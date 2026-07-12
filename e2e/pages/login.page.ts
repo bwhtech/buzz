@@ -16,8 +16,6 @@ export class LoginPage {
 		// Frappe login page selectors
 		this.emailInput = page.locator("#login_email");
 		this.passwordInput = page.locator("#login_password");
-		// Scope to the "Continue" submit button; the login page also renders a
-		// second "Send login link" button that shares the .btn-login class.
 		this.submitButton = page.getByRole("button", { name: "Continue" });
 		this.errorMessage = page.locator(".msgprint, .alert-danger").first();
 	}
