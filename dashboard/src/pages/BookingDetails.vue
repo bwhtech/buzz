@@ -25,7 +25,7 @@
 						<p class="text-sm text-yellow-700">
 							{{
 								__(
-									"Your booking is confirmed subject to verifying the offline payment details. You will be notified once payment is verified.",
+									"Your booking is confirmed subject to verifying the offline payment details. You will be notified once payment is verified."
 								)
 							}}
 						</p>
@@ -48,7 +48,7 @@
 						<p class="text-sm text-red-700">
 							{{
 								__(
-									"Your booking has been rejected. Please contact the event organizer for more information.",
+									"Your booking has been rejected. Please contact the event organizer for more information."
 								)
 							}}
 						</p>
@@ -58,9 +58,7 @@
 		</div>
 
 		<!-- Event Information and Payment Summary in two columns -->
-		<div class="grid grid-cols-1 gap-6 mb-6"
-			:class="{ 'lg:grid-cols-2': showPaymentSummary }"
-		>
+		<div class="grid grid-cols-1 gap-6 mb-6" :class="{ 'lg:grid-cols-2': showPaymentSummary }">
 			<!-- Event Information -->
 			<BookingEventInfo
 				v-if="bookingDetails.data.event"
