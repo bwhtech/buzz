@@ -24,6 +24,9 @@ class EventSponsor(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		if not self.enquiry:
+			return
+
 		already_exists = frappe.db.exists(
 			"Event Sponsor", {"event": self.event, "enquiry": self.enquiry, "name": ("!=", self.name)}
 		)

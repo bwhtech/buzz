@@ -62,6 +62,7 @@ def get_form_fields(
 	doctype: str,
 	exclude_fields: set,
 	with_layout_breaks: bool = False,
+	event: str | None = None,
 ) -> list:
 	meta = frappe.get_meta(doctype)
 	fields = []
@@ -99,13 +100,7 @@ def get_form_fields(
 			"description": df.description,
 		}
 		if df.fieldtype == "Link" and df.options:
-			link_values = frappe.get_all(
-				df.options,
-				fields=["name"],
-				limit_page_length=0,
-				order_by="name asc",
-			)
-			field_data["link_options"] = [d.name for d in link_values]
+			field_data["link_options"] = get_link_field_options(df.options, event)
 		if df.fieldtype == "Table" and df.options:
 			child_meta = frappe.get_meta(df.options)
 			child_fields = []
@@ -126,6 +121,19 @@ def get_form_fields(
 			field_data["child_fields"] = child_fields
 		fields.append(field_data)
 	return fields
+
+
+def get_link_field_options(doctype: str, event: str | None = None) -> list[dict]:
+	meta = frappe.get_meta(doctype)
+	title_field = meta.get_title_field()
+
+	filters = {}
+	if event and meta.has_field("event"):
+		filters["event"] = event
+
+	fields = ["name"] if title_field == "name" else ["name", title_field]
+	rows = frappe.get_all(doctype, filters=filters, fields=fields, limit_page_length=0, order_by="name asc")
+	return [{"value": row.name, "label": row.get(title_field) or row.name} for row in rows]
 
 
 def validate_custom_form(event_route: str, form_route: str):
@@ -246,7 +254,7 @@ def get_custom_form_data(event_route: str, form_route: str) -> dict:
 	auto_set = get_auto_set_fields(form_doctype)
 	excluded_fields = parse_excluded_fields(form_row.excluded_fields) or set()
 	exclude_fields = STANDARD_EXCLUDE_FIELDS | set(auto_set.keys()) | excluded_fields
-	form_fields = get_form_fields(form_doctype, exclude_fields, with_layout_breaks=True)
+	form_fields = get_form_fields(form_doctype, exclude_fields, with_layout_breaks=True, event=event_doc.name)
 
 	form_doctype_meta = frappe.get_meta(form_doctype)
 	custom_fields = []

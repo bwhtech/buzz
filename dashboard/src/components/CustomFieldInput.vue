@@ -220,9 +220,9 @@ const multiSelectProxy = computed({
 
 const linkFieldOptions = computed(() => {
 	if (!props.field.link_options) return [];
-	return props.field.link_options.map((name) => ({
-		label: name,
-		value: name,
+	return props.field.link_options.map((option) => ({
+		label: option.label,
+		value: option.value,
 	}));
 });
 

@@ -63,17 +63,57 @@ class EventProposal(Document):
 
 		self.create_event()
 
+	@frappe.whitelist()
+	def create_host(self):
+		self.check_permission("write")
+
+		if self.host:
+			frappe.throw(_("A Host is already linked to this proposal."))
+
+		self._create_host()
+		self.save()
+		return self.host
+
+	def _create_host(self):
+		if not self.host_company:
+			frappe.throw(_("Please enter the Company Name before creating a Host."))
+
+		if frappe.db.exists("Event Host", self.host_company):
+			host = frappe.get_doc("Event Host", self.host_company)
+			updated = False
+			if self.host_company_logo and not host.logo:
+				host.logo = self.host_company_logo
+				updated = True
+			if self.about_the_company and not host.about:
+				host.about = self.about_the_company
+				updated = True
+			if updated:
+				host.save(ignore_permissions=True)
+		else:
+			host = frappe.new_doc("Event Host")
+			host.name = self.host_company
+			host.logo = self.host_company_logo
+			host.about = self.about_the_company
+			host.insert(ignore_permissions=True)
+
+		self.host = host.name
+
 	def create_event(self):
 		if self.status == "Rejected":
 			return
 
 		if not self.host:
-			frappe.throw(_("Please create or set a Host before submitting the proposal."))
+			if not self.host_company:
+				frappe.throw(_("Please set a Host (or enter a Company Name) before submitting."))
+			self._create_host()
 
 		buzz_event = get_mapped_doc(
 			"Event Proposal", self.name, {"Event Proposal": {"doctype": "Buzz Event"}}
 		)
 		buzz_event.proposal = self.name
+		# host may have just been auto-created in-memory and is not yet persisted,
+		# so the mapped doc (read from DB) would miss it.
+		buzz_event.host = self.host
 		buzz_event.insert()
 
 		self.status = "Event Created"
