@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import os
 from base64 import b32encode
 
@@ -515,10 +517,74 @@ def process_booking(
 	return {
 		"payment_link": get_payment_link_for_booking(
 			booking.name,
-			redirect_to=f"/dashboard/bookings/{booking.name}?success=true",
+			redirect_to=f"/dashboard/booking-success/{booking.name}?token={get_booking_access_token(booking.name)}",
 			payment_gateway=payment_gateway,
 		)
 	}
+
+
+def get_booking_access_token(booking_name: str) -> str:
+	"""HMAC of the booking name signed with the site encryption_key.
+
+	Lets a guest (whose browser session stays "Guest") open their own booking
+	confirmation without logging in, while keeping sequential booking names
+	unguessable (no IDOR)."""
+	key = frappe.local.conf.get("encryption_key").encode()
+	return hmac.new(key, booking_name.encode(), hashlib.sha256).hexdigest()
+
+
+def verify_booking_access_token(booking_name: str, token: str | None) -> bool:
+	return bool(token) and hmac.compare_digest(get_booking_access_token(booking_name), token)
+
+
+@frappe.whitelist(allow_guest=True)
+def get_booking_confirmation(booking_id: str, token: str | None = None) -> dict:
+	"""Read-only booking confirmation for the post-payment success page.
+
+	Authorized by a valid access token (guest flow) OR read permission on the
+	booking (logged-in owner). Returns a minimal payload — no transfer/cancel data.
+	"""
+	authorized = verify_booking_access_token(booking_id, token) or frappe.has_permission(
+		"Event Booking", "read", doc=booking_id
+	)
+	if not authorized:
+		frappe.throw(_("You are not allowed to view this booking."), frappe.PermissionError)
+
+	booking_doc = frappe.get_cached_doc("Event Booking", booking_id)
+	event_doc = frappe.get_cached_doc("Buzz Event", booking_doc.event)
+
+	tickets = frappe.db.get_all(
+		"Event Ticket",
+		filters={"booking": booking_id},
+		fields=[
+			"name",
+			"attendee_name",
+			"ticket_type.title as ticket_type",
+			"qr_code",
+		],
+	)
+
+	return frappe._dict(
+		{
+			"event": {
+				"title": event_doc.title,
+				"route": event_doc.route,
+				"start_date": event_doc.start_date,
+				"end_date": event_doc.end_date,
+				"start_time": event_doc.start_time,
+				"end_time": event_doc.end_time,
+				"venue": event_doc.venue,
+			},
+			"booking": {
+				"name": booking_doc.name,
+				"total_amount": booking_doc.total_amount,
+				"currency": booking_doc.currency,
+				"payment_status": booking_doc.payment_status,
+				"status": booking_doc.status,
+			},
+			"tickets": tickets,
+		}
+	)
 
 
 def create_add_on_doc(attendee_name: str, add_ons: list[dict]):

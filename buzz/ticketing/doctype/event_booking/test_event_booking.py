@@ -1091,3 +1091,87 @@ class TestProcessBookingAPI(IntegrationTestCase):
 		self.assertEqual(booking.status, "Confirmed", "Free booking should auto-confirm")
 		self.assertEqual(booking.payment_status, "Paid", "Free booking should be marked as Paid")
 		self.assertEqual(booking.total_amount, 0, "Free booking should have zero total")
+
+
+class TestBookingConfirmation(IntegrationTestCase):
+	"""Test token-gated guest booking confirmation (issue #167)."""
+
+	def _make_submitted_booking(self):
+		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		test_event.apply_tax = False
+		test_event.save()
+
+		ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": test_event.name,
+				"title": "Confirmation Test Ticket",
+				"price": 500,
+			}
+		).insert()
+
+		booking = frappe.get_doc(
+			{
+				"doctype": "Event Booking",
+				"event": test_event.name,
+				"user": "Administrator",
+				"attendees": [
+					{"ticket_type": ticket_type.name, "first_name": "Conf", "email": "conf@email.com"}
+				],
+			}
+		).insert()
+		booking.submit()
+		return booking
+
+	def test_access_token_roundtrip(self):
+		from buzz.api import get_booking_access_token, verify_booking_access_token
+
+		token = get_booking_access_token("B-TEST-001")
+		self.assertTrue(verify_booking_access_token("B-TEST-001", token))
+		# wrong token rejected
+		self.assertFalse(verify_booking_access_token("B-TEST-001", "deadbeef"))
+		# empty token rejected
+		self.assertFalse(verify_booking_access_token("B-TEST-001", ""))
+		self.assertFalse(verify_booking_access_token("B-TEST-001", None))
+		# token is booking-specific
+		self.assertFalse(verify_booking_access_token("B-OTHER-002", token))
+
+	def test_get_booking_confirmation_valid_token_as_guest(self):
+		from buzz.api import get_booking_access_token, get_booking_confirmation
+
+		booking = self._make_submitted_booking()
+		token = get_booking_access_token(booking.name)
+
+		frappe.set_user("Guest")
+		try:
+			result = get_booking_confirmation(booking.name, token=token)
+		finally:
+			frappe.set_user("Administrator")
+
+		self.assertEqual(result["booking"]["name"], booking.name)
+		self.assertEqual(len(result["tickets"]), 1)
+		self.assertEqual(result["tickets"][0]["attendee_name"], "Conf")
+		self.assertTrue(result["event"]["title"])
+
+	def test_get_booking_confirmation_bad_token_as_guest_raises(self):
+		from buzz.api import get_booking_confirmation
+
+		booking = self._make_submitted_booking()
+
+		frappe.set_user("Guest")
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				get_booking_confirmation(booking.name, token="wrong-token")
+			with self.assertRaises(frappe.PermissionError):
+				get_booking_confirmation(booking.name, token="")
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_get_booking_confirmation_owner_without_token(self):
+		from buzz.api import get_booking_confirmation
+
+		booking = self._make_submitted_booking()
+
+		# Administrator owns/has perm — no token needed
+		result = get_booking_confirmation(booking.name)
+		self.assertEqual(result["booking"]["name"], booking.name)
