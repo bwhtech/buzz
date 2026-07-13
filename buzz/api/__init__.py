@@ -559,10 +559,16 @@ def get_booking_confirmation(booking_id: str, token: str | None = None) -> dict:
 		fields=[
 			"name",
 			"attendee_name",
+			"attendee_email",
 			"ticket_type.title as ticket_type",
 			"qr_code",
 		],
 	)
+
+	venue = None
+	if event_doc.venue:
+		venue_doc = frappe.get_cached_doc("Event Venue", event_doc.venue)
+		venue = {"name": venue_doc.name, "address": venue_doc.get("address")}
 
 	return frappe._dict(
 		{
@@ -573,14 +579,22 @@ def get_booking_confirmation(booking_id: str, token: str | None = None) -> dict:
 				"end_date": event_doc.end_date,
 				"start_time": event_doc.start_time,
 				"end_time": event_doc.end_time,
-				"venue": event_doc.venue,
+				"short_description": event_doc.get("short_description"),
+				"free_webinar": event_doc.get("free_webinar"),
 			},
+			"venue": venue,
 			"booking": {
 				"name": booking_doc.name,
 				"total_amount": booking_doc.total_amount,
+				"net_amount": booking_doc.net_amount,
 				"currency": booking_doc.currency,
 				"payment_status": booking_doc.payment_status,
 				"status": booking_doc.status,
+				"tax_amount": booking_doc.tax_amount,
+				"tax_label": booking_doc.tax_label,
+				"tax_percentage": booking_doc.tax_percentage,
+				"discount_amount": booking_doc.discount_amount,
+				"coupon_code": booking_doc.coupon_code,
 			},
 			"tickets": tickets,
 		}
