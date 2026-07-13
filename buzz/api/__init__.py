@@ -537,13 +537,14 @@ def verify_booking_access_token(booking_name: str, token: str | None) -> bool:
 	return bool(token) and hmac.compare_digest(get_booking_access_token(booking_name), token)
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 def get_booking_confirmation(booking_id: str, token: str | None = None) -> dict:
 	"""Read-only booking confirmation for the post-payment success page.
 
 	Authorized by a valid access token (guest flow) OR read permission on the
 	booking (logged-in owner). Returns a minimal payload — no transfer/cancel data.
 	"""
+	# nosemgrep: frappe-semgrep-rules.rules.unchecked-frappe-permission-call -- return value checked below
 	authorized = verify_booking_access_token(booking_id, token) or frappe.has_permission(
 		"Event Booking", "read", doc=booking_id
 	)
