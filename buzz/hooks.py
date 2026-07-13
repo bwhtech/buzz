@@ -18,6 +18,7 @@ before_uninstall = "buzz.uninstall.before_uninstall"
 
 
 website_route_rules = [
+	{"from_route": "/b", "to_route": "dashboard"},
 	{"from_route": "/b/<path:app_path>", "to_route": "dashboard"},
 ]
 
