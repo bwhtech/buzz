@@ -1,8 +1,6 @@
 import { createListResource } from "frappe-ui";
 
-// Maps a Frappe color name (stored on the Talk Proposal Status doctype) to a
-// frappe-ui Badge theme. Kept 1:1 with the doctype's color options so every
-// offered color themes correctly; unknown colors fall back to "gray".
+// Frappe color name (Talk Proposal Status.color) -> frappe-ui Badge theme.
 const COLOR_TO_THEME: Record<string, string> = {
 	Gray: "gray",
 	Green: "green",
@@ -14,8 +12,8 @@ const COLOR_TO_THEME: Record<string, string> = {
 	Pink: "pink",
 };
 
-// Fallback theming for the seeded statuses so badges are colored even before
-// the status list has loaded (or if a status has no color set).
+// Theme for the default statuses, used until the list loads or when a status
+// has no color set.
 const FALLBACK_THEME: Record<string, string> = {
 	Accepted: "green",
 	Shortlisted: "blue",
@@ -23,8 +21,7 @@ const FALLBACK_THEME: Record<string, string> = {
 	Rejected: "red",
 };
 
-// Shared singleton: both ProposalsList and ProposalDetails reuse this one
-// resource so the status list is fetched a single time, not once per caller.
+// Module-level so every caller shares one fetch of the status list.
 const statuses = createListResource({
 	doctype: "Talk Proposal Status",
 	fields: ["name", "color"],
