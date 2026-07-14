@@ -1,4 +1,4 @@
-import { useList } from "frappe-ui";
+import { createListResource } from "frappe-ui";
 
 // Maps a Frappe color name (stored on the Talk Proposal Status doctype) to a
 // frappe-ui Badge theme. Unknown colors fall back to "gray".
@@ -24,16 +24,17 @@ const FALLBACK_THEME: Record<string, string> = {
 };
 
 export function useProposalStatuses() {
-	const statuses = useList({
+	const statuses = createListResource({
 		doctype: "Talk Proposal Status",
 		fields: ["name", "color"],
-		orderBy: "creation asc",
+		order_by: "creation asc",
 		auto: true,
-		cacheKey: "talk-proposal-statuses",
 	});
 
 	const getStatusTheme = (status: string): string => {
-		const row = statuses.data?.find((item: { name: string }) => item.name === status);
+		const row = statuses.data?.find(
+			(item: { name: string; color?: string }) => item.name === status,
+		);
 		if (row?.color && COLOR_TO_THEME[row.color]) {
 			return COLOR_TO_THEME[row.color];
 		}
