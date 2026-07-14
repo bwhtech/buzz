@@ -21,6 +21,7 @@ from frappe.utils import (
 	today,
 	validate_email_address,
 )
+from frappe.utils.password import get_encryption_key
 
 from buzz.payments import (
 	get_payment_gateways_for_event,
@@ -529,7 +530,7 @@ def get_booking_access_token(booking_name: str) -> str:
 	Lets a guest (whose browser session stays "Guest") open their own booking
 	confirmation without logging in, while keeping sequential booking names
 	unguessable (no IDOR)."""
-	key = frappe.local.conf.get("encryption_key").encode()
+	key = get_encryption_key().encode()
 	return hmac.new(key, booking_name.encode(), hashlib.sha256).hexdigest()
 
 
