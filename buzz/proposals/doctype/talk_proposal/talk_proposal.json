@@ -39,9 +39,9 @@
   {
    "default": "Review Pending",
    "fieldname": "status",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "label": "Status",
-   "options": "Review Pending\nShortlisted\nAccepted\nRejected"
+   "options": "Talk Proposal Status"
   },
   {
    "fieldname": "event",
@@ -149,8 +149,28 @@
  "sort_order": "DESC",
  "states": [
   {
+   "color": "Orange",
+   "title": "Review Pending"
+  },
+  {
+   "color": "Blue",
+   "title": "Shortlisted"
+  },
+  {
    "color": "Green",
    "title": "Accepted"
+  },
+  {
+   "color": "Red",
+   "title": "Rejected"
+  },
+  {
+   "color": "Purple",
+   "title": "Replied"
+  },
+  {
+   "color": "Gray",
+   "title": "Duplicate"
   }
  ],
  "title_field": "title",

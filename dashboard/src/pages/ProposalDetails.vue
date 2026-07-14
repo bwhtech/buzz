@@ -189,6 +189,7 @@
 <script setup>
 import ProposalEditDialog from "@/components/ProposalEditDialog.vue";
 import BackButton from "@/components/common/BackButton.vue";
+import { useProposalStatuses } from "@/composables/useProposalStatuses";
 import {
 	Badge,
 	Button,
@@ -299,20 +300,7 @@ const isEditingEventTalk = computed(() => {
 	);
 });
 
-const getStatusTheme = (status) => {
-	switch (status) {
-		case "Accepted":
-			return "green";
-		case "Shortlisted":
-			return "blue";
-		case "Review Pending":
-			return "orange";
-		case "Rejected":
-			return "red";
-		default:
-			return "gray";
-	}
-};
+const { getStatusTheme } = useProposalStatuses();
 
 const formatDate = (dateString) => {
 	return dayjsLocal(dateString).format("MMM DD, YYYY");

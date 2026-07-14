@@ -47,7 +47,10 @@
 
 <script setup>
 import { session } from "@/data/session";
+import { useProposalStatuses } from "@/composables/useProposalStatuses";
 import { Badge, ListView, Spinner, dayjsLocal, useList } from "frappe-ui";
+
+const { getStatusTheme } = useProposalStatuses();
 
 const columns = [
 	{ label: __("Title"), key: "title" },
@@ -73,18 +76,4 @@ const proposals = useList({
 	},
 });
 
-const getStatusTheme = (status) => {
-	switch (status) {
-		case "Accepted":
-			return "green";
-		case "Shortlisted":
-			return "blue";
-		case "Review Pending":
-			return "orange";
-		case "Rejected":
-			return "red";
-		default:
-			return "gray";
-	}
-};
 </script>

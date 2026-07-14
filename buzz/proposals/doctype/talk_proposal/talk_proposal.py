@@ -23,7 +23,7 @@ class TalkProposal(Document):
 		event: DF.Link
 		phone: DF.Phone | None
 		speakers: DF.Table[ProposalSpeaker]
-		status: DF.Literal["Review Pending", "Shortlisted", "Accepted", "Rejected"]
+		status: DF.Link
 		submitted_by: DF.Link | None
 		title: DF.Data
 	# end: auto-generated types

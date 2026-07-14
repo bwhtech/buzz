@@ -11,3 +11,4 @@ buzz.patches.migrate_offline_payment_to_methods
 buzz.patches.populate_slug_in_event_category
 buzz.patches.set_applies_to_for_existing_coupons
 buzz.patches.set_payment_status_for_existing_bookings
+buzz.patches.seed_talk_proposal_statuses
