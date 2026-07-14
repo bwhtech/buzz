@@ -14,7 +14,7 @@ class TalkProposalStatus(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		color: DF.Literal["Gray", "Green", "Blue", "Orange", "Red", "Yellow", "Purple", "Pink", "Cyan"]
+		color: DF.Literal["Gray", "Green", "Blue", "Orange", "Red", "Yellow", "Purple", "Pink"]
 	# end: auto-generated types
 
 	pass

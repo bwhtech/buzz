@@ -1,6 +1,6 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "allow_rename": 0,
  "autoname": "prompt",
  "creation": "2026-07-14 00:00:00.000000",
  "doctype": "DocType",
