@@ -1,5 +1,5 @@
 <template>
-	<div class="w-4" v-if="confirmation.loading">
+	<div class="flex justify-center items-center py-8" v-if="confirmation.loading">
 		<Spinner />
 	</div>
 
