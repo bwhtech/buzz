@@ -15,7 +15,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Color",
-   "options": "Gray\nGreen\nBlue\nOrange\nRed\nYellow\nPurple\nPink\nCyan"
+   "options": "Gray\nGreen\nBlue\nOrange\nRed\nYellow\nPurple\nPink"
   }
  ],
  "grid_page_length": 50,

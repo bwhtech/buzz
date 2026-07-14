@@ -83,6 +83,8 @@ def before_tests():
 
 
 def setup_test_records():
+	create_talk_proposal_statuses()
+
 	test_category = frappe.get_doc({"doctype": "Event Category", "name": "Test Category"}).insert(
 		ignore_if_duplicate=True
 	)
@@ -113,10 +115,12 @@ def setup_test_records():
 
 def after_install():
 	create_event_categories()
+	create_talk_proposal_statuses()
 	create_custom_fields()
 
 
 def on_migrate():
+	create_talk_proposal_statuses()
 	create_custom_fields()
 
 
@@ -158,6 +162,20 @@ def delete_zoom_integration_custom_fields():
 
 def delete_crm_integration_custom_fields():
 	delete_custom_fields(CRM_INTEGRATION_CUSTOM_FIELDS)
+
+
+def create_talk_proposal_statuses():
+	statuses = [
+		{"name": "Review Pending", "color": "Orange"},
+		{"name": "Shortlisted", "color": "Blue"},
+		{"name": "Accepted", "color": "Green"},
+		{"name": "Rejected", "color": "Red"},
+		{"name": "Replied", "color": "Purple"},
+		{"name": "Duplicate", "color": "Gray"},
+	]
+
+	for status in statuses:
+		frappe.get_doc({"doctype": "Talk Proposal Status", **status}).insert(ignore_if_duplicate=True)
 
 
 def create_event_categories():
