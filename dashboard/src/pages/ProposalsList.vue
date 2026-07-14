@@ -75,5 +75,4 @@ const proposals = useList({
 		}));
 	},
 });
-
 </script>
