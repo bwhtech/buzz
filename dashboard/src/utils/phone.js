@@ -2,7 +2,7 @@
 // No Vue imports so it stays unit-testable with node --test.
 // Canonical format matches Frappe's Phone control: "<dialCode>-<digits>".
 
-export const DEFAULT_DIAL_CODE = "+1";
+export const DEFAULT_DIAL_CODE = "+91";
 
 // Returns the leading dial code of `str` (e.g. "+91"), or null.
 // Prefers the longest matching code from knownDialCodes; falls back to

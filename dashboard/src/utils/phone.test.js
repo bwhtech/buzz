@@ -4,8 +4,8 @@ import { parsePhone, formatPhone, DEFAULT_DIAL_CODE } from "./phone.js";
 
 const KNOWN = ["+1", "+91", "+44", "+971"];
 
-test("default dial code is +1", () => {
-	assert.equal(DEFAULT_DIAL_CODE, "+1");
+test("default dial code is +91", () => {
+	assert.equal(DEFAULT_DIAL_CODE, "+91");
 });
 
 test("formatPhone uses Frappe's hyphen format", () => {
