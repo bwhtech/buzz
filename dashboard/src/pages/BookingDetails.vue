@@ -106,7 +106,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage";
 import { usePaymentSuccess } from "@/composables/usePaymentSuccess";
 import { Spinner, createResource } from "frappe-ui";
@@ -162,7 +162,7 @@ const bookingDetails = createResource({
 	url: "buzz.api.get_booking_details",
 	params: { booking_id: props.bookingId },
 	auto: true,
-	onSuccess: (data) => {
+	onSuccess: (data: any) => {
 		// Clear stored booking form data if this was a successful payment
 		if (isPaymentSuccess && data?.event?.route) {
 			const { clearStoredData } = useBookingFormStorage(data.event.route);
@@ -196,7 +196,7 @@ const onTicketTransferSuccess = () => {
 	bookingDetails.reload();
 };
 
-const onCancellationRequestSuccess = (data) => {
+const onCancellationRequestSuccess = (data: any) => {
 	bookingDetails.reload();
 };
 </script>

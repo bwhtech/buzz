@@ -31,7 +31,7 @@
 				<img
 					v-if="eventBookingData.eventDetails?.banner_image"
 					:src="eventBookingData.eventDetails.banner_image"
-					:alt="eventBookingData.eventDetails.title"
+					:alt="eventBookingData.eventDetails?.title"
 					class="w-full rounded-lg mb-6 object-cover max-h-48"
 				/>
 				<h2 class="text-xl font-semibold text-ink-gray-8 mb-2">
@@ -50,9 +50,9 @@
 				v-if="eventBookingData.availableAddOns && eventBookingData.availableTicketTypes"
 				:availableAddOns="eventBookingData.availableAddOns"
 				:availableTicketTypes="eventBookingData.availableTicketTypes"
-				:taxSettings="eventBookingData.taxSettings"
-				:eventDetails="eventBookingData.eventDetails"
-				:customFields="eventBookingData.customFields"
+				:taxSettings="eventBookingData.taxSettings || {}"
+				:eventDetails="eventBookingData.eventDetails || {}"
+				:customFields="eventBookingData.customFields || []"
 				:eventRoute="eventRoute"
 				:paymentGateways="eventBookingData.paymentGateways"
 				:isGuestMode="isGuest"
@@ -62,13 +62,28 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type {
+	AvailableAddOn,
+	AvailableTicketType,
+	FrappeError,
+	FrappeField,
+	OfflineMethod,
+} from "@/types";
 import { session } from "@/data/session";
 import { Spinner, createResource } from "frappe-ui";
 import { computed, reactive, ref, watch } from "vue";
 import BookingForm from "../components/BookingForm.vue";
 
-const eventBookingData = reactive({
+const eventBookingData = reactive<{
+	availableAddOns: AvailableAddOn[] | null;
+	availableTicketTypes: AvailableTicketType[] | null;
+	taxSettings: Record<string, any> | null;
+	eventDetails: Record<string, any> | null;
+	customFields: FrappeField[] | null;
+	paymentGateways: any[];
+	offlineMethods: OfflineMethod[];
+}>({
 	availableAddOns: null,
 	availableTicketTypes: null,
 	taxSettings: null,
@@ -100,7 +115,7 @@ const eventBookingResource = createResource({
 		event_route: props.eventRoute,
 	},
 	auto: true,
-	onSuccess: (data) => {
+	onSuccess: (data: any) => {
 		eventBookingData.availableAddOns = data.available_add_ons || [];
 		eventBookingData.availableTicketTypes = data.available_ticket_types || [];
 		eventBookingData.taxSettings = data.tax_settings || {
@@ -115,7 +130,7 @@ const eventBookingResource = createResource({
 		eventBookingData.offlineMethods = data.offline_methods || [];
 		registrationsClosed.value = data.registrations_closed || false;
 	},
-	onError: (error) => {
+	onError: (error: FrappeError) => {
 		if (error.message?.includes("DoesNotExistError")) {
 			eventNotFound.value = true;
 		}

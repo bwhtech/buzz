@@ -156,7 +156,7 @@
 							>Company Logo</label
 						>
 						<FileUploader
-							@success="(file) => updateLogo(file.file_url)"
+							@success="(file: { file_url: string }) => updateLogo(file.file_url)"
 							:validateFile="validateIsImageFile"
 							:uploadArgs="logoUploadArgs"
 						>
@@ -359,7 +359,8 @@
 	/>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { FrappeError } from "@/types";
 import { usePaymentSuccess } from "@/composables/usePaymentSuccess";
 import {
 	Badge,
@@ -411,7 +412,7 @@ const withdrawResource = createResource({
 		// Reload the enquiry details to show updated status
 		enquiryDetails.reload();
 	},
-	onError: (err) => {
+	onError: (err: FrappeError) => {
 		toast.error(err.messages?.[0] || "Failed to withdraw inquiry");
 		showWithdrawDialog.value = false;
 	},
@@ -420,7 +421,7 @@ const withdrawResource = createResource({
 // Resource to update company logo
 const updateLogoResource = createResource({
 	url: "frappe.client.set_value",
-	makeParams(fileUrl) {
+	makeParams(fileUrl: string) {
 		// If we have a confirmed sponsor, update the Event Sponsor document
 		if (sponsorDetails.value) {
 			return {
@@ -443,7 +444,7 @@ const updateLogoResource = createResource({
 		// Reload the enquiry details to get updated data
 		enquiryDetails.reload();
 	},
-	onError: (err) => {
+	onError: (err: FrappeError) => {
 		console.error("Failed to update company logo:", err);
 	},
 });
@@ -492,7 +493,7 @@ const logoUploadArgs = computed(() => {
 	};
 });
 
-const getStatusTheme = (status) => {
+const getStatusTheme = (status: string) => {
 	switch (status) {
 		case "Paid":
 			return "green";
@@ -507,7 +508,7 @@ const getStatusTheme = (status) => {
 	}
 };
 
-const formatDate = (dateString) => {
+const formatDate = (dateString: string) => {
 	return dayjsLocal(dateString).format("MMM DD, YYYY");
 };
 
@@ -517,7 +518,7 @@ const onPaymentStarted = () => {
 };
 
 // Validate that uploaded file is an image
-const validateIsImageFile = (file) => {
+const validateIsImageFile = (file: File) => {
 	const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
 	const maxSize = 5 * 1024 * 1024; // 5MB
 
@@ -533,7 +534,7 @@ const validateIsImageFile = (file) => {
 };
 
 // Update logo after successful upload
-const updateLogo = (fileUrl) => {
+const updateLogo = (fileUrl: string) => {
 	// Update the local data immediately for better UX
 	if (sponsorDetails.value) {
 		// Update sponsor details if it's a confirmed sponsorship

@@ -7,7 +7,7 @@
 			row-key="name"
 			:options="{
 				selectable: false,
-				getRowRoute: (row) => ({
+				getRowRoute: (row: any) => ({
 					name: 'booking-details',
 					params: { bookingId: row.name },
 				}),
@@ -24,7 +24,7 @@
 						row.status === 'Approved' || row.status === 'Confirmed'
 							? 'green'
 							: row.status === 'Approval Pending'
-							? 'yellow'
+							? 'orange'
 							: 'red'
 					"
 					variant="subtle"
@@ -38,7 +38,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { formatCurrency } from "@/utils/currency";
 import { pluralize } from "@/utils/pluralize";
 import { Badge, ListView, useList } from "frappe-ui";
@@ -71,12 +71,10 @@ const bookings = useList({
 	],
 	filters: { user: session.user, docstatus: ["!=", "0"] },
 	orderBy: "creation desc",
-	realtime: true,
-	auto: true,
 	cacheKey: "bookings-list",
 	onError: console.error,
-	transform(data) {
-		return data.map((booking) => ({
+	transform(data: any[]) {
+		return data.map((booking: any) => ({
 			...booking,
 			formatted_amount:
 				booking.total_amount !== 0

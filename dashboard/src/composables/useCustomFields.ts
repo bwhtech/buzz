@@ -14,6 +14,8 @@ export interface FrappeField {
 	options?: string | any[]
 	placeholder?: string
 	mandatory?: number | boolean
+	reqd?: number | boolean
+	default?: string | number | boolean
 	default_value?: string | number | boolean
 	link_options?: SelectOption[]
 	applied_to?: string

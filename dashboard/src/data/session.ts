@@ -8,11 +8,11 @@ interface LoginParams {
 	password: string
 }
 
-export function sessionUser() {
+export function sessionUser(): string {
 	const cookies = new URLSearchParams(document.cookie.split("; ").join("&"))
-	let _sessionUser = cookies.get("user_id")
-	if (_sessionUser === "Guest") {
-		_sessionUser = null
+	const _sessionUser = cookies.get("user_id")
+	if (!_sessionUser || _sessionUser === "Guest") {
+		return ""
 	}
 	return _sessionUser
 }

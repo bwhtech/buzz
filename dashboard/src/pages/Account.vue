@@ -25,7 +25,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import ProfileView from "@/components/ProfileView.vue";
 import { session } from "@/data/session";
 import { Tabs, createResource, useList } from "frappe-ui";
@@ -43,7 +43,6 @@ const proposals = useList({
 	doctype: "Talk Proposal",
 	fields: ["name"],
 	filters: { submitted_by: session.user },
-	auto: true,
 	cacheKey: ["account-proposals-check", session.user],
 });
 
@@ -95,7 +94,7 @@ const currentTabRoute = computed(() => {
 	return tab ? tab.route : tabs.value[0].route;
 });
 
-function onSelectChange(value) {
+function onSelectChange(value: string) {
 	router.push(value);
 }
 

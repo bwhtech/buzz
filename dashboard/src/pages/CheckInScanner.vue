@@ -42,14 +42,14 @@
 			<!-- Event Selection -->
 			<EventSelector
 				v-if="!selectedEvent"
-				:selected-event="selectedEvent"
+				:selected-event="selectedEvent || undefined"
 				@select="selectEvent"
 			/>
 
 			<!-- Scanner Interface -->
 			<div v-else class="space-y-6">
 				<!-- Selected Event Info -->
-				<BackButton :label="selectedEvent.title" @click="clearEventSelection" />
+				<BackButton :label="selectedEvent?.title" @click="clearEventSelection" />
 
 				<!-- QR Scanner -->
 				<QRScanner ref="qrScannerRef" />
@@ -80,11 +80,11 @@
 		</div>
 
 		<!-- Ticket Details Modal -->
-		<TicketDetailsModal :selected-event="selectedEvent" />
+		<TicketDetailsModal :selected-event="selectedEvent || undefined" />
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useTicketValidation } from "@/composables/useTicketValidation";
 import { userResource } from "@/data/user";
 import { createResource } from "frappe-ui";
@@ -103,8 +103,13 @@ const props = defineProps({
 	},
 });
 
+interface UserProfile {
+	roles?: { role: string }[];
+	[key: string]: any;
+}
+
 const router = useRouter();
-const userProfile = ref({});
+const userProfile = ref<UserProfile>({});
 
 const hasRequiredRole = computed(() => {
 	if (!userProfile.value || !userProfile.value.roles) return false;
@@ -114,11 +119,11 @@ const hasRequiredRole = computed(() => {
 const { validationResult, clearResults } = useTicketValidation();
 
 // State
-const selectedEvent = ref(null);
-const qrScannerRef = ref(null);
+const selectedEvent = ref<Record<string, any> | null>(null);
+const qrScannerRef = ref<any>(null);
 
 // Event selection
-const selectEvent = (event) => {
+const selectEvent = (event: Record<string, any>) => {
 	selectedEvent.value = event;
 	clearResults();
 	router.replace({ name: "check-in", params: { eventName: event.name } });

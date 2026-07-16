@@ -327,7 +327,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { formatCurrency } from "@/utils/currency";
 import { Badge, Button, Spinner, createResource } from "frappe-ui";
 import { dayjsLocal } from "frappe-ui";
@@ -350,7 +350,7 @@ const props = defineProps({
 });
 
 // Helper function to format date and time together
-const formatEventDateTime = (date, time) => {
+const formatEventDateTime = (date: string, time: string) => {
 	if (!date) return "";
 
 	// Create a date object from the date string
@@ -377,7 +377,7 @@ const ticketDetails = createResource({
 	url: "buzz.api.get_ticket_details",
 	params: { ticket_id: props.ticketId },
 	auto: true,
-	transform(data) {
+	transform(data: any) {
 		if (!data) return null;
 
 		return {
@@ -438,7 +438,7 @@ const hasCustomizableAddOns = computed(() => {
 	}
 
 	console.log("Add-ons data:", ticketDetails.data.add_ons);
-	const hasCustomizable = ticketDetails.data.add_ons.some((addon) => {
+	const hasCustomizable = ticketDetails.data.add_ons.some((addon: any) => {
 		console.log(
 			"Checking addon:",
 			addon,
@@ -459,7 +459,7 @@ const canChangeAddOns = computed(() => {
 	);
 });
 
-const getTicketStatusTheme = (status) => {
+const getTicketStatusTheme = (status: string) => {
 	switch (status) {
 		case "Confirmed":
 		case "Active":

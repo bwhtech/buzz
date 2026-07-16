@@ -19,7 +19,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import LoginRequired from "@/components/LoginRequired.vue";
 import Navbar from "@/components/Navbar.vue";
 import { session } from "@/data/session";

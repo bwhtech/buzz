@@ -186,7 +186,7 @@
 	/>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import ProposalEditDialog from "@/components/ProposalEditDialog.vue";
 import BackButton from "@/components/common/BackButton.vue";
 import { useProposalStatuses } from "@/composables/useProposalStatuses";
@@ -302,7 +302,7 @@ const isEditingEventTalk = computed(() => {
 
 const { getStatusTheme } = useProposalStatuses();
 
-const formatDate = (dateString) => {
+const formatDate = (dateString: string) => {
 	return dayjsLocal(dateString).format("MMM DD, YYYY");
 };
 

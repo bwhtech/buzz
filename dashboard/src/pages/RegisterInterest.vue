@@ -58,12 +58,19 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { FrappeError } from "@/types";
 import { Button, Spinner, createResource } from "frappe-ui";
 import { marked } from "marked";
 import { computed, ref } from "vue";
 import LucideCheckCircle from "~icons/lucide/check-circle";
 import LucideXCircle from "~icons/lucide/x-circle";
+
+interface Campaign {
+	title?: string;
+	description?: string;
+	[key: string]: any;
+}
 
 const props = defineProps({
 	campaign: {
@@ -72,10 +79,10 @@ const props = defineProps({
 	},
 });
 
-const campaign = ref(null);
+const campaign = ref<Campaign | null>(null);
 const registered = ref(false);
-const error = ref(null);
-const errorMessage = ref(null);
+const error = ref<string | null>(null);
+const errorMessage = ref<string | null>(null);
 
 const renderedDescription = computed(() => {
 	if (!campaign.value?.description) return "";
@@ -88,10 +95,10 @@ const campaignResource = createResource({
 		campaign: props.campaign,
 	},
 	auto: true,
-	onSuccess: (data) => {
+	onSuccess: (data: Campaign) => {
 		campaign.value = data;
 	},
-	onError: (err) => {
+	onError: (err: FrappeError) => {
 		error.value = err.messages?.[0] || __("Campaign not found or not active");
 	},
 });
@@ -102,7 +109,7 @@ const registerResource = createResource({
 		registered.value = true;
 		errorMessage.value = null;
 	},
-	onError: (err) => {
+	onError: (err: FrappeError) => {
 		errorMessage.value = err.messages?.[0] || __("Failed to register interest");
 	},
 });

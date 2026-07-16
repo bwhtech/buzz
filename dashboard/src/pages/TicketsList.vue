@@ -20,7 +20,7 @@
 			row-key="name"
 			:options="{
 				selectable: false,
-				getRowRoute: (row) => ({
+				getRowRoute: (row: any) => ({
 					name: 'ticket-details',
 					params: { ticketId: row.name },
 				}),
@@ -37,7 +37,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ListView, useList } from "frappe-ui";
 import { dayjsLocal } from "frappe-ui";
 import { session } from "../data/session";
@@ -67,12 +67,10 @@ const tickets = useList({
 		docstatus: ["!=", 0],
 	},
 	orderBy: "creation desc",
-	realtime: true,
-	auto: true,
 	cacheKey: "tickets-list",
 	onError: console.error,
-	transform(data) {
-		return data.map((ticket) => ({
+	transform(data: any[]) {
+		return data.map((ticket: any) => ({
 			...ticket,
 			start_date: dayjsLocal(ticket.start_date).format("MMM DD, YYYY"),
 			ticket_type_display: ticket.ticket_type_title || ticket.ticket_type,

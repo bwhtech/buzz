@@ -7,7 +7,7 @@
 			row-key="name"
 			:options="{
 				selectable: false,
-				getRowRoute: (row) => ({
+				getRowRoute: (row: any) => ({
 					name: 'sponsorship-details',
 					params: { enquiryId: row.name },
 				}),
@@ -56,7 +56,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Badge, ListView, Spinner, createResource } from "frappe-ui";
 import { dayjsLocal } from "frappe-ui";
 
@@ -74,8 +74,8 @@ const sponsorships = createResource({
 	auto: true,
 	cacheKey: "sponsorships-list",
 	onError: console.error,
-	transform(data) {
-		return data.map((inquiry) => ({
+	transform(data: any[]) {
+		return data.map((inquiry: any) => ({
 			...inquiry,
 			formatted_creation: dayjsLocal(inquiry.creation).format("MMM DD, YYYY"),
 			sponsorship_status: inquiry.has_sponsor ? __("Sponsored") : __("Inquiry Only"),
@@ -83,7 +83,7 @@ const sponsorships = createResource({
 	},
 });
 
-const getStatusTheme = (status) => {
+const getStatusTheme = (status: string) => {
 	switch (status) {
 		case "Paid":
 			return "green";

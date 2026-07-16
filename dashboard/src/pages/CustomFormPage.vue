@@ -2,7 +2,7 @@
 	<BaseCustomEventForm :event-route="eventRoute" :form-route="formRoute" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import BaseCustomEventForm from "@/components/BaseCustomEventForm.vue";
 
 defineProps({

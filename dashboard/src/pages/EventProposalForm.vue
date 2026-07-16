@@ -8,7 +8,7 @@
 			<div class="bg-surface-green-1 border border-outline-green-1 rounded-lg p-8">
 				<LucideCheckCircle class="w-16 h-16 text-ink-green-2 mx-auto mb-4" />
 				<h2 class="text-ink-green-3 font-semibold text-xl mb-2">
-					{{ form_data.success_title }}
+					{{ form_data?.success_title }}
 				</h2>
 				<div
 					v-if="rendered_success_message"
@@ -77,21 +77,29 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import CustomFieldInput from "@/components/CustomFieldInput.vue";
 import FormFieldSections from "@/components/FormFieldSections.vue";
 import LoginRequired from "@/components/LoginRequired.vue";
+import type { FrappeError, FrappeField } from "@/types";
 import { Button, Spinner, createResource, toast } from "frappe-ui";
 import { marked } from "marked";
 import { computed, reactive, ref } from "vue";
 import LucideAlertCircle from "~icons/lucide/alert-circle";
 import LucideCheckCircle from "~icons/lucide/check-circle";
 
-const form_data = ref(null);
-const form_values = reactive({});
+interface ProposalFormData {
+	success_message?: string;
+	banner_title?: string;
+	form_fields?: FrappeField[];
+	[key: string]: any;
+}
+
+const form_data = ref<ProposalFormData | null>(null);
+const form_values = reactive<Record<string, any>>({});
 const submitted = ref(false);
 const login_required = ref(false);
-const load_error = ref(null);
+const load_error = ref<string | null>(null);
 
 const rendered_success_message = computed(() => {
 	const msg = form_data.value?.success_message;
@@ -102,7 +110,7 @@ const rendered_success_message = computed(() => {
 const form_data_resource = createResource({
 	url: "buzz.api.forms.get_event_proposal_form_data",
 	auto: true,
-	onSuccess: (data) => {
+	onSuccess: (data: ProposalFormData) => {
 		form_data.value = data;
 		for (const field of data.form_fields || []) {
 			if (field.default) {
@@ -110,7 +118,7 @@ const form_data_resource = createResource({
 			}
 		}
 	},
-	onError: (err) => {
+	onError: (err: FrappeError) => {
 		if (err.exc_type === "AuthenticationError") {
 			login_required.value = true;
 			return;
@@ -124,7 +132,7 @@ const submit_resource = createResource({
 	onSuccess: () => {
 		submitted.value = true;
 	},
-	onError: (err) => {
+	onError: (err: FrappeError) => {
 		const messages = err.messages || [];
 		const msg = messages.find((m) => typeof m === "string" && m.trim());
 		toast.error(msg || __("Failed to submit proposal"));
