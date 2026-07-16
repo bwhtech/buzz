@@ -55,7 +55,7 @@
 	</Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Button, Dialog, FormControl, TextEditor, createResource, toast } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 
@@ -102,7 +102,7 @@ const updateResource = createResource({
 		isOpen.value = false;
 		emit("updated");
 	},
-	onError: (error) => {
+	onError: (error: any) => {
 		const message = props.eventTalkId
 			? __("Failed to update talk")
 			: __("Failed to update proposal");

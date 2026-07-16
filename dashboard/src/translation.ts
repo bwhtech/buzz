@@ -1,9 +1,11 @@
 import { createResource } from "frappe-ui"
 import type { App } from "vue"
 
+// replace accepts positional values ({0}, {1}, ...) or a keyed map; values may
+// be numbers, so keep it loose to match the many mixed-arg call sites.
 type TranslateFn = (
 	message: string,
-	replace?: Record<string, string> | string[],
+	replace?: any[] | Record<string, any>,
 	context?: string | null,
 ) => string
 
@@ -14,18 +16,23 @@ declare global {
 	}
 }
 
+// `__` is registered on globalProperties so templates can call it directly.
+declare module "vue" {
+	interface ComponentCustomProperties {
+		__: TranslateFn
+	}
+}
+
 export default function translationPlugin(app: App) {
 	app.config.globalProperties.__ = translate
 	window.__ = translate
 	if (!window.translatedMessages) fetchTranslations()
 }
 
-function format(
-	message: string,
-	replace: Record<string, string> | string[],
-): string {
+function format(message: string, replace: any[] | Record<string, any>): string {
+	const values = replace as Record<string, any>
 	return message.replace(/{(\d+)}/g, (match, number) =>
-		typeof replace[number] != "undefined" ? replace[number] : match,
+		typeof values[number] != "undefined" ? values[number] : match,
 	)
 }
 

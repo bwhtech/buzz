@@ -91,7 +91,8 @@
 	</li>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { AddOn } from "@/types";
 import { Badge, Button, Dropdown } from "frappe-ui";
 import { computed, ref } from "vue";
 import LucideEdit from "~icons/lucide/edit";
@@ -132,12 +133,13 @@ const showQRExpanded = ref(false);
 // Check if ticket has customizable add-ons
 const hasCustomizableAddOns = computed(() => {
 	return (
-		props.ticket?.add_ons?.some((addon) => addon.options && addon.options.length > 0) || false
+		props.ticket?.add_ons?.some((addon: AddOn) => addon.options && addon.options.length > 0) ||
+		false
 	);
 });
 
 const ticketActions = computed(() => {
-	const actions = [];
+	const actions: any[] = [];
 
 	// Don't show any actions if ticket is cancelled or has a pending cancellation request
 	if (props.isCancelled || props.isCancellationRequested) {

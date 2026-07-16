@@ -104,7 +104,7 @@ const props = defineProps({
 });
 
 // --- UTILITY FUNCTIONS ---
-const formatEventDates = (startDate, endDate) => {
+const formatEventDates = (startDate: string, endDate: string) => {
 	if (!startDate) return "";
 
 	const start = dayjsLocal(startDate);
@@ -120,7 +120,7 @@ const formatEventDates = (startDate, endDate) => {
 	return `${startFormatted} - ${endFormatted}`;
 };
 
-const formatEventTime = (startTime, endTime) => {
+const formatEventTime = (startTime: string, endTime: string) => {
 	if (!startTime) return "";
 
 	// Create a date object for today with the given time

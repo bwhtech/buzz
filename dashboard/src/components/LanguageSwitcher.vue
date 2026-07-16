@@ -8,9 +8,10 @@
 	</Dropdown>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useLanguage } from "@/composables/useLanguage";
 import { Button, Dropdown } from "frappe-ui";
+import type { Language } from "@/types";
 import { computed } from "vue";
 import LucideLanguages from "~icons/lucide/languages";
 
@@ -21,7 +22,7 @@ const languageOptions = computed(() => {
 		return [];
 	}
 
-	return availableLanguages.data.map((lang) => ({
+	return availableLanguages.data.map((lang: Language) => ({
 		label: lang.language_name || lang.name,
 		icon: currentLanguage.value === lang.language_code ? "check" : undefined,
 		onClick: () => changeLanguage(lang.language_code),

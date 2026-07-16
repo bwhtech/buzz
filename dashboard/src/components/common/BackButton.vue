@@ -19,6 +19,6 @@ withDefaults(
 );
 
 defineEmits<{
-	click: [];
+	click: [event: MouseEvent];
 }>();
 </script>

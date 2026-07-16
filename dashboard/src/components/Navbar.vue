@@ -39,7 +39,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { userResource } from "@/data/user";
 import LucideMoon from "~icons/lucide/moon";
 import LucideSun from "~icons/lucide/sun";

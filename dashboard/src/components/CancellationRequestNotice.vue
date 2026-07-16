@@ -29,7 +29,7 @@
 import LucideInfo from "~icons/lucide/info";
 
 defineProps<{
-	cancellationRequest?: Record<string, unknown> | null;
+	cancellationRequest?: Record<string, any> | null;
 }>();
 
 const formatDate = (dateString: string) => {

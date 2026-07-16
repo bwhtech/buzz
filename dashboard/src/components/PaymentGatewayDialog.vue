@@ -43,9 +43,9 @@
 	</Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Button, Dialog } from "frappe-ui";
-import { computed, ref, watch } from "vue";
+import { computed, type PropType, ref, watch } from "vue";
 
 const props = defineProps({
 	open: {
@@ -53,7 +53,7 @@ const props = defineProps({
 		default: false,
 	},
 	paymentGateways: {
-		type: Array,
+		type: Array as PropType<any[]>,
 		required: true,
 	},
 });
@@ -65,7 +65,7 @@ const isOpen = computed({
 	set: (val) => emit("update:open", val),
 });
 
-const selectedGateway = ref(null);
+const selectedGateway = ref<any>(null);
 
 // Reset selection when dialog opens
 watch(

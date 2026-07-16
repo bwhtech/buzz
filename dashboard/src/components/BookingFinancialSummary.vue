@@ -115,15 +115,15 @@ const isPaid = computed(() => props.booking.payment_status === "Paid");
 const paymentBadge = computed(() => {
 	const status = props.booking.payment_status;
 	if (status === "Paid") {
-		return { label: __("Paid"), theme: "green", icon: LucideCheck };
+		return { label: __("Paid"), theme: "green" as const, icon: LucideCheck };
 	} else if (status === "Verification Pending") {
 		return {
 			label: __("Verification Pending"),
-			theme: "orange",
+			theme: "orange" as const,
 			icon: LucideClock,
 		};
 	}
-	return { label: __(status || "Unpaid"), theme: "red", icon: LucideX };
+	return { label: __(status || "Unpaid"), theme: "red" as const, icon: LucideX };
 });
 
 const isTaxInclusive = computed(() => {

@@ -25,4 +25,11 @@ declare global {
 		const value: string
 		export default value
 	}
+
+	// Virtual icon components from unplugin-icons (e.g. ~icons/lucide/check).
+	declare module "~icons/*" {
+		import type { FunctionalComponent, SVGAttributes } from "vue"
+		const component: FunctionalComponent<SVGAttributes>
+		export default component
+	}
 }

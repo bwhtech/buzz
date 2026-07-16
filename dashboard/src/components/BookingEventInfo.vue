@@ -64,7 +64,7 @@ defineProps({
 	event: {
 		type: Object,
 		required: true,
-		validator: (value) => {
+		validator: (value: any) => {
 			return (
 				typeof value.title === "string" &&
 				value.start_date &&
@@ -79,7 +79,7 @@ defineProps({
 });
 
 // Helper function to format date and time together (matching TicketDetails.vue)
-const formatEventDateTime = (date, time) => {
+const formatEventDateTime = (date: string, time: string) => {
 	if (!date) return "";
 
 	// Create a date object from the date string
