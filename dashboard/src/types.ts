@@ -1,10 +1,14 @@
-// Shared domain types mirroring the Buzz DocTypes as the dashboard consumes
-// them. API responses add computed/joined fields on top of the stored schema,
-// so each interface keeps an index signature for those extras while typing the
-// fields the dashboard actually reads.
+// App-facing type hub. Domain entities re-export the generated DocType types in
+// src/types/*; interfaces below cover shapes the dashboard sees that the stored
+// schema does not describe (API-joined/computed fields and non-DocType data).
 
-// Custom/form fields are typed by FrappeField in composables/useCustomFields.
+export type { BuzzEvent } from "@/types/Events/BuzzEvent"
+export type { EventBooking } from "@/types/Ticketing/EventBooking"
+export type { EventTicket } from "@/types/Ticketing/EventTicket"
+export type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 export type { FrappeField } from "@/composables/useCustomFields"
+
+import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 
 // Errors rejected by frappe-ui resources carry server messages beyond Error.
 export interface FrappeError extends Error {
@@ -13,65 +17,24 @@ export interface FrappeError extends Error {
 	exc_type?: string
 }
 
+// Languages served by the translation API (not a Buzz DocType).
 export interface Language {
 	name: string
 	language_name: string
 	language_code: string
 }
 
-export interface AddOn {
+// A selectable option on an add-on, joined into ticket responses.
+export interface TicketAddOnOption {
 	name?: string
 	title?: string
-	price?: number
-	options?: AddOnOption[]
-	[key: string]: any
+	value?: string
 }
 
-export interface AddOnOption {
-	name?: string
+// Ticket add-on rows come back with the add-on definition joined on, so they
+// carry title/options on top of the stored TicketAddOnValue fields.
+export interface TicketAddOn extends TicketAddOnValue {
 	title?: string
-	[key: string]: any
-}
-
-export interface BuzzEvent {
-	name?: string
-	title: string
-	route?: string
-	start_date?: string
-	start_time?: string
-	end_date?: string
-	end_time?: string
-	venue?: string
-	is_published?: boolean | 0 | 1
-	// Computed by the API when listing events.
-	starts_at?: string
-	ends_at?: string
-	[key: string]: any
-}
-
-export interface EventTicket {
-	name?: string
-	attendee_name?: string
-	attendee_email?: string
-	ticket_type?: string
-	event?: string
-	booking?: string
-	qr_code?: string
-	add_ons?: AddOn[]
-	[key: string]: any
-}
-
-export interface EventBooking {
-	name?: string
-	event?: string
-	user?: string
-	total_amount?: number
-	net_amount?: number
-	currency?: string
-	payment_status?: string
-	status?: string
-	tax_percentage?: number
-	tax_label?: string
-	tax_amount?: number
-	[key: string]: any
+	user_selects_option?: 0 | 1 | boolean
+	options?: TicketAddOnOption[]
 }
