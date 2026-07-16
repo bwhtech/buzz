@@ -58,7 +58,10 @@
 				type="select"
 				:options="
 					availableTicketTypes.map((tt) => ({
-						label: `${__(tt.title)} (${formatPriceOrFree(tt.price, tt.currency)})`,
+						label: `${__(tt.title ?? '')} (${formatPriceOrFree(
+							tt.price,
+							tt.currency
+						)})`,
 						value: String(tt.name),
 					}))
 				"
@@ -87,7 +90,7 @@
 						:model-value="getAddOnSelected(addOn.name)"
 						@update:model-value="updateAddOnSelection(addOn.name, $event)"
 						:id="`add_on_${addOn.name}_${index}`"
-						:label="__(addOn.title)"
+						:label="__(addOn.title ?? '')"
 					/>
 					<div class="text-ink-gray-5 text-sm/4" v-if="addOn.description">
 						<p>
@@ -105,7 +108,10 @@
 						@update:model-value="updateAddOnOption(addOn.name, $event)"
 						type="select"
 						:options="
-							addOn.options.map((option) => ({ label: __(option), value: option }))
+							(addOn.options ?? []).map((option) => ({
+								label: __(option),
+								value: option,
+							}))
 						"
 						size="sm"
 					/>
@@ -115,21 +121,53 @@
 	</div>
 </template>
 
-<script setup>
-import { getFieldDefaultValue } from "@/composables/useCustomFields";
+<script setup lang="ts">
+import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields";
 import { formatPriceOrFree } from "@/utils/currency";
 import { Tooltip } from "frappe-ui";
+import { type PropType } from "vue";
 import CustomFieldInput from "./CustomFieldInput.vue";
 
+interface AvailableTicketType {
+	name: string | number;
+	title?: string;
+	price?: number;
+	currency?: string;
+}
+
+interface AvailableAddOn {
+	name: string;
+	title?: string;
+	description?: string;
+	price?: number;
+	options?: string[];
+	user_selects_option?: 0 | 1 | boolean;
+}
+
+interface AttendeeAddOnSelection {
+	selected: boolean;
+	option: string | null;
+}
+
+interface Attendee {
+	ticket_type?: string;
+	add_ons?: Record<string, AttendeeAddOnSelection>;
+	custom_fields?: Record<string, any>;
+	[key: string]: any;
+}
+
 const props = defineProps({
-	attendee: { type: Object, required: true },
+	attendee: { type: Object as PropType<Attendee>, required: true },
 	index: { type: Number, required: true },
-	availableTicketTypes: { type: Array, required: true },
-	availableAddOns: { type: Array, required: true },
-	customFields: { type: Array, default: () => [] },
+	availableTicketTypes: {
+		type: Array as PropType<AvailableTicketType[]>,
+		required: true,
+	},
+	availableAddOns: { type: Array as PropType<AvailableAddOn[]>, required: true },
+	customFields: { type: Array as PropType<FrappeField[]>, default: () => [] },
 	showRemove: { type: Boolean, default: false },
 	eventDetails: {
-		type: Object,
+		type: Object as PropType<Record<string, any>>,
 		required: false,
 		default: () => ({}),
 	},
@@ -138,7 +176,7 @@ const props = defineProps({
 defineEmits(["remove"]);
 
 // Helper methods to safely access add-on properties
-const ensureAddOnExists = (addOnName) => {
+const ensureAddOnExists = (addOnName: string) => {
 	if (!props.attendee.add_ons) {
 		props.attendee.add_ons = {};
 	}
@@ -151,19 +189,19 @@ const ensureAddOnExists = (addOnName) => {
 	}
 };
 
-const getAddOnSelected = (addOnName) => {
+const getAddOnSelected = (addOnName: string) => {
 	ensureAddOnExists(addOnName);
-	return props.attendee.add_ons[addOnName].selected;
+	return props.attendee.add_ons![addOnName].selected;
 };
 
-const getAddOnOption = (addOnName) => {
+const getAddOnOption = (addOnName: string) => {
 	ensureAddOnExists(addOnName);
-	return props.attendee.add_ons[addOnName].option;
+	return props.attendee.add_ons![addOnName].option;
 };
 
-const updateAddOnSelection = (addOnName, selected) => {
+const updateAddOnSelection = (addOnName: string, selected: boolean) => {
 	ensureAddOnExists(addOnName);
-	props.attendee.add_ons[addOnName].selected = selected;
+	props.attendee.add_ons![addOnName].selected = selected;
 
 	// If selecting an add-on and it has options, ensure the first option is selected
 	if (selected) {
@@ -171,16 +209,16 @@ const updateAddOnSelection = (addOnName, selected) => {
 		if (
 			addOn?.options &&
 			addOn.options.length > 0 &&
-			!props.attendee.add_ons[addOnName].option
+			!props.attendee.add_ons![addOnName].option
 		) {
-			props.attendee.add_ons[addOnName].option = addOn.options[0];
+			props.attendee.add_ons![addOnName].option = addOn.options[0];
 		}
 	}
 };
 
-const updateAddOnOption = (addOnName, option) => {
+const updateAddOnOption = (addOnName: string, option: string) => {
 	ensureAddOnExists(addOnName);
-	props.attendee.add_ons[addOnName].option = option;
+	props.attendee.add_ons![addOnName].option = option;
 };
 
 // Custom fields helper methods
@@ -190,9 +228,9 @@ const ensureCustomFieldsExists = () => {
 	}
 };
 
-const getCustomFieldValue = (fieldname) => {
+const getCustomFieldValue = (fieldname: string) => {
 	ensureCustomFieldsExists();
-	const currentValue = props.attendee.custom_fields[fieldname];
+	const currentValue = props.attendee.custom_fields![fieldname];
 
 	// Apply default for fields that don't have values yet
 	if (!currentValue && currentValue !== "") {
@@ -209,8 +247,8 @@ const getCustomFieldValue = (fieldname) => {
 	return currentValue || "";
 };
 
-const updateCustomFieldValue = (fieldname, value) => {
+const updateCustomFieldValue = (fieldname: string, value: any) => {
 	ensureCustomFieldsExists();
-	props.attendee.custom_fields[fieldname] = value;
+	props.attendee.custom_fields![fieldname] = value;
 };
 </script>
