@@ -41,7 +41,7 @@ test("parses a no-space value using the known list (not greedy)", () => {
 	});
 });
 
-test("strips a doubled dial code (issue #244)", () => {
+test("strips a doubled dial code", () => {
 	assert.deepEqual(parsePhone("+91 +91 9000090000", KNOWN), {
 		dialCode: "+91",
 		localNumber: "9000090000",

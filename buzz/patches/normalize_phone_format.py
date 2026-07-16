@@ -6,10 +6,9 @@ DOCTYPES = ["Talk Proposal", "Sponsorship Enquiry"]
 
 
 def execute():
-	# Normalize legacy dashboard phone values ("+91 9000090000" / doubled
-	# "+91 +91 ...") to Frappe's canonical "+91-9000090000" so Desk can render them.
-	# Each row is healed independently: a single bad value is logged and skipped
-	# so it can never abort the whole migration.
+	# Rewrite space-separated phone values ("+91 9000090000") to the hyphen format
+	# ("+91-9000090000") that Frappe's Phone control needs to render them.
+	# Each row is healed independently so one bad value can't abort the migration.
 	for doctype in DOCTYPES:
 		rows = frappe.get_all(doctype, filters={"phone": ["is", "set"]}, fields=["name", "phone"])
 		for row in rows:
@@ -25,10 +24,9 @@ def execute():
 			if not normalized or normalized == row.phone:
 				continue
 
-			# Guard against corruption: the code must be a prefix and the number a
-			# suffix of the original digits (nothing invented or reordered). A doubled
-			# value legitimately drops the duplicated code, so we cannot require equal
-			# digit counts — only that no new digits appear and the number is intact.
+			# Never write a value that invents or reorders digits: the code must be a
+			# prefix and the number a suffix of the original digits. (A doubled value
+			# drops its duplicate code, so digit counts can legitimately differ.)
 			raw_digits = re.sub(r"\D", "", row.phone)
 			code_part, _, number_part = normalized.partition("-")
 			code_digits = re.sub(r"\D", "", code_part)
@@ -57,11 +55,10 @@ def _normalize(value: str) -> str | None:
 	if re.fullmatch(r"\+\d{1,4}-\d+", raw):
 		return None
 
-	# Only heal values where one or more leading dial codes are separated from the
-	# number by whitespace or a hyphen: "+91 9000090000", "+91 +91 9000090000",
-	# "+91 +91-9000090000". Requiring an explicit separator means an ambiguous
-	# no-separator value like "+919000090000" is left untouched rather than
-	# mis-split (e.g. into "+9190-..."), which would corrupt the number.
+	# Heal only when a separator (space or hyphen) delimits the leading dial code(s)
+	# from the number, e.g. "+91 9000090000" or "+91 +91 9000090000". A no-separator
+	# value like "+919000090000" is ambiguous without a dial-code table, so it is left
+	# untouched rather than mis-split into a wrong code and a truncated number.
 	match = re.fullmatch(r"(?:\+\d{1,4}[\s-]+)+(\d+)", raw)
 	if not match:
 		return None
