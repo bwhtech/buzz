@@ -60,7 +60,7 @@
 		:model-value="modelValue"
 		@update:model-value="$emit('update:modelValue', $event)"
 		:label="field.label"
-		:required="field.mandatory"
+		:required="!!field.mandatory"
 		:placeholder="getFieldPlaceholder(field)"
 	/>
 
@@ -71,7 +71,7 @@
 		:label="__(field.label)"
 		type="select"
 		:options="linkFieldOptions"
-		:required="field.mandatory"
+		:required="!!field.mandatory"
 		:placeholder="getFieldPlaceholder(field)"
 	/>
 
@@ -84,7 +84,7 @@
 			:model-value="modelValue"
 			@update:model-value="$emit('update:modelValue', $event)"
 			:placeholder="getFieldPlaceholder(field)"
-			:required="field.mandatory"
+			:required="!!field.mandatory"
 			variant="outline"
 		/>
 	</div>
@@ -120,7 +120,7 @@
 		</div>
 		<FileUploader
 			v-else
-			@success="(file) => $emit('update:modelValue', file.file_url)"
+			@success="(file: { file_url: string }) => $emit('update:modelValue', file.file_url)"
 			:validateFile="validateImageFile"
 		>
 			<template #default="{ openFileSelector }">
@@ -148,7 +148,10 @@
 				{{ __("Remove") }}
 			</Button>
 		</div>
-		<FileUploader v-else @success="(file) => $emit('update:modelValue', file.file_url)">
+		<FileUploader
+			v-else
+			@success="(file: { file_url: string }) => $emit('update:modelValue', file.file_url)"
+		>
 			<template #default="{ openFileSelector }">
 				<Button variant="outline" @click="openFileSelector">
 					{{ __("Upload File") }}
@@ -162,16 +165,17 @@
 		:model-value="modelValue"
 		@update:model-value="$emit('update:modelValue', $event)"
 		:label="__(field.label)"
-		:type="getFormControlType(field.fieldtype, field.options)"
+		:type="getFormControlType(field.fieldtype, field.options as string)"
 		:options="getFieldOptions(field)"
-		:required="field.mandatory"
+		:required="!!field.mandatory"
 		:placeholder="getFieldPlaceholder(field)"
 	/>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import PhoneInput from "@/components/PhoneInput.vue";
 import {
+	type FrappeField,
 	getFieldOptions,
 	getFieldPlaceholder,
 	getFormControlType,
@@ -189,12 +193,12 @@ import {
 	Rating,
 	Textarea,
 } from "frappe-ui";
-import { computed } from "vue";
+import { computed, type PropType } from "vue";
 import LucideX from "~icons/lucide/x";
 
 const props = defineProps({
 	field: {
-		type: Object,
+		type: Object as PropType<FrappeField>,
 		required: true,
 	},
 });
@@ -226,7 +230,7 @@ const linkFieldOptions = computed(() => {
 	}));
 });
 
-function validateImageFile(file) {
+function validateImageFile(file: File) {
 	const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
 	if (!validTypes.includes(file.type)) {
 		return __("Please upload a valid image file (JPEG, PNG, GIF, WebP, SVG)");

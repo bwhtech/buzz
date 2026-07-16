@@ -24,10 +24,15 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { DEFAULT_DIAL_CODE, formatPhone, parsePhone } from "@/utils/phone";
 import { Combobox, TextInput, createResource } from "frappe-ui";
 import { computed, ref, watch } from "vue";
+
+interface DialCode {
+	code: string;
+	dial_code: string;
+}
 
 const props = defineProps({
 	modelValue: { type: String, default: "" },
@@ -40,14 +45,14 @@ const emit = defineEmits(["update:modelValue"]);
 
 const dialCode = ref(DEFAULT_DIAL_CODE);
 const localNumber = ref("");
-const dialCodesData = ref([]);
+const dialCodesData = ref<DialCode[]>([]);
 
-function getFlagEmoji(countryCode) {
+function getFlagEmoji(countryCode: string) {
 	if (!countryCode) return "";
 	const codePoints = countryCode
 		.toUpperCase()
 		.split("")
-		.map((char) => 127397 + char.charCodeAt());
+		.map((char) => 127397 + char.charCodeAt(0));
 	return String.fromCodePoint(...codePoints);
 }
 
@@ -66,7 +71,7 @@ const dialCodeOptions = computed(() =>
 
 const knownDialCodes = computed(() => dialCodesData.value.map((entry) => entry.dial_code));
 
-function syncFromModel(value) {
+function syncFromModel(value: string) {
 	const { dialCode: parsedCode, localNumber: parsedNumber } = parsePhone(
 		value,
 		knownDialCodes.value
@@ -86,14 +91,14 @@ function emitValue() {
 	emit("update:modelValue", formatPhone(dialCode.value, localNumber.value));
 }
 
-function onDialCodeChange(code) {
+function onDialCodeChange(code: string) {
 	if (code) {
 		dialCode.value = code;
 		emitValue();
 	}
 }
 
-function onNumberInput(num) {
+function onNumberInput(num: string) {
 	const digitsOnly = String(num).replace(/\D/g, "");
 	localNumber.value = digitsOnly;
 	emitValue();
@@ -102,7 +107,7 @@ function onNumberInput(num) {
 createResource({
 	url: "buzz.api.forms.get_dial_codes",
 	auto: true,
-	onSuccess: (data) => {
+	onSuccess: (data: DialCode[]) => {
 		dialCodesData.value = data;
 		syncFromModel(props.modelValue);
 	},

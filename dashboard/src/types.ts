@@ -24,17 +24,11 @@ export interface Language {
 	language_code: string
 }
 
-// A selectable option on an add-on, joined into ticket responses.
-export interface TicketAddOnOption {
-	name?: string
-	title?: string
-	value?: string
-}
-
 // Ticket add-on rows come back with the add-on definition joined on, so they
-// carry title/options on top of the stored TicketAddOnValue fields.
+// carry an id, title and selectable options on top of the stored fields.
 export interface TicketAddOn extends TicketAddOnValue {
+	id?: string
 	title?: string
 	user_selects_option?: 0 | 1 | boolean
-	options?: TicketAddOnOption[]
+	options?: string[]
 }
