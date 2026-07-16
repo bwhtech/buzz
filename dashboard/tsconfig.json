@@ -14,10 +14,10 @@
 		"useDefineForClassFields": true,
 		"resolveJsonModule": true,
 		"allowImportingTsExtensions": true,
+		"noEmit": true,
 		"sourceMap": true,
 		"baseUrl": ".",
 		"types": ["node"],
-		"allowJs": true,
 		"paths": {
 			"@/*": ["src/*"],
 			"tslib": ["/node_modules/tslib/tslib.d.ts"]
