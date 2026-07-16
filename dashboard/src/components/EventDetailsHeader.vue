@@ -90,7 +90,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { dayjs, dayjsLocal } from "frappe-ui";
 import LucideCalendar from "~icons/lucide/calendar";
 import LucideClock from "~icons/lucide/clock";

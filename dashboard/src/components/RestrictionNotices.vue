@@ -29,7 +29,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from "vue";
 import LucideTriangleAlert from "~icons/lucide/triangle-alert";
 

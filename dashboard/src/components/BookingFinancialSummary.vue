@@ -84,7 +84,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { formatPrice } from "@/utils/currency";
 import { Badge } from "frappe-ui";
 import { computed } from "vue";
