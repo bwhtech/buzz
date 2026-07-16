@@ -1,3 +1,4 @@
+import type { BookingAttendee } from "@/types"
 import { useStorage } from "@vueuse/core"
 
 /**
@@ -12,11 +13,14 @@ export function useBookingFormStorage(eventRoute: string) {
 
 	// Scope storage keys to the specific event route
 	const storageKeyPrefix = `event-booking-${eventRoute}`
-	const attendees = useStorage(`${storageKeyPrefix}-attendees`, [], undefined, {
-		deep: true,
-	})
+	const attendees = useStorage<BookingAttendee[]>(
+		`${storageKeyPrefix}-attendees`,
+		[],
+		undefined,
+		{ deep: true },
+	)
 	const attendeeIdCounter = useStorage(`${storageKeyPrefix}-counter`, 0)
-	const bookingCustomFields = useStorage(
+	const bookingCustomFields = useStorage<Record<string, any>>(
 		`${storageKeyPrefix}-custom-fields`,
 		{},
 	)

@@ -238,7 +238,7 @@
 							</div>
 
 							<!-- Applied state -->
-							<div v-else>
+							<div v-else-if="couponData">
 								<div
 									class="inline-flex flex-col bg-green-50 border border-green-200 rounded-lg px-3 py-2"
 								>
@@ -273,7 +273,7 @@
 										v-if="
 											couponData.coupon_type === 'Discount' &&
 											couponData.discount_type === 'Percentage' &&
-											couponData.max_discount_amount > 0
+											(couponData.max_discount_amount ?? 0) > 0
 										"
 										class="text-xs text-green-600/70 ml-6"
 									>
@@ -298,8 +298,8 @@
 											<span class="text-ink-gray-5">{{ __("Ticket") }}</span>
 											<div class="text-ink-gray-8 font-medium truncate">
 												{{
-													ticketTypesMap[couponData.ticket_type]
-														?.title || couponData.ticket_type
+													ticketTypesMap[couponData?.ticket_type ?? ""]
+														?.title || couponData?.ticket_type
 												}}
 											</div>
 										</div>
@@ -403,15 +403,24 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage";
 import { useLoginDialog } from "@/composables/useLoginDialog";
 import { userResource } from "@/data/user";
 import { formatCurrency, formatPriceOrFree } from "@/utils/currency";
 import { clearBookingCache } from "@/utils/index";
 import BillingDetails from "@/components/BillingDetails.vue";
+import type {
+	AvailableAddOn,
+	AvailableTicketType,
+	BookingAttendee,
+	CouponData,
+	FrappeError,
+	FrappeField,
+	OfflineMethod,
+} from "@/types";
 import { FormControl, createResource, toast } from "frappe-ui";
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { type PropType, computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useRouteQuery } from "@vueuse/router";
 import LucideAlertCircle from "~icons/lucide/alert-circle";
@@ -431,7 +440,7 @@ const route = useRoute();
 const { open: openLoginDialog } = useLoginDialog();
 
 const getUtmParameters = () => {
-	const utmParams = [];
+	const utmParams: { utm_name: string; value: string }[] = [];
 	for (const [key, value] of Object.entries(route.query)) {
 		if (key.toLowerCase().startsWith("utm_") && value) {
 			utmParams.push({
@@ -445,15 +454,15 @@ const getUtmParameters = () => {
 
 const props = defineProps({
 	availableAddOns: {
-		type: Array,
+		type: Array as PropType<AvailableAddOn[]>,
 		default: () => [],
 	},
 	availableTicketTypes: {
-		type: Array,
+		type: Array as PropType<AvailableTicketType[]>,
 		default: () => [],
 	},
 	taxSettings: {
-		type: Object,
+		type: Object as PropType<Record<string, any>>,
 		default: () => ({
 			apply_tax: false,
 			tax_inclusive: false,
@@ -462,11 +471,11 @@ const props = defineProps({
 		}),
 	},
 	eventDetails: {
-		type: Object,
+		type: Object as PropType<Record<string, any>>,
 		default: () => ({}),
 	},
 	customFields: {
-		type: Array,
+		type: Array as PropType<FrappeField[]>,
 		default: () => [],
 	},
 	eventRoute: {
@@ -474,7 +483,7 @@ const props = defineProps({
 		required: true,
 	},
 	paymentGateways: {
-		type: Array,
+		type: Array as PropType<any[]>,
 		default: () => [],
 	},
 	isGuestMode: {
@@ -482,7 +491,7 @@ const props = defineProps({
 		default: false,
 	},
 	offlineMethods: {
-		type: Array,
+		type: Array as PropType<OfflineMethod[]>,
 		default: () => [],
 	},
 });
@@ -510,12 +519,13 @@ const bookingCustomFieldsData = storedBookingCustomFields;
 // Payment gateway dialog state
 const showGatewayDialog = ref(false);
 const showOfflineDialog = ref(false);
-const pendingPayload = ref(null);
-const selectedGateway = ref(null);
+const pendingPayload = ref<any>(null);
+const selectedGateway = ref<any>(null);
 
-const isOfflineGateway = (gateway) => props.offlineMethods.some((m) => m.title === gateway);
+const isOfflineGateway = (gateway: string) =>
+	props.offlineMethods.some((m) => m.title === gateway);
 
-const selectedOfflineMethod = ref(null);
+const selectedOfflineMethod = ref<OfflineMethod | null>(null);
 
 const activeOfflineSettings = computed(() => {
 	if (!selectedOfflineMethod.value) return {};
@@ -532,11 +542,11 @@ const activeOfflineCustomFields = computed(() => {
 });
 
 // Coupon state — `appliedCouponQuery` keeps the URL in sync with the applied coupon
-const appliedCouponQuery = useRouteQuery("coupon", null);
+const appliedCouponQuery = useRouteQuery<string | null>("coupon", null);
 const couponCode = ref("");
 const couponApplied = ref(false);
 const couponError = ref("");
-const couponData = ref(null);
+const couponData = ref<CouponData | null>(null);
 
 // Success state for guest bookings
 const bookingSuccess = ref(false);
@@ -546,9 +556,9 @@ const successBookingName = ref("");
 const showOtpModal = ref(false);
 const otpCode = ref("");
 const otpError = ref("");
-const pendingBookingPayload = ref(null);
+const pendingBookingPayload = ref<any>(null);
 const resendCooldown = ref(0);
-let resendCooldownTimer = null;
+let resendCooldownTimer: ReturnType<typeof setInterval> | undefined;
 
 onUnmounted(() => {
 	clearInterval(resendCooldownTimer);
@@ -591,9 +601,9 @@ const getDefaultTicketType = () => {
 	return String(props.availableTicketTypes[0]?.name || "");
 };
 
-const createNewAttendee = () => {
+const createNewAttendee = (): BookingAttendee => {
 	attendeeIdCounter.value++;
-	const newAttendee = {
+	const newAttendee: BookingAttendee = {
 		id: attendeeIdCounter.value,
 		first_name: "",
 		last_name: "",
@@ -604,7 +614,7 @@ const createNewAttendee = () => {
 		custom_fields: {},
 	};
 	for (const addOn of props.availableAddOns) {
-		newAttendee.add_ons[addOn.name] = {
+		newAttendee.add_ons![addOn.name] = {
 			selected: false,
 			option: addOn.options ? addOn.options[0] || null : null,
 		};
@@ -613,7 +623,7 @@ const createNewAttendee = () => {
 	// Initialize custom fields with default values
 	for (const field of ticketCustomFields.value) {
 		if (field.default_value) {
-			newAttendee.custom_fields[field.fieldname] = field.default_value;
+			newAttendee.custom_fields![field.fieldname] = field.default_value;
 		}
 	}
 
@@ -625,13 +635,24 @@ const addAttendee = () => {
 	attendees.value.push(newAttendee);
 };
 
-const removeAttendee = (index) => {
+const removeAttendee = (index: number) => {
 	attendees.value.splice(index, 1);
 };
 
 // --- COMPUTED PROPERTIES FOR SUMMARY ---
+interface SummaryLine {
+	count: number;
+	amount: number;
+	price?: number;
+	title?: string;
+	currency?: string;
+}
+
 const summary = computed(() => {
-	const summaryData = { tickets: {}, add_ons: {} };
+	const summaryData: {
+		tickets: Record<string, SummaryLine>;
+		add_ons: Record<string, SummaryLine>;
+	} = { tickets: {}, add_ons: {} };
 
 	for (const attendee of attendees.value) {
 		const ticketType = attendee.ticket_type;
@@ -647,7 +668,7 @@ const summary = computed(() => {
 				};
 			}
 			summaryData.tickets[ticketType].count++;
-			summaryData.tickets[ticketType].amount += ticketInfo.price;
+			summaryData.tickets[ticketType].amount += ticketInfo.price ?? 0;
 		}
 
 		for (const addOnName in attendee.add_ons) {
@@ -666,7 +687,7 @@ const summary = computed(() => {
 					};
 				}
 				summaryData.add_ons[addOnName].count++;
-				summaryData.add_ons[addOnName].amount += addOnInfo.price;
+				summaryData.add_ons[addOnName].amount += addOnInfo.price ?? 0;
 			}
 		}
 	}
@@ -702,10 +723,10 @@ const taxPercentage = computed(() => {
 
 // Count of attendees matching the coupon's ticket type (for Free Tickets)
 const matchingAttendeesCount = computed(() => {
-	if (!couponData.value || couponData.value.coupon_type !== "Free Tickets") return 0;
-	return attendees.value.filter(
-		(a) => String(a.ticket_type) === String(couponData.value.ticket_type)
-	).length;
+	const coupon = couponData.value;
+	if (!coupon || coupon.coupon_type !== "Free Tickets") return 0;
+	return attendees.value.filter((a) => String(a.ticket_type) === String(coupon.ticket_type))
+		.length;
 });
 
 // Discount amount based on coupon
@@ -714,7 +735,7 @@ const discountAmount = computed(() => {
 
 	// Free Tickets - only discount attendees with matching ticket type
 	if (couponData.value.coupon_type === "Free Tickets") {
-		const couponTicketType = couponData.value.ticket_type;
+		const couponTicketType = couponData.value.ticket_type ?? "";
 		const ticketInfo = ticketTypesMap.value[couponTicketType];
 		if (!ticketInfo) return 0;
 
@@ -724,9 +745,9 @@ const discountAmount = computed(() => {
 		);
 		const freeTicketCount = Math.min(
 			matchingAttendees.length,
-			couponData.value.remaining_tickets
+			couponData.value.remaining_tickets ?? 0
 		);
-		let discount = freeTicketCount * ticketInfo.price;
+		let discount = freeTicketCount * (ticketInfo.price ?? 0);
 
 		// Add free add-ons discount for free ticket holders only
 		if (couponData.value.free_add_ons && couponData.value.free_add_ons.length > 0) {
@@ -734,10 +755,10 @@ const discountAmount = computed(() => {
 				const attendee = matchingAttendees[i];
 				if (attendee) {
 					for (const freeAddOnName of couponData.value.free_add_ons) {
-						if (attendee.add_ons[freeAddOnName]?.selected) {
+						if (attendee.add_ons?.[freeAddOnName]?.selected) {
 							const addOnInfo = addOnsMap.value[freeAddOnName];
 							if (addOnInfo) {
-								discount += addOnInfo.price;
+								discount += addOnInfo.price ?? 0;
 							}
 						}
 					}
@@ -750,13 +771,13 @@ const discountAmount = computed(() => {
 
 	// Discount coupon
 	if (couponData.value.discount_type === "Percentage") {
-		let discount = netAmount.value * (couponData.value.discount_value / 100);
-		if (couponData.value.max_discount_amount > 0) {
-			discount = Math.min(discount, couponData.value.max_discount_amount);
+		let discount = netAmount.value * ((couponData.value.discount_value ?? 0) / 100);
+		if ((couponData.value.max_discount_amount ?? 0) > 0) {
+			discount = Math.min(discount, couponData.value.max_discount_amount ?? 0);
 		}
 		return discount;
 	}
-	return Math.min(couponData.value.discount_value, netAmount.value);
+	return Math.min(couponData.value.discount_value ?? 0, netAmount.value);
 });
 
 // Calculate free add-on counts for display
@@ -764,17 +785,20 @@ const freeAddOnCounts = computed(() => {
 	if (!couponApplied.value || couponData.value?.coupon_type !== "Free Tickets") return {};
 	if (!couponData.value.free_add_ons?.length) return {};
 
-	const counts = {};
+	const counts: Record<string, number> = {};
 	const couponTicketType = couponData.value.ticket_type;
 	const matchingAttendees = attendees.value.filter(
 		(a) => String(a.ticket_type) === String(couponTicketType)
 	);
-	const freeTicketCount = Math.min(matchingAttendees.length, couponData.value.remaining_tickets);
+	const freeTicketCount = Math.min(
+		matchingAttendees.length,
+		couponData.value.remaining_tickets ?? 0
+	);
 
 	for (const addOnName of couponData.value.free_add_ons) {
 		let count = 0;
 		for (let i = 0; i < freeTicketCount; i++) {
-			if (matchingAttendees[i]?.add_ons[addOnName]?.selected) count++;
+			if (matchingAttendees[i]?.add_ons?.[addOnName]?.selected) count++;
 		}
 		if (count > 0) counts[addOnName] = count;
 	}
@@ -908,8 +932,8 @@ watch(
 );
 
 watch(netAmount, (newVal) => {
-	if (couponApplied.value && couponData.value?.min_order_value > 0) {
-		if (newVal < couponData.value.min_order_value) {
+	if (couponApplied.value && (couponData.value?.min_order_value ?? 0) > 0) {
+		if (newVal < (couponData.value?.min_order_value ?? 0)) {
 			removeCoupon();
 			toast.warning(__("Coupon removed - minimum order not met"));
 		}
@@ -927,7 +951,7 @@ watch(matchingAttendeesCount, (newCount) => {
 	}
 });
 
-function prefillAttendee(field) {
+function prefillAttendee(field: string) {
 	if (!props.isGuestMode || !attendees.value.length) return;
 	const first = attendees.value[0];
 	if (field === "name") {
@@ -967,7 +991,7 @@ const sendOtpResource = createResource({
 				: __("Verification code sent to your email")
 		);
 	},
-	onError: (error) => {
+	onError: (error: FrappeError) => {
 		toast.error(error.messages?.[0] || __("Failed to send verification code"));
 	},
 });
@@ -995,7 +1019,7 @@ async function applyCoupon() {
 	couponError.value = "";
 	let result;
 	try {
-		const params = {
+		const params: Record<string, any> = {
 			coupon_code: normalizedCode,
 			event: eventId.value,
 		};
@@ -1005,7 +1029,7 @@ async function applyCoupon() {
 		}
 		result = await validateCoupon.submit(params);
 	} catch (error) {
-		couponError.value = error.message || __("Failed to validate coupon");
+		couponError.value = (error as FrappeError).message || __("Failed to validate coupon");
 		return;
 	}
 
@@ -1137,7 +1161,7 @@ async function submit() {
 
 		// Clean custom fields - include all valid fields (mandatory fields are validated separately)
 		if (cleanAttendee.custom_fields) {
-			const cleanedCustomFields = {};
+			const cleanedCustomFields: Record<string, any> = {};
 			for (const [fieldName, value] of Object.entries(cleanAttendee.custom_fields)) {
 				// Check if this is a valid custom field for tickets
 				const fieldDef = ticketCustomFields.value.find((cf) => cf.fieldname === fieldName);
@@ -1157,7 +1181,7 @@ async function submit() {
 	});
 
 	// Clean booking custom fields
-	const cleanedBookingCustomFields = {};
+	const cleanedBookingCustomFields: Record<string, any> = {};
 	for (const [fieldName, value] of Object.entries(bookingCustomFieldsData.value)) {
 		// Check if this is a valid custom field for bookings
 		const fieldDef = bookingCustomFields.value.find((cf) => cf.fieldname === fieldName);
@@ -1260,14 +1284,18 @@ async function submit() {
 	submitBooking(final_payload, props.paymentGateways[0] || null);
 }
 
-function submitBooking(payload, paymentGateway, { isOtpFlow = false } = {}) {
+function submitBooking(
+	payload: any,
+	paymentGateway: any,
+	{ isOtpFlow = false }: { isOtpFlow?: boolean } = {}
+) {
 	processBooking.submit(
 		{
 			...payload,
 			payment_gateway: paymentGateway,
 		},
 		{
-			onSuccess: (data) => {
+			onSuccess: (data: any) => {
 				clearBookingCache();
 
 				if (isOtpFlow) {
@@ -1287,7 +1315,7 @@ function submitBooking(payload, paymentGateway, { isOtpFlow = false } = {}) {
 					router.replace(`/bookings/${data.booking_name}?success=true`);
 				}
 			},
-			onError: (error) => {
+			onError: (error: FrappeError) => {
 				const message = error.messages?.[0] || error.message || __("Booking failed");
 
 				if (isOtpFlow) {
@@ -1307,7 +1335,7 @@ function submitBooking(payload, paymentGateway, { isOtpFlow = false } = {}) {
 	);
 }
 
-function onOfflinePaymentSubmit(data) {
+function onOfflinePaymentSubmit(data: any) {
 	if (pendingPayload.value) {
 		const payloadWithProof = {
 			...pendingPayload.value,
@@ -1323,7 +1351,7 @@ function onOfflinePaymentSubmit(data) {
 	}
 }
 
-function onGatewaySelected(gateway) {
+function onGatewaySelected(gateway: string) {
 	showGatewayDialog.value = false;
 	selectedGateway.value = gateway;
 

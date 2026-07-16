@@ -16,6 +16,7 @@ export interface FrappeField {
 	mandatory?: number | boolean
 	default_value?: string | number | boolean
 	link_options?: SelectOption[]
+	applied_to?: string
 }
 
 export interface SelectOption {
