@@ -14,7 +14,8 @@
 				type="button"
 				class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-base focus:outline-none data-[highlighted]:bg-surface-gray-3"
 				:lang="item.code"
-				:aria-current="item.isActive ? 'true' : undefined"
+				role="menuitemradio"
+				:aria-checked="item.isActive ? 'true' : 'false'"
 			>
 				<Check
 					class="h-4 w-4 shrink-0"
