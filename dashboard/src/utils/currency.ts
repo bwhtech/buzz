@@ -31,11 +31,11 @@ export function formatPrice(
 }
 
 export function formatPriceOrFree(
-	price: number,
+	price?: number,
 	currencyCode = "INR",
 	locale = "en-US",
 ) {
-	if (price === 0) {
+	if (!price) {
 		return __("Free")
 	}
 	return formatPrice(price, currencyCode, locale)

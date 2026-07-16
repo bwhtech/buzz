@@ -9,7 +9,7 @@
 
 		<template #body-content>
 			<!-- Success State -->
-			<div v-if="validationResult">
+			<div v-if="validationResult?.ticket">
 				<div class="text-center mb-6">
 					<div
 						class="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -156,7 +156,7 @@
 	</Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useTicketValidation } from "@/composables/useTicketValidation";
 import { formatPriceOrFree } from "@/utils/currency";
 import { Button, Dialog } from "frappe-ui";

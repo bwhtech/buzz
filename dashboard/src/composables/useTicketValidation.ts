@@ -19,12 +19,25 @@ interface ValidationTicket {
 	check_in_time: string | null
 	check_in_date?: string | null
 	booking_id: string
-	add_ons: TicketAddOnValue[]
+	add_ons: ValidationAddOn[]
+}
+
+// Check-in responses join the add-on title onto each stored add-on value.
+interface ValidationAddOn extends TicketAddOnValue {
+	add_on_title?: string
+}
+
+interface PaymentDetails {
+	name?: string
+	amount?: number
+	currency?: string
 }
 
 interface ValidationResult {
-	message: string
-	ticket: ValidationTicket
+	message?: string
+	error?: string
+	ticket?: ValidationTicket
+	payment_details?: PaymentDetails
 }
 
 interface TicketValidationState {
