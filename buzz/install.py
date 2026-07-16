@@ -170,7 +170,7 @@ def create_talk_proposal_statuses():
 		{"name": "Shortlisted", "color": "Blue"},
 		{"name": "Accepted", "color": "Green"},
 		{"name": "Rejected", "color": "Red"},
-		{"name": "Replied", "color": "Purple"},
+		{"name": "Replied", "color": "Blue"},
 		{"name": "Duplicate", "color": "Gray"},
 	]
 
