@@ -89,7 +89,7 @@ const confirmation = createResource({
 	url: "buzz.api.get_booking_confirmation",
 	params: { booking_id: props.bookingId, token: route.query.token },
 	auto: true,
-	onSuccess: (data: any) => {
+	onSuccess: (data: Record<string, any>) => {
 		showSuccess();
 		// Clear any stored booking form data now that the booking is confirmed
 		if (data?.event?.route) {

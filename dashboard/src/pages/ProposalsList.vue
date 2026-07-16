@@ -7,7 +7,7 @@
 			row-key="name"
 			:options="{
 				selectable: false,
-				getRowRoute: (row: any) => ({
+				getRowRoute: (row: Record<string, any>) => ({
 					name: 'proposal-details',
 					params: { proposalId: row.name },
 				}),
@@ -62,7 +62,7 @@ const columns = [
 	{ label: __("Submitted"), key: "formatted_creation" },
 ];
 
-const proposals = useList<{ name: string; [key: string]: any }>({
+const proposals = useList({
 	doctype: "Talk Proposal",
 	fields: ["name", "title", "event.title as event_title", "status", "creation"],
 	filters: {
@@ -71,7 +71,7 @@ const proposals = useList<{ name: string; [key: string]: any }>({
 	orderBy: "creation desc",
 	cacheKey: ["proposals-list", session.user],
 	transform(data: any[]) {
-		return data.map((proposal: any) => ({
+		return data.map((proposal: Record<string, any>) => ({
 			...proposal,
 			formatted_creation: dayjsLocal(proposal.creation).format("MMM DD, YYYY"),
 		}));

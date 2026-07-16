@@ -81,7 +81,7 @@ const eventBookingData = reactive<{
 	taxSettings: Record<string, any> | null;
 	eventDetails: Record<string, any> | null;
 	customFields: FrappeField[] | null;
-	paymentGateways: any[];
+	paymentGateways: Record<string, any>[];
 	offlineMethods: OfflineMethod[];
 }>({
 	availableAddOns: null,
@@ -115,7 +115,7 @@ const eventBookingResource = createResource({
 		event_route: props.eventRoute,
 	},
 	auto: true,
-	onSuccess: (data: any) => {
+	onSuccess: (data: Record<string, any>) => {
 		eventBookingData.availableAddOns = data.available_add_ons || [];
 		eventBookingData.availableTicketTypes = data.available_ticket_types || [];
 		eventBookingData.taxSettings = data.tax_settings || {

@@ -20,7 +20,7 @@
 			row-key="name"
 			:options="{
 				selectable: false,
-				getRowRoute: (row: any) => ({
+				getRowRoute: (row: Record<string, any>) => ({
 					name: 'ticket-details',
 					params: { ticketId: row.name },
 				}),
@@ -70,7 +70,7 @@ const tickets = useList({
 	cacheKey: "tickets-list",
 	onError: console.error,
 	transform(data: any[]) {
-		return data.map((ticket: any) => ({
+		return data.map((ticket: Record<string, any>) => ({
 			...ticket,
 			start_date: dayjsLocal(ticket.start_date).format("MMM DD, YYYY"),
 			ticket_type_display: ticket.ticket_type_title || ticket.ticket_type,

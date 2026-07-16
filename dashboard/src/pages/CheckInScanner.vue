@@ -120,7 +120,7 @@ const { validationResult, clearResults } = useTicketValidation();
 
 // State
 const selectedEvent = ref<Record<string, any> | null>(null);
-const qrScannerRef = ref<any>(null);
+const qrScannerRef = ref<InstanceType<typeof QRScanner> | null>(null);
 
 // Event selection
 const selectEvent = (event: Record<string, any>) => {

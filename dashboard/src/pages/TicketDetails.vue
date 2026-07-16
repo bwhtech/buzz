@@ -328,6 +328,7 @@
 </template>
 
 <script setup lang="ts">
+import type { TicketAddOn } from "@/types";
 import { formatCurrency } from "@/utils/currency";
 import { Badge, Button, Spinner, createResource } from "frappe-ui";
 import { dayjsLocal } from "frappe-ui";
@@ -438,7 +439,7 @@ const hasCustomizableAddOns = computed(() => {
 	}
 
 	console.log("Add-ons data:", ticketDetails.data.add_ons);
-	const hasCustomizable = ticketDetails.data.add_ons.some((addon: any) => {
+	const hasCustomizable = ticketDetails.data.add_ons.some((addon: TicketAddOn) => {
 		console.log(
 			"Checking addon:",
 			addon,

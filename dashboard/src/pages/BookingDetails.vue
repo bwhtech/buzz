@@ -162,7 +162,7 @@ const bookingDetails = createResource({
 	url: "buzz.api.get_booking_details",
 	params: { booking_id: props.bookingId },
 	auto: true,
-	onSuccess: (data: any) => {
+	onSuccess: (data: Record<string, any>) => {
 		// Clear stored booking form data if this was a successful payment
 		if (isPaymentSuccess && data?.event?.route) {
 			const { clearStoredData } = useBookingFormStorage(data.event.route);
@@ -196,7 +196,7 @@ const onTicketTransferSuccess = () => {
 	bookingDetails.reload();
 };
 
-const onCancellationRequestSuccess = (data: any) => {
+const onCancellationRequestSuccess = (data: Record<string, any>) => {
 	bookingDetails.reload();
 };
 </script>

@@ -7,7 +7,7 @@
 			row-key="name"
 			:options="{
 				selectable: false,
-				getRowRoute: (row: any) => ({
+				getRowRoute: (row: Record<string, any>) => ({
 					name: 'booking-details',
 					params: { bookingId: row.name },
 				}),
@@ -74,7 +74,7 @@ const bookings = useList({
 	cacheKey: "bookings-list",
 	onError: console.error,
 	transform(data: any[]) {
-		return data.map((booking: any) => ({
+		return data.map((booking: Record<string, any>) => ({
 			...booking,
 			formatted_amount:
 				booking.total_amount !== 0

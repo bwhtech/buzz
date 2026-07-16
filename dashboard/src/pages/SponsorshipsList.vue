@@ -7,7 +7,7 @@
 			row-key="name"
 			:options="{
 				selectable: false,
-				getRowRoute: (row: any) => ({
+				getRowRoute: (row: Record<string, any>) => ({
 					name: 'sponsorship-details',
 					params: { enquiryId: row.name },
 				}),
@@ -75,7 +75,7 @@ const sponsorships = createResource({
 	cacheKey: "sponsorships-list",
 	onError: console.error,
 	transform(data: any[]) {
-		return data.map((inquiry: any) => ({
+		return data.map((inquiry: Record<string, any>) => ({
 			...inquiry,
 			formatted_creation: dayjsLocal(inquiry.creation).format("MMM DD, YYYY"),
 			sponsorship_status: inquiry.has_sponsor ? __("Sponsored") : __("Inquiry Only"),
