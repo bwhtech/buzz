@@ -36,7 +36,7 @@ export function formatPriceOrFree(
 	currencyCode = "INR",
 	locale = "en-US",
 ) {
-	if (!price) {
+	if (!price || !Number.isFinite(price)) {
 		return __("Free")
 	}
 	return formatPrice(price, currencyCode, locale)
