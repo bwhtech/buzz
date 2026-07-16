@@ -11,6 +11,7 @@ on:
     paths:
       - "dashboard/**"
       - ".github/workflows/typecheck.yml"
+  merge_group:
 
 concurrency:
   group: typecheck-buzz-${{ github.event.number || github.sha }}
