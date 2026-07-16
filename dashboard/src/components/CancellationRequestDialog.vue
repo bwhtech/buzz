@@ -198,10 +198,11 @@
 	</Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { DashboardTicket, FrappeError } from "@/types";
 import { pluralize } from "@/utils/pluralize";
 import { Button, Dialog, createResource, toast } from "frappe-ui";
-import { computed, ref, watch } from "vue";
+import { type PropType, computed, ref, watch } from "vue";
 
 const props = defineProps({
 	modelValue: {
@@ -209,7 +210,7 @@ const props = defineProps({
 		default: false,
 	},
 	tickets: {
-		type: Array,
+		type: Array as PropType<DashboardTicket[]>,
 		required: true,
 	},
 	bookingId: {
@@ -217,11 +218,11 @@ const props = defineProps({
 		required: true,
 	},
 	cancellationRequestedTickets: {
-		type: Array,
+		type: Array as PropType<string[]>,
 		default: () => [],
 	},
 	cancelledTickets: {
-		type: Array,
+		type: Array as PropType<string[]>,
 		default: () => [],
 	},
 });
@@ -242,7 +243,7 @@ const availableTickets = computed(() => {
 	);
 });
 
-const selectedTickets = ref([]);
+const selectedTickets = ref<string[]>([]);
 const submitting = ref(false);
 
 const isAllSelected = computed({
@@ -262,7 +263,7 @@ const toggleSelectAll = () => {
 	isAllSelected.value = !isAllSelected.value;
 };
 
-const toggleTicketSelection = (ticketId) => {
+const toggleTicketSelection = (ticketId: string) => {
 	const index = selectedTickets.value.indexOf(ticketId);
 	if (index > -1) {
 		selectedTickets.value.splice(index, 1);
@@ -278,7 +279,7 @@ const closeDialog = () => {
 
 const createCancellationRequest = createResource({
 	url: "buzz.api.create_cancellation_request",
-	onSuccess: (data) => {
+	onSuccess: (data: any) => {
 		submitting.value = false;
 		const ticketCount = selectedTickets.value.length;
 		const isFullCancellation = isAllSelected.value;
@@ -294,7 +295,7 @@ const createCancellationRequest = createResource({
 		emit("success", data);
 		closeDialog();
 	},
-	onError: (error) => {
+	onError: (error: FrappeError) => {
 		submitting.value = false;
 		toast.error(
 			error?.messages?.[0] || __("Failed to submit cancellation request. Please try again.")

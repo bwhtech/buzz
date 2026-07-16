@@ -8,6 +8,7 @@ export type { EventTicket } from "@/types/Ticketing/EventTicket"
 export type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 export type { FrappeField } from "@/composables/useCustomFields"
 
+import type { EventTicket } from "@/types/Ticketing/EventTicket"
 import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 
 // Errors rejected by frappe-ui resources carry server messages beyond Error.
@@ -31,4 +32,9 @@ export interface TicketAddOn extends TicketAddOnValue {
 	title?: string
 	user_selects_option?: 0 | 1 | boolean
 	options?: string[]
+}
+
+// Tickets rendered in the dashboard carry the joined add-on rows.
+export interface DashboardTicket extends EventTicket {
+	add_ons?: TicketAddOn[]
 }
