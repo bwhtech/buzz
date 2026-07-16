@@ -12,16 +12,18 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useLoginDialog } from "@/composables/useLoginDialog";
 import { Button } from "frappe-ui";
 
-defineProps({
-	message: {
-		type: String,
-		default: "Please log in to continue.",
-	},
-});
+withDefaults(
+	defineProps<{
+		message?: string;
+	}>(),
+	{
+		message: "Please log in to continue.",
+	}
+);
 
 const { open: openLogin } = useLoginDialog();
 </script>

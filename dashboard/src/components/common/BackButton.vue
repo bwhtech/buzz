@@ -4,17 +4,21 @@
 	</Button>
 </template>
 
-<script setup>
-defineProps({
-	to: {
-		type: [String, Object],
-		default: null,
-	},
-	label: {
-		type: String,
-		default: "Back",
-	},
-});
+<script setup lang="ts">
+import type { RouteLocationRaw } from "vue-router";
 
-defineEmits(["click"]);
+withDefaults(
+	defineProps<{
+		to?: RouteLocationRaw | null;
+		label?: string;
+	}>(),
+	{
+		to: null,
+		label: "Back",
+	}
+);
+
+defineEmits<{
+	click: [];
+}>();
 </script>
