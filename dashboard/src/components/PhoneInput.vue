@@ -25,7 +25,7 @@
 </template>
 
 <script setup>
-import { DEFAULT_DIAL_CODE, formatPhone, parsePhone } from "@/utils/phone.js";
+import { DEFAULT_DIAL_CODE, formatPhone, parsePhone } from "@/utils/phone";
 import { Combobox, TextInput, createResource } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 
