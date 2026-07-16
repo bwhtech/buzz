@@ -230,19 +230,36 @@
 	</Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { FrappeError } from "@/types";
 import { useLoginDialog } from "@/composables/useLoginDialog";
 import { session } from "@/data/session";
 import { userResource } from "@/data/user";
 import { Button, Dialog, FormControl, createResource } from "frappe-ui";
-import { computed, defineComponent, h, ref, watch } from "vue";
+import {
+	type ComponentPublicInstance,
+	type PropType,
+	computed,
+	defineComponent,
+	h,
+	ref,
+	watch,
+} from "vue";
+
+type LoginView = "login" | "signup" | "forgot-password" | "email-link";
+
+interface ProviderLogin {
+	auth_url: string;
+	icon?: string;
+	provider_name: string;
+}
 
 const { is_open, close } = useLoginDialog();
 
-const current_view = ref("login");
+const current_view = ref<LoginView>("login");
 const error_message = ref("");
 const success_message = ref("");
-const password_input = ref(null);
+const password_input = ref<ComponentPublicInstance | null>(null);
 
 const form = ref({
 	email: "",
@@ -271,7 +288,7 @@ const login_context = computed(() => login_context_resource.data);
 const has_social_logins = computed(() => login_context.value?.provider_logins?.length > 0);
 
 const SocialLoginButtons = defineComponent({
-	props: { provider_logins: Array },
+	props: { provider_logins: Array as PropType<ProviderLogin[]> },
 	setup(props) {
 		return () =>
 			(props.provider_logins || []).map((provider) =>
@@ -307,7 +324,7 @@ function focusPassword() {
 	password_input.value?.$el?.querySelector("input")?.focus();
 }
 
-function switchView(view) {
+function switchView(view: LoginView) {
 	current_view.value = view;
 	error_message.value = "";
 	success_message.value = "";
@@ -331,7 +348,7 @@ function handleLogin() {
 					session.login.data?.user || document.cookie.match(/user_id=([^;]+)/)?.[1];
 				close();
 			},
-			onError(error) {
+			onError(error: FrappeError) {
 				error_message.value = error.messages?.[0] || __("Invalid email or password.");
 			},
 		}
@@ -351,7 +368,7 @@ function handleSignup() {
 			redirect_to: window.location.pathname,
 		},
 		{
-			onSuccess(data) {
+			onSuccess(data: any[]) {
 				if (data && data[0] === 1) {
 					success_message.value = __("Please check your email to verify your account.");
 				} else if (data && data[1]) {
@@ -360,7 +377,7 @@ function handleSignup() {
 					success_message.value = __("Please check your email to verify your account.");
 				}
 			},
-			onError(error) {
+			onError(error: FrappeError) {
 				error_message.value =
 					error.messages?.[0] || __("Something went wrong. Please try again.");
 			},
@@ -380,7 +397,7 @@ function handleForgotPassword() {
 			onSuccess() {
 				success_message.value = __("Password reset link has been sent to your email.");
 			},
-			onError(error) {
+			onError(error: FrappeError) {
 				error_message.value =
 					error.messages?.[0] || __("Something went wrong. Please try again.");
 			},
@@ -400,7 +417,7 @@ function handleEmailLink() {
 			onSuccess() {
 				success_message.value = __("Login link has been sent to your email.");
 			},
-			onError(error) {
+			onError(error: FrappeError) {
 				error_message.value =
 					error.messages?.[0] || __("Something went wrong. Please try again.");
 			},

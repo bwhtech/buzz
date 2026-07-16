@@ -1,10 +1,11 @@
 // Currency formatting utilities using JavaScript Intl API
 
 export function formatCurrency(
-	amount: number,
+	amount: number | undefined,
 	currencyCode = "INR",
 	locale = "en-US",
 ) {
+	amount = amount ?? 0
 	try {
 		return new Intl.NumberFormat(locale, {
 			style: "currency",

@@ -4,7 +4,7 @@
 		:options="{
 			title: __('Select Sponsorship Tier'),
 			size: 'xl',
-			description: __('Choose your preferred sponsorship tier and proceed to payment'),
+			message: __('Choose your preferred sponsorship tier and proceed to payment'),
 		}"
 	>
 		<template #body-content>
@@ -141,10 +141,17 @@
 	</Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { formatCurrency } from "@/utils/currency";
 import { Button, Dialog, Spinner, createResource, useList } from "frappe-ui";
 import { computed, ref, watch } from "vue";
+
+interface Tier {
+	name: string;
+	title?: string;
+	price?: number;
+	currency?: string;
+}
 
 const props = defineProps({
 	open: {
@@ -168,9 +175,9 @@ const props = defineProps({
 const emit = defineEmits(["update:open", "payment-started"]);
 
 const isOpen = ref(props.open);
-const selectedTier = ref(null);
-const selectedGateway = ref(null);
-const paymentGateways = ref([]);
+const selectedTier = ref<Tier | null>(null);
+const selectedGateway = ref<any>(null);
+const paymentGateways = ref<any[]>([]);
 
 const hasMultipleGateways = computed(() => paymentGateways.value.length > 1);
 
@@ -201,19 +208,19 @@ watch(isOpen, (newVal) => {
 });
 
 // Resource to fetch sponsorship tiers
-const tiers = useList({
+const tiers = useList<Tier>({
 	doctype: "Sponsorship Tier",
 	filters: { event: props.eventId },
 	fields: ["name", "title", "price", "currency"],
 	orderBy: "price asc",
 	onError: console.error,
-	auto: false, // Don't auto-fetch, we'll fetch manually when dialog opens
+	immediate: false, // Don't auto-fetch, we'll fetch manually when dialog opens
 });
 
 // Fetch payment gateways for the event
 const paymentGatewaysResource = createResource({
 	url: "buzz.api.get_event_payment_gateways",
-	onSuccess: (data) => {
+	onSuccess: (data: any[]) => {
 		paymentGateways.value = data || [];
 	},
 	onError: console.error,
@@ -228,13 +235,13 @@ function fetchPaymentGateways() {
 // Resource to create payment link
 const paymentLink = createResource({
 	url: "buzz.api.create_sponsorship_payment_link",
-	onSuccess: (paymentUrl) => {
+	onSuccess: (paymentUrl: string) => {
 		emit("payment-started");
 		closeDialog();
 		// Redirect to payment page
 		window.location.href = paymentUrl;
 	},
-	onError: (error) => {
+	onError: (error: unknown) => {
 		console.error("Payment link creation failed:", error);
 		// TODO: Show error toast
 	},
