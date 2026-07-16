@@ -19,6 +19,8 @@ const FALLBACK_THEME: Record<string, string> = {
 	Shortlisted: "blue",
 	"Review Pending": "orange",
 	Rejected: "red",
+	Replied: "purple",
+	Duplicate: "gray",
 };
 
 // Module-level so every caller shares one fetch of the status list.
