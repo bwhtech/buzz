@@ -94,7 +94,13 @@
 <script setup lang="ts">
 import type { AddOn } from "@/types";
 import { Badge, Button, Dropdown } from "frappe-ui";
-import { computed, ref } from "vue";
+import { type Component, computed, ref } from "vue";
+
+interface TicketAction {
+	label: string;
+	icon: Component;
+	onClick: () => void;
+}
 import LucideEdit from "~icons/lucide/edit";
 import LucideUserPen from "~icons/lucide/user-pen";
 import AddOnPreferenceDialog from "./AddOnPreferenceDialog.vue";
@@ -139,7 +145,7 @@ const hasCustomizableAddOns = computed(() => {
 });
 
 const ticketActions = computed(() => {
-	const actions: any[] = [];
+	const actions: TicketAction[] = [];
 
 	// Don't show any actions if ticket is cancelled or has a pending cancellation request
 	if (props.isCancelled || props.isCancellationRequested) {

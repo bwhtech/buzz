@@ -3,14 +3,14 @@
 // so each interface keeps an index signature for those extras while typing the
 // fields the dashboard actually reads.
 
-export interface CustomField {
-	fieldname: string
-	fieldtype: string
-	label?: string
-	options?: string
-	reqd?: boolean | 0 | 1
-	default?: string
-	[key: string]: any
+// Custom/form fields are typed by FrappeField in composables/useCustomFields.
+export type { FrappeField } from "@/composables/useCustomFields"
+
+// Errors rejected by frappe-ui resources carry server messages beyond Error.
+export interface FrappeError extends Error {
+	messages?: string[]
+	exc?: string
+	exc_type?: string
 }
 
 export interface Language {

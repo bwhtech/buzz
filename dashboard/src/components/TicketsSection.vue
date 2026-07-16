@@ -33,14 +33,15 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { EventTicket } from "@/types";
 import { Button } from "frappe-ui";
-import { computed } from "vue";
+import { computed, type PropType } from "vue";
 import TicketCard from "./TicketCard.vue";
 
 const props = defineProps({
 	tickets: {
-		type: Array,
+		type: Array as PropType<EventTicket[]>,
 		required: true,
 	},
 	canRequestCancellation: {
@@ -56,15 +57,15 @@ const props = defineProps({
 		default: false,
 	},
 	cancellationRequest: {
-		type: Object,
+		type: Object as PropType<Record<string, any> | null>,
 		default: null,
 	},
 	cancellationRequestedTickets: {
-		type: Array,
+		type: Array as PropType<string[]>,
 		default: () => [],
 	},
 	cancelledTickets: {
-		type: Array,
+		type: Array as PropType<string[]>,
 		default: () => [],
 	},
 });
@@ -75,8 +76,8 @@ defineEmits(["request-cancellation", "transfer-success"]);
 const hasTicketsAvailableForCancellation = computed(() => {
 	return props.tickets.some(
 		(ticket) =>
-			!props.cancelledTickets.includes(ticket.name) &&
-			!props.cancellationRequestedTickets.includes(ticket.name)
+			!props.cancelledTickets.includes(ticket.name ?? "") &&
+			!props.cancellationRequestedTickets.includes(ticket.name ?? "")
 	);
 });
 
@@ -90,11 +91,11 @@ const showCancellationButton = computed(() => {
 	);
 });
 
-const isCancellationRequestedTicket = (ticketId) => {
-	return props.cancellationRequestedTickets?.includes(ticketId) || false;
+const isCancellationRequestedTicket = (ticketId?: string) => {
+	return props.cancellationRequestedTickets?.includes(ticketId ?? "") || false;
 };
 
-const isCancelledTicket = (ticketId) => {
-	return props.cancelledTickets?.includes(ticketId) || false;
+const isCancelledTicket = (ticketId?: string) => {
+	return props.cancelledTickets?.includes(ticketId ?? "") || false;
 };
 </script>

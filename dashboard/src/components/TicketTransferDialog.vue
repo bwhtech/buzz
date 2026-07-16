@@ -54,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import type { FrappeError } from "@/types";
 import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 
@@ -90,7 +91,7 @@ const transferResource = createResource({
 		resetTransferForm();
 		emit("success");
 	},
-	onError: (error: any) => {
+	onError: (error: FrappeError) => {
 		toast.error(`${__("Failed to transfer ticket")}: ${error.message}`);
 	},
 });

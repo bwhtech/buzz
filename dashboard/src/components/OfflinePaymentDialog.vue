@@ -1,5 +1,5 @@
 <template>
-	<Dialog v-model:open="isOpen" :options="{ size: 'md' }">
+	<Dialog v-model="isOpen" :options="{ size: 'md' }">
 		<template #body>
 			<div class="p-4">
 				<!-- Title (shows custom label if set, otherwise default) -->
@@ -95,9 +95,10 @@
 	</Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { FrappeField } from "@/types";
 import { Button, Dialog, FileUploader, toast } from "frappe-ui";
-import { computed, ref } from "vue";
+import { computed, type PropType, ref } from "vue";
 import LucideCheckCircle from "~icons/lucide/check-circle";
 import LucideRefreshCw from "~icons/lucide/refresh-cw";
 import { formatCurrency } from "../utils/currency";
@@ -117,7 +118,7 @@ const props = defineProps({
 		default: "INR",
 	},
 	offlineSettings: {
-		type: Object,
+		type: Object as PropType<Record<string, any>>,
 		required: true,
 	},
 	loading: {
@@ -125,7 +126,7 @@ const props = defineProps({
 		default: false,
 	},
 	customFields: {
-		type: Array,
+		type: Array as PropType<FrappeField[]>,
 		default: () => [],
 	},
 });
@@ -137,8 +138,8 @@ const isOpen = computed({
 	set: (value) => emit("update:open", value),
 });
 
-const paymentProof = ref(null);
-const customFieldsData = ref({});
+const paymentProof = ref<Record<string, any> | null>(null);
+const customFieldsData = ref<Record<string, any>>({});
 
 // Custom fields are now pre-filtered by method in BookingForm
 const offlineCustomFields = computed(() => props.customFields);
@@ -164,7 +165,7 @@ const isSubmitDisabled = computed(() => {
 	return false;
 });
 
-const onFileUpload = (file) => {
+const onFileUpload = (file: Record<string, any>) => {
 	paymentProof.value = file;
 };
 

@@ -72,7 +72,7 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useTicketValidation } from "@/composables/useTicketValidation";
 import { Button, Spinner, TextInput, toast } from "frappe-ui";
 import { Html5Qrcode } from "html5-qrcode";
@@ -81,11 +81,11 @@ import LucideQrCode from "~icons/lucide/qr-code";
 
 const { validateTicket, isProcessingTicket } = useTicketValidation();
 
-const qrScanner = ref(null);
+const qrScanner = ref<Html5Qrcode | null>(null);
 const scannerActive = ref(false);
 const manualTicketId = ref("");
-const lastScannedTicketId = ref(null);
-const scanTimeout = ref(null);
+const lastScannedTicketId = ref<string | null>(null);
+const scanTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
 
 const startScanner = async () => {
 	if (scannerActive.value) return;
@@ -107,7 +107,8 @@ const startScanner = async () => {
 				qrbox: { width: 250, height: 250 },
 				aspectRatio: 1.0,
 			},
-			onScanSuccess
+			onScanSuccess,
+			undefined
 		);
 		scannerActive.value = true;
 	} catch (error) {
@@ -128,7 +129,7 @@ const stopScanner = async () => {
 	scannerActive.value = false;
 };
 
-const onScanSuccess = (decodedText) => {
+const onScanSuccess = (decodedText: string) => {
 	// Extract ticket ID from QR code
 	const ticketId = extractTicketId(decodedText);
 	if (!ticketId) {
@@ -152,7 +153,7 @@ const onScanSuccess = (decodedText) => {
 	}, 2000);
 };
 
-const extractTicketId = (qrData) => {
+const extractTicketId = (qrData: string) => {
 	// If QR contains just the ticket ID
 	if (qrData.match(/^[A-Z0-9\-]+$/)) {
 		return qrData;
@@ -191,7 +192,7 @@ onUnmounted(() => {
 		qrScanner.value
 			.stop()
 			.then(() => {
-				qrScanner.value.clear();
+				qrScanner.value?.clear();
 			})
 			.catch((error) => {
 				console.error("Failed to cleanup scanner:", error);

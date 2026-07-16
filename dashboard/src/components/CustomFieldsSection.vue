@@ -16,17 +16,18 @@
 	</div>
 </template>
 
-<script setup>
-import { getFieldDefaultValue } from "@/composables/useCustomFields";
+<script setup lang="ts">
+import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields";
+import { type PropType } from "vue";
 import CustomFieldInput from "./CustomFieldInput.vue";
 
 const props = defineProps({
 	customFields: {
-		type: Array,
+		type: Array as PropType<FrappeField[]>,
 		default: () => [],
 	},
 	modelValue: {
-		type: Object,
+		type: Object as PropType<Record<string, any>>,
 		default: () => ({}),
 	},
 	title: {
@@ -42,7 +43,7 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 // Get field value from model
-const getFieldValue = (fieldname) => {
+const getFieldValue = (fieldname: string) => {
 	const currentValue = props.modelValue[fieldname];
 
 	// If field already has a value, return it
@@ -64,7 +65,7 @@ const getFieldValue = (fieldname) => {
 };
 
 // Update field value in model
-const updateFieldValue = (fieldname, value) => {
+const updateFieldValue = (fieldname: string, value: any) => {
 	const updatedValue = { ...props.modelValue, [fieldname]: value };
 	emit("update:modelValue", updatedValue);
 };
