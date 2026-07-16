@@ -8,7 +8,7 @@
 			<div class="bg-surface-green-1 border border-outline-green-1 rounded-lg p-8">
 				<LucideCheckCircle class="w-16 h-16 text-ink-green-2 mx-auto mb-4" />
 				<h2 class="text-ink-green-3 font-semibold text-xl mb-2">
-					{{ formData.success_title }}
+					{{ formData?.success_title }}
 				</h2>
 				<div
 					v-if="renderedSuccessMessage"
@@ -155,17 +155,45 @@
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import CustomFieldInput from "@/components/CustomFieldInput.vue";
 import CustomFieldsSection from "@/components/CustomFieldsSection.vue";
 import EventDetailsHeader from "@/components/EventDetailsHeader.vue";
 import FormFieldSections from "@/components/FormFieldSections.vue";
 import LoginRequired from "@/components/LoginRequired.vue";
+import type { FrappeError } from "@/types";
 import { Button, Dialog, Spinner, createResource, toast } from "frappe-ui";
 import { marked } from "marked";
 import { computed, reactive, ref } from "vue";
 import LucideAlertCircle from "~icons/lucide/alert-circle";
 import LucideCheckCircle from "~icons/lucide/check-circle";
+
+interface FormFieldDef {
+	fieldname: string;
+	fieldtype: string;
+	label: string;
+	options?: any;
+	reqd?: number | boolean;
+	mandatory?: number | boolean;
+	default?: any;
+	default_value?: any;
+	placeholder?: string;
+	link_options?: any;
+	child_fields?: FormFieldDef[];
+	[key: string]: any;
+}
+
+interface CustomFormData {
+	success_message?: string;
+	form_title?: string;
+	form_fields?: FormFieldDef[];
+	custom_fields?: FormFieldDef[];
+	event?: Record<string, any>;
+	closed?: boolean;
+	closed_title?: string;
+	closed_message?: string;
+	[key: string]: any;
+}
 
 const props = defineProps({
 	eventRoute: {
@@ -178,21 +206,21 @@ const props = defineProps({
 	},
 });
 
-const formData = ref(null);
-const formValues = reactive({});
-const customFieldValues = ref({});
+const formData = ref<CustomFormData | null>(null);
+const formValues = reactive<Record<string, any>>({});
+const customFieldValues = ref<Record<string, any>>({});
 const submitted = ref(false);
 const loginRequired = ref(false);
-const loadError = ref(null);
+const loadError = ref<string | null>(null);
 
-const tableData = reactive({});
+const tableData = reactive<Record<string, any[]>>({});
 const tableDialog = reactive({
 	open: false,
 	title: "",
 	fieldname: "",
-	fields: [],
-	rowData: {},
-	editIndex: null,
+	fields: [] as FormFieldDef[],
+	rowData: {} as Record<string, any>,
+	editIndex: null as number | null,
 });
 
 const renderedSuccessMessage = computed(() => {
@@ -201,7 +229,7 @@ const renderedSuccessMessage = computed(() => {
 	return marked(msg);
 });
 
-function normalizeField(field) {
+function normalizeField(field: FormFieldDef) {
 	return {
 		fieldname: field.fieldname,
 		fieldtype: field.fieldtype,
@@ -214,12 +242,12 @@ function normalizeField(field) {
 	};
 }
 
-function getTableRowSummary(row) {
+function getTableRowSummary(row: Record<string, any>) {
 	const values = Object.values(row).filter((v) => v && typeof v === "string");
 	return values.slice(0, 3).join(" — ") || __("(empty)");
 }
 
-function addTableRow(field) {
+function addTableRow(field: FormFieldDef) {
 	if (!tableData[field.fieldname]) tableData[field.fieldname] = [];
 
 	tableDialog.open = true;
@@ -230,7 +258,7 @@ function addTableRow(field) {
 	tableDialog.editIndex = null;
 }
 
-function editTableRow(field, idx) {
+function editTableRow(field: FormFieldDef, idx: number) {
 	tableDialog.open = true;
 	tableDialog.title = __("Edit {0}", [__(field.label)]);
 	tableDialog.fieldname = field.fieldname;
@@ -239,7 +267,7 @@ function editTableRow(field, idx) {
 	tableDialog.editIndex = idx;
 }
 
-function removeTableRow(fieldname, idx) {
+function removeTableRow(fieldname: string, idx: number) {
 	tableData[fieldname].splice(idx, 1);
 }
 
@@ -262,7 +290,7 @@ const formDataResource = createResource({
 		form_route: props.formRoute,
 	},
 	auto: true,
-	onSuccess: (data) => {
+	onSuccess: (data: CustomFormData) => {
 		formData.value = data;
 		for (const field of data.form_fields || []) {
 			if (field.default) {
@@ -270,7 +298,7 @@ const formDataResource = createResource({
 			}
 		}
 	},
-	onError: (err) => {
+	onError: (err: FrappeError) => {
 		if (err.exc_type === "AuthenticationError") {
 			loginRequired.value = true;
 			return;
@@ -284,21 +312,21 @@ const submitResource = createResource({
 	onSuccess: () => {
 		submitted.value = true;
 	},
-	onError: (err) => {
+	onError: (err: FrappeError) => {
 		const msg = err.messages?.[0] || __("Failed to submit form");
 		toast.error(msg.replace(/<[^>]*>/g, ""));
 	},
 });
 
 function handleSubmit() {
-	for (const field of formData.value.form_fields || []) {
+	for (const field of formData.value?.form_fields || []) {
 		if (field.fieldtype === "Table" && field.reqd && !tableData[field.fieldname]?.length) {
 			toast.error(__("Please add at least one {0}", [__(field.label)]));
 			return;
 		}
 	}
 
-	for (const field of formData.value.custom_fields || []) {
+	for (const field of formData.value?.custom_fields || []) {
 		if (!field.mandatory) continue;
 		const val = customFieldValues.value[field.fieldname];
 		const isEmpty = !val || val === "0" || val === 0;
