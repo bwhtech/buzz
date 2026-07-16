@@ -14,6 +14,10 @@ declare global {
 		__: TranslateFn
 		translatedMessages?: Record<string, string>
 	}
+
+	// Bare `__(...)` calls in scripts resolve to this global; keep it aligned
+	// with TranslateFn so script and template call sites share one signature.
+	const __: TranslateFn
 }
 
 // `__` is registered on globalProperties so templates can call it directly.

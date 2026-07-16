@@ -9,8 +9,6 @@ declare global {
 		site_name?: string
 	}
 
-	function __(str: string, values?: any[]): string
-
 	declare module "*.wav" {
 		const value: string
 		export default value
