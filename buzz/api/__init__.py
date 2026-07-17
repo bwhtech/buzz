@@ -28,7 +28,7 @@ from buzz.payments import (
 	get_payment_link_for_booking,
 	get_payment_link_for_sponsorship,
 )
-from buzz.utils import is_app_installed
+from buzz.utils import build_event_datetimes, is_app_installed
 
 OFFLINE_PAYMENT_METHOD = "Offline"
 
@@ -139,13 +139,15 @@ def get_event_payment_gateways(event: str) -> list[str]:
 
 
 def are_registrations_closed(event_doc) -> bool:
-	if not event_doc.registrations_close_at:
-		return False
+	event_timezone = event_doc.time_zone or get_system_timezone()
+	current_datetime_in_event_timezone = get_datetime_in_timezone(event_timezone).replace(tzinfo=None)
 
-	event_tz = event_doc.time_zone or get_system_timezone()
-	now_in_event_tz = get_datetime_in_timezone(event_tz).replace(tzinfo=None)
+	if event_doc.registrations_close_at:
+		return current_datetime_in_event_timezone > get_datetime(event_doc.registrations_close_at)
 
-	return now_in_event_tz > get_datetime(event_doc.registrations_close_at)
+	# No explicit cutoff set - registrations close once the event itself has ended.
+	_, event_end_datetime = build_event_datetimes(event_doc)
+	return current_datetime_in_event_timezone > event_end_datetime
 
 
 def is_ticket_transfer_allowed(event_id: str | int) -> bool:
