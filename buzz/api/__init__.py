@@ -478,7 +478,10 @@ def process_booking(
 	if booking.total_amount == 0:
 		booking.flags.ignore_permissions = True
 		booking.submit()
-		return {"booking_name": booking.name}
+		return {
+			"booking_name": booking.name,
+			"redirect_to": f"/booking-success/{booking.name}?token={get_booking_access_token(booking.name)}",
+		}
 
 	if is_offline:
 		method_filters = {"event": event, "enabled": 1}

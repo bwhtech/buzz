@@ -940,6 +940,45 @@ class TestProcessBookingAPI(IntegrationTestCase):
 		tickets = frappe.db.get_all("Event Ticket", filters={"booking": booking.name})
 		self.assertEqual(len(tickets), 1)
 
+	def test_process_booking_free_event_returns_redirect_to(self):
+		"""Free bookings (total_amount == 0) must get a redirect_to the new
+		token-gated booking-success screen, same as the paid-gateway branch."""
+		from buzz.api import process_booking, verify_booking_access_token
+
+		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		test_event.apply_tax = False
+		test_event.is_published = True
+		test_event.save()
+
+		free_ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": test_event.name,
+				"title": "Free Redirect Test Ticket",
+				"price": 0,
+				"is_published": True,
+			}
+		).insert()
+
+		result = process_booking(
+			attendees=[
+				{
+					"first_name": "Redirect Test User",
+					"email": "redirecttest@email.com",
+					"ticket_type": str(free_ticket_type.name),
+					"add_ons": [],
+				}
+			],
+			event=str(test_event.name),
+		)
+
+		self.assertIn("booking_name", result)
+		self.assertIn("redirect_to", result)
+		self.assertTrue(result["redirect_to"].startswith(f"/booking-success/{result['booking_name']}?token="))
+
+		token = result["redirect_to"].split("token=")[1]
+		self.assertTrue(verify_booking_access_token(result["booking_name"], token))
+
 	def test_process_booking_without_utm_parameters(self):
 		"""Test that process_booking API works without UTM parameters."""
 		from buzz.api import process_booking
