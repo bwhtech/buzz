@@ -10,6 +10,14 @@
 			:is-webinar="confirmation.data.event.free_webinar"
 		/>
 
+		<h2 class="text-3xl font-bold text-ink-gray-9 mb-4">
+			{{
+				confirmation.data.event.free_webinar
+					? __("Registration Confirmed")
+					: __("Booking Confirmed")
+			}}
+		</h2>
+
 		<!-- Event Information and Payment Summary in two columns -->
 		<div class="grid grid-cols-1 gap-6 mb-6" :class="{ 'lg:grid-cols-2': showPaymentSummary }">
 			<BookingEventInfo :event="confirmation.data.event" :venue="confirmation.data.venue" />
