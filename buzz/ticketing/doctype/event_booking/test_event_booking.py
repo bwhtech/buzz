@@ -1223,40 +1223,30 @@ class TestBookingConfirmationEmail(IntegrationTestCase):
 
 	BOOKER_EMAIL = "booker-56@example.com"
 
-	@classmethod
-	def setUpClass(cls):
-		super().setUpClass()
-		cls.test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
-		# Remember the original value so tearDownClass can restore the shared
-		# fixture — other test classes rely on the default send_ticket_email.
-		cls.original_send_ticket_email = cls.test_event.send_ticket_email
-		cls.test_event.apply_tax = False
-		cls.test_event.send_booking_confirmation_email = 1
-		cls.test_event.booking_confirmation_email_template = None
-		# Isolate the confirmation email: keep per-attendee ticket emails off so
-		# frappe.sendmail is only invoked by the booking confirmation logic.
-		cls.test_event.send_ticket_email = 0
-		cls.test_event.save()
+	def setUp(self):
+		# Configure the shared event and create fixtures per test (not in
+		# setUpClass) so every mutation lives inside the test's own transaction:
+		# nothing leaks into other test classes, and the booker User is
+		# guaranteed to exist when the booking's user link is validated.
+		self.test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		self.test_event.apply_tax = False
+		self.test_event.send_booking_confirmation_email = 1
+		self.test_event.booking_confirmation_email_template = None
+		# Keep per-attendee ticket emails off so frappe.sendmail is only invoked
+		# by the booking confirmation logic.
+		self.test_event.send_ticket_email = 0
+		self.test_event.save()
 
 		settings = frappe.get_doc("Buzz Settings")
 		settings.default_booking_confirmation_email_template = None
 		settings.save()
 
-	@classmethod
-	def tearDownClass(cls):
-		# Restore the shared test event so we don't leak send_ticket_email = 0
-		# into any test class that runs afterwards.
-		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
-		test_event.send_ticket_email = cls.original_send_ticket_email
-		test_event.save()
-		super().tearDownClass()
-
 		# A real (non-system) booker whose User email is a valid recipient.
-		if not frappe.db.exists("User", cls.BOOKER_EMAIL):
+		if not frappe.db.exists("User", self.BOOKER_EMAIL):
 			frappe.get_doc(
 				{
 					"doctype": "User",
-					"email": cls.BOOKER_EMAIL,
+					"email": self.BOOKER_EMAIL,
 					"first_name": "Booker",
 					"enabled": 1,
 					"user_type": "Website User",
@@ -1264,7 +1254,6 @@ class TestBookingConfirmationEmail(IntegrationTestCase):
 				}
 			).insert(ignore_permissions=True)
 
-	def setUp(self):
 		self.ticket_type = frappe.get_doc(
 			{
 				"doctype": "Event Ticket Type",
