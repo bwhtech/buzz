@@ -96,7 +96,7 @@
                   <td>
                     <p
                       style="color:rgb(75,85,99);font-size:13px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;margin:0px;margin-bottom:8px">
-                      Tickets ({{ doc.attendees | length }})
+                      Tickets ({{ attendee_rows | length }})
                     </p>
                     <table
                       align="center"
@@ -107,17 +107,17 @@
                       role="presentation"
                       style="border-top:1px solid rgb(229,231,235)">
                       <tbody>
-                        {% for attendee in doc.attendees %}
+                        {% for attendee in attendee_rows %}
                         <tr>
                           <td
                             style="padding-top:12px;padding-bottom:12px;border-bottom:1px solid rgb(229,231,235);vertical-align:top">
                             <p
                               style="color:rgb(31,41,55);font-size:15px;font-weight:600;margin:0px;line-height:20px">
-                              {{ attendee.full_name or [attendee.first_name, attendee.last_name] | select | join(" ") }}
+                              {{ attendee.full_name }}
                             </p>
                             <p
                               style="color:rgb(107,114,128);font-size:13px;margin:2px 0px 0px 0px;line-height:18px">
-                              {{ frappe.db.get_value("Event Ticket Type", attendee.ticket_type, "title") }}
+                              {{ attendee.ticket_type_title }}
                               {% if attendee.number_of_add_ons %}
                                 &nbsp;·&nbsp; {{ attendee.number_of_add_ons }} add-on(s)
                               {% endif %}
@@ -127,7 +127,7 @@
                             style="padding-top:12px;padding-bottom:12px;border-bottom:1px solid rgb(229,231,235);text-align:right;vertical-align:top;white-space:nowrap">
                             <p
                               style="color:rgb(31,41,55);font-size:15px;font-weight:500;margin:0px;line-height:20px">
-                              {{ frappe.utils.fmt_money(attendee.amount + (attendee.add_on_total or 0), currency=doc.currency) }}
+                              {{ frappe.utils.fmt_money(attendee.amount, currency=doc.currency) }}
                             </p>
                           </td>
                         </tr>

@@ -178,11 +178,38 @@ class EventBooking(Document):
 
 		subject = _("Your booking for {0} is confirmed ✅").format(event_title)
 		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
+
+		# Pre-fetch ticket type titles in a single query so the email template
+		# loop stays a pure display operation (no per-attendee DB round-trips).
+		ticket_type_names = list({attendee.ticket_type for attendee in self.attendees})
+		ticket_type_titles = {}
+		if ticket_type_names:
+			ticket_type_titles = {
+				row.name: row.title
+				for row in frappe.get_all(
+					"Event Ticket Type",
+					filters={"name": ["in", ticket_type_names]},
+					fields=["name", "title"],
+				)
+			}
+
+		attendee_rows = [
+			{
+				"full_name": attendee.full_name
+				or " ".join(filter(None, [attendee.first_name, attendee.last_name])),
+				"ticket_type_title": ticket_type_titles.get(attendee.ticket_type, attendee.ticket_type),
+				"number_of_add_ons": attendee.number_of_add_ons,
+				"amount": (attendee.amount or 0) + (attendee.add_on_total or 0),
+			}
+			for attendee in self.attendees
+		]
+
 		args = {
 			"doc": self,
 			"event_doc": event_doc,
 			"event_title": event_title,
 			"venue": venue,
+			"attendee_rows": attendee_rows,
 		}
 
 		content = None
