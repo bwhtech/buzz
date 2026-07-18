@@ -196,7 +196,7 @@ class EventBooking(Document):
 		attendee_rows = [
 			{
 				"full_name": attendee.full_name
-				or " ".join(filter(None, [attendee.first_name, attendee.last_name])),
+				or " ".join(part for part in (attendee.first_name, attendee.last_name) if part),
 				"ticket_type_title": ticket_type_titles.get(attendee.ticket_type, attendee.ticket_type),
 				"number_of_add_ons": attendee.number_of_add_ons,
 				"amount": (attendee.amount or 0) + (attendee.add_on_total or 0),
