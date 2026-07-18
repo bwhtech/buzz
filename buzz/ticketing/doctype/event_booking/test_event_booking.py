@@ -1227,6 +1227,9 @@ class TestBookingConfirmationEmail(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		# Remember the original value so tearDownClass can restore the shared
+		# fixture — other test classes rely on the default send_ticket_email.
+		cls.original_send_ticket_email = cls.test_event.send_ticket_email
 		cls.test_event.apply_tax = False
 		cls.test_event.send_booking_confirmation_email = 1
 		cls.test_event.booking_confirmation_email_template = None
@@ -1238,6 +1241,15 @@ class TestBookingConfirmationEmail(IntegrationTestCase):
 		settings = frappe.get_doc("Buzz Settings")
 		settings.default_booking_confirmation_email_template = None
 		settings.save()
+
+	@classmethod
+	def tearDownClass(cls):
+		# Restore the shared test event so we don't leak send_ticket_email = 0
+		# into any test class that runs afterwards.
+		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		test_event.send_ticket_email = cls.original_send_ticket_email
+		test_event.save()
+		super().tearDownClass()
 
 		# A real (non-system) booker whose User email is a valid recipient.
 		if not frappe.db.exists("User", cls.BOOKER_EMAIL):
