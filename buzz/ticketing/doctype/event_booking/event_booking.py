@@ -146,6 +146,64 @@ class EventBooking(Document):
 		self.validate_coupon_availability()
 		self.generate_tickets()
 
+		try:
+			self.send_booking_confirmation_email()
+		except Exception as e:
+			frappe.log_error("Error sending booking confirmation email: " + str(e))
+
+	def send_booking_confirmation_email(self, now: bool = False):
+		# Never email system/placeholder users — they are not real recipients.
+		if self.user in ("Administrator", "Guest"):
+			return
+
+		send_email = frappe.get_cached_value("Buzz Event", self.event, "send_booking_confirmation_email")
+		if not send_email:
+			return
+
+		recipient = frappe.db.get_value("User", self.user, "email") or self.user
+		if not recipient:
+			return
+
+		event_title, booking_template, venue = frappe.get_cached_value(
+			"Buzz Event",
+			self.event,
+			["title", "booking_confirmation_email_template", "venue"],
+		)
+
+		# Fallback to global setting if event-level not set
+		if not booking_template:
+			booking_template = frappe.db.get_single_value(
+				"Buzz Settings", "default_booking_confirmation_email_template"
+			)
+
+		subject = _("Your booking for {0} is confirmed ✅").format(event_title)
+		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
+		args = {
+			"doc": self,
+			"event_doc": event_doc,
+			"event_title": event_title,
+			"venue": venue,
+		}
+
+		content = None
+		if booking_template:
+			from frappe.email.doctype.email_template.email_template import get_email_template
+
+			email_template = get_email_template(booking_template, args)
+			subject = email_template.get("subject")
+			content = email_template.get("message")
+
+		frappe.sendmail(
+			recipients=[recipient],
+			subject=subject,
+			content=content if booking_template else None,
+			template="booking_confirmation" if not booking_template else None,
+			args=args,
+			reference_doctype=self.doctype,
+			reference_name=self.name,
+			now=now,
+		)
+
 	def validate_coupon_availability(self):
 		"""Re-validate coupon with lock to prevent race condition."""
 		if not self.coupon_code:

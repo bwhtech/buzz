@@ -1,6 +1,8 @@
 # Copyright (c) 2025, BWH Studios and Contributors
 # See license.txt
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -1214,3 +1216,187 @@ class TestBookingConfirmation(IntegrationTestCase):
 		# Administrator owns/has perm — no token needed
 		result = get_booking_confirmation(booking.name)
 		self.assertEqual(result["booking"]["name"], booking.name)
+
+
+class TestBookingConfirmationEmail(IntegrationTestCase):
+	"""Confirmation email sent to the booker with a booking summary (issue #56)."""
+
+	BOOKER_EMAIL = "booker-56@example.com"
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		cls.test_event.apply_tax = False
+		cls.test_event.send_booking_confirmation_email = 1
+		cls.test_event.booking_confirmation_email_template = None
+		# Isolate the confirmation email: keep per-attendee ticket emails off so
+		# frappe.sendmail is only invoked by the booking confirmation logic.
+		cls.test_event.send_ticket_email = 0
+		cls.test_event.save()
+
+		settings = frappe.get_doc("Buzz Settings")
+		settings.default_booking_confirmation_email_template = None
+		settings.save()
+
+		# A real (non-system) booker whose User email is a valid recipient.
+		if not frappe.db.exists("User", cls.BOOKER_EMAIL):
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": cls.BOOKER_EMAIL,
+					"first_name": "Booker",
+					"enabled": 1,
+					"user_type": "Website User",
+					"send_welcome_email": 0,
+				}
+			).insert(ignore_permissions=True)
+
+	def setUp(self):
+		self.ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": self.test_event.name,
+				"title": "Confirmation Email Ticket",
+				"price": 100,
+			}
+		).insert()
+
+	def tearDown(self):
+		frappe.delete_doc("Event Ticket Type", self.ticket_type.name, force=True)
+
+	def _make_booking(self, user):
+		return frappe.get_doc(
+			{
+				"doctype": "Event Booking",
+				"event": self.test_event.name,
+				"user": user,
+				"attendees": [
+					{
+						"ticket_type": self.ticket_type.name,
+						"first_name": "John",
+						"email": "john-56@example.com",
+					}
+				],
+			}
+		).insert()
+
+	def _create_template(self, name, subject_prefix):
+		if frappe.db.exists("Email Template", name):
+			frappe.delete_doc("Email Template", name, force=True)
+		return frappe.get_doc(
+			{
+				"doctype": "Email Template",
+				"name": name,
+				"subject": f"{subject_prefix} - {{{{ event_title }}}}",
+				"response": f"<p>{subject_prefix} content</p>",
+			}
+		).insert()
+
+	@patch("frappe.sendmail")
+	def test_sends_confirmation_to_booker(self, mock_sendmail):
+		booking = self._make_booking(self.BOOKER_EMAIL)
+		booking.submit()
+
+		mock_sendmail.assert_called_once()
+		self.assertIn(self.BOOKER_EMAIL, mock_sendmail.call_args[1]["recipients"])
+		self.assertEqual(mock_sendmail.call_args[1]["reference_doctype"], "Event Booking")
+		self.assertEqual(mock_sendmail.call_args[1]["reference_name"], booking.name)
+
+	@patch("frappe.sendmail")
+	def test_uses_inline_template_when_none_configured(self, mock_sendmail):
+		booking = self._make_booking(self.BOOKER_EMAIL)
+		booking.submit()
+
+		mock_sendmail.assert_called_once()
+		self.assertEqual(mock_sendmail.call_args[1]["template"], "booking_confirmation")
+
+	@patch("frappe.sendmail")
+	def test_skips_administrator(self, mock_sendmail):
+		booking = self._make_booking("Administrator")
+		booking.submit()
+
+		mock_sendmail.assert_not_called()
+
+	@patch("frappe.sendmail")
+	def test_skips_guest(self, mock_sendmail):
+		booking = self._make_booking("Guest")
+		booking.submit()
+
+		mock_sendmail.assert_not_called()
+
+	@patch("frappe.sendmail")
+	def test_respects_event_toggle_off(self, mock_sendmail):
+		self.test_event.send_booking_confirmation_email = 0
+		self.test_event.save()
+		try:
+			booking = self._make_booking(self.BOOKER_EMAIL)
+			booking.submit()
+			mock_sendmail.assert_not_called()
+		finally:
+			self.test_event.send_booking_confirmation_email = 1
+			self.test_event.save()
+
+	@patch("frappe.sendmail")
+	def test_uses_event_template_when_set(self, mock_sendmail):
+		template = self._create_template("Booking Confirmation Event Template", "EVENT")
+		try:
+			self.test_event.booking_confirmation_email_template = template.name
+			self.test_event.save()
+
+			booking = self._make_booking(self.BOOKER_EMAIL)
+			booking.submit()
+
+			mock_sendmail.assert_called_once()
+			self.assertIn("EVENT", mock_sendmail.call_args[1]["subject"])
+		finally:
+			self.test_event.booking_confirmation_email_template = None
+			self.test_event.save()
+			frappe.delete_doc("Email Template", template.name, force=True)
+
+	@patch("frappe.sendmail")
+	def test_falls_back_to_global_template(self, mock_sendmail):
+		template = self._create_template("Booking Confirmation Global Template", "GLOBAL")
+		settings = frappe.get_doc("Buzz Settings")
+		try:
+			self.test_event.booking_confirmation_email_template = None
+			self.test_event.save()
+
+			settings.default_booking_confirmation_email_template = template.name
+			settings.save()
+
+			booking = self._make_booking(self.BOOKER_EMAIL)
+			booking.submit()
+
+			mock_sendmail.assert_called_once()
+			self.assertIn("GLOBAL", mock_sendmail.call_args[1]["subject"])
+		finally:
+			settings.default_booking_confirmation_email_template = None
+			settings.save()
+			frappe.delete_doc("Email Template", template.name, force=True)
+
+	@patch("frappe.sendmail")
+	def test_event_template_takes_precedence_over_global(self, mock_sendmail):
+		event_template = self._create_template("Booking Event Precedence Template", "EVENT")
+		global_template = self._create_template("Booking Global Precedence Template", "GLOBAL")
+		settings = frappe.get_doc("Buzz Settings")
+		try:
+			self.test_event.booking_confirmation_email_template = event_template.name
+			self.test_event.save()
+
+			settings.default_booking_confirmation_email_template = global_template.name
+			settings.save()
+
+			booking = self._make_booking(self.BOOKER_EMAIL)
+			booking.submit()
+
+			mock_sendmail.assert_called_once()
+			self.assertIn("EVENT", mock_sendmail.call_args[1]["subject"])
+			self.assertNotIn("GLOBAL", mock_sendmail.call_args[1]["subject"])
+		finally:
+			self.test_event.booking_confirmation_email_template = None
+			self.test_event.save()
+			settings.default_booking_confirmation_email_template = None
+			settings.save()
+			frappe.delete_doc("Email Template", event_template.name, force=True)
+			frappe.delete_doc("Email Template", global_template.name, force=True)

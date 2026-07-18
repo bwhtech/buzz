@@ -28,6 +28,7 @@
   "communications_tab",
   "ticketing_emails_section",
   "default_ticket_email_template",
+  "default_booking_confirmation_email_template",
   "sponsorship_emails_section",
   "auto_send_pitch_deck",
   "sponsor_email_settings_section",
@@ -157,6 +158,13 @@
    "fieldname": "default_ticket_email_template",
    "fieldtype": "Link",
    "label": "Default Ticket Email Template",
+   "options": "Email Template"
+  },
+  {
+   "description": "Default template for booking confirmation emails sent to the booker. Can be overridden per event.",
+   "fieldname": "default_booking_confirmation_email_template",
+   "fieldtype": "Link",
+   "label": "Default Booking Confirmation Email Template",
    "options": "Email Template"
   },
   {
