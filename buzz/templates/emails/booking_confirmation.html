@@ -201,6 +201,7 @@
             </table>
 
             <!-- Note about tickets -->
+            {% if event_doc.send_ticket_email %}
             <table
               align="center"
               width="100%"
@@ -219,6 +220,7 @@
                 </tr>
               </tbody>
             </table>
+            {% endif %}
 
             {% set event_settings = frappe.get_cached_doc("Buzz Settings") %}
             {% if event_settings.support_email %}
