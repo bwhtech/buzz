@@ -8,7 +8,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from buzz.api import are_registrations_closed
-from buzz.events.doctype.buzz_event.buzz_event import create_from_template
+from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, create_from_template
 from buzz.events.doctype.event_template.event_template import create_template_from_event
 
 
@@ -87,6 +87,47 @@ class TestBuzzEvent(FrappeTestCase):
 		)
 		# Should not raise
 		event.validate_schedule()
+
+	# ==================== Reserved Route Tests ====================
+
+	def _make_event_with_route(self, route):
+		return frappe.get_doc(
+			{
+				"doctype": "Buzz Event",
+				"title": f"Route Test Event {route}",
+				"category": "Test Category",
+				"host": "Test Host",
+				"start_date": frappe.utils.today(),
+				"start_time": "09:00:00",
+				"end_time": "18:00:00",
+				"route": route,
+			}
+		)
+
+	def test_reserved_routes_are_rejected(self):
+		"""Every reserved segment must be refused as an event route.
+
+		An event route becomes /b/<route>, so any route matching a top-level
+		dashboard segment would be shadowed by that segment's own page.
+		"""
+		for route in RESERVED_EVENT_ROUTES:
+			with self.subTest(route=route):
+				with self.assertRaises(frappe.exceptions.ValidationError):
+					self._make_event_with_route(route).insert()
+				frappe.db.rollback()
+
+	def test_reserved_routes_cover_dashboard_segments(self):
+		"""booking-success is reserved: it is a static route declared ahead of the
+		/:eventRoute/:formRoute catch-all, so an event using it would have every
+		custom form swallowed by the booking confirmation page.
+		"""
+		self.assertIn("booking-success", RESERVED_EVENT_ROUTES)
+
+	def test_unreserved_route_is_accepted(self):
+		"""A route that shadows nothing saves normally."""
+		event = self._make_event_with_route("my-conference-2026")
+		event.insert()
+		self.assertEqual(event.route, "my-conference-2026")
 
 	# ==================== Create from Template Tests ====================
 

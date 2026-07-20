@@ -14,6 +14,7 @@ from buzz.utils import only_if_app_installed
 RESERVED_EVENT_ROUTES = {
 	"account",
 	"bookings",
+	"booking-success",
 	"tickets",
 	"register",
 	"register-interest",
