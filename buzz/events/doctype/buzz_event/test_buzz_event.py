@@ -116,6 +116,18 @@ class TestBuzzEvent(FrappeTestCase):
 					self._make_event_with_route(route).insert()
 				frappe.db.rollback()
 
+	def test_reserved_routes_are_rejected_case_insensitively(self):
+		"""Mixed-case spellings of a reserved segment must be refused too.
+
+		vue-router matches paths case-insensitively, so an event routed
+		"Account" is shadowed by /b/account exactly as "account" would be.
+		"""
+		for route in ("Account", "BOOKING-SUCCESS", "Register"):
+			with self.subTest(route=route):
+				with self.assertRaises(frappe.exceptions.ValidationError):
+					self._make_event_with_route(route).insert()
+				frappe.db.rollback()
+
 	def test_reserved_routes_cover_dashboard_segments(self):
 		"""booking-success is reserved: it is a static route declared ahead of the
 		/:eventRoute/:formRoute catch-all, so an event using it would have every

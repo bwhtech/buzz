@@ -127,7 +127,7 @@
 - Base URL: `/b` (router history uses `createWebHistory("/b")`). Old `/dashboard/*` links 301-redirect to `/b/*` via `website_redirects` in `hooks.py`.
 
 ### Routing
-- Public-like flows: booking (`/book-tickets/:eventRoute`) and check-in (`/check-in`).
+- Public-like flows: booking (`/register/:eventRoute`) and check-in (`/check-in`).
 - Account area under `/account`:
   - bookings list/details, tickets list/details, sponsorships list/details.
 - Guard: `router.beforeEach` checks `buzz.api.get_user_info` and redirects to `/login` if unauthenticated.

@@ -39,6 +39,9 @@ website_redirects = [
 		"forward_query_parameters": True,
 	},
 	{"source": r"/dashboard/(.*)", "target": r"/b/\1", "forward_query_parameters": True},
+	# Bare /dashboard has no trailing slash for the catch-all above to match, and
+	# www/dashboard.html would otherwise serve the SPA shell under the wrong base.
+	{"source": r"/dashboard", "target": "/b", "forward_query_parameters": True},
 ]
 
 # Scheduled Tasks

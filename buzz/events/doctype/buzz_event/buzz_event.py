@@ -159,7 +159,9 @@ class BuzzEvent(Document):
 			route = frappe.website.utils.cleanup_page_name(self.title).replace("_", "-")
 			self.route = append_number_if_name_exists("Buzz Event", route, fieldname="route")
 
-		if self.route in RESERVED_EVENT_ROUTES:
+		# Compared lowercased: vue-router matches paths case-insensitively, so a
+		# route like "Account" shadows /b/account just as "account" would.
+		if (self.route or "").lower() in RESERVED_EVENT_ROUTES:
 			frappe.throw(
 				_("'{0}' is a reserved route and cannot be used as an event route.").format(self.route)
 			)
