@@ -1,6 +1,8 @@
 # Copyright (c) 2025, BWH Studios and Contributors
 # See license.txt
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -940,6 +942,45 @@ class TestProcessBookingAPI(IntegrationTestCase):
 		tickets = frappe.db.get_all("Event Ticket", filters={"booking": booking.name})
 		self.assertEqual(len(tickets), 1)
 
+	def test_process_booking_free_event_returns_redirect_to(self):
+		"""Free bookings (total_amount == 0) must get a redirect_to the new
+		token-gated booking-success screen, same as the paid-gateway branch."""
+		from buzz.api import process_booking, verify_booking_access_token
+
+		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		test_event.apply_tax = False
+		test_event.is_published = True
+		test_event.save()
+
+		free_ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": test_event.name,
+				"title": "Free Redirect Test Ticket",
+				"price": 0,
+				"is_published": True,
+			}
+		).insert()
+
+		result = process_booking(
+			attendees=[
+				{
+					"first_name": "Redirect Test User",
+					"email": "redirecttest@email.com",
+					"ticket_type": str(free_ticket_type.name),
+					"add_ons": [],
+				}
+			],
+			event=str(test_event.name),
+		)
+
+		self.assertIn("booking_name", result)
+		self.assertIn("redirect_to", result)
+		self.assertTrue(result["redirect_to"].startswith(f"/booking-success/{result['booking_name']}?token="))
+
+		token = result["redirect_to"].split("token=")[1]
+		self.assertTrue(verify_booking_access_token(result["booking_name"], token))
+
 	def test_process_booking_without_utm_parameters(self):
 		"""Test that process_booking API works without UTM parameters."""
 		from buzz.api import process_booking
@@ -1091,3 +1132,249 @@ class TestProcessBookingAPI(IntegrationTestCase):
 		self.assertEqual(booking.status, "Confirmed", "Free booking should auto-confirm")
 		self.assertEqual(booking.payment_status, "Paid", "Free booking should be marked as Paid")
 		self.assertEqual(booking.total_amount, 0, "Free booking should have zero total")
+
+
+class TestBookingConfirmation(IntegrationTestCase):
+	"""Test token-gated guest booking confirmation (issue #167)."""
+
+	def _make_submitted_booking(self):
+		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		test_event.apply_tax = False
+		test_event.save()
+
+		ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": test_event.name,
+				"title": "Confirmation Test Ticket",
+				"price": 500,
+			}
+		).insert()
+
+		booking = frappe.get_doc(
+			{
+				"doctype": "Event Booking",
+				"event": test_event.name,
+				"user": "Administrator",
+				"attendees": [
+					{"ticket_type": ticket_type.name, "first_name": "Conf", "email": "conf@email.com"}
+				],
+			}
+		).insert()
+		booking.submit()
+		return booking
+
+	def test_access_token_roundtrip(self):
+		from buzz.api import get_booking_access_token, verify_booking_access_token
+
+		token = get_booking_access_token("B-TEST-001")
+		self.assertTrue(verify_booking_access_token("B-TEST-001", token))
+		# wrong token rejected
+		self.assertFalse(verify_booking_access_token("B-TEST-001", "deadbeef"))
+		# empty token rejected
+		self.assertFalse(verify_booking_access_token("B-TEST-001", ""))
+		self.assertFalse(verify_booking_access_token("B-TEST-001", None))
+		# token is booking-specific
+		self.assertFalse(verify_booking_access_token("B-OTHER-002", token))
+
+	def test_get_booking_confirmation_valid_token_as_guest(self):
+		from buzz.api import get_booking_access_token, get_booking_confirmation
+
+		booking = self._make_submitted_booking()
+		token = get_booking_access_token(booking.name)
+
+		frappe.set_user("Guest")
+		try:
+			result = get_booking_confirmation(booking.name, token=token)
+		finally:
+			frappe.set_user("Administrator")
+
+		self.assertEqual(result["booking"]["name"], booking.name)
+		self.assertEqual(len(result["tickets"]), 1)
+		self.assertEqual(result["tickets"][0]["attendee_name"], "Conf")
+		self.assertTrue(result["event"]["title"])
+
+	def test_get_booking_confirmation_bad_token_as_guest_raises(self):
+		from buzz.api import get_booking_confirmation
+
+		booking = self._make_submitted_booking()
+
+		frappe.set_user("Guest")
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				get_booking_confirmation(booking.name, token="wrong-token")
+			with self.assertRaises(frappe.PermissionError):
+				get_booking_confirmation(booking.name, token="")
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_get_booking_confirmation_owner_without_token(self):
+		from buzz.api import get_booking_confirmation
+
+		booking = self._make_submitted_booking()
+
+		# Administrator owns/has perm — no token needed
+		result = get_booking_confirmation(booking.name)
+		self.assertEqual(result["booking"]["name"], booking.name)
+
+
+class TestBookingConfirmationEmail(IntegrationTestCase):
+	"""Confirmation email sent to the booker with a booking summary (issue #56)."""
+
+	BOOKER_EMAIL = "booker-56@example.com"
+
+	def setUp(self):
+		# Configure the shared event and create fixtures per test (not in
+		# setUpClass) so every mutation lives inside the test's own transaction:
+		# nothing leaks into other test classes, and the booker User is
+		# guaranteed to exist when the booking's user link is validated.
+		self.test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		self.test_event.apply_tax = False
+		self.test_event.send_booking_confirmation_email = 1
+		self.test_event.booking_confirmation_email_template = None
+		# Keep per-attendee ticket emails off so frappe.sendmail is only invoked
+		# by the booking confirmation logic.
+		self.test_event.send_ticket_email = 0
+		self.test_event.save()
+
+		settings = frappe.get_doc("Buzz Settings")
+		settings.default_booking_confirmation_email_template = None
+		settings.save()
+
+		# A real (non-system) booker whose User email is a valid recipient.
+		if not frappe.db.exists("User", self.BOOKER_EMAIL):
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": self.BOOKER_EMAIL,
+					"first_name": "Booker",
+					"enabled": 1,
+					"user_type": "Website User",
+					"send_welcome_email": 0,
+				}
+			).insert(ignore_permissions=True)
+
+		self.ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": self.test_event.name,
+				"title": "Confirmation Email Ticket",
+				"price": 100,
+			}
+		).insert()
+
+	def tearDown(self):
+		frappe.delete_doc("Event Ticket Type", self.ticket_type.name, force=True)
+
+	def _make_booking(self, user):
+		return frappe.get_doc(
+			{
+				"doctype": "Event Booking",
+				"event": self.test_event.name,
+				"user": user,
+				"attendees": [
+					{
+						"ticket_type": self.ticket_type.name,
+						"first_name": "John",
+						"email": "john-56@example.com",
+					}
+				],
+			}
+		).insert()
+
+	def _create_template(self, name, subject_prefix):
+		if frappe.db.exists("Email Template", name):
+			frappe.delete_doc("Email Template", name, force=True)
+		return frappe.get_doc(
+			{
+				"doctype": "Email Template",
+				"name": name,
+				"subject": f"{subject_prefix} - {{{{ event_title }}}}",
+				"response": f"<p>{subject_prefix} content</p>",
+			}
+		).insert()
+
+	@patch("frappe.sendmail")
+	def test_sends_confirmation_to_booker(self, mock_sendmail):
+		booking = self._make_booking(self.BOOKER_EMAIL)
+		booking.submit()
+
+		mock_sendmail.assert_called_once()
+		self.assertIn(self.BOOKER_EMAIL, mock_sendmail.call_args[1]["recipients"])
+		self.assertEqual(mock_sendmail.call_args[1]["reference_doctype"], "Event Booking")
+		self.assertEqual(mock_sendmail.call_args[1]["reference_name"], booking.name)
+
+	@patch("frappe.sendmail")
+	def test_uses_inline_template_when_none_configured(self, mock_sendmail):
+		booking = self._make_booking(self.BOOKER_EMAIL)
+		booking.submit()
+
+		mock_sendmail.assert_called_once()
+		self.assertEqual(mock_sendmail.call_args[1]["template"], "booking_confirmation")
+
+	@patch("frappe.sendmail")
+	def test_skips_administrator(self, mock_sendmail):
+		booking = self._make_booking("Administrator")
+		booking.submit()
+
+		mock_sendmail.assert_not_called()
+
+	@patch("frappe.sendmail")
+	def test_skips_guest(self, mock_sendmail):
+		booking = self._make_booking("Guest")
+		booking.submit()
+
+		mock_sendmail.assert_not_called()
+
+	@patch("frappe.sendmail")
+	def test_respects_event_toggle_off(self, mock_sendmail):
+		self.test_event.send_booking_confirmation_email = 0
+		self.test_event.save()
+
+		booking = self._make_booking(self.BOOKER_EMAIL)
+		booking.submit()
+
+		mock_sendmail.assert_not_called()
+
+	@patch("frappe.sendmail")
+	def test_uses_event_template_when_set(self, mock_sendmail):
+		template = self._create_template("Booking Confirmation Event Template", "EVENT")
+		self.test_event.booking_confirmation_email_template = template.name
+		self.test_event.save()
+
+		booking = self._make_booking(self.BOOKER_EMAIL)
+		booking.submit()
+
+		mock_sendmail.assert_called_once()
+		self.assertIn("EVENT", mock_sendmail.call_args[1]["subject"])
+
+	@patch("frappe.sendmail")
+	def test_falls_back_to_global_template(self, mock_sendmail):
+		template = self._create_template("Booking Confirmation Global Template", "GLOBAL")
+		settings = frappe.get_doc("Buzz Settings")
+		settings.default_booking_confirmation_email_template = template.name
+		settings.save()
+
+		booking = self._make_booking(self.BOOKER_EMAIL)
+		booking.submit()
+
+		mock_sendmail.assert_called_once()
+		self.assertIn("GLOBAL", mock_sendmail.call_args[1]["subject"])
+
+	@patch("frappe.sendmail")
+	def test_event_template_takes_precedence_over_global(self, mock_sendmail):
+		event_template = self._create_template("Booking Event Precedence Template", "EVENT")
+		global_template = self._create_template("Booking Global Precedence Template", "GLOBAL")
+		self.test_event.booking_confirmation_email_template = event_template.name
+		self.test_event.save()
+
+		settings = frappe.get_doc("Buzz Settings")
+		settings.default_booking_confirmation_email_template = global_template.name
+		settings.save()
+
+		booking = self._make_booking(self.BOOKER_EMAIL)
+		booking.submit()
+
+		mock_sendmail.assert_called_once()
+		self.assertIn("EVENT", mock_sendmail.call_args[1]["subject"])
+		self.assertNotIn("GLOBAL", mock_sendmail.call_args[1]["subject"])

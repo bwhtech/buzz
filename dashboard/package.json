@@ -9,6 +9,7 @@
 		"preview": "vite preview",
 		"lint": "biome check --write .",
 		"typecheck": "./typecheck.sh",
+		"test:unit": "node --test 'src/**/*.test.js'",
 		"copy-html-entry": "cp ../buzz/public/dashboard/index.html ../buzz/www/dashboard.html"
 	},
 	"dependencies": {

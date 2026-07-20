@@ -65,3 +65,6 @@ buzz/www/dashboard.html
 /playwright/.cache/
 /playwright/.auth/
 /e2e/.auth/
+.playwright-mcp/
+# Local planning docs
+plans/

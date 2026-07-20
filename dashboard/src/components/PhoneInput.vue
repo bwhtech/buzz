@@ -25,6 +25,7 @@
 </template>
 
 <script setup>
+import { DEFAULT_DIAL_CODE, formatPhone, parsePhone } from "@/utils/phone.js";
 import { Combobox, TextInput, createResource } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 
@@ -37,7 +38,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue"]);
 
-const dialCode = ref("+91");
+const dialCode = ref(DEFAULT_DIAL_CODE);
 const localNumber = ref("");
 const dialCodesData = ref([]);
 
@@ -63,33 +64,26 @@ const dialCodeOptions = computed(() =>
 	}))
 );
 
-function parsePhone(value) {
-	if (!value) {
-		localNumber.value = "";
-		return;
-	}
-	const match = value.match(/^(\+\d{1,4})[\s-]?(.*)$/);
-	if (match) {
-		dialCode.value = match[1];
-		localNumber.value = match[2];
-	} else {
-		localNumber.value = value;
-	}
+const knownDialCodes = computed(() => dialCodesData.value.map((entry) => entry.dial_code));
+
+function syncFromModel(value) {
+	const { dialCode: parsedCode, localNumber: parsedNumber } = parsePhone(
+		value,
+		knownDialCodes.value
+	);
+	if (parsedCode) dialCode.value = parsedCode;
+	localNumber.value = parsedNumber;
 }
 
-parsePhone(props.modelValue);
+syncFromModel(props.modelValue);
 
 watch(
 	() => props.modelValue,
-	(val) => parsePhone(val)
+	(val) => syncFromModel(val)
 );
 
 function emitValue() {
-	if (!localNumber.value) {
-		emit("update:modelValue", "");
-		return;
-	}
-	emit("update:modelValue", `${dialCode.value} ${localNumber.value}`);
+	emit("update:modelValue", formatPhone(dialCode.value, localNumber.value));
 }
 
 function onDialCodeChange(code) {
@@ -110,6 +104,7 @@ createResource({
 	auto: true,
 	onSuccess: (data) => {
 		dialCodesData.value = data;
+		syncFromModel(props.modelValue);
 	},
 });
 </script>

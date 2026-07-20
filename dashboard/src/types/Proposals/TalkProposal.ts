@@ -15,8 +15,8 @@ export interface TalkProposal {
 	title: string
 	/**	Submitted By : Link - User	*/
 	submitted_by?: string
-	/**	Status : Select	*/
-	status?: "Review Pending" | "Shortlisted" | "Accepted" | "Rejected"
+	/**	Status : Link - Talk Proposal Status	*/
+	status?: string
 	/**	Event : Link - Buzz Event	*/
 	event: string
 	/**	Description : Text Editor	*/

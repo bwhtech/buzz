@@ -58,7 +58,7 @@
 		</div>
 
 		<!-- Event Information and Payment Summary in two columns -->
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+		<div class="grid grid-cols-1 gap-6 mb-6" :class="{ 'lg:grid-cols-2': showPaymentSummary }">
 			<!-- Event Information -->
 			<BookingEventInfo
 				v-if="bookingDetails.data.event"
@@ -68,18 +68,8 @@
 
 			<!-- Booking Financial Summary -->
 			<BookingFinancialSummary
-				v-if="!bookingDetails.data.event.free_webinar && bookingDetails.data.doc"
+				v-if="!bookingDetails.data.event.free_webinar && showPaymentSummary"
 				:booking="bookingDetails.data.doc"
-			/>
-
-			<!-- Booking Financial Summary -->
-			<BookingFinancialSummary
-				v-if="
-					!bookingDetails.data.event.free_webinar &&
-					bookingDetails.data.booking_summary &&
-					!isOfflinePaymentPending
-				"
-				:summary="bookingDetails.data.booking_summary"
 			/>
 		</div>
 
@@ -148,6 +138,12 @@ const isOfflinePaymentPending = computed(() => {
 
 const isBookingRejected = computed(() => {
 	return bookingDetails.data?.doc?.status === "Rejected";
+});
+
+// Hide the payment summary for free bookings (total_amount == 0)
+const showPaymentSummary = computed(() => {
+	const doc = bookingDetails.data?.doc;
+	return doc && (doc.total_amount || 0) > 0;
 });
 
 // Check if this is a successful payment redirect (check URL immediately)

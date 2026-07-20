@@ -71,6 +71,9 @@
   "column_break_ukql",
   "attach_email_ticket",
   "ticket_print_format",
+  "booking_confirmation_email_section",
+  "send_booking_confirmation_email",
+  "booking_confirmation_email_template",
   "talks_section",
   "allow_editing_talks_after_acceptance",
   "custom_forms_tab",
@@ -269,6 +272,25 @@
    "fieldname": "ticket_email_template",
    "fieldtype": "Link",
    "label": "Ticket Email Template",
+   "options": "Email Template"
+  },
+  {
+   "fieldname": "booking_confirmation_email_section",
+   "fieldtype": "Section Break",
+   "label": "Booking Confirmation Email"
+  },
+  {
+   "default": "1",
+   "description": "Send a confirmation email with a booking summary to the person who made the booking.",
+   "fieldname": "send_booking_confirmation_email",
+   "fieldtype": "Check",
+   "label": "Send Booking Confirmation Email"
+  },
+  {
+   "depends_on": "eval:doc.send_booking_confirmation_email;",
+   "fieldname": "booking_confirmation_email_template",
+   "fieldtype": "Link",
+   "label": "Booking Confirmation Email Template",
    "options": "Email Template"
   },
   {

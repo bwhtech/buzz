@@ -407,6 +407,7 @@
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage";
 import { useLoginDialog } from "@/composables/useLoginDialog";
 import { userResource } from "@/data/user";
+import { resolveBookingSuccessAction } from "@/utils/bookingSuccessRedirect";
 import { formatCurrency, formatPriceOrFree } from "@/utils/currency";
 import { clearBookingCache } from "@/utils/index";
 import BillingDetails from "@/components/BillingDetails.vue";
@@ -1274,17 +1275,17 @@ function submitBooking(payload, paymentGateway, { isOtpFlow = false } = {}) {
 					clearOtpState();
 				}
 
-				if (data.payment_link) {
-					window.location.href = data.payment_link;
-				} else if (props.isGuestMode) {
+				const action = resolveBookingSuccessAction(data, {
+					isGuestMode: props.isGuestMode,
+				});
+
+				if (action.type === "external") {
+					window.location.href = action.url;
+				} else if (action.type === "guest-inline") {
 					bookingSuccess.value = true;
-					successBookingName.value = data.booking_name;
-				} else if (data.offline_payment) {
-					// Offline payment submitted - redirect to booking details
-					router.replace(`/bookings/${data.booking_name}?success=true&offline=true`);
+					successBookingName.value = action.bookingName;
 				} else {
-					// free event
-					router.replace(`/bookings/${data.booking_name}?success=true`);
+					router.replace(action.path);
 				}
 			},
 			onError: (error) => {
