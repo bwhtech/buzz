@@ -24,10 +24,21 @@ website_route_rules = [
 
 # Keep old /dashboard/* links working: redirect to the shortened /b/* scheme.
 # Ordered specific -> catch-all; the first matching source wins.
+# forward_query_parameters is required on every rule: without it the query
+# string is dropped, which would strip the access token off guest booking
+# confirmation links.
 website_redirects = [
-	{"source": r"/dashboard/events/([^/]+)/forms/([^/]+)", "target": r"/b/\1/\2"},
-	{"source": r"/dashboard/book-tickets/(.+)", "target": r"/b/register/\1"},
-	{"source": r"/dashboard/(.*)", "target": r"/b/\1"},
+	{
+		"source": r"/dashboard/events/([^/]+)/forms/([^/]+)",
+		"target": r"/b/\1/\2",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/dashboard/book-tickets/(.+)",
+		"target": r"/b/register/\1",
+		"forward_query_parameters": True,
+	},
+	{"source": r"/dashboard/(.*)", "target": r"/b/\1", "forward_query_parameters": True},
 ]
 
 # Scheduled Tasks
