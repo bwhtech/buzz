@@ -222,8 +222,7 @@
             </table>
             {% endif %}
 
-            {% set event_settings = frappe.get_cached_doc("Buzz Settings") %}
-            {% if event_settings.support_email %}
+            {% if support_email %}
             <table
               align="center"
               width="100%"
@@ -239,7 +238,7 @@
                       Need help? Contact our support team.
                     </p>
                     <a
-                      href="mailto:{{ event_settings.support_email }}"
+                      href="mailto:{{ support_email }}"
                       style="background-color:rgb(37,99,235);color:rgb(255,255,255);padding:12px 24px;border-radius:6px;font-size:15px;font-weight:600;text-decoration-line:none"
                       target="_blank">Contact Support</a>
                   </td>
