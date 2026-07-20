@@ -41,7 +41,7 @@
 			<Button v-if="!session.isLoggedIn" variant="outline" @click="openLoginDialog()">
 				{{ __("Log in to manage bookings") }}
 			</Button>
-			<Button v-else variant="outline" :link="`/dashboard/account/bookings/${bookingId}`">
+			<Button v-else variant="outline" :link="`/b/account/bookings/${bookingId}`">
 				{{ __("Manage booking") }}
 			</Button>
 		</div>
