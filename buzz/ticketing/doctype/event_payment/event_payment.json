@@ -17,7 +17,12 @@
   "payment_gateway",
   "column_break_oauu",
   "payment_id",
-  "order_id"
+  "order_id",
+  "refund_section",
+  "refund_status",
+  "refund_id",
+  "column_break_refund",
+  "refunded_amount"
  ],
  "fields": [
   {
@@ -88,6 +93,37 @@
    "fieldtype": "Link",
    "label": "Payment Gateway",
    "options": "Payment Gateway"
+  },
+  {
+   "depends_on": "refund_status",
+   "fieldname": "refund_section",
+   "fieldtype": "Section Break",
+   "label": "Refund"
+  },
+  {
+   "fieldname": "refund_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Refund Status",
+   "options": "\nRefund Pending\nPartially Refunded\nRefunded",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refund_id",
+   "fieldtype": "Data",
+   "label": "Refund ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_refund",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "refunded_amount",
+   "fieldtype": "Currency",
+   "label": "Refunded Amount",
+   "options": "currency",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
