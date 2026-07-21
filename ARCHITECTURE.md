@@ -140,7 +140,7 @@
 ### Key UI Components
 - Booking flow: `BookingForm.vue`, `PaymentGatewayDialog.vue`, `BookingSummary.vue`.
 - Ticket management: `TicketDetails.vue`, `TicketTransferDialog.vue`, `AddOnPreferenceDialog.vue`, `CancellationRequestDialog.vue`.
-- Sponsorship management: `SponsorshipDetails.vue`, `SponsorshipPaymentDialog.vue`, `SponsorLogoUploader.vue`.
+- Sponsorship management: `SponsorshipDetails.vue`, `SponsorshipPaymentDialog.vue`.
 - Check-in: `CheckInScanner.vue`, `EventSelector.vue`, `QRScanner.vue`.
 - Shared: `Navbar.vue`, `LanguageSwitcher.vue`, `SuccessMessage.vue`.
 
