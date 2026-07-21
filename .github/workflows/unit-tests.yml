@@ -1,0 +1,38 @@
+name: Dashboard Unit Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: unit-tests-buzz-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Pinned rather than lts/*: the tests are .ts files run straight through
+      # node --test, which relies on the runtime's type stripping.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "yarn"
+          cache-dependency-path: dashboard/yarn.lock
+
+      - name: Install dependencies
+        working-directory: dashboard
+        run: yarn install --frozen-lockfile
+
+      - name: Run unit tests
+        working-directory: dashboard
+        run: yarn test:unit
