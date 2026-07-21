@@ -17,7 +17,7 @@
 				},
 			}"
 		>
-			<template #cell="{ item, row, column }">
+			<template #cell="{ item, row, column, align }">
 				<Badge
 					v-if="column.key === 'status'"
 					:theme="getStatusTheme(row.status)"
@@ -26,7 +26,7 @@
 				>
 					{{ item }}
 				</Badge>
-				<span v-else>{{ item }}</span>
+				<ListRowItem v-else :column="column" :row="row" :item="item" :align="align" />
 			</template>
 		</ListView>
 
@@ -51,15 +51,15 @@
 <script setup lang="ts">
 import { session } from "@/data/session";
 import { useProposalStatuses } from "@/composables/useProposalStatuses";
-import { Badge, ListView, Spinner, dayjsLocal, useList } from "frappe-ui";
+import { Badge, ListRowItem, ListView, Spinner, dayjsLocal, useList } from "frappe-ui";
 
 const { getStatusTheme } = useProposalStatuses();
 
 const columns = [
-	{ label: __("Title"), key: "title" },
-	{ label: __("Event"), key: "event_title" },
-	{ label: __("Status"), key: "status" },
-	{ label: __("Submitted"), key: "formatted_creation" },
+	{ label: __("Title"), key: "title", width: "240px" },
+	{ label: __("Event"), key: "event_title", width: "180px" },
+	{ label: __("Status"), key: "status", width: "130px" },
+	{ label: __("Submitted"), key: "formatted_creation", width: "120px" },
 ];
 
 const proposals = useList({

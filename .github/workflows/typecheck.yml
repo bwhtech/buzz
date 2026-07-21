@@ -3,14 +3,8 @@ name: Dashboard TypeScript
 on:
   push:
     branches:
-      - develop
-    paths:
-      - "dashboard/**"
-      - ".github/workflows/typecheck.yml"
+      - main
   pull_request:
-    paths:
-      - "dashboard/**"
-      - ".github/workflows/typecheck.yml"
   merge_group:
 
 concurrency:

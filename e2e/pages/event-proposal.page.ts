@@ -16,7 +16,7 @@ export class EventProposalPage {
 	}
 
 	async goto(): Promise<void> {
-		await this.page.goto("/dashboard/event-proposal");
+		await this.page.goto("/b/event-proposal");
 		await this.page.waitForLoadState("networkidle");
 	}
 

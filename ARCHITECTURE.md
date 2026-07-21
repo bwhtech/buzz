@@ -124,10 +124,10 @@
 ### Entry + Build
 - Entry: `dashboard/src/main.js` mounts `App.vue` with router, resources, translation plugin, and socket.
 - Build: `dashboard/vite.config.js` outputs to `buzz/public/dashboard` and updates `buzz/www/dashboard.html`.
-- Base URL: `/dashboard` (router history uses `createWebHistory("/dashboard")`).
+- Base URL: `/b` (router history uses `createWebHistory("/b")`). Old `/dashboard/*` links 301-redirect to `/b/*` via `website_redirects` in `hooks.py`.
 
 ### Routing
-- Public-like flows: booking (`/book-tickets/:eventRoute`) and check-in (`/check-in`).
+- Public-like flows: booking (`/register/:eventRoute`) and check-in (`/check-in`).
 - Account area under `/account`:
   - bookings list/details, tickets list/details, sponsorships list/details.
 - Guard: `router.beforeEach` checks `buzz.api.get_user_info` and redirects to `/login` if unauthenticated.
@@ -237,7 +237,7 @@ erDiagram
   - Update frontend rendering in `CustomFieldInput.vue` and `BookingForm.vue`.
 - Payment flow changes
   - Update `buzz/payments.py` and any event-scoped gateway selection logic.
-  - Ensure payment redirects still land on `/dashboard/...?...success=true`.
+  - Ensure payment redirects still land on `/b/...?...success=true`.
 - Sponsorship flow changes
   - Update `Sponsorship Enquiry` for status transitions and `SponsorshipDetails.vue` for UI state.
   - Verify sponsor creation in `on_payment_authorized`.

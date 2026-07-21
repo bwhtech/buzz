@@ -8,7 +8,7 @@ import { isLoggedIn } from "../helpers";
 test.describe("Authentication - Pre-authenticated", () => {
 	test("should access buzz when authenticated", async ({ page }) => {
 		// Already authenticated via setup project
-		await page.goto("/dashboard/");
+		await page.goto("/b/");
 		await page.waitForLoadState("networkidle");
 
 		// Should not be redirected to login
@@ -51,7 +51,7 @@ test.describe("Authentication - Fresh state", () => {
 	});
 
 	test("should show login button when not authenticated", async ({ page }) => {
-		await page.goto("/dashboard");
+		await page.goto("/b");
 		await page.waitForLoadState("networkidle");
 
 		await expect(page.getByRole("button", { name: "Log In" }).first()).toBeVisible();

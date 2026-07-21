@@ -35,7 +35,7 @@ test.describe("Guest Booking", () => {
 
 		await bookingPage.submit();
 
-		await expect(page.getByText("Booking Confirmed!")).toBeVisible({ timeout: 30000 });
+		await expect(page.getByText("Booking Confirmed")).toBeVisible({ timeout: 30000 });
 	});
 
 	test("guest booking with Email OTP", async ({ page }) => {
@@ -65,7 +65,7 @@ test.describe("Guest Booking", () => {
 		await page.locator('input[placeholder="123456"]').fill(otp!);
 		await page.getByRole("button", { name: "Verify & Book" }).click();
 
-		await expect(page.getByText("Booking Confirmed!")).toBeVisible({ timeout: 30000 });
+		await expect(page.getByText("Booking Confirmed")).toBeVisible({ timeout: 30000 });
 	});
 
 	test("guest booking with Phone OTP", async ({ page }) => {
@@ -97,6 +97,6 @@ test.describe("Guest Booking", () => {
 		await page.locator('input[placeholder="123456"]').fill(otp!);
 		await page.getByRole("button", { name: "Verify & Book" }).click();
 
-		await expect(page.getByText("Booking Confirmed!")).toBeVisible({ timeout: 30000 });
+		await expect(page.getByText("Booking Confirmed")).toBeVisible({ timeout: 30000 });
 	});
 });

@@ -18,7 +18,30 @@ before_uninstall = "buzz.uninstall.before_uninstall"
 
 
 website_route_rules = [
-	{"from_route": "/dashboard/<path:app_path>", "to_route": "dashboard"},
+	{"from_route": "/b", "to_route": "dashboard"},
+	{"from_route": "/b/<path:app_path>", "to_route": "dashboard"},
+]
+
+# Keep old /dashboard/* links working: redirect to the shortened /b/* scheme.
+# Ordered specific -> catch-all; the first matching source wins.
+# forward_query_parameters is required on every rule: without it the query
+# string is dropped, which would strip the access token off guest booking
+# confirmation links.
+website_redirects = [
+	{
+		"source": r"/dashboard/events/([^/]+)/forms/([^/]+)",
+		"target": r"/b/\1/\2",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/dashboard/book-tickets/(.+)",
+		"target": r"/b/register/\1",
+		"forward_query_parameters": True,
+	},
+	{"source": r"/dashboard/(.*)", "target": r"/b/\1", "forward_query_parameters": True},
+	# Bare /dashboard has no trailing slash for the catch-all above to match, and
+	# www/dashboard.html would otherwise serve the SPA shell under the wrong base.
+	{"source": r"/dashboard", "target": "/b", "forward_query_parameters": True},
 ]
 
 # Scheduled Tasks

@@ -1,0 +1,274 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html dir="ltr" lang="en">
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+    <meta name="x-apple-disable-message-reformatting" />
+  </head>
+  <body
+    style='background-color:rgb(243,244,246);font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";padding-top:40px;padding-bottom:40px'>
+    <div
+      style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0"
+      data-skip-in-text="true">
+      Your booking for {{ event_title }} is confirmed.
+    </div>
+    <table
+      align="center"
+      width="100%"
+      border="0"
+      cellpadding="0"
+      cellspacing="0"
+      role="presentation"
+      style="background-color:rgb(255,255,255);border-radius:8px;max-width:600px;margin-left:auto;margin-right:auto;overflow:hidden">
+      <tbody>
+        <tr style="width:100%">
+          <td>
+            <!-- Header -->
+            <table
+              align="center"
+              width="100%"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              style="background-color:rgb(31,41,55);padding-left:40px;padding-right:40px;padding-top:32px;padding-bottom:32px;text-align:center">
+              <tbody>
+                <tr>
+                  <td>
+                    <h1
+                      style="color:rgb(255,255,255);font-size:28px;font-weight:700;margin:0px;margin-bottom:8px">
+                      ✅ Booking Confirmed
+                    </h1>
+                    <p
+                      style="color:rgb(219,234,254);font-size:16px;margin:0px;line-height:24px">
+                      Thanks for booking. Here's your summary.
+                    </p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Event + booking meta -->
+            <table
+              align="center"
+              width="100%"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              style="padding-left:40px;padding-right:40px;padding-top:32px;padding-bottom:8px">
+              <tbody>
+                <tr>
+                  <td>
+                    <h2
+                      style="color:rgb(31,41,55);font-size:22px;font-weight:700;margin:0px;margin-bottom:8px">
+                      {{ event_title }}
+                    </h2>
+                    <p
+                      style="color:rgb(75,85,99);font-size:14px;margin:0px;line-height:22px">
+                      📅 {{ frappe.format_date(event_doc.start_date) }}
+                      {% if event_doc.start_date != event_doc.end_date %}
+                        - {{ frappe.format_date(event_doc.end_date) }}
+                      {% endif %}
+                      {% if venue %}&nbsp;&nbsp;·&nbsp;&nbsp;📍 {{ venue }}{% endif %}
+                    </p>
+                    <p
+                      style="color:rgb(75,85,99);font-size:14px;margin-top:12px;margin-bottom:0px;line-height:22px">
+                      Booking ID:
+                      <span style='font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;color:rgb(31,41,55);font-weight:600'>{{ doc.name }}</span>
+                      &nbsp;&nbsp;·&nbsp;&nbsp;Payment: <strong>{{ doc.payment_status }}</strong>
+                    </p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Attendees / tickets -->
+            <table
+              align="center"
+              width="100%"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              style="padding-left:40px;padding-right:40px;padding-top:16px;padding-bottom:8px">
+              <tbody>
+                <tr>
+                  <td>
+                    <p
+                      style="color:rgb(75,85,99);font-size:13px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;margin:0px;margin-bottom:8px">
+                      Tickets ({{ attendee_rows | length }})
+                    </p>
+                    <table
+                      align="center"
+                      width="100%"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation"
+                      style="border-top:1px solid rgb(229,231,235)">
+                      <tbody>
+                        {% for attendee in attendee_rows %}
+                        <tr>
+                          <td
+                            style="padding-top:12px;padding-bottom:12px;border-bottom:1px solid rgb(229,231,235);vertical-align:top">
+                            <p
+                              style="color:rgb(31,41,55);font-size:15px;font-weight:600;margin:0px;line-height:20px">
+                              {{ attendee.full_name }}
+                            </p>
+                            <p
+                              style="color:rgb(107,114,128);font-size:13px;margin:2px 0px 0px 0px;line-height:18px">
+                              {{ attendee.ticket_type_title }}
+                              {% if attendee.number_of_add_ons %}
+                                &nbsp;·&nbsp; {{ attendee.number_of_add_ons }} add-on(s)
+                              {% endif %}
+                            </p>
+                          </td>
+                          <td
+                            style="padding-top:12px;padding-bottom:12px;border-bottom:1px solid rgb(229,231,235);text-align:right;vertical-align:top;white-space:nowrap">
+                            <p
+                              style="color:rgb(31,41,55);font-size:15px;font-weight:500;margin:0px;line-height:20px">
+                              {{ frappe.utils.fmt_money(attendee.amount, currency=doc.currency) }}
+                            </p>
+                          </td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Totals -->
+            <table
+              align="center"
+              width="100%"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              style="padding-left:40px;padding-right:40px;padding-top:8px;padding-bottom:24px">
+              <tbody>
+                <tr>
+                  <td>
+                    <table
+                      align="right"
+                      width="60%"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation">
+                      <tbody>
+                        <tr>
+                          <td style="padding:4px 0px;color:rgb(75,85,99);font-size:14px">Subtotal</td>
+                          <td style="padding:4px 0px;color:rgb(31,41,55);font-size:14px;text-align:right">
+                            {{ frappe.utils.fmt_money(doc.net_amount, currency=doc.currency) }}
+                          </td>
+                        </tr>
+                        {% if doc.discount_amount %}
+                        <tr>
+                          <td style="padding:4px 0px;color:rgb(22,163,74);font-size:14px">
+                            Discount{% if doc.coupon_code %} ({{ doc.coupon_code }}){% endif %}
+                          </td>
+                          <td style="padding:4px 0px;color:rgb(22,163,74);font-size:14px;text-align:right">
+                            &minus; {{ frappe.utils.fmt_money(doc.discount_amount, currency=doc.currency) }}
+                          </td>
+                        </tr>
+                        {% endif %}
+                        {% if doc.tax_amount %}
+                        <tr>
+                          <td style="padding:4px 0px;color:rgb(75,85,99);font-size:14px">
+                            {{ doc.tax_label or "Tax" }}{% if doc.tax_percentage %} ({{ doc.tax_percentage }}%){% endif %}
+                          </td>
+                          <td style="padding:4px 0px;color:rgb(31,41,55);font-size:14px;text-align:right">
+                            {{ frappe.utils.fmt_money(doc.tax_amount, currency=doc.currency) }}
+                          </td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                          <td style="padding:10px 0px 0px 0px;border-top:2px solid rgb(229,231,235);color:rgb(31,41,55);font-size:16px;font-weight:700">
+                            Total
+                          </td>
+                          <td style="padding:10px 0px 0px 0px;border-top:2px solid rgb(229,231,235);color:rgb(31,41,55);font-size:16px;font-weight:700;text-align:right">
+                            {{ frappe.utils.fmt_money(doc.total_amount, currency=doc.currency) }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Note about tickets -->
+            {% if event_doc.send_ticket_email %}
+            <table
+              align="center"
+              width="100%"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              style="background-color:rgb(249,250,251);padding-left:40px;padding-right:40px;padding-top:20px;padding-bottom:20px;text-align:center;border-top:1px solid rgb(229,231,235)">
+              <tbody>
+                <tr>
+                  <td>
+                    <p style="color:rgb(75,85,99);font-size:14px;margin:0px;line-height:22px">
+                      🎟️ Individual tickets with entry QR codes have been emailed to each attendee.
+                    </p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            {% endif %}
+
+            {% if support_email %}
+            <table
+              align="center"
+              width="100%"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              style="padding-left:40px;padding-right:40px;padding-top:20px;padding-bottom:20px;text-align:center">
+              <tbody>
+                <tr>
+                  <td>
+                    <p style="color:rgb(75,85,99);font-size:14px;margin:0px;margin-bottom:12px;line-height:22px">
+                      Need help? Contact our support team.
+                    </p>
+                    <a
+                      href="mailto:{{ support_email }}"
+                      style="background-color:rgb(37,99,235);color:rgb(255,255,255);padding:12px 24px;border-radius:6px;font-size:15px;font-weight:600;text-decoration-line:none"
+                      target="_blank">Contact Support</a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            {% endif %}
+
+            <!-- Footer -->
+            <table
+              align="center"
+              width="100%"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              style="background-color:rgb(31,41,55);padding-left:40px;padding-right:40px;padding-top:24px;padding-bottom:24px;text-align:center">
+              <tbody>
+                <tr>
+                  <td>
+                    <p style="color:rgb(209,213,219);font-size:14px;margin:0px;line-height:22px">
+                      Powered by <a href="https://github.com/BuildWithHussain/buzz" style="color:rgb(209,213,219)">Buzz</a>. Built on <a href="https://frappe.io/framework" style="color:rgb(209,213,219)">Frappe Framework</a>.
+                    </p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

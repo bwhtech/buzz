@@ -10,6 +10,20 @@ from frappe.utils.data import get_time, time_diff_in_seconds
 from buzz.api.forms import validate_excluded_fields
 from buzz.utils import only_if_app_installed
 
+# Top-level dashboard route segments (/b/<segment>) an event route must not shadow.
+RESERVED_EVENT_ROUTES = {
+	"account",
+	"bookings",
+	"booking-success",
+	"tickets",
+	"register",
+	"register-interest",
+	"check-in",
+	"book-tickets",
+	"event-proposal",
+	"events",
+}
+
 
 class BuzzEvent(Document):
 	# begin: auto-generated types
@@ -144,6 +158,13 @@ class BuzzEvent(Document):
 		if self.is_published and not self.route:
 			route = frappe.website.utils.cleanup_page_name(self.title).replace("_", "-")
 			self.route = append_number_if_name_exists("Buzz Event", route, fieldname="route")
+
+		# Compared lowercased: vue-router matches paths case-insensitively, so a
+		# route like "Account" shadows /b/account just as "account" would.
+		if (self.route or "").lower() in RESERVED_EVENT_ROUTES:
+			frappe.throw(
+				_("'{0}' is a reserved route and cannot be used as an event route.").format(self.route)
+			)
 
 	def validate_guest_verification_config(self):
 		"""Ensure email/SMS is configured when OTP verification is enabled."""

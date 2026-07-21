@@ -87,7 +87,7 @@ class EventTicket(Document):
 		invite_by_email(
 			emails=self.attendee_email,
 			roles=["Buzz User"],
-			redirect_to_path="/dashboard/account/tickets",
+			redirect_to_path="/b/account/tickets",
 			app_name="buzz",
 		)
 

@@ -7,7 +7,7 @@ test.describe("Login Modal", () => {
 	test.use({ storageState: { cookies: [], origins: [] } });
 
 	test("email/password login via modal", async ({ page }) => {
-		await page.goto("/dashboard");
+		await page.goto("/b");
 		await page.waitForLoadState("networkidle");
 		await page.getByRole("button", { name: "Log In" }).first().click();
 		await expect(page.getByRole("dialog")).toBeVisible();
@@ -20,7 +20,7 @@ test.describe("Login Modal", () => {
 	});
 
 	test("shows error for invalid credentials", async ({ page }) => {
-		await page.goto("/dashboard");
+		await page.goto("/b");
 		await page.waitForLoadState("networkidle");
 
 		await page.getByRole("button", { name: "Log In" }).first().click();

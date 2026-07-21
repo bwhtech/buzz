@@ -109,5 +109,5 @@ setup("create test event for booking", async ({ request }) => {
 	});
 	console.log(`Created Ticket Add-on: ${addOn.name}`);
 
-	console.log(`Test event setup complete! Route: /dashboard/book-tickets/${testEventRoute}`);
+	console.log(`Test event setup complete! Route: /b/register/${testEventRoute}`);
 });

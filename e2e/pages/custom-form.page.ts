@@ -18,7 +18,7 @@ export class CustomFormPage {
 	}
 
 	async goto(eventRoute: string, formRoute: string): Promise<void> {
-		await this.page.goto(`/dashboard/events/${eventRoute}/forms/${formRoute}`);
+		await this.page.goto(`/b/${eventRoute}/${formRoute}`);
 		await this.page.waitForLoadState("networkidle");
 	}
 

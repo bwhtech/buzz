@@ -37,7 +37,7 @@ export class BookingPage {
 
 	// Navigate to the booking page for a specific event.
 	async goto(eventRoute: string): Promise<void> {
-		await this.page.goto(`/dashboard/book-tickets/${eventRoute}`);
+		await this.page.goto(`/b/register/${eventRoute}`);
 		await this.page.waitForLoadState("networkidle");
 	}
 

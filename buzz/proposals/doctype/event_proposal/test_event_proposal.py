@@ -126,6 +126,20 @@ class IntegrationTestEventProposal(IntegrationTestCase):
 		self.assertTrue(frappe.db.exists("Event Host", company))
 		self.assertEqual(proposal.status, "Event Created")
 
+	def test_start_and_end_time_are_mandatory(self):
+		proposal = frappe.new_doc("Event Proposal")
+		proposal.update(
+			{
+				"title": f"Proposal {frappe.generate_hash(length=6)}",
+				"category": self.category,
+				"medium": "Online",
+				"start_date": "2030-01-01",
+				"about": "<p>About the event</p>",
+			}
+		)
+		with self.assertRaises(frappe.MandatoryError):
+			proposal.insert(ignore_permissions=True)
+
 	def test_submit_without_host_or_company_throws(self):
 		proposal = self.make_proposal(status="Approved")
 		with self.assertRaises(frappe.ValidationError):

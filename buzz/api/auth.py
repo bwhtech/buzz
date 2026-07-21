@@ -16,7 +16,7 @@ def get_login_context(redirect_to: str | None = None):
 	}
 
 	if not redirect_to:
-		redirect_to = frappe.utils.get_url("/dashboard")
+		redirect_to = frappe.utils.get_url("/b")
 
 	social_login_keys = frappe.get_all(
 		"Social Login Key",

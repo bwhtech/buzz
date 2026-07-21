@@ -28,7 +28,7 @@ from buzz.payments import (
 	get_payment_link_for_booking,
 	get_payment_link_for_sponsorship,
 )
-from buzz.utils import is_app_installed
+from buzz.utils import build_event_datetimes, is_app_installed
 
 OFFLINE_PAYMENT_METHOD = "Offline"
 
@@ -139,13 +139,15 @@ def get_event_payment_gateways(event: str) -> list[str]:
 
 
 def are_registrations_closed(event_doc) -> bool:
-	if not event_doc.registrations_close_at:
-		return False
+	event_timezone = event_doc.time_zone or get_system_timezone()
+	current_datetime_in_event_timezone = get_datetime_in_timezone(event_timezone).replace(tzinfo=None)
 
-	event_tz = event_doc.time_zone or get_system_timezone()
-	now_in_event_tz = get_datetime_in_timezone(event_tz).replace(tzinfo=None)
+	if event_doc.registrations_close_at:
+		return current_datetime_in_event_timezone > get_datetime(event_doc.registrations_close_at)
 
-	return now_in_event_tz > get_datetime(event_doc.registrations_close_at)
+	# No explicit cutoff set - registrations close once the event itself has ended.
+	_, event_end_datetime = build_event_datetimes(event_doc)
+	return current_datetime_in_event_timezone > event_end_datetime
 
 
 def is_ticket_transfer_allowed(event_id: str | int) -> bool:
@@ -478,7 +480,10 @@ def process_booking(
 	if booking.total_amount == 0:
 		booking.flags.ignore_permissions = True
 		booking.submit()
-		return {"booking_name": booking.name}
+		return {
+			"booking_name": booking.name,
+			"redirect_to": f"/booking-success/{booking.name}?token={get_booking_access_token(booking.name)}",
+		}
 
 	if is_offline:
 		method_filters = {"event": event, "enabled": 1}
@@ -518,7 +523,7 @@ def process_booking(
 	return {
 		"payment_link": get_payment_link_for_booking(
 			booking.name,
-			redirect_to=f"/dashboard/booking-success/{booking.name}?token={get_booking_access_token(booking.name)}",
+			redirect_to=f"/b/booking-success/{booking.name}?token={get_booking_access_token(booking.name)}",
 			payment_gateway=payment_gateway,
 		)
 	}
@@ -931,7 +936,7 @@ def create_sponsorship_payment_link(enquiry_id: str, tier_id: str, payment_gatew
 	if enquiry.owner != frappe.session.user:
 		frappe.throw(frappe._("Not permitted to create payment for this enquiry"))
 
-	redirect_url = f"/dashboard/account/sponsorships/{enquiry_id}?success=true"
+	redirect_url = f"/b/account/sponsorships/{enquiry_id}?success=true"
 	return get_payment_link_for_sponsorship(
 		enquiry_id, tier_id, redirect_url, payment_gateway=payment_gateway
 	)

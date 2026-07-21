@@ -74,7 +74,7 @@ test.describe("Booking Details - Offline Payment", () => {
 	test("shows verification pending status", async ({ page }) => {
 		// This test assumes a booking already exists
 		// Navigate to bookings list
-		await page.goto("/dashboard/bookings");
+		await page.goto("/b/bookings");
 		await page.waitForLoadState("networkidle");
 
 		// Look for verification pending badge

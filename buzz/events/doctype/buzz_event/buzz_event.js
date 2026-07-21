@@ -292,7 +292,7 @@ function show_save_as_template_dialog(frm) {
 frappe.ui.form.on("Buzz Event Form", {
 	copy_to_clipboard(frm, cdt, cdn) {
 		const row = frappe.get_doc(cdt, cdn);
-		const url = `${window.location.origin}/dashboard/events/${frm.doc.route}/forms/${row.route}`;
+		const url = `${window.location.origin}/b/${frm.doc.route}/${row.route}`;
 		navigator.clipboard.writeText(url);
 		frappe.show_alert({ message: __("Link copied!"), indicator: "green" });
 	},
@@ -307,11 +307,11 @@ frappe.ui.form.on("Buzz Event", {
 		}
 
 		if (frm.doc.route) {
-			frm.add_web_link(`/dashboard/book-tickets/${frm.doc.route}`, "View Registration Page");
+			frm.add_web_link(`/b/register/${frm.doc.route}`, "View Registration Page");
 		}
 
 		if (!frm.is_new()) {
-			frm.add_web_link(`/dashboard/check-in/${frm.doc.name}`, __("Open Check-in"));
+			frm.add_web_link(`/b/check-in/${frm.doc.name}`, __("Open Check-in"));
 		}
 
 		const button_label = frm.doc.is_published ? __("Unpublish") : __("Publish");

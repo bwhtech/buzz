@@ -17,7 +17,7 @@
 				},
 			}"
 		>
-			<template #cell="{ item, row, column }">
+			<template #cell="{ item, row, column, align }">
 				<Badge
 					v-if="column.key === 'status'"
 					:theme="
@@ -32,7 +32,7 @@
 				>
 					{{ item }}
 				</Badge>
-				<span v-else>{{ item }}</span>
+				<ListRowItem v-else :column="column" :row="row" :item="item" :align="align" />
 			</template>
 		</ListView>
 	</div>
@@ -41,17 +41,17 @@
 <script setup lang="ts">
 import { formatCurrency } from "@/utils/currency";
 import { pluralize } from "@/utils/pluralize";
-import { Badge, ListView, useList } from "frappe-ui";
+import { Badge, ListRowItem, ListView, useList } from "frappe-ui";
 import { dayjsLocal } from "frappe-ui";
 import { session } from "../data/session";
 
 const columns = [
-	{ label: __("Event"), key: "event_title" },
-	{ label: "", key: "ticket_count" },
-	{ label: __("Start Date"), key: "start_date" },
-	{ label: __("Venue"), key: "venue" },
-	{ label: __("Amount Paid"), key: "formatted_amount" },
-	{ label: __("Status"), key: "status" },
+	{ label: __("Event"), key: "event_title", width: "220px" },
+	{ label: "", key: "ticket_count", width: "90px" },
+	{ label: __("Start Date"), key: "start_date", width: "110px" },
+	{ label: __("Venue"), key: "venue", width: "140px" },
+	{ label: __("Amount Paid"), key: "formatted_amount", width: "110px" },
+	{ label: __("Status"), key: "status", width: "120px" },
 ];
 
 const bookings = useList({

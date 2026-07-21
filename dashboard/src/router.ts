@@ -14,7 +14,7 @@ const routes: RouteRecordRaw[] = [
 		component: () => import("@/pages/CheckInScanner.vue"),
 	},
 	{
-		path: "/book-tickets/:eventRoute",
+		path: "/register/:eventRoute",
 		props: true,
 		name: "event-booking",
 		meta: { isPublic: true },
@@ -34,17 +34,19 @@ const routes: RouteRecordRaw[] = [
 		component: () => import("@/pages/BookingSuccess.vue"),
 	},
 	{
-		path: "/events/:eventRoute/forms/:formRoute",
-		props: true,
-		name: "custom-form",
-		meta: { isPublic: true },
-		component: () => import("@/pages/CustomFormPage.vue"),
-	},
-	{
 		path: "/register-interest/:campaign",
 		props: true,
 		name: "register-interest",
 		component: () => import("@/pages/RegisterInterest.vue"),
+	},
+	// Back-compat: old in-app paths redirect to the shortened scheme.
+	{
+		path: "/book-tickets/:eventRoute",
+		redirect: (to) => ({ name: "event-booking", params: to.params }),
+	},
+	{
+		path: "/events/:eventRoute/forms/:formRoute",
+		redirect: (to) => ({ name: "custom-form", params: to.params }),
 	},
 	{
 		path: "/bookings",
@@ -120,10 +122,19 @@ const routes: RouteRecordRaw[] = [
 			},
 		],
 	},
+	// Event custom form: /b/<event>/<form>. Declared last — two dynamic segments,
+	// so it only matches after every static route above has been ruled out.
+	{
+		path: "/:eventRoute/:formRoute",
+		props: true,
+		name: "custom-form",
+		meta: { isPublic: true },
+		component: () => import("@/pages/CustomFormPage.vue"),
+	},
 ]
 
 const router = createRouter({
-	history: createWebHistory("/dashboard"),
+	history: createWebHistory("/b"),
 	routes,
 })
 

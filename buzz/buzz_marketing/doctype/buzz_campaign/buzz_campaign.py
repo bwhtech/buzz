@@ -41,7 +41,7 @@ class BuzzCampaign(Document):
 			frappe.throw(_("Please install Frappe CRM to use campaigns feature"))
 
 	def generate_qr_code(self):
-		register_url = f"{frappe.utils.get_url()}/dashboard/register-interest/{self.name}"
+		register_url = f"{frappe.utils.get_url()}/b/register-interest/{self.name}"
 		self.qr_code = generate_qr_code_file(
 			doc=self,
 			data=register_url,

@@ -4,6 +4,7 @@ import json
 
 import frappe
 from frappe import _
+from frappe.email.doctype.email_template.email_template import get_email_template
 from frappe.model.document import Document
 
 from buzz.api import OFFLINE_PAYMENT_METHOD
@@ -145,6 +146,85 @@ class EventBooking(Document):
 	def on_submit(self):
 		self.validate_coupon_availability()
 		self.generate_tickets()
+
+		try:
+			self.send_booking_confirmation_email()
+		except Exception:
+			frappe.log_error(
+				title="Booking confirmation email failed",
+				reference_doctype=self.doctype,
+				reference_name=self.name,
+			)
+
+	def send_booking_confirmation_email(self):
+		# Never email system/placeholder users — they are not real recipients.
+		if self.user in ("Administrator", "Guest"):
+			return
+
+		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
+		if not event_doc.send_booking_confirmation_email:
+			return
+
+		recipient = frappe.db.get_value("User", self.user, "email") or self.user
+		if not recipient:
+			return
+
+		# Fallback to global setting if event-level not set
+		booking_template = event_doc.booking_confirmation_email_template or frappe.db.get_single_value(
+			"Buzz Settings", "default_booking_confirmation_email_template"
+		)
+
+		subject = _("Your booking for {0} is confirmed ✅").format(event_doc.title)
+
+		# Pre-fetch ticket type titles in a single query so the email template
+		# loop stays a pure display operation (no per-attendee DB round-trips).
+		ticket_type_names = list({attendee.ticket_type for attendee in self.attendees})
+		ticket_type_titles = {}
+		if ticket_type_names:
+			ticket_type_titles = {
+				row.name: row.title
+				for row in frappe.get_all(
+					"Event Ticket Type",
+					filters={"name": ["in", ticket_type_names]},
+					fields=["name", "title"],
+				)
+			}
+
+		attendee_rows = [
+			{
+				"full_name": attendee.full_name
+				or " ".join(part for part in (attendee.first_name, attendee.last_name) if part),
+				"ticket_type_title": ticket_type_titles.get(attendee.ticket_type, attendee.ticket_type),
+				"number_of_add_ons": attendee.number_of_add_ons,
+				"amount": (attendee.amount or 0) + (attendee.add_on_total or 0),
+			}
+			for attendee in self.attendees
+		]
+
+		args = {
+			"doc": self,
+			"event_doc": event_doc,
+			"event_title": event_doc.title,
+			"venue": event_doc.venue,
+			"attendee_rows": attendee_rows,
+			"support_email": frappe.db.get_single_value("Buzz Settings", "support_email"),
+		}
+
+		content = None
+		if booking_template:
+			email_template = get_email_template(booking_template, args)
+			subject = email_template.get("subject") or subject
+			content = email_template.get("message")
+
+		frappe.sendmail(
+			recipients=[recipient],
+			subject=subject,
+			content=content,
+			template=None if booking_template else "booking_confirmation",
+			args=args,
+			reference_doctype=self.doctype,
+			reference_name=self.name,
+		)
 
 	def validate_coupon_availability(self):
 		"""Re-validate coupon with lock to prevent race condition."""
