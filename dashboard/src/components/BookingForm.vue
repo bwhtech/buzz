@@ -407,7 +407,10 @@
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage";
 import { useLoginDialog } from "@/composables/useLoginDialog";
 import { userResource } from "@/data/user";
-import { resolveBookingSuccessAction } from "@/utils/bookingSuccessRedirect";
+import {
+	type BookingSubmitResponse,
+	resolveBookingSuccessAction,
+} from "@/utils/bookingSuccessRedirect";
 import { formatCurrency, formatPriceOrFree } from "@/utils/currency";
 import { clearBookingCache } from "@/utils/index";
 import BillingDetails from "@/components/BillingDetails.vue";
@@ -1296,7 +1299,7 @@ function submitBooking(
 			payment_gateway: paymentGateway,
 		},
 		{
-			onSuccess: (data: any) => {
+			onSuccess: (data: BookingSubmitResponse) => {
 				clearBookingCache();
 
 				if (isOtpFlow) {

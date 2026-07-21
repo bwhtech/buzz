@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resolveBookingSuccessAction } from "./bookingSuccessRedirect.js";
+import { resolveBookingSuccessAction } from "./bookingSuccessRedirect.ts";
 
 test("payment_link takes priority and is external", () => {
 	const action = resolveBookingSuccessAction(
-		{ payment_link: "https://gateway.example/pay/123" },
+		{ booking_name: "B-0000", payment_link: "https://gateway.example/pay/123" },
 		{ isGuestMode: true }
 	);
 	assert.deepEqual(action, { type: "external", url: "https://gateway.example/pay/123" });
