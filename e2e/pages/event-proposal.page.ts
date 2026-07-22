@@ -32,6 +32,20 @@ export class EventProposalPage {
 			.first();
 	}
 
+	/**
+	 * Pick a value from a select field. These render as a listbox opened by a
+	 * combobox button rather than a native `select`, so the option is chosen by
+	 * clicking rather than through `selectOption`.
+	 */
+	async selectOptionByLabel(label: string, option: string): Promise<void> {
+		const trigger = this.page.getByRole("combobox", { name: new RegExp(label) });
+		await trigger.waitFor({ state: "visible", timeout: 10000 });
+		await trigger.click();
+
+		await this.page.getByRole("option", { name: option, exact: true }).click();
+		await expect(trigger).toContainText(option);
+	}
+
 	async expectFormVisible(): Promise<void> {
 		await expect(this.form).toBeVisible();
 	}
