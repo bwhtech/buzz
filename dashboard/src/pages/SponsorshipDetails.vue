@@ -34,10 +34,10 @@
 				class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-lg p-4"
 			>
 				<div class="flex items-center">
-					<LucideCheckCircle class="w-6 h-6 text-ink-green-2 mr-3" />
+					<LucideCheckCircle class="w-6 h-6 text-ink-green-5 mr-3" />
 					<div>
-						<h3 class="text-ink-green-3 font-semibold">Payment Successful! 🎉</h3>
-						<p class="text-ink-green-2">
+						<h3 class="text-ink-green-6 font-semibold">Payment Successful! 🎉</h3>
+						<p class="text-ink-green-5">
 							Your sponsorship payment has been confirmed. You'll receive
 							confirmation details via email.
 						</p>
@@ -46,7 +46,7 @@
 			</div>
 		</Transition>
 
-		<h2 class="text-ink-gray-9 font-semibold text-lg mb-6">
+		<h2 class="text-ink-gray-9 text-lg-semibold mb-6">
 			Sponsorship Inquiry Details
 			<span class="text-ink-gray-5 font-mono">(#{{ enquiryId }})</span>
 		</h2>
@@ -57,27 +57,23 @@
 			class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-lg p-6"
 		>
 			<div class="flex items-center mb-4">
-				<LucideCheckCircle class="w-6 h-6 text-ink-green-2 mr-3" />
-				<h3 class="text-ink-green-3 font-semibold text-lg">Sponsorship Confirmed</h3>
+				<LucideCheckCircle class="w-6 h-6 text-ink-green-5 mr-3" />
+				<h3 class="text-ink-green-6 text-lg-semibold">Sponsorship Confirmed</h3>
 			</div>
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div>
-					<label class="block text-sm font-medium text-ink-green-3 mb-1"
-						>Sponsor Name</label
-					>
-					<p class="text-ink-green-3">{{ sponsorDetails.company_name }}</p>
+					<label class="block text-sm-medium text-ink-green-6 mb-1">Sponsor Name</label>
+					<p class="text-ink-green-6">{{ sponsorDetails.company_name }}</p>
 				</div>
 				<div>
-					<label class="block text-sm font-medium text-ink-green-3 mb-1"
-						>Confirmed On</label
-					>
-					<p class="text-ink-green-3">{{ formatDate(sponsorDetails.creation) }}</p>
+					<label class="block text-sm-medium text-ink-green-6 mb-1">Confirmed On</label>
+					<p class="text-ink-green-6">{{ formatDate(sponsorDetails.creation) }}</p>
 				</div>
 				<div v-if="sponsorDetails.tier_title" class="md:col-span-2">
-					<label class="block text-sm font-medium text-ink-green-3 mb-1"
+					<label class="block text-sm-medium text-ink-green-6 mb-1"
 						>Sponsorship Tier</label
 					>
-					<p class="text-ink-green-3">{{ sponsorDetails.tier_title }}</p>
+					<p class="text-ink-green-6">{{ sponsorDetails.tier_title }}</p>
 				</div>
 			</div>
 		</div>
@@ -88,10 +84,10 @@
 			class="mb-6 bg-surface-red-1 border border-outline-red-1 rounded-lg p-6"
 		>
 			<div class="flex items-center">
-				<LucideXCircle class="w-6 h-6 text-ink-red-2 mr-3" />
+				<LucideXCircle class="w-6 h-6 text-ink-red-5 mr-3" />
 				<div>
-					<h3 class="text-ink-red-3 font-semibold">Inquiry Withdrawn</h3>
-					<p class="text-ink-red-2 text-sm mt-1">
+					<h3 class="text-ink-red-6 font-semibold">Inquiry Withdrawn</h3>
+					<p class="text-ink-red-5 text-sm mt-1">
 						This sponsorship inquiry has been withdrawn and is no longer active.
 					</p>
 				</div>
@@ -104,10 +100,10 @@
 			class="mb-6 bg-surface-blue-1 border border-outline-blue-1 rounded-lg p-6"
 		>
 			<div class="flex items-center">
-				<LucideClock class="w-6 h-6 text-ink-blue-2 mr-3" />
+				<LucideClock class="w-6 h-6 text-ink-blue-5 mr-3" />
 				<div>
-					<h3 class="text-ink-blue-3 font-semibold">Awaiting Approval</h3>
-					<p class="text-ink-blue-2 text-sm mt-1">
+					<h3 class="text-ink-blue-6 font-semibold">Awaiting Approval</h3>
+					<p class="text-ink-blue-5 text-sm mt-1">
 						Your sponsorship inquiry has been submitted and is pending approval from
 						the event management team. You'll be notified once it's approved and ready
 						for payment.
@@ -140,11 +136,11 @@
 
 		<div class="space-y-6">
 			<!-- Company Information -->
-			<div class="bg-surface-white border border-outline-gray-1 rounded-lg p-6">
-				<h3 class="text-ink-gray-8 font-semibold text-lg mb-4">Company Information</h3>
+			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">Company Information</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6 mb-1"
+						<label class="block text-sm-medium text-ink-gray-6 mb-1"
 							>Company Name</label
 						>
 						<p class="text-ink-gray-9">
@@ -152,7 +148,7 @@
 						</p>
 					</div>
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6 mb-2"
+						<label class="block text-sm-medium text-ink-gray-6 mb-2"
 							>Company Logo</label
 						>
 						<FileUploader
@@ -208,7 +204,7 @@
 											class="w-full bg-surface-gray-2 rounded-full h-1 mt-1"
 										>
 											<div
-												class="bg-ink-blue-2 h-1 rounded-full transition-all duration-300"
+												class="bg-ink-blue-5 h-1 rounded-full transition-all duration-300"
 												:style="{ width: progress + '%' }"
 											></div>
 										</div>
@@ -236,11 +232,11 @@
 			</div>
 
 			<!-- Event & Sponsorship Details -->
-			<div class="bg-surface-white border border-outline-gray-1 rounded-lg p-6">
-				<h3 class="text-ink-gray-8 font-semibold text-lg mb-4">Sponsorship Details</h3>
+			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">Sponsorship Details</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6 mb-1">Event</label>
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">Event</label>
 						<p class="text-ink-gray-9">
 							{{
 								enquiryDetails.data.event_details.title ||
@@ -249,15 +245,13 @@
 						</p>
 					</div>
 					<div v-if="enquiryDetails.data.enquiry.tier_title">
-						<label class="block text-sm font-medium text-ink-gray-6 mb-1"
+						<label class="block text-sm-medium text-ink-gray-6 mb-1"
 							>Sponsorship Tier</label
 						>
 						<p class="text-ink-gray-9">{{ enquiryDetails.data.enquiry.tier_title }}</p>
 					</div>
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6 mb-1"
-							>Status</label
-						>
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">Status</label>
 						<Badge
 							:theme="getStatusTheme(enquiryDetails.data.enquiry.status)"
 							variant="subtle"
@@ -267,7 +261,7 @@
 						</Badge>
 					</div>
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6 mb-1"
+						<label class="block text-sm-medium text-ink-gray-6 mb-1"
 							>Submitted On</label
 						>
 						<p class="text-ink-gray-9">
@@ -280,27 +274,25 @@
 			<!-- Event Information (if available) -->
 			<div
 				v-if="enquiryDetails.data.event_details"
-				class="bg-surface-white border border-outline-gray-1 rounded-lg p-6"
+				class="bg-surface-base border border-outline-gray-1 rounded-lg p-6"
 			>
-				<h3 class="text-ink-gray-8 font-semibold text-lg mb-4">Event Information</h3>
+				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">Event Information</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div v-if="enquiryDetails.data.event_details.start_date">
-						<label class="block text-sm font-medium text-ink-gray-6 mb-1"
-							>Event Date</label
-						>
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">Event Date</label>
 						<p class="text-ink-gray-9">
 							{{ formatDate(enquiryDetails.data.event_details.start_date) }}
 						</p>
 					</div>
 					<div v-if="enquiryDetails.data.event_details.venue">
-						<label class="block text-sm font-medium text-ink-gray-6 mb-1">Venue</label>
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">Venue</label>
 						<p class="text-ink-gray-9">
 							{{ enquiryDetails.data.event_details.venue }}
 						</p>
 					</div>
 				</div>
 				<div v-if="enquiryDetails.data.event_details.short_description" class="mt-4">
-					<label class="block text-sm font-medium text-ink-gray-6 mb-1"
+					<label class="block text-sm-medium text-ink-gray-6 mb-1"
 						>Event Description</label
 					>
 					<p class="text-ink-gray-9">
@@ -308,9 +300,7 @@
 					</p>
 				</div>
 				<div v-if="enquiryDetails.data.event_details.about" class="mt-4">
-					<label class="block text-sm font-medium text-ink-gray-6 mb-1"
-						>About Event</label
-					>
+					<label class="block text-sm-medium text-ink-gray-6 mb-1">About Event</label>
 					<div
 						class="text-ink-gray-9"
 						v-html="enquiryDetails.data.event_details.about"
@@ -321,7 +311,7 @@
 	</div>
 
 	<div v-else-if="enquiryDetails.error" class="text-center py-8">
-		<div class="text-ink-red-3 text-lg mb-2">Error loading sponsorship details</div>
+		<div class="text-ink-red-6 text-lg mb-2">Error loading sponsorship details</div>
 		<div class="text-ink-gray-4 text-sm">{{ enquiryDetails.error }}</div>
 	</div>
 

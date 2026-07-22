@@ -14,7 +14,7 @@
 				v-if="cancelledTickets.length > 0 || cancellationRequestedTickets.length > 0"
 				class="p-4 bg-surface-blue-1 border border-outline-blue-1 rounded-lg"
 			>
-				<p class="text-sm text-ink-blue-2">
+				<p class="text-sm text-ink-blue-5">
 					<span v-if="cancelledTickets.length > 0">
 						{{ pluralize(cancelledTickets.length, __("ticket")) }}
 						{{ __("already cancelled") }}.
@@ -135,7 +135,7 @@
 
 			<!-- Warning if no tickets selected -->
 			<div v-if="selectedTickets.length === 0" class="text-center py-4">
-				<p class="text-ink-red-3 text-sm">
+				<p class="text-ink-red-6 text-sm">
 					{{ __("Please select at least one ticket to cancel.") }}
 				</p>
 			</div>
@@ -147,10 +147,10 @@
 			>
 				<div class="flex items-center justify-between">
 					<div>
-						<h4 class="font-semibold text-ink-blue-2">
+						<h4 class="font-semibold text-ink-blue-5">
 							{{ __("Cancellation Summary") }}
 						</h4>
-						<p class="text-ink-blue-2">
+						<p class="text-ink-blue-5">
 							{{ pluralize(selectedTickets.length, __("ticket")) }}
 							{{ __("selected for cancellation") }}
 							<span v-if="isAllSelected" class="font-medium">{{
@@ -159,8 +159,8 @@
 						</p>
 					</div>
 					<div class="text-right">
-						<p class="text-sm text-ink-blue-2">{{ __("Request Type") }}</p>
-						<p class="font-medium text-ink-blue-2">
+						<p class="text-sm text-ink-blue-5">{{ __("Request Type") }}</p>
+						<p class="font-medium text-ink-blue-5">
 							{{
 								isAllSelected
 									? __("Full Cancellation")

@@ -2,7 +2,7 @@
 	<div v-if="isDateField(field.fieldtype)" class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(field.label) }}
-			<span v-if="field.mandatory" class="text-ink-red-4">*</span>
+			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
 		</label>
 		<DatePicker
 			:model-value="modelValue"
@@ -14,7 +14,7 @@
 	<div v-else-if="isDateTimeField(field.fieldtype)" class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(field.label) }}
-			<span v-if="field.mandatory" class="text-ink-red-4">*</span>
+			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
 		</label>
 		<DateTimePicker
 			:model-value="modelValue"
@@ -26,7 +26,7 @@
 	<div v-else-if="field.fieldtype === 'Time'" class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(field.label) }}
-			<span v-if="field.mandatory" class="text-ink-red-4">*</span>
+			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
 		</label>
 		<TimePicker
 			:model-value="modelValue"
@@ -38,7 +38,7 @@
 	<div v-else-if="field.fieldtype === 'Multi Select'" class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(field.label) }}
-			<span v-if="field.mandatory" class="text-ink-red-4">*</span>
+			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
 		</label>
 		<MultiSelect
 			:options="multiSelectOptions"
@@ -78,7 +78,7 @@
 	<div v-else-if="isTextareaField(field.fieldtype)" class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(field.label) }}
-			<span v-if="field.mandatory" class="text-ink-red-4">*</span>
+			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
 		</label>
 		<Textarea
 			:model-value="modelValue"
@@ -92,7 +92,7 @@
 	<div v-else-if="field.fieldtype === 'Rating'" class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(field.label) }}
-			<span v-if="field.mandatory" class="text-ink-red-4">*</span>
+			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
 		</label>
 		<Rating
 			:model-value="Math.round((modelValue || 0) * 5)"
@@ -103,7 +103,7 @@
 	<div v-else-if="field.fieldtype === 'Attach Image'" class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(field.label) }}
-			<span v-if="field.mandatory" class="text-ink-red-4">*</span>
+			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
 		</label>
 		<div v-if="modelValue" class="relative inline-block">
 			<img :src="modelValue" class="h-16 w-16 rounded object-cover border" />
@@ -134,13 +134,13 @@
 	<div v-else-if="field.fieldtype === 'Attach'" class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(field.label) }}
-			<span v-if="field.mandatory" class="text-ink-red-4">*</span>
+			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
 		</label>
 		<div v-if="modelValue" class="flex items-center gap-2">
 			<a
 				:href="modelValue"
 				target="_blank"
-				class="text-sm text-ink-blue-3 underline truncate max-w-xs"
+				class="text-sm text-ink-blue-6 underline truncate max-w-xs"
 			>
 				{{ modelValue.split("/").pop() }}
 			</a>

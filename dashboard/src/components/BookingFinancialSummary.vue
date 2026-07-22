@@ -1,7 +1,7 @@
 <template>
-	<div class="bg-surface-cards border border-outline-gray-1 rounded-lg p-6">
+	<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6">
 		<div class="flex items-center justify-between mb-4">
-			<h3 class="text-lg font-semibold text-ink-gray-9">{{ __("Payment Summary") }}</h3>
+			<h3 class="text-lg-semibold text-ink-gray-9">{{ __("Payment Summary") }}</h3>
 			<Badge
 				v-if="(booking.total_amount || 0) > 0"
 				variant="subtle"
@@ -63,9 +63,9 @@
 			<hr class="border-outline-gray-1" />
 
 			<!-- Total Amount -->
-			<div class="flex justify-between items-center text-lg font-semibold text-ink-gray-9">
+			<div class="flex justify-between items-center text-lg-semibold text-ink-gray-9">
 				<span>{{ isPaid ? __("Total Paid") : __("Total") }}</span>
-				<span :class="isPaid ? 'text-ink-green-2' : 'text-ink-gray-9'">{{
+				<span :class="isPaid ? 'text-ink-green-5' : 'text-ink-gray-9'">{{
 					formatPrice(booking.total_amount || 0, booking.currency || "INR")
 				}}</span>
 			</div>

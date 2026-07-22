@@ -1,7 +1,7 @@
 <template>
 	<Dialog v-model="is_open" size="md" @after-leave="resetState">
 		<template #title>
-			<h3 class="text-xl font-semibold text-ink-gray-9">
+			<h3 class="text-2xl-semibold text-ink-gray-9">
 				{{ view_title }}
 			</h3>
 		</template>
@@ -13,14 +13,14 @@
 
 		<div
 			v-if="error_message"
-			class="mb-4 rounded-md bg-surface-red-2 p-3 text-sm text-ink-red-3"
+			class="mb-4 rounded-md bg-surface-red-2 p-3 text-sm text-ink-red-6"
 		>
 			{{ error_message }}
 		</div>
 
 		<div
 			v-if="success_message"
-			class="mb-4 rounded-md bg-surface-green-2 p-3 text-sm text-ink-green-3"
+			class="mb-4 rounded-md bg-surface-green-2 p-3 text-sm text-ink-green-6"
 		>
 			{{ success_message }}
 		</div>
@@ -67,7 +67,7 @@
 					<div class="absolute inset-0 flex items-center">
 						<div class="w-full border-t border-outline-gray-2" />
 					</div>
-					<span class="relative bg-surface-modal px-2 text-sm text-ink-gray-4">
+					<span class="relative bg-surface-elevation-2 px-2 text-sm text-ink-gray-4">
 						{{ __("or") }}
 					</span>
 				</div>
@@ -131,7 +131,7 @@
 					<div class="absolute inset-0 flex items-center">
 						<div class="w-full border-t border-outline-gray-2" />
 					</div>
-					<span class="relative bg-surface-modal px-2 text-sm text-ink-gray-4">
+					<span class="relative bg-surface-elevation-2 px-2 text-sm text-ink-gray-4">
 						{{ __("or") }}
 					</span>
 				</div>

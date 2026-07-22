@@ -1,7 +1,7 @@
 <template>
 	<Dialog v-model="isOpen" size="3xl">
 		<template #title>
-			<h3 class="text-xl font-semibold text-ink-gray-9">
+			<h3 class="text-2xl-semibold text-ink-gray-9">
 				{{ eventTalkId ? __("Edit Talk") : __("Edit Proposal") }}
 			</h3>
 		</template>
@@ -15,7 +15,7 @@
 			/>
 
 			<div>
-				<label class="block text-sm font-medium text-ink-gray-7 mb-2">
+				<label class="block text-sm-medium text-ink-gray-7 mb-2">
 					{{ __("Description") }}
 				</label>
 				<TextEditor

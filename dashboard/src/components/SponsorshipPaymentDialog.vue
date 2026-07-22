@@ -51,7 +51,7 @@
 							</div>
 						</div>
 						<div class="text-right">
-							<p class="font-bold text-lg text-ink-gray-9">
+							<p class="text-lg-bold text-ink-gray-9">
 								{{ formatCurrency(tier.price, tier.currency) }}
 							</p>
 						</div>
@@ -94,14 +94,14 @@
 			>
 				<div class="flex items-center justify-between">
 					<div>
-						<h4 class="font-semibold text-ink-green-2">
+						<h4 class="font-semibold text-ink-green-5">
 							{{ __("Selected Tier") }}
 						</h4>
-						<p class="text-ink-green-2">{{ selectedTier.title }}</p>
+						<p class="text-ink-green-5">{{ selectedTier.title }}</p>
 					</div>
 					<div class="text-right">
-						<p class="text-sm text-ink-green-2">{{ __("Total Amount") }}</p>
-						<p class="font-bold text-xl text-ink-green-2">
+						<p class="text-sm text-ink-green-5">{{ __("Total Amount") }}</p>
+						<p class="text-2xl-bold text-ink-green-5">
 							{{ formatCurrency(selectedTier.price, selectedTier.currency) }}
 						</p>
 					</div>
@@ -110,7 +110,7 @@
 		</div>
 
 		<div v-else-if="tiers.error" class="text-center py-8">
-			<p class="text-ink-red-2">{{ __("Error loading sponsorship tiers") }}</p>
+			<p class="text-ink-red-5">{{ __("Error loading sponsorship tiers") }}</p>
 			<p class="text-ink-gray-5 text-sm">{{ tiers.error }}</p>
 		</div>
 

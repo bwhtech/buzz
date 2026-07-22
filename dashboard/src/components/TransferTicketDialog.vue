@@ -1,7 +1,7 @@
 <template>
 	<Dialog v-model="isOpen">
 		<template #title>
-			<h3 class="text-xl font-semibold text-ink-gray-9">Transfer Ticket</h3>
+			<h3 class="text-2xl-semibold text-ink-gray-9">Transfer Ticket</h3>
 		</template>
 		<div class="space-y-4">
 			<p class="text-ink-gray-7">

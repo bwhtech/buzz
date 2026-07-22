@@ -5,7 +5,7 @@
 		<!-- Header -->
 		<div class="shadow-sm border-b">
 			<div class="max-w-md mx-auto px-4 py-4">
-				<h1 class="text-xl font-bold text-center text-gray-900 dark:text-white">
+				<h1 class="text-2xl-bold text-center text-gray-900 dark:text-white">
 					{{ __("Event Check-in Scanner") }}
 				</h1>
 			</div>
@@ -23,7 +23,7 @@
 					<LucideShieldX class="w-8 h-8 text-red-600 dark:text-red-400" />
 				</div>
 				<div>
-					<h4 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+					<h4 class="text-lg-medium text-gray-900 dark:text-white mb-2">
 						{{ __("Access Denied") }}
 					</h4>
 					<p class="text-gray-600 dark:text-gray-400">
@@ -65,7 +65,7 @@
 					<div
 						class="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
 					>
-						<p class="text-sm font-medium text-green-800 dark:text-green-200">
+						<p class="text-sm-medium text-green-800 dark:text-green-200">
 							{{ validationResult.message }}
 						</p>
 						<p

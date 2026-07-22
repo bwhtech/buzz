@@ -13,12 +13,12 @@
 			class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-lg p-4"
 		>
 			<div class="flex items-center">
-				<LucideCheckCircle class="w-6 h-6 text-ink-green-2 mr-3" />
+				<LucideCheckCircle class="w-6 h-6 text-ink-green-5 mr-3" />
 				<div>
-					<h3 class="text-ink-green-3 font-semibold">
+					<h3 class="text-ink-green-6 font-semibold">
 						{{ __("Payment Successful! 🎉") }}
 					</h3>
-					<p class="text-ink-green-2">
+					<p class="text-ink-green-5">
 						{{
 							isWebinar
 								? __(

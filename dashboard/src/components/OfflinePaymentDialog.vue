@@ -2,14 +2,14 @@
 	<Dialog v-model="isOpen" size="md" bare>
 		<div class="p-4">
 			<!-- Title (shows custom label if set, otherwise default) -->
-			<h3 class="text-lg font-semibold mb-4 text-ink-gray-9">
+			<h3 class="text-lg-semibold mb-4 text-ink-gray-9">
 				{{ offlineSettings.label }}
 			</h3>
 
 			<div class="space-y-4">
 				<!-- Amount -->
 				<div class="text-center p-3 bg-surface-gray-1 rounded">
-					<div class="text-xl font-bold text-ink-gray-9">
+					<div class="text-2xl-bold text-ink-gray-9">
 						{{ formatCurrency(amount, currency) }}
 					</div>
 				</div>
@@ -31,7 +31,7 @@
 
 				<!-- Upload Proof -->
 				<div v-if="offlineSettings.collect_payment_proof">
-					<label class="block text-sm font-medium text-ink-gray-8 mb-2"
+					<label class="block text-sm-medium text-ink-gray-8 mb-2"
 						>{{ __("Proof of Payment") }} *</label
 					>
 					<FileUploader
@@ -43,7 +43,7 @@
 						<template #default="{ openFileSelector, uploading, progress }">
 							<div
 								v-if="paymentProof"
-								class="flex items-center gap-1.5 text-sm text-ink-green-2"
+								class="flex items-center gap-1.5 text-sm text-ink-green-5"
 							>
 								<LucideCheckCircle class="h-4 w-4 flex-shrink-0" />
 								<span class="truncate">{{

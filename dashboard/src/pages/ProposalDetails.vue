@@ -12,7 +12,7 @@
 	</div>
 
 	<div v-else-if="proposal.doc">
-		<h2 class="text-ink-gray-9 font-semibold text-lg mb-6">
+		<h2 class="text-ink-gray-9 text-lg-semibold mb-6">
 			{{ proposal.doc.title }}
 			<span class="text-ink-gray-5 font-mono text-sm">(#{{ proposalId }})</span>
 		</h2>
@@ -23,10 +23,10 @@
 			class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-lg p-6"
 		>
 			<div class="flex items-center">
-				<LucideCheckCircle class="w-6 h-6 text-ink-green-2 mr-3" />
+				<LucideCheckCircle class="w-6 h-6 text-ink-green-5 mr-3" />
 				<div>
-					<h3 class="text-ink-green-3 font-semibold">{{ __("Proposal Accepted") }}</h3>
-					<p class="text-ink-green-2 text-sm mt-1">
+					<h3 class="text-ink-green-6 font-semibold">{{ __("Proposal Accepted") }}</h3>
+					<p class="text-ink-green-5 text-sm mt-1">
 						{{
 							__(
 								"Congratulations! Your talk proposal has been accepted for the event."
@@ -43,10 +43,10 @@
 			class="mb-6 bg-surface-blue-1 border border-outline-blue-1 rounded-lg p-6"
 		>
 			<div class="flex items-center">
-				<LucideStar class="w-6 h-6 text-ink-blue-2 mr-3" />
+				<LucideStar class="w-6 h-6 text-ink-blue-5 mr-3" />
 				<div>
-					<h3 class="text-ink-blue-3 font-semibold">{{ __("Proposal Shortlisted") }}</h3>
-					<p class="text-ink-blue-2 text-sm mt-1">
+					<h3 class="text-ink-blue-6 font-semibold">{{ __("Proposal Shortlisted") }}</h3>
+					<p class="text-ink-blue-5 text-sm mt-1">
 						{{
 							__(
 								"Your proposal has been shortlisted and is under final consideration."
@@ -83,10 +83,10 @@
 			class="mb-6 bg-surface-red-1 border border-outline-red-1 rounded-lg p-6"
 		>
 			<div class="flex items-center">
-				<LucideXCircle class="w-6 h-6 text-ink-red-2 mr-3" />
+				<LucideXCircle class="w-6 h-6 text-ink-red-5 mr-3" />
 				<div>
-					<h3 class="text-ink-red-3 font-semibold">{{ __("Proposal Not Selected") }}</h3>
-					<p class="text-ink-red-2 text-sm mt-1">
+					<h3 class="text-ink-red-6 font-semibold">{{ __("Proposal Not Selected") }}</h3>
+					<p class="text-ink-red-5 text-sm mt-1">
 						{{
 							__(
 								"Unfortunately, your proposal was not selected for this event. Thank you for your submission."
@@ -99,22 +99,22 @@
 
 		<div class="space-y-6">
 			<!-- Proposal Information -->
-			<div class="bg-surface-white border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6 mb-1">{{
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{
 							__("Title")
 						}}</label>
 						<p class="text-ink-gray-9">{{ proposal.doc.title }}</p>
 					</div>
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6 mb-1">{{
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{
 							__("Event")
 						}}</label>
 						<p class="text-ink-gray-9">{{ eventTitle }}</p>
 					</div>
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6 mb-1">{{
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{
 							__("Status")
 						}}</label>
 						<Badge
@@ -126,13 +126,13 @@
 						</Badge>
 					</div>
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6 mb-1">{{
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{
 							__("Submitted On")
 						}}</label>
 						<p class="text-ink-gray-9">{{ formatDate(proposal.doc.creation) }}</p>
 					</div>
 					<div v-if="proposal.doc.phone">
-						<label class="block text-sm font-medium text-ink-gray-6 mb-1">{{
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{
 							__("Phone")
 						}}</label>
 						<p class="text-ink-gray-9">{{ proposal.doc.phone }}</p>
@@ -141,8 +141,8 @@
 			</div>
 
 			<!-- Speakers -->
-			<div class="bg-surface-white border border-outline-gray-1 rounded-lg p-6">
-				<h3 class="text-ink-gray-8 font-semibold text-lg mb-4">{{ __("Speakers") }}</h3>
+			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">{{ __("Speakers") }}</h3>
 				<ListView
 					v-if="proposal.doc.speakers && proposal.doc.speakers.length > 0"
 					:columns="speakerColumns"
@@ -154,8 +154,8 @@
 			</div>
 
 			<!-- Description -->
-			<div class="bg-surface-white border border-outline-gray-1 rounded-lg p-6">
-				<h3 class="text-ink-gray-8 font-semibold text-lg mb-4">{{ __("Description") }}</h3>
+			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">{{ __("Description") }}</h3>
 				<div
 					v-if="proposal.doc.description"
 					class="prose prose-sm max-w-none text-ink-gray-9"
@@ -167,7 +167,7 @@
 	</div>
 
 	<div v-else-if="proposal.get.error" class="text-center py-8">
-		<div class="text-ink-red-3 text-lg mb-2">{{ __("Error loading proposal details") }}</div>
+		<div class="text-ink-red-6 text-lg mb-2">{{ __("Error loading proposal details") }}</div>
 		<div class="text-ink-gray-4 text-sm">{{ proposal.get.error }}</div>
 	</div>
 

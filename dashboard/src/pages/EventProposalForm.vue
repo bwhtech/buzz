@@ -6,16 +6,16 @@
 
 		<div v-else-if="submitted" class="text-center">
 			<div class="bg-surface-green-1 border border-outline-green-1 rounded-lg p-8">
-				<LucideCheckCircle class="w-16 h-16 text-ink-green-2 mx-auto mb-4" />
-				<h2 class="text-ink-green-3 font-semibold text-xl mb-2">
+				<LucideCheckCircle class="w-16 h-16 text-ink-green-5 mx-auto mb-4" />
+				<h2 class="text-ink-green-6 text-2xl-semibold mb-2">
 					{{ form_data?.success_title }}
 				</h2>
 				<div
 					v-if="rendered_success_message"
-					class="prose prose-sm max-w-none text-ink-green-2"
+					class="prose prose-sm max-w-none text-ink-green-5"
 					v-html="rendered_success_message"
 				></div>
-				<p v-else class="text-ink-green-2">
+				<p v-else class="text-ink-green-5">
 					{{ __("Your proposal has been received.") }}
 				</p>
 			</div>
@@ -28,11 +28,11 @@
 
 		<div v-else-if="form_data">
 			<form
-				class="bg-surface-white border border-outline-gray-1 rounded-lg"
+				class="bg-surface-base border border-outline-gray-1 rounded-lg"
 				@submit.prevent="handleSubmit"
 			>
 				<div class="px-6 py-5 border-b border-outline-gray-1">
-					<h1 class="text-ink-gray-9 font-bold text-2xl">
+					<h1 class="text-ink-gray-9 text-3xl-bold">
 						{{ form_data.banner_title }}
 					</h1>
 				</div>
@@ -65,11 +65,11 @@
 
 		<div v-else-if="load_error" class="text-center">
 			<div class="bg-surface-amber-1 border border-outline-amber-1 rounded-lg p-8">
-				<LucideAlertCircle class="w-16 h-16 text-ink-amber-3 mx-auto mb-4" />
-				<h2 class="text-ink-amber-3 font-semibold text-xl mb-2">
+				<LucideAlertCircle class="w-16 h-16 text-ink-amber-6 mx-auto mb-4" />
+				<h2 class="text-ink-amber-6 text-2xl-semibold mb-2">
 					{{ __("Not Found") }}
 				</h2>
-				<p class="text-ink-amber-2">
+				<p class="text-ink-amber-5">
 					{{ load_error }}
 				</p>
 			</div>

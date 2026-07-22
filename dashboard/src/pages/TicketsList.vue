@@ -8,7 +8,7 @@
 			v-else-if="tickets.error"
 			class="bg-surface-red-1 border border-outline-red-1 rounded-lg p-4"
 		>
-			<p class="text-ink-red-3">
+			<p class="text-ink-red-6">
 				{{ __("Error loading tickets") }}: {{ tickets.error.message }}
 			</p>
 		</div>

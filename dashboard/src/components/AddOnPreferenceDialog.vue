@@ -11,7 +11,7 @@
 
 			<div v-else class="space-y-4">
 				<div v-for="addon in addOnsWithOptions" :key="addon.id" class="space-y-2">
-					<label class="block text-sm font-medium text-ink-gray-8">
+					<label class="block text-sm-medium text-ink-gray-8">
 						{{ __(addon.title ?? "") }}
 					</label>
 					<p class="text-xs text-ink-gray-6 mb-2">Current: {{ addon.value }}</p>

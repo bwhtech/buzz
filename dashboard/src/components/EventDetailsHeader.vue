@@ -15,7 +15,7 @@
 
 		<!-- Event Info without banner -->
 		<div v-else class="mb-6">
-			<h1 class="text-2xl md:text-3xl lg:text-4xl font-bold text-ink-gray-9 mb-4">
+			<h1 class="text-3xl-bold md:text-4xl lg:text-5xl text-ink-gray-9 mb-4">
 				{{ __(eventDetails.title) }}
 			</h1>
 		</div>

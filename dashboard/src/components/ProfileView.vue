@@ -48,7 +48,7 @@
 						</component>
 					</div>
 					<div class="flex flex-col gap-1">
-						<span class="text-2xl font-semibold text-ink-gray-8">
+						<span class="text-3xl-semibold text-ink-gray-8">
 							{{ profile.full_name }}
 						</span>
 						<span class="text-base text-ink-gray-7">
