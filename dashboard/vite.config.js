@@ -33,8 +33,9 @@ export default defineConfig({
 	optimizeDeps: {
 		// frappe-ui ships as source (its exports point at src/*.ts). Its files
 		// import `~icons/lucide/*` virtuals that only the lucideIcons Vite plugin
-		// can resolve, so it must skip esbuild pre-bundling and go through the
-		// plugin pipeline instead.
+		// can resolve, and use extensionless `#molecules/*` subpath imports that
+		// esbuild cannot resolve, so it must skip esbuild pre-bundling and go
+		// through the plugin pipeline instead.
 		exclude: ["frappe-ui"],
 		// frappe-ui bundles its own CJS feather-icons; since frappe-ui is not
 		// pre-bundled, pre-bundle that nested copy so its default export gets
