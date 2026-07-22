@@ -53,13 +53,12 @@ const tabs = computed(() => {
 			icon: LucideCalendarDays,
 		},
 		{ label: __("My Tickets"), route: "/account/tickets", icon: LucideTicket },
+		{
+			label: __("Talk Proposals"),
+			route: "/account/proposals",
+			icon: LucideMegaphone,
+		},
 	];
-
-	accountTabs.push({
-		label: __("Talk Proposals"),
-		route: "/account/proposals",
-		icon: LucideMegaphone,
-	});
 
 	if (sponsorships.data?.length) {
 		accountTabs.push({
