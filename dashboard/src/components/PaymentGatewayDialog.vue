@@ -1,36 +1,28 @@
 <template>
-	<Dialog
-		v-model="isOpen"
-		:options="{
-			title: __('Select Payment Method'),
-			size: 'md',
-		}"
-	>
-		<template #body-content>
-			<div class="space-y-3">
-				<div
-					v-for="gateway in paymentGateways"
-					:key="gateway"
-					class="border border-outline-gray-2 rounded-lg p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
-					:class="{
-						'border-outline-gray-4 bg-surface-gray-2': selectedGateway === gateway,
-					}"
-					@click="selectedGateway = gateway"
-				>
-					<div class="flex items-center space-x-3">
-						<input
-							type="radio"
-							:checked="selectedGateway === gateway"
-							@change="selectedGateway = gateway"
-							class="text-ink-gray-6"
-						/>
-						<div>
-							<h3 class="font-semibold text-ink-gray-9">{{ gateway }}</h3>
-						</div>
+	<Dialog v-model="isOpen" :title="__('Select Payment Method')" size="md">
+		<div class="space-y-3">
+			<div
+				v-for="gateway in paymentGateways"
+				:key="gateway"
+				class="border border-outline-gray-2 rounded-lg p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
+				:class="{
+					'border-outline-gray-4 bg-surface-gray-2': selectedGateway === gateway,
+				}"
+				@click="selectedGateway = gateway"
+			>
+				<div class="flex items-center space-x-3">
+					<input
+						type="radio"
+						:checked="selectedGateway === gateway"
+						@change="selectedGateway = gateway"
+						class="text-ink-gray-6"
+					/>
+					<div>
+						<h3 class="font-semibold text-ink-gray-9">{{ gateway }}</h3>
 					</div>
 				</div>
 			</div>
-		</template>
+		</div>
 
 		<template #actions>
 			<div class="flex justify-end space-x-3">

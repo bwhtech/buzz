@@ -13,41 +13,37 @@
 		<!-- OTP Verification Dialog for Guest Booking -->
 		<Dialog
 			v-model="showOtpModal"
-			:options="{
-				title: isPhoneOtp ? __('Verify Your Phone') : __('Verify Your Email'),
-				size: 'sm',
-			}"
+			:title="isPhoneOtp ? __('Verify Your Phone') : __('Verify Your Email')"
+			size="sm"
 		>
-			<template #body-content>
-				<p class="text-sm text-ink-gray-6 mb-4">
-					{{ __("Enter the 6-digit code sent to") }}
-					<strong>{{ isPhoneOtp ? guestPhone : guestEmail }}</strong>
-				</p>
-				<FormControl
-					v-model="otpCode"
-					type="text"
-					maxlength="6"
-					:label="__('Verification Code')"
-					placeholder="123456"
-					class="mb-3"
-					@keyup.enter="submitWithOtp"
-					@input="otpError = ''"
-				/>
-				<ErrorMessage :message="otpError" />
-				<Button
-					variant="ghost"
-					size="sm"
-					:loading="sendOtpResource.loading"
-					:disabled="resendCooldown > 0"
-					@click="resendOtp"
-				>
-					{{
-						resendCooldown > 0
-							? __("Resend code in {0}s", [resendCooldown])
-							: __("Resend code")
-					}}
-				</Button>
-			</template>
+			<p class="text-sm text-ink-gray-6 mb-4">
+				{{ __("Enter the 6-digit code sent to") }}
+				<strong>{{ isPhoneOtp ? guestPhone : guestEmail }}</strong>
+			</p>
+			<FormControl
+				v-model="otpCode"
+				type="text"
+				maxlength="6"
+				:label="__('Verification Code')"
+				placeholder="123456"
+				class="mb-3"
+				@keyup.enter="submitWithOtp"
+				@input="otpError = ''"
+			/>
+			<ErrorMessage :message="otpError" />
+			<Button
+				variant="ghost"
+				size="sm"
+				:loading="sendOtpResource.loading"
+				:disabled="resendCooldown > 0"
+				@click="resendOtp"
+			>
+				{{
+					resendCooldown > 0
+						? __("Resend code in {0}s", [resendCooldown])
+						: __("Resend code")
+				}}
+			</Button>
 
 			<template #actions>
 				<div class="flex justify-end space-x-3">

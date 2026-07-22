@@ -129,28 +129,23 @@
 			</div>
 		</div>
 
-		<Dialog v-model="tableDialog.open" :options="{ title: tableDialog.title }">
-			<template #body-content>
-				<form @submit.prevent="saveTableRow">
-					<div class="space-y-4">
-						<template
-							v-for="childField in tableDialog.fields"
-							:key="childField.fieldname"
-						>
-							<CustomFieldInput
-								:field="normalizeField(childField)"
-								:model-value="tableDialog.rowData[childField.fieldname]"
-								@update:model-value="
-									tableDialog.rowData[childField.fieldname] = $event
-								"
-							/>
-						</template>
-					</div>
-					<Button variant="solid" type="submit" class="mt-4">
-						{{ tableDialog.editIndex !== null ? __("Update") : __("Add") }}
-					</Button>
-				</form>
-			</template>
+		<Dialog v-model="tableDialog.open" :title="tableDialog.title">
+			<form @submit.prevent="saveTableRow">
+				<div class="space-y-4">
+					<template v-for="childField in tableDialog.fields" :key="childField.fieldname">
+						<CustomFieldInput
+							:field="normalizeField(childField)"
+							:model-value="tableDialog.rowData[childField.fieldname]"
+							@update:model-value="
+								tableDialog.rowData[childField.fieldname] = $event
+							"
+						/>
+					</template>
+				</div>
+				<Button variant="solid" type="submit" class="mt-4">
+					{{ tableDialog.editIndex !== null ? __("Update") : __("Add") }}
+				</Button>
+			</form>
 		</Dialog>
 	</div>
 </template>

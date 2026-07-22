@@ -1,129 +1,124 @@
 <template>
 	<Dialog
 		v-model="isOpen"
-		:options="{
-			title: __('Select Sponsorship Tier'),
-			size: 'xl',
-			message: __('Choose your preferred sponsorship tier and proceed to payment'),
-		}"
+		:title="__('Select Sponsorship Tier')"
+		size="xl"
+		:message="__('Choose your preferred sponsorship tier and proceed to payment')"
 	>
-		<template #body-content>
-			<div v-if="!props.eventId" class="text-center py-8">
-				<p class="text-ink-gray-5">{{ __("Loading event information...") }}</p>
-			</div>
+		<div v-if="!props.eventId" class="text-center py-8">
+			<p class="text-ink-gray-5">{{ __("Loading event information...") }}</p>
+		</div>
 
-			<div v-else-if="tiers.loading" class="flex justify-center py-8">
-				<Spinner />
-			</div>
+		<div v-else-if="tiers.loading" class="flex justify-center py-8">
+			<Spinner />
+		</div>
 
-			<div v-else-if="tiers.data && tiers.data.length > 0" class="space-y-6">
-				<p
-					class="text-ink-gray-7"
-					v-html="
-						__(
-							'Select a sponsorship tier for <strong>{0}</strong> and proceed to payment.',
-							[eventTitle || __('this event')]
-						)
-					"
-				></p>
+		<div v-else-if="tiers.data && tiers.data.length > 0" class="space-y-6">
+			<p
+				class="text-ink-gray-7"
+				v-html="
+					__(
+						'Select a sponsorship tier for <strong>{0}</strong> and proceed to payment.',
+						[eventTitle || __('this event')]
+					)
+				"
+			></p>
 
-				<!-- Tier Selection -->
-				<div class="space-y-3">
-					<div
-						v-for="tier in tiers.data"
-						:key="tier.name"
-						class="border border-outline-gray-2 rounded-lg p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
-						:class="{
-							'border-outline-gray-4 bg-surface-gray-2':
-								selectedTier?.name === tier.name,
-						}"
-						@click="selectedTier = tier"
-					>
-						<div class="flex items-center justify-between">
-							<div class="flex items-center space-x-3">
-								<input
-									type="radio"
-									:checked="selectedTier?.name === tier.name"
-									@change="selectedTier = tier"
-									class="text-ink-gray-6"
-								/>
-								<div>
-									<h3 class="font-semibold text-ink-gray-9">
-										{{ tier.title }}
-									</h3>
-								</div>
-							</div>
-							<div class="text-right">
-								<p class="font-bold text-lg text-ink-gray-9">
-									{{ formatCurrency(tier.price, tier.currency) }}
-								</p>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Payment Gateway Selection (only shown when tier is selected and multiple gateways exist) -->
-				<div v-if="selectedTier && hasMultipleGateways" class="space-y-3">
-					<h4 class="font-semibold text-ink-gray-8">
-						{{ __("Select Payment Method") }}
-					</h4>
-					<div class="flex flex-wrap gap-3">
-						<div
-							v-for="gateway in paymentGateways"
-							:key="gateway"
-							class="border border-outline-gray-2 rounded-lg px-4 py-3 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
-							:class="{
-								'border-outline-gray-4 bg-surface-gray-2':
-									selectedGateway === gateway,
-							}"
-							@click="selectedGateway = gateway"
-						>
-							<div class="flex items-center space-x-2">
-								<input
-									type="radio"
-									:checked="selectedGateway === gateway"
-									@change="selectedGateway = gateway"
-									class="text-ink-gray-6"
-								/>
-								<span class="font-medium text-ink-gray-9">{{ gateway }}</span>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Selected Summary -->
+			<!-- Tier Selection -->
+			<div class="space-y-3">
 				<div
-					v-if="selectedTier"
-					class="p-4 bg-surface-green-1 border border-outline-green-1 rounded-lg"
+					v-for="tier in tiers.data"
+					:key="tier.name"
+					class="border border-outline-gray-2 rounded-lg p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
+					:class="{
+						'border-outline-gray-4 bg-surface-gray-2':
+							selectedTier?.name === tier.name,
+					}"
+					@click="selectedTier = tier"
 				>
 					<div class="flex items-center justify-between">
-						<div>
-							<h4 class="font-semibold text-ink-green-2">
-								{{ __("Selected Tier") }}
-							</h4>
-							<p class="text-ink-green-2">{{ selectedTier.title }}</p>
+						<div class="flex items-center space-x-3">
+							<input
+								type="radio"
+								:checked="selectedTier?.name === tier.name"
+								@change="selectedTier = tier"
+								class="text-ink-gray-6"
+							/>
+							<div>
+								<h3 class="font-semibold text-ink-gray-9">
+									{{ tier.title }}
+								</h3>
+							</div>
 						</div>
 						<div class="text-right">
-							<p class="text-sm text-ink-green-2">{{ __("Total Amount") }}</p>
-							<p class="font-bold text-xl text-ink-green-2">
-								{{ formatCurrency(selectedTier.price, selectedTier.currency) }}
+							<p class="font-bold text-lg text-ink-gray-9">
+								{{ formatCurrency(tier.price, tier.currency) }}
 							</p>
 						</div>
 					</div>
 				</div>
 			</div>
 
-			<div v-else-if="tiers.error" class="text-center py-8">
-				<p class="text-ink-red-2">{{ __("Error loading sponsorship tiers") }}</p>
-				<p class="text-ink-gray-5 text-sm">{{ tiers.error }}</p>
+			<!-- Payment Gateway Selection (only shown when tier is selected and multiple gateways exist) -->
+			<div v-if="selectedTier && hasMultipleGateways" class="space-y-3">
+				<h4 class="font-semibold text-ink-gray-8">
+					{{ __("Select Payment Method") }}
+				</h4>
+				<div class="flex flex-wrap gap-3">
+					<div
+						v-for="gateway in paymentGateways"
+						:key="gateway"
+						class="border border-outline-gray-2 rounded-lg px-4 py-3 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
+						:class="{
+							'border-outline-gray-4 bg-surface-gray-2': selectedGateway === gateway,
+						}"
+						@click="selectedGateway = gateway"
+					>
+						<div class="flex items-center space-x-2">
+							<input
+								type="radio"
+								:checked="selectedGateway === gateway"
+								@change="selectedGateway = gateway"
+								class="text-ink-gray-6"
+							/>
+							<span class="font-medium text-ink-gray-9">{{ gateway }}</span>
+						</div>
+					</div>
+				</div>
 			</div>
 
-			<div v-else class="text-center py-8">
-				<p class="text-ink-gray-5">
-					{{ __("No sponsorship tiers available for this event") }}
-				</p>
+			<!-- Selected Summary -->
+			<div
+				v-if="selectedTier"
+				class="p-4 bg-surface-green-1 border border-outline-green-1 rounded-lg"
+			>
+				<div class="flex items-center justify-between">
+					<div>
+						<h4 class="font-semibold text-ink-green-2">
+							{{ __("Selected Tier") }}
+						</h4>
+						<p class="text-ink-green-2">{{ selectedTier.title }}</p>
+					</div>
+					<div class="text-right">
+						<p class="text-sm text-ink-green-2">{{ __("Total Amount") }}</p>
+						<p class="font-bold text-xl text-ink-green-2">
+							{{ formatCurrency(selectedTier.price, selectedTier.currency) }}
+						</p>
+					</div>
+				</div>
 			</div>
-		</template>
+		</div>
+
+		<div v-else-if="tiers.error" class="text-center py-8">
+			<p class="text-ink-red-2">{{ __("Error loading sponsorship tiers") }}</p>
+			<p class="text-ink-gray-5 text-sm">{{ tiers.error }}</p>
+		</div>
+
+		<div v-else class="text-center py-8">
+			<p class="text-ink-gray-5">
+				{{ __("No sponsorship tiers available for this event") }}
+			</p>
+		</div>
 
 		<template #actions>
 			<div class="flex justify-end space-x-3">

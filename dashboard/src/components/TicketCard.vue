@@ -21,7 +21,7 @@
 		<!-- Three-dot dropdown menu -->
 		<div class="absolute top-2 right-2">
 			<Dropdown :options="ticketActions" placement="left" v-if="ticketActions.length > 0">
-				<Button variant="ghost" icon="more-horizontal" size="sm" />
+				<Button variant="ghost" icon="lucide-more-horizontal" size="sm" />
 			</Dropdown>
 		</div>
 

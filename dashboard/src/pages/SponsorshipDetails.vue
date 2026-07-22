@@ -338,24 +338,18 @@
 	<!-- Withdraw Confirmation Dialog -->
 	<Dialog
 		v-model="showWithdrawDialog"
-		:options="{
-			title: 'Withdraw Sponsorship Inquiry',
-			message:
-				'Are you sure you want to withdraw this sponsorship inquiry? This action cannot be undone.',
-			size: 'lg',
-			icon: {
-				name: 'alert-triangle',
-				appearance: 'warning',
+		title="Withdraw Sponsorship Inquiry"
+		message="Are you sure you want to withdraw this sponsorship inquiry? This action cannot be undone."
+		size="lg"
+		:icon="{ name: 'triangle-alert', theme: 'yellow' }"
+		:actions="[
+			{
+				label: 'Withdraw Inquiry',
+				variant: 'solid',
+				theme: 'red',
+				onClick: () => withdrawResource.submit(),
 			},
-			actions: [
-				{
-					label: 'Withdraw Inquiry',
-					variant: 'solid',
-					theme: 'red',
-					onClick: () => withdrawResource.submit(),
-				},
-			],
-		}"
+		]"
 	/>
 </template>
 

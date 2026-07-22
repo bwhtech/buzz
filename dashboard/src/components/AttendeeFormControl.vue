@@ -16,7 +16,7 @@
 					@click="$emit('remove')"
 					type="button"
 					theme="red"
-					icon="x"
+					icon="lucide-x"
 				/>
 			</Tooltip>
 		</div>

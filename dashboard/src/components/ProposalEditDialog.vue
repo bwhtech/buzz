@@ -1,42 +1,40 @@
 <template>
-	<Dialog v-model="isOpen" :options="{ size: '3xl' }">
-		<template #body-title>
+	<Dialog v-model="isOpen" size="3xl">
+		<template #title>
 			<h3 class="text-xl font-semibold text-ink-gray-9">
 				{{ eventTalkId ? __("Edit Talk") : __("Edit Proposal") }}
 			</h3>
 		</template>
-		<template #body-content>
-			<div class="space-y-4">
-				<FormControl
-					type="text"
-					:label="__('Title')"
-					:placeholder="__('Enter proposal title')"
-					v-model="editForm.title"
-					:required="true"
-				/>
+		<div class="space-y-4">
+			<FormControl
+				type="text"
+				:label="__('Title')"
+				:placeholder="__('Enter proposal title')"
+				v-model="editForm.title"
+				:required="true"
+			/>
 
-				<div>
-					<label class="block text-sm font-medium text-ink-gray-7 mb-2">
-						{{ __("Description") }}
-					</label>
-					<TextEditor
-						:fixedMenu="true"
-						:content="editForm.description"
-						:placeholder="__('Enter proposal description...')"
-						@change="(val) => (editForm.description = val)"
-						editorClass="prose-sm max-w-none py-2 px-3 min-h-[12rem] border-outline-gray-2 hover:border-outline-gray-3 rounded-b-md bg-surface-gray-3"
-					/>
-				</div>
-
-				<FormControl
-					v-if="!eventTalkId"
-					type="tel"
-					:label="__('Phone (optional)')"
-					:placeholder="__('Enter phone number')"
-					v-model="editForm.phone"
+			<div>
+				<label class="block text-sm font-medium text-ink-gray-7 mb-2">
+					{{ __("Description") }}
+				</label>
+				<TextEditor
+					:fixedMenu="true"
+					:content="editForm.description"
+					:placeholder="__('Enter proposal description...')"
+					@change="(val) => (editForm.description = val)"
+					editorClass="prose-sm max-w-none py-2 px-3 min-h-[12rem] border-outline-gray-2 hover:border-outline-gray-3 rounded-b-md bg-surface-gray-3"
 				/>
 			</div>
-		</template>
+
+			<FormControl
+				v-if="!eventTalkId"
+				type="tel"
+				:label="__('Phone (optional)')"
+				:placeholder="__('Enter phone number')"
+				v-model="editForm.phone"
+			/>
+		</div>
 		<template #actions="{ close }">
 			<div class="flex gap-2">
 				<Button

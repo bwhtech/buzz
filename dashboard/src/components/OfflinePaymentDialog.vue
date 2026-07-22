@@ -1,97 +1,95 @@
 <template>
-	<Dialog v-model="isOpen" :options="{ size: 'md' }">
-		<template #body>
-			<div class="p-4">
-				<!-- Title (shows custom label if set, otherwise default) -->
-				<h3 class="text-lg font-semibold mb-4 text-ink-gray-9">
-					{{ offlineSettings.label }}
-				</h3>
+	<Dialog v-model="isOpen" size="md" bare>
+		<div class="p-4">
+			<!-- Title (shows custom label if set, otherwise default) -->
+			<h3 class="text-lg font-semibold mb-4 text-ink-gray-9">
+				{{ offlineSettings.label }}
+			</h3>
 
-				<div class="space-y-4">
-					<!-- Amount -->
-					<div class="text-center p-3 bg-surface-gray-1 rounded">
-						<div class="text-xl font-bold text-ink-gray-9">
-							{{ formatCurrency(amount, currency) }}
-						</div>
-					</div>
-
-					<!-- Payment Details (HTML Content) -->
-					<div
-						v-if="offlineSettings.payment_details"
-						class="prose-sm [&>:first-child]:mt-0 bg-surface-gray-1 border border-outline-gray-1 rounded p-3 text-ink-gray-9"
-						v-html="offlineSettings.payment_details"
-					></div>
-
-					<!-- Custom Fields -->
-					<CustomFieldsSection
-						v-if="offlineCustomFields.length > 0"
-						:custom-fields="offlineCustomFields"
-						v-model="customFieldsData"
-						:show-title="false"
-					/>
-
-					<!-- Upload Proof -->
-					<div v-if="offlineSettings.collect_payment_proof">
-						<label class="block text-sm font-medium text-ink-gray-8 mb-2"
-							>{{ __("Proof of Payment") }} *</label
-						>
-						<FileUploader
-							ref="fileUploaderRef"
-							v-model="paymentProof"
-							:file-types="['image/*']"
-							@success="onFileUpload"
-						>
-							<template #default="{ openFileSelector, uploading, progress }">
-								<div
-									v-if="paymentProof"
-									class="flex items-center gap-1.5 text-sm text-ink-green-2"
-								>
-									<LucideCheckCircle class="h-4 w-4 flex-shrink-0" />
-									<span class="truncate">{{
-										paymentProof.file_name || paymentProof.name
-									}}</span>
-									<button
-										type="button"
-										class="ml-auto p-1 rounded hover:bg-surface-gray-2 text-ink-gray-5 hover:text-ink-gray-8"
-										:title="__('Replace')"
-										@click="openFileSelector"
-									>
-										<LucideRefreshCw class="h-3.5 w-3.5" />
-									</button>
-								</div>
-								<Button
-									v-else
-									@click="openFileSelector"
-									:loading="uploading"
-									variant="outline"
-								>
-									{{
-										uploading
-											? __("Uploading {0}%", [progress])
-											: __("Upload File")
-									}}
-								</Button>
-							</template>
-						</FileUploader>
+			<div class="space-y-4">
+				<!-- Amount -->
+				<div class="text-center p-3 bg-surface-gray-1 rounded">
+					<div class="text-xl font-bold text-ink-gray-9">
+						{{ formatCurrency(amount, currency) }}
 					</div>
 				</div>
 
-				<div class="flex gap-2 mt-4">
-					<Button variant="outline" class="flex-1" @click="$emit('cancel')">
-						{{ __("Cancel") }}
-					</Button>
-					<Button
-						variant="solid"
-						class="flex-1"
-						@click="submitOfflinePayment"
-						:loading="loading"
-						:disabled="isSubmitDisabled"
+				<!-- Payment Details (HTML Content) -->
+				<div
+					v-if="offlineSettings.payment_details"
+					class="prose-sm [&>:first-child]:mt-0 bg-surface-gray-1 border border-outline-gray-1 rounded p-3 text-ink-gray-9"
+					v-html="offlineSettings.payment_details"
+				></div>
+
+				<!-- Custom Fields -->
+				<CustomFieldsSection
+					v-if="offlineCustomFields.length > 0"
+					:custom-fields="offlineCustomFields"
+					v-model="customFieldsData"
+					:show-title="false"
+				/>
+
+				<!-- Upload Proof -->
+				<div v-if="offlineSettings.collect_payment_proof">
+					<label class="block text-sm font-medium text-ink-gray-8 mb-2"
+						>{{ __("Proof of Payment") }} *</label
 					>
-						{{ __("Submit") }}
-					</Button>
+					<FileUploader
+						ref="fileUploaderRef"
+						v-model="paymentProof"
+						:file-types="['image/*']"
+						@success="onFileUpload"
+					>
+						<template #default="{ openFileSelector, uploading, progress }">
+							<div
+								v-if="paymentProof"
+								class="flex items-center gap-1.5 text-sm text-ink-green-2"
+							>
+								<LucideCheckCircle class="h-4 w-4 flex-shrink-0" />
+								<span class="truncate">{{
+									paymentProof.file_name || paymentProof.name
+								}}</span>
+								<button
+									type="button"
+									class="ml-auto p-1 rounded hover:bg-surface-gray-2 text-ink-gray-5 hover:text-ink-gray-8"
+									:title="__('Replace')"
+									@click="openFileSelector"
+								>
+									<LucideRefreshCw class="h-3.5 w-3.5" />
+								</button>
+							</div>
+							<Button
+								v-else
+								@click="openFileSelector"
+								:loading="uploading"
+								variant="outline"
+							>
+								{{
+									uploading
+										? __("Uploading {0}%", [progress])
+										: __("Upload File")
+								}}
+							</Button>
+						</template>
+					</FileUploader>
 				</div>
 			</div>
-		</template>
+
+			<div class="flex gap-2 mt-4">
+				<Button variant="outline" class="flex-1" @click="$emit('cancel')">
+					{{ __("Cancel") }}
+				</Button>
+				<Button
+					variant="solid"
+					class="flex-1"
+					@click="submitOfflinePayment"
+					:loading="loading"
+					:disabled="isSubmitDisabled"
+				>
+					{{ __("Submit") }}
+				</Button>
+			</div>
+		</div>
 	</Dialog>
 </template>
 

@@ -19,14 +19,14 @@
 									? {
 											options: [
 												{
-													icon: 'upload',
+													icon: 'lucide-upload',
 													label: profile.user_image
 														? __('Change image')
 														: __('Upload image'),
 													onClick: openFileSelector,
 												},
 												{
-													icon: 'trash-2',
+													icon: 'lucide-trash-2',
 													label: __('Remove image'),
 													onClick: () => updateImage(),
 												},

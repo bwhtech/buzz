@@ -1,32 +1,30 @@
 <template>
 	<Dialog v-model="isOpen">
-		<template #body-title>
+		<template #title>
 			<h3 class="text-xl font-semibold text-ink-gray-9">Transfer Ticket</h3>
 		</template>
-		<template #body-content>
-			<div class="space-y-4">
-				<p class="text-ink-gray-7">
-					Transfer this ticket to a new attendee. The new attendee will receive the
-					updated ticket information.
-				</p>
+		<div class="space-y-4">
+			<p class="text-ink-gray-7">
+				Transfer this ticket to a new attendee. The new attendee will receive the updated
+				ticket information.
+			</p>
 
-				<FormControl
-					type="text"
-					label="New Attendee Name"
-					placeholder="Enter full name"
-					v-model="transferForm.name"
-					:required="true"
-				/>
+			<FormControl
+				type="text"
+				label="New Attendee Name"
+				placeholder="Enter full name"
+				v-model="transferForm.name"
+				:required="true"
+			/>
 
-				<FormControl
-					type="email"
-					label="New Attendee Email"
-					placeholder="Enter email address"
-					v-model="transferForm.email"
-					:required="true"
-				/>
-			</div>
-		</template>
+			<FormControl
+				type="email"
+				label="New Attendee Email"
+				placeholder="Enter email address"
+				v-model="transferForm.email"
+				:required="true"
+			/>
+		</div>
 		<template #actions="{ close }">
 			<div class="flex gap-2">
 				<Button

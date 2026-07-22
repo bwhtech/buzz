@@ -1,42 +1,40 @@
 <template>
 	<Dialog v-model="isOpen">
-		<template #body-title>
+		<template #title>
 			<h3 class="text-xl font-semibold text-ink-gray-9">{{ __("Transfer Ticket") }}</h3>
 		</template>
-		<template #body-content>
-			<div class="space-y-4">
-				<p class="text-ink-gray-7">
-					{{
-						__(
-							"Transfer this ticket to a new attendee. The new attendee will receive the updated ticket information."
-						)
-					}}
-				</p>
+		<div class="space-y-4">
+			<p class="text-ink-gray-7">
+				{{
+					__(
+						"Transfer this ticket to a new attendee. The new attendee will receive the updated ticket information."
+					)
+				}}
+			</p>
 
-				<FormControl
-					type="text"
-					:label="__('First Name')"
-					:placeholder="__('Enter first name')"
-					v-model="transferForm.first_name"
-					:required="true"
-				/>
+			<FormControl
+				type="text"
+				:label="__('First Name')"
+				:placeholder="__('Enter first name')"
+				v-model="transferForm.first_name"
+				:required="true"
+			/>
 
-				<FormControl
-					type="text"
-					:label="__('Last Name')"
-					:placeholder="__('Enter last name')"
-					v-model="transferForm.last_name"
-				/>
+			<FormControl
+				type="text"
+				:label="__('Last Name')"
+				:placeholder="__('Enter last name')"
+				v-model="transferForm.last_name"
+			/>
 
-				<FormControl
-					type="email"
-					:label="__('New Attendee Email')"
-					:placeholder="__('Enter email address')"
-					v-model="transferForm.email"
-					:required="true"
-				/>
-			</div>
-		</template>
+			<FormControl
+				type="email"
+				:label="__('New Attendee Email')"
+				:placeholder="__('Enter email address')"
+				v-model="transferForm.email"
+				:required="true"
+			/>
+		</div>
 		<template #actions="{ close }">
 			<div class="flex gap-2">
 				<Button
