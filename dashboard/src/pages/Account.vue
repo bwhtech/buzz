@@ -27,8 +27,7 @@
 
 <script setup lang="ts">
 import ProfileView from "@/components/ProfileView.vue";
-import { session } from "@/data/session";
-import { Tabs, createResource, useList } from "frappe-ui";
+import { Tabs, createResource } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import LucideCalendarDays from "~icons/lucide/calendar-days";
@@ -38,13 +37,6 @@ import LucideTicket from "~icons/lucide/ticket";
 
 const route = useRoute();
 const router = useRouter();
-
-const proposals = useList({
-	doctype: "Talk Proposal",
-	fields: ["name"],
-	filters: { submitted_by: session.user },
-	cacheKey: ["account-proposals-check", session.user],
-});
 
 const sponsorships = createResource({
 	url: "buzz.api.get_user_sponsorship_inquiries",
@@ -63,13 +55,11 @@ const tabs = computed(() => {
 		{ label: __("My Tickets"), route: "/account/tickets", icon: LucideTicket },
 	];
 
-	if (proposals.data?.length) {
-		accountTabs.push({
-			label: __("Talk Proposals"),
-			route: "/account/proposals",
-			icon: LucideMegaphone,
-		});
-	}
+	accountTabs.push({
+		label: __("Talk Proposals"),
+		route: "/account/proposals",
+		icon: LucideMegaphone,
+	});
 
 	if (sponsorships.data?.length) {
 		accountTabs.push({
@@ -108,15 +98,10 @@ const getTabIndexFromRoute = () => {
 const tabIndex = ref(getTabIndexFromRoute());
 
 watch(
-	[
-		() => route.path,
-		() => tabs.value.length,
-		() => proposals.loading,
-		() => sponsorships.loading,
-	],
+	[() => route.path, () => tabs.value.length, () => sponsorships.loading],
 	() => {
 		const onKnownTab = tabs.value.some((tab) => route.path.startsWith(tab.route));
-		const settled = !proposals.loading && !sponsorships.loading;
+		const settled = !sponsorships.loading;
 		if (!onKnownTab && settled && route.path.startsWith("/account/")) {
 			router.replace(tabs.value[0].route);
 			return;
