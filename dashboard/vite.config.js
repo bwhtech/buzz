@@ -36,6 +36,11 @@ export default defineConfig({
 		// can resolve, so it must skip esbuild pre-bundling and go through the
 		// plugin pipeline instead.
 		exclude: ["frappe-ui"],
+		// frappe-ui bundles its own CJS feather-icons; since frappe-ui is not
+		// pre-bundled, pre-bundle that nested copy so its default export gets
+		// CJS->ESM interop (otherwise FeatherIcon import fails and the app never
+		// mounts).
+		include: ["feather-icons", "frappe-ui > feather-icons"],
 	},
 	server: {
 		allowedHosts: true,
