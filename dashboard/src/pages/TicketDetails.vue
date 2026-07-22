@@ -233,7 +233,7 @@
 						:href="ticketDetails.data.zoom_join_url"
 						target="_blank"
 						rel="noopener noreferrer"
-						class="inline-flex items-center gap-2 px-4 py-2 bg-ink-blue-3 text-surface-white rounded-lg hover:bg-ink-blue-4 transition-colors"
+						class="inline-flex items-center gap-2 px-4 py-2 bg-ink-blue-3 text-surface-white rounded-lg hover:bg-blue-700 transition-colors"
 					>
 						<span>{{ __("Join Zoom Webinar") }}</span>
 						<LucideExternalLink class="w-4 h-4" />
