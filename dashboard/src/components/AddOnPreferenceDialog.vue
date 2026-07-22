@@ -1,5 +1,5 @@
 <template>
-	<Dialog v-model="show" v-bind="dialogOptions">
+	<Dialog v-model="show" :title="__('Update Add-on Preferences')" size="lg">
 		<div class="space-y-4">
 			<p class="text-ink-gray-8">
 				Update your add-on preferences for <strong>{{ ticket.attendee_name }}</strong>
@@ -88,11 +88,6 @@ const hasChanges = computed(() => {
 		return currentValue && currentValue !== addon.value;
 	});
 });
-
-const dialogOptions = {
-	title: "Update Add-on Preferences",
-	size: "lg" as const,
-};
 
 // Initialize preferences when dialog opens
 watch(

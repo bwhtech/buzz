@@ -38,7 +38,7 @@ export class EventProposalPage {
 	 * clicking rather than through `selectOption`.
 	 */
 	async selectOptionByLabel(label: string, option: string): Promise<void> {
-		const trigger = this.page.getByRole("combobox", { name: new RegExp(label) });
+		const trigger = this.page.getByRole("combobox", { name: label });
 		await trigger.waitFor({ state: "visible", timeout: 10000 });
 		await trigger.click();
 
