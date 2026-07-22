@@ -39,7 +39,9 @@ def has_talk_proposal_permission(doc, ptype: str | None = None, user: str | None
 		return True
 	if user in (doc.submitted_by, doc.owner):
 		return True
-	return any(speaker.email == user for speaker in doc.speakers)
+	# User emails are stored lowercase, but guest-entered speaker emails keep
+	# their original casing.
+	return any(speaker.email and speaker.email.lower() == user.lower() for speaker in doc.speakers)
 
 
 class TalkProposal(Document):

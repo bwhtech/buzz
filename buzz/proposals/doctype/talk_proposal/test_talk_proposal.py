@@ -117,6 +117,16 @@ class TestTalkProposalSpeakerAccess(IntegrationTestCase):
 		self.assertIn(proposal.name, frappe.get_list("Talk Proposal", pluck="name"))
 		self.assertTrue(proposal.has_permission("read"))
 
+	def test_speaker_email_match_is_case_insensitive(self):
+		proposal = make_guest_proposal(self.event, "Mixed-Case@Example.COM")
+		user = make_test_user("mixed-case@example.com")
+
+		frappe.set_user(user)
+		doc = frappe.get_doc("Talk Proposal", proposal)
+		self.assertTrue(doc.has_permission("read"))
+		self.assertTrue(doc.has_permission("write"))
+		self.assertIn(proposal, frappe.get_list("Talk Proposal", pluck="name"))
+
 	def test_event_manager_sees_all_proposals(self):
 		frappe.set_user(self.manager_user)
 		self.assertIn(self.guest_proposal, frappe.get_list("Talk Proposal", pluck="name"))

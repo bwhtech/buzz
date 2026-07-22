@@ -49,6 +49,7 @@
 </template>
 
 <script setup lang="ts">
+import { session } from "@/data/session";
 import { useProposalStatuses } from "@/composables/useProposalStatuses";
 import type { ProposalListItem } from "@/types";
 import { Badge, ListRowItem, ListView, Spinner, createResource, dayjsLocal } from "frappe-ui";
@@ -71,7 +72,7 @@ interface ProposalRow extends ProposalListItem {
 const proposals = createResource({
 	url: "buzz.api.proposals.get_my_proposals",
 	auto: true,
-	cache: "proposals-list",
+	cache: ["proposals-list", session.user],
 	transform: (data: ProposalListItem[]): ProposalRow[] =>
 		data.map((proposal) => ({
 			...proposal,
