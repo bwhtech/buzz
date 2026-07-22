@@ -65,7 +65,7 @@
 			<!-- Total Amount -->
 			<div class="flex justify-between items-center text-lg-semibold text-ink-gray-9">
 				<span>{{ isPaid ? __("Total Paid") : __("Total") }}</span>
-				<span :class="isPaid ? 'text-ink-green-5' : 'text-ink-gray-9'">{{
+				<span :class="isPaid ? 'text-ink-green-6' : 'text-ink-gray-9'">{{
 					formatPrice(booking.total_amount || 0, booking.currency || "INR")
 				}}</span>
 			</div>
