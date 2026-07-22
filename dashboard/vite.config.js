@@ -1,82 +1,43 @@
 import path from "node:path";
 import vue from "@vitejs/plugin-vue";
+import frappeui from "frappe-ui/vite";
 import { defineConfig } from "vite";
 
-// Conditionally import frappe-ui plugin
-async function getFrappeUIPlugin(isDev) {
-	if (isDev) {
-		try {
-			const module = await import("./frappe-ui/vite");
-			return module.default;
-		} catch (error) {
-			console.warn("Local frappe-ui not found, falling back to npm package:", error.message);
-			// Fall back to npm package if local import fails
-			const module = await import("frappe-ui/vite");
-			return module.default;
-		}
-	}
-	const module = await import("frappe-ui/vite");
-	return module.default;
-}
-
 // https://vitejs.dev/config/
-export default defineConfig(async ({ command, mode }) => {
-	const isDev = process.env.NODE_ENV !== "production";
-	const frappeui = await getFrappeUIPlugin(isDev);
-
-	const config = {
-		plugins: [
-			frappeui({
-				frappeProxy: {
-					port: 8080,
-					source: "^/(app|login|api|assets|files|private|razorpay_checkout|events)",
-				},
-				jinjaBootData: true,
-				lucideIcons: true,
-				buildConfig: {
-					indexHtmlPath: "../buzz/www/dashboard.html",
-					emptyOutDir: true,
-					sourcemap: true,
-					outDir: "../buzz/public/dashboard",
-					chunkSizeWarningLimit: 1500,
-					target: "es2015",
-				},
-			}),
-			vue(),
-		],
-		resolve: {
-			alias: {
-				"@": path.resolve(__dirname, "src"),
-				"tailwind.config.js": path.resolve(__dirname, "tailwind.config.js"),
+export default defineConfig({
+	plugins: [
+		frappeui({
+			frappeProxy: {
+				port: 8080,
+				source: "^/(app|login|api|assets|files|private|razorpay_checkout|events)",
 			},
+			jinjaBootData: true,
+			lucideIcons: true,
+			buildConfig: {
+				indexHtmlPath: "../buzz/www/dashboard.html",
+				emptyOutDir: true,
+				sourcemap: true,
+				outDir: "../buzz/public/dashboard",
+				chunkSizeWarningLimit: 1500,
+				target: "es2015",
+			},
+		}),
+		vue(),
+	],
+	resolve: {
+		alias: {
+			"@": path.resolve(__dirname, "src"),
+			"tailwind.config.js": path.resolve(__dirname, "tailwind.config.js"),
 		},
-		optimizeDeps: {
-			include: ["feather-icons", "showdown", "highlight.js/lib/core", "interactjs"],
-		},
-		server: {
-			allowedHosts: true,
-		},
-	};
-
-	// Add local frappe-ui alias only in development if the local frappe-ui exists
-	if (isDev) {
-		try {
-			// Check if the local frappe-ui directory exists
-			const fs = await import("node:fs");
-			const localFrappeUIPath = path.resolve(__dirname, "frappe-ui");
-			if (fs.existsSync(localFrappeUIPath)) {
-				config.resolve.alias["frappe-ui/style.css"] = path.resolve(
-					localFrappeUIPath,
-					"src/style.css"
-				);
-				config.resolve.alias["frappe-ui"] = localFrappeUIPath;
-			} else {
-				console.warn("Local frappe-ui directory not found, using npm package");
-			}
-		} catch (error) {
-			console.warn("Error checking for local frappe-ui, using npm package:", error.message);
-		}
-	}
-
-	return config;
+	},
+	optimizeDeps: {
+		// frappe-ui ships as source (its exports point at src/*.ts). Its files
+		// import `~icons/lucide/*` virtuals that only the lucideIcons Vite plugin
+		// can resolve, so it must skip esbuild pre-bundling and go through the
+		// plugin pipeline instead.
+		exclude: ["frappe-ui"],
+	},
+	server: {
+		allowedHosts: true,
+	},
 });

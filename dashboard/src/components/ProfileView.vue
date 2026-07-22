@@ -54,7 +54,7 @@
 						<span class="text-base text-ink-gray-7">
 							{{ profile.email }}
 						</span>
-						<ErrorMessage :message="__(_error)" />
+						<ErrorMessage :message="__(_error as string)" />
 					</div>
 				</div>
 			</template>

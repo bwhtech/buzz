@@ -225,7 +225,7 @@
 									<!-- Error Message -->
 									<ErrorMessage
 										v-if="uploadError"
-										:message="uploadError"
+										:message="uploadError as string"
 										class="text-xs"
 									/>
 								</div>

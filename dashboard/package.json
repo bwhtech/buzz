@@ -17,7 +17,7 @@
 		"@vueuse/router": "^13.6.0",
 		"canvas-confetti": "^1.9.3",
 		"feather-icons": "^4.29.2",
-		"frappe-ui": "^0.1.257",
+		"frappe-ui": "1.0.0-beta.25",
 		"socket.io-client": "^4.7.2",
 		"vue": "^3.5.13",
 		"vue-router": "^4.5.0"
