@@ -31,11 +31,12 @@ export default defineConfig({
 		},
 	},
 	optimizeDeps: {
-		// frappe-ui ships as source (its exports point at src/*.ts). Its files
-		// import `~icons/lucide/*` virtuals that only the lucideIcons Vite plugin
-		// can resolve, and use extensionless `#molecules/*` subpath imports that
-		// esbuild cannot resolve, so it must skip esbuild pre-bundling and go
-		// through the plugin pipeline instead.
+		// `frappe-ui` and `frappe-ui/editor` pre-bundle as separate entries, and
+		// each inlines its own copy of the ProseMirror packages. Two copies means
+		// two selection-JSON-ID registries and two plugin-key counters, so the
+		// editor throws on "gapcursor"/`plugin$` and never starts. Neither
+		// `resolve.dedupe` nor pre-bundling ProseMirror itself merges the entries,
+		// so keep frappe-ui out of pre-bundling entirely.
 		exclude: ["frappe-ui"],
 		// frappe-ui bundles its own CJS feather-icons; since frappe-ui is not
 		// pre-bundled, pre-bundle that nested copy so its default export gets
