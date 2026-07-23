@@ -1,42 +1,46 @@
 <template>
-	<Dialog v-model="isOpen" :options="{ size: '3xl' }">
-		<template #body-title>
-			<h3 class="text-xl font-semibold text-ink-gray-9">
+	<Dialog v-model="isOpen" size="3xl">
+		<template #title>
+			<h3 class="text-2xl-semibold text-ink-gray-9">
 				{{ eventTalkId ? __("Edit Talk") : __("Edit Proposal") }}
 			</h3>
 		</template>
-		<template #body-content>
-			<div class="space-y-4">
-				<FormControl
-					type="text"
-					:label="__('Title')"
-					:placeholder="__('Enter proposal title')"
-					v-model="editForm.title"
-					:required="true"
-				/>
+		<div class="space-y-4">
+			<FormControl
+				type="text"
+				:label="__('Title')"
+				:placeholder="__('Enter proposal title')"
+				v-model="editForm.title"
+				:required="true"
+			/>
 
-				<div>
-					<label class="block text-sm font-medium text-ink-gray-7 mb-2">
-						{{ __("Description") }}
-					</label>
-					<TextEditor
-						:fixedMenu="true"
-						:content="editForm.description"
-						:placeholder="__('Enter proposal description...')"
-						@change="(val) => (editForm.description = val)"
-						editorClass="prose-sm max-w-none py-2 px-3 min-h-[12rem] border-outline-gray-2 hover:border-outline-gray-3 rounded-b-md bg-surface-gray-3"
+			<div>
+				<label class="block text-sm-medium text-ink-gray-7 mb-2">
+					{{ __("Description") }}
+				</label>
+				<Editor
+					v-model="editForm.description"
+					:extensions="editorExtensions"
+					:placeholder="__('Enter proposal description...')"
+				>
+					<EditorFixedMenu
+						:items="editorToolbar"
+						class="rounded-t-md border border-b-0 border-outline-gray-2 px-2 py-1"
 					/>
-				</div>
-
-				<FormControl
-					v-if="!eventTalkId"
-					type="tel"
-					:label="__('Phone (optional)')"
-					:placeholder="__('Enter phone number')"
-					v-model="editForm.phone"
-				/>
+					<EditorContent
+						class="prose-sm py-2 px-3 min-h-[12rem] border border-outline-gray-2 hover:border-outline-gray-3 rounded-b-md bg-surface-gray-3"
+					/>
+				</Editor>
 			</div>
-		</template>
+
+			<FormControl
+				v-if="!eventTalkId"
+				type="tel"
+				:label="__('Phone (optional)')"
+				:placeholder="__('Enter phone number')"
+				v-model="editForm.phone"
+			/>
+		</div>
 		<template #actions="{ close }">
 			<div class="flex gap-2">
 				<Button
@@ -57,8 +61,51 @@
 
 <script setup lang="ts">
 import type { FrappeError } from "@/types";
-import { Button, Dialog, FormControl, TextEditor, createResource, toast } from "frappe-ui";
+import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui";
+import {
+	Blockquote,
+	Bold,
+	BulletList,
+	Editor,
+	EditorContent,
+	EditorFixedMenu,
+	HeadingGroup,
+	InsertLink,
+	InsertTable,
+	Italic,
+	OrderedList,
+	RichTextKit,
+	Separator,
+	Strike,
+} from "frappe-ui/editor";
 import { computed, ref, watch } from "vue";
+
+// No upload handler is wired for proposals, so the media extensions are off —
+// otherwise the drop/paste paths would silently fail.
+const editorExtensions = [
+	RichTextKit.configure({
+		heading: { levels: [2, 3, 4, 5, 6] },
+		image: false,
+		imageGroup: false,
+		imageViewer: false,
+		video: false,
+		attachment: false,
+	}),
+];
+
+const editorToolbar = [
+	HeadingGroup,
+	Separator,
+	Bold,
+	Italic,
+	Strike,
+	Separator,
+	BulletList,
+	OrderedList,
+	Blockquote,
+	InsertLink,
+	InsertTable,
+];
 
 const props = defineProps({
 	open: {

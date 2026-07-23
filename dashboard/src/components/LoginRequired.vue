@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-col items-center justify-center py-16 px-4">
 		<div class="text-center max-w-md">
-			<h2 class="text-xl font-semibold text-ink-gray-8 mb-2">
+			<h2 class="text-2xl-semibold text-ink-gray-8 mb-2">
 				{{ __("Login Required") }}
 			</h2>
 			<p class="text-ink-gray-6 mb-6">

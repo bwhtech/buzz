@@ -1,31 +1,29 @@
 <template>
-	<Dialog v-model="show" :options="dialogOptions">
-		<template #body-content>
-			<div class="space-y-4">
-				<p class="text-ink-gray-8">
-					Update your add-on preferences for <strong>{{ ticket.attendee_name }}</strong>
-				</p>
+	<Dialog v-model="show" :title="__('Update Add-on Preferences')" size="lg">
+		<div class="space-y-4">
+			<p class="text-ink-gray-8">
+				Update your add-on preferences for <strong>{{ ticket.attendee_name }}</strong>
+			</p>
 
-				<div v-if="addOnsWithOptions.length === 0" class="text-center py-4">
-					<p class="text-ink-gray-6">No customizable add-ons found for this ticket.</p>
-				</div>
+			<div v-if="addOnsWithOptions.length === 0" class="text-center py-4">
+				<p class="text-ink-gray-6">No customizable add-ons found for this ticket.</p>
+			</div>
 
-				<div v-else class="space-y-4">
-					<div v-for="addon in addOnsWithOptions" :key="addon.id" class="space-y-2">
-						<label class="block text-sm font-medium text-ink-gray-8">
-							{{ __(addon.title ?? "") }}
-						</label>
-						<p class="text-xs text-ink-gray-6 mb-2">Current: {{ addon.value }}</p>
-						<FormControl
-							type="select"
-							:options="addon.selectOptions"
-							v-model="preferences[addon.id ?? '']"
-							:placeholder="`Select ${(addon.title ?? '').toLowerCase()}`"
-						/>
-					</div>
+			<div v-else class="space-y-4">
+				<div v-for="addon in addOnsWithOptions" :key="addon.id" class="space-y-2">
+					<label class="block text-sm-medium text-ink-gray-8">
+						{{ __(addon.title ?? "") }}
+					</label>
+					<p class="text-xs text-ink-gray-6 mb-2">Current: {{ addon.value }}</p>
+					<FormControl
+						type="select"
+						:options="addon.selectOptions"
+						v-model="preferences[addon.id ?? '']"
+						:placeholder="`Select ${(addon.title ?? '').toLowerCase()}`"
+					/>
 				</div>
 			</div>
-		</template>
+		</div>
 
 		<template #actions="{ close }">
 			<div class="flex space-x-2">
@@ -90,11 +88,6 @@ const hasChanges = computed(() => {
 		return currentValue && currentValue !== addon.value;
 	});
 });
-
-const dialogOptions = {
-	title: "Update Add-on Preferences",
-	size: "lg" as const,
-};
 
 // Initialize preferences when dialog opens
 watch(

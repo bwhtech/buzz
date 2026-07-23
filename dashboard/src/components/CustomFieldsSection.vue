@@ -1,6 +1,6 @@
 <template>
 	<div v-if="customFields.length > 0" class="space-y-4">
-		<h5 v-if="showTitle" class="text-base font-medium text-ink-gray-8 border-b pb-2">
+		<h5 v-if="showTitle" class="text-base-medium text-ink-gray-8 border-b pb-2">
 			{{ __(title) || __("Additional Information") }}
 		</h5>
 
