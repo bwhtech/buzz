@@ -1,0 +1,42 @@
+name: Backport
+
+on:
+  pull_request_target:
+    types: [closed, labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backport:
+    name: Backport PR
+    runs-on: ubuntu-latest
+    # Only run on merged PRs that carry a backport label. The `labeled` event
+    # lets you trigger a backport after the PR is already merged by adding the
+    # label late.
+    if: >
+      github.event.pull_request.merged == true &&
+      (
+        github.event.action == 'closed' ||
+        startsWith(github.event.label.name, 'backport ')
+      )
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create backport PRs
+        uses: korthout/backport-action@d07416681cab29bf2661702f925f020aaa962997 # v3.4.1
+        with:
+          # Act only on labels shaped like "backport <target-branch>",
+          # e.g. "backport main".
+          label_pattern: '^backport ([^ ]+)$'
+          pull_title: '[Backport ${target_branch}] ${pull_title}'
+          pull_description: |
+            Automated backport of #${pull_number} to `${target_branch}`.
+          # Carry the original PR's labels onto the backport PR, except the
+          # "backport <branch>" label itself — copying it would re-trigger this
+          # workflow when the generated PR is merged.
+          copy_labels_pattern: '^(?!backport ).*'

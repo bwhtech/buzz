@@ -229,6 +229,7 @@ def get_custom_form_data(event_route: str, form_route: str) -> dict:
 		"start_time": event_doc.start_time,
 		"end_time": event_doc.end_time,
 		"time_zone": event_doc.time_zone,
+		"time_zone_label": event_doc.time_zone_label,
 		"venue": event_doc.venue,
 		"medium": event_doc.medium,
 		"short_description": event_doc.short_description,

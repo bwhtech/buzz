@@ -1,0 +1,6 @@
+# semgrep default ignores (a custom .semgrepignore replaces them)
+.git/
+:include .gitignore
+
+# role "All" read access on events is intentional: public event info
+buzz/events/doctype/buzz_event/buzz_event.json
