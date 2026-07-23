@@ -17,23 +17,29 @@
 		"@vueuse/router": "^13.6.0",
 		"canvas-confetti": "^1.9.3",
 		"feather-icons": "^4.29.2",
-		"frappe-ui": "^0.1.257",
+		"frappe-ui": "1.0.0-beta.25",
 		"socket.io-client": "^4.7.2",
 		"vue": "^3.5.13",
 		"vue-router": "^4.5.0"
+	},
+	"resolutions": {
+		"prosemirror-keymap": "^1.2.3",
+		"prosemirror-model": "^1.25.11",
+		"prosemirror-state": "^1.4.4",
+		"prosemirror-transform": "^1.12.0",
+		"prosemirror-view": "^1.42.1"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
 		"@types/canvas-confetti": "^1.9.0",
 		"@types/node": "^25.2.0",
-		"@vitejs/plugin-vue": "^5.1.4",
+		"@vitejs/plugin-vue": "^6.0.8",
 		"autoprefixer": "^10.4.2",
 		"html5-qrcode": "^2.3.8",
 		"postcss": "^8.4.5",
 		"tailwindcss": "^3.4.15",
 		"typescript": "^5.9.3",
-		"unplugin-auto-import": "0.18.6",
-		"vite": "^5.4.10",
-		"vue-tsc": "^3.2.4"
+		"vite": "^8.1.5",
+		"vue-tsc": "^3.3.7"
 	}
 }

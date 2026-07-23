@@ -10,7 +10,7 @@
 	<div v-else-if="ticketDetails.data">
 		<div class="flex justify-between items-start mb-6">
 			<div>
-				<h2 class="text-ink-gray-9 font-semibold text-lg mb-1">
+				<h2 class="text-ink-gray-9 text-lg-semibold mb-1">
 					{{ __("Ticket Details") }}
 					<span class="text-ink-gray-5 font-mono">(#{{ ticketId }})</span>
 				</h2>
@@ -49,9 +49,9 @@
 			class="mb-4 bg-surface-amber-1 border border-outline-amber-1 rounded-lg p-4"
 		>
 			<div class="flex items-center">
-				<LucideTriangleAlert class="w-5 h-5 text-ink-amber-2 mr-3" />
+				<LucideTriangleAlert class="w-5 h-5 text-ink-amber-5 mr-3" />
 				<div>
-					<p class="text-ink-amber-3 text-sm">
+					<p class="text-ink-amber-6 text-sm">
 						<strong>{{
 							__("Add-on preference changes are no longer available")
 						}}</strong>
@@ -63,28 +63,28 @@
 
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 			<!-- Ticket Information -->
-			<div class="bg-surface-cards border border-outline-gray-1 rounded-lg p-6">
-				<h3 class="text-ink-gray-8 font-semibold text-lg mb-4">
+			<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6">
+				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">
 					{{ __("Ticket Information") }}
 				</h3>
 
 				<div class="space-y-3">
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("Attendee Name")
 						}}</label>
 						<p class="text-ink-gray-9">{{ ticketDetails.data.doc.attendee_name }}</p>
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("Attendee Email")
 						}}</label>
 						<p class="text-ink-gray-9">{{ ticketDetails.data.doc.attendee_email }}</p>
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("Event")
 						}}</label>
 						<p class="text-ink-gray-9">{{ ticketDetails.data.doc.event_title }}</p>
@@ -97,7 +97,7 @@
 							)
 						"
 					>
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("Ticket Type")
 						}}</label>
 						<p class="text-ink-gray-9">
@@ -106,7 +106,7 @@
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("Status")
 						}}</label>
 						<Badge
@@ -123,9 +123,9 @@
 			<!-- QR Code Display -->
 			<div
 				v-if="ticketDetails.data.doc.qr_code"
-				class="bg-surface-cards border border-outline-gray-1 rounded-lg p-6"
+				class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6"
 			>
-				<h3 class="text-ink-gray-8 font-semibold text-lg mb-4">{{ __("QR Code") }}</h3>
+				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">{{ __("QR Code") }}</h3>
 				<div class="flex justify-center">
 					<img
 						:src="ticketDetails.data.doc.qr_code"
@@ -140,10 +140,10 @@
 			<!-- Add-ons Information -->
 			<div
 				v-if="ticketDetails.data.add_ons && ticketDetails.data.add_ons.length > 0"
-				class="bg-surface-cards border border-outline-gray-1 rounded-lg p-6"
+				class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6"
 			>
 				<div class="flex justify-between items-center mb-4">
-					<h3 class="text-ink-gray-8 font-semibold text-lg">{{ __("Add-ons") }}</h3>
+					<h3 class="text-ink-gray-8 text-lg-semibold">{{ __("Add-ons") }}</h3>
 					<Button
 						v-if="hasCustomizableAddOns && canChangeAddOns"
 						variant="outline"
@@ -176,14 +176,14 @@
 			</div>
 
 			<!-- Event Information -->
-			<div class="bg-surface-cards border border-outline-gray-1 rounded-lg p-6">
-				<h3 class="text-ink-gray-8 font-semibold text-lg mb-4">
+			<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6">
+				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">
 					{{ __("Event Information") }}
 				</h3>
 
 				<div class="space-y-3">
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("Start Date")
 						}}</label>
 						<p class="text-ink-gray-9">
@@ -192,7 +192,7 @@
 					</div>
 
 					<div v-if="ticketDetails.data.doc.formatted_end_date">
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("End Date")
 						}}</label>
 						<p class="text-ink-gray-9">
@@ -201,14 +201,14 @@
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("Venue")
 						}}</label>
 						<p class="text-ink-gray-9">{{ ticketDetails.data.doc.venue }}</p>
 					</div>
 
 					<div v-if="ticketDetails.data.doc.description">
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("Description")
 						}}</label>
 						<p class="text-ink-gray-9">{{ ticketDetails.data.doc.description }}</p>
@@ -219,9 +219,9 @@
 			<!-- Zoom Webinar Access (only shown if webinar is linked) -->
 			<div
 				v-if="ticketDetails.data.zoom_join_url"
-				class="bg-surface-cards border border-outline-gray-1 rounded-lg p-6"
+				class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6"
 			>
-				<h3 class="text-ink-gray-8 font-semibold text-lg mb-4">
+				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">
 					{{ __("Webinar Access") }}
 				</h3>
 
@@ -233,7 +233,7 @@
 						:href="ticketDetails.data.zoom_join_url"
 						target="_blank"
 						rel="noopener noreferrer"
-						class="inline-flex items-center gap-2 px-4 py-2 bg-ink-blue-3 text-surface-white rounded-lg hover:bg-ink-blue-4 transition-colors"
+						class="inline-flex items-center gap-2 px-4 py-2 bg-ink-blue-6 text-surface-base rounded-lg hover:bg-blue-700 transition-colors"
 					>
 						<span>{{ __("Join Zoom Webinar") }}</span>
 						<LucideExternalLink class="w-4 h-4" />
@@ -244,15 +244,15 @@
 			<!-- Booking Information (only shown if user owns the booking) -->
 			<div
 				v-if="ticketDetails.data.booking"
-				class="bg-surface-cards border border-outline-gray-1 rounded-lg p-6"
+				class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6"
 			>
-				<h3 class="text-ink-gray-8 font-semibold text-lg mb-4">
+				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">
 					{{ __("Booking Information") }}
 				</h3>
 
 				<div class="space-y-3">
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("Booking ID")
 						}}</label>
 						<RouterLink
@@ -267,7 +267,7 @@
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("Booking Status")
 						}}</label>
 						<Badge
@@ -284,7 +284,7 @@
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("Total Amount")
 						}}</label>
 						<p class="text-ink-gray-9">
@@ -293,7 +293,7 @@
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-ink-gray-6">{{
+						<label class="block text-sm-medium text-ink-gray-6">{{
 							__("Booked On")
 						}}</label>
 						<p class="text-ink-gray-9">

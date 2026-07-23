@@ -2,8 +2,8 @@
 	<div class="mb-6 size-full">
 		<!-- Header - only show when there are events -->
 		<h2
-			v-if="eventsResource.data?.length > 0"
-			class="text-lg font-semibold mb-4 text-gray-900 dark:text-white"
+			v-if="(eventsResource.data?.length ?? 0) > 0"
+			class="text-lg-semibold mb-4 text-gray-900 dark:text-white"
 		>
 			{{ __("Select Event") }}
 		</h2>

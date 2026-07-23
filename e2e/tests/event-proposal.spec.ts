@@ -41,9 +41,7 @@ test.describe("Event Proposal Form - Submission", () => {
 		const titleInput = proposalPage.getInputByLabel("Title");
 		await titleInput.fill("E2E Test: Automated Testing with Playwright");
 
-		const categorySelect = page.locator("select").first();
-		await categorySelect.waitFor({ state: "visible", timeout: 5000 });
-		await categorySelect.selectOption({ label: "E2E Test Category" });
+		await proposalPage.selectOptionByLabel("Event Category", "E2E Test Category");
 
 		const aboutTextarea = page
 			.locator('label:has-text("About the event")')
@@ -71,9 +69,7 @@ test.describe("Event Proposal Form - Submission", () => {
 		const titleInput = proposalPage.getInputByLabel("Title");
 		await titleInput.fill("E2E Test: Another Proposal for Success Banner");
 
-		const categorySelect = page.locator("select").first();
-		await categorySelect.waitFor({ state: "visible", timeout: 5000 });
-		await categorySelect.selectOption({ label: "E2E Test Category" });
+		await proposalPage.selectOptionByLabel("Event Category", "E2E Test Category");
 
 		const aboutTextarea = page
 			.locator('label:has-text("About the event")')

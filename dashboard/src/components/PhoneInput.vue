@@ -2,7 +2,7 @@
 	<div class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(label) }}
-			<span v-if="required" class="text-ink-red-4">*</span>
+			<span v-if="required" class="text-ink-red-8">*</span>
 		</label>
 		<div class="flex gap-1.5">
 			<div class="w-24 shrink-0">
@@ -91,7 +91,7 @@ function emitValue() {
 	emit("update:modelValue", formatPhone(dialCode.value, localNumber.value));
 }
 
-function onDialCodeChange(code: string) {
+function onDialCodeChange(code: string | null) {
 	if (code) {
 		dialCode.value = code;
 		emitValue();

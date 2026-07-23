@@ -13,41 +13,37 @@
 		<!-- OTP Verification Dialog for Guest Booking -->
 		<Dialog
 			v-model="showOtpModal"
-			:options="{
-				title: isPhoneOtp ? __('Verify Your Phone') : __('Verify Your Email'),
-				size: 'sm',
-			}"
+			:title="isPhoneOtp ? __('Verify Your Phone') : __('Verify Your Email')"
+			size="sm"
 		>
-			<template #body-content>
-				<p class="text-sm text-ink-gray-6 mb-4">
-					{{ __("Enter the 6-digit code sent to") }}
-					<strong>{{ isPhoneOtp ? guestPhone : guestEmail }}</strong>
-				</p>
-				<FormControl
-					v-model="otpCode"
-					type="text"
-					maxlength="6"
-					:label="__('Verification Code')"
-					placeholder="123456"
-					class="mb-3"
-					@keyup.enter="submitWithOtp"
-					@input="otpError = ''"
-				/>
-				<ErrorMessage :message="otpError" />
-				<Button
-					variant="ghost"
-					size="sm"
-					:loading="sendOtpResource.loading"
-					:disabled="resendCooldown > 0"
-					@click="resendOtp"
-				>
-					{{
-						resendCooldown > 0
-							? __("Resend code in {0}s", [resendCooldown])
-							: __("Resend code")
-					}}
-				</Button>
-			</template>
+			<p class="text-sm text-ink-gray-6 mb-4">
+				{{ __("Enter the 6-digit code sent to") }}
+				<strong>{{ isPhoneOtp ? guestPhone : guestEmail }}</strong>
+			</p>
+			<FormControl
+				v-model="otpCode"
+				type="text"
+				maxlength="6"
+				:label="__('Verification Code')"
+				placeholder="123456"
+				class="mb-3"
+				@keyup.enter="submitWithOtp"
+				@input="otpError = ''"
+			/>
+			<ErrorMessage :message="otpError" />
+			<Button
+				variant="ghost"
+				size="sm"
+				:loading="sendOtpResource.loading"
+				:disabled="resendCooldown > 0"
+				@click="resendOtp"
+			>
+				{{
+					resendCooldown > 0
+						? __("Resend code in {0}s", [resendCooldown])
+						: __("Resend code")
+				}}
+			</Button>
 
 			<template #actions>
 				<div class="flex justify-end space-x-3">
@@ -67,7 +63,7 @@
 		<div v-if="bookingSuccess" class="text-center py-12 px-4">
 			<div class="bg-green-50 border border-green-200 rounded-xl p-8 max-w-md mx-auto">
 				<LucideCheckCircle class="w-16 h-16 text-green-500 mx-auto mb-4" />
-				<h2 class="text-2xl font-semibold text-green-800 mb-2">
+				<h2 class="text-3xl-semibold text-green-800 mb-2">
 					{{ isWebinar ? __("Registration Confirmed!") : __("Booking Confirmed!") }}
 				</h2>
 				<p class="text-green-700 mb-4">
@@ -118,9 +114,9 @@
 					<!-- Guest Contact Section -->
 					<div
 						v-if="props.isGuestMode"
-						class="bg-surface-white border border-outline-gray-3 rounded-xl p-4 md:p-6 mb-6 shadow-sm"
+						class="bg-surface-base border border-outline-gray-3 rounded-xl p-4 md:p-6 mb-6 shadow-sm"
 					>
-						<h3 class="text-sm font-semibold text-ink-gray-8 mb-4">
+						<h3 class="text-sm-semibold text-ink-gray-8 mb-4">
 							{{ __("Your Details") }}
 						</h3>
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
@@ -162,7 +158,7 @@
 					<!-- Booking-level Custom Fields -->
 					<div
 						v-if="bookingCustomFields.length > 0"
-						class="bg-surface-white border border-outline-gray-3 rounded-xl p-4 md:p-6 mb-6 shadow-sm"
+						class="bg-surface-base border border-outline-gray-3 rounded-xl p-4 md:p-6 mb-6 shadow-sm"
 					>
 						<CustomFieldsSection
 							v-model="bookingCustomFieldsData"
@@ -211,10 +207,10 @@
 						<!-- Coupon Code Section -->
 						<div
 							v-if="finalTotal > 0 || couponApplied"
-							class="bg-surface-white border border-outline-gray-3 rounded-xl p-4 mb-4"
+							class="bg-surface-base border border-outline-gray-3 rounded-xl p-4 mb-4"
 						>
 							<h3
-								class="text-xs font-medium text-ink-gray-6 uppercase tracking-wide mb-2"
+								class="text-xs-medium text-ink-gray-6 uppercase tracking-wide mb-2"
 							>
 								{{ __("Coupon Code") }}
 							</h3>
@@ -244,12 +240,12 @@
 								>
 									<div class="flex items-center gap-2">
 										<LucideCheck class="w-4 h-4 text-green-600" />
-										<span class="text-green-700 font-semibold text-sm">{{
+										<span class="text-green-700 text-sm-semibold">{{
 											couponCode
 										}}</span>
 										<span
 											v-if="couponData.coupon_type === 'Discount'"
-											class="text-green-600 font-medium text-sm"
+											class="text-green-600 text-sm-medium"
 										>
 											{{
 												couponData.discount_type === "Percentage"
@@ -320,7 +316,7 @@
 										<span class="text-green-700 text-xs">{{
 											__("Eligible attendees")
 										}}</span>
-										<span class="text-green-700 font-semibold text-sm">
+										<span class="text-green-700 text-sm-semibold">
 											{{ matchingAttendeesCount }}/{{ attendees.length }}
 										</span>
 									</div>

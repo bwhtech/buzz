@@ -1,14 +1,12 @@
 <!-- AttendeeCard.vue -->
 <template>
 	<div
-		class="bg-surface-white border border-outline-gray-3 rounded-xl p-4 md:p-6 mb-6 shadow-sm relative"
+		class="bg-surface-base border border-outline-gray-3 rounded-xl p-4 md:p-6 mb-6 shadow-sm relative"
 	>
 		<!-- Remove Button -->
 
 		<div class="flex justify-between items-start mb-4 border-b pb-2">
-			<h4 class="text-lg font-semibold text-ink-gray-9">
-				{{ __("Attendee") }} #{{ index + 1 }}
-			</h4>
+			<h4 class="text-lg-semibold text-ink-gray-9">{{ __("Attendee") }} #{{ index + 1 }}</h4>
 
 			<Tooltip :text="__('Remove Attendee')" :hover-delay="0.5">
 				<Button
@@ -16,7 +14,7 @@
 					@click="$emit('remove')"
 					type="button"
 					theme="red"
-					icon="x"
+					icon="lucide-x"
 				/>
 			</Tooltip>
 		</div>

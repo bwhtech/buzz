@@ -13,7 +13,6 @@ import {
 	Dialog,
 	ErrorMessage,
 	FormControl,
-	Input,
 	TextInput,
 	frappeRequest,
 	pageMetaPlugin,
@@ -26,7 +25,6 @@ import "./index.css"
 const globalComponents = {
 	Button,
 	TextInput,
-	Input,
 	FormControl,
 	ErrorMessage,
 	Dialog,
