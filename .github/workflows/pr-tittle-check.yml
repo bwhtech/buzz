@@ -7,6 +7,8 @@ on:
       - reopened
       - synchronize
       - edited
+  # Report on the queue commit (title is fixed there, so the step below no-ops).
+  merge_group:
 
 permissions:
   pull-requests: write
@@ -17,6 +19,7 @@ jobs:
     steps:
       - name: Validate PR title
         id: validate
+        if: github.event_name != 'merge_group'
         uses: amannn/action-semantic-pull-request@v6.1.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
