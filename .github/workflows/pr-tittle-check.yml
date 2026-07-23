@@ -7,6 +7,10 @@ on:
       - reopened
       - synchronize
       - edited
+  # Required status checks must report on the merge_group commit or the queue
+  # waits forever. The title can't change in the queue, so we report success
+  # without re-validating (see the step-level guard below).
+  merge_group:
 
 permissions:
   pull-requests: write
@@ -17,6 +21,7 @@ jobs:
     steps:
       - name: Validate PR title
         id: validate
+        if: github.event_name != 'merge_group'
         uses: amannn/action-semantic-pull-request@v6.1.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

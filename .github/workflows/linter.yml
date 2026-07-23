@@ -3,10 +3,14 @@ name: Linters
 on:
   push:
     branches:
+      - develop
       - main
   pull_request:
   merge_group:
   workflow_dispatch:
+  schedule:
+    # Weekly dependency-advisory sweep (Mondays 00:00 UTC), independent of any PR.
+    - cron: '0 0 * * 1'
 
 permissions:
   contents: read
@@ -19,7 +23,9 @@ jobs:
   linter:
     name: 'Frappe Linter'
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    # Runs on PRs, pushes to develop/main, and in the merge queue so lint is
+    # actually enforced before code lands (not just on the PR head).
+    if: github.event_name != 'schedule'
 
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +46,10 @@ jobs:
   deps-vulnerable-check:
     name: 'Vulnerable Dependency Check'
     runs-on: ubuntu-latest
+    # pip-audit reads an external advisory DB, so its result depends on when it
+    # runs, not on the diff. Keep it off merge_group/push so a freshly published
+    # CVE can't block a queued merge; run it on PRs and on a weekly schedule.
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
 
     steps:
       - uses: actions/setup-python@v5
