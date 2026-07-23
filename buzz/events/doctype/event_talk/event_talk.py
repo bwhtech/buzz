@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
 
@@ -27,4 +28,4 @@ class EventTalk(Document):
 
 	def validate(self):
 		if frappe.db.exists("Event Talk", {"proposal": self.proposal, "name": ["!=", self.name]}):
-			frappe.throw("Talk already created for this proposal!")
+			frappe.throw(_("Talk already created for this proposal!"))

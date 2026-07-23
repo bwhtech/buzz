@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from payments.utils import get_payment_gateway_controller
 
 
@@ -33,7 +34,7 @@ def get_payment_link_for_booking(
 	if not payment_gateway:
 		gateways = get_payment_gateways_for_event(booking_doc.event)
 		if not gateways:
-			frappe.throw("No payment gateway configured for this event")
+			frappe.throw(_("No payment gateway configured for this event"))
 		payment_gateway = gateways[0]
 	return get_payment_link(
 		"Event Booking",
@@ -57,7 +58,7 @@ def get_payment_link_for_sponsorship(
 	if not payment_gateway:
 		gateways = get_payment_gateways_for_event(tier_doc.event)
 		if not gateways:
-			frappe.throw("No payment gateway configured for this event")
+			frappe.throw(_("No payment gateway configured for this event"))
 		payment_gateway = gateways[0]
 	event_title = frappe.get_cached_value("Buzz Event", tier_doc.event, "title")
 	frappe.db.set_value(
@@ -177,7 +178,7 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 			},
 		)
 
-		frappe.db.commit()
+		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
 
 
 # TODO: use it later!
