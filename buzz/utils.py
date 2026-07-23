@@ -205,6 +205,7 @@ TIMEZONE_ABBREVIATIONS = {
 	"America/Bogota": "COT",
 	"America/Caracas": "VET",
 	"America/Godthab": "WGT",
+	"America/Nuuk": "WGT",
 	"America/Lima": "PET",
 	"America/Montevideo": "UYT",
 	"America/Santiago": "CLT",
@@ -218,6 +219,7 @@ TIMEZONE_ABBREVIATIONS = {
 	"Asia/Dacca": "BST",
 	"Asia/Dhaka": "BST",
 	"Asia/Dubai": "GST",
+	"Asia/Ho_Chi_Minh": "ICT",
 	"Asia/Irkutsk": "IRKT",
 	"Asia/Kabul": "AFT",
 	"Asia/Kathmandu": "NPT",
@@ -251,7 +253,11 @@ def get_time_zone_label(time_zone: str | None, reference_datetime: datetime | No
 	except (ZoneInfoNotFoundError, ValueError):
 		return ""
 
-	moment = (reference_datetime or now_datetime()).replace(tzinfo=zone)
+	reference = reference_datetime or now_datetime()
+	if reference.tzinfo:
+		moment = reference.astimezone(zone)
+	else:
+		moment = reference.replace(tzinfo=zone)
 
 	abbreviation = moment.tzname()
 	if re.fullmatch(r"[A-Z]{2,5}", abbreviation):

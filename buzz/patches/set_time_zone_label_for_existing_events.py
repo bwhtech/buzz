@@ -7,7 +7,11 @@ from buzz.utils import get_time_zone_label
 def execute():
 	events = frappe.get_all(
 		"Buzz Event",
-		filters={"time_zone": ("is", "set")},
+		filters={
+			"time_zone": ("is", "set"),
+			"start_date": ("is", "set"),
+			"start_time": ("is", "set"),
+		},
 		fields=["name", "time_zone", "start_date", "start_time"],
 	)
 	for event in events:

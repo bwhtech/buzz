@@ -10,6 +10,7 @@ from frappe.tests.utils import FrappeTestCase
 from buzz.api import are_registrations_closed
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, create_from_template
 from buzz.events.doctype.event_template.event_template import create_template_from_event
+from buzz.patches.set_time_zone_label_for_existing_events import execute as backfill_time_zone_labels
 from buzz.utils import get_time_zone_label
 
 
@@ -937,6 +938,21 @@ class TestTimeZoneLabel(FrappeTestCase):
 		self.assertEqual(get_time_zone_label("", reference), "")
 		self.assertEqual(get_time_zone_label("Not/A_Zone", reference), "")
 
+	def test_current_iana_names_for_renamed_zones(self):
+		"""Renamed zones resolve under both the legacy and current IANA names."""
+		reference = datetime(2026, 6, 15, 12, 0)
+		self.assertEqual(get_time_zone_label("Asia/Ho_Chi_Minh", reference), "ICT")
+		self.assertEqual(get_time_zone_label("America/Nuuk", reference), "WGT")
+
+	def test_aware_reference_datetime_converted_not_reinterpreted(self):
+		"""US DST ends 2026-11-01 06:00 UTC; 05:30 UTC is still 01:30 EDT.
+
+		Naive .replace() would read 05:30 as New York wall clock (past the
+		switch, EST); a correct conversion lands on EDT.
+		"""
+		aware_reference = datetime(2026, 11, 1, 5, 30, tzinfo=timezone.utc)
+		self.assertEqual(get_time_zone_label("America/New_York", aware_reference), "EDT")
+
 
 class TestEventTimeZoneLabelField(FrappeTestCase):
 	"""Saving a Buzz Event stores the display label for its time zone."""
@@ -991,3 +1007,18 @@ class TestEventTimeZoneLabelField(FrappeTestCase):
 		)
 		event.insert()
 		self.assertEqual(event.time_zone_label, "EDT")
+
+	def test_backfill_patch_skips_events_missing_start_fields(self):
+		"""Legacy rows can have time_zone without start fields; patch must not abort."""
+		event = self._make_event(time_zone="Asia/Kolkata")
+		event.insert()
+		frappe.db.set_value(
+			"Buzz Event",
+			event.name,
+			{"start_time": None, "time_zone_label": ""},
+			update_modified=False,
+		)
+
+		backfill_time_zone_labels()
+
+		self.assertEqual(frappe.db.get_value("Buzz Event", event.name, "time_zone_label"), "")
