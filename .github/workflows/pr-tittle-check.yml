@@ -7,9 +7,7 @@ on:
       - reopened
       - synchronize
       - edited
-  # Required status checks must report on the merge_group commit or the queue
-  # waits forever. The title can't change in the queue, so we report success
-  # without re-validating (see the step-level guard below).
+  # Report on the queue commit (title is fixed there, so the step below no-ops).
   merge_group:
 
 permissions:
