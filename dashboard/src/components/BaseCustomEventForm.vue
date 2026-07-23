@@ -6,16 +6,16 @@
 
 		<div v-else-if="submitted" class="text-center">
 			<div class="bg-surface-green-1 border border-outline-green-1 rounded-lg p-8">
-				<LucideCheckCircle class="w-16 h-16 text-ink-green-5 mx-auto mb-4" />
+				<LucideCheckCircle class="w-16 h-16 text-ink-green-6 mx-auto mb-4" />
 				<h2 class="text-ink-green-6 text-2xl-semibold mb-2">
 					{{ formData?.success_title }}
 				</h2>
 				<div
 					v-if="renderedSuccessMessage"
-					class="prose prose-sm max-w-none text-ink-green-5"
+					class="prose prose-sm max-w-none text-ink-green-6"
 					v-html="renderedSuccessMessage"
 				></div>
-				<p v-else class="text-ink-green-5">
+				<p v-else class="text-ink-green-6">
 					{{ __("Your submission has been received.") }}
 				</p>
 			</div>

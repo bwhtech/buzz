@@ -6,11 +6,11 @@
 
 		<div v-else-if="registered" class="text-center">
 			<div class="bg-surface-green-1 border border-outline-green-1 rounded-lg p-8">
-				<LucideCheckCircle class="w-16 h-16 text-ink-green-5 mx-auto mb-4" />
+				<LucideCheckCircle class="w-16 h-16 text-ink-green-6 mx-auto mb-4" />
 				<h2 class="text-ink-green-6 text-2xl-semibold mb-2">
 					{{ __("Thank you for your interest!") }}
 				</h2>
-				<p class="text-ink-green-5">
+				<p class="text-ink-green-6">
 					{{ __("We have registered your interest and will be in touch soon.") }}
 				</p>
 			</div>

@@ -43,7 +43,7 @@
 						<template #default="{ openFileSelector, uploading, progress }">
 							<div
 								v-if="paymentProof"
-								class="flex items-center gap-1.5 text-sm text-ink-green-5"
+								class="flex items-center gap-1.5 text-sm text-ink-green-6"
 							>
 								<LucideCheckCircle class="h-4 w-4 flex-shrink-0" />
 								<span class="truncate">{{

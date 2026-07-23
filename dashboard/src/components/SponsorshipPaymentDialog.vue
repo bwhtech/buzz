@@ -94,14 +94,14 @@
 			>
 				<div class="flex items-center justify-between">
 					<div>
-						<h4 class="font-semibold text-ink-green-5">
+						<h4 class="font-semibold text-ink-green-6">
 							{{ __("Selected Tier") }}
 						</h4>
-						<p class="text-ink-green-5">{{ selectedTier.title }}</p>
+						<p class="text-ink-green-6">{{ selectedTier.title }}</p>
 					</div>
 					<div class="text-right">
-						<p class="text-sm text-ink-green-5">{{ __("Total Amount") }}</p>
-						<p class="text-2xl-bold text-ink-green-5">
+						<p class="text-sm text-ink-green-6">{{ __("Total Amount") }}</p>
+						<p class="text-2xl-bold text-ink-green-6">
 							{{ formatCurrency(selectedTier.price, selectedTier.currency) }}
 						</p>
 					</div>
