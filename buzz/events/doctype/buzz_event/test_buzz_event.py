@@ -10,6 +10,8 @@ from frappe.tests.utils import FrappeTestCase
 from buzz.api import are_registrations_closed
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, create_from_template
 from buzz.events.doctype.event_template.event_template import create_template_from_event
+from buzz.patches.set_time_zone_label_for_existing_events import execute as backfill_time_zone_labels
+from buzz.utils import get_time_zone_label
 
 
 class TestBuzzEvent(FrappeTestCase):
@@ -890,3 +892,133 @@ class TestRegistrationsClosed(FrappeTestCase):
 		after_end = datetime(2026, 6, 15, 16, 31, 0, tzinfo=timezone(timedelta(hours=5, minutes=30)))
 		with patch("buzz.api.get_datetime_in_timezone", return_value=after_end):
 			self.assertTrue(are_registrations_closed(event))
+
+
+class TestTimeZoneLabel(FrappeTestCase):
+	"""Tests for get_time_zone_label: IANA name -> short display label."""
+
+	def test_tzdb_abbreviation_when_alphabetic(self):
+		"""Zones where tzdata ships a real abbreviation use it directly."""
+		reference = datetime(2026, 6, 15, 12, 0)
+		self.assertEqual(get_time_zone_label("Asia/Kolkata", reference), "IST")
+		self.assertEqual(get_time_zone_label("Asia/Tokyo", reference), "JST")
+		self.assertEqual(get_time_zone_label("Africa/Nairobi", reference), "EAT")
+		self.assertEqual(get_time_zone_label("UTC", reference), "UTC")
+
+	def test_dst_variant_follows_reference_date(self):
+		"""DST zones get the abbreviation in effect on the reference date."""
+		winter = datetime(2026, 1, 15, 12, 0)
+		summer = datetime(2026, 7, 15, 12, 0)
+		self.assertEqual(get_time_zone_label("America/New_York", winter), "EST")
+		self.assertEqual(get_time_zone_label("America/New_York", summer), "EDT")
+		self.assertEqual(get_time_zone_label("Europe/Berlin", winter), "CET")
+		self.assertEqual(get_time_zone_label("Europe/Berlin", summer), "CEST")
+
+	def test_curated_abbreviation_when_tzdb_is_numeric(self):
+		"""Zones where tzdata returns a bare offset fall back to the curated map."""
+		reference = datetime(2026, 6, 15, 12, 0)
+		self.assertEqual(get_time_zone_label("Asia/Dubai", reference), "GST")
+		self.assertEqual(get_time_zone_label("Asia/Riyadh", reference), "AST")
+		self.assertEqual(get_time_zone_label("Asia/Bangkok", reference), "ICT")
+		self.assertEqual(get_time_zone_label("Asia/Kathmandu", reference), "NPT")
+
+	def test_gmt_offset_fallback_for_unmapped_zone(self):
+		"""Zones outside tzdata abbreviations and the curated map show a GMT offset."""
+		reference = datetime(2026, 6, 15, 12, 0)
+		# Bhutan: tzname is "+06", not in the curated map
+		self.assertEqual(get_time_zone_label("Asia/Thimphu", reference), "GMT+6")
+		# Myanmar: half-hour offset formatting
+		self.assertEqual(get_time_zone_label("Asia/Yangon", reference), "GMT+6:30")
+		# Marquesas: negative half-hour offset
+		self.assertEqual(get_time_zone_label("Pacific/Marquesas", reference), "GMT-9:30")
+
+	def test_empty_or_invalid_time_zone_returns_empty(self):
+		reference = datetime(2026, 6, 15, 12, 0)
+		self.assertEqual(get_time_zone_label(None, reference), "")
+		self.assertEqual(get_time_zone_label("", reference), "")
+		self.assertEqual(get_time_zone_label("Not/A_Zone", reference), "")
+
+	def test_current_iana_names_for_renamed_zones(self):
+		"""Renamed zones resolve under both the legacy and current IANA names."""
+		reference = datetime(2026, 6, 15, 12, 0)
+		self.assertEqual(get_time_zone_label("Asia/Ho_Chi_Minh", reference), "ICT")
+		self.assertEqual(get_time_zone_label("America/Nuuk", reference), "WGT")
+
+	def test_aware_reference_datetime_converted_not_reinterpreted(self):
+		"""US DST ends 2026-11-01 06:00 UTC; 05:30 UTC is still 01:30 EDT.
+
+		Naive .replace() would read 05:30 as New York wall clock (past the
+		switch, EST); a correct conversion lands on EDT.
+		"""
+		aware_reference = datetime(2026, 11, 1, 5, 30, tzinfo=timezone.utc)
+		self.assertEqual(get_time_zone_label("America/New_York", aware_reference), "EDT")
+
+
+class TestEventTimeZoneLabelField(FrappeTestCase):
+	"""Saving a Buzz Event stores the display label for its time zone."""
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def _make_event(self, **overrides):
+		event_defaults = {
+			"doctype": "Buzz Event",
+			"title": "TZ Label Test Event",
+			"category": "Test Category",
+			"host": "Test Host",
+			"start_date": "2026-03-05",
+			"end_date": "2026-03-06",
+			"start_time": "9:00:00",
+			"end_time": "18:00:00",
+		}
+		event_defaults.update(overrides)
+		return frappe.get_doc(event_defaults)
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		TestBuzzEvent.create_test_fixtures()
+
+	def test_label_set_on_insert(self):
+		event = self._make_event(time_zone="Asia/Kolkata")
+		event.insert()
+		self.assertEqual(event.time_zone_label, "IST")
+
+	def test_label_updates_when_time_zone_changes(self):
+		event = self._make_event(time_zone="Asia/Kolkata")
+		event.insert()
+		event.time_zone = "Asia/Dubai"
+		event.save()
+		self.assertEqual(event.time_zone_label, "GST")
+
+	def test_label_cleared_when_time_zone_removed(self):
+		event = self._make_event(time_zone="Asia/Kolkata")
+		event.insert()
+		event.time_zone = ""
+		event.save()
+		self.assertEqual(event.time_zone_label, "")
+
+	def test_label_uses_event_start_date_for_dst(self):
+		"""July New York event shows EDT, not EST."""
+		event = self._make_event(
+			time_zone="America/New_York",
+			start_date="2026-07-10",
+			end_date="2026-07-10",
+		)
+		event.insert()
+		self.assertEqual(event.time_zone_label, "EDT")
+
+	def test_backfill_patch_skips_events_missing_start_fields(self):
+		"""Legacy rows can have time_zone without start fields; patch must not abort."""
+		event = self._make_event(time_zone="Asia/Kolkata")
+		event.insert()
+		frappe.db.set_value(
+			"Buzz Event",
+			event.name,
+			{"start_time": None, "time_zone_label": ""},
+			update_modified=False,
+		)
+
+		backfill_time_zone_labels()
+
+		self.assertEqual(frappe.db.get_value("Buzz Event", event.name, "time_zone_label"), "")
