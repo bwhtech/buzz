@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div class="min-h-screen bg-surface-base text-ink-gray-8">
 		<div>
 			<Navbar />
 		</div>

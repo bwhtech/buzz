@@ -8,7 +8,7 @@
 			class="flex flex-col items-center justify-center py-16 px-4"
 		>
 			<div class="text-center max-w-md">
-				<h2 class="text-xl font-semibold text-ink-gray-8 mb-2">
+				<h2 class="text-2xl-semibold text-ink-gray-8 mb-2">
 					{{ __("Event Not Found") }}
 				</h2>
 				<p class="text-ink-gray-6 mb-6">
@@ -34,7 +34,7 @@
 					:alt="eventBookingData.eventDetails?.title"
 					class="w-full rounded-lg mb-6 object-cover max-h-48"
 				/>
-				<h2 class="text-xl font-semibold text-ink-gray-8 mb-2">
+				<h2 class="text-2xl-semibold text-ink-gray-8 mb-2">
 					{{ __("Registrations Closed") }}
 				</h2>
 				<p class="text-ink-gray-6 mb-6">

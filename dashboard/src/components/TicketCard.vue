@@ -1,5 +1,5 @@
 <template>
-	<li class="shadow-md p-4 rounded-lg bg-surface-white border border-outline-gray-2 relative">
+	<li class="shadow-md p-4 rounded-lg bg-surface-base border border-outline-gray-2 relative">
 		<!-- Status Badge -->
 		<div v-if="isCancelled || isCancellationRequested" class="absolute top-2 left-2">
 			<Badge
@@ -21,13 +21,13 @@
 		<!-- Three-dot dropdown menu -->
 		<div class="absolute top-2 right-2">
 			<Dropdown :options="ticketActions" placement="left" v-if="ticketActions.length > 0">
-				<Button variant="ghost" icon="more-horizontal" size="sm" />
+				<Button variant="ghost" icon="lucide-more-horizontal" size="sm" />
 			</Dropdown>
 		</div>
 
 		<div>
 			<h4
-				class="text-md font-semibold text-ink-gray-9"
+				class="text-md-semibold text-ink-gray-9"
 				:class="{ 'mt-6': isCancelled || isCancellationRequested }"
 			>
 				{{ ticket.attendee_name }}
@@ -42,7 +42,7 @@
 
 			<!-- Add-ons Section -->
 			<div v-if="ticket.add_ons && ticket.add_ons.length > 0" class="mt-3">
-				<h5 class="text-sm font-medium text-ink-gray-8 mb-2">{{ __("Add-ons:") }}</h5>
+				<h5 class="text-sm-medium text-ink-gray-8 mb-2">{{ __("Add-ons:") }}</h5>
 				<div class="space-y-3">
 					<div
 						v-for="addon in ticket.add_ons"

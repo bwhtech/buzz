@@ -10,7 +10,7 @@
 			:is-webinar="confirmation.data.event.free_webinar"
 		/>
 
-		<h2 class="text-3xl font-bold text-ink-gray-9 mb-4">
+		<h2 class="text-4xl-bold text-ink-gray-9 mb-4">
 			{{
 				confirmation.data.event.free_webinar
 					? __("Registration Confirmed")
@@ -49,7 +49,7 @@
 
 	<!-- Error / invalid token -->
 	<div v-else-if="confirmation.error" class="text-center py-16">
-		<h2 class="text-xl font-semibold text-ink-gray-9 mb-2">
+		<h2 class="text-2xl-semibold text-ink-gray-9 mb-2">
 			{{ __("Booking not found") }}
 		</h2>
 		<p class="text-ink-gray-6">

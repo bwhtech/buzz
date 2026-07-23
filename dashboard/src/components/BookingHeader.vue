@@ -3,7 +3,7 @@
 		<BackButton :to="{ name: 'bookings-list' }" :label="__('Back to Bookings')" />
 	</div>
 
-	<h2 class="text-ink-gray-9 font-semibold text-lg mb-3">
+	<h2 class="text-ink-gray-9 text-lg-semibold mb-3">
 		{{ __("Booking Details") }}
 		<span class="text-ink-gray-5 font-mono">(#{{ bookingId }})</span>
 	</h2>

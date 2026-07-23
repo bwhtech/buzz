@@ -6,11 +6,11 @@
 
 		<div v-else-if="registered" class="text-center">
 			<div class="bg-surface-green-1 border border-outline-green-1 rounded-lg p-8">
-				<LucideCheckCircle class="w-16 h-16 text-ink-green-2 mx-auto mb-4" />
-				<h2 class="text-ink-green-3 font-semibold text-xl mb-2">
+				<LucideCheckCircle class="w-16 h-16 text-ink-green-6 mx-auto mb-4" />
+				<h2 class="text-ink-green-6 text-2xl-semibold mb-2">
 					{{ __("Thank you for your interest!") }}
 				</h2>
-				<p class="text-ink-green-2">
+				<p class="text-ink-green-6">
 					{{ __("We have registered your interest and will be in touch soon.") }}
 				</p>
 			</div>
@@ -18,9 +18,9 @@
 
 		<div
 			v-else-if="campaign"
-			class="bg-surface-white border border-outline-gray-1 rounded-lg p-6"
+			class="bg-surface-base border border-outline-gray-1 rounded-lg p-6"
 		>
-			<h1 class="text-ink-gray-9 font-bold text-2xl mb-6">
+			<h1 class="text-ink-gray-9 text-3xl-bold mb-6">
 				{{ campaign.title }}
 			</h1>
 
@@ -39,18 +39,18 @@
 				{{ __("Register") }}
 			</Button>
 
-			<p v-if="errorMessage" class="text-ink-red-2 text-sm mt-4 text-center">
+			<p v-if="errorMessage" class="text-ink-red-5 text-sm mt-4 text-center">
 				{{ errorMessage }}
 			</p>
 		</div>
 
 		<div v-else-if="error" class="text-center">
 			<div class="bg-surface-red-1 border border-outline-red-1 rounded-lg p-8">
-				<LucideXCircle class="w-16 h-16 text-ink-red-2 mx-auto mb-4" />
-				<h2 class="text-ink-red-3 font-semibold text-xl mb-2">
+				<LucideXCircle class="w-16 h-16 text-ink-red-5 mx-auto mb-4" />
+				<h2 class="text-ink-red-6 text-2xl-semibold mb-2">
 					{{ __("Campaign Not Found") }}
 				</h2>
-				<p class="text-ink-red-2">
+				<p class="text-ink-red-5">
 					{{ error }}
 				</p>
 			</div>
