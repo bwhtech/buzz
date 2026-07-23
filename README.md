@@ -1,19 +1,27 @@
 
+<div align="center" markdown="1">
 
-<div style="text-align: center;">
-  <a href="https://github.com/BuildWithHussain/buzz/actions/workflows/ci.yml"><img src="https://github.com/BuildWithHussain/buzz/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
-  <a href="https://github.com/BuildWithHussain/buzz/actions/workflows/ui-tests.yml"><img src="https://github.com/BuildWithHussain/buzz/actions/workflows/ui-tests.yml/badge.svg?branch=main" alt="UI Tests"></a>
-  <a href="https://github.com/BuildWithHussain/buzz/stargazers"><img src="https://img.shields.io/github/stars/BuildWithHussain/buzz?style=social" alt="GitHub stars"></a>
-  <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/License-AGPL_v3-blue.svg" alt="License: AGPL v3"></a>
-  <a href="https://github.com/BuildWithHussain/buzz/commits/main"><img src="https://img.shields.io/github/commit-activity/m/BuildWithHussain/buzz" alt="GitHub commit activity"></a>
+<a href="https://github.com/BuildWithHussain/buzz">
+  <img src=".github/images/buzz-logo.png" height="90" alt="Buzz logo">
+</a>
+
+<h1>Buzz</h1>
+
+**Open source, self-hosted event management platform.**<br>
+Tickets, add-ons, sponsorships, check-ins, and attendee self-service — all driven by a single **Buzz Event**.
+
+[![CI](https://github.com/BuildWithHussain/buzz/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/BuildWithHussain/buzz/actions/workflows/ci.yml)
+[![UI Tests](https://github.com/BuildWithHussain/buzz/actions/workflows/ui-tests.yml/badge.svg?branch=main)](https://github.com/BuildWithHussain/buzz/actions/workflows/ui-tests.yml)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/BuildWithHussain/buzz)](https://github.com/BuildWithHussain/buzz/commits/main)
+[![GitHub stars](https://img.shields.io/github/stars/BuildWithHussain/buzz?style=social)](https://github.com/BuildWithHussain/buzz/stargazers)
+
+<a href="#installation">Installation</a> · <a href="./ARCHITECTURE.md">Architecture</a> · <a href="https://t.me/bwh_buzz">Telegram Group</a>
+
 </div>
 
 ![Buzz Event DocType](.github/images/fe-event-main-form.png)
 
-Open Source, Powerful, and Comprehensive Event Management Platform
-
-### Learn & Connect
-[Telegram Public Group](https://t.me/bwh_buzz)
 ### Stack / Architecture
 
 1. Frappe Framework: The Backend and Admin Interface
