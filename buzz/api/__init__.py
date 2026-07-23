@@ -233,6 +233,7 @@ def get_event_booking_data(event_route: str) -> dict:
 			"start_time": event_doc.start_time,
 			"end_time": event_doc.end_time,
 			"time_zone": event_doc.time_zone,
+			"time_zone_label": event_doc.time_zone_label,
 			"venue": event_doc.venue,
 			"medium": event_doc.medium,
 			"category": event_doc.category,
