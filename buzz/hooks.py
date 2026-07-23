@@ -189,6 +189,14 @@ after_migrate = "buzz.install.on_migrate"
 # 	"Event": "frappe.desk.doctype.event.event.has_permission",
 # }
 
+permission_query_conditions = {
+	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.get_permission_query_conditions",
+}
+
+has_permission = {
+	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.has_talk_proposal_permission",
+}
+
 # Document Events
 # ---------------
 # Hook on document methods and events
