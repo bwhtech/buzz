@@ -99,7 +99,7 @@
    "link_fieldname": "proposal"
   }
  ],
- "modified": "2026-06-21 09:15:43.483668",
+ "modified": "2026-07-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Proposals",
  "name": "Talk Proposal",
@@ -134,7 +134,6 @@
    "create": 1,
    "email": 1,
    "export": 1,
-   "if_owner": 1,
    "print": 1,
    "read": 1,
    "report": 1,

@@ -12,6 +12,17 @@ import type { FrappeField } from "@/composables/useCustomFields"
 import type { EventTicket } from "@/types/Ticketing/EventTicket"
 import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 
+// Rows from buzz.api.proposals.get_my_proposals: proposals where the session
+// user is the submitter or a listed speaker, with the event title joined on.
+export interface ProposalListItem {
+	name: string
+	title: string
+	event: string
+	event_title: string | null
+	status: string
+	creation: string
+}
+
 // Errors rejected by frappe-ui resources carry server messages beyond Error.
 export interface FrappeError extends Error {
 	messages?: string[]
