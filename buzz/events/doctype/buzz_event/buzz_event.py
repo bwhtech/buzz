@@ -5,10 +5,10 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
-from frappe.utils.data import get_time, time_diff_in_seconds
+from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
 
 from buzz.api.forms import validate_excluded_fields
-from buzz.utils import only_if_app_installed
+from buzz.utils import get_time_zone_label, only_if_app_installed
 
 # Top-level dashboard route segments (/b/<segment>) an event route must not shadow.
 RESERVED_EVENT_ROUTES = {
@@ -84,6 +84,7 @@ class BuzzEvent(Document):
 		ticket_email_template: DF.Link | None
 		ticket_print_format: DF.Link | None
 		time_zone: DF.Autocomplete | None
+		time_zone_label: DF.Data | None
 		title: DF.Data
 		venue: DF.Link | None
 	# end: auto-generated types
@@ -95,6 +96,17 @@ class BuzzEvent(Document):
 		self.validate_tax_settings()
 		self.validate_guest_verification_config()
 		self.validate_custom_forms()
+		self.set_time_zone_label()
+
+	def set_time_zone_label(self):
+		# validate runs before the mandatory check, so dates may still be empty here
+		if not (self.time_zone and self.start_date and self.start_time):
+			self.time_zone_label = ""
+			return
+
+		# computed at event start so DST zones get the abbreviation in effect then
+		event_start = get_datetime(f"{self.start_date} {self.start_time}")
+		self.time_zone_label = get_time_zone_label(self.time_zone, event_start)
 
 	def validate_custom_forms(self):
 		for form in self.custom_forms:

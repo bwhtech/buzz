@@ -12,3 +12,4 @@ buzz.patches.populate_slug_in_event_category
 buzz.patches.set_applies_to_for_existing_coupons
 buzz.patches.set_payment_status_for_existing_bookings
 buzz.patches.normalize_phone_format
+buzz.patches.set_time_zone_label_for_existing_events

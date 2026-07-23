@@ -1,8 +1,12 @@
 import functools
+import re
 from collections.abc import Callable
+from datetime import datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+from frappe.utils import now_datetime
 
 
 def is_app_installed(app_name: str) -> bool:
@@ -189,3 +193,84 @@ def generate_ics_file(event_doc, attendee_email: str):
 
 	# nosemgrep: frappe-semgrep-rules.rules.security.frappe-ssti
 	return frappe.render_template("templates/ics/ics.jinja2", context, is_path=True)
+
+
+# Curated abbreviations for zones where tzdata only provides a numeric offset
+# (tzdata dropped invented abbreviations in 2017). Zones with real tzdata
+# abbreviations (IST, EST, CET, ...) never reach this map.
+# ponytail: DST-observing zones here (e.g. Chile) are pinned to their standard
+# form; extend get_time_zone_label with per-date variants if that ever matters.
+TIMEZONE_ABBREVIATIONS = {
+	"America/Araguaina": "BRT",
+	"America/Argentina/Buenos_Aires": "ART",
+	"America/Bogota": "COT",
+	"America/Caracas": "VET",
+	"America/Godthab": "WGT",
+	"America/Nuuk": "WGT",
+	"America/Lima": "PET",
+	"America/Montevideo": "UYT",
+	"America/Santiago": "CLT",
+	"America/Sao_Paulo": "BRT",
+	"Asia/Aden": "AST",
+	"Asia/Almaty": "ALMT",
+	"Asia/Baghdad": "AST",
+	"Asia/Bahrain": "AST",
+	"Asia/Baku": "AZT",
+	"Asia/Bangkok": "ICT",
+	"Asia/Dacca": "BST",
+	"Asia/Dhaka": "BST",
+	"Asia/Dubai": "GST",
+	"Asia/Ho_Chi_Minh": "ICT",
+	"Asia/Irkutsk": "IRKT",
+	"Asia/Kabul": "AFT",
+	"Asia/Kathmandu": "NPT",
+	"Asia/Krasnoyarsk": "KRAT",
+	"Asia/Kuwait": "AST",
+	"Asia/Muscat": "GST",
+	"Asia/Novosibirsk": "NOVT",
+	"Asia/Qatar": "AST",
+	"Asia/Riyadh": "AST",
+	"Asia/Saigon": "ICT",
+	"Asia/Tashkent": "UZT",
+	"Asia/Tehran": "IRST",
+	"Asia/Yekaterinburg": "YEKT",
+	"Atlantic/Azores": "AZOT",
+	"Atlantic/Cape_Verde": "CVT",
+	"Europe/Istanbul": "TRT",
+}
+
+
+def get_time_zone_label(time_zone: str | None, reference_datetime: datetime | None = None) -> str:
+	"""Short display label for an IANA time zone, e.g. "IST", "GST", "GMT+5:45".
+
+	Resolution order: tzdata abbreviation for the reference date (DST-aware),
+	then the curated map, then a formatted GMT offset.
+	"""
+	if not time_zone:
+		return ""
+
+	try:
+		zone = ZoneInfo(time_zone)
+	except (ZoneInfoNotFoundError, ValueError):
+		return ""
+
+	reference = reference_datetime or now_datetime()
+	if reference.tzinfo:
+		moment = reference.astimezone(zone)
+	else:
+		moment = reference.replace(tzinfo=zone)
+
+	abbreviation = moment.tzname()
+	if re.fullmatch(r"[A-Z]{2,5}", abbreviation):
+		return abbreviation
+
+	if time_zone in TIMEZONE_ABBREVIATIONS:
+		return TIMEZONE_ABBREVIATIONS[time_zone]
+
+	total_minutes = int(moment.utcoffset().total_seconds()) // 60
+	sign = "+" if total_minutes >= 0 else "-"
+	hours, minutes = divmod(abs(total_minutes), 60)
+	label = f"GMT{sign}{hours}"
+	if minutes:
+		label += f":{minutes:02d}"
+	return label
