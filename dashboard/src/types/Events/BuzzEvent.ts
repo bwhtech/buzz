@@ -34,6 +34,8 @@ export interface BuzzEvent {
 	start_time?: string
 	/**	Time Zone : Autocomplete	*/
 	time_zone?: any
+	/**	Time Zone Label : Data	*/
+	time_zone_label?: string
 	/**	End Date : Date	*/
 	end_date?: string
 	/**	End Time : Time	*/
