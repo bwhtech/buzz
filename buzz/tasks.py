@@ -9,4 +9,3 @@ def unpublish_ticket_types_after_last_date():
 		"is_published",
 		False,
 	)
-	frappe.db.commit()
