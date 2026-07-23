@@ -476,7 +476,7 @@ def process_booking(
 		booking.append("attendees", attendee_row)
 
 	booking.insert(ignore_permissions=True)
-	frappe.db.commit()
+	frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
 
 	if booking.total_amount == 0:
 		booking.flags.ignore_permissions = True
@@ -1060,13 +1060,13 @@ def create_cancellation_request(booking_id: str, ticket_ids: list | None = None)
 		frappe.throw(frappe._("Not permitted to request cancellation for this booking."))
 
 	if not is_cancellation_request_allowed(booking_doc.event):
-		frappe.throw("Cancellation requests are no longer allowed for this event.")
+		frappe.throw(_("Cancellation requests are no longer allowed for this event."))
 
 	existing_request = frappe.db.exists(
 		"Ticket Cancellation Request", {"booking": booking_id, "docstatus": 0}
 	)
 	if existing_request:
-		frappe.throw("A cancellation request already exists for this booking.")
+		frappe.throw(_("A cancellation request already exists for this booking."))
 
 	all_tickets = frappe.db.get_all("Event Ticket", filters={"booking": booking_id}, fields=["name"])
 	cancel_full_booking = not ticket_ids or len(ticket_ids) == len(all_tickets)

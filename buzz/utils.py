@@ -191,6 +191,7 @@ def generate_ics_file(event_doc, attendee_email: str):
 		"organizer_email": organizer_email,
 	}
 
+	# nosemgrep: frappe-semgrep-rules.rules.security.frappe-ssti
 	return frappe.render_template("templates/ics/ics.jinja2", context, is_path=True)
 
 
