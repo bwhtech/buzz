@@ -18,6 +18,7 @@
   "start_date",
   "start_time",
   "time_zone",
+  "time_zone_label",
   "column_break_cjby",
   "end_date",
   "end_time",
@@ -174,6 +175,12 @@
    "fieldname": "time_zone",
    "fieldtype": "Autocomplete",
    "label": "Time Zone"
+  },
+  {
+   "fieldname": "time_zone_label",
+   "fieldtype": "Data",
+   "label": "Time Zone Label",
+   "read_only": 1
   },
   {
    "fieldname": "banner_image",
@@ -595,7 +602,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-03-23 17:37:37.770911",
+ "modified": "2026-07-23 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

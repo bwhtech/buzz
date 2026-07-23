@@ -45,8 +45,8 @@
 					<div>
 						<p class="font-medium text-ink-gray-8">
 							{{ formatEventTime(eventDetails.start_time, eventDetails.end_time) }}
-							<span v-if="eventDetails.time_zone"
-								>({{ eventDetails.time_zone }})</span
+							<span v-if="eventDetails.time_zone_label"
+								>({{ eventDetails.time_zone_label }})</span
 							>
 						</p>
 					</div>
