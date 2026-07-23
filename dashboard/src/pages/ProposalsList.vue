@@ -51,7 +51,8 @@
 <script setup lang="ts">
 import { session } from "@/data/session";
 import { useProposalStatuses } from "@/composables/useProposalStatuses";
-import { Badge, ListRowItem, ListView, Spinner, dayjsLocal, useList } from "frappe-ui";
+import type { ProposalListItem } from "@/types";
+import { Badge, ListRowItem, ListView, Spinner, createResource, dayjsLocal } from "frappe-ui";
 
 const { getStatusTheme } = useProposalStatuses();
 
@@ -62,19 +63,20 @@ const columns = [
 	{ label: __("Submitted"), key: "formatted_creation", width: "120px" },
 ];
 
-const proposals = useList({
-	doctype: "Talk Proposal",
-	fields: ["name", "title", "event.title as event_title", "status", "creation"],
-	filters: {
-		submitted_by: session.user,
-	},
-	orderBy: "creation desc",
-	cacheKey: ["proposals-list", session.user],
-	transform(data: any[]) {
-		return data.map((proposal: Record<string, any>) => ({
+interface ProposalRow extends ProposalListItem {
+	formatted_creation: string;
+}
+
+// Server-side scoping (submitter or listed speaker) instead of a client
+// filter, so guest-submitted proposals show up for their speakers too.
+const proposals = createResource({
+	url: "buzz.api.proposals.get_my_proposals",
+	auto: true,
+	cache: ["proposals-list", session.user],
+	transform: (data: ProposalListItem[]): ProposalRow[] =>
+		data.map((proposal) => ({
 			...proposal,
 			formatted_creation: dayjsLocal(proposal.creation).format("MMM DD, YYYY"),
-		}));
-	},
+		})),
 });
 </script>
