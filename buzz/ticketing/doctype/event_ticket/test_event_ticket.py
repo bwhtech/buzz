@@ -174,3 +174,61 @@ class TestQRCodeGeneration(IntegrationTestCase):
 
 		# Cleanup
 		file_doc.delete()
+
+
+class TestEventTicketZoomMeeting(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		cls.ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"title": "Meeting TT",
+				"event": cls.event.name,
+				"currency": "USD",
+			}
+		).insert(ignore_permissions=True, ignore_if_duplicate=True)
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def test_ticket_creates_meeting_registration_when_event_has_meeting(self):
+		from zoom_integration.tests.zoom_fixtures import (
+			ADD_MEETING_REGISTRANT_RESPONSE,
+			CREATE_MEETING_RESPONSE,
+		)
+
+		meeting_controller = "zoom_integration.zoom_integration.doctype.zoom_meeting.zoom_meeting"
+
+		with patch(f"{meeting_controller}.create_zoom_session", return_value=CREATE_MEETING_RESPONSE):
+			meeting = frappe.get_doc(
+				{
+					"doctype": "Zoom Meeting",
+					"title": "Ticket Meeting",
+					"date": "2026-08-01",
+					"start_time": "10:00:00",
+					"duration": 3600,
+					"timezone": "Asia/Calcutta",
+				}
+			).insert(ignore_permissions=True)
+
+		self.event.db_set("zoom_meeting", meeting.name)
+
+		with patch(f"{meeting_controller}.add_zoom_registrant", return_value=ADD_MEETING_REGISTRANT_RESPONSE):
+			ticket = frappe.get_doc(
+				{
+					"doctype": "Event Ticket",
+					"event": self.event.name,
+					"ticket_type": self.ticket_type.name,
+					"first_name": "Alice",
+					"last_name": "Smith",
+					"attendee_email": "alice@example.com",
+				}
+			).insert(ignore_permissions=True)
+			ticket.submit()
+
+		self.assertTrue(ticket.zoom_webinar_registration)
+		registration = frappe.get_doc("Zoom Webinar Registration", ticket.zoom_webinar_registration)
+		self.assertEqual(registration.meeting, meeting.name)
+		self.assertEqual(registration.registrant_id, "abcDEF12ghIJ")

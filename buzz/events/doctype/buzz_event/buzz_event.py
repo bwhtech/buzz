@@ -236,8 +236,30 @@ class BuzzEvent(Document):
 
 		return zoom_webinar
 
+	@frappe.whitelist()
+	@only_if_app_installed("zoom_integration", raise_exception=True)
+	def create_meeting_on_zoom(self):
+		if not self.end_time:
+			frappe.throw(_("End time is needed for Zoom Meeting creation"))
+
+		zoom_meeting = frappe.get_doc(
+			{
+				"doctype": "Zoom Meeting",
+				"title": self.title,
+				"date": self.start_date,
+				"start_time": self.start_time,
+				"duration": int(time_diff_in_seconds(self.end_time, self.start_time)),
+				"timezone": self.time_zone,
+			}
+		).insert()
+
+		self.db_set("zoom_meeting", zoom_meeting.name)
+
+		return zoom_meeting
+
 	def on_update(self):
 		self.update_zoom_webinar()
+		self.update_zoom_meeting()
 
 	@only_if_app_installed("zoom_integration")
 	def update_zoom_webinar(self):
@@ -260,6 +282,28 @@ class BuzzEvent(Document):
 				}
 			)
 			webinar.save()
+
+	@only_if_app_installed("zoom_integration")
+	def update_zoom_meeting(self):
+		if not self.zoom_meeting:
+			return
+
+		if (
+			self.has_value_changed("start_date")
+			or self.has_value_changed("end_time")
+			or self.has_value_changed("start_time")
+			or self.has_value_changed("time_zone")
+		):
+			meeting = frappe.get_doc("Zoom Meeting", self.zoom_meeting)
+			meeting.update(
+				{
+					"date": self.start_date,
+					"start_time": self.start_time,
+					"duration": int(time_diff_in_seconds(self.end_time, self.start_time)),
+					"timezone": self.time_zone,
+				}
+			)
+			meeting.save()
 
 
 @frappe.whitelist()

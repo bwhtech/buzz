@@ -1022,3 +1022,67 @@ class TestEventTimeZoneLabelField(FrappeTestCase):
 		backfill_time_zone_labels()
 
 		self.assertEqual(frappe.db.get_value("Buzz Event", event.name, "time_zone_label"), "")
+
+
+class TestBuzzEventZoomMeeting(FrappeTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		if not frappe.db.exists("Event Category", "Test Category"):
+			frappe.get_doc({"doctype": "Event Category", "category_name": "Test Category"}).insert(
+				ignore_permissions=True
+			)
+		if not frappe.db.exists("Event Host", "Test Host"):
+			frappe.get_doc({"doctype": "Event Host", "host_name": "Test Host"}).insert(
+				ignore_permissions=True
+			)
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def _make_event(self):
+		return frappe.get_doc(
+			{
+				"doctype": "Buzz Event",
+				"title": "Meeting Event",
+				"category": "Test Category",
+				"host": "Test Host",
+				"start_date": "2026-08-01",
+				"end_date": "2026-08-01",
+				"start_time": "10:00:00",
+				"end_time": "11:00:00",
+			}
+		).insert(ignore_permissions=True)
+
+	def test_create_meeting_on_zoom_links_meeting_to_event(self):
+		from zoom_integration.tests.zoom_fixtures import CREATE_MEETING_RESPONSE
+
+		meeting_controller = "zoom_integration.zoom_integration.doctype.zoom_meeting.zoom_meeting"
+		event = self._make_event()
+
+		with patch(f"{meeting_controller}.create_zoom_session", return_value=CREATE_MEETING_RESPONSE):
+			meeting = event.create_meeting_on_zoom()
+
+		self.assertTrue(meeting.name)
+		event.reload()
+		self.assertEqual(event.zoom_meeting, meeting.name)
+		self.assertEqual(meeting.zoom_meeting_id, "91234567890")
+
+	def test_update_event_schedule_pushes_to_zoom_meeting(self):
+		from zoom_integration.tests.zoom_fixtures import CREATE_MEETING_RESPONSE
+
+		meeting_controller = "zoom_integration.zoom_integration.doctype.zoom_meeting.zoom_meeting"
+		event = self._make_event()
+
+		with patch(f"{meeting_controller}.create_zoom_session", return_value=CREATE_MEETING_RESPONSE):
+			event.create_meeting_on_zoom()
+
+		# Note: do not reload() — Time fields come back as timedelta and trip event
+		# validation's time diff. The in-memory doc keeps string times and has
+		# zoom_meeting set via db_set already.
+		with patch(f"{meeting_controller}.update_zoom_session") as mock_update:
+			event.end_time = "12:00:00"
+			event.save(ignore_permissions=True)
+
+		mock_update.assert_called_once()
+		self.assertEqual(mock_update.call_args.args[0], "meetings")
