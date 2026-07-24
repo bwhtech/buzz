@@ -1040,12 +1040,13 @@ def get_ticket_details(ticket_id: str) -> dict:
 		zoom_registration = frappe.db.get_value(
 			"Zoom Webinar Registration",
 			ticket_doc.zoom_webinar_registration,
-			["join_url", "webinar"],
+			["join_url", "webinar", "meeting"],
 			as_dict=True,
 		)
 		if zoom_registration:
 			details.zoom_join_url = zoom_registration.join_url
 			details.zoom_webinar = zoom_registration.webinar
+			details.zoom_meeting = zoom_registration.meeting
 
 	return details
 

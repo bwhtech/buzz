@@ -49,6 +49,13 @@ ZOOM_INTEGRATION_CUSTOM_FIELDS = {
 			"options": "Zoom Webinar",
 			"insert_after": "zoom_integration_tab",
 		},
+		{
+			"fieldname": "zoom_meeting",
+			"label": "Zoom Meeting",
+			"fieldtype": "Link",
+			"options": "Zoom Meeting",
+			"insert_after": "zoom_webinar",
+		},
 	],
 	"Buzz Settings": [
 		{

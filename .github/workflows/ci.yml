@@ -94,8 +94,10 @@ jobs:
         run: |
           bench get-app buzz $GITHUB_WORKSPACE
           bench get-app payments
+          bench get-app zoom_integration https://github.com/bwhtech/zoom_integration
           bench setup requirements --dev
           bench new-site --db-root-password root --admin-password admin test_site
+          bench --site test_site install-app zoom_integration
           bench --site test_site install-app buzz
           bench build
         env:
