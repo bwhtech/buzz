@@ -71,7 +71,7 @@ import type {
 	OfflineMethod,
 } from "@/types";
 import { session } from "@/data/session";
-import { Spinner, createResource } from "frappe-ui";
+import { Spinner, createResource, usePageMeta } from "frappe-ui";
 import { computed, reactive, ref, watch } from "vue";
 import BookingForm from "../components/BookingForm.vue";
 
@@ -145,4 +145,11 @@ watch(
 		}
 	}
 );
+
+usePageMeta(() => {
+	const eventTitle = eventBookingData.eventDetails?.title;
+	return {
+		title: eventTitle ? __("{0} – Register", [eventTitle]) : __("Register"),
+	};
+});
 </script>
