@@ -4,7 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Buzz Dashboard</title>
+    <!-- Values come from buzz/www/dashboard.py; this file is built to buzz/www/dashboard.html
+         and rendered by jinja. Keep jinja inside attributes and <title> only: the dev server
+         serves this file raw, and a stray {{ }} text node in <head> ends up shown on the page. -->
+    <title>{{ title | e }}</title>
+    <meta name="description" content="{{ meta_description | e }}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="{{ title | e }}" />
+    <meta property="og:description" content="{{ meta_description | e }}" />
+    <meta property="og:image" content="{{ meta_image | e }}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ title | e }}" />
+    <meta name="twitter:description" content="{{ meta_description | e }}" />
+    <meta name="twitter:image" content="{{ meta_image | e }}" />
   </head>
   <body class="bg-surface-white">
     <div id="app"></div>

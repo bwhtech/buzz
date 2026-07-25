@@ -1,5 +1,8 @@
 import { userResource } from "@/data/user"
-import { type RouteRecordRaw, createRouter, createWebHistory } from "vue-router"
+import { type RouteRecordRaw, START_LOCATION, createRouter, createWebHistory } from "vue-router"
+
+// Mirrors DEFAULT_TITLE in buzz/page_meta.py, which renders the initial title.
+const DEFAULT_TITLE = "Buzz Dashboard"
 
 const routes: RouteRecordRaw[] = [
 	{
@@ -145,6 +148,15 @@ router.beforeEach(async (to, from, next) => {
 		// user is not logged in — Layout will show LoginRequired for protected routes
 	}
 	next()
+})
+
+router.afterEach((to, from) => {
+	// Pages set their own title via usePageMeta. Reset on client-side navigation
+	// so a page without one doesn't keep the previous page's title. The first
+	// load is skipped to preserve the server-rendered title.
+	if (from !== START_LOCATION) {
+		document.title = DEFAULT_TITLE
+	}
 })
 
 export default router

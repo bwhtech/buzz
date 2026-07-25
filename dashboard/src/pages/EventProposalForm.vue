@@ -82,7 +82,7 @@ import CustomFieldInput from "@/components/CustomFieldInput.vue";
 import FormFieldSections from "@/components/FormFieldSections.vue";
 import LoginRequired from "@/components/LoginRequired.vue";
 import type { FrappeError, FrappeField } from "@/types";
-import { Button, Spinner, createResource, toast } from "frappe-ui";
+import { Button, Spinner, createResource, toast, usePageMeta } from "frappe-ui";
 import { marked } from "marked";
 import { computed, reactive, ref } from "vue";
 import LucideAlertCircle from "~icons/lucide/alert-circle";
@@ -100,6 +100,11 @@ const form_values = reactive<Record<string, any>>({});
 const submitted = ref(false);
 const login_required = ref(false);
 const load_error = ref<string | null>(null);
+
+usePageMeta(() => {
+	const bannerTitle = form_data.value?.banner_title;
+	return bannerTitle ? { title: bannerTitle } : null;
+});
 
 const rendered_success_message = computed(() => {
 	const msg = form_data.value?.success_message;
