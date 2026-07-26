@@ -5,15 +5,14 @@
 			<span v-if="required" class="text-ink-red-8">*</span>
 		</label>
 		<div class="flex gap-1.5">
-			<div class="w-24 shrink-0">
-				<Combobox
-					:model-value="null"
-					@update:model-value="onDialCodeChange"
-					:options="dialCodeOptions"
-					variant="outline"
-					:placeholder="shortDisplay"
-				/>
-			</div>
+			<Combobox
+				class="w-26"
+				:model-value="null"
+				@update:model-value="onDialCodeChange"
+				:options="dialCodeOptions"
+				variant="outline"
+				:placeholder="shortDisplay"
+			/>
 			<TextInput
 				type="tel"
 				:model-value="localNumber"
