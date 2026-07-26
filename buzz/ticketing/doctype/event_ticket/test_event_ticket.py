@@ -228,7 +228,7 @@ class TestEventTicketZoomMeeting(IntegrationTestCase):
 			).insert(ignore_permissions=True)
 			ticket.submit()
 
-		self.assertTrue(ticket.zoom_webinar_registration)
-		registration = frappe.get_doc("Zoom Webinar Registration", ticket.zoom_webinar_registration)
+		self.assertTrue(ticket.zoom_session_registration)
+		registration = frappe.get_doc("Zoom Session Registration", ticket.zoom_session_registration)
 		self.assertEqual(registration.meeting, meeting.name)
 		self.assertEqual(registration.registrant_id, "abcDEF12ghIJ")

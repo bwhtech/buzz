@@ -74,10 +74,10 @@ ZOOM_INTEGRATION_CUSTOM_FIELDS = {
 	],
 	"Event Ticket": [
 		{
-			"fieldname": "zoom_webinar_registration",
-			"label": "Zoom Webinar Registration",
+			"fieldname": "zoom_session_registration",
+			"label": "Zoom Session Registration",
 			"fieldtype": "Link",
-			"options": "Zoom Webinar Registration",
+			"options": "Zoom Session Registration",
 			"insert_after": "ticket_type",
 			"read_only": 1,
 		},

@@ -1036,10 +1036,10 @@ def get_ticket_details(ticket_id: str) -> dict:
 	)
 
 	details.zoom_join_url = None
-	if hasattr(ticket_doc, "zoom_webinar_registration") and ticket_doc.zoom_webinar_registration:
+	if hasattr(ticket_doc, "zoom_session_registration") and ticket_doc.zoom_session_registration:
 		zoom_registration = frappe.db.get_value(
-			"Zoom Webinar Registration",
-			ticket_doc.zoom_webinar_registration,
+			"Zoom Session Registration",
+			ticket_doc.zoom_session_registration,
 			["join_url", "webinar", "meeting"],
 			as_dict=True,
 		)

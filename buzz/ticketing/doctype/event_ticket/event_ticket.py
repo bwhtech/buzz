@@ -75,7 +75,7 @@ class EventTicket(Document):
 
 		registration = frappe.get_doc(
 			{
-				"doctype": "Zoom Webinar Registration",
+				"doctype": "Zoom Session Registration",
 				**registration_ref,
 				"email": self.attendee_email,
 				"first_name": self.first_name,
@@ -86,7 +86,7 @@ class EventTicket(Document):
 		try:
 			registration.submit()
 			# Store the registration reference on the ticket (holds meeting or webinar registration)
-			self.db_set("zoom_webinar_registration", registration.name)
+			self.db_set("zoom_session_registration", registration.name)
 		except Exception:
 			frappe.log_error("Failed to create registration on Zoom")
 
