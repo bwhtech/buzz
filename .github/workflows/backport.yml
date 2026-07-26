@@ -33,9 +33,13 @@ jobs:
           # Act only on labels shaped like "backport <target-branch>",
           # e.g. "backport main".
           label_pattern: '^backport ([^ ]+)$'
-          pull_title: '[Backport ${target_branch}] ${pull_title}'
+          # Reuse the source title verbatim. A prefix here would push the
+          # conventional-commit type out of first position and fail the PR
+          # Title Check; the "backport" label marks these PRs instead.
+          pull_title: '${pull_title}'
           pull_description: |
             Automated backport of #${pull_number} to `${target_branch}`.
+          add_labels: backport
           # Carry the original PR's labels onto the backport PR, except the
           # "backport <branch>" label itself — copying it would re-trigger this
           # workflow when the generated PR is merged.
