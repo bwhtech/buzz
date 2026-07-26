@@ -357,23 +357,64 @@ frappe.ui.form.on("Buzz Event", {
 			return;
 		}
 
+		const group = __("Create on Zoom");
+
 		if (frm.doc.zoom_webinar) {
-			frm.add_custom_button(__("View Webinar on Zoom"), () => {
-				window.open(`https://zoom.us/webinar/${frm.doc.zoom_webinar}`, "_blank");
-			});
-			return;
+			frm.add_custom_button(
+				__("View Webinar"),
+				() => {
+					window.open(`https://zoom.us/webinar/${frm.doc.zoom_webinar}`, "_blank");
+				},
+				group
+			);
+		} else {
+			const webinar_btn = frm.add_custom_button(
+				__("Create Webinar"),
+				() => {
+					frm.call({
+						doc: frm.doc,
+						method: "create_webinar_on_zoom",
+						btn: webinar_btn,
+						freeze: true,
+					}).then(() => {
+						frm.layout.tabs.find((t) => t.label == "Zoom Integration").set_active();
+					});
+				},
+				group
+			);
 		}
 
-		const btn = frm.add_custom_button(__("Create Webinar on Zoom"), () => {
-			frm.call({
-				doc: frm.doc,
-				method: "create_webinar_on_zoom",
-				btn,
-				freeze: true,
-			}).then(({ message }) => {
-				frm.layout.tabs.find((t) => t.label == "Zoom Integration").set_active();
-			});
-		});
+		if (frm.doc.zoom_meeting) {
+			frm.add_custom_button(
+				__("View Meeting"),
+				async () => {
+					// Zoom Meeting uses hash naming, so frm.doc.zoom_meeting is not the Zoom id.
+					// zoom_link holds the actual join_url returned by Zoom.
+					const { message } = await frappe.db.get_value(
+						"Zoom Meeting",
+						frm.doc.zoom_meeting,
+						"zoom_link"
+					);
+					window.open(message.zoom_link, "_blank");
+				},
+				group
+			);
+		} else {
+			const meeting_btn = frm.add_custom_button(
+				__("Create Meeting"),
+				() => {
+					frm.call({
+						doc: frm.doc,
+						method: "create_meeting_on_zoom",
+						btn: meeting_btn,
+						freeze: true,
+					}).then(() => {
+						frm.layout.tabs.find((t) => t.label == "Zoom Integration").set_active();
+					});
+				},
+				group
+			);
+		}
 	},
 	category(frm) {
 		if (!frm.is_new()) return;
