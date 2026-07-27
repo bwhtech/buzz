@@ -7,10 +7,7 @@
 
 	<div v-else-if="bookingDetails.data">
 		<!-- Approval Pending Status -->
-		<div
-			v-if="!bookingDetails.data.event.free_webinar && isOfflinePaymentPending"
-			class="mb-6"
-		>
+		<div v-if="!bookingDetails.data.event.free_event && isOfflinePaymentPending" class="mb-6">
 			<div class="p-4 rounded-lg border bg-yellow-50 border-yellow-200">
 				<div class="flex items-center gap-3">
 					<div
@@ -68,7 +65,7 @@
 
 			<!-- Booking Financial Summary -->
 			<BookingFinancialSummary
-				v-if="!bookingDetails.data.event.free_webinar && showPaymentSummary"
+				v-if="!bookingDetails.data.event.free_event && showPaymentSummary"
 				:booking="bookingDetails.data.doc"
 			/>
 		</div>
@@ -76,13 +73,13 @@
 		<!-- Cancellation Request Section -->
 		<!-- Only show if there's a pending cancellation request (not yet submitted/accepted) -->
 		<CancellationRequestNotice
-			v-if="!bookingDetails.data.event.free_webinar && hasPendingCancellationRequest"
+			v-if="!bookingDetails.data.event.free_event && hasPendingCancellationRequest"
 			:cancellation-request="bookingDetails.data.cancellation_request"
 		/>
 
 		<!-- Tickets Section -->
 		<TicketsSection
-			v-if="!bookingDetails.data.event.free_webinar && !isOfflinePaymentPending"
+			v-if="!bookingDetails.data.event.free_event && !isOfflinePaymentPending"
 			:tickets="bookingDetails.data.tickets"
 			:can-request-cancellation="canRequestCancellation"
 			:can-transfer-tickets="canTransferTickets"

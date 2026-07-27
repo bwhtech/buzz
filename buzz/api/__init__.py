@@ -28,7 +28,7 @@ from buzz.payments import (
 	get_payment_link_for_booking,
 	get_payment_link_for_sponsorship,
 )
-from buzz.utils import build_event_datetimes, is_app_installed
+from buzz.utils import ZOOM_BACKED_CATEGORIES, build_event_datetimes, is_app_installed
 
 OFFLINE_PAYMENT_METHOD = "Offline"
 
@@ -239,7 +239,7 @@ def get_event_booking_data(event_route: str) -> dict:
 			"category": event_doc.category,
 			"banner_image": event_doc.banner_image,
 			"short_description": event_doc.short_description,
-			"free_webinar": event_doc.free_webinar,
+			"free_event": event_doc.free_event,
 			"send_ticket_email": event_doc.send_ticket_email,
 			"allow_guest_booking": event_doc.allow_guest_booking,
 			"guest_verification_method": event_doc.guest_verification_method,
@@ -438,10 +438,10 @@ def process_booking(
 	)
 	phone_map = {cf["fieldname"]: cf["label"] for cf in phone_fields}
 
-	if event_doc.category == "Webinars":
+	if event_doc.category in ZOOM_BACKED_CATEGORIES:
 		for attendee in attendees:
 			if not (attendee.get("last_name") or "").strip():
-				frappe.throw(_("Last name is required for all attendees in webinar events"))
+				frappe.throw(_("Last name is required for all attendees in Zoom events"))
 
 	for attendee in attendees:
 		first_name = (attendee.get("first_name") or "").strip()
@@ -588,7 +588,7 @@ def get_booking_confirmation(booking_id: str, token: str | None = None) -> dict:
 				"start_time": event_doc.start_time,
 				"end_time": event_doc.end_time,
 				"short_description": event_doc.get("short_description"),
-				"free_webinar": event_doc.get("free_webinar"),
+				"free_event": event_doc.get("free_event"),
 			},
 			"venue": venue,
 			"booking": {
@@ -1036,16 +1036,17 @@ def get_ticket_details(ticket_id: str) -> dict:
 	)
 
 	details.zoom_join_url = None
-	if hasattr(ticket_doc, "zoom_webinar_registration") and ticket_doc.zoom_webinar_registration:
+	if hasattr(ticket_doc, "zoom_session_registration") and ticket_doc.zoom_session_registration:
 		zoom_registration = frappe.db.get_value(
-			"Zoom Webinar Registration",
-			ticket_doc.zoom_webinar_registration,
-			["join_url", "webinar"],
+			"Zoom Session Registration",
+			ticket_doc.zoom_session_registration,
+			["join_url", "reference_doctype", "reference_name"],
 			as_dict=True,
 		)
 		if zoom_registration:
 			details.zoom_join_url = zoom_registration.join_url
-			details.zoom_webinar = zoom_registration.webinar
+			details.zoom_reference_doctype = zoom_registration.reference_doctype
+			details.zoom_reference_name = zoom_registration.reference_name
 
 	return details
 

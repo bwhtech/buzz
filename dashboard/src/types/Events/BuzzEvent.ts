@@ -18,8 +18,8 @@ export interface BuzzEvent {
 	title: string
 	/**	Category : Link - Event Category	*/
 	category: string
-	/**	Free Webinar? : Check	*/
-	free_webinar?: 0 | 1
+	/**	Free Event? : Check	*/
+	free_event?: 0 | 1
 	/**	Medium : Select	*/
 	medium?: "In Person" | "Online"
 	/**	Banner Image : Attach Image	*/
