@@ -390,7 +390,7 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.category==\"Webinars\"",
+   "depends_on": "eval:[\"Webinars\",\"Zoom Meeting\"].includes(doc.category)",
    "fieldname": "free_webinar",
    "fieldtype": "Check",
    "label": "Free Webinar?"

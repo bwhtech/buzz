@@ -1,6 +1,12 @@
 // Copyright (c) 2025, BWH Studios and contributors
 // For license information, please see license.txt
 
+// Keep in sync with ZOOM_BACKED_CATEGORIES in buzz/utils.py
+const ZOOM_SESSION_BY_CATEGORY = {
+	Webinars: "webinar",
+	"Zoom Meeting": "meeting",
+};
+
 const FIELD_LABELS = {
 	category: __("Category"),
 	host: __("Host"),
@@ -353,70 +359,39 @@ frappe.ui.form.on("Buzz Event", {
 
 	add_zoom_custom_actions(frm) {
 		const installed_apps = frappe.boot.app_data.map((app) => app.app_name);
-		if (!installed_apps.includes("zoom_integration") || frm.doc.category != "Webinars") {
+		const session = ZOOM_SESSION_BY_CATEGORY[frm.doc.category];
+		if (!installed_apps.includes("zoom_integration") || !session) {
 			return;
 		}
 
-		const group = __("Create on Zoom");
+		const labels = {
+			webinar: { create: __("Create Webinar on Zoom"), view: __("View Webinar") },
+			meeting: { create: __("Create Meeting on Zoom"), view: __("View Meeting") },
+		}[session];
 
-		if (frm.doc.zoom_webinar) {
-			frm.add_custom_button(
-				__("View Webinar"),
-				() => {
-					window.open(`https://zoom.us/webinar/${frm.doc.zoom_webinar}`, "_blank");
-				},
-				group
-			);
-		} else {
-			const webinar_btn = frm.add_custom_button(
-				__("Create Webinar"),
-				() => {
-					frm.call({
-						doc: frm.doc,
-						method: "create_webinar_on_zoom",
-						btn: webinar_btn,
-						freeze: true,
-					}).then(() => {
-						frm.layout.tabs.find((t) => t.label == "Zoom Integration").set_active();
-					});
-				},
-				group
-			);
+		const existing = frm.doc[`zoom_${session}`];
+		if (existing) {
+			frm.add_custom_button(labels.view, () => {
+				window.open(`https://zoom.us/${session}/${existing}`, "_blank");
+			});
+			return;
 		}
 
-		if (frm.doc.zoom_meeting) {
-			frm.add_custom_button(
-				__("View Meeting"),
-				() => {
-					window.open(`https://zoom.us/meeting/${frm.doc.zoom_meeting}`, "_blank");
-				},
-				group
-			);
-		} else {
-			const meeting_btn = frm.add_custom_button(
-				__("Create Meeting"),
-				() => {
-					frm.call({
-						doc: frm.doc,
-						method: "create_meeting_on_zoom",
-						btn: meeting_btn,
-						freeze: true,
-					}).then(() => {
-						frm.layout.tabs.find((t) => t.label == "Zoom Integration").set_active();
-					});
-				},
-				group
-			);
-		}
+		const create_btn = frm.add_custom_button(labels.create, () => {
+			frm.call({
+				doc: frm.doc,
+				method: `create_${session}_on_zoom`,
+				btn: create_btn,
+				freeze: true,
+			}).then(() => {
+				frm.layout.tabs.find((t) => t.label == "Zoom Integration").set_active();
+			});
+		});
 	},
 	category(frm) {
 		if (!frm.is_new()) return;
 
-		if (frm.doc.category === "Webinars") {
-			frm.set_value("attach_email_ticket", 0);
-		} else {
-			frm.set_value("attach_email_ticket", 1);
-		}
+		frm.set_value("attach_email_ticket", frm.doc.category in ZOOM_SESSION_BY_CATEGORY ? 0 : 1);
 	},
 });
 

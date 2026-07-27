@@ -1378,3 +1378,50 @@ class TestBookingConfirmationEmail(IntegrationTestCase):
 		mock_sendmail.assert_called_once()
 		self.assertIn("EVENT", mock_sendmail.call_args[1]["subject"])
 		self.assertNotIn("GLOBAL", mock_sendmail.call_args[1]["subject"])
+
+
+class TestZoomBackedCategoryBooking(IntegrationTestCase):
+	"""Zoom needs a last name on every registrant, for meetings as much as webinars."""
+
+	def setUp(self):
+		super().setUp()
+		self.event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		self.ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": self.event.name,
+				"title": "Zoom Category Ticket",
+				"price": 0,
+				"is_published": True,
+			}
+		).insert()
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def _book_without_last_name(self, category):
+		from buzz.api import process_booking
+
+		self.event.db_set("category", category)
+		return process_booking(
+			attendees=[
+				{
+					"first_name": "Nolast",
+					"email": "nolast@example.com",
+					"ticket_type": str(self.ticket_type.name),
+					"add_ons": [],
+				}
+			],
+			event=str(self.event.name),
+		)
+
+	def test_last_name_required_for_webinar_category(self):
+		self.assertRaises(frappe.ValidationError, self._book_without_last_name, "Webinars")
+
+	def test_last_name_required_for_zoom_meeting_category(self):
+		self.assertRaises(frappe.ValidationError, self._book_without_last_name, "Zoom Meeting")
+
+	def test_last_name_not_required_for_other_categories(self):
+		result = self._book_without_last_name("Conferences")
+
+		self.assertIn("booking_name", result)

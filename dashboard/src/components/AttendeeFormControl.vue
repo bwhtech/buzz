@@ -32,7 +32,7 @@
 				v-model="attendee.last_name"
 				:label="__('Last Name')"
 				:placeholder="__('Enter last name')"
-				:required="eventDetails.category === 'Webinars'"
+				:required="isZoomEvent"
 				type="text"
 			/>
 			<FormControl
@@ -48,8 +48,7 @@
 			<!-- Show selector only if there are multiple ticket types -->
 			<FormControl
 				v-if="
-					availableTicketTypes.length > 1 &&
-					!(eventDetails.category == 'Webinars' && eventDetails.free_webinar)
+					availableTicketTypes.length > 1 && !(isZoomEvent && eventDetails.free_webinar)
 				"
 				v-model="attendee.ticket_type"
 				:label="__('Ticket Type')"
@@ -122,8 +121,9 @@
 <script setup lang="ts">
 import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields";
 import { formatPriceOrFree } from "@/utils/currency";
+import { isZoomBackedCategory } from "@/utils/zoomCategory";
 import { Tooltip } from "frappe-ui";
-import { type PropType } from "vue";
+import { type PropType, computed } from "vue";
 import CustomFieldInput from "./CustomFieldInput.vue";
 
 interface AvailableTicketType {
@@ -172,6 +172,8 @@ const props = defineProps({
 });
 
 defineEmits(["remove"]);
+
+const isZoomEvent = computed(() => isZoomBackedCategory(props.eventDetails.category));
 
 // Helper methods to safely access add-on properties
 const ensureAddOnExists = (addOnName: string) => {

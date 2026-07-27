@@ -28,7 +28,7 @@ from buzz.payments import (
 	get_payment_link_for_booking,
 	get_payment_link_for_sponsorship,
 )
-from buzz.utils import build_event_datetimes, is_app_installed
+from buzz.utils import ZOOM_BACKED_CATEGORIES, build_event_datetimes, is_app_installed
 
 OFFLINE_PAYMENT_METHOD = "Offline"
 
@@ -438,10 +438,10 @@ def process_booking(
 	)
 	phone_map = {cf["fieldname"]: cf["label"] for cf in phone_fields}
 
-	if event_doc.category == "Webinars":
+	if event_doc.category in ZOOM_BACKED_CATEGORIES:
 		for attendee in attendees:
 			if not (attendee.get("last_name") or "").strip():
-				frappe.throw(_("Last name is required for all attendees in webinar events"))
+				frappe.throw(_("Last name is required for all attendees in Zoom events"))
 
 	for attendee in attendees:
 		first_name = (attendee.get("first_name") or "").strip()

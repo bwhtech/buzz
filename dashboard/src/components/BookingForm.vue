@@ -64,10 +64,10 @@
 			<div class="bg-green-50 border border-green-200 rounded-xl p-8 max-w-md mx-auto">
 				<LucideCheckCircle class="w-16 h-16 text-green-500 mx-auto mb-4" />
 				<h2 class="text-3xl-semibold text-green-800 mb-2">
-					{{ isWebinar ? __("Registration Confirmed!") : __("Booking Confirmed!") }}
+					{{ isZoomEvent ? __("Registration Confirmed!") : __("Booking Confirmed!") }}
 				</h2>
 				<p class="text-green-700 mb-4">
-					<template v-if="isWebinar">
+					<template v-if="isZoomEvent">
 						{{ __("You have been registered successfully.") }}
 					</template>
 					<template v-else>
@@ -76,7 +76,7 @@
 					</template>
 				</p>
 				<p class="text-sm text-green-600 mb-6">
-					<template v-if="isWebinar">
+					<template v-if="isZoomEvent">
 						{{ __("You will receive an invite at") }}
 						<strong>{{ guestEmail }}</strong>
 						{{ __("shortly.") }}
@@ -133,7 +133,7 @@
 								type="text"
 								:label="__('Last Name')"
 								:placeholder="__('Enter your last name')"
-								:required="isWebinar"
+								:required="isZoomEvent"
 								@blur="prefillAttendee('name')"
 							/>
 							<FormControl
@@ -409,6 +409,7 @@ import {
 } from "@/utils/bookingSuccessRedirect";
 import { formatCurrency, formatPriceOrFree } from "@/utils/currency";
 import { clearBookingCache } from "@/utils/index";
+import { isZoomBackedCategory } from "@/utils/zoomCategory";
 import BillingDetails from "@/components/BillingDetails.vue";
 import type {
 	AvailableAddOn,
@@ -1098,8 +1099,8 @@ const validateForm = () => {
 		}
 	}
 
-	// Validate last name is provided for webinar events
-	if (isWebinar.value) {
+	// Zoom needs a last name on every registrant
+	if (isZoomEvent.value) {
 		attendees.value.forEach((attendee, index) => {
 			if (!attendee.last_name?.trim()) {
 				errors.push(__("Last Name is required for Attendee #{0}", [index + 1]));
@@ -1216,7 +1217,7 @@ async function submit() {
 			toast.error(__("Please enter your first name"));
 			return;
 		}
-		if (isWebinar.value && !guestLastName.value.trim()) {
+		if (isZoomEvent.value && !guestLastName.value.trim()) {
 			toast.error(__("Please enter your last name"));
 			return;
 		}
@@ -1420,7 +1421,7 @@ function clearOtpState() {
 	clearInterval(resendCooldownTimer);
 }
 
-const isWebinar = computed(() => props.eventDetails.category === "Webinars");
+const isZoomEvent = computed(() => isZoomBackedCategory(props.eventDetails.category));
 
 const requiresLogin = computed(() => {
 	return props.isGuestMode && !props.eventDetails?.allow_guest_booking;
@@ -1439,7 +1440,7 @@ const submitButtonText = computed(() => {
 		return __("Pay & Book");
 	}
 
-	if (isWebinar.value) {
+	if (isZoomEvent.value) {
 		return __("Register");
 	}
 
