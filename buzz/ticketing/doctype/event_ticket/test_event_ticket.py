@@ -243,13 +243,12 @@ class TestEventTicketZoomMeeting(IntegrationTestCase):
 		from zoom_integration.tests.zoom_fixtures import (
 			add_webinar_registrant_response,
 			create_webinar_response,
-			mock_response,
+			mock_zoom_post,
 		)
 
 		webinar_controller = "zoom_integration.zoom_integration.doctype.zoom_webinar.zoom_webinar"
 
-		with patch(f"{webinar_controller}.requests") as mock_requests:
-			mock_requests.post.return_value = mock_response(201, create_webinar_response())
+		with mock_zoom_post(webinar_controller, 201, create_webinar_response()):
 			webinar = frappe.get_doc(
 				{
 					"doctype": "Zoom Webinar",
@@ -264,8 +263,7 @@ class TestEventTicketZoomMeeting(IntegrationTestCase):
 		self.event.db_set("zoom_webinar", webinar.name)
 		registrant = add_webinar_registrant_response()
 
-		with patch(f"{webinar_controller}.requests") as mock_requests:
-			mock_requests.post.return_value = mock_response(200, registrant)
+		with mock_zoom_post(webinar_controller, 200, registrant):
 			ticket = self._submit_ticket("carol@example.com")
 
 		registration = frappe.get_doc("Zoom Session Registration", ticket.zoom_session_registration)
