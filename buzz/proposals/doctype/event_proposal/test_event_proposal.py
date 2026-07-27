@@ -144,3 +144,13 @@ class IntegrationTestEventProposal(IntegrationTestCase):
 		proposal = self.make_proposal(status="Approved")
 		with self.assertRaises(frappe.ValidationError):
 			proposal.submit()
+
+	def test_free_event_flag_carries_to_the_created_event(self):
+		"""get_mapped_doc matches on fieldname, so both doctypes must use the same one."""
+		company = f"Free {frappe.generate_hash(length=6)}"
+		proposal = self.make_proposal(host_company=company, status="Approved", free_event=1)
+
+		proposal.submit()
+
+		event = frappe.get_doc("Buzz Event", {"proposal": proposal.name})
+		self.assertEqual(event.free_event, 1)

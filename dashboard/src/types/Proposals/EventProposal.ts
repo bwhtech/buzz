@@ -13,8 +13,8 @@ export interface EventProposal {
 	title: string
 	/**	Event Category : Link - Event Category	*/
 	category: string
-	/**	Free Webinar? : Check	*/
-	free_webinar?: 0 | 1
+	/**	Free Event? : Check	*/
+	free_event?: 0 | 1
 	/**	Medium : Select	*/
 	medium: "Online" | "In Person"
 	/**	Status : Select	*/

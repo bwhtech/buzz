@@ -8,6 +8,10 @@ import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.utils import now_datetime
 
+# Categories whose events are run through Zoom. Keyed to the Zoom session doctype each
+# one creates, so a lookup doubles as the "is this Zoom-backed?" check.
+ZOOM_BACKED_CATEGORIES = {"Webinars": "webinar", "Zoom Meeting": "meeting"}
+
 
 def is_app_installed(app_name: str) -> bool:
 	"""Check if a specified app is installed."""
