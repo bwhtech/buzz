@@ -7,12 +7,12 @@
 		<!-- Success message + confetti -->
 		<SuccessMessage
 			:show="showSuccessMessage"
-			:is-webinar="confirmation.data.event.free_webinar"
+			:is-registration="confirmation.data.event.free_event"
 		/>
 
 		<h2 class="text-4xl-bold text-ink-gray-9 mb-4">
 			{{
-				confirmation.data.event.free_webinar
+				confirmation.data.event.free_event
 					? __("Registration Confirmed")
 					: __("Booking Confirmed")
 			}}

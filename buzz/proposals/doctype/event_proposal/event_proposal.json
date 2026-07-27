@@ -7,7 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
-  "free_webinar",
+  "free_event",
   "column_break_bixo",
   "category",
   "medium",
@@ -152,9 +152,9 @@
   {
    "default": "0",
    "depends_on": "eval:[\"Webinars\",\"Zoom Meeting\"].includes(doc.event_category)",
-   "fieldname": "free_webinar",
+   "fieldname": "free_event",
    "fieldtype": "Check",
-   "label": "Free Webinar?"
+   "label": "Free Event?"
   },
   {
    "fieldname": "amended_from",

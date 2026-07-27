@@ -239,7 +239,7 @@ def get_event_booking_data(event_route: str) -> dict:
 			"category": event_doc.category,
 			"banner_image": event_doc.banner_image,
 			"short_description": event_doc.short_description,
-			"free_webinar": event_doc.free_webinar,
+			"free_event": event_doc.free_event,
 			"send_ticket_email": event_doc.send_ticket_email,
 			"allow_guest_booking": event_doc.allow_guest_booking,
 			"guest_verification_method": event_doc.guest_verification_method,
@@ -588,7 +588,7 @@ def get_booking_confirmation(booking_id: str, token: str | None = None) -> dict:
 				"start_time": event_doc.start_time,
 				"end_time": event_doc.end_time,
 				"short_description": event_doc.get("short_description"),
-				"free_webinar": event_doc.get("free_webinar"),
+				"free_event": event_doc.get("free_event"),
 			},
 			"venue": venue,
 			"booking": {

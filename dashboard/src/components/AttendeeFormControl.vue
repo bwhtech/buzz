@@ -47,9 +47,7 @@
 
 			<!-- Show selector only if there are multiple ticket types -->
 			<FormControl
-				v-if="
-					availableTicketTypes.length > 1 && !(isZoomEvent && eventDetails.free_webinar)
-				"
+				v-if="availableTicketTypes.length > 1 && !(isZoomEvent && eventDetails.free_event)"
 				v-model="attendee.ticket_type"
 				:label="__('Ticket Type')"
 				type="select"

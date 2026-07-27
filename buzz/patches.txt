@@ -14,3 +14,4 @@ buzz.patches.set_payment_status_for_existing_bookings
 buzz.patches.normalize_phone_format
 buzz.patches.set_time_zone_label_for_existing_events
 buzz.patches.rename_zoom_registration_field
+buzz.patches.rename_free_webinar_to_free_event

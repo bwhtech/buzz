@@ -359,7 +359,7 @@
 
 						<BookingSummary
 							class="mb-6"
-							v-if="!eventDetails.free_webinar"
+							v-if="!eventDetails.free_event"
 							:summary="summary"
 							:net-amount="netAmount"
 							:discount-amount="discountAmount"
