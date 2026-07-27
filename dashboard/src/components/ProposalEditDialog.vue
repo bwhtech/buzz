@@ -33,9 +33,8 @@
 				</Editor>
 			</div>
 
-			<FormControl
+			<PhoneInput
 				v-if="!eventTalkId"
-				type="tel"
 				:label="__('Phone (optional)')"
 				:placeholder="__('Enter phone number')"
 				v-model="editForm.phone"
@@ -60,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+import PhoneInput from "@/components/PhoneInput.vue";
 import type { FrappeError } from "@/types";
 import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui";
 import {
