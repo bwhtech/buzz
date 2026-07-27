@@ -174,3 +174,133 @@ class TestQRCodeGeneration(IntegrationTestCase):
 
 		# Cleanup
 		file_doc.delete()
+
+
+class TestEventTicketZoomMeeting(IntegrationTestCase):
+	def setUp(self):
+		# tearDown rolls back, so the fixtures are rebuilt per test rather than per class.
+		super().setUp()
+		self.event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		self.ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"title": "Meeting TT",
+				"event": self.event.name,
+				"currency": "USD",
+			}
+		).insert(ignore_permissions=True, ignore_if_duplicate=True)
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def _submit_ticket(self, email="alice@example.com"):
+		ticket = frappe.get_doc(
+			{
+				"doctype": "Event Ticket",
+				"event": self.event.name,
+				"ticket_type": self.ticket_type.name,
+				"first_name": "Alice",
+				"last_name": "Smith",
+				"attendee_email": email,
+			}
+		).insert(ignore_permissions=True)
+		ticket.submit()
+		return ticket
+
+	def test_ticket_registration_points_at_the_events_zoom_meeting(self):
+		from zoom_integration.tests.zoom_fixtures import (
+			add_meeting_registrant_response,
+			create_meeting_response,
+		)
+
+		meeting_controller = "zoom_integration.zoom_integration.doctype.zoom_meeting.zoom_meeting"
+
+		with patch(f"{meeting_controller}.create_zoom_session", return_value=create_meeting_response()):
+			meeting = frappe.get_doc(
+				{
+					"doctype": "Zoom Meeting",
+					"title": "Ticket Meeting",
+					"date": "2026-08-01",
+					"start_time": "10:00:00",
+					"duration": 3600,
+					"timezone": "Asia/Calcutta",
+				}
+			).insert(ignore_permissions=True)
+
+		self.event.db_set("zoom_meeting", meeting.name)
+		registrant = add_meeting_registrant_response()
+
+		with patch(f"{meeting_controller}.add_zoom_registrant", return_value=registrant):
+			ticket = self._submit_ticket()
+
+		self.assertTrue(ticket.zoom_session_registration)
+		registration = frappe.get_doc("Zoom Session Registration", ticket.zoom_session_registration)
+		self.assertEqual(registration.reference_doctype, "Zoom Meeting")
+		self.assertEqual(registration.reference_name, meeting.name)
+		self.assertEqual(registration.registrant_id, registrant["registrant_id"])
+
+	def test_ticket_registration_points_at_the_events_zoom_webinar(self):
+		from zoom_integration.tests.zoom_fixtures import (
+			add_webinar_registrant_response,
+			create_webinar_response,
+			mock_zoom_post,
+		)
+
+		webinar_controller = "zoom_integration.zoom_integration.doctype.zoom_webinar.zoom_webinar"
+
+		with mock_zoom_post(webinar_controller, 201, create_webinar_response()):
+			webinar = frappe.get_doc(
+				{
+					"doctype": "Zoom Webinar",
+					"title": "Ticket Webinar",
+					"date": "2026-08-01",
+					"start_time": "10:00:00",
+					"duration": 3600,
+					"timezone": "Asia/Calcutta",
+				}
+			).insert(ignore_permissions=True)
+
+		self.event.db_set("zoom_webinar", webinar.name)
+		registrant = add_webinar_registrant_response()
+
+		with mock_zoom_post(webinar_controller, 200, registrant):
+			ticket = self._submit_ticket("carol@example.com")
+
+		registration = frappe.get_doc("Zoom Session Registration", ticket.zoom_session_registration)
+		self.assertEqual(registration.reference_doctype, "Zoom Webinar")
+		self.assertEqual(registration.reference_name, webinar.name)
+		self.assertEqual(registration.registrant_id, registrant["registrant_id"])
+
+	def test_ticket_details_expose_the_zoom_session_reference(self):
+		from zoom_integration.tests.zoom_fixtures import (
+			add_meeting_registrant_response,
+			create_meeting_response,
+		)
+
+		from buzz.api import get_ticket_details
+
+		meeting_controller = "zoom_integration.zoom_integration.doctype.zoom_meeting.zoom_meeting"
+
+		with patch(f"{meeting_controller}.create_zoom_session", return_value=create_meeting_response()):
+			meeting = frappe.get_doc(
+				{
+					"doctype": "Zoom Meeting",
+					"title": "Details Meeting",
+					"date": "2026-08-01",
+					"start_time": "10:00:00",
+					"duration": 3600,
+					"timezone": "Asia/Calcutta",
+				}
+			).insert(ignore_permissions=True)
+
+		self.event.db_set("zoom_meeting", meeting.name)
+		registrant = add_meeting_registrant_response()
+
+		with patch(f"{meeting_controller}.add_zoom_registrant", return_value=registrant):
+			ticket = self._submit_ticket("dana@example.com")
+
+		details = get_ticket_details(ticket.name)
+
+		self.assertEqual(details.zoom_join_url, registrant["join_url"])
+		self.assertEqual(details.zoom_reference_doctype, "Zoom Meeting")
+		self.assertEqual(details.zoom_reference_name, meeting.name)

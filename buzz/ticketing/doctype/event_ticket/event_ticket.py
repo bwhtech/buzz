@@ -67,21 +67,28 @@ class EventTicket(Document):
 		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
 
 		if event_doc.zoom_webinar:
-			doc = {
-				"doctype": "Zoom Webinar Registration",
-				"webinar": event_doc.zoom_webinar,
+			session_ref = {"reference_doctype": "Zoom Webinar", "reference_name": event_doc.zoom_webinar}
+		elif event_doc.get("zoom_meeting"):
+			session_ref = {"reference_doctype": "Zoom Meeting", "reference_name": event_doc.zoom_meeting}
+		else:
+			return
+
+		registration = frappe.get_doc(
+			{
+				"doctype": "Zoom Session Registration",
+				**session_ref,
 				"email": self.attendee_email,
 				"first_name": self.first_name,
 				"last_name": self.last_name or "-",
 			}
-			registration = frappe.get_doc(doc).insert(ignore_permissions=True)
+		).insert(ignore_permissions=True)
 
-			try:
-				registration.submit()
-				# Store the registration reference on the ticket
-				self.db_set("zoom_webinar_registration", registration.name)
-			except Exception:
-				frappe.log_error("Failed to create registration on Zoom")
+		try:
+			registration.submit()
+			# Store the registration reference on the ticket (holds meeting or webinar registration)
+			self.db_set("zoom_session_registration", registration.name)
+		except Exception:
+			frappe.log_error("Failed to create registration on Zoom")
 
 	def send_user_invitation(self):
 		invite_by_email(

@@ -20,7 +20,7 @@
 					</h3>
 					<p class="text-ink-green-6">
 						{{
-							isWebinar
+							isRegistration
 								? __(
 										"Your registration has been confirmed. You will receive an invite shortly."
 								  )
@@ -41,11 +41,11 @@ import LucideCheckCircle from "~icons/lucide/check-circle";
 withDefaults(
 	defineProps<{
 		show?: boolean;
-		isWebinar?: boolean;
+		isRegistration?: boolean;
 	}>(),
 	{
 		show: false,
-		isWebinar: false,
+		isRegistration: false,
 	}
 );
 </script>

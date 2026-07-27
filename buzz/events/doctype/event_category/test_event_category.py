@@ -1,20 +1,13 @@
 # Copyright (c) 2025, BWH Studios and Contributors
 # See license.txt
 
-# import frappe
+import frappe
 from frappe.tests import IntegrationTestCase
 
-# On IntegrationTestCase, the doctype test records and all
-# link-field test record dependencies are recursively loaded
-# Use these module variables to add/remove to/from that list
-EXTRA_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
-IGNORE_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
+from buzz.utils import ZOOM_BACKED_CATEGORIES
 
 
 class IntegrationTestEventCategory(IntegrationTestCase):
-	"""
-	Integration tests for EventCategory.
-	Use this class for testing interactions between multiple components.
-	"""
-
-	pass
+	def test_zoom_backed_categories_are_seeded(self):
+		for category in ZOOM_BACKED_CATEGORIES:
+			self.assertTrue(frappe.db.exists("Event Category", category), category)

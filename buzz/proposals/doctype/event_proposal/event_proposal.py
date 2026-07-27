@@ -25,7 +25,7 @@ class EventProposal(Document):
 		end_date: DF.Date | None
 		end_time: DF.Time | None
 		event_banner: DF.AttachImage | None
-		free_webinar: DF.Check
+		free_event: DF.Check
 		host: DF.Link | None
 		host_company: DF.Data | None
 		host_company_logo: DF.AttachImage | None
