@@ -67,16 +67,16 @@ class EventTicket(Document):
 		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
 
 		if event_doc.zoom_webinar:
-			registration_ref = {"webinar": event_doc.zoom_webinar}
+			session_ref = {"reference_doctype": "Zoom Webinar", "reference_name": event_doc.zoom_webinar}
 		elif event_doc.get("zoom_meeting"):
-			registration_ref = {"meeting": event_doc.zoom_meeting}
+			session_ref = {"reference_doctype": "Zoom Meeting", "reference_name": event_doc.zoom_meeting}
 		else:
 			return
 
 		registration = frappe.get_doc(
 			{
 				"doctype": "Zoom Session Registration",
-				**registration_ref,
+				**session_ref,
 				"email": self.attendee_email,
 				"first_name": self.first_name,
 				"last_name": self.last_name or "-",

@@ -1055,18 +1055,33 @@ class TestBuzzEventZoomMeeting(FrappeTestCase):
 		).insert(ignore_permissions=True)
 
 	def test_create_meeting_on_zoom_links_meeting_to_event(self):
-		from zoom_integration.tests.zoom_fixtures import CREATE_MEETING_RESPONSE
+		from zoom_integration.tests.zoom_fixtures import create_meeting_response
 
 		meeting_controller = "zoom_integration.zoom_integration.doctype.zoom_meeting.zoom_meeting"
 		event = self._make_event()
+		response = create_meeting_response()
 
-		with patch(f"{meeting_controller}.create_zoom_session", return_value=CREATE_MEETING_RESPONSE):
+		with patch(f"{meeting_controller}.create_zoom_session", return_value=response):
 			meeting = event.create_meeting_on_zoom()
 
 		self.assertTrue(meeting.name)
 		event.reload()
 		self.assertEqual(event.zoom_meeting, meeting.name)
-		self.assertEqual(meeting.zoom_meeting_id, "91234567890")
+		self.assertEqual(meeting.zoom_meeting_id, str(response["id"]))
+
+	def test_event_stores_the_zoom_meeting_id_the_desk_link_is_built_from(self):
+		"""buzz_event.js builds https://zoom.us/meeting/<zoom_meeting> from this field."""
+		from zoom_integration.tests.zoom_fixtures import create_meeting_response
+
+		meeting_controller = "zoom_integration.zoom_integration.doctype.zoom_meeting.zoom_meeting"
+		event = self._make_event()
+		response = create_meeting_response()
+
+		with patch(f"{meeting_controller}.create_zoom_session", return_value=response):
+			event.create_meeting_on_zoom()
+
+		event.reload()
+		self.assertEqual(event.zoom_meeting, str(response["id"]))
 
 	def test_update_event_schedule_pushes_to_zoom_meeting(self):
 		from zoom_integration.tests.zoom_fixtures import CREATE_MEETING_RESPONSE

@@ -387,15 +387,8 @@ frappe.ui.form.on("Buzz Event", {
 		if (frm.doc.zoom_meeting) {
 			frm.add_custom_button(
 				__("View Meeting"),
-				async () => {
-					// Zoom Meeting uses hash naming, so frm.doc.zoom_meeting is not the Zoom id.
-					// zoom_link holds the actual join_url returned by Zoom.
-					const { message } = await frappe.db.get_value(
-						"Zoom Meeting",
-						frm.doc.zoom_meeting,
-						"zoom_link"
-					);
-					window.open(message.zoom_link, "_blank");
+				() => {
+					window.open(`https://zoom.us/meeting/${frm.doc.zoom_meeting}`, "_blank");
 				},
 				group
 			);
