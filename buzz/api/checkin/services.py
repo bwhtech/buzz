@@ -1,5 +1,3 @@
-from functools import cached_property
-
 import frappe
 from frappe import _
 from frappe.utils import format_date, format_time, today
@@ -20,16 +18,17 @@ class CheckinService:
 
 	def __init__(self, ticket_id: str):
 		frappe.only_for("Frontdesk Manager", True)
+		if not frappe.db.exists("Event Ticket", ticket_id):
+			TicketNotFound.throw()
+
 		self.ticket_id = ticket_id
 		self.date = today()
 
-	@cached_property
+	@property
 	def ticket(self):
-		if not frappe.db.exists("Event Ticket", self.ticket_id):
-			TicketNotFound.throw()
 		return frappe.get_cached_doc("Event Ticket", self.ticket_id)
 
-	@cached_property
+	@property
 	def event(self):
 		return frappe.get_cached_doc("Buzz Event", self.ticket.event)
 

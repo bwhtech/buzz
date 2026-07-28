@@ -3,7 +3,6 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.api.checkin import checkin_ticket, validate_ticket_for_checkin
 from buzz.api.checkin.exceptions import AlreadyCheckedIn, TicketCancelled, TicketNotFound
-from buzz.api.checkin.services import CheckinService
 
 TICKET_FIELDS = {
 	"id",
@@ -84,11 +83,11 @@ class TestValidateTicketForCheckin(CheckinTestCase):
 		self.assertIsNone(ticket["check_in_date"])
 
 	def test_cancelled_ticket_is_rejected(self):
-		service = CheckinService(self.ticket.name)
-		service.ticket.docstatus = 2
+		frappe.db.set_value("Event Ticket", self.ticket.name, "docstatus", 2)
+		frappe.clear_document_cache("Event Ticket", self.ticket.name)
 
 		with self.assertRaises(TicketCancelled):
-			service.validate()
+			validate_ticket_for_checkin(self.ticket.name)
 
 
 class TestCheckinTicket(CheckinTestCase):
