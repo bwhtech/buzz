@@ -9,10 +9,11 @@ class TestGetEventPaymentGateways(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.event = str(frappe.get_doc("Buzz Event", {"route": "test-route"}).name)
-		cls.gateway = frappe.get_all("Payment Gateway", pluck="name", limit=1)[0]
 
 	def setUp(self):
 		frappe.set_user("Administrator")
+		gateway = {"doctype": "Payment Gateway", "gateway": f"Test Gateway {frappe.generate_hash(6)}"}
+		self.gateway = frappe.get_doc(gateway).insert().name
 		self.set_gateways([])
 
 	def tearDown(self):
