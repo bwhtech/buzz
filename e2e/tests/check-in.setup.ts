@@ -1,9 +1,7 @@
-import { test as setup, expect } from "@playwright/test";
+import { test as setup } from "@playwright/test";
 import { createUserWithRoles, saveLoginState } from "../helpers/auth";
 import { callMethod, createDoc, deleteDoc, docExists, getList } from "../helpers/frappe";
 import {
-	CHECK_IN_ATTENDEE_EMAIL,
-	CHECK_IN_ATTENDEE_NAME,
 	CHECK_IN_EVENT_ROUTE,
 	CHECK_IN_EVENT_TITLE,
 	FRONTDESK_EMAIL,
@@ -61,7 +59,7 @@ async function cleanUpPreviousRun(request) {
 	}
 }
 
-setup("seed check-in event, ticket and front-desk user", async ({ request, baseURL }) => {
+setup("seed check-in event, ticket type and front-desk users", async ({ request, baseURL }) => {
 	await cleanUpPreviousRun(request);
 
 	if (!(await docExists(request, "Event Category", CATEGORY))) {
@@ -99,14 +97,6 @@ setup("seed check-in event, ticket and front-desk user", async ({ request, baseU
 		is_published: 1,
 	});
 
-	const ticket = await createDoc<NamedDoc>(request, "Event Ticket", {
-		event: event.name,
-		ticket_type: ticketType.name,
-		attendee_name: CHECK_IN_ATTENDEE_NAME,
-		attendee_email: CHECK_IN_ATTENDEE_EMAIL,
-	});
-	expect(ticket.name).toBeTruthy();
-
 	await createUserWithRoles(request, {
 		email: FRONTDESK_EMAIL,
 		firstName: "Frontdesk",
@@ -133,5 +123,5 @@ setup("seed check-in event, ticket and front-desk user", async ({ request, baseU
 		statePath: NO_ROLE_STATE_PATH,
 	});
 
-	console.log(`Check-in setup complete. Event ${event.name}, ticket ${ticket.name}`);
+	console.log(`Check-in setup complete. Event ${event.name}, ticket type ${ticketType.name}`);
 });

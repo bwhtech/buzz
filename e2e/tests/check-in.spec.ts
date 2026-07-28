@@ -1,5 +1,5 @@
 import { APIRequestContext, expect, test } from "@playwright/test";
-import { getList, newApiContext } from "../helpers";
+import { createDoc, getList, newApiContext } from "../helpers";
 import { CheckInPage } from "../pages";
 import {
 	CHECK_IN_ATTENDEE_EMAIL,
@@ -14,7 +14,20 @@ interface NamedDoc {
 
 let admin: APIRequestContext;
 let eventName: string;
+let ticketType: string;
 let ticketId: string;
+
+// A fresh ticket per test: checking one in is not undoable within a run, so sharing would
+// leave a retry scanning an already-used ticket.
+async function createTicket(): Promise<string> {
+	const ticket = await createDoc<NamedDoc>(admin, "Event Ticket", {
+		event: eventName,
+		ticket_type: ticketType,
+		attendee_name: CHECK_IN_ATTENDEE_NAME,
+		attendee_email: CHECK_IN_ATTENDEE_EMAIL,
+	});
+	return ticket.name;
+}
 
 test.beforeAll(async ({ baseURL }) => {
 	admin = await newApiContext(baseURL!);
@@ -25,11 +38,15 @@ test.beforeAll(async ({ baseURL }) => {
 	expect(events.length).toBeGreaterThan(0);
 	eventName = events[0].name;
 
-	const tickets = await getList<NamedDoc>(admin, "Event Ticket", {
-		filters: { attendee_email: ["=", CHECK_IN_ATTENDEE_EMAIL] },
+	const ticketTypes = await getList<NamedDoc>(admin, "Event Ticket Type", {
+		filters: { event: ["=", eventName] },
 	});
-	expect(tickets.length).toBeGreaterThan(0);
-	ticketId = tickets[0].name;
+	expect(ticketTypes.length).toBeGreaterThan(0);
+	ticketType = ticketTypes[0].name;
+});
+
+test.beforeEach(async () => {
+	ticketId = await createTicket();
 });
 
 test.afterAll(async () => {
@@ -64,8 +81,7 @@ test.describe("Check-in scanner", () => {
 		await checkInPage.expectToast(/No ticket matches this code/i);
 	});
 
-	// Ordered last: it consumes the seeded ticket for the day.
-	test("checking in records the visit, and a second scan is refused", async ({ page }) => {
+	test("checking in records the visit", async ({ page }) => {
 		const checkInPage = new CheckInPage(page);
 		await checkInPage.goto(eventName);
 		await checkInPage.expectScannerVisible();
@@ -74,13 +90,23 @@ test.describe("Check-in scanner", () => {
 		await checkInPage.expectTicketModal(CHECK_IN_ATTENDEE_NAME);
 		await checkInPage.confirmCheckIn();
 
-		await expect(checkInPage.lastScanResult).toBeVisible({ timeout: 15000 });
 		const checkIns = await getList<NamedDoc>(admin, "Event Check In", {
 			filters: { ticket: ["=", ticketId] },
 		});
 		expect(checkIns.length).toBe(1);
+	});
+
+	test("a second scan the same day is refused", async ({ page }) => {
+		const checkInPage = new CheckInPage(page);
+		await checkInPage.goto(eventName);
+		await checkInPage.expectScannerVisible();
 
 		await checkInPage.submitTicketId(ticketId);
+		await checkInPage.expectTicketModal(CHECK_IN_ATTENDEE_NAME);
+		await checkInPage.confirmCheckIn();
+
+		await checkInPage.submitTicketId(ticketId);
+
 		await checkInPage.expectToast(/already checked in today/i);
 	});
 });

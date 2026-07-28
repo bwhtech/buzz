@@ -29,8 +29,17 @@ export class CheckInPage {
 		await this.checkButton.click();
 	}
 
+	/**
+	 * Clicks Check In and waits for the request to land. The "Last Scan Result" panel is not a
+	 * usable signal — it is already on screen from the preceding validate call.
+	 */
 	async confirmCheckIn(): Promise<void> {
+		const recorded = this.page.waitForResponse(
+			(response) => response.url().includes("checkin_ticket") && response.status() === 200,
+		);
 		await this.checkInButton.click();
+		await recorded;
+		await expect(this.ticketModal).toBeHidden();
 	}
 
 	async expectScannerVisible(): Promise<void> {
