@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 import frappe
 from frappe import _
 from frappe.utils import format_date, format_time, today
@@ -9,6 +11,11 @@ from buzz.api.checkin.schemas import (
 	TicketAddOn,
 	TicketCheckinDetails,
 )
+
+if TYPE_CHECKING:
+	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
+	from buzz.events.doctype.event_check_in.event_check_in import EventCheckIn
+	from buzz.ticketing.doctype.event_ticket.event_ticket import EventTicket
 
 CANCELLED = 2
 
@@ -25,11 +32,11 @@ class CheckinService:
 		self.date = today()
 
 	@property
-	def ticket(self):
+	def ticket(self) -> "EventTicket":
 		return frappe.get_cached_doc("Event Ticket", self.ticket_id)
 
 	@property
-	def event(self):
+	def event(self) -> "BuzzEvent":
 		return frappe.get_cached_doc("Buzz Event", self.ticket.event)
 
 	def validate(self) -> CheckinResponse:
@@ -65,7 +72,7 @@ class CheckinService:
 			creation = frappe.db.get_value("Event Check In", existing, "creation")
 			AlreadyCheckedIn.throw(checked_in_at=f"{format_date(creation)} at {format_time(creation)}")
 
-	def record_checkin(self):
+	def record_checkin(self) -> "EventCheckIn":
 		checkin_doc = frappe.new_doc("Event Check In")
 		checkin_doc.ticket = self.ticket_id
 		checkin_doc.date = self.date
