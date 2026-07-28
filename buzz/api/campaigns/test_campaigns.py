@@ -4,7 +4,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.campaigns import get_campaign_details
-from buzz.api.exceptions import Conflict
+from buzz.api.campaigns.exceptions import AlreadyRegistered, CampaignNotActive, CRMNotAvailable
 from buzz.utils import is_app_installed
 
 
@@ -24,8 +24,15 @@ class TestCampaignErrors(IntegrationTestCase):
 		with self.assertRaises(frappe.DoesNotExistError):
 			get_campaign_details("no-such-campaign")
 
-	def test_conflict_maps_to_409(self):
-		self.assertEqual(Conflict.http_status_code, 409)
+	def test_status_codes(self):
+		self.assertEqual(CampaignNotActive.http_status_code, 409)
+		self.assertEqual(AlreadyRegistered.http_status_code, 409)
+		self.assertEqual(CRMNotAvailable.http_status_code, 400)
+
+	def test_each_error_carries_its_own_copy(self):
+		titles = {str(error.title) for error in (CampaignNotActive, AlreadyRegistered, CRMNotAvailable)}
+
+		self.assertEqual(len(titles), 3)
 
 
 # Buzz Campaign refuses to save unless Frappe CRM is installed.
@@ -39,8 +46,11 @@ class TestGetCampaignDetails(IntegrationTestCase):
 
 		self.assertEqual(set(details), {"title", "description", "event"})
 
-	def test_disabled_campaign_raises_conflict(self):
+	def test_disabled_campaign_reports_its_message(self):
 		campaign = make_campaign(enabled=0)
+		frappe.clear_messages()
 
-		with self.assertRaises(Conflict):
+		with self.assertRaises(CampaignNotActive):
 			get_campaign_details(campaign)
+
+		self.assertEqual(frappe.local.message_log[-1]["title"], "Campaign Closed")

@@ -2,7 +2,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.account import get_enabled_languages, get_user_info, update_user_language
-from buzz.api.exceptions import BuzzAPIError
+from buzz.api.account.exceptions import UnknownLanguage
 
 
 class TestGetUserInfo(IntegrationTestCase):
@@ -55,11 +55,17 @@ class TestLanguages(IntegrationTestCase):
 		self.assertEqual(set(languages[0]), {"name", "language_name", "language_code"})
 
 	def test_update_rejects_unknown_language(self):
-		with self.assertRaises(BuzzAPIError):
+		frappe.clear_messages()
+
+		with self.assertRaises(UnknownLanguage):
 			update_user_language("not-a-language")
 
+		message = frappe.local.message_log[-1]
+		self.assertEqual(message["title"], "Language Not Available")
+		self.assertIn("not-a-language", message["message"])
+
 	def test_unknown_language_maps_to_400(self):
-		self.assertEqual(BuzzAPIError.http_status_code, 400)
+		self.assertEqual(UnknownLanguage.http_status_code, 400)
 
 	def test_update_persists_language(self):
 		original = frappe.db.get_value("User", "Administrator", "language")

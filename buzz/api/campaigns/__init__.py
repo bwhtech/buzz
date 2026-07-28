@@ -1,8 +1,8 @@
 import frappe
 from frappe import _
 
+from buzz.api.campaigns.exceptions import AlreadyRegistered, CampaignNotActive, CRMNotAvailable
 from buzz.api.campaigns.schemas import CampaignResponse
-from buzz.api.exceptions import Conflict
 from buzz.utils import is_app_installed
 
 
@@ -11,7 +11,7 @@ def get_campaign_details(campaign: str) -> CampaignResponse:
 	campaign_doc = get_campaign(campaign)
 
 	if not campaign_doc.enabled:
-		frappe.throw(_("This campaign is not active"), Conflict)
+		CampaignNotActive.throw()
 
 	return CampaignResponse(
 		title=campaign_doc.title,
@@ -26,12 +26,12 @@ def register_campaign_interest(campaign: str) -> None:
 		frappe.throw(_("Please login to register your interest"), frappe.AuthenticationError)
 
 	if not is_app_installed("crm"):
-		frappe.throw(_("CRM integration is not available"))
+		CRMNotAvailable.throw()
 
 	campaign_doc = get_campaign(campaign)
 
 	if frappe.db.exists("CRM Lead", {"email": frappe.session.user, "buzz_campaign": campaign}):
-		frappe.throw(_("You have already registered for this campaign"), Conflict)
+		AlreadyRegistered.throw()
 
 	create_campaign_lead(campaign_doc)
 

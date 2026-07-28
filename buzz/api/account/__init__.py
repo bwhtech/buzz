@@ -1,9 +1,8 @@
 import frappe
-from frappe import _
 from frappe.translate import get_all_translations
 
+from buzz.api.account.exceptions import UnknownLanguage
 from buzz.api.account.schemas import GuestInfoResponse, LanguageOption, UserInfoResponse
-from buzz.api.exceptions import BuzzAPIError
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
@@ -44,7 +43,7 @@ def get_enabled_languages() -> list[LanguageOption]:
 @frappe.whitelist()
 def update_user_language(language_code: str) -> None:
 	if not frappe.db.exists("Language", {"language_code": language_code}):
-		frappe.throw(_("Invalid language"), BuzzAPIError)
+		UnknownLanguage.throw(language_code=language_code)
 
 	frappe.db.set_value("User", frappe.session.user, "language", language_code)
 
