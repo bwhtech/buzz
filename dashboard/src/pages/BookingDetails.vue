@@ -156,7 +156,7 @@ const { showSuccessMessage } = usePaymentSuccess({
 const showCancellationDialog = ref(false);
 
 const bookingDetails = createResource({
-	url: "buzz.api.get_booking_details",
+	url: "buzz.api.booking.get_booking_details",
 	params: { booking_id: props.bookingId },
 	auto: true,
 	onSuccess: (data: Record<string, any>) => {

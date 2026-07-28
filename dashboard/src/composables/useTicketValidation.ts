@@ -92,7 +92,7 @@ const showDebouncedToast = (
 
 // Ticket validation resource
 const validateTicketResource = createResource({
-	url: "buzz.api.validate_ticket_for_checkin",
+	url: "buzz.api.checkin.validate_ticket_for_checkin",
 	onSuccess: (data: ValidationResult) => {
 		validationResult.value = data
 		showTicketModal.value = true
@@ -129,7 +129,7 @@ const validateTicketResource = createResource({
 
 // Check-in resource
 const checkInResource = createResource({
-	url: "buzz.api.checkin_ticket",
+	url: "buzz.api.checkin.checkin_ticket",
 	onSuccess: (data: ValidationResult) => {
 		validationResult.value = data
 		showTicketModal.value = false

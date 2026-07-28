@@ -70,7 +70,7 @@ const columns = [
 ];
 
 const sponsorships = createResource({
-	url: "buzz.api.get_user_sponsorship_inquiries",
+	url: "buzz.api.sponsorships.get_user_sponsorship_inquiries",
 	auto: true,
 	cacheKey: "sponsorships-list",
 	onError: console.error,

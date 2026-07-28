@@ -90,7 +90,7 @@ const renderedDescription = computed(() => {
 });
 
 const campaignResource = createResource({
-	url: "buzz.api.get_campaign_details",
+	url: "buzz.api.campaigns.get_campaign_details",
 	params: {
 		campaign: props.campaign,
 	},
@@ -104,7 +104,7 @@ const campaignResource = createResource({
 });
 
 const registerResource = createResource({
-	url: "buzz.api.register_campaign_interest",
+	url: "buzz.api.campaigns.register_campaign_interest",
 	onSuccess: () => {
 		registered.value = true;
 		errorMessage.value = null;
