@@ -2,6 +2,12 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Event Proposal", {
+	// Guest submissions leave owner as "Guest", so there is nothing to prefill.
+	get_email_recipients(frm, fieldname) {
+		const owner = frm.doc.owner || "";
+		return fieldname === "recipients" && owner.includes("@") ? [owner] : [];
+	},
+
 	refresh(frm) {
 		if (!frm.is_new() && frm.doc.docstatus == 0) {
 			frm.set_intro("Buzz Event will be created on submission of this document", "yellow");

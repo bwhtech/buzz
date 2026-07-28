@@ -2,6 +2,13 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Talk Proposal", {
+	get_email_recipients(frm, fieldname) {
+		if (fieldname !== "recipients") {
+			return [];
+		}
+		return (frm.doc.speakers || []).map((speaker) => speaker.email).filter(Boolean);
+	},
+
 	refresh(frm) {
 		if (frm.doc.status != "Accepted") {
 			const btn = frm.add_custom_button(__("Accept and Create Talk"), () => {
