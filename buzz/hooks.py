@@ -78,7 +78,7 @@ add_to_apps_screen = [
 		"logo": "/assets/buzz/images/buzz-logo-rounded.png",
 		"title": "Buzz",
 		"route": "/app/buzz",
-		"has_permission": "buzz.api.has_app_permission",
+		"has_permission": "buzz.api.account.has_app_permission",
 	}
 ]
 

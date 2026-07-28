@@ -7,7 +7,7 @@ from frappe import _
 from frappe.email.doctype.email_template.email_template import get_email_template
 from frappe.model.document import Document
 
-from buzz.api import OFFLINE_PAYMENT_METHOD
+from buzz.api.booking import OFFLINE_PAYMENT_METHOD
 from buzz.payments import mark_payment_as_received
 
 
