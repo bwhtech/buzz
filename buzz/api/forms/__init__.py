@@ -19,9 +19,8 @@ def get_custom_form_data(event_route: str, form_route: str) -> CustomFormRespons
 	return CustomFormService(event_route, form_route).form_data()
 
 
-@frappe.whitelist(
-	allow_guest=True, methods=["POST"]
-)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+# nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+@frappe.whitelist(allow_guest=True, methods=["POST"])
 def submit_custom_form(
 	event_route: str, form_route: str, data: dict | str, custom_fields_data: dict | str | None = None
 ) -> None:
@@ -33,8 +32,7 @@ def get_event_proposal_form_data() -> EventProposalFormResponse:
 	return get_event_proposal_form()
 
 
-@frappe.whitelist(
-	allow_guest=True, methods=["POST"]
-)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+# nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+@frappe.whitelist(allow_guest=True, methods=["POST"])
 def submit_event_proposal(data: dict | str) -> None:
 	create_event_proposal(data)
