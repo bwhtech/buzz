@@ -270,7 +270,7 @@ const closeDialog = () => {
 };
 
 const createCancellationRequest = createResource({
-	url: "buzz.api.create_cancellation_request",
+	url: "buzz.api.tickets.create_cancellation_request",
 	onSuccess: (data: any) => {
 		submitting.value = false;
 		const ticketCount = selectedTickets.value.length;

@@ -3,29 +3,19 @@ from frappe import _
 from payments.utils import get_payment_gateway_controller
 
 
-def get_payment_gateway_for_event(event: str):
-	return frappe.get_cached_value("Buzz Event", event, "payment_gateway")
-
-
 def get_payment_gateways_for_event(event: str) -> list[str]:
 	"""Get all payment gateways configured for an event."""
-	gateways = frappe.get_all(
+	return frappe.get_all(
 		"Event Payment Gateway",
 		filters={"parent": event, "parenttype": "Buzz Event"},
 		pluck="payment_gateway",
 	)
-	if not gateways:
-		# Fallback to legacy field
-		legacy = frappe.get_cached_value("Buzz Event", event, "payment_gateway")
-		return [legacy] if legacy else []
-	return gateways
 
 
 def get_controller(payment_gateway):
 	return get_payment_gateway_controller(payment_gateway)
 
 
-@frappe.whitelist()
 def get_payment_link_for_booking(
 	booking_id: str, redirect_to: str = "/events", payment_gateway: str | None = None
 ) -> str:
@@ -47,7 +37,6 @@ def get_payment_link_for_booking(
 	)
 
 
-@frappe.whitelist()
 def get_payment_link_for_sponsorship(
 	sponsorship_enquiry: str,
 	sponsorship_tier: str,
@@ -137,8 +126,6 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 	if frappe.in_test:
 		return
 
-	import json
-
 	request = frappe.get_all(
 		"Integration Request",
 		{
@@ -151,7 +138,7 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 
 	if len(request):
 		data = frappe.db.get_value("Integration Request", request[0].name, "data")
-		data = frappe._dict(json.loads(data))
+		data = frappe.parse_json(data)
 
 		payment_gateway = data.get("payment_gateway")
 		if payment_gateway == "Razorpay":

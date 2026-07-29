@@ -5,16 +5,17 @@ export class CustomFormPage {
 	private form: Locator;
 	private submitButton: Locator;
 	private successBanner: Locator;
-	private closedBanner: Locator;
-	private errorBanner: Locator;
+	private noticeBanner: Locator;
+	private loginRequiredHeading: Locator;
 
 	constructor(page: Page) {
 		this.page = page;
 		this.form = page.locator("form");
 		this.submitButton = page.locator('button[type="submit"]').filter({ hasText: /^Submit$/ });
 		this.successBanner = page.locator(".bg-surface-green-1");
-		this.closedBanner = page.locator(".bg-surface-orange-1");
-		this.errorBanner = page.locator(".bg-surface-amber-1");
+		// The closed and not-found panels share one amber style, so they are told apart by heading.
+		this.noticeBanner = page.locator(".bg-surface-amber-1");
+		this.loginRequiredHeading = page.getByRole("heading", { name: "Login Required" });
 	}
 
 	async goto(eventRoute: string, formRoute: string): Promise<void> {
@@ -81,12 +82,20 @@ export class CustomFormPage {
 		await expect(this.successBanner).toBeVisible({ timeout: 15000 });
 	}
 
-	async expectClosed(): Promise<void> {
-		await expect(this.closedBanner).toBeVisible({ timeout: 15000 });
+	async expectClosed(title: string, message: string): Promise<void> {
+		await expect(this.noticeBanner).toBeVisible({ timeout: 15000 });
+		await expect(this.noticeBanner).toContainText(title);
+		await expect(this.noticeBanner).toContainText(message);
 	}
 
 	async expectNotFound(): Promise<void> {
-		await expect(this.errorBanner).toBeVisible({ timeout: 15000 });
+		await expect(this.noticeBanner).toBeVisible({ timeout: 15000 });
+		await expect(this.noticeBanner).toContainText("Not Found");
+	}
+
+	async expectLoginRequired(): Promise<void> {
+		await expect(this.loginRequiredHeading).toBeVisible({ timeout: 15000 });
+		await expect(this.page.getByText("Please log in to submit this form.")).toBeVisible();
 	}
 
 	async getFieldLabels(): Promise<string[]> {

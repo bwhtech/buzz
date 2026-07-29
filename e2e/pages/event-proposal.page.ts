@@ -70,6 +70,13 @@ export class EventProposalPage {
 		await expect(this.notFoundBanner).toBeVisible({ timeout: 15000 });
 	}
 
+	async expectLoginRequired(): Promise<void> {
+		await expect(this.page.getByRole("heading", { name: "Login Required" })).toBeVisible({
+			timeout: 15000,
+		});
+		await expect(this.page.getByText("Please log in to submit a proposal.")).toBeVisible();
+	}
+
 	async submit(): Promise<void> {
 		await this.submitButton.click();
 	}

@@ -1,4 +1,7 @@
-import { APIRequestContext, BrowserContext, Page } from "@playwright/test";
+import { APIRequestContext, BrowserContext, Page, request as playwrightRequest } from "@playwright/test";
+import * as fs from "fs";
+import * as path from "path";
+import { createDoc, docExists, updateDoc } from "./frappe";
 
 const STORAGE_STATE_PATH = "e2e/.auth/user.json";
 
@@ -62,6 +65,61 @@ export async function saveAuthState(context: BrowserContext): Promise<void> {
  */
 export function getStorageStatePath() {
 	return STORAGE_STATE_PATH;
+}
+
+/**
+ * Create a user holding the given roles, or top up the roles if they already exist.
+ * Returns the user's name (its email).
+ */
+export async function createUserWithRoles(
+	request: APIRequestContext,
+	options: { email: string; firstName: string; password: string; roles: string[] },
+): Promise<string> {
+	const { email, firstName, password, roles } = options;
+	const doc = {
+		first_name: firstName,
+		new_password: password,
+		send_welcome_email: 0,
+		enabled: 1,
+		roles: roles.map((role) => ({ role })),
+	};
+
+	if (await docExists(request, "User", email)) {
+		await updateDoc(request, "User", email, doc);
+		return email;
+	}
+
+	await createDoc(request, "User", { email, user_type: "System User", ...doc });
+	return email;
+}
+
+/**
+ * Log in as the given user in a throwaway context and persist the session to `statePath`,
+ * so a Playwright project can run under an identity other than the shared one.
+ */
+export async function saveLoginState(
+	baseURL: string,
+	options: { email: string; password: string; statePath: string },
+): Promise<void> {
+	const context = await playwrightRequest.newContext({ baseURL });
+	try {
+		await loginViaAPI(context, options.email, options.password);
+		fs.mkdirSync(path.dirname(options.statePath), { recursive: true });
+		await context.storageState({ path: options.statePath });
+	} finally {
+		await context.dispose();
+	}
+}
+
+/**
+ * API context under a saved session. Lets a spec running as one user read or assert as
+ * another — the shared Administrator state by default.
+ */
+export async function newApiContext(
+	baseURL: string,
+	statePath: string = STORAGE_STATE_PATH,
+): Promise<APIRequestContext> {
+	return playwrightRequest.newContext({ baseURL, storageState: statePath });
 }
 
 /**

@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { EventProposalPage } from "../pages";
+import { newApiContext } from "../helpers/auth";
 import { callMethod, updateDoc } from "../helpers/frappe";
 
 test.describe("Event Proposal Form - Rendering", () => {
@@ -145,6 +146,36 @@ test.describe("Event Proposal Form - API", () => {
 
 		for (const excluded of excludedFields) {
 			expect(fieldnames).not.toContain(excluded);
+		}
+	});
+});
+
+test.describe("Event Proposal Form - Guest Access", () => {
+	test.use({ storageState: { cookies: [], origins: [] } });
+
+	test("guest sees the form while guest proposals are allowed", async ({ page }) => {
+		const proposalPage = new EventProposalPage(page);
+		await proposalPage.goto();
+		await proposalPage.waitForFormLoad();
+		await proposalPage.expectFormVisible();
+	});
+
+	test("guest gets the login prompt once guest proposals are off", async ({ page, baseURL }) => {
+		// This spec runs signed out, so the settings flip needs the shared admin session.
+		const admin = await newApiContext(baseURL!);
+		await updateDoc(admin, "Buzz Settings", "Buzz Settings", {
+			allow_guest_event_proposals: 0,
+		});
+
+		try {
+			const proposalPage = new EventProposalPage(page);
+			await proposalPage.goto();
+			await proposalPage.expectLoginRequired();
+		} finally {
+			await updateDoc(admin, "Buzz Settings", "Buzz Settings", {
+				allow_guest_event_proposals: 1,
+			});
+			await admin.dispose();
 		}
 	});
 });

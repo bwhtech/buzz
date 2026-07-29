@@ -1,11 +1,17 @@
 import { test as setup, expect } from "@playwright/test";
+import {
+	CLOSED_FORM_MESSAGE,
+	CLOSED_FORM_ROUTE,
+	CLOSED_FORM_TITLE,
+	CUSTOM_FORMS_EVENT_ROUTE,
+	MEMBERS_ONLY_FORM_ROUTE,
+} from "../data/custom-forms";
 import { createDoc, docExists, getDoc, getList, updateDoc } from "../helpers/frappe";
 
 interface NamedDoc {
 	name: string;
 }
 
-const testEventRoute = "custom-forms-e2e";
 const testCategoryName = "E2E Test Category";
 const testHostName = "E2E Test Host";
 
@@ -13,7 +19,7 @@ setup("setup custom forms on test event", async ({ request }) => {
 	let eventName: string;
 
 	const events = await getList<NamedDoc>(request, "Buzz Event", {
-		filters: { route: ["=", testEventRoute] },
+		filters: { route: ["=", CUSTOM_FORMS_EVENT_ROUTE] },
 	});
 
 	if (events.length > 0) {
@@ -39,7 +45,7 @@ setup("setup custom forms on test event", async ({ request }) => {
 			category: testCategoryName,
 			host: testHostName,
 			start_date: startDate,
-			route: testEventRoute,
+			route: CUSTOM_FORMS_EVENT_ROUTE,
 			is_published: 1,
 			start_time: "09:00:00",
 			end_time: "17:00:00",
@@ -53,6 +59,22 @@ setup("setup custom forms on test event", async ({ request }) => {
 			{ doctype: "Buzz Event Form", form_doctype: "Event Feedback", route: "feedback", publish: 1 },
 			{ doctype: "Buzz Event Form", form_doctype: "Talk Proposal", route: "propose-talk", publish: 1 },
 			{ doctype: "Buzz Event Form", form_doctype: "Sponsorship Enquiry", route: "enquire-sponsorship", publish: 1 },
+			{
+				doctype: "Buzz Event Form",
+				form_doctype: "Event Feedback",
+				route: MEMBERS_ONLY_FORM_ROUTE,
+				publish: 1,
+				login_required: 1,
+			},
+			{
+				doctype: "Buzz Event Form",
+				form_doctype: "Event Feedback",
+				route: CLOSED_FORM_ROUTE,
+				publish: 1,
+				auto_close_at: "2020-01-01 00:00:00",
+				closed_title: CLOSED_FORM_TITLE,
+				closed_message: CLOSED_FORM_MESSAGE,
+			},
 		],
 	});
 
@@ -60,7 +82,7 @@ setup("setup custom forms on test event", async ({ request }) => {
 		request, "Buzz Event", eventName,
 	);
 	const publishedForms = (updated.custom_forms || []).filter((f) => f.publish);
-	expect(publishedForms.length).toBe(3);
+	expect(publishedForms.length).toBe(5);
 
 	console.log(`Custom forms enabled on event: ${eventName} (${publishedForms.length} forms: ${publishedForms.map((f) => f.route).join(", ")})`);
 });

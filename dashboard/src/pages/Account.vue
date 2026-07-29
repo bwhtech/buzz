@@ -39,7 +39,7 @@ const route = useRoute();
 const router = useRouter();
 
 const sponsorships = createResource({
-	url: "buzz.api.get_user_sponsorship_inquiries",
+	url: "buzz.api.sponsorships.get_user_sponsorship_inquiries",
 	auto: true,
 	cacheKey: "account-sponsorships-check",
 	onError: console.error,

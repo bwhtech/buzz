@@ -12,6 +12,9 @@ required_apps = ["frappe/payments"]
 
 export_python_type_annotations = True
 
+# Require all whitelisted methods to have type annotations
+require_type_annotated_api_methods = True
+
 after_install = "buzz.install.after_install"
 
 before_uninstall = "buzz.uninstall.before_uninstall"
@@ -78,7 +81,7 @@ add_to_apps_screen = [
 		"logo": "/assets/buzz/images/buzz-logo-rounded.png",
 		"title": "Buzz",
 		"route": "/app/buzz",
-		"has_permission": "buzz.api.has_app_permission",
+		"has_permission": "buzz.api.account.has_app_permission",
 	}
 ]
 
