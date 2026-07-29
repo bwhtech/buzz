@@ -4,6 +4,13 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from buzz.api.booking import validate_coupon as validate_coupon_endpoint
+
+
+def validate_coupon(coupon_code, event, user_email=None):
+	return validate_coupon_endpoint(coupon_code, event, user_email).__json__()
+
+
 EXTRA_TEST_RECORD_DEPENDENCIES = []
 IGNORE_TEST_RECORD_DEPENDENCIES = []
 
@@ -1099,8 +1106,6 @@ class TestValidateCouponAPI(IntegrationTestCase):
 
 	def test_validate_coupon_returns_discount_info(self):
 		"""Test that validate_coupon returns correct discount info."""
-		from buzz.api.booking import validate_coupon
-
 		frappe.get_doc(
 			{
 				"doctype": "Buzz Coupon Code",
@@ -1121,8 +1126,6 @@ class TestValidateCouponAPI(IntegrationTestCase):
 
 	def test_validate_coupon_returns_max_and_min_values(self):
 		"""Test that validate_coupon returns max_discount_amount and min_order_value."""
-		from buzz.api.booking import validate_coupon
-
 		frappe.get_doc(
 			{
 				"doctype": "Buzz Coupon Code",
@@ -1144,8 +1147,6 @@ class TestValidateCouponAPI(IntegrationTestCase):
 
 	def test_validate_coupon_returns_free_tickets_info(self):
 		"""Test that validate_coupon returns correct free tickets info."""
-		from buzz.api.booking import validate_coupon
-
 		frappe.get_doc(
 			{
 				"doctype": "Buzz Coupon Code",
@@ -1167,8 +1168,6 @@ class TestValidateCouponAPI(IntegrationTestCase):
 
 	def test_validate_coupon_invalid_code(self):
 		"""Test that invalid coupon code returns error."""
-		from buzz.api.booking import validate_coupon
-
 		result = validate_coupon("INVALIDCODE", str(self.test_event.name))
 
 		self.assertFalse(result["valid"])
@@ -1178,8 +1177,6 @@ class TestValidateCouponAPI(IntegrationTestCase):
 
 	def test_coupon_not_yet_active(self):
 		"""Test that coupon with future valid_from is rejected."""
-		from buzz.api.booking import validate_coupon
-
 		frappe.get_doc(
 			{
 				"doctype": "Buzz Coupon Code",
@@ -1199,8 +1196,6 @@ class TestValidateCouponAPI(IntegrationTestCase):
 
 	def test_expired_coupon_rejected(self):
 		"""Test that expired coupon is rejected."""
-		from buzz.api.booking import validate_coupon
-
 		frappe.get_doc(
 			{
 				"doctype": "Buzz Coupon Code",
@@ -1220,8 +1215,6 @@ class TestValidateCouponAPI(IntegrationTestCase):
 
 	def test_coupon_within_validity_period(self):
 		"""Test that coupon within valid date range works."""
-		from buzz.api.booking import validate_coupon
-
 		frappe.get_doc(
 			{
 				"doctype": "Buzz Coupon Code",
@@ -1243,8 +1236,6 @@ class TestValidateCouponAPI(IntegrationTestCase):
 
 	def test_max_usage_per_user_enforced(self):
 		"""Test that user cannot exceed per-user usage limit."""
-		from buzz.api.booking import validate_coupon
-
 		coupon = frappe.get_doc(
 			{
 				"doctype": "Buzz Coupon Code",
@@ -1283,8 +1274,6 @@ class TestValidateCouponAPI(IntegrationTestCase):
 
 	def test_per_user_limit_does_not_affect_other_users(self):
 		"""Test that per-user limit doesn't block other users."""
-		from buzz.api.booking import validate_coupon
-
 		coupon = frappe.get_doc(
 			{
 				"doctype": "Buzz Coupon Code",

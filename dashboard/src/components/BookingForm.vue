@@ -1292,8 +1292,10 @@ function submitBooking(
 ) {
 	processBooking.submit(
 		{
-			...payload,
-			payment_gateway: paymentGateway,
+			booking: {
+				...payload,
+				payment_gateway: paymentGateway,
+			},
 		},
 		{
 			onSuccess: (data: BookingSubmitResponse) => {

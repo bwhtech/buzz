@@ -7,7 +7,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from buzz.api.booking import are_registrations_closed
+from buzz.api.booking.services import are_registrations_closed
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, create_from_template
 from buzz.events.doctype.event_template.event_template import create_template_from_event
 from buzz.patches.set_time_zone_label_for_existing_events import execute as backfill_time_zone_labels
@@ -719,7 +719,7 @@ class TestRegistrationsClosed(FrappeTestCase):
 			end_date="2026-06-20",
 			end_time="18:00:00",
 		)
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=fake_now):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=fake_now):
 			self.assertFalse(are_registrations_closed(event))
 
 	def test_no_close_at_falls_back_to_event_end(self):
@@ -732,7 +732,7 @@ class TestRegistrationsClosed(FrappeTestCase):
 			end_date="2026-06-15",
 			end_time="18:00:00",  # event ended 2 hours before fake_now
 		)
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=fake_now):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=fake_now):
 			self.assertTrue(are_registrations_closed(event))
 
 	def test_close_at_takes_priority_over_event_end(self):
@@ -746,7 +746,7 @@ class TestRegistrationsClosed(FrappeTestCase):
 			end_date="2026-06-15",
 			end_time="18:00:00",
 		)
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=fake_now):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=fake_now):
 			self.assertFalse(are_registrations_closed(event))
 
 	def test_future_close_at_returns_false(self):
@@ -756,7 +756,7 @@ class TestRegistrationsClosed(FrappeTestCase):
 			registrations_close_at="2026-06-15 12:00:00",  # 2 hours after fake_now
 			time_zone="UTC",
 		)
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=fake_now):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=fake_now):
 			self.assertFalse(are_registrations_closed(event))
 
 	def test_past_close_at_returns_true(self):
@@ -766,7 +766,7 @@ class TestRegistrationsClosed(FrappeTestCase):
 			registrations_close_at="2026-06-15 12:00:00",  # 2 hours before fake_now
 			time_zone="UTC",
 		)
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=fake_now):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=fake_now):
 			self.assertTrue(are_registrations_closed(event))
 
 	def test_timezone_ahead_of_utc_closes_earlier(self):
@@ -783,7 +783,7 @@ class TestRegistrationsClosed(FrappeTestCase):
 			time_zone="Asia/Kolkata",
 		)
 
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=fake_ist_now):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=fake_ist_now):
 			# 19:30 IST > 18:00 IST → closed
 			self.assertTrue(are_registrations_closed(event))
 
@@ -801,7 +801,7 @@ class TestRegistrationsClosed(FrappeTestCase):
 			time_zone="US/Pacific",
 		)
 
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=fake_pdt_now):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=fake_pdt_now):
 			# 16:00 PDT < 18:00 PDT → still open
 			self.assertFalse(are_registrations_closed(event))
 
@@ -819,12 +819,12 @@ class TestRegistrationsClosed(FrappeTestCase):
 
 		# 17:30 UTC = 23:00 IST
 		fake_ist_now = datetime(2026, 6, 15, 23, 0, 0, tzinfo=timezone(timedelta(hours=5, minutes=30)))
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=fake_ist_now):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=fake_ist_now):
 			self.assertTrue(are_registrations_closed(event_ist))
 
 		# 17:30 UTC = 10:30 PDT
 		fake_pdt_now = datetime(2026, 6, 15, 10, 30, 0, tzinfo=timezone(timedelta(hours=-7)))
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=fake_pdt_now):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=fake_pdt_now):
 			self.assertFalse(are_registrations_closed(event_pdt))
 
 	def test_falls_back_to_system_timezone_when_event_tz_not_set(self):
@@ -834,7 +834,7 @@ class TestRegistrationsClosed(FrappeTestCase):
 			registrations_close_at="2026-06-15 13:00:00",  # 1 hour before fake_now
 			time_zone=None,
 		)
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=fake_now):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=fake_now):
 			self.assertTrue(are_registrations_closed(event))
 
 	def test_closing_moment_is_same_absolute_instant_for_viewers_anywhere(self):
@@ -858,17 +858,17 @@ class TestRegistrationsClosed(FrappeTestCase):
 		# Exactly at the closing instant (11:00 UTC / noon BST / 16:30 IST) -> comparison is
 		# strictly-greater-than, so registrations are still open at the exact boundary.
 		at_close = datetime(2026, 6, 15, 16, 30, 0, tzinfo=timezone(timedelta(hours=5, minutes=30)))
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=at_close):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=at_close):
 			self.assertFalse(are_registrations_closed(event))
 
 		# One minute before that shared instant (10:59 UTC / 11:59 BST / 16:29 IST) -> still open.
 		before_close = datetime(2026, 6, 15, 16, 29, 0, tzinfo=timezone(timedelta(hours=5, minutes=30)))
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=before_close):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=before_close):
 			self.assertFalse(are_registrations_closed(event))
 
 		# One minute after (11:01 UTC / 12:01 BST / 16:31 IST) -> closed.
 		after_close = datetime(2026, 6, 15, 16, 31, 0, tzinfo=timezone(timedelta(hours=5, minutes=30)))
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=after_close):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=after_close):
 			self.assertTrue(are_registrations_closed(event))
 
 	def test_event_end_fallback_is_also_timezone_consistent(self):
@@ -885,12 +885,12 @@ class TestRegistrationsClosed(FrappeTestCase):
 
 		# 16:29 IST (11:59 BST / noon-minus-1 in London) -> event still ongoing, open.
 		before_end = datetime(2026, 6, 15, 16, 29, 0, tzinfo=timezone(timedelta(hours=5, minutes=30)))
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=before_end):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=before_end):
 			self.assertFalse(are_registrations_closed(event))
 
 		# 16:31 IST (12:01 BST, just past noon in London) -> event over, closed.
 		after_end = datetime(2026, 6, 15, 16, 31, 0, tzinfo=timezone(timedelta(hours=5, minutes=30)))
-		with patch("buzz.api.booking.get_datetime_in_timezone", return_value=after_end):
+		with patch("buzz.api.booking.services.get_datetime_in_timezone", return_value=after_end):
 			self.assertTrue(are_registrations_closed(event))
 
 
