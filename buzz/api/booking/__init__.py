@@ -17,12 +17,8 @@ from frappe.utils import (
 )
 from frappe.utils.password import get_encryption_key
 
-from buzz.api.tickets import (
-	can_change_add_ons,
-	can_request_cancellation,
-	can_transfer_ticket,
-	create_add_on_doc,
-)
+from buzz.api.tickets import windows
+from buzz.api.tickets.services import create_add_on_doc
 from buzz.payments import get_payment_gateways_for_event, get_payment_link_for_booking
 from buzz.utils import ZOOM_BACKED_CATEGORIES, build_event_datetimes
 
@@ -605,9 +601,10 @@ def get_booking_details(booking_id: str) -> dict:
 	if details.event.venue:
 		details.venue = frappe.get_cached_doc("Event Venue", details.event.venue)
 
-	details.can_transfer_ticket = can_transfer_ticket(details.event.name)
-	details.can_change_add_ons = can_change_add_ons(details.event.name)
-	details.can_request_cancellation = can_request_cancellation(details.event.name)
+	event_id = details.event.name
+	details.can_transfer_ticket = windows.is_window_open(event_id, windows.TRANSFER)
+	details.can_change_add_ons = windows.is_window_open(event_id, windows.ADD_ON_CHANGE)
+	details.can_request_cancellation = windows.is_window_open(event_id, windows.CANCELLATION)
 
 	existing_cancellation = frappe.db.get_value(
 		"Ticket Cancellation Request",
