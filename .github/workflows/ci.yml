@@ -5,11 +5,17 @@ on:
     branches:
       - develop
       - main
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   merge_group:
 
 concurrency:
-  group: ci-buzz-${{ github.event.number || github.sha }}
+  group: ci-buzz-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -18,6 +24,9 @@ jobs:
     strategy:
       fail-fast: false
     name: Server
+
+    env:
+      PYTHONWARNINGS: ignore
 
     services:
       redis-cache:
@@ -29,84 +38,33 @@ jobs:
         ports:
           - 11000:6379
       mariadb:
-        image: mariadb:10.6
+        image: mariadb:11.8
         env:
-          MYSQL_ROOT_PASSWORD: root
+          MARIADB_ROOT_PASSWORD: root
         ports:
           - 3306:3306
-        options: --health-cmd="mariadb-admin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=2s --health-retries=3
+          --tmpfs=/var/lib/mysql:rw,noexec,nosuid,size=2g
 
     steps:
       - name: Clone
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Find tests
         run: |
           echo "Finding tests"
           grep -rn "def test" > /dev/null
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Setup Bench
+        uses: ./.github/actions/setup-bench
         with:
-          python-version: '3.14'
-
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 24
-          check-latest: true
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/setup.py', '**/setup.cfg') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-            ${{ runner.os }}-
-
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: 'echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT'
-
-      - uses: actions/cache@v4
-        id: yarn-cache
-        with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-
-      - name: Install MariaDB Client
-        run: |
-          sudo apt update
-          sudo apt-get install mariadb-client
-
-      - name: Setup
-        run: |
-          pip install frappe-bench
-          bench init --skip-redis-config-generation --skip-assets --python "$(which python)" ~/frappe-bench
-          mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
-          mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
-
-      - name: Install
-        working-directory: /home/runner/frappe-bench
-        run: |
-          bench get-app buzz $GITHUB_WORKSPACE
-          bench get-app payments
-          bench get-app zoom_integration https://github.com/bwhtech/zoom_integration
-          bench setup requirements --dev
-          bench new-site --db-root-password root --admin-password admin test_site
-          bench --site test_site install-app zoom_integration
-          bench --site test_site install-app buzz
-          bench build
-        env:
-          CI: 'Yes'
+          # test_buzz_event imports zoom_integration.tests.zoom_fixtures.
+          extra-app-url: https://github.com/bwhtech/zoom_integration
 
       - name: Run Tests
         working-directory: /home/runner/frappe-bench
-        run: |
-          bench --site test_site set-config allow_tests true
-          bench --site test_site run-tests --app buzz
+        run: bench --site test_site run-tests --app buzz
         env:
           TYPE: server

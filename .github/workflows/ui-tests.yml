@@ -5,7 +5,13 @@ on:
     branches:
       - develop
       - main
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   merge_group:
   workflow_dispatch:
 
@@ -16,8 +22,11 @@ concurrency:
 jobs:
   ui-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 20
     name: Playwright E2E Tests
+
+    env:
+      PYTHONWARNINGS: ignore
 
     services:
       redis-cache:
@@ -29,113 +38,52 @@ jobs:
         ports:
           - 11000:6379
       mariadb:
-        image: mariadb:10.6
+        image: mariadb:11.8
         env:
-          MYSQL_ROOT_PASSWORD: root
+          MARIADB_ROOT_PASSWORD: root
         ports:
           - 3306:3306
-        options: --health-cmd="mariadb-admin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=2s --health-retries=3
+          --tmpfs=/var/lib/mysql:rw,noexec,nosuid,size=2g
 
     steps:
       - name: Clone
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          check-latest: true
-
-      - name: Add to Hosts
-        run: echo "127.0.0.1 buzz.test" | sudo tee -a /etc/hosts
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/setup.py', '**/setup.cfg') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-            ${{ runner.os }}-
-
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: 'echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT'
-
-      - name: Cache yarn
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
-      - name: Install MariaDB Client
-        run: |
-          sudo apt update
-          sudo apt-get install mariadb-client
+          key: ${{ runner.os }}-playwright-${{ hashFiles('yarn.lock') }}
 
       - name: Setup Bench
-        run: |
-          pip install frappe-bench
-          bench init --skip-redis-config-generation --skip-assets --python "$(which python)" ~/frappe-bench
-          mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
-          mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
-
-      - name: Install buzz
-        working-directory: /home/runner/frappe-bench
-        run: |
-          bench get-app payments
-          bench get-app buzz $GITHUB_WORKSPACE
-          bench setup requirements --dev
-          bench new-site --db-root-password root --admin-password admin buzz.test
-          bench --site buzz.test install-app buzz
-          bench build
-        env:
-          CI: "Yes"
-
-      - name: Configure Site for UI Tests
-        working-directory: /home/runner/frappe-bench
-        run: |
-          bench --site buzz.test set-config allow_tests true
-          bench --site buzz.test set-config host_name "http://buzz.test:8000"
+        uses: ./.github/actions/setup-bench
+        with:
+          site-name: buzz.test
+          build-assets: true
 
       - name: Create Test User
         working-directory: /home/runner/frappe-bench
-        run: bench --site buzz.test add-user testuser@buzz.test --first-name Test --last-name User --password Test@123 --add-role "System Manager"
+        run: >-
+          bench --site buzz.test add-user testuser@buzz.test
+          --first-name Test --last-name User --password Test@123
+          --add-role "System Manager"
 
       - name: Start Frappe Server
         working-directory: /home/runner/frappe-bench
         run: |
-          # Disable watch and schedule to reduce resource usage
-          sed -i 's/^watch:/# watch:/g' Procfile
-          sed -i 's/^schedule:/# schedule:/g' Procfile
-
-          # Start bench in background
           bench start &> bench_start.log &
-
-          # Wait for server to be ready
-          echo "Waiting for Frappe server to start..."
-          timeout 60 bash -c 'until curl -s http://buzz.test:8000 > /dev/null; do sleep 2; done'
-          echo "Frappe server is ready!"
+          timeout 60 bash -c \
+            'until curl -sf http://buzz.test:8000 > /dev/null; do sleep 1; done'
 
       - name: Install Playwright
         run: |
-          npm install
-          npx playwright install --with-deps chromium
+          # --ignore-scripts skips the postinstall that reinstalls the whole
+          # dashboard tree; the tests only need @playwright/test.
+          yarn install --frozen-lockfile --ignore-scripts
+          npx playwright install --with-deps --only-shell chromium
 
       - name: Run Playwright Tests
         run: npx playwright test

@@ -1,0 +1,146 @@
+name: "Setup Bench"
+description: "Provisions a bench with buzz installed on a fresh site"
+
+inputs:
+  site-name:
+    description: "Site to create. Also used as the /etc/hosts entry and host_name."
+    required: false
+    default: "test_site"
+  build-assets:
+    description: "Run `bench build`. Only needed by jobs that hit the UI."
+    required: false
+    default: "false"
+  extra-app-url:
+    description: "Git URL of one more app to install before buzz. App name is the last path segment."
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Add site to hosts
+      shell: bash -e {0}
+      run: echo "127.0.0.1 ${{ inputs.site-name }}" | sudo tee -a /etc/hosts
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.14"
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "24"
+        cache: yarn
+        cache-dependency-path: dashboard/yarn.lock
+
+    - uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+        cache-dependency-glob: |
+          **/pyproject.toml
+          **/requirements*.txt
+
+    - name: Install system deps and bench
+      shell: bash -e {0}
+      run: |
+        install_db_client() {
+          # `apt-get update` is most of the cost, so only pay for it if the
+          # runner's package lists are too stale to resolve.
+          sudo apt-get -qq install -y --no-install-recommends mariadb-client \
+            || { sudo apt-get -qq update \
+                 && sudo apt-get -qq install -y --no-install-recommends mariadb-client; }
+        }
+
+        # apt and uv share no inputs.
+        install_db_client &> "${RUNNER_TEMP}/apt.log" &
+        apt_pid=$!
+
+        uv tool install frappe-bench
+
+        if ! wait "$apt_pid"; then
+          cat "${RUNNER_TEMP}/apt.log"
+          exit 1
+        fi
+
+    - name: Init bench
+      shell: bash -e {0}
+      run: |
+        bench init ~/frappe-bench \
+          --skip-redis-config-generation \
+          --skip-assets \
+          --no-backups \
+          --python "$(which python)"
+
+        cd ~/frappe-bench
+
+        # socketio stays: the dashboard opens a socket on boot (dashboard/src/main.ts).
+        sed -i '/^watch:/d;/^schedule:/d' Procfile
+
+    - name: Get apps
+      shell: bash -e {0}
+      working-directory: /home/runner/frappe-bench
+      env:
+        EXTRA_APP_URL: ${{ inputs.extra-app-url }}
+      run: |
+        # buzz lists frappe/payments in required_apps, so it must precede install-app.
+        bench get-app --skip-assets payments
+
+        if [ -n "$EXTRA_APP_URL" ]; then
+          bench get-app --skip-assets "$EXTRA_APP_URL"
+        fi
+
+        bench get-app --skip-assets buzz "$GITHUB_WORKSPACE"
+
+    - name: Install requirements
+      shell: bash -e {0}
+      working-directory: /home/runner/frappe-bench
+      env:
+        BUILD_ASSETS: ${{ inputs.build-assets }}
+      run: |
+        # `--dev` installs only python dev deps and `--node` only runs yarn, so
+        # they share nothing. App requirements came from `bench get-app`.
+        bench setup requirements --dev &
+        dev_pid=$!
+
+        if [ "$BUILD_ASSETS" == "true" ]; then
+          bench setup requirements --node
+        fi
+
+        wait "$dev_pid"
+
+    - name: Create site
+      shell: bash -e {0}
+      working-directory: /home/runner/frappe-bench
+      env:
+        BUILD_ASSETS: ${{ inputs.build-assets }}
+        EXTRA_APP_URL: ${{ inputs.extra-app-url }}
+        SITE: ${{ inputs.site-name }}
+      run: |
+        # The build is CPU-bound and the site is DB-bound; they share no state.
+        build_pid=""
+        if [ "$BUILD_ASSETS" == "true" ]; then
+          CI=Yes bench build &> "${RUNNER_TEMP}/build.log" &
+          build_pid=$!
+        fi
+
+        # The CI database is discarded at the end of the job, so crash safety buys
+        # nothing. `root` must match MARIADB_ROOT_PASSWORD on the caller's service.
+        mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "
+          SET GLOBAL innodb_flush_log_at_trx_commit = 0;
+          SET GLOBAL sync_binlog = 0;"
+
+        bench new-site --db-root-password root --admin-password admin "$SITE"
+
+        if [ -n "$EXTRA_APP_URL" ]; then
+          bench --site "$SITE" install-app "$(basename "$EXTRA_APP_URL" .git)"
+        fi
+
+        bench --site "$SITE" install-app buzz
+
+        bench --site "$SITE" set-config allow_tests true
+        bench --site "$SITE" set-config host_name "http://$SITE:8000"
+
+        if [ -n "$build_pid" ] && ! wait "$build_pid"; then
+          echo "Asset build failed:"
+          cat "${RUNNER_TEMP}/build.log"
+          exit 1
+        fi
