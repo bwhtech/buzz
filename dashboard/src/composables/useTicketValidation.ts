@@ -102,27 +102,7 @@ const validateTicketResource = createResource({
 	onError: (error: any) => {
 		validationResult.value = null
 		isProcessingTicket.value = false
-		const errorData = JSON.stringify(error)
-
-		if (errorData.includes("Ticket not found")) {
-			showDebouncedToast("Ticket not found")
-		} else if (
-			errorData.includes(
-				"This ticket is not confirmed and cannot be used for check-in",
-			)
-		) {
-			showDebouncedToast(
-				"This ticket is not confirmed and cannot be used for check-in",
-			)
-		} else if (errorData.includes("This ticket was already checked in today")) {
-			showDebouncedToast("This ticket was already checked in today.")
-		} else if (errorData.includes("cancelled")) {
-			showDebouncedToast(
-				"This ticket has been cancelled and cannot be checked in",
-			)
-		} else {
-			showDebouncedToast("Error validating ticket")
-		}
+		showDebouncedToast(error?.messages?.[0] || __("Error validating ticket"))
 		playErrorSound()
 	},
 })
@@ -137,6 +117,8 @@ const checkInResource = createResource({
 	},
 	onError: (error: any) => {
 		isCheckingIn.value = false
+		showDebouncedToast(error?.messages?.[0] || __("Check-in failed"))
+		playErrorSound()
 	},
 })
 
