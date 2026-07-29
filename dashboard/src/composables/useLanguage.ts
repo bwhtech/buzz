@@ -11,7 +11,7 @@ interface LanguageComposable {
 
 export function useLanguage(): LanguageComposable {
 	const availableLanguages = createResource({
-		url: "buzz.api.get_enabled_languages",
+		url: "buzz.api.account.get_enabled_languages",
 		auto: true,
 		cache: "enabled_languages",
 	})
@@ -21,7 +21,7 @@ export function useLanguage(): LanguageComposable {
 	})
 
 	const switchLanguage = createResource({
-		url: "buzz.api.update_user_language",
+		url: "buzz.api.account.update_user_language",
 		onSuccess() {
 			// Reload the page to apply new translations
 			window.location.reload()

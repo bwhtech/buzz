@@ -2,8 +2,8 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils.data import cstr
 
+from buzz.api.forms.test_forms import ensure_prompt_named_record
 from buzz.api.proposals import get_my_proposals
-from buzz.api.test_forms import ensure_prompt_named_record
 from buzz.proposals.doctype.talk_proposal.test_talk_proposal import (
 	make_guest_proposal,
 	make_test_event,

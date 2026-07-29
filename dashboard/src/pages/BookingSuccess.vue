@@ -94,7 +94,7 @@ const showPaymentSummary = computed(() => {
 });
 
 const confirmation = createResource({
-	url: "buzz.api.get_booking_confirmation",
+	url: "buzz.api.booking.get_booking_confirmation",
 	params: { booking_id: props.bookingId, token: route.query.token },
 	auto: true,
 	onSuccess: (data: Record<string, any>) => {

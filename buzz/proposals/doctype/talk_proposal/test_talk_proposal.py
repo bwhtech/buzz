@@ -4,7 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.test_forms import ensure_prompt_named_record
+from buzz.api.forms.test_forms import ensure_prompt_named_record
 
 # On IntegrationTestCase, the doctype test records and all
 # link-field test record dependencies are recursively loaded
