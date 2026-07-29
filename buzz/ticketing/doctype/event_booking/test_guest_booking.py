@@ -8,7 +8,12 @@ import frappe
 import pyotp
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.booking import process_booking
+from buzz.api.booking import process_booking as process_booking_endpoint
+from buzz.api.booking.schemas import BookingRequest
+
+
+def process_booking(**kwargs):
+	return process_booking_endpoint(BookingRequest(**kwargs)).__json__()
 
 
 class TestGuestBooking(IntegrationTestCase):
