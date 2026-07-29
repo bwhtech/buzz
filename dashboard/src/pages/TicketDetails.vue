@@ -375,7 +375,7 @@ const showAddOnPreferenceDialog = ref(false);
 const showQRExpanded = ref(false);
 
 const ticketDetails = createResource({
-	url: "buzz.api.get_ticket_details",
+	url: "buzz.api.tickets.get_ticket_details",
 	params: { ticket_id: props.ticketId },
 	auto: true,
 	transform(data: any) {

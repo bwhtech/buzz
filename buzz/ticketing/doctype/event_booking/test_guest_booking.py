@@ -8,7 +8,7 @@ import frappe
 import pyotp
 from frappe.tests import IntegrationTestCase
 
-from buzz.api import process_booking
+from buzz.api.booking import process_booking
 
 
 class TestGuestBooking(IntegrationTestCase):

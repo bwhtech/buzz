@@ -963,11 +963,11 @@ function prefillAttendee(field: string) {
 }
 
 const processBooking = createResource({
-	url: "buzz.api.process_booking",
+	url: "buzz.api.booking.process_booking",
 });
 
 const validateCoupon = createResource({
-	url: "buzz.api.validate_coupon",
+	url: "buzz.api.booking.validate_coupon",
 });
 
 function startResendCooldown() {
@@ -982,7 +982,7 @@ function startResendCooldown() {
 }
 
 const sendOtpResource = createResource({
-	url: "buzz.api.send_guest_booking_otp",
+	url: "buzz.api.booking.send_guest_booking_otp",
 	onSuccess: () => {
 		showOtpModal.value = true;
 		startResendCooldown();

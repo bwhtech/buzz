@@ -71,7 +71,7 @@ const transferForm = ref({
 
 // Transfer ticket resource
 const transferResource = createResource({
-	url: "buzz.api.transfer_ticket",
+	url: "buzz.api.tickets.transfer_ticket",
 	onSuccess: () => {
 		toast.success("Ticket transferred successfully!");
 		isOpen.value = false;

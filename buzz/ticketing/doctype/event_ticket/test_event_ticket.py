@@ -277,7 +277,7 @@ class TestEventTicketZoomMeeting(IntegrationTestCase):
 			create_meeting_response,
 		)
 
-		from buzz.api import get_ticket_details
+		from buzz.api.tickets import get_ticket_details
 
 		meeting_controller = "zoom_integration.zoom_integration.doctype.zoom_meeting.zoom_meeting"
 

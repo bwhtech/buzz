@@ -75,26 +75,26 @@
 ## Backend Flows
 
 ### Booking + Payment
-1. Dashboard calls `buzz.api.get_event_booking_data` to load ticket types, add-ons, custom fields, and payment gateways.
-2. `buzz.api.process_booking` creates an `Event Booking` with attendees, add-ons, custom fields, and UTM parameters.
+1. Dashboard calls `buzz.api.booking.get_event_booking_data` to load ticket types, add-ons, custom fields, and payment gateways.
+2. `buzz.api.booking.process_booking` creates an `Event Booking` with attendees, add-ons, custom fields, and UTM parameters.
 3. If total is 0, booking is auto-submitted; otherwise `Event Payment` is created and a payment URL is returned.
 4. On payment authorization, `Event Booking.on_payment_authorized` marks the payment received and submits the booking.
 5. Booking submission creates `Event Ticket` records and triggers QR + email flow.
 
 ### Ticket Lifecycle
 - Ticket creation generates QR code file and email (with print format attachment).
-- Transfers are handled via `buzz.api.transfer_ticket` with window checks from `Buzz Settings`.
-- Add-on preference changes use `buzz.api.change_add_on_preference` with window checks.
-- Cancellation requests are created via `buzz.api.create_cancellation_request` and are accepted/rejected in Desk.
+- Transfers are handled via `buzz.api.tickets.transfer_ticket` with window checks from `Buzz Settings`.
+- Add-on preference changes use `buzz.api.tickets.change_add_on_preference` with window checks.
+- Cancellation requests are created via `buzz.api.tickets.create_cancellation_request` and are accepted/rejected in Desk.
 
 ### Sponsorships
 - Web form submits `Sponsorship Enquiry`.
 - Approval moves status to `Payment Pending` and triggers email notification.
-- Payment link is generated via `buzz.api.create_sponsorship_payment_link`.
+- Payment link is generated via `buzz.api.sponsorships.create_sponsorship_payment_link`.
 - Payment authorization creates `Event Sponsor` and marks enquiry as paid.
 
 ### Check-in
-- Dashboard scanner validates tickets with `buzz.api.validate_ticket_for_checkin`.
+- Dashboard scanner validates tickets with `buzz.api.checkin.validate_ticket_for_checkin`.
 - Successful check-in creates `Event Check In` and returns event/ticket context.
 
 ## API Surface (Whitelisted)
@@ -130,7 +130,7 @@
 - Public-like flows: booking (`/register/:eventRoute`) and check-in (`/check-in`).
 - Account area under `/account`:
   - bookings list/details, tickets list/details, sponsorships list/details.
-- Guard: `router.beforeEach` checks `buzz.api.get_user_info` and redirects to `/login` if unauthenticated.
+- Guard: `router.beforeEach` checks `buzz.api.account.get_user_info` and redirects to `/login` if unauthenticated.
 
 ### Data Access Pattern
 - Uses `frappe-ui` `createResource` and `createListResource` for API calls.
@@ -202,30 +202,30 @@ erDiagram
 
 ## Frontend Page -> API Map
 - `dashboard/src/pages/BookTickets.vue`
-  - `buzz.api.get_event_booking_data` to load event booking config.
-  - `buzz.api.process_booking` via `dashboard/src/components/BookingForm.vue`.
+  - `buzz.api.booking.get_event_booking_data` to load event booking config.
+  - `buzz.api.booking.process_booking` via `dashboard/src/components/BookingForm.vue`.
 - `dashboard/src/pages/BookingDetails.vue`
-  - `buzz.api.get_booking_details` for booking + ticket data.
-  - `buzz.api.create_cancellation_request` via `dashboard/src/components/CancellationRequestDialog.vue`.
-  - `buzz.api.transfer_ticket` via `dashboard/src/components/TicketsSection.vue`.
+  - `buzz.api.booking.get_booking_details` for booking + ticket data.
+  - `buzz.api.tickets.create_cancellation_request` via `dashboard/src/components/CancellationRequestDialog.vue`.
+  - `buzz.api.tickets.transfer_ticket` via `dashboard/src/components/TicketsSection.vue`.
 - `dashboard/src/pages/TicketDetails.vue`
-  - `buzz.api.get_ticket_details`.
-  - `buzz.api.change_add_on_preference` via `dashboard/src/components/AddOnPreferenceDialog.vue`.
-  - `buzz.api.transfer_ticket` via `dashboard/src/components/TicketTransferDialog.vue`.
+  - `buzz.api.tickets.get_ticket_details`.
+  - `buzz.api.tickets.change_add_on_preference` via `dashboard/src/components/AddOnPreferenceDialog.vue`.
+  - `buzz.api.tickets.transfer_ticket` via `dashboard/src/components/TicketTransferDialog.vue`.
 - `dashboard/src/pages/SponsorshipsList.vue`
-  - `buzz.api.get_user_sponsorship_inquiries`.
+  - `buzz.api.sponsorships.get_user_sponsorship_inquiries`.
 - `dashboard/src/pages/SponsorshipDetails.vue`
-  - `buzz.api.get_sponsorship_details`.
-  - `buzz.api.withdraw_sponsorship_enquiry`.
-  - `buzz.api.get_event_payment_gateways` and `buzz.api.create_sponsorship_payment_link` via `dashboard/src/components/SponsorshipPaymentDialog.vue`.
+  - `buzz.api.sponsorships.get_sponsorship_details`.
+  - `buzz.api.sponsorships.withdraw_sponsorship_enquiry`.
+  - `buzz.api.payments.get_event_payment_gateways` and `buzz.api.sponsorships.create_sponsorship_payment_link` via `dashboard/src/components/SponsorshipPaymentDialog.vue`.
 - `dashboard/src/pages/CheckInScanner.vue`
-  - `buzz.api.validate_ticket_for_checkin` and `buzz.api.checkin_ticket` via `dashboard/src/composables/useTicketValidation.js`.
+  - `buzz.api.checkin.validate_ticket_for_checkin` and `buzz.api.checkin.checkin_ticket` via `dashboard/src/composables/useTicketValidation.js`.
 - `dashboard/src/data/user.js`
-  - `buzz.api.get_user_info` for session user details and roles.
+  - `buzz.api.account.get_user_info` for session user details and roles.
 - `dashboard/src/composables/useLanguage.js`
-  - `buzz.api.get_enabled_languages`, `buzz.api.update_user_language`.
+  - `buzz.api.account.get_enabled_languages`, `buzz.api.account.update_user_language`.
 - `dashboard/src/translation.js`
-  - `buzz.api.get_translations`.
+  - `buzz.api.account.get_translations`.
 
 ## Feature Development Checklist (Common Changes)
 - Tickets / booking changes
@@ -242,7 +242,7 @@ erDiagram
   - Update `Sponsorship Enquiry` for status transitions and `SponsorshipDetails.vue` for UI state.
   - Verify sponsor creation in `on_payment_authorized`.
 - Check-in changes
-  - Update `buzz.api.validate_ticket_for_checkin` and `CheckInScanner.vue`/`useTicketValidation.js`.
+  - Update `buzz.api.checkin.validate_ticket_for_checkin` and `CheckInScanner.vue`/`useTicketValidation.js`.
   - Confirm role gating for `Frontdesk Manager` remains consistent.
 - Event publishing or public pages
   - Review `Buzz Event` route generation and `Additional Event Page` route uniqueness.

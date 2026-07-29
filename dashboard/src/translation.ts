@@ -65,7 +65,7 @@ const translate: TranslateFn = (message, replace, context = null) => {
 
 function fetchTranslations(_lang?: string) {
 	createResource({
-		url: "buzz.api.get_translations",
+		url: "buzz.api.account.get_translations",
 		auto: true,
 		transform: (data: Record<string, string>) => {
 			window.translatedMessages = data
