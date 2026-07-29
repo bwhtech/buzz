@@ -2,6 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 // Auth state file path (added to .gitignore)
 const authFile = "e2e/.auth/user.json";
+const frontdeskFile = "e2e/.auth/frontdesk.json";
+const ticketsAttendeeFile = "e2e/.auth/tickets-attendee.json";
 
 /**
  * Playwright configuration for Buzz E2E tests.
@@ -61,7 +63,7 @@ export default defineConfig({
 		},
 		{
 			name: "chromium",
-			testIgnore: /guest-booking|custom-forms|event-proposal|login-modal/,
+			testIgnore: /guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets/,
 			use: {
 				...devices["Desktop Chrome"],
 				storageState: authFile,
@@ -117,6 +119,40 @@ export default defineConfig({
 				storageState: authFile,
 			},
 			dependencies: ["event-proposal-setup"],
+		},
+		{
+			name: "check-in-setup",
+			testMatch: /check-in\.setup\.ts/,
+			use: {
+				storageState: authFile,
+			},
+			dependencies: ["setup"],
+		},
+		{
+			name: "check-in-chromium",
+			testMatch: /check-in\.spec\.ts/,
+			use: {
+				...devices["Desktop Chrome"],
+				storageState: frontdeskFile,
+			},
+			dependencies: ["check-in-setup"],
+		},
+		{
+			name: "tickets-setup",
+			testMatch: /tickets\.setup\.ts/,
+			use: {
+				storageState: authFile,
+			},
+			dependencies: ["setup"],
+		},
+		{
+			name: "tickets-chromium",
+			testMatch: /tickets\.spec\.ts/,
+			use: {
+				...devices["Desktop Chrome"],
+				storageState: ticketsAttendeeFile,
+			},
+			dependencies: ["tickets-setup"],
 		},
 		{
 			name: "offline-payment-setup",

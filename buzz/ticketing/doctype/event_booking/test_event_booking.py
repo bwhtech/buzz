@@ -6,6 +6,19 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from buzz.api.booking import get_booking_confirmation as get_booking_confirmation_endpoint
+from buzz.api.booking import process_booking as process_booking_endpoint
+from buzz.api.booking.schemas import BookingRequest
+
+
+def process_booking(**kwargs):
+	return process_booking_endpoint(BookingRequest(**kwargs)).__json__()
+
+
+def get_booking_confirmation(booking_id, token=None):
+	return get_booking_confirmation_endpoint(booking_id, token=token).__json__()
+
+
 # On IntegrationTestCase, the doctype test records and all
 # link-field test record dependencies are recursively loaded
 # Use these module variables to add/remove to/from that list
@@ -471,8 +484,6 @@ class TestProcessBookingAPI(IntegrationTestCase):
 
 	def test_process_booking_with_utm_parameters(self):
 		"""Test that process_booking API correctly saves UTM parameters."""
-		from buzz.api import process_booking
-
 		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
 
 		test_ticket_type = frappe.get_doc(
@@ -826,8 +837,6 @@ class TestProcessBookingAPI(IntegrationTestCase):
 
 	def test_process_booking_offline_stays_in_draft(self):
 		"""Test that offline bookings via process_booking stay in draft with no tickets."""
-		from buzz.api import process_booking
-
 		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
 		test_event.apply_tax = False
 		test_event.is_published = True
@@ -883,8 +892,6 @@ class TestProcessBookingAPI(IntegrationTestCase):
 
 	def test_process_booking_offline_generates_tickets_on_approval(self):
 		"""Test that approving an offline booking created via API generates tickets."""
-		from buzz.api import process_booking
-
 		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
 		test_event.apply_tax = False
 		test_event.is_published = True
@@ -945,7 +952,7 @@ class TestProcessBookingAPI(IntegrationTestCase):
 	def test_process_booking_free_event_returns_redirect_to(self):
 		"""Free bookings (total_amount == 0) must get a redirect_to the new
 		token-gated booking-success screen, same as the paid-gateway branch."""
-		from buzz.api import process_booking, verify_booking_access_token
+		from buzz.api.booking.services import verify_booking_access_token
 
 		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
 		test_event.apply_tax = False
@@ -983,8 +990,6 @@ class TestProcessBookingAPI(IntegrationTestCase):
 
 	def test_process_booking_without_utm_parameters(self):
 		"""Test that process_booking API works without UTM parameters."""
-		from buzz.api import process_booking
-
 		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
 		test_event.is_published = True
 		test_event.save()
@@ -1025,8 +1030,6 @@ class TestProcessBookingAPI(IntegrationTestCase):
 
 	def test_process_booking_with_empty_utm_parameters(self):
 		"""Test that process_booking API handles empty UTM list."""
-		from buzz.api import process_booking
-
 		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
 
 		test_ticket_type = frappe.get_doc(
@@ -1066,8 +1069,6 @@ class TestProcessBookingAPI(IntegrationTestCase):
 
 	def test_process_booking_failed_for_unpublished_event(self):
 		"""Booking must fail when Buzz Event is not published."""
-		from buzz.api import process_booking
-
 		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
 		test_event.is_published = 0
 		test_event.save()
@@ -1165,7 +1166,7 @@ class TestBookingConfirmation(IntegrationTestCase):
 		return booking
 
 	def test_access_token_roundtrip(self):
-		from buzz.api import get_booking_access_token, verify_booking_access_token
+		from buzz.api.booking.services import get_booking_access_token, verify_booking_access_token
 
 		token = get_booking_access_token("B-TEST-001")
 		self.assertTrue(verify_booking_access_token("B-TEST-001", token))
@@ -1178,7 +1179,7 @@ class TestBookingConfirmation(IntegrationTestCase):
 		self.assertFalse(verify_booking_access_token("B-OTHER-002", token))
 
 	def test_get_booking_confirmation_valid_token_as_guest(self):
-		from buzz.api import get_booking_access_token, get_booking_confirmation
+		from buzz.api.booking.services import get_booking_access_token
 
 		booking = self._make_submitted_booking()
 		token = get_booking_access_token(booking.name)
@@ -1195,8 +1196,6 @@ class TestBookingConfirmation(IntegrationTestCase):
 		self.assertTrue(result["event"]["title"])
 
 	def test_get_booking_confirmation_bad_token_as_guest_raises(self):
-		from buzz.api import get_booking_confirmation
-
 		booking = self._make_submitted_booking()
 
 		frappe.set_user("Guest")
@@ -1209,8 +1208,6 @@ class TestBookingConfirmation(IntegrationTestCase):
 			frappe.set_user("Administrator")
 
 	def test_get_booking_confirmation_owner_without_token(self):
-		from buzz.api import get_booking_confirmation
-
 		booking = self._make_submitted_booking()
 
 		# Administrator owns/has perm — no token needed
@@ -1400,8 +1397,6 @@ class TestZoomBackedCategoryBooking(IntegrationTestCase):
 		frappe.db.rollback()
 
 	def _book_without_last_name(self, category):
-		from buzz.api import process_booking
-
 		self.event.db_set("category", category)
 		return process_booking(
 			attendees=[

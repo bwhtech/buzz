@@ -156,7 +156,7 @@ const { showSuccessMessage } = usePaymentSuccess({
 const showCancellationDialog = ref(false);
 
 const bookingDetails = createResource({
-	url: "buzz.api.get_booking_details",
+	url: "buzz.api.booking.get_booking_details",
 	params: { booking_id: props.bookingId },
 	auto: true,
 	onSuccess: (data: Record<string, any>) => {
@@ -169,15 +169,15 @@ const bookingDetails = createResource({
 });
 
 const canTransferTickets = computed(() => {
-	return bookingDetails.data?.can_transfer_ticket?.can_transfer || false;
+	return bookingDetails.data?.can_transfer_ticket ?? false;
 });
 
 const canChangeAddOns = computed(() => {
-	return bookingDetails.data?.can_change_add_ons?.can_change_add_ons || false;
+	return bookingDetails.data?.can_change_add_ons ?? false;
 });
 
 const canRequestCancellation = computed(() => {
-	return bookingDetails.data?.can_request_cancellation?.can_request_cancellation || false;
+	return bookingDetails.data?.can_request_cancellation ?? false;
 });
 
 // Only show cancellation notice if there's a pending request (not yet submitted)

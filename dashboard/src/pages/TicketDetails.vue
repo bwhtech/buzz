@@ -21,7 +21,6 @@
 				<Button
 					variant="outline"
 					:link="`/api/method/frappe.utils.print_format.download_pdf?doctype=Event%20Ticket&name=${ticketId}&format=Buzz%20Print%20Format&no_letterhead=1&letterhead=No%20Letterhead&settings=%7B%7D&_lang=en&pdf_generator=wkhtmltopdf`"
-					:loading="downloadingTicket"
 					size="sm"
 				>
 					<template #prefix>
@@ -369,13 +368,12 @@ const formatEventDateTime = (date: string, time: string) => {
 	return dateObj.format("MMMM DD, YYYY");
 };
 
-const downloadingTicket = ref(false);
 const showTransferDialog = ref(false);
 const showAddOnPreferenceDialog = ref(false);
 const showQRExpanded = ref(false);
 
 const ticketDetails = createResource({
-	url: "buzz.api.get_ticket_details",
+	url: "buzz.api.tickets.get_ticket_details",
 	params: { ticket_id: props.ticketId },
 	auto: true,
 	transform(data: any) {
@@ -419,7 +417,7 @@ const ticketDetails = createResource({
 			event: data.event,
 			booking: data.booking,
 			ticket_type: data.ticket_type,
-			can_transfer_ticket: data.can_transfer_ticket?.can_transfer || false,
+			can_transfer_ticket: data.can_transfer_ticket,
 		};
 	},
 });
@@ -456,7 +454,7 @@ const canChangeAddOns = computed(() => {
 	if (!ticketDetails.data) return false;
 	return (
 		ticketDetails.data.doc.booking_status === "Confirmed" &&
-		ticketDetails.data.can_change_add_ons?.can_change_add_ons
+		ticketDetails.data.can_change_add_ons
 	);
 });
 
@@ -480,22 +478,5 @@ const onTicketTransferSuccess = () => {
 
 const onAddOnPreferenceSuccess = () => {
 	ticketDetails.reload();
-};
-
-const downloadTicket = async () => {
-	downloadingTicket.value = true;
-	try {
-		// Implementation for downloading ticket
-		// This would typically call an API endpoint that generates a PDF ticket
-		console.log("Downloading ticket:", props.ticketId);
-		// await createResource({
-		//   url: "buzz.api.download_ticket",
-		//   params: { ticket_id: props.ticketId }
-		// }).fetch();
-	} catch (error) {
-		console.error("Error downloading ticket:", error);
-	} finally {
-		downloadingTicket.value = false;
-	}
 };
 </script>

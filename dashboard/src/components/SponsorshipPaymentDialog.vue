@@ -214,7 +214,7 @@ const tiers = useList<Tier>({
 
 // Fetch payment gateways for the event
 const paymentGatewaysResource = createResource({
-	url: "buzz.api.get_event_payment_gateways",
+	url: "buzz.api.payments.get_event_payment_gateways",
 	onSuccess: (data: any[]) => {
 		paymentGateways.value = data || [];
 	},
@@ -229,7 +229,7 @@ function fetchPaymentGateways() {
 
 // Resource to create payment link
 const paymentLink = createResource({
-	url: "buzz.api.create_sponsorship_payment_link",
+	url: "buzz.api.sponsorships.create_sponsorship_payment_link",
 	onSuccess: (paymentUrl: string) => {
 		emit("payment-started");
 		closeDialog();

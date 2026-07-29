@@ -110,7 +110,7 @@ const goToHome = () => {
 };
 
 const eventBookingResource = createResource({
-	url: "buzz.api.get_event_booking_data",
+	url: "buzz.api.booking.get_event_booking_data",
 	params: {
 		event_route: props.eventRoute,
 	},
