@@ -1,7 +1,5 @@
 # Copyright (c) 2025, BWH Studios and contributors
 # For license information, please see license.txt
-import json
-
 import frappe
 from frappe import _
 from frappe.email.doctype.email_template.email_template import get_email_template
@@ -288,8 +286,8 @@ class EventBooking(Document):
 				custom_fields_data = attendee.custom_fields
 				if isinstance(custom_fields_data, str):
 					try:
-						custom_fields_data = json.loads(custom_fields_data)
-					except (json.JSONDecodeError, TypeError):
+						custom_fields_data = frappe.parse_json(custom_fields_data)
+					except (ValueError, TypeError):
 						custom_fields_data = {}
 
 				# Get custom field definitions for this event to get proper labels and types

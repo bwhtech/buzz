@@ -12,6 +12,9 @@ required_apps = ["frappe/payments"]
 
 export_python_type_annotations = True
 
+# Require all whitelisted methods to have type annotations
+require_type_annotated_api_methods = True
+
 after_install = "buzz.install.after_install"
 
 before_uninstall = "buzz.uninstall.before_uninstall"
