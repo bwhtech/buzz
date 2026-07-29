@@ -35,20 +35,6 @@ if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event_form.buzz_event_form import BuzzEventForm
 
 
-@lru_cache(maxsize=1)
-def get_dial_code_list() -> list[dict]:
-	countries = get_all_countries()
-	codes = []
-	seen = set()
-	for country in sorted(countries):
-		isd = countries[country].get("isd", "")
-		if isd and isd not in seen:
-			code = (countries[country].get("code") or "").upper()
-			codes.append({"country": country, "code": code, "dial_code": isd})
-			seen.add(isd)
-	return codes
-
-
 class CustomFormService:
 	"""Resolve one published custom form on a published event, then read or submit it."""
 
@@ -258,3 +244,17 @@ def create_event_proposal(data: dict | str) -> None:
 		{fieldname: value for fieldname, value in data.items() if fieldname in allowed_fieldnames}
 	)
 	frappe.get_doc(doc_data).insert(ignore_permissions=True)
+
+
+@lru_cache(maxsize=1)
+def get_dial_code_list() -> list[dict]:
+	countries = get_all_countries()
+	codes = []
+	seen = set()
+	for country in sorted(countries):
+		isd = countries[country].get("isd", "")
+		if isd and isd not in seen:
+			code = (countries[country].get("code") or "").upper()
+			codes.append({"country": country, "code": code, "dial_code": isd})
+			seen.add(isd)
+	return codes

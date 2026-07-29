@@ -25,18 +25,6 @@ STANDARD_EXCLUDE_FIELDS = DEFAULT_FIELDS | {
 }
 
 
-def is_renderable_form_field(df, exclude_fields: set) -> bool:
-	if df.fieldname in exclude_fields:
-		return False
-	if df.fieldtype in LAYOUT_FIELDTYPES:
-		return False
-	return not (df.hidden or df.read_only)
-
-
-def is_layout_break(df, exclude_fields: set) -> bool:
-	return df.fieldtype in LAYOUT_BREAK_FIELDTYPES and df.fieldname not in exclude_fields
-
-
 def get_form_fields(
 	doctype: str,
 	exclude_fields: set,
@@ -155,3 +143,15 @@ def validate_excluded_fields(form_doctype: str, excluded_fields: str | None) -> 
 	}
 	if hidden_mandatory:
 		MandatoryFieldsHidden.throw(form_doctype=form_doctype, fieldnames=", ".join(sorted(hidden_mandatory)))
+
+
+def is_renderable_form_field(df, exclude_fields: set) -> bool:
+	if df.fieldname in exclude_fields:
+		return False
+	if df.fieldtype in LAYOUT_FIELDTYPES:
+		return False
+	return not (df.hidden or df.read_only)
+
+
+def is_layout_break(df, exclude_fields: set) -> bool:
+	return df.fieldtype in LAYOUT_BREAK_FIELDTYPES and df.fieldname not in exclude_fields
