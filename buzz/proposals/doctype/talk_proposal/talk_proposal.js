@@ -11,18 +11,30 @@ frappe.ui.form.on("Talk Proposal", {
 
 	refresh(frm) {
 		if (frm.doc.status != "Accepted") {
-			const btn = frm.add_custom_button(__("Accept and Create Talk"), () => {
-				frm.call({
-					method: "create_talk",
-					doc: frm.doc,
-					btn,
-				}).then(({ message: talk }) => {
-					frm.set_value("status", "Accepted");
-					frm.save();
-					frm.refresh();
-					frappe.set_route("Form", "Event Talk", talk.name);
-				});
-			});
+			const btn = frm.add_custom_button(
+				__("Accept and Create Talk"),
+				() => {
+					frappe.confirm(
+						__(
+							"This action will accept this proposal and create a talk against it. Any speakers without a Buzz account will get one."
+						),
+						() => {
+							frm.call({
+								method: "create_talk",
+								doc: frm.doc,
+								btn,
+							}).then(({ message: talk }) => {
+								frappe.show_alert({
+									message: __("Talk created"),
+									indicator: "green",
+								});
+								frappe.set_route("Form", "Event Talk", talk.name);
+							});
+						}
+					);
+				},
+				__("Actions")
+			);
 		}
 	},
 });
