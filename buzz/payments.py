@@ -137,8 +137,6 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 	if frappe.in_test:
 		return
 
-	import json
-
 	request = frappe.get_all(
 		"Integration Request",
 		{
@@ -151,7 +149,7 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 
 	if len(request):
 		data = frappe.db.get_value("Integration Request", request[0].name, "data")
-		data = frappe._dict(json.loads(data))
+		data = frappe.parse_json(data)
 
 		payment_gateway = data.get("payment_gateway")
 		if payment_gateway == "Razorpay":
