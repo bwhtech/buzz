@@ -71,6 +71,7 @@ def get_confirmation_venue(venue_id: str | None) -> ConfirmationVenue | None:
 
 def build_booking_details(booking_id: str) -> BookingDetailsResponse:
 	booking_doc = frappe.get_cached_doc("Event Booking", booking_id)
+	ensure_booking_is_readable(booking_doc)
 	event_doc = frappe.get_cached_doc("Buzz Event", booking_doc.event)
 	tickets = get_tickets_with_add_ons(booking_id, booking_doc.event)
 
@@ -93,6 +94,13 @@ def build_booking_details(booking_id: str) -> BookingDetailsResponse:
 		cancellation_requested_tickets=get_cancellation_requested_tickets(cancellation_request, tickets),
 		cancelled_tickets=[ticket.name for ticket in tickets if ticket.docstatus == 2],
 	)
+
+
+def ensure_booking_is_readable(booking_doc) -> None:
+	if booking_doc.user == frappe.session.user:
+		return
+	if not frappe.has_permission("Event Booking", "read", doc=booking_doc):
+		frappe.throw(_("You are not allowed to view this booking."), frappe.PermissionError)
 
 
 def get_tickets_with_add_ons(booking_id: str, event_id: str) -> list:

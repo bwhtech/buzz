@@ -12,6 +12,9 @@ from buzz.api.booking.exceptions import RegistrationsClosed
 from buzz.api.booking.schemas import BookingRequest
 from buzz.api.forms.test_forms import ensure_prompt_named_record
 
+BOOKER = "booking-owner@example.com"
+OUTSIDER = "booking-outsider@example.com"
+
 EVENT_DATA_FIELDS = {
 	"registrations_closed",
 	"event_details",
@@ -231,6 +234,21 @@ class TestProcessBooking(BookingTestCase):
 
 
 class TestGetBookingDetails(BookingTestCase):
+	def setUp(self):
+		super().setUp()
+		for email, first_name in ((BOOKER, "Booking"), (OUTSIDER, "Outsider")):
+			if not frappe.db.exists("User", email):
+				frappe.get_doc(
+					{"doctype": "User", "email": email, "first_name": first_name, "send_welcome_email": 0}
+				).insert(ignore_permissions=True)
+
+	def make_booking_for(self, user):
+		frappe.set_user(user)
+		try:
+			return process_booking(self.booking_request()).booking_name
+		finally:
+			frappe.set_user("Administrator")
+
 	def test_shape(self):
 		booking_name = process_booking(self.booking_request()).booking_name
 		payload = get_booking_details(booking_name).__json__()
@@ -240,6 +258,24 @@ class TestGetBookingDetails(BookingTestCase):
 		self.assertIsInstance(payload["can_transfer_ticket"], bool)
 		self.assertEqual(payload["cancellation_requested_tickets"], [])
 		self.assertEqual(payload["cancelled_tickets"], [])
+
+	def test_the_booker_reads_their_own_booking(self):
+		booking_name = self.make_booking_for(BOOKER)
+		frappe.set_user(BOOKER)
+
+		self.assertEqual(get_booking_details(booking_name).doc.name, booking_name)
+
+	def test_another_user_cannot_read_the_booking(self):
+		booking_name = self.make_booking_for(BOOKER)
+		frappe.set_user(OUTSIDER)
+
+		with self.assertRaises(frappe.PermissionError):
+			get_booking_details(booking_name)
+
+	def test_a_privileged_user_may_read_any_booking(self):
+		booking_name = self.make_booking_for(BOOKER)
+
+		self.assertEqual(get_booking_details(booking_name).doc.name, booking_name)
 
 
 class TestValidateCoupon(BookingTestCase):
