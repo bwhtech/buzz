@@ -193,7 +193,6 @@ class BuzzEvent(Document):
 					title=frappe._("Email Not Configured"),
 				)
 
-	@frappe.whitelist()
 	def after_insert(self):
 		self.create_default_records()
 
