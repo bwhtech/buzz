@@ -2,12 +2,26 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.forms import (
-	STANDARD_EXCLUDE_FIELDS,
 	get_custom_form_data,
+	get_dial_codes,
+	get_event_proposal_form_data,
+	submit_custom_form,
+	submit_event_proposal,
+)
+from buzz.api.forms.exceptions import (
+	EventNotFound,
+	FormNotAvailable,
+	LoginRequired,
+	MandatoryFieldsHidden,
+	ProposalsNotAccepted,
+	SubmissionsClosed,
+	UnknownExcludedFields,
+)
+from buzz.api.forms.fields import (
+	STANDARD_EXCLUDE_FIELDS,
 	get_form_fields,
 	get_link_field_options,
 	parse_excluded_fields,
-	submit_custom_form,
 	validate_excluded_fields,
 )
 
@@ -24,6 +38,43 @@ def ensure_prompt_named_record(doctype, name):
 	doc.name = name
 	doc.insert(ignore_permissions=True)
 	return doc.name
+
+
+class FormsTestCase(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.category = ensure_prompt_named_record("Event Category", "Test Forms Category")
+		cls.host = ensure_prompt_named_record("Event Host", "Test Forms Host")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		frappe.clear_messages()
+
+	def build_event(self, is_published=1, **form_row):
+		"""An event carrying one custom form. Returns the inserted event and its form route."""
+		event = frappe.new_doc("Buzz Event")
+		event.update(
+			{
+				"title": f"Test Event {frappe.generate_hash(length=6)}",
+				"start_date": "2030-01-01",
+				"end_date": "2030-01-01",
+				"start_time": "10:00:00",
+				"end_time": "18:00:00",
+				"medium": "Online",
+				"category": self.category,
+				"host": self.host,
+				"is_published": is_published,
+			}
+		)
+		form_row.setdefault("form_doctype", "Talk Proposal")
+		form_row.setdefault("route", f"propose-{frappe.generate_hash(length=6)}")
+		form_row.setdefault("publish", 1)
+		event.set("custom_forms", [])
+		event.append("custom_forms", form_row)
+		event.insert(ignore_permissions=True)
+		event.reload()
+		return event, form_row["route"]
 
 
 class TestParseExcludedFields(IntegrationTestCase):
@@ -64,6 +115,13 @@ class TestGetFormFields(IntegrationTestCase):
 		self.assertIn("title", real_fields)
 		self.assertFalse({"description", "speakers", "phone"} & real_fields)
 		self.assertTrue(breaks, "expected layout breaks to pass through")
+
+	def test_table_field_carries_child_fields(self):
+		speakers = next(
+			f for f in get_form_fields("Talk Proposal", TALK_PROPOSAL_EXCLUDE) if f["fieldname"] == "speakers"
+		)
+		child_fieldnames = {f["fieldname"] for f in speakers["child_fields"]}
+		self.assertTrue({"first_name", "email"} <= child_fieldnames)
 
 
 class TestGetLinkFieldOptions(IntegrationTestCase):
@@ -118,59 +176,39 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 		self.assertEqual(match["label"], tier.name)
 
 
-class TestCustomFormExcludedFields(IntegrationTestCase):
-	@classmethod
-	def setUpClass(cls):
-		super().setUpClass()
-		cls.category = ensure_prompt_named_record("Event Category", "Test Forms Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Test Forms Host")
-
-	def make_event(self, excluded_fields, form_route=None, publish=1):
-		form_route = form_route or f"propose-{frappe.generate_hash(length=6)}"
-		event = frappe.new_doc("Buzz Event")
-		event.update(
-			{
-				"title": f"Test Event {frappe.generate_hash(length=6)}",
-				"start_date": "2030-01-01",
-				"end_date": "2030-01-01",
-				"start_time": "10:00:00",
-				"end_time": "18:00:00",
-				"medium": "Online",
-				"category": self.category,
-				"host": self.host,
-				"is_published": 1,
-			}
-		)
-		event.set("custom_forms", [])
-		event.append(
-			"custom_forms",
-			{
-				"form_doctype": "Talk Proposal",
-				"route": form_route,
-				"publish": publish,
-				"excluded_fields": excluded_fields,
-			},
-		)
-		event.insert(ignore_permissions=True)
-		event.reload()
-		return event, form_route
-
-	def test_get_custom_form_data_hides_excluded_fields(self):
-		event, form_route = self.make_event("phone")
+class TestCustomFormResponse(FormsTestCase):
+	def test_event_name_travels_as_a_string(self):
+		event, form_route = self.build_event()
 		data = get_custom_form_data(event.route, form_route)
-		returned = {f["fieldname"] for f in data["form_fields"]}
+		self.assertEqual(data.event.name, str(event.name))
+		self.assertIsInstance(data.__json__()["event"]["name"], str)
+
+	def test_open_form_carries_success_copy(self):
+		event, form_route = self.build_event(success_title="Nice one", success_message="See you there")
+		data = get_custom_form_data(event.route, form_route)
+		self.assertFalse(data.closed)
+		self.assertEqual(data.success_title, "Nice one")
+		self.assertEqual(data.success_message, "See you there")
+		self.assertEqual(data.form_title, "Talk Proposal")
+
+
+class TestCustomFormExcludedFields(FormsTestCase):
+	def test_get_custom_form_data_hides_excluded_fields(self):
+		event, form_route = self.build_event(excluded_fields="phone")
+		data = get_custom_form_data(event.route, form_route)
+		returned = {f["fieldname"] for f in data.form_fields}
 		self.assertNotIn("phone", returned)
 		self.assertTrue({"title", "description", "speakers"} <= returned)
 
 	def test_get_custom_form_data_empty_excluded_fields_returns_all(self):
-		event, form_route = self.make_event("")
+		event, form_route = self.build_event(excluded_fields="")
 		data = get_custom_form_data(event.route, form_route)
-		returned = {f["fieldname"] for f in data["form_fields"]}
+		returned = {f["fieldname"] for f in data.form_fields}
 		self.assertTrue({"title", "description", "speakers", "phone"} <= returned)
 
 	def test_submit_drops_excluded_field_value(self):
 		# phone is excluded -> a posted phone value must be dropped.
-		event, form_route = self.make_event("phone")
+		event, form_route = self.build_event(excluded_fields="phone")
 		submit_custom_form(
 			event.route,
 			form_route,
@@ -192,35 +230,151 @@ class TestCustomFormExcludedFields(IntegrationTestCase):
 		self.assertEqual(created.speakers[0].email, "jane@example.com")
 
 
-class TestCustomFormLinkEventFilter(IntegrationTestCase):
-	@classmethod
-	def setUpClass(cls):
-		super().setUpClass()
-		cls.category = ensure_prompt_named_record("Event Category", "Test Forms Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Test Forms Host")
+class TestCustomFormAccess(FormsTestCase):
+	def test_status_codes(self):
+		self.assertEqual(EventNotFound.http_status_code, 404)
+		self.assertEqual(FormNotAvailable.http_status_code, 404)
+		self.assertEqual(LoginRequired.http_status_code, 401)
+		self.assertEqual(SubmissionsClosed.http_status_code, 409)
 
-	def make_sponsorship_event(self):
-		form_route = f"sponsor-{frappe.generate_hash(length=6)}"
-		event = frappe.new_doc("Buzz Event")
-		event.update(
+	def test_unknown_event_route(self):
+		with self.assertRaises(EventNotFound):
+			get_custom_form_data("no-such-event-route", "feedback")
+
+		self.assertEqual(frappe.local.message_log[-1]["title"], "Not Found")
+		self.assertIn("Event not found", frappe.local.message_log[-1]["message"])
+
+	def test_unpublished_event_is_not_found(self):
+		# A route is only assigned on publish, so unpublish after the fact to keep one.
+		event, form_route = self.build_event()
+		frappe.db.set_value("Buzz Event", event.name, "is_published", 0)
+		frappe.clear_document_cache("Buzz Event", event.name)
+
+		with self.assertRaises(EventNotFound):
+			get_custom_form_data(event.route, form_route)
+
+	def test_unknown_form_route(self):
+		event, _ = self.build_event()
+		with self.assertRaises(FormNotAvailable):
+			get_custom_form_data(event.route, "no-such-form-route")
+
+		self.assertIn("not available for this event", frappe.local.message_log[-1]["message"])
+
+	def test_unpublished_form_row_is_not_available(self):
+		event, form_route = self.build_event(publish=0)
+		with self.assertRaises(FormNotAvailable):
+			get_custom_form_data(event.route, form_route)
+
+	def test_guest_needs_login_when_form_requires_it(self):
+		event, form_route = self.build_event(login_required=1)
+		frappe.set_user("Guest")
+		with self.assertRaises(LoginRequired):
+			get_custom_form_data(event.route, form_route)
+
+		self.assertEqual(frappe.local.message_log[-1]["title"], "Login Required")
+
+	def test_guest_cannot_submit_a_login_only_form(self):
+		event, form_route = self.build_event(login_required=1)
+		frappe.set_user("Guest")
+		with self.assertRaises(LoginRequired):
+			submit_custom_form(event.route, form_route, data={"title": "Nope"})
+
+	def test_logged_in_user_passes_the_login_gate(self):
+		event, form_route = self.build_event(login_required=1)
+		self.assertFalse(get_custom_form_data(event.route, form_route).closed)
+
+
+class TestCustomFormClosing(FormsTestCase):
+	def test_closed_form_returns_the_closed_copy_and_no_fields(self):
+		event, form_route = self.build_event(
+			auto_close_at="2020-01-01 00:00:00",
+			closed_title="All done",
+			closed_message="Come back next year",
+		)
+		data = get_custom_form_data(event.route, form_route)
+		self.assertTrue(data.closed)
+		self.assertEqual(data.form_fields, [])
+		self.assertEqual(data.custom_fields, [])
+		self.assertEqual(data.closed_title, "All done")
+		self.assertEqual(data.closed_message, "Come back next year")
+		self.assertEqual(data.success_title, "")
+		self.assertEqual(data.success_message, "")
+
+	def test_future_close_time_leaves_the_form_open(self):
+		event, form_route = self.build_event(auto_close_at="2099-01-01 00:00:00")
+		self.assertFalse(get_custom_form_data(event.route, form_route).closed)
+
+	def test_submitting_a_closed_form_conflicts(self):
+		event, form_route = self.build_event(auto_close_at="2020-01-01 00:00:00")
+		with self.assertRaises(SubmissionsClosed):
+			submit_custom_form(event.route, form_route, data={"title": "Too late"})
+
+		self.assertEqual(frappe.local.message_log[-1]["title"], "Submissions Closed")
+
+
+class TestCustomFormCustomFields(FormsTestCase):
+	def build_event_with_custom_field(self, **field):
+		event, form_route = self.build_event()
+		field.setdefault("label", "Dietary Preference")
+		field.setdefault("fieldtype", "Data")
+		frappe.get_doc(
 			{
-				"title": f"Test Event {frappe.generate_hash(length=6)}",
-				"start_date": "2030-01-01",
-				"end_date": "2030-01-01",
-				"start_time": "10:00:00",
-				"end_time": "18:00:00",
-				"medium": "Online",
-				"category": self.category,
-				"host": self.host,
-				"is_published": 1,
+				"doctype": "Buzz Custom Field",
+				"event": event.name,
+				"applied_to": "Custom Form",
+				"custom_form_doctype": "Talk Proposal",
+				"enabled": 1,
+				**field,
 			}
-		)
-		event.append(
-			"custom_forms",
-			{"form_doctype": "Sponsorship Enquiry", "route": form_route, "publish": 1},
-		)
-		event.insert(ignore_permissions=True)
+		).insert(ignore_permissions=True)
+		frappe.clear_document_cache("Buzz Event", event.name)
 		return event, form_route
+
+	def test_definitions_are_returned_with_the_form(self):
+		event, form_route = self.build_event_with_custom_field(mandatory=1, order=2, placeholder="Veg?")
+		custom_fields = get_custom_form_data(event.route, form_route).custom_fields
+		self.assertEqual(len(custom_fields), 1)
+		self.assertEqual(custom_fields[0].label, "Dietary Preference")
+		# Check fields travel as 0/1, not booleans.
+		self.assertEqual(custom_fields[0].mandatory, 1)
+		self.assertEqual(custom_fields[0].order, 2)
+
+	def test_submitted_values_land_in_additional_fields(self):
+		event, form_route = self.build_event_with_custom_field()
+		submit_custom_form(
+			event.route,
+			form_route,
+			data={
+				"title": "Custom Field Test",
+				"speakers": [{"first_name": "Jane", "email": "jane@example.com"}],
+			},
+			custom_fields_data={"dietary_preference": "Vegetarian", "not_a_custom_field": "dropped"},
+		)
+		created = frappe.get_last_doc("Talk Proposal", filters={"title": "Custom Field Test"})
+		self.assertEqual(len(created.additional_fields), 1)
+		self.assertEqual(created.additional_fields[0].fieldname, "dietary_preference")
+		self.assertEqual(created.additional_fields[0].value, "Vegetarian")
+
+	def test_blank_values_are_not_appended(self):
+		event, form_route = self.build_event_with_custom_field()
+		submit_custom_form(
+			event.route,
+			form_route,
+			data={
+				"title": "Blank Custom Field Test",
+				"speakers": [{"first_name": "Jane", "email": "jane@example.com"}],
+			},
+			custom_fields_data={"dietary_preference": ""},
+		)
+		created = frappe.get_last_doc("Talk Proposal", filters={"title": "Blank Custom Field Test"})
+		self.assertEqual(created.additional_fields, [])
+
+
+class TestCustomFormLinkEventFilter(FormsTestCase):
+	def make_sponsorship_event(self):
+		return self.build_event(
+			form_doctype="Sponsorship Enquiry", route=f"sponsor-{frappe.generate_hash(length=6)}"
+		)
 
 	def make_tier(self, event_name, title):
 		tier = frappe.new_doc("Sponsorship Tier")
@@ -235,7 +389,7 @@ class TestCustomFormLinkEventFilter(IntegrationTestCase):
 		tier_b = self.make_tier(event_b.name, "Gold B")
 
 		data = get_custom_form_data(event_a.route, route_a)
-		tier_field = next(f for f in data["form_fields"] if f["fieldname"] == "tier")
+		tier_field = next(f for f in data.form_fields if f["fieldname"] == "tier")
 
 		option_values = [option["value"] for option in tier_field["link_options"]]
 		self.assertIn(tier_a, option_values)
@@ -245,19 +399,27 @@ class TestCustomFormLinkEventFilter(IntegrationTestCase):
 		# Country has no `event` field -> it must keep returning the full list.
 		event_a, route_a = self.make_sponsorship_event()
 		data = get_custom_form_data(event_a.route, route_a)
-		country_field = next(f for f in data["form_fields"] if f["fieldname"] == "country")
+		country_field = next(f for f in data.form_fields if f["fieldname"] == "country")
 		self.assertTrue(len(country_field["link_options"]) > 1)
 
 
 class TestValidateExcludedFields(IntegrationTestCase):
+	def test_status_codes(self):
+		self.assertEqual(UnknownExcludedFields.http_status_code, 400)
+		self.assertEqual(MandatoryFieldsHidden.http_status_code, 400)
+
 	def test_hiding_mandatory_field_throws(self):
 		# speakers is mandatory; it cannot be hidden.
-		with self.assertRaises(frappe.ValidationError):
+		with self.assertRaises(MandatoryFieldsHidden):
 			validate_excluded_fields("Talk Proposal", "speakers")
 
+		self.assertIn("speakers", frappe.local.message_log[-1]["message"])
+
 	def test_unknown_field_throws(self):
-		with self.assertRaises(frappe.ValidationError):
+		with self.assertRaises(UnknownExcludedFields):
 			validate_excluded_fields("Talk Proposal", "phone, not_a_field")
+
+		self.assertIn("not_a_field", frappe.local.message_log[-1]["message"])
 
 	def test_hiding_optional_field_passes(self):
 		# phone is optional -> safe to hide.
@@ -272,51 +434,96 @@ class TestValidateExcludedFields(IntegrationTestCase):
 		validate_excluded_fields("Talk Proposal", None)
 
 
-class TestBuzzEventSaveValidatesExcludedFields(IntegrationTestCase):
+class TestBuzzEventSaveValidatesExcludedFields(FormsTestCase):
+	def test_save_hiding_mandatory_throws(self):
+		with self.assertRaises(MandatoryFieldsHidden):
+			self.build_event(excluded_fields="speakers")
+
+	def test_save_with_unknown_field_throws(self):
+		with self.assertRaises(UnknownExcludedFields):
+			self.build_event(excluded_fields="phone, bogus_field")
+
+	def test_save_hiding_optional_field_succeeds(self):
+		event, _ = self.build_event(excluded_fields="phone")
+		self.assertTrue(frappe.db.exists("Buzz Event", event.name))
+
+
+class TestEventProposalForm(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Test Forms Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Test Forms Host")
 
-	def make_event_doc(self, excluded_fields):
-		event = frappe.new_doc("Buzz Event")
-		event.update(
-			{
-				"title": f"Test Event {frappe.generate_hash(length=6)}",
-				"start_date": "2030-01-01",
-				"end_date": "2030-01-01",
-				"start_time": "10:00:00",
-				"end_time": "18:00:00",
-				"medium": "Online",
-				"category": self.category,
-				"host": self.host,
-				"is_published": 1,
-			}
-		)
-		event.set("custom_forms", [])
-		event.append(
-			"custom_forms",
-			{
-				"form_doctype": "Talk Proposal",
-				"route": f"propose-{frappe.generate_hash(length=6)}",
-				"publish": 1,
-				"excluded_fields": excluded_fields,
-			},
-		)
-		return event
+	def setUp(self):
+		frappe.set_user("Administrator")
+		frappe.clear_messages()
+		self.set_settings(accept_event_proposals=1, allow_guest_event_proposals=1)
 
-	def test_save_hiding_mandatory_throws(self):
-		event = self.make_event_doc("speakers")
-		with self.assertRaises(frappe.ValidationError):
-			event.insert(ignore_permissions=True)
+	def proposal_payload(self, **overrides):
+		return {
+			"title": f"Proposal {frappe.generate_hash(length=6)}",
+			"category": self.category,
+			"start_date": "2030-01-01",
+			"start_time": "10:00:00",
+			"end_time": "18:00:00",
+			"about": "A proposal raised by the forms test suite.",
+			**overrides,
+		}
 
-	def test_save_with_unknown_field_throws(self):
-		event = self.make_event_doc("phone, bogus_field")
-		with self.assertRaises(frappe.ValidationError):
-			event.insert(ignore_permissions=True)
+	def set_settings(self, **values):
+		for fieldname, value in values.items():
+			frappe.db.set_single_value("Buzz Settings", fieldname, value)
+		frappe.clear_document_cache("Buzz Settings", "Buzz Settings")
 
-	def test_save_hiding_optional_field_succeeds(self):
-		event = self.make_event_doc("phone")
-		event.insert(ignore_permissions=True)
-		self.assertTrue(frappe.db.exists("Buzz Event", event.name))
+	def test_form_data_shape(self):
+		self.set_settings(event_proposal_banner_title="Pitch us", event_proposal_success_title="Got it")
+		data = get_event_proposal_form_data()
+		self.assertEqual(data.banner_title, "Pitch us")
+		self.assertEqual(data.success_title, "Got it")
+		self.assertTrue(data.form_fields)
+		self.assertNotIn("status", {f["fieldname"] for f in data.form_fields})
+
+	def test_disabled_proposals_are_not_found(self):
+		self.set_settings(accept_event_proposals=0)
+		with self.assertRaises(ProposalsNotAccepted):
+			get_event_proposal_form_data()
+
+		self.assertIn("not being accepted", frappe.local.message_log[-1]["message"])
+
+	def test_guest_blocked_when_guest_proposals_are_off(self):
+		self.set_settings(allow_guest_event_proposals=0)
+		frappe.set_user("Guest")
+		with self.assertRaises(LoginRequired):
+			get_event_proposal_form_data()
+
+	def test_submit_drops_fields_outside_the_form(self):
+		payload = self.proposal_payload(status="Approved")
+		submit_event_proposal(data=payload)
+		created = frappe.get_last_doc("Event Proposal", filters={"title": payload["title"]})
+		# status is excluded, so a posted value must not stick.
+		self.assertNotEqual(created.status, "Approved")
+		self.assertEqual(created.about, payload["about"])
+
+	def test_guest_can_submit(self):
+		payload = self.proposal_payload()
+		frappe.set_user("Guest")
+		submit_event_proposal(data=payload)
+		frappe.set_user("Administrator")
+		# Event Proposal has no submitted_by field, so the proposer is only the doc owner.
+		created = frappe.get_last_doc("Event Proposal", filters={"title": payload["title"]})
+		self.assertEqual(created.owner, "Guest")
+
+	def test_submit_blocked_when_proposals_are_closed(self):
+		self.set_settings(accept_event_proposals=0)
+		with self.assertRaises(ProposalsNotAccepted):
+			submit_event_proposal(data=self.proposal_payload())
+
+
+class TestDialCodes(IntegrationTestCase):
+	def test_shape_and_uniqueness(self):
+		codes = get_dial_codes()
+		self.assertTrue(codes)
+		self.assertTrue(all(set(entry) == {"country", "code", "dial_code"} for entry in codes))
+		dial_codes = [entry["dial_code"] for entry in codes]
+		self.assertEqual(len(dial_codes), len(set(dial_codes)), "dial codes must be de-duplicated")
+		self.assertIn("+91", dial_codes)

@@ -7,7 +7,7 @@ from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
 from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
 
-from buzz.api.forms import validate_excluded_fields
+from buzz.api.forms.fields import validate_excluded_fields
 from buzz.utils import get_time_zone_label, only_if_app_installed
 
 # Top-level dashboard route segments (/b/<segment>) an event route must not shadow.
