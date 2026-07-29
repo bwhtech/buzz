@@ -1,20 +1,10 @@
-from datetime import datetime
-
 import frappe
-from pydantic import BaseModel
 
-
-class ProposalListItem(BaseModel):
-	name: str
-	title: str
-	event: str
-	event_title: str | None = None
-	status: str
-	creation: datetime
+from buzz.api.proposals.schemas import ProposalListItem
 
 
 @frappe.whitelist()
-def get_my_proposals() -> list[dict]:
+def get_my_proposals() -> list[ProposalListItem]:
 	"""Proposals where the session user is the submitter or a listed speaker.
 
 	Speaker matching runs on the speakers child table because guest form
@@ -38,4 +28,4 @@ def get_my_proposals() -> list[dict]:
 		order_by="creation desc",
 	)
 
-	return [ProposalListItem(**row).model_dump() for row in rows]
+	return [ProposalListItem(**row) for row in rows]
