@@ -130,3 +130,39 @@ class TestTalkProposalSpeakerAccess(IntegrationTestCase):
 	def test_event_manager_sees_all_proposals(self):
 		frappe.set_user(self.manager_user)
 		self.assertIn(self.guest_proposal, frappe.get_list("Talk Proposal", pluck="name"))
+
+
+class TestCreateTalk(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.category = ensure_prompt_named_record("Event Category", "Proposal Perm Category")
+		cls.host = ensure_prompt_named_record("Event Host", "Proposal Perm Host")
+		cls.event = make_test_event(cls.category, cls.host)
+		cls.speaker_user = make_test_user("create-talk-speaker@example.com")
+
+	def test_create_talk_accepts_the_proposal(self):
+		proposal = frappe.get_doc("Talk Proposal", make_guest_proposal(self.event, self.speaker_user))
+
+		talk = proposal.create_talk()
+
+		self.assertEqual(talk.proposal, proposal.name)
+		self.assertEqual(frappe.db.get_value("Talk Proposal", proposal.name, "status"), "Accepted")
+
+	def test_speaker_without_an_account_gets_a_website_user(self):
+		email = f"new-speaker-{frappe.generate_hash(length=6)}@example.com"
+		proposal = frappe.get_doc("Talk Proposal", make_guest_proposal(self.event, email))
+
+		proposal.create_talk()
+
+		self.assertEqual(frappe.db.get_value("User", email, "user_type"), "Website User")
+
+	def test_second_create_talk_leaves_no_partial_state(self):
+		proposal = frappe.get_doc("Talk Proposal", make_guest_proposal(self.event, self.speaker_user))
+		proposal.create_talk()
+
+		proposal.reload()
+		with self.assertRaises(frappe.ValidationError):
+			proposal.create_talk()
+
+		self.assertEqual(frappe.db.count("Event Talk", {"proposal": proposal.name}), 1)
