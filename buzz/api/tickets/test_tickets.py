@@ -4,6 +4,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
+from buzz.api.forms.test_forms import ensure_prompt_named_record
 from buzz.api.tickets import (
 	change_add_on_preference,
 	create_cancellation_request,
@@ -46,7 +47,26 @@ class TicketTestCase(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		cls.event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		# These tests move the event's start date around, so they own an event rather than
+		# sharing test-route: IntegrationTestCase rolls the DB back but not the document
+		# cache, which would leave a rolled-back date visible to later test modules.
+		category = ensure_prompt_named_record("Event Category", "Test Tickets Category")
+		host = ensure_prompt_named_record("Event Host", "Test Tickets Host")
+		cls.event = frappe.get_doc(
+			{
+				"doctype": "Buzz Event",
+				"title": f"Tickets Test Event {frappe.generate_hash(length=6)}",
+				"start_date": "2030-01-01",
+				"end_date": "2030-01-01",
+				"start_time": "10:00:00",
+				"end_time": "18:00:00",
+				"medium": "Online",
+				"category": category,
+				"host": host,
+				"is_published": 1,
+			}
+		).insert(ignore_permissions=True)
+
 		for email, first_name in ((ATTENDEE, "Ticket"), (OTHER_USER, "Outsider")):
 			if not frappe.db.exists("User", email):
 				frappe.get_doc(
@@ -56,6 +76,9 @@ class TicketTestCase(IntegrationTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
 		frappe.clear_messages()
+		# Buzz Settings is a single and cannot be owned per test, so drop it from the document
+		# cache afterwards — the rollback restores the row but not the cached copy.
+		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
 		# The window checks read Buzz Settings, so pin the cutoffs the tests reason about.
 		self.set_cutoffs(7)
 		self.ticket_type = frappe.get_doc(
@@ -263,7 +286,7 @@ class TestChangeAddOnPreference(TicketTestCase):
 		return ticket, ticket.add_ons[0].name
 
 	def test_changes_the_stored_value(self):
-		ticket, add_on_value_id = self.make_ticket_with_add_on()
+		_ticket, add_on_value_id = self.make_ticket_with_add_on()
 		change_add_on_preference(add_on_value_id, "Non-veg")
 		self.assertEqual(frappe.db.get_value("Ticket Add-on Value", add_on_value_id, "value"), "Non-veg")
 
@@ -274,7 +297,7 @@ class TestChangeAddOnPreference(TicketTestCase):
 		self.assertEqual(AddOnValueNotFound.http_status_code, 404)
 
 	def test_refused_once_the_window_closes(self):
-		ticket, add_on_value_id = self.make_ticket_with_add_on()
+		_ticket, add_on_value_id = self.make_ticket_with_add_on()
 		self.set_event_start(2)
 
 		with self.assertRaises(AddOnChangeWindowClosed):
