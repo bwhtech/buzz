@@ -119,7 +119,7 @@ const form_data_resource = createResource({
 		}
 	},
 	onError: (err: FrappeError) => {
-		if (err.exc_type === "AuthenticationError") {
+		if (err.exc_type === "LoginRequired") {
 			login_required.value = true;
 			return;
 		}
