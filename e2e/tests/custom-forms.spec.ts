@@ -1,8 +1,13 @@
 import { test, expect } from "@playwright/test";
 import { CustomFormPage } from "../pages";
+import {
+	CLOSED_FORM_MESSAGE,
+	CLOSED_FORM_ROUTE,
+	CLOSED_FORM_TITLE,
+	CUSTOM_FORMS_EVENT_ROUTE as testEventRoute,
+	MEMBERS_ONLY_FORM_ROUTE,
+} from "../data/custom-forms";
 import { callMethod } from "../helpers/frappe";
-
-const testEventRoute = "custom-forms-e2e";
 
 test.describe("Event Feedback Form", () => {
 	test("should display feedback form with title", async ({ page }) => {
@@ -337,5 +342,56 @@ test.describe("Custom Form Edge Cases", () => {
 		const formPage = new CustomFormPage(page);
 		await formPage.goto(testEventRoute, "nonexistent-form-route");
 		await formPage.expectNotFound();
+	});
+});
+
+test.describe("Login Required Form", () => {
+	test("logged-in user gets the form", async ({ page }) => {
+		const formPage = new CustomFormPage(page);
+
+		await formPage.goto(testEventRoute, MEMBERS_ONLY_FORM_ROUTE);
+		await formPage.waitForFormLoad();
+		await formPage.expectFormVisible();
+	});
+
+	test.describe("as a guest", () => {
+		test.use({ storageState: { cookies: [], origins: [] } });
+
+		test("gets the login prompt instead of the form", async ({ page }) => {
+			const formPage = new CustomFormPage(page);
+
+			await formPage.goto(testEventRoute, MEMBERS_ONLY_FORM_ROUTE);
+			await formPage.expectLoginRequired();
+		});
+
+		test("still gets an open form that does not require login", async ({ page }) => {
+			const formPage = new CustomFormPage(page);
+
+			await formPage.goto(testEventRoute, "feedback");
+			await formPage.waitForFormLoad();
+			await formPage.expectFormVisible();
+		});
+	});
+});
+
+test.describe("Closed Form", () => {
+	test("shows the closed notice instead of the form", async ({ page }) => {
+		const formPage = new CustomFormPage(page);
+
+		await formPage.goto(testEventRoute, CLOSED_FORM_ROUTE);
+		await formPage.expectClosed(CLOSED_FORM_TITLE, CLOSED_FORM_MESSAGE);
+		await expect(page.locator("form")).toHaveCount(0);
+	});
+
+	test("rejects a submission over the API", async ({ request }) => {
+		const result = await callMethod(request, "buzz.api.forms.submit_custom_form", {
+			event_route: testEventRoute,
+			form_route: CLOSED_FORM_ROUTE,
+			data: { feedback: "too late" },
+		}).catch((err: Error) => err);
+
+		expect(result).toBeInstanceOf(Error);
+		expect((result as Error).message).toContain("SubmissionsClosed");
+		expect((result as Error).message).toContain("Submissions for this form have closed.");
 	});
 });
