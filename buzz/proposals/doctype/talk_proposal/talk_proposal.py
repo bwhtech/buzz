@@ -84,6 +84,7 @@ class TalkProposal(Document):
 							"first_name": speaker.first_name,
 							"last_name": speaker.last_name,
 							"email": speaker.email,
+							"user_type": "Website User",
 						}
 					)
 					.insert()
@@ -95,4 +96,8 @@ class TalkProposal(Document):
 				speaker_profile = frappe.get_doc({"doctype": "Speaker Profile", "user": user}).insert().name
 
 			talk.append("speakers", {"speaker": speaker_profile})
-		return talk.save()
+
+		talk.save()
+		self.status = "Accepted"
+		self.save()
+		return talk
