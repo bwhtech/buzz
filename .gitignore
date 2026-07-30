@@ -68,3 +68,7 @@ buzz/www/dashboard.html
 .playwright-mcp/
 # Local planning docs
 plans/
+
+# Claude Code local state
+.claude/worktrees/
+.claude/settings.local.json
