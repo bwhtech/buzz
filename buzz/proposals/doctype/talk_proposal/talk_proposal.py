@@ -5,18 +5,10 @@ import frappe
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 
-PROPOSAL_MANAGER_ROLES = frozenset({"System Manager", "Event Manager"})
+from buzz.permissions import derived_has_permission, derived_query_conditions
 
 
-def is_proposal_manager(user: str) -> bool:
-	return user == "Administrator" or bool(PROPOSAL_MANAGER_ROLES & set(frappe.get_roles(user)))
-
-
-def get_permission_query_conditions(user: str | None = None) -> str:
-	user = user or frappe.session.user
-	if is_proposal_manager(user):
-		return ""
-
+def get_speaker_query_conditions(user: str) -> str:
 	escaped_user = frappe.db.escape(user)
 	# Guest form submissions leave owner/submitted_by as "Guest", so speakers
 	# are matched by their email in the speakers child table.
@@ -29,19 +21,32 @@ def get_permission_query_conditions(user: str | None = None) -> str:
 	)
 
 
-def has_talk_proposal_permission(doc, ptype: str | None = None, user: str | None = None) -> bool:
-	# Controller hooks can only deny access: True means "no objection" and
-	# role permissions still apply, False blocks the document outright.
+def get_permission_query_conditions(user: str | None = None, doctype: str | None = None) -> str:
 	user = user or frappe.session.user
-	if ptype == "create" or doc.is_new():
-		return True
-	if is_proposal_manager(user):
-		return True
+	team_conditions = derived_query_conditions(user=user, doctype="Talk Proposal")
+	if not team_conditions:
+		return ""
+
+	return f"({get_speaker_query_conditions(user)} or {team_conditions})"
+
+
+def is_speaker_on(doc, user: str) -> bool:
 	if user in (doc.submitted_by, doc.owner):
 		return True
 	# User emails are stored lowercase, but guest-entered speaker emails keep
 	# their original casing.
 	return any(speaker.email and speaker.email.lower() == user.lower() for speaker in doc.speakers)
+
+
+def has_talk_proposal_permission(doc, ptype: str | None = None, user: str | None = None, **kwargs) -> bool:
+	# Controller hooks can only deny access: True means "no objection" and
+	# role permissions still apply, False blocks the document outright.
+	user = user or frappe.session.user
+	if ptype == "create" or doc.is_new():
+		return True
+	if is_speaker_on(doc, user):
+		return True
+	return derived_has_permission(doc, ptype=ptype, user=user)
 
 
 class TalkProposal(Document):

@@ -1,0 +1,367 @@
+# Copyright (c) 2026, BWH Studios and contributors
+# See license.txt
+
+import frappe
+from frappe.tests import IntegrationTestCase
+
+from buzz.api.checkin.exceptions import TicketNotFound
+from buzz.api.exceptions import NotPermitted
+from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user, payload_for
+from buzz.permissions import team_query_conditions
+
+# Buzz Team Membership carries a team column but is scoped by its own pair of hooks.
+SELF_SCOPED_DOCTYPES = frozenset({"Buzz Team Membership"})
+
+
+def linked_to(doctype: str) -> set[str]:
+	"""Doctypes with a Link field named after `doctype`'s short name, e.g. `team` -> Buzz Team."""
+	fieldname = doctype.replace("Buzz ", "").lower()
+	parents = frappe.get_all(
+		"DocField",
+		filters={"fieldname": fieldname, "fieldtype": "Link", "options": doctype},
+		pluck="parent",
+	)
+	return {parent for parent in parents if not frappe.get_meta(parent).istable}
+
+
+def tenant_doctypes() -> set[str]:
+	"""Every doctype a team owns, derived from the schema rather than a second hardcoded list."""
+	return (linked_to("Buzz Team") | linked_to("Buzz Event")) - SELF_SCOPED_DOCTYPES
+
+
+def add_member(team: str, user: str, team_role: str) -> str:
+	return (
+		frappe.get_doc(
+			{"doctype": "Buzz Team Membership", "team": team, "user": user, "team_role": team_role}
+		)
+		.insert(ignore_permissions=True)
+		.name
+	)
+
+
+def create_event(title: str, team: str, is_published: int = 0) -> str:
+	payload = payload_for("Buzz Event", title)
+	return (
+		frappe.get_doc({**payload, "team": team, "is_published": is_published})
+		.insert(ignore_permissions=True)
+		.name
+	)
+
+
+def create_ticket(event: str, owner: str) -> str:
+	ticket_type = frappe.get_doc(
+		{
+			"doctype": "Event Ticket Type",
+			"event": event,
+			"title": f"Type {frappe.generate_hash(length=6)}",
+			"price": 0,
+		}
+	).insert(ignore_permissions=True)
+
+	ticket = frappe.get_doc(
+		{
+			"doctype": "Event Ticket",
+			"event": event,
+			"ticket_type": ticket_type.name,
+			"attendee_name": "Attendee",
+			"attendee_email": owner,
+		}
+	).insert(ignore_permissions=True)
+	frappe.db.set_value("Event Ticket", ticket.name, "owner", owner, update_modified=False)
+	return ticket.name
+
+
+class TeamPermissionTestCase(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.alice = create_user("perm-alice@example.com", "Alice")
+		cls.bob = create_user("perm-bob@example.com", "Bob")
+		cls.outsider = create_user("perm-outsider@example.com", "Outsider")
+
+		cls.team_a = create_owned_team("Perm Team A", cls.alice)
+		cls.team_b = create_owned_team("Perm Team B", cls.bob)
+
+		cls.event_a = create_event("Perm A", cls.team_a)
+		cls.event_b = create_event("Perm B", cls.team_b)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def as_user(self, user: str):
+		frappe.set_user(user)
+
+
+class TestCrossTeamIsolation(TeamPermissionTestCase):
+	def listed_names(self, doctype: str, **kwargs) -> list[str]:
+		return frappe.get_list(doctype, pluck="name", **kwargs)
+
+	def test_team_direct_lists_exclude_other_teams(self):
+		self.as_user(self.alice)
+
+		for doctype in linked_to("Buzz Team") - SELF_SCOPED_DOCTYPES:
+			with self.subTest(doctype=doctype):
+				teams = frappe.get_list(doctype, pluck="team")
+
+				self.assertNotIn(self.team_b, teams)
+
+	def test_event_derived_lists_exclude_other_teams(self):
+		ticket_type = frappe.get_doc(
+			{"doctype": "Event Ticket Type", "event": self.event_b, "title": "Hidden", "price": 0}
+		).insert(ignore_permissions=True)
+
+		self.as_user(self.alice)
+
+		self.assertNotIn(ticket_type.name, self.listed_names("Event Ticket Type"))
+
+	def test_every_tenant_doctype_is_wired_to_both_hooks(self):
+		# Catches a new team-owned doctype that nobody registered in hooks.py.
+		query_conditions = frappe.get_hooks("permission_query_conditions")
+		has_permission = frappe.get_hooks("has_permission")
+
+		for doctype in tenant_doctypes():
+			with self.subTest(doctype=doctype):
+				self.assertTrue(query_conditions.get(doctype))
+				self.assertTrue(has_permission.get(doctype))
+
+	def test_opening_another_teams_event_is_denied(self):
+		self.as_user(self.alice)
+
+		with self.assertRaises(frappe.PermissionError):
+			frappe.get_doc("Buzz Event", self.event_b).check_permission("read")
+
+	def test_opening_another_teams_derived_doc_is_denied(self):
+		ticket_type = frappe.get_doc(
+			{"doctype": "Event Ticket Type", "event": self.event_b, "title": "Denied", "price": 0}
+		).insert(ignore_permissions=True)
+
+		self.as_user(self.alice)
+
+		with self.assertRaises(frappe.PermissionError):
+			frappe.get_doc("Event Ticket Type", ticket_type.name).check_permission("read")
+
+	def test_system_manager_is_unrestricted(self):
+		self.assertIn(self.event_b, self.listed_names("Buzz Event"))
+
+	def test_unstamped_rows_stay_readable_by_system_managers_only(self):
+		orphan = create_event("Perm Orphan", self.team_a)
+		frappe.db.set_value("Buzz Event", orphan, "team", None, update_modified=False)
+
+		self.assertIn(orphan, self.listed_names("Buzz Event"))
+
+		self.as_user(self.alice)
+
+		self.assertNotIn(orphan, self.listed_names("Buzz Event"))
+		# has_permission tolerates the missing team so a half-migrated site does not hard-break.
+		frappe.get_doc("Buzz Event", orphan).check_permission("read")
+
+
+class TestMultiTeamMembership(TeamPermissionTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.single_team_user = create_user("perm-one-team@example.com", "Single")
+		add_member(cls.team_a, cls.single_team_user, "Manager")
+
+		cls.both_teams_user = create_user("perm-both-teams@example.com", "Both")
+		add_member(cls.team_a, cls.both_teams_user, "Manager")
+		cls.membership_b = add_member(cls.team_b, cls.both_teams_user, "Manager")
+
+	def listed_events(self) -> list[str]:
+		return frappe.get_list("Buzz Event", pluck="name")
+
+	def test_single_team_member_sees_their_team_and_only_their_team(self):
+		self.as_user(self.single_team_user)
+		events = self.listed_events()
+
+		self.assertIn(self.event_a, events)
+		self.assertNotIn(self.event_b, events)
+
+	def test_single_team_member_writes_their_team_only(self):
+		self.as_user(self.single_team_user)
+
+		self.assertTrue(frappe.has_permission("Buzz Event", "write", doc=self.event_a))
+		self.assertFalse(frappe.has_permission("Buzz Event", "write", doc=self.event_b))
+
+	def test_member_of_both_teams_sees_both(self):
+		self.as_user(self.both_teams_user)
+		events = self.listed_events()
+
+		self.assertIn(self.event_a, events)
+		self.assertIn(self.event_b, events)
+
+	def test_member_of_both_teams_writes_both(self):
+		self.as_user(self.both_teams_user)
+
+		self.assertTrue(frappe.has_permission("Buzz Event", "write", doc=self.event_a))
+		self.assertTrue(frappe.has_permission("Buzz Event", "write", doc=self.event_b))
+
+	def test_member_of_both_teams_sees_derived_rows_from_both(self):
+		ours = create_ticket(self.event_a, self.alice)
+		theirs = create_ticket(self.event_b, self.bob)
+
+		self.as_user(self.both_teams_user)
+		tickets = frappe.get_list("Event Ticket", pluck="name")
+
+		self.assertIn(ours, tickets)
+		self.assertIn(theirs, tickets)
+
+	def test_disabling_one_membership_leaves_the_other_intact(self):
+		membership = frappe.get_doc("Buzz Team Membership", self.membership_b)
+		membership.enabled = 0
+		membership.save(ignore_permissions=True)
+		self.addCleanup(frappe.db.set_value, "Buzz Team Membership", self.membership_b, "enabled", 1)
+
+		self.as_user(self.both_teams_user)
+		events = self.listed_events()
+
+		self.assertIn(self.event_a, events)
+		self.assertNotIn(self.event_b, events)
+
+
+class TestRoleMatrix(TeamPermissionTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.viewer = create_user("perm-viewer@example.com", "Viewer")
+		cls.manager = create_user("perm-manager@example.com", "Manager")
+		cls.admin = create_user("perm-admin@example.com", "Admin")
+
+		for user, team_role in ((cls.viewer, "Viewer"), (cls.manager, "Manager"), (cls.admin, "Admin")):
+			add_member(cls.team_a, user, team_role)
+
+	def can(self, user: str, ptype: str) -> bool:
+		self.as_user(user)
+		return frappe.has_permission("Buzz Event", ptype, doc=self.event_a)
+
+	def test_viewer_reads_but_cannot_write(self):
+		self.assertTrue(self.can(self.viewer, "read"))
+		self.assertFalse(self.can(self.viewer, "write"))
+
+	def test_manager_writes_but_cannot_delete(self):
+		self.assertTrue(self.can(self.manager, "write"))
+		self.assertFalse(self.can(self.manager, "delete"))
+
+	def test_admin_deletes(self):
+		self.assertTrue(self.can(self.admin, "delete"))
+
+	def test_manager_cannot_write_another_teams_event(self):
+		self.as_user(self.manager)
+
+		self.assertFalse(frappe.has_permission("Buzz Event", "write", doc=self.event_b))
+
+
+class TestNonMemberCarveOuts(TeamPermissionTestCase):
+	def test_attendee_lists_own_ticket_without_a_membership(self):
+		mine = create_ticket(self.event_b, self.outsider)
+		theirs = create_ticket(self.event_b, self.bob)
+
+		self.as_user(self.outsider)
+		tickets = frappe.get_list("Event Ticket", pluck="name")
+
+		self.assertIn(mine, tickets)
+		self.assertNotIn(theirs, tickets)
+
+	def test_attendee_gets_no_carve_out_on_payments(self):
+		self.as_user(self.outsider)
+
+		with self.assertRaises(frappe.PermissionError):
+			frappe.get_list("Event Payment", pluck="name")
+
+	def test_published_sponsorship_tier_is_visible_to_non_members(self):
+		published = create_event("Perm Published", self.team_b, is_published=1)
+		visible = frappe.get_doc(
+			{"doctype": "Sponsorship Tier", "event": published, "title": "Gold", "amount": 1}
+		).insert(ignore_permissions=True)
+		hidden = frappe.get_doc(
+			{"doctype": "Sponsorship Tier", "event": self.event_b, "title": "Silver", "amount": 1}
+		).insert(ignore_permissions=True)
+
+		self.as_user(self.outsider)
+		tiers = frappe.get_list("Sponsorship Tier", pluck="name")
+
+		self.assertIn(visible.name, tiers)
+		self.assertNotIn(hidden.name, tiers)
+
+	def test_published_events_stay_visible_to_non_members(self):
+		published = create_event("Perm Public", self.team_b, is_published=1)
+
+		self.as_user(self.outsider)
+
+		self.assertIn(published, frappe.get_list("Buzz Event", pluck="name"))
+		self.assertNotIn(self.event_b, frappe.get_list("Buzz Event", pluck="name"))
+
+	def test_guest_event_reads_are_never_narrowed(self):
+		self.assertEqual(team_query_conditions(user="Guest", doctype="Buzz Event"), "")
+
+
+class TestTalkProposalComposition(TeamPermissionTestCase):
+	def create_proposal(self, event: str, submitted_by: str) -> str:
+		proposal = frappe.get_doc(
+			{
+				"doctype": "Talk Proposal",
+				"event": event,
+				"title": f"Proposal {frappe.generate_hash(length=6)}",
+				"submitted_by": submitted_by,
+				"status": frappe.db.get_value("Talk Proposal Status", {}, "name"),
+				"speakers": [{"first_name": "Speaker", "email": submitted_by}],
+			}
+		)
+		return proposal.insert(ignore_permissions=True).name
+
+	def test_speaker_sees_own_proposal_without_a_membership(self):
+		mine = self.create_proposal(self.event_b, self.outsider)
+
+		self.as_user(self.outsider)
+
+		self.assertIn(mine, frappe.get_list("Talk Proposal", pluck="name"))
+
+	def test_team_member_sees_their_teams_proposals_only(self):
+		ours = self.create_proposal(self.event_a, self.outsider)
+		theirs = self.create_proposal(self.event_b, self.outsider)
+
+		self.as_user(self.alice)
+		proposals = frappe.get_list("Talk Proposal", pluck="name")
+
+		self.assertIn(ours, proposals)
+		self.assertNotIn(theirs, proposals)
+
+
+class TestCheckinIsolation(TeamPermissionTestCase):
+	def test_frontdesk_cannot_check_in_another_teams_ticket(self):
+		from buzz.api.checkin import validate_ticket_for_checkin
+
+		frontdesk = create_user("perm-frontdesk@example.com", "Frontdesk")
+		add_member(self.team_a, frontdesk, "Frontdesk")
+
+		ticket_type = frappe.get_doc(
+			{"doctype": "Event Ticket Type", "event": self.event_b, "title": "Scan", "price": 0}
+		).insert(ignore_permissions=True)
+		ticket = frappe.get_doc(
+			{
+				"doctype": "Event Ticket",
+				"event": self.event_b,
+				"ticket_type": ticket_type.name,
+				"attendee_name": "Other Team",
+				"attendee_email": "other-team@example.com",
+			}
+		).insert(ignore_permissions=True)
+
+		self.as_user(frontdesk)
+
+		with self.assertRaises(NotPermitted):
+			validate_ticket_for_checkin(ticket.name)
+
+	def test_unknown_ticket_still_raises_not_found(self):
+		from buzz.api.checkin import validate_ticket_for_checkin
+
+		frontdesk = create_user("perm-frontdesk-2@example.com", "Frontdesk")
+		add_member(self.team_a, frontdesk, "Frontdesk")
+
+		self.as_user(frontdesk)
+
+		with self.assertRaises(TicketNotFound):
+			validate_ticket_for_checkin("no-such-ticket")

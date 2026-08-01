@@ -5,6 +5,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.forms.test_forms import ensure_prompt_named_record
+from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team
 
 # On IntegrationTestCase, the doctype test records and all
 # link-field test record dependencies are recursively loaded
@@ -28,7 +29,7 @@ def make_test_user(email: str, roles: list[str] | None = None) -> str:
 	return user.name
 
 
-def make_test_event(category: str, host: str) -> str:
+def make_test_event(category: str, host: str, team: str | None = None) -> str:
 	event = frappe.new_doc("Buzz Event")
 	event.update(
 		{
@@ -41,6 +42,7 @@ def make_test_event(category: str, host: str) -> str:
 			"category": category,
 			"host": host,
 			"is_published": 1,
+			"team": team,
 		}
 	)
 	event.insert(ignore_permissions=True)
@@ -71,10 +73,11 @@ class TestTalkProposalSpeakerAccess(IntegrationTestCase):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Proposal Perm Category")
 		cls.host = ensure_prompt_named_record("Event Host", "Proposal Perm Host")
-		cls.event = make_test_event(cls.category, cls.host)
 		cls.speaker_user = make_test_user("speaker-perm@example.com")
 		cls.other_user = make_test_user("other-perm@example.com")
 		cls.manager_user = make_test_user("manager-perm@example.com", roles=["Event Manager"])
+		cls.team = create_owned_team("Proposal Perm Team", cls.manager_user)
+		cls.event = make_test_event(cls.category, cls.host, team=cls.team)
 		cls.guest_proposal = make_guest_proposal(cls.event, cls.speaker_user)
 
 	def tearDown(self):
@@ -127,7 +130,7 @@ class TestTalkProposalSpeakerAccess(IntegrationTestCase):
 		self.assertTrue(doc.has_permission("write"))
 		self.assertIn(proposal, frappe.get_list("Talk Proposal", pluck="name"))
 
-	def test_event_manager_sees_all_proposals(self):
+	def test_team_member_sees_their_teams_proposals(self):
 		frappe.set_user(self.manager_user)
 		self.assertIn(self.guest_proposal, frappe.get_list("Talk Proposal", pluck="name"))
 

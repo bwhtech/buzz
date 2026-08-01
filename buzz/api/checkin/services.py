@@ -11,6 +11,8 @@ from buzz.api.checkin.schemas import (
 	TicketAddOn,
 	TicketCheckinDetails,
 )
+from buzz.api.exceptions import NotPermitted
+from buzz.permissions import has_team_access
 
 if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
@@ -30,6 +32,9 @@ class CheckinService:
 
 		self.ticket_id = ticket_id
 		self.date = today()
+		# Both endpoints route through here, so one team check covers them.
+		if not has_team_access(self.event.team, "read", frappe.session.user):
+			NotPermitted.throw()
 
 	@property
 	def ticket(self) -> "EventTicket":
