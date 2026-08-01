@@ -1,5 +1,6 @@
 import frappe
 
+from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
 from buzz.utils import delete_custom_fields, get_custom_fields_creator
 
 _create_custom_fields = get_custom_fields_creator("Buzz")
@@ -93,8 +94,7 @@ def setup_test_records():
 	create_talk_proposal_statuses()
 
 	# Administrator's only membership, so the team resolves for fixtures that omit one.
-	if not frappe.db.exists("Buzz Team", {"team_name": "Test Team"}):
-		frappe.get_doc({"doctype": "Buzz Team", "team_name": "Test Team"}).insert()
+	create_default_team_for("Administrator")
 
 	test_category = frappe.get_doc({"doctype": "Event Category", "name": "Test Category"}).insert(
 		ignore_if_duplicate=True
@@ -129,6 +129,9 @@ def after_install():
 	create_event_categories()
 	create_talk_proposal_statuses()
 	create_custom_fields()
+	# install_app marks patches as applied without running them, so create_default_teams
+	# never fires on a fresh site.
+	create_default_team_for("Administrator")
 
 
 def on_migrate():
