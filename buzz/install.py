@@ -129,9 +129,6 @@ def after_install():
 	create_event_categories()
 	create_talk_proposal_statuses()
 	create_custom_fields()
-	# install_app marks patches as applied without running them, so create_default_teams
-	# never fires on a fresh site.
-	create_default_team_for("Administrator")
 
 
 def on_migrate():
