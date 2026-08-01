@@ -63,6 +63,11 @@ doc_events = {
 		"after_insert": "buzz.utils.add_buzz_user_role",
 		"on_update": "buzz.events.doctype.speaker_profile.speaker_profile.update_speaker_display_name",
 	},
+	# Team-direct doctypes. Descendants derive their team through their event link.
+	**{
+		doctype: {"validate": "buzz.events.doctype.buzz_team.buzz_team.set_team_from_sole_membership"}
+		for doctype in ("Buzz Event", "Event Venue", "Event Host", "Event Template", "Buzz Campaign")
+	},
 }
 
 fixtures = [{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Frontdesk Manager"]]}}]

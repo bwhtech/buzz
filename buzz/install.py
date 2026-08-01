@@ -92,6 +92,10 @@ def before_tests():
 def setup_test_records():
 	create_talk_proposal_statuses()
 
+	# Administrator's only membership, so the team resolves for fixtures that omit one.
+	if not frappe.db.exists("Buzz Team", {"team_name": "Test Team"}):
+		frappe.get_doc({"doctype": "Buzz Team", "team_name": "Test Team"}).insert()
+
 	test_category = frappe.get_doc({"doctype": "Event Category", "name": "Test Category"}).insert(
 		ignore_if_duplicate=True
 	)

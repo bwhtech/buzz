@@ -21,6 +21,24 @@ def create_default_team_for(user: str) -> "BuzzTeam":
 	return team.insert(ignore_permissions=True)
 
 
+def set_team_from_sole_membership(doc, event=None):
+	"""Fill an empty team from the user's only enabled membership.
+
+	Zero or several memberships leave it empty, so reqd raises rather than this
+	picking a team on the user's behalf.
+	"""
+	if doc.team:
+		return
+
+	teams = frappe.get_all(
+		"Buzz Team Membership",
+		filters={"user": frappe.session.user, "enabled": 1},
+		pluck="team",
+	)
+	if len(teams) == 1:
+		doc.team = teams[0]
+
+
 class BuzzTeam(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.

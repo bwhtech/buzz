@@ -81,6 +81,7 @@ class BuzzEvent(Document):
 		tax_inclusive: DF.Check
 		tax_label: DF.Data | None
 		tax_percentage: DF.Percent
+		team: DF.Link
 		ticket_email_template: DF.Link | None
 		ticket_print_format: DF.Link | None
 		time_zone: DF.Autocomplete | None
