@@ -6,7 +6,7 @@
    "label": "Events by Category"
   }
  ],
- "content": "[{\"id\":\"bzQuickActHd\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Quick Actions</b></span>\",\"col\":12}},{\"id\":\"bzShortcutMt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Meetup\",\"col\":3}},{\"id\":\"bzShortcutCf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Conference\",\"col\":3}},{\"id\":\"bzShortcutEv\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Event\",\"col\":3}},{\"id\":\"bzOverviewHd\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Overview</b></span>\",\"col\":12}},{\"id\":\"bzCardActive\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Events\",\"col\":4}},{\"id\":\"bzCardTotal\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Events\",\"col\":4}},{\"id\":\"bzChartByCat\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Events by Category\",\"col\":12}}]",
+ "content": "[{\"id\":\"bzQuickActHd\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Quick Actions</b></span>\",\"col\":12}},{\"id\":\"bzShortcutMt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Meetup\",\"col\":3}},{\"id\":\"bzShortcutCf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Conference\",\"col\":3}},{\"id\":\"bzShortcutZm\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Zoom Meeting\",\"col\":3}},{\"id\":\"bzShortcutZw\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Zoom Webinar\",\"col\":3}},{\"id\":\"bzShortcutEv\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Event\",\"col\":3}},{\"id\":\"bzOverviewHd\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Overview</b></span>\",\"col\":12}},{\"id\":\"bzCardActive\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Events\",\"col\":4}},{\"id\":\"bzCardTotal\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Events\",\"col\":4}},{\"id\":\"bzChartByCat\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Events by Category\",\"col\":12}}]",
  "creation": "2026-03-05 19:10:56.484378",
  "custom_blocks": [],
  "docstatus": 0,
@@ -18,7 +18,7 @@
  "label": "Buzz",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-07-31 12:00:00.000000",
+ "modified": "2026-08-03 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Buzz",
  "name": "Buzz",
@@ -49,6 +49,18 @@
    "label": "New Conference",
    "type": "URL",
    "url": "/app/buzz-event/new?category=Conferences"
+  },
+  {
+   "doc_view": "",
+   "label": "New Zoom Meeting",
+   "type": "URL",
+   "url": "/app/buzz-event/new?category=Zoom%20Meeting"
+  },
+  {
+   "doc_view": "",
+   "label": "New Zoom Webinar",
+   "type": "URL",
+   "url": "/app/buzz-event/new?category=Webinars"
   },
   {
    "doc_view": "New",
