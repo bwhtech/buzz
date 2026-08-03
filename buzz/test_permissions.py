@@ -117,6 +117,18 @@ class TestCrossTeamIsolation(TeamPermissionTestCase):
 
 		self.assertNotIn(ticket_type.name, self.listed_names("Event Ticket Type"))
 
+	def test_team_lists_exclude_other_teams(self):
+		self.as_user(self.alice)
+		teams = self.listed_names("Buzz Team")
+
+		self.assertIn(self.team_a, teams)
+		self.assertNotIn(self.team_b, teams)
+
+	def test_membership_lists_exclude_other_teams(self):
+		self.as_user(self.alice)
+
+		self.assertNotIn(self.team_b, frappe.get_list("Buzz Team Membership", pluck="team"))
+
 	def test_every_tenant_doctype_is_wired_to_both_hooks(self):
 		# Catches a new team-owned doctype that nobody registered in hooks.py.
 		query_conditions = frappe.get_hooks("permission_query_conditions")
@@ -295,7 +307,7 @@ class TestNonMemberCarveOuts(TeamPermissionTestCase):
 		self.assertNotIn(self.event_b, frappe.get_list("Buzz Event", pluck="name"))
 
 	def test_guest_event_reads_are_never_narrowed(self):
-		self.assertEqual(team_query_conditions(user="Guest", doctype="Buzz Event"), "")
+		self.assertIsNone(team_query_conditions(user="Guest", doctype="Buzz Event"))
 
 
 class TestTalkProposalComposition(TeamPermissionTestCase):

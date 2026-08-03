@@ -2,6 +2,8 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe.query_builder import Criterion
+from frappe.query_builder.builder import QueryBuilder
 
 WRITE_ROLES = frozenset({"Owner", "Admin", "Manager"})
 ADMIN_ROLES = frozenset({"Owner", "Admin"})
@@ -15,15 +17,23 @@ def is_unrestricted(user: str) -> bool:
 	return user == "Administrator" or "System Manager" in frappe.get_roles(user)
 
 
-def my_teams(user: str) -> str:
+def my_teams(user: str) -> QueryBuilder:
+	membership = frappe.qb.DocType("Buzz Team Membership")
 	return (
-		"select `team` from `tabBuzz Team Membership`"
-		f" where `user` = {frappe.db.escape(user)} and `enabled` = 1"
+		frappe.qb.from_(membership)
+		.select(membership.team)
+		.where((membership.user == user) & (membership.enabled == 1))
 	)
 
 
-def published_events() -> str:
-	return "select `name` from `tabBuzz Event` where `is_published` = 1"
+def published_events() -> QueryBuilder:
+	event = frappe.qb.DocType("Buzz Event")
+	return frappe.qb.from_(event).select(event.name).where(event.is_published == 1)
+
+
+def my_team_events(user: str) -> QueryBuilder:
+	event = frappe.qb.DocType("Buzz Event")
+	return frappe.qb.from_(event).select(event.name).where(event.team.isin(my_teams(user)))
 
 
 def team_role_of(user: str, team: str | None) -> str | None:
@@ -54,48 +64,49 @@ def has_team_access(team: str | None, ptype: str, user: str) -> bool:
 	return bool(team_role) and role_allows(team_role, ptype)
 
 
-def team_query_conditions(user: str | None = None, doctype: str | None = None, **kwargs) -> str:
+def team_query_conditions(user: str | None = None, doctype: str | None = None, **kwargs) -> Criterion | None:
 	user = user or frappe.session.user
 	if is_unrestricted(user):
-		return ""
+		return None
 
+	table = frappe.qb.DocType(doctype)
 	if doctype == "Buzz Event":
 		if user == "Guest":
-			return ""
-		return f"(`tabBuzz Event`.`team` in ({my_teams(user)}) or `tabBuzz Event`.`is_published` = 1)"
+			return None
+		return table.team.isin(my_teams(user)) | (table.is_published == 1)
 
-	return f"`tab{doctype}`.`team` in ({my_teams(user)})"
+	return table.team.isin(my_teams(user))
 
 
-def derived_query_conditions(user: str | None = None, doctype: str | None = None, **kwargs) -> str:
+def derived_query_conditions(
+	user: str | None = None, doctype: str | None = None, **kwargs
+) -> Criterion | None:
 	user = user or frappe.session.user
 	if is_unrestricted(user):
-		return ""
+		return None
 
-	clauses = [
-		f"`tab{doctype}`.`event` in (select `name` from `tabBuzz Event`"
-		f" where `team` in ({my_teams(user)}))"
-	]
+	table = frappe.qb.DocType(doctype)
+	criterion = table.event.isin(my_team_events(user))
 	if doctype in OWNER_VISIBLE_DOCTYPES:
-		clauses.append(f"`tab{doctype}`.`owner` = {frappe.db.escape(user)}")
+		criterion |= table.owner == user
 	if doctype == "Sponsorship Tier":
-		clauses.append(f"`tabSponsorship Tier`.`event` in ({published_events()})")
+		criterion |= table.event.isin(published_events())
 
-	return f"({' or '.join(clauses)})"
+	return criterion
 
 
-def team_doc_query_conditions(user: str | None = None, **kwargs) -> str:
+def team_doc_query_conditions(user: str | None = None, **kwargs) -> Criterion | None:
 	user = user or frappe.session.user
 	if is_unrestricted(user):
-		return ""
-	return f"`tabBuzz Team`.`name` in ({my_teams(user)})"
+		return None
+	return frappe.qb.DocType("Buzz Team").name.isin(my_teams(user))
 
 
-def membership_query_conditions(user: str | None = None, **kwargs) -> str:
+def membership_query_conditions(user: str | None = None, **kwargs) -> Criterion | None:
 	user = user or frappe.session.user
 	if is_unrestricted(user):
-		return ""
-	return f"`tabBuzz Team Membership`.`team` in ({my_teams(user)})"
+		return None
+	return frappe.qb.DocType("Buzz Team Membership").team.isin(my_teams(user))
 
 
 def team_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:

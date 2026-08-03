@@ -4,30 +4,31 @@
 import frappe
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
+from frappe.query_builder import Criterion
 
 from buzz.permissions import derived_has_permission, derived_query_conditions
 
 
-def get_speaker_query_conditions(user: str) -> str:
-	escaped_user = frappe.db.escape(user)
+def get_speaker_query_conditions(user: str) -> Criterion:
+	proposal = frappe.qb.DocType("Talk Proposal")
+	speaker = frappe.qb.DocType("Proposal Speaker")
 	# Guest form submissions leave owner/submitted_by as "Guest", so speakers
 	# are matched by their email in the speakers child table.
-	return (
-		f"(`tabTalk Proposal`.`submitted_by` = {escaped_user}"
-		f" or `tabTalk Proposal`.`owner` = {escaped_user}"
-		f" or `tabTalk Proposal`.`name` in ("
-		f"select `parent` from `tabProposal Speaker`"
-		f" where `parenttype` = 'Talk Proposal' and `email` = {escaped_user}))"
+	speaker_rows = (
+		frappe.qb.from_(speaker)
+		.select(speaker.parent)
+		.where((speaker.parenttype == "Talk Proposal") & (speaker.email == user))
 	)
+	return (proposal.submitted_by == user) | (proposal.owner == user) | proposal.name.isin(speaker_rows)
 
 
-def get_permission_query_conditions(user: str | None = None, doctype: str | None = None) -> str:
+def get_permission_query_conditions(user: str | None = None, doctype: str | None = None) -> Criterion | None:
 	user = user or frappe.session.user
 	team_conditions = derived_query_conditions(user=user, doctype="Talk Proposal")
-	if not team_conditions:
-		return ""
+	if team_conditions is None:
+		return None
 
-	return f"({get_speaker_query_conditions(user)} or {team_conditions})"
+	return get_speaker_query_conditions(user) | team_conditions
 
 
 def is_speaker_on(doc, user: str) -> bool:
