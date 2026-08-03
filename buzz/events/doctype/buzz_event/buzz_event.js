@@ -304,9 +304,18 @@ frappe.ui.form.on("Buzz Event Form", {
 	},
 });
 
+// min_date on the df is only read when the control builds its picker,
+// so the datepicker instance has to be updated directly.
+function set_end_date_limit(frm) {
+	frm.fields_dict.end_date.datepicker?.update({
+		minDate: frm.doc.start_date ? frappe.datetime.str_to_obj(frm.doc.start_date) : null,
+	});
+}
+
 frappe.ui.form.on("Buzz Event", {
 	refresh(frm) {
 		frm.fields_dict.time_zone.set_data(getZoomSupportedTimezones());
+		set_end_date_limit(frm);
 
 		if (frm.doc.route && frm.doc.is_published) {
 			frm.add_web_link(`/events/${frm.doc.route}`);
@@ -387,6 +396,15 @@ frappe.ui.form.on("Buzz Event", {
 				frm.layout.tabs.find((t) => t.label == "Zoom Integration").set_active();
 			});
 		});
+	},
+	start_date(frm) {
+		if (frm.doc.start_date && !frm.doc.end_date) {
+			frm.set_value("end_date", frm.doc.start_date);
+		} else if (frm.doc.start_date && frm.doc.end_date < frm.doc.start_date) {
+			frm.set_value("end_date", frm.doc.start_date);
+			frappe.show_alert(__("End Date moved to match Start Date"));
+		}
+		set_end_date_limit(frm);
 	},
 	category(frm) {
 		if (!frm.is_new()) return;
