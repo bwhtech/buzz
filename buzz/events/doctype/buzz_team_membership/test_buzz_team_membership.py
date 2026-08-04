@@ -150,22 +150,22 @@ class TestBuzzTeamMembership(IntegrationTestCase):
 class TestInvitationAccept(IntegrationTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
+		# Every invitation mails itself out on insert, which needs an outgoing email account.
+		self.enterContext(patch("frappe.sendmail"))
 		create_user(INVITER, "Inviter")
 		self.team = create_team(f"Invite Team {frappe.generate_hash(length=6)}", INVITER)
 
 	def invite(self, email: str, team_role: str = "Manager", inviter: str = INVITER, team: str | None = None):
 		try:
 			frappe.set_user(inviter)
-			# The invitation mails itself out on insert, which needs an outgoing email account.
-			with patch("frappe.sendmail"):
-				invite_by_email(
-					emails=email,
-					roles=["Buzz User"],
-					redirect_to_path="/dashboard",
-					app_name="buzz",
-					buzz_team=team or self.team.name,
-					buzz_team_role=team_role,
-				)
+			invite_by_email(
+				emails=email,
+				roles=["Buzz User"],
+				redirect_to_path="/dashboard",
+				app_name="buzz",
+				buzz_team=team or self.team.name,
+				buzz_team_role=team_role,
+			)
 		finally:
 			frappe.set_user("Administrator")
 		return frappe.get_last_doc("User Invitation", filters={"email": email})
