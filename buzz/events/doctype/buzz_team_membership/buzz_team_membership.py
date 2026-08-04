@@ -105,6 +105,10 @@ class BuzzTeamMembership(Document):
 		# Fires on insert too — Document._action is "save" for both.
 		sync_frappe_roles(self.user)
 
+	def on_trash(self):
+		if self.team_role == "Owner":
+			frappe.throw(_("The owner of a team cannot be removed."))
+
 	def after_delete(self):
 		# Not on_trash — that runs before the row is gone, so it would still be counted.
 		sync_frappe_roles(self.user)
@@ -123,7 +127,7 @@ class BuzzTeamMembership(Document):
 
 	def validate_owner_is_locked(self):
 		# Locking the row outright means ownership can never be transferred. Relax to
-		# "one enabled Owner must remain" when transfer is needed.
+		# "one enabled Owner must remain" here and in on_trash when transfer is needed.
 		previous = self.get_doc_before_save()
 		was_owner = previous is not None and previous.team_role == "Owner"
 

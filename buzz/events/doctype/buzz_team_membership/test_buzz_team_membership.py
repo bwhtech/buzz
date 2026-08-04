@@ -122,6 +122,20 @@ class TestBuzzTeamMembership(IntegrationTestCase):
 
 		self.assertRaises(frappe.ValidationError, membership.save)
 
+	def test_owner_membership_cannot_be_deleted(self):
+		team = create_team("Owner Delete Team")
+		membership = self.owner_membership(team.name)
+
+		self.assertRaises(frappe.ValidationError, membership.delete)
+
+	def test_non_owner_membership_can_be_deleted(self):
+		team = create_team("Member Delete Team")
+		membership = add_member(team.name, MEMBER)
+
+		membership.delete()
+
+		self.assertFalse(frappe.db.exists("Buzz Team Membership", membership.name))
+
 	def test_non_owner_membership_can_be_disabled(self):
 		team = create_team("Member Disable Team")
 		membership = add_member(team.name, MEMBER)
