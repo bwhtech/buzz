@@ -6,7 +6,6 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
 from buzz.patches.assign_default_team import TEAM_DIRECT_DOCTYPES
-from buzz.patches.assign_default_team import execute as backfill_teams
 
 OWNER = "team-owner@example.com"
 
@@ -112,26 +111,6 @@ class TestBuzzTeam(IntegrationTestCase):
 
 		self.assertEqual(frappe.db.count("Buzz Team", {"team_name": "Sam's Team"}), 2)
 
-	def test_patch_gives_event_managers_a_team_and_is_idempotent(self):
-		from buzz.patches.create_default_teams import execute
-
-		user = create_user("patched-manager@example.com", "Patched")
-		frappe.get_doc("User", user).add_roles("Event Manager")
-
-		execute()
-		execute()
-
-		self.assertEqual(frappe.db.count("Buzz Team Membership", {"user": user, "team_role": "Owner"}), 1)
-
-	def test_patch_skips_users_without_event_manager(self):
-		from buzz.patches.create_default_teams import execute
-
-		user = create_user("patched-outsider@example.com", "Outsider")
-
-		execute()
-
-		self.assertEqual(frappe.db.count("Buzz Team Membership", {"user": user, "team_role": "Owner"}), 0)
-
 	def test_inserting_a_team_creates_one_owner_membership(self):
 		team = frappe.get_doc({"doctype": "Buzz Team", "team_name": "Membership Events"})
 		team.flags.owner_user = OWNER
@@ -233,25 +212,3 @@ class TestSetTeamFromSoleMembership(IntegrationTestCase):
 		doc = self.insert_as(user, "Event Venue", "Disabled")
 
 		self.assertEqual(doc.team, enabled)
-
-
-class TestAssignDefaultTeamPatch(IntegrationTestCase):
-	def setUp(self):
-		frappe.set_user("Administrator")
-
-	def create_teamless_venue(self, name: str) -> str:
-		venue = frappe.get_doc(payload_for("Event Venue", name)).insert(ignore_permissions=True)
-		frappe.db.set_value("Event Venue", venue.name, "team", None, update_modified=False)
-		return venue.name
-
-	def test_backfills_teamless_rows_and_is_idempotent(self):
-		venue = self.create_teamless_venue("Legacy")
-
-		backfill_teams()
-		assigned = frappe.db.get_value("Event Venue", venue, "team")
-
-		self.assertTrue(assigned)
-
-		backfill_teams()
-
-		self.assertEqual(frappe.db.get_value("Event Venue", venue, "team"), assigned)

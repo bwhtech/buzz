@@ -5,10 +5,18 @@ TEAM_DIRECT_DOCTYPES = ("Buzz Event", "Event Venue", "Event Host", "Event Templa
 
 
 def execute():
+	teamless = [doctype for doctype in TEAM_DIRECT_DOCTYPES if has_teamless_rows(doctype)]
+	if not teamless:
+		return
+
 	team = get_site_default_team()
-	for doctype in TEAM_DIRECT_DOCTYPES:
+	for doctype in teamless:
 		table = frappe.qb.DocType(doctype)
 		frappe.qb.update(table).set(table.team, team).where((table.team.isnull()) | (table.team == "")).run()
+
+
+def has_teamless_rows(doctype: str) -> bool:
+	return bool(frappe.get_all(doctype, filters={"team": ("is", "not set")}, limit=1))
 
 
 def get_site_default_team() -> str:
