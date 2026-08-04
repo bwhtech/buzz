@@ -1,6 +1,8 @@
 # Copyright (c) 2026, BWH Studios and contributors
 # See license.txt
 
+from unittest.mock import patch
+
 import frappe
 from frappe.core.api.user_invitation import invite_by_email
 from frappe.tests import IntegrationTestCase
@@ -154,14 +156,16 @@ class TestInvitationAccept(IntegrationTestCase):
 	def invite(self, email: str, team_role: str = "Manager", inviter: str = INVITER, team: str | None = None):
 		try:
 			frappe.set_user(inviter)
-			invite_by_email(
-				emails=email,
-				roles=["Buzz User"],
-				redirect_to_path="/dashboard",
-				app_name="buzz",
-				buzz_team=team or self.team.name,
-				buzz_team_role=team_role,
-			)
+			# The invitation mails itself out on insert, which needs an outgoing email account.
+			with patch("frappe.sendmail"):
+				invite_by_email(
+					emails=email,
+					roles=["Buzz User"],
+					redirect_to_path="/dashboard",
+					app_name="buzz",
+					buzz_team=team or self.team.name,
+					buzz_team_role=team_role,
+				)
 		finally:
 			frappe.set_user("Administrator")
 		return frappe.get_last_doc("User Invitation", filters={"email": email})
