@@ -310,6 +310,35 @@ class TestNonMemberCarveOuts(TeamPermissionTestCase):
 		self.assertIsNone(team_query_conditions(user="Guest", doctype="Buzz Event"))
 
 
+class TestTeamSettingsPermissions(TeamPermissionTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.manager = create_user("perm-settings-manager@example.com", "Manager")
+		add_member(cls.team_a, cls.manager, "Manager")
+		cls.admin = create_user("perm-settings-admin@example.com", "Admin")
+		add_member(cls.team_a, cls.admin, "Admin")
+
+	def can(self, user: str, ptype: str) -> bool:
+		self.as_user(user)
+		return frappe.has_permission("Buzz Team Settings", ptype, doc=self.team_a)
+
+	def test_manager_reads_but_cannot_write(self):
+		self.assertTrue(self.can(self.manager, "read"))
+		self.assertFalse(self.can(self.manager, "write"))
+
+	def test_admin_writes(self):
+		self.assertTrue(self.can(self.admin, "write"))
+
+	def test_non_member_is_refused(self):
+		self.assertFalse(self.can(self.outsider, "read"))
+
+	def test_another_teams_settings_are_not_listed(self):
+		self.as_user(self.alice)
+
+		self.assertNotIn(self.team_b, frappe.get_list("Buzz Team Settings", pluck="team"))
+
+
 class TestTalkProposalComposition(TeamPermissionTestCase):
 	def create_proposal(self, event: str, submitted_by: str) -> str:
 		proposal = frappe.get_doc(

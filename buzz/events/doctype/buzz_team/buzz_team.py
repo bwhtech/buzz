@@ -5,6 +5,8 @@ import frappe
 from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
 
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import create_team_settings
+
 
 def create_default_team_for(user: str) -> "BuzzTeam":
 	"""Give a user a team of their own. Idempotent."""
@@ -71,3 +73,4 @@ class BuzzTeam(Document):
 				"team_role": "Owner",
 			}
 		).insert(ignore_permissions=True)
+		create_team_settings(self.name)

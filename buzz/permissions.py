@@ -144,7 +144,8 @@ def team_doc_has_permission(doc, ptype: str = "read", user: str | None = None, *
 	return True
 
 
-def membership_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:
+def team_admin_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:
+	"""Memberships and settings are team administration: members read, Owner/Admin write."""
 	user = user or frappe.session.user
 	if is_unrestricted(user):
 		return True

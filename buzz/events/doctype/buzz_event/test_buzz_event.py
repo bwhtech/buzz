@@ -9,9 +9,18 @@ from frappe.tests.utils import FrappeTestCase
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, create_from_template
+from buzz.events.doctype.buzz_team_settings.test_buzz_team_settings import (
+	create_webinar_template,
+	set_team_settings,
+)
 from buzz.events.doctype.event_template.event_template import create_template_from_event
 from buzz.patches.set_time_zone_label_for_existing_events import execute as backfill_time_zone_labels
 from buzz.utils import get_time_zone_label
+
+
+def stub_zoom_id(webinar):
+	"""Stand in for the Zoom API call before_insert makes; validation needs the id."""
+	webinar.zoom_webinar_id = "1234567890"
 
 
 class TestBuzzEvent(FrappeTestCase):
@@ -1101,3 +1110,15 @@ class TestBuzzEventZoomMeeting(FrappeTestCase):
 
 		mock_update.assert_called_once()
 		self.assertEqual(mock_update.call_args.args[0], "meetings")
+
+	def test_webinar_template_comes_from_the_events_team(self):
+		webinar_controller = "zoom_integration.zoom_integration.doctype.zoom_webinar.zoom_webinar.ZoomWebinar"
+		event = self._make_event()
+		template = create_webinar_template()
+		set_team_settings(event.team, default_webinar_template=template)
+		self.addCleanup(frappe.clear_document_cache, "Buzz Team Settings", event.team)
+
+		with patch(f"{webinar_controller}.create_webinar_on_zoom", autospec=True, side_effect=stub_zoom_id):
+			webinar = event.create_webinar_on_zoom()
+
+		self.assertEqual(webinar.template, template)

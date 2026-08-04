@@ -46,9 +46,14 @@
    "group": "Members",
    "link_doctype": "Buzz Team Membership",
    "link_fieldname": "team"
+  },
+  {
+   "group": "Settings",
+   "link_doctype": "Buzz Team Settings",
+   "link_fieldname": "team"
   }
  ],
- "modified": "2026-07-31 18:01:22.171085",
+ "modified": "2026-08-04 17:38:48.007790",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Team",

@@ -201,6 +201,7 @@ permission_query_conditions = {
 	"Event Host": "buzz.permissions.team_query_conditions",
 	"Event Template": "buzz.permissions.team_query_conditions",
 	"Event Venue": "buzz.permissions.team_query_conditions",
+	"Buzz Team Settings": "buzz.permissions.team_query_conditions",
 	"Additional Event Page": "buzz.permissions.derived_query_conditions",
 	"Buzz Coupon Code": "buzz.permissions.derived_query_conditions",
 	"Buzz Custom Field": "buzz.permissions.derived_query_conditions",
@@ -227,6 +228,7 @@ has_permission = {
 	"Event Host": "buzz.permissions.team_has_permission",
 	"Event Template": "buzz.permissions.team_has_permission",
 	"Event Venue": "buzz.permissions.team_has_permission",
+	"Buzz Team Settings": "buzz.permissions.team_admin_has_permission",
 	"Additional Event Page": "buzz.permissions.derived_has_permission",
 	"Buzz Coupon Code": "buzz.permissions.derived_has_permission",
 	"Buzz Custom Field": "buzz.permissions.derived_has_permission",
@@ -243,7 +245,7 @@ has_permission = {
 	"Sponsorship Tier": "buzz.permissions.derived_has_permission",
 	"Ticket Add-on": "buzz.permissions.derived_has_permission",
 	"Buzz Team": "buzz.permissions.team_doc_has_permission",
-	"Buzz Team Membership": "buzz.permissions.membership_has_permission",
+	"Buzz Team Membership": "buzz.permissions.team_admin_has_permission",
 	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.has_talk_proposal_permission",
 }
 

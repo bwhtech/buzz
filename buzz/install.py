@@ -94,6 +94,21 @@ ZOOM_INTEGRATION_CUSTOM_FIELDS = {
 			"insert_after": "zoom_integration_section",
 		},
 	],
+	"Buzz Team Settings": [
+		{
+			"fieldname": "zoom_integration_section",
+			"label": "Zoom Integration Settings",
+			"fieldtype": "Section Break",
+			"insert_after": "custom_fields_go_after_this",
+		},
+		{
+			"fieldname": "default_webinar_template",
+			"label": "Default Webinar Template",
+			"fieldtype": "Link",
+			"options": "Zoom Webinar Template",
+			"insert_after": "zoom_integration_section",
+		},
+	],
 	"Event Ticket": [
 		{
 			"fieldname": "zoom_session_registration",
