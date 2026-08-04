@@ -72,7 +72,11 @@ doc_events = {
 
 fixtures = [{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Frontdesk Manager"]]}}]
 
-user_invitation = {"allowed_roles": {"Event Manager": ["Buzz User"], "Buzz User": ["Buzz User"]}}
+user_invitation = {
+	"allowed_roles": {"Event Manager": ["Buzz User"], "Buzz User": ["Buzz User"]},
+	"extra_invite_params": ["buzz_team", "buzz_team_role"],
+	"after_accept": ["buzz.events.doctype.buzz_team_membership.buzz_team_membership.on_invitation_accepted"],
+}
 
 
 ignore_links_on_delete = ["Ticket Cancellation Request", "Ticket Add-on Value"]

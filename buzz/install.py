@@ -35,6 +35,27 @@ CRM_INTEGRATION_CUSTOM_FIELDS = {
 	],
 }
 
+USER_INVITATION_CUSTOM_FIELDS = {
+	"User Invitation": [
+		{
+			"fieldname": "buzz_team",
+			"label": "Buzz Team",
+			"fieldtype": "Link",
+			"options": "Buzz Team",
+			"insert_after": "roles",
+			"set_only_once": 1,
+		},
+		{
+			"fieldname": "buzz_team_role",
+			"label": "Buzz Team Role",
+			"fieldtype": "Select",
+			"options": "\nOwner\nAdmin\nManager\nFrontdesk\nViewer",
+			"insert_after": "buzz_team",
+			"set_only_once": 1,
+		},
+	],
+}
+
 ZOOM_INTEGRATION_CUSTOM_FIELDS = {
 	"Buzz Event": [
 		{
@@ -154,6 +175,8 @@ def after_app_uninstall(app_name: str):
 
 def create_custom_fields():
 	installed_apps = frappe.get_installed_apps()
+
+	_create_custom_fields(USER_INVITATION_CUSTOM_FIELDS, ignore_validate=True)
 
 	if "zoom_integration" in installed_apps:
 		create_zoom_integration_custom_fields()

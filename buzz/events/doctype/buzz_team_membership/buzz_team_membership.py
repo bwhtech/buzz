@@ -1,9 +1,15 @@
 # Copyright (c) 2026, BWH Studios and contributors
 # For license information, please see license.txt
 
+from typing import TYPE_CHECKING
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
+
+if TYPE_CHECKING:
+	from frappe.core.doctype.user.user import User
+	from frappe.core.doctype.user_invitation.user_invitation import UserInvitation
 
 # Viewer earns nothing. "Buzz User" is granted by buzz.utils.add_buzz_user_role instead.
 TEAM_ROLE_TO_FRAPPE_ROLE = {
@@ -13,6 +19,47 @@ TEAM_ROLE_TO_FRAPPE_ROLE = {
 	"Frontdesk": "Frontdesk Manager",
 }
 MANAGED_FRAPPE_ROLES = set(TEAM_ROLE_TO_FRAPPE_ROLE.values())
+INVITING_TEAM_ROLES = ("Owner", "Admin")
+
+
+def on_invitation_accepted(invitation: "UserInvitation", user: "User", user_inserted: bool) -> None:
+	"""Turn an accepted `User Invitation` into a team membership.
+
+	Every accepted invitation routes through here, whoever created it, so the inviter's
+	authority is checked here rather than at invite time.
+	"""
+	team, team_role = invitation.buzz_team, invitation.buzz_team_role
+	if not team or not team_role:
+		frappe.throw(_("This invitation is not linked to a team."))
+
+	if team_role == "Owner":
+		frappe.throw(_("An invitation cannot grant ownership of a team."))
+
+	inviter_role = frappe.db.get_value(
+		"Buzz Team Membership", {"team": team, "user": invitation.invited_by, "enabled": 1}, "team_role"
+	)
+	if inviter_role not in INVITING_TEAM_ROLES:
+		frappe.throw(_("{0} cannot invite members to this team.").format(invitation.invited_by))
+
+	upsert_membership(team, user.name, team_role)
+
+
+def upsert_membership(team: str, user: str, team_role: str) -> None:
+	"""Re-enable a lapsed membership rather than adding a second one. Enabled ones are left alone."""
+	name = frappe.db.exists("Buzz Team Membership", {"team": team, "user": user})
+	if not name:
+		frappe.get_doc(
+			{"doctype": "Buzz Team Membership", "team": team, "user": user, "team_role": team_role}
+		).insert(ignore_permissions=True)
+		return
+
+	membership = frappe.get_doc("Buzz Team Membership", name)
+	if membership.enabled:
+		return
+
+	membership.enabled = 1
+	membership.team_role = team_role
+	membership.save(ignore_permissions=True)
 
 
 def sync_frappe_roles(user: str):
@@ -32,6 +79,9 @@ def sync_frappe_roles(user: str):
 	}
 
 	user_doc = frappe.get_doc("User", user)
+	# Roles follow from the membership, not from whoever triggered the save — a team admin
+	# adding a member, or a Guest accepting an invitation, has no write access to User.
+	user_doc.flags.ignore_permissions = True
 	user_doc.add_roles(*earned)
 	user_doc.remove_roles(*(MANAGED_FRAPPE_ROLES - earned))
 
