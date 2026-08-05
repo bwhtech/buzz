@@ -1,7 +1,12 @@
 {
  "app": "Buzz",
- "charts": [],
- "content": "[]",
+ "charts": [
+  {
+   "chart_name": "Events by Category",
+   "label": "Events by Category"
+  }
+ ],
+ "content": "[{\"id\":\"bzQuickActHd\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Quick Actions</b></span>\",\"col\":12}},{\"id\":\"bzShortcutMt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Meetup\",\"col\":3}},{\"id\":\"bzShortcutCf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Conference\",\"col\":3}},{\"id\":\"bzShortcutZm\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Zoom Meeting\",\"col\":3}},{\"id\":\"bzShortcutZw\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Zoom Webinar\",\"col\":3}},{\"id\":\"bzShortcutEv\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Event\",\"col\":3}},{\"id\":\"bzOverviewHd\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Overview</b></span>\",\"col\":12}},{\"id\":\"bzCardActive\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Events\",\"col\":4}},{\"id\":\"bzCardTotal\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Events\",\"col\":4}},{\"id\":\"bzChartByCat\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Events by Category\",\"col\":12}}]",
  "creation": "2026-03-05 19:10:56.484378",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,17 +18,57 @@
  "label": "Buzz",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-03-05 19:24:18.378896",
+ "modified": "2026-08-03 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Buzz",
  "name": "Buzz",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Active Events",
+   "number_card_name": "Active Events"
+  },
+  {
+   "label": "Total Events",
+   "number_card_name": "Total Events"
+  }
+ ],
  "owner": "Administrator",
  "public": 1,
  "quick_lists": [],
  "roles": [],
  "sequence_id": 0.0,
- "shortcuts": [],
+ "shortcuts": [
+  {
+   "doc_view": "",
+   "label": "New Meetup",
+   "type": "URL",
+   "url": "/app/buzz-event/new?category=Meetups"
+  },
+  {
+   "doc_view": "",
+   "label": "New Conference",
+   "type": "URL",
+   "url": "/app/buzz-event/new?category=Conferences"
+  },
+  {
+   "doc_view": "",
+   "label": "New Zoom Meeting",
+   "type": "URL",
+   "url": "/app/buzz-event/new?category=Zoom%20Meeting"
+  },
+  {
+   "doc_view": "",
+   "label": "New Zoom Webinar",
+   "type": "URL",
+   "url": "/app/buzz-event/new?category=Webinars"
+  },
+  {
+   "doc_view": "New",
+   "label": "New Event",
+   "link_to": "Buzz Event",
+   "type": "DocType"
+  }
+ ],
  "title": "Buzz",
  "type": "Workspace"
 }
