@@ -222,6 +222,10 @@ permission_query_conditions = {
 	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.get_permission_query_conditions",
 }
 
+# Every Buzz Team link field, not one form at a time: the permission hooks let a System
+# Manager read all teams, which is right for support and wrong for a picker.
+standard_queries = {"Buzz Team": "buzz.permissions.team_link_query"}
+
 has_permission = {
 	"Buzz Event": "buzz.permissions.team_has_permission",
 	"Buzz Campaign": "buzz.permissions.team_has_permission",
