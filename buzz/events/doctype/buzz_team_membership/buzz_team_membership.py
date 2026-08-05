@@ -44,22 +44,26 @@ def on_invitation_accepted(invitation: "UserInvitation", user: "User", user_inse
 	upsert_membership(team, user.name, team_role)
 
 
-def upsert_membership(team: str, user: str, team_role: str) -> None:
-	"""Re-enable a lapsed membership rather than adding a second one. Enabled ones are left alone."""
+def upsert_membership(team: str, user: str, team_role: str) -> bool:
+	"""Re-enable a lapsed membership rather than adding a second one. Enabled ones are left alone.
+
+	Returns whether the user is newly on the team, so callers can announce it.
+	"""
 	name = frappe.db.exists("Buzz Team Membership", {"team": team, "user": user})
 	if not name:
 		frappe.get_doc(
 			{"doctype": "Buzz Team Membership", "team": team, "user": user, "team_role": team_role}
 		).insert(ignore_permissions=True)
-		return
+		return True
 
 	membership = frappe.get_doc("Buzz Team Membership", name)
 	if membership.enabled:
-		return
+		return False
 
 	membership.enabled = 1
 	membership.team_role = team_role
 	membership.save(ignore_permissions=True)
+	return True
 
 
 def sync_frappe_roles(user: str):

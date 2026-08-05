@@ -144,6 +144,12 @@ def team_doc_has_permission(doc, ptype: str = "read", user: str | None = None, *
 	return True
 
 
+def can_manage_members(team: str, user: str | None = None) -> bool:
+	"""The membership-write rule below, asked about a team rather than a document."""
+	user = user or frappe.session.user
+	return is_unrestricted(user) or team_role_of(user, team) in ADMIN_ROLES
+
+
 def team_admin_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:
 	"""Memberships and settings are team administration: members read, Owner/Admin write."""
 	user = user or frappe.session.user
