@@ -63,11 +63,20 @@ doc_events = {
 		"after_insert": "buzz.utils.add_buzz_user_role",
 		"on_update": "buzz.events.doctype.speaker_profile.speaker_profile.update_speaker_display_name",
 	},
+	# Team-direct doctypes. Descendants derive their team through their event link.
+	**{
+		doctype: {"validate": "buzz.events.doctype.buzz_team.buzz_team.set_team_from_sole_membership"}
+		for doctype in ("Buzz Event", "Event Venue", "Event Host", "Event Template", "Buzz Campaign")
+	},
 }
 
 fixtures = [{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Frontdesk Manager"]]}}]
 
-user_invitation = {"allowed_roles": {"Event Manager": ["Buzz User"], "Buzz User": ["Buzz User"]}}
+user_invitation = {
+	"allowed_roles": {"Event Manager": ["Buzz User"], "Buzz User": ["Buzz User"]},
+	"extra_invite_params": ["buzz_team", "buzz_team_role"],
+	"after_accept": ["buzz.events.doctype.buzz_team_membership.buzz_team_membership.on_invitation_accepted"],
+}
 
 
 ignore_links_on_delete = ["Ticket Cancellation Request", "Ticket Add-on Value"]
@@ -182,21 +191,61 @@ after_migrate = "buzz.install.on_migrate"
 
 # Permissions
 # -----------
-# Permissions evaluated in scripted ways
-
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+# Row-level team isolation. Doctypes with a team column are scoped on it; the rest reach
+# their team through their event link. Talk Proposal keeps its own pair of functions, which
+# compose the team scope with the speaker carve-out — one function per doctype per hook.
 
 permission_query_conditions = {
+	"Buzz Event": "buzz.permissions.team_query_conditions",
+	"Buzz Campaign": "buzz.permissions.team_query_conditions",
+	"Event Host": "buzz.permissions.team_query_conditions",
+	"Event Template": "buzz.permissions.team_query_conditions",
+	"Event Venue": "buzz.permissions.team_query_conditions",
+	"Buzz Team Settings": "buzz.permissions.team_query_conditions",
+	"Additional Event Page": "buzz.permissions.derived_query_conditions",
+	"Buzz Coupon Code": "buzz.permissions.derived_query_conditions",
+	"Buzz Custom Field": "buzz.permissions.derived_query_conditions",
+	"Event Booking": "buzz.permissions.derived_query_conditions",
+	"Event Check In": "buzz.permissions.derived_query_conditions",
+	"Event Feedback": "buzz.permissions.derived_query_conditions",
+	"Event Sponsor": "buzz.permissions.derived_query_conditions",
+	"Event Talk": "buzz.permissions.derived_query_conditions",
+	"Event Ticket": "buzz.permissions.derived_query_conditions",
+	"Event Ticket Type": "buzz.permissions.derived_query_conditions",
+	"Event Track": "buzz.permissions.derived_query_conditions",
+	"Offline Payment Method": "buzz.permissions.derived_query_conditions",
+	"Sponsorship Enquiry": "buzz.permissions.derived_query_conditions",
+	"Sponsorship Tier": "buzz.permissions.derived_query_conditions",
+	"Ticket Add-on": "buzz.permissions.derived_query_conditions",
+	"Buzz Team": "buzz.permissions.team_doc_query_conditions",
+	"Buzz Team Membership": "buzz.permissions.membership_query_conditions",
 	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.get_permission_query_conditions",
 }
 
 has_permission = {
+	"Buzz Event": "buzz.permissions.team_has_permission",
+	"Buzz Campaign": "buzz.permissions.team_has_permission",
+	"Event Host": "buzz.permissions.team_has_permission",
+	"Event Template": "buzz.permissions.team_has_permission",
+	"Event Venue": "buzz.permissions.team_has_permission",
+	"Buzz Team Settings": "buzz.permissions.team_admin_has_permission",
+	"Additional Event Page": "buzz.permissions.derived_has_permission",
+	"Buzz Coupon Code": "buzz.permissions.derived_has_permission",
+	"Buzz Custom Field": "buzz.permissions.derived_has_permission",
+	"Event Booking": "buzz.permissions.derived_has_permission",
+	"Event Check In": "buzz.permissions.derived_has_permission",
+	"Event Feedback": "buzz.permissions.derived_has_permission",
+	"Event Sponsor": "buzz.permissions.derived_has_permission",
+	"Event Talk": "buzz.permissions.derived_has_permission",
+	"Event Ticket": "buzz.permissions.derived_has_permission",
+	"Event Ticket Type": "buzz.permissions.derived_has_permission",
+	"Event Track": "buzz.permissions.derived_has_permission",
+	"Offline Payment Method": "buzz.permissions.derived_has_permission",
+	"Sponsorship Enquiry": "buzz.permissions.derived_has_permission",
+	"Sponsorship Tier": "buzz.permissions.derived_has_permission",
+	"Ticket Add-on": "buzz.permissions.derived_has_permission",
+	"Buzz Team": "buzz.permissions.team_doc_has_permission",
+	"Buzz Team Membership": "buzz.permissions.team_admin_has_permission",
 	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.has_talk_proposal_permission",
 }
 

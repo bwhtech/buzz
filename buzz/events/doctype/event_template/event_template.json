@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "template_name",
+  "team",
   "category",
   "medium",
   "column_break_main",
@@ -280,12 +281,20 @@
    "fieldtype": "Table",
    "label": "Custom Fields",
    "options": "Event Template Custom Field"
+  },
+  {
+   "fieldname": "team",
+   "fieldtype": "Link",
+   "label": "Team",
+   "options": "Buzz Team",
+   "reqd": 1,
+   "search_index": 1
   }
  ],
  "image_field": "banner_image",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-31 12:00:00.000000",
+ "modified": "2026-07-31 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Template",

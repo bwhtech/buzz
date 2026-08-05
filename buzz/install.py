@@ -1,5 +1,6 @@
 import frappe
 
+from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
 from buzz.utils import delete_custom_fields, get_custom_fields_creator
 
 _create_custom_fields = get_custom_fields_creator("Buzz")
@@ -30,6 +31,27 @@ CRM_INTEGRATION_CUSTOM_FIELDS = {
 			"fieldtype": "Link",
 			"options": "Event Ticket",
 			"insert_after": "buzz_column_break",
+		},
+	],
+}
+
+USER_INVITATION_CUSTOM_FIELDS = {
+	"User Invitation": [
+		{
+			"fieldname": "buzz_team",
+			"label": "Buzz Team",
+			"fieldtype": "Link",
+			"options": "Buzz Team",
+			"insert_after": "roles",
+			"set_only_once": 1,
+		},
+		{
+			"fieldname": "buzz_team_role",
+			"label": "Buzz Team Role",
+			"fieldtype": "Select",
+			"options": "\nOwner\nAdmin\nManager\nFrontdesk\nViewer",
+			"insert_after": "buzz_team",
+			"set_only_once": 1,
 		},
 	],
 }
@@ -72,6 +94,21 @@ ZOOM_INTEGRATION_CUSTOM_FIELDS = {
 			"insert_after": "zoom_integration_section",
 		},
 	],
+	"Buzz Team Settings": [
+		{
+			"fieldname": "zoom_integration_section",
+			"label": "Zoom Integration Settings",
+			"fieldtype": "Section Break",
+			"insert_after": "custom_fields_go_after_this",
+		},
+		{
+			"fieldname": "default_webinar_template",
+			"label": "Default Webinar Template",
+			"fieldtype": "Link",
+			"options": "Zoom Webinar Template",
+			"insert_after": "zoom_integration_section",
+		},
+	],
 	"Event Ticket": [
 		{
 			"fieldname": "zoom_session_registration",
@@ -91,6 +128,9 @@ def before_tests():
 
 def setup_test_records():
 	create_talk_proposal_statuses()
+
+	# Administrator's only membership, so the team resolves for fixtures that omit one.
+	create_default_team_for("Administrator")
 
 	test_category = frappe.get_doc({"doctype": "Event Category", "name": "Test Category"}).insert(
 		ignore_if_duplicate=True
@@ -150,6 +190,8 @@ def after_app_uninstall(app_name: str):
 
 def create_custom_fields():
 	installed_apps = frappe.get_installed_apps()
+
+	_create_custom_fields(USER_INVITATION_CUSTOM_FIELDS, ignore_validate=True)
 
 	if "zoom_integration" in installed_apps:
 		create_zoom_integration_custom_fields()

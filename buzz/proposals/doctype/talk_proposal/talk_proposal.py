@@ -4,44 +4,50 @@
 import frappe
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
+from frappe.query_builder import Criterion
 
-PROPOSAL_MANAGER_ROLES = frozenset({"System Manager", "Event Manager"})
-
-
-def is_proposal_manager(user: str) -> bool:
-	return user == "Administrator" or bool(PROPOSAL_MANAGER_ROLES & set(frappe.get_roles(user)))
+from buzz.permissions import derived_has_permission, derived_query_conditions
 
 
-def get_permission_query_conditions(user: str | None = None) -> str:
-	user = user or frappe.session.user
-	if is_proposal_manager(user):
-		return ""
-
-	escaped_user = frappe.db.escape(user)
+def get_speaker_query_conditions(user: str) -> Criterion:
+	proposal = frappe.qb.DocType("Talk Proposal")
+	speaker = frappe.qb.DocType("Proposal Speaker")
 	# Guest form submissions leave owner/submitted_by as "Guest", so speakers
 	# are matched by their email in the speakers child table.
-	return (
-		f"(`tabTalk Proposal`.`submitted_by` = {escaped_user}"
-		f" or `tabTalk Proposal`.`owner` = {escaped_user}"
-		f" or `tabTalk Proposal`.`name` in ("
-		f"select `parent` from `tabProposal Speaker`"
-		f" where `parenttype` = 'Talk Proposal' and `email` = {escaped_user}))"
+	speaker_rows = (
+		frappe.qb.from_(speaker)
+		.select(speaker.parent)
+		.where((speaker.parenttype == "Talk Proposal") & (speaker.email == user))
 	)
+	return (proposal.submitted_by == user) | (proposal.owner == user) | proposal.name.isin(speaker_rows)
 
 
-def has_talk_proposal_permission(doc, ptype: str | None = None, user: str | None = None) -> bool:
-	# Controller hooks can only deny access: True means "no objection" and
-	# role permissions still apply, False blocks the document outright.
+def get_permission_query_conditions(user: str | None = None, doctype: str | None = None) -> Criterion | None:
 	user = user or frappe.session.user
-	if ptype == "create" or doc.is_new():
-		return True
-	if is_proposal_manager(user):
-		return True
+	team_conditions = derived_query_conditions(user=user, doctype="Talk Proposal")
+	if team_conditions is None:
+		return None
+
+	return get_speaker_query_conditions(user) | team_conditions
+
+
+def is_speaker_on(doc, user: str) -> bool:
 	if user in (doc.submitted_by, doc.owner):
 		return True
 	# User emails are stored lowercase, but guest-entered speaker emails keep
 	# their original casing.
 	return any(speaker.email and speaker.email.lower() == user.lower() for speaker in doc.speakers)
+
+
+def has_talk_proposal_permission(doc, ptype: str | None = None, user: str | None = None, **kwargs) -> bool:
+	# Controller hooks can only deny access: True means "no objection" and
+	# role permissions still apply, False blocks the document outright.
+	user = user or frappe.session.user
+	if ptype == "create" or doc.is_new():
+		return True
+	if is_speaker_on(doc, user):
+		return True
+	return derived_has_permission(doc, ptype=ptype, user=user)
 
 
 class TalkProposal(Document):

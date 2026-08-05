@@ -8,6 +8,7 @@
  "field_order": [
   "enabled",
   "title",
+  "team",
   "event",
   "qr_code",
   "column_break_onhk",
@@ -50,13 +51,21 @@
    "in_list_view": 1,
    "label": "Title",
    "reqd": 1
+  },
+  {
+   "fieldname": "team",
+   "fieldtype": "Link",
+   "label": "Team",
+   "options": "Buzz Team",
+   "reqd": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "image_field": "qr_code",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-23 17:23:01.011762",
+ "modified": "2026-07-31 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Buzz Marketing",
  "name": "Buzz Campaign",

@@ -6,6 +6,7 @@ from frappe.email.doctype.email_template.email_template import get_email_templat
 from frappe.model.document import Document
 from frappe.utils import get_url
 
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.payments import mark_payment_as_received
 
 
@@ -79,13 +80,13 @@ class SponsorshipEnquiry(Document):
 
 	def send_pitch_deck(self, now=False):
 		event = frappe.get_cached_doc("Buzz Event", self.event)
-		settings = frappe.get_cached_doc("Buzz Settings")
+		settings = get_event_team_settings(self.event)
 
-		# Check event-level toggle first, then fall back to global
+		# Check event-level toggle first, then fall back to the team default
 		if not event.auto_send_pitch_deck and not settings.auto_send_pitch_deck:
 			return
 
-		# Get template: event-level takes precedence, fall back to global
+		# Get template: event-level takes precedence, fall back to the team default
 		template_name = event.sponsor_deck_email_template or settings.default_sponsor_deck_email_template
 		if not template_name:
 			frappe.log_error("No sponsor deck email template configured", "Sponsorship Enquiry")

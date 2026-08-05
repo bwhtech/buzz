@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
+  "team",
   "category",
   "free_event",
   "medium",
@@ -525,6 +526,15 @@
    "fieldname": "custom_forms_tab",
    "fieldtype": "Tab Break",
    "label": "Forms"
+  },
+  {
+   "fieldname": "team",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Team",
+   "options": "Buzz Team",
+   "reqd": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
@@ -602,7 +612,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-07-23 12:00:00.000000",
+ "modified": "2026-07-31 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",
