@@ -21,6 +21,7 @@ class BuzzCampaign(Document):
 		enabled: DF.Check
 		event: DF.Link | None
 		qr_code: DF.AttachImage | None
+		team: DF.Link
 		title: DF.Data
 	# end: auto-generated types
 

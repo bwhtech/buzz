@@ -40,6 +40,7 @@ class EventTemplate(Document):
 		sponsor_deck_reply_to: DF.Data | None
 		tax_label: DF.Data | None
 		tax_percentage: DF.Percent
+		team: DF.Link
 		template_add_ons: DF.Table[EventTemplateAddOn]
 		template_custom_fields: DF.Table[EventTemplateCustomField]
 		template_name: DF.Data

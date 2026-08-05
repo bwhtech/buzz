@@ -6,6 +6,7 @@ from frappe.email.doctype.email_template.email_template import get_email_templat
 from frappe.model.document import Document
 
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.payments import mark_payment_as_received
 
 
@@ -167,9 +168,11 @@ class EventBooking(Document):
 		if not recipient:
 			return
 
-		# Fallback to global setting if event-level not set
-		booking_template = event_doc.booking_confirmation_email_template or frappe.db.get_single_value(
-			"Buzz Settings", "default_booking_confirmation_email_template"
+		team_settings = get_event_team_settings(self.event)
+		# Fallback to the team default if event-level not set
+		booking_template = (
+			event_doc.booking_confirmation_email_template
+			or team_settings.default_booking_confirmation_email_template
 		)
 
 		subject = _("Your booking for {0} is confirmed ✅").format(event_doc.title)
@@ -205,7 +208,7 @@ class EventBooking(Document):
 			"event_title": event_doc.title,
 			"venue": event_doc.venue,
 			"attendee_rows": attendee_rows,
-			"support_email": frappe.db.get_single_value("Buzz Settings", "support_email"),
+			"support_email": team_settings.support_email,
 		}
 
 		content = None

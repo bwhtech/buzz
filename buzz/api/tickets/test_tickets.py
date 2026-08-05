@@ -23,10 +23,17 @@ from buzz.api.tickets.exceptions import (
 	TransferNotPermitted,
 	TransferWindowClosed,
 )
-from buzz.api.tickets.windows import TRANSFER, is_window_open
+from buzz.api.tickets.windows import ADD_ON_CHANGE, CANCELLATION, TRANSFER, is_window_open
+from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user, payload_for
+from buzz.events.doctype.buzz_team_settings.test_buzz_team_settings import set_team_settings
 
 ATTENDEE = "ticket-attendee@example.com"
 OTHER_USER = "ticket-outsider@example.com"
+
+
+def set_team_cutoffs(team: str, days: int):
+	set_team_settings(team, **dict.fromkeys((TRANSFER, ADD_ON_CHANGE, CANCELLATION), days))
+
 
 DETAILS_FIELDS = {
 	"doc",
@@ -76,10 +83,9 @@ class TicketTestCase(IntegrationTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
 		frappe.clear_messages()
-		# Buzz Settings is a single and cannot be owned per test, so drop it from the document
-		# cache afterwards — the rollback restores the row but not the cached copy.
-		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
-		# The window checks read Buzz Settings, so pin the cutoffs the tests reason about.
+		# The rollback restores the settings row but not its cached copy.
+		self.addCleanup(frappe.clear_document_cache, "Buzz Team Settings", self.event.team)
+		# The window checks read the event's team settings, so pin the cutoffs tests reason about.
 		self.set_cutoffs(7)
 		self.ticket_type = frappe.get_doc(
 			{
@@ -91,13 +97,7 @@ class TicketTestCase(IntegrationTestCase):
 		).insert(ignore_permissions=True)
 
 	def set_cutoffs(self, days):
-		for fieldname in (
-			"allow_transfer_ticket_before_event_start_days",
-			"allow_add_ons_change_before_event_start_days",
-			"allow_ticket_cancellation_request_before_event_start_days",
-		):
-			frappe.db.set_single_value("Buzz Settings", fieldname, days)
-		frappe.clear_document_cache("Buzz Settings", "Buzz Settings")
+		set_team_cutoffs(self.event.team, days)
 
 	def set_event_start(self, days_from_today):
 		start_date = add_days(today(), days_from_today)
@@ -154,6 +154,41 @@ class TestWindows(TicketTestCase):
 		frappe.db.set_value("Buzz Event", self.event.name, "start_date", None)
 		frappe.clear_document_cache("Buzz Event", self.event.name)
 		self.assertFalse(is_window_open(self.event.name, TRANSFER))
+
+
+class TestPerTeamWindows(TicketTestCase):
+	def team_event(self, team_name: str, cutoff_days: int, days_from_today: int) -> str:
+		owner = create_user(f"windows-{team_name.lower().replace(' ', '-')}@example.com", "Windows")
+		team = create_owned_team(team_name, owner)
+		set_team_cutoffs(team, cutoff_days)
+
+		start_date = add_days(today(), days_from_today)
+		return (
+			frappe.get_doc(
+				{
+					**payload_for("Buzz Event", team_name),
+					"team": team,
+					"start_date": start_date,
+					"end_date": start_date,
+				}
+			)
+			.insert(ignore_permissions=True)
+			.name
+		)
+
+	def test_each_team_enforces_its_own_window(self):
+		strict = self.team_event("Windows Strict", 7, 5)
+		lenient = self.team_event("Windows Lenient", 2, 5)
+
+		for cutoff_fieldname in (TRANSFER, ADD_ON_CHANGE, CANCELLATION):
+			with self.subTest(cutoff_fieldname=cutoff_fieldname):
+				self.assertFalse(is_window_open(strict, cutoff_fieldname))
+				self.assertTrue(is_window_open(lenient, cutoff_fieldname))
+
+	def test_an_explicit_zero_cutoff_is_not_treated_as_unset(self):
+		event = self.team_event("Windows Zero", 0, 1)
+
+		self.assertTrue(is_window_open(event, TRANSFER))
 
 
 class TestGetTicketDetails(TicketTestCase):

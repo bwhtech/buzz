@@ -22,6 +22,7 @@ class EventHost(Document):
 		country: DF.Link | None
 		logo: DF.AttachImage | None
 		social_media_links: DF.Table[SocialMediaLink]
+		team: DF.Link
 	# end: auto-generated types
 
 	pass

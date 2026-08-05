@@ -16,6 +16,17 @@ interface NamedDoc {
 	name: string;
 }
 
+// Front-desk access is scoped to the event's team, so the seeded user needs a membership.
+async function ensureTeamMembership(request, team: string, user: string, teamRole: string) {
+	const existing = await getList<NamedDoc>(request, "Buzz Team Membership", {
+		filters: { team: ["=", team], user: ["=", user] },
+	});
+
+	if (existing.length === 0) {
+		await createDoc(request, "Buzz Team Membership", { team, user, team_role: teamRole });
+	}
+}
+
 const CATEGORY = "E2E Check-in Category";
 const HOST = "E2E Check-in Host";
 
@@ -77,7 +88,7 @@ setup("seed check-in event, ticket type and front-desk users", async ({ request,
 	const startDate = new Date();
 	startDate.setDate(startDate.getDate() + 7);
 
-	const event = await createDoc<NamedDoc>(request, "Buzz Event", {
+	const event = await createDoc<NamedDoc & { team: string }>(request, "Buzz Event", {
 		title: CHECK_IN_EVENT_TITLE,
 		category: CATEGORY,
 		host: HOST,
@@ -103,6 +114,8 @@ setup("seed check-in event, ticket type and front-desk users", async ({ request,
 		password: FRONTDESK_PASSWORD,
 		roles: ["Buzz User", "Frontdesk Manager"],
 	});
+
+	await ensureTeamMembership(request, event.team, FRONTDESK_EMAIL, "Frontdesk");
 
 	await saveLoginState(baseURL!, {
 		email: FRONTDESK_EMAIL,

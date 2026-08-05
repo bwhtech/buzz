@@ -9,6 +9,7 @@ from frappe.tests import IntegrationTestCase
 from buzz.api.booking import get_booking_confirmation as get_booking_confirmation_endpoint
 from buzz.api.booking import process_booking as process_booking_endpoint
 from buzz.api.booking.schemas import BookingRequest
+from buzz.events.doctype.buzz_team_settings.test_buzz_team_settings import set_team_settings
 
 
 def process_booking(**kwargs):
@@ -1234,9 +1235,9 @@ class TestBookingConfirmationEmail(IntegrationTestCase):
 		self.test_event.send_ticket_email = 0
 		self.test_event.save()
 
-		settings = frappe.get_doc("Buzz Settings")
-		settings.default_booking_confirmation_email_template = None
-		settings.save()
+		set_team_settings(self.test_event.team, default_booking_confirmation_email_template=None)
+		# The rollback restores the settings row but not its cached copy.
+		self.addCleanup(frappe.clear_document_cache, "Buzz Team Settings", self.test_event.team)
 
 		# A real (non-system) booker whose User email is a valid recipient.
 		if not frappe.db.exists("User", self.BOOKER_EMAIL):
@@ -1346,35 +1347,42 @@ class TestBookingConfirmationEmail(IntegrationTestCase):
 		self.assertIn("EVENT", mock_sendmail.call_args[1]["subject"])
 
 	@patch("frappe.sendmail")
-	def test_falls_back_to_global_template(self, mock_sendmail):
-		template = self._create_template("Booking Confirmation Global Template", "GLOBAL")
-		settings = frappe.get_doc("Buzz Settings")
-		settings.default_booking_confirmation_email_template = template.name
-		settings.save()
+	def test_falls_back_to_the_teams_default_template(self, mock_sendmail):
+		template = self._create_template("Booking Confirmation Team Template", "TEAM")
+		set_team_settings(self.test_event.team, default_booking_confirmation_email_template=template.name)
 
 		booking = self._make_booking(self.BOOKER_EMAIL)
 		booking.submit()
 
 		mock_sendmail.assert_called_once()
-		self.assertIn("GLOBAL", mock_sendmail.call_args[1]["subject"])
+		self.assertIn("TEAM", mock_sendmail.call_args[1]["subject"])
 
 	@patch("frappe.sendmail")
-	def test_event_template_takes_precedence_over_global(self, mock_sendmail):
+	def test_support_email_comes_from_the_teams_settings(self, mock_sendmail):
+		set_team_settings(self.test_event.team, support_email="booking-support@example.com")
+
+		booking = self._make_booking(self.BOOKER_EMAIL)
+		booking.submit()
+
+		self.assertEqual(mock_sendmail.call_args[1]["args"]["support_email"], "booking-support@example.com")
+
+	@patch("frappe.sendmail")
+	def test_event_template_takes_precedence_over_the_team_default(self, mock_sendmail):
 		event_template = self._create_template("Booking Event Precedence Template", "EVENT")
-		global_template = self._create_template("Booking Global Precedence Template", "GLOBAL")
+		team_template = self._create_template("Booking Team Precedence Template", "TEAM")
 		self.test_event.booking_confirmation_email_template = event_template.name
 		self.test_event.save()
 
-		settings = frappe.get_doc("Buzz Settings")
-		settings.default_booking_confirmation_email_template = global_template.name
-		settings.save()
+		set_team_settings(
+			self.test_event.team, default_booking_confirmation_email_template=team_template.name
+		)
 
 		booking = self._make_booking(self.BOOKER_EMAIL)
 		booking.submit()
 
 		mock_sendmail.assert_called_once()
 		self.assertIn("EVENT", mock_sendmail.call_args[1]["subject"])
-		self.assertNotIn("GLOBAL", mock_sendmail.call_args[1]["subject"])
+		self.assertNotIn("TEAM", mock_sendmail.call_args[1]["subject"])
 
 
 class TestZoomBackedCategoryBooking(IntegrationTestCase):

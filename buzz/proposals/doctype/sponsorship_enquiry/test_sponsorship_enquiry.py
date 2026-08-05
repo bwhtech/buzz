@@ -6,6 +6,8 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from buzz.events.doctype.buzz_team_settings.test_buzz_team_settings import set_team_settings
+
 EXTRA_TEST_RECORD_DEPENDENCIES = []
 IGNORE_TEST_RECORD_DEPENDENCIES = []
 
@@ -23,12 +25,24 @@ class TestSponsorshipEnquiryEmail(IntegrationTestCase):
 		cls.test_event.sponsor_deck_reply_to = None
 		cls.test_event.save()
 
-		settings = frappe.get_doc("Buzz Settings")
-		settings.auto_send_pitch_deck = False
-		settings.default_sponsor_deck_email_template = None
-		settings.default_sponsor_deck_cc = None
-		settings.default_sponsor_deck_reply_to = None
-		settings.save()
+		set_team_settings(
+			cls.test_event.team,
+			auto_send_pitch_deck=0,
+			default_sponsor_deck_email_template=None,
+			default_sponsor_deck_cc=None,
+			default_sponsor_deck_reply_to=None,
+		)
+
+	def set_team_defaults(self, **values):
+		set_team_settings(self.test_event.team, **values)
+
+	def clear_team_defaults(self):
+		self.set_team_defaults(
+			auto_send_pitch_deck=0,
+			default_sponsor_deck_email_template=None,
+			default_sponsor_deck_reply_to=None,
+			default_sponsor_deck_cc=None,
+		)
 
 	def _create_enquiry(self):
 		return frappe.get_doc(
@@ -64,12 +78,13 @@ class TestSponsorshipEnquiryEmail(IntegrationTestCase):
 		cls.test_event.sponsor_deck_reply_to = None
 		cls.test_event.save()
 
-		settings = frappe.get_doc("Buzz Settings")
-		settings.auto_send_pitch_deck = False
-		settings.default_sponsor_deck_email_template = None
-		settings.default_sponsor_deck_cc = None
-		settings.default_sponsor_deck_reply_to = None
-		settings.save()
+		set_team_settings(
+			cls.test_event.team,
+			auto_send_pitch_deck=0,
+			default_sponsor_deck_email_template=None,
+			default_sponsor_deck_cc=None,
+			default_sponsor_deck_reply_to=None,
+		)
 		super().tearDownClass()
 
 	@patch("frappe.sendmail")
@@ -109,47 +124,43 @@ class TestSponsorshipEnquiryEmail(IntegrationTestCase):
 			frappe.delete_doc("Email Template", template.name, force=True)
 
 	@patch("frappe.sendmail")
-	def test_falls_back_to_global_settings(self, mock_sendmail):
-		template = self._create_template("Global Sponsor Template", "GLOBAL")
+	def test_falls_back_to_team_settings(self, mock_sendmail):
+		template = self._create_template("Team Sponsor Template", "TEAM")
 		try:
-			settings = frappe.get_doc("Buzz Settings")
-			settings.auto_send_pitch_deck = True
-			settings.default_sponsor_deck_email_template = template.name
-			settings.default_sponsor_deck_reply_to = "global@test.com"
-			settings.default_sponsor_deck_cc = "global-cc@test.com"
-			settings.save()
+			self.set_team_defaults(
+				auto_send_pitch_deck=1,
+				default_sponsor_deck_email_template=template.name,
+				default_sponsor_deck_reply_to="team@test.com",
+				default_sponsor_deck_cc="team-cc@test.com",
+			)
 
 			# after_insert hook triggers send_pitch_deck automatically
 			self._create_enquiry()
 
 			mock_sendmail.assert_called_once()
 			args = mock_sendmail.call_args[1]
-			self.assertIn("GLOBAL", args["subject"])
-			self.assertEqual(args["reply_to"], "global@test.com")
-			self.assertEqual(args["cc"], "global-cc@test.com")
+			self.assertIn("TEAM", args["subject"])
+			self.assertEqual(args["reply_to"], "team@test.com")
+			self.assertEqual(args["cc"], "team-cc@test.com")
 		finally:
-			settings.auto_send_pitch_deck = False
-			settings.default_sponsor_deck_email_template = None
-			settings.default_sponsor_deck_reply_to = None
-			settings.default_sponsor_deck_cc = None
-			settings.save()
+			self.clear_team_defaults()
 			frappe.delete_doc("Email Template", template.name, force=True)
 
 	@patch("frappe.sendmail")
 	def test_event_settings_take_precedence(self, mock_sendmail):
 		event_template = self._create_template("Event Template", "EVENT")
-		global_template = self._create_template("Global Template", "GLOBAL")
+		team_template = self._create_template("Team Template", "TEAM")
 		try:
 			self.test_event.auto_send_pitch_deck = True
 			self.test_event.sponsor_deck_email_template = event_template.name
 			self.test_event.sponsor_deck_reply_to = "event@test.com"
 			self.test_event.save()
 
-			settings = frappe.get_doc("Buzz Settings")
-			settings.auto_send_pitch_deck = True
-			settings.default_sponsor_deck_email_template = global_template.name
-			settings.default_sponsor_deck_reply_to = "global@test.com"
-			settings.save()
+			self.set_team_defaults(
+				auto_send_pitch_deck=1,
+				default_sponsor_deck_email_template=team_template.name,
+				default_sponsor_deck_reply_to="team@test.com",
+			)
 
 			# after_insert hook triggers send_pitch_deck automatically
 			self._create_enquiry()
@@ -163,9 +174,6 @@ class TestSponsorshipEnquiryEmail(IntegrationTestCase):
 			self.test_event.sponsor_deck_email_template = None
 			self.test_event.sponsor_deck_reply_to = None
 			self.test_event.save()
-			settings.auto_send_pitch_deck = False
-			settings.default_sponsor_deck_email_template = None
-			settings.default_sponsor_deck_reply_to = None
-			settings.save()
+			self.clear_team_defaults()
 			frappe.delete_doc("Email Template", event_template.name, force=True)
-			frappe.delete_doc("Email Template", global_template.name, force=True)
+			frappe.delete_doc("Email Template", team_template.name, force=True)

@@ -15,3 +15,6 @@ buzz.patches.normalize_phone_format
 buzz.patches.set_time_zone_label_for_existing_events
 buzz.patches.rename_zoom_registration_field
 buzz.patches.rename_free_webinar_to_free_event
+buzz.patches.create_default_teams #2
+buzz.patches.assign_default_team #2
+buzz.patches.create_team_settings_for_existing_teams
