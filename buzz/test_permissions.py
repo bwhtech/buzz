@@ -2,6 +2,7 @@
 # See license.txt
 
 import frappe
+from frappe.desk.search import search_link
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.checkin.exceptions import TicketNotFound
@@ -232,6 +233,36 @@ class TestMultiTeamMembership(TeamPermissionTestCase):
 
 		self.assertIn(self.event_a, events)
 		self.assertNotIn(self.event_b, events)
+
+
+class TestTeamLinkQuery(TeamPermissionTestCase):
+	def searched(self, txt: str = "") -> list[str]:
+		results = search_link("Buzz Team", txt, reference_doctype="Buzz Event")
+		return [result["value"] for result in results]
+
+	def test_link_search_offers_only_the_users_teams(self):
+		self.as_user(self.alice)
+		teams = self.searched()
+
+		self.assertIn(self.team_a, teams)
+		self.assertNotIn(self.team_b, teams)
+
+	def test_link_search_matches_the_team_name(self):
+		self.as_user(self.alice)
+
+		self.assertEqual(self.searched("Perm Team A"), [self.team_a])
+		self.assertEqual(self.searched("Perm Team B"), [])
+
+	def test_system_manager_is_narrowed_here_despite_reading_every_team(self):
+		# Administrator is on neither team, but the permission hooks let it list both.
+		self.assertIn(self.team_b, frappe.get_list("Buzz Team", pluck="name"))
+
+		self.assertNotIn(self.team_b, self.searched())
+
+	def test_non_member_gets_nothing(self):
+		self.as_user(self.outsider)
+
+		self.assertEqual(self.searched(), [])
 
 
 class TestRoleMatrix(TeamPermissionTestCase):

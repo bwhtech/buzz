@@ -8,7 +8,7 @@ from frappe.model.naming import append_number_if_name_exists
 
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import create_team_settings
-from buzz.permissions import can_manage_members
+from buzz.permissions import can_manage_members, my_team_names
 
 SEARCH_LIMIT = 10
 STANDARD_USERS = ("Administrator", "Guest")
@@ -38,11 +38,7 @@ def set_team_from_sole_membership(doc, event=None):
 	if doc.team:
 		return
 
-	teams = frappe.get_all(
-		"Buzz Team Membership",
-		filters={"user": frappe.session.user, "enabled": 1},
-		pluck="team",
-	)
+	teams = my_team_names(frappe.session.user)
 	if len(teams) == 1:
 		doc.team = teams[0]
 

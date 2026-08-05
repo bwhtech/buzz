@@ -26,6 +26,33 @@ def my_teams(user: str) -> QueryBuilder:
 	)
 
 
+def my_team_names(user: str) -> list[str]:
+	return frappe.get_all("Buzz Team Membership", filters={"user": user, "enabled": 1}, pluck="team")
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def team_link_query(
+	doctype: str, txt: str, searchfield: str, start: int, page_len: int, filters: dict | None
+) -> list[tuple]:
+	"""Link fields offer the user's own teams only.
+
+	Narrower than the read permission on purpose: a System Manager reads every team for
+	support, but stamping a document with a team they are not on is never intended.
+	"""
+	pattern = f"%{txt}%"
+	return frappe.get_all(
+		"Buzz Team",
+		filters={**(filters or {}), "name": ("in", my_team_names(frappe.session.user))},
+		or_filters=[["name", "like", pattern], ["team_name", "like", pattern]],
+		fields=["name", "team_name"],
+		order_by="team_name asc",
+		limit_start=start,
+		limit_page_length=page_len,
+		as_list=True,
+	)
+
+
 def published_events() -> QueryBuilder:
 	event = frappe.qb.DocType("Buzz Event")
 	return frappe.qb.from_(event).select(event.name).where(event.is_published == 1)
