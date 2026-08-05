@@ -8,6 +8,7 @@ from frappe.model.naming import append_number_if_name_exists
 from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
 
 from buzz.api.forms.fields import validate_excluded_fields
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 from buzz.utils import get_time_zone_label, only_if_app_installed
 
 # Top-level dashboard route segments (/b/<segment>) an event route must not shadow.
@@ -81,6 +82,7 @@ class BuzzEvent(Document):
 		tax_inclusive: DF.Check
 		tax_label: DF.Data | None
 		tax_percentage: DF.Percent
+		team: DF.Link
 		ticket_email_template: DF.Link | None
 		ticket_print_format: DF.Link | None
 		time_zone: DF.Autocomplete | None
@@ -227,7 +229,7 @@ class BuzzEvent(Document):
 				"start_time": self.start_time,
 				"duration": int(time_diff_in_seconds(self.end_time, self.start_time)),
 				"timezone": self.time_zone,
-				"template": frappe.get_cached_doc("Buzz Settings").default_webinar_template,
+				"template": get_team_settings(self.team).default_webinar_template,
 			}
 		).insert()
 

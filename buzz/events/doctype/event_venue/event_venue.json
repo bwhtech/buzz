@@ -6,6 +6,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "team",
   "address",
   "column_break_kqaw",
   "type",
@@ -69,12 +70,20 @@
    "fieldtype": "Code",
    "label": "Google Maps Embed Code",
    "options": "HTML"
+  },
+  {
+   "fieldname": "team",
+   "fieldtype": "Link",
+   "label": "Team",
+   "options": "Buzz Team",
+   "reqd": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-09 10:08:41.169559",
+ "modified": "2026-07-31 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Venue",

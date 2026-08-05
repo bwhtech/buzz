@@ -2,6 +2,8 @@ import { test as setup, expect } from "@playwright/test";
 import * as fs from "fs";
 import * as path from "path";
 
+import { createDoc, getList } from "../helpers/frappe";
+
 const authFile = "e2e/.auth/user.json";
 const csrfFile = "e2e/.auth/csrf.json";
 
@@ -51,4 +53,15 @@ setup("authenticate", async ({ page }) => {
 	// Save authentication state
 	await page.context().storageState({ path: authFile });
 	console.log(`💾 Saved auth state to ${authFile}`);
+
+	// The fixtures omit `team`, which resolves from the acting user's only membership.
+	const teams = await getList(page.request, "Buzz Team Membership", {
+		filters: { user: userData.message, enabled: 1 },
+		limit: 2,
+	});
+
+	if (teams.length === 0) {
+		await createDoc(page.request, "Buzz Team", { team_name: "E2E Team" });
+		console.log("👥 Created E2E Team for the test user");
+	}
 });

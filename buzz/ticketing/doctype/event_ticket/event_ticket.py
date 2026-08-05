@@ -5,6 +5,7 @@ import frappe
 from frappe.core.api.user_invitation import invite_by_email
 from frappe.model.document import Document
 
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.utils import generate_ics_file, generate_qr_code_file, only_if_app_installed
 
 
@@ -108,9 +109,10 @@ class EventTicket(Document):
 			"Buzz Event", self.event, ["title", "ticket_email_template", "ticket_print_format", "venue"]
 		)
 
-		# Fallback to global setting if event-level not set
+		team_settings = get_event_team_settings(self.event)
+		# Fallback to the team default if event-level not set
 		if not ticket_template:
-			ticket_template = frappe.db.get_single_value("Buzz Settings", "default_ticket_email_template")
+			ticket_template = team_settings.default_ticket_email_template
 
 		subject = frappe._("Your ticket to {0} 🎟️").format(event_title)
 		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
@@ -119,6 +121,7 @@ class EventTicket(Document):
 			"event_doc": event_doc,
 			"event_title": event_title,
 			"venue": venue,
+			"support_email": team_settings.support_email,
 		}
 
 		if ticket_template:

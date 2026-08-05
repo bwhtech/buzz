@@ -6,6 +6,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from buzz.events.doctype.buzz_team_settings.test_buzz_team_settings import set_team_settings
 from buzz.utils import generate_qr_code_file, make_qr_image
 
 EXTRA_TEST_RECORD_DEPENDENCIES = []
@@ -22,12 +23,11 @@ class TestEventTicketEmail(IntegrationTestCase):
 		cls.test_event.ticket_email_template = None
 		cls.test_event.save()
 
-		# Clear global settings
-		settings = frappe.get_doc("Buzz Settings")
-		settings.default_ticket_email_template = None
-		settings.save()
+		set_team_settings(cls.test_event.team, default_ticket_email_template=None)
 
 	def setUp(self):
+		# The rollback restores the settings row but not its cached copy.
+		self.addCleanup(frappe.clear_document_cache, "Buzz Team Settings", self.test_event.team)
 		self.test_ticket_type = frappe.get_doc(
 			{
 				"doctype": "Event Ticket Type",
@@ -50,6 +50,9 @@ class TestEventTicketEmail(IntegrationTestCase):
 	def tearDown(self):
 		frappe.delete_doc("Event Ticket", self.test_ticket.name, force=True)
 		frappe.delete_doc("Event Ticket Type", self.test_ticket_type.name, force=True)
+
+	def set_team_default(self, template: str | None):
+		set_team_settings(self.test_event.team, default_ticket_email_template=template)
 
 	def _create_template(self, name, subject_prefix):
 		if frappe.db.exists("Email Template", name):
@@ -80,63 +83,64 @@ class TestEventTicketEmail(IntegrationTestCase):
 			frappe.delete_doc("Email Template", template.name, force=True)
 
 	@patch("frappe.sendmail")
-	def test_falls_back_to_global_template(self, mock_sendmail):
-		template = self._create_template("Global Ticket Template", "GLOBAL")
+	def test_falls_back_to_the_teams_default_template(self, mock_sendmail):
+		template = self._create_template("Team Ticket Template", "TEAM")
 		try:
 			self.test_event.ticket_email_template = None
 			self.test_event.save()
 
-			settings = frappe.get_doc("Buzz Settings")
-			settings.default_ticket_email_template = template.name
-			settings.save()
+			self.set_team_default(template.name)
 
 			self.test_ticket.send_ticket_email(now=True)
 
 			mock_sendmail.assert_called_once()
-			self.assertIn("GLOBAL", mock_sendmail.call_args[1]["subject"])
+			self.assertIn("TEAM", mock_sendmail.call_args[1]["subject"])
 		finally:
-			settings.default_ticket_email_template = None
-			settings.save()
+			self.set_team_default(None)
 			frappe.delete_doc("Email Template", template.name, force=True)
 
 	@patch("frappe.sendmail")
 	def test_event_template_takes_precedence(self, mock_sendmail):
 		event_template = self._create_template("Event Template", "EVENT")
-		global_template = self._create_template("Global Template", "GLOBAL")
+		team_template = self._create_template("Team Template", "TEAM")
 		try:
 			self.test_event.ticket_email_template = event_template.name
 			self.test_event.save()
 
-			settings = frappe.get_doc("Buzz Settings")
-			settings.default_ticket_email_template = global_template.name
-			settings.save()
+			self.set_team_default(team_template.name)
 
 			self.test_ticket.send_ticket_email(now=True)
 
 			mock_sendmail.assert_called_once()
 			self.assertIn("EVENT", mock_sendmail.call_args[1]["subject"])
-			self.assertNotIn("GLOBAL", mock_sendmail.call_args[1]["subject"])
+			self.assertNotIn("TEAM", mock_sendmail.call_args[1]["subject"])
 		finally:
 			self.test_event.ticket_email_template = None
 			self.test_event.save()
-			settings.default_ticket_email_template = None
-			settings.save()
+			self.set_team_default(None)
 			frappe.delete_doc("Email Template", event_template.name, force=True)
-			frappe.delete_doc("Email Template", global_template.name, force=True)
+			frappe.delete_doc("Email Template", team_template.name, force=True)
 
 	@patch("frappe.sendmail")
 	def test_uses_inline_template_when_none_configured(self, mock_sendmail):
 		self.test_event.ticket_email_template = None
 		self.test_event.save()
 
-		settings = frappe.get_doc("Buzz Settings")
-		settings.default_ticket_email_template = None
-		settings.save()
+		self.set_team_default(None)
 
 		self.test_ticket.send_ticket_email(now=True)
 
 		mock_sendmail.assert_called_once()
 		self.assertEqual(mock_sendmail.call_args[1]["template"], "ticket")
+
+	@patch("frappe.sendmail")
+	def test_support_email_reaches_the_template_from_the_team(self, mock_sendmail):
+		set_team_settings(self.test_event.team, support_email="team-support@example.com")
+		self.addCleanup(set_team_settings, self.test_event.team, support_email=None)
+
+		self.test_ticket.send_ticket_email(now=True)
+
+		self.assertEqual(mock_sendmail.call_args[1]["args"]["support_email"], "team-support@example.com")
 
 
 class TestQRCodeGeneration(IntegrationTestCase):
