@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.utils import get_system_timezone
 
+from buzz.page_meta import get_page_meta
+
 no_cache = 1
 
 
@@ -14,6 +16,11 @@ def get_context():
 	context = frappe._dict()
 	context.boot = get_boot()
 	context.boot.csrf_token = csrf_token
+
+	meta = get_page_meta(frappe.form_dict.get("app_path"))
+	context.title = meta["title"]
+	context.meta_description = meta["description"]
+	context.meta_image = meta["image"]
 	return context
 
 
