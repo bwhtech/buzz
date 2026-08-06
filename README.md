@@ -97,6 +97,22 @@ Pre-commit is configured to use the following tools for checking and formatting 
 - eslint
 - prettier
 - pyupgrade
+
+#### Branches
+
+Buzz is developed on two release lines:
+
+| Branch | Line | What it is |
+| --- | --- | --- |
+| `main` | 1.x — stable | The supported release line, and what `bench get-app` installs by default. |
+| `develop` | 2.x — beta | Where the next major lands, including team-based multi-tenancy. Not yet released. |
+
+Open your pull request against `develop`. Once it is merged, add a `backport main`
+label to cherry-pick it onto the stable line — the [backport
+workflow](.github/workflows/backport.yml) opens the follow-up PR for you. Changes
+that target 2.x only, such as anything building on teams, stay on `develop` and
+should not be labelled.
+
 ### CI
 
 This app can use GitHub Actions for CI. The following workflows are configured:
