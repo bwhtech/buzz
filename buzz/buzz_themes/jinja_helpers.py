@@ -12,7 +12,7 @@ def buzz_theme_asset_url(path):
 	by shipping a file at the same relative path. Each theme's files may live
 	in a different content app (resolved via its `module`), so both the
 	filesystem lookup and the `/assets/<app>/...` URL are app-aware. Falls
-	back to the base theme's URL if no file is found (so themes can document
+	back to the active theme's URL if no file is found (so themes can document
 	expected paths without forcing every child to ship every asset)."""
 	context = get_render_theme_context()
 	if not context["theme_name"]:
@@ -29,10 +29,13 @@ def buzz_theme_asset_url(path):
 		if is_within_directory(theme_public_dir, asset_path) and os.path.isfile(asset_path):
 			return f"/assets/{app}/themes/{slug}/{relative_path}"
 
-	base_name = context["names"][0]
-	base_app = apps[base_name]
-	base_slug = frappe.scrub(base_name)
-	return f"/assets/{base_app}/themes/{base_slug}/{relative_path}"
+	# names is child-first, so this is the ACTIVE theme, not the root ancestor:
+	# a missing asset should 404 under the theme the page is actually rendering
+	# as, which is where an author would look for it.
+	active_name = context["names"][0]
+	active_app = apps[active_name]
+	active_slug = frappe.scrub(active_name)
+	return f"/assets/{active_app}/themes/{active_slug}/{relative_path}"
 
 
 def buzz_theme_config():
