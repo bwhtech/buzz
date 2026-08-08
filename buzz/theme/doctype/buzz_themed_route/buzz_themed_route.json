@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "creation": "2026-05-17 12:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "url_pattern",
+  "template_path",
+  "requires_auth"
+ ],
+ "fields": [
+  {
+   "description": "Regex pattern matched against the request path (with leading slash stripped). Use named groups like (?P&lt;slug&gt;[^/]+) to expose as context variables.",
+   "fieldname": "url_pattern",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "URL Pattern",
+   "reqd": 1,
+   "ignore_xss_filter": 1
+  },
+  {
+   "description": "Path relative to the theme folder, e.g. pages/events/list.html",
+   "fieldname": "template_path",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Template Path",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "requires_auth",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Requires Auth"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-17 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Theme",
+ "name": "Buzz Themed Route",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

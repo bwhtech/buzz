@@ -1,0 +1,65 @@
+{
+ "actions": [],
+ "creation": "2026-05-17 12:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "dynamic_pages_enabled",
+  "section_break_routes",
+  "routes"
+ ],
+ "fields": [
+  {
+   "default": "1",
+   "description": "If enabled, any URL like /foo/bar will look for pages/foo/bar.html in the active theme as a fallback when no explicit route matches.",
+   "fieldname": "dynamic_pages_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Dynamic Pages"
+  },
+  {
+   "fieldname": "section_break_routes",
+   "fieldtype": "Section Break",
+   "label": "Routes"
+  },
+  {
+   "fieldname": "routes",
+   "fieldtype": "Table",
+   "label": "Themed Routes",
+   "options": "Buzz Themed Route"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-05-17 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Theme",
+ "name": "Buzz Theme Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Website Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
