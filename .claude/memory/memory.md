@@ -79,14 +79,30 @@ Ships via the idempotent patch `buzz.patches.seed_buzz_theme_routes`
 theme chain is servable — a theme shipping `pages/b.html` WOULD hijack the SPA
 at `/b`. No bundled theme does.
 
-`^events$` -> `pages/events.html` is only satisfied by `events_theme`; the two
-real themes do not ship that page.
+`^events$` -> `pages/events.html` is seeded but NO bundled theme ships that
+page, so the route is dead until one does. It is harmless: `can_render()`
+declines when the template is missing.
 
 ### Bundled themes
 
-`buzz_events_theme` (ticket-stub look) and `sketchbook_theme` (handwritten,
-ruled paper) are complete. `events_theme` is a 2-file stub with no `base.html`
-and cannot render standalone unless given a `parent_theme`.
+Three, all complete: `buzz_events_theme` (ticket stub), `sketchbook_theme`
+(handwritten, ruled paper), `stickerpack_theme` (neo-brutalist — dot-grid
+ground, 3px borders with 4px offset shadows, accent-cycled rotated cards).
+
+`stickerpack_theme` was ported from a static prototype at
+`hobby/ui/buzz_implementation/themes/stickerpack`. Two things that do not
+survive such a port: the prototype registered `accent_bg`/`accent_fg`/
+`rot_class` as Python globals in its own `render.py` (Frappe's Jinja has no
+equivalent — they live in `components/macros/accents.html` here), and it
+loaded Tailwind from the Play CDN (built locally here). Its category filter
+chips were NOT ported.
+
+An earlier `events_theme` was deleted: it shipped pages that `{% extends %}`
+a `base.html` it did not contain, so it could never render standalone.
+Deleting a theme means three places, not one: the folder, the
+`public/themes/<slug>` symlink, AND the fixture folder — plus the DB record,
+which survives a migrate because removing a fixture never deletes an
+already-imported doc.
 
 Theme templates query buzz doctypes directly in Jinja and ship no page
 controllers, though the engine supports sibling `.py` controllers per page.
