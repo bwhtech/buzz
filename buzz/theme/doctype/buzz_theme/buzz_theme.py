@@ -225,32 +225,22 @@ def resolve_default_theme():
 	return frappe.get_single_value("Buzz Settings", "default_theme")
 
 
-def resolve_theme_for_request(match):
-	"""Theme for this request: previewed theme, else the matched event's own
-	theme, else the site default.
+def resolve_theme():
+	"""Theme for this render: the previewed theme, else the site default.
 
-	`match` is the regex match for the themed route, or None. A route that
-	captures an `event_route` group is event-scoped, so the event it names
-	chooses the theme; every other route (home, category, dynamic pages) has
-	no event in scope and uses the site default."""
-	preview_theme = requested_preview_theme()
-	if preview_theme:
-		return preview_theme
-
-	event_route = (match.groupdict() or {}).get("event_route") if match else None
-	if event_route:
-		event_theme = frappe.db.get_value("Buzz Event", {"route": event_route}, "theme")
-		if event_theme:
-			return event_theme
-
-	return resolve_default_theme()
+	One theme per site, deliberately. Theming an individual event would let a
+	listing page and the events it links to render in different design
+	languages, which is why hosted platforms attach the theme to the organizer
+	or workspace and let an event vary only its content (cover, accent), never
+	its templates."""
+	return requested_preview_theme() or resolve_default_theme()
 
 
 def get_theme_context(theme_name):
 	"""Resolved chain/dirs/apps for one theme, cached per theme name.
 
-	Keyed per theme rather than as one global entry because several themes
-	are now live on the same site at once — one per event."""
+	Keyed per theme rather than as one global entry so that switching the
+	default — or previewing a second theme — does not evict the other's chain."""
 	if not theme_name:
 		return build_theme_context(None)
 	return frappe.cache.hget(
@@ -258,23 +248,14 @@ def get_theme_context(theme_name):
 	)
 
 
-def set_render_theme_context(context):
-	"""Remember what the renderer resolved, so the Jinja helpers agree with it."""
-	frappe.local.render_theme_context = context
-
-
 def get_render_theme_context():
-	"""Theme context for the current render.
+	"""Theme context for the current render, shared by the renderer and the
+	Jinja helpers.
 
-	The renderer resolves the theme once (it needs the matched route to know
-	which event is in scope) and stashes it here. buzz_theme_asset_url() and
-	buzz_theme_config() must read that same context — if they re-resolved
-	independently they would fall back to the site default and an event page
-	would render its own theme's HTML with the default theme's assets."""
-	context = getattr(frappe.local, "render_theme_context", None)
-	if context is not None:
-		return context
-	return get_theme_context(resolve_theme_for_request(None))
+	Both sides call this rather than resolving separately: if they ever
+	disagreed, a page would render one theme's markup against another's assets,
+	which shows up as a broken stylesheet rather than an error."""
+	return get_theme_context(resolve_theme())
 
 
 def requested_preview_theme():

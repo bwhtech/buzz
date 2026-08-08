@@ -29,7 +29,6 @@
   "tab_2_tab",
   "schedule",
   "website_tab",
-  "theme",
   "is_published",
   "route",
   "default_ticket_type",
@@ -241,12 +240,6 @@
    "fieldname": "website_tab",
    "fieldtype": "Tab Break",
    "label": "Website"
-  },
-  {
-   "fieldname": "theme",
-   "fieldtype": "Link",
-   "label": "Theme",
-   "options": "Buzz Theme"
   },
   {
    "fieldname": "column_break_ndtl",
