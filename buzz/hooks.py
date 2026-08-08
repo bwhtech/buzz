@@ -27,6 +27,10 @@ website_route_rules = [
 
 page_renderer = ["buzz.theme.theme_resolver.ThemePageRenderer"]
 
+# Ships the bundled themes as records. Without this the theme folders exist on
+# disk but no Buzz Theme row does, so none of them can be selected.
+importable_doctypes = ["Buzz Theme"]
+
 jinja = {
 	"methods": [
 		"buzz.theme.jinja_helpers.theme_asset_url",

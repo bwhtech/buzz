@@ -1,0 +1,102 @@
+<div
+  x-data="loginDialog()"
+  x-show="open"
+  x-cloak
+  @open-login.window="show()"
+  @keydown.escape.window="hide()"
+  class="login-backdrop no-print"
+  role="dialog"
+  aria-modal="true"
+>
+  <div class="login-backdrop__shade" @click="hide()"></div>
+
+  <div class="login-card" @click.stop>
+    <button type="button" @click="hide()" aria-label="Close" class="login-card__close">&times;</button>
+
+    <div class="label" x-text="labelFor()"></div>
+    <h2 class="marker" style="font-size: 36px; line-height: 1; margin: 6px 0 18px; transform: rotate(-1deg);" x-text="titleFor()"></h2>
+
+    <div x-show="error" x-text="error" class="login-error marker" role="alert"></div>
+    <div x-show="success" x-text="success" class="login-success marker" role="status"></div>
+
+    <form x-show="view === 'login'" @submit.prevent="submitLogin()" style="display: flex; flex-direction: column; gap: 14px;">
+      <div x-show="!context || !context.disable_user_pass_login" style="display: flex; flex-direction: column; gap: 14px;">
+        <div>
+          <label class="login-label">email</label>
+          <input type="email" x-model="form.email" required autocomplete="email" placeholder="you@example.com" class="login-input" />
+        </div>
+        <div>
+          <label class="login-label">password</label>
+          <input type="password" x-model="form.password" required autocomplete="current-password" placeholder="••••••••" class="login-input" />
+        </div>
+        <div style="text-align: right;">
+          <button type="button" @click="switchView('forgot')" class="login-link">forgot password?</button>
+        </div>
+        <button type="submit" :disabled="loading" class="login-btn">
+          <span x-show="!loading">&rarr; sign in &#9733;</span>
+          <span x-show="loading">scribbling…</span>
+        </button>
+      </div>
+
+      <div x-show="context && context.provider_logins && context.provider_logins.length" style="display: flex; flex-direction: column; gap: 10px;">
+        <div x-show="!context || !context.disable_user_pass_login" class="login-divider">or</div>
+        <template x-for="provider in (context && context.provider_logins) || []" :key="provider.name">
+          <button type="button" @click="window.location.href = provider.auth_url" class="login-provider">
+            <img :src="provider.icon" :alt="provider.provider_name" style="width:18px;height:18px;" x-show="provider.icon" />
+            <span x-text="`continue with ${provider.provider_name}`"></span>
+          </button>
+        </template>
+      </div>
+
+      <div x-show="!context || !context.disable_signup" class="marker" style="text-align: center; font-size: 18px; opacity: 0.75; padding-top: 10px; border-top: 2px dashed var(--line-strong);">
+        new here?
+        <button type="button" @click="switchView('signup')" class="login-link" style="font-size: 18px;">sign up</button>
+      </div>
+    </form>
+
+    <form x-show="view === 'signup'" @submit.prevent="submitSignup()" style="display: flex; flex-direction: column; gap: 14px;">
+      <div>
+        <label class="login-label">full name</label>
+        <input type="text" x-model="form.full_name" required autocomplete="name" placeholder="jane doe" class="login-input" />
+      </div>
+      <div>
+        <label class="login-label">email</label>
+        <input type="email" x-model="form.email" required autocomplete="email" placeholder="you@example.com" class="login-input" />
+      </div>
+      <button type="submit" :disabled="loading" class="login-btn">
+        <span x-show="!loading">&rarr; sign up &#9733;</span>
+        <span x-show="loading">scribbling…</span>
+      </button>
+
+      <div x-show="context && context.provider_logins && context.provider_logins.length" style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="login-divider">or</div>
+        <template x-for="provider in (context && context.provider_logins) || []" :key="provider.name">
+          <button type="button" @click="window.location.href = provider.auth_url" class="login-provider">
+            <img :src="provider.icon" :alt="provider.provider_name" style="width:18px;height:18px;" x-show="provider.icon" />
+            <span x-text="`continue with ${provider.provider_name}`"></span>
+          </button>
+        </template>
+      </div>
+
+      <div class="marker" style="text-align: center; font-size: 18px; opacity: 0.75; padding-top: 10px; border-top: 2px dashed var(--line-strong);">
+        already have an account?
+        <button type="button" @click="switchView('login')" class="login-link" style="font-size: 18px;">login</button>
+      </div>
+    </form>
+
+    <form x-show="view === 'forgot'" @submit.prevent="submitForgot()" style="display: flex; flex-direction: column; gap: 14px;">
+      <p class="marker" style="font-size: 20px; opacity: 0.8; line-height: 1.3;">put your email — we'll mail you a reset link.</p>
+      <div>
+        <label class="login-label">email</label>
+        <input type="email" x-model="form.email" required autocomplete="email" placeholder="you@example.com" class="login-input" />
+      </div>
+      <button type="submit" :disabled="loading" class="login-btn">
+        <span x-show="!loading">&rarr; send link &#9733;</span>
+        <span x-show="loading">sending…</span>
+      </button>
+      <div style="text-align: center; padding-top: 10px; border-top: 2px dashed var(--line-strong);">
+        <button type="button" @click="switchView('login')" class="login-link">&larr; back to login</button>
+      </div>
+    </form>
+  </div>
+</div>

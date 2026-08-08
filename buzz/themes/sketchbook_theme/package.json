@@ -1,0 +1,13 @@
+{
+  "name": "sketchbook_theme",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "build:css": "tailwindcss -i ./tailwind.input.css -o ./tailwind.output.css --minify",
+    "watch:css": "tailwindcss -i ./tailwind.input.css -o ./tailwind.output.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^4.0.14",
+    "@tailwindcss/cli": "^4.0.14"
+  }
+}
