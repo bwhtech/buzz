@@ -1,0 +1,6 @@
+@source "./pages/**/*.html";
+@source "./components/**/*.html";
+
+@import "tailwindcss";
+
+@import "./styles/tokens.css";

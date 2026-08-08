@@ -1,0 +1,324 @@
+{% extends "components/base.html" %}
+{% import "components/macros/accents.html" as accents %}
+
+{% set event_name = frappe.db.get_value("Buzz Event", {"route": event_route, "is_published": 1}, "name") %}
+{% if not event_name %}
+  {% set not_found = frappe.throw(_("Event not found"), frappe.PageDoesNotExistError) %}
+{% endif %}
+{% set event = frappe.get_cached_doc("Buzz Event", event_name) %}
+{% set venue = frappe.get_cached_doc("Event Venue", event.venue) if event.venue else None %}
+{% set host = frappe.get_cached_doc("Event Host", event.host) if event.host else None %}
+{% set category = frappe.get_cached_doc("Event Category", event.category) if event.category else None %}
+{% set sponsors = frappe.get_all("Event Sponsor", filters={"event": event.name},
+      fields=["company_name", "tier", "company_logo", "website", "country"]) %}
+
+{% set today = frappe.utils.today() %}
+{% set is_past = event.start_date and (event.start_date|string) < today %}
+
+{# Batch the talk + speaker lookups once so the schedule and featured-speaker
+   loops below never fetch a doc per row (same pattern as home.html). #}
+{% set talk_names = event.schedule | selectattr("type", "equalto", "Talk")
+      | map(attribute="talk") | reject("none") | list | unique | list %}
+{% set talk_title_map = {} %}
+{% set first_speaker_map = {} %}
+{% if talk_names %}
+  {% for talk in frappe.get_all("Event Talk", filters={"name": ["in", talk_names]}, fields=["name", "title"]) %}
+    {% set _ = talk_title_map.update({talk.name | string: talk.title}) %}
+  {% endfor %}
+  {% for row in frappe.get_all("Talk Speaker", filters={"parenttype": "Event Talk", "parent": ["in", talk_names]},
+        fields=["parent", "speaker"], order_by="parent asc, idx asc") %}
+    {% if (row.parent | string) not in first_speaker_map %}{% set _ = first_speaker_map.update({row.parent | string: row.speaker}) %}{% endif %}
+  {% endfor %}
+{% endif %}
+
+{% set speaker_names = ((first_speaker_map.values() | list)
+      + (event.featured_speakers | map(attribute="speaker") | reject("none") | list)) | unique | list %}
+{% set speaker_map = {} %}
+{% if speaker_names %}
+  {% for speaker in frappe.get_all("Speaker Profile", filters={"name": ["in", speaker_names]},
+        fields=["name", "display_name", "designation", "company", "display_image"]) %}
+    {% set _ = speaker_map.update({speaker.name | string: speaker}) %}
+  {% endfor %}
+{% endif %}
+
+{% set schedule_items = [] %}
+{% for session in event.schedule %}
+  {% set session_title = '' %}
+  {% set session_speaker = '' %}
+  {% if session.type == 'Talk' and session.talk %}
+    {% set session_title = talk_title_map.get(session.talk | string) or '' %}
+    {% set first_speaker = first_speaker_map.get(session.talk | string) %}
+    {% set speaker_profile = speaker_map.get(first_speaker | string) if first_speaker else None %}
+    {% set session_speaker = (speaker_profile.display_name or '') if speaker_profile else '' %}
+  {% elif session.type == 'Break' %}
+    {% set session_title = session.description or 'Break' %}
+  {% else %}
+    {% set session_title = session.description or '' %}
+  {% endif %}
+  {% set _ = schedule_items.append({
+      "start_time": (session.start_time|string)[:5] if session.start_time else '',
+      "end_time": (session.end_time|string)[:5] if session.end_time else '',
+      "title": session_title,
+      "speaker_name": session_speaker,
+      "is_break": session.type == 'Break'
+  }) %}
+{% endfor %}
+
+{% set featured_speakers = [] %}
+{% for featured_speaker in event.featured_speakers %}
+  {% set speaker_profile = speaker_map.get(featured_speaker.speaker | string) if featured_speaker.speaker else None %}
+  {% if speaker_profile %}
+    {% set role_parts = [] %}
+    {% if speaker_profile.designation %}{% set _ = role_parts.append(speaker_profile.designation) %}{% endif %}
+    {% if speaker_profile.company %}{% set _ = role_parts.append(speaker_profile.company) %}{% endif %}
+    {% set _ = featured_speakers.append({
+        "name": speaker_profile.display_name or '',
+        "role": role_parts|join(', '),
+        "image_url": speaker_profile.display_image
+    }) %}
+  {% endif %}
+{% endfor %}
+
+{% set accent_cycle = ['warm', 'hot', 'cool', 'ink', 'primary', 'bold'] %}
+{% set rot_cycle = [1, -1, 2, -2, 3, -3] %}
+{% set category_label = (category.name|upper) if category else 'EVENT' %}
+{% set date_full = event.start_date.strftime('%a, %d %b %Y') if event.start_date else 'TBA' %}
+{% set doors_time = (event.start_time|string)[:5] if event.start_time else '' %}
+{% set time_zone_label = event.time_zone.split('/')|last if event.time_zone else 'IST' %}
+{% set hero_image = event.banner_image or event.card_image %}
+{% set register_href = '/dashboard/book-tickets/' + (event.route or '') %}
+{% set sponsor_href = '/dashboard/events/' + (event.route or '') + '/forms/enquire-sponsorship' %}
+
+{% block title %}{{ event.title }} &mdash; Frappe Events{% endblock %}
+{% block og_type %}event{% endblock %}
+{% block og_title %}{{ event.title }}{% endblock %}
+{% block og_description %}{{ event.short_description or event.title }}{% endblock %}
+{% block og_image %}{{ event.meta_image or event.banner_image or '' }}{% endblock %}
+{% block og_url %}{{ frappe.utils.get_url() }}/events/{{ event.route }}{% endblock %}
+
+{% block body %}
+
+{# ---------- HERO ---------- #}
+<section id="hero" class="mt-4 relative">
+  <div class="flex flex-wrap gap-3 mb-6">
+    <span class="sticker sticker--sm {{ accents.rot_class(-2) }}" style="{{ accents.accent_style('primary') }}">{{ category_label }}</span>
+    {% if is_past %}<span class="sticker sticker--sm bg-[var(--ink)] text-[var(--surface)] rotate-2">PAST EVENT</span>{% endif %}
+  </div>
+
+  <h1 class="font-black text-[52px] md:text-[110px] leading-[0.88] tracking-tight max-w-3xl">{{ event.title }}</h1>
+
+  {% if event.short_description %}
+  <p class="hand text-[24px] md:text-[30px] mt-4 -rotate-1 opacity-80 max-w-xl">{{ event.short_description }}</p>
+  {% endif %}
+
+  <div class="mt-10 grid md:grid-cols-3 gap-6">
+    <div class="square p-5 -rotate-1">
+      <div class="hand text-[28px] text-[var(--accent-primary)]">&#9733; what is this</div>
+      <p class="mt-2 text-[16px] leading-snug">{{ event.short_description or event.title }}</p>
+    </div>
+    <div class="square bg-[var(--accent-warm)] text-[#161616] p-5 rotate-1">
+      <div class="hand text-[28px]">when &darr;</div>
+      <p class="mt-2 font-bold text-[20px] leading-tight">{{ date_full }}{% if doors_time %}<br>{{ doors_time }} {{ time_zone_label }} doors{% endif %}</p>
+    </div>
+    <div class="square bg-[var(--accent-cool)] text-[#161616] p-5 -rotate-2">
+      <div class="hand text-[28px]">where &darr;</div>
+      <p class="mt-2 font-bold text-[20px] leading-tight">{% if venue %}{{ venue.name }}{% else %}online{% endif %}</p>
+    </div>
+  </div>
+
+  {% if hero_image %}
+  <div class="my-16 grid md:grid-cols-[2fr_1fr] gap-6 items-end">
+    <div class="square p-3 photo-tape rotate-1">
+      <img src="{{ hero_image }}" alt="{{ event.title }} banner" class="w-full h-72 md:h-80 object-cover" />
+      {% if venue %}<div class="hand text-[18px] mt-2 text-center">{{ venue.name }}</div>{% endif %}
+    </div>
+    <div class="square bg-[var(--accent-hot)] text-white p-6 -rotate-3">
+      <div class="hand text-[40px] leading-none">don't<br>be late!</div>
+      <p class="mt-3 text-[14px]">{% if doors_time %}Doors {{ doors_time }} {{ time_zone_label }}.{% endif %} Once sold out, that's it.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="flex flex-col sm:flex-row items-start gap-4 mt-12 no-print">
+    <a href="{{ register_href }}" class="cta-btn">{% if is_past %}watch recap{% else %}reserve a seat{% endif %} &#9733;</a>
+    <a href="{{ sponsor_href }}" class="hand -rotate-1 self-center text-[28px] text-[var(--accent-primary)]">propose talk / sponsor &rarr;</a>
+  </div>
+</section>
+
+<div class="print-hide-below">
+
+  {% if event.about %}
+  <section class="mt-16 square p-8 rotate-1">
+    <div class="hand text-[36px] text-[var(--accent-primary)] -rotate-1">&#9733; the why</div>
+    <div class="mt-4 text-[16px] leading-relaxed opacity-92">{{ event.about|safe }}</div>
+  </section>
+  {% endif %}
+
+  {# ---------- SCHEDULE ---------- #}
+  {% if schedule_items %}
+  <section class="mt-12 square p-8 -rotate-1">
+    <div class="hand text-[36px] text-[var(--accent-primary)] -rotate-1">&#9733; the day, in order</div>
+    <p class="mono text-[10px] tracking-[0.25em] uppercase opacity-50 mt-1">{{ time_zone_label }} &middot; subject to change</p>
+
+    <div class="schedule-rail mt-8">
+      {% for item in schedule_items %}
+      <div class="schedule-row {% if item.is_break %}is-break{% endif %}">
+        <span class="schedule-time">{{ item.start_time }}{% if item.end_time %} &rarr; {{ item.end_time }}{% endif %}</span>
+        <span class="schedule-title">{{ item.title }}</span>
+        {% if item.speaker_name %}<span class="schedule-speaker">&middot; {{ item.speaker_name }}</span>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# ---------- SPEAKERS ---------- #}
+  {% if featured_speakers %}
+  <section class="mt-12 square p-8 rotate-1">
+    <div class="flex items-baseline justify-between flex-wrap gap-3 mb-6">
+      <div class="hand text-[36px] text-[var(--accent-primary)] -rotate-1">&#9733; speakers</div>
+      <span class="mono text-[10px] tracking-[0.25em] uppercase opacity-60">{{ featured_speakers | length }} talks</span>
+    </div>
+
+    <div class="speaker-grid">
+      {% for speaker in featured_speakers %}
+      <div class="speaker-row">
+        {% if speaker.image_url %}
+        <img class="speaker-avatar" src="{{ speaker.image_url }}" alt="{{ speaker.name }}" loading="lazy" />
+        {% else %}
+        <div class="speaker-avatar hand text-[28px] flex items-center justify-center bg-[var(--accent-warm)] text-[#161616]">
+          {{ (speaker.name.split(' ')[0][0] if speaker.name else '?') + (speaker.name.split(' ')[-1][0] if speaker.name and (speaker.name.split(' ') | length > 1) else '') }}
+        </div>
+        {% endif %}
+        <div>
+          <span class="speaker-name-pill">{{ speaker.name }}</span>
+          {% if speaker.role %}<div class="speaker-role">{{ speaker.role }}</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {# ---------- VENUE ---------- #}
+  {% if venue %}
+  <section class="mt-12 square p-8 -rotate-1">
+    <div class="hand text-[36px] text-[var(--accent-primary)] -rotate-1">&#9733; venue</div>
+    <div class="grid md:grid-cols-[1fr_1.4fr] gap-8 mt-4">
+      <div>
+        <h3 class="font-bold text-[22px] leading-tight">{{ venue.name }}</h3>
+        {% if venue.address %}
+        <div class="mt-3 text-[14px] leading-relaxed opacity-90 whitespace-pre-line">{{ venue.address }}</div>
+        {% endif %}
+        <a href="https://www.google.com/maps/search/?api=1&query={{ venue.name|urlencode }}" target="_blank" rel="noopener"
+           class="mono text-[11px] tracking-[0.2em] uppercase mt-4 inline-flex items-center gap-1 hover:underline">
+          Open in maps <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+        </a>
+      </div>
+      <div class="square bg-[var(--accent-warm)] text-[#161616] overflow-hidden p-0">
+        {% if venue.google_maps_embed_code %}
+          {{ venue.google_maps_embed_code|safe }}
+        {% elif venue.latitude and venue.longitude and (venue.latitude|float != 0 or venue.longitude|float != 0) %}
+          <img src="https://staticmap.openstreetmap.de/staticmap.php?center={{ venue.latitude }},{{ venue.longitude }}&zoom=14&size=600x375&markers={{ venue.latitude }},{{ venue.longitude }},red-dot"
+               alt="Map of {{ venue.name }}" class="w-full h-48 md:h-56 object-cover" loading="lazy" />
+        {% else %}
+          <div class="w-full h-48 md:h-56 flex items-center justify-center hand text-[40px] -rotate-2">map</div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {# ---------- HOST / SPONSORS ---------- #}
+  {% if host or sponsors %}
+  <section class="mt-8 square bg-[var(--accent-warm)] text-[#161616] p-8 rotate-1">
+    <div class="hand text-[36px] -rotate-1">&#9733; hosted by</div>
+    <div class="grid sm:grid-cols-2 gap-5 mt-4">
+      {% if host %}
+      <div class="square bg-white p-5 flex items-center gap-4 rotate-0">
+        {% if host.logo %}
+        <div class="w-16 h-16 flex items-center justify-center bg-white border-[3px] border-[#161616] shrink-0">
+          <img src="{{ host.logo }}" alt="{{ host.name }}" class="max-w-full max-h-full object-contain p-1" />
+        </div>
+        {% endif %}
+        <div>
+          <div class="label">host</div>
+          <div class="font-black text-[22px] leading-tight">{{ host.name }}</div>
+          {% if host.by_line %}<div class="text-[14px] opacity-70 mt-1">{{ host.by_line }}</div>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% for sponsor in sponsors %}
+      <div class="square bg-white p-5 flex items-center gap-4 rotate-0">
+        <div class="w-16 h-16 flex items-center justify-center shrink-0" style="{{ accents.accent_style(accent_cycle[loop.index0 % 6]) }}">
+          {% if sponsor.company_logo %}<img src="{{ sponsor.company_logo }}" alt="{{ sponsor.company_name }}" class="max-w-full max-h-full object-contain p-1" />{% else %}&#9733;{% endif %}
+        </div>
+        <div>
+          <div class="label">{{ (sponsor.tier or 'partner') | lower }}</div>
+          <div class="font-black text-[22px] leading-tight">{{ sponsor.company_name }}</div>
+          {% if sponsor.country %}<div class="text-[14px] opacity-70 mt-1">{{ sponsor.country }}</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if host and host.about %}
+  <section class="mt-12 square p-8 -rotate-1">
+    <div class="label">about the host</div>
+    <div class="font-black text-[28px] mt-2 leading-tight">{{ host.name }}</div>
+    <div class="mt-4 text-[16px] leading-relaxed opacity-92">{{ host.about|safe }}</div>
+  </section>
+  {% endif %}
+
+  {# ---------- RELATED ---------- #}
+  {% if event.category %}
+    {% set related = frappe.get_all("Buzz Event",
+        filters={"is_published": 1, "category": event.category, "name": ["!=", event.name]},
+        fields=["title", "route", "start_date", "venue", "card_image", "banner_image"],
+        order_by="start_date asc", limit_page_length=3) %}
+    {% if related %}
+    <section class="mt-16">
+      <div class="hand text-[36px] -rotate-1 mb-4">&#9733; also happening</div>
+      <div class="grid md:grid-cols-3 gap-4">
+        {% for related_event in related %}
+          {% set related_is_past = related_event.start_date and (related_event.start_date|string) < today %}
+          {% set related_card = {
+            'route': related_event.route,
+            'title': related_event.title,
+            'image': related_event.card_image or related_event.banner_image,
+            'date_short': related_event.start_date.strftime('%d %b').upper() if related_event.start_date else '',
+            'venue_short': related_event.venue or '',
+            'category_label': (category.name if category else 'EVENT')|upper,
+            'accent': accent_cycle[loop.index0 % 6],
+            'rot': rot_cycle[loop.index0 % 6],
+            'is_past': related_is_past
+          } %}
+          {% with event = related_card %}{% include "components/event_card.html" %}{% endwith %}
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+  {% endif %}
+
+</div>
+
+<p class="text-center hand mt-12 -rotate-1 no-print text-[24px] opacity-70">
+  {% if is_past %}thanks for being there &#9733;{% else %}seats are limited. don't dawdle &#9733;{% endif %}
+</p>
+
+{% endblock %}
+
+{% block body_extra %}
+<div x-data="stickyCta()" x-show="visible" x-cloak x-transition.duration.200ms class="sticky-cta no-print">
+  <a href="{{ register_href }}"
+     class="square flex-1 px-4 py-3 text-center font-black text-[14px] tracking-wide text-white bg-[var(--accent-primary)] -rotate-1">
+    {% if is_past %}WATCH RECAP &rarr;{% else %}REGISTER &rarr;{% endif %}
+  </a>
+  <a href="{{ sponsor_href }}"
+     class="square px-4 py-3 text-center font-bold text-[12px] tracking-wide rotate-1">
+    Propose
+  </a>
+</div>
+{% endblock %}
