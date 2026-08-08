@@ -16,8 +16,6 @@
 {% set is_free = event.free_webinar or paid_ticket_count == 0 %}
 {% set tier_label = "FREE" if is_free else "PAID" %}
 
-{# Batch the talk + speaker lookups once so the schedule and featured-speaker
-   loops never fetch a doc per row (same pattern as home.html). #}
 {% set talk_names = event.schedule | selectattr("type", "equalto", "Talk")
       | map(attribute="talk") | reject("none") | list | unique | list %}
 {% set talk_title_map = {} %}

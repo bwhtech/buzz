@@ -6,9 +6,6 @@ import frappe
 from frappe.model.document import Document
 from frappe.modules.utils import export_module_json
 
-# A theme name reaches the filesystem as `frappe.scrub(name)`, which keeps path
-# separators ("../../evil name" -> "../../evil_name"), and frappe's own name
-# validation only rejects `<` and `>`. Constrain the name at the source.
 THEME_NAME_PATTERN = re.compile(r"^[A-Za-z0-9 _-]+$")
 
 
@@ -19,15 +16,11 @@ class BuzzTheme(Document):
 			self.validate_no_circular_inheritance()
 
 	def after_insert(self):
-		# Scaffolding writes into the app directory, which is read-only on a
-		# production deployment.
 		if frappe.conf.developer_mode:
 			scaffold_theme(self.theme_name, self.module)
 
 	@frappe.whitelist(methods=["POST"])
 	def scaffold_theme_settings(self):
-		# `run_doc_method` only enforces READ, so a whitelisted method that
-		# creates a DocType has to check for itself.
 		self.check_permission("write")
 
 		settings_doctype_name = f"{self.theme_name} Settings"
@@ -39,8 +32,6 @@ class BuzzTheme(Document):
 		return settings_doctype_name
 
 	def after_rename(self, old_name, new_name, merge=False):
-		# `rename_doc` does not re-run `validate`, so the new name arrives here
-		# unchecked.
 		validate_theme_name(new_name)
 		validate_theme_name(old_name)
 
@@ -63,8 +54,6 @@ class BuzzTheme(Document):
 				new_export_dir = get_theme_export_dir(self.module, new_slug)
 				if os.path.isdir(old_export_dir):
 					os.rename(old_export_dir, new_export_dir)
-				# export_module_json names the json after the new slug, so the
-				# old json lingers in the renamed folder unless we drop it.
 				if os.path.isdir(new_export_dir):
 					for filename in os.listdir(new_export_dir):
 						if filename.endswith(".json") and filename != f"{new_slug}.json":
@@ -99,9 +88,6 @@ class BuzzTheme(Document):
 		clear_theme_cache()
 
 	def on_trash(self):
-		# A standard theme's folders are shipped app source, not site data —
-		# deleting the record from Desk must never wipe them off disk. Only a
-		# developer-mode site owns the folders it scaffolded itself.
 		if not frappe.conf.developer_mode or self.is_standard:
 			return
 
@@ -178,23 +164,12 @@ def validate_theme_name(theme_name):
 
 
 def is_within_directory(directory, target):
-	"""True if `target` resolves to a path inside `directory`.
-
-	Guards every lookup that folds a request path, a theme name or a
-	template-supplied include path into a filesystem path: a `..` segment that
-	survives upstream normalization must not let a render escape the theme
-	folder (file disclosure / SSTI surface), nor let a delete escape it. Don't
-	trust werkzeug — or `frappe.scrub` — to have normalized it."""
 	directory = os.path.realpath(directory)
 	target = os.path.realpath(target)
 	return target == directory or target.startswith(directory + os.sep)
 
 
 def get_contained_path(base_dir, *segments):
-	"""Join `segments` under `base_dir`, refusing anything that escapes it.
-
-	Every path this module renames, removes or creates goes through here, so a
-	crafted theme name cannot reach a directory outside the themes folder."""
 	path = os.path.join(base_dir, *segments)
 	if not is_within_directory(base_dir, path):
 		frappe.throw(frappe._("Invalid theme path: {0}").format(path))
@@ -202,30 +177,25 @@ def get_contained_path(base_dir, *segments):
 
 
 def get_app_for_module(module):
-	"""App a Module Def belongs to; falls back to the engine app."""
 	app = frappe.db.get_value("Module Def", module, "app_name") if module else None
 	return app or DEFAULT_THEME_APP
 
 
 def get_theme_app(theme_name):
-	"""App whose files back a theme, resolved via its `module` field."""
 	return get_app_for_module(frappe.db.get_value("Buzz Theme", theme_name, "module"))
 
 
 def get_theme_dir(theme_name):
-	"""Absolute path to a theme's private templates: <app>/themes/<slug>."""
 	base_dir = os.path.join(frappe.get_app_path(get_theme_app(theme_name)), "themes")
 	return get_contained_path(base_dir, frappe.scrub(theme_name))
 
 
 def get_theme_public_dir(theme_name):
-	"""Absolute path to a theme's static assets: <app>/public/themes/<slug>."""
 	base_dir = os.path.join(frappe.get_app_path(get_theme_app(theme_name)), "public", "themes")
 	return get_contained_path(base_dir, frappe.scrub(theme_name))
 
 
 def get_theme_export_dir(module, slug):
-	"""Absolute path to a theme's exported record folder under its module."""
 	return get_contained_path(frappe.get_module_path(module), "buzz_theme", slug)
 
 
@@ -250,7 +220,6 @@ def scaffold_theme(theme_name, module=None):
 
 
 def build_theme_context(theme_name):
-	"""Resolved chain, folders, backing apps and settings DocType for one theme."""
 	if not theme_name:
 		return {"theme_name": None, "names": [], "dirs": [], "apps": {}, "settings_doctype": None}
 
@@ -277,26 +246,14 @@ PREVIEW_THEME_PARAM = "preview_theme"
 
 
 def resolve_default_theme():
-	"""Site-wide fallback theme. Buzz Settings is the single source of truth."""
 	return frappe.get_single_value("Buzz Settings", "default_theme")
 
 
 def resolve_theme():
-	"""Theme for this render: the previewed theme, else the site default.
-
-	One theme per site, deliberately. Theming an individual event would let a
-	listing page and the events it links to render in different design
-	languages, which is why hosted platforms attach the theme to the organizer
-	or workspace and let an event vary only its content (cover, accent), never
-	its templates."""
 	return requested_preview_theme() or resolve_default_theme()
 
 
 def get_theme_context(theme_name):
-	"""Resolved chain/dirs/apps for one theme, cached per theme name.
-
-	Keyed per theme rather than as one global entry so that switching the
-	default — or previewing a second theme — does not evict the other's chain."""
 	if not theme_name:
 		return build_theme_context(None)
 	return frappe.cache.hget(
@@ -305,17 +262,10 @@ def get_theme_context(theme_name):
 
 
 def get_render_theme_context():
-	"""Theme context for the current render, shared by the renderer and the
-	Jinja helpers.
-
-	Both sides call this rather than resolving separately: if they ever
-	disagreed, a page would render one theme's markup against another's assets,
-	which shows up as a broken stylesheet rather than an error."""
 	return get_theme_context(resolve_theme())
 
 
 def requested_preview_theme():
-	"""Validated `?preview_theme=` value, or None."""
 	if not frappe.conf.developer_mode:
 		return None
 
@@ -326,8 +276,6 @@ def requested_preview_theme():
 	if not theme_name:
 		return None
 
-	# An unknown name falls back to the route/site default rather than raising: a
-	# mistyped query parameter should not take a page down.
 	if not frappe.db.exists("Buzz Theme", theme_name):
 		return None
 
@@ -335,7 +283,6 @@ def requested_preview_theme():
 
 
 def get_theme_names(theme_name):
-	"""Theme names, child first, walking the parent_theme inheritance chain."""
 	names = []
 	visited = set()
 	current = theme_name

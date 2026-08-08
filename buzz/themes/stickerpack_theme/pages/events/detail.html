@@ -15,8 +15,6 @@
 {% set today = frappe.utils.today() %}
 {% set is_past = event.start_date and (event.start_date|string) < today %}
 
-{# Batch the talk + speaker lookups once so the schedule and featured-speaker
-   loops below never fetch a doc per row (same pattern as home.html). #}
 {% set talk_names = event.schedule | selectattr("type", "equalto", "Talk")
       | map(attribute="talk") | reject("none") | list | unique | list %}
 {% set talk_title_map = {} %}
@@ -98,7 +96,6 @@
 
 {% block body %}
 
-{# ---------- HERO ---------- #}
 <section id="hero" class="mt-4 relative">
   <div class="flex flex-wrap gap-3 mb-6">
     <span class="sticker sticker--sm {{ accents.rot_class(-2) }}" style="{{ accents.accent_style('primary') }}">{{ category_label }}</span>
@@ -154,7 +151,6 @@
   </section>
   {% endif %}
 
-  {# ---------- SCHEDULE ---------- #}
   {% if schedule_items %}
   <section class="mt-12 square p-8 -rotate-1">
     <div class="hand text-[36px] text-[var(--accent-primary)] -rotate-1">&#9733; the day, in order</div>
@@ -172,7 +168,6 @@
   </section>
   {% endif %}
 
-  {# ---------- SPEAKERS ---------- #}
   {% if featured_speakers %}
   <section class="mt-12 square p-8 rotate-1">
     <div class="flex items-baseline justify-between flex-wrap gap-3 mb-6">
@@ -200,7 +195,6 @@
   </section>
   {% endif %}
 
-  {# ---------- VENUE ---------- #}
   {% if venue %}
   <section class="mt-12 square p-8 -rotate-1">
     <div class="hand text-[36px] text-[var(--accent-primary)] -rotate-1">&#9733; venue</div>
@@ -229,7 +223,6 @@
   </section>
   {% endif %}
 
-  {# ---------- HOST / SPONSORS ---------- #}
   {% if host or sponsors %}
   <section class="mt-8 square bg-[var(--accent-warm)] text-[#161616] p-8 rotate-1">
     <div class="hand text-[36px] -rotate-1">&#9733; hosted by</div>
@@ -272,7 +265,6 @@
   </section>
   {% endif %}
 
-  {# ---------- RELATED ---------- #}
   {% if event.category %}
     {% set related = frappe.get_all("Buzz Event",
         filters={"is_published": 1, "category": event.category, "name": ["!=", event.name]},

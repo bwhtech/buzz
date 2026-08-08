@@ -48,7 +48,6 @@
 {% set accent_cycle = ['warm', 'hot', 'cool', 'ink', 'primary', 'bold'] %}
 {% set rot_cycle = [1, -1, 2, -2, 3, -3] %}
 
-{# ---------- HERO ---------- #}
 <section class="mt-4" aria-labelledby="hero-heading">
   <h2 id="hero-heading" class="sr-only">Frappe Events</h2>
 
@@ -67,7 +66,6 @@
   <p class="hand text-[28px] md:text-[36px] mt-6 -rotate-1 opacity-80">&#9733; conferences &middot; yatras &middot; meetups &middot; webinars</p>
 </section>
 
-{# ---------- FEATURED ---------- #}
 {% if featured %}
 {% set featured_image = featured.card_image or featured.banner_image %}
 {% set featured_date_short = featured.start_date.strftime('%d %b').upper() if featured.start_date else '' %}
@@ -108,7 +106,6 @@
 </section>
 {% endif %}
 
-{# ---------- UPCOMING YATRA ---------- #}
 {% if upcoming_yatra %}
 <section class="mt-16" aria-labelledby="yatra-heading">
   <div class="flex items-baseline justify-between flex-wrap gap-3 mb-6">
@@ -135,7 +132,6 @@
 </section>
 {% endif %}
 
-{# ---------- UPCOMING CONFERENCES ---------- #}
 {% set upcoming_conf_rest = upcoming_conferences[1:] if featured else upcoming_conferences %}
 {% if upcoming_conf_rest or not featured %}
 <section class="mt-16" aria-labelledby="conf-heading">
@@ -169,7 +165,6 @@
 </section>
 {% endif %}
 
-{# ---------- CATEGORIES STRIP ---------- #}
 <section class="mt-16" aria-labelledby="cat-heading">
   <h2 id="cat-heading" class="sr-only">Browse by category</h2>
   <div class="flex flex-wrap gap-4 justify-center">
@@ -183,7 +178,6 @@
   </div>
 </section>
 
-{# ---------- PAST CONFERENCES ---------- #}
 {% if past_conferences %}
 <section class="mt-20" aria-labelledby="past-conf-heading">
   <div class="flex items-baseline justify-between flex-wrap gap-3 mb-6">
@@ -210,7 +204,6 @@
 </section>
 {% endif %}
 
-{# ---------- PAST WEBINARS ---------- #}
 {% if past_webinars %}
 <section class="mt-12" aria-labelledby="past-web-heading">
   <div class="flex items-baseline justify-between flex-wrap gap-3 mb-6">

@@ -18,9 +18,6 @@ ROUTES = [
 
 
 def execute():
-	# Route table used to live only in one dev site's database; ship it with the app so
-	# every site gets the default routes. Idempotent: only appends rows an operator
-	# hasn't already added by hand, matched on url_pattern.
 	settings = frappe.get_single("Buzz Theme Settings")
 	existing_patterns = {row.url_pattern for row in settings.routes}
 

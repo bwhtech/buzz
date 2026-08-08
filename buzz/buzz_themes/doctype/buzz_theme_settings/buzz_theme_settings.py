@@ -6,9 +6,6 @@ from frappe.model.document import Document
 
 class BuzzThemeSettings(Document):
 	def validate(self):
-		# Reject bad patterns before the row is written, so a route can never
-		# reach the compiled-routes cache (where a bad one would be silently
-		# skipped) in the first place.
 		for row in self.get("routes") or []:
 			try:
 				re.compile(row.url_pattern)
@@ -46,10 +43,6 @@ def build_compiled_routes():
 
 
 def get_compiled_routes():
-	# Memoized per request because `can_render` runs on every website request:
-	# `frappe.cache.get_value` has no `frappe.local` memo of its own (unlike
-	# `hget`), so each call would otherwise pay a redis round-trip plus an
-	# unpickle of the compiled `re.Pattern` objects.
 	routes = getattr(frappe.local, "buzz_theme_compiled_routes", None)
 	if routes is None:
 		routes = frappe.cache.get_value("buzz_theme_settings_compiled", generator=build_compiled_routes)

@@ -1,6 +1,3 @@
-# Copyright (c) 2026, BWH Studios and Contributors
-# See license.txt
-
 import os
 import shutil
 import tempfile
@@ -27,12 +24,6 @@ from buzz.buzz_themes.theme_resolver import ThemePageRenderer, find_theme_file
 
 @contextmanager
 def developer_mode(enabled):
-	"""Toggle `frappe.conf.developer_mode` for one block.
-
-	Theme records scaffold folders and export module JSON into the app source
-	tree on a developer-mode site; tests create their fixtures on disk
-	themselves, so inserts run with it off and only the tests that assert on the
-	developer-mode branches turn it back on."""
 	original_value = frappe.local.conf.get("developer_mode")
 	frappe.local.conf.developer_mode = 1 if enabled else 0
 	try:
@@ -80,7 +71,6 @@ class TestPathContainment(UnitTestCase):
 		self.assertFalse(is_within_directory(self.theme_dir, escaping_path))
 
 	def test_rejects_sibling_with_same_prefix(self):
-		# A plain startswith() check would call /a/themes/foo-evil "inside" /a/themes/foo.
 		sibling_dir = os.path.join(self.base_dir, "themes", "foo-evil")
 		self.assertFalse(is_within_directory(self.theme_dir, sibling_dir))
 
@@ -106,12 +96,6 @@ class TestPathContainment(UnitTestCase):
 
 
 class ThemeEngineTestCase(IntegrationTestCase):
-	"""Creates throwaway Buzz Theme records plus their on-disk folders.
-
-	The folders have to live under the app path because `build_theme_context`
-	derives them from it; every one of them is removed again in tearDown so the
-	three bundled themes are the only ones left behind."""
-
 	def setUp(self):
 		super().setUp()
 		self.created_theme_names = []
@@ -140,7 +124,6 @@ class ThemeEngineTestCase(IntegrationTestCase):
 		super().tearDown()
 
 	def create_theme(self, parent_theme=None, is_standard=0, templates=None, assets=None):
-		# Rollback is per class, so names must not collide between tests.
 		theme_name = f"Ztest Theme {frappe.generate_hash(length=8)}"
 
 		with developer_mode(False):
@@ -204,8 +187,6 @@ class TestThemeAssetUrl(ThemeEngineTestCase):
 		theme = self.create_theme(assets={"tailwind.output.css": "body{}"})
 		self.set_default_theme(theme.name)
 
-		# Assert the whole string: a name collision once made this return "",
-		# which renders as a missing stylesheet rather than an error.
 		self.assertEqual(
 			buzz_theme_asset_url("tailwind.output.css"),
 			f"/assets/buzz/themes/{frappe.scrub(theme.name)}/tailwind.output.css",
@@ -305,8 +286,6 @@ class TestCanRender(ThemeEngineTestCase):
 		self.assertEqual(renderer.match.group("event_route"), "foss-event")
 
 	def test_explicit_route_with_missing_template_does_not_fall_through(self):
-		# The dynamic page exists; a configured route that points at a missing
-		# template must still decline rather than quietly serve pages/probe.html.
 		theme = self.create_theme(templates={"pages/probe.html": "<h1>Dynamic</h1>"})
 		self.set_default_theme(theme.name)
 		self.set_routes([("^probe$", "pages/gone.html", 0)], dynamic_pages_enabled=1)
@@ -341,7 +320,6 @@ class TestCanRender(ThemeEngineTestCase):
 				self.assertFalse(self.make_renderer(path).can_render())
 
 	def test_non_reserved_lookalike_segment_still_renders(self):
-		# Guards the reserved check against becoming a prefix match.
 		theme = self.create_theme(templates={"pages/application.html": "<h1>Application</h1>"})
 		self.set_default_theme(theme.name)
 		self.set_routes([], dynamic_pages_enabled=1)

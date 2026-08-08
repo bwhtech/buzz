@@ -6,11 +6,6 @@ THEME_DOCTYPES = ("Buzz Theme", "Buzz Theme Settings", "Buzz Themed Route")
 
 
 def execute():
-	"""Move the theme engine from module `Theme` to `Buzz Themes`.
-
-	Runs pre-model-sync: DocType.module is a Link to Module Def, so the new
-	module has to exist before the doctype JSONs (which already name it) sync,
-	or every one of them fails to import."""
 	if not frappe.db.exists("Module Def", OLD_MODULE):
 		return
 
@@ -24,8 +19,6 @@ def execute():
 		if frappe.db.exists("DocType", doctype):
 			frappe.db.set_value("DocType", doctype, "module", NEW_MODULE, update_modified=False)
 
-	# The Buzz Theme rows carry the module as data too — it is what resolves a
-	# theme's backing app and therefore its folder on disk.
 	if frappe.db.has_column("Buzz Theme", "module"):
 		for theme_name in frappe.get_all("Buzz Theme", filters={"module": OLD_MODULE}, pluck="name"):
 			frappe.db.set_value("Buzz Theme", theme_name, "module", NEW_MODULE, update_modified=False)

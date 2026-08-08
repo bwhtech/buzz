@@ -1,6 +1,3 @@
-{# Event card. Input (set by parent): `event` dict with route, title, image,
-   date_short, venue_short, category_label, accent (accent token), rot (-3..3),
-   is_past (bool), recap_url (opt). #}
 {% import "components/macros/accents.html" as accents %}
 {% set is_past = event.is_past %}
 {% set href = event.recap_url if (is_past and event.recap_url) else ("/events/" ~ event.route) %}

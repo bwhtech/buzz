@@ -6,14 +6,6 @@ from buzz.buzz_themes.doctype.buzz_theme.buzz_theme import get_render_theme_cont
 
 
 def buzz_theme_asset_url(path):
-	"""Resolve a static asset URL for the active theme.
-
-	Walks the theme inheritance chain so a child theme can override an asset
-	by shipping a file at the same relative path. Each theme's files may live
-	in a different content app (resolved via its `module`), so both the
-	filesystem lookup and the `/assets/<app>/...` URL are app-aware. Falls
-	back to the active theme's URL if no file is found (so themes can document
-	expected paths without forcing every child to ship every asset)."""
 	context = get_render_theme_context()
 	if not context["theme_name"]:
 		return ""
@@ -29,9 +21,6 @@ def buzz_theme_asset_url(path):
 		if is_within_directory(theme_public_dir, asset_path) and os.path.isfile(asset_path):
 			return f"/assets/{app}/themes/{slug}/{relative_path}"
 
-	# names is child-first, so this is the ACTIVE theme, not the root ancestor:
-	# a missing asset should 404 under the theme the page is actually rendering
-	# as, which is where an author would look for it.
 	active_name = context["names"][0]
 	active_app = apps[active_name]
 	active_slug = frappe.scrub(active_name)
@@ -39,12 +28,6 @@ def buzz_theme_asset_url(path):
 
 
 def buzz_theme_config():
-	"""Return the active theme's settings doc (from the linked Single DocType).
-
-	The theme owner creates a `<Theme Name> Settings` Single DocType via the
-	'Scaffold Theme Settings' button on the Buzz Theme form, then adds
-	whatever fields the theme needs. Returns an empty dict if no settings
-	DocType is linked."""
 	context = get_render_theme_context()
 	settings_doctype = context.get("settings_doctype")
 	if not settings_doctype:

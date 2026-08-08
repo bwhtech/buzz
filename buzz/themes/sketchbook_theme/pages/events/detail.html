@@ -14,8 +14,6 @@
 {% set today = frappe.utils.today() %}
 {% set is_past = event.start_date and (event.start_date|string) < today %}
 
-{# Batch the talk + speaker lookups once so the schedule and featured-speaker
-   loops below never fetch a doc per row (same pattern as home.html). #}
 {% set talk_names = event.schedule | selectattr("type", "equalto", "Talk")
       | map(attribute="talk") | reject("none") | list | unique | list %}
 {% set talk_title_map = {} %}

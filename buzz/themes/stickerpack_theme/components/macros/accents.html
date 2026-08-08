@@ -1,9 +1,3 @@
-{# Sticker Pack accent helpers.
-
-   The reference prototype (render.py) registers accent_bg(), accent_fg(), and
-   rot_class() as Jinja globals via a Python render script. Frappe's Jinja env
-   has no such registration hook for theme-scoped helpers, so we recreate the
-   exact same mappings as macros instead. #}
 
 {% macro accent_style(token) -%}
 {%- set accent_map = {
