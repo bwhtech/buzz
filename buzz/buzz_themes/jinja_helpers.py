@@ -2,7 +2,7 @@ import os
 
 import frappe
 
-from buzz.theme.doctype.buzz_theme.buzz_theme import get_render_theme_context, is_within_directory
+from buzz.buzz_themes.doctype.buzz_theme.buzz_theme import get_render_theme_context, is_within_directory
 
 
 def buzz_theme_asset_url(path):

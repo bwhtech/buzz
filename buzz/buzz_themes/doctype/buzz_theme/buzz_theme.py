@@ -129,7 +129,7 @@ def create_theme_settings_doctype(doctype_name, module=None):
 	doctype.update(
 		{
 			"name": doctype_name,
-			"module": module or "Theme",
+			"module": module or "Buzz Themes",
 			"custom": 0 if is_developer_mode else 1,
 			"issingle": 1,
 			"fields": [

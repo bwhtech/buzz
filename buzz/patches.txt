@@ -5,6 +5,7 @@ buzz.patches.migrate_offline_payment_to_methods
 
 # Patches added in this section will be executed before doctypes are migrated
 # Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
+buzz.patches.rename_theme_module_to_buzz_themes
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated

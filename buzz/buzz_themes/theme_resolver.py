@@ -7,8 +7,8 @@ from frappe.utils.jinja_globals import is_rtl
 from frappe.website.utils import build_response, get_boot_data
 from jinja2 import BaseLoader, TemplateNotFound
 
-from buzz.theme.doctype.buzz_theme.buzz_theme import get_render_theme_context, is_within_directory
-from buzz.theme.doctype.buzz_theme_settings.buzz_theme_settings import get_compiled_routes
+from buzz.buzz_themes.doctype.buzz_theme.buzz_theme import get_render_theme_context, is_within_directory
+from buzz.buzz_themes.doctype.buzz_theme_settings.buzz_theme_settings import get_compiled_routes
 
 # First path segment of every route Frappe serves itself. Page renderers run
 # before Frappe's own (see `frappe/website/path_resolver.py`), so without this
@@ -91,7 +91,7 @@ def build_controller_module_name(theme_dirs, controller_path, relative_path):
 	for separator in (os.sep, "/", "-", "."):
 		page_slug = page_slug.replace(separator, "_")
 
-	return f"buzz.theme.theme_pages.{theme_slug}.{page_slug}"
+	return f"buzz.buzz_themes.theme_pages.{theme_slug}.{page_slug}"
 
 
 def run_page_controller(theme_dirs, template_relative_path, context):

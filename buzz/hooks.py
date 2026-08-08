@@ -25,7 +25,7 @@ website_route_rules = [
 	{"from_route": "/b/<path:app_path>", "to_route": "dashboard"},
 ]
 
-page_renderer = ["buzz.theme.theme_resolver.ThemePageRenderer"]
+page_renderer = ["buzz.buzz_themes.theme_resolver.ThemePageRenderer"]
 
 # Ships the bundled themes as records. Without this the theme folders exist on
 # disk but no Buzz Theme row does, so none of them can be selected.
@@ -33,8 +33,8 @@ importable_doctypes = ["Buzz Theme"]
 
 jinja = {
 	"methods": [
-		"buzz.theme.jinja_helpers.buzz_theme_asset_url",
-		"buzz.theme.jinja_helpers.buzz_theme_config",
+		"buzz.buzz_themes.jinja_helpers.buzz_theme_asset_url",
+		"buzz.buzz_themes.jinja_helpers.buzz_theme_config",
 	],
 }
 

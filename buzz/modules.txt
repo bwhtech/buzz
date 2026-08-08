@@ -3,4 +3,4 @@ Events
 Ticketing
 Proposals
 Buzz Marketing
-Theme
+Buzz Themes
