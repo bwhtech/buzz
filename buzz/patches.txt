@@ -19,3 +19,4 @@ buzz.patches.create_default_teams #2
 buzz.patches.assign_default_team #2
 buzz.patches.create_team_settings_for_existing_teams
 buzz.patches.seed_buzz_theme_routes
+buzz.patches.drop_buzz_event_theme_column
