@@ -21,27 +21,37 @@ class BuzzThemeSettings(Document):
 
 def clear_settings_cache():
 	frappe.cache.delete_value("buzz_theme_settings_compiled")
+	frappe.local.buzz_theme_compiled_routes = None
+
+
+def build_compiled_routes():
+	settings = frappe.get_cached_doc("Buzz Theme Settings")
+	compiled = []
+	for row in settings.get("routes") or []:
+		try:
+			pattern = re.compile(row.url_pattern)
+		except re.error:
+			continue
+		compiled.append(
+			{
+				"pattern": pattern,
+				"template_path": row.template_path,
+				"requires_auth": bool(row.requires_auth),
+			}
+		)
+	return {
+		"routes": compiled,
+		"dynamic_pages_enabled": bool(settings.dynamic_pages_enabled),
+	}
 
 
 def get_compiled_routes():
-	def _build():
-		settings = frappe.get_cached_doc("Buzz Theme Settings")
-		compiled = []
-		for row in settings.get("routes") or []:
-			try:
-				pattern = re.compile(row.url_pattern)
-			except re.error:
-				continue
-			compiled.append(
-				{
-					"pattern": pattern,
-					"template_path": row.template_path,
-					"requires_auth": bool(row.requires_auth),
-				}
-			)
-		return {
-			"routes": compiled,
-			"dynamic_pages_enabled": bool(settings.dynamic_pages_enabled),
-		}
-
-	return frappe.cache.get_value("buzz_theme_settings_compiled", generator=_build)
+	# Memoized per request because `can_render` runs on every website request:
+	# `frappe.cache.get_value` has no `frappe.local` memo of its own (unlike
+	# `hget`), so each call would otherwise pay a redis round-trip plus an
+	# unpickle of the compiled `re.Pattern` objects.
+	routes = getattr(frappe.local, "buzz_theme_compiled_routes", None)
+	if routes is None:
+		routes = frappe.cache.get_value("buzz_theme_settings_compiled", generator=build_compiled_routes)
+		frappe.local.buzz_theme_compiled_routes = routes
+	return routes

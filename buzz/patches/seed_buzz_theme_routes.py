@@ -25,10 +25,6 @@ def execute():
 	existing_patterns = {row.url_pattern for row in settings.routes}
 
 	changed = False
-	if not settings.dynamic_pages_enabled:
-		settings.dynamic_pages_enabled = 1
-		changed = True
-
 	for route in ROUTES:
 		if route["url_pattern"] in existing_patterns:
 			continue

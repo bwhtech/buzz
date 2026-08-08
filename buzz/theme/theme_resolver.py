@@ -7,20 +7,28 @@ from frappe.utils.jinja_globals import is_rtl
 from frappe.website.utils import build_response, get_boot_data
 from jinja2 import BaseLoader, TemplateNotFound
 
-from buzz.theme.doctype.buzz_theme.buzz_theme import get_render_theme_context
+from buzz.theme.doctype.buzz_theme.buzz_theme import get_render_theme_context, is_within_directory
 from buzz.theme.doctype.buzz_theme_settings.buzz_theme_settings import get_compiled_routes
 
-
-def is_within_directory(directory, target):
-	"""True if `target` resolves to a path inside `directory`.
-
-	Guards every lookup that folds a request path or a template-supplied
-	include path into a filesystem path: a `..` segment that survives upstream
-	normalization must not let a render escape the theme folder (file
-	disclosure / SSTI surface). Don't trust werkzeug to have normalized it."""
-	directory = os.path.realpath(directory)
-	target = os.path.realpath(target)
-	return target == directory or target.startswith(directory + os.sep)
+# First path segment of every route Frappe serves itself. Page renderers run
+# before Frappe's own (see `frappe/website/path_resolver.py`), so without this
+# a theme shipping `pages/login.html` or `pages/app.html` would hijack login
+# and the desk for the whole site.
+RESERVED_PATH_SEGMENTS = frozenset(
+	{
+		"api",
+		"app",
+		"assets",
+		"b",
+		"backups",
+		"dashboard",
+		"desk",
+		"files",
+		"login",
+		"private",
+		"socket.io",
+	}
+)
 
 
 def find_theme_file(theme_dirs, relative_path):
@@ -139,7 +147,11 @@ class ThemePageRenderer:
 		if matched_route:
 			template_path = matched_route["template_path"]
 			requires_auth = matched_route["requires_auth"]
-		elif settings["dynamic_pages_enabled"] and request_path:
+		elif (
+			settings["dynamic_pages_enabled"]
+			and request_path
+			and request_path.split("/")[0] not in RESERVED_PATH_SEGMENTS
+		):
 			template_path = f"pages/{request_path}.html"
 			requires_auth = False
 		else:
@@ -253,7 +265,11 @@ def build_base_context(match):
 	try:
 		context.boot = get_boot_data()
 	except Exception:
+		# A themed page renders fine without boot data, so this must not take
+		# the page down — but a broken `update_website_context`/boot hook would
+		# otherwise stay invisible forever.
 		context.boot = {}
+		frappe.log_error(title="Buzz Theme: boot data failed")
 
 	apply_website_context_hooks(context)
 

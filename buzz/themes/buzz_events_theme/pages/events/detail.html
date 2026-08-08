@@ -32,6 +32,15 @@
   {% endfor %}
 {% endif %}
 
+{% set tier_names = sponsors | map(attribute="tier") | reject("none") | list | unique | list %}
+{% set tier_title_map = {} %}
+{% if tier_names %}
+  {% for tier in frappe.get_all("Sponsorship Tier", filters={"name": ["in", tier_names]},
+        fields=["name", "title"]) %}
+    {% set _ = tier_title_map.update({tier.name | string: tier.title}) %}
+  {% endfor %}
+{% endif %}
+
 {% set speaker_names = ((first_speaker_map.values() | list)
       + (event.featured_speakers | map(attribute="speaker") | reject("none") | list)) | unique | list %}
 {% set speaker_map = {} %}
@@ -318,7 +327,7 @@
         {% for sponsor in sponsors %}
           {% set name = sponsor.company_name %}
           {% set logo_url = sponsor.company_logo %}
-          {% set tier_label = (frappe.db.get_value("Sponsorship Tier", sponsor.tier, "title") if sponsor.tier else None) or 'Partner' %}
+          {% set tier_label = tier_title_map.get(sponsor.tier | string) or 'Partner' %}
           {% set tagline = sponsor.country or '' %}
           {% include "components/sponsor_card.html" %}
         {% endfor %}

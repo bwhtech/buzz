@@ -1,21 +1,35 @@
 import os
+import re
 import shutil
 
 import frappe
 from frappe.model.document import Document
 from frappe.modules.utils import export_module_json
 
+# A theme name reaches the filesystem as `frappe.scrub(name)`, which keeps path
+# separators ("../../evil name" -> "../../evil_name"), and frappe's own name
+# validation only rejects `<` and `>`. Constrain the name at the source.
+THEME_NAME_PATTERN = re.compile(r"^[A-Za-z0-9 _-]+$")
+
 
 class BuzzTheme(Document):
 	def validate(self):
+		validate_theme_name(self.theme_name)
 		if self.parent_theme:
 			self.validate_no_circular_inheritance()
 
 	def after_insert(self):
-		scaffold_theme(self.theme_name, self.module)
+		# Scaffolding writes into the app directory, which is read-only on a
+		# production deployment.
+		if frappe.conf.developer_mode:
+			scaffold_theme(self.theme_name, self.module)
 
-	@frappe.whitelist()
+	@frappe.whitelist(methods=["POST"])
 	def scaffold_theme_settings(self):
+		# `run_doc_method` only enforces READ, so a whitelisted method that
+		# creates a DocType has to check for itself.
+		self.check_permission("write")
+
 		settings_doctype_name = f"{self.theme_name} Settings"
 		if frappe.db.exists("DocType", settings_doctype_name):
 			frappe.throw(f"DocType '{settings_doctype_name}' already exists")
@@ -25,6 +39,11 @@ class BuzzTheme(Document):
 		return settings_doctype_name
 
 	def after_rename(self, old_name, new_name, merge=False):
+		# `rename_doc` does not re-run `validate`, so the new name arrives here
+		# unchecked.
+		validate_theme_name(new_name)
+		validate_theme_name(old_name)
+
 		old_slug = frappe.scrub(old_name)
 		new_slug = frappe.scrub(new_name)
 
@@ -34,8 +53,8 @@ class BuzzTheme(Document):
 				os.path.join(app_path, "themes"),
 				os.path.join(app_path, "public", "themes"),
 			):
-				old_path = os.path.join(base, old_slug)
-				new_path = os.path.join(base, new_slug)
+				old_path = get_contained_path(base, old_slug)
+				new_path = get_contained_path(base, new_slug)
 				if os.path.isdir(old_path):
 					os.rename(old_path, new_path)
 
@@ -80,8 +99,15 @@ class BuzzTheme(Document):
 		clear_theme_cache()
 
 	def on_trash(self):
+		# A standard theme's folders are shipped app source, not site data —
+		# deleting the record from Desk must never wipe them off disk. Only a
+		# developer-mode site owns the folders it scaffolded itself.
+		if not frappe.conf.developer_mode or self.is_standard:
+			return
+
+		validate_theme_name(self.name)
 		paths = [get_theme_dir(self.name), get_theme_public_dir(self.name)]
-		if self.module and frappe.conf.developer_mode:
+		if self.module:
 			paths.append(get_theme_export_dir(self.module, frappe.scrub(self.name)))
 		for path in paths:
 			if os.path.isdir(path):
@@ -106,8 +132,6 @@ def create_theme_settings_doctype(doctype_name, module=None):
 			"module": module or "Theme",
 			"custom": 0 if is_developer_mode else 1,
 			"issingle": 1,
-			"naming_rule": "Expression (old style)",
-			"autoname": f"{frappe.scrub(doctype_name)}",
 			"fields": [
 				{
 					"fieldname": "info_section",
@@ -146,6 +170,37 @@ def create_theme_settings_doctype(doctype_name, module=None):
 DEFAULT_THEME_APP = "buzz"
 
 
+def validate_theme_name(theme_name):
+	if not THEME_NAME_PATTERN.match(theme_name or ""):
+		frappe.throw(
+			frappe._("Theme name may only contain letters, numbers, spaces, hyphens and underscores")
+		)
+
+
+def is_within_directory(directory, target):
+	"""True if `target` resolves to a path inside `directory`.
+
+	Guards every lookup that folds a request path, a theme name or a
+	template-supplied include path into a filesystem path: a `..` segment that
+	survives upstream normalization must not let a render escape the theme
+	folder (file disclosure / SSTI surface), nor let a delete escape it. Don't
+	trust werkzeug — or `frappe.scrub` — to have normalized it."""
+	directory = os.path.realpath(directory)
+	target = os.path.realpath(target)
+	return target == directory or target.startswith(directory + os.sep)
+
+
+def get_contained_path(base_dir, *segments):
+	"""Join `segments` under `base_dir`, refusing anything that escapes it.
+
+	Every path this module renames, removes or creates goes through here, so a
+	crafted theme name cannot reach a directory outside the themes folder."""
+	path = os.path.join(base_dir, *segments)
+	if not is_within_directory(base_dir, path):
+		frappe.throw(frappe._("Invalid theme path: {0}").format(path))
+	return path
+
+
 def get_app_for_module(module):
 	"""App a Module Def belongs to; falls back to the engine app."""
 	app = frappe.db.get_value("Module Def", module, "app_name") if module else None
@@ -158,26 +213,26 @@ def get_theme_app(theme_name):
 
 
 def get_theme_dir(theme_name):
-	"""Absolute path to a theme's folder: <app>/themes/<slug>."""
-	return os.path.join(frappe.get_app_path(get_theme_app(theme_name)), "themes", frappe.scrub(theme_name))
+	"""Absolute path to a theme's private templates: <app>/themes/<slug>."""
+	base_dir = os.path.join(frappe.get_app_path(get_theme_app(theme_name)), "themes")
+	return get_contained_path(base_dir, frappe.scrub(theme_name))
 
 
 def get_theme_public_dir(theme_name):
 	"""Absolute path to a theme's static assets: <app>/public/themes/<slug>."""
-	return os.path.join(
-		frappe.get_app_path(get_theme_app(theme_name)), "public", "themes", frappe.scrub(theme_name)
-	)
+	base_dir = os.path.join(frappe.get_app_path(get_theme_app(theme_name)), "public", "themes")
+	return get_contained_path(base_dir, frappe.scrub(theme_name))
 
 
 def get_theme_export_dir(module, slug):
 	"""Absolute path to a theme's exported record folder under its module."""
-	return os.path.join(frappe.get_module_path(module), "buzz_theme", slug)
+	return get_contained_path(frappe.get_module_path(module), "buzz_theme", slug)
 
 
 def scaffold_theme(theme_name, module=None):
 	app_path = frappe.get_app_path(get_app_for_module(module))
 	slug = frappe.scrub(theme_name)
-	theme_dir = os.path.join(app_path, "themes", slug)
+	theme_dir = get_contained_path(os.path.join(app_path, "themes"), slug)
 
 	if os.path.exists(theme_dir):
 		return
@@ -187,10 +242,11 @@ def scaffold_theme(theme_name, module=None):
 		"components/includes",
 		"components/macros",
 	):
-		os.makedirs(os.path.join(theme_dir, folder), exist_ok=True)
+		os.makedirs(get_contained_path(theme_dir, folder), exist_ok=True)
 
+	theme_public_dir = get_contained_path(os.path.join(app_path, "public", "themes"), slug)
 	for folder in ("css", "js", "images"):
-		os.makedirs(os.path.join(app_path, "public", "themes", slug, folder), exist_ok=True)
+		os.makedirs(get_contained_path(theme_public_dir, folder), exist_ok=True)
 
 
 def build_theme_context(theme_name):
@@ -276,16 +332,6 @@ def requested_preview_theme():
 		return None
 
 	return theme_name
-
-
-def get_theme_dirs(theme_name):
-	"""Existing theme folders, child first, walking the inheritance chain."""
-	dirs = []
-	for name in get_theme_names(theme_name):
-		theme_dir = get_theme_dir(name)
-		if os.path.isdir(theme_dir):
-			dirs.append(theme_dir)
-	return dirs
 
 
 def get_theme_names(theme_name):
