@@ -1,0 +1,16 @@
+<div class="border border-dashed border-line rounded-lg p-5 flex items-center gap-4">
+  <div class="w-14 h-14 rounded bg-white p-2 flex items-center justify-center shrink-0 border border-line">
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="{{ name }}" class="max-w-full max-h-full object-contain" />
+    {% endif %}
+  </div>
+  <div>
+    {% if tier_label %}
+    <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">{{ tier_label }}</div>
+    {% endif %}
+    <div class="font-ui font-bold text-[15px] mt-0.5">{{ name }}</div>
+    {% if tagline %}
+    <div class="text-[11px] opacity-70 mt-0.5">{{ tagline }}</div>
+    {% endif %}
+  </div>
+</div>

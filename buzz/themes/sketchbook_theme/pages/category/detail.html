@@ -1,0 +1,158 @@
+{% extends "components/base.html" %}
+
+{% set today = frappe.utils.today() %}
+{% set category_name = frappe.db.get_value("Event Category", {"slug": category_slug, "enabled": 1}, "name") %}
+{% if not category_name %}
+  {% set not_found = frappe.throw(_("Category not found"), frappe.PageDoesNotExistError) %}
+{% endif %}
+{% set category = frappe.get_cached_doc("Event Category", category_name) %}
+
+{% set all_categories = frappe.get_all("Event Category",
+      filters={"enabled": 1},
+      fields=["name", "slug"],
+      order_by="name asc") %}
+
+{% set all_events = frappe.get_all("Buzz Event",
+      filters={"is_published": 1, "category": category_name},
+      fields=["name", "title", "route", "start_date", "venue",
+              "card_image", "banner_image", "short_description"],
+      order_by="start_date desc") %}
+
+{% set venue_names = all_events | map(attribute='venue') | reject('none') | list | unique | list %}
+{% set venues = frappe.get_all("Event Venue",
+      filters={"name": ["in", venue_names]},
+      fields=["name", "address"]) if venue_names else [] %}
+{% set venue_map = {} %}
+{% for venue in venues %}
+  {% set _ = venue_map.update({venue.name: venue.address}) %}
+{% endfor %}
+
+{% set upcoming = [] %}
+{% set past = [] %}
+{% for event in all_events %}
+  {% if event.start_date and (event.start_date|string) < today %}
+    {% set _ = past.append(event) %}
+  {% else %}
+    {% set _ = upcoming.append(event) %}
+  {% endif %}
+{% endfor %}
+
+{% set swatches = ['yellow', 'pink', 'blue', 'green', 'orange', 'purple'] %}
+{% set category_slug_lower = (category.slug or '') | lower %}
+{% set is_webinars = category_slug_lower == 'webinars' %}
+
+{% block title %}{{ category.name }} &mdash; Frappe Events{% endblock %}
+{% block og_title %}{{ category.name }} &mdash; Frappe Events{% endblock %}
+{% block og_description %}{{ category.description or category.name }}{% endblock %}
+{% block og_url %}{{ frappe.utils.get_url() }}/category/{{ category.slug }}{% endblock %}
+
+{% block body %}
+
+<section class="mt-4">
+  <div class="label">browse by &middot; {{ category.name | lower }}</div>
+  <h1 class="display-h1">
+    {% if category_slug_lower == 'yatra' %}
+    a <span class="scribble">tour</span><br>across <span class="accent">india</span>
+    {% elif category_slug_lower == 'conferences' %}
+    the <span class="scribble">big</span><br><span class="accent">conferences</span>
+    {% elif category_slug_lower == 'meetups' %}
+    <span class="scribble">local</span><br><span class="accent">meetups</span>
+    {% elif is_webinars %}
+    <span class="scribble">online</span><br><span class="accent">webinars</span>
+    {% else %}
+    <span class="scribble">{{ category.name.split(' ')[0] | lower }}</span>{% if category.name.split(' ') | length > 1 %}<br><span class="accent">{{ category.name.split(' ')[1:] | join(' ') | lower }}</span>{% endif %}
+    {% endif %}
+  </h1>
+  {% if category.description %}
+  <p class="mt-6 max-w-[560px]" style="font-size: 22px; opacity: 0.8;">{{ category.description }}</p>
+  {% endif %}
+
+  <div class="mt-8 flex flex-wrap gap-3">
+    {% for category_link in all_categories %}
+    <a href="/category/{{ category_link.slug }}"
+       class="circle marker {% if category_link.slug == category.slug %}swatch-{{ swatches[loop.index0 % 6] }}{% endif %}"
+       style="font-size: 22px; {% if category_link.slug != category.slug %}opacity:0.6;{% endif %}">
+      {{ category_link.name | lower }}
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+{% if upcoming %}
+<section aria-labelledby="upcoming-heading" class="mt-12">
+  <div class="section-header">
+    <h2 id="upcoming-heading" class="section-header__title"><span class="star">&#9733;</span> upcoming</h2>
+    <span class="marker" style="font-size: 24px; opacity: 0.7;">{{ upcoming | length }} {{ 'stop' if upcoming | length == 1 else 'stops' }}</span>
+  </div>
+  <div class="grid gap-6 md:grid-cols-2">
+    {% for event_row in upcoming %}
+      {% if is_webinars %}
+        {% set webinar = {
+          'route': event_row.route,
+          'title': event_row.title,
+          'blurb': event_row.short_description,
+          'date_month': event_row.start_date.strftime('%b').upper() if event_row.start_date else '',
+          'date_day': event_row.start_date.strftime('%d') if event_row.start_date else ''
+        } %}
+        {% include "components/webinar_row.html" %}
+      {% else %}
+        {% set event = {
+          'route': event_row.route,
+          'title': event_row.title,
+          'image': event_row.card_image or event_row.banner_image,
+          'date_short': event_row.start_date.strftime('%d %b').upper() if event_row.start_date else '',
+          'venue_short': venue_map.get(event_row.venue, '').split(',')[0] if venue_map.get(event_row.venue, '') else '',
+          'category_label': category.name.upper(),
+          'swatch': swatches[loop.index0 % 6],
+          'is_past': False
+        } %}
+        {% include "components/event_card.html" %}
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if past %}
+<section aria-labelledby="past-heading" class="mt-12">
+  <div class="section-header">
+    <h2 id="past-heading" class="section-header__title">past {{ category.name | lower }}</h2>
+    <span class="marker" style="font-size: 24px; opacity: 0.7;">{{ past | length }}</span>
+  </div>
+  <div class="grid gap-6 md:grid-cols-2">
+    {% for event_row in past %}
+      {% if is_webinars %}
+        {% set webinar = {
+          'route': event_row.route,
+          'title': event_row.title,
+          'blurb': event_row.short_description,
+          'date_month': event_row.start_date.strftime('%b').upper() if event_row.start_date else '',
+          'date_day': event_row.start_date.strftime('%d') if event_row.start_date else ''
+        } %}
+        {% include "components/webinar_row.html" %}
+      {% else %}
+        {% set event = {
+          'route': event_row.route,
+          'title': event_row.title,
+          'image': event_row.card_image or event_row.banner_image,
+          'date_short': event_row.start_date.strftime('%d %b').upper() if event_row.start_date else '',
+          'venue_short': venue_map.get(event_row.venue, '').split(',')[0] if venue_map.get(event_row.venue, '') else '',
+          'category_label': category.name.upper(),
+          'swatch': swatches[loop.index0 % 6],
+          'is_past': True
+        } %}
+        {% include "components/event_card.html" %}
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if not upcoming and not past %}
+<section class="mt-16 text-center">
+  <p class="marker -rotate-1" style="font-size: 44px; opacity: 0.7;">no {{ category.name | lower }} on the page yet.</p>
+  <p class="marker mt-4" style="font-size: 24px; opacity: 0.6;">check back, or <a href="mailto:events@frappe.io" class="scribble">propose one</a>.</p>
+</section>
+{% endif %}
+
+{% endblock %}

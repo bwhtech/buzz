@@ -25,6 +25,17 @@ website_route_rules = [
 	{"from_route": "/b/<path:app_path>", "to_route": "dashboard"},
 ]
 
+page_renderer = ["buzz.buzz_themes.theme_resolver.ThemePageRenderer"]
+
+importable_doctypes = ["Buzz Theme"]
+
+jinja = {
+	"methods": [
+		"buzz.buzz_themes.jinja_helpers.buzz_theme_asset_url",
+		"buzz.buzz_themes.jinja_helpers.buzz_theme_config",
+	],
+}
+
 # Keep old /dashboard/* links working: redirect to the shortened /b/* scheme.
 # Ordered specific -> catch-all; the first matching source wins.
 # forward_query_parameters is required on every rule: without it the query

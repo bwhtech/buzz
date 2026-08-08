@@ -1,0 +1,20 @@
+{% extends "components/base.html" %}
+
+{% block title %}Not found &mdash; Frappe Events{% endblock %}
+{% block og_title %}Not found &mdash; Frappe Events{% endblock %}
+{% block og_description %}That sticker peeled off.{% endblock %}
+
+{% block body %}
+<section class="mt-12 flex flex-col items-center text-center">
+  <div class="relative">
+    <div class="square w-[280px] h-[280px] md:w-[420px] md:h-[420px] flex items-center justify-center">
+      <span class="mono text-[10px] tracking-[0.3em] uppercase opacity-40">empty square</span>
+    </div>
+    <span class="sticker bg-[var(--accent-primary)] text-white -rotate-12 absolute top-6 -right-6 text-[18px]">STICKER MISSING</span>
+    <span class="sticker bg-[var(--accent-warm)] text-[#161616] rotate-6 absolute -bottom-4 -left-6 text-[12px]">404</span>
+  </div>
+  <h1 class="hand text-[60px] md:text-[80px] mt-12 -rotate-2">page peeled off!</h1>
+  <p class="mt-4 max-w-md opacity-80">That URL doesn't lead anywhere we know. Try the home page.</p>
+  <a href="/home" class="cta-btn mt-10 inline-block">&#9733; BACK HOME &rarr;</a>
+</section>
+{% endblock %}

@@ -5,6 +5,7 @@ buzz.patches.migrate_offline_payment_to_methods
 
 # Patches added in this section will be executed before doctypes are migrated
 # Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
+buzz.patches.rename_theme_module_to_buzz_themes
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
@@ -18,3 +19,5 @@ buzz.patches.rename_free_webinar_to_free_event
 buzz.patches.create_default_teams #2
 buzz.patches.assign_default_team #2
 buzz.patches.create_team_settings_for_existing_teams
+buzz.patches.seed_buzz_theme_routes
+buzz.patches.drop_buzz_event_theme_column

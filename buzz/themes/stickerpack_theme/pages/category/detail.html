@@ -1,0 +1,166 @@
+{% extends "components/base.html" %}
+{% import "components/macros/accents.html" as accents %}
+
+{% set today = frappe.utils.today() %}
+{% set category_name = frappe.db.get_value("Event Category", {"slug": category_slug, "enabled": 1}, "name") %}
+{% if not category_name %}
+  {% set not_found = frappe.throw(_("Category not found"), frappe.PageDoesNotExistError) %}
+{% endif %}
+{% set category = frappe.get_cached_doc("Event Category", category_name) %}
+
+{% set all_categories = frappe.get_all("Event Category",
+      filters={"enabled": 1},
+      fields=["name", "slug"],
+      order_by="name asc") %}
+
+{% set all_events = frappe.get_all("Buzz Event",
+      filters={"is_published": 1, "category": category_name},
+      fields=["name", "title", "route", "start_date", "venue",
+              "card_image", "banner_image", "short_description"],
+      order_by="start_date desc") %}
+
+{% set venue_names = all_events | map(attribute='venue') | reject('none') | list | unique | list %}
+{% set venues = frappe.get_all("Event Venue",
+      filters={"name": ["in", venue_names]},
+      fields=["name", "address"]) if venue_names else [] %}
+{% set venue_map = {} %}
+{% for venue in venues %}
+  {% set _ = venue_map.update({venue.name: venue.address}) %}
+{% endfor %}
+
+{% set upcoming = [] %}
+{% set past = [] %}
+{% for event in all_events %}
+  {% if event.start_date and (event.start_date|string) < today %}
+    {% set _ = past.append(event) %}
+  {% else %}
+    {% set _ = upcoming.append(event) %}
+  {% endif %}
+{% endfor %}
+
+{% set accent_cycle = ['warm', 'hot', 'cool', 'ink', 'primary', 'bold'] %}
+{% set rot_cycle = [1, -1, 2, -2, 3, -3] %}
+{% set category_slug_lower = (category.slug or '') | lower %}
+{% set is_webinars = category_slug_lower == 'webinars' %}
+
+{% block title %}{{ category.name }} &mdash; Frappe Events{% endblock %}
+{% block og_title %}{{ category.name }} &mdash; Frappe Events{% endblock %}
+{% block og_description %}{{ category.description or category.name }}{% endblock %}
+{% block og_url %}{{ frappe.utils.get_url() }}/category/{{ category.slug }}{% endblock %}
+
+{% block body %}
+
+<section class="mt-4">
+  <div class="flex flex-wrap gap-3 mb-6">
+    <span class="sticker -rotate-3" style="{{ accents.accent_style('primary') }}">{{ category.name | upper }}</span>
+    <span class="sticker bg-[var(--ink)] text-[var(--surface)] rotate-2">{{ all_events | length }} EVENTS</span>
+  </div>
+
+  <h1 class="font-black text-[72px] md:text-[140px] leading-[0.88] tracking-tight">
+    {{ category.name | lower }}<br>
+    <span class="hand text-[var(--accent-primary)] text-[120px] md:text-[220px] inline-block -rotate-3">archive!</span>
+  </h1>
+
+  {% if category.description %}
+  <p class="mt-6 max-w-[560px] text-[22px] opacity-80">{{ category.description }}</p>
+  {% endif %}
+</section>
+
+{% if upcoming %}
+<section class="mt-12" aria-labelledby="upcoming-heading">
+  <div class="flex items-baseline justify-between flex-wrap gap-3 mb-6">
+    <h2 id="upcoming-heading" class="hand text-[40px] -rotate-1">&#9733; upcoming</h2>
+    <span class="mono text-[11px] tracking-[0.2em] uppercase opacity-70">{{ upcoming | length }} {{ 'stop' if upcoming | length == 1 else 'stops' }}</span>
+  </div>
+  <div class="grid md:grid-cols-2 gap-6">
+    {% for event_row in upcoming %}
+      {% if is_webinars %}
+        {% set webinar = {
+          'route': event_row.route,
+          'title': event_row.title,
+          'blurb': event_row.short_description,
+          'date_month': event_row.start_date.strftime('%b').upper() if event_row.start_date else '',
+          'date_day': event_row.start_date.strftime('%d') if event_row.start_date else ''
+        } %}
+        {% include "components/webinar_row.html" %}
+      {% else %}
+        {% set event = {
+          'route': event_row.route,
+          'title': event_row.title,
+          'image': event_row.card_image or event_row.banner_image,
+          'date_short': event_row.start_date.strftime('%d %b').upper() if event_row.start_date else '',
+          'venue_short': venue_map.get(event_row.venue, '').split(',')[0] if venue_map.get(event_row.venue, '') else '',
+          'category_label': category.name.upper(),
+          'accent': accent_cycle[loop.index0 % 6],
+          'rot': rot_cycle[loop.index0 % 6],
+          'is_past': False
+        } %}
+        {% include "components/event_card.html" %}
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if past %}
+<section class="mt-12" aria-labelledby="past-heading">
+  <div class="flex items-baseline justify-between flex-wrap gap-3 mb-6">
+    <h2 id="past-heading" class="hand text-[40px] -rotate-1 opacity-70">past {{ category.name | lower }}</h2>
+    <span class="mono text-[11px] tracking-[0.2em] uppercase opacity-50">{{ past | length }}</span>
+  </div>
+  <div class="grid md:grid-cols-2 gap-6">
+    {% for event_row in past %}
+      {% if is_webinars %}
+        {% set webinar = {
+          'route': event_row.route,
+          'title': event_row.title,
+          'blurb': event_row.short_description,
+          'date_month': event_row.start_date.strftime('%b').upper() if event_row.start_date else '',
+          'date_day': event_row.start_date.strftime('%d') if event_row.start_date else ''
+        } %}
+        {% include "components/webinar_row.html" %}
+      {% else %}
+        {% set event = {
+          'route': event_row.route,
+          'title': event_row.title,
+          'image': event_row.card_image or event_row.banner_image,
+          'date_short': event_row.start_date.strftime('%d %b').upper() if event_row.start_date else '',
+          'venue_short': venue_map.get(event_row.venue, '').split(',')[0] if venue_map.get(event_row.venue, '') else '',
+          'category_label': category.name.upper(),
+          'accent': 'ink',
+          'rot': 0,
+          'is_past': True
+        } %}
+        {% include "components/event_card.html" %}
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if not upcoming and not past %}
+<section class="mt-16">
+  <div class="square p-12 text-center -rotate-1">
+    <div class="hand text-[60px] text-[var(--accent-primary)] -rotate-2">nothing here<br>yet &#9733;</div>
+    <p class="mt-4 max-w-md mx-auto opacity-80">No {{ category.name | lower }} on the calendar. Watch this space, or propose your city.</p>
+    <a href="mailto:events@frappe.io" class="cta-btn mt-8 inline-block">PROPOSE A CITY &rarr;</a>
+  </div>
+</section>
+{% endif %}
+
+<section class="mt-20">
+  <div class="hand text-[36px] -rotate-1 mb-4">&#9733; or try</div>
+  <div class="flex flex-wrap gap-4">
+    {% for category_link in all_categories %}
+      {% if category_link.slug != category.slug %}
+      <a href="/category/{{ category_link.slug }}"
+         class="sticker {{ accents.rot_class(rot_cycle[loop.index0 % 6]) }} hover:rotate-0 transition-transform"
+         style="{{ accents.accent_style(accent_cycle[loop.index0 % 6]) }}">
+        {{ category_link.name | upper }}
+      </a>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+
+{% endblock %}

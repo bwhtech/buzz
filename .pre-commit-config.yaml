@@ -42,7 +42,9 @@ repos:
                 .*node_modules.*|
                 .*boilerplate.*|
                 buzz/templates/includes/.*|
-                buzz/public/js/lib/.*
+                buzz/public/js/lib/.*|
+                buzz/public/themes/.*|
+                buzz/themes/.*
             )$
 
 
@@ -60,7 +62,9 @@ repos:
                 .*node_modules.*|
                 .*boilerplate.*|
                 buzz/templates/includes/.*|
-                buzz/public/js/lib/.*
+                buzz/public/js/lib/.*|
+                buzz/public/themes/.*|
+                buzz/themes/.*
             )$
 
 ci:

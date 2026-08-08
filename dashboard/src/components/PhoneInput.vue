@@ -90,8 +90,11 @@ function emitValue() {
 	emit("update:modelValue", formatPhone(dialCode.value, localNumber.value));
 }
 
-function onDialCodeChange(code: string | null) {
-	if (code) {
+// frappe-ui's Combobox declares its emit as (...args: unknown[]), so a narrowly
+// typed handler is not assignable to it. Narrow at the boundary instead.
+function onDialCodeChange(...args: unknown[]) {
+	const code = args[0];
+	if (typeof code === "string" && code) {
 		dialCode.value = code;
 		emitValue();
 	}

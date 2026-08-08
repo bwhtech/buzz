@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+/* ---------- design tokens ---------- */
+/* Tokens registered via @theme become Tailwind utilities (bg-bg, text-ink, ...). */
+/* Dark-mode swap happens by overriding the same variables under [data-theme="dark"]. */
+
+@theme {
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-bg: #ebe8e1;
+  --color-pass: #ffffff;
+  --color-ink: #0f0f0f;
+  --color-ink-soft: rgba(15, 15, 15, 0.7);
+  --color-line: rgba(0, 0, 0, 0.3);
+  --color-line-strong: rgba(0, 0, 0, 0.4);
+  --color-pill: #0f0f0f;
+  --color-pill-fg: #ffffff;
+  --color-cta: #0f0f0f;
+  --color-cta-fg: #ffffff;
+  --color-cta-hover: #0044aa;
+  --color-focus-ring: #0044aa;
+}
+
+html[data-theme="dark"] {
+  --color-bg: #0a0a0a;
+  --color-pass: #161616;
+  --color-ink: #ebe8e1;
+  --color-ink-soft: rgba(235, 232, 225, 0.7);
+  --color-line: rgba(235, 232, 225, 0.25);
+  --color-line-strong: rgba(235, 232, 225, 0.35);
+  --color-pill: #ebe8e1;
+  --color-pill-fg: #0f0f0f;
+  --color-cta: #ebe8e1;
+  --color-cta-fg: #0f0f0f;
+  --color-cta-hover: #ff5722;
+  --color-focus-ring: #ff5722;
+}
+
+body {
+  font-family: var(--font-mono);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  transition: background 0.3s, color 0.3s;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- irreducible bits — pseudo-elements + gradients Tailwind can't express ---------- */
+
+.perf-strip { position: relative; }
+.perf-strip::before,
+.perf-strip::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  transition: background 0.3s;
+}
+.perf-strip::before { left: -12px; }
+.perf-strip::after { right: -12px; }
+
+.perf {
+  background:
+    radial-gradient(circle at 0 50%, transparent 8px, var(--color-pass) 8px),
+    radial-gradient(circle at 100% 50%, transparent 8px, var(--color-pass) 8px);
+  border-left: 1px dashed var(--color-line);
+}
+
+.barcode {
+  background: repeating-linear-gradient(
+    to right,
+    var(--color-ink) 0,
+    var(--color-ink) 1.5px,
+    transparent 1.5px,
+    transparent 3px,
+    var(--color-ink) 3px,
+    var(--color-ink) 4.5px,
+    transparent 4.5px,
+    transparent 6px,
+    var(--color-ink) 6px,
+    var(--color-ink) 9px,
+    transparent 9px,
+    transparent 12px
+  );
+}
+
+.theme-toggle .icon-sun { display: none; }
+html[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+html[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+
+[x-cloak] { display: none !important; }
+
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .no-print, .theme-toggle, .sticky-cta, header, footer { display: none !important; }
+  main { max-width: 100% !important; padding: 0 !important; }
+  .perf-strip::before, .perf-strip::after { display: none !important; }
+  .barcode { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .print-hide-below { display: none !important; }
+}
+
+@font-face { font-display: swap; }

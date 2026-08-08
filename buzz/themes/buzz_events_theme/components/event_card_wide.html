@@ -1,0 +1,32 @@
+{% from "components/category_pill.html" import category_pill %}
+{% set image = event.get('card_image') or event.get('banner_image') %}
+{% set past_classes = ' opacity-85 hover:opacity-100' if is_past else '' %}
+<a href="/events/{{ event.route }}" class="block bg-pass text-ink rounded-xl overflow-hidden md:col-span-2 transition-colors group{{ past_classes }}">
+  <div class="md:flex">
+    <div class="relative md:w-2/5 aspect-[4/3] md:aspect-auto overflow-hidden">
+      {% if image %}
+      <img src="{{ image }}" alt="" loading="lazy"
+           class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+      {% endif %}
+      <span class="absolute top-3 left-3 bg-pill text-pill-fg font-ui font-bold text-[11px] tracking-[0.04em] uppercase px-2.5 py-1 rounded">{{ event.start_date }}</span>
+      {% if is_past %}
+      <span class="absolute top-3 right-3 bg-bg text-ink border border-line font-ui font-bold text-[10px] tracking-[0.04em] uppercase px-2 py-1 rounded">PAST</span>
+      {% endif %}
+    </div>
+    <div class="p-5 md:flex-1">
+      <h3 class="font-ui font-bold text-[20px] leading-tight">{{ event.title }}</h3>
+      {% if event.venue_address %}
+      <div class="flex items-center gap-1.5 text-xs opacity-70 mt-2">
+        <i data-lucide="map-pin"></i>
+        <span>{{ event.venue_address }}</span>
+      </div>
+      {% endif %}
+      <div class="flex justify-between items-center border-t border-dashed border-line mt-4 pt-3">
+        {{ category_pill(event.category_label, is_past=is_past) }}
+        <span class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase opacity-80 group-hover:opacity-100 inline-flex items-center gap-1">
+          {% if is_past %}Recap →{% else %}Ticket →{% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+</a>

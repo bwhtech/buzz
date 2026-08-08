@@ -1,0 +1,9 @@
+{% set link_label = link_label or 'View all' %}
+<div class="flex items-baseline justify-between gap-3 flex-wrap border-b border-dashed border-line pb-3 mb-6">
+  <h2 class="font-ui font-extrabold text-[22px] tracking-[-0.015em]">{{ title }}</h2>
+  {% if link_href %}
+  <a href="{{ link_href }}" class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase inline-flex items-center gap-1 hover:opacity-70">
+    {{ link_label }} <i data-lucide="arrow-right"></i>
+  </a>
+  {% endif %}
+</div>

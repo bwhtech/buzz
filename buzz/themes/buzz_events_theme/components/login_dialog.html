@@ -1,0 +1,129 @@
+<div
+  x-data="loginDialog()"
+  x-show="open"
+  x-cloak
+  @open-login.window="show()"
+  @keydown.escape.window="hide()"
+  class="fixed inset-0 z-[100] flex items-center justify-center p-4 no-print"
+  role="dialog"
+  aria-modal="true"
+>
+  <div class="absolute inset-0 bg-ink/60" @click="hide()"></div>
+
+  <div class="relative bg-pass text-ink rounded-2xl shadow-2xl w-full max-w-md p-8 z-10" @click.stop>
+    <button
+      type="button"
+      @click="hide()"
+      aria-label="Close"
+      class="absolute top-3 right-3 w-8 h-8 inline-flex items-center justify-center rounded-full opacity-60 hover:opacity-100 hover:bg-line transition-opacity"
+    >
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+
+    <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65 mb-1" x-text="labelFor()"></div>
+    <h2 class="font-ui font-extrabold text-[24px] leading-tight tracking-tight mb-6" x-text="titleFor()"></h2>
+
+    <div x-show="error" x-text="error" class="mb-4 p-3 border border-dashed border-line text-[13px] rounded font-ui" role="alert"></div>
+    <div x-show="success" x-text="success" class="mb-4 p-3 border border-dashed border-line text-[13px] rounded font-ui" role="status"></div>
+
+    <form x-show="view === 'login'" @submit.prevent="submitLogin()" class="space-y-4">
+      <div x-show="!context || !context.disable_user_pass_login" class="space-y-4">
+        <div>
+          <label class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65 block mb-1.5">Email</label>
+          <input type="email" x-model="form.email" required autocomplete="email" placeholder="you@example.com"
+            class="w-full bg-bg border border-line rounded px-3 py-2.5 text-[14px] font-mono text-ink placeholder:text-ink/40 focus:border-ink outline-none transition-colors" />
+        </div>
+        <div>
+          <label class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65 block mb-1.5">Password</label>
+          <input type="password" x-model="form.password" required autocomplete="current-password" placeholder="••••••••"
+            class="w-full bg-bg border border-line rounded px-3 py-2.5 text-[14px] font-mono text-ink placeholder:text-ink/40 focus:border-ink outline-none transition-colors" />
+        </div>
+        <div class="flex justify-end">
+          <button type="button" @click="switchView('forgot')" class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase opacity-70 hover:opacity-100">
+            Forgot password?
+          </button>
+        </div>
+        <button type="submit" :disabled="loading"
+          class="bg-cta text-cta-fg hover:bg-cta-hover hover:text-white w-full font-ui font-bold text-[12px] tracking-[0.04em] uppercase px-6 py-3 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <span x-show="!loading">Login</span>
+          <span x-show="loading">Signing in…</span>
+        </button>
+      </div>
+
+      <div x-show="context && context.provider_logins && context.provider_logins.length" class="space-y-3">
+        <div x-show="!context || !context.disable_user_pass_login" class="relative flex items-center justify-center my-2">
+          <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-dashed border-line"></div></div>
+          <span class="relative bg-pass px-3 font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">or</span>
+        </div>
+        <template x-for="provider in (context && context.provider_logins) || []" :key="provider.name">
+          <button type="button" @click="window.location.href = provider.auth_url"
+            class="w-full inline-flex items-center justify-center gap-2 bg-pass text-ink border border-line hover:border-ink rounded px-4 py-3 font-ui font-bold text-[12px] tracking-[0.04em] uppercase transition-colors">
+            <img :src="provider.icon" :alt="provider.provider_name" class="w-4 h-4" x-show="provider.icon" />
+            <span x-text="`Continue with ${provider.provider_name}`"></span>
+          </button>
+        </template>
+      </div>
+
+      <div x-show="!context || !context.disable_signup" class="text-center text-[12px] opacity-70 font-ui pt-2 border-t border-dashed border-line">
+        <span class="block pt-3">Don't have an account?
+          <button type="button" @click="switchView('signup')" class="font-bold underline underline-offset-4 hover:opacity-100">Sign up</button>
+        </span>
+      </div>
+    </form>
+
+    <form x-show="view === 'signup'" @submit.prevent="submitSignup()" class="space-y-4">
+      <div>
+        <label class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65 block mb-1.5">Full name</label>
+        <input type="text" x-model="form.full_name" required autocomplete="name" placeholder="Jane Doe"
+          class="w-full bg-bg border border-line rounded px-3 py-2.5 text-[14px] font-mono text-ink placeholder:text-ink/40 focus:border-ink outline-none transition-colors" />
+      </div>
+      <div>
+        <label class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65 block mb-1.5">Email</label>
+        <input type="email" x-model="form.email" required autocomplete="email" placeholder="you@example.com"
+          class="w-full bg-bg border border-line rounded px-3 py-2.5 text-[14px] font-mono text-ink placeholder:text-ink/40 focus:border-ink outline-none transition-colors" />
+      </div>
+      <button type="submit" :disabled="loading"
+        class="bg-cta text-cta-fg hover:bg-cta-hover hover:text-white w-full font-ui font-bold text-[12px] tracking-[0.04em] uppercase px-6 py-3 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span x-show="!loading">Sign up</span>
+        <span x-show="loading">Creating…</span>
+      </button>
+
+      <div x-show="context && context.provider_logins && context.provider_logins.length" class="space-y-3">
+        <div class="relative flex items-center justify-center my-2">
+          <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-dashed border-line"></div></div>
+          <span class="relative bg-pass px-3 font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">or</span>
+        </div>
+        <template x-for="provider in (context && context.provider_logins) || []" :key="provider.name">
+          <button type="button" @click="window.location.href = provider.auth_url"
+            class="w-full inline-flex items-center justify-center gap-2 bg-pass text-ink border border-line hover:border-ink rounded px-4 py-3 font-ui font-bold text-[12px] tracking-[0.04em] uppercase transition-colors">
+            <img :src="provider.icon" :alt="provider.provider_name" class="w-4 h-4" x-show="provider.icon" />
+            <span x-text="`Continue with ${provider.provider_name}`"></span>
+          </button>
+        </template>
+      </div>
+
+      <div class="text-center text-[12px] opacity-70 font-ui pt-2 border-t border-dashed border-line">
+        <span class="block pt-3">Already have an account?
+          <button type="button" @click="switchView('login')" class="font-bold underline underline-offset-4 hover:opacity-100">Login</button>
+        </span>
+      </div>
+    </form>
+
+    <form x-show="view === 'forgot'" @submit.prevent="submitForgot()" class="space-y-4">
+      <p class="text-[13px] opacity-70 font-ui leading-relaxed">Enter your email — we'll send a link to reset your password.</p>
+      <div>
+        <label class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65 block mb-1.5">Email</label>
+        <input type="email" x-model="form.email" required autocomplete="email" placeholder="you@example.com"
+          class="w-full bg-bg border border-line rounded px-3 py-2.5 text-[14px] font-mono text-ink placeholder:text-ink/40 focus:border-ink outline-none transition-colors" />
+      </div>
+      <button type="submit" :disabled="loading"
+        class="bg-cta text-cta-fg hover:bg-cta-hover hover:text-white w-full font-ui font-bold text-[12px] tracking-[0.04em] uppercase px-6 py-3 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <span x-show="!loading">Send reset link</span>
+        <span x-show="loading">Sending…</span>
+      </button>
+      <div class="text-center pt-2 border-t border-dashed border-line">
+        <button type="button" @click="switchView('login')" class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase opacity-70 hover:opacity-100 block pt-3 mx-auto">Back to login</button>
+      </div>
+    </form>
+  </div>
+</div>

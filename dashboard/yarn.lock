@@ -1755,6 +1755,11 @@ entities@^7.0.0:
   resolved "https://registry.yarnpkg.com/entities/-/entities-7.0.1.tgz#26e8a88889db63417dcb9a1e79a3f1bc92b5976b"
   integrity sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==
 
+es-module-lexer@^1.7.0:
+  version "1.7.0"
+  resolved "https://registry.yarnpkg.com/es-module-lexer/-/es-module-lexer-1.7.0.tgz#9159601561880a85f2734560a9099b2c31e5372a"
+  integrity sha512-jEQoCwk8hyb2AZziIOLhDqpm5+2ww5uIE6lkO/6jcOCusfk6LhMHpXXfBLXTZ7Ydyt0j4VoUQv6uGNYbdW+kBA==
+
 escalade@^3.1.1:
   version "3.1.1"
   resolved "https://registry.npmjs.org/escalade/-/escalade-3.1.1.tgz"
@@ -1863,10 +1868,10 @@ fraction.js@^4.1.2:
   resolved "https://registry.npmjs.org/fraction.js/-/fraction.js-4.1.2.tgz"
   integrity sha512-o2RiJQ6DZaR/5+Si0qJUIy637QMRudSi9kU/FFzx9EZazrIdnBgpU+3sEWCxAVhH2RtxW2Oz+T4p2o8uOPVcgA==
 
-frappe-ui@1.0.0-beta.25:
-  version "1.0.0-beta.25"
-  resolved "https://registry.yarnpkg.com/frappe-ui/-/frappe-ui-1.0.0-beta.25.tgz#99aa2463de799ae98550e9be7e4770e79b431680"
-  integrity sha512-RiHl6Nv3vy8ywtQfWG9pvWYiH9aRdhzteXPiF2+Qjsh0owBVnim0ZP6ZE03jhtmaZ5QgrPovZu+rcBTOORWzuA==
+frappe-ui@1.0.0-beta.37:
+  version "1.0.0-beta.37"
+  resolved "https://registry.yarnpkg.com/frappe-ui/-/frappe-ui-1.0.0-beta.37.tgz#9ce3f12b78dd2408a389c330a0bd8f9087b3ff31"
+  integrity sha512-OfnE9Wwy3Pxd9XKTYfulFOh8OUqdmbBy9T9bv8EIoRqE84iYJbWnYwlloyDfowP9MHJCFG1j0ysKC+fVITX+hA==
   dependencies:
     "@codemirror/lang-css" "^6.3.0"
     "@codemirror/lang-html" "^6.4.9"
@@ -1925,6 +1930,7 @@ frappe-ui@1.0.0-beta.25:
     dayjs "^1.11.13"
     dompurify "^3.4.0"
     echarts "^5.6.0"
+    es-module-lexer "^1.7.0"
     feather-icons "^4.28.0"
     fuzzysort "^3.1.0"
     grid-layout-plus "^1.1.0"
@@ -1932,6 +1938,7 @@ frappe-ui@1.0.0-beta.25:
     idb-keyval "^6.2.0"
     lowlight "^3.3.0"
     lucide-static "^1.16.0"
+    magic-string "^0.30.21"
     marked "^15.0.12"
     ora "5.4.1"
     prettier "^3.3.2"
