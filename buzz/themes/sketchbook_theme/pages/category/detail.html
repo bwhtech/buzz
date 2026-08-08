@@ -3,7 +3,7 @@
 {% set today = frappe.utils.today() %}
 {% set category_name = frappe.db.get_value("Event Category", {"slug": category_slug, "enabled": 1}, "name") %}
 {% if not category_name %}
-  {{ frappe.throw(_("Category not found"), frappe.PageDoesNotExistError) }}
+  {% set not_found = frappe.throw(_("Category not found"), frappe.PageDoesNotExistError) %}
 {% endif %}
 {% set category = frappe.get_cached_doc("Event Category", category_name) %}
 

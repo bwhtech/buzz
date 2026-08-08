@@ -33,8 +33,8 @@ importable_doctypes = ["Buzz Theme"]
 
 jinja = {
 	"methods": [
-		"buzz.theme.jinja_helpers.theme_asset_url",
-		"buzz.theme.jinja_helpers.theme_config",
+		"buzz.theme.jinja_helpers.buzz_theme_asset_url",
+		"buzz.theme.jinja_helpers.buzz_theme_config",
 	],
 }
 

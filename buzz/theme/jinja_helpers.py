@@ -6,7 +6,7 @@ from buzz.theme.doctype.buzz_theme.buzz_theme import get_render_theme_context
 from buzz.theme.theme_resolver import is_within_directory
 
 
-def theme_asset_url(path):
+def buzz_theme_asset_url(path):
 	"""Resolve a static asset URL for the active theme.
 
 	Walks the theme inheritance chain so a child theme can override an asset
@@ -36,7 +36,7 @@ def theme_asset_url(path):
 	return f"/assets/{base_app}/themes/{base_slug}/{relative_path}"
 
 
-def theme_config():
+def buzz_theme_config():
 	"""Return the active theme's settings doc (from the linked Single DocType).
 
 	The theme owner creates a `<Theme Name> Settings` Single DocType via the

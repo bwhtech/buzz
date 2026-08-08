@@ -2,7 +2,7 @@
 
 {% set event_name = frappe.db.get_value("Buzz Event", {"route": event_route, "is_published": 1}, "name") %}
 {% if not event_name %}
-  {{ frappe.throw(_("Event not found"), frappe.PageDoesNotExistError) }}
+  {% set not_found = frappe.throw(_("Event not found"), frappe.PageDoesNotExistError) %}
 {% endif %}
 {% set event = frappe.get_cached_doc("Buzz Event", event_name) %}
 {% set venue = frappe.get_cached_doc("Event Venue", event.venue) if event.venue else None %}

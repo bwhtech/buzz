@@ -267,8 +267,8 @@ def get_render_theme_context():
 	"""Theme context for the current render.
 
 	The renderer resolves the theme once (it needs the matched route to know
-	which event is in scope) and stashes it here. theme_asset_url() and
-	theme_config() must read that same context — if they re-resolved
+	which event is in scope) and stashes it here. buzz_theme_asset_url() and
+	buzz_theme_config() must read that same context — if they re-resolved
 	independently they would fall back to the site default and an event page
 	would render its own theme's HTML with the default theme's assets."""
 	context = getattr(frappe.local, "render_theme_context", None)
