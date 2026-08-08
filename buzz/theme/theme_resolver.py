@@ -7,7 +7,11 @@ from frappe.utils.jinja_globals import is_rtl
 from frappe.website.utils import build_response, get_boot_data
 from jinja2 import BaseLoader, TemplateNotFound
 
-from buzz.theme.doctype.buzz_theme.buzz_theme import get_render_theme_context
+from buzz.theme.doctype.buzz_theme.buzz_theme import (
+	get_theme_context,
+	resolve_theme_for_request,
+	set_render_theme_context,
+)
 from buzz.theme.doctype.buzz_theme_settings.buzz_theme_settings import get_compiled_routes
 
 
@@ -114,14 +118,6 @@ class ThemePageRenderer:
 		self.requires_auth = False
 
 	def can_render(self):
-		context = get_render_theme_context()
-		if not context["theme_name"]:
-			return False
-
-		self.theme_dirs = context["dirs"]
-		if not self.theme_dirs:
-			return False
-
 		if hasattr(frappe.local, "request") and frappe.local.request:
 			request_path = frappe.local.request.path.strip("/")
 		else:
@@ -129,25 +125,38 @@ class ThemePageRenderer:
 
 		settings = get_compiled_routes()
 
-		# Explicit routes win over dynamic pages; they may also carry auth flags.
+		matched_route = None
+		match = None
 		for route in settings["routes"]:
-			match = route["pattern"].match(request_path)
-			if match:
-				if find_theme_file(self.theme_dirs, route["template_path"]):
-					self.template_path = route["template_path"]
-					self.match = match
-					self.requires_auth = route["requires_auth"]
-					return True
-				return False
+			candidate = route["pattern"].match(request_path)
+			if candidate:
+				matched_route = route
+				match = candidate
+				break
 
-		if settings["dynamic_pages_enabled"] and request_path:
-			candidate = f"pages/{request_path}.html"
-			if find_theme_file(self.theme_dirs, candidate):
-				self.template_path = candidate
-				self.match = None
-				return True
+		if matched_route:
+			template_path = matched_route["template_path"]
+			requires_auth = matched_route["requires_auth"]
+		elif settings["dynamic_pages_enabled"] and request_path:
+			template_path = f"pages/{request_path}.html"
+			requires_auth = False
+		else:
+			return False
 
-		return False
+		theme_name = resolve_theme_for_request(match)
+		if not theme_name:
+			return False
+
+		context = get_theme_context(theme_name)
+		if not context["dirs"] or not find_theme_file(context["dirs"], template_path):
+			return False
+
+		self.theme_dirs = context["dirs"]
+		self.template_path = template_path
+		self.match = match
+		self.requires_auth = requires_auth
+		set_render_theme_context(context)
+		return True
 
 	def render(self):
 		if self.requires_auth and frappe.session.user == "Guest":

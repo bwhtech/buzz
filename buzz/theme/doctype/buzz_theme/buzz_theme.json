@@ -11,7 +11,6 @@
   "is_standard",
   "theme_settings",
   "column_break_main",
-  "is_active",
   "parent_theme",
   "section_break_config",
   "config"
@@ -50,13 +49,6 @@
   {
    "fieldname": "column_break_main",
    "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_active",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "label": "Active"
   },
   {
    "description": "Inherit from this theme. Overrides fall back to the parent theme before the defaults.",

@@ -1,4 +1,3 @@
-import json
 import os
 import shutil
 
@@ -11,8 +10,6 @@ class BuzzTheme(Document):
 	def validate(self):
 		if self.parent_theme:
 			self.validate_no_circular_inheritance()
-		if self.is_active:
-			self.deactivate_other_themes()
 
 	def after_insert(self):
 		scaffold_theme(self.theme_name, self.module)
@@ -79,15 +76,8 @@ class BuzzTheme(Document):
 
 		export_module_json(self, is_standard=bool(self.is_standard), module=self.module)
 
-	def before_export(self, doc_export):
-		doc_export["is_active"] = 0
-
 	def on_change(self):
-		clear_active_theme_cache()
-		# Write the manifest only once the row is durable: an in-transaction
-		# rollback after on_change would otherwise leave active_theme.json (read
-		# by the Vite plugin) pointing at a theme the DB no longer reflects.
-		frappe.db.after_commit.add(save_active_theme_manifest)
+		clear_theme_cache()
 
 	def on_trash(self):
 		paths = [get_theme_dir(self.name), get_theme_public_dir(self.name)]
@@ -105,15 +95,6 @@ class BuzzTheme(Document):
 				frappe.throw(f"Circular theme inheritance detected: {current}")
 			visited.add(current)
 			current = frappe.db.get_value("Buzz Theme", current, "parent_theme")
-
-	def deactivate_other_themes(self):
-		other_active_themes = frappe.get_all(
-			"Buzz Theme",
-			filters={"is_active": 1, "name": ("!=", self.name)},
-			pluck="name",
-		)
-		for theme_name in other_active_themes:
-			frappe.db.set_value("Buzz Theme", theme_name, "is_active", 0)
 
 
 def create_theme_settings_doctype(doctype_name, module=None):
@@ -212,29 +193,6 @@ def scaffold_theme(theme_name, module=None):
 		os.makedirs(os.path.join(app_path, "public", "themes", slug, folder), exist_ok=True)
 
 
-def get_active_theme():
-	return frappe.cache.get_value("buzz_active_theme", generator=resolve_active_theme)
-
-
-def resolve_active_theme():
-	return frappe.db.get_value("Buzz Theme", {"is_active": 1}, "theme_name")
-
-
-def get_active_theme_context():
-	"""Resolved inheritance chain for the active theme, cached as one entry.
-
-	Carries the chain names (child first), the theme folders that exist on
-	disk, the backing app per theme, and the linked settings DocType. This
-	replaces the uncached DB walks that `can_render` ran on every request and
-	that `theme_asset_url` / `theme_config` ran per call. Invalidated on any
-	theme change via `clear_active_theme_cache`."""
-	return frappe.cache.get_value("buzz_active_theme_context", generator=build_active_theme_context)
-
-
-def build_active_theme_context():
-	return build_theme_context(resolve_active_theme())
-
-
 def build_theme_context(theme_name):
 	"""Resolved chain, folders, backing apps and settings DocType for one theme."""
 	if not theme_name:
@@ -262,30 +220,61 @@ def build_theme_context(theme_name):
 PREVIEW_THEME_PARAM = "preview_theme"
 
 
-def get_render_theme_context():
-	"""Theme context for the current render: the active theme, or a previewed one.
+def resolve_default_theme():
+	"""Site-wide fallback theme. Buzz Settings is the single source of truth."""
+	return frappe.get_single_value("Buzz Settings", "default_theme")
 
-	A site has exactly one active theme, which makes developing a second theme
-	awkward — you cannot look at it without switching the live site over. A
-	`?preview_theme=<name>` parameter resolves that theme's chain for this
-	request only, so several themes can be built and screenshotted side by side.
 
-	Gated on `developer_mode`: letting a request choose which templates render is
-	fine on a developer's machine and is not something a production site should
-	expose."""
+def resolve_theme_for_request(match):
+	"""Theme for this request: previewed theme, else the matched event's own
+	theme, else the site default.
+
+	`match` is the regex match for the themed route, or None. A route that
+	captures an `event_route` group is event-scoped, so the event it names
+	chooses the theme; every other route (home, category, dynamic pages) has
+	no event in scope and uses the site default."""
 	preview_theme = requested_preview_theme()
-	if not preview_theme:
-		return get_active_theme_context()
+	if preview_theme:
+		return preview_theme
 
-	# Per-request memo — `can_render`, `theme_asset_url` and `theme_config` each
-	# ask for this, and rebuilding walks the inheritance chain every time.
-	cached = getattr(frappe.local, "preview_theme_context", None)
-	if cached and cached["theme_name"] == preview_theme:
-		return cached
+	event_route = (match.groupdict() or {}).get("event_route") if match else None
+	if event_route:
+		event_theme = frappe.db.get_value("Buzz Event", {"route": event_route}, "theme")
+		if event_theme:
+			return event_theme
 
-	context = build_theme_context(preview_theme)
-	frappe.local.preview_theme_context = context
-	return context
+	return resolve_default_theme()
+
+
+def get_theme_context(theme_name):
+	"""Resolved chain/dirs/apps for one theme, cached per theme name.
+
+	Keyed per theme rather than as one global entry because several themes
+	are now live on the same site at once — one per event."""
+	if not theme_name:
+		return build_theme_context(None)
+	return frappe.cache.hget(
+		"buzz_theme_context", theme_name, generator=lambda: build_theme_context(theme_name)
+	)
+
+
+def set_render_theme_context(context):
+	"""Remember what the renderer resolved, so the Jinja helpers agree with it."""
+	frappe.local.render_theme_context = context
+
+
+def get_render_theme_context():
+	"""Theme context for the current render.
+
+	The renderer resolves the theme once (it needs the matched route to know
+	which event is in scope) and stashes it here. theme_asset_url() and
+	theme_config() must read that same context — if they re-resolved
+	independently they would fall back to the site default and an event page
+	would render its own theme's HTML with the default theme's assets."""
+	context = getattr(frappe.local, "render_theme_context", None)
+	if context is not None:
+		return context
+	return get_theme_context(resolve_theme_for_request(None))
 
 
 def requested_preview_theme():
@@ -300,7 +289,7 @@ def requested_preview_theme():
 	if not theme_name:
 		return None
 
-	# An unknown name falls back to the active theme rather than raising: a
+	# An unknown name falls back to the route/site default rather than raising: a
 	# mistyped query parameter should not take a page down.
 	if not frappe.db.exists("Buzz Theme", theme_name):
 		return None
@@ -330,32 +319,5 @@ def get_theme_names(theme_name):
 	return names
 
 
-def clear_active_theme_cache():
-	frappe.cache.delete_value("buzz_active_theme")
-	frappe.cache.delete_value("buzz_active_theme_context")
-
-
-def save_active_theme_manifest():
-	"""Write `active_theme.json` at the buzz app root, read by the Vite
-	plugin at build time. Carries absolute per-theme folder paths so the plugin
-	stays app-agnostic when themes live across different content apps."""
-	engine_module_path = frappe.get_app_path(DEFAULT_THEME_APP)
-	app_root = os.path.dirname(engine_module_path)
-	manifest_path = os.path.join(app_root, "active_theme.json")
-
-	theme_name = resolve_active_theme()
-	names = get_theme_names(theme_name) if theme_name else []
-	theme_dirs = [get_theme_dir(name) for name in names]
-
-	manifest = {
-		"active_theme": theme_name,
-		# Slugs, not names: a display name like "Buzz Events Theme" is scrubbed
-		# to its folder name.
-		"theme_chain": [frappe.scrub(name) for name in names],
-		"theme_dirs": theme_dirs,
-		"themes_dir": os.path.dirname(theme_dirs[0])
-		if theme_dirs
-		else os.path.join(engine_module_path, "themes"),
-	}
-	with open(manifest_path, "w") as manifest_file:
-		json.dump(manifest, manifest_file, indent=2)
+def clear_theme_cache():
+	frappe.cache.delete_value("buzz_theme_context")
