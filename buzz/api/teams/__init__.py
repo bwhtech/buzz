@@ -8,28 +8,18 @@ def get_my_teams() -> list[TeamOption]:
 	"""Teams the session user belongs to, for the dashboard team switcher.
 
 	Reads past permissions on purpose: Buzz Team is readable by Event Manager only, while a
-	Frontdesk or Viewer member still has to see the team they are looking at. Rows are
-	filtered to the session user's own enabled memberships.
+	Frontdesk or Viewer member still has to see the team they work in. Rows are filtered to
+	the session user's own enabled memberships.
 	"""
-	memberships = frappe.get_all(
-		"Buzz Team Membership",
-		filters={"user": frappe.session.user, "enabled": 1},
-		fields=["team", "team_role"],
-		ignore_permissions=True,
-	)
-	if not memberships:
-		return []
+	membership = frappe.qb.DocType("Buzz Team Membership")
+	team = frappe.qb.DocType("Buzz Team")
 
-	teams = frappe.get_all(
-		"Buzz Team",
-		filters={"name": ("in", [membership.team for membership in memberships])},
-		fields=["name", "team_name", "logo"],
-		ignore_permissions=True,
-	)
-	team_by_name = {team.name: team for team in teams}
+	my_teams = (
+		frappe.qb.from_(membership)
+		.inner_join(team)
+		.on(team.name == membership.team)
+		.select(team.name, team.team_name, team.logo, membership.team_role)
+		.where((membership.user == frappe.session.user) & (membership.enabled == 1))
+	).run(as_dict=True)
 
-	return [
-		TeamOption(**team_by_name[membership.team], team_role=membership.team_role)
-		for membership in memberships
-		if membership.team in team_by_name
-	]
+	return [TeamOption(**my_team) for my_team in my_teams]
