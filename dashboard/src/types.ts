@@ -30,6 +30,30 @@ export interface FrappeError extends Error {
 	exc_type?: string
 }
 
+// buzz.api.account.get_user_info: every field but is_logged_in and brand_image
+// is absent for guests, so the session fields stay optional.
+export interface UserInfo {
+	is_logged_in: boolean
+	brand_image: string | null
+	name?: string
+	first_name?: string | null
+	last_name?: string | null
+	full_name?: string | null
+	email?: string
+	user_image?: string | null
+	roles?: { role: string }[]
+	language?: string | null
+}
+
+// Rows from buzz.api.teams.get_my_teams: the session user's enabled memberships
+// with the team title and logo joined on.
+export interface TeamOption {
+	name: string
+	team_name: string
+	logo: string | null
+	team_role: string
+}
+
 // Languages served by the translation API (not a Buzz DocType).
 export interface Language {
 	name: string
