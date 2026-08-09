@@ -8,6 +8,12 @@ const routes: RouteRecordRaw[] = [
 		redirect: { name: "bookings-tab" },
 	},
 	{
+		path: "/layout-playground",
+		name: "layout-playground",
+		meta: { fullBleed: true },
+		component: () => import("@/pages/LayoutPlayground.vue"),
+	},
+	{
 		path: "/check-in/:eventName?",
 		name: "check-in",
 		props: true,
