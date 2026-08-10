@@ -30,8 +30,13 @@ class TicketCancellationRequest(Document):
 			frappe.throw(frappe._("You must accept the request in order to submit it!"))
 
 		if self.cancel_full_booking:
-			frappe.get_cached_doc("Event Booking", self.booking).cancel()
+			self.cancel_doc("Event Booking", self.booking)
 		else:
-			# cancel individual tickets
 			for ticket_item in self.tickets:
-				frappe.get_cached_doc("Event Ticket", ticket_item.ticket).cancel()
+				self.cancel_doc("Event Ticket", ticket_item.ticket)
+
+	def cancel_doc(self, doctype: str, name: str) -> None:
+		doc = frappe.get_doc(doctype, name)
+		# A refund settling in a webhook job submits this as Guest.
+		doc.flags.ignore_permissions = self.flags.ignore_permissions
+		doc.cancel()

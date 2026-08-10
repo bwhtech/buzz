@@ -173,6 +173,8 @@ class TestRefundNotification(BookingRefundTestCase):
 		self.make_payment()
 
 	def notify(self, refund_id: str, status: str, amount: float) -> None:
+		# Cancelling a ticket emails the attendee, and the test site has no
+		# outgoing account. Delivery is not what these tests are about.
 		log = frappe.get_doc(
 			{
 				"doctype": "Integration Request",
@@ -198,7 +200,9 @@ class TestRefundNotification(BookingRefundTestCase):
 			}
 		).insert(ignore_permissions=True)
 
-		handle_refund_notification("Integration Request", log.name)
+		with patch("frappe.sendmail"):
+			handle_refund_notification("Integration Request", log.name)
+
 		self.booking.reload()
 		return log
 
@@ -257,7 +261,9 @@ class TestRefundNotification(BookingRefundTestCase):
 	def test_a_webhook_processed_as_guest_still_updates_the_booking(self):
 		# The refund webhook is an allow_guest endpoint, so the job it enqueues
 		# runs as Guest — who has no write permission on Event Booking.
-		self.initiate(self.refund_id("1"), CHARGED_PER_TICKET)
+		tickets = self.booking.get_refund_summary()["tickets"]
+		self.initiate(self.refund_id("1"), CHARGED_PER_TICKET, tickets=[tickets[0]["ticket"]])
+		cancellation_request = self.refunds()[0].cancellation_request
 		frappe.set_user("Guest")
 		self.addCleanup(frappe.set_user, "Administrator")
 
@@ -265,6 +271,39 @@ class TestRefundNotification(BookingRefundTestCase):
 
 		self.assertEqual(self.refunds()[0].status, "Processed")
 		self.assertEqual(self.booking.refund_status, "Partially Refunded")
+		self.assertEqual(
+			frappe.db.get_value("Ticket Cancellation Request", cancellation_request, "docstatus"), 1
+		)
+
+	def test_a_processed_refund_accepts_and_submits_the_queued_cancellation(self):
+		tickets = self.booking.get_refund_summary()["tickets"]
+		self.initiate(self.refund_id("1"), CHARGED_PER_TICKET, tickets=[tickets[0]["ticket"]])
+		cancellation_request = self.refunds()[0].cancellation_request
+
+		self.notify(self.refund_id("1"), "processed", CHARGED_PER_TICKET)
+
+		request = frappe.get_doc("Ticket Cancellation Request", cancellation_request)
+		self.assertEqual(request.status, "Accepted")
+		self.assertEqual(request.docstatus, 1)
+		self.assertEqual(frappe.db.get_value("Event Ticket", tickets[0]["ticket"], "docstatus"), 2)
+
+	def test_a_cancellation_that_cannot_go_through_leaves_the_refund_recorded(self):
+		tickets = self.booking.get_refund_summary()["tickets"]
+		self.initiate(self.refund_id("1"), CHARGED_PER_TICKET, tickets=[tickets[0]["ticket"]])
+		refund = self.refunds()[0]
+		cancellation_request = refund.cancellation_request
+
+		with patch("frappe.sendmail", side_effect=Exception("no outgoing email account")):
+			refund.apply_gateway_status("processed", CHARGED_PER_TICKET)
+
+		self.booking.reload()
+		self.assertEqual(self.refunds()[0].status, "Processed")
+		self.assertEqual(self.booking.refunded_amount, CHARGED_PER_TICKET)
+
+		request = frappe.get_doc("Ticket Cancellation Request", cancellation_request)
+		self.assertEqual(request.docstatus, 0)
+		self.assertEqual(request.status, "In Review")
+		self.assertEqual(frappe.db.get_value("Event Ticket", tickets[0]["ticket"], "docstatus"), 1)
 
 	def test_the_integration_request_is_linked_back_to_the_booking(self):
 		self.initiate(self.refund_id("1"), CHARGED_PER_TICKET)
@@ -375,7 +414,9 @@ class TestRefundCeiling(IntegrationTestCase):
 
 	def settle(self, refund_id: str, amount: float) -> None:
 		refund = frappe.get_doc("Event Booking Refund", {"refund_id": refund_id})
-		refund.apply_gateway_status("processed", amount)
+		with patch("frappe.sendmail"):
+			refund.apply_gateway_status("processed", amount)
+
 		self.booking.reload()
 
 	def test_the_booking_total_is_the_ceiling(self):

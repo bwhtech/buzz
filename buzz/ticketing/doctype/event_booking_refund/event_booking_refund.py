@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe.database.database import savepoint
 from frappe.model.document import Document
 from frappe.utils import flt
 
@@ -37,15 +38,33 @@ class EventBookingRefund(Document):
 		self.amount = flt(amount)
 		self.status = "Failed" if gateway_status == "failed" else "Processed"
 
-		if self.status == "Failed" and self.cancellation_request:
-			frappe.db.set_value(
-				"Ticket Cancellation Request", self.cancellation_request, "status", "Rejected"
-			)
-
-		# The gateway webhook is an allow_guest endpoint, so the job carrying this
-		# call runs as Guest. Authentication already happened on the signature.
+		# Runs as Guest out of the webhook job; the signature already authenticated it.
 		self.flags.ignore_permissions = True
 		self.save()
+
+		if self.cancellation_request:
+			self.settle_cancellation_request()
+
+	def settle_cancellation_request(self) -> None:
+		"""Refunded tickets get cancelled, refused ones stay. Nobody needs to approve
+		what the gateway already settled."""
+		request = frappe.get_doc("Ticket Cancellation Request", self.cancellation_request)
+		if request.docstatus != 0:
+			return
+
+		if self.status == "Failed":
+			request.db_set("status", "Rejected")
+			return
+
+		# The refund is already recorded, so a cancellation that cannot go through
+		# is undone whole and left in review rather than taking the refund with it.
+		with savepoint(catch=Exception):
+			request.status = "Accepted"
+			request.flags.ignore_permissions = True
+			request.submit()
+
+		if frappe.db.get_value("Ticket Cancellation Request", request.name, "docstatus") == 0:
+			frappe.log_error(f"Cancelling tickets after refund {self.name} failed")
 
 	def on_update(self):
 		frappe.get_doc("Event Booking", self.booking).set_refund_status()

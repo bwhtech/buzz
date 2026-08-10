@@ -353,12 +353,11 @@ class EventBooking(Document):
 
 	@frappe.whitelist()
 	def get_refund_summary(self) -> dict:
-		"""What is still refundable on this booking: the amount, and the tickets.
+		"""What is still refundable: the amount, and the tickets.
 
-		Both the refund dialog and `refund` read this, so what an operator is
-		offered and what the server accepts cannot drift apart. Refunds the
-		gateway has not refused hold their money and their tickets; a failed one
-		releases both.
+		The dialog and `refund` both read this, so what an operator is offered
+		cannot drift from what the server accepts. Refunds the gateway has not
+		refused hold their money and their tickets; a failed one releases both.
 		"""
 		committed = sum(flt(refund.amount) for refund in get_committed_refunds(self.name))
 
@@ -369,11 +368,9 @@ class EventBooking(Document):
 		}
 
 	def get_refundable_tickets(self) -> list[dict]:
-		"""Tickets not already spoken for, each with the share of the total the buyer paid for it.
-
-		Attendee amounts are pre-tax and pre-discount, so they are scaled to the
-		amount actually charged before anything is offered up for refund.
-		"""
+		"""Tickets not already spoken for, each with the share of the total the buyer
+		paid for it. Attendee amounts are pre-tax and pre-discount, so they are
+		scaled to what was actually charged."""
 		claimed = get_committed_tickets(self.name)
 		attendee_totals = [flt(attendee.amount) + flt(attendee.add_on_total) for attendee in self.attendees]
 		booked = sum(attendee_totals)
@@ -463,7 +460,7 @@ class EventBooking(Document):
 			)
 
 	def set_refund_status(self) -> None:
-		"""Recompute the summary the booking shows from the refunds raised against it."""
+		"""Recompute the summary from the refunds raised against this booking."""
 		refunds = frappe.get_all(
 			"Event Booking Refund", filters={"booking": self.name}, fields=["amount", "status"]
 		)
