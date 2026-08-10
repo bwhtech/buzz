@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.utils import flt
 from payments.utils import get_payment_gateway_controller
 
 
@@ -166,6 +167,43 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 		)
 
 		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+
+
+def handle_refund_notification(doctype: str, docname: str) -> None:
+	"""Apply a gateway refund webhook to the booking whose payment it belongs to.
+
+	Subscribed via the `handle_refund_notification` hook. Returns nothing on
+	purpose: `call_hook_method` stops at the first handler that returns a value.
+	"""
+	payload = frappe.parse_json(frappe.db.get_value(doctype, docname, "data"))
+	refund = payload.get("payload", {}).get("refund", {}).get("entity", {})
+
+	if not (refund.get("id") and refund.get("payment_id")):
+		return
+
+	payment = frappe.db.get_value(
+		"Event Payment",
+		{"payment_id": refund["payment_id"]},
+		["reference_doctype", "reference_docname"],
+		as_dict=True,
+	)
+
+	if not payment or payment.reference_doctype != "Event Booking":
+		return
+
+	booking = frappe.get_doc("Event Booking", payment.reference_docname)
+	booking.apply_refund_notification(
+		refund_id=refund["id"],
+		gateway_status=refund.get("status"),
+		amount=flt(refund.get("amount")) / 100,  # gateways report money in the minor unit
+	)
+
+	frappe.db.set_value(
+		doctype,
+		docname,
+		{"reference_doctype": booking.doctype, "reference_docname": booking.name},
+		update_modified=False,
+	)
 
 
 # TODO: use it later!
