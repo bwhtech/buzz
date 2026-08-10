@@ -22,6 +22,7 @@
 				:lang="(item as LanguageOption).code"
 				role="menuitemradio"
 				:aria-checked="(item as LanguageOption).isActive ? 'true' : 'false'"
+				:data-testid="`language-option-${(item as LanguageOption).code}`"
 			>
 				<Check
 					class="h-4 w-4 shrink-0"

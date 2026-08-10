@@ -2,6 +2,7 @@ import { session } from "@/data/session"
 import { userResource } from "@/data/user"
 import type { Language } from "@/types"
 import {
+	LANGUAGE_QUERY_PARAM,
 	buildPreferredLanguageCookie,
 	readPreferredLanguage,
 	resolveRequestedLanguage,
@@ -9,6 +10,7 @@ import {
 } from "@/utils/language"
 import { createResource } from "frappe-ui"
 import { type ComputedRef, computed, watch } from "vue"
+import type { Router } from "vue-router"
 
 // frappe-ui types `data` as `{}`; this endpoint returns Language rows.
 type LanguagesResource = Omit<ReturnType<typeof createResource>, "data"> & {
@@ -77,26 +79,44 @@ function persistRequestedLanguage(
 	if (!languageToApply) return
 
 	document.cookie = buildPreferredLanguageCookie(languageToApply)
-	window.location.reload()
+
+	// Navigating to the cleaned URL both drops the parameter and reloads for the
+	// new translations. The page is torn down either way, so writing the address
+	// bar directly is safe here.
+	const { cleanedUrl } = takeLanguageFromQuery(window.location.href)
+	window.location.replace(cleanedUrl ?? window.location.href)
+}
+
+/**
+ * Drop `?lang` through the router rather than history.replaceState.
+ *
+ * The router captures the location when it is created and writes it back on its
+ * first navigation, so a replaceState before that gets undone; going through
+ * the router also keeps its `currentRoute.query` in step with the address bar,
+ * so a later push that spreads the existing query cannot resurrect the value.
+ */
+function stripLanguageQueryParam(router: Router) {
+	const route = router.currentRoute.value
+
+	if (!(LANGUAGE_QUERY_PARAM in route.query)) return
+
+	const { [LANGUAGE_QUERY_PARAM]: _applied, ...query } = route.query
+	router.replace({ path: route.path, query, hash: route.hash })
 }
 
 /**
  * Honour `?lang=xx` on boot, so a link can be shared in a specific language.
  *
- * Reading and stripping happen synchronously — the router is about to run, and
- * a redirect would carry the parameter away. Applying it has to wait for the
- * enabled languages, which is what the requested code is validated against.
+ * The parameter is read synchronously — the router is about to run and may
+ * redirect — but applying it has to wait for the enabled languages, which is
+ * what the requested code is validated against.
  */
-export function applyLanguageFromQuery() {
-	const { cleanedUrl, requestedLanguage } = takeLanguageFromQuery(
-		window.location.href,
-	)
+export function applyLanguageFromQuery(router: Router) {
+	const { requestedLanguage } = takeLanguageFromQuery(window.location.href)
 
 	if (!requestedLanguage) return
 
-	if (cleanedUrl) {
-		window.history.replaceState(window.history.state, "", cleanedUrl)
-	}
+	router.isReady().then(() => stripLanguageQueryParam(router))
 
 	const languages = availableLanguages()
 

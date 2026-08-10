@@ -37,9 +37,9 @@ const app = createApp(App)
 
 setConfig("resourceFetcher", frappeRequest)
 
-// Before the router reads the address bar: a `?lang=` link is a one-shot
+// Read before the router runs and may redirect: a `?lang=` link is a one-shot
 // instruction that gets applied and then stripped.
-applyLanguageFromQuery()
+applyLanguageFromQuery(router)
 
 app.use(router)
 app.use(translationPlugin)

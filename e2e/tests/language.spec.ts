@@ -6,6 +6,18 @@ const TARGET_LANGUAGE = "de";
 const switcher = (page: Page) => page.getByTestId("language-switcher");
 const activeLanguage = (page: Page) => switcher(page).locator("span[lang]");
 
+/**
+ * Pick a language from the open dropdown.
+ *
+ * Selected by test id rather than by role: reka-ui's menu item renders
+ * `as-child`, and its own `role="menuitem"` wins over the one the template
+ * sets, so `[role="menuitemradio"]` never matches.
+ */
+async function chooseLanguage(page: Page, languageCode: string) {
+	await switcher(page).click();
+	await page.getByTestId(`language-option-${languageCode}`).click();
+}
+
 async function preferredLanguageCookie(page: Page): Promise<string | undefined> {
 	const cookies = await page.context().cookies();
 	return cookies.find((cookie) => cookie.name === "preferred_language")?.value;
@@ -30,8 +42,7 @@ test.describe("Language switcher — guest", () => {
 		await page.waitForLoadState("networkidle");
 
 		await expect(switcher(page)).toBeVisible();
-		await switcher(page).click();
-		await page.locator(`[role="menuitemradio"][lang="${TARGET_LANGUAGE}"]`).click();
+		await chooseLanguage(page, TARGET_LANGUAGE);
 
 		await expect(activeLanguage(page)).toHaveAttribute("lang", TARGET_LANGUAGE);
 		expect(await preferredLanguageCookie(page)).toBe(TARGET_LANGUAGE);
@@ -42,8 +53,7 @@ test.describe("Language switcher — guest", () => {
 		await page.goto("/b");
 		await page.waitForLoadState("networkidle");
 
-		await switcher(page).click();
-		await page.locator(`[role="menuitemradio"][lang="${TARGET_LANGUAGE}"]`).click();
+		await chooseLanguage(page, TARGET_LANGUAGE);
 		await expect(activeLanguage(page)).toHaveAttribute("lang", TARGET_LANGUAGE);
 
 		await page.goto("/b");
