@@ -32,6 +32,11 @@
   "currency",
   "coupon_code",
   "discount_amount",
+  "refund_section",
+  "refund_status",
+  "column_break_refund",
+  "refunded_amount",
+  "refunds",
   "billing_details_section",
   "invoice_requested",
   "tax_id",
@@ -182,6 +187,41 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.refund_status || (doc.refunds && doc.refunds.length)",
+   "fieldname": "refund_section",
+   "fieldtype": "Section Break",
+   "label": "Refund"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "refund_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Refund Status",
+   "options": "\nRefund Initiated\nPartially Refunded\nRefunded",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_refund",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "refunded_amount",
+   "fieldtype": "Currency",
+   "label": "Refunded Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "refunds",
+   "fieldtype": "Table",
+   "label": "Refunds",
+   "options": "Event Booking Refund",
+   "read_only": 1
+  },
+  {
    "fieldname": "billing_details_section",
    "fieldtype": "Section Break",
    "label": "Billing Details"
@@ -272,7 +312,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2026-05-03 07:18:23.131237",
+ "modified": "2026-08-11 10:30:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Booking",
