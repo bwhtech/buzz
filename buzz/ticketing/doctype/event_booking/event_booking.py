@@ -9,6 +9,10 @@ from frappe.utils import cstr, flt
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.payments import get_controller, mark_payment_as_received
+from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
+	get_committed_refunds,
+	get_committed_tickets,
+)
 
 RAZORPAY = "Razorpay"
 
@@ -346,12 +350,29 @@ class EventBooking(Document):
 			frappe.get_cached_doc("Event Ticket", ticket).cancel()
 
 	@frappe.whitelist()
+	def get_refund_summary(self) -> dict:
+		"""What is still refundable on this booking: the amount, and the tickets.
+
+		Both the refund dialog and `refund` read this, so what an operator is
+		offered and what the server accepts cannot drift apart. Refunds the
+		gateway has not refused hold their money and their tickets; a failed one
+		releases both.
+		"""
+		committed = sum(flt(refund.amount) for refund in get_committed_refunds(self.name))
+
+		return {
+			"committed": committed,
+			"remaining": flt(self.total_amount) - committed,
+			"tickets": self.get_refundable_tickets(),
+		}
+
 	def get_refundable_tickets(self) -> list[dict]:
-		"""Tickets of this booking, each with the share of the total the buyer paid for it.
+		"""Tickets not already spoken for, each with the share of the total the buyer paid for it.
 
 		Attendee amounts are pre-tax and pre-discount, so they are scaled to the
 		amount actually charged before anything is offered up for refund.
 		"""
+		claimed = get_committed_tickets(self.name)
 		attendee_totals = [flt(attendee.amount) + flt(attendee.add_on_total) for attendee in self.attendees]
 		booked = sum(attendee_totals)
 		charged_share = (flt(self.total_amount) / booked) if booked else 0
@@ -373,9 +394,13 @@ class EventBooking(Document):
 			if not matches:
 				continue
 
+			ticket = matches.pop(0)
+			if ticket in claimed:
+				continue
+
 			refundable.append(
 				{
-					"ticket": matches.pop(0),
+					"ticket": ticket,
 					"attendee": attendee.full_name
 					or " ".join(part for part in (attendee.first_name, attendee.last_name) if part),
 					"ticket_type": attendee.ticket_type,
@@ -400,56 +425,58 @@ class EventBooking(Document):
 			frappe.throw(_("Refunds are only supported for Razorpay at the moment"))
 
 		tickets = frappe.parse_json(tickets) if isinstance(tickets, str) else tickets
+		self.validate_refund_amount(flt(amount))
+
 		refund = get_controller(payment.payment_gateway).refund_payment(payment.payment_id, flt(amount))
 
-		self.append(
-			"refunds",
+		frappe.get_doc(
 			{
+				"doctype": "Event Booking Refund",
+				"booking": self.name,
+				"payment": payment.name,
 				"refund_id": refund.get("id"),
 				"status": "Initiated",
 				"amount": flt(refund.get("amount")) / 100,
 				"currency": self.currency,
-				"tickets": "\n".join(tickets) if tickets else None,
+				"tickets": [{"ticket": ticket} for ticket in tickets or []],
 				"cancellation_request": self.request_ticket_cancellation(tickets),
-			},
-		)
-		self.refund_status = "Refund Initiated"
-		self.save()
+			}
+		).insert()
+
+		self.set_refund_status()
 
 		return self.refund_status
 
-	def apply_refund_notification(self, refund_id: str, gateway_status: str, amount: float) -> None:
-		"""Record what the gateway settled. Called once per webhook, and the same
-		event arrives more than once, so the row is keyed on `refund_id`."""
-		row = next((refund for refund in self.refunds if refund.refund_id == refund_id), None)
-		if not row:
-			row = self.append("refunds", {"refund_id": refund_id, "currency": self.currency})
+	def validate_refund_amount(self, amount: float) -> None:
+		remaining = self.get_refund_summary()["remaining"]
 
-		row.amount = flt(amount)
-		row.status = "Failed" if gateway_status == "failed" else "Processed"
+		if amount <= 0:
+			frappe.throw(_("Refund amount must be greater than 0"))
 
-		if row.status == "Failed" and row.cancellation_request:
-			frappe.db.set_value("Ticket Cancellation Request", row.cancellation_request, "status", "Rejected")
-
-		self.set_refund_status()
-		# The gateway webhook is an allow_guest endpoint, so the job carrying this
-		# call runs as Guest. Authentication already happened on the signature.
-		self.flags.ignore_permissions = True
-		self.save()
+		if amount > remaining:
+			frappe.throw(
+				_("Only {0} is left to refund on this booking").format(
+					frappe.format_value(remaining, {"fieldtype": "Currency", "options": "currency"}, self)
+				)
+			)
 
 	def set_refund_status(self) -> None:
-		self.refunded_amount = sum(
-			flt(refund.amount) for refund in self.refunds if refund.status == "Processed"
+		"""Recompute the summary the booking shows from the refunds raised against it."""
+		refunds = frappe.get_all(
+			"Event Booking Refund", filters={"booking": self.name}, fields=["amount", "status"]
 		)
+		self.refunded_amount = sum(flt(refund.amount) for refund in refunds if refund.status == "Processed")
 
 		if self.refunded_amount >= flt(self.total_amount):
-			self.refund_status = "Refunded"
+			status = "Refunded"
 		elif self.refunded_amount:
-			self.refund_status = "Partially Refunded"
-		elif any(refund.status == "Initiated" for refund in self.refunds):
-			self.refund_status = "Refund Initiated"
+			status = "Partially Refunded"
+		elif any(refund.status == "Initiated" for refund in refunds):
+			status = "Refund Initiated"
 		else:
-			self.refund_status = ""
+			status = ""
+
+		self.db_set({"refunded_amount": self.refunded_amount, "refund_status": status}, notify=True)
 
 	def get_received_payment(self):
 		payment = frappe.get_all(

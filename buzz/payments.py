@@ -184,16 +184,30 @@ def handle_refund_notification(doctype: str, docname: str) -> None:
 	payment = frappe.db.get_value(
 		"Event Payment",
 		{"payment_id": refund["payment_id"]},
-		["reference_doctype", "reference_docname"],
+		["name", "reference_doctype", "reference_docname"],
 		as_dict=True,
 	)
 
 	if not payment or payment.reference_doctype != "Event Booking":
 		return
 
-	booking = frappe.get_doc("Event Booking", payment.reference_docname)
-	booking.apply_refund_notification(
-		refund_id=refund["id"],
+	# The same event arrives more than once, so the refund is keyed on its id.
+	existing = frappe.db.exists("Event Booking Refund", {"refund_id": refund["id"]})
+	refund_doc = (
+		frappe.get_doc("Event Booking Refund", existing)
+		if existing
+		else frappe.get_doc(
+			{
+				"doctype": "Event Booking Refund",
+				"booking": payment.reference_docname,
+				"payment": payment.name,
+				"refund_id": refund["id"],
+				"currency": frappe.db.get_value("Event Booking", payment.reference_docname, "currency"),
+			}
+		).insert(ignore_permissions=True)
+	)
+
+	refund_doc.apply_gateway_status(
 		gateway_status=refund.get("status"),
 		amount=flt(refund.get("amount")) / 100,  # gateways report money in the minor unit
 	)
@@ -201,7 +215,7 @@ def handle_refund_notification(doctype: str, docname: str) -> None:
 	frappe.db.set_value(
 		doctype,
 		docname,
-		{"reference_doctype": booking.doctype, "reference_docname": booking.name},
+		{"reference_doctype": "Event Booking", "reference_docname": payment.reference_docname},
 		update_modified=False,
 	)
 
