@@ -44,6 +44,8 @@ class EventBooking(Document):
 		offline_payment_method: DF.Data | None
 		payment_method: DF.Data | None
 		payment_status: DF.Literal["Unpaid", "Paid", "Verification Pending"]
+		refund_status: DF.Literal["", "Refund Initiated", "Partially Refunded", "Refunded"]
+		refunded_amount: DF.Currency
 		status: DF.Literal["Confirmed", "Approval Pending", "Approved", "Rejected"]
 		tax_amount: DF.Currency
 		tax_id: DF.Data | None
