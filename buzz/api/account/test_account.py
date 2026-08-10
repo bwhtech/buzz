@@ -38,12 +38,16 @@ class LanguageTestCase(IntegrationTestCase):
 		return frappe.get_system_settings("language") or "en"
 
 	def other_enabled_language(self) -> str:
-		"""An enabled language that is not the site default."""
+		"""An enabled language that is not the site default.
+
+		Plain codes only: a regional one like `pt-BR` is a different string once
+		it has been through werkzeug's Accept-Language parsing.
+		"""
 		for language in get_all_languages():
-			if language != self.default_language():
+			if language != self.default_language() and language.isalpha():
 				return language
 
-		self.skipTest("site has only one enabled language")
+		self.skipTest("site has no second enabled language with a plain code")
 
 	def set_user_language(self, language: str | None):
 		original = frappe.db.get_value("User", "Administrator", "language")
