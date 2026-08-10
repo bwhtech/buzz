@@ -1,6 +1,7 @@
 import { createApp } from "vue"
 
 import App from "./App.vue"
+import { applyLanguageFromQuery } from "./composables/useLanguage"
 import router from "./router"
 import { initSocket } from "./socket"
 
@@ -35,6 +36,10 @@ const globalComponents = {
 const app = createApp(App)
 
 setConfig("resourceFetcher", frappeRequest)
+
+// Before the router reads the address bar: a `?lang=` link is a one-shot
+// instruction that gets applied and then stripped.
+applyLanguageFromQuery()
 
 app.use(router)
 app.use(translationPlugin)

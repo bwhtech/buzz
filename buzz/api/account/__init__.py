@@ -3,6 +3,7 @@ from frappe.translate import get_all_translations
 
 from buzz.api.account.exceptions import UnknownLanguage
 from buzz.api.account.schemas import GuestInfoResponse, LanguageOption, UserInfoResponse
+from buzz.api.account.services import get_request_language
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
@@ -11,6 +12,7 @@ def get_user_info() -> UserInfoResponse | GuestInfoResponse:
 		return GuestInfoResponse(
 			is_logged_in=False,
 			brand_image=frappe.get_cached_value("Website Settings", "Website Settings", "banner_image"),
+			language=get_request_language(),
 		)
 
 	user = frappe.get_cached_doc("User", frappe.session.user)
@@ -40,7 +42,10 @@ def get_enabled_languages() -> list[LanguageOption]:
 	return [LanguageOption(**language) for language in languages]
 
 
-@frappe.whitelist()
+# Deliberately not guest-whitelisted: every guest shares the one `Guest` User,
+# so a write here would set the language for every other visitor. Guests switch
+# language through the `preferred_language` cookie instead.
+@frappe.whitelist(methods=["POST"])
 def update_user_language(language_code: str) -> None:
 	if not frappe.db.exists("Language", {"language_code": language_code}):
 		UnknownLanguage.throw(language_code=language_code)
@@ -50,12 +55,7 @@ def update_user_language(language_code: str) -> None:
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 def get_translations() -> dict:
-	if frappe.session.user != "Guest":
-		language = frappe.db.get_value("User", frappe.session.user, "language")
-	else:
-		language = frappe.db.get_single_value("System Settings", "language")
-
-	return get_all_translations(language)
+	return get_all_translations(get_request_language())
 
 
 def has_app_permission() -> bool:

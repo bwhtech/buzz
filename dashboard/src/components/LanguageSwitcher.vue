@@ -1,7 +1,13 @@
 <template>
 	<Dropdown :options="languageOptions">
 		<template #default="{ open }">
-			<Button variant="ghost" size="md" :loading="isSwitching" :aria-label="triggerLabel">
+			<Button
+				variant="ghost"
+				size="md"
+				:loading="isSwitching"
+				:aria-label="triggerLabel"
+				data-testid="language-switcher"
+			>
 				<div class="flex items-center gap-2">
 					<Globe class="w-4 h-4" />
 					<span :lang="currentLanguage">{{ currentLanguageName }}</span>
