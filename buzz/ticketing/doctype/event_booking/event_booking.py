@@ -373,7 +373,8 @@ class EventBooking(Document):
 
 	def get_refundable_tickets(self) -> list[dict]:
 		"""
-		Get the tickets no committed refund has claimed, one row per ticket.
+		Get the tickets neither a committed refund nor the front desk has claimed,
+		one row per ticket.
 
 		Returns:
 		    ticket: name of the Event Ticket
@@ -388,13 +389,16 @@ class EventBooking(Document):
 		# Attendee amounts are pre-tax and pre-discount, so scale them to what was charged.
 		charged_share = (flt(self.total_amount) / booked) if booked else 0
 
-		tickets_by_attendee = {}
-		for ticket in frappe.get_all(
+		booked_tickets = frappe.get_all(
 			"Event Ticket",
 			filters={"booking": self.name, "docstatus": 1},
 			fields=["name", "attendee_email", "ticket_type"],
 			order_by="creation asc",
-		):
+		)
+		used = get_checked_in_tickets([ticket.name for ticket in booked_tickets])
+
+		tickets_by_attendee = {}
+		for ticket in booked_tickets:
 			tickets_by_attendee.setdefault((ticket.attendee_email, cstr(ticket.ticket_type)), []).append(
 				ticket.name
 			)
@@ -406,7 +410,7 @@ class EventBooking(Document):
 				continue
 
 			ticket = matches.pop(0)
-			if ticket in claimed:
+			if ticket in claimed or ticket in used:
 				continue
 
 			refundable.append(
@@ -469,6 +473,10 @@ class EventBooking(Document):
 					)
 				)
 			)
+
+		if get_checked_in_tickets(tickets or []):
+			# The attendee has been through the door, so the ticket has been used.
+			frappe.throw(_("A ticket that has been checked in cannot be refunded"))
 
 		refundable = {ticket["ticket"] for ticket in summary["tickets"]}
 		if not set(tickets or []) <= refundable:
@@ -600,3 +608,13 @@ class EventBooking(Document):
 				frappe.throw(_("No attendees with eligible ticket type for this coupon"))
 
 			self.total_amount = self.net_amount - self.discount_amount
+
+
+def get_checked_in_tickets(tickets: list[str]) -> set[str]:
+	"""Of the tickets given, the ones whose attendee has already been through the door."""
+	if not tickets:
+		return set()
+
+	return set(
+		frappe.get_all("Event Check In", filters={"ticket": ("in", tickets), "docstatus": 1}, pluck="ticket")
+	)

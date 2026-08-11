@@ -2,9 +2,14 @@ from typing import TYPE_CHECKING
 
 import frappe
 from frappe import _
-from frappe.utils import format_date, format_time, today
+from frappe.utils import cstr, format_date, format_time, today
 
-from buzz.api.checkin.exceptions import AlreadyCheckedIn, TicketCancelled, TicketNotFound
+from buzz.api.checkin.exceptions import (
+	AlreadyCheckedIn,
+	TicketCancelled,
+	TicketNotFound,
+	TicketRefunded,
+)
 from buzz.api.checkin.schemas import (
 	CheckinResponse,
 	PaymentDetails,
@@ -13,6 +18,7 @@ from buzz.api.checkin.schemas import (
 )
 from buzz.api.exceptions import NotPermitted
 from buzz.permissions import has_team_access
+from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import get_committed_tickets
 
 if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
@@ -71,6 +77,11 @@ class CheckinService:
 	def ensure_checkin_allowed(self) -> None:
 		if self.ticket.docstatus == CANCELLED:
 			TicketCancelled.throw()
+
+		# A refund that has not failed is money on its way back to the attendee,
+		# whether or not it has got as far as cancelling the ticket.
+		if self.ticket.booking and self.ticket_id in get_committed_tickets(self.ticket.booking):
+			TicketRefunded.throw()
 
 		existing = frappe.db.exists("Event Check In", {"ticket": self.ticket_id, "date": self.date})
 		if existing:
@@ -139,4 +150,9 @@ class CheckinService:
 			fields=["name", "amount", "currency"],
 			limit=1,
 		)
-		return PaymentDetails(**payments[0]) if payments else None
+		if not payments:
+			return None
+
+		payment = payments[0]
+		# Event Payment is named by autoincrement, so its name arrives as an int.
+		return PaymentDetails(name=cstr(payment.name), amount=payment.amount, currency=payment.currency)

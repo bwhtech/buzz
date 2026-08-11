@@ -5,8 +5,11 @@ from unittest.mock import MagicMock, patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import today
 from pydantic import ValidationError
 
+from buzz.api.checkin import validate_ticket_for_checkin
+from buzz.api.exceptions import Conflict
 from buzz.payments import handle_refund_notification
 
 TICKET_PRICE = 500
@@ -68,6 +71,9 @@ class BookingRefundTestCase(IntegrationTestCase):
 			)
 		]
 
+	def check_in(self, ticket: str) -> None:
+		frappe.get_doc({"doctype": "Event Check In", "ticket": ticket, "date": today()}).insert().submit()
+
 	def make_payment(self, gateway: str = "Razorpay", payment_id: str = "pay_123") -> None:
 		make_payment_gateway(gateway)
 		frappe.get_doc(
@@ -107,6 +113,16 @@ class TestRefundSummary(BookingRefundTestCase):
 
 		self.assertEqual(summary["committed"], 0)
 		self.assertEqual(summary["remaining"], self.booking.total_amount)
+
+	def test_a_checked_in_ticket_is_not_offered(self):
+		# The attendee has been through the door, so the ticket has been used.
+		used = self.booking.get_refund_summary()["tickets"][0]["ticket"]
+		self.check_in(used)
+
+		summary = self.booking.get_refund_summary()
+
+		self.assertNotIn(used, [ticket["ticket"] for ticket in summary["tickets"]])
+		self.assertEqual(len(summary["tickets"]), 1)
 
 
 class TestBookingRefund(BookingRefundTestCase):
@@ -186,6 +202,30 @@ class TestBookingRefund(BookingRefundTestCase):
 
 		self.assertFalse(frappe.db.exists("Ticket Cancellation Request", {"booking": self.booking.name}))
 		self.assertEqual(frappe.db.get_value("Event Ticket", foreign_ticket, "docstatus"), 1)
+
+	def test_a_ticket_that_has_been_checked_in_is_refused(self):
+		self.make_payment()
+		tickets = self.booking.get_refund_summary()["tickets"]
+		self.check_in(tickets[0]["ticket"])
+
+		with self.assertRaises(frappe.ValidationError) as raised:
+			self.refund(amount=CHARGED_PER_TICKET, tickets=[tickets[0]["ticket"]])
+
+		self.assertIn("checked in", str(raised.exception))
+		self.assertFalse(self.refunds())
+
+	def test_a_ticket_a_refund_holds_cannot_be_checked_in(self):
+		# The refund has not settled, so the ticket is still live, but the money
+		# is already on its way back and the door must not let it through.
+		self.make_payment()
+		tickets = self.booking.get_refund_summary()["tickets"]
+
+		self.refund(amount=CHARGED_PER_TICKET, tickets=[tickets[0]["ticket"]])
+
+		with self.assertRaises(Conflict):
+			validate_ticket_for_checkin(tickets[0]["ticket"])
+
+		self.assertEqual(frappe.local.message_log[-1]["title"], "Ticket Refunded")
 
 	def test_a_custom_amount_refund_cancels_no_tickets(self):
 		self.make_payment()

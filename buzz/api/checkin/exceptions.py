@@ -13,6 +13,11 @@ class TicketCancelled(Conflict):
 	message = _lt("This ticket has been cancelled and cannot be checked in.")
 
 
+class TicketRefunded(Conflict):
+	title = _lt("Ticket Refunded")
+	message = _lt("This ticket has been refunded and cannot be checked in.")
+
+
 class AlreadyCheckedIn(Conflict):
 	title = _lt("Already Checked In")
 	message = _lt("This ticket was already checked in today, at {checked_in_at}.")
