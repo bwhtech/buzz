@@ -190,6 +190,5 @@ class EventTicket(Document):
 			subject=f"Your ticket to {event_title} is cancelled.",
 			message=f"Hi {self.attendee_name}, your ticket has been cancelled successfully. Sad to see you go.",
 			header=[("Ticket Cancelled"), "red"],
-			delayed=False,
 			retry=2,
 		)

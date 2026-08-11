@@ -57,6 +57,12 @@ scheduler_events = {"daily": ["buzz.tasks.unpublish_ticket_types_after_last_date
 
 before_tests = "buzz.install.before_tests"
 
+# Payments
+# --------
+
+# Fired by the payments app when a gateway settles a refund.
+handle_refund_notification = "buzz.payments.handle_refund_notification"
+
 
 doc_events = {
 	"User": {
