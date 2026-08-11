@@ -1,0 +1,98 @@
+{
+ "actions": [],
+ "creation": "2026-08-11 12:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "hero_section",
+  "hero_tagline",
+  "hero_description",
+  "featured_section",
+  "featured_label",
+  "sections_section",
+  "yatra_heading",
+  "conferences_heading"
+ ],
+ "fields": [
+  {
+   "fieldname": "hero_section",
+   "fieldtype": "Section Break",
+   "label": "Hero"
+  },
+  {
+   "default": "Conferences, Meetups, Webinars",
+   "description": "Appended to the site name in the page title and social preview.",
+   "fieldname": "hero_tagline",
+   "fieldtype": "Data",
+   "label": "Hero Tagline"
+  },
+  {
+   "default": "Conferences, yatras, meetups, and webinars.",
+   "fieldname": "hero_description",
+   "fieldtype": "Data",
+   "label": "Hero Description"
+  },
+  {
+   "fieldname": "featured_section",
+   "fieldtype": "Section Break",
+   "label": "Featured Event"
+  },
+  {
+   "default": "Featured conference",
+   "fieldname": "featured_label",
+   "fieldtype": "Data",
+   "label": "Featured Label"
+  },
+  {
+   "fieldname": "sections_section",
+   "fieldtype": "Section Break",
+   "label": "Sections"
+  },
+  {
+   "default": "Upcoming Yatra",
+   "fieldname": "yatra_heading",
+   "fieldtype": "Data",
+   "label": "Yatra Heading"
+  },
+  {
+   "default": "Upcoming Conferences",
+   "fieldname": "conferences_heading",
+   "fieldtype": "Data",
+   "label": "Conferences Heading"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-08-11 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Buzz Themes",
+ "name": "Buzz Events Theme Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Website Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

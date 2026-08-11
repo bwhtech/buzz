@@ -1,8 +1,10 @@
 {% extends "components/base.html" %}
 
+{% set theme_config = buzz_theme_config() %}
+
 {% block title %}{{ app_name }}{% endblock %}
 {% block og_title %}{{ app_name }}{% endblock %}
-{% block og_description %}Conferences, yatras, meetups, and webinars.{% endblock %}
+{% block og_description %}{{ theme_config.hero_description or 'Conferences, yatras, meetups, and webinars.' }}{% endblock %}
 {% block og_url %}{{ frappe.utils.get_url() }}/home{% endblock %}
 
 {% block body %}
@@ -74,7 +76,7 @@
           {% if featured_image %}
           <img src="{{ featured_image }}" alt="{{ featured.title }} banner" fetchpriority="high" />
           {% endif %}
-          <div class="py-2 marker text-center" style="background: var(--surface); font-size: 20px; transform: rotate(-1deg);">&#9733; the big one!</div>
+          <div class="py-2 marker text-center" style="background: var(--surface); font-size: 20px; transform: rotate(-1deg);">&#9733; {{ theme_config.featured_caption or 'the big one!' }}</div>
         </div>
       </div>
     </a>
@@ -84,7 +86,7 @@
 {% if upcoming_yatra %}
 <section aria-labelledby="yatra-heading">
   <div class="section-header">
-    <h2 id="yatra-heading" class="section-header__title"><span class="star">&#9733;</span> upcoming yatra</h2>
+    <h2 id="yatra-heading" class="section-header__title"><span class="star">&#9733;</span> {{ theme_config.yatra_heading or 'upcoming yatra' }}</h2>
     <a href="/category/yatra" class="section-header__link">all stops <i data-lucide="arrow-right"></i></a>
   </div>
   <div class="grid gap-6 md:grid-cols-2">
@@ -108,7 +110,7 @@
 {% set upcoming_conf_rest = upcoming_conferences[1:] if featured else upcoming_conferences %}
 <section aria-labelledby="conf-heading" class="mt-12">
   <div class="section-header">
-    <h2 id="conf-heading" class="section-header__title"><span class="star">&#9733;</span> upcoming conferences</h2>
+    <h2 id="conf-heading" class="section-header__title"><span class="star">&#9733;</span> {{ theme_config.conferences_heading or 'upcoming conferences' }}</h2>
     <a href="/category/conferences" class="section-header__link">all <i data-lucide="arrow-right"></i></a>
   </div>
   <div class="grid gap-6 md:grid-cols-2">
@@ -127,7 +129,7 @@
     {% endfor %}
     <div class="box p-6 flex flex-col items-center justify-center text-center" style="background: var(--surface);">
       <div class="label">2026 &middot; in planning</div>
-      <div class="marker mt-2 leading-tight" style="font-size: 28px;">more conferences<br>announced soon</div>
+      <div class="marker mt-2 leading-tight" style="font-size: 28px;">{{ theme_config.planning_note or 'more conferences announced soon' }}</div>
     </div>
   </div>
 </section>

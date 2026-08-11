@@ -1,8 +1,11 @@
 {% extends "components/base.html" %}
 
-{% block title %}{{ app_name }} &mdash; Conferences, Meetups, Webinars{% endblock %}
-{% block og_title %}{{ app_name }} &mdash; Conferences, Meetups, Webinars{% endblock %}
-{% block og_description %}Conferences, yatras, meetups, and webinars.{% endblock %}
+{% set theme_config = buzz_theme_config() %}
+{% set hero_tagline = theme_config.hero_tagline or 'Conferences, Meetups, Webinars' %}
+
+{% block title %}{{ app_name }} &mdash; {{ hero_tagline }}{% endblock %}
+{% block og_title %}{{ app_name }} &mdash; {{ hero_tagline }}{% endblock %}
+{% block og_description %}{{ theme_config.hero_description or 'Conferences, yatras, meetups, and webinars.' }}{% endblock %}
 {% block og_url %}{{ frappe.utils.get_url() }}/home{% endblock %}
 
 {% block body %}
@@ -68,7 +71,7 @@
         <div class="p-8 md:p-12 flex flex-col justify-between gap-8">
           <div>
             <div class="flex justify-between items-start gap-3">
-              <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Featured conference</div>
+              <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">{{ theme_config.featured_label or 'Featured conference' }}</div>
               <div class="bg-pill text-pill-fg px-3 py-1 font-ui font-bold text-[12px] tracking-[0.04em] whitespace-nowrap rounded">{{ featured_date }}</div>
             </div>
             <h3 class="font-ui font-extrabold text-[32px] md:text-[40px] leading-[1.05] mt-4 tracking-tight">
@@ -102,7 +105,7 @@
   {% endif %}
 
   <section aria-labelledby="yatra-heading" class="mt-16">
-    {% set title = 'Upcoming Yatra' %}
+    {% set title = theme_config.yatra_heading or 'Upcoming Yatra' %}
     {% set link_href = '/category/yatra' %}
     {% set link_label = 'View all' %}
     {% include "components/section_header.html" %}
@@ -133,7 +136,7 @@
 
   {% set upcoming_conf_rest = upcoming_conferences[1:] if featured else upcoming_conferences %}
   <section aria-labelledby="conf-heading" class="mt-16">
-    {% set title = 'Upcoming Conferences' %}
+    {% set title = theme_config.conferences_heading or 'Upcoming Conferences' %}
     {% set link_href = '/category/conferences' %}
     {% set link_label = 'View all' %}
     {% include "components/section_header.html" %}

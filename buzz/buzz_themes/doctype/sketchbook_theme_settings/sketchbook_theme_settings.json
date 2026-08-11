@@ -1,0 +1,98 @@
+{
+ "actions": [],
+ "creation": "2026-08-11 12:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "hero_section",
+  "hero_description",
+  "featured_section",
+  "featured_caption",
+  "sections_section",
+  "yatra_heading",
+  "conferences_heading",
+  "planning_note"
+ ],
+ "fields": [
+  {
+   "fieldname": "hero_section",
+   "fieldtype": "Section Break",
+   "label": "Hero"
+  },
+  {
+   "default": "Conferences, yatras, meetups, and webinars.",
+   "description": "Used as the social preview description.",
+   "fieldname": "hero_description",
+   "fieldtype": "Data",
+   "label": "Hero Description"
+  },
+  {
+   "fieldname": "featured_section",
+   "fieldtype": "Section Break",
+   "label": "Featured Event"
+  },
+  {
+   "default": "the big one!",
+   "fieldname": "featured_caption",
+   "fieldtype": "Data",
+   "label": "Featured Caption"
+  },
+  {
+   "fieldname": "sections_section",
+   "fieldtype": "Section Break",
+   "label": "Sections"
+  },
+  {
+   "default": "upcoming yatra",
+   "fieldname": "yatra_heading",
+   "fieldtype": "Data",
+   "label": "Yatra Heading"
+  },
+  {
+   "default": "upcoming conferences",
+   "fieldname": "conferences_heading",
+   "fieldtype": "Data",
+   "label": "Conferences Heading"
+  },
+  {
+   "default": "more conferences announced soon",
+   "fieldname": "planning_note",
+   "fieldtype": "Data",
+   "label": "Planning Note"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-08-11 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Buzz Themes",
+ "name": "Sketchbook Theme Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Website Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
