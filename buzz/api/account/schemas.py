@@ -4,6 +4,8 @@ from buzz.api.schemas import APIResponse
 class GuestInfoResponse(APIResponse):
 	is_logged_in: bool
 	brand_image: str | None
+	# Resolved per browser, so the switcher can show a guest the language in effect.
+	language: str
 
 
 class UserInfoResponse(APIResponse):

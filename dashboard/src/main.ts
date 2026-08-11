@@ -1,6 +1,7 @@
 import { createApp } from "vue"
 
 import App from "./App.vue"
+import { applyLanguageFromQuery } from "./composables/useLanguage"
 import router from "./router"
 import { initSocket } from "./socket"
 
@@ -35,6 +36,9 @@ const globalComponents = {
 const app = createApp(App)
 
 setConfig("resourceFetcher", frappeRequest)
+
+// Before the router runs and may redirect away from the query.
+applyLanguageFromQuery(router)
 
 app.use(router)
 app.use(translationPlugin)
