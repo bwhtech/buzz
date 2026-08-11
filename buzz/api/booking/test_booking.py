@@ -14,6 +14,7 @@ from buzz.api.forms.test_forms import ensure_prompt_named_record
 
 BOOKER = "booking-owner@example.com"
 OUTSIDER = "booking-outsider@example.com"
+VALID_PHONE = "+91-9000090000"
 
 EVENT_DATA_FIELDS = {
 	"registrations_closed",
@@ -142,6 +143,27 @@ class TestSendGuestBookingOtp(BookingTestCase):
 		self.assertTrue(response["otp"])
 		self.assertTrue(frappe.cache.get_value("guest_booking_otp:email:someone@example.com"))
 
+	def enable_phone_otp(self):
+		self.set_event({"allow_guest_booking": 1, "guest_verification_method": "Phone OTP"})
+
+	def test_alphabetic_phone_is_refused(self):
+		self.enable_phone_otp()
+		with self.assertRaises(frappe.ValidationError):
+			send_guest_booking_otp(self.event.name, "abcd")
+		self.assertFalse(frappe.cache.get_value("guest_booking_otp:phone:abcd"))
+
+	def test_phone_of_the_wrong_length_is_refused(self):
+		self.enable_phone_otp()
+		with self.assertRaises(frappe.ValidationError):
+			send_guest_booking_otp(self.event.name, "+91-12345")
+		self.assertFalse(frappe.cache.get_value("guest_booking_otp:phone:+91-12345"))
+
+	def test_valid_phone_returns_the_code(self):
+		self.enable_phone_otp()
+		response = send_guest_booking_otp(self.event.name, VALID_PHONE)
+		self.assertTrue(response["otp"])
+		self.assertTrue(frappe.cache.get_value(f"guest_booking_otp:phone:{VALID_PHONE}"))
+
 
 class TestGetEventBookingData(BookingTestCase):
 	def test_shape(self):
@@ -231,6 +253,51 @@ class TestProcessBooking(BookingTestCase):
 		)
 		self.assertEqual(booking.status, "Approval Pending")
 		self.assertEqual(booking.payment_status, "Verification Pending")
+
+
+class TestBookingPhoneCustomFields(BookingTestCase):
+	def setUp(self):
+		super().setUp()
+		self.phone_field = frappe.get_doc(
+			{
+				"doctype": "Buzz Custom Field",
+				"event": self.event.name,
+				"label": "Contact Number",
+				"fieldname": "contact_number",
+				"fieldtype": "Phone",
+				"applied_to": "Booking",
+				"enabled": 1,
+				"order": 1,
+			}
+		).insert(ignore_permissions=True)
+
+	def test_invalid_booking_level_phone_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			process_booking(self.booking_request(booking_custom_fields={"contact_number": "+91-12345"}))
+
+	def test_valid_booking_level_phone_is_stored(self):
+		payload = process_booking(
+			self.booking_request(booking_custom_fields={"contact_number": VALID_PHONE})
+		).__json__()
+		stored = frappe.db.get_value(
+			"Additional Field",
+			{"parent": payload["booking_name"], "fieldname": "contact_number"},
+			"value",
+		)
+		self.assertEqual(stored, VALID_PHONE)
+
+	def test_invalid_attendee_level_phone_is_still_refused(self):
+		frappe.db.set_value("Buzz Custom Field", self.phone_field.name, "applied_to", "Ticket")
+		attendees = [
+			{
+				"first_name": "Booker",
+				"email": "booker@example.com",
+				"ticket_type": str(self.free_ticket_type.name),
+				"custom_fields": {"contact_number": "+91-12345"},
+			}
+		]
+		with self.assertRaises(frappe.ValidationError):
+			process_booking(self.booking_request(attendees=attendees))
 
 
 class TestGetBookingDetails(BookingTestCase):

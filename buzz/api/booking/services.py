@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 import frappe
@@ -90,7 +91,9 @@ class BookingService:
 			return
 		if not self.request.guest_phone:
 			frappe.throw(_("Phone number is required"))
-		verify_guest_otp("phone", self.request.guest_phone.strip(), self.request.otp)
+		guest_phone = self.request.guest_phone.strip()
+		validate_phone_number_with_country_code(guest_phone, _("Phone Number"))
+		verify_guest_otp("phone", guest_phone, self.request.otp)
 
 	def guest_full_name(self) -> str:
 		first_name = (self.request.attendees[0].get("first_name") or "").strip()
@@ -117,6 +120,7 @@ class BookingService:
 	def append_custom_fields(self, booking: "EventBooking") -> None:
 		if not self.request.booking_custom_fields:
 			return
+		validate_custom_fields(self.request.booking_custom_fields, self.phone_field_labels)
 		definitions = frappe.db.get_all(
 			"Buzz Custom Field",
 			filters={"event": self.request.event, "enabled": 1, "applied_to": "Booking"},
@@ -139,7 +143,7 @@ class BookingService:
 
 	def append_attendees(self, booking: "EventBooking") -> None:
 		self.validate_zoom_last_names()
-		phone_field_map = self.phone_field_labels()
+		phone_field_map = self.phone_field_labels
 		for attendee in self.request.attendees:
 			booking.append("attendees", self.attendee_row(attendee, phone_field_map))
 
@@ -150,7 +154,13 @@ class BookingService:
 			if not (attendee.get("last_name") or "").strip():
 				frappe.throw(_("Last name is required for all attendees in Zoom events"))
 
+	@cached_property
 	def phone_field_labels(self) -> dict:
+		"""Label by fieldname for every Phone custom field on the event.
+
+		Not filtered on `applied_to`, so it covers booking-level and attendee-level fields alike.
+		Cached because both append paths need it and the rows cannot change mid-request.
+		"""
 		phone_fields = frappe.db.get_all(
 			"Buzz Custom Field",
 			filters={"event": self.request.event, "enabled": 1, "fieldtype": "Phone"},

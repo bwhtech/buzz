@@ -20,12 +20,13 @@
 				:placeholder="placeholder || __('Phone number')"
 			/>
 		</div>
+		<ErrorMessage v-if="error" :message="error" />
 	</div>
 </template>
 
 <script setup lang="ts">
 import { DEFAULT_DIAL_CODE, formatPhone, parsePhone } from "@/utils/phone";
-import { Combobox, TextInput, createResource } from "frappe-ui";
+import { Combobox, ErrorMessage, TextInput, createResource } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 
 interface DialCode {
@@ -38,6 +39,9 @@ const props = defineProps({
 	label: { type: String, default: "Phone" },
 	placeholder: { type: String, default: "" },
 	required: { type: Boolean, default: false },
+	// Server-side validation message to render under the field. Callers that don't
+	// pass it render nothing, so existing usages are unchanged.
+	error: { type: String, default: "" },
 });
 
 const emit = defineEmits(["update:modelValue"]);

@@ -6,7 +6,7 @@ import pyotp
 from frappe import _
 from frappe.auth import LoginAttemptTracker
 from frappe.core.doctype.sms_settings.sms_settings import send_sms
-from frappe.utils import validate_email_address
+from frappe.utils import validate_email_address, validate_phone_number_with_country_code
 
 from buzz.api.booking.exceptions import InvalidOTP, OTPExpired, TooManyOTPAttempts
 
@@ -29,6 +29,11 @@ def send_booking_otp(event: int, identifier: str) -> dict | None:
 	if channel == "email":
 		identifier = identifier.lower()
 		validate_email_address(identifier, throw=True)
+	else:
+		# Validate only, never rewrite: the OTP cache key is built from `identifier` here and
+		# rebuilt from the submitted phone in BookingService.verify_guest. Normalising on one
+		# side and not the other would silently break verification.
+		validate_phone_number_with_country_code(identifier, _("Phone Number"))
 
 	otp_secret = b32encode(os.urandom(10)).decode("utf-8")
 	otp_code = pyotp.HOTP(otp_secret).at(0)

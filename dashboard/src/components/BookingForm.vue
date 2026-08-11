@@ -144,12 +144,12 @@
 								required
 								@blur="prefillAttendee('email')"
 							/>
-							<FormControl
+							<PhoneInput
 								v-if="props.eventDetails.guest_verification_method === 'Phone OTP'"
 								v-model="guestPhone"
-								type="tel"
 								:label="__('Phone Number')"
 								:placeholder="__('Enter your phone number')"
+								:error="guestPhoneError"
 								required
 							/>
 						</div>
@@ -435,6 +435,7 @@ import CustomFieldsSection from "./CustomFieldsSection.vue";
 import EventDetailsHeader from "./EventDetailsHeader.vue";
 import OfflinePaymentDialog from "./OfflinePaymentDialog.vue";
 import PaymentGatewayDialog from "./PaymentGatewayDialog.vue";
+import PhoneInput from "./PhoneInput.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -557,6 +558,8 @@ const successBookingName = ref("");
 const showOtpModal = ref(false);
 const otpCode = ref("");
 const otpError = ref("");
+// Server-side phone validation message, rendered under the guest Phone Number field.
+const guestPhoneError = ref("");
 const pendingBookingPayload = ref<any>(null);
 const resendCooldown = ref(0);
 let resendCooldownTimer: ReturnType<typeof setInterval> | undefined;
@@ -993,11 +996,22 @@ const sendOtpResource = createResource({
 		);
 	},
 	onError: (error: FrappeError) => {
-		toast.error(error.messages?.[0] || __("Failed to send verification code"));
+		const message = error.messages?.[0] || __("Failed to send verification code");
+		// Phone validation failures belong under the field, not in a toast that
+		// disappears before the user can act on it.
+		if (isPhoneOtp.value) {
+			guestPhoneError.value = message;
+			return;
+		}
+		toast.error(message);
 	},
 });
 
 const isPhoneOtp = computed(() => props.eventDetails.guest_verification_method === "Phone OTP");
+
+watch(guestPhone, () => {
+	guestPhoneError.value = "";
+});
 
 function sendOtpForVerification() {
 	sendOtpResource.submit({
