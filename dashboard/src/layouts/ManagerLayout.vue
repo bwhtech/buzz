@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import TeamSwitcher from "@/components/TeamSwitcher.vue";
 import UserMenu from "@/components/UserMenu.vue";
+import { isTeamMember } from "@/data/teams";
+import NotFound from "@/pages/NotFound.vue";
 import { DesktopShell, Sidebar, SidebarItem, SidebarLabel } from "frappe-ui";
 import { ref } from "vue";
+
+const isMember = ref<boolean | null>(null);
+isTeamMember().then((member) => {
+	isMember.value = member;
+});
 
 const collapsed = ref(false);
 const active = ref("Calendar");
@@ -23,7 +30,9 @@ const teamItems = [
 </script>
 
 <template>
-	<DesktopShell>
+	<NotFound v-if="isMember === false" />
+
+	<DesktopShell v-else-if="isMember">
 		<template #sidebar>
 			<Sidebar v-model:collapsed="collapsed">
 				<div class="flex h-12 shrink-0 items-center px-1">

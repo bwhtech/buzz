@@ -1,3 +1,4 @@
+import { isTeamMember } from "@/data/teams"
 import { userResource } from "@/data/user"
 import { type RouteRecordRaw, createRouter, createWebHistory } from "vue-router"
 
@@ -5,7 +6,11 @@ const routes: RouteRecordRaw[] = [
 	{
 		path: "/",
 		name: "dashboard",
-		redirect: { name: "bookings-tab" },
+		// Never rendered — the guard always redirects — but a record needs a component.
+		component: { render: () => null },
+		beforeEnter: async () => ({
+			name: (await isTeamMember()) ? "manage" : "bookings-tab",
+		}),
 	},
 	{
 		path: "/manage",
