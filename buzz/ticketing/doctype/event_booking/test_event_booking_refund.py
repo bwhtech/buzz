@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from pydantic import ValidationError
 
 from buzz.payments import handle_refund_notification
 
@@ -200,34 +201,37 @@ class TestRefundNotification(BookingRefundTestCase):
 		super().setUp()
 		self.make_payment()
 
-	def notify(self, refund_id: str, status: str, amount: float) -> None:
-		# Cancelling a ticket emails the attendee, and the test site has no
-		# outgoing account. Delivery is not what these tests are about.
-		log = frappe.get_doc(
+	def make_log(self, payload: dict):
+		return frappe.get_doc(
 			{
 				"doctype": "Integration Request",
 				"integration_request_service": "Razorpay",
 				"request_description": "Refund Notification",
 				"is_remote_request": 1,
 				"status": "Queued",
-				"data": frappe.as_json(
-					{
-						"event": f"refund.{status}",
-						"payload": {
-							"refund": {
-								"entity": {
-									"id": refund_id,
-									"status": status,
-									"amount": int(amount * 100),
-									"payment_id": "pay_123",
-								}
-							}
-						},
-					}
-				),
+				"data": frappe.as_json(payload),
 			}
 		).insert(ignore_permissions=True)
 
+	def notify(self, refund_id: str, status: str, amount: float) -> None:
+		log = self.make_log(
+			{
+				"event": f"refund.{status}",
+				"payload": {
+					"refund": {
+						"entity": {
+							"id": refund_id,
+							"status": status,
+							"amount": int(amount * 100),
+							"payment_id": "pay_123",
+						}
+					}
+				},
+			}
+		)
+
+		# Cancelling a ticket emails the attendee, and the test site has no
+		# outgoing account. Delivery is not what these tests are about.
 		with patch("frappe.sendmail"):
 			handle_refund_notification("Integration Request", log.name)
 
@@ -341,27 +345,32 @@ class TestRefundNotification(BookingRefundTestCase):
 		)
 
 	def test_a_refund_for_an_unknown_payment_is_ignored(self):
-		log = frappe.get_doc(
+		log = self.make_log(
 			{
-				"doctype": "Integration Request",
-				"integration_request_service": "Razorpay",
-				"request_description": "Refund Notification",
-				"is_remote_request": 1,
-				"status": "Queued",
-				"data": frappe.as_json(
-					{
-						"event": "refund.processed",
-						"payload": {
-							"refund": {"entity": {"id": self.refund_id("x"), "payment_id": "pay_nope"}}
-						},
+				"event": "refund.processed",
+				"payload": {
+					"refund": {
+						"entity": {
+							"id": self.refund_id("x"),
+							"payment_id": "pay_nope",
+							"status": "processed",
+							"amount": 55000,
+						}
 					}
-				),
+				},
 			}
-		).insert(ignore_permissions=True)
+		)
 
 		self.assertIsNone(handle_refund_notification("Integration Request", log.name))
 		self.booking.reload()
 		self.assertFalse(self.refunds())
+
+	def test_a_payload_without_a_refund_is_refused(self):
+		# Only refund events reach this handler, so one carrying no refund is a
+		# defect for the caller to log, not an event to pass over quietly.
+		log = self.make_log({"event": "refund.processed", "payload": {}})
+
+		self.assertRaises(ValidationError, handle_refund_notification, "Integration Request", log.name)
 
 
 class TestRefundCeiling(IntegrationTestCase):
