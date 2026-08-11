@@ -36,7 +36,7 @@ frappe.ui.form.on("Event Booking", {
 			frm.doc.payment_status === "Paid" &&
 			frm.doc.refund_status !== "Refunded"
 		) {
-			frm.add_custom_button(__("Refund"), () => showRefundDialog(frm));
+			frm.add_custom_button(__("Issue Refund"), () => showRefundDialog(frm), __("Actions"));
 		}
 
 		renderRefunds(frm);
