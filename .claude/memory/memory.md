@@ -1,111 +1,138 @@
 # Buzz — project memory
 
-## Theme system (buzz/theme/ + buzz/themes/)
+## Theme system
 
-Ported from the standalone `frappe_themes` + `buzz_themes` apps into buzz.
-Jinja-only: there is no SPA/Vue theming and `dashboard/` is not involved.
+Ported from the standalone `frappe_themes` + `buzz_themes` apps into buzz; both were
+then uninstalled. Jinja-only — no SPA/Vue theming, `dashboard/` is not involved.
 
-### Layout — two directories one letter apart, both load-bearing
+### Layout
 
-    buzz/theme/          engine. Module path for module "Theme".
-                         theme_resolver.py, jinja_helpers.py, doctype/,
-                         buzz_theme/ (exported theme records).
-    buzz/themes/<slug>/  theme content. APP path, because get_theme_dir()
-                         joins frappe.get_app_path("buzz") + "themes".
-    buzz/public/themes/<slug> -> ../../themes/<slug>   SYMLINK.
+    buzz/buzz_themes/           engine. Module path for module "Buzz Themes".
+                                theme_resolver.py, jinja_helpers.py, doctype/,
+                                buzz_theme/ (exported theme records), tests/
+    buzz/themes/<slug>/         PRIVATE templates: components/, pages/,
+                                styles/tokens.css, tailwind.input.css
+    buzz/public/themes/<slug>/  PUBLIC, real directories: tailwind.output.css,
+                                scripts/, images/
 
-The symlink is how theme CSS/JS is served at `/assets/buzz/themes/<slug>/...`.
-Without it every theme asset 404s with no useful error.
+The private/public split is load-bearing. These were once symlinks from public ->
+private, which served the raw Jinja at `/assets/buzz/themes/<slug>/pages/...` —
+data model, filters and all. Never symlink them back.
 
-### Theme resolution order
+One toolchain at `buzz/themes/package.json` builds all three CSS outputs. Each
+build must `cd` into its own theme dir: running them from `buzz/themes/` changes
+Tailwind v4's source-detection root and every theme absorbs the others' utilities.
 
-    1. ?preview_theme=<name>        developer_mode only
-    2. Buzz Event.theme             routes that capture an `event_route` group
-    3. Buzz Settings.default_theme  everything else
-    4. nothing -> renderer declines, normal Frappe routing
+### Inheritance — the dedup mechanism
 
-With `default_theme` unset the whole engine is inert. That is the safety valve:
-nothing themed can break the site until someone selects a default.
+`Buzz Base Theme` owns the shared assets (alpine/lucide vendor JS, theme.js,
+components.js, images/placeholder.svg). The three real themes set
+`parent_theme = "Buzz Base Theme"`. `buzz_theme_asset_url()` walks the chain
+child-first and returns the first theme that HAS the file, so a child overrides by
+shipping the same relative path. This removed 1.12 MiB of byte-identical blobs.
 
-`can_render()` must match the route BEFORE resolving the theme — the event is
-only known once `event_route` has been captured. Do not "simplify" it back to
-resolving the theme first.
+### Theme resolution — one theme per site
+
+    1. ?preview_theme=<name>            developer_mode only
+    2. Buzz Settings.default_theme
+    3. nothing -> renderer declines, normal Frappe routing
+
+Per-event theming existed briefly and was removed on purpose: a listing page and
+the events it linked to rendered in different design languages, so clicking a card
+changed the design mid-journey. Hosted platforms attach the theme to the organizer
+and let an event vary only content. Do not reintroduce `Buzz Event.theme`.
+
+With `default_theme` unset the engine is inert — the safety valve.
+
+### Configuration — nothing about identity is hardcoded
+
+Brand and footer come from Frappe's own **Website Settings**: `app_name`,
+`app_logo`, `brand_html`, `banner_image`, `footer_logo`, `copyright`, `address`,
+`footer_items` (links AND socials — no bespoke social fields). `build_base_context`
+calls `get_website_settings()`; without it themed pages render missing the
+site-wide context Frappe's own renderers provide.
+
+Per-theme presentational copy lives in a Single per theme (`Stickerpack Theme
+Settings`, `Buzz Events Theme Settings`, `Sketchbook Theme Settings`), linked from
+`Buzz Theme.theme_settings` and read in templates via `buzz_theme_config()`. Every
+field falls back to the original literal so a blank never renders an empty heading.
 
 ### Gotchas paid for the hard way
 
-**Jinja methods share one global namespace keyed by FUNCTION NAME.**
-`frappe/utils/jinja.py:247` does `out[function_name] = obj`, last app wins. Buzz
-originally shipped `theme_asset_url`, the same name `frappe_themes` uses, so on
-any site with both installed buzz silently lost and every themed page rendered
-with empty `href`/`src`. Helpers are now `buzz_theme_asset_url` /
-`buzz_theme_config`. Never give a jinja method a name another app might use.
+**A fixture whose `modified` is not newer than the DB row is SILENTLY SKIPPED.**
+Editing `buzz/buzz_themes/buzz_theme/<slug>/<slug>.json` does nothing until you also
+bump `modified`. Cost time three separate times.
+
+**Records of a custom doctype do not import on migrate** unless the doctype is in
+the `importable_doctypes` hook (`frappe/model/sync.py`). The module folder is an
+EXPORT target only.
+
+**Adding a module to an installed app needs a Module Def created by hand** —
+`add_module_defs()` runs only at install, never on migrate. Until it exists,
+`sync_for()` skips the module and the doctypes are silently not created.
+
+**Jinja methods share one global namespace keyed by FUNCTION NAME**
+(`frappe/utils/jinja.py`, `out[function_name] = obj`, last app wins). Buzz's helpers
+are `buzz_theme_asset_url` / `buzz_theme_config` because the unprefixed names lost
+to `frappe_themes` and every page rendered with empty asset URLs — a silent failure
+that looks like broken CSS, not an error.
 
 **A template that `{% extends %}` discards top-level OUTPUT nodes.**
-`{{ frappe.throw(...) }}` at the top of an extending page never executes —
-only statements (`{% set %}`) run. The not-found guards silently did nothing,
-execution continued into `frappe.get_cached_doc("Buzz Event", None)`, and the
-resulting `DoesNotExistError` (which carries a `doctype`) was converted by
-`@handle_does_not_exist_error` into **403 Not Permitted for guests** instead of
-404. Guards are now `{% set not_found = frappe.throw(...) %}`.
+`{{ frappe.throw(...) }}` at the top of an extending page never runs; only `{% set %}`
+does. The not-found guards silently did nothing and a missing event fell through to
+`get_cached_doc(..., None)`, whose `DoesNotExistError` became **403 for guests**.
+Guards must be `{% set not_found = frappe.throw(...) %}`.
 
-**Adding a module to an already-installed app needs a Module Def by hand.**
-`add_module_defs()` runs only at install (`frappe/installer.py:724`), never on
-migrate. Until the Module Def exists, `sync_for()` skips the module entirely and
-the doctypes are silently not created. Fix:
-`bench --site <site> execute frappe.installer.add_module_defs --kwargs "{'app':'buzz','ignore_if_duplicate':True}"`
-then migrate.
+**`(some_time|string)[:5]` is wrong.** Time fields are `timedelta`; `str()` gives
+`9:00:00` unpadded, so the slice renders `9:00:`. Use
+`frappe.utils.get_time(x).strftime('%H:%M')`.
 
-**Records of a custom doctype do not auto-import on migrate.**
-`get_doc_files()` walks a fixed list plus whatever is in the
-`importable_doctypes` hook (`frappe/model/sync.py:151`). The module folder is
-otherwise an EXPORT target only. `importable_doctypes = ["Buzz Theme"]` in
-hooks.py is what ships the bundled themes as records.
+**`free_webinar` no longer exists** — `buzz.patches.rename_free_webinar_to_free_event`
+renamed it to `free_event`, and `free_event` is a PRICING flag, not a delivery mode.
+"Is this a webinar" is `medium == "Online"`.
 
-**DocType names are globally unique — a module does not namespace them.**
-Hence Buzz Theme / Buzz Theme Settings / Buzz Themed Route rather than reusing
-frappe_themes' names. Renaming the doctype without renaming the
-`.py`/`.json`/`.js` files and the controller class fails at RUNTIME with
-ImportError, not at migrate time: `frappe/modules/utils.py:328` derives the
-import path and `base_document.py:147` derives the class from the doctype name.
+**Website Settings `address` arrives on the context as `footer_address`**, and
+`get_website_settings()` already sets `context.boot` — don't call `get_boot_data()`
+again.
 
-**`bench execute --kwargs` uses `eval`, not JSON** — pass Python literals
-(`True`, not `true`).
+**DocType names are globally unique; a module does not namespace them.** Hence
+`Buzz Theme` / `Buzz Theme Settings` / `Buzz Themed Route`. Renaming a doctype
+without renaming its `.py`/`.json`/`.js` and controller class fails at RUNTIME with
+ImportError, not at migrate — it passes a migration and breaks on first page load.
 
-### Route table
+**`bench execute --kwargs` uses `eval`** — pass Python literals (`True`, not `true`).
 
-Ships via the idempotent patch `buzz.patches.seed_buzz_theme_routes`
-(`^$`, `^home$`, `^events$`, `^events/<event_route>$`, `^category/<category_slug>$`).
-`dynamic_pages_enabled` is on, so any `pages/<request-path>.html` in the active
-theme chain is servable — a theme shipping `pages/b.html` WOULD hijack the SPA
-at `/b`. No bundled theme does.
+### Routes
 
-`^events$` -> `pages/events.html` is seeded but NO bundled theme ships that
-page, so the route is dead until one does. It is harmless: `can_render()`
-declines when the template is missing.
+Seeded by `buzz.patches.seed_buzz_theme_routes`: `^$`, `^home$`, `^events$`,
+`^events/<event_route>$`, `^category/<category_slug>$`. `^events$` is dead — no
+bundled theme ships `pages/events.html`.
+
+`dynamic_pages_enabled` is on, so any `pages/<request-path>.html` is servable.
+`RESERVED_PATH_SEGMENTS` in `theme_resolver.py` stops a theme hijacking `/login`,
+`/app`, `/api`, `/b` etc — page_renderer hooks run BEFORE Frappe's own renderers
+(`frappe/website/path_resolver.py`).
 
 ### Bundled themes
 
-Three, all complete: `buzz_events_theme` (ticket stub), `sketchbook_theme`
-(handwritten, ruled paper), `stickerpack_theme` (neo-brutalist — dot-grid
-ground, 3px borders with 4px offset shadows, accent-cycled rotated cards).
+`buzz_events_theme` (ticket stub), `sketchbook_theme` (handwritten, ruled paper),
+`stickerpack_theme` (neo-brutalist). All inherit `Buzz Base Theme`.
 
-`stickerpack_theme` was ported from a static prototype at
-`hobby/ui/buzz_implementation/themes/stickerpack`. Two things that do not
-survive such a port: the prototype registered `accent_bg`/`accent_fg`/
-`rot_class` as Python globals in its own `render.py` (Frappe's Jinja has no
-equivalent — they live in `components/macros/accents.html` here), and it
-loaded Tailwind from the Play CDN (built locally here). Its category filter
-chips were NOT ported.
+Venue maps use `openstreetmap.org/export/embed.html` (keyless, needs a bbox).
+The old `staticmap.openstreetmap.de` is NXDOMAIN — that service was withdrawn.
 
-An earlier `events_theme` was deleted: it shipped pages that `{% extends %}`
-a `base.html` it did not contain, so it could never render standalone.
-Deleting a theme means three places, not one: the folder, the
-`public/themes/<slug>` symlink, AND the fixture folder — plus the DB record,
-which survives a migrate because removing a fixture never deletes an
-already-imported doc.
+Theme JS/CSS is excluded from prettier+eslint in `.pre-commit-config.yaml`, and
+`buzz/public/themes/` had to be added there when the scripts moved out of
+`buzz/themes/`.
 
-Theme templates query buzz doctypes directly in Jinja and ship no page
-controllers, though the engine supports sibling `.py` controllers per page.
-Each theme builds its own CSS: `yarn build:css` (Tailwind v4) inside the folder.
-Theme JS/CSS is excluded from prettier+eslint in `.pre-commit-config.yaml`
-alongside the other vendored bundles.
+## Environment
+
+`gh` holds two accounts; only **Rl0007** can push to `buildwithhussain/buzz`. If a
+push 403s as `ghostinmyterminal`, run `gh auth switch --user Rl0007`.
+
+`apps/builder` has an UNCOMMITTED local fix: it imported `POSTHOG_HOST_FIELD` /
+`POSTHOG_PROJECT_FIELD`, which frappe deleted in `2a48f956bf`, and that broke
+`/desk` and `/app` with a 500 for every logged-in user. The repo has no `origin`,
+so any update to builder silently re-breaks the desk the same way.
+
+buzz.localhost admin password is `admin`.
