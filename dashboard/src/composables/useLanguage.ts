@@ -24,21 +24,15 @@ interface LanguageComposable {
 	isSwitching: ComputedRef<boolean>
 }
 
-// One resource for every caller: the list cannot change within a page load, and
-// applyLanguageFromQuery needs the same data the switcher renders. Created on
-// first use rather than at import — `auto: true` fetches straight away, and
-// main.ts has to install frappe-ui's resource fetcher first.
-let languagesResource: LanguagesResource | null = null
-
+// The cache key hands every caller the same resource. Built on call rather than
+// at import: `auto: true` fetches straight away, and main.ts has to install
+// frappe-ui's resource fetcher first.
 function availableLanguages(): LanguagesResource {
-	if (!languagesResource) {
-		languagesResource = createResource({
-			url: "buzz.api.account.get_enabled_languages",
-			auto: true,
-			cache: "enabled_languages",
-		}) as LanguagesResource
-	}
-	return languagesResource
+	return createResource({
+		url: "buzz.api.account.get_enabled_languages",
+		auto: true,
+		cache: "enabled_languages",
+	}) as LanguagesResource
 }
 
 const switchLanguage = createResource({
@@ -49,8 +43,7 @@ const switchLanguage = createResource({
 	},
 })
 
-// The server resolves this for both kinds of visitor — a logged-in user's User
-// document, a guest's cookie — so there is one source of truth either way.
+// Resolved server-side for both kinds of visitor, so there is one source of truth.
 const currentLanguage = computed(() => userResource.data?.language || "en")
 
 function changeLanguage(languageCode: string) {
@@ -59,8 +52,7 @@ function changeLanguage(languageCode: string) {
 		return
 	}
 
-	// Guests all share the `Guest` User, so persisting there would hand this
-	// language to every other visitor. The cookie is per browser.
+	// Guests share the one `Guest` User; the cookie is per browser.
 	document.cookie = buildPreferredLanguageCookie(languageCode)
 	window.location.reload()
 }
@@ -80,20 +72,17 @@ function persistRequestedLanguage(
 
 	document.cookie = buildPreferredLanguageCookie(languageToApply)
 
-	// Navigating to the cleaned URL both drops the parameter and reloads for the
-	// new translations. The page is torn down either way, so writing the address
-	// bar directly is safe here.
+	// Navigating to the cleaned URL drops the parameter and reloads for the new
+	// translations in one go.
 	const { cleanedUrl } = takeLanguageFromQuery(window.location.href)
 	window.location.replace(cleanedUrl ?? window.location.href)
 }
 
 /**
- * Drop `?lang` through the router rather than history.replaceState.
- *
- * The router captures the location when it is created and writes it back on its
- * first navigation, so a replaceState before that gets undone; going through
- * the router also keeps its `currentRoute.query` in step with the address bar,
- * so a later push that spreads the existing query cannot resurrect the value.
+ * Drop `?lang` through the router, not history.replaceState: the router captures
+ * the location when it is created and writes it back on its first navigation,
+ * undoing anything done before that. It also keeps `currentRoute.query` in step,
+ * so a later push spreading the query cannot resurrect the value.
  */
 function stripLanguageQueryParam(router: Router) {
 	const route = router.currentRoute.value
@@ -105,11 +94,9 @@ function stripLanguageQueryParam(router: Router) {
 }
 
 /**
- * Honour `?lang=xx` on boot, so a link can be shared in a specific language.
- *
- * The parameter is read synchronously — the router is about to run and may
- * redirect — but applying it has to wait for the enabled languages, which is
- * what the requested code is validated against.
+ * Honour `?lang=xx` on boot, so a link can be shared in a specific language. The
+ * parameter is read synchronously — the router is about to run and may redirect
+ * — but applying it waits for the enabled languages it is validated against.
  */
 export function applyLanguageFromQuery(router: Router) {
 	const { requestedLanguage } = takeLanguageFromQuery(window.location.href)

@@ -2,9 +2,8 @@ import { test as setup } from "@playwright/test";
 import { getDoc, updateDoc } from "../helpers/frappe";
 
 /**
- * The language specs need a second enabled language to switch to. German ships
- * with every Frappe site; enabling it here keeps the specs from depending on
- * whatever the site happens to have turned on.
+ * The specs need a second language to switch to. German ships with every Frappe
+ * site, so enabling it beats depending on whatever the site has turned on.
  */
 setup("enable a second language", async ({ request }) => {
 	const language = await getDoc<{ enabled: number }>(request, "Language", "de");

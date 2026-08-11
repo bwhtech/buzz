@@ -50,24 +50,23 @@ const languageOptions = computed(() => {
 
 		return {
 			label,
-			// The label goes through the row shell's `label` slot rather than the
-			// whole-row `item` slot: the whole-row slot remounts its element on
-			// every re-render, so mousedown and mouseup land on two different nodes
-			// and the browser never fires the click that selects the item. A touch
-			// press is unaffected, which is why this only broke with a mouse.
+			// The row shell's `label` slot, not the whole-row `item` slot: that one
+			// remounts its element on every re-render, so mousedown and mouseup land
+			// on different nodes and the browser never fires a click.
 			slots: {
 				label: () =>
 					h(
 						"span",
 						{
+							class: "whitespace-nowrap",
 							lang: lang.language_code,
 							"data-testid": `language-option-${lang.language_code}`,
 						},
 						label
 					),
 			},
-			// The tick marks the active language; every other row reserves the same
-			// leading space, so the list stays aligned.
+			// One icon in the group makes every row reserve the space, so the list
+			// stays aligned with a tick on only the active one.
 			icon: isActive ? "lucide-check" : undefined,
 			selected: isActive,
 			onClick: () => changeLanguage(lang.language_code),

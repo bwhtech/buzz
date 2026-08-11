@@ -1,21 +1,25 @@
-// Guests have no User document to hold a language preference — every visitor
-// shares the one `Guest` user — so their choice lives in the
-// `preferred_language` cookie that frappe.translate.get_language() reads on
-// each request. A cookie is per browser, so one visitor's choice cannot leak
-// into another's session.
-//
-// Everything here is pure so it can be unit tested; useLanguage owns the
-// document/window side effects.
+// Every visitor shares the one `Guest` user, so a guest's language lives in the
+// `preferred_language` cookie that frappe.translate.get_language() reads per
+// request — a cookie is per browser, so one choice cannot leak into another
+// visitor's session. Kept pure for unit testing; useLanguage owns the side
+// effects.
 
 export const PREFERRED_LANGUAGE_COOKIE = "preferred_language"
 export const LANGUAGE_QUERY_PARAM = "lang"
 
-// A year, so a returning visitor keeps the language they picked.
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
 
 export function readPreferredLanguage(cookieString: string): string | null {
-	const cookies = new URLSearchParams(cookieString.split("; ").join("&"))
-	return cookies.get(PREFERRED_LANGUAGE_COOKIE)
+	// Split on the separator rather than reusing URLSearchParams: another
+	// cookie's value is free to contain an `&`, and would be read as ours.
+	for (const cookie of cookieString.split(";")) {
+		const [name, ...value] = cookie.split("=")
+		if (name.trim() === PREFERRED_LANGUAGE_COOKIE) {
+			return decodeURIComponent(value.join("="))
+		}
+	}
+
+	return null
 }
 
 export function buildPreferredLanguageCookie(languageCode: string): string {
@@ -31,11 +35,8 @@ export interface LanguageQueryRequest {
 }
 
 /**
- * Pull `?lang=xx` off a URL.
- *
- * The parameter is a one-shot instruction carried by a shared link, so it is
- * always removed — leaving it in place would re-pin the language on every
- * later reload, and the router is free to drop the query on its next redirect.
+ * Pull `?lang=xx` off a URL. Always removed: left in place it would re-pin the
+ * language on every later reload.
  */
 export function takeLanguageFromQuery(url: string): LanguageQueryRequest {
 	const parsedUrl = new URL(url)
@@ -72,8 +73,8 @@ export function resolveRequestedLanguage({
 	// A shared link must not silently rewrite someone's saved preference.
 	if (isLoggedIn) return null
 
-	// Never hand an unvalidated value to the cookie: whatever lands there is
-	// what the server resolves translations against.
+	// Whatever lands in the cookie is what the server resolves translations
+	// against, so it is never written unvalidated.
 	if (!enabledLanguageCodes.includes(requestedLanguage)) return null
 
 	// Already in effect — nothing to write, and no reason to reload.

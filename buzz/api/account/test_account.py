@@ -12,13 +12,14 @@ from buzz.api.account import (
 	update_user_language,
 )
 from buzz.api.account.exceptions import UnknownLanguage
+from buzz.api.account.services import get_default_language
 
 
 class LanguageTestCase(IntegrationTestCase):
 	"""Base for the tests that exercise language resolution.
 
-	`frappe.translate.get_language` reads cookies and headers off the live
-	request, which a test process does not have until one is installed.
+	`get_language` reads cookies and headers off the live request, which a test
+	process does not have until one is installed.
 	"""
 
 	def tearDown(self):
@@ -34,17 +35,14 @@ class LanguageTestCase(IntegrationTestCase):
 		set_request(method="GET", path="/api/method/get_translations", headers=headers)
 		self.addCleanup(setattr, frappe.local, "request", None)
 
-	def default_language(self) -> str:
-		return frappe.get_system_settings("language") or "en"
-
 	def other_enabled_language(self) -> str:
 		"""An enabled language that is not the site default.
 
-		Plain codes only: a regional one like `pt-BR` is a different string once
-		it has been through werkzeug's Accept-Language parsing.
+		Plain codes only: a regional one like `pt-BR` comes back as a different
+		string once werkzeug has parsed the Accept-Language header.
 		"""
 		for language in get_all_languages():
-			if language != self.default_language() and language.isalpha():
+			if language != get_default_language() and language.isalpha():
 				return language
 
 		self.skipTest("site has no second enabled language with a plain code")
@@ -69,14 +67,13 @@ class TestGetUserInfo(LanguageTestCase):
 		self.install_request(cookies={"preferred_language": language})
 		frappe.set_user("Guest")
 
-		# Without this the switcher label is stuck on "en" whatever the guest picks.
 		self.assertEqual(get_user_info().__json__()["language"], language)
 
 	def test_guest_language_falls_back_to_the_site_default(self):
 		self.install_request()
 		frappe.set_user("Guest")
 
-		self.assertEqual(get_user_info().__json__()["language"], self.default_language())
+		self.assertEqual(get_user_info().__json__()["language"], get_default_language())
 
 	def test_logged_in_payload_shape(self):
 		info = get_user_info().__json__()
@@ -134,8 +131,7 @@ class TestLanguages(LanguageTestCase):
 		self.assertEqual(frappe.db.get_value("User", "Administrator", "language"), "en")
 
 	def test_update_stays_closed_to_guests(self):
-		# Every guest shares the one `Guest` User, so a guest write here would
-		# change the language for every other visitor.
+		self.assertIn(update_user_language, frappe.whitelisted)
 		self.assertNotIn(update_user_language, frappe.guest_methods)
 
 
@@ -166,7 +162,7 @@ class TestGetTranslations(LanguageTestCase):
 		self.install_request()
 		frappe.set_user("Guest")
 
-		self.assertEqual(self.resolved_language(), self.default_language())
+		self.assertEqual(self.resolved_language(), get_default_language())
 
 	def test_logged_in_translations_follow_the_user_document(self):
 		language = self.other_enabled_language()
@@ -177,4 +173,4 @@ class TestGetTranslations(LanguageTestCase):
 	def test_a_user_without_a_language_gets_the_site_default(self):
 		self.set_user_language(None)
 
-		self.assertEqual(self.resolved_language(), self.default_language())
+		self.assertEqual(self.resolved_language(), get_default_language())

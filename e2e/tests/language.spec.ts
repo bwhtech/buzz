@@ -7,10 +7,8 @@ const switcher = (page: Page) => page.getByTestId("language-switcher");
 const activeLanguage = (page: Page) => switcher(page).locator("span[lang]");
 
 /**
- * Pick a language from the open dropdown.
- *
- * The row itself is rendered by frappe-ui, so the test id sits on the label
- * span the switcher supplies. Clicking it selects the row it belongs to.
+ * Pick a language from the open dropdown. frappe-ui renders the row, so the test
+ * id sits on the label span the switcher supplies; clicking it selects the row.
  */
 async function chooseLanguage(page: Page, languageCode: string) {
 	await switcher(page).click();
@@ -29,8 +27,7 @@ test.describe("Language switcher — guest", () => {
 	test("switching language stores a cookie instead of calling the account API", async ({
 		page,
 	}) => {
-		// Every guest shares the one `Guest` User, so the endpoint that writes to
-		// it is not whitelisted for guests — it used to return a PermissionError.
+		// The endpoint that writes to the shared `Guest` User is not open to guests.
 		const userLanguageCalls: string[] = [];
 		page.on("request", (request) => {
 			if (request.url().includes("update_user_language")) {
@@ -89,7 +86,6 @@ test.describe("Language switcher — logged in", () => {
 		await page.goto(`/b?lang=${TARGET_LANGUAGE}`);
 		await page.waitForLoadState("networkidle");
 
-		// The user's own preference wins; the parameter is still stripped.
 		await expect(switcher(page)).toBeVisible();
 		await expect(activeLanguage(page)).not.toHaveAttribute("lang", TARGET_LANGUAGE);
 		expect(await preferredLanguageCookie(page)).toBeUndefined();

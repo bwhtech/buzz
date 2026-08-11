@@ -37,8 +37,7 @@ const app = createApp(App)
 
 setConfig("resourceFetcher", frappeRequest)
 
-// Read before the router runs and may redirect: a `?lang=` link is a one-shot
-// instruction that gets applied and then stripped.
+// Before the router runs and may redirect away from the query.
 applyLanguageFromQuery(router)
 
 app.use(router)

@@ -42,9 +42,9 @@ def get_enabled_languages() -> list[LanguageOption]:
 	return [LanguageOption(**language) for language in languages]
 
 
-# Deliberately not guest-whitelisted: every guest shares the one `Guest` User,
-# so a write here would set the language for every other visitor. Guests switch
-# language through the `preferred_language` cookie instead.
+# Deliberately not guest-whitelisted: every guest shares the one `Guest` User, so
+# a write here would set the language for every visitor. Guests use the
+# `preferred_language` cookie instead.
 @frappe.whitelist(methods=["POST"])
 def update_user_language(language_code: str) -> None:
 	if not frappe.db.exists("Language", {"language_code": language_code}):

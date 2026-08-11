@@ -87,6 +87,13 @@ test("reads the preferred language out of a cookie string", () => {
 	assert.equal(readPreferredLanguage(""), null)
 })
 
+test("a value in a neighbouring cookie is not mistaken for ours", () => {
+	assert.equal(
+		readPreferredLanguage("full_name=a&preferred_language=de; sid=abc123"),
+		null,
+	)
+})
+
 test("the cookie is written for the whole site and survives the session", () => {
 	const cookie = buildPreferredLanguageCookie("de")
 
