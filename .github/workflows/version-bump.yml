@@ -23,15 +23,16 @@ jobs:
   bump:
     name: Push bump branch
     runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      BASE: ${{ inputs.base }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.base }}
 
-      - name: Bump version
-        env:
-          VERSION: ${{ inputs.version }}
+      - name: Bump version and push branch
         run: |
           set -euo pipefail
           # Semver, not PEP 440: Frappe's update check parses __version__ with
@@ -45,23 +46,26 @@ jobs:
           # dashboard/package.json is deliberately pinned at 0.0.0.
           sed -i -E "s/^__version__ = \".*\"$/__version__ = \"$VERSION\"/" buzz/__init__.py
           sed -i -E "s/^  \"version\": \".*\",$/  \"version\": \"$VERSION\",/" package.json
-          git diff --exit-code && { echo "::error::version is already $VERSION"; exit 1; } || true
-
-      - name: Push branch
-        env:
-          VERSION: ${{ inputs.version }}
-        run: |
-          set -euo pipefail
+          # Both expressions are anchored to the exact line, so reformatting
+          # either file turns its sed into a silent no-op and lets the two
+          # versions drift apart — the drift this workflow exists to prevent.
+          # Insist that both files changed, and no others.
+          changed="$(git diff --name-only | sort | tr '\n' ' ')"
+          if [ "$changed" != "buzz/__init__.py package.json " ]; then
+            echo "::error::expected both version files to change, changed: ${changed:-nothing}"
+            exit 1
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "chore/bump-$VERSION"
           git commit -am "chore: bump version to $VERSION"
-          git push --force-with-lease origin "chore/bump-$VERSION"
+          # Plain --force: the runner clones shallow and never fetches this
+          # branch, so --force-with-lease has no remote-tracking ref to compare
+          # against and rejects every rerun as stale. Nothing but this workflow
+          # writes to chore/bump-*.
+          git push --force origin "chore/bump-$VERSION"
 
       - name: Link to PR form
-        env:
-          VERSION: ${{ inputs.version }}
-          BASE: ${{ inputs.base }}
         run: |
           # ponytail: the workflow stops at the branch because a PR opened with
           # GITHUB_TOKEN does not trigger other workflows, and the required
