@@ -424,7 +424,7 @@ class EventBooking(Document):
 			frappe.throw(_("Refunds are only supported for Razorpay at the moment"))
 
 		tickets = frappe.parse_json(tickets) if isinstance(tickets, str) else tickets
-		self.validate_refund_amount(flt(amount))
+		self.validate_refund(flt(amount), tickets)
 
 		refund = get_controller(payment.payment_gateway).refund_payment(payment.payment_id, flt(amount))
 
@@ -446,18 +446,26 @@ class EventBooking(Document):
 
 		return self.refund_status
 
-	def validate_refund_amount(self, amount: float) -> None:
-		remaining = self.get_refund_summary()["remaining"]
+	def validate_refund(self, amount: float, tickets: list[str] | None = None) -> None:
+		summary = self.get_refund_summary()
 
 		if amount <= 0:
 			frappe.throw(_("Refund amount must be greater than 0"))
 
-		if amount > remaining:
+		if amount > summary["remaining"]:
 			frappe.throw(
 				_("Only {0} is left to refund on this booking").format(
-					frappe.format_value(remaining, {"fieldtype": "Currency", "options": "currency"}, self)
+					frappe.format_value(
+						summary["remaining"], {"fieldtype": "Currency", "options": "currency"}, self
+					)
 				)
 			)
+
+		refundable = {ticket["ticket"] for ticket in summary["tickets"]}
+		if not set(tickets or []) <= refundable:
+			# Whoever called this asked to cancel a ticket that another booking
+			# owns, or one an earlier refund already claimed.
+			frappe.throw(_("Those tickets cannot be refunded against this booking"))
 
 	def set_refund_status(self) -> None:
 		"""Recompute the summary from the refunds raised against this booking."""

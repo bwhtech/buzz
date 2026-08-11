@@ -158,6 +158,33 @@ class TestBookingRefund(BookingRefundTestCase):
 		self.assertEqual(request.status, "In Review")
 		self.assertEqual([row.ticket for row in request.tickets], [tickets[0]["ticket"]])
 
+	def test_a_ticket_from_another_booking_is_refused(self):
+		self.make_payment()
+		stranger = frappe.get_doc(
+			{
+				"doctype": "Event Booking",
+				"event": self.event.name,
+				"user": "Administrator",
+				"attendees": [
+					{
+						"ticket_type": self.ticket_type.name,
+						"first_name": "Stranger",
+						"email": "stranger@example.com",
+					}
+				],
+			}
+		).insert()
+		stranger.payment_status = "Paid"
+		stranger.submit()
+		foreign_ticket = frappe.db.get_value("Event Ticket", {"booking": stranger.name}, "name")
+
+		# Patch the gateway so nothing but the ownership check can refuse this.
+		with self.assertRaises(frappe.ValidationError):
+			self.refund(amount=CHARGED_PER_TICKET, tickets=[foreign_ticket])
+
+		self.assertFalse(frappe.db.exists("Ticket Cancellation Request", {"booking": self.booking.name}))
+		self.assertEqual(frappe.db.get_value("Event Ticket", foreign_ticket, "docstatus"), 1)
+
 	def test_a_custom_amount_refund_cancels_no_tickets(self):
 		self.make_payment()
 
