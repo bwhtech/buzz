@@ -1,6 +1,29 @@
 import frappe
 from frappe import _
+from frappe.utils import flt
 from payments.utils import get_payment_gateway_controller
+from pydantic import AliasPath, BaseModel, ConfigDict, Field
+
+
+class RefundNotification(BaseModel):
+	"""The refund a Razorpay `refund.processed` or `refund.failed` webhook carries.
+
+	The fields sit at `payload.refund.entity` in the webhook body, and every one
+	of them is mandatory: the payments app hands us refund events only, and a
+	refund event without them is broken rather than uninteresting.
+	"""
+
+	model_config = ConfigDict(extra="ignore")
+
+	refund_id: str = Field(validation_alias=AliasPath("payload", "refund", "entity", "id"))
+	payment_id: str = Field(validation_alias=AliasPath("payload", "refund", "entity", "payment_id"))
+	status: str = Field(validation_alias=AliasPath("payload", "refund", "entity", "status"))
+	amount_in_minor_unit: int = Field(validation_alias=AliasPath("payload", "refund", "entity", "amount"))
+
+	@property
+	def amount(self) -> float:
+		"""What the gateway refunded, in the major unit the booking is priced in."""
+		return flt(self.amount_in_minor_unit) / 100
 
 
 def get_payment_gateways_for_event(event: str) -> list[str]:
@@ -166,6 +189,48 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 		)
 
 		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+
+
+def handle_refund_notification(doctype: str, docname: str) -> None:
+	"""Apply a gateway refund webhook to the booking whose payment it belongs to."""
+	# Returns nothing on purpose: `call_hook_method` stops at the first handler
+	# that returns a value.
+	payload = frappe.parse_json(frappe.db.get_value(doctype, docname, "data"))
+	notification = RefundNotification.model_validate(payload)
+
+	payment = frappe.db.get_value(
+		"Event Payment",
+		{"payment_id": notification.payment_id},
+		["name", "reference_doctype", "reference_docname"],
+		as_dict=True,
+	)
+
+	if not payment or payment.reference_doctype != "Event Booking":
+		return
+
+	# The same event arrives more than once, so the refund is keyed on its id.
+	existing = frappe.db.exists("Event Booking Refund", {"refund_id": notification.refund_id})
+	if existing:
+		refund_doc = frappe.get_doc("Event Booking Refund", existing)
+	else:
+		refund_doc = frappe.get_doc(
+			{
+				"doctype": "Event Booking Refund",
+				"booking": payment.reference_docname,
+				"payment": payment.name,
+				"refund_id": notification.refund_id,
+				"currency": frappe.db.get_value("Event Booking", payment.reference_docname, "currency"),
+			}
+		).insert(ignore_permissions=True)
+
+	refund_doc.apply_gateway_status(gateway_status=notification.status, amount=notification.amount)
+
+	frappe.db.set_value(
+		doctype,
+		docname,
+		{"reference_doctype": "Event Booking", "reference_docname": payment.reference_docname},
+		update_modified=False,
+	)
 
 
 # TODO: use it later!
