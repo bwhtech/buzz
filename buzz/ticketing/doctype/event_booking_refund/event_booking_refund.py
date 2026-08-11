@@ -42,25 +42,32 @@ class EventBookingRefund(Document):
 		self.flags.ignore_permissions = True
 		self.save()
 
-		if self.cancellation_request:
-			self.settle_cancellation_request()
+		if self.status == "Processed" and self.tickets and not self.cancellation_request:
+			self.cancel_refunded_tickets()
 
-	def settle_cancellation_request(self) -> None:
-		"""Refunded tickets get cancelled, refused ones stay. Nobody needs to approve
-		what the gateway already settled."""
-		request = frappe.get_doc("Ticket Cancellation Request", self.cancellation_request)
-		if request.docstatus != 0:
-			return
+	def cancel_refunded_tickets(self) -> None:
+		"""Cancel what the gateway paid back for.
 
-		if self.status == "Failed":
-			request.db_set("status", "Rejected")
-			return
+		Raised here rather than when the refund went out: a refund can still fail,
+		and a ticket cancelled against one leaves the customer with neither money
+		nor a seat. Nobody needs to approve what the gateway already settled.
+		"""
+		request = frappe.get_doc(
+			{
+				"doctype": "Ticket Cancellation Request",
+				"booking": self.booking,
+				"status": "In Review",
+				"tickets": [{"ticket": row.ticket} for row in self.tickets],
+			}
+		)
+		request.flags.ignore_permissions = True
+		request.insert()
+		self.db_set("cancellation_request", request.name)
 
 		# The refund is already recorded, so a cancellation that cannot go through
 		# is undone whole and left in review rather than taking the refund with it.
 		with savepoint(catch=Exception):
 			request.status = "Accepted"
-			request.flags.ignore_permissions = True
 			request.submit()
 
 		if frappe.db.get_value("Ticket Cancellation Request", request.name, "docstatus") == 0:

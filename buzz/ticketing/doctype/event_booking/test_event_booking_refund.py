@@ -147,16 +147,17 @@ class TestBookingRefund(BookingRefundTestCase):
 		self.assertEqual(self.refunds()[0].status, "Initiated")
 		self.assertEqual(self.refunds()[0].amount, CHARGED_PER_TICKET)
 
-	def test_refunding_tickets_queues_a_cancellation_request_for_them(self):
+	def test_an_unsettled_refund_cancels_nothing_yet(self):
+		# Razorpay can take days. Nothing may cancel tickets before it answers,
+		# or a refund that fails leaves the customer with neither money nor seat.
 		self.make_payment()
 		tickets = self.booking.get_refund_summary()["tickets"]
 
 		self.refund(amount=CHARGED_PER_TICKET, tickets=[tickets[0]["ticket"]])
 
-		request = frappe.get_doc("Ticket Cancellation Request", self.refunds()[0].cancellation_request)
-		self.assertEqual(request.docstatus, 0)
-		self.assertEqual(request.status, "In Review")
-		self.assertEqual([row.ticket for row in request.tickets], [tickets[0]["ticket"]])
+		self.assertIsNone(self.refunds()[0].cancellation_request)
+		self.assertFalse(frappe.db.exists("Ticket Cancellation Request", {"booking": self.booking.name}))
+		self.assertEqual([row.ticket for row in self.refunds()[0].tickets], [tickets[0]["ticket"]])
 
 	def test_a_ticket_from_another_booking_is_refused(self):
 		self.make_payment()
@@ -272,25 +273,22 @@ class TestRefundNotification(BookingRefundTestCase):
 		self.assertEqual(len(self.refunds()), 1)
 		self.assertEqual(self.booking.refunded_amount, CHARGED_PER_TICKET)
 
-	def test_a_failed_refund_is_not_counted_and_drops_its_queued_cancellation(self):
+	def test_a_failed_refund_is_not_counted_and_cancels_nothing(self):
 		tickets = self.booking.get_refund_summary()["tickets"]
 		self.initiate(self.refund_id("1"), CHARGED_PER_TICKET, tickets=[tickets[0]["ticket"]])
-		cancellation_request = self.refunds()[0].cancellation_request
 
 		self.notify(self.refund_id("1"), "failed", CHARGED_PER_TICKET)
 
 		self.assertEqual(self.refunds()[0].status, "Failed")
 		self.assertEqual(self.booking.refunded_amount, 0)
-		self.assertEqual(
-			frappe.db.get_value("Ticket Cancellation Request", cancellation_request, "status"), "Rejected"
-		)
+		self.assertFalse(frappe.db.exists("Ticket Cancellation Request", {"booking": self.booking.name}))
+		self.assertEqual(frappe.db.get_value("Event Ticket", tickets[0]["ticket"], "docstatus"), 1)
 
 	def test_a_webhook_processed_as_guest_still_updates_the_booking(self):
 		# The refund webhook is an allow_guest endpoint, so the job it enqueues
 		# runs as Guest — who has no write permission on Event Booking.
 		tickets = self.booking.get_refund_summary()["tickets"]
 		self.initiate(self.refund_id("1"), CHARGED_PER_TICKET, tickets=[tickets[0]["ticket"]])
-		cancellation_request = self.refunds()[0].cancellation_request
 		frappe.set_user("Guest")
 		self.addCleanup(frappe.set_user, "Administrator")
 
@@ -299,17 +297,19 @@ class TestRefundNotification(BookingRefundTestCase):
 		self.assertEqual(self.refunds()[0].status, "Processed")
 		self.assertEqual(self.booking.refund_status, "Partially Refunded")
 		self.assertEqual(
-			frappe.db.get_value("Ticket Cancellation Request", cancellation_request, "docstatus"), 1
+			frappe.db.get_value(
+				"Ticket Cancellation Request", self.refunds()[0].cancellation_request, "docstatus"
+			),
+			1,
 		)
 
-	def test_a_processed_refund_accepts_and_submits_the_queued_cancellation(self):
+	def test_a_processed_refund_raises_and_submits_the_cancellation(self):
 		tickets = self.booking.get_refund_summary()["tickets"]
 		self.initiate(self.refund_id("1"), CHARGED_PER_TICKET, tickets=[tickets[0]["ticket"]])
-		cancellation_request = self.refunds()[0].cancellation_request
 
 		self.notify(self.refund_id("1"), "processed", CHARGED_PER_TICKET)
 
-		request = frappe.get_doc("Ticket Cancellation Request", cancellation_request)
+		request = frappe.get_doc("Ticket Cancellation Request", self.refunds()[0].cancellation_request)
 		self.assertEqual(request.status, "Accepted")
 		self.assertEqual(request.docstatus, 1)
 		self.assertEqual(frappe.db.get_value("Event Ticket", tickets[0]["ticket"], "docstatus"), 2)
@@ -318,7 +318,6 @@ class TestRefundNotification(BookingRefundTestCase):
 		tickets = self.booking.get_refund_summary()["tickets"]
 		self.initiate(self.refund_id("1"), CHARGED_PER_TICKET, tickets=[tickets[0]["ticket"]])
 		refund = self.refunds()[0]
-		cancellation_request = refund.cancellation_request
 
 		with patch("frappe.sendmail", side_effect=Exception("no outgoing email account")):
 			refund.apply_gateway_status("processed", CHARGED_PER_TICKET)
@@ -327,7 +326,7 @@ class TestRefundNotification(BookingRefundTestCase):
 		self.assertEqual(self.refunds()[0].status, "Processed")
 		self.assertEqual(self.booking.refunded_amount, CHARGED_PER_TICKET)
 
-		request = frappe.get_doc("Ticket Cancellation Request", cancellation_request)
+		request = frappe.get_doc("Ticket Cancellation Request", self.refunds()[0].cancellation_request)
 		self.assertEqual(request.docstatus, 0)
 		self.assertEqual(request.status, "In Review")
 		self.assertEqual(frappe.db.get_value("Event Ticket", tickets[0]["ticket"], "docstatus"), 1)

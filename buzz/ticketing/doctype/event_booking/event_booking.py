@@ -413,9 +413,10 @@ class EventBooking(Document):
 	def refund(self, amount: float, tickets: list[str] | None = None) -> str:
 		"""Refund `amount` against this booking's payment.
 
-		`tickets` are the tickets the operator picked; each one gets queued for
-		cancellation through the usual Ticket Cancellation Request review. A
-		custom amount cancels nothing, because it maps to no particular ticket.
+		`tickets` are the tickets the operator picked. They are recorded, not
+		cancelled: that waits until the gateway settles the refund, because a
+		refund can still fail. A custom amount cancels nothing at all, because it
+		maps to no particular ticket.
 		"""
 		frappe.only_for("System Manager")
 
@@ -438,7 +439,6 @@ class EventBooking(Document):
 				"amount": flt(refund.get("amount")) / 100,
 				"currency": self.currency,
 				"tickets": [{"ticket": ticket} for ticket in tickets or []],
-				"cancellation_request": self.request_ticket_cancellation(tickets),
 			}
 		).insert()
 
@@ -502,21 +502,6 @@ class EventBooking(Document):
 			frappe.throw(_("No received payment found for this booking"))
 
 		return payment[0]
-
-	def request_ticket_cancellation(self, tickets: list[str] | None) -> str | None:
-		if not tickets:
-			return None
-
-		request = frappe.get_doc(
-			{
-				"doctype": "Ticket Cancellation Request",
-				"booking": self.name,
-				"status": "In Review",
-				"tickets": [{"ticket": ticket} for ticket in tickets],
-			}
-		).insert()
-
-		return request.name
 
 	@frappe.whitelist()
 	def approve_booking(self):
