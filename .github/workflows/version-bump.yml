@@ -1,0 +1,72 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New version, e.g. 1.2.0 or 2.0.0-beta.1 (semver, no leading "v")'
+        required: true
+        type: string
+      base:
+        description: 'Branch to bump'
+        required: true
+        default: develop
+        type: choice
+        options:
+          - develop
+          - main
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    name: Push bump branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base }}
+
+      - name: Bump version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          # Semver, not PEP 440: Frappe's update check parses __version__ with
+          # semantic_version, which rejects forms like "2.0.0b0". pip normalises
+          # the semver pre-release back to PEP 440, so packaging is unaffected.
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$VERSION' is not a semver version"
+            exit 1
+          fi
+          # pyproject.toml reads the version from buzz/__init__.py, and
+          # dashboard/package.json is deliberately pinned at 0.0.0.
+          sed -i -E "s/^__version__ = \".*\"$/__version__ = \"$VERSION\"/" buzz/__init__.py
+          sed -i -E "s/^  \"version\": \".*\",$/  \"version\": \"$VERSION\",/" package.json
+          git diff --exit-code && { echo "::error::version is already $VERSION"; exit 1; } || true
+
+      - name: Push branch
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "chore/bump-$VERSION"
+          git commit -am "chore: bump version to $VERSION"
+          git push --force-with-lease origin "chore/bump-$VERSION"
+
+      - name: Link to PR form
+        env:
+          VERSION: ${{ inputs.version }}
+          BASE: ${{ inputs.base }}
+        run: |
+          # ponytail: the workflow stops at the branch because a PR opened with
+          # GITHUB_TOKEN does not trigger other workflows, and the required
+          # checks on develop would never run, leaving the PR unmergeable.
+          # Give it a PAT and swap this step for `gh pr create` if the click
+          # ever gets annoying.
+          url="${{ github.server_url }}/${{ github.repository }}/compare/$BASE...chore/bump-$VERSION?expand=1&title=chore:%20v$VERSION"
+          echo "[Open the bump PR](<$url>)" >> "$GITHUB_STEP_SUMMARY"
