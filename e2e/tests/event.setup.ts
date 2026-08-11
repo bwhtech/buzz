@@ -1,5 +1,5 @@
 import { test as setup, expect } from "@playwright/test";
-import { createDoc, deleteDoc, docExists, getList } from "../helpers/frappe";
+import { createDoc, deleteDoc, docExists, ensureTestTeam, getList } from "../helpers/frappe";
 
 interface NamedDoc {
 	name: string;
@@ -63,10 +63,13 @@ setup("create test event for booking", async ({ request }) => {
 		console.log(`Created Event Category: ${testCategoryName}`);
 	}
 
+	const team = await ensureTestTeam(request);
+
 	// Create Event Host if it doesn't exist
 	if (!(await docExists(request, "Event Host", testHostName))) {
 		await createDoc(request, "Event Host", {
 			name: testHostName,
+			team,
 		});
 		console.log(`Created Event Host: ${testHostName}`);
 	}
@@ -77,6 +80,7 @@ setup("create test event for booking", async ({ request }) => {
 	const startDate = futureDate.toISOString().split("T")[0];
 
 	const event = await createDoc<NamedDoc>(request, "Buzz Event", {
+		team,
 		title: testEventTitle,
 		category: testCategoryName,
 		host: testHostName,
