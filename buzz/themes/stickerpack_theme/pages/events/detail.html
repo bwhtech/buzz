@@ -81,8 +81,10 @@
 {% set rot_cycle = [1, -1, 2, -2, 3, -3] %}
 {% set category_label = (category.name|upper) if category else 'EVENT' %}
 {% set date_full = event.start_date.strftime('%a, %d %b %Y') if event.start_date else 'TBA' %}
-{% set doors_time = (event.start_time|string)[:5] if event.start_time else '' %}
-{% set time_zone_label = event.time_zone.split('/')|last if event.time_zone else 'IST' %}
+{% set start_time_display = frappe.utils.get_time(event.start_time).strftime('%H:%M') if event.start_time else '' %}
+{% set time_zone_label = event.time_zone_label or (event.time_zone.split('/')|last if event.time_zone else '') %}
+{% set is_webinar = event.medium == 'Online' %}
+{% set partners_heading = 'hosted & sponsored by' if (host and sponsors) else ('sponsored by' if sponsors else 'hosted by') %}
 {% set hero_image = event.banner_image or event.card_image %}
 {% set register_href = '/dashboard/book-tickets/' + (event.route or '') %}
 {% set sponsor_href = '/dashboard/events/' + (event.route or '') + '/forms/enquire-sponsorship' %}
@@ -115,7 +117,7 @@
     </div>
     <div class="square bg-[var(--accent-warm)] text-[#161616] p-5 rotate-1">
       <div class="hand text-[28px]">when &darr;</div>
-      <p class="mt-2 font-bold text-[20px] leading-tight">{{ date_full }}{% if doors_time %}<br>{{ doors_time }} {{ time_zone_label }} doors{% endif %}</p>
+      <p class="mt-2 font-bold text-[20px] leading-tight">{{ date_full }}{% if start_time_display %}<br>starts {{ start_time_display }}{% if time_zone_label %} {{ time_zone_label }}{% endif %}{% endif %}</p>
     </div>
     <div class="square bg-[var(--accent-cool)] text-[#161616] p-5 -rotate-2">
       <div class="hand text-[28px]">where &darr;</div>
@@ -131,7 +133,7 @@
     </div>
     <div class="square bg-[var(--accent-hot)] text-white p-6 -rotate-3">
       <div class="hand text-[40px] leading-none">don't<br>be late!</div>
-      <p class="mt-3 text-[14px]">{% if doors_time %}Doors {{ doors_time }} {{ time_zone_label }}.{% endif %} Once sold out, that's it.</p>
+      <p class="mt-3 text-[14px]">{% if start_time_display %}Starts {{ start_time_display }}{% if time_zone_label %} {{ time_zone_label }}{% endif %}.{% endif %} Once sold out, that's it.</p>
     </div>
   </div>
   {% endif %}
@@ -151,10 +153,10 @@
   </section>
   {% endif %}
 
-  {% if schedule_items %}
+  {% if schedule_items and not is_webinar %}
   <section class="mt-12 square p-8 -rotate-1">
     <div class="hand text-[36px] text-[var(--accent-primary)] -rotate-1">&#9733; the day, in order</div>
-    <p class="mono text-[10px] tracking-[0.25em] uppercase opacity-50 mt-1">{{ time_zone_label }} &middot; subject to change</p>
+    <p class="mono text-[10px] tracking-[0.25em] uppercase opacity-50 mt-1">{% if time_zone_label %}{{ time_zone_label }} &middot; {% endif %}subject to change</p>
 
     <div class="schedule-rail mt-8">
       {% for item in schedule_items %}
@@ -225,15 +227,13 @@
 
   {% if host or sponsors %}
   <section class="mt-8 square bg-[var(--accent-warm)] text-[#161616] p-8 rotate-1">
-    <div class="hand text-[36px] -rotate-1">&#9733; hosted by</div>
+    <div class="hand text-[36px] -rotate-1">&#9733; {{ partners_heading }}</div>
     <div class="grid sm:grid-cols-2 gap-5 mt-4">
       {% if host %}
       <div class="square bg-white p-5 flex items-center gap-4 rotate-0">
-        {% if host.logo %}
-        <div class="w-16 h-16 flex items-center justify-center bg-white border-[3px] border-[#161616] shrink-0">
-          <img src="{{ host.logo }}" alt="{{ host.name }}" class="max-w-full max-h-full object-contain p-1" />
+        <div class="w-16 h-16 flex items-center justify-center bg-white border-[3px] border-[#161616] shrink-0 hand text-[28px]">
+          {% if host.logo %}<img src="{{ host.logo }}" alt="{{ host.name }}" class="max-w-full max-h-full object-contain p-1" />{% else %}&#9733;{% endif %}
         </div>
-        {% endif %}
         <div>
           <div class="label">host</div>
           <div class="font-black text-[22px] leading-tight">{{ host.name }}</div>

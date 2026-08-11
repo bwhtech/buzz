@@ -79,8 +79,10 @@
 {% set swatches = ['yellow', 'pink', 'blue', 'green', 'orange', 'purple'] %}
 {% set category_label = (category.name|upper) if category else 'EVENT' %}
 {% set date_full = event.start_date.strftime('%a, %d %b %Y') if event.start_date else 'TBA' %}
-{% set doors_time = (event.start_time|string)[:5] if event.start_time else '' %}
-{% set time_zone_label = event.time_zone.split('/')|last if event.time_zone else 'IST' %}
+{% set start_time_display = frappe.utils.get_time(event.start_time).strftime('%H:%M') if event.start_time else '' %}
+{% set time_zone_label = event.time_zone_label or (event.time_zone.split('/')|last if event.time_zone else '') %}
+{% set is_webinar = event.medium == 'Online' %}
+{% set partners_heading = 'hosted & sponsored by' if (host and sponsors) else ('sponsored by' if sponsors else 'hosted by') %}
 {% set hero_image = event.banner_image or event.card_image %}
 {% set register_href = '/dashboard/book-tickets/' + (event.route or '') %}
 {% set sponsor_href = '/dashboard/events/' + (event.route or '') + '/forms/enquire-sponsorship' %}
@@ -123,8 +125,8 @@
       <div class="marker -rotate-2 inline-block" style="font-size: 36px;">when &darr;</div>
       <div class="-mt-1 leading-snug" style="font-size: 22px;">
         <span class="circle marker" style="font-size: 22px;">{{ date_full }}</span>
-        {% if doors_time %}
-        <div class="mt-3">doors <span class="marker" style="color: var(--accent);">{{ doors_time }} {{ time_zone_label }}</span></div>
+        {% if start_time_display %}
+        <div class="mt-3">starts <span class="marker" style="color: var(--accent);">{{ start_time_display }}{% if time_zone_label %} {{ time_zone_label }}{% endif %}</span></div>
         {% endif %}
       </div>
     </div>
@@ -177,10 +179,10 @@
   </section>
   {% endif %}
 
-  {% if schedule_items %}
+  {% if schedule_items and not is_webinar %}
   <section aria-labelledby="sched-heading" class="mt-16">
     <h2 id="sched-heading" class="section-h2 -rotate-2 inline-block"><span class="star">&#9733;</span> the day, in scribbles</h2>
-    <p class="label mt-2">{{ schedule_items | length }} session{{ 's' if schedule_items | length != 1 else '' }} &middot; {{ time_zone_label }} &middot; subject to change</p>
+    <p class="label mt-2">{{ schedule_items | length }} session{{ 's' if schedule_items | length != 1 else '' }} &middot; {% if time_zone_label %}{{ time_zone_label }} &middot; {% endif %}subject to change</p>
     <ol class="programme">
       {% for item in schedule_items %}
       <li class="{% if item.is_break %}is-break{% endif %}">
@@ -251,7 +253,7 @@
 
   {% if host or sponsors %}
   <section aria-labelledby="host-heading" class="mt-16">
-    <h2 id="host-heading" class="section-h2 -rotate-2 inline-block"><span class="star">&#9733;</span> hosted by</h2>
+    <h2 id="host-heading" class="section-h2 -rotate-2 inline-block"><span class="star">&#9733;</span> {{ partners_heading }}</h2>
     <div class="grid sm:grid-cols-2 gap-5 mt-3">
       {% if host %}
       <div class="box p-5 flex items-center gap-4">

@@ -13,7 +13,7 @@
 
 {% set paid_ticket_count = frappe.db.count("Event Ticket Type",
       {"event": event.name, "is_published": 1, "price": [">", 0]}) %}
-{% set is_free = event.free_webinar or paid_ticket_count == 0 %}
+{% set is_free = event.free_event or paid_ticket_count == 0 %}
 {% set tier_label = "FREE" if is_free else "PAID" %}
 
 {% set talk_names = event.schedule | selectattr("type", "equalto", "Talk")
@@ -78,8 +78,10 @@
 {% set date_display = event.start_date.strftime('%d %b %Y') if event.start_date else 'TBA' %}
 {% set date_compact = event.start_date.strftime('%d.%m.%y') if event.start_date else 'TBA' %}
 {% set date_pill = event.start_date.strftime('%d %b')|upper if event.start_date else '' %}
-{% set time_zone_label = event.time_zone.split('/')|last|upper if event.time_zone else 'IST' %}
-{% set doors_time = (event.start_time|string)[:5] if event.start_time else 'TBA' %}
+{% set time_zone_label = event.time_zone_label or (event.time_zone.split('/')|last|upper if event.time_zone else '') %}
+{% set start_time_display = frappe.utils.get_time(event.start_time).strftime('%H:%M') if event.start_time else 'TBA' %}
+{% set is_webinar = event.medium == 'Online' %}
+{% set partners_heading = 'Hosted & sponsored by' if (host and sponsors) else ('Sponsored by' if sponsors else 'Hosted by') %}
 {% set hall_label = venue.address.split('\n')[0] if venue and venue.address else (venue.name if venue else 'TBA') %}
 
 {% set register_href = '/dashboard/book-tickets/' + (event.route or '') %}
@@ -148,8 +150,8 @@
           <div class="font-ui font-bold mt-1">{{ date_display }}</div>
         </div>
         <div>
-          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Doors</div>
-          <div class="font-ui font-bold mt-1">{{ doors_time }} {{ time_zone_label }}</div>
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Starts</div>
+          <div class="font-ui font-bold mt-1">{{ start_time_display }}{% if time_zone_label %} {{ time_zone_label }}{% endif %}</div>
         </div>
         <div>
           <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Hall</div>
@@ -184,8 +186,8 @@
             <div class="font-ui font-bold text-[16px]">{{ date_compact }}</div>
           </div>
           <div>
-            <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Doors</div>
-            <div class="font-ui font-bold text-[14px]">{{ doors_time }}</div>
+            <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Starts</div>
+            <div class="font-ui font-bold text-[14px]">{{ start_time_display }}</div>
           </div>
           <div>
             <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Hall</div>
@@ -242,6 +244,7 @@
       </div>
     </section>
 
+    {% if not is_webinar %}
     <section aria-labelledby="schedule-heading" class="bg-pass rounded-xl p-8 md:p-10 mt-6">
       <div class="flex items-baseline justify-between flex-wrap gap-3 mb-6">
         <div>
@@ -254,7 +257,7 @@
             {% endif %}
           </h2>
         </div>
-        <div class="font-ui text-[11px] font-medium opacity-70">{{ time_zone_label }} &middot; subject to change</div>
+        <div class="font-ui text-[11px] font-medium opacity-70">{% if time_zone_label %}{{ time_zone_label }} &middot; {% endif %}subject to change</div>
       </div>
 
       {% if schedule_items %}
@@ -269,6 +272,7 @@
       </div>
       {% endif %}
     </section>
+    {% endif %}
 
     {% if event.featured_speakers and event.featured_speakers|length > 0 %}
     <section aria-labelledby="speakers-heading" class="bg-pass rounded-xl p-8 md:p-10 mt-6">
@@ -277,9 +281,11 @@
           <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Featured speakers</div>
           <h2 id="speakers-heading" class="font-ui font-extrabold text-[24px] mt-2 tracking-tight">Talks by</h2>
         </div>
+        {% if not is_webinar %}
         <a href="#schedule-heading" class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase inline-flex items-center gap-1 hover:opacity-70 no-underline">
           See full schedule <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
         </a>
+        {% endif %}
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -306,7 +312,7 @@
       <div class="flex items-baseline justify-between flex-wrap gap-3">
         <div>
           <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Partners</div>
-          <h2 id="partners-heading" class="font-ui font-extrabold text-[24px] mt-2 tracking-tight">Hosted by</h2>
+          <h2 id="partners-heading" class="font-ui font-extrabold text-[24px] mt-2 tracking-tight">{{ partners_heading }}</h2>
         </div>
         <a href="{{ secondary_href }}"
            class="font-ui text-[11px] font-bold tracking-[0.04em] uppercase flex items-center gap-1 hover:opacity-70 no-underline">
@@ -375,9 +381,7 @@
     <section aria-labelledby="host-heading" class="bg-pass rounded-xl p-8 md:p-10 mt-6">
       <div class="grid md:grid-cols-[auto_1fr] gap-6 items-start">
         <div class="w-20 h-20 rounded bg-white p-3 flex items-center justify-center shrink-0 border border-line">
-          {% if host.logo %}
-          <img src="{{ host.logo }}" alt="{{ host.name }} logo" class="max-w-full max-h-full object-contain" />
-          {% endif %}
+          <img src="{{ host.logo or buzz_theme_asset_url('images/placeholder.svg') }}" alt="{{ host.name }} logo" class="max-w-full max-h-full object-contain" />
         </div>
         <div>
           <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">About the host</div>
