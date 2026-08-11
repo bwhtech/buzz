@@ -9,7 +9,7 @@ import {
 	TICKETS_EVENT_TITLE,
 } from "../data/tickets";
 import { createUserWithRoles, saveLoginState } from "../helpers/auth";
-import { callMethod, createDoc, deleteDoc, docExists, getList } from "../helpers/frappe";
+import { callMethod, createDoc, deleteDoc, docExists, ensureTestTeam, getList } from "../helpers/frappe";
 
 interface NamedDoc {
 	name: string;
@@ -62,8 +62,10 @@ setup("seed a ticket owned by the attendee", async ({ request, baseURL }) => {
 			slug: "e2e-tickets-category",
 		});
 	}
+	const team = await ensureTestTeam(request);
+
 	if (!(await docExists(request, "Event Host", HOST))) {
-		await createDoc(request, "Event Host", { name: HOST });
+		await createDoc(request, "Event Host", { name: HOST, team });
 	}
 
 	// Far enough out that every action window (transfer, add-ons, cancellation) is open.
@@ -71,6 +73,7 @@ setup("seed a ticket owned by the attendee", async ({ request, baseURL }) => {
 	startDate.setDate(startDate.getDate() + 60);
 
 	const event = await createDoc<NamedDoc>(request, "Buzz Event", {
+		team,
 		title: TICKETS_EVENT_TITLE,
 		category: CATEGORY,
 		host: HOST,

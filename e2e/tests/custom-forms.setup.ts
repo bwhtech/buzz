@@ -6,7 +6,7 @@ import {
 	CUSTOM_FORMS_EVENT_ROUTE,
 	MEMBERS_ONLY_FORM_ROUTE,
 } from "../data/custom-forms";
-import { createDoc, docExists, getDoc, getList, updateDoc } from "../helpers/frappe";
+import { createDoc, docExists, ensureTestTeam, getDoc, getList, updateDoc } from "../helpers/frappe";
 
 interface NamedDoc {
 	name: string;
@@ -32,8 +32,10 @@ setup("setup custom forms on test event", async ({ request }) => {
 				slug: "e2e-test-category",
 			});
 		}
+		const team = await ensureTestTeam(request);
+
 		if (!(await docExists(request, "Event Host", testHostName))) {
-			await createDoc(request, "Event Host", { name: testHostName });
+			await createDoc(request, "Event Host", { name: testHostName, team });
 		}
 
 		const futureDate = new Date();
@@ -41,6 +43,7 @@ setup("setup custom forms on test event", async ({ request }) => {
 		const startDate = futureDate.toISOString().split("T")[0];
 
 		const event = await createDoc<NamedDoc>(request, "Buzz Event", {
+			team,
 			title: "E2E Custom Forms Event",
 			category: testCategoryName,
 			host: testHostName,

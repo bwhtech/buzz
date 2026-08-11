@@ -99,4 +99,25 @@ test.describe("Guest Booking", () => {
 
 		await expect(page.getByText("Booking Confirmed")).toBeVisible({ timeout: 30000 });
 	});
+
+	test("guest phone field rejects a number of the wrong length", async ({ page }) => {
+		const email = `guest-phone-invalid-${uid}@test.com`;
+		const bookingPage = new BookingPage(page);
+		await bookingPage.goto("guest-phone-otp-e2e");
+		await bookingPage.waitForFormLoad();
+
+		await page.locator('input[placeholder="Enter your first name"]').fill("Test");
+		await page.locator('input[placeholder="Enter your last name"]').fill("Guest Phone");
+		await page.locator('input[placeholder="Enter your email"]').fill(email);
+		await page.locator('input[placeholder="Enter your email"]').blur();
+
+		// A well-formed but too-short number passes PhoneInput's digit filter and is
+		// caught by the server, which reports it under the field rather than as a toast.
+		const phoneInput = page.locator('input[placeholder="Enter your phone number"]');
+		await phoneInput.fill("12345");
+		await bookingPage.submit();
+
+		await expect(page.getByText("is not valid")).toBeVisible({ timeout: 10000 });
+		await expect(page.getByText("Verify Your Phone")).toBeHidden();
+	});
 });

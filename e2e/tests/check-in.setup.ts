@@ -1,6 +1,6 @@
 import { test as setup } from "@playwright/test";
 import { createUserWithRoles, saveLoginState } from "../helpers/auth";
-import { callMethod, createDoc, deleteDoc, docExists, getList } from "../helpers/frappe";
+import { callMethod, createDoc, deleteDoc, docExists, ensureTestTeam, getList } from "../helpers/frappe";
 import {
 	CHECK_IN_EVENT_ROUTE,
 	CHECK_IN_EVENT_TITLE,
@@ -81,14 +81,17 @@ setup("seed check-in event, ticket type and front-desk users", async ({ request,
 		});
 	}
 
+	const team = await ensureTestTeam(request);
+
 	if (!(await docExists(request, "Event Host", HOST))) {
-		await createDoc(request, "Event Host", { name: HOST });
+		await createDoc(request, "Event Host", { name: HOST, team });
 	}
 
 	const startDate = new Date();
 	startDate.setDate(startDate.getDate() + 7);
 
-	const event = await createDoc<NamedDoc & { team: string }>(request, "Buzz Event", {
+	const event = await createDoc<NamedDoc>(request, "Buzz Event", {
+		team,
 		title: CHECK_IN_EVENT_TITLE,
 		category: CATEGORY,
 		host: HOST,
@@ -115,7 +118,7 @@ setup("seed check-in event, ticket type and front-desk users", async ({ request,
 		roles: ["Buzz User", "Frontdesk Manager"],
 	});
 
-	await ensureTeamMembership(request, event.team, FRONTDESK_EMAIL, "Frontdesk");
+	await ensureTeamMembership(request, team, FRONTDESK_EMAIL, "Frontdesk");
 
 	await saveLoginState(baseURL!, {
 		email: FRONTDESK_EMAIL,

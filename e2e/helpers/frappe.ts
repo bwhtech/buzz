@@ -221,3 +221,32 @@ export async function docExists(
 		return false;
 	}
 }
+
+const TEST_TEAM_NAME = "E2E Team";
+
+/**
+ * Return the team every fixture stamps its documents with, creating it on first run.
+ *
+ * Team-direct doctypes (Buzz Event, Event Host, ...) make `team` mandatory and only fill
+ * it in when the acting user has exactly one membership. A dev site can hand the test user
+ * any number of teams, so fixtures name the team rather than relying on that inference.
+ *
+ * The list is already scoped to the acting user's teams, so a same-named team belonging to
+ * somebody else is invisible here and a membership comes free with the insert.
+ */
+export async function ensureTestTeam(request: APIRequestContext): Promise<string> {
+	const [existing] = await getList<{ name: string }>(request, "Buzz Team", {
+		fields: ["name"],
+		filters: { team_name: TEST_TEAM_NAME },
+		limit: 1,
+	});
+
+	if (existing) {
+		return existing.name;
+	}
+
+	const team = await createDoc<{ name: string }>(request, "Buzz Team", {
+		team_name: TEST_TEAM_NAME,
+	});
+	return team.name;
+}

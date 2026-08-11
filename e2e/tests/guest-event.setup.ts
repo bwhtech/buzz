@@ -1,5 +1,5 @@
 import { test as setup } from "@playwright/test";
-import { callMethod, createDoc, docExists, getList } from "../helpers/frappe";
+import { callMethod, createDoc, docExists, ensureTestTeam, getList } from "../helpers/frappe";
 
 interface NamedDoc {
 	name: string;
@@ -103,9 +103,12 @@ setup("create guest booking test events", async ({ request }) => {
 		});
 	}
 
+	const team = await ensureTestTeam(request);
+
 	if (!(await docExists(request, "Event Host", testHostName))) {
 		await createDoc(request, "Event Host", {
 			name: testHostName,
+			team,
 		});
 	}
 
@@ -116,6 +119,7 @@ setup("create guest booking test events", async ({ request }) => {
 	// Create each guest test event with a free ticket type
 	for (const evt of guestEvents) {
 		const event = await createDoc<NamedDoc>(request, "Buzz Event", {
+			team,
 			title: evt.title,
 			category: testCategoryName,
 			host: testHostName,
