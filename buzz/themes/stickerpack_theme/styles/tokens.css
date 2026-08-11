@@ -120,6 +120,9 @@ html, body {
   display: flex; align-items: center; justify-content: space-between;
   padding: 8px 0 28px;
 }
+@media (max-width: 640px) {
+  .rule-bar { padding-right: 56px; }
+}
 .rule-bar .brand {
   font-family: 'Caveat', cursive;
   font-size: 40px;
