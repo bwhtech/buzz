@@ -34,7 +34,7 @@ class EventBookingRefund(Document):
 	# end: auto-generated types
 
 	def apply_gateway_status(self, gateway_status: str, amount: float) -> None:
-		"""Record what the gateway settled, and stop cancelling tickets it refused."""
+		"""Record what the gateway settled on this refund."""
 		self.amount = flt(amount)
 		self.status = "Failed" if gateway_status == "failed" else "Processed"
 
@@ -46,12 +46,10 @@ class EventBookingRefund(Document):
 			self.cancel_refunded_tickets()
 
 	def cancel_refunded_tickets(self) -> None:
-		"""Cancel what the gateway paid back for.
-
-		Raised here rather than when the refund went out: a refund can still fail,
-		and a ticket cancelled against one leaves the customer with neither money
-		nor a seat. Nobody needs to approve what the gateway already settled.
-		"""
+		"""Cancel the tickets this refund paid back for."""
+		# Cancelled here and not when the refund went out: a refund can still
+		# fail, and a ticket cancelled against one leaves the customer with
+		# neither money nor a seat. What the gateway settled needs no approval.
 		request = frappe.get_doc(
 			{
 				"doctype": "Ticket Cancellation Request",
@@ -78,7 +76,7 @@ class EventBookingRefund(Document):
 
 
 def get_committed_refunds(booking: str) -> list[frappe._dict]:
-	"""Refunds holding money against a booking — everything the gateway has not refused."""
+	"""Get the refunds still holding money against a booking."""
 	return frappe.get_all(
 		"Event Booking Refund",
 		filters={"booking": booking, "status": ("in", COMMITTED_STATUSES)},

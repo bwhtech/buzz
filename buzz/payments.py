@@ -170,11 +170,9 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 
 
 def handle_refund_notification(doctype: str, docname: str) -> None:
-	"""Apply a gateway refund webhook to the booking whose payment it belongs to.
-
-	Subscribed via the `handle_refund_notification` hook. Returns nothing on
-	purpose: `call_hook_method` stops at the first handler that returns a value.
-	"""
+	"""Apply a gateway refund webhook to the booking whose payment it belongs to."""
+	# Returns nothing on purpose: `call_hook_method` stops at the first handler
+	# that returns a value.
 	payload = frappe.parse_json(frappe.db.get_value(doctype, docname, "data"))
 	refund = payload.get("payload", {}).get("refund", {}).get("entity", {})
 

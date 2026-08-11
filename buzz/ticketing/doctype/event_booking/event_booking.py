@@ -353,12 +353,16 @@ class EventBooking(Document):
 
 	@frappe.whitelist()
 	def get_refund_summary(self) -> dict:
-		"""What is still refundable: the amount, and the tickets.
-
-		The dialog and `refund` both read this, so what an operator is offered
-		cannot drift from what the server accepts. Refunds the gateway has not
-		refused hold their money and their tickets; a failed one releases both.
 		"""
+		Get the amount and tickets still refundable on this booking.
+
+		Returns:
+		    committed: amount the gateway has refunded or not answered on yet
+		    remaining: booking total minus the committed amount, the most a new refund may be
+		    tickets: tickets no committed refund has claimed, from `get_refundable_tickets`
+		"""
+		# Read by both the refund dialog and `refund`, so what an operator is
+		# offered cannot drift from what the server accepts.
 		committed = sum(flt(refund.amount) for refund in get_committed_refunds(self.name))
 
 		return {
@@ -368,12 +372,20 @@ class EventBooking(Document):
 		}
 
 	def get_refundable_tickets(self) -> list[dict]:
-		"""Tickets not already spoken for, each with the share of the total the buyer
-		paid for it. Attendee amounts are pre-tax and pre-discount, so they are
-		scaled to what was actually charged."""
+		"""
+		Get the tickets no committed refund has claimed, one row per ticket.
+
+		Returns:
+		    ticket: name of the Event Ticket
+		    attendee: name of whoever the ticket was booked for
+		    ticket_type: the attendee's ticket type
+		    amount: the ticket's share of what the buyer was charged
+		"""
 		claimed = get_committed_tickets(self.name)
 		attendee_totals = [flt(attendee.amount) + flt(attendee.add_on_total) for attendee in self.attendees]
 		booked = sum(attendee_totals)
+
+		# Attendee amounts are pre-tax and pre-discount, so scale them to what was charged.
 		charged_share = (flt(self.total_amount) / booked) if booked else 0
 
 		tickets_by_attendee = {}
@@ -411,13 +423,7 @@ class EventBooking(Document):
 
 	@frappe.whitelist()
 	def refund(self, amount: float, tickets: list[str] | None = None) -> str:
-		"""Refund `amount` against this booking's payment.
-
-		`tickets` are the tickets the operator picked. They are recorded, not
-		cancelled: that waits until the gateway settles the refund, because a
-		refund can still fail. A custom amount cancels nothing at all, because it
-		maps to no particular ticket.
-		"""
+		"""Refund `amount` against this booking's payment."""
 		frappe.only_for("System Manager")
 
 		payment = self.get_received_payment()
@@ -429,6 +435,9 @@ class EventBooking(Document):
 
 		refund = get_controller(payment.payment_gateway).refund_payment(payment.payment_id, flt(amount))
 
+		# The picked tickets are only recorded here. They are cancelled once the
+		# gateway settles the refund, since a refund can still fail. A custom
+		# amount maps to no ticket, so it cancels nothing.
 		frappe.get_doc(
 			{
 				"doctype": "Event Booking Refund",
@@ -463,12 +472,11 @@ class EventBooking(Document):
 
 		refundable = {ticket["ticket"] for ticket in summary["tickets"]}
 		if not set(tickets or []) <= refundable:
-			# Whoever called this asked to cancel a ticket that another booking
-			# owns, or one an earlier refund already claimed.
+			# Ticket belongs to another booking, or an earlier refund claimed it.
 			frappe.throw(_("Those tickets cannot be refunded against this booking"))
 
 	def set_refund_status(self) -> None:
-		"""Recompute the summary from the refunds raised against this booking."""
+		"""Recompute refunded amount and status from the refunds against this booking."""
 		refunds = frappe.get_all(
 			"Event Booking Refund", filters={"booking": self.name}, fields=["amount", "status"]
 		)
