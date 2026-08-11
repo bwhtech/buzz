@@ -64,8 +64,8 @@
     {% set session_title = session.description or '' %}
   {% endif %}
   {% set _ = schedule_items.append({
-      "start_time": (session.start_time|string)[:5] if session.start_time else '',
-      "end_time": (session.end_time|string)[:5] if session.end_time else '',
+      "start_time": frappe.utils.get_time(session.start_time).strftime('%H:%M') if session.start_time else '',
+      "end_time": frappe.utils.get_time(session.end_time).strftime('%H:%M') if session.end_time else '',
       "title": session_title,
       "speaker_name": session_speaker,
       "is_break": session.type == 'Break'
