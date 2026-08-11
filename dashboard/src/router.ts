@@ -143,6 +143,13 @@ const routes: RouteRecordRaw[] = [
 		meta: { isPublic: true },
 		component: () => import("@/pages/CustomFormPage.vue"),
 	},
+	// Last: everything above must be ruled out before a path counts as unknown.
+	{
+		path: "/:pathMatch(.*)*",
+		name: "not-found",
+		meta: { isPublic: true },
+		component: () => import("@/pages/NotFound.vue"),
+	},
 ]
 
 const router = createRouter({
