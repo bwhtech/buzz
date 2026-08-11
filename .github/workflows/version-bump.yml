@@ -1,0 +1,76 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New version, e.g. 1.2.0 or 2.0.0-beta.1 (semver, no leading "v")'
+        required: true
+        type: string
+      base:
+        description: 'Branch to bump'
+        required: true
+        default: develop
+        type: choice
+        options:
+          - develop
+          - main
+
+permissions:
+  contents: write
+
+# Two runs sharing a branch name would force-push over each other. The branch
+# name carries the base, so only a repeat of the same dispatch collides, and
+# that regenerates identical content — queue it rather than race it.
+concurrency:
+  group: version-bump-${{ github.event.inputs.base }}-${{ github.event.inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    name: Push bump branch
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      BASE: ${{ inputs.base }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base }}
+
+      - name: Bump version and push branch
+        run: |
+          set -euo pipefail
+          # Semver, not PEP 440: Frappe parses __version__ with semantic_version.
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$VERSION' is not a semver version"
+            exit 1
+          fi
+          # pyproject.toml reads the version from buzz/__init__.py.
+          sed -i -E "s/^__version__ = \".*\"$/__version__ = \"$VERSION\"/" buzz/__init__.py
+          sed -i -E "s/^  \"version\": \".*\",$/  \"version\": \"$VERSION\",/" package.json
+          # Both are anchored to the exact line, so a reformat would silently
+          # no-op one of them and bump only the other.
+          changed="$(git diff --name-only | sort | tr '\n' ' ')"
+          if [ "$changed" != "buzz/__init__.py package.json " ]; then
+            echo "::error::expected both version files to change, changed: ${changed:-nothing}"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # The base is part of the branch name: one version can be bumped on
+          # both lines, and the two commits must not share a branch.
+          git switch -c "chore/bump-$BASE-$VERSION"
+          git commit -am "chore: bump version to $VERSION"
+          # --force-with-lease has no remote-tracking ref here and rejects
+          # reruns as stale. Only this workflow writes to chore/bump-*.
+          git push --force origin "chore/bump-$BASE-$VERSION"
+
+      - name: Link to PR form
+        run: |
+          # Stops at the branch because a PR opened with GITHUB_TOKEN triggers
+          # no checks, leaving it unmergeable. Swap for `gh pr create` once a
+          # PAT exists.
+          url="${{ github.server_url }}/${{ github.repository }}/compare/$BASE...chore/bump-$BASE-$VERSION?expand=1&title=chore:%20v$VERSION"
+          echo "[Open the bump PR](<$url>)" >> "$GITHUB_STEP_SUMMARY"
