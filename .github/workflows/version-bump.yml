@@ -60,8 +60,8 @@ jobs:
 
       - name: Link to PR form
         run: |
-          # ponytail: stops at the branch because a PR opened with GITHUB_TOKEN
-          # triggers no checks, leaving it unmergeable. Swap for `gh pr create`
-          # once a PAT exists.
+          # Stops at the branch because a PR opened with GITHUB_TOKEN triggers
+          # no checks, leaving it unmergeable. Swap for `gh pr create` once a
+          # PAT exists.
           url="${{ github.server_url }}/${{ github.repository }}/compare/$BASE...chore/bump-$VERSION?expand=1&title=chore:%20v$VERSION"
           echo "[Open the bump PR](<$url>)" >> "$GITHUB_STEP_SUMMARY"
