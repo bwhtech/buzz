@@ -85,10 +85,10 @@
 {% set register_href = '/dashboard/book-tickets/' + (event.route or '') %}
 {% set secondary_href = '/dashboard/events/' + (event.route or '') + '/forms/enquire-sponsorship' %}
 
-{% block title %}{{ event.title }} &mdash; Frappe Events{% endblock %}
+{% block title %}{{ event.title }} &mdash; {{ app_name }}{% endblock %}
 {% block og_title %}{{ event.title }}{% endblock %}
 {% block og_description %}{{ event.short_description or event.title }}{% endblock %}
-{% block og_image %}{{ event.meta_image or event.banner_image or 'https://events.frappe.io/files/build26.webp' }}{% endblock %}
+{% block og_image %}{{ event.meta_image or event.banner_image or banner_image or '' }}{% endblock %}
 {% block og_url %}{{ frappe.utils.get_url() }}/events/{{ event.route }}{% endblock %}
 
 {% block body %}
@@ -224,7 +224,7 @@
         <ul class="space-y-3 text-[13px]">
           <li class="flex items-start gap-3 border-l border-dashed border-line pl-4">
             <i data-lucide="users" class="w-4 h-4 mt-0.5 opacity-70 shrink-0"></i>
-            <span>Network with the Frappe community</span>
+            <span>Network with the community</span>
           </li>
           <li class="flex items-start gap-3 border-l border-dashed border-line pl-4">
             <i data-lucide="handshake" class="w-4 h-4 mt-0.5 opacity-70 shrink-0"></i>
@@ -292,7 +292,7 @@
             {% set speaker = {
                 "name": speaker_profile.display_name or '',
                 "role": role_parts|join(', '),
-                "image_url": speaker_profile.display_image or 'https://events.frappe.io/files/frappe-logo.png'
+                "image_url": speaker_profile.display_image or ''
             } %}
             {% include "components/speaker_row.html" %}
           {% endif %}

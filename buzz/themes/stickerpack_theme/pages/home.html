@@ -1,9 +1,9 @@
 {% extends "components/base.html" %}
 {% import "components/macros/accents.html" as accents %}
 
-{% block title %}Frappe Events &mdash; doodled{% endblock %}
-{% block og_title %}Frappe Events &mdash; doodled{% endblock %}
-{% block og_description %}Conferences, yatras, meetups, and webinars from the Frappe community.{% endblock %}
+{% block title %}{{ app_name }}{% endblock %}
+{% block og_title %}{{ app_name }}{% endblock %}
+{% block og_description %}Conferences, yatras, meetups, and webinars.{% endblock %}
 {% block og_url %}{{ frappe.utils.get_url() }}/home{% endblock %}
 
 {% block body %}
@@ -48,22 +48,30 @@
 {% set accent_cycle = ['warm', 'hot', 'cool', 'ink', 'primary', 'bold'] %}
 {% set rot_cycle = [1, -1, 2, -2, 3, -3] %}
 
+{% set theme_config = buzz_theme_config() %}
+{% set hero_words = (theme_config.hero_heading or '').split() or ['come', 'build', 'together!'] %}
+{% set hero_chips = (theme_config.hero_chips or '26 SEASON\nOPEN SOURCE').splitlines() %}
+{% set chip_styles = ['bg-[var(--accent-warm)] text-[#161616] rotate-2', 'bg-[var(--accent-bold)] text-white rotate-3', 'bg-[var(--accent-hot)] text-white -rotate-2'] %}
+
 <section class="mt-4" aria-labelledby="hero-heading">
-  <h2 id="hero-heading" class="sr-only">Frappe Events</h2>
+  <h2 id="hero-heading" class="sr-only">{{ app_name }}</h2>
 
   <div class="flex flex-wrap gap-3 mb-8">
-    <span class="sticker bg-[var(--accent-primary)] text-white -rotate-3">FRAPPE EVENTS &#9733;</span>
-    <span class="sticker bg-[var(--accent-warm)] text-[#161616] rotate-2">26 SEASON</span>
+    <span class="sticker bg-[var(--accent-primary)] text-white -rotate-3">{{ app_name | upper }} &#9733;</span>
     <span class="sticker bg-[var(--accent-cool)] text-[#161616] -rotate-1">{{ all_events | length }} EVENTS</span>
-    <span class="sticker bg-[var(--accent-bold)] text-white rotate-3">OPEN SOURCE</span>
+    {% for chip in hero_chips %}
+      {% if chip | trim %}
+      <span class="sticker {{ chip_styles[loop.index0 % 3] }}">{{ chip | trim }}</span>
+      {% endif %}
+    {% endfor %}
   </div>
 
   <h1 class="font-black text-[64px] md:text-[140px] leading-[0.85] tracking-tight">
-    come<br>build<br>
-    <span class="hand text-[var(--accent-primary)] text-[140px] md:text-[260px] inline-block -rotate-3">together!</span>
+    {% for word in hero_words[:-1] %}{{ word }}<br>{% endfor %}
+    <span class="hand text-[var(--accent-primary)] text-[140px] md:text-[260px] inline-block -rotate-3">{{ hero_words[-1] }}</span>
   </h1>
 
-  <p class="hand text-[28px] md:text-[36px] mt-6 -rotate-1 opacity-80">&#9733; conferences &middot; yatras &middot; meetups &middot; webinars</p>
+  <p class="hand text-[28px] md:text-[36px] mt-6 -rotate-1 opacity-80">&#9733; {{ theme_config.hero_tagline or 'conferences · yatras · meetups · webinars' }}</p>
 </section>
 
 {% if featured %}
@@ -71,7 +79,7 @@
 {% set featured_date_short = featured.start_date.strftime('%d %b').upper() if featured.start_date else '' %}
 {% set featured_venue = venue_map.get(featured.venue, '') %}
 <section class="mt-16" aria-labelledby="featured-heading">
-  <h2 id="featured-heading" class="hand text-[40px] -rotate-1 mb-6">&#9733; this season's flagship</h2>
+  <h2 id="featured-heading" class="hand text-[40px] -rotate-1 mb-6">&#9733; {{ theme_config.featured_heading or "this season's flagship" }}</h2>
 
   <a href="/events/{{ featured.route }}" class="square block bg-[var(--accent-warm)] text-[#161616] p-3 photo-tape rotate-1 hover:rotate-0 transition-transform">
     <div class="grid md:grid-cols-2 gap-0">
@@ -159,7 +167,6 @@
     <div class="square p-6 -rotate-1 flex flex-col items-center justify-center text-center">
       <span class="label">2026 &middot; in planning</span>
       <div class="hand text-[36px] mt-2 leading-none">more soon &darr;</div>
-      <a href="mailto:events@frappe.io" class="mono text-[11px] tracking-[0.2em] uppercase mt-4 underline-offset-4 hover:underline">Propose a venue &rarr;</a>
     </div>
   </div>
 </section>

@@ -1,16 +1,14 @@
+{% import "components/macros/branding.html" as branding with context %}
 <footer class="site-footer no-print">
-  <span>events.frappe.io</span>
-  <span class="inline-flex items-center gap-3">
-    <a href="https://x.com/frappetech" target="_blank" rel="noopener" aria-label="X / Twitter" class="hover:opacity-70">
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M18.244 2H21l-6.52 7.45L22 22h-6.84l-4.78-6.27L4.8 22H2l7-8 -7-12h7l4.32 5.72L18.24 2zm-2.4 18h1.9L7.92 4h-2L15.84 20z"/></svg>
-    </a>
-    <a href="https://www.youtube.com/@frappetech" target="_blank" rel="noopener" aria-label="YouTube" class="hover:opacity-70"><i data-lucide="youtube" class="w-3.5 h-3.5"></i></a>
-    <a href="https://github.com/frappe" target="_blank" rel="noopener" aria-label="GitHub" class="hover:opacity-70"><i data-lucide="github" class="w-3.5 h-3.5"></i></a>
-    <a href="https://www.linkedin.com/company/frappe-tech" target="_blank" rel="noopener" aria-label="LinkedIn" class="hover:opacity-70"><i data-lucide="linkedin" class="w-3.5 h-3.5"></i></a>
-    <a href="https://discord.gg/frappe" target="_blank" rel="noopener" aria-label="Discord" class="hover:opacity-70"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i></a>
-  </span>
-  <span>doodled in mumbai &middot; 2026</span>
+  <span>{{ branding.brand(footer_logo or app_logo, "footer-logo") }}</span>
+  {% if footer_items %}
+  <span class="footer-links">{{ branding.footer_links() }}</span>
+  {% endif %}
+  {% if copyright %}<span>&copy; {{ copyright }}</span>{% endif %}
 </footer>
+{% if footer_address %}
+<address class="site-footer-address no-print">{{ footer_address }}</address>
+{% endif %}
 <p class="mono text-[10px] tracking-[0.25em] uppercase opacity-60 text-center mt-4 no-print">
-  thank you for joining us &middot; powered by buzz &middot; <a href="mailto:events@frappe.io" class="underline">events@frappe.io</a>
+  thank you for joining us &middot; powered by buzz
 </p>

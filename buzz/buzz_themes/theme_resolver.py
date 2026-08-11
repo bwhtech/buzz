@@ -4,7 +4,8 @@ import os
 import frappe
 from frappe.utils.jinja import get_jenv
 from frappe.utils.jinja_globals import is_rtl
-from frappe.website.utils import build_response, get_boot_data
+from frappe.website.doctype.website_settings.website_settings import get_website_settings
+from frappe.website.utils import build_response
 from jinja2 import BaseLoader, TemplateNotFound
 
 from buzz.buzz_themes.doctype.buzz_theme.buzz_theme import get_render_theme_context, is_within_directory
@@ -210,15 +211,32 @@ def build_base_context(match):
 	if match:
 		apply_route_groups(match, context)
 
-	try:
-		context.boot = get_boot_data()
-	except Exception:
-		context.boot = {}
-		frappe.log_error(title="Buzz Theme: boot data failed")
-
+	apply_website_settings(context)
 	apply_website_context_hooks(context)
 
 	return context
+
+
+DEFAULT_APP_NAME = "Buzz"
+
+
+def apply_website_settings(context):
+	context.app_name = DEFAULT_APP_NAME
+	context.app_logo = None
+	context.boot = {}
+
+	try:
+		# Also fills context.boot, so a themed page gets the same site-wide
+		# context frappe's own renderers build.
+		context.update(get_website_settings())
+
+		# get_website_settings() leaves out the branding fields the themes render
+		# the brand from, so a site never has to restate its own identity.
+		settings = frappe.client_cache.get_doc("Website Settings")
+		context.app_name = settings.app_name or DEFAULT_APP_NAME
+		context.app_logo = settings.app_logo
+	except Exception:
+		frappe.log_error(title="Buzz Theme: website settings failed")
 
 
 def apply_route_groups(match, context):

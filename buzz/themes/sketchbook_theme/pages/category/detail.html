@@ -41,8 +41,8 @@
 {% set category_slug_lower = (category.slug or '') | lower %}
 {% set is_webinars = category_slug_lower == 'webinars' %}
 
-{% block title %}{{ category.name }} &mdash; Frappe Events{% endblock %}
-{% block og_title %}{{ category.name }} &mdash; Frappe Events{% endblock %}
+{% block title %}{{ category.name }} &mdash; {{ app_name }}{% endblock %}
+{% block og_title %}{{ category.name }} &mdash; {{ app_name }}{% endblock %}
 {% block og_description %}{{ category.description or category.name }}{% endblock %}
 {% block og_url %}{{ frappe.utils.get_url() }}/category/{{ category.slug }}{% endblock %}
 
@@ -151,7 +151,7 @@
 {% if not upcoming and not past %}
 <section class="mt-16 text-center">
   <p class="marker -rotate-1" style="font-size: 44px; opacity: 0.7;">no {{ category.name | lower }} on the page yet.</p>
-  <p class="marker mt-4" style="font-size: 24px; opacity: 0.6;">check back, or <a href="mailto:events@frappe.io" class="scribble">propose one</a>.</p>
+  <p class="marker mt-4" style="font-size: 24px; opacity: 0.6;">check back soon.</p>
 </section>
 {% endif %}
 

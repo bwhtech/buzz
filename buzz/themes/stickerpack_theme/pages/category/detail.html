@@ -43,8 +43,8 @@
 {% set category_slug_lower = (category.slug or '') | lower %}
 {% set is_webinars = category_slug_lower == 'webinars' %}
 
-{% block title %}{{ category.name }} &mdash; Frappe Events{% endblock %}
-{% block og_title %}{{ category.name }} &mdash; Frappe Events{% endblock %}
+{% block title %}{{ category.name }} &mdash; {{ app_name }}{% endblock %}
+{% block og_title %}{{ category.name }} &mdash; {{ app_name }}{% endblock %}
 {% block og_description %}{{ category.description or category.name }}{% endblock %}
 {% block og_url %}{{ frappe.utils.get_url() }}/category/{{ category.slug }}{% endblock %}
 
@@ -142,8 +142,7 @@
 <section class="mt-16">
   <div class="square p-12 text-center -rotate-1">
     <div class="hand text-[60px] text-[var(--accent-primary)] -rotate-2">nothing here<br>yet &#9733;</div>
-    <p class="mt-4 max-w-md mx-auto opacity-80">No {{ category.name | lower }} on the calendar. Watch this space, or propose your city.</p>
-    <a href="mailto:events@frappe.io" class="cta-btn mt-8 inline-block">PROPOSE A CITY &rarr;</a>
+    <p class="mt-4 max-w-md mx-auto opacity-80">No {{ category.name | lower }} on the calendar. Watch this space.</p>
   </div>
 </section>
 {% endif %}

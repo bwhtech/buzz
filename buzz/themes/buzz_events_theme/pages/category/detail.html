@@ -32,8 +32,8 @@
   {% endif %}
 {% endfor %}
 
-{% block title %}{{ category.name }} &mdash; Frappe Events{% endblock %}
-{% block og_title %}{{ category.name }} &mdash; Frappe Events{% endblock %}
+{% block title %}{{ category.name }} &mdash; {{ app_name }}{% endblock %}
+{% block og_title %}{{ category.name }} &mdash; {{ app_name }}{% endblock %}
 {% block og_description %}{{ category.description or category.name }}{% endblock %}
 {% block og_url %}{{ frappe.utils.get_url() }}/category/{{ category.slug }}{% endblock %}
 

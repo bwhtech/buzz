@@ -87,7 +87,7 @@
 {% set register_href = '/dashboard/book-tickets/' + (event.route or '') %}
 {% set sponsor_href = '/dashboard/events/' + (event.route or '') + '/forms/enquire-sponsorship' %}
 
-{% block title %}{{ event.title }} &mdash; Frappe Events{% endblock %}
+{% block title %}{{ event.title }} &mdash; {{ app_name }}{% endblock %}
 {% block og_type %}event{% endblock %}
 {% block og_title %}{{ event.title }}{% endblock %}
 {% block og_description %}{{ event.short_description or event.title }}{% endblock %}

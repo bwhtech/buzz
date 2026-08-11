@@ -1,18 +1,16 @@
+{% import "components/macros/branding.html" as branding with context %}
 <footer class="site-footer no-print">
   <div class="site-footer-row">
-    <span>events.frappe.io</span>
-    <div class="social-row">
-      <a href="https://x.com/frappetech" target="_blank" rel="noopener" aria-label="X / Twitter">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M18.244 2H21l-6.52 7.45L22 22h-6.84l-4.78-6.27L4.8 22H2l7-8 -7-12h7l4.32 5.72L18.24 2zm-2.4 18h1.9L7.92 4h-2L15.84 20z"/></svg>
-      </a>
-      <a href="https://www.youtube.com/@frappetech" target="_blank" rel="noopener" aria-label="YouTube"><i data-lucide="youtube"></i></a>
-      <a href="https://github.com/frappe" target="_blank" rel="noopener" aria-label="GitHub"><i data-lucide="github"></i></a>
-      <a href="https://www.linkedin.com/company/frappe-tech" target="_blank" rel="noopener" aria-label="LinkedIn"><i data-lucide="linkedin"></i></a>
-      <a href="https://discord.gg/frappe" target="_blank" rel="noopener" aria-label="Discord"><i data-lucide="message-circle"></i></a>
-    </div>
-    <span>doodled in mumbai &middot; 2026</span>
+    <span>{{ branding.brand(footer_logo or app_logo, "footer-logo") }}</span>
+    {% if footer_items %}
+    <nav class="footer-links">{{ branding.footer_links() }}</nav>
+    {% endif %}
+    {% if copyright %}<span>&copy; {{ copyright }}</span>{% endif %}
   </div>
+  {% if footer_address %}
+  <address class="site-footer-address">{{ footer_address }}</address>
+  {% endif %}
   <div class="site-footer-tagline">
-    thank you for joining us &middot; powered by buzz &middot; <a href="mailto:events@frappe.io">events@frappe.io</a>
+    thank you for joining us &middot; powered by buzz
   </div>
 </footer>

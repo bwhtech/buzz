@@ -87,11 +87,11 @@
 
 {% set title_words = (event.title or '').split(' ') %}
 
-{% block title %}{{ event.title }} &mdash; Frappe Events{% endblock %}
+{% block title %}{{ event.title }} &mdash; {{ app_name }}{% endblock %}
 {% block og_type %}event{% endblock %}
 {% block og_title %}{{ event.title }}{% endblock %}
 {% block og_description %}{{ event.short_description or event.title }}{% endblock %}
-{% block og_image %}{{ event.meta_image or event.banner_image or 'https://events.frappe.io/files/build26.webp' }}{% endblock %}
+{% block og_image %}{{ event.meta_image or event.banner_image or banner_image or '' }}{% endblock %}
 {% block og_url %}{{ frappe.utils.get_url() }}/events/{{ event.route }}{% endblock %}
 
 {% block body %}

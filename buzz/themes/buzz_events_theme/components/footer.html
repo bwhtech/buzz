@@ -1,20 +1,17 @@
+{% import "components/macros/branding.html" as branding with context %}
 <footer class="mt-16 pt-5 border-t border-dashed border-line">
   <div class="flex flex-wrap justify-between items-center gap-4">
-    <div class="flex items-center gap-5 flex-wrap">
-      <span class="font-ui font-extrabold text-base tracking-[-0.01em]">&#9733; Frappe Events</span>
-      <a href="https://events.frappe.io" class="font-ui font-medium text-xs opacity-70 hover:opacity-100 no-underline">events.frappe.io</a>
-    </div>
-    <div class="flex items-center gap-1">
-      <a href="https://x.com/frappetech" target="_blank" rel="noopener" class="w-8 h-8 rounded-full opacity-70 hover:opacity-100 hover:bg-line inline-flex items-center justify-center text-ink" aria-label="X / Twitter">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4"><path d="M18.244 2H21l-6.52 7.45L22 22h-6.84l-4.78-6.27L4.8 22H2l7-8 -7-12h7l4.32 5.72L18.24 2zm-2.4 18h1.9L7.92 4h-2L15.84 20z"/></svg>
-      </a>
-      <a href="https://www.youtube.com/@frappetech" target="_blank" rel="noopener" class="w-8 h-8 rounded-full opacity-70 hover:opacity-100 hover:bg-line inline-flex items-center justify-center text-ink" aria-label="YouTube"><i data-lucide="youtube"></i></a>
-      <a href="https://github.com/frappe" target="_blank" rel="noopener" class="w-8 h-8 rounded-full opacity-70 hover:opacity-100 hover:bg-line inline-flex items-center justify-center text-ink" aria-label="GitHub"><i data-lucide="github"></i></a>
-      <a href="https://www.linkedin.com/company/frappe-tech" target="_blank" rel="noopener" class="w-8 h-8 rounded-full opacity-70 hover:opacity-100 hover:bg-line inline-flex items-center justify-center text-ink" aria-label="LinkedIn"><i data-lucide="linkedin"></i></a>
-      <a href="https://discord.gg/frappe" target="_blank" rel="noopener" class="w-8 h-8 rounded-full opacity-70 hover:opacity-100 hover:bg-line inline-flex items-center justify-center text-ink" aria-label="Discord"><i data-lucide="message-circle"></i></a>
-    </div>
+    <span class="font-ui font-extrabold text-base tracking-[-0.01em]">{{ branding.brand(footer_logo or app_logo, "h-7 w-auto", "&#9733; ") }}</span>
+    {% if footer_items %}
+    <nav class="flex items-center gap-5 flex-wrap">
+      {{ branding.footer_links("font-ui font-medium text-xs opacity-70 hover:opacity-100 no-underline") }}
+    </nav>
+    {% endif %}
   </div>
   <div class="font-ui font-medium text-xs opacity-55 mt-3.5">
-    Thank you for joining us &middot; Powered by Buzz &middot; <a href="mailto:events@frappe.io" class="no-underline hover:opacity-100">events@frappe.io</a>
+    Thank you for joining us &middot; Powered by Buzz{% if copyright %} &middot; &copy; {{ copyright }}{% endif %}
   </div>
+  {% if footer_address %}
+  <address class="font-ui font-medium text-xs opacity-55 mt-1 not-italic whitespace-pre-line">{{ footer_address }}</address>
+  {% endif %}
 </footer>

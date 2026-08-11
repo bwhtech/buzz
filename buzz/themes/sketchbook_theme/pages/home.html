@@ -1,8 +1,8 @@
 {% extends "components/base.html" %}
 
-{% block title %}Frappe Events &mdash; doodled in mumbai{% endblock %}
-{% block og_title %}Frappe Events &mdash; doodled in mumbai{% endblock %}
-{% block og_description %}Conferences, yatras, meetups, and webinars from the Frappe community.{% endblock %}
+{% block title %}{{ app_name }}{% endblock %}
+{% block og_title %}{{ app_name }}{% endblock %}
+{% block og_description %}Conferences, yatras, meetups, and webinars.{% endblock %}
 {% block og_url %}{{ frappe.utils.get_url() }}/home{% endblock %}
 
 {% block body %}
@@ -128,7 +128,6 @@
     <div class="box p-6 flex flex-col items-center justify-center text-center" style="background: var(--surface);">
       <div class="label">2026 &middot; in planning</div>
       <div class="marker mt-2 leading-tight" style="font-size: 28px;">more conferences<br>announced soon</div>
-      <a href="mailto:events@frappe.io" class="marker mt-3" style="color: var(--accent); font-size: 20px;">propose a venue &nearr;</a>
     </div>
   </div>
 </section>

@@ -1,5 +1,6 @@
+{% import "components/macros/branding.html" as branding with context %}
 <header class="flex justify-between items-center gap-3 flex-wrap border-b-2 border-ink pb-2 mb-10 font-ui font-bold text-xs tracking-[0.04em] uppercase">
-  <a href="/" class="font-ui font-extrabold text-base tracking-[-0.01em] normal-case text-ink no-underline">&#9733; Frappe Events</a>
+  <a href="/" class="font-ui font-extrabold text-base tracking-[-0.01em] normal-case text-ink no-underline">{{ branding.brand(app_logo, "h-7 w-auto", "&#9733; ") }}</a>
   <span class="context hidden md:inline"></span>
   <div class="inline-flex items-center gap-4">
     {% include "components/theme_toggle.html" %}

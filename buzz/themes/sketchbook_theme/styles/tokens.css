@@ -330,6 +330,12 @@ img {
   font-weight: 500;
 }
 
+.rule-bar .brand-logo {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
 .rule-bar .signin-link {
   font-family: "Caveat", cursive;
   font-size: 24px;
@@ -365,23 +371,36 @@ img {
   opacity: 0.5;
 }
 
-.site-footer .social-row {
+.site-footer .footer-links {
   display: flex;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: 1rem;
   align-items: center;
 }
 
-.site-footer .social-row a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
+.site-footer .footer-links a {
   opacity: 0.7;
 }
 
-.site-footer .social-row a:hover {
+.site-footer .footer-links a:hover {
   opacity: 1;
+}
+
+.site-footer-address {
+  margin-top: 0.75rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  font-style: normal;
+  white-space: pre-line;
+}
+
+.site-footer .footer-logo {
+  height: 22px;
+  width: auto;
+  display: block;
 }
 
 .site-footer-tagline {

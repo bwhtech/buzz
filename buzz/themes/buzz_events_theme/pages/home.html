@@ -1,8 +1,8 @@
 {% extends "components/base.html" %}
 
-{% block title %}Frappe Events &mdash; Conferences, Meetups, Webinars{% endblock %}
-{% block og_title %}Frappe Events &mdash; Conferences, Meetups, Webinars{% endblock %}
-{% block og_description %}Conferences, yatras, meetups, and webinars from the Frappe community.{% endblock %}
+{% block title %}{{ app_name }} &mdash; Conferences, Meetups, Webinars{% endblock %}
+{% block og_title %}{{ app_name }} &mdash; Conferences, Meetups, Webinars{% endblock %}
+{% block og_description %}Conferences, yatras, meetups, and webinars.{% endblock %}
 {% block og_url %}{{ frappe.utils.get_url() }}/home{% endblock %}
 
 {% block body %}
@@ -157,9 +157,6 @@
       <div class="bg-pass text-ink rounded-xl p-8 flex flex-col items-center justify-center text-center border border-dashed border-line opacity-70">
         <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">2026 &middot; in planning</div>
         <div class="font-ui font-bold text-[18px] mt-3 leading-tight">More conferences<br />announced soon</div>
-        <a href="mailto:events@frappe.io" class="font-ui text-[11px] font-bold tracking-[0.04em] uppercase mt-4 underline-offset-4 hover:underline">
-          Propose a venue &rarr;
-        </a>
       </div>
       {% endif %}
     </div>
@@ -169,9 +166,6 @@
       <div class="bg-pass text-ink rounded-xl p-8 flex flex-col items-center justify-center text-center border border-dashed border-line opacity-70 md:col-span-2">
         <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">2026 &middot; in planning</div>
         <div class="font-ui font-bold text-[18px] mt-3 leading-tight">More conferences<br />announced soon</div>
-        <a href="mailto:events@frappe.io" class="font-ui text-[11px] font-bold tracking-[0.04em] uppercase mt-4 underline-offset-4 hover:underline">
-          Propose a venue &rarr;
-        </a>
       </div>
     </div>
     {% endif %}

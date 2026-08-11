@@ -4,15 +4,16 @@
   <meta name="csrf-token" content="{{ csrf_token }}" />
   {% include "components/head_top.html" %}
 
-  <meta property="og:site_name" content="Frappe Events" />
+  <meta property="og:site_name" content="{{ app_name }}" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="{% block og_title %}Frappe Events &mdash; Conferences, Meetups, Webinars{% endblock %}" />
-  <meta property="og:description" content="{% block og_description %}Conferences, yatras, meetups, and webinars from the Frappe community.{% endblock %}" />
-  <meta property="og:image" content="{% block og_image %}https://events.frappe.io/files/build26.webp{% endblock %}" />
-  <meta property="og:url" content="{% block og_url %}https://events.frappe.io/{% endblock %}" />
+  <meta property="og:title" content="{% block og_title %}{{ title_prefix or app_name }}{% endblock %}" />
+  <meta property="og:description" content="{% block og_description %}Conferences, yatras, meetups, and webinars.{% endblock %}" />
+  {% set og_image %}{% block og_image %}{{ banner_image or '' }}{% endblock %}{% endset %}
+  {% if og_image | trim %}<meta property="og:image" content="{{ og_image | trim }}" />{% endif %}
+  <meta property="og:url" content="{% block og_url %}{{ frappe.utils.get_url() }}{% endblock %}" />
   <meta name="twitter:card" content="summary_large_image" />
 
-  <title>{% block title %}Frappe Events{% endblock %}</title>
+  <title>{% block title %}{{ title_prefix or app_name }}{% endblock %}</title>
 
   {% include "components/head_bottom.html" %}
 </head>
