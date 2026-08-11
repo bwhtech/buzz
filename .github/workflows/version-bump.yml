@@ -35,21 +35,16 @@ jobs:
       - name: Bump version and push branch
         run: |
           set -euo pipefail
-          # Semver, not PEP 440: Frappe's update check parses __version__ with
-          # semantic_version, which rejects forms like "2.0.0b0". pip normalises
-          # the semver pre-release back to PEP 440, so packaging is unaffected.
+          # Semver, not PEP 440: Frappe parses __version__ with semantic_version.
           if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
             echo "::error::'$VERSION' is not a semver version"
             exit 1
           fi
-          # pyproject.toml reads the version from buzz/__init__.py, and
-          # dashboard/package.json is deliberately pinned at 0.0.0.
+          # pyproject.toml reads the version from buzz/__init__.py.
           sed -i -E "s/^__version__ = \".*\"$/__version__ = \"$VERSION\"/" buzz/__init__.py
           sed -i -E "s/^  \"version\": \".*\",$/  \"version\": \"$VERSION\",/" package.json
-          # Both expressions are anchored to the exact line, so reformatting
-          # either file turns its sed into a silent no-op and lets the two
-          # versions drift apart — the drift this workflow exists to prevent.
-          # Insist that both files changed, and no others.
+          # Both are anchored to the exact line, so a reformat would silently
+          # no-op one of them and bump only the other.
           changed="$(git diff --name-only | sort | tr '\n' ' ')"
           if [ "$changed" != "buzz/__init__.py package.json " ]; then
             echo "::error::expected both version files to change, changed: ${changed:-nothing}"
@@ -59,18 +54,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "chore/bump-$VERSION"
           git commit -am "chore: bump version to $VERSION"
-          # Plain --force: the runner clones shallow and never fetches this
-          # branch, so --force-with-lease has no remote-tracking ref to compare
-          # against and rejects every rerun as stale. Nothing but this workflow
-          # writes to chore/bump-*.
+          # --force-with-lease has no remote-tracking ref here and rejects
+          # reruns as stale. Only this workflow writes to chore/bump-*.
           git push --force origin "chore/bump-$VERSION"
 
       - name: Link to PR form
         run: |
-          # ponytail: the workflow stops at the branch because a PR opened with
-          # GITHUB_TOKEN does not trigger other workflows, and the required
-          # checks on develop would never run, leaving the PR unmergeable.
-          # Give it a PAT and swap this step for `gh pr create` if the click
-          # ever gets annoying.
+          # ponytail: stops at the branch because a PR opened with GITHUB_TOKEN
+          # triggers no checks, leaving it unmergeable. Swap for `gh pr create`
+          # once a PAT exists.
           url="${{ github.server_url }}/${{ github.repository }}/compare/$BASE...chore/bump-$VERSION?expand=1&title=chore:%20v$VERSION"
           echo "[Open the bump PR](<$url>)" >> "$GITHUB_STEP_SUMMARY"
