@@ -9,31 +9,13 @@ const activeLanguage = (page: Page) => switcher(page).locator("span[lang]");
 /**
  * Pick a language from the open dropdown.
  *
- * Selected by test id rather than by role: reka-ui's menu item renders
- * `as-child`, and its own `role="menuitem"` wins over the one the template
- * sets, so `[role="menuitemradio"]` never matches.
- *
- * The menu is portalled and animates in. Until that settles a click lands on
- * `<html>` instead of the item, which the dismissable layer treats as an
- * outside click and closes the menu — so wait the animation out, then click
- * past Playwright's hit-test check. `force` cannot hide a click that did
- * nothing here: every caller asserts on the effect (cookie, label, no API
- * call), not on the click itself.
+ * The row itself is rendered by frappe-ui, so the test id sits on the label
+ * span the switcher supplies. Clicking it selects the row it belongs to.
  */
 async function chooseLanguage(page: Page, languageCode: string) {
 	await switcher(page).click();
-
-	const menu = page.locator('[data-slot="content"]');
-	await expect(menu).toBeVisible();
-	await menu.evaluate((element) =>
-		Promise.all(
-			element
-				.getAnimations({ subtree: true })
-				.map((animation) => animation.finished),
-		),
-	);
-
-	await page.getByTestId(`language-option-${languageCode}`).click({ force: true });
+	await expect(page.locator('[data-slot="content"]')).toBeVisible();
+	await page.getByTestId(`language-option-${languageCode}`).click();
 }
 
 async function preferredLanguageCookie(page: Page): Promise<string | undefined> {
