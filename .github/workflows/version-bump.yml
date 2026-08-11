@@ -19,6 +19,12 @@ on:
 permissions:
   contents: write
 
+# Runs for one version share a branch name, so queue them rather than let a
+# second run force-push over the first.
+concurrency:
+  group: version-bump-${{ github.event.inputs.version }}
+  cancel-in-progress: false
+
 jobs:
   bump:
     name: Push bump branch
