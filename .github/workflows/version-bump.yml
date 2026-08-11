@@ -19,10 +19,11 @@ on:
 permissions:
   contents: write
 
-# Runs for one version share a branch name, so queue them rather than let a
-# second run force-push over the first.
+# Two runs sharing a branch name would force-push over each other. The branch
+# name carries the base, so only a repeat of the same dispatch collides, and
+# that regenerates identical content — queue it rather than race it.
 concurrency:
-  group: version-bump-${{ github.event.inputs.version }}
+  group: version-bump-${{ github.event.inputs.base }}-${{ github.event.inputs.version }}
   cancel-in-progress: false
 
 jobs:
@@ -58,16 +59,18 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "chore/bump-$VERSION"
+          # The base is part of the branch name: one version can be bumped on
+          # both lines, and the two commits must not share a branch.
+          git switch -c "chore/bump-$BASE-$VERSION"
           git commit -am "chore: bump version to $VERSION"
           # --force-with-lease has no remote-tracking ref here and rejects
           # reruns as stale. Only this workflow writes to chore/bump-*.
-          git push --force origin "chore/bump-$VERSION"
+          git push --force origin "chore/bump-$BASE-$VERSION"
 
       - name: Link to PR form
         run: |
           # Stops at the branch because a PR opened with GITHUB_TOKEN triggers
           # no checks, leaving it unmergeable. Swap for `gh pr create` once a
           # PAT exists.
-          url="${{ github.server_url }}/${{ github.repository }}/compare/$BASE...chore/bump-$VERSION?expand=1&title=chore:%20v$VERSION"
+          url="${{ github.server_url }}/${{ github.repository }}/compare/$BASE...chore/bump-$BASE-$VERSION?expand=1&title=chore:%20v$VERSION"
           echo "[Open the bump PR](<$url>)" >> "$GITHUB_STEP_SUMMARY"
