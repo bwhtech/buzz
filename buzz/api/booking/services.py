@@ -1,6 +1,5 @@
 import hashlib
 import hmac
-from functools import cached_property
 from typing import TYPE_CHECKING
 
 import frappe
@@ -44,6 +43,7 @@ class BookingService:
 
 	def process(self) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
 		self.validate_event()
+		self.validate_phone_fields()
 		booking = self.build_booking()
 		booking.insert(ignore_permissions=True)
 		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
@@ -54,6 +54,18 @@ class BookingService:
 			frappe.throw(_("Event is not live"))
 		if are_registrations_closed(self.event):
 			RegistrationsClosed.throw()
+
+	def validate_phone_fields(self) -> None:
+		"""Validate every Phone custom field, booking-level and attendee-level, before
+		anything with a side effect runs.
+
+		verify_guest_otp deletes the code from the cache, and no rollback puts it back, so a
+		phone rejected later in build_booking would cost the guest a fresh OTP.
+		"""
+		phone_field_map = self.phone_field_labels()
+		validate_custom_fields(self.request.booking_custom_fields or {}, phone_field_map)
+		for attendee in self.request.attendees:
+			validate_custom_fields(attendee.get("custom_fields") or {}, phone_field_map)
 
 	def build_booking(self) -> "EventBooking":
 		booking = frappe.new_doc("Event Booking")
@@ -120,7 +132,6 @@ class BookingService:
 	def append_custom_fields(self, booking: "EventBooking") -> None:
 		if not self.request.booking_custom_fields:
 			return
-		validate_custom_fields(self.request.booking_custom_fields, self.phone_field_labels)
 		definitions = frappe.db.get_all(
 			"Buzz Custom Field",
 			filters={"event": self.request.event, "enabled": 1, "applied_to": "Booking"},
@@ -143,9 +154,8 @@ class BookingService:
 
 	def append_attendees(self, booking: "EventBooking") -> None:
 		self.validate_zoom_last_names()
-		phone_field_map = self.phone_field_labels
 		for attendee in self.request.attendees:
-			booking.append("attendees", self.attendee_row(attendee, phone_field_map))
+			booking.append("attendees", self.attendee_row(attendee))
 
 	def validate_zoom_last_names(self) -> None:
 		if self.event.category not in ZOOM_BACKED_CATEGORIES:
@@ -154,13 +164,9 @@ class BookingService:
 			if not (attendee.get("last_name") or "").strip():
 				frappe.throw(_("Last name is required for all attendees in Zoom events"))
 
-	@cached_property
 	def phone_field_labels(self) -> dict:
-		"""Label by fieldname for every Phone custom field on the event.
-
-		Not filtered on `applied_to`, so it covers booking-level and attendee-level fields alike.
-		Cached because both append paths need it and the rows cannot change mid-request.
-		"""
+		"""Label by fieldname for every Phone custom field on the event, booking- and
+		attendee-level alike, so `applied_to` is deliberately not filtered on."""
 		phone_fields = frappe.db.get_all(
 			"Buzz Custom Field",
 			filters={"event": self.request.event, "enabled": 1, "fieldtype": "Phone"},
@@ -168,7 +174,7 @@ class BookingService:
 		)
 		return {field.fieldname: field.label for field in phone_fields}
 
-	def attendee_row(self, attendee: dict, phone_field_map: dict) -> dict:
+	def attendee_row(self, attendee: dict) -> dict:
 		first_name, last_name = resolve_attendee_names(attendee)
 
 		add_ons = attendee.get("add_ons", None)
@@ -176,8 +182,6 @@ class BookingService:
 			add_ons = create_add_on_doc(f"{first_name} {last_name}".strip(), add_ons)
 
 		custom_fields = attendee.get("custom_fields", {})
-		if custom_fields:
-			validate_custom_fields(custom_fields, phone_field_map)
 
 		return {
 			"first_name": first_name,

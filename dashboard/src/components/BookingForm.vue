@@ -558,7 +558,6 @@ const successBookingName = ref("");
 const showOtpModal = ref(false);
 const otpCode = ref("");
 const otpError = ref("");
-// Server-side phone validation message, rendered under the guest Phone Number field.
 const guestPhoneError = ref("");
 const pendingBookingPayload = ref<any>(null);
 const resendCooldown = ref(0);
@@ -997,8 +996,7 @@ const sendOtpResource = createResource({
 	},
 	onError: (error: FrappeError) => {
 		const message = error.messages?.[0] || __("Failed to send verification code");
-		// Phone validation failures belong under the field, not in a toast that
-		// disappears before the user can act on it.
+		// Under the field, not in a toast the user has to remember while retyping.
 		if (isPhoneOtp.value) {
 			guestPhoneError.value = message;
 			return;
@@ -1014,6 +1012,7 @@ watch(guestPhone, () => {
 });
 
 function sendOtpForVerification() {
+	guestPhoneError.value = "";
 	sendOtpResource.submit({
 		event: props.eventDetails.name,
 		identifier: isPhoneOtp.value ? guestPhone.value.trim() : guestEmail.value.trim(),

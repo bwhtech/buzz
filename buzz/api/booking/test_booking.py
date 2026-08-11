@@ -286,6 +286,29 @@ class TestBookingPhoneCustomFields(BookingTestCase):
 		)
 		self.assertEqual(stored, VALID_PHONE)
 
+	def test_a_rejected_phone_does_not_burn_the_guest_otp(self):
+		# The OTP lives in the cache, which no rollback restores, so phone validation has to
+		# run before verify_guest_otp deletes it — otherwise one typo costs the guest a code.
+		self.set_event({"allow_guest_booking": 1, "guest_verification_method": "Phone OTP"})
+		otp = send_guest_booking_otp(self.event.name, VALID_PHONE)["otp"]
+		cache_key = f"guest_booking_otp:phone:{VALID_PHONE}"
+		self.addCleanup(frappe.cache.delete_value, cache_key)
+
+		frappe.set_user("Guest")
+		self.addCleanup(frappe.set_user, "Administrator")
+		with self.assertRaises(frappe.ValidationError):
+			process_booking(
+				self.booking_request(
+					guest_email="guest-phone-otp@example.com",
+					guest_full_name="Guest Phone",
+					guest_phone=VALID_PHONE,
+					otp=otp,
+					booking_custom_fields={"contact_number": "+91-12345"},
+				)
+			)
+
+		self.assertTrue(frappe.cache.get_value(cache_key))
+
 	def test_invalid_attendee_level_phone_is_still_refused(self):
 		frappe.db.set_value("Buzz Custom Field", self.phone_field.name, "applied_to", "Ticket")
 		attendees = [

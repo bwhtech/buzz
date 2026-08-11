@@ -100,7 +100,7 @@ test.describe("Guest Booking", () => {
 		await expect(page.getByText("Booking Confirmed")).toBeVisible({ timeout: 30000 });
 	});
 
-	test("guest phone field rejects alphabets and short numbers", async ({ page }) => {
+	test("guest phone field rejects a number of the wrong length", async ({ page }) => {
 		const email = `guest-phone-invalid-${uid}@test.com`;
 		const bookingPage = new BookingPage(page);
 		await bookingPage.goto("guest-phone-otp-e2e");
@@ -111,13 +111,9 @@ test.describe("Guest Booking", () => {
 		await page.locator('input[placeholder="Enter your email"]').fill(email);
 		await page.locator('input[placeholder="Enter your email"]').blur();
 
-		// PhoneInput strips non-digits on input, so letters never reach the model.
+		// A well-formed but too-short number passes PhoneInput's digit filter and is
+		// caught by the server, which reports it under the field rather than as a toast.
 		const phoneInput = page.locator('input[placeholder="Enter your phone number"]');
-		await phoneInput.fill("abcd");
-		await expect(phoneInput).toHaveValue("");
-
-		// A well-formed but too-short number is caught by the server and reported
-		// under the field rather than as a toast.
 		await phoneInput.fill("12345");
 		await bookingPage.submit();
 

@@ -39,8 +39,6 @@ const props = defineProps({
 	label: { type: String, default: "Phone" },
 	placeholder: { type: String, default: "" },
 	required: { type: Boolean, default: false },
-	// Server-side validation message to render under the field. Callers that don't
-	// pass it render nothing, so existing usages are unchanged.
 	error: { type: String, default: "" },
 });
 

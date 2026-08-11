@@ -30,9 +30,8 @@ def send_booking_otp(event: int, identifier: str) -> dict | None:
 		identifier = identifier.lower()
 		validate_email_address(identifier, throw=True)
 	else:
-		# Validate only, never rewrite: the OTP cache key is built from `identifier` here and
-		# rebuilt from the submitted phone in BookingService.verify_guest. Normalising on one
-		# side and not the other would silently break verification.
+		# Validate only, never rewrite: the cache key below is rebuilt from the submitted
+		# phone in BookingService.verify_guest, so normalising here would break verification.
 		validate_phone_number_with_country_code(identifier, _("Phone Number"))
 
 	otp_secret = b32encode(os.urandom(10)).decode("utf-8")
