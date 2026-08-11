@@ -52,6 +52,39 @@ class CheckinTestCase(IntegrationTestCase):
 			}
 		).insert()
 
+	def make_booked_ticket(self) -> str:
+		"""Book the ticket type and pay for it, and return the ticket that came out."""
+		booking = frappe.get_doc(
+			{
+				"doctype": "Event Booking",
+				"event": self.event,
+				"user": "Administrator",
+				"attendees": [
+					{
+						"ticket_type": self.ticket_type.name,
+						"first_name": "Booked",
+						"email": "booked@example.com",
+					}
+				],
+			}
+		).insert()
+		booking.payment_status = "Paid"
+		booking.submit()
+
+		frappe.get_doc(
+			{
+				"doctype": "Event Payment",
+				"user": "Administrator",
+				"amount": booking.total_amount,
+				"currency": booking.currency,
+				"reference_doctype": "Event Booking",
+				"reference_docname": booking.name,
+				"payment_received": 1,
+			}
+		).insert()
+
+		return frappe.db.get_value("Event Ticket", {"booking": booking.name}, "name")
+
 	def tearDown(self):
 		frappe.db.rollback()
 
@@ -81,6 +114,14 @@ class TestValidateTicketForCheckin(CheckinTestCase):
 		self.assertFalse(ticket["is_checked_in"])
 		self.assertIsNone(ticket["check_in_time"])
 		self.assertIsNone(ticket["check_in_date"])
+
+	def test_payment_details_are_reported_for_a_paid_booking(self):
+		# Event Payment is named by autoincrement, so its name arrives as an int.
+		ticket = self.make_booked_ticket()
+
+		response = validate_ticket_for_checkin(ticket).__json__()
+
+		self.assertEqual(response["payment_details"]["amount"], 0)
 
 	def test_cancelled_ticket_is_rejected(self):
 		frappe.db.set_value("Event Ticket", self.ticket.name, "docstatus", 2)

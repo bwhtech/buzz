@@ -1,0 +1,136 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:REF-{#####}",
+ "creation": "2026-08-11 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "booking",
+  "payment",
+  "column_break_refund",
+  "refund_id",
+  "status",
+  "amounts_section",
+  "amount",
+  "currency",
+  "tickets_section",
+  "tickets",
+  "cancellation_request"
+ ],
+ "fields": [
+  {
+   "fieldname": "booking",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Booking",
+   "options": "Event Booking",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "payment",
+   "fieldtype": "Link",
+   "label": "Payment",
+   "options": "Event Payment",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_refund",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Identifier the payment gateway gave this refund.",
+   "fieldname": "refund_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Refund ID",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Initiated\nProcessed\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amounts_section",
+   "fieldtype": "Section Break",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tickets_section",
+   "fieldtype": "Section Break",
+   "label": "Tickets"
+  },
+  {
+   "description": "Tickets this refund was raised against. Empty when a custom amount was refunded.",
+   "fieldname": "tickets",
+   "fieldtype": "Table MultiSelect",
+   "label": "Tickets",
+   "options": "Event Booking Refund Ticket",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancellation_request",
+   "fieldtype": "Link",
+   "label": "Cancellation Request",
+   "options": "Ticket Cancellation Request",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-11 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Ticketing",
+ "name": "Event Booking Refund",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "refund_id"
+}
