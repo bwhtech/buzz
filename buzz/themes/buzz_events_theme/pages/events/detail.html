@@ -357,10 +357,10 @@
           {% if venue.google_maps_embed_code %}
             {{ venue.google_maps_embed_code|safe }}
           {% elif venue.latitude and venue.longitude and (venue.latitude|float != 0 or venue.longitude|float != 0) %}
-            <img
-              src="https://staticmap.openstreetmap.de/staticmap.php?center={{ venue.latitude }},{{ venue.longitude }}&zoom=14&size=600x375&markers={{ venue.latitude }},{{ venue.longitude }},red-dot"
-              alt="Map of {{ venue.name }}"
-              class="w-full h-full object-cover" loading="lazy" />
+            <iframe
+              title="Map of {{ venue.name }}"
+              src="https://www.openstreetmap.org/export/embed.html?bbox={{ venue.longitude|float - 0.01 }},{{ venue.latitude|float - 0.01 }},{{ venue.longitude|float + 0.01 }},{{ venue.latitude|float + 0.01 }}&layer=mapnik&marker={{ venue.latitude }},{{ venue.longitude }}"
+              class="w-full h-full border-0" loading="lazy"></iframe>
           {% else %}
             <div class="w-full h-full flex items-center justify-center opacity-40 text-[11px] tracking-[0.04em] uppercase">
               map &middot; {{ venue.name }}

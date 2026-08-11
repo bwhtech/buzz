@@ -213,8 +213,8 @@
         {% if venue.google_maps_embed_code %}
           {{ venue.google_maps_embed_code|safe }}
         {% elif venue.latitude and venue.longitude and (venue.latitude|float != 0 or venue.longitude|float != 0) %}
-          <img src="https://staticmap.openstreetmap.de/staticmap.php?center={{ venue.latitude }},{{ venue.longitude }}&zoom=14&size=600x375&markers={{ venue.latitude }},{{ venue.longitude }},red-dot"
-               alt="Map of {{ venue.name }}" class="w-full h-48 md:h-56 object-cover" loading="lazy" />
+          <iframe title="Map of {{ venue.name }}" class="w-full h-48 md:h-56 object-cover border-0" loading="lazy"
+                  src="https://www.openstreetmap.org/export/embed.html?bbox={{ venue.longitude|float - 0.01 }},{{ venue.latitude|float - 0.01 }},{{ venue.longitude|float + 0.01 }},{{ venue.latitude|float + 0.01 }}&layer=mapnik&marker={{ venue.latitude }},{{ venue.longitude }}"></iframe>
         {% else %}
           <div class="w-full h-48 md:h-56 flex items-center justify-center hand text-[40px] -rotate-2">map</div>
         {% endif %}
