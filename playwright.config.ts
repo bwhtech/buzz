@@ -63,7 +63,7 @@ export default defineConfig({
 		},
 		{
 			name: "chromium",
-			testIgnore: /guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets/,
+			testIgnore: /guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets|language/,
 			use: {
 				...devices["Desktop Chrome"],
 				storageState: authFile,
@@ -153,6 +153,24 @@ export default defineConfig({
 				storageState: ticketsAttendeeFile,
 			},
 			dependencies: ["tickets-setup"],
+		},
+		{
+			name: "language-setup",
+			testMatch: /language\.setup\.ts/,
+			use: {
+				storageState: authFile,
+			},
+			dependencies: ["setup"],
+		},
+		{
+			// The guest specs in here drop the storage state per describe block.
+			name: "language-chromium",
+			testMatch: /language\.spec\.ts/,
+			use: {
+				...devices["Desktop Chrome"],
+				storageState: authFile,
+			},
+			dependencies: ["language-setup"],
 		},
 		{
 			name: "offline-payment-setup",
