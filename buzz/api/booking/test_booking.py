@@ -13,7 +13,6 @@ from buzz.api.booking import (
 from buzz.api.booking.exceptions import AddOnNotForEvent, InvalidAddOnValue, RegistrationsClosed
 from buzz.api.booking.schemas import BookingRequest
 from buzz.api.forms.test_forms import ensure_prompt_named_record
-from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 
 BOOKER = "booking-owner@example.com"
 OUTSIDER = "booking-outsider@example.com"
@@ -73,13 +72,10 @@ class BookingTestCase(IntegrationTestCase):
 		super().setUpClass()
 		category = ensure_prompt_named_record("Event Category", "Test Booking Category")
 		host = ensure_prompt_named_record("Event Host", "Test Booking Host")
-		owner = create_user("booking-team-owner@example.com", "Booking")
-		cls.team = create_owned_team(f"Booking Test Team {frappe.generate_hash(length=6)}", owner)
 		cls.event = frappe.get_doc(
 			{
 				"doctype": "Buzz Event",
 				"title": f"Booking Test Event {frappe.generate_hash(length=6)}",
-				"team": cls.team,
 				"start_date": "2030-01-01",
 				"end_date": "2030-01-01",
 				"start_time": "10:00:00",
@@ -324,13 +320,10 @@ class TestBookingSelectionValidation(BookingTestCase):
 			}
 		).insert(ignore_permissions=True)
 
-		foreign_owner = create_user("booking-foreign-owner@example.com", "Foreign")
-		foreign_team = create_owned_team(f"Foreign Team {frappe.generate_hash(length=6)}", foreign_owner)
 		self.foreign_event = frappe.get_doc(
 			{
 				"doctype": "Buzz Event",
 				"title": f"Foreign Event {frappe.generate_hash(length=6)}",
-				"team": foreign_team,
 				"start_date": "2030-01-01",
 				"end_date": "2030-01-01",
 				"start_time": "10:00:00",
