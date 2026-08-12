@@ -20,6 +20,17 @@ const routes: RouteRecordRaw[] = [
 			{
 				path: "",
 				name: "manage",
+				redirect: { name: "events" },
+			},
+			{
+				path: "events",
+				name: "events",
+				component: () => import("@/pages/manage/MyEvents.vue"),
+			},
+			// Sidebar destinations that have no page yet. Unnamed on purpose: SidebarItem
+			// falls back to matching on path, so each one lights up on its own.
+			{
+				path: ":section",
 				component: () => import("@/pages/manage/WorkInProgress.vue"),
 			},
 		],

@@ -12,20 +12,19 @@ isTeamMember().then((member) => {
 });
 
 const collapsed = ref(false);
-const active = ref("Calendar");
 
 const personalItems = [
-	{ label: "Calendar", icon: "lucide-calendar-days" },
-	{ label: "My Tickets", icon: "lucide-ticket" },
-	{ label: "Talk Proposals", icon: "lucide-file-text" },
-	{ label: "Sponsorship", icon: "lucide-handshake" },
+	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/events" },
+	{ label: "My Tickets", icon: "lucide-ticket", to: "/manage/tickets" },
+	{ label: "Talk Proposals", icon: "lucide-file-text", to: "/manage/proposals" },
+	{ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" },
 ];
 
 const teamItems = [
-	{ label: "Overview", icon: "lucide-layout-dashboard" },
-	{ label: "Registrations", icon: "lucide-users" },
-	{ label: "Sponsors", icon: "lucide-badge-dollar-sign" },
-	{ label: "More", icon: "lucide-ellipsis" },
+	{ label: "Overview", icon: "lucide-layout-dashboard", to: "/manage/overview" },
+	{ label: "Registrations", icon: "lucide-users", to: "/manage/registrations" },
+	{ label: "Sponsors", icon: "lucide-badge-dollar-sign", to: "/manage/sponsors" },
+	{ label: "More", icon: "lucide-ellipsis", to: "/manage/more" },
 ];
 </script>
 
@@ -45,8 +44,7 @@ const teamItems = [
 						:key="item.label"
 						:label="item.label"
 						:icon="item.icon"
-						:active="active === item.label"
-						@click="active = item.label"
+						:to="item.to"
 					/>
 
 					<SidebarLabel divider class="mt-3 px-2">Team</SidebarLabel>
@@ -55,8 +53,7 @@ const teamItems = [
 						:key="item.label"
 						:label="item.label"
 						:icon="item.icon"
-						:active="active === item.label"
-						@click="active = item.label"
+						:to="item.to"
 					/>
 				</div>
 
@@ -66,7 +63,7 @@ const teamItems = [
 			</Sidebar>
 		</template>
 
-		<div class="h-[calc(100vh-1rem)] bg-surface-sidebar py-2 pl-2">
+		<div class="h-lvh bg-surface-sidebar py-2 pl-2">
 			<div class="h-full rounded-l-lg bg-surface-elevation-1 shadow-base overflow-y-auto">
 				<router-view />
 			</div>
