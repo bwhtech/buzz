@@ -13,7 +13,7 @@ from frappe.utils import (
 )
 from frappe.utils.password import get_encryption_key
 
-from buzz.api.booking.exceptions import RegistrationsClosed
+from buzz.api.booking.exceptions import AddOnNotForEvent, InvalidAddOnValue, RegistrationsClosed
 from buzz.api.booking.guests import get_or_create_guest_user, verify_guest_otp
 from buzz.api.booking.schemas import (
 	BookingRequest,
@@ -44,6 +44,7 @@ class BookingService:
 	def process(self) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
 		self.validate_event()
 		self.validate_phone_fields()
+		self.validate_add_ons()
 		booking = self.build_booking()
 		booking.insert(ignore_permissions=True)
 		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
@@ -66,6 +67,29 @@ class BookingService:
 		validate_custom_fields(self.request.booking_custom_fields or {}, phone_field_map)
 		for attendee in self.request.attendees:
 			validate_custom_fields(attendee.get("custom_fields") or {}, phone_field_map)
+
+	def validate_add_ons(self) -> None:
+		"""Every add-on named in the request must be an enabled add-on of this event, and
+		its value one of the add-on's options. Runs before build_booking so a bad selection
+		is rejected before any document is written."""
+		allowed = self.allowed_add_ons()
+		for attendee in self.request.attendees:
+			for add_on in attendee.get("add_ons") or []:
+				catalog = allowed.get(add_on["add_on"])
+				if not catalog:
+					AddOnNotForEvent.throw()
+				if catalog.user_selects_option:
+					options = (catalog.options or "").split("\n")
+					if add_on.get("value") not in options:
+						InvalidAddOnValue.throw(value=add_on.get("value"))
+
+	def allowed_add_ons(self) -> dict:
+		rows = frappe.db.get_all(
+			"Ticket Add-on",
+			filters={"event": self.request.event, "enabled": 1},
+			fields=["name", "options", "user_selects_option"],
+		)
+		return {row.name: row for row in rows}
 
 	def build_booking(self) -> "EventBooking":
 		booking = frappe.new_doc("Event Booking")
@@ -286,8 +310,13 @@ def validate_custom_fields(custom_fields_data: dict, phone_field_map: dict) -> N
 
 
 def create_add_on_doc(attendee_name: str, add_ons: list[dict]):
+	# Price and currency are read from the catalog and overwrite whatever the request
+	# carried. The Ticket Add-on Value price field only fetches when left empty, so a
+	# price sent in the payload would otherwise be charged as-is.
 	for add_on in add_ons:
-		add_on["currency"] = frappe.db.get_value("Ticket Add-on", add_on["add_on"], "currency")
+		price, currency = frappe.db.get_value("Ticket Add-on", add_on["add_on"], ["price", "currency"])
+		add_on["price"] = price
+		add_on["currency"] = currency
 
 	return frappe.get_doc(
 		{"doctype": "Attendee Ticket Add-on", "add_ons": add_ons, "attendee_name": attendee_name}
