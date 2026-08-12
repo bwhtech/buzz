@@ -5,6 +5,7 @@ import { isTeamMember } from "@/data/teams";
 import NotFound from "@/pages/NotFound.vue";
 import { DesktopShell, Sidebar, SidebarItem, SidebarLabel } from "frappe-ui";
 import { ref } from "vue";
+import { useRoute } from "vue-router";
 
 const isMember = ref<boolean | null>(null);
 isTeamMember().then((member) => {
@@ -12,6 +13,11 @@ isTeamMember().then((member) => {
 });
 
 const collapsed = ref(false);
+const route = useRoute();
+
+// SidebarItem infers this from `to` on paper, but its `active` prop is declared
+// type Boolean, so Vue casts the absent prop to false and the inference never runs.
+const isActive = (to: string) => route.path === to;
 
 const personalItems = [
 	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/events" },
@@ -45,6 +51,7 @@ const teamItems = [
 						:label="item.label"
 						:icon="item.icon"
 						:to="item.to"
+						:active="isActive(item.to)"
 					/>
 
 					<SidebarLabel divider class="mt-3 px-2">Team</SidebarLabel>
@@ -54,6 +61,7 @@ const teamItems = [
 						:label="item.label"
 						:icon="item.icon"
 						:to="item.to"
+						:active="isActive(item.to)"
 					/>
 				</div>
 
