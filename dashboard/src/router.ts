@@ -147,4 +147,11 @@ router.beforeEach(async (to, from, next) => {
 	next()
 })
 
+router.afterEach(() => {
+	// Pages set their own title via usePageMeta, which never restores it on
+	// unmount. Reset here so a page without one doesn't keep showing the
+	// previous page's title.
+	document.title = "Buzz Dashboard"
+})
+
 export default router
