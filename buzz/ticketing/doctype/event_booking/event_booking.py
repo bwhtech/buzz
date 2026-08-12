@@ -131,6 +131,8 @@ class EventBooking(Document):
 
 		for ticket_type, num_tickets in num_tickets_by_type.items():
 			ticket_type_doc = frappe.get_cached_doc("Event Ticket Type", ticket_type)
+			if str(ticket_type_doc.event) != str(self.event):
+				frappe.throw(_("{0} is not available for this event").format(ticket_type_doc.title))
 			if not ticket_type_doc.is_published:
 				frappe.throw(frappe._(f"{ticket_type_doc.title} tickets no longer available!"))
 
