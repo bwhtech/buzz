@@ -147,11 +147,14 @@ router.beforeEach(async (to, from, next) => {
 	next()
 })
 
-router.afterEach(() => {
+const defaultTitle = document.title
+
+router.afterEach((to, from) => {
 	// Pages set their own title via usePageMeta, which never restores it on
 	// unmount. Reset here so a page without one doesn't keep showing the
-	// previous page's title.
-	document.title = "Buzz Dashboard"
+	// previous page's title. Same-path navigation keeps the title: usePageMeta's
+	// watcher won't refire when its data is unchanged, so resetting would stick.
+	if (to.path !== from.path) document.title = defaultTitle
 })
 
 export default router
