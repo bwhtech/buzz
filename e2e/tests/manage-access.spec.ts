@@ -7,7 +7,15 @@ test.describe("Manage access", () => {
 	test("sends a team member to the manage dashboard", async ({ page }) => {
 		await page.goto("/b/");
 
-		await expect(page).toHaveURL(/\/b\/manage$/, { timeout: 15000 });
+		await expect(page).toHaveURL(/\/b\/manage\/events$/, { timeout: 15000 });
+		await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible();
+	});
+
+	test("routes a sidebar item with no page yet to the placeholder", async ({ page }) => {
+		await page.goto("/b/manage/events");
+		await page.getByRole("link", { name: "Registrations" }).click();
+
+		await expect(page).toHaveURL(/\/b\/manage\/registrations$/);
 		await expect(page.getByText("Work in progress")).toBeVisible();
 	});
 
@@ -29,7 +37,7 @@ test.describe("Manage access", () => {
 			await page.goto("/b/manage");
 
 			await expect(page.getByText("Page not found")).toBeVisible({ timeout: 15000 });
-			await expect(page).toHaveURL(/\/b\/manage$/);
+			await expect(page).toHaveURL(/\/b\/manage/);
 		});
 	});
 
