@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import EventCard from "@/components/dashboard/events/EventCard.vue";
 import type { MyEvents } from "@/types";
+import { dayLabel, monthLabel, weekday } from "@/utils/dateLabels";
 import { groupEventsByMonth } from "@/utils/eventGroups";
-import { ErrorMessage, LoadingText, TabButtons, dayjsLocal, useCall } from "frappe-ui";
+import { ErrorMessage, LoadingText, TabButtons, useCall } from "frappe-ui";
 import { computed, ref } from "vue";
 
 // v2 path: useCall reads the payload from `data`, which /api/method names `message`.
@@ -18,22 +19,6 @@ const tabOptions = [
 ];
 
 const months = computed(() => groupEventsByMonth(myEvents.data?.[tab.value] || []));
-
-function monthLabel(month: string): string {
-	return dayjsLocal(`${month}-01`).format("MMMM YYYY");
-}
-
-// dayjs ships isToday here, but not the calendar plugin, so tomorrow is compared by hand.
-function dayLabel(date: string): string {
-	const day = dayjsLocal(date);
-	if (day.isToday()) return "Today";
-	if (day.isSame(dayjsLocal().add(1, "day"), "day")) return "Tomorrow";
-	return day.format("D MMM");
-}
-
-function weekday(date: string): string {
-	return dayjsLocal(date).format("dddd");
-}
 </script>
 
 <template>
