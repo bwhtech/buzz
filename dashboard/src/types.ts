@@ -85,6 +85,7 @@ export interface TicketStub {
 	// Event columns come over a link hop, so a deleted event leaves them null.
 	event_title: string | null
 	start_date: string | null
+	end_date: string | null
 	start_time: string | null
 	venue: string | null
 }
