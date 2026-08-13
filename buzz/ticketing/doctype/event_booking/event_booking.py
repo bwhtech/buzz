@@ -6,7 +6,8 @@ from frappe.email.doctype.email_template.email_template import get_email_templat
 from frappe.model.document import Document
 from frappe.utils import cstr, flt
 
-from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
+from buzz.api.booking.exceptions import RegistrationsClosed
+from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, are_registrations_closed
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.payments import get_controller, mark_payment_as_received
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
@@ -57,12 +58,51 @@ class EventBooking(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		self.validate_event_registration_is_open()
 		self.validate_ticket_availability()
 		self.fetch_amounts_from_ticket_types()
 		self.set_currency()
 		self.set_total()
 		self.apply_coupon_if_applicable()
 		self.apply_taxes_if_applicable()
+
+	def validate_event_registration_is_open(self):
+		"""Refuse bookings for events that are not open for registration.
+
+		Booking eligibility (event published + registrations open) used to be
+		enforced only in `BookingService` (`buzz/api/booking/services.py`), so the
+		generic document API — `/api/resource/Event Booking`, `frappe.client.insert`
+		— let any logged-in `Buzz User` create bookings for unpublished or closed
+		events by skipping the service entirely. Enforcing it on the model closes
+		every write path at once.
+
+		`BookingService.validate_event` stays: it runs before the guest OTP is spent
+		and returns the friendlier `RegistrationsClosed` (409), and — because the
+		service inserts with `ignore_permissions` — it is the only thing that guards
+		the vetted flow, which this method deliberately skips.
+
+		Skipped for:
+		- trusted server flows (`ignore_permissions`) — `BookingService` has already
+		  validated, and payment authorisation / offline approval resubmit an
+		  existing draft, which must still succeed even if registrations have closed
+		  in the meantime;
+		- existing documents — only creation is gated, so amendments and later edits
+		  of an already-valid booking are left alone;
+		- event organisers (Event Manager / System Manager), who legitimately create
+		  bookings for their own unpublished or closed events (comp tickets, testing).
+		"""
+		if self.flags.ignore_permissions or not self.is_new():
+			return
+
+		organiser_roles = {"System Manager", "Event Manager"}
+		if organiser_roles.intersection(frappe.get_roles()):
+			return
+
+		event = frappe.get_cached_doc("Buzz Event", self.event)
+		if not event.is_published:
+			frappe.throw(_("Event is not live"))
+		if are_registrations_closed(event):
+			RegistrationsClosed.throw()
 
 	def before_submit(self):
 		"""Set status before submit based on payment method."""

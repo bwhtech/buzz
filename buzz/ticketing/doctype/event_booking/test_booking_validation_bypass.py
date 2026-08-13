@@ -1,18 +1,18 @@
 # Copyright (c) 2026, BWH Studios and contributors
 # For license information, please see license.txt
-"""Reproduction for the reported access-control / validation-bypass issue.
+"""Regression tests for the closed/unpublished-event booking bypass.
 
 `Event Booking` grants `create` to the `Buzz User` role, and every User gets that
 role on `after_insert` (`buzz.utils.add_buzz_user_role`, wired in `hooks.py`). The
-booking eligibility rules — event published, registrations open, add-ons drawn from
-the event's catalog, Zoom last names, phone custom fields — live only in
-`BookingService` (`buzz/api/booking/services.py`), never in `EventBooking.validate`.
+booking eligibility rules (event published, registrations open) originally lived
+only in `BookingService` (`buzz/api/booking/services.py`), so Frappe's generic
+document API — `/api/resource/Event Booking`, `frappe.client.insert` — could reach
+`Document.insert()` and create bookings for events that were never live.
 
-Frappe's generic document API (`/api/resource/Event Booking`,
-`frappe.client.insert`) goes straight to `Document.insert()`, so it runs
-`EventBooking.validate` and skips every service-level rule. These tests pin both
-sides: what the service refuses, and what the same payload achieves when it is
-inserted directly by an ordinary logged-in user.
+`EventBooking.validate_event_registration_is_open` now enforces the same rules on
+the model, for any non-privileged user creating a booking outside the vetted
+service flow. These tests pin that: the generic API is refused, while the service,
+event organisers, and post-payment resubmits are all left working.
 """
 
 import frappe
@@ -26,6 +26,7 @@ from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, crea
 
 ATTACKER = "bypass-attacker@example.com"
 VICTIM = "bypass-victim@example.com"
+ORGANISER = "bypass-organiser@example.com"
 
 
 class BypassTestCase(IntegrationTestCase):
@@ -96,7 +97,8 @@ class BypassTestCase(IntegrationTestCase):
 	def insert_as(self, session_user: str, **overrides):
 		"""What `/api/resource/Event Booking` and `frappe.client.insert` do: build the
 		document from the request payload and insert it under the caller's own
-		permissions. No `ignore_permissions`, so the doctype's role permissions decide."""
+		permissions. No `ignore_permissions`, so the doctype's role permissions and
+		`validate` decide."""
 		payload = {
 			"doctype": "Event Booking",
 			"event": str(self.event.name),
@@ -114,7 +116,8 @@ class BypassTestCase(IntegrationTestCase):
 
 
 class TestOrdinaryUsersCanWriteBookings(BypassTestCase):
-	"""The precondition: the role that lets this happen is granted to everyone."""
+	"""The precondition that made the bypass reachable: the role that permits a
+	direct insert is granted to every signed-up user."""
 
 	def test_every_new_user_is_granted_the_buzz_user_role(self):
 		self.assertIn("Buzz User", frappe.get_roles(self.attacker))
@@ -126,7 +129,7 @@ class TestOrdinaryUsersCanWriteBookings(BypassTestCase):
 		self.assertFalse(frappe.has_permission("Event Booking", "submit", user=self.attacker))
 
 
-class TestUnpublishedEventBypass(BypassTestCase):
+class TestUnpublishedEventIsRefused(BypassTestCase):
 	def test_service_refuses_an_unpublished_event(self):
 		self.set_event({"is_published": 0})
 		frappe.set_user(self.attacker)
@@ -136,17 +139,18 @@ class TestUnpublishedEventBypass(BypassTestCase):
 
 		self.assertIn("Event is not live", frappe.local.message_log[-1]["message"])
 
-	def test_direct_insert_books_an_unpublished_event(self):
+	def test_direct_insert_is_refused_for_an_unpublished_event(self):
+		"""The bypass, now closed: the generic document API hits the same guard."""
 		self.set_event({"is_published": 0})
 
-		booking = self.insert_as(self.attacker)
+		with self.assertRaises(frappe.ValidationError):
+			self.insert_as(self.attacker)
 
-		self.assertTrue(frappe.db.exists("Event Booking", booking.name))
-		self.assertEqual(booking.event, self.event.name)
-		self.assertFalse(frappe.db.get_value("Buzz Event", self.event.name, "is_published"))
+		self.assertIn("Event is not live", frappe.local.message_log[-1]["message"])
+		self.assertFalse(frappe.db.exists("Event Booking", {"event": self.event.name}))
 
 
-class TestClosedRegistrationsBypass(BypassTestCase):
+class TestClosedRegistrationsAreRefused(BypassTestCase):
 	def test_service_refuses_once_registrations_have_closed(self):
 		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})
 		frappe.set_user(self.attacker)
@@ -154,37 +158,79 @@ class TestClosedRegistrationsBypass(BypassTestCase):
 		with self.assertRaises(RegistrationsClosed):
 			process_booking(self.booking_request())
 
-	def test_direct_insert_books_after_registrations_close(self):
+	def test_direct_insert_is_refused_after_registrations_close(self):
 		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})
 
-		booking = self.insert_as(self.attacker)
+		with self.assertRaises(RegistrationsClosed):
+			self.insert_as(self.attacker)
 
-		self.assertTrue(frappe.db.exists("Event Booking", booking.name))
+		self.assertFalse(frappe.db.exists("Event Booking", {"event": self.event.name}))
 
-	def test_direct_insert_books_an_event_that_already_ended(self):
+	def test_direct_insert_is_refused_for_an_event_that_already_ended(self):
 		# No explicit cutoff, so `are_registrations_closed` falls back to the end datetime.
 		self.set_event({"start_date": "2020-01-01", "end_date": "2020-01-01"})
 		self.addCleanup(self.set_event, {"start_date": "2030-01-01", "end_date": "2030-01-01"})
 
+		with self.assertRaises(RegistrationsClosed):
+			self.insert_as(self.attacker)
+
+
+class TestLegitimateFlowsStillWork(BypassTestCase):
+	def test_direct_insert_succeeds_while_the_event_is_open(self):
 		booking = self.insert_as(self.attacker)
+
+		self.assertTrue(frappe.db.exists("Event Booking", booking.name))
+		self.assertEqual(booking.event, self.event.name)
+
+	def test_the_guard_does_not_apply_to_the_vetted_service_flow(self):
+		# A free ticket keeps the flow off the payment gateway; the point is only that
+		# the service insert clears the model guard and produces a real booking.
+		free_ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": self.event.name,
+				"title": f"Bypass Free {frappe.generate_hash(length=6)}",
+				"price": 0,
+				"currency": "INR",
+				"is_published": 1,
+			}
+		).insert(ignore_permissions=True)
+
+		frappe.set_user(self.attacker)
+		payload = process_booking(
+			self.booking_request(attendees=[self.attendee_row(ticket_type=str(free_ticket_type.name))])
+		).__json__()
+
+		self.assertIn("booking_name", payload)
+		self.assertTrue(frappe.db.exists("Event Booking", payload["booking_name"]))
+
+	def test_an_event_organiser_may_book_a_closed_event(self):
+		"""Event Managers legitimately create bookings for their own unpublished or
+		closed events (comp tickets, pre-launch testing); the guard exempts them."""
+		organiser = create_user(ORGANISER, "Organiser")
+		frappe.get_doc("User", organiser).add_roles("Event Manager")
+		self.set_event({"is_published": 0, "registrations_close_at": "2020-01-01 00:00:00"})
+
+		booking = self.insert_as(organiser, user=organiser)
+
+		self.assertTrue(frappe.db.exists("Event Booking", booking.name))
+
+	def test_a_draft_booked_while_open_survives_registrations_closing(self):
+		"""A paid draft created while the event was open must still be writable through
+		a trusted flow (payment authorisation, offline approval) after registrations
+		close — otherwise a completed payment could no longer be turned into tickets."""
+		booking = self.insert_as(self.attacker)
+		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})
+
+		booking.reload()
+		booking.flags.ignore_permissions = True
+		booking.save()  # must not raise
 
 		self.assertTrue(frappe.db.exists("Event Booking", booking.name))
 
 
-class TestBookingAttribution(BypassTestCase):
-	def test_direct_insert_can_name_another_user_as_the_booker(self):
-		"""`user` is a plain Link with no check that it is the session user. The
-		`if_owner` restriction keys off `owner`, which Frappe sets itself, so the
-		booking lands in the victim's dashboard while the attacker owns the row."""
-		booking = self.insert_as(self.attacker, user=self.victim)
-
-		self.assertEqual(booking.user, self.victim)
-		self.assertEqual(booking.owner, self.attacker)
-
-
-class TestWhatValidateStillEnforces(BypassTestCase):
-	"""Scope the finding: these rules do live in `EventBooking.validate`, so a direct
-	insert does not defeat them."""
+class TestWhatValidateAlreadyEnforced(BypassTestCase):
+	"""Rules that lived in `validate` before this change, kept as guardrails."""
 
 	def test_prices_are_refetched_from_the_ticket_type(self):
 		booking = self.insert_as(self.attacker, attendees=[self.attendee_row(amount=0)])
@@ -213,11 +259,21 @@ class TestWhatValidateStillEnforces(BypassTestCase):
 			frappe.get_doc("Event Booking", booking.name).submit()
 
 
-class TestDraftStateIsAttackerControlled(BypassTestCase):
-	def test_read_only_status_fields_are_accepted_from_the_payload(self):
-		"""`status` and `payment_status` are `read_only`, which Frappe enforces in the
-		desk UI only — the REST API writes whatever the payload carries."""
+class TestResidualHardeningNotCoveredByThisChange(BypassTestCase):
+	"""Documented follow-ups: on an *open* event a direct insert can still carry
+	attacker-chosen `status`/`payment_status` and name another user as booker.
+	These are out of scope for the event-eligibility guard and are pinned here so
+	the remaining exposure stays visible."""
+
+	def test_read_only_status_fields_are_still_accepted_from_the_payload(self):
 		booking = self.insert_as(self.attacker, status="Confirmed", payment_status="Paid")
 
 		self.assertEqual(booking.status, "Confirmed")
 		self.assertEqual(booking.payment_status, "Paid")
+		self.assertEqual(booking.docstatus, 0)
+
+	def test_a_booking_can_still_name_another_user_as_the_booker(self):
+		booking = self.insert_as(self.attacker, user=self.victim)
+
+		self.assertEqual(booking.user, self.victim)
+		self.assertEqual(booking.owner, self.attacker)
