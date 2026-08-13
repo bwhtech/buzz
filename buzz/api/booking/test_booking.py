@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -8,9 +10,10 @@ from buzz.api.booking import (
 	send_guest_booking_otp,
 	validate_coupon,
 )
-from buzz.api.booking.exceptions import RegistrationsClosed
+from buzz.api.booking.exceptions import AddOnNotForEvent, InvalidAddOnValue, RegistrationsClosed
 from buzz.api.booking.schemas import BookingRequest
 from buzz.api.forms.test_forms import ensure_prompt_named_record
+from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 
 BOOKER = "booking-owner@example.com"
 OUTSIDER = "booking-outsider@example.com"
@@ -70,10 +73,13 @@ class BookingTestCase(IntegrationTestCase):
 		super().setUpClass()
 		category = ensure_prompt_named_record("Event Category", "Test Booking Category")
 		host = ensure_prompt_named_record("Event Host", "Test Booking Host")
+		owner = create_user("booking-team-owner@example.com", "Booking")
+		cls.team = create_owned_team(f"Booking Test Team {frappe.generate_hash(length=6)}", owner)
 		cls.event = frappe.get_doc(
 			{
 				"doctype": "Buzz Event",
 				"title": f"Booking Test Event {frappe.generate_hash(length=6)}",
+				"team": cls.team,
 				"start_date": "2030-01-01",
 				"end_date": "2030-01-01",
 				"start_time": "10:00:00",
@@ -253,6 +259,145 @@ class TestProcessBooking(BookingTestCase):
 		)
 		self.assertEqual(booking.status, "Approval Pending")
 		self.assertEqual(booking.payment_status, "Verification Pending")
+
+
+class TestBookingAddOnPricing(BookingTestCase):
+	"""The add-on price is server-authoritative: it comes from the Ticket Add-on catalog,
+	never from the booking payload. A guest who names their own price must be ignored."""
+
+	ADD_ON_PRICE = 500
+
+	def setUp(self):
+		super().setUp()
+		self.add_on = frappe.get_doc(
+			{
+				"doctype": "Ticket Add-on",
+				"event": self.event.name,
+				"title": f"Meal {frappe.generate_hash(length=6)}",
+				"price": self.ADD_ON_PRICE,
+				"enabled": 1,
+			}
+		).insert(ignore_permissions=True)
+
+	def book_with_add_on(self, add_on_row):
+		attendees = [
+			{
+				"first_name": "Booker",
+				"email": "booker@example.com",
+				"ticket_type": str(self.free_ticket_type.name),
+				"add_ons": [add_on_row],
+			}
+		]
+		# The paid path builds a payment link from a gateway that tests do not configure;
+		# stub it so the booking is created and its stored amounts can be read back.
+		with patch("buzz.api.booking.services.get_payment_link_for_booking", return_value="/pay"):
+			process_booking(self.booking_request(attendees=attendees))
+		return frappe.get_last_doc("Event Booking")
+
+	def test_client_supplied_price_is_ignored(self):
+		# The exploit payload: a Rs 500 add-on booked for Rs 1.
+		booking = self.book_with_add_on({"add_on": self.add_on.name, "value": "Veg", "price": 1})
+		self.assertEqual(booking.attendees[0].add_on_total, self.ADD_ON_PRICE)
+		self.assertEqual(booking.total_amount, self.ADD_ON_PRICE)
+
+	def test_price_is_charged_when_omitted(self):
+		# The legitimate payload carries no price; the catalog price must still be charged.
+		booking = self.book_with_add_on({"add_on": self.add_on.name, "value": "Veg"})
+		self.assertEqual(booking.attendees[0].add_on_total, self.ADD_ON_PRICE)
+
+
+class TestBookingSelectionValidation(BookingTestCase):
+	"""Every selection in the payload must be a legitimate server-side choice for this
+	event. A client cannot name a ticket type or add-on the event never offered."""
+
+	def setUp(self):
+		super().setUp()
+		self.add_on = frappe.get_doc(
+			{
+				"doctype": "Ticket Add-on",
+				"event": self.event.name,
+				"title": f"Meal {frappe.generate_hash(length=6)}",
+				"price": 500,
+				"enabled": 1,
+				"user_selects_option": 1,
+				"options": "Vegetarian meal\nNon-veg",
+			}
+		).insert(ignore_permissions=True)
+
+		foreign_owner = create_user("booking-foreign-owner@example.com", "Foreign")
+		foreign_team = create_owned_team(f"Foreign Team {frappe.generate_hash(length=6)}", foreign_owner)
+		self.foreign_event = frappe.get_doc(
+			{
+				"doctype": "Buzz Event",
+				"title": f"Foreign Event {frappe.generate_hash(length=6)}",
+				"team": foreign_team,
+				"start_date": "2030-01-01",
+				"end_date": "2030-01-01",
+				"start_time": "10:00:00",
+				"end_time": "18:00:00",
+				"medium": "Online",
+				"category": self.event.category,
+				"host": self.event.host,
+				"is_published": 1,
+			}
+		).insert(ignore_permissions=True)
+
+	def attendee(self, **overrides):
+		row = {
+			"first_name": "Booker",
+			"email": "booker@example.com",
+			"ticket_type": str(self.free_ticket_type.name),
+		}
+		row.update(overrides)
+		return row
+
+	def book(self, attendees):
+		# These payloads are rejected in validate, before finalize reaches a payment gateway.
+		process_booking(self.booking_request(attendees=attendees))
+
+	def test_ticket_type_from_another_event_is_refused(self):
+		foreign_ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": self.foreign_event.name,
+				"title": f"Foreign Ticket {frappe.generate_hash(length=6)}",
+				"price": 0,
+				"is_published": 1,
+			}
+		).insert(ignore_permissions=True)
+
+		with self.assertRaises(frappe.ValidationError):
+			self.book([self.attendee(ticket_type=str(foreign_ticket_type.name))])
+		self.assertIn("not available for this event", frappe.local.message_log[-1]["message"])
+
+	def test_add_on_from_another_event_is_refused(self):
+		foreign_add_on = frappe.get_doc(
+			{
+				"doctype": "Ticket Add-on",
+				"event": self.foreign_event.name,
+				"title": f"Foreign Meal {frappe.generate_hash(length=6)}",
+				"price": 500,
+				"enabled": 1,
+			}
+		).insert(ignore_permissions=True)
+
+		with self.assertRaises(AddOnNotForEvent):
+			self.book([self.attendee(add_ons=[{"add_on": foreign_add_on.name, "value": True}])])
+
+	def test_disabled_add_on_is_refused(self):
+		frappe.db.set_value("Ticket Add-on", self.add_on.name, "enabled", 0)
+		with self.assertRaises(AddOnNotForEvent):
+			self.book([self.attendee(add_ons=[{"add_on": self.add_on.name, "value": "Vegetarian meal"}])])
+
+	def test_invalid_add_on_value_is_refused(self):
+		with self.assertRaises(InvalidAddOnValue):
+			self.book([self.attendee(add_ons=[{"add_on": self.add_on.name, "value": "Gold"}])])
+
+	def test_a_legitimate_selection_is_accepted(self):
+		with patch("buzz.api.booking.services.get_payment_link_for_booking", return_value="/pay"):
+			self.book([self.attendee(add_ons=[{"add_on": self.add_on.name, "value": "Vegetarian meal"}])])
+		booking = frappe.get_last_doc("Event Booking")
+		self.assertEqual(booking.attendees[0].add_on_total, 500)
 
 
 class TestBookingPhoneCustomFields(BookingTestCase):
