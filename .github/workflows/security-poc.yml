@@ -31,15 +31,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - ref: 757c29f
+          - ref: 757c29f64af6aca95330086680abebfc0c180854
+            short: 757c29f
             label: "757c29f pre-refactor"
             endpoint: buzz.api.process_booking
             payload_style: flat
-          - ref: 23644b7
+          - ref: 23644b70b4db074f37a50a758d51f72949af36cd
+            short: 23644b7
             label: "23644b7 post-refactor, pre-fix"
             endpoint: buzz.api.booking.process_booking
             payload_style: wrapped
-          - ref: e231a49
+          - ref: e231a498d3857a965ace7515fecd0ad3ae9a2b37
+            short: e231a49
             label: "e231a49 the #340 fix"
             endpoint: buzz.api.booking.process_booking
             payload_style: wrapped
@@ -122,7 +125,7 @@ jobs:
         working-directory: /home/runner/frappe-bench
         run: bench --site test_site execute buzz.poc_report.run
         env:
-          POC_REVISION: ${{ matrix.ref }}
+          POC_REVISION: ${{ matrix.short }}
           POC_LABEL: ${{ matrix.label }}
           ENDPOINT: ${{ matrix.endpoint }}
 
@@ -130,7 +133,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: poc-${{ matrix.ref }}
+          name: poc-${{ matrix.short }}
           path: |
             /home/runner/poc-fixture.json
             /home/runner/poc-responses.jsonl
