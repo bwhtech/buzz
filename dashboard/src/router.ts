@@ -48,6 +48,11 @@ const routes: RouteRecordRaw[] = [
 				name: "team-overview",
 				component: () => import("@/pages/manage/teams/TeamOverview.vue"),
 			},
+			{
+				path: "team/members",
+				name: "team-members",
+				component: () => import("@/pages/manage/teams/TeamMembers.vue"),
+			},
 			// Sidebar destinations that have no page yet. Unnamed on purpose: SidebarItem
 			// falls back to matching on path, so each one lights up on its own. Enumerated
 			// so a mistyped path reaches the 404 below — keep in step with the sidebar

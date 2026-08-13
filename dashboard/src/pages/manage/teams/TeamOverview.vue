@@ -100,7 +100,12 @@ const hiddenMemberCount = computed(() =>
 						</Avatar>
 					</div>
 
-					<Button variant="ghost" label="Manage members" class="w-fit" />
+					<Button
+						variant="ghost"
+						label="Manage members"
+						class="w-fit"
+						:route="{ name: 'team-members' }"
+					/>
 				</section>
 			</div>
 		</template>

@@ -55,6 +55,10 @@ export function useTeamOverview() {
 	return teamOverview
 }
 
+export const removeMember = createResource({
+	url: "buzz.api.teams.remove_member",
+})
+
 export function selectTeam(name: string) {
 	selectedTeamName.value = name
 	localStorage.setItem(STORAGE_KEY, name)
