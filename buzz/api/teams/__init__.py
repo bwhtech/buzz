@@ -29,3 +29,8 @@ def get_my_teams() -> list[TeamOption]:
 @frappe.whitelist()
 def get_team_overview(team: str) -> TeamOverview:
 	return services.team_overview(team)
+
+
+@frappe.whitelist(methods=["POST"])
+def remove_member(team: str, user: str) -> None:
+	services.remove_member(team, user)
