@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AddMembersDialog: typeof import('./src/components/dashboard/teams/AddMembersDialog.vue')['default']
     AddOnPreferenceDialog: typeof import('./src/components/AddOnPreferenceDialog.vue')['default']
     AttendeeFormControl: typeof import('./src/components/AttendeeFormControl.vue')['default']
     BackButton: typeof import('./src/components/common/BackButton.vue')['default']

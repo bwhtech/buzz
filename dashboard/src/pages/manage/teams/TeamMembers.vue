@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import AddMembersDialog from "@/components/dashboard/teams/AddMembersDialog.vue";
 import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue";
 import { session } from "@/data/session";
 import { currentTeam, removeMember, useTeamOverview } from "@/data/teams";
-import type { TeamMember } from "@/types";
+import type { TeamInvite, TeamMember } from "@/types";
 import { Avatar, Button, Dropdown, ErrorMessage, LoadingText, dialog, toast } from "frappe-ui";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
 const MANAGING_ROLES = ["Owner", "Admin"];
 
@@ -20,6 +21,8 @@ const ROLES = [
 const COLUMNS =
 	"grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)_2rem] items-center gap-4";
 
+const isAdding = ref(false);
+
 const teamOverview = useTeamOverview();
 
 const team = computed(() => teamOverview.data);
@@ -28,7 +31,12 @@ const errorMessage = computed(() => teamOverview.error?.message);
 
 const canManage = computed(() => MANAGING_ROLES.includes(team.value?.my_role ?? ""));
 
-const rows = computed<Row[]>(() => (team.value?.members ?? []).map(memberRow));
+// Members and pending invitations share one list so the table reads as the whole team,
+// with the people who have not accepted yet at the bottom.
+const rows = computed<Row[]>(() => [
+	...(team.value?.members ?? []).map(memberRow),
+	...(team.value?.invites ?? []).map(inviteRow),
+]);
 
 interface Row {
 	key: string;
@@ -36,7 +44,7 @@ interface Row {
 	email: string;
 	role: string;
 	image?: string;
-	member: TeamMember;
+	member?: TeamMember;
 }
 
 function memberRow(member: TeamMember): Row {
@@ -50,10 +58,20 @@ function memberRow(member: TeamMember): Row {
 	};
 }
 
-// The owner is locked server-side, and leaving a team is its own flow rather than a
-// self-removal.
+// There is no user yet, so no name and no image — the address stands in for both.
+function inviteRow(invite: TeamInvite): Row {
+	return {
+		key: `invite:${invite.email}`,
+		name: invite.email,
+		email: invite.email,
+		role: invite.team_role,
+	};
+}
+
+// The owner is locked server-side, leaving a team is its own flow rather than a
+// self-removal, and an invitation is revoked rather than removed.
 function canRemove(row: Row) {
-	if (!canManage.value) return false;
+	if (!canManage.value || !row.member) return false;
 	return row.member.team_role !== "Owner" && row.member.user !== session.user;
 }
 
@@ -111,6 +129,15 @@ function confirmRemove(row: Row) {
 			</section>
 
 			<div>
+				<div class="flex justify-end pb-3">
+					<Button
+						v-if="canManage"
+						icon-left="plus"
+						label="Add member"
+						@click="isAdding = true"
+					/>
+				</div>
+
 				<div :class="COLUMNS" class="pb-2 text-sm text-ink-gray-5">
 					<span>Name</span>
 					<span>Email</span>
@@ -134,6 +161,9 @@ function confirmRemove(row: Row) {
 
 						<span class="truncate text-base font-medium text-ink-gray-8">
 							{{ row.role }}
+							<span v-if="!row.member" class="font-normal text-ink-gray-5">
+								(Invited)
+							</span>
 						</span>
 
 						<Dropdown v-if="canRemove(row)" :options="actionsFor(row)" align="end">
@@ -147,6 +177,12 @@ function confirmRemove(row: Row) {
 					</li>
 				</TransitionGroup>
 			</div>
+
+			<AddMembersDialog
+				v-model="isAdding"
+				:team="currentTeam?.name ?? ''"
+				@success="teamOverview.reload()"
+			/>
 		</template>
 	</div>
 </template>
