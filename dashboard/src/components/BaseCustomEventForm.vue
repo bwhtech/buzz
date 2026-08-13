@@ -157,7 +157,7 @@ import EventDetailsHeader from "@/components/EventDetailsHeader.vue";
 import FormFieldSections from "@/components/FormFieldSections.vue";
 import LoginRequired from "@/components/LoginRequired.vue";
 import type { FrappeError } from "@/types";
-import { Button, Dialog, Spinner, createResource, toast } from "frappe-ui";
+import { Button, Dialog, Spinner, createResource, toast, usePageMeta } from "frappe-ui";
 import { marked } from "marked";
 import { computed, reactive, ref } from "vue";
 import LucideAlertCircle from "~icons/lucide/alert-circle";
@@ -202,6 +202,13 @@ const props = defineProps({
 });
 
 const formData = ref<CustomFormData | null>(null);
+
+usePageMeta(() => {
+	const eventTitle = formData.value?.event?.title;
+	const formTitle = formData.value?.form_title;
+	return eventTitle && formTitle ? { title: `${eventTitle} - ${formTitle}` } : null;
+});
+
 const formValues = reactive<Record<string, any>>({});
 const customFieldValues = ref<Record<string, any>>({});
 const submitted = ref(false);
