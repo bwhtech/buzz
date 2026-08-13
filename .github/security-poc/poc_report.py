@@ -44,12 +44,20 @@ def load_responses() -> dict:
 
 
 def find_booking(email: str) -> dict | None:
-	attendees = frappe.get_all(
-		"Event Booking Attendee",
-		filters={"email": email, "parenttype": "Event Booking"},
-		fields=["parent", "add_ons", "add_on_total", "amount"],
-		parent="Event Booking",
-		ignore_permissions=True,
+	# Query builder rather than get_all: these are child tables, and the `parent`
+	# argument get_all wants for them is not accepted by every frappe version this
+	# harness runs against.
+	attendee_table = frappe.qb.DocType("Event Booking Attendee")
+	attendees = (
+		frappe.qb.from_(attendee_table)
+		.select(
+			attendee_table.parent,
+			attendee_table.add_ons,
+			attendee_table.add_on_total,
+			attendee_table.amount,
+		)
+		.where((attendee_table.email == email) & (attendee_table.parenttype == "Event Booking"))
+		.run(as_dict=True)
 	)
 	if not attendees:
 		return None
@@ -64,12 +72,15 @@ def find_booking(email: str) -> dict | None:
 
 	stored_add_on_price = None
 	if attendee.add_ons:
-		add_on_rows = frappe.get_all(
-			"Ticket Add-on Value",
-			filters={"parent": attendee.add_ons, "parenttype": "Attendee Ticket Add-on"},
-			fields=["add_on", "value", "price"],
-			parent="Attendee Ticket Add-on",
-			ignore_permissions=True,
+		value_table = frappe.qb.DocType("Ticket Add-on Value")
+		add_on_rows = (
+			frappe.qb.from_(value_table)
+			.select(value_table.add_on, value_table.value, value_table.price)
+			.where(
+				(value_table.parent == attendee.add_ons)
+				& (value_table.parenttype == "Attendee Ticket Add-on")
+			)
+			.run(as_dict=True)
 		)
 		if add_on_rows:
 			stored_add_on_price = add_on_rows[0].price
