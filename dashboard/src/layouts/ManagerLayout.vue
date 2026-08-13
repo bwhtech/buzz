@@ -20,7 +20,7 @@ const route = useRoute();
 const isActive = (to: string) => route.path === to;
 
 const personalItems = [
-	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/events" },
+	{ label: "My Events", icon: "lucide-calendar-days", to: "/manage/events" },
 	{ label: "My Tickets", icon: "lucide-ticket", to: "/manage/tickets" },
 	{ label: "Talk Proposals", icon: "lucide-file-text", to: "/manage/proposals" },
 	{ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" },
@@ -30,10 +30,8 @@ const personalItems = [
 // so they are fixed and need no team loaded to render.
 const teamItems = [
 	{ label: "Overview", icon: "lucide-layout-dashboard", to: "/manage/team/overview" },
+	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/team/events" },
 	{ label: "Members", icon: "lucide-users-round", to: "/manage/team/members" },
-	{ label: "Registrations", icon: "lucide-users", to: "/manage/registrations" },
-	{ label: "Sponsors", icon: "lucide-badge-dollar-sign", to: "/manage/sponsors" },
-	{ label: "More", icon: "lucide-ellipsis", to: "/manage/more" },
 ];
 </script>
 

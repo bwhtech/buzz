@@ -2,12 +2,18 @@
 import type { MyEvent } from "@/types";
 import { dayLabel } from "@/utils/dateLabels";
 import { bannerPattern } from "@/utils/eventBanner";
-import { Avatar } from "frappe-ui";
+import { Avatar, Button } from "frappe-ui";
 import { computed } from "vue";
 
 // The Events page files cards under a date heading; a standalone list has to
 // carry the date on the card itself.
-const props = defineProps<{ event: MyEvent; showDate?: boolean }>();
+const props = withDefaults(
+	defineProps<{ event: MyEvent; showDate?: boolean; showManage?: boolean }>(),
+	{ showManage: true }
+);
+
+// Two gates: the caller has to want the button, and only a host has anything to manage.
+const canManage = computed(() => props.showManage && props.event.is_host);
 
 // Times arrive as a serialized timedelta ("9:00:00"), so the hour needs padding.
 const startTime = computed((): string => {
@@ -69,14 +75,18 @@ const venue = computed(() => {
 				</p>
 			</div>
 
-			<p class="mt-2 flex items-center gap-2 text-base text-ink-gray-5">
-				<span
-					class="size-4 shrink-0"
-					:class="[venue.icon, venue.tone]"
-					aria-hidden="true"
-				/>
-				{{ venue.label }}
-			</p>
+			<div class="flex justify-between">
+				<p class="mt-2 flex items-center gap-2 text-base text-ink-gray-5">
+					<span
+						class="size-4 shrink-0"
+						:class="[venue.icon, venue.tone]"
+						aria-hidden="true"
+					/>
+					{{ venue.label }}
+				</p>
+				<!-- TODO: wire this button up with the manage event page -->
+				<Button v-if="canManage" label="Manage" icon-right="arrow-right" size="sm" />
+			</div>
 		</div>
 	</article>
 </template>
