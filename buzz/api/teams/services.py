@@ -1,8 +1,9 @@
 import frappe
+from frappe.query_builder import Case
 
-from buzz.api.teams.exceptions import NotATeamMember
+from buzz.api.teams.exceptions import CannotManageMembers, NotATeamMember
 from buzz.api.teams.schemas import TeamMember, TeamOverview
-from buzz.permissions import team_role_of
+from buzz.permissions import can_manage_members, team_role_of
 
 TEAM_FIELDS = ("name", "team_name", "slug", "logo")
 
@@ -33,13 +34,38 @@ def members_of(team: str) -> list[TeamMember]:
 	membership = frappe.qb.DocType("Buzz Team Membership")
 	user = frappe.qb.DocType("User")
 
+	# A team can hold several Owners, so this is a role bucket rather than a single row.
+	owner_first = Case().when(membership.team_role == "Owner", 0).else_(1)
+
 	rows = (
 		frappe.qb.from_(membership)
 		.inner_join(user)
 		.on(user.name == membership.user)
 		.select(membership.user, membership.team_role, user.full_name, user.user_image)
 		.where((membership.team == team) & (membership.enabled == 1))
+		.orderby(owner_first)
 		.orderby(user.full_name)
 	).run(as_dict=True)
 
 	return [TeamMember(**row) for row in rows]
+
+
+def remove_member(team: str, user: str) -> None:
+	"""Take a member off a team by disabling their membership.
+
+	Disabled rather than deleted: `upsert_membership` re-enables the same row if they are
+	ever invited back, and the history survives. An Owner row refuses to be disabled in the
+	membership controller, so ownership needs no check here.
+	"""
+	if not can_manage_members(team):
+		CannotManageMembers.throw()
+
+	name = frappe.db.exists("Buzz Team Membership", {"team": team, "user": user, "enabled": 1})
+	if not name:
+		NotATeamMember.throw()
+
+	membership = frappe.get_doc("Buzz Team Membership", name)
+	membership.enabled = 0
+	# Event Manager holds no write permission on the membership doctype, so the guard above
+	# is the authorization — the same shape as the Desk add-members flow.
+	membership.save(ignore_permissions=True)
