@@ -60,7 +60,70 @@ class TestGetMyProposals(IntegrationTestCase):
 		row = next(r for r in serialized_proposals() if r["name"] == self.guest_proposal)
 		self.assertEqual(row["event"], cstr(self.event))
 		self.assertEqual(row["status"], "Review Pending")
-		self.assertEqual(set(row), {"name", "title", "event", "event_title", "status", "creation"})
+		self.assertEqual(
+			set(row),
+			{
+				"name",
+				"title",
+				"event",
+				"event_title",
+				"start_date",
+				"banner_image",
+				"status",
+				"creation",
+				"modified",
+				"speakers",
+			},
+		)
+
+	def test_rows_carry_their_speakers(self):
+		frappe.set_user(self.speaker_user)
+		row = next(r for r in serialized_proposals() if r["name"] == self.guest_proposal)
+		self.assertEqual(
+			row["speakers"],
+			[{"first_name": "Speaker", "last_name": None, "email": self.speaker_user}],
+		)
+
+	def test_speakers_keep_their_row_order(self):
+		proposal = frappe.get_doc(
+			{
+				"doctype": "Talk Proposal",
+				"title": f"Duo Talk {frappe.generate_hash(length=6)}",
+				"event": self.event,
+				"submitted_by": self.speaker_user,
+				"speakers": [
+					{"first_name": "First", "email": "first-speaker@example.com"},
+					{"first_name": "Second", "email": "second-speaker@example.com"},
+				],
+			}
+		).insert(ignore_permissions=True)
+
+		frappe.set_user(self.speaker_user)
+		row = next(r for r in serialized_proposals() if r["name"] == proposal.name)
+		self.assertEqual([speaker["first_name"] for speaker in row["speakers"]], ["First", "Second"])
+
+	def test_rows_carry_the_event_start_date(self):
+		frappe.set_user(self.speaker_user)
+		row = next(r for r in serialized_proposals() if r["name"] == self.guest_proposal)
+		self.assertEqual(cstr(row["start_date"]), "2030-01-01")
+
+	def test_rows_carry_the_event_banner(self):
+		frappe.db.set_value("Buzz Event", self.event, "banner_image", "/files/banner-probe.png")
+		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event)
+
+		frappe.set_user(self.speaker_user)
+		row = next(r for r in serialized_proposals() if r["name"] == self.guest_proposal)
+		self.assertEqual(row["banner_image"], "/files/banner-probe.png")
+
+	def test_modified_tracks_the_latest_edit(self):
+		proposal = frappe.get_doc("Talk Proposal", self.guest_proposal)
+		proposal.title = f"Edited {frappe.generate_hash(length=6)}"
+		proposal.save(ignore_permissions=True)
+		self.addCleanup(frappe.clear_document_cache, "Talk Proposal", self.guest_proposal)
+
+		frappe.set_user(self.speaker_user)
+		row = next(r for r in serialized_proposals() if r["name"] == self.guest_proposal)
+		self.assertGreater(row["modified"], row["creation"])
 
 	def test_creation_serializes_in_frappe_datetime_format(self):
 		frappe.set_user(self.speaker_user)
