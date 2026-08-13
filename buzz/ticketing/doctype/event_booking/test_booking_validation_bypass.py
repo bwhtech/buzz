@@ -2,17 +2,10 @@
 # For license information, please see license.txt
 """Regression tests for the closed/unpublished-event booking bypass.
 
-`Event Booking` grants `create` to the `Buzz User` role, and every User gets that
-role on `after_insert` (`buzz.utils.add_buzz_user_role`, wired in `hooks.py`). The
-booking eligibility rules (event published, registrations open) originally lived
-only in `BookingService` (`buzz/api/booking/services.py`), so Frappe's generic
-document API — `/api/resource/Event Booking`, `frappe.client.insert` — could reach
-`Document.insert()` and create bookings for events that were never live.
-
-`EventBooking.validate_event_registration_is_open` now enforces the same rules on
-the model, for any non-privileged user creating a booking outside the vetted
-service flow. These tests pin that: the generic API is refused, while the service,
-event organisers, and post-payment resubmits are all left working.
+Any logged-in Buzz User could create bookings for unpublished or closed events
+via the generic document API, since eligibility was only checked in
+`BookingService`. These pin the model-level guard: the generic API is refused,
+while the service, event organisers, and post-payment resubmits keep working.
 """
 
 import frappe
@@ -95,10 +88,8 @@ class BypassTestCase(IntegrationTestCase):
 		return BookingRequest(**values)
 
 	def insert_as(self, session_user: str, **overrides):
-		"""What `/api/resource/Event Booking` and `frappe.client.insert` do: build the
-		document from the request payload and insert it under the caller's own
-		permissions. No `ignore_permissions`, so the doctype's role permissions and
-		`validate` decide."""
+		"""Insert under the caller's own permissions, like the generic document API —
+		no `ignore_permissions`, so role permissions and `validate` decide."""
 		payload = {
 			"doctype": "Event Booking",
 			"event": str(self.event.name),
@@ -116,8 +107,7 @@ class BypassTestCase(IntegrationTestCase):
 
 
 class TestOrdinaryUsersCanWriteBookings(BypassTestCase):
-	"""The precondition that made the bypass reachable: the role that permits a
-	direct insert is granted to every signed-up user."""
+	"""The precondition: every signed-up user gets the role that permits a direct insert."""
 
 	def test_every_new_user_is_granted_the_buzz_user_role(self):
 		self.assertIn("Buzz User", frappe.get_roles(self.attacker))
@@ -140,7 +130,7 @@ class TestUnpublishedEventIsRefused(BypassTestCase):
 		self.assertIn("Event is not live", frappe.local.message_log[-1]["message"])
 
 	def test_direct_insert_is_refused_for_an_unpublished_event(self):
-		"""The bypass, now closed: the generic document API hits the same guard."""
+		# The bypass, now closed.
 		self.set_event({"is_published": 0})
 
 		with self.assertRaises(frappe.ValidationError):
@@ -183,8 +173,7 @@ class TestLegitimateFlowsStillWork(BypassTestCase):
 		self.assertEqual(booking.event, self.event.name)
 
 	def test_the_guard_does_not_apply_to_the_vetted_service_flow(self):
-		# A free ticket keeps the flow off the payment gateway; the point is only that
-		# the service insert clears the model guard and produces a real booking.
+		# Free ticket keeps the flow off the payment gateway.
 		free_ticket_type = frappe.get_doc(
 			{
 				"doctype": "Event Ticket Type",
@@ -205,8 +194,7 @@ class TestLegitimateFlowsStillWork(BypassTestCase):
 		self.assertTrue(frappe.db.exists("Event Booking", payload["booking_name"]))
 
 	def test_an_event_organiser_may_book_a_closed_event(self):
-		"""Event Managers legitimately create bookings for their own unpublished or
-		closed events (comp tickets, pre-launch testing); the guard exempts them."""
+		# Organisers are exempt (comp tickets, pre-launch testing).
 		organiser = create_user(ORGANISER, "Organiser")
 		frappe.get_doc("User", organiser).add_roles("Event Manager")
 		self.set_event({"is_published": 0, "registrations_close_at": "2020-01-01 00:00:00"})
@@ -216,9 +204,8 @@ class TestLegitimateFlowsStillWork(BypassTestCase):
 		self.assertTrue(frappe.db.exists("Event Booking", booking.name))
 
 	def test_a_draft_booked_while_open_survives_registrations_closing(self):
-		"""A paid draft created while the event was open must still be writable through
-		a trusted flow (payment authorisation, offline approval) after registrations
-		close — otherwise a completed payment could no longer be turned into tickets."""
+		# A draft made while open must stay writable via a trusted flow (payment
+		# authorisation, offline approval) after close, or a paid booking is stranded.
 		booking = self.insert_as(self.attacker)
 		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})
 
@@ -260,10 +247,9 @@ class TestWhatValidateAlreadyEnforced(BypassTestCase):
 
 
 class TestResidualHardeningNotCoveredByThisChange(BypassTestCase):
-	"""Documented follow-ups: on an *open* event a direct insert can still carry
-	attacker-chosen `status`/`payment_status` and name another user as booker.
-	These are out of scope for the event-eligibility guard and are pinned here so
-	the remaining exposure stays visible."""
+	"""Out of scope for the eligibility guard, pinned so the exposure stays visible:
+	on an open event a direct insert can still set `status`/`payment_status` and name
+	another user as booker."""
 
 	def test_read_only_status_fields_are_still_accepted_from_the_payload(self):
 		booking = self.insert_as(self.attacker, status="Confirmed", payment_status="Paid")

@@ -67,35 +67,17 @@ class EventBooking(Document):
 		self.apply_taxes_if_applicable()
 
 	def validate_event_registration_is_open(self):
-		"""Refuse bookings for events that are not open for registration.
+		"""Refuse new bookings for unpublished or closed events.
 
-		Booking eligibility (event published + registrations open) used to be
-		enforced only in `BookingService` (`buzz/api/booking/services.py`), so the
-		generic document API — `/api/resource/Event Booking`, `frappe.client.insert`
-		— let any logged-in `Buzz User` create bookings for unpublished or closed
-		events by skipping the service entirely. Enforcing it on the model closes
-		every write path at once.
-
-		`BookingService.validate_event` stays: it runs before the guest OTP is spent
-		and returns the friendlier `RegistrationsClosed` (409), and — because the
-		service inserts with `ignore_permissions` — it is the only thing that guards
-		the vetted flow, which this method deliberately skips.
-
-		Skipped for:
-		- trusted server flows (`ignore_permissions`) — `BookingService` has already
-		  validated, and payment authorisation / offline approval resubmit an
-		  existing draft, which must still succeed even if registrations have closed
-		  in the meantime;
-		- existing documents — only creation is gated, so amendments and later edits
-		  of an already-valid booking are left alone;
-		- event organisers (Event Manager / System Manager), who legitimately create
-		  bookings for their own unpublished or closed events (comp tickets, testing).
+		Backs up `BookingService.validate_event` so the generic document API
+		(`/api/resource`, `frappe.client.insert`) can't skip the check. Skips vetted
+		server flows (`ignore_permissions`, which also lets a draft made while open
+		be resubmitted after close), later edits, and event organisers.
 		"""
 		if self.flags.ignore_permissions or not self.is_new():
 			return
 
-		organiser_roles = {"System Manager", "Event Manager"}
-		if organiser_roles.intersection(frappe.get_roles()):
+		if {"System Manager", "Event Manager"}.intersection(frappe.get_roles()):
 			return
 
 		event = frappe.get_cached_doc("Buzz Event", self.event)
