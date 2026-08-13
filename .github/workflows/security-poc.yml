@@ -110,20 +110,43 @@ jobs:
           cp "$GITHUB_WORKSPACE/harness/.github/security-poc/poc_report.py" \
              /home/runner/frappe-bench/apps/buzz/buzz/poc_report.py
 
+      # Each stage keeps going after a failure and tees its output to a file, so one
+      # broken stage still leaves the others' evidence to read. The run's own logs are
+      # unreadable in practice -- the service containers dump a few hundred lines after
+      # the last step -- so the final step reprints everything that matters in one
+      # compact block at the very end.
       - name: Seed event, ticket type and add-ons
+        id: seed
+        continue-on-error: true
         working-directory: /home/runner/frappe-bench
-        run: bench --site test_site execute buzz.poc_seed.run
+        run: |
+          mkdir -p /home/runner/poc-logs
+          set -o pipefail
+          bench --site test_site execute buzz.poc_seed.run 2>&1 \
+            | tee /home/runner/poc-logs/seed.log
 
       - name: Fire booking payloads over HTTP
-        run: bash "$GITHUB_WORKSPACE/harness/.github/security-poc/exploit.sh"
+        id: exploit
+        continue-on-error: true
+        run: |
+          mkdir -p /home/runner/poc-logs
+          set -o pipefail
+          bash "$GITHUB_WORKSPACE/harness/.github/security-poc/exploit.sh" 2>&1 \
+            | tee /home/runner/poc-logs/exploit.log
         env:
           BASE_URL: http://test_site:8000
           ENDPOINT: ${{ matrix.endpoint }}
           PAYLOAD_STYLE: ${{ matrix.payload_style }}
 
       - name: Report what persisted
+        id: report
+        continue-on-error: true
         working-directory: /home/runner/frappe-bench
-        run: bench --site test_site execute buzz.poc_report.run
+        run: |
+          mkdir -p /home/runner/poc-logs
+          set -o pipefail
+          bench --site test_site execute buzz.poc_report.run 2>&1 \
+            | tee /home/runner/poc-logs/report.log
         env:
           POC_REVISION: ${{ matrix.short }}
           POC_LABEL: ${{ matrix.label }}
@@ -137,12 +160,27 @@ jobs:
           path: |
             /home/runner/poc-fixture.json
             /home/runner/poc-responses.jsonl
+            /home/runner/poc-logs
           retention-days: 7
           if-no-files-found: warn
 
-      - name: Show bench logs on failure
-        if: failure()
-        working-directory: /home/runner/frappe-bench
+      - name: PoC results
+        if: always()
         run: |
-          cat bench_start.log || true
-          cat logs/*.log || true
+          echo "######## POC RESULTS ${{ matrix.short }} (${{ matrix.label }}) ########"
+          for stage in seed exploit report; do
+            echo ""
+            echo "-------- $stage --------"
+            tail -n 80 "/home/runner/poc-logs/$stage.log" 2>/dev/null \
+              || echo "(stage did not run)"
+          done
+          echo ""
+          echo "-------- outcomes --------"
+          echo "seed=${{ steps.seed.outcome }} exploit=${{ steps.exploit.outcome }} report=${{ steps.report.outcome }}"
+          echo "######## END POC RESULTS ########"
+
+          # The job's verdict is whether the harness ran, not whether a revision turned
+          # out to be vulnerable -- that finding lives in the table above.
+          [ "${{ steps.seed.outcome }}" = "success" ] \
+            && [ "${{ steps.exploit.outcome }}" = "success" ] \
+            && [ "${{ steps.report.outcome }}" = "success" ]

@@ -18,10 +18,16 @@ def has_field(doctype: str, fieldname: str) -> bool:
 	return fieldname in {df.fieldname for df in frappe.get_meta(doctype).fields}
 
 
-def ensure_prompt_named(doctype: str, record_name: str) -> str:
+def ensure_prompt_named(doctype: str, record_name: str, **fields) -> str:
+	"""Extra fields are applied only where the meta has them, since the doctypes gained
+	fields between the revisions under test -- Event Host, for one, only requires a team
+	after the multi-tenancy change."""
 	if not frappe.db.exists(doctype, record_name):
 		doc = frappe.new_doc(doctype)
 		doc.name = record_name
+		for fieldname, value in fields.items():
+			if value is not None and has_field(doctype, fieldname):
+				doc.set(fieldname, value)
 		doc.insert(ignore_permissions=True)
 	return record_name
 
@@ -86,14 +92,17 @@ def create_add_on(event: str, title: str, enabled: int = 1, with_options: int = 
 def run() -> None:
 	frappe.set_user("Administrator")
 
-	category = ensure_prompt_named("Event Category", "PoC Conference")
-	host = ensure_prompt_named("Event Host", "PoC Host")
-
+	# Teams first: on the post-multi-tenancy revisions the host cannot be created
+	# without one.
 	target_team = ensure_team("PoC Target Team")
 	foreign_team = ensure_team("PoC Foreign Team")
 
+	category = ensure_prompt_named("Event Category", "PoC Conference")
+	host = ensure_prompt_named("Event Host", "PoC Host", team=target_team)
+	foreign_host = ensure_prompt_named("Event Host", "PoC Foreign Host", team=foreign_team)
+
 	target_event = create_event("PoC Target Event", category, host, target_team)
-	foreign_event = create_event("PoC Foreign Event", category, host, foreign_team)
+	foreign_event = create_event("PoC Foreign Event", category, foreign_host, foreign_team)
 
 	fixture = {
 		"add_on_price": ADD_ON_PRICE,
