@@ -1,6 +1,7 @@
 import frappe
 
-from buzz.api.teams.schemas import TeamOption
+from buzz.api.teams import services
+from buzz.api.teams.schemas import TeamOption, TeamOverview
 
 
 @frappe.whitelist()
@@ -23,3 +24,8 @@ def get_my_teams() -> list[TeamOption]:
 	).run(as_dict=True)
 
 	return [TeamOption(**my_team) for my_team in my_teams]
+
+
+@frappe.whitelist()
+def get_team_overview(team: str) -> TeamOverview:
+	return services.team_overview(team)
