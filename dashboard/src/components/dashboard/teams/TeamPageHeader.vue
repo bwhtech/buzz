@@ -13,7 +13,7 @@ const items = computed(() => {
 </script>
 
 <template>
-	<PageHeader class="border-none pt-2">
+	<PageHeader class="border-none pt-2 bg-surface-elevation-1">
 		<Breadcrumbs :items="items" />
 		<Button variant="solid" icon-left="plus" label="Create Event" />
 	</PageHeader>
