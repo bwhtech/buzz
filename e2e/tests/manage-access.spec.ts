@@ -13,9 +13,9 @@ test.describe("Manage access", () => {
 
 	test("routes a sidebar item with no page yet to the placeholder", async ({ page }) => {
 		await page.goto("/b/manage/events");
-		await page.getByRole("link", { name: "Registrations" }).click();
+		await page.getByRole("link", { name: "Sponsorship" }).click();
 
-		await expect(page).toHaveURL(/\/b\/manage\/registrations$/);
+		await expect(page).toHaveURL(/\/b\/manage\/sponsorship$/);
 		await expect(page.getByText("Work in progress")).toBeVisible();
 	});
 
