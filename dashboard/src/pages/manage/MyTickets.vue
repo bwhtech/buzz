@@ -4,10 +4,11 @@ import { useMyTickets } from "@/data/tickets";
 import type { TicketWithEvent } from "@/types";
 import { dayLabel, monthLabel, weekday } from "@/utils/dateLabels";
 import { groupEventsByMonth } from "@/utils/eventGroups";
+import { type TimelineTab, inTab } from "@/utils/timelineTabs";
 import { ErrorMessage, LoadingText, TabButtons, dayjs } from "frappe-ui";
 import { computed, ref } from "vue";
 
-const tab = ref<"upcoming" | "past">("upcoming");
+const tab = ref<TimelineTab>("upcoming");
 const tabOptions = [
 	{ label: "Upcoming", value: "upcoming" },
 	{ label: "Past", value: "past" },
@@ -22,20 +23,9 @@ const dated = computed(() =>
 	)
 );
 
-const months = computed(() => {
-	const today = dayjs().format("YYYY-MM-DD");
-	const upcoming = tab.value === "upcoming";
-	// Same rule as the events feed: an event running through today is not over yet.
-	const isOver = (ticket: TicketWithEvent) => (ticket.end_date || ticket.start_date) < today;
-	const shown = dated.value
-		.filter((ticket) => isOver(ticket) !== upcoming)
-		.sort((a, b) =>
-			upcoming
-				? a.start_date.localeCompare(b.start_date)
-				: b.start_date.localeCompare(a.start_date)
-		);
-	return groupEventsByMonth(shown);
-});
+const months = computed(() =>
+	groupEventsByMonth(inTab(dated.value, tab.value, dayjs().format("YYYY-MM-DD")))
+);
 </script>
 
 <template>
