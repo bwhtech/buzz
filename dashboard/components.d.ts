@@ -39,6 +39,7 @@ declare module 'vue' {
     PhoneInput: typeof import('./src/components/PhoneInput.vue')['default']
     PrintedTicket: typeof import('./src/components/dashboard/tickets/PrintedTicket.vue')['default']
     ProfileView: typeof import('./src/components/ProfileView.vue')['default']
+    ProposalCard: typeof import('./src/components/dashboard/proposals/ProposalCard.vue')['default']
     ProposalEditDialog: typeof import('./src/components/ProposalEditDialog.vue')['default']
     QRCodeExpandDialog: typeof import('./src/components/QRCodeExpandDialog.vue')['default']
     QRScanner: typeof import('./src/components/QRScanner.vue')['default']

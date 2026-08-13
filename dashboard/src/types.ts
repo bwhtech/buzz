@@ -12,16 +12,32 @@ import type { FrappeField } from "@/composables/useCustomFields"
 import type { EventTicket } from "@/types/Ticketing/EventTicket"
 import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 
+// A speaker listed on a proposal. Proposal Speaker holds contact details only —
+// no photo, bio or Speaker Profile link until a proposal is accepted.
+export interface ProposalSpeaker {
+	first_name: string
+	last_name: string | null
+	email: string
+}
+
 // Rows from buzz.api.proposals.get_my_proposals: proposals where the session
-// user is the submitter or a listed speaker, with the event title joined on.
+// user is the submitter or a listed speaker, with the event columns joined on.
 export interface ProposalListItem {
 	name: string
 	title: string
 	event: string
+	// Event columns come over a link hop, so a deleted event leaves them null.
 	event_title: string | null
+	start_date: string | null
+	banner_image: string | null
 	status: string
 	creation: string
+	modified: string
+	speakers: ProposalSpeaker[]
 }
+
+// A proposal whose event row still resolves — the only kind the timeline can place.
+export type ProposalWithEvent = ProposalListItem & { event_title: string; start_date: string }
 
 // Errors rejected by frappe-ui resources carry server messages beyond Error.
 export interface FrappeError extends Error {

@@ -32,6 +32,11 @@ const routes: RouteRecordRaw[] = [
 				name: "tickets",
 				component: () => import("@/pages/manage/MyTickets.vue"),
 			},
+			{
+				path: "proposals",
+				name: "proposals",
+				component: () => import("@/pages/manage/MyProposals.vue"),
+			},
 			// Sidebar destinations that have no page yet. Unnamed on purpose: SidebarItem
 			// falls back to matching on path, so each one lights up on its own. Enumerated
 			// so a mistyped path reaches the 404 below — keep in step with the sidebar
