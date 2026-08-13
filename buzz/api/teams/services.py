@@ -2,7 +2,7 @@ import frappe
 from frappe.query_builder import Case
 
 from buzz.api.teams.exceptions import CannotManageMembers, NotATeamMember
-from buzz.api.teams.schemas import TeamMember, TeamOverview
+from buzz.api.teams.schemas import TeamInvite, TeamMember, TeamOverview
 from buzz.permissions import can_manage_members, team_role_of
 
 TEAM_FIELDS = ("name", "team_name", "slug", "logo")
@@ -27,6 +27,7 @@ def team_overview(team: str) -> TeamOverview:
 		**details,
 		my_role=role,
 		members=members_of(team),
+		invites=pending_invites_for(team),
 	)
 
 
@@ -48,6 +49,22 @@ def members_of(team: str) -> list[TeamMember]:
 	).run(as_dict=True)
 
 	return [TeamMember(**row) for row in rows]
+
+
+def pending_invites_for(team: str) -> list[TeamInvite]:
+	"""Invitations still waiting on their recipient.
+
+	App-scoped as well as team-scoped: `User Invitation` is shared with every other
+	installed app, and only buzz's own rows carry a team.
+	"""
+	rows = frappe.db.get_all(
+		"User Invitation",
+		filters={"buzz_team": team, "status": "Pending", "app_name": "buzz"},
+		fields=["email", "buzz_team_role as team_role"],
+		order_by="creation asc",
+	)
+
+	return [TeamInvite(**row) for row in rows]
 
 
 def remove_member(team: str, user: str) -> None:
