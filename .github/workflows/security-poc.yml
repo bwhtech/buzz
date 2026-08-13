@@ -1,0 +1,145 @@
+name: Booking PoC
+
+# Investigation harness, not a gate. It answers one question: was the add-on pricing
+# and selection hole fixed in #340 already present before the api split in #295, or did
+# the refactor introduce it? Three revisions get the identical payloads over HTTP:
+#
+#   757c29f  parent of the api split (#295)      -> buzz.api.process_booking
+#   23644b7  after the split, before the fix     -> buzz.api.booking.process_booking
+#   e231a49  the fix itself (#340)               -> buzz.api.booking.process_booking
+#
+# Every job is expected to pass. The finding is in the job summary table, not the
+# exit code, so one vulnerable revision does not mask the others.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/security-issue-persistence-check-x0wnjz
+
+concurrency:
+  group: security-poc-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  poc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: ${{ matrix.label }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ref: 757c29f
+            label: "757c29f pre-refactor"
+            endpoint: buzz.api.process_booking
+            payload_style: flat
+          - ref: 23644b7
+            label: "23644b7 post-refactor, pre-fix"
+            endpoint: buzz.api.booking.process_booking
+            payload_style: wrapped
+          - ref: e231a49
+            label: "e231a49 the #340 fix"
+            endpoint: buzz.api.booking.process_booking
+            payload_style: wrapped
+
+    env:
+      PYTHONWARNINGS: ignore
+      SITE: test_site
+
+    services:
+      redis-cache:
+        image: redis:alpine
+        ports:
+          - 13000:6379
+      redis-queue:
+        image: redis:alpine
+        ports:
+          - 11000:6379
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=2s --health-retries=3
+          --tmpfs=/var/lib/mysql:rw,noexec,nosuid,size=2g
+
+    steps:
+      # The revision under test owns the workspace root, because setup-bench installs
+      # the app from $GITHUB_WORKSPACE. It must be checked out first: a root checkout
+      # cleans the workspace and would wipe a harness already placed beside it.
+      - name: Clone revision under test
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+
+      # The PoC scripts and the bench action live on this branch, not on the old
+      # revisions, so they come from a second checkout kept out of the app tree.
+      - name: Clone PoC harness
+        uses: actions/checkout@v4
+        with:
+          path: harness
+
+      - name: Setup Bench
+        uses: ./harness/.github/actions/setup-bench
+        with:
+          site-name: test_site
+
+      - name: Start Frappe server
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench start &> bench_start.log &
+          # Any HTTP response means the port is serving; the status itself does not
+          # matter here, so this deliberately does not use `curl -f`.
+          timeout 90 bash -c \
+            'until curl -s -o /dev/null http://test_site:8000/api/method/frappe.handler.ping; do sleep 1; done'
+
+      # `bench execute` needs an importable dotted path, so the scripts are dropped
+      # into the installed app rather than run as loose files.
+      - name: Install PoC scripts into the app
+        run: |
+          cp "$GITHUB_WORKSPACE/harness/.github/security-poc/poc_seed.py" \
+             /home/runner/frappe-bench/apps/buzz/buzz/poc_seed.py
+          cp "$GITHUB_WORKSPACE/harness/.github/security-poc/poc_report.py" \
+             /home/runner/frappe-bench/apps/buzz/buzz/poc_report.py
+
+      - name: Seed event, ticket type and add-ons
+        working-directory: /home/runner/frappe-bench
+        run: bench --site test_site execute buzz.poc_seed.run
+
+      - name: Fire booking payloads over HTTP
+        run: bash "$GITHUB_WORKSPACE/harness/.github/security-poc/exploit.sh"
+        env:
+          BASE_URL: http://test_site:8000
+          ENDPOINT: ${{ matrix.endpoint }}
+          PAYLOAD_STYLE: ${{ matrix.payload_style }}
+
+      - name: Report what persisted
+        working-directory: /home/runner/frappe-bench
+        run: bench --site test_site execute buzz.poc_report.run
+        env:
+          POC_REVISION: ${{ matrix.ref }}
+          POC_LABEL: ${{ matrix.label }}
+          ENDPOINT: ${{ matrix.endpoint }}
+
+      - name: Upload PoC artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: poc-${{ matrix.ref }}
+          path: |
+            /home/runner/poc-fixture.json
+            /home/runner/poc-responses.jsonl
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Show bench logs on failure
+        if: failure()
+        working-directory: /home/runner/frappe-bench
+        run: |
+          cat bench_start.log || true
+          cat logs/*.log || true
