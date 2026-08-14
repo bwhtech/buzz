@@ -43,9 +43,9 @@ const eventItems = computed(() => [
 		to: `/manage/events/${eventId.value}/details`,
 	},
 	{
-		label: "Attendees",
+		label: "Guests",
 		icon: "lucide-users-round",
-		to: `/manage/events/${eventId.value}/attendees`,
+		to: `/manage/events/${eventId.value}/guests`,
 	},
 	{
 		label: "Talks",

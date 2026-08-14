@@ -33,6 +33,7 @@ declare module 'vue' {
     EventDetailsHeader: typeof import('./src/components/EventDetailsHeader.vue')['default']
     EventLocation: typeof import('./src/components/dashboard/events/EventLocation.vue')['default']
     EventMedium: typeof import('./src/components/dashboard/events/EventMedium.vue')['default']
+    EventPageHeader: typeof import('./src/components/dashboard/events/EventPageHeader.vue')['default']
     EventRoute: typeof import('./src/components/dashboard/events/EventRoute.vue')['default']
     EventSchedule: typeof import('./src/components/dashboard/events/EventSchedule.vue')['default']
     EventSelector: typeof import('./src/components/EventSelector.vue')['default']
