@@ -5,6 +5,7 @@ import {
 	canonicalZone,
 	zoneCity,
 	zoneCountry,
+	nowInZone,
 	zoneGenericName,
 	zoneOffsetLabel,
 	zoneSearchText,
@@ -106,4 +107,13 @@ test("search text carries city, country and everyday name", () => {
 
 test("search text drops the parts a zone has no answer for", () => {
 	assert.equal(zoneSearchText("Nowhere/Nothing"), "Nothing")
+})
+
+test("the wall clock in a zone reads as Frappe's naive datetime", () => {
+	assert.equal(nowInZone("Asia/Kolkata", WINTER), "2026-01-15 17:30:00")
+	assert.equal(nowInZone("America/New_York", WINTER), "2026-01-15 07:00:00")
+})
+
+test("a zone the runtime cannot resolve falls back rather than throwing", () => {
+	assert.match(nowInZone("Nowhere/Nothing", WINTER), /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
 })
