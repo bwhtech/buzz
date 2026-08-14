@@ -40,6 +40,11 @@ const routes: RouteRecordRaw[] = [
 				redirect: (to) => `/manage/events/${to.params.eventId}/details`,
 			},
 			{
+				path: "events/:eventId/details",
+				name: "event-details",
+				component: () => import("@/pages/manage/events/EventDetails.vue"),
+			},
+			{
 				path: "events/:eventId/:section",
 				component: () => import("@/pages/manage/WorkInProgress.vue"),
 			},
