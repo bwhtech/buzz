@@ -48,6 +48,11 @@ const eventItems = computed(() => [
 		to: `/manage/events/${eventId.value}/guests`,
 	},
 	{
+		label: "Registrations",
+		icon: "lucide-ticket",
+		to: `/manage/events/${eventId.value}/registrations`,
+	},
+	{
 		label: "Talks",
 		icon: "lucide-presentation",
 		to: `/manage/events/${eventId.value}/talks`,
