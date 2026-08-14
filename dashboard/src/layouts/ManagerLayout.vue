@@ -1,19 +1,16 @@
 <script setup lang="ts">
 import TeamSwitcher from "@/components/TeamSwitcher.vue";
 import UserMenu from "@/components/UserMenu.vue";
-import { isTeamMember } from "@/data/teams";
+import { useTeamAccess } from "@/composables/useTeamAccess";
 import NotFound from "@/pages/NotFound.vue";
 import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem, SidebarLabel } from "frappe-ui";
 import { ref } from "vue";
 import { useRoute } from "vue-router";
 
-const isMember = ref<boolean | null>(null);
-isTeamMember().then((member) => {
-	isMember.value = member;
-});
-
 const collapsed = ref(false);
 const route = useRoute();
+
+const access = useTeamAccess();
 
 // SidebarItem infers this from `to` on paper, but its `active` prop is declared
 // type Boolean, so Vue casts the absent prop to false and the inference never runs.
@@ -36,10 +33,10 @@ const teamItems = [
 </script>
 
 <template>
-	<NotFound v-if="isMember === false" />
+	<NotFound v-if="access === 'denied'" />
 
 	<!-- scroll=false: the rounded panel below owns its own scroll. -->
-	<DesktopShell v-else-if="isMember" :scroll="false">
+	<DesktopShell v-else-if="access === 'granted'" :scroll="false">
 		<template #sidebar>
 			<Sidebar v-model:collapsed="collapsed">
 				<div class="flex h-12 shrink-0 items-center px-1">
