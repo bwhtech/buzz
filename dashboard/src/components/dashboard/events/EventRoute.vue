@@ -76,7 +76,7 @@ async function copy() {
 					<!-- Swapped, not crossfaded: at this size a fade reads as a flicker. -->
 					<span
 						class="block size-4"
-						:class="justCopied ? 'lucide-check text-ink-green-3' : 'lucide-copy'"
+						:class="justCopied ? 'lucide-check text-ink-gray-6' : 'lucide-copy'"
 						aria-hidden="true"
 					/>
 				</button>
