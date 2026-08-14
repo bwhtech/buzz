@@ -4,6 +4,7 @@ from frappe.model.naming import append_number_if_name_exists
 from frappe.query_builder import Case
 from frappe.utils import getdate
 
+from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.exceptions import (
 	CannotCreateEvents,
 	CannotManageEvent,
@@ -174,7 +175,11 @@ def event_guests(event: str) -> EventGuestsResponse:
 		)
 		for ticket in tickets
 	]
-	return EventGuestsResponse(total=len(guests), guests=guests)
+	return EventGuestsResponse(
+		total=len(guests),
+		registrations_closed=are_registrations_closed(frappe.get_cached_doc("Buzz Event", event)),
+		guests=guests,
+	)
 
 
 def titles_of(doctype: str, names: set[str | None]) -> dict[str, str]:

@@ -141,6 +141,7 @@ export interface EventGuest {
 
 export interface EventGuests {
 	total: number
+	registrations_closed: boolean
 	guests: EventGuest[]
 }
 

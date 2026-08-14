@@ -469,6 +469,18 @@ class TestGetEventGuests(IntegrationTestCase):
 		self.assertEqual(guests.total, 0)
 		self.assertEqual(guests.guests, [])
 
+	def test_reports_registrations_closed_once_the_cutoff_has_passed(self):
+		event = create_event("Closed Event", self.team, registrations_close_at="2020-01-01 00:00:00")
+		frappe.set_user(self.owner)
+
+		self.assertTrue(get_event_guests(event).registrations_closed)
+
+	def test_reports_registrations_open_before_the_event_ends(self):
+		event = create_event("Open Event", self.team)
+		frappe.set_user(self.owner)
+
+		self.assertFalse(get_event_guests(event).registrations_closed)
+
 	def test_a_non_member_cannot_read_the_guest_list(self):
 		event = create_event("Private Guests", self.team)
 		issue_ticket(event, "private-guest@example.com")
