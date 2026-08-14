@@ -31,6 +31,7 @@ declare module 'vue' {
     EventBanner: typeof import('./src/components/dashboard/events/EventBanner.vue')['default']
     EventCard: typeof import('./src/components/dashboard/events/EventCard.vue')['default']
     EventDetailsHeader: typeof import('./src/components/EventDetailsHeader.vue')['default']
+    EventGuestItem: typeof import('./src/components/dashboard/events/EventGuestItem.vue')['default']
     EventLocation: typeof import('./src/components/dashboard/events/EventLocation.vue')['default']
     EventMedium: typeof import('./src/components/dashboard/events/EventMedium.vue')['default']
     EventPageHeader: typeof import('./src/components/dashboard/events/EventPageHeader.vue')['default']

@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 
+from pydantic import Field
+
 from buzz.api.schemas import APIRequest, APIResponse
 
 
@@ -48,6 +50,27 @@ class EventDetail(APIResponse):
 	# The organiser's own link, or the one Zoom issued when the meeting was booked.
 	meeting_link: str | None = None
 	is_published: bool
+
+
+class GuestAddOn(APIResponse):
+	title: str
+	# The option the attendee picked, for an add-on that offers a choice.
+	value: str | None = None
+
+
+class EventGuest(APIResponse):
+	"""One ticket. A person who booked twice holds two, and appears twice."""
+
+	name: str
+	attendee_name: str | None = None
+	attendee_email: str | None = None
+	ticket_type: str | None = None
+	add_ons: list[GuestAddOn] = Field(default_factory=list)
+
+
+class EventGuestsResponse(APIResponse):
+	total: int
+	guests: list[EventGuest]
 
 
 class RouteAvailability(APIResponse):
