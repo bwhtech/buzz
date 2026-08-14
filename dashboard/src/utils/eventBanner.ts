@@ -2,6 +2,7 @@
 // squash come from the event name, so an event always draws the same pattern.
 
 const LINE = "var(--outline-gray-2)"
+const LINE_WIDTH = 2
 const SURFACE = "var(--surface-gray-1)"
 
 /** FNV-1a seed, then xorshift — successive draws stay independent of each other. */
@@ -31,10 +32,11 @@ export function bannerPattern(seed: string): string {
 	// Squashing one axis is what keeps the rings from reading as a bullseye.
 	const width = Math.round(between(next(), 55, 110))
 	const height = Math.round(between(next(), 55, 110))
-	const gap = between(next(), 9, 12).toFixed(1)
+	const gap = between(next(), 18, 26).toFixed(1)
 
 	return (
 		`repeating-radial-gradient(ellipse ${width}% ${height}% at ${originX}% ${originY}%,` +
-		` ${LINE} 0 1px, transparent 1px ${gap}px), linear-gradient(${SURFACE}, ${SURFACE})`
+		` ${LINE} 0 ${LINE_WIDTH}px, transparent ${LINE_WIDTH}px ${gap}px),` +
+		` linear-gradient(${SURFACE}, ${SURFACE})`
 	)
 }
