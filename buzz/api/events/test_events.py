@@ -2,8 +2,8 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
+from buzz.api.events import check_event_route, get_event, get_my_events
 from buzz.api.events import create_event as create_event_endpoint
-from buzz.api.events import get_event, get_my_events
 from buzz.api.events.exceptions import (
 	CannotCreateEvents,
 	CannotManageEvent,
@@ -361,3 +361,50 @@ class TestGetEvent(IntegrationTestCase):
 
 		with self.assertRaises(EventNotFound):
 			get_event("999999999")
+
+
+class TestCheckEventRoute(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("check-route-owner@example.com", "Owner")
+		cls.team = create_owned_team("Check Route Team", cls.owner)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_an_unused_route_is_available(self):
+		frappe.set_user(self.owner)
+
+		self.assertTrue(check_event_route("a-route-nobody-has").available)
+
+	def test_a_route_another_event_holds_is_taken(self):
+		create_event("Route Holder", self.team, route="taken-route")
+		frappe.set_user(self.owner)
+
+		self.assertFalse(check_event_route("taken-route").available)
+
+	def test_an_unpublished_event_still_holds_its_route(self):
+		create_event("Draft Route Holder", self.team, route="draft-route", is_published=0)
+		frappe.set_user(self.owner)
+
+		self.assertFalse(check_event_route("draft-route").available)
+
+	def test_an_event_does_not_block_its_own_route(self):
+		event = create_event("Self Route", self.team, route="own-route")
+		frappe.set_user(self.owner)
+
+		self.assertTrue(check_event_route("own-route", event=event).available)
+
+	def test_a_reserved_route_is_refused(self):
+		frappe.set_user(self.owner)
+
+		self.assertFalse(check_event_route("account").available)
+
+	def test_a_blank_route_is_not_available(self):
+		frappe.set_user(self.owner)
+
+		self.assertFalse(check_event_route("   ").available)

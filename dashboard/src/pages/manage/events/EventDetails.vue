@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import EventBanner from "@/components/dashboard/events/EventBanner.vue";
 import EventMedium from "@/components/dashboard/events/EventMedium.vue";
+import EventRoute from "@/components/dashboard/events/EventRoute.vue";
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue";
 import { eventDetail, updateEvent } from "@/data/events";
 import type { EventDetail, FrappeError } from "@/types";
@@ -21,6 +22,7 @@ const saved = ref(JSON.stringify(blank()));
 function blank() {
 	return {
 		title: "",
+		route: "",
 		short_description: "",
 		about: "",
 		banner_image: "",
@@ -40,6 +42,7 @@ function blank() {
 function fill(detail: EventDetail) {
 	Object.assign(form, {
 		title: detail.title ?? "",
+		route: detail.route ?? "",
 		short_description: detail.short_description ?? "",
 		about: detail.about ?? "",
 		banner_image: detail.banner_image ?? "",
@@ -99,13 +102,21 @@ async function save() {
 		<EventBanner v-model="form.banner_image" :seed="form.title" />
 
 		<div class="space-y-2">
-			<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
-			<input
-				v-model="form.title"
-				aria-label="Event title"
-				placeholder="Name your event"
-				class="w-full bg-transparent text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none"
-			/>
+			<div class="flex items-start justify-between gap-4">
+				<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
+				<input
+					v-model="form.title"
+					aria-label="Event title"
+					placeholder="Name your event"
+					class="min-w-0 flex-1 bg-transparent text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none"
+				/>
+				<EventRoute
+					v-model="form.route"
+					:event="eventId"
+					:saved="event.data.route"
+					class="shrink-0"
+				/>
+			</div>
 			<!-- Ghost variant: no border, so it reads as a subtitle under the name. -->
 			<Textarea
 				v-model="form.short_description"

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { callMethod, ensureTestTeam } from "../helpers/frappe";
 
 // Runs under the shared Administrator state, whose team hosts the event seeded by
 // event.setup.ts — the one card guaranteed to carry a Manage button.
@@ -32,6 +33,20 @@ test.describe("Event workspace", () => {
 		await expect(page.getByText("Event saved")).toBeVisible();
 		await page.reload();
 		await expect(description).toHaveValue(text, { timeout: 15000 });
+	});
+
+	test("shows the event's public address beside its name", async ({ page }) => {
+		const field = page.getByRole("textbox", { name: "Event route" });
+		await expect(field).toBeVisible({ timeout: 15000 });
+
+		// The host is fixed text; only the part after the slash is editable.
+		const route = await field.inputValue();
+		expect(route).not.toBe("");
+
+		const open = page.getByRole("link", { name: "Open event page" });
+		await expect(open).toHaveAttribute("href", `/b/register/${route}`);
+		await expect(open).toHaveAttribute("target", "_blank");
+		await expect(page.getByRole("button", { name: "Copy" })).toBeVisible();
 	});
 
 	test("swaps the venue for a meeting link when the event turns virtual", async ({ page }) => {
@@ -69,6 +84,45 @@ test.describe("Event workspace", () => {
 
 		await expect(page).toHaveURL(/\/b\/manage\/events$/, { timeout: 15000 });
 		await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible();
+	});
+});
+
+// An event with no route yet has to claim one, so this block seeds its own rather than
+// reusing the shared event, which already has one.
+test.describe("Claiming a route", () => {
+	let eventId: string;
+
+	test.beforeEach(async ({ page, request }) => {
+		const team = await ensureTestTeam(request);
+		// Through the app's own endpoint: it fills the category and host that a bare
+		// insert would be missing.
+		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
+			event: {
+				team,
+				title: `Routeless Event ${Date.now()}`,
+				start_date: "2030-01-01",
+				start_time: "09:00:00",
+				end_time: "17:00:00",
+			},
+		});
+		eventId = String(event.name);
+		await page.goto(`/b/manage/events/${eventId}/details`);
+	});
+
+	test("reports whether a typed route is free", async ({ page }) => {
+		const field = page.getByRole("textbox", { name: "Event route" });
+		await expect(field).toBeVisible({ timeout: 15000 });
+
+		await field.fill(`free-route-${Date.now()}`);
+		await expect(page.getByText("This route is available.")).toBeVisible();
+
+		// The shared event already answers to this one.
+		await field.fill("test-event-e2e");
+		await expect(page.getByText("This route is already taken.")).toBeVisible();
+
+		// Reserved so an event cannot shadow /b/account.
+		await field.fill("account");
+		await expect(page.getByText("reserved")).toBeVisible();
 	});
 });
 

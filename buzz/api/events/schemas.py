@@ -33,6 +33,7 @@ class EventDetail(APIResponse):
 
 	name: str
 	title: str
+	route: str | None = None
 	team: str | None = None
 	start_date: date
 	end_date: date | None = None
@@ -47,6 +48,11 @@ class EventDetail(APIResponse):
 	# The organiser's own link, or the one Zoom issued when the meeting was booked.
 	meeting_link: str | None = None
 	is_published: bool
+
+
+class RouteAvailability(APIResponse):
+	available: bool
+	message: str
 
 
 class NewEvent(APIRequest):
