@@ -1,6 +1,5 @@
-import type { MyEvent, MyEvents } from "@/types"
+import type { EventDetail, MyEvents } from "@/types"
 import { createResource, useCall } from "frappe-ui"
-import { type Ref, computed } from "vue"
 
 // v2 path: useCall reads the payload from `data`, which /api/method names `message`.
 // Uncached: cacheKey would persist this user's feed to IndexedDB past a logout.
@@ -14,18 +13,20 @@ export const createEvent = createResource<{ name: string; title: string }>({
 	url: "buzz.api.events.create_event",
 })
 
-/**
- * One event out of the feed the dashboard loads for this page.
- *
- * The feed carries every event the user hosts or holds a ticket to, so the manage
- * pages can name an event without a second round trip. Undefined while the feed
- * loads, and for an event the user cannot see at all.
- */
-export function useMyEvent(eventId: Ref<string>) {
-	const myEvents = useMyEvents()
-	return computed((): MyEvent | undefined => {
-		const events = myEvents.data
-		if (!events) return undefined
-		return [...events.upcoming, ...events.past].find((event) => event.name === eventId.value)
+/** One event with everything its manage page edits. Per page, so it is not a singleton. */
+export function eventDetail(event: string) {
+	return createResource<EventDetail>({
+		url: "buzz.api.events.get_event",
+		params: { event },
+		auto: true,
 	})
 }
+
+/**
+ * Save edits back onto an event.
+ *
+ * `set_value` takes a fieldname-to-value map, so the whole form travels as one write —
+ * and the team permission hooks guard Buzz Event, which is why this needs no endpoint of
+ * its own.
+ */
+export const updateEvent = createResource({ url: "frappe.client.set_value" })
