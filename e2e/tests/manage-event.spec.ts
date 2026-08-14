@@ -66,7 +66,7 @@ test.describe("Event workspace", () => {
 	});
 
 	test("swaps the sidebar for the event's own destinations", async ({ page }) => {
-		for (const label of ["Back", "Details", "Guests", "Talks"]) {
+		for (const label of ["Back", "Details", "Guests", "Registrations", "Talks"]) {
 			await expect(page.getByRole("link", { name: label })).toBeVisible({ timeout: 15000 });
 		}
 		await expect(page.getByRole("link", { name: "My Tickets" })).toHaveCount(0);
@@ -109,6 +109,98 @@ test.describe("Event workspace", () => {
 
 		await page.getByRole("textbox", { name: "Search guests" }).fill("");
 		await expect(rows).toHaveCount(everyone);
+	});
+
+	test("closes and reopens registration from its tile", async ({ page }) => {
+		await page.getByRole("link", { name: "Registrations" }).click();
+		await expect(page).toHaveURL(/\/b\/manage\/events\/\d+\/registrations$/);
+
+		const tile = page.getByRole("button", { name: /^Registration (Open|Closed)$/ });
+		await expect(tile).toContainText("Open", { timeout: 15000 });
+
+		await tile.click();
+		await page.getByRole("switch", { name: "Accept Registration" }).click();
+		await page.getByRole("button", { name: "Confirm" }).click();
+		await expect(tile).toContainText("Closed");
+
+		// Back to open, so the shared event is left as the other specs expect it.
+		await tile.click();
+		await page.getByRole("switch", { name: "Accept Registration" }).click();
+		await page.getByRole("button", { name: "Confirm" }).click();
+		await expect(tile).toContainText("Open");
+	});
+
+	test("turns guest registration on and off again", async ({ page }) => {
+		await page.getByRole("link", { name: "Registrations" }).click();
+
+		const tile = page.getByRole("button", { name: /^Guest Registration (On|Off)$/ });
+		await expect(tile).toBeVisible({ timeout: 15000 });
+
+		// Whichever way the shared event is currently set: flip it, then flip it back.
+		const wasOn = (await tile.textContent())?.endsWith("On");
+		const allow = page.getByRole("switch", { name: "Allow Guest Registration" });
+
+		await tile.click();
+		await allow.click();
+		await page.getByRole("button", { name: "Confirm" }).click();
+		await expect(tile).toContainText(wasOn ? "Off" : "On");
+
+		await tile.click();
+		await allow.click();
+		await page.getByRole("button", { name: "Confirm" }).click();
+		await expect(tile).toContainText(wasOn ? "On" : "Off");
+	});
+
+	test("picks how guests are verified once guest registration is on", async ({ page }) => {
+		await page.getByRole("link", { name: "Registrations" }).click();
+
+		const tile = page.getByRole("button", { name: /^Guest Registration (On|Off)$/ });
+		await expect(tile).toBeVisible({ timeout: 15000 });
+		// Read before opening: the dialog hides the page behind it from the tree.
+		const wasOff = (await tile.textContent())?.endsWith("Off");
+		await tile.click();
+
+		const allow = page.getByRole("switch", { name: "Allow Guest Registration" });
+		const verify = page.getByRole("switch", { name: "Verify Guests" });
+		// The verification question only exists for an event that takes guests at all.
+		if (wasOff) {
+			await expect(verify).toHaveCount(0);
+			await allow.click();
+		}
+
+		await verify.click();
+		// The select is a custom listbox, not a native one — pick from the popup.
+		const method = page.getByRole("combobox", { name: "Verify by" });
+		await method.click();
+		await page.getByRole("option", { name: "Phone OTP" }).click();
+		await page.getByRole("button", { name: "Confirm" }).click();
+
+		// Reopening reads back what was stored, rather than the default.
+		await tile.click();
+		await expect(method).toContainText("Phone OTP");
+
+		// Back to how the shared event was found.
+		await verify.click();
+		if (wasOff) await allow.click();
+		await page.getByRole("button", { name: "Confirm" }).click();
+		await expect(tile).toContainText(wasOff ? "Off" : "On");
+	});
+
+	test("adds a ticket type to the event", async ({ page }) => {
+		await page.getByRole("link", { name: "Registrations" }).click();
+
+		const title = `Early Bird ${Date.now()}`;
+		await page.getByRole("button", { name: "New Ticket Type" }).click();
+		await page.getByRole("textbox", { name: "Title" }).fill(title);
+		await page.getByRole("spinbutton", { name: "Price" }).fill("499");
+		await page.getByRole("button", { name: "Create ticket type" }).click();
+
+		const row = page
+			.getByRole("list", { name: "Ticket types" })
+			.getByRole("listitem")
+			.filter({ hasText: title });
+		await expect(row).toBeVisible({ timeout: 15000 });
+		await expect(row).toContainText("499");
 	});
 
 	test("moves between sections", async ({ page }) => {
