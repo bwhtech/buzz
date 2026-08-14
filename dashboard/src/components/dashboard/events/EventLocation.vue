@@ -8,7 +8,11 @@ import { computed, ref, watch } from "vue";
 // venue really could be called "Zoom" — the sentinel keeps the two apart.
 const ZOOM = "__zoom__";
 
-const props = defineProps<{ team: string }>();
+// A page that asks for the medium separately picks a venue and nothing else, so the
+// Zoom option would be a second way to answer a question already answered.
+const props = withDefaults(defineProps<{ team: string; showVirtual?: boolean }>(), {
+	showVirtual: true,
+});
 
 const venue = defineModel<string>("venue", { default: "" });
 // Zoom cannot be booked until the event exists, so this is the intent to act on at save.
@@ -32,37 +36,41 @@ const selected = computed({
 	},
 });
 
+const addVenue = {
+	type: "custom" as const,
+	key: "add-venue",
+	label: "Add venue",
+	icon: "lucide-plus",
+	// Only worth offering once they have typed a name nothing answers to.
+	condition: ({ query }: { query: string }) =>
+		Boolean(query.trim()) &&
+		!(venues.data ?? []).some((row) => row.name.toLowerCase() === query.trim().toLowerCase()),
+	onClick: ({ query }: { query: string }) => {
+		suggestedName.value = query.trim();
+		isAdding.value = true;
+	},
+};
+
 const options = computed(() => [
 	{
 		group: "Venues",
-		options: (venues.data ?? []).map((row) => ({
-			label: row.name,
-			description: row.address,
-			value: row.name,
-		})),
-	},
-	{
-		group: "Virtual",
 		options: [
-			{ label: "Create Zoom meeting", value: ZOOM, icon: "lucide-video" },
-			{
-				type: "custom" as const,
-				key: "add-venue",
-				label: "Add venue",
-				icon: "lucide-plus",
-				// Only worth offering once they have typed a name nothing answers to.
-				condition: ({ query }: { query: string }) =>
-					Boolean(query.trim()) &&
-					!(venues.data ?? []).some(
-						(row) => row.name.toLowerCase() === query.trim().toLowerCase()
-					),
-				onClick: ({ query }: { query: string }) => {
-					suggestedName.value = query.trim();
-					isAdding.value = true;
-				},
-			},
+			...(venues.data ?? []).map((row) => ({
+				label: row.name,
+				description: row.address,
+				value: row.name,
+			})),
+			addVenue,
 		],
 	},
+	...(props.showVirtual
+		? [
+				{
+					group: "Virtual",
+					options: [{ label: "Create Zoom meeting", value: ZOOM, icon: "lucide-video" }],
+				},
+		  ]
+		: []),
 ]);
 
 async function onVenueCreated(name: string) {

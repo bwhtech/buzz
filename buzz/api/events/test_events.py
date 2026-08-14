@@ -3,8 +3,13 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
 from buzz.api.events import create_event as create_event_endpoint
-from buzz.api.events import get_my_events
-from buzz.api.events.exceptions import CannotCreateEvents, ZoomNotAvailable
+from buzz.api.events import get_event, get_my_events
+from buzz.api.events.exceptions import (
+	CannotCreateEvents,
+	CannotManageEvent,
+	EventNotFound,
+	ZoomNotAvailable,
+)
 from buzz.api.events.schemas import NewEvent
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user, payload_for
 from buzz.test_permissions import add_member, create_ticket
@@ -261,3 +266,77 @@ class TestCreateEvent(IntegrationTestCase):
 
 		with self.assertRaises(ZoomNotAvailable):
 			create_event_endpoint(self.payload(zoom_meeting=True))
+
+
+class TestGetEvent(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("get-event-owner@example.com", "Owner")
+		cls.viewer = create_user("get-event-viewer@example.com", "Viewer")
+		cls.stranger = create_user("get-event-stranger@example.com", "Stranger")
+		cls.team = create_owned_team("Get Event Team", cls.owner)
+		add_member(cls.team, cls.viewer, "Viewer")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_returns_the_fields_the_manage_page_edits(self):
+		event = create_event(
+			"Detailed Event",
+			self.team,
+			short_description="A short one",
+			about="<p>A long one</p>",
+			medium="Online",
+			meeting_link="https://example.com/join",
+		)
+		frappe.set_user(self.owner)
+
+		detail = get_event(event).__json__()
+
+		self.assertEqual(detail["name"], event)
+		self.assertEqual(detail["short_description"], "A short one")
+		self.assertEqual(detail["about"], "<p>A long one</p>")
+		self.assertEqual(detail["medium"], "Online")
+		self.assertEqual(detail["meeting_link"], "https://example.com/join")
+		self.assertIsNone(detail["venue"])
+
+	def test_resolves_the_venue_with_its_address(self):
+		venue = frappe.get_doc(
+			{
+				"doctype": "Event Venue",
+				"name": "Get Event Venue",
+				"address": "12 Example Street",
+				"team": self.team,
+			}
+		).insert(ignore_permissions=True)
+		event = create_event("Venued Event", self.team, venue=venue.name)
+		frappe.set_user(self.owner)
+
+		detail = get_event(event).__json__()
+
+		self.assertEqual(detail["venue"]["name"], venue.name)
+		self.assertEqual(detail["venue"]["address"], "12 Example Street")
+
+	def test_a_viewer_cannot_open_the_manage_payload(self):
+		event = create_event("Viewer Event", self.team)
+		frappe.set_user(self.viewer)
+
+		with self.assertRaises(CannotManageEvent):
+			get_event(event)
+
+	def test_a_non_member_cannot_open_the_manage_payload(self):
+		event = create_event("Stranger Event", self.team)
+		frappe.set_user(self.stranger)
+
+		with self.assertRaises(CannotManageEvent):
+			get_event(event)
+
+	def test_an_unknown_event_is_not_found(self):
+		frappe.set_user(self.owner)
+
+		with self.assertRaises(EventNotFound):
+			get_event("999999999")
