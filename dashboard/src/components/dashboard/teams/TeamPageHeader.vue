@@ -15,6 +15,12 @@ const items = computed(() => {
 <template>
 	<PageHeader class="border-none pt-2 bg-surface-elevation-1">
 		<Breadcrumbs :items="items" />
-		<Button variant="solid" icon-left="plus" label="Create Event" />
+		<Button
+			variant="solid"
+			icon-left="plus"
+			label="Create Event"
+			:disabled="!currentTeam"
+			:route="{ name: 'create-event' }"
+		/>
 	</PageHeader>
 </template>
