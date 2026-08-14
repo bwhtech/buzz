@@ -130,15 +130,15 @@ def setup_test_records():
 	create_talk_proposal_statuses()
 
 	# Administrator's only membership, so the team resolves for fixtures that omit one.
-	create_default_team_for("Administrator")
+	admin_team = create_default_team_for("Administrator").name
 
 	test_category = frappe.get_doc({"doctype": "Event Category", "name": "Test Category"}).insert(
 		ignore_if_duplicate=True
 	)
-	test_venue = frappe.get_doc({"doctype": "Event Venue", "name": "Test Venue", "address": "test"}).insert(
-		ignore_if_duplicate=True
-	)
-	test_host = frappe.get_doc({"doctype": "Event Host", "name": "Test Host"}).insert(
+	test_venue = frappe.get_doc(
+		{"doctype": "Event Venue", "name": "Test Venue", "address": "test", "team": admin_team}
+	).insert(ignore_if_duplicate=True)
+	test_host = frappe.get_doc({"doctype": "Event Host", "name": "Test Host", "team": admin_team}).insert(
 		ignore_if_duplicate=True
 	)
 
@@ -148,6 +148,7 @@ def setup_test_records():
 	frappe.get_doc(
 		{
 			"doctype": "Buzz Event",
+			"team": admin_team,
 			"category": test_category.name,
 			"venue": test_venue.name,
 			"host": test_host.name,
