@@ -10,14 +10,16 @@ const name = props.guest.attendee_name || props.guest.attendee_email || "Unnamed
 </script>
 
 <template>
-	<li class="flex items-center gap-3 py-3">
+	<li class="flex items-center gap-3 px-4 py-3">
 		<Avatar :label="name" size="lg" />
 
-		<div class="min-w-0 flex-1">
-			<p class="truncate text-base font-medium text-ink-gray-8">{{ name }}</p>
-			<p v-if="guest.attendee_email" class="truncate text-sm text-ink-gray-5">
+		<!-- Name and email on one line: the email is how you tell two Harshes apart, so it
+			 belongs beside the name rather than under it. -->
+		<div class="flex min-w-0 flex-1 items-baseline gap-2">
+			<span class="shrink-0 truncate text-base font-medium text-ink-gray-8">{{ name }}</span>
+			<span v-if="guest.attendee_email" class="truncate text-base text-ink-gray-5">
 				{{ guest.attendee_email }}
-			</p>
+			</span>
 		</div>
 
 		<div class="flex shrink-0 items-center gap-1.5">
