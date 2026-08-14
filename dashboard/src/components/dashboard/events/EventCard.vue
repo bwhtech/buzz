@@ -84,8 +84,13 @@ const venue = computed(() => {
 					/>
 					{{ venue.label }}
 				</p>
-				<!-- TODO: wire this button up with the manage event page -->
-				<Button v-if="canManage" label="Manage" icon-right="arrow-right" size="sm" />
+				<Button
+					v-if="canManage"
+					label="Manage"
+					icon-right="arrow-right"
+					size="sm"
+					:route="`/manage/events/${event.name}`"
+				/>
 			</div>
 		</div>
 	</article>

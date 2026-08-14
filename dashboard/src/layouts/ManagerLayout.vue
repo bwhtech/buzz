@@ -4,7 +4,7 @@ import UserMenu from "@/components/UserMenu.vue";
 import { useTeamAccess } from "@/composables/useTeamAccess";
 import NotFound from "@/pages/NotFound.vue";
 import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem, SidebarLabel } from "frappe-ui";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 
 const collapsed = ref(false);
@@ -30,6 +30,25 @@ const teamItems = [
 	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/team/events" },
 	{ label: "Members", icon: "lucide-users-round", to: "/manage/team/members" },
 ];
+
+// An event opens into the same shell with its own destinations in place of the
+// personal and team ones.
+const eventId = computed(() => route.params.eventId as string | undefined);
+
+const eventItems = computed(() => [
+	{ label: "Back", icon: "lucide-arrow-left", to: "/" },
+	{ label: "Details", icon: "lucide-info", to: `/manage/events/${eventId.value}/details` },
+	{
+		label: "Attendees",
+		icon: "lucide-users-round",
+		to: `/manage/events/${eventId.value}/attendees`,
+	},
+	{
+		label: "Talks",
+		icon: "lucide-presentation",
+		to: `/manage/events/${eventId.value}/talks`,
+	},
+]);
 </script>
 
 <template>
@@ -43,7 +62,18 @@ const teamItems = [
 					<TeamSwitcher />
 				</div>
 
-				<div class="flex flex-col mx-2 py-2">
+				<div v-if="eventId" class="flex flex-col mx-2 py-2">
+					<SidebarItem
+						v-for="item in eventItems"
+						:key="item.label"
+						:label="item.label"
+						:icon="item.icon"
+						:to="item.to"
+						:active="isActive(item.to)"
+					/>
+				</div>
+
+				<div v-else class="flex flex-col mx-2 py-2">
 					<SidebarItem
 						v-for="item in personalItems"
 						:key="item.label"
