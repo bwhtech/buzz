@@ -77,11 +77,18 @@ test.describe("Event workspace", () => {
 
 		await expect(page).toHaveURL(/\/b\/manage\/events\/\d+\/guests$/);
 		await expect(page.getByRole("heading", { name: "Event guests", level: 1 })).toBeVisible();
-		// The shared event is the one tickets.setup.ts books against, so it has guests,
-		// and each row is a name rather than a blank.
-		const names = page.getByRole("list").getByRole("listitem");
-		await expect(names.first()).toBeVisible({ timeout: 15000 });
-		await expect(names.first()).not.toBeEmpty();
+		// The shared event is the one tickets.setup.ts books against, so it has guests.
+		const rows = page.getByRole("list").getByRole("listitem");
+		await expect(rows.first()).toBeVisible({ timeout: 15000 });
+
+		// The count is the number of rows under it, not a separate claim.
+		const registrations = Number(await page.getByText(/^\d+$/).first().textContent());
+		expect(registrations).toBe(await rows.count());
+
+		// A row carries the person and the ticket they hold, named rather than numbered.
+		await expect(rows.first()).toContainText("@");
+		const badge = rows.first().locator("div").last();
+		await expect(badge).not.toHaveText(/^\d+$/);
 	});
 
 	test("moves between sections", async ({ page }) => {
