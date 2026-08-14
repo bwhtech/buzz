@@ -104,9 +104,20 @@ ImportError, not at migrate — it passes a migration and breaks on first page l
 
 ### Routes
 
-Seeded by `buzz.patches.seed_buzz_theme_routes`: `^$`, `^home$`, `^events$`,
-`^events/<event_route>$`, `^category/<category_slug>$`. `^events$` is dead — no
-bundled theme ships `pages/events.html`.
+`DEFAULT_ROUTES` + `seed_default_routes()` live in `buzz_theme_settings.py` and are
+called from BOTH `after_install`/`on_migrate` (`buzz/install.py`) and
+`buzz.patches.seed_buzz_theme_routes`. Seeding is idempotent, keyed on `url_pattern`.
+
+**A patch alone does NOT seed a fresh site.** Frappe writes every patch into Patch Log
+as applied WITHOUT running it when a site is installed, so `buzzv2.localhost` came up
+with 5 themes but 0 routes, and the log entry then blocks any re-run. Anything a new
+site needs must be in `after_install`, never only in a patch. (Theme *records* have the
+opposite problem: they import on `migrate` but not on `install-app`, so a fresh site
+needs one `bench migrate` before any Buzz Theme row exists.)
+
+Live patterns: `^$`, `^home$`, `^events/<event_route>$`, `^category/<category_slug>$`.
+The old `^events$` was dropped from the defaults — no bundled theme ships
+`pages/events.html` — but it survives on sites already carrying it.
 
 `dynamic_pages_enabled` is on, so any `pages/<request-path>.html` is servable.
 `RESERVED_PATH_SEGMENTS` in `theme_resolver.py` stops a theme hijacking `/login`,

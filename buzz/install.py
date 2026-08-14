@@ -1,5 +1,6 @@
 import frappe
 
+from buzz.buzz_themes.doctype.buzz_theme_settings.buzz_theme_settings import seed_default_routes
 from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
 from buzz.utils import delete_custom_fields, get_custom_fields_creator
 
@@ -165,6 +166,7 @@ def after_install():
 	create_event_categories()
 	create_talk_proposal_statuses()
 	create_custom_fields()
+	seed_default_routes()
 
 
 def on_migrate():
@@ -172,6 +174,7 @@ def on_migrate():
 	create_event_categories()
 	create_talk_proposal_statuses()
 	create_custom_fields()
+	seed_default_routes()
 
 
 def after_app_install(app_name: str):

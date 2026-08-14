@@ -3,6 +3,39 @@ import re
 import frappe
 from frappe.model.document import Document
 
+# The routes every bundled theme ships pages for. Seeded from after_install AND from
+# buzz.patches.seed_buzz_theme_routes: frappe logs patches as applied without running them
+# on a fresh install, so a patch alone leaves new sites with no themed routes at all.
+DEFAULT_ROUTES = [
+	{"url_pattern": "^$", "template_path": "pages/home.html", "requires_auth": 0},
+	{"url_pattern": "^home$", "template_path": "pages/home.html", "requires_auth": 0},
+	{
+		"url_pattern": "^events/(?P<event_route>[^/]+)$",
+		"template_path": "pages/events/detail.html",
+		"requires_auth": 0,
+	},
+	{
+		"url_pattern": "^category/(?P<category_slug>[^/]+)$",
+		"template_path": "pages/category/detail.html",
+		"requires_auth": 0,
+	},
+]
+
+
+def seed_default_routes():
+	"""Add any missing default route. Idempotent, so install and the patch can both call it."""
+	settings = frappe.get_single("Buzz Theme Settings")
+	existing_patterns = {row.url_pattern for row in settings.routes}
+
+	missing_routes = [route for route in DEFAULT_ROUTES if route["url_pattern"] not in existing_patterns]
+	if not missing_routes:
+		return
+
+	for route in missing_routes:
+		settings.append("routes", route)
+
+	settings.save(ignore_permissions=True)
+
 
 class BuzzThemeSettings(Document):
 	def validate(self):

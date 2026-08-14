@@ -15,8 +15,10 @@ from buzz.buzz_themes.doctype.buzz_theme.buzz_theme import (
 	validate_theme_name,
 )
 from buzz.buzz_themes.doctype.buzz_theme_settings.buzz_theme_settings import (
+	DEFAULT_ROUTES,
 	clear_settings_cache,
 	get_compiled_routes,
+	seed_default_routes,
 )
 from buzz.buzz_themes.jinja_helpers import buzz_theme_asset_url, buzz_theme_config
 from buzz.buzz_themes.theme_resolver import ThemePageRenderer, find_theme_file
@@ -524,3 +526,50 @@ class TestThemeConfigHelper(ThemeEngineTestCase):
 		self.set_default_theme(theme.name)
 
 		self.assertEqual(buzz_theme_config(), frappe._dict())
+
+
+class TestDefaultRouteSeeding(IntegrationTestCase):
+	def setUp(self):
+		settings = frappe.get_single("Buzz Theme Settings")
+		self.addCleanup(self.restore_routes, [row.as_dict() for row in settings.routes])
+
+	def restore_routes(self, original_rows):
+		settings = frappe.get_single("Buzz Theme Settings")
+		settings.set("routes", [])
+		for row in original_rows:
+			settings.append("routes", row)
+		settings.save(ignore_permissions=True)
+
+	def current_patterns(self):
+		return [row.url_pattern for row in frappe.get_single("Buzz Theme Settings").routes]
+
+	def test_seeding_an_empty_settings_adds_every_default_route(self):
+		settings = frappe.get_single("Buzz Theme Settings")
+		settings.set("routes", [])
+		settings.save(ignore_permissions=True)
+
+		seed_default_routes()
+
+		self.assertEqual(self.current_patterns(), [route["url_pattern"] for route in DEFAULT_ROUTES])
+
+	def test_seeding_twice_does_not_duplicate_routes(self):
+		seed_default_routes()
+		patterns_after_first_run = self.current_patterns()
+
+		seed_default_routes()
+
+		self.assertEqual(self.current_patterns(), patterns_after_first_run)
+
+	def test_seeding_preserves_custom_routes(self):
+		settings = frappe.get_single("Buzz Theme Settings")
+		settings.set("routes", [])
+		settings.append(
+			"routes",
+			{"url_pattern": "^sponsors$", "template_path": "pages/sponsors.html", "requires_auth": 0},
+		)
+		settings.save(ignore_permissions=True)
+
+		seed_default_routes()
+
+		self.assertIn("^sponsors$", self.current_patterns())
+		self.assertIn("^home$", self.current_patterns())
