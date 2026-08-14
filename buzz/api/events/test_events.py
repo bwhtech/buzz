@@ -325,6 +325,30 @@ class TestGetEvent(IntegrationTestCase):
 		self.assertEqual(detail["meeting_link"], "https://example.com/join")
 		self.assertIsNone(detail["venue"])
 
+	def test_an_event_with_no_cutoff_is_open_to_registrations(self):
+		event = create_event("Open Event", self.team)
+		frappe.set_user(self.owner)
+
+		detail = get_event(event).__json__()
+
+		self.assertIsNone(detail["registrations_close_at"])
+		self.assertFalse(detail["registrations_closed"])
+		self.assertFalse(detail["allow_guest_booking"])
+
+	def test_a_cutoff_in_the_past_closes_registrations(self):
+		event = create_event("Closed Event", self.team, registrations_close_at="2020-01-01 00:00:00")
+		frappe.set_user(self.owner)
+
+		detail = get_event(event).__json__()
+
+		self.assertTrue(detail["registrations_closed"])
+
+	def test_guest_booking_reaches_the_manage_page(self):
+		event = create_event("Guest Bookable Event", self.team, allow_guest_booking=1)
+		frappe.set_user(self.owner)
+
+		self.assertTrue(get_event(event).__json__()["allow_guest_booking"])
+
 	def test_resolves_the_venue_with_its_address(self):
 		venue = frappe.get_doc(
 			{

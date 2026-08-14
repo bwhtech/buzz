@@ -104,6 +104,9 @@ DETAIL_FIELDS = (
 	"venue",
 	"meeting_link",
 	"is_published",
+	"registrations_close_at",
+	"allow_guest_booking",
+	"guest_verification_method",
 )
 
 
@@ -118,7 +121,13 @@ def event_detail(event: str) -> EventDetail:
 		CannotManageEvent.throw()
 
 	return EventDetail(
-		**row | {"name": str(row.name), "venue": venue_of(row.venue), "meeting_link": meeting_link_of(row)}
+		**row
+		| {
+			"name": str(row.name),
+			"venue": venue_of(row.venue),
+			"meeting_link": meeting_link_of(row),
+			"registrations_closed": are_registrations_closed(row),
+		}
 	)
 
 

@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from pydantic import Field
 
@@ -50,6 +50,12 @@ class EventDetail(APIResponse):
 	# The organiser's own link, or the one Zoom issued when the meeting was booked.
 	meeting_link: str | None = None
 	is_published: bool
+	registrations_close_at: datetime | None = None
+	# Derived: an event with no cutoff still closes once it has ended.
+	registrations_closed: bool
+	allow_guest_booking: bool
+	# "None", "Email OTP" or "Phone OTP".
+	guest_verification_method: str | None = None
 
 
 class GuestAddOn(APIResponse):
