@@ -70,6 +70,7 @@ class EventGuest(APIResponse):
 
 class EventGuestsResponse(APIResponse):
 	total: int
+	registrations_closed: bool
 	guests: list[EventGuest]
 
 
