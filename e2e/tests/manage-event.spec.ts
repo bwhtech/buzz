@@ -66,10 +66,22 @@ test.describe("Event workspace", () => {
 	});
 
 	test("swaps the sidebar for the event's own destinations", async ({ page }) => {
-		for (const label of ["Back", "Details", "Attendees", "Talks"]) {
+		for (const label of ["Back", "Details", "Guests", "Talks"]) {
 			await expect(page.getByRole("link", { name: label })).toBeVisible({ timeout: 15000 });
 		}
 		await expect(page.getByRole("link", { name: "My Tickets" })).toHaveCount(0);
+	});
+
+	test("lists the event's guests", async ({ page }) => {
+		await page.getByRole("link", { name: "Guests" }).click();
+
+		await expect(page).toHaveURL(/\/b\/manage\/events\/\d+\/guests$/);
+		await expect(page.getByRole("heading", { name: "Event guests", level: 1 })).toBeVisible();
+		// The shared event is the one tickets.setup.ts books against, so it has guests,
+		// and each row is a name rather than a blank.
+		const names = page.getByRole("list").getByRole("listitem");
+		await expect(names.first()).toBeVisible({ timeout: 15000 });
+		await expect(names.first()).not.toBeEmpty();
 	});
 
 	test("moves between sections", async ({ page }) => {
