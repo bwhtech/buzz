@@ -134,6 +134,7 @@ export interface EventVenueDetail {
 export interface EventDetail {
 	name: string
 	title: string
+	route: string | null
 	team: string | null
 	start_date: string
 	end_date: string | null

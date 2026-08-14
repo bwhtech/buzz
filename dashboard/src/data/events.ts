@@ -30,3 +30,6 @@ export function eventDetail(event: string) {
  * its own.
  */
 export const updateEvent = createResource({ url: "frappe.client.set_value" })
+
+/** Whether an event can take a route. Routes are the public URL namespace, so they are unique. */
+export const checkEventRoute = createResource({ url: "buzz.api.events.check_event_route" })

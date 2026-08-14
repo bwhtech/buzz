@@ -17,7 +17,9 @@ from buzz.api.events.schemas import (
 	MyEvent,
 	MyEventsResponse,
 	NewEvent,
+	RouteAvailability,
 )
+from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES
 from buzz.permissions import has_team_access, my_teams
 from buzz.utils import is_app_installed
 
@@ -84,6 +86,7 @@ def split_by_date(events: list[MyEvent]) -> tuple[list[MyEvent], list[MyEvent]]:
 DETAIL_FIELDS = (
 	"name",
 	"title",
+	"route",
 	"team",
 	"start_date",
 	"end_date",
@@ -135,6 +138,32 @@ def meeting_link_of(row) -> str | None:
 
 	meeting = frappe.db.get_value("Buzz Event", row.name, "zoom_meeting")
 	return frappe.db.get_value("Zoom Meeting", meeting, "zoom_link") if meeting else None
+
+
+def route_availability(route: str, event: str | None = None) -> RouteAvailability:
+	"""Whether an event can take this route.
+
+	Routes are the public URL namespace, so this checks every event rather than only the
+	published ones: an unpublished event still holds its route, and publishing it later
+	would collide.
+	"""
+	route = (route or "").strip().lower()
+	if not route:
+		return RouteAvailability(available=False, message=_("Enter a route."))
+
+	if route in RESERVED_EVENT_ROUTES:
+		return RouteAvailability(
+			available=False, message=_("'{0}' is reserved and cannot be used.").format(route)
+		)
+
+	filters = {"route": route}
+	if event:
+		filters["name"] = ("!=", event)
+
+	if frappe.db.exists("Buzz Event", filters):
+		return RouteAvailability(available=False, message=_("This route is already taken."))
+
+	return RouteAvailability(available=True, message=_("This route is available."))
 
 
 # Buzz Event demands a category and a host, neither of which the create form asks for.
