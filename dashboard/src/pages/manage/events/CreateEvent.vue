@@ -1,19 +1,18 @@
 <script setup lang="ts">
+import EventBanner from "@/components/dashboard/events/EventBanner.vue";
 import EventLocation from "@/components/dashboard/events/EventLocation.vue";
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue";
 import { useTeamAccess } from "@/composables/useTeamAccess";
 import { createEvent } from "@/data/events";
 import { currentTeam } from "@/data/teams";
 import NotFound from "@/pages/NotFound.vue";
-import { bannerPattern } from "@/utils/eventBanner";
 import { isEndBeforeStart } from "@/utils/eventDates";
 import { canCreateEvents } from "@/utils/teamRoles";
 import { currentTimeZone } from "@/utils/timeZones";
-import { refDebounced } from "@vueuse/core";
 import type { FrappeError } from "@/types";
-import { Alert, Button, ErrorMessage, FileUploader, toast, useTheme } from "frappe-ui";
+import { Alert, Button, ErrorMessage, toast, useTheme } from "frappe-ui";
 import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor";
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -23,18 +22,6 @@ const access = useTeamAccess();
 // The server refuses anything below Manager, so the form is shown read-only rather than
 // letting someone fill it in and lose the work to a 403 on save.
 const canCreate = computed(() => canCreateEvents(currentTeam.value?.team_role));
-
-// The picker is filtered to these, and the file that comes back is checked against the
-// same list: `accept` is a hint the OS may ignore, and a drag-drop never consults it.
-// Raster only — an SVG banner would be same-origin markup, which a banner has no need
-// to be. Neither check is enforcement; the upload endpoint takes what it is given.
-const BANNER_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
-
-function validateBannerImage(file: File): string | void {
-	if (!BANNER_IMAGE_TYPES.includes(file.type)) {
-		return "Choose a PNG, JPEG, WebP or GIF image";
-	}
-}
 
 const { currentTheme, setTheme, getSystemTheme } = useTheme();
 // `system` resolves against the OS, so the icon shows what is on screen rather than
@@ -58,22 +45,6 @@ const timeZone = ref(currentTimeZone());
 const venue = ref("");
 // The Zoom meeting can only be booked once the event exists, so save has to act on this.
 const zoomMeeting = ref(false);
-
-// The pattern is seeded by the title, so the draft banner settles into the one the
-// event keeps. Seeded off a debounced copy: a gradient cannot be transitioned, so
-// re-seeding per keystroke would redraw the banner once per character while the
-// organiser types. An untitled draft seeds on "Untitled" rather than the empty string,
-// which would draw every new event the same.
-const settledTitle = refDebounced(title, 250);
-
-const banner = computed(() => ({
-	backgroundImage: bannerPattern(settledTitle.value.trim() || "Untitled"),
-}));
-
-// True from the first keystroke until the debounce fires — and the pattern swaps on the
-// same tick it turns false. So the blur is already up when the swap lands, and only
-// falls away afterwards, which is what hides the change.
-const isSettling = computed(() => title.value.trim() !== settledTitle.value.trim());
 
 // About is optional: an event needs a name, when it runs, and where.
 const canSave = computed(() =>
@@ -116,12 +87,6 @@ async function save() {
 	toast.success(`${createEvent.data?.title} created`);
 	router.push({ name: "team-events" });
 }
-
-// Reset per image, so a second upload fades in rather than snapping.
-const bannerLoaded = ref(false);
-watch(bannerImage, () => {
-	bannerLoaded.value = false;
-});
 </script>
 
 <template>
@@ -174,62 +139,7 @@ watch(bannerImage, () => {
 				:dismissible="false"
 			/>
 
-			<FileUploader
-				:file-types="BANNER_IMAGE_TYPES"
-				:validate-file="validateBannerImage"
-				@success="(file: { file_url: string }) => (bannerImage = file.file_url)"
-			>
-				<template #default="{ openFileSelector, error: uploadError }">
-					<!-- The whole banner is the hit area; the button inside stays the -->
-					<!-- keyboard-reachable control, so its press must not fire twice. -->
-					<div
-						class="relative aspect-[3/1] overflow-hidden rounded-xl border border-outline-gray-2"
-						:class="canCreate ? 'cursor-pointer' : 'cursor-default'"
-						@click="canCreate && openFileSelector()"
-					>
-						<!-- The pattern gets a layer of its own so the blur below never
-							 reaches the image or the button. Overscaled because blur samples
-							 past the edges, which would otherwise go milky against the border.
-							 A gradient cannot be interpolated, so blurring over the swap is
-							 what hides it. -->
-						<div
-							class="absolute inset-0 scale-105 transition-[filter] duration-200 ease-out"
-							:class="
-								isSettling && !bannerImage
-									? 'blur-[10px] motion-reduce:blur-none'
-									: 'blur-0'
-							"
-							:style="banner"
-							aria-hidden="true"
-						/>
-
-						<!-- Fades onto the pattern rather than replacing it outright. -->
-						<!-- Absolute, like the pattern behind it: a static sibling would paint
-							 under the positioned layer instead of over it. -->
-						<img
-							v-if="bannerImage"
-							class="absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-200 ease-out"
-							:class="bannerLoaded ? 'opacity-100' : 'opacity-0'"
-							:src="bannerImage"
-							alt=""
-							@load="bannerLoaded = true"
-						/>
-
-						<div class="absolute inset-0 grid place-items-center">
-							<Button
-								variant="subtle"
-								icon-left="lucide-image-up"
-								:label="bannerImage ? 'Change banner' : 'Add a banner'"
-								:disabled="!canCreate"
-								@click.stop="openFileSelector"
-							/>
-						</div>
-					</div>
-
-					<!-- The slot types its error as {}, so the message needs narrowing. -->
-					<ErrorMessage v-if="uploadError" class="mt-2" :message="String(uploadError)" />
-				</template>
-			</FileUploader>
+			<EventBanner v-model="bannerImage" :seed="title" :disabled="!canCreate" />
 
 			<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
 			<input

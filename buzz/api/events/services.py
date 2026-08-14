@@ -4,8 +4,20 @@ from frappe.model.naming import append_number_if_name_exists
 from frappe.query_builder import Case
 from frappe.utils import getdate
 
-from buzz.api.events.exceptions import CannotCreateEvents, ZoomNotAvailable
-from buzz.api.events.schemas import CreatedEvent, MyEvent, MyEventsResponse, NewEvent
+from buzz.api.events.exceptions import (
+	CannotCreateEvents,
+	CannotManageEvent,
+	EventNotFound,
+	ZoomNotAvailable,
+)
+from buzz.api.events.schemas import (
+	CreatedEvent,
+	EventDetail,
+	EventVenue,
+	MyEvent,
+	MyEventsResponse,
+	NewEvent,
+)
 from buzz.permissions import has_team_access, my_teams
 from buzz.utils import is_app_installed
 
@@ -67,6 +79,62 @@ def split_by_date(events: list[MyEvent]) -> tuple[list[MyEvent], list[MyEvent]]:
 		is_over = (event.end_date or event.start_date) < getdate()
 		(past if is_over else upcoming).append(event)
 	return upcoming, list(reversed(past))
+
+
+DETAIL_FIELDS = (
+	"name",
+	"title",
+	"team",
+	"start_date",
+	"end_date",
+	"start_time",
+	"end_time",
+	"time_zone",
+	"short_description",
+	"about",
+	"banner_image",
+	"medium",
+	"venue",
+	"meeting_link",
+	"is_published",
+)
+
+
+def event_detail(event: str) -> EventDetail:
+	"""One event for its manage page, with the venue and meeting link resolved."""
+	row = frappe.db.get_value("Buzz Event", event, DETAIL_FIELDS, as_dict=True)
+	if not row:
+		EventNotFound.throw()
+
+	# Read is not enough: this payload backs the page that edits the event.
+	if not has_team_access(row.team, "write", frappe.session.user):
+		CannotManageEvent.throw()
+
+	return EventDetail(
+		**row | {"name": str(row.name), "venue": venue_of(row.venue), "meeting_link": meeting_link_of(row)}
+	)
+
+
+def venue_of(venue: str | None) -> EventVenue | None:
+	if not venue:
+		return None
+	address = frappe.db.get_value("Event Venue", venue, "address")
+	return EventVenue(name=venue, address=address)
+
+
+def meeting_link_of(row) -> str | None:
+	"""The organiser's own link, falling back to the one Zoom issued.
+
+	`zoom_meeting` is a custom field the zoom_integration app adds, so it is absent on a
+	site without it — and a booked meeting is the link even when nobody typed one in.
+	"""
+	if row.meeting_link:
+		return row.meeting_link
+	if not is_app_installed("zoom_integration"):
+		return None
+
+	meeting = frappe.db.get_value("Buzz Event", row.name, "zoom_meeting")
+	return frappe.db.get_value("Zoom Meeting", meeting, "zoom_link") if meeting else None
 
 
 # Buzz Event demands a category and a host, neither of which the create form asks for.

@@ -10,11 +10,44 @@ test.describe("Event workspace", () => {
 
 	test("opens the event on its details section", async ({ page }) => {
 		await expect(page).toHaveURL(/\/b\/manage\/events\/\d+\/details$/, { timeout: 15000 });
-		// The details page names the event, with the section it is showing after it.
-		const heading = page.getByRole("heading", { level: 1 });
-		await expect(heading).toBeVisible();
-		await expect(heading).not.toHaveText("Details");
+		// The details page opens on the event's own values, with the section after it
+		// in the trail.
+		await expect(page.getByRole("textbox", { name: "Event title" })).not.toHaveValue("", {
+			timeout: 15000,
+		});
 		await expect(page.getByRole("banner").first()).toContainText("Details");
+	});
+
+	test("saves an edit, offering Save only once something changed", async ({ page }) => {
+		const description = page.getByRole("textbox", { name: "Short description" });
+		await expect(description).toBeVisible({ timeout: 15000 });
+
+		const save = page.getByRole("button", { name: "Save" });
+		await expect(save).toHaveCount(0);
+
+		const text = `Edited at ${Date.now()}`;
+		await description.fill(text);
+		await save.click();
+
+		await expect(page.getByText("Event saved")).toBeVisible();
+		await page.reload();
+		await expect(description).toHaveValue(text, { timeout: 15000 });
+	});
+
+	test("swaps the venue for a meeting link when the event turns virtual", async ({ page }) => {
+		const venue = page.getByRole("combobox", { name: "Search venues, or add one" });
+		await expect(venue).toBeVisible({ timeout: 15000 });
+
+		await page.getByRole("button", { name: "Virtual" }).click();
+
+		await expect(venue).toHaveCount(0);
+		const link = page.getByRole("textbox", { name: "Meeting link" });
+		await expect(link).toBeVisible();
+		// Nothing to copy until a link is there.
+		await expect(page.getByRole("button", { name: "Copy meeting link" })).toBeDisabled();
+
+		await page.getByRole("button", { name: "In person" }).click();
+		await expect(venue).toBeVisible();
 	});
 
 	test("swaps the sidebar for the event's own destinations", async ({ page }) => {
