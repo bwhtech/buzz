@@ -18,7 +18,8 @@ const guests = eventGuests(eventId);
 	<div class="m-auto max-w-[800px] w-full py-8 px-4 space-y-6">
 		<h1 class="font-semibold text-4xl">Event guests</h1>
 
-		<section class="rounded-xl border border-outline-gray-2 px-4 py-3">
+		<!-- A stat, not a card: the number is the thing, the border was packaging. -->
+		<section class="w-fit">
 			<p class="text-sm text-ink-gray-5">Registrations</p>
 			<p class="text-2xl font-semibold tabular-nums text-ink-gray-9">
 				{{ guests.data?.total ?? "—" }}
