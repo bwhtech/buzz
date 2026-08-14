@@ -32,9 +32,10 @@ const months = computed(() =>
 		:loading="myEvents.loading"
 		:error="myEvents.error"
 	>
-		<!-- Every event here belongs to the team, so a per-card Manage button says nothing. -->
+		<!-- Every event here belongs to the team, so a per-card Manage button says nothing —
+		     the card itself opens the event instead. -->
 		<template #default="{ item }">
-			<EventCard :event="item" :show-manage="false" />
+			<EventCard :event="item" route-to-manage />
 		</template>
 	</TimelineList>
 </template>
