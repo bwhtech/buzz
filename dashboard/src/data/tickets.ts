@@ -1,6 +1,6 @@
 import { session } from "@/data/session"
 import { userResource } from "@/data/user"
-import type { TicketStub } from "@/types"
+import type { TicketStub, TicketType } from "@/types"
 import { useList } from "frappe-ui"
 
 // Everything the printed ticket shows lives on the ticket or one link hop away,
@@ -27,5 +27,35 @@ export function useMyTickets() {
 		}),
 		// No cacheKey: it persists to IndexedDB and would outlive this user's session.
 		orderBy: "creation desc",
+	})
+}
+
+/**
+ * The tiers an event sells, oldest first.
+ *
+ * Plain doctype reads and writes, so no endpoint of its own: Event Ticket Type inherits
+ * its event's team scope from the permission hooks, and the filter below only narrows
+ * what the page asks for. `tickets_sold` and `remaining_tickets` are Python properties
+ * rather than columns, so a list call cannot carry them.
+ */
+export function useEventTicketTypes(event: string) {
+	return useList<TicketType>({
+		doctype: "Event Ticket Type",
+		fields: ["name", "title", "price", "currency", "max_tickets_available"],
+		filters: { event },
+		orderBy: "creation asc",
+		limit: 0,
+	})
+}
+
+/** Currencies a tier can be priced in. Readable by everyone, so nothing scopes this. */
+export function useCurrencies() {
+	return useList<{ name: string }>({
+		doctype: "Currency",
+		fields: ["name"],
+		filters: { enabled: 1 },
+		orderBy: "name asc",
+		limit: 0,
+		cacheKey: "currencies",
 	})
 }
