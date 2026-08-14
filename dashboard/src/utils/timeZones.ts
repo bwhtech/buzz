@@ -35,6 +35,29 @@ export function currentTimeZone(): string {
 }
 
 /**
+ * The wall clock in a zone right now, as Frappe's naive "YYYY-MM-DD HH:mm:ss".
+ *
+ * Frappe stores Datetime without an offset and reads it in the event's own zone, so the
+ * value written has to be that zone's local time. The Swedish locale formats dates in
+ * exactly that shape, which saves assembling it part by part.
+ */
+export function nowInZone(zone: string | null, at: Date = new Date()): string {
+	const format = (timeZone?: string) =>
+		new Intl.DateTimeFormat("sv-SE", {
+			timeZone,
+			dateStyle: "short",
+			timeStyle: "medium",
+		}).format(at)
+
+	try {
+		return format(zone ?? undefined)
+	} catch {
+		// An event carrying a zone this runtime cannot resolve falls back to the browser's.
+		return format()
+	}
+}
+
+/**
  * Names a zone in one of Intl's styles.
  *
  * A zone the runtime does not recognise throws rather than returning nothing, and the
