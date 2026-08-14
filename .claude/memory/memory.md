@@ -115,8 +115,30 @@ bundled theme ships `pages/events.html`.
 
 ### Bundled themes
 
+`buzz_default_theme` (dark/light minimal, ported from the Builder pages),
 `buzz_events_theme` (ticket stub), `sketchbook_theme` (handwritten, ruled paper),
 `stickerpack_theme` (neo-brutalist). All inherit `Buzz Base Theme`.
+
+`buzz_default_theme` takes its palette from **frappe-ui's own semantic tokens** —
+resolved out of `dashboard/node_modules/frappe-ui/tailwind/generated/colors.json`
+(`themedVariables.light/dark` -> surface / ink / outline) and written into
+`styles/tokens.css` as CSS variables. That is why themed pages and the Vue
+dashboard share one grey ramp; re-resolve from that JSON rather than eyeballing
+hexes if frappe-ui bumps its tokens.
+
+**`tokens.css` is imported UNLAYERED, so every rule in it beats every Tailwind
+utility — specificity is irrelevant.** `@import "tailwindcss"` declares
+`@layer theme, base, components, utilities`; an unlayered rule outranks all of
+them. So a bare `.card { background: ... }` silently wins over `bg-*` in the
+markup, and `a.card { display: block }` beat `.flex` (this looked like a
+specificity bug and was misdiagnosed as one). Wrap the component half of every
+theme's tokens.css in `@layer components { ... }`, leaving only the `:root` /
+`html[data-theme]` variable blocks unlayered. Verify with:
+`python3 -c "css=open('tailwind.output.css').read(); i=css.find('.card{'); print(css[:i].count('{')-css[:i].count('}'))"`
+— 1 means layered, 0 means it will override your markup.
+
+Only `buzz_default_theme` is layered so far; the other three themes still have
+this latent.
 
 Venue maps use `openstreetmap.org/export/embed.html` (keyless, needs a bbox).
 The old `staticmap.openstreetmap.de` is NXDOMAIN — that service was withdrawn.

@@ -3,10 +3,12 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "build:css": "yarn build:buzz_events_theme && yarn build:sketchbook_theme && yarn build:stickerpack_theme",
+    "build:css": "yarn build:buzz_default_theme && yarn build:buzz_events_theme && yarn build:sketchbook_theme && yarn build:stickerpack_theme",
+    "build:buzz_default_theme": "cd buzz_default_theme && tailwindcss -i ./tailwind.input.css -o ../../public/themes/buzz_default_theme/tailwind.output.css --minify",
     "build:buzz_events_theme": "cd buzz_events_theme && tailwindcss -i ./tailwind.input.css -o ../../public/themes/buzz_events_theme/tailwind.output.css --minify",
     "build:sketchbook_theme": "cd sketchbook_theme && tailwindcss -i ./tailwind.input.css -o ../../public/themes/sketchbook_theme/tailwind.output.css --minify",
     "build:stickerpack_theme": "cd stickerpack_theme && tailwindcss -i ./tailwind.input.css -o ../../public/themes/stickerpack_theme/tailwind.output.css --minify",
+    "watch:buzz_default_theme": "cd buzz_default_theme && tailwindcss -i ./tailwind.input.css -o ../../public/themes/buzz_default_theme/tailwind.output.css --watch",
     "watch:buzz_events_theme": "cd buzz_events_theme && tailwindcss -i ./tailwind.input.css -o ../../public/themes/buzz_events_theme/tailwind.output.css --watch",
     "watch:sketchbook_theme": "cd sketchbook_theme && tailwindcss -i ./tailwind.input.css -o ../../public/themes/sketchbook_theme/tailwind.output.css --watch",
     "watch:stickerpack_theme": "cd stickerpack_theme && tailwindcss -i ./tailwind.input.css -o ../../public/themes/stickerpack_theme/tailwind.output.css --watch"

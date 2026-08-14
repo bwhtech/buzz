@@ -1,0 +1,11 @@
+{% import "components/macros/branding.html" as branding with context %}
+{% set footer_config = buzz_theme_config() %}
+<footer class="site-footer no-print">
+  <div class="footer-inner">
+    <span>{{ footer_config.footer_note or 'Built with Buzz' }}</span>
+    {% if footer_items %}
+    <span class="footer-links">{{ branding.footer_links() }}</span>
+    {% endif %}
+    {% if copyright %}<span>&copy; {{ copyright }}</span>{% endif %}
+  </div>
+</footer>

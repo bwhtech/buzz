@@ -1,0 +1,7 @@
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=League+Gothic&display=swap" rel="stylesheet" />
+{# No Alpine here: this theme ships no x-data, so the base theme's alpine + components.js
+   would be ~45KB of dead weight on every page. Add both back if a login dialog lands. #}
+<script defer src="{{ buzz_theme_asset_url('scripts/vendor/lucide.min.js') }}"></script>
+<link rel="stylesheet" href="{{ buzz_theme_asset_url('tailwind.output.css') }}" />

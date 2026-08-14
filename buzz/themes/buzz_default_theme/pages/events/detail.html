@@ -1,0 +1,251 @@
+{% extends "components/base.html" %}
+
+{% set event_name = frappe.db.get_value("Buzz Event", {"route": event_route, "is_published": 1}, "name") %}
+{% if not event_name %}
+  {% set not_found = frappe.throw(_("Event not found"), frappe.PageDoesNotExistError) %}
+{% endif %}
+{% set event = frappe.get_cached_doc("Buzz Event", event_name) %}
+{% set venue = frappe.get_cached_doc("Event Venue", event.venue) if event.venue else None %}
+{% set host = frappe.get_cached_doc("Event Host", event.host) if event.host else None %}
+{% set sponsors = frappe.get_all("Event Sponsor", filters={"event": event.name},
+      fields=["company_name", "tier", "company_logo", "website"]) %}
+
+{% set today = frappe.utils.today() %}
+{% set is_past = event.start_date and (event.start_date|string) < today %}
+{% set is_online = event.medium == 'Online' %}
+
+{% set talk_names = event.schedule | selectattr("type", "equalto", "Talk")
+      | map(attribute="talk") | reject("none") | list | unique | list %}
+{% set talk_title_map = {} %}
+{% set first_speaker_map = {} %}
+{% if talk_names %}
+  {% for talk in frappe.get_all("Event Talk", filters={"name": ["in", talk_names]}, fields=["name", "title"]) %}
+    {% set _ = talk_title_map.update({talk.name | string: talk.title}) %}
+  {% endfor %}
+  {% for talk_speaker in frappe.get_all("Talk Speaker", filters={"parenttype": "Event Talk", "parent": ["in", talk_names]},
+        fields=["parent", "speaker"], order_by="parent asc, idx asc") %}
+    {% if (talk_speaker.parent | string) not in first_speaker_map %}
+      {% set _ = first_speaker_map.update({talk_speaker.parent | string: talk_speaker.speaker}) %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{% set speaker_names = ((first_speaker_map.values() | list)
+      + (event.featured_speakers | map(attribute="speaker") | reject("none") | list)) | unique | list %}
+{% set speaker_map = {} %}
+{% if speaker_names %}
+  {% for speaker in frappe.get_all("Speaker Profile", filters={"name": ["in", speaker_names]},
+        fields=["name", "display_name", "designation", "company", "display_image"]) %}
+    {% set _ = speaker_map.update({speaker.name | string: speaker}) %}
+  {% endfor %}
+{% endif %}
+
+{% set schedule_items = [] %}
+{% for session in event.schedule %}
+  {% set session_title = '' %}
+  {% set session_speaker = '' %}
+  {% if session.type == 'Talk' and session.talk %}
+    {% set session_title = talk_title_map.get(session.talk | string) or '' %}
+    {% set first_speaker = first_speaker_map.get(session.talk | string) %}
+    {% set speaker_profile = speaker_map.get(first_speaker | string) if first_speaker else None %}
+    {% set session_speaker = (speaker_profile.display_name or '') if speaker_profile else '' %}
+  {% else %}
+    {% set session_title = session.description or ('Break' if session.type == 'Break' else '') %}
+  {% endif %}
+  {% set _ = schedule_items.append({
+      "start_time": frappe.utils.get_time(session.start_time).strftime('%H:%M') if session.start_time else '',
+      "end_time": frappe.utils.get_time(session.end_time).strftime('%H:%M') if session.end_time else '',
+      "title": session_title,
+      "speaker_name": session_speaker,
+      "is_break": session.type == 'Break'
+  }) %}
+{% endfor %}
+
+{% set featured_speakers = [] %}
+{% for featured_speaker in event.featured_speakers %}
+  {% set speaker_profile = speaker_map.get(featured_speaker.speaker | string) if featured_speaker.speaker else None %}
+  {% if speaker_profile %}
+    {% set role_parts = [] %}
+    {% if speaker_profile.designation %}{% set _ = role_parts.append(speaker_profile.designation) %}{% endif %}
+    {% if speaker_profile.company %}{% set _ = role_parts.append(speaker_profile.company) %}{% endif %}
+    {% set _ = featured_speakers.append({
+        "name": speaker_profile.display_name or '',
+        "role": role_parts | join(', '),
+        "image_url": speaker_profile.display_image
+    }) %}
+  {% endif %}
+{% endfor %}
+
+{% set start_date = event.start_date %}
+{% set end_date = event.end_date %}
+{% if start_date and end_date and end_date != start_date %}
+  {% if start_date.month == end_date.month and start_date.year == end_date.year %}
+    {% set date_display = start_date.strftime('%d') ~ ' - ' ~ end_date.strftime('%d %B, %Y') %}
+  {% else %}
+    {% set date_display = start_date.strftime('%d %B') ~ ' - ' ~ end_date.strftime('%d %B, %Y') %}
+  {% endif %}
+{% elif start_date %}
+  {% set date_display = start_date.strftime('%d %B, %Y') %}
+{% else %}
+  {% set date_display = '' %}
+{% endif %}
+
+{% set start_time_display = frappe.utils.get_time(event.start_time).strftime('%I:%M %p') if event.start_time else '' %}
+{% set end_time_display = frappe.utils.get_time(event.end_time).strftime('%I:%M %p') if event.end_time else '' %}
+{% set time_zone_label = event.time_zone_label or (event.time_zone.split('/') | last if event.time_zone else '') %}
+{% set hero_image = event.banner_image or event.card_image %}
+{% set register_href = event.registration_url if (event.external_registration_page and event.registration_url) else ('/b/register/' ~ (event.route or '')) %}
+{% set theme_config = buzz_theme_config() %}
+
+{% block title %}{{ event.title }} &mdash; {{ app_name }}{% endblock %}
+{% block og_type %}event{% endblock %}
+{% block og_title %}{{ event.title }}{% endblock %}
+{% block og_description %}{{ event.short_description or event.title }}{% endblock %}
+{% block og_image %}{{ event.meta_image or event.banner_image or '' }}{% endblock %}
+{% block og_url %}{{ frappe.utils.get_url() }}/events/{{ event.route }}{% endblock %}
+
+{% block body %}
+
+{% if hero_image %}
+<section class="mb-6">
+  <img src="{{ hero_image }}" alt="{{ event.title }}" class="w-full aspect-[16/6] object-cover rounded-xl block" fetchpriority="high" />
+</section>
+{% endif %}
+
+<section id="hero" class="mb-8">
+  <h1 class="text-[28px] font-semibold tracking-[-0.02em] leading-tight text-[var(--text-primary)]">{{ event.title }}</h1>
+
+  <div class="mt-3 grid gap-2">
+    {% if date_display %}
+    <div class="meta-row">
+      <i data-lucide="calendar" class="w-4 h-4 shrink-0 text-[var(--text-muted)]"></i>
+      <span>
+        {{ date_display }}
+        {%- if start_time_display %} &middot; {{ start_time_display }}{% if end_time_display %} - {{ end_time_display }}{% endif %}{% endif %}
+        {%- if time_zone_label %} {{ time_zone_label }}{% endif %}
+      </span>
+    </div>
+    {% endif %}
+
+    <div class="meta-row">
+      <i data-lucide="{{ 'video' if is_online else 'map-pin' }}" class="w-4 h-4 shrink-0 text-[var(--text-muted)]"></i>
+      <span>{% if is_online %}Online{% elif venue %}{{ venue.address or venue.name }}{% else %}Venue to be announced{% endif %}</span>
+    </div>
+  </div>
+
+  {% if not is_past %}
+  <div class="mt-6 flex flex-wrap gap-3 no-print">
+    <a href="{{ register_href }}" class="cta-btn">{{ theme_config.register_label or 'Register' }}</a>
+    <a href="/b/{{ event.route }}/enquire-sponsorship" class="cta-btn cta-btn--ghost">Become a sponsor</a>
+  </div>
+  {% endif %}
+</section>
+
+<hr class="border-0 border-t border-[var(--hairline)] mb-8" />
+
+{% if event.about %}
+<section class="mb-10">
+  <h2 class="section-heading mb-2">{{ theme_config.about_heading or 'About the event' }}</h2>
+  <div class="prose-block">{{ event.about | safe }}</div>
+</section>
+{% endif %}
+
+{% if schedule_items %}
+<section class="mb-10">
+  <h2 class="section-heading mb-1">{{ theme_config.schedule_heading or 'Schedule' }}</h2>
+  {% if time_zone_label %}<p class="label mb-4">All times {{ time_zone_label }}</p>{% endif %}
+  <div class="card divide-y divide-[var(--hairline)]">
+    {% for item in schedule_items %}
+    <div class="px-5 py-3 flex items-baseline gap-4">
+      <span class="text-[13px] tabular-nums text-[var(--text-muted)] shrink-0 w-[92px]">
+        {{ item.start_time }}{% if item.end_time %} &ndash; {{ item.end_time }}{% endif %}
+      </span>
+      <span class="min-w-0">
+        <span class="text-[15px] {% if item.is_break %}text-[var(--text-secondary)]{% else %}text-[var(--text-primary)]{% endif %}">{{ item.title }}</span>
+        {% if item.speaker_name %}<span class="text-[14px] text-[var(--text-secondary)]"> &middot; {{ item.speaker_name }}</span>{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if featured_speakers %}
+<section class="mb-10">
+  <h2 class="section-heading mb-4">{{ theme_config.speakers_heading or 'Speakers' }}</h2>
+  <div class="grid sm:grid-cols-2 gap-4">
+    {% for speaker in featured_speakers %}
+    <div class="flex items-center gap-3">
+      {% if speaker.image_url %}
+      <img src="{{ speaker.image_url }}" alt="{{ speaker.name }}" loading="lazy" class="w-11 h-11 rounded-full object-cover shrink-0" />
+      {% else %}
+      <div class="w-11 h-11 rounded-full shrink-0 bg-[var(--placeholder-bg)] flex items-center justify-center text-[13px] font-medium text-[var(--text-secondary)]">
+        {{ speaker.name[:1] | upper }}
+      </div>
+      {% endif %}
+      <div class="min-w-0">
+        <div class="text-[15px] font-medium text-[var(--text-primary)]">{{ speaker.name }}</div>
+        {% if speaker.role %}<div class="text-[13px] text-[var(--text-secondary)]">{{ speaker.role }}</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if venue and not is_online %}
+<section class="mb-10">
+  <h2 class="section-heading mb-2">{{ theme_config.venue_heading or 'Venue details' }}</h2>
+  <p class="prose-block whitespace-pre-line">{{ venue.address or venue.name }}</p>
+  {% if venue.latitude and venue.longitude and (venue.latitude | float != 0 or venue.longitude | float != 0) %}
+  <div class="card overflow-hidden mt-4">
+    <iframe title="Map of {{ venue.name }}" class="w-full h-56 border-0 block" loading="lazy"
+            src="https://www.openstreetmap.org/export/embed.html?bbox={{ venue.longitude|float - 0.01 }},{{ venue.latitude|float - 0.01 }},{{ venue.longitude|float + 0.01 }},{{ venue.latitude|float + 0.01 }}&layer=mapnik&marker={{ venue.latitude }},{{ venue.longitude }}"></iframe>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if host %}
+<section class="mb-10">
+  <h2 class="section-heading mb-4">{{ theme_config.host_heading or 'Meet the host' }}</h2>
+  <div class="card p-5">
+    <div class="flex items-center gap-4">
+      {% if host.logo %}
+      <img src="{{ host.logo }}" alt="{{ host.name }}" class="w-12 h-12 rounded-lg object-contain bg-[var(--placeholder-bg)] p-1 shrink-0" />
+      {% else %}
+      <div class="w-12 h-12 rounded-lg shrink-0 bg-[var(--placeholder-bg)] flex items-center justify-center text-[15px] font-medium text-[var(--text-secondary)]">
+        {{ host.name[:2] | upper }}
+      </div>
+      {% endif %}
+      <div class="min-w-0">
+        <div class="text-[15px] font-medium text-[var(--text-primary)]">{{ host.name }}</div>
+        {% if host.by_line %}<div class="text-[13px] text-[var(--text-secondary)]">{{ host.by_line }}</div>{% endif %}
+        {% if host.country %}<div class="text-[13px] text-[var(--text-secondary)]">{{ host.country }}</div>{% endif %}
+      </div>
+    </div>
+    {% if host.about %}
+    <div class="prose-block mt-4">{{ host.about | safe }}</div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% if sponsors %}
+<section class="mb-10">
+  <h2 class="section-heading mb-4">{{ theme_config.sponsors_heading or 'Sponsors' }}</h2>
+  <div class="flex flex-wrap items-center gap-8">
+    {% for sponsor in sponsors %}
+      {% if sponsor.company_logo %}
+      <a href="{{ sponsor.website or '#' }}" {% if sponsor.website %}target="_blank" rel="noopener"{% endif %} title="{{ sponsor.company_name }}">
+        <img src="{{ sponsor.company_logo }}" alt="{{ sponsor.company_name }}" loading="lazy" class="h-12 w-auto object-contain" />
+      </a>
+      {% else %}
+      <span class="text-[15px] text-[var(--text-secondary)]">{{ sponsor.company_name }}</span>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

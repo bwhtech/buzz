@@ -1,0 +1,15 @@
+{
+ "creation": "2026-08-14 09:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Buzz Theme",
+ "idx": 0,
+ "is_standard": 1,
+ "modified": "2026-08-14 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Buzz Themes",
+ "name": "Buzz Default Theme",
+ "owner": "Administrator",
+ "parent_theme": "Buzz Base Theme",
+ "theme_name": "Buzz Default Theme",
+ "theme_settings": "Buzz Default Theme Settings"
+}

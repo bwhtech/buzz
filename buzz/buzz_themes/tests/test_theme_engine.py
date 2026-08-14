@@ -18,7 +18,7 @@ from buzz.buzz_themes.doctype.buzz_theme_settings.buzz_theme_settings import (
 	clear_settings_cache,
 	get_compiled_routes,
 )
-from buzz.buzz_themes.jinja_helpers import buzz_theme_asset_url
+from buzz.buzz_themes.jinja_helpers import buzz_theme_asset_url, buzz_theme_config
 from buzz.buzz_themes.theme_resolver import ThemePageRenderer, find_theme_file
 
 
@@ -452,3 +452,75 @@ class TestOnTrash(ThemeEngineTestCase):
 			frappe.delete_doc("Buzz Theme", theme.name, force=True)
 
 		self.assertTrue(os.path.isdir(theme_dir))
+
+
+class TestNavLinkValidation(IntegrationTestCase):
+	def make_nav_link(self, url):
+		return frappe.get_doc({"doctype": "Buzz Theme Nav Link", "label": "Somewhere", "url": url})
+
+	def test_site_relative_path_is_accepted(self):
+		self.make_nav_link("/b/event-proposal").validate()
+
+	def test_https_url_is_accepted(self):
+		self.make_nav_link("https://example.com/docs").validate()
+
+	def test_javascript_scheme_is_rejected(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.make_nav_link("javascript:alert(1)").validate()
+
+	def test_data_scheme_is_rejected(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.make_nav_link("data:text/html,<script>alert(1)</script>").validate()
+
+
+class TestDefaultThemeNavLinks(IntegrationTestCase):
+	def setUp(self):
+		self.settings = frappe.get_doc("Buzz Default Theme Settings")
+		self.addCleanup(self.restore_nav_links, list(self.settings.nav_links))
+		self.settings.set("nav_links", [])
+
+	def restore_nav_links(self, original_rows):
+		settings = frappe.get_doc("Buzz Default Theme Settings")
+		settings.set("nav_links", [])
+		for row in original_rows:
+			settings.append(
+				"nav_links", {"label": row.label, "url": row.url, "open_in_new_tab": row.open_in_new_tab}
+			)
+		settings.save()
+		frappe.db.commit()
+
+	def test_empty_table_falls_back_to_bundled_links(self):
+		links = self.settings.get_nav_links()
+
+		self.assertEqual([link.label for link in links], ["Dashboard", "Propose Event"])
+		self.assertEqual([link.url for link in links], ["/b", "/b/event-proposal"])
+
+	def test_configured_links_replace_the_fallback_entirely(self):
+		self.settings.append("nav_links", {"label": "Events", "url": "/category/conferences"})
+
+		links = self.settings.get_nav_links()
+
+		self.assertEqual([link.label for link in links], ["Events"])
+
+	def test_configured_link_keeps_the_new_tab_flag(self):
+		self.settings.append(
+			"nav_links", {"label": "Docs", "url": "https://example.com", "open_in_new_tab": 1}
+		)
+
+		self.assertTrue(self.settings.get_nav_links()[0].open_in_new_tab)
+
+
+class TestThemeConfigHelper(ThemeEngineTestCase):
+	def test_config_returns_the_linked_settings_single(self):
+		theme = self.create_theme()
+		frappe.db.set_value("Buzz Theme", theme.name, "theme_settings", "Buzz Default Theme Settings")
+		clear_theme_cache()
+		self.set_default_theme(theme.name)
+
+		self.assertEqual(buzz_theme_config().doctype, "Buzz Default Theme Settings")
+
+	def test_config_is_an_empty_dict_when_no_settings_are_linked(self):
+		theme = self.create_theme()
+		self.set_default_theme(theme.name)
+
+		self.assertEqual(buzz_theme_config(), frappe._dict())

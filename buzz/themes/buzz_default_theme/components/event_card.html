@@ -1,0 +1,22 @@
+{# Takes a raw "Buzz Event" row from get_all plus `is_past`, and derives its own labels. #}
+{% set card_image = event_row.card_image or event_row.banner_image %}
+
+<a href="/events/{{ event_row.route }}" class="card block overflow-hidden {% if is_past %}is-past{% endif %}" aria-label="{{ event_row.title }}">
+  {% if card_image %}
+  <img src="{{ card_image }}" alt="" loading="lazy" class="w-full h-[104px] object-cover block" />
+  {% else %}
+  <div class="w-full h-[104px] bg-[var(--placeholder-bg)]"></div>
+  {% endif %}
+
+  <div class="px-4 py-3 border-b border-[var(--hairline)]">
+    <h3 class="text-[15px] font-medium leading-snug text-[var(--text-primary)]">{{ event_row.title }}</h3>
+  </div>
+
+  <div class="px-4 py-3 flex items-center gap-3">
+    {% with badge_date = event_row.start_date %}{% include "components/date_badge.html" %}{% endwith %}
+    {% if event_row.venue %}
+    <span class="w-px self-stretch bg-[var(--hairline)]"></span>
+    <span class="text-[13px] text-[var(--text-secondary)] line-clamp-2">{{ event_row.venue }}</span>
+    {% endif %}
+  </div>
+</a>
