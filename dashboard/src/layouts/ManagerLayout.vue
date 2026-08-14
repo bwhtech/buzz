@@ -37,7 +37,11 @@ const eventId = computed(() => route.params.eventId as string | undefined);
 
 const eventItems = computed(() => [
 	{ label: "Back", icon: "lucide-arrow-left", to: "/" },
-	{ label: "Details", icon: "lucide-info", to: `/manage/events/${eventId.value}/details` },
+	{
+		label: "Details",
+		icon: "lucide-receipt-text",
+		to: `/manage/events/${eventId.value}/details`,
+	},
 	{
 		label: "Attendees",
 		icon: "lucide-users-round",

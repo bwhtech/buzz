@@ -10,7 +10,11 @@ test.describe("Event workspace", () => {
 
 	test("opens the event on its details section", async ({ page }) => {
 		await expect(page).toHaveURL(/\/b\/manage\/events\/\d+\/details$/, { timeout: 15000 });
-		await expect(page.getByText("Work in progress")).toBeVisible();
+		// The details page names the event, with the section it is showing after it.
+		const heading = page.getByRole("heading", { level: 1 });
+		await expect(heading).toBeVisible();
+		await expect(heading).not.toHaveText("Details");
+		await expect(page.getByRole("banner").first()).toContainText("Details");
 	});
 
 	test("swaps the sidebar for the event's own destinations", async ({ page }) => {
