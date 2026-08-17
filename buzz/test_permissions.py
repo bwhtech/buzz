@@ -49,23 +49,48 @@ def create_event(title: str, team: str, is_published: int = 0) -> str:
 	)
 
 
-def create_ticket(event: str, owner: str) -> str:
-	ticket_type = frappe.get_doc(
+def create_ticket_type(event: str) -> str:
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": event,
+				"title": f"Type {frappe.generate_hash(length=6)}",
+				"price": 0,
+			}
+		)
+		.insert(ignore_permissions=True)
+		.name
+	)
+
+
+def create_booking(event: str, user: str, owner: str | None = None) -> str:
+	# Event Booking.validate prices the attendee rows, so it needs at least one.
+	booking = frappe.get_doc(
 		{
-			"doctype": "Event Ticket Type",
+			"doctype": "Event Booking",
 			"event": event,
-			"title": f"Type {frappe.generate_hash(length=6)}",
-			"price": 0,
+			"user": user,
+			"attendees": [
+				{"ticket_type": create_ticket_type(event), "first_name": "Attendee", "email": user}
+			],
 		}
 	).insert(ignore_permissions=True)
+	frappe.db.set_value("Event Booking", booking.name, "owner", owner or user, update_modified=False)
+	return booking.name
 
+
+def create_ticket(
+	event: str, owner: str, attendee_email: str | None = None, booking: str | None = None
+) -> str:
 	ticket = frappe.get_doc(
 		{
 			"doctype": "Event Ticket",
 			"event": event,
-			"ticket_type": ticket_type.name,
+			"ticket_type": create_ticket_type(event),
 			"attendee_name": "Attendee",
-			"attendee_email": owner,
+			"attendee_email": attendee_email or owner,
+			"booking": booking,
 		}
 	).insert(ignore_permissions=True)
 	frappe.db.set_value("Event Ticket", ticket.name, "owner", owner, update_modified=False)
@@ -307,6 +332,93 @@ class TestNonMemberCarveOuts(TeamPermissionTestCase):
 
 		self.assertIn(mine, tickets)
 		self.assertNotIn(theirs, tickets)
+
+	def test_attendee_lists_a_ticket_someone_else_created(self):
+		mine = create_ticket(self.event_b, owner=self.bob, attendee_email=self.outsider)
+
+		self.as_user(self.outsider)
+
+		self.assertIn(mine, frappe.get_list("Event Ticket", pluck="name"))
+
+	def test_booker_lists_a_ticket_held_by_someone_else(self):
+		booking = create_booking(self.event_b, user=self.outsider)
+		theirs = create_ticket(
+			self.event_b, owner=self.bob, attendee_email="perm-guest@example.com", booking=booking
+		)
+
+		self.as_user(self.outsider)
+
+		self.assertIn(theirs, frappe.get_list("Event Ticket", pluck="name"))
+
+	def test_an_unrelated_user_sees_neither_the_ticket_nor_the_booking(self):
+		booking = create_booking(self.event_b, user=self.bob)
+		by_attendee = create_ticket(self.event_b, owner=self.bob, attendee_email=self.alice)
+		by_booking = create_ticket(self.event_b, owner=self.bob, attendee_email=self.alice, booking=booking)
+
+		self.as_user(self.outsider)
+		tickets = frappe.get_list("Event Ticket", pluck="name")
+
+		self.assertNotIn(by_attendee, tickets)
+		self.assertNotIn(by_booking, tickets)
+		self.assertNotIn(booking, frappe.get_list("Event Booking", pluck="name"))
+
+	def test_an_unrelated_user_cannot_open_someone_elses_ticket(self):
+		theirs = create_ticket(self.event_b, owner=self.bob, attendee_email=self.alice)
+
+		self.as_user(self.outsider)
+
+		with self.assertRaises(frappe.PermissionError):
+			frappe.get_doc("Event Ticket", theirs).check_permission("read")
+
+	def test_an_unstamped_event_does_not_open_its_tickets_to_a_stranger(self):
+		orphan = create_event("Perm Unstamped", self.team_b)
+		theirs = create_ticket(orphan, owner=self.bob, attendee_email=self.alice)
+		frappe.db.set_value("Buzz Event", orphan, "team", None, update_modified=False)
+
+		self.as_user(self.outsider)
+
+		self.assertNotIn(theirs, frappe.get_list("Event Ticket", pluck="name"))
+		with self.assertRaises(frappe.PermissionError):
+			frappe.get_doc("Event Ticket", theirs).check_permission("read")
+
+	def test_attendee_reads_but_cannot_write_their_ticket(self):
+		mine = create_ticket(self.event_b, owner=self.bob, attendee_email=self.outsider)
+
+		self.as_user(self.outsider)
+
+		self.assertTrue(frappe.has_permission("Event Ticket", "read", doc=mine))
+		self.assertFalse(frappe.has_permission("Event Ticket", "write", doc=mine))
+
+	def test_buyer_lists_a_guest_checkout_booking(self):
+		# Guest checkout runs as Administrator, so `owner` never names the buyer.
+		booking = create_booking(self.event_b, user=self.outsider, owner="Administrator")
+
+		self.as_user(self.outsider)
+
+		self.assertIn(booking, frappe.get_list("Event Booking", pluck="name"))
+
+	def test_buyer_writes_their_own_booking_but_nobody_elses(self):
+		mine = create_booking(self.event_b, user=self.outsider, owner="Administrator")
+		theirs = create_booking(self.event_b, user=self.bob)
+
+		self.as_user(self.outsider)
+
+		self.assertTrue(frappe.has_permission("Event Booking", "write", doc=mine))
+		self.assertFalse(frappe.has_permission("Event Booking", "write", doc=theirs))
+
+	def test_nobody_deletes_a_booking_from_the_portal(self):
+		# Bookings are cancelled, never deleted — the role carries no delete at all, so this
+		# holds for the buyer's own row as much as for a stranger's.
+		mine = create_booking(self.event_b, user=self.outsider)
+		guest_checkout = create_booking(self.event_b, user=self.outsider, owner="Guest")
+		theirs = create_booking(self.event_b, user=self.bob)
+
+		self.as_user(self.outsider)
+
+		for booking in (mine, guest_checkout, theirs):
+			self.assertFalse(frappe.has_permission("Event Booking", "delete", doc=booking))
+			with self.assertRaises(frappe.PermissionError):
+				frappe.delete_doc("Event Booking", booking)
 
 	def test_attendee_gets_no_carve_out_on_payments(self):
 		self.as_user(self.outsider)
