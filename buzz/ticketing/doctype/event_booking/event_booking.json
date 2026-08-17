@@ -308,7 +308,7 @@
    "link_fieldname": "booking"
   }
  ],
- "modified": "2026-08-11 03:19:31.303090",
+ "modified": "2026-08-17 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Booking",
@@ -350,7 +350,6 @@
    "delete": 1,
    "email": 1,
    "export": 1,
-   "if_owner": 1,
    "print": 1,
    "read": 1,
    "report": 1,

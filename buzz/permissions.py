@@ -12,6 +12,10 @@ WRITE_PTYPES = frozenset({"write", "create", "submit", "cancel", "amend", "delet
 # Attendees, sponsors and speakers reach their own rows without any membership.
 OWNER_VISIBLE_DOCTYPES = frozenset({"Event Booking", "Event Ticket", "Sponsorship Enquiry", "Event Talk"})
 
+# The column naming who a row belongs to: a booking made on someone else's behalf, or a
+# guest checkout running as Administrator, leaves `owner` naming neither buyer nor attendee.
+IDENTITY_FIELDS = {"Event Booking": "user", "Event Ticket": "attendee_email"}
+
 
 def is_unrestricted(user: str) -> bool:
 	return user == "Administrator" or "System Manager" in frappe.get_roles(user)
@@ -61,6 +65,29 @@ def published_events() -> QueryBuilder:
 def my_team_events(user: str) -> QueryBuilder:
 	event = frappe.qb.DocType("Buzz Event")
 	return frappe.qb.from_(event).select(event.name).where(event.team.isin(my_teams(user)))
+
+
+def my_bookings(user: str) -> QueryBuilder:
+	booking = frappe.qb.DocType("Event Booking")
+	return (
+		frappe.qb.from_(booking).select(booking.name).where((booking.user == user) | (booking.owner == user))
+	)
+
+
+def belongs_to_user(doc, user: str) -> bool:
+	"""Whether `doc` names `user`, whether or not they are the one who created it."""
+	if doc.owner == user:
+		return True
+
+	if (identity_field := IDENTITY_FIELDS.get(doc.doctype)) and doc.get(identity_field) == user:
+		return True
+
+	# A ticket also belongs to whoever booked it, who is often not its attendee.
+	if doc.doctype == "Event Ticket" and doc.booking:
+		booking = frappe.db.get_value("Event Booking", doc.booking, ["user", "owner"], as_dict=True)
+		return bool(booking) and user in (booking.user, booking.owner)
+
+	return False
 
 
 def team_role_of(user: str, team: str | None) -> str | None:
@@ -116,6 +143,12 @@ def derived_query_conditions(
 	criterion = table.event.isin(my_team_events(user))
 	if doctype in OWNER_VISIBLE_DOCTYPES:
 		criterion |= table.owner == user
+
+		if identity_field := IDENTITY_FIELDS.get(doctype):
+			criterion |= table[identity_field] == user
+
+		if doctype == "Event Ticket":
+			criterion |= table.booking.isin(my_bookings(user))
 	if doctype == "Sponsorship Tier":
 		criterion |= table.event.isin(published_events())
 
@@ -145,7 +178,7 @@ def team_has_permission(doc, ptype: str = "read", user: str | None = None, **kwa
 
 def derived_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:
 	user = user or frappe.session.user
-	if doc.doctype in OWNER_VISIBLE_DOCTYPES and doc.owner == user:
+	if doc.doctype in OWNER_VISIBLE_DOCTYPES and belongs_to_user(doc, user):
 		return True
 	if doc.doctype == "Sponsorship Tier" and ptype not in WRITE_PTYPES:
 		if frappe.db.get_value("Buzz Event", doc.event, "is_published"):
@@ -153,6 +186,11 @@ def derived_has_permission(doc, ptype: str = "read", user: str | None = None, **
 
 	# These doctypes carry no team column, so the team comes from their event.
 	team = frappe.db.get_value("Buzz Event", doc.event, "team") if doc.event else None
+	if not team and doc.doctype in OWNER_VISIBLE_DOCTYPES:
+		# `has_team_access` waves an unstamped row through for a half-migrated site. These
+		# rows hold personal data, so they get no such pass — the checks above are the way in.
+		return is_unrestricted(user)
+
 	return has_team_access(team, ptype, user)
 
 
