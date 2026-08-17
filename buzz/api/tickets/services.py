@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 class TicketService:
-	"""Read or act on one Event Ticket on behalf of its attendee."""
+	"""Read or act on one Event Ticket on behalf of its attendee or whoever booked it."""
 
 	def __init__(self, ticket_id: str):
 		self.ticket_id = ticket_id
@@ -34,7 +34,9 @@ class TicketService:
 
 	def details(self) -> TicketDetailsResponse:
 		ticket = self.ticket
-		if frappe.session.user != "Administrator" and ticket.attendee_email != frappe.session.user:
+		# The read permission already covers attendee, booker and the event's team, so this
+		# page stays in step with the list the user opened it from.
+		if not frappe.has_permission("Event Ticket", "read", ticket):
 			TicketNotAccessible.throw()
 
 		event_id = ticket.event
@@ -97,7 +99,8 @@ class TicketService:
 			return None
 
 		booking = frappe.get_cached_doc("Event Booking", booking_id)
-		return booking if booking.owner == frappe.session.user else None
+		# A guest checkout runs as Administrator, so `user` is the buyer of record.
+		return booking if frappe.session.user in (booking.user, booking.owner) else None
 
 	def zoom_registration(self) -> dict:
 		registration_id = self.ticket.get("zoom_session_registration")

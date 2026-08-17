@@ -198,11 +198,17 @@ after_migrate = "buzz.install.on_migrate"
 # 	"Event": "frappe.desk.doctype.event.event.has_permission",
 # }
 
+# Bookings and tickets are scoped to the person they name — the attendee, or the buyer —
+# rather than to whoever created the row, which is often neither of them.
 permission_query_conditions = {
+	"Event Booking": "buzz.permissions.owned_query_conditions",
+	"Event Ticket": "buzz.permissions.owned_query_conditions",
 	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.get_permission_query_conditions",
 }
 
 has_permission = {
+	"Event Booking": "buzz.permissions.owned_has_permission",
+	"Event Ticket": "buzz.permissions.owned_has_permission",
 	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.has_talk_proposal_permission",
 }
 

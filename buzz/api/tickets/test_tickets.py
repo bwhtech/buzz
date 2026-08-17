@@ -199,6 +199,17 @@ class TestGetTicketDetails(TicketTestCase):
 
 		self.assertEqual(frappe.local.message_log[-1]["title"], "Not Permitted")
 
+	def test_booker_can_read_a_ticket_held_by_someone_else(self):
+		self.set_event_start(30)
+		booking = self.make_booking(user=OTHER_USER)
+		ticket = self.make_ticket(attendee_email="guest@example.com", booking=booking.name)
+		frappe.set_user(OTHER_USER)
+
+		details = get_ticket_details(ticket.name)
+
+		self.assertEqual(details.doc.name, ticket.name)
+		self.assertEqual(details.booking.name, booking.name)
+
 	def test_booking_is_withheld_from_an_attendee_who_did_not_book(self):
 		self.set_event_start(30)
 		booking = self.make_booking(user=OTHER_USER)
