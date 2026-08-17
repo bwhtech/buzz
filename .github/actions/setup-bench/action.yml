@@ -82,7 +82,7 @@ runs:
         EXTRA_APP_URL: ${{ inputs.extra-app-url }}
       run: |
         # buzz lists frappe/payments in required_apps, so it must precede install-app.
-        bench get-app --skip-assets payments
+        bench get-app --skip-assets https://github.com/frappe/payments
 
         if [ -n "$EXTRA_APP_URL" ]; then
           bench get-app --skip-assets "$EXTRA_APP_URL"
