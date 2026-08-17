@@ -72,7 +72,7 @@ class EventBooking(Document):
 		`BookingService.validate_event` so the generic document API can't skip it."""
 		# A trusted flow has already validated, and payment authorisation or offline
 		# approval must still be able to resubmit a draft made before the event closed.
-		if self.flags.ignore_permissions or not self.is_new():
+		if self.flags.ignore_permissions:
 			return
 
 		event = frappe.get_cached_doc("Buzz Event", self.event)

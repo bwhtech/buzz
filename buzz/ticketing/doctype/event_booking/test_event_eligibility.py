@@ -236,6 +236,31 @@ class TestLegitimateFlowsStillWork(EligibilityTestCase):
 
 
 class TestTheGuardCannotBeSteppedAround(EligibilityTestCase):
+	"""The guard runs on every write, so a draft cannot outlive its event's
+	eligibility by being edited or repointed after the fact."""
+
+	def test_an_outsider_cannot_grow_a_draft_after_registrations_close(self):
+		free_type = self.make_ticket_type(price=0)
+		outsider = self.outsider_managing_another_team()
+		booking = self.insert_as(
+			outsider,
+			user=outsider,
+			attendees=[self.attendee_row(ticket_type=str(free_type.name))],
+		)
+		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})
+
+		frappe.set_user(outsider)
+		booking.reload()
+		booking.append(
+			"attendees",
+			self.attendee_row(email="smuggled@example.com", ticket_type=str(free_type.name)),
+		)
+
+		with self.assertRaises(RegistrationsClosed):
+			booking.save()
+
+		self.assertEqual(frappe.db.count("Event Booking Attendee", {"parent": booking.name}), 1)
+
 	def test_a_draft_cannot_be_repointed_at_a_closed_event(self):
 		# The guard only runs on creation, so a draft must not be able to reach a
 		# closed event afterwards. Ticket types are what pin it down.
