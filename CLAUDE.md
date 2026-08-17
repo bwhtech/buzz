@@ -21,6 +21,18 @@ Guidelines for writing good code for a developer:
 
 * Use column breaks and tab breaks to create user friendly doctype forms
 
+## Dashboard data fetching
+
+* Prefer Frappe UI's composables — `useCall`, `useList`, `useDoc`, `useDoctype`,
+  `useNewDoc` — over legacy `createResource` / `createListResource`. Migrate an old
+  call site only when already editing that page.
+* Call whitelisted methods on the v2 path (`/api/v2/method/<dotted.path>`). The
+  composables read the payload from `data` and never unwrap `message`, so
+  `/api/method/...` leaves `data` null with no error.
+* `cacheKey` persists to IndexedDB and outlives a logout. Key it by user, or omit it,
+  for anything user-specific.
+* `session.login` / `session.logout` stay on `createResource`.
+
 ## Skills
 
 Always load frappe-app-dev before any implementation. For UI work, also load ui-design

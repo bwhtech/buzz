@@ -26,6 +26,7 @@ declare module 'vue' {
     CancellationRequestNotice: typeof import('./src/components/CancellationRequestNotice.vue')['default']
     CustomFieldInput: typeof import('./src/components/CustomFieldInput.vue')['default']
     CustomFieldsSection: typeof import('./src/components/CustomFieldsSection.vue')['default']
+    EventCard: typeof import('./src/components/dashboard/events/EventCard.vue')['default']
     EventDetailsHeader: typeof import('./src/components/EventDetailsHeader.vue')['default']
     EventSelector: typeof import('./src/components/EventSelector.vue')['default']
     FormFieldSections: typeof import('./src/components/FormFieldSections.vue')['default']

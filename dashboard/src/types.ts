@@ -54,6 +54,28 @@ export interface TeamOption {
 	team_role: string
 }
 
+// buzz.api.events.get_my_events: events the user's teams host, plus events they
+// hold a ticket to. is_host separates the two.
+export interface MyEvent {
+	name: string
+	title: string
+	route: string | null
+	start_date: string
+	end_date: string | null
+	start_time: string | null
+	venue: string | null
+	banner_image: string | null
+	is_host: boolean
+	team: string | null
+	team_name: string | null
+	team_logo: string | null
+}
+
+export interface MyEvents {
+	upcoming: MyEvent[]
+	past: MyEvent[]
+}
+
 // Languages served by the translation API (not a Buzz DocType).
 export interface Language {
 	name: string

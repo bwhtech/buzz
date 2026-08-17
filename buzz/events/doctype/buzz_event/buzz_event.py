@@ -23,6 +23,7 @@ RESERVED_EVENT_ROUTES = {
 	"book-tickets",
 	"event-proposal",
 	"events",
+	"manage",
 }
 
 

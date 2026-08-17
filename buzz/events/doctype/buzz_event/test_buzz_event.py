@@ -146,6 +146,12 @@ class TestBuzzEvent(FrappeTestCase):
 		"""
 		self.assertIn("booking-success", RESERVED_EVENT_ROUTES)
 
+	def test_manager_section_is_reserved(self):
+		"""/manage owns everything below it: its children end in a catch-all that
+		renders the 404, so an event routed "manage" would lose every custom form.
+		"""
+		self.assertIn("manage", RESERVED_EVENT_ROUTES)
+
 	def test_unreserved_route_is_accepted(self):
 		"""A route that shadows nothing saves normally."""
 		event = self._make_event_with_route("my-conference-2026")
