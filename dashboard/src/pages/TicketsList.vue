@@ -40,7 +40,6 @@
 <script setup lang="ts">
 import { ListView, useList } from "frappe-ui";
 import { dayjsLocal } from "frappe-ui";
-import { session } from "../data/session";
 
 const columns = [
 	{ label: __("Attendee Name"), key: "attendee_name" },
@@ -62,8 +61,8 @@ const tickets = useList({
 		"event.start_date",
 		"creation",
 	],
+	// No attendee filter: the permission query already scopes this to the user's tickets.
 	filters: {
-		attendee_email: session.user,
 		docstatus: ["!=", 0],
 	},
 	orderBy: "creation desc",
