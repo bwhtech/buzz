@@ -28,9 +28,11 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/MyEvents.vue"),
 			},
 			// Sidebar destinations that have no page yet. Unnamed on purpose: SidebarItem
-			// falls back to matching on path, so each one lights up on its own.
+			// falls back to matching on path, so each one lights up on its own. Enumerated
+			// so a mistyped path falls through to the 404 instead — keep in step with the
+			// sidebar items in ManagerLayout.vue.
 			{
-				path: ":section",
+				path: ":section(tickets|proposals|sponsorship|overview|registrations|sponsors|more)",
 				component: () => import("@/pages/manage/WorkInProgress.vue"),
 			},
 		],

@@ -19,6 +19,12 @@ test.describe("Manage access", () => {
 		await expect(page.getByText("Work in progress")).toBeVisible();
 	});
 
+	test("shows a 404 for a manage section that does not exist", async ({ page }) => {
+		await page.goto("/b/manage/evnets");
+
+		await expect(page.getByText("Page not found")).toBeVisible({ timeout: 15000 });
+	});
+
 	test.describe("without a team", () => {
 		test.beforeEach(async ({ page }) => {
 			const response = await page.request.post("/api/method/login", {
@@ -36,8 +42,10 @@ test.describe("Manage access", () => {
 		test("gets a 404 in place at /manage", async ({ page }) => {
 			await page.goto("/b/manage");
 
+			// /manage redirects to the landing page before the layout decides anyone is
+			// unwelcome, so the 404 renders at /manage/events, not at /manage.
 			await expect(page.getByText("Page not found")).toBeVisible({ timeout: 15000 });
-			await expect(page).toHaveURL(/\/b\/manage/);
+			await expect(page).toHaveURL(/\/b\/manage\/events$/);
 		});
 	});
 
