@@ -397,13 +397,16 @@ class TestNonMemberCarveOuts(TeamPermissionTestCase):
 
 		self.assertIn(booking, frappe.get_list("Event Booking", pluck="name"))
 
-	def test_buyer_writes_their_own_booking_but_nobody_elses(self):
+	def test_buyer_reads_their_own_booking_but_writes_nothing(self):
+		# Bookings are only ever written by the service flow and by organisers. The
+		# portal reads them; transfers and cancellations go through their own doctypes.
 		mine = create_booking(self.event_b, user=self.outsider, owner="Administrator")
 		theirs = create_booking(self.event_b, user=self.bob)
 
 		self.as_user(self.outsider)
 
-		self.assertTrue(frappe.has_permission("Event Booking", "write", doc=mine))
+		self.assertTrue(frappe.has_permission("Event Booking", "read", doc=mine))
+		self.assertFalse(frappe.has_permission("Event Booking", "write", doc=mine))
 		self.assertFalse(frappe.has_permission("Event Booking", "write", doc=theirs))
 
 	def test_nobody_deletes_a_booking_from_the_portal(self):
