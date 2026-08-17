@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import EventCard from "@/components/dashboard/events/EventCard.vue";
-import { myEvents } from "@/data/events";
+import type { MyEvents } from "@/types";
 import { groupEventsByMonth } from "@/utils/eventGroups";
-import { TabButtons, dayjsLocal } from "frappe-ui";
+import { ErrorMessage, LoadingText, TabButtons, dayjsLocal, useCall } from "frappe-ui";
 import { computed, ref } from "vue";
+
+// v2 path: useCall reads the payload from `data`, which /api/method names `message`.
+// Uncached: cacheKey would persist this user's feed to IndexedDB past a logout.
+const myEvents = useCall<MyEvents>({
+	url: "/api/v2/method/buzz.api.events.get_my_events",
+});
 
 const tab = ref<"upcoming" | "past">("upcoming");
 const tabOptions = [
@@ -17,7 +23,7 @@ function monthLabel(month: string): string {
 	return dayjsLocal(`${month}-01`).format("MMMM YYYY");
 }
 
-// frappe-ui's dayjs ships isToday but not the calendar plugin, so tomorrow is compared by hand.
+// dayjs ships isToday here, but not the calendar plugin, so tomorrow is compared by hand.
 function dayLabel(date: string): string {
 	const day = dayjsLocal(date);
 	if (day.isToday()) return "Today";
@@ -37,7 +43,11 @@ function weekday(date: string): string {
 			<TabButtons v-model="tab" :options="tabOptions" size="md" />
 		</header>
 
-		<div class="relative space-y-6">
+		<ErrorMessage v-if="myEvents.error" :message="myEvents.error.message" />
+
+		<LoadingText v-else-if="myEvents.loading" text="Loading events..." />
+
+		<div v-else class="relative space-y-6">
 			<section v-for="month in months" :key="month.month" class="space-y-4">
 				<h2
 					class="relative bg-surface-elevation-1 py-1 text-xl font-semibold text-ink-gray-8"
@@ -78,6 +88,11 @@ function weekday(date: string): string {
 			</section>
 		</div>
 
-		<p v-if="!months.length" class="text-base text-ink-gray-5">No {{ tab }} events.</p>
+		<p
+			v-if="!months.length && !myEvents.loading && !myEvents.error"
+			class="text-base text-ink-gray-5"
+		>
+			No {{ tab }} events.
+		</p>
 	</div>
 </template>
