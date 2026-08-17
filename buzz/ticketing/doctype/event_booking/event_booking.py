@@ -6,9 +6,11 @@ from frappe.email.doctype.email_template.email_template import get_email_templat
 from frappe.model.document import Document
 from frappe.utils import cstr, flt
 
-from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
+from buzz.api.booking.exceptions import RegistrationsClosed
+from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, are_registrations_closed
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.payments import get_controller, mark_payment_as_received
+from buzz.permissions import has_team_access
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
 	get_committed_tickets,
@@ -57,12 +59,30 @@ class EventBooking(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		self.validate_event_registration_is_open()
 		self.validate_ticket_availability()
 		self.fetch_amounts_from_ticket_types()
 		self.set_currency()
 		self.set_total()
 		self.apply_coupon_if_applicable()
 		self.apply_taxes_if_applicable()
+
+	def validate_event_registration_is_open(self):
+		"""Refuse new bookings for unpublished or closed events, backing up
+		`BookingService.validate_event` so the generic document API can't skip it."""
+		# A trusted flow has already validated, and payment authorisation or offline
+		# approval must still be able to resubmit a draft made before the event closed.
+		if self.flags.ignore_permissions:
+			return
+
+		event = frappe.get_cached_doc("Buzz Event", self.event)
+		if has_team_access(event.team, "create", frappe.session.user):
+			return
+
+		if not event.is_published:
+			frappe.throw(_("Event is not live"))
+		if are_registrations_closed(event):
+			RegistrationsClosed.throw()
 
 	def before_submit(self):
 		"""Set status before submit based on payment method."""
