@@ -405,7 +405,20 @@ class TestNonMemberCarveOuts(TeamPermissionTestCase):
 
 		self.assertTrue(frappe.has_permission("Event Booking", "write", doc=mine))
 		self.assertFalse(frappe.has_permission("Event Booking", "write", doc=theirs))
-		self.assertFalse(frappe.has_permission("Event Booking", "delete", doc=theirs))
+
+	def test_nobody_deletes_a_booking_from_the_portal(self):
+		# Bookings are cancelled, never deleted — the role carries no delete at all, so this
+		# holds for the buyer's own row as much as for a stranger's.
+		mine = create_booking(self.event_b, user=self.outsider)
+		guest_checkout = create_booking(self.event_b, user=self.outsider, owner="Guest")
+		theirs = create_booking(self.event_b, user=self.bob)
+
+		self.as_user(self.outsider)
+
+		for booking in (mine, guest_checkout, theirs):
+			self.assertFalse(frappe.has_permission("Event Booking", "delete", doc=booking))
+			with self.assertRaises(frappe.PermissionError):
+				frappe.delete_doc("Event Booking", booking)
 
 	def test_attendee_gets_no_carve_out_on_payments(self):
 		self.as_user(self.outsider)
