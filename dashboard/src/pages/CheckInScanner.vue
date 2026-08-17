@@ -87,6 +87,7 @@
 <script setup lang="ts">
 import { useTicketValidation } from "@/composables/useTicketValidation";
 import { userResource } from "@/data/user";
+import type { UserInfo } from "@/types";
 import { createResource } from "frappe-ui";
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
@@ -103,13 +104,8 @@ const props = defineProps({
 	},
 });
 
-interface UserProfile {
-	roles?: { role: string }[];
-	[key: string]: any;
-}
-
 const router = useRouter();
-const userProfile = ref<UserProfile>({});
+const userProfile = ref<Partial<UserInfo>>({});
 
 const hasRequiredRole = computed(() => {
 	if (!userProfile.value || !userProfile.value.roles) return false;

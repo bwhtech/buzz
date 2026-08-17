@@ -45,10 +45,12 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SponsorshipPaymentDialog: typeof import('./src/components/SponsorshipPaymentDialog.vue')['default']
     SuccessMessage: typeof import('./src/components/SuccessMessage.vue')['default']
+    TeamSwitcher: typeof import('./src/components/TeamSwitcher.vue')['default']
     TicketCard: typeof import('./src/components/TicketCard.vue')['default']
     TicketDetailsModal: typeof import('./src/components/TicketDetailsModal.vue')['default']
     TicketsSection: typeof import('./src/components/TicketsSection.vue')['default']
     TicketTransferDialog: typeof import('./src/components/TicketTransferDialog.vue')['default']
     TransferTicketDialog: typeof import('./src/components/TransferTicketDialog.vue')['default']
+    UserMenu: typeof import('./src/components/UserMenu.vue')['default']
   }
 }

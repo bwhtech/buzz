@@ -9,8 +9,8 @@
 					<div class="group relative !size-[66px]">
 						<Avatar
 							class="!size-16"
-							:image="profile.user_image"
-							:label="profile.full_name"
+							:image="profile.user_image ?? undefined"
+							:label="profile.full_name ?? undefined"
 						/>
 						<component
 							:is="profile.user_image ? Dropdown : 'div'"
@@ -63,25 +63,16 @@
 </template>
 
 <script setup lang="ts">
-import type { FrappeError } from "@/types";
+import type { FrappeError, UserInfo } from "@/types";
 import { validateIsImageFile } from "@/utils";
 import { Avatar, Dropdown, FileUploader, createResource, toast } from "frappe-ui";
 import { onMounted, ref } from "vue";
 import LucideCamera from "~icons/lucide/camera";
 import { userResource } from "../data/user";
 
-interface UserProfile {
-	name?: string;
-	full_name?: string;
-	email?: string;
-	user_image?: string;
-	first_name?: string;
-	last_name?: string;
-}
+const user: Partial<UserInfo> = userResource.data || {};
 
-const user = (userResource.data || {}) as UserProfile;
-
-const profile = ref<UserProfile>({});
+const profile = ref<Partial<UserInfo>>({});
 const error = ref("");
 
 const setUser = createResource({

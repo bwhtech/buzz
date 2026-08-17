@@ -82,8 +82,10 @@ test.describe("Language switcher — guest", () => {
 });
 
 test.describe("Language switcher — logged in", () => {
+	// An attendee route rather than /b: a user on a team is redirected from the root into
+	// the manager shell, which carries no navbar and so no switcher.
 	test("?lang does not rewrite a saved language preference", async ({ page }) => {
-		await page.goto(`/b?lang=${TARGET_LANGUAGE}`);
+		await page.goto(`/b/account/bookings?lang=${TARGET_LANGUAGE}`);
 		await page.waitForLoadState("networkidle");
 
 		await expect(switcher(page)).toBeVisible();
