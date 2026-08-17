@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { MyEvent } from "@/types";
 import { bannerPattern } from "@/utils/eventBanner";
-import { Avatar, Button } from "frappe-ui";
+import { Avatar } from "frappe-ui";
 import { computed } from "vue";
 
 const props = defineProps<{ event: MyEvent }>();
@@ -61,18 +61,14 @@ const venue = computed(() => {
 				</p>
 			</div>
 
-			<div class="flex justify-between">
-				<p class="mt-2 flex items-center gap-2 text-base text-ink-gray-5">
-					<span
-						class="size-4 shrink-0"
-						:class="[venue.icon, venue.tone]"
-						aria-hidden="true"
-					/>
-					{{ venue.label }}
-				</p>
-				<!-- TODO: wire this button up with the manage event page -->
-				<Button v-if="event.is_host" label="Manage" icon-right="arrow-right" size="sm" />
-			</div>
+			<p class="mt-2 flex items-center gap-2 text-base text-ink-gray-5">
+				<span
+					class="size-4 shrink-0"
+					:class="[venue.icon, venue.tone]"
+					aria-hidden="true"
+				/>
+				{{ venue.label }}
+			</p>
 		</div>
 	</article>
 </template>

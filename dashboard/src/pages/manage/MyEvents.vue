@@ -7,14 +7,8 @@ import { computed, ref } from "vue";
 
 const tab = ref<"upcoming" | "past">("upcoming");
 const tabOptions = [
-	{
-		label: "Upcoming",
-		value: "upcoming",
-	},
-	{
-		label: "Past",
-		value: "past",
-	},
+	{ label: "Upcoming", value: "upcoming" },
+	{ label: "Past", value: "past" },
 ];
 
 const months = computed(() => groupEventsByMonth(myEvents.data?.[tab.value] || []));

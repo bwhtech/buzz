@@ -63,11 +63,8 @@ export interface MyEvent {
 	start_date: string
 	end_date: string | null
 	start_time: string | null
-	end_time: string | null
 	venue: string | null
-	medium: string | null
 	banner_image: string | null
-	is_published: boolean
 	is_host: boolean
 	team: string | null
 	team_name: string | null

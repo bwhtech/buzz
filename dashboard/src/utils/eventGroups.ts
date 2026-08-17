@@ -1,9 +1,9 @@
-export interface DayGroup<T> {
+interface DayGroup<T> {
 	date: string
 	events: T[]
 }
 
-export interface MonthGroup<T> {
+interface MonthGroup<T> {
 	month: string
 	days: DayGroup<T>[]
 }

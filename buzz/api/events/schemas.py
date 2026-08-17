@@ -10,11 +10,8 @@ class MyEvent(APIResponse):
 	start_date: date
 	end_date: date | None = None
 	start_time: timedelta | None = None
-	end_time: timedelta | None = None
 	venue: str | None = None
-	medium: str | None = None
 	banner_image: str | None = None
-	is_published: bool
 	is_host: bool
 	team: str | None = None
 	team_name: str | None = None

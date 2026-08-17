@@ -5,21 +5,6 @@ from frappe.utils import getdate
 from buzz.api.events.schemas import MyEvent, MyEventsResponse
 from buzz.permissions import my_teams
 
-EVENT_FIELDS = (
-	"name",
-	"title",
-	"route",
-	"start_date",
-	"end_date",
-	"start_time",
-	"end_time",
-	"venue",
-	"medium",
-	"banner_image",
-	"is_published",
-	"team",
-)
-
 
 def my_events() -> MyEventsResponse:
 	upcoming, past = split_by_date(events_for(frappe.session.user))
@@ -50,7 +35,15 @@ def events_for(user: str) -> list[MyEvent]:
 		.left_join(team)
 		.on(team.name == event.team)
 		.select(
-			*(event[field] for field in EVENT_FIELDS),
+			event.name,
+			event.title,
+			event.route,
+			event.start_date,
+			event.end_date,
+			event.start_time,
+			event.venue,
+			event.banner_image,
+			event.team,
 			team.team_name,
 			team.logo.as_("team_logo"),
 			Case().when(hosted, 1).else_(0).as_("is_host"),
