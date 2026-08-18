@@ -33,10 +33,17 @@ frappe.ui.form.on("Event Booking", {
 		if (
 			frappe.user.has_role("System Manager") &&
 			frm.doc.docstatus === 1 &&
-			frm.doc.payment_status === "Paid" &&
-			frm.doc.refund_status !== "Refunded"
+			frm.doc.payment_status === "Paid"
 		) {
-			frm.add_custom_button(__("Issue Refund"), () => showRefundDialog(frm), __("Actions"));
+			if (frm.doc.refund_status !== "Refunded") {
+				frm.add_custom_button(
+					__("Issue Refund"),
+					() => showRefundDialog(frm),
+					__("Refunds")
+				);
+			}
+
+			frm.add_custom_button(__("Sync Refund Status"), () => syncRefunds(frm), __("Refunds"));
 		}
 
 		renderRefunds(frm);
@@ -115,6 +122,22 @@ async function renderRefunds(frm) {
 			</thead>
 			<tbody>${rows}</tbody>
 		</table>`);
+}
+
+async function syncRefunds(frm) {
+	const { message } = await frm.call("sync_refunds");
+
+	frappe.show_alert({
+		message: message.refunds
+			? __("Razorpay has {0} refund(s) on this payment, {1} new here.", [
+					message.refunds,
+					message.created,
+			  ])
+			: __("Razorpay has no refunds on this payment."),
+		indicator: "blue",
+	});
+
+	frm.reload_doc();
 }
 
 async function showRefundDialog(frm) {
