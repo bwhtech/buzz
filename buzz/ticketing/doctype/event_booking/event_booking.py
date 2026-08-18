@@ -14,6 +14,7 @@ from buzz.permissions import has_team_access
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
 	get_committed_tickets,
+	record_gateway_refund,
 )
 
 RAZORPAY = "Razorpay"
@@ -480,6 +481,34 @@ class EventBooking(Document):
 		self.set_refund_status()
 
 		return self.refund_status
+
+	@frappe.whitelist()
+	def sync_refunds(self) -> dict:
+		"""Reconcile this booking's refunds against what Razorpay actually holds."""
+		frappe.only_for("System Manager")
+
+		payment = self.get_received_payment()
+		if payment.payment_gateway != RAZORPAY:
+			frappe.throw(_("Refunds are only supported for Razorpay at the moment"))
+
+		# Razorpay lists the newest refund first, and each one recorded moves what
+		# is left to refund, so they are applied in the order they were raised.
+		refunds = list(reversed(get_controller(payment.payment_gateway).fetch_refunds(payment.payment_id)))
+
+		return {
+			"refunds": len(refunds),
+			"created": sum(self.record_refund(payment, refund) for refund in refunds),
+		}
+
+	def record_refund(self, payment, gateway_refund: dict) -> bool:
+		"""Record one gateway refund against this booking. True when it was new."""
+		return record_gateway_refund(
+			booking=self.name,
+			payment=payment.name,
+			refund_id=gateway_refund.get("id"),
+			status=gateway_refund.get("status"),
+			amount=flt(gateway_refund.get("amount")) / 100,
+		)
 
 	def validate_refund(self, amount: float, tickets: list[str] | None = None) -> None:
 		summary = self.get_refund_summary()
