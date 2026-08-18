@@ -10,6 +10,7 @@ on:
       - labeled
       - unlabeled
       - ready_for_review
+      - converted_to_draft
   # Report on the queue commit (the step below no-ops there).
   merge_group:
 
@@ -56,7 +57,10 @@ jobs:
 
             const changedUiFiles = async () => {
               const files = await github.paginate(github.rest.pulls.listFiles, pull);
-              return files.filter((file) => UI_PATH.test(file.filename));
+              // A rename reports the destination in `filename` and the origin in
+              // `previous_filename`; moving a file out of the tree still counts.
+              return files.filter((file) =>
+                UI_PATH.test(file.filename) || UI_PATH.test(file.previous_filename || ''));
             };
 
             const findComment = async () => {
@@ -85,7 +89,11 @@ jobs:
             const labels = pr.labels.map((label) => label.name);
             const skipped = SKIP_LABELS.filter((label) => labels.includes(label));
 
-            if (pr.draft) return core.info('Draft pull request, skipping.');
+            if (pr.draft) {
+              core.info('Draft pull request, skipping.');
+              return stickyComment('⏸️ **UI Demo Check** — paused while this is a draft.',
+                { createIfMissing: false });
+            }
             if (skipped.length) return pass(`skipped via the \`${skipped[0]}\` label`);
 
             const uiFiles = await changedUiFiles();
