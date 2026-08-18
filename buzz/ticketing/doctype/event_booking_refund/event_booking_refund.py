@@ -93,6 +93,11 @@ def record_gateway_refund(
 	Used for refunds the gateway reports, from the webhook or a sync — never for
 	one raised from the Desk, which records the tickets an operator picked.
 	"""
+	# The webhook job and a Desk sync can both be recording refunds on this
+	# booking. Serialising them here is what lets the reads below see every
+	# refund that came before, rather than a picture from an instant ago.
+	frappe.db.get_value("Event Booking", booking, "name", for_update=True)
+
 	existing = frappe.db.exists("Event Booking Refund", {"refund_id": refund_id})
 	if existing:
 		refund = frappe.get_doc("Event Booking Refund", existing)

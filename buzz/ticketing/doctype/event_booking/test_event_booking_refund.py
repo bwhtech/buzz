@@ -684,6 +684,39 @@ class TestSyncRefunds(BookingRefundTestCase):
 		self.assertEqual(self.refunds()[0].status, "Failed")
 		self.assertEqual(self.booking.refunded_amount, 0)
 
+	def test_a_refund_the_webhook_recorded_is_not_duplicated_by_a_sync(self):
+		log = frappe.get_doc(
+			{
+				"doctype": "Integration Request",
+				"integration_request_service": "Razorpay",
+				"request_description": "Refund Notification",
+				"is_remote_request": 1,
+				"status": "Queued",
+				"data": frappe.as_json(
+					{
+						"payload": {
+							"refund": {
+								"entity": {
+									"id": self.refund_id(),
+									"status": "processed",
+									"amount": int(CHARGED_PER_TICKET * 100),
+									"payment_id": "pay_123",
+								}
+							}
+						}
+					}
+				),
+			}
+		).insert(ignore_permissions=True)
+		with patch("frappe.sendmail"):
+			handle_refund_notification("Integration Request", log.name)
+
+		result = self.sync(self.gateway_refund(self.refund_id(), "processed", CHARGED_PER_TICKET))
+
+		self.assertEqual(result, {"refunds": 1, "created": 0})
+		self.assertEqual(len(self.refunds()), 1)
+		self.assertEqual(self.booking.refunded_amount, CHARGED_PER_TICKET)
+
 	def test_syncing_twice_does_not_count_the_same_refund_twice(self):
 		refund = self.gateway_refund(self.refund_id(), "processed", CHARGED_PER_TICKET)
 
@@ -703,6 +736,21 @@ class TestSyncRefunds(BookingRefundTestCase):
 			[row.ticket for row in self.refunds()[0].tickets],
 			[tickets[1]["ticket"]],
 		)
+
+	def test_two_refunds_in_one_batch_cancel_the_tickets_once_they_cover_the_total(self):
+		# Neither half covers the booking on its own; the second one, seeing the
+		# first already recorded, is what pays back the last of it.
+		self.sync(
+			self.gateway_refund(self.refund_id("1"), "processed", CHARGED_PER_TICKET),
+			self.gateway_refund(self.refund_id("2"), "processed", CHARGED_PER_TICKET),
+		)
+
+		refunds = self.refunds()
+		self.assertEqual(len(refunds), 2)
+		self.assertEqual(refunds[0].tickets, [])
+		self.assertEqual(len(refunds[1].tickets), 2)
+		self.assertEqual(self.booking.refund_status, "Refunded")
+		self.assertEqual([request.docstatus for request in self.cancellation_requests()], [1])
 
 	def test_sync_is_refused_when_the_gateway_is_not_razorpay(self):
 		frappe.db.set_value(
