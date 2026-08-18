@@ -97,7 +97,7 @@ jobs:
             if (skipped.length) return pass(`skipped via the \`${skipped[0]}\` label`);
 
             const uiFiles = await changedUiFiles();
-            if (!uiFiles.length) return core.info('No UI changes, skipping.');
+            if (!uiFiles.length) return pass('no UI changes');
             if (hasMedia(pr.body)) return pass('a screenshot or demo is attached');
 
             await stickyComment([
