@@ -1,0 +1,120 @@
+name: UI Demo Check
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+      - labeled
+      - unlabeled
+      - ready_for_review
+      - converted_to_draft
+  # Report on the queue commit (the step below no-ops there).
+  merge_group:
+
+concurrency:
+  group: pr-demo-check-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  require-demo:
+    runs-on: ubuntu-slim
+    steps:
+      # Deliberately no workflow-level `paths:` filter: a filtered workflow never
+      # reports on non-UI PRs, which leaves a required check pending forever.
+      # The path test happens here instead, and exits green when no UI file moved.
+      - name: Require a screenshot or demo on UI changes
+        if: github.event_name != 'merge_group'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const UI_PATH = /^dashboard\/src\//;
+            const SKIP_LABELS = ['skip-demo', 'backport'];
+            const MEDIA = [
+              /!\[[^\]]*\]\([^)]+\)/,
+              /<(img|video)\b/i,
+              /https:\/\/github\.com\/user-attachments\/assets\/\S+/i,
+              /https?:\/\/\S+\.(png|jpe?g|gif|webp|mp4|mov|webm)\b/i,
+            ];
+            const MARKER = '<!-- ui-demo-check -->';
+
+            const pull = { owner: context.repo.owner, repo: context.repo.repo,
+                           pull_number: context.payload.pull_request.number };
+
+            // The event payload body is stale on `synchronize`, so read it fresh.
+            const { data: pr } = await github.rest.pulls.get(pull);
+
+            const hasMedia = (body) => {
+              const text = (body || '').replace(/<!--[\s\S]*?-->/g, '');
+              return MEDIA.some((pattern) => pattern.test(text));
+            };
+
+            const changedUiFiles = async () => {
+              const files = await github.paginate(github.rest.pulls.listFiles, pull);
+              // A rename reports the destination in `filename` and the origin in
+              // `previous_filename`; moving a file out of the tree still counts.
+              return files.filter((file) =>
+                UI_PATH.test(file.filename) || UI_PATH.test(file.previous_filename || ''));
+            };
+
+            const findComment = async () => {
+              const comments = await github.paginate(github.rest.issues.listComments,
+                { ...context.repo, issue_number: pull.pull_number });
+              return comments.find((comment) => (comment.body || '').includes(MARKER));
+            };
+
+            // Only ever keep one comment: created on failure, flipped in place on
+            // a later pass so a fixed pull request does not keep a red comment.
+            const stickyComment = async (body, { createIfMissing }) => {
+              const existing = await findComment();
+              const payload = { ...context.repo, body: `${MARKER}\n${body}` };
+              if (existing) {
+                await github.rest.issues.updateComment({ ...payload, comment_id: existing.id });
+              } else if (createIfMissing) {
+                await github.rest.issues.createComment({ ...payload, issue_number: pull.pull_number });
+              }
+            };
+
+            const pass = async (reason) => {
+              core.info(`Demo check passed: ${reason}`);
+              await stickyComment(`✅ **UI Demo Check** — ${reason}.`, { createIfMissing: false });
+            };
+
+            const labels = pr.labels.map((label) => label.name);
+            const skipped = SKIP_LABELS.filter((label) => labels.includes(label));
+
+            if (pr.draft) {
+              core.info('Draft pull request, skipping.');
+              return stickyComment('⏸️ **UI Demo Check** — paused while this is a draft.',
+                { createIfMissing: false });
+            }
+            if (skipped.length) return pass(`skipped via the \`${skipped[0]}\` label`);
+
+            const uiFiles = await changedUiFiles();
+            if (!uiFiles.length) return pass('no UI changes');
+            if (hasMedia(pr.body)) return pass('a screenshot or demo is attached');
+
+            await stickyComment([
+              '### ❌ UI Demo Check failed',
+              '',
+              `This pull request changes the UI (${uiFiles.length} file(s) under \`dashboard/src/\`),`,
+              'but the description has no screenshot or demo. Reviewers should be able to see the',
+              'change without checking out the branch.',
+              '',
+              '### 🛠️ How to fix',
+              '',
+              '- **Edit the description** and drag a screenshot or a short screen recording into it.',
+              '  Before/after images are ideal for visual tweaks.',
+              '- Or apply the **`skip-demo`** label if a visual makes no sense here',
+              '  (pure refactor, copy change, dependency bump).',
+              '',
+              'Either one re-runs this check automatically.',
+            ].join('\n'), { createIfMissing: true });
+
+            core.setFailed('UI changes need a screenshot or demo in the pull request description.');
