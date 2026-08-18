@@ -4,6 +4,8 @@ from frappe.utils import flt
 from payments.utils import get_payment_gateway_controller
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
+from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import record_gateway_refund
+
 
 class RefundNotification(BaseModel):
 	"""The refund a Razorpay `refund.processed` or `refund.failed` webhook carries.
@@ -209,21 +211,13 @@ def handle_refund_notification(doctype: str, docname: str) -> None:
 		return
 
 	# The same event arrives more than once, so the refund is keyed on its id.
-	existing = frappe.db.exists("Event Booking Refund", {"refund_id": notification.refund_id})
-	if existing:
-		refund_doc = frappe.get_doc("Event Booking Refund", existing)
-	else:
-		refund_doc = frappe.get_doc(
-			{
-				"doctype": "Event Booking Refund",
-				"booking": payment.reference_docname,
-				"payment": payment.name,
-				"refund_id": notification.refund_id,
-				"currency": frappe.db.get_value("Event Booking", payment.reference_docname, "currency"),
-			}
-		).insert(ignore_permissions=True)
-
-	refund_doc.apply_gateway_status(gateway_status=notification.status, amount=notification.amount)
+	record_gateway_refund(
+		booking=payment.reference_docname,
+		payment=payment.name,
+		refund_id=notification.refund_id,
+		status=notification.status,
+		amount=notification.amount,
+	)
 
 	frappe.db.set_value(
 		doctype,
