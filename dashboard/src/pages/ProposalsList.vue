@@ -24,6 +24,9 @@
 					variant="subtle"
 					size="sm"
 				>
+					<template #prefix>
+						<span :class="getStatusIcon(row.status)" class="size-3" />
+					</template>
 					{{ item }}
 				</Badge>
 				<ListRowItem v-else :column="column" :row="row" :item="item" :align="align" />
@@ -49,12 +52,12 @@
 </template>
 
 <script setup lang="ts">
-import { session } from "@/data/session";
 import { useProposalStatuses } from "@/composables/useProposalStatuses";
+import { session } from "@/data/session";
 import type { ProposalListItem } from "@/types";
 import { Badge, ListRowItem, ListView, Spinner, createResource, dayjsLocal } from "frappe-ui";
 
-const { getStatusTheme } = useProposalStatuses();
+const { getStatusTheme, getStatusIcon } = useProposalStatuses();
 
 const columns = [
 	{ label: __("Title"), key: "title", width: "240px" },

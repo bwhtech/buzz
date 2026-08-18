@@ -122,6 +122,12 @@
 							variant="subtle"
 							size="md"
 						>
+							<template #prefix>
+								<span
+									:class="getStatusIcon(proposal.doc.status)"
+									class="size-3.5"
+								/>
+							</template>
 							{{ proposal.doc.status }}
 						</Badge>
 					</div>
@@ -300,7 +306,7 @@ const isEditingEventTalk = computed(() => {
 	);
 });
 
-const { getStatusTheme } = useProposalStatuses();
+const { getStatusTheme, getStatusIcon } = useProposalStatuses();
 
 const formatDate = (dateString: string) => {
 	return dayjsLocal(dateString).format("MMM DD, YYYY");
