@@ -68,6 +68,7 @@ class TestGetMyProposals(IntegrationTestCase):
 				"event",
 				"event_title",
 				"start_date",
+				"end_date",
 				"banner_image",
 				"status",
 				"creation",
@@ -102,17 +103,13 @@ class TestGetMyProposals(IntegrationTestCase):
 		row = next(r for r in serialized_proposals() if r["name"] == proposal.name)
 		self.assertEqual([speaker["first_name"] for speaker in row["speakers"]], ["First", "Second"])
 
-	def test_rows_carry_the_event_start_date(self):
-		frappe.set_user(self.speaker_user)
-		row = next(r for r in serialized_proposals() if r["name"] == self.guest_proposal)
-		self.assertEqual(cstr(row["start_date"]), "2030-01-01")
-
-	def test_rows_carry_the_event_banner(self):
+	def test_rows_carry_the_joined_event_columns(self):
 		frappe.db.set_value("Buzz Event", self.event, "banner_image", "/files/banner-probe.png")
 		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event)
 
 		frappe.set_user(self.speaker_user)
 		row = next(r for r in serialized_proposals() if r["name"] == self.guest_proposal)
+		self.assertEqual(cstr(row["start_date"]), "2030-01-01")
 		self.assertEqual(row["banner_image"], "/files/banner-probe.png")
 
 	def test_modified_tracks_the_latest_edit(self):

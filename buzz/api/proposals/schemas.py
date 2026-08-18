@@ -13,9 +13,10 @@ class ProposalListItem(APIResponse):
 	name: str
 	title: str
 	event: str
-	# Joined over the event link, so a deleted event leaves both empty.
+	# Joined over the event link, so a deleted event leaves them empty.
 	event_title: str | None = None
 	start_date: date | None = None
+	end_date: date | None = None
 	banner_image: str | None = None
 	status: str
 	creation: datetime
