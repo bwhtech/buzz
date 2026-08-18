@@ -1,4 +1,5 @@
 {% extends "components/base.html" %}
+{% import "components/macros/icons.html" as icons %}
 
 {% set theme_config = buzz_theme_config() %}
 
@@ -87,7 +88,7 @@
 <section aria-labelledby="yatra-heading">
   <div class="section-header">
     <h2 id="yatra-heading" class="section-header__title"><span class="star">&#9733;</span> {{ theme_config.yatra_heading or 'upcoming yatra' }}</h2>
-    <a href="/category/yatra" class="section-header__link">all stops <i data-lucide="arrow-right"></i></a>
+    <a href="/category/yatra" class="section-header__link">all stops {{ icons.icon("arrow-right") }}</a>
   </div>
   <div class="grid gap-6 md:grid-cols-2">
     {% for event_row in upcoming_yatra %}
@@ -111,7 +112,7 @@
 <section aria-labelledby="conf-heading" class="mt-12">
   <div class="section-header">
     <h2 id="conf-heading" class="section-header__title"><span class="star">&#9733;</span> {{ theme_config.conferences_heading or 'upcoming conferences' }}</h2>
-    <a href="/category/conferences" class="section-header__link">all <i data-lucide="arrow-right"></i></a>
+    <a href="/category/conferences" class="section-header__link">all {{ icons.icon("arrow-right") }}</a>
   </div>
   <div class="grid gap-6 md:grid-cols-2">
     {% for event_row in upcoming_conf_rest %}
@@ -162,7 +163,7 @@
         {% if category.icon_svg %}
           <span style="width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; color: var(--accent);">{{ category.icon_svg|safe }}</span>
         {% else %}
-          <i data-lucide="{{ lucide_fallback.get(category.name, 'calendar') }}"></i>
+          {{ icons.icon(lucide_fallback.get(category.name, 'calendar')) }}
         {% endif %}
       </a>
     {% endfor %}
@@ -173,7 +174,7 @@
 <section aria-labelledby="past-conf-heading" class="mt-4">
   <div class="section-header">
     <h2 id="past-conf-heading" class="section-header__title">past conferences</h2>
-    <a href="/category/conferences" class="section-header__link">all <i data-lucide="arrow-right"></i></a>
+    <a href="/category/conferences" class="section-header__link">all {{ icons.icon("arrow-right") }}</a>
   </div>
   <div class="grid gap-6 md:grid-cols-2">
     {% for event_row in past_conferences %}
@@ -197,7 +198,7 @@
 <section aria-labelledby="past-web-heading" class="mt-4">
   <div class="section-header">
     <h2 id="past-web-heading" class="section-header__title">past webinars</h2>
-    <a href="/category/webinars" class="section-header__link">all <i data-lucide="arrow-right"></i></a>
+    <a href="/category/webinars" class="section-header__link">all {{ icons.icon("arrow-right") }}</a>
   </div>
   <div class="grid gap-4 md:grid-cols-2">
     {% for event_row in past_webinars %}

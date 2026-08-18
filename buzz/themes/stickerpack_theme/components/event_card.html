@@ -1,3 +1,4 @@
+{% import "components/macros/icons.html" as icons %}
 {% import "components/macros/accents.html" as accents %}
 {% set is_past = event.is_past %}
 {% set href = event.recap_url if (is_past and event.recap_url) else ("/events/" ~ event.route) %}
@@ -23,7 +24,7 @@
     <div class="font-bold text-[20px] leading-tight">{{ event.title }}</div>
     {% if event.venue_short %}
     <div class="flex items-center gap-1.5 text-[13px] opacity-80 mt-2">
-      <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+      {{ icons.icon("map-pin", "w-3.5 h-3.5") }}
       <span>{{ event.venue_short }}</span>
     </div>
     {% endif %}

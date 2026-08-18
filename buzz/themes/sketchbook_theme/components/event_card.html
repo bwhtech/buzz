@@ -1,3 +1,4 @@
+{% import "components/macros/icons.html" as icons %}
 <a href="{{ event.recap_url if (event.is_past and event.recap_url) else ('/events/' ~ event.route) }}" class="event-card {% if event.is_past %}is-past{% endif %}" aria-label="{{ event.title }}">
   <div class="event-card__media">
     {% if event.image %}
@@ -11,7 +12,7 @@
     <h3 class="event-card__title">{{ event.title }}</h3>
     {% if event.venue_short %}
     <div class="event-card__venue">
-      <i data-lucide="map-pin"></i>
+      {{ icons.icon("map-pin") }}
       <span>{{ event.venue_short }}</span>
     </div>
     {% endif %}

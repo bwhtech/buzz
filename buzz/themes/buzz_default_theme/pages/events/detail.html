@@ -1,4 +1,5 @@
 {% extends "components/base.html" %}
+{% import "components/macros/icons.html" as icons %}
 
 {% set event_name = frappe.db.get_value("Buzz Event", {"route": event_route, "is_published": 1}, "name") %}
 {% if not event_name %}
@@ -118,7 +119,7 @@
   <div class="mt-3 grid gap-2">
     {% if date_display %}
     <div class="meta-row">
-      <i data-lucide="calendar" class="w-4 h-4 shrink-0 text-[var(--text-muted)]"></i>
+      {{ icons.icon("calendar", "w-4 h-4 shrink-0 text-[var(--text-muted)]") }}
       <span>
         {{ date_display }}
         {%- if start_time_display %} &middot; {{ start_time_display }}{% if end_time_display %} - {{ end_time_display }}{% endif %}{% endif %}
@@ -128,7 +129,7 @@
     {% endif %}
 
     <div class="meta-row">
-      <i data-lucide="{{ 'video' if is_online else 'map-pin' }}" class="w-4 h-4 shrink-0 text-[var(--text-muted)]"></i>
+      {{ icons.icon('video' if is_online else 'map-pin', "w-4 h-4 shrink-0 text-[var(--text-muted)]") }}
       <span>{% if is_online %}Online{% elif venue %}{{ venue.address or venue.name }}{% else %}Venue to be announced{% endif %}</span>
     </div>
   </div>

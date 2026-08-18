@@ -1,3 +1,4 @@
+{% import "components/macros/icons.html" as icons %}
 <div
   x-data="loginDialog()"
   x-show="open"
@@ -17,7 +18,7 @@
       aria-label="Close"
       class="absolute top-3 right-3 w-8 h-8 inline-flex items-center justify-center rounded-full opacity-60 hover:opacity-100 hover:bg-line transition-opacity"
     >
-      <i data-lucide="x" class="w-4 h-4"></i>
+      {{ icons.icon("x", "w-4 h-4") }}
     </button>
 
     <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65 mb-1" x-text="labelFor()"></div>

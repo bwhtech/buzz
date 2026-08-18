@@ -1,4 +1,5 @@
 {% extends "components/base.html" %}
+{% import "components/macros/icons.html" as icons %}
 
 {% block title %}Not found &mdash; {{ app_name }}{% endblock %}
 {% block og_title %}Not found &mdash; {{ app_name }}{% endblock %}
@@ -17,7 +18,7 @@
       </p>
       <a href="/home"
          class="bg-cta text-cta-fg hover:bg-cta-hover hover:text-white font-ui font-bold text-[12px] tracking-[0.04em] uppercase inline-flex items-center gap-2 px-6 py-3 rounded mt-8 transition-colors">
-        Back to events <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        Back to events {{ icons.icon("arrow-right", "w-4 h-4") }}
       </a>
     </div>
   </section>

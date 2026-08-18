@@ -1,3 +1,4 @@
+{% import "components/macros/icons.html" as icons %}
 {% import "components/macros/branding.html" as branding with context %}
 <header class="flex justify-between items-center gap-3 flex-wrap border-b-2 border-ink pb-2 mb-10 font-ui font-bold text-xs tracking-[0.04em] uppercase">
   <a href="/" class="font-ui font-extrabold text-base tracking-[-0.01em] normal-case text-ink no-underline">{{ branding.brand(app_logo, "h-7 w-auto", "&#9733; ") }}</a>
@@ -12,7 +13,7 @@
         class="font-ui font-bold text-xs tracking-[0.04em] uppercase text-ink opacity-80 hover:opacity-100 inline-flex items-center gap-1.5 bg-transparent border-0 cursor-pointer p-0"
       >
         Sign in
-        <i data-lucide="arrow-right"></i>
+        {{ icons.icon("arrow-right") }}
       </button>
     {% else %}
       <button
@@ -22,7 +23,7 @@
         class="font-ui font-bold text-xs tracking-[0.04em] uppercase text-ink opacity-80 hover:opacity-100 inline-flex items-center gap-1.5 bg-transparent border-0 cursor-pointer p-0"
       >
         Logout
-        <i data-lucide="arrow-right"></i>
+        {{ icons.icon("arrow-right") }}
       </button>
     {% endif %}
   </div>

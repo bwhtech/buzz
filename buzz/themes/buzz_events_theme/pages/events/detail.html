@@ -1,4 +1,5 @@
 {% extends "components/base.html" %}
+{% import "components/macros/icons.html" as icons %}
 
 {% set event_name = frappe.db.get_value("Buzz Event", {"route": event_route, "is_published": 1}, "name") %}
 {% if not event_name %}
@@ -167,7 +168,7 @@
         <a href="{{ register_href }}"
            class="font-ui inline-flex items-center justify-center gap-2 px-8 py-4 text-[13px] font-bold tracking-[0.04em] uppercase rounded bg-cta text-cta-fg hover:bg-cta-hover hover:text-white transition-colors active:translate-y-px">
           Register
-          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          {{ icons.icon("arrow-right", "w-4 h-4") }}
         </a>
         <a href="{{ secondary_href }}"
            class="font-ui inline-flex items-center justify-center gap-2 px-8 py-4 text-[13px] font-bold tracking-[0.04em] uppercase rounded border border-dashed border-line text-ink hover:opacity-70">
@@ -225,19 +226,19 @@
 
         <ul class="space-y-3 text-[13px]">
           <li class="flex items-start gap-3 border-l border-dashed border-line pl-4">
-            <i data-lucide="users" class="w-4 h-4 mt-0.5 opacity-70 shrink-0"></i>
+            {{ icons.icon("users", "w-4 h-4 mt-0.5 opacity-70 shrink-0") }}
             <span>Network with the community</span>
           </li>
           <li class="flex items-start gap-3 border-l border-dashed border-line pl-4">
-            <i data-lucide="handshake" class="w-4 h-4 mt-0.5 opacity-70 shrink-0"></i>
+            {{ icons.icon("handshake", "w-4 h-4 mt-0.5 opacity-70 shrink-0") }}
             <span>Connect with partners and implementation teams</span>
           </li>
           <li class="flex items-start gap-3 border-l border-dashed border-line pl-4">
-            <i data-lucide="mic" class="w-4 h-4 mt-0.5 opacity-70 shrink-0"></i>
+            {{ icons.icon("mic", "w-4 h-4 mt-0.5 opacity-70 shrink-0") }}
             <span>Hear from product builders and maintainers</span>
           </li>
           <li class="flex items-start gap-3 border-l border-dashed border-line pl-4">
-            <i data-lucide="lightbulb" class="w-4 h-4 mt-0.5 opacity-70 shrink-0"></i>
+            {{ icons.icon("lightbulb", "w-4 h-4 mt-0.5 opacity-70 shrink-0") }}
             <span>Learn from real-world implementations</span>
           </li>
         </ul>
@@ -283,7 +284,7 @@
         </div>
         {% if not is_webinar %}
         <a href="#schedule-heading" class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase inline-flex items-center gap-1 hover:opacity-70 no-underline">
-          See full schedule <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          See full schedule {{ icons.icon("arrow-right", "w-3.5 h-3.5") }}
         </a>
         {% endif %}
       </div>
@@ -316,7 +317,7 @@
         </div>
         <a href="{{ secondary_href }}"
            class="font-ui text-[11px] font-bold tracking-[0.04em] uppercase flex items-center gap-1 hover:opacity-70 no-underline">
-          Be a sponsor <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          Be a sponsor {{ icons.icon("arrow-right", "w-3.5 h-3.5") }}
         </a>
       </div>
 
@@ -348,7 +349,7 @@
           {% if venue.address %}
           <div class="mt-4 text-[13px] leading-relaxed opacity-90">
             <div class="flex items-start gap-2">
-              <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 opacity-70 shrink-0"></i>
+              {{ icons.icon("map-pin", "w-4 h-4 mt-0.5 opacity-70 shrink-0") }}
               <div>{{ venue.address|replace('\n', '<br />')|safe }}</div>
             </div>
           </div>
@@ -356,7 +357,7 @@
           <a href="https://www.google.com/maps/search/?api=1&query={{ venue.name|urlencode }}"
              target="_blank" rel="noopener noreferrer"
              class="font-ui text-[11px] font-bold tracking-[0.04em] uppercase mt-5 inline-flex items-center gap-1 hover:opacity-70 no-underline">
-            Open in maps <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            Open in maps {{ icons.icon("external-link", "w-3.5 h-3.5") }}
           </a>
         </div>
         <div class="aspect-[16/10] rounded-lg overflow-hidden border border-dashed border-line">
@@ -408,7 +409,7 @@
           <h2 id="related-heading" class="font-ui font-extrabold text-[22px] tracking-[-0.015em]">More in {{ category.name if category else 'this category' }}</h2>
           {% if category and category.slug %}
           <a href="/category/{{ category.slug }}" class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase inline-flex items-center gap-1 hover:opacity-70 no-underline">
-            View all <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            View all {{ icons.icon("arrow-right", "w-3.5 h-3.5") }}
           </a>
           {% endif %}
         </div>

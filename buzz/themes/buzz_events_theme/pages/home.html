@@ -1,4 +1,5 @@
 {% extends "components/base.html" %}
+{% import "components/macros/icons.html" as icons %}
 
 {% set theme_config = buzz_theme_config() %}
 {% set hero_tagline = theme_config.hero_tagline or 'Conferences, Meetups, Webinars' %}
@@ -97,7 +98,7 @@
 
           <div class="flex items-center gap-2 font-ui text-[12px] font-bold tracking-[0.04em] uppercase opacity-90 group-hover:opacity-100">
             View ticket
-            <i data-lucide="arrow-right" class="w-4 h-4 transition-transform group-hover:translate-x-1"></i>
+            {{ icons.icon("arrow-right", "w-4 h-4 transition-transform group-hover:translate-x-1") }}
           </div>
         </div>
       </a>
@@ -200,7 +201,7 @@
           {% if category.icon_svg %}
             <span class="w-5 h-5 opacity-60 group-hover:opacity-100 inline-flex items-center justify-center [&_svg]:w-5 [&_svg]:h-5">{{ category.icon_svg|safe }}</span>
           {% else %}
-            <i data-lucide="{{ lucide_fallback.get(category.name, 'calendar') }}" class="w-5 h-5 opacity-60 group-hover:opacity-100"></i>
+            {{ icons.icon(lucide_fallback.get(category.name, 'calendar'), "w-5 h-5 opacity-60 group-hover:opacity-100") }}
           {% endif %}
         </a>
       {% endfor %}

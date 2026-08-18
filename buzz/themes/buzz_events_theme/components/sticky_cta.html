@@ -1,9 +1,10 @@
+{% import "components/macros/icons.html" as icons %}
 {% set secondary_label = secondary_label or 'Propose' %}
 <div x-data="stickyCta()" x-show="visible" x-cloak x-transition.duration.200ms
      class="fixed inset-x-0 bottom-0 z-50 bg-pass border-t border-line-strong p-3 flex gap-2 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] md:hidden no-print">
   <a href="{{ register_href }}"
      class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 font-ui font-bold text-[12px] tracking-[0.04em] uppercase rounded bg-cta text-cta-fg hover:bg-cta-hover hover:text-white transition-colors active:translate-y-px">
-    Register <i data-lucide="arrow-right" class="w-4 h-4"></i>
+    Register {{ icons.icon("arrow-right", "w-4 h-4") }}
   </a>
   <a href="{{ secondary_href }}"
      class="inline-flex items-center justify-center gap-1 px-4 py-3 font-ui font-bold text-[12px] tracking-[0.04em] uppercase rounded border border-dashed border-line text-ink">

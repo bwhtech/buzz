@@ -1,3 +1,4 @@
+{% import "components/macros/icons.html" as icons %}
 {% from "components/category_pill.html" import category_pill %}
 {% set image = event.get('card_image') or event.get('banner_image') %}
 {% set past_classes = ' opacity-85 hover:opacity-100' if is_past else '' %}
@@ -16,7 +17,7 @@
     <h3 class="font-ui font-bold text-[20px] leading-tight">{{ event.title }}</h3>
     {% if event.venue_address %}
     <div class="flex items-center gap-1.5 text-xs opacity-70 mt-2">
-      <i data-lucide="map-pin"></i>
+      {{ icons.icon("map-pin") }}
       <span>{{ event.venue_address }}</span>
     </div>
     {% endif %}

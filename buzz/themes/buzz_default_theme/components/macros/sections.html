@@ -1,3 +1,4 @@
+{% import "components/macros/icons.html" as icons %}
 {# Section chrome shared by the home and category pages. #}
 
 {% macro section_header(title, heading_id=None) %}
@@ -5,5 +6,5 @@
 {% endmacro %}
 
 {% macro view_all_link(href, link_label="View all") %}
-<a href="{{ href }}" class="view-all mt-4">{{ link_label }} <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></a>
+<a href="{{ href }}" class="view-all mt-4">{{ link_label }} {{ icons.icon("arrow-right", "w-3.5 h-3.5") }}</a>
 {% endmacro %}

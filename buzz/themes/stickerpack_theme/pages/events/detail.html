@@ -1,4 +1,5 @@
 {% extends "components/base.html" %}
+{% import "components/macros/icons.html" as icons %}
 {% import "components/macros/accents.html" as accents %}
 
 {% set event_name = frappe.db.get_value("Buzz Event", {"route": event_route, "is_published": 1}, "name") %}
@@ -208,7 +209,7 @@
         {% endif %}
         <a href="https://www.google.com/maps/search/?api=1&query={{ venue.name|urlencode }}" target="_blank" rel="noopener"
            class="mono text-[11px] tracking-[0.2em] uppercase mt-4 inline-flex items-center gap-1 hover:underline">
-          Open in maps <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          Open in maps {{ icons.icon("external-link", "w-3.5 h-3.5") }}
         </a>
       </div>
       <div class="square bg-[var(--accent-warm)] text-[#161616] overflow-hidden p-0">
