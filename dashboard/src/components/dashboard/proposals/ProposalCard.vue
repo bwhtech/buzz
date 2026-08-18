@@ -5,26 +5,28 @@ import { userResource } from "@/data/user";
 import type { ProposalWithEvent } from "@/types";
 import { bannerPattern } from "@/utils/eventBanner";
 import { speakerByline } from "@/utils/speakerByline";
-import { Avatar, Badge, HoverCard, dayjs, dayjsLocal } from "frappe-ui";
+import { Avatar, Badge, HoverCard, Tooltip, dayjs, dayjsLocal } from "frappe-ui";
 import { computed } from "vue";
 
 const props = defineProps<{ proposal: ProposalWithEvent }>();
 
-const { getStatusTheme } = useProposalStatuses();
+const { getStatusTheme, getStatusIcon } = useProposalStatuses();
 
 const byline = computed(() =>
 	speakerByline(props.proposal.speakers, userResource.data?.email || session.user)
 );
 
-const banner = computed(() => ({ backgroundImage: bannerPattern(props.proposal.event) }));
+const banner = computed(() => ({
+	backgroundImage: bannerPattern(props.proposal.event),
+}));
 
 // Plain dayjs: start_date is date-only, and a timezone shift moves it a day back.
 const eventDate = computed(() => dayjs(props.proposal.start_date).format("D MMM YYYY"));
 
 // modified is a full timestamp in the site's timezone, so this one does convert.
-const lastUpdated = computed(() =>
-	dayjsLocal(props.proposal.modified).format("D MMM YYYY, h:mm A")
-);
+const modified = computed(() => dayjsLocal(props.proposal.modified));
+const lastUpdated = computed(() => modified.value.fromNow());
+const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm A"));
 </script>
 
 <template>
@@ -34,11 +36,6 @@ const lastUpdated = computed(() =>
 	>
 		<article class="flex flex-col space-y-6 p-4">
 			<div class="space-y-2">
-				<Badge
-					class="w-fit mb-1"
-					:label="proposal.status"
-					:theme="getStatusTheme(proposal.status)"
-				/>
 				<h3 class="font-semibold text-xl text-ink-gray-8">{{ proposal.title }}</h3>
 				<p v-if="byline" class="text-base text-ink-gray-7">
 					By {{ byline.lead
@@ -75,32 +72,47 @@ const lastUpdated = computed(() =>
 			</div>
 
 			<div class="flex gap-4 justify-between">
-				<p class="text-base text-ink-gray-7">
-					For
-					<HoverCard :hover-delay="0.15" align="start">
-						<template #trigger>
-							<span
-								class="font-medium text-ink-gray-8 transition-colors hover:text-ink-gray-9"
-								>{{ proposal.event_title }}</span
-							>
+				<div class="flex items-center gap-2">
+					<Badge class="w-fit" :theme="getStatusTheme(proposal.status)">
+						<template #prefix>
+							<span :class="getStatusIcon(proposal.status)" class="size-3.5" />
 						</template>
-						<div class="w-56 space-y-2 p-2">
-							<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
-							<img
-								v-if="proposal.banner_image"
-								class="h-24 w-full rounded object-cover object-top"
-								:src="proposal.banner_image"
-								:style="banner"
-								alt=""
-							/>
-							<div v-else class="h-24 w-full rounded" :style="banner" />
+						<span class="ml-0.5">{{ proposal.status }}</span>
+					</Badge>
+					<p class="text-base text-ink-gray-7">
+						For
+						<HoverCard :hover-delay="0.15" align="start">
+							<template #trigger>
+								<span
+									class="font-medium text-ink-gray-8 transition-colors hover:text-ink-gray-9"
+									>{{ proposal.event_title }}</span
+								>
+							</template>
+							<div class="w-56 space-y-2 p-2">
+								<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
+								<img
+									v-if="proposal.banner_image"
+									class="h-24 w-full rounded object-cover object-top"
+									:src="proposal.banner_image"
+									:style="banner"
+									alt=""
+								/>
+								<div v-else class="h-24 w-full rounded" :style="banner" />
 
-							<p class="font-medium text-ink-gray-8">{{ proposal.event_title }}</p>
-							<p class="text-sm text-ink-gray-5">{{ eventDate }}</p>
-						</div>
-					</HoverCard>
-				</p>
-				<p class="shrink-0 text-sm text-ink-gray-6">Last updated {{ lastUpdated }}</p>
+								<p class="font-medium text-ink-gray-8">
+									{{ proposal.event_title }}
+								</p>
+								<p class="text-sm text-ink-gray-5">{{ eventDate }}</p>
+							</div>
+						</HoverCard>
+					</p>
+				</div>
+				<Tooltip :text="`Last updated on ${lastUpdatedExact}`">
+					<span class="flex items-center gap-1 text-ink-gray-5">
+						<span class="lucide-clock-fading size-3.5"></span>
+						<p class="shrink-0 text-sm">{{ lastUpdated }}</p>
+					</span>
+				</Tooltip>
 			</div>
 		</article>
 	</RouterLink>
