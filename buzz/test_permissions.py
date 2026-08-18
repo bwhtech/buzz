@@ -81,7 +81,11 @@ def create_booking(event: str, user: str, owner: str | None = None) -> str:
 
 
 def create_ticket(
-	event: str, owner: str, attendee_email: str | None = None, booking: str | None = None
+	event: str,
+	owner: str,
+	attendee_email: str | None = None,
+	booking: str | None = None,
+	submit: bool = False,
 ) -> str:
 	ticket = frappe.get_doc(
 		{
@@ -93,6 +97,8 @@ def create_ticket(
 			"booking": booking,
 		}
 	).insert(ignore_permissions=True)
+	if submit:
+		ticket.submit()
 	frappe.db.set_value("Event Ticket", ticket.name, "owner", owner, update_modified=False)
 	return ticket.name
 
@@ -454,6 +460,91 @@ class TestNonMemberCarveOuts(TeamPermissionTestCase):
 
 	def test_guest_event_reads_are_never_narrowed(self):
 		self.assertIsNone(team_query_conditions(user="Guest", doctype="Buzz Event"))
+
+
+class TicketHolderTestCase(TeamPermissionTestCase):
+	"""A ticket is owned by whoever booked it, which is rarely the attendee holding it."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.booker = create_user("perm-booker@example.com", "Booker")
+		cls.holder = create_user("perm-holder@example.com", "Holder")
+		cls.stranger = create_user("perm-stranger@example.com", "Stranger")
+		cls.viewer = create_user("perm-viewer@example.com", "Viewer")
+		add_member(cls.team_b, cls.viewer, "Viewer")
+
+	def listed_tickets(self, user: str) -> list[str]:
+		self.as_user(user)
+		return frappe.get_list("Event Ticket", pluck="name")
+
+	def held_ticket(self, owner: str | None = None) -> str:
+		return create_ticket(self.event_b, owner or self.booker, attendee_email=self.holder, submit=True)
+
+
+class TestTicketHolderVisibility(TicketHolderTestCase):
+	def test_holder_sees_a_guest_booked_ticket(self):
+		ticket = self.held_ticket(owner="Guest")
+
+		self.assertIn(ticket, self.listed_tickets(self.holder))
+
+	def test_booker_still_sees_the_tickets_they_created(self):
+		ticket = self.held_ticket()
+
+		self.assertIn(ticket, self.listed_tickets(self.booker))
+
+	def test_team_member_reads_every_ticket_for_their_event(self):
+		ticket = self.held_ticket()
+
+		self.as_user(self.bob)
+		self.assertTrue(frappe.has_permission("Event Ticket", "read", doc=ticket))
+
+	def test_viewer_sees_their_teams_tickets(self):
+		ticket = self.held_ticket()
+
+		self.assertIn(ticket, self.listed_tickets(self.viewer))
+
+
+class TestTicketImmutability(TicketHolderTestCase):
+	"""Reading a ticket you hold is a carve-out. Changing one is not."""
+
+	def test_holder_cannot_cancel_or_delete_their_ticket(self):
+		ticket = self.held_ticket()
+
+		self.as_user(self.holder)
+		self.assertFalse(frappe.has_permission("Event Ticket", "cancel", doc=ticket))
+		self.assertFalse(frappe.has_permission("Event Ticket", "delete", doc=ticket))
+
+	def test_holder_saving_their_ticket_is_refused(self):
+		ticket = create_ticket(self.event_b, self.booker, attendee_email=self.holder)
+
+		self.as_user(self.holder)
+		doc = frappe.get_doc("Event Ticket", ticket)
+		doc.attendee_name = "Renamed"
+
+		with self.assertRaises(frappe.PermissionError):
+			doc.save()
+
+	def test_stranger_cannot_write_another_persons_ticket(self):
+		ticket = self.held_ticket()
+
+		self.as_user(self.stranger)
+		self.assertFalse(frappe.has_permission("Event Ticket", "write", doc=ticket))
+
+	def test_submitted_ticket_is_frozen_even_for_administrator(self):
+		doc = frappe.get_doc("Event Ticket", self.held_ticket())
+		doc.event = self.event_a
+
+		with self.assertRaises(frappe.UpdateAfterSubmitError):
+			doc.save()
+
+	def test_only_the_transfer_fields_stay_editable_after_submit(self):
+		editable = {
+			field.fieldname for field in frappe.get_meta("Event Ticket").fields if field.allow_on_submit
+		}
+
+		# The ticket transfer flow needs these four and nothing else.
+		self.assertEqual(editable, {"first_name", "last_name", "attendee_name", "attendee_email"})
 
 
 class TestTeamSettingsPermissions(TeamPermissionTestCase):

@@ -76,6 +76,23 @@ export interface MyEvents {
 	past: MyEvent[]
 }
 
+// A ticket the user holds, flattened with the context its event carries.
+export interface TicketStub {
+	name: string
+	attendee_name: string
+	ticket_type: string
+	qr_code: string | null
+	// Event columns come over a link hop, so a deleted event leaves them null.
+	event_title: string | null
+	start_date: string | null
+	end_date: string | null
+	start_time: string | null
+	venue: string | null
+}
+
+// A ticket whose event row still resolves — the only kind the ticket UI can draw.
+export type TicketWithEvent = TicketStub & { event_title: string; start_date: string }
+
 // Languages served by the translation API (not a Buzz DocType).
 export interface Language {
 	name: string

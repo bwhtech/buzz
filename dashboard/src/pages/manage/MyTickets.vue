@@ -1,16 +1,11 @@
 <script setup lang="ts">
-import EventCard from "@/components/dashboard/events/EventCard.vue";
-import type { MyEvents } from "@/types";
+import PrintedTicket from "@/components/dashboard/tickets/PrintedTicket.vue";
+import { useMyTickets } from "@/data/tickets";
+import type { TicketWithEvent } from "@/types";
 import { dayLabel, monthLabel, weekday } from "@/utils/dateLabels";
 import { groupEventsByMonth } from "@/utils/eventGroups";
-import { ErrorMessage, LoadingText, TabButtons, useCall } from "frappe-ui";
+import { ErrorMessage, LoadingText, TabButtons, dayjs } from "frappe-ui";
 import { computed, ref } from "vue";
-
-// v2 path: useCall reads the payload from `data`, which /api/method names `message`.
-// Uncached: cacheKey would persist this user's feed to IndexedDB past a logout.
-const myEvents = useCall<MyEvents>({
-	url: "/api/v2/method/buzz.api.events.get_my_events",
-});
 
 const tab = ref<"upcoming" | "past">("upcoming");
 const tabOptions = [
@@ -18,19 +13,41 @@ const tabOptions = [
 	{ label: "Past", value: "past" },
 ];
 
-const months = computed(() => groupEventsByMonth(myEvents.data?.[tab.value] || []));
+const tickets = useMyTickets();
+
+// A ticket whose event was deleted has no date to file it under, so it drops out.
+const dated = computed(() =>
+	(tickets.data || []).filter((ticket): ticket is TicketWithEvent =>
+		Boolean(ticket.start_date && ticket.event_title)
+	)
+);
+
+const months = computed(() => {
+	const today = dayjs().format("YYYY-MM-DD");
+	const upcoming = tab.value === "upcoming";
+	// Same rule as the events feed: an event running through today is not over yet.
+	const isOver = (ticket: TicketWithEvent) => (ticket.end_date || ticket.start_date) < today;
+	const shown = dated.value
+		.filter((ticket) => isOver(ticket) !== upcoming)
+		.sort((a, b) =>
+			upcoming
+				? a.start_date.localeCompare(b.start_date)
+				: b.start_date.localeCompare(a.start_date)
+		);
+	return groupEventsByMonth(shown);
+});
 </script>
 
 <template>
 	<div class="m-auto max-w-[800px] w-full py-8 px-4 space-y-6">
 		<header class="flex items-center justify-between">
-			<h1 class="font-semibold text-4xl">Events</h1>
+			<h1 class="font-semibold text-4xl">Tickets</h1>
 			<TabButtons v-model="tab" :options="tabOptions" size="md" />
 		</header>
 
-		<ErrorMessage v-if="myEvents.error" :message="myEvents.error.message" />
+		<ErrorMessage v-if="tickets.error" :message="tickets.error.message" />
 
-		<LoadingText v-else-if="myEvents.loading" text="Loading events..." />
+		<LoadingText v-else-if="tickets.loading" text="Loading tickets..." />
 
 		<div v-else class="relative space-y-6">
 			<section v-for="month in months" :key="month.month" class="space-y-4">
@@ -62,10 +79,10 @@ const months = computed(() => groupEventsByMonth(myEvents.data?.[tab.value] || [
 						</div>
 
 						<div class="space-y-6">
-							<EventCard
-								v-for="event in day.events"
-								:key="event.name"
-								:event="event"
+							<PrintedTicket
+								v-for="ticket in day.events"
+								:key="ticket.name"
+								:ticket="ticket"
 							/>
 						</div>
 					</div>
@@ -74,10 +91,10 @@ const months = computed(() => groupEventsByMonth(myEvents.data?.[tab.value] || [
 		</div>
 
 		<p
-			v-if="!months.length && !myEvents.loading && !myEvents.error"
+			v-if="!months.length && !tickets.loading && !tickets.error"
 			class="text-base text-ink-gray-5"
 		>
-			No {{ tab }} events.
+			No {{ tab }} tickets.
 		</p>
 	</div>
 </template>
