@@ -42,21 +42,23 @@ const lastUpdated = computed(() =>
 				<h3 class="font-semibold text-xl text-ink-gray-8">{{ proposal.title }}</h3>
 				<p v-if="byline" class="text-base text-ink-gray-7">
 					By {{ byline.lead
-					}}<template v-if="byline.partner"> &amp; {{ byline.partner }}</template>
-					<template v-else-if="byline.others.length">
+					}}<template v-if="byline.rest.length === 1">
+						&amp; {{ byline.rest[0] }}</template
+					>
+					<template v-else-if="byline.rest.length">
 						and
 						<HoverCard :hover-delay="0.15" align="start">
 							<template #trigger>
 								<span
 									class="underline decoration-dotted underline-offset-2 transition-colors hover:text-ink-gray-9"
 								>
-									{{ byline.others.length }} others
+									{{ byline.rest.length }} others
 								</span>
 							</template>
 							<div class="p-2">
 								<ul class="space-y-2">
 									<li
-										v-for="(name, index) in byline.others"
+										v-for="(name, index) in byline.rest"
 										:key="index"
 										class="flex items-center gap-2 text-sm text-ink-gray-8"
 									>
@@ -67,7 +69,7 @@ const lastUpdated = computed(() =>
 							</div>
 						</HoverCard>
 						<!-- The card is hover-only, so the names need a spoken path too. -->
-						<span class="sr-only">: {{ byline.others.join(", ") }}</span>
+						<span class="sr-only">: {{ byline.rest.join(", ") }}</span>
 					</template>
 				</p>
 			</div>

@@ -17,16 +17,14 @@ test("no speakers have no byline", () => {
 test("a lone speaker who is the reader is You", () => {
 	assert.deepEqual(speakerByline([speaker("Me", ME)], ME), {
 		lead: "You",
-		partner: null,
-		others: [],
+		rest: [],
 	})
 })
 
 test("a lone speaker who is someone else gets their full name", () => {
 	assert.deepEqual(speakerByline([speaker("Jane", "jane@example.com", "Doe")], ME), {
 		lead: "Jane Doe",
-		partner: null,
-		others: [],
+		rest: [],
 	})
 })
 
@@ -35,8 +33,7 @@ test("a pair reads as you and the other speaker, whatever the row order", () => 
 
 	assert.deepEqual(speakerByline(speakers, ME), {
 		lead: "You",
-		partner: "Jane Doe",
-		others: [],
+		rest: ["Jane Doe"],
 	})
 })
 
@@ -45,8 +42,7 @@ test("a pair without the reader keeps its row order", () => {
 
 	assert.deepEqual(speakerByline(speakers, ME), {
 		lead: "Jane",
-		partner: "Ravi",
-		others: [],
+		rest: ["Ravi"],
 	})
 })
 
@@ -60,8 +56,7 @@ test("a crowd names the reader and hides the rest", () => {
 
 	assert.deepEqual(speakerByline(speakers, ME), {
 		lead: "You",
-		partner: null,
-		others: ["Jane", "Ravi", "Sam"],
+		rest: ["Jane", "Ravi", "Sam"],
 	})
 })
 
@@ -74,23 +69,20 @@ test("a crowd without the reader leads with the first speaker", () => {
 
 	assert.deepEqual(speakerByline(speakers, ME), {
 		lead: "Jane",
-		partner: null,
-		others: ["Ravi", "Sam"],
+		rest: ["Ravi", "Sam"],
 	})
 })
 
 test("a speaker email cased differently is still the reader", () => {
 	assert.deepEqual(speakerByline([speaker("Me", "Me@Example.COM")], ME), {
 		lead: "You",
-		partner: null,
-		others: [],
+		rest: [],
 	})
 })
 
 test("a speaker with no name falls back to their email", () => {
 	assert.deepEqual(speakerByline([speaker("", "jane@example.com")], ME), {
 		lead: "jane@example.com",
-		partner: null,
-		others: [],
+		rest: [],
 	})
 })
