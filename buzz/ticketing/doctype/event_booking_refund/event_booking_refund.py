@@ -9,6 +9,11 @@ from frappe.utils import flt
 # A refund that the gateway has not rejected still holds money and tickets.
 COMMITTED_STATUSES = ("Initiated", "Processed")
 
+# What the gateway settled on. Anything else is still in flight.
+FINAL_STATUSES = ("Processed", "Failed")
+
+GATEWAY_STATUSES = {"processed": "Processed", "failed": "Failed"}
+
 
 class EventBookingRefund(Document):
 	# begin: auto-generated types
@@ -35,8 +40,13 @@ class EventBookingRefund(Document):
 
 	def apply_gateway_status(self, gateway_status: str, amount: float) -> None:
 		"""Record what the gateway settled on this refund."""
+		# A settled refund does not un-settle: a sync can read a stale `pending`,
+		# or arrive behind the webhook that already recorded the outcome.
+		if self.status in FINAL_STATUSES:
+			return
+
 		self.amount = flt(amount)
-		self.status = "Failed" if gateway_status == "failed" else "Processed"
+		self.status = GATEWAY_STATUSES.get(gateway_status, "Initiated")
 
 		# Runs as Guest out of the webhook job; the signature already authenticated it.
 		self.flags.ignore_permissions = True
@@ -73,6 +83,53 @@ class EventBookingRefund(Document):
 
 	def on_update(self):
 		frappe.get_doc("Event Booking", self.booking).set_refund_status()
+
+
+def record_gateway_refund(
+	booking: str, payment: str | None, refund_id: str, status: str, amount: float
+) -> bool:
+	"""Create or update the refund `refund_id` names. True when it was new.
+
+	Used for refunds the gateway reports, from the webhook or a sync — never for
+	one raised from the Desk, which records the tickets an operator picked.
+	"""
+	# The webhook job and a Desk sync can both be recording refunds on this
+	# booking. Serialising them here is what lets the reads below see every
+	# refund that came before, rather than a picture from an instant ago.
+	frappe.db.get_value("Event Booking", booking, "name", for_update=True)
+
+	existing = frappe.db.exists("Event Booking Refund", {"refund_id": refund_id})
+	if existing:
+		refund = frappe.get_doc("Event Booking Refund", existing)
+	else:
+		refund = frappe.get_doc(
+			{
+				"doctype": "Event Booking Refund",
+				"booking": booking,
+				"payment": payment,
+				"refund_id": refund_id,
+				"currency": frappe.db.get_value("Event Booking", booking, "currency"),
+				"tickets": [{"ticket": ticket} for ticket in tickets_a_refund_covers(booking, amount)],
+			}
+		).insert(ignore_permissions=True)
+
+	refund.apply_gateway_status(gateway_status=status, amount=amount)
+
+	return not existing
+
+
+def tickets_a_refund_covers(booking: str, amount: float) -> list[str]:
+	"""The tickets a refund raised outside Buzz pays back for: what is left, or nothing."""
+	# Read before the refund is recorded: `remaining` is already net of every
+	# refund the booking holds, so a refund counts itself out once it is stored.
+	doc = frappe.get_doc("Event Booking", booking)
+	summary = doc.get_refund_summary()
+	precision = doc.precision("total_amount")
+
+	if flt(amount, precision) < flt(summary["remaining"], precision):
+		return []
+
+	return [ticket["ticket"] for ticket in summary["tickets"]]
 
 
 def get_committed_refunds(booking: str) -> list[frappe._dict]:
