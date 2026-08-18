@@ -1,0 +1,32 @@
+{# Category presentation shared by every buzz theme.
+
+   Event Category.icon_svg is a Code field, which Frappe does not XSS-sanitize, so raw SVG from
+   that field is never rendered. Categories name an icon instead and it is drawn server-side by
+   the icons macro.
+
+   DEFAULT_CATEGORY_ICONS only covers the categories a fresh install ships with; any renamed or
+   added category should set Icon Name on the record rather than growing this map. #}
+
+{% import "components/macros/icons.html" as icons %}
+
+{% set DEFAULT_CATEGORY_ICONS = {
+  'Conferences': 'users',
+  'Local': 'map-pin',
+  'Meetups': 'coffee',
+  'Webinars': 'monitor',
+  'Yatra': 'route'
+} %}
+
+{% set DEFAULT_CATEGORY_SUBTITLES = {
+  'Conferences': 'Flagship',
+  'Webinars': 'Online',
+  'Yatra': 'Roadshow'
+} %}
+
+{% macro category_icon(category, class_name="") %}
+{{- icons.icon(category.icon_name or DEFAULT_CATEGORY_ICONS.get(category.name, 'calendar'), class_name) -}}
+{% endmacro %}
+
+{% macro category_subtitle(category) %}
+{{- category.subtitle or DEFAULT_CATEGORY_SUBTITLES.get(category.name, _("Browse")) -}}
+{% endmacro %}

@@ -1,7 +1,7 @@
 {% import "components/macros/icons.html" as icons %}
 {% import "components/macros/branding.html" as branding with context %}
 <header class="rule-bar">
-  <a href="/home" class="brand">{{ branding.brand(app_logo, "brand-logo", "&#9733; ") }}</a>
+  <a href="/home" class="brand">{{ branding.brand(app_logo, "brand-logo", "★ ") }}</a>
   <div class="inline-flex items-center gap-4">
     {% include "components/theme_toggle.html" %}
     {% if frappe.session.user == "Guest" %}

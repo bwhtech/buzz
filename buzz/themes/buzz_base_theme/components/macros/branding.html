@@ -2,7 +2,8 @@
 
 {% macro brand(logo=None, logo_class="", prefix="") %}
   {%- if brand_html -%}
-    {{ brand_html }}
+    {# Website Settings is System Manager only, and this field is HTML by definition. #}
+    {{ brand_html|safe }}
   {%- elif logo -%}
     <img src="{{ logo }}" alt="{{ app_name }}"{% if logo_class %} class="{{ logo_class }}"{% endif %} />
   {%- else -%}

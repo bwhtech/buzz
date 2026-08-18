@@ -1,7 +1,7 @@
 {% import "components/macros/branding.html" as branding with context %}
 <footer class="mt-16 pt-5 border-t border-dashed border-line">
   <div class="flex flex-wrap justify-between items-center gap-4">
-    <span class="font-ui font-extrabold text-base tracking-[-0.01em]">{{ branding.brand(footer_logo or app_logo, "h-7 w-auto", "&#9733; ") }}</span>
+    <span class="font-ui font-extrabold text-base tracking-[-0.01em]">{{ branding.brand(footer_logo or app_logo, "h-7 w-auto", "★ ") }}</span>
     {% if footer_items %}
     <nav class="flex items-center gap-5 flex-wrap">
       {{ branding.footer_links("font-ui font-medium text-xs opacity-70 hover:opacity-100 no-underline") }}

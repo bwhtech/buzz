@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import re
 
 import frappe
 from frappe.utils.jinja import get_jenv
@@ -27,13 +28,30 @@ RESERVED_PATH_SEGMENTS = frozenset(
 	}
 )
 
+# A dynamic page name maps straight onto a file under the theme's pages/ directory, so every
+# segment has to be inert on a filesystem. Werkzeug hands us the path un-normalised, which
+# means an encoded "..%2f" would otherwise walk out of pages/ and render any partial.
+DYNAMIC_PATH_SEGMENT_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def is_safe_dynamic_path(request_path):
+	segments = request_path.split("/")
+	return all(DYNAMIC_PATH_SEGMENT_PATTERN.match(segment) for segment in segments)
+
 
 def find_theme_file(theme_dirs, relative_path):
+	if ".." in relative_path.split("/"):
+		return None
+
 	for theme_dir in theme_dirs:
 		candidate = os.path.join(theme_dir, relative_path)
 		if is_within_directory(theme_dir, candidate) and os.path.isfile(candidate):
 			return candidate
 	return None
+
+
+def get_template_auth_requirement(routes, template_path):
+	return any(route["requires_auth"] for route in routes if route["template_path"] == template_path)
 
 
 page_controller_modules = {}
@@ -50,7 +68,7 @@ def load_page_controller(theme_dirs, template_relative_path):
 	if cached and cached[0] == modified_time:
 		return cached[1]
 
-	module_name = build_controller_module_name(theme_dirs, controller_path, controller_relative_path)
+	module_name = get_controller_module_name(theme_dirs, controller_path, controller_relative_path)
 	spec = importlib.util.spec_from_file_location(module_name, controller_path)
 	module = importlib.util.module_from_spec(spec)
 	spec.loader.exec_module(module)
@@ -58,7 +76,7 @@ def load_page_controller(theme_dirs, template_relative_path):
 	return module
 
 
-def build_controller_module_name(theme_dirs, controller_path, relative_path):
+def get_controller_module_name(theme_dirs, controller_path, relative_path):
 	theme_slug = ""
 	for theme_dir in theme_dirs:
 		if os.path.join(theme_dir, relative_path) == controller_path:
@@ -119,9 +137,12 @@ class ThemePageRenderer:
 			settings["dynamic_pages_enabled"]
 			and request_path
 			and request_path.split("/")[0] not in RESERVED_PATH_SEGMENTS
+			and is_safe_dynamic_path(request_path)
 		):
 			template_path = f"pages/{request_path}.html"
-			requires_auth = False
+			# The auth flag belongs to the template, not to the URL that reached it. Without this
+			# lookup a gated template stays reachable by its file path once dynamic pages are on.
+			requires_auth = get_template_auth_requirement(settings["routes"], template_path)
 		else:
 			return False
 
@@ -138,7 +159,7 @@ class ThemePageRenderer:
 		if self.requires_auth and frappe.session.user == "Guest":
 			raise frappe.PermissionError
 
-		context = build_base_context(self.match)
+		context = get_base_context(self.match)
 		run_page_controller(self.theme_dirs, self.template_path, context)
 		html = self.render_with_theme_loader(context)
 		return build_response(self.path, html, self.http_status_code or 200)
@@ -196,23 +217,32 @@ def get_theme_environment(jenv, theme_dirs):
 	theme_env = theme_environments.get(key)
 	if theme_env is None:
 		loader = ThemeFallbackLoader(theme_dirs, jenv.loader)
-		theme_env = jenv.overlay(loader=loader)
+		# Frappe's shared jenv renders with autoescape off, which makes every {{ }} in a theme an
+		# XSS sink for any field Frappe does not sanitize on save (Code and Data fields, and
+		# anything written through db.set_value, which skips validation). Themes are ours to
+		# define, so they opt in to escape-by-default and mark the deliberate HTML with |safe.
+		theme_env = jenv.overlay(loader=loader, autoescape=True)
 		theme_env.auto_reload = bool(frappe.conf.get("developer_mode") or frappe._dev_server)
 		theme_environments[key] = theme_env
+
+	# The overlay is cached for the process but jenv is rebuilt per request, and its globals carry
+	# request state (session.user, csrf_token, form_dict). Without this reassignment a macro
+	# imported without "with context" would read whichever request built the overlay first.
+	theme_env.globals = jenv.globals
 	return theme_env
 
 
-def build_base_context(match):
+def get_base_context(match):
 	context = frappe._dict(
 		is_rtl=is_rtl(),
 		csrf_token=frappe.sessions.get_csrf_token(),
 	)
 
 	if match:
-		apply_route_groups(match, context)
+		set_route_groups(match, context)
 
-	apply_website_settings(context)
-	apply_website_context_hooks(context)
+	set_website_settings(context)
+	set_website_context_hooks(context)
 
 	return context
 
@@ -220,35 +250,34 @@ def build_base_context(match):
 DEFAULT_APP_NAME = "Buzz"
 
 
-def apply_website_settings(context):
+def set_website_settings(context):
 	context.app_name = DEFAULT_APP_NAME
 	context.app_logo = None
 	context.boot = {}
 
-	try:
-		# Also fills context.boot, so a themed page gets the same site-wide
-		# context frappe's own renderers build.
-		context.update(get_website_settings())
+	# Also fills context.boot, so a themed page gets the same site-wide context frappe's own
+	# renderers build. A failure here means the site is broken, not that this page should quietly
+	# render unbranded - swallowing it used to write one Error Log row per request.
+	context.update(get_website_settings())
 
-		# get_website_settings() leaves out the branding fields the themes render
-		# the brand from, so a site never has to restate its own identity.
-		settings = frappe.client_cache.get_doc("Website Settings")
-		context.app_name = settings.app_name or DEFAULT_APP_NAME
-		context.app_logo = settings.app_logo
-	except Exception:
-		frappe.log_error(title="Buzz Theme: website settings failed")
+	# get_website_settings() leaves out the branding fields the themes render the brand from,
+	# so a site never has to restate its own identity.
+	app_name, app_logo = frappe.db.get_value("Website Settings", None, ["app_name", "app_logo"])
+	context.app_name = app_name or DEFAULT_APP_NAME
+	context.app_logo = app_logo
 
 
-def apply_route_groups(match, context):
+def set_route_groups(match, context):
 	groups = match.groupdict() or {}
 	if not groups:
 		return
 
+	# Route captures belong to the render context only. Merging them into form_dict would let a
+	# capture named cmd/user/doctype shadow a real request argument.
 	context.update(groups)
-	frappe.local.form_dict.update(groups)
 
 
-def apply_website_context_hooks(context):
+def set_website_context_hooks(context):
 	for hook_method in frappe.get_hooks("update_website_context"):
 		values = frappe.get_attr(hook_method)(context)
 		if values:

@@ -1,5 +1,6 @@
 {% extends "components/base.html" %}
 {% import "components/macros/icons.html" as icons %}
+{% import "components/macros/maps.html" as maps %}
 
 {% set event_name = frappe.db.get_value("Buzz Event", {"route": event_route, "is_published": 1}, "name") %}
 {% if not event_name %}
@@ -350,7 +351,7 @@
           <div class="mt-4 text-[13px] leading-relaxed opacity-90">
             <div class="flex items-start gap-2">
               {{ icons.icon("map-pin", "w-4 h-4 mt-0.5 opacity-70 shrink-0") }}
-              <div>{{ venue.address|replace('\n', '<br />')|safe }}</div>
+              <div class="whitespace-pre-line">{{ venue.address }}</div>
             </div>
           </div>
           {% endif %}
@@ -361,18 +362,11 @@
           </a>
         </div>
         <div class="aspect-[16/10] rounded-lg overflow-hidden border border-dashed border-line">
-          {% if venue.google_maps_embed_code %}
-            {{ venue.google_maps_embed_code|safe }}
-          {% elif venue.latitude and venue.longitude and (venue.latitude|float != 0 or venue.longitude|float != 0) %}
-            <iframe
-              title="Map of {{ venue.name }}"
-              src="https://www.openstreetmap.org/export/embed.html?bbox={{ venue.longitude|float - 0.01 }},{{ venue.latitude|float - 0.01 }},{{ venue.longitude|float + 0.01 }},{{ venue.latitude|float + 0.01 }}&layer=mapnik&marker={{ venue.latitude }},{{ venue.longitude }}"
-              class="w-full h-full border-0" loading="lazy"></iframe>
-          {% else %}
+          {% call maps.venue_map(venue, "w-full h-full border-0") %}
             <div class="w-full h-full flex items-center justify-center opacity-40 text-[11px] tracking-[0.04em] uppercase">
               map &middot; {{ venue.name }}
             </div>
-          {% endif %}
+          {% endcall %}
         </div>
       </div>
     </section>

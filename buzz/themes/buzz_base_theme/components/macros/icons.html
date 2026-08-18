@@ -8,7 +8,8 @@
    removes the post-DOMContentLoaded icon pop-in.
 
    Adding an icon: copy the child elements from node_modules/lucide/dist/esm/icons/<name>.js
-   (or lucide.dev), keeping the paths in source order. #}
+   (or lucide.dev), keeping the paths in source order. An unknown name throws rather than
+   silently drawing the wrong glyph. #}
 
 {% set BUZZ_ICON_BODIES = {
   'arrow-right': '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
@@ -26,7 +27,11 @@
   'x': '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'
 } %}
 
-{% macro icon(icon_name, class_name="") %}
-{%- set body = BUZZ_ICON_BODIES.get(icon_name, BUZZ_ICON_BODIES['calendar']) -%}
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="{{ icon_name }}" class="lucide lucide-{{ icon_name }}{% if class_name %} {{ class_name }}{% endif %}" aria-hidden="true">{{ body|safe }}</svg>
+{# Pass `label` for an icon that is the only content of a control; it swaps the decorative
+   aria-hidden for role="img" plus an accessible name. Icons next to visible text need nothing. #}
+{% macro icon(icon_name, class_name="", label="") %}
+{%- if icon_name not in BUZZ_ICON_BODIES -%}
+{{- frappe.throw(_("Unknown buzz theme icon: {0}").format(icon_name)) -}}
+{%- endif -%}
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="{{ icon_name }}" class="lucide lucide-{{ icon_name }}{% if class_name %} {{ class_name }}{% endif %}"{% if label %} role="img"{% else %} aria-hidden="true"{% endif %}>{% if label %}<title>{{ label }}</title>{% endif %}{{ BUZZ_ICON_BODIES[icon_name]|safe }}</svg>
 {%- endmacro %}

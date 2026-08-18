@@ -26,7 +26,7 @@
 
 {% set categories = frappe.get_all("Event Category",
       filters={"enabled": 1},
-      fields=["name", "slug", "description", "icon_svg"],
+      fields=["name", "slug", "description", "icon_name", "subtitle"],
       order_by="name asc") %}
 
 {% set upcoming_conferences = [] %}

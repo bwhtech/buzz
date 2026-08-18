@@ -219,7 +219,7 @@ def scaffold_theme(theme_name, module=None):
 		os.makedirs(get_contained_path(theme_public_dir, folder), exist_ok=True)
 
 
-def build_theme_context(theme_name):
+def get_theme_context_uncached(theme_name):
 	if not theme_name:
 		return {"theme_name": None, "names": [], "dirs": [], "apps": {}, "settings_doctype": None}
 
@@ -255,9 +255,9 @@ def resolve_theme():
 
 def get_theme_context(theme_name):
 	if not theme_name:
-		return build_theme_context(None)
+		return get_theme_context_uncached(None)
 	return frappe.cache.hget(
-		"buzz_theme_context", theme_name, generator=lambda: build_theme_context(theme_name)
+		"buzz_theme_context", theme_name, generator=lambda: get_theme_context_uncached(theme_name)
 	)
 
 

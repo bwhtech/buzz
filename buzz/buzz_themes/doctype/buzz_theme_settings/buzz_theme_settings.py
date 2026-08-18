@@ -54,7 +54,7 @@ def clear_settings_cache():
 	frappe.local.buzz_theme_compiled_routes = None
 
 
-def build_compiled_routes():
+def get_compiled_routes_uncached():
 	settings = frappe.get_cached_doc("Buzz Theme Settings")
 	compiled = []
 	for row in settings.get("routes") or []:
@@ -78,6 +78,8 @@ def build_compiled_routes():
 def get_compiled_routes():
 	routes = getattr(frappe.local, "buzz_theme_compiled_routes", None)
 	if routes is None:
-		routes = frappe.cache.get_value("buzz_theme_settings_compiled", generator=build_compiled_routes)
+		routes = frappe.cache.get_value(
+			"buzz_theme_settings_compiled", generator=get_compiled_routes_uncached
+		)
 		frappe.local.buzz_theme_compiled_routes = routes
 	return routes

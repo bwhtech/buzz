@@ -43,7 +43,7 @@ repos:
                 .*boilerplate.*|
                 buzz/templates/includes/.*|
                 buzz/public/js/lib/.*|
-                buzz/public/themes/.*|
+                buzz/public/themes/.*/scripts/vendor/.*|
                 buzz/themes/.*
             )$
 
@@ -63,7 +63,7 @@ repos:
                 .*boilerplate.*|
                 buzz/templates/includes/.*|
                 buzz/public/js/lib/.*|
-                buzz/public/themes/.*|
+                buzz/public/themes/.*/scripts/vendor/.*|
                 buzz/themes/.*
             )$
 

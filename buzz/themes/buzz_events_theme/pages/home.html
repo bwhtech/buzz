@@ -1,5 +1,6 @@
 {% extends "components/base.html" %}
 {% import "components/macros/icons.html" as icons %}
+{% import "components/macros/categories.html" as categories_macro %}
 
 {% set theme_config = buzz_theme_config() %}
 {% set hero_tagline = theme_config.hero_tagline or 'Conferences, Meetups, Webinars' %}
@@ -31,7 +32,7 @@
 
   {% set categories = frappe.get_all("Event Category",
         filters={"enabled": 1},
-        fields=["name", "slug", "description", "icon_svg"],
+        fields=["name", "slug", "description", "icon_name", "subtitle"],
         order_by="name asc") %}
 
   {% set upcoming_conferences = [] %}
@@ -180,29 +181,12 @@
     {% if categories %}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
       {% for category in categories %}
-        {% set lucide_fallback = {
-          'Webinars': 'monitor',
-          'Yatra': 'route',
-          'Conferences': 'users',
-          'Meetups': 'coffee',
-          'Local': 'map-pin'
-        } %}
-        {% set sub_label = {
-          'Webinars': 'Online',
-          'Yatra': 'Roadshow',
-          'Conferences': 'Flagship',
-          'Meetups': 'Local'
-        }.get(category.name, 'Browse') %}
         <a href="/category/{{ category.slug }}" class="bg-pass text-ink rounded-xl p-5 flex items-center justify-between group hover:-translate-y-[2px] transition-transform">
           <div>
-            <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">{{ sub_label }}</div>
+            <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">{{ categories_macro.category_subtitle(category) }}</div>
             <div class="font-ui font-bold text-[18px] mt-1">{{ category.name }}</div>
           </div>
-          {% if category.icon_svg %}
-            <span class="w-5 h-5 opacity-60 group-hover:opacity-100 inline-flex items-center justify-center [&_svg]:w-5 [&_svg]:h-5">{{ category.icon_svg|safe }}</span>
-          {% else %}
-            {{ icons.icon(lucide_fallback.get(category.name, 'calendar'), "w-5 h-5 opacity-60 group-hover:opacity-100") }}
-          {% endif %}
+          {{ categories_macro.category_icon(category, "w-5 h-5 opacity-60 group-hover:opacity-100") }}
         </a>
       {% endfor %}
     </div>

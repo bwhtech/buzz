@@ -33,6 +33,7 @@ jinja = {
 	"methods": [
 		"buzz.buzz_themes.jinja_helpers.buzz_theme_asset_url",
 		"buzz.buzz_themes.jinja_helpers.buzz_theme_config",
+		"buzz.buzz_themes.jinja_helpers.buzz_map_embed_url",
 	],
 }
 

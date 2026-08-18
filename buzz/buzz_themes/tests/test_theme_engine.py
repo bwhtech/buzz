@@ -20,7 +20,7 @@ from buzz.buzz_themes.doctype.buzz_theme_settings.buzz_theme_settings import (
 	get_compiled_routes,
 	seed_default_routes,
 )
-from buzz.buzz_themes.jinja_helpers import buzz_theme_asset_url, buzz_theme_config
+from buzz.buzz_themes.jinja_helpers import buzz_map_embed_url, buzz_theme_asset_url, buzz_theme_config
 from buzz.buzz_themes.theme_resolver import ThemePageRenderer, find_theme_file
 
 
@@ -184,6 +184,43 @@ class ThemeEngineTestCase(IntegrationTestCase):
 		return ThemePageRenderer(path)
 
 
+class TestMapEmbedUrl(UnitTestCase):
+	def test_extracts_src_from_a_pasted_google_iframe(self):
+		embed_code = (
+			'<iframe src="https://www.google.com/maps/embed?pb=!1m18!2sfoo" '
+			'width="600" height="450" style="border:0;" allowfullscreen></iframe>'
+		)
+		self.assertEqual(buzz_map_embed_url(embed_code), "https://www.google.com/maps/embed?pb=!1m18!2sfoo")
+
+	def test_accepts_a_bare_embed_url(self):
+		url = "https://www.google.com/maps/embed?pb=!1m18"
+		self.assertEqual(buzz_map_embed_url(url), url)
+
+	def test_rejects_markup_that_is_not_a_google_embed(self):
+		attacks = (
+			'<iframe src="https://evil.example/pwn"></iframe>',
+			'<img src=x onerror="alert(1)">',
+			"<script>alert(1)</script>",
+			'<iframe src="javascript:alert(1)"></iframe>',
+			'<iframe src="data:text/html,<script>alert(1)</script>"></iframe>',
+			"https://evil.example/maps/embed",
+			"javascript:alert(1)",
+		)
+		for embed_code in attacks:
+			with self.subTest(embed_code=embed_code):
+				self.assertEqual(buzz_map_embed_url(embed_code), "")
+
+	def test_rejects_a_google_lookalike_host(self):
+		self.assertEqual(
+			buzz_map_embed_url('<iframe src="https://www.google.com.evil.example/maps/embed"></iframe>'), ""
+		)
+
+	def test_empty_input_is_empty_output(self):
+		for embed_code in ("", None, "   "):
+			with self.subTest(embed_code=embed_code):
+				self.assertEqual(buzz_map_embed_url(embed_code), "")
+
+
 class TestThemeAssetUrl(ThemeEngineTestCase):
 	def test_asset_url_points_at_the_active_theme(self):
 		theme = self.create_theme(assets={"tailwind.output.css": "body{}"})
@@ -320,6 +357,41 @@ class TestCanRender(ThemeEngineTestCase):
 		for path in reserved_paths:
 			with self.subTest(path=path):
 				self.assertFalse(self.make_renderer(path).can_render())
+
+	def test_dynamic_page_cannot_escape_the_pages_directory(self):
+		theme = self.create_theme(
+			templates={
+				"pages/home.html": "<h1>Home</h1>",
+				"components/secret_partial.html": "<h1>Partial</h1>",
+			}
+		)
+		self.set_default_theme(theme.name)
+		self.set_routes([], dynamic_pages_enabled=1)
+
+		for path in ("../components/secret_partial", "home/../../components/secret_partial"):
+			with self.subTest(path=path):
+				self.assertFalse(self.make_renderer(path).can_render())
+
+	def test_dynamic_page_rejects_unsafe_segments(self):
+		theme = self.create_theme(templates={"pages/home.html": "<h1>Home</h1>"})
+		self.set_default_theme(theme.name)
+		self.set_routes([], dynamic_pages_enabled=1)
+
+		for path in ("ho me", "home$", "home;x", "ho%me"):
+			with self.subTest(path=path):
+				self.assertFalse(self.make_renderer(path).can_render())
+
+	def test_dynamic_page_inherits_requires_auth_from_a_route_on_the_same_template(self):
+		theme = self.create_theme(templates={"pages/user/account.html": "<h1>Secret</h1>"})
+		self.set_default_theme(theme.name)
+		self.set_routes([("^account$", "pages/user/account.html", 1)], dynamic_pages_enabled=1)
+
+		renderer = self.make_renderer("user/account")
+		self.assertTrue(renderer.can_render())
+		self.assertTrue(renderer.requires_auth)
+
+		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
+			renderer.render()
 
 	def test_non_reserved_lookalike_segment_still_renders(self):
 		theme = self.create_theme(templates={"pages/application.html": "<h1>Application</h1>"})

@@ -1,6 +1,8 @@
 import os
+import re
 
 import frappe
+from frappe.utils.html_utils import unescape_html
 
 from buzz.buzz_themes.doctype.buzz_theme.buzz_theme import get_render_theme_context, is_within_directory
 
@@ -34,3 +36,32 @@ def buzz_theme_config():
 		return frappe._dict()
 
 	return frappe.get_cached_doc(settings_doctype)
+
+
+# Venue.google_maps_embed_code is a Code field, and Frappe deliberately skips XSS sanitization
+# for Code fieldtypes, so the pasted value is attacker-controlled markup for anyone holding the
+# Event Manager role. Never render the paste: pull the src out, prove it is a Google Maps embed,
+# and let the theme build its own iframe around the URL.
+GOOGLE_MAPS_EMBED_PREFIXES = (
+	"https://www.google.com/maps/embed",
+	"https://maps.google.com/maps",
+)
+IFRAME_SRC_PATTERN = re.compile(r"""\bsrc\s*=\s*["']([^"']+)["']""", re.IGNORECASE)
+
+
+def buzz_map_embed_url(embed_code):
+	if not embed_code:
+		return ""
+
+	candidate = embed_code.strip()
+	if "<" in candidate:
+		match = IFRAME_SRC_PATTERN.search(candidate)
+		if not match:
+			return ""
+		candidate = match.group(1).strip()
+
+	candidate = unescape_html(candidate)
+	if not candidate.startswith(GOOGLE_MAPS_EMBED_PREFIXES):
+		return ""
+
+	return candidate

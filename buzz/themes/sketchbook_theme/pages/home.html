@@ -1,5 +1,6 @@
 {% extends "components/base.html" %}
 {% import "components/macros/icons.html" as icons %}
+{% import "components/macros/categories.html" as categories_macro %}
 
 {% set theme_config = buzz_theme_config() %}
 
@@ -28,7 +29,7 @@
 
 {% set categories = frappe.get_all("Event Category",
       filters={"enabled": 1},
-      fields=["name", "slug", "description", "icon_svg"],
+      fields=["name", "slug", "description", "icon_name", "subtitle"],
       order_by="name asc") %}
 
 {% set upcoming_conferences = [] %}
@@ -140,31 +141,14 @@
     <h2 id="cat-heading" class="section-header__title">browse by</h2>
   </div>
   <div class="category-strip">
-    {% set lucide_fallback = {
-      'Webinars': 'monitor',
-      'Yatra': 'route',
-      'Conferences': 'users',
-      'Meetups': 'coffee',
-      'Local': 'map-pin'
-    } %}
-    {% set sub_map = {
-      'Webinars': 'Online',
-      'Yatra': 'Roadshow',
-      'Conferences': 'Flagship',
-      'Meetups': 'Local'
-    } %}
     {% for category in categories %}
       {% set swatch = swatches[loop.index0 % 6] %}
       <a href="/category/{{ category.slug }}" class="category-chip swatch-{{ swatch }}">
         <div>
           <div class="category-chip__label">{{ category.name | lower }}</div>
-          <span class="category-chip__sub">{{ sub_map.get(category.name, 'Browse') }}</span>
+          <span class="category-chip__sub">{{ categories_macro.category_subtitle(category) }}</span>
         </div>
-        {% if category.icon_svg %}
-          <span style="width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; color: var(--accent);">{{ category.icon_svg|safe }}</span>
-        {% else %}
-          {{ icons.icon(lucide_fallback.get(category.name, 'calendar')) }}
-        {% endif %}
+        <span class="category-chip__icon">{{ categories_macro.category_icon(category) }}</span>
       </a>
     {% endfor %}
   </div>

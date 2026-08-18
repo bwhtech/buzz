@@ -1,4 +1,5 @@
 {% extends "components/base.html" %}
+{% import "components/macros/maps.html" as maps %}
 
 {% set event_name = frappe.db.get_value("Buzz Event", {"route": event_route, "is_published": 1}, "name") %}
 {% if not event_name %}
@@ -228,7 +229,7 @@
         <div class="label">venue</div>
         <div class="marker mt-2 leading-tight" style="font-size: 28px;">{{ venue.name }}</div>
         {% if venue.address %}
-        <p class="mt-3 leading-relaxed" style="font-size: 16px; opacity: 0.85;">{{ venue.address|replace('\n', '<br />')|safe }}</p>
+        <p class="mt-3 leading-relaxed whitespace-pre-line text-[16px] opacity-85">{{ venue.address }}</p>
         {% endif %}
         <a href="https://www.google.com/maps/search/?api=1&query={{ venue.name|urlencode }}"
            target="_blank" rel="noopener noreferrer"
@@ -237,15 +238,9 @@
         </a>
       </div>
       <div class="box p-3" style="background: var(--surface);">
-        {% if venue.google_maps_embed_code %}
-          {{ venue.google_maps_embed_code|safe }}
-        {% elif venue.latitude and venue.longitude and (venue.latitude|float != 0 or venue.longitude|float != 0) %}
-          <iframe title="Map of {{ venue.name }}"
-                  src="https://www.openstreetmap.org/export/embed.html?bbox={{ venue.longitude|float - 0.01 }},{{ venue.latitude|float - 0.01 }},{{ venue.longitude|float + 0.01 }},{{ venue.latitude|float + 0.01 }}&layer=mapnik&marker={{ venue.latitude }},{{ venue.longitude }}"
-                  class="w-full h-full border-0" style="min-height: 220px; border-radius: 4px;" loading="lazy"></iframe>
-        {% else %}
-          <div class="marker text-center py-16" style="font-size: 24px; opacity: 0.6;">map &middot; {{ venue.name }}</div>
-        {% endif %}
+        {% call maps.venue_map(venue, "w-full h-full min-h-[220px] rounded border-0") %}
+          <div class="marker text-center py-16 text-[24px] opacity-60">map &middot; {{ venue.name }}</div>
+        {% endcall %}
       </div>
     </div>
   </section>
