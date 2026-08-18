@@ -29,6 +29,7 @@ export interface ProposalListItem {
 	// Event columns come over a link hop, so a deleted event leaves them null.
 	event_title: string | null
 	start_date: string | null
+	end_date: string | null
 	banner_image: string | null
 	status: string
 	creation: string

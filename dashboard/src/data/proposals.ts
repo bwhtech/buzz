@@ -1,8 +1,10 @@
 import type { ProposalListItem } from "@/types"
-import { createResource } from "frappe-ui"
+import { useCall } from "frappe-ui"
 
-export const myProposals = createResource<ProposalListItem[]>({
-	url: "buzz.api.proposals.get_my_proposals",
-	cache: "My Proposals",
-	auto: true,
-})
+// v2 path: useCall reads the payload from `data`, which /api/method names `message`.
+// Uncached: cacheKey would persist this user's proposals to IndexedDB past a logout.
+export function useMyProposals() {
+	return useCall<ProposalListItem[]>({
+		url: "/api/v2/method/buzz.api.proposals.get_my_proposals",
+	})
+}
