@@ -1,18 +1,14 @@
 <script setup lang="ts">
+import TimelineList from "@/components/dashboard/TimelineList.vue";
 import PrintedTicket from "@/components/dashboard/tickets/PrintedTicket.vue";
 import { useMyTickets } from "@/data/tickets";
 import type { TicketWithEvent } from "@/types";
-import { dayLabel, monthLabel, weekday } from "@/utils/dateLabels";
 import { groupEventsByMonth } from "@/utils/eventGroups";
 import { type TimelineTab, inTab } from "@/utils/timelineTabs";
-import { ErrorMessage, LoadingText, TabButtons, dayjs } from "frappe-ui";
+import { dayjs } from "frappe-ui";
 import { computed, ref } from "vue";
 
 const tab = ref<TimelineTab>("upcoming");
-const tabOptions = [
-	{ label: "Upcoming", value: "upcoming" },
-	{ label: "Past", value: "past" },
-];
 
 const tickets = useMyTickets();
 
@@ -23,68 +19,23 @@ const dated = computed(() =>
 	)
 );
 
+// Plain dayjs: these are date-only values, and dayjsLocal shifts them a day back.
 const months = computed(() =>
 	groupEventsByMonth(inTab(dated.value, tab.value, dayjs().format("YYYY-MM-DD")))
 );
 </script>
 
 <template>
-	<div class="m-auto max-w-[800px] w-full py-8 px-4 space-y-6">
-		<header class="flex items-center justify-between">
-			<h1 class="font-semibold text-4xl">Tickets</h1>
-			<TabButtons v-model="tab" :options="tabOptions" size="md" />
-		</header>
-
-		<ErrorMessage v-if="tickets.error" :message="tickets.error.message" />
-
-		<LoadingText v-else-if="tickets.loading" text="Loading tickets..." />
-
-		<div v-else class="relative space-y-6">
-			<section v-for="month in months" :key="month.month" class="space-y-4">
-				<h2
-					class="relative bg-surface-elevation-1 py-1 text-xl font-semibold text-ink-gray-8"
-				>
-					{{ monthLabel(month.month) }}
-				</h2>
-
-				<div
-					v-for="day in month.days"
-					:key="day.date"
-					class="grid grid-cols-[6rem_1fr] gap-4"
-				>
-					<div class="pt-1">
-						<p class="font-semibold text-ink-gray-8">{{ dayLabel(day.date) }}</p>
-						<p class="text-base text-ink-gray-5">{{ weekday(day.date) }}</p>
-					</div>
-
-					<div class="relative space-y-1 pl-6 pb-7">
-						<div class="absolute -left-4 flex flex-col items-center h-full">
-							<span
-								class="size-2 rounded-full bg-surface-gray-4"
-								aria-hidden="true"
-							/>
-							<div
-								class="w-px h-full bg-gradient-to-b from-outline-gray-2 from-75% to-transparent"
-							></div>
-						</div>
-
-						<div class="space-y-6">
-							<PrintedTicket
-								v-for="ticket in day.events"
-								:key="ticket.name"
-								:ticket="ticket"
-							/>
-						</div>
-					</div>
-				</div>
-			</section>
-		</div>
-
-		<p
-			v-if="!months.length && !tickets.loading && !tickets.error"
-			class="text-base text-ink-gray-5"
-		>
-			No {{ tab }} tickets.
-		</p>
-	</div>
+	<TimelineList
+		v-model:tab="tab"
+		heading="Tickets"
+		noun="tickets"
+		:months="months"
+		:loading="tickets.loading"
+		:error="tickets.error"
+	>
+		<template #default="{ item }">
+			<PrintedTicket :ticket="item" />
+		</template>
+	</TimelineList>
 </template>

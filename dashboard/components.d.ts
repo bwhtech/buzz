@@ -53,6 +53,7 @@ declare module 'vue' {
     TicketDetailsModal: typeof import('./src/components/TicketDetailsModal.vue')['default']
     TicketsSection: typeof import('./src/components/TicketsSection.vue')['default']
     TicketTransferDialog: typeof import('./src/components/TicketTransferDialog.vue')['default']
+    TimelineList: typeof import('./src/components/dashboard/TimelineList.vue')['default']
     TransferTicketDialog: typeof import('./src/components/TransferTicketDialog.vue')['default']
     UserMenu: typeof import('./src/components/UserMenu.vue')['default']
   }
