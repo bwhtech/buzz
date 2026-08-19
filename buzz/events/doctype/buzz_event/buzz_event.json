@@ -15,6 +15,7 @@
   "banner_image",
   "host",
   "venue",
+  "meeting_link",
   "section_break_naqe",
   "start_date",
   "start_time",
@@ -117,6 +118,14 @@
    "label": "Venue",
    "mandatory_depends_on": "eval:doc.medium!=\"Online\"",
    "options": "Event Venue"
+  },
+  {
+   "depends_on": "eval:doc.medium==\"Online\"",
+   "description": "Where attendees join an online event.",
+   "fieldname": "meeting_link",
+   "fieldtype": "Data",
+   "label": "Meeting Link",
+   "options": "URL"
   },
   {
    "default": "In Person",
@@ -612,7 +621,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-07-31 12:00:00.000000",
+ "modified": "2026-08-14 13:08:24.523151",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

@@ -23,6 +23,38 @@ class MyEventsResponse(APIResponse):
 	past: list[MyEvent]
 
 
+class EventVenue(APIResponse):
+	name: str
+	address: str | None = None
+
+
+class EventDetail(APIResponse):
+	"""One event, with everything the manage page edits or shows."""
+
+	name: str
+	title: str
+	route: str | None = None
+	team: str | None = None
+	start_date: date
+	end_date: date | None = None
+	start_time: timedelta | None = None
+	end_time: timedelta | None = None
+	time_zone: str | None = None
+	short_description: str | None = None
+	about: str | None = None
+	banner_image: str | None = None
+	medium: str | None = None
+	venue: EventVenue | None = None
+	# The organiser's own link, or the one Zoom issued when the meeting was booked.
+	meeting_link: str | None = None
+	is_published: bool
+
+
+class RouteAvailability(APIResponse):
+	available: bool
+	message: str
+
+
 class NewEvent(APIRequest):
 	team: str
 	title: str
