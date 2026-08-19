@@ -168,6 +168,21 @@ export interface EventDetail {
 	venue: EventVenueDetail | null
 	meeting_link: string | null
 	is_published: boolean
+	registrations_close_at: string | null
+	// Derived: an event with no cutoff still closes once it has ended.
+	registrations_closed: boolean
+	allow_guest_booking: boolean
+	// "None", "Email OTP" or "Phone OTP".
+	guest_verification_method: string | null
+}
+
+// One tier of ticket an event sells.
+export interface TicketType {
+	name: string
+	title: string
+	price: number
+	currency: string
+	max_tickets_available: number
 }
 
 // A ticket the user holds, flattened with the context its event carries.
