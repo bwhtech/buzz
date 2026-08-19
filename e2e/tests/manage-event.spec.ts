@@ -66,10 +66,49 @@ test.describe("Event workspace", () => {
 	});
 
 	test("swaps the sidebar for the event's own destinations", async ({ page }) => {
-		for (const label of ["Back", "Details", "Attendees", "Talks"]) {
+		for (const label of ["Back", "Details", "Guests", "Talks"]) {
 			await expect(page.getByRole("link", { name: label })).toBeVisible({ timeout: 15000 });
 		}
 		await expect(page.getByRole("link", { name: "My Tickets" })).toHaveCount(0);
+	});
+
+	test("lists the event's guests", async ({ page }) => {
+		await page.getByRole("link", { name: "Guests" }).click();
+
+		await expect(page).toHaveURL(/\/b\/manage\/events\/\d+\/guests$/);
+		await expect(page.getByRole("heading", { name: "Guest list" })).toBeVisible();
+		// The shared event is the one tickets.setup.ts books against, so it has guests.
+		const rows = page.getByRole("list").getByRole("listitem");
+		await expect(rows.first()).toBeVisible({ timeout: 15000 });
+
+		// The count is the number of rows under it, not a separate claim.
+		const registrations = Number(await page.getByText(/^\d+$/).first().textContent());
+		expect(registrations).toBe(await rows.count());
+		await expect(page.getByText(/Registrations (are open|have closed)/)).toBeVisible();
+
+		// A row carries the person and the ticket they hold, named rather than numbered.
+		await expect(rows.first()).toContainText("@");
+		const badge = rows.first().locator("div").last();
+		await expect(badge).not.toHaveText(/^\d+$/);
+	});
+
+	test("narrows the guest list by search", async ({ page }) => {
+		await page.getByRole("link", { name: "Guests" }).click();
+
+		const rows = page.getByRole("list").getByRole("listitem");
+		await expect(rows.first()).toBeVisible({ timeout: 15000 });
+		const everyone = await rows.count();
+
+		// The email of whoever happens to be first, so this holds on any site. Read from
+		// its own element: the row's text runs the name and email together.
+		const email = (await rows.first().getByText(/@/).last().textContent())!.trim();
+		await page.getByRole("textbox", { name: "Search guests" }).fill(email);
+
+		await expect(rows).toHaveCount(1);
+		await expect(rows.first()).toContainText(email!);
+
+		await page.getByRole("textbox", { name: "Search guests" }).fill("");
+		await expect(rows).toHaveCount(everyone);
 	});
 
 	test("moves between sections", async ({ page }) => {

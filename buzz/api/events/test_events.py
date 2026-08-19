@@ -2,7 +2,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
-from buzz.api.events import check_event_route, get_event, get_my_events
+from buzz.api.events import check_event_route, get_event, get_event_guests, get_my_events
 from buzz.api.events import create_event as create_event_endpoint
 from buzz.api.events.exceptions import (
 	CannotCreateEvents,
@@ -387,3 +387,110 @@ class TestCheckEventRoute(IntegrationTestCase):
 		frappe.set_user(self.owner)
 
 		self.assertFalse(check_event_route("   ").available)
+
+
+class TestGetEventGuests(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("guests-owner@example.com", "Owner")
+		cls.stranger = create_user("guests-stranger@example.com", "Stranger")
+		cls.team = create_owned_team("Guests Team", cls.owner)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_counts_and_lists_the_submitted_tickets(self):
+		event = create_event("Guested Event", self.team)
+		issue_ticket(event, "guest-one@example.com")
+		issue_ticket(event, "guest-two@example.com")
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event).__json__()
+
+		self.assertEqual(guests["total"], 2)
+		self.assertEqual(len(guests["guests"]), 2)
+		emails = {guest["attendee_email"] for guest in guests["guests"]}
+		self.assertEqual(emails, {"guest-one@example.com", "guest-two@example.com"})
+
+	def test_leaves_out_a_ticket_that_was_never_submitted(self):
+		event = create_event("Draft Ticket Event", self.team)
+		create_ticket(event, "draft-guest@example.com")
+		frappe.set_user(self.owner)
+
+		self.assertEqual(get_event_guests(event).total, 0)
+
+	def test_carries_the_add_ons_a_ticket_holds(self):
+		event = create_event("Add-on Event", self.team)
+		ticket = issue_ticket(event, "addon-guest@example.com")
+		add_on = frappe.get_doc(
+			{"doctype": "Ticket Add-on", "event": event, "title": "T-Shirt", "price": 0}
+		).insert(ignore_permissions=True)
+		# Submitted, so the row goes on through db_insert rather than a save.
+		frappe.get_doc(
+			{
+				"doctype": "Ticket Add-on Value",
+				"parenttype": "Event Ticket",
+				"parentfield": "add_ons",
+				"parent": ticket,
+				"add_on": add_on.name,
+				"value": "Large",
+			}
+		).db_insert()
+		frappe.set_user(self.owner)
+
+		guest = get_event_guests(event).guests[0]
+
+		self.assertEqual(len(guest.add_ons), 1)
+		self.assertEqual(guest.add_ons[0].title, "T-Shirt")
+		self.assertEqual(guest.add_ons[0].value, "Large")
+
+	def test_names_the_ticket_type_rather_than_its_docname(self):
+		event = create_event("Typed Ticket Event", self.team)
+		ticket = issue_ticket(event, "typed-guest@example.com")
+		ticket_type = frappe.db.get_value("Event Ticket", ticket, "ticket_type")
+		title = frappe.db.get_value("Event Ticket Type", ticket_type, "title")
+		frappe.set_user(self.owner)
+
+		guest = get_event_guests(event).guests[0]
+
+		self.assertEqual(guest.ticket_type, title)
+		self.assertNotEqual(guest.ticket_type, ticket_type)
+
+	def test_an_event_with_no_guests_is_empty_rather_than_an_error(self):
+		event = create_event("Quiet Event", self.team)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event)
+
+		self.assertEqual(guests.total, 0)
+		self.assertEqual(guests.guests, [])
+
+	def test_reports_registrations_closed_once_the_cutoff_has_passed(self):
+		event = create_event("Closed Event", self.team, registrations_close_at="2020-01-01 00:00:00")
+		frappe.set_user(self.owner)
+
+		self.assertTrue(get_event_guests(event).registrations_closed)
+
+	def test_reports_registrations_open_before_the_event_ends(self):
+		event = create_event("Open Event", self.team)
+		frappe.set_user(self.owner)
+
+		self.assertFalse(get_event_guests(event).registrations_closed)
+
+	def test_a_non_member_cannot_read_the_guest_list(self):
+		event = create_event("Private Guests", self.team)
+		issue_ticket(event, "private-guest@example.com")
+		frappe.set_user(self.stranger)
+
+		with self.assertRaises(CannotManageEvent):
+			get_event_guests(event)
+
+	def test_an_unknown_event_is_not_found(self):
+		frappe.set_user(self.owner)
+
+		with self.assertRaises(EventNotFound):
+			get_event_guests("999999999")
