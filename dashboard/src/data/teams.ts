@@ -1,5 +1,5 @@
 import { session } from "@/data/session"
-import type { TeamOption, TeamOverview } from "@/types"
+import type { InviteOutcome, TeamOption, TeamOverview } from "@/types"
 import { createResource, useCall } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
@@ -54,6 +54,14 @@ export function useTeamOverview() {
 	watch(currentTeam, (team) => team && teamOverview.reload(), { immediate: true })
 	return teamOverview
 }
+
+export const removeMember = createResource({
+	url: "buzz.api.teams.remove_member",
+})
+
+export const inviteMembers = createResource<InviteOutcome[]>({
+	url: "buzz.api.teams.invite_members",
+})
 
 export function selectTeam(name: string) {
 	selectedTeamName.value = name

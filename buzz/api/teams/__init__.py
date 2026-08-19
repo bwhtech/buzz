@@ -1,7 +1,7 @@
 import frappe
 
-from buzz.api.teams import services
-from buzz.api.teams.schemas import TeamOption, TeamOverview
+from buzz.api.teams import invitations, services
+from buzz.api.teams.schemas import InviteOutcome, TeamOption, TeamOverview
 
 
 @frappe.whitelist()
@@ -29,3 +29,13 @@ def get_my_teams() -> list[TeamOption]:
 @frappe.whitelist()
 def get_team_overview(team: str) -> TeamOverview:
 	return services.team_overview(team)
+
+
+@frappe.whitelist(methods=["POST"])
+def remove_member(team: str, user: str) -> None:
+	services.remove_member(team, user)
+
+
+@frappe.whitelist(methods=["POST"])
+def invite_members(team: str, invites: list[dict]) -> list[InviteOutcome]:
+	return invitations.invite_members(team, invites)
