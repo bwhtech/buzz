@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { MyEvent } from "@/types";
+import { dayLabel } from "@/utils/dateLabels";
 import { bannerPattern } from "@/utils/eventBanner";
 import { Avatar } from "frappe-ui";
 import { computed } from "vue";
 
-const props = defineProps<{ event: MyEvent }>();
+// The Events page files cards under a date heading; a standalone list has to
+// carry the date on the card itself.
+const props = defineProps<{ event: MyEvent; showDate?: boolean }>();
 
 // Times arrive as a serialized timedelta ("9:00:00"), so the hour needs padding.
 const startTime = computed((): string => {
@@ -46,8 +49,13 @@ const venue = computed(() => {
 
 		<div class="flex-1 py-1 flex flex-col justify-between">
 			<div class="flex-1 space-y-2">
-				<p v-if="startTime" class="text-base tabular-nums text-ink-gray-5">
-					{{ startTime }}
+				<p
+					v-if="showDate || startTime"
+					class="flex items-center gap-2 text-base tabular-nums text-ink-gray-5"
+				>
+					<span v-if="showDate">{{ dayLabel(event.start_date) }}</span>
+					<span v-if="showDate && startTime" class="text-ink-gray-4">·</span>
+					<span v-if="startTime">{{ startTime }}</span>
 				</p>
 
 				<h3 class="font-semibold text-lg text-ink-gray-8">{{ event.title }}</h3>

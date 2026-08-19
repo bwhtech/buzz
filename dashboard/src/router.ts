@@ -37,12 +37,27 @@ const routes: RouteRecordRaw[] = [
 				name: "proposals",
 				component: () => import("@/pages/manage/MyProposals.vue"),
 			},
+			// The team is not in the path: data/teams holds the selection, so these
+			// paths are fixed and switching teams re-reads the page in place.
+			{
+				path: "team",
+				redirect: { name: "team-overview" },
+			},
+			{
+				path: "team/overview",
+				name: "team-overview",
+				component: () => import("@/pages/manage/teams/TeamOverview.vue"),
+			},
 			// Sidebar destinations that have no page yet. Unnamed on purpose: SidebarItem
 			// falls back to matching on path, so each one lights up on its own. Enumerated
 			// so a mistyped path reaches the 404 below — keep in step with the sidebar
 			// items in ManagerLayout.vue.
 			{
 				path: ":section(sponsorship|overview|registrations|sponsors|more)",
+				component: () => import("@/pages/manage/WorkInProgress.vue"),
+			},
+			{
+				path: "team/:section",
 				component: () => import("@/pages/manage/WorkInProgress.vue"),
 			},
 			// Claims the rest of /manage before the two-segment custom form route can:

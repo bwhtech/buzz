@@ -3,7 +3,7 @@ import TeamSwitcher from "@/components/TeamSwitcher.vue";
 import UserMenu from "@/components/UserMenu.vue";
 import { isTeamMember } from "@/data/teams";
 import NotFound from "@/pages/NotFound.vue";
-import { DesktopShell, Sidebar, SidebarItem, SidebarLabel } from "frappe-ui";
+import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem, SidebarLabel } from "frappe-ui";
 import { ref } from "vue";
 import { useRoute } from "vue-router";
 
@@ -26,8 +26,11 @@ const personalItems = [
 	{ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" },
 ];
 
+// Team-scoped destinations read the active team from data/teams rather than the path,
+// so they are fixed and need no team loaded to render.
 const teamItems = [
-	{ label: "Overview", icon: "lucide-layout-dashboard", to: "/manage/overview" },
+	{ label: "Overview", icon: "lucide-layout-dashboard", to: "/manage/team/overview" },
+	{ label: "Members", icon: "lucide-users-round", to: "/manage/team/members" },
 	{ label: "Registrations", icon: "lucide-users", to: "/manage/registrations" },
 	{ label: "Sponsors", icon: "lucide-badge-dollar-sign", to: "/manage/sponsors" },
 	{ label: "More", icon: "lucide-ellipsis", to: "/manage/more" },
@@ -37,7 +40,8 @@ const teamItems = [
 <template>
 	<NotFound v-if="isMember === false" />
 
-	<DesktopShell v-else-if="isMember">
+	<!-- scroll=false: the rounded panel below owns its own scroll. -->
+	<DesktopShell v-else-if="isMember" :scroll="false">
 		<template #sidebar>
 			<Sidebar v-model:collapsed="collapsed">
 				<div class="flex h-12 shrink-0 items-center px-1">
@@ -71,9 +75,14 @@ const teamItems = [
 			</Sidebar>
 		</template>
 
-		<div class="h-lvh bg-surface-sidebar py-2 pl-2">
-			<div class="h-full rounded-l-lg bg-surface-elevation-1 shadow-base overflow-y-auto">
-				<router-view />
+		<div class="h-full min-h-0 bg-surface-sidebar py-2 pl-2">
+			<div
+				class="flex h-full flex-col overflow-hidden rounded-l-lg bg-surface-elevation-1 shadow-base"
+			>
+				<PageHeaderTarget />
+				<div class="min-h-0 flex-1 overflow-y-auto">
+					<router-view />
+				</div>
 			</div>
 		</div>
 	</DesktopShell>

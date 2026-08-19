@@ -71,6 +71,23 @@ export interface TeamOption {
 	team_role: string
 }
 
+export interface TeamMember {
+	user: string
+	full_name: string | null
+	user_image: string | null
+	team_role: string
+}
+
+// buzz.api.teams.get_team_overview: one team with its enabled members.
+export interface TeamOverview {
+	name: string
+	team_name: string
+	slug: string | null
+	logo: string | null
+	my_role: string
+	members: TeamMember[]
+}
+
 // buzz.api.events.get_my_events: events the user's teams host, plus events they
 // hold a ticket to. is_host separates the two.
 export interface MyEvent {
