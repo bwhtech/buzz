@@ -24,6 +24,18 @@ const FALLBACK_THEME: Record<string, BadgeTheme> = {
 	Duplicate: "gray",
 };
 
+// Tailwind emits only the icon classes it can see, so no interpolated names.
+const STATUS_ICONS: Record<string, string> = {
+	"Review Pending": "lucide-clock",
+	Shortlisted: "lucide-bookmark",
+	Accepted: "lucide-circle-check",
+	Rejected: "lucide-circle-x",
+	Replied: "lucide-reply",
+	Duplicate: "lucide-layers-2",
+};
+
+const FALLBACK_ICON = "lucide-squircle-dashed";
+
 // Module-level so every caller shares one fetch of the status list.
 const statuses = createListResource({
 	doctype: "Talk Proposal Status",
@@ -43,5 +55,7 @@ export function useProposalStatuses() {
 		return FALLBACK_THEME[status] ?? "gray";
 	};
 
-	return { statuses, getStatusTheme };
+	const getStatusIcon = (status: string): string => STATUS_ICONS[status] ?? FALLBACK_ICON;
+
+	return { statuses, getStatusTheme, getStatusIcon };
 }

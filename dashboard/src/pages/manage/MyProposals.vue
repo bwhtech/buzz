@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import TimelineList from "@/components/dashboard/TimelineList.vue";
-import PrintedTicket from "@/components/dashboard/tickets/PrintedTicket.vue";
-import { useMyTickets } from "@/data/tickets";
-import type { TicketWithEvent } from "@/types";
+import ProposalCard from "@/components/dashboard/proposals/ProposalCard.vue";
+import { useMyProposals } from "@/data/proposals";
+import type { ProposalWithEvent } from "@/types";
 import { groupEventsByMonth } from "@/utils/eventGroups";
 import { type TimelineTab, inTab } from "@/utils/timelineTabs";
 import { dayjs } from "frappe-ui";
@@ -10,12 +10,12 @@ import { computed, ref } from "vue";
 
 const tab = ref<TimelineTab>("upcoming");
 
-const tickets = useMyTickets();
+const myProposals = useMyProposals();
 
-// A ticket whose event was deleted has no date to file it under, so it drops out.
+// A proposal whose event was deleted has no date to file it under, so it drops out.
 const dated = computed(() =>
-	(tickets.data || []).filter((ticket): ticket is TicketWithEvent =>
-		Boolean(ticket.start_date && ticket.event_title)
+	(myProposals.data || []).filter((proposal): proposal is ProposalWithEvent =>
+		Boolean(proposal.start_date && proposal.event_title)
 	)
 );
 
@@ -28,14 +28,14 @@ const months = computed(() =>
 <template>
 	<TimelineList
 		v-model:tab="tab"
-		heading="Tickets"
-		noun="tickets"
+		heading="Talk Proposals"
+		noun="proposals"
 		:months="months"
-		:loading="tickets.loading"
-		:error="tickets.error"
+		:loading="myProposals.loading"
+		:error="myProposals.error"
 	>
 		<template #default="{ item }">
-			<PrintedTicket :ticket="item" />
+			<ProposalCard :proposal="item" />
 		</template>
 	</TimelineList>
 </template>

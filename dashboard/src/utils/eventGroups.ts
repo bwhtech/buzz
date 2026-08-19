@@ -3,7 +3,7 @@ interface DayGroup<T> {
 	events: T[]
 }
 
-interface MonthGroup<T> {
+export interface MonthGroup<T> {
 	month: string
 	days: DayGroup<T>[]
 }

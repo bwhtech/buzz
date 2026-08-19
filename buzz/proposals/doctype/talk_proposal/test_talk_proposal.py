@@ -160,6 +160,37 @@ class TestCreateTalk(IntegrationTestCase):
 
 		self.assertEqual(frappe.db.get_value("User", email, "user_type"), "Website User")
 
+	def test_a_member_of_the_events_team_can_accept_a_proposal(self):
+		manager = make_test_user("create-talk-manager@example.com", roles=["Event Manager"])
+		team = create_owned_team("Create Talk Team", manager)
+		event = make_test_event(self.category, self.host, team=team)
+		proposal = frappe.get_doc("Talk Proposal", make_guest_proposal(event, self.speaker_user))
+
+		frappe.set_user(manager)
+		self.addCleanup(frappe.set_user, "Administrator")
+		talk = proposal.run_method("create_talk")
+
+		self.assertEqual(talk.proposal, proposal.name)
+		self.assertEqual(frappe.db.get_value("Talk Proposal", proposal.name, "status"), "Accepted")
+
+	def test_a_listed_speaker_cannot_accept_their_own_proposal(self):
+		# A speaker who already has a profile reaches the end of create_talk: nothing it
+		# touches needs a permission the speaker lacks.
+		if not frappe.db.exists("Speaker Profile", {"user": self.speaker_user}):
+			frappe.get_doc({"doctype": "Speaker Profile", "user": self.speaker_user}).insert()
+		proposal = frappe.get_doc("Talk Proposal", make_guest_proposal(self.event, self.speaker_user))
+
+		frappe.set_user(self.speaker_user)
+		self.addCleanup(frappe.set_user, "Administrator")
+		# run_doc_method loads the document with a read check and nothing more.
+		doc = frappe.get_doc("Talk Proposal", proposal.name, check_permission=True)
+
+		with self.assertRaises(frappe.PermissionError):
+			doc.run_method("create_talk")
+
+		self.assertEqual(frappe.db.get_value("Talk Proposal", proposal.name, "status"), "Review Pending")
+		self.assertEqual(frappe.db.count("Event Talk", {"proposal": proposal.name}), 0)
+
 	def test_second_create_talk_leaves_no_partial_state(self):
 		proposal = frappe.get_doc("Talk Proposal", make_guest_proposal(self.event, self.speaker_user))
 		proposal.create_talk()

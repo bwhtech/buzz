@@ -32,12 +32,17 @@ const routes: RouteRecordRaw[] = [
 				name: "tickets",
 				component: () => import("@/pages/manage/MyTickets.vue"),
 			},
+			{
+				path: "proposals",
+				name: "proposals",
+				component: () => import("@/pages/manage/MyProposals.vue"),
+			},
 			// Sidebar destinations that have no page yet. Unnamed on purpose: SidebarItem
 			// falls back to matching on path, so each one lights up on its own. Enumerated
 			// so a mistyped path reaches the 404 below — keep in step with the sidebar
 			// items in ManagerLayout.vue.
 			{
-				path: ":section(proposals|sponsorship|overview|registrations|sponsors|more)",
+				path: ":section(sponsorship|overview|registrations|sponsors|more)",
 				component: () => import("@/pages/manage/WorkInProgress.vue"),
 			},
 			// Claims the rest of /manage before the two-segment custom form route can:

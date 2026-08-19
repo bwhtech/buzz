@@ -39,6 +39,7 @@ declare module 'vue' {
     PhoneInput: typeof import('./src/components/PhoneInput.vue')['default']
     PrintedTicket: typeof import('./src/components/dashboard/tickets/PrintedTicket.vue')['default']
     ProfileView: typeof import('./src/components/ProfileView.vue')['default']
+    ProposalCard: typeof import('./src/components/dashboard/proposals/ProposalCard.vue')['default']
     ProposalEditDialog: typeof import('./src/components/ProposalEditDialog.vue')['default']
     QRCodeExpandDialog: typeof import('./src/components/QRCodeExpandDialog.vue')['default']
     QRScanner: typeof import('./src/components/QRScanner.vue')['default']
@@ -52,6 +53,7 @@ declare module 'vue' {
     TicketDetailsModal: typeof import('./src/components/TicketDetailsModal.vue')['default']
     TicketsSection: typeof import('./src/components/TicketsSection.vue')['default']
     TicketTransferDialog: typeof import('./src/components/TicketTransferDialog.vue')['default']
+    TimelineList: typeof import('./src/components/dashboard/TimelineList.vue')['default']
     TransferTicketDialog: typeof import('./src/components/TransferTicketDialog.vue')['default']
     UserMenu: typeof import('./src/components/UserMenu.vue')['default']
   }

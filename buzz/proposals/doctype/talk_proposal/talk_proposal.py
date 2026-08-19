@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder import Criterion
@@ -78,6 +79,13 @@ class TalkProposal(Document):
 
 	@frappe.whitelist()
 	def create_talk(self):
+		# A listed speaker holds write on their own proposal, so has_permission("write")
+		# would wave them through their own acceptance. Accepting belongs to the event's
+		# team, which is what the derived rule asks on its own. That rule waves through a
+		# team-less document, which cannot happen here: Buzz Event.team is mandatory.
+		if not derived_has_permission(self, ptype="write"):
+			frappe.throw(_("Only the event's team can accept a proposal."), frappe.PermissionError)
+
 		talk = get_mapped_doc("Talk Proposal", self.name, {"Talk Proposal": {"doctype": "Event Talk"}})
 
 		for speaker in self.speakers:
