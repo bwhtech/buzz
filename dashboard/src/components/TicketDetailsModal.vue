@@ -51,9 +51,15 @@
 						<h3 class="text-sm-medium text-gray-700 dark:text-gray-300">
 							{{ __("Ticket ID") }}
 						</h3>
-						<p class="text-sm font-mono text-gray-900 dark:text-white">
+						<a
+							:href="`/app/event-ticket/${validationResult?.ticket?.id}`"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="inline-flex items-center gap-1 text-sm font-mono text-ink-blue-6 hover:underline"
+						>
 							{{ validationResult?.ticket?.id }}
-						</p>
+							<LucideExternalLink class="w-3.5 h-3.5" />
+						</a>
 					</div>
 				</div>
 
@@ -157,6 +163,7 @@ import { useTicketValidation } from "@/composables/useTicketValidation";
 import { formatPriceOrFree } from "@/utils/currency";
 import { Button, Dialog } from "frappe-ui";
 import LucideCheckCircle from "~icons/lucide/check-circle";
+import LucideExternalLink from "~icons/lucide/external-link";
 import LucideUserCheck from "~icons/lucide/user-check";
 import LucideXCircle from "~icons/lucide/x-circle";
 
