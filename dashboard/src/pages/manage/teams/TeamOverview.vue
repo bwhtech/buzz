@@ -72,7 +72,7 @@ const hiddenMemberCount = computed(() =>
 						variant="ghost"
 						label="See all events"
 						class="w-fit"
-						:route="{ name: 'events' }"
+						:route="{ name: 'team-events' }"
 					/>
 				</section>
 

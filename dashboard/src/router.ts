@@ -49,6 +49,11 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/teams/TeamOverview.vue"),
 			},
 			{
+				path: "team/events",
+				name: "team-events",
+				component: () => import("@/pages/manage/teams/TeamEvents.vue"),
+			},
+			{
 				path: "team/members",
 				name: "team-members",
 				component: () => import("@/pages/manage/teams/TeamMembers.vue"),
