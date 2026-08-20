@@ -278,3 +278,12 @@ def get_time_zone_label(time_zone: str | None, reference_datetime: datetime | No
 	if minutes:
 		label += f":{minutes:02d}"
 	return label
+
+
+def render_email_template(template_name: str, args: dict) -> dict:
+	"""Render an Email Template without a permission check.
+
+	Frappe's get_email_template() is whitelisted and reads the template as the session
+	user, which fails for the guest-facing booking and enquiry flows.
+	"""
+	return frappe.get_doc("Email Template", template_name).get_formatted_email(args)

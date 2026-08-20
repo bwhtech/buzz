@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 import frappe
 from frappe import _
-from frappe.email.doctype.email_template.email_template import get_email_template
 from frappe.model.document import Document
 from frappe.utils import cstr, flt
 
@@ -13,6 +12,7 @@ from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_tickets,
 	record_gateway_refund,
 )
+from buzz.utils import render_email_template
 
 RAZORPAY = "Razorpay"
 
@@ -222,7 +222,7 @@ class EventBooking(Document):
 
 		content = None
 		if booking_template:
-			email_template = get_email_template(booking_template, args)
+			email_template = render_email_template(booking_template, args)
 			subject = email_template.get("subject") or subject
 			content = email_template.get("message")
 
