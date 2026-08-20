@@ -6,7 +6,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.utils import generate_qr_code_file, make_qr_image
+from buzz.utils import generate_qr_code_file, make_qr_image, render_email_template
 
 EXTRA_TEST_RECORD_DEPENDENCIES = []
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Bulk Ticket Coupon"]
@@ -304,3 +304,87 @@ class TestEventTicketZoomMeeting(IntegrationTestCase):
 		self.assertEqual(details.zoom_join_url, registrant["join_url"])
 		self.assertEqual(details.zoom_reference_doctype, "Zoom Meeting")
 		self.assertEqual(details.zoom_reference_name, meeting.name)
+
+
+class TestRenderEmailTemplate(IntegrationTestCase):
+	"""Attendees and sponsors are Website Users; only Desk Users can read an Email Template."""
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def test_renders_for_a_user_without_email_template_permission(self):
+		template = frappe.get_doc(
+			{
+				"doctype": "Email Template",
+				"name": "Unprivileged Render Template",
+				"subject": "NOPERM - {{ event_title }}",
+				"response": "<p>NOPERM content</p>",
+			}
+		).insert(ignore_permissions=True)
+
+		attendee = "attendee-render@example.com"
+		if not frappe.db.exists("User", attendee):
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": attendee,
+					"first_name": "Attendee",
+					"user_type": "Website User",
+					"send_welcome_email": 0,
+				}
+			).insert(ignore_permissions=True)
+		self.addCleanup(frappe.set_user, frappe.session.user)
+		frappe.set_user(attendee)
+		self.assertFalse(frappe.has_permission("Email Template", "read"))
+
+		rendered = render_email_template(template.name, {"event_title": "Buzz Conf"})
+
+		self.assertEqual(rendered["subject"], "NOPERM - Buzz Conf")
+		self.assertIn("NOPERM content", rendered["message"])
+
+
+class TestGuestTicketEmail(IntegrationTestCase):
+	"""Public bookings submit their tickets as Guest."""
+
+	def setUp(self):
+		self.event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		self.ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": self.event.name,
+				"title": "Guest Email Ticket",
+				"price": 0,
+			}
+		).insert(ignore_permissions=True)
+		self.template = frappe.get_doc(
+			{
+				"doctype": "Email Template",
+				"name": "Guest Ticket Template",
+				"subject": "GUEST - {{ event_title }}",
+				"response": "<p>Guest content</p>",
+			}
+		).insert(ignore_permissions=True)
+		self.event.db_set("ticket_email_template", self.template.name)
+		self.addCleanup(frappe.set_user, frappe.session.user)
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	@patch("frappe.sendmail")
+	def test_guest_can_render_the_ticket_email_template(self, mock_sendmail):
+		ticket = frappe.get_doc(
+			{
+				"doctype": "Event Ticket",
+				"event": self.event.name,
+				"ticket_type": self.ticket_type.name,
+				"first_name": "Guest",
+				"attendee_email": "guest-booking@example.com",
+			}
+		).insert(ignore_permissions=True)
+
+		frappe.set_user("Guest")
+
+		ticket.send_ticket_email(now=True)
+
+		mock_sendmail.assert_called_once()
+		self.assertIn("GUEST", mock_sendmail.call_args[1]["subject"])

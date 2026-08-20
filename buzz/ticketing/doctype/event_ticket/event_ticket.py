@@ -5,7 +5,12 @@ import frappe
 from frappe.core.api.user_invitation import invite_by_email
 from frappe.model.document import Document
 
-from buzz.utils import generate_ics_file, generate_qr_code_file, only_if_app_installed
+from buzz.utils import (
+	generate_ics_file,
+	generate_qr_code_file,
+	only_if_app_installed,
+	render_email_template,
+)
 
 
 class EventTicket(Document):
@@ -122,9 +127,7 @@ class EventTicket(Document):
 		}
 
 		if ticket_template:
-			from frappe.email.doctype.email_template.email_template import get_email_template
-
-			email_template = get_email_template(ticket_template, args)
+			email_template = render_email_template(ticket_template, args)
 			subject = email_template.get("subject")
 			content = email_template.get("message")
 
