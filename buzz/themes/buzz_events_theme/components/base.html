@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="csrf-token" content="{{ csrf_token }}" />
+  {% include "components/head_top.html" %}
+
+  <meta property="og:site_name" content="{{ app_name }}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="{% block og_title %}{{ title_prefix or app_name }}{% endblock %}" />
+  <meta property="og:description" content="{% block og_description %}Conferences, yatras, meetups, and webinars.{% endblock %}" />
+  {% set og_image %}{% block og_image %}{{ banner_image or '' }}{% endblock %}{% endset %}
+  {% if og_image | trim %}<meta property="og:image" content="{{ og_image | trim }}" />{% endif %}
+  <meta property="og:url" content="{% block og_url %}{{ frappe.utils.get_url() }}{% endblock %}" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <title>{% block title %}{{ title_prefix or app_name }}{% endblock %}</title>
+
+  {% include "components/head_bottom.html" %}
+</head>
+
+<body>
+  {% block body %}{% endblock %}
+
+  {% if frappe.session.user == "Guest" %}{% include "components/login_dialog.html" %}{% endif %}
+
+  {% include "components/scripts_tail.html" %}
+</body>
+</html>

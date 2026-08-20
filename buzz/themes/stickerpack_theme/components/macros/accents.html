@@ -1,0 +1,23 @@
+
+{% macro accent_style(token) -%}
+{%- set accent_map = {
+	"primary": "var(--accent-primary)",
+	"hot": "var(--accent-hot)",
+	"warm": "var(--accent-warm)",
+	"cool": "var(--accent-cool)",
+	"bold": "var(--accent-bold)",
+	"ink": "var(--accent-ink)",
+} -%}
+{%- set dark_accents = ["primary", "hot", "bold", "ink"] -%}
+{%- set bg = accent_map.get(token, "var(--surface)") -%}
+{%- set fg = "#ffffff" if token in dark_accents else "#161616" -%}
+background: {{ bg }}; color: {{ fg }};
+{%- endmacro %}
+
+{% macro rot_class(n) -%}
+{%- if n and n < 0 -%}
+-rotate-{{ -n }}
+{%- elif n and n > 0 -%}
+rotate-{{ n }}
+{%- endif -%}
+{%- endmacro %}

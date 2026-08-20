@@ -1,0 +1,14 @@
+{% extends "components/base.html" %}
+
+{% block title %}Not found &mdash; {{ app_name }}{% endblock %}
+{% block og_title %}Not found &mdash; {{ app_name }}{% endblock %}
+{% block og_description %}This page does not exist.{% endblock %}
+
+{% block body %}
+<section class="py-24 text-center">
+  <div class="numeral text-[96px] leading-none text-[var(--text-muted)]">404</div>
+  <h1 class="text-[22px] font-semibold tracking-[-0.01em] mt-4 text-[var(--text-primary)]">This page does not exist</h1>
+  <p class="text-[15px] text-[var(--text-secondary)] mt-2">The link may be broken, or the event may have moved.</p>
+  <a href="/home" class="cta-btn mt-8">Back home</a>
+</section>
+{% endblock %}

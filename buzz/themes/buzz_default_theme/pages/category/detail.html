@@ -1,0 +1,78 @@
+{% extends "components/base.html" %}
+{% import "components/macros/sections.html" as sections %}
+
+{% set category_name = frappe.db.get_value("Event Category", {"slug": category_slug, "enabled": 1}, "name") %}
+{% if not category_name %}
+  {% set not_found = frappe.throw(_("Category not found"), frappe.PageDoesNotExistError) %}
+{% endif %}
+{% set category = frappe.get_cached_doc("Event Category", category_name) %}
+
+{% set today = frappe.utils.today() %}
+{% set all_events = frappe.get_all("Buzz Event",
+      filters={"is_published": 1, "category": category_name},
+      fields=["name", "title", "route", "start_date", "venue",
+              "card_image", "banner_image", "short_description"],
+      order_by="start_date desc") %}
+
+{% set upcoming = [] %}
+{% set past = [] %}
+{% for event in all_events %}
+  {% if event.start_date and (event.start_date|string) < today %}
+    {% set _ = past.append(event) %}
+  {% else %}
+    {% set _ = upcoming.append(event) %}
+  {% endif %}
+{% endfor %}
+
+{% set theme_config = buzz_theme_config() %}
+
+{% block title %}{{ category.name }} &mdash; {{ app_name }}{% endblock %}
+{% block og_title %}{{ category.name }} &mdash; {{ app_name }}{% endblock %}
+{% block og_description %}{{ category.description or category.name }}{% endblock %}
+{% block og_url %}{{ frappe.utils.get_url() }}/category/{{ category.slug }}{% endblock %}
+
+{% block body %}
+
+{% if category.banner_image %}
+<section class="mb-6">
+  <img src="{{ category.banner_image }}" alt="{{ category.name }}" class="w-full aspect-[16/6] object-cover rounded-xl block" fetchpriority="high" />
+</section>
+{% endif %}
+
+<section class="mb-12">
+  <h1 class="text-[28px] font-semibold tracking-[-0.02em] leading-tight text-[var(--text-primary)]">{{ category.name }}</h1>
+  {% if category.description %}
+  <p class="prose-block mt-2 max-w-[640px]">{{ category.description }}</p>
+  {% endif %}
+</section>
+
+{% if upcoming %}
+<section class="mb-12" aria-labelledby="upcoming-heading">
+  {{ sections.section_header(theme_config.upcoming_heading or 'Upcoming', 'upcoming-heading') }}
+  <div class="grid gap-3">
+    {% for event_row in upcoming %}
+      {% with is_past = False %}{% include "components/event_row.html" %}{% endwith %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if past %}
+<section class="mb-12" aria-labelledby="past-heading">
+  {{ sections.section_header(theme_config.past_heading or 'In the Past', 'past-heading') }}
+  <div class="grid gap-3">
+    {% for event_row in past %}
+      {% with is_past = True %}{% include "components/event_row.html" %}{% endwith %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if not upcoming and not past %}
+<section class="card p-10 text-center">
+  <p class="text-[15px] text-[var(--text-secondary)]">No {{ category.name | lower }} on the calendar yet.</p>
+  <a href="/home" class="cta-btn mt-5">Back home</a>
+</section>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,106 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:theme_name",
+ "creation": "2026-05-17 12:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "theme_name",
+  "module",
+  "is_standard",
+  "theme_settings",
+  "column_break_main",
+  "parent_theme",
+  "section_break_config",
+  "config"
+ ],
+ "fields": [
+  {
+   "fieldname": "theme_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Theme Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "Buzz Themes",
+   "description": "Module the theme JSON is exported under when developer_mode is on.",
+   "fieldname": "module",
+   "fieldtype": "Link",
+   "label": "Module",
+   "options": "Module Def"
+  },
+  {
+   "default": "0",
+   "description": "When checked and developer_mode is on, saving writes this theme to disk so it ships with the app.",
+   "fieldname": "is_standard",
+   "fieldtype": "Check",
+   "label": "Is Standard"
+  },
+  {
+   "description": "Single DocType holding this theme's settings. Use the 'Scaffold Theme Settings' button to create one.",
+   "fieldname": "theme_settings",
+   "fieldtype": "Link",
+   "label": "Theme Settings",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Inherit from this theme. Overrides fall back to the parent theme before the defaults.",
+   "fieldname": "parent_theme",
+   "fieldtype": "Link",
+   "label": "Parent Theme",
+   "options": "Buzz Theme"
+  },
+  {
+   "fieldname": "section_break_config",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Theme Configuration"
+  },
+  {
+   "fieldname": "config",
+   "fieldtype": "JSON",
+   "label": "Config"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-17 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Buzz Themes",
+ "name": "Buzz Theme",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Website Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,112 @@
+{% extends "components/base.html" %}
+
+{% set today = frappe.utils.today() %}
+{% set category_name = frappe.db.get_value("Event Category", {"slug": category_slug, "enabled": 1}, "name") %}
+{% if not category_name %}
+  {% set not_found = frappe.throw(_("Category not found"), frappe.PageDoesNotExistError) %}
+{% endif %}
+{% set category = frappe.get_cached_doc("Event Category", category_name) %}
+
+{% set all_events = frappe.get_all("Buzz Event",
+      filters={"is_published": 1, "category": category_name},
+      fields=["name", "title", "route", "start_date", "venue",
+              "card_image", "banner_image", "short_description"],
+      order_by="start_date desc") %}
+
+{% set venue_names = all_events | map(attribute='venue') | reject('none') | list | unique | list %}
+{% set venues = frappe.get_all("Event Venue",
+      filters={"name": ["in", venue_names]},
+      fields=["name", "address"]) if venue_names else [] %}
+{% set venue_map = {} %}
+{% for venue in venues %}
+  {% set _ = venue_map.update({venue.name: venue.address}) %}
+{% endfor %}
+
+{% set upcoming_count = 0 %}
+{% set past_count = 0 %}
+{% for event in all_events %}
+  {% if event.start_date and (event.start_date|string) < today %}
+    {% set past_count = past_count + 1 %}
+  {% else %}
+    {% set upcoming_count = upcoming_count + 1 %}
+  {% endif %}
+{% endfor %}
+
+{% block title %}{{ category.name }} &mdash; {{ app_name }}{% endblock %}
+{% block og_title %}{{ category.name }} &mdash; {{ app_name }}{% endblock %}
+{% block og_description %}{{ category.description or category.name }}{% endblock %}
+{% block og_url %}{{ frappe.utils.get_url() }}/category/{{ category.slug }}{% endblock %}
+
+{% block body %}
+<main class="max-w-[1100px] mx-auto px-6 py-16">
+  {% include "components/header.html" %}
+
+  <section class="mb-10">
+    <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Browse</div>
+    <h1 class="font-ui font-extrabold text-[40px] leading-[1.05] mt-2 tracking-tight">{{ category.name }}</h1>
+    {% if category.description %}
+    <p class="text-[13px] opacity-70 mt-3 max-w-2xl">{{ category.description }}</p>
+    {% endif %}
+  </section>
+
+  <div x-data="eventFilter()" class="mt-8">
+    <div class="flex gap-2 mb-8 flex-wrap">
+      <button type="button" @click="set('upcoming')"
+              :class="filter==='upcoming' ? 'bg-pill text-pill-fg' : 'bg-transparent text-ink border border-line'"
+              class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase px-3 py-1.5 rounded transition-colors">
+        Upcoming
+      </button>
+      <button type="button" @click="set('past')"
+              :class="filter==='past' ? 'bg-pill text-pill-fg' : 'bg-transparent text-ink border border-line'"
+              class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase px-3 py-1.5 rounded transition-colors">
+        Past
+      </button>
+      <button type="button" @click="set('all')"
+              :class="filter==='all' ? 'bg-pill text-pill-fg' : 'bg-transparent text-ink border border-line'"
+              class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase px-3 py-1.5 rounded transition-colors">
+        All
+      </button>
+    </div>
+
+    {% if all_events %}
+    <div class="grid md:grid-cols-2 gap-6">
+      {% for event_row in all_events %}
+        {% set is_past = event_row.start_date and (event_row.start_date|string) < today %}
+        {% set status = 'past' if is_past else 'upcoming' %}
+        {% set event = {
+            "route": event_row.route,
+            "title": event_row.title,
+            "card_image": event_row.card_image or event_row.banner_image,
+            "start_date": event_row.start_date.strftime('%d %b').upper() if event_row.start_date else '',
+            "venue_address": venue_map.get(event_row.venue, ''),
+            "category_label": category.name.upper()
+        } %}
+        <div data-status="{{ status }}" x-show="matches('{{ status }}')">
+          {% include "components/event_card.html" %}
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if upcoming_count == 0 %}
+    <div x-show="filter==='upcoming'" class="text-center py-16 opacity-65">
+      <p class="font-ui font-semibold text-[13px] tracking-[0.04em] uppercase">No upcoming {{ category.name|lower }} events</p>
+      <p class="text-[13px] opacity-80 mt-2">Check back soon, or browse past events.</p>
+    </div>
+    {% endif %}
+    {% if past_count == 0 %}
+    <div x-show="filter==='past'" class="text-center py-16 opacity-65">
+      <p class="font-ui font-semibold text-[13px] tracking-[0.04em] uppercase">No past {{ category.name|lower }} events</p>
+      <p class="text-[13px] opacity-80 mt-2">Nothing in the archive yet.</p>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="text-center py-16 opacity-65">
+      <p class="font-ui font-semibold text-[13px] tracking-[0.04em] uppercase">No {{ category.name|lower }} events yet</p>
+      <p class="text-[13px] opacity-80 mt-2">Check back soon.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {% include "components/footer.html" %}
+</main>
+{% endblock %}

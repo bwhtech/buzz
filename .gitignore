@@ -72,3 +72,6 @@ plans/
 # Claude Code local state
 .claude/worktrees/
 .claude/settings.local.json
+
+# Local frappe-ui checkout for yarn link
+dashboard/frappe-ui/

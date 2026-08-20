@@ -1,0 +1,16 @@
+{% import "components/macros/branding.html" as branding with context %}
+<footer class="site-footer no-print">
+  <div class="site-footer-row">
+    <span>{{ branding.brand(footer_logo or app_logo, "footer-logo") }}</span>
+    {% if footer_items %}
+    <nav class="footer-links">{{ branding.footer_links() }}</nav>
+    {% endif %}
+    {% if copyright %}<span>&copy; {{ copyright }}</span>{% endif %}
+  </div>
+  {% if footer_address %}
+  <address class="site-footer-address">{{ footer_address }}</address>
+  {% endif %}
+  <div class="site-footer-tagline">
+    thank you for joining us &middot; powered by buzz
+  </div>
+</footer>

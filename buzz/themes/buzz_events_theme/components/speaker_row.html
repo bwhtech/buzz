@@ -1,0 +1,9 @@
+<div class="flex items-center gap-3.5 px-4 py-3.5 bg-pass border border-line rounded-[10px] hover:border-ink transition-colors">
+  <img class="w-14 h-14 rounded-full object-cover shrink-0 bg-bg border border-line" src="{{ speaker.image_url or buzz_theme_asset_url('images/placeholder.svg') }}" alt="{{ speaker.name }}" loading="lazy" />
+  <div>
+    <div class="font-ui font-bold text-[15px] leading-tight">{{ speaker.name }}</div>
+    {% if speaker.role %}
+    <div class="font-ui font-medium text-xs opacity-65 mt-1">{{ speaker.role }}</div>
+    {% endif %}
+  </div>
+</div>

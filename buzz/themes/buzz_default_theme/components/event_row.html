@@ -1,0 +1,11 @@
+{# Takes a raw "Buzz Event" row from get_all plus `is_past`, and derives its own labels. #}
+<a href="/events/{{ event_row.route }}" class="card px-5 py-4 flex items-start gap-4 {% if is_past %}is-past{% endif %}" aria-label="{{ event_row.title }}">
+  {% with badge_date = event_row.start_date %}{% include "components/date_badge.html" %}{% endwith %}
+  <span class="w-px self-stretch bg-[var(--hairline)] shrink-0"></span>
+  <div class="min-w-0">
+    <h3 class="text-[15px] font-medium leading-snug text-[var(--text-primary)]">{{ event_row.title }}</h3>
+    {% if event_row.short_description %}
+    <p class="text-[14px] leading-relaxed text-[var(--text-secondary)] mt-1">{{ event_row.short_description }}</p>
+    {% endif %}
+  </div>
+</a>

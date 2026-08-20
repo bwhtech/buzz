@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="csrf-token" content="{{ csrf_token }}" />
+  {% include "components/head_top.html" %}
+
+  <meta property="og:site_name" content="{{ app_name }}" />
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}" />
+  <meta property="og:title" content="{% block og_title %}{{ title_prefix or app_name }}{% endblock %}" />
+  <meta property="og:description" content="{% block og_description %}Conferences, yatras, meetups, and webinars.{% endblock %}" />
+  {% set og_image %}{% block og_image %}{{ banner_image or '' }}{% endblock %}{% endset %}
+  {% if og_image | trim %}<meta property="og:image" content="{{ og_image | trim }}" />{% endif %}
+  <meta property="og:url" content="{% block og_url %}{{ frappe.utils.get_url() }}{% endblock %}" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <title>{% block title %}{{ title_prefix or app_name }}{% endblock %}</title>
+
+  {% include "components/head_bottom.html" %}
+</head>
+
+<body>
+  <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] mono text-[11px] tracking-[0.15em] uppercase px-3 py-2 focus:bg-[var(--surface)] border-[3px] border-[var(--line-strong)]">skip to content</a>
+
+  <main id="main" class="page-shell">
+    {% include "components/header.html" %}
+
+    {% block body %}{% endblock %}
+
+    {% include "components/footer.html" %}
+  </main>
+
+  {% block body_extra %}{% endblock %}
+
+  {% if frappe.session.user == "Guest" %}{% include "components/login_dialog.html" %}{% endif %}
+
+  {% include "components/scripts_tail.html" %}
+</body>
+</html>

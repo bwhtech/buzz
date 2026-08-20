@@ -1,0 +1,255 @@
+{% extends "components/base.html" %}
+{% import "components/macros/icons.html" as icons %}
+{% import "components/macros/categories.html" as categories_macro %}
+
+{% set theme_config = buzz_theme_config() %}
+{% set hero_tagline = theme_config.hero_tagline or 'Conferences, Meetups, Webinars' %}
+
+{% block title %}{{ app_name }} &mdash; {{ hero_tagline }}{% endblock %}
+{% block og_title %}{{ app_name }} &mdash; {{ hero_tagline }}{% endblock %}
+{% block og_description %}{{ theme_config.hero_description or 'Conferences, yatras, meetups, and webinars.' }}{% endblock %}
+{% block og_url %}{{ frappe.utils.get_url() }}/home{% endblock %}
+
+{% block body %}
+<main class="max-w-[1100px] mx-auto px-6 py-16">
+  {% include "components/header.html" %}
+
+  {% set today = frappe.utils.today() %}
+  {% set all_events = frappe.get_all("Buzz Event",
+        filters={"is_published": 1},
+        fields=["name", "title", "route", "category", "start_date", "venue", "host",
+                "card_image", "banner_image", "short_description", "medium"],
+        order_by="start_date asc") %}
+
+  {% set venue_names = all_events | map(attribute='venue') | reject('none') | list | unique | list %}
+  {% set venues = frappe.get_all("Event Venue",
+        filters={"name": ["in", venue_names]},
+        fields=["name", "address"]) if venue_names else [] %}
+  {% set venue_map = {} %}
+  {% for venue in venues %}
+    {% set _ = venue_map.update({venue.name: venue.address}) %}
+  {% endfor %}
+
+  {% set categories = frappe.get_all("Event Category",
+        filters={"enabled": 1},
+        fields=["name", "slug", "description", "icon_name", "subtitle"],
+        order_by="name asc") %}
+
+  {% set upcoming_conferences = [] %}
+  {% set past_conferences = [] %}
+  {% set upcoming_yatra = [] %}
+  {% set past_webinars = [] %}
+  {% for event in all_events %}
+    {% set is_past = event.start_date and (event.start_date|string) < today %}
+    {% if event.category == 'Conferences' %}
+      {% if is_past %}{% set _ = past_conferences.append(event) %}{% else %}{% set _ = upcoming_conferences.append(event) %}{% endif %}
+    {% elif event.category == 'Yatra' and not is_past %}
+      {% set _ = upcoming_yatra.append(event) %}
+    {% elif event.category == 'Webinars' and is_past %}
+      {% set _ = past_webinars.append(event) %}
+    {% endif %}
+  {% endfor %}
+
+  {% set featured = upcoming_conferences[0] if upcoming_conferences else None %}
+
+  {% if featured %}
+    {% set featured_image = featured.card_image or featured.banner_image %}
+    {% set featured_date = featured.start_date.strftime('%d %b').upper() if featured.start_date else '' %}
+    {% set featured_venue = venue_map.get(featured.venue, '') %}
+    <section aria-labelledby="featured-heading" class="mb-16">
+      <h2 id="featured-heading" class="sr-only">Featured event</h2>
+
+      <a href="/events/{{ featured.route }}" class="pass perf-strip rounded-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2 group block bg-pass text-ink">
+        <div class="aspect-[4/3] md:aspect-auto md:h-full overflow-hidden">
+          {% if featured_image %}
+          <img
+            src="{{ featured_image }}"
+            alt="{{ featured.title }} banner"
+            class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+            fetchpriority="high"
+          />
+          {% endif %}
+        </div>
+        <div class="p-8 md:p-12 flex flex-col justify-between gap-8">
+          <div>
+            <div class="flex justify-between items-start gap-3">
+              <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">{{ theme_config.featured_label or 'Featured conference' }}</div>
+              <div class="bg-pill text-pill-fg px-3 py-1 font-ui font-bold text-[12px] tracking-[0.04em] whitespace-nowrap rounded">{{ featured_date }}</div>
+            </div>
+            <h3 class="font-ui font-extrabold text-[32px] md:text-[40px] leading-[1.05] mt-4 tracking-tight">
+              {{ featured.title }}
+            </h3>
+            {% if featured.short_description %}
+            <p class="text-[13px] mt-4 opacity-70 leading-relaxed max-w-md">
+              {{ featured.short_description }}
+            </p>
+            {% endif %}
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 border-t border-dashed border-line pt-5">
+            <div>
+              <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Venue</div>
+              <div class="font-ui font-bold text-[14px] mt-1">{{ featured_venue or '—' }}</div>
+            </div>
+            <div>
+              <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Date</div>
+              <div class="font-ui font-bold text-[14px] mt-1">{{ featured.start_date.strftime('%d %b %Y') if featured.start_date else '—' }}</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 font-ui text-[12px] font-bold tracking-[0.04em] uppercase opacity-90 group-hover:opacity-100">
+            View ticket
+            {{ icons.icon("arrow-right", "w-4 h-4 transition-transform group-hover:translate-x-1") }}
+          </div>
+        </div>
+      </a>
+    </section>
+  {% endif %}
+
+  <section aria-labelledby="yatra-heading" class="mt-16">
+    {% set title = theme_config.yatra_heading or 'Upcoming Yatra' %}
+    {% set link_href = '/category/yatra' %}
+    {% set link_label = 'View all' %}
+    {% include "components/section_header.html" %}
+
+    {% if upcoming_yatra %}
+    <div class="grid md:grid-cols-2 gap-6">
+      {% for event_row in upcoming_yatra %}
+        {% set event = {
+          'route': event_row.route,
+          'title': event_row.title,
+          'card_image': event_row.card_image or event_row.banner_image,
+          'start_date': event_row.start_date.strftime('%d %b').upper() if event_row.start_date else '',
+          'venue_address': venue_map.get(event_row.venue, ''),
+          'category_label': 'YATRA'
+        } %}
+        {% set is_past = False %}
+        {% if loop.index == 3 %}
+          {% include "components/event_card_wide.html" %}
+        {% else %}
+          {% include "components/event_card.html" %}
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="opacity-60 font-ui text-sm py-6">Nothing scheduled yet.</div>
+    {% endif %}
+  </section>
+
+  {% set upcoming_conf_rest = upcoming_conferences[1:] if featured else upcoming_conferences %}
+  <section aria-labelledby="conf-heading" class="mt-16">
+    {% set title = theme_config.conferences_heading or 'Upcoming Conferences' %}
+    {% set link_href = '/category/conferences' %}
+    {% set link_label = 'View all' %}
+    {% include "components/section_header.html" %}
+
+    {% if upcoming_conf_rest %}
+    <div class="grid md:grid-cols-2 gap-6">
+      {% for event_row in upcoming_conf_rest %}
+        {% set event = {
+          'route': event_row.route,
+          'title': event_row.title,
+          'card_image': event_row.card_image or event_row.banner_image,
+          'start_date': event_row.start_date.strftime('%d %b').upper() if event_row.start_date else '',
+          'venue_address': venue_map.get(event_row.venue, ''),
+          'category_label': 'CONFERENCE'
+        } %}
+        {% set is_past = False %}
+        {% include "components/event_card.html" %}
+      {% endfor %}
+
+      {% if upcoming_conf_rest|length < 2 %}
+      <div class="bg-pass text-ink rounded-xl p-8 flex flex-col items-center justify-center text-center border border-dashed border-line opacity-70">
+        <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">2026 &middot; in planning</div>
+        <div class="font-ui font-bold text-[18px] mt-3 leading-tight">More conferences<br />announced soon</div>
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-pass text-ink rounded-xl p-8 flex flex-col items-center justify-center text-center border border-dashed border-line opacity-70 md:col-span-2">
+        <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">2026 &middot; in planning</div>
+        <div class="font-ui font-bold text-[18px] mt-3 leading-tight">More conferences<br />announced soon</div>
+      </div>
+    </div>
+    {% endif %}
+  </section>
+
+  <section aria-labelledby="cat-heading" class="mt-16">
+    <h2 id="cat-heading" class="sr-only">Browse by category</h2>
+    {% if categories %}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {% for category in categories %}
+        <a href="/category/{{ category.slug }}" class="bg-pass text-ink rounded-xl p-5 flex items-center justify-between group hover:-translate-y-[2px] transition-transform">
+          <div>
+            <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">{{ categories_macro.category_subtitle(category) }}</div>
+            <div class="font-ui font-bold text-[18px] mt-1">{{ category.name }}</div>
+          </div>
+          {{ categories_macro.category_icon(category, "w-5 h-5 opacity-60 group-hover:opacity-100") }}
+        </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="opacity-60 font-ui text-sm py-6">No categories yet.</div>
+    {% endif %}
+  </section>
+
+  <section aria-labelledby="past-conf-heading" class="mt-16">
+    {% set title = 'Past Conferences' %}
+    {% set link_href = '/category/conferences' %}
+    {% set link_label = 'View all' %}
+    {% include "components/section_header.html" %}
+
+    {% if past_conferences %}
+    <div class="grid md:grid-cols-2 gap-6">
+      {% for event_row in past_conferences %}
+        {% set event = {
+          'route': event_row.route,
+          'title': event_row.title,
+          'card_image': event_row.card_image or event_row.banner_image,
+          'start_date': event_row.start_date.strftime('%d %b').upper() if event_row.start_date else '',
+          'venue_address': venue_map.get(event_row.venue, ''),
+          'category_label': 'CONFERENCE'
+        } %}
+        {% set is_past = True %}
+        {% if loop.index == 3 %}
+          {% include "components/event_card_wide.html" %}
+        {% else %}
+          {% include "components/event_card.html" %}
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="opacity-60 font-ui text-sm py-6">Nothing scheduled yet.</div>
+    {% endif %}
+  </section>
+
+  <section aria-labelledby="past-web-heading" class="mt-16">
+    {% set title = 'Past Webinars' %}
+    {% set link_href = '/category/webinars' %}
+    {% set link_label = 'View all' %}
+    {% include "components/section_header.html" %}
+
+    {% if past_webinars %}
+    <div class="grid md:grid-cols-2 gap-3">
+      {% for event_row in past_webinars %}
+        {% set event = {
+          'route': event_row.route,
+          'title': event_row.title,
+          'short_description': event_row.short_description,
+          'month_short': event_row.start_date.strftime('%b') if event_row.start_date else '',
+          'day': event_row.start_date.strftime('%d') if event_row.start_date else '',
+          'is_wide': (loop.index == 3)
+        } %}
+        {% include "components/webinar_row.html" %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="opacity-60 font-ui text-sm py-6">Nothing scheduled yet.</div>
+    {% endif %}
+  </section>
+
+  {% include "components/footer.html" %}
+</main>
+{% endblock %}

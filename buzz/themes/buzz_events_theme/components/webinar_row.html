@@ -1,0 +1,21 @@
+{% import "components/macros/icons.html" as icons %}
+{% set wide_classes = ' md:col-span-2' if event.get('is_wide') else '' %}
+<a href="/events/{{ event.route }}" class="block bg-pass text-ink rounded-xl p-5 opacity-85 hover:opacity-100 transition-colors group{{ wide_classes }}">
+  <div class="flex items-start gap-5">
+    <div class="text-center shrink-0 w-14">
+      <div class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase opacity-60">{{ event.month_short }}</div>
+      <div class="font-ui font-extrabold text-[28px] leading-none mt-1">{{ event.day }}</div>
+    </div>
+    <div class="flex-1 border-l border-dashed border-line pl-5">
+      <h3 class="font-ui font-bold text-[15px] leading-tight">{{ event.title }}</h3>
+      {% if event.short_description %}
+      <p class="text-xs opacity-70 mt-2 line-clamp-2">
+        {{ event.short_description }}
+      </p>
+      {% endif %}
+      <div class="flex items-center gap-1 font-ui font-bold text-[10px] tracking-[0.04em] uppercase mt-3 opacity-80 group-hover:opacity-100">
+        Recording {{ icons.icon("arrow-right", "w-3 h-3") }}
+      </div>
+    </div>
+  </div>
+</a>
