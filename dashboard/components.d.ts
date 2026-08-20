@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AddMembersDialog: typeof import('./src/components/dashboard/teams/AddMembersDialog.vue')['default']
     AddOnPreferenceDialog: typeof import('./src/components/AddOnPreferenceDialog.vue')['default']
+    AddVenueDialog: typeof import('./src/components/dashboard/events/AddVenueDialog.vue')['default']
     AttendeeFormControl: typeof import('./src/components/AttendeeFormControl.vue')['default']
     BackButton: typeof import('./src/components/common/BackButton.vue')['default']
     BaseCustomEventForm: typeof import('./src/components/BaseCustomEventForm.vue')['default']
@@ -29,6 +30,8 @@ declare module 'vue' {
     CustomFieldsSection: typeof import('./src/components/CustomFieldsSection.vue')['default']
     EventCard: typeof import('./src/components/dashboard/events/EventCard.vue')['default']
     EventDetailsHeader: typeof import('./src/components/EventDetailsHeader.vue')['default']
+    EventLocation: typeof import('./src/components/dashboard/events/EventLocation.vue')['default']
+    EventSchedule: typeof import('./src/components/dashboard/events/EventSchedule.vue')['default']
     EventSelector: typeof import('./src/components/EventSelector.vue')['default']
     FormFieldSections: typeof import('./src/components/FormFieldSections.vue')['default']
     LanguageSwitcher: typeof import('./src/components/LanguageSwitcher.vue')['default']

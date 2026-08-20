@@ -2,9 +2,13 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
+from buzz.api.events import create_event as create_event_endpoint
 from buzz.api.events import get_my_events
+from buzz.api.events.exceptions import CannotCreateEvents, ZoomNotAvailable
+from buzz.api.events.schemas import NewEvent
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user, payload_for
 from buzz.test_permissions import add_member, create_ticket
+from buzz.utils import is_app_installed
 
 
 def create_event(title: str, team: str, **overrides) -> str:
@@ -174,3 +178,86 @@ class TestGetMyEvents(IntegrationTestCase):
 				"team_logo",
 			},
 		)
+
+
+class TestCreateEvent(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		if not frappe.db.exists("Event Category", "Meetups"):
+			frappe.get_doc({"doctype": "Event Category", "name": "Meetups"}).insert(ignore_permissions=True)
+
+		cls.owner = create_user("create-event-owner@example.com", "Owner")
+		cls.viewer = create_user("create-event-viewer@example.com", "Viewer")
+		cls.team = create_owned_team("Create Event Team", cls.owner)
+		add_member(cls.team, cls.viewer, "Viewer")
+
+	def setUp(self):
+		frappe.set_user(self.owner)
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def payload(self, **overrides) -> NewEvent:
+		return NewEvent(
+			**{
+				"team": self.team,
+				"title": "Frappeverse Mumbai",
+				"start_date": add_days(today(), 30),
+				"start_time": "09:00:00",
+				"end_time": "17:00:00",
+				**overrides,
+			}
+		)
+
+	def test_creates_an_event_the_team_owns(self):
+		created = create_event_endpoint(self.payload())
+
+		event = frappe.get_doc("Buzz Event", created.name)
+		self.assertEqual(created.title, "Frappeverse Mumbai")
+		self.assertEqual(event.team, self.team)
+		self.assertEqual(event.medium, "In Person")
+		self.assertEqual(event.category, "Meetups")
+
+	def test_mints_one_host_per_team_and_reuses_it(self):
+		first = frappe.get_doc("Buzz Event", create_event_endpoint(self.payload()).name)
+		second = frappe.get_doc("Buzz Event", create_event_endpoint(self.payload(title="Second")).name)
+
+		self.assertTrue(first.host)
+		self.assertEqual(first.host, second.host)
+		self.assertEqual(frappe.db.get_value("Event Host", first.host, "team"), self.team)
+
+	def test_carries_the_optional_fields_through(self):
+		created = create_event_endpoint(
+			self.payload(
+				end_date=add_days(today(), 31),
+				about="<p>Come along</p>",
+				time_zone="Asia/Kolkata",
+			)
+		)
+
+		event = frappe.get_doc("Buzz Event", created.name)
+		self.assertEqual(event.about, "<p>Come along</p>")
+		self.assertEqual(event.time_zone, "Asia/Kolkata")
+		# Derived on validate from the zone, so it proves the zone reached the document.
+		self.assertEqual(event.time_zone_label, "IST")
+
+	def test_a_viewer_cannot_create_events(self):
+		frappe.set_user(self.viewer)
+
+		with self.assertRaises(CannotCreateEvents):
+			create_event_endpoint(self.payload())
+
+	def test_a_non_member_cannot_create_events(self):
+		stranger = create_user("create-event-stranger@example.com", "Stranger")
+		frappe.set_user(stranger)
+
+		with self.assertRaises(CannotCreateEvents):
+			create_event_endpoint(self.payload())
+
+	def test_zoom_is_refused_when_the_app_is_missing(self):
+		if is_app_installed("zoom_integration"):
+			self.skipTest("zoom_integration is installed on this site")
+
+		with self.assertRaises(ZoomNotAvailable):
+			create_event_endpoint(self.payload(zoom_meeting=True))
