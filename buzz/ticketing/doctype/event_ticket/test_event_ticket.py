@@ -308,3 +308,55 @@ class TestEventTicketZoomMeeting(IntegrationTestCase):
 		self.assertEqual(details.zoom_join_url, registrant["join_url"])
 		self.assertEqual(details.zoom_reference_doctype, "Zoom Meeting")
 		self.assertEqual(details.zoom_reference_name, meeting.name)
+
+
+class TestGuestTicketEmail(IntegrationTestCase):
+	"""Public bookings submit their tickets as Guest."""
+
+	def setUp(self):
+		self.event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		self.ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": self.event.name,
+				"title": "Guest Email Ticket",
+				"price": 0,
+			}
+		).insert(ignore_permissions=True)
+		self.template = frappe.get_doc(
+			{
+				"doctype": "Email Template",
+				"name": "Guest Ticket Template",
+				"subject": "GUEST - {{ event_title }}",
+				"response": "<p>Guest content</p>",
+			}
+		).insert(ignore_permissions=True)
+		self.event.db_set("ticket_email_template", self.template.name)
+		self.addCleanup(frappe.set_user, frappe.session.user)
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	# Frappe's whitelisted helper reads the template as the session user, which a guest is not allowed to do
+	@patch(
+		"frappe.email.doctype.email_template.email_template.get_email_template",
+		side_effect=frappe.PermissionError,
+	)
+	@patch("frappe.sendmail")
+	def test_guest_can_render_the_ticket_email_template(self, mock_sendmail, _permission_checked_helper):
+		ticket = frappe.get_doc(
+			{
+				"doctype": "Event Ticket",
+				"event": self.event.name,
+				"ticket_type": self.ticket_type.name,
+				"first_name": "Guest",
+				"attendee_email": "guest-booking@example.com",
+			}
+		).insert(ignore_permissions=True)
+
+		frappe.set_user("Guest")
+
+		ticket.send_ticket_email(now=True)
+
+		mock_sendmail.assert_called_once()
+		self.assertIn("GUEST", mock_sendmail.call_args[1]["subject"])
