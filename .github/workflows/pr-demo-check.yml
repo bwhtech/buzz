@@ -41,6 +41,10 @@ jobs:
               /<(img|video)\b/i,
               /https:\/\/github\.com\/user-attachments\/assets\/\S+/i,
               /https?:\/\/\S+\.(png|jpe?g|gif|webp|mp4|mov|webm)\b/i,
+              // Hosted screen recordings: Loom and Cap.
+              /https?:\/\/(www\.)?loom\.com\/(share|embed)\/\w+/i,
+              /https?:\/\/(www\.)?cap\.so\/s\/\w+/i,
+              /https?:\/\/cap\.link\/\w+/i,
             ];
             const MARKER = '<!-- ui-demo-check -->';
 
@@ -110,7 +114,7 @@ jobs:
               '### 🛠️ How to fix',
               '',
               '- **Edit the description** and drag a screenshot or a short screen recording into it.',
-              '  Before/after images are ideal for visual tweaks.',
+              '  Before/after images are ideal for visual tweaks. A Loom or Cap link works too.',
               '- Or apply the **`skip-demo`** label if a visual makes no sense here',
               '  (pure refactor, copy change, dependency bump).',
               '',
