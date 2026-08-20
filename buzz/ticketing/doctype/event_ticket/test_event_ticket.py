@@ -6,8 +6,9 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from buzz.events.doctype.buzz_team.test_buzz_team import create_user
 from buzz.events.doctype.buzz_team_settings.test_buzz_team_settings import set_team_settings
-from buzz.utils import generate_qr_code_file, make_qr_image
+from buzz.utils import generate_qr_code_file, make_qr_image, render_email_template
 
 EXTRA_TEST_RECORD_DEPENDENCIES = []
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Bulk Ticket Coupon"]
@@ -310,6 +311,33 @@ class TestEventTicketZoomMeeting(IntegrationTestCase):
 		self.assertEqual(details.zoom_reference_name, meeting.name)
 
 
+class TestRenderEmailTemplate(IntegrationTestCase):
+	"""Attendees and sponsors are Website Users; only Desk Users can read an Email Template."""
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def test_renders_for_a_user_without_email_template_permission(self):
+		template = frappe.get_doc(
+			{
+				"doctype": "Email Template",
+				"name": "Unprivileged Render Template",
+				"subject": "NOPERM - {{ event_title }}",
+				"response": "<p>NOPERM content</p>",
+			}
+		).insert(ignore_permissions=True)
+
+		attendee = create_user("attendee-render@example.com", "Attendee")
+		self.addCleanup(frappe.set_user, frappe.session.user)
+		frappe.set_user(attendee)
+		self.assertFalse(frappe.has_permission("Email Template", "read"))
+
+		rendered = render_email_template(template.name, {"event_title": "Buzz Conf"})
+
+		self.assertEqual(rendered["subject"], "NOPERM - Buzz Conf")
+		self.assertIn("NOPERM content", rendered["message"])
+
+
 class TestGuestTicketEmail(IntegrationTestCase):
 	"""Public bookings submit their tickets as Guest."""
 
@@ -337,13 +365,8 @@ class TestGuestTicketEmail(IntegrationTestCase):
 	def tearDown(self):
 		frappe.db.rollback()
 
-	# Frappe's whitelisted helper reads the template as the session user, which a guest is not allowed to do
-	@patch(
-		"frappe.email.doctype.email_template.email_template.get_email_template",
-		side_effect=frappe.PermissionError,
-	)
 	@patch("frappe.sendmail")
-	def test_guest_can_render_the_ticket_email_template(self, mock_sendmail, _permission_checked_helper):
+	def test_guest_can_render_the_ticket_email_template(self, mock_sendmail):
 		ticket = frappe.get_doc(
 			{
 				"doctype": "Event Ticket",
