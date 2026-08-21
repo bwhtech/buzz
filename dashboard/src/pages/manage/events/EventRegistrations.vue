@@ -6,8 +6,9 @@ import GuestRegistrationDialog from "@/components/dashboard/events/GuestRegistra
 import TicketTypeDialog from "@/components/dashboard/events/TicketTypeDialog.vue";
 import { eventDetail } from "@/data/events";
 import { useEventTicketTypes } from "@/data/tickets";
+import type { TicketType } from "@/types";
 import { formatPriceOrFree } from "@/utils/currency";
-import { Button, LoadingText } from "frappe-ui";
+import { Badge, Button, LoadingText } from "frappe-ui";
 import { ref } from "vue";
 import { useRoute } from "vue-router";
 
@@ -19,7 +20,18 @@ const ticketTypes = useEventTicketTypes(eventId);
 
 const editingRegistration = ref(false);
 const editingGuestRegistration = ref(false);
-const addingTicketType = ref(false);
+const editingTicketType = ref(false);
+// Null while creating; the tier being edited otherwise.
+const ticketTypeInEdit = ref<TicketType | null>(null);
+
+function editTicketType(ticketType: TicketType | null) {
+	ticketTypeInEdit.value = ticketType;
+	editingTicketType.value = true;
+}
+
+function saveTicketType(doc: Partial<TicketType> & Record<string, unknown>) {
+	return doc.name ? ticketTypes.setValue.submit(doc) : ticketTypes.insert.submit(doc);
+}
 </script>
 
 <template>
@@ -48,7 +60,7 @@ const addingTicketType = ref(false);
 					variant="subtle"
 					icon-left="plus"
 					label="New Ticket Type"
-					@click="addingTicketType = true"
+					@click="editTicketType(null)"
 				/>
 			</div>
 
@@ -57,19 +69,29 @@ const addingTicketType = ref(false);
 			<ul
 				v-else-if="ticketTypes.data?.length"
 				aria-label="Ticket types"
-				class="divide-y divide-outline-gray-1 overflow-hidden rounded-xl border border-outline-gray-2"
+				class="grid grid-cols-2 gap-3"
 			>
-				<li
-					v-for="ticketType in ticketTypes.data"
-					:key="ticketType.name"
-					class="flex items-baseline gap-2 px-4 py-3"
-				>
-					<span class="text-base font-medium text-ink-gray-9">{{
-						ticketType.title
-					}}</span>
-					<span class="text-base text-ink-gray-5">
-						{{ formatPriceOrFree(ticketType.price, ticketType.currency) }}
-					</span>
+				<li v-for="ticketType in ticketTypes.data" :key="ticketType.name">
+					<button
+						type="button"
+						class="w-full space-y-2 rounded-xl border border-outline-gray-2 bg-surface-white p-4 text-left transition-colors hover:border-outline-gray-3"
+						@click="editTicketType(ticketType)"
+					>
+						<Badge
+							:theme="ticketType.is_published ? 'green' : 'gray'"
+							variant="subtle"
+							size="sm"
+						>
+							{{ ticketType.is_published ? __("Available") : __("Sale Ended") }}
+						</Badge>
+
+						<p class="text-lg font-medium text-ink-gray-9">{{ ticketType.title }}</p>
+
+						<span class="flex items-center gap-1.5 text-sm text-ink-gray-6">
+							<span class="lucide-banknote size-4" aria-hidden="true" />
+							{{ formatPriceOrFree(ticketType.price, ticketType.currency) }}
+						</span>
+					</button>
 				</li>
 			</ul>
 
@@ -96,8 +118,9 @@ const addingTicketType = ref(false);
 	/>
 
 	<TicketTypeDialog
-		v-model="addingTicketType"
+		v-model="editingTicketType"
 		:event="eventId"
-		:insert="ticketTypes.insert.submit"
+		:tier="ticketTypeInEdit"
+		:save="saveTicketType"
 	/>
 </template>
