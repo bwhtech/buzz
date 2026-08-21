@@ -224,6 +224,15 @@ class TestCreateEvent(IntegrationTestCase):
 		self.assertEqual(event.medium, "In Person")
 		self.assertEqual(event.category, "Meetups")
 
+	def test_takes_a_hash_route_and_stays_unpublished(self):
+		first = frappe.get_doc("Buzz Event", create_event_endpoint(self.payload()).name)
+		second = frappe.get_doc("Buzz Event", create_event_endpoint(self.payload()).name)
+
+		self.assertFalse(first.is_published)
+		self.assertNotEqual(first.route, second.route)
+		# The title never reaches the route, so two events of the same name do not collide.
+		self.assertNotIn("frappeverse", first.route)
+
 	def test_mints_one_host_per_team_and_reuses_it(self):
 		first = frappe.get_doc("Buzz Event", create_event_endpoint(self.payload()).name)
 		second = frappe.get_doc("Buzz Event", create_event_endpoint(self.payload(title="Second")).name)
