@@ -1,4 +1,5 @@
 import frappe
+from frappe.rate_limiter import rate_limit
 
 from buzz.api.teams import invitations, services
 from buzz.api.teams.schemas import InviteOutcome, TeamOption, TeamOverview
@@ -39,3 +40,11 @@ def remove_member(team: str, user: str) -> None:
 @frappe.whitelist(methods=["POST"])
 def invite_members(team: str, invites: list[dict]) -> list[InviteOutcome]:
 	return invitations.invite_members(team, invites)
+
+
+# Rate limited by IP: the limiter buckets on `frappe.form_dict.cmd`, which only the
+# /api/method path sets, so this endpoint is called from there rather than over v2.
+@frappe.whitelist(methods=["POST"])
+@rate_limit(limit=5, seconds=60 * 60)
+def create_team(team_name: str, logo: str | None = None) -> TeamOption:
+	return services.create_team(team_name, logo)

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LoadingPanel from "@/components/common/LoadingPanel.vue";
 import TeamSwitcher from "@/components/TeamSwitcher.vue";
 import UserMenu from "@/components/UserMenu.vue";
 import { useTeamAccess } from "@/composables/useTeamAccess";
@@ -70,8 +71,9 @@ const eventItems = computed(() => [
 <template>
 	<NotFound v-if="access === 'denied'" />
 
-	<!-- scroll=false: the rounded panel below owns its own scroll. -->
-	<DesktopShell v-else-if="access === 'granted'" :scroll="false">
+	<!-- scroll=false: the rounded panel below owns its own scroll. The shell renders while
+		 the teams are still loading so the panel, not the whole window, holds the wait. -->
+	<DesktopShell v-else :scroll="false">
 		<template #sidebar>
 			<Sidebar v-model:collapsed="collapsed">
 				<div class="flex h-12 shrink-0 items-center px-1">
@@ -122,7 +124,8 @@ const eventItems = computed(() => [
 			>
 				<PageHeaderTarget />
 				<div class="min-h-0 flex-1 overflow-y-auto">
-					<router-view />
+					<LoadingPanel v-if="access === 'pending'" />
+					<router-view v-else />
 				</div>
 			</div>
 		</div>

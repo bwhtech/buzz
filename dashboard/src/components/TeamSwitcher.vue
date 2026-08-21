@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import CreateTeamDialog from "@/components/dashboard/teams/CreateTeamDialog.vue";
 import { currentTeam, selectTeam, teams } from "@/data/teams";
 import type { TeamOption } from "@/types";
 import { Avatar, Badge, KeyboardShortcut, Popover } from "frappe-ui";
 import { computed, ref } from "vue";
 
 const query = ref("");
+const showCreateDialog = ref(false);
 
 const matchingTeams = computed(() =>
 	teams.value.filter((team) =>
@@ -15,6 +17,12 @@ const matchingTeams = computed(() =>
 function switchTeam(team: TeamOption, closePanel: () => void) {
 	selectTeam(team.name);
 	closePanel();
+}
+
+// The popover has to go first: it traps focus, which the dialog then cannot take.
+function openCreateDialog(closePanel: () => void) {
+	closePanel();
+	showCreateDialog.value = true;
 }
 </script>
 
@@ -89,6 +97,7 @@ function switchTeam(team: TeamOption, closePanel: () => void) {
 
 				<button
 					class="flex w-full items-center gap-3 border-t px-3 py-2.5 text-left transition-colors duration-150 hover:bg-surface-gray-2 active:bg-surface-gray-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+					@click="openCreateDialog(close)"
 				>
 					<span class="lucide-plus size-4 shrink-0 text-ink-gray-6" />
 					<div class="min-w-0">
@@ -101,4 +110,6 @@ function switchTeam(team: TeamOption, closePanel: () => void) {
 			</div>
 		</template>
 	</Popover>
+
+	<CreateTeamDialog v-model="showCreateDialog" />
 </template>

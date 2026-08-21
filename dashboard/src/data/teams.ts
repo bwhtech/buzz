@@ -51,9 +51,25 @@ const teamOverview = useCall<TeamOverview, { team: string }>({
  * first fetch, so `loading` is true before the page paints.
  */
 export function useTeamOverview() {
-	watch(currentTeam, (team) => team && teamOverview.reload(), { immediate: true })
+	// Watched by name rather than by the object: every refresh of the teams list builds
+	// fresh TeamOption objects, so watching `currentTeam` itself re-fired on the same team
+	// and the second request aborted the first one mid-flight.
+	watch(selectedTeamName, (team) => team && teamOverview.reload(), { immediate: true })
 	return teamOverview
 }
+
+/**
+ * The overview's error, minus the ones no one should see.
+ *
+ * A superseded request is aborted, and the rejection lands in `error` after the newer
+ * request has already succeeded — "signal is aborted without reason" over a page whose
+ * data is sitting right there.
+ */
+export const teamOverviewError = computed(() =>
+	teamOverview.error && teamOverview.error.name !== "AbortError"
+		? teamOverview.error.message
+		: ""
+)
 
 export const removeMember = createResource({
 	url: "buzz.api.teams.remove_member",
@@ -62,6 +78,32 @@ export const removeMember = createResource({
 export const inviteMembers = createResource<InviteOutcome[]>({
 	url: "buzz.api.teams.invite_members",
 })
+
+// The endpoint is rate limited, and the limiter buckets on `cmd`, which only the
+// /api/method path sets — hence createResource here rather than a v2 useCall.
+export const createTeam = createResource<TeamOption>({
+	url: "buzz.api.teams.create_team",
+})
+
+/**
+ * Create a team and switch to it. Resolves once it is the selected team.
+ *
+ * The selection happens here rather than in an `onSuccess`, which createResource does
+ * not await: the caller would navigate first, the team page would load the old team,
+ * and the switch that followed would abort that request mid-flight — leaving "signal is
+ * aborted without reason" on a page whose data had already arrived.
+ */
+export async function createAndSelectTeam(params: {
+	team_name: string
+	logo: string | null
+}): Promise<TeamOption | null> {
+	const team = (await createTeam.submit(params)) as TeamOption | null
+	if (createTeam.error || !team) return null
+
+	await teamsResource.reload()
+	selectTeam(team.name)
+	return team
+}
 
 export function selectTeam(name: string) {
 	selectedTeamName.value = name
