@@ -183,6 +183,7 @@ export interface TicketType {
 	title: string
 	price: number
 	currency: string
+	is_published: boolean
 	max_tickets_available: number
 }
 

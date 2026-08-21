@@ -4,10 +4,12 @@ import type { TicketType } from "@/types";
 import { Button, Dialog, FormControl, toast } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 
-// The list on the page owns the insert, so creating a tier refreshes it for free.
+// The list on the page owns the write, so a saved tier refreshes it for free. A `tier`
+// means we are editing that one; without it the dialog creates.
 const props = defineProps<{
 	event: string;
-	insert: (doc: Partial<TicketType> & Record<string, unknown>) => Promise<unknown>;
+	tier?: TicketType | null;
+	save: (doc: Partial<TicketType> & Record<string, unknown>) => Promise<unknown>;
 }>();
 const isOpen = defineModel<boolean>({ required: true });
 
@@ -19,6 +21,7 @@ const title = ref("");
 const price = ref("");
 const currency = ref("INR");
 const capacity = ref("");
+const published = ref(true);
 const showErrors = ref(false);
 const saving = ref(false);
 const failure = ref("");
@@ -35,10 +38,13 @@ const problem = computed(() => {
 
 watch(isOpen, (open) => {
 	if (!open) return;
-	title.value = "";
-	price.value = "";
-	currency.value = "INR";
-	capacity.value = "";
+	title.value = props.tier?.title ?? "";
+	price.value = props.tier ? String(props.tier.price) : "";
+	currency.value = props.tier?.currency ?? "INR";
+	capacity.value = props.tier?.max_tickets_available
+		? String(props.tier.max_tickets_available)
+		: "";
+	published.value = props.tier ? Boolean(props.tier.is_published) : true;
 	showErrors.value = false;
 	failure.value = "";
 });
@@ -50,11 +56,12 @@ async function submit() {
 	saving.value = true;
 	failure.value = "";
 	try {
-		await props.insert({
-			event: props.event,
+		await props.save({
+			...(props.tier ? { name: props.tier.name } : { event: props.event }),
 			title: title.value.trim(),
 			price: Number(price.value),
 			currency: currency.value,
+			is_published: published.value,
 			// The doctype spells unlimited as 0.
 			max_tickets_available: capacity.value === "" ? 0 : Number(capacity.value),
 		});
@@ -65,13 +72,13 @@ async function submit() {
 		saving.value = false;
 	}
 
-	toast.success(`${title.value.trim()} added`);
+	toast.success(`${title.value.trim()} ${props.tier ? "updated" : "added"}`);
 	isOpen.value = false;
 }
 </script>
 
 <template>
-	<Dialog v-model="isOpen" title="New ticket type">
+	<Dialog v-model="isOpen" :title="tier ? 'Edit ticket type' : 'New ticket type'">
 		<form novalidate class="space-y-4" @submit.prevent="submit">
 			<FormControl
 				v-model="title"
@@ -106,6 +113,8 @@ async function submit() {
 				placeholder="Unlimited"
 			/>
 
+			<FormControl v-model="published" type="checkbox" label="Published" />
+
 			<p v-if="showErrors && problem" class="text-sm text-ink-red-4">{{ problem }}</p>
 			<ErrorMessage v-else-if="failure" :message="failure" />
 
@@ -115,7 +124,7 @@ async function submit() {
 			<Button
 				type="button"
 				variant="solid"
-				label="Create ticket type"
+				:label="tier ? 'Save changes' : 'Create ticket type'"
 				class="w-full"
 				:loading="saving"
 				@click="submit"
