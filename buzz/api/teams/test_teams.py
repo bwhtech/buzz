@@ -1,7 +1,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.teams import get_my_teams, get_team_overview, remove_member
+from buzz.api.teams import create_team, get_my_teams, get_team_overview, remove_member
 from buzz.api.teams.exceptions import CannotManageMembers, NotATeamMember
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
@@ -212,3 +212,51 @@ class TestRemoveMember(IntegrationTestCase):
 
 		remove_member(second, member)
 		self.assertNotIn("Event Manager", frappe.get_roles(member))
+
+
+class TestCreateTeam(IntegrationTestCase):
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_makes_the_creator_the_owner(self):
+		user = create_user("create-team-owner@example.com", "Founder")
+
+		frappe.set_user(user)
+		option = create_team("Create Team Owned")
+
+		self.assertEqual(option.team_name, "Create Team Owned")
+		self.assertEqual(option.team_role, "Owner")
+		self.assertTrue(
+			frappe.db.exists(
+				"Buzz Team Membership",
+				{"team": option.name, "user": user, "team_role": "Owner", "enabled": 1},
+			)
+		)
+		self.assertTrue(frappe.db.exists("Buzz Team Settings", {"team": option.name}))
+
+	def test_appears_in_the_creators_teams(self):
+		user = create_user("create-team-switcher@example.com", "Founder")
+
+		frappe.set_user(user)
+		option = create_team("Create Team Switcher")
+
+		self.assertIn(option.name, [team.name for team in get_my_teams()])
+
+	def test_a_repeated_name_gets_a_team_of_its_own(self):
+		user = create_user("create-team-twice@example.com", "Founder")
+
+		frappe.set_user(user)
+		first = create_team("Create Team Twice")
+		second = create_team("Create Team Twice")
+
+		self.assertNotEqual(first.name, second.name)
+		slugs = frappe.get_all("Buzz Team", filters={"name": ["in", [first.name, second.name]]}, pluck="slug")
+		self.assertEqual(len(set(slugs)), 2)
+
+	def test_refuses_a_nameless_team(self):
+		user = create_user("create-team-nameless@example.com", "Founder")
+
+		frappe.set_user(user)
+		with self.assertRaises(frappe.MandatoryError):
+			create_team("")

@@ -2,7 +2,7 @@
 import AddMembersDialog from "@/components/dashboard/teams/AddMembersDialog.vue";
 import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue";
 import { session } from "@/data/session";
-import { currentTeam, removeMember, useTeamOverview } from "@/data/teams";
+import { currentTeam, removeMember, teamOverviewError, useTeamOverview } from "@/data/teams";
 import type { TeamInvite, TeamMember } from "@/types";
 import { Avatar, Button, Dropdown, ErrorMessage, LoadingText, dialog, toast } from "frappe-ui";
 import { computed, ref } from "vue";
@@ -26,8 +26,6 @@ const isAdding = ref(false);
 const teamOverview = useTeamOverview();
 
 const team = computed(() => teamOverview.data);
-
-const errorMessage = computed(() => teamOverview.error?.message);
 
 const canManage = computed(() => MANAGING_ROLES.includes(team.value?.my_role ?? ""));
 
@@ -108,7 +106,7 @@ function confirmRemove(row: Row) {
 	<div class="m-auto max-w-[900px] w-full py-8 px-4 space-y-6">
 		<LoadingText v-if="teamOverview.loading" text="Loading members…" />
 
-		<ErrorMessage v-else-if="errorMessage" :message="errorMessage" />
+		<ErrorMessage v-else-if="teamOverviewError" :message="teamOverviewError" />
 
 		<template v-else-if="team">
 			<header class="space-y-1">

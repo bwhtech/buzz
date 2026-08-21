@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import LoadingPanel from "@/components/common/LoadingPanel.vue";
 import EventCard from "@/components/dashboard/events/EventCard.vue";
 import TeamHero from "@/components/dashboard/teams/TeamHero.vue";
 import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue";
 import { useMyEvents } from "@/data/events";
-import { currentTeam, useTeamOverview } from "@/data/teams";
-import { Avatar, Button, ErrorMessage, LoadingText } from "frappe-ui";
+import { currentTeam, teamOverviewError, useTeamOverview } from "@/data/teams";
+import { Avatar, Button, ErrorMessage } from "frappe-ui";
 import { computed } from "vue";
 
 const PREVIEW_LIMIT = 3;
@@ -13,8 +14,6 @@ const AVATAR_LIMIT = 5;
 const teamOverview = useTeamOverview();
 
 const team = computed(() => teamOverview.data);
-
-const errorMessage = computed(() => teamOverview.error?.message);
 
 const myEvents = useMyEvents();
 
@@ -37,9 +36,9 @@ const hiddenMemberCount = computed(() =>
 	<TeamPageHeader title="Overview" />
 
 	<div class="m-auto max-w-[1000px] w-full py-8 px-4 space-y-8">
-		<LoadingText v-if="teamOverview.loading" text="Loading team…" />
+		<LoadingPanel v-if="teamOverview.loading" />
 
-		<ErrorMessage v-else-if="errorMessage" :message="errorMessage" />
+		<ErrorMessage v-else-if="teamOverviewError" :message="teamOverviewError" />
 
 		<template v-else-if="team">
 			<TeamHero :team="team" />
