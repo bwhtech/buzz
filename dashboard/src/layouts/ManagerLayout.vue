@@ -2,6 +2,7 @@
 import TeamSwitcher from "@/components/TeamSwitcher.vue";
 import UserMenu from "@/components/UserMenu.vue";
 import { useTeamAccess } from "@/composables/useTeamAccess";
+import { useMySponsorships } from "@/data/sponsorships";
 import NotFound from "@/pages/NotFound.vue";
 import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem, SidebarLabel } from "frappe-ui";
 import { computed, ref } from "vue";
@@ -16,12 +17,18 @@ const access = useTeamAccess();
 // type Boolean, so Vue casts the absent prop to false and the inference never runs.
 const isActive = (to: string) => route.path === to;
 
-const personalItems = [
+// Sponsorship is only worth a slot once the user has an enquiry to look at, the same
+// rule the account tabs follow.
+const sponsorships = useMySponsorships();
+
+const personalItems = computed(() => [
 	{ label: "My Events", icon: "lucide-calendar-days", to: "/manage/events" },
 	{ label: "My Tickets", icon: "lucide-ticket", to: "/manage/tickets" },
 	{ label: "Talk Proposals", icon: "lucide-file-text", to: "/manage/proposals" },
-	{ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" },
-];
+	...(sponsorships.data?.length
+		? [{ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" }]
+		: []),
+]);
 
 // Team-scoped destinations read the active team from data/teams rather than the path,
 // so they are fixed and need no team loaded to render.
