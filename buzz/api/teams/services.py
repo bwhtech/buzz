@@ -2,7 +2,7 @@ import frappe
 from frappe.query_builder import Case
 
 from buzz.api.teams.exceptions import CannotManageMembers, NotATeamMember
-from buzz.api.teams.schemas import TeamInvite, TeamMember, TeamOverview
+from buzz.api.teams.schemas import TeamInvite, TeamMember, TeamOption, TeamOverview
 from buzz.permissions import can_manage_members, team_role_of
 
 TEAM_FIELDS = ("name", "team_name", "slug", "logo")
@@ -86,3 +86,16 @@ def remove_member(team: str, user: str) -> None:
 	# Event Manager holds no write permission on the membership doctype, so the guard above
 	# is the authorization — the same shape as the Desk add-members flow.
 	membership.save(ignore_permissions=True)
+
+
+def create_team(team_name: str, logo: str | None = None) -> TeamOption:
+	"""Start a team with the session user as its Owner.
+
+	Inserted past permissions like the reads above: Buzz Team's create right belongs to
+	System Manager, while any signed-in user may start a team of their own. The controller
+	derives the slug and lays down the Owner membership and the team settings.
+	"""
+	team = frappe.get_doc({"doctype": "Buzz Team", "team_name": team_name, "logo": logo})
+	team.insert(ignore_permissions=True)
+
+	return TeamOption(name=team.name, team_name=team.team_name, logo=team.logo, team_role="Owner")
