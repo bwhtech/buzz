@@ -203,6 +203,29 @@ test.describe("Event workspace", () => {
 		await expect(row).toContainText("499");
 	});
 
+	test("edits a ticket type from its card", async ({ page }) => {
+		await page.getByRole("link", { name: "Registrations" }).click();
+
+		const title = `Late Bird ${Date.now()}`;
+		await page.getByRole("button", { name: "New Ticket Type" }).click();
+		await page.getByRole("textbox", { name: "Title" }).fill(title);
+		await page.getByRole("spinbutton", { name: "Price" }).fill("100");
+		await page.getByRole("button", { name: "Create ticket type" }).click();
+
+		const card = page
+			.getByRole("list", { name: "Ticket types" })
+			.getByRole("listitem")
+			.filter({ hasText: title });
+		await expect(card).toBeVisible({ timeout: 15000 });
+
+		await card.getByRole("button").click();
+		await page.getByRole("spinbutton", { name: "Price" }).fill("250");
+		await page.getByRole("button", { name: "Save changes" }).click();
+
+		await expect(page.getByText(`${title} updated`)).toBeVisible();
+		await expect(card).toContainText("250");
+	});
+
 	test("moves between sections", async ({ page }) => {
 		await page.getByRole("link", { name: "Talks" }).click();
 

@@ -41,7 +41,7 @@ export function useMyTickets() {
 export function useEventTicketTypes(event: string) {
 	return useList<TicketType>({
 		doctype: "Event Ticket Type",
-		fields: ["name", "title", "price", "currency", "max_tickets_available"],
+		fields: ["name", "title", "price", "currency", "is_published", "max_tickets_available"],
 		filters: { event },
 		orderBy: "creation asc",
 		limit: 0,
