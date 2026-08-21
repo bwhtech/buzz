@@ -257,6 +257,9 @@ DEFAULT_CATEGORY = "Meetups"
 # Zoom-backed, so the meeting the organiser asked for is the one the event gets.
 ZOOM_CATEGORY = "Zoom Meeting"
 
+# Long enough to be unguessable, short enough to paste into a chat.
+ROUTE_HASH_LENGTH = 12
+
 
 def create_event(new: NewEvent) -> CreatedEvent:
 	"""Create an event for a team from the dashboard's create form."""
@@ -284,6 +287,9 @@ def create_event(new: NewEvent) -> CreatedEvent:
 			"medium": "Online" if new.zoom_meeting else "In Person",
 			"category": ZOOM_CATEGORY if new.zoom_meeting else DEFAULT_CATEGORY,
 			"host": host_for(new.team),
+			# A hash rather than the title: the event has an address to publish at from the
+			# off, and two events of the same name never collide. The details page renames it.
+			"route": frappe.generate_hash(length=ROUTE_HASH_LENGTH),
 		}
 	).insert()
 

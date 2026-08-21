@@ -75,7 +75,7 @@ async function save() {
 	if (createEvent.error) return;
 
 	toast.success(`${createEvent.data?.title} created`);
-	router.push({ name: "team-events" });
+	router.push({ name: "event-details", params: { eventId: createEvent.data?.name } });
 }
 </script>
 
