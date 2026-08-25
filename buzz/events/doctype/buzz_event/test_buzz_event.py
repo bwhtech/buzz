@@ -226,6 +226,44 @@ class TestBuzzEvent(FrappeTestCase):
 
 		event.validate_venue_team()
 
+	def test_turning_an_event_online_drops_its_venue(self):
+		"""The venue outlives the medium otherwise.
+
+		`generate_ics_file` and the booking page both read `venue` without consulting
+		`medium`, so a leftover venue puts a physical address on an online event.
+		"""
+		team = self._make_team("Venue Test Team")
+		event = self._make_event_with_venue(self._make_venue("Venue Test Hall", team), team)
+		event.medium = "Online"
+		event.meeting_link = "https://example.com/room"
+
+		event.clear_unused_location()
+
+		self.assertIsNone(event.venue)
+		self.assertEqual(event.meeting_link, "https://example.com/room")
+
+	def test_turning_an_event_in_person_drops_its_meeting_link(self):
+		team = self._make_team("Venue Test Team")
+		venue = self._make_venue("Venue Test Hall", team)
+		event = self._make_event_with_venue(venue, team)
+		event.medium = "In Person"
+		event.meeting_link = "https://example.com/room"
+
+		event.clear_unused_location()
+
+		self.assertEqual(event.venue, venue)
+		self.assertIsNone(event.meeting_link)
+
+	def test_an_online_event_keeps_a_venue_it_never_had(self):
+		"""Clearing must not invent a change on an event that was always online."""
+		team = self._make_team("Venue Test Team")
+		event = self._make_event_with_venue(None, team)
+		event.medium = "Online"
+
+		event.clear_unused_location()
+
+		self.assertIsNone(event.venue)
+
 	# ==================== Create from Template Tests ====================
 
 	def test_create_from_template_copies_direct_fields(self):

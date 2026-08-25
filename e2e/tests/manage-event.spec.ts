@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { callMethod, ensureTestTeam } from "../helpers/frappe";
+import { callMethod, createDoc, ensureTestTeam, getDoc } from "../helpers/frappe";
 
 // Runs under the shared Administrator state, whose team hosts the event seeded by
 // event.setup.ts — the one card guaranteed to carry a Manage button.
@@ -84,6 +84,55 @@ test.describe("Event workspace", () => {
 
 		await expect(page).toHaveURL(/\/b\/manage\/events$/, { timeout: 15000 });
 		await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible();
+	});
+});
+
+// The shared event has no venue, and a switch has to have one to lose, so this block
+// seeds its own.
+test.describe("Switching an event's medium", () => {
+	let eventId: string;
+
+	test.beforeEach(async ({ page, request }) => {
+		const team = await ensureTestTeam(request);
+		// Event Venue is autonamed by prompt, so the docname is the venue's own name.
+		const venue = `E2E Venue ${Date.now()}`;
+		await createDoc(request, "Event Venue", {
+			__newname: venue,
+			address: "1 Test Street",
+			team,
+		});
+		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
+			event: {
+				team,
+				title: `Medium Event ${Date.now()}`,
+				start_date: "2030-01-01",
+				start_time: "09:00:00",
+				end_time: "17:00:00",
+				venue,
+			},
+		});
+		eventId = String(event.name);
+		await page.goto(`/b/manage/events/${eventId}/details`);
+	});
+
+	test("drops the venue when the event turns virtual", async ({ page, request }) => {
+		await expect(page.getByRole("combobox", { name: "Search venues, or add one" })).toBeVisible({
+			timeout: 15000,
+		});
+
+		await page.getByRole("button", { name: "Virtual" }).click();
+		await page.getByRole("button", { name: "Save" }).click();
+		await expect(page.getByText("Event saved")).toBeVisible();
+
+		// The calendar invite and the booking page read the venue whatever the medium is,
+		// so it has to be gone from the record, not just from the form.
+		const saved = await getDoc<{ medium: string; venue: string | null }>(
+			request,
+			"Buzz Event",
+			eventId
+		);
+		expect(saved.medium).toBe("Online");
+		expect(saved.venue).toBeFalsy();
 	});
 });
 

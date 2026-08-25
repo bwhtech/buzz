@@ -28,6 +28,15 @@ const address = computed(() => {
 	return picked?.address || props.venueAddress || "";
 });
 
+// The hidden field is dropped here as well as on the server: the calendar invite and the
+// booking page both read `venue` without consulting `medium`, so a leftover one shows an
+// address the event no longer has.
+function pick(value: string) {
+	medium.value = value;
+	if (value === ONLINE) venue.value = "";
+	else meetingLink.value = "";
+}
+
 async function copyLink() {
 	await navigator.clipboard.writeText(meetingLink.value);
 	toast.success("Link copied");
@@ -45,7 +54,7 @@ async function copyLink() {
 				:label="option.label"
 				:aria-pressed="medium === option.value"
 				class="w-full"
-				@click="medium = option.value"
+				@click="pick(option.value)"
 			/>
 		</div>
 
