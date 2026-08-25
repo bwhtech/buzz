@@ -23,10 +23,13 @@ watchDebounced(
 	async (value) => {
 		availability.value = null;
 		if (!value.trim() || value === props.saved) return;
-		availability.value = (await checkEventRoute.submit({
+		const answer = (await checkEventRoute.submit({
 			route: value,
 			event: props.event,
 		})) as Availability;
+		// A later keystroke may have overtaken this request while it was in flight.
+		if (route.value !== value) return;
+		availability.value = answer;
 	},
 	{ debounce: 400 }
 );
@@ -86,7 +89,7 @@ async function copy() {
 		<p
 			v-if="availability"
 			class="mt-1.5 flex items-center gap-1 text-sm"
-			:class="availability.available ? 'text-ink-green-3' : 'text-ink-red-3'"
+			:class="availability.available ? 'text-ink-green-6' : 'text-ink-red-6'"
 		>
 			<span
 				class="size-3.5 shrink-0"
