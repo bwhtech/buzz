@@ -1,9 +1,13 @@
 import frappe
+from frappe import _
+from frappe.model.naming import append_number_if_name_exists
 from frappe.query_builder import Case
 from frappe.utils import getdate
 
-from buzz.api.events.schemas import MyEvent, MyEventsResponse
-from buzz.permissions import my_teams
+from buzz.api.events.exceptions import CannotCreateEvents, ZoomNotAvailable
+from buzz.api.events.schemas import CreatedEvent, MyEvent, MyEventsResponse, NewEvent
+from buzz.permissions import has_team_access, my_teams
+from buzz.utils import is_app_installed
 
 
 def my_events() -> MyEventsResponse:
@@ -63,3 +67,84 @@ def split_by_date(events: list[MyEvent]) -> tuple[list[MyEvent], list[MyEvent]]:
 		is_over = (event.end_date or event.start_date) < getdate()
 		(past if is_over else upcoming).append(event)
 	return upcoming, list(reversed(past))
+
+
+# Buzz Event demands a category and a host, neither of which the create form asks for.
+# These are the defaults it fills in; the organiser changes them on the event afterwards.
+DEFAULT_CATEGORY = "Meetups"
+# Zoom-backed, so the meeting the organiser asked for is the one the event gets.
+ZOOM_CATEGORY = "Zoom Meeting"
+
+
+def create_event(new: NewEvent) -> CreatedEvent:
+	"""Create an event for a team from the dashboard's create form."""
+	if not has_team_access(new.team, "create", frappe.session.user):
+		CannotCreateEvents.throw()
+
+	# Checked before the insert: a half-made event the organiser has to clean up is worse
+	# than a refusal.
+	if new.zoom_meeting and not is_app_installed("zoom_integration"):
+		ZoomNotAvailable.throw()
+
+	event = frappe.get_doc(
+		{
+			"doctype": "Buzz Event",
+			"team": new.team,
+			"title": new.title,
+			"start_date": new.start_date,
+			"end_date": new.end_date,
+			"start_time": new.start_time,
+			"end_time": new.end_time,
+			"about": new.about,
+			"banner_image": new.banner_image,
+			"time_zone": new.time_zone,
+			"venue": new.venue,
+			"medium": "Online" if new.zoom_meeting else "In Person",
+			"category": ZOOM_CATEGORY if new.zoom_meeting else DEFAULT_CATEGORY,
+			"host": host_for(new.team),
+		}
+	).insert()
+
+	if new.zoom_meeting:
+		book_zoom_meeting(event)
+
+	return CreatedEvent(name=str(event.name), title=event.title)
+
+
+def book_zoom_meeting(event) -> None:
+	"""Book the Zoom meeting the organiser asked for, and keep the event either way.
+
+	`create_meeting_on_zoom` calls Zoom during the request and writes the meeting back
+	onto the event. Letting it raise would roll the insert back with it, so a Zoom outage
+	would cost the organiser the whole event rather than just the meeting; they can add
+	one from the event afterwards.
+	"""
+	try:
+		event.create_meeting_on_zoom()
+	except Exception:
+		frappe.log_error(title="Zoom meeting not created", reference_doctype="Buzz Event")
+		frappe.msgprint(
+			_("The event was created, but its Zoom meeting could not be. Add one from the event."),
+			title=_("Zoom Meeting Not Created"),
+			indicator="orange",
+		)
+
+
+def host_for(team: str) -> str:
+	"""The team's own Event Host, made on first use.
+
+	Event Host is required on every event but absent from the create form, and a new team
+	has none. Host names are docnames and therefore global, so an existing name is given a
+	suffix rather than joined.
+	"""
+	existing = frappe.db.get_value("Event Host", {"team": team}, "name")
+	if existing:
+		return existing
+
+	team_name = frappe.db.get_value("Buzz Team", team, "team_name") or team
+	host = frappe.get_doc({"doctype": "Event Host", "name": team_name, "team": team})
+	host.name = append_number_if_name_exists("Event Host", team_name)
+	# Event Host is readable by the team but writable by Event Manager only, and creating
+	# an event is what mints it — the team check above is the authorisation.
+	host.insert(ignore_permissions=True)
+	return host.name

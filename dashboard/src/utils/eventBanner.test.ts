@@ -25,7 +25,7 @@ test("ring origins stay off centre", () => {
 
 test("ring spacing stays inside the readable range", () => {
 	for (const name of NAMES) {
-		const gap = Number(bannerPattern(name).match(/1px (\d+\.\d)px/)?.[1])
-		assert.ok(gap >= 9 && gap <= 12, `${name} drew a ${gap}px gap`)
+		const gap = Number(bannerPattern(name).match(/transparent \d+px (\d+\.\d)px/)?.[1])
+		assert.ok(gap >= 18 && gap <= 26, `${name} drew a ${gap}px gap`)
 	}
 })
