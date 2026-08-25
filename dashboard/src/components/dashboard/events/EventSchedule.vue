@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { alignedEndDate } from "@/utils/eventDates";
+import { alignedEndDate, isEndBeforeStart } from "@/utils/eventDates";
 import {
 	allTimeZones,
 	zoneCity,
@@ -7,7 +7,7 @@ import {
 	zoneOffsetLabel,
 	zoneSearchText,
 } from "@/utils/timeZones";
-import { Combobox, DatePicker, TimePicker, dayjsLocal } from "frappe-ui";
+import { Combobox, DatePicker, ErrorMessage, TimePicker, dayjsLocal } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 
 defineProps<{ disabled?: boolean }>();
@@ -25,6 +25,20 @@ const earliestEnd = computed(() => startDate.value || today);
 watch(startDate, (start) => {
 	endDate.value = alignedEndDate(start, endDate.value);
 });
+
+// Only a single-day event is bounded: a span that runs into another day may well end
+// earlier in the day than it began. The picker rejects a typed value below `min` too,
+// not just the ones it lists.
+const earliestEndTime = computed(() =>
+	!endDate.value || endDate.value === startDate.value ? startTime.value : undefined
+);
+
+// `min` is inclusive, so it still lets the end land exactly on the start, which the
+// server refuses. It also cannot undo a time that was already valid as a multi-day
+// event before the end date was pulled back to the start.
+const endsBeforeItStarts = computed(() =>
+	isEndBeforeStart(startDate.value, endDate.value, startTime.value, endTime.value)
+);
 
 // The row slot is typed for custom rows too, which carry no value; ours never are.
 const zoneOf = (item: { type?: string; value?: string }) => item.value ?? "";
@@ -71,8 +85,15 @@ const zoneOptions = computed(() =>
 					:min="earliestEnd"
 					:disabled="disabled"
 				/>
-				<TimePicker v-model="endTime" placeholder="Time" :disabled="disabled" />
+				<TimePicker
+					v-model="endTime"
+					placeholder="Time"
+					:min="earliestEndTime"
+					:disabled="disabled"
+				/>
 			</div>
+
+			<ErrorMessage v-if="endsBeforeItStarts" message="End time must be after start time" />
 		</div>
 
 		<div class="space-y-1">

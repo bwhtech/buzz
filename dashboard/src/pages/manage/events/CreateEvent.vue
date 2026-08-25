@@ -6,6 +6,7 @@ import { createEvent } from "@/data/events";
 import { currentTeam } from "@/data/teams";
 import NotFound from "@/pages/NotFound.vue";
 import { bannerPattern } from "@/utils/eventBanner";
+import { isEndBeforeStart } from "@/utils/eventDates";
 import { canCreateEvents } from "@/utils/teamRoles";
 import { currentTimeZone } from "@/utils/timeZones";
 import { refDebounced } from "@vueuse/core";
@@ -82,12 +83,15 @@ const canSave = computed(() =>
 			startDate.value &&
 			startTime.value &&
 			endTime.value &&
+			!isEndBeforeStart(startDate.value, endDate.value, startTime.value, endTime.value) &&
 			(venue.value || zoomMeeting.value)
 	)
 );
 
 // createResource types its error as {}, so the message needs narrowing.
-const errorMessage = computed(() => (createEvent.error as FrappeError | null)?.message);
+const errorMessage = computed(() =>
+	(createEvent.error as FrappeError | null)?.messages?.join("\n")
+);
 
 async function save() {
 	if (!canSave.value) return;
