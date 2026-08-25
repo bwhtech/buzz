@@ -68,7 +68,9 @@ const isDirty = computed(() => JSON.stringify(form) !== saved.value);
 const items = computed(() => [{ label: event.data?.title || "Event" }, { label: "Details" }]);
 
 // createResource types its error as {}, so the message needs narrowing.
-const errorMessage = computed(() => (updateEvent.error as FrappeError | null)?.message);
+const errorMessage = computed(() =>
+	(updateEvent.error as FrappeError | null)?.messages?.join("\n")
+);
 
 async function save() {
 	// A blank date or venue has to reach the server as null, not "".
@@ -124,7 +126,7 @@ async function save() {
 				:rows="2"
 				aria-label="Short description"
 				placeholder="Add a small description"
-				class="!border-0 resize-none px-0 text-ink-gray-6"
+				class="!border-0 resize-none px-0 text-ink-gray-6 bg-transparent"
 			/>
 		</div>
 
