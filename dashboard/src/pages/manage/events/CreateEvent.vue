@@ -6,10 +6,11 @@ import { createEvent } from "@/data/events";
 import { currentTeam } from "@/data/teams";
 import NotFound from "@/pages/NotFound.vue";
 import { bannerPattern } from "@/utils/eventBanner";
+import { canCreateEvents } from "@/utils/teamRoles";
 import { currentTimeZone } from "@/utils/timeZones";
 import { refDebounced } from "@vueuse/core";
 import type { FrappeError } from "@/types";
-import { Button, ErrorMessage, FileUploader, toast, useTheme } from "frappe-ui";
+import { Alert, Button, ErrorMessage, FileUploader, toast, useTheme } from "frappe-ui";
 import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor";
 import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
@@ -17,6 +18,10 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 
 const access = useTeamAccess();
+
+// The server refuses anything below Manager, so the form is shown read-only rather than
+// letting someone fill it in and lose the work to a 403 on save.
+const canCreate = computed(() => canCreateEvents(currentTeam.value?.team_role));
 
 // The picker is filtered to these, and the file that comes back is checked against the
 // same list: `accept` is a hint the OS may ignore, and a drag-drop never consults it.
@@ -72,7 +77,8 @@ const isSettling = computed(() => title.value.trim() !== settledTitle.value.trim
 // About is optional: an event needs a name, when it runs, and where.
 const canSave = computed(() =>
 	Boolean(
-		title.value.trim() &&
+		canCreate.value &&
+			title.value.trim() &&
 			startDate.value &&
 			startTime.value &&
 			endTime.value &&
@@ -156,6 +162,14 @@ watch(bannerImage, () => {
 				<ErrorMessage v-if="errorMessage" :message="errorMessage" />
 			</header>
 
+			<Alert
+				v-if="!canCreate"
+				theme="yellow"
+				title="You cannot create events"
+				description="Ask an admin to make you a Manager to create events."
+				:dismissible="false"
+			/>
+
 			<FileUploader
 				:file-types="BANNER_IMAGE_TYPES"
 				:validate-file="validateBannerImage"
@@ -165,8 +179,9 @@ watch(bannerImage, () => {
 					<!-- The whole banner is the hit area; the button inside stays the -->
 					<!-- keyboard-reachable control, so its press must not fire twice. -->
 					<div
-						class="relative aspect-[3/1] cursor-pointer overflow-hidden rounded-xl border border-outline-gray-2"
-						@click="openFileSelector"
+						class="relative aspect-[3/1] overflow-hidden rounded-xl border border-outline-gray-2"
+						:class="canCreate ? 'cursor-pointer' : 'cursor-default'"
+						@click="canCreate && openFileSelector()"
 					>
 						<!-- The pattern gets a layer of its own so the blur below never
 							 reaches the image or the button. Overscaled because blur samples
@@ -201,6 +216,7 @@ watch(bannerImage, () => {
 								variant="subtle"
 								icon-left="lucide-image-up"
 								:label="bannerImage ? 'Change banner' : 'Add a banner'"
+								:disabled="!canCreate"
 								@click.stop="openFileSelector"
 							/>
 						</div>
@@ -216,7 +232,8 @@ watch(bannerImage, () => {
 				v-model="title"
 				aria-label="Event title"
 				placeholder="Name your event"
-				class="w-full bg-transparent text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none"
+				:disabled="!canCreate"
+				class="w-full bg-transparent text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none disabled:text-ink-gray-5"
 			/>
 
 			<div class="grid gap-8 md:grid-cols-5">
@@ -232,6 +249,7 @@ watch(bannerImage, () => {
 							v-model="about"
 							:extensions="[RichTextKit]"
 							placeholder="What is this event about?"
+							:editable="canCreate"
 						>
 							<EditorContent
 								class="prose-sm h-48 max-w-none overflow-y-auto text-ink-gray-8 focus:outline-none"
@@ -246,6 +264,7 @@ watch(bannerImage, () => {
 							When
 						</h2>
 						<EventSchedule
+							:disabled="!canCreate"
 							v-model:start-date="startDate"
 							v-model:start-time="startTime"
 							v-model:end-date="endDate"
@@ -262,6 +281,7 @@ watch(bannerImage, () => {
 							v-model:venue="venue"
 							v-model:zoom-meeting="zoomMeeting"
 							:team="currentTeam?.name ?? ''"
+							:disabled="!canCreate"
 						/>
 					</section>
 				</div>

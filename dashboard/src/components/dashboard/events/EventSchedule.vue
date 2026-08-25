@@ -10,6 +10,8 @@ import {
 import { Combobox, DatePicker, TimePicker, dayjsLocal } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 
+defineProps<{ disabled?: boolean }>();
+
 const startDate = defineModel<string>("startDate", { default: "" });
 const startTime = defineModel<string>("startTime", { default: "" });
 const endDate = defineModel<string>("endDate", { default: "" });
@@ -53,8 +55,9 @@ const zoneOptions = computed(() =>
 					format="ddd D MMM"
 					placeholder="Date"
 					:min="today"
+					:disabled="disabled"
 				/>
-				<TimePicker v-model="startTime" placeholder="Time" />
+				<TimePicker v-model="startTime" placeholder="Time" :disabled="disabled" />
 			</div>
 		</div>
 
@@ -66,8 +69,9 @@ const zoneOptions = computed(() =>
 					format="ddd D MMM"
 					placeholder="Date"
 					:min="earliestEnd"
+					:disabled="disabled"
 				/>
-				<TimePicker v-model="endTime" placeholder="Time" />
+				<TimePicker v-model="endTime" placeholder="Time" :disabled="disabled" />
 			</div>
 		</div>
 
@@ -78,11 +82,12 @@ const zoneOptions = computed(() =>
 				v-model="timeZone"
 				:options="zoneOptions"
 				placeholder="Search by city, country or zone"
+				:disabled="disabled"
 				@update:open="(open: boolean) => (hasOpened = hasOpened || open)"
 			>
 				<!-- Mounted inside the popover trigger, so the press opens it on its own. -->
 				<template #trigger>
-					<Button class="w-full mt-2">
+					<Button class="w-full mt-2" :disabled="disabled">
 						<div class="flex gap-2">
 							<span
 								class="lucide-globe size-4 shrink-0 text-ink-gray-5"

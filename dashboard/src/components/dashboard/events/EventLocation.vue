@@ -8,7 +8,7 @@ import { computed, ref, watch } from "vue";
 // venue really could be called "Zoom" — the sentinel keeps the two apart.
 const ZOOM = "__zoom__";
 
-const props = defineProps<{ team: string }>();
+const props = defineProps<{ team: string; disabled?: boolean }>();
 
 const venue = defineModel<string>("venue", { default: "" });
 // Zoom cannot be booked until the event exists, so this is the intent to act on at save.
@@ -77,6 +77,7 @@ async function onVenueCreated(name: string) {
 		:options="options"
 		placeholder="Search venues, or add one"
 		class="w-full mt-2"
+		:disabled="disabled"
 	/>
 
 	<AddVenueDialog
