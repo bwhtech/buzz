@@ -255,6 +255,27 @@ class TestCreateEvent(IntegrationTestCase):
 		with self.assertRaises(CannotCreateEvents):
 			create_event_endpoint(self.payload())
 
+	def test_a_venue_from_another_team_is_refused(self):
+		"""The reported vector: a manager naming a venue that belongs to someone else.
+
+		Event Venue is autonamed by prompt, so another team's venue name is guessable,
+		and the booking confirmation reads the linked venue's address without a
+		permission check.
+		"""
+		stranger = create_user("create-event-venue-stranger@example.com", "Stranger")
+		their_team = create_owned_team("Create Event Other Team", stranger)
+		theirs = frappe.get_doc(
+			{
+				"doctype": "Event Venue",
+				"__newname": "Create Event Other Team Hall",
+				"address": "1 Test Street",
+				"team": their_team,
+			}
+		).insert(ignore_permissions=True)
+
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			create_event_endpoint(self.payload(venue=str(theirs.name)))
+
 	def test_zoom_is_refused_when_the_app_is_missing(self):
 		if is_app_installed("zoom_integration"):
 			self.skipTest("zoom_integration is installed on this site")
