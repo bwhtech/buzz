@@ -11,7 +11,9 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AddMembersDialog: typeof import('./src/components/dashboard/teams/AddMembersDialog.vue')['default']
     AddOnPreferenceDialog: typeof import('./src/components/AddOnPreferenceDialog.vue')['default']
+    AddVenueDialog: typeof import('./src/components/dashboard/events/AddVenueDialog.vue')['default']
     AttendeeFormControl: typeof import('./src/components/AttendeeFormControl.vue')['default']
     BackButton: typeof import('./src/components/common/BackButton.vue')['default']
     BaseCustomEventForm: typeof import('./src/components/BaseCustomEventForm.vue')['default']
@@ -26,8 +28,15 @@ declare module 'vue' {
     CancellationRequestNotice: typeof import('./src/components/CancellationRequestNotice.vue')['default']
     CustomFieldInput: typeof import('./src/components/CustomFieldInput.vue')['default']
     CustomFieldsSection: typeof import('./src/components/CustomFieldsSection.vue')['default']
+    EventBanner: typeof import('./src/components/dashboard/events/EventBanner.vue')['default']
     EventCard: typeof import('./src/components/dashboard/events/EventCard.vue')['default']
     EventDetailsHeader: typeof import('./src/components/EventDetailsHeader.vue')['default']
+    EventGuestItem: typeof import('./src/components/dashboard/events/EventGuestItem.vue')['default']
+    EventLocation: typeof import('./src/components/dashboard/events/EventLocation.vue')['default']
+    EventMedium: typeof import('./src/components/dashboard/events/EventMedium.vue')['default']
+    EventPageHeader: typeof import('./src/components/dashboard/events/EventPageHeader.vue')['default']
+    EventRoute: typeof import('./src/components/dashboard/events/EventRoute.vue')['default']
+    EventSchedule: typeof import('./src/components/dashboard/events/EventSchedule.vue')['default']
     EventSelector: typeof import('./src/components/EventSelector.vue')['default']
     FormFieldSections: typeof import('./src/components/FormFieldSections.vue')['default']
     LanguageSwitcher: typeof import('./src/components/LanguageSwitcher.vue')['default']

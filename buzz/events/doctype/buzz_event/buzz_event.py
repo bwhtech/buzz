@@ -99,7 +99,36 @@ class BuzzEvent(Document):
 		self.validate_tax_settings()
 		self.validate_guest_verification_config()
 		self.validate_custom_forms()
+		self.clear_unused_location()
+		self.validate_venue_team()
 		self.set_time_zone_label()
+
+	def clear_unused_location(self):
+		"""Only the medium in force keeps its location.
+
+		`generate_ics_file` and the booking page both read `venue` without consulting
+		`medium`, so a venue left behind by a switch to Online publishes an address the
+		event no longer has.
+		"""
+		if self.medium == "Online":
+			self.venue = None
+		else:
+			self.meeting_link = None
+
+	def validate_venue_team(self):
+		"""A venue may only be linked by the team that owns it.
+
+		Nothing downstream re-checks this: the booking confirmation and the calendar
+		invite both read the linked venue's address without a permission check, so a
+		cross-team link publishes the other team's address.
+		"""
+		if not self.venue:
+			return
+
+		venue_team = frappe.db.get_value("Event Venue", self.venue, "team")
+		# An unstamped venue predates the team backfill; role permissions still gate it.
+		if venue_team and venue_team != self.team:
+			frappe.throw(_("Venue {0} belongs to another team.").format(self.venue))
 
 	def set_time_zone_label(self):
 		# validate runs before the mandatory check, so dates may still be empty here

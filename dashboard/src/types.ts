@@ -78,6 +78,20 @@ export interface TeamMember {
 	team_role: string
 }
 
+// buzz.api.teams.invite_members: what happened to each address that was submitted.
+export interface InviteOutcome {
+	email: string
+	status: "invited" | "added" | "already_a_member"
+	// Null for an invited stranger — they have no account to carry a name yet.
+	full_name: string | null
+}
+
+// An invitation nobody has accepted yet — no user, so no name or image.
+export interface TeamInvite {
+	email: string
+	team_role: string
+}
+
 // buzz.api.teams.get_team_overview: one team with its enabled members.
 export interface TeamOverview {
 	name: string
@@ -86,6 +100,7 @@ export interface TeamOverview {
 	logo: string | null
 	my_role: string
 	members: TeamMember[]
+	invites: TeamInvite[]
 }
 
 // buzz.api.events.get_my_events: events the user's teams host, plus events they
@@ -108,6 +123,52 @@ export interface MyEvent {
 export interface MyEvents {
 	upcoming: MyEvent[]
 	past: MyEvent[]
+}
+
+export interface GuestAddOn {
+	title: string
+	value: string | null
+}
+
+// buzz.api.events.get_event_guests: one row per submitted ticket, not per person.
+export interface EventGuest {
+	name: string
+	attendee_name: string | null
+	attendee_email: string | null
+	ticket_type: string | null
+	add_ons: GuestAddOn[]
+}
+
+export interface EventGuests {
+	title: string | null
+	total: number
+	registrations_closed: boolean
+	guests: EventGuest[]
+}
+
+export interface EventVenueDetail {
+	name: string
+	address: string | null
+}
+
+// buzz.api.events.get_event: one event with everything its manage page edits.
+export interface EventDetail {
+	name: string
+	title: string
+	route: string | null
+	team: string | null
+	start_date: string
+	end_date: string | null
+	start_time: string | null
+	end_time: string | null
+	time_zone: string | null
+	short_description: string | null
+	about: string | null
+	banner_image: string | null
+	medium: string | null
+	venue: EventVenueDetail | null
+	meeting_link: string | null
+	is_published: boolean
 }
 
 // A ticket the user holds, flattened with the context its event carries.

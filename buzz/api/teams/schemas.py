@@ -15,6 +15,18 @@ class TeamMember(APIResponse):
 	team_role: str
 
 
+class InviteOutcome(APIResponse):
+	email: str
+	status: str
+	# Only someone who already has a User has a name to show; a stranger is still an address.
+	full_name: str | None = None
+
+
+class TeamInvite(APIResponse):
+	email: str
+	team_role: str
+
+
 class TeamOverview(APIResponse):
 	name: str
 	team_name: str
@@ -22,3 +34,5 @@ class TeamOverview(APIResponse):
 	logo: str | None
 	my_role: str
 	members: list[TeamMember]
+	# Kept apart from members: these people cannot do anything on the team yet.
+	invites: list[TeamInvite]

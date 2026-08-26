@@ -12,6 +12,14 @@ const routes: RouteRecordRaw[] = [
 			name: (await isTeamMember()) ? "manage" : "bookings-tab",
 		}),
 	},
+	// Declared before /manage: this one opts out of the manager shell, so it cannot be a
+	// child of the route that renders it.
+	{
+		path: "/manage/team/events/new",
+		name: "create-event",
+		meta: { fullBleed: true },
+		component: () => import("@/pages/manage/events/CreateEvent.vue"),
+	},
 	{
 		path: "/manage",
 		meta: { fullBleed: true },
@@ -26,6 +34,24 @@ const routes: RouteRecordRaw[] = [
 				path: "events",
 				name: "events",
 				component: () => import("@/pages/manage/MyEvents.vue"),
+			},
+			{
+				path: "events/:eventId",
+				redirect: (to) => `/manage/events/${to.params.eventId}/details`,
+			},
+			{
+				path: "events/:eventId/details",
+				name: "event-details",
+				component: () => import("@/pages/manage/events/EventDetails.vue"),
+			},
+			{
+				path: "events/:eventId/guests",
+				name: "event-guests",
+				component: () => import("@/pages/manage/events/EventGuests.vue"),
+			},
+			{
+				path: "events/:eventId/:section",
+				component: () => import("@/pages/manage/WorkInProgress.vue"),
 			},
 			{
 				path: "tickets",
@@ -47,6 +73,16 @@ const routes: RouteRecordRaw[] = [
 				path: "team/overview",
 				name: "team-overview",
 				component: () => import("@/pages/manage/teams/TeamOverview.vue"),
+			},
+			{
+				path: "team/events",
+				name: "team-events",
+				component: () => import("@/pages/manage/teams/TeamEvents.vue"),
+			},
+			{
+				path: "team/members",
+				name: "team-members",
+				component: () => import("@/pages/manage/teams/TeamMembers.vue"),
 			},
 			// Sidebar destinations that have no page yet. Unnamed on purpose: SidebarItem
 			// falls back to matching on path, so each one lights up on its own. Enumerated

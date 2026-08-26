@@ -1,26 +1,23 @@
 <script setup lang="ts">
 import TeamSwitcher from "@/components/TeamSwitcher.vue";
 import UserMenu from "@/components/UserMenu.vue";
-import { isTeamMember } from "@/data/teams";
+import { useTeamAccess } from "@/composables/useTeamAccess";
 import NotFound from "@/pages/NotFound.vue";
 import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem, SidebarLabel } from "frappe-ui";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
-
-const isMember = ref<boolean | null>(null);
-isTeamMember().then((member) => {
-	isMember.value = member;
-});
 
 const collapsed = ref(false);
 const route = useRoute();
+
+const access = useTeamAccess();
 
 // SidebarItem infers this from `to` on paper, but its `active` prop is declared
 // type Boolean, so Vue casts the absent prop to false and the inference never runs.
 const isActive = (to: string) => route.path === to;
 
 const personalItems = [
-	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/events" },
+	{ label: "My Events", icon: "lucide-calendar-days", to: "/manage/events" },
 	{ label: "My Tickets", icon: "lucide-ticket", to: "/manage/tickets" },
 	{ label: "Talk Proposals", icon: "lucide-file-text", to: "/manage/proposals" },
 	{ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" },
@@ -30,25 +27,57 @@ const personalItems = [
 // so they are fixed and need no team loaded to render.
 const teamItems = [
 	{ label: "Overview", icon: "lucide-layout-dashboard", to: "/manage/team/overview" },
+	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/team/events" },
 	{ label: "Members", icon: "lucide-users-round", to: "/manage/team/members" },
-	{ label: "Registrations", icon: "lucide-users", to: "/manage/registrations" },
-	{ label: "Sponsors", icon: "lucide-badge-dollar-sign", to: "/manage/sponsors" },
-	{ label: "More", icon: "lucide-ellipsis", to: "/manage/more" },
 ];
+
+// An event opens into the same shell with its own destinations in place of the
+// personal and team ones.
+const eventId = computed(() => route.params.eventId as string | undefined);
+
+const eventItems = computed(() => [
+	{ label: "Back", icon: "lucide-arrow-left", to: "/" },
+	{
+		label: "Details",
+		icon: "lucide-receipt-text",
+		to: `/manage/events/${eventId.value}/details`,
+	},
+	{
+		label: "Guests",
+		icon: "lucide-users-round",
+		to: `/manage/events/${eventId.value}/guests`,
+	},
+	{
+		label: "Talks",
+		icon: "lucide-presentation",
+		to: `/manage/events/${eventId.value}/talks`,
+	},
+]);
 </script>
 
 <template>
-	<NotFound v-if="isMember === false" />
+	<NotFound v-if="access === 'denied'" />
 
 	<!-- scroll=false: the rounded panel below owns its own scroll. -->
-	<DesktopShell v-else-if="isMember" :scroll="false">
+	<DesktopShell v-else-if="access === 'granted'" :scroll="false">
 		<template #sidebar>
 			<Sidebar v-model:collapsed="collapsed">
 				<div class="flex h-12 shrink-0 items-center px-1">
 					<TeamSwitcher />
 				</div>
 
-				<div class="flex flex-col mx-2 py-2">
+				<div v-if="eventId" class="flex flex-col mx-2 py-2">
+					<SidebarItem
+						v-for="item in eventItems"
+						:key="item.label"
+						:label="item.label"
+						:icon="item.icon"
+						:to="item.to"
+						:active="isActive(item.to)"
+					/>
+				</div>
+
+				<div v-else class="flex flex-col mx-2 py-2">
 					<SidebarItem
 						v-for="item in personalItems"
 						:key="item.label"

@@ -9,6 +9,7 @@ from frappe.tests.utils import FrappeTestCase
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, create_from_template
+from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.events.doctype.buzz_team_settings.test_buzz_team_settings import (
 	create_webinar_template,
 	set_team_settings,
@@ -157,6 +158,111 @@ class TestBuzzEvent(FrappeTestCase):
 		event = self._make_event_with_route("my-conference-2026")
 		event.insert()
 		self.assertEqual(event.route, "my-conference-2026")
+
+	# ==================== Venue Team Tests ====================
+
+	def _make_team(self, team_name: str) -> str:
+		"""Per test, not per class: tearDown rolls back everything setUpClass inserts."""
+		owner = create_user("buzz-event-venue-owner@example.com", "Owner")
+		return create_owned_team(team_name, owner)
+
+	def _make_venue(self, name: str, team: str | None) -> str:
+		"""Event Venue is autonamed by prompt, so the docname is the venue's own name."""
+		venue = frappe.get_doc(
+			{
+				"doctype": "Event Venue",
+				"__newname": name,
+				"address": "1 Test Street",
+				"team": team,
+			}
+		).insert(ignore_permissions=True)
+		return str(venue.name)
+
+	def _make_event_with_venue(self, venue: str, team: str | None):
+		return frappe.get_doc(
+			{
+				"doctype": "Buzz Event",
+				"title": f"Venue Test Event {venue}",
+				"category": "Test Category",
+				"host": "Test Host",
+				"start_date": frappe.utils.today(),
+				"start_time": "09:00:00",
+				"end_time": "18:00:00",
+				"team": team,
+				"venue": venue,
+			}
+		)
+
+	def test_a_venue_from_another_team_is_rejected(self):
+		"""A venue carries its team's address, so linking one across teams leaks it.
+
+		Event Venue is autonamed by prompt, so the docname is the venue's own name and
+		therefore guessable; nothing else stops a manager naming another team's venue.
+		"""
+		team = self._make_team("Venue Test Team")
+		theirs = self._make_venue("Venue Test Other Team Hall", self._make_team("Venue Test Other Team"))
+		event = self._make_event_with_venue(theirs, team)
+
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			event.validate_venue_team()
+
+	def test_the_teams_own_venue_is_accepted(self):
+		team = self._make_team("Venue Test Team")
+		ours = self._make_venue("Venue Test Own Hall", team)
+		event = self._make_event_with_venue(ours, team)
+
+		event.validate_venue_team()
+
+	def test_a_venue_without_a_team_is_accepted(self):
+		"""An unstamped venue predates the team backfill; role permissions still gate it.
+
+		Same convention as `has_team_access`, which abstains on an unstamped row rather
+		than refusing one.
+		"""
+		team = self._make_team("Venue Test Team")
+		unstamped = self._make_venue("Venue Test Unstamped Hall", team)
+		frappe.db.set_value("Event Venue", unstamped, "team", None)
+		event = self._make_event_with_venue(unstamped, team)
+
+		event.validate_venue_team()
+
+	def test_turning_an_event_online_drops_its_venue(self):
+		"""The venue outlives the medium otherwise.
+
+		`generate_ics_file` and the booking page both read `venue` without consulting
+		`medium`, so a leftover venue puts a physical address on an online event.
+		"""
+		team = self._make_team("Venue Test Team")
+		event = self._make_event_with_venue(self._make_venue("Venue Test Hall", team), team)
+		event.medium = "Online"
+		event.meeting_link = "https://example.com/room"
+
+		event.clear_unused_location()
+
+		self.assertIsNone(event.venue)
+		self.assertEqual(event.meeting_link, "https://example.com/room")
+
+	def test_turning_an_event_in_person_drops_its_meeting_link(self):
+		team = self._make_team("Venue Test Team")
+		venue = self._make_venue("Venue Test Hall", team)
+		event = self._make_event_with_venue(venue, team)
+		event.medium = "In Person"
+		event.meeting_link = "https://example.com/room"
+
+		event.clear_unused_location()
+
+		self.assertEqual(event.venue, venue)
+		self.assertIsNone(event.meeting_link)
+
+	def test_an_online_event_keeps_a_venue_it_never_had(self):
+		"""Clearing must not invent a change on an event that was always online."""
+		team = self._make_team("Venue Test Team")
+		event = self._make_event_with_venue(None, team)
+		event.medium = "Online"
+
+		event.clear_unused_location()
+
+		self.assertIsNone(event.venue)
 
 	# ==================== Create from Template Tests ====================
 

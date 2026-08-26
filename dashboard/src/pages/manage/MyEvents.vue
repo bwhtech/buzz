@@ -17,7 +17,7 @@ const months = computed(() => groupEventsByMonth(myEvents.data?.[tab.value] || [
 <template>
 	<TimelineList
 		v-model:tab="tab"
-		heading="Events"
+		heading="My Events"
 		noun="events"
 		:months="months"
 		:loading="myEvents.loading"
