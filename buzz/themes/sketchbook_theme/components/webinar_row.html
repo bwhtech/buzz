@@ -1,0 +1,11 @@
+<a href="{{ webinar.recap_url if webinar.recap_url else ('/events/' ~ webinar.route) }}" class="webinar-row" aria-label="{{ webinar.title }}">
+  <div class="webinar-row__date">
+    <div class="month">{{ webinar.date_month }}</div>
+    <div class="day">{{ webinar.date_day }}</div>
+  </div>
+  <div class="webinar-row__body">
+    <h3 class="webinar-row__title">{{ webinar.title }}</h3>
+    {% if webinar.blurb %}<p class="webinar-row__desc">{{ webinar.blurb }}</p>{% endif %}
+    <div class="webinar-row__cta">recording &rarr;</div>
+  </div>
+</a>

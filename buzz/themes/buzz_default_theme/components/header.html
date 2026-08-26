@@ -1,0 +1,13 @@
+{% import "components/macros/branding.html" as branding with context %}
+{% set header_config = buzz_theme_config() %}
+{# buzz_theme_config() is a plain _dict when no theme settings Single is linked, hence the guard. #}
+{% set nav_links = header_config.get_nav_links() if header_config.get_nav_links else [] %}
+<header class="site-header no-print">
+  <a href="/home" class="brand">{{ branding.brand(app_logo, "brand-logo") }}</a>
+  <nav class="nav-links" aria-label="Primary">
+    {% for nav_link in nav_links %}
+    <a href="{{ nav_link.url }}"{% if nav_link.open_in_new_tab %} target="_blank" rel="noopener"{% endif %}>{{ nav_link.label }}</a>
+    {% endfor %}
+    {% include "components/theme_toggle.html" %}
+  </nav>
+</header>

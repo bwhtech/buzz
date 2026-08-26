@@ -1,0 +1,28 @@
+{% extends "components/base.html" %}
+{% import "components/macros/icons.html" as icons %}
+
+{% block title %}Not found &mdash; {{ app_name }}{% endblock %}
+{% block og_title %}Not found &mdash; {{ app_name }}{% endblock %}
+{% block og_description %}This route doesn't exist on the manifest.{% endblock %}
+
+{% block body %}
+<main class="max-w-[1100px] mx-auto px-6 py-16">
+  {% include "components/header.html" %}
+
+  <section class="mt-16">
+    <div class="bg-pass perf-strip rounded-2xl overflow-hidden p-12 md:p-16 text-center max-w-2xl mx-auto">
+      <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Void ticket</div>
+      <h1 class="font-ui font-extrabold text-[64px] md:text-[96px] leading-none mt-4 tracking-tight">404</h1>
+      <p class="text-[14px] opacity-70 mt-6 max-w-md mx-auto">
+        This route doesn't exist on the manifest. The ticket scanner couldn't find what you're looking for.
+      </p>
+      <a href="/home"
+         class="bg-cta text-cta-fg hover:bg-cta-hover hover:text-white font-ui font-bold text-[12px] tracking-[0.04em] uppercase inline-flex items-center gap-2 px-6 py-3 rounded mt-8 transition-colors">
+        Back to events {{ icons.icon("arrow-right", "w-4 h-4") }}
+      </a>
+    </div>
+  </section>
+
+  {% include "components/footer.html" %}
+</main>
+{% endblock %}

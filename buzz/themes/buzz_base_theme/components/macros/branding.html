@@ -1,0 +1,18 @@
+{# Brand and footer chrome sourced from Website Settings, shared by every buzz theme. #}
+
+{% macro brand(logo=None, logo_class="", prefix="") %}
+  {%- if brand_html -%}
+    {# Website Settings is System Manager only, and this field is HTML by definition. #}
+    {{ brand_html|safe }}
+  {%- elif logo -%}
+    <img src="{{ logo }}" alt="{{ app_name }}"{% if logo_class %} class="{{ logo_class }}"{% endif %} />
+  {%- else -%}
+    {{ prefix }}{{ app_name }}
+  {%- endif -%}
+{% endmacro %}
+
+{% macro footer_links(link_class="") %}
+  {%- for item in footer_items -%}
+    <a href="{{ item.url or '#' }}"{% if link_class %} class="{{ link_class }}"{% endif %}{% if item.open_in_new_tab %} target="_blank" rel="noopener"{% endif %}>{{ item.label }}</a>
+  {%- endfor -%}
+{% endmacro %}

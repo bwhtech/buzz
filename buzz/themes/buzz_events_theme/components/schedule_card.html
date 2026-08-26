@@ -1,0 +1,20 @@
+{% set is_break = item.get('is_break') %}
+{% if is_break %}
+  {% set wrap_classes = 'bg-pill text-pill-fg border border-line rounded-[10px] grid grid-cols-[auto_1fr] overflow-hidden' %}
+  {% set stub_classes = 'px-4 py-3.5 border-r border-dashed border-transparent min-w-[92px] text-center' %}
+{% else %}
+  {% set wrap_classes = 'bg-pass text-ink border border-line rounded-[10px] grid grid-cols-[auto_1fr] overflow-hidden' %}
+  {% set stub_classes = 'px-4 py-3.5 bg-bg border-r border-dashed border-line min-w-[92px] text-center' %}
+{% endif %}
+<div class="{{ wrap_classes }}">
+  <div class="{{ stub_classes }}">
+    <div class="font-ui font-extrabold text-[18px] tracking-[-0.01em] leading-none">{{ item.start_time }}</div>
+    <div class="font-mono text-[10px] opacity-55 mt-1">→ {{ item.end_time }}</div>
+  </div>
+  <div class="px-4 py-3 flex flex-col justify-center">
+    <div class="font-ui font-bold text-[15px] leading-tight">{{ item.title }}</div>
+    {% if item.speaker_name and not is_break %}
+    <div class="font-ui font-medium text-xs opacity-70 mt-1">{{ item.speaker_name }}</div>
+    {% endif %}
+  </div>
+</div>

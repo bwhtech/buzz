@@ -1,0 +1,443 @@
+{% extends "components/base.html" %}
+{% import "components/macros/icons.html" as icons %}
+{% import "components/macros/maps.html" as maps %}
+
+{% set event_name = frappe.db.get_value("Buzz Event", {"route": event_route, "is_published": 1}, "name") %}
+{% if not event_name %}
+  {% set not_found = frappe.throw(_("Event not found"), frappe.PageDoesNotExistError) %}
+{% endif %}
+{% set event = frappe.get_cached_doc("Buzz Event", event_name) %}
+{% set venue = frappe.get_cached_doc("Event Venue", event.venue) if event.venue else None %}
+{% set host = frappe.get_cached_doc("Event Host", event.host) if event.host else None %}
+{% set category = frappe.get_cached_doc("Event Category", event.category) if event.category else None %}
+{% set sponsors = frappe.get_all("Event Sponsor", filters={"event": event.name},
+      fields=["company_name", "tier", "company_logo", "website", "country"]) %}
+
+{% set paid_ticket_count = frappe.db.count("Event Ticket Type",
+      {"event": event.name, "is_published": 1, "price": [">", 0]}) %}
+{% set is_free = event.free_event or paid_ticket_count == 0 %}
+{% set tier_label = "FREE" if is_free else "PAID" %}
+
+{% set talk_names = event.schedule | selectattr("type", "equalto", "Talk")
+      | map(attribute="talk") | reject("none") | list | unique | list %}
+{% set talk_title_map = {} %}
+{% set first_speaker_map = {} %}
+{% if talk_names %}
+  {% for talk in frappe.get_all("Event Talk", filters={"name": ["in", talk_names]}, fields=["name", "title"]) %}
+    {% set _ = talk_title_map.update({talk.name | string: talk.title}) %}
+  {% endfor %}
+  {% for row in frappe.get_all("Talk Speaker", filters={"parenttype": "Event Talk", "parent": ["in", talk_names]},
+        fields=["parent", "speaker"], order_by="parent asc, idx asc") %}
+    {% if (row.parent | string) not in first_speaker_map %}{% set _ = first_speaker_map.update({row.parent | string: row.speaker}) %}{% endif %}
+  {% endfor %}
+{% endif %}
+
+{% set tier_names = sponsors | map(attribute="tier") | reject("none") | list | unique | list %}
+{% set tier_title_map = {} %}
+{% if tier_names %}
+  {% for tier in frappe.get_all("Sponsorship Tier", filters={"name": ["in", tier_names]},
+        fields=["name", "title"]) %}
+    {% set _ = tier_title_map.update({tier.name | string: tier.title}) %}
+  {% endfor %}
+{% endif %}
+
+{% set speaker_names = ((first_speaker_map.values() | list)
+      + (event.featured_speakers | map(attribute="speaker") | reject("none") | list)) | unique | list %}
+{% set speaker_map = {} %}
+{% if speaker_names %}
+  {% for speaker in frappe.get_all("Speaker Profile", filters={"name": ["in", speaker_names]},
+        fields=["name", "display_name", "designation", "company", "display_image"]) %}
+    {% set _ = speaker_map.update({speaker.name | string: speaker}) %}
+  {% endfor %}
+{% endif %}
+
+{% set schedule_items = [] %}
+{% for session in event.schedule %}
+  {% set session_title = '' %}
+  {% set session_speaker = '' %}
+  {% if session.type == 'Talk' and session.talk %}
+    {% set session_title = talk_title_map.get(session.talk | string) or '' %}
+    {% set first_speaker = first_speaker_map.get(session.talk | string) %}
+    {% set speaker_profile = speaker_map.get(first_speaker | string) if first_speaker else None %}
+    {% set session_speaker = (speaker_profile.display_name or '') if speaker_profile else '' %}
+  {% elif session.type == 'Break' %}
+    {% set session_title = session.description or 'Break' %}
+  {% else %}
+    {% set session_title = session.description or '' %}
+  {% endif %}
+  {% set _ = schedule_items.append({
+      "start_time": frappe.utils.get_time(session.start_time).strftime('%H:%M') if session.start_time else '',
+      "end_time": frappe.utils.get_time(session.end_time).strftime('%H:%M') if session.end_time else '',
+      "title": session_title,
+      "speaker_name": session_speaker,
+      "is_break": session.type == 'Break'
+  }) %}
+{% endfor %}
+
+{% set city_code = (venue.name[:3]|upper) if venue and venue.name else 'TBD' %}
+{% set event_code_short = (event.route or event.name)|truncate(10, True, '')|upper %}
+{% set category_label = (category.name|upper) if category else 'EVENT' %}
+{% set date_display = event.start_date.strftime('%d %b %Y') if event.start_date else 'TBA' %}
+{% set date_compact = event.start_date.strftime('%d.%m.%y') if event.start_date else 'TBA' %}
+{% set date_pill = event.start_date.strftime('%d %b')|upper if event.start_date else '' %}
+{% set time_zone_label = event.time_zone_label or (event.time_zone.split('/')|last|upper if event.time_zone else '') %}
+{% set start_time_display = frappe.utils.get_time(event.start_time).strftime('%H:%M') if event.start_time else 'TBA' %}
+{% set is_webinar = event.medium == 'Online' %}
+{% set partners_heading = 'Hosted & sponsored by' if (host and sponsors) else ('Sponsored by' if sponsors else 'Hosted by') %}
+{% set hall_label = venue.address.split('\n')[0] if venue and venue.address else (venue.name if venue else 'TBA') %}
+
+{% set register_href = '/dashboard/book-tickets/' + (event.route or '') %}
+{% set secondary_href = '/dashboard/events/' + (event.route or '') + '/forms/enquire-sponsorship' %}
+
+{% block title %}{{ event.title }} &mdash; {{ app_name }}{% endblock %}
+{% block og_title %}{{ event.title }}{% endblock %}
+{% block og_description %}{{ event.short_description or event.title }}{% endblock %}
+{% block og_image %}{{ event.meta_image or event.banner_image or banner_image or '' }}{% endblock %}
+{% block og_url %}{{ frappe.utils.get_url() }}/events/{{ event.route }}{% endblock %}
+
+{% block body %}
+<main class="max-w-[1100px] mx-auto px-6 pt-16 pb-24 md:pb-16">
+
+  {% include "components/header.html" %}
+
+  <div id="hero" class="bg-pass perf-strip rounded-2xl overflow-hidden grid grid-cols-1 md:grid-cols-[2.5fr_1fr]">
+
+    <div class="p-8 md:p-12">
+      <div class="flex justify-between items-start gap-3 flex-wrap">
+        <div>
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Event ticket</div>
+          <h1 class="font-ui font-extrabold text-[28px] md:text-[34px] leading-[1.05] mt-2 tracking-tight">
+            {{ event.title }}
+          </h1>
+        </div>
+        <div class="bg-pill text-pill-fg px-3 py-1 font-ui font-bold text-[12px] tracking-[0.04em] whitespace-nowrap rounded">
+          {{ category_label }} / {{ event_code_short }}
+        </div>
+      </div>
+
+      {% if event.banner_image %}
+      <img
+        src="{{ event.banner_image }}"
+        alt="{{ event.title }} banner"
+        class="w-full h-48 md:h-56 object-cover rounded-lg mt-6"
+        fetchpriority="high"
+      />
+      {% endif %}
+
+      {% if event.short_description %}
+      <p class="text-[13px] leading-relaxed opacity-80 mt-6 max-w-2xl">
+        {{ event.short_description }}
+      </p>
+      {% endif %}
+
+      <div class="grid grid-cols-3 mt-8 gap-4 items-center">
+        <div>
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Holder</div>
+          <div class="font-ui font-extrabold text-[36px] md:text-[44px] leading-none mt-1">YOU</div>
+          <div class="text-[11px] opacity-70 mt-1">attending in person</div>
+        </div>
+        <div class="text-center self-center text-[32px] md:text-[40px] opacity-80">&rarr;</div>
+        <div class="text-right">
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Venue</div>
+          <div class="font-ui font-extrabold text-[36px] md:text-[44px] leading-none mt-1">{{ city_code }}</div>
+          {% if venue %}
+          <div class="text-[11px] opacity-70 mt-1">{{ venue.name }}{% if date_pill %} &middot; {{ date_pill }}{% endif %}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 border-t border-dashed border-line pt-5">
+        <div>
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Date</div>
+          <div class="font-ui font-bold mt-1">{{ date_display }}</div>
+        </div>
+        <div>
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Starts</div>
+          <div class="font-ui font-bold mt-1">{{ start_time_display }}{% if time_zone_label %} {{ time_zone_label }}{% endif %}</div>
+        </div>
+        <div>
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Hall</div>
+          <div class="font-ui font-bold mt-1">{{ hall_label }}</div>
+        </div>
+        <div>
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Tier</div>
+          <div class="font-ui font-bold mt-1">Community</div>
+        </div>
+      </div>
+
+      <div class="mt-8 flex flex-col sm:flex-row gap-3 no-print">
+        <a href="{{ register_href }}"
+           class="font-ui inline-flex items-center justify-center gap-2 px-8 py-4 text-[13px] font-bold tracking-[0.04em] uppercase rounded bg-cta text-cta-fg hover:bg-cta-hover hover:text-white transition-colors active:translate-y-px">
+          Register
+          {{ icons.icon("arrow-right", "w-4 h-4") }}
+        </a>
+        <a href="{{ secondary_href }}"
+           class="font-ui inline-flex items-center justify-center gap-2 px-8 py-4 text-[13px] font-bold tracking-[0.04em] uppercase rounded border border-dashed border-line text-ink hover:opacity-70">
+          Propose talk / sponsor
+        </a>
+      </div>
+    </div>
+
+    <aside class="perf border-l-2 border-dashed border-line p-6 flex flex-col justify-between min-h-[320px]">
+      <div>
+        <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Stub &middot; keep</div>
+        <div class="font-ui font-bold text-[16px] mt-1">{{ event_code_short }} / {{ city_code }}</div>
+        <div class="mt-6 grid gap-3">
+          <div>
+            <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Date</div>
+            <div class="font-ui font-bold text-[16px]">{{ date_compact }}</div>
+          </div>
+          <div>
+            <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Starts</div>
+            <div class="font-ui font-bold text-[14px]">{{ start_time_display }}</div>
+          </div>
+          <div>
+            <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Hall</div>
+            <div class="font-ui font-bold text-[14px]">{{ hall_label }}</div>
+          </div>
+          <div>
+            <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Seat</div>
+            <div class="font-ui font-bold text-[16px]">{{ tier_label }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6">
+        <div class="barcode h-12"></div>
+        <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65 text-center mt-1">
+          {{ event_code_short }}{{ city_code }}0001
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="print-hide-below">
+
+    <section aria-labelledby="about-heading" class="bg-pass rounded-xl p-8 md:p-10 mt-10">
+      <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">About this event</div>
+      <h2 id="about-heading" class="font-ui font-extrabold text-[24px] mt-2 tracking-tight">Why join</h2>
+
+      <div class="grid md:grid-cols-2 gap-8 mt-6">
+        <div class="space-y-4 text-[14px] leading-relaxed opacity-90">
+          {% if event.about %}
+            {{ event.about|safe }}
+          {% else %}
+            <p>{{ event.short_description or event.title }}</p>
+          {% endif %}
+        </div>
+
+        <ul class="space-y-3 text-[13px]">
+          <li class="flex items-start gap-3 border-l border-dashed border-line pl-4">
+            {{ icons.icon("users", "w-4 h-4 mt-0.5 opacity-70 shrink-0") }}
+            <span>Network with the community</span>
+          </li>
+          <li class="flex items-start gap-3 border-l border-dashed border-line pl-4">
+            {{ icons.icon("handshake", "w-4 h-4 mt-0.5 opacity-70 shrink-0") }}
+            <span>Connect with partners and implementation teams</span>
+          </li>
+          <li class="flex items-start gap-3 border-l border-dashed border-line pl-4">
+            {{ icons.icon("mic", "w-4 h-4 mt-0.5 opacity-70 shrink-0") }}
+            <span>Hear from product builders and maintainers</span>
+          </li>
+          <li class="flex items-start gap-3 border-l border-dashed border-line pl-4">
+            {{ icons.icon("lightbulb", "w-4 h-4 mt-0.5 opacity-70 shrink-0") }}
+            <span>Learn from real-world implementations</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    {% if not is_webinar %}
+    <section aria-labelledby="schedule-heading" class="bg-pass rounded-xl p-8 md:p-10 mt-6">
+      <div class="flex items-baseline justify-between flex-wrap gap-3 mb-6">
+        <div>
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Schedule</div>
+          <h2 id="schedule-heading" class="font-ui font-extrabold text-[24px] mt-2 tracking-tight">
+            {% if schedule_items %}
+              {{ schedule_items|length }} session{{ 's' if schedule_items|length != 1 else '' }} &middot; single track
+            {% else %}
+              Schedule
+            {% endif %}
+          </h2>
+        </div>
+        <div class="font-ui text-[11px] font-medium opacity-70">{% if time_zone_label %}{{ time_zone_label }} &middot; {% endif %}subject to change</div>
+      </div>
+
+      {% if schedule_items %}
+      <div class="grid gap-2">
+        {% for item in schedule_items %}
+          {% include "components/schedule_card.html" %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="border border-dashed border-line rounded-[10px] px-4 py-8 text-center opacity-65 font-ui text-[13px]">
+        Schedule coming soon.
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if event.featured_speakers and event.featured_speakers|length > 0 %}
+    <section aria-labelledby="speakers-heading" class="bg-pass rounded-xl p-8 md:p-10 mt-6">
+      <div class="flex items-baseline justify-between flex-wrap gap-3 mb-6">
+        <div>
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Featured speakers</div>
+          <h2 id="speakers-heading" class="font-ui font-extrabold text-[24px] mt-2 tracking-tight">Talks by</h2>
+        </div>
+        {% if not is_webinar %}
+        <a href="#schedule-heading" class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase inline-flex items-center gap-1 hover:opacity-70 no-underline">
+          See full schedule {{ icons.icon("arrow-right", "w-3.5 h-3.5") }}
+        </a>
+        {% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {% for featured_speaker in event.featured_speakers %}
+          {% set speaker_profile = speaker_map.get(featured_speaker.speaker | string) if featured_speaker.speaker else None %}
+          {% if speaker_profile %}
+            {% set role_parts = [] %}
+            {% if speaker_profile.designation %}{% set _ = role_parts.append(speaker_profile.designation) %}{% endif %}
+            {% if speaker_profile.company %}{% set _ = role_parts.append(speaker_profile.company) %}{% endif %}
+            {% set speaker = {
+                "name": speaker_profile.display_name or '',
+                "role": role_parts|join(', '),
+                "image_url": speaker_profile.display_image or ''
+            } %}
+            {% include "components/speaker_row.html" %}
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if host or sponsors %}
+    <section aria-labelledby="partners-heading" class="bg-pass rounded-xl p-8 md:p-10 mt-6">
+      <div class="flex items-baseline justify-between flex-wrap gap-3">
+        <div>
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Partners</div>
+          <h2 id="partners-heading" class="font-ui font-extrabold text-[24px] mt-2 tracking-tight">{{ partners_heading }}</h2>
+        </div>
+        <a href="{{ secondary_href }}"
+           class="font-ui text-[11px] font-bold tracking-[0.04em] uppercase flex items-center gap-1 hover:opacity-70 no-underline">
+          Be a sponsor {{ icons.icon("arrow-right", "w-3.5 h-3.5") }}
+        </a>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4 mt-6">
+        {% if host %}
+          {% set name = host.name %}
+          {% set logo_url = host.logo %}
+          {% set tier_label = 'Host' %}
+          {% set tagline = host.by_line or '' %}
+          {% include "components/sponsor_card.html" %}
+        {% endif %}
+        {% for sponsor in sponsors %}
+          {% set name = sponsor.company_name %}
+          {% set logo_url = sponsor.company_logo %}
+          {% set tier_label = tier_title_map.get(sponsor.tier | string) or 'Partner' %}
+          {% set tagline = sponsor.country or '' %}
+          {% include "components/sponsor_card.html" %}
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if venue %}
+    <section aria-labelledby="venue-heading" class="bg-pass rounded-xl p-8 md:p-10 mt-6">
+      <div class="grid md:grid-cols-[1fr_1.4fr] gap-8">
+        <div>
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">Venue</div>
+          <h2 id="venue-heading" class="font-ui font-extrabold text-[24px] mt-2 tracking-tight">{{ venue.name }}</h2>
+          {% if venue.address %}
+          <div class="mt-4 text-[13px] leading-relaxed opacity-90">
+            <div class="flex items-start gap-2">
+              {{ icons.icon("map-pin", "w-4 h-4 mt-0.5 opacity-70 shrink-0") }}
+              <div class="whitespace-pre-line">{{ venue.address }}</div>
+            </div>
+          </div>
+          {% endif %}
+          <a href="https://www.google.com/maps/search/?api=1&query={{ venue.name|urlencode }}"
+             target="_blank" rel="noopener noreferrer"
+             class="font-ui text-[11px] font-bold tracking-[0.04em] uppercase mt-5 inline-flex items-center gap-1 hover:opacity-70 no-underline">
+            Open in maps {{ icons.icon("external-link", "w-3.5 h-3.5") }}
+          </a>
+        </div>
+        <div class="aspect-[16/10] rounded-lg overflow-hidden border border-dashed border-line">
+          {% call maps.venue_map(venue, "w-full h-full border-0") %}
+            <div class="w-full h-full flex items-center justify-center opacity-40 text-[11px] tracking-[0.04em] uppercase">
+              map &middot; {{ venue.name }}
+            </div>
+          {% endcall %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if host %}
+    <section aria-labelledby="host-heading" class="bg-pass rounded-xl p-8 md:p-10 mt-6">
+      <div class="grid md:grid-cols-[auto_1fr] gap-6 items-start">
+        <div class="w-20 h-20 rounded bg-white p-3 flex items-center justify-center shrink-0 border border-line">
+          <img src="{{ host.logo or buzz_theme_asset_url('images/placeholder.svg') }}" alt="{{ host.name }} logo" class="max-w-full max-h-full object-contain" />
+        </div>
+        <div>
+          <div class="font-ui font-semibold text-[11px] tracking-[0.04em] uppercase opacity-65">About the host</div>
+          <h2 id="host-heading" class="font-ui font-extrabold text-[24px] mt-2 tracking-tight">{{ host.name }}</h2>
+          {% if host.by_line %}
+          <div class="font-ui text-[12px] tracking-[0.04em] uppercase mt-1 opacity-70">{{ host.by_line }}</div>
+          {% endif %}
+          {% if host.about %}
+          <div class="text-[13px] leading-relaxed mt-4 opacity-90 max-w-2xl">{{ host.about|safe }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if event.category %}
+      {% set related = frappe.get_all("Buzz Event",
+          filters={"is_published": 1, "category": event.category, "name": ["!=", event.name]},
+          fields=["title", "route", "start_date", "venue", "card_image", "banner_image"],
+          order_by="start_date asc", limit_page_length=3) %}
+      {% if related %}
+      <section aria-labelledby="related-heading" class="mt-10">
+        <div class="flex items-baseline justify-between gap-3 flex-wrap border-b border-dashed border-line pb-3 mb-6">
+          <h2 id="related-heading" class="font-ui font-extrabold text-[22px] tracking-[-0.015em]">More in {{ category.name if category else 'this category' }}</h2>
+          {% if category and category.slug %}
+          <a href="/category/{{ category.slug }}" class="font-ui font-bold text-[11px] tracking-[0.04em] uppercase inline-flex items-center gap-1 hover:opacity-70 no-underline">
+            View all {{ icons.icon("arrow-right", "w-3.5 h-3.5") }}
+          </a>
+          {% endif %}
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-4">
+          {% for related_event in related %}
+            {% set related_image = related_event.card_image or related_event.banner_image %}
+            {% set related_date_pill = related_event.start_date.strftime('%d %b')|upper if related_event.start_date else '' %}
+            <a href="/events/{{ related_event.route }}" class="block bg-pass text-ink rounded-xl overflow-hidden transition-colors group no-underline">
+              <div class="relative aspect-[4/3] overflow-hidden">
+                {% if related_image %}
+                <img src="{{ related_image }}" alt="" loading="lazy"
+                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+                {% endif %}
+                {% if related_date_pill %}
+                <span class="absolute top-3 left-3 bg-pill text-pill-fg font-ui font-bold text-[10px] tracking-[0.04em] uppercase px-2 py-0.5 rounded">{{ related_date_pill }}</span>
+                {% endif %}
+              </div>
+              <div class="p-4">
+                <div class="font-ui font-bold text-[14px] leading-tight">{{ related_event.title }}</div>
+                {% if related_event.venue %}
+                <div class="text-[11px] opacity-70 mt-1">{{ related_event.venue }}</div>
+                {% endif %}
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    {% endif %}
+
+    {% include "components/footer.html" %}
+  </div>
+</main>
+
+{% include "components/sticky_cta.html" %}
+{% endblock %}

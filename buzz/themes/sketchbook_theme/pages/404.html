@@ -1,0 +1,23 @@
+{% extends "components/base.html" %}
+
+{% block title %}Not found &mdash; {{ app_name }}{% endblock %}
+{% block og_title %}Not found &mdash; {{ app_name }}{% endblock %}
+{% block og_description %}This page got scribbled out.{% endblock %}
+
+{% block body %}
+<section class="notfound">
+  <p class="label">error &middot; four-oh-four</p>
+  <div class="display-h1" style="margin-top: 0.5rem;">
+    page <span class="scribble">scribbled</span><br>
+    <span class="accent">out</span>
+  </div>
+  <div class="notfound__box mt-12">
+    <p class="marker" style="font-size: 36px; margin: 0;">this page got scribbled out</p>
+    <p class="mt-4" style="opacity: 0.7;">we looked everywhere in the notebook. it's not here.</p>
+  </div>
+  <p class="notfound__note">
+    try the <a href="/home" class="scribble">front cover</a> instead,<br>
+    or browse a <a href="/category/yatra" class="scribble">yatra</a>.
+  </p>
+</section>
+{% endblock %}

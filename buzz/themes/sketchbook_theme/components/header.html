@@ -1,0 +1,28 @@
+{% import "components/macros/branding.html" as branding with context %}
+<header class="rule-bar">
+  <a href="/home" class="brand">{{ branding.brand(app_logo, "brand-logo", "★ ") }}</a>
+  <div class="inline-flex items-center gap-4">
+    {% include "components/theme_toggle.html" %}
+    {% if frappe.session.user == "Guest" %}
+      <button
+        type="button"
+        x-data
+        @click="$dispatch('open-login')"
+        class="signin-link bg-transparent border-0 cursor-pointer p-0"
+        style="color: inherit;"
+      >
+        sign in <span class="arrow">&rarr;</span>
+      </button>
+    {% else %}
+      <button
+        type="button"
+        x-data="loginDialog()"
+        @click="logout()"
+        class="signin-link bg-transparent border-0 cursor-pointer p-0"
+        style="color: inherit;"
+      >
+        logout <span class="arrow">&rarr;</span>
+      </button>
+    {% endif %}
+  </div>
+</header>

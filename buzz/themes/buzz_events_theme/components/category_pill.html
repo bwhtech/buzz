@@ -1,0 +1,9 @@
+{% macro category_pill(label, is_past=False) %}
+  {% if is_past %}
+  <span class="inline-block bg-transparent text-ink border border-line font-ui font-bold text-[10px] tracking-[0.06em] uppercase px-2.5 py-1 rounded">{{ label }}</span>
+  {% else %}
+  <span class="inline-block bg-pill text-pill-fg font-ui font-bold text-[10px] tracking-[0.06em] uppercase px-2.5 py-1 rounded">{{ label }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% if label is defined %}{{ category_pill(label, is_past=is_past|default(False)) }}{% endif %}

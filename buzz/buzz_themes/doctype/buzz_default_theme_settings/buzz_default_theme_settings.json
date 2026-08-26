@@ -1,0 +1,189 @@
+{
+ "actions": [],
+ "creation": "2026-08-14 09:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "navigation_section",
+  "nav_links",
+  "footer_note",
+  "home_section",
+  "welcome_heading",
+  "welcome_body",
+  "yatra_heading",
+  "upcoming_conferences_heading",
+  "past_conferences_heading",
+  "past_webinars_heading",
+  "category_section",
+  "upcoming_heading",
+  "past_heading",
+  "event_section",
+  "register_label",
+  "about_heading",
+  "schedule_heading",
+  "speakers_heading",
+  "venue_heading",
+  "host_heading",
+  "sponsors_heading"
+ ],
+ "fields": [
+  {
+   "fieldname": "navigation_section",
+   "fieldtype": "Section Break",
+   "label": "Navigation & Footer"
+  },
+  {
+   "description": "Links shown in the header. Leave empty to fall back to Dashboard and Propose Event.",
+   "fieldname": "nav_links",
+   "fieldtype": "Table",
+   "label": "Navigation Links",
+   "options": "Buzz Theme Nav Link"
+  },
+  {
+   "default": "Built with Buzz",
+   "fieldname": "footer_note",
+   "fieldtype": "Data",
+   "label": "Footer Note"
+  },
+  {
+   "fieldname": "home_section",
+   "fieldtype": "Section Break",
+   "label": "Home Page"
+  },
+  {
+   "description": "Defaults to \"Welcome to <site name>\".",
+   "fieldname": "welcome_heading",
+   "fieldtype": "Data",
+   "label": "Welcome Heading"
+  },
+  {
+   "default": "This is where the community shows up \u2014 to share what they have been working on, discuss common problems, and have honest conversations.\n\nBrowse through the upcoming conferences, webinars, and meetups to join in.",
+   "description": "Separate paragraphs with a blank line.",
+   "fieldname": "welcome_body",
+   "fieldtype": "Small Text",
+   "label": "Welcome Body"
+  },
+  {
+   "default": "Upcoming Yatra Meetups",
+   "fieldname": "yatra_heading",
+   "fieldtype": "Data",
+   "label": "Yatra Section Heading"
+  },
+  {
+   "default": "Upcoming Conferences",
+   "fieldname": "upcoming_conferences_heading",
+   "fieldtype": "Data",
+   "label": "Upcoming Conferences Heading"
+  },
+  {
+   "default": "Past Conferences",
+   "fieldname": "past_conferences_heading",
+   "fieldtype": "Data",
+   "label": "Past Conferences Heading"
+  },
+  {
+   "default": "Past Webinars",
+   "fieldname": "past_webinars_heading",
+   "fieldtype": "Data",
+   "label": "Past Webinars Heading"
+  },
+  {
+   "fieldname": "category_section",
+   "fieldtype": "Section Break",
+   "label": "Category Page"
+  },
+  {
+   "default": "Upcoming",
+   "fieldname": "upcoming_heading",
+   "fieldtype": "Data",
+   "label": "Upcoming Heading"
+  },
+  {
+   "default": "In the Past",
+   "fieldname": "past_heading",
+   "fieldtype": "Data",
+   "label": "Past Heading"
+  },
+  {
+   "fieldname": "event_section",
+   "fieldtype": "Section Break",
+   "label": "Event Page"
+  },
+  {
+   "default": "Register",
+   "fieldname": "register_label",
+   "fieldtype": "Data",
+   "label": "Register Button Label"
+  },
+  {
+   "default": "About the event",
+   "fieldname": "about_heading",
+   "fieldtype": "Data",
+   "label": "About Heading"
+  },
+  {
+   "default": "Schedule",
+   "fieldname": "schedule_heading",
+   "fieldtype": "Data",
+   "label": "Schedule Heading"
+  },
+  {
+   "default": "Speakers",
+   "fieldname": "speakers_heading",
+   "fieldtype": "Data",
+   "label": "Speakers Heading"
+  },
+  {
+   "default": "Venue details",
+   "fieldname": "venue_heading",
+   "fieldtype": "Data",
+   "label": "Venue Heading"
+  },
+  {
+   "default": "Meet the host",
+   "fieldname": "host_heading",
+   "fieldtype": "Data",
+   "label": "Host Heading"
+  },
+  {
+   "default": "Sponsors",
+   "fieldname": "sponsors_heading",
+   "fieldtype": "Data",
+   "label": "Sponsors Heading"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-08-14 09:55:00",
+ "modified_by": "Administrator",
+ "module": "Buzz Themes",
+ "name": "Buzz Default Theme Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Website Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,21 @@
+{# Venue map embed, shared by every buzz theme.
+
+   google_maps_embed_code is a Code field, and Frappe deliberately skips XSS sanitization for
+   Code fieldtypes, so the pasted markup is never rendered. buzz_map_embed_url() extracts the
+   src and proves it is a Google Maps embed; the theme's own iframe is built around that URL.
+
+   Invoke with {% call %} to supply the theme's placeholder for a venue with no map at all. #}
+
+{% macro venue_map(venue, class_name="w-full h-full border-0") %}
+{%- set embed_url = buzz_map_embed_url(venue.google_maps_embed_code) -%}
+{%- if embed_url -%}
+<iframe title="{{ _("Map of") }} {{ venue.name }}" src="{{ embed_url }}" class="{{ class_name }}"
+        loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+{%- elif venue.latitude and venue.longitude and (venue.latitude|float != 0 or venue.longitude|float != 0) -%}
+<iframe title="{{ _("Map of") }} {{ venue.name }}" class="{{ class_name }}" loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+        src="https://www.openstreetmap.org/export/embed.html?bbox={{ venue.longitude|float - 0.01 }},{{ venue.latitude|float - 0.01 }},{{ venue.longitude|float + 0.01 }},{{ venue.latitude|float + 0.01 }}&layer=mapnik&marker={{ venue.latitude }},{{ venue.longitude }}"></iframe>
+{%- elif caller is defined -%}
+{{ caller() }}
+{%- endif -%}
+{% endmacro %}

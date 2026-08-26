@@ -1,0 +1,110 @@
+{% extends "components/base.html" %}
+{% import "components/macros/sections.html" as sections %}
+
+{% block title %}{{ app_name }}{% endblock %}
+{% block og_title %}{{ app_name }}{% endblock %}
+{% block og_description %}Conferences, meetups, and webinars.{% endblock %}
+{% block og_url %}{{ frappe.utils.get_url() }}/home{% endblock %}
+
+{% block body %}
+
+{% set today = frappe.utils.today() %}
+{% set all_events = frappe.get_all("Buzz Event",
+      filters={"is_published": 1},
+      fields=["name", "title", "route", "category", "start_date", "venue",
+              "card_image", "banner_image", "short_description", "medium"],
+      order_by="start_date asc") %}
+
+{% set upcoming_conferences = [] %}
+{% set past_conferences = [] %}
+{% set upcoming_yatra = [] %}
+{% set past_webinars = [] %}
+{% for event in all_events %}
+  {% set is_past = event.start_date and (event.start_date|string) < today %}
+  {% if event.category == 'Conferences' %}
+    {% if is_past %}{% set _ = past_conferences.append(event) %}{% else %}{% set _ = upcoming_conferences.append(event) %}{% endif %}
+  {% elif event.category == 'Yatra' and not is_past %}
+    {% set _ = upcoming_yatra.append(event) %}
+  {% elif event.category == 'Webinars' and is_past %}
+    {% set _ = past_webinars.append(event) %}
+  {% endif %}
+{% endfor %}
+
+{# Past lists come back oldest-first from the shared ascending query; most recent reads better. #}
+{% set past_conferences = past_conferences | reverse | list %}
+{% set past_webinars = past_webinars | reverse | list %}
+
+{% set category_slugs = {} %}
+{% for category in frappe.get_all("Event Category", filters={"enabled": 1}, fields=["name", "slug"]) %}
+  {% set _ = category_slugs.update({category.name: category.slug}) %}
+{% endfor %}
+
+{% set preview_count = 3 %}
+{% set theme_config = buzz_theme_config() %}
+
+{% if banner_image %}
+<section class="mb-8">
+  <img src="{{ banner_image }}" alt="{{ app_name }}" class="w-full aspect-[16/6] object-cover rounded-xl block" fetchpriority="high" />
+</section>
+{% endif %}
+
+<section class="card p-6 mb-12">
+  <h1 class="text-[19px] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{{ theme_config.welcome_heading or ('Welcome to ' ~ app_name) }}</h1>
+  {% if theme_config.welcome_body %}
+  <div class="prose-block mt-3">
+    {% for paragraph in theme_config.welcome_body.split('\n\n') %}
+      {% if paragraph | trim %}<p>{{ paragraph | trim }}</p>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+{% if upcoming_yatra %}
+<section class="mb-12" aria-labelledby="yatra-heading">
+  {{ sections.section_header(theme_config.yatra_heading or 'Upcoming Yatra Meetups', 'yatra-heading') }}
+  <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+    {% for event_row in upcoming_yatra[:preview_count] %}
+      {% with is_past = False %}{% include "components/event_card.html" %}{% endwith %}
+    {% endfor %}
+  </div>
+  {{ sections.view_all_link('/category/' ~ (category_slugs.get('Yatra') or 'yatra')) }}
+</section>
+{% endif %}
+
+{% if upcoming_conferences %}
+<section class="mb-12" aria-labelledby="upcoming-conf-heading">
+  {{ sections.section_header(theme_config.upcoming_conferences_heading or 'Upcoming Conferences', 'upcoming-conf-heading') }}
+  <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+    {% for event_row in upcoming_conferences[:preview_count] %}
+      {% with is_past = False %}{% include "components/event_card.html" %}{% endwith %}
+    {% endfor %}
+  </div>
+  {{ sections.view_all_link('/category/' ~ (category_slugs.get('Conferences') or 'conferences')) }}
+</section>
+{% endif %}
+
+{% if past_conferences %}
+<section class="mb-12" aria-labelledby="past-conf-heading">
+  {{ sections.section_header(theme_config.past_conferences_heading or 'Past Conferences', 'past-conf-heading') }}
+  <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+    {% for event_row in past_conferences[:preview_count] %}
+      {% with is_past = True %}{% include "components/event_card.html" %}{% endwith %}
+    {% endfor %}
+  </div>
+  {{ sections.view_all_link('/category/' ~ (category_slugs.get('Conferences') or 'conferences')) }}
+</section>
+{% endif %}
+
+{% if past_webinars %}
+<section class="mb-12" aria-labelledby="past-web-heading">
+  {{ sections.section_header(theme_config.past_webinars_heading or 'Past Webinars', 'past-web-heading') }}
+  <div class="grid gap-3">
+    {% for event_row in past_webinars[:preview_count] %}
+      {% with is_past = True %}{% include "components/event_row.html" %}{% endwith %}
+    {% endfor %}
+  </div>
+  {{ sections.view_all_link('/category/' ~ (category_slugs.get('Webinars') or 'webinars')) }}
+</section>
+{% endif %}
+
+{% endblock %}

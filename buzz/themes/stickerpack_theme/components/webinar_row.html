@@ -1,0 +1,13 @@
+<a href="{{ webinar.recap_url if webinar.recap_url else ('/events/' ~ webinar.route) }}"
+   class="square flex items-stretch gap-0 p-0 overflow-hidden hover:-translate-y-0.5 transition-transform"
+   aria-label="{{ webinar.title }}">
+  <div class="w-20 shrink-0 flex flex-col items-center justify-center bg-[var(--accent-warm)] text-[#161616] border-r-[3px] border-[var(--line-strong)]">
+    <div class="mono text-[10px] tracking-[0.2em] uppercase">{{ webinar.date_month }}</div>
+    <div class="font-black text-[28px] leading-none">{{ webinar.date_day }}</div>
+  </div>
+  <div class="p-5 flex-1">
+    <h3 class="font-bold text-[18px] leading-tight">{{ webinar.title }}</h3>
+    {% if webinar.blurb %}<p class="text-[13px] opacity-75 mt-1.5 leading-snug">{{ webinar.blurb }}</p>{% endif %}
+    <span class="hand text-[20px] mt-3 inline-block">recording &rarr;</span>
+  </div>
+</a>

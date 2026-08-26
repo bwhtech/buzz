@@ -1,0 +1,245 @@
+/* Buzz Default — design tokens.
+   Colours are frappe-ui's own semantic tokens (surface / ink / outline), resolved
+   from frappe-ui/tailwind/generated/colors.json, so themed pages and the Vue
+   dashboard (ticket booking, check-in) render the same greys. */
+
+:root {
+  --surface-base: #ffffff;
+  --surface-gray-1: #f8f8f8;
+  --surface-gray-2: #f3f3f3;
+  --surface-gray-3: #ededed;
+  --surface-gray-4: #e2e2e2;
+
+  --ink-gray-9: #0f0f0f;
+  --ink-gray-8: #171717;
+  --ink-gray-7: #383838;
+  --ink-gray-6: #525252;
+  --ink-gray-5: #7c7c7c;
+  --ink-gray-4: #999999;
+
+  --outline-gray-1: #ededed;
+  --outline-gray-2: #e2e2e2;
+  --outline-gray-3: #c7c7c7;
+
+  --blue-500: #0d8ef8;
+
+  /* roles — every component reads these, never a raw token */
+  --page-bg: var(--surface-base);
+  --card-bg: var(--surface-gray-1);
+  --card-bg-hover: var(--surface-gray-2);
+  --placeholder-bg: var(--surface-gray-3);
+  --hairline: var(--outline-gray-1);
+  --text-primary: var(--ink-gray-9);
+  --text-secondary: var(--ink-gray-6);
+  /* ink-gray-4 (#999) is only 2.9:1 on white — muted text still has to clear AA. */
+  --text-muted: var(--ink-gray-5);
+  --focus-ring: var(--blue-500);
+}
+
+html[data-theme="dark"] {
+  --surface-base: #171717;
+  --surface-gray-1: #1f1f1f;
+  --surface-gray-2: #292929;
+  --surface-gray-3: #383838;
+  --surface-gray-4: #424242;
+
+  --ink-gray-9: #f8f8f8;
+  --ink-gray-8: #d9d9d9;
+  --ink-gray-7: #afafaf;
+  --ink-gray-6: #999999;
+  --ink-gray-5: #7a7a7a;
+  --ink-gray-4: #7a7a7a;
+
+  --outline-gray-1: #242424;
+  --outline-gray-2: #383838;
+  --outline-gray-3: #424242;
+
+  /* outline-gray-1 is 1.06:1 against the dark card — every border would vanish. */
+  --hairline: var(--outline-gray-2);
+  --text-muted: var(--ink-gray-6);
+}
+
+/* Everything below is component CSS. It MUST live in @layer components: this file is
+   imported unlayered, and unlayered rules outrank every Tailwind utility regardless of
+   specificity, so an unlayered component rule cannot be overridden from the markup. */
+@layer components {
+  /* ---------- typography ---------- */
+
+  html, body {
+    background: var(--page-bg);
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: 'cv10' 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* The condensed numerals are the one piece of display type this theme keeps. */
+  .numeral { font-family: 'League Gothic', 'Inter', sans-serif; }
+
+  .label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* ---------- page chrome ---------- */
+
+  .page-shell { max-width: 800px; margin: 0 auto; padding: 0 20px 80px; }
+
+  .site-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 16px 0 12px;
+  }
+
+  .site-header .brand {
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+  }
+
+  .site-header .brand-logo { height: 26px; width: auto; display: block; }
+
+  .nav-links { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 20px; }
+
+  .nav-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+  .nav-links a:hover { color: var(--text-secondary); }
+
+  .site-footer {
+    border-top: 1px solid var(--hairline);
+    background: var(--card-bg);
+    margin-top: 72px;
+  }
+
+  .site-footer .footer-inner {
+    max-width: 800px; margin: 0 auto;
+    padding: 22px 20px;
+    display: flex; flex-wrap: wrap; gap: 12px;
+    align-items: center; justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .site-footer .footer-links { display: inline-flex; flex-wrap: wrap; gap: 16px; }
+  .site-footer a:hover { color: var(--text-primary); }
+  .site-footer .footer-logo { height: 20px; width: auto; display: block; }
+
+  /* ---------- primitives ---------- */
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+  }
+
+  /* No `display` here. tokens.css is imported UNLAYERED, and unlayered CSS beats every
+     @layer — including Tailwind's utilities — whatever the specificity. A `display` set
+     here silently wins over `flex`/`block` in the markup. */
+  a.card { transition: background-color .15s ease, border-color .15s ease; }
+  a.card:hover { background: var(--card-bg-hover); border-color: var(--outline-gray-2); }
+
+  .section-heading {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+  }
+
+  .view-all {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 14px; font-weight: 500;
+    color: var(--text-primary);
+  }
+  .view-all:hover { gap: 9px; }
+  .view-all { transition: gap .15s ease; }
+
+  /* Date badge — MONTH over a condensed day numeral, the Builder page's signature. */
+  .date-badge {
+    display: flex; flex-direction: column; align-items: center;
+    line-height: 1;
+    min-width: 34px;
+  }
+  .date-badge .badge-month {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .date-badge .badge-day {
+    font-family: 'League Gothic', 'Inter', sans-serif;
+    font-size: 30px;
+    line-height: 0.95;
+    margin-top: 3px;
+    color: var(--text-primary);
+  }
+
+  .meta-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .prose-block { font-size: 15px; line-height: 1.65; color: var(--text-secondary); }
+  .prose-block p { margin-bottom: 12px; }
+  .prose-block p:last-child { margin-bottom: 0; }
+  .prose-block a { color: var(--text-primary); text-decoration: underline; }
+
+  .cta-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--text-primary);
+    color: var(--page-bg);
+    border-radius: 8px;
+    padding: 11px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: opacity .15s ease;
+  }
+  .cta-btn:hover { opacity: 0.85; }
+
+  .cta-btn--ghost {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--outline-gray-2);
+  }
+  .cta-btn--ghost:hover { background: var(--card-bg-hover); opacity: 1; }
+
+  /* ---------- theme toggle ---------- */
+
+  .theme-toggle {
+    width: 44px; height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--outline-gray-2);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color .15s ease;
+  }
+  .theme-toggle:hover { background: var(--card-bg-hover); color: var(--text-primary); }
+  .theme-toggle .icon-sun { display: none; }
+  .theme-toggle .icon-moon { display: block; }
+  html[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+  html[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+
+  /* ---------- state ---------- */
+
+  .is-past { opacity: 0.7; }
+  .is-past:hover { opacity: 1; }
+
+  :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+  @media print {
+    .no-print, .theme-toggle { display: none !important; }
+    body { background: #ffffff !important; color: #000000; }
+    .card { border-color: #e2e2e2; }
+  }
+}

@@ -12,25 +12,16 @@
   "column_break_mrmh",
   "banner_image",
   "meta_image",
+  "icon_name",
+  "subtitle",
   "icon_svg"
  ],
  "fields": [
-  {
-   "fieldname": "icon_svg",
-   "fieldtype": "Code",
-   "label": "Icon SVG",
-   "options": "HTML"
-  },
   {
    "default": "1",
    "fieldname": "enabled",
    "fieldtype": "Check",
    "label": "Enabled"
-  },
-  {
-   "fieldname": "banner_image",
-   "fieldtype": "Attach Image",
-   "label": "Banner Image"
   },
   {
    "fieldname": "slug",
@@ -39,18 +30,41 @@
    "unique": 1
   },
   {
-   "fieldname": "column_break_mrmh",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
   },
   {
+   "fieldname": "column_break_mrmh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "banner_image",
+   "fieldtype": "Attach Image",
+   "label": "Banner Image"
+  },
+  {
    "fieldname": "meta_image",
    "fieldtype": "Attach Image",
    "label": "Meta Image"
+  },
+  {
+   "fieldname": "icon_name",
+   "fieldtype": "Data",
+   "label": "Icon Name",
+   "description": "Name of a bundled icon, e.g. users, monitor, route, coffee, map-pin. Themes render this inline."
+  },
+  {
+   "fieldname": "subtitle",
+   "fieldtype": "Data",
+   "label": "Subtitle",
+   "description": "Short kicker shown above the category name, e.g. Flagship, Online, Roadshow."
+  },
+  {
+   "fieldname": "icon_svg",
+   "fieldtype": "Code",
+   "label": "Icon SVG",
+   "options": "HTML"
   }
  ],
  "grid_page_length": 50,

@@ -1,0 +1,6 @@
+{% if badge_date %}
+<div class="date-badge">
+  <span class="badge-month">{{ badge_date.strftime('%b') | upper }}</span>
+  <span class="badge-day">{{ badge_date.strftime('%d') }}</span>
+</div>
+{% endif %}
