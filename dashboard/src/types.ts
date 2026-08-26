@@ -125,6 +125,31 @@ export interface MyEvents {
 	past: MyEvent[]
 }
 
+export interface EventVenueDetail {
+	name: string
+	address: string | null
+}
+
+// buzz.api.events.get_event: one event with everything its manage page edits.
+export interface EventDetail {
+	name: string
+	title: string
+	route: string | null
+	team: string | null
+	start_date: string
+	end_date: string | null
+	start_time: string | null
+	end_time: string | null
+	time_zone: string | null
+	short_description: string | null
+	about: string | null
+	banner_image: string | null
+	medium: string | null
+	venue: EventVenueDetail | null
+	meeting_link: string | null
+	is_published: boolean
+}
+
 // A ticket the user holds, flattened with the context its event carries.
 export interface TicketStub {
 	name: string

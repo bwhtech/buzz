@@ -99,8 +99,21 @@ class BuzzEvent(Document):
 		self.validate_tax_settings()
 		self.validate_guest_verification_config()
 		self.validate_custom_forms()
+		self.clear_unused_location()
 		self.validate_venue_team()
 		self.set_time_zone_label()
+
+	def clear_unused_location(self):
+		"""Only the medium in force keeps its location.
+
+		`generate_ics_file` and the booking page both read `venue` without consulting
+		`medium`, so a venue left behind by a switch to Online publishes an address the
+		event no longer has.
+		"""
+		if self.medium == "Online":
+			self.venue = None
+		else:
+			self.meeting_link = None
 
 	def validate_venue_team(self):
 		"""A venue may only be linked by the team that owns it.

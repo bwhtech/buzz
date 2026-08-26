@@ -4,16 +4,27 @@ import { dayLabel } from "@/utils/dateLabels";
 import { bannerPattern } from "@/utils/eventBanner";
 import { Avatar, Button } from "frappe-ui";
 import { computed } from "vue";
+import { RouterLink } from "vue-router";
 
 // The Events page files cards under a date heading; a standalone list has to
 // carry the date on the card itself.
 const props = withDefaults(
-	defineProps<{ event: MyEvent; showDate?: boolean; showManage?: boolean }>(),
+	defineProps<{
+		event: MyEvent;
+		showDate?: boolean;
+		showManage?: boolean;
+		// A list where every card is manageable — a team's own events — can drop the
+		// per-card button and make the whole card the way in.
+		routeToManage?: boolean;
+	}>(),
 	{ showManage: true }
 );
 
-// Two gates: the caller has to want the button, and only a host has anything to manage.
-const canManage = computed(() => props.showManage && props.event.is_host);
+// Only a host has anything to manage, whichever way in the caller asked for.
+const linksToManage = computed(() => props.routeToManage && props.event.is_host);
+
+// The button would be a second link inside the first, so the card link wins.
+const canManage = computed(() => props.showManage && !linksToManage.value && props.event.is_host);
 
 // Times arrive as a serialized timedelta ("9:00:00"), so the hour needs padding.
 const startTime = computed((): string => {
@@ -38,8 +49,9 @@ const venue = computed(() => {
 </script>
 
 <template>
-	<!-- TODO: some sort of action on click of this card -->
-	<article
+	<component
+		:is="linksToManage ? RouterLink : 'article'"
+		:to="linksToManage ? `/manage/events/${event.name}` : undefined"
 		class="flex gap-4 border border-outline-gray-2 hover:border-outline-gray-3 rounded-2xl p-3"
 	>
 		<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
@@ -84,9 +96,14 @@ const venue = computed(() => {
 					/>
 					{{ venue.label }}
 				</p>
-				<!-- TODO: wire this button up with the manage event page -->
-				<Button v-if="canManage" label="Manage" icon-right="arrow-right" size="sm" />
+				<Button
+					v-if="canManage"
+					label="Manage"
+					icon-right="arrow-right"
+					size="sm"
+					:route="`/manage/events/${event.name}`"
+				/>
 			</div>
 		</div>
-	</article>
+	</component>
 </template>
