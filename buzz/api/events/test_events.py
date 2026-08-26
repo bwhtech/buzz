@@ -502,6 +502,17 @@ class TestGetEventGuests(IntegrationTestCase):
 
 		self.assertFalse(get_event_guests(event).registrations_closed)
 
+	def test_names_the_event_for_a_member_who_cannot_edit_it(self):
+		"""The header labels the page off this payload, so read access has to be enough."""
+		event = create_event("Named Event", self.team)
+		viewer = create_user("guests-viewer@example.com", "Viewer")
+		add_member(self.team, viewer, "Viewer")
+		frappe.set_user(viewer)
+
+		self.assertEqual(get_event_guests(event).title, "Event Named Event")
+		with self.assertRaises(CannotManageEvent):
+			get_event(event)
+
 	def test_a_non_member_cannot_read_the_guest_list(self):
 		event = create_event("Private Guests", self.team)
 		issue_ticket(event, "private-guest@example.com")

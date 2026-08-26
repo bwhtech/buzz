@@ -69,6 +69,7 @@ class EventGuest(APIResponse):
 
 
 class EventGuestsResponse(APIResponse):
+	title: str | None = None
 	total: int
 	registrations_closed: bool
 	guests: list[EventGuest]

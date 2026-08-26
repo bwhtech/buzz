@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import EventGuestItem from "@/components/dashboard/events/EventGuestItem.vue";
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue";
-import { eventDetail, eventGuests } from "@/data/events";
+import { eventGuests } from "@/data/events";
 import { FormControl, LoadingText } from "frappe-ui";
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
@@ -9,7 +9,6 @@ import { useRoute } from "vue-router";
 const route = useRoute();
 const eventId = route.params.eventId as string;
 
-const event = eventDetail(eventId);
 const guests = eventGuests(eventId);
 
 const query = ref("");
@@ -29,7 +28,7 @@ const matches = computed(() => {
 </script>
 
 <template>
-	<EventPageHeader :title="event.data?.title" section="Guests" />
+	<EventPageHeader :title="guests.data?.title" section="Guests" />
 
 	<div class="m-auto max-w-[800px] w-full py-8 px-4 space-y-8">
 		<section class="space-y-2">

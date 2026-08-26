@@ -140,6 +140,7 @@ export interface EventGuest {
 }
 
 export interface EventGuests {
+	title: string | null
 	total: number
 	registrations_closed: boolean
 	guests: EventGuest[]

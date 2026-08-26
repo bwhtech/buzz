@@ -175,9 +175,11 @@ def event_guests(event: str) -> EventGuestsResponse:
 		)
 		for ticket in tickets
 	]
+	doc = frappe.get_cached_doc("Buzz Event", event)
 	return EventGuestsResponse(
+		title=doc.title,
 		total=len(guests),
-		registrations_closed=are_registrations_closed(frappe.get_cached_doc("Buzz Event", event)),
+		registrations_closed=are_registrations_closed(doc),
 		guests=guests,
 	)
 
