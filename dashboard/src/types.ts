@@ -125,6 +125,27 @@ export interface MyEvents {
 	past: MyEvent[]
 }
 
+export interface GuestAddOn {
+	title: string
+	value: string | null
+}
+
+// buzz.api.events.get_event_guests: one row per submitted ticket, not per person.
+export interface EventGuest {
+	name: string
+	attendee_name: string | null
+	attendee_email: string | null
+	ticket_type: string | null
+	add_ons: GuestAddOn[]
+}
+
+export interface EventGuests {
+	title: string | null
+	total: number
+	registrations_closed: boolean
+	guests: EventGuest[]
+}
+
 export interface EventVenueDetail {
 	name: string
 	address: string | null

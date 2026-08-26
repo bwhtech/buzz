@@ -4,6 +4,7 @@ from frappe.model.naming import append_number_if_name_exists
 from frappe.query_builder import Case
 from frappe.utils import getdate
 
+from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.exceptions import (
 	CannotCreateEvents,
 	CannotManageEvent,
@@ -13,7 +14,10 @@ from buzz.api.events.exceptions import (
 from buzz.api.events.schemas import (
 	CreatedEvent,
 	EventDetail,
+	EventGuest,
+	EventGuestsResponse,
 	EventVenue,
+	GuestAddOn,
 	MyEvent,
 	MyEventsResponse,
 	NewEvent,
@@ -138,6 +142,80 @@ def meeting_link_of(row) -> str | None:
 
 	meeting = frappe.db.get_value("Buzz Event", row.name, "zoom_meeting")
 	return frappe.db.get_value("Zoom Meeting", meeting, "zoom_link") if meeting else None
+
+
+def event_guests(event: str) -> EventGuestsResponse:
+	"""Everyone holding a ticket to an event.
+
+	A submitted ticket only — a draft belongs to a booking still being paid for. Read
+	access is the bar: this shows the team what it already sees through the doctype.
+	"""
+	team = frappe.db.get_value("Buzz Event", event, "team")
+	if not frappe.db.exists("Buzz Event", event):
+		EventNotFound.throw()
+
+	if not has_team_access(team, "read", frappe.session.user):
+		CannotManageEvent.throw()
+
+	tickets = frappe.get_all(
+		"Event Ticket",
+		filters={"event": event, "docstatus": 1},
+		fields=["name", "attendee_name", "attendee_email", "ticket_type"],
+		order_by="attendee_name asc",
+	)
+
+	by_ticket = add_ons_by_ticket([ticket.name for ticket in tickets])
+	# Event Ticket Type is autonamed, so the link value is a number nobody recognises.
+	type_titles = titles_of("Event Ticket Type", {ticket.ticket_type for ticket in tickets})
+
+	guests = [
+		EventGuest(
+			**ticket | {"ticket_type": type_titles.get(ticket.ticket_type) or ticket.ticket_type},
+			add_ons=by_ticket.get(ticket.name, []),
+		)
+		for ticket in tickets
+	]
+	doc = frappe.get_cached_doc("Buzz Event", event)
+	return EventGuestsResponse(
+		title=doc.title,
+		total=len(guests),
+		registrations_closed=are_registrations_closed(doc),
+		guests=guests,
+	)
+
+
+def titles_of(doctype: str, names: set[str | None]) -> dict[str, str]:
+	"""Name-to-title map for a set of links, in one query."""
+	wanted = [name for name in names if name]
+	if not wanted:
+		return {}
+
+	rows = frappe.get_all(doctype, filters={"name": ("in", wanted)}, fields=["name", "title"], as_list=True)
+	# An autonamed doctype comes back with integer names, while every link to it travels
+	# as a string — without this the map never matches.
+	return {str(name): title for name, title in rows}
+
+
+def add_ons_by_ticket(tickets: list[str]) -> dict[str, list[GuestAddOn]]:
+	"""Add-ons for every ticket at once, rather than a query per row."""
+	if not tickets:
+		return {}
+
+	# Query builder rather than get_all: a child doctype has no standalone permission of
+	# its own, and the team check above is the authorization.
+	value = frappe.qb.DocType("Ticket Add-on Value")
+	rows = (
+		frappe.qb.from_(value)
+		.select(value.parent, value.add_on, value.value)
+		.where((value.parenttype == "Event Ticket") & value.parent.isin(tickets))
+	).run(as_dict=True)
+	titles = titles_of("Ticket Add-on", {row.add_on for row in rows})
+
+	by_ticket: dict[str, list[GuestAddOn]] = {}
+	for row in rows:
+		add_on = GuestAddOn(title=titles.get(row.add_on) or row.add_on, value=row.value)
+		by_ticket.setdefault(row.parent, []).append(add_on)
+	return by_ticket
 
 
 def route_availability(route: str, event: str | None = None) -> RouteAvailability:

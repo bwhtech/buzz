@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import EventBanner from "@/components/dashboard/events/EventBanner.vue";
 import EventMedium from "@/components/dashboard/events/EventMedium.vue";
+import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue";
 import EventRoute from "@/components/dashboard/events/EventRoute.vue";
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue";
 import { eventDetail, updateEvent } from "@/data/events";
 import type { EventDetail, FrappeError } from "@/types";
-import { Breadcrumbs, Button, ErrorMessage, PageHeader, Textarea, toast } from "frappe-ui";
+import { Button, ErrorMessage, Textarea, toast } from "frappe-ui";
 import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor";
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
@@ -65,8 +66,6 @@ watch(
 
 const isDirty = computed(() => JSON.stringify(form) !== saved.value);
 
-const items = computed(() => [{ label: event.data?.title || "Event" }, { label: "Details" }]);
-
 // createResource types its error as {}, so the message needs narrowing.
 const errorMessage = computed(() =>
 	(updateEvent.error as FrappeError | null)?.messages?.join("\n")
@@ -87,8 +86,7 @@ async function save() {
 </script>
 
 <template>
-	<PageHeader class="border-none pt-2 bg-surface-elevation-1">
-		<Breadcrumbs :items="items" />
+	<EventPageHeader :title="event.data?.title" section="Details">
 		<Button
 			v-if="isDirty"
 			variant="solid"
@@ -96,7 +94,7 @@ async function save() {
 			:loading="updateEvent.loading"
 			@click="save"
 		/>
-	</PageHeader>
+	</EventPageHeader>
 
 	<div v-if="event.data" class="m-auto max-w-[800px] w-full py-8 px-4 space-y-8">
 		<ErrorMessage v-if="errorMessage" :message="errorMessage" />

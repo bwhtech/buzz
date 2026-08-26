@@ -66,7 +66,7 @@ test.describe("Event workspace", () => {
 	});
 
 	test("swaps the sidebar for the event's own destinations", async ({ page }) => {
-		for (const label of ["Back", "Details", "Attendees", "Talks"]) {
+		for (const label of ["Back", "Details", "Guests", "Talks"]) {
 			await expect(page.getByRole("link", { name: label })).toBeVisible({ timeout: 15000 });
 		}
 		await expect(page.getByRole("link", { name: "My Tickets" })).toHaveCount(0);
@@ -172,6 +172,109 @@ test.describe("Claiming a route", () => {
 		// Reserved so an event cannot shadow /b/account.
 		await field.fill("account");
 		await expect(page.getByText("reserved")).toBeVisible();
+	});
+});
+
+// Nothing seeds a ticket against the shared event, so a guest list read off it is empty
+// in CI. This block seeds the guests it asserts on.
+test.describe("Guest list", () => {
+	const TICKET_TYPE = "Guest List Ticket";
+	const ADD_ON = "Guest List T-Shirt";
+	const GUESTS = [
+		{ name: "Ada Lovelace", email: "ada@example.com" },
+		{ name: "Grace Hopper", email: "grace@example.com" },
+	];
+
+	let eventId: string;
+
+	test.beforeEach(async ({ page, request }) => {
+		const team = await ensureTestTeam(request);
+		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
+			event: {
+				team,
+				title: `Guest List Event ${Date.now()}`,
+				start_date: "2030-01-01",
+				start_time: "09:00:00",
+				end_time: "17:00:00",
+			},
+		});
+		eventId = String(event.name);
+
+		const ticketType = await createDoc<{ name: string }>(request, "Event Ticket Type", {
+			event: eventId,
+			title: TICKET_TYPE,
+			price: 0,
+			currency: "INR",
+			is_published: 1,
+		});
+		const addOn = await createDoc<{ name: string }>(request, "Ticket Add-on", {
+			event: eventId,
+			title: ADD_ON,
+			user_selects_option: 1,
+			options: ["Small", "Large"].join("\n"),
+			price: 0,
+			currency: "INR",
+		});
+
+		for (const [index, guest] of GUESTS.entries()) {
+			const ticket = await createDoc(request, "Event Ticket", {
+				event: eventId,
+				ticket_type: ticketType.name,
+				attendee_name: guest.name,
+				attendee_email: guest.email,
+				// Only the first guest holds one, so the badges belong to a row rather than
+				// to every row alike.
+				add_ons:
+					index === 0 ? [{ add_on: addOn.name, value: "Large", price: 0, currency: "INR" }] : [],
+			});
+			// A draft ticket belongs to a booking still being paid for; only a submitted
+			// one is somebody coming.
+			await callMethod(request, "frappe.client.submit", { doc: ticket });
+		}
+
+		await page.goto(`/b/manage/events/${eventId}/details`);
+	});
+
+	test("lists the event's guests", async ({ page }) => {
+		await page.getByRole("link", { name: "Guests" }).click();
+
+		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`));
+		await expect(page.getByRole("heading", { name: "Guest list" })).toBeVisible();
+		const rows = page.getByRole("list").getByRole("listitem");
+		await expect(rows).toHaveCount(GUESTS.length, { timeout: 15000 });
+
+		// The count is the number of rows under it, not a separate claim.
+		const registrations = Number(await page.getByText(/^\d+$/).first().textContent());
+		expect(registrations).toBe(GUESTS.length);
+		await expect(page.getByText(/Registrations (are open|have closed)/)).toBeVisible();
+
+		// Sorted by name, so Ada is first, and she is the one holding the add-on. Both the
+		// ticket type and the add-on are autonamed, so a docname here would read as a bare
+		// number.
+		await expect(rows.first()).toContainText(GUESTS[0].email);
+		await expect(rows.first()).toContainText(TICKET_TYPE);
+		await expect(rows.first()).toContainText(ADD_ON);
+		await expect(rows.last()).not.toContainText(ADD_ON);
+	});
+
+	test("narrows the guest list by search", async ({ page }) => {
+		await page.goto(`/b/manage/events/${eventId}/guests`);
+
+		const rows = page.getByRole("list").getByRole("listitem");
+		await expect(rows).toHaveCount(GUESTS.length, { timeout: 15000 });
+
+		const search = page.getByRole("textbox", { name: "Search guests" });
+		await search.fill(GUESTS[1].email);
+		await expect(rows).toHaveCount(1);
+		await expect(rows.first()).toContainText(GUESTS[1].email);
+
+		// By name as well as by email.
+		await search.fill("Ada");
+		await expect(rows).toHaveCount(1);
+		await expect(rows.first()).toContainText(GUESTS[0].email);
+
+		await search.fill("");
+		await expect(rows).toHaveCount(GUESTS.length);
 	});
 });
 
