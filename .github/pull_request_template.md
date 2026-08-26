@@ -6,7 +6,8 @@
 
 <!--
 Required for UI changes (anything under `dashboard/src/`): drag in a screenshot
-or a short screen recording. Before/after images are ideal for visual tweaks.
+or a short screen recording, or paste a Loom / Cap link.
+Before/after images are ideal for visual tweaks.
 Apply the `skip-demo` label if a visual makes no sense here.
 -->
 
