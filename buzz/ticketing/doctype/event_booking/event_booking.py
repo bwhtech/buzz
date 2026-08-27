@@ -188,27 +188,76 @@ class EventBooking(Document):
 			)
 
 	def send_booking_confirmation_email(self):
-		# Never email system/placeholder users — they are not real recipients.
-		if self.user in ("Administrator", "Guest"):
-			return
-
 		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
-		if not event_doc.send_booking_confirmation_email:
-			return
+		team_settings = get_event_team_settings(self.event)
+		# Fallback to the team default if event-level not set
+		self.send_booking_email(
+			template=(
+				event_doc.booking_confirmation_email_template
+				or team_settings.default_booking_confirmation_email_template
+			),
+			builtin="booking_confirmation",
+			subject=_("Your booking for {0} is confirmed ✅").format(event_doc.title),
+		)
 
-		recipient = frappe.db.get_value("User", self.user, "email") or self.user
+	def send_offline_acknowledgement_email(self):
+		"""Tell the booker their offline payment is awaiting verification. Sent while the
+		booking is still a draft, so the confirmation above stays the approval's job."""
+		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
+		self.send_booking_email(
+			template=event_doc.offline_acknowledgement_email_template,
+			builtin="offline_booking_acknowledgement",
+			subject=_("We received your booking for {0} — payment verification pending").format(
+				event_doc.title
+			),
+		)
+
+	def send_booking_email(self, template: str | None, builtin: str, subject: str) -> None:
+		recipient = self.get_booking_email_recipient()
 		if not recipient:
 			return
 
-		team_settings = get_event_team_settings(self.event)
-		# Fallback to the team default if event-level not set
-		booking_template = (
-			event_doc.booking_confirmation_email_template
-			or team_settings.default_booking_confirmation_email_template
+		args = self.get_booking_email_args()
+
+		content = None
+		if template:
+			email_template = render_email_template(template, args)
+			subject = email_template.get("subject") or subject
+			content = email_template.get("message")
+
+		frappe.sendmail(
+			recipients=[recipient],
+			subject=subject,
+			content=content,
+			template=None if template else builtin,
+			args=args,
+			reference_doctype=self.doctype,
+			reference_name=self.name,
 		)
 
-		subject = _("Your booking for {0} is confirmed ✅").format(event_doc.title)
+	def get_booking_email_recipient(self) -> str | None:
+		"""Who to email about this booking, or None when nobody should be emailed."""
+		# Never email system/placeholder users — they are not real recipients.
+		if self.user in ("Administrator", "Guest"):
+			return None
 
+		if not frappe.get_cached_value("Buzz Event", self.event, "send_booking_confirmation_email"):
+			return None
+
+		return frappe.db.get_value("User", self.user, "email") or self.user
+
+	def get_booking_email_args(self) -> dict:
+		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
+		return {
+			"doc": self,
+			"event_doc": event_doc,
+			"event_title": event_doc.title,
+			"venue": event_doc.venue,
+			"attendee_rows": self.get_attendee_email_rows(),
+			"support_email": get_event_team_settings(self.event).support_email,
+		}
+
+	def get_attendee_email_rows(self) -> list[dict]:
 		# Pre-fetch ticket type titles in a single query so the email template
 		# loop stays a pure display operation (no per-attendee DB round-trips).
 		ticket_type_names = list({attendee.ticket_type for attendee in self.attendees})
@@ -223,7 +272,7 @@ class EventBooking(Document):
 				)
 			}
 
-		attendee_rows = [
+		return [
 			{
 				"full_name": attendee.full_name
 				or " ".join(part for part in (attendee.first_name, attendee.last_name) if part),
@@ -233,31 +282,6 @@ class EventBooking(Document):
 			}
 			for attendee in self.attendees
 		]
-
-		args = {
-			"doc": self,
-			"event_doc": event_doc,
-			"event_title": event_doc.title,
-			"venue": event_doc.venue,
-			"attendee_rows": attendee_rows,
-			"support_email": team_settings.support_email,
-		}
-
-		content = None
-		if booking_template:
-			email_template = render_email_template(booking_template, args)
-			subject = email_template.get("subject") or subject
-			content = email_template.get("message")
-
-		frappe.sendmail(
-			recipients=[recipient],
-			subject=subject,
-			content=content,
-			template=None if booking_template else "booking_confirmation",
-			args=args,
-			reference_doctype=self.doctype,
-			reference_name=self.name,
-		)
 
 	def validate_coupon_availability(self):
 		"""Re-validate coupon with lock to prevent race condition."""
