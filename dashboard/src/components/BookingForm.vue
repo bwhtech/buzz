@@ -15,6 +15,7 @@
 			v-model="showOtpModal"
 			:title="isPhoneOtp ? __('Verify Your Phone') : __('Verify Your Email')"
 			size="sm"
+			:dismissible="false"
 		>
 			<p class="text-sm text-ink-gray-6 mb-4">
 				{{ __("Enter the 6-digit code sent to") }}
