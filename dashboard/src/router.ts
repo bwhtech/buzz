@@ -1,5 +1,6 @@
-import { userResource } from "@/data/user"
 import { type RouteRecordRaw, createRouter, createWebHistory } from "vue-router"
+
+import { userResource } from "@/data/user"
 
 const routes: RouteRecordRaw[] = [
 	{

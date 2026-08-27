@@ -1,0 +1,32 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "vue"],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "warn"
+	},
+	"env": {
+		"browser": true,
+		"es2024": true
+	},
+	"rules": {
+		"no-underscore-dangle": "off",
+		"no-case-declarations": "error",
+		"no-empty": "error",
+		"no-fallthrough": "error",
+		"no-prototype-builtins": "error",
+		"no-redeclare": "error",
+		"no-regex-spaces": "error",
+		"import/no-unassigned-import": "off",
+		"vue/component-definition-name-casing": "error",
+		"vue/next-tick-style": "error",
+		"vue/no-import-compiler-macros": "error",
+		"vue/no-multiple-slot-args": "error",
+		"vue/prop-name-casing": "error",
+		"vue/require-default-prop": "error",
+		"vue/require-direct-export": "error",
+		"vue/require-prop-types": "error",
+		"vue/require-typed-ref": "error"
+	},
+	"ignorePatterns": ["auto-imports.d.ts", "components.d.ts"]
+}

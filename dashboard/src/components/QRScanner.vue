@@ -28,24 +28,13 @@
 		<!-- Scanner Controls -->
 		<div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
 			<div class="flex gap-2">
-				<Button
-					@click="startScanner"
-					v-if="!scannerActive"
-					variant="outline"
-					class="flex-1"
-				>
+				<Button @click="startScanner" v-if="!scannerActive" variant="outline" class="flex-1">
 					<template #prefix>
 						<LucideQrCode class="w-4 h-4" />
 					</template>
 					Start Scanner
 				</Button>
-				<Button
-					@click="stopScanner"
-					v-else
-					variant="outline"
-					class="flex-1"
-					icon-left="square"
-				>
+				<Button @click="stopScanner" v-else variant="outline" class="flex-1" icon-left="square">
 					{{ __("Stop Scanner") }}
 				</Button>
 			</div>
@@ -73,32 +62,33 @@
 </template>
 
 <script setup lang="ts">
-import { useTicketValidation } from "@/composables/useTicketValidation";
-import { extractTicketId } from "@/utils/ticketQr";
-import { Button, Spinner, TextInput, toast } from "frappe-ui";
-import { Html5Qrcode } from "html5-qrcode";
-import { onMounted, onUnmounted, ref } from "vue";
-import LucideQrCode from "~icons/lucide/qr-code";
+import { Button, Spinner, TextInput, toast } from "frappe-ui"
+import { Html5Qrcode } from "html5-qrcode"
+import { onMounted, onUnmounted, ref } from "vue"
+import LucideQrCode from "~icons/lucide/qr-code"
 
-const { validateTicket, isProcessingTicket } = useTicketValidation();
+import { useTicketValidation } from "@/composables/useTicketValidation"
+import { extractTicketId } from "@/utils/ticketQr"
 
-const qrScanner = ref<Html5Qrcode | null>(null);
-const scannerActive = ref(false);
-const manualTicketId = ref("");
-const lastScannedTicketId = ref<string | null>(null);
-const scanTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
+const { validateTicket, isProcessingTicket } = useTicketValidation()
+
+const qrScanner = ref<Html5Qrcode | null>(null)
+const scannerActive = ref(false)
+const manualTicketId = ref("")
+const lastScannedTicketId = ref<string | null>(null)
+const scanTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 
 const startScanner = async () => {
-	if (scannerActive.value) return;
+	if (scannerActive.value) return
 
 	try {
 		// Clear any existing scanner content first
-		const container = document.getElementById("qr-reader");
+		const container = document.getElementById("qr-reader")
 		if (container) {
-			container.innerHTML = "";
+			container.innerHTML = ""
 		}
 
-		qrScanner.value = new Html5Qrcode("qr-reader");
+		qrScanner.value = new Html5Qrcode("qr-reader")
 
 		// Start scanning with the back camera (environment) as default
 		await qrScanner.value.start(
@@ -109,93 +99,93 @@ const startScanner = async () => {
 				aspectRatio: 1.0,
 			},
 			onScanSuccess,
-			undefined
-		);
-		scannerActive.value = true;
+			undefined,
+		)
+		scannerActive.value = true
 	} catch (error) {
-		console.error("Failed to start scanner:", error);
-		toast.error(__("Failed to start camera. Please check permissions."));
+		console.error("Failed to start scanner:", error)
+		toast.error(__("Failed to start camera. Please check permissions."))
 	}
-};
+}
 
 const stopScanner = async () => {
-	if (!scannerActive.value || !qrScanner.value) return;
+	if (!scannerActive.value || !qrScanner.value) return
 
 	try {
-		await qrScanner.value.stop();
+		await qrScanner.value.stop()
 	} catch (error) {
-		console.error("Failed to stop scanner:", error);
+		console.error("Failed to stop scanner:", error)
 	}
-	qrScanner.value = null;
-	scannerActive.value = false;
-};
+	qrScanner.value = null
+	scannerActive.value = false
+}
 
 const onScanSuccess = (decodedText: string) => {
 	// Extract ticket ID from QR code
-	const ticketId = extractTicketId(decodedText);
+	const ticketId = extractTicketId(decodedText)
 	if (!ticketId) {
-		toast.error(__("Invalid QR code format"));
-		return;
+		toast.error(__("Invalid QR code format"))
+		return
 	}
 
 	// Prevent duplicate scans of the same ticket within 2 seconds
 	if (lastScannedTicketId.value === ticketId) {
-		return;
+		return
 	}
 
 	if (scanTimeout.value) {
-		clearTimeout(scanTimeout.value);
+		clearTimeout(scanTimeout.value)
 	}
-	lastScannedTicketId.value = ticketId;
-	validateTicket(ticketId);
+	lastScannedTicketId.value = ticketId
+	validateTicket(ticketId)
 
 	scanTimeout.value = setTimeout(() => {
-		lastScannedTicketId.value = null;
-	}, 2000);
-};
+		lastScannedTicketId.value = null
+	}, 2000)
+}
 
 const handleManualEntry = () => {
-	const ticketId = manualTicketId.value.trim();
-	if (!ticketId) return;
+	const ticketId = manualTicketId.value.trim()
+	if (!ticketId) return
 
-	validateTicket(ticketId);
-	manualTicketId.value = "";
-};
+	validateTicket(ticketId)
+	manualTicketId.value = ""
+}
 
 onMounted(() => {
 	// Automatically start the scanner when component mounts
-	startScanner();
-});
+	startScanner()
+})
 
 onUnmounted(() => {
 	if (qrScanner.value) {
 		qrScanner.value
 			.stop()
 			.then(() => {
-				qrScanner.value?.clear();
+				qrScanner.value?.clear()
 			})
 			.catch((error) => {
-				console.error("Failed to cleanup scanner:", error);
+				console.error("Failed to cleanup scanner:", error)
 			})
 			.finally(() => {
-				qrScanner.value = null;
-				scannerActive.value = false;
-			});
+				qrScanner.value = null
+				scannerActive.value = false
+			})
 	} else {
-		qrScanner.value = null;
-		scannerActive.value = false;
+		qrScanner.value = null
+		scannerActive.value = false
 	}
 
 	if (scanTimeout.value) {
-		clearTimeout(scanTimeout.value);
-		scanTimeout.value = null;
+		clearTimeout(scanTimeout.value)
+		scanTimeout.value = null
 	}
-});
+})
 
 defineExpose({
 	startScanner,
 	stopScanner,
-});
+})
 </script>
 
 <style scoped>

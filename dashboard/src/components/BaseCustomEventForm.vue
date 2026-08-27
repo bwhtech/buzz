@@ -21,10 +21,7 @@
 			</div>
 		</div>
 
-		<LoginRequired
-			v-else-if="loginRequired"
-			:message="__('Please log in to submit this form.')"
-		/>
+		<LoginRequired v-else-if="loginRequired" :message="__('Please log in to submit this form.')" />
 
 		<div v-else-if="formData?.closed" class="text-center">
 			<div class="bg-surface-amber-1 border border-outline-amber-1 rounded-lg p-8">
@@ -66,11 +63,7 @@
 											{{ getTableRowSummary(row) }}
 										</span>
 										<div class="flex gap-1 shrink-0">
-											<Button
-												variant="ghost"
-												size="sm"
-												@click="editTableRow(field, idx)"
-											>
+											<Button variant="ghost" size="sm" @click="editTableRow(field, idx)">
 												{{ __("Edit") }}
 											</Button>
 											<Button
@@ -136,9 +129,7 @@
 						<CustomFieldInput
 							:field="normalizeField(childField)"
 							:model-value="tableDialog.rowData[childField.fieldname]"
-							@update:model-value="
-								tableDialog.rowData[childField.fieldname] = $event
-							"
+							@update:model-value="tableDialog.rowData[childField.fieldname] = $event"
 						/>
 					</template>
 				</div>
@@ -151,43 +142,44 @@
 </template>
 
 <script setup lang="ts">
-import CustomFieldInput from "@/components/CustomFieldInput.vue";
-import CustomFieldsSection from "@/components/CustomFieldsSection.vue";
-import EventDetailsHeader from "@/components/EventDetailsHeader.vue";
-import FormFieldSections from "@/components/FormFieldSections.vue";
-import LoginRequired from "@/components/LoginRequired.vue";
-import type { FrappeError } from "@/types";
-import { Button, Dialog, Spinner, createResource, toast, usePageMeta } from "frappe-ui";
-import { marked } from "marked";
-import { computed, reactive, ref } from "vue";
-import LucideAlertCircle from "~icons/lucide/alert-circle";
-import LucideCheckCircle from "~icons/lucide/check-circle";
+import { Button, Dialog, Spinner, createResource, toast, usePageMeta } from "frappe-ui"
+import { marked } from "marked"
+import { computed, reactive, ref } from "vue"
+import LucideAlertCircle from "~icons/lucide/alert-circle"
+import LucideCheckCircle from "~icons/lucide/check-circle"
+
+import CustomFieldInput from "@/components/CustomFieldInput.vue"
+import CustomFieldsSection from "@/components/CustomFieldsSection.vue"
+import EventDetailsHeader from "@/components/EventDetailsHeader.vue"
+import FormFieldSections from "@/components/FormFieldSections.vue"
+import LoginRequired from "@/components/LoginRequired.vue"
+import type { FrappeError } from "@/types"
 
 interface FormFieldDef {
-	fieldname: string;
-	fieldtype: string;
-	label: string;
-	options?: any;
-	reqd?: number | boolean;
-	mandatory?: number | boolean;
-	default?: any;
-	default_value?: any;
-	placeholder?: string;
-	link_options?: any;
-	child_fields?: FormFieldDef[];
-	[key: string]: any;
+	fieldname: string
+	fieldtype: string
+	label: string
+	options?: any
+	reqd?: number | boolean
+	mandatory?: number | boolean
+	default?: any
+	default_value?: any
+	placeholder?: string
+	link_options?: any
+	child_fields?: FormFieldDef[]
+	[key: string]: any
 }
 
 interface CustomFormData {
-	success_message?: string;
-	form_title?: string;
-	form_fields?: FormFieldDef[];
-	custom_fields?: FormFieldDef[];
-	event?: Record<string, any>;
-	closed?: boolean;
-	closed_title?: string;
-	closed_message?: string;
-	[key: string]: any;
+	success_message?: string
+	form_title?: string
+	form_fields?: FormFieldDef[]
+	custom_fields?: FormFieldDef[]
+	event?: Record<string, any>
+	closed?: boolean
+	closed_title?: string
+	closed_message?: string
+	[key: string]: any
 }
 
 const props = defineProps({
@@ -199,23 +191,23 @@ const props = defineProps({
 		type: String,
 		required: true,
 	},
-});
+})
 
-const formData = ref<CustomFormData | null>(null);
+const formData = ref<CustomFormData | null>(null)
 
 usePageMeta(() => {
-	const eventTitle = formData.value?.event?.title;
-	const formTitle = formData.value?.form_title;
-	return eventTitle && formTitle ? { title: `${eventTitle} - ${formTitle}` } : null;
-});
+	const eventTitle = formData.value?.event?.title
+	const formTitle = formData.value?.form_title
+	return eventTitle && formTitle ? { title: `${eventTitle} - ${formTitle}` } : null
+})
 
-const formValues = reactive<Record<string, any>>({});
-const customFieldValues = ref<Record<string, any>>({});
-const submitted = ref(false);
-const loginRequired = ref(false);
-const loadError = ref<string | null>(null);
+const formValues = reactive<Record<string, any>>({})
+const customFieldValues = ref<Record<string, any>>({})
+const submitted = ref(false)
+const loginRequired = ref(false)
+const loadError = ref<string | null>(null)
 
-const tableData = reactive<Record<string, any[]>>({});
+const tableData = reactive<Record<string, any[]>>({})
 const tableDialog = reactive({
 	open: false,
 	title: "",
@@ -223,13 +215,13 @@ const tableDialog = reactive({
 	fields: [] as FormFieldDef[],
 	rowData: {} as Record<string, any>,
 	editIndex: null as number | null,
-});
+})
 
 const renderedSuccessMessage = computed(() => {
-	const msg = formData.value?.success_message;
-	if (!msg) return "";
-	return marked(msg);
-});
+	const msg = formData.value?.success_message
+	if (!msg) return ""
+	return marked(msg)
+})
 
 function normalizeField(field: FormFieldDef) {
 	return {
@@ -241,48 +233,48 @@ function normalizeField(field: FormFieldDef) {
 		placeholder: field.placeholder || "",
 		default_value: field.default || field.default_value,
 		link_options: field.link_options,
-	};
+	}
 }
 
 function getTableRowSummary(row: Record<string, any>) {
-	const values = Object.values(row).filter((v) => v && typeof v === "string");
-	return values.slice(0, 3).join(" — ") || __("(empty)");
+	const values = Object.values(row).filter((v) => v && typeof v === "string")
+	return values.slice(0, 3).join(" — ") || __("(empty)")
 }
 
 function addTableRow(field: FormFieldDef) {
-	if (!tableData[field.fieldname]) tableData[field.fieldname] = [];
+	if (!tableData[field.fieldname]) tableData[field.fieldname] = []
 
-	tableDialog.open = true;
-	tableDialog.title = __("Add {0}", [__(field.label)]);
-	tableDialog.fieldname = field.fieldname;
-	tableDialog.fields = field.child_fields || [];
-	tableDialog.rowData = {};
-	tableDialog.editIndex = null;
+	tableDialog.open = true
+	tableDialog.title = __("Add {0}", [__(field.label)])
+	tableDialog.fieldname = field.fieldname
+	tableDialog.fields = field.child_fields || []
+	tableDialog.rowData = {}
+	tableDialog.editIndex = null
 }
 
 function editTableRow(field: FormFieldDef, idx: number) {
-	tableDialog.open = true;
-	tableDialog.title = __("Edit {0}", [__(field.label)]);
-	tableDialog.fieldname = field.fieldname;
-	tableDialog.fields = field.child_fields || [];
-	tableDialog.rowData = { ...tableData[field.fieldname][idx] };
-	tableDialog.editIndex = idx;
+	tableDialog.open = true
+	tableDialog.title = __("Edit {0}", [__(field.label)])
+	tableDialog.fieldname = field.fieldname
+	tableDialog.fields = field.child_fields || []
+	tableDialog.rowData = { ...tableData[field.fieldname][idx] }
+	tableDialog.editIndex = idx
 }
 
 function removeTableRow(fieldname: string, idx: number) {
-	tableData[fieldname].splice(idx, 1);
+	tableData[fieldname].splice(idx, 1)
 }
 
 function saveTableRow() {
-	const fieldname = tableDialog.fieldname;
-	if (!tableData[fieldname]) tableData[fieldname] = [];
+	const fieldname = tableDialog.fieldname
+	if (!tableData[fieldname]) tableData[fieldname] = []
 
 	if (tableDialog.editIndex !== null) {
-		tableData[fieldname][tableDialog.editIndex] = { ...tableDialog.rowData };
+		tableData[fieldname][tableDialog.editIndex] = { ...tableDialog.rowData }
 	} else {
-		tableData[fieldname].push({ ...tableDialog.rowData });
+		tableData[fieldname].push({ ...tableDialog.rowData })
 	}
-	tableDialog.open = false;
+	tableDialog.open = false
 }
 
 const formDataResource = createResource({
@@ -293,55 +285,55 @@ const formDataResource = createResource({
 	},
 	auto: true,
 	onSuccess: (data: CustomFormData) => {
-		formData.value = data;
+		formData.value = data
 		for (const field of data.form_fields || []) {
 			if (field.default) {
-				formValues[field.fieldname] = field.default;
+				formValues[field.fieldname] = field.default
 			}
 		}
 	},
 	onError: (err: FrappeError) => {
 		if (err.exc_type === "LoginRequired") {
-			loginRequired.value = true;
-			return;
+			loginRequired.value = true
+			return
 		}
-		loadError.value = err.messages?.[0] || __("Form not found");
+		loadError.value = err.messages?.[0] || __("Form not found")
 	},
-});
+})
 
 const submitResource = createResource({
 	url: "buzz.api.forms.submit_custom_form",
 	onSuccess: () => {
-		submitted.value = true;
+		submitted.value = true
 	},
 	onError: (err: FrappeError) => {
-		const msg = err.messages?.[0] || __("Failed to submit form");
-		toast.error(msg.replace(/<[^>]*>/g, ""));
+		const msg = err.messages?.[0] || __("Failed to submit form")
+		toast.error(msg.replace(/<[^>]*>/g, ""))
 	},
-});
+})
 
 function handleSubmit() {
 	for (const field of formData.value?.form_fields || []) {
 		if (field.fieldtype === "Table" && field.reqd && !tableData[field.fieldname]?.length) {
-			toast.error(__("Please add at least one {0}", [__(field.label)]));
-			return;
+			toast.error(__("Please add at least one {0}", [__(field.label)]))
+			return
 		}
 	}
 
 	for (const field of formData.value?.custom_fields || []) {
-		if (!field.mandatory) continue;
-		const val = customFieldValues.value[field.fieldname];
-		const isEmpty = !val || val === "0" || val === 0;
+		if (!field.mandatory) continue
+		const val = customFieldValues.value[field.fieldname]
+		const isEmpty = !val || val === "0" || val === 0
 		if (isEmpty) {
-			toast.error(__("{0} is required", [__(field.label)]));
-			return;
+			toast.error(__("{0} is required", [__(field.label)]))
+			return
 		}
 	}
 
-	const data = { ...formValues };
+	const data = { ...formValues }
 	for (const [fieldname, rows] of Object.entries(tableData)) {
 		if (rows.length) {
-			data[fieldname] = rows;
+			data[fieldname] = rows
 		}
 	}
 
@@ -350,6 +342,6 @@ function handleSubmit() {
 		form_route: props.formRoute,
 		data,
 		custom_fields_data: customFieldValues.value,
-	});
+	})
 }
 </script>

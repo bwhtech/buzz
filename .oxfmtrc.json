@@ -1,0 +1,21 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"useTabs": true,
+	"printWidth": 100,
+	"semi": false,
+	"sortImports": true,
+	"ignorePatterns": [
+		"buzz/public/dist/**",
+		"buzz/public/dashboard/**",
+		"dashboard/auto-imports.d.ts",
+		"dashboard/components.d.ts",
+		"**/*.json",
+		"**/*.jsonc",
+		"**/*.md",
+		"**/*.yml",
+		"**/*.yaml",
+		"**/*.toml",
+		"**/*.html",
+		"**/*.css"
+	]
+}

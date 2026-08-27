@@ -34,7 +34,7 @@
 				emptyState: {
 					title: __('No Events Available'),
 					description: __(
-						'There are currently no active events available for check-in. Events may be scheduled for later dates or may need to be published.'
+						'There are currently no active events available for check-in. Events may be scheduled for later dates or may need to be published.',
 					),
 					button: {
 						label: __('Refresh Events'),
@@ -48,44 +48,45 @@
 </template>
 
 <script setup lang="ts">
-import type { BuzzEvent } from "@/types";
-import { ListView, Spinner, createListResource, dayjsLocal } from "frappe-ui";
+import { ListView, Spinner, createListResource, dayjsLocal } from "frappe-ui"
+
+import type { BuzzEvent } from "@/types"
 
 defineProps({
 	selectedEvent: {
 		type: Object,
 		default: null,
 	},
-});
+})
 
-const emit = defineEmits(["select"]);
+const emit = defineEmits(["select"])
 
 const columns = [
 	{ label: __("Event"), key: "title", width: 1.5 },
 	{ label: __("Starts At"), key: "starts_at" },
 	{ label: __("Ends At"), key: "ends_at" },
-];
+]
 
 const formatTimestamp = (date?: string, time?: string) => {
-	let formattedDate = "";
-	let formattedTime = "";
+	let formattedDate = ""
+	let formattedTime = ""
 
 	if (date || time) {
-		const dateTimeStr = date ? `${date}${time ? "T" + time : "T00:00:00"}` : undefined;
+		const dateTimeStr = date ? `${date}${time ? "T" + time : "T00:00:00"}` : undefined
 
-		const parsed = dayjsLocal(dateTimeStr);
+		const parsed = dayjsLocal(dateTimeStr)
 
 		if (parsed.isValid()) {
-			formattedDate = parsed.format("MMM DD, YYYY");
-			formattedTime = parsed.format("h:mm A");
+			formattedDate = parsed.format("MMM DD, YYYY")
+			formattedTime = parsed.format("h:mm A")
 		}
 	}
 
-	if (!formattedDate && !formattedTime) return "No date specified";
-	if (formattedDate && !formattedTime) return formattedDate;
-	if (!formattedDate && formattedTime) return formattedTime;
-	return `${formattedDate} ${formattedTime}`;
-};
+	if (!formattedDate && !formattedTime) return "No date specified"
+	if (formattedDate && !formattedTime) return formattedDate
+	if (!formattedDate && formattedTime) return formattedTime
+	return `${formattedDate} ${formattedTime}`
+}
 
 const eventsResource = createListResource({
 	doctype: "Buzz Event",
@@ -101,11 +102,11 @@ const eventsResource = createListResource({
 			...event,
 			starts_at: formatTimestamp(event.start_date, event.start_time),
 			ends_at: formatTimestamp(event.end_date, event.end_time),
-		}));
+		}))
 	},
-});
+})
 
 const handleEventSelect = (event: BuzzEvent) => {
-	emit("select", event);
-};
+	emit("select", event)
+}
 </script>

@@ -2,13 +2,7 @@
 	<li class="shadow-md p-4 rounded-lg bg-surface-base border border-outline-gray-2 relative">
 		<!-- Status Badge -->
 		<div v-if="isCancelled || isCancellationRequested" class="absolute top-2 left-2">
-			<Badge
-				v-if="isCancelled"
-				variant="outline"
-				theme="red"
-				size="sm"
-				:label="__('Cancelled')"
-			/>
+			<Badge v-if="isCancelled" variant="outline" theme="red" size="sm" :label="__('Cancelled')" />
 			<Badge
 				v-else-if="isCancellationRequested"
 				variant="subtle"
@@ -33,10 +27,7 @@
 				{{ ticket.attendee_name }}
 			</h4>
 			<p class="text-sm text-ink-gray-7">{{ __("Email") }}: {{ ticket.attendee_email }}</p>
-			<p
-				v-if="!['Default', 'Normal'].includes(ticket.ticket_type)"
-				class="text-sm text-ink-gray-7"
-			>
+			<p v-if="!['Default', 'Normal'].includes(ticket.ticket_type)" class="text-sm text-ink-gray-7">
 				{{ __("Ticket Type") }}: {{ ticket.ticket_type }}
 			</p>
 
@@ -92,19 +83,21 @@
 </template>
 
 <script setup lang="ts">
-import type { TicketAddOn } from "@/types";
-import { Badge, Button, Dropdown } from "frappe-ui";
-import { type Component, computed, ref } from "vue";
-import LucideEdit from "~icons/lucide/edit";
-import LucideUserPen from "~icons/lucide/user-pen";
-import AddOnPreferenceDialog from "./AddOnPreferenceDialog.vue";
-import QRCodeExpandDialog from "./QRCodeExpandDialog.vue";
-import TicketTransferDialog from "./TicketTransferDialog.vue";
+import { Badge, Button, Dropdown } from "frappe-ui"
+import { type Component, computed, ref } from "vue"
+import LucideEdit from "~icons/lucide/edit"
+import LucideUserPen from "~icons/lucide/user-pen"
+
+import type { TicketAddOn } from "@/types"
+
+import AddOnPreferenceDialog from "./AddOnPreferenceDialog.vue"
+import QRCodeExpandDialog from "./QRCodeExpandDialog.vue"
+import TicketTransferDialog from "./TicketTransferDialog.vue"
 
 interface TicketAction {
-	label: string;
-	icon: Component;
-	onClick: () => void;
+	label: string
+	icon: Component
+	onClick: () => void
 }
 
 const props = defineProps({
@@ -128,29 +121,29 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
-});
+})
 
-const emit = defineEmits(["transfer-success"]);
+const emit = defineEmits(["transfer-success"])
 
-const showTransferDialog = ref(false);
-const showPreferenceDialog = ref(false);
-const showQRExpanded = ref(false);
+const showTransferDialog = ref(false)
+const showPreferenceDialog = ref(false)
+const showQRExpanded = ref(false)
 
 // Check if ticket has customizable add-ons
 const hasCustomizableAddOns = computed(() => {
 	return (
 		props.ticket?.add_ons?.some(
-			(addon: TicketAddOn) => addon.options && addon.options.length > 0
+			(addon: TicketAddOn) => addon.options && addon.options.length > 0,
 		) || false
-	);
-});
+	)
+})
 
 const ticketActions = computed(() => {
-	const actions: TicketAction[] = [];
+	const actions: TicketAction[] = []
 
 	// Don't show any actions if ticket is cancelled or has a pending cancellation request
 	if (props.isCancelled || props.isCancellationRequested) {
-		return actions;
+		return actions
 	}
 
 	// Only show transfer action if transfers are allowed
@@ -159,9 +152,9 @@ const ticketActions = computed(() => {
 			label: __("Transfer Ticket"),
 			icon: LucideUserPen,
 			onClick: () => {
-				showTransferDialog.value = true;
+				showTransferDialog.value = true
 			},
-		});
+		})
 	}
 
 	// Only show preference action if add-on changes are allowed and ticket has customizable add-ons
@@ -170,19 +163,19 @@ const ticketActions = computed(() => {
 			label: __("Change Add-on Preference"),
 			icon: LucideEdit,
 			onClick: () => {
-				showPreferenceDialog.value = true;
+				showPreferenceDialog.value = true
 			},
-		});
+		})
 	}
 
-	return actions;
-});
+	return actions
+})
 
 const onTicketTransferSuccess = () => {
-	emit("transfer-success");
-};
+	emit("transfer-success")
+}
 
 const onPreferenceChangeSuccess = () => {
-	emit("transfer-success");
-};
+	emit("transfer-success")
+}
 </script>

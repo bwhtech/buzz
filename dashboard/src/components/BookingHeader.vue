@@ -10,12 +10,12 @@
 </template>
 
 <script setup lang="ts">
-import BackButton from "./common/BackButton.vue";
+import BackButton from "./common/BackButton.vue"
 
 defineProps({
 	bookingId: {
 		type: String,
 		required: true,
 	},
-});
+})
 </script>

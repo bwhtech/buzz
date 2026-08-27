@@ -59,9 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import PhoneInput from "@/components/PhoneInput.vue";
-import type { FrappeError } from "@/types";
-import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui";
+import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui"
 import {
 	Blockquote,
 	Bold,
@@ -77,8 +75,11 @@ import {
 	RichTextKit,
 	Separator,
 	Strike,
-} from "frappe-ui/editor";
-import { computed, ref, watch } from "vue";
+} from "frappe-ui/editor"
+import { computed, ref, watch } from "vue"
+
+import PhoneInput from "@/components/PhoneInput.vue"
+import type { FrappeError } from "@/types"
 
 // No upload handler is wired for proposals, so the media extensions are off —
 // otherwise the drop/paste paths would silently fail.
@@ -91,7 +92,7 @@ const editorExtensions = [
 		video: false,
 		attachment: false,
 	}),
-];
+]
 
 const editorToolbar = [
 	HeadingGroup,
@@ -105,7 +106,7 @@ const editorToolbar = [
 	Blockquote,
 	InsertLink,
 	InsertTable,
-];
+]
 
 const props = defineProps({
 	open: {
@@ -124,20 +125,20 @@ const props = defineProps({
 		type: Object,
 		default: () => ({ title: "", description: "", phone: "" }),
 	},
-});
+})
 
-const emit = defineEmits(["update:open", "updated"]);
+const emit = defineEmits(["update:open", "updated"])
 
 const isOpen = computed({
 	get: () => props.open,
 	set: (value) => emit("update:open", value),
-});
+})
 
 const editForm = ref({
 	title: "",
 	description: "",
 	phone: "",
-});
+})
 
 // Update resource using frappe.client.set_value
 const updateResource = createResource({
@@ -145,23 +146,23 @@ const updateResource = createResource({
 	onSuccess: () => {
 		const message = props.eventTalkId
 			? __("Talk updated successfully")
-			: __("Proposal updated successfully");
-		toast.success(message);
-		isOpen.value = false;
-		emit("updated");
+			: __("Proposal updated successfully")
+		toast.success(message)
+		isOpen.value = false
+		emit("updated")
 	},
 	onError: (error: FrappeError) => {
 		const message = props.eventTalkId
 			? __("Failed to update talk")
-			: __("Failed to update proposal");
-		toast.error(error.messages?.[0] || message);
+			: __("Failed to update proposal")
+		toast.error(error.messages?.[0] || message)
 	},
-});
+})
 
 const handleSave = () => {
 	if (!editForm.value.title) {
-		toast.error(__("Title is required"));
-		return;
+		toast.error(__("Title is required"))
+		return
 	}
 
 	// If eventTalkId is provided, update the Event Talk doctype
@@ -174,7 +175,7 @@ const handleSave = () => {
 				title: editForm.value.title,
 				description: editForm.value.description,
 			},
-		});
+		})
 	} else {
 		updateResource.submit({
 			doctype: "Talk Proposal",
@@ -184,9 +185,9 @@ const handleSave = () => {
 				description: editForm.value.description,
 				phone: editForm.value.phone || "",
 			},
-		});
+		})
 	}
-};
+}
 
 // Initialize form with initial data when dialog opens
 watch(
@@ -197,11 +198,11 @@ watch(
 				title: props.initialData.title || "",
 				description: props.initialData.description || "",
 				phone: props.initialData.phone || "",
-			};
+			}
 		}
 	},
-	{ immediate: true }
-);
+	{ immediate: true },
+)
 
 // Also watch for initialData changes
 watch(
@@ -212,9 +213,9 @@ watch(
 				title: newData.title || "",
 				description: newData.description || "",
 				phone: newData.phone || "",
-			};
+			}
 		}
 	},
-	{ deep: true }
-);
+	{ deep: true },
+)
 </script>

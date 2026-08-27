@@ -5,20 +5,20 @@
 </template>
 
 <script setup lang="ts">
-import type { RouteLocationRaw } from "vue-router";
+import type { RouteLocationRaw } from "vue-router"
 
 withDefaults(
 	defineProps<{
-		to?: RouteLocationRaw | null;
-		label?: string;
+		to?: RouteLocationRaw | null
+		label?: string
 	}>(),
 	{
 		to: null,
 		label: "Back",
-	}
-);
+	},
+)
 
 defineEmits<{
-	click: [event: MouseEvent];
-}>();
+	click: [event: MouseEvent]
+}>()
 </script>

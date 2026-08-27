@@ -11,7 +11,10 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e:debug": "playwright test --debug",
+    "lint": "oxlint --deny-warnings",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check"
   },
   "repository": {
     "type": "git",
@@ -26,6 +29,8 @@
   "homepage": "https://github.com/BuildWithHussain/buzz#readme",
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "@types/node": "^25.0.8"
+    "@types/node": "^25.0.8",
+    "oxfmt": "0.65.0",
+    "oxlint": "1.80.0"
   }
 }

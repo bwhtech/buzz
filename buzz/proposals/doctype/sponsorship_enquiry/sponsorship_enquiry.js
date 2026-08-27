@@ -3,8 +3,8 @@
 
 frappe.ui.form.on("Sponsorship Enquiry", {
 	get_email_recipients(frm, fieldname) {
-		const owner = frm.doc.owner || "";
-		return fieldname === "recipients" && owner.includes("@") ? [owner] : [];
+		const owner = frm.doc.owner || ""
+		return fieldname === "recipients" && owner.includes("@") ? [owner] : []
 	},
 
 	setup(frm) {
@@ -13,13 +13,13 @@ frappe.ui.form.on("Sponsorship Enquiry", {
 				filters: {
 					event: doc.event,
 				},
-			};
-		});
+			}
+		})
 	},
 
 	event(frm) {
 		if (frm.doc.tier) {
-			frm.set_value("tier", null);
+			frm.set_value("tier", null)
 		}
 	},
 
@@ -27,17 +27,17 @@ frappe.ui.form.on("Sponsorship Enquiry", {
 		if (!frm.doc.__islocal) {
 			if (frm.doc.status === "Approval Pending") {
 				frm.add_custom_button(__("Approve"), () => {
-					frm.set_value("status", "Payment Pending");
-					frm.save();
-				});
+					frm.set_value("status", "Payment Pending")
+					frm.save()
+				})
 			}
 
 			frm.add_custom_button(__("Create Sponsor"), () => {
 				frm.call("create_sponsor").then(() => {
-					frappe.show_alert(__("Sponsor Created!"));
-					frm.refresh();
-				});
-			});
+					frappe.show_alert(__("Sponsor Created!"))
+					frm.refresh()
+				})
+			})
 		}
 	},
-});
+})

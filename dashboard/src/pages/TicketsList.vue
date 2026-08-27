@@ -8,9 +8,7 @@
 			v-else-if="tickets.error"
 			class="bg-surface-red-1 border border-outline-red-1 rounded-lg p-4"
 		>
-			<p class="text-ink-red-6">
-				{{ __("Error loading tickets") }}: {{ tickets.error.message }}
-			</p>
+			<p class="text-ink-red-6">{{ __("Error loading tickets") }}: {{ tickets.error.message }}</p>
 		</div>
 
 		<ListView
@@ -38,15 +36,15 @@
 </template>
 
 <script setup lang="ts">
-import { ListView, useList } from "frappe-ui";
-import { dayjsLocal } from "frappe-ui";
+import { ListView, useList } from "frappe-ui"
+import { dayjsLocal } from "frappe-ui"
 
 const columns = [
 	{ label: __("Attendee Name"), key: "attendee_name" },
 	{ label: __("Event"), key: "event_title" },
 	{ label: __("Ticket Type"), key: "ticket_type_display" },
 	{ label: __("Start Date"), key: "start_date" },
-];
+]
 
 const tickets = useList({
 	doctype: "Event Ticket",
@@ -73,7 +71,7 @@ const tickets = useList({
 			...ticket,
 			start_date: dayjsLocal(ticket.start_date).format("MMM DD, YYYY"),
 			ticket_type_display: ticket.ticket_type_title || ticket.ticket_type,
-		}));
+		}))
 	},
-});
+})
 </script>

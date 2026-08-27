@@ -1,3 +1,7 @@
+import { createResource } from "frappe-ui"
+import { type ComputedRef, computed, watch } from "vue"
+import type { Router } from "vue-router"
+
 import { session } from "@/data/session"
 import { userResource } from "@/data/user"
 import type { Language } from "@/types"
@@ -8,9 +12,6 @@ import {
 	resolveRequestedLanguage,
 	takeLanguageFromQuery,
 } from "@/utils/language"
-import { createResource } from "frappe-ui"
-import { type ComputedRef, computed, watch } from "vue"
-import type { Router } from "vue-router"
 
 // frappe-ui types `data` as `{}`; this endpoint returns Language rows.
 type LanguagesResource = Omit<ReturnType<typeof createResource>, "data"> & {
@@ -57,10 +58,7 @@ function changeLanguage(languageCode: string) {
 	window.location.reload()
 }
 
-function persistRequestedLanguage(
-	requestedLanguage: string,
-	languages: Language[],
-) {
+function persistRequestedLanguage(requestedLanguage: string, languages: Language[]) {
 	const languageToApply = resolveRequestedLanguage({
 		requestedLanguage,
 		isLoggedIn: session.isLoggedIn,
@@ -115,8 +113,7 @@ export function applyLanguageFromQuery(router: Router) {
 	watch(
 		() => languages.data,
 		(loadedLanguages: Language[] | undefined) => {
-			if (loadedLanguages)
-				persistRequestedLanguage(requestedLanguage, loadedLanguages)
+			if (loadedLanguages) persistRequestedLanguage(requestedLanguage, loadedLanguages)
 		},
 		{ once: true },
 	)

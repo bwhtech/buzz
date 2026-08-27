@@ -42,9 +42,10 @@
 </template>
 
 <script setup lang="ts">
-import type { FrappeError, TicketAddOn } from "@/types";
-import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui";
-import { type PropType, computed, ref, watch } from "vue";
+import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui"
+import { type PropType, computed, ref, watch } from "vue"
+
+import type { FrappeError, TicketAddOn } from "@/types"
 
 const props = defineProps({
 	modelValue: {
@@ -55,20 +56,20 @@ const props = defineProps({
 		type: Object as PropType<{ add_ons?: TicketAddOn[]; attendee_name?: string }>,
 		required: true,
 	},
-});
+})
 
-const emit = defineEmits(["update:modelValue", "success"]);
+const emit = defineEmits(["update:modelValue", "success"])
 
 const show = computed({
 	get: () => props.modelValue,
 	set: (value) => emit("update:modelValue", value),
-});
+})
 
-const preferences = ref<Record<string, any>>({});
+const preferences = ref<Record<string, any>>({})
 
 // Filter add-ons that have selectable options
 const addOnsWithOptions = computed(() => {
-	if (!props.ticket?.add_ons) return [];
+	if (!props.ticket?.add_ons) return []
 
 	return props.ticket.add_ons
 		.filter((addon: TicketAddOn) => addon.options && addon.options.length > 0)
@@ -78,69 +79,69 @@ const addOnsWithOptions = computed(() => {
 				label: __(option),
 				value: option,
 			})),
-		}));
-});
+		}))
+})
 
 // Check if user has made any changes
 const hasChanges = computed(() => {
 	return addOnsWithOptions.value.some((addon) => {
-		const currentValue = preferences.value[addon.id ?? ""];
-		return currentValue && currentValue !== addon.value;
-	});
-});
+		const currentValue = preferences.value[addon.id ?? ""]
+		return currentValue && currentValue !== addon.value
+	})
+})
 
 // Initialize preferences when dialog opens
 watch(
 	() => props.modelValue,
 	(newValue) => {
 		if (newValue && addOnsWithOptions.value.length > 0) {
-			preferences.value = {};
+			preferences.value = {}
 			for (const addon of addOnsWithOptions.value) {
-				preferences.value[addon.id ?? ""] = addon.value;
+				preferences.value[addon.id ?? ""] = addon.value
 			}
 		}
 	},
-	{ immediate: true }
-);
+	{ immediate: true },
+)
 
 const savePreferences = createResource({
 	url: "buzz.api.tickets.change_add_on_preference",
 	onSuccess: () => {
-		toast.success("Add-on preferences updated successfully!");
-		emit("success");
-		show.value = false;
+		toast.success("Add-on preferences updated successfully!")
+		emit("success")
+		show.value = false
 	},
 	onError: (error: FrappeError) => {
 		// Check if this is the specific error about change window closing
 		if (error?.message?.includes("change window has closed")) {
 			toast.error(
-				"Add-on changes are not allowed at this time - the change window has closed as the event is approaching."
-			);
+				"Add-on changes are not allowed at this time - the change window has closed as the event is approaching.",
+			)
 		} else {
-			toast.error("Failed to update preferences");
+			toast.error("Failed to update preferences")
 		}
-		console.error("Error updating add-on preferences:", error);
+		console.error("Error updating add-on preferences:", error)
 	},
-});
+})
 
 const handleSave = async () => {
 	const changes = addOnsWithOptions.value.filter((addon) => {
-		const newValue = preferences.value[addon.id ?? ""];
-		return newValue && newValue !== addon.value;
-	});
+		const newValue = preferences.value[addon.id ?? ""]
+		return newValue && newValue !== addon.value
+	})
 
 	if (changes.length === 0) {
-		toast.warning("No changes to save");
-		return;
+		toast.warning("No changes to save")
+		return
 	}
 
 	// Save each changed preference
 	for (const addon of changes) {
-		const newValue = preferences.value[addon.id ?? ""];
+		const newValue = preferences.value[addon.id ?? ""]
 		await savePreferences.submit({
 			add_on_id: addon.id,
 			new_value: newValue,
-		});
+		})
 	}
-};
+}
 </script>
