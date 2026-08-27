@@ -260,6 +260,19 @@ class TestProcessBooking(BookingTestCase):
 		self.assertEqual(booking.status, "Approval Pending")
 		self.assertEqual(booking.payment_status, "Verification Pending")
 
+	def test_gateway_booking_is_not_acknowledged(self):
+		"""The acknowledgement belongs to the offline path only: a gateway booking is
+		still unpaid at this point and gets its confirmation after the payment lands."""
+		request = self.make_paid_request()
+
+		with (
+			patch("buzz.api.booking.services.get_payment_link_for_booking", return_value="/pay"),
+			patch("frappe.sendmail") as sendmail,
+		):
+			process_booking(request)
+
+		sendmail.assert_not_called()
+
 	def test_offline_booking_acknowledges_then_confirms(self):
 		"""Offline is a two-stage conversation: an acknowledgement while the payment is
 		unverified, the existing confirmation only once an approval submits the booking."""

@@ -50,6 +50,7 @@ class BuzzEvent(Document):
 		attach_email_ticket: DF.Check
 		auto_send_pitch_deck: DF.Check
 		banner_image: DF.AttachImage | None
+		booking_confirmation_email_template: DF.Link | None
 		card_image: DF.AttachImage | None
 		category: DF.Link
 		custom_forms: DF.Table[BuzzEventForm]
@@ -63,14 +64,17 @@ class BuzzEvent(Document):
 		host: DF.Link
 		is_published: DF.Check
 		medium: DF.Literal["In Person", "Online"]
+		meeting_link: DF.Data | None
 		meta_image: DF.AttachImage | None
 		name: DF.Int | None
+		offline_acknowledgement_email_template: DF.Link | None
 		payment_gateways: DF.Table[EventPaymentGateway]
 		proposal: DF.Link | None
 		registration_url: DF.Data | None
 		registrations_close_at: DF.Datetime | None
 		route: DF.Data | None
 		schedule: DF.Table[ScheduleItem]
+		send_booking_confirmation_email: DF.Check
 		send_ticket_email: DF.Check
 		short_description: DF.SmallText | None
 		show_sponsorship_section: DF.Check
