@@ -84,6 +84,10 @@ runs:
         # buzz lists frappe/payments in required_apps, so it must precede install-app.
         bench get-app --skip-assets https://github.com/frappe/payments
 
+        # Test-only: buzz/tests/factories imports frappe_factory_bot. No install-app —
+        # the app ships no DocTypes, and get-app already pip-installs it into the env.
+        bench get-app --skip-assets https://github.com/harshtandiya/frappe_factory_bot
+
         if [ -n "$EXTRA_APP_URL" ]; then
           bench get-app --skip-assets "$EXTRA_APP_URL"
         fi
