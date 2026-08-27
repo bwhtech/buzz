@@ -1385,6 +1385,170 @@ class TestBookingConfirmationEmail(IntegrationTestCase):
 		self.assertNotIn("TEAM", mock_sendmail.call_args[1]["subject"])
 
 
+class TestOfflineAcknowledgementEmail(IntegrationTestCase):
+	"""Acknowledgement sent when an offline booking is created, before verification."""
+
+	BOOKER_EMAIL = "offline-booker@example.com"
+
+	def setUp(self):
+		self.test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+		self.test_event.apply_tax = False
+		self.test_event.send_booking_confirmation_email = 1
+		self.test_event.booking_confirmation_email_template = None
+		self.test_event.offline_acknowledgement_email_template = None
+		self.test_event.send_ticket_email = 0
+		self.test_event.save()
+
+		set_team_settings(self.test_event.team, default_booking_confirmation_email_template=None)
+		self.addCleanup(frappe.clear_document_cache, "Buzz Team Settings", self.test_event.team)
+
+		if not frappe.db.exists("User", self.BOOKER_EMAIL):
+			frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": self.BOOKER_EMAIL,
+					"first_name": "Offline",
+					"enabled": 1,
+					"user_type": "Website User",
+					"send_welcome_email": 0,
+				}
+			).insert(ignore_permissions=True)
+
+		self.ticket_type = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Type",
+				"event": self.test_event.name,
+				"title": "Offline Acknowledgement Ticket",
+				"price": 100,
+			}
+		).insert()
+
+	def tearDown(self):
+		frappe.delete_doc("Event Ticket Type", self.ticket_type.name, force=True)
+
+	def _make_offline_booking(self, user):
+		"""A booking in the state offline_booking_response leaves behind: a draft
+		awaiting verification, with no tickets."""
+		booking = frappe.get_doc(
+			{
+				"doctype": "Event Booking",
+				"event": self.test_event.name,
+				"user": user,
+				"payment_method": "Offline",
+				"offline_payment_method": "Bank Transfer",
+				"status": "Approval Pending",
+				"payment_status": "Verification Pending",
+				"attendees": [
+					{
+						"ticket_type": self.ticket_type.name,
+						"first_name": "John",
+						"email": "john-offline@example.com",
+					}
+				],
+			}
+		).insert()
+		return booking
+
+	def _create_template(self, name, subject_prefix):
+		if frappe.db.exists("Email Template", name):
+			frappe.delete_doc("Email Template", name, force=True)
+		return frappe.get_doc(
+			{
+				"doctype": "Email Template",
+				"name": name,
+				"subject": f"{subject_prefix} - {{{{ event_title }}}}",
+				"response": f"<p>{subject_prefix} content</p>",
+			}
+		).insert()
+
+	@patch("frappe.sendmail")
+	def test_sends_acknowledgement_to_booker(self, mock_sendmail):
+		booking = self._make_offline_booking(self.BOOKER_EMAIL)
+		booking.send_offline_acknowledgement_email()
+
+		mock_sendmail.assert_called_once()
+		self.assertIn(self.BOOKER_EMAIL, mock_sendmail.call_args[1]["recipients"])
+		self.assertEqual(mock_sendmail.call_args[1]["reference_doctype"], "Event Booking")
+		self.assertEqual(mock_sendmail.call_args[1]["reference_name"], booking.name)
+
+	@patch("frappe.sendmail")
+	def test_uses_inline_template_when_none_configured(self, mock_sendmail):
+		self._make_offline_booking(self.BOOKER_EMAIL).send_offline_acknowledgement_email()
+
+		self.assertEqual(mock_sendmail.call_args[1]["template"], "offline_booking_acknowledgement")
+
+	@patch("frappe.sendmail")
+	def test_carries_the_booking_summary(self, mock_sendmail):
+		booking = self._make_offline_booking(self.BOOKER_EMAIL)
+		booking.send_offline_acknowledgement_email()
+
+		args = mock_sendmail.call_args[1]["args"]
+		self.assertEqual(args["doc"].name, booking.name)
+		self.assertEqual(args["event_title"], self.test_event.title)
+		self.assertEqual(len(args["attendee_rows"]), 1)
+		# Ticket types autoname to integers and arrive off the row as strings, so a
+		# title lookup keyed on the raw value silently prints the id instead.
+		self.assertEqual(args["attendee_rows"][0]["ticket_type_title"], self.ticket_type.title)
+
+	def test_builtin_template_renders(self):
+		"""The template is only exercised end-to-end here: every other test mocks the
+		send, so a broken Jinja tag would otherwise reach production silently."""
+		booking = self._make_offline_booking(self.BOOKER_EMAIL)
+
+		html = frappe.render_template(
+			"templates/emails/offline_booking_acknowledgement.html", booking.get_booking_email_args()
+		)
+
+		self.assertIn("Payment Verification Pending", html)
+		self.assertIn(booking.name, html)
+		self.assertIn(booking.offline_payment_method, html)
+		self.assertIn(self.ticket_type.title, html)
+
+	@patch("frappe.sendmail")
+	def test_uses_event_template_when_set(self, mock_sendmail):
+		template = self._create_template("Offline Acknowledgement Event Template", "OFFLINE")
+		self.test_event.offline_acknowledgement_email_template = template.name
+		self.test_event.save()
+
+		self._make_offline_booking(self.BOOKER_EMAIL).send_offline_acknowledgement_email()
+
+		mock_sendmail.assert_called_once()
+		self.assertIn("OFFLINE", mock_sendmail.call_args[1]["subject"])
+
+	@patch("frappe.sendmail")
+	def test_ignores_the_confirmation_template(self, mock_sendmail):
+		"""The acknowledgement has its own template field; the confirmation's, event-level
+		or team-level, must not leak into it."""
+		event_template = self._create_template("Offline Acknowledgement Confirmation Template", "EVENT")
+		team_template = self._create_template("Offline Acknowledgement Team Template", "TEAM")
+		self.test_event.booking_confirmation_email_template = event_template.name
+		self.test_event.save()
+		set_team_settings(
+			self.test_event.team, default_booking_confirmation_email_template=team_template.name
+		)
+
+		self._make_offline_booking(self.BOOKER_EMAIL).send_offline_acknowledgement_email()
+
+		self.assertEqual(mock_sendmail.call_args[1]["template"], "offline_booking_acknowledgement")
+
+	@patch("frappe.sendmail")
+	def test_respects_event_toggle_off(self, mock_sendmail):
+		self.test_event.send_booking_confirmation_email = 0
+		self.test_event.save()
+
+		self._make_offline_booking(self.BOOKER_EMAIL).send_offline_acknowledgement_email()
+
+		mock_sendmail.assert_not_called()
+
+	@patch("frappe.sendmail")
+	def test_skips_system_users(self, mock_sendmail):
+		for user in ("Administrator", "Guest"):
+			with self.subTest(user=user):
+				self._make_offline_booking(user).send_offline_acknowledgement_email()
+
+		mock_sendmail.assert_not_called()
+
+
 class TestZoomBackedCategoryBooking(IntegrationTestCase):
 	"""Zoom needs a last name on every registrant, for meetings as much as webinars."""
 
