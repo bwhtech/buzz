@@ -29,7 +29,9 @@
 		"src/**/*.tsx",
 		"src/**/*.vue",
 		"tests/**/*.ts",
-		"tests/**/*.tsx"
+		"tests/**/*.tsx",
+		"vite.config.ts",
+		"frappe-ui-vite.d.ts"
 	],
 	"exclude": ["node_modules"]
 }
