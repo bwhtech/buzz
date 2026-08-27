@@ -29,7 +29,23 @@ test("redirect_to routes to booking-success for a logged-in user", () => {
 
 test("guest with no redirect_to and no payment_link falls back to inline confirmation", () => {
 	const action = resolveBookingSuccessAction({ booking_name: "B-0003" }, { isGuestMode: true })
-	assert.deepEqual(action, { type: "guest-inline", bookingName: "B-0003" })
+	assert.deepEqual(action, {
+		type: "guest-inline",
+		bookingName: "B-0003",
+		pendingVerification: false,
+	})
+})
+
+test("guest offline booking stays inline but is pending verification", () => {
+	const action = resolveBookingSuccessAction(
+		{ booking_name: "B-0006", offline_payment: true },
+		{ isGuestMode: true },
+	)
+	assert.deepEqual(action, {
+		type: "guest-inline",
+		bookingName: "B-0006",
+		pendingVerification: true,
+	})
 })
 
 test("logged-in offline booking routes to bookings page with offline flag", () => {

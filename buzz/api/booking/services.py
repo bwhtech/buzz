@@ -242,7 +242,20 @@ class BookingService:
 		booking.flags.ignore_permissions = True
 		booking.save()
 		self.attach_payment_proof(booking)
+		self.acknowledge_offline_booking(booking)
 		return OfflineBookingResponse(booking_name=booking.name, offline_payment=True)
+
+	def acknowledge_offline_booking(self, booking: "EventBooking") -> None:
+		"""The booking is only a draft until an approval verifies the payment, so this
+		acknowledgement is the booker's only receipt until then."""
+		try:
+			booking.send_offline_acknowledgement_email()
+		except Exception:
+			frappe.log_error(
+				title="Offline booking acknowledgement email failed",
+				reference_doctype=booking.doctype,
+				reference_name=booking.name,
+			)
 
 	def offline_method(self) -> dict:
 		filters = {"event": self.request.event, "enabled": 1}

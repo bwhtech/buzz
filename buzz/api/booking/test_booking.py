@@ -256,6 +256,55 @@ class TestProcessBooking(BookingTestCase):
 		self.assertEqual(booking.status, "Approval Pending")
 		self.assertEqual(booking.payment_status, "Verification Pending")
 
+	def test_gateway_booking_is_not_acknowledged(self):
+		"""The acknowledgement belongs to the offline path only: a gateway booking is
+		still unpaid at this point and gets its confirmation after the payment lands."""
+		request = self.make_paid_request()
+
+		with (
+			patch("buzz.api.booking.services.get_payment_link_for_booking", return_value="/pay"),
+			patch("frappe.sendmail") as sendmail,
+		):
+			process_booking(request)
+
+		sendmail.assert_not_called()
+
+	def test_offline_booking_acknowledges_then_confirms(self):
+		"""Offline is a two-stage conversation: an acknowledgement while the payment is
+		unverified, the existing confirmation only once an approval submits the booking."""
+		self.set_event({"send_ticket_email": 0})
+		if not frappe.db.exists("User", BOOKER):
+			frappe.get_doc(
+				{"doctype": "User", "email": BOOKER, "first_name": "Booking", "send_welcome_email": 0}
+			).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "Offline Payment Method",
+				"event": self.event.name,
+				"title": f"Bank Transfer {frappe.generate_hash(length=6)}",
+				"enabled": 1,
+			}
+		).insert(ignore_permissions=True)
+		request = self.make_paid_request(is_offline=True)
+
+		frappe.set_user(BOOKER)
+		self.addCleanup(frappe.set_user, "Administrator")
+
+		with patch("frappe.sendmail") as sendmail:
+			booking_name = process_booking(request).booking_name
+
+			sendmail.assert_called_once()
+			self.assertEqual(sendmail.call_args[1]["template"], "offline_booking_acknowledgement")
+			self.assertIn(BOOKER, sendmail.call_args[1]["recipients"])
+			self.assertFalse(frappe.db.exists("Event Ticket", {"booking": booking_name}))
+
+			frappe.set_user("Administrator")
+			frappe.get_doc("Event Booking", booking_name).approve_booking()
+
+			self.assertEqual(sendmail.call_args[1]["template"], "booking_confirmation")
+
+		self.assertTrue(frappe.db.exists("Event Ticket", {"booking": booking_name}))
+
 
 class TestBookingAddOnPricing(BookingTestCase):
 	"""The add-on price is server-authoritative: it comes from the Ticket Add-on catalog,
