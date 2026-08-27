@@ -1,24 +1,25 @@
 <script setup lang="ts">
-import EventBanner from "@/components/dashboard/events/EventBanner.vue";
-import EventMedium from "@/components/dashboard/events/EventMedium.vue";
-import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue";
-import EventRoute from "@/components/dashboard/events/EventRoute.vue";
-import EventSchedule from "@/components/dashboard/events/EventSchedule.vue";
-import { eventDetail, updateEvent } from "@/data/events";
-import type { EventDetail, FrappeError } from "@/types";
-import { Button, ErrorMessage, Textarea, toast } from "frappe-ui";
-import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor";
-import { computed, reactive, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
+import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
+import { computed, reactive, ref, watch } from "vue"
+import { useRoute } from "vue-router"
 
-const route = useRoute();
-const eventId = route.params.eventId as string;
+import EventBanner from "@/components/dashboard/events/EventBanner.vue"
+import EventMedium from "@/components/dashboard/events/EventMedium.vue"
+import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
+import EventRoute from "@/components/dashboard/events/EventRoute.vue"
+import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
+import { eventDetail, updateEvent } from "@/data/events"
+import type { EventDetail, FrappeError } from "@/types"
 
-const event = eventDetail(eventId);
+const route = useRoute()
+const eventId = route.params.eventId as string
+
+const event = eventDetail(eventId)
 
 // The form the page edits, and the copy it is compared against to know it is dirty.
-const form = reactive(blank());
-const saved = ref(JSON.stringify(blank()));
+const form = reactive(blank())
+const saved = ref(JSON.stringify(blank()))
 
 function blank() {
 	return {
@@ -35,7 +36,7 @@ function blank() {
 		medium: "In Person",
 		venue: "",
 		meeting_link: "",
-	};
+	}
 }
 
 // Nulls all the way through the payload; the form works in empty strings so an untouched
@@ -55,33 +56,31 @@ function fill(detail: EventDetail) {
 		medium: detail.medium || "In Person",
 		venue: detail.venue?.name ?? "",
 		meeting_link: detail.meeting_link ?? "",
-	});
-	saved.value = JSON.stringify(form);
+	})
+	saved.value = JSON.stringify(form)
 }
 
 watch(
 	() => event.data,
-	(detail) => detail && fill(detail)
-);
+	(detail) => detail && fill(detail),
+)
 
-const isDirty = computed(() => JSON.stringify(form) !== saved.value);
+const isDirty = computed(() => JSON.stringify(form) !== saved.value)
 
 // createResource types its error as {}, so the message needs narrowing.
-const errorMessage = computed(() =>
-	(updateEvent.error as FrappeError | null)?.messages?.join("\n")
-);
+const errorMessage = computed(() => (updateEvent.error as FrappeError | null)?.messages?.join("\n"))
 
 async function save() {
 	// A blank date or venue has to reach the server as null, not "".
 	const fieldname = Object.fromEntries(
-		Object.entries(form).map(([field, value]) => [field, value === "" ? null : value])
-	);
+		Object.entries(form).map(([field, value]) => [field, value === "" ? null : value]),
+	)
 
-	await updateEvent.submit({ doctype: "Buzz Event", name: eventId, fieldname });
-	if (updateEvent.error) return;
+	await updateEvent.submit({ doctype: "Buzz Event", name: eventId, fieldname })
+	if (updateEvent.error) return
 
-	saved.value = JSON.stringify(form);
-	toast.success("Event saved");
+	saved.value = JSON.stringify(form)
+	toast.success("Event saved")
 }
 </script>
 
@@ -149,9 +148,7 @@ async function save() {
 
 			<div class="space-y-8 md:col-span-2">
 				<section class="space-y-3">
-					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">
-						When
-					</h2>
+					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">When</h2>
 					<EventSchedule
 						v-model:start-date="form.start_date"
 						v-model:start-time="form.start_time"
@@ -162,9 +159,7 @@ async function save() {
 				</section>
 
 				<section class="space-y-3">
-					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">
-						Where
-					</h2>
+					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
 					<EventMedium
 						v-model:medium="form.medium"
 						v-model:venue="form.venue"

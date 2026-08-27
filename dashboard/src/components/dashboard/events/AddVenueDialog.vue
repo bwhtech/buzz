@@ -1,46 +1,47 @@
 <script setup lang="ts">
-import { createVenue } from "@/data/venues";
-import type { FrappeError } from "@/types";
-import { Button, Dialog, FormControl, toast } from "frappe-ui";
-import { computed, ref, watch } from "vue";
+import { Button, Dialog, FormControl, toast } from "frappe-ui"
+import { computed, ref, watch } from "vue"
 
-const props = defineProps<{ team: string }>();
-const isOpen = defineModel<boolean>({ required: true });
+import { createVenue } from "@/data/venues"
+import type { FrappeError } from "@/types"
+
+const props = defineProps<{ team: string }>()
+const isOpen = defineModel<boolean>({ required: true })
 // The name the picker was searching for when it gave up and offered to add one.
-const suggestedName = defineModel<string>("suggestedName", { default: "" });
-const emit = defineEmits<{ created: [venue: string] }>();
+const suggestedName = defineModel<string>("suggestedName", { default: "" })
+const emit = defineEmits<{ created: [venue: string] }>()
 
-const name = ref("");
-const address = ref("");
-const showErrors = ref(false);
+const name = ref("")
+const address = ref("")
+const showErrors = ref(false)
 
 // createResource types its error as {}, so the message needs narrowing.
-const errorMessage = computed(() => (createVenue.error as FrappeError | null)?.message);
+const errorMessage = computed(() => (createVenue.error as FrappeError | null)?.message)
 
 watch(isOpen, (open) => {
-	if (!open) return;
-	name.value = suggestedName.value;
-	address.value = "";
-	showErrors.value = false;
-	createVenue.error = null;
-});
+	if (!open) return
+	name.value = suggestedName.value
+	address.value = ""
+	showErrors.value = false
+	createVenue.error = null
+})
 
-const invalid = computed(() => !name.value.trim() || !address.value.trim());
+const invalid = computed(() => !name.value.trim() || !address.value.trim())
 
 async function submit() {
-	showErrors.value = true;
-	if (invalid.value) return;
+	showErrors.value = true
+	if (invalid.value) return
 
 	await createVenue.submit({
 		team: props.team,
 		name: name.value.trim(),
 		address: address.value.trim(),
-	});
-	if (createVenue.error) return;
+	})
+	if (createVenue.error) return
 
-	toast.success(`${name.value.trim()} added`);
-	emit("created", name.value.trim());
-	isOpen.value = false;
+	toast.success(`${name.value.trim()} added`)
+	emit("created", name.value.trim())
+	isOpen.value = false
 }
 </script>
 

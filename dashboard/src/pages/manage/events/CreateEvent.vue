@@ -1,71 +1,70 @@
 <script setup lang="ts">
-import EventBanner from "@/components/dashboard/events/EventBanner.vue";
-import EventLocation from "@/components/dashboard/events/EventLocation.vue";
-import EventSchedule from "@/components/dashboard/events/EventSchedule.vue";
-import { useTeamAccess } from "@/composables/useTeamAccess";
-import { createEvent } from "@/data/events";
-import { currentTeam } from "@/data/teams";
-import NotFound from "@/pages/NotFound.vue";
-import { isEndBeforeStart } from "@/utils/eventDates";
-import { canCreateEvents } from "@/utils/teamRoles";
-import { currentTimeZone } from "@/utils/timeZones";
-import type { FrappeError } from "@/types";
-import { Alert, Button, ErrorMessage, toast, useTheme } from "frappe-ui";
-import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor";
-import { computed, ref } from "vue";
-import { useRouter } from "vue-router";
+import { Alert, Button, ErrorMessage, toast, useTheme } from "frappe-ui"
+import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
+import { computed, ref } from "vue"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
+import EventBanner from "@/components/dashboard/events/EventBanner.vue"
+import EventLocation from "@/components/dashboard/events/EventLocation.vue"
+import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
+import { useTeamAccess } from "@/composables/useTeamAccess"
+import { createEvent } from "@/data/events"
+import { currentTeam } from "@/data/teams"
+import NotFound from "@/pages/NotFound.vue"
+import type { FrappeError } from "@/types"
+import { isEndBeforeStart } from "@/utils/eventDates"
+import { canCreateEvents } from "@/utils/teamRoles"
+import { currentTimeZone } from "@/utils/timeZones"
 
-const access = useTeamAccess();
+const router = useRouter()
+
+const access = useTeamAccess()
 
 // The server refuses anything below Manager, so the form is shown read-only rather than
 // letting someone fill it in and lose the work to a 403 on save.
-const canCreate = computed(() => canCreateEvents(currentTeam.value?.team_role));
+const canCreate = computed(() => canCreateEvents(currentTeam.value?.team_role))
 
-const { currentTheme, setTheme, getSystemTheme } = useTheme();
+const { currentTheme, setTheme, getSystemTheme } = useTheme()
 // `system` resolves against the OS, so the icon shows what is on screen rather than
 // what was picked — and the toggle sets the opposite outright instead of stepping
 // through `system`, which would look like a no-op when the OS is already dark.
 const isDark = computed(
-	() => (currentTheme.value === "system" ? getSystemTheme() : currentTheme.value) === "dark"
-);
+	() => (currentTheme.value === "system" ? getSystemTheme() : currentTheme.value) === "dark",
+)
 
-const title = ref("");
-const about = ref("");
-const bannerImage = ref("");
-const startDate = ref("");
-const startTime = ref("");
-const endDate = ref("");
-const endTime = ref("");
+const title = ref("")
+const about = ref("")
+const bannerImage = ref("")
+const startDate = ref("")
+const startTime = ref("")
+const endDate = ref("")
+const endTime = ref("")
 // The organiser's own zone is the safe opening guess; they change it if the event is
 // somewhere else.
-const timeZone = ref(currentTimeZone());
+const timeZone = ref(currentTimeZone())
 
-const venue = ref("");
+const venue = ref("")
 // The Zoom meeting can only be booked once the event exists, so save has to act on this.
-const zoomMeeting = ref(false);
+const zoomMeeting = ref(false)
 
 // About is optional: an event needs a name, when it runs, and where.
 const canSave = computed(() =>
 	Boolean(
 		canCreate.value &&
-			title.value.trim() &&
-			startDate.value &&
-			startTime.value &&
-			endTime.value &&
-			!isEndBeforeStart(startDate.value, endDate.value, startTime.value, endTime.value) &&
-			(venue.value || zoomMeeting.value)
-	)
-);
+		title.value.trim() &&
+		startDate.value &&
+		startTime.value &&
+		endTime.value &&
+		!isEndBeforeStart(startDate.value, endDate.value, startTime.value, endTime.value) &&
+		(venue.value || zoomMeeting.value),
+	),
+)
 
 // createResource types its error as {}, so the message needs narrowing.
-const errorMessage = computed(() =>
-	(createEvent.error as FrappeError | null)?.messages?.join("\n")
-);
+const errorMessage = computed(() => (createEvent.error as FrappeError | null)?.messages?.join("\n"))
 
 async function save() {
-	if (!canSave.value) return;
+	if (!canSave.value) return
 
 	await createEvent.submit({
 		event: {
@@ -81,11 +80,11 @@ async function save() {
 			venue: venue.value || null,
 			zoom_meeting: zoomMeeting.value,
 		},
-	});
-	if (createEvent.error) return;
+	})
+	if (createEvent.error) return
 
-	toast.success(`${createEvent.data?.title} created`);
-	router.push({ name: "team-events" });
+	toast.success(`${createEvent.data?.title} created`)
+	router.push({ name: "team-events" })
 }
 </script>
 
@@ -152,9 +151,7 @@ async function save() {
 
 			<div class="grid gap-8 md:grid-cols-5">
 				<section class="space-y-3 md:col-span-3">
-					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">
-						About
-					</h2>
+					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
 					<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
 					 itself: the height and scrolling land on the editable area rather than on a
 					 wrapper, and the whole box takes a click. -->
@@ -174,9 +171,7 @@ async function save() {
 
 				<div class="space-y-8 md:col-span-2">
 					<section class="space-y-3">
-						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">
-							When
-						</h2>
+						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">When</h2>
 						<EventSchedule
 							:disabled="!canCreate"
 							v-model:start-date="startDate"

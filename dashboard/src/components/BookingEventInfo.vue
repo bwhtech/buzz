@@ -3,11 +3,7 @@
 		<div class="mb-8 flex items-center justify-between">
 			<h3 class="text-lg-semibold text-ink-gray-9">{{ event.title }}</h3>
 
-			<Button
-				:link="`/events/${event.route}`"
-				icon-left="external-link"
-				variant="subtle"
-				size="sm"
+			<Button :link="`/events/${event.route}`" icon-left="external-link" variant="subtle" size="sm"
 				>{{ __("Visit Event Page") }}
 			</Button>
 		</div>
@@ -56,44 +52,40 @@
 </template>
 
 <script setup lang="ts">
-import { dayjsLocal } from "frappe-ui";
-import LucideCalendarDays from "~icons/lucide/calendar-days";
-import LucideMapPin from "~icons/lucide/map-pin";
+import { dayjsLocal } from "frappe-ui"
+import LucideCalendarDays from "~icons/lucide/calendar-days"
+import LucideMapPin from "~icons/lucide/map-pin"
 
 defineProps({
 	event: {
 		type: Object,
 		required: true,
 		validator: (value: any) => {
-			return (
-				typeof value.title === "string" &&
-				value.start_date &&
-				typeof value.route === "string"
-			);
+			return typeof value.title === "string" && value.start_date && typeof value.route === "string"
 		},
 	},
 	venue: {
 		type: Object,
 		default: null,
 	},
-});
+})
 
 // Helper function to format date and time together (matching TicketDetails.vue)
 const formatEventDateTime = (date: string, time: string) => {
-	if (!date) return "";
+	if (!date) return ""
 
 	// Create a date object from the date string
-	const dateObj = dayjsLocal(date);
+	const dateObj = dayjsLocal(date)
 
 	// If time is provided, combine it with the date
 	if (time) {
 		// Parse the time (format: "HH:mm:ss")
-		const [hours, minutes] = time.split(":");
-		const dateTimeObj = dateObj.hour(Number.parseInt(hours)).minute(Number.parseInt(minutes));
-		return dateTimeObj.format("MMMM DD, YYYY [at] h:mm A");
+		const [hours, minutes] = time.split(":")
+		const dateTimeObj = dateObj.hour(Number.parseInt(hours)).minute(Number.parseInt(minutes))
+		return dateTimeObj.format("MMMM DD, YYYY [at] h:mm A")
 	}
 
 	// If no time, just show the date
-	return dateObj.format("MMMM DD, YYYY");
-};
+	return dateObj.format("MMMM DD, YYYY")
+}
 </script>

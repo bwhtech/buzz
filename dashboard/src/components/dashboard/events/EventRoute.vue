@@ -1,49 +1,50 @@
 <script setup lang="ts">
-import { checkEventRoute } from "@/data/events";
-import { watchDebounced } from "@vueuse/core";
-import { computed, ref } from "vue";
+import { watchDebounced } from "@vueuse/core"
+import { computed, ref } from "vue"
+
+import { checkEventRoute } from "@/data/events"
 
 // The route the event already answers to, which is the one that opens and copies —
 // an edit in the field is not a live address until it is saved.
-const props = defineProps<{ event: string; saved: string | null }>();
+const props = defineProps<{ event: string; saved: string | null }>()
 
-const route = defineModel<string>({ default: "" });
+const route = defineModel<string>({ default: "" })
 
 // The host the dashboard is being used on, so the chip reads as the address it will be.
-const hostname = window.location.hostname;
+const hostname = window.location.hostname
 // Events are served under the dashboard's own base, not off the bare host.
-const publicPath = computed(() => `/b/register/${props.saved}`);
+const publicPath = computed(() => `/b/register/${props.saved}`)
 
-type Availability = { available: boolean; message: string };
-const availability = ref<Availability | null>(null);
+type Availability = { available: boolean; message: string }
+const availability = ref<Availability | null>(null)
 
 // Only worth saying anything about a route that is not already this event's.
 watchDebounced(
 	route,
 	async (value) => {
-		availability.value = null;
-		if (!value.trim() || value === props.saved) return;
+		availability.value = null
+		if (!value.trim() || value === props.saved) return
 		const answer = (await checkEventRoute.submit({
 			route: value,
 			event: props.event,
-		})) as Availability;
+		})) as Availability
 		// A later keystroke may have overtaken this request while it was in flight.
-		if (route.value !== value) return;
-		availability.value = answer;
+		if (route.value !== value) return
+		availability.value = answer
 	},
-	{ debounce: 400 }
-);
+	{ debounce: 400 },
+)
 
 // The icon carries the confirmation, so this needs no toast on top of it.
-const justCopied = ref(false);
-let clearCopied: ReturnType<typeof setTimeout>;
+const justCopied = ref(false)
+let clearCopied: ReturnType<typeof setTimeout>
 
 async function copy() {
 	// The path the link opens, not the shorthand the chip reads.
-	await navigator.clipboard.writeText(`${window.location.origin}${publicPath.value}`);
-	justCopied.value = true;
-	clearTimeout(clearCopied);
-	clearCopied = setTimeout(() => (justCopied.value = false), 1500);
+	await navigator.clipboard.writeText(`${window.location.origin}${publicPath.value}`)
+	justCopied.value = true
+	clearTimeout(clearCopied)
+	clearCopied = setTimeout(() => (justCopied.value = false), 1500)
 }
 </script>
 

@@ -18,36 +18,37 @@
 </template>
 
 <script setup lang="ts">
-import type { FrappeField } from "@/types";
-import { computed, type PropType } from "vue";
+import { computed, type PropType } from "vue"
+
+import type { FrappeField } from "@/types"
 
 const props = defineProps({
 	fields: {
 		type: Array as PropType<FrappeField[]>,
 		default: () => [],
 	},
-});
+})
 
 const sections = computed(() => {
-	const sections: FrappeField[][][] = [];
-	let current_section: FrappeField[][] = [[]];
+	const grouped: FrappeField[][][] = []
+	let current_section: FrappeField[][] = [[]]
 	for (const field of props.fields) {
 		if (field.fieldtype === "Section Break") {
 			if (current_section.some((column) => column.length)) {
-				sections.push(current_section);
+				grouped.push(current_section)
 			}
-			current_section = [[]];
-			continue;
+			current_section = [[]]
+			continue
 		}
 		if (field.fieldtype === "Column Break") {
-			current_section.push([]);
-			continue;
+			current_section.push([])
+			continue
 		}
-		current_section[current_section.length - 1].push(field);
+		current_section[current_section.length - 1].push(field)
 	}
 	if (current_section.some((column) => column.length)) {
-		sections.push(current_section);
+		grouped.push(current_section)
 	}
-	return sections;
-});
+	return grouped
+})
 </script>

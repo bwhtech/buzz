@@ -1,27 +1,28 @@
 <script setup lang="ts">
-import TeamSwitcher from "@/components/TeamSwitcher.vue";
-import UserMenu from "@/components/UserMenu.vue";
-import { useTeamAccess } from "@/composables/useTeamAccess";
-import NotFound from "@/pages/NotFound.vue";
-import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem, SidebarLabel } from "frappe-ui";
-import { computed, ref } from "vue";
-import { useRoute } from "vue-router";
+import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem, SidebarLabel } from "frappe-ui"
+import { computed, ref } from "vue"
+import { useRoute } from "vue-router"
 
-const collapsed = ref(false);
-const route = useRoute();
+import TeamSwitcher from "@/components/TeamSwitcher.vue"
+import UserMenu from "@/components/UserMenu.vue"
+import { useTeamAccess } from "@/composables/useTeamAccess"
+import NotFound from "@/pages/NotFound.vue"
 
-const access = useTeamAccess();
+const collapsed = ref(false)
+const route = useRoute()
+
+const access = useTeamAccess()
 
 // SidebarItem infers this from `to` on paper, but its `active` prop is declared
 // type Boolean, so Vue casts the absent prop to false and the inference never runs.
-const isActive = (to: string) => route.path === to;
+const isActive = (to: string) => route.path === to
 
 const personalItems = [
 	{ label: "My Events", icon: "lucide-calendar-days", to: "/manage/events" },
 	{ label: "My Tickets", icon: "lucide-ticket", to: "/manage/tickets" },
 	{ label: "Talk Proposals", icon: "lucide-file-text", to: "/manage/proposals" },
 	{ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" },
-];
+]
 
 // Team-scoped destinations read the active team from data/teams rather than the path,
 // so they are fixed and need no team loaded to render.
@@ -29,11 +30,11 @@ const teamItems = [
 	{ label: "Overview", icon: "lucide-layout-dashboard", to: "/manage/team/overview" },
 	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/team/events" },
 	{ label: "Members", icon: "lucide-users-round", to: "/manage/team/members" },
-];
+]
 
 // An event opens into the same shell with its own destinations in place of the
 // personal and team ones.
-const eventId = computed(() => route.params.eventId as string | undefined);
+const eventId = computed(() => route.params.eventId as string | undefined)
 
 const eventItems = computed(() => [
 	{ label: "Back", icon: "lucide-arrow-left", to: "/" },
@@ -52,7 +53,7 @@ const eventItems = computed(() => [
 		icon: "lucide-presentation",
 		to: `/manage/events/${eventId.value}/talks`,
 	},
-]);
+])
 </script>
 
 <template>

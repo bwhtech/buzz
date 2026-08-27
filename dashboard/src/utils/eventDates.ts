@@ -32,7 +32,7 @@ export function isEndBeforeStart(
 	startDate: string,
 	endDate: string,
 	startTime: string,
-	endTime: string
+	endTime: string,
 ): boolean {
 	if (!startTime || !endTime) return false
 	if (endDate && endDate !== startDate) return false

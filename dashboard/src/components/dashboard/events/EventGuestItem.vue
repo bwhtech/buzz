@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import type { EventGuest } from "@/types";
-import { Avatar, Badge } from "frappe-ui";
+import { Avatar, Badge } from "frappe-ui"
 
-const props = defineProps<{ guest: EventGuest }>();
+import type { EventGuest } from "@/types"
+
+const props = defineProps<{ guest: EventGuest }>()
 
 // A ticket can be issued before anyone is named on it, so the email is the fallback
 // and the row never renders blank.
-const name = props.guest.attendee_name || props.guest.attendee_email || "Unnamed guest";
+const name = props.guest.attendee_name || props.guest.attendee_email || "Unnamed guest"
 </script>
 
 <template>

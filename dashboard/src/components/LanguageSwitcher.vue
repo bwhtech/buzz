@@ -19,34 +19,35 @@
 </template>
 
 <script setup lang="ts">
-import { useLanguage } from "@/composables/useLanguage";
-import { Button, Dropdown } from "frappe-ui";
-import type { Language } from "@/types";
-import { computed, h } from "vue";
-import ChevronDown from "~icons/lucide/chevron-down";
-import Globe from "~icons/lucide/globe";
+import { Button, Dropdown } from "frappe-ui"
+import { computed, h } from "vue"
+import ChevronDown from "~icons/lucide/chevron-down"
+import Globe from "~icons/lucide/globe"
 
-const { availableLanguages, currentLanguage, changeLanguage, isSwitching } = useLanguage();
+import { useLanguage } from "@/composables/useLanguage"
+import type { Language } from "@/types"
+
+const { availableLanguages, currentLanguage, changeLanguage, isSwitching } = useLanguage()
 
 const currentLanguageName = computed(() => {
 	const match = (availableLanguages.data || []).find(
-		(lang: Language) => lang.language_code === currentLanguage.value
-	);
-	return match?.language_name || currentLanguage.value;
-});
+		(lang: Language) => lang.language_code === currentLanguage.value,
+	)
+	return match?.language_name || currentLanguage.value
+})
 
 const triggerLabel = computed(() =>
-	__("Change language, current: {0}", [currentLanguageName.value])
-);
+	__("Change language, current: {0}", [currentLanguageName.value]),
+)
 
 const languageOptions = computed(() => {
 	if (!availableLanguages.data || availableLanguages.data.length === 0) {
-		return [];
+		return []
 	}
 
 	return availableLanguages.data.map((lang: Language) => {
-		const label = lang.language_name || lang.name;
-		const isActive = currentLanguage.value === lang.language_code;
+		const label = lang.language_name || lang.name
+		const isActive = currentLanguage.value === lang.language_code
 
 		return {
 			label,
@@ -62,7 +63,7 @@ const languageOptions = computed(() => {
 							lang: lang.language_code,
 							"data-testid": `language-option-${lang.language_code}`,
 						},
-						label
+						label,
 					),
 			},
 			// One icon in the group makes every row reserve the space, so the list
@@ -70,7 +71,7 @@ const languageOptions = computed(() => {
 			icon: isActive ? "lucide-check" : undefined,
 			selected: isActive,
 			onClick: () => changeLanguage(lang.language_code),
-		};
-	});
-});
+		}
+	})
+})
 </script>

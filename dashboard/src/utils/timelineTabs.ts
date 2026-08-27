@@ -14,7 +14,10 @@ export function inTab<T extends Dated>(items: T[], tab: TimelineTab, today: stri
 	const upcoming = tab === "upcoming"
 	const isOver = (item: T) => (item.end_date || item.start_date) < today
 
-	return items
-		.filter((item) => isOver(item) !== upcoming)
-		.sort((a, b) => (upcoming ? 1 : -1) * a.start_date.localeCompare(b.start_date))
+	return (
+		items
+			.filter((item) => isOver(item) !== upcoming)
+			// oxlint-disable-next-line no-array-sort -- sorts the array .filter() just created
+			.sort((a, b) => (upcoming ? 1 : -1) * a.start_date.localeCompare(b.start_date))
+	)
 }

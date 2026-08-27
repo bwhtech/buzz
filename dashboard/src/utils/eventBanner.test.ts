@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
+
 import { bannerPattern } from "./eventBanner.ts"
 
 const NAMES = ["Frappe Yatra 2026", "PyCon India", "1042", "", "a"]

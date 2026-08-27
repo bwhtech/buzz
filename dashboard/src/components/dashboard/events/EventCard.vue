@@ -1,51 +1,52 @@
 <script setup lang="ts">
-import type { MyEvent } from "@/types";
-import { dayLabel } from "@/utils/dateLabels";
-import { bannerPattern } from "@/utils/eventBanner";
-import { Avatar, Button } from "frappe-ui";
-import { computed } from "vue";
-import { RouterLink } from "vue-router";
+import { Avatar, Button } from "frappe-ui"
+import { computed } from "vue"
+import { RouterLink } from "vue-router"
+
+import type { MyEvent } from "@/types"
+import { dayLabel } from "@/utils/dateLabels"
+import { bannerPattern } from "@/utils/eventBanner"
 
 // The Events page files cards under a date heading; a standalone list has to
 // carry the date on the card itself.
 const props = withDefaults(
 	defineProps<{
-		event: MyEvent;
-		showDate?: boolean;
-		showManage?: boolean;
+		event: MyEvent
+		showDate?: boolean
+		showManage?: boolean
 		// A list where every card is manageable — a team's own events — can drop the
 		// per-card button and make the whole card the way in.
-		routeToManage?: boolean;
+		routeToManage?: boolean
 	}>(),
-	{ showManage: true }
-);
+	{ showManage: true },
+)
 
 // Only a host has anything to manage, whichever way in the caller asked for.
-const linksToManage = computed(() => props.routeToManage && props.event.is_host);
+const linksToManage = computed(() => props.routeToManage && props.event.is_host)
 
 // The button would be a second link inside the first, so the card link wins.
-const canManage = computed(() => props.showManage && !linksToManage.value && props.event.is_host);
+const canManage = computed(() => props.showManage && !linksToManage.value && props.event.is_host)
 
 // Times arrive as a serialized timedelta ("9:00:00"), so the hour needs padding.
 const startTime = computed((): string => {
-	if (!props.event.start_time) return "";
-	const [hour, minute] = props.event.start_time.split(":");
-	return `${hour.padStart(2, "0")}:${minute}`;
-});
+	if (!props.event.start_time) return ""
+	const [hour, minute] = props.event.start_time.split(":")
+	return `${hour.padStart(2, "0")}:${minute}`
+})
 
-const banner = computed(() => ({ backgroundImage: bannerPattern(props.event.name) }));
+const banner = computed(() => ({ backgroundImage: bannerPattern(props.event.name) }))
 
 // Only a host can fix a missing venue; for everyone else it is news, not a warning.
 const venue = computed(() => {
-	if (props.event.venue) return { label: props.event.venue, icon: "lucide-map-pin", tone: "" };
+	if (props.event.venue) return { label: props.event.venue, icon: "lucide-map-pin", tone: "" }
 	if (props.event.is_host)
 		return {
 			label: "Location missing",
 			icon: "lucide-triangle-alert",
 			tone: "text-ink-amber-6",
-		};
-	return { label: "Venue to be announced", icon: "lucide-map-pin-off", tone: "" };
-});
+		}
+	return { label: "Venue to be announced", icon: "lucide-map-pin-off", tone: "" }
+})
 </script>
 
 <template>
@@ -78,22 +79,14 @@ const venue = computed(() => {
 
 				<h3 class="font-semibold text-lg text-ink-gray-8">{{ event.title }}</h3>
 				<p v-if="event.team_name" class="flex items-center gap-2 text-sm text-ink-gray-6">
-					<Avatar
-						:image="event.team_logo || undefined"
-						:label="event.team_name"
-						size="xs"
-					/>
+					<Avatar :image="event.team_logo || undefined" :label="event.team_name" size="xs" />
 					By {{ event.team_name }}
 				</p>
 			</div>
 
 			<div class="flex justify-between">
 				<p class="mt-2 flex items-center gap-2 text-base text-ink-gray-5">
-					<span
-						class="size-4 shrink-0"
-						:class="[venue.icon, venue.tone]"
-						aria-hidden="true"
-					/>
+					<span class="size-4 shrink-0" :class="[venue.icon, venue.tone]" aria-hidden="true" />
 					{{ venue.label }}
 				</p>
 				<Button

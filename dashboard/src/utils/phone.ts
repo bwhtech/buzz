@@ -7,14 +7,10 @@ export const DEFAULT_DIAL_CODE = "+91"
 // Returns the leading dial code of `str` (e.g. "+91"), or null.
 // Prefers the longest matching code from knownDialCodes; falls back to
 // "+" followed by 1-4 digits when the list has not loaded yet.
-function matchLeadingDialCode(
-	str: string,
-	knownDialCodes: string[],
-): string | null {
+function matchLeadingDialCode(str: string, knownDialCodes: string[]): string | null {
 	if (!str.startsWith("+")) return null
-	const sorted = [...knownDialCodes].sort(
-		(first, second) => second.length - first.length,
-	)
+	// oxlint-disable-next-line no-array-sort -- sorts the spread copy, not the caller's array
+	const sorted = [...knownDialCodes].sort((first, second) => second.length - first.length)
 	for (const code of sorted) {
 		if (str.startsWith(code)) return code
 	}
@@ -30,10 +26,7 @@ export interface ParsedPhone {
 	localNumber: string
 }
 
-export function parsePhone(
-	value: unknown,
-	knownDialCodes: string[] = [],
-): ParsedPhone {
+export function parsePhone(value: unknown, knownDialCodes: string[] = []): ParsedPhone {
 	const raw = String(value ?? "").trim()
 	if (!raw) return { dialCode: null, localNumber: "" }
 
@@ -50,10 +43,7 @@ export function parsePhone(
 }
 
 // Joins a dial code and local number into Frappe's canonical hyphen format.
-export function formatPhone(
-	dialCode: string | null,
-	localNumber: unknown,
-): string {
+export function formatPhone(dialCode: string | null, localNumber: unknown): string {
 	const digits = String(localNumber ?? "").replace(/\D/g, "")
 	if (!digits) return ""
 	return `${dialCode}-${digits}`

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
+
 import { canCreateEvents } from "./teamRoles.ts"
 
 test("a manager can create events", () => {

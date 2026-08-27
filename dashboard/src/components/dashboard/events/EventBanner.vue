@@ -1,26 +1,27 @@
 <script setup lang="ts">
-import { bannerPattern } from "@/utils/eventBanner";
-import { refDebounced } from "@vueuse/core";
-import { Button, ErrorMessage, FileUploader } from "frappe-ui";
-import { computed, ref, watch } from "vue";
+import { refDebounced } from "@vueuse/core"
+import { Button, ErrorMessage, FileUploader } from "frappe-ui"
+import { computed, ref, watch } from "vue"
+
+import { bannerPattern } from "@/utils/eventBanner"
 
 // The picker is filtered to these, and the file that comes back is checked against the
 // same list: `accept` is a hint the OS may ignore, and a drag-drop never consults it.
 // Raster only — an SVG banner would be same-origin markup, which a banner has no need
 // to be. Neither check is enforcement; the upload endpoint takes what it is given.
-const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 
 function validateImage(file: File): string | void {
 	if (!IMAGE_TYPES.includes(file.type)) {
-		return "Choose a PNG, JPEG, WebP or GIF image";
+		return "Choose a PNG, JPEG, WebP or GIF image"
 	}
 }
 
 // The event title. The generated pattern is seeded by it, so a draft banner settles into
 // the one the event keeps.
-const props = defineProps<{ seed: string; disabled?: boolean }>();
+const props = defineProps<{ seed: string; disabled?: boolean }>()
 
-const image = defineModel<string>({ default: "" });
+const image = defineModel<string>({ default: "" })
 
 // Seeded off a debounced copy: a gradient cannot be transitioned, so re-seeding per
 // keystroke would redraw the banner once per character while the organiser types. An
@@ -28,23 +29,23 @@ const image = defineModel<string>({ default: "" });
 // every new event the same.
 const settledSeed = refDebounced(
 	computed(() => props.seed.trim()),
-	250
-);
+	250,
+)
 
 const pattern = computed(() => ({
 	backgroundImage: bannerPattern(settledSeed.value || "Untitled"),
-}));
+}))
 
 // True from the first keystroke until the debounce fires — and the pattern swaps on the
 // same tick it turns false. So the blur is already up when the swap lands, and only
 // falls away afterwards, which is what hides the change.
-const isSettling = computed(() => props.seed.trim() !== settledSeed.value);
+const isSettling = computed(() => props.seed.trim() !== settledSeed.value)
 
 // Reset per image, so a second upload fades in rather than snapping.
-const loaded = ref(false);
+const loaded = ref(false)
 watch(image, () => {
-	loaded.value = false;
-});
+	loaded.value = false
+})
 </script>
 
 <template>
@@ -68,9 +69,7 @@ watch(image, () => {
 					 what hides it. -->
 				<div
 					class="absolute inset-0 scale-105 transition-[filter] duration-200 ease-out"
-					:class="
-						isSettling && !image ? 'blur-[10px] motion-reduce:blur-none' : 'blur-0'
-					"
+					:class="isSettling && !image ? 'blur-[10px] motion-reduce:blur-none' : 'blur-0'"
 					:style="pattern"
 					aria-hidden="true"
 				/>

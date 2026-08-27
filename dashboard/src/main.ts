@@ -1,12 +1,3 @@
-import { createApp } from "vue"
-
-import App from "./App.vue"
-import { applyLanguageFromQuery } from "./composables/useLanguage"
-import router from "./router"
-import { initSocket } from "./socket"
-
-import translationPlugin from "./translation"
-
 import {
 	Alert,
 	Badge,
@@ -20,6 +11,13 @@ import {
 	resourcesPlugin,
 	setConfig,
 } from "frappe-ui"
+import { createApp } from "vue"
+
+import App from "./App.vue"
+import { applyLanguageFromQuery } from "./composables/useLanguage"
+import router from "./router"
+import { initSocket } from "./socket"
+import translationPlugin from "./translation"
 
 import "./index.css"
 

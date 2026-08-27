@@ -10,4 +10,4 @@ frappe.query_reports["Event Overview"] = {
 			options: "Buzz Event",
 		},
 	],
-};
+}

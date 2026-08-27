@@ -1,8 +1,6 @@
 export function isImage(extension: string | null | undefined): boolean {
 	if (!extension) return false
-	return ["png", "jpg", "jpeg", "gif", "svg", "bmp", "webp"].includes(
-		extension.toLowerCase(),
-	)
+	return ["png", "jpg", "jpeg", "gif", "svg", "bmp", "webp"].includes(extension.toLowerCase())
 }
 
 export function validateIsImageFile(file: File): string | void {

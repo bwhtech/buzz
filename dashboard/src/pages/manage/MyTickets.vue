@@ -1,28 +1,29 @@
 <script setup lang="ts">
-import TimelineList from "@/components/dashboard/TimelineList.vue";
-import PrintedTicket from "@/components/dashboard/tickets/PrintedTicket.vue";
-import { useMyTickets } from "@/data/tickets";
-import type { TicketWithEvent } from "@/types";
-import { groupEventsByMonth } from "@/utils/eventGroups";
-import { type TimelineTab, inTab } from "@/utils/timelineTabs";
-import { dayjs } from "frappe-ui";
-import { computed, ref } from "vue";
+import { dayjs } from "frappe-ui"
+import { computed, ref } from "vue"
 
-const tab = ref<TimelineTab>("upcoming");
+import PrintedTicket from "@/components/dashboard/tickets/PrintedTicket.vue"
+import TimelineList from "@/components/dashboard/TimelineList.vue"
+import { useMyTickets } from "@/data/tickets"
+import type { TicketWithEvent } from "@/types"
+import { groupEventsByMonth } from "@/utils/eventGroups"
+import { type TimelineTab, inTab } from "@/utils/timelineTabs"
 
-const tickets = useMyTickets();
+const tab = ref<TimelineTab>("upcoming")
+
+const tickets = useMyTickets()
 
 // A ticket whose event was deleted has no date to file it under, so it drops out.
 const dated = computed(() =>
 	(tickets.data || []).filter((ticket): ticket is TicketWithEvent =>
-		Boolean(ticket.start_date && ticket.event_title)
-	)
-);
+		Boolean(ticket.start_date && ticket.event_title),
+	),
+)
 
 // Plain dayjs: these are date-only values, and dayjsLocal shifts them a day back.
 const months = computed(() =>
-	groupEventsByMonth(inTab(dated.value, tab.value, dayjs().format("YYYY-MM-DD")))
-);
+	groupEventsByMonth(inTab(dated.value, tab.value, dayjs().format("YYYY-MM-DD"))),
+)
 </script>
 
 <template>

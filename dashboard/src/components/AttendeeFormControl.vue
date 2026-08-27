@@ -53,10 +53,7 @@
 				type="select"
 				:options="
 					availableTicketTypes.map((tt) => ({
-						label: `${__(tt.title ?? '')} (${formatPriceOrFree(
-							tt.price,
-							tt.currency
-						)})`,
+						label: `${__(tt.title ?? '')} (${formatPriceOrFree(tt.price, tt.currency)})`,
 						value: String(tt.name),
 					}))
 				"
@@ -94,10 +91,7 @@
 					</div>
 				</div>
 
-				<div
-					v-if="addOn.user_selects_option && getAddOnSelected(addOn.name)"
-					class="mt-2 ml-6"
-				>
+				<div v-if="addOn.user_selects_option && getAddOnSelected(addOn.name)" class="mt-2 ml-6">
 					<FormControl
 						:model-value="getAddOnOption(addOn.name)"
 						@update:model-value="updateAddOnOption(addOn.name, $event)"
@@ -117,39 +111,41 @@
 </template>
 
 <script setup lang="ts">
-import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields";
-import { formatPriceOrFree } from "@/utils/currency";
-import { isZoomBackedCategory } from "@/utils/zoomCategory";
-import { Tooltip } from "frappe-ui";
-import { type PropType, computed } from "vue";
-import CustomFieldInput from "./CustomFieldInput.vue";
+import { Tooltip } from "frappe-ui"
+import { type PropType, computed } from "vue"
+
+import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields"
+import { formatPriceOrFree } from "@/utils/currency"
+import { isZoomBackedCategory } from "@/utils/zoomCategory"
+
+import CustomFieldInput from "./CustomFieldInput.vue"
 
 interface AvailableTicketType {
-	name: string | number;
-	title?: string;
-	price?: number;
-	currency?: string;
+	name: string | number
+	title?: string
+	price?: number
+	currency?: string
 }
 
 interface AvailableAddOn {
-	name: string;
-	title?: string;
-	description?: string;
-	price?: number;
-	options?: string[];
-	user_selects_option?: 0 | 1 | boolean;
+	name: string
+	title?: string
+	description?: string
+	price?: number
+	options?: string[]
+	user_selects_option?: 0 | 1 | boolean
 }
 
 interface AttendeeAddOnSelection {
-	selected: boolean;
-	option: string | null;
+	selected: boolean
+	option: string | null
 }
 
 interface Attendee {
-	ticket_type?: string;
-	add_ons?: Record<string, AttendeeAddOnSelection>;
-	custom_fields?: Record<string, any>;
-	[key: string]: any;
+	ticket_type?: string
+	add_ons?: Record<string, AttendeeAddOnSelection>
+	custom_fields?: Record<string, any>
+	[key: string]: any
 }
 
 const props = defineProps({
@@ -167,86 +163,82 @@ const props = defineProps({
 		required: false,
 		default: () => ({}),
 	},
-});
+})
 
-defineEmits(["remove"]);
+defineEmits(["remove"])
 
-const isZoomEvent = computed(() => isZoomBackedCategory(props.eventDetails.category));
+const isZoomEvent = computed(() => isZoomBackedCategory(props.eventDetails.category))
 
 // Helper methods to safely access add-on properties
 const ensureAddOnExists = (addOnName: string) => {
 	if (!props.attendee.add_ons) {
-		props.attendee.add_ons = {};
+		props.attendee.add_ons = {}
 	}
 	if (!props.attendee.add_ons[addOnName]) {
-		const addOn = props.availableAddOns.find((a) => a.name === addOnName);
+		const addOn = props.availableAddOns.find((a) => a.name === addOnName)
 		props.attendee.add_ons[addOnName] = {
 			selected: false,
 			option: addOn?.options ? addOn.options[0] || null : null,
-		};
+		}
 	}
-};
+}
 
 const getAddOnSelected = (addOnName: string) => {
-	ensureAddOnExists(addOnName);
-	return props.attendee.add_ons![addOnName].selected;
-};
+	ensureAddOnExists(addOnName)
+	return props.attendee.add_ons![addOnName].selected
+}
 
 const getAddOnOption = (addOnName: string) => {
-	ensureAddOnExists(addOnName);
-	return props.attendee.add_ons![addOnName].option;
-};
+	ensureAddOnExists(addOnName)
+	return props.attendee.add_ons![addOnName].option
+}
 
 const updateAddOnSelection = (addOnName: string, selected: boolean) => {
-	ensureAddOnExists(addOnName);
-	props.attendee.add_ons![addOnName].selected = selected;
+	ensureAddOnExists(addOnName)
+	props.attendee.add_ons![addOnName].selected = selected
 
 	// If selecting an add-on and it has options, ensure the first option is selected
 	if (selected) {
-		const addOn = props.availableAddOns.find((a) => a.name === addOnName);
-		if (
-			addOn?.options &&
-			addOn.options.length > 0 &&
-			!props.attendee.add_ons![addOnName].option
-		) {
-			props.attendee.add_ons![addOnName].option = addOn.options[0];
+		const addOn = props.availableAddOns.find((a) => a.name === addOnName)
+		if (addOn?.options && addOn.options.length > 0 && !props.attendee.add_ons![addOnName].option) {
+			props.attendee.add_ons![addOnName].option = addOn.options[0]
 		}
 	}
-};
+}
 
 const updateAddOnOption = (addOnName: string, option: string) => {
-	ensureAddOnExists(addOnName);
-	props.attendee.add_ons![addOnName].option = option;
-};
+	ensureAddOnExists(addOnName)
+	props.attendee.add_ons![addOnName].option = option
+}
 
 // Custom fields helper methods
 const ensureCustomFieldsExists = () => {
 	if (!props.attendee.custom_fields) {
-		props.attendee.custom_fields = {};
+		props.attendee.custom_fields = {}
 	}
-};
+}
 
 const getCustomFieldValue = (fieldname: string) => {
-	ensureCustomFieldsExists();
-	const currentValue = props.attendee.custom_fields![fieldname];
+	ensureCustomFieldsExists()
+	const currentValue = props.attendee.custom_fields![fieldname]
 
 	// Apply default for fields that don't have values yet
 	if (!currentValue && currentValue !== "") {
-		const field = props.customFields.find((f) => f.fieldname === fieldname);
+		const field = props.customFields.find((f) => f.fieldname === fieldname)
 		if (field) {
-			const defaultValue = getFieldDefaultValue(field);
+			const defaultValue = getFieldDefaultValue(field)
 			if (defaultValue) {
-				updateCustomFieldValue(fieldname, defaultValue);
-				return defaultValue;
+				updateCustomFieldValue(fieldname, defaultValue)
+				return defaultValue
 			}
 		}
 	}
 
-	return currentValue || "";
-};
+	return currentValue || ""
+}
 
 const updateCustomFieldValue = (fieldname: string, value: any) => {
-	ensureCustomFieldsExists();
-	props.attendee.custom_fields![fieldname] = value;
-};
+	ensureCustomFieldsExists()
+	props.attendee.custom_fields![fieldname] = value
+}
 </script>

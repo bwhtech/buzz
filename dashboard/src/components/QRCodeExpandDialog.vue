@@ -7,9 +7,9 @@
 </template>
 
 <script setup lang="ts">
-import { Dialog } from "frappe-ui";
+import { Dialog } from "frappe-ui"
 
-const isOpen = defineModel({ type: Boolean, default: false });
+const isOpen = defineModel({ type: Boolean, default: false })
 
 defineProps({
 	qrCodeSrc: {
@@ -20,5 +20,5 @@ defineProps({
 		type: String,
 		default: "QR Code",
 	},
-});
+})
 </script>

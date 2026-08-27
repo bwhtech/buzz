@@ -1,9 +1,9 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test"
 
 // Auth state file path (added to .gitignore)
-const authFile = "e2e/.auth/user.json";
-const frontdeskFile = "e2e/.auth/frontdesk.json";
-const ticketsAttendeeFile = "e2e/.auth/tickets-attendee.json";
+const authFile = "e2e/.auth/user.json"
+const frontdeskFile = "e2e/.auth/frontdesk.json"
+const ticketsAttendeeFile = "e2e/.auth/tickets-attendee.json"
 
 /**
  * Playwright configuration for Buzz E2E tests.
@@ -227,4 +227,4 @@ export default defineConfig({
 	//   url: 'http://localhost:3000',
 	//   reuseExistingServer: !process.env.CI,
 	// },
-});
+})

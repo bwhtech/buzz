@@ -12,9 +12,7 @@
 							{{ __("Full booking cancellation has been requested.") }}
 						</span>
 						<span v-else>
-							{{
-								__("Partial cancellation has been requested for selected tickets.")
-							}}
+							{{ __("Partial cancellation has been requested for selected tickets.") }}
 						</span>
 						{{ __("Request submitted on") }}
 						{{ formatDate(cancellationRequest.creation) }}.
@@ -26,13 +24,13 @@
 </template>
 
 <script setup lang="ts">
-import LucideInfo from "~icons/lucide/info";
+import LucideInfo from "~icons/lucide/info"
 
 defineProps<{
-	cancellationRequest?: Record<string, any> | null;
-}>();
+	cancellationRequest?: Record<string, any> | null
+}>()
 
 const formatDate = (dateString: string) => {
-	return new Date(dateString).toLocaleDateString();
-};
+	return new Date(dateString).toLocaleDateString()
+}
 </script>

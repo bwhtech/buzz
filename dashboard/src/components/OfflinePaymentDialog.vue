@@ -41,14 +41,9 @@
 						@success="onFileUpload"
 					>
 						<template #default="{ openFileSelector, uploading, progress }">
-							<div
-								v-if="paymentProof"
-								class="flex items-center gap-1.5 text-sm text-ink-green-6"
-							>
+							<div v-if="paymentProof" class="flex items-center gap-1.5 text-sm text-ink-green-6">
 								<LucideCheckCircle class="h-4 w-4 flex-shrink-0" />
-								<span class="truncate">{{
-									paymentProof.file_name || paymentProof.name
-								}}</span>
+								<span class="truncate">{{ paymentProof.file_name || paymentProof.name }}</span>
 								<button
 									type="button"
 									class="ml-auto p-1 rounded hover:bg-surface-gray-2 text-ink-gray-5 hover:text-ink-gray-8"
@@ -58,17 +53,8 @@
 									<LucideRefreshCw class="h-3.5 w-3.5" />
 								</button>
 							</div>
-							<Button
-								v-else
-								@click="openFileSelector"
-								:loading="uploading"
-								variant="outline"
-							>
-								{{
-									uploading
-										? __("Uploading {0}%", [progress])
-										: __("Upload File")
-								}}
+							<Button v-else @click="openFileSelector" :loading="uploading" variant="outline">
+								{{ uploading ? __("Uploading {0}%", [progress]) : __("Upload File") }}
 							</Button>
 						</template>
 					</FileUploader>
@@ -94,13 +80,15 @@
 </template>
 
 <script setup lang="ts">
-import type { FrappeField } from "@/types";
-import { Button, Dialog, FileUploader, toast } from "frappe-ui";
-import { computed, type PropType, ref } from "vue";
-import LucideCheckCircle from "~icons/lucide/check-circle";
-import LucideRefreshCw from "~icons/lucide/refresh-cw";
-import { formatCurrency } from "../utils/currency";
-import CustomFieldsSection from "./CustomFieldsSection.vue";
+import { Button, Dialog, FileUploader, toast } from "frappe-ui"
+import { computed, type PropType, ref } from "vue"
+import LucideCheckCircle from "~icons/lucide/check-circle"
+import LucideRefreshCw from "~icons/lucide/refresh-cw"
+
+import type { FrappeField } from "@/types"
+
+import { formatCurrency } from "../utils/currency"
+import CustomFieldsSection from "./CustomFieldsSection.vue"
 
 const props = defineProps({
 	open: {
@@ -127,55 +115,54 @@ const props = defineProps({
 		type: Array as PropType<FrappeField[]>,
 		default: () => [],
 	},
-});
+})
 
-const emit = defineEmits(["update:open", "submit", "cancel"]);
+const emit = defineEmits(["update:open", "submit", "cancel"])
 
 const isOpen = computed({
 	get: () => props.open,
 	set: (value) => emit("update:open", value),
-});
+})
 
-const paymentProof = ref<Record<string, any> | null>(null);
-const customFieldsData = ref<Record<string, any>>({});
+const paymentProof = ref<Record<string, any> | null>(null)
+const customFieldsData = ref<Record<string, any>>({})
 
 // Custom fields are now pre-filtered by method in BookingForm
-const offlineCustomFields = computed(() => props.customFields);
+const offlineCustomFields = computed(() => props.customFields)
 
 // Check if submit should be disabled
 const isSubmitDisabled = computed(() => {
 	// Check payment proof requirement
 	if (props.offlineSettings.collect_payment_proof && !paymentProof.value) {
-		return true;
+		return true
 	}
 
 	// Check mandatory custom fields
 	for (const field of offlineCustomFields.value) {
 		if (
 			field.mandatory &&
-			(!customFieldsData.value[field.fieldname] ||
-				customFieldsData.value[field.fieldname] === "")
+			(!customFieldsData.value[field.fieldname] || customFieldsData.value[field.fieldname] === "")
 		) {
-			return true;
+			return true
 		}
 	}
 
-	return false;
-});
+	return false
+})
 
 const onFileUpload = (file: Record<string, any>) => {
-	paymentProof.value = file;
-};
+	paymentProof.value = file
+}
 
 const submitOfflinePayment = () => {
 	if (isSubmitDisabled.value) {
-		toast.error(__("Please fill all required fields"));
-		return;
+		toast.error(__("Please fill all required fields"))
+		return
 	}
 
 	emit("submit", {
 		payment_proof: paymentProof.value,
 		custom_fields: customFieldsData.value,
-	});
-};
+	})
+}
 </script>

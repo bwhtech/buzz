@@ -1,5 +1,6 @@
-import type { EventDetail, EventGuests, MyEvents } from "@/types"
 import { createResource, useCall } from "frappe-ui"
+
+import type { EventDetail, EventGuests, MyEvents } from "@/types"
 
 // v2 path: useCall reads the payload from `data`, which /api/method names `message`.
 // Uncached: cacheKey would persist this user's feed to IndexedDB past a logout.

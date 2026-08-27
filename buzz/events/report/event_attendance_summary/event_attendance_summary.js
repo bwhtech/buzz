@@ -11,4 +11,4 @@ frappe.query_reports["Event Attendance Summary"] = {
 			reqd: 1,
 		},
 	],
-};
+}

@@ -1,14 +1,12 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
+
 import { groupEventsByMonth } from "./eventGroups.ts"
 
 const event = (start_date: string, title = start_date) => ({ start_date, title })
 
 test("events on the same date share a day group", () => {
-	const groups = groupEventsByMonth([
-		event("2026-08-15", "first"),
-		event("2026-08-15", "second"),
-	])
+	const groups = groupEventsByMonth([event("2026-08-15", "first"), event("2026-08-15", "second")])
 
 	assert.equal(groups.length, 1)
 	assert.deepEqual(
@@ -22,11 +20,7 @@ test("events on the same date share a day group", () => {
 })
 
 test("dates split across months in input order", () => {
-	const groups = groupEventsByMonth([
-		event("2026-08-15"),
-		event("2026-08-20"),
-		event("2026-09-01"),
-	])
+	const groups = groupEventsByMonth([event("2026-08-15"), event("2026-08-20"), event("2026-09-01")])
 
 	assert.deepEqual(
 		groups.map((group) => group.month),
@@ -39,11 +33,7 @@ test("dates split across months in input order", () => {
 })
 
 test("descending input keeps its order", () => {
-	const groups = groupEventsByMonth([
-		event("2026-09-01"),
-		event("2026-08-20"),
-		event("2026-08-15"),
-	])
+	const groups = groupEventsByMonth([event("2026-09-01"), event("2026-08-20"), event("2026-08-15")])
 
 	assert.deepEqual(
 		groups.map((group) => group.month),

@@ -1,32 +1,33 @@
 <script setup lang="ts">
-import { useProposalStatuses } from "@/composables/useProposalStatuses";
-import { session } from "@/data/session";
-import { userResource } from "@/data/user";
-import type { ProposalWithEvent } from "@/types";
-import { bannerPattern } from "@/utils/eventBanner";
-import { speakerByline } from "@/utils/speakerByline";
-import { Avatar, Badge, HoverCard, Tooltip, dayjs, dayjsLocal } from "frappe-ui";
-import { computed } from "vue";
+import { Avatar, Badge, HoverCard, Tooltip, dayjs, dayjsLocal } from "frappe-ui"
+import { computed } from "vue"
 
-const props = defineProps<{ proposal: ProposalWithEvent }>();
+import { useProposalStatuses } from "@/composables/useProposalStatuses"
+import { session } from "@/data/session"
+import { userResource } from "@/data/user"
+import type { ProposalWithEvent } from "@/types"
+import { bannerPattern } from "@/utils/eventBanner"
+import { speakerByline } from "@/utils/speakerByline"
 
-const { getStatusTheme, getStatusIcon } = useProposalStatuses();
+const props = defineProps<{ proposal: ProposalWithEvent }>()
+
+const { getStatusTheme, getStatusIcon } = useProposalStatuses()
 
 const byline = computed(() =>
-	speakerByline(props.proposal.speakers, userResource.data?.email || session.user)
-);
+	speakerByline(props.proposal.speakers, userResource.data?.email || session.user),
+)
 
 const banner = computed(() => ({
 	backgroundImage: bannerPattern(props.proposal.event),
-}));
+}))
 
 // Plain dayjs: start_date is date-only, and a timezone shift moves it a day back.
-const eventDate = computed(() => dayjs(props.proposal.start_date).format("D MMM YYYY"));
+const eventDate = computed(() => dayjs(props.proposal.start_date).format("D MMM YYYY"))
 
 // modified is a full timestamp in the site's timezone, so this one does convert.
-const modified = computed(() => dayjsLocal(props.proposal.modified));
-const lastUpdated = computed(() => modified.value.fromNow());
-const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm A"));
+const modified = computed(() => dayjsLocal(props.proposal.modified))
+const lastUpdated = computed(() => modified.value.fromNow())
+const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm A"))
 </script>
 
 <template>
@@ -39,9 +40,7 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 				<h3 class="font-semibold text-xl text-ink-gray-8">{{ proposal.title }}</h3>
 				<p v-if="byline" class="text-base text-ink-gray-7">
 					By {{ byline.lead
-					}}<template v-if="byline.rest.length === 1">
-						&amp; {{ byline.rest[0] }}</template
-					>
+					}}<template v-if="byline.rest.length === 1"> &amp; {{ byline.rest[0] }}</template>
 					<template v-else-if="byline.rest.length">
 						and
 						<HoverCard :hover-delay="0.15" align="start">
@@ -83,10 +82,9 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 						For
 						<HoverCard :hover-delay="0.15" align="start">
 							<template #trigger>
-								<span
-									class="font-medium text-ink-gray-8 transition-colors hover:text-ink-gray-9"
-									>{{ proposal.event_title }}</span
-								>
+								<span class="font-medium text-ink-gray-8 transition-colors hover:text-ink-gray-9">{{
+									proposal.event_title
+								}}</span>
 							</template>
 							<div class="w-56 space-y-2 p-2">
 								<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
@@ -120,7 +118,9 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 
 <style scoped>
 .proposal-card {
-	transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), border-color 160ms ease;
+	transition:
+		transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+		border-color 160ms ease;
 }
 
 .proposal-card:active {

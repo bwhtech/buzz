@@ -1,7 +1,8 @@
+import { useList } from "frappe-ui"
+
 import { session } from "@/data/session"
 import { userResource } from "@/data/user"
 import type { TicketStub } from "@/types"
-import { useList } from "frappe-ui"
 
 // Everything the printed ticket shows lives on the ticket or one link hop away,
 // so the standard list call covers it without a whitelisted endpoint.

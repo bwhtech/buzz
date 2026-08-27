@@ -1,6 +1,7 @@
-import { triggerCelebrationConfetti } from "@/utils/confetti"
 import { type Ref, onMounted, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
+
+import { triggerCelebrationConfetti } from "@/utils/confetti"
 
 interface PaymentSuccessOptions {
 	onSuccess?: () => void
@@ -28,15 +29,8 @@ interface PaymentSuccessReturn {
  * @param {boolean} options.cleanupUrl - Whether to clean up success parameter from URL (default: true)
  * @returns {Object} - Returns reactive state and helper functions
  */
-export function usePaymentSuccess(
-	options: PaymentSuccessOptions = {},
-): PaymentSuccessReturn {
-	const {
-		onSuccess,
-		messageDuration = 10000,
-		enableConfetti = true,
-		cleanupUrl = true,
-	} = options
+export function usePaymentSuccess(options: PaymentSuccessOptions = {}): PaymentSuccessReturn {
+	const { onSuccess, messageDuration = 10000, enableConfetti = true, cleanupUrl = true } = options
 
 	const route = useRoute()
 	const router = useRouter()

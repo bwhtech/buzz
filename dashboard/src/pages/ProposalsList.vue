@@ -52,22 +52,23 @@
 </template>
 
 <script setup lang="ts">
-import { useProposalStatuses } from "@/composables/useProposalStatuses";
-import { session } from "@/data/session";
-import type { ProposalListItem } from "@/types";
-import { Badge, ListRowItem, ListView, Spinner, createResource, dayjsLocal } from "frappe-ui";
+import { Badge, ListRowItem, ListView, Spinner, createResource, dayjsLocal } from "frappe-ui"
 
-const { getStatusTheme, getStatusIcon } = useProposalStatuses();
+import { useProposalStatuses } from "@/composables/useProposalStatuses"
+import { session } from "@/data/session"
+import type { ProposalListItem } from "@/types"
+
+const { getStatusTheme, getStatusIcon } = useProposalStatuses()
 
 const columns = [
 	{ label: __("Title"), key: "title", width: "240px" },
 	{ label: __("Event"), key: "event_title", width: "180px" },
 	{ label: __("Status"), key: "status", width: "130px" },
 	{ label: __("Submitted"), key: "formatted_creation", width: "120px" },
-];
+]
 
 interface ProposalRow extends ProposalListItem {
-	formatted_creation: string;
+	formatted_creation: string
 }
 
 // Server-side scoping (submitter or listed speaker) instead of a client
@@ -81,5 +82,5 @@ const proposals = createResource({
 			...proposal,
 			formatted_creation: dayjsLocal(proposal.creation).format("MMM DD, YYYY"),
 		})),
-});
+})
 </script>

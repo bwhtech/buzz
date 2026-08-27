@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import AddMembersDialog from "@/components/dashboard/teams/AddMembersDialog.vue";
-import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue";
-import { session } from "@/data/session";
-import { currentTeam, removeMember, useTeamOverview } from "@/data/teams";
-import type { TeamInvite, TeamMember } from "@/types";
-import { Avatar, Button, Dropdown, ErrorMessage, LoadingText, dialog, toast } from "frappe-ui";
-import { computed, ref } from "vue";
+import { Avatar, Button, Dropdown, ErrorMessage, LoadingText, dialog, toast } from "frappe-ui"
+import { computed, ref } from "vue"
 
-const MANAGING_ROLES = ["Owner", "Admin"];
+import AddMembersDialog from "@/components/dashboard/teams/AddMembersDialog.vue"
+import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue"
+import { session } from "@/data/session"
+import { currentTeam, removeMember, useTeamOverview } from "@/data/teams"
+import type { TeamInvite, TeamMember } from "@/types"
+
+const MANAGING_ROLES = ["Owner", "Admin"]
 
 // Plain-language reading of the capability matrix in specs/v2/00-teams.
 const ROLES = [
@@ -16,35 +17,34 @@ const ROLES = [
 	{ name: "Manager", can: "Creates and edits events. Cannot delete records or manage members." },
 	{ name: "Frontdesk", can: "Checks attendees in at the door, and nothing else." },
 	{ name: "Viewer", can: "Reads the team's events and details. Changes nothing." },
-];
+]
 // Header and rows share one grid so the columns line up without a table element.
-const COLUMNS =
-	"grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)_2rem] items-center gap-4";
+const COLUMNS = "grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)_2rem] items-center gap-4"
 
-const isAdding = ref(false);
+const isAdding = ref(false)
 
-const teamOverview = useTeamOverview();
+const teamOverview = useTeamOverview()
 
-const team = computed(() => teamOverview.data);
+const team = computed(() => teamOverview.data)
 
-const errorMessage = computed(() => teamOverview.error?.message);
+const errorMessage = computed(() => teamOverview.error?.message)
 
-const canManage = computed(() => MANAGING_ROLES.includes(team.value?.my_role ?? ""));
+const canManage = computed(() => MANAGING_ROLES.includes(team.value?.my_role ?? ""))
 
 // Members and pending invitations share one list so the table reads as the whole team,
 // with the people who have not accepted yet at the bottom.
 const rows = computed<Row[]>(() => [
 	...(team.value?.members ?? []).map(memberRow),
 	...(team.value?.invites ?? []).map(inviteRow),
-]);
+])
 
 interface Row {
-	key: string;
-	name: string;
-	email: string;
-	role: string;
-	image?: string;
-	member?: TeamMember;
+	key: string
+	name: string
+	email: string
+	role: string
+	image?: string
+	member?: TeamMember
 }
 
 function memberRow(member: TeamMember): Row {
@@ -55,7 +55,7 @@ function memberRow(member: TeamMember): Row {
 		role: member.team_role,
 		image: member.user_image ?? undefined,
 		member,
-	};
+	}
 }
 
 // There is no user yet, so no name and no image — the address stands in for both.
@@ -65,14 +65,14 @@ function inviteRow(invite: TeamInvite): Row {
 		name: invite.email,
 		email: invite.email,
 		role: invite.team_role,
-	};
+	}
 }
 
 // The owner is locked server-side, leaving a team is its own flow rather than a
 // self-removal, and an invitation is revoked rather than removed.
 function canRemove(row: Row) {
-	if (!canManage.value || !row.member) return false;
-	return row.member.team_role !== "Owner" && row.member.user !== session.user;
+	if (!canManage.value || !row.member) return false
+	return row.member.team_role !== "Owner" && row.member.user !== session.user
 }
 
 function actionsFor(row: Row) {
@@ -83,7 +83,7 @@ function actionsFor(row: Row) {
 			theme: "red" as const,
 			onClick: () => confirmRemove(row),
 		},
-	];
+	]
 }
 
 function confirmRemove(row: Row) {
@@ -94,11 +94,11 @@ function confirmRemove(row: Row) {
 		confirmLabel: "Remove",
 		// A rejected promise renders inline in the dialog, so failures need no branch here.
 		onConfirm: async () => {
-			await removeMember.submit({ team: currentTeam.value?.name, user: row.email });
-			await teamOverview.reload();
-			toast.success(`${row.name} was removed from the team.`);
+			await removeMember.submit({ team: currentTeam.value?.name, user: row.email })
+			await teamOverview.reload()
+			toast.success(`${row.name} was removed from the team.`)
 		},
-	});
+	})
 }
 </script>
 
@@ -130,12 +130,7 @@ function confirmRemove(row: Row) {
 
 			<div>
 				<div class="flex justify-end pb-3">
-					<Button
-						v-if="canManage"
-						icon-left="plus"
-						label="Add member"
-						@click="isAdding = true"
-					/>
+					<Button v-if="canManage" icon-left="plus" label="Add member" @click="isAdding = true" />
 				</div>
 
 				<div :class="COLUMNS" class="pb-2 text-sm text-ink-gray-5">
@@ -161,9 +156,7 @@ function confirmRemove(row: Row) {
 
 						<span class="truncate text-base font-medium text-ink-gray-8">
 							{{ row.role }}
-							<span v-if="!row.member" class="font-normal text-ink-gray-5">
-								(Invited)
-							</span>
+							<span v-if="!row.member" class="font-normal text-ink-gray-5"> (Invited) </span>
 						</span>
 
 						<Dropdown v-if="canRemove(row)" :options="actionsFor(row)" align="end">
@@ -193,7 +186,8 @@ function confirmRemove(row: Row) {
 .member-leave-active {
 	position: absolute;
 	inset-inline: 0;
-	transition: opacity 150ms cubic-bezier(0.23, 1, 0.32, 1),
+	transition:
+		opacity 150ms cubic-bezier(0.23, 1, 0.32, 1),
 		transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 

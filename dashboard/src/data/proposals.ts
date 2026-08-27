@@ -1,5 +1,6 @@
-import type { ProposalListItem } from "@/types"
 import { useCall } from "frappe-ui"
+
+import type { ProposalListItem } from "@/types"
 
 // v2 path: useCall reads the payload from `data`, which /api/method names `message`.
 // Uncached: cacheKey would persist this user's proposals to IndexedDB past a logout.

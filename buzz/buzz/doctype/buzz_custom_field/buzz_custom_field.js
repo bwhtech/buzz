@@ -9,7 +9,7 @@ frappe.ui.form.on("Buzz Custom Field", {
 					istable: 0,
 					issingle: 0,
 				},
-			};
-		});
+			}
+		})
 	},
-});
+})

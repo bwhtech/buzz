@@ -7,10 +7,12 @@
 		"dev": "vite",
 		"build": "vite build --base=/assets/buzz/dashboard/ && yarn copy-html-entry",
 		"preview": "vite preview",
-		"lint": "biome check --write .",
+		"lint": "oxlint --deny-warnings",
 		"typecheck": "./typecheck.sh",
 		"test:unit": "node --test 'src/**/*.test.ts'",
-		"copy-html-entry": "cp ../buzz/public/dashboard/index.html ../buzz/www/dashboard.html"
+		"copy-html-entry": "cp ../buzz/public/dashboard/index.html ../buzz/www/dashboard.html",
+		"fmt": "oxfmt",
+		"fmt:check": "oxfmt --check"
 	},
 	"dependencies": {
 		"@vueuse/core": "^13.6.0",
@@ -30,12 +32,13 @@
 		"prosemirror-view": "^1.42.1"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "1.9.4",
 		"@types/canvas-confetti": "^1.9.0",
 		"@types/node": "^25.2.0",
 		"@vitejs/plugin-vue": "^6.0.8",
 		"autoprefixer": "^10.4.2",
 		"html5-qrcode": "^2.3.8",
+		"oxfmt": "0.65.0",
+		"oxlint": "1.80.0",
 		"postcss": "^8.4.5",
 		"tailwindcss": "^3.4.15",
 		"typescript": "^5.9.3",

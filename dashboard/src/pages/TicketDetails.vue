@@ -51,9 +51,7 @@
 				<LucideTriangleAlert class="w-5 h-5 text-ink-amber-5 mr-3" />
 				<div>
 					<p class="text-ink-amber-6 text-sm">
-						<strong>{{
-							__("Add-on preference changes are no longer available")
-						}}</strong>
+						<strong>{{ __("Add-on preference changes are no longer available") }}</strong>
 						- {{ __("The change window has closed as the event is approaching.") }}
 					</p>
 				</div>
@@ -69,45 +67,29 @@
 
 				<div class="space-y-3">
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("Attendee Name")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("Attendee Name") }}</label>
 						<p class="text-ink-gray-9">{{ ticketDetails.data.doc.attendee_name }}</p>
 					</div>
 
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("Attendee Email")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("Attendee Email") }}</label>
 						<p class="text-ink-gray-9">{{ ticketDetails.data.doc.attendee_email }}</p>
 					</div>
 
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("Event")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("Event") }}</label>
 						<p class="text-ink-gray-9">{{ ticketDetails.data.doc.event_title }}</p>
 					</div>
 
-					<div
-						v-if="
-							!['Default', 'Normal'].includes(
-								ticketDetails.data.doc.ticket_type_title
-							)
-						"
-					>
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("Ticket Type")
-						}}</label>
+					<div v-if="!['Default', 'Normal'].includes(ticketDetails.data.doc.ticket_type_title)">
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("Ticket Type") }}</label>
 						<p class="text-ink-gray-9">
 							{{ ticketDetails.data.doc.ticket_type_title }}
 						</p>
 					</div>
 
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("Status")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("Status") }}</label>
 						<Badge
 							:theme="getTicketStatusTheme(ticketDetails.data.doc.ticket_status)"
 							variant="subtle"
@@ -182,34 +164,26 @@
 
 				<div class="space-y-3">
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("Start Date")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("Start Date") }}</label>
 						<p class="text-ink-gray-9">
 							{{ ticketDetails.data.doc.formatted_start_date }}
 						</p>
 					</div>
 
 					<div v-if="ticketDetails.data.doc.formatted_end_date">
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("End Date")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("End Date") }}</label>
 						<p class="text-ink-gray-9">
 							{{ ticketDetails.data.doc.formatted_end_date }}
 						</p>
 					</div>
 
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("Venue")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("Venue") }}</label>
 						<p class="text-ink-gray-9">{{ ticketDetails.data.doc.venue }}</p>
 					</div>
 
 					<div v-if="ticketDetails.data.doc.description">
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("Description")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("Description") }}</label>
 						<p class="text-ink-gray-9">{{ ticketDetails.data.doc.description }}</p>
 					</div>
 				</div>
@@ -251,9 +225,7 @@
 
 				<div class="space-y-3">
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("Booking ID")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("Booking ID") }}</label>
 						<RouterLink
 							:to="{
 								name: 'booking-details',
@@ -266,15 +238,9 @@
 					</div>
 
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("Booking Status")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("Booking Status") }}</label>
 						<Badge
-							:theme="
-								ticketDetails.data.doc.booking_status === 'Confirmed'
-									? 'green'
-									: 'red'
-							"
+							:theme="ticketDetails.data.doc.booking_status === 'Confirmed' ? 'green' : 'red'"
 							variant="subtle"
 							size="md"
 						>
@@ -283,18 +249,14 @@
 					</div>
 
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("Total Amount")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("Total Amount") }}</label>
 						<p class="text-ink-gray-9">
 							{{ ticketDetails.data.doc.formatted_amount }}
 						</p>
 					</div>
 
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6">{{
-							__("Booked On")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6">{{ __("Booked On") }}</label>
 						<p class="text-ink-gray-9">
 							{{ ticketDetails.data.doc.formatted_creation }}
 						</p>
@@ -327,57 +289,59 @@
 </template>
 
 <script setup lang="ts">
-import type { TicketAddOn } from "@/types";
-import { formatCurrency } from "@/utils/currency";
-import { Badge, Button, Spinner, createResource } from "frappe-ui";
-import { dayjsLocal } from "frappe-ui";
-import { computed, ref } from "vue";
-import LucideDownload from "~icons/lucide/download";
-import LucideEdit from "~icons/lucide/edit";
-import LucideExternalLink from "~icons/lucide/external-link";
-import LucideTriangleAlert from "~icons/lucide/triangle-alert";
-import LucideUserPlus from "~icons/lucide/user-plus";
-import AddOnPreferenceDialog from "../components/AddOnPreferenceDialog.vue";
-import QRCodeExpandDialog from "../components/QRCodeExpandDialog.vue";
-import TicketTransferDialog from "../components/TicketTransferDialog.vue";
-import BackButton from "../components/common/BackButton.vue";
+import { Badge, Button, Spinner, createResource } from "frappe-ui"
+import { dayjsLocal } from "frappe-ui"
+import { computed, ref } from "vue"
+import LucideDownload from "~icons/lucide/download"
+import LucideEdit from "~icons/lucide/edit"
+import LucideExternalLink from "~icons/lucide/external-link"
+import LucideTriangleAlert from "~icons/lucide/triangle-alert"
+import LucideUserPlus from "~icons/lucide/user-plus"
+
+import type { TicketAddOn } from "@/types"
+import { formatCurrency } from "@/utils/currency"
+
+import AddOnPreferenceDialog from "../components/AddOnPreferenceDialog.vue"
+import BackButton from "../components/common/BackButton.vue"
+import QRCodeExpandDialog from "../components/QRCodeExpandDialog.vue"
+import TicketTransferDialog from "../components/TicketTransferDialog.vue"
 
 const props = defineProps({
 	ticketId: {
 		type: String,
 		required: true,
 	},
-});
+})
 
 // Helper function to format date and time together
 const formatEventDateTime = (date: string, time: string) => {
-	if (!date) return "";
+	if (!date) return ""
 
 	// Create a date object from the date string
-	const dateObj = dayjsLocal(date);
+	const dateObj = dayjsLocal(date)
 
 	// If time is provided, combine it with the date
 	if (time) {
 		// Parse the time (format: "HH:mm:ss")
-		const [hours, minutes] = time.split(":");
-		const dateTimeObj = dateObj.hour(Number.parseInt(hours)).minute(Number.parseInt(minutes));
-		return dateTimeObj.format("MMMM DD, YYYY [at] h:mm A");
+		const [hours, minutes] = time.split(":")
+		const dateTimeObj = dateObj.hour(Number.parseInt(hours)).minute(Number.parseInt(minutes))
+		return dateTimeObj.format("MMMM DD, YYYY [at] h:mm A")
 	}
 
 	// If no time, just show the date
-	return dateObj.format("MMMM DD, YYYY");
-};
+	return dateObj.format("MMMM DD, YYYY")
+}
 
-const showTransferDialog = ref(false);
-const showAddOnPreferenceDialog = ref(false);
-const showQRExpanded = ref(false);
+const showTransferDialog = ref(false)
+const showAddOnPreferenceDialog = ref(false)
+const showQRExpanded = ref(false)
 
 const ticketDetails = createResource({
 	url: "buzz.api.tickets.get_ticket_details",
 	params: { ticket_id: props.ticketId },
 	auto: true,
 	transform(data: any) {
-		if (!data) return null;
+		if (!data) return null
 
 		return {
 			...data,
@@ -404,9 +368,7 @@ const ticketDetails = createResource({
 				formatted_end_date: data.event?.end_date
 					? formatEventDateTime(data.event.end_date, data.event.end_time)
 					: null,
-				formatted_creation: dayjsLocal(data.doc.creation).format(
-					"MMMM DD, YYYY [at] h:mm A"
-				),
+				formatted_creation: dayjsLocal(data.doc.creation).format("MMMM DD, YYYY [at] h:mm A"),
 				event_title: data.event?.title || "",
 				venue: data.event?.venue || "",
 				description: data.event?.description || "",
@@ -418,65 +380,58 @@ const ticketDetails = createResource({
 			booking: data.booking,
 			ticket_type: data.ticket_type,
 			can_transfer_ticket: data.can_transfer_ticket,
-		};
+		}
 	},
-});
+})
 
 const canTransferTicket = computed(() => {
-	if (!ticketDetails.data) return false;
+	if (!ticketDetails.data) return false
 	return (
-		ticketDetails.data.doc.booking_status === "Confirmed" &&
-		ticketDetails.data.can_transfer_ticket
-	);
-});
+		ticketDetails.data.doc.booking_status === "Confirmed" && ticketDetails.data.can_transfer_ticket
+	)
+})
 
 const hasCustomizableAddOns = computed(() => {
 	if (!ticketDetails.data?.add_ons) {
-		console.log("No add_ons data found:", ticketDetails.data);
-		return false;
+		console.log("No add_ons data found:", ticketDetails.data)
+		return false
 	}
 
-	console.log("Add-ons data:", ticketDetails.data.add_ons);
+	console.log("Add-ons data:", ticketDetails.data.add_ons)
 	const hasCustomizable = ticketDetails.data.add_ons.some((addon: TicketAddOn) => {
-		console.log(
-			"Checking addon:",
-			addon,
-			"has options:",
-			addon.options && addon.options.length > 0
-		);
-		return addon.options && addon.options.length > 0;
-	});
-	console.log("Has customizable add-ons:", hasCustomizable);
-	return hasCustomizable;
-});
+		console.log("Checking addon:", addon, "has options:", addon.options && addon.options.length > 0)
+		return addon.options && addon.options.length > 0
+	})
+	console.log("Has customizable add-ons:", hasCustomizable)
+	return hasCustomizable
+})
 
 const canChangeAddOns = computed(() => {
-	if (!ticketDetails.data) return false;
+	if (!ticketDetails.data) return false
 	return (
-		ticketDetails.data.doc.booking_status === "Confirmed" &&
-		ticketDetails.data.can_change_add_ons
-	);
-});
+		ticketDetails.data.doc.booking_status === "Confirmed" && ticketDetails.data.can_change_add_ons
+	)
+})
 
 const getTicketStatusTheme = (status: string) => {
 	switch (status) {
 		case "Confirmed":
 		case "Active":
-			return "green";
+			return "green"
 		case "Cancelled":
-			return "red";
+			return "red"
 		case "Transferred":
-			return "blue";
+			return "blue"
 		default:
-			return "gray";
+			return "gray"
 	}
-};
+}
 
 const onTicketTransferSuccess = () => {
-	ticketDetails.reload();
-};
+	ticketDetails.reload()
+}
 
 const onAddOnPreferenceSuccess = () => {
-	ticketDetails.reload();
-};
+	ticketDetails.reload()
+}
 </script>

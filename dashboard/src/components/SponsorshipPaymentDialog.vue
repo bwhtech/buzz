@@ -17,10 +17,9 @@
 			<p
 				class="text-ink-gray-7"
 				v-html="
-					__(
-						'Select a sponsorship tier for <strong>{0}</strong> and proceed to payment.',
-						[eventTitle || __('this event')]
-					)
+					__('Select a sponsorship tier for <strong>{0}</strong> and proceed to payment.', [
+						eventTitle || __('this event'),
+					])
 				"
 			></p>
 
@@ -31,8 +30,7 @@
 					:key="tier.name"
 					class="border border-outline-gray-2 rounded-lg p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
 					:class="{
-						'border-outline-gray-4 bg-surface-gray-2':
-							selectedTier?.name === tier.name,
+						'border-outline-gray-4 bg-surface-gray-2': selectedTier?.name === tier.name,
 					}"
 					@click="selectedTier = tier"
 				>
@@ -137,15 +135,16 @@
 </template>
 
 <script setup lang="ts">
-import { formatCurrency } from "@/utils/currency";
-import { Button, Dialog, Spinner, createResource, useList } from "frappe-ui";
-import { computed, ref, watch } from "vue";
+import { Button, Dialog, Spinner, createResource, useList } from "frappe-ui"
+import { computed, ref, watch } from "vue"
+
+import { formatCurrency } from "@/utils/currency"
 
 interface Tier {
-	name: string;
-	title?: string;
-	price?: number;
-	currency?: string;
+	name: string
+	title?: string
+	price?: number
+	currency?: string
 }
 
 const props = defineProps({
@@ -163,44 +162,44 @@ const props = defineProps({
 	},
 	eventTitle: {
 		type: String,
-		required: false,
+		default: "",
 	},
-});
+})
 
-const emit = defineEmits(["update:open", "payment-started"]);
+const emit = defineEmits(["update:open", "payment-started"])
 
-const isOpen = ref(props.open);
-const selectedTier = ref<Tier | null>(null);
-const selectedGateway = ref<any>(null);
-const paymentGateways = ref<any[]>([]);
+const isOpen = ref(props.open)
+const selectedTier = ref<Tier | null>(null)
+const selectedGateway = ref<any>(null)
+const paymentGateways = ref<any[]>([])
 
-const hasMultipleGateways = computed(() => paymentGateways.value.length > 1);
+const hasMultipleGateways = computed(() => paymentGateways.value.length > 1)
 
 const canProceed = computed(() => {
-	if (!selectedTier.value) return false;
+	if (!selectedTier.value) return false
 	// If multiple gateways, require gateway selection
-	if (hasMultipleGateways.value && !selectedGateway.value) return false;
-	return true;
-});
+	if (hasMultipleGateways.value && !selectedGateway.value) return false
+	return true
+})
 
 // Watch for prop changes
 watch(
 	() => props.open,
 	(newVal) => {
-		isOpen.value = newVal;
+		isOpen.value = newVal
 		if (newVal && props.eventId) {
 			// Reset selection when dialog opens
-			selectedTier.value = null;
-			selectedGateway.value = null;
-			tiers.fetch();
-			fetchPaymentGateways();
+			selectedTier.value = null
+			selectedGateway.value = null
+			tiers.fetch()
+			fetchPaymentGateways()
 		}
-	}
-);
+	},
+)
 
 watch(isOpen, (newVal) => {
-	emit("update:open", newVal);
-});
+	emit("update:open", newVal)
+})
 
 // Resource to fetch sponsorship tiers
 const tiers = useList<Tier>({
@@ -210,54 +209,54 @@ const tiers = useList<Tier>({
 	orderBy: "price asc",
 	onError: console.error,
 	immediate: false, // Don't auto-fetch, we'll fetch manually when dialog opens
-});
+})
 
 // Fetch payment gateways for the event
 const paymentGatewaysResource = createResource({
 	url: "buzz.api.payments.get_event_payment_gateways",
 	onSuccess: (data: any[]) => {
-		paymentGateways.value = data || [];
+		paymentGateways.value = data || []
 	},
 	onError: console.error,
-});
+})
 
 function fetchPaymentGateways() {
 	paymentGatewaysResource.submit({
 		event: props.eventId,
-	});
+	})
 }
 
 // Resource to create payment link
 const paymentLink = createResource({
 	url: "buzz.api.sponsorships.create_sponsorship_payment_link",
 	onSuccess: (paymentUrl: string) => {
-		emit("payment-started");
-		closeDialog();
+		emit("payment-started")
+		closeDialog()
 		// Redirect to payment page
-		window.location.href = paymentUrl;
+		window.location.href = paymentUrl
 	},
 	onError: (error: unknown) => {
-		console.error("Payment link creation failed:", error);
+		console.error("Payment link creation failed:", error)
 		// TODO: Show error toast
 	},
-});
+})
 
 const closeDialog = () => {
-	isOpen.value = false;
-	selectedTier.value = null;
-	selectedGateway.value = null;
-};
+	isOpen.value = false
+	selectedTier.value = null
+	selectedGateway.value = null
+}
 
 const proceedToPayment = () => {
-	if (!selectedTier.value) return;
+	if (!selectedTier.value) return
 
 	// Use selected gateway or first available (for single gateway case)
-	const gateway = selectedGateway.value || paymentGateways.value[0] || null;
+	const gateway = selectedGateway.value || paymentGateways.value[0] || null
 
 	paymentLink.submit({
 		enquiry_id: props.enquiryId,
 		tier_id: selectedTier.value.name,
 		payment_gateway: gateway,
-	});
-};
+	})
+}
 </script>

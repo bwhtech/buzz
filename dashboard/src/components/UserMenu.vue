@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { session } from "@/data/session";
-import { Avatar, Button, Divider, Popover, useTheme } from "frappe-ui";
+import { Avatar, Button, Divider, Popover, useTheme } from "frappe-ui"
 
-const { currentTheme, setTheme } = useTheme();
+import { session } from "@/data/session"
+
+const { currentTheme, setTheme } = useTheme()
 
 const themes = [
 	{ value: "light", icon: "lucide-sun", label: "Light" },
 	{ value: "dark", icon: "lucide-moon", label: "Dark" },
 	{ value: "system", icon: "lucide-monitor", label: "System" },
-] as const;
+] as const
 </script>
 
 <template>
@@ -19,11 +20,7 @@ const themes = [
 				class="group flex h-10 w-full items-center gap-2 rounded px-1.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
 				:class="{ 'bg-surface-gray-2': isOpen }"
 			>
-				<Avatar
-					:image="session.userImage ?? undefined"
-					:label="session.fullName"
-					size="lg"
-				/>
+				<Avatar :image="session.userImage ?? undefined" :label="session.fullName" size="lg" />
 				<span class="flex-1 truncate text-left text-base text-ink-gray-8">
 					{{ session.fullName }}
 				</span>
