@@ -3,24 +3,15 @@
 		<div v-if="eventBookingResource.loading" class="flex justify-center py-16">
 			<Spinner class="w-8 h-8" />
 		</div>
-		<div
-			v-else-if="eventNotFound"
-			class="flex flex-col items-center justify-center py-16 px-4"
-		>
+		<div v-else-if="eventNotFound" class="flex flex-col items-center justify-center py-16 px-4">
 			<div class="text-center max-w-md">
 				<h2 class="text-2xl-semibold text-ink-gray-8 mb-2">
 					{{ __("Event Not Found") }}
 				</h2>
 				<p class="text-ink-gray-6 mb-6">
-					{{
-						__(
-							"The event you are looking for does not exist or may have been removed."
-						)
-					}}
+					{{ __("The event you are looking for does not exist or may have been removed.") }}
 				</p>
-				<Button variant="solid" size="lg" @click="$router.push('/')">{{
-					__("Go to Home")
-				}}</Button>
+				<Button variant="solid" size="lg" @click="$router.push('/')">{{ __("Go to Home") }}</Button>
 			</div>
 		</div>
 		<div
@@ -40,9 +31,7 @@
 				<p class="text-ink-gray-6 mb-6">
 					{{ __("Registrations for this event are closed.") }}
 				</p>
-				<Button variant="solid" size="lg" @click="goToHome">{{
-					__("Browse Other Events")
-				}}</Button>
+				<Button variant="solid" size="lg" @click="goToHome">{{ __("Browse Other Events") }}</Button>
 			</div>
 		</div>
 		<div v-else>
@@ -63,26 +52,28 @@
 </template>
 
 <script setup lang="ts">
+import { Spinner, createResource, usePageMeta } from "frappe-ui"
+import { computed, reactive, ref, watch } from "vue"
+
+import { session } from "@/data/session"
 import type {
 	AvailableAddOn,
 	AvailableTicketType,
 	FrappeError,
 	FrappeField,
 	OfflineMethod,
-} from "@/types";
-import { session } from "@/data/session";
-import { Spinner, createResource, usePageMeta } from "frappe-ui";
-import { computed, reactive, ref, watch } from "vue";
-import BookingForm from "../components/BookingForm.vue";
+} from "@/types"
+
+import BookingForm from "../components/BookingForm.vue"
 
 const eventBookingData = reactive<{
-	availableAddOns: AvailableAddOn[] | null;
-	availableTicketTypes: AvailableTicketType[] | null;
-	taxSettings: Record<string, any> | null;
-	eventDetails: Record<string, any> | null;
-	customFields: FrappeField[] | null;
-	paymentGateways: Record<string, any>[];
-	offlineMethods: OfflineMethod[];
+	availableAddOns: AvailableAddOn[] | null
+	availableTicketTypes: AvailableTicketType[] | null
+	taxSettings: Record<string, any> | null
+	eventDetails: Record<string, any> | null
+	customFields: FrappeField[] | null
+	paymentGateways: Record<string, any>[]
+	offlineMethods: OfflineMethod[]
 }>({
 	availableAddOns: null,
 	availableTicketTypes: null,
@@ -91,28 +82,28 @@ const eventBookingData = reactive<{
 	customFields: null,
 	paymentGateways: [],
 	offlineMethods: [],
-});
+})
 
-const eventNotFound = ref(false);
-const registrationsClosed = ref(false);
+const eventNotFound = ref(false)
+const registrationsClosed = ref(false)
 
 const props = defineProps({
 	eventRoute: {
 		type: String,
 		required: true,
 	},
-});
+})
 
-const isGuest = computed(() => !session.isLoggedIn);
+const isGuest = computed(() => !session.isLoggedIn)
 
 usePageMeta(() => {
-	const eventTitle = eventBookingData.eventDetails?.title;
-	return eventTitle ? { title: `${eventTitle} - ${__("Register")}` } : null;
-});
+	const eventTitle = eventBookingData.eventDetails?.title
+	return eventTitle ? { title: `${eventTitle} - ${__("Register")}` } : null
+})
 
 const goToHome = () => {
-	window.location.href = "/";
-};
+	window.location.href = "/"
+}
 
 const eventBookingResource = createResource({
 	url: "buzz.api.booking.get_event_booking_data",
@@ -121,33 +112,33 @@ const eventBookingResource = createResource({
 	},
 	auto: true,
 	onSuccess: (data: Record<string, any>) => {
-		eventBookingData.availableAddOns = data.available_add_ons || [];
-		eventBookingData.availableTicketTypes = data.available_ticket_types || [];
+		eventBookingData.availableAddOns = data.available_add_ons || []
+		eventBookingData.availableTicketTypes = data.available_ticket_types || []
 		eventBookingData.taxSettings = data.tax_settings || {
 			apply_tax: false,
 			tax_inclusive: false,
 			tax_label: "Tax",
 			tax_percentage: 0,
-		};
-		eventBookingData.eventDetails = data.event_details || {};
-		eventBookingData.customFields = data.custom_fields || [];
-		eventBookingData.paymentGateways = data.payment_gateways || [];
-		eventBookingData.offlineMethods = data.offline_methods || [];
-		registrationsClosed.value = data.registrations_closed || false;
+		}
+		eventBookingData.eventDetails = data.event_details || {}
+		eventBookingData.customFields = data.custom_fields || []
+		eventBookingData.paymentGateways = data.payment_gateways || []
+		eventBookingData.offlineMethods = data.offline_methods || []
+		registrationsClosed.value = data.registrations_closed || false
 	},
 	onError: (error: FrappeError) => {
 		if (error.message?.includes("DoesNotExistError")) {
-			eventNotFound.value = true;
+			eventNotFound.value = true
 		}
 	},
-});
+})
 
 watch(
 	() => session.isLoggedIn,
 	(isLoggedIn) => {
 		if (isLoggedIn) {
-			eventBookingResource.reload();
+			eventBookingResource.reload()
 		}
-	}
-);
+	},
+)
 </script>

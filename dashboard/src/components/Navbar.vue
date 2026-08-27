@@ -25,13 +25,7 @@
 				>
 					{{ __("Log Out") }}
 				</Button>
-				<Button
-					v-else
-					@click="openLoginDialog"
-					icon-right="log-in"
-					variant="ghost"
-					size="md"
-				>
+				<Button v-else @click="openLoginDialog" icon-right="log-in" variant="ghost" size="md">
 					{{ __("Log In") }}
 				</Button>
 			</div>
@@ -40,28 +34,29 @@
 </template>
 
 <script setup lang="ts">
-import { userResource } from "@/data/user";
-import LucideMoon from "~icons/lucide/moon";
-import LucideSun from "~icons/lucide/sun";
-import { session } from "../data/session";
-import LanguageSwitcher from "./LanguageSwitcher.vue";
-import BuzzLogo from "./common/BuzzLogo.vue";
+import { useStorage } from "@vueuse/core"
+import { onMounted } from "vue"
+import LucideMoon from "~icons/lucide/moon"
+import LucideSun from "~icons/lucide/sun"
 
-import { useLoginDialog } from "@/composables/useLoginDialog";
-import { useStorage } from "@vueuse/core";
-import { onMounted } from "vue";
+import { useLoginDialog } from "@/composables/useLoginDialog"
+import { userResource } from "@/data/user"
 
-const { open: openLoginDialog } = useLoginDialog();
-const userTheme = useStorage("user-theme", "dark");
+import { session } from "../data/session"
+import BuzzLogo from "./common/BuzzLogo.vue"
+import LanguageSwitcher from "./LanguageSwitcher.vue"
+
+const { open: openLoginDialog } = useLoginDialog()
+const userTheme = useStorage("user-theme", "dark")
 
 onMounted(() => {
-	document.documentElement.setAttribute("data-theme", userTheme.value);
-});
+	document.documentElement.setAttribute("data-theme", userTheme.value)
+})
 
 function toggleTheme() {
-	const currentTheme = userTheme.value;
-	const newTheme = currentTheme === "dark" ? "light" : "dark";
-	document.documentElement.setAttribute("data-theme", newTheme);
-	userTheme.value = newTheme;
+	const currentTheme = userTheme.value
+	const newTheme = currentTheme === "dark" ? "light" : "dark"
+	document.documentElement.setAttribute("data-theme", newTheme)
+	userTheme.value = newTheme
 }
 </script>

@@ -5,8 +5,8 @@
 		</template>
 		<div class="space-y-4">
 			<p class="text-ink-gray-7">
-				Transfer this ticket to a new attendee. The new attendee will receive the updated
-				ticket information.
+				Transfer this ticket to a new attendee. The new attendee will receive the updated ticket
+				information.
 			</p>
 
 			<FormControl
@@ -42,9 +42,10 @@
 </template>
 
 <script setup lang="ts">
-import type { FrappeError } from "@/types";
-import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui";
-import { computed, ref, watch } from "vue";
+import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui"
+import { computed, ref, watch } from "vue"
+
+import type { FrappeError } from "@/types"
 
 const props = defineProps({
 	modelValue: {
@@ -55,58 +56,58 @@ const props = defineProps({
 		type: Object,
 		default: null,
 	},
-});
+})
 
-const emit = defineEmits(["update:modelValue", "success"]);
+const emit = defineEmits(["update:modelValue", "success"])
 
 const isOpen = computed({
 	get: () => props.modelValue,
 	set: (value) => emit("update:modelValue", value),
-});
+})
 
 const transferForm = ref({
 	name: "",
 	email: "",
-});
+})
 
 // Transfer ticket resource
 const transferResource = createResource({
 	url: "buzz.api.tickets.transfer_ticket",
 	onSuccess: () => {
-		toast.success("Ticket transferred successfully!");
-		isOpen.value = false;
-		resetTransferForm();
-		emit("success");
+		toast.success("Ticket transferred successfully!")
+		isOpen.value = false
+		resetTransferForm()
+		emit("success")
 	},
 	onError: (error: FrappeError) => {
-		toast.error(`Failed to transfer ticket: ${error.message}`);
+		toast.error(`Failed to transfer ticket: ${error.message}`)
 	},
-});
+})
 
 const handleTransferTicket = () => {
 	if (!props.ticket || !transferForm.value.name || !transferForm.value.email) {
-		toast.error("Please fill in all required fields");
-		return;
+		toast.error("Please fill in all required fields")
+		return
 	}
 
 	transferResource.submit({
 		ticket_id: props.ticket.name,
 		new_name: transferForm.value.name,
 		new_email: transferForm.value.email,
-	});
-};
+	})
+}
 
 const resetTransferForm = () => {
 	transferForm.value = {
 		name: "",
 		email: "",
-	};
-};
+	}
+}
 
 // Reset form when dialog is closed
 watch(isOpen, (newValue) => {
 	if (!newValue) {
-		resetTransferForm();
+		resetTransferForm()
 	}
-});
+})
 </script>

@@ -4,7 +4,7 @@
 			<p class="text-ink-gray-7">
 				{{
 					__(
-						"Select the tickets you would like to cancel. Please note that cancellation requests are subject to approval and refund policies."
+						"Select the tickets you would like to cancel. Please note that cancellation requests are subject to approval and refund policies.",
 					)
 				}}
 			</p>
@@ -19,11 +19,7 @@
 						{{ pluralize(cancelledTickets.length, __("ticket")) }}
 						{{ __("already cancelled") }}.
 					</span>
-					<span
-						v-if="
-							cancelledTickets.length > 0 && cancellationRequestedTickets.length > 0
-						"
-					>
+					<span v-if="cancelledTickets.length > 0 && cancellationRequestedTickets.length > 0">
 						<br />
 					</span>
 					<span v-if="cancellationRequestedTickets.length > 0">
@@ -70,7 +66,7 @@
 					<p class="text-ink-gray-5">
 						{{
 							__(
-								"No tickets available for cancellation. All tickets are either already cancelled or have pending cancellation requests."
+								"No tickets available for cancellation. All tickets are either already cancelled or have pending cancellation requests.",
 							)
 						}}
 					</p>
@@ -81,9 +77,7 @@
 						:key="ticket.name"
 						class="border border-outline-gray-2 rounded-lg p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
 						:class="{
-							'border-outline-gray-4 bg-surface-gray-2': selectedTickets.includes(
-								ticket.name
-							),
+							'border-outline-gray-4 bg-surface-gray-2': selectedTickets.includes(ticket.name),
 						}"
 						@click="toggleTicketSelection(ticket.name)"
 					>
@@ -153,19 +147,13 @@
 						<p class="text-ink-blue-5">
 							{{ pluralize(selectedTickets.length, __("ticket")) }}
 							{{ __("selected for cancellation") }}
-							<span v-if="isAllSelected" class="font-medium">{{
-								__("(Full booking)")
-							}}</span>
+							<span v-if="isAllSelected" class="font-medium">{{ __("(Full booking)") }}</span>
 						</p>
 					</div>
 					<div class="text-right">
 						<p class="text-sm text-ink-blue-5">{{ __("Request Type") }}</p>
 						<p class="font-medium text-ink-blue-5">
-							{{
-								isAllSelected
-									? __("Full Cancellation")
-									: __("Partial Cancellation")
-							}}
+							{{ isAllSelected ? __("Full Cancellation") : __("Partial Cancellation") }}
 						</p>
 					</div>
 				</div>
@@ -191,10 +179,11 @@
 </template>
 
 <script setup lang="ts">
-import type { DashboardTicket, FrappeError } from "@/types";
-import { pluralize } from "@/utils/pluralize";
-import { Button, Dialog, createResource, toast } from "frappe-ui";
-import { type PropType, computed, ref, watch } from "vue";
+import { Button, Dialog, createResource, toast } from "frappe-ui"
+import { type PropType, computed, ref, watch } from "vue"
+
+import type { DashboardTicket, FrappeError } from "@/types"
+import { pluralize } from "@/utils/pluralize"
 
 const props = defineProps({
 	modelValue: {
@@ -217,26 +206,26 @@ const props = defineProps({
 		type: Array as PropType<string[]>,
 		default: () => [],
 	},
-});
+})
 
-const emit = defineEmits(["update:modelValue", "success"]);
+const emit = defineEmits(["update:modelValue", "success"])
 
 const show = computed({
 	get: () => props.modelValue,
 	set: (val) => emit("update:modelValue", val),
-});
+})
 
 // Filter out tickets that are already cancelled or have pending cancellation request
 const availableTickets = computed(() => {
 	return props.tickets.filter(
 		(ticket) =>
 			!props.cancelledTickets.includes(ticket.name) &&
-			!props.cancellationRequestedTickets.includes(ticket.name)
-	);
-});
+			!props.cancellationRequestedTickets.includes(ticket.name),
+	)
+})
 
-const selectedTickets = ref<string[]>([]);
-const submitting = ref(false);
+const selectedTickets = ref<string[]>([])
+const submitting = ref(false)
 
 const isAllSelected = computed({
 	get: () =>
@@ -244,71 +233,68 @@ const isAllSelected = computed({
 		availableTickets.value.length > 0,
 	set: (val) => {
 		if (val) {
-			selectedTickets.value = availableTickets.value.map((ticket) => ticket.name);
+			selectedTickets.value = availableTickets.value.map((ticket) => ticket.name)
 		} else {
-			selectedTickets.value = [];
+			selectedTickets.value = []
 		}
 	},
-});
+})
 
 const toggleSelectAll = () => {
-	isAllSelected.value = !isAllSelected.value;
-};
+	isAllSelected.value = !isAllSelected.value
+}
 
 const toggleTicketSelection = (ticketId: string) => {
-	const index = selectedTickets.value.indexOf(ticketId);
+	const index = selectedTickets.value.indexOf(ticketId)
 	if (index > -1) {
-		selectedTickets.value.splice(index, 1);
+		selectedTickets.value.splice(index, 1)
 	} else {
-		selectedTickets.value.push(ticketId);
+		selectedTickets.value.push(ticketId)
 	}
-};
+}
 
 const closeDialog = () => {
-	show.value = false;
-	selectedTickets.value = [];
-};
+	show.value = false
+	selectedTickets.value = []
+}
 
 const createCancellationRequest = createResource({
 	url: "buzz.api.tickets.create_cancellation_request",
 	onSuccess: (data: any) => {
-		submitting.value = false;
-		const ticketCount = selectedTickets.value.length;
-		const isFullCancellation = isAllSelected.value;
+		submitting.value = false
+		const ticketCount = selectedTickets.value.length
+		const isFullCancellation = isAllSelected.value
 
 		toast.success(
 			isFullCancellation
 				? __("Full booking cancellation request submitted successfully!")
-				: `${__("Cancellation request submitted for")} ${pluralize(
-						ticketCount,
-						__("ticket")
-				  )}!`
-		);
-		emit("success", data);
-		closeDialog();
+				: `${__("Cancellation request submitted for")} ${pluralize(ticketCount, __("ticket"))}!`,
+		)
+		emit("success", data)
+		closeDialog()
 	},
 	onError: (error: FrappeError) => {
-		submitting.value = false;
+		submitting.value = false
 		toast.error(
-			error?.messages?.[0] || __("Failed to submit cancellation request. Please try again.")
-		);
+			error?.messages?.[0] || __("Failed to submit cancellation request. Please try again."),
+		)
 	},
-});
+})
 
 const submitCancellationRequest = () => {
-	if (selectedTickets.value.length === 0) return;
+	if (selectedTickets.value.length === 0) return
 
-	submitting.value = true;
+	submitting.value = true
 	createCancellationRequest.submit({
 		booking_id: props.bookingId,
 		ticket_ids: selectedTickets.value,
-	});
-};
+	})
+}
 
 // Reset selected tickets when dialog closes
 watch(show, (newVal) => {
 	if (!newVal) {
-		selectedTickets.value = [];
+		selectedTickets.value = []
 	}
-});
+})
 </script>

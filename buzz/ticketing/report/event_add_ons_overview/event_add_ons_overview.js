@@ -22,4 +22,4 @@ frappe.query_reports["Event Add-Ons Overview"] = {
 			fieldtype: "Data",
 		},
 	],
-};
+}

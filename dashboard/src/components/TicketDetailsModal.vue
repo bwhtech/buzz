@@ -108,7 +108,7 @@
 								{{
 									formatPriceOrFree(
 										validationResult?.payment_details?.amount,
-										validationResult?.payment_details?.currency
+										validationResult?.payment_details?.currency,
 									)
 								}}
 							</p>
@@ -159,29 +159,30 @@
 </template>
 
 <script setup lang="ts">
-import { useTicketValidation } from "@/composables/useTicketValidation";
-import { formatPriceOrFree } from "@/utils/currency";
-import { Button, Dialog } from "frappe-ui";
-import LucideCheckCircle from "~icons/lucide/check-circle";
-import LucideExternalLink from "~icons/lucide/external-link";
-import LucideUserCheck from "~icons/lucide/user-check";
-import LucideXCircle from "~icons/lucide/x-circle";
+import { Button, Dialog } from "frappe-ui"
+import LucideCheckCircle from "~icons/lucide/check-circle"
+import LucideExternalLink from "~icons/lucide/external-link"
+import LucideUserCheck from "~icons/lucide/user-check"
+import LucideXCircle from "~icons/lucide/x-circle"
+
+import { useTicketValidation } from "@/composables/useTicketValidation"
+import { formatPriceOrFree } from "@/utils/currency"
 
 const props = defineProps({
 	selectedEvent: {
 		type: Object,
 		default: null,
 	},
-});
+})
 
 const { showTicketModal, isCheckingIn, validationResult, checkInTicket, closeModal } =
-	useTicketValidation();
+	useTicketValidation()
 
 const handleCheckIn = () => {
-	checkInTicket();
-};
+	checkInTicket()
+}
 
 const handleModalClose = () => {
-	closeModal();
-};
+	closeModal()
+}
 </script>

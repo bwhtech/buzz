@@ -1,6 +1,8 @@
-import { clearBookingCache } from "@/utils"
 import { createResource } from "frappe-ui"
 import { computed, reactive } from "vue"
+
+import { clearBookingCache } from "@/utils"
+
 import { userResource } from "./user"
 
 interface LoginParams {

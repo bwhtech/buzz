@@ -37,8 +37,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { FormControl, Textarea } from "frappe-ui";
+import { FormControl, Textarea } from "frappe-ui"
+import { computed } from "vue"
 
 const props = defineProps({
 	invoiceRequested: {
@@ -57,9 +57,9 @@ const props = defineProps({
 		type: String,
 		default: "Tax",
 	},
-});
+})
 
-defineEmits(["update:invoiceRequested", "update:taxId", "update:billingAddress"]);
+defineEmits(["update:invoiceRequested", "update:taxId", "update:billingAddress"])
 
-const taxIdLabel = computed(() => __(props.taxLabel));
+const taxIdLabel = computed(() => __(props.taxLabel))
 </script>
