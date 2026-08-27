@@ -1486,6 +1486,9 @@ class TestOfflineAcknowledgementEmail(IntegrationTestCase):
 		self.assertEqual(args["doc"].name, booking.name)
 		self.assertEqual(args["event_title"], self.test_event.title)
 		self.assertEqual(len(args["attendee_rows"]), 1)
+		# Ticket types autoname to integers and arrive off the row as strings, so a
+		# title lookup keyed on the raw value silently prints the id instead.
+		self.assertEqual(args["attendee_rows"][0]["ticket_type_title"], self.ticket_type.title)
 
 	def test_builtin_template_renders(self):
 		"""The template is only exercised end-to-end here: every other test mocks the
@@ -1499,6 +1502,7 @@ class TestOfflineAcknowledgementEmail(IntegrationTestCase):
 		self.assertIn("Payment Verification Pending", html)
 		self.assertIn(booking.name, html)
 		self.assertIn(booking.offline_payment_method, html)
+		self.assertIn(self.ticket_type.title, html)
 
 	@patch("frappe.sendmail")
 	def test_uses_event_template_when_set(self, mock_sendmail):

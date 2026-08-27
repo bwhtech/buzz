@@ -263,8 +263,10 @@ class EventBooking(Document):
 		ticket_type_names = list({attendee.ticket_type for attendee in self.attendees})
 		ticket_type_titles = {}
 		if ticket_type_names:
+			# Ticket types autoname to integers but arrive off the attendee row as
+			# strings, so both sides of the lookup are cast before they are compared.
 			ticket_type_titles = {
-				row.name: row.title
+				str(row.name): row.title
 				for row in frappe.get_all(
 					"Event Ticket Type",
 					filters={"name": ["in", ticket_type_names]},
@@ -276,7 +278,7 @@ class EventBooking(Document):
 			{
 				"full_name": attendee.full_name
 				or " ".join(part for part in (attendee.first_name, attendee.last_name) if part),
-				"ticket_type_title": ticket_type_titles.get(attendee.ticket_type, attendee.ticket_type),
+				"ticket_type_title": ticket_type_titles.get(str(attendee.ticket_type), attendee.ticket_type),
 				"number_of_add_ons": attendee.number_of_add_ons,
 				"amount": (attendee.amount or 0) + (attendee.add_on_total or 0),
 			}
