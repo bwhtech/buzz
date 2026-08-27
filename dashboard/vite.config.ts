@@ -4,7 +4,6 @@ import vue from "@vitejs/plugin-vue"
 import frappeui from "frappe-ui/vite"
 import { defineConfig } from "vite"
 
-// https://vitejs.dev/config/
 export default defineConfig({
 	plugins: [
 		frappeui({
@@ -32,17 +31,12 @@ export default defineConfig({
 		},
 	},
 	optimizeDeps: {
-		// `frappe-ui` and `frappe-ui/editor` pre-bundle as separate entries, and
-		// each inlines its own copy of the ProseMirror packages. Two copies means
-		// two selection-JSON-ID registries and two plugin-key counters, so the
-		// editor throws on "gapcursor"/`plugin$` and never starts. Neither
-		// `resolve.dedupe` nor pre-bundling ProseMirror itself merges the entries,
-		// so keep frappe-ui out of pre-bundling entirely.
+		// Pre-bundling gives frappe-ui and frappe-ui/editor their own ProseMirror
+		// copy each, so the editor throws on "gapcursor". resolve.dedupe does not
+		// merge them.
 		exclude: ["frappe-ui"],
-		// frappe-ui bundles its own CJS feather-icons; since frappe-ui is not
-		// pre-bundled, pre-bundle that nested copy so its default export gets
-		// CJS->ESM interop (otherwise FeatherIcon import fails and the app never
-		// mounts).
+		// frappe-ui is not pre-bundled, so its nested CJS feather-icons needs
+		// pre-bundling of its own for default-export interop.
 		include: ["feather-icons", "frappe-ui > feather-icons"],
 	},
 	server: {
