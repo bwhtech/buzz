@@ -18,8 +18,6 @@ export default defineConfig({
 				emptyOutDir: true,
 				sourcemap: true,
 				outDir: "../buzz/public/dashboard",
-				chunkSizeWarningLimit: 1500,
-				target: "es2015",
 			},
 		}),
 		vue(),
