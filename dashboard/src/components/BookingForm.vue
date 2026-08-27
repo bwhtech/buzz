@@ -15,10 +15,13 @@
 			v-model="showOtpModal"
 			:title="isPhoneOtp ? __('Verify Your Phone') : __('Verify Your Email')"
 			size="sm"
+			:dismissible="false"
 		>
 			<p class="text-sm text-ink-gray-6 mb-4">
 				{{ __("Enter the 6-digit code sent to") }}
 				<strong>{{ isPhoneOtp ? guestPhone : guestEmail }}</strong>
+				<br />
+				{{ __("The code expires in 10 minutes.") }}
 			</p>
 			<FormControl
 				v-model="otpCode"
@@ -40,7 +43,7 @@
 			>
 				{{
 					resendCooldown > 0
-						? __("Resend code in {0}s", [resendCooldown])
+						? __("Didn't get the code? Resend in {0}s", [resendCooldown])
 						: __("Resend code")
 				}}
 			</Button>
