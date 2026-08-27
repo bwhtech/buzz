@@ -5,7 +5,7 @@
 const ZOOM_SESSION_BY_CATEGORY = {
 	Webinars: "webinar",
 	"Zoom Meeting": "meeting",
-};
+}
 
 const FIELD_LABELS = {
 	category: __("Category"),
@@ -33,53 +33,53 @@ const FIELD_LABELS = {
 	ticket_types: __("Ticket Types"),
 	add_ons: __("Add-ons"),
 	custom_fields: __("Custom Fields"),
-};
+}
 
 function get_field_label(field) {
-	return FIELD_LABELS[field] || field;
+	return FIELD_LABELS[field] || field
 }
 
 function render_save_template_field_group(fields, doc) {
-	let html = "";
+	let html = ""
 	for (let field of fields) {
-		let value = doc[field];
-		let has_value = value !== null && value !== undefined && value !== "" && value !== 0;
+		let value = doc[field]
+		let has_value = value !== null && value !== undefined && value !== "" && value !== 0
 		if (Array.isArray(value)) {
-			has_value = value.length > 0;
+			has_value = value.length > 0
 		}
-		let label = get_field_label(field);
+		let label = get_field_label(field)
 
 		html += `
 			<div class="col-md-6 mb-2">
 				<label class="d-flex align-items-center">
 					<input type="checkbox" class="template-option mr-2" data-option="${field}" ${
-			has_value ? "checked" : "disabled"
-		}>
+						has_value ? "checked" : "disabled"
+					}>
 					${label}
 					${!has_value ? '<span class="text-muted ml-1">(' + __("Not set") + ")</span>" : ""}
 				</label>
 			</div>
-		`;
+		`
 	}
-	return html;
+	return html
 }
 
 function render_save_template_options(dialog, frm) {
-	let html = "";
-	let doc = frm.doc;
+	let html = ""
+	let doc = frm.doc
 
 	let buttons_html = `
 		<div class="mb-3">
 			<button class="btn btn-default btn-xs select-all-btn">${__("Select All")}</button>
 			<button class="btn btn-default btn-xs unselect-all-btn">${__("Unselect All")}</button>
 		</div>
-	`;
-	dialog.get_field("select_buttons").$wrapper.html(buttons_html);
+	`
+	dialog.get_field("select_buttons").$wrapper.html(buttons_html)
 
 	// Event Details
-	html += '<div class="template-section mt-3">';
-	html += `<h6 class="text-muted">${__("Event Details")}</h6>`;
-	html += '<div class="row">';
+	html += '<div class="template-section mt-3">'
+	html += `<h6 class="text-muted">${__("Event Details")}</h6>`
+	html += '<div class="row">'
 	html += render_save_template_field_group(
 		[
 			"category",
@@ -93,14 +93,14 @@ function render_save_template_options(dialog, frm) {
 			"guest_verification_method",
 			"time_zone",
 		],
-		doc
-	);
-	html += "</div></div>";
+		doc,
+	)
+	html += "</div></div>"
 
 	// Ticketing Settings
-	html += '<div class="template-section mt-3">';
-	html += `<h6 class="text-muted">${__("Ticketing Settings")}</h6>`;
-	html += '<div class="row">';
+	html += '<div class="template-section mt-3">'
+	html += `<h6 class="text-muted">${__("Ticketing Settings")}</h6>`
+	html += '<div class="row">'
 	html += render_save_template_field_group(
 		[
 			"send_ticket_email",
@@ -110,14 +110,14 @@ function render_save_template_options(dialog, frm) {
 			"ticket_email_template",
 			"ticket_print_format",
 		],
-		doc
-	);
-	html += "</div></div>";
+		doc,
+	)
+	html += "</div></div>"
 
 	// Sponsorship Settings
-	html += '<div class="template-section mt-3">';
-	html += `<h6 class="text-muted">${__("Sponsorship Settings")}</h6>`;
-	html += '<div class="row">';
+	html += '<div class="template-section mt-3">'
+	html += `<h6 class="text-muted">${__("Sponsorship Settings")}</h6>`
+	html += '<div class="row">'
 	html += render_save_template_field_group(
 		[
 			"auto_send_pitch_deck",
@@ -126,16 +126,16 @@ function render_save_template_options(dialog, frm) {
 			"sponsor_deck_cc",
 			"sponsor_deck_attachments",
 		],
-		doc
-	);
-	html += "</div></div>";
+		doc,
+	)
+	html += "</div></div>"
 
 	// Related Documents
-	html += '<div class="template-section mt-4" id="related-docs-section">';
-	html += `<h6 class="text-muted">${__("Related Documents")}</h6>`;
-	html += '<div class="row">';
+	html += '<div class="template-section mt-4" id="related-docs-section">'
+	html += `<h6 class="text-muted">${__("Related Documents")}</h6>`
+	html += '<div class="row">'
 
-	let pg_count = doc.payment_gateways ? doc.payment_gateways.length : 0;
+	let pg_count = doc.payment_gateways ? doc.payment_gateways.length : 0
 	html += `
 		<div class="col-md-6 mb-2">
 			<label class="d-flex align-items-center">
@@ -143,13 +143,13 @@ function render_save_template_options(dialog, frm) {
 					pg_count > 0 ? "checked" : ""
 				} ${pg_count === 0 ? "disabled" : ""}>
 				${__("Payment Gateways")} ${
-		pg_count > 0
-			? `<span class="text-muted ml-1">(${pg_count})</span>`
-			: '<span class="text-muted ml-1">(' + __("None") + ")</span>"
-	}
+					pg_count > 0
+						? `<span class="text-muted ml-1">(${pg_count})</span>`
+						: '<span class="text-muted ml-1">(' + __("None") + ")</span>"
+				}
 			</label>
 		</div>
-	`;
+	`
 
 	html += `
 		<div class="col-md-6 mb-2" id="ticket-types-option">
@@ -161,13 +161,13 @@ function render_save_template_options(dialog, frm) {
 		<div class="col-md-6 mb-2" id="custom-fields-option">
 			<span class="text-muted">${__("Loading...")}</span>
 		</div>
-	`;
+	`
 
-	html += "</div></div>";
+	html += "</div></div>"
 
-	dialog.get_field("field_options").$wrapper.html(html);
+	dialog.get_field("field_options").$wrapper.html(html)
 
-	let $wrapper = dialog.get_field("field_options").$wrapper;
+	let $wrapper = dialog.get_field("field_options").$wrapper
 
 	const linked_doctypes = [
 		{
@@ -188,28 +188,28 @@ function render_save_template_options(dialog, frm) {
 			option: "custom_fields",
 			label: __("Custom Fields"),
 		},
-	];
+	]
 
 	for (let item of linked_doctypes) {
 		frappe.call({
 			method: "frappe.client.get_count",
 			args: { doctype: item.doctype, filters: { event: doc.name } },
 			callback: function (r) {
-				let count = r.message || 0;
+				let count = r.message || 0
 				$wrapper.find(`#${item.id}`).html(`
 					<label class="d-flex align-items-center">
 						<input type="checkbox" class="template-option mr-2" data-option="${item.option}" ${
-					count > 0 ? "checked" : ""
-				} ${count === 0 ? "disabled" : ""}>
+							count > 0 ? "checked" : ""
+						} ${count === 0 ? "disabled" : ""}>
 						${item.label} ${
-					count > 0
-						? `<span class="text-muted ml-1">(${count})</span>`
-						: '<span class="text-muted ml-1">(' + __("None") + ")</span>"
-				}
+							count > 0
+								? `<span class="text-muted ml-1">(${count})</span>`
+								: '<span class="text-muted ml-1">(' + __("None") + ")</span>"
+						}
 					</label>
-				`);
+				`)
 			},
-		});
+		})
 	}
 
 	dialog
@@ -219,18 +219,15 @@ function render_save_template_options(dialog, frm) {
 			dialog
 				.get_field("field_options")
 				.$wrapper.find(".template-option:not(:disabled)")
-				.prop("checked", true);
-		});
+				.prop("checked", true)
+		})
 
 	dialog
 		.get_field("select_buttons")
 		.$wrapper.find(".unselect-all-btn")
 		.on("click", function () {
-			dialog
-				.get_field("field_options")
-				.$wrapper.find(".template-option")
-				.prop("checked", false);
-		});
+			dialog.get_field("field_options").$wrapper.find(".template-option").prop("checked", false)
+		})
 }
 
 function show_save_as_template_dialog(frm) {
@@ -260,13 +257,13 @@ function show_save_as_template_dialog(frm) {
 		size: "large",
 		primary_action_label: __("Save Template"),
 		primary_action: function (values) {
-			let options = {};
+			let options = {}
 			dialog
 				.get_field("field_options")
 				.$wrapper.find(".template-option:checked")
 				.each(function () {
-					options[$(this).data("option")] = 1;
-				});
+					options[$(this).data("option")] = 1
+				})
 
 			frappe.call({
 				method: "buzz.events.doctype.event_template.event_template.create_template_from_event",
@@ -279,69 +276,69 @@ function show_save_as_template_dialog(frm) {
 				freeze_message: __("Creating Template..."),
 				callback: function (r) {
 					if (r.message) {
-						dialog.hide();
+						dialog.hide()
 						frappe.show_alert({
 							message: __("Template {0} created successfully", [r.message]),
 							indicator: "green",
-						});
-						frappe.set_route("Form", "Event Template", r.message);
+						})
+						frappe.set_route("Form", "Event Template", r.message)
 					}
 				},
-			});
+			})
 		},
-	});
+	})
 
-	render_save_template_options(dialog, frm);
-	dialog.show();
+	render_save_template_options(dialog, frm)
+	dialog.show()
 }
 
 frappe.ui.form.on("Buzz Event Form", {
 	copy_to_clipboard(frm, cdt, cdn) {
-		const row = frappe.get_doc(cdt, cdn);
-		const url = `${window.location.origin}/b/${frm.doc.route}/${row.route}`;
-		navigator.clipboard.writeText(url);
-		frappe.show_alert({ message: __("Link copied!"), indicator: "green" });
+		const row = frappe.get_doc(cdt, cdn)
+		const url = `${window.location.origin}/b/${frm.doc.route}/${row.route}`
+		navigator.clipboard.writeText(url)
+		frappe.show_alert({ message: __("Link copied!"), indicator: "green" })
 	},
-});
+})
 
 // min_date on the df is only read when the control builds its picker,
 // so the datepicker instance has to be updated directly.
 function set_end_date_limit(frm) {
 	frm.fields_dict.end_date.datepicker?.update({
 		minDate: frm.doc.start_date ? frappe.datetime.str_to_obj(frm.doc.start_date) : null,
-	});
+	})
 }
 
 frappe.ui.form.on("Buzz Event", {
 	refresh(frm) {
-		frm.fields_dict.time_zone.set_data(getZoomSupportedTimezones());
-		set_end_date_limit(frm);
+		frm.fields_dict.time_zone.set_data(getZoomSupportedTimezones())
+		set_end_date_limit(frm)
 
 		if (frm.doc.route && frm.doc.is_published) {
-			frm.add_web_link(`/events/${frm.doc.route}`);
+			frm.add_web_link(`/events/${frm.doc.route}`)
 		}
 
 		if (frm.doc.route) {
-			frm.add_web_link(`/b/register/${frm.doc.route}`, "View Registration Page");
+			frm.add_web_link(`/b/register/${frm.doc.route}`, "View Registration Page")
 		}
 
 		if (!frm.is_new()) {
-			frm.add_web_link(`/b/check-in/${frm.doc.name}`, __("Open Check-in"));
+			frm.add_web_link(`/b/check-in/${frm.doc.name}`, __("Open Check-in"))
 		}
 
-		const button_label = frm.doc.is_published ? __("Unpublish") : __("Publish");
+		const button_label = frm.doc.is_published ? __("Unpublish") : __("Publish")
 		frm.add_custom_button(button_label, () => {
-			frm.set_value("is_published", !frm.doc.is_published);
-			frm.save();
-		});
+			frm.set_value("is_published", !frm.doc.is_published)
+			frm.save()
+		})
 
-		frm.set_query("track", "schedule", (doc, cdt, cdn) => {
+		frm.set_query("track", "schedule", (doc) => {
 			return {
 				filters: {
 					event: doc.name,
 				},
-			};
-		});
+			}
+		})
 
 		frm.set_query("default_ticket_type", (doc) => {
 			return {
@@ -349,69 +346,71 @@ frappe.ui.form.on("Buzz Event", {
 					event: doc.name,
 					is_published: 1,
 				},
-			};
-		});
+			}
+		})
 
 		// Save as Template button
 		if (!frm.is_new()) {
 			frm.add_custom_button(
 				__("Save as Template"),
 				function () {
-					show_save_as_template_dialog(frm);
+					show_save_as_template_dialog(frm)
 				},
-				__("Actions")
-			);
+				__("Actions"),
+			)
 		}
 
-		frm.trigger("add_zoom_custom_actions");
+		frm.trigger("add_zoom_custom_actions")
 	},
 
 	add_zoom_custom_actions(frm) {
-		const installed_apps = frappe.boot.app_data.map((app) => app.app_name);
-		const session = ZOOM_SESSION_BY_CATEGORY[frm.doc.category];
+		const installed_apps = frappe.boot.app_data.map((app) => app.app_name)
+		const session = ZOOM_SESSION_BY_CATEGORY[frm.doc.category]
 		if (!installed_apps.includes("zoom_integration") || !session) {
-			return;
+			return
 		}
 
 		const labels = {
 			webinar: { create: __("Create Webinar on Zoom"), view: __("View Webinar") },
 			meeting: { create: __("Create Meeting on Zoom"), view: __("View Meeting") },
-		}[session];
+		}[session]
 
-		const existing = frm.doc[`zoom_${session}`];
+		const existing = frm.doc[`zoom_${session}`]
 		if (existing) {
 			frm.add_custom_button(labels.view, () => {
-				window.open(`https://zoom.us/${session}/${existing}`, "_blank");
-			});
-			return;
+				window.open(`https://zoom.us/${session}/${existing}`, "_blank")
+			})
+			return
 		}
 
 		const create_btn = frm.add_custom_button(labels.create, () => {
-			frm.call({
-				doc: frm.doc,
-				method: `create_${session}_on_zoom`,
-				btn: create_btn,
-				freeze: true,
-			}).then(() => {
-				frm.layout.tabs.find((t) => t.label == "Zoom Integration").set_active();
-			});
-		});
+			frm
+				.call({
+					doc: frm.doc,
+					method: `create_${session}_on_zoom`,
+					btn: create_btn,
+					freeze: true,
+				})
+				.then(() => {
+					frm.layout.tabs.find((t) => t.label == "Zoom Integration").set_active()
+				})
+		})
 	},
 	start_date(frm) {
 		if (frm.doc.start_date && !frm.doc.end_date) {
-			frm.set_value("end_date", frm.doc.start_date);
+			frm.set_value("end_date", frm.doc.start_date)
 		} else if (frm.doc.start_date && frm.doc.end_date < frm.doc.start_date) {
-			frm.set_value("end_date", frm.doc.start_date);
-			frappe.show_alert(__("End Date moved to match Start Date"));
+			frm.set_value("end_date", frm.doc.start_date)
+			frappe.show_alert(__("End Date moved to match Start Date"))
 		}
-		set_end_date_limit(frm);
+		set_end_date_limit(frm)
 	},
 	category(frm) {
-		if (!frm.is_new()) return;
+		if (!frm.is_new()) return
 
-		frm.set_value("attach_email_ticket", frm.doc.category in ZOOM_SESSION_BY_CATEGORY ? 0 : 1);
+		frm.set_value("attach_email_ticket", frm.doc.category in ZOOM_SESSION_BY_CATEGORY ? 0 : 1)
 	},
-});
+})
 
 function getZoomSupportedTimezones() {
 	return [
@@ -550,5 +549,5 @@ function getZoomSupportedTimezones() {
 		"Europe/Kiev",
 		"America/Tegucigalpa",
 		"Pacific/Apia",
-	];
+	]
 }

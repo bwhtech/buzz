@@ -17,11 +17,11 @@
 		</div>
 
 		<div
-			v-else-if="campaign"
+			v-else-if="campaignDoc"
 			class="bg-surface-base border border-outline-gray-1 rounded-lg p-6"
 		>
 			<h1 class="text-ink-gray-9 text-3xl-bold mb-6">
-				{{ campaign.title }}
+				{{ campaignDoc.title }}
 			</h1>
 
 			<div
@@ -59,17 +59,18 @@
 </template>
 
 <script setup lang="ts">
-import type { FrappeError } from "@/types";
-import { Button, Spinner, createResource } from "frappe-ui";
-import { marked } from "marked";
-import { computed, ref } from "vue";
-import LucideCheckCircle from "~icons/lucide/check-circle";
-import LucideXCircle from "~icons/lucide/x-circle";
+import { Button, Spinner, createResource } from "frappe-ui"
+import { marked } from "marked"
+import { computed, ref } from "vue"
+import LucideCheckCircle from "~icons/lucide/check-circle"
+import LucideXCircle from "~icons/lucide/x-circle"
+
+import type { FrappeError } from "@/types"
 
 interface Campaign {
-	title?: string;
-	description?: string;
-	[key: string]: any;
+	title?: string
+	description?: string
+	[key: string]: any
 }
 
 const props = defineProps({
@@ -77,17 +78,17 @@ const props = defineProps({
 		type: String,
 		required: true,
 	},
-});
+})
 
-const campaign = ref<Campaign | null>(null);
-const registered = ref(false);
-const error = ref<string | null>(null);
-const errorMessage = ref<string | null>(null);
+const campaignDoc = ref<Campaign | null>(null)
+const registered = ref(false)
+const error = ref<string | null>(null)
+const errorMessage = ref<string | null>(null)
 
 const renderedDescription = computed(() => {
-	if (!campaign.value?.description) return "";
-	return marked(campaign.value.description);
-});
+	if (!campaignDoc.value?.description) return ""
+	return marked(campaignDoc.value.description)
+})
 
 const campaignResource = createResource({
 	url: "buzz.api.campaigns.get_campaign_details",
@@ -96,27 +97,27 @@ const campaignResource = createResource({
 	},
 	auto: true,
 	onSuccess: (data: Campaign) => {
-		campaign.value = data;
+		campaignDoc.value = data
 	},
 	onError: (err: FrappeError) => {
-		error.value = err.messages?.[0] || __("Campaign not found or not active");
+		error.value = err.messages?.[0] || __("Campaign not found or not active")
 	},
-});
+})
 
 const registerResource = createResource({
 	url: "buzz.api.campaigns.register_campaign_interest",
 	onSuccess: () => {
-		registered.value = true;
-		errorMessage.value = null;
+		registered.value = true
+		errorMessage.value = null
 	},
 	onError: (err: FrappeError) => {
-		errorMessage.value = err.messages?.[0] || __("Failed to register interest");
+		errorMessage.value = err.messages?.[0] || __("Failed to register interest")
 	},
-});
+})
 
 function registerInterest() {
 	registerResource.submit({
 		campaign: props.campaign,
-	});
+	})
 }
 </script>

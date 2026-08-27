@@ -4,21 +4,21 @@
  */
 export function extractTicketId(qrData: string): string | null {
 	// If QR contains just the ticket ID
-	if (qrData.match(/^[A-Z0-9\-]+$/)) {
-		return qrData;
+	if (qrData.match(/^[A-Z0-9-]+$/)) {
+		return qrData
 	}
 
 	// If QR contains a URL with ticket ID
-	const urlMatch = qrData.match(/ticket[\/=]([A-Z0-9\-]+)/i);
+	const urlMatch = qrData.match(/ticket[/=]([A-Z0-9-]+)/i)
 	if (urlMatch) {
-		return urlMatch[1];
+		return urlMatch[1]
 	}
 
 	// Try to extract any alphanumeric string that looks like a ticket ID
-	const idMatch = qrData.match(/([A-Z0-9\-]{10,})/i);
+	const idMatch = qrData.match(/([A-Z0-9-]{10,})/i)
 	if (idMatch) {
-		return idMatch[1];
+		return idMatch[1]
 	}
 
-	return null;
+	return null
 }

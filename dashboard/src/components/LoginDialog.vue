@@ -11,10 +11,7 @@
 			v-html="login_context.login_banner"
 		/>
 
-		<div
-			v-if="error_message"
-			class="mb-4 rounded-md bg-surface-red-2 p-3 text-sm text-ink-red-6"
-		>
+		<div v-if="error_message" class="mb-4 rounded-md bg-surface-red-2 p-3 text-sm text-ink-red-6">
 			{{ error_message }}
 		</div>
 
@@ -52,12 +49,7 @@
 						{{ __("Forgot Password?") }}
 					</button>
 				</div>
-				<Button
-					variant="solid"
-					class="w-full"
-					type="submit"
-					:loading="session.login.loading"
-				>
+				<Button variant="solid" class="w-full" type="submit" :loading="session.login.loading">
 					{{ __("Login") }}
 				</Button>
 			</template>
@@ -72,15 +64,10 @@
 					</span>
 				</div>
 
-				<SocialLoginButtons :provider_logins="login_context?.provider_logins" />
+				<SocialLoginButtons :provider-logins="login_context?.provider_logins" />
 
 				<template v-if="login_context?.login_with_email_link">
-					<Button
-						variant="subtle"
-						class="w-full"
-						type="button"
-						@click="switchView('email-link')"
-					>
+					<Button variant="subtle" class="w-full" type="button" @click="switchView('email-link')">
 						{{ __("Login with Email Link") }}
 					</Button>
 				</template>
@@ -98,11 +85,7 @@
 			</div>
 		</form>
 
-		<form
-			v-else-if="current_view === 'signup'"
-			class="space-y-4"
-			@submit.prevent="handleSignup"
-		>
+		<form v-else-if="current_view === 'signup'" class="space-y-4" @submit.prevent="handleSignup">
 			<FormControl
 				type="text"
 				:label="__('Full Name')"
@@ -117,12 +100,7 @@
 				v-model="form.email"
 				required
 			/>
-			<Button
-				variant="solid"
-				class="w-full"
-				type="submit"
-				:loading="signup_resource.loading"
-			>
+			<Button variant="solid" class="w-full" type="submit" :loading="signup_resource.loading">
 				{{ __("Sign Up") }}
 			</Button>
 
@@ -136,7 +114,7 @@
 					</span>
 				</div>
 
-				<SocialLoginButtons :provider_logins="login_context?.provider_logins" />
+				<SocialLoginButtons :provider-logins="login_context?.provider_logins" />
 			</template>
 
 			<div class="text-center text-sm text-ink-gray-5">
@@ -157,11 +135,7 @@
 			@submit.prevent="handleForgotPassword"
 		>
 			<p class="text-sm text-ink-gray-5">
-				{{
-					__(
-						"Enter your email address and we'll send you a link to reset your password."
-					)
-				}}
+				{{ __("Enter your email address and we'll send you a link to reset your password.") }}
 			</p>
 			<FormControl
 				type="email"
@@ -204,12 +178,7 @@
 				v-model="form.email"
 				required
 			/>
-			<Button
-				variant="solid"
-				class="w-full"
-				type="submit"
-				:loading="email_link_resource.loading"
-			>
+			<Button variant="solid" class="w-full" type="submit" :loading="email_link_resource.loading">
 				{{ __("Send Login Link") }}
 			</Button>
 			<div class="text-center">
@@ -226,11 +195,7 @@
 </template>
 
 <script setup lang="ts">
-import type { FrappeError } from "@/types";
-import { useLoginDialog } from "@/composables/useLoginDialog";
-import { session } from "@/data/session";
-import { userResource } from "@/data/user";
-import { Button, Dialog, FormControl, createResource } from "frappe-ui";
+import { Button, Dialog, FormControl, createResource } from "frappe-ui"
 import {
 	type ComponentPublicInstance,
 	type PropType,
@@ -239,28 +204,33 @@ import {
 	h,
 	ref,
 	watch,
-} from "vue";
+} from "vue"
 
-type LoginView = "login" | "signup" | "forgot-password" | "email-link";
+import { useLoginDialog } from "@/composables/useLoginDialog"
+import { session } from "@/data/session"
+import { userResource } from "@/data/user"
+import type { FrappeError } from "@/types"
+
+type LoginView = "login" | "signup" | "forgot-password" | "email-link"
 
 interface ProviderLogin {
-	auth_url: string;
-	icon?: string;
-	provider_name: string;
+	auth_url: string
+	icon?: string
+	provider_name: string
 }
 
-const { is_open, close } = useLoginDialog();
+const { is_open, close } = useLoginDialog()
 
-const current_view = ref<LoginView>("login");
-const error_message = ref("");
-const success_message = ref("");
-const password_input = ref<ComponentPublicInstance | null>(null);
+const current_view = ref<LoginView>("login")
+const error_message = ref("")
+const success_message = ref("")
+const password_input = ref<ComponentPublicInstance | null>(null)
 
 const form = ref({
 	email: "",
 	password: "",
 	full_name: "",
-});
+})
 
 const view_title = computed(() => {
 	const titles = {
@@ -268,25 +238,27 @@ const view_title = computed(() => {
 		signup: __("Create Account"),
 		"forgot-password": __("Forgot Password"),
 		"email-link": __("Login with Email Link"),
-	};
-	return titles[current_view.value] || __("Login");
-});
+	}
+	return titles[current_view.value] || __("Login")
+})
 
 const login_context_resource = createResource({
 	url: "buzz.api.auth.get_login_context",
 	params: { redirect_to: window.location.href },
 	auto: true,
-});
+})
 
-const login_context = computed(() => login_context_resource.data);
+const login_context = computed(() => login_context_resource.data)
 
-const has_social_logins = computed(() => login_context.value?.provider_logins?.length > 0);
+const has_social_logins = computed(() => login_context.value?.provider_logins?.length > 0)
 
 const SocialLoginButtons = defineComponent({
-	props: { provider_logins: Array as PropType<ProviderLogin[]> },
+	props: {
+		providerLogins: { type: Array as PropType<ProviderLogin[]>, default: () => [] },
+	},
 	setup(props) {
 		return () =>
-			(props.provider_logins || []).map((provider) =>
+			props.providerLogins.map((provider) =>
 				h(
 					Button,
 					{
@@ -294,7 +266,7 @@ const SocialLoginButtons = defineComponent({
 						class: "w-full",
 						type: "button",
 						onClick: () => {
-							window.location.href = provider.auth_url;
+							window.location.href = provider.auth_url
 						},
 					},
 					{
@@ -306,56 +278,55 @@ const SocialLoginButtons = defineComponent({
 											class: "h-4 w-4",
 											alt: provider.provider_name,
 										}),
-							  }
+								}
 							: {}),
 						default: () => __("Continue with {0}", [provider.provider_name]),
-					}
-				)
-			);
+					},
+				),
+			)
 	},
-});
+})
 
 function focusPassword() {
-	password_input.value?.$el?.querySelector("input")?.focus();
+	password_input.value?.$el?.querySelector("input")?.focus()
 }
 
 function switchView(view: LoginView) {
-	current_view.value = view;
-	error_message.value = "";
-	success_message.value = "";
+	current_view.value = view
+	error_message.value = ""
+	success_message.value = ""
 }
 
 function resetState() {
-	current_view.value = "login";
-	error_message.value = "";
-	success_message.value = "";
-	form.value = { email: "", password: "", full_name: "" };
+	current_view.value = "login"
+	error_message.value = ""
+	success_message.value = ""
+	form.value = { email: "", password: "", full_name: "" }
 }
 
 function handleLogin() {
-	error_message.value = "";
+	error_message.value = ""
 	session.login.submit(
 		{ email: form.value.email, password: form.value.password },
 		{
 			onSuccess() {
-				userResource.reload();
-				session.user =
-					session.login.data?.user || document.cookie.match(/user_id=([^;]+)/)?.[1];
-				close();
+				userResource.reload()
+				session.user = session.login.data?.user || document.cookie.match(/user_id=([^;]+)/)?.[1]
+				close()
 			},
 			onError(error: FrappeError) {
-				error_message.value = error.messages?.[0] || __("Invalid email or password.");
+				error_message.value = error.messages?.[0] || __("Invalid email or password.")
 			},
-		}
-	);
+		},
+	)
 }
 
 const signup_resource = createResource({
 	url: "frappe.core.doctype.user.user.sign_up",
-});
+})
 
 function handleSignup() {
-	error_message.value = "";
+	error_message.value = ""
 	signup_resource.submit(
 		{
 			email: form.value.email,
@@ -365,64 +336,61 @@ function handleSignup() {
 		{
 			onSuccess(data: any[]) {
 				if (data && data[0] === 1) {
-					success_message.value = __("Please check your email to verify your account.");
+					success_message.value = __("Please check your email to verify your account.")
 				} else if (data && data[1]) {
-					success_message.value = data[1];
+					success_message.value = data[1]
 				} else {
-					success_message.value = __("Please check your email to verify your account.");
+					success_message.value = __("Please check your email to verify your account.")
 				}
 			},
 			onError(error: FrappeError) {
-				error_message.value =
-					error.messages?.[0] || __("Something went wrong. Please try again.");
+				error_message.value = error.messages?.[0] || __("Something went wrong. Please try again.")
 			},
-		}
-	);
+		},
+	)
 }
 
 const forgot_password_resource = createResource({
 	url: "frappe.core.doctype.user.user.reset_password",
-});
+})
 
 function handleForgotPassword() {
-	error_message.value = "";
+	error_message.value = ""
 	forgot_password_resource.submit(
 		{ user: form.value.email },
 		{
 			onSuccess() {
-				success_message.value = __("Password reset link has been sent to your email.");
+				success_message.value = __("Password reset link has been sent to your email.")
 			},
 			onError(error: FrappeError) {
-				error_message.value =
-					error.messages?.[0] || __("Something went wrong. Please try again.");
+				error_message.value = error.messages?.[0] || __("Something went wrong. Please try again.")
 			},
-		}
-	);
+		},
+	)
 }
 
 const email_link_resource = createResource({
 	url: "frappe.www.login.send_login_link",
-});
+})
 
 function handleEmailLink() {
-	error_message.value = "";
+	error_message.value = ""
 	email_link_resource.submit(
 		{ email: form.value.email },
 		{
 			onSuccess() {
-				success_message.value = __("Login link has been sent to your email.");
+				success_message.value = __("Login link has been sent to your email.")
 			},
 			onError(error: FrappeError) {
-				error_message.value =
-					error.messages?.[0] || __("Something went wrong. Please try again.");
+				error_message.value = error.messages?.[0] || __("Something went wrong. Please try again.")
 			},
-		}
-	);
+		},
+	)
 }
 
 watch(is_open, (value) => {
 	if (value) {
-		login_context_resource.fetch({ redirect_to: window.location.href });
+		login_context_resource.fetch({ redirect_to: window.location.href })
 	}
-});
+})
 </script>
