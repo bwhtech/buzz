@@ -75,6 +75,7 @@
   "booking_confirmation_email_section",
   "send_booking_confirmation_email",
   "booking_confirmation_email_template",
+  "offline_acknowledgement_email_template",
   "talks_section",
   "allow_editing_talks_after_acceptance",
   "custom_forms_tab",
@@ -288,7 +289,7 @@
   },
   {
    "default": "1",
-   "description": "Send a confirmation email with a booking summary to the person who made the booking.",
+   "description": "Send booking emails to the person who made the booking: an acknowledgement while an offline payment awaits verification, and a confirmation once the booking is confirmed.",
    "fieldname": "send_booking_confirmation_email",
    "fieldtype": "Check",
    "label": "Send Booking Confirmation Email"
@@ -298,6 +299,14 @@
    "fieldname": "booking_confirmation_email_template",
    "fieldtype": "Link",
    "label": "Booking Confirmation Email Template",
+   "options": "Email Template"
+  },
+  {
+   "depends_on": "eval:doc.send_booking_confirmation_email;",
+   "description": "Sent when a booking is made with an offline payment method, before the payment is verified.",
+   "fieldname": "offline_acknowledgement_email_template",
+   "fieldtype": "Link",
+   "label": "Offline Payment Acknowledgement Email Template",
    "options": "Email Template"
   },
   {
@@ -602,7 +611,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-07-23 12:00:00.000000",
+ "modified": "2026-08-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

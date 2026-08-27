@@ -14,7 +14,7 @@ export interface BookingSubmitResponse {
 export type BookingSuccessAction =
 	| { type: "external"; url: string }
 	| { type: "route"; path: string }
-	| { type: "guest-inline"; bookingName: string }
+	| { type: "guest-inline"; bookingName: string; pendingVerification: boolean }
 
 export function resolveBookingSuccessAction(
 	data: BookingSubmitResponse,
@@ -35,8 +35,10 @@ export function resolveBookingSuccessAction(
 		throw new Error("Booking response carried neither a payment link nor a booking name")
 	}
 
+	// A guest has no session to read /bookings/<name> with, so an offline booking stays
+	// inline and says so instead of claiming tickets were sent.
 	if (isGuestMode) {
-		return { type: "guest-inline", bookingName }
+		return { type: "guest-inline", bookingName, pendingVerification: !!data.offline_payment }
 	}
 
 	if (data.offline_payment) {

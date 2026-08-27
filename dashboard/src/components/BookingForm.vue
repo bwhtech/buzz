@@ -58,8 +58,46 @@
 			</template>
 		</Dialog>
 
+		<!-- Pending State for Guest Offline Booking -->
+		<div v-if="bookingSuccess && bookingPendingVerification" class="text-center py-12 px-4">
+			<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-8 max-w-md mx-auto">
+				<LucideClock class="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+				<h2 class="text-3xl-semibold text-yellow-800 mb-2">
+					{{ __("Booking Received!") }}
+				</h2>
+				<p class="text-yellow-700 mb-4">
+					{{
+						__(
+							"We have received your booking and offline payment details. Your payment is awaiting verification.",
+						)
+					}}
+				</p>
+				<p class="text-sm text-yellow-700 mb-2">
+					{{
+						isZoomEvent
+							? __("Your registration is not confirmed yet.")
+							: __("Your tickets are not confirmed yet.")
+					}}
+					{{ __("We will email") }}
+					<strong>{{ guestEmail }}</strong>
+					{{ __("once the payment is verified.") }}
+				</p>
+				<p class="text-xs text-ink-gray-5 mb-6">
+					{{ __("Booking reference") }}: <strong>{{ successBookingName }}</strong>
+				</p>
+				<div class="space-y-3">
+					<p class="text-xs text-ink-gray-5">
+						{{ __("Want to manage your bookings?") }}
+					</p>
+					<Button variant="outline" @click="openLoginDialog()">
+						{{ __("Log in to your account") }}
+					</Button>
+				</div>
+			</div>
+		</div>
+
 		<!-- Success State for Guest Booking -->
-		<div v-if="bookingSuccess" class="text-center py-12 px-4">
+		<div v-else-if="bookingSuccess" class="text-center py-12 px-4">
 			<div class="bg-green-50 border border-green-200 rounded-xl p-8 max-w-md mx-auto">
 				<LucideCheckCircle class="w-16 h-16 text-green-500 mx-auto mb-4" />
 				<h2 class="text-3xl-semibold text-green-800 mb-2">
@@ -374,6 +412,7 @@ import { useRoute, useRouter } from "vue-router"
 import LucideAlertCircle from "~icons/lucide/alert-circle"
 import LucideCheck from "~icons/lucide/check"
 import LucideCheckCircle from "~icons/lucide/check-circle"
+import LucideClock from "~icons/lucide/clock"
 import LucideGift from "~icons/lucide/gift"
 import LucideX from "~icons/lucide/x"
 
@@ -521,6 +560,7 @@ const couponData = ref<CouponData | null>(null)
 // Success state for guest bookings
 const bookingSuccess = ref(false)
 const successBookingName = ref("")
+const bookingPendingVerification = ref(false)
 
 // OTP verification state for guest bookings
 const showOtpModal = ref(false)
@@ -1287,6 +1327,7 @@ function submitBooking(
 				} else if (action.type === "guest-inline") {
 					bookingSuccess.value = true
 					successBookingName.value = action.bookingName
+					bookingPendingVerification.value = action.pendingVerification
 				} else {
 					router.replace(action.path)
 				}
