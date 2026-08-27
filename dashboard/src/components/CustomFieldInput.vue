@@ -173,16 +173,6 @@
 </template>
 
 <script setup lang="ts">
-import PhoneInput from "@/components/PhoneInput.vue";
-import {
-	type FrappeField,
-	getFieldOptions,
-	getFieldPlaceholder,
-	getFormControlType,
-	isDateField,
-	isDateTimeField,
-	isTextareaField,
-} from "@/composables/useCustomFields";
 import {
 	Button,
 	DatePicker,
@@ -192,48 +182,61 @@ import {
 	MultiSelect,
 	Rating,
 	Textarea,
-} from "frappe-ui";
-import { computed, type PropType } from "vue";
-import LucideX from "~icons/lucide/x";
+} from "frappe-ui"
+import { computed, type PropType } from "vue"
+import LucideX from "~icons/lucide/x"
+
+import PhoneInput from "@/components/PhoneInput.vue"
+import {
+	type FrappeField,
+	getFieldOptions,
+	getFieldPlaceholder,
+	getFormControlType,
+	isDateField,
+	isDateTimeField,
+	isTextareaField,
+} from "@/composables/useCustomFields"
 
 const props = defineProps({
 	field: {
 		type: Object as PropType<FrappeField>,
 		required: true,
 	},
-});
+})
 
-const model = defineModel();
-const multiSelectOptions = computed(() => getFieldOptions(props.field));
-const checkboxValue = computed(() => model.value === 1 || model.value === "1");
+// Frappe field values are heterogeneous (string, number, comma-joined multi-select),
+// and the template binds this straight into components that expect a string.
+const model = defineModel<any>()
+const multiSelectOptions = computed(() => getFieldOptions(props.field))
+const checkboxValue = computed(() => model.value === 1 || model.value === "1")
 
 const multiSelectProxy = computed({
 	get() {
-		if (!model.value) return [];
-		return Array.isArray(model.value) ? model.value : String(model.value).split(",");
+		if (!model.value) return []
+		return Array.isArray(model.value) ? model.value : String(model.value).split(",")
 	},
 	set(val) {
 		if (!val || val.length === 0) {
-			model.value = "";
+			model.value = ""
 		} else {
-			const values = val.map((item) => item.value || item);
-			model.value = values.join(",");
+			const values = val.map((item) => item.value || item)
+			model.value = values.join(",")
 		}
 	},
-});
+})
 
 const linkFieldOptions = computed(() => {
-	if (!props.field.link_options) return [];
+	if (!props.field.link_options) return []
 	return props.field.link_options.map((option) => ({
 		label: option.label,
 		value: option.value,
-	}));
-});
+	}))
+})
 
 function validateImageFile(file: File) {
-	const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
+	const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"]
 	if (!validTypes.includes(file.type)) {
-		return __("Please upload a valid image file (JPEG, PNG, GIF, WebP, SVG)");
+		return __("Please upload a valid image file (JPEG, PNG, GIF, WebP, SVG)")
 	}
 }
 </script>
