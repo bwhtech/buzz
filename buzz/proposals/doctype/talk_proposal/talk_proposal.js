@@ -4,9 +4,9 @@
 frappe.ui.form.on("Talk Proposal", {
 	get_email_recipients(frm, fieldname) {
 		if (fieldname !== "recipients") {
-			return [];
+			return []
 		}
-		return (frm.doc.speakers || []).map((speaker) => speaker.email).filter(Boolean);
+		return (frm.doc.speakers || []).map((speaker) => speaker.email).filter(Boolean)
 	},
 
 	refresh(frm) {
@@ -16,25 +16,27 @@ frappe.ui.form.on("Talk Proposal", {
 				() => {
 					frappe.confirm(
 						__(
-							"This action will accept this proposal and create a talk against it. Any speakers without a Buzz account will get one."
+							"This action will accept this proposal and create a talk against it. Any speakers without a Buzz account will get one.",
 						),
 						() => {
-							frm.call({
-								method: "create_talk",
-								doc: frm.doc,
-								btn,
-							}).then(({ message: talk }) => {
-								frappe.show_alert({
-									message: __("Talk created"),
-									indicator: "green",
-								});
-								frappe.set_route("Form", "Event Talk", talk.name);
-							});
-						}
-					);
+							frm
+								.call({
+									method: "create_talk",
+									doc: frm.doc,
+									btn,
+								})
+								.then(({ message: talk }) => {
+									frappe.show_alert({
+										message: __("Talk created"),
+										indicator: "green",
+									})
+									frappe.set_route("Form", "Event Talk", talk.name)
+								})
+						},
+					)
 				},
-				__("Actions")
-			);
+				__("Actions"),
+			)
 		}
 	},
-});
+})

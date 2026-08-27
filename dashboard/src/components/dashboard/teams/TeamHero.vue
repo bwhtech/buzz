@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { TeamOverview } from "@/types";
-import { Avatar } from "frappe-ui";
+import { Avatar } from "frappe-ui"
 
-defineProps<{ team: TeamOverview }>();
+import type { TeamOverview } from "@/types"
+
+defineProps<{ team: TeamOverview }>()
 </script>
 
 <template>

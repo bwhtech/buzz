@@ -1,6 +1,7 @@
+import { type RouteRecordRaw, createRouter, createWebHistory } from "vue-router"
+
 import { isTeamMember } from "@/data/teams"
 import { userResource } from "@/data/user"
-import { type RouteRecordRaw, createRouter, createWebHistory } from "vue-router"
 
 const routes: RouteRecordRaw[] = [
 	{

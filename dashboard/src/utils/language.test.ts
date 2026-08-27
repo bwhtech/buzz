@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
+
 import {
 	buildPreferredLanguageCookie,
 	readPreferredLanguage,
@@ -9,10 +10,7 @@ import {
 
 const enabledLanguageCodes = ["en", "de", "fr"]
 
-function resolve(
-	requestedLanguage: string,
-	overrides: Record<string, unknown> = {},
-) {
+function resolve(requestedLanguage: string, overrides: Record<string, unknown> = {}) {
 	return resolveRequestedLanguage({
 		requestedLanguage,
 		isLoggedIn: false,
@@ -23,30 +21,22 @@ function resolve(
 }
 
 test("a URL without ?lang is left untouched", () => {
-	assert.deepEqual(
-		takeLanguageFromQuery("https://buzz.test/b/account/bookings"),
-		{
-			cleanedUrl: null,
-			requestedLanguage: null,
-		},
-	)
+	assert.deepEqual(takeLanguageFromQuery("https://buzz.test/b/account/bookings"), {
+		cleanedUrl: null,
+		requestedLanguage: null,
+	})
 })
 
 test("?lang is read off the URL and stripped from it", () => {
-	assert.deepEqual(
-		takeLanguageFromQuery("https://buzz.test/b/register/pycon?lang=de"),
-		{
-			cleanedUrl: "https://buzz.test/b/register/pycon",
-			requestedLanguage: "de",
-		},
-	)
+	assert.deepEqual(takeLanguageFromQuery("https://buzz.test/b/register/pycon?lang=de"), {
+		cleanedUrl: "https://buzz.test/b/register/pycon",
+		requestedLanguage: "de",
+	})
 })
 
 test("stripping ?lang keeps the other query parameters and the hash", () => {
 	assert.deepEqual(
-		takeLanguageFromQuery(
-			"https://buzz.test/b/register/pycon?lang=de&coupon=EARLY#tickets",
-		),
+		takeLanguageFromQuery("https://buzz.test/b/register/pycon?lang=de&coupon=EARLY#tickets"),
 		{
 			cleanedUrl: "https://buzz.test/b/register/pycon?coupon=EARLY#tickets",
 			requestedLanguage: "de",
@@ -79,19 +69,13 @@ test("?lang matching the language already in effect changes nothing", () => {
 })
 
 test("reads the preferred language out of a cookie string", () => {
-	assert.equal(
-		readPreferredLanguage("sid=abc123; preferred_language=de; user_id=Guest"),
-		"de",
-	)
+	assert.equal(readPreferredLanguage("sid=abc123; preferred_language=de; user_id=Guest"), "de")
 	assert.equal(readPreferredLanguage("sid=abc123"), null)
 	assert.equal(readPreferredLanguage(""), null)
 })
 
 test("a value in a neighbouring cookie is not mistaken for ours", () => {
-	assert.equal(
-		readPreferredLanguage("full_name=a&preferred_language=de; sid=abc123"),
-		null,
-	)
+	assert.equal(readPreferredLanguage("full_name=a&preferred_language=de; sid=abc123"), null)
 })
 
 test("the cookie is written for the whole site and survives the session", () => {

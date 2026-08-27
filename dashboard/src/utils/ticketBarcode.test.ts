@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
+
 import { barcodePattern } from "./ticketBarcode.ts"
 
 const IDS = ["a1b2c3d4e5", "0f9e8d7c6b", "1042", "a"]

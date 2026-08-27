@@ -11,4 +11,4 @@ frappe.query_reports["Detailed Event Registrations"] = {
 			reqd: 1,
 		},
 	],
-};
+}

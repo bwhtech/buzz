@@ -1,25 +1,26 @@
 <script setup lang="ts">
-import QRCodeExpandDialog from "@/components/QRCodeExpandDialog.vue";
-import type { TicketWithEvent } from "@/types";
-import { barcodePattern } from "@/utils/ticketBarcode";
-import { dayjs } from "frappe-ui";
-import { computed, ref } from "vue";
+import { dayjs } from "frappe-ui"
+import { computed, ref } from "vue"
 
-const props = defineProps<{ ticket: TicketWithEvent }>();
+import QRCodeExpandDialog from "@/components/QRCodeExpandDialog.vue"
+import type { TicketWithEvent } from "@/types"
+import { barcodePattern } from "@/utils/ticketBarcode"
 
-const showQR = ref(false);
+const props = defineProps<{ ticket: TicketWithEvent }>()
 
-const barcode = computed(() => ({ backgroundImage: barcodePattern(props.ticket.name) }));
+const showQR = ref(false)
+
+const barcode = computed(() => ({ backgroundImage: barcodePattern(props.ticket.name) }))
 // Plain dayjs: start_date is date-only, and a timezone shift moves it a day back.
-const day = computed(() => dayjs(props.ticket.start_date).format("DD.MM"));
-const year = computed(() => dayjs(props.ticket.start_date).format("YYYY"));
+const day = computed(() => dayjs(props.ticket.start_date).format("DD.MM"))
+const year = computed(() => dayjs(props.ticket.start_date).format("YYYY"))
 
 // Times arrive as a serialized timedelta ("9:00:00"), so the hour needs padding.
 const doors = computed(() => {
-	if (!props.ticket.start_time) return "To be announced";
-	const [hour, minute] = props.ticket.start_time.split(":");
-	return `${hour.padStart(2, "0")}:${minute}`;
-});
+	if (!props.ticket.start_time) return "To be announced"
+	const [hour, minute] = props.ticket.start_time.split(":")
+	return `${hour.padStart(2, "0")}:${minute}`
+})
 </script>
 
 <template>
@@ -27,9 +28,7 @@ const doors = computed(() => {
 		<section
 			class="flex-1 min-w-0 flex flex-col justify-between gap-6 rounded-2xl bg-surface-gray-4 p-6 min-h-[12rem]"
 		>
-			<div
-				class="flex flex-col gap-1 md:flex-row md:items-start md:justify-between md:gap-6"
-			>
+			<div class="flex flex-col gap-1 md:flex-row md:items-start md:justify-between md:gap-6">
 				<h3
 					class="font-black uppercase text-[1.375rem] md:text-[1.75rem] leading-[0.92] tracking-tight line-clamp-2"
 				>
@@ -43,9 +42,7 @@ const doors = computed(() => {
 				</p>
 			</div>
 
-			<div
-				class="flex flex-col gap-4 md:flex-row md:gap-10 text-[10px] uppercase leading-[1.5]"
-			>
+			<div class="flex flex-col gap-4 md:flex-row md:gap-10 text-[10px] uppercase leading-[1.5]">
 				<dl class="shrink-0 space-y-3">
 					<div>
 						<dt class="tracking-[0.12em] text-ink-gray-8">Doors</dt>
@@ -110,17 +107,21 @@ const doors = computed(() => {
 /* Tear notches. The mask clips anything outside the border box, so focus rings must be inset. */
 .ticket-stub {
 	--notch: transparent 5px, black 6px;
-	-webkit-mask-image: radial-gradient(circle 6px at 0 32%, var(--notch)),
+	-webkit-mask-image:
+		radial-gradient(circle 6px at 0 32%, var(--notch)),
 		radial-gradient(circle 6px at 0 68%, var(--notch)),
 		radial-gradient(circle 6px at 100% 32%, var(--notch)),
 		radial-gradient(circle 6px at 100% 68%, var(--notch));
-	mask-image: radial-gradient(circle 6px at 0 32%, var(--notch)),
+	mask-image:
+		radial-gradient(circle 6px at 0 32%, var(--notch)),
 		radial-gradient(circle 6px at 0 68%, var(--notch)),
 		radial-gradient(circle 6px at 100% 32%, var(--notch)),
 		radial-gradient(circle 6px at 100% 68%, var(--notch));
 	-webkit-mask-composite: source-in;
 	mask-composite: intersect;
-	transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms ease;
+	transition:
+		transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+		background-color 160ms ease;
 }
 
 /* A touch tap fires hover and leaves it stuck. */

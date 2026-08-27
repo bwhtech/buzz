@@ -1,24 +1,25 @@
 <script setup lang="ts" generic="T extends { name: string }">
-import { dayLabel, monthLabel, weekday } from "@/utils/dateLabels";
-import type { MonthGroup } from "@/utils/eventGroups";
-import type { TimelineTab } from "@/utils/timelineTabs";
-import { ErrorMessage, LoadingText, TabButtons } from "frappe-ui";
+import { ErrorMessage, LoadingText, TabButtons } from "frappe-ui"
+
+import { dayLabel, monthLabel, weekday } from "@/utils/dateLabels"
+import type { MonthGroup } from "@/utils/eventGroups"
+import type { TimelineTab } from "@/utils/timelineTabs"
 
 defineProps<{
-	heading: string;
+	heading: string
 	// Names the rows in "Loading tickets..." and "No upcoming tickets.".
-	noun: string;
-	months: MonthGroup<T>[];
-	loading?: boolean;
-	error?: { message: string } | null;
-}>();
+	noun: string
+	months: MonthGroup<T>[]
+	loading?: boolean
+	error?: { message: string } | null
+}>()
 
-const tab = defineModel<TimelineTab>("tab", { required: true });
+const tab = defineModel<TimelineTab>("tab", { required: true })
 
 const tabOptions = [
 	{ label: "Upcoming", value: "upcoming" },
 	{ label: "Past", value: "past" },
-];
+]
 </script>
 
 <template>
@@ -34,17 +35,11 @@ const tabOptions = [
 
 		<div v-else class="relative space-y-6">
 			<section v-for="month in months" :key="month.month" class="space-y-4">
-				<h2
-					class="relative bg-surface-elevation-1 py-1 text-xl font-semibold text-ink-gray-8"
-				>
+				<h2 class="relative bg-surface-elevation-1 py-1 text-xl font-semibold text-ink-gray-8">
 					{{ monthLabel(month.month) }}
 				</h2>
 
-				<div
-					v-for="day in month.days"
-					:key="day.date"
-					class="grid grid-cols-[6rem_1fr] gap-4"
-				>
+				<div v-for="day in month.days" :key="day.date" class="grid grid-cols-[6rem_1fr] gap-4">
 					<div class="pt-1">
 						<p class="font-semibold text-ink-gray-8">{{ dayLabel(day.date) }}</p>
 						<p class="text-base text-ink-gray-5">{{ weekday(day.date) }}</p>
@@ -52,10 +47,7 @@ const tabOptions = [
 
 					<div class="relative space-y-1 pl-6 pb-7">
 						<div class="absolute -left-4 flex flex-col items-center h-full">
-							<span
-								class="size-2 rounded-full bg-surface-gray-4"
-								aria-hidden="true"
-							/>
+							<span class="size-2 rounded-full bg-surface-gray-4" aria-hidden="true" />
 							<div
 								class="w-px h-full bg-gradient-to-b from-outline-gray-2 from-75% to-transparent"
 							></div>

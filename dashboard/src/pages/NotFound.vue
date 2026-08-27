@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Button } from "frappe-ui";
-import { useRouter } from "vue-router";
+import { Button } from "frappe-ui"
+import { useRouter } from "vue-router"
 
-const router = useRouter();
+const router = useRouter()
 </script>
 
 <template>

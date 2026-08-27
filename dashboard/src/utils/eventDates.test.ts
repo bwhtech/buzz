@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
+
 import { alignedEndDate, isEndBeforeStart } from "./eventDates.ts"
 
 test("an unset end date follows the start", () => {

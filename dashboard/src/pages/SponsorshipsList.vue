@@ -42,10 +42,7 @@
 			<Spinner />
 		</div>
 
-		<div
-			v-else-if="sponsorships.data && sponsorships.data.length === 0"
-			class="text-center py-8"
-		>
+		<div v-else-if="sponsorships.data && sponsorships.data.length === 0" class="text-center py-8">
 			<div class="text-ink-gray-5 text-lg mb-2">
 				{{ __("No sponsorship inquiries yet") }}
 			</div>
@@ -57,8 +54,8 @@
 </template>
 
 <script setup lang="ts">
-import { Badge, ListView, Spinner, createResource } from "frappe-ui";
-import { dayjsLocal } from "frappe-ui";
+import { Badge, ListView, Spinner, createResource } from "frappe-ui"
+import { dayjsLocal } from "frappe-ui"
 
 const columns = [
 	{ label: __("Company"), key: "company_name" },
@@ -67,7 +64,7 @@ const columns = [
 	{ label: __("Status"), key: "status" },
 	{ label: __("Sponsorship"), key: "sponsorship_status" },
 	{ label: __("Submitted"), key: "formatted_creation" },
-];
+]
 
 const sponsorships = createResource({
 	url: "buzz.api.sponsorships.get_user_sponsorship_inquiries",
@@ -79,22 +76,22 @@ const sponsorships = createResource({
 			...inquiry,
 			formatted_creation: dayjsLocal(inquiry.creation).format("MMM DD, YYYY"),
 			sponsorship_status: inquiry.has_sponsor ? __("Sponsored") : __("Inquiry Only"),
-		}));
+		}))
 	},
-});
+})
 
 const getStatusTheme = (status: string) => {
 	switch (status) {
 		case "Paid":
-			return "green";
+			return "green"
 		case "Payment Pending":
-			return "orange";
+			return "orange"
 		case "Approval Pending":
-			return "blue";
+			return "blue"
 		case "Withdrawn":
-			return "red";
+			return "red"
 		default:
-			return "gray";
+			return "gray"
 	}
-};
+}
 </script>

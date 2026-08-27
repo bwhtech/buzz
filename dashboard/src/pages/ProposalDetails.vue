@@ -27,11 +27,7 @@
 				<div>
 					<h3 class="text-ink-green-6 font-semibold">{{ __("Proposal Accepted") }}</h3>
 					<p class="text-ink-green-6 text-sm mt-1">
-						{{
-							__(
-								"Congratulations! Your talk proposal has been accepted for the event."
-							)
-						}}
+						{{ __("Congratulations! Your talk proposal has been accepted for the event.") }}
 					</p>
 				</div>
 			</div>
@@ -47,11 +43,7 @@
 				<div>
 					<h3 class="text-ink-blue-6 font-semibold">{{ __("Proposal Shortlisted") }}</h3>
 					<p class="text-ink-blue-5 text-sm mt-1">
-						{{
-							__(
-								"Your proposal has been shortlisted and is under final consideration."
-							)
-						}}
+						{{ __("Your proposal has been shortlisted and is under final consideration.") }}
 					</p>
 				</div>
 			</div>
@@ -69,7 +61,7 @@
 					<p class="text-ink-gray-7 text-sm mt-1">
 						{{
 							__(
-								"Your proposal has been submitted and is under review. You can still edit it while it's pending."
+								"Your proposal has been submitted and is under review. You can still edit it while it's pending.",
 							)
 						}}
 					</p>
@@ -89,7 +81,7 @@
 					<p class="text-ink-red-5 text-sm mt-1">
 						{{
 							__(
-								"Unfortunately, your proposal was not selected for this event. Thank you for your submission."
+								"Unfortunately, your proposal was not selected for this event. Thank you for your submission.",
 							)
 						}}
 					</p>
@@ -102,31 +94,18 @@
 			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{
-							__("Title")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{ __("Title") }}</label>
 						<p class="text-ink-gray-9">{{ proposal.doc.title }}</p>
 					</div>
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{
-							__("Event")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{ __("Event") }}</label>
 						<p class="text-ink-gray-9">{{ eventTitle }}</p>
 					</div>
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{
-							__("Status")
-						}}</label>
-						<Badge
-							:theme="getStatusTheme(proposal.doc.status)"
-							variant="subtle"
-							size="md"
-						>
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{ __("Status") }}</label>
+						<Badge :theme="getStatusTheme(proposal.doc.status)" variant="subtle" size="md">
 							<template #prefix>
-								<span
-									:class="getStatusIcon(proposal.doc.status)"
-									class="size-3.5"
-								/>
+								<span :class="getStatusIcon(proposal.doc.status)" class="size-3.5" />
 							</template>
 							{{ proposal.doc.status }}
 						</Badge>
@@ -138,9 +117,7 @@
 						<p class="text-ink-gray-9">{{ formatDate(proposal.doc.creation) }}</p>
 					</div>
 					<div v-if="proposal.doc.phone">
-						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{
-							__("Phone")
-						}}</label>
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{ __("Phone") }}</label>
 						<p class="text-ink-gray-9">{{ proposal.doc.phone }}</p>
 					</div>
 				</div>
@@ -193,9 +170,6 @@
 </template>
 
 <script setup lang="ts">
-import ProposalEditDialog from "@/components/ProposalEditDialog.vue";
-import BackButton from "@/components/common/BackButton.vue";
-import { useProposalStatuses } from "@/composables/useProposalStatuses";
 import {
 	Badge,
 	Button,
@@ -204,27 +178,31 @@ import {
 	createDocumentResource,
 	createResource,
 	dayjsLocal,
-} from "frappe-ui";
-import { computed, ref, watch } from "vue";
-import LucideCheckCircle from "~icons/lucide/check-circle";
-import LucideClock from "~icons/lucide/clock";
-import LucideStar from "~icons/lucide/star";
-import LucideXCircle from "~icons/lucide/x-circle";
+} from "frappe-ui"
+import { computed, ref, watch } from "vue"
+import LucideCheckCircle from "~icons/lucide/check-circle"
+import LucideClock from "~icons/lucide/clock"
+import LucideStar from "~icons/lucide/star"
+import LucideXCircle from "~icons/lucide/x-circle"
+
+import BackButton from "@/components/common/BackButton.vue"
+import ProposalEditDialog from "@/components/ProposalEditDialog.vue"
+import { useProposalStatuses } from "@/composables/useProposalStatuses"
 
 const props = defineProps({
 	proposalId: {
 		type: String,
 		required: true,
 	},
-});
+})
 
-const showEditDialog = ref(false);
+const showEditDialog = ref(false)
 
 const proposal = createDocumentResource({
 	doctype: "Talk Proposal",
 	name: props.proposalId,
 	auto: true,
-});
+})
 
 // Fetch event details including title and allow_editing_talks_after_acceptance
 const eventResource = createResource({
@@ -234,9 +212,9 @@ const eventResource = createResource({
 			doctype: "Buzz Event",
 			filters: { name: proposal.doc?.event },
 			fieldname: ["title", "allow_editing_talks_after_acceptance"],
-		};
+		}
 	},
-});
+})
 
 // Fetch Event Talk record if proposal is accepted
 const eventTalkResource = createResource({
@@ -246,76 +224,70 @@ const eventTalkResource = createResource({
 			doctype: "Event Talk",
 			filters: { proposal: props.proposalId },
 			fieldname: ["name", "title", "description"],
-		};
+		}
 	},
-});
+})
 
 watch(
 	() => proposal.doc?.event,
 	(eventId) => {
 		if (eventId) {
-			eventResource.fetch();
+			eventResource.fetch()
 		}
 	},
-	{ immediate: true }
-);
+	{ immediate: true },
+)
 
 watch(
 	() => proposal.doc?.status,
 	(status) => {
 		if (status === "Accepted") {
-			eventTalkResource.fetch();
+			eventTalkResource.fetch()
 		}
 	},
-	{ immediate: true }
-);
+	{ immediate: true },
+)
 
-const eventTitle = computed(() => eventResource.data?.title || proposal.doc?.event);
+const eventTitle = computed(() => eventResource.data?.title || proposal.doc?.event)
 const allowEditingAfterAcceptance = computed(
-	() => eventResource.data?.allow_editing_talks_after_acceptance
-);
-const eventTalk = computed(() => eventTalkResource.data);
+	() => eventResource.data?.allow_editing_talks_after_acceptance,
+)
+const eventTalk = computed(() => eventTalkResource.data)
 
 const speakerColumns = [
 	{ label: __("First Name"), key: "first_name" },
 	{ label: __("Last Name"), key: "last_name" },
 	{ label: __("Email"), key: "email" },
-];
+]
 
 // Check if user can edit
 // - Always allowed when status is "Review Pending" (edits Talk Proposal)
 // - Allowed when status is "Accepted" AND event has allow_editing_talks_after_acceptance enabled (edits Event Talk)
 const canEdit = computed(() => {
 	if (proposal.doc?.status === "Review Pending") {
-		return true;
+		return true
 	}
-	if (
-		proposal.doc?.status === "Accepted" &&
-		allowEditingAfterAcceptance.value &&
-		eventTalk.value
-	) {
-		return true;
+	if (proposal.doc?.status === "Accepted" && allowEditingAfterAcceptance.value && eventTalk.value) {
+		return true
 	}
-	return false;
-});
+	return false
+})
 
 // Determine if we're editing the Event Talk (after acceptance) or the Talk Proposal
 const isEditingEventTalk = computed(() => {
-	return (
-		proposal.doc?.status === "Accepted" && allowEditingAfterAcceptance.value && eventTalk.value
-	);
-});
+	return proposal.doc?.status === "Accepted" && allowEditingAfterAcceptance.value && eventTalk.value
+})
 
-const { getStatusTheme, getStatusIcon } = useProposalStatuses();
+const { getStatusTheme, getStatusIcon } = useProposalStatuses()
 
 const formatDate = (dateString: string) => {
-	return dayjsLocal(dateString).format("MMM DD, YYYY");
-};
+	return dayjsLocal(dateString).format("MMM DD, YYYY")
+}
 
 const onProposalUpdated = () => {
-	proposal.reload();
+	proposal.reload()
 	if (proposal.doc?.status === "Accepted") {
-		eventTalkResource.fetch();
+		eventTalkResource.fetch()
 	}
-};
+}
 </script>

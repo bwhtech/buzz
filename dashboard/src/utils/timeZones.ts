@@ -130,7 +130,5 @@ export function zoneCountry(zone: string): string {
  * instead, which is why this can afford to be a haystack rather than a caption.
  */
 export function zoneSearchText(zone: string): string {
-	return [zoneCity(zone), zoneCountry(zone), zoneGenericName(zone)]
-		.filter(Boolean)
-		.join(", ")
+	return [zoneCity(zone), zoneCountry(zone), zoneGenericName(zone)].filter(Boolean).join(", ")
 }

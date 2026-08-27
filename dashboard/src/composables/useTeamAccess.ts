@@ -1,5 +1,6 @@
-import { isTeamMember } from "@/data/teams"
 import { type Ref, ref } from "vue"
+
+import { isTeamMember } from "@/data/teams"
 
 export type TeamAccess = "pending" | "granted" | "denied"
 

@@ -28,10 +28,7 @@
 			</div>
 
 			<!-- Coupon Code -->
-			<div
-				v-if="booking.coupon_code"
-				class="flex justify-between items-center text-ink-gray-7"
-			>
+			<div v-if="booking.coupon_code" class="flex justify-between items-center text-ink-gray-7">
 				<span>{{ __("Coupon") }}</span>
 				<span class="font-medium text-green-600">{{ booking.coupon_code }}</span>
 			</div>
@@ -49,11 +46,7 @@
 				v-if="hasTax && !isTaxInclusive"
 				class="flex justify-between items-center text-ink-gray-7"
 			>
-				<span
-					>{{ __(booking.tax_label || "Tax") }} ({{
-						booking.tax_percentage || 0
-					}}%)</span
-				>
+				<span>{{ __(booking.tax_label || "Tax") }} ({{ booking.tax_percentage || 0 }}%)</span>
 				<span class="font-medium">{{
 					formatPrice(booking.tax_amount || 0, booking.currency || "INR")
 				}}</span>
@@ -85,51 +78,52 @@
 </template>
 
 <script setup lang="ts">
-import { formatPrice } from "@/utils/currency";
-import { Badge } from "frappe-ui";
-import { computed } from "vue";
-import LucideCheck from "~icons/lucide/check";
-import LucideClock from "~icons/lucide/clock";
-import LucideX from "~icons/lucide/x";
+import { Badge } from "frappe-ui"
+import { computed } from "vue"
+import LucideCheck from "~icons/lucide/check"
+import LucideClock from "~icons/lucide/clock"
+import LucideX from "~icons/lucide/x"
+
+import { formatPrice } from "@/utils/currency"
 
 const props = defineProps({
 	booking: {
 		type: Object,
 		required: true,
 		validator: (value) => {
-			return typeof value === "object" && value !== null;
+			return typeof value === "object" && value !== null
 		},
 	},
-});
+})
 
 const hasTax = computed(() => {
-	return Boolean(props.booking.tax_amount && props.booking.tax_amount > 0);
-});
+	return Boolean(props.booking.tax_amount && props.booking.tax_amount > 0)
+})
 
 const hasDiscount = computed(() => {
-	return (props.booking.discount_amount || 0) > 0;
-});
+	return (props.booking.discount_amount || 0) > 0
+})
 
-const isPaid = computed(() => props.booking.payment_status === "Paid");
+const isPaid = computed(() => props.booking.payment_status === "Paid")
 
 const paymentBadge = computed(() => {
-	const status = props.booking.payment_status;
+	const status = props.booking.payment_status
 	if (status === "Paid") {
-		return { label: __("Paid"), theme: "green" as const, icon: LucideCheck };
+		return { label: __("Paid"), theme: "green" as const, icon: LucideCheck }
 	} else if (status === "Verification Pending") {
 		return {
 			label: __("Verification Pending"),
 			theme: "orange" as const,
 			icon: LucideClock,
-		};
+		}
 	}
-	return { label: __(status || "Unpaid"), theme: "red" as const, icon: LucideX };
-});
+	return { label: __(status || "Unpaid"), theme: "red" as const, icon: LucideX }
+})
 
 const isTaxInclusive = computed(() => {
 	// Tax-inclusive: total_amount equals net_amount minus discount (tax not added on top)
-	if (!hasTax.value) return false;
-	const expected = (props.booking.net_amount || 0) - (props.booking.discount_amount || 0);
-	return Math.abs(props.booking.total_amount - expected) < 0.01;
-});
+	if (!hasTax.value) return false
+	const expected = (props.booking.net_amount || 0) - (props.booking.discount_amount || 0)
+	return Math.abs(props.booking.total_amount - expected) < 0.01
+})
 </script>

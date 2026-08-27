@@ -5,11 +5,7 @@
  * @param {string} plural - The plural form of the word (optional, defaults to singular + 's')
  * @returns {string} The correctly pluralized word with count
  */
-export function pluralize(
-	count: number,
-	singular: string,
-	plural?: string | null,
-): string {
+export function pluralize(count: number, singular: string, plural?: string | null): string {
 	// If no plural form is provided, default to singular + 's'
 	const pluralForm = plural || `${singular}s`
 
@@ -26,11 +22,7 @@ export function pluralize(
  * @param {string} plural - The plural form of the word (optional, defaults to singular + 's')
  * @returns {string} The correctly pluralized word without count
  */
-export function pluralizeWord(
-	count: number,
-	singular: string,
-	plural?: string | null,
-): string {
+export function pluralizeWord(count: number, singular: string, plural?: string | null): string {
 	const pluralForm = plural || `${singular}s`
 	return count === 1 ? singular : pluralForm
 }

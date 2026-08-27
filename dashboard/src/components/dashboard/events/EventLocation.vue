@@ -1,41 +1,42 @@
 <script setup lang="ts">
-import AddVenueDialog from "@/components/dashboard/events/AddVenueDialog.vue";
-import { venues } from "@/data/venues";
-import { Combobox } from "frappe-ui";
-import { computed, ref, watch } from "vue";
+import { Combobox } from "frappe-ui"
+import { computed, ref, watch } from "vue"
+
+import AddVenueDialog from "@/components/dashboard/events/AddVenueDialog.vue"
+import { venues } from "@/data/venues"
 
 // A reserved value rather than a venue name. Event Venue is autonamed by prompt, so a
 // venue really could be called "Zoom" — the sentinel keeps the two apart.
-const ZOOM = "__zoom__";
+const ZOOM = "__zoom__"
 
 // A page that asks for the medium separately picks a venue and nothing else, so the
 // Zoom option would be a second way to answer a question already answered.
 const props = withDefaults(
 	defineProps<{ team: string; disabled?: boolean; showVirtual?: boolean }>(),
-	{ showVirtual: true }
-);
+	{ showVirtual: true },
+)
 
-const venue = defineModel<string>("venue", { default: "" });
+const venue = defineModel<string>("venue", { default: "" })
 // Zoom cannot be booked until the event exists, so this is the intent to act on at save.
-const zoomMeeting = defineModel<boolean>("zoomMeeting", { default: false });
+const zoomMeeting = defineModel<boolean>("zoomMeeting", { default: false })
 
-const isAdding = ref(false);
-const suggestedName = ref("");
+const isAdding = ref(false)
+const suggestedName = ref("")
 
 watch(
 	() => props.team,
 	(team) => team && venues.fetch({ team }),
-	{ immediate: true }
-);
+	{ immediate: true },
+)
 
 const selected = computed({
 	get: () => (zoomMeeting.value ? ZOOM : venue.value),
 	set: (value: string | null) => {
 		// The server derives `medium` from this, so it is not tracked here as well.
-		zoomMeeting.value = value === ZOOM;
-		venue.value = value === ZOOM ? "" : value ?? "";
+		zoomMeeting.value = value === ZOOM
+		venue.value = value === ZOOM ? "" : (value ?? "")
 	},
-});
+})
 
 const addVenue = {
 	type: "custom" as const,
@@ -47,10 +48,10 @@ const addVenue = {
 		Boolean(query.trim()) &&
 		!(venues.data ?? []).some((row) => row.name.toLowerCase() === query.trim().toLowerCase()),
 	onClick: ({ query }: { query: string }) => {
-		suggestedName.value = query.trim();
-		isAdding.value = true;
+		suggestedName.value = query.trim()
+		isAdding.value = true
 	},
-};
+}
 
 const options = computed(() => [
 	{
@@ -70,13 +71,13 @@ const options = computed(() => [
 					group: "Virtual",
 					options: [{ label: "Create Zoom meeting", value: ZOOM, icon: "lucide-video" }],
 				},
-		  ]
+			]
 		: []),
-]);
+])
 
 async function onVenueCreated(name: string) {
-	await venues.fetch({ team: props.team });
-	selected.value = name;
+	await venues.fetch({ team: props.team })
+	selected.value = name
 }
 </script>
 

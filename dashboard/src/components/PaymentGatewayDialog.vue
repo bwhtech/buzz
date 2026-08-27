@@ -36,8 +36,8 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog } from "frappe-ui";
-import { computed, type PropType, ref, watch } from "vue";
+import { Button, Dialog } from "frappe-ui"
+import { computed, type PropType, ref, watch } from "vue"
 
 const props = defineProps({
 	open: {
@@ -48,35 +48,35 @@ const props = defineProps({
 		type: Array as PropType<any[]>,
 		required: true,
 	},
-});
+})
 
-const emit = defineEmits(["update:open", "gateway-selected"]);
+const emit = defineEmits(["update:open", "gateway-selected"])
 
 const isOpen = computed({
 	get: () => props.open,
 	set: (val) => emit("update:open", val),
-});
+})
 
-const selectedGateway = ref<any>(null);
+const selectedGateway = ref<any>(null)
 
 // Reset selection when dialog opens
 watch(
 	() => props.open,
 	(newVal) => {
 		if (newVal) {
-			selectedGateway.value = null;
+			selectedGateway.value = null
 		}
-	}
-);
+	},
+)
 
 const closeDialog = () => {
-	isOpen.value = false;
-	selectedGateway.value = null;
-};
+	isOpen.value = false
+	selectedGateway.value = null
+}
 
 const proceedToPayment = () => {
-	if (!selectedGateway.value) return;
-	emit("gateway-selected", selectedGateway.value);
-	closeDialog();
-};
+	if (!selectedGateway.value) return
+	emit("gateway-selected", selectedGateway.value)
+	closeDialog()
+}
 </script>

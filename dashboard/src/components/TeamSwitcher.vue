@@ -1,20 +1,21 @@
 <script setup lang="ts">
-import { currentTeam, selectTeam, teams } from "@/data/teams";
-import type { TeamOption } from "@/types";
-import { Avatar, Badge, KeyboardShortcut, Popover } from "frappe-ui";
-import { computed, ref } from "vue";
+import { Avatar, Badge, KeyboardShortcut, Popover } from "frappe-ui"
+import { computed, ref } from "vue"
 
-const query = ref("");
+import { currentTeam, selectTeam, teams } from "@/data/teams"
+import type { TeamOption } from "@/types"
+
+const query = ref("")
 
 const matchingTeams = computed(() =>
 	teams.value.filter((team) =>
-		team.team_name.toLowerCase().includes(query.value.trim().toLowerCase())
-	)
-);
+		team.team_name.toLowerCase().includes(query.value.trim().toLowerCase()),
+	),
+)
 
 function switchTeam(team: TeamOption, closePanel: () => void) {
-	selectTeam(team.name);
-	closePanel();
+	selectTeam(team.name)
+	closePanel()
 }
 </script>
 
@@ -93,9 +94,7 @@ function switchTeam(team: TeamOption, closePanel: () => void) {
 					<span class="lucide-plus size-4 shrink-0 text-ink-gray-6" />
 					<div class="min-w-0">
 						<div class="text-base text-ink-gray-8">Create team</div>
-						<div class="text-sm text-ink-gray-5">
-							Collaborate with others in a shared workspace
-						</div>
+						<div class="text-sm text-ink-gray-5">Collaborate with others in a shared workspace</div>
 					</div>
 				</button>
 			</div>

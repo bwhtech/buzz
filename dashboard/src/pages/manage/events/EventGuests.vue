@@ -1,30 +1,31 @@
 <script setup lang="ts">
-import EventGuestItem from "@/components/dashboard/events/EventGuestItem.vue";
-import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue";
-import { eventGuests } from "@/data/events";
-import { FormControl, LoadingText } from "frappe-ui";
-import { computed, ref } from "vue";
-import { useRoute } from "vue-router";
+import { FormControl, LoadingText } from "frappe-ui"
+import { computed, ref } from "vue"
+import { useRoute } from "vue-router"
 
-const route = useRoute();
-const eventId = route.params.eventId as string;
+import EventGuestItem from "@/components/dashboard/events/EventGuestItem.vue"
+import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
+import { eventGuests } from "@/data/events"
 
-const guests = eventGuests(eventId);
+const route = useRoute()
+const eventId = route.params.eventId as string
 
-const query = ref("");
+const guests = eventGuests(eventId)
+
+const query = ref("")
 
 // Filtered here rather than server-side: the whole list is already loaded, so a round
 // trip per keystroke would be slower than the search it replaces.
 const matches = computed(() => {
-	const term = query.value.trim().toLowerCase();
-	const all = guests.data?.guests ?? [];
-	if (!term) return all;
+	const term = query.value.trim().toLowerCase()
+	const all = guests.data?.guests ?? []
+	if (!term) return all
 	return all.filter((guest) =>
 		[guest.attendee_name, guest.attendee_email].some((field) =>
-			field?.toLowerCase().includes(term)
-		)
-	);
-});
+			field?.toLowerCase().includes(term),
+		),
+	)
+})
 </script>
 
 <template>
@@ -70,9 +71,7 @@ const matches = computed(() => {
 				<EventGuestItem v-for="guest in matches" :key="guest.name" :guest="guest" />
 			</ul>
 
-			<p v-else-if="query" class="text-base text-ink-gray-5">
-				Nobody here matches “{{ query }}”.
-			</p>
+			<p v-else-if="query" class="text-base text-ink-gray-5">Nobody here matches “{{ query }}”.</p>
 			<p v-else class="text-base text-ink-gray-5">No guests yet.</p>
 		</section>
 	</div>

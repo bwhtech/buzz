@@ -1,8 +1,9 @@
+import { createResource, toast } from "frappe-ui"
+import { type Ref, ref } from "vue"
+
 import beepFailSound from "@/assets/audio/beep-fail.wav"
 import beepSound from "@/assets/audio/beep.wav"
 import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
-import { createResource, toast } from "frappe-ui"
-import { type Ref, ref } from "vue"
 
 interface ValidationTicket {
 	id: string
@@ -72,10 +73,7 @@ const playErrorSound = (): void => {
 	audio.play()
 }
 
-const showDebouncedToast = (
-	message: string,
-	type: "error" | "success" = "error",
-): void => {
+const showDebouncedToast = (message: string, type: "error" | "success" = "error"): void => {
 	const now = Date.now()
 	if (lastToastMessage === message && now - lastToastTime < TOAST_DEBOUNCE_MS) {
 		return

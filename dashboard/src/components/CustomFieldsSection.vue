@@ -17,9 +17,11 @@
 </template>
 
 <script setup lang="ts">
-import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields";
-import { type PropType } from "vue";
-import CustomFieldInput from "./CustomFieldInput.vue";
+import { type PropType } from "vue"
+
+import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields"
+
+import CustomFieldInput from "./CustomFieldInput.vue"
 
 const props = defineProps({
 	customFields: {
@@ -38,35 +40,35 @@ const props = defineProps({
 		type: Boolean,
 		default: true,
 	},
-});
+})
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue"])
 
 // Get field value from model
 const getFieldValue = (fieldname: string) => {
-	const currentValue = props.modelValue[fieldname];
+	const currentValue = props.modelValue[fieldname]
 
 	// If field already has a value, return it
 	if (currentValue !== undefined && currentValue !== null && currentValue !== "") {
-		return currentValue;
+		return currentValue
 	}
 
 	// Apply default value if available
-	const field = props.customFields.find((f) => f.fieldname === fieldname);
+	const field = props.customFields.find((f) => f.fieldname === fieldname)
 	if (field) {
-		const defaultValue = getFieldDefaultValue(field);
+		const defaultValue = getFieldDefaultValue(field)
 		if (defaultValue) {
-			updateFieldValue(fieldname, defaultValue);
-			return defaultValue;
+			updateFieldValue(fieldname, defaultValue)
+			return defaultValue
 		}
 	}
 
-	return "";
-};
+	return ""
+}
 
 // Update field value in model
 const updateFieldValue = (fieldname: string, value: any) => {
-	const updatedValue = { ...props.modelValue, [fieldname]: value };
-	emit("update:modelValue", updatedValue);
-};
+	const updatedValue = { ...props.modelValue, [fieldname]: value }
+	emit("update:modelValue", updatedValue)
+}
 </script>

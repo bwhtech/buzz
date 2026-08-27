@@ -1,7 +1,5 @@
 <template>
-	<div
-		class="min-h-[75vh] border border-gray-200 dark:border-gray-700 shadow-sm mx-4 rounded-md"
-	>
+	<div class="min-h-[75vh] border border-gray-200 dark:border-gray-700 shadow-sm mx-4 rounded-md">
 		<!-- Header -->
 		<div class="shadow-sm border-b">
 			<div class="max-w-md mx-auto px-4 py-4">
@@ -27,11 +25,7 @@
 						{{ __("Access Denied") }}
 					</h4>
 					<p class="text-gray-600 dark:text-gray-400">
-						{{
-							__(
-								"You don't have the required permissions to access the ticket scanner."
-							)
-						}}
+						{{ __("You don't have the required permissions to access the ticket scanner.") }}
 					</p>
 				</div>
 			</div>
@@ -85,54 +79,56 @@
 </template>
 
 <script setup lang="ts">
-import { useTicketValidation } from "@/composables/useTicketValidation";
-import { userResource } from "@/data/user";
-import type { UserInfo } from "@/types";
-import { createResource } from "frappe-ui";
-import { computed, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
-import LucideShieldX from "~icons/lucide/shield-x";
-import EventSelector from "../components/EventSelector.vue";
-import QRScanner from "../components/QRScanner.vue";
-import TicketDetailsModal from "../components/TicketDetailsModal.vue";
-import BackButton from "../components/common/BackButton.vue";
+import { createResource } from "frappe-ui"
+import { computed, onMounted, ref } from "vue"
+import { useRouter } from "vue-router"
+import LucideShieldX from "~icons/lucide/shield-x"
+
+import { useTicketValidation } from "@/composables/useTicketValidation"
+import { userResource } from "@/data/user"
+import type { UserInfo } from "@/types"
+
+import BackButton from "../components/common/BackButton.vue"
+import EventSelector from "../components/EventSelector.vue"
+import QRScanner from "../components/QRScanner.vue"
+import TicketDetailsModal from "../components/TicketDetailsModal.vue"
 
 const props = defineProps({
 	eventName: {
 		type: String,
 		default: "",
 	},
-});
+})
 
-const router = useRouter();
-const userProfile = ref<Partial<UserInfo>>({});
+const router = useRouter()
+const userProfile = ref<Partial<UserInfo>>({})
 
 const hasRequiredRole = computed(() => {
-	if (!userProfile.value || !userProfile.value.roles) return false;
-	return userProfile.value.roles.some((role) => role.role === "Frontdesk Manager");
-});
+	if (!userProfile.value || !userProfile.value.roles) return false
+	return userProfile.value.roles.some((role) => role.role === "Frontdesk Manager")
+})
 
-const { validationResult, clearResults } = useTicketValidation();
+const { validationResult, clearResults } = useTicketValidation()
 
 // State
-const selectedEvent = ref<Record<string, any> | null>(null);
-const qrScannerRef = ref<InstanceType<typeof QRScanner> | null>(null);
+const selectedEvent = ref<Record<string, any> | null>(null)
+const qrScannerRef = ref<InstanceType<typeof QRScanner> | null>(null)
 
 // Event selection
 const selectEvent = (event: Record<string, any>) => {
-	selectedEvent.value = event;
-	clearResults();
-	router.replace({ name: "check-in", params: { eventName: event.name } });
-};
+	selectedEvent.value = event
+	clearResults()
+	router.replace({ name: "check-in", params: { eventName: event.name } })
+}
 
 const clearEventSelection = () => {
-	selectedEvent.value = null;
-	clearResults();
-	router.replace({ name: "check-in" });
-};
+	selectedEvent.value = null
+	clearResults()
+	router.replace({ name: "check-in" })
+}
 
 onMounted(() => {
-	userProfile.value = { ...userResource.data };
+	userProfile.value = { ...userResource.data }
 
 	if (props.eventName) {
 		const eventResource = createResource({
@@ -144,12 +140,12 @@ onMounted(() => {
 				limit_page_length: 1,
 			},
 			auto: false,
-		});
+		})
 		eventResource.fetch().then(() => {
 			if (eventResource.data && eventResource.data.length > 0) {
-				selectedEvent.value = eventResource.data[0];
+				selectedEvent.value = eventResource.data[0]
 			}
-		});
+		})
 	}
-});
+})
 </script>

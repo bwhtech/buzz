@@ -38,8 +38,8 @@
 					<div>
 						<h3 class="text-ink-green-6 font-semibold">Payment Successful! 🎉</h3>
 						<p class="text-ink-green-6">
-							Your sponsorship payment has been confirmed. You'll receive
-							confirmation details via email.
+							Your sponsorship payment has been confirmed. You'll receive confirmation details via
+							email.
 						</p>
 					</div>
 				</div>
@@ -70,9 +70,7 @@
 					<p class="text-ink-green-6">{{ formatDate(sponsorDetails.creation) }}</p>
 				</div>
 				<div v-if="sponsorDetails.tier_title" class="md:col-span-2">
-					<label class="block text-sm-medium text-ink-green-6 mb-1"
-						>Sponsorship Tier</label
-					>
+					<label class="block text-sm-medium text-ink-green-6 mb-1">Sponsorship Tier</label>
 					<p class="text-ink-green-6">{{ sponsorDetails.tier_title }}</p>
 				</div>
 			</div>
@@ -104,9 +102,8 @@
 				<div>
 					<h3 class="text-ink-blue-6 font-semibold">Awaiting Approval</h3>
 					<p class="text-ink-blue-5 text-sm mt-1">
-						Your sponsorship inquiry has been submitted and is pending approval from
-						the event management team. You'll be notified once it's approved and ready
-						for payment.
+						Your sponsorship inquiry has been submitted and is pending approval from the event
+						management team. You'll be notified once it's approved and ready for payment.
 					</p>
 				</div>
 			</div>
@@ -123,8 +120,8 @@
 					<div>
 						<h3 class="text-ink-gray-8 font-semibold">Payment Pending</h3>
 						<p class="text-ink-gray-7 text-sm mt-1">
-							Your sponsorship inquiry has been approved! Complete your payment to
-							confirm your sponsorship.
+							Your sponsorship inquiry has been approved! Complete your payment to confirm your
+							sponsorship.
 						</p>
 					</div>
 				</div>
@@ -140,30 +137,19 @@
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">Company Information</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6 mb-1"
-							>Company Name</label
-						>
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">Company Name</label>
 						<p class="text-ink-gray-9">
 							{{ enquiryDetails.data.enquiry.company_name }}
 						</p>
 					</div>
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6 mb-2"
-							>Company Logo</label
-						>
+						<label class="block text-sm-medium text-ink-gray-6 mb-2">Company Logo</label>
 						<FileUploader
 							@success="(file: { file_url: string }) => updateLogo(file.file_url)"
 							:validateFile="validateIsImageFile"
 							:uploadArgs="logoUploadArgs"
 						>
-							<template
-								#default="{
-									openFileSelector,
-									error: uploadError,
-									uploading,
-									progress,
-								}"
-							>
+							<template #default="{ openFileSelector, error: uploadError, uploading, progress }">
 								<div class="space-y-2">
 									<!-- Logo Display -->
 									<div v-if="currentLogo" class="mb-2">
@@ -172,8 +158,7 @@
 											:alt="companyName"
 											class="h-16 w-auto object-contain border border-outline-gray-1 rounded p-1 contrast-100 brightness-100"
 											:class="{
-												'opacity-50':
-													uploading || updateLogoResource.loading,
+												'opacity-50': uploading || updateLogoResource.loading,
 											}"
 										/>
 									</div>
@@ -200,9 +185,7 @@
 									<!-- Upload Progress -->
 									<div v-if="uploading" class="text-xs text-ink-gray-7">
 										Uploading... {{ progress }}%
-										<div
-											class="w-full bg-surface-gray-2 rounded-full h-1 mt-1"
-										>
+										<div class="w-full bg-surface-gray-2 rounded-full h-1 mt-1">
 											<div
 												class="bg-ink-blue-5 h-1 rounded-full transition-all duration-300"
 												:style="{ width: progress + '%' }"
@@ -211,10 +194,7 @@
 									</div>
 
 									<!-- Update Status -->
-									<div
-										v-else-if="updateLogoResource.loading"
-										class="text-xs text-ink-gray-7"
-									>
+									<div v-else-if="updateLogoResource.loading" class="text-xs text-ink-gray-7">
 										Updating logo...
 									</div>
 
@@ -238,16 +218,11 @@
 					<div>
 						<label class="block text-sm-medium text-ink-gray-6 mb-1">Event</label>
 						<p class="text-ink-gray-9">
-							{{
-								enquiryDetails.data.event_details.title ||
-								enquiryDetails.data.enquiry.event
-							}}
+							{{ enquiryDetails.data.event_details.title || enquiryDetails.data.enquiry.event }}
 						</p>
 					</div>
 					<div v-if="enquiryDetails.data.enquiry.tier_title">
-						<label class="block text-sm-medium text-ink-gray-6 mb-1"
-							>Sponsorship Tier</label
-						>
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">Sponsorship Tier</label>
 						<p class="text-ink-gray-9">{{ enquiryDetails.data.enquiry.tier_title }}</p>
 					</div>
 					<div>
@@ -261,9 +236,7 @@
 						</Badge>
 					</div>
 					<div>
-						<label class="block text-sm-medium text-ink-gray-6 mb-1"
-							>Submitted On</label
-						>
+						<label class="block text-sm-medium text-ink-gray-6 mb-1">Submitted On</label>
 						<p class="text-ink-gray-9">
 							{{ formatDate(enquiryDetails.data.enquiry.creation) }}
 						</p>
@@ -292,19 +265,14 @@
 					</div>
 				</div>
 				<div v-if="enquiryDetails.data.event_details.short_description" class="mt-4">
-					<label class="block text-sm-medium text-ink-gray-6 mb-1"
-						>Event Description</label
-					>
+					<label class="block text-sm-medium text-ink-gray-6 mb-1">Event Description</label>
 					<p class="text-ink-gray-9">
 						{{ enquiryDetails.data.event_details.short_description }}
 					</p>
 				</div>
 				<div v-if="enquiryDetails.data.event_details.about" class="mt-4">
 					<label class="block text-sm-medium text-ink-gray-6 mb-1">About Event</label>
-					<div
-						class="text-ink-gray-9"
-						v-html="enquiryDetails.data.event_details.about"
-					></div>
+					<div class="text-ink-gray-9" v-html="enquiryDetails.data.event_details.about"></div>
 				</div>
 			</div>
 		</div>
@@ -344,8 +312,6 @@
 </template>
 
 <script setup lang="ts">
-import type { FrappeError } from "@/types";
-import { usePaymentSuccess } from "@/composables/usePaymentSuccess";
 import {
 	Badge,
 	Button,
@@ -354,25 +320,29 @@ import {
 	FileUploader,
 	Spinner,
 	createResource,
-} from "frappe-ui";
-import { toast } from "frappe-ui";
-import { dayjsLocal } from "frappe-ui";
-import { computed, ref } from "vue";
-import LucideCheckCircle from "~icons/lucide/check-circle";
-import LucideClock from "~icons/lucide/clock";
-import LucideXCircle from "~icons/lucide/x-circle";
-import SponsorshipPaymentDialog from "../components/SponsorshipPaymentDialog.vue";
-import BackButton from "../components/common/BackButton.vue";
+} from "frappe-ui"
+import { toast } from "frappe-ui"
+import { dayjsLocal } from "frappe-ui"
+import { computed, ref } from "vue"
+import LucideCheckCircle from "~icons/lucide/check-circle"
+import LucideClock from "~icons/lucide/clock"
+import LucideXCircle from "~icons/lucide/x-circle"
+
+import { usePaymentSuccess } from "@/composables/usePaymentSuccess"
+import type { FrappeError } from "@/types"
+
+import BackButton from "../components/common/BackButton.vue"
+import SponsorshipPaymentDialog from "../components/SponsorshipPaymentDialog.vue"
 
 const props = defineProps({
 	enquiryId: {
 		type: String,
 		required: true,
 	},
-});
+})
 
-const showPaymentDialog = ref(false);
-const showWithdrawDialog = ref(false);
+const showPaymentDialog = ref(false)
+const showWithdrawDialog = ref(false)
 
 const enquiryDetails = createResource({
 	url: "buzz.api.sponsorships.get_sponsorship_details",
@@ -380,7 +350,7 @@ const enquiryDetails = createResource({
 		enquiry_id: props.enquiryId,
 	},
 	auto: true,
-});
+})
 
 // Resource to withdraw sponsorship inquiry
 const withdrawResource = createResource({
@@ -388,19 +358,19 @@ const withdrawResource = createResource({
 	makeParams() {
 		return {
 			enquiry_id: props.enquiryId,
-		};
+		}
 	},
 	onSuccess: () => {
-		toast.success("Inquiry withdrawn successfully");
-		showWithdrawDialog.value = false;
+		toast.success("Inquiry withdrawn successfully")
+		showWithdrawDialog.value = false
 		// Reload the enquiry details to show updated status
-		enquiryDetails.reload();
+		enquiryDetails.reload()
 	},
 	onError: (err: FrappeError) => {
-		toast.error(err.messages?.[0] || "Failed to withdraw inquiry");
-		showWithdrawDialog.value = false;
+		toast.error(err.messages?.[0] || "Failed to withdraw inquiry")
+		showWithdrawDialog.value = false
 	},
-});
+})
 
 // Resource to update company logo
 const updateLogoResource = createResource({
@@ -413,7 +383,7 @@ const updateLogoResource = createResource({
 				name: sponsorDetails.value.name,
 				fieldname: "company_logo",
 				value: fileUrl,
-			};
+			}
 		}
 
 		// If it's still an inquiry, update the Sponsorship Enquiry document
@@ -422,113 +392,113 @@ const updateLogoResource = createResource({
 			name: props.enquiryId,
 			fieldname: "company_logo",
 			value: fileUrl,
-		};
+		}
 	},
 	onSuccess: () => {
 		// Reload the enquiry details to get updated data
-		enquiryDetails.reload();
+		enquiryDetails.reload()
 	},
 	onError: (err: FrappeError) => {
-		console.error("Failed to update company logo:", err);
+		console.error("Failed to update company logo:", err)
 	},
-});
+})
 
 // Use the payment success composable
 const { showSuccessMessage } = usePaymentSuccess({
 	onSuccess: () => {
 		// Reload the enquiry details to get updated status
-		enquiryDetails.reload();
+		enquiryDetails.reload()
 	},
-});
+})
 
 // Extract sponsor details from the response
 const sponsorDetails = computed(() => {
-	return enquiryDetails.data?.sponsor_details || null;
-});
+	return enquiryDetails.data?.sponsor_details || null
+})
 
 // Check if inquiry can be withdrawn (not paid and not already withdrawn)
 const canWithdraw = computed(() => {
-	if (!enquiryDetails.data?.enquiry) return false;
-	const status = enquiryDetails.data.enquiry.status;
-	return status !== "Paid" && status !== "Withdrawn";
-});
+	if (!enquiryDetails.data?.enquiry) return false
+	const status = enquiryDetails.data.enquiry.status
+	return status !== "Paid" && status !== "Withdrawn"
+})
 
 // Get the current company logo (from sponsor if confirmed, otherwise from enquiry)
 const currentLogo = computed(() => {
 	if (sponsorDetails.value?.company_logo) {
-		return sponsorDetails.value.company_logo;
+		return sponsorDetails.value.company_logo
 	}
-	return enquiryDetails.data?.enquiry?.company_logo || null;
-});
+	return enquiryDetails.data?.enquiry?.company_logo || null
+})
 
 // Get the company name
 const companyName = computed(() => {
 	if (sponsorDetails.value?.company_name) {
-		return sponsorDetails.value.company_name;
+		return sponsorDetails.value.company_name
 	}
-	return enquiryDetails.data?.enquiry?.company_name || "";
-});
+	return enquiryDetails.data?.enquiry?.company_name || ""
+})
 
 // Upload arguments for file uploader
 const logoUploadArgs = computed(() => {
 	return {
 		private: false,
 		folder: "Home/Attachments",
-	};
-});
+	}
+})
 
 const getStatusTheme = (status: string) => {
 	switch (status) {
 		case "Paid":
-			return "green";
+			return "green"
 		case "Payment Pending":
-			return "orange";
+			return "orange"
 		case "Approval Pending":
-			return "blue";
+			return "blue"
 		case "Withdrawn":
-			return "red";
+			return "red"
 		default:
-			return "gray";
+			return "gray"
 	}
-};
+}
 
 const formatDate = (dateString: string) => {
-	return dayjsLocal(dateString).format("MMM DD, YYYY");
-};
+	return dayjsLocal(dateString).format("MMM DD, YYYY")
+}
 
 const onPaymentStarted = () => {
 	// Optional: Show a loading state or toast message
-	console.log("Payment process started");
-};
+	console.log("Payment process started")
+}
 
 // Validate that uploaded file is an image
 const validateIsImageFile = (file: File) => {
-	const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
-	const maxSize = 5 * 1024 * 1024; // 5MB
+	const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"]
+	const maxSize = 5 * 1024 * 1024 // 5MB
 
 	if (!allowedTypes.includes(file.type)) {
-		return "Please upload a valid image file (JPEG, PNG, GIF, or WebP)";
+		return "Please upload a valid image file (JPEG, PNG, GIF, or WebP)"
 	}
 
 	if (file.size > maxSize) {
-		return "File size must be less than 5MB";
+		return "File size must be less than 5MB"
 	}
 
-	return null;
-};
+	return null
+}
 
 // Update logo after successful upload
 const updateLogo = (fileUrl: string) => {
 	// Update the local data immediately for better UX
 	if (sponsorDetails.value) {
 		// Update sponsor details if it's a confirmed sponsorship
-		sponsorDetails.value.company_logo = fileUrl;
+		sponsorDetails.value.company_logo = fileUrl
 	} else if (enquiryDetails.data?.enquiry) {
 		// Update enquiry details if it's still an inquiry
-		enquiryDetails.data.enquiry.company_logo = fileUrl;
+		enquiryDetails.data.enquiry.company_logo = fileUrl
 	}
 
 	// Update the document field using the resource
-	updateLogoResource.submit(fileUrl);
-};
+	updateLogoResource.submit(fileUrl)
+}
 </script>

@@ -6,8 +6,7 @@ import confetti, { type Options as ConfettiOptions } from "canvas-confetti"
  * @param {number} max - Maximum value
  * @returns {number} Random number between min and max
  */
-const randomInRange = (min: number, max: number): number =>
-	Math.random() * (max - min) + min
+const randomInRange = (min: number, max: number): number => Math.random() * (max - min) + min
 
 /**
  * Triggers a celebratory confetti animation
@@ -16,9 +15,7 @@ const randomInRange = (min: number, max: number): number =>
  * @param {number} options.startVelocity - Starting velocity of particles (default: 30)
  * @param {number} options.spread - Spread angle of particles (default: 360)
  */
-export const triggerCelebrationConfetti = (
-	options: ConfettiOptions = {},
-): void => {
+export const triggerCelebrationConfetti = (options: ConfettiOptions = {}): void => {
 	const { particleCount = 50, startVelocity = 30, spread = 360 } = options
 	const duration = 3000
 

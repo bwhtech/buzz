@@ -13,17 +13,18 @@
 </template>
 
 <script setup lang="ts">
-import { useLoginDialog } from "@/composables/useLoginDialog";
-import { Button } from "frappe-ui";
+import { Button } from "frappe-ui"
+
+import { useLoginDialog } from "@/composables/useLoginDialog"
 
 withDefaults(
 	defineProps<{
-		message?: string;
+		message?: string
 	}>(),
 	{
 		message: "Please log in to continue.",
-	}
-);
+	},
+)
 
-const { open: openLogin } = useLoginDialog();
+const { open: openLogin } = useLoginDialog()
 </script>

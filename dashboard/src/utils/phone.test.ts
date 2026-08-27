@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
+
 import { DEFAULT_DIAL_CODE, formatPhone, parsePhone } from "./phone.ts"
 
 const KNOWN = ["+1", "+91", "+44", "+971"]

@@ -1,7 +1,8 @@
-import { session } from "@/data/session"
-import type { InviteOutcome, TeamOption, TeamOverview } from "@/types"
 import { createResource, useCall } from "frappe-ui"
 import { computed, ref, watch } from "vue"
+
+import { session } from "@/data/session"
+import type { InviteOutcome, TeamOption, TeamOverview } from "@/types"
 
 const STORAGE_KEY = "buzz:current-team"
 
@@ -23,8 +24,7 @@ const teamsResource = createResource<TeamOption[]>({
 export const teams = computed((): TeamOption[] => teamsResource.data || [])
 
 export const currentTeam = computed(
-	(): TeamOption | null =>
-		teams.value.find((team) => team.name === selectedTeamName.value) || null
+	(): TeamOption | null => teams.value.find((team) => team.name === selectedTeamName.value) || null,
 )
 
 export async function isTeamMember(): Promise<boolean> {

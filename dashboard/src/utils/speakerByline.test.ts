@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
+
 import { speakerByline } from "./speakerByline.ts"
 
 const ME = "me@example.com"

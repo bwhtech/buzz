@@ -12,9 +12,7 @@
 
 		<h2 class="text-4xl-bold text-ink-gray-9 mb-4">
 			{{
-				confirmation.data.event.free_event
-					? __("Registration Confirmed")
-					: __("Booking Confirmed")
+				confirmation.data.event.free_event ? __("Registration Confirmed") : __("Booking Confirmed")
 			}}
 		</h2>
 
@@ -22,10 +20,7 @@
 		<div class="grid grid-cols-1 gap-6 mb-6" :class="{ 'lg:grid-cols-2': showPaymentSummary }">
 			<BookingEventInfo :event="confirmation.data.event" :venue="confirmation.data.venue" />
 
-			<BookingFinancialSummary
-				v-if="showPaymentSummary"
-				:booking="confirmation.data.booking"
-			/>
+			<BookingFinancialSummary v-if="showPaymentSummary" :booking="confirmation.data.booking" />
 		</div>
 
 		<!-- Tickets (read-only) -->
@@ -59,51 +54,53 @@
 </template>
 
 <script setup lang="ts">
-import { useBookingFormStorage } from "@/composables/useBookingFormStorage";
-import { useLoginDialog } from "@/composables/useLoginDialog";
-import { usePaymentSuccess } from "@/composables/usePaymentSuccess";
-import { session } from "@/data/session";
-import { Button, Spinner, createResource } from "frappe-ui";
-import { computed } from "vue";
-import { useRoute } from "vue-router";
-import BookingEventInfo from "../components/BookingEventInfo.vue";
-import BookingFinancialSummary from "../components/BookingFinancialSummary.vue";
-import SuccessMessage from "../components/SuccessMessage.vue";
-import TicketsSection from "../components/TicketsSection.vue";
+import { Button, Spinner, createResource } from "frappe-ui"
+import { computed } from "vue"
+import { useRoute } from "vue-router"
+
+import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
+import { useLoginDialog } from "@/composables/useLoginDialog"
+import { usePaymentSuccess } from "@/composables/usePaymentSuccess"
+import { session } from "@/data/session"
+
+import BookingEventInfo from "../components/BookingEventInfo.vue"
+import BookingFinancialSummary from "../components/BookingFinancialSummary.vue"
+import SuccessMessage from "../components/SuccessMessage.vue"
+import TicketsSection from "../components/TicketsSection.vue"
 
 const props = defineProps({
 	bookingId: {
 		type: String,
 		required: true,
 	},
-});
+})
 
-const route = useRoute();
-const { open: openLoginDialog } = useLoginDialog();
+const route = useRoute()
+const { open: openLoginDialog } = useLoginDialog()
 
 // Confetti + success message, always on for this page. Keep the token in the
 // URL (cleanupUrl: false) so a refresh can still re-fetch the booking.
 const { showSuccessMessage, showSuccess } = usePaymentSuccess({
 	enableConfetti: true,
 	cleanupUrl: false,
-});
+})
 
 const showPaymentSummary = computed(() => {
-	const booking = confirmation.data?.booking;
-	return booking && (booking.total_amount || 0) > 0;
-});
+	const booking = confirmation.data?.booking
+	return booking && (booking.total_amount || 0) > 0
+})
 
 const confirmation = createResource({
 	url: "buzz.api.booking.get_booking_confirmation",
 	params: { booking_id: props.bookingId, token: route.query.token },
 	auto: true,
 	onSuccess: (data: Record<string, any>) => {
-		showSuccess();
+		showSuccess()
 		// Clear any stored booking form data now that the booking is confirmed
 		if (data?.event?.route) {
-			const { clearStoredData } = useBookingFormStorage(data.event.route);
-			clearStoredData();
+			const { clearStoredData } = useBookingFormStorage(data.event.route)
+			clearStoredData()
 		}
 	},
-});
+})
 </script>

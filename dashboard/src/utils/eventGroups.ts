@@ -12,9 +12,7 @@ export interface MonthGroup<T> {
  * Groups a sorted list of events by month, then by day. Insertion order is kept,
  * so the caller's sort survives — ascending for upcoming, descending for past.
  */
-export function groupEventsByMonth<T extends { start_date: string }>(
-	events: T[]
-): MonthGroup<T>[] {
+export function groupEventsByMonth<T extends { start_date: string }>(events: T[]): MonthGroup<T>[] {
 	const months = new Map<string, Map<string, T[]>>()
 
 	for (const event of events) {

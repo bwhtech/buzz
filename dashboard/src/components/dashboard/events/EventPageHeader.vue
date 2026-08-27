@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Breadcrumbs, PageHeader } from "frappe-ui";
-import { computed } from "vue";
+import { Breadcrumbs, PageHeader } from "frappe-ui"
+import { computed } from "vue"
 
 // The event, then the section of it being looked at. Neither crumb is a link: the
 // event on its own resolves to whichever section is open.
-const props = defineProps<{ title: string | null | undefined; section: string }>();
+const props = defineProps<{ title: string | null | undefined; section: string }>()
 
-const items = computed(() => [{ label: props.title || "Event" }, { label: props.section }]);
+const items = computed(() => [{ label: props.title || "Event" }, { label: props.section }])
 </script>
 
 <template>

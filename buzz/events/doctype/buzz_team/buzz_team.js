@@ -2,15 +2,15 @@
 // For license information, please see license.txt
 
 // Owner is absent on purpose — it is granted at team creation and never moves.
-const ASSIGNABLE_ROLES = ["Admin", "Manager", "Frontdesk", "Viewer"];
+const ASSIGNABLE_ROLES = ["Admin", "Manager", "Frontdesk", "Viewer"]
 
 frappe.ui.form.on("Buzz Team", {
 	refresh(frm) {
-		if (frm.is_new() || !frm.doc.__onload?.can_manage_members) return;
+		if (frm.is_new() || !frm.doc.__onload?.can_manage_members) return
 
-		frm.add_custom_button(__("Add Team Members"), () => pick_users(frm));
+		frm.add_custom_button(__("Add Team Members"), () => pick_users(frm))
 	},
-});
+})
 
 function pick_users(frm, picked = []) {
 	const dialog = new frappe.ui.Dialog({
@@ -27,20 +27,20 @@ function pick_users(frm, picked = []) {
 					frm.call("search_addable_users", { txt }).then(({ message }) => {
 						// The control means to hide what is already picked but discards its own
 						// filter() result, so clicking such a row does nothing.
-						const chosen = dialog.get_value("users") || [];
-						return message.filter((row) => !chosen.includes(row.value));
+						const chosen = dialog.get_value("users") || []
+						return message.filter((row) => !chosen.includes(row.value))
 					}),
 			},
 		],
 		primary_action_label: __("Next"),
 		primary_action({ users }) {
-			if (!users?.length) return;
-			dialog.hide();
-			set_roles(frm, users);
+			if (!users?.length) return
+			dialog.hide()
+			set_roles(frm, users)
 		},
-	});
-	dialog.show();
-	if (picked.length) dialog.set_value("users", picked);
+	})
+	dialog.show()
+	if (picked.length) dialog.set_value("users", picked)
 }
 
 function set_roles(frm, users) {
@@ -57,30 +57,32 @@ function set_roles(frm, users) {
 		})),
 		secondary_action_label: __("Back"),
 		secondary_action() {
-			dialog.hide();
-			pick_users(frm, users);
+			dialog.hide()
+			pick_users(frm, users)
 		},
 		primary_action_label: __("Add Members"),
 		primary_action(values) {
 			const members = users.map((user, index) => ({
 				user,
 				team_role: values[`role_${index}`],
-			}));
-			frm.call({
-				method: "add_members",
-				doc: frm.doc,
-				args: { members: JSON.stringify(members) },
-				freeze: true,
-				freeze_message: __("Adding members..."),
-			}).then(({ message: added }) => {
-				dialog.hide();
-				frappe.show_alert({
-					message: __("{0} member(s) added.", [added]),
-					indicator: "green",
-				});
-				frm.reload_doc();
-			});
+			}))
+			frm
+				.call({
+					method: "add_members",
+					doc: frm.doc,
+					args: { members: JSON.stringify(members) },
+					freeze: true,
+					freeze_message: __("Adding members..."),
+				})
+				.then(({ message: added }) => {
+					dialog.hide()
+					frappe.show_alert({
+						message: __("{0} member(s) added.", [added]),
+						indicator: "green",
+					})
+					frm.reload_doc()
+				})
 		},
-	});
-	dialog.show();
+	})
+	dialog.show()
 }

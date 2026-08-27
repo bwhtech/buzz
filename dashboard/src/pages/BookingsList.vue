@@ -24,8 +24,8 @@
 						row.status === 'Approved' || row.status === 'Confirmed'
 							? 'green'
 							: row.status === 'Approval Pending'
-							? 'orange'
-							: 'red'
+								? 'orange'
+								: 'red'
 					"
 					variant="subtle"
 					size="sm"
@@ -39,11 +39,13 @@
 </template>
 
 <script setup lang="ts">
-import { formatCurrency } from "@/utils/currency";
-import { pluralize } from "@/utils/pluralize";
-import { Badge, ListRowItem, ListView, useList } from "frappe-ui";
-import { dayjsLocal } from "frappe-ui";
-import { session } from "../data/session";
+import { Badge, ListRowItem, ListView, useList } from "frappe-ui"
+import { dayjsLocal } from "frappe-ui"
+
+import { formatCurrency } from "@/utils/currency"
+import { pluralize } from "@/utils/pluralize"
+
+import { session } from "../data/session"
 
 const columns = [
 	{ label: __("Event"), key: "event_title", width: "220px" },
@@ -52,7 +54,7 @@ const columns = [
 	{ label: __("Venue"), key: "venue", width: "140px" },
 	{ label: __("Amount Paid"), key: "formatted_amount", width: "110px" },
 	{ label: __("Status"), key: "status", width: "120px" },
-];
+]
 
 const bookings = useList({
 	doctype: "Event Booking",
@@ -82,11 +84,8 @@ const bookings = useList({
 					: __("FREE"),
 			status: booking.status || __("Pending"),
 			start_date: dayjsLocal(booking.start_date).format("MMM DD, YYYY"),
-			ticket_count: pluralize(
-				booking.attendees ? booking.attendees.length : 0,
-				__("Ticket")
-			),
-		}));
+			ticket_count: pluralize(booking.attendees ? booking.attendees.length : 0, __("Ticket")),
+		}))
 	},
-});
+})
 </script>
