@@ -1,0 +1,22 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["eslint", "typescript", "unicorn", "oxc", "import"],
+	"categories": { "correctness": "error", "suspicious": "warn" },
+	"env": { "browser": true, "node": true, "es2024": true, "jquery": true },
+	"rules": {
+		"no-underscore-dangle": "off",
+		"no-case-declarations": "error",
+		"no-empty": "error",
+		"no-fallthrough": "error",
+		"no-prototype-builtins": "error",
+		"no-redeclare": "error",
+		"no-regex-spaces": "error"
+	},
+	"ignorePatterns": ["buzz/public/dist/**", "buzz/public/dashboard/**"],
+	"overrides": [
+		{
+			"files": ["buzz/**/*.js"],
+			"rules": { "unicorn/no-empty-file": "off", "no-console": "warn" }
+		}
+	]
+}
