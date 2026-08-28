@@ -6,13 +6,14 @@ import {
 	Sidebar,
 	SidebarCollapseToggle,
 	SidebarItem,
-	SidebarLabel,
+	SidebarSection,
 } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
 import UserMenu from "@/components/UserMenu.vue"
 import { useTeamAccess } from "@/composables/useTeamAccess"
+import { currentTeam } from "@/data/teams"
 import NotFound from "@/pages/NotFound.vue"
 
 const isMobile = useBreakpoints(breakpointsTailwind).smaller("sm")
@@ -30,7 +31,7 @@ const access = useTeamAccess()
 const isActive = (to: string) => route.path === to
 
 const personalItems = [
-	{ label: "My Events", icon: "lucide-calendar-days", to: "/manage/events" },
+	{ label: "My Calendar", icon: "lucide-calendar-days", to: "/manage/events" },
 	{ label: "My Tickets", icon: "lucide-ticket", to: "/manage/tickets" },
 	{ label: "Talk Proposals", icon: "lucide-file-text", to: "/manage/proposals" },
 	{ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" },
@@ -100,15 +101,17 @@ const eventItems = computed(() => [
 						:active="isActive(item.to)"
 					/>
 
-					<SidebarLabel divider class="mt-3 px-2">Team</SidebarLabel>
-					<SidebarItem
-						v-for="item in teamItems"
-						:key="item.label"
-						:label="item.label"
-						:icon="item.icon"
-						:to="item.to"
-						:active="isActive(item.to)"
-					/>
+					<SidebarSection :label="currentTeam?.team_name" collapsible>
+						<SidebarItem
+							class="ml-2"
+							v-for="item in teamItems"
+							:key="item.label"
+							:label="item.label"
+							:icon="item.icon"
+							:to="item.to"
+							:active="isActive(item.to)"
+						/>
+					</SidebarSection>
 				</div>
 
 				<div class="mt-auto px-2 py-2 sm:hidden">

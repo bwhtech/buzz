@@ -18,7 +18,8 @@ const months = computed(() => groupEventsByMonth(myEvents.data?.[tab.value] || [
 <template>
 	<TimelineList
 		v-model:tab="tab"
-		heading="My Events"
+		heading="My Calendar"
+		icon="lucide-calendar-days"
 		noun="events"
 		:months="months"
 		:loading="myEvents.loading"
