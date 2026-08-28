@@ -72,8 +72,11 @@ const tabOptions = [
 			</section>
 		</div>
 
-		<p v-if="!months.length && !loading && !error" class="text-base text-ink-gray-5">
-			No {{ tab }} {{ noun }}.
-		</p>
+		<!-- A div, not a p: the slot takes a block component. -->
+		<div v-if="!months.length && !loading && !error">
+			<slot name="empty-state">
+				<p class="text-base text-ink-gray-5">No {{ tab }} {{ noun }}.</p>
+			</slot>
+		</div>
 	</div>
 </template>
