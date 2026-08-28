@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem, SidebarLabel } from "frappe-ui"
+import { breakpointsTailwind, useBreakpoints } from "@vueuse/core"
+import {
+	DesktopShell,
+	PageHeaderTarget,
+	Sidebar,
+	SidebarCollapseToggle,
+	SidebarItem,
+	SidebarLabel,
+} from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
@@ -7,7 +15,12 @@ import UserMenu from "@/components/UserMenu.vue"
 import { useTeamAccess } from "@/composables/useTeamAccess"
 import NotFound from "@/pages/NotFound.vue"
 
-const collapsed = ref(false)
+const isMobile = useBreakpoints(breakpointsTailwind).smaller("sm")
+
+// Collapsing is a small-screen affordance only: `disableCollapse` pins the
+// sidebar open from `sm` up, so this ref only ever governs mobile, where it
+// starts collapsed and the toggle expands it.
+const collapsed = ref(true)
 const route = useRoute()
 
 const access = useTeamAccess()
@@ -61,7 +74,7 @@ const eventItems = computed(() => [
 	<!-- scroll=false: the rounded panel below owns its own scroll. -->
 	<DesktopShell v-else-if="access === 'granted'" :scroll="false">
 		<template #sidebar>
-			<Sidebar v-model:collapsed="collapsed">
+			<Sidebar v-model:collapsed="collapsed" :disable-collapse="!isMobile">
 				<div class="flex h-12 shrink-0 items-center px-2">
 					<UserMenu />
 				</div>
@@ -97,10 +110,14 @@ const eventItems = computed(() => [
 						:active="isActive(item.to)"
 					/>
 				</div>
+
+				<div class="mt-auto px-2 py-2 sm:hidden">
+					<SidebarCollapseToggle />
+				</div>
 			</Sidebar>
 		</template>
 
-		<div class="h-full min-h-0 bg-surface-sidebar py-2 pl-2">
+		<div class="flex flex-col h-full min-h-0 bg-surface-sidebar py-2 pl-2">
 			<div
 				class="flex h-full flex-col overflow-hidden rounded-l-6 bg-surface-elevation-1 shadow-base"
 			>

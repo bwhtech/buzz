@@ -13,7 +13,7 @@ const themes = [
 </script>
 
 <template>
-	<Popover side="bottom" align="start">
+	<Popover match-trigger-width side="bottom" align="start">
 		<template #trigger="{ open: isOpen }">
 			<button
 				aria-label="Account"
@@ -34,7 +34,7 @@ const themes = [
 		</template>
 
 		<template #default>
-			<div class="w-64 max-w-[calc(100vw-1rem)] p-2">
+			<div class="p-2">
 				<div class="flex flex-col px-1.5 py-1">
 					<span class="truncate text-base text-ink-gray-8">{{ session.fullName }}</span>
 					<span class="truncate text-sm text-ink-gray-5">{{ session.user }}</span>
