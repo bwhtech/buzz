@@ -25,10 +25,10 @@
 				>
 					<EditorFixedMenu
 						:items="editorToolbar"
-						class="rounded-t-md border border-b-0 border-outline-gray-2 px-2 py-1"
+						class="rounded-t-5 border border-b-0 border-outline-gray-2 px-2 py-1"
 					/>
 					<EditorContent
-						class="prose-sm py-2 px-3 min-h-[12rem] border border-outline-gray-2 hover:border-outline-gray-3 rounded-b-md bg-surface-gray-3"
+						class="prose-sm py-2 px-3 min-h-[12rem] border border-outline-gray-2 hover:border-outline-gray-3 rounded-b-5 bg-surface-gray-3"
 					/>
 				</Editor>
 			</div>

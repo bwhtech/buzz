@@ -6,7 +6,7 @@
 
 		<div
 			v-else-if="tickets.error"
-			class="bg-surface-red-1 border border-outline-red-1 rounded-lg p-4"
+			class="bg-surface-red-1 border border-outline-red-1 rounded-6 p-4"
 		>
 			<p class="text-ink-red-6">{{ __("Error loading tickets") }}: {{ tickets.error.message }}</p>
 		</div>
@@ -36,8 +36,9 @@
 </template>
 
 <script setup lang="ts">
-import { ListView, useList } from "frappe-ui"
+import { useList } from "frappe-ui"
 import { dayjsLocal } from "frappe-ui"
+import { ListView } from "frappe-ui/experimental"
 
 const columns = [
 	{ label: __("Attendee Name"), key: "attendee_name" },
