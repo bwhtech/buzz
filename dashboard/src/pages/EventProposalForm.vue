@@ -5,7 +5,7 @@
 		</div>
 
 		<div v-else-if="submitted" class="text-center">
-			<div class="bg-surface-green-1 border border-outline-green-1 rounded-lg p-8">
+			<div class="bg-surface-green-1 border border-outline-green-1 rounded-6 p-8">
 				<LucideCheckCircle class="w-16 h-16 text-ink-green-6 mx-auto mb-4" />
 				<h2 class="text-ink-green-6 text-2xl-semibold mb-2">
 					{{ form_data?.success_title }}
@@ -28,7 +28,7 @@
 
 		<div v-else-if="form_data">
 			<form
-				class="bg-surface-base border border-outline-gray-1 rounded-lg"
+				class="bg-surface-base border border-outline-gray-1 rounded-6"
 				@submit.prevent="handleSubmit"
 			>
 				<div class="px-6 py-5 border-b border-outline-gray-1">
@@ -64,7 +64,7 @@
 		</div>
 
 		<div v-else-if="load_error" class="text-center">
-			<div class="bg-surface-amber-1 border border-outline-amber-1 rounded-lg p-8">
+			<div class="bg-surface-amber-1 border border-outline-amber-1 rounded-6 p-8">
 				<LucideAlertCircle class="w-16 h-16 text-ink-amber-6 mx-auto mb-4" />
 				<h2 class="text-ink-amber-6 text-2xl-semibold mb-2">
 					{{ __("Not Found") }}

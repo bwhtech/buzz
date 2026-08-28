@@ -21,9 +21,9 @@ function switchTeam(team: TeamOption, closePanel: () => void) {
 
 <template>
 	<Popover side="bottom" align="start" @close="query = ''">
-		<template #trigger="{ isOpen }">
+		<template #trigger="{ open: isOpen }">
 			<button
-				class="flex h-10 w-full items-center gap-2 rounded px-1.5 transition-colors duration-150 hover:bg-surface-gray-2 active:bg-surface-gray-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+				class="flex h-10 w-full items-center gap-2 rounded-4 px-1.5 transition-colors duration-150 hover:bg-surface-gray-2 active:bg-surface-gray-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
 				:class="{ 'bg-surface-gray-3': isOpen }"
 			>
 				<Avatar
@@ -58,7 +58,7 @@ function switchTeam(team: TeamOption, closePanel: () => void) {
 					<button
 						v-for="team in matchingTeams"
 						:key="team.name"
-						class="flex h-9 w-full items-center gap-2 rounded px-1.5 text-base text-ink-gray-8 transition-colors duration-150 hover:bg-surface-gray-2 active:bg-surface-gray-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+						class="flex h-9 w-full items-center gap-2 rounded-4 px-1.5 text-base text-ink-gray-8 transition-colors duration-150 hover:bg-surface-gray-2 active:bg-surface-gray-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
 						@click="switchTeam(team, close)"
 					>
 						<Avatar
@@ -80,7 +80,7 @@ function switchTeam(team: TeamOption, closePanel: () => void) {
 						class="flex h-32 flex-col items-center justify-center gap-3 px-6 text-ink-gray-5"
 					>
 						<span
-							class="lucide-users grid size-5 place-items-center rounded-md border border-outline-gray-2"
+							class="lucide-users grid size-5 place-items-center rounded-5 border border-outline-gray-2"
 						/>
 						<p class="text-center text-sm">
 							Teams you create and join appear here for quick context switching.

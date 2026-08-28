@@ -26,7 +26,7 @@ const doors = computed(() => {
 <template>
 	<article class="flex items-stretch gap-3 text-ink-gray-9">
 		<section
-			class="flex-1 min-w-0 flex flex-col justify-between gap-6 rounded-2xl bg-surface-gray-4 p-6 min-h-[12rem]"
+			class="flex-1 min-w-0 flex flex-col justify-between gap-6 rounded-8 bg-surface-gray-4 p-6 min-h-[12rem]"
 		>
 			<div class="flex flex-col gap-1 md:flex-row md:items-start md:justify-between md:gap-6">
 				<h3
@@ -72,7 +72,7 @@ const doors = computed(() => {
 					? `Show QR code for ${ticket.attendee_name}, ticket #${ticket.name}`
 					: undefined
 			"
-			class="ticket-stub w-[27%] min-w-[10.5rem] shrink-0 flex flex-col justify-between gap-4 rounded-2xl bg-surface-gray-2 p-4 text-left enabled:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-gray-9"
+			class="ticket-stub w-[27%] min-w-[10.5rem] shrink-0 flex flex-col justify-between gap-4 rounded-8 bg-surface-gray-2 p-4 text-left enabled:active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-gray-9"
 			@click="showQR = true"
 		>
 			<span class="block truncate text-[9px] font-semibold uppercase tracking-[0.2em]">

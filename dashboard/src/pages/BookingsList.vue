@@ -24,7 +24,7 @@
 						row.status === 'Approved' || row.status === 'Confirmed'
 							? 'green'
 							: row.status === 'Approval Pending'
-								? 'orange'
+								? 'amber'
 								: 'red'
 					"
 					variant="subtle"
@@ -39,8 +39,9 @@
 </template>
 
 <script setup lang="ts">
-import { Badge, ListRowItem, ListView, useList } from "frappe-ui"
+import { Badge, useList } from "frappe-ui"
 import { dayjsLocal } from "frappe-ui"
+import { ListRowItem, ListView } from "frappe-ui/experimental"
 
 import { formatCurrency } from "@/utils/currency"
 import { pluralize } from "@/utils/pluralize"

@@ -33,7 +33,7 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 <template>
 	<RouterLink
 		:to="{ name: 'proposal-details', params: { proposalId: proposal.name } }"
-		class="proposal-card block rounded-2xl border border-outline-gray-2"
+		class="proposal-card block rounded-8 border border-outline-gray-2"
 	>
 		<article class="flex flex-col space-y-6 p-4">
 			<div class="space-y-2">
@@ -90,12 +90,12 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 								<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
 								<img
 									v-if="proposal.banner_image"
-									class="h-24 w-full rounded object-cover object-top"
+									class="h-24 w-full rounded-4 object-cover object-top"
 									:src="proposal.banner_image"
 									:style="banner"
 									alt=""
 								/>
-								<div v-else class="h-24 w-full rounded" :style="banner" />
+								<div v-else class="h-24 w-full rounded-4" :style="banner" />
 
 								<p class="font-medium text-ink-gray-8">
 									{{ proposal.event_title }}

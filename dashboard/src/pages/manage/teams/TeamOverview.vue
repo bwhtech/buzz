@@ -70,7 +70,7 @@ const hiddenMemberCount = computed(() =>
 					/>
 				</section>
 
-				<section class="md:w-2/5 h-fit space-y-3 rounded-2xl bg-surface-gray-1 p-4">
+				<section class="md:w-2/5 h-fit space-y-3 rounded-8 bg-surface-gray-1 p-4">
 					<h2 class="text-lg font-semibold text-ink-gray-8">
 						Team members
 						<span class="text-ink-gray-5">({{ team.members.length }})</span>

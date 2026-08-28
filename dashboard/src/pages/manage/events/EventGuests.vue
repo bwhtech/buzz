@@ -66,7 +66,7 @@ const matches = computed(() => {
 
 			<ul
 				v-else-if="matches.length"
-				class="divide-y divide-outline-gray-1 overflow-hidden rounded-xl border border-outline-gray-2"
+				class="divide-y divide-outline-gray-1 overflow-hidden rounded-7 border border-outline-gray-2"
 			>
 				<EventGuestItem v-for="guest in matches" :key="guest.name" :guest="guest" />
 			</ul>
