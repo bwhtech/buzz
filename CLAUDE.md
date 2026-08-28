@@ -56,6 +56,16 @@ Create specs in `specs/`. Maintain a `PROGRESS.md` file to track progress of imp
 
 ## Testing
 
+Backend tests run through Frappe's runner:
+
+```bash
+bench --site buzz.localhost run-tests --app buzz
+bench --site buzz.localhost run-tests --module buzz.api.booking.test_booking
+```
+
+Build test fixtures with the factories in `buzz/tests/factories/` (powered by
+`frappe_factory_bot`), never `frappe.get_doc({...}).insert()`. See the `writing-tests` skill.
+
 Use agent-browser for quick manual e2e checks.
 
 Automated e2e uses Playwright (root `package.json`, specs in `e2e/`).
