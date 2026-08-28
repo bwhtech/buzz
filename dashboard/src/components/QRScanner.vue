@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
+		class="bg-white dark:bg-gray-800 rounded-6 shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
 	>
 		<div class="p-4 border-b border-gray-200 dark:border-gray-700">
 			<h3 class="font-medium text-gray-900 dark:text-white">

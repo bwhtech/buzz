@@ -1,5 +1,5 @@
 <template>
-	<div class="min-h-[75vh] border border-gray-200 dark:border-gray-700 shadow-sm mx-4 rounded-md">
+	<div class="min-h-[75vh] border border-gray-200 dark:border-gray-700 shadow-sm mx-4 rounded-5">
 		<!-- Header -->
 		<div class="shadow-sm border-b">
 			<div class="max-w-md mx-auto px-4 py-4">
@@ -51,13 +51,13 @@
 				<!-- Last Scan Status -->
 				<div
 					v-if="validationResult"
-					class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4"
+					class="bg-white dark:bg-gray-800 rounded-6 shadow-sm border border-gray-200 dark:border-gray-700 p-4"
 				>
 					<h3 class="font-medium text-gray-900 dark:text-white mb-2">
 						{{ __("Last Scan Result") }}
 					</h3>
 					<div
-						class="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+						class="p-3 rounded-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
 					>
 						<p class="text-sm-medium text-green-800 dark:text-green-200">
 							{{ validationResult.message }}

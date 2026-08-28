@@ -12,7 +12,7 @@
 			<!-- Info about excluded tickets -->
 			<div
 				v-if="cancelledTickets.length > 0 || cancellationRequestedTickets.length > 0"
-				class="p-4 bg-surface-blue-1 border border-outline-blue-1 rounded-lg"
+				class="p-4 bg-surface-blue-1 border border-outline-blue-1 rounded-6"
 			>
 				<p class="text-sm text-ink-blue-5">
 					<span v-if="cancelledTickets.length > 0">
@@ -32,7 +32,7 @@
 			<!-- Select All Option -->
 			<div
 				v-if="availableTickets.length > 0"
-				class="border border-outline-gray-2 rounded-lg p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
+				class="border border-outline-gray-2 rounded-6 p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
 				:class="{
 					'border-outline-gray-4 bg-surface-gray-2': isAllSelected,
 				}"
@@ -43,7 +43,7 @@
 						type="checkbox"
 						:checked="isAllSelected"
 						@change="toggleSelectAll"
-						class="h-4 w-4 text-ink-gray-6 border-outline-gray-1 rounded focus:ring-ink-gray-5"
+						class="h-4 w-4 text-ink-gray-6 border-outline-gray-1 rounded-4 focus:ring-ink-gray-5"
 					/>
 					<div>
 						<h3 class="font-semibold text-ink-gray-9">
@@ -75,7 +75,7 @@
 					<div
 						v-for="ticket in availableTickets"
 						:key="ticket.name"
-						class="border border-outline-gray-2 rounded-lg p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
+						class="border border-outline-gray-2 rounded-6 p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
 						:class="{
 							'border-outline-gray-4 bg-surface-gray-2': selectedTickets.includes(ticket.name),
 						}"
@@ -86,7 +86,7 @@
 								type="checkbox"
 								:checked="selectedTickets.includes(ticket.name)"
 								@change="toggleTicketSelection(ticket.name)"
-								class="h-4 w-4 text-ink-gray-6 border-outline-gray-1 rounded focus:ring-ink-gray-5 mt-1"
+								class="h-4 w-4 text-ink-gray-6 border-outline-gray-1 rounded-4 focus:ring-ink-gray-5 mt-1"
 							/>
 							<div class="flex-1">
 								<div class="flex items-center justify-between">
@@ -137,7 +137,7 @@
 			<!-- Summary -->
 			<div
 				v-if="selectedTickets.length > 0"
-				class="p-4 bg-surface-blue-1 border border-outline-blue-1 rounded-lg"
+				class="p-4 bg-surface-blue-1 border border-outline-blue-1 rounded-6"
 			>
 				<div class="flex items-center justify-between">
 					<div>

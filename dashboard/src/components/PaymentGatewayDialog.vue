@@ -4,7 +4,7 @@
 			<div
 				v-for="gateway in paymentGateways"
 				:key="gateway"
-				class="border border-outline-gray-2 rounded-lg p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
+				class="border border-outline-gray-2 rounded-6 p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
 				:class="{
 					'border-outline-gray-4 bg-surface-gray-2': selectedGateway === gateway,
 				}"

@@ -7,17 +7,17 @@
 		</template>
 		<div
 			v-if="login_context?.login_banner"
-			class="rounded-md bg-surface-gray-2 p-3 prose prose-sm max-w-none mb-6"
+			class="rounded-5 bg-surface-gray-2 p-3 prose prose-sm max-w-none mb-6"
 			v-html="login_context.login_banner"
 		/>
 
-		<div v-if="error_message" class="mb-4 rounded-md bg-surface-red-2 p-3 text-sm text-ink-red-6">
+		<div v-if="error_message" class="mb-4 rounded-5 bg-surface-red-2 p-3 text-sm text-ink-red-6">
 			{{ error_message }}
 		</div>
 
 		<div
 			v-if="success_message"
-			class="mb-4 rounded-md bg-surface-green-2 p-3 text-sm text-ink-green-6"
+			class="mb-4 rounded-5 bg-surface-green-2 p-3 text-sm text-ink-green-6"
 		>
 			{{ success_message }}
 		</div>

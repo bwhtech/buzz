@@ -49,7 +49,8 @@
 </template>
 
 <script setup lang="ts">
-import { Badge, ListRowItem, ListView, Spinner, createResource, dayjsLocal } from "frappe-ui"
+import { Badge, Spinner, createResource, dayjsLocal } from "frappe-ui"
+import { ListRowItem, ListView } from "frappe-ui/experimental"
 
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
 import { session } from "@/data/session"
