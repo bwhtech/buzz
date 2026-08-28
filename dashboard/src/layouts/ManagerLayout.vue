@@ -3,7 +3,6 @@ import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem, SidebarLabel } fr
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
-import TeamSwitcher from "@/components/TeamSwitcher.vue"
 import UserMenu from "@/components/UserMenu.vue"
 import { useTeamAccess } from "@/composables/useTeamAccess"
 import NotFound from "@/pages/NotFound.vue"
@@ -63,8 +62,8 @@ const eventItems = computed(() => [
 	<DesktopShell v-else-if="access === 'granted'" :scroll="false">
 		<template #sidebar>
 			<Sidebar v-model:collapsed="collapsed">
-				<div class="flex h-12 shrink-0 items-center px-1">
-					<TeamSwitcher />
+				<div class="flex h-12 shrink-0 items-center px-2">
+					<UserMenu />
 				</div>
 
 				<div v-if="eventId" class="flex flex-col mx-2 py-2">
@@ -97,10 +96,6 @@ const eventItems = computed(() => [
 						:to="item.to"
 						:active="isActive(item.to)"
 					/>
-				</div>
-
-				<div class="mt-auto px-2 py-2">
-					<UserMenu />
 				</div>
 			</Sidebar>
 		</template>

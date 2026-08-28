@@ -13,7 +13,7 @@ const themes = [
 </script>
 
 <template>
-	<Popover side="top" align="end">
+	<Popover side="bottom" align="start">
 		<template #trigger="{ isOpen }">
 			<button
 				aria-label="Account"
