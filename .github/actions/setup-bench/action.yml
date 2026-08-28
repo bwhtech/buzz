@@ -86,7 +86,11 @@ runs:
 
         # Test-only: buzz/tests/factories imports frappe_factory_bot. No install-app —
         # the app ships no DocTypes, and get-app already pip-installs it into the env.
-        bench get-app --skip-assets https://github.com/harshtandiya/frappe_factory_bot
+        # Pinned to a reviewed commit: the repo has no tags and `bench get-app --branch`
+        # rejects a SHA, so clone and check out before handing bench the local path.
+        git clone https://github.com/harshtandiya/frappe_factory_bot /tmp/frappe_factory_bot
+        git -C /tmp/frappe_factory_bot checkout 48904d0df778513934e92a4e7663c74bfe31bc56
+        bench get-app --skip-assets /tmp/frappe_factory_bot
 
         if [ -n "$EXTRA_APP_URL" ]; then
           bench get-app --skip-assets "$EXTRA_APP_URL"
