@@ -58,7 +58,7 @@ watch(image, () => {
 			<!-- The whole banner is the hit area; the button inside stays the -->
 			<!-- keyboard-reachable control, so its press must not fire twice. -->
 			<div
-				class="relative aspect-[3/1] overflow-hidden rounded-xl border border-outline-gray-2"
+				class="relative aspect-[3/1] overflow-hidden rounded-7 border border-outline-gray-2"
 				:class="disabled ? 'cursor-default' : 'cursor-pointer'"
 				@click="!disabled && openFileSelector()"
 			>

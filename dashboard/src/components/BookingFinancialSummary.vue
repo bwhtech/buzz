@@ -1,5 +1,5 @@
 <template>
-	<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6">
+	<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-6 p-6">
 		<div class="flex items-center justify-between mb-4">
 			<h3 class="text-lg-semibold text-ink-gray-9">{{ __("Payment Summary") }}</h3>
 			<Badge
@@ -113,7 +113,7 @@ const paymentBadge = computed(() => {
 	} else if (status === "Verification Pending") {
 		return {
 			label: __("Verification Pending"),
-			theme: "orange" as const,
+			theme: "amber" as const,
 			icon: LucideClock,
 		}
 	}

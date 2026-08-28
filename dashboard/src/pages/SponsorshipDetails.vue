@@ -31,7 +31,7 @@
 		>
 			<div
 				v-if="showSuccessMessage"
-				class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-lg p-4"
+				class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-6 p-4"
 			>
 				<div class="flex items-center">
 					<LucideCheckCircle class="w-6 h-6 text-ink-green-6 mr-3" />
@@ -54,7 +54,7 @@
 		<!-- Sponsorship Confirmation (shown at top if sponsored) -->
 		<div
 			v-if="sponsorDetails"
-			class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-lg p-6"
+			class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-6 p-6"
 		>
 			<div class="flex items-center mb-4">
 				<LucideCheckCircle class="w-6 h-6 text-ink-green-6 mr-3" />
@@ -79,7 +79,7 @@
 		<!-- Withdrawn Alert (shown at top for withdrawn inquiries) -->
 		<div
 			v-if="enquiryDetails.data.enquiry.status === 'Withdrawn'"
-			class="mb-6 bg-surface-red-1 border border-outline-red-1 rounded-lg p-6"
+			class="mb-6 bg-surface-red-1 border border-outline-red-1 rounded-6 p-6"
 		>
 			<div class="flex items-center">
 				<LucideXCircle class="w-6 h-6 text-ink-red-5 mr-3" />
@@ -95,7 +95,7 @@
 		<!-- Approval Pending Alert (shown at top for pending approval) -->
 		<div
 			v-if="enquiryDetails.data.enquiry.status === 'Approval Pending'"
-			class="mb-6 bg-surface-blue-1 border border-outline-blue-1 rounded-lg p-6"
+			class="mb-6 bg-surface-blue-1 border border-outline-blue-1 rounded-6 p-6"
 		>
 			<div class="flex items-center">
 				<LucideClock class="w-6 h-6 text-ink-blue-5 mr-3" />
@@ -112,7 +112,7 @@
 		<!-- Payment Pending Alert (shown at top for pending payments) -->
 		<div
 			v-else-if="enquiryDetails.data.enquiry.status === 'Payment Pending'"
-			class="mb-6 bg-surface-orange-1 border border-outline-orange-1 rounded-lg p-6"
+			class="mb-6 bg-surface-orange-1 border border-outline-orange-1 rounded-6 p-6"
 		>
 			<div class="flex items-center justify-between">
 				<div class="flex items-center">
@@ -133,7 +133,7 @@
 
 		<div class="space-y-6">
 			<!-- Company Information -->
-			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-base border border-outline-gray-1 rounded-6 p-6">
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">Company Information</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 					<div>
@@ -156,7 +156,7 @@
 										<img
 											:src="currentLogo"
 											:alt="companyName"
-											class="h-16 w-auto object-contain border border-outline-gray-1 rounded p-1 contrast-100 brightness-100"
+											class="h-16 w-auto object-contain border border-outline-gray-1 rounded-4 p-1 contrast-100 brightness-100"
 											:class="{
 												'opacity-50': uploading || updateLogoResource.loading,
 											}"
@@ -164,7 +164,7 @@
 									</div>
 									<div v-else class="mb-2">
 										<div
-											class="h-16 w-20 border-2 border-dashed border-outline-gray-2 rounded flex items-center justify-center"
+											class="h-16 w-20 border-2 border-dashed border-outline-gray-2 rounded-4 flex items-center justify-center"
 										>
 											<span class="text-ink-gray-4 text-xs">No Logo</span>
 										</div>
@@ -212,7 +212,7 @@
 			</div>
 
 			<!-- Event & Sponsorship Details -->
-			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-base border border-outline-gray-1 rounded-6 p-6">
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">Sponsorship Details</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
@@ -247,7 +247,7 @@
 			<!-- Event Information (if available) -->
 			<div
 				v-if="enquiryDetails.data.event_details"
-				class="bg-surface-base border border-outline-gray-1 rounded-lg p-6"
+				class="bg-surface-base border border-outline-gray-1 rounded-6 p-6"
 			>
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">Event Information</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -299,7 +299,7 @@
 		title="Withdraw Sponsorship Inquiry"
 		message="Are you sure you want to withdraw this sponsorship inquiry? This action cannot be undone."
 		size="lg"
-		:icon="{ name: 'triangle-alert', theme: 'yellow' }"
+		:icon="{ name: 'triangle-alert', theme: 'amber' }"
 		:actions="[
 			{
 				label: 'Withdraw Inquiry',
@@ -452,7 +452,7 @@ const getStatusTheme = (status: string) => {
 		case "Paid":
 			return "green"
 		case "Payment Pending":
-			return "orange"
+			return "amber"
 		case "Approval Pending":
 			return "blue"
 		case "Withdrawn":

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Combobox, DatePicker, ErrorMessage, TimePicker, dayjsLocal } from "frappe-ui"
+import type { ComboboxCustomOption, ComboboxSelectableOption } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import { alignedEndDate, isEndBeforeStart } from "@/utils/eventDates"
@@ -42,7 +43,7 @@ const endsBeforeItStarts = computed(() =>
 )
 
 // The row slot is typed for custom rows too, which carry no value; ours never are.
-const zoneOf = (item: { type?: string; value?: string }) => item.value ?? ""
+const zoneOf = (item: ComboboxSelectableOption | ComboboxCustomOption) => String(item.value ?? "")
 
 // Built on first open, not on mount. `:options` is a prop, so an eager computed would
 // run the 676-code sweep behind `zoneCountry` plus 400-odd Intl formatters while the
@@ -105,7 +106,7 @@ const zoneOptions = computed(() =>
 				:options="zoneOptions"
 				placeholder="Search by city, country or zone"
 				:disabled="disabled"
-				@update:open="(open: boolean) => (hasOpened = hasOpened || open)"
+				@update:open="(open: unknown) => (hasOpened = hasOpened || Boolean(open))"
 			>
 				<!-- Mounted inside the popover trigger, so the press opens it on its own. -->
 				<template #trigger>

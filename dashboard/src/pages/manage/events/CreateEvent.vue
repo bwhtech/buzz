@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Alert, Button, ErrorMessage, toast, useTheme } from "frappe-ui"
+import { Alert, Button, ErrorMessage, resolvedColorScheme, toast, useColorScheme } from "frappe-ui"
 import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
 import { computed, ref } from "vue"
 import { useRouter } from "vue-router"
@@ -24,12 +24,12 @@ const access = useTeamAccess()
 // letting someone fill it in and lose the work to a 403 on save.
 const canCreate = computed(() => canCreateEvents(currentTeam.value?.team_role))
 
-const { currentTheme, setTheme, getSystemTheme } = useTheme()
+const { colorScheme, setColorScheme } = useColorScheme()
 // `system` resolves against the OS, so the icon shows what is on screen rather than
 // what was picked — and the toggle sets the opposite outright instead of stepping
 // through `system`, which would look like a no-op when the OS is already dark.
 const isDark = computed(
-	() => (currentTheme.value === "system" ? getSystemTheme() : currentTheme.value) === "dark",
+	() => (colorScheme.value === "system" ? resolvedColorScheme() : colorScheme.value) === "dark",
 )
 
 const title = ref("")
@@ -112,7 +112,7 @@ async function save() {
 						variant="ghost"
 						:icon="isDark ? 'lucide-sun' : 'lucide-moon'"
 						:label="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
-						@click="setTheme(isDark ? 'light' : 'dark')"
+						@click="setColorScheme(isDark ? 'light' : 'dark')"
 					/>
 				</div>
 
@@ -132,7 +132,7 @@ async function save() {
 
 			<Alert
 				v-if="!canCreate"
-				theme="yellow"
+				theme="amber"
 				title="You cannot create events"
 				description="Ask an admin to make you a Manager to create events."
 				:dismissible="false"
@@ -155,7 +155,7 @@ async function save() {
 					<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
 					 itself: the height and scrolling land on the editable area rather than on a
 					 wrapper, and the whole box takes a click. -->
-					<div class="rounded-lg border border-outline-gray-2 p-3">
+					<div class="rounded-6 border border-outline-gray-2 p-3">
 						<Editor
 							v-model="about"
 							:extensions="[RichTextKit]"

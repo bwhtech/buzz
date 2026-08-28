@@ -23,7 +23,7 @@
 					v-if="eventBookingData.eventDetails?.banner_image"
 					:src="eventBookingData.eventDetails.banner_image"
 					:alt="eventBookingData.eventDetails?.title"
-					class="w-full rounded-lg mb-6 object-cover max-h-48"
+					class="w-full rounded-6 mb-6 object-cover max-h-48"
 				/>
 				<h2 class="text-2xl-semibold text-ink-gray-8 mb-2">
 					{{ __("Registrations Closed") }}

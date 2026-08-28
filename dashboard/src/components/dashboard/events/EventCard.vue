@@ -53,18 +53,18 @@ const venue = computed(() => {
 	<component
 		:is="linksToManage ? RouterLink : 'article'"
 		:to="linksToManage ? `/manage/events/${event.name}` : undefined"
-		class="flex gap-4 border border-outline-gray-2 hover:border-outline-gray-3 rounded-2xl p-3"
+		class="flex gap-4 border border-outline-gray-2 hover:border-outline-gray-3 rounded-8 p-3"
 	>
 		<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
 		<img
 			v-if="event.banner_image"
-			class="h-28 w-28 rounded object-cover object-top"
+			class="h-28 w-28 rounded-4 object-cover object-top"
 			:src="event.banner_image"
 			:style="banner"
 			loading="lazy"
 			alt=""
 		/>
-		<div v-else class="h-28 w-28 rounded" :style="banner" />
+		<div v-else class="h-28 w-28 rounded-4" :style="banner" />
 
 		<div class="flex-1 py-1 flex flex-col justify-between">
 			<div class="flex-1 space-y-2">

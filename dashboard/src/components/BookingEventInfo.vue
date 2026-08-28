@@ -1,5 +1,5 @@
 <template>
-	<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6">
+	<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-6 p-6">
 		<div class="mb-8 flex items-center justify-between">
 			<h3 class="text-lg-semibold text-ink-gray-9">{{ event.title }}</h3>
 

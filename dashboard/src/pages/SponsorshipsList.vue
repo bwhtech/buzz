@@ -54,8 +54,9 @@
 </template>
 
 <script setup lang="ts">
-import { Badge, ListView, Spinner, createResource } from "frappe-ui"
+import { Badge, Spinner, createResource } from "frappe-ui"
 import { dayjsLocal } from "frappe-ui"
+import { ListView } from "frappe-ui/experimental"
 
 const columns = [
 	{ label: __("Company"), key: "company_name" },
@@ -85,7 +86,7 @@ const getStatusTheme = (status: string) => {
 		case "Paid":
 			return "green"
 		case "Payment Pending":
-			return "orange"
+			return "amber"
 		case "Approval Pending":
 			return "blue"
 		case "Withdrawn":

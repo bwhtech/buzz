@@ -50,7 +50,7 @@ async function copy() {
 
 <template>
 	<div class="w-80">
-		<div class="flex items-center gap-1 rounded bg-surface-gray-1 py-1 pl-2.5 pr-1 text-base">
+		<div class="flex items-center gap-1 rounded-4 bg-surface-gray-1 py-1 pl-2.5 pr-1 text-base">
 			<span class="shrink-0 text-ink-gray-5">{{ hostname }}/</span>
 
 			<input
@@ -66,7 +66,7 @@ async function copy() {
 					target="_blank"
 					rel="noopener"
 					aria-label="Open event page"
-					class="shrink-0 rounded p-1 text-ink-gray-5 transition-[color,transform] duration-150 ease-out hover:text-ink-gray-8 active:scale-95 motion-reduce:transition-none"
+					class="shrink-0 rounded-4 p-1 text-ink-gray-5 transition-[color,transform] duration-150 ease-out hover:text-ink-gray-8 active:scale-95 motion-reduce:transition-none"
 				>
 					<span class="lucide-arrow-up-right block size-4" aria-hidden="true" />
 				</a>
@@ -74,7 +74,7 @@ async function copy() {
 				<button
 					type="button"
 					aria-label="Copy"
-					class="shrink-0 rounded p-1 text-ink-gray-5 transition-[color,transform] duration-150 ease-out hover:text-ink-gray-8 active:scale-95 motion-reduce:transition-none"
+					class="shrink-0 rounded-4 p-1 text-ink-gray-5 transition-[color,transform] duration-150 ease-out hover:text-ink-gray-8 active:scale-95 motion-reduce:transition-none"
 					@click="copy"
 				>
 					<!-- Swapped, not crossfaded: at this size a fade reads as a flicker. -->

@@ -5,7 +5,7 @@
 		</div>
 
 		<div v-else-if="submitted" class="text-center">
-			<div class="bg-surface-green-1 border border-outline-green-1 rounded-lg p-8">
+			<div class="bg-surface-green-1 border border-outline-green-1 rounded-6 p-8">
 				<LucideCheckCircle class="w-16 h-16 text-ink-green-6 mx-auto mb-4" />
 				<h2 class="text-ink-green-6 text-2xl-semibold mb-2">
 					{{ formData?.success_title }}
@@ -24,7 +24,7 @@
 		<LoginRequired v-else-if="loginRequired" :message="__('Please log in to submit this form.')" />
 
 		<div v-else-if="formData?.closed" class="text-center">
-			<div class="bg-surface-amber-1 border border-outline-amber-1 rounded-lg p-8">
+			<div class="bg-surface-amber-1 border border-outline-amber-1 rounded-6 p-8">
 				<LucideAlertCircle class="w-16 h-16 text-ink-amber-6 mx-auto mb-4" />
 				<h2 class="text-ink-amber-6 text-2xl-semibold mb-2">
 					{{ formData.closed_title }}
@@ -39,7 +39,7 @@
 			<EventDetailsHeader :event-details="formData.event" />
 
 			<form
-				class="bg-surface-base border border-outline-gray-1 rounded-lg p-6"
+				class="bg-surface-base border border-outline-gray-1 rounded-6 p-6"
 				@submit.prevent="handleSubmit"
 			>
 				<h1 class="text-ink-gray-9 text-3xl-bold mb-6">
@@ -57,7 +57,7 @@
 									<div
 										v-for="(row, idx) in tableData[field.fieldname]"
 										:key="idx"
-										class="flex items-center justify-between gap-2 border border-outline-gray-2 rounded-md px-3 py-2"
+										class="flex items-center justify-between gap-2 border border-outline-gray-2 rounded-5 px-3 py-2"
 									>
 										<span class="text-sm text-ink-gray-7 min-w-0 truncate">
 											{{ getTableRowSummary(row) }}
@@ -111,7 +111,7 @@
 		</div>
 
 		<div v-else-if="loadError" class="text-center">
-			<div class="bg-surface-amber-1 border border-outline-amber-1 rounded-lg p-8">
+			<div class="bg-surface-amber-1 border border-outline-amber-1 rounded-6 p-8">
 				<LucideAlertCircle class="w-16 h-16 text-ink-amber-6 mx-auto mb-4" />
 				<h2 class="text-ink-amber-6 text-2xl-semibold mb-2">
 					{{ __("Not Found") }}

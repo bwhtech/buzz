@@ -118,7 +118,7 @@ function confirmRemove(row: Row) {
 				</p>
 			</header>
 
-			<section class="rounded-xl bg-surface-gray-1 p-4">
+			<section class="rounded-7 bg-surface-gray-1 p-4">
 				<h2 class="text-sm font-medium text-ink-gray-7">What each role can do</h2>
 				<dl class="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
 					<div v-for="role in ROLES" :key="role.name" class="flex gap-2">
@@ -145,7 +145,7 @@ function confirmRemove(row: Row) {
 						v-for="row in rows"
 						:key="row.key"
 						:class="COLUMNS"
-						class="-mx-2 rounded px-2 py-2 transition-colors duration-150 hover:bg-surface-gray-1"
+						class="-mx-2 rounded-4 px-2 py-2 transition-colors duration-150 hover:bg-surface-gray-1"
 					>
 						<div class="flex min-w-0 items-center gap-3">
 							<Avatar :image="row.image" :label="row.name" size="lg" />

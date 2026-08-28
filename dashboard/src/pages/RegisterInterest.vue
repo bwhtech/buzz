@@ -5,7 +5,7 @@
 		</div>
 
 		<div v-else-if="registered" class="text-center">
-			<div class="bg-surface-green-1 border border-outline-green-1 rounded-lg p-8">
+			<div class="bg-surface-green-1 border border-outline-green-1 rounded-6 p-8">
 				<LucideCheckCircle class="w-16 h-16 text-ink-green-6 mx-auto mb-4" />
 				<h2 class="text-ink-green-6 text-2xl-semibold mb-2">
 					{{ __("Thank you for your interest!") }}
@@ -16,10 +16,7 @@
 			</div>
 		</div>
 
-		<div
-			v-else-if="campaignDoc"
-			class="bg-surface-base border border-outline-gray-1 rounded-lg p-6"
-		>
+		<div v-else-if="campaignDoc" class="bg-surface-base border border-outline-gray-1 rounded-6 p-6">
 			<h1 class="text-ink-gray-9 text-3xl-bold mb-6">
 				{{ campaignDoc.title }}
 			</h1>
@@ -45,7 +42,7 @@
 		</div>
 
 		<div v-else-if="error" class="text-center">
-			<div class="bg-surface-red-1 border border-outline-red-1 rounded-lg p-8">
+			<div class="bg-surface-red-1 border border-outline-red-1 rounded-6 p-8">
 				<LucideXCircle class="w-16 h-16 text-ink-red-5 mx-auto mb-4" />
 				<h2 class="text-ink-red-6 text-2xl-semibold mb-2">
 					{{ __("Campaign Not Found") }}

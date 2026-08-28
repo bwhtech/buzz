@@ -48,7 +48,8 @@
 </template>
 
 <script setup lang="ts">
-import { ListView, Spinner, createListResource, dayjsLocal } from "frappe-ui"
+import { Spinner, createListResource, dayjsLocal } from "frappe-ui"
+import { ListView } from "frappe-ui/experimental"
 
 import type { BuzzEvent } from "@/types"
 
