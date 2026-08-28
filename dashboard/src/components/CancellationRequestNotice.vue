@@ -1,6 +1,6 @@
 <template>
 	<div v-if="cancellationRequest" class="mb-6">
-		<div class="bg-surface-blue-1 border border-outline-blue-1 rounded-lg p-4">
+		<div class="bg-surface-blue-1 border border-outline-blue-1 rounded-6 p-4">
 			<div class="flex items-center">
 				<LucideInfo class="w-5 h-5 text-ink-blue-5 mr-3" />
 				<div>

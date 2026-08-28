@@ -93,9 +93,9 @@ function emitValue() {
 	emit("update:modelValue", formatPhone(dialCode.value, localNumber.value))
 }
 
-function onDialCodeChange(code: string | null) {
+function onDialCodeChange(code: unknown) {
 	if (code) {
-		dialCode.value = code
+		dialCode.value = String(code)
 		emitValue()
 	}
 }

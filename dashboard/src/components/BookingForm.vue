@@ -60,7 +60,7 @@
 
 		<!-- Pending State for Guest Offline Booking -->
 		<div v-if="bookingSuccess && bookingPendingVerification" class="text-center py-12 px-4">
-			<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-8 max-w-md mx-auto">
+			<div class="bg-yellow-50 border border-yellow-200 rounded-7 p-8 max-w-md mx-auto">
 				<LucideClock class="w-16 h-16 text-yellow-500 mx-auto mb-4" />
 				<h2 class="text-3xl-semibold text-yellow-800 mb-2">
 					{{ __("Booking Received!") }}
@@ -98,7 +98,7 @@
 
 		<!-- Success State for Guest Booking -->
 		<div v-else-if="bookingSuccess" class="text-center py-12 px-4">
-			<div class="bg-green-50 border border-green-200 rounded-xl p-8 max-w-md mx-auto">
+			<div class="bg-green-50 border border-green-200 rounded-7 p-8 max-w-md mx-auto">
 				<LucideCheckCircle class="w-16 h-16 text-green-500 mx-auto mb-4" />
 				<h2 class="text-3xl-semibold text-green-800 mb-2">
 					{{ isZoomEvent ? __("Registration Confirmed!") : __("Booking Confirmed!") }}
@@ -151,7 +151,7 @@
 					<!-- Guest Contact Section -->
 					<div
 						v-if="props.isGuestMode"
-						class="bg-surface-base border border-outline-gray-3 rounded-xl p-4 md:p-6 mb-6 shadow-sm"
+						class="bg-surface-base border border-outline-gray-3 rounded-7 p-4 md:p-6 mb-6 shadow-sm"
 					>
 						<h3 class="text-sm-semibold text-ink-gray-8 mb-4">
 							{{ __("Your Details") }}
@@ -195,7 +195,7 @@
 					<!-- Booking-level Custom Fields -->
 					<div
 						v-if="bookingCustomFields.length > 0"
-						class="bg-surface-base border border-outline-gray-3 rounded-xl p-4 md:p-6 mb-6 shadow-sm"
+						class="bg-surface-base border border-outline-gray-3 rounded-7 p-4 md:p-6 mb-6 shadow-sm"
 					>
 						<CustomFieldsSection
 							v-model="bookingCustomFieldsData"
@@ -244,7 +244,7 @@
 						<!-- Coupon Code Section -->
 						<div
 							v-if="finalTotal > 0 || couponApplied"
-							class="bg-surface-base border border-outline-gray-3 rounded-xl p-4 mb-4"
+							class="bg-surface-base border border-outline-gray-3 rounded-7 p-4 mb-4"
 						>
 							<h3 class="text-xs-medium text-ink-gray-6 uppercase tracking-wide mb-2">
 								{{ __("Coupon Code") }}
@@ -267,7 +267,7 @@
 							<!-- Applied state -->
 							<div v-else-if="couponData">
 								<div
-									class="inline-flex flex-col bg-green-50 border border-green-200 rounded-lg px-3 py-2"
+									class="inline-flex flex-col bg-green-50 border border-green-200 rounded-6 px-3 py-2"
 								>
 									<div class="flex items-center gap-2">
 										<LucideCheck class="w-4 h-4 text-green-600" />
@@ -311,7 +311,7 @@
 								>
 									<!-- Compact info grid -->
 									<div class="grid grid-cols-2 gap-2 text-xs">
-										<div class="bg-surface-gray-2 rounded px-2 py-1.5">
+										<div class="bg-surface-gray-2 rounded-4 px-2 py-1.5">
 											<span class="text-ink-gray-5">{{ __("Ticket") }}</span>
 											<div class="text-ink-gray-8 font-medium truncate">
 												{{
@@ -320,7 +320,7 @@
 												}}
 											</div>
 										</div>
-										<div class="bg-surface-gray-2 rounded px-2 py-1.5">
+										<div class="bg-surface-gray-2 rounded-4 px-2 py-1.5">
 											<span class="text-ink-gray-5">{{ __("Available") }}</span>
 											<div class="text-ink-gray-8 font-medium">
 												{{ couponData.remaining_tickets }}
@@ -329,7 +329,7 @@
 									</div>
 
 									<!-- Eligibility indicator -->
-									<div class="flex items-center justify-between bg-green-50 rounded px-2 py-1.5">
+									<div class="flex items-center justify-between bg-green-50 rounded-4 px-2 py-1.5">
 										<span class="text-green-700 text-xs">{{ __("Eligible attendees") }}</span>
 										<span class="text-green-700 text-sm-semibold">
 											{{ matchingAttendeesCount }}/{{ attendees.length }}
@@ -357,7 +357,7 @@
 
 							<div
 								v-if="couponError"
-								class="mt-2 flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg"
+								class="mt-2 flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-6"
 							>
 								<LucideAlertCircle class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
 								<span class="text-sm text-amber-800">{{ couponError }}</span>

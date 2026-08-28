@@ -133,7 +133,7 @@ async function save() {
 				<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
 					 itself: the height and scrolling land on the editable area rather than on a
 					 wrapper, and the whole box takes a click. -->
-				<div class="rounded-lg border border-outline-gray-2 p-3">
+				<div class="rounded-6 border border-outline-gray-2 p-3">
 					<Editor
 						v-model="form.about"
 						:extensions="[RichTextKit]"

@@ -28,7 +28,7 @@
 				<div
 					v-for="tier in tiers.data"
 					:key="tier.name"
-					class="border border-outline-gray-2 rounded-lg p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
+					class="border border-outline-gray-2 rounded-6 p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
 					:class="{
 						'border-outline-gray-4 bg-surface-gray-2': selectedTier?.name === tier.name,
 					}"
@@ -66,7 +66,7 @@
 					<div
 						v-for="gateway in paymentGateways"
 						:key="gateway"
-						class="border border-outline-gray-2 rounded-lg px-4 py-3 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
+						class="border border-outline-gray-2 rounded-6 px-4 py-3 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
 						:class="{
 							'border-outline-gray-4 bg-surface-gray-2': selectedGateway === gateway,
 						}"
@@ -88,7 +88,7 @@
 			<!-- Selected Summary -->
 			<div
 				v-if="selectedTier"
-				class="p-4 bg-surface-green-1 border border-outline-green-1 rounded-lg"
+				class="p-4 bg-surface-green-1 border border-outline-green-1 rounded-6"
 			>
 				<div class="flex items-center justify-between">
 					<div>

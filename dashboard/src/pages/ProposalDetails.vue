@@ -20,7 +20,7 @@
 		<!-- Accepted Alert -->
 		<div
 			v-if="proposal.doc.status === 'Accepted'"
-			class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-lg p-6"
+			class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-6 p-6"
 		>
 			<div class="flex items-center">
 				<LucideCheckCircle class="w-6 h-6 text-ink-green-6 mr-3" />
@@ -36,7 +36,7 @@
 		<!-- Shortlisted Alert -->
 		<div
 			v-else-if="proposal.doc.status === 'Shortlisted'"
-			class="mb-6 bg-surface-blue-1 border border-outline-blue-1 rounded-lg p-6"
+			class="mb-6 bg-surface-blue-1 border border-outline-blue-1 rounded-6 p-6"
 		>
 			<div class="flex items-center">
 				<LucideStar class="w-6 h-6 text-ink-blue-5 mr-3" />
@@ -52,7 +52,7 @@
 		<!-- Review Pending Alert -->
 		<div
 			v-else-if="proposal.doc.status === 'Review Pending'"
-			class="mb-6 bg-surface-orange-1 border border-outline-orange-1 rounded-lg p-6"
+			class="mb-6 bg-surface-orange-1 border border-outline-orange-1 rounded-6 p-6"
 		>
 			<div class="flex items-center">
 				<LucideClock class="w-6 h-6 text-ink-gray-8 mr-3" />
@@ -72,7 +72,7 @@
 		<!-- Rejected Alert -->
 		<div
 			v-else-if="proposal.doc.status === 'Rejected'"
-			class="mb-6 bg-surface-red-1 border border-outline-red-1 rounded-lg p-6"
+			class="mb-6 bg-surface-red-1 border border-outline-red-1 rounded-6 p-6"
 		>
 			<div class="flex items-center">
 				<LucideXCircle class="w-6 h-6 text-ink-red-5 mr-3" />
@@ -91,7 +91,7 @@
 
 		<div class="space-y-6">
 			<!-- Proposal Information -->
-			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-base border border-outline-gray-1 rounded-6 p-6">
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
 						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{ __("Title") }}</label>
@@ -124,7 +124,7 @@
 			</div>
 
 			<!-- Speakers -->
-			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-base border border-outline-gray-1 rounded-6 p-6">
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">{{ __("Speakers") }}</h3>
 				<ListView
 					v-if="proposal.doc.speakers && proposal.doc.speakers.length > 0"
@@ -137,7 +137,7 @@
 			</div>
 
 			<!-- Description -->
-			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-base border border-outline-gray-1 rounded-6 p-6">
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">{{ __("Description") }}</h3>
 				<div
 					v-if="proposal.doc.description"
@@ -173,12 +173,12 @@
 import {
 	Badge,
 	Button,
-	ListView,
 	Spinner,
 	createDocumentResource,
 	createResource,
 	dayjsLocal,
 } from "frappe-ui"
+import { ListView } from "frappe-ui/experimental"
 import { computed, ref, watch } from "vue"
 import LucideCheckCircle from "~icons/lucide/check-circle"
 import LucideClock from "~icons/lucide/clock"

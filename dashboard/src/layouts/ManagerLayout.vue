@@ -102,7 +102,7 @@ const eventItems = computed(() => [
 
 		<div class="h-full min-h-0 bg-surface-sidebar py-2 pl-2">
 			<div
-				class="flex h-full flex-col overflow-hidden rounded-l-lg bg-surface-elevation-1 shadow-base"
+				class="flex h-full flex-col overflow-hidden rounded-l-6 bg-surface-elevation-1 shadow-base"
 			>
 				<PageHeaderTarget />
 				<div class="min-h-0 flex-1 overflow-y-auto">

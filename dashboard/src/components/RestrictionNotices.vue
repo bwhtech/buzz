@@ -2,7 +2,7 @@
 	<div>
 		<!-- Single consolidated restriction notice -->
 		<div v-if="hasRestrictions" class="mb-4">
-			<div class="bg-surface-amber-1 border border-outline-amber-1 rounded-lg p-4">
+			<div class="bg-surface-amber-1 border border-outline-amber-1 rounded-6 p-4">
 				<div class="flex items-start">
 					<LucideTriangleAlert class="w-5 h-5 text-ink-amber-5 mr-3 mt-0.5 flex-shrink-0" />
 					<div>

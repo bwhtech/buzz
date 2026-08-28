@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Avatar, Button, Divider, Popover, useTheme } from "frappe-ui"
+import { Avatar, Button, Divider, Popover, useColorScheme } from "frappe-ui"
 
 import { session } from "@/data/session"
 
-const { currentTheme, setTheme } = useTheme()
+const { colorScheme, setColorScheme } = useColorScheme()
 
 const themes = [
 	{ value: "light", icon: "lucide-sun", label: "Light" },
@@ -14,10 +14,10 @@ const themes = [
 
 <template>
 	<Popover side="bottom" align="start">
-		<template #trigger="{ isOpen }">
+		<template #trigger="{ open: isOpen }">
 			<button
 				aria-label="Account"
-				class="group flex h-10 w-full items-center gap-2 rounded px-1.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+				class="group flex h-10 w-full items-center gap-2 rounded-4 px-1.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
 				:class="{ 'bg-surface-gray-2': isOpen }"
 			>
 				<Avatar :image="session.userImage ?? undefined" :label="session.fullName" size="lg" />
@@ -25,7 +25,7 @@ const themes = [
 					{{ session.fullName }}
 				</span>
 				<span
-					class="grid size-6 shrink-0 place-items-center rounded transition-colors duration-150 group-hover:bg-surface-gray-3"
+					class="grid size-6 shrink-0 place-items-center rounded-4 transition-colors duration-150 group-hover:bg-surface-gray-3"
 					:class="{ 'bg-surface-gray-3': isOpen }"
 				>
 					<span class="lucide-ellipsis size-4 text-ink-gray-6" />
@@ -50,11 +50,11 @@ const themes = [
 						<Button
 							v-for="theme in themes"
 							:key="theme.value"
-							:variant="currentTheme === theme.value ? 'subtle' : 'ghost'"
+							:variant="colorScheme === theme.value ? 'subtle' : 'ghost'"
 							:icon="theme.icon"
 							:label="theme.label"
 							:tooltip="theme.label"
-							@click="setTheme(theme.value)"
+							@click="setColorScheme(theme.value)"
 						/>
 					</div>
 				</div>
