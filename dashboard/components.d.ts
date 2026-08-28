@@ -59,7 +59,6 @@ declare module 'vue' {
     SuccessMessage: typeof import('./src/components/SuccessMessage.vue')['default']
     TeamHero: typeof import('./src/components/dashboard/teams/TeamHero.vue')['default']
     TeamPageHeader: typeof import('./src/components/dashboard/teams/TeamPageHeader.vue')['default']
-    TeamSwitcher: typeof import('./src/components/TeamSwitcher.vue')['default']
     TicketCard: typeof import('./src/components/TicketCard.vue')['default']
     TicketDetailsModal: typeof import('./src/components/TicketDetailsModal.vue')['default']
     TicketsSection: typeof import('./src/components/TicketsSection.vue')['default']
