@@ -17,3 +17,15 @@ export function dayLabel(date: string): string {
 export function weekday(date: string): string {
 	return dayjs(date).format("dddd")
 }
+
+// Times arrive as a serialized timedelta ("9:00:00"), so the hour needs padding and the
+// seconds dropping — slicing the raw string cuts a single-digit hour mid-segment.
+export function timeLabel(time: string): string {
+	const [hour, minute] = time.split(":")
+	return `${hour.padStart(2, "0")}:${minute}`
+}
+
+/** Same serialized timedelta, rendered on a 12-hour clock: "9:30 AM". */
+export function timeLabel12Hour(time: string): string {
+	return dayjs(`2000-01-01 ${time}`).format("h:mm A")
+}

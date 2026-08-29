@@ -63,6 +63,7 @@ def events_for(user: str) -> list[MyEvent]:
 			event.start_date,
 			event.end_date,
 			event.start_time,
+			event.end_time,
 			event.venue,
 			event.banner_image,
 			event.team,
