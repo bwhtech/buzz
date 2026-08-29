@@ -175,6 +175,7 @@ class TestGetMyEvents(IntegrationTestCase):
 				"start_date",
 				"end_date",
 				"start_time",
+				"end_time",
 				"venue",
 				"banner_image",
 				"is_host",

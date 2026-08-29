@@ -32,14 +32,16 @@ const day = computed(() => ({
 
 // A run that ends on a later day cannot state its times as one range — "09:00 – 17:00"
 // would read as a single afternoon — so each end gets its own line with its own date.
-const spansDays = computed(
-	() => !!props.event?.end_date && props.event.end_date !== props.event.start_date,
-)
+const laterEndDate = computed(() => {
+	const event = props.event
+	if (!event?.end_date || event.end_date === event.start_date) return null
+	return event.end_date
+})
 
 const startsAt = computed(() => {
 	if (!props.event) return ""
 	const date = dayjs(props.event.start_date)
-	if (!spansDays.value) return date.format("dddd, D MMMM")
+	if (!laterEndDate.value) return date.format("dddd, D MMMM")
 	const time = props.event.start_time ? `, ${timeLabel12Hour(props.event.start_time)}` : ""
 	return `${date.format("ddd, D MMM")}${time}`
 })
@@ -58,8 +60,8 @@ async function copyLink() {
 
 const endsAt = computed(() => {
 	if (!props.event) return ""
-	if (spansDays.value) {
-		const date = dayjs(props.event.end_date as string).format("ddd, D MMM")
+	if (laterEndDate.value) {
+		const date = dayjs(laterEndDate.value).format("ddd, D MMM")
 		const time = props.event.end_time ? `, ${timeLabel12Hour(props.event.end_time)}` : ""
 		return `to ${date}${time}`
 	}
