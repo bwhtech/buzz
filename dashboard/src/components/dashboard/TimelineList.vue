@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends { name: string }">
-import { ErrorMessage, LoadingText, TabButtons } from "frappe-ui"
+import { ErrorMessage, Icon, LoadingText, TabButtons } from "frappe-ui"
 
 import { dayLabel, monthLabel, weekday } from "@/utils/dateLabels"
 import type { MonthGroup } from "@/utils/eventGroups"
@@ -7,7 +7,8 @@ import type { TimelineTab } from "@/utils/timelineTabs"
 
 defineProps<{
 	heading: string
-	// Names the rows in "Loading tickets..." and "No upcoming tickets.".
+	icon?: string
+	description?: string
 	noun: string
 	months: MonthGroup<T>[]
 	loading?: boolean
@@ -24,10 +25,22 @@ const tabOptions = [
 
 <template>
 	<div class="m-auto max-w-[800px] w-full py-8 px-4 space-y-6">
-		<header class="flex items-center justify-between">
-			<h1 class="font-semibold text-4xl">{{ heading }}</h1>
+		<header class="flex items-start justify-between">
+			<div class="flex flex-col gap-3 items-start">
+				<div class="flex gap-3 items-center">
+					<div v-if="icon" class="p-2 bg-surface-gray-3 rounded-4">
+						<Icon :name="icon" class="size-6" />
+					</div>
+					<h1 class="font-semibold text-4xl">{{ heading }}</h1>
+				</div>
+				<p class="text-p-base" v-if="description">{{ description }}</p>
+			</div>
 			<TabButtons v-model="tab" :options="tabOptions" size="md" />
 		</header>
+
+		<div v-if="$slots.controls" class="flex items-center justify-between gap-4">
+			<slot name="controls" />
+		</div>
 
 		<ErrorMessage v-if="error" :message="error.message" />
 
@@ -63,8 +76,11 @@ const tabOptions = [
 			</section>
 		</div>
 
-		<p v-if="!months.length && !loading && !error" class="text-base text-ink-gray-5">
-			No {{ tab }} {{ noun }}.
-		</p>
+		<!-- A div, not a p: the slot takes a block component. -->
+		<div v-if="!months.length && !loading && !error">
+			<slot name="empty-state">
+				<p class="text-base text-ink-gray-5">No {{ tab }} {{ noun }}.</p>
+			</slot>
+		</div>
 	</div>
 </template>

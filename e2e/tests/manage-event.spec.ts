@@ -84,7 +84,7 @@ test.describe("Event workspace", () => {
 		await page.getByRole("link", { name: "Back" }).click()
 
 		await expect(page).toHaveURL(/\/b\/manage\/events$/, { timeout: 15000 })
-		await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible()
+		await expect(page.getByRole("heading", { name: "My Calendar", level: 1 })).toBeVisible()
 	})
 })
 

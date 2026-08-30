@@ -19,6 +19,7 @@ from buzz.api.events.schemas import (
 	EventVenue,
 	GuestAddOn,
 	MyEvent,
+	MyEventFilters,
 	MyEventsResponse,
 	NewEvent,
 	RouteAvailability,
@@ -28,17 +29,21 @@ from buzz.permissions import has_team_access, my_teams
 from buzz.utils import is_app_installed
 
 
-def my_events() -> MyEventsResponse:
-	upcoming, past = split_by_date(events_for(frappe.session.user))
+def my_events(filters: MyEventFilters | None = None) -> MyEventsResponse:
+	upcoming, past = split_by_date(events_for(frappe.session.user, filters))
 	return MyEventsResponse(upcoming=upcoming, past=past)
 
 
-def events_for(user: str) -> list[MyEvent]:
+def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent]:
 	"""Team membership and ticket ownership are the authorization here.
 
 	Buzz Event's own query condition shows published events to everyone and drafts to the
 	team, which is neither list: a Viewer needs their team's drafts, and an attendee needs
 	the unpublished event they hold a ticket to.
+
+	Filters only ever narrow. The hosted-or-ticketed predicate still bounds the result, so
+	a team filter cannot reach an event the user could not already see, and needs no guard
+	of its own.
 	"""
 	event = frappe.qb.DocType("Buzz Event")
 	ticket = frappe.qb.DocType("Event Ticket")
@@ -51,7 +56,7 @@ def events_for(user: str) -> list[MyEvent]:
 		.where((ticket.attendee_email == user) & (ticket.docstatus == 1))
 	)
 
-	rows = (
+	query = (
 		frappe.qb.from_(event)
 		# Left join: an event predating the team backfill still belongs in the feed.
 		.left_join(team)
@@ -63,20 +68,39 @@ def events_for(user: str) -> list[MyEvent]:
 			event.start_date,
 			event.end_date,
 			event.start_time,
+			event.end_time,
 			event.venue,
+			event.medium,
 			event.banner_image,
 			event.team,
 			team.team_name,
 			team.logo.as_("team_logo"),
 			Case().when(hosted, 1).else_(0).as_("is_host"),
+			Case().when(ticketed, 1).else_(0).as_("is_attendee"),
 		)
 		.where(hosted | ticketed)
 		.orderby(event.start_date)
 		.orderby(event.start_time)
-	).run(as_dict=True)
+	)
+
+	query = narrow(query, event, hosted, ticketed, filters)
+	rows = query.run(as_dict=True)
 
 	# Buzz Event autonames to integers, while every link to it travels as a string.
 	return [MyEvent(**row | {"name": str(row.name)}) for row in rows]
+
+
+def narrow(query, event, hosted, ticketed, filters: MyEventFilters | None):
+	"""Each set field adds one clause; the role reuses the criterions built above."""
+	if not filters:
+		return query
+	if filters.role:
+		query = query.where(hosted if filters.role == "hosting" else ticketed)
+	if filters.team:
+		query = query.where(event.team == filters.team)
+	if filters.medium:
+		query = query.where(event.medium == filters.medium)
+	return query
 
 
 def split_by_date(events: list[MyEvent]) -> tuple[list[MyEvent], list[MyEvent]]:

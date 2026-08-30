@@ -4,7 +4,7 @@ import { computed } from "vue"
 import { RouterLink } from "vue-router"
 
 import type { MyEvent } from "@/types"
-import { dayLabel } from "@/utils/dateLabels"
+import { dayLabel, timeLabel } from "@/utils/dateLabels"
 import { bannerPattern } from "@/utils/eventBanner"
 
 // The Events page files cards under a date heading; a standalone list has to
@@ -27,12 +27,7 @@ const linksToManage = computed(() => props.routeToManage && props.event.is_host)
 // The button would be a second link inside the first, so the card link wins.
 const canManage = computed(() => props.showManage && !linksToManage.value && props.event.is_host)
 
-// Times arrive as a serialized timedelta ("9:00:00"), so the hour needs padding.
-const startTime = computed((): string => {
-	if (!props.event.start_time) return ""
-	const [hour, minute] = props.event.start_time.split(":")
-	return `${hour.padStart(2, "0")}:${minute}`
-})
+const startTime = computed(() => (props.event.start_time ? timeLabel(props.event.start_time) : ""))
 
 const banner = computed(() => ({ backgroundImage: bannerPattern(props.event.name) }))
 
@@ -91,6 +86,7 @@ const venue = computed(() => {
 				</p>
 				<Button
 					v-if="canManage"
+					class="relative z-10"
 					label="Manage"
 					icon-right="arrow-right"
 					size="sm"

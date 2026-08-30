@@ -20,11 +20,13 @@
 		"canvas-confetti": "^1.9.3",
 		"feather-icons": "^4.29.2",
 		"frappe-ui": "1.0.0-beta.55",
+		"reka-ui": "^2.10.1",
 		"socket.io-client": "^4.7.2",
 		"vue": "^3.5.13",
 		"vue-router": "^4.5.0"
 	},
 	"resolutions": {
+		"reka-ui": "2.10.4",
 		"prosemirror-keymap": "^1.2.3",
 		"prosemirror-model": "^1.25.11",
 		"prosemirror-state": "^1.4.4",

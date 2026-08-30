@@ -1,6 +1,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
+from pydantic import ValidationError
 
 from buzz.api.events import check_event_route, get_event, get_event_guests, get_my_events
 from buzz.api.events import create_event as create_event_endpoint
@@ -54,9 +55,9 @@ class TestGetMyEvents(IntegrationTestCase):
 		frappe.set_user("Administrator")
 		self.addCleanup(frappe.set_user, "Administrator")
 
-	def events_of(self, user: str) -> dict[str, list[dict]]:
+	def events_of(self, user: str, **filters) -> dict[str, list[dict]]:
 		frappe.set_user(user)
-		return get_my_events().__json__()
+		return get_my_events(filters or None).__json__()
 
 	def names_in(self, events: list[dict]) -> list[str]:
 		return [event["name"] for event in events]
@@ -161,6 +162,49 @@ class TestGetMyEvents(IntegrationTestCase):
 		self.assertIsNone(row["team_name"])
 		self.assertIsNone(row["team_logo"])
 
+	def test_a_role_filter_keeps_only_hosted_events(self):
+		hosted = create_event("Role Filter Hosted", self.host_team)
+		ticketed = create_event("Role Filter Ticketed", self.other_team)
+		issue_ticket(ticketed, self.host_user)
+
+		names = self.names_in(self.events_of(self.host_user, role="hosting")["upcoming"])
+
+		self.assertIn(hosted, names)
+		self.assertNotIn(ticketed, names)
+
+	def test_a_role_filter_keeps_only_ticketed_events(self):
+		hosted = create_event("Role Filter Own", self.host_team)
+		ticketed = create_event("Role Filter Guest", self.other_team)
+		issue_ticket(ticketed, self.host_user)
+
+		names = self.names_in(self.events_of(self.host_user, role="attending")["upcoming"])
+
+		self.assertIn(ticketed, names)
+		self.assertNotIn(hosted, names)
+
+	def test_a_team_filter_keeps_only_that_teams_events(self):
+		mine = create_event("Team Filter Mine", self.host_team)
+		theirs = create_event("Team Filter Theirs", self.other_team)
+		issue_ticket(theirs, self.host_user)
+
+		names = self.names_in(self.events_of(self.host_user, team=self.host_team)["upcoming"])
+
+		self.assertIn(mine, names)
+		self.assertNotIn(theirs, names)
+
+	def test_a_medium_filter_keeps_only_that_medium(self):
+		online = create_event("Medium Online", self.host_team, medium="Online")
+		in_person = create_event("Medium In Person", self.host_team, medium="In Person")
+
+		names = self.names_in(self.events_of(self.host_user, medium="Online")["upcoming"])
+
+		self.assertIn(online, names)
+		self.assertNotIn(in_person, names)
+
+	def test_an_unknown_filter_value_is_refused(self):
+		with self.assertRaises(ValidationError):
+			self.events_of(self.host_user, role="lurking")
+
 	def test_serializes_every_declared_field(self):
 		create_event("Payload Shape", self.host_team)
 
@@ -175,9 +219,12 @@ class TestGetMyEvents(IntegrationTestCase):
 				"start_date",
 				"end_date",
 				"start_time",
+				"end_time",
 				"venue",
+				"medium",
 				"banner_image",
 				"is_host",
+				"is_attendee",
 				"team",
 				"team_name",
 				"team_logo",

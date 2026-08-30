@@ -6,10 +6,10 @@ export default {
 		"./index.html",
 		"./src/**/*.{vue,js,ts,jsx,tsx}",
 		...frappeUIContent,
-		// ListView lives in frappe-ui/experimental, which the `content` export
-		// deliberately skips. Without this its classes are never scanned and every
-		// list renders unstyled.
-		"./node_modules/frappe-ui/experimental/ListView/**/*.{vue,js,ts,jsx,tsx}",
+		// frappe-ui/experimental is deliberately absent from the `content` export, so
+		// nothing under it is scanned: ListView renders unstyled, and Accordion loses
+		// its chevron rotation, which lives in a group-data variant.
+		"./node_modules/frappe-ui/experimental/**/*.{vue,js,ts,jsx,tsx}",
 	],
 	theme: {
 		extend: {},
