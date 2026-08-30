@@ -1,8 +1,21 @@
 from datetime import date, timedelta
+from typing import Literal
 
 from pydantic import Field
 
 from buzz.api.schemas import APIRequest, APIResponse
+
+
+class MyEventFilters(APIRequest):
+	"""Every field narrows the feed; None is no constraint.
+
+	Literals rather than plain strings so an unknown value is refused at the boundary
+	instead of quietly matching nothing.
+	"""
+
+	role: Literal["hosting", "attending"] | None = None
+	team: str | None = None
+	medium: Literal["In Person", "Online"] | None = None
 
 
 class MyEvent(APIResponse):
@@ -14,8 +27,10 @@ class MyEvent(APIResponse):
 	start_time: timedelta | None = None
 	end_time: timedelta | None = None
 	venue: str | None = None
+	medium: str | None = None
 	banner_image: str | None = None
 	is_host: bool
+	is_attendee: bool
 	team: str | None = None
 	team_name: str | None = None
 	team_logo: str | None = None

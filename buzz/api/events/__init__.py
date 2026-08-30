@@ -5,6 +5,7 @@ from buzz.api.events.schemas import (
 	CreatedEvent,
 	EventDetail,
 	EventGuestsResponse,
+	MyEventFilters,
 	MyEventsResponse,
 	NewEvent,
 	RouteAvailability,
@@ -12,9 +13,14 @@ from buzz.api.events.schemas import (
 
 
 @frappe.whitelist()
-def get_my_events() -> MyEventsResponse:
-	"""Events hosted by the session user's teams, plus events they hold a ticket to."""
-	return services.my_events()
+def get_my_events(filters: dict | str | None = None) -> MyEventsResponse:
+	"""Events hosted by the session user's teams, plus events they hold a ticket to.
+
+	`filters` arrives as JSON rather than a model: a nested object cannot ride on a GET
+	query string, and frappe validates a model-annotated argument with validate_python,
+	which does not parse JSON. Same shape as submit_custom_form's `data`.
+	"""
+	return services.my_events(MyEventFilters.model_validate(frappe.parse_json(filters or {})))
 
 
 @frappe.whitelist()
