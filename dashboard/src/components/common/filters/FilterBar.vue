@@ -96,7 +96,7 @@ const clear = () => (model.value = Object.fromEntries(props.groups.map((group) =
 					>
 						Filters
 						<template v-if="hiddenCount" #suffix>
-							<Badge theme="blue" size="sm" :label="String(hiddenCount)" />
+							<Badge variant="solid" size="sm" :label="String(hiddenCount)" />
 						</template>
 					</Button>
 				</template>
