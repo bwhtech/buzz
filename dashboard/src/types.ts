@@ -123,6 +123,32 @@ export interface MyEvent {
 	team_logo: string | null
 }
 
+/** buzz.api.booking.get_my_booking_summaries: one ticket type per line, add-ons beneath. */
+export interface BookingLine {
+	label: string
+	quantity: number
+	amount: number
+	add_ons: BookingLine[]
+}
+
+export interface BookingSummary {
+	name: string
+	status: string
+	payment_status: string
+	payment_method: string | null
+	is_offline: boolean
+	currency: string
+	booked_on: string
+	lines: BookingLine[]
+	net_amount: number
+	discount_amount: number
+	coupon_code: string | null
+	tax_amount: number
+	tax_label: string | null
+	tax_percentage: number
+	total_amount: number
+}
+
 export interface MyEvents {
 	upcoming: MyEvent[]
 	past: MyEvent[]

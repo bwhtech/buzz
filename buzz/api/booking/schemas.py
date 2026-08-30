@@ -1,5 +1,7 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
+
+from pydantic import Field
 
 from buzz.api.schemas import APIRequest, APIResponse
 
@@ -140,3 +142,37 @@ class FreeTicketsCouponResponse(APIResponse):
 	ticket_type: Any
 	remaining_tickets: int
 	free_add_ons: list
+
+
+class BookingLine(APIResponse):
+	"""One ticket type on a booking. Its add-ons hang off it and never nest further."""
+
+	label: str
+	quantity: int
+	# Attendee amounts only — every add-on carries its own.
+	amount: float
+	add_ons: list["BookingLine"] = Field(default_factory=list)
+
+
+class BookingSummary(APIResponse):
+	"""A booking as a receipt: what was bought and what it cost, and nothing else.
+
+	No ticket, attendee or QR field travels — the card draws none of them, and the reader
+	is always the person who booked.
+	"""
+
+	name: str
+	status: str
+	payment_status: str
+	payment_method: str | None
+	is_offline: bool
+	currency: str
+	booked_on: datetime
+	lines: list[BookingLine]
+	net_amount: float
+	discount_amount: float
+	coupon_code: str | None
+	tax_amount: float
+	tax_label: str | None
+	tax_percentage: float
+	total_amount: float

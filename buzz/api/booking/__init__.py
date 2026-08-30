@@ -6,6 +6,7 @@ from buzz.api.booking.schemas import (
 	BookingConfirmationResponse,
 	BookingDetailsResponse,
 	BookingRequest,
+	BookingSummary,
 	EventBookingDataResponse,
 	FreeBookingResponse,
 	OfflineBookingResponse,
@@ -42,6 +43,12 @@ def get_booking_confirmation(booking_id: str, token: str | None = None) -> Booki
 @frappe.whitelist()
 def get_booking_details(booking_id: str) -> BookingDetailsResponse:
 	return details.build_booking_details(booking_id)
+
+
+@frappe.whitelist()
+def get_my_booking_summaries(event: str) -> list[BookingSummary]:
+	"""Every booking the session user made for one event, each as a receipt."""
+	return details.build_my_booking_summaries(event)
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method

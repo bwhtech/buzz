@@ -10,6 +10,7 @@ import {
 	DrawerDescription,
 	DrawerTitle,
 } from "@/components/common/drawer"
+import EventBookings from "@/components/dashboard/events/EventBookings.vue"
 import type { MyEvent } from "@/types"
 import { timeLabel12Hour } from "@/utils/dateLabels"
 import { bannerPattern } from "@/utils/eventBanner"
@@ -159,6 +160,8 @@ const endsAt = computed(() => {
 							</p>
 						</div>
 					</div>
+
+					<EventBookings v-if="event.is_attendee" :event="event.name" />
 				</div>
 			</template>
 		</DrawerContent>

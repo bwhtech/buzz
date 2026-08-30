@@ -32,6 +32,7 @@ declare module 'vue' {
     DrawerContent: typeof import('./src/components/common/drawer/DrawerContent.vue')['default']
     EmptyState: typeof import('./src/components/common/EmptyState.vue')['default']
     EventBanner: typeof import('./src/components/dashboard/events/EventBanner.vue')['default']
+    EventBookings: typeof import('./src/components/dashboard/events/EventBookings.vue')['default']
     EventCard: typeof import('./src/components/dashboard/events/EventCard.vue')['default']
     EventDetailsHeader: typeof import('./src/components/EventDetailsHeader.vue')['default']
     EventDrawer: typeof import('./src/components/dashboard/events/EventDrawer.vue')['default']

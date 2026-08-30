@@ -1,15 +1,18 @@
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 from buzz.api.booking.schemas import (
 	BookingConfirmationResponse,
 	BookingDetailsResponse,
+	BookingLine,
+	BookingSummary,
 	ConfirmationBooking,
 	ConfirmationEvent,
 	ConfirmationTicket,
 	ConfirmationVenue,
 )
-from buzz.api.booking.services import verify_booking_access_token
+from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, verify_booking_access_token
 from buzz.api.tickets import windows
 
 TICKET_FIELDS = [
@@ -162,3 +165,110 @@ def get_cancellation_requested_tickets(cancellation_request, tickets) -> list[st
 		"Ticket Cancellation Item", filters={"parent": cancellation_request.name}, fields=["ticket"]
 	)
 	return [item.ticket for item in requested]
+
+
+def build_my_booking_summaries(event: str) -> list[BookingSummary]:
+	"""The session user's own bookings for one event, newest first.
+
+	The `user` filter is the scope, and the permission query still applies on top of it —
+	nothing here runs with ignore_permissions. A draft stays in so an offline booking
+	awaiting verification is visible; a cancelled one drops out.
+	"""
+	names = frappe.get_all(
+		"Event Booking",
+		filters={"event": event, "user": frappe.session.user, "docstatus": ("!=", 2)},
+		order_by="creation desc",
+		pluck="name",
+	)
+	bookings = [frappe.get_cached_doc("Event Booking", name) for name in names]
+	titles = ticket_type_titles(bookings)
+	add_ons = add_on_values(bookings)
+	return [summarize_booking(booking, titles, add_ons) for booking in bookings]
+
+
+def ticket_type_titles(bookings: list) -> dict[str, str]:
+	"""Titles for every ticket type across the bookings, in one query.
+
+	Ticket types autoname to integers and arrive off an attendee row as strings, so both
+	sides of the lookup are cast.
+	"""
+	ids = {attendee.ticket_type for booking in bookings for attendee in booking.attendees}
+	if not ids:
+		return {}
+
+	# db.get_all: the bookings themselves are already permission-checked, and a title is
+	# all that is read.
+	rows = frappe.db.get_all(
+		"Event Ticket Type", filters={"name": ("in", list(ids))}, fields=["name", "title"]
+	)
+	return {str(row.name): row.title for row in rows}
+
+
+def add_on_values(bookings: list) -> dict[str, list]:
+	"""Add-on rows bought across the bookings, grouped by the attendee row that holds them."""
+	parents = {attendee.add_ons for booking in bookings for attendee in booking.attendees if attendee.add_ons}
+	if not parents:
+		return {}
+
+	rows = frappe.db.get_all(
+		"Ticket Add-on Value",
+		filters={"parent": ("in", list(parents))},
+		fields=["parent", "add_on", "add_on.title as title", "price"],
+	)
+
+	grouped = {}
+	for row in rows:
+		grouped.setdefault(row.parent, []).append(row)
+	return grouped
+
+
+def summarize_booking(booking, titles: dict[str, str], add_ons: dict[str, list]) -> BookingSummary:
+	return BookingSummary(
+		name=booking.name,
+		status=booking.status,
+		payment_status=booking.payment_status,
+		payment_method=booking.offline_payment_method or booking.payment_method,
+		is_offline=booking.payment_method == OFFLINE_PAYMENT_METHOD,
+		currency=booking.currency,
+		booked_on=booking.creation,
+		lines=build_lines(booking, titles, add_ons),
+		net_amount=flt(booking.net_amount),
+		discount_amount=flt(booking.discount_amount),
+		coupon_code=booking.coupon_code,
+		tax_amount=flt(booking.tax_amount),
+		tax_label=booking.tax_label,
+		tax_percentage=flt(booking.tax_percentage),
+		total_amount=flt(booking.total_amount),
+	)
+
+
+def build_lines(booking, titles: dict[str, str], add_ons: dict[str, list]) -> list[BookingLine]:
+	"""One line per ticket type, with the add-ons bought against it beneath.
+
+	ponytail: line amounts are the stored attendee amounts. A Free Tickets coupon zeroes
+	those after the subtotal has already counted them, so under that coupon the lines sum
+	to less than `net_amount` and the discount line makes up the difference.
+	"""
+	lines: dict[str, BookingLine] = {}
+	# Two add-ons of one event may carry the same title, so the sub-lines are keyed by
+	# add-on id and the title is only ever displayed.
+	sub_lines: dict[tuple[str, str], BookingLine] = {}
+	for attendee in booking.attendees:
+		key = str(attendee.ticket_type)
+		line = lines.setdefault(key, BookingLine(label=titles.get(key, key), quantity=0, amount=0))
+		line.quantity += 1
+		line.amount += flt(attendee.amount)
+		fold_add_ons(line, sub_lines, key, add_ons.get(attendee.add_ons, []))
+	return list(lines.values())
+
+
+def fold_add_ons(line: BookingLine, sub_lines: dict, ticket_type: str, rows: list) -> None:
+	"""Fold one attendee's add-ons into their ticket type's line, one entry per add-on."""
+	for row in rows:
+		add_on = sub_lines.get((ticket_type, str(row.add_on)))
+		if not add_on:
+			add_on = BookingLine(label=row.title, quantity=0, amount=0)
+			line.add_ons.append(add_on)
+			sub_lines[(ticket_type, str(row.add_on))] = add_on
+		add_on.quantity += 1
+		add_on.amount += flt(row.price)
