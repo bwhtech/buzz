@@ -42,6 +42,7 @@ declare module 'vue' {
     EventRoute: typeof import('./src/components/dashboard/events/EventRoute.vue')['default']
     EventSchedule: typeof import('./src/components/dashboard/events/EventSchedule.vue')['default']
     EventSelector: typeof import('./src/components/EventSelector.vue')['default']
+    FilterBar: typeof import('./src/components/common/filters/FilterBar.vue')['default']
     FormFieldSections: typeof import('./src/components/FormFieldSections.vue')['default']
     LanguageSwitcher: typeof import('./src/components/LanguageSwitcher.vue')['default']
     LoginDialog: typeof import('./src/components/LoginDialog.vue')['default']

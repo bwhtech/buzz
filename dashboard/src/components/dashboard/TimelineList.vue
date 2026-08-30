@@ -38,6 +38,10 @@ const tabOptions = [
 			<TabButtons v-model="tab" :options="tabOptions" size="md" />
 		</header>
 
+		<div v-if="$slots.controls" class="flex items-center justify-between gap-4">
+			<slot name="controls" />
+		</div>
+
 		<ErrorMessage v-if="error" :message="error.message" />
 
 		<LoadingText v-else-if="loading" :text="`Loading ${noun}...`" />

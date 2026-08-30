@@ -114,8 +114,10 @@ export interface MyEvent {
 	start_time: string | null
 	end_time: string | null
 	venue: string | null
+	medium: string | null
 	banner_image: string | null
 	is_host: boolean
+	is_attendee: boolean
 	team: string | null
 	team_name: string | null
 	team_logo: string | null
