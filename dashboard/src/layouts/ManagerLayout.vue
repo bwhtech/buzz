@@ -33,7 +33,7 @@ const isActive = (to: string) => route.path === to
 const personalItems = [
 	{ label: "My Calendar", icon: "lucide-calendar-days", to: "/manage/events" },
 	{ label: "My Tickets", icon: "lucide-ticket", to: "/manage/tickets" },
-	{ label: "Talk Proposals", icon: "lucide-file-text", to: "/manage/proposals" },
+	{ label: "Talk Proposals", icon: "lucide-mic", to: "/manage/proposals" },
 	{ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" },
 ]
 

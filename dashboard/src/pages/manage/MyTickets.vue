@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { dayjs } from "frappe-ui"
+import { Icon, dayjs } from "frappe-ui"
 import { computed, ref } from "vue"
 
+import EmptyState from "@/components/common/EmptyState.vue"
 import PrintedTicket from "@/components/dashboard/tickets/PrintedTicket.vue"
 import TicketDrawer from "@/components/dashboard/tickets/TicketDrawer.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
@@ -35,6 +36,12 @@ const dated = computed(() =>
 const months = computed(() =>
 	groupEventsByMonth(inTab(dated.value, tab.value, dayjs().format("YYYY-MM-DD"))),
 )
+
+const emptyDescription = computed(() =>
+	tab.value === "upcoming"
+		? "Tickets you book will show up here."
+		: "Tickets for events you have already attended will show up here.",
+)
 </script>
 
 <template>
@@ -47,6 +54,14 @@ const months = computed(() =>
 		:loading="tickets.loading"
 		:error="tickets.error"
 	>
+		<template #empty-state>
+			<EmptyState :title="`No ${tab} tickets`" :description="emptyDescription">
+				<template #illustration>
+					<Icon name="lucide-ticket-slash" class="size-8 text-ink-gray-4" />
+				</template>
+			</EmptyState>
+		</template>
+
 		<template #default="{ item }">
 			<PrintedTicket :ticket="item" :banner-image="item.banner_image" @open="openTicket(item)" />
 		</template>
