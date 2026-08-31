@@ -35,7 +35,7 @@ const hiddenMemberCount = computed(() =>
 </script>
 
 <template>
-	<TeamPageHeader title="Overview" />
+	<TeamPageHeader title="Home" />
 
 	<div class="m-auto max-w-[1000px] w-full py-8 px-4 space-y-8">
 		<LoadingText v-if="teamOverview.loading" text="Loading team…" />

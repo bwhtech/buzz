@@ -39,7 +39,7 @@ const personalItems = [
 // Team-scoped destinations read the active team from data/teams rather than the path,
 // so they are fixed and need no team loaded to render.
 const teamItems = [
-	{ label: "Overview", icon: "lucide-layout-dashboard", to: "/manage/team/overview" },
+	{ label: "Home", icon: "lucide-house", to: "/manage/team/overview" },
 	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/team/events" },
 	{ label: "Members", icon: "lucide-users-round", to: "/manage/team/members" },
 ]
