@@ -2,6 +2,7 @@
 import { Avatar, Button, Divider, Popover, useColorScheme } from "frappe-ui"
 
 import { session } from "@/data/session"
+import { currentTeam } from "@/data/teams"
 
 const { colorScheme, setColorScheme } = useColorScheme()
 
@@ -16,20 +17,23 @@ const themes = [
 	<Popover match-trigger-width side="bottom" align="start">
 		<template #trigger="{ open: isOpen }">
 			<button
-				aria-label="Account"
-				class="group flex h-10 w-full items-center gap-2 rounded-4 px-1.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+				aria-label="Account menu"
+				class="flex h-12 w-full items-center gap-2 rounded-4 px-1.5 transition-colors duration-150 hover:bg-surface-gray-2 focus-visible:outline-none focus-visible:focus-ring"
 				:class="{ 'bg-surface-gray-2': isOpen }"
 			>
-				<Avatar :image="session.userImage ?? undefined" :label="session.fullName" size="lg" />
-				<span class="flex-1 truncate text-left text-base text-ink-gray-8">
-					{{ session.fullName }}
+				<Avatar
+					image="/assets/buzz/images/buzz-logo-rounded.png"
+					label="Buzz"
+					size="lg"
+					shape="square"
+				/>
+				<span class="flex min-w-0 flex-1 flex-col text-left">
+					<span class="truncate text-base font-medium text-ink-gray-8">
+						{{ currentTeam?.team_name ?? "Buzz" }}
+					</span>
+					<span class="truncate text-sm text-ink-gray-6">{{ session.fullName }}</span>
 				</span>
-				<span
-					class="grid size-6 shrink-0 place-items-center rounded-4 transition-colors duration-150 group-hover:bg-surface-gray-3"
-					:class="{ 'bg-surface-gray-3': isOpen }"
-				>
-					<span class="lucide-ellipsis size-4 text-ink-gray-6" />
-				</span>
+				<span class="lucide-chevron-down size-4 shrink-0 text-ink-gray-5" />
 			</button>
 		</template>
 
