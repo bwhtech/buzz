@@ -101,7 +101,7 @@ async function copyLink() {
 					</template>
 				</div>
 
-				<div class="border-b border-outline-gray-1 px-4 pb-2">
+				<div class="px-4 pb-2">
 					<TabButtons v-model="panel" :options="panels" size="md" />
 				</div>
 
