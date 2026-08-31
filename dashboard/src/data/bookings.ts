@@ -12,3 +12,17 @@ export function useMyBookingSummaries(event: () => string) {
 		refetch: true,
 	})
 }
+
+/**
+ * One booking as a receipt, scoped by read permission rather than by who booked it — a
+ * ticket holder can open the booking behind their ticket even when someone else paid.
+ */
+export function useBookingSummary(booking: () => string | undefined) {
+	return useCall<BookingSummary, { booking_id: string }>({
+		url: "/api/v2/method/buzz.api.booking.get_booking_summary",
+		params: () => ({ booking_id: booking() || "" }),
+		// The drawer mounts before a ticket is picked, so the first fetch waits for the id.
+		immediate: false,
+		refetch: true,
+	})
+}

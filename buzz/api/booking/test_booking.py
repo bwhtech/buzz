@@ -5,6 +5,7 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.api.booking import (
 	get_booking_details,
+	get_booking_summary,
 	get_event_booking_data,
 	get_my_booking_summaries,
 	process_booking,
@@ -56,6 +57,7 @@ GUEST_EVENT_DETAIL_FIELDS = {
 
 SUMMARY_FIELDS = {
 	"name",
+	"booked_by",
 	"status",
 	"payment_status",
 	"payment_method",
@@ -616,7 +618,9 @@ class TestValidateCoupon(BookingTestCase):
 		self.assertEqual(payload["max_discount_amount"], 0)
 
 
-class TestGetMyBookingSummaries(BookingTestCase):
+class BookingSummaryTestCase(BookingTestCase):
+	"""A booker and an outsider, and the helpers both summary endpoints book through."""
+
 	def setUp(self):
 		super().setUp()
 		for email, first_name in ((BOOKER, "Booking"), (OUTSIDER, "Outsider")):
@@ -643,6 +647,8 @@ class TestGetMyBookingSummaries(BookingTestCase):
 		finally:
 			frappe.set_user("Administrator")
 
+
+class TestGetMyBookingSummaries(BookingSummaryTestCase):
 	def summaries_of(self, user):
 		frappe.set_user(user)
 		try:
@@ -698,3 +704,45 @@ class TestGetMyBookingSummaries(BookingTestCase):
 			frappe.get_doc("Event Booking", booking_name).cancel()
 
 		self.assertEqual(self.summaries_of(BOOKER), [])
+
+
+class TestGetBookingSummary(BookingSummaryTestCase):
+	"""The single-booking receipt, which is scoped by read access rather than by buyer."""
+
+	def summary_of(self, booking_name, user):
+		frappe.set_user(user)
+		try:
+			return get_booking_summary(booking_name).__json__()
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_the_buyer_reads_their_own_booking(self):
+		booking_name = self.book_as(BOOKER)
+
+		summary = self.summary_of(booking_name, BOOKER)
+
+		self.assertEqual(summary["name"], booking_name)
+		self.assertEqual(set(summary), SUMMARY_FIELDS)
+
+	def test_an_attendee_reads_the_booking_that_paid_for_their_ticket(self):
+		booking_name = self.book_as(BOOKER, [self.attendee(email=OUTSIDER)])
+
+		summary = self.summary_of(booking_name, OUTSIDER)
+
+		self.assertEqual(summary["name"], booking_name)
+
+	def test_nobody_else_reads_it(self):
+		booking_name = self.book_as(BOOKER)
+
+		with self.assertRaises(frappe.PermissionError):
+			self.summary_of(booking_name, OUTSIDER)
+
+	def test_a_cancelled_ticket_stops_being_a_way_in(self):
+		booking_name = self.book_as(BOOKER, [self.attendee(email=OUTSIDER)])
+		# Cancelling a ticket mails its holder, and a test site configures no email account.
+		with patch("frappe.sendmail"):
+			for ticket in frappe.get_all("Event Ticket", {"booking": booking_name}, pluck="name"):
+				frappe.get_doc("Event Ticket", ticket).cancel()
+
+		with self.assertRaises(frappe.PermissionError):
+			self.summary_of(booking_name, OUTSIDER)

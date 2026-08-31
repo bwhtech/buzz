@@ -3,7 +3,8 @@
 
 const BAR = "var(--ink-gray-8)"
 
-export function barcodePattern(ticketId: string): string {
+/** `angle` turns the strip: the default draws bars across, "180deg" draws them down. */
+export function barcodePattern(ticketId: string, angle = "90deg"): string {
 	if (!ticketId) return "none"
 	const stops: string[] = []
 	let edge = 0
@@ -17,5 +18,5 @@ export function barcodePattern(ticketId: string): string {
 		)
 		edge += width + gap
 	}
-	return `linear-gradient(90deg, ${stops.join(", ")})`
+	return `linear-gradient(${angle}, ${stops.join(", ")})`
 }
