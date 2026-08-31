@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useRouteQuery } from "@vueuse/router"
 import { Icon } from "frappe-ui"
 import { computed, ref } from "vue"
 
@@ -14,10 +13,10 @@ import { useMyEvents } from "@/data/events"
 import { teams } from "@/data/teams"
 import type { MyEvent } from "@/types"
 import { groupEventsByMonth } from "@/utils/eventGroups"
-import type { TimelineTab } from "@/utils/timelineTabs"
+import { useTimelineTabQuery } from "@/utils/timelineTabs"
 
 // In the URL alongside the filters, so one link carries the whole view.
-const tab = useRouteQuery<TimelineTab>("tab", "upcoming")
+const tab = useTimelineTabQuery()
 
 const filterValues = useUrlFilters(["role", "team", "medium"])
 

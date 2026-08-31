@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useRouteQuery } from "@vueuse/router"
 import { dayjs } from "frappe-ui"
 import { computed, ref } from "vue"
 
@@ -9,10 +8,10 @@ import TimelineList from "@/components/dashboard/TimelineList.vue"
 import { useMyTickets } from "@/data/tickets"
 import type { TicketWithEvent } from "@/types"
 import { groupEventsByMonth } from "@/utils/eventGroups"
-import { type TimelineTab, inTab } from "@/utils/timelineTabs"
+import { inTab, useTimelineTabQuery } from "@/utils/timelineTabs"
 
 // In the URL, so the tab survives a reload and a shared link lands on the same view.
-const tab = useRouteQuery<TimelineTab>("tab", "upcoming")
+const tab = useTimelineTabQuery()
 
 const tickets = useMyTickets()
 

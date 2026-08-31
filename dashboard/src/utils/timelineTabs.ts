@@ -1,3 +1,6 @@
+import { useRouteQuery } from "@vueuse/router"
+import { computed } from "vue"
+
 export type TimelineTab = "upcoming" | "past"
 
 interface Dated {
@@ -20,4 +23,20 @@ export function inTab<T extends Dated>(items: T[], tab: TimelineTab, today: stri
 			// oxlint-disable-next-line no-array-sort -- sorts the array .filter() just created
 			.sort((a, b) => (upcoming ? 1 : -1) * a.start_date.localeCompare(b.start_date))
 	)
+}
+
+/**
+ * The tab a timeline page reads from the URL, so a link carries the view.
+ *
+ * Anything the URL does not name reads as "upcoming": `inTab` sorts every value that is
+ * not "upcoming" as the past, and the tab control would then show no selection at all.
+ */
+export function useTimelineTabQuery() {
+	const query = useRouteQuery<string>("tab", "upcoming")
+	return computed<TimelineTab>({
+		get: () => (query.value === "past" ? "past" : "upcoming"),
+		set: (tab) => {
+			query.value = tab
+		},
+	})
 }
