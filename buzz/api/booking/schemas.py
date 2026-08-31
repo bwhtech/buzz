@@ -155,13 +155,14 @@ class BookingLine(APIResponse):
 
 
 class BookingSummary(APIResponse):
-	"""A booking as a receipt: what was bought and what it cost, and nothing else.
+	"""A booking as a receipt: who booked it, what was bought and what it cost.
 
-	No ticket, attendee or QR field travels — the card draws none of them, and the reader
-	is always the person who booked.
+	No ticket, attendee or QR field travels — the card draws none of them. `booked_by` does
+	travel, because a ticket holder may read a receipt somebody else paid for.
 	"""
 
 	name: str
+	booked_by: str | None
 	status: str
 	payment_status: str
 	payment_method: str | None

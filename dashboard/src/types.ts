@@ -133,6 +133,7 @@ export interface BookingLine {
 
 export interface BookingSummary {
 	name: string
+	booked_by: string | null
 	status: string
 	payment_status: string
 	payment_method: string | null
@@ -212,10 +213,46 @@ export interface TicketStub {
 	end_date: string | null
 	start_time: string | null
 	venue: string | null
+	banner_image?: string | null
 }
 
 // A ticket whose event row still resolves — the only kind the ticket UI can draw.
 export type TicketWithEvent = TicketStub & { event_title: string; start_date: string }
+
+// buzz.api.tickets.get_ticket_details. doc, event and booking pass through as whole
+// documents, so only the fields the drawer reads are typed.
+export interface TicketDetails {
+	doc: {
+		name: string
+		first_name: string | null
+		last_name: string | null
+		attendee_name: string
+		attendee_email: string | null
+		ticket_type: string
+		qr_code: string | null
+		booking: string | null
+		creation: string
+	}
+	add_ons: TicketAddOnDetail[]
+	event: { name: string; title: string; route: string | null; ticket_print_format: string | null }
+	// Null for an attendee who did not pay for the ticket themselves.
+	booking: {
+		name: string
+		user: string | null
+		owner: string
+		total_amount: number
+		currency: string
+	} | null
+	ticket_type: { title: string }
+}
+
+export interface TicketAddOnDetail {
+	id: string
+	title: string | null
+	value: string | null
+	price: number | null
+	currency: string | null
+}
 
 // Languages served by the translation API (not a Buzz DocType).
 export interface Language {

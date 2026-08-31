@@ -186,6 +186,31 @@ def build_my_booking_summaries(event: str) -> list[BookingSummary]:
 	return [summarize_booking(booking, titles, add_ons) for booking in bookings]
 
 
+def build_booking_summary(booking_id: str) -> BookingSummary:
+	"""One booking as a receipt, for its buyer or for anyone holding a ticket in it.
+
+	Read permission on Event Booking covers the buyer and the event's team. It does not
+	cover an attendee somebody else booked for — and they hold the ticket this receipt
+	explains, so they are let through here rather than by widening the doctype's rule.
+	"""
+	# nosemgrep: frappe-semgrep-rules.rules.unchecked-frappe-permission-call -- return value checked below
+	if not frappe.has_permission("Event Booking", "read", doc=booking_id) and not holds_ticket(booking_id):
+		frappe.throw(_("You are not allowed to view this booking."), frappe.PermissionError)
+
+	booking = frappe.get_cached_doc("Event Booking", booking_id)
+	return summarize_booking(booking, ticket_type_titles([booking]), add_on_values([booking]))
+
+
+def holds_ticket(booking_id: str) -> bool:
+	"""Whether the session user is an attendee on this booking."""
+	return bool(
+		frappe.db.exists(
+			"Event Ticket",
+			{"booking": booking_id, "attendee_email": frappe.session.user, "docstatus": 1},
+		)
+	)
+
+
 def ticket_type_titles(bookings: list) -> dict[str, str]:
 	"""Titles for every ticket type across the bookings, in one query.
 
@@ -225,6 +250,8 @@ def add_on_values(bookings: list) -> dict[str, list]:
 def summarize_booking(booking, titles: dict[str, str], add_ons: dict[str, list]) -> BookingSummary:
 	return BookingSummary(
 		name=booking.name,
+		# A guest checkout runs as Administrator, so `user` is the buyer of record.
+		booked_by=booking.user or booking.owner,
 		status=booking.status,
 		payment_status=booking.payment_status,
 		payment_method=booking.offline_payment_method or booking.payment_method,

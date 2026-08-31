@@ -51,6 +51,12 @@ def get_my_booking_summaries(event: str) -> list[BookingSummary]:
 	return details.build_my_booking_summaries(event)
 
 
+@frappe.whitelist()
+def get_booking_summary(booking_id: str) -> BookingSummary:
+	"""One booking as a receipt, for anyone allowed to read it."""
+	return details.build_booking_summary(booking_id)
+
+
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 def validate_coupon(coupon_code: str, event: str, user_email: str | None = None) -> coupons.CouponResponse:
 	return coupons.validate_coupon_for_event(coupon_code, event, user_email)
