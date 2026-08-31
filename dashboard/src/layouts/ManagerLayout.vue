@@ -13,7 +13,6 @@ import { useRoute } from "vue-router"
 
 import UserMenu from "@/components/UserMenu.vue"
 import { useTeamAccess } from "@/composables/useTeamAccess"
-import { currentTeam } from "@/data/teams"
 import NotFound from "@/pages/NotFound.vue"
 
 const isMobile = useBreakpoints(breakpointsTailwind).smaller("sm")
@@ -40,7 +39,7 @@ const personalItems = [
 // Team-scoped destinations read the active team from data/teams rather than the path,
 // so they are fixed and need no team loaded to render.
 const teamItems = [
-	{ label: "Overview", icon: "lucide-layout-dashboard", to: "/manage/team/overview" },
+	{ label: "Home", icon: "lucide-house", to: "/manage/team/overview" },
 	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/team/events" },
 	{ label: "Members", icon: "lucide-users-round", to: "/manage/team/members" },
 ]
@@ -76,7 +75,7 @@ const eventItems = computed(() => [
 	<DesktopShell v-else-if="access === 'granted'" :scroll="false">
 		<template #sidebar>
 			<Sidebar v-model:collapsed="collapsed" :disable-collapse="!isMobile">
-				<div class="flex h-12 shrink-0 items-center px-2">
+				<div class="flex shrink-0 items-center px-2 pt-2">
 					<UserMenu />
 				</div>
 
@@ -91,9 +90,9 @@ const eventItems = computed(() => [
 					/>
 				</div>
 
-				<div v-else class="flex flex-col mx-2 py-2">
+				<div v-else class="flex flex-col gap-0.5 mx-2 py-2">
 					<SidebarItem
-						v-for="item in personalItems"
+						v-for="item in teamItems"
 						:key="item.label"
 						:label="item.label"
 						:icon="item.icon"
@@ -101,10 +100,13 @@ const eventItems = computed(() => [
 						:active="isActive(item.to)"
 					/>
 
-					<SidebarSection :label="currentTeam?.team_name" collapsible>
+					<!-- Not <Divider>: outside a flex-item context it computes h-full and
+					     stretches to the sidebar's height. -->
+					<hr class="mt-2 border-t border-outline-gray-2" />
+
+					<SidebarSection label="Personal">
 						<SidebarItem
-							class="ml-2"
-							v-for="item in teamItems"
+							v-for="item in personalItems"
 							:key="item.label"
 							:label="item.label"
 							:icon="item.icon"

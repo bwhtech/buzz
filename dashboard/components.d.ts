@@ -53,7 +53,6 @@ declare module 'vue' {
     PaymentGatewayDialog: typeof import('./src/components/PaymentGatewayDialog.vue')['default']
     PhoneInput: typeof import('./src/components/PhoneInput.vue')['default']
     PrintedTicket: typeof import('./src/components/dashboard/tickets/PrintedTicket.vue')['default']
-    PrintedTicketLoud: typeof import('./src/components/dashboard/tickets/PrintedTicketLoud.vue')['default']
     ProfileView: typeof import('./src/components/ProfileView.vue')['default']
     ProposalCard: typeof import('./src/components/dashboard/proposals/ProposalCard.vue')['default']
     ProposalEditDialog: typeof import('./src/components/ProposalEditDialog.vue')['default']
