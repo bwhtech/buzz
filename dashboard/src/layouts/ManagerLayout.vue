@@ -1,26 +1,23 @@
 <script setup lang="ts">
-import { breakpointsTailwind, useBreakpoints } from "@vueuse/core"
+import { StorageSerializers, useStorage } from "@vueuse/core"
 import {
 	DesktopShell,
 	PageHeaderTarget,
 	Sidebar,
 	SidebarCollapseToggle,
 	SidebarItem,
-	SidebarSection,
 } from "frappe-ui"
-import { computed, ref } from "vue"
+import { computed } from "vue"
 import { useRoute } from "vue-router"
 
 import UserMenu from "@/components/UserMenu.vue"
 import { useTeamAccess } from "@/composables/useTeamAccess"
 import NotFound from "@/pages/NotFound.vue"
 
-const isMobile = useBreakpoints(breakpointsTailwind).smaller("sm")
-
-// Collapsing is a small-screen affordance only: `disableCollapse` pins the
-// sidebar open from `sm` up, so this ref only ever governs mobile, where it
-// starts collapsed and the toggle expands it.
-const collapsed = ref(true)
+// `null` keeps the sidebar's own rule: collapsed below `sm`, until the toggle overrides it.
+const collapsed = useStorage<boolean | null>("buzz-sidebar-collapsed", null, undefined, {
+	serializer: StorageSerializers.boolean,
+})
 const route = useRoute()
 
 const access = useTeamAccess()
@@ -29,43 +26,25 @@ const access = useTeamAccess()
 // type Boolean, so Vue casts the absent prop to false and the inference never runs.
 const isActive = (to: string) => route.path === to
 
-const personalItems = [
-	{ label: "My Calendar", icon: "lucide-calendar-days", to: "/manage/events" },
-	{ label: "My Tickets", icon: "lucide-ticket", to: "/manage/tickets" },
+const mainItems = [
+	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/events" },
 	{ label: "Talk Proposals", icon: "lucide-mic", to: "/manage/proposals" },
 	{ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" },
 ]
 
-// Team-scoped destinations read the active team from data/teams rather than the path,
-// so they are fixed and need no team loaded to render.
-const teamItems = [
-	{ label: "Home", icon: "lucide-house", to: "/manage/team/overview" },
-	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/team/events" },
-	{ label: "Members", icon: "lucide-users-round", to: "/manage/team/members" },
-]
-
-// An event opens into the same shell with its own destinations in place of the
-// personal and team ones.
+// An event opens into the same shell with its own destinations.
 const eventId = computed(() => route.params.eventId as string | undefined)
 
-const eventItems = computed(() => [
-	{ label: "Back", icon: "lucide-arrow-left", to: "/" },
-	{
-		label: "Details",
-		icon: "lucide-receipt-text",
-		to: `/manage/events/${eventId.value}/details`,
-	},
-	{
-		label: "Guests",
-		icon: "lucide-users-round",
-		to: `/manage/events/${eventId.value}/guests`,
-	},
-	{
-		label: "Talks",
-		icon: "lucide-presentation",
-		to: `/manage/events/${eventId.value}/talks`,
-	},
-])
+const items = computed(() => {
+	if (!eventId.value) return mainItems
+	const event = `/manage/events/${eventId.value}`
+	return [
+		{ label: "Back", icon: "lucide-arrow-left", to: "/" },
+		{ label: "Details", icon: "lucide-receipt-text", to: `${event}/details` },
+		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests` },
+		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks` },
+	]
+})
 </script>
 
 <template>
@@ -74,14 +53,15 @@ const eventItems = computed(() => [
 	<!-- scroll=false: the rounded panel below owns its own scroll. -->
 	<DesktopShell v-else-if="access === 'granted'" :scroll="false">
 		<template #sidebar>
-			<Sidebar v-model:collapsed="collapsed" :disable-collapse="!isMobile">
-				<div class="flex shrink-0 items-center px-2 pt-2">
+			<Sidebar v-model:collapsed="collapsed">
+				<!-- px-1: puts the avatar on the item-icon centerline, in both states. -->
+				<div class="flex shrink-0 items-center px-1 pt-2">
 					<UserMenu />
 				</div>
 
-				<div v-if="eventId" class="flex flex-col mx-2 py-2">
+				<div class="flex flex-col gap-0.5 mx-2 py-2">
 					<SidebarItem
-						v-for="item in eventItems"
+						v-for="item in items"
 						:key="item.label"
 						:label="item.label"
 						:icon="item.icon"
@@ -90,33 +70,7 @@ const eventItems = computed(() => [
 					/>
 				</div>
 
-				<div v-else class="flex flex-col gap-0.5 mx-2 py-2">
-					<SidebarItem
-						v-for="item in teamItems"
-						:key="item.label"
-						:label="item.label"
-						:icon="item.icon"
-						:to="item.to"
-						:active="isActive(item.to)"
-					/>
-
-					<!-- Not <Divider>: outside a flex-item context it computes h-full and
-					     stretches to the sidebar's height. -->
-					<hr class="mt-2 border-t border-outline-gray-2" />
-
-					<SidebarSection label="Personal">
-						<SidebarItem
-							v-for="item in personalItems"
-							:key="item.label"
-							:label="item.label"
-							:icon="item.icon"
-							:to="item.to"
-							:active="isActive(item.to)"
-						/>
-					</SidebarSection>
-				</div>
-
-				<div class="mt-auto px-2 py-2 sm:hidden">
+				<div class="mt-auto px-2 py-2">
 					<SidebarCollapseToggle />
 				</div>
 			</Sidebar>
