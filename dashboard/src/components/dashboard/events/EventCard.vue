@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { Avatar, Button } from "frappe-ui"
+import { Avatar, Badge, Button } from "frappe-ui"
 import { computed } from "vue"
-import { RouterLink } from "vue-router"
 
 import type { MyEvent } from "@/types"
 import { dayLabel, timeLabel } from "@/utils/dateLabels"
@@ -14,18 +13,12 @@ const props = withDefaults(
 		event: MyEvent
 		showDate?: boolean
 		showManage?: boolean
-		// A list where every card is manageable — a team's own events — can drop the
-		// per-card button and make the whole card the way in.
-		routeToManage?: boolean
 	}>(),
 	{ showManage: true },
 )
 
-// Only a host has anything to manage, whichever way in the caller asked for.
-const linksToManage = computed(() => props.routeToManage && props.event.is_host)
-
-// The button would be a second link inside the first, so the card link wins.
-const canManage = computed(() => props.showManage && !linksToManage.value && props.event.is_host)
+// Manage is the only way into the desk view; the card itself opens the drawer.
+const canManage = computed(() => props.showManage && props.event.is_host)
 
 const startTime = computed(() => (props.event.start_time ? timeLabel(props.event.start_time) : ""))
 
@@ -45,21 +38,19 @@ const venue = computed(() => {
 </script>
 
 <template>
-	<component
-		:is="linksToManage ? RouterLink : 'article'"
-		:to="linksToManage ? `/manage/events/${event.name}` : undefined"
+	<article
 		class="flex gap-4 border border-outline-gray-2 hover:border-outline-gray-3 rounded-8 p-3"
 	>
 		<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
 		<img
 			v-if="event.banner_image"
-			class="h-28 w-28 rounded-4 object-cover object-top"
+			class="h-30 w-30 rounded-4 object-cover object-top"
 			:src="event.banner_image"
 			:style="banner"
 			loading="lazy"
 			alt=""
 		/>
-		<div v-else class="h-28 w-28 rounded-4" :style="banner" />
+		<div v-else class="h-30 w-30 rounded-4" :style="banner" />
 
 		<div class="flex-1 py-1 flex flex-col justify-between">
 			<div class="flex-1 space-y-2">
@@ -77,22 +68,23 @@ const venue = computed(() => {
 					<Avatar :image="event.team_logo || undefined" :label="event.team_name" size="xs" />
 					By {{ event.team_name }}
 				</p>
-			</div>
-
-			<div class="flex justify-between">
-				<p class="mt-2 flex items-center gap-2 text-base text-ink-gray-5">
+				<p class="flex items-center gap-2 text-base text-ink-gray-5">
 					<span class="size-4 shrink-0" :class="[venue.icon, venue.tone]" aria-hidden="true" />
 					{{ venue.label }}
 				</p>
+			</div>
+
+			<div v-if="event.is_attendee || canManage" class="mt-3 flex items-end">
+				<Badge v-if="event.is_attendee" theme="violet" variant="subtle" label="Attending" />
 				<Button
 					v-if="canManage"
-					class="relative z-10"
+					class="relative z-10 ml-auto"
 					label="Manage"
-					icon-right="arrow-right"
+					icon-right="lucide-arrow-right"
 					size="sm"
 					:route="`/manage/events/${event.name}`"
 				/>
 			</div>
 		</div>
-	</component>
+	</article>
 </template>
