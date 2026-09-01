@@ -24,7 +24,7 @@ const tabOptions = [
 </script>
 
 <template>
-	<div class="m-auto max-w-[800px] w-full py-8 px-4 space-y-6">
+	<div class="m-auto max-w-[800px] w-full p-4 space-y-6">
 		<header class="flex items-start justify-between">
 			<div class="flex flex-col gap-3 items-start">
 				<div class="flex gap-3 items-center">
