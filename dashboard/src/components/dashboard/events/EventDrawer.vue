@@ -10,7 +10,8 @@ import {
 	DrawerDescription,
 	DrawerTitle,
 } from "@/components/common/drawer"
-import EventBookings from "@/components/dashboard/events/EventBookings.vue"
+import EventCountdownPill from "@/components/dashboard/events/EventCountdownPill.vue"
+import EventMyTickets from "@/components/dashboard/events/EventMyTickets.vue"
 import type { MyEvent } from "@/types"
 import { timeLabel12Hour } from "@/utils/dateLabels"
 import { bannerPattern } from "@/utils/eventBanner"
@@ -107,19 +108,24 @@ const endsAt = computed(() => {
 				/>
 
 				<div class="flex-1 overflow-y-auto">
-					<div class="p-4">
+					<div class="relative p-4">
 						<img
 							v-if="event.banner_image"
-							class="aspect-video w-full rounded-6 object-cover"
+							class="aspect-video w-full rounded-6 object-cover border"
 							:src="event.banner_image"
 							:style="banner"
 							alt=""
 						/>
-						<div v-else class="aspect-video w-full rounded-6" :style="banner" />
+						<div v-else class="aspect-video w-full rounded-6 border" :style="banner" />
+
+						<EventCountdownPill
+							:event="event"
+							class="absolute bottom-5 left-1/2 -translate-x-1/2 translate-y-1/2"
+						/>
 					</div>
 
 					<div class="flex flex-col gap-2 px-4">
-						<DrawerTitle class="text-2xl font-semibold text-ink-gray-9">
+						<DrawerTitle class="text-6xl font-semibold text-ink-gray-9">
 							{{ event.title }}
 						</DrawerTitle>
 
@@ -161,7 +167,7 @@ const endsAt = computed(() => {
 						</div>
 					</div>
 
-					<EventBookings v-if="event.is_attendee" :event="event.name" />
+					<EventMyTickets :event="event" class="mx-4 mb-4" />
 				</div>
 			</template>
 		</DrawerContent>

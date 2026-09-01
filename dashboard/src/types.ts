@@ -123,7 +123,7 @@ export interface MyEvent {
 	team_logo: string | null
 }
 
-/** buzz.api.booking.get_my_booking_summaries: one ticket type per line, add-ons beneath. */
+/** buzz.api.booking.get_booking_summary: one ticket type per line, add-ons beneath. */
 export interface BookingLine {
 	label: string
 	quantity: number
@@ -205,15 +205,17 @@ export interface EventDetail {
 export interface TicketStub {
 	name: string
 	attendee_name: string
+	attendee_email: string | null
 	ticket_type: string
 	qr_code: string | null
+	// A ticket issued outside a booking has none.
+	booking: string | null
 	// Event columns come over a link hop, so a deleted event leaves them null.
 	event_title: string | null
 	start_date: string | null
 	end_date: string | null
 	start_time: string | null
 	venue: string | null
-	banner_image?: string | null
 }
 
 // A ticket whose event row still resolves — the only kind the ticket UI can draw.

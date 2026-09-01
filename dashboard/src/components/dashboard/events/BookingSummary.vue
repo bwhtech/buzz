@@ -51,7 +51,7 @@ const bookedOn = computed(() => dayjs(props.booking.booked_on).format("D MMM, HH
 
 <template>
 	<div class="flex flex-col gap-5">
-		<div class="flex flex-col gap-5 rounded-lg bg-surface-gray-1 p-4">
+		<div class="flex flex-col gap-5 rounded-lg bg-surface-gray-1 p-2">
 			<div>
 				<div class="flex items-baseline justify-between gap-3">
 					<p class="text-p-xs uppercase tracking-wide text-ink-gray-5">
