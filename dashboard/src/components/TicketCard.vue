@@ -60,10 +60,13 @@
 		</div>
 
 		<!-- QR Code Expand Dialog -->
-		<QRCodeExpandDialog
-			v-model="showQRExpanded"
-			:qrCodeSrc="ticket.qr_code"
-			:altText="__('QR Code')"
+		<CheckInQrDialog
+			v-model:open="showQRExpanded"
+			:qr-code="ticket.qr_code"
+			:attendee-name="ticket.attendee_name"
+			:attendee-email="ticket.attendee_email"
+			:ticket-type="ticket.ticket_type"
+			:add-ons="ticket.add_ons"
 		/>
 
 		<!-- Ticket Transfer Dialog -->
@@ -88,10 +91,10 @@ import { type Component, computed, ref } from "vue"
 import LucideEdit from "~icons/lucide/edit"
 import LucideUserPen from "~icons/lucide/user-pen"
 
+import CheckInQrDialog from "@/components/dashboard/tickets/CheckInQrDialog.vue"
 import type { TicketAddOn } from "@/types"
 
 import AddOnPreferenceDialog from "./AddOnPreferenceDialog.vue"
-import QRCodeExpandDialog from "./QRCodeExpandDialog.vue"
 import TicketTransferDialog from "./TicketTransferDialog.vue"
 
 interface TicketAction {
