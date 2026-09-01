@@ -63,7 +63,7 @@ const emptyDescription = computed(() =>
 		</template>
 
 		<template #default="{ item }">
-			<PrintedTicket :ticket="item" :banner-image="item.banner_image" @open="openTicket(item)" />
+			<PrintedTicket :ticket="item" @open="openTicket(item)" />
 		</template>
 	</TimelineList>
 
