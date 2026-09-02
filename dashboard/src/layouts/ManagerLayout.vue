@@ -7,11 +7,12 @@ import {
 	SidebarCollapseToggle,
 	SidebarItem,
 } from "frappe-ui"
-import { computed } from "vue"
+import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
-import UserMenu from "@/components/UserMenu.vue"
+import ManagerSidebarHeader from "@/components/dashboard/ManagerSidebarHeader.vue"
 import { useTeamAccess } from "@/composables/useTeamAccess"
+import { eventDetail } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
 import NotFound from "@/pages/NotFound.vue"
 
@@ -51,11 +52,25 @@ const mainItems = computed(() => {
 // An event opens into the same shell with its own destinations.
 const eventId = computed(() => route.params.eventId as string | undefined)
 
+const eventTitle = ref("")
+watch(
+	eventId,
+	(id) => {
+		eventTitle.value = ""
+		if (!id) return
+		// The user can hop between events faster than a fetch returns, so a late
+		// response for the event that was left has to be dropped.
+		eventDetail(id).promise?.then((event) => {
+			if (eventId.value === id) eventTitle.value = event?.title ?? ""
+		})
+	},
+	{ immediate: true },
+)
+
 const items = computed(() => {
 	if (!eventId.value) return mainItems.value
 	const event = `/manage/events/${eventId.value}`
 	return [
-		{ label: "Back", icon: "lucide-arrow-left", to: "/" },
 		{ label: "Details", icon: "lucide-receipt-text", to: `${event}/details` },
 		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests` },
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks` },
@@ -70,9 +85,9 @@ const items = computed(() => {
 	<DesktopShell v-else-if="access === 'granted'" :scroll="false">
 		<template #sidebar>
 			<Sidebar v-model:collapsed="collapsed">
-				<!-- px-1: puts the avatar on the item-icon centerline, in both states. -->
+				<!-- px-1: puts the header mark on the item-icon centerline, in both states. -->
 				<div class="flex shrink-0 items-center px-1 pt-2">
-					<UserMenu />
+					<ManagerSidebarHeader :event-id="eventId" :event-title="eventTitle" />
 				</div>
 
 				<div class="flex flex-col gap-0.5 mx-2 py-2">

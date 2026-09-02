@@ -52,6 +52,7 @@ declare module 'vue' {
     LanguageSwitcher: typeof import('./src/components/LanguageSwitcher.vue')['default']
     LoginDialog: typeof import('./src/components/LoginDialog.vue')['default']
     LoginRequired: typeof import('./src/components/LoginRequired.vue')['default']
+    ManagerSidebarHeader: typeof import('./src/components/dashboard/ManagerSidebarHeader.vue')['default']
     Navbar: typeof import('./src/components/Navbar.vue')['default']
     OfflinePaymentDialog: typeof import('./src/components/OfflinePaymentDialog.vue')['default']
     PaymentGatewayDialog: typeof import('./src/components/PaymentGatewayDialog.vue')['default']
