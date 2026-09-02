@@ -167,25 +167,6 @@ def get_cancellation_requested_tickets(cancellation_request, tickets) -> list[st
 	return [item.ticket for item in requested]
 
 
-def build_my_booking_summaries(event: str) -> list[BookingSummary]:
-	"""The session user's own bookings for one event, newest first.
-
-	The `user` filter is the scope, and the permission query still applies on top of it —
-	nothing here runs with ignore_permissions. A draft stays in so an offline booking
-	awaiting verification is visible; a cancelled one drops out.
-	"""
-	names = frappe.get_all(
-		"Event Booking",
-		filters={"event": event, "user": frappe.session.user, "docstatus": ("!=", 2)},
-		order_by="creation desc",
-		pluck="name",
-	)
-	bookings = [frappe.get_cached_doc("Event Booking", name) for name in names]
-	titles = ticket_type_titles(bookings)
-	add_ons = add_on_values(bookings)
-	return [summarize_booking(booking, titles, add_ons) for booking in bookings]
-
-
 def build_booking_summary(booking_id: str) -> BookingSummary:
 	"""One booking as a receipt, for its buyer or for anyone holding a ticket in it.
 

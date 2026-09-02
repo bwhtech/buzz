@@ -1,8 +1,8 @@
-import { createResource, useCall } from "frappe-ui"
-import { computed, ref, watch } from "vue"
+import { createResource } from "frappe-ui"
+import { computed, ref } from "vue"
 
 import { session } from "@/data/session"
-import type { InviteOutcome, TeamOption, TeamOverview } from "@/types"
+import type { TeamOption } from "@/types"
 
 const STORAGE_KEY = "buzz:current-team"
 
@@ -32,36 +32,6 @@ export async function isTeamMember(): Promise<boolean> {
 	if (!teamsResource.data) await teamsResource.fetch()
 	return teams.value.length > 0
 }
-
-// Scoped to the selected team rather than to a route, so a switch re-reads whatever
-// page is open. v2 path: useCall reads the payload from `data`, which /api/method
-// names `message`.
-const teamOverview = useCall<TeamOverview, { team: string }>({
-	url: "/api/v2/method/buzz.api.teams.get_team_overview",
-	params: () => ({ team: selectedTeamName.value }),
-	immediate: false,
-})
-
-/**
- * The selected team's details, for the pages that show them.
- *
- * The watcher belongs to the caller rather than to this module: at module scope it
- * would fire as soon as get_my_teams settles, putting a request on every manage page
- * instead of the few that read one. Scoped here it also means the page owns its own
- * first fetch, so `loading` is true before the page paints.
- */
-export function useTeamOverview() {
-	watch(currentTeam, (team) => team && teamOverview.reload(), { immediate: true })
-	return teamOverview
-}
-
-export const removeMember = createResource({
-	url: "buzz.api.teams.remove_member",
-})
-
-export const inviteMembers = createResource<InviteOutcome[]>({
-	url: "buzz.api.teams.invite_members",
-})
 
 export function selectTeam(name: string) {
 	selectedTeamName.value = name

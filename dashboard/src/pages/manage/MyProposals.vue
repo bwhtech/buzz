@@ -3,6 +3,7 @@ import { Icon, dayjs } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import EmptyState from "@/components/common/EmptyState.vue"
+import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
 import ProposalCard from "@/components/dashboard/proposals/ProposalCard.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
 import { useMyProposals } from "@/data/proposals"
@@ -34,6 +35,8 @@ const emptyDescription = computed(() =>
 </script>
 
 <template>
+	<CreateEventHeader />
+
 	<TimelineList
 		v-model:tab="tab"
 		heading="Talk Proposals"

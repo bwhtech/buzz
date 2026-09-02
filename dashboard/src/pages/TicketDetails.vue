@@ -280,10 +280,14 @@
 		/>
 
 		<!-- QR Code Expand Dialog -->
-		<QRCodeExpandDialog
-			v-model="showQRExpanded"
-			:qrCodeSrc="ticketDetails.data.doc.qr_code"
-			:altText="__('Ticket QR Code')"
+		<CheckInQrDialog
+			v-model:open="showQRExpanded"
+			:qr-code="ticketDetails.data.doc.qr_code"
+			:attendee-name="ticketDetails.data.doc.attendee_name"
+			:attendee-email="ticketDetails.data.doc.attendee_email"
+			:ticket-type="ticketDetails.data.doc.ticket_type_title"
+			:event-title="ticketDetails.data.doc.event_title"
+			:add-ons="ticketDetails.data.add_ons"
 		/>
 	</div>
 </template>
@@ -298,12 +302,12 @@ import LucideExternalLink from "~icons/lucide/external-link"
 import LucideTriangleAlert from "~icons/lucide/triangle-alert"
 import LucideUserPlus from "~icons/lucide/user-plus"
 
+import CheckInQrDialog from "@/components/dashboard/tickets/CheckInQrDialog.vue"
 import type { TicketAddOn } from "@/types"
 import { formatCurrency } from "@/utils/currency"
 
 import AddOnPreferenceDialog from "../components/AddOnPreferenceDialog.vue"
 import BackButton from "../components/common/BackButton.vue"
-import QRCodeExpandDialog from "../components/QRCodeExpandDialog.vue"
 import TicketTransferDialog from "../components/TicketTransferDialog.vue"
 
 const props = defineProps({

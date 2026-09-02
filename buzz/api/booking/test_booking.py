@@ -7,7 +7,6 @@ from buzz.api.booking import (
 	get_booking_details,
 	get_booking_summary,
 	get_event_booking_data,
-	get_my_booking_summaries,
 	process_booking,
 	send_guest_booking_otp,
 	validate_coupon,
@@ -637,6 +636,15 @@ class BookingSummaryTestCase(BookingTestCase):
 			**overrides,
 		}
 
+	def booking_of(self, user):
+		"""A paid booking answers with a payment link, not a name, so it is looked up."""
+		return frappe.get_all(
+			"Event Booking",
+			filters={"event": self.event.name, "user": user},
+			order_by="creation desc",
+			pluck="name",
+		)[0]
+
 	def book_as(self, user, attendees=None):
 		frappe.set_user(user)
 		try:
@@ -646,64 +654,6 @@ class BookingSummaryTestCase(BookingTestCase):
 				return process_booking(request).__json__().get("booking_name")
 		finally:
 			frappe.set_user("Administrator")
-
-
-class TestGetMyBookingSummaries(BookingSummaryTestCase):
-	def summaries_of(self, user):
-		frappe.set_user(user)
-		try:
-			return [summary.__json__() for summary in get_my_booking_summaries(str(self.event.name))]
-		finally:
-			frappe.set_user("Administrator")
-
-	def test_the_payload_names_no_ticket_and_no_attendee(self):
-		self.book_as(BOOKER)
-
-		summary = self.summaries_of(BOOKER)[0]
-
-		self.assertEqual(set(summary), SUMMARY_FIELDS)
-		self.assertEqual(set(summary["lines"][0]), LINE_FIELDS)
-
-	def test_another_users_booking_is_absent(self):
-		self.book_as(BOOKER)
-
-		self.assertEqual(self.summaries_of(OUTSIDER), [])
-
-	def test_two_attendees_on_one_ticket_type_are_one_line(self):
-		self.book_as(BOOKER, [self.attendee(), self.attendee("second@example.com")])
-
-		lines = self.summaries_of(BOOKER)[0]["lines"]
-
-		self.assertEqual(len(lines), 1)
-		self.assertEqual(lines[0]["quantity"], 2)
-		self.assertEqual(lines[0]["label"], self.free_ticket_type.title)
-
-	def test_an_add_on_hangs_off_its_ticket_line(self):
-		add_on = frappe.get_doc(
-			{
-				"doctype": "Ticket Add-on",
-				"event": self.event.name,
-				"title": f"Meal {frappe.generate_hash(length=6)}",
-				"price": 500,
-				"enabled": 1,
-			}
-		).insert(ignore_permissions=True)
-		self.book_as(BOOKER, [self.attendee(add_ons=[{"add_on": add_on.name, "value": "Veg"}])])
-
-		add_ons = self.summaries_of(BOOKER)[0]["lines"][0]["add_ons"]
-
-		self.assertEqual(len(add_ons), 1)
-		self.assertEqual(add_ons[0]["label"], add_on.title)
-		self.assertEqual(add_ons[0]["quantity"], 1)
-		self.assertEqual(add_ons[0]["amount"], 500)
-
-	def test_a_cancelled_booking_is_excluded(self):
-		booking_name = self.book_as(BOOKER)
-		# Cancelling a ticket mails its holder, and a test site configures no email account.
-		with patch("frappe.sendmail"):
-			frappe.get_doc("Event Booking", booking_name).cancel()
-
-		self.assertEqual(self.summaries_of(BOOKER), [])
 
 
 class TestGetBookingSummary(BookingSummaryTestCase):
@@ -723,6 +673,41 @@ class TestGetBookingSummary(BookingSummaryTestCase):
 
 		self.assertEqual(summary["name"], booking_name)
 		self.assertEqual(set(summary), SUMMARY_FIELDS)
+
+	def test_the_payload_names_no_ticket_and_no_attendee(self):
+		booking_name = self.book_as(BOOKER)
+
+		summary = self.summary_of(booking_name, BOOKER)
+
+		self.assertEqual(set(summary["lines"][0]), LINE_FIELDS)
+
+	def test_two_attendees_on_one_ticket_type_are_one_line(self):
+		booking_name = self.book_as(BOOKER, [self.attendee(), self.attendee("second@example.com")])
+
+		lines = self.summary_of(booking_name, BOOKER)["lines"]
+
+		self.assertEqual(len(lines), 1)
+		self.assertEqual(lines[0]["quantity"], 2)
+		self.assertEqual(lines[0]["label"], self.free_ticket_type.title)
+
+	def test_an_add_on_hangs_off_its_ticket_line(self):
+		add_on = frappe.get_doc(
+			{
+				"doctype": "Ticket Add-on",
+				"event": self.event.name,
+				"title": f"Meal {frappe.generate_hash(length=6)}",
+				"price": 500,
+				"enabled": 1,
+			}
+		).insert(ignore_permissions=True)
+		self.book_as(BOOKER, [self.attendee(add_ons=[{"add_on": add_on.name, "value": "Veg"}])])
+
+		add_ons = self.summary_of(self.booking_of(BOOKER), BOOKER)["lines"][0]["add_ons"]
+
+		self.assertEqual(len(add_ons), 1)
+		self.assertEqual(add_ons[0]["label"], add_on.title)
+		self.assertEqual(add_ons[0]["quantity"], 1)
+		self.assertEqual(add_ons[0]["amount"], 500)
 
 	def test_an_attendee_reads_the_booking_that_paid_for_their_ticket(self):
 		booking_name = self.book_as(BOOKER, [self.attendee(email=OUTSIDER)])

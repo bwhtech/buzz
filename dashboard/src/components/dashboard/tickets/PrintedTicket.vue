@@ -3,10 +3,11 @@ import { dayjs } from "frappe-ui"
 import { computed } from "vue"
 
 import type { TicketWithEvent } from "@/types"
-import { bannerPattern } from "@/utils/eventBanner"
 import { barcodePattern } from "@/utils/ticketBarcode"
 
-const props = defineProps<{ ticket: TicketWithEvent; bannerImage?: string | null }>()
+// `static` renders the same paper without a press target, for a place that already
+// shows the ticket's own context.
+const props = defineProps<{ ticket: TicketWithEvent; static?: boolean }>()
 
 const emit = defineEmits<{ open: [] }>()
 
@@ -16,7 +17,6 @@ const barcode = computed(() => ({
 	backgroundSize: "100% 1rem",
 	backgroundRepeat: "repeat-y",
 }))
-const pattern = computed(() => ({ backgroundImage: bannerPattern(props.ticket.event_title) }))
 const date = computed(() => dayjs(props.ticket.start_date).format("DD.MM.YY"))
 const time = computed(() => {
 	if (!props.ticket.start_time) return "TBA"
@@ -30,19 +30,14 @@ const time = computed(() => {
 	     so the die-cut edge is traced with drop-shadow, which follows the mask instead. -->
 	<div class="ticket-shell">
 		<!-- Spans only: a button may not contain flow content. -->
-		<button
-			type="button"
-			:aria-label="`Open ticket #${ticket.name} for ${ticket.attendee_name}`"
-			class="ticket flex h-40 w-full items-stretch overflow-hidden bg-surface-elevation-1 text-left text-ink-gray-9 active:scale-[0.995] focus-visible:outline-none"
-			@click="emit('open')"
+		<component
+			:is="static ? 'div' : 'button'"
+			:type="static ? undefined : 'button'"
+			:aria-label="static ? undefined : `Open ticket #${ticket.name} for ${ticket.attendee_name}`"
+			class="ticket flex h-40 w-full items-stretch overflow-hidden bg-surface-base text-left text-ink-gray-9 focus-visible:outline-none"
+			:class="{ 'is-pressable active:scale-[0.995]': !static }"
+			:onClick="static ? undefined : () => emit('open')"
 		>
-			<span
-				class="m-3 mr-0 block w-40 shrink-0 overflow-hidden rounded-6 bg-surface-gray-2"
-				:style="bannerImage ? undefined : pattern"
-			>
-				<img v-if="bannerImage" :src="bannerImage" alt="" class="h-full w-full object-cover" />
-			</span>
-
 			<span class="flex min-w-0 flex-1 flex-col justify-between gap-4 p-4">
 				<span class="block">
 					<span class="block text-2xs-medium uppercase tracking-widest text-ink-gray-5">Event</span>
@@ -82,7 +77,7 @@ const time = computed(() => {
 					#{{ ticket.name }}
 				</span>
 			</span>
-		</button>
+		</component>
 	</div>
 </template>
 
@@ -139,7 +134,7 @@ const time = computed(() => {
 
 /* A touch tap fires hover and leaves it stuck. */
 @media (hover: hover) and (pointer: fine) {
-	.ticket:hover {
+	.ticket.is-pressable:hover {
 		background-color: var(--surface-gray-1);
 	}
 }
