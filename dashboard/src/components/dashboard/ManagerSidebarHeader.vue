@@ -13,8 +13,7 @@ const isCollapsed = inject(
 	computed(() => false),
 )
 
-// Outside an event the sidebar has nothing to go back to, so it keeps the account menu.
-// The id is never shown: it is a hash, and swapping it for the title reads as a glitch.
+// Never falls back to the id: swapping a hash for the title reads as a glitch.
 const name = computed(() => props.eventTitle ?? "")
 
 const goBack = () => router.push("/manage/events")
