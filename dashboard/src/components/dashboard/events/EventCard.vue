@@ -8,17 +8,12 @@ import { bannerPattern } from "@/utils/eventBanner"
 
 // The Events page files cards under a date heading; a standalone list has to
 // carry the date on the card itself.
-const props = withDefaults(
-	defineProps<{
-		event: MyEvent
-		showDate?: boolean
-		showManage?: boolean
-	}>(),
-	{ showManage: true },
-)
+const props = defineProps<{ event: MyEvent; showDate?: boolean }>()
+
+const emit = defineEmits<{ open: [] }>()
 
 // Manage is the only way into the desk view; the card itself opens the drawer.
-const canManage = computed(() => props.showManage && props.event.is_host)
+const canManage = computed(() => props.event.is_host)
 
 const startTime = computed(() => (props.event.start_time ? timeLabel(props.event.start_time) : ""))
 
@@ -39,8 +34,17 @@ const venue = computed(() => {
 
 <template>
 	<article
-		class="flex gap-4 border border-outline-gray-2 hover:border-outline-gray-3 rounded-8 p-3"
+		class="event-card relative flex gap-4 border border-outline-gray-2 hover:border-outline-gray-3 rounded-8 p-3"
 	>
+		<!-- Overlay rather than a wrapper: Manage cannot legally nest inside a button.
+		     It sits above the overlay, so both targets work and both are focusable. -->
+		<button
+			type="button"
+			class="absolute inset-0 rounded-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
+			:aria-label="`Open ${event.title}`"
+			@click="emit('open')"
+		/>
+
 		<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
 		<img
 			v-if="event.banner_image"
@@ -88,3 +92,23 @@ const venue = computed(() => {
 		</div>
 	</article>
 </template>
+
+<style scoped>
+/* A card that is a button has to answer the press. The scale stays near-imperceptible
+   because these are seen dozens of times a session. */
+.event-card {
+	transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.event-card:active {
+	transform: scale(0.995);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.event-card {
+		transition: none;
+	}
+	.event-card:active {
+		transform: none;
+	}
+}
+</style>
