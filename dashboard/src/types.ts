@@ -7,6 +7,7 @@ export type { EventBooking } from "@/types/Ticketing/EventBooking"
 export type { EventTicket } from "@/types/Ticketing/EventTicket"
 export type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 export type { FrappeField } from "@/composables/useCustomFields"
+export type { TalkProposal } from "@/types/Proposals/TalkProposal"
 
 import type { FrappeField } from "@/composables/useCustomFields"
 import type { EventTicket } from "@/types/Ticketing/EventTicket"
@@ -31,6 +32,7 @@ export interface ProposalListItem {
 	start_date: string | null
 	end_date: string | null
 	banner_image: string | null
+	allow_editing_talks_after_acceptance: boolean
 	status: string
 	creation: string
 	modified: string
@@ -84,6 +86,7 @@ export interface MyEvent {
 	venue: string | null
 	medium: string | null
 	banner_image: string | null
+	allow_editing_talks_after_acceptance: boolean
 	is_host: boolean
 	is_attendee: boolean
 	team: string | null
@@ -163,6 +166,7 @@ export interface EventDetail {
 	short_description: string | null
 	about: string | null
 	banner_image: string | null
+	allow_editing_talks_after_acceptance: boolean
 	medium: string | null
 	venue: EventVenueDetail | null
 	meeting_link: string | null

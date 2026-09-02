@@ -36,6 +36,22 @@ const STATUS_ICONS: Record<string, string> = {
 
 const FALLBACK_ICON = "lucide-squircle-dashed"
 
+// What the state means for the submitter. A status the site added itself gets the
+// fallback: say nothing about a workflow we do not know.
+const STATUS_MESSAGES: Record<string, string> = {
+	"Review Pending":
+		"Your proposal has been submitted and is under review. You can still edit it while it's pending.",
+	Shortlisted: "Your proposal has been shortlisted and is under final consideration.",
+	Accepted: "Congratulations! Your talk proposal has been accepted for the event.",
+	Rejected:
+		"Unfortunately, your proposal was not selected for this event. Thank you for your submission.",
+	Replied: "Read their notes and reply if anything is still open.",
+	Duplicate: "Another proposal for the same event already covers this talk.",
+	Withdrawn: "You withdrew this proposal.",
+}
+
+const FALLBACK_MESSAGE = "The organisers set this status for your proposal."
+
 // Module-level so every caller shares one fetch of the status list.
 const statuses = createListResource({
 	doctype: "Talk Proposal Status",
@@ -57,5 +73,7 @@ export function useProposalStatuses() {
 
 	const getStatusIcon = (status: string): string => STATUS_ICONS[status] ?? FALLBACK_ICON
 
-	return { statuses, getStatusTheme, getStatusIcon }
+	const getStatusMessage = (status: string): string => STATUS_MESSAGES[status] ?? FALLBACK_MESSAGE
+
+	return { statuses, getStatusTheme, getStatusIcon, getStatusMessage }
 }

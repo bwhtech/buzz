@@ -11,6 +11,8 @@ import { speakerByline } from "@/utils/speakerByline"
 
 const props = defineProps<{ proposal: ProposalWithEvent }>()
 
+const emit = defineEmits<{ open: [] }>()
+
 const { getStatusTheme, getStatusIcon } = useProposalStatuses()
 
 const byline = computed(() =>
@@ -31,11 +33,17 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 </script>
 
 <template>
-	<RouterLink
-		:to="{ name: 'proposal-details', params: { proposalId: proposal.name } }"
-		class="proposal-card block rounded-8 border border-outline-gray-2"
-	>
-		<article class="flex flex-col space-y-6 p-4">
+	<article class="proposal-card relative rounded-8 border border-outline-gray-2">
+		<!-- Overlay rather than a wrapper: the hover cards inside cannot legally nest in a
+		     button. They sit above the overlay, so both targets work and both are focusable. -->
+		<button
+			type="button"
+			class="absolute inset-0 rounded-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
+			:aria-label="`Open ${proposal.title}`"
+			@click="emit('open')"
+		/>
+
+		<div class="flex flex-col space-y-6 p-4">
 			<div class="space-y-2">
 				<h3 class="font-semibold text-xl text-ink-gray-8">{{ proposal.title }}</h3>
 				<p v-if="byline" class="text-base text-ink-gray-7">
@@ -46,7 +54,7 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 						<HoverCard :hover-delay="0.15" align="start">
 							<template #trigger>
 								<span
-									class="underline decoration-dotted underline-offset-2 transition-colors hover:text-ink-gray-9"
+									class="relative z-10 underline decoration-dotted underline-offset-2 transition-colors hover:text-ink-gray-9"
 								>
 									{{ byline.rest.length }} others
 								</span>
@@ -82,9 +90,10 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 						For
 						<HoverCard :hover-delay="0.15" align="start">
 							<template #trigger>
-								<span class="font-medium text-ink-gray-8 transition-colors hover:text-ink-gray-9">{{
-									proposal.event_title
-								}}</span>
+								<span
+									class="relative z-10 font-medium text-ink-gray-8 transition-colors hover:text-ink-gray-9"
+									>{{ proposal.event_title }}</span
+								>
 							</template>
 							<div class="w-56 space-y-2 p-2">
 								<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
@@ -112,19 +121,20 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 					</span>
 				</Tooltip>
 			</div>
-		</article>
-	</RouterLink>
+		</div>
+	</article>
 </template>
 
 <style scoped>
 .proposal-card {
 	transition:
-		transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+		transform 120ms cubic-bezier(0.23, 1, 0.32, 1),
 		border-color 160ms ease;
 }
 
-.proposal-card:active {
-	transform: scale(0.98);
+/* Only the overlay opens the drawer, so only its press answers back. */
+.proposal-card:has(> button:active) {
+	transform: scale(0.995);
 }
 
 /* A touch tap fires hover and leaves it stuck. */
@@ -135,7 +145,7 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.proposal-card:active {
+	.proposal-card:has(> button:active) {
 		transform: none;
 	}
 }

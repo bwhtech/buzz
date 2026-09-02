@@ -12,6 +12,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AddOnPreferenceDialog: typeof import('./src/components/AddOnPreferenceDialog.vue')['default']
+    AddSpeakerDialog: typeof import('./src/components/dashboard/proposals/AddSpeakerDialog.vue')['default']
     AddVenueDialog: typeof import('./src/components/dashboard/events/AddVenueDialog.vue')['default']
     AttendeeFormControl: typeof import('./src/components/AttendeeFormControl.vue')['default']
     BackButton: typeof import('./src/components/common/BackButton.vue')['default']
@@ -57,6 +58,7 @@ declare module 'vue' {
     PrintedTicket: typeof import('./src/components/dashboard/tickets/PrintedTicket.vue')['default']
     ProfileView: typeof import('./src/components/ProfileView.vue')['default']
     ProposalCard: typeof import('./src/components/dashboard/proposals/ProposalCard.vue')['default']
+    ProposalDrawer: typeof import('./src/components/dashboard/proposals/ProposalDrawer.vue')['default']
     ProposalEditDialog: typeof import('./src/components/ProposalEditDialog.vue')['default']
     QRScanner: typeof import('./src/components/QRScanner.vue')['default']
     RestrictionNotices: typeof import('./src/components/RestrictionNotices.vue')['default']
