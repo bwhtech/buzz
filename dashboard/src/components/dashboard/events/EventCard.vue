@@ -99,7 +99,8 @@ const venue = computed(() => {
 .event-card {
 	transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-.event-card:active {
+/* Only the overlay opens the drawer, so Manage does not press the card with it. */
+.event-card:has(> button:active) {
 	transform: scale(0.995);
 }
 
@@ -107,7 +108,7 @@ const venue = computed(() => {
 	.event-card {
 		transition: none;
 	}
-	.event-card:active {
+	.event-card:has(> button:active) {
 		transform: none;
 	}
 }

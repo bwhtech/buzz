@@ -7,8 +7,9 @@ import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
 import EventCard from "@/components/dashboard/events/EventCard.vue"
 import EventDrawer from "@/components/dashboard/events/EventDrawer.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
-import { useEventDrawer } from "@/composables/useEventDrawer"
+import { useDrawerSelection } from "@/composables/useDrawerSelection"
 import { useMyEvents } from "@/data/events"
+import type { MyEvent } from "@/types"
 import { groupEventsByMonth } from "@/utils/eventGroups"
 import { useTimelineTabQuery } from "@/utils/timelineTabs"
 
@@ -20,7 +21,7 @@ const myEvents = useMyEvents()
 // The feed arrives already split, so the tab only picks a side.
 const months = computed(() => groupEventsByMonth(myEvents.data?.[tab.value] || []))
 
-const drawer = useEventDrawer()
+const drawer = useDrawerSelection<MyEvent>()
 
 const emptyDescription = computed(() =>
 	tab.value === "upcoming"

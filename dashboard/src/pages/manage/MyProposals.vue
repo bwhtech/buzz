@@ -1,19 +1,33 @@
 <script setup lang="ts">
 import { Icon, dayjs } from "frappe-ui"
-import { computed, ref } from "vue"
+import { computed } from "vue"
 
 import EmptyState from "@/components/common/EmptyState.vue"
 import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
 import ProposalCard from "@/components/dashboard/proposals/ProposalCard.vue"
+import ProposalDrawer from "@/components/dashboard/proposals/ProposalDrawer.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
+import { useDrawerSelection } from "@/composables/useDrawerSelection"
 import { useMyProposals } from "@/data/proposals"
 import type { ProposalWithEvent } from "@/types"
 import { groupEventsByMonth } from "@/utils/eventGroups"
-import { type TimelineTab, inTab } from "@/utils/timelineTabs"
+import { inTab, useTimelineTabQuery } from "@/utils/timelineTabs"
 
-const tab = ref<TimelineTab>("upcoming")
+// In the URL, so one link carries the whole view.
+const tab = useTimelineTabQuery()
 
 const myProposals = useMyProposals()
+
+const drawer = useDrawerSelection<ProposalWithEvent>()
+
+// The open drawer holds the row it was handed, so a withdrawal or a new speaker has to be
+// pointed at the refreshed one or it keeps showing the state it opened with.
+async function refresh() {
+	await myProposals.reload()
+	const open = drawer.selected.value?.name
+	const fresh = dated.value.find((proposal) => proposal.name === open)
+	if (fresh) drawer.selected.value = fresh
+}
 
 // A proposal whose event was deleted has no date to file it under, so it drops out.
 const dated = computed(() =>
@@ -55,7 +69,13 @@ const emptyDescription = computed(() =>
 		</template>
 
 		<template #default="{ item }">
-			<ProposalCard :proposal="item" />
+			<ProposalCard :proposal="item" @open="drawer.show(item)" />
 		</template>
 	</TimelineList>
+
+	<ProposalDrawer
+		v-model:open="drawer.open.value"
+		:proposal="drawer.selected.value"
+		@changed="refresh"
+	/>
 </template>

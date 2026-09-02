@@ -60,53 +60,15 @@
 
 <script setup lang="ts">
 import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui"
-import {
-	Blockquote,
-	Bold,
-	BulletList,
-	Editor,
-	EditorContent,
-	EditorFixedMenu,
-	HeadingGroup,
-	InsertLink,
-	InsertTable,
-	Italic,
-	OrderedList,
-	RichTextKit,
-	Separator,
-	Strike,
-} from "frappe-ui/editor"
+import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, ref, watch } from "vue"
 
 import PhoneInput from "@/components/PhoneInput.vue"
 import type { FrappeError } from "@/types"
-
-// No upload handler is wired for proposals, so the media extensions are off —
-// otherwise the drop/paste paths would silently fail.
-const editorExtensions = [
-	RichTextKit.configure({
-		heading: { levels: [2, 3, 4, 5, 6] },
-		image: false,
-		imageGroup: false,
-		imageViewer: false,
-		video: false,
-		attachment: false,
-	}),
-]
-
-const editorToolbar = [
-	HeadingGroup,
-	Separator,
-	Bold,
-	Italic,
-	Strike,
-	Separator,
-	BulletList,
-	OrderedList,
-	Blockquote,
-	InsertLink,
-	InsertTable,
-]
+import {
+	proposalEditorExtensions as editorExtensions,
+	proposalEditorToolbar as editorToolbar,
+} from "@/utils/proposalEditor"
 
 const props = defineProps({
 	open: {

@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder import Criterion
+from frappe.utils import cstr, getdate
 
 from buzz.permissions import derived_has_permission, derived_query_conditions
 
@@ -51,6 +52,10 @@ def has_talk_proposal_permission(doc, ptype: str | None = None, user: str | None
 	return derived_has_permission(doc, ptype=ptype, user=user)
 
 
+PENDING = "Review Pending"
+WITHDRAWN = "Withdrawn"
+
+
 class TalkProposal(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
@@ -73,9 +78,67 @@ class TalkProposal(Document):
 		title: DF.Data
 	# end: auto-generated types
 
+	@property
+	def speaker_emails(self) -> set[str]:
+		return {speaker.email.lower() for speaker in self.speakers if speaker.email}
+
+	@property
+	def is_closed(self) -> bool:
+		if self.status != PENDING:
+			return True
+
+		dates = frappe.db.get_value("Buzz Event", self.event, ["start_date", "end_date"], as_dict=True)
+		if not dates:
+			return True
+
+		# A run that ends today is not over yet, so end_date decides.
+		last = dates.end_date or dates.start_date
+		return bool(last) and last < getdate()
+
 	def validate(self):
+		self.validate_event_is_unchanged()
+
 		if not self.submitted_by:
 			self.submitted_by = frappe.session.user
+
+		self.restrict_speaker_changes()
+
+	def validate_event_is_unchanged(self):
+		"""A proposal stays with the event it was submitted to, whoever is saving it."""
+		before = self.get_doc_before_save()
+		if not before or not before.event:
+			return
+
+		# cstr: an autoincrement name is an int in memory and a string out of the database.
+		if cstr(self.event) != cstr(before.event):
+			frappe.throw(
+				_("A proposal cannot be moved to another event. Submit a new one there instead."),
+				frappe.CannotChangeConstantError,
+			)
+
+	def restrict_speaker_changes(self):
+		"""The drawer's rules, on the server: a speaker holds plain write on the document."""
+		before = self.get_doc_before_save()
+		user = frappe.session.user
+		if not before or not is_speaker_on(before, user):
+			return
+		# Safe on the incoming document only because validate_event_is_unchanged has already
+		# refused any change to `event`, which is what decides the team here.
+		if derived_has_permission(self, ptype="write", user=user):
+			return
+
+		if before.is_closed:
+			frappe.throw(_("This proposal can no longer be changed."), frappe.PermissionError)
+
+		if self.status not in (before.status, WITHDRAWN):
+			frappe.throw(_("A proposal can only be withdrawn."), frappe.PermissionError)
+
+		if self.submitted_by != before.submitted_by:
+			frappe.throw(_("A proposal stays with its submitter."), frappe.PermissionError)
+
+		# Dropping your own row would take away your access to the proposal.
+		if user.lower() in before.speaker_emails and user.lower() not in self.speaker_emails:
+			frappe.throw(_("You cannot remove yourself from a proposal."), frappe.PermissionError)
 
 	@frappe.whitelist()
 	def create_talk(self):

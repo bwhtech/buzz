@@ -21,6 +21,12 @@ withDefaults(
 				class="drawer-handle mx-auto my-3 h-1.5 w-12 shrink-0 rounded-full bg-surface-gray-4"
 			/>
 			<slot />
+
+			<!-- reka has no footer part and shadcn's is a plain styled div, so this is the
+			     same idea as a slot: pinned below the body, never scrolling with it. -->
+			<div v-if="$slots.footer" class="mt-auto flex shrink-0 items-center gap-2 p-4">
+				<slot name="footer" />
+			</div>
 		</DrawerContent>
 	</DrawerPortal>
 </template>

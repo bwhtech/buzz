@@ -40,7 +40,7 @@ const countdown = computed(() => {
 </script>
 
 <template>
-	<Badge v-if="isLive || countdown" variant="solid" class="font-medium">
+	<Badge v-if="isLive || countdown" class="font-medium shadow">
 		<template v-if="isLive" #prefix>
 			<span class="relative flex size-2">
 				<span
@@ -50,10 +50,10 @@ const countdown = computed(() => {
 			</span>
 		</template>
 
-		<span v-if="isLive" class="text-xs text-ink-base">Live</span>
+		<span v-if="isLive" class="text-xs text-inherit">Live</span>
 		<template v-else>
 			<span class="text-xs text-inherit">Starting in</span>
-			<span class="text-xs font-semibold tabular-nums text-ink-base">{{ countdown }}</span>
+			<span class="text-xs font-semibold tabular-nums text-ink-gray-8">{{ countdown }}</span>
 		</template>
 	</Badge>
 </template>

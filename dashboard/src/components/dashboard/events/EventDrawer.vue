@@ -120,7 +120,7 @@ const endsAt = computed(() => {
 
 						<EventCountdownPill
 							:event="event"
-							class="absolute bottom-5 left-1/2 -translate-x-1/2 translate-y-1/2"
+							class="absolute bottom-4 left-1/2 -translate-x-1/2 translate-y-1/2"
 						/>
 					</div>
 
