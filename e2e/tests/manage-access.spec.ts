@@ -9,7 +9,7 @@ test.describe("Manage access", () => {
 		await page.goto("/b/")
 
 		await expect(page).toHaveURL(/\/b\/manage\/events$/, { timeout: 15000 })
-		await expect(page.getByRole("heading", { name: "My Calendar", level: 1 })).toBeVisible()
+		await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible()
 	})
 
 	test("routes a sidebar item with no page yet to the placeholder", async ({ page }) => {

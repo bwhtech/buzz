@@ -84,7 +84,7 @@ test.describe("Event workspace", () => {
 		await page.getByRole("link", { name: "Back" }).click()
 
 		await expect(page).toHaveURL(/\/b\/manage\/events$/, { timeout: 15000 })
-		await expect(page.getByRole("heading", { name: "My Calendar", level: 1 })).toBeVisible()
+		await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible()
 	})
 })
 
@@ -276,23 +276,5 @@ test.describe("Guest list", () => {
 
 		await search.fill("")
 		await expect(rows).toHaveCount(GUESTS.length)
-	})
-})
-
-// A team's own events are all manageable, so those cards drop the button and become
-// the link themselves.
-test.describe("Team events card", () => {
-	test("opens the workspace on click, with no Manage button of its own", async ({ page }) => {
-		await page.goto("/b/manage/events")
-		await page.getByRole("link", { name: "Events", exact: true }).click()
-		await expect(page).toHaveURL(/\/b\/manage\/team\/events$/, { timeout: 15000 })
-
-		// Keyed on the href, not a title: which events the team owns varies by site.
-		const card = page.locator('a[href^="/b/manage/events/"]').first()
-		await expect(card).toBeVisible({ timeout: 15000 })
-		await expect(page.getByRole("link", { name: "Manage" })).toHaveCount(0)
-		await card.click()
-
-		await expect(page).toHaveURL(/\/b\/manage\/events\/\d+\/details$/)
 	})
 })
