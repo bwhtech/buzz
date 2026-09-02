@@ -32,6 +32,7 @@ const STATUS_ICONS: Record<string, string> = {
 	Rejected: "lucide-circle-x",
 	Replied: "lucide-reply",
 	Duplicate: "lucide-layers-2",
+	Withdrawn: "lucide-circle-slash",
 }
 
 const FALLBACK_ICON = "lucide-squircle-dashed"
