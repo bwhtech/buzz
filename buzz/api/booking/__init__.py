@@ -46,12 +46,6 @@ def get_booking_details(booking_id: str) -> BookingDetailsResponse:
 
 
 @frappe.whitelist()
-def get_my_booking_summaries(event: str) -> list[BookingSummary]:
-	"""Every booking the session user made for one event, each as a receipt."""
-	return details.build_my_booking_summaries(event)
-
-
-@frappe.whitelist()
 def get_booking_summary(booking_id: str) -> BookingSummary:
 	"""One booking as a receipt, for anyone allowed to read it."""
 	return details.build_booking_summary(booking_id)
