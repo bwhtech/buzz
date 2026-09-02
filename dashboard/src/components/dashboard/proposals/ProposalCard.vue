@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Avatar, Badge, HoverCard, Tooltip, dayjs, dayjsLocal } from "frappe-ui"
+import { Avatar, Badge, HoverCard, Tooltip, dayjsLocal } from "frappe-ui"
 import { computed } from "vue"
 
+import EventHoverCard from "@/components/dashboard/events/EventHoverCard.vue"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
 import { session } from "@/data/session"
 import { userResource } from "@/data/user"
 import type { ProposalWithEvent } from "@/types"
-import { bannerPattern } from "@/utils/eventBanner"
 import { speakerByline } from "@/utils/speakerByline"
 
 const props = defineProps<{ proposal: ProposalWithEvent }>()
@@ -18,13 +18,6 @@ const { getStatusTheme, getStatusIcon } = useProposalStatuses()
 const byline = computed(() =>
 	speakerByline(props.proposal.speakers, userResource.data?.email || session.user),
 )
-
-const banner = computed(() => ({
-	backgroundImage: bannerPattern(props.proposal.event),
-}))
-
-// Plain dayjs: start_date is date-only, and a timezone shift moves it a day back.
-const eventDate = computed(() => dayjs(props.proposal.start_date).format("D MMM YYYY"))
 
 // modified is a full timestamp in the site's timezone, so this one does convert.
 const modified = computed(() => dayjsLocal(props.proposal.modified))
@@ -88,30 +81,15 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 					</Badge>
 					<p class="text-base text-ink-gray-7">
 						For
-						<HoverCard :hover-delay="0.15" align="start">
-							<template #trigger>
-								<span
-									class="relative z-10 font-medium text-ink-gray-8 transition-colors hover:text-ink-gray-9"
-									>{{ proposal.event_title }}</span
-								>
-							</template>
-							<div class="w-56 space-y-2 p-2">
-								<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
-								<img
-									v-if="proposal.banner_image"
-									class="h-24 w-full rounded-4 object-cover object-top"
-									:src="proposal.banner_image"
-									:style="banner"
-									alt=""
-								/>
-								<div v-else class="h-24 w-full rounded-4" :style="banner" />
-
-								<p class="font-medium text-ink-gray-8">
-									{{ proposal.event_title }}
-								</p>
-								<p class="text-sm text-ink-gray-5">{{ eventDate }}</p>
-							</div>
-						</HoverCard>
+						<EventHoverCard
+							class="text-ink-gray-8"
+							:event="proposal.event"
+							:title="proposal.event_title"
+							:start-date="proposal.start_date"
+							:start-time="proposal.start_time"
+							:venue="proposal.venue"
+							:banner-image="proposal.banner_image"
+						/>
 					</p>
 				</div>
 				<Tooltip :text="`Last updated on ${lastUpdatedExact}`">

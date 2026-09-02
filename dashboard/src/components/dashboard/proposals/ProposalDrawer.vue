@@ -21,6 +21,7 @@ import {
 	DrawerDescription,
 	DrawerTitle,
 } from "@/components/common/drawer"
+import EventHoverCard from "@/components/dashboard/events/EventHoverCard.vue"
 import AddSpeakerDialog from "@/components/dashboard/proposals/AddSpeakerDialog.vue"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
 import { useProposal } from "@/data/proposals"
@@ -176,7 +177,15 @@ const fields = computed(() => [
 							{{ proposal.title }}
 						</DrawerTitle>
 						<DrawerDescription class="text-base text-ink-gray-6">
-							{{ proposal.event_title }}
+							<EventHoverCard
+								class="text-ink-gray-6"
+								:event="proposal.event"
+								:title="proposal.event_title || 'Deleted event'"
+								:start-date="proposal.start_date"
+								:start-time="proposal.start_time"
+								:venue="proposal.venue"
+								:banner-image="proposal.banner_image"
+							/>
 							<template v-if="eventDate"> · {{ eventDate }}</template>
 						</DrawerDescription>
 					</div>
