@@ -7,11 +7,12 @@ import {
 	SidebarCollapseToggle,
 	SidebarItem,
 } from "frappe-ui"
-import { computed } from "vue"
+import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
-import UserMenu from "@/components/UserMenu.vue"
+import ManagerSidebarHeader from "@/components/dashboard/ManagerSidebarHeader.vue"
 import { useTeamAccess } from "@/composables/useTeamAccess"
+import { eventDetail } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
 import NotFound from "@/pages/NotFound.vue"
 
@@ -51,11 +52,30 @@ const mainItems = computed(() => {
 // An event opens into the same shell with its own destinations.
 const eventId = computed(() => route.params.eventId as string | undefined)
 
+// Entering an event pushes the sidebar left, leaving it pulls back right.
+const direction = ref<"forward" | "back">("forward")
+watch(eventId, (id, previous) => {
+	direction.value = id && !previous ? "forward" : "back"
+})
+
+const eventTitle = ref("")
+watch(
+	eventId,
+	(id) => {
+		eventTitle.value = ""
+		if (!id) return
+		// Drops a late response for an event the user has already left.
+		eventDetail(id).promise?.then((event) => {
+			if (eventId.value === id) eventTitle.value = event?.title ?? ""
+		})
+	},
+	{ immediate: true },
+)
+
 const items = computed(() => {
 	if (!eventId.value) return mainItems.value
 	const event = `/manage/events/${eventId.value}`
 	return [
-		{ label: "Back", icon: "lucide-arrow-left", to: "/" },
 		{ label: "Details", icon: "lucide-receipt-text", to: `${event}/details` },
 		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests` },
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks` },
@@ -70,20 +90,35 @@ const items = computed(() => {
 	<DesktopShell v-else-if="access === 'granted'" :scroll="false">
 		<template #sidebar>
 			<Sidebar v-model:collapsed="collapsed">
-				<!-- px-1: puts the avatar on the item-icon centerline, in both states. -->
-				<div class="flex shrink-0 items-center px-1 pt-2">
-					<UserMenu />
+				<!-- px-1: puts the header mark on the item-icon centerline, in both states.
+				     h-14 holds the height while both states overlap mid-transition. -->
+				<div class="nav-stage relative h-14 shrink-0">
+					<Transition :name="`nav-${direction}`">
+						<div
+							:key="eventId ? 'event' : 'root'"
+							class="absolute inset-x-1 top-2 flex items-center"
+						>
+							<ManagerSidebarHeader :event-id="eventId" :event-title="eventTitle" />
+						</div>
+					</Transition>
 				</div>
 
-				<div class="flex flex-col gap-0.5 mx-2 py-2">
-					<SidebarItem
-						v-for="item in items"
-						:key="item.label"
-						:label="item.label"
-						:icon="item.icon"
-						:to="item.to"
-						:active="isActive(item.to)"
-					/>
+				<!-- One block, not per row: absolute rows would all collapse onto the
+				     container's corner. my-2, not py-2: the leaving list anchors to the
+				     padding box, so padding here would lift it out of line. -->
+				<div class="nav-stage relative mx-2 my-2">
+					<Transition :name="`nav-${direction}`">
+						<div :key="eventId ? 'event' : 'root'" class="nav-list flex flex-col gap-0.5">
+							<SidebarItem
+								v-for="item in items"
+								:key="item.label"
+								:label="item.label"
+								:icon="item.icon"
+								:to="item.to"
+								:active="isActive(item.to)"
+							/>
+						</div>
+					</Transition>
 				</div>
 
 				<div class="mt-auto px-2 py-2">
@@ -104,3 +139,62 @@ const items = computed(() => {
 		</div>
 	</DesktopShell>
 </template>
+
+<style scoped>
+/* One vanishing point per stage, so header and list hinge off the same rail. */
+.nav-stage {
+	perspective: 700px;
+}
+
+.nav-forward-enter-active,
+.nav-back-enter-active,
+.nav-forward-leave-active,
+.nav-back-leave-active {
+	transform-origin: left center;
+}
+
+/* Opacity lands before the movement: a row still visible at the end of its slide
+   reads as a ghost. */
+.nav-forward-enter-active,
+.nav-back-enter-active {
+	transition:
+		opacity 140ms cubic-bezier(0.23, 1, 0.32, 1),
+		transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.nav-forward-leave-active,
+.nav-back-leave-active {
+	transition:
+		opacity 100ms cubic-bezier(0.23, 1, 0.32, 1),
+		transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Only the list leaves the flow; re-anchoring the header would shift it 4px. */
+.nav-list.nav-forward-leave-active,
+.nav-list.nav-back-leave-active {
+	position: absolute;
+	inset-inline: 0;
+	top: 0;
+}
+
+.nav-forward-enter-from,
+.nav-back-leave-to {
+	opacity: 0;
+	transform: translateX(10px) rotateY(-8deg);
+}
+
+.nav-forward-leave-to,
+.nav-back-enter-from {
+	opacity: 0;
+	transform: translateX(-10px) rotateY(8deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.nav-forward-enter-from,
+	.nav-forward-leave-to,
+	.nav-back-enter-from,
+	.nav-back-leave-to {
+		transform: none;
+	}
+}
+</style>

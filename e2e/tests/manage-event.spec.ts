@@ -67,9 +67,10 @@ test.describe("Event workspace", () => {
 	})
 
 	test("swaps the sidebar for the event's own destinations", async ({ page }) => {
-		for (const label of ["Back", "Details", "Guests", "Talks"]) {
+		for (const label of ["Details", "Guests", "Talks"]) {
 			await expect(page.getByRole("link", { name: label })).toBeVisible({ timeout: 15000 })
 		}
+		await expect(page.getByRole("button", { name: "Back to events" })).toBeVisible()
 		await expect(page.getByRole("link", { name: "My Tickets" })).toHaveCount(0)
 	})
 
@@ -80,8 +81,8 @@ test.describe("Event workspace", () => {
 		await expect(page.getByText("Work in progress")).toBeVisible()
 	})
 
-	test("leaves the workspace through the back item", async ({ page }) => {
-		await page.getByRole("link", { name: "Back" }).click()
+	test("leaves the workspace through the back button", async ({ page }) => {
+		await page.getByRole("button", { name: "Back to events" }).click()
 
 		await expect(page).toHaveURL(/\/b\/manage\/events$/, { timeout: 15000 })
 		await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible()
