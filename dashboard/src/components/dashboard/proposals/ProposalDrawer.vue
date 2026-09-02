@@ -95,7 +95,7 @@ async function save() {
 		...field,
 		value: form.value.answers[index] ?? field.value,
 	}))
-	await write(
+	const saved = await write(
 		{
 			title: form.value.title.trim(),
 			description: form.value.description,
@@ -104,7 +104,8 @@ async function save() {
 		},
 		"Proposal saved",
 	)
-	editing.value = false
+	// A rejected save keeps the form open, with what was typed still in it.
+	if (saved) editing.value = false
 }
 
 const confirmingWithdrawal = ref(false)
@@ -116,24 +117,25 @@ const addingSpeaker = ref(false)
 // takes the shape the API accepts rather than the generated one.
 type ProposalUpdate = Partial<Omit<TalkProposal, "speakers">> & { speakers?: ProposalSpeaker[] }
 
-async function write(fields: ProposalUpdate, done: string) {
+async function write(fields: ProposalUpdate, done: string): Promise<boolean> {
 	try {
 		await proposalDoc.setValue.submit(fields as Partial<TalkProposal>)
 		toast.success(done)
 		emit("changed")
+		return true
 	} catch {
 		toast.error("Could not save your change")
+		return false
 	}
 }
 
 async function withdraw() {
-	await write({ status: "Withdrawn" }, "Proposal withdrawn")
-	confirmingWithdrawal.value = false
+	if (await write({ status: "Withdrawn" }, "Proposal withdrawn")) confirmingWithdrawal.value = false
 }
 
 async function addSpeaker(speaker: ProposalSpeaker) {
-	await write({ speakers: [...speakers.value, speaker] }, "Speaker added")
-	addingSpeaker.value = false
+	if (await write({ speakers: [...speakers.value, speaker] }, "Speaker added"))
+		addingSpeaker.value = false
 }
 
 async function removeSpeaker() {
@@ -141,8 +143,7 @@ async function removeSpeaker() {
 	// Removing yourself would take away your own access to the proposal.
 	if (!speaker || isReader(speaker, reader.value)) return
 	const rest = speakers.value.filter((listed) => listed.email !== speaker.email)
-	await write({ speakers: rest }, "Speaker removed")
-	removing.value = null
+	if (await write({ speakers: rest }, "Speaker removed")) removing.value = null
 }
 
 const reader = computed(() => userResource.data?.email || session.user)

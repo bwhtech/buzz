@@ -35,6 +35,14 @@ watch(open, (showing) => {
 	submitted.value = false
 })
 
+// A rejected add leaves the dialog up, so the latch has to come off with the spinner.
+watch(
+	() => props.saving,
+	(now, before) => {
+		if (before && !now) submitted.value = false
+	},
+)
+
 function submit() {
 	if (!canSubmit.value) return
 	submitted.value = true

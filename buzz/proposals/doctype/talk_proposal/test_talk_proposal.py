@@ -141,8 +141,11 @@ class TestCreateTalk(IntegrationTestCase):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Proposal Perm Category")
 		cls.host = ensure_prompt_named_record("Event Host", "Proposal Perm Host")
-		cls.event = make_test_event(cls.category, cls.host)
 		cls.speaker_user = make_test_user("create-talk-speaker@example.com")
+		cls.owner_user = make_test_user("create-talk-owner@example.com", roles=["Event Manager"])
+		cls.event = make_test_event(
+			cls.category, cls.host, team=create_owned_team("Create Talk Owner Team", cls.owner_user)
+		)
 
 	def test_create_talk_accepts_the_proposal(self):
 		proposal = frappe.get_doc("Talk Proposal", make_guest_proposal(self.event, self.speaker_user))
@@ -200,3 +203,82 @@ class TestCreateTalk(IntegrationTestCase):
 			proposal.create_talk()
 
 		self.assertEqual(frappe.db.count("Event Talk", {"proposal": proposal.name}), 1)
+
+
+class TestTalkProposalSpeakerChanges(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.category = ensure_prompt_named_record("Event Category", "Proposal Perm Category")
+		cls.host = ensure_prompt_named_record("Event Host", "Proposal Perm Host")
+		cls.speaker_user = make_test_user("guard-speaker@example.com")
+		cls.manager_user = make_test_user("guard-manager@example.com", roles=["Event Manager"])
+		cls.team = create_owned_team("Proposal Guard Team", cls.manager_user)
+		cls.event = make_test_event(cls.category, cls.host, team=cls.team)
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def proposal(self, event: str | None = None, status: str = "Review Pending") -> str:
+		name = make_guest_proposal(event or self.event, self.speaker_user)
+		if status != "Review Pending":
+			frappe.db.set_value("Talk Proposal", name, "status", status)
+		return name
+
+	def as_speaker(self, name: str):
+		frappe.set_user(self.speaker_user)
+		return frappe.get_doc("Talk Proposal", name)
+
+	def test_speaker_edits_an_open_proposal(self):
+		doc = self.as_speaker(self.proposal())
+		doc.title = "Edited by the speaker"
+		doc.save()
+		self.assertEqual(frappe.db.get_value("Talk Proposal", doc.name, "title"), "Edited by the speaker")
+
+	def test_speaker_withdraws_an_open_proposal(self):
+		doc = self.as_speaker(self.proposal())
+		doc.status = "Withdrawn"
+		doc.save()
+		self.assertEqual(frappe.db.get_value("Talk Proposal", doc.name, "status"), "Withdrawn")
+
+	def test_speaker_cannot_accept_their_own_proposal(self):
+		doc = self.as_speaker(self.proposal())
+		doc.status = "Accepted"
+		self.assertRaises(frappe.PermissionError, doc.save)
+
+	def test_speaker_cannot_edit_an_accepted_proposal(self):
+		doc = self.as_speaker(self.proposal(status="Accepted"))
+		doc.title = "Edited after acceptance"
+		self.assertRaises(frappe.PermissionError, doc.save)
+
+	def test_speaker_cannot_edit_after_the_event(self):
+		past = make_test_event(self.category, self.host, team=self.team)
+		frappe.db.set_value("Buzz Event", past, {"start_date": "2020-01-01", "end_date": "2020-01-02"})
+		doc = self.as_speaker(self.proposal(event=past))
+		doc.title = "Edited after the event"
+		self.assertRaises(frappe.PermissionError, doc.save)
+
+	def test_speaker_cannot_move_a_proposal_to_another_event(self):
+		other = make_test_event(self.category, self.host, team=self.team)
+		doc = self.as_speaker(self.proposal())
+		doc.event = other
+		self.assertRaises(frappe.PermissionError, doc.save)
+
+	def test_speaker_cannot_remove_themselves(self):
+		doc = self.as_speaker(self.proposal())
+		doc.speakers = []
+		self.assertRaises(frappe.PermissionError, doc.save)
+
+	def test_speaker_adds_a_co_speaker(self):
+		doc = self.as_speaker(self.proposal())
+		doc.append("speakers", {"first_name": "Co", "email": "guard-co@example.com"})
+		doc.save()
+		self.assertEqual(len(frappe.get_doc("Talk Proposal", doc.name).speakers), 2)
+
+	def test_the_team_still_accepts_a_proposal(self):
+		name = self.proposal()
+		frappe.set_user(self.manager_user)
+		doc = frappe.get_doc("Talk Proposal", name)
+		doc.status = "Accepted"
+		doc.save()
+		self.assertEqual(frappe.db.get_value("Talk Proposal", name, "status"), "Accepted")
