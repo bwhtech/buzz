@@ -84,7 +84,7 @@ async function save() {
 	if (createEvent.error) return
 
 	toast.success(`${createEvent.data?.title} created`)
-	router.push({ name: "team-events" })
+	router.push({ name: "event-details", params: { eventId: createEvent.data?.name } })
 }
 </script>
 
@@ -105,7 +105,7 @@ async function save() {
 						icon-left="lucide-arrow-left"
 						label="Back"
 						class="-ml-2"
-						:route="{ name: 'team-events' }"
+						:route="{ name: 'events' }"
 					/>
 
 					<Button

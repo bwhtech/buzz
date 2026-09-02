@@ -55,35 +55,9 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/WorkInProgress.vue"),
 			},
 			{
-				path: "tickets",
-				name: "tickets",
-				component: () => import("@/pages/manage/MyTickets.vue"),
-			},
-			{
 				path: "proposals",
 				name: "proposals",
 				component: () => import("@/pages/manage/MyProposals.vue"),
-			},
-			// The team is not in the path: data/teams holds the selection, so these
-			// paths are fixed and switching teams re-reads the page in place.
-			{
-				path: "team",
-				redirect: { name: "team-overview" },
-			},
-			{
-				path: "team/overview",
-				name: "team-overview",
-				component: () => import("@/pages/manage/teams/TeamOverview.vue"),
-			},
-			{
-				path: "team/events",
-				name: "team-events",
-				component: () => import("@/pages/manage/teams/TeamEvents.vue"),
-			},
-			{
-				path: "team/members",
-				name: "team-members",
-				component: () => import("@/pages/manage/teams/TeamMembers.vue"),
 			},
 			// Sidebar destinations that have no page yet. Unnamed on purpose: SidebarItem
 			// falls back to matching on path, so each one lights up on its own. Enumerated
@@ -91,10 +65,6 @@ const routes: RouteRecordRaw[] = [
 			// items in ManagerLayout.vue.
 			{
 				path: ":section(sponsorship|overview|registrations|sponsors|more)",
-				component: () => import("@/pages/manage/WorkInProgress.vue"),
-			},
-			{
-				path: "team/:section",
 				component: () => import("@/pages/manage/WorkInProgress.vue"),
 			},
 			// Claims the rest of /manage before the two-segment custom form route can:

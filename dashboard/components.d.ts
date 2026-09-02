@@ -11,7 +11,6 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    AddMembersDialog: typeof import('./src/components/dashboard/teams/AddMembersDialog.vue')['default']
     AddOnPreferenceDialog: typeof import('./src/components/AddOnPreferenceDialog.vue')['default']
     AddVenueDialog: typeof import('./src/components/dashboard/events/AddVenueDialog.vue')['default']
     AttendeeFormControl: typeof import('./src/components/AttendeeFormControl.vue')['default']
@@ -65,13 +64,9 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SponsorshipPaymentDialog: typeof import('./src/components/SponsorshipPaymentDialog.vue')['default']
     SuccessMessage: typeof import('./src/components/SuccessMessage.vue')['default']
-    TeamHero: typeof import('./src/components/dashboard/teams/TeamHero.vue')['default']
-    TeamPageHeader: typeof import('./src/components/dashboard/teams/TeamPageHeader.vue')['default']
-    TicketAddOnList: typeof import('./src/components/dashboard/tickets/TicketAddOnList.vue')['default']
     TicketBookingDetails: typeof import('./src/components/dashboard/tickets/TicketBookingDetails.vue')['default']
     TicketCard: typeof import('./src/components/TicketCard.vue')['default']
     TicketDetailsModal: typeof import('./src/components/TicketDetailsModal.vue')['default']
-    TicketDrawer: typeof import('./src/components/dashboard/tickets/TicketDrawer.vue')['default']
     TicketsSection: typeof import('./src/components/TicketsSection.vue')['default']
     TicketTransferDialog: typeof import('./src/components/TicketTransferDialog.vue')['default']
     TimelineList: typeof import('./src/components/dashboard/TimelineList.vue')['default']

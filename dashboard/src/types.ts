@@ -71,38 +71,6 @@ export interface TeamOption {
 	team_role: string
 }
 
-export interface TeamMember {
-	user: string
-	full_name: string | null
-	user_image: string | null
-	team_role: string
-}
-
-// buzz.api.teams.invite_members: what happened to each address that was submitted.
-export interface InviteOutcome {
-	email: string
-	status: "invited" | "added" | "already_a_member"
-	// Null for an invited stranger — they have no account to carry a name yet.
-	full_name: string | null
-}
-
-// An invitation nobody has accepted yet — no user, so no name or image.
-export interface TeamInvite {
-	email: string
-	team_role: string
-}
-
-// buzz.api.teams.get_team_overview: one team with its enabled members.
-export interface TeamOverview {
-	name: string
-	team_name: string
-	slug: string | null
-	logo: string | null
-	my_role: string
-	members: TeamMember[]
-	invites: TeamInvite[]
-}
-
 // buzz.api.events.get_my_events: events the user's teams host, plus events they
 // hold a ticket to. is_host separates the two.
 export interface MyEvent {

@@ -6,7 +6,7 @@ import type { TicketDetails, TicketStub } from "@/types"
 
 // Everything the printed ticket shows lives on the ticket or one link hop away,
 // so the standard list call covers it without a whitelisted endpoint.
-export function useMyTickets(event?: () => string | undefined) {
+export function useMyTickets(event: () => string) {
 	return useList<TicketStub>({
 		doctype: "Event Ticket",
 		fields: [
@@ -27,11 +27,8 @@ export function useMyTickets(event?: () => string | undefined) {
 		filters: () => ({
 			attendee_email: userResource.data?.email || session.user,
 			docstatus: 1,
-			...(event?.() ? { event: event() } : {}),
+			event: event(),
 		}),
-		// A caller that already has its event fetches on mount; one that mounts before an
-		// event is picked waits, and the filter getter carries every later fetch.
-		immediate: !event || Boolean(event()),
 		// No cacheKey: it persists to IndexedDB and would outlive this user's session.
 		orderBy: "creation desc",
 	})
