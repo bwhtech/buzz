@@ -18,17 +18,16 @@ function isOver(proposal: ProposalListItem, today: string): boolean {
  * What the submitter may still do to their proposal.
  *
  * Nothing survives the event: once it is over the proposal is a record, not a draft.
- * Before then only a pending proposal is open, with one exception — an event may let its
- * accepted talks keep being edited.
+ * Before then only a pending proposal is open.
  */
 export function proposalActions(proposal: ProposalListItem, today: string): ProposalActions {
 	if (isOver(proposal, today)) {
 		return { canEdit: false, canWithdraw: false, canManageSpeakers: false }
 	}
 
+	// An accepted talk is edited through its Event Talk, not the proposal, so the drawer
+	// leaves it alone even where allow_editing_talks_after_acceptance is on.
 	const pending = proposal.status === PENDING
-	const acceptedAndOpen =
-		proposal.status === "Accepted" && proposal.allow_editing_talks_after_acceptance
 
-	return { canEdit: pending || acceptedAndOpen, canWithdraw: pending, canManageSpeakers: pending }
+	return { canEdit: pending, canWithdraw: pending, canManageSpeakers: pending }
 }

@@ -32,14 +32,16 @@ test("a pending proposal on an upcoming event is fully open", () => {
 	})
 })
 
-test("an accepted proposal is closed unless its event allows edits after acceptance", () => {
-	assert.equal(proposalActions(proposal({ status: "Accepted" }), TODAY).canEdit, false)
-
-	const open = proposalActions(
-		proposal({ status: "Accepted", allow_editing_talks_after_acceptance: true }),
-		TODAY,
-	)
-	assert.deepEqual(open, { canEdit: true, canWithdraw: false, canManageSpeakers: false })
+test("an accepted proposal is closed, even where the event allows edits after acceptance", () => {
+	for (const flag of [false, true]) {
+		assert.deepEqual(
+			proposalActions(
+				proposal({ status: "Accepted", allow_editing_talks_after_acceptance: flag }),
+				TODAY,
+			),
+			{ canEdit: false, canWithdraw: false, canManageSpeakers: false },
+		)
+	}
 })
 
 test("every other status is closed", () => {

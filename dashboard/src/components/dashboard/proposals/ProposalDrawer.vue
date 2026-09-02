@@ -7,11 +7,13 @@ import {
 	Button,
 	Dialog,
 	Divider,
+	FormControl,
 	Skeleton,
 	dayjs,
 	dayjsLocal,
 	toast,
 } from "frappe-ui"
+import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, ref } from "vue"
 
 import {
@@ -23,12 +25,14 @@ import {
 } from "@/components/common/drawer"
 import EventHoverCard from "@/components/dashboard/events/EventHoverCard.vue"
 import AddSpeakerDialog from "@/components/dashboard/proposals/AddSpeakerDialog.vue"
+import PhoneInput from "@/components/PhoneInput.vue"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
 import { useProposal } from "@/data/proposals"
 import { session } from "@/data/session"
 import { userResource } from "@/data/user"
 import type { ProposalListItem, ProposalSpeaker, TalkProposal } from "@/types"
 import { proposalActions } from "@/utils/proposalActions"
+import { proposalEditorExtensions, proposalEditorToolbar } from "@/utils/proposalEditor"
 import { isReader, speakerName } from "@/utils/speakerByline"
 
 const props = defineProps<{ proposal: ProposalListItem | null }>()
@@ -62,6 +66,46 @@ const speakers = computed<ProposalSpeaker[]>(() =>
 		email: speaker.email,
 	})),
 )
+
+// The proposal's own answers, edited in place: the drawer becomes the form rather than
+// handing the reader off to a dialog that hides everything else.
+const editing = ref(false)
+const form = ref({ title: "", description: "", phone: "", answers: [] as string[] })
+
+// Guarded by the button's disabled state: a form seeded before the document lands would
+// save an empty description over a real one.
+function startEditing() {
+	const doc = proposalDoc.doc
+	form.value = {
+		title: doc?.title || props.proposal?.title || "",
+		description: doc?.description || "",
+		phone: doc?.phone || "",
+		answers: (doc?.additional_fields || []).map((field) => field.value || ""),
+	}
+	editing.value = true
+}
+
+async function save() {
+	if (!form.value.title.trim()) {
+		toast.error("A proposal needs a title")
+		return
+	}
+	// The answers ride back on their own rows, so nothing else about them is disturbed.
+	const additional_fields = (proposalDoc.doc?.additional_fields || []).map((field, index) => ({
+		...field,
+		value: form.value.answers[index] ?? field.value,
+	}))
+	await write(
+		{
+			title: form.value.title.trim(),
+			description: form.value.description,
+			phone: form.value.phone,
+			additional_fields,
+		},
+		"Proposal saved",
+	)
+	editing.value = false
+}
 
 const confirmingWithdrawal = ref(false)
 // The speaker the confirmation is asking about, and the row whose button spins.
@@ -173,9 +217,10 @@ const fields = computed(() => [
 					/>
 
 					<div class="space-y-2">
-						<DrawerTitle class="text-4xl font-semibold text-pretty text-ink-gray-9">
+						<DrawerTitle v-if="!editing" class="text-4xl font-semibold text-pretty text-ink-gray-9">
 							{{ proposal.title }}
 						</DrawerTitle>
+						<DrawerTitle v-else class="sr-only">Editing {{ proposal.title }}</DrawerTitle>
 						<DrawerDescription class="text-base text-ink-gray-6">
 							<EventHoverCard
 								class="text-ink-gray-6"
@@ -190,7 +235,52 @@ const fields = computed(() => [
 						</DrawerDescription>
 					</div>
 
-					<div class="grid grid-cols-2 gap-x-5 gap-y-3">
+					<!-- The form takes the place of the answers it edits, so the drawer stays one
+					     column and the reader keeps the event and the speakers in view. -->
+					<div v-if="editing" class="proposal-form space-y-4">
+						<FormControl
+							v-model="form.title"
+							label="Title"
+							type="text"
+							variant="outline"
+							required
+						/>
+
+						<div class="space-y-1.5">
+							<label class="block text-xs text-ink-gray-5">Description</label>
+							<Editor
+								v-model="form.description"
+								:extensions="proposalEditorExtensions"
+								placeholder="What is the talk about?"
+							>
+								<EditorFixedMenu
+									:items="proposalEditorToolbar"
+									class="rounded-t-5 border border-b-0 border-outline-gray-2 px-2 py-1"
+								/>
+								<EditorContent
+									class="min-h-40 rounded-b-5 border border-outline-gray-2 bg-surface-base px-3 py-2 prose-sm hover:border-outline-gray-3"
+								/>
+							</Editor>
+						</div>
+
+						<PhoneInput
+							v-model="form.phone"
+							label="Phone"
+							placeholder="Phone number"
+							variant="outline"
+						/>
+
+						<FormControl
+							v-for="(field, index) in proposalDoc.doc?.additional_fields || []"
+							:key="field.name"
+							v-model="form.answers[index]"
+							:label="field.label || field.fieldname"
+							:type="field.fieldtype === 'Small Text' ? 'textarea' : 'text'"
+							variant="outline"
+						/>
+					</div>
+
+					<div v-else class="grid grid-cols-2 gap-x-5 gap-y-3">
 						<div v-for="field in fields" :key="field.label" class="space-y-0.5">
 							<p class="text-base text-ink-gray-5">{{ field.label }}</p>
 							<p class="text-base font-medium text-ink-gray-8">{{ field.value }}</p>
@@ -257,7 +347,7 @@ const fields = computed(() => [
 						</table>
 					</div>
 
-					<div class="space-y-2">
+					<div v-if="!editing" class="space-y-2">
 						<h3 class="text-lg font-semibold text-ink-gray-8">Description</h3>
 						<!-- Only the document carries the description, so it arrives a beat later. -->
 						<Skeleton v-if="proposalDoc.loading" class="h-16 w-full rounded-4" />
@@ -322,27 +412,38 @@ const fields = computed(() => [
 				</Dialog>
 			</template>
 
-			<template v-if="proposal" #footer>
-				<p class="flex items-center gap-1 text-xs text-ink-gray-5">
-					<span class="lucide-clock-fading size-3.5 shrink-0" aria-hidden="true" />
-					Last updated {{ lastUpdated }}
-				</p>
+			<template v-if="proposal && editing" #footer>
+				<Button
+					variant="solid"
+					size="md"
+					label="Save changes"
+					:loading="proposalDoc.setValue.loading"
+					@click="save"
+				/>
+				<Button size="md" label="Cancel" @click="editing = false" />
+			</template>
+
+			<template v-else-if="proposal" #footer>
+				<Button
+					v-if="actions.canEdit"
+					variant="solid"
+					size="md"
+					label="Edit proposal"
+					:disabled="proposalDoc.loading"
+					@click="startEditing"
+				/>
 				<Button
 					v-if="actions.canWithdraw"
-					class="ml-auto"
 					variant="ghost"
 					theme="red"
 					size="md"
 					label="Withdraw"
 					@click="confirmingWithdrawal = true"
 				/>
-				<Button
-					v-if="actions.canEdit"
-					:class="{ 'ml-auto': !actions.canWithdraw }"
-					variant="solid"
-					size="md"
-					label="Edit proposal"
-				/>
+				<p class="ml-auto flex items-center gap-1 text-xs text-ink-gray-5">
+					<span class="lucide-clock-fading size-3.5 shrink-0" aria-hidden="true" />
+					Last updated {{ lastUpdated }}
+				</p>
 			</template>
 		</DrawerContent>
 	</Drawer>
@@ -353,6 +454,31 @@ const fields = computed(() => [
 @media (hover: none) {
 	.speaker-remove {
 		opacity: 1;
+	}
+}
+
+/* The form replaces the drawer's whole upper half, so it fades up into place rather
+   than appearing there. Entry only: the read view leaves at once, which keeps the
+   swap to a single duration. */
+.proposal-form {
+	transition:
+		opacity 160ms cubic-bezier(0.23, 1, 0.32, 1),
+		transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@starting-style {
+	.proposal-form {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+}
+
+/* Gentler, not none: the fade still explains what happened, nothing travels. */
+@media (prefers-reduced-motion: reduce) {
+	@starting-style {
+		.proposal-form {
+			transform: none;
+		}
 	}
 }
 </style>
