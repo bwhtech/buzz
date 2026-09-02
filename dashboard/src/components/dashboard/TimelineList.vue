@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends { name: string }">
-import { ErrorMessage, Icon, LoadingText, TabButtons } from "frappe-ui"
+import { ErrorMessage, Icon, Skeleton, TabButtons } from "frappe-ui"
 
 import { dayLabel, monthLabel, weekday } from "@/utils/dateLabels"
 import type { MonthGroup } from "@/utils/eventGroups"
@@ -44,7 +44,21 @@ const tabOptions = [
 
 		<ErrorMessage v-if="error" :message="error.message" />
 
-		<LoadingText v-else-if="loading" :text="`Loading ${noun}...`" />
+		<!-- The timeline's own shape, held while the rows load: a spinner would say less
+		     and move the page under the reader once the cards arrive. -->
+		<div v-else-if="loading" class="space-y-6" aria-busy="true">
+			<span class="sr-only">Loading {{ noun }}…</span>
+			<Skeleton class="h-6 w-40 rounded-4" />
+			<div v-for="row in 3" :key="row" class="grid grid-cols-[6rem_1fr] gap-4">
+				<div class="space-y-2 pt-1">
+					<Skeleton class="h-4 w-14 rounded-4" />
+					<Skeleton class="h-4 w-20 rounded-4" />
+				</div>
+				<div class="pb-7 pl-6">
+					<Skeleton class="h-28 w-full rounded-8" />
+				</div>
+			</div>
+		</div>
 
 		<div v-else class="relative space-y-6">
 			<section v-for="month in months" :key="month.month" class="space-y-4">
