@@ -12,6 +12,7 @@ import { useRoute } from "vue-router"
 
 import UserMenu from "@/components/UserMenu.vue"
 import { useTeamAccess } from "@/composables/useTeamAccess"
+import { useMySponsorships } from "@/data/sponsorships"
 import NotFound from "@/pages/NotFound.vue"
 
 // `null` keeps the sidebar's own rule: collapsed below `sm`, until the toggle overrides it.
@@ -26,17 +27,32 @@ const access = useTeamAccess()
 // type Boolean, so Vue casts the absent prop to false and the inference never runs.
 const isActive = (to: string) => route.path === to
 
-const mainItems = [
-	{ label: "Events", icon: "lucide-calendar-days", to: "/manage/events" },
-	{ label: "Talk Proposals", icon: "lucide-mic", to: "/manage/proposals" },
-	{ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" },
-]
+// Sponsorship is hidden until the user has an inquiry, the same rule the account
+// page applies to its Sponsorships tab.
+const sponsorships = useMySponsorships()
+
+const mainItems = computed(() => {
+	const destinations = [
+		{ label: "Events", icon: "lucide-calendar-days", to: "/manage/events" },
+		{ label: "Talk Proposals", icon: "lucide-mic", to: "/manage/proposals" },
+	]
+
+	if (sponsorships.data?.length) {
+		destinations.push({
+			label: "Sponsorship",
+			icon: "lucide-handshake",
+			to: "/manage/sponsorship",
+		})
+	}
+
+	return destinations
+})
 
 // An event opens into the same shell with its own destinations.
 const eventId = computed(() => route.params.eventId as string | undefined)
 
 const items = computed(() => {
-	if (!eventId.value) return mainItems
+	if (!eventId.value) return mainItems.value
 	const event = `/manage/events/${eventId.value}`
 	return [
 		{ label: "Back", icon: "lucide-arrow-left", to: "/" },
