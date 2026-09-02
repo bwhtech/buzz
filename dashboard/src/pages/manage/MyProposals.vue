@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon, dayjs } from "frappe-ui"
-import { computed, ref } from "vue"
+import { computed } from "vue"
 
 import EmptyState from "@/components/common/EmptyState.vue"
 import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
@@ -11,9 +11,10 @@ import { useDrawerSelection } from "@/composables/useDrawerSelection"
 import { useMyProposals } from "@/data/proposals"
 import type { ProposalWithEvent } from "@/types"
 import { groupEventsByMonth } from "@/utils/eventGroups"
-import { type TimelineTab, inTab } from "@/utils/timelineTabs"
+import { inTab, useTimelineTabQuery } from "@/utils/timelineTabs"
 
-const tab = ref<TimelineTab>("upcoming")
+// In the URL, so one link carries the whole view.
+const tab = useTimelineTabQuery()
 
 const myProposals = useMyProposals()
 
