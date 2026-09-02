@@ -96,10 +96,25 @@ class TalkProposal(Document):
 		return bool(last) and last < getdate()
 
 	def validate(self):
+		self.validate_event_is_unchanged()
+
 		if not self.submitted_by:
 			self.submitted_by = frappe.session.user
 
 		self.restrict_speaker_changes()
+
+	def validate_event_is_unchanged(self):
+		"""A proposal stays with the event it was submitted to, whoever is saving it."""
+		before = self.get_doc_before_save()
+		if not before or not before.event:
+			return
+
+		# cstr: an autoincrement name is an int in memory and a string out of the database.
+		if cstr(self.event) != cstr(before.event):
+			frappe.throw(
+				_("A proposal cannot be moved to another event. Submit a new one there instead."),
+				frappe.CannotChangeConstantError,
+			)
 
 	def restrict_speaker_changes(self):
 		"""The drawer's rules, on the server: a speaker holds plain write on the document."""
@@ -107,6 +122,8 @@ class TalkProposal(Document):
 		user = frappe.session.user
 		if not before or not is_speaker_on(before, user):
 			return
+		# Safe on the incoming document only because validate_event_is_unchanged has already
+		# refused any change to `event`, which is what decides the team here.
 		if derived_has_permission(self, ptype="write", user=user):
 			return
 
@@ -116,9 +133,8 @@ class TalkProposal(Document):
 		if self.status not in (before.status, WITHDRAWN):
 			frappe.throw(_("A proposal can only be withdrawn."), frappe.PermissionError)
 
-		# cstr: an autoincrement name is an int in memory and a string out of the database.
-		if [cstr(self.event), cstr(self.submitted_by)] != [cstr(before.event), cstr(before.submitted_by)]:
-			frappe.throw(_("A proposal stays with its event and its submitter."), frappe.PermissionError)
+		if self.submitted_by != before.submitted_by:
+			frappe.throw(_("A proposal stays with its submitter."), frappe.PermissionError)
 
 		# Dropping your own row would take away your access to the proposal.
 		if user.lower() in before.speaker_emails and user.lower() not in self.speaker_emails:

@@ -262,7 +262,28 @@ class TestTalkProposalSpeakerChanges(IntegrationTestCase):
 		other = make_test_event(self.category, self.host, team=self.team)
 		doc = self.as_speaker(self.proposal())
 		doc.event = other
-		self.assertRaises(frappe.PermissionError, doc.save)
+		self.assertRaises(frappe.CannotChangeConstantError, doc.save)
+
+	def test_speaker_cannot_move_a_proposal_into_an_event_they_run(self):
+		own_team = create_owned_team("Proposal Speaker Own Team", self.speaker_user)
+		own_event = make_test_event(self.category, self.host, team=own_team)
+		doc = self.as_speaker(self.proposal())
+		doc.event = own_event
+		doc.status = "Accepted"
+		self.assertRaises(frappe.CannotChangeConstantError, doc.save)
+
+	def test_the_team_cannot_move_a_proposal_to_another_event(self):
+		other = make_test_event(self.category, self.host, team=self.team)
+		name = self.proposal()
+		frappe.set_user(self.manager_user)
+		doc = frappe.get_doc("Talk Proposal", name)
+		doc.event = other
+		self.assertRaises(frappe.CannotChangeConstantError, doc.save)
+
+	def test_a_proposal_cannot_lose_its_event(self):
+		doc = self.as_speaker(self.proposal())
+		doc.event = None
+		self.assertRaises(frappe.CannotChangeConstantError, doc.save)
 
 	def test_speaker_cannot_remove_themselves(self):
 		doc = self.as_speaker(self.proposal())
