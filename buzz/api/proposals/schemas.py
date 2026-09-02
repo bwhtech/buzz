@@ -18,6 +18,7 @@ class ProposalListItem(APIResponse):
 	start_date: date | None = None
 	end_date: date | None = None
 	banner_image: str | None = None
+	allow_editing_talks_after_acceptance: bool = False
 	status: str
 	creation: datetime
 	modified: datetime

@@ -225,6 +225,7 @@ def create_talk_proposal_statuses():
 		{"name": "Rejected", "color": "Red"},
 		{"name": "Replied", "color": "Blue"},
 		{"name": "Duplicate", "color": "Gray"},
+		{"name": "Withdrawn", "color": "Gray"},
 	]
 
 	for status in statuses:

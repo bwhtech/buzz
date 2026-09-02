@@ -31,6 +31,7 @@ def my_proposals() -> list[ProposalListItem]:
 			"event.start_date",
 			"event.end_date",
 			"event.banner_image",
+			"event.allow_editing_talks_after_acceptance",
 			"status",
 			"creation",
 			"modified",
