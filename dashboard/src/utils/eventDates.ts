@@ -13,9 +13,18 @@ export function alignedEndDate(startDate: string, endDate: string): string {
 	return !endDate || endDate < startDate ? startDate : endDate
 }
 
-/** `HH:mm` and `HH:mm:ss` both reach here; padded, they compare correctly as text. */
-function normalizedTime(time: string): string {
-	return time.length === 5 ? `${time}:00` : time
+/**
+ * A time widened to `HH:mm:ss`, so times compare correctly as text.
+ *
+ * Two sources feed this. The pickers emit `HH:mm`, which only wants its seconds. The API
+ * renders a Time field through frappe's `format_timedelta`, which pads the minutes and
+ * seconds but not the hour — 9am arrives as `9:00:00`, and unpadded it sorts after every
+ * afternoon time.
+ */
+export function normalizedTime(time: string): string {
+	if (!time) return time
+	const [hour = "", minute = "00", second = "00"] = time.split(":")
+	return `${hour.padStart(2, "0")}:${minute}:${second}`
 }
 
 /**
