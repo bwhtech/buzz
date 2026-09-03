@@ -116,6 +116,7 @@ DETAIL_FIELDS = (
 	"title",
 	"route",
 	"team",
+	"modified",
 	"start_date",
 	"end_date",
 	"start_time",

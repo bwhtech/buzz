@@ -54,7 +54,7 @@ watch(image, () => {
 		:validate-file="validateImage"
 		@success="(file: { file_url: string }) => (image = file.file_url)"
 	>
-		<template #default="{ openFileSelector, error: uploadError }">
+		<template #default="{ openFileSelector, uploading, error: uploadError }">
 			<!-- The whole banner is the hit area; the button inside stays the -->
 			<!-- keyboard-reachable control, so its press must not fire twice. -->
 			<div
@@ -86,13 +86,24 @@ watch(image, () => {
 					@load="loaded = true"
 				/>
 
-				<div class="absolute inset-0 grid place-items-center">
+				<div class="absolute inset-0 flex items-center justify-center gap-2">
 					<Button
 						variant="subtle"
 						icon-left="lucide-image-up"
 						:label="image ? 'Change banner' : 'Add a banner'"
 						:disabled="disabled"
 						@click.stop="openFileSelector"
+					/>
+					<!-- Clearing the field is the whole removal: the event carries the file
+						 by URL, and the seeded pattern is already painted underneath. Gone
+						 mid-upload, because the upload that lands would put a banner back. -->
+					<Button
+						v-if="image && !uploading"
+						variant="subtle"
+						icon="lucide-trash-2"
+						label="Remove banner"
+						:disabled="disabled"
+						@click.stop="image = ''"
 					/>
 				</div>
 			</div>

@@ -371,6 +371,7 @@ class TestGetEvent(IntegrationTestCase):
 		self.assertEqual(detail["medium"], "Online")
 		self.assertEqual(detail["meeting_link"], "https://example.com/join")
 		self.assertIsNone(detail["venue"])
+		self.assertTrue(detail["modified"])
 
 	def test_resolves_the_venue_with_its_address(self):
 		venue = frappe.get_doc(

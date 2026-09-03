@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useClipboard } from "@vueuse/core"
 import {
 	Alert,
 	Avatar,
@@ -26,6 +25,7 @@ import {
 import EventHoverCard from "@/components/dashboard/events/EventHoverCard.vue"
 import AddSpeakerDialog from "@/components/dashboard/proposals/AddSpeakerDialog.vue"
 import PhoneInput from "@/components/PhoneInput.vue"
+import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
 import { useProposal } from "@/data/proposals"
 import { session } from "@/data/session"
@@ -148,18 +148,7 @@ async function removeSpeaker() {
 
 const reader = computed(() => userResource.data?.email || session.user)
 
-// legacy: the async clipboard API is refused outside a secure context, and on an
-// http:// host in development that is every time.
-const { copy } = useClipboard({ legacy: true })
-
-async function copyId(id: string) {
-	try {
-		await copy(id)
-		toast.success("Copied to clipboard")
-	} catch {
-		toast.error("Could not copy to clipboard")
-	}
-}
+const copyId = useCopyToClipboard()
 
 // One theme per speaker, stable across renders so a face keeps its colour.
 const AVATAR_THEMES = ["blue", "green", "amber", "red", "violet"] as const
