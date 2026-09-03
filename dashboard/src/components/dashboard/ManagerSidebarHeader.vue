@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { Tooltip, sidebarCollapsedKey } from "frappe-ui"
+import { Avatar, Tooltip, sidebarCollapsedKey } from "frappe-ui"
 import { computed, inject } from "vue"
 import { useRouter } from "vue-router"
-
-import UserMenu from "@/components/UserMenu.vue"
 
 const props = defineProps<{ eventId?: string; eventTitle?: string }>()
 
@@ -20,9 +18,25 @@ const goBack = () => router.push("/manage/events")
 </script>
 
 <template>
-	<UserMenu v-if="!eventId" />
+	<!-- Identity and the way home; the account menu sits in the sidebar footer. -->
+	<Tooltip v-if="!eventId" class="w-full" text="Buzz" side="right" :disabled="!isCollapsed">
+		<router-link
+			to="/manage"
+			class="flex h-12 w-full items-center gap-2 rounded-4 px-1.5 transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:outline-none focus-visible:focus-ring"
+		>
+			<Avatar
+				image="/assets/buzz/images/buzz-logo-rounded.png"
+				label="Buzz"
+				size="lg"
+				shape="square"
+			/>
+			<span v-if="!isCollapsed" class="flex-1 truncate text-base font-medium text-ink-gray-8">
+				Buzz
+			</span>
+		</router-link>
+	</Tooltip>
 
-	<Tooltip v-else class="w-full" text="Back to events" placement="right" :disabled="!isCollapsed">
+	<Tooltip v-else class="w-full" text="Back to events" side="right" :disabled="!isCollapsed">
 		<button
 			aria-label="Back to events"
 			class="group flex h-12 w-full items-center gap-1.5 rounded-4 px-1 transition duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:outline-none focus-visible:focus-ring"

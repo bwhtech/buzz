@@ -27,30 +27,27 @@ const themes = [
 </script>
 
 <template>
-	<Popover match-trigger-width side="bottom" align="start">
+	<Popover match-trigger-width side="top" align="start">
 		<template #trigger="{ open: isOpen }">
 			<button
 				aria-label="Account menu"
-				class="flex h-12 w-full items-center gap-2 rounded-4 px-1.5 transition-colors duration-150 hover:bg-surface-gray-2 focus-visible:outline-none focus-visible:focus-ring"
+				class="flex h-12 w-full items-center gap-2 rounded-4 px-1.5 transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:outline-none focus-visible:focus-ring"
 				:class="{ 'bg-surface-gray-2': isOpen }"
 			>
-				<Tooltip text="Buzz" placement="right" :disabled="!isCollapsed">
-					<Avatar
-						image="/assets/buzz/images/buzz-logo-rounded.png"
-						label="Buzz"
-						size="lg"
-						shape="square"
-					/>
+				<Tooltip :text="session.fullName" side="right" :disabled="!isCollapsed">
+					<Avatar :image="session.userImage ?? undefined" :label="session.fullName" size="lg" />
 				</Tooltip>
 				<span
-					class="flex min-w-0 flex-col text-left transition-all ease-in-out"
+					class="flex min-w-0 flex-col text-left transition-opacity duration-150 ease-out"
 					:class="isCollapsed ? 'w-0 flex-none overflow-hidden opacity-0' : 'flex-1 opacity-100'"
 				>
-					<span class="truncate text-base font-medium text-ink-gray-8">Buzz</span>
-					<span class="truncate text-sm text-ink-gray-6">{{ session.fullName }}</span>
+					<span class="truncate text-base font-medium text-ink-gray-8">
+						{{ session.fullName }}
+					</span>
+					<span class="truncate text-sm text-ink-gray-6">{{ session.user }}</span>
 				</span>
 				<span
-					class="lucide-chevron-down size-4 shrink-0 text-ink-gray-5 transition-all ease-in-out"
+					class="lucide-chevrons-up-down size-4 shrink-0 text-ink-gray-5 transition-opacity duration-150 ease-out"
 					:class="{ 'w-0 overflow-hidden opacity-0': isCollapsed }"
 				/>
 			</button>
