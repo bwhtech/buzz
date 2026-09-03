@@ -170,17 +170,14 @@ async function save() {
 				</section>
 
 				<div class="space-y-8 md:col-span-2">
-					<section class="space-y-3">
-						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">When</h2>
-						<EventSchedule
-							:disabled="!canCreate"
-							v-model:start-date="startDate"
-							v-model:start-time="startTime"
-							v-model:end-date="endDate"
-							v-model:end-time="endTime"
-							v-model:time-zone="timeZone"
-						/>
-					</section>
+					<EventSchedule
+						:disabled="!canCreate"
+						v-model:start-date="startDate"
+						v-model:start-time="startTime"
+						v-model:end-date="endDate"
+						v-model:end-time="endTime"
+						v-model:time-zone="timeZone"
+					/>
 
 					<section class="space-y-8">
 						<label class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">
