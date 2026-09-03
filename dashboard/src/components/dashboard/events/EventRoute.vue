@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { watchDebounced } from "@vueuse/core"
-import { computed, onBeforeUnmount, ref, watch } from "vue"
+import { computed, ref, watch } from "vue"
 
+import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { checkEventRoute } from "@/data/events"
 
 // The route the event already answers to, which is the one that opens and copies —
@@ -39,19 +40,11 @@ watchDebounced(
 
 watch(availability, (answer) => (taken.value = Boolean(answer) && !answer?.available))
 
-// The icon carries the confirmation, so this needs no toast on top of it.
-const justCopied = ref(false)
-let clearCopied: ReturnType<typeof setTimeout>
+const copyToClipboard = useCopyToClipboard()
 
-async function copy() {
-	// The path the link opens, not the shorthand the chip reads.
-	await navigator.clipboard.writeText(`${window.location.origin}${publicPath.value}`)
-	justCopied.value = true
-	clearTimeout(clearCopied)
-	clearCopied = setTimeout(() => (justCopied.value = false), 1500)
-}
-
-onBeforeUnmount(() => clearTimeout(clearCopied))
+// The path the link opens, not the shorthand the field reads.
+const copy = () =>
+	copyToClipboard(`${window.location.origin}${publicPath.value}`, "Event link copied")
 </script>
 
 <template>
@@ -76,12 +69,7 @@ onBeforeUnmount(() => clearTimeout(clearCopied))
 					class="rounded-4 p-1 text-ink-gray-5 transition-[color,transform] duration-150 ease-out hover:text-ink-gray-8 active:scale-95 motion-reduce:transition-none"
 					@click="copy"
 				>
-					<!-- Swapped, not crossfaded: at this size a fade reads as a flicker. -->
-					<span
-						class="block size-4"
-						:class="justCopied ? 'lucide-check text-ink-gray-6' : 'lucide-copy'"
-						aria-hidden="true"
-					/>
+					<span class="lucide-copy block size-4" aria-hidden="true" />
 				</button>
 			</div>
 		</div>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Button, FormControl, toast } from "frappe-ui"
+import { Button, FormControl } from "frappe-ui"
 import { computed } from "vue"
 
 import EventLocation from "@/components/dashboard/events/EventLocation.vue"
+import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { venues } from "@/data/venues"
 
 // The two values Buzz Event's `medium` select takes.
@@ -38,10 +39,9 @@ function pick(value: string) {
 	else meetingLink.value = ""
 }
 
-async function copyLink() {
-	await navigator.clipboard.writeText(meetingLink.value)
-	toast.success("Link copied")
-}
+const copyToClipboard = useCopyToClipboard()
+
+const copyLink = () => copyToClipboard(meetingLink.value, "Meeting link copied")
 </script>
 
 <template>

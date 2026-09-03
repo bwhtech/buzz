@@ -86,13 +86,23 @@ watch(image, () => {
 					@load="loaded = true"
 				/>
 
-				<div class="absolute inset-0 grid place-items-center">
+				<div class="absolute inset-0 flex items-center justify-center gap-2">
 					<Button
 						variant="subtle"
 						icon-left="lucide-image-up"
 						:label="image ? 'Change banner' : 'Add a banner'"
 						:disabled="disabled"
 						@click.stop="openFileSelector"
+					/>
+					<!-- Clearing the field is the whole removal: the event carries the file
+						 by URL, and the seeded pattern is already painted underneath. -->
+					<Button
+						v-if="image"
+						variant="subtle"
+						icon="lucide-trash-2"
+						label="Remove banner"
+						:disabled="disabled"
+						@click.stop="image = ''"
 					/>
 				</div>
 			</div>

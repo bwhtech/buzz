@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useEventListener } from "@vueuse/core"
 import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
 import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
@@ -92,6 +93,14 @@ onMounted(() => window.addEventListener("beforeunload", warnOnUnload))
 onBeforeUnmount(() => window.removeEventListener("beforeunload", warnOnUnload))
 onBeforeRouteLeave(() => !isDirty.value || window.confirm(LEAVE_WARNING))
 
+// The page's own save takes the shortcut the browser would otherwise spend on saving the
+// document — swallowed even with nothing to commit, so it never surprises mid-edit.
+useEventListener(document, "keydown", (stroke: KeyboardEvent) => {
+	if (stroke.key !== "s" || !(stroke.metaKey || stroke.ctrlKey) || stroke.altKey) return
+	stroke.preventDefault()
+	if (!stroke.repeat) save()
+})
+
 function discard() {
 	if (event.data) fill(event.data)
 }
@@ -100,7 +109,7 @@ function discard() {
 const errorMessage = computed(() => (updateEvent.error as FrappeError | null)?.messages?.join("\n"))
 
 async function save() {
-	if (!canSave.value) return
+	if (!canSave.value || updateEvent.loading) return
 
 	// A blank date or venue has to reach the server as null, not "".
 	const fieldname = Object.fromEntries(
