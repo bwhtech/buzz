@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
 import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
-import { computed, reactive, ref, watch } from "vue"
-import { useRoute } from "vue-router"
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
+import { onBeforeRouteLeave, useRoute } from "vue-router"
 
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
 import EventMedium from "@/components/dashboard/events/EventMedium.vue"
@@ -11,6 +11,7 @@ import EventRoute from "@/components/dashboard/events/EventRoute.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
 import { eventDetail, updateEvent } from "@/data/events"
 import type { EventDetail, FrappeError } from "@/types"
+import { isEndBeforeStart } from "@/utils/eventDates"
 
 const route = useRoute()
 const eventId = route.params.eventId as string
@@ -57,7 +58,9 @@ function fill(detail: EventDetail) {
 		venue: detail.venue?.name ?? "",
 		meeting_link: detail.meeting_link ?? "",
 	})
-	saved.value = JSON.stringify(form)
+	// The editor rewrites its own HTML once it mounts, so the baseline is taken after
+	// that settles — otherwise the page loads already dirty.
+	nextTick().then(() => (saved.value = JSON.stringify(form)))
 }
 
 watch(
@@ -67,10 +70,37 @@ watch(
 
 const isDirty = computed(() => JSON.stringify(form) !== saved.value)
 
+// The server refuses both of these, so the page should not spend a round trip finding out.
+const routeTaken = ref(false)
+const canSave = computed(
+	() =>
+		isDirty.value &&
+		!routeTaken.value &&
+		!isEndBeforeStart(form.start_date, form.end_date, form.start_time, form.end_time),
+)
+
+// Nothing here autosaves, so leaving with edits in hand has to be deliberate.
+const LEAVE_WARNING = "You have unsaved changes. Leave without saving?"
+
+function warnOnUnload(unload: BeforeUnloadEvent) {
+	if (!isDirty.value) return
+	unload.preventDefault()
+}
+
+onMounted(() => window.addEventListener("beforeunload", warnOnUnload))
+onBeforeUnmount(() => window.removeEventListener("beforeunload", warnOnUnload))
+onBeforeRouteLeave(() => !isDirty.value || window.confirm(LEAVE_WARNING))
+
+function discard() {
+	if (event.data) fill(event.data)
+}
+
 // createResource types its error as {}, so the message needs narrowing.
 const errorMessage = computed(() => (updateEvent.error as FrappeError | null)?.messages?.join("\n"))
 
 async function save() {
+	if (!canSave.value) return
+
 	// A blank date or venue has to reach the server as null, not "".
 	const fieldname = Object.fromEntries(
 		Object.entries(form).map(([field, value]) => [field, value === "" ? null : value]),
@@ -80,83 +110,87 @@ async function save() {
 	if (updateEvent.error) return
 
 	saved.value = JSON.stringify(form)
+	// The header's modified badge and the route's open/copy links all read the fetched
+	// document, so they stay wrong until it is refetched.
+	await event.reload()
 	toast.success("Event saved")
 }
 </script>
 
 <template>
-	<EventPageHeader :title="event.data?.title" section="Details">
-		<Button
-			v-if="isDirty"
-			variant="solid"
-			label="Save"
-			:loading="updateEvent.loading"
-			@click="save"
-		/>
+	<EventPageHeader :title="event.data?.title" section="Details" :modified="event.data?.modified">
+		<template v-if="isDirty">
+			<Button label="Discard" @click="discard" />
+			<Button
+				variant="solid"
+				label="Save"
+				:disabled="!canSave"
+				:loading="updateEvent.loading"
+				@click="save"
+			/>
+		</template>
 	</EventPageHeader>
 
-	<div v-if="event.data" class="m-auto max-w-[800px] w-full py-8 px-4 space-y-8">
+	<div v-if="event.data" class="m-auto w-full max-w-[800px] space-y-8 px-4 py-8">
 		<ErrorMessage v-if="errorMessage" :message="errorMessage" />
 
 		<EventBanner v-model="form.banner_image" :seed="form.title" />
 
-		<div class="space-y-2">
-			<div class="flex items-start justify-between gap-4">
-				<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
-				<input
-					v-model="form.title"
-					aria-label="Event title"
-					placeholder="Name your event"
-					class="min-w-0 flex-1 bg-transparent text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none"
-				/>
-				<EventRoute
-					v-model="form.route"
-					:event="eventId"
-					:saved="event.data.route"
-					class="shrink-0"
-				/>
-			</div>
-			<!-- Ghost variant: no border, so it reads as a subtitle under the name. -->
-			<Textarea
-				v-model="form.short_description"
-				variant="ghost"
-				:rows="2"
-				aria-label="Short description"
-				placeholder="Add a small description"
-				class="!border-0 resize-none px-0 text-ink-gray-6 bg-transparent"
-			/>
-		</div>
-
 		<div class="grid gap-8 md:grid-cols-5">
-			<section class="space-y-3 md:col-span-3">
-				<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
-				<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
-					 itself: the height and scrolling land on the editable area rather than on a
-					 wrapper, and the whole box takes a click. -->
-				<div class="rounded-6 border border-outline-gray-2 p-3">
-					<Editor
-						v-model="form.about"
-						:extensions="[RichTextKit]"
-						placeholder="What is this event about?"
-					>
-						<EditorContent
-							class="prose-sm h-48 max-w-none overflow-y-auto text-ink-gray-8 focus:outline-none"
-						/>
-					</Editor>
+			<div class="space-y-8 md:col-span-3">
+				<div class="space-y-2">
+					<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
+					<input
+						v-model="form.title"
+						aria-label="Event title"
+						placeholder="Name your event"
+						class="w-full bg-transparent text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none"
+					/>
+					<!-- Ghost variant: no border, so it reads as a subtitle under the name. -->
+					<Textarea
+						v-model="form.short_description"
+						variant="ghost"
+						:rows="2"
+						aria-label="Short description"
+						placeholder="Add a small description"
+						class="!border-0 resize-none !px-0 text-ink-gray-6 bg-transparent"
+					/>
 				</div>
-			</section>
+
+				<section class="space-y-3">
+					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
+					<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
+						 itself: the height and scrolling land on the editable area rather than on a
+						 wrapper, and the whole box takes a click. -->
+					<div class="rounded-6 border border-outline-gray-2 p-3">
+						<Editor
+							v-model="form.about"
+							:extensions="[RichTextKit]"
+							placeholder="What is this event about?"
+						>
+							<EditorContent
+								class="prose-sm h-48 max-w-none overflow-y-auto text-ink-gray-8 focus:outline-none"
+							/>
+						</Editor>
+					</div>
+				</section>
+			</div>
 
 			<div class="space-y-8 md:col-span-2">
-				<section class="space-y-3">
-					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">When</h2>
-					<EventSchedule
-						v-model:start-date="form.start_date"
-						v-model:start-time="form.start_time"
-						v-model:end-date="form.end_date"
-						v-model:end-time="form.end_time"
-						v-model:time-zone="form.time_zone"
-					/>
-				</section>
+				<EventRoute
+					v-model="form.route"
+					v-model:taken="routeTaken"
+					:event="eventId"
+					:saved="event.data.route"
+				/>
+
+				<EventSchedule
+					v-model:start-date="form.start_date"
+					v-model:start-time="form.start_time"
+					v-model:end-date="form.end_date"
+					v-model:end-time="form.end_time"
+					v-model:time-zone="form.time_zone"
+				/>
 
 				<section class="space-y-3">
 					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
