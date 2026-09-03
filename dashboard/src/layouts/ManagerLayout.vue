@@ -1,25 +1,15 @@
 <script setup lang="ts">
-import { StorageSerializers, useStorage } from "@vueuse/core"
-import {
-	DesktopShell,
-	PageHeaderTarget,
-	Sidebar,
-	SidebarCollapseToggle,
-	SidebarItem,
-} from "frappe-ui"
+import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import ManagerSidebarHeader from "@/components/dashboard/ManagerSidebarHeader.vue"
+import UserMenu from "@/components/UserMenu.vue"
 import { useTeamAccess } from "@/composables/useTeamAccess"
 import { eventDetail } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
 import NotFound from "@/pages/NotFound.vue"
 
-// `null` keeps the sidebar's own rule: collapsed below `sm`, until the toggle overrides it.
-const collapsed = useStorage<boolean | null>("buzz-sidebar-collapsed", null, undefined, {
-	serializer: StorageSerializers.boolean,
-})
 const route = useRoute()
 
 const access = useTeamAccess()
@@ -89,7 +79,7 @@ const items = computed(() => {
 	<!-- scroll=false: the rounded panel below owns its own scroll. -->
 	<DesktopShell v-else-if="access === 'granted'" :scroll="false">
 		<template #sidebar>
-			<Sidebar v-model:collapsed="collapsed">
+			<Sidebar>
 				<!-- px-1: puts the header mark on the item-icon centerline, in both states.
 				     h-14 holds the height while both states overlap mid-transition. -->
 				<div class="nav-stage relative h-14 shrink-0">
@@ -122,12 +112,12 @@ const items = computed(() => {
 				</div>
 
 				<div class="mt-auto px-2 py-2">
-					<SidebarCollapseToggle />
+					<UserMenu />
 				</div>
 			</Sidebar>
 		</template>
 
-		<div class="flex flex-col h-full min-h-0 bg-surface-sidebar py-2 pl-2">
+		<div class="flex flex-col h-full min-h-0 bg-surface-sidebar py-2 pl-1">
 			<div
 				class="flex h-full flex-col overflow-hidden rounded-l-6 bg-surface-elevation-1 shadow-base"
 			>
