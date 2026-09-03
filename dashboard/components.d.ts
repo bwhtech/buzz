@@ -37,6 +37,7 @@ declare module 'vue' {
     EventCard: typeof import('./src/components/dashboard/events/EventCard.vue')['default']
     EventCountdownPill: typeof import('./src/components/dashboard/events/EventCountdownPill.vue')['default']
     EventDetailsHeader: typeof import('./src/components/EventDetailsHeader.vue')['default']
+    EventDetailsSkeleton: typeof import('./src/components/dashboard/events/EventDetailsSkeleton.vue')['default']
     EventDrawer: typeof import('./src/components/dashboard/events/EventDrawer.vue')['default']
     EventGuestItem: typeof import('./src/components/dashboard/events/EventGuestItem.vue')['default']
     EventHoverCard: typeof import('./src/components/dashboard/events/EventHoverCard.vue')['default']

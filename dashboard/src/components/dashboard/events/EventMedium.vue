@@ -59,8 +59,16 @@ async function copyLink() {
 			/>
 		</div>
 
-		<template v-if="isOnline">
-			<div class="flex items-end gap-2">
+		<!-- The two answers are different heights, so the swap moves the column. Opacity
+			 only, and out before in: a height animation here would cost more than it hides. -->
+		<Transition
+			mode="out-in"
+			enter-active-class="transition-opacity duration-100 ease-out motion-reduce:transition-none"
+			enter-from-class="opacity-0"
+			leave-active-class="transition-opacity duration-75 ease-out motion-reduce:transition-none"
+			leave-to-class="opacity-0"
+		>
+			<div v-if="isOnline" class="flex items-end gap-2">
 				<FormControl
 					v-model="meetingLink"
 					class="flex-1"
@@ -75,11 +83,11 @@ async function copyLink() {
 					@click="copyLink"
 				/>
 			</div>
-		</template>
 
-		<template v-else>
-			<EventLocation v-model:venue="venue" :team="team" :show-virtual="false" />
-			<p v-if="address" class="text-base text-ink-gray-5">{{ address }}</p>
-		</template>
+			<div v-else class="flex flex-col gap-3">
+				<EventLocation v-model:venue="venue" :team="team" :show-virtual="false" />
+				<p v-if="address" class="text-base text-ink-gray-5">{{ address }}</p>
+			</div>
+		</Transition>
 	</div>
 </template>

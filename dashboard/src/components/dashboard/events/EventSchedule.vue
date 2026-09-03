@@ -65,7 +65,7 @@ const momentLabel = (date: string, time: string) =>
 const earliestEnd = computed(() => startAt.value || today)
 
 const cellClass =
-	"flex w-full flex-col gap-0.5 px-3 py-2 text-left leading-tight transition-colors hover:bg-surface-gray-1"
+	"flex w-full flex-col gap-0.5 px-3 py-2 text-left leading-tight transition-colors duration-150 ease-out hover:bg-surface-gray-1 active:bg-surface-gray-2 motion-reduce:transition-none"
 
 // The row slot is typed for custom rows too, which carry no value; ours never are.
 const zoneOf = (item: ComboboxSelectableOption | ComboboxCustomOption) => String(item.value ?? "")

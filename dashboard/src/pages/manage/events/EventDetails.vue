@@ -5,6 +5,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { onBeforeRouteLeave, useRoute } from "vue-router"
 
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
+import EventDetailsSkeleton from "@/components/dashboard/events/EventDetailsSkeleton.vue"
 import EventMedium from "@/components/dashboard/events/EventMedium.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventRoute from "@/components/dashboard/events/EventRoute.vue"
@@ -119,90 +120,108 @@ async function save() {
 
 <template>
 	<EventPageHeader :title="event.data?.title" section="Details" :modified="event.data?.modified">
-		<template v-if="isDirty">
-			<Button label="Discard" @click="discard" />
-			<Button
-				variant="solid"
-				label="Save"
-				:disabled="!canSave"
-				:loading="updateEvent.loading"
-				@click="save"
-			/>
-		</template>
+		<!-- These appear mid-edit, so they arrive rather than pop. Exit is quicker than
+			 entry: the save has already happened by then. -->
+		<Transition
+			enter-active-class="transition duration-150 ease-out motion-reduce:transition-none"
+			enter-from-class="opacity-0 translate-y-1"
+			leave-active-class="transition duration-100 ease-out motion-reduce:transition-none"
+			leave-to-class="opacity-0"
+		>
+			<div v-if="isDirty" class="flex items-center gap-2">
+				<Button label="Discard" @click="discard" />
+				<Button
+					variant="solid"
+					label="Save"
+					:disabled="!canSave"
+					:loading="updateEvent.loading"
+					@click="save"
+				/>
+			</div>
+		</Transition>
 	</EventPageHeader>
 
-	<div v-if="event.data" class="m-auto w-full max-w-[800px] space-y-8 px-4 py-8">
-		<ErrorMessage v-if="errorMessage" :message="errorMessage" />
+	<EventDetailsSkeleton v-if="!event.data" />
 
-		<EventBanner v-model="form.banner_image" :seed="form.title" />
+	<Transition
+		enter-active-class="transition-opacity duration-200 ease-out motion-reduce:transition-none"
+		enter-from-class="opacity-0"
+	>
+		<div v-if="event.data" class="m-auto w-full max-w-[800px] space-y-8 px-4 py-8">
+			<ErrorMessage v-if="errorMessage" :message="errorMessage" />
 
-		<div class="grid gap-8 md:grid-cols-5">
-			<div class="space-y-8 md:col-span-3">
-				<div class="space-y-2">
-					<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
-					<input
-						v-model="form.title"
-						aria-label="Event title"
-						placeholder="Name your event"
-						class="w-full bg-transparent text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none"
-					/>
-					<!-- Ghost variant: no border, so it reads as a subtitle under the name. -->
-					<Textarea
-						v-model="form.short_description"
-						variant="ghost"
-						:rows="2"
-						aria-label="Short description"
-						placeholder="Add a small description"
-						class="!border-0 resize-none !px-0 text-ink-gray-6 bg-transparent"
-					/>
-				</div>
+			<EventBanner v-model="form.banner_image" :seed="form.title" />
 
-				<section class="space-y-3">
-					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
-					<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
+			<div class="grid gap-8 md:grid-cols-5">
+				<div class="space-y-8 md:col-span-3">
+					<div class="space-y-2">
+						<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
+						<input
+							v-model="form.title"
+							aria-label="Event title"
+							placeholder="Name your event"
+							class="-mx-1 w-full rounded-4 bg-transparent px-1 text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+						/>
+						<!-- Ghost variant: no border, so it reads as a subtitle under the name. -->
+						<Textarea
+							v-model="form.short_description"
+							variant="ghost"
+							:rows="2"
+							aria-label="Short description"
+							placeholder="Add a small description"
+							class="!border-0 resize-none !px-0 text-ink-gray-6 bg-transparent"
+						/>
+					</div>
+
+					<section class="space-y-3">
+						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
+						<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
 						 itself: the height and scrolling land on the editable area rather than on a
 						 wrapper, and the whole box takes a click. -->
-					<div class="rounded-6 border border-outline-gray-2 p-3">
-						<Editor
-							v-model="form.about"
-							:extensions="[RichTextKit]"
-							placeholder="What is this event about?"
+						<div
+							class="rounded-6 border border-outline-gray-2 p-3 transition-colors duration-150 ease-out focus-within:border-outline-gray-4 motion-reduce:transition-none"
 						>
-							<EditorContent
-								class="prose-sm h-48 max-w-none overflow-y-auto text-ink-gray-8 focus:outline-none"
-							/>
-						</Editor>
-					</div>
-				</section>
-			</div>
+							<Editor
+								v-model="form.about"
+								:extensions="[RichTextKit]"
+								placeholder="What is this event about?"
+							>
+								<EditorContent
+									class="prose-sm h-48 max-w-none overflow-y-auto text-ink-gray-8 focus:outline-none"
+								/>
+							</Editor>
+						</div>
+					</section>
+				</div>
 
-			<div class="space-y-8 md:col-span-2">
-				<EventRoute
-					v-model="form.route"
-					v-model:taken="routeTaken"
-					:event="eventId"
-					:saved="event.data.route"
-				/>
-
-				<EventSchedule
-					v-model:start-date="form.start_date"
-					v-model:start-time="form.start_time"
-					v-model:end-date="form.end_date"
-					v-model:end-time="form.end_time"
-					v-model:time-zone="form.time_zone"
-				/>
-
-				<section class="space-y-3">
-					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
-					<EventMedium
-						v-model:medium="form.medium"
-						v-model:venue="form.venue"
-						v-model:meeting-link="form.meeting_link"
-						:team="event.data.team || ''"
-						:venue-address="event.data.venue?.address"
+				<div class="space-y-8 md:col-span-2">
+					<EventRoute
+						v-model="form.route"
+						v-model:taken="routeTaken"
+						:event="eventId"
+						:saved="event.data.route"
 					/>
-				</section>
+
+					<EventSchedule
+						v-model:start-date="form.start_date"
+						v-model:start-time="form.start_time"
+						v-model:end-date="form.end_date"
+						v-model:end-time="form.end_time"
+						v-model:time-zone="form.time_zone"
+					/>
+
+					<section class="space-y-3">
+						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
+						<EventMedium
+							v-model:medium="form.medium"
+							v-model:venue="form.venue"
+							v-model:meeting-link="form.meeting_link"
+							:team="event.data.team || ''"
+							:venue-address="event.data.venue?.address"
+						/>
+					</section>
+				</div>
 			</div>
 		</div>
-	</div>
+	</Transition>
 </template>

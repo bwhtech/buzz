@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { watchDebounced } from "@vueuse/core"
-import { computed, ref, watch } from "vue"
+import { computed, onBeforeUnmount, ref, watch } from "vue"
 
 import { checkEventRoute } from "@/data/events"
 
@@ -50,6 +50,8 @@ async function copy() {
 	clearTimeout(clearCopied)
 	clearCopied = setTimeout(() => (justCopied.value = false), 1500)
 }
+
+onBeforeUnmount(() => clearTimeout(clearCopied))
 </script>
 
 <template>
@@ -98,17 +100,26 @@ async function copy() {
 			/>
 		</div>
 
-		<p
-			v-if="availability"
-			class="flex items-center gap-1 pt-0.5 text-sm"
-			:class="availability.available ? 'text-ink-green-6' : 'text-ink-red-6'"
+		<!-- The answer lands 400ms after the last keystroke; without this it snaps in and
+			 shoves the column. -->
+		<Transition
+			enter-active-class="transition duration-150 ease-out motion-reduce:transition-none"
+			enter-from-class="opacity-0 -translate-y-0.5"
+			leave-active-class="transition duration-100 ease-out motion-reduce:transition-none"
+			leave-to-class="opacity-0"
 		>
-			<span
-				class="size-3.5 shrink-0"
-				:class="availability.available ? 'lucide-check' : 'lucide-triangle-alert'"
-				aria-hidden="true"
-			/>
-			{{ availability.message }}
-		</p>
+			<p
+				v-if="availability"
+				class="flex items-center gap-1 pt-0.5 text-sm"
+				:class="availability.available ? 'text-ink-green-6' : 'text-ink-red-6'"
+			>
+				<span
+					class="size-3.5 shrink-0"
+					:class="availability.available ? 'lucide-check' : 'lucide-triangle-alert'"
+					aria-hidden="true"
+				/>
+				{{ availability.message }}
+			</p>
+		</Transition>
 	</div>
 </template>
