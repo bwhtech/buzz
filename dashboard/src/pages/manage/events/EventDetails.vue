@@ -65,9 +65,11 @@ function fill(detail: EventDetail) {
 	nextTick().then(() => (saved.value = JSON.stringify(form)))
 }
 
+// A dirty form outranks the fetched document: the refetch after a save would otherwise
+// drop anything typed while it was in flight.
 watch(
 	() => event.data,
-	(detail) => detail && fill(detail),
+	(detail) => detail && !isDirty.value && fill(detail),
 )
 
 const isDirty = computed(() => JSON.stringify(form) !== saved.value)
@@ -115,11 +117,14 @@ async function save() {
 	const fieldname = Object.fromEntries(
 		Object.entries(form).map(([field, value]) => [field, value === "" ? null : value]),
 	)
+	const submitted = JSON.stringify(form)
 
 	await updateEvent.submit({ doctype: "Buzz Event", name: eventId, fieldname })
 	if (updateEvent.error) return
 
-	saved.value = JSON.stringify(form)
+	// What the server now holds, not what the form holds — an edit made while the save
+	// was in flight is still unsaved, and the baseline has to say so.
+	saved.value = submitted
 	// The header's modified badge and the route's open/copy links all read the fetched
 	// document, so they stay wrong until it is refetched.
 	await event.reload()
