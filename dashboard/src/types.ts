@@ -160,6 +160,7 @@ export interface EventDetail {
 	title: string
 	route: string | null
 	team: string | null
+	modified: string
 	start_date: string
 	end_date: string | null
 	start_time: string | null

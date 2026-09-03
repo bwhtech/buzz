@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Literal
 
 from pydantic import Field
@@ -53,6 +53,7 @@ class EventDetail(APIResponse):
 	title: str
 	route: str | None = None
 	team: str | None = None
+	modified: datetime
 	start_date: date
 	end_date: date | None = None
 	start_time: timedelta | None = None
