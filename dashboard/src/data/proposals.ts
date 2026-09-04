@@ -1,6 +1,6 @@
 import { useCall, useDoc } from "frappe-ui"
 
-import type { ProposalListItem, TalkProposal } from "@/types"
+import type { ProposalListItem, ProposalTrend, TalkProposal } from "@/types"
 
 // v2 path: useCall reads the payload from `data`, which /api/method names `message`.
 // Uncached: cacheKey would persist this user's proposals to IndexedDB past a logout.
@@ -21,4 +21,12 @@ export function useProposal(name: () => string | undefined) {
 	// useDoc holds its initial fetch until the name resolves, so the empty string is
 	// only ever the drawer before a card has been picked.
 	return useDoc<TalkProposal>({ doctype: "Talk Proposal", name: () => name() || "" })
+}
+
+// The card above an event's proposal list: how many have come in, and their split.
+export function useProposalTrend(event: string) {
+	return useCall<ProposalTrend, { event: string }>({
+		url: "/api/v2/method/buzz.api.proposals.get_event_proposal_trend",
+		params: { event },
+	})
 }
