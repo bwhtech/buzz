@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Badge, Button, Checkbox, Popover, Select } from "frappe-ui"
+import { Badge, Button, Checkbox, FormControl, Popover, Select } from "frappe-ui"
 import { computed } from "vue"
 
 export interface FilterOption {
@@ -22,8 +22,14 @@ export interface FilterGroup {
 /** Group key to selected values. Within a group the values are OR-ed. */
 export type FilterValues = Record<string, string[]>
 
-const props = defineProps<{ groups: FilterGroup[] }>()
+const props = withDefaults(
+	defineProps<{ groups: FilterGroup[]; searchable?: boolean; searchPlaceholder?: string }>(),
+	{ searchPlaceholder: "Search" },
+)
 const model = defineModel<FilterValues>({ required: true })
+// Free text sits with the filters because it narrows the same list; it stays a separate
+// model, since a search term is one string rather than a group of chosen values.
+const search = defineModel<string>("search", { default: "" })
 
 const quickGroups = computed(() => props.groups.filter((group) => group.quick))
 const panelGroups = computed(() => props.groups.filter((group) => !group.quick))
@@ -58,6 +64,20 @@ const clear = () => (model.value = Object.fromEntries(props.groups.map((group) =
 
 <template>
 	<div class="flex flex-wrap items-center gap-2">
+		<FormControl
+			v-if="searchable"
+			v-model="search"
+			class="min-w-48 flex-1"
+			size="sm"
+			type="text"
+			:placeholder="searchPlaceholder"
+			:aria-label="searchPlaceholder"
+		>
+			<template #prefix>
+				<span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true" />
+			</template>
+		</FormControl>
+
 		<template v-for="group in quickGroups" :key="group.key">
 			<Select
 				v-if="group.single"
@@ -119,7 +139,7 @@ const clear = () => (model.value = Object.fromEntries(props.groups.map((group) =
 			<!-- Hairline rather than a gap: the two read as one control, as in Frappe's own
 			     filter chip. -->
 			<template v-if="anyActive">
-				<span class="h-4 w-px bg-outline-gray-2" aria-hidden="true" />
+				<span class="h-4 w-px bg-surface-gray-3" aria-hidden="true" />
 				<Button
 					size="sm"
 					icon="lucide-x"
