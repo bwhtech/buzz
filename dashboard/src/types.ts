@@ -139,14 +139,45 @@ export interface EventGuest {
 	attendee_name: string | null
 	attendee_email: string | null
 	ticket_type: string | null
+	registered_at: string | null
 	add_ons: GuestAddOn[]
+}
+
+// buzz.api.events.get_event_registration_trend
+export interface DailyRegistrations {
+	date: string
+	ticket_type: string | null
+	count: number
+}
+
+export interface TicketTypeTotal {
+	ticket_type: string | null
+	count: number
+}
+
+export interface RegistrationTrend {
+	total: number
+	per_day: DailyRegistrations[]
+	by_ticket_type: TicketTypeTotal[]
+}
+
+export interface GuestTicketType {
+	name: string
+	title: string | null
 }
 
 export interface EventGuests {
 	title: string | null
+	start_date: string | null
+	start_time: string | null
+	end_date: string | null
+	venue: string | null
 	total: number
+	matched: number
 	registrations_closed: boolean
 	guests: EventGuest[]
+	ticket_types: GuestTicketType[]
+	has_next_page: boolean
 }
 
 export interface EventVenueDetail {

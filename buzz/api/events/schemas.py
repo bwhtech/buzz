@@ -82,14 +82,57 @@ class EventGuest(APIResponse):
 	attendee_name: str | None = None
 	attendee_email: str | None = None
 	ticket_type: str | None = None
+	# When the ticket was raised, which is when this guest registered.
+	registered_at: datetime | None = None
 	add_ons: list[GuestAddOn] = Field(default_factory=list)
+
+
+class GuestTicketType(APIResponse):
+	"""A ticket type the guest list can be narrowed to."""
+
+	name: str
+	title: str | None = None
 
 
 class EventGuestsResponse(APIResponse):
 	title: str | None = None
+	# The event's own details, so a guest row can be drawn as the ticket it is.
+	start_date: date | None = None
+	start_time: timedelta | None = None
+	end_date: date | None = None
+	venue: str | None = None
+	# Everyone registered, then everyone the current search matches — the second is the
+	# first when nothing is being searched for.
 	total: int
+	matched: int
 	registrations_closed: bool
 	guests: list[EventGuest]
+	ticket_types: list[GuestTicketType] = Field(default_factory=list)
+	has_next_page: bool = False
+
+
+class DailyRegistrations(APIResponse):
+	"""One day of one ticket type. A type nobody bought that day is a zero row."""
+
+	date: date
+	ticket_type: str | None = None
+	count: int
+
+
+class TicketTypeTotal(APIResponse):
+	"""Everyone holding one type, over the event's whole life rather than the window."""
+
+	ticket_type: str | None = None
+	count: int
+
+
+class RegistrationTrend(APIResponse):
+	"""How registration has run, for a card that shows the count and its shape."""
+
+	total: int
+	per_day: list[DailyRegistrations]
+	# All-time, like `total` — the window is a shape over time, a tier is a share of a whole.
+	by_ticket_type: list[TicketTypeTotal] = Field(default_factory=list)
 
 
 class RouteAvailability(APIResponse):
