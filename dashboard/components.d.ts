@@ -49,6 +49,7 @@ declare module 'vue' {
     EventRoute: typeof import('./src/components/dashboard/events/EventRoute.vue')['default']
     EventSchedule: typeof import('./src/components/dashboard/events/EventSchedule.vue')['default']
     EventSelector: typeof import('./src/components/EventSelector.vue')['default']
+    EventTalkProposalDrawer: typeof import('./src/components/dashboard/proposals/EventTalkProposalDrawer.vue')['default']
     FilterBar: typeof import('./src/components/common/filters/FilterBar.vue')['default']
     FormFieldSections: typeof import('./src/components/FormFieldSections.vue')['default']
     GuestInfoDrawer: typeof import('./src/components/dashboard/events/GuestInfoDrawer.vue')['default']

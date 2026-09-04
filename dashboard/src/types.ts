@@ -41,6 +41,41 @@ export interface ProposalListItem {
 	speakers: ProposalSpeaker[]
 }
 
+// buzz.api.proposals.get_event_proposals: one page of an event's own pipeline.
+export interface EventProposals {
+	title: string | null
+	total: number
+	matched: number
+	proposals: ProposalListItem[]
+	has_next_page: boolean
+	// Read access alone is a Viewer or Frontdesk, who cannot change a status.
+	can_write: boolean
+}
+
+// buzz.api.proposals.accept_proposal
+export interface AcceptedProposal {
+	proposal: string
+	status: string
+	talk: string
+}
+
+// buzz.api.proposals.get_event_proposal_trend
+export interface DailySubmissions {
+	date: string
+	count: number
+}
+
+export interface StatusTotal {
+	status: string
+	count: number
+}
+
+export interface ProposalTrend {
+	total: number
+	per_day: DailySubmissions[]
+	by_status: StatusTotal[]
+}
+
 // A proposal whose event row still resolves — the only kind the timeline can place.
 export type ProposalWithEvent = ProposalListItem & { event_title: string; start_date: string }
 

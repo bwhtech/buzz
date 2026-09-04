@@ -51,6 +51,11 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/events/EventGuests.vue"),
 			},
 			{
+				path: "events/:eventId/talks",
+				name: "event-talks",
+				component: () => import("@/pages/manage/events/EventTalks.vue"),
+			},
+			{
 				path: "events/:eventId/:section",
 				component: () => import("@/pages/manage/WorkInProgress.vue"),
 			},

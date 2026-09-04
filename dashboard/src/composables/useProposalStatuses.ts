@@ -61,6 +61,17 @@ const statuses = createListResource({
 	auto: true,
 })
 
+// Tailwind emits only the classes it can see, so the dot colours are written out per
+// theme rather than interpolated. The `ink` scale is registered as a text colour, not a
+// background one, so the token is reached through its variable.
+const THEME_DOTS: Record<BadgeTheme, string> = {
+	blue: "bg-[--ink-blue-5]",
+	red: "bg-[--ink-red-5]",
+	green: "bg-[--ink-green-5]",
+	amber: "bg-[--ink-amber-5]",
+	gray: "bg-[--ink-gray-5]",
+}
+
 export function useProposalStatuses() {
 	const getStatusTheme = (status: string): BadgeTheme => {
 		const row = statuses.data?.find(
@@ -74,7 +85,9 @@ export function useProposalStatuses() {
 
 	const getStatusIcon = (status: string): string => STATUS_ICONS[status] ?? FALLBACK_ICON
 
+	const getStatusDot = (status: string): string => THEME_DOTS[getStatusTheme(status)]
+
 	const getStatusMessage = (status: string): string => STATUS_MESSAGES[status] ?? FALLBACK_MESSAGE
 
-	return { statuses, getStatusTheme, getStatusIcon, getStatusMessage }
+	return { statuses, getStatusTheme, getStatusIcon, getStatusDot, getStatusMessage }
 }

@@ -78,7 +78,10 @@ test.describe("Event workspace", () => {
 		await page.getByRole("link", { name: "Talks" }).click()
 
 		await expect(page).toHaveURL(/\/b\/manage\/events\/\d+\/talks$/)
-		await expect(page.getByText("Work in progress")).toBeVisible()
+		// Heading rather than text: the sidebar link is named Talks too.
+		await expect(page.getByRole("heading", { name: "Talks", level: 2 })).toBeVisible({
+			timeout: 15000,
+		})
 	})
 
 	test("leaves the workspace through the back button", async ({ page }) => {
@@ -250,13 +253,14 @@ test.describe("Guest list", () => {
 		expect(registrations).toBe(GUESTS.length)
 		await expect(page.getByText(/Registrations (are open|have closed)/)).toBeVisible()
 
-		// Sorted by name, so Ada is first, and she is the one holding the add-on. Both the
-		// ticket type and the add-on are autonamed, so a docname here would read as a bare
-		// number.
-		await expect(rows.first()).toContainText(GUESTS[0].email)
-		await expect(rows.first()).toContainText(TICKET_TYPE)
-		await expect(rows.first()).toContainText(ADD_ON)
-		await expect(rows.last()).not.toContainText(ADD_ON)
+		// Newest registration first, which is the reverse of the seeding above — so each
+		// row is found by its guest rather than by a position the sort order decides. Both
+		// the ticket type and the add-on are autonamed, so a docname here would read as a
+		// bare number.
+		const withAddOn = rows.filter({ hasText: GUESTS[0].email })
+		await expect(withAddOn).toContainText(TICKET_TYPE)
+		await expect(withAddOn).toContainText(ADD_ON)
+		await expect(rows.filter({ hasText: GUESTS[1].email })).not.toContainText(ADD_ON)
 	})
 
 	test("narrows the guest list by search", async ({ page }) => {
@@ -265,7 +269,7 @@ test.describe("Guest list", () => {
 		const rows = page.getByRole("list").getByRole("listitem")
 		await expect(rows).toHaveCount(GUESTS.length, { timeout: 15000 })
 
-		const search = page.getByRole("textbox", { name: "Search guests" })
+		const search = page.getByRole("textbox", { name: "Search by name or email" })
 		await search.fill(GUESTS[1].email)
 		await expect(rows).toHaveCount(1)
 		await expect(rows.first()).toContainText(GUESTS[1].email)

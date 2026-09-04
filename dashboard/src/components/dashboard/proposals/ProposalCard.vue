@@ -9,7 +9,10 @@ import { userResource } from "@/data/user"
 import type { ProposalWithEvent } from "@/types"
 import { speakerByline } from "@/utils/speakerByline"
 
-const props = defineProps<{ proposal: ProposalWithEvent }>()
+// The event line is noise on a page that is already scoped to one event.
+const props = withDefaults(defineProps<{ proposal: ProposalWithEvent; showEvent?: boolean }>(), {
+	showEvent: true,
+})
 
 const emit = defineEmits<{ open: [] }>()
 
@@ -79,7 +82,7 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 						</template>
 						<span class="ml-0.5">{{ proposal.status }}</span>
 					</Badge>
-					<p class="text-base text-ink-gray-7">
+					<p v-if="showEvent" class="text-base text-ink-gray-7">
 						For
 						<EventHoverCard
 							class="text-ink-gray-8"
