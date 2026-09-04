@@ -140,7 +140,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 					:sparkline="{ data: perDay, type: 'line', color: PROPOSAL_VIOLET }"
 				/>
 
-				<div v-if="showStatuses && !trend.error" class="h-64 w-full">
+				<div v-if="showStatuses && !trend.error" class="status-donut h-64 w-full">
 					<DonutChart
 						title="Review status"
 						:data="byStatus"
@@ -237,3 +237,12 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 		@changed="page.reload()"
 	/>
 </template>
+
+<style scoped>
+/* DonutChart renders its legend whenever there is more than one slice, with no prop to
+   turn it off. Seven statuses make a wrapping row taller than the ring it explains; the
+   tooltip still names every slice. */
+.status-donut :deep([data-slot="chart-legend"]) {
+	display: none;
+}
+</style>
