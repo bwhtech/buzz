@@ -185,6 +185,9 @@ const fields = computed(() => [
 		<DrawerContent size="lg">
 			<template v-if="proposal">
 				<div class="flex items-center gap-2 p-4 pb-0">
+					<DrawerClose as-child>
+						<Button size="sm" icon="lucide-chevrons-right" aria-label="Close" />
+					</DrawerClose>
 					<button
 						type="button"
 						class="cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5"
@@ -193,9 +196,6 @@ const fields = computed(() => [
 					>
 						#{{ proposal.name }}
 					</button>
-					<DrawerClose as-child>
-						<Button class="ml-auto" variant="ghost" size="sm" icon="lucide-x" aria-label="Close" />
-					</DrawerClose>
 				</div>
 
 				<div class="flex flex-1 flex-col space-y-4 overflow-y-auto p-4">

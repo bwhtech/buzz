@@ -66,12 +66,7 @@ const ticket = computed<TicketWithEvent | null>(() => {
 			<template v-if="guest">
 				<div class="flex items-center gap-1 p-4 pb-0">
 					<DrawerClose as-child>
-						<Button
-							variant="ghost"
-							size="sm"
-							icon="lucide-chevrons-right"
-							aria-label="Close guest"
-						/>
+						<Button size="sm" icon="lucide-chevrons-right" aria-label="Close guest" />
 					</DrawerClose>
 
 					<!-- Paging sits at the far end, so the list can be walked without going back
