@@ -169,7 +169,7 @@ const ticket = computed<TicketWithEvent | null>(() => {
 							<dd class="flex min-w-0 flex-wrap gap-1.5">
 								<Badge
 									v-for="addOn in guest.add_ons"
-									:key="addOn.title"
+									:key="`${addOn.title}: ${addOn.value}`"
 									theme="blue"
 									variant="subtle"
 									:label="addOn.value ? `${addOn.title}: ${addOn.value}` : addOn.title"

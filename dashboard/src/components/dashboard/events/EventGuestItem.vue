@@ -10,7 +10,9 @@ const emit = defineEmits<{ open: [] }>()
 
 // A ticket can be issued before anyone is named on it, so the email is the fallback
 // and the row never renders blank.
-const name = props.guest.attendee_name || props.guest.attendee_email || "Unnamed guest"
+const name = computed(
+	() => props.guest.attendee_name || props.guest.attendee_email || "Unnamed guest",
+)
 
 // Two badges is what a row fits beside a name and an email; the rest collapse into a
 // count so a guest with five add-ons cannot push the row wider than the list.
@@ -46,7 +48,7 @@ const hidden = computed(() => props.guest.add_ons.slice(VISIBLE_ADD_ONS))
 			<span class="flex shrink-0 items-center gap-1.5">
 				<Badge
 					v-for="addOn in shown"
-					:key="addOn.title"
+					:key="label(addOn)"
 					theme="blue"
 					variant="subtle"
 					:label="label(addOn)"

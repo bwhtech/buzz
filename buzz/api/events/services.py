@@ -195,10 +195,10 @@ def ticket_type_filter(ticket_types: str | None) -> list[str]:
 
 def ensure_guest_list_access(event: str) -> None:
 	"""Read access to the event's team is the bar for everything about its guests."""
-	team = frappe.db.get_value("Buzz Event", event, "team")
 	if not frappe.db.exists("Buzz Event", event):
 		EventNotFound.throw()
 
+	team = frappe.db.get_value("Buzz Event", event, "team")
 	if not has_team_access(team, "read", frappe.session.user):
 		CannotManageEvent.throw()
 
@@ -245,19 +245,12 @@ def event_guests(
 	# Event Ticket Type is autonamed, so the link value is a number nobody recognises.
 	type_titles = titles_of("Event Ticket Type", {ticket.ticket_type for ticket in tickets})
 
-	guests = [
-		# `creation` is popped rather than passed on: the response names it registered_at,
-		# and the model forbids a field it does not declare.
-		EventGuest(
-			**ticket
-			| {
-				"ticket_type": type_titles.get(ticket.ticket_type) or ticket.ticket_type,
-				"registered_at": ticket.pop("creation"),
-			},
-			add_ons=by_ticket.get(ticket.name, []),
-		)
-		for ticket in tickets
-	]
+	for ticket in tickets:
+		# The response names it registered_at, and the model forbids a field it does not declare.
+		ticket["registered_at"] = ticket.pop("creation")
+		ticket["ticket_type"] = type_titles.get(ticket.ticket_type) or ticket.ticket_type
+
+	guests = [EventGuest(**ticket, add_ons=by_ticket.get(ticket.name, [])) for ticket in tickets]
 	doc = frappe.get_cached_doc("Buzz Event", event)
 	total = count_tickets({"event": event, "docstatus": 1})
 	matched = count_tickets(filters, or_filters) if or_filters or chosen_types else total

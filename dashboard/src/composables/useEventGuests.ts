@@ -47,10 +47,16 @@ export function useEventGuests(
 		},
 	})
 
-	watch([debouncedSearch, order, ticketTypes], () => {
-		start.value = 0
-		guests.value = []
-	})
+	// Sync, so the offset is back at zero before useCall's own watcher rebuilds the URL —
+	// a pre-flush reset lets the stale offset go out as a request that is aborted a tick later.
+	watch(
+		[debouncedSearch, order, ticketTypes],
+		() => {
+			start.value = 0
+			guests.value = []
+		},
+		{ flush: "sync" },
+	)
 
 	const loadMore = () => {
 		if (page.loading || !page.data?.has_next_page) return

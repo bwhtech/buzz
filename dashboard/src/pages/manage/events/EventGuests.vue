@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
 import { useRouteQuery } from "@vueuse/router"
+import { ErrorMessage } from "frappe-ui"
 import { DonutChart, NumberCard } from "frappe-ui/charts"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
@@ -13,6 +14,7 @@ import GuestInfoDrawer from "@/components/dashboard/events/GuestInfoDrawer.vue"
 import { type GuestOrder, useEventGuests } from "@/composables/useEventGuests"
 import { useUrlFilters } from "@/composables/useUrlFilters"
 import { useRegistrationTrend } from "@/data/events"
+import type { FrappeError } from "@/types"
 
 const route = useRoute()
 const eventId = route.params.eventId as string
@@ -28,10 +30,9 @@ const search = computed<string>({
 	set: (term) => (searchParam.value = term.trim() ? term : null),
 })
 
-const order = computed<GuestOrder>({
-	get: () => (filters.value.order?.[0] === "asc" ? "asc" : "desc"),
-	set: (next) => (filters.value = { ...filters.value, order: next === "asc" ? ["asc"] : [] }),
-})
+// Read-only: the filter bar owns the write, and routes it through `barFilters` so the
+// order and the type filter land in the query string as one assignment.
+const order = computed<GuestOrder>(() => (filters.value.order?.[0] === "asc" ? "asc" : "desc"))
 
 const ticketTypes = computed(() => filters.value.ticket_type || [])
 
@@ -81,6 +82,8 @@ const barFilters = computed<FilterValues>({
 })
 
 const trend = useRegistrationTrend(eventId)
+
+const message = (error: unknown) => (error as FrappeError | null)?.messages?.join("\n")
 
 // echarts paints into a canvas, where a `var(--token)` never resolves, so the green is
 // the palette's own 600 written out.
@@ -159,7 +162,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 					:sparkline="{ data: perDay, type: 'line', color: REGISTRATION_GREEN }"
 				/>
 
-				<div v-if="showTicketTypes" class="h-64 w-full">
+				<div v-if="showTicketTypes && !trend.error" class="h-64 w-full">
 					<DonutChart
 						title="Ticket types"
 						:data="byTicketType"
@@ -170,6 +173,8 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 					/>
 				</div>
 			</div>
+
+			<ErrorMessage :message="message(trend.error)" />
 
 			<p v-if="page.data?.registrations_closed" class="text-sm text-ink-red-3">
 				Registrations have closed
@@ -212,6 +217,10 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 				>
 					<EventGuestSkeleton :rows="6" />
 				</ul>
+
+				<div v-else-if="page.error">
+					<ErrorMessage :message="message(page.error)" />
+				</div>
 
 				<div v-else>
 					<ul
