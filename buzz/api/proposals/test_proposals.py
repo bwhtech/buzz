@@ -210,6 +210,28 @@ class TestGetEventProposals(IntegrationTestCase):
 		row = next(p for p in get_event_proposals(self.event).proposals if p.name == self.pending)
 		self.assertEqual([speaker.email for speaker in row.speakers], ["one@example.com"])
 
+	def test_a_writer_is_told_they_may_change_a_status(self):
+		frappe.set_user(self.manager)
+		self.assertTrue(get_event_proposals(self.event).can_write)
+
+	def test_a_read_only_member_reads_the_pipeline_without_the_write_flag(self):
+		"""Viewer and Frontdesk pass the read check the list uses and fail the write one."""
+		viewer = make_test_user("proposals-viewer@example.com")
+		frappe.get_doc(
+			{
+				"doctype": "Buzz Team Membership",
+				"team": self.team,
+				"user": viewer,
+				"team_role": "Viewer",
+				"enabled": 1,
+			}
+		).insert(ignore_permissions=True)
+
+		frappe.set_user(viewer)
+		response = get_event_proposals(self.event)
+		self.assertEqual(response.total, 2)
+		self.assertFalse(response.can_write)
+
 
 class TestGetEventProposalTrend(IntegrationTestCase):
 	@classmethod

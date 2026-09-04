@@ -38,6 +38,9 @@ class EventProposalsResponse(APIResponse):
 	matched: int
 	proposals: list[ProposalListItem]
 	has_next_page: bool = False
+	# Whether this reader may change a proposal, so the drawer offers the control only to
+	# someone the server will accept it from. Read access alone is a Viewer or Frontdesk.
+	can_write: bool = False
 
 
 class DailySubmissions(APIResponse):

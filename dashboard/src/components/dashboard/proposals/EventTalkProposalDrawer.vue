@@ -15,11 +15,11 @@ import { useProposal } from "@/data/proposals"
 import type { ProposalListItem, ProposalSpeaker } from "@/types"
 import { speakerName } from "@/utils/speakerByline"
 
-const props = defineProps<{ proposal: ProposalListItem | null }>()
+const props = defineProps<{ proposal: ProposalListItem | null; canWrite?: boolean }>()
 
 const open = defineModel<boolean>("open", { required: true })
 
-const emit = defineEmits<{ changed: [] }>()
+const emit = defineEmits<{ changed: [status: string] }>()
 
 const { statuses, getStatusDot } = useProposalStatuses()
 
@@ -53,7 +53,8 @@ const statusOptions = computed(() =>
 )
 
 // Picking a status only arms the change: the footer's button is what writes it, so a
-// mis-click on a decision the speaker gets told about is still recoverable.
+// mis-click on a decision the speaker gets told about is still recoverable. A reader the
+// server would refuse never gets the control — read access alone is a Viewer or Frontdesk.
 const changed = computed(() => Boolean(status.value) && status.value !== props.proposal?.status)
 
 async function updateStatus() {
@@ -61,7 +62,7 @@ async function updateStatus() {
 	try {
 		await proposalDoc.setValue.submit({ status: status.value })
 		toast.success(`Marked ${status.value.toLowerCase()}`)
-		emit("changed")
+		emit("changed", status.value)
 	} catch {
 		status.value = props.proposal?.status || ""
 		toast.error("Could not change the status")
@@ -122,7 +123,7 @@ const fields = computed(() => [
 						aria-label="Review status"
 						side="bottom"
 						:options="statusOptions"
-						:disabled="proposalDoc.setValue.loading"
+						:disabled="!canWrite || proposalDoc.setValue.loading"
 					>
 						<!-- The trigger reuses this slot for the selected option, so the dot is
 						     defined once and shows in both places. -->
@@ -196,7 +197,7 @@ const fields = computed(() => [
 			<template v-if="proposal" #footer>
 				<!-- Arriving rather than appearing: the buttons showing up is the confirmation
 				     that the pick registered, so the footer is not allowed to jump. -->
-				<div v-if="changed" class="status-actions flex items-center gap-2">
+				<div v-if="canWrite && changed" class="status-actions flex items-center gap-2">
 					<Button
 						variant="solid"
 						size="md"

@@ -35,7 +35,7 @@ const order = computed<ProposalOrder>(() => (filters.value.order?.[0] === "asc" 
 
 const statuses = computed(() => filters.value.status || [])
 
-const { proposals, loadMore, page, loadingFirstPage, loadingMore } = useEventProposals(
+const { proposals, applyStatus, loadMore, page, loadingFirstPage, loadingMore } = useEventProposals(
 	eventId,
 	search,
 	order,
@@ -111,6 +111,13 @@ const drawerOpen = computed<boolean>({
 	get: () => selected.value !== null,
 	set: (open) => !open && (selectedId.value = null),
 })
+
+// The row is patched rather than refetched — see applyStatus. The card above counts the
+// whole pipeline, so it is the one thing that does have to go back to the server.
+const onStatusChanged = (status: string) => {
+	if (selectedId.value) applyStatus(selectedId.value, status)
+	trend.reload()
+}
 
 // The next page is fetched when the foot of the list comes into view, a screen early so
 // the cards are already there by the time the scroll reaches them.
@@ -234,7 +241,8 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 	<EventTalkProposalDrawer
 		v-model:open="drawerOpen"
 		:proposal="selected"
-		@changed="page.reload()"
+		:can-write="page.data?.can_write"
+		@changed="onStatusChanged"
 	/>
 </template>
 

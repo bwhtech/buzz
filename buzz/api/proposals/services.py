@@ -11,6 +11,7 @@ from buzz.api.proposals.schemas import (
 	ProposalTrend,
 	StatusTotal,
 )
+from buzz.permissions import has_team_access
 
 # The columns behind one proposal card. The event ones come over a link hop, so a
 # deleted event leaves them empty.
@@ -120,12 +121,14 @@ def event_proposals(
 
 	total = frappe.db.count("Talk Proposal", {"event": event})
 	matched = count_proposals(filters, or_filters) if or_filters or chosen else total
+	title, team = frappe.db.get_value("Buzz Event", event, ["title", "team"])
 	return EventProposalsResponse(
-		title=frappe.db.get_value("Buzz Event", event, "title"),
+		title=title,
 		total=total,
 		matched=matched,
 		proposals=[ProposalListItem(**row, speakers=speakers.get(row.name, [])) for row in rows],
 		has_next_page=start + len(rows) < matched,
+		can_write=has_team_access(team, "write", frappe.session.user),
 	)
 
 

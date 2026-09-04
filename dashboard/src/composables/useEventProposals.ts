@@ -67,6 +67,22 @@ export function useEventProposals(
 		{ flush: "sync" },
 	)
 
+	/**
+	 * Carries a status change into the list without refetching.
+	 *
+	 * Refetching would not do it: past the first page `onSuccess` appends what it does
+	 * not already hold, so the changed row is discarded as a duplicate and the stale one
+	 * stays on screen. A row that no longer answers the active filter leaves the list.
+	 */
+	const applyStatus = (name: string, status: string) => {
+		const matchesFilter = !statuses.value.length || statuses.value.includes(status)
+		proposals.value = matchesFilter
+			? proposals.value.map((proposal) =>
+					proposal.name === name ? { ...proposal, status } : proposal,
+				)
+			: proposals.value.filter((proposal) => proposal.name !== name)
+	}
+
 	const loadMore = () => {
 		if (page.loading || !page.data?.has_next_page) return
 		start.value += PROPOSALS_PAGE_SIZE
@@ -74,6 +90,7 @@ export function useEventProposals(
 
 	return {
 		proposals,
+		applyStatus,
 		loadMore,
 		page,
 		// The first page is the only one that leaves the list empty while it loads.

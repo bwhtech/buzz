@@ -48,6 +48,8 @@ export interface EventProposals {
 	matched: number
 	proposals: ProposalListItem[]
 	has_next_page: boolean
+	// Read access alone is a Viewer or Frontdesk, who cannot change a status.
+	can_write: boolean
 }
 
 // buzz.api.proposals.get_event_proposal_trend
