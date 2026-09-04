@@ -1,9 +1,15 @@
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, today
+from frappe.utils import add_days, getdate, today
 from pydantic import ValidationError
 
-from buzz.api.events import check_event_route, get_event, get_event_guests, get_my_events
+from buzz.api.events import (
+	check_event_route,
+	get_event,
+	get_event_guests,
+	get_event_registration_trend,
+	get_my_events,
+)
 from buzz.api.events import create_event as create_event_endpoint
 from buzz.api.events.exceptions import (
 	CannotCreateEvents,
@@ -574,3 +580,349 @@ class TestGetEventGuests(IntegrationTestCase):
 
 		with self.assertRaises(EventNotFound):
 			get_event_guests("999999999")
+
+
+class TestGetEventGuestsPaging(IntegrationTestCase):
+	"""Search, order and paging — the arguments the guest list walks the roll with."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("paging-owner@example.com", "Owner")
+		cls.team = create_owned_team("Paging Team", cls.owner)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def registered(self, event: str, email: str, name: str, at: str) -> str:
+		"""A ticket with a name on it and a registration time of its own.
+
+		Tickets a test writes land in the same second, so `creation` is set explicitly —
+		otherwise the order under test is decided by the name hash.
+		"""
+		ticket = issue_ticket(event, email)
+		frappe.db.set_value(
+			"Event Ticket",
+			ticket,
+			{"first_name": name, "attendee_name": name, "creation": at},
+			update_modified=False,
+		)
+		return ticket
+
+	def roll_call(self, event: str) -> None:
+		self.registered(event, "ana@example.com", "Ana Diaz", "2026-01-01 09:00:00")
+		self.registered(event, "bo@example.com", "Bo Chen", "2026-01-02 09:00:00")
+		self.registered(event, "cy@example.com", "Cy Ferreira", "2026-01-03 09:00:00")
+
+	def test_carries_the_time_the_ticket_was_raised(self):
+		event = create_event("Registered At Event", self.team)
+		self.registered(event, "ana@example.com", "Ana Diaz", "2026-01-01 09:00:00")
+		frappe.set_user(self.owner)
+
+		guest = get_event_guests(event).guests[0]
+
+		self.assertEqual(str(guest.registered_at), "2026-01-01 09:00:00")
+
+	def test_newest_registration_comes_first_by_default(self):
+		event = create_event("Ordered Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		names = [guest.attendee_name for guest in get_event_guests(event).guests]
+
+		self.assertEqual(names, ["Cy Ferreira", "Bo Chen", "Ana Diaz"])
+
+	def test_asc_walks_from_the_oldest_registration(self):
+		event = create_event("Ascending Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		names = [guest.attendee_name for guest in get_event_guests(event, order="asc").guests]
+
+		self.assertEqual(names, ["Ana Diaz", "Bo Chen", "Cy Ferreira"])
+
+	def test_an_unknown_order_falls_back_to_newest_first(self):
+		event = create_event("Odd Order Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, order="name desc; drop table")
+
+		self.assertEqual(guests.guests[0].attendee_name, "Cy Ferreira")
+
+	def test_a_page_carries_only_its_own_slice(self):
+		event = create_event("Paged Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		first = get_event_guests(event, limit=2)
+
+		self.assertEqual([guest.attendee_name for guest in first.guests], ["Cy Ferreira", "Bo Chen"])
+		self.assertTrue(first.has_next_page)
+
+	def test_the_last_page_says_there_is_nothing_after_it(self):
+		event = create_event("Last Page Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		last = get_event_guests(event, start=2, limit=2)
+
+		self.assertEqual([guest.attendee_name for guest in last.guests], ["Ana Diaz"])
+		self.assertFalse(last.has_next_page)
+
+	def test_a_full_final_page_is_still_the_end(self):
+		"""Three guests read two at a time: the second page fills, and nothing follows."""
+		event = create_event("Even Page Event", self.team)
+		self.roll_call(event)
+		self.registered(event, "di@example.com", "Di Okafor", "2026-01-04 09:00:00")
+		frappe.set_user(self.owner)
+
+		self.assertFalse(get_event_guests(event, start=2, limit=2).has_next_page)
+
+	def test_search_matches_a_name(self):
+		event = create_event("Name Search Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, search="chen")
+
+		self.assertEqual([guest.attendee_name for guest in guests.guests], ["Bo Chen"])
+
+	def test_search_matches_an_email(self):
+		event = create_event("Email Search Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, search="cy@")
+
+		self.assertEqual([guest.attendee_email for guest in guests.guests], ["cy@example.com"])
+
+	def test_search_reports_the_match_count_beside_the_registered_count(self):
+		event = create_event("Counted Search Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, search="chen")
+
+		self.assertEqual(guests.total, 3)
+		self.assertEqual(guests.matched, 1)
+
+	def test_without_a_search_every_guest_is_a_match(self):
+		event = create_event("Unsearched Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event)
+
+		self.assertEqual(guests.matched, guests.total)
+
+	def test_a_search_that_matches_nobody_is_empty_rather_than_an_error(self):
+		event = create_event("Empty Search Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, search="nobody-here")
+
+		self.assertEqual(guests.guests, [])
+		self.assertEqual(guests.matched, 0)
+		self.assertEqual(guests.total, 3)
+		self.assertFalse(guests.has_next_page)
+
+	def test_blank_search_is_not_a_filter(self):
+		event = create_event("Blank Search Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		self.assertEqual(len(get_event_guests(event, search="   ").guests), 3)
+
+
+class TestGetEventGuestsTicketTypeFilter(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("types-owner@example.com", "Owner")
+		cls.team = create_owned_team("Ticket Types Team", cls.owner)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def two_types(self, event: str) -> tuple[str, str]:
+		"""One ticket on each of two types, returning the types in that order."""
+		first = frappe.db.get_value("Event Ticket", issue_ticket(event, "early@example.com"), "ticket_type")
+		second = frappe.db.get_value("Event Ticket", issue_ticket(event, "late@example.com"), "ticket_type")
+		return str(first), str(second)
+
+	def test_lists_the_types_the_event_sells(self):
+		"""Every type, not only the ones someone has bought — an empty tier is still a filter."""
+		event = create_event("Typed Filter Event", self.team)
+		first, second = self.two_types(event)
+		frappe.set_user(self.owner)
+
+		names = {ticket_type.name for ticket_type in get_event_guests(event).ticket_types}
+
+		self.assertLessEqual({first, second}, names)
+
+	def test_narrows_the_list_to_the_chosen_type(self):
+		event = create_event("Narrowed Event", self.team)
+		first, _ = self.two_types(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, ticket_types=first)
+
+		self.assertEqual([guest.attendee_email for guest in guests.guests], ["early@example.com"])
+		self.assertEqual(guests.matched, 1)
+		self.assertEqual(guests.total, 2)
+
+	def test_several_types_are_read_as_any_of_them(self):
+		event = create_event("Any Type Event", self.team)
+		first, second = self.two_types(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, ticket_types=f"{first},{second}")
+
+		self.assertEqual(guests.matched, 2)
+
+	def test_no_chosen_type_is_not_a_filter(self):
+		event = create_event("Untyped Filter Event", self.team)
+		self.two_types(event)
+		frappe.set_user(self.owner)
+
+		self.assertEqual(len(get_event_guests(event, ticket_types="  ").guests), 2)
+
+	def test_search_and_type_narrow_together(self):
+		event = create_event("Combined Filter Event", self.team)
+		first, _ = self.two_types(event)
+		frappe.set_user(self.owner)
+
+		self.assertEqual(get_event_guests(event, search="late@", ticket_types=first).matched, 0)
+		self.assertEqual(get_event_guests(event, search="early@", ticket_types=first).matched, 1)
+
+
+class TestGetEventRegistrationTrend(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("trend-owner@example.com", "Owner")
+		cls.stranger = create_user("trend-stranger@example.com", "Stranger")
+		cls.team = create_owned_team("Trend Team", cls.owner)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def registered_on(self, event: str, email: str, day: str) -> str:
+		ticket = issue_ticket(event, email)
+		frappe.db.set_value("Event Ticket", ticket, "creation", f"{day} 10:00:00", update_modified=False)
+		return frappe.db.get_value("Event Ticket", ticket, "ticket_type")
+
+	def totals_by_day(self, trend) -> dict:
+		"""The stack's own height: every type of a day summed back together."""
+		totals: dict = {}
+		for row in trend.per_day:
+			totals[row.date] = totals.get(row.date, 0) + row.count
+		return totals
+
+	def test_counts_the_tickets_raised_on_each_day(self):
+		event = create_event("Trended Event", self.team)
+		self.registered_on(event, "today-one@example.com", today())
+		self.registered_on(event, "today-two@example.com", today())
+		self.registered_on(event, "yesterday@example.com", add_days(today(), -1))
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=3)
+
+		totals = self.totals_by_day(trend)
+		self.assertEqual(totals[getdate(today())], 2)
+		self.assertEqual(totals[getdate(add_days(today(), -1))], 1)
+		self.assertEqual(trend.total, 3)
+
+	def test_splits_a_day_by_ticket_type(self):
+		event = create_event("Split Event", self.team)
+		# create_ticket raises a type of its own per ticket, so these are two tiers.
+		first = self.registered_on(event, "tier-one@example.com", today())
+		second = self.registered_on(event, "tier-two@example.com", today())
+		titles = {
+			str(first): frappe.db.get_value("Event Ticket Type", first, "title"),
+			str(second): frappe.db.get_value("Event Ticket Type", second, "title"),
+		}
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=2)
+
+		today_rows = {row.ticket_type: row.count for row in trend.per_day if row.date == getdate(today())}
+		for title in titles.values():
+			self.assertEqual(today_rows[title], 1)
+
+	def test_a_quiet_day_is_a_zero_rather_than_a_gap(self):
+		event = create_event("Quiet Day Event", self.team)
+		self.registered_on(event, "quiet@example.com", today())
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=7)
+
+		totals = self.totals_by_day(trend)
+		self.assertEqual(len(totals), 7)
+		self.assertEqual(sorted(totals.values()), [0] * 6 + [1])
+
+	def test_every_type_is_drawn_on_every_day(self):
+		"""A band that vanishes mid-stack reads as a break in the chart, not as nobody buying."""
+		event = create_event("Gridded Event", self.team)
+		self.registered_on(event, "gridded@example.com", today())
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=4)
+
+		types = {row.ticket_type for row in trend.per_day}
+		self.assertEqual(len(trend.per_day), 4 * len(types))
+
+	def test_the_window_ends_on_today(self):
+		event = create_event("Windowed Event", self.team)
+		self.registered_on(event, "windowed@example.com", today())
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=5)
+
+		self.assertEqual(trend.per_day[-1].date, getdate(today()))
+		self.assertEqual(trend.per_day[0].date, getdate(add_days(today(), -4)))
+
+	def test_names_the_ticket_type_rather_than_its_docname(self):
+		event = create_event("Named Type Trend", self.team)
+		ticket_type = self.registered_on(event, "named-type@example.com", today())
+		title = frappe.db.get_value("Event Ticket Type", ticket_type, "title")
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=2)
+
+		self.assertIn(title, {row.ticket_type for row in trend.per_day})
+		self.assertNotIn(str(ticket_type), {row.ticket_type for row in trend.per_day})
+
+	def test_leaves_out_a_ticket_that_was_never_submitted(self):
+		event = create_event("Draft Trend Event", self.team)
+		create_ticket(event, "draft-trend@example.com")
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event)
+
+		self.assertEqual(trend.total, 0)
+		self.assertEqual({row.count for row in trend.per_day}, {0})
+
+	def test_a_non_member_cannot_read_the_trend(self):
+		event = create_event("Private Trend", self.team)
+		frappe.set_user(self.stranger)
+
+		with self.assertRaises(CannotManageEvent):
+			get_event_registration_trend(event)
+
+	def test_an_unknown_event_is_not_found(self):
+		frappe.set_user(self.owner)
+
+		with self.assertRaises(EventNotFound):
+			get_event_registration_trend("999999999")

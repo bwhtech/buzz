@@ -8,6 +8,7 @@ from buzz.api.events.schemas import (
 	MyEventFilters,
 	MyEventsResponse,
 	NewEvent,
+	RegistrationTrend,
 	RouteAvailability,
 )
 
@@ -30,9 +31,26 @@ def get_event(event: str) -> EventDetail:
 
 
 @frappe.whitelist()
-def get_event_guests(event: str) -> EventGuestsResponse:
-	"""Everyone holding a submitted ticket to an event, with their add-ons."""
-	return services.event_guests(event)
+def get_event_guests(
+	event: str,
+	search: str | None = None,
+	ticket_types: str | None = None,
+	order: str = "desc",
+	start: int = 0,
+	limit: int = services.GUESTS_PAGE_SIZE,
+) -> EventGuestsResponse:
+	"""One page of the people holding a submitted ticket to an event, with their add-ons.
+
+	`ticket_types` is comma-joined rather than a list: a GET query string carries one, and
+	it is the same string the dashboard keeps the filter in.
+	"""
+	return services.event_guests(event, search, ticket_types, order, start, limit)
+
+
+@frappe.whitelist()
+def get_event_registration_trend(event: str, days: int = services.TREND_DAYS) -> RegistrationTrend:
+	"""Registrations per day for an event, for the card above its guest list."""
+	return services.registration_trend(event, days)
 
 
 @frappe.whitelist()

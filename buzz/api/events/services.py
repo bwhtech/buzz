@@ -2,7 +2,8 @@ import frappe
 from frappe import _
 from frappe.model.naming import append_number_if_name_exists
 from frappe.query_builder import Case
-from frappe.utils import getdate
+from frappe.query_builder.functions import Count, Date
+from frappe.utils import add_days, getdate
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.exceptions import (
@@ -13,15 +14,18 @@ from buzz.api.events.exceptions import (
 )
 from buzz.api.events.schemas import (
 	CreatedEvent,
+	DailyRegistrations,
 	EventDetail,
 	EventGuest,
 	EventGuestsResponse,
 	EventVenue,
 	GuestAddOn,
+	GuestTicketType,
 	MyEvent,
 	MyEventFilters,
 	MyEventsResponse,
 	NewEvent,
+	RegistrationTrend,
 	RouteAvailability,
 )
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES
@@ -169,12 +173,28 @@ def meeting_link_of(row) -> str | None:
 	return frappe.db.get_value("Zoom Meeting", meeting, "zoom_link") if meeting else None
 
 
-def event_guests(event: str) -> EventGuestsResponse:
-	"""Everyone holding a ticket to an event.
+GUESTS_PAGE_SIZE = 20
 
-	A submitted ticket only — a draft belongs to a booking still being paid for. Read
-	access is the bar: this shows the team what it already sees through the doctype.
-	"""
+
+def guest_search_filters(search: str | None) -> list[list] | None:
+	"""Name or email, matched loosely — the two things a manager reads off the row."""
+	term = (search or "").strip()
+	if not term:
+		return None
+
+	return [
+		["attendee_name", "like", f"%{term}%"],
+		["attendee_email", "like", f"%{term}%"],
+	]
+
+
+def ticket_type_filter(ticket_types: str | None) -> list[str]:
+	"""The chosen types, as the comma-joined list the query string carries them in."""
+	return [chosen for chosen in (ticket_types or "").split(",") if chosen.strip()]
+
+
+def ensure_guest_list_access(event: str) -> None:
+	"""Read access to the event's team is the bar for everything about its guests."""
 	team = frappe.db.get_value("Buzz Event", event, "team")
 	if not frappe.db.exists("Buzz Event", event):
 		EventNotFound.throw()
@@ -182,11 +202,43 @@ def event_guests(event: str) -> EventGuestsResponse:
 	if not has_team_access(team, "read", frappe.session.user):
 		CannotManageEvent.throw()
 
+
+def event_guests(
+	event: str,
+	search: str | None = None,
+	ticket_types: str | None = None,
+	order: str = "desc",
+	start: int = 0,
+	limit: int = GUESTS_PAGE_SIZE,
+) -> EventGuestsResponse:
+	"""One page of the people holding a ticket to an event.
+
+	A submitted ticket only — a draft belongs to a booking still being paid for. Read
+	access is the bar: this shows the team what it already sees through the doctype.
+
+	Ordered by when the ticket was registered, newest first by default, so a page is a
+	stable slice as the caller walks down the list.
+	"""
+	ensure_guest_list_access(event)
+
+	filters = {"event": event, "docstatus": 1}
+	chosen_types = ticket_type_filter(ticket_types)
+	if chosen_types:
+		filters["ticket_type"] = ["in", chosen_types]
+	or_filters = guest_search_filters(search)
+	limit = max(1, min(int(limit), 100))
+	start = max(0, int(start))
+	# Interpolated into ORDER BY, so it can only ever be one of two literals.
+	direction = "asc" if str(order).lower() == "asc" else "desc"
+
 	tickets = frappe.get_all(
 		"Event Ticket",
-		filters={"event": event, "docstatus": 1},
-		fields=["name", "attendee_name", "attendee_email", "ticket_type"],
-		order_by="attendee_name asc",
+		filters=filters,
+		or_filters=or_filters,
+		fields=["name", "attendee_name", "attendee_email", "ticket_type", "creation"],
+		order_by=f"creation {direction}, name {direction}",
+		limit_start=start,
+		limit_page_length=limit,
 	)
 
 	by_ticket = add_ons_by_ticket([ticket.name for ticket in tickets])
@@ -194,19 +246,98 @@ def event_guests(event: str) -> EventGuestsResponse:
 	type_titles = titles_of("Event Ticket Type", {ticket.ticket_type for ticket in tickets})
 
 	guests = [
+		# `creation` is popped rather than passed on: the response names it registered_at,
+		# and the model forbids a field it does not declare.
 		EventGuest(
-			**ticket | {"ticket_type": type_titles.get(ticket.ticket_type) or ticket.ticket_type},
+			**ticket
+			| {
+				"ticket_type": type_titles.get(ticket.ticket_type) or ticket.ticket_type,
+				"registered_at": ticket.pop("creation"),
+			},
 			add_ons=by_ticket.get(ticket.name, []),
 		)
 		for ticket in tickets
 	]
 	doc = frappe.get_cached_doc("Buzz Event", event)
+	total = count_tickets({"event": event, "docstatus": 1})
+	matched = count_tickets(filters, or_filters) if or_filters or chosen_types else total
 	return EventGuestsResponse(
 		title=doc.title,
-		total=len(guests),
+		start_date=doc.start_date,
+		start_time=doc.start_time,
+		end_date=doc.end_date,
+		venue=doc.venue,
+		total=total,
+		matched=matched,
 		registrations_closed=are_registrations_closed(doc),
 		guests=guests,
+		ticket_types=ticket_types_of(event),
+		has_next_page=start + len(guests) < matched,
 	)
+
+
+TREND_DAYS = 14
+
+
+def registration_trend(event: str, days: int = TREND_DAYS) -> RegistrationTrend:
+	"""Tickets raised per day and ticket type, oldest day first.
+
+	Every day of the window against every type the event sells, zero-filled: the series
+	is read as a shape, and a missing row would draw as a shorter week or a band that
+	disappears mid-stack rather than a quiet one.
+	"""
+	ensure_guest_list_access(event)
+
+	days = max(2, min(int(days), 90))
+	window = [add_days(getdate(), -offset) for offset in reversed(range(days))]
+	counted = registrations_by_day_and_type(event, window[0])
+	titles = {ticket_type.name: ticket_type.title for ticket_type in ticket_types_of(event)}
+
+	return RegistrationTrend(
+		total=count_tickets({"event": event, "docstatus": 1}),
+		per_day=[
+			DailyRegistrations(
+				date=day,
+				ticket_type=titles.get(ticket_type) or ticket_type,
+				count=counted.get((day, ticket_type), 0),
+			)
+			for day in window
+			for ticket_type in titles
+		],
+	)
+
+
+def registrations_by_day_and_type(event: str, since) -> dict[tuple, int]:
+	"""Counts keyed by day and ticket type, in one grouped query.
+
+	Query builder rather than get_all: grouping by the date part of a timestamp is a SQL
+	function, which get_all takes only as a dict of the whole select.
+	"""
+	ticket = frappe.qb.DocType("Event Ticket")
+	day = Date(ticket.creation)
+	rows = (
+		frappe.qb.from_(ticket)
+		.select(day.as_("day"), ticket.ticket_type, Count("*").as_("count"))
+		.where((ticket.event == event) & (ticket.docstatus == 1) & (ticket.creation >= since))
+		.groupby(day, ticket.ticket_type)
+	).run(as_dict=True)
+	# Event Ticket Type is autonamed, so its link value arrives as a string either way.
+	return {(getdate(row.day), str(row.ticket_type)): row.count for row in rows}
+
+
+def ticket_types_of(event: str) -> list[GuestTicketType]:
+	"""Every type the event sells, so the filter can offer one that nobody bought yet."""
+	rows = frappe.get_all(
+		"Event Ticket Type", filters={"event": event}, fields=["name", "title"], order_by="title asc"
+	)
+	# Autonamed, so the name arrives as an integer while every link to it travels as a string.
+	return [GuestTicketType(name=str(row.name), title=row.title) for row in rows]
+
+
+def count_tickets(filters: dict, or_filters: list[list] | None = None) -> int:
+	"""Dict syntax rather than "count(name)": get_all rejects SQL functions written as strings."""
+	rows = frappe.get_all("Event Ticket", filters=filters, or_filters=or_filters, fields=[{"COUNT": "*"}])
+	return rows[0]["COUNT(*)"] if rows else 0
 
 
 def titles_of(doctype: str, names: set[str | None]) -> dict[str, str]:
