@@ -99,18 +99,13 @@ const perDay = computed(() => {
 	return [...totals.values()]
 })
 
-// Tier is a share of a whole, not a shape over time: the days collapse into one slice
-// per ticket type, and a tier nobody has bought is left off the ring.
-const byTicketType = computed(() => {
-	const totals = new Map<string, number>()
-	for (const row of rows.value) {
-		const type = row.ticket_type || "Unnamed"
-		totals.set(type, (totals.get(type) || 0) + row.count)
-	}
-	return [...totals]
-		.filter(([, count]) => count)
-		.map(([ticket_type, count]) => ({ ticket_type, count }))
-})
+// All-time, like the total beside it — summing the window would split a number the card
+// does not show. A tier nobody has bought is left off the ring.
+const byTicketType = computed(() =>
+	(trend.data?.by_ticket_type || [])
+		.filter((row) => row.count)
+		.map((row) => ({ ticket_type: row.ticket_type || "Unnamed", count: row.count })),
+)
 
 const showTicketTypes = computed(() => byTicketType.value.length > 1)
 
@@ -119,20 +114,25 @@ const sinceYesterday = computed(() => {
 	return days.length < 2 ? null : days[days.length - 1] - days[days.length - 2]
 })
 
-// The drawer walks the list it was opened from, so the position is what is held rather
-// than the guest: a refetch reorders rows, and an index still points at the list.
-const selected = ref<number | null>(null)
+// The ticket is what is held, not its position. A row can be opened while a search is
+// still settling, and by the time the new page lands an index points at a different guest.
+const selectedId = ref<string | null>(null)
 
-const selectedGuest = computed(() =>
-	selected.value === null ? null : (guests.value[selected.value] ?? null),
+const selectedIndex = computed(() =>
+	guests.value.findIndex((guest) => guest.name === selectedId.value),
 )
+
+const selectedGuest = computed(() => guests.value[selectedIndex.value] ?? null)
 
 const drawerOpen = computed<boolean>({
 	get: () => selectedGuest.value !== null,
-	set: (open) => !open && (selected.value = null),
+	set: (open) => !open && (selectedId.value = null),
 })
 
-const step = (by: number) => selected.value !== null && (selected.value += by)
+const step = (by: number) => {
+	const next = guests.value[selectedIndex.value + by]
+	if (next) selectedId.value = next.name
+}
 
 // The next page is fetched when the foot of the list comes into view, a screen early so
 // the rows are already there by the time the scroll reaches them.
@@ -228,11 +228,11 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 						class="divide-y divide-outline-gray-1 overflow-hidden rounded-7 border border-outline-gray-2"
 					>
 						<EventGuestItem
-							v-for="(guest, index) in guests"
+							v-for="guest in guests"
 							:key="guest.name"
 							:guest="guest"
-							:selected="index === selected"
-							@open="selected = index"
+							:selected="guest.name === selectedId"
+							@open="selectedId = guest.name"
 						/>
 						<!-- The next page draws itself into the list rather than announcing itself
 							 under it: the rows arrive where the placeholders already are. -->
@@ -275,8 +275,8 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 		v-model:open="drawerOpen"
 		:guest="selectedGuest"
 		:event="page.data"
-		:has-previous="selected !== null && selected > 0"
-		:has-next="selected !== null && selected < guests.length - 1"
+		:has-previous="selectedIndex > 0"
+		:has-next="selectedIndex >= 0 && selectedIndex < guests.length - 1"
 		@previous="step(-1)"
 		@next="step(1)"
 	/>

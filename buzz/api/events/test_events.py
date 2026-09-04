@@ -914,6 +914,27 @@ class TestGetEventRegistrationTrend(IntegrationTestCase):
 		self.assertEqual(trend.total, 0)
 		self.assertEqual({row.count for row in trend.per_day}, {0})
 
+	def test_the_type_breakdown_counts_registrations_older_than_the_window(self):
+		"""It sits beside the all-time total, so a fortnight's slice would not add up to it."""
+		event = create_event("Long Running Event", self.team)
+		self.registered_on(event, "ancient@example.com", add_days(today(), -60))
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=7)
+
+		self.assertEqual(sum(row.count for row in trend.by_ticket_type), trend.total)
+		self.assertEqual({row.count for row in trend.per_day}, {0})
+
+	def test_the_type_breakdown_names_the_type_rather_than_its_docname(self):
+		event = create_event("Named Breakdown", self.team)
+		ticket_type = self.registered_on(event, "named-breakdown@example.com", today())
+		title = frappe.db.get_value("Event Ticket Type", ticket_type, "title")
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event)
+
+		self.assertIn(title, {row.ticket_type for row in trend.by_ticket_type})
+
 	def test_a_non_member_cannot_read_the_trend(self):
 		event = create_event("Private Trend", self.team)
 		frappe.set_user(self.stranger)

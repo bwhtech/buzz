@@ -119,11 +119,20 @@ class DailyRegistrations(APIResponse):
 	count: int
 
 
+class TicketTypeTotal(APIResponse):
+	"""Everyone holding one type, over the event's whole life rather than the window."""
+
+	ticket_type: str | None = None
+	count: int
+
+
 class RegistrationTrend(APIResponse):
 	"""How registration has run, for a card that shows the count and its shape."""
 
 	total: int
 	per_day: list[DailyRegistrations]
+	# All-time, like `total` — the window is a shape over time, a tier is a share of a whole.
+	by_ticket_type: list[TicketTypeTotal] = Field(default_factory=list)
 
 
 class RouteAvailability(APIResponse):

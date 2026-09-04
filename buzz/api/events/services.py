@@ -27,6 +27,7 @@ from buzz.api.events.schemas import (
 	NewEvent,
 	RegistrationTrend,
 	RouteAvailability,
+	TicketTypeTotal,
 )
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES
 from buzz.permissions import has_team_access, my_teams
@@ -286,8 +287,14 @@ def registration_trend(event: str, days: int = TREND_DAYS) -> RegistrationTrend:
 	counted = registrations_by_day_and_type(event, window[0])
 	titles = {ticket_type.name: ticket_type.title for ticket_type in ticket_types_of(event)}
 
+	all_time = registrations_by_type(event)
+
 	return RegistrationTrend(
 		total=count_tickets({"event": event, "docstatus": 1}),
+		by_ticket_type=[
+			TicketTypeTotal(ticket_type=title or ticket_type, count=all_time.get(ticket_type, 0))
+			for ticket_type, title in titles.items()
+		],
 		per_day=[
 			DailyRegistrations(
 				date=day,
@@ -298,6 +305,22 @@ def registration_trend(event: str, days: int = TREND_DAYS) -> RegistrationTrend:
 			for ticket_type in titles
 		],
 	)
+
+
+def registrations_by_type(event: str) -> dict[str, int]:
+	"""Counts per ticket type over the event's whole life, in one grouped query.
+
+	Unwindowed on purpose: the donut sits beside the all-time total, and a fortnight's
+	slice of an older event would read as the breakdown of a number it does not add up to.
+	"""
+	ticket = frappe.qb.DocType("Event Ticket")
+	rows = (
+		frappe.qb.from_(ticket)
+		.select(ticket.ticket_type, Count("*").as_("count"))
+		.where((ticket.event == event) & (ticket.docstatus == 1))
+		.groupby(ticket.ticket_type)
+	).run(as_dict=True)
+	return {str(row.ticket_type): row.count for row in rows}
 
 
 def registrations_by_day_and_type(event: str, since) -> dict[tuple, int]:

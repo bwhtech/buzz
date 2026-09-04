@@ -43,7 +43,14 @@ export function useEventGuests(
 		// Off by default, so without this a new page or search would never be fetched.
 		refetch: true,
 		onSuccess: (data) => {
-			guests.value = start.value === 0 ? data.guests : [...guests.value, ...data.guests]
+			if (start.value === 0) {
+				guests.value = data.guests
+				return
+			}
+			// The offset is taken against a live list: a ticket raised since the first page
+			// shifts every later one down, and the row on the boundary arrives twice.
+			const seen = new Set(guests.value.map((guest) => guest.name))
+			guests.value = [...guests.value, ...data.guests.filter((guest) => !seen.has(guest.name))]
 		},
 	})
 

@@ -150,9 +150,15 @@ export interface DailyRegistrations {
 	count: number
 }
 
+export interface TicketTypeTotal {
+	ticket_type: string | null
+	count: number
+}
+
 export interface RegistrationTrend {
 	total: number
 	per_day: DailyRegistrations[]
+	by_ticket_type: TicketTypeTotal[]
 }
 
 export interface GuestTicketType {
