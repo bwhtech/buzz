@@ -96,6 +96,8 @@ class GuestTicketType(APIResponse):
 
 class EventGuestsResponse(APIResponse):
 	title: str | None = None
+	# The public registration page's path, for a link out of the manage page.
+	route: str | None = None
 	# The event's own details, so a guest row can be drawn as the ticket it is.
 	start_date: date | None = None
 	start_time: timedelta | None = None

@@ -257,6 +257,7 @@ def event_guests(
 	matched = count_tickets(filters, or_filters) if or_filters or chosen_types else total
 	return EventGuestsResponse(
 		title=doc.title,
+		route=doc.route,
 		start_date=doc.start_date,
 		start_time=doc.start_time,
 		end_date=doc.end_date,

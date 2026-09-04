@@ -210,6 +210,7 @@ export interface EventGuests {
 	total: number
 	matched: number
 	registrations_closed: boolean
+	route: string | null
 	guests: EventGuest[]
 	ticket_types: GuestTicketType[]
 	has_next_page: boolean
