@@ -194,8 +194,8 @@ def ticket_type_filter(ticket_types: str | None) -> list[str]:
 	return [chosen for chosen in (ticket_types or "").split(",") if chosen.strip()]
 
 
-def ensure_guest_list_access(event: str) -> None:
-	"""Read access to the event's team is the bar for everything about its guests."""
+def ensure_event_team_access(event: str) -> None:
+	"""Read access to the event's team is the bar for everything a manage page shows."""
 	if not frappe.db.exists("Buzz Event", event):
 		EventNotFound.throw()
 
@@ -220,7 +220,7 @@ def event_guests(
 	Ordered by when the ticket was registered, newest first by default, so a page is a
 	stable slice as the caller walks down the list.
 	"""
-	ensure_guest_list_access(event)
+	ensure_event_team_access(event)
 
 	filters = {"event": event, "docstatus": 1}
 	chosen_types = ticket_type_filter(ticket_types)
@@ -280,7 +280,7 @@ def registration_trend(event: str, days: int = TREND_DAYS) -> RegistrationTrend:
 	is read as a shape, and a missing row would draw as a shorter week or a band that
 	disappears mid-stack rather than a quiet one.
 	"""
-	ensure_guest_list_access(event)
+	ensure_event_team_access(event)
 
 	days = max(2, min(int(days), 90))
 	window = [add_days(getdate(), -offset) for offset in reversed(range(days))]
