@@ -52,6 +52,13 @@ export interface EventProposals {
 	can_write: boolean
 }
 
+// buzz.api.proposals.accept_proposal
+export interface AcceptedProposal {
+	proposal: string
+	status: string
+	talk: string
+}
+
 // buzz.api.proposals.get_event_proposal_trend
 export interface DailySubmissions {
 	date: string

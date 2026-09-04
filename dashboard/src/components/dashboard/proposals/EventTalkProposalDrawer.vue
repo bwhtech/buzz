@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Avatar, Button, Select, Skeleton, dayjsLocal, toast } from "frappe-ui"
+import { Avatar, Button, Dialog, Select, Skeleton, dayjsLocal, toast } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import {
@@ -11,7 +11,7 @@ import {
 } from "@/components/common/drawer"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
-import { useProposal } from "@/data/proposals"
+import { useAcceptProposal, useProposal } from "@/data/proposals"
 import type { ProposalListItem, ProposalSpeaker } from "@/types"
 import { speakerName } from "@/utils/speakerByline"
 
@@ -57,15 +57,42 @@ const statusOptions = computed(() =>
 // server would refuse never gets the control — read access alone is a Viewer or Frontdesk.
 const changed = computed(() => Boolean(status.value) && status.value !== props.proposal?.status)
 
-async function updateStatus() {
+// Accepting is the one status that is not a status write: it creates the talk the
+// programme is made of, and an account for any speaker who has none. Worth a confirmation.
+const ACCEPTED = "Accepted"
+
+const accept = useAcceptProposal()
+const confirmingAcceptance = ref(false)
+
+const saving = computed(() => proposalDoc.setValue.loading || accept.loading)
+
+function updateStatus() {
 	if (!changed.value) return
+	if (status.value === ACCEPTED) {
+		confirmingAcceptance.value = true
+		return
+	}
+	write(() => proposalDoc.setValue.submit({ status: status.value }))
+}
+
+async function acceptProposal() {
+	const name = props.proposal?.name
+	if (!name) return
+	if (await write(() => accept.submit({ proposal: name }))) confirmingAcceptance.value = false
+}
+
+async function write(save: () => Promise<unknown>): Promise<boolean> {
 	try {
-		await proposalDoc.setValue.submit({ status: status.value })
+		await save()
 		toast.success(`Marked ${status.value.toLowerCase()}`)
 		emit("changed", status.value)
+		return true
 	} catch {
+		// The select goes back to what is actually stored, so the footer stops offering
+		// an update that has already failed.
 		status.value = props.proposal?.status || ""
 		toast.error("Could not change the status")
+		return false
 	}
 }
 
@@ -123,7 +150,7 @@ const fields = computed(() => [
 						aria-label="Review status"
 						side="bottom"
 						:options="statusOptions"
-						:disabled="!canWrite || proposalDoc.setValue.loading"
+						:disabled="!canWrite || saving"
 					>
 						<!-- The trigger reuses this slot for the selected option, so the dot is
 						     defined once and shows in both places. -->
@@ -192,6 +219,24 @@ const fields = computed(() => [
 						</p>
 					</div>
 				</div>
+				<Dialog
+					v-model:open="confirmingAcceptance"
+					title="Accept this talk?"
+					message="This puts the talk on the event's programme. Any speaker without a Buzz account gets one."
+					size="md"
+				>
+					<template #actions>
+						<div class="flex justify-end gap-2">
+							<Button label="Not yet" @click="confirmingAcceptance = false" />
+							<Button
+								variant="solid"
+								label="Accept and create talk"
+								:loading="accept.loading"
+								@click="acceptProposal"
+							/>
+						</div>
+					</template>
+				</Dialog>
 			</template>
 
 			<template v-if="proposal" #footer>
@@ -202,7 +247,7 @@ const fields = computed(() => [
 						variant="solid"
 						size="md"
 						label="Update"
-						:loading="proposalDoc.setValue.loading"
+						:loading="saving"
 						@click="updateStatus"
 					/>
 					<Button size="md" label="Cancel" @click="status = proposal.status" />

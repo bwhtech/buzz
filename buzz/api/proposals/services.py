@@ -1,9 +1,11 @@
 import frappe
+from frappe import _
 from frappe.query_builder.functions import Count, Date
 from frappe.utils import add_days, getdate
 
 from buzz.api.events.services import ensure_event_team_access
 from buzz.api.proposals.schemas import (
+	AcceptedProposal,
 	DailySubmissions,
 	EventProposalsResponse,
 	ProposalListItem,
@@ -11,7 +13,7 @@ from buzz.api.proposals.schemas import (
 	ProposalTrend,
 	StatusTotal,
 )
-from buzz.permissions import has_team_access
+from buzz.permissions import derived_has_permission, has_team_access
 
 # The columns behind one proposal card. The event ones come over a link hop, so a
 # deleted event leaves them empty.
@@ -209,3 +211,29 @@ def counts_by_status(event: str) -> list:
 		.where(proposal.event == event)
 		.groupby(proposal.status)
 	).run(as_dict=True)
+
+
+ACCEPTED = "Accepted"
+
+
+def accept_proposal(proposal: str) -> AcceptedProposal:
+	"""Accept a proposal, and put the talk it becomes on the event's programme.
+
+	`create_talk` is the only path that builds the Event Talk and the speaker accounts,
+	and the Desk button that used to be its only caller hides once the status reads
+	Accepted — so a status written straight to Accepted stranded the proposal with no
+	programme entry and no way back to make one.
+	"""
+	doc = frappe.get_doc("Talk Proposal", proposal)
+	if not derived_has_permission(doc, ptype="write"):
+		# A listed speaker holds write on their own proposal, which is not the same thing.
+		frappe.throw(_("Only the event's team can accept a proposal."), frappe.PermissionError)
+
+	existing = frappe.db.get_value("Event Talk", {"proposal": doc.name}, "name")
+	if not existing:
+		return AcceptedProposal(proposal=doc.name, talk=str(doc.create_talk().name), status=doc.status)
+
+	# Accepted once already and moved away since: the talk stands, only the status returns.
+	doc.status = ACCEPTED
+	doc.save()
+	return AcceptedProposal(proposal=doc.name, talk=str(existing), status=doc.status)

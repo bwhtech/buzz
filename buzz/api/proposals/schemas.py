@@ -60,3 +60,11 @@ class ProposalTrend(APIResponse):
 	per_day: list[DailySubmissions]
 	# All-time, like `total` — the window is a shape over time, a status is a share of a whole.
 	by_status: list[StatusTotal] = Field(default_factory=list)
+
+
+class AcceptedProposal(APIResponse):
+	"""What an acceptance produced: the proposal's new status and the talk behind it."""
+
+	proposal: str
+	status: str
+	talk: str

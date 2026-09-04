@@ -1,7 +1,12 @@
 import frappe
 
 from buzz.api.proposals import services
-from buzz.api.proposals.schemas import EventProposalsResponse, ProposalListItem, ProposalTrend
+from buzz.api.proposals.schemas import (
+	AcceptedProposal,
+	EventProposalsResponse,
+	ProposalListItem,
+	ProposalTrend,
+)
 
 
 @frappe.whitelist()
@@ -31,3 +36,9 @@ def get_event_proposals(
 def get_event_proposal_trend(event: str, days: int = services.TREND_DAYS) -> ProposalTrend:
 	"""Submissions per day for an event, for the card above its proposal list."""
 	return services.proposal_trend(event, days)
+
+
+@frappe.whitelist(methods=["POST"])
+def accept_proposal(proposal: str) -> AcceptedProposal:
+	"""Accept a proposal and create the Event Talk it becomes."""
+	return services.accept_proposal(proposal)

@@ -150,6 +150,9 @@ class TalkProposal(Document):
 			frappe.throw(_("Only the event's team can accept a proposal."), frappe.PermissionError)
 
 		talk = get_mapped_doc("Talk Proposal", self.name, {"Talk Proposal": {"doctype": "Event Talk"}})
+		# Event Talk.validate refuses a second talk for the same proposal, and the mapper
+		# cannot fill a field the source doctype does not have.
+		talk.proposal = self.name
 
 		for speaker in self.speakers:
 			user = frappe.db.exists("User", speaker.email)

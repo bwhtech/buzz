@@ -5,7 +5,12 @@ from frappe.utils.response import json_handler
 
 from buzz.api.events.exceptions import CannotManageEvent, EventNotFound
 from buzz.api.forms.test_forms import ensure_prompt_named_record
-from buzz.api.proposals import get_event_proposal_trend, get_event_proposals, get_my_proposals
+from buzz.api.proposals import (
+	accept_proposal,
+	get_event_proposal_trend,
+	get_event_proposals,
+	get_my_proposals,
+)
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team
 from buzz.proposals.doctype.talk_proposal.test_talk_proposal import (
 	make_guest_proposal,
@@ -270,3 +275,57 @@ class TestGetEventProposalTrend(IntegrationTestCase):
 		frappe.set_user(self.outsider)
 		with self.assertRaises(CannotManageEvent):
 			get_event_proposal_trend(self.event)
+
+
+class TestAcceptProposal(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.category = ensure_prompt_named_record("Event Category", "Accept Proposal Category")
+		cls.host = ensure_prompt_named_record("Event Host", "Accept Proposal Host")
+		cls.manager = make_test_user("accept-manager@example.com")
+		cls.outsider = make_test_user("accept-outsider@example.com")
+		cls.team = create_owned_team(f"Accept Team {frappe.generate_hash(length=6)}", cls.manager)
+		cls.event = cstr(make_test_event(cls.category, cls.host, team=cls.team))
+
+	def setUp(self):
+		self.proposal = make_guest_proposal(self.event, "accept-speaker@example.com")
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def test_accepting_creates_the_talk_and_sets_the_status(self):
+		frappe.set_user(self.manager)
+		accepted = accept_proposal(self.proposal)
+
+		self.assertEqual(accepted.status, "Accepted")
+		self.assertEqual(frappe.db.get_value("Talk Proposal", self.proposal, "status"), "Accepted")
+		self.assertEqual(frappe.db.get_value("Event Talk", accepted.talk, "proposal"), self.proposal)
+
+	def test_the_talk_carries_the_proposal_speakers(self):
+		frappe.set_user(self.manager)
+		talk = frappe.get_doc("Event Talk", accept_proposal(self.proposal).talk)
+		self.assertEqual(len(talk.speakers), 1)
+
+	def test_accepting_twice_reuses_the_talk_rather_than_duplicating_it(self):
+		"""A reviewer can move a proposal off Accepted and back; the programme has one entry."""
+		frappe.set_user(self.manager)
+		first = accept_proposal(self.proposal)
+		frappe.db.set_value("Talk Proposal", self.proposal, "status", "Shortlisted")
+
+		second = accept_proposal(self.proposal)
+		self.assertEqual(second.talk, first.talk)
+		self.assertEqual(second.status, "Accepted")
+		self.assertEqual(frappe.db.count("Event Talk", {"proposal": self.proposal}), 1)
+
+	def test_a_speaker_cannot_accept_their_own_proposal(self):
+		"""A listed speaker holds write on the document; accepting is the team's call."""
+		speaker = make_test_user("accept-speaker@example.com")
+		frappe.set_user(speaker)
+		with self.assertRaises(frappe.PermissionError):
+			accept_proposal(self.proposal)
+
+	def test_an_outsider_cannot_accept(self):
+		frappe.set_user(self.outsider)
+		with self.assertRaises(frappe.PermissionError):
+			accept_proposal(self.proposal)
