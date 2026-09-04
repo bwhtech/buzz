@@ -83,9 +83,12 @@ export function useEventProposals(
 			: proposals.value.filter((proposal) => proposal.name !== name)
 	}
 
+	// The offset is what the browser already holds, not the page number it is on. A row
+	// that a status change took out of the filter is gone from the server's results too,
+	// so every row behind it moved down one — counting pages would step over them.
 	const loadMore = () => {
 		if (page.loading || !page.data?.has_next_page) return
-		start.value += PROPOSALS_PAGE_SIZE
+		start.value = proposals.value.length
 	}
 
 	return {
