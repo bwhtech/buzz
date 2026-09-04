@@ -96,8 +96,9 @@ class GuestTicketType(APIResponse):
 
 class EventGuestsResponse(APIResponse):
 	title: str | None = None
-	# The public registration page's path, for a link out of the manage page.
-	route: str | None = None
+	# Where registrations are actually taken: the event's own page, or the external one
+	# it sends people to instead.
+	registration_link: str | None = None
 	# The event's own details, so a guest row can be drawn as the ticket it is.
 	start_date: date | None = None
 	start_time: timedelta | None = None
@@ -108,6 +109,8 @@ class EventGuestsResponse(APIResponse):
 	total: int
 	matched: int
 	registrations_closed: bool
+	# Read access alone is a Viewer or Frontdesk, who cannot change the registration state.
+	can_write: bool = False
 	guests: list[EventGuest]
 	ticket_types: list[GuestTicketType] = Field(default_factory=list)
 	has_next_page: bool = False
@@ -161,3 +164,9 @@ class NewEvent(APIRequest):
 class CreatedEvent(APIResponse):
 	name: str
 	title: str
+
+
+class RegistrationState(APIResponse):
+	"""Whether the event takes registrations, as the server reads it after a change."""
+
+	registrations_closed: bool

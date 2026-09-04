@@ -45,6 +45,13 @@ const { guests, loadMore, page, loadingFirstPage, loadingMore } = useEventGuests
 	ticketTypes,
 )
 
+// The export is the list on screen, not the whole event: same filters, same order.
+const exportQuery = computed(() => ({
+	search: search.value.trim(),
+	ticket_types: ticketTypes.value.join(","),
+	order: order.value,
+}))
+
 // The bar speaks in groups of chosen values; sort is one choice, so it reads and writes
 // the single order the list is fetched with.
 // The types come back with the guests, so the filter offers exactly what this event sells.
@@ -271,8 +278,10 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 				v-if="page.data"
 				:event="eventId"
 				:title="page.data.title"
-				:route="page.data.route"
+				:registration-link="page.data.registration_link"
 				:closed="!!page.data.registrations_closed"
+				:can-write="!!page.data.can_write"
+				:query="exportQuery"
 				@changed="page.reload()"
 			/>
 		</template>

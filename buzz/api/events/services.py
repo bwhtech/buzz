@@ -3,7 +3,7 @@ from frappe import _
 from frappe.model.naming import append_number_if_name_exists
 from frappe.query_builder import Case
 from frappe.query_builder.functions import Count, Date
-from frappe.utils import add_days, getdate
+from frappe.utils import add_days, get_datetime_in_timezone, get_system_timezone, getdate
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.exceptions import (
@@ -25,6 +25,7 @@ from buzz.api.events.schemas import (
 	MyEventFilters,
 	MyEventsResponse,
 	NewEvent,
+	RegistrationState,
 	RegistrationTrend,
 	RouteAvailability,
 	TicketTypeTotal,
@@ -194,6 +195,30 @@ def ticket_type_filter(ticket_types: str | None) -> list[str]:
 	return [chosen for chosen in (ticket_types or "").split(",") if chosen.strip()]
 
 
+def registration_link(doc) -> str | None:
+	"""An event that sends people elsewhere is managed elsewhere: link where they land."""
+	if doc.external_registration_page:
+		return doc.registration_url
+	return f"/b/register/{doc.route}" if doc.route else None
+
+
+def set_registration_state(event: str, closed: bool) -> RegistrationState:
+	"""Open or close registrations, and answer with the state the server ends up in.
+
+	Closure is derived from `registrations_close_at`, so closing writes the event's own
+	wall clock and opening clears the cutoff. Opening cannot beat the event's end date,
+	which closes registrations on its own — hence the state rather than an acknowledgement.
+	"""
+	doc = frappe.get_doc("Buzz Event", event)
+	if not has_team_access(doc.team, "write", frappe.session.user):
+		CannotManageEvent.throw()
+
+	timezone = doc.time_zone or get_system_timezone()
+	doc.registrations_close_at = get_datetime_in_timezone(timezone).replace(tzinfo=None) if closed else None
+	doc.save()
+	return RegistrationState(registrations_closed=are_registrations_closed(doc))
+
+
 def ensure_event_team_access(event: str) -> None:
 	"""Read access to the event's team is the bar for everything a manage page shows."""
 	if not frappe.db.exists("Buzz Event", event):
@@ -257,7 +282,7 @@ def event_guests(
 	matched = count_tickets(filters, or_filters) if or_filters or chosen_types else total
 	return EventGuestsResponse(
 		title=doc.title,
-		route=doc.route,
+		registration_link=registration_link(doc),
 		start_date=doc.start_date,
 		start_time=doc.start_time,
 		end_date=doc.end_date,
@@ -265,6 +290,7 @@ def event_guests(
 		total=total,
 		matched=matched,
 		registrations_closed=are_registrations_closed(doc),
+		can_write=has_team_access(doc.team, "write", frappe.session.user),
 		guests=guests,
 		ticket_types=ticket_types_of(event),
 		has_next_page=start + len(guests) < matched,

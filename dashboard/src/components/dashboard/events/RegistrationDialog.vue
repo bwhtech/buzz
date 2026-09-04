@@ -8,19 +8,20 @@ const emit = defineEmits<{ changed: [] }>()
 
 const saving = ref(false)
 
-// ponytail: there is no on/off flag — closure is derived from `registrations_close_at`,
-// so closing writes "now" and opening clears the cutoff. An event that has already ended
-// stays closed either way; give it a real flag if that needs to change.
+// The server owns the state: an event that has already ended stays closed however this
+// call is answered, so the toast reports what came back rather than what was asked for.
 async function setClosed(closed: boolean) {
 	saving.value = true
 	try {
-		await call("frappe.client.set_value", {
-			doctype: "Buzz Event",
-			name: props.event,
-			fieldname: "registrations_close_at",
-			value: closed ? new Date().toISOString().slice(0, 19).replace("T", " ") : null,
-		})
-		toast.success(closed ? "Registrations closed" : "Registrations open")
+		const state: { registrations_closed: boolean } = await call(
+			"buzz.api.events.set_registration_state",
+			{ event: props.event, closed },
+		)
+		if (state.registrations_closed === closed) {
+			toast.success(closed ? "Registrations closed" : "Registrations open")
+		} else {
+			toast.warning("Registrations stay closed: the event has ended.")
+		}
 		emit("changed")
 		isOpen.value = false
 	} catch {

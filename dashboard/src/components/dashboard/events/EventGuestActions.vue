@@ -8,8 +8,11 @@ import type { EventGuest, EventGuests } from "@/types"
 const props = defineProps<{
 	event: string
 	closed: boolean
+	canWrite: boolean
 	title?: string | null
-	route?: string | null
+	registrationLink?: string | null
+	// What the list is currently showing, so the export is the same list.
+	query: { search: string; ticket_types: string; order: string }
 }>()
 const emit = defineEmits<{ changed: [] }>()
 
@@ -20,7 +23,14 @@ const exporting = ref(false)
 const PRESSABLE =
 	"duration-150 ease-out active:scale-[0.98] !transition-[transform,background-color,color]"
 
-const cell = (value: string | null | undefined) => `"${(value ?? "").replace(/"/g, '""')}"`
+// A cell opening with one of these is a formula to a spreadsheet, and attendees write
+// their own names — a leading quote makes it text again.
+const FORMULA_START = /^[=+\-@\t\r]/
+
+const cell = (value: string | null | undefined) => {
+	const text = String(value ?? "")
+	return `"${(FORMULA_START.test(text) ? `'${text}` : text).replace(/"/g, '""')}"`
+}
 
 // The list is paged, so the export walks it: a hundred at a time until the server says
 // there is no next page.
@@ -29,6 +39,7 @@ async function fetchAll(): Promise<EventGuest[]> {
 	for (let start = 0; ; start += 100) {
 		const page: EventGuests = await call("buzz.api.events.get_event_guests", {
 			event: props.event,
+			...props.query,
 			start,
 			limit: 100,
 		})
@@ -76,11 +87,11 @@ type QuickAction = {
 // three near-identical buttons. A link row renders as an anchor; the rest as buttons.
 const actions = computed<QuickAction[]>(() =>
 	[
-		props.route
+		props.registrationLink
 			? {
 					icon: "lucide-arrow-up-right",
 					label: "Registration page",
-					link: `/b/register/${props.route}`,
+					link: props.registrationLink,
 				}
 			: null,
 		{
@@ -96,10 +107,13 @@ const actions = computed<QuickAction[]>(() =>
 <template>
 	<h3 class="text-p-sm font-medium text-ink-gray-5">Quick actions</h3>
 	<!-- The whole block is the control: the state is the label, pressing it is how the
-		 state gets changed, and the theme carries the state before the words are read. -->
+		 state gets changed, and the theme carries the state before the words are read.
+		 A reader the server would refuse gets it as a readout instead — read access alone
+		 is a Viewer or Frontdesk, who cannot write the event. -->
 	<Button
 		:class="`h-auto w-full !justify-start !gap-3 px-2.5 py-2.5 ${PRESSABLE}`"
 		variant="subtle"
+		:disabled="!canWrite"
 		:theme="closed ? 'red' : 'green'"
 		@click="dialogOpen = true"
 	>
