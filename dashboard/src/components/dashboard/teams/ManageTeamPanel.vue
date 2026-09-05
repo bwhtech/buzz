@@ -117,8 +117,10 @@ async function refresh() {
 					<ErrorMessage :message="(updateTeam.error as Error | null)?.message" />
 				</template>
 
-				<section class="rounded-7 bg-surface-gray-1 p-4">
-					<h3 class="text-sm font-medium text-ink-gray-7">{{ __("What each role can do") }}</h3>
+				<h3 class="text-base-semibold text-ink-gray-8">{{ __("Team Members") }}</h3>
+
+				<section class="-mt-3 rounded-7 bg-surface-gray-1 p-4">
+					<h4 class="text-sm font-medium text-ink-gray-7">{{ __("What each role can do") }}</h4>
 					<dl class="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
 						<div v-for="role in ROLES" :key="role.name" class="flex gap-2">
 							<dt class="w-20 shrink-0 font-medium text-ink-gray-7">{{ role.name }}</dt>
