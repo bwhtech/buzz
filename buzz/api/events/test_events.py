@@ -9,6 +9,7 @@ from buzz.api.events import (
 	get_event_guests,
 	get_event_registration_trend,
 	get_my_events,
+	set_registration_state,
 )
 from buzz.api.events import create_event as create_event_endpoint
 from buzz.api.events.exceptions import (
@@ -947,3 +948,79 @@ class TestGetEventRegistrationTrend(IntegrationTestCase):
 
 		with self.assertRaises(EventNotFound):
 			get_event_registration_trend("999999999")
+
+
+class TestSetRegistrationState(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("registration-owner@example.com", "Owner")
+		cls.viewer = create_user("registration-viewer@example.com", "Viewer")
+		cls.team = create_owned_team("Registration Team", cls.owner)
+		add_member(cls.team, cls.viewer, "Viewer")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_closing_stops_registrations_now_in_the_events_own_timezone(self):
+		"""A UTC wall clock would sit hours ahead of an event west of UTC, leaving it open."""
+		event = create_event("Pacific Event", self.team, time_zone="US/Pacific")
+		frappe.set_user(self.owner)
+
+		self.assertTrue(set_registration_state(event, closed=True).registrations_closed)
+		self.assertTrue(get_event_guests(event).registrations_closed)
+
+	def test_opening_clears_the_cutoff(self):
+		event = create_event("Reopened Event", self.team, registrations_close_at="2020-01-01 00:00:00")
+		frappe.set_user(self.owner)
+
+		self.assertFalse(set_registration_state(event, closed=False).registrations_closed)
+		self.assertIsNone(frappe.db.get_value("Buzz Event", event, "registrations_close_at"))
+
+	def test_an_ended_event_stays_closed_when_it_is_opened(self):
+		"""Clearing the cutoff cannot reopen it, so the answer says closed rather than done."""
+		event = create_event(
+			"Finished Event",
+			self.team,
+			start_date=add_days(today(), -10),
+			end_date=add_days(today(), -9),
+		)
+		frappe.set_user(self.owner)
+
+		self.assertTrue(set_registration_state(event, closed=False).registrations_closed)
+
+	def test_a_reader_cannot_change_the_registration_state(self):
+		event = create_event("Guarded Event", self.team)
+		frappe.set_user(self.viewer)
+
+		with self.assertRaises(CannotManageEvent):
+			set_registration_state(event, closed=True)
+
+	def test_the_guest_response_tells_a_reader_they_cannot_write(self):
+		event = create_event("Read Only Event", self.team)
+
+		frappe.set_user(self.viewer)
+		self.assertFalse(get_event_guests(event).can_write)
+
+		frappe.set_user(self.owner)
+		self.assertTrue(get_event_guests(event).can_write)
+
+	def test_an_external_registration_page_is_linked_instead_of_the_buzz_one(self):
+		event = create_event(
+			"External Event",
+			self.team,
+			external_registration_page=1,
+			registration_url="https://tickets.example.com/buzz",
+		)
+		frappe.set_user(self.owner)
+
+		self.assertEqual(get_event_guests(event).registration_link, "https://tickets.example.com/buzz")
+
+	def test_an_ordinary_event_is_linked_to_its_own_registration_page(self):
+		event = create_event("Hosted Event", self.team, route="hosted-event")
+		frappe.set_user(self.owner)
+
+		self.assertEqual(get_event_guests(event).registration_link, "/b/register/hosted-event")

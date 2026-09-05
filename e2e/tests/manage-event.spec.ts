@@ -251,7 +251,9 @@ test.describe("Guest list", () => {
 		// The count is the number of rows under it, not a separate claim.
 		const registrations = Number(await page.getByText(/^\d+$/).first().textContent())
 		expect(registrations).toBe(GUESTS.length)
-		await expect(page.getByText(/Registrations (are open|have closed)/)).toBeVisible()
+		// The registration state is the actions rail's own control, which reads the state
+		// out and is how it gets changed.
+		await expect(page.getByRole("button", { name: /Registration (Open|Closed)/ })).toBeVisible()
 
 		// Newest registration first, which is the reverse of the seeding above — so each
 		// row is found by its guest rather than by a position the sort order decides. Both

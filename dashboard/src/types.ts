@@ -210,6 +210,10 @@ export interface EventGuests {
 	total: number
 	matched: number
 	registrations_closed: boolean
+	// Where registrations are taken: this event's own page, or the external one it uses.
+	registration_link: string | null
+	// Read access alone is a Viewer or Frontdesk, who cannot change the registration state.
+	can_write: boolean
 	guests: EventGuest[]
 	ticket_types: GuestTicketType[]
 	has_next_page: boolean

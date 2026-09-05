@@ -8,6 +8,7 @@ from buzz.api.events.schemas import (
 	MyEventFilters,
 	MyEventsResponse,
 	NewEvent,
+	RegistrationState,
 	RegistrationTrend,
 	RouteAvailability,
 )
@@ -45,6 +46,12 @@ def get_event_guests(
 	it is the same string the dashboard keeps the filter in.
 	"""
 	return services.event_guests(event, search, ticket_types, order, start, limit)
+
+
+@frappe.whitelist(methods=["POST"])
+def set_registration_state(event: str, closed: bool) -> RegistrationState:
+	"""Open or close an event's registrations, answering with the state that results."""
+	return services.set_registration_state(event, closed)
 
 
 @frappe.whitelist()

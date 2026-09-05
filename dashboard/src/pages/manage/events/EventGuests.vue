@@ -7,6 +7,7 @@ import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
 import { FilterBar, type FilterGroup, type FilterValues } from "@/components/common/filters"
+import EventGuestActions from "@/components/dashboard/events/EventGuestActions.vue"
 import EventGuestItem from "@/components/dashboard/events/EventGuestItem.vue"
 import EventGuestSkeleton from "@/components/dashboard/events/EventGuestSkeleton.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
@@ -14,6 +15,7 @@ import GuestInfoDrawer from "@/components/dashboard/events/GuestInfoDrawer.vue"
 import { type GuestOrder, useEventGuests } from "@/composables/useEventGuests"
 import { useUrlFilters } from "@/composables/useUrlFilters"
 import { useRegistrationTrend } from "@/data/events"
+import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError } from "@/types"
 
 const route = useRoute()
@@ -42,6 +44,13 @@ const { guests, loadMore, page, loadingFirstPage, loadingMore } = useEventGuests
 	order,
 	ticketTypes,
 )
+
+// The export is the list on screen, not the whole event: same filters, same order.
+const exportQuery = computed(() => ({
+	search: search.value.trim(),
+	ticket_types: ticketTypes.value.join(","),
+	order: order.value,
+}))
 
 // The bar speaks in groups of chosen values; sort is one choice, so it reads and writes
 // the single order the list is fetched with.
@@ -145,12 +154,12 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 <template>
 	<EventPageHeader :title="page.data?.title" section="Guests" />
 
-	<div class="m-auto max-w-[800px] w-full py-8 px-4 space-y-8">
+	<PageWithSidebar>
 		<section class="space-y-2">
 			<h1 class="text-xl font-semibold text-ink-gray-9">How it's going</h1>
 
 			<!-- One row of readings. The donut only earns its half when there is more than one
-				 tier to split; with a single type the card takes the whole row. -->
+			 tier to split; with a single type the card takes the whole row. -->
 			<div class="grid gap-4 sm:grid-cols-2">
 				<NumberCard
 					:class="showTicketTypes ? '' : 'sm:col-span-2'"
@@ -175,11 +184,6 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 			</div>
 
 			<ErrorMessage :message="message(trend.error)" />
-
-			<p v-if="page.data?.registrations_closed" class="text-sm text-ink-red-3">
-				Registrations have closed
-			</p>
-			<p v-else-if="page.data" class="text-sm text-ink-gray-5">Registrations are open</p>
 		</section>
 
 		<section class="space-y-3">
@@ -210,7 +214,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 				leave-to-class="opacity-0"
 			>
 				<!-- Rows shaped like the real ones, so the list settles into place instead of
-					 shoving the page down when it arrives. -->
+				 shoving the page down when it arrives. -->
 				<ul
 					v-if="loadingFirstPage"
 					class="divide-y divide-outline-gray-1 overflow-hidden rounded-7 border border-outline-gray-2"
@@ -235,7 +239,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 							@open="selectedId = guest.name"
 						/>
 						<!-- The next page draws itself into the list rather than announcing itself
-							 under it: the rows arrive where the placeholders already are. -->
+						 under it: the rows arrive where the placeholders already are. -->
 						<EventGuestSkeleton v-if="loadingMore" :rows="3" />
 					</ul>
 
@@ -250,8 +254,8 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 					<div ref="sentinel" aria-hidden="true" />
 
 					<!-- The list has a floor, so the scroll ends on a statement rather than on
-						 rows that might still be coming. The label sits on the rule rather than
-						 beside it, which reads as a stop instead of another section heading. -->
+					 rows that might still be coming. The label sits on the rule rather than
+					 beside it, which reads as a stop instead of another section heading. -->
 					<div
 						v-if="guests.length && !page.data?.has_next_page && !loadingMore"
 						class="relative mt-6 flex justify-center"
@@ -269,7 +273,19 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 				</div>
 			</Transition>
 		</section>
-	</div>
+		<template #sidebar>
+			<EventGuestActions
+				v-if="page.data"
+				:event="eventId"
+				:title="page.data.title"
+				:registration-link="page.data.registration_link"
+				:closed="!!page.data.registrations_closed"
+				:can-write="!!page.data.can_write"
+				:query="exportQuery"
+				@changed="page.reload()"
+			/>
+		</template>
+	</PageWithSidebar>
 
 	<GuestInfoDrawer
 		v-model:open="drawerOpen"
