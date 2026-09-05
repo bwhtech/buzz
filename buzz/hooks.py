@@ -76,7 +76,7 @@ doc_events = {
 	},
 }
 
-fixtures = [{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Frontdesk Manager"]]}}]
+fixtures = [{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Event Manager", "Frontdesk Manager"]]}}]
 
 user_invitation = {
 	"allowed_roles": {"Event Manager": ["Buzz User"], "Buzz User": ["Buzz User"]},
