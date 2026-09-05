@@ -1,8 +1,8 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.teams import get_my_teams, get_team_overview, remove_member
-from buzz.api.teams.exceptions import CannotManageMembers, NotATeamMember
+from buzz.api.teams import get_my_teams, get_team_overview, remove_member, update_team
+from buzz.api.teams.exceptions import CannotEditTeam, CannotManageMembers, NotATeamMember
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
 
@@ -223,3 +223,41 @@ class TestRemoveMember(IntegrationTestCase):
 
 		remove_member(second, member)
 		self.assertNotIn("Event Manager", frappe.get_roles(member))
+
+
+class TestUpdateTeam(IntegrationTestCase):
+	# Rollback is per class, not per test — every test owns its users and its team names.
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_an_admin_renames_the_team_and_sets_its_logo(self):
+		owner = create_user("update-owner@example.com", "Owner")
+		admin = create_user("update-admin@example.com", "Admin")
+		team = create_owned_team("Update Before", owner)
+		upsert_membership(team, admin, "Admin")
+
+		frappe.set_user(admin)
+		update_team(team, "  Update After  ", "/files/logo.png")
+
+		details = frappe.db.get_value("Buzz Team", team, ["team_name", "logo"], as_dict=True)
+		self.assertEqual(details.team_name, "Update After")
+		self.assertEqual(details.logo, "/files/logo.png")
+
+	def test_a_manager_cannot_edit_the_team(self):
+		owner = create_user("update-owner2@example.com", "Owner")
+		manager = create_user("update-manager@example.com", "Manager")
+		team = create_owned_team("Update Locked", owner)
+		upsert_membership(team, manager, "Manager")
+
+		frappe.set_user(manager)
+		with self.assertRaises(CannotEditTeam):
+			update_team(team, "Renamed", None)
+
+	def test_a_blank_name_is_refused(self):
+		owner = create_user("update-owner3@example.com", "Owner")
+		team = create_owned_team("Update Blank", owner)
+
+		frappe.set_user(owner)
+		with self.assertRaises(frappe.ValidationError):
+			update_team(team, "   ", None)

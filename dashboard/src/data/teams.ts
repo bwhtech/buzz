@@ -53,6 +53,10 @@ export const inviteMembers = createResource<InviteOutcome[]>({
 	url: "buzz.api.teams.invite_members",
 })
 
+export const updateTeam = createResource({
+	url: "buzz.api.teams.update_team",
+})
+
 export function selectTeam(name: string) {
 	selectedTeamName.value = name
 	localStorage.setItem(STORAGE_KEY, name)

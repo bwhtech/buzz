@@ -3,7 +3,6 @@ import {
 	Avatar,
 	Button,
 	ErrorMessage,
-	FileUploader,
 	FormControl,
 	SettingsBody,
 	SettingsContent,
@@ -13,7 +12,6 @@ import {
 	SettingsNavItem,
 	SettingsPanel,
 	SettingsSidebar,
-	Spinner,
 	Textarea,
 	toast,
 	useDoc,
@@ -21,11 +19,11 @@ import {
 } from "frappe-ui"
 import { computed, reactive, ref, watch } from "vue"
 
+import AvatarUploader from "@/components/common/AvatarUploader.vue"
 import TeamsPanel from "@/components/dashboard/teams/TeamsPanel.vue"
 import { session } from "@/data/session"
 import { reloadTeams } from "@/data/teams"
 import { userResource } from "@/data/user"
-import { validateIsImageFile } from "@/utils"
 
 interface UserDoc {
 	name: string
@@ -157,68 +155,12 @@ async function save() {
 
 				<SettingsBody>
 					<div class="flex flex-col gap-6 pt-6">
-						<FileUploader
-							:validate-file="validateIsImageFile"
-							file-types="image/*"
-							@success="(file: { file_url: string }) => (form.user_image = file.file_url)"
-						>
-							<template #default="{ openFileSelector, error: uploadError, uploading }">
-								<div class="flex items-center gap-4">
-									<button
-										type="button"
-										class="group relative size-16 shrink-0 overflow-hidden rounded-full bg-surface-gray-3 transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline-none focus-visible:focus-ring active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100"
-										:aria-label="form.user_image ? __('Change photo') : __('Upload photo')"
-										@click="openFileSelector"
-									>
-										<img
-											v-if="form.user_image"
-											:src="form.user_image"
-											:alt="fullName"
-											class="size-full object-cover"
-										/>
-										<!-- Over an image the scrim is a hover affordance; over the empty
-										     circle the camera is the only click cue. -->
-										<span
-											class="absolute inset-0 flex items-center justify-center transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
-											:class="
-												form.user_image
-													? 'bg-black/40 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'
-													: ''
-											"
-										>
-											<Spinner
-												v-if="uploading"
-												class="size-5"
-												:class="form.user_image ? 'text-white' : 'text-ink-gray-5'"
-											/>
-											<span
-												v-else
-												class="lucide-camera size-5"
-												:class="form.user_image ? 'text-white' : 'text-ink-gray-5'"
-											/>
-										</span>
-									</button>
-
-									<div class="flex flex-col gap-1">
-										<span class="text-base-medium text-ink-gray-8">
-											{{ __("Profile picture") }}
-										</span>
-										<p class="text-p-sm text-ink-gray-5">
-											{{ __("Helps people recognise you") }}
-										</p>
-										<button
-											v-if="form.user_image"
-											type="button"
-											class="self-start text-p-sm text-ink-gray-6 underline underline-offset-2 transition-colors duration-150 hover:text-ink-gray-8"
-											@click="form.user_image = null"
-										>
-											{{ __("Remove") }}
-										</button>
-										<ErrorMessage :message="(uploadError as string) ?? ''" />
-									</div>
-								</div>
-							</template>
-						</FileUploader>
+						<AvatarUploader
+							v-model="form.user_image"
+							:label="fullName"
+							:title="__('Profile picture')"
+							:description="__('Helps people recognise you')"
+						/>
 
 						<div class="grid gap-4 sm:grid-cols-2">
 							<FormControl type="text" :label="__('First Name')" v-model="form.first_name" />

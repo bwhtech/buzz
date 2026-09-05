@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { Button, ErrorMessage, SettingsBody, SettingsHeader, Skeleton } from "frappe-ui"
-import { computed, ref } from "vue"
+import {
+	Button,
+	ErrorMessage,
+	FormControl,
+	SettingsBody,
+	SettingsHeader,
+	Skeleton,
+	toast,
+} from "frappe-ui"
+import { computed, reactive, ref, watch } from "vue"
 
+import AvatarUploader from "@/components/common/AvatarUploader.vue"
 import AddMembersDialog from "@/components/dashboard/teams/AddMembersDialog.vue"
 import TeamMembersTable from "@/components/dashboard/teams/TeamMembersTable.vue"
-import { reloadTeams, useTeamOverview } from "@/data/teams"
+import { reloadTeams, updateTeam, useTeamOverview } from "@/data/teams"
 import { canManageMembers } from "@/utils/teamRoles"
 
 const props = defineProps<{ team: string; teamName: string }>()
@@ -13,7 +22,7 @@ defineEmits<{ back: [] }>()
 // Plain-language reading of the capability matrix in specs/v2/00-teams.
 const ROLES = [
 	{ name: "Owner", can: __("Created the team. Full control, and cannot be removed.") },
-	{ name: "Admin", can: __("Everything an owner can do, except renaming or deleting the team.") },
+	{ name: "Admin", can: __("Everything an owner can do, except deleting the team.") },
 	{
 		name: "Manager",
 		can: __("Creates and edits events. Cannot delete records or manage members."),
@@ -27,6 +36,31 @@ const isAdding = ref(false)
 const overview = useTeamOverview(props.team)
 
 const canManage = computed(() => canManageMembers(overview.data?.my_role))
+
+const form = reactive({ team_name: props.teamName, logo: null as string | null })
+
+// The overview arrives after the panel opens, so the form follows it in.
+watch(
+	() => overview.data,
+	(team) => team && Object.assign(form, { team_name: team.team_name, logo: team.logo }),
+)
+
+const isDirty = computed(
+	() =>
+		!!overview.data &&
+		(form.team_name !== overview.data.team_name || form.logo !== overview.data.logo),
+)
+
+const title = computed(() => overview.data?.team_name ?? props.teamName)
+
+async function save() {
+	// Rejects on failure; updateTeam.error renders inline, so the rejection is swallowed.
+	await updateTeam.submit({ team: props.team, ...form }).catch(() => null)
+	if (updateTeam.error) return
+
+	await refresh()
+	toast.success(__("Team updated"))
+}
 
 // The teams list behind this view shows member avatars, so it has to follow every change.
 async function refresh() {
@@ -45,19 +79,45 @@ async function refresh() {
 							<span class="lucide-chevron-left size-4" />
 						</template>
 					</Button>
-					<h2 class="truncate text-lg font-semibold text-ink-gray-8">{{ teamName }}</h2>
+					<h2 class="truncate text-lg font-semibold text-ink-gray-8">{{ title }}</h2>
 				</div>
-				<Button
-					v-if="canManage"
-					icon-left="lucide-plus"
-					:label="__('Add member')"
-					@click="isAdding = true"
-				/>
+				<div v-if="canManage" class="flex shrink-0 items-center gap-2">
+					<Transition name="save">
+						<Button
+							v-if="isDirty || updateTeam.loading"
+							variant="solid"
+							:loading="updateTeam.loading"
+							@click="save"
+						>
+							{{ __("Save") }}
+						</Button>
+					</Transition>
+					<Button icon-left="lucide-plus" :label="__('Add member')" @click="isAdding = true" />
+				</div>
 			</div>
 		</SettingsHeader>
 
 		<SettingsBody>
 			<div class="flex flex-col gap-6 pt-6">
+				<template v-if="canManage">
+					<AvatarUploader
+						v-model="form.logo"
+						shape="square"
+						:label="title"
+						:title="__('Team logo')"
+						:description="__('Shown wherever the team appears')"
+					/>
+
+					<FormControl
+						type="text"
+						class="max-w-sm"
+						:label="__('Team Name')"
+						v-model="form.team_name"
+					/>
+
+					<ErrorMessage :message="(updateTeam.error as Error | null)?.message" />
+				</template>
+
 				<section class="rounded-7 bg-surface-gray-1 p-4">
 					<h3 class="text-sm font-medium text-ink-gray-7">{{ __("What each role can do") }}</h3>
 					<dl class="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
@@ -86,3 +146,31 @@ async function refresh() {
 		<AddMembersDialog v-model="isAdding" :team="team" @success="refresh" />
 	</div>
 </template>
+
+<style scoped>
+/* Same save affordance as the profile panel: leave quicker than enter. */
+.save-enter-active {
+	transition:
+		opacity 150ms cubic-bezier(0.23, 1, 0.32, 1),
+		transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.save-leave-active {
+	transition:
+		opacity 100ms cubic-bezier(0.23, 1, 0.32, 1),
+		transform 100ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.save-enter-from,
+.save-leave-to {
+	opacity: 0;
+	transform: scale(0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.save-enter-from,
+	.save-leave-to {
+		transform: none;
+	}
+}
+</style>

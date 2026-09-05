@@ -39,3 +39,8 @@ def remove_member(team: str, user: str) -> None:
 @frappe.whitelist(methods=["POST"])
 def invite_members(team: str, invites: list[dict]) -> list[InviteOutcome]:
 	return invitations.invite_members(team, invites)
+
+
+@frappe.whitelist(methods=["POST"])
+def update_team(team: str, team_name: str, logo: str | None = None) -> None:
+	services.update_team(team, team_name, logo)

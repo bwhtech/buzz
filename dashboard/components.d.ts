@@ -16,6 +16,7 @@ declare module 'vue' {
     AddSpeakerDialog: typeof import('./src/components/dashboard/proposals/AddSpeakerDialog.vue')['default']
     AddVenueDialog: typeof import('./src/components/dashboard/events/AddVenueDialog.vue')['default']
     AttendeeFormControl: typeof import('./src/components/AttendeeFormControl.vue')['default']
+    AvatarUploader: typeof import('./src/components/common/AvatarUploader.vue')['default']
     BackButton: typeof import('./src/components/common/BackButton.vue')['default']
     BaseCustomEventForm: typeof import('./src/components/BaseCustomEventForm.vue')['default']
     BillingDetails: typeof import('./src/components/BillingDetails.vue')['default']

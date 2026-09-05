@@ -12,6 +12,10 @@ class CannotManageMembers(NotPermitted):
 	message = _lt("You cannot manage members of this team.")
 
 
+class CannotEditTeam(NotPermitted):
+	message = _lt("You cannot edit this team.")
+
+
 class CannotGrantOwnership(NotPermitted):
 	title = _lt("Not Permitted")
 	message = _lt("Ownership of a team cannot be granted.")
