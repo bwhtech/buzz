@@ -1,16 +1,20 @@
 import { expect, type Page, test } from "@playwright/test"
 
-// Nothing here hardcodes who the session user is or what their profile holds: CI
-// signs in as FRAPPE_USER, and the whole chromium project shares that account.
-// Every test reads the saved value, edits it to something unique, and puts it
-// back through the same dialog.
+import { SETTINGS_EMAIL, SETTINGS_FIRST_NAME } from "../data/user-settings"
+
+// Runs as its own user (see user-settings.setup.ts), and every edit is stamped and put back
+// through the dialog, so the tests hold in any order.
 const unique = (prefix: string) => `${prefix} ${Date.now()}`
 
+// Scoped to the dialog: the events page behind it carries its own labels, and a bare
+// getByLabel("Email") also matches an event card's "Open E2E Guest Email OTP" button.
+const settings = (page: Page) => page.getByRole("dialog")
+
 async function openSettings(page: Page) {
-	await page.getByRole("heading", { name: "Events", level: 1 }).waitFor()
+	await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible()
 	await page.getByLabel("Account menu").click()
 	await page.getByRole("button", { name: "Settings" }).click()
-	await expect(page.getByRole("heading", { name: "Profile" })).toBeVisible()
+	await expect(settings(page).getByRole("heading", { name: "Profile" })).toBeVisible()
 }
 
 test.describe("User settings", () => {
@@ -19,16 +23,18 @@ test.describe("User settings", () => {
 		await openSettings(page)
 	})
 
-	test("opens the profile tab with the saved profile and nothing to save", async ({ page }) => {
-		await expect(page.getByLabel("First Name")).not.toHaveValue("")
-		await expect(page.getByLabel("Email")).not.toHaveValue("")
-		await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
+	test("opens the profile tab on the session user", async ({ page }) => {
+		const panel = settings(page)
+
+		await expect(panel.getByLabel("First Name")).toHaveValue(SETTINGS_FIRST_NAME)
+		await expect(panel.getByLabel("Email")).toHaveValue(SETTINGS_EMAIL)
+		await expect(panel.getByRole("button", { name: "Save" })).toHaveCount(0)
 	})
 
 	test("saves a new first name and updates the sidebar", async ({ page }) => {
-		const firstName = page.getByLabel("First Name")
-		const save = page.getByRole("button", { name: "Save" })
-		const original = await firstName.inputValue()
+		const panel = settings(page)
+		const firstName = panel.getByLabel("First Name")
+		const save = panel.getByRole("button", { name: "Save" })
 		const edited = unique("Buzz")
 
 		await firstName.fill(edited)
@@ -38,27 +44,25 @@ test.describe("User settings", () => {
 		// The sidebar reads full_name, which the server derives on save.
 		await expect(page.getByLabel("Account menu")).toContainText(edited)
 
-		await firstName.fill(original)
+		await firstName.fill(SETTINGS_FIRST_NAME)
 		await save.click()
 		await expect(save).toHaveCount(0)
 	})
 
 	test("keeps a saved bio across a reload", async ({ page }) => {
-		const bio = page.getByLabel("Bio")
-		const save = page.getByRole("button", { name: "Save" })
-		const original = await bio.inputValue()
+		const bio = settings(page).getByLabel("Bio")
 		const edited = unique("Runs the conference.")
 
 		await bio.fill(edited)
-		await save.click()
-		await expect(save).toHaveCount(0)
+		await settings(page).getByRole("button", { name: "Save" }).click()
+		await expect(settings(page).getByRole("button", { name: "Save" })).toHaveCount(0)
 
 		await page.reload()
 		await openSettings(page)
-		await expect(page.getByLabel("Bio")).toHaveValue(edited)
+		await expect(settings(page).getByLabel("Bio")).toHaveValue(edited)
 
-		await page.getByLabel("Bio").fill(original)
-		await page.getByRole("button", { name: "Save" }).click()
-		await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
+		await settings(page).getByLabel("Bio").fill("")
+		await settings(page).getByRole("button", { name: "Save" }).click()
+		await expect(settings(page).getByRole("button", { name: "Save" })).toHaveCount(0)
 	})
 })
