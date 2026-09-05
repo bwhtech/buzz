@@ -85,8 +85,8 @@ class BuzzTeam(Document):
 		"""Users who could still join this team, matched on email or full name.
 
 		Website users are in on purpose: frappe's own `user_query` hides them, but an attendee
-		is as likely to be a colleague as anyone. Adding one to a team grants a role with desk
-		access, which turns them into a System User.
+		is as likely to be a colleague as anyone. Team roles grant no desk access, so they
+		stay Website Users.
 		"""
 		self.check_can_manage_members()
 
