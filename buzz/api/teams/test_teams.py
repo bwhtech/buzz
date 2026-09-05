@@ -54,6 +54,17 @@ class TestGetMyTeams(IntegrationTestCase):
 
 		self.assertEqual(self.team_names_for(user), [])
 
+	def test_lists_each_teams_enabled_members(self):
+		owner = create_user("switcher-members-owner@example.com", "Owner")
+		viewer = create_user("switcher-members-viewer@example.com", "Viewer")
+		team = create_owned_team("Switcher Members", owner)
+		upsert_membership(team, viewer, "Viewer")
+
+		frappe.set_user(viewer)
+		members = get_my_teams()[0].members
+
+		self.assertEqual([member.user for member in members], [owner, viewer])
+
 	def test_returns_nothing_for_a_user_on_no_team(self):
 		user = create_user("switcher-teamless@example.com", "Teamless")
 

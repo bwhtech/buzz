@@ -65,4 +65,24 @@ test.describe("User settings", () => {
 		await settings(page).getByRole("button", { name: "Save" }).click()
 		await expect(settings(page).getByRole("button", { name: "Save" })).toHaveCount(0)
 	})
+
+	test("lists the user's teams and opens one to manage", async ({ page }) => {
+		const panel = settings(page)
+
+		await panel.getByRole("tab", { name: "Teams" }).click()
+		await expect(panel.getByRole("heading", { name: "Your Teams" })).toBeVisible()
+
+		const teams = panel.getByRole("list", { name: "Your teams" }).getByRole("listitem")
+		await expect(teams.first()).toContainText("members", { timeout: 15000 })
+
+		await teams.first().getByRole("button").click()
+
+		// The Manager role can read the roster but not change it.
+		const members = panel.getByRole("list", { name: "Team members" }).getByRole("listitem")
+		await expect(members.first()).toContainText("Owner", { timeout: 15000 })
+		await expect(panel.getByRole("button", { name: "Add member" })).toHaveCount(0)
+
+		await panel.getByRole("button", { name: "Back to teams" }).click()
+		await expect(panel.getByRole("heading", { name: "Your Teams" })).toBeVisible()
+	})
 })

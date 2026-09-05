@@ -21,7 +21,9 @@ import {
 } from "frappe-ui"
 import { computed, reactive, ref, watch } from "vue"
 
+import TeamsPanel from "@/components/dashboard/teams/TeamsPanel.vue"
 import { session } from "@/data/session"
+import { reloadTeams } from "@/data/teams"
 import { userResource } from "@/data/user"
 import { validateIsImageFile } from "@/utils"
 
@@ -74,7 +76,10 @@ const form = reactive<Profile>(savedProfile())
 
 // Mounted for the session, so a cancelled edit is discarded on the way back in.
 watch(open, (isOpen) => {
-	if (isOpen) Object.assign(form, savedProfile())
+	if (!isOpen) return
+	Object.assign(form, savedProfile())
+	// Memberships change under the cached list, so the teams tab reads a fresh one.
+	reloadTeams()
 })
 
 function savedProfile(): Profile {
@@ -105,7 +110,7 @@ async function save() {
 </script>
 
 <template>
-	<SettingsDialog v-model:open="open" v-model:tab="tab" size="5xl" :shortcut="false">
+	<SettingsDialog v-model:open="open" v-model:tab="tab" size="6xl" :shortcut="false">
 		<template #title>{{ __("Settings") }}</template>
 
 		<SettingsSidebar>
@@ -120,6 +125,15 @@ async function save() {
 						<Avatar size="xs" :image="form.user_image ?? undefined" :label="fullName" />
 					</template>
 					{{ __("Profile") }}
+				</SettingsNavItem>
+			</SettingsNavGroup>
+
+			<SettingsNavGroup :label="__('Team Management')">
+				<SettingsNavItem value="teams">
+					<template #prefix>
+						<span class="lucide-users size-4" />
+					</template>
+					{{ __("Teams") }}
 				</SettingsNavItem>
 			</SettingsNavGroup>
 		</SettingsSidebar>
@@ -223,6 +237,10 @@ async function save() {
 						<ErrorMessage :message="user.setValue.error?.message" />
 					</div>
 				</SettingsBody>
+			</SettingsPanel>
+
+			<SettingsPanel value="teams">
+				<TeamsPanel />
 			</SettingsPanel>
 		</SettingsContent>
 	</SettingsDialog>

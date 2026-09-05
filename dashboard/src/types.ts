@@ -105,13 +105,44 @@ export interface UserInfo {
 	language?: string | null
 }
 
+export interface TeamMember {
+	user: string
+	full_name: string | null
+	user_image: string | null
+	team_role: string
+}
+
 // Rows from buzz.api.teams.get_my_teams: the session user's enabled memberships
-// with the team title and logo joined on.
+// with the team title, logo and members joined on.
 export interface TeamOption {
 	name: string
 	team_name: string
 	logo: string | null
 	team_role: string
+	members: TeamMember[]
+}
+
+// Someone invited by email who has not accepted yet, so has no User row.
+export interface TeamInvite {
+	email: string
+	team_role: string
+}
+
+export interface TeamOverview {
+	name: string
+	team_name: string
+	slug: string | null
+	logo: string | null
+	my_role: string
+	members: TeamMember[]
+	invites: TeamInvite[]
+}
+
+// buzz.api.teams.invite_members: one row per address, saying which route it took.
+export interface InviteOutcome {
+	email: string
+	status: "added" | "invited" | "already_a_member"
+	full_name?: string | null
 }
 
 // buzz.api.events.get_my_events: events the user's teams host, plus events they

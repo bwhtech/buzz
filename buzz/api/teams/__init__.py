@@ -6,7 +6,7 @@ from buzz.api.teams.schemas import InviteOutcome, TeamOption, TeamOverview
 
 @frappe.whitelist()
 def get_my_teams() -> list[TeamOption]:
-	"""Teams the session user belongs to, for the dashboard team switcher.
+	"""Teams the session user belongs to, for the settings dialog.
 
 	Reads past permissions on purpose: Buzz Team is readable by Event Manager only, while a
 	Frontdesk or Viewer member still has to see the team they work in. Rows are filtered to
@@ -23,7 +23,7 @@ def get_my_teams() -> list[TeamOption]:
 		.where((membership.user == frappe.session.user) & (membership.enabled == 1))
 	).run(as_dict=True)
 
-	return [TeamOption(**my_team) for my_team in my_teams]
+	return [TeamOption(**my_team, members=services.members_of(my_team.name)) for my_team in my_teams]
 
 
 @frappe.whitelist()

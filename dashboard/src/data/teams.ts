@@ -1,8 +1,8 @@
-import { createResource } from "frappe-ui"
+import { createResource, useCall } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import { session } from "@/data/session"
-import type { TeamOption } from "@/types"
+import type { InviteOutcome, TeamOption, TeamOverview } from "@/types"
 
 const STORAGE_KEY = "buzz:current-team"
 
@@ -32,6 +32,26 @@ export async function isTeamMember(): Promise<boolean> {
 	if (!teamsResource.data) await teamsResource.fetch()
 	return teams.value.length > 0
 }
+
+export function reloadTeams() {
+	return teamsResource.reload()
+}
+
+// v2 path: useCall reads the payload from `data`, which /api/method names `message`.
+export function useTeamOverview(team: string) {
+	return useCall<TeamOverview, { team: string }>({
+		url: "/api/v2/method/buzz.api.teams.get_team_overview",
+		params: { team },
+	})
+}
+
+export const removeMember = createResource({
+	url: "buzz.api.teams.remove_member",
+})
+
+export const inviteMembers = createResource<InviteOutcome[]>({
+	url: "buzz.api.teams.invite_members",
+})
 
 export function selectTeam(name: string) {
 	selectedTeamName.value = name
