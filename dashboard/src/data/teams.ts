@@ -10,7 +10,8 @@ const selectedTeamName = ref(localStorage.getItem(STORAGE_KEY) || "")
 
 const teamsResource = createResource<TeamOption[]>({
 	url: "buzz.api.teams.get_my_teams",
-	cache: "My Teams",
+	// Uncached: the key is not per-user, and a cached empty list restores as data, so
+	// `isTeamMember` would skip its fetch and keep denying a user who has since joined a team.
 	// Not `auto`: get_my_teams is not allow_guest, so a logged-out visitor on a public
 	// booking route would fire a 403 on module load.
 	onSuccess(myTeams: TeamOption[]) {
