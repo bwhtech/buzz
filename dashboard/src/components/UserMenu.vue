@@ -3,13 +3,15 @@ import {
 	Avatar,
 	Button,
 	Divider,
+	KeyboardShortcut,
 	Popover,
 	Tooltip,
 	sidebarCollapsedKey,
 	useColorScheme,
 } from "frappe-ui"
-import { computed, inject } from "vue"
+import { computed, inject, ref } from "vue"
 
+import UserSettingsDialog from "@/components/UserSettingsDialog.vue"
 import { session } from "@/data/session"
 
 const isCollapsed = inject(
@@ -24,6 +26,14 @@ const themes = [
 	{ value: "dark", icon: "lucide-moon", label: "Dark" },
 	{ value: "system", icon: "lucide-monitor", label: "System" },
 ] as const
+
+const settingsOpen = ref(false)
+
+// The popover sits above the dialog's overlay, so it never gets the outside-click.
+function openSettings(closeMenu: () => void) {
+	closeMenu()
+	settingsOpen.value = true
+}
 </script>
 
 <template>
@@ -53,7 +63,7 @@ const themes = [
 			</button>
 		</template>
 
-		<template #default>
+		<template #default="{ close }">
 			<div class="p-2">
 				<div class="flex flex-col px-1.5 py-1">
 					<span class="truncate text-base text-ink-gray-8">{{ session.fullName }}</span>
@@ -62,7 +72,19 @@ const themes = [
 
 				<Divider class="my-2" />
 
-				<Button size="sm" label="Settings" variant="ghost" class="w-full !justify-start" />
+				<Button
+					size="sm"
+					label="Settings"
+					variant="ghost"
+					class="w-full !justify-start"
+					@click="openSettings(close)"
+				>
+					<template #suffix>
+						<span class="ml-auto flex items-center gap-1">
+							<KeyboardShortcut combo="G+S" bg />
+						</span>
+					</template>
+				</Button>
 
 				<div class="flex h-8 items-center justify-between gap-2 px-1.5">
 					<span class="text-base text-ink-gray-8 pl-0.5">Theme</span>
@@ -92,4 +114,6 @@ const themes = [
 			</div>
 		</template>
 	</Popover>
+
+	<UserSettingsDialog v-model:open="settingsOpen" />
 </template>

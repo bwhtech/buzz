@@ -100,6 +100,7 @@ export interface UserInfo {
 	full_name?: string | null
 	email?: string
 	user_image?: string | null
+	bio?: string | null
 	roles?: { role: string }[]
 	language?: string | null
 }
