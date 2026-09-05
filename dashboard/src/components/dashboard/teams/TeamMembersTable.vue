@@ -5,11 +5,11 @@ import { computed } from "vue"
 import { session } from "@/data/session"
 import { removeMember } from "@/data/teams"
 import type { TeamInvite, TeamMember, TeamOverview } from "@/types"
+import { canManageMembers } from "@/utils/teamRoles"
 
 const props = defineProps<{ team: TeamOverview }>()
 const emit = defineEmits<{ removed: [] }>()
 
-const MANAGING_ROLES = ["Owner", "Admin"]
 // Header and rows share one grid so the columns line up without a table element.
 const COLUMNS = "grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)_2rem] items-center gap-4"
 
@@ -22,7 +22,7 @@ interface Row {
 	member?: TeamMember
 }
 
-const canManage = computed(() => MANAGING_ROLES.includes(props.team.my_role))
+const canManage = computed(() => canManageMembers(props.team.my_role))
 
 // Members and pending invitations share one list so the table reads as the whole team,
 // with the people who have not accepted yet at the bottom.

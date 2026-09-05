@@ -5,11 +5,10 @@ import { computed, ref } from "vue"
 import AddMembersDialog from "@/components/dashboard/teams/AddMembersDialog.vue"
 import TeamMembersTable from "@/components/dashboard/teams/TeamMembersTable.vue"
 import { reloadTeams, useTeamOverview } from "@/data/teams"
+import { canManageMembers } from "@/utils/teamRoles"
 
 const props = defineProps<{ team: string; teamName: string }>()
 defineEmits<{ back: [] }>()
-
-const MANAGING_ROLES = ["Owner", "Admin"]
 
 // Plain-language reading of the capability matrix in specs/v2/00-teams.
 const ROLES = [
@@ -27,7 +26,7 @@ const isAdding = ref(false)
 
 const overview = useTeamOverview(props.team)
 
-const canManage = computed(() => MANAGING_ROLES.includes(overview.data?.my_role ?? ""))
+const canManage = computed(() => canManageMembers(overview.data?.my_role))
 
 // The teams list behind this view shows member avatars, so it has to follow every change.
 async function refresh() {
