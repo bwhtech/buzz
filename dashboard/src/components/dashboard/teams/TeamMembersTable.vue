@@ -89,8 +89,8 @@ function confirmRemove(row: Row) {
 <template>
 	<div>
 		<div :class="COLUMNS" class="pb-2 text-sm text-ink-gray-5">
-			<span>{{ __("Name") }}</span>
-			<span>{{ __("Email") }}</span>
+			<span />
+			<span />
 			<span>{{ __("Role") }}</span>
 		</div>
 
@@ -107,7 +107,8 @@ function confirmRemove(row: Row) {
 					<span class="truncate text-base text-ink-gray-8">{{ row.name }}</span>
 				</div>
 
-				<span class="truncate text-base text-ink-gray-6">{{ row.email }}</span>
+				<!-- An invite has only an address, already shown as its name. -->
+				<span class="truncate text-base text-ink-gray-6">{{ row.member ? row.email : "" }}</span>
 
 				<span class="truncate text-base font-medium text-ink-gray-8">
 					{{ row.role }}
