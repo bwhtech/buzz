@@ -63,7 +63,7 @@ function actionsFor(row: Row) {
 	return [
 		{
 			label: __("Remove from team"),
-			icon: "trash-2",
+			icon: "lucide-trash-2",
 			theme: "red" as const,
 			onClick: () => confirmRemove(row),
 		},

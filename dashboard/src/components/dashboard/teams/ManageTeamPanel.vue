@@ -37,45 +37,47 @@ async function refresh() {
 </script>
 
 <template>
-	<SettingsHeader>
-		<div class="flex items-start justify-between gap-4">
-			<div class="flex min-w-0 items-center gap-1">
-				<Button variant="ghost" :label="__('Back to teams')" @click="$emit('back')">
-					<template #icon>
-						<span class="lucide-chevron-left size-4" />
-					</template>
-				</Button>
-				<h2 class="truncate text-lg font-semibold text-ink-gray-8">{{ teamName }}</h2>
+	<div class="flex min-h-0 flex-1 flex-col">
+		<SettingsHeader>
+			<div class="flex items-start justify-between gap-4">
+				<div class="flex min-w-0 items-center gap-1">
+					<Button variant="ghost" :label="__('Back to teams')" @click="$emit('back')">
+						<template #icon>
+							<span class="lucide-chevron-left size-4" />
+						</template>
+					</Button>
+					<h2 class="truncate text-lg font-semibold text-ink-gray-8">{{ teamName }}</h2>
+				</div>
+				<Button
+					v-if="canManage"
+					icon-left="lucide-plus"
+					:label="__('Add member')"
+					@click="isAdding = true"
+				/>
 			</div>
-			<Button
-				v-if="canManage"
-				icon-left="plus"
-				:label="__('Add member')"
-				@click="isAdding = true"
-			/>
-		</div>
-	</SettingsHeader>
+		</SettingsHeader>
 
-	<SettingsBody>
-		<div class="flex flex-col gap-6 pt-6">
-			<LoadingText v-if="overview.loading" :text="__('Loading members…')" />
-			<ErrorMessage v-else-if="overview.error" :message="overview.error.message" />
+		<SettingsBody>
+			<div class="flex flex-col gap-6 pt-6">
+				<LoadingText v-if="overview.loading" :text="__('Loading members…')" />
+				<ErrorMessage v-else-if="overview.error" :message="overview.error.message" />
 
-			<template v-else-if="overview.data">
-				<section class="rounded-7 bg-surface-gray-1 p-4">
-					<h3 class="text-sm font-medium text-ink-gray-7">{{ __("What each role can do") }}</h3>
-					<dl class="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-						<div v-for="role in ROLES" :key="role.name" class="flex gap-2">
-							<dt class="w-20 shrink-0 font-medium text-ink-gray-7">{{ role.name }}</dt>
-							<dd class="text-ink-gray-5">{{ role.can }}</dd>
-						</div>
-					</dl>
-				</section>
+				<template v-else-if="overview.data">
+					<section class="rounded-7 bg-surface-gray-1 p-4">
+						<h3 class="text-sm font-medium text-ink-gray-7">{{ __("What each role can do") }}</h3>
+						<dl class="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+							<div v-for="role in ROLES" :key="role.name" class="flex gap-2">
+								<dt class="w-20 shrink-0 font-medium text-ink-gray-7">{{ role.name }}</dt>
+								<dd class="text-ink-gray-5">{{ role.can }}</dd>
+							</div>
+						</dl>
+					</section>
 
-				<TeamMembersTable :team="overview.data" @removed="refresh" />
-			</template>
-		</div>
-	</SettingsBody>
+					<TeamMembersTable :team="overview.data" @removed="refresh" />
+				</template>
+			</div>
+		</SettingsBody>
 
-	<AddMembersDialog v-model="isAdding" :team="team" @success="refresh" />
+		<AddMembersDialog v-model="isAdding" :team="team" @success="refresh" />
+	</div>
 </template>
