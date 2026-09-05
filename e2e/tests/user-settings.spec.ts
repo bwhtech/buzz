@@ -1,58 +1,64 @@
-import { expect, test } from "@playwright/test"
+import { expect, type Page, test } from "@playwright/test"
 
-import { updateDoc } from "../helpers"
+// Nothing here hardcodes who the session user is or what their profile holds: CI
+// signs in as FRAPPE_USER, and the whole chromium project shares that account.
+// Every test reads the saved value, edits it to something unique, and puts it
+// back through the same dialog.
+const unique = (prefix: string) => `${prefix} ${Date.now()}`
 
-// Runs under the shared Administrator state, so the edit is made to that user and
-// put back afterwards — every other spec in this project reads the same name.
-const ORIGINAL_FIRST_NAME = "Administrator"
-const EDITED_FIRST_NAME = "Buzz Admin"
-const EDITED_BIO = "Runs the conference."
+async function openSettings(page: Page) {
+	await page.getByRole("heading", { name: "Events", level: 1 }).waitFor()
+	await page.getByLabel("Account menu").click()
+	await page.getByRole("button", { name: "Settings" }).click()
+	await expect(page.getByRole("heading", { name: "Profile" })).toBeVisible()
+}
 
 test.describe("User settings", () => {
-	test.afterAll(async ({ request }) => {
-		await updateDoc(request, "User", "Administrator", {
-			first_name: ORIGINAL_FIRST_NAME,
-			bio: "",
-		})
-	})
-
 	test.beforeEach(async ({ page }) => {
 		await page.goto("/b/manage/events")
-		await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible()
-		await page.getByLabel("Account menu").click()
-		await page.getByRole("button", { name: "Settings" }).click()
+		await openSettings(page)
 	})
 
-	test("opens the profile tab with the current name filled in", async ({ page }) => {
-		await expect(page.getByRole("heading", { name: "Profile" })).toBeVisible()
-		await expect(page.getByLabel("First Name")).toHaveValue(ORIGINAL_FIRST_NAME)
+	test("opens the profile tab with the saved profile and nothing to save", async ({ page }) => {
+		await expect(page.getByLabel("First Name")).not.toHaveValue("")
+		await expect(page.getByLabel("Email")).not.toHaveValue("")
 		await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
 	})
 
-	test("saves the profile and updates the sidebar", async ({ page }) => {
-		await page.getByLabel("First Name").fill(EDITED_FIRST_NAME)
-		await page.getByLabel("Bio").fill(EDITED_BIO)
-
+	test("saves a new first name and updates the sidebar", async ({ page }) => {
+		const firstName = page.getByLabel("First Name")
 		const save = page.getByRole("button", { name: "Save" })
+		const original = await firstName.inputValue()
+		const edited = unique("Buzz")
+
+		await firstName.fill(edited)
 		await expect(save).toBeEnabled()
 		await save.click()
 
-		await expect(page.getByText("Profile updated")).toBeVisible()
-
 		// The sidebar reads full_name, which the server derives on save.
-		await page.keyboard.press("Escape")
-		await expect(page.getByLabel("Account menu")).toContainText(EDITED_FIRST_NAME)
+		await expect(page.getByLabel("Account menu")).toContainText(edited)
+
+		await firstName.fill(original)
+		await save.click()
+		await expect(save).toHaveCount(0)
 	})
 
-	test("keeps the saved bio across a reload", async ({ page }) => {
-		await page.getByLabel("Bio").fill(EDITED_BIO)
-		await page.getByRole("button", { name: "Save" }).click()
-		await expect(page.getByText("Profile updated")).toBeVisible()
+	test("keeps a saved bio across a reload", async ({ page }) => {
+		const bio = page.getByLabel("Bio")
+		const save = page.getByRole("button", { name: "Save" })
+		const original = await bio.inputValue()
+		const edited = unique("Runs the conference.")
+
+		await bio.fill(edited)
+		await save.click()
+		await expect(save).toHaveCount(0)
 
 		await page.reload()
-		await page.getByLabel("Account menu").click()
-		await page.getByRole("button", { name: "Settings" }).click()
+		await openSettings(page)
+		await expect(page.getByLabel("Bio")).toHaveValue(edited)
 
-		await expect(page.getByLabel("Bio")).toHaveValue(EDITED_BIO)
+		await page.getByLabel("Bio").fill(original)
+		await page.getByRole("button", { name: "Save" }).click()
+		await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
 	})
 })
