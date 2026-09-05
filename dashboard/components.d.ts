@@ -85,5 +85,6 @@ declare module 'vue' {
     TimelineList: typeof import('./src/components/dashboard/TimelineList.vue')['default']
     TransferTicketDialog: typeof import('./src/components/TransferTicketDialog.vue')['default']
     UserMenu: typeof import('./src/components/UserMenu.vue')['default']
+    UserSettingsDialog: typeof import('./src/components/UserSettingsDialog.vue')['default']
   }
 }

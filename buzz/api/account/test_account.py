@@ -88,6 +88,7 @@ class TestGetUserInfo(LanguageTestCase):
 				"full_name",
 				"email",
 				"user_image",
+				"bio",
 				"roles",
 				"brand_image",
 				"language",
