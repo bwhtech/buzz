@@ -51,9 +51,14 @@ const isDirty = computed(
 		(form.team_name !== overview.data.team_name || form.logo !== overview.data.logo),
 )
 
+// A logo has no blur: an upload or a remove is the whole gesture.
+watch(() => form.logo, save)
+
 const title = computed(() => overview.data?.team_name ?? props.teamName)
 
 async function save() {
+	if (!isDirty.value || !form.team_name.trim()) return
+
 	// Rejects on failure; updateTeam.error renders inline, so the rejection is swallowed.
 	await updateTeam.submit({ team: props.team, ...form }).catch(() => null)
 	if (updateTeam.error) return
@@ -81,19 +86,12 @@ async function refresh() {
 					</Button>
 					<h2 class="truncate text-lg font-semibold text-ink-gray-8">{{ title }}</h2>
 				</div>
-				<div v-if="canManage" class="flex shrink-0 items-center gap-2">
-					<Transition name="save">
-						<Button
-							v-if="isDirty || updateTeam.loading"
-							variant="solid"
-							:loading="updateTeam.loading"
-							@click="save"
-						>
-							{{ __("Save") }}
-						</Button>
-					</Transition>
-					<Button icon-left="lucide-plus" :label="__('Add member')" @click="isAdding = true" />
-				</div>
+				<Button
+					v-if="canManage"
+					icon-left="lucide-plus"
+					:label="__('Add member')"
+					@click="isAdding = true"
+				/>
 			</div>
 		</SettingsHeader>
 
@@ -113,6 +111,7 @@ async function refresh() {
 						class="max-w-sm"
 						:label="__('Team Name')"
 						v-model="form.team_name"
+						@blur="save"
 					/>
 
 					<ErrorMessage :message="(updateTeam.error as Error | null)?.message" />
@@ -146,31 +145,3 @@ async function refresh() {
 		<AddMembersDialog v-model="isAdding" :team="team" @success="refresh" />
 	</div>
 </template>
-
-<style scoped>
-/* Same save affordance as the profile panel: leave quicker than enter. */
-.save-enter-active {
-	transition:
-		opacity 150ms cubic-bezier(0.23, 1, 0.32, 1),
-		transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.save-leave-active {
-	transition:
-		opacity 100ms cubic-bezier(0.23, 1, 0.32, 1),
-		transform 100ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.save-enter-from,
-.save-leave-to {
-	opacity: 0;
-	transform: scale(0.95);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.save-enter-from,
-	.save-leave-to {
-		transform: none;
-	}
-}
-</style>
