@@ -10,6 +10,7 @@ from buzz.api.proposals import (
 	get_event_proposal_trend,
 	get_event_proposals,
 	get_my_proposals,
+	set_proposal_state,
 )
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team
 from buzz.proposals.doctype.talk_proposal.test_talk_proposal import (
@@ -329,3 +330,56 @@ class TestAcceptProposal(IntegrationTestCase):
 		frappe.set_user(self.outsider)
 		with self.assertRaises(frappe.PermissionError):
 			accept_proposal(self.proposal)
+
+
+class TestSetProposalState(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.category = ensure_prompt_named_record("Event Category", "Proposal State Category")
+		cls.host = ensure_prompt_named_record("Event Host", "Proposal State Host")
+		cls.manager = make_test_user("proposal-state-manager@example.com")
+		cls.outsider = make_test_user("proposal-state-outsider@example.com")
+		cls.team = create_owned_team(f"Proposal State Team {frappe.generate_hash(length=6)}", cls.manager)
+		cls.event = cstr(make_test_event(cls.category, cls.host, team=cls.team))
+		frappe.db.set_value("Buzz Event", cls.event, "route", f"proposal-state-{frappe.generate_hash(6)}")
+
+	def setUp(self):
+		frappe.set_user(self.manager)
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def test_closing_then_opening_round_trips(self):
+		self.assertTrue(set_proposal_state(self.event, closed=True).proposals_closed)
+		self.assertTrue(get_event_proposals(self.event).proposals_closed)
+
+		self.assertFalse(set_proposal_state(self.event, closed=False).proposals_closed)
+		self.assertFalse(get_event_proposals(self.event).proposals_closed)
+
+	def test_opening_publishes_a_form_that_was_never_published(self):
+		event = frappe.get_doc("Buzz Event", self.event)
+		for row in event.custom_forms:
+			if row.form_doctype == "Talk Proposal":
+				row.publish = 0
+		event.save(ignore_permissions=True)
+
+		self.assertFalse(set_proposal_state(self.event, closed=False).proposals_closed)
+
+	def test_an_unpublished_form_reads_as_closed(self):
+		event = frappe.get_doc("Buzz Event", self.event)
+		for row in event.custom_forms:
+			if row.form_doctype == "Talk Proposal":
+				row.publish = 0
+		event.save(ignore_permissions=True)
+
+		self.assertTrue(get_event_proposals(self.event).proposals_closed)
+
+	def test_the_link_points_at_the_events_own_form_page(self):
+		route = frappe.db.get_value("Buzz Event", self.event, "route")
+		self.assertEqual(get_event_proposals(self.event).proposal_link, f"/b/{route}/propose-talk")
+
+	def test_an_outsider_cannot_change_the_state(self):
+		frappe.set_user(self.outsider)
+		with self.assertRaises(CannotManageEvent):
+			set_proposal_state(self.event, closed=True)

@@ -50,6 +50,9 @@ export interface EventProposals {
 	has_next_page: boolean
 	// Read access alone is a Viewer or Frontdesk, who cannot change a status.
 	can_write: boolean
+	// Where talks are proposed, and whether that page still takes them.
+	proposal_link: string | null
+	proposals_closed: boolean
 }
 
 // buzz.api.proposals.accept_proposal
