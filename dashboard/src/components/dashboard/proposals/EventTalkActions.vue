@@ -5,8 +5,8 @@ import { computed, ref } from "vue"
 import QuickActionsRail, {
 	type QuickAction,
 } from "@/components/dashboard/events/QuickActionsRail.vue"
-import RegistrationDialog from "@/components/dashboard/events/RegistrationDialog.vue"
-import type { EventGuest, EventGuests } from "@/types"
+import ProposalsDialog from "@/components/dashboard/proposals/ProposalsDialog.vue"
+import type { EventProposals, ProposalListItem } from "@/types"
 import { downloadCsv } from "@/utils/csv"
 
 const props = defineProps<{
@@ -14,9 +14,9 @@ const props = defineProps<{
 	closed: boolean
 	canWrite: boolean
 	title?: string | null
-	registrationLink?: string | null
+	proposalLink?: string | null
 	// What the list is currently showing, so the export is the same list.
-	query: { search: string; ticket_types: string; order: string }
+	query: { search: string; statuses: string; order: string }
 }>()
 const emit = defineEmits<{ changed: [] }>()
 
@@ -25,56 +25,54 @@ const exporting = ref(false)
 
 // The list is paged, so the export walks it: a hundred at a time until the server says
 // there is no next page.
-async function fetchAll(): Promise<EventGuest[]> {
-	const all: EventGuest[] = []
+async function fetchAll(): Promise<ProposalListItem[]> {
+	const all: ProposalListItem[] = []
 	for (let start = 0; ; start += 100) {
-		const page: EventGuests = await call("buzz.api.events.get_event_guests", {
+		const page: EventProposals = await call("buzz.api.proposals.get_event_proposals", {
 			event: props.event,
 			...props.query,
 			start,
 			limit: 100,
 		})
-		all.push(...page.guests)
+		all.push(...page.proposals)
 		if (!page.has_next_page) return all
 	}
 }
 
-async function exportGuests() {
+const speakerNames = (proposal: ProposalListItem) =>
+	proposal.speakers.map((speaker) => [speaker.first_name, speaker.last_name].join(" ").trim())
+
+async function exportProposals() {
 	exporting.value = true
 	try {
-		const guests = await fetchAll()
-		downloadCsv(`${props.title || "guests"}.csv`, [
-			["Name", "Email", "Ticket type", "Registered at"],
-			...guests.map((guest) => [
-				guest.attendee_name,
-				guest.attendee_email,
-				guest.ticket_type,
-				guest.registered_at,
+		const proposals = await fetchAll()
+		downloadCsv(`${props.title || "proposals"} - talks.csv`, [
+			["Title", "Speakers", "Emails", "Status", "Submitted at"],
+			...proposals.map((proposal) => [
+				proposal.title,
+				speakerNames(proposal).join(", "),
+				proposal.speakers.map((speaker) => speaker.email).join(", "),
+				proposal.status,
+				proposal.creation,
 			]),
 		])
 	} catch {
-		toast.error("Could not export the guest list. Try again.")
+		toast.error("Could not export the proposals. Try again.")
 	} finally {
 		exporting.value = false
 	}
 }
 
-// The rows differ only in icon, label and what they do, so they are data rather than
-// two near-identical buttons. A link row renders as an anchor; the rest as buttons.
 const actions = computed<QuickAction[]>(() =>
 	[
-		props.registrationLink
-			? {
-					icon: "lucide-arrow-up-right",
-					label: "Registration page",
-					link: props.registrationLink,
-				}
+		props.proposalLink
+			? { icon: "lucide-arrow-up-right", label: "Proposal page", link: props.proposalLink }
 			: null,
 		{
 			icon: "lucide-download",
 			label: "Download CSV",
 			loading: exporting.value,
-			onClick: exportGuests,
+			onClick: exportProposals,
 		},
 	].filter((action) => action !== null),
 )
@@ -82,16 +80,16 @@ const actions = computed<QuickAction[]>(() =>
 
 <template>
 	<QuickActionsRail
-		subject="Registration"
-		open-icon="lucide-ticket"
-		closed-icon="lucide-ticket-x"
+		subject="Proposals"
+		open-icon="lucide-mic"
+		closed-icon="lucide-mic-off"
 		:closed="closed"
 		:can-write="canWrite"
 		:actions="actions"
 		@toggle="dialogOpen = true"
 	/>
 
-	<RegistrationDialog
+	<ProposalsDialog
 		v-model="dialogOpen"
 		:event="event"
 		:closed="closed"

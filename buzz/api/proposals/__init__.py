@@ -5,6 +5,7 @@ from buzz.api.proposals.schemas import (
 	AcceptedProposal,
 	EventProposalsResponse,
 	ProposalListItem,
+	ProposalState,
 	ProposalTrend,
 )
 
@@ -42,3 +43,9 @@ def get_event_proposal_trend(event: str, days: int = services.TREND_DAYS) -> Pro
 def accept_proposal(proposal: str) -> AcceptedProposal:
 	"""Accept a proposal and create the Event Talk it becomes."""
 	return services.accept_proposal(proposal)
+
+
+@frappe.whitelist(methods=["POST"])
+def set_proposal_state(event: str, closed: bool) -> ProposalState:
+	"""Open or close an event's talk proposals, answering with the state that results."""
+	return services.set_proposal_state(event, closed)

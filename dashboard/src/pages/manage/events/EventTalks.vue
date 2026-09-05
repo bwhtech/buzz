@@ -8,12 +8,14 @@ import { useRoute } from "vue-router"
 
 import { FilterBar, type FilterGroup, type FilterValues } from "@/components/common/filters"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
+import EventTalkActions from "@/components/dashboard/proposals/EventTalkActions.vue"
 import EventTalkProposalDrawer from "@/components/dashboard/proposals/EventTalkProposalDrawer.vue"
 import ProposalCard from "@/components/dashboard/proposals/ProposalCard.vue"
 import { type ProposalOrder, useEventProposals } from "@/composables/useEventProposals"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
 import { useUrlFilters } from "@/composables/useUrlFilters"
 import { useProposalTrend } from "@/data/proposals"
+import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError, ProposalWithEvent } from "@/types"
 
 const route = useRoute()
@@ -43,6 +45,13 @@ const { proposals, applyStatus, loadMore, page, loadingFirstPage, loadingMore } 
 )
 
 const { statuses: statusList, getStatusTheme } = useProposalStatuses()
+
+// The export is the list on screen, not the whole event: same filters, same order.
+const exportQuery = computed(() => ({
+	search: search.value.trim(),
+	statuses: statuses.value.join(","),
+	order: order.value,
+}))
 
 const filterGroups = computed<FilterGroup[]>(() => [
 	{
@@ -130,7 +139,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 <template>
 	<EventPageHeader :title="page.data?.title" section="Talks" />
 
-	<div class="m-auto max-w-[800px] w-full py-8 px-4 space-y-8">
+	<PageWithSidebar>
 		<section class="space-y-2">
 			<h1 class="text-xl font-semibold text-ink-gray-9">How it's going</h1>
 
@@ -236,7 +245,20 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 				</div>
 			</Transition>
 		</section>
-	</div>
+
+		<template #sidebar>
+			<EventTalkActions
+				v-if="page.data"
+				:event="eventId"
+				:title="page.data.title"
+				:proposal-link="page.data.proposal_link"
+				:closed="!!page.data.proposals_closed"
+				:can-write="!!page.data.can_write"
+				:query="exportQuery"
+				@changed="page.reload()"
+			/>
+		</template>
+	</PageWithSidebar>
 
 	<EventTalkProposalDrawer
 		v-model:open="drawerOpen"

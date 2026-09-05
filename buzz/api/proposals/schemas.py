@@ -41,6 +41,15 @@ class EventProposalsResponse(APIResponse):
 	# Whether this reader may change a proposal, so the drawer offers the control only to
 	# someone the server will accept it from. Read access alone is a Viewer or Frontdesk.
 	can_write: bool = False
+	# Where talks are proposed, and whether that page still takes them.
+	proposal_link: str | None = None
+	proposals_closed: bool = False
+
+
+class ProposalState(APIResponse):
+	"""Whether talk proposals are being taken, as the server leaves them."""
+
+	proposals_closed: bool
 
 
 class DailySubmissions(APIResponse):
