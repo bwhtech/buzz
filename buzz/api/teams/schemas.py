@@ -1,18 +1,20 @@
 from buzz.api.schemas import APIResponse
 
 
-class TeamOption(APIResponse):
-	name: str
-	team_name: str
-	logo: str | None
-	team_role: str
-
-
 class TeamMember(APIResponse):
 	user: str
 	full_name: str | None
 	user_image: str | None
 	team_role: str
+
+
+class TeamOption(APIResponse):
+	name: str
+	team_name: str
+	logo: str | None
+	team_role: str
+	# The settings list shows who is on each team, not only how many.
+	members: list[TeamMember]
 
 
 class InviteOutcome(APIResponse):

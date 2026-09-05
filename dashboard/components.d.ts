@@ -11,10 +11,12 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AddMembersDialog: typeof import('./src/components/dashboard/teams/AddMembersDialog.vue')['default']
     AddOnPreferenceDialog: typeof import('./src/components/AddOnPreferenceDialog.vue')['default']
     AddSpeakerDialog: typeof import('./src/components/dashboard/proposals/AddSpeakerDialog.vue')['default']
     AddVenueDialog: typeof import('./src/components/dashboard/events/AddVenueDialog.vue')['default']
     AttendeeFormControl: typeof import('./src/components/AttendeeFormControl.vue')['default']
+    AvatarUploader: typeof import('./src/components/common/AvatarUploader.vue')['default']
     BackButton: typeof import('./src/components/common/BackButton.vue')['default']
     BaseCustomEventForm: typeof import('./src/components/BaseCustomEventForm.vue')['default']
     BillingDetails: typeof import('./src/components/BillingDetails.vue')['default']
@@ -59,6 +61,7 @@ declare module 'vue' {
     LoginDialog: typeof import('./src/components/LoginDialog.vue')['default']
     LoginRequired: typeof import('./src/components/LoginRequired.vue')['default']
     ManagerSidebarHeader: typeof import('./src/components/dashboard/ManagerSidebarHeader.vue')['default']
+    ManageTeamPanel: typeof import('./src/components/dashboard/teams/ManageTeamPanel.vue')['default']
     Navbar: typeof import('./src/components/Navbar.vue')['default']
     OfflinePaymentDialog: typeof import('./src/components/OfflinePaymentDialog.vue')['default']
     PaymentGatewayDialog: typeof import('./src/components/PaymentGatewayDialog.vue')['default']
@@ -77,6 +80,8 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SponsorshipPaymentDialog: typeof import('./src/components/SponsorshipPaymentDialog.vue')['default']
     SuccessMessage: typeof import('./src/components/SuccessMessage.vue')['default']
+    TeamMembersTable: typeof import('./src/components/dashboard/teams/TeamMembersTable.vue')['default']
+    TeamsPanel: typeof import('./src/components/dashboard/teams/TeamsPanel.vue')['default']
     TicketBookingDetails: typeof import('./src/components/dashboard/tickets/TicketBookingDetails.vue')['default']
     TicketCard: typeof import('./src/components/TicketCard.vue')['default']
     TicketDetailsModal: typeof import('./src/components/TicketDetailsModal.vue')['default']
@@ -84,6 +89,7 @@ declare module 'vue' {
     TicketTransferDialog: typeof import('./src/components/TicketTransferDialog.vue')['default']
     TimelineList: typeof import('./src/components/dashboard/TimelineList.vue')['default']
     TransferTicketDialog: typeof import('./src/components/TransferTicketDialog.vue')['default']
+    UserGroup: typeof import('./src/components/common/UserGroup.vue')['default']
     UserMenu: typeof import('./src/components/UserMenu.vue')['default']
     UserSettingsDialog: typeof import('./src/components/UserSettingsDialog.vue')['default']
   }

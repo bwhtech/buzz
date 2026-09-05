@@ -1,7 +1,7 @@
 import frappe
 from frappe.query_builder import Case
 
-from buzz.api.teams.exceptions import CannotManageMembers, NotATeamMember
+from buzz.api.teams.exceptions import CannotEditTeam, CannotManageMembers, NotATeamMember
 from buzz.api.teams.schemas import TeamInvite, TeamMember, TeamOverview
 from buzz.permissions import can_manage_members, team_role_of
 
@@ -86,3 +86,23 @@ def remove_member(team: str, user: str) -> None:
 	# Event Manager holds no write permission on the membership doctype, so the guard above
 	# is the authorization — the same shape as the Desk add-members flow.
 	membership.save(ignore_permissions=True)
+
+
+def update_team(team: str, team_name: str, logo: str | None) -> None:
+	"""Rename a team or change its logo.
+
+	Owner/Admin, the rule `team_doc_has_permission` applies to a write. Desk write on Buzz
+	Team is System Manager only, so the guard here is the authorization and the save skips
+	the doctype check — the same shape as `remove_member`.
+	"""
+	if not can_manage_members(team):
+		CannotEditTeam.throw()
+
+	team_name = team_name.strip()
+	if not team_name:
+		frappe.throw(frappe._("Team name is required"))
+
+	doc = frappe.get_doc("Buzz Team", team)
+	doc.team_name = team_name
+	doc.logo = logo or None
+	doc.save(ignore_permissions=True)

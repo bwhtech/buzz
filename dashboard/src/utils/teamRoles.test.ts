@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import { canCreateEvents } from "./teamRoles.ts"
+import { canCreateEvents, canManageMembers } from "./teamRoles.ts"
 
 test("a manager can create events", () => {
 	assert.equal(canCreateEvents("Manager"), true)
@@ -22,4 +22,14 @@ test("a frontdesk member cannot create events", () => {
 
 test("no team selected cannot create events", () => {
 	assert.equal(canCreateEvents(undefined), false)
+})
+
+test("an owner and an admin can manage members", () => {
+	assert.equal(canManageMembers("Owner"), true)
+	assert.equal(canManageMembers("Admin"), true)
+})
+
+test("a manager cannot manage members", () => {
+	assert.equal(canManageMembers("Manager"), false)
+	assert.equal(canManageMembers(undefined), false)
 })
