@@ -112,10 +112,17 @@ const viewedWhen = computed(() =>
 					</div>
 				</div>
 
-				<div
-					class="prose prose-sm max-w-none text-base leading-[1.6] text-ink-gray-7"
-					v-html="viewing.message"
-				/>
+				<!-- The same editor, read-only, rather than v-html: tiptap parses the stored
+				     HTML into its own schema, so only what the composer can produce is rendered. -->
+				<Editor
+					:model-value="viewing.message"
+					:extensions="proposalEditorExtensions"
+					:editable="false"
+				>
+					<EditorContent
+						class="prose prose-sm max-w-none text-base leading-[1.6] text-ink-gray-7"
+					/>
+				</Editor>
 			</div>
 
 			<!-- Composing -->
