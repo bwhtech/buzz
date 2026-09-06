@@ -33,18 +33,26 @@ const savedTimeZone = computed(() => userResource.data?.time_zone || currentTime
 
 const timeZone = ref(savedTimeZone.value)
 
-watch(
-	() => props.open,
-	(isOpen) => {
-		if (isOpen) timeZone.value = savedTimeZone.value
-	},
-)
-
-const isDirty = computed(() => timeZone.value !== savedTimeZone.value)
-
 // createResource types its own `error` as `{}`, so the message is kept here for the
 // inline ErrorMessage rather than read back off the resource.
 const saveError = ref("")
+
+watch(
+	() => props.open,
+	(isOpen) => {
+		if (isOpen) {
+			timeZone.value = savedTimeZone.value
+			saveError.value = ""
+		}
+	},
+)
+
+// The message names the zone that was submitted, so a new pick retires it.
+watch(timeZone, () => {
+	saveError.value = ""
+})
+
+const isDirty = computed(() => timeZone.value !== savedTimeZone.value)
 
 const saveTimeZone = createResource({
 	url: "buzz.api.account.update_user_timezone",
