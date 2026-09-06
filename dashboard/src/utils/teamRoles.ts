@@ -1,9 +1,16 @@
+import type { TeamOption } from "@/types"
+
 // Mirrors WRITE_ROLES in buzz/permissions.py, which is what the server actually enforces.
 const EVENT_WRITE_ROLES = ["Owner", "Admin", "Manager"]
 
 /** Whether a team role may create events. Used to gate the form, not to secure it. */
 export function canCreateEvents(teamRole: string | undefined): boolean {
 	return Boolean(teamRole && EVENT_WRITE_ROLES.includes(teamRole))
+}
+
+/** The teams an event can be hosted by: the ones this user may create events for. */
+export function hostableTeams(teams: TeamOption[]): TeamOption[] {
+	return teams.filter((team) => canCreateEvents(team.team_role))
 }
 
 // Mirrors ADMIN_ROLES in buzz/permissions.py; can_manage_members is the server's check.
