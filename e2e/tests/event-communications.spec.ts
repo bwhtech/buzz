@@ -48,7 +48,7 @@ test.describe("Event communications", () => {
 		await editor.fill(text)
 		await page.getByRole("button", { name: "Send" }).click()
 
-		await expect(page.getByText(/Sent to \d+ people/)).toBeVisible()
+		await expect(page.getByText(/Queued for \d+ guests?/)).toBeVisible()
 		await expect(page.getByRole("button", { name: `Open message ${text}` })).toBeVisible()
 	})
 

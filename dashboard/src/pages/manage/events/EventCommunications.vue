@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useLocalStorage } from "@vueuse/core"
-import { ErrorMessage, Skeleton, toast } from "frappe-ui"
+import { ErrorMessage, Skeleton, dayjsLocal, toast } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
@@ -62,15 +62,30 @@ async function send() {
 			message: draft.value.message,
 			scheduled_at: draft.value.scheduled_at || null,
 		})
-		toast.success(
-			sent?.scheduled_at ? "Message scheduled" : `Sent to ${sent?.recipient_count ?? 0} people`,
-		)
 		draft.value = emptyDraft()
 		drawerOpen.value = false
 		page.reload()
+		if (sent) announce(sent)
 	} catch (error) {
 		toast.error(message(error) || "Could not send the message. Try again.")
 	}
+}
+
+// Nothing has left yet: the queue sends on the scheduler's next pass, so the toast says
+// "queued" and offers the row rather than claiming delivery.
+function announce(sent: CommunicationItem) {
+	const noun = sent.audience === "Guests" ? "guest" : "speaker"
+	const who = `${sent.recipient_count} ${noun}${sent.recipient_count === 1 ? "" : "s"}`
+	const scheduled = sent.scheduled_at ? dayjsLocal(sent.scheduled_at) : null
+	toast.success(
+		scheduled ? `Scheduled for ${scheduled.format("D MMM, h:mm A")}` : `Queued for ${who}`,
+		{
+			description: scheduled
+				? `${who} will get it then.`
+				: "Emails go out over the next few minutes.",
+			action: { label: "View", onClick: () => openSent(sent) },
+		},
+	)
 }
 
 const canWrite = computed(() => !!page.data?.can_write)
