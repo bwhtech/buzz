@@ -39,6 +39,7 @@ class EventCommunication(Document):
 
 	def render(self, event) -> str:
 		link = registration_link(event)
+		# nosemgrep: frappe-semgrep-rules.rules.security.frappe-ssti
 		return frappe.render_template(
 			"buzz/templates/emails/event_communication.html",
 			{

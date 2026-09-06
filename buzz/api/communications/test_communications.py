@@ -1,4 +1,5 @@
 from email import message_from_string
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -44,6 +45,11 @@ def html_part(raw_message: str) -> str:
 	return ""
 
 
+def forget_outgoing_account() -> None:
+	if hasattr(frappe.local, "outgoing_email_account"):
+		delattr(frappe.local, "outgoing_email_account")
+
+
 class CommunicationsTestCase(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
@@ -62,9 +68,13 @@ class CommunicationsTestCase(IntegrationTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
 		self.addCleanup(frappe.set_user, "Administrator")
-		# CI has no outgoing account. Muted, frappe queues against a dummy one and never sends.
+		# CI has no outgoing account. Muted, frappe queues against a dummy one and never sends;
+		# the dummy is cached on frappe.local, so it is dropped before the next module runs.
 		frappe.flags.mute_emails = True
 		self.addCleanup(setattr, frappe.flags, "mute_emails", False)
+		self.addCleanup(forget_outgoing_account)
+		# CI never builds assets, and every email inlines email.bundle.css through this lookup.
+		self.enterContext(patch("frappe.utils.get_assets_json", return_value={}))
 		self.event = create_event(f"Comms {frappe.generate_hash(length=6)}", self.team)
 
 
