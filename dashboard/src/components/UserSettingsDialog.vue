@@ -21,6 +21,7 @@ import { computed, reactive, ref, watch } from "vue"
 
 import AvatarUploader from "@/components/common/AvatarUploader.vue"
 import TeamsPanel from "@/components/dashboard/teams/TeamsPanel.vue"
+import PreferencesPanel from "@/components/settings/PreferencesPanel.vue"
 import { session } from "@/data/session"
 import { reloadTeams } from "@/data/teams"
 import { userResource } from "@/data/user"
@@ -124,6 +125,13 @@ async function save() {
 					</template>
 					{{ __("Profile") }}
 				</SettingsNavItem>
+
+				<SettingsNavItem value="preferences">
+					<template #prefix>
+						<span class="lucide-sliders-horizontal size-4" />
+					</template>
+					{{ __("Preferences") }}
+				</SettingsNavItem>
 			</SettingsNavGroup>
 
 			<SettingsNavGroup :label="__('Team Management')">
@@ -179,6 +187,10 @@ async function save() {
 						<ErrorMessage :message="user.setValue.error?.message" />
 					</div>
 				</SettingsBody>
+			</SettingsPanel>
+
+			<SettingsPanel value="preferences">
+				<PreferencesPanel :open="open" />
 			</SettingsPanel>
 
 			<SettingsPanel value="teams">

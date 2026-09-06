@@ -21,6 +21,7 @@ class UserInfoResponse(APIResponse):
 	roles: list
 	brand_image: str | None
 	language: str | None
+	time_zone: str | None
 
 
 class LanguageOption(APIResponse):

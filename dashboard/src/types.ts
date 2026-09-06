@@ -103,6 +103,7 @@ export interface UserInfo {
 	bio?: string | null
 	roles?: { role: string }[]
 	language?: string | null
+	time_zone?: string | null
 }
 
 export interface TeamMember {
