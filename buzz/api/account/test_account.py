@@ -10,8 +10,9 @@ from buzz.api.account import (
 	get_translations,
 	get_user_info,
 	update_user_language,
+	update_user_timezone,
 )
-from buzz.api.account.exceptions import UnknownLanguage
+from buzz.api.account.exceptions import UnknownLanguage, UnknownTimezone
 from buzz.api.account.services import get_default_language
 
 
@@ -92,6 +93,7 @@ class TestGetUserInfo(LanguageTestCase):
 				"roles",
 				"brand_image",
 				"language",
+				"time_zone",
 			},
 		)
 		self.assertTrue(info["is_logged_in"])
@@ -134,6 +136,48 @@ class TestLanguages(LanguageTestCase):
 	def test_update_stays_closed_to_guests(self):
 		self.assertIn(update_user_language, frappe.whitelisted)
 		self.assertNotIn(update_user_language, frappe.guest_methods)
+
+
+class TestTimezones(IntegrationTestCase):
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def set_user_timezone(self, time_zone: str | None):
+		original = frappe.db.get_value("User", "Administrator", "time_zone")
+		self.addCleanup(frappe.db.set_value, "User", "Administrator", "time_zone", original)
+		frappe.db.set_value("User", "Administrator", "time_zone", time_zone)
+
+	def test_update_rejects_unknown_timezone(self):
+		frappe.clear_messages()
+
+		with self.assertRaises(UnknownTimezone):
+			update_user_timezone("Mars/Olympus_Mons")
+
+		message = frappe.local.message_log[-1]
+		self.assertEqual(message["title"], "Timezone Not Available")
+		self.assertIn("Mars/Olympus_Mons", message["message"])
+
+	def test_unknown_timezone_maps_to_400(self):
+		self.assertEqual(UnknownTimezone.http_status_code, 400)
+
+	def test_update_persists_timezone(self):
+		self.set_user_timezone(None)
+
+		update_user_timezone("Asia/Kolkata")
+
+		self.assertEqual(frappe.db.get_value("User", "Administrator", "time_zone"), "Asia/Kolkata")
+
+	def test_update_accepts_utc(self):
+		"""The dashboard's picker puts UTC at the top of the list."""
+		self.set_user_timezone(None)
+
+		update_user_timezone("UTC")
+
+		self.assertEqual(frappe.db.get_value("User", "Administrator", "time_zone"), "UTC")
+
+	def test_update_stays_closed_to_guests(self):
+		self.assertIn(update_user_timezone, frappe.whitelisted)
+		self.assertNotIn(update_user_timezone, frappe.guest_methods)
 
 
 class TestGetTranslations(LanguageTestCase):
