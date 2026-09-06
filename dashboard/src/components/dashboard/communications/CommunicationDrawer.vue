@@ -195,19 +195,26 @@ const viewedWhen = computed(() =>
 			</div>
 
 			<template v-if="!viewing" #footer>
-				<Button
-					variant="solid"
-					:label="scheduling ? 'Schedule' : 'Send now'"
-					:icon-left="scheduling ? 'lucide-clock' : 'lucide-send'"
-					:disabled="!canSend"
-					:loading="sending"
-					@click="send"
-				/>
-				<Button
-					:label="scheduling ? 'Send now instead' : 'Schedule'"
-					:disabled="!canWrite"
-					@click="scheduling = !scheduling"
-				/>
+				<!-- Keyed on the mode, so a toggle morphs the pair through a short blur rather
+				     than swapping two labels in one frame. -->
+				<Transition name="mode" mode="out-in">
+					<div :key="String(scheduling)" class="flex items-center gap-2">
+						<Button
+							variant="solid"
+							:label="scheduling ? 'Schedule' : 'Send now'"
+							:icon-left="scheduling ? 'lucide-mail-clock' : 'lucide-send'"
+							:disabled="!canSend"
+							:loading="sending"
+							@click="send"
+						/>
+						<Button
+							:label="scheduling ? 'Send now instead' : 'Schedule'"
+							:icon-left="scheduling ? 'lucide-send' : 'lucide-mail-clock'"
+							:disabled="!canWrite"
+							@click="scheduling = !scheduling"
+						/>
+					</div>
+				</Transition>
 			</template>
 		</DrawerContent>
 	</Drawer>
@@ -215,7 +222,9 @@ const viewedWhen = computed(() =>
 
 <style scoped>
 .reach,
-.schedule-field {
+.schedule-field,
+.mode-enter-active,
+.mode-leave-active {
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
@@ -237,7 +246,25 @@ const viewedWhen = computed(() =>
 	}
 }
 
+.mode-enter-active,
+.mode-leave-active {
+	transition:
+		opacity 120ms var(--ease-out),
+		filter 120ms var(--ease-out);
+}
+
+.mode-enter-from,
+.mode-leave-to {
+	opacity: 0.7;
+	filter: blur(2px);
+}
+
 @media (prefers-reduced-motion: reduce) {
+	.mode-enter-from,
+	.mode-leave-to {
+		filter: none;
+	}
+
 	@starting-style {
 		.schedule-field {
 			transform: none;
