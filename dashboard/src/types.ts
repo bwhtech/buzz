@@ -419,3 +419,40 @@ export interface CouponData {
 	remaining_tickets?: number
 	[key: string]: any
 }
+
+// buzz.api.communications: a message sent (or scheduled) to an event's guests or speakers.
+export type CommunicationAudience = "Guests" | "Speakers"
+
+export interface CommunicationItem {
+	name: string
+	audience: CommunicationAudience
+	// Comma-joined, the shape the composer keeps the filters in.
+	ticket_types: string
+	statuses: string
+	subject: string
+	message: string
+	recipient_count: number
+	scheduled_at: string | null
+	sent_by: string
+	creation: string
+}
+
+export interface EventCommunications {
+	title: string | null
+	can_write: boolean
+	can_edit_settings: boolean
+	support_email: string | null
+	ticket_types: { name: string; title: string | null }[]
+	statuses: string[]
+	communications: CommunicationItem[]
+}
+
+// What the composer holds between the inline box and the Advanced drawer.
+export interface CommunicationDraft {
+	audience: CommunicationAudience
+	ticket_types: string[]
+	statuses: string[]
+	subject: string
+	message: string
+	scheduled_at: string
+}

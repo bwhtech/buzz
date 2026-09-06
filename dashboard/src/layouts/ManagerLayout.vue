@@ -69,6 +69,7 @@ const items = computed(() => {
 		{ label: "Details", icon: "lucide-receipt-text", to: `${event}/details` },
 		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests` },
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks` },
+		{ label: "Communications", icon: "lucide-send", to: `${event}/communications` },
 	]
 })
 </script>
