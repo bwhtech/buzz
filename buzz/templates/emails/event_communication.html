@@ -1,0 +1,57 @@
+{#- Wrapper for every message an organiser sends from the Communications page.
+    Gray and black only; the event's own banner is the one splash of colour. -#}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+  style="max-width:600px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#171717">
+  {% if banner_url %}
+  <tr>
+    <td style="padding:0 0 20px">
+      <img src="{{ banner_url }}" alt="" width="600" data-banner="true"
+        style="display:block;width:100%;max-width:600px;height:auto;border-radius:8px" />
+    </td>
+  </tr>
+  {% endif %}
+  <tr>
+    <td style="padding:0 0 16px;border-bottom:1px solid #e5e5e5">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="vertical-align:top">
+            <div style="font-size:20px;font-weight:600;line-height:28px;color:#171717">{{ event_title }}</div>
+            <div style="font-size:14px;line-height:22px;color:#737373">
+              {{ when }}{% if venue %} &middot; {{ venue }}{% endif %}
+            </div>
+          </td>
+          {% if event_url %}
+          <td width="32" style="vertical-align:top;text-align:right">
+            <a href="{{ event_url }}" style="color:#a3a3a3;text-decoration:none;font-size:18px" aria-label="Open event page">&#8599;</a>
+          </td>
+          {% endif %}
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px 0 8px;font-size:16px;line-height:26px;color:#171717">
+      {{ message }}
+    </td>
+  </tr>
+  {% if event_url %}
+  <tr>
+    <td style="padding:16px 0 32px">
+      <a href="{{ event_url }}"
+        style="display:inline-block;background:#171717;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;line-height:20px;padding:12px 24px;border-radius:8px">View Event</a>
+    </td>
+  </tr>
+  {% endif %}
+  <tr>
+    <td style="padding:0 0 24px;font-size:14px;line-height:22px;color:#737373;border-bottom:1px solid #e5e5e5">
+      You received this email because you are part of
+      {% if event_url %}<a href="{{ event_url }}" style="color:#171717;text-decoration:none;font-weight:500">{{ event_title }}</a>{% else %}<span style="color:#171717;font-weight:500">{{ event_title }}</span>{% endif %}
+      on Buzz. To contact the host, reply to this email.
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:20px 0 0">
+      <img src="{{ logo_url }}" alt="Buzz" width="28" height="28" style="display:block;width:28px;height:28px;border-radius:6px;opacity:0.6" />
+    </td>
+  </tr>
+</table>
