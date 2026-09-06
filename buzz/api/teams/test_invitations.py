@@ -3,8 +3,13 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.teams import get_team_overview, invite_members
-from buzz.api.teams.exceptions import CannotGrantOwnership, CannotManageMembers, UnknownTeamRole
+from buzz.api.teams import get_team_overview, invite_members, resend_invite, retract_invite
+from buzz.api.teams.exceptions import (
+	CannotGrantOwnership,
+	CannotManageMembers,
+	NoPendingInvite,
+	UnknownTeamRole,
+)
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
 
@@ -200,3 +205,96 @@ class TestTeamOverviewInvitations(IntegrationTestCase):
 
 		frappe.set_user(owner)
 		self.assertEqual(get_team_overview(team).invites, [])
+
+
+class TestInviteActions(IntegrationTestCase):
+	# Rollback is per class, not per test — every test owns its users and its team names.
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+		# Every invitation mails itself out on insert, which needs an outgoing email account.
+		self.enterContext(patch("frappe.sendmail"))
+
+	def invited_team(self, name: str, owner_email: str, invitee: str) -> tuple[str, str]:
+		"""A team with one pending invitation, and the owner who sent it."""
+		owner = create_user(owner_email, "Owner")
+		team = create_owned_team(name, owner)
+		frappe.set_user(owner)
+		invite_members(team, [{"email": invitee, "team_role": "Viewer"}])
+		return team, owner
+
+	def invitation_for(self, email: str) -> dict:
+		return frappe.db.get_value(
+			"User Invitation", {"email": email}, ["name", "key", "status"], as_dict=True
+		)
+
+	def test_resending_rotates_the_key_and_leaves_the_invitation_pending(self):
+		team, _ = self.invited_team("Resend Rotates", "resend-owner@example.com", "resend-me@example.com")
+		before = self.invitation_for("resend-me@example.com")
+
+		resend_invite(team, "resend-me@example.com")
+
+		after = self.invitation_for("resend-me@example.com")
+		self.assertEqual(after.status, "Pending")
+		# The plaintext key only ever exists in the mail, so a new hash is the proof.
+		self.assertNotEqual(after.key, before.key)
+
+	def test_retracting_cancels_the_invitation_and_drops_it_from_the_overview(self):
+		team, _ = self.invited_team("Retract Cancels", "retract-owner@example.com", "retract-me@example.com")
+
+		retract_invite(team, "retract-me@example.com")
+
+		self.assertEqual(self.invitation_for("retract-me@example.com").status, "Cancelled")
+		self.assertEqual(get_team_overview(team).invites, [])
+
+	def test_an_address_is_matched_regardless_of_case_or_padding(self):
+		team, _ = self.invited_team("Retract Untidy", "untidy-owner@example.com", "untidy@example.com")
+
+		retract_invite(team, "  Untidy@Example.com  ")
+
+		self.assertEqual(self.invitation_for("untidy@example.com").status, "Cancelled")
+
+	def test_a_manager_can_do_neither(self):
+		team, _ = self.invited_team(
+			"Actions Manager Guard", "actions-owner2@example.com", "guarded@example.com"
+		)
+		manager = create_user("actions-manager@example.com", "Manager")
+		upsert_membership(team, manager, "Manager")
+
+		frappe.set_user(manager)
+		with self.assertRaises(CannotManageMembers):
+			resend_invite(team, "guarded@example.com")
+		with self.assertRaises(CannotManageMembers):
+			retract_invite(team, "guarded@example.com")
+
+		self.assertEqual(self.invitation_for("guarded@example.com").status, "Pending")
+
+	def test_another_teams_owner_can_do_neither(self):
+		team, _ = self.invited_team("Actions Mine", "actions-owner3@example.com", "not-yours@example.com")
+		frappe.set_user("Administrator")
+		outsider = create_user("actions-other-owner@example.com", "Other")
+		create_owned_team("Actions Theirs", outsider)
+
+		# Core's own guards are app-wide: an Event Manager passes them for any buzz invitation.
+		frappe.set_user(outsider)
+		with self.assertRaises(CannotManageMembers):
+			resend_invite(team, "not-yours@example.com")
+		with self.assertRaises(CannotManageMembers):
+			retract_invite(team, "not-yours@example.com")
+
+		self.assertEqual(self.invitation_for("not-yours@example.com").status, "Pending")
+
+	def test_an_unknown_address_has_nothing_to_act_on(self):
+		team, _ = self.invited_team("Actions Unknown", "actions-owner4@example.com", "known@example.com")
+
+		with self.assertRaises(NoPendingInvite):
+			resend_invite(team, "stranger@example.com")
+
+	def test_a_retracted_invitation_cannot_be_retracted_again(self):
+		team, _ = self.invited_team("Actions Twice", "actions-owner5@example.com", "twice@example.com")
+		retract_invite(team, "twice@example.com")
+
+		with self.assertRaises(NoPendingInvite):
+			retract_invite(team, "twice@example.com")
+		with self.assertRaises(NoPendingInvite):
+			resend_invite(team, "twice@example.com")

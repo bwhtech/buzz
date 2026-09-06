@@ -1,7 +1,12 @@
 import frappe
-from frappe.core.api.user_invitation import invite_by_email
+from frappe.core.api.user_invitation import cancel_invitation, invite_by_email, resend_invitation
 
-from buzz.api.teams.exceptions import CannotGrantOwnership, CannotManageMembers, UnknownTeamRole
+from buzz.api.teams.exceptions import (
+	CannotGrantOwnership,
+	CannotManageMembers,
+	NoPendingInvite,
+	UnknownTeamRole,
+)
 from buzz.api.teams.schemas import InviteOutcome
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
 from buzz.permissions import can_manage_members
@@ -66,3 +71,31 @@ def invite_one(team: str, invite: dict) -> InviteOutcome:
 		buzz_team_role=team_role,
 	)
 	return InviteOutcome(email=email, status="invited")
+
+
+def resend_invite(team: str, email: str) -> None:
+	"""Mail the invitation again. Core rotates the key, so the earlier link stops working."""
+	resend_invitation(name=pending_invite(team, email), app_name="buzz")
+
+
+def retract_invite(team: str, email: str) -> None:
+	"""Cancel the invitation. Core mails the invitee that it was withdrawn."""
+	cancel_invitation(name=pending_invite(team, email), app_name="buzz")
+
+
+def pending_invite(team: str, email: str) -> str:
+	"""The one pending buzz invitation for this address on this team.
+
+	Core allows at most one pending invitation per address per app, so the pair is a key.
+	Its own guards are app-wide rather than team-wide, which is why the team check lives here.
+	"""
+	if not can_manage_members(team):
+		CannotManageMembers.throw()
+
+	name = frappe.db.exists(
+		"User Invitation",
+		{"buzz_team": team, "email": email.strip().lower(), "status": "Pending", "app_name": "buzz"},
+	)
+	if not name:
+		NoPendingInvite.throw(email=email)
+	return name
