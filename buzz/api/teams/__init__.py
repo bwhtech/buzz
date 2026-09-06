@@ -44,3 +44,13 @@ def invite_members(team: str, invites: list[dict]) -> list[InviteOutcome]:
 @frappe.whitelist(methods=["POST"])
 def update_team(team: str, team_name: str, logo: str | None = None) -> None:
 	services.update_team(team, team_name, logo)
+
+
+@frappe.whitelist(methods=["POST"])
+def resend_invite(team: str, email: str) -> None:
+	invitations.resend_invite(team, email)
+
+
+@frappe.whitelist(methods=["POST"])
+def retract_invite(team: str, email: str) -> None:
+	invitations.retract_invite(team, email)
