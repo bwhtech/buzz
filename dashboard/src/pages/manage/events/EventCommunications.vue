@@ -10,6 +10,7 @@ import CommunicationDrawer from "@/components/dashboard/communications/Communica
 import CommunicationHistory from "@/components/dashboard/communications/CommunicationHistory.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import { useEventCommunications, useSendCommunication } from "@/data/communications"
+import { session } from "@/data/session"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { CommunicationDraft, CommunicationItem, FrappeError } from "@/types"
 
@@ -29,7 +30,8 @@ const emptyDraft = (): CommunicationDraft => ({
 // One draft for the inline box and the drawer, so Advanced continues what was typed.
 // Kept in localStorage per event: a tab switch or reload must not eat a half-written message.
 const draft = useLocalStorage<CommunicationDraft>(
-	`buzz:communication-draft:${eventId}`,
+	// Keyed by user too: a shared browser must not hand one account's draft to the next.
+	`buzz:communication-draft:${session.user}:${eventId}`,
 	emptyDraft(),
 	{
 		mergeDefaults: true,

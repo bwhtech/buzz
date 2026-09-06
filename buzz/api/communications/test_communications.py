@@ -62,6 +62,9 @@ class CommunicationsTestCase(IntegrationTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
 		self.addCleanup(frappe.set_user, "Administrator")
+		# CI has no outgoing account. Muted, frappe queues against a dummy one and never sends.
+		frappe.flags.mute_emails = True
+		self.addCleanup(setattr, frappe.flags, "mute_emails", False)
 		self.event = create_event(f"Comms {frappe.generate_hash(length=6)}", self.team)
 
 

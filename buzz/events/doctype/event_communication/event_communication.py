@@ -11,7 +11,6 @@ from buzz.api.events.services import registration_link
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.utils import build_event_datetimes, get_time_zone_label
 
-TEMPLATE = "buzz/templates/emails/event_communication.html"
 LOGO = "/assets/buzz/images/buzz-logo-rounded.png"
 
 
@@ -33,14 +32,15 @@ class EventCommunication(Document):
 			reference_doctype=self.doctype,
 			reference_name=self.name,
 			send_after=self.scheduled_at,
-			queue_separately=True,
+			# Not queue_separately: that opens SMTP at queue time. One row still mails each
+			# recipient on its own at flush, and past 100 recipients frappe batches by itself.
 			add_unsubscribe_link=0,
 		)
 
 	def render(self, event) -> str:
 		link = registration_link(event)
 		return frappe.render_template(
-			TEMPLATE,
+			"buzz/templates/emails/event_communication.html",
 			{
 				"event_title": event.title,
 				"when": event_when(event),
@@ -50,6 +50,7 @@ class EventCommunication(Document):
 				"logo_url": get_url(LOGO),
 				"message": self.message,
 			},
+			is_path=True,
 		)
 
 
