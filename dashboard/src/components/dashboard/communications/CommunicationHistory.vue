@@ -39,7 +39,7 @@ const exact = (row: CommunicationItem) =>
 						<span class="truncate">{{ row.sent_by }}</span>
 						<span aria-hidden="true">·</span>
 						<Tooltip :text="exact(row)">
-							<span :class="isScheduled(row) && 'text-ink-amber-3'">{{ when(row) }}</span>
+							<span :class="isScheduled(row) && 'text-ink-amber-5'">{{ when(row) }}</span>
 						</Tooltip>
 					</span>
 				</span>
