@@ -6,6 +6,12 @@ import type { InviteOutcome, TeamOption, TeamOverview } from "@/types"
 
 const STORAGE_KEY = "buzz:current-team"
 
+// A pending invitation is addressed by team and email: core allows only one per pair.
+interface InviteAction {
+	team: string
+	email: string
+}
+
 const selectedTeamName = ref(localStorage.getItem(STORAGE_KEY) || "")
 
 const teamsResource = createResource<TeamOption[]>({
@@ -61,4 +67,21 @@ export const updateTeam = createResource({
 export function selectTeam(name: string) {
 	selectedTeamName.value = name
 	localStorage.setItem(STORAGE_KEY, name)
+}
+
+// Imperative POSTs: `immediate: false` means nothing fires until `.submit(params)`.
+export function useResendInvite() {
+	return useCall<null, InviteAction>({
+		url: "/api/v2/method/buzz.api.teams.resend_invite",
+		method: "POST",
+		immediate: false,
+	})
+}
+
+export function useRetractInvite() {
+	return useCall<null, InviteAction>({
+		url: "/api/v2/method/buzz.api.teams.retract_invite",
+		method: "POST",
+		immediate: false,
+	})
 }

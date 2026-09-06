@@ -3,7 +3,7 @@ import { Avatar, Button, Dropdown, dialog, toast } from "frappe-ui"
 import { computed } from "vue"
 
 import { session } from "@/data/session"
-import { removeMember } from "@/data/teams"
+import { removeMember, useResendInvite, useRetractInvite } from "@/data/teams"
 import type { TeamInvite, TeamMember, TeamOverview } from "@/types"
 import { canManageMembers } from "@/utils/teamRoles"
 
@@ -23,6 +23,9 @@ interface Row {
 }
 
 const canManage = computed(() => canManageMembers(props.team.my_role))
+
+const resendInvite = useResendInvite()
+const retractInvite = useRetractInvite()
 
 // Members and pending invitations share one list so the table reads as the whole team,
 // with the people who have not accepted yet at the bottom.
@@ -52,14 +55,17 @@ function inviteRow(invite: TeamInvite): Row {
 	}
 }
 
-// The owner is locked server-side, leaving a team is its own flow rather than a
-// self-removal, and an invitation is revoked rather than removed.
+// The owner is locked server-side, and leaving a team is its own flow rather than a
+// self-removal.
 function canRemove(row: Row) {
 	if (!canManage.value || !row.member) return false
 	return row.member.team_role !== "Owner" && row.member.user !== session.user
 }
 
+// An invitation is resent or retracted; only a member is removed.
 function actionsFor(row: Row) {
+	if (!row.member) return canManage.value ? inviteActions(row) : []
+	if (!canRemove(row)) return []
 	return [
 		{
 			label: __("Remove from team"),
@@ -68,6 +74,29 @@ function actionsFor(row: Row) {
 			onClick: () => confirmRemove(row),
 		},
 	]
+}
+
+function inviteActions(row: Row) {
+	return [
+		{
+			label: __("Resend invitation"),
+			icon: "lucide-arrow-up-from-line",
+			onClick: () => resend(row),
+		},
+		{
+			label: __("Retract invitation"),
+			icon: "lucide-shredder",
+			theme: "red" as const,
+			onClick: () => confirmRetract(row),
+		},
+	]
+}
+
+// Nothing the table shows changes, so the overview is left alone.
+async function resend(row: Row) {
+	await resendInvite.submit({ team: props.team.name, email: row.email })
+	if (resendInvite.error) return toast.error(resendInvite.error.message)
+	toast.success(__("Invitation resent to {0}.", [row.email]))
 }
 
 function confirmRemove(row: Row) {
@@ -81,6 +110,24 @@ function confirmRemove(row: Row) {
 			await removeMember.submit({ team: props.team.name, user: row.email })
 			emit("removed")
 			toast.success(__("{0} was removed from the team.", [row.name]))
+		},
+	})
+}
+
+function confirmRetract(row: Row) {
+	dialog.confirm({
+		title: __("Retract invitation"),
+		message: __("{0} will be told the invitation was withdrawn, and the link will stop working.", [
+			row.email,
+		]),
+		theme: "red",
+		confirmLabel: __("Retract"),
+		onConfirm: async () => {
+			await retractInvite.submit({ team: props.team.name, email: row.email })
+			// useCall settles either way, so the failure has to be rethrown to reach the dialog.
+			if (retractInvite.error) throw retractInvite.error
+			emit("removed")
+			toast.success(__("The invitation to {0} was retracted.", [row.email]))
 		},
 	})
 }
@@ -115,9 +162,12 @@ function confirmRemove(row: Row) {
 					<span v-if="!row.member" class="font-normal text-ink-gray-5">({{ __("Invited") }})</span>
 				</span>
 
-				<Dropdown v-if="canRemove(row)" :options="actionsFor(row)" align="end">
+				<Dropdown v-if="actionsFor(row).length" :options="actionsFor(row)" align="end">
 					<!-- label is the accessible name here: an icon slot makes it icon-only. -->
-					<Button variant="ghost" :label="__('Member actions')">
+					<Button
+						variant="ghost"
+						:label="row.member ? __('Member actions') : __('Invitation actions')"
+					>
 						<template #icon>
 							<span class="lucide-ellipsis size-4" />
 						</template>
