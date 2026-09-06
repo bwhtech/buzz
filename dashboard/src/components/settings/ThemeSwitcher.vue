@@ -7,6 +7,8 @@ import { userResource } from "@/data/user"
 
 // One pane per window in the preview: `system` shows a light and a dark half side
 // by side, the other two a single window. Follows Helpdesk's preferences switcher.
+// The card clips its own corners, so a pane carries no radius of its own; only the
+// miniature screen inside it does.
 interface Pane {
 	tone: "light" | "dark"
 	containerClass: string
@@ -27,8 +29,8 @@ const themeOptions = computed<
 		panes: [
 			{
 				tone: "light",
-				containerClass: "pl-5 pt-3.5 bg-surface-gray-2 rounded-t-[10.5px]",
-				screenClass: "bg-white rounded-tl-sm",
+				containerClass: "pl-5 pt-3.5 bg-surface-gray-2",
+				screenClass: "bg-white rounded-tl-3",
 			},
 		],
 	},
@@ -39,8 +41,8 @@ const themeOptions = computed<
 		panes: [
 			{
 				tone: "dark",
-				containerClass: "pl-5 pt-3.5 bg-surface-gray-2 rounded-t-[10.5px]",
-				screenClass: "bg-gray-900 rounded-tl-sm",
+				containerClass: "pl-5 pt-3.5 bg-surface-gray-2",
+				screenClass: "bg-gray-900 rounded-tl-3",
 			},
 		],
 	},
@@ -51,13 +53,13 @@ const themeOptions = computed<
 		panes: [
 			{
 				tone: "light",
-				containerClass: "flex flex-1 pl-5 pt-3.5 bg-surface-gray-2 rounded-tl-[10.5px]",
-				screenClass: "bg-white rounded-tl-sm w-full",
+				containerClass: "flex flex-1 pl-5 pt-3.5 bg-surface-gray-2",
+				screenClass: "bg-white rounded-tl-3 w-full",
 			},
 			{
 				tone: "dark",
-				containerClass: "flex flex-1 pl-5 pt-3.5 bg-surface-gray-3 rounded-tr-[10.5px]",
-				screenClass: "bg-gray-900 rounded-tl-sm w-full",
+				containerClass: "flex flex-1 pl-5 pt-3.5 bg-surface-gray-3",
+				screenClass: "bg-gray-900 rounded-tl-3 w-full",
 			},
 		],
 	},
@@ -73,13 +75,13 @@ const themeOptions = computed<
 			role="radio"
 			:aria-checked="colorScheme === option.value"
 			:data-testid="`theme-option-${option.value}`"
-			class="min-h-[42px] flex-1 overflow-hidden rounded-lg border text-left transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:focus-ring"
+			class="min-h-[42px] flex-1 overflow-hidden rounded-6 border text-left transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:focus-ring"
 			:class="colorScheme === option.value ? 'border-outline-gray-4' : 'border-outline-gray-1'"
 			@click="setColorScheme(option.value)"
 		>
 			<div :class="{ flex: option.panes.length > 1 }">
 				<div v-for="pane in option.panes" :key="pane.tone" :class="pane.containerClass">
-					<div :class="pane.screenClass">
+					<div class="overflow-hidden" :class="pane.screenClass">
 						<div
 							class="flex gap-[3px] border-b px-1 py-[3px]"
 							:class="pane.tone === 'light' ? 'border-gray-100' : 'border-gray-800'"
