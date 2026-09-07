@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import frappe
+from frappe.apps import get_default_path
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.teams import get_team_overview, invite_members, resend_invite, retract_invite
@@ -298,3 +299,11 @@ class TestInviteActions(IntegrationTestCase):
 			retract_invite(team, "twice@example.com")
 		with self.assertRaises(NoPendingInvite):
 			resend_invite(team, "twice@example.com")
+
+
+class TestDefaultPath(IntegrationTestCase):
+	def test_an_invitee_setting_their_password_lands_on_the_dashboard(self):
+		"""Core sends a System User to `get_default_path()` after a password reset, ignoring
+		the invitation's own redirect. Buzz roles have no desk access, so that path has to
+		be the dashboard."""
+		self.assertEqual(get_default_path(), "/b")
