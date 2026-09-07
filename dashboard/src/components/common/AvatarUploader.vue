@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ErrorMessage, FileUploader, Spinner } from "frappe-ui"
+import { ErrorMessage, Spinner } from "frappe-ui"
 
+import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
 import { validateIsImageFile } from "@/utils"
 
 withDefaults(
@@ -17,7 +18,10 @@ const image = defineModel<string | null>({ required: true })
 </script>
 
 <template>
-	<FileUploader
+	<ImageCropUploader
+		:aspect-ratio="1"
+		:shape="shape === 'circle' ? 'circle' : 'rect'"
+		:output-width="512"
 		:validate-file="validateIsImageFile"
 		file-types="image/*"
 		@success="(file: { file_url: string }) => (image = file.file_url)"
@@ -70,5 +74,5 @@ const image = defineModel<string | null>({ required: true })
 				</div>
 			</div>
 		</template>
-	</FileUploader>
+	</ImageCropUploader>
 </template>

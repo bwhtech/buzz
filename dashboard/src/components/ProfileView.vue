@@ -1,8 +1,11 @@
 <template>
 	<div v-if="profile" class="flex w-full items-center justify-between mb-3 sm:mb-5">
-		<FileUploader
-			@success="(file: { file_url: string }) => updateImage(file.file_url)"
+		<ImageCropUploader
+			:aspect-ratio="1"
+			shape="circle"
+			:output-width="512"
 			:validateFile="validateIsImageFile"
+			@success="(file: { file_url: string }) => updateImage(file.file_url)"
 		>
 			<template #default="{ openFileSelector, error: _error }">
 				<div class="flex items-center gap-4">
@@ -53,15 +56,16 @@
 					</div>
 				</div>
 			</template>
-		</FileUploader>
+		</ImageCropUploader>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { Avatar, Dropdown, FileUploader, createResource, toast } from "frappe-ui"
+import { Avatar, Dropdown, createResource, toast } from "frappe-ui"
 import { onMounted, ref } from "vue"
 import LucideCamera from "~icons/lucide/camera"
 
+import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
 import type { FrappeError, UserInfo } from "@/types"
 import { validateIsImageFile } from "@/utils"
 
