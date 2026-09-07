@@ -24,15 +24,13 @@ const label = computed(() =>
 
 <template>
 	<div class="flex items-center gap-2">
-		<!-- Overlap needs a margin; the row's gap alone would spread the stack apart. -->
-		<div v-if="shown.length" class="flex shrink-0 -space-x-1.5" aria-hidden="true">
+		<div v-if="shown.length" class="flex shrink-0 gap-1" aria-hidden="true">
 			<Avatar
 				v-for="user in shown"
 				:key="user.user ?? user.full_name ?? ''"
 				size="sm"
 				:image="user.user_image ?? undefined"
 				:label="user.full_name ?? user.user ?? ''"
-				class="ring-2 ring-surface-white"
 			/>
 		</div>
 		<span class="truncate text-base text-ink-gray-6">{{ label }}</span>
