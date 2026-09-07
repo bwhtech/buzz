@@ -79,12 +79,12 @@ function actionsFor(row: Row) {
 function inviteActions(row: Row) {
 	return [
 		{
-			label: __("Resend invitation"),
+			label: __("Resend"),
 			icon: "lucide-arrow-up-from-line",
 			onClick: () => resend(row),
 		},
 		{
-			label: __("Retract invitation"),
+			label: __("Retract"),
 			icon: "lucide-shredder",
 			theme: "red" as const,
 			onClick: () => confirmRetract(row),
