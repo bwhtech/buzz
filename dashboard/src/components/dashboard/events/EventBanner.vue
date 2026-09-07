@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { refDebounced } from "@vueuse/core"
-import { Button, ErrorMessage, FileUploader } from "frappe-ui"
+import { Button, ErrorMessage } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
+import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
 import { bannerPattern } from "@/utils/eventBanner"
 
 // The picker is filtered to these, and the file that comes back is checked against the
@@ -49,7 +50,12 @@ watch(image, () => {
 </script>
 
 <template>
-	<FileUploader
+	<!-- 3:1 because that is the frame below; the crop is baked into the uploaded file, so
+		 every other place the banner appears keeps its own object-cover with no extra
+		 field to carry a position. -->
+	<ImageCropUploader
+		:aspect-ratio="3"
+		:output-width="1500"
 		:file-types="IMAGE_TYPES"
 		:validate-file="validateImage"
 		@success="(file: { file_url: string }) => (image = file.file_url)"
@@ -111,5 +117,5 @@ watch(image, () => {
 			<!-- The slot types its error as {}, so the message needs narrowing. -->
 			<ErrorMessage v-if="uploadError" class="mt-2" :message="String(uploadError)" />
 		</template>
-	</FileUploader>
+	</ImageCropUploader>
 </template>

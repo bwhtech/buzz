@@ -147,7 +147,8 @@
 						<FileUploader
 							@success="(file: { file_url: string }) => updateLogo(file.file_url)"
 							:validateFile="validateIsImageFile"
-							:uploadArgs="logoUploadArgs"
+							:private="false"
+							folder="Home/Attachments"
 						>
 							<template #default="{ openFileSelector, error: uploadError, uploading, progress }">
 								<div class="space-y-2">
@@ -437,14 +438,6 @@ const companyName = computed(() => {
 		return sponsorDetails.value.company_name
 	}
 	return enquiryDetails.data?.enquiry?.company_name || ""
-})
-
-// Upload arguments for file uploader
-const logoUploadArgs = computed(() => {
-	return {
-		private: false,
-		folder: "Home/Attachments",
-	}
 })
 
 const getStatusTheme = (status: string) => {

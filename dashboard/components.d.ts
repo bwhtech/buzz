@@ -63,6 +63,8 @@ declare module 'vue' {
     FilterBar: typeof import('./src/components/common/filters/FilterBar.vue')['default']
     FormFieldSections: typeof import('./src/components/FormFieldSections.vue')['default']
     GuestInfoDrawer: typeof import('./src/components/dashboard/events/GuestInfoDrawer.vue')['default']
+    ImageCropper: typeof import('./src/components/common/ImageCropper.vue')['default']
+    ImageCropUploader: typeof import('./src/components/common/ImageCropUploader.vue')['default']
     LanguageSwitcher: typeof import('./src/components/LanguageSwitcher.vue')['default']
     LoginDialog: typeof import('./src/components/LoginDialog.vue')['default']
     LoginRequired: typeof import('./src/components/LoginRequired.vue')['default']
