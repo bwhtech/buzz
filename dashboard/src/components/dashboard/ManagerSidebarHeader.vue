@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Avatar, Tooltip, sidebarCollapsedKey } from "frappe-ui"
 import { computed, inject } from "vue"
-import { useRouter } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 
 const props = defineProps<{ eventId?: string; eventTitle?: string }>()
 
+const route = useRoute()
 const router = useRouter()
 const isCollapsed = inject(
 	sidebarCollapsedKey,
@@ -14,12 +15,38 @@ const isCollapsed = inject(
 // Never falls back to the id: swapping a hash for the title reads as a glitch.
 const name = computed(() => props.eventTitle ?? "")
 
-const goBack = () => router.push("/manage/events")
+const isCreatingEvent = computed(() => route.name === "create-event")
+
+const goToEvents = () => router.push("/manage/events")
+
+// Deep links have nothing to go back to, so the events list stands in.
+const goBack = () => (window.history.state?.back ? router.back() : goToEvents())
 </script>
 
 <template>
+	<Tooltip
+		v-if="isCreatingEvent"
+		class="w-full"
+		text="Go back"
+		side="right"
+		:disabled="!isCollapsed"
+	>
+		<button
+			aria-label="Go back"
+			class="group flex h-12 w-full items-center gap-1.5 rounded-4 px-1 transition duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:outline-none focus-visible:focus-ring"
+			@click="goBack"
+		>
+			<span
+				class="lucide-chevron-left size-4 shrink-0 text-ink-gray-5 transition duration-150 ease-out group-hover:-translate-x-0.5 group-hover:text-ink-gray-8"
+			/>
+			<span v-if="!isCollapsed" class="truncate text-base font-medium text-ink-gray-8">
+				Go back
+			</span>
+		</button>
+	</Tooltip>
+
 	<!-- Identity and the way home; the account menu sits in the sidebar footer. -->
-	<Tooltip v-if="!eventId" class="w-full" text="Buzz" side="right" :disabled="!isCollapsed">
+	<Tooltip v-else-if="!eventId" class="w-full" text="Buzz" side="right" :disabled="!isCollapsed">
 		<router-link
 			to="/manage"
 			class="flex h-12 w-full items-center gap-2 rounded-4 px-1.5 transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:outline-none focus-visible:focus-ring"
@@ -40,7 +67,7 @@ const goBack = () => router.push("/manage/events")
 		<button
 			aria-label="Back to events"
 			class="group flex h-12 w-full items-center gap-1.5 rounded-4 px-1 transition duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:outline-none focus-visible:focus-ring"
-			@click="goBack"
+			@click="goToEvents"
 		>
 			<span
 				class="lucide-chevron-left size-4 shrink-0 text-ink-gray-5 transition duration-150 ease-out group-hover:-translate-x-0.5 group-hover:text-ink-gray-8"

@@ -15,14 +15,6 @@ const routes: RouteRecordRaw[] = [
 			name: (await isTeamMember()) ? "manage" : "bookings-tab",
 		}),
 	},
-	// Declared before /manage: this one opts out of the manager shell, so it cannot be a
-	// child of the route that renders it.
-	{
-		path: "/manage/team/events/new",
-		name: "create-event",
-		meta: { fullBleed: true, title: "Create New Event" },
-		component: () => import("@/pages/manage/events/CreateEvent.vue"),
-	},
 	{
 		path: "/manage",
 		meta: { fullBleed: true },
@@ -70,6 +62,12 @@ const routes: RouteRecordRaw[] = [
 			{
 				path: "events/:eventId/:section",
 				component: () => import("@/pages/manage/WorkInProgress.vue"),
+			},
+			{
+				path: "team/events/new",
+				name: "create-event",
+				meta: { title: "Create New Event" },
+				component: () => import("@/pages/manage/events/CreateEvent.vue"),
 			},
 			{
 				path: "proposals",

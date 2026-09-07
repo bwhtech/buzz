@@ -42,10 +42,16 @@ const mainItems = computed(() => {
 // An event opens into the same shell with its own destinations.
 const eventId = computed(() => route.params.eventId as string | undefined)
 
-// Entering an event pushes the sidebar left, leaving it pulls back right.
+// The header swaps between the brand mark, an event, and the create-event way out.
+const headerKey = computed(() => {
+	if (route.name === "create-event") return "create"
+	return eventId.value ? "event" : "root"
+})
+
+// Leaving the root pushes the sidebar left, returning to it pulls back right.
 const direction = ref<"forward" | "back">("forward")
-watch(eventId, (id, previous) => {
-	direction.value = id && !previous ? "forward" : "back"
+watch(headerKey, (key, previous) => {
+	direction.value = previous === "root" && key !== "root" ? "forward" : "back"
 })
 
 const eventTitle = ref("")
@@ -69,6 +75,8 @@ usePageMeta(() => {
 })
 
 const items = computed(() => {
+	// Creating an event is a page of its own; the sidebar holds only the way out of it.
+	if (headerKey.value === "create") return []
 	if (!eventId.value) return mainItems.value
 	const event = `/manage/events/${eventId.value}`
 	return [
@@ -87,14 +95,11 @@ const items = computed(() => {
 	<DesktopShell v-else-if="access === 'granted'" :scroll="false">
 		<template #sidebar>
 			<Sidebar>
-				<!-- px-1: puts the header mark on the item-icon centerline, in both states.
-				     h-14 holds the height while both states overlap mid-transition. -->
+				<!-- px-1: puts the header mark on the item-icon centerline, in every state.
+				     h-14 holds the height while two states overlap mid-transition. -->
 				<div class="nav-stage relative h-14 shrink-0">
 					<Transition :name="`nav-${direction}`">
-						<div
-							:key="eventId ? 'event' : 'root'"
-							class="absolute inset-x-1 top-2 flex items-center"
-						>
+						<div :key="headerKey" class="absolute inset-x-1 top-2 flex items-center">
 							<ManagerSidebarHeader :event-id="eventId" :event-title="eventTitle" />
 						</div>
 					</Transition>
@@ -105,7 +110,7 @@ const items = computed(() => {
 				     padding box, so padding here would lift it out of line. -->
 				<div class="nav-stage relative mx-2 my-2">
 					<Transition :name="`nav-${direction}`">
-						<div :key="eventId ? 'event' : 'root'" class="nav-list flex flex-col gap-0.5">
+						<div :key="headerKey" class="nav-list flex flex-col gap-0.5">
 							<SidebarItem
 								v-for="item in items"
 								:key="item.label"

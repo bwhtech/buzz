@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Alert, Button, ErrorMessage, resolvedColorScheme, toast, useColorScheme } from "frappe-ui"
+import { Alert, Button, ErrorMessage, toast } from "frappe-ui"
 import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { onBeforeRouteLeave, useRouter } from "vue-router"
@@ -7,10 +7,8 @@ import { onBeforeRouteLeave, useRouter } from "vue-router"
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
 import EventLocation from "@/components/dashboard/events/EventLocation.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
-import { useTeamAccess } from "@/composables/useTeamAccess"
 import { createEvent } from "@/data/events"
 import { currentTeam } from "@/data/teams"
-import NotFound from "@/pages/NotFound.vue"
 import type { FrappeError } from "@/types"
 import { defaultSchedule } from "@/utils/eventDates"
 import type { ChecklistItem } from "@/utils/eventValidation"
@@ -22,19 +20,9 @@ const MANAGER_REQUIRED = "Ask an admin to make you a Manager to create events."
 
 const router = useRouter()
 
-const access = useTeamAccess()
-
 // The server refuses anything below Manager, so the form is shown read-only rather than
 // letting someone fill it in and lose the work to a 403 on save.
 const canCreate = computed(() => canCreateEvents(currentTeam.value?.team_role))
-
-const { colorScheme, setColorScheme } = useColorScheme()
-// `system` resolves against the OS, so the icon shows what is on screen rather than
-// what was picked — and the toggle sets the opposite outright instead of stepping
-// through `system`, which would look like a no-op when the OS is already dark.
-const isDark = computed(
-	() => (colorScheme.value === "system" ? resolvedColorScheme() : colorScheme.value) === "dark",
-)
 
 const title = ref("")
 const about = ref("")
@@ -173,137 +161,111 @@ async function save() {
 </script>
 
 <template>
-	<NotFound v-if="access === 'denied'" />
-
-	<!-- Nothing renders until the team resolves, so the page would otherwise pop in. -->
-	<Transition
-		v-else
-		enter-active-class="transition-opacity duration-150 ease-out motion-reduce:transition-none"
-		enter-from-class="opacity-0"
-	>
-		<div v-if="access === 'granted'" class="m-auto max-w-[800px] w-full py-8 px-4 space-y-8">
-			<header class="space-y-4">
-				<div class="flex items-center justify-between">
-					<Button
-						variant="ghost"
-						icon-left="lucide-arrow-left"
-						label="Back"
-						class="-ml-2"
-						:route="{ name: 'events' }"
-					/>
-
-					<Button
-						variant="ghost"
-						:icon="isDark ? 'lucide-sun' : 'lucide-moon'"
-						:label="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
-						@click="setColorScheme(isDark ? 'light' : 'dark')"
-					/>
-				</div>
-
-				<div class="flex items-center justify-between gap-4">
-					<h1 class="text-2xl font-semibold text-ink-gray-9">Create event</h1>
-					<!-- Enabled even when incomplete, so the click can say what is missing. No
-					 aria-disabled: that reads as disabled to assistive tech and blocks the very
-					 click that explains the state. The checklist is named instead. -->
-					<Button
-						variant="solid"
-						label="Create"
-						:loading="createEvent.loading"
-						aria-describedby="event-requirements"
-						@click="save"
-					/>
-				</div>
-
-				<ErrorMessage v-if="errorMessage" :message="errorMessage" />
-			</header>
-
-			<Alert
-				v-if="!canCreate"
-				theme="amber"
-				title="You cannot create events"
-				:description="MANAGER_REQUIRED"
-				:dismissible="false"
-			/>
-
-			<EventBanner v-model="bannerImage" :seed="title" :disabled="!canCreate" />
-
-			<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
-			<input
-				id="event-title"
-				v-model="title"
-				aria-label="Event title"
-				placeholder="Name your event"
-				:disabled="!canCreate"
-				:aria-invalid="saveAttempted && !title.trim()"
-				class="w-full bg-transparent text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none disabled:text-ink-gray-5 aria-invalid:placeholder:text-ink-red-4"
-			/>
-
-			<div class="grid gap-8 md:grid-cols-5">
-				<section class="space-y-3 md:col-span-3">
-					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
-					<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
-					 itself: the height and scrolling land on the editable area rather than on a
-					 wrapper, and the whole box takes a click. -->
-					<div class="rounded-6 border border-outline-gray-2 p-3">
-						<Editor
-							v-model="about"
-							:extensions="[RichTextKit]"
-							placeholder="What is this event about?"
-							:editable="canCreate"
-						>
-							<EditorContent
-								class="prose-sm h-48 max-w-none overflow-y-auto text-ink-gray-8 focus:outline-none"
-							/>
-						</Editor>
-					</div>
-				</section>
-
-				<div class="space-y-8 md:col-span-2">
-					<EventSchedule
-						:disabled="!canCreate"
-						v-model:start-date="startDate"
-						v-model:start-time="startTime"
-						v-model:end-date="endDate"
-						v-model:end-time="endTime"
-						v-model:time-zone="timeZone"
-					/>
-
-					<section id="event-location" class="space-y-3">
-						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
-						<EventLocation
-							v-model:venue="venue"
-							v-model:zoom-meeting="zoomMeeting"
-							:team="currentTeam?.name ?? ''"
-							:disabled="!canCreate"
-							:error="locationError"
-						/>
-					</section>
-				</div>
+	<div class="m-auto max-w-[800px] w-full py-8 px-4 space-y-8">
+		<header class="space-y-4">
+			<div class="flex items-center justify-between gap-4">
+				<h1 class="text-2xl font-semibold text-ink-gray-9">Create event</h1>
+				<!-- Enabled even when incomplete, so the click can say what is missing. No
+				 aria-disabled: that reads as disabled to assistive tech and blocks the very
+				 click that explains the state. The checklist is named instead. -->
+				<Button
+					variant="solid"
+					label="Create"
+					:loading="createEvent.loading"
+					aria-describedby="event-requirements"
+					@click="save"
+				/>
 			</div>
-			<!-- The colour rides on the icon alone: the label stays at full contrast, so the
-			 row still reads when the two hues do not. -->
-			<section id="event-requirements" class="space-y-3 rounded-6 bg-surface-gray-1/90 p-4">
-				<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">
-					{{ missingItems.length ? "Still needed" : "Ready to create" }}
-				</h2>
 
-				<ul class="space-y-2" aria-live="polite">
-					<li
-						v-for="item in checklist"
-						:key="item.label"
-						class="flex items-center gap-2 text-base text-ink-gray-8"
+			<ErrorMessage v-if="errorMessage" :message="errorMessage" />
+		</header>
+
+		<Alert
+			v-if="!canCreate"
+			theme="amber"
+			title="You cannot create events"
+			:description="MANAGER_REQUIRED"
+			:dismissible="false"
+		/>
+
+		<EventBanner v-model="bannerImage" :seed="title" :disabled="!canCreate" />
+
+		<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
+		<input
+			id="event-title"
+			v-model="title"
+			aria-label="Event title"
+			placeholder="Name your event"
+			:disabled="!canCreate"
+			:aria-invalid="saveAttempted && !title.trim()"
+			class="w-full bg-transparent text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none disabled:text-ink-gray-5 aria-invalid:placeholder:text-ink-red-4"
+		/>
+
+		<div class="grid gap-8 md:grid-cols-5">
+			<section class="space-y-3 md:col-span-3">
+				<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
+				<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
+				 itself: the height and scrolling land on the editable area rather than on a
+				 wrapper, and the whole box takes a click. -->
+				<div class="rounded-6 border border-outline-gray-2 p-3">
+					<Editor
+						v-model="about"
+						:extensions="[RichTextKit]"
+						placeholder="What is this event about?"
+						:editable="canCreate"
 					>
-						<!-- A row turning green is the only reward in this flow; a hard cut spends it. -->
-						<span
-							class="size-4 shrink-0 transition-colors duration-150 ease-out motion-reduce:transition-none"
-							:class="[item.done ? 'lucide-check' : 'lucide-x', iconColor(item)]"
-							aria-hidden="true"
+						<EditorContent
+							class="prose-sm h-48 max-w-none overflow-y-auto text-ink-gray-8 focus:outline-none"
 						/>
-						<span>{{ item.label }}</span>
-						<span class="sr-only">{{ item.done ? "done" : "missing" }}</span>
-					</li>
-				</ul>
+					</Editor>
+				</div>
 			</section>
+
+			<div class="space-y-8 md:col-span-2">
+				<EventSchedule
+					:disabled="!canCreate"
+					v-model:start-date="startDate"
+					v-model:start-time="startTime"
+					v-model:end-date="endDate"
+					v-model:end-time="endTime"
+					v-model:time-zone="timeZone"
+				/>
+
+				<section id="event-location" class="space-y-3">
+					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
+					<EventLocation
+						v-model:venue="venue"
+						v-model:zoom-meeting="zoomMeeting"
+						:team="currentTeam?.name ?? ''"
+						:disabled="!canCreate"
+						:error="locationError"
+					/>
+				</section>
+			</div>
 		</div>
-	</Transition>
+		<!-- The colour rides on the icon alone: the label stays at full contrast, so the
+		 row still reads when the two hues do not. -->
+		<section id="event-requirements" class="space-y-3 rounded-6 bg-surface-gray-1/90 p-4">
+			<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">
+				{{ missingItems.length ? "Still needed" : "Ready to create" }}
+			</h2>
+
+			<ul class="space-y-2" aria-live="polite">
+				<li
+					v-for="item in checklist"
+					:key="item.label"
+					class="flex items-center gap-2 text-base text-ink-gray-8"
+				>
+					<!-- A row turning green is the only reward in this flow; a hard cut spends it. -->
+					<span
+						class="size-4 shrink-0 transition-colors duration-150 ease-out motion-reduce:transition-none"
+						:class="[item.done ? 'lucide-check' : 'lucide-x', iconColor(item)]"
+						aria-hidden="true"
+					/>
+					<span>{{ item.label }}</span>
+					<span class="sr-only">{{ item.done ? "done" : "missing" }}</span>
+				</li>
+			</ul>
+		</section>
+	</div>
 </template>
