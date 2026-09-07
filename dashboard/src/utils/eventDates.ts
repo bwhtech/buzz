@@ -65,7 +65,10 @@ export function defaultSchedule(now: Date = new Date()) {
 	const start = new Date(now)
 	start.setMinutes(0, 0, 0)
 	start.setHours(start.getHours() + 1)
-	const end = new Date(start.getTime() + 60 * 60 * 1000)
+	// Wall clock, not elapsed milliseconds: on a DST fall-back day the hour after 01:00
+	// is 01:00 again, which would leave the event ending exactly when it starts.
+	const end = new Date(start)
+	end.setHours(end.getHours() + 1)
 	return {
 		startDate: localDate(start),
 		startTime: localTime(start),

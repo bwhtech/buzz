@@ -18,6 +18,8 @@ import { eventDraftChecklist, isDraftComplete } from "@/utils/eventValidation"
 import { canCreateEvents } from "@/utils/teamRoles"
 import { currentTimeZone } from "@/utils/timeZones"
 
+const MANAGER_REQUIRED = "Ask an admin to make you a Manager to create events."
+
 const router = useRouter()
 
 const access = useTeamAccess()
@@ -111,7 +113,7 @@ function iconColor(item: ChecklistItem) {
 // Combobox draws its own error region, so Where says what it is missing in place.
 const locationError = computed(() =>
 	saveAttempted.value && !venue.value && !zoomMeeting.value
-		? "Pick a venue or an online meeting"
+		? "Pick a venue, or create a Zoom meeting"
 		: "",
 )
 
@@ -125,14 +127,19 @@ function focusFirstMissing() {
 	// A full-page smooth scroll is exactly the motion a vestibular user turns off.
 	const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches
 	target?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "center" })
-	const focusable = target?.matches("input") ? target : target?.querySelector("input, button")
+	const focusable = target?.matches("input, button")
+		? target
+		: target?.querySelector("input, button")
 	;(focusable as HTMLElement | null)?.focus({ preventScroll: true })
 }
 
 // The button stays live and the checklist says what is still missing, rather than
 // leaving the organiser to guess what would enable it.
 async function save() {
-	if (!canCreate.value) return
+	if (!canCreate.value) {
+		toast.error(MANAGER_REQUIRED)
+		return
+	}
 	saveAttempted.value = true
 	if (!isDraftComplete(draft.value)) {
 		// Labels are sentence-cased for the list, which reads as one sentence.
@@ -200,7 +207,7 @@ async function save() {
 					 click that explains the state. The checklist is named instead. -->
 					<Button
 						variant="solid"
-						label="Create event"
+						label="Create"
 						:loading="createEvent.loading"
 						aria-describedby="event-requirements"
 						@click="save"
@@ -214,7 +221,7 @@ async function save() {
 				v-if="!canCreate"
 				theme="amber"
 				title="You cannot create events"
-				description="Ask an admin to make you a Manager to create events."
+				:description="MANAGER_REQUIRED"
 				:dismissible="false"
 			/>
 
@@ -253,7 +260,6 @@ async function save() {
 
 				<div class="space-y-8 md:col-span-2">
 					<EventSchedule
-						id="event-schedule"
 						:disabled="!canCreate"
 						v-model:start-date="startDate"
 						v-model:start-time="startTime"

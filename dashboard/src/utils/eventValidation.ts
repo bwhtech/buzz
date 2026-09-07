@@ -36,18 +36,14 @@ export function eventDraftChecklist(draft: EventDraft): ChecklistItem[] {
 		{
 			label: "Start date and time",
 			done: Boolean(draft.startDate && draft.startTime),
-			field: "event-schedule",
+			field: "event-schedule-start",
 		},
-		{ label: "End time", done: Boolean(draft.endTime), field: "event-schedule" },
-		{
-			label: "Venue or online meeting",
-			done: Boolean(draft.venue || draft.zoomMeeting),
-			field: "event-location",
-		},
+		{ label: "End time", done: Boolean(draft.endTime), field: "event-schedule-end" },
+		{ label: "Venue", done: Boolean(draft.venue || draft.zoomMeeting), field: "event-location" },
 		// A schedule nobody has filled in yet cannot run backwards, so this only earns a row
 		// once it can actually fail.
 		...(endsBeforeItStarts
-			? [{ label: "Ends after it starts", done: false, field: "event-schedule" }]
+			? [{ label: "Ends after it starts", done: false, field: "event-schedule-end" }]
 			: []),
 	]
 }
