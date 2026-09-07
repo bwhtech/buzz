@@ -29,6 +29,13 @@ const themes = [
 
 const settingsOpen = ref(false)
 
+const NEW_ISSUE_URL = "https://github.com/bwhtech/buzz/issues/new"
+
+function reportIssue(closeMenu: () => void) {
+	closeMenu()
+	window.open(NEW_ISSUE_URL, "_blank", "noopener")
+}
+
 // The popover sits above the dialog's overlay, so it never gets the outside-click.
 function openSettings(closeMenu: () => void) {
 	closeMenu()
@@ -100,6 +107,15 @@ function openSettings(closeMenu: () => void) {
 						/>
 					</div>
 				</div>
+
+				<Button
+					size="sm"
+					label="Report an Issue"
+					icon="lucide-bug"
+					variant="ghost"
+					class="w-full !justify-start"
+					@click="reportIssue(close)"
+				/>
 
 				<Divider class="my-2" />
 
