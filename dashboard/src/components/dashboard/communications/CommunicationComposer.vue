@@ -23,7 +23,7 @@ const canSend = computed(() => props.canWrite && hasText(draft.value.message) &&
 		class="composer rounded-8 border border-outline-gray-2 bg-surface-white focus-within:border-outline-gray-4"
 	>
 		<p class="flex flex-wrap items-center gap-2 px-4 pt-4 text-base text-ink-gray-7">
-			Send a message to your
+			Send an announcement to your
 			<Select
 				v-model="draft.audience"
 				size="sm"
