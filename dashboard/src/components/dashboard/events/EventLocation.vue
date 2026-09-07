@@ -12,8 +12,8 @@ const ZOOM = "__zoom__"
 // A page that asks for the medium separately picks a venue and nothing else, so the
 // Zoom option would be a second way to answer a question already answered.
 const props = withDefaults(
-	defineProps<{ team: string; disabled?: boolean; showVirtual?: boolean }>(),
-	{ showVirtual: true },
+	defineProps<{ team: string; disabled?: boolean; showVirtual?: boolean; error?: string }>(),
+	{ showVirtual: true, error: "" },
 )
 
 const venue = defineModel<string>("venue", { default: "" })
@@ -86,8 +86,9 @@ async function onVenueCreated(name: string) {
 		v-model="selected"
 		:options="options"
 		placeholder="Search venues, or add one"
-		class="w-full mt-2"
+		class="w-full"
 		:disabled="disabled"
+		:error="error"
 	/>
 
 	<AddVenueDialog

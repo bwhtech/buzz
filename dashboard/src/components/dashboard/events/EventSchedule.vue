@@ -99,6 +99,7 @@ const zoneOptions = computed(() =>
 					<DateTimePicker v-model="startAt" :min="today" :disabled="disabled">
 						<template #trigger="{ toggle, open }">
 							<button
+								id="event-schedule-start"
 								type="button"
 								:class="[cellClass, open && 'bg-surface-gray-1']"
 								:disabled="disabled"
@@ -115,6 +116,7 @@ const zoneOptions = computed(() =>
 					<DateTimePicker v-model="endAt" :min="earliestEnd" :disabled="disabled">
 						<template #trigger="{ toggle, open }">
 							<button
+								id="event-schedule-end"
 								type="button"
 								:class="[cellClass, open && 'bg-surface-gray-1']"
 								:disabled="disabled"
