@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import { callMethod, createDoc, ensureTestTeam, getDoc } from "../helpers/frappe"
+import { callMethod, createDoc, deleteDoc, ensureTestTeam, getDoc } from "../helpers/frappe"
 
 // Runs under the shared Administrator state, whose team hosts the event seeded by
 // event.setup.ts — the one card guaranteed to carry a Manage button.
@@ -305,6 +305,12 @@ test.describe("Unsaved details", () => {
 		})
 		eventId = String(event.name)
 		await page.goto(`/b/manage/events/${eventId}/details`)
+	})
+
+	// Each run seeds its own event, so each run takes it away again rather than leaving a
+	// trail of them on the shared site.
+	test.afterEach(async ({ request }) => {
+		await deleteDoc(request, "Buzz Event", eventId).catch(() => {})
 	})
 
 	test("keeps edits through a trip to another section, and drops them on discard", async ({
