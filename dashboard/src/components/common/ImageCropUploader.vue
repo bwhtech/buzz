@@ -11,7 +11,8 @@ import ImageCropper from "@/components/common/ImageCropper.vue"
  * `validateFile` props, same `success`/`failure` emits, same slot props — so a host that
  * wants a crop swaps the tag and keeps everything else. The difference is that nothing
  * is sent until the organiser presses Save: the file picker hands over a `File`, the
- * dialog hands back a re-encoded blob, and only that blob is uploaded.
+ * dialog hands back a re-encoded blob, and only that blob is uploaded. Cancel aborts a
+ * crop that is already uploading, so a slow request cannot land after it was dismissed.
  *
  * Public by default, unlike `FileUploader`. Every image this component uploads is read
  * without a session — a banner in a ticket email, an avatar on a public event page — and
@@ -48,6 +49,7 @@ const cropper = useTemplateRef<InstanceType<typeof ImageCropper>>("cropper")
 const selected = ref<File | null>(null)
 const isOpen = ref(false)
 const pickError = ref("")
+const pending = ref<AbortController | null>(null)
 
 const accept = computed(() =>
 	Array.isArray(props.fileTypes) ? props.fileTypes.join(",") : props.fileTypes || "image/*",
@@ -85,32 +87,51 @@ function selectFile(event: Event) {
 }
 
 async function save() {
-	const blob = await cropper.value?.getCroppedBlob()
-	if (!blob) {
-		pickError.value = __("Could not crop the image")
-		return
-	}
+	pickError.value = ""
+	const controller = new AbortController()
+	pending.value = controller
 
 	try {
-		const cropped = new File([blob], croppedName(selected.value), { type: "image/jpeg" })
+		// Cropping is inside the try because a canvas export can throw on an image the
+		// browser has not finished decoding, and that belongs in the dialog, not in an
+		// unhandled rejection.
+		const blob = await cropper.value?.getCroppedBlob()
+		if (!blob) {
+			pickError.value = __("Could not crop the image")
+			return
+		}
+
+		const cropped = new File([blob], croppedName(selected.value, blob.type), { type: blob.type })
 		const file = await upload.upload(cropped, {
 			private: props.private,
 			optimize: props.optimize,
+			signal: controller.signal,
 		})
 		isOpen.value = false
 		emit("success", file)
 	} catch (uploadError) {
+		// Cancel aborts the request rather than letting it land, so its rejection is the
+		// outcome the organiser asked for, not a failure to report.
+		if (controller.signal.aborted) return
 		emit("failure", uploadError)
+	} finally {
+		if (pending.value === controller) pending.value = null
 	}
 }
 
 /** Keeps the original name recognisable in the file list, with the new extension. */
-function croppedName(file: File | null) {
+function croppedName(file: File | null, type: string) {
 	const stem = file?.name.replace(/\.[^.]+$/, "")
-	return `${stem || "image"}-cropped.jpg`
+	return `${stem || "image"}-cropped.${type === "image/png" ? "png" : "jpg"}`
 }
 
+// Every way out of the dialog lands here — Cancel, Escape, the overlay — so this is the
+// one place an upload still in flight gets abandoned rather than left to land later. The
+// reset clears the "Upload cancelled" the abort leaves behind: the organiser asked for
+// that, and reporting it back to them as an error is just noise.
 function clearFile() {
+	pending.value?.abort()
+	upload.reset()
 	selected.value = null
 }
 </script>

@@ -98,7 +98,13 @@ const isDirty = computed(() => {
 
 const fullName = computed(() => [form.first_name, form.last_name].filter(Boolean).join(" "))
 
+// A picture has no blur: an upload or a remove is the whole gesture, so it saves itself
+// rather than leaving the organiser to find the Save button. Reopening the dialog resets
+// the form back to what is stored, which the dirty check below absorbs.
+watch(() => form.user_image, save)
+
 async function save() {
+	if (!isDirty.value) return
 	// Resolves null on failure rather than throwing; setValue.error renders inline.
 	if (!(await user.setValue.submit({ ...form }))) return
 

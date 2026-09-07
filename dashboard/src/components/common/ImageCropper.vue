@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { useElementSize } from "@vueuse/core"
 import { Button, Slider } from "frappe-ui"
-import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch } from "vue"
+import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from "vue"
 
 import { clampOffset, coverScale, rotatedSize, type Point } from "@/utils/imageCrop"
 
@@ -32,10 +33,13 @@ const dragStart = ref<Point>({ x: 0, y: 0 })
 const dragOrigin = ref<Point>({ x: 0, y: 0 })
 
 const zoom = computed(() => zoomPercent.value[0] / 100)
-const frameSize = computed(() => {
-	const width = frame.value?.getBoundingClientRect().width || 0
-	return { width, height: width / props.aspectRatio }
-})
+// Observed rather than measured once: the dialog scales as it opens, and a plain
+// getBoundingClientRect would freeze the width mid-animation and again on every resize.
+const { width: frameWidth } = useElementSize(frame)
+const frameSize = computed(() => ({
+	width: frameWidth.value,
+	height: frameWidth.value / props.aspectRatio,
+}))
 const turnedSize = computed(() =>
 	imageSize.value ? rotatedSize(imageSize.value, rotation.value) : null,
 )
@@ -48,6 +52,11 @@ const renderedSize = computed(() => {
 	const scale = baseScale.value * zoom.value
 	return { width: turnedSize.value.width * scale, height: turnedSize.value.height * scale }
 })
+
+// PNG survives as PNG so a logo keeps its transparent background — JPEG has none to
+// keep, and an unpainted canvas encodes as black. Everything else is a photograph,
+// where JPEG is far smaller for the same picture.
+const outputType = computed(() => (props.file.type === "image/png" ? "image/png" : "image/jpeg"))
 
 const wrapStyle = computed(() => ({
 	transform: `translate(-50%, -50%) translate(${offset.value.x}px, ${offset.value.y}px)`,
@@ -70,14 +79,11 @@ watch(
 		imageUrl.value = URL.createObjectURL(file)
 		imageSize.value = await readImageSize(imageUrl.value)
 		resetCrop()
-		// The frame has no width until it is laid out, and every bound is measured off it.
-		await nextTick()
-		constrain()
 	},
 	{ immediate: true },
 )
 
-watch([zoomPercent, rotation], constrain)
+watch([zoomPercent, rotation, frameWidth], constrain)
 
 onBeforeUnmount(() => {
 	releaseImageUrl()
@@ -110,7 +116,7 @@ function startDrag(event: PointerEvent) {
 }
 
 function drag(event: PointerEvent) {
-	if (dragPointer.value === null) return
+	if (event.pointerId !== dragPointer.value) return
 	offset.value = bound({
 		x: dragOrigin.value.x + event.clientX - dragStart.value.x,
 		y: dragOrigin.value.y + event.clientY - dragStart.value.y,
@@ -139,7 +145,7 @@ function bound(point: Point) {
 }
 
 /**
- * The crop, as a JPEG.
+ * The crop, re-encoded.
  *
  * The canvas replays exactly what is on screen, scaled up from the frame's rendered
  * width to the export width — so what the organiser lined up is what gets stored, and
@@ -167,7 +173,7 @@ async function getCroppedBlob(): Promise<Blob | null> {
 	context.scale(scale, scale)
 	context.drawImage(source, -size.width / 2, -size.height / 2)
 
-	return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92))
+	return new Promise((resolve) => canvas.toBlob(resolve, outputType.value, 0.92))
 }
 
 function releaseImageUrl() {
@@ -217,11 +223,13 @@ defineExpose({ getCroppedBlob, resetCrop })
 			</div>
 
 			<!-- The mask is the crop's own outline: everything outside it is what the
-				 frame will cut off. A ring rather than a fill, so the picture underneath
+				 frame will cut off. Edge to edge, because that is the circle the avatar
+				 renderers clip with — an inset ring would promise a tighter crop than the
+				 export delivers. A ring rather than a fill, so the picture underneath
 				 stays visible while it is being placed. -->
 			<div
 				v-if="shape === 'circle'"
-				class="pointer-events-none absolute inset-[7%] rounded-full border-2 border-white shadow-[0_0_0_999px_rgba(0,0,0,0.28)]"
+				class="pointer-events-none absolute inset-0 rounded-full border-2 border-white shadow-[0_0_0_999px_rgba(0,0,0,0.28)]"
 			/>
 
 			<Button
