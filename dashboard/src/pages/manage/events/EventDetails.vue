@@ -2,7 +2,7 @@
 import { useEventListener } from "@vueuse/core"
 import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
 import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
+import { computed, nextTick, reactive, ref, watch } from "vue"
 import { onBeforeRouteLeave, useRoute } from "vue-router"
 
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
@@ -86,13 +86,15 @@ const canSave = computed(
 // Nothing here autosaves, so leaving with edits in hand has to be deliberate.
 const LEAVE_WARNING = "You have unsaved changes. Leave without saving?"
 
-function warnOnUnload(unload: BeforeUnloadEvent) {
+// Covers a reload, a tab close and a back out of the app; Safari reads returnValue
+// rather than the prevented default.
+useEventListener(window, "beforeunload", (unload: BeforeUnloadEvent) => {
 	if (!isDirty.value) return
 	unload.preventDefault()
-}
+	unload.returnValue = LEAVE_WARNING
+})
 
-onMounted(() => window.addEventListener("beforeunload", warnOnUnload))
-onBeforeUnmount(() => window.removeEventListener("beforeunload", warnOnUnload))
+// Covers the back button and any other in-app navigation, which never unloads the page.
 onBeforeRouteLeave(() => !isDirty.value || window.confirm(LEAVE_WARNING))
 
 // The page's own save takes the shortcut the browser would otherwise spend on saving the
