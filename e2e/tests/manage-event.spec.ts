@@ -344,6 +344,28 @@ test.describe("Unsaved details", () => {
 		await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
 	})
 
+	// Leaving the site warns first, and taking that exit means the edits go with it —
+	// otherwise the reload would hand back the text the warning offered to save.
+	test("warns on reload, and drops the draft once the warning is accepted", async ({ page }) => {
+		const description = page.getByRole("textbox", { name: "Short description" })
+		await expect(description).toBeVisible({ timeout: 15000 })
+
+		await description.fill(`Typed then reloaded ${Date.now()}`)
+		await expect(page.getByRole("button", { name: "Save" })).toBeVisible()
+
+		let warned = false
+		page.on("dialog", (dialog) => {
+			warned = dialog.type() === "beforeunload"
+			return dialog.accept()
+		})
+		await page.reload()
+
+		expect(warned).toBe(true)
+		await expect(description).toHaveValue("", { timeout: 15000 })
+		await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
+		await expect(page.getByText("Restored your unsaved changes")).toHaveCount(0)
+	})
+
 	test("drops the draft once the edits are saved", async ({ page }) => {
 		const description = page.getByRole("textbox", { name: "Short description" })
 		await expect(description).toBeVisible({ timeout: 15000 })

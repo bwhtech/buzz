@@ -2,7 +2,7 @@
 import { useEventListener } from "@vueuse/core"
 import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
 import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
-import { computed, nextTick, reactive, ref, watch } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
@@ -108,7 +108,16 @@ const canSave = computed(
 		!isEndBeforeStart(form.start_date, form.end_date, form.start_time, form.end_time),
 )
 
-// No unload warning: edits survive a reload now, so a dialog would guard nothing.
+// Moving between the event's own sections keeps the edits, so it passes without a word.
+// Leaving the site is the deliberate exit: it is worth a warning, and taking it drops the
+// draft, so the warning is the last chance to keep the text.
+function warnOnUnload(unload: BeforeUnloadEvent) {
+	if (!isDirty.value) return
+	unload.preventDefault()
+}
+
+onMounted(() => window.addEventListener("beforeunload", warnOnUnload))
+onBeforeUnmount(() => window.removeEventListener("beforeunload", warnOnUnload))
 
 // The page's own save takes the shortcut the browser would otherwise spend on saving the
 // document — swallowed even with nothing to commit, so it never surprises mid-edit.

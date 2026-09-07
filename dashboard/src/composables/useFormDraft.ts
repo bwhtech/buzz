@@ -1,4 +1,4 @@
-import { StorageSerializers, useLocalStorage } from "@vueuse/core"
+import { StorageSerializers, useEventListener, useLocalStorage } from "@vueuse/core"
 import { type Ref, watch } from "vue"
 
 import { type DraftOutcome, type StoredDraft, matches, restoredDraft } from "@/utils/formDraft"
@@ -31,6 +31,14 @@ export function useFormDraft<T extends object>(key: string, form: T, baseline: R
 		},
 		{ deep: true },
 	)
+
+	// Leaving the site is the one exit the page warns about, so taking it means the draft
+	// goes too — a reload that put the text back would make the warning a lie. Written
+	// straight through: the reactive write is queued, and the document is already going.
+	// A page held for the back button is not leaving, so it keeps its draft.
+	useEventListener(window, "pagehide", (leaving: PageTransitionEvent) => {
+		if (!leaving.persisted) localStorage.removeItem(key)
+	})
 
 	/**
 	 * Applies the draft this page opened with, and reports what became of it. Spent on
