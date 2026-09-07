@@ -285,3 +285,75 @@ test.describe("Guest list", () => {
 		await expect(rows).toHaveCount(GUESTS.length)
 	})
 })
+
+// The details form holds edits in memory, so moving between sections used to drop them.
+// They are kept in localStorage now; this block seeds its own event rather than leaving
+// the shared one dirty for the specs above.
+test.describe("Unsaved details", () => {
+	let eventId: string
+
+	test.beforeEach(async ({ page, request }) => {
+		const team = await ensureTestTeam(request)
+		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
+			event: {
+				team,
+				title: `Draft Event ${Date.now()}`,
+				start_date: "2030-01-01",
+				start_time: "09:00:00",
+				end_time: "17:00:00",
+			},
+		})
+		eventId = String(event.name)
+		await page.goto(`/b/manage/events/${eventId}/details`)
+	})
+
+	test("keeps edits through a trip to another section, and drops them on discard", async ({
+		page,
+	}) => {
+		const description = page.getByRole("textbox", { name: "Short description" })
+		await expect(description).toBeVisible({ timeout: 15000 })
+
+		const text = `Typed but not saved ${Date.now()}`
+		await description.fill(text)
+		// Save showing is the form registering the edit, so the trip below starts dirty.
+		await expect(page.getByRole("button", { name: "Save" })).toBeVisible()
+
+		await page.getByRole("link", { name: "Guests" }).click()
+		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
+		await page.getByRole("link", { name: "Details" }).click()
+
+		await expect(description).toHaveValue(text, { timeout: 15000 })
+		await expect(page.getByText("Restored your unsaved changes")).toBeVisible()
+		await expect(page.getByRole("button", { name: "Save" })).toBeVisible()
+
+		// Discard is the deliberate way out, and it has to take the stored draft with it.
+		await page.getByRole("button", { name: "Discard" }).click()
+		await expect(description).toHaveValue("")
+
+		await page.getByRole("link", { name: "Guests" }).click()
+		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
+		await page.getByRole("link", { name: "Details" }).click()
+
+		await expect(description).toHaveValue("", { timeout: 15000 })
+		await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
+	})
+
+	test("drops the draft once the edits are saved", async ({ page }) => {
+		const description = page.getByRole("textbox", { name: "Short description" })
+		await expect(description).toBeVisible({ timeout: 15000 })
+
+		const text = `Saved after a detour ${Date.now()}`
+		await description.fill(text)
+		await page.getByRole("button", { name: "Save" }).click()
+		await expect(page.getByText("Event saved")).toBeVisible()
+
+		await page.getByRole("link", { name: "Guests" }).click()
+		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
+		await page.getByRole("link", { name: "Details" }).click()
+
+		// The value is the event's own now, so it arrives without a draft behind it.
+		await expect(description).toHaveValue(text, { timeout: 15000 })
+		await expect(page.getByText("Restored your unsaved changes")).toHaveCount(0)
+		await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
+	})
+})
