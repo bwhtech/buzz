@@ -2,7 +2,7 @@
 import { useEventListener } from "@vueuse/core"
 import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
 import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
+import { computed, nextTick, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
@@ -89,12 +89,12 @@ watch(
 	(detail) => detail && !isDirty.value && fill(detail),
 )
 
-// The draft is the user's own text: whether it came back or had to be let go, they are
-// told which.
+// The draft is the user's own text and always comes back; a stale one says so, because
+// it now sits on top of a change made somewhere else.
 function announceDraft(outcome: ReturnType<typeof draft.restore>) {
 	if (outcome === "restored") toast.info("Restored your unsaved changes")
 	if (outcome === "stale")
-		toast.warning("The event changed elsewhere, so your unsaved changes were dropped")
+		toast.warning("The event changed elsewhere — check your restored changes before saving")
 }
 
 const isDirty = computed(() => !matches({ ...form }, saved.value))
@@ -108,15 +108,7 @@ const canSave = computed(
 		!isEndBeforeStart(form.start_date, form.end_date, form.start_time, form.end_time),
 )
 
-// The draft only reaches this browser, so closing the site with edits in hand is still
-// worth a word — moving between the event's own sections is not.
-function warnOnUnload(unload: BeforeUnloadEvent) {
-	if (!isDirty.value) return
-	unload.preventDefault()
-}
-
-onMounted(() => window.addEventListener("beforeunload", warnOnUnload))
-onBeforeUnmount(() => window.removeEventListener("beforeunload", warnOnUnload))
+// No unload warning: edits survive a reload now, so a dialog would guard nothing.
 
 // The page's own save takes the shortcut the browser would otherwise spend on saving the
 // document — swallowed even with nothing to commit, so it never surprises mid-edit.

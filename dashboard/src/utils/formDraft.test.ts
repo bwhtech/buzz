@@ -31,9 +31,16 @@ test("a draft matching the document is not an edit", () => {
 	})
 })
 
-test("a draft typed against an older document reads as stale", () => {
+test("a draft typed against an older document comes back flagged stale", () => {
 	const moved = { title: "Frappe Fest", venue: "Bengaluru" }
-	assert.deepEqual(restoredDraft({ baseline, form: edited }, moved), { status: "stale" })
+	assert.deepEqual(restoredDraft({ baseline, form: edited }, moved), {
+		status: "stale",
+		form: edited,
+	})
+})
+
+test("a stale draft the document caught up with is not an edit", () => {
+	assert.deepEqual(restoredDraft({ baseline, form: edited }, edited), { status: "none" })
 })
 
 test("a half-written entry without its baseline is dropped", () => {

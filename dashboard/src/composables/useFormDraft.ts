@@ -1,4 +1,4 @@
-import { useLocalStorage } from "@vueuse/core"
+import { StorageSerializers, useLocalStorage } from "@vueuse/core"
 import { type Ref, watch } from "vue"
 
 import { type DraftOutcome, type StoredDraft, matches, restoredDraft } from "@/utils/formDraft"
@@ -12,7 +12,12 @@ import { type DraftOutcome, type StoredDraft, matches, restoredDraft } from "@/u
  * @param baseline - the clean document the form is compared against
  */
 export function useFormDraft<T extends object>(key: string, form: T, baseline: Ref<T>) {
-	const stored = useLocalStorage<Partial<StoredDraft<T>>>(key, {})
+	// Null rather than an empty object once the form is clean: vueuse only drops the key
+	// on null, and a browser that opens many documents should not keep one entry each. A
+	// null default leaves it guessing the serializer, and it guesses String.
+	const stored = useLocalStorage<Partial<StoredDraft<T>> | null>(key, null, {
+		serializer: StorageSerializers.object,
+	})
 	// Read once, up front: the page's own load rewrites the form, and the watcher below
 	// would drop the draft as clean before anyone asked for it back.
 	let onOpen: Partial<StoredDraft<T>> = { ...stored.value }
@@ -22,7 +27,7 @@ export function useFormDraft<T extends object>(key: string, form: T, baseline: R
 		() => {
 			const edited = { ...form }
 			const clean = { ...baseline.value }
-			stored.value = matches(edited, clean) ? {} : { baseline: clean, form: edited }
+			stored.value = matches(edited, clean) ? null : { baseline: clean, form: edited }
 		},
 		{ deep: true },
 	)
@@ -35,7 +40,7 @@ export function useFormDraft<T extends object>(key: string, form: T, baseline: R
 	function restore(): DraftOutcome<T>["status"] {
 		const outcome = restoredDraft(onOpen, baseline.value)
 		onOpen = {}
-		if (outcome.status === "restored") Object.assign(form, outcome.form)
+		if (outcome.status !== "none") Object.assign(form, outcome.form)
 		return outcome.status
 	}
 
