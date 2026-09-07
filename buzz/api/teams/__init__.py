@@ -37,6 +37,11 @@ def remove_member(team: str, user: str) -> None:
 
 
 @frappe.whitelist(methods=["POST"])
+def change_role(team: str, user: str, team_role: str) -> None:
+	services.change_role(team, user, team_role)
+
+
+@frappe.whitelist(methods=["POST"])
 def invite_members(team: str, invites: list[dict]) -> list[InviteOutcome]:
 	return invitations.invite_members(team, invites)
 

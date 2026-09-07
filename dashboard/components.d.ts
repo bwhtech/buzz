@@ -28,6 +28,7 @@ declare module 'vue' {
     BuzzLogo: typeof import('./src/components/common/BuzzLogo.vue')['default']
     CancellationRequestDialog: typeof import('./src/components/CancellationRequestDialog.vue')['default']
     CancellationRequestNotice: typeof import('./src/components/CancellationRequestNotice.vue')['default']
+    ChangeRoleDialog: typeof import('./src/components/dashboard/teams/ChangeRoleDialog.vue')['default']
     CheckInQrDialog: typeof import('./src/components/dashboard/tickets/CheckInQrDialog.vue')['default']
     CommunicationActions: typeof import('./src/components/dashboard/communications/CommunicationActions.vue')['default']
     CommunicationComposer: typeof import('./src/components/dashboard/communications/CommunicationComposer.vue')['default']

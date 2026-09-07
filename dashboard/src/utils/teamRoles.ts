@@ -13,3 +13,7 @@ const MEMBER_WRITE_ROLES = ["Owner", "Admin"]
 export function canManageMembers(teamRole: string | undefined): boolean {
 	return Boolean(teamRole && MEMBER_WRITE_ROLES.includes(teamRole))
 }
+
+// Mirrors the membership doctype's Select options, minus Owner. The server rejects anything
+// outside this set, so a drift here fails loudly rather than silently.
+export const ASSIGNABLE_TEAM_ROLES = ["Admin", "Manager", "Frontdesk", "Viewer"]

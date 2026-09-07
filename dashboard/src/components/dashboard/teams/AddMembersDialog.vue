@@ -4,10 +4,8 @@ import { computed, nextTick, ref, watch } from "vue"
 
 import { inviteMembers } from "@/data/teams"
 import type { FrappeError, InviteOutcome } from "@/types"
+import { ASSIGNABLE_TEAM_ROLES } from "@/utils/teamRoles"
 
-// Mirrors the membership doctype's own options, minus Owner. The server rejects
-// anything outside this set, so a drift here fails loudly rather than silently.
-const ROLE_OPTIONS = ["Admin", "Manager", "Frontdesk", "Viewer"]
 const DEFAULT_ROLE = "Manager"
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -191,7 +189,7 @@ async function submit() {
 						v-model="row.team_role"
 						type="select"
 						aria-label="Role"
-						:options="ROLE_OPTIONS"
+						:options="ASSIGNABLE_TEAM_ROLES"
 					/>
 
 					<Button
