@@ -37,7 +37,7 @@ setConfig("resourceFetcher", frappeRequest)
 // Before the router runs and may redirect away from the query.
 applyLanguageFromQuery(router)
 
-// Before the router: its afterEach translates page titles through `__`.
+// Before the router, whose afterEach translates page titles through `__`.
 app.use(translationPlugin)
 app.use(router)
 app.use(resourcesPlugin)

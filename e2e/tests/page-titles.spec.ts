@@ -1,8 +1,5 @@
 import { expect, test } from "@playwright/test"
 
-// The three levels that produce a title: the router's afterEach for static routes,
-// ManagerLayout for event-scoped ones, and a page's own usePageMeta for titles that
-// need loaded data.
 const EVENT_TITLE = "E2E Test Event"
 const EVENT_ROUTE = "test-event-e2e"
 
@@ -19,8 +16,7 @@ test.describe("Page titles", () => {
 		await page.goto("/b/manage/events")
 		await page.getByRole("link", { name: "Manage" }).first().click()
 
-		// Whichever event the first card opens — the title comes from the event, not
-		// from the route.
+		// Whichever event the first card opens: the title follows the event, not the route.
 		const field = page.getByRole("textbox", { name: "Event title" })
 		await expect(field).toBeVisible({ timeout: 15000 })
 		const title = await field.inputValue()
@@ -34,7 +30,7 @@ test.describe("Page titles", () => {
 		await page.goto(`/b/register/${EVENT_ROUTE}`)
 		await expect(page).toHaveTitle(`Register | ${EVENT_TITLE}`, { timeout: 15000 })
 
-		// The stale-title case the afterEach exists for: usePageMeta never restores.
+		// usePageMeta never restores on unmount; the afterEach is what clears it.
 		await page.goto("/b/account/tickets")
 		await expect(page).toHaveTitle("My Tickets | Buzz")
 	})

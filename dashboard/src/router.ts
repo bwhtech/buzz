@@ -250,10 +250,10 @@ router.beforeEach(async (to, from, next) => {
 	next()
 })
 
-router.afterEach((to) => {
-	// Pages whose title needs loaded data (the event name, a form title) set it
-	// through usePageMeta. Those watchers flush after this hook, so the specific
-	// title always lands last and this one is what a route falls back to.
+router.afterEach((to, from) => {
+	// Skipped on a same-path navigation: a usePageMeta watcher built only on loaded
+	// data won't rerun, so overwriting here would strand the generic title.
+	if (to.path === from.path) return
 	const title = to.meta.title as string | undefined
 	document.title = title ? `${__(title)} | ${APP_NAME}` : APP_NAME
 })
