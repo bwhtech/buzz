@@ -85,3 +85,11 @@ export function useRetractInvite() {
 		immediate: false,
 	})
 }
+
+export function useChangeRole() {
+	return useCall<null, { team: string; user: string; team_role: string }>({
+		url: "/api/v2/method/buzz.api.teams.change_role",
+		method: "POST",
+		immediate: false,
+	})
+}

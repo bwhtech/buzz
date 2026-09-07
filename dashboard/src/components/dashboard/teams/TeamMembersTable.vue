@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { Avatar, Button, Dropdown, dialog, toast } from "frappe-ui"
-import { computed } from "vue"
+import { computed, ref } from "vue"
 
+import ChangeRoleDialog from "@/components/dashboard/teams/ChangeRoleDialog.vue"
 import { session } from "@/data/session"
 import { removeMember, useResendInvite, useRetractInvite } from "@/data/teams"
 import type { TeamInvite, TeamMember, TeamOverview } from "@/types"
 import { canManageMembers } from "@/utils/teamRoles"
 
 const props = defineProps<{ team: TeamOverview }>()
-const emit = defineEmits<{ removed: [] }>()
+// One event for both actions: the roster is reloaded either way.
+const emit = defineEmits<{ changed: [] }>()
 
 // Header and rows share one grid so the columns line up without a table element.
 const COLUMNS = "grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)_2rem] items-center gap-4"
@@ -23,6 +25,9 @@ interface Row {
 }
 
 const canManage = computed(() => canManageMembers(props.team.my_role))
+
+const changing = ref<TeamMember | null>(null)
+const isChangingRole = ref(false)
 
 const resendInvite = useResendInvite()
 const retractInvite = useRetractInvite()
@@ -55,25 +60,36 @@ function inviteRow(invite: TeamInvite): Row {
 	}
 }
 
-// The owner is locked server-side, and leaving a team is its own flow rather than a
-// self-removal.
-function canRemove(row: Row) {
-	if (!canManage.value || !row.member) return false
-	return row.member.team_role !== "Owner" && row.member.user !== session.user
+// The owner is locked server-side, and changing your own standing on a team — leaving it,
+// or demoting yourself out of managing it — is not something to do from the roster.
+function canAdminister(member: TeamMember) {
+	if (!canManage.value) return false
+	return member.team_role !== "Owner" && member.user !== session.user
 }
 
-// An invitation is resent or retracted; only a member is removed.
+// An invitation is resent or retracted; a member is re-roled or removed.
 function actionsFor(row: Row) {
-	if (!row.member) return canManage.value ? inviteActions(row) : []
-	if (!canRemove(row)) return []
+	const member = row.member
+	if (!member) return canManage.value ? inviteActions(row) : []
+	if (!canAdminister(member)) return []
 	return [
 		{
-			label: __("Remove from team"),
+			label: __("Change role"),
+			icon: "lucide-refresh-ccw",
+			onClick: () => openRoleChange(member),
+		},
+		{
+			label: __("Remove"),
 			icon: "lucide-trash-2",
 			theme: "red" as const,
 			onClick: () => confirmRemove(row),
 		},
 	]
+}
+
+function openRoleChange(member: TeamMember) {
+	changing.value = member
+	isChangingRole.value = true
 }
 
 function inviteActions(row: Row) {
@@ -108,7 +124,7 @@ function confirmRemove(row: Row) {
 		// A rejected promise renders inline in the dialog, so failures need no branch here.
 		onConfirm: async () => {
 			await removeMember.submit({ team: props.team.name, user: row.email })
-			emit("removed")
+			emit("changed")
 			toast.success(__("{0} was removed from the team.", [row.name]))
 		},
 	})
@@ -126,7 +142,7 @@ function confirmRetract(row: Row) {
 			await retractInvite.submit({ team: props.team.name, email: row.email })
 			// useCall settles either way, so the failure has to be rethrown to reach the dialog.
 			if (retractInvite.error) throw retractInvite.error
-			emit("removed")
+			emit("changed")
 			toast.success(__("The invitation to {0} was retracted.", [row.email]))
 		},
 	})
@@ -175,6 +191,13 @@ function confirmRetract(row: Row) {
 				</Dropdown>
 			</li>
 		</TransitionGroup>
+
+		<ChangeRoleDialog
+			v-model="isChangingRole"
+			:team="team.name"
+			:member="changing"
+			@success="emit('changed')"
+		/>
 	</div>
 </template>
 

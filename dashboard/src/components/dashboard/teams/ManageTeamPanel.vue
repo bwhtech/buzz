@@ -131,7 +131,7 @@ async function refresh() {
 
 				<ErrorMessage v-if="overview.error" :message="overview.error.message" />
 
-				<TeamMembersTable v-else-if="overview.data" :team="overview.data" @removed="refresh" />
+				<TeamMembersTable v-else-if="overview.data" :team="overview.data" @changed="refresh" />
 
 				<!-- Shaped like a TeamMembersTable row, so members land where the placeholders stood. -->
 				<ul v-else :aria-label="__('Loading members')" class="pt-7">

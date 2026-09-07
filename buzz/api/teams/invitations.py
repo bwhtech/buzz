@@ -1,13 +1,9 @@
 import frappe
 from frappe.core.api.user_invitation import cancel_invitation, invite_by_email, resend_invitation
 
-from buzz.api.teams.exceptions import (
-	CannotGrantOwnership,
-	CannotManageMembers,
-	NoPendingInvite,
-	UnknownTeamRole,
-)
+from buzz.api.teams.exceptions import CannotManageMembers, NoPendingInvite
 from buzz.api.teams.schemas import InviteOutcome
+from buzz.api.teams.services import validate_role
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
 from buzz.permissions import can_manage_members
 
@@ -32,19 +28,6 @@ def invite_members(team: str, invites: list[dict]) -> list[InviteOutcome]:
 		validate_role(invite["team_role"])
 
 	return [invite_one(team, invite) for invite in invites]
-
-
-def validate_role(team_role: str) -> None:
-	if team_role == "Owner":
-		CannotGrantOwnership.throw()
-	if team_role not in assignable_roles():
-		UnknownTeamRole.throw(team_role=team_role)
-
-
-def assignable_roles() -> list[str]:
-	"""The membership doctype's own options, minus the one nobody may be given."""
-	options = frappe.get_meta("Buzz Team Membership").get_field("team_role").options
-	return [role for role in options.split("\n") if role and role != "Owner"]
 
 
 def invite_one(team: str, invite: dict) -> InviteOutcome:
