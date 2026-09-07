@@ -99,14 +99,18 @@ const isDirty = computed(() => {
 const fullName = computed(() => [form.first_name, form.last_name].filter(Boolean).join(" "))
 
 // A picture has no blur: an upload or a remove is the whole gesture, so it saves itself
-// rather than leaving the organiser to find the Save button. Reopening the dialog resets
-// the form back to what is stored, which the dirty check below absorbs.
-watch(() => form.user_image, save)
+// rather than leaving the organiser to find the Save button. It sends the picture alone,
+// so a half-typed name or bio stays a draft until Save is pressed. Reopening the dialog
+// resets the form back to what is stored, which the dirty check below absorbs.
+watch(
+	() => form.user_image,
+	() => save({ user_image: form.user_image }),
+)
 
-async function save() {
+async function save(fields: Partial<Profile> = { ...form }) {
 	if (!isDirty.value) return
 	// Resolves null on failure rather than throwing; setValue.error renders inline.
-	if (!(await user.setValue.submit({ ...form }))) return
+	if (!(await user.setValue.submit(fields))) return
 
 	// full_name is derived server-side.
 	await userResource.reload()
@@ -159,7 +163,7 @@ async function save() {
 								v-if="isDirty || user.setValue.loading"
 								variant="solid"
 								:loading="user.setValue.loading"
-								@click="save"
+								@click="() => save()"
 							>
 								{{ __("Save") }}
 							</Button>
