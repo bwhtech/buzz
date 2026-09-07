@@ -42,7 +42,7 @@ test.describe("Event communications", () => {
 
 	test("sends a message to the guests and lists it", async ({ page }) => {
 		const text = `Doors open at nine ${Date.now()}`
-		await page.getByRole("heading", { name: "Communications" }).waitFor()
+		await page.getByRole("heading", { name: "Send an Announcement" }).waitFor()
 		const editor = page.locator(".composer .ProseMirror")
 		await editor.click()
 		await editor.fill(text)

@@ -98,7 +98,7 @@ const canWrite = computed(() => !!page.data?.can_write)
 
 	<PageWithSidebar>
 		<section class="space-y-3">
-			<h1 class="text-xl font-semibold text-ink-gray-9">Announcements</h1>
+			<h1 class="text-xl font-semibold text-ink-gray-9">Send an Announcement</h1>
 			<Skeleton v-if="page.loading && !page.data" class="h-40 w-full rounded-8" />
 			<CommunicationComposer
 				v-else
