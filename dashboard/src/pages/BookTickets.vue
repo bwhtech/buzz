@@ -98,7 +98,7 @@ const isGuest = computed(() => !session.isLoggedIn)
 
 usePageMeta(() => {
 	const eventTitle = eventBookingData.eventDetails?.title
-	return eventTitle ? { title: `${eventTitle} - ${__("Register")}` } : null
+	return eventTitle ? { title: `${__("Register")} | ${eventTitle}` } : null
 })
 
 const goToHome = () => {
