@@ -111,7 +111,6 @@ function openSettings(closeMenu: () => void) {
 				<Button
 					size="sm"
 					label="Report an Issue"
-					icon="lucide-bug"
 					variant="ghost"
 					class="w-full !justify-start"
 					@click="reportIssue(close)"
