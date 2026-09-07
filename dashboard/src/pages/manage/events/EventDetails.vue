@@ -3,7 +3,7 @@ import { useEventListener } from "@vueuse/core"
 import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
 import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
-import { onBeforeRouteLeave, useRoute } from "vue-router"
+import { useRoute } from "vue-router"
 
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
 import EventDetailsSkeleton from "@/components/dashboard/events/EventDetailsSkeleton.vue"
@@ -11,18 +11,32 @@ import EventMedium from "@/components/dashboard/events/EventMedium.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventRoute from "@/components/dashboard/events/EventRoute.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
+import { useFormDraft } from "@/composables/useFormDraft"
 import { eventDetail, updateEvent } from "@/data/events"
+import { session } from "@/data/session"
 import type { EventDetail, FrappeError } from "@/types"
 import { isEndBeforeStart } from "@/utils/eventDates"
+import { matches } from "@/utils/formDraft"
 
 const route = useRoute()
 const eventId = route.params.eventId as string
 
 const event = eventDetail(eventId)
 
+type EventForm = ReturnType<typeof blank>
+
 // The form the page edits, and the copy it is compared against to know it is dirty.
 const form = reactive(blank())
-const saved = ref(JSON.stringify(blank()))
+const saved = ref<EventForm>(blank())
+
+// Unsaved edits outlive the page: the section tabs unmount it, and losing a half-written
+// description to a look at the guest list is not a fair trade.
+const draft = useFormDraft(
+	// Keyed by user too: a shared browser must not hand one account's edits to the next.
+	`buzz:event-details-draft:${session.user}:${eventId}`,
+	form,
+	saved,
+)
 
 function blank() {
 	return {
@@ -62,7 +76,10 @@ function fill(detail: EventDetail) {
 	})
 	// The editor rewrites its own HTML once it mounts, so the baseline is taken after
 	// that settles — otherwise the page loads already dirty.
-	nextTick().then(() => (saved.value = JSON.stringify(form)))
+	nextTick().then(() => {
+		saved.value = { ...form }
+		announceDraft(draft.restore())
+	})
 }
 
 // A dirty form outranks the fetched document: the refetch after a save would otherwise
@@ -72,7 +89,15 @@ watch(
 	(detail) => detail && !isDirty.value && fill(detail),
 )
 
-const isDirty = computed(() => JSON.stringify(form) !== saved.value)
+// The draft is the user's own text: whether it came back or had to be let go, they are
+// told which.
+function announceDraft(outcome: ReturnType<typeof draft.restore>) {
+	if (outcome === "restored") toast.info("Restored your unsaved changes")
+	if (outcome === "stale")
+		toast.warning("The event changed elsewhere, so your unsaved changes were dropped")
+}
+
+const isDirty = computed(() => !matches({ ...form }, saved.value))
 
 // The server refuses both of these, so the page should not spend a round trip finding out.
 const routeTaken = ref(false)
@@ -83,9 +108,8 @@ const canSave = computed(
 		!isEndBeforeStart(form.start_date, form.end_date, form.start_time, form.end_time),
 )
 
-// Nothing here autosaves, so leaving with edits in hand has to be deliberate.
-const LEAVE_WARNING = "You have unsaved changes. Leave without saving?"
-
+// The draft only reaches this browser, so closing the site with edits in hand is still
+// worth a word — moving between the event's own sections is not.
 function warnOnUnload(unload: BeforeUnloadEvent) {
 	if (!isDirty.value) return
 	unload.preventDefault()
@@ -93,7 +117,6 @@ function warnOnUnload(unload: BeforeUnloadEvent) {
 
 onMounted(() => window.addEventListener("beforeunload", warnOnUnload))
 onBeforeUnmount(() => window.removeEventListener("beforeunload", warnOnUnload))
-onBeforeRouteLeave(() => !isDirty.value || window.confirm(LEAVE_WARNING))
 
 // The page's own save takes the shortcut the browser would otherwise spend on saving the
 // document — swallowed even with nothing to commit, so it never surprises mid-edit.
@@ -117,7 +140,7 @@ async function save() {
 	const fieldname = Object.fromEntries(
 		Object.entries(form).map(([field, value]) => [field, value === "" ? null : value]),
 	)
-	const submitted = JSON.stringify(form)
+	const submitted = { ...form }
 
 	await updateEvent.submit({ doctype: "Buzz Event", name: eventId, fieldname })
 	if (updateEvent.error) return
