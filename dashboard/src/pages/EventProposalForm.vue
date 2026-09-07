@@ -104,7 +104,7 @@ const load_error = ref<string | null>(null)
 
 usePageMeta(() => {
 	const bannerTitle = form_data.value?.banner_title
-	return bannerTitle ? { title: bannerTitle } : null
+	return bannerTitle ? { title: `${bannerTitle} | Buzz` } : null
 })
 
 const rendered_success_message = computed(() => {

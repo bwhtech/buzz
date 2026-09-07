@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem } from "frappe-ui"
+import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem, usePageMeta } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
@@ -61,6 +61,12 @@ watch(
 	},
 	{ immediate: true },
 )
+
+usePageMeta(() => {
+	const section = route.meta.title as string | undefined
+	if (!section || !eventTitle.value) return null
+	return { title: `${__(section)} | ${eventTitle.value}` }
+})
 
 const items = computed(() => {
 	if (!eventId.value) return mainItems.value

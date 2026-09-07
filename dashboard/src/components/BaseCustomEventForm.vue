@@ -198,7 +198,7 @@ const formData = ref<CustomFormData | null>(null)
 usePageMeta(() => {
 	const eventTitle = formData.value?.event?.title
 	const formTitle = formData.value?.form_title
-	return eventTitle && formTitle ? { title: `${eventTitle} - ${formTitle}` } : null
+	return eventTitle && formTitle ? { title: `${formTitle} | ${eventTitle}` } : null
 })
 
 const formValues = reactive<Record<string, any>>({})

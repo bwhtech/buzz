@@ -3,6 +3,8 @@ import { type RouteRecordRaw, createRouter, createWebHistory } from "vue-router"
 import { isTeamMember } from "@/data/teams"
 import { userResource } from "@/data/user"
 
+const APP_NAME = "Buzz"
+
 const routes: RouteRecordRaw[] = [
 	{
 		path: "/",
@@ -18,7 +20,7 @@ const routes: RouteRecordRaw[] = [
 	{
 		path: "/manage/team/events/new",
 		name: "create-event",
-		meta: { fullBleed: true },
+		meta: { fullBleed: true, title: "Create New Event" },
 		component: () => import("@/pages/manage/events/CreateEvent.vue"),
 	},
 	{
@@ -34,6 +36,7 @@ const routes: RouteRecordRaw[] = [
 			{
 				path: "events",
 				name: "events",
+				meta: { title: "My Events" },
 				component: () => import("@/pages/manage/MyEvents.vue"),
 			},
 			{
@@ -43,21 +46,25 @@ const routes: RouteRecordRaw[] = [
 			{
 				path: "events/:eventId/details",
 				name: "event-details",
+				meta: { title: "Details" },
 				component: () => import("@/pages/manage/events/EventDetails.vue"),
 			},
 			{
 				path: "events/:eventId/guests",
 				name: "event-guests",
+				meta: { title: "Guests" },
 				component: () => import("@/pages/manage/events/EventGuests.vue"),
 			},
 			{
 				path: "events/:eventId/talks",
 				name: "event-talks",
+				meta: { title: "Talks" },
 				component: () => import("@/pages/manage/events/EventTalks.vue"),
 			},
 			{
 				path: "events/:eventId/communications",
 				name: "event-communications",
+				meta: { title: "Announcements" },
 				component: () => import("@/pages/manage/events/EventCommunications.vue"),
 			},
 			{
@@ -67,6 +74,7 @@ const routes: RouteRecordRaw[] = [
 			{
 				path: "proposals",
 				name: "proposals",
+				meta: { title: "My Proposals" },
 				component: () => import("@/pages/manage/MyProposals.vue"),
 			},
 			// Sidebar destinations that have no page yet. Unnamed on purpose: SidebarItem
@@ -89,6 +97,7 @@ const routes: RouteRecordRaw[] = [
 		path: "/check-in/:eventName?",
 		name: "check-in",
 		props: true,
+		meta: { title: "Check In" },
 		component: () => import("@/pages/CheckInScanner.vue"),
 	},
 	{
@@ -108,13 +117,14 @@ const routes: RouteRecordRaw[] = [
 		path: "/booking-success/:bookingId",
 		name: "booking-success",
 		props: true,
-		meta: { isPublic: true },
+		meta: { isPublic: true, title: "Booking Confirmed" },
 		component: () => import("@/pages/BookingSuccess.vue"),
 	},
 	{
 		path: "/register-interest/:campaign",
 		props: true,
 		name: "register-interest",
+		meta: { title: "Register Interest" },
 		component: () => import("@/pages/RegisterInterest.vue"),
 	},
 	// Back-compat: old in-app paths redirect to the shortened scheme.
@@ -157,45 +167,53 @@ const routes: RouteRecordRaw[] = [
 			{
 				path: "bookings",
 				name: "bookings-list",
+				meta: { title: "My Bookings" },
 				component: () => import("@/pages/BookingsList.vue"),
 			},
 			{
 				path: "bookings/:bookingId",
 				props: true,
 				name: "booking-details",
+				meta: { title: "Booking Details" },
 				component: () => import("@/pages/BookingDetails.vue"),
 			},
 			{
 				path: "tickets",
 				name: "tickets-list",
+				meta: { title: "My Tickets" },
 				component: () => import("@/pages/TicketsList.vue"),
 			},
 			{
 				path: "tickets/:ticketId",
 				props: true,
 				name: "ticket-details",
+				meta: { title: "Ticket Details" },
 				component: () => import("@/pages/TicketDetails.vue"),
 			},
 			{
 				path: "proposals",
 				name: "proposals-list",
+				meta: { title: "Talk Proposals" },
 				component: () => import("@/pages/ProposalsList.vue"),
 			},
 			{
 				path: "proposals/:proposalId",
 				props: true,
 				name: "proposal-details",
+				meta: { title: "Proposal Details" },
 				component: () => import("@/pages/ProposalDetails.vue"),
 			},
 			{
 				path: "sponsorships",
 				name: "sponsorships-list",
+				meta: { title: "Sponsorships" },
 				component: () => import("@/pages/SponsorshipsList.vue"),
 			},
 			{
 				path: "sponsorships/:enquiryId",
 				props: true,
 				name: "sponsorship-details",
+				meta: { title: "Sponsorship Details" },
 				component: () => import("@/pages/SponsorshipDetails.vue"),
 			},
 		],
@@ -213,7 +231,7 @@ const routes: RouteRecordRaw[] = [
 	{
 		path: "/:pathMatch(.*)*",
 		name: "not-found",
-		meta: { isPublic: true },
+		meta: { isPublic: true, title: "Not Found" },
 		component: () => import("@/pages/NotFound.vue"),
 	},
 ]
@@ -232,14 +250,12 @@ router.beforeEach(async (to, from, next) => {
 	next()
 })
 
-const defaultTitle = document.title
-
-router.afterEach((to, from) => {
-	// Pages set their own title via usePageMeta, which never restores it on
-	// unmount. Reset here so a page without one doesn't keep showing the
-	// previous page's title. Same-path navigation keeps the title: usePageMeta's
-	// watcher won't refire when its data is unchanged, so resetting would stick.
-	if (to.path !== from.path) document.title = defaultTitle
+router.afterEach((to) => {
+	// Pages whose title needs loaded data (the event name, a form title) set it
+	// through usePageMeta. Those watchers flush after this hook, so the specific
+	// title always lands last and this one is what a route falls back to.
+	const title = to.meta.title as string | undefined
+	document.title = title ? `${__(title)} | ${APP_NAME}` : APP_NAME
 })
 
 export default router
