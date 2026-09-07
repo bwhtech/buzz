@@ -13,6 +13,7 @@ import { currentTeam } from "@/data/teams"
 import NotFound from "@/pages/NotFound.vue"
 import type { FrappeError } from "@/types"
 import { defaultSchedule } from "@/utils/eventDates"
+import type { ChecklistItem } from "@/utils/eventValidation"
 import { eventDraftChecklist, isDraftComplete } from "@/utils/eventValidation"
 import { canCreateEvents } from "@/utils/teamRoles"
 import { currentTimeZone } from "@/utils/timeZones"
@@ -102,6 +103,11 @@ const saveAttempted = ref(false)
 
 const missingItems = computed(() => checklist.value.filter((item) => !item.done))
 
+function iconColor(item: ChecklistItem) {
+	if (item.done) return "text-ink-green-7"
+	return saveAttempted.value ? "text-ink-red-7" : "text-ink-gray-6"
+}
+
 // Combobox draws its own error region, so Where says what it is missing in place.
 const locationError = computed(() =>
 	saveAttempted.value && !venue.value && !zoomMeeting.value
@@ -116,7 +122,9 @@ const listFormat = new Intl.ListFormat("en", { style: "long", type: "conjunction
 // The checklist is a summary; the fields themselves have to show which one is meant.
 function focusFirstMissing() {
 	const target = document.getElementById(missingItems.value[0]?.field ?? "")
-	target?.scrollIntoView({ behavior: "smooth", block: "center" })
+	// A full-page smooth scroll is exactly the motion a vestibular user turns off.
+	const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+	target?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "center" })
 	const focusable = target?.matches("input") ? target : target?.querySelector("input, button")
 	;(focusable as HTMLElement | null)?.focus({ preventScroll: true })
 }
@@ -279,16 +287,10 @@ async function save() {
 						:key="item.label"
 						class="flex items-center gap-2 text-base text-ink-gray-8"
 					>
+						<!-- A row turning green is the only reward in this flow; a hard cut spends it. -->
 						<span
-							class="size-4 shrink-0"
-							:class="[
-								item.done ? 'lucide-check' : 'lucide-x',
-								item.done
-									? 'text-ink-green-7'
-									: saveAttempted
-										? 'text-ink-red-7'
-										: 'text-ink-gray-6',
-							]"
+							class="size-4 shrink-0 transition-colors duration-150 ease-out motion-reduce:transition-none"
+							:class="[item.done ? 'lucide-check' : 'lucide-x', iconColor(item)]"
 							aria-hidden="true"
 						/>
 						<span>{{ item.label }}</span>
