@@ -47,3 +47,32 @@ export function isEndBeforeStart(
 	if (endDate && endDate !== startDate) return false
 	return normalizedTime(endTime) <= normalizedTime(startTime)
 }
+
+const pad = (value: number) => String(value).padStart(2, "0")
+
+const localDate = (at: Date) => `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`
+
+const localTime = (at: Date) => `${pad(at.getHours())}:00:00`
+
+/**
+ * The schedule a new event opens with: the next full hour, running for an hour.
+ *
+ * An organiser creating an event now is almost always scheduling one soon, so the form
+ * starts from a plausible slot rather than from nothing. Reads in local time, which is
+ * the same zone the form pre-selects.
+ */
+export function defaultSchedule(now: Date = new Date()) {
+	const start = new Date(now)
+	start.setMinutes(0, 0, 0)
+	start.setHours(start.getHours() + 1)
+	// Wall clock, not elapsed milliseconds: on a DST fall-back day the hour after 01:00
+	// is 01:00 again, which would leave the event ending exactly when it starts.
+	const end = new Date(start)
+	end.setHours(end.getHours() + 1)
+	return {
+		startDate: localDate(start),
+		startTime: localTime(start),
+		endDate: localDate(end),
+		endTime: localTime(end),
+	}
+}
