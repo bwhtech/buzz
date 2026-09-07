@@ -426,21 +426,19 @@ def route_availability(route: str, event: str | None = None) -> RouteAvailabilit
 	"""
 	route = (route or "").strip().lower()
 	if not route:
-		return RouteAvailability(available=False, message=_("Enter a route."))
+		return RouteAvailability(available=False, message=_("Required"))
 
 	if route in RESERVED_EVENT_ROUTES:
-		return RouteAvailability(
-			available=False, message=_("'{0}' is reserved and cannot be used.").format(route)
-		)
+		return RouteAvailability(available=False, message=_("'{0}' is reserved").format(route))
 
 	filters = {"route": route}
 	if event:
 		filters["name"] = ("!=", event)
 
 	if frappe.db.exists("Buzz Event", filters):
-		return RouteAvailability(available=False, message=_("This route is already taken."))
+		return RouteAvailability(available=False, message=_("Already Exists"))
 
-	return RouteAvailability(available=True, message=_("This route is available."))
+	return RouteAvailability(available=True, message=_("Available"))
 
 
 # Buzz Event demands a category and a host, neither of which the create form asks for.
