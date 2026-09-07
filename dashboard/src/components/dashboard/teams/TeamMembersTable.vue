@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Avatar, Button, Dropdown, dialog, toast } from "frappe-ui"
+import { Avatar, Badge, Button, Dropdown, dialog, toast } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import ChangeRoleDialog from "@/components/dashboard/teams/ChangeRoleDialog.vue"
@@ -170,13 +170,14 @@ function confirmRetract(row: Row) {
 					<span class="truncate text-base text-ink-gray-8">{{ row.name }}</span>
 				</div>
 
-				<!-- An invite has only an address, already shown as its name. -->
-				<span class="truncate text-base text-ink-gray-6">{{ row.member ? row.email : "" }}</span>
-
-				<span class="truncate text-base font-medium text-ink-gray-8">
-					{{ row.role }}
-					<span v-if="!row.member" class="font-normal text-ink-gray-5">({{ __("Invited") }})</span>
+				<!-- An invite has only an address, already shown as its name, so the cell
+				     carries its pending state instead. -->
+				<span class="flex min-w-0 items-center">
+					<span v-if="row.member" class="truncate text-base text-ink-gray-6">{{ row.email }}</span>
+					<Badge v-else theme="gray" variant="subtle" :label="__('Invited')" />
 				</span>
+
+				<span class="truncate text-base font-medium text-ink-gray-8">{{ row.role }}</span>
 
 				<Dropdown v-if="actionsFor(row).length" :options="actionsFor(row)" align="end">
 					<!-- label is the accessible name here: an icon slot makes it icon-only. -->
