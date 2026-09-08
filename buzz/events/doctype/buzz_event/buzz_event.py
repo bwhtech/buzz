@@ -106,7 +106,6 @@ class BuzzEvent(Document):
 		self.validate_guest_verification_config()
 		self.validate_custom_forms()
 		self.clear_unused_location()
-		self.validate_venue_team()
 		self.validate_co_hosts()
 		self.set_time_zone_label()
 
@@ -121,21 +120,6 @@ class BuzzEvent(Document):
 			self.venue = None
 		else:
 			self.meeting_link = None
-
-	def validate_venue_team(self):
-		"""A venue may only be linked by the team that owns it.
-
-		Nothing downstream re-checks this: the booking confirmation and the calendar
-		invite both read the linked venue's address without a permission check, so a
-		cross-team link publishes the other team's address.
-		"""
-		if not self.venue:
-			return
-
-		venue_team = frappe.db.get_value("Event Venue", self.venue, "team")
-		# An unstamped venue predates the team backfill; role permissions still gate it.
-		if venue_team and venue_team != self.team:
-			frappe.throw(_("Venue {0} belongs to another team.").format(self.venue))
 
 	def validate_co_hosts(self):
 		hosts = [row.host for row in self.co_hosts]

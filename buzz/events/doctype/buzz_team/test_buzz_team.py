@@ -177,8 +177,9 @@ class TestSetTeamFromSoleMembership(IntegrationTestCase):
 		create_owned_team("Two Teams A", user)
 		create_owned_team("Two Teams B", user)
 
-		with self.assertRaises(frappe.MandatoryError):
-			self.insert_as(user, "Event Venue", "Ambiguous")
+		doc = self.insert_as(user, "Event Venue", "Ambiguous")
+
+		self.assertFalse(doc.team)
 
 	def test_explicit_team_wins_for_a_multi_team_user(self):
 		user = create_user("picks-a-team@example.com", "Tenant")
