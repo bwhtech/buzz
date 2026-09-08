@@ -253,7 +253,7 @@ def summarize_booking(booking, titles: dict[str, str], add_ons: dict[str, list])
 def build_lines(booking, titles: dict[str, str], add_ons: dict[str, list]) -> list[BookingLine]:
 	"""One line per ticket type, with the add-ons bought against it beneath.
 
-	ponytail: line amounts are the stored attendee amounts. A Free Tickets coupon zeroes
+	Line amounts are the stored attendee amounts. A Free Tickets coupon zeroes
 	those after the subtotal has already counted them, so under that coupon the lines sum
 	to less than `net_amount` and the discount line makes up the difference.
 	"""

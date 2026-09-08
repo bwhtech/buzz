@@ -172,7 +172,7 @@ def generate_ics_file(event_doc, attendee_email: str):
 	from frappe.utils import now_datetime
 
 	start_dt, end_dt = build_event_datetimes(event_doc)
-	organizer_name = event_doc.host or event_doc.title
+	organizer_name = frappe.db.get_value("Buzz Team", event_doc.team, "team_name") or event_doc.title
 	organizer_email = frappe.db.get_value(
 		"Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "email_id"
 	)
@@ -202,8 +202,8 @@ def generate_ics_file(event_doc, attendee_email: str):
 # Curated abbreviations for zones where tzdata only provides a numeric offset
 # (tzdata dropped invented abbreviations in 2017). Zones with real tzdata
 # abbreviations (IST, EST, CET, ...) never reach this map.
-# ponytail: DST-observing zones here (e.g. Chile) are pinned to their standard
-# form; extend get_time_zone_label with per-date variants if that ever matters.
+# DST-observing zones here (e.g. Chile) are pinned to their standard form; extend
+# get_time_zone_label with per-date variants if that ever matters.
 TIMEZONE_ABBREVIATIONS = {
 	"America/Araguaina": "BRT",
 	"America/Argentina/Buenos_Aires": "ART",

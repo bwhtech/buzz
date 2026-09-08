@@ -260,6 +260,13 @@ export interface EventVenueDetail {
 	address: string | null
 }
 
+// One name under "Hosted by": the event's team, or one of its co-hosts.
+export interface EventHostRef {
+	host: string
+	label: string
+	logo: string | null
+}
+
 // buzz.api.events.get_event: one event with everything its manage page edits.
 export interface EventDetail {
 	name: string
@@ -280,6 +287,8 @@ export interface EventDetail {
 	venue: EventVenueDetail | null
 	meeting_link: string | null
 	is_published: boolean
+	primary_host: EventHostRef | null
+	co_hosts: EventHostRef[]
 }
 
 // A ticket the user holds, flattened with the context its event carries.

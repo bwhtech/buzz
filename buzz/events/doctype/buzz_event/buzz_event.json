@@ -16,6 +16,8 @@
   "host",
   "venue",
   "meeting_link",
+  "hosted_by_section",
+  "co_hosts",
   "section_break_naqe",
   "start_date",
   "start_time",
@@ -178,9 +180,21 @@
   {
    "fieldname": "host",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Host",
    "options": "Event Host",
-   "reqd": 1
+   "read_only": 1
+  },
+  {
+   "fieldname": "hosted_by_section",
+   "fieldtype": "Section Break",
+   "label": "Hosted By"
+  },
+  {
+   "fieldname": "co_hosts",
+   "fieldtype": "Table",
+   "label": "Co-hosts",
+   "options": "Event CoHost"
   },
   {
    "fieldname": "time_zone",
@@ -630,7 +644,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-08-27 12:00:00.000000",
+ "modified": "2026-09-08 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

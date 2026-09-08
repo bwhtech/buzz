@@ -1,6 +1,5 @@
 import frappe
 from frappe import _
-from frappe.model.naming import append_number_if_name_exists
 from frappe.query_builder import Case
 from frappe.query_builder.functions import Count, Date
 from frappe.utils import add_days, get_datetime_in_timezone, get_system_timezone, getdate
@@ -18,6 +17,7 @@ from buzz.api.events.schemas import (
 	EventDetail,
 	EventGuest,
 	EventGuestsResponse,
+	EventHostRef,
 	EventVenue,
 	GuestAddOn,
 	GuestTicketType,
@@ -30,7 +30,7 @@ from buzz.api.events.schemas import (
 	RouteAvailability,
 	TicketTypeTotal,
 )
-from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES
+from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
 from buzz.permissions import has_team_access, my_teams
 from buzz.utils import is_app_installed
 
@@ -149,8 +149,82 @@ def event_detail(event: str) -> EventDetail:
 		CannotManageEvent.throw()
 
 	return EventDetail(
-		**row | {"name": str(row.name), "venue": venue_of(row.venue), "meeting_link": meeting_link_of(row)}
+		**row
+		| {
+			"name": str(row.name),
+			"venue": venue_of(row.venue),
+			"meeting_link": meeting_link_of(row),
+			"primary_host": primary_host_of(row.team),
+			"co_hosts": co_hosts_of(event),
+		}
 	)
+
+
+def primary_host_of(team: str | None) -> EventHostRef | None:
+	"""The team hosting the event."""
+	if not team:
+		return None
+	row = frappe.db.get_value("Buzz Team", team, ["team_name", "logo"], as_dict=True)
+	return EventHostRef(host=team, label=row.team_name or team, logo=row.logo) if row else None
+
+
+def co_hosts_of(event: str) -> list[EventHostRef]:
+	"""Co-hosts in table order.
+
+	Read as SQL rather than through `get_list`: `Event Host` is filtered to the reader's
+	own teams, and a co-host may belong to another.
+	"""
+	co_host, host = frappe.qb.DocType("Event CoHost"), frappe.qb.DocType("Event Host")
+	rows = (
+		frappe.qb.from_(co_host)
+		.join(host)
+		.on(host.name == co_host.host)
+		.select(host.name, host.host_name, host.logo)
+		.where((co_host.parenttype == "Buzz Event") & (co_host.parent == str(event)))
+		.orderby(co_host.idx)
+	).run(as_dict=True)
+	return [EventHostRef(host=row.name, label=row.host_name or row.name, logo=row.logo) for row in rows]
+
+
+def create_co_host(
+	event: str,
+	host_name: str,
+	logo: str | None = None,
+	by_line: str | None = None,
+	about: str | None = None,
+) -> EventHostRef:
+	"""Add an organisation with no team here as a co-host of the event."""
+	doc = manageable_event(event)
+	host = frappe.get_doc(
+		{
+			"doctype": "Event Host",
+			"host_name": host_name,
+			"team": doc.team,
+			"logo": logo,
+			"by_line": by_line,
+			"about": about,
+		}
+	)
+	# Event Host is Event Manager-writable; the team access check above is the authorisation.
+	host.insert(ignore_permissions=True)
+
+	doc.append("co_hosts", {"host": host.name})
+	doc.save()
+	return EventHostRef(host=host.name, label=host.host_name, logo=host.logo)
+
+
+def remove_co_host(event: str, host: str) -> None:
+	"""Drop a co-host from the event. The Event Host record itself is left alone."""
+	doc = manageable_event(event)
+	doc.co_hosts = [row for row in doc.co_hosts if row.host != host]
+	doc.save()
+
+
+def manageable_event(event: str) -> BuzzEvent:
+	doc = frappe.get_doc("Buzz Event", event)
+	if not has_team_access(doc.team, "write", frappe.session.user):
+		CannotManageEvent.throw()
+	return doc
 
 
 def venue_of(venue: str | None) -> EventVenue | None:
@@ -209,10 +283,7 @@ def set_registration_state(event: str, closed: bool) -> RegistrationState:
 	wall clock and opening clears the cutoff. Opening cannot beat the event's end date,
 	which closes registrations on its own — hence the state rather than an acknowledgement.
 	"""
-	doc = frappe.get_doc("Buzz Event", event)
-	if not has_team_access(doc.team, "write", frappe.session.user):
-		CannotManageEvent.throw()
-
+	doc = manageable_event(event)
 	timezone = doc.time_zone or get_system_timezone()
 	doc.registrations_close_at = get_datetime_in_timezone(timezone).replace(tzinfo=None) if closed else None
 	doc.save()
@@ -438,8 +509,8 @@ def route_availability(route: str, event: str | None = None) -> RouteAvailabilit
 	return RouteAvailability(available=True, message=_("Available"))
 
 
-# Buzz Event demands a category and a host, neither of which the create form asks for.
-# These are the defaults it fills in; the organiser changes them on the event afterwards.
+# Buzz Event demands a category, which the create form does not ask for. This is the default
+# it fills in; the organiser changes it on the event afterwards.
 DEFAULT_CATEGORY = "Meetups"
 # Zoom-backed, so the meeting the organiser asked for is the one the event gets.
 ZOOM_CATEGORY = "Zoom Meeting"
@@ -470,7 +541,6 @@ def create_event(new: NewEvent) -> CreatedEvent:
 			"venue": new.venue,
 			"medium": "Online" if new.zoom_meeting else "In Person",
 			"category": ZOOM_CATEGORY if new.zoom_meeting else DEFAULT_CATEGORY,
-			"host": host_for(new.team),
 		}
 	).insert()
 
@@ -497,23 +567,3 @@ def book_zoom_meeting(event) -> None:
 			title=_("Zoom Meeting Not Created"),
 			indicator="orange",
 		)
-
-
-def host_for(team: str) -> str:
-	"""The team's own Event Host, made on first use.
-
-	Event Host is required on every event but absent from the create form, and a new team
-	has none. Host names are docnames and therefore global, so an existing name is given a
-	suffix rather than joined.
-	"""
-	existing = frappe.db.get_value("Event Host", {"team": team}, "name")
-	if existing:
-		return existing
-
-	team_name = frappe.db.get_value("Buzz Team", team, "team_name") or team
-	host = frappe.get_doc({"doctype": "Event Host", "name": team_name, "team": team})
-	host.name = append_number_if_name_exists("Event Host", team_name)
-	# Event Host is readable by the team but writable by Event Manager only, and creating
-	# an event is what mints it — the team check above is the authorisation.
-	host.insert(ignore_permissions=True)
-	return host.name

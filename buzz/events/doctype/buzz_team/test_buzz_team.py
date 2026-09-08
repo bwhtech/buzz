@@ -137,13 +137,12 @@ def create_owned_team(team_name: str, owner: str) -> str:
 def payload_for(doctype: str, suffix: str) -> dict:
 	payloads = {
 		"Event Venue": {"name": f"Venue {suffix}", "address": "somewhere"},
-		"Event Host": {"name": f"Host {suffix}"},
+		"Event Host": {"host_name": f"Host {suffix}"},
 		"Event Template": {"template_name": f"Template {suffix}"},
 		"Buzz Campaign": {"name": f"Campaign {suffix}", "title": suffix, "description": "why"},
 		"Buzz Event": {
 			"title": f"Event {suffix}",
 			"category": "Test Category",
-			"host": "Test Host",
 			"start_date": "2026-03-05",
 			"end_date": "2026-03-06",
 			"start_time": "09:00:00",

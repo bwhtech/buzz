@@ -1,11 +1,12 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "prompt",
+ "autoname": "hash",
  "creation": "2025-07-19 11:36:30.869780",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "host_name",
   "team",
   "logo",
   "country",
@@ -17,6 +18,14 @@
   "about"
  ],
  "fields": [
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "host_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Host Name",
+   "reqd": 1
+  },
   {
    "allow_in_quick_entry": 1,
    "fieldname": "logo",
@@ -65,7 +74,6 @@
    "fieldtype": "Link",
    "label": "Team",
    "options": "Buzz Team",
-   "reqd": 1,
    "search_index": 1
   }
  ],
@@ -73,11 +81,11 @@
  "image_field": "logo",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-31 12:00:00.000000",
+ "modified": "2026-09-08 17:48:14.470171",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Host",
- "naming_rule": "Set by user",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
   {
@@ -108,7 +116,9 @@
  ],
  "quick_entry": 1,
  "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "host_name"
 }

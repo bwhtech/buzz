@@ -8,6 +8,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from buzz.api.booking.services import are_registrations_closed
+from buzz.api.forms.test_forms import ensure_event_host
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, create_from_template
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.events.doctype.buzz_team_settings.test_buzz_team_settings import (
@@ -37,11 +38,6 @@ class TestBuzzEvent(FrappeTestCase):
 				ignore_permissions=True
 			)
 
-		if not frappe.db.exists("Event Host", "Test Host"):
-			frappe.get_doc({"doctype": "Event Host", "host_name": "Test Host"}).insert(
-				ignore_permissions=True
-			)
-
 	def tearDown(self):
 		frappe.db.rollback()
 
@@ -53,7 +49,7 @@ class TestBuzzEvent(FrappeTestCase):
 			"doctype": "Buzz Event",
 			"title": "Schedule Test Event",
 			"category": "Test Category",
-			"host": "Test Host",
+			"host": ensure_event_host("Test Host"),
 			"start_date": "2026-03-05",
 			"end_date": "2026-03-06",
 			"start_time": "9:00:00",
@@ -108,7 +104,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Buzz Event",
 				"title": f"Route Test Event {route}",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"start_date": frappe.utils.today(),
 				"start_time": "09:00:00",
 				"end_time": "18:00:00",
@@ -184,7 +180,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Buzz Event",
 				"title": f"Venue Test Event {venue}",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"start_date": frappe.utils.today(),
 				"start_time": "09:00:00",
 				"end_time": "18:00:00",
@@ -273,7 +269,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Direct Fields Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"medium": "Online",
 				"about": "About text",
 				"short_description": "Short desc",
@@ -307,7 +303,7 @@ class TestBuzzEvent(FrappeTestCase):
 		event = frappe.get_doc("Buzz Event", event_name)
 
 		self.assertEqual(event.category, "Test Category")
-		self.assertEqual(event.host, "Test Host")
+		self.assertEqual(event.host, ensure_event_host("Test Host"))
 		self.assertEqual(event.medium, "Online")
 		self.assertEqual(event.about, "About text")
 		self.assertEqual(event.short_description, "Short desc")
@@ -326,7 +322,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Selective Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"medium": "In Person",
 				"about": "Should not appear",
 				"apply_tax": 1,
@@ -341,7 +337,7 @@ class TestBuzzEvent(FrappeTestCase):
 		event = frappe.get_doc("Buzz Event", event_name)
 
 		self.assertEqual(event.category, "Test Category")
-		self.assertEqual(event.host, "Test Host")
+		self.assertEqual(event.host, ensure_event_host("Test Host"))
 		self.assertFalse(event.about)
 		self.assertFalse(event.apply_tax)
 
@@ -352,7 +348,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Override Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 			}
 		)
 		template.insert()
@@ -367,7 +363,7 @@ class TestBuzzEvent(FrappeTestCase):
 		event = frappe.get_doc("Buzz Event", event_name)
 
 		self.assertEqual(event.category, "Test Category")
-		self.assertEqual(event.host, "Test Host")
+		self.assertEqual(event.host, ensure_event_host("Test Host"))
 
 	def test_create_from_template_creates_ticket_types(self):
 		"""Test that ticket types are created as linked documents"""
@@ -376,7 +372,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Ticket Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"template_ticket_types": [
 					{
 						"title": "Early Bird",
@@ -414,7 +410,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "AddOn Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"template_add_ons": [
 					{
 						"title": "Workshop Access",
@@ -450,7 +446,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "CustomField Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"template_custom_fields": [
 					{
 						"label": "Company",
@@ -487,7 +483,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Skip Linked Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"template_ticket_types": [
 					{"title": "Skipped", "price": 100, "currency": "INR", "is_published": 1}
 				],
@@ -523,7 +519,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Defaults Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 			}
 		)
 		template.insert()
@@ -542,7 +538,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Sponsor Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"auto_send_pitch_deck": 1,
 				"sponsor_deck_reply_to": "test@example.com",
 				"sponsor_deck_cc": "cc@example.com",
@@ -574,7 +570,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Buzz Event",
 				"title": "Full Save Event",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"start_date": frappe.utils.today(),
 				"start_time": "09:00:00",
 				"end_time": "18:00:00",
@@ -641,7 +637,7 @@ class TestBuzzEvent(FrappeTestCase):
 		template = frappe.get_doc("Event Template", template_name)
 
 		self.assertEqual(template.category, "Test Category")
-		self.assertEqual(template.host, "Test Host")
+		self.assertEqual(template.host, ensure_event_host("Test Host"))
 		self.assertEqual(template.medium, "Online")
 		self.assertEqual(template.about, "Full event description")
 		self.assertEqual(template.apply_tax, 1)
@@ -665,7 +661,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Buzz Event",
 				"title": "Partial Save Event",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"start_date": frappe.utils.today(),
 				"start_time": "09:00:00",
 				"end_time": "18:00:00",
@@ -698,7 +694,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Buzz Event",
 				"title": "Round Trip Event",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"start_date": frappe.utils.today(),
 				"start_time": "09:00:00",
 				"end_time": "18:00:00",
@@ -767,7 +763,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Perm Test Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 			}
 		)
 		template.insert()
@@ -787,7 +783,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Buzz Event",
 				"title": "Perm Event",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"start_date": frappe.utils.today(),
 				"start_time": "09:00:00",
 				"end_time": "18:00:00",
@@ -1086,7 +1082,7 @@ class TestEventTimeZoneLabelField(FrappeTestCase):
 			"doctype": "Buzz Event",
 			"title": "TZ Label Test Event",
 			"category": "Test Category",
-			"host": "Test Host",
+			"host": ensure_event_host("Test Host"),
 			"start_date": "2026-03-05",
 			"end_date": "2026-03-06",
 			"start_time": "9:00:00",
@@ -1153,10 +1149,6 @@ class TestBuzzEventZoomMeeting(FrappeTestCase):
 			frappe.get_doc({"doctype": "Event Category", "category_name": "Test Category"}).insert(
 				ignore_permissions=True
 			)
-		if not frappe.db.exists("Event Host", "Test Host"):
-			frappe.get_doc({"doctype": "Event Host", "host_name": "Test Host"}).insert(
-				ignore_permissions=True
-			)
 
 	def tearDown(self):
 		frappe.db.rollback()
@@ -1167,7 +1159,7 @@ class TestBuzzEventZoomMeeting(FrappeTestCase):
 				"doctype": "Buzz Event",
 				"title": "Meeting Event",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"start_date": "2026-08-01",
 				"end_date": "2026-08-01",
 				"start_time": "10:00:00",

@@ -4,7 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.forms.test_forms import ensure_prompt_named_record
+from buzz.api.forms.test_forms import ensure_event_host, ensure_prompt_named_record
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team
 
 # On IntegrationTestCase, the doctype test records and all
@@ -72,7 +72,7 @@ class TestTalkProposalSpeakerAccess(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Proposal Perm Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Proposal Perm Host")
+		cls.host = ensure_event_host("Proposal Perm Host")
 		cls.speaker_user = make_test_user("speaker-perm@example.com")
 		cls.other_user = make_test_user("other-perm@example.com")
 		cls.manager_user = make_test_user("manager-perm@example.com", roles=["Event Manager"])
@@ -140,7 +140,7 @@ class TestCreateTalk(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Proposal Perm Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Proposal Perm Host")
+		cls.host = ensure_event_host("Proposal Perm Host")
 		cls.speaker_user = make_test_user("create-talk-speaker@example.com")
 		cls.owner_user = make_test_user("create-talk-owner@example.com", roles=["Event Manager"])
 		cls.event = make_test_event(
@@ -210,7 +210,7 @@ class TestTalkProposalSpeakerChanges(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Proposal Perm Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Proposal Perm Host")
+		cls.host = ensure_event_host("Proposal Perm Host")
 		cls.speaker_user = make_test_user("guard-speaker@example.com")
 		cls.manager_user = make_test_user("guard-manager@example.com", roles=["Event Manager"])
 		cls.team = create_owned_team("Proposal Guard Team", cls.manager_user)
