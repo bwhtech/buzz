@@ -8,7 +8,7 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder import Criterion
 from frappe.utils import cstr, getdate
 
-from buzz.permissions import derived_has_permission, derived_query_conditions
+from buzz.permissions import as_sql, derived_criterion, derived_has_permission
 
 
 def get_speaker_query_conditions(user: str) -> Criterion:
@@ -24,13 +24,13 @@ def get_speaker_query_conditions(user: str) -> Criterion:
 	return (proposal.submitted_by == user) | (proposal.owner == user) | proposal.name.isin(speaker_rows)
 
 
-def get_permission_query_conditions(user: str | None = None, doctype: str | None = None) -> Criterion | None:
+def get_permission_query_conditions(user: str | None = None, doctype: str | None = None) -> str | None:
 	user = user or frappe.session.user
-	team_conditions = derived_query_conditions(user=user, doctype="Talk Proposal")
+	team_conditions = derived_criterion(user, "Talk Proposal")
 	if team_conditions is None:
 		return None
 
-	return get_speaker_query_conditions(user) | team_conditions
+	return as_sql(get_speaker_query_conditions(user) | team_conditions)
 
 
 def is_speaker_on(doc, user: str) -> bool:
