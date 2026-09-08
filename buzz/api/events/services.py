@@ -425,22 +425,17 @@ def route_availability(route: str, event: str | None = None) -> RouteAvailabilit
 	would collide.
 	"""
 	route = (route or "").strip().lower()
-	if not route:
-		return RouteAvailability(available=False, message=_("Enter a route."))
-
-	if route in RESERVED_EVENT_ROUTES:
-		return RouteAvailability(
-			available=False, message=_("'{0}' is reserved and cannot be used.").format(route)
-		)
-
 	filters = {"route": route}
 	if event:
 		filters["name"] = ("!=", event)
 
-	if frappe.db.exists("Buzz Event", filters):
-		return RouteAvailability(available=False, message=_("This route is already taken."))
+	# A reserved route and a blank one are both unavailable, and the field says so the
+	# same way a claimed one does — the reason is not the organiser's problem to fix.
+	taken = not route or route in RESERVED_EVENT_ROUTES or frappe.db.exists("Buzz Event", filters)
+	if taken:
+		return RouteAvailability(available=False, message=_("Already exists"))
 
-	return RouteAvailability(available=True, message=_("This route is available."))
+	return RouteAvailability(available=True, message=_("Available"))
 
 
 # Buzz Event demands a category and a host, neither of which the create form asks for.
