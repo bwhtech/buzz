@@ -21,6 +21,18 @@ def is_unrestricted(user: str) -> bool:
 	return user == "Administrator" or "System Manager" in frappe.get_roles(user)
 
 
+def as_sql(criterion: Criterion | None) -> str | None:
+	"""Render a criterion the way the query engine itself does.
+
+	A permission query hook hands back SQL text: whatever it returns is stringified,
+	and pypika defaults to ANSI double quotes, which MariaDB reads as string literals.
+	"""
+	if criterion is None:
+		return None
+	quote_char = "`" if frappe.db.db_type == "mariadb" else '"'
+	return criterion.get_sql(with_namespace=True, quote_char=quote_char)
+
+
 def my_teams(user: str) -> QueryBuilder:
 	membership = frappe.qb.DocType("Buzz Team Membership")
 	return (
@@ -118,7 +130,7 @@ def has_team_access(team: str | None, ptype: str, user: str) -> bool:
 	return bool(team_role) and role_allows(team_role, ptype)
 
 
-def team_query_conditions(user: str | None = None, doctype: str | None = None, **kwargs) -> Criterion | None:
+def team_query_conditions(user: str | None = None, doctype: str | None = None, **kwargs) -> str | None:
 	user = user or frappe.session.user
 	if is_unrestricted(user):
 		return None
@@ -127,15 +139,12 @@ def team_query_conditions(user: str | None = None, doctype: str | None = None, *
 	if doctype == "Buzz Event":
 		if user == "Guest":
 			return None
-		return table.team.isin(my_teams(user)) | (table.is_published == 1)
+		return as_sql(table.team.isin(my_teams(user)) | (table.is_published == 1))
 
-	return table.team.isin(my_teams(user))
+	return as_sql(table.team.isin(my_teams(user)))
 
 
-def derived_query_conditions(
-	user: str | None = None, doctype: str | None = None, **kwargs
-) -> Criterion | None:
-	user = user or frappe.session.user
+def derived_criterion(user: str, doctype: str | None) -> Criterion | None:
 	if is_unrestricted(user):
 		return None
 
@@ -155,18 +164,22 @@ def derived_query_conditions(
 	return criterion
 
 
-def team_doc_query_conditions(user: str | None = None, **kwargs) -> Criterion | None:
+def derived_query_conditions(user: str | None = None, doctype: str | None = None, **kwargs) -> str | None:
+	return as_sql(derived_criterion(user or frappe.session.user, doctype))
+
+
+def team_doc_query_conditions(user: str | None = None, **kwargs) -> str | None:
 	user = user or frappe.session.user
 	if is_unrestricted(user):
 		return None
-	return frappe.qb.DocType("Buzz Team").name.isin(my_teams(user))
+	return as_sql(frappe.qb.DocType("Buzz Team").name.isin(my_teams(user)))
 
 
-def membership_query_conditions(user: str | None = None, **kwargs) -> Criterion | None:
+def membership_query_conditions(user: str | None = None, **kwargs) -> str | None:
 	user = user or frappe.session.user
 	if is_unrestricted(user):
 		return None
-	return frappe.qb.DocType("Buzz Team Membership").team.isin(my_teams(user))
+	return as_sql(frappe.qb.DocType("Buzz Team Membership").team.isin(my_teams(user)))
 
 
 def team_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:
