@@ -8,7 +8,7 @@ import ManageTeamPanel from "@/components/dashboard/teams/ManageTeamPanel.vue"
 import { teams } from "@/data/teams"
 import type { TeamOption } from "@/types"
 
-const COLUMNS = "grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_1.5rem] items-center gap-4"
+const COLUMNS = "grid grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_1.5rem] items-center gap-4 pl-3"
 
 const search = ref("")
 const managing = ref<TeamOption | null>(null)
