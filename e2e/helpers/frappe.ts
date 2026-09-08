@@ -251,8 +251,9 @@ export async function ensureTestTeam(request: APIRequestContext): Promise<string
 /**
  * Return the Event Host a fixture links its event to, creating it on first run.
  *
- * Event Host autonames to a hash, so `host_name` is the label and the only stable key
- * a fixture can look it up by.
+ * Event Host autonames to a hash, so `host_name` is the label and the only stable key a
+ * fixture can look it up by. Names are not unique across teams, and Administrator reads
+ * every team, so the team is part of the key.
  */
 export async function ensureEventHost(
 	request: APIRequestContext,
@@ -261,7 +262,7 @@ export async function ensureEventHost(
 ): Promise<string> {
 	const [existing] = await getList<{ name: string }>(request, "Event Host", {
 		fields: ["name"],
-		filters: { host_name: hostName },
+		filters: { host_name: hostName, team },
 		limit: 1,
 	})
 
