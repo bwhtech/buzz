@@ -10,10 +10,14 @@ const unique = (prefix: string) => `${prefix} ${Date.now()}`
 // getByLabel("Email") also matches an event card's "Open E2E Guest Email OTP" button.
 const settings = (page: Page) => page.getByRole("dialog")
 
+// By test id, not by role: the open settings dialog hides the sidebar from the
+// accessibility tree, and the name assertion below runs while it is open.
+const accountMenu = (page: Page) => page.getByTestId("account-menu")
+
 async function openSettings(page: Page) {
 	await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible()
-	await page.getByLabel("Account menu").click()
-	await page.getByRole("button", { name: "Settings" }).click()
+	await accountMenu(page).click()
+	await page.getByRole("menuitem", { name: "Settings" }).click()
 	await expect(settings(page).getByRole("heading", { name: "Profile" })).toBeVisible()
 }
 
@@ -42,7 +46,7 @@ test.describe("User settings", () => {
 		await save.click()
 
 		// The sidebar reads full_name, which the server derives on save.
-		await expect(page.getByLabel("Account menu")).toContainText(edited)
+		await expect(accountMenu(page)).toContainText(edited)
 
 		await firstName.fill(SETTINGS_FIRST_NAME)
 		await save.click()

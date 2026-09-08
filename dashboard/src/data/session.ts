@@ -1,4 +1,4 @@
-import { createResource } from "frappe-ui"
+import { createResource, toast } from "frappe-ui"
 import { computed, reactive } from "vue"
 
 import { clearBookingCache } from "@/utils"
@@ -39,6 +39,10 @@ export const session = reactive({
 			session.user = sessionUser()
 			clearBookingCache()
 			window.location.reload()
+		},
+		// A silent failure leaves the menu open on a session that is still live.
+		onError() {
+			toast.error(__("Could not sign you out. Check your connection and try again."))
 		},
 	}),
 	user: sessionUser(),
