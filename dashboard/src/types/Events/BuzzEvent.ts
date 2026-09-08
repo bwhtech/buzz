@@ -1,4 +1,5 @@
 import type { SponsorshipDeckItem } from "../Proposals/SponsorshipDeckItem"
+import type { EventCoHost } from "./EventCoHost"
 import type { EventFeaturedSpeaker } from "./EventFeaturedSpeaker"
 import type { EventPaymentGateway } from "./EventPaymentGateway"
 import type { ScheduleItem } from "./ScheduleItem"
@@ -25,7 +26,9 @@ export interface BuzzEvent {
 	/**	Banner Image : Attach Image	*/
 	banner_image?: string
 	/**	Host : Link - Event Host	*/
-	host: string
+	host?: string
+	/**	Co-hosts : Table - Event CoHost	*/
+	co_hosts?: EventCoHost[]
 	/**	Venue : Link - Event Venue	*/
 	venue?: string
 	/**	Start Date : Date	*/

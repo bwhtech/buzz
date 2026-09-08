@@ -20,7 +20,7 @@ class EventVenue(Document):
 		google_maps_embed_code: DF.Code | None
 		latitude: DF.Float
 		longitude: DF.Float
-		team: DF.Link
+		team: DF.Link | None
 		type: DF.Literal["Embed Google Maps", "Open Street Map"]
 	# end: auto-generated types
 

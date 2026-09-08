@@ -32,8 +32,8 @@ def create_default_team_for(user: str) -> "BuzzTeam":
 def set_team_from_sole_membership(doc, event=None):
 	"""Fill an empty team from the user's only enabled membership.
 
-	Zero or several memberships leave it empty, so reqd raises rather than this
-	picking a team on the user's behalf.
+	Zero or several memberships leave it empty rather than this picking a team on
+	the user's behalf; where the field is reqd, that raises.
 	"""
 	if doc.team:
 		return
