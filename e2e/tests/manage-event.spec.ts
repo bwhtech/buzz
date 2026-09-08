@@ -172,11 +172,11 @@ test.describe("Claiming a route", () => {
 
 		// The shared event already answers to this one.
 		await field.fill("test-event-e2e")
-		await expect(page.getByText("Already Exists", { exact: true })).toBeVisible()
+		await expect(page.getByText("Already exists", { exact: true })).toBeVisible()
 
-		// Reserved so an event cannot shadow /b/account.
+		// Reserved so an event cannot shadow /b/account, and it reads the same as a claimed one.
 		await field.fill("account")
-		await expect(page.getByText("reserved")).toBeVisible()
+		await expect(page.getByText("Already exists", { exact: true })).toBeVisible()
 	})
 })
 
