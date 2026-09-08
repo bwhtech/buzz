@@ -16,6 +16,7 @@ import {
 	createDoc,
 	deleteDoc,
 	docExists,
+	ensureEventHost,
 	ensureTestTeam,
 	getList,
 } from "../helpers/frappe"
@@ -91,9 +92,7 @@ setup("seed check-in event, ticket type and front-desk users", async ({ request,
 
 	const team = await ensureTestTeam(request)
 
-	if (!(await docExists(request, "Event Host", HOST))) {
-		await createDoc(request, "Event Host", { name: HOST, team })
-	}
+	const host = await ensureEventHost(request, HOST, team)
 
 	const startDate = new Date()
 	startDate.setDate(startDate.getDate() + 7)
@@ -102,7 +101,7 @@ setup("seed check-in event, ticket type and front-desk users", async ({ request,
 		team,
 		title: CHECK_IN_EVENT_TITLE,
 		category: CATEGORY,
-		host: HOST,
+		host,
 		route: CHECK_IN_EVENT_ROUTE,
 		start_date: startDate.toISOString().split("T")[0],
 		start_time: "09:00:00",

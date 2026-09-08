@@ -193,20 +193,28 @@ def create_co_host(
 	by_line: str | None = None,
 	about: str | None = None,
 ) -> EventHostRef:
-	"""Add an organisation with no team here as a co-host of the event."""
+	"""Add an organisation with no team here as a co-host of the event.
+
+	The team's own host of that name is reused rather than minted twice: names are no
+	longer docnames, so a second record would list the same organisation twice.
+	"""
 	doc = manageable_event(event)
-	host = frappe.get_doc(
-		{
-			"doctype": "Event Host",
-			"host_name": host_name,
-			"team": doc.team,
-			"logo": logo,
-			"by_line": by_line,
-			"about": about,
-		}
-	)
-	# Event Host is Event Manager-writable; the team access check above is the authorisation.
-	host.insert(ignore_permissions=True)
+	existing = frappe.db.get_value("Event Host", {"host_name": host_name, "team": doc.team}, "name")
+	if existing:
+		host = frappe.get_doc("Event Host", existing)
+	else:
+		host = frappe.get_doc(
+			{
+				"doctype": "Event Host",
+				"host_name": host_name,
+				"team": doc.team,
+				"logo": logo,
+				"by_line": by_line,
+				"about": about,
+			}
+		)
+		# Event Host is Event Manager-writable; the team access check above is the authorisation.
+		host.insert(ignore_permissions=True)
 
 	doc.append("co_hosts", {"host": host.name})
 	doc.save()

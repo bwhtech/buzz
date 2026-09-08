@@ -451,6 +451,16 @@ class TestEventCoHosts(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			event.save()
 
+	def test_the_same_name_is_not_added_twice(self):
+		added = add_co_host(self.event, "Acme Corp")
+
+		with self.assertRaises(frappe.ValidationError):
+			add_co_host(self.event, "Acme Corp")
+
+		# The second call reuses the team's host rather than minting a second record.
+		self.assertEqual(frappe.db.count("Event Host", {"host_name": "Acme Corp", "team": self.team}), 1)
+		self.assertEqual(get_event(self.event).__json__()["co_hosts"][0]["host"], added.host)
+
 	def test_a_viewer_cannot_add_a_co_host(self):
 		frappe.set_user(self.viewer)
 
