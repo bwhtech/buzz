@@ -171,6 +171,18 @@ class TestCrossTeamIsolation(TeamPermissionTestCase):
 				self.assertTrue(query_conditions.get(doctype))
 				self.assertTrue(has_permission.get(doctype))
 
+	def test_every_query_condition_is_valid_sql(self):
+		# Whatever these hooks return is stringified into the WHERE clause, so a
+		# criterion rendered in pypika's default dialect reaches the database as-is.
+		hooks = frappe.get_hooks("permission_query_conditions", app_name="buzz")
+
+		for doctype, methods in hooks.items():
+			for method in methods:
+				with self.subTest(doctype=doctype):
+					condition = frappe.call(frappe.get_attr(method), self.alice, doctype=doctype)
+					self.assertIsInstance(condition, str)
+					frappe.db.sql(f"SELECT `name` FROM `tab{doctype}` WHERE {condition} LIMIT 1")
+
 	def test_opening_another_teams_event_is_denied(self):
 		self.as_user(self.alice)
 
