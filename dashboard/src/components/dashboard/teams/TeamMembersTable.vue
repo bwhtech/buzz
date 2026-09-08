@@ -174,7 +174,7 @@ function confirmRetract(row: Row) {
 				     carries its pending state instead. -->
 				<span class="flex min-w-0 items-center">
 					<span v-if="row.member" class="truncate text-base text-ink-gray-6">{{ row.email }}</span>
-					<Badge v-else theme="gray" variant="subtle" :label="__('Invited')" />
+					<Badge v-else size="sm" variant="outline" :label="__('Invited')" />
 				</span>
 
 				<span class="truncate text-base font-medium text-ink-gray-8">{{ row.role }}</span>
