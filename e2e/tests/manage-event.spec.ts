@@ -45,8 +45,7 @@ test.describe("Event workspace", () => {
 		expect(route).not.toBe("")
 
 		const open = page.getByRole("link", { name: "Open event page" })
-		await expect(open).toHaveAttribute("href", `/b/register/${route}`)
-		await expect(open).toHaveAttribute("target", "_blank")
+		await expect(open).toHaveAttribute("href", `/events/${route}`)
 		await expect(page.getByRole("button", { name: "Copy" })).toBeVisible()
 	})
 

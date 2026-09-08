@@ -4,6 +4,7 @@ import { computed, ref, watch } from "vue"
 
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { checkEventRoute } from "@/data/events"
+import { eventPath, eventUrl, openEventPage } from "@/utils/eventUrl"
 
 // The route the event already answers to, which is the one that opens and copies —
 // an edit in the field is not a live address until it is saved.
@@ -15,8 +16,8 @@ const taken = defineModel<boolean>("taken", { default: false })
 
 // The host the dashboard is being used on, so the field reads as the address it will be.
 const hostname = window.location.hostname
-// Events are served under the dashboard's own base, not off the bare host.
-const publicPath = computed(() => `/b/register/${props.saved}`)
+// The public event page, which is served outside the dashboard's /b base.
+const publicPath = computed(() => eventPath(props.saved ?? ""))
 
 type Availability = { available: boolean; message: string }
 const availability = ref<Availability | null>(null)
@@ -42,9 +43,10 @@ watch(availability, (answer) => (taken.value = Boolean(answer) && !answer?.avail
 
 const copyToClipboard = useCopyToClipboard()
 
-// The path the link opens, not the shorthand the field reads.
-const copy = () =>
-	copyToClipboard(`${window.location.origin}${publicPath.value}`, "Event link copied")
+// The address the link opens, not the shorthand the field reads.
+const copy = () => copyToClipboard(eventUrl(props.saved ?? ""), "Event link copied")
+
+const open = () => openEventPage(props.saved ?? "")
 </script>
 
 <template>
@@ -55,10 +57,9 @@ const copy = () =>
 			<div v-if="saved" class="flex items-center gap-1">
 				<a
 					:href="publicPath"
-					target="_blank"
-					rel="noopener"
 					aria-label="Open event page"
 					class="rounded-4 p-1 text-ink-gray-5 transition-[color,transform] duration-150 ease-out hover:text-ink-gray-8 active:scale-95 motion-reduce:transition-none"
+					@click.prevent="open"
 				>
 					<span class="lucide-arrow-up-right block size-4" aria-hidden="true" />
 				</a>
@@ -79,7 +80,7 @@ const copy = () =>
 		<div
 			class="rounded-6 border border-outline-gray-2 px-2.5 py-1.5 transition-colors duration-150 ease-out focus-within:border-outline-gray-4 motion-reduce:transition-none"
 		>
-			<p class="text-xs leading-4 text-ink-gray-5">{{ hostname }}/</p>
+			<p class="text-xs leading-4 text-ink-gray-5">{{ hostname }}/events/</p>
 			<input
 				v-model="route"
 				aria-label="Event route"

@@ -15,7 +15,7 @@ import EventMyTickets from "@/components/dashboard/events/EventMyTickets.vue"
 import type { MyEvent } from "@/types"
 import { timeLabel12Hour } from "@/utils/dateLabels"
 import { bannerPattern } from "@/utils/eventBanner"
-import { copyEventUrl, eventUrl } from "@/utils/eventUrl"
+import { copyEventUrl, openEventPage } from "@/utils/eventUrl"
 
 const props = defineProps<{ event: MyEvent | null }>()
 
@@ -89,7 +89,7 @@ const endsAt = computed(() => {
 							size="sm"
 							label="Event Page"
 							icon-right="lucide-arrow-up-right"
-							:link="eventUrl(event.route)"
+							@click="openEventPage(event.route)"
 						/>
 					</template>
 				</div>
