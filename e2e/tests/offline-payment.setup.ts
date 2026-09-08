@@ -1,6 +1,13 @@
 import { test as setup } from "@playwright/test"
 
-import { callMethod, createDoc, docExists, ensureTestTeam, getList } from "../helpers/frappe"
+import {
+	callMethod,
+	createDoc,
+	docExists,
+	ensureEventHost,
+	ensureTestTeam,
+	getList,
+} from "../helpers/frappe"
 
 interface NamedDoc {
 	name: string
@@ -85,12 +92,7 @@ setup("create offline payment test event", async ({ request }) => {
 
 	const team = await ensureTestTeam(request)
 
-	if (!(await docExists(request, "Event Host", testHostName))) {
-		await createDoc(request, "Event Host", {
-			name: testHostName,
-			team,
-		})
-	}
+	const host = await ensureEventHost(request, testHostName, team)
 
 	const futureDate = new Date()
 	futureDate.setMonth(futureDate.getMonth() + 1)
@@ -101,7 +103,7 @@ setup("create offline payment test event", async ({ request }) => {
 		team,
 		title: offlinePaymentEvent.title,
 		category: testCategoryName,
-		host: testHostName,
+		host,
 		start_date: startDate,
 		start_time: "09:00:00",
 		end_time: "17:00:00",

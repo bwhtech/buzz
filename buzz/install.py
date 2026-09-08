@@ -138,9 +138,9 @@ def setup_test_records():
 	test_venue = frappe.get_doc(
 		{"doctype": "Event Venue", "name": "Test Venue", "address": "test", "team": admin_team}
 	).insert(ignore_if_duplicate=True)
-	test_host = frappe.get_doc({"doctype": "Event Host", "name": "Test Host", "team": admin_team}).insert(
-		ignore_if_duplicate=True
-	)
+	test_host = frappe.get_doc(
+		{"doctype": "Event Host", "host_name": "Test Host", "team": admin_team}
+	).insert(ignore_if_duplicate=True)
 
 	test_event_exists = frappe.db.exists("Buzz Event", {"route": "test-route"})
 	if test_event_exists:

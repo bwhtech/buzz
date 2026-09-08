@@ -7,7 +7,15 @@ import {
 	CUSTOM_FORMS_EVENT_ROUTE,
 	MEMBERS_ONLY_FORM_ROUTE,
 } from "../data/custom-forms"
-import { createDoc, docExists, ensureTestTeam, getDoc, getList, updateDoc } from "../helpers/frappe"
+import {
+	createDoc,
+	docExists,
+	ensureEventHost,
+	ensureTestTeam,
+	getDoc,
+	getList,
+	updateDoc,
+} from "../helpers/frappe"
 
 interface NamedDoc {
 	name: string
@@ -35,9 +43,7 @@ setup("setup custom forms on test event", async ({ request }) => {
 		}
 		const team = await ensureTestTeam(request)
 
-		if (!(await docExists(request, "Event Host", testHostName))) {
-			await createDoc(request, "Event Host", { name: testHostName, team })
-		}
+		const host = await ensureEventHost(request, testHostName, team)
 
 		const futureDate = new Date()
 		futureDate.setMonth(futureDate.getMonth() + 1)
@@ -47,7 +53,7 @@ setup("setup custom forms on test event", async ({ request }) => {
 			team,
 			title: "E2E Custom Forms Event",
 			category: testCategoryName,
-			host: testHostName,
+			host,
 			start_date: startDate,
 			route: CUSTOM_FORMS_EVENT_ROUTE,
 			is_published: 1,

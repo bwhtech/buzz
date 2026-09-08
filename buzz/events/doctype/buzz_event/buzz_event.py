@@ -37,6 +37,7 @@ class BuzzEvent(Document):
 		from frappe.types import DF
 
 		from buzz.events.doctype.buzz_event_form.buzz_event_form import BuzzEventForm
+		from buzz.events.doctype.event_cohost.event_cohost import EventCoHost
 		from buzz.events.doctype.event_featured_speaker.event_featured_speaker import EventFeaturedSpeaker
 		from buzz.events.doctype.event_payment_gateway.event_payment_gateway import EventPaymentGateway
 		from buzz.events.doctype.schedule_item.schedule_item import ScheduleItem
@@ -53,6 +54,7 @@ class BuzzEvent(Document):
 		booking_confirmation_email_template: DF.Link | None
 		card_image: DF.AttachImage | None
 		category: DF.Link
+		co_hosts: DF.Table[EventCoHost]
 		custom_forms: DF.Table[BuzzEventForm]
 		default_ticket_type: DF.Link | None
 		end_date: DF.Date | None
@@ -61,7 +63,7 @@ class BuzzEvent(Document):
 		featured_speakers: DF.Table[EventFeaturedSpeaker]
 		free_event: DF.Check
 		guest_verification_method: DF.Literal["None", "Email OTP", "Phone OTP"]
-		host: DF.Link
+		host: DF.Link | None
 		is_published: DF.Check
 		medium: DF.Literal["In Person", "Online"]
 		meeting_link: DF.Data | None
@@ -105,6 +107,7 @@ class BuzzEvent(Document):
 		self.validate_custom_forms()
 		self.clear_unused_location()
 		self.validate_venue_team()
+		self.validate_co_hosts()
 		self.set_time_zone_label()
 
 	def clear_unused_location(self):
@@ -133,6 +136,13 @@ class BuzzEvent(Document):
 		# An unstamped venue predates the team backfill; role permissions still gate it.
 		if venue_team and venue_team != self.team:
 			frappe.throw(_("Venue {0} belongs to another team.").format(self.venue))
+
+	def validate_co_hosts(self):
+		hosts = [row.host for row in self.co_hosts]
+		duplicate = next((host for host in hosts if hosts.count(host) > 1), None)
+		if duplicate:
+			label = frappe.db.get_value("Event Host", duplicate, "host_name") or duplicate
+			frappe.throw(_("{0} is already a co-host of this event.").format(label))
 
 	def set_time_zone_label(self):
 		# validate runs before the mandatory check, so dates may still be empty here

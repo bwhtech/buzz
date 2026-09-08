@@ -46,6 +46,14 @@ class EventVenue(APIResponse):
 	address: str | None = None
 
 
+class EventHostRef(APIResponse):
+	"""One name under "Hosted by" — the event's team, or one of its co-hosts."""
+
+	host: str
+	label: str
+	logo: str | None = None
+
+
 class EventDetail(APIResponse):
 	"""One event, with everything the manage page edits or shows."""
 
@@ -67,6 +75,8 @@ class EventDetail(APIResponse):
 	# The organiser's own link, or the one Zoom issued when the meeting was booked.
 	meeting_link: str | None = None
 	is_published: bool
+	primary_host: EventHostRef | None = None
+	co_hosts: list[EventHostRef] = Field(default_factory=list)
 
 
 class GuestAddOn(APIResponse):

@@ -5,6 +5,7 @@ from buzz.api.events.schemas import (
 	CreatedEvent,
 	EventDetail,
 	EventGuestsResponse,
+	EventHostRef,
 	MyEventFilters,
 	MyEventsResponse,
 	NewEvent,
@@ -69,3 +70,21 @@ def check_event_route(route: str, event: str | None = None) -> RouteAvailability
 @frappe.whitelist(methods=["POST"])
 def create_event(event: NewEvent) -> CreatedEvent:
 	return services.create_event(event)
+
+
+@frappe.whitelist(methods=["POST"])
+def add_co_host(
+	event: str,
+	host_name: str,
+	logo: str | None = None,
+	by_line: str | None = None,
+	about: str | None = None,
+) -> EventHostRef:
+	"""Add an organisation that has no team here as a co-host of the event."""
+	return services.create_co_host(event, host_name, logo, by_line, about)
+
+
+@frappe.whitelist(methods=["POST"])
+def remove_co_host(event: str, host: str) -> None:
+	"""Drop a co-host from the event."""
+	services.remove_co_host(event, host)

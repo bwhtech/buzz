@@ -55,9 +55,10 @@ class CommunicationsTestCase(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		frappe.set_user("Administrator")
-		for doctype, name in (("Event Category", "Test Category"), ("Event Host", "Test Host")):
-			if not frappe.db.exists(doctype, name):
-				frappe.get_doc({"doctype": doctype, "name": name}).insert(ignore_permissions=True)
+		if not frappe.db.exists("Event Category", "Test Category"):
+			frappe.get_doc({"doctype": "Event Category", "name": "Test Category"}).insert(
+				ignore_permissions=True
+			)
 		cls.owner = create_user("comms-owner@example.com", "Owner")
 		cls.viewer = create_user("comms-viewer@example.com", "Viewer")
 		cls.manager = create_user("comms-manager@example.com", "Manager")

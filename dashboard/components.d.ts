@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AddCoHostDialog: typeof import('./src/components/dashboard/events/AddCoHostDialog.vue')['default']
     AddMembersDialog: typeof import('./src/components/dashboard/teams/AddMembersDialog.vue')['default']
     AddOnPreferenceDialog: typeof import('./src/components/AddOnPreferenceDialog.vue')['default']
     AddSpeakerDialog: typeof import('./src/components/dashboard/proposals/AddSpeakerDialog.vue')['default']
@@ -50,6 +51,7 @@ declare module 'vue' {
     EventGuestActions: typeof import('./src/components/dashboard/events/EventGuestActions.vue')['default']
     EventGuestItem: typeof import('./src/components/dashboard/events/EventGuestItem.vue')['default']
     EventGuestSkeleton: typeof import('./src/components/dashboard/events/EventGuestSkeleton.vue')['default']
+    EventHosts: typeof import('./src/components/dashboard/events/EventHosts.vue')['default']
     EventHoverCard: typeof import('./src/components/dashboard/events/EventHoverCard.vue')['default']
     EventLocation: typeof import('./src/components/dashboard/events/EventLocation.vue')['default']
     EventMedium: typeof import('./src/components/dashboard/events/EventMedium.vue')['default']

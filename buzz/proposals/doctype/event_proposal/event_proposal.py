@@ -78,8 +78,9 @@ class EventProposal(Document):
 		if not self.host_company:
 			frappe.throw(_("Please enter the Company Name before creating a Host."))
 
-		if frappe.db.exists("Event Host", self.host_company):
-			host = frappe.get_doc("Event Host", self.host_company)
+		existing = frappe.db.get_value("Event Host", {"host_name": self.host_company}, "name")
+		if existing:
+			host = frappe.get_doc("Event Host", existing)
 			updated = False
 			if self.host_company_logo and not host.logo:
 				host.logo = self.host_company_logo
@@ -91,7 +92,7 @@ class EventProposal(Document):
 				host.save(ignore_permissions=True)
 		else:
 			host = frappe.new_doc("Event Host")
-			host.name = self.host_company
+			host.host_name = self.host_company
 			host.logo = self.host_company_logo
 			host.about = self.about_the_company
 			host.insert(ignore_permissions=True)
@@ -114,6 +115,7 @@ class EventProposal(Document):
 		# host may have just been auto-created in-memory and is not yet persisted,
 		# so the mapped doc (read from DB) would miss it.
 		buzz_event.host = self.host
+		buzz_event.append("co_hosts", {"host": self.host})
 		buzz_event.insert()
 
 		self.status = "Event Created"

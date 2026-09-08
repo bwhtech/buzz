@@ -4,7 +4,7 @@ from frappe.utils.data import cstr, getdate
 from frappe.utils.response import json_handler
 
 from buzz.api.events.exceptions import CannotManageEvent, EventNotFound
-from buzz.api.forms.test_forms import ensure_prompt_named_record
+from buzz.api.forms.test_forms import ensure_event_host, ensure_prompt_named_record
 from buzz.api.proposals import (
 	accept_proposal,
 	get_event_proposal_trend,
@@ -29,7 +29,7 @@ class TestGetMyProposals(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "My Proposals Category")
-		cls.host = ensure_prompt_named_record("Event Host", "My Proposals Host")
+		cls.host = ensure_event_host("My Proposals Host")
 		cls.event = make_test_event(cls.category, cls.host)
 		cls.speaker_user = make_test_user("speaker-api@example.com")
 		cls.other_user = make_test_user("other-api@example.com")
@@ -144,7 +144,7 @@ class TestGetEventProposals(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Event Proposals Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Event Proposals Host")
+		cls.host = ensure_event_host("Event Proposals Host")
 		cls.manager = make_test_user("proposals-manager@example.com")
 		cls.outsider = make_test_user("proposals-outsider@example.com")
 		cls.team = create_owned_team(f"Proposals Team {frappe.generate_hash(length=6)}", cls.manager)
@@ -244,7 +244,7 @@ class TestGetEventProposalTrend(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Proposal Trend Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Proposal Trend Host")
+		cls.host = ensure_event_host("Proposal Trend Host")
 		cls.manager = make_test_user("trend-manager@example.com")
 		cls.outsider = make_test_user("trend-outsider@example.com")
 		cls.team = create_owned_team(f"Trend Team {frappe.generate_hash(length=6)}", cls.manager)
@@ -283,7 +283,7 @@ class TestAcceptProposal(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Accept Proposal Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Accept Proposal Host")
+		cls.host = ensure_event_host("Accept Proposal Host")
 		cls.manager = make_test_user("accept-manager@example.com")
 		cls.outsider = make_test_user("accept-outsider@example.com")
 		cls.team = create_owned_team(f"Accept Team {frappe.generate_hash(length=6)}", cls.manager)
@@ -337,7 +337,7 @@ class TestSetProposalState(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Proposal State Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Proposal State Host")
+		cls.host = ensure_event_host("Proposal State Host")
 		cls.manager = make_test_user("proposal-state-manager@example.com")
 		cls.outsider = make_test_user("proposal-state-outsider@example.com")
 		cls.team = create_owned_team(f"Proposal State Team {frappe.generate_hash(length=6)}", cls.manager)

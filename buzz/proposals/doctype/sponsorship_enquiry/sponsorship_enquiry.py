@@ -115,7 +115,7 @@ class SponsorshipEnquiry(Document):
 
 	def send_approval_notification(self):
 		event = frappe.get_cached_doc("Buzz Event", self.event)
-		host_name = event.host or "The Event Team"
+		host_name = frappe.db.get_value("Buzz Team", event.team, "team_name") or "The Event Team"
 		dashboard_link = get_url(f"/b/account/sponsorships/{self.name}")
 
 		subject = f"[Payment Pending] Your Sponsorship for {event.title} has been Approved!"

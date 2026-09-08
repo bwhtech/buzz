@@ -4,11 +4,13 @@ from frappe.utils import add_days, getdate, today
 from pydantic import ValidationError
 
 from buzz.api.events import (
+	add_co_host,
 	check_event_route,
 	get_event,
 	get_event_guests,
 	get_event_registration_trend,
 	get_my_events,
+	remove_co_host,
 	set_registration_state,
 )
 from buzz.api.events import create_event as create_event_endpoint
@@ -50,8 +52,6 @@ class TestGetMyEvents(IntegrationTestCase):
 			frappe.get_doc({"doctype": "Event Category", "name": "Test Category"}).insert(
 				ignore_permissions=True
 			)
-		if not frappe.db.exists("Event Host", "Test Host"):
-			frappe.get_doc({"doctype": "Event Host", "name": "Test Host"}).insert(ignore_permissions=True)
 
 		cls.host_user = create_user("events-host@example.com", "Host")
 		cls.attendee = create_user("events-attendee@example.com", "Attendee")
@@ -278,14 +278,6 @@ class TestCreateEvent(IntegrationTestCase):
 		self.assertEqual(event.medium, "In Person")
 		self.assertEqual(event.category, "Meetups")
 
-	def test_mints_one_host_per_team_and_reuses_it(self):
-		first = frappe.get_doc("Buzz Event", create_event_endpoint(self.payload()).name)
-		second = frappe.get_doc("Buzz Event", create_event_endpoint(self.payload(title="Second")).name)
-
-		self.assertTrue(first.host)
-		self.assertEqual(first.host, second.host)
-		self.assertEqual(frappe.db.get_value("Event Host", first.host, "team"), self.team)
-
 	def test_carries_the_optional_fields_through(self):
 		created = create_event_endpoint(
 			self.payload(
@@ -416,6 +408,71 @@ class TestGetEvent(IntegrationTestCase):
 
 		with self.assertRaises(EventNotFound):
 			get_event("999999999")
+
+
+class TestEventCoHosts(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("co-host-owner@example.com", "Owner")
+		cls.viewer = create_user("co-host-viewer@example.com", "Viewer")
+		cls.team = create_owned_team("Co-host Team", cls.owner)
+		add_member(cls.team, cls.viewer, "Viewer")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.event = create_event("Co-hosted Event", self.team)
+		frappe.set_user(self.owner)
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_the_team_is_the_primary_host(self):
+		detail = get_event(self.event).__json__()
+
+		self.assertEqual(detail["primary_host"]["host"], self.team)
+		self.assertEqual(detail["primary_host"]["label"], "Co-host Team")
+		self.assertEqual(detail["co_hosts"], [])
+
+	def test_adding_and_removing_a_co_host_round_trips(self):
+		added = add_co_host(self.event, "Acme Corp", by_line="We make things")
+
+		self.assertEqual(get_event(self.event).__json__()["co_hosts"][0]["label"], "Acme Corp")
+		self.assertEqual(frappe.db.get_value("Event Host", added.host, "team"), self.team)
+
+		remove_co_host(self.event, added.host)
+		self.assertEqual(get_event(self.event).__json__()["co_hosts"], [])
+
+	def test_the_same_organisation_cannot_be_added_twice(self):
+		added = add_co_host(self.event, "Acme Corp")
+		event = frappe.get_doc("Buzz Event", self.event)
+		event.append("co_hosts", {"host": added.host})
+
+		with self.assertRaises(frappe.ValidationError):
+			event.save()
+
+	def test_the_same_name_is_not_added_twice(self):
+		added = add_co_host(self.event, "Acme Corp")
+
+		with self.assertRaises(frappe.ValidationError):
+			add_co_host(self.event, "Acme Corp")
+
+		# The second call reuses the team's host rather than minting a second record.
+		self.assertEqual(frappe.db.count("Event Host", {"host_name": "Acme Corp", "team": self.team}), 1)
+		self.assertEqual(get_event(self.event).__json__()["co_hosts"][0]["host"], added.host)
+
+	def test_a_viewer_cannot_add_a_co_host(self):
+		frappe.set_user(self.viewer)
+
+		with self.assertRaises(CannotManageEvent):
+			add_co_host(self.event, "Acme Corp")
+
+	def test_a_viewer_cannot_remove_a_co_host(self):
+		added = add_co_host(self.event, "Acme Corp")
+		frappe.set_user(self.viewer)
+
+		with self.assertRaises(CannotManageEvent):
+			remove_co_host(self.event, added.host)
 
 
 class TestCheckEventRoute(IntegrationTestCase):

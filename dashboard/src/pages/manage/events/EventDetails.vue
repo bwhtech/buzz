@@ -7,6 +7,7 @@ import { useRoute } from "vue-router"
 
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
 import EventDetailsSkeleton from "@/components/dashboard/events/EventDetailsSkeleton.vue"
+import EventHosts from "@/components/dashboard/events/EventHosts.vue"
 import EventMedium from "@/components/dashboard/events/EventMedium.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventRoute from "@/components/dashboard/events/EventRoute.vue"
@@ -258,6 +259,13 @@ async function save() {
 							:venue-address="event.data.venue?.address"
 						/>
 					</section>
+
+					<EventHosts
+						:event="eventId"
+						:primary-host="event.data.primary_host"
+						:co-hosts="event.data.co_hosts"
+						@changed="event.reload()"
+					/>
 				</div>
 			</div>
 		</div>

@@ -4,7 +4,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
-from buzz.api.forms.test_forms import ensure_prompt_named_record
+from buzz.api.forms.test_forms import ensure_event_host, ensure_prompt_named_record
 from buzz.api.tickets import (
 	change_add_on_preference,
 	create_cancellation_request,
@@ -58,7 +58,7 @@ class TicketTestCase(IntegrationTestCase):
 		# sharing test-route: IntegrationTestCase rolls the DB back but not the document
 		# cache, which would leave a rolled-back date visible to later test modules.
 		category = ensure_prompt_named_record("Event Category", "Test Tickets Category")
-		host = ensure_prompt_named_record("Event Host", "Test Tickets Host")
+		host = ensure_event_host("Test Tickets Host")
 		cls.event = frappe.get_doc(
 			{
 				"doctype": "Buzz Event",

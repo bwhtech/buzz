@@ -1,6 +1,6 @@
 import { createResource, useCall } from "frappe-ui"
 
-import type { EventDetail, MyEvents, RegistrationTrend } from "@/types"
+import type { EventDetail, EventHostRef, MyEvents, RegistrationTrend } from "@/types"
 
 // v2 path: useCall reads the payload from `data`, which /api/method names `message`.
 // Uncached: cacheKey would persist this user's feed to IndexedDB past a logout.
@@ -44,5 +44,26 @@ export function useRegistrationTrend(event: string) {
 	return useCall<RegistrationTrend, { event: string }>({
 		url: "/api/v2/method/buzz.api.events.get_event_registration_trend",
 		params: { event },
+	})
+}
+
+/** Add an organisation that has no team here as a co-host of the event. */
+export function useAddCoHost() {
+	return useCall<
+		EventHostRef,
+		{ event: string; host_name: string; logo?: string; by_line?: string; about?: string }
+	>({
+		url: "/api/v2/method/buzz.api.events.add_co_host",
+		method: "POST",
+		immediate: false,
+	})
+}
+
+/** Drop a co-host from the event. The Event Host record itself is left alone. */
+export function useRemoveCoHost() {
+	return useCall<null, { event: string; host: string }>({
+		url: "/api/v2/method/buzz.api.events.remove_co_host",
+		method: "POST",
+		immediate: false,
 	})
 }

@@ -14,7 +14,7 @@ from frappe.tests import IntegrationTestCase
 from buzz.api.booking import process_booking
 from buzz.api.booking.exceptions import RegistrationsClosed
 from buzz.api.booking.schemas import BookingRequest
-from buzz.api.forms.test_forms import ensure_prompt_named_record
+from buzz.api.forms.test_forms import ensure_event_host, ensure_prompt_named_record
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
 
@@ -28,7 +28,7 @@ class EligibilityTestCase(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Eligibility Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Eligibility Host")
+		cls.host = ensure_event_host("Eligibility Host")
 		owner = create_user("eligibility-team-owner@example.com", "Eligibility")
 		cls.team = create_owned_team(f"Eligibility Team {frappe.generate_hash(length=6)}", owner)
 		cls.event = cls.make_event()

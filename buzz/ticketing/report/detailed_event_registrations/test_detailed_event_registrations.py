@@ -4,6 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from buzz.api.forms.test_forms import ensure_event_host
 from buzz.ticketing.report.detailed_event_registrations.detailed_event_registrations import (
 	execute,
 	get_add_ons_for_event,
@@ -41,16 +42,13 @@ class TestDetailedEventRegistrationsReport(IntegrationTestCase):
 		if not frappe.db.exists("Event Category", "Test Category"):
 			frappe.get_doc({"doctype": "Event Category", "category_name": "Test Category"}).insert()
 
-		if not frappe.db.exists("Event Host", "Test Host"):
-			frappe.get_doc({"doctype": "Event Host", "host_name": "Test Host"}).insert()
-
 		event = frappe.get_doc(
 			{
 				"doctype": "Buzz Event",
 				"title": "Test Report Event",
 				"route": "test-report-event",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"start_date": frappe.utils.today(),
 				"start_time": "10:00:00",
 				"end_time": "18:00:00",
@@ -763,7 +761,7 @@ class TestDetailedEventRegistrationsReport(IntegrationTestCase):
 				"title": "Empty Event",
 				"route": "empty-event-" + frappe.generate_hash(length=6),
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"start_date": frappe.utils.today(),
 				"start_time": "10:00:00",
 				"end_time": "18:00:00",

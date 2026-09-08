@@ -13,7 +13,7 @@ from buzz.api.booking import (
 )
 from buzz.api.booking.exceptions import AddOnNotForEvent, InvalidAddOnValue, RegistrationsClosed
 from buzz.api.booking.schemas import BookingRequest
-from buzz.api.forms.test_forms import ensure_prompt_named_record
+from buzz.api.forms.test_forms import ensure_event_host, ensure_prompt_named_record
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 
 BOOKER = "booking-owner@example.com"
@@ -94,7 +94,7 @@ class BookingTestCase(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		category = ensure_prompt_named_record("Event Category", "Test Booking Category")
-		host = ensure_prompt_named_record("Event Host", "Test Booking Host")
+		host = ensure_event_host("Test Booking Host")
 		owner = create_user("booking-team-owner@example.com", "Booking")
 		cls.team = create_owned_team(f"Booking Test Team {frappe.generate_hash(length=6)}", owner)
 		cls.event = frappe.get_doc(
