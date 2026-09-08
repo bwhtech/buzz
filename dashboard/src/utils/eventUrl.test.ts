@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import { eventUrl } from "./eventUrl.ts"
+import { eventPath, eventUrl } from "./eventUrl.ts"
 
 const withOrigin = (origin: string, run: () => void) => {
 	// The helper reads the live location; there is no browser under node --test.
@@ -15,12 +15,16 @@ const withOrigin = (origin: string, run: () => void) => {
 
 test("hangs the route off the current origin", () => {
 	withOrigin("https://buzz.example.com", () => {
-		assert.equal(eventUrl("frappeverse-2026"), "https://buzz.example.com/frappeverse-2026")
+		assert.equal(eventUrl("frappeverse-2026"), "https://buzz.example.com/events/frappeverse-2026")
 	})
 })
 
 test("keeps the port, which differs between the dashboard and the bench", () => {
 	withOrigin("http://buzz.localhost:8080", () => {
-		assert.equal(eventUrl("summit"), "http://buzz.localhost:8080/summit")
+		assert.equal(eventUrl("summit"), "http://buzz.localhost:8080/events/summit")
 	})
+})
+
+test("keeps the path off the dashboard's own base", () => {
+	assert.equal(eventPath("frappeverse-2026"), "/events/frappeverse-2026")
 })
