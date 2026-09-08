@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
 	Avatar,
-	Button,
 	Dropdown,
 	KeyboardShortcut,
 	Tooltip,
@@ -21,35 +20,28 @@ const isCollapsed = inject(
 
 const { colorScheme, setColorScheme } = useColorScheme()
 
-const themes = computed(() => [
-	{ value: "light", icon: "lucide-sun", label: __("Light") } as const,
-	{ value: "dark", icon: "lucide-moon", label: __("Dark") } as const,
-	{ value: "system", icon: "lucide-monitor", label: __("System") } as const,
-])
-
 const settingsOpen = ref(false)
 
 const NEW_ISSUE_URL = "https://github.com/bwhtech/buzz/issues/new"
 
-// Buttons rather than a menu item each: the row is one choice of three, and it
-// keeps the menu open so the theme can be compared without reopening it.
-function themeChoices() {
-	return h(
-		"div",
-		{ class: "flex items-center gap-1", role: "group", "aria-label": __("Theme") },
-		themes.value.map((theme) =>
-			h(Button, {
-				key: theme.value,
-				variant: colorScheme.value === theme.value ? "subtle" : "ghost",
-				icon: theme.icon,
-				label: theme.label,
-				tooltip: theme.label,
-				"aria-pressed": colorScheme.value === theme.value,
-				onClick: () => setColorScheme(theme.value),
-			}),
-		),
-	)
-}
+// preventDefault keeps the menu open, so themes can be compared without reopening it.
+const themeOptions = computed<DropdownOptions>(() =>
+	(
+		[
+			{ value: "light", icon: "lucide-sun", label: __("Light") },
+			{ value: "dark", icon: "lucide-moon", label: __("Dark") },
+			{ value: "system", icon: "lucide-monitor", label: __("System") },
+		] as const
+	).map((theme) => ({
+		label: theme.label,
+		icon: theme.icon,
+		selected: colorScheme.value === theme.value,
+		onClick: (event: Event) => {
+			event.preventDefault()
+			setColorScheme(theme.value)
+		},
+	})),
+)
 
 const menu = computed<DropdownOptions>(() => [
 	{
@@ -65,8 +57,7 @@ const menu = computed<DropdownOptions>(() => [
 			{
 				label: __("Theme"),
 				icon: "lucide-sun-moon",
-				switch: true,
-				slots: { suffix: themeChoices },
+				submenu: themeOptions.value,
 			},
 			{
 				label: __("Report an Issue"),
