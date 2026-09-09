@@ -98,9 +98,16 @@ async function save(close: () => void) {
 }
 
 // The dialog runs its own loading state around an async onClick, so saving needs no ref.
+// Save waits for the site's answer: until it lands, the options on screen are either
+// absent or a previous open's, and neither is what this save would be written against.
 const actions = computed<DialogAction[]>(() => [
 	{ label: "Cancel" },
-	{ label: "Save", variant: "solid", onClick: ({ close }) => save(close) },
+	{
+		label: "Save",
+		variant: "solid",
+		disabled: !methods.data || methods.loading,
+		onClick: ({ close }) => save(close),
+	},
 ])
 </script>
 
