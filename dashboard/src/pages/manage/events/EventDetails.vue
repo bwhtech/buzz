@@ -233,8 +233,11 @@ async function save() {
 					</section>
 				</div>
 
-				<div class="space-y-8 md:col-span-2">
+				<div class="space-y-4 md:col-span-2">
+					<!-- Every section in this column carries the same padding, so their labels
+					     share one left edge; the fill marks the two that take input. -->
 					<EventRoute
+						class="rounded-6 p-4"
 						v-model="form.route"
 						v-model:taken="routeTaken"
 						:event="eventId"
@@ -249,7 +252,7 @@ async function save() {
 						v-model:time-zone="form.time_zone"
 					/>
 
-					<section class="space-y-3">
+					<section class="space-y-3 rounded-6 bg-surface-gray-1/90 p-4">
 						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
 						<EventMedium
 							v-model:medium="form.medium"
@@ -261,6 +264,7 @@ async function save() {
 					</section>
 
 					<EventHosts
+						class="rounded-6 p-4"
 						:event="eventId"
 						:primary-host="event.data.primary_host"
 						:co-hosts="event.data.co_hosts"
