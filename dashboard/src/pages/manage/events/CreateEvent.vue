@@ -231,7 +231,7 @@ async function save() {
 					v-model:time-zone="timeZone"
 				/>
 
-				<section id="event-location" class="space-y-3">
+				<section id="event-location" class="space-y-1.5">
 					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
 					<EventLocation
 						v-model:venue="venue"
