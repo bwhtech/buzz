@@ -13,7 +13,7 @@ import {
 import { useRecipientCount } from "@/data/communications"
 import type { CommunicationDraft, CommunicationItem, EventCommunications } from "@/types"
 import { audienceOptions, hasText } from "@/utils/communicationText"
-import { proposalEditorExtensions, proposalEditorToolbar } from "@/utils/proposalEditor"
+import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 
 const props = defineProps<{
 	event: string
@@ -114,11 +114,7 @@ const viewedWhen = computed(() =>
 
 				<!-- The same editor, read-only, rather than v-html: tiptap parses the stored
 				     HTML into its own schema, so only what the composer can produce is rendered. -->
-				<Editor
-					:model-value="viewing.message"
-					:extensions="proposalEditorExtensions"
-					:editable="false"
-				>
+				<Editor :model-value="viewing.message" :extensions="richTextExtensions" :editable="false">
 					<EditorContent
 						class="prose prose-sm max-w-none text-base leading-[1.6] text-ink-gray-7"
 					/>
@@ -177,13 +173,9 @@ const viewedWhen = computed(() =>
 
 				<div class="space-y-2">
 					<label class="block text-xs text-ink-gray-5">Message</label>
-					<Editor
-						v-model="draft.message"
-						:extensions="proposalEditorExtensions"
-						:editable="canWrite"
-					>
+					<Editor v-model="draft.message" :extensions="richTextExtensions" :editable="canWrite">
 						<EditorFixedMenu
-							:items="proposalEditorToolbar"
+							:items="richTextToolbar"
 							class="rounded-t-5 border border-b-0 border-outline-gray-2 px-2 py-1"
 						/>
 						<EditorContent

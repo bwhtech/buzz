@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-	Avatar,
 	Button,
 	ErrorMessage,
 	FormControl,
@@ -131,7 +130,7 @@ async function save(fields: Partial<Profile> = { ...form }) {
 			<SettingsNavGroup :label="__('Account')">
 				<SettingsNavItem value="profile">
 					<template #prefix>
-						<Avatar size="xs" :image="form.user_image ?? undefined" :label="fullName" />
+						<span class="lucide-circle-user-round size-4" />
 					</template>
 					{{ __("Profile") }}
 				</SettingsNavItem>

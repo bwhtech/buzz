@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useEventListener } from "@vueuse/core"
+import { useEventListener, useTextareaAutosize } from "@vueuse/core"
 import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
-import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
+import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
@@ -18,6 +18,7 @@ import { session } from "@/data/session"
 import type { EventDetail, FrappeError } from "@/types"
 import { isEndBeforeStart } from "@/utils/eventDates"
 import { matches } from "@/utils/formDraft"
+import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 
 const route = useRoute()
 const eventId = route.params.eventId as string
@@ -29,6 +30,10 @@ type EventForm = ReturnType<typeof blank>
 // The form the page edits, and the copy it is compared against to know it is dirty.
 const form = reactive(blank())
 const saved = ref<EventForm>(blank())
+
+// A title wraps rather than scrolling out of sight, so the box grows with it.
+const titleField = ref<HTMLTextAreaElement>()
+useTextareaAutosize({ element: titleField, watch: () => form.title })
 
 // Unsaved edits outlive the page: the section tabs unmount it, and losing a half-written
 // description to a look at the guest list is not a fair trade.
@@ -194,12 +199,17 @@ async function save() {
 			<div class="grid gap-8 md:grid-cols-5">
 				<div class="space-y-8 md:col-span-3">
 					<div class="space-y-2">
-						<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
-						<input
+						<!-- Plain field on purpose: this is the page's headline, not a labelled one.
+						 A textarea rather than an input so a long name wraps; Enter is swallowed
+						 since a title has no second line of its own. -->
+						<textarea
+							ref="titleField"
 							v-model="form.title"
+							rows="1"
 							aria-label="Event title"
 							placeholder="Name your event"
-							class="-mx-1 w-full rounded-4 bg-transparent px-1 text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+							class="w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none"
+							@keydown.enter.prevent
 						/>
 						<!-- Ghost variant: no border, so it reads as a subtitle under the name. -->
 						<Textarea
@@ -218,23 +228,30 @@ async function save() {
 						 itself: the height and scrolling land on the editable area rather than on a
 						 wrapper, and the whole box takes a click. -->
 						<div
-							class="rounded-6 border border-outline-gray-2 p-3 transition-colors duration-150 ease-out focus-within:border-outline-gray-4 motion-reduce:transition-none"
+							class="overflow-hidden rounded-6 border border-outline-gray-2 transition-colors duration-150 ease-out focus-within:border-outline-gray-4 motion-reduce:transition-none"
 						>
 							<Editor
 								v-model="form.about"
-								:extensions="[RichTextKit]"
+								:extensions="richTextExtensions"
 								placeholder="What is this event about?"
 							>
+								<EditorFixedMenu
+									:items="richTextToolbar"
+									class="overflow-x-auto border-b border-outline-gray-2 px-2 py-1"
+								/>
 								<EditorContent
-									class="prose-sm h-48 max-w-none overflow-y-auto text-ink-gray-8 focus:outline-none"
+									class="prose-sm h-48 max-w-none overflow-y-auto p-3 text-ink-gray-8 focus:outline-none"
 								/>
 							</Editor>
 						</div>
 					</section>
 				</div>
 
-				<div class="space-y-8 md:col-span-2">
+				<div class="space-y-4 md:col-span-2">
+					<!-- Every section in this column carries the same padding, so their labels
+					     share one left edge. -->
 					<EventRoute
+						class="rounded-6 p-4"
 						v-model="form.route"
 						v-model:taken="routeTaken"
 						:event="eventId"
@@ -249,7 +266,7 @@ async function save() {
 						v-model:time-zone="form.time_zone"
 					/>
 
-					<section class="space-y-3">
+					<section class="space-y-3 rounded-6 p-4">
 						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
 						<EventMedium
 							v-model:medium="form.medium"
@@ -261,6 +278,7 @@ async function save() {
 					</section>
 
 					<EventHosts
+						class="rounded-6 p-4"
 						:event="eventId"
 						:primary-host="event.data.primary_host"
 						:co-hosts="event.data.co_hosts"

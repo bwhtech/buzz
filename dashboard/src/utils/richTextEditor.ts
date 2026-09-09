@@ -12,9 +12,9 @@ import {
 	Strike,
 } from "frappe-ui/editor"
 
-// No upload handler is wired for proposals, so the media extensions are off —
+// No upload handler is wired anywhere this is used, so the media extensions are off —
 // otherwise the drop/paste paths would silently fail.
-export const proposalEditorExtensions = [
+export const richTextExtensions = [
 	RichTextKit.configure({
 		heading: { levels: [2, 3, 4, 5, 6] },
 		image: false,
@@ -25,7 +25,7 @@ export const proposalEditorExtensions = [
 	}),
 ]
 
-export const proposalEditorToolbar = [
+export const richTextToolbar = [
 	HeadingGroup,
 	Separator,
 	Bold,
