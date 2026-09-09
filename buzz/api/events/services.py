@@ -4,6 +4,7 @@ from frappe.query_builder import Case
 from frappe.query_builder.functions import Count, Date
 from frappe.utils import add_days, get_datetime_in_timezone, get_system_timezone, getdate
 
+from buzz.api.booking.guests import email_otp_available, phone_otp_available
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.exceptions import (
 	CannotCreateEvents,
@@ -29,6 +30,7 @@ from buzz.api.events.schemas import (
 	RegistrationTrend,
 	RouteAvailability,
 	TicketTypeTotal,
+	VerificationMethods,
 )
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
 from buzz.permissions import has_team_access, my_teams
@@ -298,6 +300,11 @@ def set_registration_state(event: str, closed: bool) -> RegistrationState:
 	return RegistrationState(registrations_closed=are_registrations_closed(doc))
 
 
+def verification_methods() -> VerificationMethods:
+	"""Site configuration, not event data: what a guest OTP could actually be sent over."""
+	return VerificationMethods(email=email_otp_available(), phone=phone_otp_available())
+
+
 def ensure_event_team_access(event: str) -> None:
 	"""Read access to the event's team is the bar for everything a manage page shows."""
 	if not frappe.db.exists("Buzz Event", event):
@@ -370,6 +377,8 @@ def event_guests(
 		matched=matched,
 		registrations_closed=are_registrations_closed(doc),
 		can_write=has_team_access(doc.team, "write", frappe.session.user),
+		allow_guest_booking=bool(doc.allow_guest_booking),
+		guest_verification_method=doc.guest_verification_method or "None",
 		guests=guests,
 		ticket_types=ticket_types_of(event),
 		has_next_page=start + len(guests) < matched,

@@ -10,6 +10,7 @@ from buzz.api.events import (
 	get_event_guests,
 	get_event_registration_trend,
 	get_my_events,
+	get_verification_methods,
 	remove_co_host,
 	set_registration_state,
 )
@@ -527,6 +528,20 @@ class TestGetEventGuests(IntegrationTestCase):
 		self.assertEqual(len(guests["guests"]), 2)
 		emails = {guest["attendee_email"] for guest in guests["guests"]}
 		self.assertEqual(emails, {"guest-one@example.com", "guest-two@example.com"})
+
+	def test_carries_the_guest_registration_settings(self):
+		event = create_event("Guest Setting Event", self.team)
+		frappe.db.set_value(
+			"Buzz Event",
+			event,
+			{"allow_guest_booking": 1, "guest_verification_method": "Phone OTP"},
+		)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event)
+
+		self.assertTrue(guests.allow_guest_booking)
+		self.assertEqual(guests.guest_verification_method, "Phone OTP")
 
 	def test_leaves_out_a_ticket_that_was_never_submitted(self):
 		event = create_event("Draft Ticket Event", self.team)
@@ -1060,3 +1075,42 @@ class TestSetRegistrationState(IntegrationTestCase):
 		frappe.set_user(self.owner)
 
 		self.assertEqual(get_event_guests(event).registration_link, "/b/register/hosted-event")
+
+
+class TestVerificationMethods(IntegrationTestCase):
+	"""Site configuration, so every case here writes SMS Settings rather than an event."""
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+		# Cleanups run last-registered-first, so the cache is cleared after the rollback:
+		# the Single is cached per request and would otherwise be read back undone.
+		self.addCleanup(frappe.clear_document_cache, "SMS Settings", "SMS Settings")
+		self.addCleanup(frappe.db.rollback)
+
+	def test_phone_needs_a_gateway(self):
+		# Written through the db: an unconfigured Single cannot pass its own mandatory check.
+		frappe.db.set_single_value("SMS Settings", "sms_gateway_url", "")
+
+		self.assertFalse(get_verification_methods().phone)
+
+	def test_phone_needs_the_guest_role_to_be_allowed(self):
+		settings = frappe.get_single("SMS Settings")
+		settings.sms_gateway_url = "https://sms.example.com/send"
+		settings.message_parameter = "message"
+		settings.receiver_parameter = "to"
+		settings.set("allowed_roles", [{"role": "System Manager"}])
+		settings.save()
+
+		self.assertFalse(get_verification_methods().phone)
+
+		settings.append("allowed_roles", {"role": "Guest"})
+		settings.save()
+
+		self.assertTrue(get_verification_methods().phone)
+
+	def test_email_follows_the_outgoing_account(self):
+		# Whatever this site is configured with, the answer is what frappe.sendmail resolves.
+		from frappe.email.doctype.email_account.email_account import EmailAccount
+
+		self.assertEqual(get_verification_methods().email, bool(EmailAccount.find_default_outgoing()))

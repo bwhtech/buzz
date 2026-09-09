@@ -1,6 +1,12 @@
 import { createResource, useCall } from "frappe-ui"
 
-import type { EventDetail, EventHostRef, MyEvents, RegistrationTrend } from "@/types"
+import type {
+	EventDetail,
+	EventHostRef,
+	MyEvents,
+	RegistrationTrend,
+	VerificationMethods,
+} from "@/types"
 
 // v2 path: useCall reads the payload from `data`, which /api/method names `message`.
 // Uncached: cacheKey would persist this user's feed to IndexedDB past a logout.
@@ -44,6 +50,18 @@ export function useRegistrationTrend(event: string) {
 	return useCall<RegistrationTrend, { event: string }>({
 		url: "/api/v2/method/buzz.api.events.get_event_registration_trend",
 		params: { event },
+	})
+}
+
+/**
+ * Which verification methods this site can deliver a guest OTP over. Site configuration
+ * rather than event data, so it is fetched when the settings dialog opens rather than
+ * cached — an admin configuring email mid-session must not be answered from IndexedDB.
+ */
+export function useVerificationMethods() {
+	return useCall<VerificationMethods>({
+		url: "/api/v2/method/buzz.api.events.get_verification_methods",
+		immediate: false,
 	})
 }
 

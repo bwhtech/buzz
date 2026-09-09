@@ -214,8 +214,11 @@ class BuzzEvent(Document):
 			return
 
 		if self.guest_verification_method == "Email OTP":
-			has_email = frappe.db.exists("Email Account", {"default_outgoing": 1, "enable_outgoing": 1})
-			if not has_email:
+			# Imported here rather than at the top: doctype modules load during boot, and
+			# this pulls frappe.email onto that path for a check only this branch makes.
+			from buzz.api.booking.guests import email_otp_available
+
+			if not email_otp_available():
 				frappe.throw(
 					frappe._(
 						"Please configure an outgoing Email Account before enabling Email OTP verification."

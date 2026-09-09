@@ -121,6 +121,9 @@ class EventGuestsResponse(APIResponse):
 	registrations_closed: bool
 	# Read access alone is a Viewer or Frontdesk, who cannot change the registration state.
 	can_write: bool = False
+	# Whether people without an account can register themselves, and how they are verified.
+	allow_guest_booking: bool = False
+	guest_verification_method: str = "None"
 	guests: list[EventGuest]
 	ticket_types: list[GuestTicketType] = Field(default_factory=list)
 	has_next_page: bool = False
@@ -180,3 +183,10 @@ class RegistrationState(APIResponse):
 	"""Whether the event takes registrations, as the server reads it after a change."""
 
 	registrations_closed: bool
+
+
+class VerificationMethods(APIResponse):
+	"""Which guest verification methods this site is configured to deliver."""
+
+	email: bool = False
+	phone: bool = False

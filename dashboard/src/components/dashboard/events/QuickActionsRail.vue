@@ -11,6 +11,8 @@ export type QuickAction = {
 <script setup lang="ts">
 import { Button } from "frappe-ui"
 
+import QuickActionTile, { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
+
 defineProps<{
 	// What is open or closed — "Registration", "Proposals".
 	subject: string
@@ -21,47 +23,24 @@ defineProps<{
 	actions: QuickAction[]
 }>()
 defineEmits<{ toggle: [] }>()
-
-// Every control in the rail answers a press the same way; the string is written once.
-const PRESSABLE =
-	"duration-150 ease-out active:scale-[0.98] !transition-[transform,background-color,color]"
 </script>
 
 <template>
 	<h3 class="text-p-sm font-medium text-ink-gray-5">Quick actions</h3>
-	<!-- The whole block is the control: the state is the label, pressing it is how the
-		 state gets changed, and the icon tile carries the state before the words are read.
-		 A reader the server would refuse gets it as a readout instead — read access alone
-		 is a Viewer or Frontdesk, who cannot write the event. -->
-	<Button
-		:class="`h-auto w-full !justify-start !gap-3 px-2.5 py-2.5 ${PRESSABLE}`"
-		variant="subtle"
-		:disabled="!canWrite"
-		theme="gray"
-		@click="$emit('toggle')"
-	>
-		<template #prefix>
-			<span class="relative grid size-9 shrink-0 place-items-center">
-				<!-- Only while open: the halo says the page is taking submissions right now,
-					 and a closed state has nothing to keep announcing. -->
-				<span
-					v-if="!closed"
-					class="absolute inset-0 animate-ping rounded-4 bg-surface-green-7 opacity-25 [animation-duration:2.5s] motion-reduce:hidden"
-					aria-hidden="true"
-				/>
-				<span
-					class="relative grid size-9 place-items-center rounded-4 text-white"
-					:class="closed ? 'bg-surface-red-7' : 'bg-surface-green-7'"
-				>
-					<span class="size-5" :class="closed ? closedIcon : openIcon" aria-hidden="true" />
-				</span>
-			</span>
-		</template>
-		<span class="flex flex-col items-start">
-			<span class="text-p-base font-medium">{{ subject }}</span>
-			<span class="text-p-sm opacity-70">{{ closed ? "Closed" : "Open" }}</span>
-		</span>
-	</Button>
+	<!-- The tiles share the buttons' own background, so a caller that adds one more reads
+		 as a second row of the same block rather than a second block. -->
+	<div class="flex flex-col rounded-4 p-1 bg-surface-gray-2">
+		<QuickActionTile
+			:icon="closed ? closedIcon : openIcon"
+			:title="subject"
+			:subtitle="closed ? 'Closed' : 'Open'"
+			:tone="closed ? 'red' : 'green'"
+			:pulse="!closed"
+			:disabled="!canWrite"
+			@click="$emit('toggle')"
+		/>
+		<slot />
+	</div>
 
 	<section class="space-y-1 pt-1">
 		<Button

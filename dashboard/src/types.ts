@@ -250,9 +250,17 @@ export interface EventGuests {
 	registration_link: string | null
 	// Read access alone is a Viewer or Frontdesk, who cannot change the registration state.
 	can_write: boolean
+	// Whether people without an account can register themselves, and how they are verified.
+	allow_guest_booking: boolean
+	guest_verification_method: string
 	guests: EventGuest[]
 	ticket_types: GuestTicketType[]
 	has_next_page: boolean
+}
+
+export interface VerificationMethods {
+	email: boolean
+	phone: boolean
 }
 
 export interface EventVenueDetail {

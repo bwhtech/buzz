@@ -281,6 +281,8 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 				:registration-link="page.data.registration_link"
 				:closed="!!page.data.registrations_closed"
 				:can-write="!!page.data.can_write"
+				:allow-guest-booking="!!page.data.allow_guest_booking"
+				:guest-verification-method="page.data.guest_verification_method"
 				:query="exportQuery"
 				@changed="page.reload()"
 			/>
