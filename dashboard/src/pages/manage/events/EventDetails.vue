@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useEventListener } from "@vueuse/core"
+import { useEventListener, useTextareaAutosize } from "@vueuse/core"
 import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
@@ -30,6 +30,10 @@ type EventForm = ReturnType<typeof blank>
 // The form the page edits, and the copy it is compared against to know it is dirty.
 const form = reactive(blank())
 const saved = ref<EventForm>(blank())
+
+// A title wraps rather than scrolling out of sight, so the box grows with it.
+const titleField = ref<HTMLTextAreaElement>()
+useTextareaAutosize({ element: titleField, watch: () => form.title })
 
 // Unsaved edits outlive the page: the section tabs unmount it, and losing a half-written
 // description to a look at the guest list is not a fair trade.
@@ -195,12 +199,17 @@ async function save() {
 			<div class="grid gap-8 md:grid-cols-5">
 				<div class="space-y-8 md:col-span-3">
 					<div class="space-y-2">
-						<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
-						<input
+						<!-- Plain field on purpose: this is the page's headline, not a labelled one.
+						 A textarea rather than an input so a long name wraps; Enter is swallowed
+						 since a title has no second line of its own. -->
+						<textarea
+							ref="titleField"
 							v-model="form.title"
+							rows="1"
 							aria-label="Event title"
 							placeholder="Name your event"
-							class="-mx-1 w-full rounded-4 bg-transparent px-1 text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+							class="w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none"
+							@keydown.enter.prevent
 						/>
 						<!-- Ghost variant: no border, so it reads as a subtitle under the name. -->
 						<Textarea

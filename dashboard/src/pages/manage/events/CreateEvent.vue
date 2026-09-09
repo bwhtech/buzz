@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useTextareaAutosize } from "@vueuse/core"
 import { Alert, Button, ErrorMessage, toast } from "frappe-ui"
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
@@ -26,6 +27,10 @@ const router = useRouter()
 const canCreate = computed(() => canCreateEvents(currentTeam.value?.team_role))
 
 const title = ref("")
+
+// A title wraps rather than scrolling out of sight, so the box grows with it.
+const titleField = ref<HTMLTextAreaElement>()
+useTextareaAutosize({ element: titleField, watch: title })
 const about = ref("")
 const bannerImage = ref("")
 
@@ -192,14 +197,19 @@ async function save() {
 		<EventBanner v-model="bannerImage" :seed="title" :disabled="!canCreate" />
 
 		<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
-		<input
+		<!-- A textarea rather than an input so a long name wraps; Enter is swallowed
+		 since a title has no second line of its own. -->
+		<textarea
 			id="event-title"
+			ref="titleField"
 			v-model="title"
+			rows="1"
 			aria-label="Event title"
 			placeholder="Name your event"
 			:disabled="!canCreate"
 			:aria-invalid="saveAttempted && !title.trim()"
-			class="w-full bg-transparent text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none disabled:text-ink-gray-5 aria-invalid:placeholder:text-ink-red-4"
+			class="w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none disabled:text-ink-gray-5 aria-invalid:placeholder:text-ink-red-4"
+			@keydown.enter.prevent
 		/>
 
 		<div class="grid gap-8 md:grid-cols-5">
