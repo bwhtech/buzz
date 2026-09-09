@@ -130,6 +130,8 @@ function focusFirstMissing() {
 // The button stays live and the checklist says what is still missing, rather than
 // leaving the organiser to guess what would enable it.
 async function save() {
+	// The button is disabled through both, but a keyboard repeat outruns the re-render.
+	if (createEvent.loading || created.value) return
 	if (!canCreate.value) {
 		toast.error(MANAGER_REQUIRED)
 		return
@@ -174,10 +176,14 @@ async function save() {
 				<!-- Enabled even when incomplete, so the click can say what is missing. No
 				 aria-disabled: that reads as disabled to assistive tech and blocks the very
 				 click that explains the state. The checklist is named instead. -->
+				<!-- Held busy past the response as well: the redirect waits on a session
+				 check and a lazy chunk, and a live button on the page it just saved
+				 creates the event a second time. -->
 				<Button
 					variant="solid"
+					size="lg"
 					label="Create"
-					:loading="createEvent.loading"
+					:loading="createEvent.loading || created"
 					aria-describedby="event-requirements"
 					@click="save"
 				/>
