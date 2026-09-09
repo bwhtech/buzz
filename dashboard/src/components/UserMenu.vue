@@ -2,13 +2,12 @@
 import {
 	Avatar,
 	Dropdown,
-	KeyboardShortcut,
 	Tooltip,
 	sidebarCollapsedKey,
 	useColorScheme,
 	type DropdownOptions,
 } from "frappe-ui"
-import { computed, h, inject, ref } from "vue"
+import { computed, inject, ref } from "vue"
 
 import UserSettingsDialog from "@/components/UserSettingsDialog.vue"
 import { session } from "@/data/session"
@@ -52,7 +51,6 @@ const menu = computed<DropdownOptions>(() => [
 				label: __("Settings"),
 				icon: "lucide-settings",
 				onClick: () => (settingsOpen.value = true),
-				slots: { suffix: () => h(KeyboardShortcut, { combo: "G+S", bg: true }) },
 			},
 			{
 				label: __("Theme"),
