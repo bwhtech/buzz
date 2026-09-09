@@ -106,5 +106,6 @@ declare module 'vue' {
     UserGroup: typeof import('./src/components/common/UserGroup.vue')['default']
     UserMenu: typeof import('./src/components/UserMenu.vue')['default']
     UserSettingsDialog: typeof import('./src/components/UserSettingsDialog.vue')['default']
+    ZoomLogo: typeof import('./src/components/common/ZoomLogo.vue')['default']
   }
 }
