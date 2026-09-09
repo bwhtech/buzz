@@ -6,9 +6,24 @@ import pyotp
 from frappe import _
 from frappe.auth import LoginAttemptTracker
 from frappe.core.doctype.sms_settings.sms_settings import send_sms
+from frappe.email.doctype.email_account.email_account import EmailAccount
 from frappe.utils import validate_email_address, validate_phone_number_with_country_code
 
 from buzz.api.booking.exceptions import InvalidOTP, OTPExpired, TooManyOTPAttempts
+
+
+def email_otp_available() -> bool:
+	"""What frappe.sendmail itself resolves through, so mail set in site_config counts."""
+	return bool(EmailAccount.find_default_outgoing())
+
+
+def phone_otp_available() -> bool:
+	"""A gateway, and a Guest allowed to use it: send_sms permission-checks its caller."""
+	if not frappe.db.get_single_value("SMS Settings", "sms_gateway_url"):
+		return False
+
+	allowed = {row.role for row in frappe.get_single("SMS Settings").get("allowed_roles")}
+	return "Guest" in allowed
 
 
 def send_booking_otp(event: int, identifier: str) -> dict | None:

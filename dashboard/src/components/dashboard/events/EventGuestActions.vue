@@ -2,9 +2,11 @@
 import { call, toast } from "frappe-ui"
 import { computed, ref } from "vue"
 
+import GuestRegistrationDialog from "@/components/dashboard/events/GuestRegistrationDialog.vue"
 import QuickActionsRail, {
 	type QuickAction,
 } from "@/components/dashboard/events/QuickActionsRail.vue"
+import QuickActionTile from "@/components/dashboard/events/QuickActionTile.vue"
 import RegistrationDialog from "@/components/dashboard/events/RegistrationDialog.vue"
 import type { EventGuest, EventGuests } from "@/types"
 import { downloadCsv } from "@/utils/csv"
@@ -15,13 +17,27 @@ const props = defineProps<{
 	canWrite: boolean
 	title?: string | null
 	registrationLink?: string | null
+	allowGuestBooking: boolean
+	guestVerificationMethod: string
 	// What the list is currently showing, so the export is the same list.
 	query: { search: string; ticket_types: string; order: string }
 }>()
 const emit = defineEmits<{ changed: [] }>()
 
 const dialogOpen = ref(false)
+const guestDialogOpen = ref(false)
 const exporting = ref(false)
+
+const VERIFICATION_LABELS: Record<string, string> = {
+	"Email OTP": "Email verification",
+	"Phone OTP": "Phone verification",
+}
+
+const guestSubtitle = computed(() => {
+	if (!props.allowGuestBooking) return "Disabled"
+	const verification = VERIFICATION_LABELS[props.guestVerificationMethod]
+	return verification ? `Enabled · ${verification}` : "Enabled"
+})
 
 // The list is paged, so the export walks it: a hundred at a time until the server says
 // there is no next page.
@@ -89,12 +105,29 @@ const actions = computed<QuickAction[]>(() =>
 		:can-write="canWrite"
 		:actions="actions"
 		@toggle="dialogOpen = true"
-	/>
+	>
+		<QuickActionTile
+			icon="lucide-hat-glasses"
+			title="Guest registration"
+			:subtitle="guestSubtitle"
+			:tone="allowGuestBooking ? 'violet' : 'gray'"
+			:disabled="!canWrite"
+			@click="guestDialogOpen = true"
+		/>
+	</QuickActionsRail>
 
 	<RegistrationDialog
 		v-model="dialogOpen"
 		:event="event"
 		:closed="closed"
+		@changed="emit('changed')"
+	/>
+
+	<GuestRegistrationDialog
+		v-model="guestDialogOpen"
+		:event="event"
+		:enabled="allowGuestBooking"
+		:method="guestVerificationMethod"
 		@changed="emit('changed')"
 	/>
 </template>

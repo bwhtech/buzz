@@ -213,15 +213,24 @@ class BuzzEvent(Document):
 		if frappe.in_test or not self.allow_guest_booking:
 			return
 
-		if self.guest_verification_method == "Email OTP":
-			has_email = frappe.db.exists("Email Account", {"default_outgoing": 1, "enable_outgoing": 1})
-			if not has_email:
-				frappe.throw(
-					frappe._(
-						"Please configure an outgoing Email Account before enabling Email OTP verification."
-					),
-					title=frappe._("Email Not Configured"),
-				)
+		# Imported here rather than at the top: doctype modules load during boot, and this
+		# pulls frappe.email onto that path for a check only these branches make.
+		from buzz.api.booking.guests import email_otp_available, phone_otp_available
+
+		if self.guest_verification_method == "Email OTP" and not email_otp_available():
+			frappe.throw(
+				_("Please configure an outgoing Email Account before enabling Email OTP verification."),
+				title=_("Email Not Configured"),
+			)
+
+		if self.guest_verification_method == "Phone OTP" and not phone_otp_available():
+			frappe.throw(
+				_(
+					"Please configure SMS Settings, and allow the Guest role to send SMS, "
+					"before enabling Phone OTP verification."
+				),
+				title=_("SMS Not Configured"),
+			)
 
 	def after_insert(self):
 		self.create_default_records()

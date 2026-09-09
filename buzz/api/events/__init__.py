@@ -12,6 +12,7 @@ from buzz.api.events.schemas import (
 	RegistrationState,
 	RegistrationTrend,
 	RouteAvailability,
+	VerificationMethods,
 )
 
 
@@ -53,6 +54,12 @@ def get_event_guests(
 def set_registration_state(event: str, closed: bool) -> RegistrationState:
 	"""Open or close an event's registrations, answering with the state that results."""
 	return services.set_registration_state(event, closed)
+
+
+@frappe.whitelist()
+def get_verification_methods() -> VerificationMethods:
+	"""Which guest verification methods this site can deliver, for the settings dialog."""
+	return services.verification_methods()
 
 
 @frappe.whitelist()

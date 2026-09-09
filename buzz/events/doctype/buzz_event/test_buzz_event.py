@@ -1193,3 +1193,43 @@ class TestBuzzEventZoomMeeting(FrappeTestCase):
 			webinar = event.create_webinar_on_zoom()
 
 		self.assertEqual(webinar.template, template)
+
+
+class TestGuestVerificationConfig(FrappeTestCase):
+	"""The method is called directly: it is the only validation under test, and the
+	`frappe.in_test` early return has to be lifted for any of it to run."""
+
+	def _event(self, method):
+		event = frappe.new_doc("Buzz Event")
+		event.allow_guest_booking = 1
+		event.guest_verification_method = method
+		return event
+
+	def test_email_otp_needs_an_outgoing_account(self):
+		with (
+			patch.object(frappe, "in_test", False),
+			patch("buzz.api.booking.guests.email_otp_available", return_value=False),
+		):
+			self.assertRaises(
+				frappe.ValidationError, self._event("Email OTP").validate_guest_verification_config
+			)
+
+	def test_phone_otp_needs_sms_a_guest_can_be_sent(self):
+		with (
+			patch.object(frappe, "in_test", False),
+			patch("buzz.api.booking.guests.phone_otp_available", return_value=False),
+		):
+			self.assertRaises(
+				frappe.ValidationError, self._event("Phone OTP").validate_guest_verification_config
+			)
+
+	def test_a_configured_site_passes(self):
+		with (
+			patch.object(frappe, "in_test", False),
+			patch("buzz.api.booking.guests.phone_otp_available", return_value=True),
+		):
+			self._event("Phone OTP").validate_guest_verification_config()
+
+	def test_none_needs_nothing_configured(self):
+		with patch.object(frappe, "in_test", False):
+			self._event("None").validate_guest_verification_config()
