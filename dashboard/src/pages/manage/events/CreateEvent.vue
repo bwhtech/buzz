@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Alert, Button, ErrorMessage, toast } from "frappe-ui"
-import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
+import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { onBeforeRouteLeave, useRouter } from "vue-router"
 
@@ -13,6 +13,7 @@ import type { FrappeError } from "@/types"
 import { defaultSchedule } from "@/utils/eventDates"
 import type { ChecklistItem } from "@/utils/eventValidation"
 import { eventDraftChecklist, isDraftComplete } from "@/utils/eventValidation"
+import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 import { canCreateEvents } from "@/utils/teamRoles"
 import { currentTimeZone } from "@/utils/timeZones"
 
@@ -207,15 +208,19 @@ async function save() {
 				<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
 				 itself: the height and scrolling land on the editable area rather than on a
 				 wrapper, and the whole box takes a click. -->
-				<div class="rounded-6 border border-outline-gray-2 p-3">
+				<div class="overflow-hidden rounded-6 border border-outline-gray-2">
 					<Editor
 						v-model="about"
-						:extensions="[RichTextKit]"
+						:extensions="richTextExtensions"
 						placeholder="What is this event about?"
 						:editable="canCreate"
 					>
+						<EditorFixedMenu
+							:items="richTextToolbar"
+							class="overflow-x-auto border-b border-outline-gray-2 px-2 py-1"
+						/>
 						<EditorContent
-							class="prose-sm h-48 max-w-none overflow-y-auto text-ink-gray-8 focus:outline-none"
+							class="prose-sm h-48 max-w-none overflow-y-auto p-3 text-ink-gray-8 focus:outline-none"
 						/>
 					</Editor>
 				</div>

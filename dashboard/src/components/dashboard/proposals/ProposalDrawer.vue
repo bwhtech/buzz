@@ -32,7 +32,7 @@ import { session } from "@/data/session"
 import { userResource } from "@/data/user"
 import type { ProposalListItem, ProposalSpeaker, TalkProposal } from "@/types"
 import { proposalActions } from "@/utils/proposalActions"
-import { proposalEditorExtensions, proposalEditorToolbar } from "@/utils/proposalEditor"
+import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 import { isReader, speakerName } from "@/utils/speakerByline"
 
 const props = defineProps<{ proposal: ProposalListItem | null }>()
@@ -240,11 +240,11 @@ const fields = computed(() => [
 							<label class="block text-xs text-ink-gray-5">Description</label>
 							<Editor
 								v-model="form.description"
-								:extensions="proposalEditorExtensions"
+								:extensions="richTextExtensions"
 								placeholder="What is the talk about?"
 							>
 								<EditorFixedMenu
-									:items="proposalEditorToolbar"
+									:items="richTextToolbar"
 									class="rounded-t-5 border border-b-0 border-outline-gray-2 px-2 py-1"
 								/>
 								<EditorContent

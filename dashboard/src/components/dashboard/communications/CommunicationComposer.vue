@@ -5,7 +5,7 @@ import { computed, ref } from "vue"
 
 import type { CommunicationDraft } from "@/types"
 import { audienceOptions, hasText } from "@/utils/communicationText"
-import { proposalEditorExtensions, proposalEditorToolbar } from "@/utils/proposalEditor"
+import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 
 const props = defineProps<{ canWrite: boolean; sending: boolean }>()
 const draft = defineModel<CommunicationDraft>({ required: true })
@@ -36,7 +36,7 @@ const canSend = computed(() => props.canWrite && hasText(draft.value.message) &&
 
 		<Editor
 			v-model="draft.message"
-			:extensions="proposalEditorExtensions"
+			:extensions="richTextExtensions"
 			:editable="canWrite"
 			placeholder="Write your message…"
 			@focus="touched = true"
@@ -48,7 +48,7 @@ const canSend = computed(() => props.canWrite && hasText(draft.value.message) &&
 				v-if="showActions"
 				class="composer-actions flex items-center gap-2 border-t border-outline-gray-1 p-2"
 			>
-				<EditorFixedMenu :items="proposalEditorToolbar" class="min-w-0 flex-1 overflow-x-auto" />
+				<EditorFixedMenu :items="richTextToolbar" class="min-w-0 flex-1 overflow-x-auto" />
 				<Button label="Advanced" icon-left="lucide-sliders-horizontal" @click="emit('advanced')" />
 				<Button
 					variant="solid"

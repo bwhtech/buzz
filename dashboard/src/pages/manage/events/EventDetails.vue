@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useEventListener } from "@vueuse/core"
 import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
-import { Editor, EditorContent, RichTextKit } from "frappe-ui/editor"
+import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
@@ -18,6 +18,7 @@ import { session } from "@/data/session"
 import type { EventDetail, FrappeError } from "@/types"
 import { isEndBeforeStart } from "@/utils/eventDates"
 import { matches } from "@/utils/formDraft"
+import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 
 const route = useRoute()
 const eventId = route.params.eventId as string
@@ -218,15 +219,19 @@ async function save() {
 						 itself: the height and scrolling land on the editable area rather than on a
 						 wrapper, and the whole box takes a click. -->
 						<div
-							class="rounded-6 border border-outline-gray-2 p-3 transition-colors duration-150 ease-out focus-within:border-outline-gray-4 motion-reduce:transition-none"
+							class="overflow-hidden rounded-6 border border-outline-gray-2 transition-colors duration-150 ease-out focus-within:border-outline-gray-4 motion-reduce:transition-none"
 						>
 							<Editor
 								v-model="form.about"
-								:extensions="[RichTextKit]"
+								:extensions="richTextExtensions"
 								placeholder="What is this event about?"
 							>
+								<EditorFixedMenu
+									:items="richTextToolbar"
+									class="overflow-x-auto border-b border-outline-gray-2 px-2 py-1"
+								/>
 								<EditorContent
-									class="prose-sm h-48 max-w-none overflow-y-auto text-ink-gray-8 focus:outline-none"
+									class="prose-sm h-48 max-w-none overflow-y-auto p-3 text-ink-gray-8 focus:outline-none"
 								/>
 							</Editor>
 						</div>

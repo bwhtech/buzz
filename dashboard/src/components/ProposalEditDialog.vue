@@ -66,9 +66,9 @@ import { computed, ref, watch } from "vue"
 import PhoneInput from "@/components/PhoneInput.vue"
 import type { FrappeError } from "@/types"
 import {
-	proposalEditorExtensions as editorExtensions,
-	proposalEditorToolbar as editorToolbar,
-} from "@/utils/proposalEditor"
+	richTextExtensions as editorExtensions,
+	richTextToolbar as editorToolbar,
+} from "@/utils/richTextEditor"
 
 const props = defineProps({
 	open: {
