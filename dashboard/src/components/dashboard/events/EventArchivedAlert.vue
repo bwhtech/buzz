@@ -14,7 +14,12 @@ const archived = computed(() => Boolean(eventDoc.doc) && !eventDoc.doc?.is_publi
 </script>
 
 <template>
-	<Alert v-if="archived" theme="amber" :title="__('This event is archived')">
+	<Alert
+		v-if="archived"
+		theme="amber"
+		:title="__('This event is archived')"
+		class="dark:!bg-surface-gray-2"
+	>
 		<template #description>
 			{{ __("The event page is offline and its forms are no longer accepting responses.") }}
 			<RouterLink
@@ -23,7 +28,7 @@ const archived = computed(() => Boolean(eventDoc.doc) && !eventDoc.doc?.is_publi
 			>
 				{{ __("Unarchive the event") }}
 			</RouterLink>
-			{{ __("from More to bring it back online.") }}
+			{{ __("to make the event page live.") }}
 		</template>
 	</Alert>
 </template>
