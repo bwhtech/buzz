@@ -27,7 +27,7 @@ def get_user_info() -> UserInfoResponse | GuestInfoResponse:
 		user_image=user.user_image,
 		bio=user.bio,
 		roles=user.roles,
-		brand_image=frappe.get_single_value("Website Settings", "banner_image"),
+		brand_image=frappe.get_cached_value("Website Settings", "Website Settings", "banner_image"),
 		language=user.language,
 		time_zone=user.time_zone,
 	)
