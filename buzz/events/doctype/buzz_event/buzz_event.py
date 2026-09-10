@@ -259,11 +259,10 @@ class BuzzEvent(Document):
 		self.save(ignore_permissions=True)
 
 	def archive_event(self):
-		"""Take the event off the public site, along with every form it serves.
+		"""Take the event off the public site, along with the forms and registrations it takes.
 
-		The public form page already refuses an unpublished event, so unpublishing the
-		rows is the stored state catching up with that gate: a row left published would
-		reopen its form the moment the event is published again.
+		The booking and form gates already refuse an unpublished event; this is the stored
+		state catching up, so publishing again does not reopen everything with it.
 		"""
 		self.is_published = 0
 		self.close_registrations()

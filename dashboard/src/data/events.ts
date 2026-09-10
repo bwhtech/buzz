@@ -100,7 +100,7 @@ export function useAddCoHost() {
  * it lands: the store has no idea the server moved.
  */
 export function useArchiveEvent() {
-	return useCall<{ archived: boolean }, { event: string }>({
+	return useCall<null, { event: string }>({
 		url: "/api/v2/method/buzz.api.events.archive_event",
 		method: "POST",
 		immediate: false,

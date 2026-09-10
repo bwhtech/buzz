@@ -1142,7 +1142,7 @@ class TestArchiveEvent(IntegrationTestCase):
 		publish_forms(event)
 		frappe.set_user(self.owner)
 
-		self.assertTrue(archive_event(event).archived)
+		archive_event(event)
 
 		doc = frappe.get_doc("Buzz Event", event)
 		self.assertFalse(doc.is_published)
@@ -1158,10 +1158,13 @@ class TestArchiveEvent(IntegrationTestCase):
 		self.assertIsNotNone(frappe.db.get_value("Buzz Event", event, "registrations_close_at"))
 
 	def test_archiving_an_archived_event_is_a_no_op(self):
+		"""validate() runs on the way through, so a second archive must not throw."""
 		event = create_event("Already Archived Event", self.team, is_published=0)
 		frappe.set_user(self.owner)
 
-		self.assertTrue(archive_event(event).archived)
+		archive_event(event)
+
+		self.assertFalse(frappe.db.get_value("Buzz Event", event, "is_published"))
 
 	def test_someone_outside_the_team_cannot_archive(self):
 		event = create_event("Guarded Event", self.team, is_published=1)

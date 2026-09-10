@@ -2,7 +2,6 @@ import frappe
 
 from buzz.api.events import services
 from buzz.api.events.schemas import (
-	ArchiveState,
 	CreatedEvent,
 	EventDetail,
 	EventGuestsResponse,
@@ -58,9 +57,9 @@ def set_registration_state(event: str, closed: bool) -> RegistrationState:
 
 
 @frappe.whitelist(methods=["POST"])
-def archive_event(event: str) -> ArchiveState:
+def archive_event(event: str) -> None:
 	"""Take an event and the forms it serves off the public site."""
-	return services.archive_event(event)
+	services.archive_event(event)
 
 
 @frappe.whitelist()

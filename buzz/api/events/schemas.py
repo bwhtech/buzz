@@ -185,12 +185,6 @@ class RegistrationState(APIResponse):
 	registrations_closed: bool
 
 
-class ArchiveState(APIResponse):
-	"""Whether the event is off the public site, as the server reads it after a change."""
-
-	archived: bool
-
-
 class VerificationMethods(APIResponse):
 	"""Which guest verification methods this site is configured to deliver."""
 
