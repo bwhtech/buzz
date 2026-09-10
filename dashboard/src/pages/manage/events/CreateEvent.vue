@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useTextareaAutosize } from "@vueuse/core"
-import { Alert, Button, ErrorMessage, toast } from "frappe-ui"
+import { Alert, Button, ErrorMessage, LoadingIndicator, toast } from "frappe-ui"
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
+import { TextMorph } from "torph/vue"
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { onBeforeRouteLeave, useRouter } from "vue-router"
 
@@ -22,13 +23,10 @@ const MANAGER_REQUIRED = "Ask an admin to make you a Manager to create events."
 
 const router = useRouter()
 
-// The server refuses anything below Manager, so the form is shown read-only rather than
-// letting someone fill it in and lose the work to a 403 on save.
 const canCreate = computed(() => canCreateEvents(currentTeam.value?.team_role))
 
 const title = ref("")
 
-// A title wraps rather than scrolling out of sight, so the box grows with it.
 const titleField = ref<HTMLTextAreaElement>()
 useTextareaAutosize({ element: titleField, watch: title })
 const about = ref("")
@@ -39,12 +37,9 @@ const startDate = ref(opening.startDate)
 const startTime = ref(opening.startTime)
 const endDate = ref(opening.endDate)
 const endTime = ref(opening.endTime)
-// The organiser's own zone is the safe opening guess; they change it if the event is
-// somewhere else.
 const timeZone = ref(currentTimeZone())
 
 const venue = ref("")
-// The Zoom meeting can only be booked once the event exists, so save has to act on this.
 const zoomMeeting = ref(false)
 
 const draft = computed(() => ({
@@ -62,8 +57,6 @@ const checklist = computed(() => eventDraftChecklist(draft.value))
 // createResource types its error as {}, so the message needs narrowing.
 const errorMessage = computed(() => (createEvent.error as FrappeError | null)?.messages?.join("\n"))
 
-// The time zone and the opening slot come pre-filled, so they say nothing about whether
-// the organiser has started — only a schedule moved off those defaults does.
 const isDirty = computed(() =>
 	Boolean(
 		title.value ||
@@ -78,11 +71,44 @@ const isDirty = computed(() =>
 	),
 )
 
-// Set once the event exists: the form is no longer worth keeping, and the redirect that
-// follows must not be challenged.
+// Also releases the leave guard: the redirect that follows must not be challenged.
 const created = ref(false)
 
-// Nothing here autosaves, so leaving with a draft in hand has to be deliberate.
+// Held for the whole sequence, not just the request: the steps play on past the response,
+// and a flag that tracks the request alone drops the form back in mid-walk.
+const submitting = ref(false)
+
+// Local to the sequence: the resource keeps its error for the form's message long after
+// the panel is done with it, and the panel has to start clean on every attempt.
+const failed = ref(false)
+
+const CREATION_STEPS = [
+	"Saving the details",
+	"Setting the schedule",
+	"Booking the venue",
+	"Opening the guest list",
+]
+const FINAL_STEP = "Opening event page"
+const FAILED_STEP = "Failed to create event"
+const STEP_DURATION = 600
+
+const step = ref(CREATION_STEPS[0])
+
+function wait(milliseconds: number) {
+	return new Promise((resolve) => setTimeout(resolve, milliseconds))
+}
+
+// Walks the steps at a fixed pace whatever the save is doing, so the panel reads as
+// progress rather than as a spinner with captions.
+async function walkSteps() {
+	for (const next of CREATION_STEPS.slice(1)) {
+		await wait(STEP_DURATION)
+		if (createEvent.error) return
+		step.value = next
+	}
+	await wait(STEP_DURATION)
+}
+
 const LEAVE_WARNING = "You have unsaved changes. Leave without saving?"
 
 function warnOnUnload(unload: BeforeUnloadEvent) {
@@ -93,8 +119,6 @@ onMounted(() => window.addEventListener("beforeunload", warnOnUnload))
 onBeforeUnmount(() => window.removeEventListener("beforeunload", warnOnUnload))
 onBeforeRouteLeave(() => !isDirty.value || created.value || window.confirm(LEAVE_WARNING))
 
-// Nothing is marked wrong until the organiser has asked to save; before that the
-// checklist reads as a plan, not as four errors about work they have not started.
 const saveAttempted = ref(false)
 
 const missingItems = computed(() => checklist.value.filter((item) => !item.done))
@@ -104,21 +128,16 @@ function iconColor(item: ChecklistItem) {
 	return saveAttempted.value ? "text-ink-red-7" : "text-ink-gray-6"
 }
 
-// Combobox draws its own error region, so Where says what it is missing in place.
 const locationError = computed(() =>
 	saveAttempted.value && !venue.value && !zoomMeeting.value
 		? "Pick a venue, or create a Zoom meeting"
 		: "",
 )
 
-// "a, b, and c" — the toast has to name the fields, since the checklist may be scrolled
-// out of view and never reaches assistive tech on its own.
 const listFormat = new Intl.ListFormat("en", { style: "long", type: "conjunction" })
 
-// The checklist is a summary; the fields themselves have to show which one is meant.
 function focusFirstMissing() {
 	const target = document.getElementById(missingItems.value[0]?.field ?? "")
-	// A full-page smooth scroll is exactly the motion a vestibular user turns off.
 	const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches
 	target?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "center" })
 	const focusable = target?.matches("input, button")
@@ -127,166 +146,191 @@ function focusFirstMissing() {
 	;(focusable as HTMLElement | null)?.focus({ preventScroll: true })
 }
 
-// The button stays live and the checklist says what is still missing, rather than
-// leaving the organiser to guess what would enable it.
 async function save() {
 	// The button is disabled through both, but a keyboard repeat outruns the re-render.
-	if (createEvent.loading || created.value) return
+	if (submitting.value || created.value) return
 	if (!canCreate.value) {
 		toast.error(MANAGER_REQUIRED)
 		return
 	}
 	saveAttempted.value = true
 	if (!isDraftComplete(draft.value)) {
-		// Labels are sentence-cased for the list, which reads as one sentence.
 		const names = missingItems.value.map((item) => item.label.toLowerCase())
 		toast.error(`Add ${listFormat.format(names)}`)
 		focusFirstMissing()
 		return
 	}
 
-	await createEvent.submit({
-		event: {
-			team: currentTeam.value?.name,
-			title: title.value.trim(),
-			start_date: startDate.value,
-			start_time: startTime.value,
-			end_date: endDate.value || null,
-			end_time: endTime.value,
-			about: about.value || null,
-			banner_image: bannerImage.value || null,
-			time_zone: timeZone.value || null,
-			venue: venue.value || null,
-			zoom_meeting: zoomMeeting.value,
-		},
-	})
-	if (createEvent.error) return
+	submitting.value = true
+	failed.value = false
+	step.value = CREATION_STEPS[0]
+	// Steps and save run together: whichever finishes first waits for the other. The
+	// rejection is swallowed because createResource records the error on itself.
+	await Promise.all([
+		createEvent
+			.submit({
+				event: {
+					team: currentTeam.value?.name,
+					title: title.value.trim(),
+					start_date: startDate.value,
+					start_time: startTime.value,
+					end_date: endDate.value || null,
+					end_time: endTime.value,
+					about: about.value || null,
+					banner_image: bannerImage.value || null,
+					time_zone: timeZone.value || null,
+					venue: venue.value || null,
+					zoom_meeting: zoomMeeting.value,
+				},
+			})
+			.catch(() => {}),
+		walkSteps(),
+	])
+	if (createEvent.error) {
+		// The panel says how it ended before it hands the form back with the message.
+		failed.value = true
+		step.value = FAILED_STEP
+		toast.error(errorMessage.value || FAILED_STEP)
+		await wait(STEP_DURATION * 2)
+		submitting.value = false
+		return
+	}
 
 	created.value = true
+	step.value = FINAL_STEP
 	toast.success(`${createEvent.data?.title} created`)
+	await wait(STEP_DURATION)
 	router.push({ name: "event-details", params: { eventId: createEvent.data?.name } })
 }
 </script>
 
 <template>
-	<div class="m-auto max-w-[800px] w-full py-8 px-4 space-y-8">
-		<header class="space-y-4">
-			<div class="flex items-center justify-between gap-4">
-				<h1 class="text-2xl font-semibold text-ink-gray-9">Create event</h1>
-				<!-- Enabled even when incomplete, so the click can say what is missing. No
-				 aria-disabled: that reads as disabled to assistive tech and blocks the very
-				 click that explains the state. The checklist is named instead. -->
-				<!-- Held busy past the response as well: the redirect waits on a session
-				 check and a lazy chunk, and a live button on the page it just saved
-				 creates the event a second time. -->
-				<Button
-					variant="solid"
-					size="lg"
-					label="Create"
-					:loading="createEvent.loading || created"
-					aria-describedby="event-requirements"
-					@click="save"
+	<div class="m-auto max-w-[800px] w-full py-8 px-4">
+		<Transition
+			mode="out-in"
+			enter-active-class="transition-opacity duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
+			leave-active-class="transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
+			enter-from-class="opacity-0"
+			leave-to-class="opacity-0"
+		>
+			<div v-if="!submitting" class="space-y-8">
+				<header class="space-y-4">
+					<div class="flex items-center justify-between gap-4">
+						<h1 class="text-2xl font-semibold text-ink-gray-9">Create event</h1>
+						<!-- Never disabled, and never aria-disabled: the click is what explains
+						 what is missing. Held busy past the response, or the page it just saved
+						 takes a second click. -->
+						<Button
+							variant="solid"
+							size="lg"
+							label="Create"
+							:loading="submitting"
+							aria-describedby="event-requirements"
+							@click="save"
+						/>
+					</div>
+
+					<ErrorMessage v-if="errorMessage" :message="errorMessage" />
+				</header>
+
+				<Alert
+					v-if="!canCreate"
+					theme="amber"
+					title="You cannot create events"
+					:description="MANAGER_REQUIRED"
+					:dismissible="false"
 				/>
-			</div>
 
-			<ErrorMessage v-if="errorMessage" :message="errorMessage" />
-		</header>
+				<EventBanner v-model="bannerImage" :seed="title" :disabled="!canCreate" />
 
-		<Alert
-			v-if="!canCreate"
-			theme="amber"
-			title="You cannot create events"
-			:description="MANAGER_REQUIRED"
-			:dismissible="false"
-		/>
-
-		<EventBanner v-model="bannerImage" :seed="title" :disabled="!canCreate" />
-
-		<!-- Plain input on purpose: this is the page's headline, not a labelled field. -->
-		<!-- A textarea rather than an input so a long name wraps; Enter is swallowed
-		 since a title has no second line of its own. -->
-		<textarea
-			id="event-title"
-			ref="titleField"
-			v-model="title"
-			rows="1"
-			aria-label="Event title"
-			placeholder="Name your event"
-			:disabled="!canCreate"
-			:aria-invalid="saveAttempted && !title.trim()"
-			class="w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none disabled:text-ink-gray-5 aria-invalid:placeholder:text-ink-red-4"
-			@keydown.enter.prevent
-		/>
-
-		<div class="grid gap-8 md:grid-cols-5">
-			<section class="space-y-3 md:col-span-3">
-				<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
-				<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
-				 itself: the height and scrolling land on the editable area rather than on a
-				 wrapper, and the whole box takes a click. -->
-				<div class="overflow-hidden rounded-6 border border-outline-gray-2">
-					<Editor
-						v-model="about"
-						:extensions="richTextExtensions"
-						placeholder="What is this event about?"
-						:editable="canCreate"
-					>
-						<EditorFixedMenu
-							:items="richTextToolbar"
-							class="overflow-x-auto border-b border-outline-gray-2 px-2 py-1"
-						/>
-						<EditorContent
-							class="prose-sm h-48 max-w-none overflow-y-auto p-3 text-ink-gray-8 focus:outline-none"
-						/>
-					</Editor>
-				</div>
-			</section>
-
-			<div class="space-y-8 md:col-span-2">
-				<EventSchedule
+				<textarea
+					id="event-title"
+					ref="titleField"
+					v-model="title"
+					rows="1"
+					aria-label="Event title"
+					placeholder="Name your event"
 					:disabled="!canCreate"
-					v-model:start-date="startDate"
-					v-model:start-time="startTime"
-					v-model:end-date="endDate"
-					v-model:end-time="endTime"
-					v-model:time-zone="timeZone"
+					:aria-invalid="saveAttempted && !title.trim()"
+					class="w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none disabled:text-ink-gray-5 aria-invalid:placeholder:text-ink-red-4"
+					@keydown.enter.prevent
 				/>
 
-				<section id="event-location" class="space-y-1.5">
-					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
-					<EventLocation
-						v-model:venue="venue"
-						v-model:zoom-meeting="zoomMeeting"
-						:team="currentTeam?.name ?? ''"
-						:disabled="!canCreate"
-						:error="locationError"
-					/>
+				<div class="grid gap-8 md:grid-cols-5">
+					<section class="space-y-3 md:col-span-3">
+						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
+						<div class="overflow-hidden rounded-6 border border-outline-gray-2">
+							<Editor
+								v-model="about"
+								:extensions="richTextExtensions"
+								placeholder="What is this event about?"
+								:editable="canCreate"
+							>
+								<EditorFixedMenu
+									:items="richTextToolbar"
+									class="overflow-x-auto border-b border-outline-gray-2 px-2 py-1"
+								/>
+								<EditorContent
+									class="prose-sm h-48 max-w-none overflow-y-auto p-3 text-ink-gray-8 focus:outline-none"
+								/>
+							</Editor>
+						</div>
+					</section>
+
+					<div class="space-y-8 md:col-span-2">
+						<EventSchedule
+							:disabled="!canCreate"
+							v-model:start-date="startDate"
+							v-model:start-time="startTime"
+							v-model:end-date="endDate"
+							v-model:end-time="endTime"
+							v-model:time-zone="timeZone"
+						/>
+
+						<section id="event-location" class="space-y-1.5">
+							<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
+							<EventLocation
+								v-model:venue="venue"
+								v-model:zoom-meeting="zoomMeeting"
+								:team="currentTeam?.name ?? ''"
+								:disabled="!canCreate"
+								:error="locationError"
+							/>
+						</section>
+					</div>
+				</div>
+				<section id="event-requirements" class="space-y-3 rounded-6 bg-surface-gray-1/90 p-4">
+					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">
+						{{ missingItems.length ? "Still needed" : "Ready to create" }}
+					</h2>
+
+					<ul class="space-y-2" aria-live="polite">
+						<li
+							v-for="item in checklist"
+							:key="item.label"
+							class="flex items-center gap-2 text-base text-ink-gray-8"
+						>
+							<span
+								class="size-4 shrink-0 transition-colors duration-150 ease-out motion-reduce:transition-none"
+								:class="[item.done ? 'lucide-check' : 'lucide-x', iconColor(item)]"
+								aria-hidden="true"
+							/>
+							<span>{{ item.label }}</span>
+							<span class="sr-only">{{ item.done ? "done" : "missing" }}</span>
+						</li>
+					</ul>
 				</section>
 			</div>
-		</div>
-		<!-- The colour rides on the icon alone: the label stays at full contrast, so the
-		 row still reads when the two hues do not. -->
-		<section id="event-requirements" class="space-y-3 rounded-6 bg-surface-gray-1/90 p-4">
-			<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">
-				{{ missingItems.length ? "Still needed" : "Ready to create" }}
-			</h2>
 
-			<ul class="space-y-2" aria-live="polite">
-				<li
-					v-for="item in checklist"
-					:key="item.label"
-					class="flex items-center gap-2 text-base text-ink-gray-8"
-				>
-					<!-- A row turning green is the only reward in this flow; a hard cut spends it. -->
-					<span
-						class="size-4 shrink-0 transition-colors duration-150 ease-out motion-reduce:transition-none"
-						:class="[item.done ? 'lucide-check' : 'lucide-x', iconColor(item)]"
-						aria-hidden="true"
-					/>
-					<span>{{ item.label }}</span>
-					<span class="sr-only">{{ item.done ? "done" : "missing" }}</span>
-				</li>
-			</ul>
-		</section>
+			<div v-else class="flex m-auto items-center justify-center gap-3 py-24">
+				<span v-if="failed" class="lucide-circle-x size-6 text-ink-red-6" aria-hidden="true" />
+				<LoadingIndicator v-else class="size-6 text-ink-gray-7" />
+				<TextMorph
+					:text="step"
+					class="text-base"
+					:class="failed ? 'text-ink-red-6' : 'text-ink-gray-7'"
+				/>
+			</div>
+		</Transition>
 	</div>
 </template>
