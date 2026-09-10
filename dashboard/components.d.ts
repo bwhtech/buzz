@@ -92,6 +92,7 @@ declare module 'vue' {
     RestrictionNotices: typeof import('./src/components/RestrictionNotices.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SelectionBar: typeof import('./src/components/common/SelectionBar.vue')['default']
     SponsorshipPaymentDialog: typeof import('./src/components/SponsorshipPaymentDialog.vue')['default']
     SuccessMessage: typeof import('./src/components/SuccessMessage.vue')['default']
     TeamMembersTable: typeof import('./src/components/dashboard/teams/TeamMembersTable.vue')['default']
