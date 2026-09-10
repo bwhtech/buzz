@@ -7,7 +7,7 @@ import { Button, PageHeader } from "frappe-ui"
 		<Button
 			class="ml-auto"
 			variant="solid"
-			icon-left="plus"
+			icon-left="lucide-plus"
 			label="Create Event"
 			:route="{ name: 'create-event' }"
 		/>

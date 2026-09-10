@@ -34,7 +34,13 @@
 					</template>
 					Start Scanner
 				</Button>
-				<Button @click="stopScanner" v-else variant="outline" class="flex-1" icon-left="square">
+				<Button
+					@click="stopScanner"
+					v-else
+					variant="outline"
+					class="flex-1"
+					icon-left="lucide-square"
+				>
 					{{ __("Stop Scanner") }}
 				</Button>
 			</div>
