@@ -4,7 +4,7 @@ import { computed } from "vue"
 import { useRoute } from "vue-router"
 
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
-import { useArchiveEvent, useEventDoc } from "@/data/events"
+import { useArchiveEvent, useCanWriteEvent, useEventDoc } from "@/data/events"
 
 // A settings row and the group it belongs to. The page renders whatever this describes,
 // so a new setting is an entry here rather than another block of markup.
@@ -22,6 +22,11 @@ const eventId = route.params.eventId as string
 
 const event = useEventDoc(() => eventId)
 const archiveEvent = useArchiveEvent()
+
+// Viewers and Frontdesk reach this page — the shell only gates on team membership — but
+// the server refuses the write. Read-only sees the setting, greyed, rather than a button
+// that always fails.
+const canWrite = useCanWriteEvent(eventId)
 
 // Only read once the doc has landed, so a null doc never renders as "not archived".
 const archived = computed(() => !event.doc?.is_published)
@@ -120,6 +125,7 @@ async function unarchive() {
 								:label="setting.action.label"
 								:theme="setting.action.theme"
 								:loading="busy"
+								:disabled="!canWrite.data?.has_permission"
 								class="transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97] motion-reduce:active:scale-100"
 								@click="setting.action.onClick"
 							/>

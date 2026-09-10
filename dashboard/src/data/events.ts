@@ -93,6 +93,23 @@ export function useAddCoHost() {
 }
 
 /**
+ * Whether the session user may write to an event.
+ *
+ * Core's own check, so it runs through Buzz's `team_has_permission` hook and answers for
+ * an unrestricted user too — a System Manager holds no membership, so reading the role off
+ * the loaded teams list would deny them.
+ */
+export function useCanWriteEvent(event: string) {
+	return useCall<
+		{ has_permission: boolean },
+		{ doctype: string; docname: string; perm_type: string }
+	>({
+		url: "/api/v2/method/frappe.client.has_permission",
+		params: { doctype: "Buzz Event", docname: event, perm_type: "write" },
+	})
+}
+
+/**
  * Take an event and the forms it serves off the public site.
  *
  * Archiving is more than the `is_published` write its opposite is — the endpoint also
