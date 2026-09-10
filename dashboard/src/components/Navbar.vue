@@ -19,13 +19,19 @@
 					v-if="session.isLoggedIn"
 					:loading="session.logout.loading"
 					@click="session.logout.submit"
-					icon-right="log-out"
+					icon-right="lucide-log-out"
 					variant="ghost"
 					size="md"
 				>
 					{{ __("Log Out") }}
 				</Button>
-				<Button v-else @click="openLoginDialog" icon-right="log-in" variant="ghost" size="md">
+				<Button
+					v-else
+					@click="openLoginDialog"
+					icon-right="lucide-log-in"
+					variant="ghost"
+					size="md"
+				>
 					{{ __("Log In") }}
 				</Button>
 			</div>

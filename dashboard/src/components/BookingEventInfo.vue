@@ -3,7 +3,11 @@
 		<div class="mb-8 flex items-center justify-between">
 			<h3 class="text-lg-semibold text-ink-gray-9">{{ event.title }}</h3>
 
-			<Button :link="`/events/${event.route}`" icon-left="external-link" variant="subtle" size="sm"
+			<Button
+				:link="`/events/${event.route}`"
+				icon-left="lucide-external-link"
+				variant="subtle"
+				size="sm"
 				>{{ __("Visit Event Page") }}
 			</Button>
 		</div>

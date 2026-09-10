@@ -1910,10 +1910,10 @@ fraction.js@^4.1.2:
   resolved "https://registry.npmjs.org/fraction.js/-/fraction.js-4.1.2.tgz"
   integrity sha512-o2RiJQ6DZaR/5+Si0qJUIy637QMRudSi9kU/FFzx9EZazrIdnBgpU+3sEWCxAVhH2RtxW2Oz+T4p2o8uOPVcgA==
 
-frappe-ui@1.0.0-beta.55:
-  version "1.0.0-beta.55"
-  resolved "https://registry.yarnpkg.com/frappe-ui/-/frappe-ui-1.0.0-beta.55.tgz#405b8e569d456d8b6679f4dd3109068c3982dfcc"
-  integrity sha512-+G+5GDVIr31+QJ2ekDpM8FOXUWzTO4oBhh9rMjfDzJnFGzISbAy4U7V/XOF3hYOkQz4R/QqnrHTD55o+JRcOoA==
+frappe-ui@1.0.0-beta.63:
+  version "1.0.0-beta.63"
+  resolved "https://registry.yarnpkg.com/frappe-ui/-/frappe-ui-1.0.0-beta.63.tgz#4538261c9fd8bad4802d55b9b46c3f42548cb1bd"
+  integrity sha512-wUVIAFwpBGQTnmItSfWaDVu1/OxT885ENWMH7FUVb9j9NGDnSwcQDwaPAJyRUjGp+91jL4Be2xS0cBCzhXcpvA==
   dependencies:
     "@codemirror/lang-css" "^6.3.0"
     "@codemirror/lang-html" "^6.4.9"
