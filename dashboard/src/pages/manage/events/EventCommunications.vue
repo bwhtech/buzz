@@ -8,6 +8,7 @@ import CommunicationActions from "@/components/dashboard/communications/Communic
 import CommunicationComposer from "@/components/dashboard/communications/CommunicationComposer.vue"
 import CommunicationDrawer from "@/components/dashboard/communications/CommunicationDrawer.vue"
 import CommunicationHistory from "@/components/dashboard/communications/CommunicationHistory.vue"
+import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import { useEventCommunications, useSendCommunication } from "@/data/communications"
 import { session } from "@/data/session"
@@ -97,6 +98,8 @@ const canWrite = computed(() => !!page.data?.can_write)
 	<EventPageHeader :title="page.data?.title" section="Announcements" />
 
 	<PageWithSidebar>
+		<EventArchivedAlert :event="eventId" />
+
 		<section class="space-y-3">
 			<h1 class="text-xl font-semibold text-ink-gray-9">Send an Announcement</h1>
 			<Skeleton v-if="page.loading && !page.data" class="h-40 w-full rounded-8" />

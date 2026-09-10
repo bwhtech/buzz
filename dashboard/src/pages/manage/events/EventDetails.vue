@@ -5,6 +5,7 @@ import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
+import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
 import EventDetailsSkeleton from "@/components/dashboard/events/EventDetailsSkeleton.vue"
 import EventHosts from "@/components/dashboard/events/EventHosts.vue"
@@ -192,6 +193,8 @@ async function save() {
 		enter-from-class="opacity-0"
 	>
 		<div v-if="event.data" class="m-auto w-full max-w-[800px] space-y-8 px-4 py-8">
+			<EventArchivedAlert :event="eventId" />
+
 			<ErrorMessage v-if="errorMessage" :message="errorMessage" />
 
 			<EventBanner v-model="form.banner_image" :seed="form.title" />

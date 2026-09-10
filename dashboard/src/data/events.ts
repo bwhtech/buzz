@@ -1,4 +1,4 @@
-import { createResource, useCall } from "frappe-ui"
+import { createResource, useCall, useDoc } from "frappe-ui"
 
 import type {
 	EventDetail,
@@ -23,6 +23,21 @@ export function useMyEvents(filters?: () => Record<string, string>) {
 export const createEvent = createResource<{ name: string; title: string }>({
 	url: "buzz.api.events.create_event",
 })
+
+/** What the manage shell reads off the event itself: its title, and whether it is live. */
+type EventShellDoc = { name: string; title: string; is_published: 0 | 1 }
+
+/**
+ * The event document, shared by everything that reads or flips its publish state.
+ *
+ * useDoc keys into frappe-ui's document store, so the shell's archived banner and the
+ * setting that archives the event work off one reactive doc — a write through `setValue`
+ * lands in both without either knowing about the other.
+ */
+export function useEventDoc(event: () => string) {
+	// The empty string holds the initial fetch until the route param resolves.
+	return useDoc<EventShellDoc>({ doctype: "Buzz Event", name: () => event() || "" })
+}
 
 /** One event with everything its manage page edits. Per page, so it is not a singleton. */
 export function eventDetail(event: string) {
