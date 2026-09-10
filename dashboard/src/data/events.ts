@@ -92,6 +92,21 @@ export function useAddCoHost() {
 	})
 }
 
+/**
+ * Take an event and the forms it serves off the public site.
+ *
+ * Archiving is more than the `is_published` write its opposite is — the endpoint also
+ * closes the event's forms — so it does not go through `setValue`. Reload the doc after
+ * it lands: the store has no idea the server moved.
+ */
+export function useArchiveEvent() {
+	return useCall<{ archived: boolean }, { event: string }>({
+		url: "/api/v2/method/buzz.api.events.archive_event",
+		method: "POST",
+		immediate: false,
+	})
+}
+
 /** Drop a co-host from the event. The Event Host record itself is left alone. */
 export function useRemoveCoHost() {
 	return useCall<null, { event: string; host: string }>({

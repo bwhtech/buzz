@@ -257,6 +257,18 @@ class BuzzEvent(Document):
 			self.append("custom_forms", form)
 		self.save(ignore_permissions=True)
 
+	def archive_event(self):
+		"""Take the event off the public site, along with every form it serves.
+
+		The public form page already refuses an unpublished event, so unpublishing the
+		rows is the stored state catching up with that gate: a row left published would
+		reopen its form the moment the event is published again.
+		"""
+		self.is_published = 0
+		for form in self.custom_forms:
+			form.publish = 0
+		self.save()
+
 	@frappe.whitelist()
 	@only_if_app_installed("zoom_integration", raise_exception=True)
 	def create_webinar_on_zoom(self):

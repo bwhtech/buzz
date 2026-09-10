@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from buzz.api.events import (
 	add_co_host,
+	archive_event,
 	check_event_route,
 	get_event,
 	get_event_guests,
@@ -1114,3 +1115,50 @@ class TestVerificationMethods(IntegrationTestCase):
 		from frappe.email.doctype.email_account.email_account import EmailAccount
 
 		self.assertEqual(get_verification_methods().email, bool(EmailAccount.find_default_outgoing()))
+
+
+def publish_forms(event: str) -> None:
+	"""`publish` defaults to 0, so the rows have to be opened before a close means anything."""
+	doc = frappe.get_doc("Buzz Event", event)
+	for row in doc.custom_forms:
+		row.publish = 1
+	doc.save(ignore_permissions=True)
+
+
+class TestArchiveEvent(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+		cls.owner = create_user("archive-owner@example.com", "Archive Owner")
+		cls.outsider = create_user("archive-outsider@example.com", "Archive Outsider")
+		cls.team = create_owned_team("Archive Team", cls.owner)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+
+	def test_archiving_unpublishes_the_event_and_its_forms(self):
+		event = create_event("Archivable Event", self.team, is_published=1)
+		publish_forms(event)
+		frappe.set_user(self.owner)
+
+		self.assertTrue(archive_event(event).archived)
+
+		doc = frappe.get_doc("Buzz Event", event)
+		self.assertFalse(doc.is_published)
+		self.assertFalse(any(row.publish for row in doc.custom_forms))
+
+	def test_archiving_an_archived_event_is_a_no_op(self):
+		event = create_event("Already Archived Event", self.team, is_published=0)
+		frappe.set_user(self.owner)
+
+		self.assertTrue(archive_event(event).archived)
+
+	def test_someone_outside_the_team_cannot_archive(self):
+		event = create_event("Guarded Event", self.team, is_published=1)
+		frappe.set_user(self.outsider)
+
+		with self.assertRaises(CannotManageEvent):
+			archive_event(event)
+
+		self.assertTrue(frappe.db.get_value("Buzz Event", event, "is_published"))

@@ -4,7 +4,7 @@ import { computed } from "vue"
 import { useRoute } from "vue-router"
 
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
-import { useEventDoc } from "@/data/events"
+import { useArchiveEvent, useEventDoc } from "@/data/events"
 
 // A settings row and the group it belongs to. The page renders whatever this describes,
 // so a new setting is an entry here rather than another block of markup.
@@ -21,9 +21,12 @@ const route = useRoute()
 const eventId = route.params.eventId as string
 
 const event = useEventDoc(() => eventId)
+const archiveEvent = useArchiveEvent()
 
 // Only read once the doc has landed, so a null doc never renders as "not archived".
 const archived = computed(() => !event.doc?.is_published)
+
+const busy = computed(() => event.setValue.loading || archiveEvent.loading)
 
 const settingGroups = computed<SettingGroup[]>(() => [
 	{ name: "danger", title: __("Danger"), settings: [archiveSetting()] },
@@ -36,7 +39,7 @@ function archiveSetting(): Setting {
 			name: "archive",
 			title: __("Unarchive event"),
 			description: __("Puts the event page back online."),
-			action: { label: __("Unarchive"), onClick: () => publish(1) },
+			action: { label: __("Unarchive"), onClick: unarchive },
 		}
 
 	return {
@@ -53,22 +56,35 @@ function confirmArchive() {
 	dialog.confirm({
 		title: __("Archive Event?"),
 		message: __(
-			"The event page goes offline and its forms stop accepting responses. You can unarchive it from here at any time.",
+			"The event page goes offline and its forms stop accepting responses. You can unarchive the event at any time, but its forms stay closed until you publish them again.",
 		),
 		theme: "red",
 		confirmLabel: __("Archive"),
-		onConfirm: () => publish(0),
+		onConfirm: archive,
 	})
 }
 
-async function publish(is_published: 0 | 1) {
-	await event.setValue.submit({ is_published })
+// Archiving closes the event's forms as well as the event, so it goes through the
+// endpoint that does both. The doc store never sees that write — hence the reload.
+async function archive() {
+	await archiveEvent.submit({ event: eventId })
+	if (archiveEvent.error) {
+		toast.error(archiveEvent.error.message || __("Could not archive the event"))
+		return
+	}
+	await event.reload()
+	toast.success(__("Event archived"))
+}
+
+// Publishing is the plain write its opposite is not: the forms this closed stay closed.
+async function unarchive() {
+	await event.setValue.submit({ is_published: 1 })
 	if (event.setValue.error) {
 		// An event that never had a route cannot be published — the server says so.
 		toast.error(event.setValue.error.message || __("Could not save the event"))
 		return
 	}
-	toast.success(is_published ? __("Event is back online") : __("Event archived"))
+	toast.success(__("Event is back online"))
 }
 </script>
 
@@ -103,7 +119,7 @@ async function publish(is_published: 0 | 1) {
 							<Button
 								:label="setting.action.label"
 								:theme="setting.action.theme"
-								:loading="event.setValue.loading"
+								:loading="busy"
 								class="transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97] motion-reduce:active:scale-100"
 								@click="setting.action.onClick"
 							/>

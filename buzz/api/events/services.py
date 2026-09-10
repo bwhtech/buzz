@@ -13,6 +13,7 @@ from buzz.api.events.exceptions import (
 	ZoomNotAvailable,
 )
 from buzz.api.events.schemas import (
+	ArchiveState,
 	CreatedEvent,
 	DailyRegistrations,
 	EventDetail,
@@ -298,6 +299,17 @@ def set_registration_state(event: str, closed: bool) -> RegistrationState:
 	doc.registrations_close_at = get_datetime_in_timezone(timezone).replace(tzinfo=None) if closed else None
 	doc.save()
 	return RegistrationState(registrations_closed=are_registrations_closed(doc))
+
+
+def archive_event(event: str) -> ArchiveState:
+	"""Take the event and its forms off the public site, answering with the resulting state.
+
+	Unarchiving is the plain `is_published` write the dashboard already makes; it does not
+	republish the forms this closed.
+	"""
+	doc = manageable_event(event)
+	doc.archive_event()
+	return ArchiveState(archived=not doc.is_published)
 
 
 def verification_methods() -> VerificationMethods:
