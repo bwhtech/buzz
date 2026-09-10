@@ -71,11 +71,8 @@ const isDirty = computed(() =>
 	),
 )
 
-// Also releases the leave guard: the redirect that follows must not be challenged.
-const created = ref(false)
-
-// Held for the whole sequence, not just the request: the steps play on past the response,
-// and a flag that tracks the request alone drops the form back in mid-walk.
+// True from the first step until the redirect lands, so the steps play past the response
+// and the leave guard stays quiet for a redirect the page asked for.
 const submitting = ref(false)
 
 // Local to the sequence: the resource keeps its error for the form's message long after
@@ -92,7 +89,7 @@ const FINAL_STEP = "Opening event page"
 const FAILED_STEP = "Failed to create event"
 const STEP_DURATION = 600
 
-const step = ref(CREATION_STEPS[0])
+const step = ref("")
 
 function wait(milliseconds: number) {
 	return new Promise((resolve) => setTimeout(resolve, milliseconds))
@@ -101,23 +98,22 @@ function wait(milliseconds: number) {
 // Walks the steps at a fixed pace whatever the save is doing, so the panel reads as
 // progress rather than as a spinner with captions.
 async function walkSteps() {
-	for (const next of CREATION_STEPS.slice(1)) {
-		await wait(STEP_DURATION)
+	for (const next of CREATION_STEPS) {
 		if (createEvent.error) return
 		step.value = next
+		await wait(STEP_DURATION)
 	}
-	await wait(STEP_DURATION)
 }
 
 const LEAVE_WARNING = "You have unsaved changes. Leave without saving?"
 
 function warnOnUnload(unload: BeforeUnloadEvent) {
-	if (isDirty.value && !created.value) unload.preventDefault()
+	if (isDirty.value && !submitting.value) unload.preventDefault()
 }
 
 onMounted(() => window.addEventListener("beforeunload", warnOnUnload))
 onBeforeUnmount(() => window.removeEventListener("beforeunload", warnOnUnload))
-onBeforeRouteLeave(() => !isDirty.value || created.value || window.confirm(LEAVE_WARNING))
+onBeforeRouteLeave(() => !isDirty.value || submitting.value || window.confirm(LEAVE_WARNING))
 
 const saveAttempted = ref(false)
 
@@ -148,7 +144,7 @@ function focusFirstMissing() {
 
 async function save() {
 	// The button is disabled through both, but a keyboard repeat outruns the re-render.
-	if (submitting.value || created.value) return
+	if (submitting.value) return
 	if (!canCreate.value) {
 		toast.error(MANAGER_REQUIRED)
 		return
@@ -163,27 +159,25 @@ async function save() {
 
 	submitting.value = true
 	failed.value = false
-	step.value = CREATION_STEPS[0]
-	// Steps and save run together: whichever finishes first waits for the other. The
-	// rejection is swallowed because createResource records the error on itself.
-	await Promise.all([
-		createEvent
-			.submit({
-				event: {
-					team: currentTeam.value?.name,
-					title: title.value.trim(),
-					start_date: startDate.value,
-					start_time: startTime.value,
-					end_date: endDate.value || null,
-					end_time: endTime.value,
-					about: about.value || null,
-					banner_image: bannerImage.value || null,
-					time_zone: timeZone.value || null,
-					venue: venue.value || null,
-					zoom_meeting: zoomMeeting.value,
-				},
-			})
-			.catch(() => {}),
+	// Steps and save run together: whichever finishes first waits for the other. Settled,
+	// not all: createResource rejects as well as recording the error, and the record is
+	// what the panel reads.
+	await Promise.allSettled([
+		createEvent.submit({
+			event: {
+				team: currentTeam.value?.name,
+				title: title.value.trim(),
+				start_date: startDate.value,
+				start_time: startTime.value,
+				end_date: endDate.value || null,
+				end_time: endTime.value,
+				about: about.value || null,
+				banner_image: bannerImage.value || null,
+				time_zone: timeZone.value || null,
+				venue: venue.value || null,
+				zoom_meeting: zoomMeeting.value,
+			},
+		}),
 		walkSteps(),
 	])
 	if (createEvent.error) {
@@ -196,7 +190,6 @@ async function save() {
 		return
 	}
 
-	created.value = true
 	step.value = FINAL_STEP
 	toast.success(`${createEvent.data?.title} created`)
 	await wait(STEP_DURATION)
@@ -322,7 +315,7 @@ async function save() {
 				</section>
 			</div>
 
-			<div v-else class="flex m-auto items-center justify-center gap-3 py-24">
+			<div v-else class="flex items-center justify-center gap-3 py-24">
 				<span v-if="failed" class="lucide-circle-x size-6 text-ink-red-6" aria-hidden="true" />
 				<LoadingIndicator v-else class="size-6 text-ink-gray-7" />
 				<TextMorph
