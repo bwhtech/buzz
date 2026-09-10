@@ -98,7 +98,7 @@ class TestBuzzEvent(FrappeTestCase):
 
 	# ==================== Reserved Route Tests ====================
 
-	def _make_event_with_route(self, route):
+	def _make_event_with_route(self, route=None, **overrides):
 		return frappe.get_doc(
 			{
 				"doctype": "Buzz Event",
@@ -109,6 +109,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"start_time": "09:00:00",
 				"end_time": "18:00:00",
 				"route": route,
+				**overrides,
 			}
 		)
 
@@ -154,6 +155,27 @@ class TestBuzzEvent(FrappeTestCase):
 		event = self._make_event_with_route("my-conference-2026")
 		event.insert()
 		self.assertEqual(event.route, "my-conference-2026")
+
+	def test_new_event_is_published_with_a_hashed_route(self):
+		"""A new event is shareable on insert, on a route that is not its title."""
+		event = self._make_event_with_route()
+		event.insert()
+		self.assertTrue(event.is_published)
+		self.assertRegex(event.route, r"^[0-9a-f]{8}$")
+
+	def test_generated_routes_are_unique(self):
+		"""route is a unique column, so two events must not land on one hash."""
+		first = self._make_event_with_route()
+		first.insert()
+		second = self._make_event_with_route()
+		second.insert()
+		self.assertNotEqual(first.route, second.route)
+
+	def test_explicitly_unpublished_event_stays_a_draft(self):
+		"""The publish default must not override a caller asking for a draft."""
+		event = self._make_event_with_route(is_published=0)
+		event.insert()
+		self.assertFalse(event.is_published)
 
 	# ==================== Venue Tests ====================
 
