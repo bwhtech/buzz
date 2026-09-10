@@ -419,7 +419,7 @@ import LucideX from "~icons/lucide/x"
 import BillingDetails from "@/components/BillingDetails.vue"
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
 import { useLoginDialog } from "@/composables/useLoginDialog"
-import { userResource } from "@/data/user"
+import { loadUser, userResource } from "@/data/user"
 import type {
 	AvailableAddOn,
 	AvailableTicketType,
@@ -575,9 +575,8 @@ onUnmounted(() => {
 	clearInterval(resendCooldownTimer)
 })
 
-// Ensure user data is loaded (only if not in guest mode)
-if (!props.isGuestMode && !userResource.data) {
-	userResource.fetch()
+if (!props.isGuestMode) {
+	loadUser()
 }
 
 // --- HELPERS / DERIVED STATE ---

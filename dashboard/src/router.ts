@@ -1,7 +1,7 @@
 import { type RouteRecordRaw, createRouter, createWebHistory } from "vue-router"
 
 import { isTeamMember } from "@/data/teams"
-import { userResource } from "@/data/user"
+import { loadUser } from "@/data/user"
 
 const APP_NAME = "Buzz"
 
@@ -246,11 +246,7 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from, next) => {
-	try {
-		await userResource.fetch()
-	} catch {
-		// user is not logged in — Layout will show LoginRequired for protected routes
-	}
+	await loadUser()
 	next()
 })
 
