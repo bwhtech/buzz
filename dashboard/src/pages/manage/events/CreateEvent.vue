@@ -193,6 +193,8 @@ async function save() {
 	step.value = FINAL_STEP
 	toast.success(`${createEvent.data?.title} created`)
 	await wait(STEP_DURATION)
+	// Someone who walked off mid-save meant it; the toast already says the event exists.
+	if (router.currentRoute.value.name !== "create-event") return
 	router.push({ name: "event-details", params: { eventId: createEvent.data?.name } })
 }
 </script>
