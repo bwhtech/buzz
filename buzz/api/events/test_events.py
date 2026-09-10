@@ -1148,6 +1148,15 @@ class TestArchiveEvent(IntegrationTestCase):
 		self.assertFalse(doc.is_published)
 		self.assertFalse(any(row.publish for row in doc.custom_forms))
 
+	def test_archiving_closes_registrations(self):
+		"""The booking gates stop at `is_published`, but the cutoff has to agree with them."""
+		event = create_event("Open Registrations Event", self.team, is_published=1)
+		frappe.set_user(self.owner)
+
+		archive_event(event)
+
+		self.assertIsNotNone(frappe.db.get_value("Buzz Event", event, "registrations_close_at"))
+
 	def test_archiving_an_archived_event_is_a_no_op(self):
 		event = create_event("Already Archived Event", self.team, is_published=0)
 		frappe.set_user(self.owner)

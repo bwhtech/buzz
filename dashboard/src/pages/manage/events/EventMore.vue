@@ -56,7 +56,7 @@ function confirmArchive() {
 	dialog.confirm({
 		title: __("Archive Event?"),
 		message: __(
-			"The event page goes offline and its forms stop accepting responses. You can unarchive the event at any time, but its forms stay closed until you publish them again.",
+			"The event page goes offline, and its forms and registrations stop accepting responses. You can unarchive the event at any time, but its forms and registrations stay closed until you reopen them.",
 		),
 		theme: "red",
 		confirmLabel: __("Archive"),
