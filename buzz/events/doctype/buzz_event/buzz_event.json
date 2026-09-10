@@ -213,7 +213,7 @@
    "label": "Banner Image"
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "is_published",
    "fieldtype": "Check",
    "label": "Is Published?"
@@ -644,7 +644,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-09-08 12:00:00.000000",
+ "modified": "2026-09-10 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

@@ -42,8 +42,10 @@ const selected = computed({
 })
 
 // Nothing answers to what they typed, so Add Manually is the only move left: it is
-// pre-armed, and Enter takes it.
+// pre-armed, and Enter takes it. Not while the list is still loading: an empty list is
+// not an answer, and arming Enter on one adds a venue that already exists.
 const unmatched = computed(() => {
+	if (venues.loading) return false
 	const text = query.value.trim().toLowerCase()
 	return Boolean(text) && !(venues.data ?? []).some((row) => row.name.toLowerCase().includes(text))
 })
@@ -92,6 +94,7 @@ async function onVenueCreated(name: string) {
 		placeholder="Search venues, or add one"
 		empty-text=""
 		class="w-full"
+		:loading="venues.loading"
 		:disabled="disabled"
 		:error="error"
 		@keydown.enter.prevent="unmatched && addManually()"

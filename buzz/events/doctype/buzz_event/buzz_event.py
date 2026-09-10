@@ -98,6 +98,11 @@ class BuzzEvent(Document):
 		venue: DF.Link | None
 	# end: auto-generated types
 
+	def before_insert(self):
+		# Opaque, not a title slug: a new event is published immediately.
+		if not self.route:
+			self.route = frappe.generate_hash(length=8)
+
 	def validate(self):
 		self.validate_dates()
 		self.validate_schedule()
