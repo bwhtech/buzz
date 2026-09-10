@@ -300,7 +300,7 @@
 		title="Withdraw Sponsorship Inquiry"
 		message="Are you sure you want to withdraw this sponsorship inquiry? This action cannot be undone."
 		size="lg"
-		:icon="{ name: 'triangle-alert', theme: 'amber' }"
+		:icon="{ name: 'lucide-triangle-alert', theme: 'amber' }"
 		:actions="[
 			{
 				label: 'Withdraw Inquiry',
