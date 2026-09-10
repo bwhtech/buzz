@@ -7,6 +7,7 @@ import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
 import { FilterBar, type FilterGroup, type FilterValues } from "@/components/common/filters"
+import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventTalkActions from "@/components/dashboard/proposals/EventTalkActions.vue"
 import EventTalkProposalDrawer from "@/components/dashboard/proposals/EventTalkProposalDrawer.vue"
@@ -140,6 +141,8 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 	<EventPageHeader :title="page.data?.title" section="Talks" />
 
 	<PageWithSidebar>
+		<EventArchivedAlert :event="eventId" />
+
 		<section class="space-y-2">
 			<h1 class="text-xl font-semibold text-ink-gray-9">How it's going</h1>
 

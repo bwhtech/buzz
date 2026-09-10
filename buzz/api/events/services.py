@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.functions import Count, Date
-from frappe.utils import add_days, get_datetime_in_timezone, get_system_timezone, getdate
+from frappe.utils import add_days, getdate
 
 from buzz.api.booking.guests import email_otp_available, phone_otp_available
 from buzz.api.booking.services import are_registrations_closed
@@ -294,10 +294,17 @@ def set_registration_state(event: str, closed: bool) -> RegistrationState:
 	which closes registrations on its own — hence the state rather than an acknowledgement.
 	"""
 	doc = manageable_event(event)
-	timezone = doc.time_zone or get_system_timezone()
-	doc.registrations_close_at = get_datetime_in_timezone(timezone).replace(tzinfo=None) if closed else None
+	if closed:
+		doc.close_registrations()
+	else:
+		doc.registrations_close_at = None
 	doc.save()
 	return RegistrationState(registrations_closed=are_registrations_closed(doc))
+
+
+def archive_event(event: str) -> None:
+	"""Take the event and its forms off the public site."""
+	manageable_event(event).archive_event()
 
 
 def verification_methods() -> VerificationMethods:

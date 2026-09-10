@@ -56,6 +56,12 @@ def set_registration_state(event: str, closed: bool) -> RegistrationState:
 	return services.set_registration_state(event, closed)
 
 
+@frappe.whitelist(methods=["POST"])
+def archive_event(event: str) -> None:
+	"""Take an event and the forms it serves off the public site."""
+	services.archive_event(event)
+
+
 @frappe.whitelist()
 def get_verification_methods() -> VerificationMethods:
 	"""Which guest verification methods this site can deliver, for the settings dialog."""

@@ -42,6 +42,7 @@ declare module 'vue' {
     DrawerContent: typeof import('./src/components/common/drawer/DrawerContent.vue')['default']
     EmailSettingsDialog: typeof import('./src/components/dashboard/communications/EmailSettingsDialog.vue')['default']
     EmptyState: typeof import('./src/components/common/EmptyState.vue')['default']
+    EventArchivedAlert: typeof import('./src/components/dashboard/events/EventArchivedAlert.vue')['default']
     EventBanner: typeof import('./src/components/dashboard/events/EventBanner.vue')['default']
     EventCard: typeof import('./src/components/dashboard/events/EventCard.vue')['default']
     EventCountdownPill: typeof import('./src/components/dashboard/events/EventCountdownPill.vue')['default']

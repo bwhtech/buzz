@@ -7,6 +7,7 @@ import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
 import { FilterBar, type FilterGroup, type FilterValues } from "@/components/common/filters"
+import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventGuestActions from "@/components/dashboard/events/EventGuestActions.vue"
 import EventGuestItem from "@/components/dashboard/events/EventGuestItem.vue"
 import EventGuestSkeleton from "@/components/dashboard/events/EventGuestSkeleton.vue"
@@ -155,6 +156,8 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 	<EventPageHeader :title="page.data?.title" section="Guests" />
 
 	<PageWithSidebar>
+		<EventArchivedAlert :event="eventId" />
+
 		<section class="space-y-2">
 			<h1 class="text-xl font-semibold text-ink-gray-9">How it's going</h1>
 

@@ -1,4 +1,4 @@
-import { createResource, useCall } from "frappe-ui"
+import { createResource, useCall, useDoc } from "frappe-ui"
 
 import type {
 	EventDetail,
@@ -23,6 +23,21 @@ export function useMyEvents(filters?: () => Record<string, string>) {
 export const createEvent = createResource<{ name: string; title: string }>({
 	url: "buzz.api.events.create_event",
 })
+
+/** What the manage shell reads off the event itself: its title, and whether it is live. */
+type EventShellDoc = { name: string; title: string; is_published: 0 | 1 }
+
+/**
+ * The event document, shared by everything that reads or flips its publish state.
+ *
+ * useDoc keys into frappe-ui's document store, so the shell's archived banner and the
+ * setting that archives the event work off one reactive doc — a write through `setValue`
+ * lands in both without either knowing about the other.
+ */
+export function useEventDoc(event: () => string) {
+	// The empty string holds the initial fetch until the route param resolves.
+	return useDoc<EventShellDoc>({ doctype: "Buzz Event", name: () => event() || "" })
+}
 
 /** One event with everything its manage page edits. Per page, so it is not a singleton. */
 export function eventDetail(event: string) {
@@ -72,6 +87,38 @@ export function useAddCoHost() {
 		{ event: string; host_name: string; logo?: string; by_line?: string; about?: string }
 	>({
 		url: "/api/v2/method/buzz.api.events.add_co_host",
+		method: "POST",
+		immediate: false,
+	})
+}
+
+/**
+ * Whether the session user may write to an event.
+ *
+ * Core's own check, so it runs through Buzz's `team_has_permission` hook and answers for
+ * an unrestricted user too — a System Manager holds no membership, so reading the role off
+ * the loaded teams list would deny them.
+ */
+export function useCanWriteEvent(event: string) {
+	return useCall<
+		{ has_permission: boolean },
+		{ doctype: string; docname: string; perm_type: string }
+	>({
+		url: "/api/v2/method/frappe.client.has_permission",
+		params: { doctype: "Buzz Event", docname: event, perm_type: "write" },
+	})
+}
+
+/**
+ * Take an event and the forms it serves off the public site.
+ *
+ * Archiving is more than the `is_published` write its opposite is — the endpoint also
+ * closes the event's forms — so it does not go through `setValue`. Reload the doc after
+ * it lands: the store has no idea the server moved.
+ */
+export function useArchiveEvent() {
+	return useCall<null, { event: string }>({
+		url: "/api/v2/method/buzz.api.events.archive_event",
 		method: "POST",
 		immediate: false,
 	})

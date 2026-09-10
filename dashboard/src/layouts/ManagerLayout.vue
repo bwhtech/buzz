@@ -6,7 +6,7 @@ import { useRoute } from "vue-router"
 import ManagerSidebarHeader from "@/components/dashboard/ManagerSidebarHeader.vue"
 import UserMenu from "@/components/UserMenu.vue"
 import { useTeamAccess } from "@/composables/useTeamAccess"
-import { eventDetail } from "@/data/events"
+import { useEventDoc } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
 import NotFound from "@/pages/NotFound.vue"
 
@@ -54,19 +54,12 @@ watch(headerKey, (key, previous) => {
 	direction.value = previous === "root" && key !== "root" ? "forward" : "back"
 })
 
-const eventTitle = ref("")
-watch(
-	eventId,
-	(id) => {
-		eventTitle.value = ""
-		if (!id) return
-		// Drops a late response for an event the user has already left.
-		eventDetail(id).promise?.then((event) => {
-			if (eventId.value === id) eventTitle.value = event?.title ?? ""
-		})
-	},
-	{ immediate: true },
-)
+// Keyed by the route param, so the doc follows the event the user is looking at. Shared
+// through frappe-ui's document store, so the spaces reading the same event pay for one
+// fetch between them.
+const eventDoc = useEventDoc(() => eventId.value ?? "")
+
+const eventTitle = computed(() => eventDoc.doc?.title ?? "")
 
 usePageMeta(() => {
 	const section = route.meta.title as string | undefined
@@ -84,6 +77,7 @@ const items = computed(() => {
 		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests` },
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks` },
 		{ label: "Announcements", icon: "lucide-megaphone", to: `${event}/communications` },
+		{ label: "More", icon: "lucide-ellipsis", to: `${event}/more` },
 	]
 })
 </script>

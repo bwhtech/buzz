@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
+from frappe.utils import get_datetime_in_timezone, get_system_timezone
 from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
 
 from buzz.api.forms.fields import validate_excluded_fields
@@ -256,6 +257,23 @@ class BuzzEvent(Document):
 		for form in default_forms:
 			self.append("custom_forms", form)
 		self.save(ignore_permissions=True)
+
+	def archive_event(self):
+		"""Take the event off the public site, along with the forms and registrations it takes.
+
+		The booking and form gates already refuse an unpublished event; this is the stored
+		state catching up, so publishing again does not reopen everything with it.
+		"""
+		self.is_published = 0
+		self.close_registrations()
+		for form in self.custom_forms:
+			form.publish = 0
+		self.save()
+
+	def close_registrations(self):
+		"""Stop new registrations now, read on the event's own wall clock."""
+		timezone = self.time_zone or get_system_timezone()
+		self.registrations_close_at = get_datetime_in_timezone(timezone).replace(tzinfo=None)
 
 	@frappe.whitelist()
 	@only_if_app_installed("zoom_integration", raise_exception=True)
