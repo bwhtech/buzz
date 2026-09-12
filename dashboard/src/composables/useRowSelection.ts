@@ -18,13 +18,9 @@ export function useRowSelection(selectableKeys: Ref<string[]>) {
 		chosen.value = next
 	}
 
-	function select(keys: string[]) {
-		chosen.value = new Set(keys)
-	}
-
 	function clear() {
 		chosen.value = new Set()
 	}
 
-	return { selected, isSelected, toggle, select, clear }
+	return { selected, isSelected, toggle, clear }
 }

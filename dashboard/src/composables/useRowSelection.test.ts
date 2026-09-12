@@ -30,7 +30,8 @@ test("a key that stops being selectable leaves the selection", () => {
 	const selectable = keys()
 	const selection = useRowSelection(selectable)
 
-	selection.select(["a", "c"])
+	selection.toggle("a")
+	selection.toggle("c")
 	selectable.value = ["a", "b"]
 
 	assert.deepEqual(selection.selected.value, ["a"])
@@ -39,7 +40,8 @@ test("a key that stops being selectable leaves the selection", () => {
 test("clearing empties the selection", () => {
 	const selection = useRowSelection(keys())
 
-	selection.select(["a", "b"])
+	selection.toggle("a")
+	selection.toggle("b")
 	selection.clear()
 
 	assert.deepEqual(selection.selected.value, [])

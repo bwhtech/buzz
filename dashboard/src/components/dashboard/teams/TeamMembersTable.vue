@@ -51,16 +51,6 @@ const selectedMembers = computed(() =>
 	props.team.members.filter((member) => selection.isSelected(member.user)),
 )
 
-const visibleSelectableKeys = computed(() =>
-	visibleRows.value.filter(isSelectable).map((row) => row.key),
-)
-
-const allVisibleSelected = computed(
-	() =>
-		visibleSelectableKeys.value.length > 0 &&
-		visibleSelectableKeys.value.every(selection.isSelected),
-)
-
 // A row joins a selection only if both group actions apply to it, so an invitation —
 // which is resent or retracted, never re-roled — stays on its own menu.
 function isSelectable(row: RosterRow) {
@@ -72,12 +62,6 @@ function isSelectable(row: RosterRow) {
 function canAdminister(member: TeamMember) {
 	if (!canManage.value) return false
 	return member.team_role !== "Owner" && member.user !== session.user
-}
-
-// Select-all covers what the search has left on screen; clearing covers everything.
-function toggleAllVisible() {
-	if (allVisibleSelected.value) selection.clear()
-	else selection.select(visibleSelectableKeys.value)
 }
 
 // An invitation is resent or retracted; a member is re-roled or removed.
@@ -130,19 +114,22 @@ function refreshed() {
 
 <template>
 	<div class="flex flex-col gap-4">
-		<div class="flex flex-col gap-3">
-			<FormControl
-				v-model="search"
-				type="text"
-				class="max-w-xs"
-				:placeholder="__('Search members')"
-				:aria-label="__('Search members')"
-			>
-				<template #prefix>
-					<span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true" />
-				</template>
-			</FormControl>
+		<FormControl
+			v-model="search"
+			type="text"
+			class="max-w-xs"
+			:placeholder="__('Search members')"
+			:aria-label="__('Search members')"
+		>
+			<template #prefix>
+				<span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true" />
+			</template>
+		</FormControl>
 
+		<!-- relative: the roster is what the selection bar floats over. -->
+		<div class="relative">
+			<!-- Sticky at the top of the list rather than after it: a selection made at the top
+			     of a long roster has to stay in reach while the rows scroll under it. -->
 			<SelectionBar
 				:count="selectedMembers.length"
 				:label="__('{0} selected', [selectedMembers.length])"
@@ -160,18 +147,9 @@ function refreshed() {
 					@click="actions.confirmRemove(selectedMembers)"
 				/>
 			</SelectionBar>
-		</div>
 
-		<div>
 			<div :class="columns" class="pb-2 text-sm text-ink-gray-5">
-				<Checkbox
-					v-if="canManage"
-					:model-value="allVisibleSelected"
-					:indeterminate="!allVisibleSelected && selectedMembers.length > 0"
-					:disabled="!visibleSelectableKeys.length"
-					:aria-label="__('Select all members')"
-					@update:model-value="toggleAllVisible"
-				/>
+				<span v-if="canManage" />
 				<span />
 				<span />
 				<span>{{ __("Role") }}</span>
@@ -189,13 +167,16 @@ function refreshed() {
 					:class="columns"
 					class="-mx-2 rounded-4 px-2 py-2 transition-colors duration-150 hover:bg-surface-gray-1"
 				>
+					<!-- An invitation is never part of a selection, so it carries no checkbox at
+					     all; a member who cannot be acted on carries a disabled one. -->
 					<Checkbox
-						v-if="canManage"
+						v-if="canManage && row.member"
 						:model-value="selection.isSelected(row.key)"
 						:disabled="!isSelectable(row)"
 						:aria-label="__('Select {0}', [row.name])"
 						@update:model-value="selection.toggle(row.key)"
 					/>
+					<span v-else-if="canManage" />
 
 					<div class="flex min-w-0 items-center gap-3">
 						<Avatar :image="row.image" :label="row.name" size="lg" />

@@ -31,7 +31,10 @@ const description = computed(() =>
 
 // The panel's role legend explains the roles; this only guards a pointless save.
 const unchanged = computed(
-	() => !props.members.length || props.members.every((member) => member.team_role === role.value),
+	() =>
+		!props.members.length ||
+		!role.value ||
+		props.members.every((member) => member.team_role === role.value),
 )
 
 // The selection arrives with the dialog, so the select is seeded on open rather than on mount.
