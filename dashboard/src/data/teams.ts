@@ -12,6 +12,11 @@ interface InviteAction {
 	email: string
 }
 
+interface MemberBatch {
+	team: string
+	users: string[]
+}
+
 const selectedTeamName = ref(localStorage.getItem(STORAGE_KEY) || "")
 
 const teamsResource = createResource<TeamOption[]>({
@@ -52,10 +57,6 @@ export function useTeamOverview(team: string) {
 	})
 }
 
-export const removeMember = createResource({
-	url: "buzz.api.teams.remove_member",
-})
-
 export const inviteMembers = createResource<InviteOutcome[]>({
 	url: "buzz.api.teams.invite_members",
 })
@@ -86,9 +87,18 @@ export function useRetractInvite() {
 	})
 }
 
-export function useChangeRole() {
-	return useCall<null, { team: string; user: string; team_role: string }>({
-		url: "/api/v2/method/buzz.api.teams.change_role",
+// Batched: the roster acts on a selection, and a single row is a selection of one.
+export function useRemoveMembers() {
+	return useCall<null, MemberBatch>({
+		url: "/api/v2/method/buzz.api.teams.remove_members",
+		method: "POST",
+		immediate: false,
+	})
+}
+
+export function useChangeRoles() {
+	return useCall<null, MemberBatch & { team_role: string }>({
+		url: "/api/v2/method/buzz.api.teams.change_roles",
 		method: "POST",
 		immediate: false,
 	})
