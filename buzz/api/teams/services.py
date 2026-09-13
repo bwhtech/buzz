@@ -128,6 +128,22 @@ def change_role(team: str, user: str, team_role: str) -> None:
 	membership.save(ignore_permissions=True)
 
 
+def remove_members(team: str, users: list[str]) -> None:
+	"""Take several members off a team at once.
+
+	One request is one transaction, so a refusal on any of them takes the whole batch
+	back out — the roster is never left half-changed.
+	"""
+	for user in users:
+		remove_member(team, user)
+
+
+def change_roles(team: str, users: list[str], team_role: str) -> None:
+	"""Move several members to the same role, all-or-nothing like `remove_members`."""
+	for user in users:
+		change_role(team, user, team_role)
+
+
 def update_team(team: str, team_name: str, logo: str | None) -> None:
 	"""Rename a team or change its logo.
 

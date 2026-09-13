@@ -32,13 +32,13 @@ def get_team_overview(team: str) -> TeamOverview:
 
 
 @frappe.whitelist(methods=["POST"])
-def remove_member(team: str, user: str) -> None:
-	services.remove_member(team, user)
+def remove_members(team: str, users: list[str]) -> None:
+	services.remove_members(team, users)
 
 
 @frappe.whitelist(methods=["POST"])
-def change_role(team: str, user: str, team_role: str) -> None:
-	services.change_role(team, user, team_role)
+def change_roles(team: str, users: list[str], team_role: str) -> None:
+	services.change_roles(team, users, team_role)
 
 
 @frappe.whitelist(methods=["POST"])

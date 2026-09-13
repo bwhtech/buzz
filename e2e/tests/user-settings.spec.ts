@@ -89,4 +89,25 @@ test.describe("User settings", () => {
 		await panel.getByRole("button", { name: "Back to teams" }).click()
 		await expect(panel.getByRole("heading", { name: "Your Teams" })).toBeVisible()
 	})
+
+	test("searches the roster of a team", async ({ page }) => {
+		const panel = settings(page)
+
+		await panel.getByRole("tab", { name: "Teams" }).click()
+		const teams = panel.getByRole("list", { name: "Your teams" }).getByRole("listitem")
+		await expect(teams.first()).toContainText("members", { timeout: 15000 })
+		await teams.first().getByRole("button").click()
+
+		const members = panel.getByRole("list", { name: "Team members" }).getByRole("listitem")
+		await expect(members.first()).toContainText("Owner", { timeout: 15000 })
+
+		const search = panel.getByPlaceholder("Search members")
+		await search.fill(SETTINGS_EMAIL)
+		await expect(members).toHaveCount(1)
+		await expect(members.first()).toContainText(SETTINGS_EMAIL)
+
+		await search.fill("nobody-on-this-team")
+		await expect(members).toHaveCount(0)
+		await expect(panel.getByText("No members found")).toBeVisible()
+	})
 })

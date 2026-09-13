@@ -17,3 +17,12 @@ export function canManageMembers(teamRole: string | undefined): boolean {
 // Mirrors the membership doctype's Select options, minus Owner. The server rejects anything
 // outside this set, so a drift here fails loudly rather than silently.
 export const ASSIGNABLE_TEAM_ROLES = ["Admin", "Manager", "Frontdesk", "Viewer"]
+
+// Most authority first, which is the order the roster lists people in.
+const TEAM_ROLE_ORDER = ["Owner", ...ASSIGNABLE_TEAM_ROLES]
+
+/** Where a role sits in the roster. An unknown role sorts last rather than first. */
+export function teamRoleRank(teamRole: string): number {
+	const rank = TEAM_ROLE_ORDER.indexOf(teamRole)
+	return rank === -1 ? TEAM_ROLE_ORDER.length : rank
+}

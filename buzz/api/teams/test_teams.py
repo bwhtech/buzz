@@ -1,7 +1,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.teams import change_role, get_my_teams, get_team_overview, remove_member, update_team
+from buzz.api.teams import change_roles, get_my_teams, get_team_overview, remove_members, update_team
 from buzz.api.teams.exceptions import (
 	CannotEditTeam,
 	CannotGrantOwnership,
@@ -160,7 +160,7 @@ class TestRemoveMember(IntegrationTestCase):
 		upsert_membership(team, member, "Manager")
 
 		frappe.set_user(admin)
-		remove_member(team, member)
+		remove_members(team, [member])
 
 		self.assertEqual(self.membership(team, member).enabled, 0)
 
@@ -173,7 +173,7 @@ class TestRemoveMember(IntegrationTestCase):
 
 		frappe.set_user(manager)
 		with self.assertRaises(CannotManageMembers):
-			remove_member(team, member)
+			remove_members(team, [member])
 
 	def test_an_outsider_cannot_remove_anyone(self):
 		outsider = create_user("remove-outsider@example.com", "Outsider")
@@ -182,7 +182,7 @@ class TestRemoveMember(IntegrationTestCase):
 
 		frappe.set_user(outsider)
 		with self.assertRaises(CannotManageMembers):
-			remove_member(team, owner)
+			remove_members(team, [owner])
 
 	def test_the_owner_cannot_be_removed(self):
 		owner = create_user("remove-locked-owner@example.com", "Owner")
@@ -192,7 +192,7 @@ class TestRemoveMember(IntegrationTestCase):
 
 		frappe.set_user(admin)
 		with self.assertRaises(frappe.ValidationError):
-			remove_member(team, owner)
+			remove_members(team, [owner])
 
 	def test_refuses_a_user_who_is_not_on_the_team(self):
 		owner = create_user("remove-stranger-owner@example.com", "Owner")
@@ -201,7 +201,7 @@ class TestRemoveMember(IntegrationTestCase):
 
 		frappe.set_user(owner)
 		with self.assertRaises(NotATeamMember):
-			remove_member(team, stranger)
+			remove_members(team, [stranger])
 
 	def test_removing_the_same_member_twice_is_refused(self):
 		owner = create_user("remove-twice-owner@example.com", "Owner")
@@ -210,10 +210,10 @@ class TestRemoveMember(IntegrationTestCase):
 		upsert_membership(team, member, "Manager")
 
 		frappe.set_user(owner)
-		remove_member(team, member)
+		remove_members(team, [member])
 
 		with self.assertRaises(NotATeamMember):
-			remove_member(team, member)
+			remove_members(team, [member])
 
 	def test_the_desk_role_survives_while_another_team_still_earns_it(self):
 		owner = create_user("remove-roles-owner@example.com", "Owner")
@@ -224,11 +224,25 @@ class TestRemoveMember(IntegrationTestCase):
 		upsert_membership(second, member, "Manager")
 
 		frappe.set_user(owner)
-		remove_member(first, member)
+		remove_members(first, [member])
 		self.assertIn("Event Manager", frappe.get_roles(member))
 
-		remove_member(second, member)
+		remove_members(second, [member])
 		self.assertNotIn("Event Manager", frappe.get_roles(member))
+
+	def test_an_admin_removes_several_members_at_once(self):
+		owner = create_user("remove-batch-owner@example.com", "Owner")
+		first = create_user("remove-batch-first@example.com", "First")
+		second = create_user("remove-batch-second@example.com", "Second")
+		team = create_owned_team("Remove Batch", owner)
+		upsert_membership(team, first, "Manager")
+		upsert_membership(team, second, "Viewer")
+
+		frappe.set_user(owner)
+		remove_members(team, [first, second])
+
+		self.assertEqual(self.membership(team, first).enabled, 0)
+		self.assertEqual(self.membership(team, second).enabled, 0)
 
 
 class TestChangeRole(IntegrationTestCase):
@@ -249,7 +263,7 @@ class TestChangeRole(IntegrationTestCase):
 		upsert_membership(team, member, "Manager")
 
 		frappe.set_user(admin)
-		change_role(team, member, "Admin")
+		change_roles(team, [member], "Admin")
 
 		self.assertEqual(self.role(team, member), "Admin")
 
@@ -261,7 +275,7 @@ class TestChangeRole(IntegrationTestCase):
 		self.assertIn("Event Manager", frappe.get_roles(member))
 
 		frappe.set_user(owner)
-		change_role(team, member, "Viewer")
+		change_roles(team, [member], "Viewer")
 
 		self.assertNotIn("Event Manager", frappe.get_roles(member))
 
@@ -274,7 +288,7 @@ class TestChangeRole(IntegrationTestCase):
 		upsert_membership(team, peer, "Admin")
 
 		frappe.set_user(admin)
-		change_role(team, peer, "Viewer")
+		change_roles(team, [peer], "Viewer")
 
 		self.assertEqual(self.role(team, peer), "Viewer")
 
@@ -288,7 +302,7 @@ class TestChangeRole(IntegrationTestCase):
 
 		frappe.set_user(manager)
 		with self.assertRaises(CannotManageMembers):
-			change_role(team, member, "Manager")
+			change_roles(team, [member], "Manager")
 
 	def test_an_outsider_cannot_change_anyone(self):
 		owner = create_user("role-outsider-owner@example.com", "Owner")
@@ -299,7 +313,7 @@ class TestChangeRole(IntegrationTestCase):
 
 		frappe.set_user(outsider)
 		with self.assertRaises(CannotManageMembers):
-			change_role(team, member, "Manager")
+			change_roles(team, [member], "Manager")
 
 	def test_the_owner_cannot_be_given_another_role(self):
 		owner = create_user("role-locked-owner@example.com", "Owner")
@@ -309,7 +323,7 @@ class TestChangeRole(IntegrationTestCase):
 
 		frappe.set_user(admin)
 		with self.assertRaises(frappe.ValidationError):
-			change_role(team, owner, "Viewer")
+			change_roles(team, [owner], "Viewer")
 
 	def test_ownership_cannot_be_granted(self):
 		owner = create_user("role-grant-owner@example.com", "Owner")
@@ -319,7 +333,7 @@ class TestChangeRole(IntegrationTestCase):
 
 		frappe.set_user(owner)
 		with self.assertRaises(CannotGrantOwnership):
-			change_role(team, member, "Owner")
+			change_roles(team, [member], "Owner")
 
 	def test_an_unknown_role_is_refused(self):
 		owner = create_user("role-unknown-owner@example.com", "Owner")
@@ -329,7 +343,7 @@ class TestChangeRole(IntegrationTestCase):
 
 		frappe.set_user(owner)
 		with self.assertRaises(UnknownTeamRole):
-			change_role(team, member, "Overlord")
+			change_roles(team, [member], "Overlord")
 
 	def test_refuses_a_user_who_is_not_on_the_team(self):
 		owner = create_user("role-stranger-owner@example.com", "Owner")
@@ -338,7 +352,7 @@ class TestChangeRole(IntegrationTestCase):
 
 		frappe.set_user(owner)
 		with self.assertRaises(NotATeamMember):
-			change_role(team, stranger, "Manager")
+			change_roles(team, [stranger], "Manager")
 
 	def test_refuses_a_member_whose_membership_is_disabled(self):
 		owner = create_user("role-disabled-owner@example.com", "Owner")
@@ -347,10 +361,24 @@ class TestChangeRole(IntegrationTestCase):
 		upsert_membership(team, member, "Manager")
 
 		frappe.set_user(owner)
-		remove_member(team, member)
+		remove_members(team, [member])
 
 		with self.assertRaises(NotATeamMember):
-			change_role(team, member, "Viewer")
+			change_roles(team, [member], "Viewer")
+
+	def test_an_admin_re_roles_several_members_at_once(self):
+		owner = create_user("role-batch-owner@example.com", "Owner")
+		first = create_user("role-batch-first@example.com", "First")
+		second = create_user("role-batch-second@example.com", "Second")
+		team = create_owned_team("Role Batch", owner)
+		upsert_membership(team, first, "Manager")
+		upsert_membership(team, second, "Frontdesk")
+
+		frappe.set_user(owner)
+		change_roles(team, [first, second], "Viewer")
+
+		self.assertEqual(self.role(team, first), "Viewer")
+		self.assertEqual(self.role(team, second), "Viewer")
 
 
 class TestUpdateTeam(IntegrationTestCase):
