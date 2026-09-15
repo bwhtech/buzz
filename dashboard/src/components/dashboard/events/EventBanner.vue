@@ -56,6 +56,7 @@ watch(image, () => {
 	<ImageCropUploader
 		:aspect-ratio="3"
 		:output-width="1500"
+		:optimize="false"
 		:file-types="IMAGE_TYPES"
 		:validate-file="validateImage"
 		@success="(file: { file_url: string }) => (image = file.file_url)"
