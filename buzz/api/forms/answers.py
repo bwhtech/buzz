@@ -1,6 +1,6 @@
 import json
 import math
-from enum import StrEnum
+from enum import Enum
 
 import frappe
 from frappe import _
@@ -9,7 +9,7 @@ from frappe.utils import cstr, getdate, validate_email_address, validate_phone_n
 from buzz.api.forms.exceptions import InvalidAnswer, UnknownQuestions
 
 
-class QuestionType(StrEnum):
+class QuestionType(str, Enum):
 	"""Mirrors the fieldtype options on Buzz Form Field."""
 
 	DATA = "Data"
