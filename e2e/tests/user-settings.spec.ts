@@ -70,6 +70,22 @@ test.describe("User settings", () => {
 		await expect(settings(page).getByRole("button", { name: "Save" })).toHaveCount(0)
 	})
 
+	test("emails a password reset link", async ({ page }) => {
+		const panel = settings(page)
+
+		// Stubbed: the test site has no outgoing email account, so the real call throws.
+		await page.route(/reset_password/, (route) =>
+			route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ message: null }),
+			}),
+		)
+
+		await panel.getByRole("button", { name: "Reset Password" }).click()
+		await expect(page.getByText("Password reset link sent to your email")).toBeVisible()
+	})
+
 	test("lists the user's teams and opens one to manage", async ({ page }) => {
 		const panel = settings(page)
 
