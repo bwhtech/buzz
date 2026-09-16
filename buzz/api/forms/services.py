@@ -57,8 +57,6 @@ class CustomFormService:
 	def form_row(self) -> "BuzzEventForm":
 		for row in self.event.custom_forms:
 			if row.route == self.form_route and row.publish:
-				if row.form_doctype == "Sponsorship Enquiry":
-					FormNotAvailable.throw()
 				return row
 		FormNotAvailable.throw()
 
