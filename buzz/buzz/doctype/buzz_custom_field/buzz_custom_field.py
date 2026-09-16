@@ -15,16 +15,29 @@ class BuzzCustomField(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		applied_to: DF.Literal["Booking", "Ticket", "Offline Payment Form"]
+		applied_to: DF.Literal["Booking", "Ticket", "Offline Payment Form", "Custom Form"]
+		custom_form_doctype: DF.Link | None
 		default_value: DF.Data | None
 		enabled: DF.Check
 		event: DF.Link
 		fieldname: DF.Data | None
 		fieldtype: DF.Literal[
-			"Data", "Check", "Small Text", "Phone", "Email", "Select", "Date", "Number", "Multi Select"
+			"Data",
+			"Check",
+			"Small Text",
+			"Phone",
+			"Email",
+			"Select",
+			"Date",
+			"Number",
+			"Multi Select",
+			"Rating",
+			"Attach",
+			"Attach Image",
 		]
 		label: DF.Data
 		mandatory: DF.Check
+		offline_payment_method: DF.Link | None
 		options: DF.SmallText | None
 		order: DF.Int
 		placeholder: DF.Data | None
