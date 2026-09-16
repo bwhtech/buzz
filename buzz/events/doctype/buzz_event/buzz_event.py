@@ -502,6 +502,7 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 			custom_field.fieldtype = cf.fieldtype
 			custom_field.options = cf.options
 			custom_field.applied_to = cf.applied_to
+			custom_field.custom_form_doctype = cf.custom_form_doctype
 			custom_field.enabled = cf.enabled
 			custom_field.mandatory = cf.mandatory
 			custom_field.placeholder = cf.placeholder
