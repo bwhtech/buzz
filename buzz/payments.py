@@ -119,6 +119,9 @@ def get_payment_link(
 	if payment_gateway == "Razorpay" or payment_gateway == "Paymob":
 		order = controller.create_order(**payment_details)
 		payment_details.update({"order_id": order.get("id")})
+		# Stored now, not once the money arrives: it is the only handle on a
+		# payment the buyer never came back to confirm.
+		payment.db_set("order_id", order.get("id"))
 
 	url = controller.get_payment_url(**payment_details)
 

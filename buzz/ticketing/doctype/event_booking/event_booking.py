@@ -10,6 +10,7 @@ from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, are_registrations_
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.payments import get_controller, mark_payment_as_received
 from buzz.permissions import has_team_access
+from buzz.ticketing.doctype.event_booking.payment_sync import BookingPaymentSync
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
 	get_committed_tickets,
@@ -46,7 +47,7 @@ class EventBooking(Document):
 		net_amount: DF.Currency
 		offline_payment_method: DF.Data | None
 		payment_method: DF.Data | None
-		payment_status: DF.Literal["Unpaid", "Paid", "Verification Pending"]
+		payment_status: DF.Literal["Unpaid", "Paid", "Verification Pending", "Failed"]
 		refund_status: DF.Literal["", "Refund Initiated", "Partially Refunded", "Refunded"]
 		refunded_amount: DF.Currency
 		status: DF.Literal["Confirmed", "Approval Pending", "Approved", "Rejected"]
@@ -595,6 +596,12 @@ class EventBooking(Document):
 			frappe.throw(_("No received payment found for this booking"))
 
 		return payment[0]
+
+	@frappe.whitelist()
+	def sync_payment_status(self) -> dict:
+		"""Reconcile a booking waiting on payment against what the gateway holds."""
+		frappe.only_for("Event Manager")
+		return BookingPaymentSync(self).run()
 
 	@frappe.whitelist()
 	def approve_booking(self):

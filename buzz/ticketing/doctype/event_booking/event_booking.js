@@ -31,6 +31,15 @@ frappe.ui.form.on("Event Booking", {
 		}
 
 		if (
+			frappe.user.has_role("Event Manager") &&
+			frm.doc.docstatus === 0 &&
+			frm.doc.payment_status !== "Paid" &&
+			frm.doc.payment_method !== "Offline"
+		) {
+			frm.add_custom_button(__("Sync Payment Status"), () => syncPaymentStatus(frm))
+		}
+
+		if (
 			frappe.user.has_role("System Manager") &&
 			frm.doc.docstatus === 1 &&
 			frm.doc.payment_status === "Paid"
@@ -45,6 +54,23 @@ frappe.ui.form.on("Event Booking", {
 		renderRefunds(frm)
 	},
 })
+
+const PAYMENT_INDICATORS = {
+	Paid: "green",
+	Unpaid: "orange",
+	Failed: "red",
+}
+
+async function syncPaymentStatus(frm) {
+	const { message } = await frm.call("sync_payment_status")
+
+	frappe.show_alert({
+		message: message.message,
+		indicator: PAYMENT_INDICATORS[message.payment_status] || "blue",
+	})
+
+	frm.reload_doc()
+}
 
 const REFUND_INDICATORS = {
 	Processed: "green",

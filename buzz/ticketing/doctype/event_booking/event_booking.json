@@ -246,7 +246,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Payment Status",
-   "options": "Unpaid\nPaid\nVerification Pending",
+   "options": "Unpaid\nPaid\nVerification Pending\nFailed",
    "read_only": 1
   },
   {
