@@ -54,7 +54,7 @@ class CustomFormService:
 		return event
 
 	@property
-	def form_row(self) -> "BuzzEventForm":
+	def form(self) -> "BuzzEventForm":
 		for row in self.event.custom_forms:
 			if row.route == self.form_route and row.publish:
 				return row
@@ -62,15 +62,15 @@ class CustomFormService:
 
 	@property
 	def form_doctype(self) -> str:
-		return self.form_row.form_doctype
+		return self.form.form_doctype
 
 	@property
 	def is_closed(self) -> bool:
-		auto_close_at = self.form_row.auto_close_at
+		auto_close_at = self.form.auto_close_at
 		return bool(auto_close_at) and get_datetime(auto_close_at) < now_datetime()
 
 	def check_login(self) -> None:
-		if sbool(self.form_row.login_required) and frappe.session.user == "Guest":
+		if sbool(self.form.login_required) and frappe.session.user == "Guest":
 			LoginRequired.throw()
 
 	def form_data(self) -> CustomFormResponse:
@@ -78,29 +78,29 @@ class CustomFormService:
 		if self.is_closed:
 			return self.closed_response()
 
-		form_row = self.form_row
+		form = self.form
 		return CustomFormResponse(
 			form_fields=self.renderable_fields(),
 			custom_fields=self.custom_field_definitions(),
 			form_title=self.form_doctype,
 			event=self.event_summary(),
 			closed=False,
-			closed_title=form_row.closed_title or _("Submissions Closed"),
-			closed_message=form_row.closed_message or _("Submissions for this form have closed."),
-			success_title=form_row.success_title or _("Thank you!"),
-			success_message=form_row.success_message or "",
+			closed_title=form.closed_title or _("Submissions Closed"),
+			closed_message=form.closed_message or _("Submissions for this form have closed."),
+			success_title=form.success_title or _("Thank you!"),
+			success_message=form.success_message or "",
 		)
 
 	def closed_response(self) -> CustomFormResponse:
-		form_row = self.form_row
+		form = self.form
 		return CustomFormResponse(
 			form_fields=[],
 			custom_fields=[],
 			form_title=self.form_doctype,
 			event=self.event_summary(),
 			closed=True,
-			closed_title=form_row.closed_title or _("Submissions Closed"),
-			closed_message=form_row.closed_message or _("Submissions for this form have closed."),
+			closed_title=form.closed_title or _("Submissions Closed"),
+			closed_message=form.closed_message or _("Submissions for this form have closed."),
 			success_title="",
 			success_message="",
 		)
@@ -125,7 +125,7 @@ class CustomFormService:
 
 	@property
 	def exclude_fields(self) -> set:
-		return get_exclude_fields(self.form_doctype, self.form_row.excluded_fields)
+		return get_exclude_fields(self.form_doctype, self.form.excluded_fields)
 
 	def renderable_fields(self) -> list[dict]:
 		return get_form_fields(

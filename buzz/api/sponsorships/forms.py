@@ -10,32 +10,39 @@ from buzz.api.forms.schemas import CustomFieldDefinition
 from buzz.api.forms.services import CustomFormService
 from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import ENQUIRY_FIELDS
 
+ENQUIRY_DOCTYPE = "Sponsorship Enquiry"
+SUBMISSION_METHOD = "buzz.api.sponsorships.submit_enquiry_form"
+
 
 class SponsorFormService(CustomFormService):
+	"""Serve the event's Sponsor Enquiry Form through the shared custom form machinery."""
+
 	def form_data(self):
 		response = super().form_data()
-		response.submission_method = "buzz.api.sponsorships.submit_enquiry_form"
+		response.submission_method = SUBMISSION_METHOD
 		return response
 
 	@cached_property
-	def form_row(self):
-		name = frappe.db.get_value(
+	def form(self):
+		"""The event's published Sponsor Enquiry Form, in place of a custom_forms row."""
+		form_id = frappe.db.get_value(
 			"Sponsor Enquiry Form", {"event": self.event.name, "route": self.form_route, "publish": 1}
 		)
-		if not name:
+		if not form_id:
 			FormNotAvailable.throw()
-		return frappe.get_doc("Sponsor Enquiry Form", name)
+		return frappe.get_doc("Sponsor Enquiry Form", form_id)
 
 	@property
 	def form_doctype(self):
-		return "Sponsorship Enquiry"
+		return ENQUIRY_DOCTYPE
 
 	def check_login(self):
-		if not self.form_row.allow_guest_submissions and frappe.session.user == "Guest":
+		if not self.form.allow_guest_submissions and frappe.session.user == "Guest":
 			LoginRequired.throw()
 
 	@property
 	def exclude_fields(self):
+		"""Hide every enquiry field except the ones an applicant is meant to fill in."""
 		internal = {
 			field.fieldname
 			for field in frappe.get_meta(self.form_doctype).fields
@@ -59,34 +66,38 @@ class SponsorFormService(CustomFormService):
 	def custom_field_definitions(self):
 		return [
 			CustomFieldDefinition(
-				label=row.label,
-				fieldname=row.fieldname,
-				fieldtype=row.fieldtype,
-				options=row.options,
-				mandatory=row.mandatory,
-				placeholder=row.placeholder,
-				default_value=row.default_value,
-				order=row.idx,
+				label=question.label,
+				fieldname=question.fieldname,
+				fieldtype=question.fieldtype,
+				options=question.options,
+				mandatory=question.mandatory,
+				placeholder=question.placeholder,
+				default_value=question.default_value,
+				order=question.idx,
 			)
-			for row in self.form_row.custom_fields
-			if row.enabled
+			for question in self.form.custom_fields
+			if question.enabled
 		]
 
 	def submit(self, data, custom_fields_data=None) -> str:
+		"""Record one enquiry against this form and return its name."""
 		self.check_login()
 		if self.is_closed:
 			SubmissionsClosed.throw()
 		values = frappe.parse_json(data) or {}
 		if not isinstance(values, dict):
-			frappe.throw(_("Form values must be an object."))
-		doc = frappe.get_doc(self.build_doc_data(values))
-		doc.enquiry_form = self.form_row.name
-		doc.set(
+			frappe.throw(_("Could not read the submitted form. Please reload the page and try again."))
+		enquiry = frappe.get_doc(self.build_doc_data(values))
+		enquiry.enquiry_form = self.form.name
+		enquiry.set(
 			"additional_fields",
-			CustomAnswers(self.form_row.custom_fields).rows(frappe.parse_json(custom_fields_data) or {}),
+			CustomAnswers(self.form.custom_fields).rows(frappe.parse_json(custom_fields_data) or {}),
 		)
-		if doc.tier and str(frappe.db.get_value("Sponsorship Tier", doc.tier, "event")) != str(
-			self.event.name
-		):
+		self.validate_tier_belongs_to_event(enquiry.tier)
+		return enquiry.insert(ignore_permissions=True).name
+
+	def validate_tier_belongs_to_event(self, tier):
+		if not tier:
+			return
+		if str(frappe.db.get_value("Sponsorship Tier", tier, "event")) != str(self.event.name):
 			frappe.throw(_("Select a sponsorship tier from this event."))
-		return doc.insert(ignore_permissions=True).name

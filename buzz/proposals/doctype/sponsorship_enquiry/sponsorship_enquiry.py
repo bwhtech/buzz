@@ -29,25 +29,17 @@ class SponsorshipEnquiry(Document):
 		website: DF.Data | None
 	# end: auto-generated types
 
-	def validate(self):
-		if self.contact_email:
+	def before_save(self):
+		if self.contact_email and self.has_value_changed("contact_email"):
 			self.contact_email = self.contact_email.strip().lower()
-		self.validate_contact_email_is_not_reassigned()
+
+	def validate(self):
 		if self.is_new() and self.enquiry_form and self.owner == "Guest" and not self.contact_email:
 			frappe.throw(frappe._("Contact Email is required for guest enquiries."), frappe.MandatoryError)
 		if self.enquiry_form and str(
 			frappe.db.get_value("Sponsor Enquiry Form", self.enquiry_form, "event")
 		) != str(self.event):
 			frappe.throw(frappe._("The enquiry form must belong to this event."))
-
-	def validate_contact_email_is_not_reassigned(self):
-		# The address grants access to the enquiry, so it is fixed once chosen. It stays
-		# settable while empty, which is how a pre-form enquiry gains one.
-		before = self.get_doc_before_save()
-		if before and before.contact_email and before.contact_email != self.contact_email:
-			frappe.throw(
-				frappe._("Contact Email cannot be changed once set."), frappe.CannotChangeConstantError
-			)
 
 	@property
 	def contact_recipient(self):

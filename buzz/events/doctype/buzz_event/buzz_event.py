@@ -10,6 +10,7 @@ from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
 
 from buzz.api.forms.fields import validate_excluded_fields
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
+from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import create_for_event
 from buzz.utils import get_time_zone_label, only_if_app_installed
 
 # Top-level dashboard route segments (/b/<segment>) an event route must not shadow.
@@ -252,12 +253,13 @@ class BuzzEvent(Document):
 		self.create_default_records()
 
 	def on_trash(self):
-		# The form is created with the event and is the only doc that is one-per-event, so
-		# it goes with it. Frappe runs this before the link check, which would otherwise
-		# refuse to delete any event at all.
-		form = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
-		if form:
-			frappe.delete_doc("Sponsor Enquiry Form", form, ignore_permissions=True)
+		# The form is created with the event and is the only doc that is one-per-event, so it
+		# goes with it. Frappe runs this before the link check, which would otherwise refuse
+		# every event delete. Enquiries block the delete on their own link to the event, so
+		# leave their form standing rather than pre-empting that with a worse message.
+		sponsorship_form_id = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
+		if sponsorship_form_id and not frappe.db.exists("Sponsorship Enquiry", {"event": self.name}):
+			frappe.delete_doc("Sponsor Enquiry Form", sponsorship_form_id, ignore_permissions=True)
 
 	def create_default_records(self):
 		records = [
@@ -273,8 +275,6 @@ class BuzzEvent(Document):
 		]
 		for form in default_forms:
 			self.append("custom_forms", form)
-		from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import create_for_event
-
 		create_for_event(self.name)
 		self.save(ignore_permissions=True)
 
@@ -288,11 +288,11 @@ class BuzzEvent(Document):
 		self.close_registrations()
 		for form in self.custom_forms:
 			form.publish = 0
-		form_name = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
-		if form_name:
-			form = frappe.get_doc("Sponsor Enquiry Form", form_name)
-			form.publish = 0
-			form.save(ignore_permissions=True)
+		sponsorship_form_id = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
+		if sponsorship_form_id:
+			sponsorship_form = frappe.get_doc("Sponsor Enquiry Form", sponsorship_form_id)
+			sponsorship_form.publish = 0
+			sponsorship_form.save(ignore_permissions=True)
 		self.save()
 
 	def close_registrations(self):
@@ -495,6 +495,10 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 
 	if options.get("custom_fields"):
 		for cf in template.template_custom_fields:
+			# Sponsorship questions live on Sponsor Enquiry Form now; an older template may
+			# still carry one, and recreating it here would fail the event mid-creation.
+			if cf.custom_form_doctype == "Sponsorship Enquiry":
+				continue
 			custom_field = frappe.new_doc("Buzz Custom Field")
 			custom_field.event = event.name
 			custom_field.label = cf.label

@@ -48,22 +48,26 @@ class SponsorEnquiryForm(Document):
 			frappe.throw(_("This route is already used by another event form."))
 
 	def validate_questions(self):
-		seen = set()
-		before = self.get_doc_before_save()
-		previous = {row.name: row.fieldname for row in before.custom_fields} if before else {}
-		for row in self.custom_fields:
-			row.fieldname = row.fieldname or frappe.scrub(row.label or "")
-			if not re.fullmatch(r"[a-z][a-z0-9_]*", row.fieldname):
+		used_fieldnames = set()
+		before_save = self.get_doc_before_save()
+		saved_fieldnames = (
+			{question.name: question.fieldname for question in before_save.custom_fields}
+			if before_save
+			else {}
+		)
+		for question in self.custom_fields:
+			question.fieldname = question.fieldname or frappe.scrub(question.label or "")
+			if not re.fullmatch(r"[a-z][a-z0-9_]*", question.fieldname):
 				frappe.throw(
 					_(
 						"Question fieldnames must start with a letter and contain lowercase letters, numbers or underscores."
 					)
 				)
-			if row.fieldname in seen or row.fieldname in ENQUIRY_FIELDS:
-				frappe.throw(_("Duplicate or reserved question fieldname: {0}").format(row.fieldname))
-			if previous.get(row.name) and previous[row.name] != row.fieldname:
+			if question.fieldname in used_fieldnames or question.fieldname in ENQUIRY_FIELDS:
+				frappe.throw(_("Duplicate or reserved question fieldname: {0}").format(question.fieldname))
+			if saved_fieldnames.get(question.name) not in (None, question.fieldname):
 				frappe.throw(_("A saved question's fieldname cannot be changed. Add a new question instead."))
-			seen.add(row.fieldname)
+			used_fieldnames.add(question.fieldname)
 
 
 def create_for_event(event: str) -> Document:

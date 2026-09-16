@@ -29,7 +29,8 @@
    "label": "Route",
    "fieldtype": "Data",
    "default": "enquire-sponsorship",
-   "reqd": 1
+   "reqd": 1,
+   "read_only": 1
   },
   {
    "fieldname": "column_break_settings",
@@ -137,5 +138,6 @@
    "link_doctype": "Sponsorship Enquiry",
    "link_fieldname": "enquiry_form"
   }
- ]
+ ],
+ "modified": "2026-09-16 13:00:00.000000"
 }
