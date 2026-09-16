@@ -39,7 +39,7 @@ class SponsorshipService:
 
 	@property
 	def is_owner(self) -> bool:
-		return self.enquiry.owner == frappe.session.user
+		return self.enquiry.is_applicant()
 
 	def details(self) -> SponsorshipDetailsResponse:
 		if not self.is_owner and not frappe.has_permission("Sponsorship Enquiry", "read", self.enquiry):
@@ -117,9 +117,11 @@ class SponsorshipService:
 
 
 def list_user_enquiries() -> list[SponsorshipListItem]:
+	if frappe.session.user == "Guest":
+		return []
 	enquiries = frappe.db.get_all(
 		"Sponsorship Enquiry",
-		filters={"owner": frappe.session.user},
+		or_filters={"owner": frappe.session.user, "contact_email": frappe.session.user},
 		fields=["name", "company_name", "event", "tier", "status", "creation"],
 		order_by="creation desc",
 	)

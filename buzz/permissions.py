@@ -14,7 +14,11 @@ OWNER_VISIBLE_DOCTYPES = frozenset({"Event Booking", "Event Ticket", "Sponsorshi
 
 # The column naming who a row belongs to: a booking made on someone else's behalf, or a
 # guest checkout running as Administrator, leaves `owner` naming neither buyer nor attendee.
-IDENTITY_FIELDS = {"Event Booking": "user", "Event Ticket": "attendee_email"}
+IDENTITY_FIELDS = {
+	"Event Booking": "user",
+	"Event Ticket": "attendee_email",
+	"Sponsorship Enquiry": "contact_email",
+}
 
 
 def is_unrestricted(user: str) -> bool:

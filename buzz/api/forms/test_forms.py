@@ -24,6 +24,7 @@ from buzz.api.forms.fields import (
 	parse_excluded_fields,
 	validate_excluded_fields,
 )
+from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team
 
 # Renderable Talk Proposal fields (after STANDARD_EXCLUDE_FIELDS + auto-set event/submitted_by):
 #   title (reqd, Data), description (Text Editor), speakers (reqd, Table), phone (Phone)
@@ -57,6 +58,7 @@ class FormsTestCase(IntegrationTestCase):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Test Forms Category")
 		cls.host = ensure_event_host("Test Forms Host")
+		cls.team = create_owned_team(f"Forms Tests {frappe.generate_hash(length=6)}", "Administrator")
 
 	def setUp(self):
 		frappe.set_user("Administrator")
@@ -75,6 +77,7 @@ class FormsTestCase(IntegrationTestCase):
 				"medium": "Online",
 				"category": self.category,
 				"host": self.host,
+				"team": self.team,
 				"is_published": is_published,
 			}
 		)
@@ -141,6 +144,7 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Test Forms Category")
 		cls.host = ensure_event_host("Test Forms Host")
+		cls.team = create_owned_team(f"Link Field Tests {frappe.generate_hash(length=6)}", "Administrator")
 
 	def make_tier(self, title="Gold Tier"):
 		event = frappe.new_doc("Buzz Event")
@@ -154,6 +158,7 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 				"medium": "Online",
 				"category": self.category,
 				"host": self.host,
+				"team": self.team,
 			}
 		)
 		event.insert(ignore_permissions=True)
@@ -383,9 +388,11 @@ class TestCustomFormCustomFields(FormsTestCase):
 
 class TestCustomFormLinkEventFilter(FormsTestCase):
 	def make_sponsorship_event(self):
-		return self.build_event(
-			form_doctype="Sponsorship Enquiry", route=f"sponsor-{frappe.generate_hash(length=6)}"
-		)
+		event, _ = self.build_event()
+		form = frappe.get_doc("Sponsor Enquiry Form", {"event": event.name})
+		form.publish = 1
+		form.save()
+		return event, form.route
 
 	def make_tier(self, event_name, title):
 		tier = frappe.new_doc("Sponsorship Tier")
