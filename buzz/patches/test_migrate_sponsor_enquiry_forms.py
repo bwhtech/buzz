@@ -198,18 +198,25 @@ class TestMigrateSponsorEnquiryForms(SponsorFormMigrationTestCase):
 		self.assertFalse(frappe.db.exists("Sponsor Enquiry Form", {"event": migratable.name}))
 		self.assertTrue(frappe.db.exists("Buzz Event Form", legacy.name))
 
-	def test_invalid_question_keys_preflight_before_any_event_is_changed(self):
-		migratable = self.make_legacy_event()
-		legacy = self.add_legacy_form(migratable)
-		conflicted = self.make_legacy_event()
-		self.add_legacy_question(conflicted, fieldname="duplicate")
-		self.add_legacy_question(conflicted, label="Duplicate", fieldname="duplicate")
+	def test_legacy_question_keys_are_reshaped_rather_than_refused(self):
+		event = self.make_legacy_event()
+		self.add_legacy_form(event)
+		self.add_legacy_question(event, label="Website", fieldname="website")
+		self.add_legacy_question(event, label="1st Choice", fieldname="1st_choice")
+		self.add_legacy_question(event, label="Booth Size?", fieldname="booth_size?")
+		self.add_legacy_question(event, label="Duplicate", fieldname="duplicate")
+		self.add_legacy_question(event, label="Duplicate Again", fieldname="duplicate")
 
-		with self.assertRaises(frappe.ValidationError):
-			SponsorFormMigration().run()
+		SponsorFormMigration().run()
 
-		self.assertFalse(frappe.db.exists("Sponsor Enquiry Form", {"event": migratable.name}))
-		self.assertTrue(frappe.db.exists("Buzz Event Form", legacy.name))
+		form = frappe.get_doc("Sponsor Enquiry Form", {"event": event.name})
+		fieldnames = [row.fieldname for row in form.custom_fields]
+
+		# A key colliding with a standard field would shadow it on submission.
+		self.assertNotIn("website", fieldnames)
+		self.assertEqual(len(set(fieldnames)), len(fieldnames))
+		for fieldname in fieldnames:
+			self.assertRegex(fieldname, r"^[a-z][a-z0-9_]*$")
 
 	def test_route_collision_preflight_before_any_event_is_changed(self):
 		migratable = self.make_legacy_event()
