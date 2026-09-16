@@ -5,7 +5,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cstr
 
-from buzz.api.forms.fields import validate_excluded_fields
+from buzz.api.forms.fields import parse_excluded_fields, validate_excluded_fields
 
 ENQUIRY_FIELDS = frozenset(
 	{"company_name", "company_logo", "website", "tier", "country", "phone", "contact_email"}
@@ -17,9 +17,9 @@ class SponsorEnquiryForm(Document):
 		self.validate_event_is_unchanged()
 		self.validate_route()
 		validate_excluded_fields("Sponsorship Enquiry", self.excluded_fields)
-		if self.allow_guest_submissions and "contact_email" in (self.excluded_fields or "").replace(
-			" ", ""
-		).split(","):
+		if self.allow_guest_submissions and "contact_email" in (
+			parse_excluded_fields(self.excluded_fields) or set()
+		):
 			frappe.throw(_("Contact Email cannot be hidden when guest submissions are enabled."))
 		self.validate_questions()
 		if (
@@ -39,14 +39,12 @@ class SponsorEnquiryForm(Document):
 	def validate_route(self):
 		if not self.route or not re.fullmatch(r"[a-zA-Z0-9_-]+", self.route):
 			frappe.throw(_("Use only letters, numbers, hyphens and underscores in the form route."))
-		rows = frappe.get_all(
+		clashing = frappe.get_all(
 			"Buzz Event Form",
-			filters={"parent": self.event, "parenttype": "Buzz Event"},
-			fields=["name", "route"],
+			filters={"parent": self.event, "parenttype": "Buzz Event", "route": self.route},
+			pluck="name",
 		)
-		if any(
-			row.route.lower() == self.route.lower() and row.name != self.flags.legacy_form_row for row in rows
-		):
+		if any(name != self.flags.legacy_form_row for name in clashing):
 			frappe.throw(_("This route is already used by another event form."))
 
 	def validate_questions(self):

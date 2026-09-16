@@ -145,19 +145,17 @@ class BuzzEvent(Document):
 		self.time_zone_label = get_time_zone_label(self.time_zone, event_start)
 
 	def validate_custom_forms(self):
+		# A new event has no form row yet, but create_default_records is about to make one.
 		sponsor_route = (
 			frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name}, "route")
 			if not self.is_new()
 			else "enquire-sponsorship"
 		)
-		routes = set()
 		for form in self.custom_forms:
 			if form.form_doctype == "Sponsorship Enquiry":
 				frappe.throw(_("Manage sponsorship intake in Sponsor Enquiry Form."))
-			route = (form.route or "").lower()
-			if route in routes or (sponsor_route and route == sponsor_route.lower()):
-				frappe.throw(_("Each event form must have a unique route."))
-			routes.add(route)
+			if sponsor_route and (form.route or "").lower() == sponsor_route.lower():
+				frappe.throw(_("This route is already used by the sponsorship form."))
 			if form.excluded_fields:
 				validate_excluded_fields(form.form_doctype, form.excluded_fields)
 

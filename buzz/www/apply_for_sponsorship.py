@@ -9,24 +9,19 @@ def get_context(context):
 	requested = frappe.form_dict.get("event")
 	if requested:
 		for event in context.sponsorship_events:
-			if requested in (str(event.name), event.route):
+			if requested in (str(event.name), event.event_route):
 				frappe.local.flags.redirect_location = event.url
 				raise frappe.Redirect
 
 
 def available_events():
-	form = frappe.qb.DocType("Sponsor Enquiry Form")
-	event = frappe.qb.DocType("Buzz Event")
-	rows = (
-		frappe.qb.from_(form)
-		.join(event)
-		.on(form.event == event.name)
-		.select(event.name, event.title, event.route, form.route.as_("form_route"))
-		.where((form.publish == 1) & (event.is_published == 1))
-		.where(form.auto_close_at.isnull() | (form.auto_close_at >= now_datetime()))
-		.orderby(event.start_date)
-		.run(as_dict=True)
+	rows = frappe.get_all(
+		"Sponsor Enquiry Form",
+		filters={"publish": 1, "event.is_published": 1},
+		or_filters=[["auto_close_at", "is", "not set"], ["auto_close_at", ">=", now_datetime()]],
+		fields=["event as name", "route as form_route", "event.title as title", "event.route as event_route"],
+		order_by="`tabBuzz Event`.start_date",
 	)
 	for row in rows:
-		row.url = f"/b/{row.route}/{row.form_route}"
+		row.url = f"/b/{row.event_route}/{row.form_route}"
 	return rows
