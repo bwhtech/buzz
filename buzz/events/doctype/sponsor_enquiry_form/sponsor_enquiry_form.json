@@ -1,0 +1,143 @@
+{
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Events",
+ "autoname": "hash",
+ "naming_rule": "Random",
+ "track_changes": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "name": "Sponsor Enquiry Form",
+ "fields": [
+  {
+   "fieldname": "allow_guest_submissions",
+   "label": "Allow Guest Submissions",
+   "fieldtype": "Check",
+   "default": "0"
+  },
+  {
+   "fieldname": "event",
+   "label": "Event",
+   "fieldtype": "Link",
+   "options": "Buzz Event",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "route",
+   "label": "Route",
+   "fieldtype": "Data",
+   "default": "enquire-sponsorship",
+   "reqd": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_settings",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "publish",
+   "label": "Published",
+   "fieldtype": "Check",
+   "default": "0",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "auto_close_at",
+   "label": "Close At",
+   "fieldtype": "Datetime"
+  },
+  {
+   "fieldname": "excluded_fields",
+   "label": "Excluded Optional Fields",
+   "fieldtype": "Small Text",
+   "description": "Comma-separated optional Sponsorship Enquiry field names."
+  },
+  {
+   "fieldname": "questions_tab",
+   "label": "Questions",
+   "fieldtype": "Tab Break"
+  },
+  {
+   "fieldname": "custom_fields",
+   "label": "Custom Questions",
+   "fieldtype": "Table",
+   "options": "Buzz Form Field"
+  },
+  {
+   "fieldname": "messages_tab",
+   "label": "Messages",
+   "fieldtype": "Tab Break"
+  },
+  {
+   "fieldname": "success_title",
+   "label": "Success Title",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "success_message",
+   "label": "Success Message",
+   "fieldtype": "Markdown Editor"
+  },
+  {
+   "fieldname": "closed_section",
+   "label": "Closed",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "closed_title",
+   "label": "Closed Title",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "closed_message",
+   "label": "Closed Message",
+   "fieldtype": "Small Text"
+  }
+ ],
+ "field_order": [
+  "event",
+  "route",
+  "column_break_settings",
+  "publish",
+  "allow_guest_submissions",
+  "auto_close_at",
+  "excluded_fields",
+  "questions_tab",
+  "custom_fields",
+  "messages_tab",
+  "success_title",
+  "success_message",
+  "closed_section",
+  "closed_title",
+  "closed_message"
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Event Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "links": [
+  {
+   "link_doctype": "Sponsorship Enquiry",
+   "link_fieldname": "enquiry_form"
+  }
+ ],
+ "modified": "2026-09-16 13:00:00.000000"
+}

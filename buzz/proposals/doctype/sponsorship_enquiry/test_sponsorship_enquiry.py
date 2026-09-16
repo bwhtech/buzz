@@ -177,3 +177,57 @@ class TestSponsorshipEnquiryEmail(IntegrationTestCase):
 			self.clear_team_defaults()
 			frappe.delete_doc("Email Template", event_template.name, force=True)
 			frappe.delete_doc("Email Template", team_template.name, force=True)
+
+
+class TestSponsorshipApprovalNotification(IntegrationTestCase):
+	"""Where the approval email sends the applicant next."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+		frappe.db.rollback()
+
+	def make_enquiry(self, owner=None, contact_email=None):
+		enquiry = frappe.get_doc(
+			{
+				"doctype": "Sponsorship Enquiry",
+				"event": self.test_event.name,
+				"company_name": "Approval Co",
+				"company_logo": "/files/test-logo.png",
+				"contact_email": contact_email,
+			}
+		).insert(ignore_permissions=True)
+		if owner:
+			frappe.db.set_value("Sponsorship Enquiry", enquiry.name, "owner", owner)
+			enquiry.reload()
+		return enquiry
+
+	@patch("frappe.sendmail")
+	def test_an_account_holder_is_sent_to_their_dashboard(self, mock_sendmail):
+		enquiry = self.make_enquiry()
+		enquiry.send_approval_notification()
+
+		message = mock_sendmail.call_args[1]["message"]
+		self.assertIn(f"/b/account/sponsorships/{enquiry.name}", message)
+
+	@patch("frappe.sendmail")
+	def test_a_guest_enquiry_is_not_sent_to_a_page_it_cannot_open(self, mock_sendmail):
+		enquiry = self.make_enquiry(owner="Guest", contact_email="guest-applicant@example.com")
+		enquiry.send_approval_notification()
+
+		args = mock_sendmail.call_args[1]
+		self.assertEqual(args["recipients"], ["guest-applicant@example.com"])
+		# Nobody satisfies is_applicant on a Guest-owned enquiry, so the link would 403.
+		self.assertNotIn("/b/account/sponsorships/", args["message"])
+		self.assertIn("be in touch", args["message"])
+
+	@patch("frappe.sendmail")
+	def test_a_guest_enquiry_without_a_contact_email_sends_nothing(self, mock_sendmail):
+		enquiry = self.make_enquiry(owner="Guest")
+		enquiry.send_approval_notification()
+
+		mock_sendmail.assert_not_called()

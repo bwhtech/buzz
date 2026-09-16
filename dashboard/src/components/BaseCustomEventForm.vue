@@ -18,6 +18,16 @@
 				<p v-else class="text-ink-green-6">
 					{{ __("Your submission has been received.") }}
 				</p>
+				<p v-if="enquiryId && !session.isLoggedIn" class="text-ink-green-6 mt-3">
+					{{ __("We'll be in touch at the email address you gave us.") }}
+				</p>
+				<Button
+					v-if="enquiryId && session.isLoggedIn"
+					class="mt-4"
+					:route="`/account/sponsorships/${enquiryId}`"
+				>
+					{{ __("View your enquiry") }}
+				</Button>
 			</div>
 		</div>
 
@@ -142,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog, Spinner, createResource, toast, usePageMeta } from "frappe-ui"
+import { Button, Dialog, Spinner, toast, useCall, usePageMeta } from "frappe-ui"
 import { marked } from "marked"
 import { computed, reactive, ref } from "vue"
 import LucideAlertCircle from "~icons/lucide/alert-circle"
@@ -153,6 +163,7 @@ import CustomFieldsSection from "@/components/CustomFieldsSection.vue"
 import EventDetailsHeader from "@/components/EventDetailsHeader.vue"
 import FormFieldSections from "@/components/FormFieldSections.vue"
 import LoginRequired from "@/components/LoginRequired.vue"
+import { session } from "@/data/session"
 import type { FrappeError } from "@/types"
 
 interface FormFieldDef {
@@ -204,6 +215,7 @@ usePageMeta(() => {
 const formValues = reactive<Record<string, any>>({})
 const customFieldValues = ref<Record<string, any>>({})
 const submitted = ref(false)
+const enquiryId = ref<string | null>(null)
 const loginRequired = ref(false)
 const loadError = ref<string | null>(null)
 
@@ -277,13 +289,12 @@ function saveTableRow() {
 	tableDialog.open = false
 }
 
-const formDataResource = createResource({
-	url: "buzz.api.forms.get_custom_form_data",
+const formDataResource = useCall<CustomFormData, { event_route: string; form_route: string }>({
+	url: "/api/v2/method/buzz.api.forms.get_custom_form_data",
 	params: {
 		event_route: props.eventRoute,
 		form_route: props.formRoute,
 	},
-	auto: true,
 	onSuccess: (data: CustomFormData) => {
 		formData.value = data
 		for (const field of data.form_fields || []) {
@@ -292,8 +303,9 @@ const formDataResource = createResource({
 			}
 		}
 	},
-	onError: (err: FrappeError) => {
-		if (err.exc_type === "LoginRequired") {
+	onError: (error: Error) => {
+		const err = error as FrappeError
+		if (err.type === "LoginRequired" || err.exc_type === "LoginRequired") {
 			loginRequired.value = true
 			return
 		}
@@ -301,12 +313,19 @@ const formDataResource = createResource({
 	},
 })
 
-const submitResource = createResource({
-	url: "buzz.api.forms.submit_custom_form",
-	onSuccess: () => {
+const submitResource = useCall<string | null, Record<string, any>>({
+	url: computed(
+		() =>
+			`/api/v2/method/${formData.value?.submission_method || "buzz.api.forms.submit_custom_form"}`,
+	),
+	method: "POST",
+	immediate: false,
+	onSuccess: (name) => {
+		enquiryId.value = name || null
 		submitted.value = true
 	},
-	onError: (err: FrappeError) => {
+	onError: (error: Error) => {
+		const err = error as FrappeError
 		const msg = err.messages?.[0] || __("Failed to submit form")
 		toast.error(msg.replace(/<[^>]*>/g, ""))
 	},
@@ -323,7 +342,7 @@ function handleSubmit() {
 	for (const field of formData.value?.custom_fields || []) {
 		if (!field.mandatory) continue
 		const val = customFieldValues.value[field.fieldname]
-		const isEmpty = !val || val === "0" || val === 0
+		const isEmpty = val == null || val === "" || (Array.isArray(val) && val.length === 0)
 		if (isEmpty) {
 			toast.error(__("{0} is required", [__(field.label)]))
 			return

@@ -202,6 +202,7 @@ after_migrate = "buzz.install.on_migrate"
 # compose the team scope with the speaker carve-out — one function per doctype per hook.
 
 permission_query_conditions = {
+	"Sponsor Enquiry Form": "buzz.permissions.derived_query_conditions",
 	"Buzz Event": "buzz.permissions.team_query_conditions",
 	"Buzz Campaign": "buzz.permissions.team_query_conditions",
 	"Event Host": "buzz.permissions.team_query_conditions",
@@ -234,6 +235,7 @@ permission_query_conditions = {
 standard_queries = {"Buzz Team": "buzz.permissions.team_link_query"}
 
 has_permission = {
+	"Sponsor Enquiry Form": "buzz.permissions.derived_has_permission",
 	"Buzz Event": "buzz.permissions.team_has_permission",
 	"Buzz Campaign": "buzz.permissions.team_has_permission",
 	"Event Host": "buzz.permissions.team_has_permission",

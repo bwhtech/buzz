@@ -30,7 +30,7 @@
  "name": "apply-for-sponsorship",
  "owner": "Administrator",
  "payment_button_label": "Buy Now",
- "published": 1,
+ "published": 0,
  "route": "apply-for-sponsorship",
  "show_attachments": 0,
  "show_list": 1,

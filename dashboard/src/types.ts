@@ -85,6 +85,7 @@ export type ProposalWithEvent = ProposalListItem & { event_title: string; start_
 // Errors rejected by frappe-ui resources carry server messages beyond Error.
 export interface FrappeError extends Error {
 	messages?: string[]
+	type?: string
 	exc?: string
 	exc_type?: string
 }

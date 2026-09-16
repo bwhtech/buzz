@@ -16,15 +16,24 @@ def get_dial_codes() -> list:
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 def get_custom_form_data(event_route: str, form_route: str) -> CustomFormResponse:
-	return CustomFormService(event_route, form_route).form_data()
+	return form_service(event_route, form_route).form_data()
 
 
 # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def submit_custom_form(
 	event_route: str, form_route: str, data: dict | str, custom_fields_data: dict | str | None = None
-) -> None:
-	CustomFormService(event_route, form_route).submit(data, custom_fields_data)
+) -> str | None:
+	return form_service(event_route, form_route).submit(data, custom_fields_data)
+
+
+def form_service(event_route: str, form_route: str):
+	from buzz.api.sponsorships.forms import SponsorFormService
+
+	service = CustomFormService(event_route, form_route)
+	if frappe.db.exists("Sponsor Enquiry Form", {"event": service.event.name, "route": form_route}):
+		return SponsorFormService(event_route, form_route)
+	return service
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method

@@ -58,15 +58,14 @@
   "tax_label",
   "tax_percentage",
   "sponsorships_tab",
+  "open_sponsor_form",
   "show_sponsorship_section",
   "automations_section",
   "auto_send_pitch_deck",
-  "section_break_edar",
   "sponsor_deck_email_template",
   "sponsor_deck_reply_to",
-  "column_break_awpd",
   "sponsor_deck_cc",
-  "section_break_mieu",
+  "column_break_rgkz",
   "sponsor_deck_attachments",
   "customisations_tab",
   "send_ticket_email",
@@ -89,6 +88,12 @@
   "proposal"
  ],
  "fields": [
+  {
+   "depends_on": "eval:!doc.__islocal",
+   "fieldname": "open_sponsor_form",
+   "fieldtype": "Button",
+   "label": "Open Form Settings"
+  },
   {
    "fieldname": "title",
    "fieldtype": "Data",
@@ -376,18 +381,6 @@
    "label": "Auto Send Pitch Deck?"
   },
   {
-   "fieldname": "section_break_edar",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "column_break_awpd",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "section_break_mieu",
-   "fieldtype": "Section Break"
-  },
-  {
    "depends_on": "eval:doc.auto_send_pitch_deck==true",
    "description": "Default template will be used if not set",
    "fieldname": "sponsor_deck_email_template",
@@ -567,6 +560,10 @@
    "options": "Buzz Team",
    "reqd": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "column_break_rgkz",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
@@ -644,7 +641,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-09-10 12:00:00.000000",
+ "modified": "2026-09-16 23:55:26.308934",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

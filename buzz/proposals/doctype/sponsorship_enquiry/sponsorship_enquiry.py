@@ -29,6 +29,27 @@ class SponsorshipEnquiry(Document):
 		website: DF.Data | None
 	# end: auto-generated types
 
+	def before_save(self):
+		if self.contact_email and self.has_value_changed("contact_email"):
+			self.contact_email = self.contact_email.strip().lower()
+
+	def validate(self):
+		if self.is_new() and self.enquiry_form and self.owner == "Guest" and not self.contact_email:
+			frappe.throw(frappe._("Contact Email is required for guest enquiries."), frappe.MandatoryError)
+		if self.enquiry_form and str(
+			frappe.db.get_value("Sponsor Enquiry Form", self.enquiry_form, "event")
+		) != str(self.event):
+			frappe.throw(frappe._("The enquiry form must belong to this event."))
+
+	@property
+	def contact_recipient(self):
+		return self.contact_email or (self.owner if self.owner != "Guest" else None)
+
+	def is_applicant(self, user=None):
+		# `contact_email` is unverified, so it addresses mail and nothing more.
+		user = user or frappe.session.user
+		return user != "Guest" and self.owner == user
+
 	def on_update(self):
 		if self.has_value_changed("status") and self.status == "Payment Pending":
 			try:
@@ -79,6 +100,8 @@ class SponsorshipEnquiry(Document):
 			frappe.log_error("Error sending Sponsor Pitch Deck")
 
 	def send_pitch_deck(self, now=False):
+		if not self.contact_recipient:
+			return
 		event = frappe.get_cached_doc("Buzz Event", self.event)
 		settings = get_event_team_settings(self.event)
 
@@ -102,7 +125,7 @@ class SponsorshipEnquiry(Document):
 		reply_to = event.sponsor_deck_reply_to or settings.default_sponsor_deck_reply_to
 
 		frappe.sendmail(
-			recipients=[self.owner],
+			recipients=[self.contact_recipient],
 			subject=subject,
 			cc=cc,
 			reply_to=reply_to,
@@ -113,10 +136,25 @@ class SponsorshipEnquiry(Document):
 			attachments=[{"file_url": attachment.file} for attachment in event.sponsor_deck_attachments],
 		)
 
+	def approval_next_step(self) -> str:
+		"""What the applicant does next, which depends on whether they have an account.
+
+		A guest enquiry is owned by `Guest`, so no account satisfies `is_applicant` and the
+		dashboard would refuse whoever followed the link. Do not send them to a dead page.
+		"""
+		if self.owner == "Guest":
+			return "We will be in touch shortly to confirm your sponsorship tier and arrange payment."
+		dashboard_link = get_url(f"/b/account/sponsorships/{self.name}")
+		return (
+			"You can now proceed to select a sponsorship tier and complete the payment "
+			f'by visiting your dashboard <a href="{dashboard_link}">here</a>.'
+		)
+
 	def send_approval_notification(self):
+		if not self.contact_recipient:
+			return
 		event = frappe.get_cached_doc("Buzz Event", self.event)
 		host_name = frappe.db.get_value("Buzz Team", event.team, "team_name") or "The Event Team"
-		dashboard_link = get_url(f"/b/account/sponsorships/{self.name}")
 
 		subject = f"[Payment Pending] Your Sponsorship for {event.title} has been Approved!"
 		message = f"""
@@ -124,13 +162,13 @@ class SponsorshipEnquiry(Document):
 
 		<p>We are pleased to inform you that your sponsorship enquiry for <strong>{event.title}</strong> has been approved.</p>
 
-		<p>You can now proceed to select a sponsorship tier and complete the payment by visiting your dashboard <a href="{dashboard_link}">here</a>.</p>
+		<p>{self.approval_next_step()}</p>
 
 		<br>{host_name}</p>
 		"""
 
 		frappe.sendmail(
-			recipients=[self.owner],
+			recipients=[self.contact_recipient],
 			subject=subject,
 			message=message,
 			reference_doctype=self.doctype,
