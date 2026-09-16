@@ -21,3 +21,4 @@ buzz.patches.create_team_settings_for_existing_teams
 buzz.patches.create_withdrawn_proposal_status
 buzz.patches.backfill_event_host_names
 buzz.patches.backfill_event_co_hosts
+buzz.patches.migrate_sponsor_enquiry_forms
