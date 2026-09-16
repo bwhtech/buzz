@@ -7,7 +7,8 @@ import {
 	CUSTOM_FORMS_EVENT_ROUTE as testEventRoute,
 	MEMBERS_ONLY_FORM_ROUTE,
 } from "../data/custom-forms"
-import { callMethod } from "../helpers/frappe"
+import { newApiContext } from "../helpers/auth"
+import { callMethod, getList, updateDoc } from "../helpers/frappe"
 import { CustomFormPage } from "../pages"
 
 test.describe("Event Feedback Form", () => {
@@ -341,6 +342,31 @@ test.describe("Sponsorship Enquiry Form", () => {
 
 		await formPage.expectFormVisible()
 	})
+
+	test("should submit an enquiry and offer account details", async ({ page }) => {
+		const formPage = new CustomFormPage(page)
+
+		await formPage.goto(testEventRoute, "enquire-sponsorship")
+		await formPage.waitForFormLoad()
+		await formPage.getInputByLabel("Company Name").fill("E2E Sponsor Company")
+
+		const fileInput = page.locator('input[type="file"]').first()
+		await fileInput.setInputFiles({
+			name: "e2e-logo.png",
+			mimeType: "image/png",
+			buffer: Buffer.from(
+				"89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000000020001e221bc330000000049454e44ae426082",
+				"hex",
+			),
+		})
+
+		const result = await formPage.submitAndExpectResponse()
+		expect(result.succeeded).toBeTruthy()
+		const enquiryLink = page.getByRole("link", { name: "View your enquiry" })
+		await expect(enquiryLink).toBeVisible()
+		await enquiryLink.click()
+		await expect(page).toHaveURL(/\/account\/sponsorships\/.+/)
+	})
 })
 
 test.describe("Custom Form Edge Cases", () => {
@@ -391,6 +417,40 @@ test.describe("Login Required Form", () => {
 			await formPage.goto(testEventRoute, "feedback")
 			await formPage.waitForFormLoad()
 			await formPage.expectFormVisible()
+		})
+
+		test("gets a login prompt for sponsorship by default", async ({ page }) => {
+			const formPage = new CustomFormPage(page)
+			await formPage.goto(testEventRoute, "enquire-sponsorship")
+			await formPage.expectLoginRequired()
+		})
+
+		test("gets the sponsorship form when guest submissions are enabled", async ({
+			page,
+			baseURL,
+		}) => {
+			const admin = await newApiContext(baseURL!)
+			const events = await getList<{ name: string }>(admin, "Buzz Event", {
+				filters: { route: ["=", testEventRoute] },
+			})
+			const event = events[0]
+			if (!event) throw new Error("Custom forms event fixture was not created")
+			const forms = await getList<{ name: string }>(admin, "Sponsor Enquiry Form", {
+				filters: { event: ["=", event.name] },
+			})
+			const form = forms[0]
+			if (!form) throw new Error("Sponsorship form fixture was not created")
+			await updateDoc(admin, "Sponsor Enquiry Form", form.name, { allow_guest_submissions: 1 })
+			try {
+				const formPage = new CustomFormPage(page)
+				await formPage.goto(testEventRoute, "enquire-sponsorship")
+				await formPage.waitForFormLoad()
+				await formPage.expectFormVisible()
+				await formPage.expectFieldVisible("Contact Email")
+			} finally {
+				await updateDoc(admin, "Sponsor Enquiry Form", form.name, { allow_guest_submissions: 0 })
+				await admin.dispose()
+			}
 		})
 	})
 })

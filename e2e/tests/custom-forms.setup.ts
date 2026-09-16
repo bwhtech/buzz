@@ -75,12 +75,6 @@ setup("setup custom forms on test event", async ({ request }) => {
 			},
 			{
 				doctype: "Buzz Event Form",
-				form_doctype: "Sponsorship Enquiry",
-				route: "enquire-sponsorship",
-				publish: 1,
-			},
-			{
-				doctype: "Buzz Event Form",
 				form_doctype: "Event Feedback",
 				route: MEMBERS_ONLY_FORM_ROUTE,
 				publish: 1,
@@ -98,13 +92,32 @@ setup("setup custom forms on test event", async ({ request }) => {
 		],
 	})
 
+	const sponsorshipForms = await getList<NamedDoc>(request, "Sponsor Enquiry Form", {
+		filters: { event: ["=", eventName] },
+	})
+	const sponsorshipFormName = sponsorshipForms[0]?.name
+	if (!sponsorshipFormName) {
+		await createDoc(request, "Sponsor Enquiry Form", {
+			event: eventName,
+			route: "enquire-sponsorship",
+			publish: 1,
+			allow_guest_submissions: 0,
+		})
+	} else {
+		await updateDoc(request, "Sponsor Enquiry Form", sponsorshipFormName, {
+			route: "enquire-sponsorship",
+			publish: 1,
+			allow_guest_submissions: 0,
+		})
+	}
+
 	const updated = await getDoc<{ custom_forms: Array<{ route: string; publish: number }> }>(
 		request,
 		"Buzz Event",
 		eventName,
 	)
 	const publishedForms = (updated.custom_forms || []).filter((f) => f.publish)
-	expect(publishedForms.length).toBe(5)
+	expect(publishedForms.length).toBe(4)
 
 	console.log(
 		`Custom forms enabled on event: ${eventName} (${publishedForms.length} forms: ${publishedForms.map((f) => f.route).join(", ")})`,
