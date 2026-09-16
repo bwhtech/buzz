@@ -145,7 +145,19 @@ class BuzzEvent(Document):
 		self.time_zone_label = get_time_zone_label(self.time_zone, event_start)
 
 	def validate_custom_forms(self):
+		sponsor_route = (
+			frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name}, "route")
+			if not self.is_new()
+			else "enquire-sponsorship"
+		)
+		routes = set()
 		for form in self.custom_forms:
+			if form.form_doctype == "Sponsorship Enquiry":
+				frappe.throw(_("Manage sponsorship intake in Sponsor Enquiry Form."))
+			route = (form.route or "").lower()
+			if route in routes or (sponsor_route and route == sponsor_route.lower()):
+				frappe.throw(_("Each event form must have a unique route."))
+			routes.add(route)
 			if form.excluded_fields:
 				validate_excluded_fields(form.form_doctype, form.excluded_fields)
 
@@ -252,10 +264,12 @@ class BuzzEvent(Document):
 		default_forms = [
 			{"form_doctype": "Event Feedback", "route": "feedback"},
 			{"form_doctype": "Talk Proposal", "route": "propose-talk"},
-			{"form_doctype": "Sponsorship Enquiry", "route": "enquire-sponsorship"},
 		]
 		for form in default_forms:
 			self.append("custom_forms", form)
+		from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import create_for_event
+
+		create_for_event(self.name)
 		self.save(ignore_permissions=True)
 
 	def archive_event(self):
@@ -268,6 +282,11 @@ class BuzzEvent(Document):
 		self.close_registrations()
 		for form in self.custom_forms:
 			form.publish = 0
+		form_name = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
+		if form_name:
+			form = frappe.get_doc("Sponsor Enquiry Form", form_name)
+			form.publish = 0
+			form.save(ignore_permissions=True)
 		self.save()
 
 	def close_registrations(self):

@@ -31,6 +31,12 @@ class BuzzCustomField(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		if (
+			self.enabled
+			and self.applied_to == "Custom Form"
+			and self.custom_form_doctype == "Sponsorship Enquiry"
+		):
+			frappe.throw(_("Add sponsorship questions to Sponsor Enquiry Form."))
 		if not self.fieldname:
 			self.fieldname = frappe.scrub(self.label)
 

@@ -58,6 +58,7 @@
   "tax_label",
   "tax_percentage",
   "sponsorships_tab",
+  "open_sponsor_form",
   "show_sponsorship_section",
   "automations_section",
   "auto_send_pitch_deck",
@@ -89,6 +90,12 @@
   "proposal"
  ],
  "fields": [
+  {
+   "fieldname": "open_sponsor_form",
+   "fieldtype": "Button",
+   "label": "Open Form Settings",
+   "depends_on": "eval:!doc.__islocal"
+  },
   {
    "fieldname": "title",
    "fieldtype": "Data",
