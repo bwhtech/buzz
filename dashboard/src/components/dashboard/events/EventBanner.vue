@@ -4,7 +4,12 @@ import { Button, ErrorMessage } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
-import { bannerPattern } from "@/utils/eventBanner"
+import {
+	BANNER_ASPECT_RATIO,
+	BANNER_OUTPUT_WIDTH,
+	BANNER_SIZE_HINT,
+	bannerPattern,
+} from "@/utils/eventBanner"
 
 // The picker is filtered to these, and the file that comes back is checked against the
 // same list: `accept` is a hint the OS may ignore, and a drag-drop never consults it.
@@ -54,8 +59,9 @@ watch(image, () => {
 		 every other place the banner appears keeps its own object-cover with no extra
 		 field to carry a position. -->
 	<ImageCropUploader
-		:aspect-ratio="3"
-		:output-width="1500"
+		:aspect-ratio="BANNER_ASPECT_RATIO"
+		:output-width="BANNER_OUTPUT_WIDTH"
+		:hint="BANNER_SIZE_HINT"
 		:optimize="false"
 		:file-types="IMAGE_TYPES"
 		:validate-file="validateImage"
@@ -114,6 +120,8 @@ watch(image, () => {
 					/>
 				</div>
 			</div>
+
+			<p class="mt-2 text-p-sm text-ink-gray-5">{{ __(BANNER_SIZE_HINT) }}</p>
 
 			<!-- The slot types its error as {}, so the message needs narrowing. -->
 			<ErrorMessage v-if="uploadError" class="mt-2" :message="String(uploadError)" />

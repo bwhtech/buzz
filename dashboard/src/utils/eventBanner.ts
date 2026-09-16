@@ -40,3 +40,10 @@ export function bannerPattern(seed: string): string {
 		` linear-gradient(${SURFACE}, ${SURFACE})`
 	)
 }
+
+/** Wide and short: the frame the banner is drawn in everywhere it appears. */
+export const BANNER_ASPECT_RATIO = 3
+export const BANNER_OUTPUT_WIDTH = 1500
+
+/** Sizes the organiser can shoot for, both on the ratio above. */
+export const BANNER_SIZE_HINT = `Use a ${BANNER_ASPECT_RATIO}:1 wide image — ${BANNER_OUTPUT_WIDTH}×${BANNER_OUTPUT_WIDTH / BANNER_ASPECT_RATIO} or 900×300 pixels work well.`
