@@ -253,6 +253,14 @@ class BuzzEvent(Document):
 	def after_insert(self):
 		self.create_default_records()
 
+	def on_trash(self):
+		# The form is created with the event and is the only doc that is one-per-event, so
+		# it goes with it. Frappe runs this before the link check, which would otherwise
+		# refuse to delete any event at all.
+		form = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
+		if form:
+			frappe.delete_doc("Sponsor Enquiry Form", form, ignore_permissions=True)
+
 	def create_default_records(self):
 		records = [
 			{"doctype": "Sponsorship Tier", "title": "Normal"},
