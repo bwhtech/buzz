@@ -136,12 +136,25 @@ class SponsorshipEnquiry(Document):
 			attachments=[{"file_url": attachment.file} for attachment in event.sponsor_deck_attachments],
 		)
 
+	def approval_next_step(self) -> str:
+		"""What the applicant does next, which depends on whether they have an account.
+
+		A guest enquiry is owned by `Guest`, so no account satisfies `is_applicant` and the
+		dashboard would refuse whoever followed the link. Do not send them to a dead page.
+		"""
+		if self.owner == "Guest":
+			return "We will be in touch shortly to confirm your sponsorship tier and arrange payment."
+		dashboard_link = get_url(f"/b/account/sponsorships/{self.name}")
+		return (
+			"You can now proceed to select a sponsorship tier and complete the payment "
+			f'by visiting your dashboard <a href="{dashboard_link}">here</a>.'
+		)
+
 	def send_approval_notification(self):
 		if not self.contact_recipient:
 			return
 		event = frappe.get_cached_doc("Buzz Event", self.event)
 		host_name = frappe.db.get_value("Buzz Team", event.team, "team_name") or "The Event Team"
-		dashboard_link = get_url(f"/b/account/sponsorships/{self.name}")
 
 		subject = f"[Payment Pending] Your Sponsorship for {event.title} has been Approved!"
 		message = f"""
@@ -149,7 +162,7 @@ class SponsorshipEnquiry(Document):
 
 		<p>We are pleased to inform you that your sponsorship enquiry for <strong>{event.title}</strong> has been approved.</p>
 
-		<p>You can now proceed to select a sponsorship tier and complete the payment by visiting your dashboard <a href="{dashboard_link}">here</a>.</p>
+		<p>{self.approval_next_step()}</p>
 
 		<br>{host_name}</p>
 		"""
