@@ -19,7 +19,7 @@
 					{{ __("Your submission has been received.") }}
 				</p>
 				<p v-if="enquiryId && !session.isLoggedIn" class="text-ink-green-6 mt-3">
-					{{ __("Log in with the email you submitted to manage your enquiry.") }}
+					{{ __("We'll be in touch at the email address you gave us.") }}
 				</p>
 				<Button
 					v-if="enquiryId && session.isLoggedIn"

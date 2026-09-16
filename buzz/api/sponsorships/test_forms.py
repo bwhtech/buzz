@@ -194,21 +194,21 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 		self.assertEqual(enquiry.owner, "Guest")
 		self.assertEqual(enquiry.contact_email, "applicant@example.com")
 
-	def test_same_email_user_can_access_a_guest_enquiry_but_a_stranger_cannot(self):
+	def test_contact_email_addresses_mail_but_grants_no_access(self):
 		self.form.allow_guest_submissions = 1
 		self.form.save(ignore_permissions=True)
 		frappe.set_user("Guest")
 		name = submit_enquiry_form(self.event.route, self.form_values(contact_email="applicant@example.com"))
+		enquiry = frappe.get_doc("Sponsorship Enquiry", name)
 
+		self.assertEqual(enquiry.contact_recipient, "applicant@example.com")
+
+		# The address is never verified, so holding that mailbox proves nothing.
 		applicant = self.make_user("applicant@example.com")
 		frappe.set_user(applicant)
-		self.assertEqual(get_sponsorship_details(name).enquiry.name, name)
-		self.assertIn(name, {row.name for row in get_user_sponsorship_inquiries()})
-
-		stranger = self.make_user("stranger@example.com")
-		frappe.set_user(stranger)
 		with self.assertRaises(EnquiryNotAccessible):
 			get_sponsorship_details(name)
+		self.assertNotIn(name, {row.name for row in get_user_sponsorship_inquiries()})
 
 	def test_custom_answers_validate_required_zero_and_options(self):
 		self.add_question(mandatory=1)

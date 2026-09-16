@@ -121,7 +121,7 @@ def list_user_enquiries() -> list[SponsorshipListItem]:
 		return []
 	enquiries = frappe.db.get_all(
 		"Sponsorship Enquiry",
-		or_filters={"owner": frappe.session.user, "contact_email": frappe.session.user},
+		filters={"owner": frappe.session.user},
 		fields=["name", "company_name", "event", "tier", "status", "creation"],
 		order_by="creation desc",
 	)

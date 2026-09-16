@@ -25,7 +25,7 @@
    "fieldtype": "Data",
    "label": "Contact Email",
    "options": "Email",
-   "description": "Guest applicants can log in with this email to manage their enquiry."
+   "description": "Where a guest applicant's enquiry mail is sent. Not verified, and grants no access."
   },
   {
    "fieldname": "enquiry_form",
@@ -118,7 +118,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2026-09-16 10:00:00.000000",
+ "modified": "2026-09-16 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Proposals",
  "name": "Sponsorship Enquiry",

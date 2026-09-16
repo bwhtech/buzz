@@ -46,10 +46,9 @@ class SponsorshipEnquiry(Document):
 		return self.contact_email or (self.owner if self.owner != "Guest" else None)
 
 	def is_applicant(self, user=None):
+		# `contact_email` is unverified, so it addresses mail and nothing more.
 		user = user or frappe.session.user
-		return user != "Guest" and (
-			self.owner == user or bool(self.contact_email and self.contact_email.lower() == user.lower())
-		)
+		return user != "Guest" and self.owner == user
 
 	def on_update(self):
 		if self.has_value_changed("status") and self.status == "Payment Pending":
