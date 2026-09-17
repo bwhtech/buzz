@@ -17,6 +17,7 @@ SPONSOR_FIELDS = {
 	"company_logo",
 	"website",
 	"country",
+	"contact_email",
 	"enquiry",
 	"tier",
 	"tier_title",

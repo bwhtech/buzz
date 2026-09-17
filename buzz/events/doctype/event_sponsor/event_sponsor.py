@@ -16,6 +16,7 @@ class EventSponsor(Document):
 
 		company_logo: DF.AttachImage
 		company_name: DF.Data
+		contact_email: DF.Data | None
 		country: DF.Link | None
 		enquiry: DF.Link | None
 		event: DF.Link

@@ -26,6 +26,7 @@ class EventSponsorItem(APIResponse):
 	company_logo: str | None
 	website: str | None
 	country: str | None
+	contact_email: str | None
 	enquiry: str | None
 	tier: str | None
 	tier_title: str

@@ -3,7 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import get_url
+from frappe.utils import get_url, validate_email_address
 
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.payments import mark_payment_as_received
@@ -60,17 +60,7 @@ class SponsorshipEnquiry(Document):
 	def on_payment_authorized(self, payment_status: str):
 		if payment_status in ("Authorized", "Completed"):
 			mark_payment_as_received(self.doctype, self.name)
-			frappe.get_doc(
-				{
-					"doctype": "Event Sponsor",
-					"company_name": self.company_name,
-					"company_logo": self.company_logo,
-					"event": self.event,
-					"tier": self.tier,
-					"enquiry": self.name,
-					"website": self.website,
-				}
-			).insert(ignore_permissions=True)
+			self.insert_sponsor()
 			self.db_set("status", "Paid")
 
 	@frappe.whitelist()
@@ -80,6 +70,9 @@ class SponsorshipEnquiry(Document):
 		if not self.tier:
 			frappe.throw(frappe._("Please select a sponsorship tier!"))
 
+		self.insert_sponsor()
+
+	def insert_sponsor(self):
 		frappe.get_doc(
 			{
 				"doctype": "Event Sponsor",
@@ -90,6 +83,8 @@ class SponsorshipEnquiry(Document):
 				"enquiry": self.name,
 				"website": self.website,
 				"country": self.country,
+				# The owner fallback can be a non-email user such as Administrator.
+				"contact_email": validate_email_address(self.contact_recipient or ""),
 			}
 		).insert(ignore_permissions=True)
 
