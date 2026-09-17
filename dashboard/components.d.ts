@@ -106,8 +106,6 @@ declare module 'vue' {
     SelectionBar: typeof import('./src/components/common/SelectionBar.vue')['default']
     SponsorCard: typeof import('./src/components/dashboard/sponsorships/SponsorCard.vue')['default']
     SponsorDrawer: typeof import('./src/components/dashboard/sponsorships/SponsorDrawer.vue')['default']
-    SponsorRow: typeof import('./src/components/dashboard/sponsorships/SponsorRow.vue')['default']
-    SponsorsByTier: typeof import('./src/components/dashboard/sponsorships/SponsorsByTier.vue')['default']
     SponsorshipDrawer: typeof import('./src/components/dashboard/sponsorships/SponsorshipDrawer.vue')['default']
     SponsorshipPaymentDialog: typeof import('./src/components/SponsorshipPaymentDialog.vue')['default']
     SuccessMessage: typeof import('./src/components/SuccessMessage.vue')['default']
@@ -122,13 +120,12 @@ declare module 'vue' {
     TierCard: typeof import('./src/components/dashboard/sponsorships/TierCard.vue')['default']
     TierDialog: typeof import('./src/components/dashboard/sponsorships/TierDialog.vue')['default']
     TierDrawer: typeof import('./src/components/dashboard/sponsorships/TierDrawer.vue')['default']
-    TierIcon: typeof import('./src/components/dashboard/sponsorships/TierIcon.vue')['default']
-    TierIconPicker: typeof import('./src/components/dashboard/sponsorships/TierIconPicker.vue')['default']
     TimelineList: typeof import('./src/components/dashboard/TimelineList.vue')['default']
     TransferTicketDialog: typeof import('./src/components/TransferTicketDialog.vue')['default']
     UserGroup: typeof import('./src/components/common/UserGroup.vue')['default']
     UserMenu: typeof import('./src/components/UserMenu.vue')['default']
     UserSettingsDialog: typeof import('./src/components/UserSettingsDialog.vue')['default']
+    WebsiteInput: typeof import('./src/components/dashboard/sponsorships/WebsiteInput.vue')['default']
     ZoomLogo: typeof import('./src/components/common/ZoomLogo.vue')['default']
   }
 }

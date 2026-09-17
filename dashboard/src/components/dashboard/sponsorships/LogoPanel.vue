@@ -1,17 +1,25 @@
 <script setup lang="ts">
-import { Avatar } from "frappe-ui"
+import { Avatar, Button } from "frappe-ui"
 
 // A logo centred on a quiet grey ground. Without an image it shows initials, or the
-// placeholder prompt when the panel is an upload target.
+// placeholder prompt when the panel is an upload target. `editable` adds a Replace button.
 withDefaults(
-	defineProps<{ src?: string | null; name?: string; size?: "sm" | "lg"; placeholder?: string }>(),
-	{ src: null, name: "", size: "sm", placeholder: "" },
+	defineProps<{
+		src?: string | null
+		name?: string
+		size?: "sm" | "lg"
+		placeholder?: string
+		editable?: boolean
+		replacing?: boolean
+	}>(),
+	{ src: null, name: "", size: "sm", placeholder: "", editable: false, replacing: false },
 )
+defineEmits<{ replace: [] }>()
 </script>
 
 <template>
 	<span
-		class="flex w-full items-center justify-center rounded-4 bg-surface-gray-2"
+		class="relative flex w-full items-center justify-center rounded-4 bg-surface-gray-2"
 		:class="size === 'lg' ? 'h-40 p-6' : 'h-24 p-4'"
 	>
 		<img v-if="src" :src="src" :alt="`${name} logo`" class="max-h-full max-w-full object-contain" />
@@ -20,5 +28,15 @@ withDefaults(
 			<span class="text-base">{{ placeholder }}</span>
 		</span>
 		<Avatar v-else shape="square" :size="size === 'lg' ? '3xl' : 'xl'" :label="name" />
+		<Button
+			v-if="editable"
+			class="absolute bottom-2 right-2"
+			size="sm"
+			variant="outline"
+			label="Replace"
+			icon-left="lucide-images"
+			:loading="replacing"
+			@click="$emit('replace')"
+		/>
 	</span>
 </template>

@@ -146,6 +146,7 @@ async function save(values: TierValues) {
 			<FormControl
 				v-model="draft.title"
 				label="Tier name"
+				required
 				placeholder="Gold"
 				autocomplete="off"
 				:disabled="!canWrite"
@@ -154,6 +155,7 @@ async function save(values: TierValues) {
 				<PriceInput
 					v-model="draft.price"
 					label="Price"
+					required
 					:currency-symbol="selectedCurrency?.symbol || draft.currency"
 					:number-format="selectedCurrency?.number_format"
 					:disabled="!canWrite"

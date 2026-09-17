@@ -9,6 +9,7 @@ const props = defineProps<{
 	currencySymbol: string
 	numberFormat?: string | null
 	label?: string
+	required?: boolean
 	disabled?: boolean
 }>()
 
@@ -36,6 +37,7 @@ function onInput(value: string) {
 	<TextInput
 		:model-value="displayValue"
 		:label="label"
+		:required="required"
 		inputmode="decimal"
 		autocomplete="off"
 		:disabled="disabled"

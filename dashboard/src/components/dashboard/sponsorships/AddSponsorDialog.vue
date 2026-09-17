@@ -3,7 +3,9 @@ import { Button, Dialog, ErrorMessage, FormControl, Spinner, toast, useNewDoc } 
 import { computed, ref, watch } from "vue"
 
 import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
+import { websiteUrl } from "@/components/dashboard/sponsorships/helpers"
 import LogoPanel from "@/components/dashboard/sponsorships/LogoPanel.vue"
+import WebsiteInput from "@/components/dashboard/sponsorships/WebsiteInput.vue"
 import type { FrappeError, SponsorshipTierItem } from "@/types"
 import { validateIsImageFile } from "@/utils"
 
@@ -13,6 +15,7 @@ type SponsorDoc = {
 	company_logo: string
 	website: string
 	tier: string
+	contact_email: string
 }
 
 const props = defineProps<{ event: string; tiers: SponsorshipTierItem[] }>()
@@ -23,6 +26,7 @@ const companyName = ref("")
 const logo = ref<string | null>(null)
 const website = ref("")
 const tier = ref("")
+const contactEmail = ref("")
 const showErrors = ref(false)
 
 const creator = useNewDoc<SponsorDoc>("Event Sponsor")
@@ -30,7 +34,20 @@ const creator = useNewDoc<SponsorDoc>("Event Sponsor")
 const tierOptions = computed(() =>
 	props.tiers.filter((row) => row.enabled).map((row) => ({ label: row.title, value: row.name })),
 )
-const invalid = computed(() => !companyName.value.trim() || !logo.value || !tier.value)
+const missingFields = computed(() =>
+	[
+		!companyName.value.trim() && "a company name",
+		!logo.value && "a logo",
+		!website.value.trim() && "a website",
+		!tier.value && "a tier",
+		!contactEmail.value.trim() && "a contact email",
+	].filter(Boolean),
+)
+const invalid = computed(() => missingFields.value.length > 0)
+const missingFieldsMessage = computed(
+	() =>
+		`Add ${new Intl.ListFormat("en", { type: "conjunction" }).format(missingFields.value as string[])}.`,
+)
 const errorMessage = computed(() => (creator.error as FrappeError | null)?.messages?.join("\n"))
 
 watch(isOpen, (open) => open && reset())
@@ -40,11 +57,14 @@ function reset() {
 	logo.value = null
 	website.value = ""
 	tier.value = tierOptions.value[0]?.value ?? ""
+	contactEmail.value = ""
 	showErrors.value = false
 	creator.reset()
 }
 
 async function submit() {
+	// Enter in a field submits the form too, so guard against a second insert mid-request.
+	if (creator.loading) return
 	showErrors.value = true
 	if (invalid.value) return
 
@@ -52,8 +72,9 @@ async function submit() {
 		event: props.event,
 		company_name: companyName.value.trim(),
 		company_logo: logo.value,
-		website: website.value.trim(),
+		website: websiteUrl(website.value.trim()) || "",
 		tier: tier.value,
+		contact_email: contactEmail.value.trim(),
 	})
 	await creator.submit().catch(() => null)
 	if (creator.error) return
@@ -102,20 +123,25 @@ async function submit() {
 					</div>
 				</template>
 			</ImageCropUploader>
-			<FormControl v-model="companyName" label="Company name" autocomplete="off" />
-			<FormControl v-model="website" label="Website" placeholder="example.com" />
-			<FormControl v-model="tier" type="select" label="Tier" :options="tierOptions" />
+			<FormControl v-model="companyName" label="Company name" autocomplete="off" required />
+			<WebsiteInput v-model="website" required />
+			<FormControl v-model="tier" type="select" label="Tier" :options="tierOptions" required />
+			<FormControl
+				v-model="contactEmail"
+				type="email"
+				label="Contact email"
+				required
+				placeholder="name@example.com"
+				autocomplete="off"
+			/>
 
-			<p v-if="showErrors && invalid" class="text-sm text-ink-red-4">
-				A sponsor needs a name, a logo and a tier.
-			</p>
-			<ErrorMessage v-else-if="errorMessage" :message="errorMessage" />
+			<ErrorMessage :message="showErrors && invalid ? missingFieldsMessage : errorMessage" />
 
 			<Button
 				type="button"
 				variant="solid"
 				class="w-full"
-				label="Add sponsor"
+				label="Add"
 				:loading="creator.loading"
 				@click="submit"
 			/>

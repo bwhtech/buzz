@@ -1,109 +1,98 @@
 <script setup lang="ts">
-import { Button, Dialog, ErrorMessage, FormControl, toast, useDoc, useNewDoc } from "frappe-ui"
+import { Button, Dialog, ErrorMessage, FormControl, toast, useNewDoc } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
-import type { FrappeError, SponsorshipTierItem } from "@/types"
+import PriceInput from "@/components/dashboard/sponsorships/PriceInput.vue"
+import { useEnabledCurrencies } from "@/data/currencies"
+import type { FrappeError } from "@/types"
 
-type TierValues = {
-	title: string
-	price: number
-	currency: string
-	enabled: 0 | 1
-}
-type TierDoc = TierValues & { name: string; event: string }
+type TierDoc = { event: string; title: string; price: number; currency: string }
 
-const props = defineProps<{ event: string; tier: SponsorshipTierItem | null }>()
+const DEFAULT_CURRENCY = "INR"
+
+const props = defineProps<{ event: string }>()
 const isOpen = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ saved: [] }>()
 
 const title = ref("")
-const price = ref<number | string>(0)
-const currency = ref("INR")
-const enabled = ref(true)
+const price = ref(0)
+const currency = ref(DEFAULT_CURRENCY)
 const showErrors = ref(false)
 
 const creator = useNewDoc<TierDoc>("Sponsorship Tier")
-// Only setValue is used; the tier already arrived with the page.
-const editor = useDoc<TierDoc>({
-	doctype: "Sponsorship Tier",
-	name: () => props.tier?.name ?? "",
-	immediate: false,
-})
-const request = computed(() => (props.tier ? editor.setValue : creator))
+const enabledCurrencies = useEnabledCurrencies()
 
-const invalid = computed(() => !title.value.trim() || Number(price.value) < 0)
-const errorMessage = computed(() =>
-	(request.value.error as FrappeError | null)?.messages?.join("\n"),
+const currencyOptions = computed(() =>
+	(enabledCurrencies.data ?? []).map((enabledCurrency) => enabledCurrency.name),
 )
+const selectedCurrency = computed(() =>
+	enabledCurrencies.data?.find((enabledCurrency) => enabledCurrency.name === currency.value),
+)
+
+const invalid = computed(() => !title.value.trim() || !(price.value >= 0))
+const errorMessage = computed(() => (creator.error as FrappeError | null)?.messages?.join("\n"))
 
 watch(isOpen, (open) => open && reset())
 
 function reset() {
-	title.value = props.tier?.title ?? ""
-	price.value = props.tier?.price ?? 0
-	currency.value = props.tier?.currency || "INR"
-	enabled.value = props.tier?.enabled ?? true
+	title.value = ""
+	price.value = 0
+	currency.value = currencyOptions.value.includes(DEFAULT_CURRENCY)
+		? DEFAULT_CURRENCY
+		: (currencyOptions.value[0] ?? DEFAULT_CURRENCY)
 	showErrors.value = false
 	creator.reset()
-	editor.setValue.reset()
-}
-
-function values(): TierValues {
-	return {
-		title: title.value.trim(),
-		price: Number(price.value) || 0,
-		currency: currency.value.trim().toUpperCase(),
-		enabled: enabled.value ? 1 : 0,
-	}
 }
 
 async function submit() {
+	// Enter in a field submits the form too, so guard against a second insert mid-request.
+	if (creator.loading) return
 	showErrors.value = true
 	if (invalid.value) return
 
-	if (props.tier) {
-		await editor.setValue.submit(values())
-	} else {
-		Object.assign(creator.doc, { ...values(), event: props.event })
-		await creator.submit().catch(() => null)
-	}
-	if (request.value.error) return
+	Object.assign(creator.doc, {
+		event: props.event,
+		title: title.value.trim(),
+		price: price.value,
+		currency: currency.value,
+	})
+	await creator.submit().catch(() => null)
+	if (creator.error) return
 
-	toast.success(props.tier ? "Tier updated" : "Tier added")
+	toast.success("Tier added")
 	emit("saved")
 	isOpen.value = false
 }
 </script>
 
 <template>
-	<Dialog v-model="isOpen" :title="tier ? 'Edit tier' : 'Add tier'">
+	<Dialog v-model="isOpen" title="Add Tier">
 		<form novalidate class="space-y-4" @submit.prevent="submit">
-			<FormControl v-model="title" label="Title" placeholder="Gold" autocomplete="off" />
+			<FormControl v-model="title" label="Title" placeholder="Gold" autocomplete="off" required />
 
-			<div class="grid grid-cols-2 gap-4">
-				<FormControl v-model="price" type="number" label="Price" min="0" />
-				<FormControl v-model="currency" label="Currency" placeholder="INR" maxlength="3" />
+			<div class="grid grid-cols-[2fr_1fr] gap-4">
+				<PriceInput
+					v-model="price"
+					label="Price"
+					required
+					:currency-symbol="selectedCurrency?.symbol || currency"
+					:number-format="selectedCurrency?.number_format"
+				/>
+				<FormControl v-model="currency" type="select" label="Currency" :options="currencyOptions" />
 			</div>
 
-			<FormControl
-				v-if="tier"
-				v-model="enabled"
-				type="checkbox"
-				label="Enabled"
-				description="Disabled tiers stay on existing enquiries and sponsors, but new applicants cannot pick them."
+			<ErrorMessage
+				:message="
+					showErrors && invalid ? 'A tier needs a title and a price of zero or more.' : errorMessage
+				"
 			/>
-
-			<p v-if="showErrors && invalid" class="text-sm text-ink-red-4">
-				A tier needs a title and a price of zero or more.
-			</p>
-			<ErrorMessage v-else-if="errorMessage" :message="errorMessage" />
 
 			<Button
 				type="button"
 				variant="solid"
 				class="w-full"
-				:label="tier ? 'Save tier' : 'Add tier'"
-				:loading="request.loading"
+				label="Add"
+				:loading="creator.loading"
 				@click="submit"
 			/>
 		</form>

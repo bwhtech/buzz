@@ -507,6 +507,7 @@ export interface EventSponsorItem {
 	company_logo: string | null
 	website: string | null
 	country: string | null
+	contact_email: string | null
 	enquiry: string | null
 	tier: string | null
 	tier_title: string

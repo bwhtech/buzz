@@ -29,7 +29,12 @@ const tierDialogOpen = ref(false)
 
 const addTierAction = computed(() =>
 	page.data?.can_write
-		? { label: "Add tier", variant: "ghost" as const, onClick: openTierDialog }
+		? {
+				label: "Add Tier",
+				variant: "outline" as const,
+				iconLeft: "lucide-plus",
+				onClick: openTierDialog,
+			}
 		: null,
 )
 
@@ -49,7 +54,12 @@ function openSponsorDialog() {
 
 const addSponsorAction = computed(() =>
 	page.data?.can_write
-		? { label: "Add manually", variant: "ghost" as const, onClick: openSponsorDialog }
+		? {
+				label: "Add Manually",
+				variant: "outline" as const,
+				iconLeft: "lucide-plus",
+				onClick: openSponsorDialog,
+			}
 		: null,
 )
 
@@ -206,5 +216,5 @@ const message = (error: unknown) => (error as FrappeError | null)?.messages?.joi
 		@added="page.reload()"
 	/>
 
-	<TierDialog v-model="tierDialogOpen" :event="eventId" :tier="null" @saved="page.reload()" />
+	<TierDialog v-model="tierDialogOpen" :event="eventId" @saved="page.reload()" />
 </template>

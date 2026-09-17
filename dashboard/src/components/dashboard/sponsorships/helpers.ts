@@ -28,6 +28,8 @@ export const enquiryStatusTheme = (status: string): BadgeTheme =>
 export const websiteUrl = (website: string | null) =>
 	website && (/^https?:\/\//i.test(website) ? website : `https://${website}`)
 
+export const stripUrlScheme = (website: string) => website.replace(/^\s*https?:\/\//i, "")
+
 // "2h ago" today, "Yesterday", then a short date — how a pipeline row reads at a glance.
 export function shortSubmittedAt(creation: string) {
 	const submitted = dayjsLocal(creation)
