@@ -6,6 +6,7 @@ import {
 	ErrorMessage,
 	Select,
 	Skeleton,
+	Tooltip,
 	dayjsLocal,
 	toast,
 } from "frappe-ui"
@@ -18,6 +19,7 @@ import {
 } from "reka-ui"
 import { computed, ref, watch } from "vue"
 
+import DetailRow from "@/components/common/DetailRow.vue"
 import {
 	Drawer,
 	DrawerClose,
@@ -41,7 +43,7 @@ const emit = defineEmits<{ changed: [status: string]; openSponsor: [name: string
 
 const detail = useEnquiryDetail(() => props.enquiry)
 const update = useUpdateEnquiryStatus()
-const copyId = useCopyToClipboard()
+const copyToClipboard = useCopyToClipboard()
 
 watch(
 	() => props.enquiry,
@@ -63,6 +65,13 @@ const statusOptions = ENQUIRY_STATUSES.map((value) => ({ value, label: value }))
 const changed = computed(() => Boolean(status.value) && status.value !== loaded.value?.status)
 // Paid is settled by a payment or a confirmed sponsor, so it is not walked back from here.
 const locked = computed(() => loaded.value?.status === "Paid")
+
+// A disabled control should say why, not just refuse the click.
+const statusHint = computed(() => {
+	if (!props.canWrite) return "Only the event team can change this."
+	if (locked.value) return "Status cannot be changed for paid enquiries."
+	return ""
+})
 
 // These two reach outside the enquiry — an email to the applicant, a sponsor on the event.
 const CONFIRMATIONS: Record<string, { title: string; message: string; action: string }> = {
@@ -107,26 +116,30 @@ const details = computed(() => {
 	if (!enquiry) return []
 	return [
 		{ label: "Tier", value: enquiry.tier_title || "—" },
-		{ label: "Submitted on", value: dayjsLocal(enquiry.creation).format("D MMM YYYY") },
+		{ label: "Submitted on", value: dayjsLocal(enquiry.creation).format("D MMM YYYY, h:mm A") },
 		{
 			label: "Contact",
 			value: enquiry.contact || "—",
 			link: enquiry.contact?.includes("@") ? `mailto:${enquiry.contact}` : null,
+			copy: enquiry.contact,
 		},
 		{ label: "Phone", value: enquiry.phone || "—", link: enquiry.phone && `tel:${enquiry.phone}` },
-		{ label: "Website", value: enquiry.website || "—", link: websiteUrl(enquiry.website) },
+		{
+			label: "Website",
+			value: enquiry.website || "—",
+			link: websiteUrl(enquiry.website),
+			copy: enquiry.website,
+		},
 		{ label: "Country", value: enquiry.country || "—" },
 	]
 })
 
-const lastUpdated = computed(() =>
-	loaded.value ? dayjsLocal(loaded.value.modified).format("D MMM'YY, h:mm A") : "",
-)
+const updatedAt = computed(() => (loaded.value ? dayjsLocal(loaded.value.modified) : null))
 </script>
 
 <template>
 	<Drawer v-model:open="open" swipe-direction="right">
-		<DrawerContent size="lg">
+		<DrawerContent>
 			<template v-if="enquiry">
 				<div class="flex items-center gap-2 p-4 pb-0">
 					<DrawerClose as-child>
@@ -136,7 +149,7 @@ const lastUpdated = computed(() =>
 						type="button"
 						class="cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5 hover:text-ink-gray-7"
 						:aria-label="`Copy enquiry id ${enquiry}`"
-						@click="copyId(enquiry)"
+						@click="copyToClipboard(enquiry, 'Enquiry ID copied')"
 					>
 						#{{ enquiry }}
 					</button>
@@ -151,23 +164,25 @@ const lastUpdated = computed(() =>
 					<ErrorMessage v-else-if="errorMessage" :message="errorMessage" />
 
 					<template v-if="loaded">
-						<Select
-							v-model="status"
-							class="w-fit"
-							size="md"
-							aria-label="Enquiry status"
-							side="bottom"
-							:options="statusOptions"
-							:disabled="!canWrite || locked || update.loading"
-						>
-							<template #item-prefix="{ item }">
-								<span
-									class="size-2 shrink-0 rounded-full transition-colors duration-150"
-									:class="enquiryStatusDot(String(item.value))"
-									aria-hidden="true"
-								/>
-							</template>
-						</Select>
+						<Tooltip :text="statusHint" :disabled="!statusHint">
+							<Select
+								v-model="status"
+								class="w-fit"
+								size="md"
+								aria-label="Enquiry status"
+								side="bottom"
+								:options="statusOptions"
+								:disabled="!canWrite || locked || update.loading"
+							>
+								<template #item-prefix="{ item }">
+									<span
+										class="size-2 shrink-0 rounded-full transition-colors duration-150"
+										:class="enquiryStatusDot(String(item.value))"
+										aria-hidden="true"
+									/>
+								</template>
+							</Select>
+						</Tooltip>
 
 						<LogoPanel size="lg" :src="loaded.company_logo" :name="loaded.company_name" />
 
@@ -178,29 +193,30 @@ const lastUpdated = computed(() =>
 							Sponsorship enquiry, {{ loaded.status }}
 						</DrawerDescription>
 
-						<div class="grid grid-cols-2 gap-x-5 gap-y-3">
-							<div v-for="field in details" :key="field.label" class="min-w-0 space-y-0.5">
-								<p class="text-base text-ink-gray-5">{{ field.label }}</p>
+						<dl class="space-y-3 text-base">
+							<DetailRow v-for="field in details" :key="field.label" :label="field.label">
 								<a
 									v-if="field.link"
 									:href="field.link"
 									target="_blank"
 									rel="noopener"
-									class="block truncate text-base text-ink-gray-8 underline decoration-outline-gray-3 underline-offset-2 hover:text-ink-gray-9"
+									class="block truncate underline decoration-outline-gray-3 underline-offset-2 hover:text-ink-gray-9"
 								>
 									{{ field.value }}
 								</a>
-								<p v-else class="truncate text-base text-ink-gray-8">{{ field.value }}</p>
-							</div>
-						</div>
+								<span v-else>{{ field.value }}</span>
 
-						<Button
-							v-if="loaded.sponsor"
-							class="w-fit"
-							icon-left="lucide-handshake"
-							label="View sponsor"
-							@click="emit('openSponsor', loaded.sponsor)"
-						/>
+								<template v-if="field.copy" #suffix>
+									<Button
+										variant="ghost"
+										size="sm"
+										icon="lucide-copy"
+										:aria-label="`Copy ${field.label.toLowerCase()}`"
+										@click="copyToClipboard(field.copy, `${field.label} copied`)"
+									/>
+								</template>
+							</DetailRow>
+						</dl>
 
 						<div v-if="loaded.answers.length" class="space-y-2 pt-4">
 							<h3 class="text-lg font-semibold text-ink-gray-9">Form answers</h3>
@@ -259,20 +275,32 @@ const lastUpdated = computed(() =>
 			</template>
 
 			<template v-if="loaded" #footer>
+				<Tooltip v-if="updatedAt" :text="updatedAt.format('D MMM YYYY, h:mm A')">
+					<p class="flex items-center gap-1 text-xs text-ink-gray-5">
+						<span class="lucide-clock-fading size-3.5 shrink-0" aria-hidden="true" />
+						Updated {{ updatedAt.fromNow() }}
+					</p>
+				</Tooltip>
+
 				<div v-if="canWrite && changed" class="flex items-center gap-2">
 					<Button
 						variant="solid"
-						size="md"
+						size="sm"
 						label="Update"
 						:loading="update.loading"
 						@click="requestUpdate"
 					/>
-					<Button size="md" label="Cancel" @click="status = loaded.status" />
+					<Button size="sm" label="Cancel" @click="status = loaded.status" />
 				</div>
-				<p class="ml-auto flex items-center gap-1 text-xs text-ink-gray-5">
-					<span class="lucide-clock-fading size-3.5 shrink-0" aria-hidden="true" />
-					Last updated {{ lastUpdated }}
-				</p>
+
+				<Button
+					v-if="loaded.sponsor"
+					class="ml-auto"
+					variant="outline"
+					size="sm"
+					label="View sponsor"
+					@click="emit('openSponsor', loaded.sponsor)"
+				/>
 			</template>
 		</DrawerContent>
 	</Drawer>
