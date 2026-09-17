@@ -99,5 +99,8 @@ class SponsorFormService(CustomFormService):
 	def validate_tier_belongs_to_event(self, tier):
 		if not tier:
 			return
-		if str(frappe.db.get_value("Sponsorship Tier", tier, "event")) != str(self.event.name):
+		event, enabled = frappe.db.get_value("Sponsorship Tier", tier, ["event", "enabled"]) or (None, 0)
+		if str(event) != str(self.event.name):
 			frappe.throw(_("Select a sponsorship tier from this event."))
+		if not enabled:
+			frappe.throw(_("Select an available sponsorship tier from this event."))

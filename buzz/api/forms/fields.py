@@ -90,6 +90,8 @@ def get_link_field_options(doctype: str, event: str | None = None) -> list[dict]
 	filters = {}
 	if event and meta.has_field("event"):
 		filters["event"] = event
+	if meta.has_field("enabled"):
+		filters["enabled"] = 1
 
 	fields = ["name"] if title_field == "name" else ["name", title_field]
 	rows = frappe.get_all(doctype, filters=filters, fields=fields, limit_page_length=0, order_by="name asc")

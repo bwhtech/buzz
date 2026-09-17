@@ -204,7 +204,7 @@ watch(isOpen, (newVal) => {
 // Resource to fetch sponsorship tiers
 const tiers = useList<Tier>({
 	doctype: "Sponsorship Tier",
-	filters: { event: props.eventId },
+	filters: { event: props.eventId, enabled: 1 },
 	fields: ["name", "title", "price", "currency"],
 	orderBy: "price asc",
 	onError: console.error,

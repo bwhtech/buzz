@@ -178,6 +178,36 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			submit_enquiry_form(self.event.route, self.form_values(tier=tier.name))
 
+	def test_disabled_tier_is_excluded_from_link_options(self):
+		enabled = self.make_tier("Available")
+		disabled = self.make_tier("Retired", enabled=0)
+
+		tier_field = next(
+			field for field in get_enquiry_form(self.event.route).form_fields if field["fieldname"] == "tier"
+		)
+		values = {option["value"] for option in tier_field["link_options"]}
+
+		self.assertIn(enabled.name, values)
+		self.assertNotIn(disabled.name, values)
+
+	def test_disabled_tier_submission_is_rejected(self):
+		tier = self.make_tier("Retired", enabled=0)
+
+		with self.assertRaises(frappe.ValidationError):
+			submit_enquiry_form(self.event.route, self.form_values(tier=tier.name))
+
+	def make_tier(self, title, enabled=1):
+		return frappe.get_doc(
+			{
+				"doctype": "Sponsorship Tier",
+				"event": self.event.name,
+				"title": title,
+				"price": 100,
+				"currency": "INR",
+				"enabled": enabled,
+			}
+		).insert(ignore_permissions=True)
+
 	def test_guest_submission_requires_a_valid_contact_email(self):
 		self.form.allow_guest_submissions = 1
 		self.form.save(ignore_permissions=True)
