@@ -116,9 +116,6 @@ async function save(values: SponsorValues) {
 		v-model:open="open"
 		:title="shownSponsor.company_name"
 		description="Confirmed sponsor"
-		:show-avatar="false"
-		:details="[]"
-		title-in-header
 	>
 		<template #notice>
 			<ImageCropUploader

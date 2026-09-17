@@ -10,7 +10,7 @@ from buzz.api.sponsorships import (
 from buzz.api.sponsorships.exceptions import EnquiryNotFound, EnquiryStatusLocked, EnquiryTierMissing
 from buzz.api.sponsorships.test_sponsorships import SponsorshipTestCase
 
-TIER_FIELDS = {"name", "title", "price", "currency", "enabled", "perks", "sponsor_count", "enquiry_count"}
+TIER_FIELDS = {"name", "title", "price", "currency", "enabled", "perks", "sponsor_count"}
 SPONSOR_FIELDS = {
 	"name",
 	"company_name",
@@ -30,7 +30,6 @@ ENQUIRY_FIELDS = {
 	"tier",
 	"tier_title",
 	"creation",
-	"has_sponsor",
 	"website",
 	"tier_price",
 	"tier_currency",
@@ -70,14 +69,14 @@ class TestGetEventSponsorships(ManageTestCase):
 		self.assertEqual(set(response.tiers[0].__json__()), TIER_FIELDS)
 		self.assertEqual(set(response.sponsors[0].__json__()), SPONSOR_FIELDS)
 
-	def test_tier_counts_its_sponsors_and_enquiries(self):
+	def test_tier_counts_its_sponsors(self):
 		self.make_sponsor()
 		frappe.set_user(self.make_member("Manager"))
 
 		response = get_event_sponsorships(self.event)
 
 		tier = next(tier for tier in response.tiers if tier.name == self.tier.name)
-		self.assertEqual((tier.sponsor_count, tier.enquiry_count), (1, 1))
+		self.assertEqual(tier.sponsor_count, 1)
 
 	def test_non_member_is_refused(self):
 		frappe.set_user(self.make_stranger())
@@ -106,8 +105,7 @@ class TestGetEventSponsorshipEnquiries(ManageTestCase):
 			}
 		).insert()
 
-	def test_rows_carry_tier_title_and_sponsor_flag(self):
-		self.make_sponsor()
+	def test_rows_carry_tier_title_and_price(self):
 		frappe.set_user(self.make_member("Viewer"))
 
 		response = get_event_sponsorship_enquiries(self.event, search="Acme Corp")
@@ -115,7 +113,6 @@ class TestGetEventSponsorshipEnquiries(ManageTestCase):
 		row = next(row for row in response.enquiries if row.name == self.enquiry.name)
 		self.assertEqual(set(row.__json__()), ENQUIRY_FIELDS)
 		self.assertEqual((row.tier_title, row.tier_price), (self.tier.title, 5000))
-		self.assertTrue(row.has_sponsor)
 
 	def test_search_and_status_narrow_the_page(self):
 		suffix = frappe.generate_hash(length=6)

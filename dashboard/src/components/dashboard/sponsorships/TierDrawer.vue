@@ -121,11 +121,8 @@ async function save(values: TierValues) {
 	<SponsorshipDrawer
 		v-if="shownTier"
 		v-model:open="open"
-		:show-avatar="false"
 		:title="shownTier.title"
 		:description="formattedPrice"
-		:details="[]"
-		title-in-header
 	>
 		<template #notice>
 			<Alert

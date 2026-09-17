@@ -90,6 +90,7 @@ def get_link_field_options(doctype: str, event: str | None = None) -> list[dict]
 	filters = {}
 	if event and meta.has_field("event"):
 		filters["event"] = event
+	# A linked master is disabled rather than deleted, so a picker never offers a retired row.
 	if meta.has_field("enabled"):
 		filters["enabled"] = 1
 

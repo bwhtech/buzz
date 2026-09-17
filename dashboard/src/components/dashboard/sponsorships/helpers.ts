@@ -1,7 +1,7 @@
 import { dayjsLocal } from "frappe-ui"
 import { type Ref, ref, watch } from "vue"
 
-export type BadgeTheme = "green" | "amber" | "blue" | "red" | "gray"
+import { type BadgeTheme, badgeDotClass } from "@/utils/badgeTheme"
 
 const ENQUIRY_STATUS_THEMES: Record<string, BadgeTheme> = {
 	Paid: "green",
@@ -13,15 +13,7 @@ const ENQUIRY_STATUS_THEMES: Record<string, BadgeTheme> = {
 
 export const ENQUIRY_STATUSES = Object.keys(ENQUIRY_STATUS_THEMES)
 
-const THEME_DOTS: Record<BadgeTheme, string> = {
-	blue: "bg-[--ink-blue-5]",
-	red: "bg-[--ink-red-5]",
-	green: "bg-[--ink-green-5]",
-	amber: "bg-[--ink-amber-5]",
-	gray: "bg-[--ink-gray-5]",
-}
-
-export const enquiryStatusDot = (status: string) => THEME_DOTS[enquiryStatusTheme(status)]
+export const enquiryStatusDot = (status: string) => badgeDotClass(enquiryStatusTheme(status))
 
 export const enquiryStatusTheme = (status: string): BadgeTheme =>
 	ENQUIRY_STATUS_THEMES[status] || "gray"

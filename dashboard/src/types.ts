@@ -498,7 +498,6 @@ export interface SponsorshipTierItem {
 	enabled: boolean
 	perks: string | null
 	sponsor_count: number
-	enquiry_count: number
 }
 
 export interface EventSponsorItem {
@@ -547,7 +546,6 @@ export interface EventEnquiryItem {
 	tier_price: number | null
 	tier_currency: string | null
 	creation: string
-	has_sponsor: boolean
 }
 
 export interface EventSponsorships {

@@ -8,7 +8,7 @@ from buzz.api.sponsorships.schemas import (
 	EventEnquiriesResponse,
 	EventEnquiryItem,
 )
-from buzz.api.sponsorships.services import get_sponsored_enquiries, get_tier_title
+from buzz.api.sponsorships.services import get_tier_title
 
 ENQUIRIES_PAGE_SIZE = 20
 ENQUIRY_FIELDS = ["name", "company_name", "company_logo", "website", "status", "tier", "creation"]
@@ -64,6 +64,9 @@ def search_filters(search: str | None) -> list[list] | None:
 
 
 def count_enquiries(filters: dict, or_filters: list[list] | None) -> int:
+	"""`frappe.db.count` takes no or_filters, so a search has to be counted the long way."""
+	if not or_filters:
+		return frappe.db.count("Sponsorship Enquiry", filters)
 	return len(
 		frappe.get_all(
 			"Sponsorship Enquiry",
@@ -77,17 +80,15 @@ def count_enquiries(filters: dict, or_filters: list[list] | None) -> int:
 
 def enquiry_items(rows: list) -> list[EventEnquiryItem]:
 	tiers = tiers_by_name({row.tier for row in rows if row.tier})
-	sponsored = get_sponsored_enquiries([row.name for row in rows])
-	return [enquiry_item(row, tiers.get(str(row.tier)), row.name in sponsored) for row in rows]
+	return [enquiry_item(row, tiers.get(str(row.tier))) for row in rows]
 
 
-def enquiry_item(row, tier, has_sponsor: bool) -> EventEnquiryItem:
+def enquiry_item(row, tier) -> EventEnquiryItem:
 	return EventEnquiryItem(
 		**row,
 		tier_title=(tier.title if tier else row.tier) or "",
 		tier_price=tier.price if tier else None,
 		tier_currency=tier.currency if tier else None,
-		has_sponsor=has_sponsor,
 	)
 
 

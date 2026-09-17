@@ -17,7 +17,6 @@ class TierItem(APIResponse):
 	enabled: bool
 	perks: str | None
 	sponsor_count: int
-	enquiry_count: int
 
 
 class EventSponsorItem(APIResponse):
@@ -43,7 +42,6 @@ class EventEnquiryItem(APIResponse):
 	tier_price: float | None
 	tier_currency: str | None
 	creation: datetime
-	has_sponsor: bool
 
 
 class EventSponsorshipsResponse(APIResponse):
