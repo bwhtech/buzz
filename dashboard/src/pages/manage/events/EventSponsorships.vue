@@ -99,6 +99,12 @@ function onEnquiryStatusChanged(status: string) {
 	page.reload()
 }
 
+// Removing a sponsor cancels the enquiry it came from, so that list is stale too.
+function onSponsorsChanged() {
+	page.reload()
+	enquiriesSection.value?.reload()
+}
+
 const tierDrawerOpen = drawerOpen("tier")
 const sponsorDrawerOpen = drawerOpen("sponsor")
 const enquiryDrawerOpen = drawerOpen("enquiry")
@@ -197,7 +203,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.messages?.joi
 		:sponsor="selectedSponsor"
 		:tiers="page.data?.tiers ?? []"
 		:can-write="!!page.data?.can_write"
-		@changed="page.reload()"
+		@changed="onSponsorsChanged"
 		@open-enquiry="select('enquiry', $event)"
 	/>
 
@@ -213,7 +219,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.messages?.joi
 		v-model="sponsorDialogOpen"
 		:event="eventId"
 		:tiers="page.data?.tiers ?? []"
-		@added="page.reload()"
+		@added="onSponsorsChanged"
 	/>
 
 	<TierDialog v-model="tierDialogOpen" :event="eventId" @saved="page.reload()" />
