@@ -58,7 +58,7 @@ async function moveWithArrowKeys(event: KeyboardEvent, index: number) {
 			>
 				<button
 					type="button"
-					class="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-4 text-ink-gray-4 hover:text-ink-gray-7 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 disabled:cursor-default disabled:opacity-0"
+					class="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-4 text-ink-gray-4 hover:text-ink-gray-7 focus-visible:outline-none focus-visible:focus-ring disabled:cursor-default disabled:opacity-0"
 					:draggable="!disabled"
 					:disabled="disabled"
 					:aria-label="`Reorder ${perk || 'perk'}`"
@@ -81,7 +81,7 @@ async function moveWithArrowKeys(event: KeyboardEvent, index: number) {
 				<button
 					v-if="!disabled"
 					type="button"
-					class="flex size-7 shrink-0 items-center justify-center rounded-4 text-ink-gray-4 opacity-0 transition-opacity hover:text-ink-gray-7 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 group-hover:opacity-100"
+					class="flex size-7 shrink-0 items-center justify-center rounded-4 text-ink-gray-4 transition-opacity hover:text-ink-gray-7 focus-visible:opacity-100 focus-visible:outline-none focus-visible:focus-ring group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
 					:aria-label="`Remove ${perk || 'perk'}`"
 					@click="removePerk(index)"
 				>
@@ -92,7 +92,7 @@ async function moveWithArrowKeys(event: KeyboardEvent, index: number) {
 		<button
 			v-if="!disabled"
 			type="button"
-			class="flex items-center gap-1 rounded-4 py-1 text-base text-ink-gray-5 hover:text-ink-gray-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+			class="flex items-center gap-1 rounded-4 py-1 text-base text-ink-gray-5 hover:text-ink-gray-8 focus-visible:outline-none focus-visible:focus-ring"
 			@click="addPerk"
 		>
 			<span class="flex size-7 items-center justify-center">

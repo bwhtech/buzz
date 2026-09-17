@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-	Avatar,
 	Button,
 	Dialog,
 	ErrorMessage,
@@ -233,7 +232,7 @@ const updatedAt = computed(() => (loaded.value ? dayjsLocal(loaded.value.modifie
 								>
 									<AccordionHeader>
 										<AccordionTrigger
-											class="group flex w-full items-center justify-between gap-2 py-2.5 text-left text-base text-ink-gray-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+											class="group flex w-full items-center justify-between gap-2 py-2.5 text-left text-base text-ink-gray-8 focus-visible:outline-none focus-visible:focus-ring"
 										>
 											{{ answer.label }}
 											<span
@@ -242,10 +241,10 @@ const updatedAt = computed(() => (loaded.value ? dayjsLocal(loaded.value.modifie
 											/>
 										</AccordionTrigger>
 									</AccordionHeader>
-									<AccordionContent
-										class="whitespace-pre-line break-words pb-3 text-base text-ink-gray-6"
-									>
-										{{ answer.value || "No answer" }}
+									<AccordionContent class="answer text-base text-ink-gray-6">
+										<div class="whitespace-pre-line break-words pb-3">
+											{{ answer.value || "No answer" }}
+										</div>
 									</AccordionContent>
 								</AccordionItem>
 							</AccordionRoot>
@@ -305,3 +304,43 @@ const updatedAt = computed(() => (loaded.value ? dayjsLocal(loaded.value.modifie
 		</DrawerContent>
 	</Drawer>
 </template>
+
+<style scoped>
+/* reka measures the panel and exposes its height; without it the answers snap open. */
+.answer {
+	overflow: hidden;
+}
+
+.answer[data-state="open"] {
+	animation: answer-open 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.answer[data-state="closed"] {
+	animation: answer-close 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes answer-open {
+	from {
+		height: 0;
+	}
+	to {
+		height: var(--reka-accordion-content-height);
+	}
+}
+
+@keyframes answer-close {
+	from {
+		height: var(--reka-accordion-content-height);
+	}
+	to {
+		height: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.answer[data-state="open"],
+	.answer[data-state="closed"] {
+		animation: none;
+	}
+}
+</style>
