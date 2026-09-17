@@ -3,6 +3,90 @@ from datetime import date, datetime
 from buzz.api.schemas import APIResponse
 
 
+class EnquiryFormState(APIResponse):
+	name: str
+	closed: bool
+	link: str | None
+
+
+class TierItem(APIResponse):
+	name: str
+	title: str
+	price: float
+	currency: str | None
+	enabled: bool
+	perks: str | None
+	sponsor_count: int
+	enquiry_count: int
+
+
+class EventSponsorItem(APIResponse):
+	name: str
+	company_name: str
+	company_logo: str | None
+	website: str | None
+	country: str | None
+	enquiry: str | None
+	tier: str | None
+	tier_title: str
+
+
+class EventEnquiryItem(APIResponse):
+	name: str
+	company_name: str
+	company_logo: str | None
+	website: str | None
+	status: str
+	tier: str | None
+	tier_title: str
+	tier_price: float | None
+	tier_currency: str | None
+	creation: datetime
+	has_sponsor: bool
+
+
+class EventSponsorshipsResponse(APIResponse):
+	title: str
+	can_write: bool
+	form: EnquiryFormState | None
+	tiers: list[TierItem]
+	sponsors: list[EventSponsorItem]
+
+
+class EventEnquiriesResponse(APIResponse):
+	"""One page of an event's enquiries, with the counts the section header reads."""
+
+	total: int
+	matched: int
+	enquiries: list[EventEnquiryItem]
+	has_next_page: bool = False
+
+
+class EnquiryAnswer(APIResponse):
+	label: str
+	value: str | None
+	fieldtype: str | None
+
+
+class EnquiryDetail(APIResponse):
+	"""Everything an organiser reads about one enquiry, answers included."""
+
+	name: str
+	company_name: str
+	company_logo: str | None
+	status: str
+	tier: str | None
+	tier_title: str
+	website: str | None
+	country: str | None
+	phone: str | None
+	contact: str | None
+	creation: datetime
+	modified: datetime
+	sponsor: str | None
+	answers: list[EnquiryAnswer]
+
+
 class EnquirySummary(APIResponse):
 	name: str
 	company_name: str
