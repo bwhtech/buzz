@@ -58,7 +58,7 @@ const exact = (row: CommunicationItem) =>
 		description="Anything you send to this event's guests or speakers shows up here."
 	>
 		<template #illustration>
-			<Icon name="lucide-megaphone" class="size-8 text-ink-gray-4" />
+			<Icon name="lucide-megaphone" class="size-5 text-ink-gray-5" />
 		</template>
 	</EmptyState>
 </template>
