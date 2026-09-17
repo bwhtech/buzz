@@ -1,4 +1,5 @@
 import { dayjsLocal } from "frappe-ui"
+import { type Ref, ref, watch } from "vue"
 
 export type BadgeTheme = "green" | "amber" | "blue" | "red" | "gray"
 
@@ -6,6 +7,7 @@ const ENQUIRY_STATUS_THEMES: Record<string, BadgeTheme> = {
 	Paid: "green",
 	"Payment Pending": "amber",
 	"Approval Pending": "blue",
+	Cancelled: "gray",
 	Withdrawn: "red",
 }
 
@@ -44,3 +46,14 @@ export const websiteLabel = (website: string | null) =>
 		?.replace(/^https?:\/\//i, "")
 		.replace(/^www\./i, "")
 		.replace(/\/$/, "") ?? ""
+
+/**
+ * Holds on to the last non-null value. A drawer keyed straight off the selection unmounts
+ * the moment it clears, which skips its exit animation; this keeps the content in place
+ * while the drawer slides out.
+ */
+export function keepLastValue<T>(current: () => T | null | undefined) {
+	const last = ref<T | null>(null)
+	watch(current, (value) => value && (last.value = value), { immediate: true })
+	return last as Ref<T | null>
+}

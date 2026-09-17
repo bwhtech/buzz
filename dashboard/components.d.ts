@@ -39,6 +39,7 @@ declare module 'vue' {
     CreateEventHeader: typeof import('./src/components/dashboard/CreateEventHeader.vue')['default']
     CustomFieldInput: typeof import('./src/components/CustomFieldInput.vue')['default']
     CustomFieldsSection: typeof import('./src/components/CustomFieldsSection.vue')['default']
+    DetailRow: typeof import('./src/components/common/DetailRow.vue')['default']
     Drawer: typeof import('./src/components/common/drawer/Drawer.vue')['default']
     DrawerContent: typeof import('./src/components/common/drawer/DrawerContent.vue')['default']
     DrawerSaveBar: typeof import('./src/components/dashboard/sponsorships/DrawerSaveBar.vue')['default']

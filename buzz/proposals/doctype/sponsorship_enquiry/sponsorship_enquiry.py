@@ -24,7 +24,7 @@ class SponsorshipEnquiry(Document):
 		country: DF.Link | None
 		event: DF.Link
 		phone: DF.Phone | None
-		status: DF.Literal["Approval Pending", "Payment Pending", "Paid", "Withdrawn"]
+		status: DF.Literal["Approval Pending", "Payment Pending", "Paid", "Cancelled", "Withdrawn"]
 		tier: DF.Link | None
 		website: DF.Data | None
 	# end: auto-generated types
@@ -34,8 +34,8 @@ class SponsorshipEnquiry(Document):
 			self.contact_email = self.contact_email.strip().lower()
 
 	def validate(self):
-		if self.is_new() and self.enquiry_form and self.owner == "Guest" and not self.contact_email:
-			frappe.throw(frappe._("Contact Email is required for guest enquiries."), frappe.MandatoryError)
+		if self.is_new() and self.enquiry_form and not self.contact_email:
+			frappe.throw(frappe._("Contact Email is required."), frappe.MandatoryError)
 		if self.enquiry_form and str(
 			frappe.db.get_value("Sponsor Enquiry Form", self.enquiry_form, "event")
 		) != str(self.event):

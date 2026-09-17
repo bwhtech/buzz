@@ -24,6 +24,11 @@ class EventSponsor(Document):
 		website: DF.Data | None
 	# end: auto-generated types
 
+	def on_trash(self):
+		"""The enquiry it came from is settled but no longer listed, so it reads as cancelled."""
+		if self.enquiry and frappe.db.exists("Sponsorship Enquiry", self.enquiry):
+			frappe.db.set_value("Sponsorship Enquiry", self.enquiry, "status", "Cancelled")
+
 	def validate(self):
 		if not self.enquiry:
 			return

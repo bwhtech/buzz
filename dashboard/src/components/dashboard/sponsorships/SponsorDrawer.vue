@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { Button, Combobox, ErrorMessage, FormControl, useDoc } from "frappe-ui"
+import { Button, Combobox, ErrorMessage, FormControl, dialog, toast, useDoc } from "frappe-ui"
 import { computed } from "vue"
 
 import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
 import DrawerSaveBar from "@/components/dashboard/sponsorships/DrawerSaveBar.vue"
-import { stripUrlScheme, websiteUrl } from "@/components/dashboard/sponsorships/helpers"
+import {
+	keepLastValue,
+	stripUrlScheme,
+	websiteUrl,
+} from "@/components/dashboard/sponsorships/helpers"
 import LogoPanel from "@/components/dashboard/sponsorships/LogoPanel.vue"
 import SponsorshipDrawer from "@/components/dashboard/sponsorships/SponsorshipDrawer.vue"
 import WebsiteInput from "@/components/dashboard/sponsorships/WebsiteInput.vue"
@@ -29,6 +33,8 @@ const props = defineProps<{
 }>()
 const open = defineModel<boolean>("open", { required: true })
 const emit = defineEmits<{ changed: []; openEnquiry: [name: string] }>()
+
+const shownSponsor = keepLastValue(() => props.sponsor)
 
 const sponsorDoc = useDoc<SponsorValues & { name: string }>({
 	doctype: "Event Sponsor",
@@ -74,6 +80,25 @@ function toSponsorValues(sponsor: EventSponsorItem): SponsorValues {
 	}
 }
 
+function confirmRemove() {
+	const sponsor = shownSponsor.value
+	if (!sponsor) return
+	dialog.confirm({
+		title: "Remove this sponsor?",
+		message: `Sponsor ${sponsor.company_name} will be removed from the website.`,
+		theme: "red",
+		confirmLabel: "Remove",
+		onConfirm: async () => {
+			await sponsorDoc.delete.submit()
+			// useCall settles either way, so the failure has to be rethrown to reach the dialog.
+			if (sponsorDoc.delete.error) throw sponsorDoc.delete.error
+			open.value = false
+			toast.success(`${sponsor.company_name} is no longer a sponsor of this event.`)
+			emit("changed")
+		},
+	})
+}
+
 async function save(values: SponsorValues) {
 	await sponsorDoc.setValue.submit({
 		...values,
@@ -87,9 +112,9 @@ async function save(values: SponsorValues) {
 
 <template>
 	<SponsorshipDrawer
-		v-if="sponsor"
+		v-if="shownSponsor"
 		v-model:open="open"
-		:title="sponsor.company_name"
+		:title="shownSponsor.company_name"
 		description="Confirmed sponsor"
 		:show-avatar="false"
 		:details="[]"
@@ -155,15 +180,28 @@ async function save(values: SponsorValues) {
 		</form>
 
 		<Button
-			v-if="sponsor.enquiry"
+			v-if="shownSponsor.enquiry"
 			class="w-fit"
-			icon-left="lucide-inbox"
+			icon-right="lucide-arrow-right"
 			label="View enquiry"
-			@click="emit('openEnquiry', sponsor.enquiry)"
+			@click="emit('openEnquiry', shownSponsor.enquiry)"
 		/>
 
-		<template v-if="canWrite && hasChanges" #footer>
-			<DrawerSaveBar :disabled="isInvalid" @discard="discardChanges" @save="confirmAndSave" />
+		<template v-if="canWrite" #footer>
+			<DrawerSaveBar
+				v-if="hasChanges"
+				:disabled="isInvalid"
+				@discard="discardChanges"
+				@save="confirmAndSave"
+			/>
+			<Button
+				class="ml-auto"
+				variant="ghost"
+				theme="red"
+				label="Remove Sponsor"
+				:loading="sponsorDoc.delete.loading"
+				@click="confirmRemove"
+			/>
 		</template>
 	</SponsorshipDrawer>
 </template>

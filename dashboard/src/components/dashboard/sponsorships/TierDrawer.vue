@@ -3,6 +3,7 @@ import { Alert, FormControl, toast, useDoc } from "frappe-ui"
 import { computed } from "vue"
 
 import DrawerSaveBar from "@/components/dashboard/sponsorships/DrawerSaveBar.vue"
+import { keepLastValue } from "@/components/dashboard/sponsorships/helpers"
 import PerkList from "@/components/dashboard/sponsorships/PerkList.vue"
 import PriceInput from "@/components/dashboard/sponsorships/PriceInput.vue"
 import SponsorCard from "@/components/dashboard/sponsorships/SponsorCard.vue"
@@ -31,6 +32,8 @@ const props = defineProps<{
 }>()
 const open = defineModel<boolean>("open", { required: true })
 const emit = defineEmits<{ changed: []; openSponsor: [name: string] }>()
+
+const shownTier = keepLastValue(() => props.tier)
 
 const tierDoc = useDoc<TierDoc>({
 	doctype: "Sponsorship Tier",
@@ -116,10 +119,10 @@ async function save(values: TierValues) {
 
 <template>
 	<SponsorshipDrawer
-		v-if="tier"
+		v-if="shownTier"
 		v-model:open="open"
 		:show-avatar="false"
-		:title="tier.title"
+		:title="shownTier.title"
 		:description="formattedPrice"
 		:details="[]"
 		title-in-header
