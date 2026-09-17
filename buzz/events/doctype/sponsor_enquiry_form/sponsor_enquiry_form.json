@@ -10,12 +10,6 @@
  "name": "Sponsor Enquiry Form",
  "fields": [
   {
-   "fieldname": "allow_guest_submissions",
-   "label": "Allow Guest Submissions",
-   "fieldtype": "Check",
-   "default": "0"
-  },
-  {
    "fieldname": "event",
    "label": "Event",
    "fieldtype": "Link",
@@ -101,7 +95,6 @@
   "route",
   "column_break_settings",
   "publish",
-  "allow_guest_submissions",
   "auto_close_at",
   "excluded_fields",
   "questions_tab",
@@ -139,5 +132,5 @@
    "link_fieldname": "enquiry_form"
   }
  ],
- "modified": "2026-09-16 13:00:00.000000"
+ "modified": "2026-09-18 14:00:00.000000"
 }

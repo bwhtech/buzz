@@ -32,10 +32,8 @@ class SponsorEnquiryForm(Document):
 		self.validate_event_is_unchanged()
 		self.validate_route()
 		validate_excluded_fields("Sponsorship Enquiry", self.excluded_fields)
-		if self.allow_guest_submissions and "contact_email" in (
-			parse_excluded_fields(self.excluded_fields) or set()
-		):
-			frappe.throw(_("Contact Email cannot be hidden when guest submissions are enabled."))
+		if "contact_email" in (parse_excluded_fields(self.excluded_fields) or set()):
+			frappe.throw(_("Contact Email cannot be hidden."))
 		self.validate_questions()
 		if (
 			self.publish
