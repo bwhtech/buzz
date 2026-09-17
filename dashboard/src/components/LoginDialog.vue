@@ -11,9 +11,7 @@
 			v-html="login_context.login_banner"
 		/>
 
-		<div v-if="error_message" class="mb-4 rounded-5 bg-surface-red-2 p-3 text-sm text-ink-red-6">
-			{{ error_message }}
-		</div>
+		<ErrorMessage v-if="error_message" class="mb-4" :message="error_message" />
 
 		<div
 			v-if="success_message"
@@ -195,7 +193,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog, FormControl, createResource } from "frappe-ui"
+import { Button, Dialog, ErrorMessage, FormControl, createResource } from "frappe-ui"
 import {
 	type ComponentPublicInstance,
 	type PropType,

@@ -62,10 +62,9 @@ async function submit() {
 				placeholder="Paste a Google Maps link, or type the address"
 			/>
 
-			<p v-if="showErrors && invalid" class="text-sm text-ink-red-4">
-				A venue needs a name and an address.
-			</p>
-			<ErrorMessage v-else-if="errorMessage" :message="errorMessage" />
+			<ErrorMessage
+				:message="showErrors && invalid ? 'A venue needs a name and an address.' : errorMessage"
+			/>
 
 			<!-- type=button: inside a form, a submit button would run `submit` twice —
 				 once on click, once on the form's own submit — and the second insert

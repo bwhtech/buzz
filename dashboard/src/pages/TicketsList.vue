@@ -4,12 +4,10 @@
 			<div class="text-ink-gray-6">{{ __("Loading tickets...") }}</div>
 		</div>
 
-		<div
+		<ErrorMessage
 			v-else-if="tickets.error"
-			class="bg-surface-red-1 border border-outline-red-1 rounded-6 p-4"
-		>
-			<p class="text-ink-red-6">{{ __("Error loading tickets") }}: {{ tickets.error.message }}</p>
-		</div>
+			:message="`${__('Error loading tickets')}: ${tickets.error.message}`"
+		/>
 
 		<ListView
 			v-else
@@ -36,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { useList } from "frappe-ui"
+import { ErrorMessage, useList } from "frappe-ui"
 import { dayjsLocal } from "frappe-ui"
 import { ListView } from "frappe-ui/experimental"
 

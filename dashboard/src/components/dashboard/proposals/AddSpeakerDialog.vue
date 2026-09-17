@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, Dialog, FormControl } from "frappe-ui"
+import { Button, Dialog, ErrorMessage, FormControl } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import type { ProposalSpeaker } from "@/types"
@@ -69,9 +69,10 @@ function submit() {
 					required
 					@keyup.enter="submit"
 				/>
-				<p v-if="alreadyListed" class="text-base text-ink-red-6">
-					That email is already a speaker on this proposal.
-				</p>
+				<ErrorMessage
+					v-if="alreadyListed"
+					message="That email is already a speaker on this proposal."
+				/>
 			</div>
 		</template>
 

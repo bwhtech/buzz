@@ -108,7 +108,7 @@
 		</div>
 
 		<div v-else-if="tiers.error" class="text-center py-8">
-			<p class="text-ink-red-5">{{ __("Error loading sponsorship tiers") }}</p>
+			<ErrorMessage :message="__('Error loading sponsorship tiers')" />
 			<p class="text-ink-gray-5 text-sm">{{ tiers.error }}</p>
 		</div>
 
@@ -135,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog, Spinner, createResource, useList } from "frappe-ui"
+import { Button, Dialog, ErrorMessage, Spinner, createResource, useList } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import { formatCurrency } from "@/utils/currency"

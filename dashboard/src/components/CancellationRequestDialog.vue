@@ -129,9 +129,7 @@
 
 			<!-- Warning if no tickets selected -->
 			<div v-if="selectedTickets.length === 0" class="text-center py-4">
-				<p class="text-ink-red-6 text-sm">
-					{{ __("Please select at least one ticket to cancel.") }}
-				</p>
+				<ErrorMessage :message="__('Please select at least one ticket to cancel.')" />
 			</div>
 
 			<!-- Summary -->
@@ -179,7 +177,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog, createResource, toast } from "frappe-ui"
+import { Button, Dialog, ErrorMessage, createResource, toast } from "frappe-ui"
 import { type PropType, computed, ref, watch } from "vue"
 
 import type { DashboardTicket, FrappeError } from "@/types"
