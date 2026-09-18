@@ -115,6 +115,10 @@ watch(image, () => {
 				</div>
 			</div>
 
+			<p class="mt-2 text-p-sm text-ink-gray-5">
+				{{ __("Use a 3:1 wide image — 1500×500 or 900×300 pixels work well.") }}
+			</p>
+
 			<!-- The slot types its error as {}, so the message needs narrowing. -->
 			<ErrorMessage v-if="uploadError" class="mt-2" :message="String(uploadError)" />
 		</template>
