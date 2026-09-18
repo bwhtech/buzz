@@ -31,6 +31,14 @@ frappe.ui.form.on("Event Booking", {
 		}
 
 		if (
+			frm.doc.docstatus === 0 &&
+			frm.doc.payment_status === "Unpaid" &&
+			(frappe.user.has_role("System Manager") || frappe.user.has_role("Event Manager"))
+		) {
+			frm.add_custom_button(__("Sync Payment Status"), () => syncPayment(frm))
+		}
+
+		if (
 			frappe.user.has_role("System Manager") &&
 			frm.doc.docstatus === 1 &&
 			frm.doc.payment_status === "Paid"
@@ -118,6 +126,19 @@ async function renderRefunds(frm) {
 			</thead>
 			<tbody>${rows}</tbody>
 		</table>`)
+}
+
+async function syncPayment(frm) {
+	const { message: status } = await frm.call("sync_payment")
+
+	frappe.show_alert({
+		message: status
+			? __("The gateway had this payment. The booking is confirmed and tickets are issued.")
+			: __("The gateway has no payment on this booking yet."),
+		indicator: status ? "green" : "orange",
+	})
+
+	frm.reload_doc()
 }
 
 async function syncRefunds(frm) {
