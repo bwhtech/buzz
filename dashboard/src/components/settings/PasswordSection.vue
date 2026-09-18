@@ -21,7 +21,7 @@ function sendResetLink() {
 
 <template>
 	<section class="flex flex-col gap-4">
-		<span class="text-base-medium text-ink-gray-8">{{ __("Password") }}</span>
+		<span class="text-lg-semibold text-ink-gray-8">{{ __("Account") }}</span>
 
 		<div class="flex items-center justify-between gap-4">
 			<div class="flex flex-col gap-1">

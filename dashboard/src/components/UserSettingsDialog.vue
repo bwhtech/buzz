@@ -196,7 +196,7 @@ async function save(fields: Partial<Profile> = { ...form }) {
 
 						<ErrorMessage :message="user.setValue.error?.message" />
 
-						<PasswordSection />
+						<PasswordSection class="mt-6" />
 					</div>
 				</SettingsBody>
 			</SettingsPanel>
