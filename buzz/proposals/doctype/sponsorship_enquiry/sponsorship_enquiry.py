@@ -73,6 +73,9 @@ class SponsorshipEnquiry(Document):
 		self.insert_sponsor()
 
 	def insert_sponsor(self):
+		# A manual "Paid" and a late gateway callback both land here.
+		if frappe.db.exists("Event Sponsor", {"enquiry": self.name}):
+			return
 		frappe.get_doc(
 			{
 				"doctype": "Event Sponsor",
