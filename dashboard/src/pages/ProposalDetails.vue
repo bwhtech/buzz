@@ -150,7 +150,7 @@
 	</div>
 
 	<div v-else-if="proposal.get.error" class="text-center py-8">
-		<div class="text-ink-red-6 text-lg mb-2">{{ __("Error loading proposal details") }}</div>
+		<ErrorMessage class="mb-2" :message="__('Error loading proposal details')" />
 		<div class="text-ink-gray-4 text-sm">{{ proposal.get.error }}</div>
 	</div>
 
@@ -173,6 +173,7 @@
 import {
 	Badge,
 	Button,
+	ErrorMessage,
 	Spinner,
 	createDocumentResource,
 	createResource,

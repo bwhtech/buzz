@@ -36,9 +36,7 @@
 				{{ __("Register") }}
 			</Button>
 
-			<p v-if="errorMessage" class="text-ink-red-5 text-sm mt-4 text-center">
-				{{ errorMessage }}
-			</p>
+			<ErrorMessage v-if="errorMessage" class="mt-4 text-center" :message="errorMessage" />
 		</div>
 
 		<div v-else-if="error" class="text-center">
@@ -56,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Spinner, createResource } from "frappe-ui"
+import { Button, ErrorMessage, Spinner, createResource } from "frappe-ui"
 import { marked } from "marked"
 import { computed, ref } from "vue"
 import LucideCheckCircle from "~icons/lucide/check-circle"

@@ -280,7 +280,7 @@
 	</div>
 
 	<div v-else-if="enquiryDetails.error" class="text-center py-8">
-		<div class="text-ink-red-6 text-lg mb-2">Error loading sponsorship details</div>
+		<ErrorMessage class="mb-2" message="Error loading sponsorship details" />
 		<div class="text-ink-gray-4 text-sm">{{ enquiryDetails.error }}</div>
 	</div>
 

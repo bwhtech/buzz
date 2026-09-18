@@ -78,10 +78,10 @@ async function submit() {
 				placeholder="What do they do?"
 			/>
 
-			<p v-if="showErrors && invalid" class="text-sm text-ink-red-4">
-				{{ __("A co-host needs a name.") }}
-			</p>
-			<ErrorMessage v-else-if="showErrors && errorMessage" :message="errorMessage" />
+			<ErrorMessage
+				v-if="showErrors"
+				:message="invalid ? __('A co-host needs a name.') : errorMessage"
+			/>
 
 			<!-- type=button: inside a form a submit button fires `submit` twice, and the
 				 second call adds the co-host again. -->
