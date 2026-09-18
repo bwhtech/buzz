@@ -20,6 +20,7 @@ import { computed, reactive, ref, watch } from "vue"
 
 import AvatarUploader from "@/components/common/AvatarUploader.vue"
 import TeamsPanel from "@/components/dashboard/teams/TeamsPanel.vue"
+import PasswordSection from "@/components/settings/PasswordSection.vue"
 import PreferencesPanel from "@/components/settings/PreferencesPanel.vue"
 import { session } from "@/data/session"
 import { reloadTeams } from "@/data/teams"
@@ -194,6 +195,8 @@ async function save(fields: Partial<Profile> = { ...form }) {
 						/>
 
 						<ErrorMessage :message="user.setValue.error?.message" />
+
+						<PasswordSection class="mt-6" />
 					</div>
 				</SettingsBody>
 			</SettingsPanel>

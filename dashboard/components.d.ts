@@ -85,6 +85,7 @@ declare module 'vue' {
     ManageTeamPanel: typeof import('./src/components/dashboard/teams/ManageTeamPanel.vue')['default']
     Navbar: typeof import('./src/components/Navbar.vue')['default']
     OfflinePaymentDialog: typeof import('./src/components/OfflinePaymentDialog.vue')['default']
+    PasswordSection: typeof import('./src/components/settings/PasswordSection.vue')['default']
     PaymentGatewayDialog: typeof import('./src/components/PaymentGatewayDialog.vue')['default']
     PerkList: typeof import('./src/components/dashboard/sponsorships/PerkList.vue')['default']
     PhoneInput: typeof import('./src/components/PhoneInput.vue')['default']
