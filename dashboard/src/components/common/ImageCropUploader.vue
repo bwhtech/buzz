@@ -21,7 +21,6 @@ import ImageCropper from "@/components/common/ImageCropper.vue"
 const props = withDefaults(
 	defineProps<{
 		aspectRatio: number
-		hint?: string
 		shape?: "circle" | "rect"
 		outputWidth?: number
 		fileTypes?: string | string[]
@@ -30,7 +29,6 @@ const props = withDefaults(
 		optimize?: boolean
 	}>(),
 	{
-		hint: "",
 		shape: "rect",
 		outputWidth: 1024,
 		fileTypes: "image/*",
@@ -160,8 +158,6 @@ function clearFile() {
 				:shape="shape"
 				:output-width="outputWidth"
 			/>
-
-			<p v-if="hint" class="text-p-sm text-ink-gray-6">{{ __(hint) }}</p>
 
 			<ErrorMessage :message="error" />
 

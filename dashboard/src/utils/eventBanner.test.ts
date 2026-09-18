@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import { BANNER_ASPECT_RATIO, BANNER_SIZE_HINT, bannerPattern } from "./eventBanner.ts"
+import { bannerPattern } from "./eventBanner.ts"
 
 const NAMES = ["Frappe Yatra 2026", "PyCon India", "1042", "", "a"]
 
@@ -28,13 +28,5 @@ test("ring spacing stays inside the readable range", () => {
 	for (const name of NAMES) {
 		const gap = Number(bannerPattern(name).match(/transparent \d+px (\d+\.\d)px/)?.[1])
 		assert.ok(gap >= 18 && gap <= 26, `${name} drew a ${gap}px gap`)
-	}
-})
-
-test("every size the hint suggests is on the banner ratio", () => {
-	const sizes = [...BANNER_SIZE_HINT.matchAll(/(\d+)×(\d+)/g)]
-	assert.ok(sizes.length > 0)
-	for (const [, width, height] of sizes) {
-		assert.equal(Number(width) / Number(height), BANNER_ASPECT_RATIO)
 	}
 })
