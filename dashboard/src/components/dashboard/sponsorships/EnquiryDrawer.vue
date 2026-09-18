@@ -276,14 +276,7 @@ const updatedAt = computed(() => (loaded.value ? dayjsLocal(loaded.value.modifie
 			</template>
 
 			<template v-if="loaded" #footer>
-				<Tooltip v-if="updatedAt" :text="updatedAt.format('D MMM YYYY, h:mm A')">
-					<p class="flex items-center gap-1 text-xs text-ink-gray-5">
-						<span class="lucide-clock-fading size-3.5 shrink-0" aria-hidden="true" />
-						Updated {{ updatedAt.fromNow() }}
-					</p>
-				</Tooltip>
-
-				<div v-if="canWrite && changed" class="ml-auto flex items-center gap-2">
+				<div v-if="canWrite && changed" class="flex items-center gap-2">
 					<Button
 						variant="solid"
 						size="sm"
@@ -296,12 +289,18 @@ const updatedAt = computed(() => (loaded.value ? dayjsLocal(loaded.value.modifie
 
 				<Button
 					v-if="loaded.sponsor"
-					class="ml-auto"
 					variant="outline"
 					size="sm"
 					label="View sponsor"
 					@click="emit('openSponsor', loaded.sponsor)"
 				/>
+
+				<Tooltip v-if="updatedAt" :text="updatedAt.format('D MMM YYYY, h:mm A')">
+					<p class="ml-auto flex items-center gap-1 text-xs text-ink-gray-5">
+						<span class="lucide-clock-fading size-3.5 shrink-0" aria-hidden="true" />
+						Updated {{ updatedAt.fromNow() }}
+					</p>
+				</Tooltip>
 			</template>
 		</DrawerContent>
 	</Drawer>
