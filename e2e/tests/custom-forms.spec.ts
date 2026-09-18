@@ -358,6 +358,7 @@ test.describe("Sponsorship Enquiry Form", () => {
 				"hex",
 			),
 		})
+		await expect(page.getByRole("button", { name: "Remove image" })).toBeVisible()
 
 		const result = await formPage.submitAndExpectResponse()
 		expect(result.succeeded).toBeTruthy()
