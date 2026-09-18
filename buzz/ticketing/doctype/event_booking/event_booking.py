@@ -6,15 +6,13 @@ from frappe.model.document import Document
 from frappe.utils import cstr, flt
 
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
-from buzz.payments import get_controller, mark_payment_as_received
+from buzz.payments import RAZORPAY, get_controller, mark_payment_as_received, sync_gateway_payment
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
 	get_committed_tickets,
 	record_gateway_refund,
 )
 from buzz.utils import render_email_template
-
-RAZORPAY = "Razorpay"
 
 
 class EventBooking(Document):
@@ -485,6 +483,20 @@ class EventBooking(Document):
 		self.set_refund_status()
 
 		return self.refund_status
+
+	@frappe.whitelist()
+	def sync_payment(self) -> str:
+		"""Reconcile this booking against the payment the gateway holds for its order.
+
+		A payment the buyer's browser never reported back leaves the booking in draft, so
+		nobody gets a ticket for money that was taken.
+		"""
+		frappe.only_for(["System Manager", "Event Manager"])
+
+		if self.docstatus != 0 or self.payment_status == "Paid":
+			return ""
+
+		return sync_gateway_payment(self.doctype, self.name)
 
 	@frappe.whitelist()
 	def sync_refunds(self) -> dict:
