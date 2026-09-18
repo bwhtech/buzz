@@ -134,6 +134,8 @@ def enquiry_detail(enquiry: str) -> EnquiryDetail:
 	)
 
 
+# Settled outcomes: a payment or sponsor, a removed sponsor, or the applicant's withdrawal.
+LOCKED_STATUSES = ("Paid", "Cancelled", "Withdrawn")
 # Moving to these tells the applicant a tier is settled, so the enquiry must carry one.
 TIERED_STATUSES = ("Payment Pending", "Paid")
 
@@ -145,11 +147,11 @@ def set_enquiry_status(enquiry: str, status: str) -> str:
 	doc = frappe.get_doc("Sponsorship Enquiry", enquiry)
 	manageable_event(doc.event)
 
-	if doc.status == "Paid" and status != "Paid":
+	if doc.status in LOCKED_STATUSES and status != doc.status:
 		EnquiryStatusLocked.throw()
 	if status in TIERED_STATUSES and not doc.tier:
 		EnquiryTierMissing.throw()
-	if status == "Paid" and not frappe.db.exists("Event Sponsor", {"enquiry": doc.name}):
+	if status == "Paid":
 		doc.create_sponsor()
 
 	doc.status = status

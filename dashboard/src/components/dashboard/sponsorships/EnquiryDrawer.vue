@@ -62,13 +62,15 @@ watch(
 )
 const statusOptions = ENQUIRY_STATUSES.map((value) => ({ value, label: value }))
 const changed = computed(() => Boolean(status.value) && status.value !== loaded.value?.status)
-// Paid is settled by a payment or a confirmed sponsor, so it is not walked back from here.
-const locked = computed(() => loaded.value?.status === "Paid")
+// Settled outcomes are not walked back from here.
+const LOCKED_STATUSES = ["Paid", "Cancelled", "Withdrawn"]
+const locked = computed(() => LOCKED_STATUSES.includes(loaded.value?.status || ""))
 
 // A disabled control should say why, not just refuse the click.
 const statusHint = computed(() => {
 	if (!props.canWrite) return "Only the event team can change this."
-	if (locked.value) return "Status cannot be changed for paid enquiries."
+	if (locked.value)
+		return `Status cannot be changed for ${loaded.value?.status.toLowerCase()} enquiries.`
 	return ""
 })
 

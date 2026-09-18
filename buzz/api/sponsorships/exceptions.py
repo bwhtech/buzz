@@ -30,8 +30,8 @@ class EnquiryAlreadyWithdrawn(Conflict):
 
 
 class EnquiryStatusLocked(Conflict):
-	title = _lt("Already Paid")
-	message = _lt("A paid sponsorship enquiry keeps its status.")
+	title = _lt("Status Locked")
+	message = _lt("A paid, cancelled or withdrawn sponsorship enquiry keeps its status.")
 
 
 class EnquiryTierMissing(Conflict):
