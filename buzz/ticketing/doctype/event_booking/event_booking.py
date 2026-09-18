@@ -381,11 +381,15 @@ class EventBooking(Document):
 			self.update_payment_record()
 
 	def update_payment_record(self):
+		# The payment is marked received only if the booking it pays for is confirmed, so a
+		# failure here leaves it unmarked and a later sync can pick the booking up again.
+		frappe.db.savepoint("payment_record")
 		try:
 			mark_payment_as_received(self.doctype, self.name)
 			self.flags.ignore_permissions = 1
 			self.submit()
 		except Exception:
+			frappe.db.rollback(save_point="payment_record")
 			frappe.log_error(frappe.get_traceback(), _("Booking Failed"))
 			frappe.throw(frappe._("Booking Failed! Please contact support."))
 

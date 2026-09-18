@@ -193,9 +193,6 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 			},
 		)
 
-		if not frappe.in_test:
-			frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
-
 
 def get_checkout_request(reference_doctype: str, reference_docname: str) -> frappe._dict | None:
 	"""The Integration Request holding the gateway order for this document."""

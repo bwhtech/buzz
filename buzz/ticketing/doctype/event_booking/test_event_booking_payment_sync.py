@@ -10,6 +10,7 @@ from frappe.utils import add_to_date, now
 
 from buzz.payments import sync_gateway_payment
 from buzz.tasks import sync_pending_online_payments
+from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
 
 ORDER_ID = "order_sync_1"
 TICKET_PRICE = 500
@@ -206,6 +207,21 @@ class TestSyncGatewayPayment(PaymentSyncTestCase):
 		self.assertEqual(self.sync(), "Completed")
 		self.order_payments_call().assert_called_once_with(ORDER_ID)
 
+	def test_a_booking_that_fails_to_submit_leaves_the_payment_retryable(self):
+		# A payment marked received on a booking still in draft is one no later sync looks at.
+		self.make_checkout_request()
+		self.set_order_payments(razorpay_payment())
+
+		with patch.object(EventBooking, "submit", side_effect=Exception("submit failed")):
+			self.assertRaises(frappe.ValidationError, self.sync)
+
+		self.payment.reload()
+		self.assertEqual(self.payment.payment_received, 0)
+		self.assertEqual(frappe.db.get_value("Event Booking", self.booking.name, "docstatus"), 0)
+
+		self.assertEqual(self.sync(), "Completed")
+		self.assertEqual(frappe.db.get_value("Event Booking", self.booking.name, "docstatus"), 1)
+
 
 class TestBookingSyncPayment(PaymentSyncTestCase):
 	def test_a_draft_booking_is_confirmed(self):
@@ -283,11 +299,14 @@ class TestPendingPaymentSweep(PaymentSyncTestCase):
 		other = self.make_booking("Jenny", "jenny@example.com")
 		self.backdate(other.name, minutes=30)
 
-		with patch(
-			"buzz.tasks.sync_gateway_payment", side_effect=[Exception("Razorpay is down"), "Completed"]
-		) as sync:
+		def fail_one(doctype: str, booking: str) -> str:
+			if booking == self.booking.name:
+				raise Exception("Razorpay is down")
+			return "Completed"
+
+		with patch("buzz.tasks.sync_gateway_payment", side_effect=fail_one) as sync:
 			self.sweep()
 
-		self.assertEqual(
-			sorted(call.args[1] for call in sync.call_args_list), sorted([other.name, self.booking.name])
-		)
+		swept = {call.args[1] for call in sync.call_args_list}
+		self.assertIn(self.booking.name, swept)
+		self.assertIn(other.name, swept)
