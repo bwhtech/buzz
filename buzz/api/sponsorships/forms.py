@@ -4,7 +4,7 @@ import frappe
 from frappe import _
 
 from buzz.api.forms.answers import CustomAnswers
-from buzz.api.forms.exceptions import FormNotAvailable, LoginRequired, SubmissionsClosed
+from buzz.api.forms.exceptions import FormNotAvailable, SubmissionsClosed
 from buzz.api.forms.fields import get_form_fields
 from buzz.api.forms.schemas import CustomFieldDefinition
 from buzz.api.forms.services import CustomFormService
@@ -37,8 +37,7 @@ class SponsorFormService(CustomFormService):
 		return ENQUIRY_DOCTYPE
 
 	def check_login(self):
-		if not self.form.allow_guest_submissions and frappe.session.user == "Guest":
-			LoginRequired.throw()
+		"""Sponsor enquiry forms are always public."""
 
 	@property
 	def exclude_fields(self):
@@ -48,11 +47,8 @@ class SponsorFormService(CustomFormService):
 			for field in frappe.get_meta(self.form_doctype).fields
 			if field.fieldtype not in ("Section Break", "Column Break")
 		} - ENQUIRY_FIELDS
-		# A signed-in applicant is already named by `owner`, so the address that grants
-		# access is never theirs to type. Only a guest supplies one.
-		if frappe.session.user != "Guest":
-			internal.add("contact_email")
-		return super().exclude_fields | internal
+		# Every applicant gives a contact address, even on forms saved while it could be hidden.
+		return (super().exclude_fields | internal) - {"contact_email"}
 
 	def renderable_fields(self):
 		fields = get_form_fields(
@@ -61,6 +57,7 @@ class SponsorFormService(CustomFormService):
 		for field in fields:
 			if field["fieldname"] == "contact_email":
 				field["reqd"] = 1
+				field["default"] = session_user_email()
 		return fields
 
 	def custom_field_definitions(self):
@@ -89,6 +86,7 @@ class SponsorFormService(CustomFormService):
 			frappe.throw(_("Could not read the submitted form. Please reload the page and try again."))
 		enquiry = frappe.get_doc(self.build_doc_data(values))
 		enquiry.enquiry_form = self.form.name
+		enquiry.contact_email = enquiry.contact_email or session_user_email()
 		enquiry.set(
 			"additional_fields",
 			CustomAnswers(self.form.custom_fields).rows(frappe.parse_json(custom_fields_data) or {}),
@@ -99,5 +97,15 @@ class SponsorFormService(CustomFormService):
 	def validate_tier_belongs_to_event(self, tier):
 		if not tier:
 			return
-		if str(frappe.db.get_value("Sponsorship Tier", tier, "event")) != str(self.event.name):
+		event, enabled = frappe.db.get_value("Sponsorship Tier", tier, ["event", "enabled"]) or (None, 0)
+		if str(event) != str(self.event.name):
 			frappe.throw(_("Select a sponsorship tier from this event."))
+		if not enabled:
+			frappe.throw(_("Select an available sponsorship tier from this event."))
+
+
+def session_user_email() -> str | None:
+	"""The signed-in user's address, to prefill the contact field. Guests have none."""
+	if frappe.session.user == "Guest":
+		return None
+	return frappe.get_cached_value("User", frappe.session.user, "email")

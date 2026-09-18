@@ -2,6 +2,7 @@
 import { Avatar, Badge, Button, Tooltip, dayjsLocal } from "frappe-ui"
 import { computed } from "vue"
 
+import DetailRow from "@/components/common/DetailRow.vue"
 import {
 	Drawer,
 	DrawerClose,
@@ -111,57 +112,45 @@ const ticket = computed<TicketWithEvent | null>(() => {
 					</div>
 
 					<dl class="space-y-3 text-base">
-						<div class="flex items-baseline gap-3">
-							<dt class="w-24 shrink-0 text-ink-gray-5">Ticket type</dt>
-							<dd class="min-w-0">
-								<Badge v-if="guest.ticket_type" variant="subtle" :label="guest.ticket_type" />
-								<span v-else class="text-ink-gray-5">—</span>
-							</dd>
-						</div>
+						<DetailRow label="Ticket type">
+							<Badge v-if="guest.ticket_type" variant="subtle" :label="guest.ticket_type" />
+							<span v-else class="text-ink-gray-5">—</span>
+						</DetailRow>
 
-						<div class="flex items-baseline gap-3">
-							<dt class="w-24 shrink-0 text-ink-gray-5">Email</dt>
-							<dd class="min-w-0">
-								<button
-									v-if="guest.attendee_email"
-									type="button"
-									class="max-w-full cursor-copy truncate text-ink-gray-8"
-									:aria-label="`Copy email ${guest.attendee_email}`"
+						<DetailRow label="Email" :value="guest.attendee_email">
+							<template v-if="guest.attendee_email" #suffix>
+								<Button
+									variant="ghost"
+									size="sm"
+									icon="lucide-copy"
+									aria-label="Copy email"
 									@click="copyToClipboard(guest.attendee_email, 'Email copied')"
-								>
-									{{ guest.attendee_email }}
-								</button>
-								<span v-else class="text-ink-gray-5">—</span>
-							</dd>
-						</div>
+								/>
+							</template>
+						</DetailRow>
 
-						<div class="flex items-baseline gap-3">
-							<dt class="w-24 shrink-0 text-ink-gray-5">Ticket ID</dt>
-							<dd class="min-w-0">
-								<button
-									type="button"
-									class="cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-8"
-									:aria-label="`Copy ticket id ${guest.name}`"
+						<DetailRow label="Ticket ID">
+							<span class="font-mono text-sm tracking-wider uppercase">{{ guest.name }}</span>
+							<template #suffix>
+								<Button
+									variant="ghost"
+									size="sm"
+									icon="lucide-copy"
+									aria-label="Copy ticket ID"
 									@click="copyToClipboard(guest.name, 'Ticket ID copied')"
-								>
-									{{ guest.name }}
-								</button>
-							</dd>
-						</div>
+								/>
+							</template>
+						</DetailRow>
 
-						<div class="flex items-baseline gap-3">
-							<dt class="w-24 shrink-0 text-ink-gray-5">Registered</dt>
-							<dd class="min-w-0 text-ink-gray-8">
-								<Tooltip v-if="registeredAt" :text="registeredAt.fromNow()">
-									<span>{{ registeredAt.format("D MMM YYYY, h:mm A") }}</span>
-								</Tooltip>
-								<span v-else class="text-ink-gray-5">—</span>
-							</dd>
-						</div>
+						<DetailRow label="Registered">
+							<Tooltip v-if="registeredAt" :text="registeredAt.fromNow()">
+								<span>{{ registeredAt.format("D MMM YYYY, h:mm A") }}</span>
+							</Tooltip>
+							<span v-else class="text-ink-gray-5">—</span>
+						</DetailRow>
 
-						<div v-if="guest.add_ons.length" class="flex items-baseline gap-3">
-							<dt class="w-24 shrink-0 text-ink-gray-5">Add-ons</dt>
-							<dd class="flex min-w-0 flex-wrap gap-1.5">
+						<DetailRow v-if="guest.add_ons.length" label="Add-ons">
+							<div class="flex flex-wrap gap-1.5">
 								<Badge
 									v-for="addOn in guest.add_ons"
 									:key="`${addOn.title}: ${addOn.value}`"
@@ -169,8 +158,8 @@ const ticket = computed<TicketWithEvent | null>(() => {
 									variant="subtle"
 									:label="addOn.value ? `${addOn.title}: ${addOn.value}` : addOn.title"
 								/>
-							</dd>
-						</div>
+							</div>
+						</DetailRow>
 					</dl>
 				</div>
 			</template>

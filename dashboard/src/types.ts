@@ -475,3 +475,90 @@ export interface CommunicationDraft {
 	message: string
 	scheduled_at: string
 }
+
+// buzz.api.sponsorships.get_event_sponsorships: an event's Sponsor Enquiry Form, as read
+// on the manage page.
+export interface EnquiryFormState {
+	name: string
+	closed: boolean
+	link: string | null
+}
+
+export interface CurrencyItem {
+	name: string
+	symbol: string | null
+	number_format: string | null
+}
+
+export interface SponsorshipTierItem {
+	name: string
+	title: string
+	price: number
+	currency: string | null
+	enabled: boolean
+	perks: string | null
+	sponsor_count: number
+}
+
+export interface EventSponsorItem {
+	name: string
+	company_name: string
+	company_logo: string | null
+	website: string | null
+	country: string | null
+	contact_email: string | null
+	enquiry: string | null
+	tier: string | null
+	tier_title: string
+}
+
+export interface EnquiryAnswer {
+	label: string
+	value: string | null
+	fieldtype: string | null
+}
+
+export interface EnquiryDetail {
+	name: string
+	company_name: string
+	company_logo: string | null
+	status: string
+	tier: string | null
+	tier_title: string
+	website: string | null
+	country: string | null
+	phone: string | null
+	contact: string | null
+	creation: string
+	modified: string
+	sponsor: string | null
+	answers: EnquiryAnswer[]
+}
+
+export interface EventEnquiryItem {
+	name: string
+	company_name: string
+	company_logo: string | null
+	website: string | null
+	status: string
+	tier: string | null
+	tier_title: string
+	tier_price: number | null
+	tier_currency: string | null
+	creation: string
+}
+
+export interface EventSponsorships {
+	title: string
+	can_write: boolean
+	form: EnquiryFormState | null
+	tiers: SponsorshipTierItem[]
+	sponsors: EventSponsorItem[]
+}
+
+export interface EventEnquiries {
+	total: number
+	matched: number
+	enquiries: EventEnquiryItem[]
+	has_next_page: boolean
+}

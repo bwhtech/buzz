@@ -45,7 +45,7 @@ const emptyDescription = computed(() =>
 		<template #empty-state>
 			<EmptyState :title="`No ${tab} events`" :description="emptyDescription">
 				<template #illustration>
-					<Icon name="lucide-ghost" class="size-8 text-ink-gray-4" />
+					<Icon name="lucide-ghost" class="size-5 text-ink-gray-5" />
 				</template>
 			</EmptyState>
 		</template>

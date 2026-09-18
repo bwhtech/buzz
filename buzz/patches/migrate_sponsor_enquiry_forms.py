@@ -52,7 +52,7 @@ class SponsorFormMigration:
 			legacy = frappe.get_all(
 				"Buzz Event Form",
 				filters={"parent": event, "parenttype": "Buzz Event", "form_doctype": "Sponsorship Enquiry"},
-				fields=["name", "login_required", *SETTINGS],
+				fields=["name", *SETTINGS],
 			)
 			existing = frappe.db.exists("Sponsor Enquiry Form", {"event": event})
 			if len(legacy) > 1 or (existing and legacy):
@@ -80,7 +80,6 @@ class SponsorFormMigration:
 		)
 		if legacy:
 			form.update({key: legacy.get(key) for key in SETTINGS})
-			form.allow_guest_submissions = not legacy.login_required
 			form.flags.legacy_form_row = legacy.name
 		taken = set()
 		for question in questions:

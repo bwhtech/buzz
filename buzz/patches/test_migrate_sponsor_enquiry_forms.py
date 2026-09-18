@@ -138,7 +138,6 @@ class TestMigrateSponsorEnquiryForms(SponsorFormMigrationTestCase):
 		enquiry.reload()
 
 		self.assertEqual(form.route, "apply-sponsor")
-		self.assertTrue(form.allow_guest_submissions)
 		self.assertEqual(form.success_title, "Received")
 		self.assertEqual(form.success_message, "We will reply soon.")
 		self.assertEqual(form.closed_title, "Closed")
@@ -159,7 +158,7 @@ class TestMigrateSponsorEnquiryForms(SponsorFormMigrationTestCase):
 		self.assertEqual(enquiry.status, "Withdrawn")
 		self.assertEqual(enquiry.additional_fields[0].value, "0")
 
-	def test_missing_legacy_form_creates_a_closed_login_only_default(self):
+	def test_missing_legacy_form_creates_a_closed_default(self):
 		event = self.make_legacy_event()
 
 		SponsorFormMigration().run()
@@ -167,7 +166,6 @@ class TestMigrateSponsorEnquiryForms(SponsorFormMigrationTestCase):
 
 		self.assertEqual(form.route, "enquire-sponsorship")
 		self.assertFalse(form.publish)
-		self.assertFalse(form.allow_guest_submissions)
 
 	def test_second_run_is_idempotent(self):
 		event = self.make_legacy_event()

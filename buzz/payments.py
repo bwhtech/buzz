@@ -75,6 +75,8 @@ def get_payment_link_for_sponsorship(
 	payment_gateway: str | None = None,
 ) -> str:
 	tier_doc = frappe.get_cached_doc("Sponsorship Tier", sponsorship_tier)
+	if not tier_doc.enabled:
+		frappe.throw(_("This sponsorship tier is no longer available."))
 	if not payment_gateway:
 		gateways = get_payment_gateways_for_event(tier_doc.event)
 		if not gateways:
