@@ -283,7 +283,7 @@ const updatedAt = computed(() => (loaded.value ? dayjsLocal(loaded.value.modifie
 					</p>
 				</Tooltip>
 
-				<div v-if="canWrite && changed" class="flex items-center gap-2">
+				<div v-if="canWrite && changed" class="ml-auto flex items-center gap-2">
 					<Button
 						variant="solid"
 						size="sm"
