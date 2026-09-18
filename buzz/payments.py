@@ -1,8 +1,6 @@
 import frappe
 from frappe import _
 from frappe.utils import flt
-from payments.payment_gateways.doctype.razorpay_settings.razorpay_settings import razorpay_api_call
-from payments.utils import get_payment_gateway_controller
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import record_gateway_refund
@@ -44,6 +42,8 @@ def get_payment_gateways_for_event(event: str) -> list[str]:
 
 
 def get_controller(payment_gateway):
+	from payments.utils import get_payment_gateway_controller
+
 	return get_payment_gateway_controller(payment_gateway)
 
 
@@ -217,6 +217,8 @@ def get_checkout_request(reference_doctype: str, reference_docname: str) -> frap
 
 def fetch_order_payments(controller, order_id: str) -> list[dict]:
 	"""Every payment the gateway holds against an order."""
+	from payments.payment_gateways.doctype.razorpay_settings.razorpay_settings import razorpay_api_call
+
 	with razorpay_api_call("order payment list"):
 		return controller.get_client().order.payments(order_id).get("items", [])
 
