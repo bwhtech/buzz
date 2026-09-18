@@ -1,10 +1,16 @@
 import frappe
 from frappe import _
 from frappe.utils import flt
+from payments.payment_gateways.doctype.razorpay_settings.razorpay_settings import razorpay_api_call
 from payments.utils import get_payment_gateway_controller
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import record_gateway_refund
+
+RAZORPAY = "Razorpay"
+
+# What a paid Razorpay status means to a document's `on_payment_authorized`.
+PAID_STATUSES = {"captured": "Completed", "authorized": "Authorized"}
 
 
 class RefundNotification(BaseModel):
@@ -69,6 +75,8 @@ def get_payment_link_for_sponsorship(
 	payment_gateway: str | None = None,
 ) -> str:
 	tier_doc = frappe.get_cached_doc("Sponsorship Tier", sponsorship_tier)
+	if not tier_doc.enabled:
+		frappe.throw(_("This sponsorship tier is no longer available."))
 	if not payment_gateway:
 		gateways = get_payment_gateways_for_event(tier_doc.event)
 		if not gateways:
@@ -148,9 +156,6 @@ def record_payment(
 
 
 def mark_payment_as_received(reference_doctype: str, reference_docname: str):
-	if frappe.in_test:
-		return
-
 	request = frappe.get_all(
 		"Integration Request",
 		{
@@ -190,7 +195,85 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 			},
 		)
 
-		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+		if not frappe.in_test:
+			frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+
+
+def get_checkout_request(reference_doctype: str, reference_docname: str) -> frappe._dict | None:
+	"""The Integration Request holding the gateway order for this document."""
+	# A checkout logs two of them, and only the one behind the checkout link has an order id.
+	logs = frappe.get_all(
+		"Integration Request",
+		{"reference_doctype": reference_doctype, "reference_docname": reference_docname},
+		["name", "data"],
+		order_by="creation desc",
+	)
+
+	for log in logs:
+		data = frappe.parse_json(log.data)
+		if str(data.get("order_id") or "").startswith("order_"):
+			return frappe._dict(name=log.name, data=data)
+
+
+def fetch_order_payments(controller, order_id: str) -> list[dict]:
+	"""Every payment the gateway holds against an order."""
+	with razorpay_api_call("order payment list"):
+		return controller.get_client().order.payments(order_id).get("items", [])
+
+
+def sync_gateway_payment(reference_doctype: str, reference_docname: str) -> str:
+	"""Apply what the gateway holds for this document's order.
+
+	A payment the browser never reported back leaves the document waiting on money the
+	gateway already took. Returns the status applied, or "" when there was nothing to apply.
+	"""
+	checkout = get_checkout_request(reference_doctype, reference_docname)
+	if not checkout:
+		return ""
+
+	# Locked, because a late browser callback can be confirming the same payment right now.
+	payment = frappe.db.get_value(
+		"Event Payment",
+		checkout.data.get("payment"),
+		["payment_gateway", "payment_received"],
+		as_dict=True,
+		for_update=True,
+	)
+	if not payment or payment.payment_received:
+		return ""
+
+	# Only Razorpay can be asked about an order today, and the hourly sweep walks every
+	# unpaid booking, so another gateway is nothing to sync rather than an error.
+	if payment.payment_gateway != RAZORPAY:
+		return ""
+
+	controller = get_controller(payment.payment_gateway)
+	for gateway_payment in fetch_order_payments(controller, checkout.data["order_id"]):
+		if gateway_payment.get("status") in PAID_STATUSES:
+			return apply_gateway_payment(checkout, gateway_payment, reference_doctype, reference_docname)
+
+	return ""
+
+
+def apply_gateway_payment(
+	checkout: frappe._dict, gateway_payment: dict, reference_doctype: str, reference_docname: str
+) -> str:
+	"""Run the confirmation a live checkout would have run for this gateway payment."""
+	status = PAID_STATUSES[gateway_payment["status"]]
+
+	# The document reads the payment id back off the checkout log, exactly as it does after a
+	# live checkout, so this writes it where `mark_payment_as_received` already looks.
+	frappe.db.set_value(
+		"Integration Request",
+		checkout.name,
+		{
+			"data": frappe.as_json({**checkout.data, "razorpay_payment_id": gateway_payment["id"]}),
+			"status": status,
+		},
+	)
+	frappe.get_doc(reference_doctype, reference_docname).run_method("on_payment_authorized", status)
+
+	return status
 
 
 def handle_refund_notification(doctype: str, docname: str) -> None:

@@ -63,7 +63,7 @@ const emptyDescription = computed(() =>
 		<template #empty-state>
 			<EmptyState :title="`No ${tab} proposals`" :description="emptyDescription">
 				<template #illustration>
-					<Icon name="lucide-mic-off" class="size-8 text-ink-gray-4" />
+					<Icon name="lucide-mic-off" class="size-5 text-ink-gray-5" />
 				</template>
 			</EmptyState>
 		</template>

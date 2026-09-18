@@ -50,7 +50,10 @@ website_redirects = [
 # Scheduled Tasks
 # ---------------
 
-scheduler_events = {"daily": ["buzz.tasks.unpublish_ticket_types_after_last_date"]}
+scheduler_events = {
+	"hourly": ["buzz.tasks.sync_pending_online_payments"],
+	"daily": ["buzz.tasks.unpublish_ticket_types_after_last_date"],
+}
 
 # Testing
 # -------
@@ -68,6 +71,10 @@ doc_events = {
 	"User": {
 		"after_insert": "buzz.utils.add_buzz_user_role",
 		"on_update": "buzz.events.doctype.speaker_profile.speaker_profile.update_speaker_display_name",
+	},
+	"Currency": {
+		"on_update": "buzz.api.payments.currencies.clear_currency_cache",
+		"on_trash": "buzz.api.payments.currencies.clear_currency_cache",
 	},
 	# Team-direct doctypes. Descendants derive their team through their event link.
 	**{

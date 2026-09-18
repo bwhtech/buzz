@@ -43,7 +43,7 @@
    "in_preview": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Approval Pending\nPayment Pending\nPaid\nWithdrawn"
+   "options": "Approval Pending\nPayment Pending\nPaid\nCancelled\nWithdrawn"
   },
   {
    "fieldname": "company_name",
@@ -118,7 +118,7 @@
    "link_fieldname": "reference_docname"
   }
  ],
- "modified": "2026-09-16 14:00:00.000000",
+ "modified": "2026-09-18 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Proposals",
  "name": "Sponsorship Enquiry",

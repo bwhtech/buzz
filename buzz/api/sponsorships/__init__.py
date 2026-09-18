@@ -1,8 +1,21 @@
 import frappe
 
 from buzz.api.forms.schemas import CustomFormResponse
+from buzz.api.sponsorships.enquiries import (
+	ENQUIRIES_PAGE_SIZE,
+	enquiry_detail,
+	event_enquiries,
+	set_enquiry_status,
+)
 from buzz.api.sponsorships.forms import SponsorFormService
-from buzz.api.sponsorships.schemas import SponsorshipDetailsResponse, SponsorshipListItem
+from buzz.api.sponsorships.manage import event_sponsorships
+from buzz.api.sponsorships.schemas import (
+	EnquiryDetail,
+	EventEnquiriesResponse,
+	EventSponsorshipsResponse,
+	SponsorshipDetailsResponse,
+	SponsorshipListItem,
+)
 from buzz.api.sponsorships.services import SponsorshipService, list_user_enquiries
 
 
@@ -41,3 +54,31 @@ def create_sponsorship_payment_link(enquiry_id: str, tier_id: str, payment_gatew
 @frappe.whitelist()
 def withdraw_sponsorship_enquiry(enquiry_id: str) -> None:
 	SponsorshipService(enquiry_id).withdraw()
+
+
+@frappe.whitelist(methods=["GET"])
+def get_event_sponsorships(event: str) -> EventSponsorshipsResponse:
+	return event_sponsorships(event)
+
+
+@frappe.whitelist(methods=["GET"])
+def get_event_sponsorship_enquiries(
+	event: str,
+	search: str | None = None,
+	statuses: str | None = None,
+	order: str = "desc",
+	start: int = 0,
+	limit: int = ENQUIRIES_PAGE_SIZE,
+) -> EventEnquiriesResponse:
+	"""`statuses` is comma-joined, the same string the dashboard keeps the filter in."""
+	return event_enquiries(event, search, statuses, order, start, limit)
+
+
+@frappe.whitelist(methods=["GET"])
+def get_event_sponsorship_enquiry(enquiry: str) -> EnquiryDetail:
+	return enquiry_detail(enquiry)
+
+
+@frappe.whitelist(methods=["POST"])
+def update_enquiry_status(enquiry: str, status: str) -> str:
+	return set_enquiry_status(enquiry, status)

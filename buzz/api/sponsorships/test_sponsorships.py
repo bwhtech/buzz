@@ -208,3 +208,10 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 
 		with self.assertRaises(PaymentNotPermitted):
 			create_sponsorship_payment_link(self.enquiry.name, self.tier.name)
+
+	def test_disabled_tier_cannot_create_a_payment_link(self):
+		self.tier.enabled = 0
+		self.tier.save()
+
+		with self.assertRaises(frappe.ValidationError):
+			create_sponsorship_payment_link(self.enquiry.name, self.tier.name)

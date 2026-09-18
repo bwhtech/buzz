@@ -3,7 +3,7 @@ import re
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cstr
+from frappe.utils import cstr, get_datetime, now_datetime
 
 from buzz.api.forms.fields import parse_excluded_fields, validate_excluded_fields
 
@@ -13,14 +13,27 @@ ENQUIRY_FIELDS = frozenset(
 
 
 class SponsorEnquiryForm(Document):
+	@property
+	def is_closed(self) -> bool:
+		if not self.publish:
+			return True
+		return bool(self.auto_close_at) and get_datetime(self.auto_close_at) < now_datetime()
+
+	@frappe.whitelist(methods=["POST"])
+	def set_closed(self, closed: bool) -> bool:
+		"""Close by unpublishing, so no cutoff is written in a time zone the event may not share."""
+		self.publish = 0 if closed else 1
+		if not closed:
+			self.auto_close_at = None
+		self.save()
+		return self.is_closed
+
 	def validate(self):
 		self.validate_event_is_unchanged()
 		self.validate_route()
 		validate_excluded_fields("Sponsorship Enquiry", self.excluded_fields)
-		if self.allow_guest_submissions and "contact_email" in (
-			parse_excluded_fields(self.excluded_fields) or set()
-		):
-			frappe.throw(_("Contact Email cannot be hidden when guest submissions are enabled."))
+		if "contact_email" in (parse_excluded_fields(self.excluded_fields) or set()):
+			frappe.throw(_("Contact Email cannot be hidden."))
 		self.validate_questions()
 		if (
 			self.publish
