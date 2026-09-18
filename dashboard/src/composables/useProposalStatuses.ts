@@ -1,9 +1,9 @@
 import { createListResource } from "frappe-ui"
 
+import { type BadgeTheme, badgeDotClass } from "@/utils/badgeTheme"
+
 // Frappe color name (Talk Proposal Status.color) -> frappe-ui Badge theme.
-// frappe-ui's Badge only themes these five colors, so the doctype's color
-// options are limited to match.
-type BadgeTheme = "blue" | "red" | "green" | "gray" | "amber"
+// The doctype's color options are limited to the themes Badge renders.
 
 const COLOR_TO_THEME: Record<string, BadgeTheme> = {
 	Gray: "gray",
@@ -61,17 +61,6 @@ const statuses = createListResource({
 	auto: true,
 })
 
-// Tailwind emits only the classes it can see, so the dot colours are written out per
-// theme rather than interpolated. The `ink` scale is registered as a text colour, not a
-// background one, so the token is reached through its variable.
-const THEME_DOTS: Record<BadgeTheme, string> = {
-	blue: "bg-[--ink-blue-5]",
-	red: "bg-[--ink-red-5]",
-	green: "bg-[--ink-green-5]",
-	amber: "bg-[--ink-amber-5]",
-	gray: "bg-[--ink-gray-5]",
-}
-
 export function useProposalStatuses() {
 	const getStatusTheme = (status: string): BadgeTheme => {
 		const row = statuses.data?.find(
@@ -85,7 +74,7 @@ export function useProposalStatuses() {
 
 	const getStatusIcon = (status: string): string => STATUS_ICONS[status] ?? FALLBACK_ICON
 
-	const getStatusDot = (status: string): string => THEME_DOTS[getStatusTheme(status)]
+	const getStatusDot = (status: string): string => badgeDotClass(getStatusTheme(status))
 
 	const getStatusMessage = (status: string): string => STATUS_MESSAGES[status] ?? FALLBACK_MESSAGE
 

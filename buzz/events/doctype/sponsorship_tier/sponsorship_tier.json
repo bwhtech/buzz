@@ -6,10 +6,13 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
+  "enabled",
   "event",
   "column_break_vmpf",
   "price",
-  "currency"
+  "currency",
+  "section_break_perks",
+  "perks"
  ],
  "fields": [
   {
@@ -25,6 +28,13 @@
    "fieldtype": "Data",
    "label": "Title",
    "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
   },
   {
    "fieldname": "column_break_vmpf",
@@ -43,12 +53,22 @@
    "fieldtype": "Link",
    "label": "Currency",
    "options": "Currency"
+  },
+  {
+   "fieldname": "section_break_perks",
+   "fieldtype": "Section Break"
+  },
+  {
+   "description": "One perk per line.",
+   "fieldname": "perks",
+   "fieldtype": "Small Text",
+   "label": "Perks"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-28 16:17:50.389537",
+ "modified": "2026-09-18 12:30:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Sponsorship Tier",

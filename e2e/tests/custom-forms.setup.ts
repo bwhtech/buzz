@@ -101,13 +101,11 @@ setup("setup custom forms on test event", async ({ request }) => {
 			event: eventName,
 			route: "enquire-sponsorship",
 			publish: 1,
-			allow_guest_submissions: 0,
 		})
 	} else {
 		await updateDoc(request, "Sponsor Enquiry Form", sponsorshipFormName, {
 			route: "enquire-sponsorship",
 			publish: 1,
-			allow_guest_submissions: 0,
 		})
 	}
 
