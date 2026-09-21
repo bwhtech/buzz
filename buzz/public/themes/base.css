@@ -85,10 +85,6 @@ body {
 	cursor: pointer;
 }
 
-.mode-toggle:hover {
-	background: var(--surface-raised);
-}
-
 .icon {
 	width: 16px;
 	height: 16px;
@@ -156,10 +152,12 @@ body {
 	text-align: left;
 }
 
-.menu a:hover,
-.menu button:hover,
 .menu [aria-current] {
 	background: var(--border);
+}
+
+.menu a,
+.menu button {
 	cursor: pointer;
 }
 
@@ -193,10 +191,6 @@ body {
 .btn-primary {
 	background: var(--accent);
 	color: var(--accent-ink);
-}
-
-.btn-primary:hover {
-	background: var(--accent-hover);
 }
 
 .btn-secondary {
@@ -331,7 +325,6 @@ body {
 	cursor: pointer;
 }
 
-.tab:hover,
 .tab[aria-current="page"] {
 	color: var(--ink-strong);
 }
@@ -558,10 +551,6 @@ body {
 	font-weight: 500;
 }
 
-.event-card:hover .event-card-title {
-	text-decoration: underline;
-}
-
 .empty-state {
 	color: var(--ink-muted);
 }
@@ -595,12 +584,103 @@ body {
 	gap: 8px 20px;
 }
 
-.footer-links a:hover {
-	color: var(--ink-strong);
-}
-
 .footer-legal {
 	white-space: pre-line;
+}
+
+/* Motion */
+
+:root {
+	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.btn,
+.mode-toggle,
+.site-nav summary {
+	transition:
+		transform 160ms var(--ease-out),
+		background-color 150ms ease;
+}
+
+.btn:not([aria-disabled]):active,
+.mode-toggle:active,
+.site-nav summary:active {
+	transform: scale(0.97);
+}
+
+.tab,
+.menu a,
+.menu button,
+.footer-links a {
+	transition:
+		color 150ms ease,
+		background-color 150ms ease,
+		border-color 150ms ease;
+}
+
+.menu {
+	transform-origin: top right;
+	transition:
+		opacity 150ms var(--ease-out),
+		transform 150ms var(--ease-out);
+}
+
+@starting-style {
+	.site-nav details[open] .menu {
+		opacity: 0;
+		transform: scale(0.97) translateY(-4px);
+	}
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 200ms;
+}
+
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible {
+	outline: 2px solid var(--ink-muted);
+	outline-offset: 2px;
+}
+
+/* Touch devices fire hover on tap, so hover styles only apply to real pointers. */
+@media (hover: hover) and (pointer: fine) {
+	.mode-toggle:hover {
+		background: var(--surface-raised);
+	}
+
+	.menu a:hover,
+	.menu button:hover {
+		background: var(--border);
+	}
+
+	.btn-primary:hover {
+		background: var(--accent-hover);
+	}
+
+	.tab:hover,
+	.footer-links a:hover {
+		color: var(--ink-strong);
+	}
+
+	.event-card:hover .event-card-title {
+		text-decoration: underline;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.btn:not([aria-disabled]):active,
+	.mode-toggle:active,
+	.site-nav summary:active {
+		transform: none;
+	}
+
+	@starting-style {
+		.site-nav details[open] .menu {
+			transform: none;
+		}
+	}
 }
 
 @media (max-width: 720px) {

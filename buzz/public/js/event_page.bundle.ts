@@ -34,7 +34,13 @@ function setMode(toggle: HTMLElement, mode: string) {
 
 function toggleMode(toggle: HTMLElement) {
 	const mode = document.documentElement.dataset.mode === "dark" ? "light" : "dark"
-	setMode(toggle, mode)
+	// A crossfade hides the whole palette swapping in one frame; skipped for reduced motion.
+	const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches
+	if ("startViewTransition" in document && !reduceMotion) {
+		document.startViewTransition(() => setMode(toggle, mode))
+	} else {
+		setMode(toggle, mode)
+	}
 	try {
 		localStorage.setItem(MODE_STORAGE_KEY, mode)
 	} catch {
