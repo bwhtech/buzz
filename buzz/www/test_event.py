@@ -6,7 +6,7 @@ from frappe.website.serve import get_response_content
 from buzz.api.events.test_events import create_event
 from buzz.api.forms.test_forms import ensure_event_host
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
-from buzz.www.event import EventPage
+from buzz.www.event import EventPage, event_page_theme
 from buzz.www.venue_map import google_maps_url, open_street_map_url
 
 
@@ -128,6 +128,10 @@ class TestEventPage(IntegrationTestCase):
 
 	def test_about_markup_survives(self):
 		self.assertIn("<b>Welcome</b>", render("public-page-event"))
+
+	def test_unknown_theme_falls_back_to_first_option(self):
+		frappe.db.set_single_value("Buzz Settings", "event_page_theme", "../../evil")
+		self.assertEqual(event_page_theme(), "classic")
 
 
 class TestVenueMap(IntegrationTestCase):

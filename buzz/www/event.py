@@ -19,6 +19,13 @@ def get_context(context):
 	context.update(get_website_settings(context))
 	context.update(EventPage(frappe.form_dict.event_route).as_context())
 	context.update(SiteHeader().as_context())
+	context.theme = event_page_theme()
+
+
+def event_page_theme() -> str:
+	themes = frappe.get_meta("Buzz Settings").get_options("event_page_theme").split("\n")
+	theme = frappe.db.get_single_value("Buzz Settings", "event_page_theme")
+	return theme if theme in themes else themes[0]
 
 
 def join_names(names: list[str]) -> str:

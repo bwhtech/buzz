@@ -1,0 +1,27 @@
+:root {
+	color-scheme: light;
+
+	--page-bg: #fbfaf7;
+	--surface: #ffffff;
+	--surface-raised: #f1eee8;
+	--border: #e6e2da;
+
+	--ink: #1c1917;
+	--ink-title: #1c1917;
+	--ink-strong: #292524;
+	--ink-body: #44403c;
+	--ink-muted: #78716c;
+
+	--accent: #b4432a;
+	--accent-hover: #9a3822;
+	--accent-ink: #ffffff;
+
+	--font-body: InterVar, Inter, system-ui, sans-serif;
+	--font-display: Newsreader, Georgia, serif;
+
+	--radius: 6px;
+	--radius-banner: 8px;
+	--measure: 471px;
+	--aside: 250px;
+	--page-width: 762px;
+}
