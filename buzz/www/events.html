@@ -1,0 +1,43 @@
+{% extends "buzz/templates/event_page/layout.html" %}
+
+{% block head %}{% autoescape true %}
+	<title>{{ title }}</title>
+	<meta name="description" content="{{ meta.description }}">
+	<link rel="canonical" href="{{ meta.url }}">
+{% endautoescape %}{% endblock %}
+
+{% block content %}{% autoescape true %}
+	<main class="event-content">
+		{% if category and category.banner_image %}
+		<img class="event-banner" src="{{ category.banner_image }}" alt="">
+		{% endif %}
+		<h1 class="event-title">{{ title }}</h1>
+		{% if category and category.description %}<p class="event-meta">{{ category.description }}</p>{% endif %}
+
+		{% if categories %}
+		<nav class="tabs listing-filters">
+			<a class="tab" href="/events"{% if not category %} aria-current="page"{% endif %}>{{ _("All") }}</a>
+			{% for item in categories %}
+			<a class="tab" href="/events?category={{ item.slug | urlencode }}"{% if category and category.slug == item.slug %} aria-current="page"{% endif %}>{{ item.name }}</a>
+			{% endfor %}
+		</nav>
+		{% endif %}
+
+		{% if events %}
+		<ul class="event-cards">
+			{% for event in events %}
+			<li>
+				<a class="event-card" href="{{ event.url }}">
+					{% if event.image %}<img class="event-card-image" src="{{ event.image }}" alt="">{% else %}<span class="event-card-image"></span>{% endif %}
+					<span class="event-card-date">{{ event.date }}</span>
+					<span class="event-card-title">{{ event.title }}</span>
+					{% if event.place %}<span class="event-card-place">{{ event.place }}</span>{% endif %}
+				</a>
+			</li>
+			{% endfor %}
+		</ul>
+		{% else %}
+		<p class="empty-state">{{ _("No upcoming events.") }}</p>
+		{% endif %}
+	</main>
+{% endautoescape %}{% endblock %}

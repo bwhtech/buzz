@@ -6,7 +6,8 @@ from frappe.website.serve import get_response_content
 from buzz.api.events.test_events import create_event
 from buzz.api.forms.test_forms import ensure_event_host
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
-from buzz.www.event import EventPage, event_page_theme
+from buzz.www.event import EventPage
+from buzz.www.site_header import event_page_theme
 from buzz.www.venue_map import google_maps_url, open_street_map_url
 
 
@@ -132,6 +133,37 @@ class TestEventPage(IntegrationTestCase):
 	def test_unknown_theme_falls_back_to_first_option(self):
 		frappe.db.set_single_value("Buzz Settings", "event_page_theme", "../../evil")
 		self.assertEqual(event_page_theme(), "classic")
+
+	def test_additional_page(self):
+		frappe.get_doc(
+			{
+				"doctype": "Additional Event Page",
+				"event": self.event,
+				"title": "Travel",
+				"content": "<p>Trains</p>",
+				"is_published": 1,
+			}
+		).insert()
+		context = EventPage("public-page-event", "travel").as_context()
+		self.assertEqual(context["page"].title, "Travel")
+		self.assertEqual([page.route for page in context["pages"]], ["travel"])
+
+	def test_unpublished_additional_page_is_not_found(self):
+		frappe.get_doc(
+			{
+				"doctype": "Additional Event Page",
+				"event": self.event,
+				"title": "Draft",
+				"route": "draft",
+				"content": "x",
+			}
+		).insert()
+		with self.assertRaises(frappe.PageDoesNotExistError):
+			EventPage("public-page-event", "draft")
+
+	def test_tabs_list_only_sections_with_content(self):
+		tabs = EventPage("public-page-event").as_context()["tabs"]
+		self.assertEqual([tab["key"] for tab in tabs], ["about"])
 
 
 class TestVenueMap(IntegrationTestCase):

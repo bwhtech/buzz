@@ -1,10 +1,7 @@
-<!DOCTYPE html>
-{% autoescape true %}
-<html lang="{{ current_language }}">
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>{{ event.title }}</title>
+{% extends "buzz/templates/event_page/layout.html" %}
+
+{% block head %}{% autoescape true %}
+	<title>{% if page %}{{ page.title }} · {% endif %}{{ event.title }}</title>
 	<meta name="description" content="{{ meta.description }}">
 	<meta property="og:title" content="{{ event.title }}">
 	<meta property="og:description" content="{{ meta.description }}">
@@ -12,54 +9,9 @@
 	{% if meta.image %}<meta property="og:image" content="{{ meta.image }}">{% endif %}
 	<meta name="twitter:card" content="summary_large_image">
 	<link rel="canonical" href="{{ meta.url }}">
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Newsreader:wght@400&display=swap">
-	<link rel="stylesheet" href="/assets/buzz/themes/base.css">
-	<link rel="stylesheet" href="/assets/buzz/themes/{{ theme }}.css">
-</head>
-<body class="event-page">
-	<header class="site-header">
-		<a class="site-brand" href="/">
-			<img src="{{ brand.logo }}" alt="">
-			<span>{{ brand.name }}</span>
-		</a>
-		<nav class="site-nav">
-			{% if languages | length > 1 %}
-			<details class="lang-menu">
-				<summary aria-label="{{ _('Language') }}">{{ current_language | upper }}</summary>
-				<div class="menu">
-					{% if is_guest %}
-					{% for language in languages %}
-					<a href="?_lang={{ language.language_code }}"{% if language.language_code == current_language %} aria-current="true"{% endif %}>{{ language.language_name }}</a>
-					{% endfor %}
-					{% else %}
-					<a href="/b/account">{{ _("Change language in account settings") }}</a>
-					{% endif %}
-				</div>
-			</details>
-			{% endif %}
-			{% if is_guest %}
-			<a class="btn btn-secondary" href="/login?redirect-to={{ meta.url | urlencode }}">{{ _("Log in") }}</a>
-			{% else %}
-			<details class="user-menu">
-				<summary aria-label="{{ _('Account') }}">
-					{% if user_image %}
-					<img class="user-avatar" src="{{ user_image }}" alt="">
-					{% else %}
-					<span class="user-avatar">{{ (fullname or user)[:1] | upper }}</span>
-					{% endif %}
-				</summary>
-				<div class="menu">
-					<span class="menu-heading">{{ fullname }}</span>
-					<a href="/b">{{ _("Dashboard") }}</a>
-					<button type="button" data-logout>{{ _("Log out") }}</button>
-				</div>
-			</details>
-			{% endif %}
-		</nav>
-	</header>
+{% endautoescape %}{% endblock %}
 
+{% block content %}{% autoescape true %}
 	<main class="event-content">
 		{% if event.banner_image %}
 		<img class="event-banner" src="{{ event.banner_image }}" alt="">
@@ -83,15 +35,37 @@
 
 		<div class="event-columns">
 			<div class="event-main">
-				{% if event.about %}
+				{% if page %}
+				<nav class="tabs">
+					<a class="tab" href="/events/{{ event.route }}">{{ _("Overview") }}</a>
+					{% for item in pages %}
+					<a class="tab" href="/events/{{ event.route }}/{{ item.route }}"{% if item.route == page.route %} aria-current="page"{% endif %}>{{ item.title }}</a>
+					{% endfor %}
+				</nav>
 				<section class="section">
+					<h2 class="section-title">{{ page.title }}</h2>
+					<div class="prose">{{ page.content | safe }}</div>
+				</section>
+				{% else %}
+				{% if tabs | length + pages | length > 1 %}
+				{% for tab in tabs %}
+				<input class="tab-input" type="radio" name="tab" id="tab-{{ tab.key }}"{% if loop.first %} checked{% endif %}>
+				{% endfor %}
+				<nav class="tabs">
+					{% for tab in tabs %}<label class="tab" for="tab-{{ tab.key }}">{{ tab.label }}</label>{% endfor %}
+					{% for item in pages %}<a class="tab" href="/events/{{ event.route }}/{{ item.route }}">{{ item.title }}</a>{% endfor %}
+				</nav>
+				{% endif %}
+
+				{% if event.about %}
+				<section class="section tab-panel" id="panel-about">
 					<h2 class="section-title">{{ _("About") }}</h2>
 					<div class="prose">{{ event.about | safe }}</div>
 				</section>
 				{% endif %}
 
 				{% if schedule %}
-				<section class="section">
+				<section class="section tab-panel" id="panel-schedule">
 					<h2 class="section-title">{{ _("Schedule") }} · {{ timezone.label }}</h2>
 					{% for day in schedule %}
 					{% if schedule | length > 1 %}<h3 class="label">{{ day.day }}</h3>{% endif %}
@@ -109,7 +83,7 @@
 				{% endif %}
 
 				{% if speakers %}
-				<section class="section">
+				<section class="section tab-panel" id="panel-speakers">
 					<h2 class="section-title">{{ _("Speakers") }}</h2>
 					<ul class="speakers">
 						{% for speaker in speakers %}
@@ -128,7 +102,7 @@
 				{% endif %}
 
 				{% if sponsor_tiers %}
-				<section class="section">
+				<section class="section tab-panel" id="panel-sponsors">
 					<h2 class="section-title">{{ _("Sponsors") }}</h2>
 					<div class="sponsors card">
 						{% for tier in sponsor_tiers %}
@@ -146,6 +120,7 @@
 						{% endfor %}
 					</div>
 				</section>
+				{% endif %}
 				{% endif %}
 			</div>
 
@@ -180,29 +155,4 @@
 			</aside>
 		</div>
 	</main>
-
-	<footer class="site-footer">
-		{% if footer_logo is defined and footer_logo %}<img class="footer-logo" src="{{ footer_logo }}" alt="">{% endif %}
-		{% if footer_items is defined and footer_items %}
-		<nav class="footer-links">
-			{% for item in footer_items %}{% if item.url %}<a href="{{ item.url }}">{{ item.label }}</a>{% endif %}{% endfor %}
-		</nav>
-		{% endif %}
-		{% if footer_address is defined and footer_address %}<div class="footer-legal">{{ footer_address }}</div>{% endif %}
-		{% if copyright is defined and copyright %}<p class="footer-legal">© {{ copyright }}</p>{% endif %}
-	</footer>
-
-	<script>window.frappe = {}</script>
-	<!-- csrf_token -->
-	<script>
-		document.addEventListener("click", (event) => {
-			document.querySelectorAll("details[open]").forEach((menu) => menu.contains(event.target) || menu.removeAttribute("open"))
-		})
-		document.querySelector("[data-logout]")?.addEventListener("click", async () => {
-			await fetch("/api/method/logout", { method: "POST", headers: { "X-Frappe-CSRF-Token": frappe.csrf_token } })
-			location.reload()
-		})
-	</script>
-</body>
-</html>
-{% endautoescape %}
+{% endautoescape %}{% endblock %}

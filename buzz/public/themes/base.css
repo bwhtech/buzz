@@ -262,6 +262,64 @@ body {
 	list-style: decimal;
 }
 
+/* Tabs */
+
+.tabs {
+	display: flex;
+	gap: 20px;
+	margin-bottom: 24px;
+	overflow-x: auto;
+	border-bottom: 1px solid var(--border);
+	white-space: nowrap;
+}
+
+.tab {
+	padding: 0 0 10px;
+	border-bottom: 2px solid transparent;
+	color: var(--ink-muted);
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.tab:hover,
+.tab[aria-current="page"] {
+	color: var(--ink-strong);
+}
+
+.tab[aria-current="page"] {
+	border-bottom-color: var(--ink-strong);
+}
+
+.tab-input {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.event-main:has(.tab-input) .tab-panel {
+	display: none;
+}
+
+.event-main:has(#tab-about:checked) #panel-about,
+.event-main:has(#tab-schedule:checked) #panel-schedule,
+.event-main:has(#tab-speakers:checked) #panel-speakers,
+.event-main:has(#tab-sponsors:checked) #panel-sponsors {
+	display: block;
+}
+
+.event-main:has(#tab-about:checked) [for="tab-about"],
+.event-main:has(#tab-schedule:checked) [for="tab-schedule"],
+.event-main:has(#tab-speakers:checked) [for="tab-speakers"],
+.event-main:has(#tab-sponsors:checked) [for="tab-sponsors"] {
+	border-bottom-color: var(--ink-strong);
+	color: var(--ink-strong);
+}
+
+.event-main:has(.tab-input:focus-visible) .tabs {
+	outline: 2px solid var(--ink-muted);
+	outline-offset: 4px;
+}
+
 /* Schedule */
 
 .schedule-row {
@@ -411,6 +469,53 @@ body {
 	object-fit: contain;
 }
 
+/* Listing */
+
+.listing-filters {
+	margin-top: 24px;
+}
+
+.event-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 24px;
+}
+
+.event-card {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.event-card-image {
+	display: block;
+	width: 100%;
+	aspect-ratio: 16 / 9;
+	margin-bottom: 8px;
+	border-radius: var(--radius);
+	background: var(--surface-raised);
+	object-fit: cover;
+}
+
+.event-card-date,
+.event-card-place {
+	color: var(--ink-muted);
+	font-size: 13px;
+}
+
+.event-card-title {
+	color: var(--ink-strong);
+	font-weight: 500;
+}
+
+.event-card:hover .event-card-title {
+	text-decoration: underline;
+}
+
+.empty-state {
+	color: var(--ink-muted);
+}
+
 /* Footer */
 
 .site-footer {
@@ -458,7 +563,7 @@ body {
 	}
 
 	.event-columns {
-		grid-template-columns: 1fr;
+		grid-template-columns: minmax(0, 1fr);
 	}
 
 	.schedule-row {

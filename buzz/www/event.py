@@ -1,14 +1,14 @@
+from functools import cached_property
 from itertools import groupby
 
 import frappe
 from frappe import _
-from frappe.utils import comma_sep, get_datetime, get_system_timezone, get_time, get_url, getdate
-from frappe.website.doctype.website_settings.website_settings import get_website_settings
+from frappe.utils import comma_sep, format_date, get_datetime, get_system_timezone, get_time, get_url, getdate
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import co_hosts_of, primary_host_of, registration_link
 from buzz.utils import get_time_zone_label
-from buzz.www.site_header import SiteHeader
+from buzz.www.site_header import apply_site_context
 from buzz.www.venue_map import venue_map_url
 
 no_cache = 1
@@ -16,16 +16,8 @@ RANGE_SEPARATOR = " \u2013 "
 
 
 def get_context(context):
-	context.update(get_website_settings(context))
-	context.update(EventPage(frappe.form_dict.event_route).as_context())
-	context.update(SiteHeader().as_context())
-	context.theme = event_page_theme()
-
-
-def event_page_theme() -> str:
-	themes = frappe.get_meta("Buzz Settings").get_options("event_page_theme").split("\n")
-	theme = frappe.db.get_single_value("Buzz Settings", "event_page_theme")
-	return theme if theme in themes else themes[0]
+	apply_site_context(context)
+	context.update(EventPage(frappe.form_dict.event_route, frappe.form_dict.page_route).as_context())
 
 
 def join_names(names: list[str]) -> str:
@@ -33,7 +25,7 @@ def join_names(names: list[str]) -> str:
 
 
 def format_day(date) -> str:
-	return getdate(date).strftime("%a %d %b %Y")
+	return format_date(date, "EEE d MMM y")
 
 
 def format_time(time) -> str:
@@ -44,13 +36,29 @@ def format_time_range(start, end) -> str:
 	return RANGE_SEPARATOR.join(filter(None, [format_time(start), format_time(end)]))
 
 
+def not_found():
+	frappe.throw(_("Page not found"), frappe.PageDoesNotExistError)
+
+
 class EventPage:
-	def __init__(self, route: str):
+	def __init__(self, route: str, page_route: str | None = None):
 		# get_doc skips the team permission hooks, which would hide every event from a Guest
 		name = frappe.db.get_value("Buzz Event", {"route": route, "is_published": 1})
 		if not name:
-			frappe.throw(_("Event not found"), frappe.PageDoesNotExistError)
+			not_found()
 		self.event = frappe.get_doc("Buzz Event", name)
+		self.page = self.load_page(page_route) if page_route else None
+
+	def load_page(self, page_route: str) -> frappe._dict:
+		page = frappe.db.get_value(
+			"Additional Event Page",
+			{"event": self.event.name, "route": page_route, "is_published": 1},
+			["title", "route", "content"],
+			as_dict=True,
+		)
+		if not page:
+			not_found()
+		return page
 
 	def as_context(self) -> dict:
 		hosts = self.hosts()
@@ -59,16 +67,36 @@ class EventPage:
 			"dates": self.dates(),
 			"times": format_time_range(self.event.start_time, self.event.end_time),
 			"timezone": self.timezone(),
+			"page": self.page,
+			"pages": self.pages(),
+			"tabs": self.tabs(),
 			"hosts": hosts,
 			"hosted_by": join_names([host.label for host in hosts]),
-			"schedule": self.schedule(),
-			"speakers": self.speakers(),
-			"sponsor_tiers": self.sponsor_tiers(),
+			"schedule": self.schedule,
+			"speakers": self.speakers,
+			"sponsor_tiers": self.sponsor_tiers,
 			"venue": self.venue(),
 			"register_url": registration_link(self.event),
 			"registrations_closed": are_registrations_closed(self.event),
 			"meta": self.meta(),
 		}
+
+	def tabs(self) -> list[dict]:
+		sections = [
+			("about", _("About"), self.event.about),
+			("schedule", _("Schedule"), self.schedule),
+			("speakers", _("Speakers"), self.speakers),
+			("sponsors", _("Sponsors"), self.sponsor_tiers),
+		]
+		return [{"key": key, "label": label} for key, label, content in sections if content]
+
+	def pages(self) -> list[dict]:
+		return frappe.get_all(
+			"Additional Event Page",
+			filters={"event": self.event.name, "is_published": 1, "route": ["is", "set"]},
+			fields=["title", "route"],
+			order_by="creation",
+		)
 
 	def dates(self) -> str:
 		start, end = self.event.start_date, self.event.end_date
@@ -86,6 +114,7 @@ class EventPage:
 		hosts = [primary_host_of(self.event.team), *co_hosts_of(self.event.name)]
 		return [host for host in hosts if host]
 
+	@cached_property
 	def schedule(self) -> list[dict]:
 		talk_names = [row.talk for row in self.event.schedule if row.talk]
 		talk_titles = self.talk_titles(talk_names)
@@ -129,6 +158,7 @@ class EventPage:
 		)
 		return {str(row.name): row.display_name for row in rows}
 
+	@cached_property
 	def speakers(self) -> list[dict]:
 		profiles = [row.speaker for row in self.event.featured_speakers]
 		rows = frappe.get_all(
@@ -146,6 +176,7 @@ class EventPage:
 			"image": profile.display_image,
 		}
 
+	@cached_property
 	def sponsor_tiers(self) -> list[dict]:
 		sponsors = frappe.get_all(
 			"Event Sponsor",
@@ -188,5 +219,5 @@ class EventPage:
 		return {
 			"description": self.event.short_description or "",
 			"image": get_url(image) if image else "",
-			"url": get_url(f"/events/{self.event.route}"),
+			"url": get_url(f"/events/{self.event.route}" + (f"/{self.page.route}" if self.page else "")),
 		}
