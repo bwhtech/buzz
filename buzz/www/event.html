@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+{% autoescape true %}
+<html lang="{{ current_language }}">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{{ event.title }}</title>
+	<meta name="description" content="{{ meta.description }}">
+	<meta property="og:title" content="{{ event.title }}">
+	<meta property="og:description" content="{{ meta.description }}">
+	<meta property="og:url" content="{{ meta.url }}">
+	{% if meta.image %}<meta property="og:image" content="{{ meta.image }}">{% endif %}
+	<meta name="twitter:card" content="summary_large_image">
+	<link rel="canonical" href="{{ meta.url }}">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Newsreader:wght@400&display=swap">
+	<link rel="stylesheet" href="/assets/buzz/themes/base.css">
+	<link rel="stylesheet" href="/assets/buzz/themes/classic.css">
+</head>
+<body class="event-page">
+	<header class="site-header">
+		<a class="site-brand" href="/">
+			<img src="{{ brand.logo }}" alt="">
+			<span>{{ brand.name }}</span>
+		</a>
+		<nav class="site-nav">
+			{% if languages | length > 1 %}
+			<details class="lang-menu">
+				<summary aria-label="{{ _('Language') }}">{{ current_language | upper }}</summary>
+				<div class="menu">
+					{% if is_guest %}
+					{% for language in languages %}
+					<a href="?_lang={{ language.language_code }}"{% if language.language_code == current_language %} aria-current="true"{% endif %}>{{ language.language_name }}</a>
+					{% endfor %}
+					{% else %}
+					<a href="/b/account">{{ _("Change language in account settings") }}</a>
+					{% endif %}
+				</div>
+			</details>
+			{% endif %}
+			{% if is_guest %}
+			<a class="btn btn-secondary" href="/login?redirect-to={{ meta.url | urlencode }}">{{ _("Log in") }}</a>
+			{% else %}
+			<details class="user-menu">
+				<summary aria-label="{{ _('Account') }}">
+					{% if user_image %}
+					<img class="user-avatar" src="{{ user_image }}" alt="">
+					{% else %}
+					<span class="user-avatar">{{ (fullname or user)[:1] | upper }}</span>
+					{% endif %}
+				</summary>
+				<div class="menu">
+					<span class="menu-heading">{{ fullname }}</span>
+					<a href="/b">{{ _("Dashboard") }}</a>
+					<button type="button" data-logout>{{ _("Log out") }}</button>
+				</div>
+			</details>
+			{% endif %}
+		</nav>
+	</header>
+
+	<main class="event-content">
+		{% if event.banner_image %}
+		<img class="event-banner" src="{{ event.banner_image }}" alt="">
+		{% endif %}
+
+		<h1 class="event-title">{{ event.title }}</h1>
+
+		<div class="event-meta">
+			<span class="meta-item">{{ dates }}</span>
+			{% if times %}<span class="meta-item">{{ times }} {{ timezone.label }}</span>{% endif %}
+			{% if venue %}<span class="meta-item">{{ venue.name }}</span>{% elif event.medium == "Online" %}<span class="meta-item">{{ _("Online") }}</span>{% endif %}
+		</div>
+
+		<div class="event-actions">
+			{% if registrations_closed %}
+			<span class="btn btn-secondary" aria-disabled="true">{{ _("Registrations closed") }}</span>
+			{% elif register_url %}
+			<a class="btn btn-primary" href="{{ register_url }}">{{ _("Register") }}</a>
+			{% endif %}
+		</div>
+
+		<div class="event-columns">
+			<div class="event-main">
+				{% if event.about %}
+				<section class="section">
+					<h2 class="section-title">{{ _("About") }}</h2>
+					<div class="prose">{{ event.about | safe }}</div>
+				</section>
+				{% endif %}
+
+				{% if schedule %}
+				<section class="section">
+					<h2 class="section-title">{{ _("Schedule") }} · {{ timezone.label }}</h2>
+					{% for day in schedule %}
+					{% if schedule | length > 1 %}<h3 class="label">{{ day.day }}</h3>{% endif %}
+					<ol class="schedule">
+						{% for row in day.rows %}
+						<li class="schedule-row">
+							<span class="schedule-time">{{ row.time }}</span>
+							<span class="schedule-title">{{ row.title }}</span>
+							{% if row.speakers %}<span class="schedule-speaker">{{ row.speakers }}</span>{% endif %}
+						</li>
+						{% endfor %}
+					</ol>
+					{% endfor %}
+				</section>
+				{% endif %}
+
+				{% if speakers %}
+				<section class="section">
+					<h2 class="section-title">{{ _("Speakers") }}</h2>
+					<ul class="speakers">
+						{% for speaker in speakers %}
+						<li class="speaker">
+							{% if speaker.image %}
+							<img class="speaker-avatar" src="{{ speaker.image }}" alt="">
+							{% else %}
+							<span class="speaker-avatar">{{ speaker.name[:1] | upper }}</span>
+							{% endif %}
+							<span class="speaker-name">{{ speaker.name }}</span>
+							{% if speaker.role %}<span class="speaker-role">{{ speaker.role }}</span>{% endif %}
+						</li>
+						{% endfor %}
+					</ul>
+				</section>
+				{% endif %}
+
+				{% if sponsor_tiers %}
+				<section class="section">
+					<h2 class="section-title">{{ _("Sponsors") }}</h2>
+					<div class="sponsors card">
+						{% for tier in sponsor_tiers %}
+						<div class="sponsor-tier">
+							{% if tier.title %}<h3 class="sponsor-tier-title">{{ tier.title }}</h3>{% endif %}
+							<ul class="sponsor-list">
+								{% for sponsor in tier.sponsors %}
+								<li class="sponsor">
+									{% set logo %}<img class="sponsor-logo" src="{{ sponsor.company_logo }}" alt="{{ sponsor.company_name }}">{% endset %}
+									{% if sponsor.website %}<a href="{{ sponsor.website }}" rel="noopener" target="_blank">{{ logo }}</a>{% else %}{{ logo }}{% endif %}
+								</li>
+								{% endfor %}
+							</ul>
+						</div>
+						{% endfor %}
+					</div>
+				</section>
+				{% endif %}
+			</div>
+
+			<aside class="event-aside">
+				<section class="aside-block">
+					<h2 class="label">{{ _("When") }}</h2>
+					<p class="aside-value">{{ dates }}</p>
+					{% if times %}<p class="aside-value">{{ times }}</p>{% endif %}
+					<p class="aside-note">{{ timezone.name }} ({{ timezone.label }})</p>
+				</section>
+
+				{% if venue %}
+				<section class="aside-block venue">
+					<h2 class="label">{{ _("Where") }}</h2>
+					{% if venue.map_url %}
+					<iframe class="venue-map" src="{{ venue.map_url }}" title="{{ _('Map of {0}').format(venue.name) }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+					{% endif %}
+					<p class="aside-value">{{ venue.name }}</p>
+					{% if venue.address %}<p class="aside-note">{{ venue.address }}</p>{% endif %}
+				</section>
+				{% endif %}
+
+				{% if hosts %}
+				<section class="aside-block hosts">
+					<h2 class="label">{{ _("Hosted by") }}</h2>
+					<div class="host-logos">
+						{% for host in hosts %}{% if host.logo %}<img class="host-logo" src="{{ host.logo }}" alt="">{% endif %}{% endfor %}
+					</div>
+					<p class="aside-value">{{ hosted_by }}</p>
+				</section>
+				{% endif %}
+			</aside>
+		</div>
+	</main>
+
+	<footer class="site-footer">
+		{% if footer_logo is defined and footer_logo %}<img class="footer-logo" src="{{ footer_logo }}" alt="">{% endif %}
+		{% if footer_items is defined and footer_items %}
+		<nav class="footer-links">
+			{% for item in footer_items %}{% if item.url %}<a href="{{ item.url }}">{{ item.label }}</a>{% endif %}{% endfor %}
+		</nav>
+		{% endif %}
+		{% if footer_address is defined and footer_address %}<div class="footer-legal">{{ footer_address }}</div>{% endif %}
+		{% if copyright is defined and copyright %}<p class="footer-legal">© {{ copyright }}</p>{% endif %}
+	</footer>
+
+	<script>window.frappe = {}</script>
+	<!-- csrf_token -->
+	<script>
+		document.addEventListener("click", (event) => {
+			document.querySelectorAll("details[open]").forEach((menu) => menu.contains(event.target) || menu.removeAttribute("open"))
+		})
+		document.querySelector("[data-logout]")?.addEventListener("click", async () => {
+			await fetch("/api/method/logout", { method: "POST", headers: { "X-Frappe-CSRF-Token": frappe.csrf_token } })
+			location.reload()
+		})
+	</script>
+</body>
+</html>
+{% endautoescape %}
