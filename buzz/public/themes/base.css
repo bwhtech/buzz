@@ -540,7 +540,7 @@ body {
 .event-card-image {
 	display: block;
 	width: 100%;
-	aspect-ratio: 16 / 9;
+	aspect-ratio: 3 / 1;
 	margin-bottom: 8px;
 	border-radius: var(--radius);
 	background: var(--surface-raised);
