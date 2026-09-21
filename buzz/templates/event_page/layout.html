@@ -14,13 +14,16 @@
 <body class="event-page">
 	<header class="site-header">
 		<a class="site-brand" href="/">
-			<img src="{{ brand.logo }}" alt="">
-			<span>{{ brand.name }}</span>
+			<img src="{{ brand.logo }}" alt="{{ brand.name }}">
 		</a>
 		<nav class="site-nav">
 			{% if languages | length > 1 %}
 			<details class="lang-menu">
-				<summary aria-label="{{ _('Language') }}">{{ current_language | upper }}</summary>
+				<summary aria-label="{{ _('Change language, current: {0}').format(current_language_name) }}">
+					<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+					<span lang="{{ current_language }}">{{ current_language_name }}</span>
+					<svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+				</summary>
 				<div class="menu">
 					{% if is_guest %}
 					{% for language in languages %}

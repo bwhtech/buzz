@@ -6,7 +6,7 @@
   "color_scheme": "dark",
   "enabled": 1,
   "is_standard": 1,
-  "modified": "2026-09-21 14:00:00.000000",
+  "modified": "2026-09-21 16:00:00.000000",
   "tokens": [
    {
     "doctype": "Buzz Theme Token",
@@ -142,7 +142,7 @@
     "parenttype": "Buzz Theme",
     "token": "measure",
     "type": "Dimension",
-    "value": "471px"
+    "value": "510px"
    },
    {
     "doctype": "Buzz Theme Token",
@@ -158,7 +158,7 @@
     "parenttype": "Buzz Theme",
     "token": "page-width",
     "type": "Dimension",
-    "value": "762px"
+    "value": "800px"
    }
   ]
  },
@@ -169,7 +169,7 @@
   "color_scheme": "light",
   "enabled": 1,
   "is_standard": 1,
-  "modified": "2026-09-21 14:00:00.000000",
+  "modified": "2026-09-21 16:00:00.000000",
   "tokens": [
    {
     "doctype": "Buzz Theme Token",
@@ -305,7 +305,7 @@
     "parenttype": "Buzz Theme",
     "token": "measure",
     "type": "Dimension",
-    "value": "471px"
+    "value": "510px"
    },
    {
     "doctype": "Buzz Theme Token",
@@ -321,7 +321,7 @@
     "parenttype": "Buzz Theme",
     "token": "page-width",
     "type": "Dimension",
-    "value": "762px"
+    "value": "800px"
    }
   ]
  }

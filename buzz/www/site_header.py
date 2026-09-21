@@ -33,11 +33,18 @@ class SiteHeader:
 			"is_guest": self.is_guest,
 			"languages": self.languages,
 			"current_language": frappe.local.lang,
+			"current_language_name": self.current_language_name(),
 		}
 
 	def brand(self) -> dict:
+		# Same logo the dashboard's navbar shows (brand_image in get_user_info)
 		settings = frappe.get_cached_doc("Website Settings")
-		return {"logo": settings.app_logo or DEFAULT_LOGO, "name": settings.app_name or "Buzz"}
+		logo = settings.banner_image or settings.app_logo or DEFAULT_LOGO
+		return {"logo": logo, "name": settings.app_name or "Buzz"}
+
+	def current_language_name(self) -> str:
+		names = {language.language_code: language.language_name for language in self.languages}
+		return names.get(frappe.local.lang, frappe.local.lang)
 
 	def remember_guest_language(self):
 		# Guests share one User record, so their choice lives in a cookie, as in the dashboard
