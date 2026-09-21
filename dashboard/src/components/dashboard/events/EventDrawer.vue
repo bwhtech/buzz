@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { bannerPattern } from "@public/js/event_banner"
 import { Alert, Avatar, Button, Icon, toast } from "frappe-ui"
 import { dayjs } from "frappe-ui"
 import { computed } from "vue"
@@ -14,7 +15,6 @@ import EventCountdownPill from "@/components/dashboard/events/EventCountdownPill
 import EventMyTickets from "@/components/dashboard/events/EventMyTickets.vue"
 import type { MyEvent } from "@/types"
 import { timeLabel12Hour } from "@/utils/dateLabels"
-import { bannerPattern } from "@/utils/eventBanner"
 import { copyEventUrl, openEventPage } from "@/utils/eventUrl"
 
 const props = defineProps<{ event: MyEvent | null }>()
@@ -23,7 +23,7 @@ const open = defineModel<boolean>("open", { required: true })
 
 // The banner also backs a missing image, so the slot is never blank while it loads.
 const banner = computed(() => ({
-	backgroundImage: props.event ? bannerPattern(props.event.name) : "",
+	backgroundImage: props.event ? bannerPattern(props.event.title) : "",
 }))
 
 // The calendar chip wants the parts, not a formatted string.

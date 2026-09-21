@@ -175,8 +175,10 @@ body {
 }
 
 .event-banner {
+	display: block;
 	width: 100%;
-	aspect-ratio: 762 / 222;
+	aspect-ratio: 3 / 1;
+	background-color: var(--surface);
 	object-fit: cover;
 	border-radius: var(--radius-banner);
 }

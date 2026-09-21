@@ -28,7 +28,7 @@
 			{% for event in events %}
 			<li>
 				<a class="event-card" href="{{ event.url }}">
-					{% if event.image %}<img class="event-card-image" src="{{ event.image }}" alt="">{% else %}<span class="event-card-image"></span>{% endif %}
+					{% if event.image %}<img class="event-card-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
 					<span class="event-card-date">{{ event.date }}</span>
 					<span class="event-card-title">{{ event.title }}</span>
 					{% if event.place %}<span class="event-card-place">{{ event.place }}</span>{% endif %}

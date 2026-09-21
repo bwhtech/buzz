@@ -1,9 +1,14 @@
 // Deterministic stand-in for a missing banner: contour rings whose origin, spacing and
-// squash come from the event name, so an event always draws the same pattern.
+// squash come from the event title, so an event always draws the same pattern.
+// Shared by the dashboard and the public event page, which pass their own colours.
 
-const LINE = "var(--outline-gray-2)"
+export type BannerColours = { line: string; surface: string }
+
+const DASHBOARD_COLOURS: BannerColours = {
+	line: "var(--outline-gray-2)",
+	surface: "var(--surface-gray-1)",
+}
 const LINE_WIDTH = 2
-const SURFACE = "var(--surface-gray-1)"
 
 /** FNV-1a seed, then xorshift — successive draws stay independent of each other. */
 function randomFrom(seed: string): () => number {
@@ -25,7 +30,7 @@ const between = (draw: number, low: number, high: number) => low + draw * (high 
 const offCentre = (draw: number) =>
 	draw < 0.5 ? between(draw * 2, -10, 30) : between(draw * 2 - 1, 70, 110)
 
-export function bannerPattern(seed: string): string {
+export function bannerPattern(seed: string, colours: BannerColours = DASHBOARD_COLOURS): string {
 	const next = randomFrom(seed)
 	const originX = Math.round(offCentre(next()))
 	const originY = Math.round(offCentre(next()))
@@ -36,7 +41,7 @@ export function bannerPattern(seed: string): string {
 
 	return (
 		`repeating-radial-gradient(ellipse ${width}% ${height}% at ${originX}% ${originY}%,` +
-		` ${LINE} 0 ${LINE_WIDTH}px, transparent ${LINE_WIDTH}px ${gap}px),` +
-		` linear-gradient(${SURFACE}, ${SURFACE})`
+		` ${colours.line} 0 ${LINE_WIDTH}px, transparent ${LINE_WIDTH}px ${gap}px),` +
+		` linear-gradient(${colours.surface}, ${colours.surface})`
 	)
 }

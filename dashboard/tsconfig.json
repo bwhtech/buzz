@@ -20,6 +20,7 @@
 		"types": ["node"],
 		"paths": {
 			"@/*": ["src/*"],
+			"@public/*": ["../buzz/public/*"],
 			"tslib": ["/node_modules/tslib/tslib.d.ts"]
 		},
 		"lib": ["esnext", "dom", "dom.iterable", "scripthost"]
@@ -28,6 +29,7 @@
 		"src/**/*.ts",
 		"src/**/*.tsx",
 		"src/**/*.vue",
+		"../buzz/public/js/**/*.ts",
 		"tests/**/*.ts",
 		"tests/**/*.tsx",
 		"vite.config.ts",

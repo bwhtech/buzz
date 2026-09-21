@@ -15,6 +15,8 @@
 	<main class="event-content">
 		{% if event.banner_image %}
 		<img class="event-banner" src="{{ event.banner_image }}" alt="">
+		{% else %}
+		<event-banner class="event-banner" seed="{{ event.title }}"></event-banner>
 		{% endif %}
 
 		<h1 class="event-title">{{ event.title }}</h1>
