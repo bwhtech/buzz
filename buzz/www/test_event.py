@@ -131,7 +131,10 @@ class TestEventPage(IntegrationTestCase):
 
 	def test_event_theme_overrides_the_default(self):
 		frappe.db.set_value("Buzz Event", self.event, "theme", "Paper")
-		self.assertIn("color-scheme: light", render("public-page-event"))
+		html = render("public-page-event")
+		self.assertIn('data-mode="light"', html)
+		# The theme CSS sits in an autoescaped <style>; a quoted selector would arrive as &#34;
+		self.assertIn(":root[data-mode=dark] { color-scheme: dark; }", html)
 
 	def test_additional_page(self):
 		frappe.get_doc(

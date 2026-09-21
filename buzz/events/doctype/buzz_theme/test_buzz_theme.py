@@ -23,7 +23,9 @@ def set_token(theme, token: str, value: str, token_type: str | None = None):
 class TestBuzzTheme(IntegrationTestCase):
 	def test_copy_of_standard_theme_saves(self):
 		copy_of_classic("Copied Theme").insert()
-		self.assertIn("--accent: #ffffff;", theme_css("Copied Theme"))
+		css = theme_css("Copied Theme")
+		self.assertIn("--accent: light-dark(#171717, #ffffff);", css)
+		self.assertIn(":root[data-mode=light] { color-scheme: light; }", css)
 
 	def test_missing_token_is_rejected(self):
 		theme = copy_of_classic("Missing Token Theme")
@@ -33,6 +35,16 @@ class TestBuzzTheme(IntegrationTestCase):
 	def test_value_that_breaks_out_of_the_rule_is_rejected(self):
 		theme = copy_of_classic("Injected Value Theme")
 		set_token(theme, "accent", "red; } body { display: none } .x {")
+		self.assertRaises(frappe.ValidationError, theme.insert)
+
+	def test_dark_value_that_breaks_out_of_the_rule_is_rejected(self):
+		theme = copy_of_classic("Injected Dark Theme")
+		next(row for row in theme.tokens if row.token == "accent").dark_value = "red; } body { x: y"
+		self.assertRaises(frappe.ValidationError, theme.insert)
+
+	def test_required_colour_needs_a_dark_value(self):
+		theme = copy_of_classic("No Dark Theme")
+		next(row for row in theme.tokens if row.token == "accent").dark_value = ""
 		self.assertRaises(frappe.ValidationError, theme.insert)
 
 	def test_token_name_is_restricted(self):

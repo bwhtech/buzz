@@ -40,7 +40,7 @@ class BuzzTheme(Document):
 
 	def validate_tokens(self):
 		for row in self.tokens:
-			if error := token_error(row.token, row.type, row.value):
+			if error := token_error(row.token, row.type, row.value, row.dark_value):
 				frappe.throw(_("Row {0}: {1}").format(row.idx, error))
 
 	def validate_required_tokens(self):
@@ -75,14 +75,16 @@ def theme_css(name: str) -> str:
 	rows = frappe.get_all(
 		"Buzz Theme Token",
 		filters={"parenttype": "Buzz Theme", "parent": name},
-		fields=["token", "type", "value"],
+		fields=["token", "type", "value", "dark_value"],
 		order_by="idx",
 	)
 	# Re-checked here too: a row written past validate (db.set_value, a data import) must not reach the page
 	declarations = [
-		f"--{row.token}: {css_value(row.type, row.value)};"
+		f"--{row.token}: {css_value(row.type, row.value, row.dark_value)};"
 		for row in rows
-		if not token_error(row.token, row.type, row.value)
+		if not token_error(row.token, row.type, row.value, row.dark_value)
 	]
-	color_scheme = scheme if scheme in COLOR_SCHEMES else COLOR_SCHEMES[0]
-	return f":root {{ color-scheme: {color_scheme}; {' '.join(declarations)} }}"
+	default_mode = scheme if scheme in COLOR_SCHEMES else COLOR_SCHEMES[0]
+	# Unquoted attribute values: the page autoescapes, and a quote would turn into &#34;
+	modes = " ".join(f":root[data-mode={mode}] {{ color-scheme: {mode}; }}" for mode in COLOR_SCHEMES)
+	return f":root {{ color-scheme: {default_mode}; {' '.join(declarations)} }} {modes}"

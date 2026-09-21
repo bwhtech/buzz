@@ -25,7 +25,12 @@ async function submit() {
 		theme_name: themeName.value.trim(),
 		color_scheme: props.colorScheme,
 		enabled: 1,
-		tokens: props.tokens.map(({ token, type, value }) => ({ token, type, value })),
+		tokens: props.tokens.map(({ token, type, value, dark_value }) => ({
+			token,
+			type,
+			value,
+			dark_value,
+		})),
 	})
 	const theme = await creator.submit().catch(() => null)
 	if (!theme) return

@@ -570,6 +570,7 @@ export interface ThemeToken {
 	token: string
 	type: ThemeTokenType
 	value: string
+	dark_value: string | null
 }
 
 export interface ThemeRow {

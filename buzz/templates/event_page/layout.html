@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 {% autoescape true %}
-<html lang="{{ current_language }}">
+<html lang="{{ current_language }}" data-mode="{{ default_mode }}">
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,15 +9,29 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Newsreader:wght@400&display=swap">
 	<link rel="stylesheet" href="/assets/buzz/themes/base.css">
+	<script>
+		try {
+			const mode = localStorage.getItem("buzz-page-mode")
+			if (mode === "light" || mode === "dark") document.documentElement.dataset.mode = mode
+		} catch (error) {}
+	</script>
 	<style>{{ theme_css }}</style>
-	<script src="{{ bundled_asset('event_banner.bundle.ts') }}" defer></script>
+	<script src="{{ bundled_asset('event_page.bundle.ts') }}" defer></script>
 </head>
 <body class="event-page">
 	<header class="site-header">
 		<a class="site-brand" href="/">
+			{% if brand.is_default %}
+			<span class="default-logo" role="img" aria-label="{{ brand.name }}"></span>
+			{% else %}
 			<img src="{{ brand.logo }}" alt="{{ brand.name }}">
+			{% endif %}
 		</a>
 		<nav class="site-nav">
+			<button type="button" class="mode-toggle" data-mode-toggle aria-label="{{ _('Dark mode') }}">
+				<svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+				<svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+			</button>
 			{% if is_guest %}
 			<a class="btn btn-secondary" href="/login?redirect-to={{ meta.url | urlencode }}">{{ _("Log in") }}</a>
 			{% else %}

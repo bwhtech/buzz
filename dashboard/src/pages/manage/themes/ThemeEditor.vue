@@ -19,9 +19,16 @@ const draft = reactive<{ color_scheme: "dark" | "light"; tokens: ThemeToken[] }>
 	tokens: [],
 })
 
+const pickToken = ({ token, type, value, dark_value }: ThemeToken): ThemeToken => ({
+	token,
+	type,
+	value,
+	dark_value: dark_value ?? null,
+})
+
 function reset(doc: ThemeDoc) {
 	draft.color_scheme = doc.color_scheme
-	draft.tokens = doc.tokens.map(({ token, type, value }) => ({ token, type, value }))
+	draft.tokens = doc.tokens.map(pickToken)
 }
 
 watch(
@@ -34,7 +41,7 @@ const savedDraft = computed(() =>
 	theme.doc
 		? JSON.stringify({
 				color_scheme: theme.doc.color_scheme,
-				tokens: theme.doc.tokens.map(({ token, type, value }) => ({ token, type, value })),
+				tokens: theme.doc.tokens.map(pickToken),
 			})
 		: "",
 )
@@ -99,7 +106,7 @@ async function toggleEnabled() {
 			<FormControl
 				v-model="draft.color_scheme"
 				type="select"
-				:label="__('Colour scheme')"
+				:label="__('Default mode')"
 				:options="[
 					{ label: __('Dark'), value: 'dark' },
 					{ label: __('Light'), value: 'light' },
@@ -114,6 +121,7 @@ async function toggleEnabled() {
 					v-for="row in group.tokens"
 					:key="row.token"
 					v-model="row.value"
+					v-model:dark-value="row.dark_value"
 					:token="row"
 					:fonts="fontNames"
 					:disabled="readOnly"

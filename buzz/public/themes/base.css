@@ -63,6 +63,47 @@ body {
 	height: 24px;
 }
 
+/* The bundled wordmark is used as a shape only, painted in the ink colour each theme pairs with its background. */
+.default-logo {
+	display: block;
+	height: 24px;
+	aspect-ratio: 313 / 244;
+	background-color: var(--ink);
+	mask: url("/assets/buzz/images/buzz-logo-no-bg.svg") center / contain no-repeat;
+}
+
+.mode-toggle {
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: 0;
+	border-radius: 8px;
+	background: none;
+	color: var(--ink-strong);
+	cursor: pointer;
+}
+
+.mode-toggle:hover {
+	background: var(--surface-raised);
+}
+
+.icon {
+	width: 16px;
+	height: 16px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+:root[data-mode="dark"] .icon-moon,
+:root[data-mode="light"] .icon-sun {
+	display: none;
+}
+
 .site-nav {
 	display: flex;
 	align-items: center;
@@ -202,6 +243,16 @@ body {
 	font-weight: 500;
 }
 
+.meta-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.meta-icon {
+	display: none;
+}
+
 .event-actions {
 	margin-top: 20px;
 }
@@ -213,9 +264,7 @@ body {
 	grid-template-columns: minmax(0, var(--measure)) var(--aside);
 	justify-content: space-between;
 	gap: 40px;
-	margin-top: 32px;
-	padding-top: 32px;
-	border-top: 1px solid var(--border);
+	margin-top: 40px;
 }
 
 .section + .section {
@@ -553,6 +602,45 @@ body {
 }
 
 @media (max-width: 720px) {
+	.event-banner {
+		border: 1px solid var(--border);
+	}
+
+	.event-meta {
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.meta-icon {
+		display: block;
+	}
+
+	/* The meta row under the title carries when and where on a narrow screen. */
+	.event-aside {
+		display: none;
+	}
+
+	.prose {
+		font-size: 16px;
+		line-height: 1.75;
+	}
+
+	/* The active tab already names the panel; the heading stays for screen readers. */
+	.event-main:has(.tab-input) .tab-panel > .section-title {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
+
+	/* The tab rule runs to the screen edges, past the page gutter. */
+	.tabs {
+		margin-inline: -16px;
+		padding-inline: 16px;
+	}
+
 	.event-columns {
 		grid-template-columns: minmax(0, 1fr);
 	}

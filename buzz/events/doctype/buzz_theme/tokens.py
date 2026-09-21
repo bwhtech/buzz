@@ -42,14 +42,17 @@ VALUE_PATTERNS = {
 }
 
 
-def token_error(token: str, token_type: str, value: str) -> str | None:
+def token_error(token: str, token_type: str, value: str, dark_value: str | None = None) -> str | None:
 	if not TOKEN_NAME.match(token or ""):
 		return _("Token {0} may only use lowercase letters, digits and hyphens").format(token)
 	expected_type = REQUIRED_TOKENS.get(token)
 	if expected_type and token_type != expected_type:
 		return _("Token {0} must be of type {1}").format(token, expected_type)
-	if not is_valid_value(token_type, value or ""):
-		return _("{0} is not a valid {1} for token {2}").format(value, token_type, token)
+	for candidate in (value, dark_value if token_type == "Color" else None):
+		if candidate is not None and not is_valid_value(token_type, candidate):
+			return _("{0} is not a valid {1} for token {2}").format(candidate, token_type, token)
+	if expected_type == "Color" and not dark_value:
+		return _("Token {0} needs a dark value").format(token)
 	return None
 
 
@@ -60,5 +63,10 @@ def is_valid_value(token_type: str, value: str) -> bool:
 	return bool(pattern and pattern.match(value))
 
 
-def css_value(token_type: str, value: str) -> str:
-	return FONT_STACKS[value] if token_type == "Font" else value
+def css_value(token_type: str, value: str, dark_value: str | None = None) -> str:
+	if token_type == "Font":
+		return FONT_STACKS[value]
+	# light-dark() picks by the root's color-scheme, which the page's mode toggle flips
+	if token_type == "Color" and dark_value:
+		return f"light-dark({value}, {dark_value})"
+	return value

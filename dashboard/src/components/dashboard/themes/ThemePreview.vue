@@ -13,15 +13,21 @@ const props = defineProps<{
 
 const frame = ref<HTMLIFrameElement>()
 
+function cssValue(row: ThemeToken): string {
+	if (row.type === "Font") return props.fonts[row.value] ?? ""
+	return row.type === "Color" && row.dark_value
+		? `light-dark(${row.value}, ${row.dark_value})`
+		: row.value
+}
+
 // Unsaved values go straight onto the page's root as inline custom properties, which
 // outrank the saved theme's :root block. The page is same-origin, so no messaging is needed.
 function apply() {
 	const root = frame.value?.contentDocument?.documentElement
 	if (!root) return
-	root.style.colorScheme = props.colorScheme
+	root.dataset.mode = props.colorScheme
 	for (const row of props.tokens) {
-		const value = row.type === "Font" ? (props.fonts[row.value] ?? "") : row.value
-		root.style.setProperty(`--${row.token}`, value)
+		root.style.setProperty(`--${row.token}`, cssValue(row))
 	}
 }
 

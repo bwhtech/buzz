@@ -30,8 +30,9 @@
    "fieldname": "color_scheme",
    "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Colour Scheme",
-   "options": "dark\nlight"
+   "label": "Default Mode",
+   "options": "dark\nlight",
+   "description": "Mode the page opens in until a visitor switches it."
   },
   {
    "fieldname": "column_break_theme",
@@ -66,7 +67,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-21 15:00:00.000000",
+ "modified": "2026-09-21 17:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Theme",
