@@ -2,22 +2,23 @@ import frappe
 from frappe.website.doctype.website_settings.website_settings import get_website_settings
 
 from buzz.api.account import get_enabled_languages
+from buzz.events.doctype.buzz_theme.buzz_theme import resolve_theme, theme_css
 
 LANGUAGE_COOKIE = "preferred_language"
 LANGUAGE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 DEFAULT_LOGO = "/assets/buzz/images/buzz-logo.svg"
 
 
-def apply_site_context(context):
+def apply_site_context(context, preferred_theme: str | None = None):
 	context.update(get_website_settings(context))
 	context.update(SiteHeader().as_context())
-	context.theme = event_page_theme()
+	context.theme_css = page_theme_css(preferred_theme)
 
 
-def event_page_theme() -> str:
-	themes = frappe.get_meta("Buzz Settings").get_options("event_page_theme").split("\n")
-	theme = frappe.db.get_single_value("Buzz Settings", "event_page_theme")
-	return theme if theme in themes else themes[0]
+def page_theme_css(preferred_theme: str | None) -> str:
+	default_theme = frappe.db.get_single_value("Buzz Settings", "event_page_theme")
+	name = resolve_theme(preferred_theme, default_theme)
+	return theme_css(name) if name else ""
 
 
 class SiteHeader:

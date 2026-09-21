@@ -40,6 +40,7 @@
   "registration_url",
   "meta_image",
   "card_image",
+  "theme",
   "section_break_rmtj",
   "allow_guest_booking",
   "column_break_lzcw",
@@ -486,6 +487,13 @@
    "label": "Card Image"
   },
   {
+   "fieldname": "theme",
+   "fieldtype": "Link",
+   "label": "Theme",
+   "options": "Buzz Theme",
+   "description": "Look of this event's public page. Leave empty to use the default from Buzz Settings."
+  },
+  {
    "default": "1",
    "depends_on": "eval:doc.send_ticket_email",
    "fieldname": "attach_calendar_invite",
@@ -641,7 +649,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-09-16 23:55:26.308934",
+ "modified": "2026-09-21 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

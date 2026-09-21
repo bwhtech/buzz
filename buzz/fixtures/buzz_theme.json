@@ -1,0 +1,328 @@
+[
+ {
+  "doctype": "Buzz Theme",
+  "name": "Classic",
+  "theme_name": "Classic",
+  "color_scheme": "dark",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-09-21 14:00:00.000000",
+  "tokens": [
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "page-bg",
+    "type": "Color",
+    "value": "#121212"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "surface",
+    "type": "Color",
+    "value": "#171717"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "surface-raised",
+    "type": "Color",
+    "value": "#232323"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "border",
+    "type": "Color",
+    "value": "#383838"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "ink",
+    "type": "Color",
+    "value": "#ffffff"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "ink-title",
+    "type": "Color",
+    "value": "#f8f8f8"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "ink-strong",
+    "type": "Color",
+    "value": "#e2e2e2"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "ink-body",
+    "type": "Color",
+    "value": "#bebebe"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "ink-muted",
+    "type": "Color",
+    "value": "#999999"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "accent",
+    "type": "Color",
+    "value": "#ffffff"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "accent-hover",
+    "type": "Color",
+    "value": "#e2e2e2"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "accent-ink",
+    "type": "Color",
+    "value": "#121212"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "font-body",
+    "type": "Font",
+    "value": "Inter"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "font-display",
+    "type": "Font",
+    "value": "Newsreader"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "radius",
+    "type": "Dimension",
+    "value": "10px"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "radius-banner",
+    "type": "Dimension",
+    "value": "12px"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "measure",
+    "type": "Dimension",
+    "value": "471px"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "aside",
+    "type": "Dimension",
+    "value": "250px"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "page-width",
+    "type": "Dimension",
+    "value": "762px"
+   }
+  ]
+ },
+ {
+  "doctype": "Buzz Theme",
+  "name": "Paper",
+  "theme_name": "Paper",
+  "color_scheme": "light",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-09-21 14:00:00.000000",
+  "tokens": [
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "page-bg",
+    "type": "Color",
+    "value": "#fbfaf7"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "surface",
+    "type": "Color",
+    "value": "#ffffff"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "surface-raised",
+    "type": "Color",
+    "value": "#f1eee8"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "border",
+    "type": "Color",
+    "value": "#e6e2da"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "ink",
+    "type": "Color",
+    "value": "#1c1917"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "ink-title",
+    "type": "Color",
+    "value": "#1c1917"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "ink-strong",
+    "type": "Color",
+    "value": "#292524"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "ink-body",
+    "type": "Color",
+    "value": "#44403c"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "ink-muted",
+    "type": "Color",
+    "value": "#78716c"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "accent",
+    "type": "Color",
+    "value": "#b4432a"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "accent-hover",
+    "type": "Color",
+    "value": "#9a3822"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "accent-ink",
+    "type": "Color",
+    "value": "#ffffff"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "font-body",
+    "type": "Font",
+    "value": "Inter"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "font-display",
+    "type": "Font",
+    "value": "Newsreader"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "radius",
+    "type": "Dimension",
+    "value": "6px"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "radius-banner",
+    "type": "Dimension",
+    "value": "8px"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "measure",
+    "type": "Dimension",
+    "value": "471px"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "aside",
+    "type": "Dimension",
+    "value": "250px"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "page-width",
+    "type": "Dimension",
+    "value": "762px"
+   }
+  ]
+ }
+]

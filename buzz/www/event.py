@@ -16,8 +16,9 @@ RANGE_SEPARATOR = " \u2013 "
 
 
 def get_context(context):
-	apply_site_context(context)
-	context.update(EventPage(frappe.form_dict.event_route, frappe.form_dict.page_route).as_context())
+	page = EventPage(frappe.form_dict.event_route, frappe.form_dict.page_route)
+	apply_site_context(context, page.event.theme)
+	context.update(page.as_context())
 
 
 def join_names(names: list[str]) -> str:
