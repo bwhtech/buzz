@@ -234,23 +234,25 @@ body {
 	letter-spacing: 0.017em;
 }
 
+/* Mobile only: on wider screens the sidebar's WHEN and WHERE blocks carry these. */
 .event-meta {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px 16px;
+	display: none;
+	flex-direction: column;
+	gap: 6px;
 	margin-top: 8px;
 	color: var(--ink-muted);
 	font-weight: 500;
+}
+
+.listing-description {
+	margin-top: 8px;
+	color: var(--ink-muted);
 }
 
 .meta-item {
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
-}
-
-.meta-icon {
-	display: none;
 }
 
 .event-actions {
@@ -607,12 +609,7 @@ body {
 	}
 
 	.event-meta {
-		flex-direction: column;
-		gap: 6px;
-	}
-
-	.meta-icon {
-		display: block;
+		display: flex;
 	}
 
 	/* The meta row under the title carries when and where on a narrow screen. */
