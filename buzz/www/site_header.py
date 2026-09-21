@@ -1,11 +1,8 @@
 import frappe
 from frappe.website.doctype.website_settings.website_settings import get_website_settings
 
-from buzz.api.account import get_enabled_languages
 from buzz.events.doctype.buzz_theme.buzz_theme import resolve_theme, theme_css
 
-LANGUAGE_COOKIE = "preferred_language"
-LANGUAGE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 DEFAULT_LOGO = "/assets/buzz/images/buzz-logo.svg"
 
 
@@ -24,16 +21,12 @@ def page_theme_css(preferred_theme: str | None) -> str:
 class SiteHeader:
 	def __init__(self):
 		self.is_guest = frappe.session.user == "Guest"
-		self.languages = get_enabled_languages()
 
 	def as_context(self) -> dict:
-		self.remember_guest_language()
 		return {
 			"brand": self.brand(),
 			"is_guest": self.is_guest,
-			"languages": self.languages,
 			"current_language": frappe.local.lang,
-			"current_language_name": self.current_language_name(),
 		}
 
 	def brand(self) -> dict:
@@ -41,14 +34,3 @@ class SiteHeader:
 		settings = frappe.get_cached_doc("Website Settings")
 		logo = settings.banner_image or settings.app_logo or DEFAULT_LOGO
 		return {"logo": logo, "name": settings.app_name or "Buzz"}
-
-	def current_language_name(self) -> str:
-		names = {language.language_code: language.language_name for language in self.languages}
-		return names.get(frappe.local.lang, frappe.local.lang)
-
-	def remember_guest_language(self):
-		# Guests share one User record, so their choice lives in a cookie, as in the dashboard
-		code = frappe.form_dict.get("_lang")
-		if not self.is_guest or code not in {language.language_code for language in self.languages}:
-			return
-		frappe.local.cookie_manager.set_cookie(LANGUAGE_COOKIE, code, max_age=LANGUAGE_COOKIE_MAX_AGE)

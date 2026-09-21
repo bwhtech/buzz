@@ -17,24 +17,6 @@
 			<img src="{{ brand.logo }}" alt="{{ brand.name }}">
 		</a>
 		<nav class="site-nav">
-			{% if languages | length > 1 %}
-			<details class="lang-menu">
-				<summary aria-label="{{ _('Change language, current: {0}').format(current_language_name) }}">
-					<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
-					<span lang="{{ current_language }}">{{ current_language_name }}</span>
-					<svg class="icon icon-small" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-				</summary>
-				<div class="menu">
-					{% if is_guest %}
-					{% for language in languages %}
-					<a href="?_lang={{ language.language_code }}"{% if language.language_code == current_language %} aria-current="true"{% endif %}>{{ language.language_name }}</a>
-					{% endfor %}
-					{% else %}
-					<a href="/b/account">{{ _("Change language in account settings") }}</a>
-					{% endif %}
-				</div>
-			</details>
-			{% endif %}
 			{% if is_guest %}
 			<a class="btn btn-secondary" href="/login?redirect-to={{ meta.url | urlencode }}">{{ _("Log in") }}</a>
 			{% else %}

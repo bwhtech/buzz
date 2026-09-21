@@ -63,25 +63,6 @@ body {
 	height: 24px;
 }
 
-.icon {
-	width: 16px;
-	height: 16px;
-	fill: none;
-	stroke: currentColor;
-	stroke-width: 2;
-	stroke-linecap: round;
-	stroke-linejoin: round;
-}
-
-.icon-small {
-	width: 12px;
-	height: 12px;
-}
-
-.lang-menu[open] .icon-small {
-	transform: rotate(180deg);
-}
-
 .site-nav {
 	display: flex;
 	align-items: center;
