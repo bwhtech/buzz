@@ -562,3 +562,30 @@ export interface EventEnquiries {
 	enquiries: EventEnquiryItem[]
 	has_next_page: boolean
 }
+
+export type ThemeTokenType = "Color" | "Dimension" | "Font"
+
+export interface ThemeToken {
+	name?: string
+	token: string
+	type: ThemeTokenType
+	value: string
+}
+
+export interface ThemeRow {
+	name: string
+	color_scheme: "dark" | "light"
+	enabled: 0 | 1
+	is_standard: 0 | 1
+}
+
+export interface ThemeDoc extends ThemeRow {
+	theme_name: string
+	tokens: ThemeToken[]
+}
+
+export interface ThemeOptions {
+	can_edit: boolean
+	fonts: Record<string, string>
+	preview_route: string | null
+}

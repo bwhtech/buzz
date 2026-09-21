@@ -8,6 +8,7 @@ import UserMenu from "@/components/UserMenu.vue"
 import { useTeamAccess } from "@/composables/useTeamAccess"
 import { useEventDoc } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
+import { useThemeOptions } from "@/data/themes"
 import NotFound from "@/pages/NotFound.vue"
 
 const route = useRoute()
@@ -22,6 +23,9 @@ const isActive = (to: string) => route.path === to
 // page applies to its Sponsorships tab.
 const sponsorships = useMySponsorships()
 
+// Themes are site-wide, so only people who may write them see the destination.
+const themeOptions = useThemeOptions()
+
 const mainItems = computed(() => {
 	const destinations = [
 		{ label: "Events", icon: "lucide-calendar-days", to: "/manage/events" },
@@ -34,6 +38,10 @@ const mainItems = computed(() => {
 			icon: "lucide-handshake",
 			to: "/manage/sponsorship",
 		})
+	}
+
+	if (themeOptions.data?.can_edit) {
+		destinations.push({ label: "Themes", icon: "lucide-palette", to: "/manage/themes" })
 	}
 
 	return destinations

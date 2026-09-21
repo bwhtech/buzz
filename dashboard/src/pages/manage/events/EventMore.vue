@@ -4,6 +4,7 @@ import { computed } from "vue"
 import { useRoute } from "vue-router"
 
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
+import EventThemeSetting from "@/components/dashboard/events/EventThemeSetting.vue"
 import { useArchiveEvent, useCanWriteEvent, useEventDoc } from "@/data/events"
 
 // A settings row and the group it belongs to. The page renders whatever this describes,
@@ -97,6 +98,13 @@ async function unarchive() {
 	<EventPageHeader :title="event.doc?.title" section="More" />
 
 	<div class="m-auto w-full max-w-[800px] space-y-8 px-4 py-8">
+		<section class="space-y-3">
+			<h2 class="text-lg font-semibold text-ink-gray-9">{{ __("Appearance") }}</h2>
+			<div class="overflow-hidden rounded-6 border border-outline-gray-2">
+				<EventThemeSetting :event="eventId" :disabled="!canWrite.data?.has_permission" />
+			</div>
+		</section>
+
 		<section v-for="group in settingGroups" :key="group.name" class="space-y-3">
 			<h2 class="text-lg font-semibold text-ink-gray-9">{{ group.title }}</h2>
 

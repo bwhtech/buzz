@@ -24,8 +24,8 @@ export const createEvent = createResource<{ name: string; title: string }>({
 	url: "buzz.api.events.create_event",
 })
 
-/** What the manage shell reads off the event itself: its title, and whether it is live. */
-type EventShellDoc = { name: string; title: string; is_published: 0 | 1 }
+/** What the manage shell reads off the event itself: its title, whether it is live, and its page theme. */
+type EventShellDoc = { name: string; title: string; is_published: 0 | 1; theme: string | null }
 
 /**
  * The event document, shared by everything that reads or flips its publish state.
