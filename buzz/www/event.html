@@ -134,9 +134,8 @@
 
 			<aside class="event-aside">
 				<section class="aside-block">
-					<h2 class="label">{{ _("When") }}</h2>
 					<div class="date-row">
-						<span class="date-badge" aria-hidden="true"><span class="date-badge-day">{{ event_date.day }}</span>{{ event_date.month }}</span>
+						<span class="date-badge" aria-hidden="true"><span class="date-badge-month">{{ event_date.month }}</span><span class="date-badge-day">{{ event_date.day }}</span></span>
 						<div>
 							<p class="aside-value">{{ event_date.full_date }}</p>
 							<p class="aside-note">{{ event_date.time_range }}</p>

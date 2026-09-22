@@ -231,10 +231,15 @@ body {
 	min-width: 0;
 }
 
+/* The title face, shared by the date badge so both always match. */
+:root {
+	--font-title: "League Gothic", var(--font-display);
+}
+
 .event-title {
 	color: var(--ink-title);
-	font-family: var(--font-display);
-	font-size: 28px;
+	font-family: var(--font-title);
+	font-size: 40px;
 	font-weight: 400;
 	line-height: 1.2;
 	letter-spacing: 0.017em;
@@ -526,22 +531,32 @@ body {
 	display: flex;
 	flex-direction: column;
 	flex-shrink: 0;
-	align-items: center;
-	gap: 2px;
-	min-width: 32px;
+	width: 48px;
+	overflow: hidden;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	text-align: center;
+}
+
+.date-badge-month {
+	padding: 3px 0;
+	background: var(--surface-raised);
 	color: var(--ink-muted);
-	font-size: 13px;
+	font-size: 10px;
 	font-weight: 600;
-	letter-spacing: 0.12em;
+	letter-spacing: 0.08em;
 	line-height: 1;
 	text-transform: uppercase;
 }
 
+/* Trimmed to the digits' cap height and baseline, so the padding is even above and below. */
 .date-badge-day {
-	font-family: "League Gothic", var(--font-body);
-	font-size: 48px;
-	font-weight: 400;
-	letter-spacing: -0.02em;
+	padding: 8px 4px;
+	color: var(--ink-strong);
+	font-family: var(--font-title);
+	font-size: 24px;
+	line-height: 1.2;
+	text-box: trim-both cap alphabetic;
 }
 
 .venue-map {
