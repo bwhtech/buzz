@@ -1,8 +1,7 @@
 import re
 
 import frappe
-from frappe import _
-from frappe.utils import scrub
+from frappe import _, scrub
 
 from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import ENQUIRY_FIELDS
 
