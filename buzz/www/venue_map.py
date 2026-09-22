@@ -37,6 +37,10 @@ def open_street_map_url(latitude: float | None, longitude: float | None) -> str 
 		latitude + MAP_SPAN_DEGREES,
 	]
 	query = urlencode(
-		{"bbox": ",".join(map(str, box)), "layer": "mapnik", "marker": f"{latitude},{longitude}"}
+		{
+			"bbox": ",".join([str(edge) for edge in box]),
+			"layer": "mapnik",
+			"marker": f"{latitude},{longitude}",
+		}
 	)
 	return f"https://www.openstreetmap.org/export/embed.html?{query}"

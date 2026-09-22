@@ -1,5 +1,6 @@
 from functools import cached_property
 from itertools import groupby
+from urllib.parse import urlparse
 
 import frappe
 from frappe import _
@@ -42,8 +43,17 @@ def format_time(time) -> str:
 	return get_time(time).strftime("%H:%M") if time else ""
 
 
+def join_parts(parts: list, separator: str) -> str:
+	return separator.join([part for part in parts if part])
+
+
 def format_time_range(start, end) -> str:
-	return RANGE_SEPARATOR.join(filter(None, [format_time(start), format_time(end)]))
+	return join_parts([format_time(start), format_time(end)], RANGE_SEPARATOR)
+
+
+def web_url(url: str | None) -> str | None:
+	# Frappe's URL field check lets javascript: through
+	return url if url and urlparse(url).scheme in ("http", "https") else None
 
 
 def format_full_date(date) -> str:
@@ -79,7 +89,7 @@ class EventPage:
 		return {
 			"event": self.event,
 			"event_date": self.event_date(),
-			"timezone": self.timezone(),
+			"timezone_label": self.timezone_label,
 			"page": self.page,
 			"pages": self.pages(),
 			"tabs": self.tabs(),
@@ -116,7 +126,7 @@ class EventPage:
 			"month": format_date(start_date, "MMM"),
 			"day": start_date.day,
 			"full_date": format_full_date(start_date),
-			"time_range": " ".join(filter(None, [self.time_range(), self.timezone()["label"]])),
+			"time_range": join_parts([self.time_range(), self.timezone_label], " "),
 		}
 
 	def time_range(self) -> str:
@@ -124,14 +134,14 @@ class EventPage:
 		end_date = getdate(self.event.end_date) if self.event.end_date else None
 		if not end_date or end_date == getdate(self.event.start_date):
 			return format_time_range(start_time, end_time)
-		end_text = ", ".join(filter(None, [format_date(end_date, "d MMM"), format_time(end_time)]))
-		return RANGE_SEPARATOR.join(filter(None, [format_time(start_time), end_text]))
+		end_text = join_parts([format_date(end_date, "d MMM"), format_time(end_time)], ", ")
+		return join_parts([format_time(start_time), end_text], RANGE_SEPARATOR)
 
-	def timezone(self) -> dict:
+	@cached_property
+	def timezone_label(self) -> str:
 		name = self.event.time_zone or get_system_timezone()
 		event_start = get_datetime(f"{self.event.start_date} {self.event.start_time or '00:00:00'}")
-		label = self.event.time_zone_label or get_time_zone_label(name, event_start)
-		return {"name": name, "label": label}
+		return self.event.time_zone_label or get_time_zone_label(name, event_start)
 
 	def hosts(self) -> list:
 		hosts = [primary_host_of(self.event.team), *co_hosts_of(self.event.name)]
@@ -139,9 +149,8 @@ class EventPage:
 
 	@cached_property
 	def schedule(self) -> list[dict]:
-		talk_names = [row.talk for row in self.event.schedule if row.talk]
-		talk_titles = self.talk_titles(talk_names)
-		talk_speakers = self.talk_speakers(talk_names)
+		talk_titles = self.talk_titles([row.talk for row in self.event.schedule if row.talk])
+		talk_speakers = self.talk_speakers(list(talk_titles))
 		rows = sorted(self.event.schedule, key=lambda row: (getdate(row.date), get_time(row.start_time)))
 		return [
 			{
@@ -159,7 +168,11 @@ class EventPage:
 		}
 
 	def talk_titles(self, talk_names: list[str]) -> dict:
-		talks = frappe.get_all("Event Talk", filters={"name": ["in", talk_names]}, fields=["name", "title"])
+		talks = frappe.get_all(
+			"Event Talk",
+			filters={"name": ["in", talk_names], "event": self.event.name},
+			fields=["name", "title"],
+		)
 		return {str(talk.name): talk.title for talk in talks}
 
 	def talk_speakers(self, talk_names: list[str]) -> dict:
@@ -195,7 +208,7 @@ class EventPage:
 	def speaker(self, profile) -> dict:
 		return {
 			"name": profile.display_name,
-			"role": ", ".join(filter(None, [profile.designation, profile.company])),
+			"role": join_parts([profile.designation, profile.company], ", "),
 			"image": profile.display_image,
 		}
 
@@ -207,6 +220,8 @@ class EventPage:
 			fields=["company_name", "company_logo", "website", "tier"],
 			order_by="creation",
 		)
+		for sponsor in sponsors:
+			sponsor.website = web_url(sponsor.website)
 		tiers = frappe.get_all(
 			"Sponsorship Tier",
 			filters={"event": self.event.name},

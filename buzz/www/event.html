@@ -74,7 +74,7 @@
 
 				{% if schedule %}
 				<section class="section tab-panel" id="panel-schedule">
-					<h2 class="section-title">{{ _("Schedule") }} · {{ timezone.label }}</h2>
+					<h2 class="section-title">{{ _("Schedule") }} · {{ timezone_label }}</h2>
 					{% for day in schedule %}
 					{% if schedule | length > 1 %}<h3 class="label">{{ day.day }}</h3>{% endif %}
 					<ol class="schedule">

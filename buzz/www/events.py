@@ -49,7 +49,7 @@ class EventListing:
 		)
 
 	def events(self) -> list:
-		filters = {"is_published": 1, "end_date": [">=", today()]}
+		filters = {"is_published": 1, "route": ["is", "set"], "end_date": [">=", today()]}
 		if self.category:
 			filters["category"] = self.category.name
 		return frappe.get_all(

@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import set_request
@@ -12,7 +14,9 @@ from buzz.www.venue_map import google_maps_url, open_street_map_url
 
 def render(route: str) -> str:
 	set_request(method="GET", path=f"/events/{route}")
-	return get_response_content(f"/events/{route}")
+	# CI never runs bench build, so there is no assets.json for bundled_asset to read
+	with patch("frappe.utils.get_assets_json", return_value={}):
+		return get_response_content(f"/events/{route}")
 
 
 class TestEventPage(IntegrationTestCase):
@@ -35,7 +39,7 @@ class TestEventPage(IntegrationTestCase):
 		context = EventPage("public-page-event").as_context()
 		self.assertEqual(str(context["event"].name), self.event)
 		self.assertEqual([host.label for host in context["hosts"]], ["Event Page Team"])
-		self.assertTrue(context["timezone"]["label"])
+		self.assertTrue(context["timezone_label"])
 
 	def test_unpublished_event_is_not_found(self):
 		create_event("Hidden Page", self.team, route="hidden-page-event", is_published=0)
@@ -108,7 +112,7 @@ class TestEventPage(IntegrationTestCase):
 
 	def test_time_zone_falls_back_to_system(self):
 		frappe.db.set_value("Buzz Event", self.event, {"time_zone": "", "time_zone_label": ""})
-		self.assertTrue(EventPage("public-page-event").timezone()["label"])
+		self.assertTrue(EventPage("public-page-event").timezone_label)
 
 	def test_team_hosts_first_then_co_hosts(self):
 		event = frappe.get_doc(
