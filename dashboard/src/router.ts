@@ -82,18 +82,6 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/events/CreateEvent.vue"),
 			},
 			{
-				path: "themes",
-				name: "themes",
-				meta: { title: "Themes" },
-				component: () => import("@/pages/manage/themes/Themes.vue"),
-			},
-			{
-				path: "themes/:themeName",
-				name: "theme-editor",
-				meta: { title: "Theme" },
-				component: () => import("@/pages/manage/themes/ThemeEditor.vue"),
-			},
-			{
 				path: "proposals",
 				name: "proposals",
 				meta: { title: "My Proposals" },

@@ -3,12 +3,12 @@ import { FormControl, toast } from "frappe-ui"
 import { computed } from "vue"
 
 import { useEventDoc } from "@/data/events"
-import { useThemes } from "@/data/themes"
+import { useEnabledThemes } from "@/data/themes"
 
 const props = defineProps<{ event: string; disabled: boolean }>()
 
 const eventDoc = useEventDoc(() => props.event)
-const themes = useThemes({ enabled: 1 })
+const themes = useEnabledThemes()
 
 const options = computed(() => [
 	{ label: __("Site default"), value: "" },
