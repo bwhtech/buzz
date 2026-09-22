@@ -51,7 +51,7 @@ class TestEventPage(IntegrationTestCase):
 		frappe.set_user("Guest")
 		context = EventPage("public-page-event").as_context()
 		self.assertEqual(context["hosts"], expected["hosts"])
-		self.assertEqual(context["dates"], expected["dates"])
+		self.assertEqual(context["event_date"], expected["event_date"])
 
 	def test_schedule_time_before_ten(self):
 		event = frappe.get_doc(

@@ -3,7 +3,16 @@ from itertools import groupby
 
 import frappe
 from frappe import _
-from frappe.utils import comma_sep, format_date, get_datetime, get_system_timezone, get_time, get_url, getdate
+from frappe.utils import (
+	comma_sep,
+	format_date,
+	get_datetime,
+	get_system_timezone,
+	get_time,
+	get_url,
+	getdate,
+	nowdate,
+)
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import co_hosts_of, primary_host_of, registration_link
@@ -37,6 +46,11 @@ def format_time_range(start, end) -> str:
 	return RANGE_SEPARATOR.join(filter(None, [format_time(start), format_time(end)]))
 
 
+def format_full_date(date) -> str:
+	pattern = "EEEE, d MMMM" if date.year == getdate(nowdate()).year else "EEEE, d MMMM y"
+	return format_date(date, pattern)
+
+
 def not_found():
 	frappe.throw(_("Page not found"), frappe.PageDoesNotExistError)
 
@@ -64,8 +78,7 @@ class EventPage:
 	def as_context(self) -> dict:
 		return {
 			"event": self.event,
-			"dates": self.dates(),
-			"times": format_time_range(self.event.start_time, self.event.end_time),
+			"event_date": self.event_date(),
 			"timezone": self.timezone(),
 			"page": self.page,
 			"pages": self.pages(),
@@ -97,11 +110,22 @@ class EventPage:
 			order_by="creation",
 		)
 
-	def dates(self) -> str:
-		start, end = self.event.start_date, self.event.end_date
-		if not end or getdate(end) == getdate(start):
-			return format_day(start)
-		return f"{format_day(start)}{RANGE_SEPARATOR}{format_day(end)}"
+	def event_date(self) -> dict:
+		start_date = getdate(self.event.start_date)
+		return {
+			"month": format_date(start_date, "MMM"),
+			"day": start_date.day,
+			"full_date": format_full_date(start_date),
+			"time_range": " ".join(filter(None, [self.time_range(), self.timezone()["label"]])),
+		}
+
+	def time_range(self) -> str:
+		start_time, end_time = self.event.start_time, self.event.end_time
+		end_date = getdate(self.event.end_date) if self.event.end_date else None
+		if not end_date or end_date == getdate(self.event.start_date):
+			return format_time_range(start_time, end_time)
+		end_text = ", ".join(filter(None, [format_date(end_date, "d MMM"), format_time(end_time)]))
+		return RANGE_SEPARATOR.join(filter(None, [format_time(start_time), end_text]))
 
 	def timezone(self) -> dict:
 		name = self.event.time_zone or get_system_timezone()
