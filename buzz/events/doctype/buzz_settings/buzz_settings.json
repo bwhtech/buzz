@@ -48,7 +48,6 @@
    "label": "Public Event Page"
   },
   {
-   "default": "Classic",
    "description": "Default look of the public event pages. An event can pick its own.",
    "fieldname": "event_page_theme",
    "fieldtype": "Link",
@@ -254,7 +253,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-21 14:00:00.000000",
+ "modified": "2026-09-22 00:38:54.748044",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",
