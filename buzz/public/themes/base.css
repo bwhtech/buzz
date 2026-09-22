@@ -218,8 +218,20 @@ body {
 	border-radius: var(--radius-banner);
 }
 
-.event-title {
+.event-intro {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 24px;
 	margin-top: 24px;
+}
+
+.event-heading {
+	flex: 1;
+	min-width: 0;
+}
+
+.event-title {
 	color: var(--ink-title);
 	font-family: var(--font-display);
 	font-size: 28px;
@@ -250,7 +262,7 @@ body {
 }
 
 .event-actions {
-	margin-top: 20px;
+	flex-shrink: 0;
 }
 
 /* Columns */
@@ -429,37 +441,54 @@ body {
 
 /* Sponsors */
 
-.card {
-	padding: 20px;
-	background: var(--surface);
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-}
-
 .sponsor-tier + .sponsor-tier {
-	margin-top: 20px;
+	margin-top: 40px;
 }
 
 .sponsor-tier-title {
-	margin-bottom: 12px;
-	color: var(--ink-body);
-	font-size: 12px;
-	font-weight: 600;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	margin-bottom: 24px;
+	color: var(--ink-muted);
+	font-family: var(--font-display);
+	font-size: 14px;
+	font-weight: 400;
 	letter-spacing: 0.09em;
 	text-transform: uppercase;
 }
 
+.sponsor-tier-title::after {
+	flex: 1;
+	height: 1px;
+	background: var(--border);
+	content: "";
+}
+
 .sponsor-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: 32px 24px;
+}
+
+.sponsor {
 	display: flex;
-	flex-wrap: wrap;
+	flex-direction: column;
 	align-items: center;
-	gap: 16px 24px;
+	gap: 12px;
+	color: var(--ink-strong);
+	text-align: center;
+	text-decoration: none;
 }
 
 .sponsor-logo {
 	max-width: 120px;
-	max-height: 40px;
+	height: 56px;
 	object-fit: contain;
+}
+
+.sponsor-name {
+	font-weight: 500;
 }
 
 /* Aside */
@@ -495,20 +524,27 @@ body {
 	border-radius: var(--radius);
 }
 
-.host-logos {
+.host-list {
 	display: flex;
-	gap: 8px;
-	margin-bottom: 8px;
+	flex-direction: column;
+	gap: 12px;
 }
 
-.host-logos:not(:has(img)) {
-	display: none;
+.host-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
 }
 
 .host-logo {
+	display: grid;
+	flex-shrink: 0;
+	place-items: center;
 	width: 32px;
 	height: 32px;
 	border-radius: 6px;
+	background: var(--surface-raised);
+	color: var(--ink-strong);
 	object-fit: contain;
 }
 
@@ -690,6 +726,12 @@ summary:focus-visible {
 
 	.event-meta {
 		display: flex;
+	}
+
+	.event-intro {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 20px;
 	}
 
 	/* The meta row under the title carries when and where on a narrow screen. */

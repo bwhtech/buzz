@@ -34,7 +34,7 @@ class TestEventPage(IntegrationTestCase):
 	def test_published_event_context(self):
 		context = EventPage("public-page-event").as_context()
 		self.assertEqual(str(context["event"].name), self.event)
-		self.assertEqual(context["hosted_by"], "Event Page Team")
+		self.assertEqual([host.label for host in context["hosts"]], ["Event Page Team"])
 		self.assertTrue(context["timezone"]["label"])
 
 	def test_unpublished_event_is_not_found(self):
@@ -50,7 +50,7 @@ class TestEventPage(IntegrationTestCase):
 		expected = EventPage("public-page-event").as_context()
 		frappe.set_user("Guest")
 		context = EventPage("public-page-event").as_context()
-		self.assertEqual(context["hosted_by"], expected["hosted_by"])
+		self.assertEqual(context["hosts"], expected["hosts"])
 		self.assertEqual(context["dates"], expected["dates"])
 
 	def test_schedule_time_before_ten(self):
@@ -117,8 +117,10 @@ class TestEventPage(IntegrationTestCase):
 		for name in ("Acme Page Host", "Beta Page Host"):
 			event.append("co_hosts", {"host": ensure_event_host(name)})
 		event.save()
-		hosted_by = EventPage("hosts-page-event").as_context()["hosted_by"]
-		self.assertEqual(hosted_by, "Event Page Team, Acme Page Host and Beta Page Host")
+		hosts = EventPage("hosts-page-event").as_context()["hosts"]
+		self.assertEqual(
+			[host.label for host in hosts], ["Event Page Team", "Acme Page Host", "Beta Page Host"]
+		)
 
 	def test_title_is_escaped(self):
 		frappe.db.set_value("Buzz Event", self.event, "title", "<script>alert(1)</script>")

@@ -62,7 +62,6 @@ class EventPage:
 		return page
 
 	def as_context(self) -> dict:
-		hosts = self.hosts()
 		return {
 			"event": self.event,
 			"dates": self.dates(),
@@ -71,8 +70,7 @@ class EventPage:
 			"page": self.page,
 			"pages": self.pages(),
 			"tabs": self.tabs(),
-			"hosts": hosts,
-			"hosted_by": join_names([host.label for host in hosts]),
+			"hosts": self.hosts(),
 			"schedule": self.schedule,
 			"speakers": self.speakers,
 			"sponsor_tiers": self.sponsor_tiers,
@@ -84,7 +82,7 @@ class EventPage:
 
 	def tabs(self) -> list[dict]:
 		sections = [
-			("about", _("About"), self.event.about),
+			("about", _("About"), True),
 			("schedule", _("Schedule"), self.schedule),
 			("speakers", _("Speakers"), self.speakers),
 			("sponsors", _("Sponsors"), self.sponsor_tiers),
@@ -189,13 +187,13 @@ class EventPage:
 			"Sponsorship Tier",
 			filters={"event": self.event.name},
 			fields=["name", "title"],
-			order_by="price desc",
+			order_by="price desc, creation asc",
 		)
 		tier_order = [tier.name for tier in tiers] + [None]
 		tier_titles = {tier.name: tier.title for tier in tiers}
 		return [
 			{
-				"title": tier_titles.get(tier, ""),
+				"title": tier_titles.get(tier) or _("Other"),
 				"sponsors": [sponsor for sponsor in sponsors if sponsor.tier == tier],
 			}
 			for tier in tier_order

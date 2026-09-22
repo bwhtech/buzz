@@ -19,20 +19,24 @@
 		<event-banner class="event-banner" seed="{{ event.title }}"></event-banner>
 		{% endif %}
 
-		<h1 class="event-title">{{ event.title }}</h1>
+		<div class="event-intro">
+			<div class="event-heading">
+				<h1 class="event-title">{{ event.title }}</h1>
 
-		<div class="event-meta">
-			<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>{{ dates }}</span>
-			{% if times %}<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>{{ times }} {{ timezone.label }}</span>{% endif %}
-			{% if venue %}<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12s-8-7-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>{{ venue.name }}</span>{% elif event.medium == "Online" %}<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12s-8-7-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>{{ _("Online") }}</span>{% endif %}
-		</div>
+				<div class="event-meta">
+					<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>{{ dates }}</span>
+					{% if times %}<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>{{ times }} {{ timezone.label }}</span>{% endif %}
+					{% if venue %}<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12s-8-7-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>{{ venue.name }}</span>{% elif event.medium == "Online" %}<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12s-8-7-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>{{ _("Online") }}</span>{% endif %}
+				</div>
+			</div>
 
-		<div class="event-actions">
-			{% if registrations_closed %}
-			<span class="btn btn-secondary" aria-disabled="true">{{ _("Registrations closed") }}</span>
-			{% elif register_url %}
-			<a class="btn btn-primary" href="{{ register_url }}">{{ _("Register") }}</a>
-			{% endif %}
+			<div class="event-actions">
+				{% if registrations_closed %}
+				<span class="btn btn-secondary" aria-disabled="true">{{ _("Registrations closed") }}</span>
+				{% elif register_url %}
+				<a class="btn btn-primary" href="{{ register_url }}">{{ _("Register") }}</a>
+				{% endif %}
+			</div>
 		</div>
 
 		<div class="event-columns">
@@ -59,12 +63,14 @@
 				</nav>
 				{% endif %}
 
-				{% if event.about %}
 				<section class="section tab-panel" id="panel-about">
 					<h2 class="section-title">{{ _("About") }}</h2>
+					{% if event.about %}
 					<div class="prose">{{ event.about | safe }}</div>
+					{% else %}
+					<p class="empty-state">{{ _("No details about this event yet.") }}</p>
+					{% endif %}
 				</section>
-				{% endif %}
 
 				{% if schedule %}
 				<section class="section tab-panel" id="panel-schedule">
@@ -106,21 +112,21 @@
 				{% if sponsor_tiers %}
 				<section class="section tab-panel" id="panel-sponsors">
 					<h2 class="section-title">{{ _("Sponsors") }}</h2>
-					<div class="sponsors card">
-						{% for tier in sponsor_tiers %}
-						<div class="sponsor-tier">
-							{% if tier.title %}<h3 class="sponsor-tier-title">{{ tier.title }}</h3>{% endif %}
-							<ul class="sponsor-list">
-								{% for sponsor in tier.sponsors %}
-								<li class="sponsor">
-									{% set logo %}<img class="sponsor-logo" src="{{ sponsor.company_logo }}" alt="{{ sponsor.company_name }}">{% endset %}
-									{% if sponsor.website %}<a href="{{ sponsor.website }}" rel="noopener" target="_blank">{{ logo }}</a>{% else %}{{ logo }}{% endif %}
-								</li>
-								{% endfor %}
-							</ul>
-						</div>
-						{% endfor %}
+					{% for tier in sponsor_tiers %}
+					<div class="sponsor-tier">
+						{% if sponsor_tiers | length > 1 %}
+						<h3 class="sponsor-tier-title">{{ tier.title }}</h3>
+						{% endif %}
+						<ul class="sponsor-list">
+							{% for sponsor in tier.sponsors %}
+							<li>
+								{% set content %}<img class="sponsor-logo" src="{{ sponsor.company_logo }}" alt=""><span class="sponsor-name">{{ sponsor.company_name }}</span>{% endset %}
+								{% if sponsor.website %}<a class="sponsor" href="{{ sponsor.website }}" rel="noopener" target="_blank">{{ content }}</a>{% else %}<div class="sponsor">{{ content }}</div>{% endif %}
+							</li>
+							{% endfor %}
+						</ul>
 					</div>
+					{% endfor %}
 				</section>
 				{% endif %}
 				{% endif %}
@@ -148,10 +154,18 @@
 				{% if hosts %}
 				<section class="aside-block hosts">
 					<h2 class="label">{{ _("Hosted by") }}</h2>
-					<div class="host-logos">
-						{% for host in hosts %}{% if host.logo %}<img class="host-logo" src="{{ host.logo }}" alt="">{% endif %}{% endfor %}
-					</div>
-					<p class="aside-value">{{ hosted_by }}</p>
+					<ul class="host-list">
+						{% for host in hosts %}
+						<li class="host-row">
+							{% if host.logo %}
+							<img class="host-logo" src="{{ host.logo }}" alt="">
+							{% else %}
+							<span class="host-logo">{{ host.label[:1] | upper }}</span>
+							{% endif %}
+							<span class="aside-value">{{ host.label }}</span>
+						</li>
+						{% endfor %}
+					</ul>
 				</section>
 				{% endif %}
 			</aside>
