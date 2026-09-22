@@ -30,7 +30,10 @@ a {
 	text-decoration: none;
 }
 
+/* A column whose content grows, so a short page still puts the footer at the bottom of the screen. */
 body {
+	display: flex;
+	flex-direction: column;
 	min-height: 100vh;
 	background: var(--page-bg);
 	color: var(--ink-body);
@@ -206,6 +209,7 @@ body {
 /* Hero */
 
 .event-content {
+	flex: 1;
 	margin-block: 16px 64px;
 }
 
@@ -373,6 +377,16 @@ body {
 .event-main:has(#tab-sponsors:checked) [for="tab-sponsors"] {
 	border-bottom-color: var(--ink-strong);
 	color: var(--ink-strong);
+}
+
+/* The active tab already names the panel; the heading stays for screen readers. */
+.event-main:has(.tab-input) .tab-panel > .section-title {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
 }
 
 .event-main:has(.tab-input:focus-visible) .tabs {
@@ -638,33 +652,38 @@ body {
 
 .site-footer {
 	display: flex;
-	flex-direction: column;
+	flex-wrap: wrap;
 	align-items: center;
-	gap: 12px;
-	padding: 32px 0;
+	justify-content: space-between;
+	gap: 16px;
+	margin-top: 32px;
+	padding: 20px 8px 24px;
 	border-top: 1px solid var(--border);
 	color: var(--ink-muted);
 	font-size: 13px;
-	text-align: center;
-}
-
-.site-footer:not(:has(*)) {
-	display: none;
 }
 
 .footer-logo {
-	max-height: 32px;
+	width: auto;
+	height: 16px;
+}
+
+/* The bundled wordmark as a shape, in the footer's muted ink. */
+span.footer-logo {
+	aspect-ratio: 313 / 244;
+	background-color: currentColor;
+	mask: url("/assets/buzz/images/buzz-logo-no-bg.svg") center / contain no-repeat;
 }
 
 .footer-links {
 	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
-	gap: 8px 20px;
+	align-items: center;
+	gap: 20px;
 }
 
-.footer-legal {
-	white-space: pre-line;
+.footer-brand,
+.footer-links a {
+	display: flex;
 }
 
 /* Motion */
@@ -690,6 +709,7 @@ body {
 .tab,
 .menu a,
 .menu button,
+.footer-brand,
 .footer-links a {
 	transition:
 		color 150ms ease,
@@ -739,6 +759,7 @@ summary:focus-visible {
 	}
 
 	.tab:hover,
+	.footer-brand:hover,
 	.footer-links a:hover {
 		color: var(--ink-strong);
 	}
@@ -785,16 +806,6 @@ summary:focus-visible {
 	.prose {
 		font-size: 16px;
 		line-height: 1.75;
-	}
-
-	/* The active tab already names the panel; the heading stays for screen readers. */
-	.event-main:has(.tab-input) .tab-panel > .section-title {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip-path: inset(50%);
-		white-space: nowrap;
 	}
 
 	/* The tab rule runs to the screen edges, past the page gutter. */
