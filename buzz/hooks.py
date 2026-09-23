@@ -52,10 +52,7 @@ website_redirects = [
 # Scheduled Tasks
 # ---------------
 
-scheduler_events = {
-	"hourly": ["buzz.tasks.sync_pending_online_payments"],
-	"daily": ["buzz.tasks.unpublish_ticket_types_after_last_date"],
-}
+scheduler_events = {"daily": ["buzz.tasks.unpublish_ticket_types_after_last_date"]}
 
 # Testing
 # -------

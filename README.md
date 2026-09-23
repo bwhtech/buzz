@@ -7,6 +7,8 @@
 
 <h1>Buzz</h1>
 
+<a href="https://bwh.tech"><img src=".github/images/built-at-bwh.svg" height="28" alt="Built at BWH"></a>
+
 **Open source, self-hosted event management platform.**<br>
 Tickets, add-ons, sponsorships, check-ins, and attendee self-service — all driven by a single **Buzz Event**.
 
