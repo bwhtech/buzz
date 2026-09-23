@@ -25,6 +25,7 @@ class BuzzSettings(Document):
 		default_sponsor_deck_email_template: DF.Link | None
 		default_sponsor_deck_reply_to: DF.Data | None
 		default_ticket_email_template: DF.Link | None
+		event_page_theme: DF.Link | None
 		event_proposal_banner_title: DF.Data | None
 		event_proposal_success_message: DF.MarkdownEditor | None
 		event_proposal_success_title: DF.Data | None

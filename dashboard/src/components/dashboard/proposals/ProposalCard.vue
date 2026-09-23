@@ -86,7 +86,6 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 						For
 						<EventHoverCard
 							class="text-ink-gray-8"
-							:event="proposal.event"
 							:title="proposal.event_title"
 							:start-date="proposal.start_date"
 							:start-time="proposal.start_time"

@@ -21,6 +21,8 @@ before_uninstall = "buzz.uninstall.before_uninstall"
 
 
 website_route_rules = [
+	{"from_route": "/events/<event_route>", "to_route": "event"},
+	{"from_route": "/events/<event_route>/<page_route>", "to_route": "event"},
 	{"from_route": "/b", "to_route": "dashboard"},
 	{"from_route": "/b/<path:app_path>", "to_route": "dashboard"},
 ]
@@ -80,7 +82,10 @@ doc_events = {
 	},
 }
 
-fixtures = [{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Event Manager", "Frontdesk Manager"]]}}]
+fixtures = [
+	{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Event Manager", "Frontdesk Manager"]]}},
+	{"dt": "Buzz Theme", "filters": {"is_standard": 1}},
+]
 
 user_invitation = {
 	"allowed_roles": {"Event Manager": ["Buzz User"], "Buzz User": ["Buzz User"]},

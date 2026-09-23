@@ -71,6 +71,7 @@ declare module 'vue' {
     EventSponsorshipActions: typeof import('./src/components/dashboard/sponsorships/EventSponsorshipActions.vue')['default']
     EventTalkActions: typeof import('./src/components/dashboard/proposals/EventTalkActions.vue')['default']
     EventTalkProposalDrawer: typeof import('./src/components/dashboard/proposals/EventTalkProposalDrawer.vue')['default']
+    EventThemeSetting: typeof import('./src/components/dashboard/events/EventThemeSetting.vue')['default']
     FilterBar: typeof import('./src/components/common/filters/FilterBar.vue')['default']
     FormFieldSections: typeof import('./src/components/FormFieldSections.vue')['default']
     GuestInfoDrawer: typeof import('./src/components/dashboard/events/GuestInfoDrawer.vue')['default']

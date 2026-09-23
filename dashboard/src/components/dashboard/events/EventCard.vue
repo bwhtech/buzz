@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { bannerPattern } from "@public/js/event_banner"
 import { Avatar, Badge, Button } from "frappe-ui"
 import { computed } from "vue"
 
 import type { MyEvent } from "@/types"
 import { dayLabel, timeLabel } from "@/utils/dateLabels"
-import { bannerPattern } from "@/utils/eventBanner"
 
 // The Events page files cards under a date heading; a standalone list has to
 // carry the date on the card itself.
@@ -17,7 +17,7 @@ const canManage = computed(() => props.event.is_host)
 
 const startTime = computed(() => (props.event.start_time ? timeLabel(props.event.start_time) : ""))
 
-const banner = computed(() => ({ backgroundImage: bannerPattern(props.event.name) }))
+const banner = computed(() => ({ backgroundImage: bannerPattern(props.event.title) }))
 
 // Only a host can fix a missing venue; for everyone else it is news, not a warning.
 const venue = computed(() => {

@@ -1,13 +1,12 @@
 <script setup lang="ts">
+import { bannerPattern } from "@public/js/event_banner"
 import { HoverCard, dayjs } from "frappe-ui"
 import { computed } from "vue"
 
 import { timeLabel } from "@/utils/dateLabels"
-import { bannerPattern } from "@/utils/eventBanner"
 
 const props = defineProps<{
-	/** The event's name, which is what the banner pattern is drawn from. */
-	event: string
+	/** Also seeds the banner pattern, as it does everywhere else. */
 	title: string
 	startDate?: string | null
 	startTime?: string | null
@@ -18,7 +17,7 @@ const props = defineProps<{
 // The class a caller passes belongs on the trigger, not on the hover card's root.
 defineOptions({ inheritAttrs: false })
 
-const banner = computed(() => ({ backgroundImage: bannerPattern(props.event) }))
+const banner = computed(() => ({ backgroundImage: bannerPattern(props.title) }))
 
 // Plain dayjs: start_date is date-only, and a timezone shift moves it a day back.
 // The time leads, as the one thing a reader checks first.

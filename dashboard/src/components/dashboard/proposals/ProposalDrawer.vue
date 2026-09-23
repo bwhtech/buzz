@@ -214,7 +214,6 @@ const fields = computed(() => [
 						<DrawerDescription class="text-base text-ink-gray-6">
 							<EventHoverCard
 								class="text-ink-gray-6"
-								:event="proposal.event"
 								:title="proposal.event_title || 'Deleted event'"
 								:start-date="proposal.start_date"
 								:start-time="proposal.start_time"

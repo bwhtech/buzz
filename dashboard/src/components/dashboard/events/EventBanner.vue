@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { bannerPattern } from "@public/js/event_banner"
 import { refDebounced } from "@vueuse/core"
 import { Button, ErrorMessage } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
-import { bannerPattern } from "@/utils/eventBanner"
 
 // The picker is filtered to these, and the file that comes back is checked against the
 // same list: `accept` is a hint the OS may ignore, and a drag-drop never consults it.

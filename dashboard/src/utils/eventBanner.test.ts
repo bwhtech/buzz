@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import { bannerPattern } from "./eventBanner.ts"
+import { bannerPattern } from "../../../buzz/public/js/event_banner.ts"
 
 const NAMES = ["Frappe Yatra 2026", "PyCon India", "1042", "", "a"]
 
@@ -10,7 +10,7 @@ test("an event always draws the same pattern", () => {
 })
 
 test("different events draw different patterns", () => {
-	const patterns = new Set(NAMES.map(bannerPattern))
+	const patterns = new Set(NAMES.map((name) => bannerPattern(name)))
 	assert.equal(patterns.size, NAMES.length)
 })
 

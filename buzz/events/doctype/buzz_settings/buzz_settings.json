@@ -7,6 +7,8 @@
  "field_order": [
   "general_section",
   "support_email",
+  "event_page_section",
+  "event_page_theme",
   "ticketing_section",
   "allow_transfer_ticket_before_event_start_days",
   "column_break_ehsr",
@@ -40,6 +42,18 @@
   "custom_fields_go_after_this"
  ],
  "fields": [
+  {
+   "fieldname": "event_page_section",
+   "fieldtype": "Section Break",
+   "label": "Public Event Page"
+  },
+  {
+   "description": "Default look of the public event pages. An event can pick its own.",
+   "fieldname": "event_page_theme",
+   "fieldtype": "Link",
+   "label": "Theme",
+   "options": "Buzz Theme"
+  },
   {
    "description": "Seeds new teams only. Existing teams read their own Buzz Team Settings.",
    "fieldname": "ticketing_section",
@@ -239,7 +253,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-04 13:00:00.000000",
+ "modified": "2026-09-22 00:38:54.748044",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",
