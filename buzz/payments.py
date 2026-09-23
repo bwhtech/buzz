@@ -1,7 +1,6 @@
 import frappe
 from frappe import _
 from frappe.utils import flt
-from payments.utils import get_payment_gateway_controller
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import record_gateway_refund
@@ -38,6 +37,8 @@ def get_payment_gateways_for_event(event: str) -> list[str]:
 
 
 def get_controller(payment_gateway):
+	from payments.utils import get_payment_gateway_controller
+
 	return get_payment_gateway_controller(payment_gateway)
 
 
