@@ -47,7 +47,7 @@ class BookingService:
 		self.validate_add_ons()
 		booking = self.build_booking()
 		booking.insert(ignore_permissions=True)
-		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+		frappe.db.commit()  # nosemgrep: frappe-manual-commit
 		return self.finalize(booking)
 
 	def validate_event(self) -> None:

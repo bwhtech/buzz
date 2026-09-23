@@ -19,13 +19,13 @@ from buzz.api.sponsorships.schemas import (
 from buzz.api.sponsorships.services import SponsorshipService, list_user_enquiries
 
 
-# nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+# nosemgrep: guest-whitelisted-method
 @frappe.whitelist(allow_guest=True, methods=["GET"])
 def get_enquiry_form(event_route: str, form_route: str = "enquire-sponsorship") -> CustomFormResponse:
 	return SponsorFormService(event_route, form_route).form_data()
 
 
-# nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+# nosemgrep: guest-whitelisted-method
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def submit_enquiry_form(
 	event_route: str,

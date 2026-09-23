@@ -25,7 +25,7 @@ TICKET_FIELDS = [
 
 
 def build_booking_confirmation(booking_id: str, token: str | None) -> BookingConfirmationResponse:
-	# nosemgrep: frappe-semgrep-rules.rules.unchecked-frappe-permission-call -- return value checked below
+	# nosemgrep: unchecked-frappe-permission-call -- return value checked below
 	authorized = verify_booking_access_token(booking_id, token) or frappe.has_permission(
 		"Event Booking", "read", doc=booking_id
 	)
@@ -174,7 +174,7 @@ def build_booking_summary(booking_id: str) -> BookingSummary:
 	cover an attendee somebody else booked for — and they hold the ticket this receipt
 	explains, so they are let through here rather than by widening the doctype's rule.
 	"""
-	# nosemgrep: frappe-semgrep-rules.rules.unchecked-frappe-permission-call -- return value checked below
+	# nosemgrep: unchecked-frappe-permission-call -- return value checked below
 	if not frappe.has_permission("Event Booking", "read", doc=booking_id) and not holds_ticket(booking_id):
 		frappe.throw(_("You are not allowed to view this booking."), frappe.PermissionError)
 

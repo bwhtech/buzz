@@ -192,7 +192,7 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 			},
 		)
 
-		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+		frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def handle_refund_notification(doctype: str, docname: str) -> None:

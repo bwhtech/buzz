@@ -10,14 +10,14 @@ no_cache = 1
 
 def get_context():
 	csrf_token = frappe.sessions.get_csrf_token()
-	frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+	frappe.db.commit()  # nosemgrep: frappe-manual-commit
 	context = frappe._dict()
 	context.boot = get_boot()
 	context.boot.csrf_token = csrf_token
 	return context
 
 
-# nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+# nosemgrep: guest-whitelisted-method
 @frappe.whitelist(methods=["POST"], allow_guest=True)
 def get_context_for_dev():
 	if not frappe.conf.developer_mode:
