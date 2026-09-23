@@ -6,7 +6,7 @@ from buzz.api.account.schemas import GuestInfoResponse, LanguageOption, UserInfo
 from buzz.api.account.services import accepted_timezones, get_request_language
 
 
-@frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_user_info() -> UserInfoResponse | GuestInfoResponse:
 	if frappe.session.user == "Guest":
 		return GuestInfoResponse(
@@ -33,7 +33,7 @@ def get_user_info() -> UserInfoResponse | GuestInfoResponse:
 	)
 
 
-@frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_enabled_languages() -> list[LanguageOption]:
 	languages = frappe.get_all(
 		"Language",
@@ -65,7 +65,7 @@ def update_user_timezone(time_zone: str) -> None:
 	frappe.db.set_value("User", frappe.session.user, "time_zone", time_zone)
 
 
-@frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_translations() -> dict:
 	return get_all_translations(get_request_language())
 

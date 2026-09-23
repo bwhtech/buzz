@@ -55,7 +55,7 @@ Rules that are load-bearing, not style:
   when the decorator is doing more than one thing:
 
 ```python
-# nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+# nosemgrep: guest-whitelisted-method
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 @rate_limit(key="identifier", limit=5, seconds=3600)
 def send_guest_booking_otp(event: int, identifier: str) -> dict | None:
@@ -169,7 +169,7 @@ class CheckinService:
   SQL those lookups replaced was coercing silently.
 - `frappe.parse_json`, not `json.loads` — it already returns a `frappe._dict` for dicts.
 - A manual `frappe.db.commit()` needs
-  `# nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit` and a reason.
+  `# nosemgrep: frappe-manual-commit` and a reason.
 
 ## Tests
 
