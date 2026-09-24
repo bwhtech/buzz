@@ -241,14 +241,14 @@ class TestCommunicationTemplate(CommunicationsTestCase):
 		return html_part(queued_emails(sent.name)[0].message)
 
 	def test_wraps_the_message_in_the_event_header_and_footer(self):
-		html = self.sent_html(route=f"comms-{frappe.generate_hash(length=6)}")
+		html = self.sent_html(route=f"comms-{frappe.generate_hash(length=6)}", is_published=1)
 
 		title = frappe.db.get_value("Buzz Event", self.event, "title")
 		route = frappe.db.get_value("Buzz Event", self.event, "route")
 		self.assertIn(title, html)
 		self.assertIn("Bring a jacket.", html)
-		self.assertIn("View Event", html)
-		self.assertIn(f"/b/register/{route}", html)
+		self.assertIn("View event", html)
+		self.assertIn(f"/events/{route}", html)
 		self.assertIn("reply to this email", html)
 		self.assertNotIn("Unsubscribe", html)
 

@@ -1,3 +1,4 @@
+import base64
 import functools
 import re
 from collections.abc import Callable
@@ -121,7 +122,13 @@ def make_qr_image(data: str) -> bytes:
 	return output.getvalue()
 
 
-def generate_qr_code_file(doc, data: str, field_name: str = "qr_code", file_prefix: str = "qr-code") -> str:
+def qr_data_uri(data: str) -> str:
+	return "data:image/png;base64," + base64.b64encode(make_qr_image(data)).decode()
+
+
+def generate_qr_code_file(
+	doc, data: str, field_name: str = "qr_code", file_prefix: str = "qr-code", is_private: bool = False
+) -> str:
 	"""
 	Generate QR code image and attach as File to a document.
 
@@ -129,6 +136,7 @@ def generate_qr_code_file(doc, data: str, field_name: str = "qr_code", file_pref
 	:param data: The data to encode in the QR code
 	:param field_name: The field name to attach the file to (default: "qr_code")
 	:param file_prefix: Prefix for the file name (default: "qr-code")
+	:param is_private: Store the file as private
 	:return: The file URL of the created QR code image
 	"""
 	qr_data = make_qr_image(data)
@@ -140,6 +148,7 @@ def generate_qr_code_file(doc, data: str, field_name: str = "qr_code", file_pref
 			"attached_to_name": doc.name,
 			"attached_to_field": field_name,
 			"file_name": f"{file_prefix}-{doc.name}.png",
+			"is_private": is_private,
 		}
 	).save(ignore_permissions=True)
 	return qr_code_file.file_url

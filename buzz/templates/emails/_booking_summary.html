@@ -1,0 +1,40 @@
+{%- set muted_style = "color:#7c7c7c" -%}
+{%- set cell_style = "padding:12px 0;border-bottom:1px solid #ededed;vertical-align:top" -%}
+<div style="font-size:13px;color:#7c7c7c;margin:0 0 12px">
+  Booking <span style="font-family:'SF Mono',Menlo,Consolas,monospace;color:#171717">{{ doc.name }}</span>{% if doc.payment_status %} · {{ doc.payment_status }}{% endif %}
+</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #ededed;font-size:14px;line-height:20px">
+  {% for attendee in attendee_rows %}
+  <tr>
+    <td style="{{ cell_style }}">
+      <div style="font-weight:500;color:#171717">{{ attendee.full_name }}</div>
+      <div style="font-size:13px;{{ muted_style }};margin-top:2px">
+        {{ attendee.ticket_type_title }}{% if attendee.number_of_add_ons %} · {{ attendee.number_of_add_ons }} add-on(s){% endif %}
+      </div>
+    </td>
+    <td align="right" style="{{ cell_style }};white-space:nowrap;color:#171717">{{ frappe.utils.fmt_money(attendee.amount, currency=doc.currency) }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:12px;font-size:14px;line-height:20px">
+  <tr>
+    <td style="padding:4px 0;{{ muted_style }}">Subtotal</td>
+    <td align="right" style="padding:4px 0;color:#171717">{{ frappe.utils.fmt_money(doc.net_amount, currency=doc.currency) }}</td>
+  </tr>
+  {% if doc.discount_amount %}
+  <tr>
+    <td style="padding:4px 0;{{ muted_style }}">Discount{% if doc.coupon_code %} ({{ doc.coupon_code }}){% endif %}</td>
+    <td align="right" style="padding:4px 0;color:#171717">&minus; {{ frappe.utils.fmt_money(doc.discount_amount, currency=doc.currency) }}</td>
+  </tr>
+  {% endif %}
+  {% if doc.tax_amount %}
+  <tr>
+    <td style="padding:4px 0;{{ muted_style }}">{{ doc.tax_label or "Tax" }}{% if doc.tax_percentage %} ({{ doc.tax_percentage }}%){% endif %}</td>
+    <td align="right" style="padding:4px 0;color:#171717">{{ frappe.utils.fmt_money(doc.tax_amount, currency=doc.currency) }}</td>
+  </tr>
+  {% endif %}
+  <tr>
+    <td style="padding:10px 0 0;border-top:1px solid #ededed;font-weight:600;color:#171717">{{ total_label }}</td>
+    <td align="right" style="padding:10px 0 0;border-top:1px solid #ededed;font-weight:600;color:#171717">{{ frappe.utils.fmt_money(doc.total_amount, currency=doc.currency) }}</td>
+  </tr>
+</table>

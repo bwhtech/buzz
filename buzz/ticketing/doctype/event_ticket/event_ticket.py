@@ -5,6 +5,7 @@ import frappe
 from frappe.core.api.user_invitation import invite_by_email
 from frappe.model.document import Document
 
+from buzz.emails import is_full_document, send_message_email
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.utils import (
 	generate_ics_file,
@@ -132,7 +133,9 @@ class EventTicket(Document):
 		if ticket_template:
 			email_template = render_email_template(ticket_template, args)
 			subject = email_template.get("subject")
-			content = email_template.get("message")
+			content = email_template.get("message").replace(
+				f'src="{self.qr_code}"', f'embed="{self.qr_code}"'
+			)
 
 		attachments = []
 
@@ -155,11 +158,14 @@ class EventTicket(Document):
 				}
 			)
 
+		full_document = not ticket_template or is_full_document(content)
 		frappe.sendmail(
 			recipients=[self.attendee_email],
 			subject=subject,
 			content=content if ticket_template else None,
 			template="ticket" if not ticket_template else None,
+			raw_html=full_document,
+			add_css=not full_document,
 			args=args,
 			reference_doctype=self.doctype,
 			reference_name=self.name,
@@ -180,6 +186,7 @@ class EventTicket(Document):
 			doc=self,
 			data=self.name,
 			file_prefix="ticket-qr-code",
+			is_private=True,
 		)
 
 	def on_cancel(self):
@@ -187,11 +194,14 @@ class EventTicket(Document):
 		self.send_cancellation_email()
 
 	def send_cancellation_email(self):
-		event_title = frappe.get_cached_value("Buzz Event", self.event, "title")
-		frappe.sendmail(
+		event = frappe.get_cached_doc("Buzz Event", self.event)
+		send_message_email(
+			title=frappe._("Ticket cancelled"),
+			message=frappe._("<p>Hi {0}, your ticket has been cancelled. Sad to see you go.</p>").format(
+				self.attendee_name
+			),
+			event=event,
 			recipients=self.attendee_email,
-			subject=f"Your ticket to {event_title} is cancelled.",
-			message=f"Hi {self.attendee_name}, your ticket has been cancelled successfully. Sad to see you go.",
-			header=[("Ticket Cancelled"), "red"],
+			subject=f"Your ticket to {event.title} is cancelled.",
 			retry=2,
 		)

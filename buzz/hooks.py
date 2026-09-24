@@ -164,11 +164,9 @@ add_to_apps_screen = [
 # Jinja
 # ----------
 
-# add methods and filters to jinja environment
-# jinja = {
-# 	"methods": "events.utils.jinja_methods",
-# 	"filters": "events.utils.jinja_filters"
-# }
+jinja = {
+	"methods": ["buzz.emails.email_event_header", "buzz.emails.email_brand"],
+}
 
 # Installation
 # ------------
