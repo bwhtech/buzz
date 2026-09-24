@@ -1,6 +1,6 @@
 ---
 name: writing-tests
-description: How backend tests build their fixtures in Buzz — factories under buzz/tests/factories/ powered by frappe_factory_bot, instead of raw frappe.get_doc({...}).insert(). Covers authoring a factory, traits, overrides, the flags passthrough, and the Frappe-level traps (per-class rollback, prompt autoname, the User creation throttle, doc cache). Use this whenever writing or modifying a python test under buzz/, and when the user says "add a test", "write tests for X", "convert these tests", or "this test needs a fixture".
+description: How backend tests build their fixtures in Buzz — factories under buzz/tests/factories/ powered by frappe_factory_bot, instead of raw frappe.get_doc({...}).insert(). Covers authoring a factory, traits, overrides, the flags passthrough, and the Frappe-level traps (per-class rollback, committed fixtures, autoname, the User creation throttle, doc cache, unmocked mail). Use this whenever writing or modifying a python test under buzz/, and when the user says "add a test", "write tests for X", "convert these tests", or "this test needs a fixture".
 ---
 
 # Writing backend tests in Buzz
@@ -16,7 +16,9 @@ to `pyproject.toml`.
 ## Rules
 
 1. **Never** `frappe.get_doc({...}).insert()` or `frappe.new_doc(...)` to build a fixture.
-   Use a factory. If the doctype has none, write it first.
+   Use a factory. If the doctype has none, write it first. The raw inserts still left in
+   `test_booking.py` (Offline Payment Method, Buzz Coupon Code, Buzz Custom Field) are
+   debt awaiting a factory, not precedent.
 2. One factory per doctype, `buzz/tests/factories/<snake_case_doctype>_factory.py`, class
    `<PascalCaseDocType>Factory(BaseFactory[<DocClass>])`. Parameterise the generic with the
    real controller class so the IDE types the result. Re-export from `__init__.py`.
@@ -34,13 +36,15 @@ to `pyproject.toml`.
    building one combined trait. Don't run ahead of the evidence, though — a configuration
    used once is an override, and inventing traits before anything repeats just moves the
    noise into the factory.
-5. **Every default that hits a unique constraint must be unique per call.** Rollback is per
-   *class*, not per test, and three test files already comment on it
-   (`test_buzz_team.py:27`, `:155`, `test_buzz_event.py:165`) — a fixed default collides
-   with the previous test in the same class. `_fake.unique.*` covers that, but it only
-   dedupes within one process: for a value that is the doctype's **primary key** (anything
-   prompt-autonamed) use `frappe.generate_hash(length=8)`, because those rows outlive the
-   run that made them and Faker will eventually repeat itself.
+5. **Every default that hits a unique constraint must be unique per call** — a `unique`
+   column, or a controller duplicate check such as `TicketAddon.validate_duplicate_title`.
+   Rollback is per *class*, not per test (`TestBuzzTeam` and `TestSetTeamFromSoleMembership`
+   comment on it), so a fixed default collides with the previous test in the same class.
+   Use `frappe.generate_hash(length=8)` for these: rows can outlive a run (see the commit
+   trap), and `_fake.unique.*` only dedupes within one process. Fields with no such
+   constraint don't need uniqueness at all — a plain `_fake.*` is enough. `_fake.unique`
+   also runs dry: `word()` has 971 values per process and then raises
+   `UniquenessException`.
 6. Foreign keys honour the override before creating anything:
    `self.overrides.get("event") or BuzzEventFactory.create().name`. Without this, passing
    `event=<existing>` still spawns an orphan event. Import the related factory *inside* the
@@ -118,9 +122,12 @@ The same route carries doctype flags the controller reads itself —
 
 ## Traps
 
+**Some code under test commits.** `process_booking` does, so every row made before it in
+that test survives the rollback and outlives the run. Design defaults as if every fixture
+leaks.
+
 **Administrator must not own throwaway teams.** `create_default_team_for` picks the *first*
-enabled Owner membership (`buzz_team.py:19`), and test rows are not always rolled back —
-`process_booking` commits, so its fixtures survive. A team inserted plainly as Administrator
+enabled Owner membership, and fixtures leak (above). A team inserted plainly as Administrator
 therefore becomes Administrator's "default team" for every later run on that site, and
 `setup_test_records()` then fails with `Venue Test Venue belongs to another team.` Use
 `BuzzTeamFactory.create_owned_by()`.
@@ -131,15 +138,28 @@ per fixture trips it after a couple of runs. Where the identity is fixed and one
 all you want, use `UserFactory.create_once(email)`; use `create()` only when the test needs
 a genuinely distinct user.
 
-**Prompt-autonamed doctypes need `name` in the attributes.** `Event Category` uses
-`autoname: prompt`, and `_prompt_autoname` throws when `doc.name` is unset
-(`frappe/model/naming.py:225`). Set `"name"` in `default_attributes`.
+**Only prompt and uuid autonames keep a `name` you pass.** `Event Category` is
+`autoname: prompt`, so `_prompt_autoname` throws unless `"name"` is in
+`default_attributes`. Every other rule (hash, autoincrement, naming series) discards a
+pre-set name in `set_new_name` — `Event Host` became hash-named in #447, so its factory
+sets `host_name`. Check the doctype's `autoname` before setting `name`, and look records
+up by their label field, never by a guessed docname.
 
 **`before_insert` / `validate` can clobber an override.** Overrides are merged into the dict
 that becomes the doc, and those hooks run after. Set the field after `.create()` and save
 again.
 
-**The rollback restores a Single but not its cached copy** (`test_buzz_team_settings.py:47`).
+**The test site has no email account or payment gateway.** Controllers that mail
+(ticket cancel, team membership) need `patch("frappe.sendmail")`; paid bookings
+need `patch("buzz.api.booking.services.get_payment_link_for_booking", return_value="/pay")`.
+
+**Factory results are a subclass.** `create()` swaps the doc's class for a temporary
+subclass to attach `__del__`, so check with `isinstance`, never `type(doc) is ...`.
+
+**Traits are not inherited.** Trait lookup reads the factory's own `__dict__`, so a trait
+defined on a parent factory raises `TypeError` on the child.
+
+**The rollback restores a Single but not its cached copy** (`TestBuzzTeamSettings`).
 A fixture touching `Buzz Team Settings` or `Buzz Settings` needs
 `frappe.clear_document_cache`.
 
@@ -162,10 +182,19 @@ class BookingTestCase(IntegrationTestCase):
 
 `buzz/api/booking/test_booking.py` is the reference conversion.
 
-Some older test modules still export ad-hoc helpers — `create_user` / `create_owned_team` /
-`payload_for` in `test_buzz_team.py`, `ensure_prompt_named_record` / `ensure_event_host` in `test_forms.py`,
-`create_event` / `create_ticket` in `test_permissions.py`. They are being retired module by
-module; `context_local.md` tracks who still imports what. Do not add new callers.
+Older test modules still export ad-hoc helpers, being retired module by module. Do not add
+new callers; when converting a module, swap its imports for factories:
+
+| Helper | Home | Factory |
+| --- | --- | --- |
+| `create_user` | `test_buzz_team.py` | `UserFactory.create_once` |
+| `create_owned_team` | `test_buzz_team.py` | `BuzzTeamFactory.create_owned_by` |
+| `payload_for` | `test_buzz_team.py` | the doctype's `default_attributes` |
+| `ensure_prompt_named_record` | `test_forms.py` | `EventCategoryFactory` |
+| `ensure_event_host` | `test_forms.py` | `EventHostFactory` |
+| `create_event` / `create_ticket_type` / `create_booking` / `create_ticket` | `test_permissions.py` | `BuzzEventFactory` / `EventTicketTypeFactory` / none yet |
+
+Find who still imports one: `grep -rln "import.*create_owned_team" buzz --include='test_*.py'`.
 
 ## Running tests
 
