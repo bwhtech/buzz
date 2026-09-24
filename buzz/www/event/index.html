@@ -1,14 +1,18 @@
 {% extends "buzz/templates/event_page/layout.html" %}
 
 {% block head %}{% autoescape true %}
-	<title>{% if page %}{{ page.title }} · {% endif %}{{ event.title }}</title>
+	<title>{{ meta.title }}</title>
 	<meta name="description" content="{{ meta.description }}">
-	<meta property="og:title" content="{{ event.title }}">
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="{{ brand.name }}">
+	<meta property="og:title" content="{{ meta.title }}">
 	<meta property="og:description" content="{{ meta.description }}">
 	<meta property="og:url" content="{{ meta.url }}">
-	{% if meta.image %}<meta property="og:image" content="{{ meta.image }}">{% endif %}
-	<meta name="twitter:card" content="summary_large_image">
+	{% if meta.image %}<meta property="og:image" content="{{ meta.image }}">
+	<meta property="og:image:alt" content="{{ event.title }}">{% endif %}
+	<meta name="twitter:card" content="{{ meta.card }}">
 	<link rel="canonical" href="{{ meta.url }}">
+	{% if structured_data %}<script type="application/ld+json">{{ structured_data | tojson }}</script>{% endif %}
 {% endautoescape %}{% endblock %}
 
 {% block content %}{% autoescape true %}

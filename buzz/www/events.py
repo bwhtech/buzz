@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import get_url, today
 
-from buzz.www.event import format_day, not_found
+from buzz.www.event.index import format_day, not_found
 from buzz.www.site_header import apply_site_context
 
 no_cache = 1

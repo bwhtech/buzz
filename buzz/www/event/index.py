@@ -10,7 +10,6 @@ from frappe.utils import (
 	get_datetime,
 	get_system_timezone,
 	get_time,
-	get_url,
 	getdate,
 	nowdate,
 )
@@ -18,8 +17,9 @@ from frappe.utils import (
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import co_hosts_of, primary_host_of, registration_link
 from buzz.utils import get_time_zone_label
+from buzz.www.event.meta import EventMeta
+from buzz.www.event.venue_map import venue_map_url
 from buzz.www.site_header import apply_site_context
-from buzz.www.venue_map import venue_map_url
 
 no_cache = 1
 RANGE_SEPARATOR = " \u2013 "
@@ -86,7 +86,7 @@ class EventPage:
 		return page
 
 	def as_context(self) -> dict:
-		return {
+		context = {
 			"event": self.event,
 			"event_date": self.event_date(),
 			"timezone_label": self.timezone_label,
@@ -100,8 +100,9 @@ class EventPage:
 			"venue": self.venue(),
 			"register_url": registration_link(self.event),
 			"registrations_closed": are_registrations_closed(self.event),
-			"meta": self.meta(),
 		}
+		meta = EventMeta(self.event, self.page, context)
+		return context | {"meta": meta.as_dict(), "structured_data": meta.structured_data()}
 
 	def tabs(self) -> list[dict]:
 		sections = [
@@ -251,11 +252,3 @@ class EventPage:
 		return (
 			{"name": venue.name, "address": venue.address, "map_url": venue_map_url(venue)} if venue else None
 		)
-
-	def meta(self) -> dict:
-		image = self.event.meta_image or self.event.banner_image or self.event.card_image
-		return {
-			"description": self.event.short_description or "",
-			"image": get_url(image) if image else "",
-			"url": get_url(f"/events/{self.event.route}" + (f"/{self.page.route}" if self.page else "")),
-		}

@@ -3,6 +3,12 @@
 {% block head %}{% autoescape true %}
 	<title>{{ title }}</title>
 	<meta name="description" content="{{ meta.description }}">
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="{{ brand.name }}">
+	<meta property="og:title" content="{{ title }}">
+	<meta property="og:description" content="{{ meta.description }}">
+	<meta property="og:url" content="{{ meta.url }}">
+	<meta name="twitter:card" content="summary">
 	<link rel="canonical" href="{{ meta.url }}">
 {% endautoescape %}{% endblock %}
 
