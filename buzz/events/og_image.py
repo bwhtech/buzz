@@ -12,7 +12,6 @@ from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageOps
 from buzz.events.banner_pattern import rings_banner
 from buzz.events.doctype.buzz_theme.buzz_theme import resolve_theme
 from buzz.www.event.index import RANGE_SEPARATOR, EventPage, format_time
-from buzz.www.event.meta import is_private_file
 
 # Bump when the layout changes, so every event renders again on its next save
 RENDER_VERSION = 1
@@ -43,7 +42,6 @@ def generate(event_name: str):
 	# Not `event`: frappe.enqueue takes that keyword for itself
 	doc = frappe.get_doc("Buzz Event", event_name)
 	if not doc.is_published:
-		clear(doc)
 		return
 	image = EventOgImage(doc)
 	if not image.can_render():
@@ -164,8 +162,7 @@ class EventOgImage:
 
 	def uploaded_banner(self) -> Image.Image | None:
 		url = self.event.banner_image
-		# A private banner drawn into a public image would leak it
-		if not url or urlparse(url).scheme or is_private_file(url):
+		if not url or urlparse(url).scheme:
 			return None
 		try:
 			content = frappe.get_doc("File", {"file_url": url}).get_content()

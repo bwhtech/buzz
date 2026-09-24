@@ -9,10 +9,6 @@ DESCRIPTION_LENGTH = 160
 IMAGE_FIELDS = ("meta_image", "og_image", "banner_image", "card_image")
 
 
-def is_private_file(url: str) -> bool:
-	return url.startswith("/private/")
-
-
 def plain_text(html: str | None) -> str:
 	return BeautifulSoup(html or "", "html.parser").get_text(" ")
 
@@ -45,7 +41,7 @@ class EventMeta:
 	def image(self) -> str:
 		# Crawlers get a 403 on private files, which drops the preview image silently
 		urls = [self.event.get(field) for field in IMAGE_FIELDS]
-		public = next((url for url in urls if url and not is_private_file(url)), None)
+		public = next((url for url in urls if url and not url.startswith("/private/")), None)
 		return get_url(public) if public else ""
 
 	def structured_data(self) -> dict | None:

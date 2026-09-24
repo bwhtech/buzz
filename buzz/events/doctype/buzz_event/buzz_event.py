@@ -354,12 +354,7 @@ class BuzzEvent(Document):
 		from buzz.events.og_image import EventOgImage, enqueue_generate
 
 		# A live worker would render test events mid-test and race their teardown
-		if frappe.in_test or not self.route:
-			return
-		# Unpublishing takes the page down, so the job removes its share image too
-		if not self.is_published:
-			if self.og_image:
-				enqueue_generate(str(self.name))
+		if frappe.in_test or not (self.is_published and self.route):
 			return
 		try:
 			needs_update = EventOgImage(self).needs_update()
