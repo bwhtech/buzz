@@ -1,3 +1,5 @@
+import json
+import re
 from unittest.mock import patch
 
 import frappe
@@ -8,8 +10,8 @@ from frappe.website.serve import get_response_content
 from buzz.api.events.test_events import create_event
 from buzz.api.forms.test_forms import ensure_event_host
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
-from buzz.www.event import EventPage
-from buzz.www.venue_map import google_maps_url, open_street_map_url
+from buzz.www.event.index import EventPage
+from buzz.www.event.venue_map import google_maps_url, open_street_map_url
 
 
 def render(route: str) -> str:
@@ -17,6 +19,11 @@ def render(route: str) -> str:
 	# CI never runs bench build, so there is no assets.json for bundled_asset to read
 	with patch("frappe.utils.get_assets_json", return_value={}):
 		return get_response_content(f"/events/{route}")
+
+
+def structured_data(html: str) -> dict:
+	match = re.search(r'<script type="application/ld\+json">(.*?)</script>', html, re.DOTALL)
+	return json.loads(match.group(1))
 
 
 class TestEventPage(IntegrationTestCase):
@@ -172,6 +179,77 @@ class TestEventPage(IntegrationTestCase):
 	def test_tabs_list_only_sections_with_content(self):
 		tabs = EventPage("public-page-event").as_context()["tabs"]
 		self.assertEqual([tab["key"] for tab in tabs], ["about"])
+
+	def test_description_falls_back_to_about(self):
+		frappe.db.set_value(
+			"Buzz Event", self.event, {"short_description": "", "about": "<p>Tom &amp; Jerry " + "word " * 60}
+		)
+		description = EventPage("public-page-event").as_context()["meta"]["description"]
+		self.assertTrue(description.startswith("Tom & Jerry word"))
+		self.assertLessEqual(len(description), 160)
+
+	def test_additional_page_title_names_both(self):
+		frappe.get_doc(
+			{
+				"doctype": "Additional Event Page",
+				"event": self.event,
+				"title": "Venue",
+				"content": "<p>Map</p>",
+				"is_published": 1,
+			}
+		).insert()
+		context = EventPage("public-page-event", "venue").as_context()
+		self.assertEqual(context["meta"]["title"], f"Venue · {context['event'].title}")
+		self.assertIsNone(context["structured_data"])
+
+	def test_private_image_is_skipped(self):
+		frappe.db.set_value(
+			"Buzz Event",
+			self.event,
+			{"meta_image": "/private/files/meta.png", "banner_image": "/files/banner.png", "card_image": ""},
+		)
+		meta = EventPage("public-page-event").as_context()["meta"]
+		self.assertTrue(meta["image"].endswith("/files/banner.png"))
+		self.assertEqual(meta["card"], "summary_large_image")
+
+	def test_no_image_uses_summary_card(self):
+		frappe.db.set_value(
+			"Buzz Event", self.event, {"meta_image": "", "banner_image": "", "card_image": ""}
+		)
+		meta = EventPage("public-page-event").as_context()["meta"]
+		self.assertEqual((meta["image"], meta["card"]), ("", "summary"))
+
+	def test_structured_data_in_page(self):
+		frappe.db.set_value(
+			"Buzz Event",
+			self.event,
+			{
+				"medium": "In Person",
+				"time_zone": "Asia/Kolkata",
+				"start_time": "09:30:00",
+				"end_time": "17:00:00",
+			},
+		)
+		data = structured_data(render("public-page-event"))
+		self.assertEqual(data["@type"], "Event")
+		self.assertTrue(data["startDate"].endswith("T09:30:00+05:30"))
+		self.assertEqual(data["organizer"]["name"], "Event Page Team")
+		self.assertIn("OfflineEventAttendanceMode", data["eventAttendanceMode"])
+
+	def test_structured_data_cannot_close_its_script(self):
+		frappe.db.set_value("Buzz Event", self.event, "title", "Talks </script><b>x</b>")
+		html = render("public-page-event")
+		self.assertEqual(structured_data(html)["name"], "Talks </script><b>x</b>")
+		self.assertEqual(html.count("</script><b>"), 0)
+
+	def test_online_event_links_the_page_not_the_join_link(self):
+		frappe.db.set_value("Buzz Event", self.event, "medium", "Online")
+		data = EventPage("public-page-event").as_context()["structured_data"]
+		self.assertEqual(data["location"], {"@type": "VirtualLocation", "url": data["url"]})
+
+	def test_no_offer_when_registrations_are_closed(self):
+		frappe.db.set_value("Buzz Event", self.event, "registrations_close_at", "2000-01-01 00:00:00")
+		self.assertNotIn("offers", EventPage("public-page-event").as_context()["structured_data"])
 
 
 class TestVenueMap(IntegrationTestCase):
