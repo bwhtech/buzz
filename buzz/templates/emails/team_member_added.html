@@ -1,0 +1,15 @@
+{% extends "buzz/templates/emails/base.html" %}
+
+{% block preheader %}You are now a member of {{ team_name }} on Buzz.{% endblock %}
+{% block title %}You were added to a team{% endblock %}
+
+{% block content %}
+<p style="margin:0">You are now a member of <strong style="color:#171717">{{ team_name }}</strong> on Buzz. You can manage its events from the dashboard.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px">
+  <tr>
+    <td style="background-color:#171717;border-radius:8px">
+      <a href="{{ frappe.get_url("/b/manage") }}" style="display:block;padding:10px 16px;color:#ffffff;font-size:14px;font-weight:500;text-decoration:none">Open dashboard</a>
+    </td>
+  </tr>
+</table>
+{% endblock %}

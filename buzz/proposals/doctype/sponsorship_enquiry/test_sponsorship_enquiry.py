@@ -211,7 +211,7 @@ class TestSponsorshipApprovalNotification(IntegrationTestCase):
 		enquiry = self.make_enquiry()
 		enquiry.send_approval_notification()
 
-		message = mock_sendmail.call_args[1]["message"]
+		message = mock_sendmail.call_args[1]["args"]["message"]
 		self.assertIn(f"/b/account/sponsorships/{enquiry.name}", message)
 
 	@patch("frappe.sendmail")
@@ -222,8 +222,8 @@ class TestSponsorshipApprovalNotification(IntegrationTestCase):
 		args = mock_sendmail.call_args[1]
 		self.assertEqual(args["recipients"], ["guest-applicant@example.com"])
 		# Nobody satisfies is_applicant on a Guest-owned enquiry, so the link would 403.
-		self.assertNotIn("/b/account/sponsorships/", args["message"])
-		self.assertIn("be in touch", args["message"])
+		self.assertNotIn("/b/account/sponsorships/", args["args"]["message"])
+		self.assertIn("be in touch", args["args"]["message"])
 
 	@patch("frappe.sendmail")
 	def test_a_guest_enquiry_without_a_contact_email_sends_nothing(self, mock_sendmail):

@@ -1499,7 +1499,7 @@ class TestOfflineAcknowledgementEmail(IntegrationTestCase):
 			"templates/emails/offline_booking_acknowledgement.html", booking.get_booking_email_args()
 		)
 
-		self.assertIn("Payment Verification Pending", html)
+		self.assertIn("Payment verification pending", html)
 		self.assertIn(booking.name, html)
 		self.assertIn(booking.offline_payment_method, html)
 		self.assertIn(self.ticket_type.title, html)

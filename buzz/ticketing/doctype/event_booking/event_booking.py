@@ -230,6 +230,8 @@ class EventBooking(Document):
 			subject=subject,
 			content=content,
 			template=None if template else builtin,
+			raw_html=not template,
+			add_css=bool(template),
 			args=args,
 			reference_doctype=self.doctype,
 			reference_name=self.name,

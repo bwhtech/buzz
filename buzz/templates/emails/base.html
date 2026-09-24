@@ -1,0 +1,97 @@
+{#- Pass `event_doc` for the event header. -#}
+{%- set brand = email_brand() -%}
+{%- set event_header = email_event_header(event_doc) if event_doc else None -%}
+{%- set body_style = "font-size:15px;line-height:24px;color:#383838" -%}
+{%- set footer_link_style = "color:#383838;text-decoration:none" -%}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html dir="ltr" lang="en">
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <style>p { margin: 0 0 16px; }</style>
+</head>
+<body style="margin:0;background-color:#f3f3f3">
+  <div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0">{% block preheader %}{% endblock %}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f3f3">
+    <tr>
+      <td align="center" style="padding:40px 16px 32px">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+          style="max-width:536px;font-family:Inter,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#171717;text-align:left">
+          {% if not event_header %}
+          <tr>
+            <td style="padding:0 4px 20px"><img src="{{ brand.logo }}" alt="{{ brand.name }}" height="28" style="display:block;height:28px;width:auto" /></td>
+          </tr>
+          {% endif %}
+          <tr>
+            <td style="background-color:#ffffff;border:1px solid #e2e2e2;border-radius:12px;overflow:hidden">
+              {% if event_header %}
+              {% if event_header.banner_url %}
+              <img src="{{ event_header.banner_url }}" alt="" width="536" data-banner="true" style="display:block;width:100%;height:auto" />
+              {% endif %}
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-bottom:1px solid #ededed">
+                <tr>
+                  <td style="padding:20px 0 20px 24px;width:48px;vertical-align:middle">
+                    <div style="width:48px;border:1px solid #e2e2e2;border-radius:8px;text-align:center;padding:6px 0">
+                      <div style="font-size:10px;font-weight:600;color:#7c7c7c;letter-spacing:0.04em">{{ event_header.month }}</div>
+                      <div style="font-size:18px;font-weight:600;line-height:22px">{{ event_header.day }}</div>
+                    </div>
+                  </td>
+                  <td style="padding:20px 14px;vertical-align:middle">
+                    <div style="font-size:16px;font-weight:600">{{ event_header.title }}</div>
+                    <div style="font-size:13px;color:#7c7c7c;margin-top:3px">
+                      {{ event_header.start_time }}
+                      {%- if event_header.venue %} ·
+                      {% if event_header.venue_map_url -%}
+                      <a href="{{ event_header.venue_map_url }}" style="color:#7c7c7c;text-decoration:none">{{ event_header.venue }}&nbsp;<img src="{{ frappe.get_url('/assets/buzz/images/arrow-up-right.png') }}" alt="" width="12" height="12" style="display:inline-block;width:12px;height:12px;vertical-align:-1px;border:0" /></a>
+                      {%- else %}{{ event_header.venue }}{% endif %}
+                      {%- endif %}
+                    </div>
+                  </td>
+                  {% if event_header.url %}
+                  <td align="right" style="padding:20px 24px 20px 0;vertical-align:middle;white-space:nowrap">
+                    <a href="{{ event_header.url }}" style="display:inline-block;border:1px solid #e2e2e2;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:500;color:#171717;text-decoration:none">View event</a>
+                  </td>
+                  {% endif %}
+                </tr>
+              </table>
+              {% endif %}
+              <div style="padding:{{ '28px 24px' if event_header else '32px' }}">
+                {% if self.title() | trim %}
+                <div style="font-size:20px;font-weight:600;letter-spacing:-0.01em;margin:0 0 16px">{% block title %}{% endblock %}</div>
+                {% endif %}
+                <div style="{{ body_style }}">{% block content %}{% endblock %}</div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 4px 0">
+              <p style="margin:0 0 16px;font-size:13px;line-height:20px;color:#7c7c7c">
+                {% block reason %}
+                {% if event_header %}
+                You received this email because you are part of
+                {% if event_header.url %}<a href="{{ event_header.url }}" style="color:#171717;font-weight:500;text-decoration:none">{{ event_header.title }}</a>{% else %}<span style="color:#171717;font-weight:500">{{ event_header.title }}</span>{% endif %}
+                on Buzz.
+                {% else %}
+                You received this email because you have an account on Buzz.
+                {% endif %}
+                {% if support_email %}Questions? Write to <a href="mailto:{{ support_email }}" style="color:#171717;font-weight:500;text-decoration:none">{{ support_email }}</a>.{% endif %}
+                {% endblock %}
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e2e2e2">
+                <tr>
+                  <td style="padding-top:16px;vertical-align:middle"><img src="{{ brand.logo }}" alt="{{ brand.name }}" height="22" style="display:block;height:22px;width:auto" /></td>
+                  <td align="right" style="padding-top:16px;vertical-align:middle;font-size:13px">
+                    <a href="{{ frappe.get_url("/b/account/tickets") }}" style="{{ footer_link_style }}">My tickets</a>&nbsp;&nbsp;&nbsp;
+                    <a href="https://github.com/bwhtech/buzz" style="{{ footer_link_style }}">GitHub</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:10px 0 0;font-size:12px;line-height:18px;color:#999999">Sent by Buzz, open-source event management.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

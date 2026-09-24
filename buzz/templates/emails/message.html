@@ -1,5 +1,5 @@
 {% extends "buzz/templates/emails/base.html" %}
 
+{% block preheader %}{{ title }}{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 {% block content %}{{ message }}{% endblock %}
-
-{% block reason %}{{ super() }} To contact the host, reply to this email.{% endblock %}

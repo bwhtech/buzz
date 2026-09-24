@@ -247,7 +247,7 @@ class TestCommunicationTemplate(CommunicationsTestCase):
 		route = frappe.db.get_value("Buzz Event", self.event, "route")
 		self.assertIn(title, html)
 		self.assertIn("Bring a jacket.", html)
-		self.assertIn("View Event", html)
+		self.assertIn("View event", html)
 		self.assertIn(f"/b/register/{route}", html)
 		self.assertIn("reply to this email", html)
 		self.assertNotIn("Unsubscribe", html)

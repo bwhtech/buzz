@@ -130,7 +130,10 @@ class BuzzTeam(Document):
 		frappe.sendmail(
 			recipients=[user],
 			subject=_("You have been added to {0}").format(self.team_name),
-			message=_("<p>You are now a member of <strong>{0}</strong> on Buzz.</p>").format(self.team_name),
+			template="team_member_added",
+			raw_html=True,
+			add_css=False,
+			args={"team_name": self.team_name},
 			reference_doctype=self.doctype,
 			reference_name=self.name,
 		)
