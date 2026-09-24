@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from frappe.utils import get_system_timezone, get_time, get_url, getdate
 
 DESCRIPTION_LENGTH = 160
-IMAGE_FIELDS = ("meta_image", "banner_image", "card_image")
+IMAGE_FIELDS = ("meta_image", "og_image", "banner_image", "card_image")
 
 
 def plain_text(html: str | None) -> str:

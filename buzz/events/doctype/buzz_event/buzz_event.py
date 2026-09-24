@@ -72,6 +72,7 @@ class BuzzEvent(Document):
 		meta_image: DF.AttachImage | None
 		name: DF.Int | None
 		offline_acknowledgement_email_template: DF.Link | None
+		og_image: DF.AttachImage | None
 		payment_gateways: DF.Table[EventPaymentGateway]
 		proposal: DF.Link | None
 		registration_url: DF.Data | None
@@ -347,6 +348,28 @@ class BuzzEvent(Document):
 	def on_update(self):
 		self.update_zoom_webinar()
 		self.update_zoom_meeting()
+		self.enqueue_og_image()
+
+	def enqueue_og_image(self):
+		from buzz.events.og_image import EventOgImage
+
+		# A live worker would render test events mid-test and race their teardown
+		if frappe.in_test or not (self.is_published and self.route):
+			return
+		try:
+			needs_update = EventOgImage(self).needs_update()
+		except Exception:
+			# The share image is a nicety; it must never block saving the event
+			frappe.log_error(f"Share image check failed for event {self.name}")
+			return
+		if needs_update:
+			frappe.enqueue(
+				"buzz.events.og_image.generate",
+				event_name=str(self.name),
+				job_id=f"og-image-{self.name}",
+				deduplicate=True,
+				enqueue_after_commit=True,
+			)
 
 	@only_if_app_installed("zoom_integration")
 	def update_zoom_webinar(self):
