@@ -9,11 +9,8 @@ WORDMARK = "/assets/buzz/images/buzz-wordmark-dark.png"
 
 
 def email_event_header(event) -> dict:
-	from buzz.api.events.services import registration_link
-
 	start, _ = build_event_datetimes(event)
 	label = get_time_zone_label(event.time_zone, start)
-	link = registration_link(event)
 	return frappe._dict(
 		month=start.strftime("%b").upper(),
 		day=start.day,
@@ -21,7 +18,7 @@ def email_event_header(event) -> dict:
 		start_time=f"{start.strftime('%-I:%M %p')} {label}".strip(),
 		venue=event.venue,
 		venue_map_url=venue_map_url(event.venue),
-		url=get_url(link) if link else None,
+		url=get_url(f"/events/{event.route}") if event.is_published and event.route else None,
 		banner_url=get_url(event.banner_image) if event.banner_image else None,
 	)
 

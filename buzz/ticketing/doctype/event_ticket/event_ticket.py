@@ -133,7 +133,9 @@ class EventTicket(Document):
 		if ticket_template:
 			email_template = render_email_template(ticket_template, args)
 			subject = email_template.get("subject")
-			content = email_template.get("message")
+			content = email_template.get("message").replace(
+				f'src="{self.qr_code}"', f'embed="{self.qr_code}"'
+			)
 
 		attachments = []
 

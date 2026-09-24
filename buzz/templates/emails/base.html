@@ -72,7 +72,7 @@
                 {% if event_header.url %}<a href="{{ event_header.url }}" style="color:#171717;font-weight:500;text-decoration:none">{{ event_header.title }}</a>{% else %}<span style="color:#171717;font-weight:500">{{ event_header.title }}</span>{% endif %}
                 on Buzz.
                 {% else %}
-                You received this email because you have an account on Buzz.
+                You received this email because this address was used on Buzz.
                 {% endif %}
                 {% if support_email %}Questions? Write to <a href="mailto:{{ support_email }}" style="color:#171717;font-weight:500;text-decoration:none">{{ support_email }}</a>.{% endif %}
                 {% endblock %}
