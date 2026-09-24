@@ -5,7 +5,7 @@
 {% block content %}
 <p style="margin:0 0 20px">Hi {{ doc.attendee_name }}, here is your ticket. Show the QR code at the entrance.</p>
 <div style="background-color:#f8f8f8;border-radius:10px;padding:20px;text-align:center">
-  <img src="{{ doc.qr_code }}" alt="Entry QR code" width="160" height="160"
+  <img embed="{{ doc.qr_code }}" alt="Entry QR code" width="160" height="160"
     style="display:block;width:160px;height:160px;margin:0 auto;background-color:#ffffff;border:1px solid #e2e2e2;border-radius:8px" />
   <div style="font-size:16px;font-weight:600;color:#171717;margin-top:16px">{{ doc.attendee_name }}</div>
   <div style="font-size:13px;line-height:20px;color:#7c7c7c;margin-top:4px">

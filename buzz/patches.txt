@@ -23,3 +23,4 @@ buzz.patches.backfill_event_host_names
 buzz.patches.backfill_event_co_hosts
 buzz.patches.migrate_sponsor_enquiry_forms
 buzz.patches.generate_event_share_images
+buzz.patches.make_ticket_qr_codes_private

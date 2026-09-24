@@ -183,6 +183,7 @@ class EventTicket(Document):
 			doc=self,
 			data=self.name,
 			file_prefix="ticket-qr-code",
+			is_private=True,
 		)
 
 	def on_cancel(self):

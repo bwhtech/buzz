@@ -14,6 +14,7 @@ from buzz.api.booking.schemas import (
 )
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, verify_booking_access_token
 from buzz.api.tickets import windows
+from buzz.utils import qr_data_uri
 
 TICKET_FIELDS = [
 	"name",
@@ -61,7 +62,8 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 			discount_amount=booking_doc.discount_amount,
 			coupon_code=booking_doc.coupon_code,
 		),
-		tickets=[ConfirmationTicket(**ticket) for ticket in tickets],
+		# Guests read this with a token and no session, so the private QR file is inlined
+		tickets=[ConfirmationTicket(**{**ticket, "qr_code": qr_data_uri(ticket.name)}) for ticket in tickets],
 	)
 
 
