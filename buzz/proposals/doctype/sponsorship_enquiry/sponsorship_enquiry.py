@@ -5,7 +5,7 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import escape_html, get_url, validate_email_address
 
-from buzz.emails import send_message_email
+from buzz.emails import is_full_document, send_message_email
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.payments import mark_payment_as_received
 from buzz.utils import render_email_template
@@ -114,7 +114,9 @@ class SponsorshipEnquiry(Document):
 			frappe.log_error("No sponsor deck email template configured", "Sponsorship Enquiry")
 			return
 
-		email_template = render_email_template(template_name, {"doc": self, "event": event})
+		email_template = render_email_template(
+			template_name, {"doc": self, "event": event, "event_doc": event}
+		)
 
 		subject = email_template.get("subject")
 		content = email_template.get("message")
@@ -129,6 +131,8 @@ class SponsorshipEnquiry(Document):
 			cc=cc,
 			reply_to=reply_to,
 			content=content,
+			raw_html=is_full_document(content),
+			add_css=not is_full_document(content),
 			reference_doctype=self.doctype,
 			reference_name=self.name,
 			now=now,

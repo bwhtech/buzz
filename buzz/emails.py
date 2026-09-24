@@ -45,6 +45,10 @@ def email_brand() -> dict:
 	)
 
 
+def is_full_document(html: str | None) -> bool:
+	return bool(html) and html.lstrip().lower().startswith("<!doctype")
+
+
 def send_message_email(title: str, message: str, event=None, **sendmail_kwargs) -> None:
 	frappe.sendmail(
 		template="message",

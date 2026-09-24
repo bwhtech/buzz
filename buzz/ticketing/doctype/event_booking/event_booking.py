@@ -7,6 +7,7 @@ from frappe.utils import cstr, flt
 
 from buzz.api.booking.exceptions import RegistrationsClosed
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, are_registrations_closed
+from buzz.emails import is_full_document
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.payments import get_controller, mark_payment_as_received
 from buzz.permissions import has_team_access
@@ -225,13 +226,14 @@ class EventBooking(Document):
 			subject = email_template.get("subject") or subject
 			content = email_template.get("message")
 
+		full_document = not template or is_full_document(content)
 		frappe.sendmail(
 			recipients=[recipient],
 			subject=subject,
 			content=content,
 			template=None if template else builtin,
-			raw_html=not template,
-			add_css=bool(template),
+			raw_html=full_document,
+			add_css=not full_document,
 			args=args,
 			reference_doctype=self.doctype,
 			reference_name=self.name,

@@ -5,7 +5,7 @@ import frappe
 from frappe.core.api.user_invitation import invite_by_email
 from frappe.model.document import Document
 
-from buzz.emails import send_message_email
+from buzz.emails import is_full_document, send_message_email
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.utils import (
 	generate_ics_file,
@@ -156,13 +156,14 @@ class EventTicket(Document):
 				}
 			)
 
+		full_document = not ticket_template or is_full_document(content)
 		frappe.sendmail(
 			recipients=[self.attendee_email],
 			subject=subject,
 			content=content if ticket_template else None,
 			template="ticket" if not ticket_template else None,
-			raw_html=not ticket_template,
-			add_css=bool(ticket_template),
+			raw_html=full_document,
+			add_css=not full_document,
 			args=args,
 			reference_doctype=self.doctype,
 			reference_name=self.name,
