@@ -12,6 +12,7 @@ from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageOps
 from buzz.events.banner_pattern import rings_banner
 from buzz.events.doctype.buzz_theme.buzz_theme import resolve_theme
 from buzz.www.event.index import RANGE_SEPARATOR, EventPage, format_time
+from buzz.www.event.meta import is_private_file
 
 # Bump when the layout changes, so every event renders again on its next save
 RENDER_VERSION = 1
@@ -42,19 +43,30 @@ def generate(event_name: str):
 	# Not `event`: frappe.enqueue takes that keyword for itself
 	doc = frappe.get_doc("Buzz Event", event_name)
 	if not doc.is_published:
+		clear(doc)
 		return
 	image = EventOgImage(doc)
 	if not image.can_render():
-		image.clear()
+		clear(doc)
 	elif not image.is_current():
 		image.save()
 
 
-def render_all_published():
-	for event in frappe.get_all(
+def enqueue_generate(event_name: str):
+	frappe.enqueue(
+		"buzz.events.og_image.generate",
+		event_name=event_name,
+		job_id=f"og-image-{event_name}",
+		deduplicate=True,
+		enqueue_after_commit=True,
+	)
+
+
+def enqueue_all_published():
+	for name in frappe.get_all(
 		"Buzz Event", filters={"is_published": 1, "route": ["is", "set"]}, pluck="name"
 	):
-		generate(event)
+		enqueue_generate(str(name))
 
 
 def font(weight: str, size: int) -> ImageFont.FreeTypeFont:
@@ -152,7 +164,8 @@ class EventOgImage:
 
 	def uploaded_banner(self) -> Image.Image | None:
 		url = self.event.banner_image
-		if not url or urlparse(url).scheme:
+		# A private banner drawn into a public image would leak it
+		if not url or urlparse(url).scheme or is_private_file(url):
 			return None
 		try:
 			content = frappe.get_doc("File", {"file_url": url}).get_content()
@@ -185,19 +198,8 @@ class EventOgImage:
 		)
 		return max(WORDMARK_SIZE[0], math.ceil(host_font.getlength(host)))
 
-	def attached_files(self) -> list[str]:
-		return frappe.get_all(
-			"File",
-			filters={
-				"attached_to_doctype": "Buzz Event",
-				"attached_to_name": self.event.name,
-				"attached_to_field": "og_image",
-			},
-			pluck="name",
-		)
-
 	def save(self):
-		previous = self.attached_files()
+		previous = attached_files(self.event.name)
 		file = frappe.get_doc(
 			{
 				"doctype": "File",
@@ -212,9 +214,22 @@ class EventOgImage:
 		self.event.db_set("og_image", file.file_url, update_modified=False)
 		delete_files(previous)
 
-	def clear(self):
-		self.event.db_set("og_image", None, update_modified=False)
-		delete_files(self.attached_files())
+
+def attached_files(event_name: str) -> list[str]:
+	return frappe.get_all(
+		"File",
+		filters={
+			"attached_to_doctype": "Buzz Event",
+			"attached_to_name": event_name,
+			"attached_to_field": "og_image",
+		},
+		pluck="name",
+	)
+
+
+def clear(event):
+	event.db_set("og_image", None, update_modified=False)
+	delete_files(attached_files(event.name))
 
 
 def delete_files(names: list[str]):

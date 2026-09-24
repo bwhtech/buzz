@@ -1,12 +1,16 @@
 import textwrap
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from bs4 import BeautifulSoup
 from frappe.utils import get_system_timezone, get_time, get_url, getdate
 
 DESCRIPTION_LENGTH = 160
 IMAGE_FIELDS = ("meta_image", "og_image", "banner_image", "card_image")
+
+
+def is_private_file(url: str) -> bool:
+	return url.startswith("/private/")
 
 
 def plain_text(html: str | None) -> str:
@@ -41,7 +45,7 @@ class EventMeta:
 	def image(self) -> str:
 		# Crawlers get a 403 on private files, which drops the preview image silently
 		urls = [self.event.get(field) for field in IMAGE_FIELDS]
-		public = next((url for url in urls if url and not url.startswith("/private/")), None)
+		public = next((url for url in urls if url and not is_private_file(url)), None)
 		return get_url(public) if public else ""
 
 	def structured_data(self) -> dict | None:
@@ -67,8 +71,14 @@ class EventMeta:
 	def event_datetime(self, date, time) -> str:
 		if not time:
 			return getdate(date).isoformat()
-		zone = ZoneInfo(self.event.time_zone or get_system_timezone())
-		return datetime.combine(getdate(date), get_time(time), zone).isoformat()
+		return datetime.combine(getdate(date), get_time(time), self.time_zone()).isoformat()
+
+	def time_zone(self) -> ZoneInfo:
+		# time_zone is free text; a bad value must not take the page down
+		try:
+			return ZoneInfo(self.event.time_zone or get_system_timezone())
+		except (ZoneInfoNotFoundError, ValueError):
+			return ZoneInfo(get_system_timezone())
 
 	def end_datetime(self) -> str | None:
 		if not self.event.end_time:

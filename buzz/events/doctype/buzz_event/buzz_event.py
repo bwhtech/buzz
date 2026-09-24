@@ -351,10 +351,15 @@ class BuzzEvent(Document):
 		self.enqueue_og_image()
 
 	def enqueue_og_image(self):
-		from buzz.events.og_image import EventOgImage
+		from buzz.events.og_image import EventOgImage, enqueue_generate
 
 		# A live worker would render test events mid-test and race their teardown
-		if frappe.in_test or not (self.is_published and self.route):
+		if frappe.in_test or not self.route:
+			return
+		# Unpublishing takes the page down, so the job removes its share image too
+		if not self.is_published:
+			if self.og_image:
+				enqueue_generate(str(self.name))
 			return
 		try:
 			needs_update = EventOgImage(self).needs_update()
@@ -363,13 +368,7 @@ class BuzzEvent(Document):
 			frappe.log_error(f"Share image check failed for event {self.name}")
 			return
 		if needs_update:
-			frappe.enqueue(
-				"buzz.events.og_image.generate",
-				event_name=str(self.name),
-				job_id=f"og-image-{self.name}",
-				deduplicate=True,
-				enqueue_after_commit=True,
-			)
+			enqueue_generate(str(self.name))
 
 	@only_if_app_installed("zoom_integration")
 	def update_zoom_webinar(self):
