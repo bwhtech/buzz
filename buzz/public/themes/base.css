@@ -693,14 +693,18 @@ span.footer-logo {
 }
 
 .btn,
+.es-button,
 .mode-toggle,
 .site-nav summary {
 	transition:
 		transform 160ms var(--ease-out),
-		background-color 150ms ease;
+		background-color 150ms ease,
+		border-color 150ms ease,
+		color 150ms ease;
 }
 
 .btn:not([aria-disabled]):active,
+.es-button:active,
 .mode-toggle:active,
 .site-nav summary:active {
 	transform: scale(0.97);
@@ -771,6 +775,7 @@ summary:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
 	.btn:not([aria-disabled]):active,
+	.es-button:active,
 	.mode-toggle:active,
 	.site-nav summary:active {
 		transform: none;

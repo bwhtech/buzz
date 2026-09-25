@@ -8,6 +8,7 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Newsreader:wght@400&family=League+Gothic&display=swap">
+	<link rel="stylesheet" href="{{ bundled_asset('espresso.bundle.css') }}">
 	<link rel="stylesheet" href="/assets/buzz/themes/base.css">
 	<script>
 		try {
@@ -33,7 +34,7 @@
 				<svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
 			</button>
 			{% if is_guest %}
-			<a class="btn btn-secondary" href="/login?redirect-to={{ meta.url | urlencode }}">{{ _("Log in") }}</a>
+			<a class="es-button" data-variant="ghost" data-size="md" href="/login?redirect-to={{ meta.url | urlencode }}">{{ _("Log in") }}</a>
 			{% else %}
 			<details class="user-menu">
 				<summary aria-label="{{ _('Account') }}">
