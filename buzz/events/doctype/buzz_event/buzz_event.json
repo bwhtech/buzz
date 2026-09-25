@@ -33,6 +33,7 @@
   "schedule",
   "website_tab",
   "is_published",
+  "is_featured",
   "route",
   "default_ticket_type",
   "column_break_ndtl",
@@ -224,6 +225,14 @@
    "fieldname": "is_published",
    "fieldtype": "Check",
    "label": "Is Published?"
+  },
+  {
+   "default": "0",
+   "description": "Shown in the Featured section of the public events page.",
+   "fieldname": "is_featured",
+   "fieldtype": "Check",
+   "label": "Featured",
+   "permlevel": 1
   },
   {
    "fieldname": "tab_2_tab",
@@ -658,7 +667,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-09-23 12:00:00.000000",
+ "modified": "2026-09-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",
@@ -709,6 +718,12 @@
    "role": "Buzz User",
    "select": 1,
    "share": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

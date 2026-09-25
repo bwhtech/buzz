@@ -66,6 +66,7 @@ class BuzzEvent(Document):
 		free_event: DF.Check
 		guest_verification_method: DF.Literal["None", "Email OTP", "Phone OTP"]
 		host: DF.Link | None
+		is_featured: DF.Check
 		is_published: DF.Check
 		medium: DF.Literal["In Person", "Online"]
 		meeting_link: DF.Data | None
