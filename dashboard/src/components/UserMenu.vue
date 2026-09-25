@@ -2,6 +2,7 @@
 import {
 	Avatar,
 	Dropdown,
+	MobileNavItem,
 	Tooltip,
 	sidebarCollapsedKey,
 	useColorScheme,
@@ -11,6 +12,13 @@ import { computed, inject, ref } from "vue"
 
 import UserSettingsDialog from "@/components/UserSettingsDialog.vue"
 import { session } from "@/data/session"
+
+// "tab" is the account cell of the mobile tab bar; "sidebar" the desktop footer row.
+const props = withDefaults(defineProps<{ variant?: "sidebar" | "tab" }>(), {
+	variant: "sidebar",
+})
+
+const isTab = computed(() => props.variant === "tab")
 
 const isCollapsed = inject(
 	sidebarCollapsedKey,
@@ -81,9 +89,18 @@ const menu = computed<DropdownOptions>(() => [
 </script>
 
 <template>
-	<Dropdown :options="menu" side="top" align="start" match-trigger-width>
+	<Dropdown
+		:options="menu"
+		side="top"
+		:align="isTab ? 'end' : 'start'"
+		:match-trigger-width="!isTab"
+	>
 		<template #default="{ open: isOpen }">
+			<MobileNavItem v-if="isTab" :label="__('Account')" data-testid="account-menu">
+				<Avatar :image="session.userImage ?? undefined" :label="session.fullName" size="md" />
+			</MobileNavItem>
 			<button
+				v-else
 				data-testid="account-menu"
 				class="flex h-12 w-full items-center gap-2 rounded-4 px-1.5 transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:outline-none focus-visible:focus-ring"
 				:class="{ 'bg-surface-gray-2': isOpen }"

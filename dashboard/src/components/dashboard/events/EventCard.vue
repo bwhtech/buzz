@@ -48,15 +48,15 @@ const venue = computed(() => {
 		<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
 		<img
 			v-if="event.banner_image"
-			class="h-30 w-30 rounded-4 object-cover object-top"
+			class="size-20 shrink-0 rounded-4 object-cover object-top md:size-30"
 			:src="event.banner_image"
 			:style="banner"
 			loading="lazy"
 			alt=""
 		/>
-		<div v-else class="h-30 w-30 rounded-4" :style="banner" />
+		<div v-else class="size-20 shrink-0 rounded-4 md:size-30" :style="banner" />
 
-		<div class="flex-1 py-1 flex flex-col justify-between">
+		<div class="min-w-0 flex-1 py-1 flex flex-col justify-between">
 			<div class="flex-1 space-y-2">
 				<p
 					v-if="showDate || startTime"

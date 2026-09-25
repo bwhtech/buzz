@@ -49,7 +49,7 @@ const emptyDescription = computed(() =>
 </script>
 
 <template>
-	<CreateEventHeader />
+	<CreateEventHeader title="Talk Proposals" />
 
 	<TimelineList
 		v-model:tab="tab"

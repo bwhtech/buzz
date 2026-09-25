@@ -48,7 +48,8 @@ withDefaults(
 	overflow: hidden;
 	--drawer-inset: 0.5rem;
 	--drawer-width: 28rem;
-	--drawer-height: calc(100dvh - 12rem);
+	/* Not --drawer-height: reka writes its measured height there, inline. */
+	--drawer-max-height: calc(100dvh - 12rem);
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
@@ -80,19 +81,27 @@ withDefaults(
    cross-axis rule already keeps it from swallowing a small screen. */
 .drawer[data-size="lg"] {
 	--drawer-width: 36rem;
-	--drawer-height: calc(100dvh - 6rem);
+	--drawer-max-height: calc(100dvh - 6rem);
 }
 .drawer[data-size="xl"] {
 	--drawer-width: max(28rem, 50vw);
-	--drawer-height: max(28rem, 50dvh);
+	--drawer-max-height: max(28rem, 50dvh);
 }
 
 .drawer[data-swipe-direction="down"],
 .drawer[data-swipe-direction="up"] {
 	left: 0;
 	right: 0;
-	max-height: var(--drawer-height);
+	max-height: var(--drawer-max-height);
 	transform: translateY(var(--drawer-swipe-movement-y, 0px));
+}
+
+/* Below md every drawer is a sheet, and the content that filled a side panel needs
+   nearly the whole screen to breathe. */
+@media (max-width: 767px) {
+	.drawer[data-size] {
+		--drawer-max-height: calc(100dvh - 3rem);
+	}
 }
 
 /* Inset from every edge rather than pinned to one: a side drawer reads as a panel over

@@ -199,7 +199,7 @@ async function save() {
 
 			<EventBanner v-model="form.banner_image" :seed="form.title" />
 
-			<div class="grid gap-8 md:grid-cols-5">
+			<div class="grid grid-cols-1 gap-8 md:grid-cols-5">
 				<div class="space-y-8 md:col-span-3">
 					<div class="space-y-2">
 						<!-- Plain field on purpose: this is the page's headline, not a labelled one.

@@ -25,8 +25,9 @@ const tabOptions = [
 
 <template>
 	<div class="m-auto max-w-[800px] w-full p-4 space-y-6">
-		<header class="flex items-start justify-between">
-			<div class="flex flex-col gap-3 items-start">
+		<!-- On mobile the heading lives in the page header, leaving the tabs. -->
+		<header class="flex items-start justify-end md:justify-between">
+			<div class="hidden md:flex flex-col gap-3 items-start">
 				<div class="flex gap-3 items-center">
 					<div v-if="icon" class="p-2 bg-surface-gray-3 rounded-4">
 						<Icon :name="icon" class="size-6" />
@@ -49,12 +50,12 @@ const tabOptions = [
 		<div v-else-if="loading" class="space-y-6" aria-busy="true">
 			<span class="sr-only">Loading {{ noun }}…</span>
 			<Skeleton class="h-6 w-40 rounded-4" />
-			<div v-for="row in 3" :key="row" class="grid grid-cols-[6rem_1fr] gap-4">
-				<div class="space-y-2 pt-1">
+			<div v-for="row in 3" :key="row" class="grid gap-4 md:grid-cols-[6rem_1fr]">
+				<div class="flex gap-2 md:block md:space-y-2 md:pt-1">
 					<Skeleton class="h-4 w-14 rounded-4" />
 					<Skeleton class="h-4 w-20 rounded-4" />
 				</div>
-				<div class="pb-7 pl-6">
+				<div class="md:pb-7 md:pl-6">
 					<Skeleton class="h-28 w-full rounded-8" />
 				</div>
 			</div>
@@ -66,14 +67,19 @@ const tabOptions = [
 					{{ monthLabel(month.month) }}
 				</h2>
 
-				<div v-for="day in month.days" :key="day.date" class="grid grid-cols-[6rem_1fr] gap-4">
-					<div class="pt-1">
+				<!-- A phone has no room for the date rail, so the day heads its cards instead. -->
+				<div
+					v-for="day in month.days"
+					:key="day.date"
+					class="grid gap-3 md:grid-cols-[6rem_1fr] md:gap-4"
+				>
+					<div class="flex items-baseline gap-2 md:block md:pt-1">
 						<p class="font-semibold text-ink-gray-8">{{ dayLabel(day.date) }}</p>
 						<p class="text-base text-ink-gray-5">{{ weekday(day.date) }}</p>
 					</div>
 
-					<div class="relative space-y-1 pl-6 pb-7">
-						<div class="absolute -left-4 flex flex-col items-center h-full">
+					<div class="relative space-y-1 pb-4 md:pl-6 md:pb-7">
+						<div class="absolute -left-4 hidden md:flex flex-col items-center h-full">
 							<span class="size-2 rounded-full bg-surface-gray-4" aria-hidden="true" />
 							<div
 								class="w-px h-full bg-gradient-to-b from-outline-gray-2 from-75% to-transparent"
