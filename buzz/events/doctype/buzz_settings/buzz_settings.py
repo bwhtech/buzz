@@ -30,6 +30,7 @@ class BuzzSettings(Document):
 		event_proposal_success_message: DF.MarkdownEditor | None
 		event_proposal_success_title: DF.Data | None
 		login_banner: DF.MarkdownEditor | None
+		show_hosting_banner: DF.Check
 		support_email: DF.Data | None
 	# end: auto-generated types
 

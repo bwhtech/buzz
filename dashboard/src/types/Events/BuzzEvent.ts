@@ -51,6 +51,8 @@ export interface BuzzEvent {
 	schedule?: ScheduleItem[]
 	/**	Is Published? : Check	*/
 	is_published?: 0 | 1
+	/**	Featured : Check - Shown in the Featured section of the public events page.	*/
+	is_featured?: 0 | 1
 	/**	Route : Data - Used by Frappe Builder	*/
 	route?: string
 	/**	Default Ticket Type : Link - Event Ticket Type - Will be selected by default in the booking form	*/

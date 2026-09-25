@@ -5,9 +5,11 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	{% block head %}{% endblock %}
+	<link rel="preload" href="/assets/buzz/fonts/LeagueGothic-Latin.woff2" as="font" type="font/woff2" crossorigin>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Newsreader:wght@400&family=League+Gothic&display=swap">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Newsreader:wght@400&display=swap">
+	<link rel="stylesheet" href="{{ bundled_asset('espresso.bundle.css') }}">
 	<link rel="stylesheet" href="/assets/buzz/themes/base.css">
 	<script>
 		try {
@@ -17,6 +19,10 @@
 	</script>
 	<style>{{ theme_css }}</style>
 	<script src="{{ bundled_asset('event_page.bundle.ts') }}" defer></script>
+	<!-- Fetches an event page's HTML after a short hover so the click lands on a ready document. -->
+	<script type="speculationrules">
+		{"prefetch": [{"where": {"href_matches": "/events*"}, "eagerness": "moderate"}]}
+	</script>
 </head>
 <body class="event-page">
 	<header class="site-header">
@@ -28,12 +34,15 @@
 			{% endif %}
 		</a>
 		<nav class="site-nav">
+			{% if not is_guest %}
+			<a class="es-button" data-variant="ghost" data-size="md" href="/b/manage/team/events/new">{{ _("Create Event") }}</a>
+			{% endif %}
 			<button type="button" class="mode-toggle" data-mode-toggle aria-label="{{ _('Dark mode') }}">
 				<svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
 				<svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
 			</button>
 			{% if is_guest %}
-			<a class="btn btn-secondary" href="/login?redirect-to={{ meta.url | urlencode }}">{{ _("Log in") }}</a>
+			<a class="es-button" data-variant="ghost" data-size="md" href="/login?redirect-to={{ meta.url | urlencode }}">{{ _("Log in") }}</a>
 			{% else %}
 			<details class="user-menu">
 				<summary aria-label="{{ _('Account') }}">

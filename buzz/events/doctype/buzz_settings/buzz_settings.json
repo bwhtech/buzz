@@ -9,6 +9,7 @@
   "support_email",
   "event_page_section",
   "event_page_theme",
+  "show_hosting_banner",
   "ticketing_section",
   "allow_transfer_ticket_before_event_start_days",
   "column_break_ehsr",
@@ -53,6 +54,13 @@
    "fieldtype": "Link",
    "label": "Theme",
    "options": "Buzz Theme"
+  },
+  {
+   "default": "0",
+   "description": "Guests on /events see a banner inviting them to host events. Turn on only if new signups get a team.",
+   "fieldname": "show_hosting_banner",
+   "fieldtype": "Check",
+   "label": "Show hosting banner"
   },
   {
    "description": "Seeds new teams only. Existing teams read their own Buzz Team Settings.",
@@ -253,7 +261,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-22 00:38:54.748044",
+ "modified": "2026-09-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",
