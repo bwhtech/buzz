@@ -13,7 +13,7 @@ no_cache = 1
 LISTING_LIMIT = 60
 FEATURED_LIMIT = 3
 POPULAR_LIMIT = 8
-CARD_FIELDS = ["name", "title", "route", "start_date", "medium", "venue", "card_image", "banner_image"]
+CARD_FIELDS = ["title", "route", "start_date", "medium", "venue", "card_image", "banner_image"]
 
 
 def get_context(context):
