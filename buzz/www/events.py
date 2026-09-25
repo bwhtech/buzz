@@ -135,7 +135,10 @@ class EventListing:
 			"category": self.category,
 			"categories": enabled_categories(),
 			"events": [event_card(event) for event in self.events()],
-			"meta": {"url": get_url("/events"), "description": self.category.description or ""},
+			"meta": {
+				"url": get_url(f"/events?category={quote(self.category.slug)}"),
+				"description": self.category.description or "",
+			},
 		}
 
 	def events(self) -> list:

@@ -74,6 +74,10 @@ class TestEventListing(IntegrationTestCase):
 		routes = {card["url"] for card in EventListing("listing-meetups").as_context()["events"]}
 		self.assertEqual(routes, {"/events/listed-event"})
 
+	def test_category_page_points_at_itself(self):
+		url = EventListing("listing-meetups").as_context()["meta"]["url"]
+		self.assertTrue(url.endswith("/events?category=listing-meetups"))
+
 	def test_unknown_category_is_not_found(self):
 		with self.assertRaises(frappe.PageDoesNotExistError):
 			EventListing("no-such-category")
