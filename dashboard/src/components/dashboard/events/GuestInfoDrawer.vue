@@ -5,7 +5,7 @@ import { computed } from "vue"
 import DetailRow from "@/components/common/DetailRow.vue"
 import {
 	Drawer,
-	DrawerClose,
+	DrawerCloseButton,
 	DrawerContent,
 	DrawerDescription,
 	DrawerTitle,
@@ -66,9 +66,7 @@ const ticket = computed<TicketWithEvent | null>(() => {
 		<DrawerContent size="md">
 			<template v-if="guest">
 				<div class="flex items-center gap-1 p-4 pb-0">
-					<DrawerClose as-child>
-						<Button size="sm" icon="lucide-chevrons-right" aria-label="Close guest" />
-					</DrawerClose>
+					<DrawerCloseButton label="Close guest" />
 
 					<!-- Paging sits at the far end, so the list can be walked without going back
 					     to it: the row under the pointer is never the one that closes the panel. -->

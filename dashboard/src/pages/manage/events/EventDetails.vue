@@ -173,17 +173,19 @@ async function save() {
 			leave-active-class="transition duration-100 ease-out motion-reduce:transition-none"
 			leave-to-class="opacity-0"
 		>
-			<div v-if="isDirty" class="flex items-center gap-2">
-				<Button label="Discard" @click="discard" />
-				<Button
-					variant="solid"
-					label="Save"
-					:disabled="!canSave"
-					:loading="updateEvent.loading"
-					@click="save"
-				/>
-			</div>
+			<Button
+				v-if="isDirty"
+				variant="solid"
+				label="Save"
+				:disabled="!canSave"
+				:loading="updateEvent.loading"
+				@click="save"
+			/>
 		</Transition>
+
+		<template #leading>
+			<Button v-if="isDirty" label="Discard" @click="discard" />
+		</template>
 	</EventPageHeader>
 
 	<EventDetailsSkeleton v-if="!event.data" />
@@ -197,10 +199,13 @@ async function save() {
 
 			<ErrorMessage v-if="errorMessage" :message="errorMessage" />
 
-			<EventBanner v-model="form.banner_image" :seed="form.title" />
+			<!-- Wrapped: the banner's hidden file input would otherwise take space-y margin. -->
+			<div class="max-md:px-4">
+				<EventBanner v-model="form.banner_image" :seed="form.title" />
+			</div>
 
-			<div class="grid gap-8 md:grid-cols-5">
-				<div class="space-y-8 md:col-span-3">
+			<div class="grid grid-cols-1 gap-8 md:grid-cols-5">
+				<div class="space-y-8 max-md:px-4 md:col-span-3">
 					<div class="space-y-2">
 						<!-- Plain field on purpose: this is the page's headline, not a labelled one.
 						 A textarea rather than an input so a long name wraps; Enter is swallowed

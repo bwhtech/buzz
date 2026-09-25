@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { Button } from "frappe-ui"
-
 import {
 	Drawer,
-	DrawerClose,
+	DrawerCloseButton,
 	DrawerContent,
 	DrawerDescription,
 	DrawerTitle,
@@ -19,9 +17,7 @@ const open = defineModel<boolean>("open", { required: true })
 	<Drawer v-model:open="open" swipe-direction="right">
 		<DrawerContent size="md">
 			<div class="flex items-center gap-1 p-4 pb-0">
-				<DrawerClose as-child>
-					<Button size="sm" icon="lucide-chevrons-right" aria-label="Close" />
-				</DrawerClose>
+				<DrawerCloseButton />
 				<DrawerTitle class="ml-1 truncate text-lg font-semibold text-ink-gray-9">
 					{{ title }}
 				</DrawerTitle>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { DrawerContent, DrawerHandle, DrawerOverlay, DrawerPortal } from "reka-ui"
 
+import { useIsMobile } from "@/composables/useIsMobile"
+
 withDefaults(
 	defineProps<{
 		showSwipeHandle?: boolean
@@ -9,10 +11,19 @@ withDefaults(
 	}>(),
 	{ showSwipeHandle: true, size: "md" },
 )
+
+const isMobile = useIsMobile()
 </script>
 
 <template>
-	<DrawerPortal>
+	<div v-if="isMobile" class="flex min-h-[75dvh] flex-col">
+		<slot />
+		<div v-if="$slots.footer" class="mt-auto flex shrink-0 items-center gap-2 p-4">
+			<slot name="footer" />
+		</div>
+	</div>
+
+	<DrawerPortal v-else>
 		<DrawerOverlay class="drawer-overlay fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" />
 
 		<DrawerContent :data-size="size" class="drawer bg-surface-elevation-2 shadow-2xl">

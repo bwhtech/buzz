@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { useTextareaAutosize } from "@vueuse/core"
-import { Alert, Button, ErrorMessage, LoadingIndicator, toast } from "frappe-ui"
+import {
+	Alert,
+	Button,
+	ErrorMessage,
+	LoadingIndicator,
+	PageHeaderBackButton,
+	PageHeaderMobile,
+	toast,
+} from "frappe-ui"
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { TextMorph } from "torph/vue"
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
@@ -9,6 +17,7 @@ import { onBeforeRouteLeave, useRouter } from "vue-router"
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
 import EventLocation from "@/components/dashboard/events/EventLocation.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
+import { useIsMobile } from "@/composables/useIsMobile"
 import { createEvent } from "@/data/events"
 import { currentTeam } from "@/data/teams"
 import type { FrappeError } from "@/types"
@@ -22,6 +31,8 @@ import { currentTimeZone } from "@/utils/timeZones"
 const MANAGER_REQUIRED = "Ask an admin to make you a Manager to create events."
 
 const router = useRouter()
+
+const isMobile = useIsMobile()
 
 const canCreate = computed(() => canCreateEvents(currentTeam.value?.team_role))
 
@@ -200,6 +211,15 @@ async function save() {
 </script>
 
 <template>
+	<PageHeaderMobile v-if="isMobile" title="Create event">
+		<template #prefix>
+			<PageHeaderBackButton :to="{ name: 'events' }" />
+		</template>
+		<template #suffix>
+			<Button variant="solid" label="Create" :loading="submitting" @click="save" />
+		</template>
+	</PageHeaderMobile>
+
 	<div class="m-auto max-w-[800px] w-full py-8 px-4">
 		<Transition
 			mode="out-in"
@@ -210,7 +230,7 @@ async function save() {
 		>
 			<div v-if="!submitting" class="space-y-8">
 				<header class="space-y-4">
-					<div class="flex items-center justify-between gap-4">
+					<div class="hidden items-center justify-between gap-4 md:flex">
 						<h1 class="text-2xl font-semibold text-ink-gray-9">Create event</h1>
 						<!-- Never disabled, and never aria-disabled: the click is what explains
 						 what is missing. Held busy past the response, or the page it just saved
@@ -251,7 +271,7 @@ async function save() {
 					@keydown.enter.prevent
 				/>
 
-				<div class="grid gap-8 md:grid-cols-5">
+				<div class="grid grid-cols-1 gap-8 md:grid-cols-5">
 					<section class="space-y-3 md:col-span-3">
 						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
 						<div class="overflow-hidden rounded-6 border border-outline-gray-2">

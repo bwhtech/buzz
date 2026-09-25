@@ -5,7 +5,7 @@ import { computed, ref, watch } from "vue"
 
 import {
 	Drawer,
-	DrawerClose,
+	DrawerCloseButton,
 	DrawerContent,
 	DrawerDescription,
 	DrawerTitle,
@@ -87,9 +87,7 @@ const viewedWhen = computed(() =>
 	<Drawer v-model:open="open" swipe-direction="right">
 		<DrawerContent size="lg">
 			<div class="flex items-center gap-2 p-4 pb-0">
-				<DrawerClose as-child>
-					<Button size="sm" icon="lucide-chevrons-right" aria-label="Close" />
-				</DrawerClose>
+				<DrawerCloseButton />
 			</div>
 
 			<!-- Reading a sent message -->

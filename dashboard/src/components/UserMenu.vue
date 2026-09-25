@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import {
 	Avatar,
+	BottomSheet,
+	Button,
 	Dropdown,
+	ItemListRow,
+	TabButtons,
 	Tooltip,
 	sidebarCollapsedKey,
 	useColorScheme,
 	type DropdownOptions,
+	type TabButtonValue,
 } from "frappe-ui"
 import { computed, inject, ref } from "vue"
 
 import UserSettingsDialog from "@/components/UserSettingsDialog.vue"
 import { session } from "@/data/session"
+
+withDefaults(defineProps<{ variant?: "sidebar" | "sheet" }>(), { variant: "sidebar" })
 
 const isCollapsed = inject(
 	sidebarCollapsedKey,
@@ -20,18 +27,28 @@ const isCollapsed = inject(
 const { colorScheme, setColorScheme } = useColorScheme()
 
 const settingsOpen = ref(false)
+const sheetOpen = ref(false)
 
 const NEW_ISSUE_URL = "https://github.com/bwhtech/buzz/issues/new"
 
+const themes = [
+	{ value: "light", icon: "lucide-sun", label: __("Light") },
+	{ value: "dark", icon: "lucide-moon", label: __("Dark") },
+	{ value: "system", icon: "lucide-monitor", label: __("System") },
+] as const
+
+const themeTabs = [...themes]
+const setTheme = (value: TabButtonValue) =>
+	setColorScheme(value as (typeof themes)[number]["value"])
+
+const openSettings = () => (settingsOpen.value = true)
+const reportIssue = () => window.open(NEW_ISSUE_URL, "_blank", "noopener")
+const logOut = () => session.logout.fetch()
+const logOutLabel = computed(() => (session.logout.loading ? __("Signing out…") : __("Log Out")))
+
 // preventDefault keeps the menu open, so themes can be compared without reopening it.
 const themeOptions = computed<DropdownOptions>(() =>
-	(
-		[
-			{ value: "light", icon: "lucide-sun", label: __("Light") },
-			{ value: "dark", icon: "lucide-moon", label: __("Dark") },
-			{ value: "system", icon: "lucide-monitor", label: __("System") },
-		] as const
-	).map((theme) => ({
+	themes.map((theme) => ({
 		label: theme.label,
 		icon: theme.icon,
 		selected: colorScheme.value === theme.value,
@@ -50,7 +67,7 @@ const menu = computed<DropdownOptions>(() => [
 			{
 				label: __("Settings"),
 				icon: "lucide-settings",
-				onClick: () => (settingsOpen.value = true),
+				onClick: openSettings,
 			},
 			{
 				label: __("Theme"),
@@ -60,7 +77,7 @@ const menu = computed<DropdownOptions>(() => [
 			{
 				label: __("Report an Issue"),
 				icon: "lucide-bug",
-				onClick: () => window.open(NEW_ISSUE_URL, "_blank", "noopener"),
+				onClick: reportIssue,
 			},
 		],
 	},
@@ -69,11 +86,11 @@ const menu = computed<DropdownOptions>(() => [
 		hideLabel: true,
 		options: [
 			{
-				label: session.logout.loading ? __("Signing out…") : __("Log Out"),
+				label: logOutLabel.value,
 				icon: "lucide-log-out",
 				theme: "red",
 				disabled: session.logout.loading,
-				onClick: () => session.logout.fetch(),
+				onClick: logOut,
 			},
 		],
 	},
@@ -81,7 +98,71 @@ const menu = computed<DropdownOptions>(() => [
 </script>
 
 <template>
-	<Dropdown :options="menu" side="top" align="start" match-trigger-width>
+	<template v-if="variant === 'sheet'">
+		<Button
+			variant="ghost"
+			:aria-label="__('Account menu')"
+			data-testid="account-menu"
+			@click="sheetOpen = true"
+		>
+			<Avatar :image="session.userImage ?? undefined" :label="session.fullName" size="md" />
+		</Button>
+
+		<BottomSheet v-model:open="sheetOpen">
+			<div class="flex items-center gap-3 px-5 pb-4">
+				<Avatar :image="session.userImage ?? undefined" :label="session.fullName" size="2xl" />
+				<div class="min-w-0">
+					<p class="truncate text-lg-medium text-ink-gray-9">{{ session.fullName }}</p>
+					<p class="truncate text-base text-ink-gray-6">{{ session.user }}</p>
+				</div>
+			</div>
+
+			<div class="border-t border-outline-gray-1 p-2">
+				<Button
+					class="w-full !justify-start"
+					variant="ghost"
+					size="lg"
+					icon-left="lucide-settings"
+					:label="__('Settings')"
+					@click="((sheetOpen = false), openSettings())"
+				/>
+				<ItemListRow size="lg">
+					<template #prefix><span class="lucide-sun-moon size-5" aria-hidden="true" /></template>
+					{{ __("Theme") }}
+					<template #suffix>
+						<TabButtons
+							:model-value="colorScheme"
+							:options="themeTabs"
+							@update:model-value="setTheme"
+						/>
+					</template>
+				</ItemListRow>
+				<Button
+					class="w-full !justify-start"
+					variant="ghost"
+					size="lg"
+					icon-left="lucide-bug"
+					:label="__('Report an Issue')"
+					@click="reportIssue"
+				/>
+			</div>
+
+			<div class="border-t border-outline-gray-1 p-2 pb-6">
+				<Button
+					class="w-full !justify-start"
+					variant="ghost"
+					theme="red"
+					size="lg"
+					icon-left="lucide-log-out"
+					:label="logOutLabel"
+					:loading="session.logout.loading"
+					@click="logOut"
+				/>
+			</div>
+		</BottomSheet>
+	</template>
+
+	<Dropdown v-else :options="menu" side="top" align="start" match-trigger-width>
 		<template #default="{ open: isOpen }">
 			<button
 				data-testid="account-menu"

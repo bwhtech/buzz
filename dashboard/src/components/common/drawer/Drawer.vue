@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { BottomSheet } from "frappe-ui"
 import { DrawerRoot } from "reka-ui"
+
+import { useIsMobile } from "@/composables/useIsMobile"
 
 // The edge the drawer is anchored to is the edge you swipe towards to dismiss it,
 // so reka's swipeDirection is the only positioning input DrawerContent needs.
@@ -16,10 +19,16 @@ withDefaults(
 
 const open = defineModel<boolean>("open", { default: false })
 const snapPoint = defineModel<number | string | null>("snapPoint", { default: null })
+
+const isMobile = useIsMobile()
 </script>
 
 <template>
+	<BottomSheet v-if="isMobile" v-model:open="open">
+		<slot />
+	</BottomSheet>
 	<DrawerRoot
+		v-else
 		v-model:open="open"
 		v-model:snap-point="snapPoint"
 		:swipe-direction="swipeDirection"

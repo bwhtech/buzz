@@ -31,7 +31,7 @@ const emptyDescription = computed(() =>
 </script>
 
 <template>
-	<CreateEventHeader />
+	<CreateEventHeader title="Events" />
 
 	<TimelineList
 		v-model:tab="tab"

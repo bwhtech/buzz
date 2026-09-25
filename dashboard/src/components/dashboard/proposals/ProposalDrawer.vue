@@ -17,7 +17,7 @@ import { computed, ref } from "vue"
 
 import {
 	Drawer,
-	DrawerClose,
+	DrawerCloseButton,
 	DrawerContent,
 	DrawerDescription,
 	DrawerTitle,
@@ -185,9 +185,7 @@ const fields = computed(() => [
 		<DrawerContent size="lg">
 			<template v-if="proposal">
 				<div class="flex items-center gap-2 p-4 pb-0">
-					<DrawerClose as-child>
-						<Button size="sm" icon="lucide-chevrons-right" aria-label="Close" />
-					</DrawerClose>
+					<DrawerCloseButton />
 					<button
 						type="button"
 						class="cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5"
