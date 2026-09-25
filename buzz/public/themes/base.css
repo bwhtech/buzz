@@ -631,6 +631,7 @@ body {
 	border-radius: var(--radius);
 	background: var(--surface-raised);
 	object-fit: cover;
+	transition: opacity 150ms ease;
 }
 
 .event-card-date,
@@ -710,6 +711,15 @@ span.footer-logo {
 	transform: scale(0.97);
 }
 
+.event-card {
+	transition: transform 160ms var(--ease-out);
+}
+
+/* Softer than buttons: the featured cards are large enough that 0.97 reads as rubbery. */
+.event-card:active {
+	transform: scale(0.98);
+}
+
 .tab,
 .menu a,
 .menu button,
@@ -768,14 +778,16 @@ summary:focus-visible {
 		color: var(--ink-strong);
 	}
 
-	.event-card:hover .event-card-title {
-		text-decoration: underline;
+	.event-card:hover .event-card-image {
+		opacity: 0.85;
+		transition-duration: 0ms;
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
 	.btn:not([aria-disabled]):active,
 	.es-button:active,
+	.event-card:active,
 	.mode-toggle:active,
 	.site-nav summary:active {
 		transform: none;

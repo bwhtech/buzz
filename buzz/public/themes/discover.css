@@ -1,0 +1,137 @@
+.hosting-banner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px 24px;
+	margin-bottom: 32px;
+	padding: 12px 16px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	color: var(--ink-strong);
+	font-weight: 500;
+}
+
+.discover-section {
+	margin-top: 48px;
+}
+
+.event-rows {
+	display: grid;
+	gap: 16px 32px;
+}
+
+@media (min-width: 720px) {
+	.event-rows {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+/* Padded out into the gutter so the hover fill frames the row without shifting it off the column. */
+.event-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: -8px;
+	padding: 8px;
+	border-radius: 16px;
+	transition:
+		transform 160ms var(--ease-out),
+		background-color 150ms ease;
+}
+
+.event-row-image {
+	flex-shrink: 0;
+	width: 64px;
+	height: 64px;
+	border-radius: 8px;
+	background: var(--surface-raised);
+	object-fit: cover;
+}
+
+.event-row-text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	/* Fill lands instantly under the pointer and only fades on the way out, so scanning rows never trails. */
+	.event-row:hover {
+		background: var(--surface);
+		transition:
+			transform 160ms var(--ease-out),
+			background-color 0ms;
+	}
+}
+
+.featured-cards {
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.featured-cards .event-card-image {
+	aspect-ratio: 2 / 1;
+}
+
+.category-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 16px;
+}
+
+.category-card {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	height: 100%;
+	padding: 16px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	transition:
+		transform 160ms var(--ease-out),
+		border-color 150ms ease;
+}
+
+.category-card-icon {
+	width: 32px;
+	height: 32px;
+	margin-bottom: 8px;
+}
+
+.category-card-name {
+	margin-top: auto;
+	color: var(--ink-strong);
+	font-weight: 500;
+}
+
+.category-card-count {
+	color: var(--ink-muted);
+	font-size: 13px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.category-card:hover {
+		border-color: var(--ink-muted);
+	}
+}
+
+.hosting-banner .es-button {
+	flex-shrink: 0;
+}
+
+.category-card:active {
+	transform: scale(0.97);
+}
+
+.event-row:active {
+	transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.category-card:active,
+	.event-row:active {
+		transform: none;
+	}
+}

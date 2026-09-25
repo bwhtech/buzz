@@ -10,40 +10,98 @@
 	<meta property="og:url" content="{{ meta.url }}">
 	<meta name="twitter:card" content="summary">
 	<link rel="canonical" href="{{ meta.url }}">
+	<link rel="stylesheet" href="/assets/buzz/themes/discover.css">
 {% endautoescape %}{% endblock %}
 
 {% block content %}{% autoescape true %}
-	<main class="event-content">
-		{% if category and category.banner_image %}
-		<img class="event-banner" src="{{ category.banner_image }}" alt="">
-		{% endif %}
-		<h1 class="event-title">{{ title }}</h1>
-		{% if category and category.description %}<p class="listing-description">{{ category.description }}</p>{% endif %}
+	{% macro event_card(event) %}
+	<a class="event-card" href="{{ event.url }}">
+		{% if event.image %}<img class="event-card-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
+		<span class="event-card-date">{{ event.date }}</span>
+		<span class="event-card-title">{{ event.title }}</span>
+		{% if event.place %}<span class="event-card-place">{{ event.place }}</span>{% endif %}
+	</a>
+	{% endmacro %}
 
-		{% if categories %}
+	<main class="event-content">
+		{% if show_hosting_banner %}
+		<aside class="hosting-banner">
+			<p>{{ _("Buzz is now open to everyone. Host your first event.") }}</p>
+			<a class="es-button" data-variant="solid" data-size="md" href="/login?redirect-to={{ '/b/manage/team/events/new' | urlencode }}">{{ _("Start hosting") }}</a>
+		</aside>
+		{% endif %}
+
+		{% if category %}
+		{% if category.banner_image %}<img class="event-banner" src="{{ category.banner_image }}" alt="">{% endif %}
+		<h1 class="event-title">{{ title }}</h1>
+		{% if category.description %}<p class="listing-description">{{ category.description }}</p>{% endif %}
+
 		<nav class="tabs listing-filters">
-			<a class="tab" href="/events"{% if not category %} aria-current="page"{% endif %}>{{ _("All") }}</a>
+			<a class="tab" href="/events">{{ _("All") }}</a>
 			{% for item in categories %}
-			<a class="tab" href="/events?category={{ item.slug | urlencode }}"{% if category and category.slug == item.slug %} aria-current="page"{% endif %}>{{ item.name }}</a>
+			<a class="tab" href="/events?category={{ item.slug | urlencode }}"{% if category.slug == item.slug %} aria-current="page"{% endif %}>{{ item.name }}</a>
 			{% endfor %}
 		</nav>
-		{% endif %}
 
 		{% if events %}
 		<ul class="event-cards">
-			{% for event in events %}
-			<li>
-				<a class="event-card" href="{{ event.url }}">
-					{% if event.image %}<img class="event-card-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
-					<span class="event-card-date">{{ event.date }}</span>
-					<span class="event-card-title">{{ event.title }}</span>
-					{% if event.place %}<span class="event-card-place">{{ event.place }}</span>{% endif %}
-				</a>
-			</li>
-			{% endfor %}
+			{% for event in events %}<li>{{ event_card(event) }}</li>{% endfor %}
 		</ul>
 		{% else %}
 		<p class="empty-state">{{ _("No upcoming events.") }}</p>
+		{% endif %}
+
+		{% else %}
+		<h1 class="event-title">{{ title }}</h1>
+		<p class="listing-description">{{ meta.description }}</p>
+
+		{% if featured_events %}
+		<section class="discover-section">
+			<h2 class="section-title">{{ _("Featured") }}</h2>
+			<ul class="event-cards featured-cards">
+				{% for event in featured_events %}<li>{{ event_card(event) }}</li>{% endfor %}
+			</ul>
+		</section>
+		{% endif %}
+
+		<section class="discover-section">
+			<h2 class="section-title">{{ _("Popular events") }}</h2>
+			{% if popular_events %}
+			<ul class="event-rows">
+				{% for event in popular_events %}
+				<li>
+					<a class="event-row" href="{{ event.url }}">
+						{% if event.image %}<img class="event-row-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="event-row-image" seed="{{ event.title }}"></event-banner>{% endif %}
+						<span class="event-row-text">
+							<span class="event-card-date">{{ event.date }}</span>
+							<span class="event-card-title">{{ event.title }}</span>
+							{% if event.place %}<span class="event-card-place">{{ event.place }}</span>{% endif %}
+						</span>
+					</a>
+				</li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<p class="empty-state">{{ _("No upcoming events.") }}</p>
+			{% endif %}
+		</section>
+
+		{% if categories %}
+		<section class="discover-section">
+			<h2 class="section-title">{{ _("Browse by category") }}</h2>
+			<ul class="category-cards">
+				{% for category in categories %}
+				<li>
+					<a class="category-card" href="/events?category={{ category.slug | urlencode }}">
+						{% if category.icon_url %}<img class="category-card-icon" src="{{ category.icon_url }}" alt="">{% endif %}
+						<span class="category-card-name">{{ category.name }}</span>
+						<span class="category-card-count">{% if category.event_count == 1 %}{{ _("1 event") }}{% else %}{{ _("{0} events").format(category.event_count) }}{% endif %}</span>
+					</a>
+				</li>
+				{% endfor %}
+			</ul>
+		</section>
+		{% endif %}
 		{% endif %}
 	</main>
 {% endautoescape %}{% endblock %}
