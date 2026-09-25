@@ -46,19 +46,35 @@ body {
 
 /* Header */
 
-.site-header,
 .site-footer,
 .event-content {
 	width: min(var(--page-width), 100% - 32px);
 	margin-inline: auto;
 }
 
+/* Full-bleed so the blur and the edge span the screen; the padding keeps content on the page column.
+   Content blurring through, and an edge that appears once scrolled, show the page continues above. */
 .site-header {
+	position: sticky;
+	top: 0;
+	z-index: 10;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
-	padding: 16px 0;
+	padding: 16px max(16px, (100% - var(--page-width)) / 2);
+	border-bottom: 1px solid transparent;
+	background: color-mix(in srgb, var(--page-bg) 80%, transparent);
+	backdrop-filter: blur(12px) saturate(1.5);
+	animation: header-edge linear both;
+	animation-timeline: scroll();
+	animation-range: 0 24px;
+}
+
+@keyframes header-edge {
+	to {
+		border-bottom-color: var(--border);
+	}
 }
 
 .site-brand img {
@@ -742,6 +758,40 @@ span.footer-logo {
 	.site-nav details[open] .menu {
 		opacity: 0;
 		transform: scale(0.97) translateY(-4px);
+	}
+}
+
+/* Page-to-page navigation fades through the background instead of swapping in one frame;
+   unsupported browsers navigate as before. */
+@media (prefers-reduced-motion: no-preference) {
+	@view-transition {
+		navigation: auto;
+		types: page;
+	}
+}
+
+/* Named so they stay put while the content fades; a plain crossfade ghosts two layouts over each other. */
+.site-header {
+	view-transition-name: site-header;
+}
+
+:root:active-view-transition-type(page)::view-transition-old(root) {
+	animation: 90ms ease-out both page-fade-out;
+}
+
+:root:active-view-transition-type(page)::view-transition-new(root) {
+	animation: 180ms var(--ease-out) 60ms both page-fade-in;
+}
+
+@keyframes page-fade-out {
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes page-fade-in {
+	from {
+		opacity: 0;
 	}
 }
 

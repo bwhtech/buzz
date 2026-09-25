@@ -1,4 +1,5 @@
 .hosting-banner {
+	view-transition-name: hosting-banner;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
