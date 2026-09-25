@@ -1,16 +1,9 @@
 <script setup lang="ts">
-import {
-	Breadcrumbs,
-	Button,
-	PageHeader,
-	PageHeaderBase,
-	PageHeaderMobile,
-	PageHeaderMobileTitle,
-	Tooltip,
-	dayjsLocal,
-} from "frappe-ui"
+import { Breadcrumbs, Button, PageHeader, PageHeaderMobile, Tooltip, dayjsLocal } from "frappe-ui"
 import { computed } from "vue"
+import { useRoute } from "vue-router"
 
+import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import { useIsMobile } from "@/composables/useIsMobile"
 
 // The event, then the section of it being looked at. Neither crumb is a link: the
@@ -24,6 +17,7 @@ const props = defineProps<{
 }>()
 
 const isMobile = useIsMobile()
+const route = useRoute()
 
 const items = computed(() => [{ label: props.title || "Event" }, { label: props.section }])
 
@@ -34,23 +28,23 @@ const modifiedExact = computed(() => modifiedAt.value?.format("D MMM YYYY, h:mm 
 
 <template>
 	<template v-if="isMobile">
-		<!-- The tab bar already names the section, so the title carries the event. -->
-		<PageHeaderMobile>
+		<PageHeaderMobile :title="title ?? ''">
 			<template #prefix>
-				<Button
-					variant="ghost"
-					icon="lucide-chevron-left"
-					label="Back to events"
-					:route="{ name: 'events' }"
-				/>
+				<slot name="leading">
+					<!-- Not history back: every tab tap pushes a history entry. -->
+					<Button
+						variant="ghost"
+						icon="lucide-chevron-left"
+						label="Back to events"
+						:route="{ name: 'events' }"
+					/>
+				</slot>
 			</template>
-			<PageHeaderMobileTitle :title="title || section" />
+			<template #suffix>
+				<slot />
+			</template>
 		</PageHeaderMobile>
-		<!-- Page actions get a strip of their own: a centered title leaves them a third of
-		     the width. empty: drops the strip while a v-if inside the slot renders nothing. -->
-		<PageHeaderBase class="flex justify-end gap-2 border-b bg-surface-base px-3 py-2 empty:hidden">
-			<slot />
-		</PageHeaderBase>
+		<EventArchivedAlert :event="route.params.eventId as string" banner />
 	</template>
 
 	<PageHeader v-else class="border-none pt-2 bg-surface-elevation-1">
@@ -62,6 +56,7 @@ const modifiedExact = computed(() => modifiedAt.value?.format("D MMM YYYY, h:mm 
 					Modified {{ modifiedRelative }}
 				</span>
 			</Tooltip>
+			<slot name="leading" />
 			<slot />
 		</div>
 	</PageHeader>

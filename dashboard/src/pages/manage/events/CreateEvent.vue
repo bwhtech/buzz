@@ -211,7 +211,6 @@ async function save() {
 </script>
 
 <template>
-	<!-- The mobile shell has no sidebar to leave by, so the header carries the way out. -->
 	<PageHeaderMobile v-if="isMobile" title="Create event">
 		<template #prefix>
 			<PageHeaderBackButton :to="{ name: 'events' }" />

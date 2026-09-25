@@ -82,7 +82,7 @@ const venue = computed(() => {
 				<Badge v-if="event.is_attendee" theme="violet" variant="subtle" label="Attending" />
 				<Button
 					v-if="canManage"
-					class="relative z-10 ml-auto"
+					class="relative z-10 ml-auto max-md:hidden"
 					label="Manage"
 					icon-right="lucide-arrow-right"
 					size="sm"
@@ -90,6 +90,11 @@ const venue = computed(() => {
 				/>
 			</div>
 		</div>
+
+		<span
+			class="lucide-chevron-right size-4 shrink-0 self-center text-ink-gray-4 md:hidden"
+			aria-hidden="true"
+		/>
 	</article>
 </template>
 

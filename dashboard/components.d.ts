@@ -41,6 +41,7 @@ declare module 'vue' {
     CustomFieldsSection: typeof import('./src/components/CustomFieldsSection.vue')['default']
     DetailRow: typeof import('./src/components/common/DetailRow.vue')['default']
     Drawer: typeof import('./src/components/common/drawer/Drawer.vue')['default']
+    DrawerCloseButton: typeof import('./src/components/common/drawer/DrawerCloseButton.vue')['default']
     DrawerContent: typeof import('./src/components/common/drawer/DrawerContent.vue')['default']
     DrawerSaveBar: typeof import('./src/components/dashboard/sponsorships/DrawerSaveBar.vue')['default']
     EmailSettingsDialog: typeof import('./src/components/dashboard/communications/EmailSettingsDialog.vue')['default']

@@ -1,6 +1,7 @@
 <script setup lang="ts" generic="T extends { name: string }">
 import { ErrorMessage, Icon, Skeleton, TabButtons } from "frappe-ui"
 
+import { useIsMobile } from "@/composables/useIsMobile"
 import { dayLabel, monthLabel, weekday } from "@/utils/dateLabels"
 import type { MonthGroup } from "@/utils/eventGroups"
 import type { TimelineTab } from "@/utils/timelineTabs"
@@ -17,6 +18,8 @@ defineProps<{
 
 const tab = defineModel<TimelineTab>("tab", { required: true })
 
+const isMobile = useIsMobile()
+
 const tabOptions = [
 	{ label: "Upcoming", value: "upcoming" },
 	{ label: "Past", value: "past" },
@@ -24,8 +27,7 @@ const tabOptions = [
 </script>
 
 <template>
-	<div class="m-auto max-w-[800px] w-full p-4 space-y-6">
-		<!-- On mobile the heading lives in the page header, leaving the tabs. -->
+	<div class="m-auto max-w-[800px] w-full p-4 space-y-6 max-md:pb-24">
 		<header class="flex items-start justify-end md:justify-between">
 			<div class="hidden md:flex flex-col gap-3 items-start">
 				<div class="flex gap-3 items-center">
@@ -36,7 +38,13 @@ const tabOptions = [
 				</div>
 				<p class="text-p-base" v-if="description">{{ description }}</p>
 			</div>
-			<TabButtons v-model="tab" :options="tabOptions" size="md" />
+			<TabButtons
+				v-model="tab"
+				class="max-md:w-full"
+				:options="tabOptions"
+				size="md"
+				:fluid="isMobile"
+			/>
 		</header>
 
 		<div v-if="$slots.controls" class="flex items-center justify-between gap-4">
@@ -63,11 +71,12 @@ const tabOptions = [
 
 		<div v-else class="relative space-y-6">
 			<section v-for="month in months" :key="month.month" class="space-y-4">
-				<h2 class="relative bg-surface-elevation-1 py-1 text-xl font-semibold text-ink-gray-8">
+				<h2
+					class="sticky top-0 z-[1] bg-surface-elevation-1 py-1 text-xl font-semibold text-ink-gray-8 md:relative"
+				>
 					{{ monthLabel(month.month) }}
 				</h2>
 
-				<!-- A phone has no room for the date rail, so the day heads its cards instead. -->
 				<div
 					v-for="day in month.days"
 					:key="day.date"

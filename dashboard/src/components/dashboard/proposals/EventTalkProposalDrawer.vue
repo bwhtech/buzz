@@ -4,7 +4,7 @@ import { computed, ref, watch } from "vue"
 
 import {
 	Drawer,
-	DrawerClose,
+	DrawerCloseButton,
 	DrawerContent,
 	DrawerDescription,
 	DrawerTitle,
@@ -128,9 +128,7 @@ const fields = computed(() => [
 		<DrawerContent size="lg">
 			<template v-if="proposal">
 				<div class="flex items-center gap-2 p-4 pb-0">
-					<DrawerClose as-child>
-						<Button size="sm" icon="lucide-chevrons-right" aria-label="Close proposal" />
-					</DrawerClose>
+					<DrawerCloseButton label="Close proposal" />
 					<button
 						type="button"
 						class="copy-id cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5 hover:text-ink-gray-7"

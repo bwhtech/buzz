@@ -1,6 +1,5 @@
 export type ManagerNavItem = {
 	label: string
-	// A tab bar cell is a fifth of a phone, so long labels get a shorter name there.
 	shortLabel?: string
 	icon: string
 	to: string
@@ -51,7 +50,6 @@ function eventItems(eventId: string): ManagerNavItem[] {
 	]
 }
 
-/** The destinations the manage shell offers: the root sections, or one event's. */
 export function managerNavigation(context: NavigationContext): ManagerNavItem[] {
 	// Creating an event is a page of its own; the shell holds only the way out of it.
 	if (context.creatingEvent) return []

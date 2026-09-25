@@ -6,7 +6,7 @@ import { computed } from "vue"
 
 import {
 	Drawer,
-	DrawerClose,
+	DrawerCloseButton,
 	DrawerContent,
 	DrawerDescription,
 	DrawerTitle,
@@ -78,9 +78,7 @@ const endsAt = computed(() => {
 		<DrawerContent size="lg">
 			<template v-if="event">
 				<div class="flex gap-2 p-2">
-					<DrawerClose as-child>
-						<Button size="sm" icon="lucide-chevrons-right" aria-label="Close" />
-					</DrawerClose>
+					<DrawerCloseButton />
 
 					<!-- Both need a route: an unpublished event has no public page to point at. -->
 					<template v-if="event.route">

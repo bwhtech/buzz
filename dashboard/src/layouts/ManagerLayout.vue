@@ -44,8 +44,7 @@ const items = computed(() =>
 <template>
 	<NotFound v-if="access === 'denied'" />
 	<template v-else-if="access === 'granted'">
-		<!-- Two navigation models, not one responsive frame: frappe-ui ships them apart. -->
-		<ManagerMobileShell v-if="isMobile" :items="items" :event-id="eventId" />
+		<ManagerMobileShell v-if="isMobile" :items="items" />
 		<ManagerDesktopShell v-else :items="items" :event-id="eventId" :event-title="eventTitle" />
 	</template>
 </template>

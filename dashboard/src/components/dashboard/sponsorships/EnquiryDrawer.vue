@@ -21,7 +21,7 @@ import { computed, ref, watch } from "vue"
 import DetailRow from "@/components/common/DetailRow.vue"
 import {
 	Drawer,
-	DrawerClose,
+	DrawerCloseButton,
 	DrawerContent,
 	DrawerDescription,
 	DrawerTitle,
@@ -143,9 +143,7 @@ const updatedAt = computed(() => (loaded.value ? dayjsLocal(loaded.value.modifie
 		<DrawerContent>
 			<template v-if="enquiry">
 				<div class="flex items-center gap-2 p-4 pb-0">
-					<DrawerClose as-child>
-						<Button size="sm" icon="lucide-chevrons-right" aria-label="Close enquiry" />
-					</DrawerClose>
+					<DrawerCloseButton label="Close enquiry" />
 					<button
 						type="button"
 						class="cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5 hover:text-ink-gray-7"

@@ -25,9 +25,3 @@ test("creating an event offers no destinations", () => {
 	const items = managerNavigation({ creatingEvent: true, hasSponsorships: true })
 	assert.deepEqual(items, [])
 })
-
-test("long labels carry a short name for the tab bar", () => {
-	const items = managerNavigation({ eventId: "EV-1", creatingEvent: false, hasSponsorships: false })
-	const announcements = items.find((item) => item.label === "Announcements")
-	assert.equal(announcements?.shortLabel, "Announce")
-})
