@@ -46,19 +46,35 @@ body {
 
 /* Header */
 
-.site-header,
 .site-footer,
 .event-content {
 	width: min(var(--page-width), 100% - 32px);
 	margin-inline: auto;
 }
 
+/* Full-bleed so the blur and the edge span the screen; the padding keeps content on the page column.
+   Content blurring through, and an edge that appears once scrolled, show the page continues above. */
 .site-header {
+	position: sticky;
+	top: 0;
+	z-index: 10;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
-	padding: 16px 0;
+	padding: 16px max(16px, (100% - var(--page-width)) / 2);
+	border-bottom: 1px solid transparent;
+	background: color-mix(in srgb, var(--page-bg) 80%, transparent);
+	backdrop-filter: blur(12px) saturate(1.5);
+	animation: header-edge linear both;
+	animation-timeline: scroll();
+	animation-range: 0 24px;
+}
+
+@keyframes header-edge {
+	to {
+		border-bottom-color: var(--border);
+	}
 }
 
 .site-brand img {
@@ -233,6 +249,15 @@ body {
 .event-heading {
 	flex: 1;
 	min-width: 0;
+}
+
+/* Self-hosted and preloaded by the layout, so titles never paint in the fallback face first.
+   `block` keeps the title invisible for the few ms the preload may still be in flight.
+   Latin subset only (10KB): characters outside it render in the fallback face. */
+@font-face {
+	font-family: "League Gothic";
+	font-display: block;
+	src: url("/assets/buzz/fonts/LeagueGothic-Latin.woff2") format("woff2");
 }
 
 /* The title face, shared by the date badge so both always match. */
@@ -631,6 +656,7 @@ body {
 	border-radius: var(--radius);
 	background: var(--surface-raised);
 	object-fit: cover;
+	transition: opacity 150ms ease;
 }
 
 .event-card-date,
@@ -693,17 +719,30 @@ span.footer-logo {
 }
 
 .btn,
+.es-button,
 .mode-toggle,
 .site-nav summary {
 	transition:
 		transform 160ms var(--ease-out),
-		background-color 150ms ease;
+		background-color 150ms ease,
+		border-color 150ms ease,
+		color 150ms ease;
 }
 
 .btn:not([aria-disabled]):active,
+.es-button:active,
 .mode-toggle:active,
 .site-nav summary:active {
 	transform: scale(0.97);
+}
+
+.event-card {
+	transition: transform 160ms var(--ease-out);
+}
+
+/* Softer than buttons: the featured cards are large enough that 0.97 reads as rubbery. */
+.event-card:active {
+	transform: scale(0.98);
 }
 
 .tab,
@@ -728,6 +767,40 @@ span.footer-logo {
 	.site-nav details[open] .menu {
 		opacity: 0;
 		transform: scale(0.97) translateY(-4px);
+	}
+}
+
+/* Page-to-page navigation fades through the background instead of swapping in one frame;
+   unsupported browsers navigate as before. */
+@media (prefers-reduced-motion: no-preference) {
+	@view-transition {
+		navigation: auto;
+		types: page;
+	}
+}
+
+/* Named so they stay put while the content fades; a plain crossfade ghosts two layouts over each other. */
+.site-header {
+	view-transition-name: site-header;
+}
+
+:root:active-view-transition-type(page)::view-transition-old(root) {
+	animation: 90ms ease-out both page-fade-out;
+}
+
+:root:active-view-transition-type(page)::view-transition-new(root) {
+	animation: 180ms var(--ease-out) 60ms both page-fade-in;
+}
+
+@keyframes page-fade-out {
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes page-fade-in {
+	from {
+		opacity: 0;
 	}
 }
 
@@ -764,13 +837,16 @@ summary:focus-visible {
 		color: var(--ink-strong);
 	}
 
-	.event-card:hover .event-card-title {
-		text-decoration: underline;
+	.event-card:hover .event-card-image {
+		opacity: 0.85;
+		transition-duration: 0ms;
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
 	.btn:not([aria-disabled]):active,
+	.es-button:active,
+	.event-card:active,
 	.mode-toggle:active,
 	.site-nav summary:active {
 		transform: none;
