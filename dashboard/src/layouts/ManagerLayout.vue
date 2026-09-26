@@ -44,7 +44,7 @@ const items = computed(() =>
 <template>
 	<NotFound v-if="access === 'denied'" />
 	<template v-else-if="access === 'granted'">
-		<ManagerMobileShell v-if="isMobile" :items="items" />
+		<ManagerMobileShell v-if="isMobile" :items="items" :show-discover="!eventId" />
 		<ManagerDesktopShell v-else :items="items" :event-id="eventId" :event-title="eventTitle" />
 	</template>
 </template>

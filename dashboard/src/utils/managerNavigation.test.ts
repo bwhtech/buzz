@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import { managerNavigation } from "./managerNavigation.ts"
+import { discoverEvents, managerNavigation } from "./managerNavigation.ts"
 
 const labels = (items: { label: string }[]) => items.map((item) => item.label)
 
@@ -24,4 +24,8 @@ test("an event offers its own sections, scoped to its id", () => {
 test("creating an event offers no destinations", () => {
 	const items = managerNavigation({ creatingEvent: true, hasSponsorships: true })
 	assert.deepEqual(items, [])
+})
+
+test("discover events leaves the dashboard for the public events page", () => {
+	assert.equal(discoverEvents.href, "/events")
 })

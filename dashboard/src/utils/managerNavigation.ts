@@ -5,6 +5,16 @@ export type ManagerNavItem = {
 	to: string
 }
 
+// /events is a site page outside the dashboard router, so it opens as a full page load.
+export const discoverEvents = {
+	label: "Discover Events",
+	shortLabel: "Discover",
+	icon: "lucide-compass",
+	href: "/events",
+}
+
+export const openDiscoverEvents = () => window.location.assign(discoverEvents.href)
+
 type NavigationContext = {
 	eventId?: string
 	creatingEvent: boolean

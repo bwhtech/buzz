@@ -2,9 +2,9 @@
 import { MobileNav, MobileNavItem, MobileShell } from "frappe-ui"
 import { useRoute } from "vue-router"
 
-import type { ManagerNavItem } from "@/utils/managerNavigation"
+import { discoverEvents, openDiscoverEvents, type ManagerNavItem } from "@/utils/managerNavigation"
 
-defineProps<{ items: ManagerNavItem[] }>()
+defineProps<{ items: ManagerNavItem[]; showDiscover?: boolean }>()
 
 // `active` is a Boolean prop, so leaving it unset casts to false and skips route matching.
 const route = useRoute()
@@ -25,6 +25,12 @@ const route = useRoute()
 					:icon="item.icon"
 					:to="item.to"
 					:active="route.path === item.to"
+				/>
+				<MobileNavItem
+					v-if="showDiscover"
+					:label="discoverEvents.shortLabel"
+					:icon="discoverEvents.icon"
+					@click="openDiscoverEvents"
 				/>
 			</MobileNav>
 		</template>
