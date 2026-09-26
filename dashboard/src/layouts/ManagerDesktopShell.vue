@@ -5,7 +5,7 @@ import { useRoute } from "vue-router"
 
 import ManagerSidebarHeader from "@/components/dashboard/ManagerSidebarHeader.vue"
 import UserMenu from "@/components/UserMenu.vue"
-import type { ManagerNavItem } from "@/utils/managerNavigation"
+import { discoverEvents, openDiscoverEvents, type ManagerNavItem } from "@/utils/managerNavigation"
 
 defineProps<{ items: ManagerNavItem[]; eventId?: string; eventTitle: string }>()
 
@@ -61,7 +61,16 @@ watch(headerKey, (key, previous) => {
 					</Transition>
 				</div>
 
-				<div class="mt-auto px-2 py-2">
+				<div class="mt-auto flex flex-col gap-2 px-2 py-2">
+					<SidebarItem
+						:label="discoverEvents.label"
+						:icon="discoverEvents.icon"
+						:on-click="openDiscoverEvents"
+					>
+						<template #suffix>
+							<span class="lucide-arrow-up-right mr-2 size-3.5 text-ink-gray-4" />
+						</template>
+					</SidebarItem>
 					<UserMenu />
 				</div>
 			</Sidebar>
