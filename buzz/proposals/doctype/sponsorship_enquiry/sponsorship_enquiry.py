@@ -5,6 +5,7 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import escape_html, get_url, validate_email_address
 
+from buzz import telemetry
 from buzz.emails import is_full_document, send_message_email
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.payments import mark_payment_as_received
@@ -63,6 +64,7 @@ class SponsorshipEnquiry(Document):
 			mark_payment_as_received(self.doctype, self.name)
 			self.insert_sponsor()
 			self.db_set("status", "Paid")
+			telemetry.capture("sponsorship_paid")
 
 	@frappe.whitelist()
 	def create_sponsor(self):
@@ -97,6 +99,8 @@ class SponsorshipEnquiry(Document):
 			self.send_pitch_deck()
 		except Exception:
 			frappe.log_error("Error sending Sponsor Pitch Deck")
+
+		telemetry.capture("sponsorship_enquiry_created", {"tier_selected": bool(self.tier)})
 
 	def send_pitch_deck(self, now=False):
 		if not self.contact_recipient:

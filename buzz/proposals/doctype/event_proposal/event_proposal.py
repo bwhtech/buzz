@@ -7,6 +7,8 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils.data import get_url_to_form, getdate, today
 
+from buzz import telemetry
+
 
 class EventProposal(Document):
 	# begin: auto-generated types
@@ -41,6 +43,11 @@ class EventProposal(Document):
 	def validate(self):
 		self.validate_dates()
 		self.validate_times()
+
+	def after_insert(self):
+		telemetry.capture(
+			"event_proposal_submitted", {"medium": self.medium, "free_event": bool(self.free_event)}
+		)
 
 	def validate_dates(self):
 		if getdate(self.start_date) < getdate(today()):

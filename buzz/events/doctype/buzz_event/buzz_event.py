@@ -8,6 +8,7 @@ from frappe.model.naming import append_number_if_name_exists
 from frappe.utils import get_datetime_in_timezone, get_system_timezone
 from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
 
+from buzz import telemetry
 from buzz.api.forms.fields import validate_excluded_fields
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import create_for_event
@@ -254,6 +255,27 @@ class BuzzEvent(Document):
 
 	def after_insert(self):
 		self.create_default_records()
+		self.capture_created()
+		if self.is_published:
+			self.capture_published()
+
+	def capture_created(self):
+		if self.proposal:
+			source = "proposal"
+		elif self.flags.from_template:
+			source = "template"
+		else:
+			source = "blank"
+
+		telemetry.capture(
+			"event_created",
+			{
+				"source": source,
+				"medium": self.medium,
+				"free_event": bool(self.free_event),
+				"published": bool(self.is_published),
+			},
+		)
 
 	def on_trash(self):
 		# The form is created with the event and is the only doc that is one-per-event, so it
@@ -349,6 +371,7 @@ class BuzzEvent(Document):
 	def on_update(self):
 		self.update_zoom_webinar()
 		self.update_zoom_meeting()
+		self.capture_published_change()
 		self.enqueue_og_image()
 
 	def enqueue_og_image(self):
@@ -365,6 +388,13 @@ class BuzzEvent(Document):
 			return
 		if needs_update:
 			enqueue_generate(str(self.name))
+
+	def capture_published_change(self):
+		if not self.flags.in_insert and self.is_published and self.has_value_changed("is_published"):
+			self.capture_published()
+
+	def capture_published(self):
+		telemetry.capture("event_published", {"medium": self.medium, "free_event": bool(self.free_event)})
 
 	@only_if_app_installed("zoom_integration")
 	def update_zoom_webinar(self):
@@ -440,6 +470,7 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 	event.start_date = frappe.utils.today()
 	event.start_time = "09:00:00"
 	event.end_time = "18:00:00"
+	event.flags.from_template = True
 
 	# Apply additional fields first (these are mandatory fields provided by user)
 	for field, value in additional_fields.items():
