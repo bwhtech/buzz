@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { breakpointsTailwind, useBreakpoints } from "@vueuse/core"
 import {
 	Button,
 	ErrorMessage,
@@ -40,6 +41,19 @@ const open = defineModel<boolean>("open", { default: false })
 
 const tab = ref("profile")
 
+// Below sm the dialog is a full-screen sheet: the nav list first, then one panel at a time.
+const isPhone = useBreakpoints(breakpointsTailwind).smaller("sm")
+
+watch(isPhone, (phone) => {
+	if (!phone && !tab.value) tab.value = "profile"
+})
+
+// From a panel, back returns to the list; from the list, it leaves settings.
+function goBack() {
+	if (tab.value) tab.value = ""
+	else open.value = false
+}
+
 // G then S. useKeyboardShortcut matches one chord at a time, so a sequence is
 // two registrations and the window between them.
 const SEQUENCE_WINDOW = 1000
@@ -76,6 +90,7 @@ const form = reactive<Profile>(savedProfile())
 // Mounted for the session, so a cancelled edit is discarded on the way back in.
 watch(open, (isOpen) => {
 	if (!isOpen) return
+	if (isPhone.value) tab.value = ""
 	Object.assign(form, savedProfile())
 	// Memberships change under the cached list, so the teams tab reads a fresh one.
 	reloadTeams()
@@ -122,9 +137,25 @@ async function save(fields: Partial<Profile> = { ...form }) {
 	<SettingsDialog v-model:open="open" v-model:tab="tab" size="6xl" :shortcut="false">
 		<template #title>{{ __("Settings") }}</template>
 
-		<SettingsSidebar>
+		<header
+			class="flex h-12 shrink-0 items-center gap-1 border-b border-outline-gray-1 px-2 sm:hidden"
+		>
+			<Button
+				variant="ghost"
+				size="lg"
+				icon="lucide-chevron-left"
+				:aria-label="tab ? __('Back') : __('Close')"
+				@click="goBack"
+			/>
+			<h2 aria-hidden="true" class="text-lg-semibold text-ink-gray-8">{{ __("Settings") }}</h2>
+		</header>
+
+		<SettingsSidebar
+			class="max-sm:max-h-none max-sm:flex-1 max-sm:border-b-0 max-sm:[&_[role=tab]]:h-10"
+			:class="{ 'max-sm:hidden': tab }"
+		>
 			<!-- Visible twin of the dialog's sr-only title. -->
-			<h2 aria-hidden="true" class="px-2 py-1 text-lg-semibold text-ink-gray-8">
+			<h2 aria-hidden="true" class="px-2 py-1 text-lg-semibold text-ink-gray-8 max-sm:hidden">
 				{{ __("Settings") }}
 			</h2>
 
@@ -154,7 +185,7 @@ async function save(fields: Partial<Profile> = { ...form }) {
 			</SettingsNavGroup>
 		</SettingsSidebar>
 
-		<SettingsContent>
+		<SettingsContent class="user-settings" :class="{ 'max-sm:hidden': !tab }">
 			<SettingsPanel value="profile">
 				<SettingsHeader :title="__('Profile')" :description="__('How you appear across Buzz.')">
 					<template #actions>
@@ -237,6 +268,29 @@ async function save(fields: Partial<Profile> = { ...form }) {
 	.save-enter-from,
 	.save-leave-to {
 		transform: none;
+	}
+}
+</style>
+
+<style>
+/* frappe-ui's Dialog keeps its card gutter on a phone, which pushes the settings dialog's
+   full-screen layout past the viewport, and its panels keep their desktop insets. */
+@media (max-width: 639px) {
+	.dialog-scroll-container > div:has(.user-settings) {
+		padding: 0;
+	}
+
+	.dialog-content:has(.user-settings) {
+		margin: 0;
+		border-radius: 0;
+	}
+
+	.user-settings .px-\[4\.4rem\] {
+		padding-inline: 1rem;
+	}
+
+	.user-settings .px-\[4\.4rem\].pt-10 {
+		padding-top: 1.25rem;
 	}
 }
 </style>

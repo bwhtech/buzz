@@ -127,3 +127,28 @@ test.describe("User settings", () => {
 		await expect(panel.getByText("No members found")).toBeVisible()
 	})
 })
+
+test.describe("User settings on a phone", () => {
+	test.use({ viewport: { width: 390, height: 844 } })
+
+	test("drills from the tab list into a panel and back", async ({ page }) => {
+		await page.goto("/b/manage/events")
+		await accountMenu(page).click()
+		await page.getByRole("button", { name: "Settings" }).click()
+
+		const dialog = settings(page)
+		const profileTab = dialog.getByRole("tab", { name: "Profile" })
+		await expect(profileTab).toBeVisible()
+		await expect(dialog.getByLabel("First Name")).toBeHidden()
+
+		await profileTab.click()
+		await expect(dialog.getByLabel("First Name")).toHaveValue(SETTINGS_FIRST_NAME)
+		await expect(profileTab).toBeHidden()
+
+		await dialog.getByRole("button", { name: "Back" }).click()
+		await expect(profileTab).toBeVisible()
+
+		await dialog.getByRole("button", { name: "Close" }).click()
+		await expect(dialog).toHaveCount(0)
+	})
+})
