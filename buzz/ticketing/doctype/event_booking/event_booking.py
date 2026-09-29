@@ -5,6 +5,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cstr, flt
 
+from buzz import telemetry
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
 from buzz.payments import get_controller, mark_payment_as_received
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
@@ -156,6 +157,7 @@ class EventBooking(Document):
 	def on_submit(self):
 		self.validate_coupon_availability()
 		self.generate_tickets()
+		self.capture_confirmed()
 
 		try:
 			self.send_booking_confirmation_email()
@@ -165,6 +167,26 @@ class EventBooking(Document):
 				reference_doctype=self.doctype,
 				reference_name=self.name,
 			)
+
+	def capture_confirmed(self):
+		if not self.total_amount:
+			payment = "free"
+		elif self.payment_method == OFFLINE_PAYMENT_METHOD:
+			payment = "offline"
+		else:
+			payment = "online"
+
+		telemetry.capture(
+			"booking_confirmed",
+			{
+				"payment": payment,
+				"attendees": telemetry.count_bucket(len(self.attendees)),
+				"coupon": bool(self.coupon_code),
+				"add_ons": any(attendee.add_ons for attendee in self.attendees),
+				"utm": bool(self.utm_parameters),
+				"taxed": bool(self.tax_amount),
+			},
+		)
 
 	def send_booking_confirmation_email(self):
 		event_doc = frappe.get_cached_doc("Buzz Event", self.event)

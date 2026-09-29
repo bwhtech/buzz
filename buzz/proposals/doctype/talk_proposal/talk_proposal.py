@@ -5,6 +5,8 @@ import frappe
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 
+from buzz import telemetry
+
 PROPOSAL_MANAGER_ROLES = frozenset({"System Manager", "Event Manager"})
 
 
@@ -69,6 +71,9 @@ class TalkProposal(Document):
 	def validate(self):
 		if not self.submitted_by:
 			self.submitted_by = frappe.session.user
+
+	def after_insert(self):
+		telemetry.capture("talk_proposal_submitted", {"speakers": telemetry.count_bucket(len(self.speakers))})
 
 	@frappe.whitelist()
 	def create_talk(self):

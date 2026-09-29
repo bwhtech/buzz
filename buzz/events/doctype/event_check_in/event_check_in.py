@@ -4,6 +4,8 @@
 import frappe
 from frappe.model.document import Document
 
+from buzz import telemetry
+
 
 class EventCheckIn(Document):
 	# begin: auto-generated types
@@ -23,3 +25,6 @@ class EventCheckIn(Document):
 	def before_insert(self):
 		if not self.date:
 			self.date = frappe.utils.today()
+
+	def on_submit(self):
+		telemetry.capture("ticket_checked_in")
