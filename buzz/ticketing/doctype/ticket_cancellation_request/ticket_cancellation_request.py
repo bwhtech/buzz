@@ -4,6 +4,8 @@
 import frappe
 from frappe.model.document import Document
 
+from buzz import telemetry
+
 
 class TicketCancellationRequest(Document):
 	# begin: auto-generated types
@@ -34,6 +36,20 @@ class TicketCancellationRequest(Document):
 		else:
 			for ticket_item in self.tickets:
 				self.cancel_doc("Event Ticket", ticket_item.ticket)
+
+		self.capture_cancelled()
+
+	def capture_cancelled(self):
+		telemetry.capture(
+			"tickets_cancelled",
+			{
+				"scope": "booking" if self.cancel_full_booking else "tickets",
+				"tickets": telemetry.count_bucket(len(self.tickets)),
+				"via_refund": bool(
+					frappe.db.exists("Event Booking Refund", {"cancellation_request": self.name})
+				),
+			},
+		)
 
 	def cancel_doc(self, doctype: str, name: str) -> None:
 		doc = frappe.get_doc(doctype, name)
