@@ -6,6 +6,8 @@ from frappe.database.database import savepoint
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from buzz import telemetry
+
 # A refund that the gateway has not rejected still holds money and tickets.
 COMMITTED_STATUSES = ("Initiated", "Processed")
 
@@ -82,7 +84,20 @@ class EventBookingRefund(Document):
 			frappe.log_error(f"Cancelling tickets after refund {self.name} failed")
 
 	def on_update(self):
-		frappe.get_doc("Event Booking", self.booking).set_refund_status()
+		booking = frappe.get_doc("Event Booking", self.booking)
+		booking.set_refund_status()
+		self.capture_processed(booking)
+
+	def capture_processed(self, booking):
+		if self.status != "Processed" or not self.has_value_changed("status"):
+			return
+
+		# Gateway refunds fill `tickets` themselves, so this is what the refund
+		# covers, not what someone picked.
+		telemetry.capture(
+			"booking_refunded",
+			{"full": booking.refund_status == "Refunded", "covers_tickets": bool(self.tickets)},
+		)
 
 
 def record_gateway_refund(

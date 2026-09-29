@@ -8,6 +8,7 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder import Criterion
 from frappe.utils import cstr, getdate
 
+from buzz import telemetry
 from buzz.permissions import as_sql, derived_criterion, derived_has_permission
 
 
@@ -139,6 +140,9 @@ class TalkProposal(Document):
 		# Dropping your own row would take away your access to the proposal.
 		if user.lower() in before.speaker_emails and user.lower() not in self.speaker_emails:
 			frappe.throw(_("You cannot remove yourself from a proposal."), frappe.PermissionError)
+
+	def after_insert(self):
+		telemetry.capture("talk_proposal_submitted", {"speakers": telemetry.count_bucket(len(self.speakers))})
 
 	@frappe.whitelist()
 	def create_talk(self):
