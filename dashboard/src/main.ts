@@ -16,7 +16,6 @@ import App from "./App.vue"
 import { applyLanguageFromQuery } from "./composables/useLanguage"
 import router from "./router"
 import { initSocket } from "./socket"
-import { installTelemetry } from "./telemetry"
 import translationPlugin from "./translation"
 
 import "./index.css"
@@ -41,7 +40,6 @@ applyLanguageFromQuery(router)
 app.use(router)
 app.use(translationPlugin)
 app.use(resourcesPlugin)
-void installTelemetry(router)
 
 const socket = initSocket()
 app.config.globalProperties.$socket = socket

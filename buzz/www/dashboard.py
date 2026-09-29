@@ -5,8 +5,6 @@ import frappe
 from frappe import _
 from frappe.utils import get_system_timezone
 
-from buzz import telemetry
-
 no_cache = 1
 
 
@@ -16,8 +14,6 @@ def get_context():
 	context = frappe._dict()
 	context.boot = get_boot()
 	context.boot.csrf_token = csrf_token
-	if frappe.session.user != "Guest":
-		telemetry.capture("active_site", interval="1d")
 	return context
 
 
