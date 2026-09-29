@@ -19,6 +19,7 @@
 	</script>
 	<style>{{ theme_css }}</style>
 	<script src="{{ bundled_asset('event_page.bundle.ts') }}" defer></script>
+	{{ (head_html or "") | safe }}
 	<!-- Fetches an event page's HTML after a short hover so the click lands on a ready document. -->
 	<script type="speculationrules">
 		{"prefetch": [{"where": {"href_matches": "/events*"}, "eagerness": "moderate"}]}
