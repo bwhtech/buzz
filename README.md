@@ -22,67 +22,68 @@ Tickets, add-ons, sponsorships, check-ins, and attendee self-service — all dri
 
 </div>
 
-![Buzz Event DocType](.github/images/fe-event-main-form.png)
+![Event workspace](.github/images/event-details.png)
 
-### Stack / Architecture
+### Stack
 
-1. Frappe Framework: The Backend and Admin Interface
-2. FrappeUI (based on Vue & TailwindCSS): For the frontend dashboard (for attendee, sponsors, etc.)
-3. Frappe Builder: For the public pages like events list and details page.
+1. **Frappe Framework**: backend, data model, and the Desk admin interface.
+2. **Frappe UI** (Vue 3 + TailwindCSS): the dashboard at `/b` for organisers, attendees, speakers, and sponsors.
+3. **Server-rendered pages**: public event pages at `/events/<route>` and a discover page at `/events`.
 
-### The Main Entity
-
-The **Buzz Event** DocType/Form is the primary entity of the system. Once you have created an event, you can setup ticket types, sponsorship tiers, add-ons (like T-Shirts, Meals, etc.), schedule, and much more!
+Everything hangs off a **Buzz Event**: ticket types, add-ons, schedule, talks, sponsorship tiers, and custom fields. Events belong to a **team**, so several organisations can run events on one site.
 
 ### Features
 
-This is not an exhaustive list by any means, just to give you an idea 😃
+#### Public event pages
 
-#### Dynamic Ticket & Add-on Types
+Every published event gets a themed page with its schedule, speakers, sponsors, venue map, and share images. `/events` lists popular events and categories.
 
-![Dynamic Ticket Types and Add-ons](.github/images/ticket-types-and-add-ons.png)
+![Public event page](.github/images/event-page.png)
 
-#### The Booking Form
+#### Registration and payments
 
-Once you have defined the proper ticket types, add-ons, and publish your event, the booking form will dynamically use it for booking.
+The booking form builds itself from the event's ticket types, add-ons, and custom fields. It supports coupons, GST, multiple attendees per booking, offline payments, and online payments through Frappe's [Payments](https://github.com/frappe/payments) app. Refunds sync back from the gateway.
 
-![Booking Form](.github/images/booking-form.png)
+![Booking form](.github/images/booking-form.png)
 
-#### Payments App Integration
+#### Manage events from the dashboard
 
-This app depends on Frappe's Payments app for online payments. You can select a Payment Gateway in the event form. BTW GST collection is just a check-box away 😉
+Organisers create and run events without touching Desk. Teams see their upcoming and past events, and each event opens into a workspace.
 
-#### The Dashboard
+![Events list](.github/images/manage-events.png)
 
-![Booking Details Page](.github/images/booking-details-page.png)
+The workspace covers:
 
-#### Ticket Management
+- **Details**: banner, description, dates, timezone, venue or virtual (Zoom) setup, co-hosts.
+- **Guests**: registration trends, ticket type split, searchable guest list, CSV export.
+- **Talks**: review talk proposals and open or close submissions.
+- **Announcements**: email an event's guests or speakers.
+- **Sponsorships**: tiers, sponsors, and enquiries from the sponsor enquiry form.
 
-The benefits of having a "self-service" dashboard for attendees is that they can modify their bookings on their own (the deadlines can be configured from the **Buzz Settings**). For example, changing their T-Shirt Size after booking:
+![Guests](.github/images/event-guests.png)
 
-![Change Add-on Preference](.github/images/ticket-updates.png)
+![Sponsorships](.github/images/event-sponsorships.png)
 
-They can also transfer tickets or request for cancellation.
+#### Attendee self-service
 
-#### Sponsorship Management
+Attendees see their bookings, tickets (with QR codes), talk proposals, and sponsorships under `/b/account`. Within deadlines set in **Buzz Settings**, they can change add-ons, transfer tickets, or request a cancellation.
 
-Folks can enquire about sponsoring an event and upon approval from the event management team (from desk), they can directly pay from the dashboard too:
+#### Check-in
 
-![Sponsorship Payment](.github/images/sponsorship-payment.png)
-
-*As soon as they pay, their logo appears on the event page!*
-
-![Sponsorship Management](.github/images/sponsorship-management.png)
+Volunteers scan ticket QR codes at `/b/check-in` to check guests in.
 
 ### Installation
 
-You can install this app using the [bench](https://github.com/frappe/bench) CLI:
+Install with the [bench](https://github.com/frappe/bench) CLI. Buzz needs Frappe v16 or v17 and the Payments app.
 
 ```bash
 cd $PATH_TO_YOUR_BENCH
+bench get-app payments
 bench get-app BuildWithHussain/buzz --branch main
-bench install-app buzz
+bench --site <your-site> install-app buzz
 ```
+
+Use `--branch develop` to try the 2.x beta.
 
 ### Contributing
 
@@ -93,12 +94,7 @@ cd apps/buzz
 pre-commit install
 ```
 
-Pre-commit is configured to use the following tools for checking and formatting your code:
-
-- ruff
-- eslint
-- prettier
-- pyupgrade
+It runs ruff for Python, and oxlint and oxfmt for the dashboard.
 
 #### Branches
 
@@ -115,14 +111,13 @@ workflow](.github/workflows/backport.yml) opens the follow-up PR for you. Change
 that target 2.x only, such as anything building on teams, stay on `develop` and
 should not be labelled.
 
-### CI
+### Tests
 
-This app can use GitHub Actions for CI. The following workflows are configured:
+- Python: `bench --site <site> run-tests --app buzz`
+- End-to-end: Playwright specs live in `e2e/` (`yarn test:e2e`).
 
-- CI: Installs this app and runs unit tests on every push to `develop` branch.
-- Linters: Runs [Frappe Semgrep Rules](https://github.com/frappe/semgrep-rules) and [pip-audit](https://pypi.org/project/pip-audit/) on every pull request.
-
+GitHub Actions runs unit tests, UI tests, linters (Semgrep, pip-audit), and a dashboard type check on every pull request.
 
 ### License
 
-agpl-3.0
+[AGPL-3.0](license.txt)
