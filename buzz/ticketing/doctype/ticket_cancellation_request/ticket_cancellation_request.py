@@ -44,7 +44,12 @@ class TicketCancellationRequest(Document):
 			"tickets_cancelled",
 			{
 				"scope": "booking" if self.cancel_full_booking else "tickets",
-				"tickets": telemetry.count_bucket(len(self.tickets)),
+				# A full-booking request carries no ticket rows.
+				"tickets": telemetry.count_bucket(
+					frappe.db.count("Event Ticket", {"booking": self.booking})
+					if self.cancel_full_booking
+					else len(self.tickets)
+				),
 				"via_refund": bool(
 					frappe.db.exists("Event Booking Refund", {"cancellation_request": self.name})
 				),

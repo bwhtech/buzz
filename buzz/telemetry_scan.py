@@ -31,7 +31,7 @@ def send_site_profile():
 	if not is_enabled():
 		return
 
-	telemetry.capture("site_profile", get_site_profile())
+	telemetry.capture("site_profile", get_site_profile(), on_commit=False)
 
 
 def get_site_profile() -> dict:

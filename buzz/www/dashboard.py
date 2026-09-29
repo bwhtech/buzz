@@ -17,7 +17,7 @@ def get_context():
 	context.boot = get_boot()
 	context.boot.csrf_token = csrf_token
 	if frappe.session.user != "Guest":
-		telemetry.capture("active_site", interval="1d")
+		telemetry.capture("active_site", interval="1d", on_commit=False)
 	return context
 
 

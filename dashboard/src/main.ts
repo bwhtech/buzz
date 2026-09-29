@@ -42,7 +42,7 @@ applyLanguageFromQuery(router)
 app.use(translationPlugin)
 app.use(router)
 app.use(resourcesPlugin)
-void installTelemetry(router)
+installTelemetry(router).catch(() => {})
 
 const socket = initSocket()
 app.config.globalProperties.$socket = socket

@@ -1,4 +1,5 @@
 import json
+from contextlib import contextmanager
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -8,6 +9,17 @@ from frappe.tests import IntegrationTestCase
 from buzz import telemetry, telemetry_scan
 from buzz.api.checkin import checkin_ticket
 from buzz.www import dashboard
+
+
+@contextmanager
+def capturing():
+	"""Telemetry on, and whatever was captured sent as if the transaction committed."""
+	with (
+		patch("buzz.telemetry.is_enabled", return_value=True),
+		patch("buzz.telemetry.frappe_capture") as mock_capture,
+	):
+		yield mock_capture
+		frappe.db.after_commit.run()
 
 
 def captured(mock_capture) -> list[tuple[str, dict]]:
@@ -27,7 +39,7 @@ def properties_of(mock_capture, event: str) -> dict:
 
 class TestTelemetryWrapper(IntegrationTestCase):
 	def test_capture_adds_app_and_shared_properties(self):
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			telemetry.capture("thing_happened", {"kind": "a"}, interval="1d")
 
 		mock_capture.assert_called_once()
@@ -40,7 +52,7 @@ class TestTelemetryWrapper(IntegrationTestCase):
 
 	def test_capture_is_silent_during_system_writes(self):
 		for flag in ("in_install", "in_migrate", "in_patch", "in_fixtures"):
-			with self.subTest(flag=flag), patch("buzz.telemetry.frappe_capture") as mock_capture:
+			with self.subTest(flag=flag), capturing() as mock_capture:
 				frappe.flags[flag] = True
 				try:
 					telemetry.capture("thing_happened")
@@ -49,15 +61,37 @@ class TestTelemetryWrapper(IntegrationTestCase):
 				mock_capture.assert_not_called()
 
 	def test_capture_never_raises(self):
-		with patch("buzz.telemetry.frappe_capture", side_effect=RuntimeError("pulse down")):
+		with (
+			patch("buzz.telemetry.is_enabled", return_value=True),
+			patch("buzz.telemetry.frappe_capture", side_effect=RuntimeError("pulse down")),
+		):
 			telemetry.capture("thing_happened")
+			frappe.db.after_commit.run()
+
+	def test_rolled_back_capture_is_never_sent(self):
+		with capturing() as mock_capture:
+			telemetry.capture("thing_happened")
+			frappe.db.rollback()
+		mock_capture.assert_not_called()
+
+	def test_capture_waits_for_commit(self):
+		with (
+			patch("buzz.telemetry.is_enabled", return_value=True),
+			patch("buzz.telemetry.frappe_capture") as mock_capture,
+		):
+			telemetry.capture("thing_happened")
+			mock_capture.assert_not_called()
+			telemetry.capture("page_seen", on_commit=False)
+			mock_capture.assert_called_once()
+			frappe.db.after_commit.reset()
 
 	def test_entry_from_referrer(self):
 		cases = {
 			"http://site/app/buzz-event/1": "desk",
 			"http://site/b/tickets": "dashboard",
 			"http://site/b": "dashboard",
-			"http://site/dashboard/tickets": "dashboard",
+			"http://site/apps/list": "website",
+			"http://site/application": "website",
 			"http://site/blog/post": "website",
 			"http://site/events/my-event": "website",
 			"": "api",
@@ -79,7 +113,17 @@ class TestTelemetryWrapper(IntegrationTestCase):
 			frappe.flags.in_import = False
 
 	def test_count_bucket(self):
-		cases = {0: "0", 1: "1", 2: "2-5", 5: "2-5", 6: "6-20", 20: "6-20", 21: "21-100", 101: "100+"}
+		cases = {
+			0: "0",
+			1: "1",
+			2: "2-5",
+			5: "2-5",
+			6: "6-20",
+			20: "6-20",
+			21: "21-100",
+			100: "21-100",
+			101: "101+",
+		}
 		for count, expected in cases.items():
 			with self.subTest(count=count):
 				self.assertEqual(telemetry.count_bucket(count), expected)
@@ -100,6 +144,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 				"doctype": "Buzz Event",
 				"category": self.test_event.category,
 				"host": self.test_event.host,
+				"team": self.test_event.team,
 				"title": f"Telemetry {frappe.generate_hash(length=6)}",
 				"start_date": frappe.utils.today(),
 				"start_time": "10:00:00",
@@ -141,7 +186,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 		return booking
 
 	def test_event_created_from_blank(self):
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			self.new_event().insert()
 
 		self.assertEqual(
@@ -157,7 +202,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 		self.assertNotIn("event_published", captured_names(mock_capture))
 
 	def test_event_published_at_creation(self):
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			self.new_event(is_published=1).insert()
 
 		self.assertTrue(properties_of(mock_capture, "event_created")["published"])
@@ -166,7 +211,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 	def test_event_created_from_template(self):
 		event = self.new_event()
 		event.flags.from_template = True
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			event.insert()
 
 		self.assertEqual(properties_of(mock_capture, "event_created")["source"], "template")
@@ -174,7 +219,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 	def test_event_published_fires_once_when_published(self):
 		event = self.new_event().insert()
 
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			event.is_published = 1
 			event.save()
 			event.title = f"{event.title} renamed"
@@ -184,7 +229,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 		self.assertEqual(properties_of(mock_capture, "event_published")["medium"], "Online")
 
 	def test_booking_confirmed(self):
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			self.confirmed_booking(attendee_count=2)
 
 		properties = properties_of(mock_capture, "booking_confirmed")
@@ -196,7 +241,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 
 	def test_booking_draft_sends_nothing(self):
 		ticket_type = self.free_ticket_type()
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			frappe.get_doc(
 				{
 					"doctype": "Event Booking",
@@ -214,7 +259,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 		booking = self.confirmed_booking()
 		ticket = frappe.db.get_value("Event Ticket", {"booking": booking.name}, "name")
 
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			checkin_ticket(ticket)
 
 		self.assertEqual(captured_names(mock_capture), ["ticket_checked_in"])
@@ -231,13 +276,30 @@ class TestTelemetryEvents(IntegrationTestCase):
 			}
 		).insert()
 
-		with patch("buzz.telemetry.frappe_capture") as mock_capture, patch("frappe.sendmail"):
+		with capturing() as mock_capture, patch("frappe.sendmail"):
 			request.submit()
 
 		self.assertEqual(
 			properties_of(mock_capture, "tickets_cancelled"),
 			{**telemetry.shared_properties(), "scope": "tickets", "tickets": "1", "via_refund": False},
 		)
+
+	def test_full_booking_cancelled_counts_its_tickets(self):
+		booking = self.confirmed_booking(attendee_count=2)
+		request = frappe.get_doc(
+			{
+				"doctype": "Ticket Cancellation Request",
+				"booking": booking.name,
+				"status": "Accepted",
+				"cancel_full_booking": 1,
+			}
+		).insert()
+
+		with capturing() as mock_capture, patch("frappe.sendmail"):
+			request.submit()
+
+		properties = properties_of(mock_capture, "tickets_cancelled")
+		self.assertEqual((properties["scope"], properties["tickets"]), ("booking", "2-5"))
 
 	def test_booking_refunded_once_when_processed(self):
 		ticket_type = frappe.get_doc(
@@ -261,7 +323,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 		booking.payment_status = "Paid"
 		booking.submit()
 
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			refund = frappe.get_doc(
 				{
 					"doctype": "Event Booking Refund",
@@ -279,7 +341,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 
 		self.assertEqual(
 			properties_of(mock_capture, "booking_refunded"),
-			{**telemetry.shared_properties(), "full": True, "tickets_selected": False},
+			{**telemetry.shared_properties(), "full": True, "covers_tickets": False},
 		)
 
 	def test_sponsorship_paid(self):
@@ -297,7 +359,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 			).insert()
 
 		with (
-			patch("buzz.telemetry.frappe_capture") as mock_capture,
+			capturing() as mock_capture,
 			patch("buzz.proposals.doctype.sponsorship_enquiry.sponsorship_enquiry.mark_payment_as_received"),
 		):
 			enquiry.on_payment_authorized("Failed")
@@ -306,7 +368,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 		self.assertEqual(captured_names(mock_capture), ["sponsorship_paid"])
 
 	def test_talk_proposal_submitted(self):
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			frappe.get_doc(
 				{
 					"doctype": "Talk Proposal",
@@ -319,7 +381,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 		self.assertEqual(properties_of(mock_capture, "talk_proposal_submitted")["speakers"], "1")
 
 	def test_event_proposal_submitted(self):
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			frappe.get_doc(
 				{
 					"doctype": "Event Proposal",
@@ -339,7 +401,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 
 	def test_sponsorship_enquiry_created(self):
 		with (
-			patch("buzz.telemetry.frappe_capture") as mock_capture,
+			capturing() as mock_capture,
 			patch(
 				"buzz.proposals.doctype.sponsorship_enquiry.sponsorship_enquiry.SponsorshipEnquiry.send_pitch_deck"
 			),
@@ -356,13 +418,13 @@ class TestTelemetryEvents(IntegrationTestCase):
 		self.assertEqual(properties_of(mock_capture, "sponsorship_enquiry_created")["tier_selected"], False)
 
 	def test_active_site_for_signed_in_user_only(self):
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			dashboard.get_context()
 		self.assertEqual(captured_names(mock_capture), ["active_site"])
 		self.assertEqual(mock_capture.call_args.kwargs["interval"], "1d")
 
 		frappe.set_user("Guest")
-		with patch("buzz.telemetry.frappe_capture") as mock_capture:
+		with capturing() as mock_capture:
 			dashboard.get_context()
 		mock_capture.assert_not_called()
 
@@ -372,7 +434,7 @@ class TestSiteProfile(IntegrationTestCase):
 		with (
 			patch("buzz.telemetry_scan.is_enabled", return_value=False),
 			patch("buzz.telemetry_scan.get_site_profile") as mock_profile,
-			patch("buzz.telemetry.frappe_capture") as mock_capture,
+			capturing() as mock_capture,
 		):
 			telemetry_scan.send_site_profile()
 
@@ -382,7 +444,7 @@ class TestSiteProfile(IntegrationTestCase):
 	def test_site_profile_is_sent_when_telemetry_is_on(self):
 		with (
 			patch("buzz.telemetry_scan.is_enabled", return_value=True),
-			patch("buzz.telemetry.frappe_capture") as mock_capture,
+			capturing() as mock_capture,
 		):
 			telemetry_scan.send_site_profile()
 

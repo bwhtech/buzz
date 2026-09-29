@@ -84,20 +84,19 @@ class EventBookingRefund(Document):
 			frappe.log_error(f"Cancelling tickets after refund {self.name} failed")
 
 	def on_update(self):
-		frappe.get_doc("Event Booking", self.booking).set_refund_status()
-		self.capture_processed()
+		booking = frappe.get_doc("Event Booking", self.booking)
+		booking.set_refund_status()
+		self.capture_processed(booking)
 
-	def capture_processed(self):
+	def capture_processed(self, booking):
 		if self.status != "Processed" or not self.has_value_changed("status"):
 			return
 
-		booking_total = frappe.db.get_value("Event Booking", self.booking, "total_amount")
+		# Gateway refunds fill `tickets` themselves, so this is what the refund
+		# covers, not what someone picked.
 		telemetry.capture(
 			"booking_refunded",
-			{
-				"full": flt(self.amount) >= flt(booking_total),
-				"tickets_selected": bool(self.tickets),
-			},
+			{"full": booking.refund_status == "Refunded", "covers_tickets": bool(self.tickets)},
 		)
 
 

@@ -52,7 +52,11 @@ function trackPageviews(client: PulseClient, router: Router): void {
 	const capturePageview = (route: RouteLocationNormalized) => {
 		if (route.fullPath === lastFullPath) return
 		lastFullPath = route.fullPath
-		client.capture("pageview", APP_NAME, { route: routePattern(route) })
+		try {
+			client.capture("pageview", APP_NAME, { route: routePattern(route) })
+		} catch {
+			// The client is remote code; a throw here would reject the navigation.
+		}
 	}
 
 	router.isReady().then(() => capturePageview(router.currentRoute.value))
