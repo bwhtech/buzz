@@ -12,6 +12,7 @@ from buzz.api.forms.test_forms import ensure_event_host
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.www.event.index import EventPage
 from buzz.www.event.venue_map import google_maps_url, open_street_map_url
+from buzz.www.site_header import DEFAULT_FAVICON
 
 
 def render(route: str) -> str:
@@ -145,9 +146,28 @@ class TestEventPage(IntegrationTestCase):
 	def test_event_theme_overrides_the_default(self):
 		frappe.db.set_value("Buzz Event", self.event, "theme", "Paper")
 		html = render("public-page-event")
-		self.assertIn('data-mode="light"', html)
+		self.assertIn('defaultMode = "light"', html)
 		# The theme CSS sits in an autoescaped <style>; a quoted selector would arrive as &#34;
 		self.assertIn(":root[data-mode=dark] { color-scheme: dark; }", html)
+
+	def test_title_tag_is_escaped(self):
+		frappe.db.set_value("Buzz Event", self.event, "title", "&lt;script&gt;alert(1)&lt;/script&gt;")
+		title = re.search(r"<title>(.*?)</title>", render("public-page-event"), re.DOTALL).group(1)
+		self.assertIn("&amp;lt;script&amp;gt;", title)
+
+	def test_page_skips_frappe_website_assets(self):
+		html = render("public-page-event")
+		for asset in ("website.bundle", "frappe-web.bundle", "icons/lucide"):
+			self.assertNotIn(asset, html)
+		self.assertEqual(html.count('property="og:title"'), 1)
+
+	def test_favicon_falls_back_to_buzz(self):
+		settings = frappe.get_single("Website Settings")
+		self.addCleanup(frappe.clear_document_cache, "Website Settings", "Website Settings")
+		self.addCleanup(settings.db_set, "favicon", settings.favicon)
+		settings.db_set("favicon", None)
+		frappe.clear_document_cache("Website Settings", "Website Settings")
+		self.assertIn(DEFAULT_FAVICON, render("public-page-event"))
 
 	def test_additional_page(self):
 		frappe.get_doc(

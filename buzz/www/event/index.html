@@ -1,7 +1,8 @@
 {% extends "buzz/templates/event_page/layout.html" %}
 
-{% block head %}{% autoescape true %}
-	<title>{{ meta.title }}</title>
+{% block title %}{% autoescape true %}{{ meta.title }}{% endautoescape %}{% endblock %}
+
+{% block meta_block %}{% autoescape true %}
 	<meta name="description" content="{{ meta.description }}">
 	<meta property="og:type" content="website">
 	<meta property="og:site_name" content="{{ brand.name }}">
