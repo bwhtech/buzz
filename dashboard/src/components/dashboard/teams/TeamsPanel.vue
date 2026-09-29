@@ -36,7 +36,7 @@ const filtered = computed(() => {
 					<FormControl
 						v-model="search"
 						type="text"
-						class="max-w-xs"
+						class="max-w-xs max-sm:max-w-none"
 						:placeholder="__('Search teams')"
 						:aria-label="__('Search teams')"
 					>

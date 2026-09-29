@@ -145,7 +145,7 @@ test.describe("User settings on a phone", () => {
 		await expect(dialog.getByLabel("First Name")).toHaveValue(SETTINGS_FIRST_NAME)
 		await expect(profileTab).toBeHidden()
 
-		await dialog.getByRole("button", { name: "Settings" }).click()
+		await dialog.getByRole("button", { name: "Back" }).click()
 		await expect(profileTab).toBeVisible()
 
 		await dialog.getByRole("button", { name: "Close" }).click()

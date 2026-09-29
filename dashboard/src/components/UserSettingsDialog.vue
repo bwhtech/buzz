@@ -48,6 +48,12 @@ watch(isPhone, (phone) => {
 	if (!phone && !tab.value) tab.value = "profile"
 })
 
+// From a panel, back returns to the list; from the list, it leaves settings.
+function goBack() {
+	if (tab.value) tab.value = ""
+	else open.value = false
+}
+
 // G then S. useKeyboardShortcut matches one chord at a time, so a sequence is
 // two registrations and the window between them.
 const SEQUENCE_WINDOW = 1000
@@ -132,19 +138,16 @@ async function save(fields: Partial<Profile> = { ...form }) {
 		<template #title>{{ __("Settings") }}</template>
 
 		<header
-			class="flex h-12 shrink-0 items-center justify-between border-b border-outline-gray-1 px-2 sm:hidden"
+			class="flex h-12 shrink-0 items-center gap-1 border-b border-outline-gray-1 px-2 sm:hidden"
 		>
 			<Button
-				v-if="tab"
 				variant="ghost"
-				icon-left="lucide-chevron-left"
-				:label="__('Settings')"
-				@click="tab = ''"
+				size="lg"
+				icon="lucide-chevron-left"
+				:aria-label="tab ? __('Back') : __('Close')"
+				@click="goBack"
 			/>
-			<h2 v-else aria-hidden="true" class="px-2 text-lg-semibold text-ink-gray-8">
-				{{ __("Settings") }}
-			</h2>
-			<Button variant="ghost" icon="lucide-x" :aria-label="__('Close')" @click="open = false" />
+			<h2 aria-hidden="true" class="text-lg-semibold text-ink-gray-8">{{ __("Settings") }}</h2>
 		</header>
 
 		<SettingsSidebar
