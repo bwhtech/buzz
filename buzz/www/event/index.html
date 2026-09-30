@@ -152,7 +152,7 @@
 				<section class="aside-block venue">
 					<h2 class="label">{{ _("Where") }}</h2>
 					{% if venue.map_url %}
-					<iframe class="venue-map" src="{{ venue.map_url }}" title="{{ _('Map of {0}').format(venue.name) }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+					<iframe class="venue-map" src="{{ venue.map_url }}" title="{{ _('Map of {0}').format(venue.name) }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
 					{% endif %}
 					<p class="aside-value">{{ venue.name }}</p>
 					{% if venue.address %}<p class="aside-note">{{ venue.address }}</p>{% endif %}
