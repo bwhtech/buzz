@@ -154,7 +154,13 @@
 					{% if venue.map_url %}
 					<iframe class="venue-map" src="{{ venue.map_url }}" title="{{ _('Map of {0}').format(venue.name) }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
 					{% endif %}
-					<p class="aside-value">{{ venue.name }}</p>
+					<p class="aside-value">
+						{%- if venue.link -%}
+						<a class="venue-link" href="{{ venue.link }}" target="_blank" rel="noopener noreferrer">{{ venue.name }}<svg class="icon" viewBox="5 5 14 14" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
+						{%- else -%}
+						{{ venue.name }}
+						{%- endif -%}
+					</p>
 					{% if venue.address %}<p class="aside-note">{{ venue.address }}</p>{% endif %}
 				</section>
 				{% endif %}

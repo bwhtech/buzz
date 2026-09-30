@@ -16,6 +16,7 @@ from frappe.utils import (
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import co_hosts_of, primary_host_of, registration_link
+from buzz.emails import venue_map_url as venue_link
 from buzz.utils import get_time_zone_label
 from buzz.www.event.meta import EventMeta
 from buzz.www.event.venue_map import venue_map_url
@@ -257,8 +258,11 @@ class EventPage:
 			],
 			as_dict=True,
 		)
-		return (
-			{"name": venue.venue_name, "address": venue.address, "map_url": venue_map_url(venue)}
-			if venue
-			else None
-		)
+		if not venue:
+			return None
+		return {
+			"name": venue.venue_name,
+			"address": venue.address,
+			"map_url": venue_map_url(venue),
+			"link": venue_link(self.event.venue),
+		}
