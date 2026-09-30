@@ -3,7 +3,7 @@ import { Button, Dialog, FormControl, toast } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import { createVenue } from "@/data/venues"
-import type { FrappeError } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps<{ team: string }>()
 const isOpen = defineModel<boolean>({ required: true })
@@ -15,15 +15,14 @@ const name = ref("")
 const address = ref("")
 const showErrors = ref(false)
 
-// createResource types its error as {}, so the message needs narrowing.
-const errorMessage = computed(() => (createVenue.error as FrappeError | null)?.message)
+const errorMessage = ref("")
 
 watch(isOpen, (open) => {
 	if (!open) return
 	name.value = suggestedName.value
 	address.value = ""
 	showErrors.value = false
-	createVenue.error = null
+	errorMessage.value = ""
 })
 
 const invalid = computed(() => !name.value.trim() || !address.value.trim())
@@ -32,12 +31,17 @@ async function submit() {
 	showErrors.value = true
 	if (invalid.value) return
 
-	await createVenue.submit({
-		team: props.team,
-		name: name.value.trim(),
-		address: address.value.trim(),
-	})
-	if (createVenue.error) return
+	errorMessage.value = ""
+	try {
+		await createVenue.submit({
+			team: props.team,
+			name: name.value.trim(),
+			address: address.value.trim(),
+		})
+	} catch (error) {
+		errorMessage.value = serverErrorMessage(error)
+		return
+	}
 
 	toast.success(`${name.value.trim()} added`)
 	emit("created", name.value.trim())

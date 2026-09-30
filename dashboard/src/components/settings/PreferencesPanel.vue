@@ -5,15 +5,15 @@ import {
 	ErrorMessage,
 	SettingsBody,
 	SettingsHeader,
-	createResource,
 	toast,
+	useCall,
 } from "frappe-ui"
 import type { ComboboxCustomOption, ComboboxSelectableOption } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import ThemeSwitcher from "@/components/settings/ThemeSwitcher.vue"
 import { userResource } from "@/data/user"
-import type { FrappeError } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 import {
 	allTimeZones,
 	currentTimeZone,
@@ -33,8 +33,6 @@ const savedTimeZone = computed(() => userResource.data?.time_zone || currentTime
 
 const timeZone = ref(savedTimeZone.value)
 
-// createResource types its own `error` as `{}`, so the message is kept here for the
-// inline ErrorMessage rather than read back off the resource.
 const saveError = ref("")
 
 watch(
@@ -54,15 +52,17 @@ watch(timeZone, () => {
 
 const isDirty = computed(() => timeZone.value !== savedTimeZone.value)
 
-const saveTimeZone = createResource({
-	url: "buzz.api.account.update_user_timezone",
+const saveTimeZone = useCall<unknown, { time_zone: string }>({
+	url: "/api/v2/method/buzz.api.account.update_user_timezone",
+	method: "POST",
+	immediate: false,
 	async onSuccess() {
 		saveError.value = ""
 		await userResource.reload()
 		toast.success(__("Preferences updated"))
 	},
-	onError(error: FrappeError) {
-		saveError.value = error.messages?.[0] || __("Could not update your time zone")
+	onError(error) {
+		saveError.value = serverErrorMessage(error) || __("Could not update your time zone")
 	},
 })
 

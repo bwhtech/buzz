@@ -52,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { Badge, Spinner, createResource, dayjsLocal } from "frappe-ui"
+import { Badge, Spinner, dayjsLocal, useCall } from "frappe-ui"
 import { ListRowItem, ListView } from "frappe-ui/experimental"
 
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
@@ -74,10 +74,9 @@ interface ProposalRow extends ProposalListItem {
 
 // Server-side scoping (submitter or listed speaker) instead of a client
 // filter, so guest-submitted proposals show up for their speakers too.
-const proposals = createResource({
-	url: "buzz.api.proposals.get_my_proposals",
-	auto: true,
-	cache: ["proposals-list", session.user],
+const proposals = useCall<ProposalRow[]>({
+	url: "/api/v2/method/buzz.api.proposals.get_my_proposals",
+	cacheKey: ["proposals-list", session.user],
 	transform: (data: ProposalListItem[]): ProposalRow[] =>
 		data.map((proposal) => ({
 			...proposal,

@@ -28,10 +28,7 @@ watchDebounced(
 	async (value) => {
 		availability.value = null
 		if (!value.trim() || value === props.saved) return
-		const answer = (await checkEventRoute.submit({
-			route: value,
-			event: props.event,
-		})) as Availability
+		const answer = await checkEventRoute.submit({ route: value, event: props.event })
 		// A later keystroke may have overtaken this request while it was in flight.
 		if (route.value !== value) return
 		availability.value = answer

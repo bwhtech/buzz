@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { Spinner, createListResource, dayjsLocal } from "frappe-ui"
+import { Spinner, dayjsLocal, useList } from "frappe-ui"
 import { ListView } from "frappe-ui/experimental"
 
 import type { BuzzEvent } from "@/types"
@@ -89,17 +89,16 @@ const formatTimestamp = (date?: string, time?: string) => {
 	return `${formattedDate} ${formattedTime}`
 }
 
-const eventsResource = createListResource({
+const eventsResource = useList<BuzzEvent & { name: string }>({
 	doctype: "Buzz Event",
 	fields: ["name", "title", "start_date", "start_time", "end_date", "end_time"],
-	order_by: "start_date desc",
+	orderBy: "start_date desc",
 	filters: {
 		is_published: 1,
 		end_date: [">=", dayjsLocal().format("YYYY-MM-DD")],
 	},
-	auto: true,
-	transform(data: BuzzEvent[]) {
-		return data.map((event: BuzzEvent) => ({
+	transform(data) {
+		return data.map((event) => ({
 			...event,
 			starts_at: formatTimestamp(event.start_date, event.start_time),
 			ends_at: formatTimestamp(event.end_date, event.end_time),

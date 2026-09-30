@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { Combobox, ErrorMessage, TextInput, createResource } from "frappe-ui"
+import { Combobox, ErrorMessage, TextInput, useCall } from "frappe-ui"
 import type { PropType } from "vue"
 import { computed, ref, watch } from "vue"
 
@@ -110,10 +110,9 @@ function onNumberInput(num: string) {
 	emitValue()
 }
 
-createResource({
-	url: "buzz.api.forms.get_dial_codes",
-	auto: true,
-	onSuccess: (data: DialCode[]) => {
+useCall<DialCode[]>({
+	url: "/api/v2/method/buzz.api.forms.get_dial_codes",
+	onSuccess: (data) => {
 		dialCodesData.value = data
 		syncFromModel(props.modelValue)
 	},

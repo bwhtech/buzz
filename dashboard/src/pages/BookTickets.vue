@@ -52,17 +52,11 @@
 </template>
 
 <script setup lang="ts">
-import { Spinner, createResource, usePageMeta } from "frappe-ui"
+import { Spinner, useCall, usePageMeta } from "frappe-ui"
 import { computed, reactive, ref, watch } from "vue"
 
 import { session } from "@/data/session"
-import type {
-	AvailableAddOn,
-	AvailableTicketType,
-	FrappeError,
-	FrappeField,
-	OfflineMethod,
-} from "@/types"
+import type { AvailableAddOn, AvailableTicketType, FrappeField, OfflineMethod } from "@/types"
 
 import BookingForm from "../components/BookingForm.vue"
 
@@ -105,13 +99,10 @@ const goToHome = () => {
 	window.location.href = "/"
 }
 
-const eventBookingResource = createResource({
-	url: "buzz.api.booking.get_event_booking_data",
-	params: {
-		event_route: props.eventRoute,
-	},
-	auto: true,
-	onSuccess: (data: Record<string, any>) => {
+const eventBookingResource = useCall<Record<string, any>, { event_route: string }>({
+	url: "/api/v2/method/buzz.api.booking.get_event_booking_data",
+	params: { event_route: props.eventRoute },
+	onSuccess: (data) => {
 		eventBookingData.availableAddOns = data.available_add_ons || []
 		eventBookingData.availableTicketTypes = data.available_ticket_types || []
 		eventBookingData.taxSettings = data.tax_settings || {
@@ -126,8 +117,8 @@ const eventBookingResource = createResource({
 		eventBookingData.offlineMethods = data.offline_methods || []
 		registrationsClosed.value = data.registrations_closed || false
 	},
-	onError: (error: FrappeError) => {
-		if (error.message?.includes("DoesNotExistError")) {
+	onError: (error) => {
+		if (error.message.includes("DoesNotExistError")) {
 			eventNotFound.value = true
 		}
 	},

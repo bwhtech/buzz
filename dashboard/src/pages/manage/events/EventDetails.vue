@@ -16,10 +16,11 @@ import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
 import { useFormDraft } from "@/composables/useFormDraft"
 import { eventDetail, updateEvent } from "@/data/events"
 import { session } from "@/data/session"
-import type { EventDetail, FrappeError } from "@/types"
+import type { EventDetail } from "@/types"
 import { isEndBeforeStart } from "@/utils/eventDates"
 import { matches } from "@/utils/formDraft"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const route = useRoute()
 const eventId = route.params.eventId as string
@@ -138,19 +139,18 @@ function discard() {
 	if (event.data) fill(event.data)
 }
 
-// createResource types its error as {}, so the message needs narrowing.
-const errorMessage = computed(() => (updateEvent.error as FrappeError | null)?.messages?.join("\n"))
+const errorMessage = computed(() => serverErrorMessage(updateEvent.error))
 
 async function save() {
 	if (!canSave.value || updateEvent.loading) return
 
 	// A blank date or venue has to reach the server as null, not "".
-	const fieldname = Object.fromEntries(
+	const fields = Object.fromEntries(
 		Object.entries(form).map(([field, value]) => [field, value === "" ? null : value]),
 	)
 	const submitted = { ...form }
 
-	await updateEvent.submit({ doctype: "Buzz Event", name: eventId, fieldname })
+	await updateEvent.submit({ name: eventId, ...fields }).catch(() => null)
 	if (updateEvent.error) return
 
 	// What the server now holds, not what the form holds — an edit made while the save

@@ -54,13 +54,13 @@
 </template>
 
 <script setup lang="ts">
-import { Button, ErrorMessage, Spinner, createResource } from "frappe-ui"
+import { Button, ErrorMessage, Spinner, useCall } from "frappe-ui"
 import { marked } from "marked"
 import { computed, ref } from "vue"
 import LucideCheckCircle from "~icons/lucide/check-circle"
 import LucideXCircle from "~icons/lucide/x-circle"
 
-import type { FrappeError } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 
 interface Campaign {
 	title?: string
@@ -85,28 +85,27 @@ const renderedDescription = computed(() => {
 	return marked(campaignDoc.value.description)
 })
 
-const campaignResource = createResource({
-	url: "buzz.api.campaigns.get_campaign_details",
-	params: {
-		campaign: props.campaign,
-	},
-	auto: true,
-	onSuccess: (data: Campaign) => {
+const campaignResource = useCall<Campaign, { campaign: string }>({
+	url: "/api/v2/method/buzz.api.campaigns.get_campaign_details",
+	params: { campaign: props.campaign },
+	onSuccess: (data) => {
 		campaignDoc.value = data
 	},
-	onError: (err: FrappeError) => {
-		error.value = err.messages?.[0] || __("Campaign not found or not active")
+	onError: (err) => {
+		error.value = serverErrorMessage(err) || __("Campaign not found or not active")
 	},
 })
 
-const registerResource = createResource({
-	url: "buzz.api.campaigns.register_campaign_interest",
+const registerResource = useCall<unknown, { campaign: string }>({
+	url: "/api/v2/method/buzz.api.campaigns.register_campaign_interest",
+	method: "POST",
+	immediate: false,
 	onSuccess: () => {
 		registered.value = true
 		errorMessage.value = null
 	},
-	onError: (err: FrappeError) => {
-		errorMessage.value = err.messages?.[0] || __("Failed to register interest")
+	onError: (err) => {
+		errorMessage.value = serverErrorMessage(err) || __("Failed to register interest")
 	},
 })
 

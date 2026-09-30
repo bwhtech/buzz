@@ -1,4 +1,4 @@
-import { createResource, useCall, useDoc } from "frappe-ui"
+import { useCall, useDoc, useDoctype } from "frappe-ui"
 
 import type {
 	EventDetail,
@@ -20,8 +20,13 @@ export function useMyEvents(filters?: () => Record<string, string>) {
 	})
 }
 
-export const createEvent = createResource<{ name: string; title: string }>({
-	url: "buzz.api.events.create_event",
+export const createEvent = useCall<
+	{ name: string; title: string },
+	{ event: Record<string, unknown> }
+>({
+	url: "/api/v2/method/buzz.api.events.create_event",
+	method: "POST",
+	immediate: false,
 })
 
 /** What the manage shell reads off the event itself: its title, whether it is live, and its page theme. */
@@ -41,24 +46,29 @@ export function useEventDoc(event: () => string) {
 
 /** One event with everything its manage page edits. Per page, so it is not a singleton. */
 export function eventDetail(event: string) {
-	return createResource<EventDetail>({
-		url: "buzz.api.events.get_event",
+	return useCall<EventDetail, { event: string }>({
+		url: "/api/v2/method/buzz.api.events.get_event",
 		params: { event },
-		auto: true,
 	})
 }
 
 /**
  * Save edits back onto an event.
  *
- * `set_value` takes a fieldname-to-value map, so the whole form travels as one write —
+ * The document API takes a fieldname-to-value map, so the whole form travels as one write —
  * and the team permission hooks guard Buzz Event, which is why this needs no endpoint of
  * its own.
  */
-export const updateEvent = createResource({ url: "frappe.client.set_value" })
+export const updateEvent = useDoctype<Record<string, unknown>>("Buzz Event").setValue
 
 /** Whether an event can take a route. Routes are the public URL namespace, so they are unique. */
-export const checkEventRoute = createResource({ url: "buzz.api.events.check_event_route" })
+export const checkEventRoute = useCall<
+	{ available: boolean; message: string },
+	{ route: string; event?: string }
+>({
+	url: "/api/v2/method/buzz.api.events.check_event_route",
+	immediate: false,
+})
 
 /** Registrations per day for an event, for the card above its guest list. */
 export function useRegistrationTrend(event: string) {

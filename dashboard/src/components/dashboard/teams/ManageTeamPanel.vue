@@ -14,6 +14,7 @@ import AvatarUploader from "@/components/common/AvatarUploader.vue"
 import AddMembersDialog from "@/components/dashboard/teams/AddMembersDialog.vue"
 import TeamMembersTable from "@/components/dashboard/teams/TeamMembersTable.vue"
 import { reloadTeams, updateTeam, useTeamOverview } from "@/data/teams"
+import { serverErrorMessage } from "@/utils/serverError"
 import { canManageMembers } from "@/utils/teamRoles"
 
 const props = defineProps<{ team: string; teamName: string }>()
@@ -59,7 +60,6 @@ const title = computed(() => overview.data?.team_name ?? props.teamName)
 async function save() {
 	if (!isDirty.value || !form.team_name.trim()) return
 
-	// Rejects on failure; updateTeam.error renders inline, so the rejection is swallowed.
 	await updateTeam.submit({ team: props.team, ...form }).catch(() => null)
 	if (updateTeam.error) return
 
@@ -114,7 +114,7 @@ async function refresh() {
 						@blur="save"
 					/>
 
-					<ErrorMessage :message="(updateTeam.error as Error | null)?.message" />
+					<ErrorMessage :message="serverErrorMessage(updateTeam.error)" />
 				</template>
 
 				<h3 class="text-base-semibold text-ink-gray-8">{{ __("Team Members") }}</h3>
@@ -129,7 +129,7 @@ async function refresh() {
 					</dl>
 				</section>
 
-				<ErrorMessage v-if="overview.error" :message="overview.error.message" />
+				<ErrorMessage v-if="overview.error" :message="serverErrorMessage(overview.error)" />
 
 				<TeamMembersTable v-else-if="overview.data" :team="overview.data" @changed="refresh" />
 

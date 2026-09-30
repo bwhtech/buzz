@@ -3,7 +3,8 @@ import { Button, Dialog, ErrorMessage, FormControl, toast } from "frappe-ui"
 import { computed, nextTick, ref, watch } from "vue"
 
 import { inviteMembers } from "@/data/teams"
-import type { FrappeError, InviteOutcome } from "@/types"
+import type { InviteOutcome } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 import { ASSIGNABLE_TEAM_ROLES } from "@/utils/teamRoles"
 
 const DEFAULT_ROLE = "Manager"
@@ -27,8 +28,7 @@ const rows = ref<InviteRow[]>([newRow()])
 const showErrors = ref(false)
 const form = ref<HTMLFormElement>()
 
-// createResource types its error as {}, so the message needs narrowing.
-const errorMessage = computed(() => (inviteMembers.error as FrappeError | null)?.message)
+const errorMessage = ref("")
 
 const filled = computed(() => rows.value.filter((row) => row.email.trim()))
 
@@ -47,7 +47,7 @@ watch(isOpen, async (open) => {
 	if (!open) return
 	rows.value = [newRow()]
 	showErrors.value = false
-	inviteMembers.reset()
+	errorMessage.value = ""
 	await nextTick()
 	form.value?.querySelector("input")?.focus()
 })
@@ -140,13 +140,18 @@ async function submit() {
 	showErrors.value = true
 	if (!filled.value.length || invalid.value.length) return
 
-	const outcomes = await inviteMembers.submit({
-		team: props.team,
-		invites: filled.value.map((row) => ({
-			email: row.email.trim(),
-			team_role: row.team_role,
-		})),
-	})
+	const outcomes = await inviteMembers
+		.submit({
+			team: props.team,
+			invites: filled.value.map((row) => ({
+				email: row.email.trim(),
+				team_role: row.team_role,
+			})),
+		})
+		.catch(() => null)
+
+	errorMessage.value = serverErrorMessage(inviteMembers.error)
+	if (inviteMembers.error) return
 
 	report(outcomes ?? [])
 	emit("success")

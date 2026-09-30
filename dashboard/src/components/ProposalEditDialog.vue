@@ -59,16 +59,16 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui"
+import { Button, Dialog, FormControl, toast, useCall } from "frappe-ui"
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, ref, watch } from "vue"
 
 import PhoneInput from "@/components/PhoneInput.vue"
-import type { FrappeError } from "@/types"
 import {
 	richTextExtensions as editorExtensions,
 	richTextToolbar as editorToolbar,
 } from "@/utils/richTextEditor"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps({
 	open: {
@@ -102,9 +102,15 @@ const editForm = ref({
 	phone: "",
 })
 
-// Update resource using frappe.client.set_value
-const updateResource = createResource({
-	url: "frappe.client.set_value",
+// An accepted proposal is edited on its Event Talk; until then, on the proposal itself.
+const updateResource = useCall<unknown, Record<string, string>>({
+	url: computed(() =>
+		props.eventTalkId
+			? `/api/v2/document/Event Talk/${props.eventTalkId}`
+			: `/api/v2/document/Talk Proposal/${props.proposalId}`,
+	),
+	method: "PUT",
+	immediate: false,
 	onSuccess: () => {
 		const message = props.eventTalkId
 			? __("Talk updated successfully")
@@ -113,11 +119,11 @@ const updateResource = createResource({
 		isOpen.value = false
 		emit("updated")
 	},
-	onError: (error: FrappeError) => {
+	onError: (error) => {
 		const message = props.eventTalkId
 			? __("Failed to update talk")
 			: __("Failed to update proposal")
-		toast.error(error.messages?.[0] || message)
+		toast.error(serverErrorMessage(error) || message)
 	},
 })
 
@@ -131,22 +137,14 @@ const handleSave = () => {
 	// Otherwise, update the Talk Proposal doctype
 	if (props.eventTalkId) {
 		updateResource.submit({
-			doctype: "Event Talk",
-			name: props.eventTalkId,
-			fieldname: {
-				title: editForm.value.title,
-				description: editForm.value.description,
-			},
+			title: editForm.value.title,
+			description: editForm.value.description,
 		})
 	} else {
 		updateResource.submit({
-			doctype: "Talk Proposal",
-			name: props.proposalId,
-			fieldname: {
-				title: editForm.value.title,
-				description: editForm.value.description,
-				phone: editForm.value.phone || "",
-			},
+			title: editForm.value.title,
+			description: editForm.value.description,
+			phone: editForm.value.phone || "",
 		})
 	}
 }

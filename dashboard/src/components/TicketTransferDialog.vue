@@ -52,10 +52,10 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui"
+import { Button, Dialog, FormControl, toast, useCall } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
-import type { FrappeError } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps({
 	modelValue: {
@@ -82,16 +82,18 @@ const transferForm = ref({
 })
 
 // Transfer ticket resource
-const transferResource = createResource({
-	url: "buzz.api.tickets.transfer_ticket",
+const transferResource = useCall<unknown, Record<string, string>>({
+	url: "/api/v2/method/buzz.api.tickets.transfer_ticket",
+	method: "POST",
+	immediate: false,
 	onSuccess: () => {
 		toast.success(__("Ticket transferred successfully!"))
 		isOpen.value = false
 		resetTransferForm()
 		emit("success")
 	},
-	onError: (error: FrappeError) => {
-		toast.error(`${__("Failed to transfer ticket")}: ${error.message}`)
+	onError: (error) => {
+		toast.error(`${__("Failed to transfer ticket")}: ${serverErrorMessage(error)}`)
 	},
 })
 

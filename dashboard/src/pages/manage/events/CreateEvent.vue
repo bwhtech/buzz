@@ -20,11 +20,11 @@ import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
 import { useIsMobile } from "@/composables/useIsMobile"
 import { createEvent } from "@/data/events"
 import { currentTeam } from "@/data/teams"
-import type { FrappeError } from "@/types"
 import { defaultSchedule } from "@/utils/eventDates"
 import type { ChecklistItem } from "@/utils/eventValidation"
 import { eventDraftChecklist, isDraftComplete } from "@/utils/eventValidation"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
+import { serverErrorMessage } from "@/utils/serverError"
 import { canCreateEvents } from "@/utils/teamRoles"
 import { currentTimeZone } from "@/utils/timeZones"
 
@@ -65,8 +65,7 @@ const draft = computed(() => ({
 
 const checklist = computed(() => eventDraftChecklist(draft.value))
 
-// createResource types its error as {}, so the message needs narrowing.
-const errorMessage = computed(() => (createEvent.error as FrappeError | null)?.messages?.join("\n"))
+const errorMessage = computed(() => serverErrorMessage(createEvent.error))
 
 const isDirty = computed(() =>
 	Boolean(
@@ -171,8 +170,7 @@ async function save() {
 	submitting.value = true
 	failed.value = false
 	// Steps and save run together: whichever finishes first waits for the other. Settled,
-	// not all: createResource rejects as well as recording the error, and the record is
-	// what the panel reads.
+	// not all: the panel reads the recorded error, whether or not the save also rejects.
 	await Promise.allSettled([
 		createEvent.submit({
 			event: {

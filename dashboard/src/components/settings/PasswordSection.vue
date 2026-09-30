@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { Button, createResource, toast } from "frappe-ui"
+import { Button, toast, useCall } from "frappe-ui"
 
 import { userResource } from "@/data/user"
-import type { FrappeError } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 
-const resetPassword = createResource({
-	url: "frappe.core.doctype.user.user.reset_password",
+const resetPassword = useCall<unknown, { user?: string }>({
+	url: "/api/v2/method/frappe.core.doctype.user.user.reset_password",
+	method: "POST",
+	immediate: false,
 	onSuccess() {
 		toast.success(__("Password reset link sent to your email"))
 	},
-	onError(error: FrappeError) {
-		toast.error(error.messages?.[0] || __("Could not send the password reset link"))
+	onError(error) {
+		toast.error(serverErrorMessage(error) || __("Could not send the password reset link"))
 	},
 })
 
