@@ -59,8 +59,8 @@ test.describe("Guest Booking", () => {
 		await bookingPage.submit()
 
 		const otpResponse = await otpResponsePromise
-		const otpData = (await otpResponse.json()) as { message?: { otp?: string } }
-		const otp = otpData.message?.otp
+		const otpData = (await otpResponse.json()) as { data?: { otp?: string } }
+		const otp = otpData.data?.otp
 		expect(otp).toBeTruthy()
 
 		await expect(page.getByText("Verify Your Email")).toBeVisible({ timeout: 10000 })
@@ -91,8 +91,8 @@ test.describe("Guest Booking", () => {
 		await bookingPage.submit()
 
 		const otpResponse = await otpResponsePromise
-		const otpData = (await otpResponse.json()) as { message?: { otp?: string } }
-		const otp = otpData.message?.otp
+		const otpData = (await otpResponse.json()) as { data?: { otp?: string } }
+		const otp = otpData.data?.otp
 		expect(otp).toBeTruthy()
 
 		await expect(page.getByText("Verify Your Phone")).toBeVisible({ timeout: 10000 })

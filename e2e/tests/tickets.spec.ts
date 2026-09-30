@@ -45,7 +45,7 @@ async function loadTicketDetails(page, ticketId: string): Promise<TicketDetails>
 	)
 	await page.goto(`/b/tickets/${ticketId}`)
 	const body = await (await pending).json()
-	return body.message as TicketDetails
+	return body.data as TicketDetails
 }
 
 test.describe("Ticket Details", () => {
