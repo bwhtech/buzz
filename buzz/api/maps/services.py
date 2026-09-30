@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 import frappe
 import requests
 
@@ -5,6 +7,7 @@ from buzz.api.maps.exceptions import CannotAddVenues, PlaceSearchFailed, PlaceSe
 from buzz.api.maps.schemas import PlacePrediction
 
 AUTOCOMPLETE_URL = "https://places.googleapis.com/v1/places:autocomplete"
+DETAILS_URL = "https://places.googleapis.com/v1/places/{place_id}"
 REQUEST_TIMEOUT_SECONDS = 5
 
 
@@ -26,17 +29,48 @@ class GooglePlaces:
 	def search(self, query: str, session_token: str) -> list[PlacePrediction]:
 		if not query.strip():
 			return []
-		data = self.post(AUTOCOMPLETE_URL, {"input": query, "sessionToken": session_token})
+		data = self.request("POST", AUTOCOMPLETE_URL, json={"input": query, "sessionToken": session_token})
 		return [
 			prediction_of(suggestion["placePrediction"])
 			for suggestion in data.get("suggestions", [])
 			if "placePrediction" in suggestion
 		]
 
-	def post(self, url: str, body: dict) -> dict:
+	def save_as_venue(self, team: str, place_id: str, name: str, session_token: str) -> str:
+		existing = frappe.db.exists("Event Venue", {"team": team, "google_place_id": place_id})
+		if existing:
+			frappe.has_permission("Event Venue", "read", existing, throw=True)
+			return existing
+		venue = frappe.get_doc(
+			{
+				"doctype": "Event Venue",
+				"team": team,
+				"venue_name": name,
+				"address": self.address_of(place_id, session_token) or name,
+				"google_place_id": place_id,
+			}
+		)
+		return venue.insert().name
+
+	def address_of(self, place_id: str, session_token: str) -> str | None:
+		# Only the address is asked for: the name came with the prediction, and the place id
+		# is the one thing Google lets a site keep for good.
+		place = self.request(
+			"GET",
+			DETAILS_URL.format(place_id=quote(place_id, safe="")),
+			params={"sessionToken": session_token},
+			headers={"X-Goog-FieldMask": "id,formattedAddress"},
+		)
+		return place.get("formattedAddress")
+
+	def request(self, method: str, url: str, headers: dict | None = None, **options) -> dict:
 		try:
-			response = requests.post(
-				url, json=body, headers={"X-Goog-Api-Key": self.api_key}, timeout=REQUEST_TIMEOUT_SECONDS
+			response = requests.request(
+				method,
+				url,
+				headers={"X-Goog-Api-Key": self.api_key, **(headers or {})},
+				timeout=REQUEST_TIMEOUT_SECONDS,
+				**options,
 			)
 			response.raise_for_status()
 		except requests.RequestException as error:

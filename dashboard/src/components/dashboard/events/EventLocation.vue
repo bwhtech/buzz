@@ -4,7 +4,7 @@ import { computed, ref, watch } from "vue"
 
 import ZoomLogo from "@/components/common/ZoomLogo.vue"
 import AddVenueDialog from "@/components/dashboard/events/AddVenueDialog.vue"
-import { loadVenues, usePlaceSearch, venues } from "@/data/venues"
+import { loadVenues, type PlacePrediction, usePlaceSearch, venues } from "@/data/venues"
 
 // A reserved value that no venue's `name` can take.
 const ZOOM = "__zoom__"
@@ -77,8 +77,9 @@ const placeOptions = computed(() =>
 		description: place.address ?? undefined,
 		icon: "lucide-map-pin",
 		condition: () => true,
+		// Open until the venue is saved, so a failure shows under the field being used.
 		keepOpen: true,
-		onClick: () => {},
+		onClick: () => addPlace(place),
 	})),
 )
 
@@ -98,6 +99,13 @@ const options = computed(() => [
 async function onVenueCreated(name: string) {
 	await loadVenues(props.team)
 	selected.value = name
+}
+
+async function addPlace(place: PlacePrediction) {
+	const name = await placeSearch.save(place, props.team)
+	if (!name) return
+	await onVenueCreated(name)
+	isOpen.value = false
 }
 </script>
 

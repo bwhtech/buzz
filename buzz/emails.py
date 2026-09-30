@@ -25,10 +25,16 @@ def email_event_header(event) -> dict:
 
 def venue_map_url(venue_name: str | None) -> str | None:
 	venue = venue_name and frappe.db.get_value(
-		"Event Venue", venue_name, ["address", "latitude", "longitude"], as_dict=True
+		"Event Venue",
+		venue_name,
+		["venue_name", "address", "latitude", "longitude", "google_place_id"],
+		as_dict=True,
 	)
 	if not venue:
 		return None
+	if venue.google_place_id:
+		place = {"api": 1, "query": venue.venue_name, "query_place_id": venue.google_place_id}
+		return f"https://www.google.com/maps/search/?{urlencode(place)}"
 	query = f"{venue.latitude},{venue.longitude}" if venue.latitude and venue.longitude else venue.address
 	return f"https://www.google.com/maps/search/?{urlencode({'api': 1, 'query': query})}" if query else None
 

@@ -12,6 +12,7 @@
   "column_break_kqaw",
   "type",
   "google_maps_embed_code",
+  "google_place_id",
   "section_break_cexp",
   "longitude",
   "latitude",
@@ -85,12 +86,21 @@
    "label": "Team",
    "options": "Buzz Team",
    "search_index": 1
+  },
+  {
+   "description": "Set when the venue is added from Google Maps search.",
+   "fieldname": "google_place_id",
+   "fieldtype": "Data",
+   "label": "Google Place ID",
+   "no_copy": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-30 12:00:00.000000",
+ "modified": "2026-09-30 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Venue",

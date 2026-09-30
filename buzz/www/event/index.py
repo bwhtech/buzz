@@ -246,7 +246,15 @@ class EventPage:
 		venue = frappe.db.get_value(
 			"Event Venue",
 			self.event.venue,
-			["venue_name", "address", "type", "google_maps_embed_code", "latitude", "longitude"],
+			[
+				"venue_name",
+				"address",
+				"type",
+				"google_maps_embed_code",
+				"google_place_id",
+				"latitude",
+				"longitude",
+			],
 			as_dict=True,
 		)
 		return (

@@ -9,9 +9,10 @@ from frappe.website.serve import get_response_content
 
 from buzz.api.events.test_events import create_event
 from buzz.api.forms.test_forms import ensure_event_host
+from buzz.emails import venue_map_url as email_venue_map_url
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.www.event.index import EventPage
-from buzz.www.event.venue_map import google_maps_url, open_street_map_url
+from buzz.www.event.venue_map import google_maps_url, open_street_map_url, venue_map_url
 from buzz.www.site_header import DEFAULT_FAVICON
 
 
@@ -285,3 +286,49 @@ class TestVenueMap(IntegrationTestCase):
 	def test_open_street_map_needs_coordinates(self):
 		self.assertIsNone(open_street_map_url(0, 0))
 		self.assertIn("marker=19.0%2C72.8", open_street_map_url(19.0, 72.8))
+
+
+class TestGooglePlaceMap(IntegrationTestCase):
+	PLACE = frappe._dict(google_place_id="place-1", type=None, latitude=0, longitude=0)
+
+	def setUp(self):
+		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
+
+	def configure(self, enabled: int, embed_key: str | None) -> None:
+		settings = frappe.get_doc("Buzz Settings")
+		settings.update({"google_maps_enabled": enabled, "google_maps_embed_api_key": embed_key})
+		settings.save()
+
+	def test_place_with_an_embed_key_gets_the_google_embed(self):
+		self.configure(1, "embed-key")
+		self.assertEqual(
+			venue_map_url(self.PLACE),
+			"https://www.google.com/maps/embed/v1/place?key=embed-key&q=place_id%3Aplace-1",
+		)
+
+	def test_place_without_an_embed_key_has_no_map(self):
+		self.configure(1, None)
+		self.assertIsNone(venue_map_url(self.PLACE))
+
+	def test_place_with_the_switch_off_has_no_map(self):
+		self.configure(0, "embed-key")
+		self.assertIsNone(venue_map_url(self.PLACE))
+
+	def test_venue_without_a_place_keeps_its_own_map(self):
+		self.configure(1, "embed-key")
+		venue = frappe._dict(google_place_id=None, type="Open Street Map", latitude=19.0, longitude=72.8)
+		self.assertIn("openstreetmap.org", venue_map_url(venue))
+
+	def test_email_link_points_at_the_place(self):
+		venue = frappe.get_doc(
+			{
+				"doctype": "Event Venue",
+				"venue_name": "Nehru Centre",
+				"address": "Worli",
+				"google_place_id": "place-1",
+			}
+		).insert(ignore_permissions=True)
+		self.assertEqual(
+			email_venue_map_url(venue.name),
+			"https://www.google.com/maps/search/?api=1&query=Nehru+Centre&query_place_id=place-1",
+		)

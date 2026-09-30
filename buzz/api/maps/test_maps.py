@@ -4,10 +4,10 @@ import frappe
 import requests
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.maps import search_places
+from buzz.api.maps import add_place_as_venue, search_places
 from buzz.api.maps.exceptions import CannotAddVenues, PlaceSearchFailed, PlaceSearchNotEnabled
 from buzz.api.maps.services import place_search_enabled
-from buzz.events.doctype.buzz_team.test_buzz_team import create_user
+from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 
 SUGGESTIONS = {
 	"suggestions": [
@@ -44,7 +44,7 @@ class TestSearchPlaces(IntegrationTestCase):
 		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
 		configure_google_maps()
 
-	@patch("buzz.api.maps.services.requests.post")
+	@patch("buzz.api.maps.services.requests.request")
 	def test_maps_suggestions_to_predictions_with_the_secret_key(self, post):
 		post.return_value = google_answers(SUGGESTIONS)
 
@@ -53,10 +53,13 @@ class TestSearchPlaces(IntegrationTestCase):
 		self.assertEqual(
 			places, [{"place_id": "place-1", "name": "Nehru Centre", "address": "Worli, Mumbai"}]
 		)
+		self.assertEqual(
+			post.call_args.args, ("POST", "https://places.googleapis.com/v1/places:autocomplete")
+		)
 		self.assertEqual(post.call_args.kwargs["headers"], {"X-Goog-Api-Key": "secret-places-key"})
 		self.assertEqual(post.call_args.kwargs["json"], {"input": "nehru", "sessionToken": "token-1"})
 
-	@patch("buzz.api.maps.services.requests.post")
+	@patch("buzz.api.maps.services.requests.request")
 	def test_blank_query_does_not_call_google(self, post):
 		self.assertEqual(search_places("  ", "token-1"), [])
 		post.assert_not_called()
@@ -75,7 +78,7 @@ class TestSearchPlaces(IntegrationTestCase):
 		with self.assertRaises(PlaceSearchNotEnabled):
 			search_places("nehru", "token-1")
 
-	@patch("buzz.api.maps.services.requests.post", side_effect=requests.ConnectionError)
+	@patch("buzz.api.maps.services.requests.request", side_effect=requests.ConnectionError)
 	def test_google_failure_is_a_named_error(self, post):
 		with self.assertRaises(PlaceSearchFailed):
 			search_places("nehru", "token-1")
@@ -85,3 +88,65 @@ class TestSearchPlaces(IntegrationTestCase):
 
 		with self.assertRaises(CannotAddVenues):
 			search_places("nehru", "token-1")
+
+
+class TestAddPlaceAsVenue(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.owner = create_user("place-venue-owner@example.com", "Owner")
+		cls.team = create_owned_team("Place Venue Team", cls.owner)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
+		configure_google_maps()
+		frappe.set_user(self.owner)
+
+	@patch("buzz.api.maps.services.requests.request")
+	def test_saves_the_place_with_its_address_and_place_id(self, request):
+		request.return_value = google_answers(
+			{"id": "place-1", "formattedAddress": "Dr Annie Besant Rd, Worli"}
+		)
+
+		venue = frappe.get_doc(
+			"Event Venue", add_place_as_venue(self.team, "place-1", "Nehru Centre", "token-1")
+		)
+
+		self.assertEqual(
+			(venue.venue_name, venue.address, venue.google_place_id, venue.team),
+			("Nehru Centre", "Dr Annie Besant Rd, Worli", "place-1", self.team),
+		)
+		self.assertFalse(venue.latitude or venue.longitude)
+		self.assertEqual(request.call_args.args, ("GET", "https://places.googleapis.com/v1/places/place-1"))
+		self.assertEqual(request.call_args.kwargs["params"], {"sessionToken": "token-1"})
+		self.assertEqual(request.call_args.kwargs["headers"]["X-Goog-FieldMask"], "id,formattedAddress")
+
+	@patch("buzz.api.maps.services.requests.request")
+	def test_a_place_the_team_already_has_is_reused_without_calling_google(self, request):
+		request.return_value = google_answers({"formattedAddress": "Somewhere"})
+		first = add_place_as_venue(self.team, "place-2", "Town Hall", "token-1")
+
+		self.assertEqual(add_place_as_venue(self.team, "place-2", "Town Hall", "token-2"), first)
+		request.assert_called_once()
+
+	@patch("buzz.api.maps.services.requests.request")
+	def test_place_id_cannot_redirect_the_google_call(self, request):
+		request.return_value = google_answers({})
+
+		add_place_as_venue(self.team, "../other?x=1", "Odd Place", "token-1")
+
+		self.assertEqual(
+			request.call_args.args[1], "https://places.googleapis.com/v1/places/..%2Fother%3Fx%3D1"
+		)
+
+	@patch("buzz.api.maps.services.requests.request")
+	def test_another_teams_member_cannot_add_to_the_team(self, request):
+		request.return_value = google_answers({"formattedAddress": "Somewhere"})
+		outsider = create_user("place-venue-outsider@example.com", "Outsider")
+		create_owned_team("Place Venue Other Team", outsider)
+		frappe.set_user(outsider)
+
+		with self.assertRaises(frappe.PermissionError):
+			add_place_as_venue(self.team, "place-3", "Not Mine", "token-1")

@@ -18,6 +18,7 @@ class EventVenue(Document):
 
 		address: DF.SmallText
 		google_maps_embed_code: DF.Code | None
+		google_place_id: DF.Data | None
 		latitude: DF.Float
 		longitude: DF.Float
 		team: DF.Link | None

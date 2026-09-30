@@ -45,8 +45,8 @@ const MINIMUM_PLACE_QUERY_LENGTH = 3
 /** Google Maps places for what is typed into an open picker, on a site with place search set up. */
 export function usePlaceSearch(query: Ref<string>, isOpen: Ref<boolean>) {
 	const debouncedQuery = refDebounced(query, 300)
-	// One token for the whole search, so Google bills its keystrokes as a single session.
-	const sessionToken = crypto.randomUUID()
+	// One token from the first keystroke to the save, so Google bills them as a single session.
+	let sessionToken = crypto.randomUUID()
 	const search = useCall<PlacePrediction[], { query: string; session_token: string }>({
 		url: "/api/v2/method/buzz.api.maps.search_places",
 		immediate: false,
@@ -66,9 +66,36 @@ export function usePlaceSearch(query: Ref<string>, isOpen: Ref<boolean>) {
 		search.submit({ query: text.value, session_token: sessionToken }).catch(() => {})
 	})
 
+	const venue = useCall<
+		string,
+		{ team: string; place_id: string; name: string; session_token: string }
+	>({
+		url: "/api/v2/method/buzz.api.maps.add_place_as_venue",
+		method: "POST",
+		immediate: false,
+	})
+
+	/** Saves the place as the team's venue and answers with the venue's `name`, or null on failure. */
+	async function save(place: PlacePrediction, venueTeam: string) {
+		const name = await venue
+			.submit({
+				team: venueTeam,
+				place_id: place.place_id,
+				name: place.name,
+				session_token: sessionToken,
+			})
+			.catch(() => null)
+		if (name) sessionToken = crypto.randomUUID()
+		return name
+	}
+
 	return reactive({
+		save,
 		places: computed(() => (isSearchable.value ? (search.data ?? []) : [])),
 		// Only while searching: a failed search must not leave a venue picked by hand marked as wrong.
-		error: computed(() => (isOpen.value && search.error ? serverErrorMessage(search.error) : "")),
+		error: computed(() => {
+			const error = search.error || venue.error
+			return isOpen.value && error ? serverErrorMessage(error) : ""
+		}),
 	})
 }
