@@ -15,10 +15,14 @@
 {% endautoescape %}{% endblock %}
 
 {% block content %}{% autoescape true %}
+	{% macro event_date(event) %}
+	{% if event.is_live %}<span class="event-card-live"><span class="live-dot"></span>{{ _("Live") }}</span>{% else %}<span class="event-card-date">{{ event.date }}</span>{% endif %}
+	{% endmacro %}
+
 	{% macro event_card(event) %}
 	<a class="event-card" href="{{ event.url }}">
 		{% if event.image %}<img class="event-card-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
-		<span class="event-card-date">{{ event.date }}</span>
+		{{ event_date(event) }}
 		<span class="event-card-title">{{ event.title }}</span>
 		{% if event.place %}<span class="event-card-place">{{ event.place }}</span>{% endif %}
 	</a>
@@ -74,7 +78,7 @@
 					<a class="event-row" href="{{ event.url }}">
 						{% if event.image %}<img class="event-row-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="event-row-image" seed="{{ event.title }}"></event-banner>{% endif %}
 						<span class="event-row-text">
-							<span class="event-card-date">{{ event.date }}</span>
+							{{ event_date(event) }}
 							<span class="event-card-title">{{ event.title }}</span>
 							{% if event.place %}<span class="event-card-place">{{ event.place }}</span>{% endif %}
 						</span>
@@ -83,7 +87,12 @@
 				{% endfor %}
 			</ul>
 			{% else %}
-			<p class="empty-state">{{ _("No upcoming events.") }}</p>
+			{% set new_event_url = "/b/manage/team/events/new" %}
+			<div class="discover-empty">
+				<h3 class="discover-empty-title">{{ _("No upcoming events") }}</h3>
+				<p class="empty-state">{{ _("Be the first to bring people together.") }}</p>
+				<a class="es-button" data-variant="solid" data-size="md" href="{% if is_guest %}/login?redirect-to={{ new_event_url | urlencode }}{% else %}{{ new_event_url }}{% endif %}">{{ _("Host an event") }}</a>
+			</div>
 			{% endif %}
 		</section>
 

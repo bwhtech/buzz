@@ -670,6 +670,46 @@ body {
 	font-weight: 500;
 }
 
+.event-card-live {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--ink-red-7);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.live-dot {
+	position: relative;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+.live-dot::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: inherit;
+	animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping {
+	75%,
+	100% {
+		transform: scale(2);
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.live-dot::before {
+		animation: none;
+	}
+}
+
 .empty-state {
 	color: var(--ink-muted);
 }

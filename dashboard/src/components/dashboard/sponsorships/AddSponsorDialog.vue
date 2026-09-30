@@ -48,7 +48,7 @@ const missingFieldsMessage = computed(
 	() =>
 		`Add ${new Intl.ListFormat("en", { type: "conjunction" }).format(missingFields.value as string[])}.`,
 )
-const errorMessage = computed(() => (creator.error as FrappeError | null)?.messages?.join("\n"))
+const errorMessage = computed(() => (creator.error as FrappeError | null)?.message)
 
 watch(isOpen, (open) => open && reset())
 
