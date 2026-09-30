@@ -309,7 +309,7 @@ const formDataResource = useCall<CustomFormData, { event_route: string; form_rou
 			loginRequired.value = true
 			return
 		}
-		loadError.value = err.messages?.[0] || __("Form not found")
+		loadError.value = err.message || __("Form not found")
 	},
 })
 
@@ -326,7 +326,7 @@ const submitResource = useCall<string | null, Record<string, any>>({
 	},
 	onError: (error: Error) => {
 		const err = error as FrappeError
-		const msg = err.messages?.[0] || __("Failed to submit form")
+		const msg = err.message || __("Failed to submit form")
 		toast.error(msg.replace(/<[^>]*>/g, ""))
 	},
 })

@@ -109,7 +109,7 @@ const tierDrawerOpen = drawerOpen("tier")
 const sponsorDrawerOpen = drawerOpen("sponsor")
 const enquiryDrawerOpen = drawerOpen("enquiry")
 
-const message = (error: unknown) => (error as FrappeError | null)?.messages?.join("\n")
+const message = (error: unknown) => (error as FrappeError | null)?.message
 </script>
 
 <template>

@@ -65,7 +65,7 @@ const { enquiries, applyStatus, loadMore, page, loadingFirstPage, loadingMore } 
 
 defineExpose({ applyStatus, reload: page.reload })
 
-const errorMessage = computed(() => (page.error as FrappeError | null)?.messages?.join("\n"))
+const errorMessage = computed(() => (page.error as FrappeError | null)?.message)
 
 // The next page loads a screen before the foot of the list scrolls into view.
 const sentinel = ref<HTMLElement | null>(null)
