@@ -4,6 +4,7 @@ interface Window {
 		user?: string
 	}
 	site_name?: string
+	google_place_search_enabled?: boolean
 }
 
 declare module "*.wav" {

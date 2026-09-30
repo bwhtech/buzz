@@ -4,7 +4,7 @@ import { computed, ref, watch } from "vue"
 
 import ZoomLogo from "@/components/common/ZoomLogo.vue"
 import AddVenueDialog from "@/components/dashboard/events/AddVenueDialog.vue"
-import { loadVenues, venues } from "@/data/venues"
+import { loadVenues, usePlaceSearch, venues } from "@/data/venues"
 
 // A reserved value that no venue's `name` can take.
 const ZOOM = "__zoom__"
@@ -24,6 +24,7 @@ const isAdding = ref(false)
 const suggestedName = ref("")
 const isOpen = ref(false)
 const query = ref("")
+const placeSearch = usePlaceSearch(query, isOpen)
 
 watch(
 	() => props.team,
@@ -66,6 +67,21 @@ function createZoomMeeting() {
 // selected, because the trigger reads its label from a matching option.
 const zoomOption = { label: "Create Zoom meeting", value: ZOOM, icon: "lucide-video" }
 
+// Custom rows: Google already matched them to the query, and a place is not a value
+// the picker can hold until it has been saved as a venue.
+const placeOptions = computed(() =>
+	placeSearch.places.map((place) => ({
+		type: "custom" as const,
+		key: place.place_id,
+		label: place.name,
+		description: place.address ?? undefined,
+		icon: "lucide-map-pin",
+		condition: () => true,
+		keepOpen: true,
+		onClick: () => {},
+	})),
+)
+
 const options = computed(() => [
 	{
 		group: "Venues",
@@ -75,6 +91,7 @@ const options = computed(() => [
 			value: row.name,
 		})),
 	},
+	...(placeSearch.places.length ? [{ group: "Google Maps", options: placeOptions.value }] : []),
 	...(zoomMeeting.value ? [{ group: "Virtual", options: [zoomOption] }] : []),
 ])
 
@@ -97,7 +114,7 @@ async function onVenueCreated(name: string) {
 		class="w-full"
 		:loading="venues.loading"
 		:disabled="disabled"
-		:error="error"
+		:error="error || placeSearch.error"
 		@keydown.enter.prevent="unmatched && addManually()"
 	>
 		<!-- Rows size the popover, and an address can be a long URL. Cap them near the

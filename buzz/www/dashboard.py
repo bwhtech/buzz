@@ -6,6 +6,7 @@ from frappe import _
 from frappe.utils import get_system_timezone
 
 from buzz import telemetry
+from buzz.api.maps.services import place_search_enabled
 
 no_cache = 1
 
@@ -36,5 +37,6 @@ def get_boot():
 			"site_name": frappe.local.site,
 			"read_only_mode": frappe.flags.read_only,
 			"system_timezone": get_system_timezone(),
+			"google_place_search_enabled": place_search_enabled(),
 		}
 	)
