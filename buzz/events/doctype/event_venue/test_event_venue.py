@@ -4,11 +4,17 @@
 from unittest.mock import Mock, patch
 
 import frappe
+import requests
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.events.test_events import create_event
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
-from buzz.events.doctype.event_venue.map_link import SHORT_LINK_DIGITS, coordinates_of, read_map_link
+from buzz.events.doctype.event_venue.map_link import (
+	MAP_LINK_CACHE_PREFIX,
+	SHORT_LINK_DIGITS,
+	coordinates_of,
+	read_map_link,
+)
 from buzz.patches.set_event_venue_name import execute as set_event_venue_name
 
 
@@ -74,7 +80,14 @@ def open_street_map_short_code(latitude: float, longitude: float, zoom: int) -> 
 	return code + "-" * ((zoom + 8) % 3)
 
 
+def clear_map_link_cache():
+	frappe.cache.delete_keys(MAP_LINK_CACHE_PREFIX)
+
+
 class TestMapLinkCoordinates(IntegrationTestCase):
+	def setUp(self):
+		clear_map_link_cache()
+
 	def test_google_link_gives_the_place_not_the_map_centre(self):
 		self.assertEqual(coordinates_of(GOOGLE_PLACE_LINK), (18.9903, 72.8174))
 
@@ -136,6 +149,22 @@ class TestMapLinkCoordinates(IntegrationTestCase):
 		self.assertEqual(get.call_args.kwargs["params"], {"osm_ids": "W4567", "format": "jsonv2"})
 
 	@patch("buzz.events.doctype.event_venue.map_link.requests.get")
+	def test_a_found_place_is_looked_up_once(self, get):
+		get.return_value = Mock(headers={"Location": GOOGLE_PLACE_LINK})
+
+		coordinates_of("https://maps.app.goo.gl/cached")
+		coordinates_of("https://maps.app.goo.gl/cached")
+
+		get.assert_called_once()
+
+	@patch("buzz.events.doctype.event_venue.map_link.requests.get", side_effect=requests.ConnectionError)
+	def test_a_failed_lookup_is_tried_again(self, get):
+		coordinates_of("https://maps.app.goo.gl/down")
+		coordinates_of("https://maps.app.goo.gl/down")
+
+		self.assertEqual(get.call_count, 2)
+
+	@patch("buzz.events.doctype.event_venue.map_link.requests.get")
 	def test_unknown_open_street_map_object_gives_nothing(self, get):
 		get.return_value = Mock(json=Mock(return_value=[]), raise_for_status=Mock())
 
@@ -148,6 +177,9 @@ class TestMapLinkCoordinates(IntegrationTestCase):
 
 
 class TestVenueMapLink(IntegrationTestCase):
+	def setUp(self):
+		clear_map_link_cache()
+
 	def venue(self, **fields):
 		return frappe.get_doc({"doctype": "Event Venue", "venue_name": "Linked Hall", **fields})
 

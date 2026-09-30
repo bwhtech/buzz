@@ -2,6 +2,7 @@ import re
 from typing import NamedTuple
 from urllib.parse import ParseResult, parse_qs, unquote_plus, urlparse
 
+import frappe
 import requests
 from frappe.utils import get_url
 
@@ -19,6 +20,8 @@ OPEN_STREET_MAP_SHORT_LINK = re.compile(r"^/go/([A-Za-z0-9_~@-]+)")
 SHORT_LINK_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_~"
 NOMINATIM_LOOKUP_URL = "https://nominatim.openstreetmap.org/lookup"
 REQUEST_TIMEOUT_SECONDS = 5
+MAP_LINK_CACHE_PREFIX = "buzz_map_link_place:"
+MAP_LINK_CACHE_SECONDS = 600
 
 Coordinates = tuple[float, float]
 
@@ -37,6 +40,18 @@ def coordinates_of(link: str | None) -> Coordinates | None:
 
 
 def read_map_link(link: str | None) -> MapLinkPlace:
+	# The picker's preview and the save that follows read the same link; only a place that
+	# was found is kept, so a failed lookup is tried again.
+	cache_key = f"{MAP_LINK_CACHE_PREFIX}{link}"
+	if cached := frappe.cache.get_value(cache_key):
+		return cached
+	place = parse_map_link(link)
+	if any(place):
+		frappe.cache.set_value(cache_key, place, expires_in_sec=MAP_LINK_CACHE_SECONDS)
+	return place
+
+
+def parse_map_link(link: str | None) -> MapLinkPlace:
 	url = resolved_url(link)
 	host = url.hostname or ""
 	if host in OPEN_STREET_MAP_HOSTS:

@@ -156,7 +156,7 @@
 					{% endif %}
 					<p class="aside-value">
 						{%- if venue.link -%}
-						<a class="venue-link" href="{{ venue.link }}" target="_blank" rel="noopener noreferrer">{{ venue.name }}<svg class="icon" viewBox="5 5 14 14" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
+						<a class="venue-link" href="{{ venue.link | e }}" target="_blank" rel="noopener noreferrer">{{ venue.name }}<svg class="icon" viewBox="5 5 14 14" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
 						{%- else -%}
 						{{ venue.name }}
 						{%- endif -%}

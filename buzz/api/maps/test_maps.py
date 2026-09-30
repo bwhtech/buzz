@@ -8,6 +8,7 @@ from buzz.api.maps import add_place_as_venue, locate_map_link, search_places
 from buzz.api.maps.exceptions import CannotAddVenues, PlaceSearchFailed, PlaceSearchNotEnabled
 from buzz.api.maps.services import place_search_enabled
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
+from buzz.events.doctype.event_venue.test_event_venue import clear_map_link_cache
 
 SUGGESTIONS = {
 	"suggestions": [
@@ -150,10 +151,12 @@ class TestAddPlaceAsVenue(IntegrationTestCase):
 
 		with self.assertRaises(frappe.PermissionError):
 			add_place_as_venue(self.team, "place-3", "Not Mine", "token-1")
+		request.assert_not_called()
 
 
 class TestLocateMapLink(IntegrationTestCase):
 	def setUp(self):
+		clear_map_link_cache()
 		frappe.set_user("Administrator")
 		self.addCleanup(frappe.set_user, "Administrator")
 

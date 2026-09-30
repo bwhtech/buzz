@@ -55,14 +55,11 @@ class GooglePlaces:
 			frappe.has_permission("Event Venue", "read", existing, throw=True)
 			return existing
 		venue = frappe.get_doc(
-			{
-				"doctype": "Event Venue",
-				"team": team,
-				"venue_name": name,
-				"address": self.address_of(place_id, session_token) or name,
-				"google_place_id": place_id,
-			}
+			{"doctype": "Event Venue", "team": team, "venue_name": name, "google_place_id": place_id}
 		)
+		# Checked before the billed Place Details call, not left to insert().
+		venue.check_permission("create")
+		venue.address = self.address_of(place_id, session_token) or name
 		return venue.insert().name
 
 	def address_of(self, place_id: str, session_token: str) -> str | None:

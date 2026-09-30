@@ -13,6 +13,7 @@ def search_places(query: str, session_token: str) -> list[PlacePrediction]:
 
 
 @frappe.whitelist(methods=["POST"])
+@rate_limit(limit=30, seconds=60)
 def add_place_as_venue(team: str, place_id: str, name: str, session_token: str) -> str:
 	"""Save a place picked from the search as one of the team's venues, answering with its name."""
 	return services.GooglePlaces().save_as_venue(team, place_id, name, session_token)

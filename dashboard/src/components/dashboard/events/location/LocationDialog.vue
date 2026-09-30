@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Button, Dialog, Divider, ScrollArea, Skeleton, TextInput } from "frappe-ui"
-import { ref, watch } from "vue"
+import { computed, ref, watch } from "vue"
 
 import ZoomLogo from "@/components/common/ZoomLogo.vue"
 import LocationMap from "@/components/dashboard/events/location/LocationMap.vue"
@@ -20,11 +20,12 @@ interface Preview {
 	use: () => Promise<string | null> | string
 }
 
-// Pages that book Zoom another way, or cannot book it, leave the Zoom option out.
+// Pages that book Zoom another way leave the Zoom option out; a site without Zoom never shows it.
 const props = withDefaults(defineProps<{ team: string; showZoom?: boolean; title?: string }>(), {
 	showZoom: true,
 	title: "Add location",
 })
+const canPickZoom = computed(() => props.showZoom && Boolean(window.zoom_available))
 const isOpen = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ picked: [venue: string]; zoom: [] }>()
 
@@ -151,7 +152,7 @@ function pickZoom() {
 							label="Add manually"
 							@click="addManually"
 						/>
-						<Button v-if="showZoom" variant="ghost" label="Zoom meeting" @click="pickZoom">
+						<Button v-if="canPickZoom" variant="ghost" label="Zoom meeting" @click="pickZoom">
 							<template #prefix>
 								<ZoomLogo class="size-4" color="var(--ink-gray-5)" />
 							</template>
