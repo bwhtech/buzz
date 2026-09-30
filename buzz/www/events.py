@@ -1,10 +1,12 @@
+from collections import Counter
+from datetime import datetime
 from urllib.parse import quote
 
 import frappe
 from frappe import _
 from frappe.query_builder import Order
 from frappe.query_builder.functions import Count
-from frappe.utils import get_url, today
+from frappe.utils import get_datetime_in_timezone, get_system_timezone, get_time, get_url, getdate, today
 
 from buzz.www.event.index import format_day, not_found
 from buzz.www.site_header import apply_site_context
@@ -14,6 +16,7 @@ LISTING_LIMIT = 60
 FEATURED_LIMIT = 3
 POPULAR_LIMIT = 8
 CARD_FIELDS = ["title", "route", "start_date", "medium", "venue", "card_image", "banner_image"]
+TIME_FIELDS = ["start_time", "end_date", "end_time", "time_zone"]
 
 
 def get_context(context):
@@ -30,6 +33,23 @@ def hosting_banner_visible(is_guest: bool) -> bool:
 
 def upcoming_filters() -> dict:
 	return {"is_published": 1, "route": ["is", "set"], "end_date": [">=", today()]}
+
+
+def local_now(event) -> datetime:
+	return get_datetime_in_timezone(event.time_zone or get_system_timezone()).replace(tzinfo=None)
+
+
+def has_started(event) -> bool:
+	return datetime.combine(getdate(event.start_date), get_time(event.start_time)) <= local_now(event)
+
+
+def has_ended(event) -> bool:
+	return datetime.combine(getdate(event.end_date), get_time(event.end_time)) < local_now(event)
+
+
+def without_ended(events: list) -> list:
+	# The date filter keeps an event all through its last day, so drop the ones already over.
+	return [event for event in events if not has_ended(event)]
 
 
 def enabled_categories() -> list:
@@ -51,6 +71,7 @@ def event_card(event) -> dict:
 		"title": event.title,
 		"url": f"/events/{event.route}",
 		"date": format_day(event.start_date),
+		"is_live": has_started(event) and not has_ended(event),
 		"place": _("Online") if event.medium == "Online" else event.venue,
 		"image": event.card_image or event.banner_image,
 	}
@@ -71,21 +92,24 @@ class DiscoverPage:
 		}
 
 	def featured_events(self) -> list:
-		return frappe.get_all(
+		events = frappe.get_all(
 			"Buzz Event",
 			filters=upcoming_filters() | {"is_featured": 1},
-			fields=CARD_FIELDS,
+			fields=CARD_FIELDS + TIME_FIELDS,
 			order_by="start_date asc",
 			limit=FEATURED_LIMIT,
 		)
+		return without_ended(events)
 
 	def popular_events(self, limit: int = POPULAR_LIMIT) -> list:
 		event = frappe.qb.DocType("Buzz Event")
 		ticket = frappe.qb.DocType("Event Ticket")
 		query = frappe.qb.get_query(
-			"Buzz Event", fields=CARD_FIELDS, filters=upcoming_filters() | {"is_featured": 0}
+			"Buzz Event",
+			fields=CARD_FIELDS + TIME_FIELDS,
+			filters=upcoming_filters() | {"is_featured": 0},
 		)
-		return (
+		events = (
 			query.left_join(ticket)
 			.on((ticket.event == event.name) & (ticket.docstatus == 1))
 			.groupby(event.name)
@@ -93,6 +117,7 @@ class DiscoverPage:
 			.orderby(event.start_date)
 			.limit(limit)
 		).run(as_dict=True)
+		return sorted(without_ended(events), key=lambda event: event.start_date, reverse=True)
 
 	def categories(self) -> list[dict]:
 		counts = self.event_counts()
@@ -107,13 +132,8 @@ class DiscoverPage:
 		]
 
 	def event_counts(self) -> dict[str, int]:
-		rows = frappe.get_all(
-			"Buzz Event",
-			filters=upcoming_filters(),
-			fields=["category", {"COUNT": "*", "as": "event_count"}],
-			group_by="category",
-		)
-		return {row.category: row.event_count for row in rows}
+		events = frappe.get_all("Buzz Event", filters=upcoming_filters(), fields=["category", *TIME_FIELDS])
+		return Counter(event.category for event in without_ended(events))
 
 
 class EventListing:
@@ -142,10 +162,11 @@ class EventListing:
 		}
 
 	def events(self) -> list:
-		return frappe.get_all(
+		events = frappe.get_all(
 			"Buzz Event",
 			filters=upcoming_filters() | {"category": self.category.name},
-			fields=CARD_FIELDS,
+			fields=CARD_FIELDS + TIME_FIELDS,
 			order_by="start_date asc",
 			limit=LISTING_LIMIT,
 		)
+		return without_ended(events)
