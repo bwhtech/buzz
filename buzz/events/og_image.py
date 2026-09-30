@@ -7,17 +7,17 @@ from urllib.parse import urlparse
 import frappe
 from frappe import _
 from frappe.utils import format_date, getdate
-from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageColor, ImageDraw, ImageOps
 
 from buzz.events.banner_pattern import rings_banner
 from buzz.events.doctype.buzz_theme.buzz_theme import resolve_theme
+from buzz.events.og_text import OgText, font, is_drawable, tracking
 from buzz.www.event.index import RANGE_SEPARATOR, EventPage, format_time
 
 # Bump when the layout changes, so every event renders again on its next save
 RENDER_VERSION = 1
 WIDTH, HEIGHT, BANNER_HEIGHT = 1200, 630, 400
 PADDING, COLUMN_GAP = 64, 48
-FONTS = frappe.get_app_path("buzz", "public", "fonts")
 WORDMARK = frappe.get_app_path("buzz", "public", "images", "buzz-wordmark-dark.png")
 WORDMARK_SIZE = (54, 42)
 COLOURS = {
@@ -65,16 +65,6 @@ def enqueue_all_published():
 		"Buzz Event", filters={"is_published": 1, "route": ["is", "set"]}, pluck="name"
 	):
 		enqueue_generate(str(name))
-
-
-def font(weight: str, size: int) -> ImageFont.FreeTypeFont:
-	return ImageFont.truetype(f"{FONTS}/Inter-{weight}.woff2", size)
-
-
-def is_drawable(text: str) -> bool:
-	# Inter covers Latin, Greek and Cyrillic; other scripts would draw as empty boxes.
-	# A code-point range is coarser than reading the font's cmap, which needs fontTools.
-	return all(ord(character) < 0x0530 or 0x1E00 <= ord(character) < 0x20D0 for character in text)
 
 
 @contextmanager
@@ -144,7 +134,7 @@ class EventOgImage:
 		draw = ImageDraw.Draw(image)
 		draw.line([(0, BANNER_HEIGHT), (WIDTH, BANNER_HEIGHT)], fill=self.colours["border"], width=1)
 		brand_width = self.draw_brand(image, draw)
-		self.draw_text(draw, WIDTH - 2 * PADDING - brand_width - COLUMN_GAP)
+		self.draw_text(image, WIDTH - 2 * PADDING - brand_width - COLUMN_GAP)
 		output = io.BytesIO()
 		image.save(output, "PNG", optimize=True)
 		return output.getvalue()
@@ -170,15 +160,12 @@ class EventOgImage:
 		except Exception:
 			return None
 
-	def draw_text(self, draw: ImageDraw.ImageDraw, max_width: int):
-		title_font, meta_font = font("SemiBold", 52), font("Medium", 26)
+	def draw_text(self, image: Image.Image, max_width: int):
 		top = BANNER_HEIGHT + (HEIGHT - BANNER_HEIGHT - (60 + 10 + 34)) // 2
-		title = fit(self.event.title, title_font, max_width, tracking(52))
-		draw_tracked(draw, (PADDING, top + 30), title, title_font, self.colours["ink-title"], tracking(52))
-		meta = fit(self.meta_line, meta_font, max_width)
-		draw.text(
-			(PADDING, top + 60 + 10 + 17), meta, font=meta_font, fill=self.colours["ink-muted"], anchor="lm"
-		)
+		title = OgText(self.event.title, font("SemiBold", 52), tracking(52)).fit(max_width)
+		title.draw(image, (PADDING, top + 30), self.colours["ink-title"])
+		meta = OgText(self.meta_line, font("Medium", 26)).fit(max_width)
+		meta.draw(image, (PADDING, top + 60 + 10 + 17), self.colours["ink-muted"])
 
 	def draw_brand(self, image: Image.Image, draw: ImageDraw.ImageDraw) -> int:
 		host_font, host = font("Medium", 20), site_host()
@@ -255,30 +242,6 @@ def site_host() -> str:
 	# Not get_url(): in a request it follows the Host header, which the job never sees
 	host = frappe.local.conf.host_name or frappe.local.conf.hostname or frappe.local.site
 	return urlparse(host if "://" in host else f"//{host}").hostname or ""
-
-
-def tracking(size: int) -> float:
-	return -0.03 * size
-
-
-def text_width(text: str, typeface: ImageFont.FreeTypeFont, letter_spacing: float = 0) -> float:
-	return typeface.getlength(text) + letter_spacing * max(len(text) - 1, 0)
-
-
-def fit(text: str, typeface: ImageFont.FreeTypeFont, max_width: float, letter_spacing: float = 0) -> str:
-	if text_width(text, typeface, letter_spacing) <= max_width:
-		return text
-	while text and text_width(text + "…", typeface, letter_spacing) > max_width:
-		text = text[:-1]
-	return text.rstrip() + "…"
-
-
-def draw_tracked(draw, position, text, typeface, fill, letter_spacing):
-	# Pillow has no letter-spacing; placing each glyph at the kerned prefix width keeps kerning
-	x, y = position
-	for index, character in enumerate(text):
-		offset = typeface.getlength(text[:index]) + letter_spacing * index
-		draw.text((x + offset, y), character, font=typeface, fill=fill, anchor="lm")
 
 
 def recoloured_wordmark(colour: str) -> Image.Image:

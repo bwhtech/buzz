@@ -65,6 +65,14 @@ class TestEventOgImage(IntegrationTestCase):
 		self.assertIsNone(self.og_image())
 		self.assertEqual(og_files(self.event), [])
 
+	def test_emoji_title_is_rendered_in_colour(self):
+		frappe.db.set_value("Buzz Event", self.event, "title", "👀")
+		generate(self.event)
+		self.assertTrue(self.og_image())
+		image = EventOgImage(frappe.get_doc("Buzz Event", self.event))
+		title_row = Image.open(io.BytesIO(image.render())).crop((64, 470, 140, 530))
+		self.assertGreater(len(title_row.getcolors(maxcolors=100000)), 50)
+
 	def test_saving_a_published_event_queues_a_render(self):
 		event = frappe.get_doc("Buzz Event", self.event)
 		with patch("frappe.in_test", False), patch("frappe.enqueue") as enqueue:
