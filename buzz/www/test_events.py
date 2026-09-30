@@ -5,7 +5,7 @@ from frappe.utils import add_days, today
 from buzz.api.events.test_events import create_event
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.test_permissions import create_ticket
-from buzz.www.events import DiscoverPage, EventListing, hosting_banner_visible, icon_url
+from buzz.www.events import DiscoverPage, EventListing, event_card, hosting_banner_visible, icon_url
 
 
 class TestEventListing(IntegrationTestCase):
@@ -27,6 +27,25 @@ class TestEventListing(IntegrationTestCase):
 			start_date=add_days(today(), -10),
 			end_date=add_days(today(), -9),
 		)
+		create_event(
+			"Ended Today",
+			cls.team,
+			route="ended-today-event",
+			is_published=1,
+			category="Listing Meetups",
+			start_date=today(),
+			end_date=today(),
+			start_time="00:00:00",
+			end_time="00:00:01",
+		)
+		create_event(
+			"Live",
+			cls.team,
+			route="live-event",
+			is_published=1,
+			start_date=add_days(today(), -1),
+			end_date=add_days(today(), 1),
+		)
 		cls.owner = "listing-owner@example.com"
 		popular = create_event("Popular", cls.team, route="popular-event", is_published=1)
 		create_event("Quiet", cls.team, route="quiet-event", is_published=1)
@@ -42,6 +61,18 @@ class TestEventListing(IntegrationTestCase):
 		self.assertIn("listed-event", routes)
 		self.assertNotIn("unlisted-event", routes)
 		self.assertNotIn("past-event", routes)
+
+	def test_popular_skips_events_that_ended_earlier_today(self):
+		self.assertNotIn("ended-today-event", self.popular_routes())
+
+	def test_only_running_events_are_live(self):
+		events = {event.route: event for event in DiscoverPage().popular_events(limit=1000)}
+		self.assertTrue(event_card(events["live-event"])["is_live"])
+		self.assertFalse(event_card(events["quiet-event"])["is_live"])
+
+	def test_popular_shows_latest_start_date_first(self):
+		start_dates = [event.start_date for event in DiscoverPage().popular_events(limit=1000)]
+		self.assertEqual(start_dates, sorted(start_dates, reverse=True))
 
 	def test_popular_orders_by_ticket_count(self):
 		routes = self.popular_routes()

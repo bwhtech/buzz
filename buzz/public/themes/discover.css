@@ -18,6 +18,25 @@
 	margin-top: 48px;
 }
 
+.discover-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 48px 0;
+	text-align: center;
+}
+
+.discover-empty-title {
+	color: var(--ink-strong);
+	font-size: 18px;
+	font-weight: 500;
+}
+
+.discover-empty .es-button {
+	margin-top: 8px;
+}
+
 .event-rows {
 	display: grid;
 	gap: 16px 32px;
