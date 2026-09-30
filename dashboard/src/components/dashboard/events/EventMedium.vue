@@ -2,15 +2,14 @@
 import { Button, FormControl } from "frappe-ui"
 import { computed } from "vue"
 
-import EventLocation from "@/components/dashboard/events/EventLocation.vue"
+import EventLocationField from "@/components/dashboard/events/location/EventLocationField.vue"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
-import { venues } from "@/data/venues"
 
 // The two values Buzz Event's `medium` select takes.
 const IN_PERSON = "In Person"
 const ONLINE = "Online"
 
-const props = defineProps<{ team: string; venueAddress?: string | null }>()
+defineProps<{ team: string }>()
 
 const medium = defineModel<string>("medium", { default: IN_PERSON })
 const venue = defineModel<string>("venue", { default: "" })
@@ -22,13 +21,6 @@ const options = [
 	{ label: "In person", icon: "lucide-map-pin", value: IN_PERSON },
 	{ label: "Virtual", icon: "lucide-video", value: ONLINE },
 ]
-
-// The picker knows the address of a venue chosen in this session; the one loaded with
-// the event is only known to the payload until that list arrives.
-const address = computed(() => {
-	const picked = (venues.data ?? []).find((row) => row.name === venue.value)
-	return picked?.address || props.venueAddress || ""
-})
 
 // The hidden field is dropped here as well as on the server: the calendar invite and the
 // booking page both read `venue` without consulting `medium`, so a leftover one shows an
@@ -84,10 +76,7 @@ const copyLink = () => copyToClipboard(meetingLink.value, "Meeting link copied")
 				/>
 			</div>
 
-			<div v-else class="flex flex-col gap-3">
-				<EventLocation v-model:venue="venue" :team="team" :show-virtual="false" />
-				<p v-if="address" class="text-base text-ink-gray-5">{{ address }}</p>
-			</div>
+			<EventLocationField v-else v-model:venue="venue" :team="team" :show-zoom="false" />
 		</Transition>
 	</div>
 </template>

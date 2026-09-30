@@ -50,7 +50,7 @@ test.describe("Event workspace", () => {
 	})
 
 	test("swaps the venue for a meeting link when the event turns virtual", async ({ page }) => {
-		const venue = page.getByRole("combobox", { name: "Search venues, or add one" })
+		const venue = page.getByRole("button", { name: "Add Location" })
 		await expect(venue).toBeVisible({ timeout: 15000 })
 
 		await page.getByRole("button", { name: "Virtual" }).click()
@@ -95,11 +95,13 @@ test.describe("Event workspace", () => {
 // seeds its own.
 test.describe("Switching an event's medium", () => {
 	let eventId: string
+	let venueName: string
 
 	test.beforeEach(async ({ page, request }) => {
 		const team = await ensureTestTeam(request)
+		venueName = `E2E Venue ${Date.now()}`
 		const venue = await createDoc<{ name: string }>(request, "Event Venue", {
-			venue_name: `E2E Venue ${Date.now()}`,
+			venue_name: venueName,
 			address: "1 Test Street",
 			team,
 		})
@@ -118,9 +120,7 @@ test.describe("Switching an event's medium", () => {
 	})
 
 	test("drops the venue when the event turns virtual", async ({ page, request }) => {
-		await expect(page.getByRole("combobox", { name: "Search venues, or add one" })).toBeVisible({
-			timeout: 15000,
-		})
+		await expect(page.getByText(venueName)).toBeVisible({ timeout: 15000 })
 
 		await page.getByRole("button", { name: "Virtual" }).click()
 		await page.getByRole("button", { name: "Save" }).click()

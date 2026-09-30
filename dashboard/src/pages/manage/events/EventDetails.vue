@@ -281,7 +281,6 @@ async function save() {
 							v-model:venue="form.venue"
 							v-model:meeting-link="form.meeting_link"
 							:team="event.data.team || ''"
-							:venue-address="event.data.venue?.address"
 						/>
 					</section>
 

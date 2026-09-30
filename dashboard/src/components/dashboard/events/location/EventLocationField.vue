@@ -6,7 +6,10 @@ import ChosenLocation from "@/components/dashboard/events/location/ChosenLocatio
 import LocationDialog from "@/components/dashboard/events/location/LocationDialog.vue"
 import { loadVenues, venues } from "@/data/venues"
 
-const props = defineProps<{ team: string; disabled?: boolean; error?: string }>()
+const props = withDefaults(
+	defineProps<{ team: string; disabled?: boolean; error?: string; showZoom?: boolean }>(),
+	{ error: "", showZoom: true },
+)
 const venue = defineModel<string>("venue", { default: "" })
 const zoomMeeting = defineModel<boolean>("zoomMeeting", { default: false })
 
@@ -50,8 +53,9 @@ function clear() {
 			@change="isOpen = true"
 			@remove="clear"
 		/>
+		<!-- An event opened with a venue waits for the list, rather than flashing Add Location. -->
 		<Button
-			v-else
+			v-else-if="!venue || !venues.loading"
 			class="!h-14 w-full"
 			variant="subtle"
 			icon-left="lucide-map-pin-plus"
@@ -61,6 +65,12 @@ function clear() {
 		/>
 		<ErrorMessage :message="error" />
 
-		<LocationDialog v-model="isOpen" :team="team" @picked="pickVenue" @zoom="pickZoom" />
+		<LocationDialog
+			v-model="isOpen"
+			:team="team"
+			:show-zoom="showZoom"
+			@picked="pickVenue"
+			@zoom="pickZoom"
+		/>
 	</div>
 </template>

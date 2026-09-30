@@ -20,7 +20,8 @@ interface Preview {
 	use: () => Promise<string | null> | string
 }
 
-const props = defineProps<{ team: string }>()
+// Zoom is booked only when the event is created, so a page editing one leaves it out.
+const props = withDefaults(defineProps<{ team: string; showZoom?: boolean }>(), { showZoom: true })
 const isOpen = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ picked: [venue: string]; zoom: [] }>()
 
@@ -151,7 +152,7 @@ function pickZoom() {
 							label="Add manually"
 							@click="addManually"
 						/>
-						<Button variant="ghost" label="Zoom meeting" @click="pickZoom">
+						<Button v-if="showZoom" variant="ghost" label="Zoom meeting" @click="pickZoom">
 							<template #prefix>
 								<ZoomLogo class="size-4" color="var(--ink-gray-5)" />
 							</template>
