@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Button, Dialog, Divider, ScrollArea, TextInput } from "frappe-ui"
-import { computed, ref, watch } from "vue"
+import { ref, watch } from "vue"
 
 import ZoomLogo from "@/components/common/ZoomLogo.vue"
+import LocationMap from "@/components/dashboard/events/location/LocationMap.vue"
 import LocationResults from "@/components/dashboard/events/location/LocationResults.vue"
 import ManualVenueForm from "@/components/dashboard/events/location/ManualVenueForm.vue"
 import { useLocationPicker } from "@/components/dashboard/events/location/useLocationPicker"
@@ -25,7 +26,6 @@ const picker = useLocationPicker(() => props.team, isOpen)
 const preview = ref<Preview | null>(null)
 const isAddingManually = ref(false)
 const isSaving = ref(false)
-const isMapLoaded = ref(false)
 
 watch(isOpen, (open) => {
 	if (!open) return
@@ -33,40 +33,27 @@ watch(isOpen, (open) => {
 	isAddingManually.value = false
 })
 
-function show(next: Preview) {
-	isMapLoaded.value = false
-	preview.value = next
-}
-
 function previewVenue(venue: Venue) {
-	show({
+	preview.value = {
 		key: venue.name,
 		title: venue.venue_name,
 		address: venue.address,
 		source: "Saved venue",
 		placeId: venue.google_place_id,
 		use: () => venue.name,
-	})
+	}
 }
 
 function previewPlace(place: PlacePrediction) {
-	show({
+	preview.value = {
 		key: place.place_id,
 		title: place.name,
 		address: place.address,
 		source: "From Google Maps",
 		placeId: place.place_id,
 		use: () => picker.savePlace(place),
-	})
+	}
 }
-
-const previewMapUrl = computed(() => {
-	const key = window.google_maps_embed_api_key
-	const placeId = preview.value?.placeId
-	if (!key || !placeId) return ""
-	const search = new URLSearchParams({ key, q: `place_id:${placeId}` })
-	return `https://www.google.com/maps/embed/v1/place?${search}`
-})
 
 function addManually() {
 	preview.value = null
@@ -152,19 +139,11 @@ function pickZoom() {
 
 			<div class="flex min-h-72 flex-col overflow-hidden rounded-5 bg-surface-gray-1 md:min-h-0">
 				<template v-if="preview">
-					<iframe
-						v-if="previewMapUrl"
-						:key="preview.key"
-						class="h-48 w-full border-0 transition-opacity duration-200 ease-out"
-						:class="isMapLoaded ? 'opacity-100' : 'opacity-0'"
-						:src="previewMapUrl"
-						:title="`Map of ${preview.title}`"
-						@load="isMapLoaded = true"
-						referrerpolicy="no-referrer-when-downgrade"
-					/>
-					<div v-else class="flex h-48 items-center justify-center text-ink-gray-4">
-						<span class="lucide-map size-8" aria-hidden="true" />
-					</div>
+					<LocationMap class="h-48" :place-id="preview.placeId" :title="preview.title">
+						<div class="flex h-48 items-center justify-center text-ink-gray-4">
+							<span class="lucide-map size-8" aria-hidden="true" />
+						</div>
+					</LocationMap>
 					<div class="flex flex-1 flex-col gap-1 p-4">
 						<p class="text-sm text-ink-gray-5">{{ preview.source }}</p>
 						<p class="text-lg font-medium text-ink-gray-9">{{ preview.title }}</p>
