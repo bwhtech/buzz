@@ -16,7 +16,7 @@ import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
 import { useFormDraft } from "@/composables/useFormDraft"
 import { eventDetail, updateEvent } from "@/data/events"
 import { session } from "@/data/session"
-import type { EventDetail, FrappeError } from "@/types"
+import type { EventDetail } from "@/types"
 import { isEndBeforeStart } from "@/utils/eventDates"
 import { matches } from "@/utils/formDraft"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
@@ -138,20 +138,24 @@ function discard() {
 	if (event.data) fill(event.data)
 }
 
-// createResource types its error as {}, so the message needs narrowing.
-const errorMessage = computed(() => (updateEvent.error as FrappeError | null)?.messages?.join("\n"))
+const errorMessage = ref("")
 
 async function save() {
 	if (!canSave.value || updateEvent.loading) return
 
 	// A blank date or venue has to reach the server as null, not "".
-	const fieldname = Object.fromEntries(
+	const fields = Object.fromEntries(
 		Object.entries(form).map(([field, value]) => [field, value === "" ? null : value]),
 	)
 	const submitted = { ...form }
 
-	await updateEvent.submit({ doctype: "Buzz Event", name: eventId, fieldname })
-	if (updateEvent.error) return
+	errorMessage.value = ""
+	try {
+		await updateEvent.submit({ name: eventId, ...fields })
+	} catch (error) {
+		errorMessage.value = (error as Error).message
+		return
+	}
 
 	// What the server now holds, not what the form holds — an edit made while the save
 	// was in flight is still unsaved, and the baseline has to say so.

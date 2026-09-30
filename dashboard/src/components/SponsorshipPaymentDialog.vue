@@ -135,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog, ErrorMessage, Spinner, createResource, useList } from "frappe-ui"
+import { Button, Dialog, ErrorMessage, Spinner, useCall, useList } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import { formatCurrency } from "@/utils/currency"
@@ -212,9 +212,10 @@ const tiers = useList<Tier>({
 })
 
 // Fetch payment gateways for the event
-const paymentGatewaysResource = createResource({
-	url: "buzz.api.payments.get_event_payment_gateways",
-	onSuccess: (data: any[]) => {
+const paymentGatewaysResource = useCall<string[], { event: string }>({
+	url: "/api/v2/method/buzz.api.payments.get_event_payment_gateways",
+	immediate: false,
+	onSuccess: (data) => {
 		paymentGateways.value = data || []
 	},
 	onError: console.error,
@@ -227,15 +228,17 @@ function fetchPaymentGateways() {
 }
 
 // Resource to create payment link
-const paymentLink = createResource({
-	url: "buzz.api.sponsorships.create_sponsorship_payment_link",
-	onSuccess: (paymentUrl: string) => {
+const paymentLink = useCall<string, Record<string, unknown>>({
+	url: "/api/v2/method/buzz.api.sponsorships.create_sponsorship_payment_link",
+	method: "POST",
+	immediate: false,
+	onSuccess: (paymentUrl) => {
 		emit("payment-started")
 		closeDialog()
 		// Redirect to payment page
 		window.location.href = paymentUrl
 	},
-	onError: (error: unknown) => {
+	onError: (error) => {
 		console.error("Payment link creation failed:", error)
 		// TODO: Show error toast
 	},

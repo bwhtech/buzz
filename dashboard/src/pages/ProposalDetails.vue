@@ -7,7 +7,7 @@
 		</Button>
 	</div>
 
-	<div class="w-4" v-if="proposal.get.loading">
+	<div class="w-4" v-if="proposal.loading">
 		<Spinner />
 	</div>
 
@@ -149,9 +149,9 @@
 		</div>
 	</div>
 
-	<div v-else-if="proposal.get.error" class="text-center py-8">
+	<div v-else-if="proposal.error" class="text-center py-8">
 		<ErrorMessage class="mb-2" :message="__('Error loading proposal details')" />
-		<div class="text-ink-gray-4 text-sm">{{ proposal.get.error }}</div>
+		<div class="text-ink-gray-4 text-sm">{{ proposal.error.message }}</div>
 	</div>
 
 	<!-- Edit Dialog -->
@@ -159,10 +159,10 @@
 		v-if="proposal.doc"
 		v-model:open="showEditDialog"
 		:proposal-id="proposalId"
-		:event-talk-id="isEditingEventTalk ? eventTalk.name : null"
+		:event-talk-id="isEditingEventTalk ? eventTalk?.name : undefined"
 		:initial-data="{
-			title: isEditingEventTalk ? eventTalk.title : proposal.doc.title,
-			description: isEditingEventTalk ? eventTalk.description : proposal.doc.description,
+			title: isEditingEventTalk ? eventTalk?.title : proposal.doc.title,
+			description: isEditingEventTalk ? eventTalk?.description : proposal.doc.description,
 			phone: proposal.doc.phone,
 		}"
 		@updated="onProposalUpdated"
@@ -170,15 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-	Badge,
-	Button,
-	ErrorMessage,
-	Spinner,
-	createDocumentResource,
-	createResource,
-	dayjsLocal,
-} from "frappe-ui"
+import { Badge, Button, ErrorMessage, Spinner, dayjsLocal, useDoc, useList } from "frappe-ui"
 import { ListView } from "frappe-ui/experimental"
 import { computed, ref, watch } from "vue"
 import LucideCheckCircle from "~icons/lucide/check-circle"
@@ -199,41 +191,37 @@ const props = defineProps({
 
 const showEditDialog = ref(false)
 
-const proposal = createDocumentResource({
+const proposal = useDoc<Record<string, any> & { name: string }>({
 	doctype: "Talk Proposal",
 	name: props.proposalId,
-	auto: true,
 })
 
-// Fetch event details including title and allow_editing_talks_after_acceptance
-const eventResource = createResource({
-	url: "frappe.client.get_value",
-	makeParams() {
-		return {
-			doctype: "Buzz Event",
-			filters: { name: proposal.doc?.event },
-			fieldname: ["title", "allow_editing_talks_after_acceptance"],
-		}
-	},
+// Lists of one: a list read returns only the named fields, and needs no read access to
+// the rest of the document.
+const eventResource = useList<Record<string, any> & { name: string }>({
+	doctype: "Buzz Event",
+	filters: () => ({ name: proposal.doc?.event }),
+	fields: ["name", "title", "allow_editing_talks_after_acceptance"],
+	limit: 1,
+	immediate: false,
+	refetch: false,
 })
 
 // Fetch Event Talk record if proposal is accepted
-const eventTalkResource = createResource({
-	url: "frappe.client.get_value",
-	makeParams() {
-		return {
-			doctype: "Event Talk",
-			filters: { proposal: props.proposalId },
-			fieldname: ["name", "title", "description"],
-		}
-	},
+const eventTalkResource = useList<{ name: string; title: string; description: string }>({
+	doctype: "Event Talk",
+	filters: { proposal: props.proposalId },
+	fields: ["name", "title", "description"],
+	limit: 1,
+	immediate: false,
+	refetch: false,
 })
 
 watch(
 	() => proposal.doc?.event,
 	(eventId) => {
 		if (eventId) {
-			eventResource.fetch()
+			eventResource.reload()
 		}
 	},
 	{ immediate: true },
@@ -243,17 +231,17 @@ watch(
 	() => proposal.doc?.status,
 	(status) => {
 		if (status === "Accepted") {
-			eventTalkResource.fetch()
+			eventTalkResource.reload()
 		}
 	},
 	{ immediate: true },
 )
 
-const eventTitle = computed(() => eventResource.data?.title || proposal.doc?.event)
+const eventTitle = computed(() => eventResource.data?.[0]?.title || proposal.doc?.event)
 const allowEditingAfterAcceptance = computed(
-	() => eventResource.data?.allow_editing_talks_after_acceptance,
+	() => eventResource.data?.[0]?.allow_editing_talks_after_acceptance,
 )
-const eventTalk = computed(() => eventTalkResource.data)
+const eventTalk = computed(() => eventTalkResource.data?.[0])
 
 const speakerColumns = [
 	{ label: __("First Name"), key: "first_name" },
@@ -288,7 +276,7 @@ const formatDate = (dateString: string) => {
 const onProposalUpdated = () => {
 	proposal.reload()
 	if (proposal.doc?.status === "Accepted") {
-		eventTalkResource.fetch()
+		eventTalkResource.reload()
 	}
 }
 </script>

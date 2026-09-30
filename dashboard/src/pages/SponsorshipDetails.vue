@@ -281,7 +281,7 @@
 
 	<div v-else-if="enquiryDetails.error" class="text-center py-8">
 		<ErrorMessage class="mb-2" message="Error loading sponsorship details" />
-		<div class="text-ink-gray-4 text-sm">{{ enquiryDetails.error }}</div>
+		<div class="text-ink-gray-4 text-sm">{{ enquiryDetails.error.message }}</div>
 	</div>
 
 	<!-- Payment Dialog -->
@@ -306,22 +306,14 @@
 				label: 'Withdraw Inquiry',
 				variant: 'solid',
 				theme: 'red',
-				onClick: () => withdrawResource.submit(),
+				onClick: () => void withdrawResource.submit(),
 			},
 		]"
 	/>
 </template>
 
 <script setup lang="ts">
-import {
-	Badge,
-	Button,
-	Dialog,
-	ErrorMessage,
-	FileUploader,
-	Spinner,
-	createResource,
-} from "frappe-ui"
+import { Badge, Button, Dialog, ErrorMessage, FileUploader, Spinner, useCall } from "frappe-ui"
 import { toast } from "frappe-ui"
 import { dayjsLocal } from "frappe-ui"
 import { computed, ref } from "vue"
@@ -330,7 +322,6 @@ import LucideClock from "~icons/lucide/clock"
 import LucideXCircle from "~icons/lucide/x-circle"
 
 import { usePaymentSuccess } from "@/composables/usePaymentSuccess"
-import type { FrappeError } from "@/types"
 
 import BackButton from "../components/common/BackButton.vue"
 import SponsorshipPaymentDialog from "../components/SponsorshipPaymentDialog.vue"
@@ -345,63 +336,43 @@ const props = defineProps({
 const showPaymentDialog = ref(false)
 const showWithdrawDialog = ref(false)
 
-const enquiryDetails = createResource({
-	url: "buzz.api.sponsorships.get_sponsorship_details",
-	params: {
-		enquiry_id: props.enquiryId,
-	},
-	auto: true,
+const enquiryDetails = useCall<any, { enquiry_id: string }>({
+	url: "/api/v2/method/buzz.api.sponsorships.get_sponsorship_details",
+	params: { enquiry_id: props.enquiryId },
 })
 
-// Resource to withdraw sponsorship inquiry
-const withdrawResource = createResource({
-	url: "buzz.api.sponsorships.withdraw_sponsorship_enquiry",
-	makeParams() {
-		return {
-			enquiry_id: props.enquiryId,
-		}
-	},
+// Extract sponsor details from the response
+const sponsorDetails = computed(() => {
+	return enquiryDetails.data?.sponsor_details || null
+})
+
+const withdrawResource = useCall<unknown, { enquiry_id: string }>({
+	url: "/api/v2/method/buzz.api.sponsorships.withdraw_sponsorship_enquiry",
+	method: "POST",
+	params: () => ({ enquiry_id: props.enquiryId }),
+	immediate: false,
 	onSuccess: () => {
 		toast.success("Inquiry withdrawn successfully")
 		showWithdrawDialog.value = false
-		// Reload the enquiry details to show updated status
 		enquiryDetails.reload()
 	},
-	onError: (err: FrappeError) => {
-		toast.error(err.messages?.[0] || "Failed to withdraw inquiry")
+	onError: (error) => {
+		toast.error(error.message || "Failed to withdraw inquiry")
 		showWithdrawDialog.value = false
 	},
 })
 
-// Resource to update company logo
-const updateLogoResource = createResource({
-	url: "frappe.client.set_value",
-	makeParams(fileUrl: string) {
-		// If we have a confirmed sponsor, update the Event Sponsor document
-		if (sponsorDetails.value) {
-			return {
-				doctype: "Event Sponsor",
-				name: sponsorDetails.value.name,
-				fieldname: "company_logo",
-				value: fileUrl,
-			}
-		}
-
-		// If it's still an inquiry, update the Sponsorship Enquiry document
-		return {
-			doctype: "Sponsorship Enquiry",
-			name: props.enquiryId,
-			fieldname: "company_logo",
-			value: fileUrl,
-		}
-	},
-	onSuccess: () => {
-		// Reload the enquiry details to get updated data
-		enquiryDetails.reload()
-	},
-	onError: (err: FrappeError) => {
-		console.error("Failed to update company logo:", err)
-	},
+// The logo lives on the Event Sponsor once the sponsorship is confirmed, and on the enquiry until then.
+const updateLogoResource = useCall<unknown, { company_logo: string }>({
+	url: computed(() =>
+		sponsorDetails.value
+			? `/api/v2/document/Event Sponsor/${sponsorDetails.value.name}`
+			: `/api/v2/document/Sponsorship Enquiry/${props.enquiryId}`,
+	),
+	method: "PUT",
+	immediate: false,
+	onSuccess: () => enquiryDetails.reload(),
+	onError: (error) => console.error("Failed to update company logo:", error),
 })
 
 // Use the payment success composable
@@ -410,11 +381,6 @@ const { showSuccessMessage } = usePaymentSuccess({
 		// Reload the enquiry details to get updated status
 		enquiryDetails.reload()
 	},
-})
-
-// Extract sponsor details from the response
-const sponsorDetails = computed(() => {
-	return enquiryDetails.data?.sponsor_details || null
 })
 
 // Check if inquiry can be withdrawn (not paid and not already withdrawn)
@@ -480,18 +446,5 @@ const validateIsImageFile = (file: File) => {
 	return null
 }
 
-// Update logo after successful upload
-const updateLogo = (fileUrl: string) => {
-	// Update the local data immediately for better UX
-	if (sponsorDetails.value) {
-		// Update sponsor details if it's a confirmed sponsorship
-		sponsorDetails.value.company_logo = fileUrl
-	} else if (enquiryDetails.data?.enquiry) {
-		// Update enquiry details if it's still an inquiry
-		enquiryDetails.data.enquiry.company_logo = fileUrl
-	}
-
-	// Update the document field using the resource
-	updateLogoResource.submit(fileUrl)
-}
+const updateLogo = (fileUrl: string) => updateLogoResource.submit({ company_logo: fileUrl })
 </script>

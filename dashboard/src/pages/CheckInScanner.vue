@@ -79,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { createResource } from "frappe-ui"
+import { useList } from "frappe-ui"
 import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import LucideShieldX from "~icons/lucide/shield-x"
@@ -131,20 +131,12 @@ onMounted(() => {
 	userProfile.value = { ...userResource.data }
 
 	if (props.eventName) {
-		const eventResource = createResource({
-			url: "frappe.client.get_list",
-			params: {
-				doctype: "Buzz Event",
-				filters: { name: props.eventName },
-				fields: ["name", "title", "start_date", "start_time", "end_date", "end_time"],
-				limit_page_length: 1,
-			},
-			auto: false,
-		})
-		eventResource.fetch().then(() => {
-			if (eventResource.data && eventResource.data.length > 0) {
-				selectedEvent.value = eventResource.data[0]
-			}
+		useList<Record<string, any> & { name: string }>({
+			doctype: "Buzz Event",
+			filters: { name: props.eventName },
+			fields: ["name", "title", "start_date", "start_time", "end_date", "end_time"],
+			limit: 1,
+			onSuccess: (events) => (selectedEvent.value = events[0] ?? selectedEvent.value),
 		})
 	}
 })

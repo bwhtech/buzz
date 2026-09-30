@@ -293,7 +293,7 @@
 </template>
 
 <script setup lang="ts">
-import { Badge, Button, Spinner, createResource } from "frappe-ui"
+import { Badge, Button, Spinner, useCall } from "frappe-ui"
 import { dayjsLocal } from "frappe-ui"
 import { computed, ref } from "vue"
 import LucideDownload from "~icons/lucide/download"
@@ -340,11 +340,10 @@ const showTransferDialog = ref(false)
 const showAddOnPreferenceDialog = ref(false)
 const showQRExpanded = ref(false)
 
-const ticketDetails = createResource({
-	url: "buzz.api.tickets.get_ticket_details",
+const ticketDetails = useCall<any, { ticket_id: string }>({
+	url: "/api/v2/method/buzz.api.tickets.get_ticket_details",
 	params: { ticket_id: props.ticketId },
-	auto: true,
-	transform(data: any) {
+	transform(data) {
 		if (!data) return null
 
 		return {

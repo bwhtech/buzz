@@ -1,4 +1,4 @@
-import { createResource, useCall } from "frappe-ui"
+import { useCall } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import { session } from "@/data/session"
@@ -19,12 +19,13 @@ interface MemberBatch {
 
 const selectedTeamName = ref(localStorage.getItem(STORAGE_KEY) || "")
 
-const teamsResource = createResource<TeamOption[]>({
-	url: "buzz.api.teams.get_my_teams",
+const teamsResource = useCall<TeamOption[]>({
+	url: "/api/v2/method/buzz.api.teams.get_my_teams",
 	// Uncached: the key is not per-user, and a cached empty list restores as data, so
 	// `isTeamMember` would skip its fetch and keep denying a user who has since joined a team.
-	// Not `auto`: get_my_teams is not allow_guest, so a logged-out visitor on a public
+	// Not immediate: get_my_teams is not allow_guest, so a logged-out visitor on a public
 	// booking route would fire a 403 on module load.
+	immediate: false,
 	onSuccess(myTeams: TeamOption[]) {
 		// A revoked membership leaves the stored name pointing at nothing.
 		if (!myTeams.some((team) => team.name === selectedTeamName.value)) {
@@ -57,12 +58,19 @@ export function useTeamOverview(team: string) {
 	})
 }
 
-export const inviteMembers = createResource<InviteOutcome[]>({
-	url: "buzz.api.teams.invite_members",
+export const inviteMembers = useCall<
+	InviteOutcome[],
+	{ team: string; invites: { email: string; team_role: string }[] }
+>({
+	url: "/api/v2/method/buzz.api.teams.invite_members",
+	method: "POST",
+	immediate: false,
 })
 
-export const updateTeam = createResource({
-	url: "buzz.api.teams.update_team",
+export const updateTeam = useCall<unknown, Record<string, unknown>>({
+	url: "/api/v2/method/buzz.api.teams.update_team",
+	method: "POST",
+	immediate: false,
 })
 
 export function selectTeam(name: string) {

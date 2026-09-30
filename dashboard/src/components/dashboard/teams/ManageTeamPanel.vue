@@ -59,7 +59,6 @@ const title = computed(() => overview.data?.team_name ?? props.teamName)
 async function save() {
 	if (!isDirty.value || !form.team_name.trim()) return
 
-	// Rejects on failure; updateTeam.error renders inline, so the rejection is swallowed.
 	await updateTeam.submit({ team: props.team, ...form }).catch(() => null)
 	if (updateTeam.error) return
 
@@ -114,7 +113,7 @@ async function refresh() {
 						@blur="save"
 					/>
 
-					<ErrorMessage :message="(updateTeam.error as Error | null)?.message" />
+					<ErrorMessage :message="updateTeam.error?.message" />
 				</template>
 
 				<h3 class="text-base-semibold text-ink-gray-8">{{ __("Team Members") }}</h3>

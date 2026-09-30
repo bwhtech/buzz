@@ -406,7 +406,7 @@
 
 <script setup lang="ts">
 import { useRouteQuery } from "@vueuse/router"
-import { FormControl, createResource, toast } from "frappe-ui"
+import { FormControl, toast, useCall } from "frappe-ui"
 import { type PropType, computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import LucideAlertCircle from "~icons/lucide/alert-circle"
@@ -425,7 +425,6 @@ import type {
 	AvailableTicketType,
 	BookingAttendee,
 	CouponData,
-	FrappeError,
 	FrappeField,
 	OfflineMethod,
 } from "@/types"
@@ -963,12 +962,17 @@ function prefillAttendee(field: string) {
 	if (field === "email" && !first.email) first.email = guestEmail.value
 }
 
-const processBooking = createResource({
-	url: "buzz.api.booking.process_booking",
+const processBooking = useCall<BookingSubmitResponse, { booking: Record<string, unknown> }>({
+	url: "/api/v2/method/buzz.api.booking.process_booking",
+	method: "POST",
+	immediate: false,
 })
 
-const validateCoupon = createResource({
-	url: "buzz.api.booking.validate_coupon",
+// POST although it only reads: a guest's email stays out of the query string.
+const validateCoupon = useCall<Record<string, any>, Record<string, any>>({
+	url: "/api/v2/method/buzz.api.booking.validate_coupon",
+	method: "POST",
+	immediate: false,
 })
 
 function startResendCooldown() {
@@ -982,8 +986,10 @@ function startResendCooldown() {
 	}, 1000)
 }
 
-const sendOtpResource = createResource({
-	url: "buzz.api.booking.send_guest_booking_otp",
+const sendOtpResource = useCall<unknown, { event: string; identifier: string }>({
+	url: "/api/v2/method/buzz.api.booking.send_guest_booking_otp",
+	method: "POST",
+	immediate: false,
 	onSuccess: () => {
 		showOtpModal.value = true
 		startResendCooldown()
@@ -993,8 +999,8 @@ const sendOtpResource = createResource({
 				: __("Verification code sent to your email"),
 		)
 	},
-	onError: (error: FrappeError) => {
-		const message = error.messages?.[0] || __("Failed to send verification code")
+	onError: (error) => {
+		const message = error.message || __("Failed to send verification code")
 		// Under the field, not in a toast the user has to remember while retyping.
 		if (isPhoneOtp.value) {
 			guestPhoneError.value = message
@@ -1030,19 +1036,17 @@ async function applyCoupon() {
 	couponCode.value = normalizedCode
 
 	couponError.value = ""
-	let result
-	try {
-		const params: Record<string, any> = {
-			coupon_code: normalizedCode,
-			event: eventId.value,
-		}
-		// Pass user email for guest mode to properly check per-user limits
-		if (props.isGuestMode && guestEmail.value.trim()) {
-			params.user_email = guestEmail.value.trim().toLowerCase()
-		}
-		result = await validateCoupon.submit(params)
-	} catch (error) {
-		couponError.value = (error as FrappeError).message || __("Failed to validate coupon")
+	const params: Record<string, any> = {
+		coupon_code: normalizedCode,
+		event: eventId.value,
+	}
+	// Pass user email for guest mode to properly check per-user limits
+	if (props.isGuestMode && guestEmail.value.trim()) {
+		params.user_email = guestEmail.value.trim().toLowerCase()
+	}
+	const result = await validateCoupon.submit(params).catch(() => null)
+	if (validateCoupon.error || !result) {
+		couponError.value = validateCoupon.error?.message || __("Failed to validate coupon")
 		return
 	}
 
@@ -1297,58 +1301,51 @@ async function submit() {
 	submitBooking(final_payload, props.paymentGateways[0] || null)
 }
 
-function submitBooking(
+async function submitBooking(
 	payload: any,
 	paymentGateway: any,
 	{ isOtpFlow = false }: { isOtpFlow?: boolean } = {},
 ) {
-	processBooking.submit(
-		{
-			booking: {
-				...payload,
-				payment_gateway: paymentGateway,
-			},
-		},
-		{
-			onSuccess: (data: BookingSubmitResponse) => {
-				clearBookingCache()
+	const data = await processBooking
+		.submit({ booking: { ...payload, payment_gateway: paymentGateway } })
+		.catch(() => null)
 
-				if (isOtpFlow) {
-					clearOtpState()
-				}
+	if (processBooking.error || !data) {
+		onBookingFailed(processBooking.error?.message || __("Booking failed"), isOtpFlow)
+		return
+	}
 
-				const action = resolveBookingSuccessAction(data, {
-					isGuestMode: props.isGuestMode,
-				})
+	clearBookingCache()
+	if (isOtpFlow) {
+		clearOtpState()
+	}
 
-				if (action.type === "external") {
-					window.location.href = action.url
-				} else if (action.type === "guest-inline") {
-					bookingSuccess.value = true
-					successBookingName.value = action.bookingName
-					bookingPendingVerification.value = action.pendingVerification
-				} else {
-					router.replace(action.path)
-				}
-			},
-			onError: (error: FrappeError) => {
-				const message = error.messages?.[0] || error.message || __("Booking failed")
+	const action = resolveBookingSuccessAction(data, { isGuestMode: props.isGuestMode })
 
-				if (isOtpFlow) {
-					otpCode.value = ""
-					// Close modal on lockout or expired OTP - user must restart
-					if (message.includes("Too many") || message.includes("expired")) {
-						showOtpModal.value = false
-						toast.error(message)
-					} else {
-						otpError.value = message
-					}
-				} else {
-					toast.error(message)
-				}
-			},
-		},
-	)
+	if (action.type === "external") {
+		window.location.href = action.url
+	} else if (action.type === "guest-inline") {
+		bookingSuccess.value = true
+		successBookingName.value = action.bookingName
+		bookingPendingVerification.value = action.pendingVerification
+	} else {
+		router.replace(action.path)
+	}
+}
+
+function onBookingFailed(message: string, isOtpFlow: boolean) {
+	if (!isOtpFlow) {
+		toast.error(message)
+		return
+	}
+	otpCode.value = ""
+	// Close modal on lockout or expired OTP - user must restart
+	if (message.includes("Too many") || message.includes("expired")) {
+		showOtpModal.value = false
+		toast.error(message)
+	} else {
+		otpError.value = message
+	}
 }
 
 function onOfflinePaymentSubmit(data: any) {

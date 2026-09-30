@@ -1,4 +1,4 @@
-import { createListResource } from "frappe-ui"
+import { useList } from "frappe-ui"
 
 import { type BadgeTheme, badgeDotClass } from "@/utils/badgeTheme"
 
@@ -54,18 +54,15 @@ const STATUS_MESSAGES: Record<string, string> = {
 const FALLBACK_MESSAGE = "The organisers set this status for your proposal."
 
 // Module-level so every caller shares one fetch of the status list.
-const statuses = createListResource({
+const statuses = useList<{ name: string; color?: string }>({
 	doctype: "Talk Proposal Status",
 	fields: ["name", "color"],
-	order_by: "creation asc",
-	auto: true,
+	orderBy: "creation asc",
 })
 
 export function useProposalStatuses() {
 	const getStatusTheme = (status: string): BadgeTheme => {
-		const row = statuses.data?.find(
-			(item: { name: string; color?: string }) => item.name === status,
-		)
+		const row = statuses.data?.find((item) => item.name === status)
 		if (row?.color && COLOR_TO_THEME[row.color]) {
 			return COLOR_TO_THEME[row.color]
 		}

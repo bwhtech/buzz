@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { Tabs, createResource } from "frappe-ui"
+import { Tabs, useCall } from "frappe-ui"
 import { computed, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import LucideCalendarDays from "~icons/lucide/calendar-days"
@@ -40,10 +40,8 @@ import ProfileView from "@/components/ProfileView.vue"
 const route = useRoute()
 const router = useRouter()
 
-const sponsorships = createResource({
-	url: "buzz.api.sponsorships.get_user_sponsorship_inquiries",
-	auto: true,
-	cacheKey: "account-sponsorships-check",
+const sponsorships = useCall<{ name: string }[]>({
+	url: "/api/v2/method/buzz.api.sponsorships.get_user_sponsorship_inquiries",
 	onError: console.error,
 })
 
@@ -101,10 +99,10 @@ function onSelectChange(value: string) {
 // only once the async Sponsorships tab has settled, or /account/sponsorships
 // would bounce away before its tab exists.
 watch(
-	[() => route.path, () => tabs.value.length, () => sponsorships.loading],
+	[() => route.path, () => tabs.value.length, () => sponsorships.isFinished],
 	() => {
 		const onKnownTab = tabs.value.some((tab) => route.path.startsWith(tab.route))
-		if (!onKnownTab && !sponsorships.loading && route.path.startsWith("/account/")) {
+		if (!onKnownTab && sponsorships.isFinished && route.path.startsWith("/account/")) {
 			router.replace(tabs.value[0].route)
 		}
 	},

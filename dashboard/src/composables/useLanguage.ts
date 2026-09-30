@@ -1,4 +1,4 @@
-import { createResource } from "frappe-ui"
+import { useCall } from "frappe-ui"
 import { type ComputedRef, computed, watch } from "vue"
 import type { Router } from "vue-router"
 
@@ -13,10 +13,7 @@ import {
 	takeLanguageFromQuery,
 } from "@/utils/language"
 
-// frappe-ui types `data` as `{}`; this endpoint returns Language rows.
-type LanguagesResource = Omit<ReturnType<typeof createResource>, "data"> & {
-	data?: Language[]
-}
+type LanguagesResource = { data: Language[] | null }
 
 interface LanguageComposable {
 	availableLanguages: LanguagesResource
@@ -25,19 +22,22 @@ interface LanguageComposable {
 	isSwitching: ComputedRef<boolean>
 }
 
-// The cache key hands every caller the same resource. Built on call rather than
-// at import: `auto: true` fetches straight away, and main.ts has to install
-// frappe-ui's resource fetcher first.
+let languagesCall: LanguagesResource | undefined
+
+// One fetch for every caller. The list is the same for every visitor, so the cache key
+// carries no user.
 function availableLanguages(): LanguagesResource {
-	return createResource({
-		url: "buzz.api.account.get_enabled_languages",
-		auto: true,
-		cache: "enabled_languages",
-	}) as LanguagesResource
+	languagesCall ??= useCall<Language[]>({
+		url: "/api/v2/method/buzz.api.account.get_enabled_languages",
+		cacheKey: "enabled_languages",
+	})
+	return languagesCall
 }
 
-const switchLanguage = createResource({
-	url: "buzz.api.account.update_user_language",
+const switchLanguage = useCall<unknown, { language_code: string }>({
+	url: "/api/v2/method/buzz.api.account.update_user_language",
+	method: "POST",
+	immediate: false,
 	onSuccess() {
 		// Reload the page to apply new translations
 		window.location.reload()
@@ -112,7 +112,7 @@ export function applyLanguageFromQuery(router: Router) {
 
 	watch(
 		() => languages.data,
-		(loadedLanguages: Language[] | undefined) => {
+		(loadedLanguages) => {
 			if (loadedLanguages) persistRequestedLanguage(requestedLanguage, loadedLanguages)
 		},
 		{ once: true },

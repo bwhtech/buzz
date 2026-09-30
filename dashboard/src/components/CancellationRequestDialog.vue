@@ -177,10 +177,10 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog, ErrorMessage, createResource, toast } from "frappe-ui"
+import { Button, Dialog, ErrorMessage, toast, useCall } from "frappe-ui"
 import { type PropType, computed, ref, watch } from "vue"
 
-import type { DashboardTicket, FrappeError } from "@/types"
+import type { DashboardTicket } from "@/types"
 import { pluralize } from "@/utils/pluralize"
 
 const props = defineProps({
@@ -256,9 +256,11 @@ const closeDialog = () => {
 	selectedTickets.value = []
 }
 
-const createCancellationRequest = createResource({
-	url: "buzz.api.tickets.create_cancellation_request",
-	onSuccess: (data: any) => {
+const createCancellationRequest = useCall<unknown, { booking_id: string; ticket_ids: string[] }>({
+	url: "/api/v2/method/buzz.api.tickets.create_cancellation_request",
+	method: "POST",
+	immediate: false,
+	onSuccess: (data) => {
 		submitting.value = false
 		const ticketCount = selectedTickets.value.length
 		const isFullCancellation = isAllSelected.value
@@ -271,11 +273,9 @@ const createCancellationRequest = createResource({
 		emit("success", data)
 		closeDialog()
 	},
-	onError: (error: FrappeError) => {
+	onError: (error) => {
 		submitting.value = false
-		toast.error(
-			error?.messages?.[0] || __("Failed to submit cancellation request. Please try again."),
-		)
+		toast.error(error.message || __("Failed to submit cancellation request. Please try again."))
 	},
 })
 

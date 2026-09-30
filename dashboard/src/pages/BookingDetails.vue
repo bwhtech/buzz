@@ -102,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { Spinner, createResource } from "frappe-ui"
+import { Spinner, useCall } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 import LucideClock from "~icons/lucide/clock"
@@ -155,11 +155,10 @@ const { showSuccessMessage } = usePaymentSuccess({
 
 const showCancellationDialog = ref(false)
 
-const bookingDetails = createResource({
-	url: "buzz.api.booking.get_booking_details",
+const bookingDetails = useCall<Record<string, any>, { booking_id: string }>({
+	url: "/api/v2/method/buzz.api.booking.get_booking_details",
 	params: { booking_id: props.bookingId },
-	auto: true,
-	onSuccess: (data: Record<string, any>) => {
+	onSuccess: (data) => {
 		// Clear stored booking form data if this was a successful payment
 		if (isPaymentSuccess && data?.event?.route) {
 			const { clearStoredData } = useBookingFormStorage(data.event.route)

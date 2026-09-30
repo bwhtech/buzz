@@ -4,7 +4,7 @@ import { computed, ref, watch } from "vue"
 
 import ZoomLogo from "@/components/common/ZoomLogo.vue"
 import AddVenueDialog from "@/components/dashboard/events/AddVenueDialog.vue"
-import { venues } from "@/data/venues"
+import { loadVenues, venues } from "@/data/venues"
 
 // A reserved value rather than a venue name. Event Venue is autonamed by prompt, so a
 // venue really could be called "Zoom" — the sentinel keeps the two apart.
@@ -28,7 +28,7 @@ const query = ref("")
 
 watch(
 	() => props.team,
-	(team) => team && venues.fetch({ team }),
+	(team) => team && loadVenues(team),
 	{ immediate: true },
 )
 
@@ -78,7 +78,7 @@ const options = computed(() => [
 ])
 
 async function onVenueCreated(name: string) {
-	await venues.fetch({ team: props.team })
+	await loadVenues(props.team)
 	selected.value = name
 }
 </script>
