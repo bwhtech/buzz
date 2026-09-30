@@ -55,13 +55,6 @@ class EventVenue(Document):
 		if not self.address and not has_location:
 			frappe.throw(_("Add an address, or a map link that shows where the venue is."))
 
-	def on_update(self):
-		if self.get_doc_before_save() and self.has_value_changed("venue_name"):
-			# `modified` is the manage page's conflict check, so a relabel must not move it
-			frappe.db.set_value(
-				"Buzz Event", {"venue": self.name}, "venue_name", self.venue_name, update_modified=False
-			)
-
 	def remove_fixed_dimensions_from_google_map_embed(self):
 		if not self.google_maps_embed_code:
 			return
@@ -88,3 +81,17 @@ class EventVenue(Document):
 				],
 			}
 			self.location = frappe.as_json(self.location)
+
+
+def set_venue_names(rows: list) -> None:
+	"""Swap each row's `venue` from the venue's random name to its label."""
+	venues = [row.venue for row in rows if row.venue]
+	names = {}
+	if venues:
+		names = dict(
+			frappe.get_all(
+				"Event Venue", filters={"name": ["in", venues]}, fields=["name", "venue_name"], as_list=True
+			)
+		)
+	for row in rows:
+		row.venue = names.get(row.venue)

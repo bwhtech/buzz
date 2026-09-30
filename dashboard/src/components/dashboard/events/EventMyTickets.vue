@@ -15,10 +15,13 @@ const props = defineProps<{ event: MyEvent }>()
 const tickets = useMyTickets(() => props.event.name)
 
 // A ticket whose event columns did not come over the link hop has nothing to print.
+// The venue is two hops away, and the feed row already carries it.
 const myTickets = computed(() =>
-	(tickets.data || []).filter((ticket): ticket is TicketWithEvent =>
-		Boolean(ticket.start_date && ticket.event_title),
-	),
+	(tickets.data || [])
+		.map((ticket) => ({ ...ticket, venue: props.event.venue }))
+		.filter((ticket): ticket is TicketWithEvent =>
+			Boolean(ticket.start_date && ticket.event_title),
+		),
 )
 
 // The feed row already says the viewer holds a ticket, so the section can hold its place

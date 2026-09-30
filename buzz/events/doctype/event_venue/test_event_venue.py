@@ -37,26 +37,23 @@ class IntegrationTestEventVenue(IntegrationTestCase):
 	def test_two_venues_can_share_a_venue_name(self):
 		self.assertNotEqual(self.create_venue("Shared Hall").name, self.create_venue("Shared Hall").name)
 
-	def test_event_carries_the_venue_name_and_follows_a_change(self):
+	def test_event_reads_the_current_venue_name(self):
 		venue = self.create_venue("Old Hall")
-		event = create_event("Venue Name Event", self.team, venue=venue.name)
-		self.assertEqual(frappe.db.get_value("Buzz Event", event, "venue_name"), "Old Hall")
+		event = frappe.get_doc("Buzz Event", create_event("Venue Name Event", self.team, venue=venue.name))
+		self.assertEqual(event.get_venue_name(), "Old Hall")
 
 		venue.venue_name = "New Hall"
 		venue.save(ignore_permissions=True)
 
-		self.assertEqual(frappe.db.get_value("Buzz Event", event, "venue_name"), "New Hall")
+		self.assertEqual(event.get_venue_name(), "New Hall")
 
 	def test_patch_copies_the_old_docname_into_venue_name(self):
 		venue = self.create_venue("Legacy Hall")
-		event = create_event("Legacy Venue Event", self.team, venue=venue.name)
 		frappe.db.set_value("Event Venue", venue.name, "venue_name", "", update_modified=False)
-		frappe.db.set_value("Buzz Event", event, "venue_name", "", update_modified=False)
 
 		set_event_venue_name()
 
 		self.assertEqual(frappe.db.get_value("Event Venue", venue.name, "venue_name"), venue.name)
-		self.assertEqual(frappe.db.get_value("Buzz Event", event, "venue_name"), venue.name)
 
 
 GOOGLE_PLACE_LINK = (

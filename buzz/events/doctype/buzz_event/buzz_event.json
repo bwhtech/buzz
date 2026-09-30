@@ -15,7 +15,6 @@
   "banner_image",
   "host",
   "venue",
-  "venue_name",
   "meeting_link",
   "hosted_by_section",
   "co_hosts",
@@ -591,14 +590,6 @@
   {
    "fieldname": "column_break_rgkz",
    "fieldtype": "Column Break"
-  },
-  {
-   "fetch_from": "venue.venue_name",
-   "fieldname": "venue_name",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Venue Name",
-   "read_only": 1
   }
  ],
  "grid_page_length": 50,
@@ -676,7 +667,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-09-30 12:00:00.000000",
+ "modified": "2026-10-01 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

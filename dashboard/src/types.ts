@@ -314,11 +314,14 @@ export interface TicketStub {
 	start_date: string | null
 	start_time: string | null
 	end_date: string | null
-	venue: string | null
 }
 
 // A ticket whose event row still resolves — the only kind the ticket UI can draw.
-export type TicketWithEvent = TicketStub & { event_title: string; start_date: string }
+export type TicketWithEvent = TicketStub & {
+	event_title: string
+	start_date: string
+	venue: string | null
+}
 
 // buzz.api.tickets.get_ticket_details. doc, event and booking pass through as whole
 // documents, so only the fields the drawer reads are typed.
@@ -336,6 +339,7 @@ export interface TicketDetails {
 	}
 	add_ons: TicketAddOnDetail[]
 	event: { name: string; title: string; route: string | null; ticket_print_format: string | null }
+	venue: string | null
 	// Null for an attendee who did not pay for the ticket themselves.
 	booking: {
 		name: string

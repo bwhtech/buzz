@@ -373,7 +373,7 @@ const ticketDetails = useCall<any, { ticket_id: string }>({
 					: null,
 				formatted_creation: dayjsLocal(data.doc.creation).format("MMMM DD, YYYY [at] h:mm A"),
 				event_title: data.event?.title || "",
-				venue: data.event?.venue_name || "",
+				venue: data.venue || "",
 				description: data.event?.description || "",
 				ticket_type_title: data.ticket_type?.title || data.doc.ticket_type,
 			},

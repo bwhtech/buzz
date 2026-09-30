@@ -23,7 +23,15 @@ no_cache = 1
 LISTING_LIMIT = 60
 FEATURED_LIMIT = 3
 POPULAR_LIMIT = 8
-CARD_FIELDS = ["title", "route", "start_date", "medium", "venue_name", "card_image", "banner_image"]
+CARD_FIELDS = [
+	"title",
+	"route",
+	"start_date",
+	"medium",
+	"venue.venue_name as venue_name",
+	"card_image",
+	"banner_image",
+]
 TIME_FIELDS = ["start_time", "end_date", "end_time", "time_zone"]
 
 

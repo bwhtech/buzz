@@ -102,7 +102,6 @@ class BuzzEvent(Document):
 		time_zone_label: DF.Data | None
 		title: DF.Data
 		venue: DF.Link | None
-		venue_name: DF.Data | None
 	# end: auto-generated types
 
 	def before_insert(self):
@@ -132,6 +131,9 @@ class BuzzEvent(Document):
 			self.venue = None
 		else:
 			self.meeting_link = None
+
+	def get_venue_name(self) -> str | None:
+		return frappe.get_cached_value("Event Venue", self.venue, "venue_name") if self.venue else None
 
 	def validate_co_hosts(self):
 		hosts = [row.host for row in self.co_hosts]
