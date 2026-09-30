@@ -674,7 +674,7 @@ body {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	color: var(--red-500);
+	color: var(--ink-red-7);
 	font-size: 13px;
 	font-weight: 500;
 }
