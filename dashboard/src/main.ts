@@ -46,9 +46,9 @@ installTelemetry(router).catch(() => {})
 
 // The bench renders boot data into the page; the Vite dev server does not, so dev fetches it.
 if (process.env.NODE_ENV === "development") {
-	fetch("/api/method/buzz.www.dashboard.get_context_for_dev", { method: "POST" })
+	fetch("/api/v2/method/buzz.www.dashboard.get_context_for_dev", { method: "POST" })
 		.then((response) => response.json())
-		.then(({ message }) => Object.assign(window, message))
+		.then(({ data }) => Object.assign(window, data))
 		.catch(() => {})
 }
 
