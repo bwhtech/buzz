@@ -39,6 +39,7 @@ DETAILS_FIELDS = {
 	"doc",
 	"add_ons",
 	"event",
+	"venue",
 	"booking",
 	"ticket_type",
 	"can_transfer_ticket",

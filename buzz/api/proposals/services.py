@@ -16,6 +16,7 @@ from buzz.api.proposals.schemas import (
 	ProposalTrend,
 	StatusTotal,
 )
+from buzz.events.doctype.event_venue.event_venue import set_venue_names
 from buzz.permissions import derived_has_permission, has_team_access
 
 # The columns behind one proposal card. The event ones come over a link hop, so a
@@ -28,7 +29,7 @@ PROPOSAL_LIST_FIELDS = [
 	"event.start_date",
 	"event.start_time",
 	"event.end_date",
-	"event.venue",
+	"event.venue as venue",
 	"event.banner_image",
 	"event.allow_editing_talks_after_acceptance",
 	"status",
@@ -62,6 +63,7 @@ def my_proposals() -> list[ProposalListItem]:
 	)
 
 	speakers = speakers_by_proposal([row.name for row in rows])
+	set_venue_names(rows)
 
 	return [ProposalListItem(**row, speakers=speakers.get(row.name, [])) for row in rows]
 

@@ -278,7 +278,7 @@ class EventBooking(Document):
 			"doc": self,
 			"event_doc": event_doc,
 			"event_title": event_doc.title,
-			"venue": event_doc.venue,
+			"venue": event_doc.get_venue_name(),
 			"attendee_rows": self.get_attendee_email_rows(),
 			"support_email": get_event_team_settings(self.event).support_email,
 		}

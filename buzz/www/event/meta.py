@@ -93,7 +93,9 @@ class EventMeta:
 		if self.is_online():
 			return {"@type": "VirtualLocation", "url": self.url()}
 		venue = self.context["venue"]
-		return {"@type": "Place", "name": venue["name"], "address": venue["address"]} if venue else None
+		if not venue:
+			return None
+		return {"@type": "Place", "name": venue["name"], "address": venue["address"] or venue["name"]}
 
 	def organizer(self) -> dict | None:
 		hosts = self.context["hosts"]

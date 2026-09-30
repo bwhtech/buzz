@@ -61,6 +61,16 @@ export function eventDetail(event: string) {
  */
 export const updateEvent = useDoctype<Record<string, unknown>>("Buzz Event").setValue
 
+/** Moves an event between in person and virtual, apart from the page's own Save. */
+export const convertEvent = useDoctype<Record<string, unknown>>("Buzz Event").setValue
+
+/** Books a Zoom meeting and makes the event virtual on it, or changes nothing. */
+export const convertToZoomMeeting = useCall<null, { event: string }>({
+	url: "/api/v2/method/buzz.api.events.convert_to_zoom_meeting",
+	method: "POST",
+	immediate: false,
+})
+
 /** Whether an event can take a route. Routes are the public URL namespace, so they are unique. */
 export const checkEventRoute = useCall<
 	{ available: boolean; message: string },

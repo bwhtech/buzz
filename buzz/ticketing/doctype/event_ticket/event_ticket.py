@@ -111,8 +111,8 @@ class EventTicket(Document):
 		if not send_ticket_email:
 			return
 
-		event_title, ticket_template, ticket_print_format, venue = frappe.get_cached_value(
-			"Buzz Event", self.event, ["title", "ticket_email_template", "ticket_print_format", "venue"]
+		event_title, ticket_template, ticket_print_format = frappe.get_cached_value(
+			"Buzz Event", self.event, ["title", "ticket_email_template", "ticket_print_format"]
 		)
 
 		team_settings = get_event_team_settings(self.event)
@@ -126,7 +126,7 @@ class EventTicket(Document):
 			"doc": self,
 			"event_doc": event_doc,
 			"event_title": event_title,
-			"venue": venue,
+			"venue": event_doc.get_venue_name(),
 			"support_email": team_settings.support_email,
 		}
 

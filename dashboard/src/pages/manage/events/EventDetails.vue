@@ -58,7 +58,6 @@ function blank() {
 		end_date: "",
 		end_time: "",
 		time_zone: "",
-		medium: "In Person",
 		venue: "",
 		meeting_link: "",
 	}
@@ -78,7 +77,6 @@ function fill(detail: EventDetail) {
 		end_date: detail.end_date ?? "",
 		end_time: detail.end_time ?? "",
 		time_zone: detail.time_zone ?? "",
-		medium: detail.medium || "In Person",
 		venue: detail.venue?.name ?? "",
 		meeting_link: detail.meeting_link ?? "",
 	})
@@ -134,6 +132,19 @@ useEventListener(document, "keydown", (stroke: KeyboardEvent) => {
 	stroke.preventDefault()
 	if (!stroke.repeat) save()
 })
+
+// A conversion saved the location already, so the page takes it from the server into both
+// the form and its baseline. Other unsaved edits stay, and Save does not send the old
+// location back.
+async function adoptLocation() {
+	await event.reload()
+	const location = {
+		venue: event.data?.venue?.name ?? "",
+		meeting_link: event.data?.meeting_link ?? "",
+	}
+	Object.assign(form, location)
+	saved.value = { ...saved.value, ...location }
+}
 
 function discard() {
 	if (event.data) fill(event.data)
@@ -277,11 +288,12 @@ async function save() {
 					<section class="space-y-3 rounded-6 p-4">
 						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
 						<EventMedium
-							v-model:medium="form.medium"
 							v-model:venue="form.venue"
 							v-model:meeting-link="form.meeting_link"
+							:event="eventId"
 							:team="event.data.team || ''"
-							:venue-address="event.data.venue?.address"
+							:medium="event.data.medium || 'In Person'"
+							@converted="adoptLocation"
 						/>
 					</section>
 

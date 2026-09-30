@@ -1,42 +1,82 @@
 <script setup lang="ts">
-import { Button, FormControl } from "frappe-ui"
-import { computed } from "vue"
+import { Button, Dialog, type DialogAction, FormControl, toast } from "frappe-ui"
+import { computed, ref, watch } from "vue"
 
-import EventLocation from "@/components/dashboard/events/EventLocation.vue"
+import EventLocationField from "@/components/dashboard/events/location/EventLocationField.vue"
+import LocationDialog from "@/components/dashboard/events/location/LocationDialog.vue"
+import VirtualMeetingOptions from "@/components/dashboard/events/VirtualMeetingOptions.vue"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
-import { venues } from "@/data/venues"
+import { convertEvent, convertToZoomMeeting } from "@/data/events"
+import { serverErrorMessage } from "@/utils/serverError"
 
 // The two values Buzz Event's `medium` select takes.
 const IN_PERSON = "In Person"
 const ONLINE = "Online"
 
-const props = defineProps<{ team: string; venueAddress?: string | null }>()
+type Call = { error: unknown }
 
-const medium = defineModel<string>("medium", { default: IN_PERSON })
+const props = defineProps<{ event: string; team: string; medium: string }>()
+const emit = defineEmits<{ converted: [] }>()
+
 const venue = defineModel<string>("venue", { default: "" })
 const meetingLink = defineModel<string>("meetingLink", { default: "" })
 
-const isOnline = computed(() => medium.value === ONLINE)
+const isOnline = computed(() => props.medium === ONLINE)
+const isDialogOpen = ref(false)
+const isLocationDialogOpen = ref(false)
+const isConverting = ref(false)
+const newLink = ref("")
+const choice = ref<"link" | "zoom">("link")
+const zoomAvailable = Boolean(window.zoom_available)
 
-const options = [
-	{ label: "In person", icon: "lucide-map-pin", value: IN_PERSON },
-	{ label: "Virtual", icon: "lucide-video", value: ONLINE },
-]
-
-// The picker knows the address of a venue chosen in this session; the one loaded with
-// the event is only known to the payload until that list arrives.
-const address = computed(() => {
-	const picked = (venues.data ?? []).find((row) => row.name === venue.value)
-	return picked?.address || props.venueAddress || ""
+watch(isDialogOpen, (open) => {
+	if (!open) return
+	newLink.value = ""
+	choice.value = "link"
 })
 
-// The hidden field is dropped here as well as on the server: the calendar invite and the
-// booking page both read `venue` without consulting `medium`, so a leftover one shows an
-// address the event no longer has.
-function pick(value: string) {
-	medium.value = value
-	if (value === ONLINE) venue.value = ""
-	else meetingLink.value = ""
+// Converting saves on its own, apart from the page's Save, so the page is told to take
+// the new location once the server has it.
+// `submit` settles even when the server refuses, so the failure is read off the call.
+function convert(call: Call, request: Promise<unknown>, loading: string, success: string) {
+	isDialogOpen.value = false
+	isConverting.value = true
+	const done = request
+		.then(() => {
+			if (call.error) throw call.error
+			emit("converted")
+		})
+		.finally(() => (isConverting.value = false))
+	toast.promise(done, { loading, success, error: (error: unknown) => serverErrorMessage(error) })
+}
+
+function convertToVirtual() {
+	if (choice.value === "zoom") {
+		const request = convertToZoomMeeting.submit({ event: props.event })
+		convert(convertToZoomMeeting, request, "Creating a Zoom meeting…", "The event is now on Zoom")
+	} else {
+		const request = convertEvent.submit({
+			name: props.event,
+			medium: ONLINE,
+			meeting_link: newLink.value.trim(),
+		})
+		convert(convertEvent, request, "Converting to a virtual event…", "The event is now virtual")
+	}
+}
+
+const actions = computed<DialogAction[]>(() => [
+	{ label: "Cancel" },
+	{
+		label: "Convert",
+		variant: "solid",
+		disabled: choice.value === "link" && !newLink.value.trim(),
+		onClick: convertToVirtual,
+	},
+])
+
+function convertToInPerson(pickedVenue: string) {
+	const request = convertEvent.submit({ name: props.event, medium: IN_PERSON, venue: pickedVenue })
+	convert(convertEvent, request, "Converting to an in-person event…", "The event is now in person")
 }
 
 const copyToClipboard = useCopyToClipboard()
@@ -46,19 +86,6 @@ const copyLink = () => copyToClipboard(meetingLink.value, "Meeting link copied")
 
 <template>
 	<div class="flex flex-col gap-3">
-		<div class="grid grid-cols-2 gap-2">
-			<Button
-				v-for="option in options"
-				:key="option.value"
-				:variant="medium === option.value ? 'subtle' : 'ghost'"
-				:icon-left="option.icon"
-				:label="option.label"
-				:aria-pressed="medium === option.value"
-				class="w-full"
-				@click="pick(option.value)"
-			/>
-		</div>
-
 		<!-- The two answers are different heights, so the swap moves the column. Opacity
 			 only, and out before in: a height animation here would cost more than it hides. -->
 		<Transition
@@ -84,10 +111,45 @@ const copyLink = () => copyToClipboard(meetingLink.value, "Meeting link copied")
 				/>
 			</div>
 
-			<div v-else class="flex flex-col gap-3">
-				<EventLocation v-model:venue="venue" :team="team" :show-virtual="false" />
-				<p v-if="address" class="text-base text-ink-gray-5">{{ address }}</p>
-			</div>
+			<EventLocationField v-else v-model:venue="venue" :team="team" :show-zoom="false" />
 		</Transition>
+
+		<p class="text-p-sm text-ink-gray-5">
+			{{ isOnline ? "Meeting in person?" : "Hosting online?" }}
+			<button
+				type="button"
+				class="text-ink-gray-7 underline underline-offset-2 hover:text-ink-gray-9 disabled:opacity-50"
+				:disabled="isConverting"
+				@click="isOnline ? (isLocationDialogOpen = true) : (isDialogOpen = true)"
+			>
+				{{ isOnline ? "Convert to an in-person event" : "Convert to a virtual event" }}
+			</button>
+		</p>
+
+		<Dialog v-model="isDialogOpen" title="Convert to a virtual event" :actions="actions">
+			<div class="space-y-3">
+				<p class="text-p-base text-ink-gray-7">Guests join online, and the venue is removed.</p>
+				<VirtualMeetingOptions
+					v-if="zoomAvailable"
+					v-model:choice="choice"
+					v-model:link="newLink"
+				/>
+				<FormControl
+					v-else
+					v-model="newLink"
+					type="url"
+					label="Meeting link"
+					placeholder="https://…"
+				/>
+			</div>
+		</Dialog>
+
+		<LocationDialog
+			v-model="isLocationDialogOpen"
+			:team="team"
+			:show-zoom="false"
+			title="Convert to an in-person event"
+			@picked="convertToInPerson"
+		/>
 	</div>
 </template>

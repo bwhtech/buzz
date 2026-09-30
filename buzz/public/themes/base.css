@@ -553,11 +553,49 @@ body {
 	font-weight: 500;
 }
 
+.venue-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.venue-link:hover {
+	text-decoration: underline;
+}
+
+/* The arrow only fills the middle of Lucide's 24px box, so the markup crops the box to the
+   glyph. Centred on the line it sits above the lowercase letters; 1px brings it level. */
+.venue-link .icon {
+	position: relative;
+	top: 1px;
+	flex-shrink: 0;
+	width: 12px;
+	height: 12px;
+	color: var(--ink-muted);
+}
+
 .aside-note {
 	margin-top: 4px;
 	color: var(--ink-muted);
 	font-size: 13px;
 	white-space: pre-line;
+	text-wrap: pretty;
+}
+
+.online-place {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.online-place .icon {
+	flex-shrink: 0;
+	color: var(--ink-muted);
+}
+
+/* Hangs the note under the label text, clear of the icon (16px) and the gap (8px). */
+.online-place + .aside-note {
+	padding-left: 24px;
 }
 
 .date-row {

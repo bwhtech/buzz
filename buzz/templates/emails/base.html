@@ -42,7 +42,7 @@
                       {{ event_header.start_time }}
                       {%- if event_header.venue %} ·
                       {% if event_header.venue_map_url -%}
-                      <a href="{{ event_header.venue_map_url }}" style="color:#7c7c7c;text-decoration:none">{{ event_header.venue }}&nbsp;<img src="{{ frappe.get_url('/assets/buzz/images/arrow-up-right.png') }}" alt="" width="12" height="12" style="display:inline-block;width:12px;height:12px;vertical-align:-1px;border:0" /></a>
+                      <a href="{{ event_header.venue_map_url | e }}" style="color:#7c7c7c;text-decoration:none">{{ event_header.venue }}&nbsp;<img src="{{ frappe.get_url('/assets/buzz/images/arrow-up-right.png') }}" alt="" width="12" height="12" style="display:inline-block;width:12px;height:12px;vertical-align:-1px;border:0" /></a>
                       {%- else %}{{ event_header.venue }}{% endif %}
                       {%- endif %}
                     </div>
