@@ -1,7 +1,8 @@
 import { bannerPattern } from "./event_banner"
 
+// The key frappe-ui's useColorScheme keeps the dashboard's choice under, so both share one.
 // Also read by the inline script in the layout's <head>, which applies it before first paint.
-const MODE_STORAGE_KEY = "buzz-page-mode"
+const MODE_STORAGE_KEY = "theme"
 
 // The public page's theme tokens, so each theme colours the same rings its own way.
 const PAGE_COLOURS = { line: "var(--border)", surface: "var(--surface)" }

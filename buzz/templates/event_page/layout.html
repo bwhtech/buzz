@@ -7,7 +7,9 @@
 		{
 			const defaultMode = {{ default_mode | tojson }}
 			try {
-				const mode = localStorage.getItem("buzz-page-mode")
+				const systemMode = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+				const storedMode = localStorage.getItem("theme")
+				const mode = storedMode === "system" ? systemMode : storedMode
 				document.documentElement.dataset.mode = mode === "light" || mode === "dark" ? mode : defaultMode
 			} catch (error) {
 				document.documentElement.dataset.mode = defaultMode
