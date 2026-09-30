@@ -3,7 +3,15 @@
 {% block preheader %}Your ticket for {{ event_title }} is ready.{% endblock %}
 
 {% block content %}
+{% if meeting.join_url %}
+<p style="margin:0 0 20px">Hi {{ doc.attendee_name }}, you're in. Here's how to join.</p>
+{% set kind = "ticket" %}
+{% include "buzz/templates/emails/_join_meeting.html" %}
+{% elif meeting.is_online %}
+<p style="margin:0 0 20px">Hi {{ doc.attendee_name }}, here is your ticket.</p>
+{% else %}
 <p style="margin:0 0 20px">Hi {{ doc.attendee_name }}, here is your ticket. Show the QR code at the entrance.</p>
+{% endif %}
 <div style="background-color:#f8f8f8;border-radius:10px;padding:20px;text-align:center">
   <img embed="{{ doc.qr_code }}" alt="Entry QR code" width="160" height="160"
     style="display:block;width:160px;height:160px;margin:0 auto;background-color:#ffffff;border:1px solid #e2e2e2;border-radius:8px" />

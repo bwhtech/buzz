@@ -175,10 +175,12 @@ def build_event_datetimes(event_doc):
 	return start_datetime, end_datetime
 
 
-def generate_ics_file(event_doc, attendee_email: str):
+def generate_ics_file(event_doc, attendee_email: str, meeting):
 	from uuid import uuid4
 
-	from frappe.utils import now_datetime
+	from frappe.utils import get_url, now_datetime
+
+	event_url = get_url(f"/events/{event_doc.route}") if event_doc.is_published and event_doc.route else None
 
 	start_dt, end_dt = build_event_datetimes(event_doc)
 	organizer_name = frappe.db.get_value("Buzz Team", event_doc.team, "team_name") or event_doc.title
@@ -198,16 +200,32 @@ def generate_ics_file(event_doc, attendee_email: str):
 		"timezone": event_doc.time_zone,
 		"start": start_dt.strftime("%Y%m%dT%H%M%S"),
 		"end": end_dt.strftime("%Y%m%dT%H%M%S"),
-		"title": event_doc.title,
-		"location": venue_address,
+		"title": ics_text(event_doc.title),
+		"location": ics_text(meeting.join_url or venue_address),
+		"conference_url": meeting.join_url,
+		"event_url": event_url,
 		"attendee_email": attendee_email,
-		"description": f"Your ticket for {event_doc.title}",
+		"description": ics_text(ics_description(event_doc, meeting, event_url)),
 		"organizer_name": organizer_name,
 		"organizer_email": organizer_email,
 	}
 
 	# nosemgrep: frappe-ssti
 	return frappe.render_template("templates/ics/ics.jinja2", context, is_path=True)
+
+
+def ics_description(event_doc, meeting, event_url: str | None) -> str:
+	lines = [f"Your ticket for {event_doc.title}", event_url]
+	if meeting.join_url:
+		where = f"on {meeting.platform}" if meeting.platform else "online"
+		lines.insert(0, f"Join {where}: {meeting.join_url}\n")
+	return "\n".join(line for line in lines if line)
+
+
+def ics_text(value: str | None) -> str:
+	"""Escape a TEXT value per RFC 5545, so commas and line breaks in it stay inside it."""
+	value = (value or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
+	return value.replace("\r\n", "\\n").replace("\n", "\\n")
 
 
 # Curated abbreviations for zones where tzdata only provides a numeric offset

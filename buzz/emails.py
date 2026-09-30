@@ -3,6 +3,7 @@ from urllib.parse import urlencode, urlparse
 import frappe
 from frappe.utils import get_url
 
+from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import build_event_datetimes, get_time_zone_label
 
 WORDMARK = "/assets/buzz/images/buzz-wordmark-dark.png"
@@ -16,7 +17,7 @@ def email_event_header(event) -> dict:
 		day=start.day,
 		title=event.title,
 		start_time=f"{start.strftime('%-I:%M %p')} {label}".strip(),
-		venue=event.get_venue_name(),
+		venue=event.get_venue_name() or OnlineMeeting(event).label,
 		venue_map_url=venue_map_url(event.venue),
 		url=get_url(f"/events/{event.route}") if event.is_published and event.route else None,
 		banner_url=get_url(event.banner_image) if event.banner_image else None,
