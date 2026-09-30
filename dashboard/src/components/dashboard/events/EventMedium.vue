@@ -3,6 +3,7 @@ import { Button, Dialog, type DialogAction, FormControl, toast } from "frappe-ui
 import { computed, ref, watch } from "vue"
 
 import EventLocationField from "@/components/dashboard/events/location/EventLocationField.vue"
+import LocationDialog from "@/components/dashboard/events/location/LocationDialog.vue"
 import VirtualMeetingOptions from "@/components/dashboard/events/VirtualMeetingOptions.vue"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { convertEvent, convertToZoomMeeting } from "@/data/events"
@@ -22,6 +23,7 @@ const meetingLink = defineModel<string>("meetingLink", { default: "" })
 
 const isOnline = computed(() => props.medium === ONLINE)
 const isDialogOpen = ref(false)
+const isLocationDialogOpen = ref(false)
 const isConverting = ref(false)
 const newLink = ref("")
 const choice = ref<"link" | "zoom">("link")
@@ -51,19 +53,15 @@ function convert(call: Call, request: Promise<unknown>, loading: string, success
 function convertToVirtual() {
 	if (choice.value === "zoom") {
 		const request = convertToZoomMeeting.submit({ event: props.event })
-		return convert(
-			convertToZoomMeeting,
-			request,
-			"Creating a Zoom meeting…",
-			"The event is now on Zoom",
-		)
+		convert(convertToZoomMeeting, request, "Creating a Zoom meeting…", "The event is now on Zoom")
+	} else {
+		const request = convertEvent.submit({
+			name: props.event,
+			medium: ONLINE,
+			meeting_link: newLink.value.trim(),
+		})
+		convert(convertEvent, request, "Converting to a virtual event…", "The event is now virtual")
 	}
-	const request = convertEvent.submit({
-		name: props.event,
-		medium: ONLINE,
-		meeting_link: newLink.value.trim(),
-	})
-	convert(convertEvent, request, "Converting to a virtual event…", "The event is now virtual")
 }
 
 const actions = computed<DialogAction[]>(() => [
@@ -76,8 +74,8 @@ const actions = computed<DialogAction[]>(() => [
 	},
 ])
 
-function convertToInPerson() {
-	const request = convertEvent.submit({ name: props.event, medium: IN_PERSON })
+function convertToInPerson(pickedVenue: string) {
+	const request = convertEvent.submit({ name: props.event, medium: IN_PERSON, venue: pickedVenue })
 	convert(convertEvent, request, "Converting to an in-person event…", "The event is now in person")
 }
 
@@ -122,7 +120,7 @@ const copyLink = () => copyToClipboard(meetingLink.value, "Meeting link copied")
 				type="button"
 				class="text-ink-gray-7 underline underline-offset-2 hover:text-ink-gray-9 disabled:opacity-50"
 				:disabled="isConverting"
-				@click="isOnline ? convertToInPerson() : (isDialogOpen = true)"
+				@click="isOnline ? (isLocationDialogOpen = true) : (isDialogOpen = true)"
 			>
 				{{ isOnline ? "Convert to an in-person event" : "Convert to a virtual event" }}
 			</button>
@@ -145,5 +143,13 @@ const copyLink = () => copyToClipboard(meetingLink.value, "Meeting link copied")
 				/>
 			</div>
 		</Dialog>
+
+		<LocationDialog
+			v-model="isLocationDialogOpen"
+			:team="team"
+			:show-zoom="false"
+			title="Convert to an in-person event"
+			@picked="convertToInPerson"
+		/>
 	</div>
 </template>

@@ -17,10 +17,13 @@ export function useLocationPicker(team: () => string, isOpen: Ref<boolean>) {
 	const placeSearch = usePlaceSearch(query, isOpen)
 	const manualError = ref("")
 
+	// Loaded here, not only by the location field: the dialog also opens where that field
+	// is not on the page, such as converting a virtual event back to in person.
 	watch(isOpen, (open) => {
 		if (!open) return
 		query.value = ""
 		manualError.value = ""
+		loadVenues(team())
 	})
 
 	const savedVenues = computed(() => {

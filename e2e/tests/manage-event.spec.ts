@@ -82,6 +82,7 @@ type EventLocation = { medium: string; venue: string | null; meeting_link: strin
 test.describe("Switching an event's medium", () => {
 	let eventId: string
 	let venueName: string
+	let venueId: string
 
 	test.beforeEach(async ({ page, request }) => {
 		const team = await ensureTestTeam(request)
@@ -102,6 +103,7 @@ test.describe("Switching an event's medium", () => {
 			},
 		})
 		eventId = String(event.name)
+		venueId = venue.name
 		await page.goto(`/b/manage/events/${eventId}/details`)
 	})
 
@@ -122,12 +124,20 @@ test.describe("Switching an event's medium", () => {
 		expect(saved).toMatchObject({ medium: "Online", meeting_link: link })
 		expect(saved.venue).toBeFalsy()
 
+		// Back to in person only once a venue is picked and confirmed. Reloaded first, so the
+		// page opens on a virtual event and the dialog has to load the venues itself.
+		await page.reload()
 		await page.getByRole("button", { name: "Convert to an in-person event" }).click()
+		const locations = page.getByRole("dialog")
+		await locations.getByPlaceholder("Search a venue or a place").fill(venueName)
+		await locations.getByRole("button", { name: venueName }).click()
+		await locations.getByRole("button", { name: "Use this location" }).click()
 		await expect(page.getByText("The event is now in person")).toBeVisible()
-		await expect(page.getByRole("button", { name: "Add Location" })).toBeVisible()
+		await expect(locations).toBeHidden()
+		await expect(page.getByText(venueName)).toBeVisible()
 
 		saved = await getDoc<EventLocation>(request, "Buzz Event", eventId)
-		expect(saved.medium).toBe("In Person")
+		expect(saved).toMatchObject({ medium: "In Person", venue: venueId })
 		expect(saved.meeting_link).toBeFalsy()
 	})
 })

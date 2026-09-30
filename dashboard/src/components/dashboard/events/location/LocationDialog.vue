@@ -20,8 +20,11 @@ interface Preview {
 	use: () => Promise<string | null> | string
 }
 
-// Zoom is booked only when the event is created, so a page editing one leaves it out.
-const props = withDefaults(defineProps<{ team: string; showZoom?: boolean }>(), { showZoom: true })
+// Pages that book Zoom another way, or cannot book it, leave the Zoom option out.
+const props = withDefaults(defineProps<{ team: string; showZoom?: boolean; title?: string }>(), {
+	showZoom: true,
+	title: "Add location",
+})
 const isOpen = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ picked: [venue: string]; zoom: [] }>()
 
@@ -96,11 +99,7 @@ function pickZoom() {
 </script>
 
 <template>
-	<Dialog
-		v-model="isOpen"
-		size="3xl"
-		:title="isAddingManually ? 'Add venue manually' : 'Add location'"
-	>
+	<Dialog v-model="isOpen" size="3xl" :title="isAddingManually ? 'Add venue manually' : title">
 		<!-- Dialog's `size` only caps the width. This height is the one the results scroll
 		 inside, and the manual form shares it, so switching does not resize the dialog. -->
 		<div class="grid gap-4 md:h-96 md:grid-cols-2">
