@@ -18,9 +18,13 @@ def venue_map_url(venue) -> str | None:
 	return open_street_map_url(venue.latitude, venue.longitude)
 
 
-def google_place_url(place_id: str | None) -> str | None:
+def google_maps_embed_api_key() -> str | None:
 	settings = frappe.get_cached_doc("Buzz Settings")
-	key = settings.google_maps_enabled and settings.google_maps_embed_api_key
+	return (settings.google_maps_enabled and settings.google_maps_embed_api_key) or None
+
+
+def google_place_url(place_id: str | None) -> str | None:
+	key = google_maps_embed_api_key()
 	if not (place_id and key):
 		return None
 	return f"{GOOGLE_PLACE_EMBED_URL}?{urlencode({'key': key, 'q': f'place_id:{place_id}'})}"

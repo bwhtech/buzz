@@ -8,6 +8,7 @@ export interface Venue {
 	name: string
 	venue_name: string
 	address: string
+	google_place_id?: string | null
 }
 
 const team = ref("")
@@ -18,7 +19,7 @@ const team = ref("")
 export const venues = useList<Venue>({
 	doctype: "Event Venue",
 	filters: () => ({ team: team.value }),
-	fields: ["name", "venue_name", "address"],
+	fields: ["name", "venue_name", "address", "google_place_id"],
 	orderBy: "modified desc",
 	// One page holds every venue a team has; the picker does not page.
 	limit: 1000,

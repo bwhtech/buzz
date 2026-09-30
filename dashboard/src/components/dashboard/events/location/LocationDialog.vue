@@ -1,0 +1,199 @@
+<script setup lang="ts">
+import { Button, Dialog, Divider, ScrollArea, TextInput } from "frappe-ui"
+import { computed, ref, watch } from "vue"
+
+import ZoomLogo from "@/components/common/ZoomLogo.vue"
+import LocationResults from "@/components/dashboard/events/location/LocationResults.vue"
+import ManualVenueForm from "@/components/dashboard/events/location/ManualVenueForm.vue"
+import { useLocationPicker } from "@/components/dashboard/events/location/useLocationPicker"
+import type { PlacePrediction, Venue } from "@/data/venues"
+
+interface Preview {
+	key: string
+	title: string
+	address: string | null
+	source: string
+	placeId?: string | null
+	use: () => Promise<string | null> | string
+}
+
+const props = defineProps<{ team: string }>()
+const isOpen = defineModel<boolean>({ required: true })
+const emit = defineEmits<{ picked: [venue: string]; zoom: [] }>()
+
+const picker = useLocationPicker(() => props.team, isOpen)
+const preview = ref<Preview | null>(null)
+const isAddingManually = ref(false)
+const isSaving = ref(false)
+const isMapLoaded = ref(false)
+
+watch(isOpen, (open) => {
+	if (!open) return
+	preview.value = null
+	isAddingManually.value = false
+})
+
+function show(next: Preview) {
+	isMapLoaded.value = false
+	preview.value = next
+}
+
+function previewVenue(venue: Venue) {
+	show({
+		key: venue.name,
+		title: venue.venue_name,
+		address: venue.address,
+		source: "Saved venue",
+		placeId: venue.google_place_id,
+		use: () => venue.name,
+	})
+}
+
+function previewPlace(place: PlacePrediction) {
+	show({
+		key: place.place_id,
+		title: place.name,
+		address: place.address,
+		source: "From Google Maps",
+		placeId: place.place_id,
+		use: () => picker.savePlace(place),
+	})
+}
+
+const previewMapUrl = computed(() => {
+	const key = window.google_maps_embed_api_key
+	const placeId = preview.value?.placeId
+	if (!key || !placeId) return ""
+	const search = new URLSearchParams({ key, q: `place_id:${placeId}` })
+	return `https://www.google.com/maps/embed/v1/place?${search}`
+})
+
+function addManually() {
+	preview.value = null
+	isAddingManually.value = true
+}
+
+function pick(venue: string | null) {
+	if (!venue) return
+	emit("picked", venue)
+	isOpen.value = false
+}
+
+async function usePreview() {
+	if (!preview.value) return
+	isSaving.value = true
+	pick(await preview.value.use())
+	isSaving.value = false
+}
+
+function pickZoom() {
+	emit("zoom")
+	isOpen.value = false
+}
+</script>
+
+<template>
+	<Dialog
+		v-model="isOpen"
+		size="3xl"
+		:title="isAddingManually ? 'Add venue manually' : 'Add location'"
+	>
+		<!-- Dialog's `size` only caps the width. This height is the one the results scroll
+		 inside, and the manual form shares it, so switching does not resize the dialog. -->
+		<div class="grid gap-4 md:h-96 md:grid-cols-2">
+			<Transition
+				mode="out-in"
+				enter-active-class="transition-opacity duration-150 ease-out"
+				enter-from-class="opacity-0"
+				leave-active-class="transition-opacity duration-100 ease-out"
+				leave-to-class="opacity-0"
+			>
+				<ManualVenueForm
+					v-if="isAddingManually"
+					:picker="picker"
+					:suggested-name="picker.query"
+					@saved="pick"
+					@cancel="isAddingManually = false"
+				/>
+				<div v-else class="flex min-h-0 flex-col gap-3">
+					<TextInput v-model="picker.query" placeholder="Search a venue or a place" autofocus>
+						<template #prefix>
+							<span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true" />
+						</template>
+					</TextInput>
+					<ScrollArea class="h-72 shrink-0">
+						<LocationResults
+							:picker="picker"
+							:active-key="preview?.key"
+							:inert="isSaving"
+							class="transition-opacity duration-150 ease-out"
+							:class="isSaving && 'opacity-60'"
+							@venue="previewVenue"
+							@place="previewPlace"
+						/>
+					</ScrollArea>
+					<ErrorMessage :message="picker.error" />
+					<Divider />
+					<div class="flex gap-2">
+						<Button
+							variant="ghost"
+							icon-left="lucide-map-pin-plus"
+							label="Add manually"
+							@click="addManually"
+						/>
+						<Button variant="ghost" label="Zoom meeting" @click="pickZoom">
+							<template #prefix>
+								<ZoomLogo class="size-4" color="var(--ink-gray-5)" />
+							</template>
+						</Button>
+					</div>
+				</div>
+			</Transition>
+
+			<div class="flex min-h-72 flex-col overflow-hidden rounded-5 bg-surface-gray-1 md:min-h-0">
+				<template v-if="preview">
+					<iframe
+						v-if="previewMapUrl"
+						:key="preview.key"
+						class="h-48 w-full border-0 transition-opacity duration-200 ease-out"
+						:class="isMapLoaded ? 'opacity-100' : 'opacity-0'"
+						:src="previewMapUrl"
+						:title="`Map of ${preview.title}`"
+						@load="isMapLoaded = true"
+						referrerpolicy="no-referrer-when-downgrade"
+					/>
+					<div v-else class="flex h-48 items-center justify-center text-ink-gray-4">
+						<span class="lucide-map size-8" aria-hidden="true" />
+					</div>
+					<div class="flex flex-1 flex-col gap-1 p-4">
+						<p class="text-sm text-ink-gray-5">{{ preview.source }}</p>
+						<p class="text-lg font-medium text-ink-gray-9">{{ preview.title }}</p>
+						<p v-if="preview.address" class="text-p-sm text-ink-gray-6">
+							{{ preview.address }}
+						</p>
+						<Button
+							class="mt-auto w-full"
+							variant="solid"
+							label="Use this location"
+							:loading="isSaving"
+							@click="usePreview"
+						/>
+					</div>
+				</template>
+				<div
+					v-else
+					class="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-ink-gray-5"
+				>
+					<span class="lucide-map-pin size-6" aria-hidden="true" />
+					<p class="text-p-sm">
+						{{
+							isAddingManually
+								? "A venue added by hand has no map preview."
+								: "Pick a venue or a place to see it here before you add it."
+						}}
+					</p>
+				</div>
+			</div>
+		</div>
+	</Dialog>
+</template>

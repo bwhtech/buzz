@@ -15,8 +15,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { onBeforeRouteLeave, useRouter } from "vue-router"
 
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
-import EventLocation from "@/components/dashboard/events/EventLocation.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
+import EventLocationField from "@/components/dashboard/events/location/EventLocationField.vue"
 import { useIsMobile } from "@/composables/useIsMobile"
 import { createEvent } from "@/data/events"
 import { currentTeam } from "@/data/teams"
@@ -302,7 +302,7 @@ async function save() {
 
 						<section id="event-location" class="space-y-1.5">
 							<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
-							<EventLocation
+							<EventLocationField
 								v-model:venue="venue"
 								v-model:zoom-meeting="zoomMeeting"
 								:team="currentTeam?.name ?? ''"

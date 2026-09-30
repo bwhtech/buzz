@@ -7,6 +7,7 @@ from frappe.utils import get_system_timezone
 
 from buzz import telemetry
 from buzz.api.maps.services import place_search_enabled
+from buzz.www.event.venue_map import google_maps_embed_api_key
 
 no_cache = 1
 
@@ -38,5 +39,6 @@ def get_boot():
 			"read_only_mode": frappe.flags.read_only,
 			"system_timezone": get_system_timezone(),
 			"google_place_search_enabled": place_search_enabled(),
+			"google_maps_embed_api_key": google_maps_embed_api_key(),
 		}
 	)
