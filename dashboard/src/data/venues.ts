@@ -46,11 +46,17 @@ export interface PlacePrediction {
 
 const MINIMUM_PLACE_QUERY_LENGTH = 3
 
+// Not crypto.randomUUID: browsers keep it for HTTPS, and E2E runs on plain HTTP.
+function newSessionToken() {
+	const bytes = crypto.getRandomValues(new Uint8Array(16))
+	return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
+}
+
 /** Google Maps places for what is typed into an open picker, on a site with place search set up. */
 export function usePlaceSearch(query: Ref<string>, isOpen: Ref<boolean>) {
 	const debouncedQuery = refDebounced(query, 300)
 	// One token from the first keystroke to the save, so Google bills them as a single session.
-	let sessionToken = crypto.randomUUID()
+	let sessionToken = newSessionToken()
 	const search = useCall<PlacePrediction[], { query: string; session_token: string }>({
 		url: "/api/v2/method/buzz.api.maps.search_places",
 		immediate: false,
@@ -89,7 +95,7 @@ export function usePlaceSearch(query: Ref<string>, isOpen: Ref<boolean>) {
 				session_token: sessionToken,
 			})
 			.catch(() => null)
-		if (name) sessionToken = crypto.randomUUID()
+		if (name) sessionToken = newSessionToken()
 		return name
 	}
 
