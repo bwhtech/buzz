@@ -49,22 +49,6 @@ test.describe("Event workspace", () => {
 		await expect(page.getByRole("button", { name: "Copy" })).toBeVisible()
 	})
 
-	test("swaps the venue for a meeting link when the event turns virtual", async ({ page }) => {
-		const venue = page.getByRole("button", { name: "Add Location" })
-		await expect(venue).toBeVisible({ timeout: 15000 })
-
-		await page.getByRole("button", { name: "Virtual" }).click()
-
-		await expect(venue).toHaveCount(0)
-		const link = page.getByRole("textbox", { name: "Meeting link" })
-		await expect(link).toBeVisible()
-		// Nothing to copy until a link is there.
-		await expect(page.getByRole("button", { name: "Copy meeting link" })).toBeDisabled()
-
-		await page.getByRole("button", { name: "In person" }).click()
-		await expect(venue).toBeVisible()
-	})
-
 	test("swaps the sidebar for the event's own destinations", async ({ page }) => {
 		for (const label of ["Details", "Guests", "Talks"]) {
 			await expect(page.getByRole("link", { name: label })).toBeVisible({ timeout: 15000 })
@@ -90,6 +74,8 @@ test.describe("Event workspace", () => {
 		await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible()
 	})
 })
+
+type EventLocation = { medium: string; venue: string | null; meeting_link: string | null }
 
 // The shared event has no venue, and a switch has to have one to lose, so this block
 // seeds its own.
@@ -119,22 +105,30 @@ test.describe("Switching an event's medium", () => {
 		await page.goto(`/b/manage/events/${eventId}/details`)
 	})
 
-	test("drops the venue when the event turns virtual", async ({ page, request }) => {
+	test("converts to virtual with a meeting link, then back", async ({ page, request }) => {
+		const link = "https://meet.example.com/e2e"
 		await expect(page.getByText(venueName)).toBeVisible({ timeout: 15000 })
 
-		await page.getByRole("button", { name: "Virtual" }).click()
-		await page.getByRole("button", { name: "Save" }).click()
-		await expect(page.getByText("Event saved")).toBeVisible()
+		await page.getByRole("button", { name: "Convert to a virtual event" }).click()
+		const dialog = page.getByRole("dialog")
+		await dialog.getByRole("textbox", { name: "Meeting link" }).fill(link)
+		await dialog.getByRole("button", { name: "Convert", exact: true }).click()
+		await expect(page.getByText("The event is now virtual")).toBeVisible()
+		await expect(page.getByRole("textbox", { name: "Meeting link" })).toHaveValue(link)
 
 		// The calendar invite and the booking page read the venue whatever the medium is,
 		// so it has to be gone from the record, not just from the form.
-		const saved = await getDoc<{ medium: string; venue: string | null }>(
-			request,
-			"Buzz Event",
-			eventId,
-		)
-		expect(saved.medium).toBe("Online")
+		let saved = await getDoc<EventLocation>(request, "Buzz Event", eventId)
+		expect(saved).toMatchObject({ medium: "Online", meeting_link: link })
 		expect(saved.venue).toBeFalsy()
+
+		await page.getByRole("button", { name: "Convert to an in-person event" }).click()
+		await expect(page.getByText("The event is now in person")).toBeVisible()
+		await expect(page.getByRole("button", { name: "Add Location" })).toBeVisible()
+
+		saved = await getDoc<EventLocation>(request, "Buzz Event", eventId)
+		expect(saved.medium).toBe("In Person")
+		expect(saved.meeting_link).toBeFalsy()
 	})
 })
 

@@ -1,6 +1,6 @@
 import frappe
 
-from buzz.api.events import services
+from buzz.api.events import services, zoom
 from buzz.api.events.schemas import (
 	CreatedEvent,
 	EventDetail,
@@ -83,6 +83,11 @@ def check_event_route(route: str, event: str | None = None) -> RouteAvailability
 @frappe.whitelist(methods=["POST"])
 def create_event(event: NewEvent) -> CreatedEvent:
 	return services.create_event(event)
+
+
+@frappe.whitelist(methods=["POST"])
+def convert_to_zoom_meeting(event: str) -> None:
+	zoom.convert_to_zoom_meeting(event)
 
 
 @frappe.whitelist(methods=["POST"])
