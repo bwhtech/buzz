@@ -61,13 +61,26 @@ class TestConvertToZoomMeeting(IntegrationTestCase):
 		book.assert_called_once()
 
 	def test_a_zoom_failure_changes_nothing(self):
+		# The request rolls back on the error; the savepoint stands in for it.
+		frappe.db.savepoint("zoom_conversion")
 		with patch.object(BuzzEvent, "create_meeting_on_zoom", side_effect=Exception("Zoom is down")):
 			with self.assertRaises(Exception):
 				convert_to_zoom_meeting(self.event)
+		frappe.db.rollback(save_point="zoom_conversion")
 
 		event = frappe.get_doc("Buzz Event", self.event)
 		self.assertEqual(event.medium, "In Person")
 		self.assertTrue(event.venue)
+
+	def test_a_failed_save_books_no_meeting(self):
+		with (
+			patch.object(BuzzEvent, "validate", side_effect=frappe.ValidationError),
+			patch.object(BuzzEvent, "create_meeting_on_zoom") as book,
+		):
+			with self.assertRaises(frappe.ValidationError):
+				convert_to_zoom_meeting(self.event)
+
+		book.assert_not_called()
 
 	def test_a_viewer_cannot_convert(self):
 		frappe.set_user(self.viewer)
