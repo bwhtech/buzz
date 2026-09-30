@@ -64,7 +64,7 @@ const bookings = useList({
 		"event",
 		"event.title as event_title",
 		"event.start_date",
-		"event.venue",
+		"event.venue_name as venue",
 		"docstatus",
 		"total_amount",
 		"currency",

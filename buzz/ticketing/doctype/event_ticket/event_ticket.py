@@ -112,7 +112,7 @@ class EventTicket(Document):
 			return
 
 		event_title, ticket_template, ticket_print_format, venue = frappe.get_cached_value(
-			"Buzz Event", self.event, ["title", "ticket_email_template", "ticket_print_format", "venue"]
+			"Buzz Event", self.event, ["title", "ticket_email_template", "ticket_print_format", "venue_name"]
 		)
 
 		team_settings = get_event_team_settings(self.event)

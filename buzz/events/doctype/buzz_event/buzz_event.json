@@ -15,6 +15,7 @@
   "banner_image",
   "host",
   "venue",
+  "venue_name",
   "meeting_link",
   "hosted_by_section",
   "co_hosts",
@@ -505,11 +506,11 @@
    "label": "Card Image"
   },
   {
+   "description": "Look of this event's public page. Leave empty to use the default from Buzz Settings.",
    "fieldname": "theme",
    "fieldtype": "Link",
    "label": "Theme",
-   "options": "Buzz Theme",
-   "description": "Look of this event's public page. Leave empty to use the default from Buzz Settings."
+   "options": "Buzz Theme"
   },
   {
    "default": "1",
@@ -590,6 +591,14 @@
   {
    "fieldname": "column_break_rgkz",
    "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "venue.venue_name",
+   "fieldname": "venue_name",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Venue Name",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
@@ -667,7 +676,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-09-25 12:00:00.000000",
+ "modified": "2026-09-30 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

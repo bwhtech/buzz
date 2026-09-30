@@ -73,7 +73,7 @@ class ConfirmationEvent(APIResponse):
 
 
 class ConfirmationVenue(APIResponse):
-	name: Any
+	venue_name: str | None
 	address: str | None
 
 

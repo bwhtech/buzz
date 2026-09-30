@@ -98,10 +98,8 @@ test.describe("Switching an event's medium", () => {
 
 	test.beforeEach(async ({ page, request }) => {
 		const team = await ensureTestTeam(request)
-		// Event Venue is autonamed by prompt, so the docname is the venue's own name.
-		const venue = `E2E Venue ${Date.now()}`
-		await createDoc(request, "Event Venue", {
-			__newname: venue,
+		const venue = await createDoc<{ name: string }>(request, "Event Venue", {
+			venue_name: `E2E Venue ${Date.now()}`,
 			address: "1 Test Street",
 			team,
 		})
@@ -112,7 +110,7 @@ test.describe("Switching an event's medium", () => {
 				start_date: "2030-01-01",
 				start_time: "09:00:00",
 				end_time: "17:00:00",
-				venue,
+				venue: venue.name,
 			},
 		})
 		eventId = String(event.name)

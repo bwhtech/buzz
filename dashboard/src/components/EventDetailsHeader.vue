@@ -48,13 +48,13 @@
 				</div>
 
 				<!-- Venue -->
-				<div v-if="eventDetails.venue" class="flex flex-col items-start gap-3">
+				<div v-if="eventDetails.venue_name" class="flex flex-col items-start gap-3">
 					<div class="flex items-center gap-2">
 						<LucideMapPin class="h-4 w-4 text-ink-gray-6" />
 						<p class="text-ink-gray-6 text-base">{{ __("Venue") }}</p>
 					</div>
 					<div>
-						<p class="font-medium text-ink-gray-8">{{ eventDetails.venue }}</p>
+						<p class="font-medium text-ink-gray-8">{{ eventDetails.venue_name }}</p>
 					</div>
 				</div>
 

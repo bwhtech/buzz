@@ -23,7 +23,7 @@ no_cache = 1
 LISTING_LIMIT = 60
 FEATURED_LIMIT = 3
 POPULAR_LIMIT = 8
-CARD_FIELDS = ["title", "route", "start_date", "medium", "venue", "card_image", "banner_image"]
+CARD_FIELDS = ["title", "route", "start_date", "medium", "venue_name", "card_image", "banner_image"]
 TIME_FIELDS = ["start_time", "end_date", "end_time", "time_zone"]
 
 
@@ -84,7 +84,7 @@ def event_card(event) -> dict:
 		"url": f"/events/{event.route}",
 		"date": format_day(event.start_date),
 		"is_live": has_started(event) and not has_ended(event),
-		"place": _("Online") if event.medium == "Online" else event.venue,
+		"place": _("Online") if event.medium == "Online" else event.venue_name,
 		"image": event.card_image or event.banner_image,
 	}
 

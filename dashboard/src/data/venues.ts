@@ -3,6 +3,7 @@ import { ref } from "vue"
 
 export interface Venue {
 	name: string
+	venue_name: string
 	address: string
 }
 
@@ -14,7 +15,7 @@ const team = ref("")
 export const venues = useList<Venue>({
 	doctype: "Event Venue",
 	filters: () => ({ team: team.value }),
-	fields: ["name", "address"],
+	fields: ["name", "venue_name", "address"],
 	orderBy: "modified desc",
 	// One page holds every venue a team has; the picker does not page.
 	limit: 1000,
@@ -27,5 +28,5 @@ export function loadVenues(name: string) {
 	return venues.reload()
 }
 
-// Event Venue is autonamed by prompt, so the `name` sent is the venue's own.
+// The server names the venue, so the insert answers with the `name` to select.
 export const createVenue = useDoctype<Venue & { team: string }>("Event Venue").insert

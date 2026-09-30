@@ -16,7 +16,7 @@ def email_event_header(event) -> dict:
 		day=start.day,
 		title=event.title,
 		start_time=f"{start.strftime('%-I:%M %p')} {label}".strip(),
-		venue=event.venue,
+		venue=event.venue_name,
 		venue_map_url=venue_map_url(event.venue),
 		url=get_url(f"/events/{event.route}") if event.is_published and event.route else None,
 		banner_url=get_url(event.banner_image) if event.banner_image else None,

@@ -41,7 +41,7 @@
 					<LucideMapPin class="w-4 h-4 mr-2 flex-shrink-0" />
 					<span class="text-sm-medium">{{ __("Venue") }}</span>
 				</div>
-				<p class="text-ink-gray-9 font-medium">{{ venue.name }}</p>
+				<p class="text-ink-gray-9 font-medium">{{ venue.venue_name }}</p>
 				<p v-if="venue.address" class="text-sm text-ink-gray-6 mt-1">
 					{{ venue.address }}
 				</p>

@@ -9,6 +9,8 @@ export interface EventVenue {
 	parentfield?: string
 	parenttype?: string
 	idx?: number
+	/**	Venue Name : Data	*/
+	venue_name: string
 	/**	Address : Small Text	*/
 	address: string
 	/**	Type : Select	*/

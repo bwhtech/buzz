@@ -102,6 +102,7 @@ class BuzzEvent(Document):
 		time_zone_label: DF.Data | None
 		title: DF.Data
 		venue: DF.Link | None
+		venue_name: DF.Data | None
 	# end: auto-generated types
 
 	def before_insert(self):

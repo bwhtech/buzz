@@ -6,8 +6,7 @@ import ZoomLogo from "@/components/common/ZoomLogo.vue"
 import AddVenueDialog from "@/components/dashboard/events/AddVenueDialog.vue"
 import { loadVenues, venues } from "@/data/venues"
 
-// A reserved value rather than a venue name. Event Venue is autonamed by prompt, so a
-// venue really could be called "Zoom" — the sentinel keeps the two apart.
+// A reserved value that no venue's `name` can take.
 const ZOOM = "__zoom__"
 
 // A page that asks for the medium separately picks a venue and nothing else, so the
@@ -47,7 +46,9 @@ const selected = computed({
 const unmatched = computed(() => {
 	if (venues.loading) return false
 	const text = query.value.trim().toLowerCase()
-	return Boolean(text) && !(venues.data ?? []).some((row) => row.name.toLowerCase().includes(text))
+	return (
+		Boolean(text) && !(venues.data ?? []).some((row) => row.venue_name.toLowerCase().includes(text))
+	)
 })
 
 function addManually() {
@@ -69,7 +70,7 @@ const options = computed(() => [
 	{
 		group: "Venues",
 		options: (venues.data ?? []).map((row) => ({
-			label: row.name,
+			label: row.venue_name,
 			description: row.address,
 			value: row.name,
 		})),

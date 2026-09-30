@@ -54,6 +54,7 @@ def get_event_details(event_doc: "BuzzEvent"):
 		"time_zone": event_doc.time_zone,
 		"time_zone_label": event_doc.time_zone_label,
 		"venue": event_doc.venue,
+		"venue_name": event_doc.venue_name,
 		"medium": event_doc.medium,
 		"category": event_doc.category,
 		"banner_image": event_doc.banner_image,

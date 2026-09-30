@@ -28,7 +28,7 @@ PROPOSAL_LIST_FIELDS = [
 	"event.start_date",
 	"event.start_time",
 	"event.end_date",
-	"event.venue",
+	"event.venue_name as venue",
 	"event.banner_image",
 	"event.allow_editing_talks_after_acceptance",
 	"status",

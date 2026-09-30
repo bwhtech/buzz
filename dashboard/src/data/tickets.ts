@@ -20,7 +20,7 @@ export function useMyTickets(event: () => string) {
 			"event.start_date",
 			"event.end_date",
 			"event.start_time",
-			"event.venue",
+			"event.venue_name as venue",
 		],
 		// Tickets are held by email address, which is the session id for everyone
 		// except Administrator — hence the account email first.

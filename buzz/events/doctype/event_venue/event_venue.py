@@ -21,12 +21,20 @@ class EventVenue(Document):
 		latitude: DF.Float
 		longitude: DF.Float
 		team: DF.Link | None
+		venue_name: DF.Data
 		type: DF.Literal["Embed Google Maps", "Open Street Map"]
 	# end: auto-generated types
 
 	def validate(self):
 		self.set_geojson_for_location()
 		self.remove_fixed_dimensions_from_google_map_embed()
+
+	def on_update(self):
+		if self.get_doc_before_save() and self.has_value_changed("venue_name"):
+			# `modified` is the manage page's conflict check, so a relabel must not move it
+			frappe.db.set_value(
+				"Buzz Event", {"venue": self.name}, "venue_name", self.venue_name, update_modified=False
+			)
 
 	def remove_fixed_dimensions_from_google_map_embed(self):
 		if not self.google_maps_embed_code:

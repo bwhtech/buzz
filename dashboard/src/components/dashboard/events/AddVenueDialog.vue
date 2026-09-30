@@ -32,19 +32,20 @@ async function submit() {
 	if (invalid.value) return
 
 	errorMessage.value = ""
-	try {
-		await createVenue.submit({
+	const venue = await createVenue
+		.submit({
 			team: props.team,
-			name: name.value.trim(),
+			venue_name: name.value.trim(),
 			address: address.value.trim(),
 		})
-	} catch (error) {
-		errorMessage.value = serverErrorMessage(error)
-		return
-	}
+		.catch((error) => {
+			errorMessage.value = serverErrorMessage(error)
+			return null
+		})
+	if (!venue) return
 
-	toast.success(`${name.value.trim()} added`)
-	emit("created", name.value.trim())
+	toast.success(`${venue.venue_name} added`)
+	emit("created", venue.name)
 	isOpen.value = false
 }
 </script>

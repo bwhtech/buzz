@@ -185,11 +185,10 @@ class TestBuzzEvent(FrappeTestCase):
 		return create_owned_team(team_name, owner)
 
 	def _make_venue(self, name: str, team: str | None) -> str:
-		"""Event Venue is autonamed by prompt, so the docname is the venue's own name."""
 		venue = frappe.get_doc(
 			{
 				"doctype": "Event Venue",
-				"__newname": name,
+				"venue_name": name,
 				"address": "1 Test Street",
 				"team": team,
 			}
