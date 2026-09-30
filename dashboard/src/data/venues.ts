@@ -7,8 +7,11 @@ import { serverErrorMessage } from "@/utils/serverError"
 export interface Venue {
 	name: string
 	venue_name: string
-	address: string
+	address: string | null
+	map_link?: string
 	google_place_id?: string | null
+	latitude?: number
+	longitude?: number
 }
 
 const team = ref("")
@@ -19,7 +22,7 @@ const team = ref("")
 export const venues = useList<Venue>({
 	doctype: "Event Venue",
 	filters: () => ({ team: team.value }),
-	fields: ["name", "venue_name", "address", "google_place_id"],
+	fields: ["name", "venue_name", "address", "google_place_id", "latitude", "longitude"],
 	orderBy: "modified desc",
 	// One page holds every venue a team has; the picker does not page.
 	limit: 1000,
@@ -93,10 +96,36 @@ export function usePlaceSearch(query: Ref<string>, isOpen: Ref<boolean>) {
 	return reactive({
 		save,
 		places: computed(() => (isSearchable.value ? (search.data ?? []) : [])),
+		// True from the keystroke, not from the request: the debounce wait is part of the wait.
+		isSearching: computed(() => {
+			const typed = query.value.trim()
+			const isWaiting = typed !== text.value || search.loading
+			return (
+				Boolean(window.google_place_search_enabled) &&
+				typed.length >= MINIMUM_PLACE_QUERY_LENGTH &&
+				isWaiting
+			)
+		}),
 		// Only while searching: a failed search must not leave a venue picked by hand marked as wrong.
 		error: computed(() => {
 			const error = search.error || venue.error
 			return isOpen.value && error ? serverErrorMessage(error) : ""
 		}),
+	})
+}
+
+export interface MapLinkLocation {
+	latitude: number | null
+	longitude: number | null
+	name: string | null
+	address: string | null
+	embed_url: string | null
+}
+
+/** Where a pasted map link points, read by the server the way saving the venue would. */
+export function useMapLinkLocation() {
+	return useCall<MapLinkLocation, { link: string }>({
+		url: "/api/v2/method/buzz.api.maps.locate_map_link",
+		immediate: false,
 	})
 }

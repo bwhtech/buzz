@@ -88,7 +88,7 @@ const options = computed(() => [
 		group: "Venues",
 		options: (venues.data ?? []).map((row) => ({
 			label: row.venue_name,
-			description: row.address,
+			description: row.address ?? undefined,
 			value: row.name,
 		})),
 	},

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, Dialog, Divider, ScrollArea, TextInput } from "frappe-ui"
+import { Button, Dialog, Divider, ScrollArea, Skeleton, TextInput } from "frappe-ui"
 import { ref, watch } from "vue"
 
 import ZoomLogo from "@/components/common/ZoomLogo.vue"
@@ -7,7 +7,7 @@ import LocationMap from "@/components/dashboard/events/location/LocationMap.vue"
 import LocationResults from "@/components/dashboard/events/location/LocationResults.vue"
 import ManualVenueForm from "@/components/dashboard/events/location/ManualVenueForm.vue"
 import { useLocationPicker } from "@/components/dashboard/events/location/useLocationPicker"
-import type { PlacePrediction, Venue } from "@/data/venues"
+import type { MapLinkLocation, PlacePrediction, Venue } from "@/data/venues"
 
 interface Preview {
 	key: string
@@ -15,6 +15,8 @@ interface Preview {
 	address: string | null
 	source: string
 	placeId?: string | null
+	latitude?: number
+	longitude?: number
 	use: () => Promise<string | null> | string
 }
 
@@ -26,6 +28,8 @@ const picker = useLocationPicker(() => props.team, isOpen)
 const preview = ref<Preview | null>(null)
 const isAddingManually = ref(false)
 const isSaving = ref(false)
+// What the manual form's map link turned out to point at, with the name typed so far.
+const manualLocation = ref<(MapLinkLocation & { title: string }) | null>(null)
 
 watch(isOpen, (open) => {
 	if (!open) return
@@ -40,6 +44,8 @@ function previewVenue(venue: Venue) {
 		address: venue.address,
 		source: "Saved venue",
 		placeId: venue.google_place_id,
+		latitude: venue.latitude,
+		longitude: venue.longitude,
 		use: () => venue.name,
 	}
 }
@@ -55,8 +61,17 @@ function previewPlace(place: PlacePrediction) {
 	}
 }
 
+const isLocating = ref(false)
+
+function showManualLocation(location: MapLinkLocation | null, title: string) {
+	isLocating.value = false
+	manualLocation.value = location && { ...location, title }
+}
+
 function addManually() {
 	preview.value = null
+	manualLocation.value = null
+	isLocating.value = false
 	isAddingManually.value = true
 }
 
@@ -101,6 +116,8 @@ function pickZoom() {
 					:suggested-name="picker.query"
 					@saved="pick"
 					@cancel="isAddingManually = false"
+					@locating="isLocating = true"
+					@located="showManualLocation"
 				/>
 				<div v-else class="flex min-h-0 flex-col gap-3">
 					<TextInput v-model="picker.query" placeholder="Search a venue or a place" autofocus>
@@ -139,7 +156,13 @@ function pickZoom() {
 
 			<div class="flex min-h-72 flex-col overflow-hidden rounded-5 bg-surface-gray-1 md:min-h-0">
 				<template v-if="preview">
-					<LocationMap class="h-48" :place-id="preview.placeId" :title="preview.title">
+					<LocationMap
+						class="h-48"
+						:place-id="preview.placeId"
+						:latitude="preview.latitude"
+						:longitude="preview.longitude"
+						:title="preview.title"
+					>
 						<div class="flex h-48 items-center justify-center text-ink-gray-4">
 							<span class="lucide-map size-8" aria-hidden="true" />
 						</div>
@@ -159,6 +182,22 @@ function pickZoom() {
 						/>
 					</div>
 				</template>
+				<div v-else-if="isAddingManually && isLocating" class="flex-1" aria-busy="true">
+					<span class="sr-only">Reading the map link…</span>
+					<Skeleton class="size-full min-h-48 rounded-none" />
+				</div>
+				<LocationMap
+					v-else-if="isAddingManually && manualLocation"
+					class="h-full min-h-48"
+					:latitude="manualLocation.latitude"
+					:longitude="manualLocation.longitude"
+					:embed-url="manualLocation.embed_url"
+					:title="manualLocation.title"
+				>
+					<div class="flex flex-1 items-center justify-center p-6 text-center text-ink-gray-5">
+						<p class="text-p-sm">This link does not show a location. Add the address instead.</p>
+					</div>
+				</LocationMap>
 				<div
 					v-else
 					class="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-ink-gray-5"
@@ -167,7 +206,7 @@ function pickZoom() {
 					<p class="text-p-sm">
 						{{
 							isAddingManually
-								? "A venue added by hand has no map preview."
+								? "Paste a map link to see the place here."
 								: "Pick a venue or a place to see it here before you add it."
 						}}
 					</p>

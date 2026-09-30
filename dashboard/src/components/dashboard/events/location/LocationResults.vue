@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import LocationRow from "@/components/dashboard/events/location/LocationRow.vue"
+import LocationRowSkeleton from "@/components/dashboard/events/location/LocationRowSkeleton.vue"
 import type { LocationPicker } from "@/components/dashboard/events/location/useLocationPicker"
 import type { PlacePrediction, Venue } from "@/data/venues"
 
@@ -9,8 +10,9 @@ defineEmits<{ venue: [venue: Venue]; place: [place: PlacePrediction] }>()
 
 <template>
 	<div class="space-y-3">
-		<section v-if="picker.savedVenues.length">
+		<section v-if="picker.savedVenues.length || picker.isLoadingVenues">
 			<h3 class="px-2 pb-1 text-sm text-ink-gray-5">Your venues</h3>
+			<LocationRowSkeleton v-if="picker.isLoadingVenues" label="Loading your venues…" />
 			<LocationRow
 				v-for="venue in picker.savedVenues"
 				:key="venue.name"
@@ -21,8 +23,10 @@ defineEmits<{ venue: [venue: Venue]; place: [place: PlacePrediction] }>()
 				@click="$emit('venue', venue)"
 			/>
 		</section>
-		<section v-if="picker.places.length">
+		<!-- Earlier results stay up while the next search runs; the skeleton is only for a first one. -->
+		<section v-if="picker.places.length || picker.isSearching">
 			<h3 class="px-2 pb-1 text-sm text-ink-gray-5">Google Maps</h3>
+			<LocationRowSkeleton v-if="!picker.places.length" label="Searching Google Maps…" />
 			<LocationRow
 				v-for="place in picker.places"
 				:key="place.place_id"
@@ -34,7 +38,12 @@ defineEmits<{ venue: [venue: Venue]; place: [place: PlacePrediction] }>()
 			/>
 		</section>
 		<p
-			v-if="!picker.savedVenues.length && !picker.places.length"
+			v-if="
+				!picker.savedVenues.length &&
+				!picker.places.length &&
+				!picker.isSearching &&
+				!picker.isLoadingVenues
+			"
 			class="px-2 py-6 text-center text-p-sm text-ink-gray-5"
 		>
 			{{

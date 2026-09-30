@@ -43,6 +43,8 @@ function clear() {
 			:title="zoomMeeting ? 'Zoom meeting' : (chosenVenue?.venue_name ?? '')"
 			:subtitle="zoomMeeting ? 'Created when you save the event' : chosenVenue?.address"
 			:place-id="chosenVenue?.google_place_id"
+			:latitude="chosenVenue?.latitude"
+			:longitude="chosenVenue?.longitude"
 			:is-zoom="zoomMeeting"
 			:disabled="disabled"
 			@change="isOpen = true"

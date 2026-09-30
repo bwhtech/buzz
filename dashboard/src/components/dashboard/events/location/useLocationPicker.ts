@@ -26,7 +26,7 @@ export function useLocationPicker(team: () => string, isOpen: Ref<boolean>) {
 	const savedVenues = computed(() => {
 		const text = query.value.trim().toLowerCase()
 		return (venues.data ?? []).filter((row) =>
-			`${row.venue_name} ${row.address}`.toLowerCase().includes(text),
+			`${row.venue_name} ${row.address ?? ""}`.toLowerCase().includes(text),
 		)
 	})
 
@@ -36,23 +36,23 @@ export function useLocationPicker(team: () => string, isOpen: Ref<boolean>) {
 		return name
 	}
 
-	async function saveManually(venueName: string, address: string) {
+	async function saveManually(venue: { venue_name: string; address: string; map_link: string }) {
 		manualError.value = ""
-		const venue = await createVenue
-			.submit({ team: team(), venue_name: venueName, address })
-			.catch((error) => {
-				manualError.value = serverErrorMessage(error)
-				return null
-			})
-		if (!venue) return null
+		const saved = await createVenue.submit({ team: team(), ...venue }).catch((error) => {
+			manualError.value = serverErrorMessage(error)
+			return null
+		})
+		if (!saved) return null
 		await loadVenues(team())
-		return venue.name
+		return saved.name
 	}
 
 	return reactive({
 		query,
 		savedVenues,
 		places: computed(() => placeSearch.places),
+		isSearching: computed(() => placeSearch.isSearching),
+		isLoadingVenues: computed(() => venues.loading && !venues.data),
 		error: computed(() => manualError.value || placeSearch.error),
 		savePlace,
 		saveManually,

@@ -4,7 +4,7 @@ import frappe
 import requests
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.maps import add_place_as_venue, search_places
+from buzz.api.maps import add_place_as_venue, locate_map_link, search_places
 from buzz.api.maps.exceptions import CannotAddVenues, PlaceSearchFailed, PlaceSearchNotEnabled
 from buzz.api.maps.services import place_search_enabled
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
@@ -150,3 +150,40 @@ class TestAddPlaceAsVenue(IntegrationTestCase):
 
 		with self.assertRaises(frappe.PermissionError):
 			add_place_as_venue(self.team, "place-3", "Not Mine", "token-1")
+
+
+class TestLocateMapLink(IntegrationTestCase):
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_google_link_gives_coordinates_and_the_place_name(self):
+		link = "https://www.google.com/maps/place/Nehru+Centre/@18.99,72.81,17z/data=!3d18.9903!4d72.8174"
+
+		self.assertEqual(
+			locate_map_link(link).__json__(),
+			{
+				"latitude": 18.9903,
+				"longitude": 72.8174,
+				"name": "Nehru Centre",
+				"address": None,
+				"embed_url": None,
+			},
+		)
+
+	def test_embed_code_gives_the_embed_url(self):
+		embed = '<iframe src="https://www.google.com/maps/embed?pb=abc"></iframe>'
+
+		self.assertEqual(locate_map_link(embed).embed_url, "https://www.google.com/maps/embed?pb=abc")
+
+	def test_unreadable_link_gives_nothing(self):
+		self.assertEqual(
+			locate_map_link("https://example.com/somewhere").__json__(),
+			{"latitude": None, "longitude": None, "name": None, "address": None, "embed_url": None},
+		)
+
+	def test_someone_who_cannot_add_venues_is_refused(self):
+		frappe.set_user(create_user("no-map-links@example.com", "Attendee"))
+
+		with self.assertRaises(CannotAddVenues):
+			locate_map_link("https://www.openstreetmap.org/#map=17/12.9/77.5")

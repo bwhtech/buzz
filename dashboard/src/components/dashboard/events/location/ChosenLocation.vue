@@ -8,6 +8,8 @@ defineProps<{
 	title: string
 	subtitle?: string | null
 	placeId?: string | null
+	latitude?: number
+	longitude?: number
 	isZoom?: boolean
 	disabled?: boolean
 }>()
@@ -23,7 +25,13 @@ defineEmits<{ change: []; remove: [] }>()
 				<p v-if="subtitle" class="line-clamp-2 text-p-sm text-ink-gray-6">{{ subtitle }}</p>
 			</div>
 		</div>
-		<LocationMap class="h-44 rounded-5" :place-id="placeId" :title="title" />
+		<LocationMap
+			class="h-44 rounded-5"
+			:place-id="placeId"
+			:latitude="latitude"
+			:longitude="longitude"
+			:title="title"
+		/>
 		<div class="flex gap-2">
 			<Button
 				class="flex-1"

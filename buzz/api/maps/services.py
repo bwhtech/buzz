@@ -4,7 +4,9 @@ import frappe
 import requests
 
 from buzz.api.maps.exceptions import CannotAddVenues, PlaceSearchFailed, PlaceSearchNotEnabled
-from buzz.api.maps.schemas import PlacePrediction
+from buzz.api.maps.schemas import MapLinkLocation, PlacePrediction
+from buzz.events.doctype.event_venue.map_link import read_map_link
+from buzz.www.event.venue_map import google_maps_url
 
 AUTOCOMPLETE_URL = "https://places.googleapis.com/v1/places:autocomplete"
 DETAILS_URL = "https://places.googleapis.com/v1/places/{place_id}"
@@ -14,6 +16,17 @@ REQUEST_TIMEOUT_SECONDS = 5
 def place_search_enabled() -> bool:
 	settings = frappe.get_cached_doc("Buzz Settings")
 	return bool(settings.google_maps_enabled and settings.google_places_api_key)
+
+
+def locate_map_link(link: str) -> MapLinkLocation:
+	"""Read a pasted map link the way saving a venue would, without saving anything."""
+	if not frappe.has_permission("Event Venue", "create"):
+		CannotAddVenues.throw()
+	if embed_url := google_maps_url(link):
+		return MapLinkLocation(embed_url=embed_url)
+	place = read_map_link(link)
+	latitude, longitude = place.coordinates or (None, None)
+	return MapLinkLocation(latitude=latitude, longitude=longitude, name=place.name, address=place.address)
 
 
 class GooglePlaces:
