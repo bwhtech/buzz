@@ -55,8 +55,9 @@ def has_started(event) -> bool:
 
 
 def has_ended(event) -> bool:
+	# A one-day event leaves `end_date` blank, and getdate(None) would read it as today.
 	return datetime.combine(
-		getdate(event.end_date), get_time(event.end_time)
+		getdate(event.end_date or event.start_date), get_time(event.end_time)
 	) < current_time_in_event_timezone(event)
 
 
