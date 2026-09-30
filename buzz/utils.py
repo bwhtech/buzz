@@ -186,9 +186,11 @@ def generate_ics_file(event_doc, attendee_email: str):
 		"Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "email_id"
 	)
 
-	venue_address = ""
-	if event_doc.venue:
-		venue_address = frappe.db.get_value("Event Venue", event_doc.venue, "address") or ""
+	# A venue added from a map link may have no address; its name still says where.
+	venue = event_doc.venue and frappe.db.get_value(
+		"Event Venue", event_doc.venue, ["venue_name", "address"], as_dict=True
+	)
+	venue_address = (venue.address or venue.venue_name) if venue else ""
 
 	context = {
 		"uid": uuid4(),

@@ -28,6 +28,12 @@
   "login_tab",
   "login_banner_section",
   "login_banner",
+  "map_integration_tab",
+  "google_maps_section",
+  "google_maps_enabled",
+  "column_break_google_maps",
+  "google_places_api_key",
+  "google_maps_embed_api_key",
   "communications_tab",
   "ticketing_emails_section",
   "default_ticket_email_template",
@@ -255,13 +261,48 @@
    "fieldname": "success_section",
    "fieldtype": "Section Break",
    "label": "Success"
+  },
+  {
+   "fieldname": "map_integration_tab",
+   "fieldtype": "Tab Break",
+   "label": "Map Integration"
+  },
+  {
+   "fieldname": "google_maps_section",
+   "fieldtype": "Section Break",
+   "label": "Google Maps"
+  },
+  {
+   "default": "0",
+   "description": "Search Google Maps when adding a venue, and show a Google map on event pages.",
+   "fieldname": "google_maps_enabled",
+   "fieldtype": "Check",
+   "label": "Enable Google Maps"
+  },
+  {
+   "depends_on": "eval:doc.google_maps_enabled",
+   "description": "Secret key for place search. In Google Cloud Console enable Places API (New) and restrict this key to it. It is only used from the server.",
+   "fieldname": "google_places_api_key",
+   "fieldtype": "Password",
+   "label": "Places API Key"
+  },
+  {
+   "fieldname": "column_break_google_maps",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.google_maps_enabled",
+   "description": "Public key for the map on event pages. In Google Cloud Console enable Maps Embed API and restrict this key to it and to this site's address (HTTP referrer).",
+   "fieldname": "google_maps_embed_api_key",
+   "fieldtype": "Data",
+   "label": "Maps Embed API Key"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-25 12:00:00.000000",
+ "modified": "2026-09-30 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",

@@ -357,7 +357,7 @@ class TestGetEvent(IntegrationTestCase):
 		venue = frappe.get_doc(
 			{
 				"doctype": "Event Venue",
-				"name": "Get Event Venue",
+				"venue_name": "Get Event Venue",
 				"address": "12 Example Street",
 				"team": self.team,
 			}

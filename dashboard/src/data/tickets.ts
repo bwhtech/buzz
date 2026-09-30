@@ -4,8 +4,8 @@ import { session } from "@/data/session"
 import { userResource } from "@/data/user"
 import type { TicketDetails, TicketStub } from "@/types"
 
-// Everything the printed ticket shows lives on the ticket or one link hop away,
-// so the standard list call covers it without a whitelisted endpoint.
+// Everything the printed ticket shows, bar the venue, lives on the ticket or one link hop
+// away, so the standard list call covers it without a whitelisted endpoint.
 export function useMyTickets(event: () => string) {
 	return useList<TicketStub>({
 		doctype: "Event Ticket",
@@ -20,7 +20,6 @@ export function useMyTickets(event: () => string) {
 			"event.start_date",
 			"event.end_date",
 			"event.start_time",
-			"event.venue",
 		],
 		// Tickets are held by email address, which is the session id for everyone
 		// except Administrator — hence the account email first.

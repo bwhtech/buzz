@@ -109,7 +109,7 @@ class CheckinService:
 			attendee_email=self.ticket.attendee_email,
 			event_title=self.event.title,
 			ticket_type=ticket_type or self.ticket.ticket_type,
-			venue=self.event.venue,
+			venue=self.event.get_venue_name(),
 			start_date=self.event.start_date,
 			start_time=self.event.start_time,
 			end_date=self.event.end_date,

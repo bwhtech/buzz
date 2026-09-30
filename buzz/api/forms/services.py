@@ -118,7 +118,7 @@ class CustomFormService:
 			end_time=event.end_time,
 			time_zone=event.time_zone,
 			time_zone_label=event.time_zone_label,
-			venue=event.venue,
+			venue=event.get_venue_name(),
 			medium=event.medium,
 			short_description=event.short_description,
 		)

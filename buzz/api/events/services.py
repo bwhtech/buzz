@@ -56,6 +56,7 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 	event = frappe.qb.DocType("Buzz Event")
 	ticket = frappe.qb.DocType("Event Ticket")
 	team = frappe.qb.DocType("Buzz Team")
+	venue = frappe.qb.DocType("Event Venue")
 
 	hosted = event.team.isin(my_teams(user))
 	ticketed = event.name.isin(
@@ -69,6 +70,8 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 		# Left join: an event predating the team backfill still belongs in the feed.
 		.left_join(team)
 		.on(team.name == event.team)
+		.left_join(venue)
+		.on(venue.name == event.venue)
 		.select(
 			event.name,
 			event.title,
@@ -77,7 +80,7 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 			event.end_date,
 			event.start_time,
 			event.end_time,
-			event.venue,
+			venue.venue_name.as_("venue"),
 			event.medium,
 			event.banner_image,
 			event.team,
@@ -379,7 +382,7 @@ def event_guests(
 		start_date=doc.start_date,
 		start_time=doc.start_time,
 		end_date=doc.end_date,
-		venue=doc.venue,
+		venue=doc.get_venue_name(),
 		total=total,
 		matched=matched,
 		registrations_closed=are_registrations_closed(doc),

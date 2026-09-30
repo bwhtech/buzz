@@ -29,6 +29,9 @@ class BuzzSettings(Document):
 		event_proposal_banner_title: DF.Data | None
 		event_proposal_success_message: DF.MarkdownEditor | None
 		event_proposal_success_title: DF.Data | None
+		google_maps_embed_api_key: DF.Data | None
+		google_maps_enabled: DF.Check
+		google_places_api_key: DF.Password | None
 		login_banner: DF.MarkdownEditor | None
 		show_hosting_banner: DF.Check
 		support_email: DF.Data | None

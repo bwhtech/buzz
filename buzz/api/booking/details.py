@@ -71,7 +71,7 @@ def get_confirmation_venue(venue_id: str | None) -> ConfirmationVenue | None:
 	if not venue_id:
 		return None
 	venue_doc = frappe.get_cached_doc("Event Venue", venue_id)
-	return ConfirmationVenue(name=venue_doc.name, address=venue_doc.get("address"))
+	return ConfirmationVenue(venue_name=venue_doc.venue_name, address=venue_doc.get("address"))
 
 
 def build_booking_details(booking_id: str) -> BookingDetailsResponse:

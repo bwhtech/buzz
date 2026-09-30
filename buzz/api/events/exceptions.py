@@ -21,3 +21,8 @@ class CannotCreateEvents(NotPermitted):
 class ZoomNotAvailable(BuzzAPIError):
 	title = _lt("Zoom Not Available")
 	message = _lt("Zoom is not set up on this site, so a Zoom meeting cannot be created.")
+
+
+class EventEnded(BuzzAPIError):
+	title = _lt("Event Has Ended")
+	message = _lt("You cannot convert events that have ended to Zoom meetings.")

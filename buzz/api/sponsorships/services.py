@@ -99,7 +99,7 @@ class SponsorshipService:
 			about=event.about,
 			start_date=event.start_date,
 			end_date=event.end_date,
-			venue=event.venue,
+			venue=event.get_venue_name(),
 			route=event.route,
 		)
 

@@ -43,6 +43,7 @@ GUEST_EVENT_DETAIL_FIELDS = {
 	"time_zone",
 	"time_zone_label",
 	"venue",
+	"venue_name",
 	"medium",
 	"category",
 	"banner_image",

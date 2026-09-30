@@ -505,11 +505,11 @@
    "label": "Card Image"
   },
   {
+   "description": "Look of this event's public page. Leave empty to use the default from Buzz Settings.",
    "fieldname": "theme",
    "fieldtype": "Link",
    "label": "Theme",
-   "options": "Buzz Theme",
-   "description": "Look of this event's public page. Leave empty to use the default from Buzz Settings."
+   "options": "Buzz Theme"
   },
   {
    "default": "1",
@@ -667,7 +667,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-09-25 12:00:00.000000",
+ "modified": "2026-10-01 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

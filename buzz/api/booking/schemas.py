@@ -73,7 +73,7 @@ class ConfirmationEvent(APIResponse):
 
 
 class ConfirmationVenue(APIResponse):
-	name: Any
+	venue_name: str | None
 	address: str | None
 
 
@@ -177,3 +177,18 @@ class BookingSummary(APIResponse):
 	tax_label: str | None
 	tax_percentage: float
 	total_amount: float
+
+
+class MyBooking(APIResponse):
+	name: str
+	event: str | None
+	event_title: str | None
+	start_date: date | None
+	venue: str | None
+	docstatus: int
+	total_amount: float
+	currency: str | None
+	creation: datetime
+	status: str | None
+	# Only counted by the list; each row is a plain ticket_type pair.
+	attendees: list

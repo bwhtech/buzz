@@ -2,15 +2,32 @@ import html
 import re
 from urllib.parse import urlencode, urlparse
 
+import frappe
+
 GOOGLE_MAPS_HOSTS = {"www.google.com", "maps.google.com"}
 IFRAME_SOURCE = re.compile(r"""src\s*=\s*["']([^"']+)["']""", re.IGNORECASE)
+GOOGLE_PLACE_EMBED_URL = "https://www.google.com/maps/embed/v1/place"
 MAP_SPAN_DEGREES = 0.01
 
 
 def venue_map_url(venue) -> str | None:
+	if place_url := google_place_url(venue.google_place_id):
+		return place_url
 	if venue.type == "Embed Google Maps":
 		return google_maps_url(venue.google_maps_embed_code)
 	return open_street_map_url(venue.latitude, venue.longitude)
+
+
+def google_maps_embed_api_key() -> str | None:
+	settings = frappe.get_cached_doc("Buzz Settings")
+	return (settings.google_maps_enabled and settings.google_maps_embed_api_key) or None
+
+
+def google_place_url(place_id: str | None) -> str | None:
+	key = google_maps_embed_api_key()
+	if not (place_id and key):
+		return None
+	return f"{GOOGLE_PLACE_EMBED_URL}?{urlencode({'key': key, 'q': f'place_id:{place_id}'})}"
 
 
 def google_maps_url(embed_code: str | None) -> str | None:
