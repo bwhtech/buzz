@@ -24,6 +24,12 @@ from buzz.www.site_header import apply_site_context
 
 no_cache = 1
 RANGE_SEPARATOR = " \u2013 "
+MEETING_PLATFORMS = {
+	"zoom.us": "Zoom",
+	"meet.google.com": "Google Meet",
+	"teams.microsoft.com": "Microsoft Teams",
+	"teams.live.com": "Microsoft Teams",
+}
 
 
 def get_context(context):
@@ -99,11 +105,32 @@ class EventPage:
 			"speakers": self.speakers,
 			"sponsor_tiers": self.sponsor_tiers,
 			"venue": self.venue(),
+			"online_label": self.online_label(),
 			"register_url": registration_link(self.event),
 			"registrations_closed": are_registrations_closed(self.event),
 		}
 		meta = EventMeta(self.event, self.page, context)
 		return context | {"meta": meta.as_dict(), "structured_data": meta.structured_data()}
+
+	def online_label(self) -> str | None:
+		if self.event.medium != "Online":
+			return None
+		platform = self.meeting_platform()
+		return _("Online on {0}").format(platform) if platform else _("Online")
+
+	def meeting_platform(self) -> str | None:
+		# Only the service is named; the link itself goes to guests once they register.
+		if self.event.get("zoom_meeting") or self.event.get("zoom_webinar"):
+			return "Zoom"
+		host = urlparse(self.event.meeting_link or "").hostname or ""
+		return next(
+			(
+				name
+				for domain, name in MEETING_PLATFORMS.items()
+				if host == domain or host.endswith(f".{domain}")
+			),
+			None,
+		)
 
 	def tabs(self) -> list[dict]:
 		sections = [

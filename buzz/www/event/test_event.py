@@ -268,6 +268,16 @@ class TestEventPage(IntegrationTestCase):
 		data = EventPage("public-page-event").as_context()["structured_data"]
 		self.assertEqual(data["location"], {"@type": "VirtualLocation", "url": data["url"]})
 
+	def test_online_event_names_the_platform_but_never_shows_the_link(self):
+		link = "https://us02web.zoom.us/j/123?pwd=secret"
+		frappe.db.set_value("Buzz Event", self.event, {"medium": "Online", "meeting_link": link})
+
+		self.assertEqual(EventPage("public-page-event").as_context()["online_label"], "Online on Zoom")
+		self.assertNotIn("zoom.us", render("public-page-event"))
+
+		frappe.db.set_value("Buzz Event", self.event, "meeting_link", "https://notzoom.us.example/j/1")
+		self.assertEqual(EventPage("public-page-event").as_context()["online_label"], "Online")
+
 	def test_no_offer_when_registrations_are_closed(self):
 		frappe.db.set_value("Buzz Event", self.event, "registrations_close_at", "2000-01-01 00:00:00")
 		self.assertNotIn("offers", EventPage("public-page-event").as_context()["structured_data"])

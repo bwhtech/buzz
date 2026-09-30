@@ -579,6 +579,23 @@ body {
 	color: var(--ink-muted);
 	font-size: 13px;
 	white-space: pre-line;
+	text-wrap: pretty;
+}
+
+.online-place {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.online-place .icon {
+	flex-shrink: 0;
+	color: var(--ink-muted);
+}
+
+/* Hangs the note under the label text, clear of the icon (16px) and the gap (8px). */
+.online-place + .aside-note {
+	padding-left: 24px;
 }
 
 .date-row {
