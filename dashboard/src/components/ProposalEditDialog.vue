@@ -68,6 +68,7 @@ import {
 	richTextExtensions as editorExtensions,
 	richTextToolbar as editorToolbar,
 } from "@/utils/richTextEditor"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps({
 	open: {
@@ -122,7 +123,7 @@ const updateResource = useCall<unknown, Record<string, string>>({
 		const message = props.eventTalkId
 			? __("Failed to update talk")
 			: __("Failed to update proposal")
-		toast.error(error.message || message)
+		toast.error(serverErrorMessage(error) || message)
 	},
 })
 

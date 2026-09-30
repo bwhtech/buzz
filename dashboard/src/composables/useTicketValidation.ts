@@ -4,6 +4,7 @@ import { type Ref, ref } from "vue"
 import beepFailSound from "@/assets/audio/beep-fail.wav"
 import beepSound from "@/assets/audio/beep.wav"
 import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
+import { serverErrorMessage } from "@/utils/serverError"
 
 interface ValidationTicket {
 	id: string
@@ -102,7 +103,7 @@ const validateTicketResource = useCall<ValidationResult, { ticket_id: string }>(
 	onError: (error) => {
 		validationResult.value = null
 		isProcessingTicket.value = false
-		showDebouncedToast(error.message || __("Error validating ticket"))
+		showDebouncedToast(serverErrorMessage(error) || __("Error validating ticket"))
 		playErrorSound()
 	},
 })
@@ -119,7 +120,7 @@ const checkInResource = useCall<ValidationResult, { ticket_id: string }>({
 	},
 	onError: (error) => {
 		isCheckingIn.value = false
-		showDebouncedToast(error.message || __("Check-in failed"))
+		showDebouncedToast(serverErrorMessage(error) || __("Check-in failed"))
 		playErrorSound()
 	},
 })

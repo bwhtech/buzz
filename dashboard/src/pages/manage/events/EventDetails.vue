@@ -20,6 +20,7 @@ import type { EventDetail } from "@/types"
 import { isEndBeforeStart } from "@/utils/eventDates"
 import { matches } from "@/utils/formDraft"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const route = useRoute()
 const eventId = route.params.eventId as string
@@ -138,7 +139,7 @@ function discard() {
 	if (event.data) fill(event.data)
 }
 
-const errorMessage = ref("")
+const errorMessage = computed(() => serverErrorMessage(updateEvent.error))
 
 async function save() {
 	if (!canSave.value || updateEvent.loading) return
@@ -149,13 +150,8 @@ async function save() {
 	)
 	const submitted = { ...form }
 
-	errorMessage.value = ""
-	try {
-		await updateEvent.submit({ name: eventId, ...fields })
-	} catch (error) {
-		errorMessage.value = (error as Error).message
-		return
-	}
+	await updateEvent.submit({ name: eventId, ...fields }).catch(() => null)
+	if (updateEvent.error) return
 
 	// What the server now holds, not what the form holds — an edit made while the save
 	// was in flight is still unsaved, and the baseline has to say so.

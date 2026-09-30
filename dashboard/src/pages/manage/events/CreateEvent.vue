@@ -24,6 +24,7 @@ import { defaultSchedule } from "@/utils/eventDates"
 import type { ChecklistItem } from "@/utils/eventValidation"
 import { eventDraftChecklist, isDraftComplete } from "@/utils/eventValidation"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
+import { serverErrorMessage } from "@/utils/serverError"
 import { canCreateEvents } from "@/utils/teamRoles"
 import { currentTimeZone } from "@/utils/timeZones"
 
@@ -64,7 +65,7 @@ const draft = computed(() => ({
 
 const checklist = computed(() => eventDraftChecklist(draft.value))
 
-const errorMessage = computed(() => createEvent.error?.message)
+const errorMessage = computed(() => serverErrorMessage(createEvent.error))
 
 const isDirty = computed(() =>
 	Boolean(

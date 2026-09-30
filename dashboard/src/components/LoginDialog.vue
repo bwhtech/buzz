@@ -208,6 +208,7 @@ import { useLoginDialog } from "@/composables/useLoginDialog"
 import { session } from "@/data/session"
 import { userResource } from "@/data/user"
 import type { FrappeError } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 
 type LoginView = "login" | "signup" | "forgot-password" | "email-link"
 
@@ -370,7 +371,7 @@ function handleEmailLink() {
 }
 
 function showError(error: Error) {
-	error_message.value = error.message || __("Something went wrong. Please try again.")
+	error_message.value = serverErrorMessage(error) || __("Something went wrong. Please try again.")
 }
 
 watch(is_open, (value) => {

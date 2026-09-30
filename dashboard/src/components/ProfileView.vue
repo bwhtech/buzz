@@ -68,6 +68,7 @@ import LucideCamera from "~icons/lucide/camera"
 import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
 import type { UserInfo } from "@/types"
 import { validateIsImageFile } from "@/utils"
+import { serverErrorMessage } from "@/utils/serverError"
 
 import { userResource } from "../data/user"
 
@@ -90,7 +91,7 @@ const setUser = useCall<unknown, Partial<UserInfo>>({
 		toast.success(__("Profile updated successfully"))
 	},
 	onError: (err) => {
-		error.value = err.message || __("Failed to update profile")
+		error.value = serverErrorMessage(err) || __("Failed to update profile")
 	},
 })
 

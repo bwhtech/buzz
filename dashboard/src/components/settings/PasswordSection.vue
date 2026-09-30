@@ -2,6 +2,7 @@
 import { Button, toast, useCall } from "frappe-ui"
 
 import { userResource } from "@/data/user"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const resetPassword = useCall<unknown, { user?: string }>({
 	url: "/api/v2/method/frappe.core.doctype.user.user.reset_password",
@@ -11,7 +12,7 @@ const resetPassword = useCall<unknown, { user?: string }>({
 		toast.success(__("Password reset link sent to your email"))
 	},
 	onError(error) {
-		toast.error(error.message || __("Could not send the password reset link"))
+		toast.error(serverErrorMessage(error) || __("Could not send the password reset link"))
 	},
 })
 

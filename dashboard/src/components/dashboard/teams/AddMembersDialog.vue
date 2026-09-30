@@ -4,6 +4,7 @@ import { computed, nextTick, ref, watch } from "vue"
 
 import { inviteMembers } from "@/data/teams"
 import type { InviteOutcome } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 import { ASSIGNABLE_TEAM_ROLES } from "@/utils/teamRoles"
 
 const DEFAULT_ROLE = "Manager"
@@ -139,15 +140,17 @@ async function submit() {
 	showErrors.value = true
 	if (!filled.value.length || invalid.value.length) return
 
-	const outcomes = await inviteMembers.submit({
-		team: props.team,
-		invites: filled.value.map((row) => ({
-			email: row.email.trim(),
-			team_role: row.team_role,
-		})),
-	})
+	const outcomes = await inviteMembers
+		.submit({
+			team: props.team,
+			invites: filled.value.map((row) => ({
+				email: row.email.trim(),
+				team_role: row.team_role,
+			})),
+		})
+		.catch(() => null)
 
-	errorMessage.value = inviteMembers.error?.message ?? ""
+	errorMessage.value = serverErrorMessage(inviteMembers.error)
 	if (inviteMembers.error) return
 
 	report(outcomes ?? [])

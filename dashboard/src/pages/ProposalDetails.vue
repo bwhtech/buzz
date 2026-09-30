@@ -151,7 +151,7 @@
 
 	<div v-else-if="proposal.error" class="text-center py-8">
 		<ErrorMessage class="mb-2" :message="__('Error loading proposal details')" />
-		<div class="text-ink-gray-4 text-sm">{{ proposal.error.message }}</div>
+		<div class="text-ink-gray-4 text-sm">{{ serverErrorMessage(proposal.error) }}</div>
 	</div>
 
 	<!-- Edit Dialog -->
@@ -181,6 +181,7 @@ import LucideXCircle from "~icons/lucide/x-circle"
 import BackButton from "@/components/common/BackButton.vue"
 import ProposalEditDialog from "@/components/ProposalEditDialog.vue"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps({
 	proposalId: {

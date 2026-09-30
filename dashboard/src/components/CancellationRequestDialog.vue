@@ -182,6 +182,7 @@ import { type PropType, computed, ref, watch } from "vue"
 
 import type { DashboardTicket } from "@/types"
 import { pluralize } from "@/utils/pluralize"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps({
 	modelValue: {
@@ -275,7 +276,9 @@ const createCancellationRequest = useCall<unknown, { booking_id: string; ticket_
 	},
 	onError: (error) => {
 		submitting.value = false
-		toast.error(error.message || __("Failed to submit cancellation request. Please try again."))
+		toast.error(
+			serverErrorMessage(error) || __("Failed to submit cancellation request. Please try again."),
+		)
 	},
 })
 

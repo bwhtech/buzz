@@ -13,6 +13,7 @@ import { computed, ref, watch } from "vue"
 
 import ThemeSwitcher from "@/components/settings/ThemeSwitcher.vue"
 import { userResource } from "@/data/user"
+import { serverErrorMessage } from "@/utils/serverError"
 import {
 	allTimeZones,
 	currentTimeZone,
@@ -61,7 +62,7 @@ const saveTimeZone = useCall<unknown, { time_zone: string }>({
 		toast.success(__("Preferences updated"))
 	},
 	onError(error) {
-		saveError.value = error.message || __("Could not update your time zone")
+		saveError.value = serverErrorMessage(error) || __("Could not update your time zone")
 	},
 })
 

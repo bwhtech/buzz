@@ -88,6 +88,7 @@ import CustomFieldInput from "@/components/CustomFieldInput.vue"
 import FormFieldSections from "@/components/FormFieldSections.vue"
 import LoginRequired from "@/components/LoginRequired.vue"
 import type { FrappeField } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 
 interface ProposalFormData {
 	success_message?: string
@@ -128,7 +129,7 @@ const form_data_resource = useCall<ProposalFormData>({
 			login_required.value = true
 			return
 		}
-		load_error.value = err.message || __("Form not found")
+		load_error.value = serverErrorMessage(err) || __("Form not found")
 	},
 })
 
@@ -140,7 +141,7 @@ const submit_resource = useCall<unknown, { data: Record<string, unknown> }>({
 		submitted.value = true
 	},
 	onError: (err) => {
-		toast.error(err.message || __("Failed to submit proposal"))
+		toast.error(serverErrorMessage(err) || __("Failed to submit proposal"))
 	},
 })
 

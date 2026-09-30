@@ -55,6 +55,8 @@
 import { Button, Dialog, FormControl, toast, useCall } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
+import { serverErrorMessage } from "@/utils/serverError"
+
 const props = defineProps({
 	modelValue: {
 		type: Boolean,
@@ -91,7 +93,7 @@ const transferResource = useCall<unknown, Record<string, string>>({
 		emit("success")
 	},
 	onError: (error) => {
-		toast.error(`${__("Failed to transfer ticket")}: ${error.message}`)
+		toast.error(`${__("Failed to transfer ticket")}: ${serverErrorMessage(error)}`)
 	},
 })
 

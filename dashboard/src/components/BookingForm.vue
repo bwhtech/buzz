@@ -434,6 +434,7 @@ import {
 } from "@/utils/bookingSuccessRedirect"
 import { formatCurrency, formatPriceOrFree } from "@/utils/currency"
 import { clearBookingCache } from "@/utils/index"
+import { serverErrorMessage } from "@/utils/serverError"
 import { isZoomBackedCategory } from "@/utils/zoomCategory"
 
 import AttendeeFormControl from "./AttendeeFormControl.vue"
@@ -1000,7 +1001,7 @@ const sendOtpResource = useCall<unknown, { event: string; identifier: string }>(
 		)
 	},
 	onError: (error) => {
-		const message = error.message || __("Failed to send verification code")
+		const message = serverErrorMessage(error) || __("Failed to send verification code")
 		// Under the field, not in a toast the user has to remember while retyping.
 		if (isPhoneOtp.value) {
 			guestPhoneError.value = message
@@ -1046,7 +1047,7 @@ async function applyCoupon() {
 	}
 	const result = await validateCoupon.submit(params).catch(() => null)
 	if (validateCoupon.error || !result) {
-		couponError.value = validateCoupon.error?.message || __("Failed to validate coupon")
+		couponError.value = serverErrorMessage(validateCoupon.error) || __("Failed to validate coupon")
 		return
 	}
 
@@ -1311,7 +1312,7 @@ async function submitBooking(
 		.catch(() => null)
 
 	if (processBooking.error || !data) {
-		onBookingFailed(processBooking.error?.message || __("Booking failed"), isOtpFlow)
+		onBookingFailed(serverErrorMessage(processBooking.error) || __("Booking failed"), isOtpFlow)
 		return
 	}
 

@@ -281,7 +281,7 @@
 
 	<div v-else-if="enquiryDetails.error" class="text-center py-8">
 		<ErrorMessage class="mb-2" message="Error loading sponsorship details" />
-		<div class="text-ink-gray-4 text-sm">{{ enquiryDetails.error.message }}</div>
+		<div class="text-ink-gray-4 text-sm">{{ serverErrorMessage(enquiryDetails.error) }}</div>
 	</div>
 
 	<!-- Payment Dialog -->
@@ -322,6 +322,7 @@ import LucideClock from "~icons/lucide/clock"
 import LucideXCircle from "~icons/lucide/x-circle"
 
 import { usePaymentSuccess } from "@/composables/usePaymentSuccess"
+import { serverErrorMessage } from "@/utils/serverError"
 
 import BackButton from "../components/common/BackButton.vue"
 import SponsorshipPaymentDialog from "../components/SponsorshipPaymentDialog.vue"
@@ -357,7 +358,7 @@ const withdrawResource = useCall<unknown, { enquiry_id: string }>({
 		enquiryDetails.reload()
 	},
 	onError: (error) => {
-		toast.error(error.message || "Failed to withdraw inquiry")
+		toast.error(serverErrorMessage(error) || "Failed to withdraw inquiry")
 		showWithdrawDialog.value = false
 	},
 })

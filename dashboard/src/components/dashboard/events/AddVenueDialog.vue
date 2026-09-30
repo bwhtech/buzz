@@ -3,6 +3,7 @@ import { Button, Dialog, FormControl, toast } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import { createVenue } from "@/data/venues"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps<{ team: string }>()
 const isOpen = defineModel<boolean>({ required: true })
@@ -38,7 +39,7 @@ async function submit() {
 			address: address.value.trim(),
 		})
 	} catch (error) {
-		errorMessage.value = (error as Error).message
+		errorMessage.value = serverErrorMessage(error)
 		return
 	}
 

@@ -60,6 +60,8 @@ import { computed, ref } from "vue"
 import LucideCheckCircle from "~icons/lucide/check-circle"
 import LucideXCircle from "~icons/lucide/x-circle"
 
+import { serverErrorMessage } from "@/utils/serverError"
+
 interface Campaign {
 	title?: string
 	description?: string
@@ -90,7 +92,7 @@ const campaignResource = useCall<Campaign, { campaign: string }>({
 		campaignDoc.value = data
 	},
 	onError: (err) => {
-		error.value = err.message || __("Campaign not found or not active")
+		error.value = serverErrorMessage(err) || __("Campaign not found or not active")
 	},
 })
 
@@ -103,7 +105,7 @@ const registerResource = useCall<unknown, { campaign: string }>({
 		errorMessage.value = null
 	},
 	onError: (err) => {
-		errorMessage.value = err.message || __("Failed to register interest")
+		errorMessage.value = serverErrorMessage(err) || __("Failed to register interest")
 	},
 })
 
