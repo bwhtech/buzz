@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Button, FormControl, Tooltip } from "frappe-ui"
-import { computed, ref } from "vue"
+import { computed, onMounted, ref, useTemplateRef } from "vue"
 
 import type { LocationPicker } from "@/components/dashboard/events/location/useLocationPicker"
 import { type MapLinkLocation, useMapLinkLocation } from "@/data/venues"
@@ -14,6 +14,10 @@ const emit = defineEmits<{
 }>()
 
 const mapLink = ref("")
+
+// The name arrives filled in from the search, so typing starts at the map link.
+const form = useTemplateRef<HTMLFormElement>("form")
+onMounted(() => form.value?.querySelector("input")?.focus())
 const venueName = ref(props.suggestedName ?? "")
 const address = ref("")
 const isSaving = ref(false)
@@ -51,7 +55,7 @@ async function save() {
 </script>
 
 <template>
-	<form novalidate class="flex flex-col gap-4" @submit.prevent="save">
+	<form ref="form" novalidate class="flex flex-col gap-4" @submit.prevent="save">
 		<FormControl
 			v-model="mapLink"
 			label="Map link"

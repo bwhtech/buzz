@@ -5,7 +5,7 @@ import type { LocationPicker } from "@/components/dashboard/events/location/useL
 import type { PlacePrediction, Venue } from "@/data/venues"
 
 defineProps<{ picker: LocationPicker; activeKey?: string }>()
-defineEmits<{ venue: [venue: Venue]; place: [place: PlacePrediction] }>()
+defineEmits<{ venue: [venue: Venue]; place: [place: PlacePrediction]; manual: [] }>()
 </script>
 
 <template>
@@ -37,20 +37,20 @@ defineEmits<{ venue: [venue: Venue]; place: [place: PlacePrediction] }>()
 				@click="$emit('place', place)"
 			/>
 		</section>
+		<!-- Shown as the active row because Enter in the search box takes it. -->
+		<LocationRow
+			v-if="picker.isUnmatched"
+			icon="lucide-map-pin-plus"
+			:title="`Add “${picker.query.trim()}” manually`"
+			subtitle="No venue matches. Press Enter to add it."
+			active
+			@click="$emit('manual')"
+		/>
 		<p
-			v-if="
-				!picker.savedVenues.length &&
-				!picker.places.length &&
-				!picker.isSearching &&
-				!picker.isLoadingVenues
-			"
+			v-else-if="!picker.savedVenues.length && !picker.isSearching && !picker.isLoadingVenues"
 			class="px-2 py-6 text-center text-p-sm text-ink-gray-5"
 		>
-			{{
-				picker.query
-					? "No venue matches. Add it manually instead."
-					: "No venues yet. Search for a place."
-			}}
+			No venues yet. Search for a place, or type a name to add one.
 		</p>
 	</div>
 </template>

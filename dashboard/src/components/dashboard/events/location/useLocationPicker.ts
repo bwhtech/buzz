@@ -47,8 +47,20 @@ export function useLocationPicker(team: () => string, isOpen: Ref<boolean>) {
 		return saved.name
 	}
 
+	// Something is typed and nothing answers to it, so adding it by hand is the only move
+	// left. Not while a list is still arriving: an empty list is not an answer yet.
+	const isUnmatched = computed(
+		() =>
+			Boolean(query.value.trim()) &&
+			!savedVenues.value.length &&
+			!placeSearch.places.length &&
+			!placeSearch.isSearching &&
+			!(venues.loading && !venues.data),
+	)
+
 	return reactive({
 		query,
+		isUnmatched,
 		savedVenues,
 		places: computed(() => placeSearch.places),
 		isSearching: computed(() => placeSearch.isSearching),

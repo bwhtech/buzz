@@ -113,14 +113,19 @@ function pickZoom() {
 				<ManualVenueForm
 					v-if="isAddingManually"
 					:picker="picker"
-					:suggested-name="picker.query"
+					:suggested-name="picker.query.trim()"
 					@saved="pick"
 					@cancel="isAddingManually = false"
 					@locating="isLocating = true"
 					@located="showManualLocation"
 				/>
 				<div v-else class="flex min-h-0 flex-col gap-3">
-					<TextInput v-model="picker.query" placeholder="Search a venue or a place" autofocus>
+					<TextInput
+						v-model="picker.query"
+						placeholder="Search a venue or a place"
+						autofocus
+						@keydown.enter.prevent="picker.isUnmatched && addManually()"
+					>
 						<template #prefix>
 							<span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true" />
 						</template>
@@ -134,6 +139,7 @@ function pickZoom() {
 							:class="isSaving && 'opacity-60'"
 							@venue="previewVenue"
 							@place="previewPlace"
+							@manual="addManually"
 						/>
 					</ScrollArea>
 					<ErrorMessage :message="picker.error" />
