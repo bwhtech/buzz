@@ -17,7 +17,7 @@ const form = useDoc<{ name: string }, { setClosed: (params: { closed: boolean })
 })
 const setClosed = form.setClosed
 
-const errorMessage = computed(() => (setClosed.error as FrappeError | null)?.messages?.join("\n"))
+const errorMessage = computed(() => (setClosed.error as FrappeError | null)?.message)
 
 watch(isOpen, (open) => open && setClosed.reset())
 

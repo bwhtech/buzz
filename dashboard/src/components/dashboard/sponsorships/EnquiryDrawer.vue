@@ -51,7 +51,7 @@ watch(
 )
 
 const loaded = computed(() => (detail.data?.name === props.enquiry ? detail.data : null))
-const errorMessage = computed(() => (detail.error as FrappeError | null)?.messages?.join("\n"))
+const errorMessage = computed(() => (detail.error as FrappeError | null)?.message)
 
 // Seeded from what is stored, so a failed write leaves the control telling the truth.
 const status = ref("")
@@ -103,7 +103,7 @@ async function save() {
 	confirming.value = false
 	if (update.error) {
 		status.value = loaded.value?.status || ""
-		const reason = (update.error as FrappeError | null)?.messages?.[0]
+		const reason = (update.error as FrappeError | null)?.message
 		toast.error(reason || "Could not change the status")
 		return
 	}

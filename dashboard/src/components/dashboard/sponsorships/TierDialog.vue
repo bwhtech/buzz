@@ -30,7 +30,7 @@ const selectedCurrency = computed(() =>
 )
 
 const invalid = computed(() => !title.value.trim() || !(price.value >= 0))
-const errorMessage = computed(() => (creator.error as FrappeError | null)?.messages?.join("\n"))
+const errorMessage = computed(() => (creator.error as FrappeError | null)?.message)
 
 watch(isOpen, (open) => open && reset())
 

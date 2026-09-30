@@ -52,7 +52,7 @@ function openSent(row: CommunicationItem) {
 }
 
 const sender = useSendCommunication()
-const message = (error: unknown) => (error as FrappeError | null)?.messages?.join("\n")
+const message = (error: unknown) => (error as FrappeError | null)?.message
 
 async function send() {
 	try {

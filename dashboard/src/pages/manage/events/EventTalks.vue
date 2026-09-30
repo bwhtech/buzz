@@ -89,7 +89,7 @@ const barFilters = computed<FilterValues>({
 
 const trend = useProposalTrend(eventId)
 
-const message = (error: unknown) => (error as FrappeError | null)?.messages?.join("\n")
+const message = (error: unknown) => (error as FrappeError | null)?.message
 
 // echarts paints into a canvas, where a `var(--token)` never resolves, so the violet is
 // the palette's own 600 written out.
