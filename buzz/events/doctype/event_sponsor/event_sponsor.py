@@ -4,6 +4,8 @@
 import frappe
 from frappe.model.document import Document
 
+from buzz.utils import make_file_public
+
 
 class EventSponsor(Document):
 	# begin: auto-generated types
@@ -30,6 +32,7 @@ class EventSponsor(Document):
 			frappe.db.set_value("Sponsorship Enquiry", self.enquiry, "status", "Cancelled")
 
 	def validate(self):
+		self.company_logo = make_file_public(self.company_logo)
 		if not self.enquiry:
 			return
 

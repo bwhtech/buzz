@@ -9,7 +9,7 @@ from buzz import telemetry
 from buzz.emails import is_full_document, send_message_email
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.payments import mark_payment_as_received
-from buzz.utils import render_email_template
+from buzz.utils import make_file_public, render_email_template
 
 
 class SponsorshipEnquiry(Document):
@@ -36,6 +36,7 @@ class SponsorshipEnquiry(Document):
 			self.contact_email = self.contact_email.strip().lower()
 
 	def validate(self):
+		self.company_logo = make_file_public(self.company_logo)
 		if self.is_new() and self.enquiry_form and not self.contact_email:
 			frappe.throw(frappe._("Contact Email is required."), frappe.MandatoryError)
 		if self.enquiry_form and str(

@@ -296,3 +296,21 @@ def render_email_template(template_name: str, args: dict) -> dict:
 	user, which fails for the guest-facing booking and enquiry flows.
 	"""
 	return frappe.get_doc("Email Template", template_name).get_formatted_email(args)
+
+
+def make_file_public(file_url: str | None) -> str | None:
+	"""Move a private file to public and return its new URL, so guests can load it."""
+	if not (file_url or "").startswith("/private/"):
+		return file_url
+	name = frappe.db.get_value("File", {"file_url": file_url})
+	if not name:
+		return file_url
+	file = frappe.get_doc("File", name)
+	file.is_private = 0
+	try:
+		file.save(ignore_permissions=True)
+	except FileNotFoundError:
+		# The file is gone from disk; a broken logo must not block saving its document.
+		frappe.clear_last_message()
+		return file_url
+	return file.file_url
