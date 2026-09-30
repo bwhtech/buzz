@@ -1,7 +1,7 @@
-{#- Pass `meeting` (OnlineMeeting) and `kind` ("ticket" or "booking"). -#}
+{#- Pass `meeting` (OnlineMeeting) and `email_type` ("ticket" or "booking"). -#}
 {%- set cell_style = "padding:10px 0;border-bottom:1px solid #ededed;vertical-align:top;font-size:14px;line-height:20px" -%}
 {% if meeting.join_url %}
-{%- set header = email_event_header(event_doc) -%}
+{%- set event_header = email_event_header(event_doc) -%}
 <div style="font-size:15px;font-weight:600;color:#171717;margin:0 0 8px">How to join</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #ededed;margin:0 0 16px">
   <tr>
@@ -10,7 +10,7 @@
   </tr>
   <tr>
     <td style="{{ cell_style }};color:#7c7c7c">When</td>
-    <td style="{{ cell_style }};color:#171717">{{ frappe.utils.format_date(event_doc.start_date, "EEE, d MMM") }} · {{ header.start_time }}</td>
+    <td style="{{ cell_style }};color:#171717">{{ frappe.utils.format_date(event_doc.start_date, "EEE, d MMM") }} · {{ event_header.start_time }}</td>
   </tr>
   <tr>
     <td style="{{ cell_style }};color:#7c7c7c">Link</td>
@@ -20,10 +20,10 @@
   </tr>
 </table>
 <a href="{{ meeting.join_url | e }}" style="display:inline-block;background-color:#171717;color:#ffffff;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:600;text-decoration:none"><img src="{{ frappe.get_url('/assets/buzz/images/video-white.png') }}" alt="" width="16" height="16" style="display:inline-block;width:16px;height:16px;vertical-align:-3px;border:0" />&nbsp;&nbsp;Join {{ "on " ~ meeting.platform if meeting.platform else "the event" }}</a>
-{% if kind == "ticket" and event_doc.attach_calendar_invite %}
+{% if email_type == "ticket" and event_doc.attach_calendar_invite %}
 <p style="margin:12px 0 24px;font-size:12px;line-height:18px;color:#7c7c7c">The calendar invite attached to this email has the link too.</p>
 {% else %}<div style="height:24px"></div>{% endif %}
-{% elif meeting.platform and kind == "booking" %}
+{% elif meeting.platform and email_type == "booking" %}
 {#- A Zoom event whose links are per guest, so the booking email has none of its own. -#}
 <p style="margin:0 0 24px;font-size:14px;line-height:22px;color:#7c7c7c">
   {% if event_doc.send_ticket_email %}

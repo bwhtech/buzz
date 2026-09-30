@@ -200,12 +200,12 @@ def generate_ics_file(event_doc, attendee_email: str, meeting):
 		"timezone": event_doc.time_zone,
 		"start": start_dt.strftime("%Y%m%dT%H%M%S"),
 		"end": end_dt.strftime("%Y%m%dT%H%M%S"),
-		"title": ics_text(event_doc.title),
-		"location": ics_text(meeting.join_url or venue_address),
+		"title": escape_ics_text(event_doc.title),
+		"location": escape_ics_text(meeting.join_url or venue_address),
 		"conference_url": meeting.join_url,
 		"event_url": event_url,
 		"attendee_email": attendee_email,
-		"description": ics_text(ics_description(event_doc, meeting, event_url)),
+		"description": escape_ics_text(ics_description(event_doc, meeting, event_url)),
 		"organizer_name": organizer_name,
 		"organizer_email": organizer_email,
 	}
@@ -217,12 +217,12 @@ def generate_ics_file(event_doc, attendee_email: str, meeting):
 def ics_description(event_doc, meeting, event_url: str | None) -> str:
 	lines = [f"Your ticket for {event_doc.title}", event_url]
 	if meeting.join_url:
-		where = f"on {meeting.platform}" if meeting.platform else "online"
-		lines.insert(0, f"Join {where}: {meeting.join_url}\n")
+		platform_text = f"on {meeting.platform}" if meeting.platform else "online"
+		lines.insert(0, f"Join {platform_text}: {meeting.join_url}\n")
 	return "\n".join(line for line in lines if line)
 
 
-def ics_text(value: str | None) -> str:
+def escape_ics_text(value: str | None) -> str:
 	"""Escape a TEXT value per RFC 5545, so commas and line breaks in it stay inside it."""
 	value = (value or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
 	return value.replace("\r\n", "\\n").replace("\n", "\\n")

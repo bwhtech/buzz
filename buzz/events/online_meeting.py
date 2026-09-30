@@ -42,8 +42,8 @@ class OnlineMeeting:
 	def platform(self) -> str | None:
 		# The link decides; a linked Zoom session only names the platform when there is no link.
 		if not self.join_url:
-			zoom_session = self.event.get("zoom_meeting") or self.event.get("zoom_webinar")
-			return "Zoom" if self.is_online and zoom_session else None
+			has_zoom_session = bool(self.event.get("zoom_meeting") or self.event.get("zoom_webinar"))
+			return "Zoom" if self.is_online and has_zoom_session else None
 		host = urlparse(self.join_url).hostname or ""
 		return next(
 			(

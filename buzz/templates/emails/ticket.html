@@ -5,7 +5,7 @@
 {% block content %}
 {% if meeting.join_url %}
 <p style="margin:0 0 20px">Hi {{ doc.attendee_name }}, you're in. Here's how to join.</p>
-{% set kind = "ticket" %}
+{% set email_type = "ticket" %}
 {% include "buzz/templates/emails/_join_meeting.html" %}
 {% elif meeting.is_online %}
 <p style="margin:0 0 20px">Hi {{ doc.attendee_name }}, here is your ticket.</p>
