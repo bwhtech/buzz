@@ -19,6 +19,7 @@ import {
 	ensureEventHost,
 	ensureTestTeam,
 	getList,
+	openRegistrations,
 } from "../helpers/frappe"
 
 interface NamedDoc {
@@ -109,6 +110,7 @@ setup("seed check-in event, ticket type and front-desk users", async ({ request,
 		medium: "In Person",
 		is_published: 1,
 	})
+	await openRegistrations(request, event.name)
 
 	const ticketType = await createDoc<NamedDoc>(request, "Event Ticket Type", {
 		event: event.name,

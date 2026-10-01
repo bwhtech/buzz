@@ -276,3 +276,8 @@ export async function ensureEventHost(
 	})
 	return host.name
 }
+
+// New events start with registrations closed.
+export async function openRegistrations(request: APIRequestContext, event: string): Promise<void> {
+	await updateDoc(request, "Buzz Event", event, { registrations_close_at: null })
+}

@@ -150,7 +150,7 @@ def setup_test_records():
 	test_event_exists = frappe.db.exists("Buzz Event", {"route": "test-route"})
 	if test_event_exists:
 		frappe.delete_doc("Buzz Event", test_event_exists, force=True)
-	frappe.get_doc(
+	test_event = frappe.get_doc(
 		{
 			"doctype": "Buzz Event",
 			"team": admin_team,
@@ -165,6 +165,7 @@ def setup_test_records():
 			"end_time": "18:00:00",
 		}
 	).insert(ignore_if_duplicate=True)
+	test_event.db_set("registrations_close_at", None)
 
 
 def after_install():

@@ -603,8 +603,29 @@ class TestGetEventGuests(IntegrationTestCase):
 
 		self.assertTrue(get_event_guests(event).registrations_closed)
 
+	def test_a_new_event_starts_with_registrations_closed(self):
+		event = create_event("New Event", self.team)
+		frappe.set_user(self.owner)
+
+		self.assertTrue(get_event_guests(event).registrations_closed)
+
+	def test_a_cutoff_given_at_creation_is_kept(self):
+		event = create_event("Scheduled Event", self.team, registrations_close_at="2099-01-01 00:00:00")
+
+		close_at = frappe.db.get_value("Buzz Event", event, "registrations_close_at")
+		self.assertEqual(str(close_at), "2099-01-01 00:00:00")
+
+	def test_a_duplicated_event_starts_with_registrations_closed(self):
+		event = create_event("Source Event", self.team, registrations_close_at="2099-01-01 00:00:00")
+		source = frappe.get_doc("Buzz Event", event)
+		duplicate = frappe.copy_doc(source, ignore_no_copy=False).insert(ignore_permissions=True)
+		frappe.set_user(self.owner)
+
+		self.assertTrue(get_event_guests(str(duplicate.name)).registrations_closed)
+
 	def test_reports_registrations_open_before_the_event_ends(self):
 		event = create_event("Open Event", self.team)
+		frappe.db.set_value("Buzz Event", event, "registrations_close_at", None)
 		frappe.set_user(self.owner)
 
 		self.assertFalse(get_event_guests(event).registrations_closed)

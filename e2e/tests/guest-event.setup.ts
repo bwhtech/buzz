@@ -7,6 +7,7 @@ import {
 	ensureEventHost,
 	ensureTestTeam,
 	getList,
+	openRegistrations,
 } from "../helpers/frappe"
 
 interface NamedDoc {
@@ -135,6 +136,7 @@ setup("create guest booking test events", async ({ request }) => {
 			allow_guest_booking: 1,
 			guest_verification_method: evt.guest_verification_method,
 		})
+		await openRegistrations(request, event.name)
 
 		await createDoc<NamedDoc>(request, "Event Ticket Type", {
 			event: event.name,
