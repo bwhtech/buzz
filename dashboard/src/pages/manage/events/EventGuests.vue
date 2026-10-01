@@ -153,7 +153,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 </script>
 
 <template>
-	<EventPageHeader :title="page.data?.title" section="Guests" />
+	<EventPageHeader :title="page.data?.title" section="Registrations" />
 
 	<PageWithSidebar>
 		<EventArchivedAlert :event="eventId" />
