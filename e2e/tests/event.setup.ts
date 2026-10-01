@@ -7,6 +7,7 @@ import {
 	ensureEventHost,
 	ensureTestTeam,
 	getList,
+	openRegistrations,
 } from "../helpers/frappe"
 
 interface NamedDoc {
@@ -92,6 +93,7 @@ setup("create test event for booking", async ({ request }) => {
 		end_time: "17:00:00",
 		medium: "In Person",
 	})
+	await openRegistrations(request, event.name)
 	console.log(`Created Buzz Event: ${event.name} (route: ${testEventRoute})`)
 
 	// Create Event Ticket Type

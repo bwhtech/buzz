@@ -7,6 +7,7 @@ import {
 	ensureEventHost,
 	ensureTestTeam,
 	getList,
+	openRegistrations,
 } from "../helpers/frappe"
 
 interface NamedDoc {
@@ -111,6 +112,7 @@ setup("create offline payment test event", async ({ request }) => {
 		is_published: 1,
 		medium: "In Person",
 	})
+	await openRegistrations(request, event.name)
 
 	// Create offline payment method
 	await createDoc<NamedDoc>(request, "Offline Payment Method", {

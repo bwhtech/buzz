@@ -571,7 +571,8 @@
   {
    "fieldname": "registrations_close_at",
    "fieldtype": "Datetime",
-   "label": "Registrations Close At"
+   "label": "Registrations Close At",
+   "no_copy": 1
   },
   {
    "fieldname": "custom_forms_tab",
@@ -667,7 +668,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-10-01 12:00:00.000000",
+ "modified": "2026-10-01 12:30:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

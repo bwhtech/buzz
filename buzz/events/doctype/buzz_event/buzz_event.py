@@ -108,6 +108,9 @@ class BuzzEvent(Document):
 		# Opaque, not a title slug: a new event is published immediately.
 		if not self.route:
 			self.route = frappe.generate_hash(length=8)
+		# Organisers open registrations once tickets and details are ready.
+		if not self.registrations_close_at:
+			self.close_registrations()
 
 	def validate(self):
 		self.validate_dates()
