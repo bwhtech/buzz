@@ -18,13 +18,13 @@ from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import co_hosts_of, primary_host_of, registration_link
 from buzz.emails import venue_map_url as venue_link
 from buzz.events.online_meeting import OnlineMeeting
-from buzz.utils import get_time_zone_label
+from buzz.utils import datetime_in_time_zone, format_gmt_offset, get_time_zone_label
+from buzz.www.event.date_range import RANGE_SEPARATOR, EventDateRange, format_time
 from buzz.www.event.meta import EventMeta
 from buzz.www.event.venue_map import venue_map_url
 from buzz.www.site_header import apply_site_context
 
 no_cache = 1
-RANGE_SEPARATOR = " \u2013 "
 
 
 def get_context(context):
@@ -39,10 +39,6 @@ def join_names(names: list[str]) -> str:
 
 def format_day(date) -> str:
 	return format_date(date, "EEE d MMM y")
-
-
-def format_time(time) -> str:
-	return get_time(time).strftime("%H:%M") if time else ""
 
 
 def join_parts(parts: list, separator: str) -> str:
@@ -91,6 +87,8 @@ class EventPage:
 		context = {
 			"event": self.event,
 			"event_date": self.event_date(),
+			"date_range": EventDateRange(self.event).as_dict(),
+			"timezone_label_with_offset": self.timezone_label_with_offset(),
 			"timezone_label": self.timezone_label,
 			"page": self.page,
 			"pages": self.pages(),
@@ -144,9 +142,22 @@ class EventPage:
 
 	@cached_property
 	def timezone_label(self) -> str:
-		name = self.event.time_zone or get_system_timezone()
-		event_start = get_datetime(f"{self.event.start_date} {self.event.start_time or '00:00:00'}")
-		return self.event.time_zone_label or get_time_zone_label(name, event_start)
+		return self.event.time_zone_label or get_time_zone_label(self.time_zone, self.start_datetime)
+
+	def timezone_label_with_offset(self) -> str:
+		local_datetime = datetime_in_time_zone(self.time_zone, self.start_datetime)
+		offset = format_gmt_offset(local_datetime) if local_datetime else ""
+		if offset in ("", self.timezone_label):
+			return self.timezone_label
+		return f"{self.timezone_label} ({offset})"
+
+	@property
+	def time_zone(self) -> str:
+		return self.event.time_zone or get_system_timezone()
+
+	@property
+	def start_datetime(self):
+		return get_datetime(f"{self.event.start_date} {self.event.start_time or '00:00:00'}")
 
 	def hosts(self) -> list:
 		hosts = [primary_host_of(self.event.team), *co_hosts_of(self.event.name)]
