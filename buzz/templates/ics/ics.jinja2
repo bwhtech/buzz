@@ -10,9 +10,10 @@ DTSTART;TZID={{timezone}}:{{start}}
 DTEND;TZID={{timezone}}:{{end}}
 SUMMARY:{{title}}
 LOCATION:{{location}}
-{% if organizer_email %}ORGANIZER;CN={{organizer_name}}:mailto:{{organizer_email}}
-{% endif %}
-ATTENDEE;CN=Attendee;RSVP=TRUE:mailto:{{attendee_email}}
+{% if conference_url %}CONFERENCE;VALUE=URI;FEATURE=VIDEO:{{conference_url}}
+{% endif %}{% if event_url %}URL:{{event_url}}
+{% endif %}{% if organizer_email %}ORGANIZER;CN={{organizer_name}}:mailto:{{organizer_email}}
+{% endif %}ATTENDEE;CN=Attendee;RSVP=TRUE:mailto:{{attendee_email}}
 DESCRIPTION:{{description}}
 END:VEVENT
 END:VCALENDAR

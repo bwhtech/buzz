@@ -10,6 +10,7 @@ from buzz.api.booking.exceptions import RegistrationsClosed
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, are_registrations_closed
 from buzz.emails import is_full_document
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
+from buzz.events.online_meeting import OnlineMeeting
 from buzz.payments import get_controller, mark_payment_as_received
 from buzz.permissions import has_team_access
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
@@ -277,6 +278,7 @@ class EventBooking(Document):
 		return {
 			"doc": self,
 			"event_doc": event_doc,
+			"meeting": OnlineMeeting(event_doc),
 			"event_title": event_doc.title,
 			"venue": event_doc.get_venue_name(),
 			"attendee_rows": self.get_attendee_email_rows(),

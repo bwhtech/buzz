@@ -7,6 +7,7 @@ from frappe.model.document import Document
 
 from buzz.emails import is_full_document, send_message_email
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
+from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import (
 	generate_ics_file,
 	generate_qr_code_file,
@@ -57,6 +58,8 @@ class EventTicket(Document):
 		self.generate_qr_code()
 
 	def on_submit(self):
+		# The ticket email carries the guest's own Zoom link, so registration comes first.
+		self.create_zoom_registration_if_applicable()
 		try:
 			self.send_ticket_email()
 		except Exception as e:
@@ -67,7 +70,6 @@ class EventTicket(Document):
 		# 	self.send_user_invitation()
 		# except Exception as e:
 		# 	frappe.log_error("Error sending user invitation: " + str(e))
-		self.create_zoom_registration_if_applicable()
 
 	@only_if_app_installed("zoom_integration")
 	def create_zoom_registration_if_applicable(self):
@@ -122,9 +124,11 @@ class EventTicket(Document):
 
 		subject = frappe._("Your ticket to {0} 🎟️").format(event_title)
 		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
+		meeting = OnlineMeeting(event_doc, self)
 		args = {
 			"doc": self,
 			"event_doc": event_doc,
+			"meeting": meeting,
 			"event_title": event_title,
 			"venue": event_doc.get_venue_name(),
 			"support_email": team_settings.support_email,
@@ -150,7 +154,7 @@ class EventTicket(Document):
 			)
 
 		if event_doc.attach_calendar_invite:
-			ics_content = generate_ics_file(event_doc, self.attendee_email)
+			ics_content = generate_ics_file(event_doc, self.attendee_email, meeting)
 			attachments.append(
 				{
 					"fname": f"{event_doc.title}.ics",
