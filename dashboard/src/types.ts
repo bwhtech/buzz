@@ -566,3 +566,29 @@ export interface EventEnquiries {
 	enquiries: EventEnquiryItem[]
 	has_next_page: boolean
 }
+
+// buzz.api.events.get_event_ticket_types: the ticket types an event sells, for its Tickets page.
+export interface TicketTypeItem {
+	name: string
+	title: string
+	price: number
+	currency: string
+	max_tickets_available: number
+	auto_unpublish_after: string | null
+	is_published: boolean
+	tickets_sold: number
+}
+
+export interface EventTicketTypes {
+	title: string
+	can_write: boolean
+	ticket_types: TicketTypeItem[]
+}
+
+export type TicketTypeInput = Pick<
+	TicketTypeItem,
+	"title" | "price" | "max_tickets_available" | "auto_unpublish_after" | "is_published"
+> & { name: string | null }
+
+export type TicketTypeDraft = TicketTypeInput &
+	Pick<TicketTypeItem, "currency" | "tickets_sold"> & { key: string }
