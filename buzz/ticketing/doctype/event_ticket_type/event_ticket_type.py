@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
 
@@ -23,6 +24,10 @@ class EventTicketType(Document):
 		price: DF.Currency
 		title: DF.Data
 	# end: auto-generated types
+
+	def validate(self):
+		if not self.is_new() and self.has_value_changed("price") and self.tickets_sold:
+			frappe.throw(_("The price of {0} cannot change after tickets are sold").format(self.title))
 
 	def are_tickets_available(self, num_tickets: int) -> bool:
 		if self.remaining_tickets != -1 and self.remaining_tickets < num_tickets:

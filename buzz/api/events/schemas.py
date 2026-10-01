@@ -190,3 +190,29 @@ class VerificationMethods(APIResponse):
 
 	email: bool = False
 	phone: bool = False
+
+
+class TicketTypeItem(APIResponse):
+	name: str
+	title: str
+	price: float
+	currency: str
+	max_tickets_available: int
+	auto_unpublish_after: date | None
+	is_published: bool
+	tickets_sold: int
+
+
+class EventTicketTypes(APIResponse):
+	title: str
+	can_write: bool
+	ticket_types: list[TicketTypeItem]
+
+
+class TicketTypeInput(APIRequest):
+	name: str | None = None
+	title: str
+	price: float = 0
+	max_tickets_available: int = 0
+	auto_unpublish_after: date | None = None
+	is_published: bool = True

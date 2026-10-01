@@ -1,17 +1,20 @@
 import frappe
 
 from buzz.api.events import services, zoom
+from buzz.api.events import ticket_types as ticket_types_service
 from buzz.api.events.schemas import (
 	CreatedEvent,
 	EventDetail,
 	EventGuestsResponse,
 	EventHostRef,
+	EventTicketTypes,
 	MyEventFilters,
 	MyEventsResponse,
 	NewEvent,
 	RegistrationState,
 	RegistrationTrend,
 	RouteAvailability,
+	TicketTypeInput,
 	VerificationMethods,
 )
 
@@ -106,3 +109,13 @@ def add_co_host(
 def remove_co_host(event: str, host: str) -> None:
 	"""Drop a co-host from the event."""
 	services.remove_co_host(event, host)
+
+
+@frappe.whitelist(methods=["GET"])
+def get_event_ticket_types(event: str) -> EventTicketTypes:
+	return ticket_types_service.event_ticket_types(event)
+
+
+@frappe.whitelist(methods=["POST"])
+def save_event_ticket_types(event: str, ticket_types: list[TicketTypeInput]) -> EventTicketTypes:
+	return ticket_types_service.TicketTypesEditor(event).save(ticket_types)
