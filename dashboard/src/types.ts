@@ -392,6 +392,8 @@ export interface AvailableTicketType {
 	remaining_tickets?: number
 	free_add_ons?: string[]
 	add_ons?: string[]
+	prices?: { currency: string; price: number }[]
+	price_note?: string
 }
 
 export interface AvailableAddOn {
@@ -400,6 +402,8 @@ export interface AvailableAddOn {
 	description?: string
 	price?: number
 	currency?: string
+	prices?: { currency: string; price: number }[]
+	price_note?: string
 	options?: string[]
 	user_selects_option?: 0 | 1 | boolean
 }
@@ -573,6 +577,12 @@ export interface EventEnquiries {
 	has_next_page: boolean
 }
 
+export interface TicketTypePrice {
+	currency: string
+	price: number
+	tickets_sold?: number
+}
+
 // buzz.api.events.get_event_ticket_types: the ticket types an event sells, for its Tickets page.
 export interface TicketTypeItem {
 	name: string
@@ -583,6 +593,7 @@ export interface TicketTypeItem {
 	auto_unpublish_after: string | null
 	is_published: boolean
 	tickets_sold: number
+	prices: TicketTypePrice[]
 }
 
 export interface EventTicketTypes {
@@ -593,7 +604,7 @@ export interface EventTicketTypes {
 
 export type TicketTypeInput = Pick<
 	TicketTypeItem,
-	"title" | "price" | "max_tickets_available" | "auto_unpublish_after" | "is_published"
+	"title" | "price" | "max_tickets_available" | "auto_unpublish_after" | "is_published" | "prices"
 > & { name: string | null }
 
 export type TicketTypeDraft = TicketTypeInput &

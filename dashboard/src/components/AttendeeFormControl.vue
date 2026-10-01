@@ -53,7 +53,7 @@
 				type="select"
 				:options="
 					availableTicketTypes.map((tt) => ({
-						label: `${__(tt.title ?? '')} (${formatPriceOrFree(tt.price, tt.currency)})`,
+						label: `${__(tt.title ?? '')} (${formatPriceOrFree(tt.price, tt.currency)}${tt.price_note ? ` · ${tt.price_note}` : ''})`,
 						value: String(tt.name),
 					}))
 				"
@@ -77,13 +77,16 @@
 
 			<div v-for="addOn in availableAddOns" :key="addOn.name" class="mb-4">
 				<div class="flex flex-col gap-3">
-					<FormControl
-						type="checkbox"
-						:model-value="getAddOnSelected(addOn.name)"
-						@update:model-value="updateAddOnSelection(addOn.name, $event)"
-						:id="`add_on_${addOn.name}_${index}`"
-						:label="__(addOn.title ?? '')"
-					/>
+					<div class="flex items-center gap-2">
+						<FormControl
+							type="checkbox"
+							:model-value="getAddOnSelected(addOn.name)"
+							@update:model-value="updateAddOnSelection(addOn.name, $event)"
+							:id="`add_on_${addOn.name}_${index}`"
+							:label="__(addOn.title ?? '')"
+						/>
+						<Badge v-if="addOn.price_note" :label="addOn.price_note" theme="amber" size="sm" />
+					</div>
 					<div class="text-ink-gray-5 text-sm/4" v-if="addOn.description">
 						<p>
 							{{ __(addOn.description) }}
@@ -111,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { Tooltip } from "frappe-ui"
+import { Badge, Tooltip } from "frappe-ui"
 import { type PropType, computed } from "vue"
 
 import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields"
@@ -125,6 +128,7 @@ interface AvailableTicketType {
 	title?: string
 	price?: number
 	currency?: string
+	price_note?: string
 }
 
 interface AvailableAddOn {
@@ -132,6 +136,7 @@ interface AvailableAddOn {
 	title?: string
 	description?: string
 	price?: number
+	price_note?: string
 	options?: string[]
 	user_selects_option?: 0 | 1 | boolean
 }

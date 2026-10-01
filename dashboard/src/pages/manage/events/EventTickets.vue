@@ -32,6 +32,7 @@ const toInput = (draft: TicketTypeDraft): TicketTypeInput => ({
 	max_tickets_available: draft.max_tickets_available,
 	auto_unpublish_after: draft.auto_unpublish_after || null,
 	is_published: draft.is_published,
+	prices: draft.prices,
 })
 
 const isDirty = computed(
@@ -41,7 +42,12 @@ const isDirty = computed(
 )
 
 const canSave = computed(
-	() => isDirty.value && drafts.value.every((draft) => draft.title.trim() && draft.price >= 0),
+	() =>
+		isDirty.value &&
+		drafts.value.every(
+			(draft) =>
+				draft.title.trim() && draft.price >= 0 && draft.prices.every((row) => row.price > 0),
+		),
 )
 
 function reset(rows: TicketTypeItem[]) {
@@ -71,6 +77,7 @@ function addTicketType() {
 		auto_unpublish_after: null,
 		is_published: true,
 		tickets_sold: 0,
+		prices: [],
 	})
 	openKey.value = key
 }
@@ -129,7 +136,7 @@ const errorMessage = computed(() => serverErrorMessage(saveTicketTypes.error || 
 		<div>
 			<h2 class="text-xl font-semibold text-ink-gray-9">Tickets</h2>
 			<p class="mt-1 text-p-base text-ink-gray-5">
-				What people can buy for this event. Prices are in INR.
+				What people can buy for this event. Prices are in INR, with an optional USD price.
 			</p>
 		</div>
 

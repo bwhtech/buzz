@@ -3,7 +3,7 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.api.events import get_event_ticket_types, save_event_ticket_types
 from buzz.api.events.exceptions import CannotManageEvent, TicketTypeHasSales, TicketTypeNotFound
-from buzz.api.events.schemas import TicketTypeInput
+from buzz.api.events.schemas import TicketTypeInput, TicketTypePriceInput
 from buzz.api.events.test_events import create_event
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.test_permissions import add_member
@@ -137,3 +137,78 @@ class TestSaveEventTicketTypes(TicketTypesTestCase):
 
 		with self.assertRaises(TicketTypeNotFound):
 			self.save_as(self.owner, [self.current_input(), TicketTypeInput(name=foreign, title="Foreign")])
+
+
+class TestTicketTypeOtherCurrencies(TicketTypesTestCase):
+	def sell_in_usd(self):
+		booking = frappe.get_doc(
+			{
+				"doctype": "Event Booking",
+				"event": self.event,
+				"user": "Administrator",
+				"currency": "USD",
+				"payment_status": "Paid",
+				"attendees": [
+					{"ticket_type": self.ticket_type, "first_name": "Buyer", "email": "buyer@example.com"}
+				],
+			}
+		).insert(ignore_permissions=True)
+		booking.submit()
+
+	def save_usd_price(self, price):
+		return self.save_as(
+			self.owner, [self.current_input(prices=[TicketTypePriceInput(currency="USD", price=price)])]
+		)
+
+	def test_lists_usd_sales_per_price(self):
+		self.save_usd_price(15)
+		self.sell_in_usd()
+
+		payload = self.save_usd_price(15)
+
+		row = next(row for row in payload["ticket_types"] if row["name"] == self.ticket_type)
+		self.assertEqual(row["prices"][0]["tickets_sold"], 1)
+
+	def test_usd_price_is_locked_after_a_usd_sale(self):
+		self.save_usd_price(15)
+		self.sell_in_usd()
+
+		with self.assertRaises(frappe.ValidationError):
+			self.save_usd_price(20)
+		with self.assertRaises(frappe.ValidationError):
+			self.save_as(self.owner, [self.current_input(prices=[])])
+
+	def test_saves_and_lists_a_usd_price(self):
+		usd = TicketTypePriceInput(currency="USD", price=15)
+
+		payload = self.save_as(self.owner, [self.current_input(prices=[usd])])
+
+		row = next(row for row in payload["ticket_types"] if row["name"] == self.ticket_type)
+		self.assertEqual([(price["currency"], price["price"]) for price in row["prices"]], [("USD", 15)])
+
+	def test_removing_the_usd_price(self):
+		self.save_as(
+			self.owner, [self.current_input(prices=[TicketTypePriceInput(currency="USD", price=15)])]
+		)
+
+		self.save_as(self.owner, [self.current_input(prices=[])])
+
+		self.assertFalse(frappe.get_doc("Event Ticket Type", self.ticket_type).prices)
+
+	def test_rejects_currencies_other_than_usd(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.save_as(
+				self.owner, [self.current_input(prices=[TicketTypePriceInput(currency="EUR", price=14)])]
+			)
+
+	def test_rejects_a_zero_usd_price(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.save_as(
+				self.owner, [self.current_input(prices=[TicketTypePriceInput(currency="USD", price=0)])]
+			)
+
+	def test_rejects_usd_twice(self):
+		usd = TicketTypePriceInput(currency="USD", price=15)
+
+		with self.assertRaises(frappe.ValidationError):
+			self.save_as(self.owner, [self.current_input(prices=[usd, usd])])

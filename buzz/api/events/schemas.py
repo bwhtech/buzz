@@ -192,6 +192,12 @@ class VerificationMethods(APIResponse):
 	phone: bool = False
 
 
+class TicketTypePrice(APIResponse):
+	currency: str
+	price: float
+	tickets_sold: int = 0
+
+
 class TicketTypeItem(APIResponse):
 	name: str
 	title: str
@@ -201,12 +207,18 @@ class TicketTypeItem(APIResponse):
 	auto_unpublish_after: date | None
 	is_published: bool
 	tickets_sold: int
+	prices: list[TicketTypePrice]
 
 
 class EventTicketTypes(APIResponse):
 	title: str
 	can_write: bool
 	ticket_types: list[TicketTypeItem]
+
+
+class TicketTypePriceInput(APIRequest):
+	currency: str
+	price: float
 
 
 class TicketTypeInput(APIRequest):
@@ -216,3 +228,4 @@ class TicketTypeInput(APIRequest):
 	max_tickets_available: int = 0
 	auto_unpublish_after: date | None = None
 	is_published: bool = True
+	prices: list[TicketTypePriceInput] = Field(default_factory=list)
