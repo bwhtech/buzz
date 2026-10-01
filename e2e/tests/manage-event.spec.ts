@@ -50,7 +50,7 @@ test.describe("Event workspace", () => {
 	})
 
 	test("swaps the sidebar for the event's own destinations", async ({ page }) => {
-		for (const label of ["Details", "Guests", "Talks"]) {
+		for (const label of ["Details", "Registrations", "Talks"]) {
 			await expect(page.getByRole("link", { name: label })).toBeVisible({ timeout: 15000 })
 		}
 		await expect(page.getByRole("button", { name: "Back to events" })).toBeVisible()
@@ -242,7 +242,7 @@ test.describe("Guest list", () => {
 	})
 
 	test("lists the event's guests", async ({ page }) => {
-		await page.getByRole("link", { name: "Guests" }).click()
+		await page.getByRole("link", { name: "Registrations" }).click()
 
 		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
 		await expect(page.getByRole("heading", { name: "Guest list" })).toBeVisible()
@@ -325,7 +325,7 @@ test.describe("Unsaved details", () => {
 		// Save showing is the form registering the edit, so the trip below starts dirty.
 		await expect(page.getByRole("button", { name: "Save" })).toBeVisible()
 
-		await page.getByRole("link", { name: "Guests" }).click()
+		await page.getByRole("link", { name: "Registrations" }).click()
 		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
 		await page.getByRole("link", { name: "Details" }).click()
 
@@ -337,7 +337,7 @@ test.describe("Unsaved details", () => {
 		await page.getByRole("button", { name: "Discard" }).click()
 		await expect(description).toHaveValue("")
 
-		await page.getByRole("link", { name: "Guests" }).click()
+		await page.getByRole("link", { name: "Registrations" }).click()
 		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
 		await page.getByRole("link", { name: "Details" }).click()
 
@@ -376,7 +376,7 @@ test.describe("Unsaved details", () => {
 		await page.getByRole("button", { name: "Save" }).click()
 		await expect(page.getByText("Event saved")).toBeVisible()
 
-		await page.getByRole("link", { name: "Guests" }).click()
+		await page.getByRole("link", { name: "Registrations" }).click()
 		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
 		await page.getByRole("link", { name: "Details" }).click()
 

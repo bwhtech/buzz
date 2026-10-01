@@ -22,8 +22,8 @@ test.describe("Page titles", () => {
 		const title = await field.inputValue()
 
 		await expect(page).toHaveTitle(`Details | ${title}`)
-		await page.getByRole("link", { name: "Guests" }).click()
-		await expect(page).toHaveTitle(`Guests | ${title}`)
+		await page.getByRole("link", { name: "Registrations" }).click()
+		await expect(page).toHaveTitle(`Registrations | ${title}`)
 	})
 
 	test("keeps a data-derived title, and drops it on the way out", async ({ page }) => {
