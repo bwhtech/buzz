@@ -9,11 +9,15 @@ class EnquiryFormState(APIResponse):
 	link: str | None
 
 
+class TierPrice(APIResponse):
+	currency: str
+	price: float
+
+
 class TierItem(APIResponse):
 	name: str
 	title: str
-	price: float
-	currency: str | None
+	prices: list[TierPrice]
 	enabled: bool
 	perks: str | None
 	sponsor_count: int

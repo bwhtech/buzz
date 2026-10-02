@@ -5,21 +5,19 @@ import { computed } from "vue"
 import DrawerSaveBar from "@/components/dashboard/sponsorships/DrawerSaveBar.vue"
 import { keepLastValue } from "@/components/dashboard/sponsorships/helpers"
 import PerkList from "@/components/dashboard/sponsorships/PerkList.vue"
-import PriceInput from "@/components/dashboard/sponsorships/PriceInput.vue"
+import PriceList from "@/components/dashboard/sponsorships/PriceList.vue"
 import SponsorCard from "@/components/dashboard/sponsorships/SponsorCard.vue"
 import SponsorshipDrawer from "@/components/dashboard/sponsorships/SponsorshipDrawer.vue"
 import { useDrawerEdits } from "@/composables/useDrawerEdits"
-import { useEnabledCurrencies } from "@/data/currencies"
-import type { EventSponsorItem, SponsorshipTierItem } from "@/types"
+import type { EventSponsorItem, SponsorshipTierItem, TierPrice } from "@/types"
 import { formatWholePriceOrFree } from "@/utils/currency"
 
 type TierValues = {
 	title: string
-	price: number
-	currency: string
+	prices: TierPrice[]
 	perks: string[]
 }
-type TierDoc = Pick<TierValues, "title" | "price" | "currency"> & {
+type TierDoc = Pick<TierValues, "title" | "prices"> & {
 	name: string
 	enabled: 0 | 1
 	perks: string
@@ -52,27 +50,18 @@ const { draft, hasChanges, discardChanges, confirmAndSave } = useDrawerEdits<Tie
 	},
 )
 
-const isInvalid = computed(() => !draft.value.title?.trim() || !(draft.value.price >= 0))
+const isInvalid = computed(
+	() =>
+		!draft.value.title?.trim() ||
+		draft.value.prices?.some((row) => !row.currency || !(row.price >= 0)),
+)
 
 const sponsorsInTier = computed(() => props.sponsors.filter((row) => row.tier === props.tier?.name))
 
-const formattedPrice = computed(() =>
-	props.tier ? formatWholePriceOrFree(props.tier.price, props.tier.currency || "INR") : "",
-)
-
-const enabledCurrencies = useEnabledCurrencies()
-
-// A tier keeps its currency even if the site later disables it.
-const currencyOptions = computed(() => {
-	const currencyNames = (enabledCurrencies.data ?? []).map((currency) => currency.name)
-	const tierCurrency = props.tier?.currency
-	if (tierCurrency && !currencyNames.includes(tierCurrency)) currencyNames.unshift(tierCurrency)
-	return currencyNames
+const formattedPrice = computed(() => {
+	const defaultPrice = props.tier?.prices[0]
+	return defaultPrice ? formatWholePriceOrFree(defaultPrice.price, defaultPrice.currency) : ""
 })
-
-const selectedCurrency = computed(() =>
-	enabledCurrencies.data?.find((currency) => currency.name === draft.value.currency),
-)
 
 const enabledAlert = computed(() =>
 	props.tier?.enabled
@@ -96,8 +85,7 @@ async function toggleEnabled() {
 function toTierValues(tier: SponsorshipTierItem): TierValues {
 	return {
 		title: tier.title,
-		price: tier.price,
-		currency: tier.currency || "INR",
+		prices: tier.prices.map((row) => ({ ...row })),
 		perks: (tier.perks ?? "").split("\n").filter((perk) => perk.trim()),
 	}
 }
@@ -105,8 +93,7 @@ function toTierValues(tier: SponsorshipTierItem): TierValues {
 async function save(values: TierValues) {
 	await tierDoc.setValue.submit({
 		title: values.title.trim(),
-		price: values.price,
-		currency: values.currency,
+		prices: values.prices,
 		perks: values.perks
 			.map((perk) => perk.trim())
 			.filter(Boolean)
@@ -151,23 +138,7 @@ async function save(values: TierValues) {
 				autocomplete="off"
 				:disabled="!canWrite"
 			/>
-			<div class="grid grid-cols-[2fr_1fr] gap-4">
-				<PriceInput
-					v-model="draft.price"
-					label="Price"
-					required
-					:currency-symbol="selectedCurrency?.symbol || draft.currency"
-					:number-format="selectedCurrency?.number_format"
-					:disabled="!canWrite"
-				/>
-				<FormControl
-					v-model="draft.currency"
-					type="select"
-					label="Currency"
-					:options="currencyOptions"
-					:disabled="!canWrite"
-				/>
-			</div>
+			<PriceList v-model="draft.prices" :disabled="!canWrite" />
 			<PerkList v-model="draft.perks" :disabled="!canWrite" />
 		</form>
 

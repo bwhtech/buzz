@@ -78,6 +78,7 @@ def get_payment_link_for_sponsorship(
 			frappe.throw(_("No payment gateway configured for this event"))
 		payment_gateway = gateways[0]
 	event_title = frappe.get_cached_value("Buzz Event", tier_doc.event, "title")
+	price = tier_doc.prices[0]
 	frappe.db.set_value(
 		"Sponsorship Enquiry", sponsorship_enquiry, "tier", sponsorship_tier
 	)  # TODO: rethink later
@@ -85,8 +86,8 @@ def get_payment_link_for_sponsorship(
 	return get_payment_link(
 		"Sponsorship Enquiry",
 		sponsorship_enquiry,
-		tier_doc.price,
-		tier_doc.currency,
+		price.price,
+		price.currency,
 		payment_gateway,
 		redirect_to,
 		f"Payment for {tier_doc.title} Sponsorship at {event_title}",

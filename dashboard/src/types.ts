@@ -494,11 +494,15 @@ export interface CurrencyItem {
 	number_format: string | null
 }
 
+export interface TierPrice {
+	currency: string
+	price: number
+}
+
 export interface SponsorshipTierItem {
 	name: string
 	title: string
-	price: number
-	currency: string | null
+	prices: TierPrice[]
 	enabled: boolean
 	perks: string | null
 	sponsor_count: number

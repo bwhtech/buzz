@@ -26,7 +26,7 @@
 			<!-- Tier Selection -->
 			<div class="space-y-3">
 				<div
-					v-for="tier in tiers.data"
+					v-for="tier in sortedTiers"
 					:key="tier.name"
 					class="border border-outline-gray-2 rounded-6 p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
 					:class="{
@@ -50,7 +50,7 @@
 						</div>
 						<div class="text-right">
 							<p class="text-lg-bold text-ink-gray-9">
-								{{ formatCurrency(tier.price, tier.currency) }}
+								{{ formatPrice(tier.prices[0]) }}
 							</p>
 						</div>
 					</div>
@@ -100,7 +100,7 @@
 					<div class="text-right">
 						<p class="text-sm text-ink-green-6">{{ __("Total Amount") }}</p>
 						<p class="text-2xl-bold text-ink-green-6">
-							{{ formatCurrency(selectedTier.price, selectedTier.currency) }}
+							{{ formatPrice(selectedTier.prices[0]) }}
 						</p>
 					</div>
 				</div>
@@ -138,13 +138,13 @@
 import { Button, Dialog, ErrorMessage, Spinner, useCall, useList } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
+import type { TierPrice } from "@/types"
 import { formatCurrency } from "@/utils/currency"
 
 interface Tier {
 	name: string
 	title?: string
-	price?: number
-	currency?: string
+	prices: TierPrice[]
 }
 
 const props = defineProps({
@@ -205,11 +205,18 @@ watch(isOpen, (newVal) => {
 const tiers = useList<Tier>({
 	doctype: "Sponsorship Tier",
 	filters: { event: props.eventId, enabled: 1 },
-	fields: ["name", "title", "price", "currency"],
-	orderBy: "price asc",
+	fields: ["name", "title", { prices: ["currency", "price"] }],
 	onError: console.error,
 	immediate: false, // Don't auto-fetch, we'll fetch manually when dialog opens
 })
+
+const sortedTiers = computed(() =>
+	(tiers.data ?? []).toSorted((one, other) => one.prices[0].price - other.prices[0].price),
+)
+
+function formatPrice(row: TierPrice) {
+	return formatCurrency(row.price, row.currency)
+}
 
 // Fetch payment gateways for the event
 const paymentGatewaysResource = useCall<string[], { event: string }>({

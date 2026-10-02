@@ -9,8 +9,7 @@
   "enabled",
   "event",
   "column_break_vmpf",
-  "price",
-  "currency",
+  "prices",
   "section_break_perks",
   "perks"
  ],
@@ -41,18 +40,11 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "price",
-   "fieldtype": "Currency",
-   "label": "Price",
-   "non_negative": 1,
-   "options": "currency"
-  },
-  {
-   "default": "INR",
-   "fieldname": "currency",
-   "fieldtype": "Link",
-   "label": "Currency",
-   "options": "Currency"
+   "fieldname": "prices",
+   "fieldtype": "Table",
+   "label": "Prices",
+   "options": "Buzz Price",
+   "reqd": 1
   },
   {
    "fieldname": "section_break_perks",
@@ -68,7 +60,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-18 12:30:00.000000",
+ "modified": "2026-10-02 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Sponsorship Tier",

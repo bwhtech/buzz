@@ -40,7 +40,7 @@ const addTierAction = computed(() =>
 
 // Highest-priced tier first, the order a sponsor wall reads in.
 const sponsors = computed(() => {
-	const rank = new Map((page.data?.tiers ?? []).map((tier) => [tier.name, tier.price]))
+	const rank = new Map((page.data?.tiers ?? []).map((tier) => [tier.name, tier.prices[0].price]))
 	return (page.data?.sponsors ?? []).toSorted(
 		(a, b) => (rank.get(b.tier ?? "") ?? 0) - (rank.get(a.tier ?? "") ?? 0),
 	)

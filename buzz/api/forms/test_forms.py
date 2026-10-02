@@ -163,7 +163,7 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 		)
 		event.insert(ignore_permissions=True)
 		tier = frappe.new_doc("Sponsorship Tier")
-		tier.update({"event": event.name, "title": title, "price": 1000, "currency": "INR"})
+		tier.update({"event": event.name, "title": title, "prices": [{"currency": "INR", "price": 1000}]})
 		tier.insert(ignore_permissions=True)
 		return tier
 
@@ -396,7 +396,7 @@ class TestCustomFormLinkEventFilter(FormsTestCase):
 
 	def make_tier(self, event_name, title):
 		tier = frappe.new_doc("Sponsorship Tier")
-		tier.update({"event": event_name, "title": title, "price": 100, "currency": "INR"})
+		tier.update({"event": event_name, "title": title, "prices": [{"currency": "INR", "price": 100}]})
 		tier.insert(ignore_permissions=True)
 		return tier.name
 

@@ -56,8 +56,7 @@ class SponsorshipTestCase(IntegrationTestCase):
 				"doctype": "Sponsorship Tier",
 				"event": self.event,
 				"title": f"Sponsorship Test {frappe.generate_hash(length=6)}",
-				"price": 5000,
-				"currency": "INR",
+				"prices": [{"currency": "INR", "price": 5000}],
 			}
 		).insert()
 

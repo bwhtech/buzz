@@ -29,8 +29,7 @@ class TestSponsorshipTier(IntegrationTestCase):
 				"doctype": "Sponsorship Tier",
 				"event": event or self.event,
 				"title": f"Gold {frappe.generate_hash(length=6)}",
-				"price": 1000,
-				"currency": "INR",
+				"prices": [{"currency": "INR", "price": 1000}],
 			}
 		)
 
@@ -38,7 +37,7 @@ class TestSponsorshipTier(IntegrationTestCase):
 		frappe.set_user(self.member("Manager"))
 
 		tier = self.new_tier().insert()
-		tier.price = 2000
+		tier.prices[0].price = 2000
 		tier.save()
 		tier.enabled = 0
 		tier.save()
@@ -65,3 +64,15 @@ class TestSponsorshipTier(IntegrationTestCase):
 		tier.event = other_event
 		with self.assertRaises(frappe.CannotChangeConstantError):
 			tier.save(ignore_permissions=True)
+
+	def test_tier_needs_at_least_one_price(self):
+		tier = self.new_tier()
+		tier.prices = []
+		with self.assertRaises(frappe.ValidationError):
+			tier.insert(ignore_permissions=True)
+
+	def test_currency_cannot_repeat(self):
+		tier = self.new_tier()
+		tier.append("prices", {"currency": "INR", "price": 500})
+		with self.assertRaises(frappe.ValidationError):
+			tier.insert(ignore_permissions=True)

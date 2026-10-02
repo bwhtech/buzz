@@ -4,9 +4,9 @@ import { computed, ref, watch } from "vue"
 
 import PriceInput from "@/components/dashboard/sponsorships/PriceInput.vue"
 import { useEnabledCurrencies } from "@/data/currencies"
-import type { FrappeError } from "@/types"
+import type { FrappeError, TierPrice } from "@/types"
 
-type TierDoc = { event: string; title: string; price: number; currency: string }
+type TierDoc = { event: string; title: string; prices: TierPrice[] }
 
 const DEFAULT_CURRENCY = "INR"
 
@@ -53,8 +53,7 @@ async function submit() {
 	Object.assign(creator.doc, {
 		event: props.event,
 		title: title.value.trim(),
-		price: price.value,
-		currency: currency.value,
+		prices: [{ currency: currency.value, price: price.value }],
 	})
 	await creator.submit().catch(() => null)
 	if (creator.error) return

@@ -294,7 +294,7 @@ class BuzzEvent(Document):
 
 	def create_default_records(self):
 		records = [
-			{"doctype": "Sponsorship Tier", "title": "Normal"},
+			{"doctype": "Sponsorship Tier", "title": "Normal", "prices": [{"price": 0}]},
 			{"doctype": "Event Ticket Type", "title": "Normal"},
 		]
 		for record in records:

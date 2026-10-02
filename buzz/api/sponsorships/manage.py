@@ -9,9 +9,10 @@ from buzz.api.sponsorships.schemas import (
 	EventSponsorshipsResponse,
 	TierItem,
 )
+from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.permissions import has_team_access
 
-TIER_FIELDS = ["name", "title", "price", "currency", "enabled", "perks"]
+TIER_FIELDS = ["name", "title", "enabled", "perks", {"prices": ["currency", "price"]}]
 SPONSOR_FIELDS = [
 	"name",
 	"company_name",
@@ -33,9 +34,10 @@ def event_sponsorships(event: str) -> EventSponsorshipsResponse:
 		"Sponsorship Tier",
 		filters={"event": event},
 		fields=TIER_FIELDS,
-		order_by="price desc, title asc",
+		order_by="title asc",
 		ignore_permissions=True,
 	)
+	tiers.sort(key=default_price, reverse=True)
 	sponsors = frappe.get_all(
 		"Event Sponsor",
 		filters={"event": event},

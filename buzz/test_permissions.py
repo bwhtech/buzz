@@ -450,10 +450,15 @@ class TestNonMemberCarveOuts(TeamPermissionTestCase):
 	def test_published_sponsorship_tier_is_visible_to_non_members(self):
 		published = create_event("Perm Published", self.team_b, is_published=1)
 		visible = frappe.get_doc(
-			{"doctype": "Sponsorship Tier", "event": published, "title": "Gold", "amount": 1}
+			{"doctype": "Sponsorship Tier", "event": published, "title": "Gold", "prices": [{"price": 1}]}
 		).insert(ignore_permissions=True)
 		hidden = frappe.get_doc(
-			{"doctype": "Sponsorship Tier", "event": self.event_b, "title": "Silver", "amount": 1}
+			{
+				"doctype": "Sponsorship Tier",
+				"event": self.event_b,
+				"title": "Silver",
+				"prices": [{"price": 1}],
+			}
 		).insert(ignore_permissions=True)
 
 		self.as_user(self.outsider)

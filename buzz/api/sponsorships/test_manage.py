@@ -10,7 +10,7 @@ from buzz.api.sponsorships import (
 from buzz.api.sponsorships.exceptions import EnquiryNotFound, EnquiryStatusLocked, EnquiryTierMissing
 from buzz.api.sponsorships.test_sponsorships import SponsorshipTestCase
 
-TIER_FIELDS = {"name", "title", "price", "currency", "enabled", "perks", "sponsor_count"}
+TIER_FIELDS = {"name", "title", "prices", "enabled", "perks", "sponsor_count"}
 SPONSOR_FIELDS = {
 	"name",
 	"company_name",

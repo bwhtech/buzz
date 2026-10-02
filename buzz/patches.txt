@@ -26,3 +26,4 @@ buzz.patches.generate_event_share_images #30-09-2026
 buzz.patches.make_ticket_qr_codes_private
 buzz.patches.make_sponsor_logos_public
 buzz.patches.set_event_venue_name
+buzz.patches.move_sponsorship_tier_price_to_prices

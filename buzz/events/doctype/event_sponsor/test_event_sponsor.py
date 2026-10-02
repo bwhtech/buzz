@@ -24,8 +24,7 @@ class IntegrationTestEventSponsor(IntegrationTestCase):
 				"doctype": "Sponsorship Tier",
 				"event": test_event.name,
 				"title": "Super Platinum",
-				"price": 1000,
-				"currency": "INR",
+				"prices": [{"currency": "INR", "price": 1000}],
 			}
 		).insert()
 

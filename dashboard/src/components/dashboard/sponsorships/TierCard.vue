@@ -8,7 +8,10 @@ import { formatWholePriceOrFree } from "@/utils/currency"
 const props = defineProps<{ tier: SponsorshipTierItem; canWrite?: boolean }>()
 defineEmits<{ open: [] }>()
 
-const price = computed(() => formatWholePriceOrFree(props.tier.price, props.tier.currency || "INR"))
+const price = computed(() => {
+	const [defaultPrice] = props.tier.prices
+	return formatWholePriceOrFree(defaultPrice.price, defaultPrice.currency)
+})
 
 const sponsors = computed(() => {
 	const count = props.tier.sponsor_count
