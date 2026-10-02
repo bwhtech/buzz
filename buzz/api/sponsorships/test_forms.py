@@ -193,8 +193,7 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 				"doctype": "Sponsorship Tier",
 				"event": other_event.name,
 				"title": "Other tier",
-				"price": 100,
-				"currency": "INR",
+				"prices": [{"currency": "INR", "price": 100}],
 			}
 		).insert(ignore_permissions=True)
 
@@ -225,8 +224,7 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 				"doctype": "Sponsorship Tier",
 				"event": self.event.name,
 				"title": title,
-				"price": 100,
-				"currency": "INR",
+				"prices": [{"currency": "INR", "price": 100}],
 				"enabled": enabled,
 			}
 		).insert(ignore_permissions=True)

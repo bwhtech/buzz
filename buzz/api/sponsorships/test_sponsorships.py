@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -14,6 +16,7 @@ from buzz.api.sponsorships.exceptions import (
 	PaymentNotPermitted,
 	WithdrawalNotPermitted,
 )
+from buzz.ticketing.doctype.event_booking.test_event_booking_refund import make_payment_gateway
 
 ENQUIRY_FIELDS = {
 	"name",
@@ -56,8 +59,7 @@ class SponsorshipTestCase(IntegrationTestCase):
 				"doctype": "Sponsorship Tier",
 				"event": self.event,
 				"title": f"Sponsorship Test {frappe.generate_hash(length=6)}",
-				"price": 5000,
-				"currency": "INR",
+				"prices": [{"currency": "INR", "price": 5000}],
 			}
 		).insert()
 
@@ -215,3 +217,18 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 
 		with self.assertRaises(frappe.ValidationError):
 			create_sponsorship_payment_link(self.enquiry.name, self.tier.name)
+
+	def test_link_charges_the_chosen_currency(self):
+		self.tier.append("prices", {"currency": "USD", "price": 60})
+		self.tier.save()
+		make_payment_gateway("Razorpay")
+
+		with patch("buzz.payments.get_controller", return_value=MagicMock()):
+			create_sponsorship_payment_link(self.enquiry.name, self.tier.name, "Razorpay", currency="USD")
+
+		payment = frappe.get_last_doc("Event Payment", {"reference_docname": self.enquiry.name})
+		self.assertEqual((payment.currency, payment.amount), ("USD", 60))
+
+	def test_link_refuses_a_currency_the_tier_has_no_price_in(self):
+		with self.assertRaises(frappe.ValidationError):
+			create_sponsorship_payment_link(self.enquiry.name, self.tier.name, "Razorpay", currency="EUR")

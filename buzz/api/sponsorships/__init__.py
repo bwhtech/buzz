@@ -47,8 +47,10 @@ def get_user_sponsorship_inquiries() -> list[SponsorshipListItem]:
 
 
 @frappe.whitelist()
-def create_sponsorship_payment_link(enquiry_id: str, tier_id: str, payment_gateway: str | None = None) -> str:
-	return SponsorshipService(enquiry_id).payment_link(tier_id, payment_gateway)
+def create_sponsorship_payment_link(
+	enquiry_id: str, tier_id: str, payment_gateway: str | None = None, currency: str | None = None
+) -> str:
+	return SponsorshipService(enquiry_id).payment_link(tier_id, payment_gateway, currency)
 
 
 @frappe.whitelist()
