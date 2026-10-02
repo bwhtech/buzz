@@ -1,6 +1,6 @@
 from frappe import _lt
 
-from buzz.api.exceptions import BuzzAPIError, Conflict, NotPermitted, ResourceNotFound
+from buzz.api.exceptions import BuzzAPIError, NotPermitted, ResourceNotFound
 
 
 class EventNotFound(ResourceNotFound):
@@ -26,13 +26,3 @@ class ZoomNotAvailable(BuzzAPIError):
 class EventEnded(BuzzAPIError):
 	title = _lt("Event Has Ended")
 	message = _lt("You cannot convert events that have ended to Zoom meetings.")
-
-
-class TicketTypeNotFound(ResourceNotFound):
-	title = _lt("Ticket Type Not Found")
-	message = _lt("This ticket type does not belong to the event.")
-
-
-class TicketTypeHasSales(Conflict):
-	title = _lt("Ticket Type Has Sales")
-	message = _lt("{title} cannot be deleted because tickets are sold.")

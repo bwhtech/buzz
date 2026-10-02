@@ -106,9 +106,6 @@ class GuestTicketType(APIResponse):
 
 class EventGuestsResponse(APIResponse):
 	title: str | None = None
-	# Where registrations are actually taken: the event's own page, or the external one
-	# it sends people to instead.
-	registration_link: str | None = None
 	# The event's own details, so a guest row can be drawn as the ticket it is.
 	start_date: date | None = None
 	start_time: timedelta | None = None
@@ -118,12 +115,6 @@ class EventGuestsResponse(APIResponse):
 	# first when nothing is being searched for.
 	total: int
 	matched: int
-	registrations_closed: bool
-	# Read access alone is a Viewer or Frontdesk, who cannot change the registration state.
-	can_write: bool = False
-	# Whether people without an account can register themselves, and how they are verified.
-	allow_guest_booking: bool = False
-	guest_verification_method: str = "None"
 	guests: list[EventGuest]
 	ticket_types: list[GuestTicketType] = Field(default_factory=list)
 	has_next_page: bool = False
@@ -216,17 +207,3 @@ class EventTicketTypes(APIResponse):
 	allow_guest_booking: bool
 	guest_verification_method: str
 	ticket_types: list[TicketTypeItem]
-
-
-class TicketTypePriceInput(APIRequest):
-	currency: str
-	price: float
-
-
-class TicketTypeInput(APIRequest):
-	name: str | None = None
-	title: str
-	max_tickets_available: int = 0
-	auto_unpublish_after: date | None = None
-	is_published: bool = True
-	prices: list[TicketTypePriceInput] = Field(default_factory=list)

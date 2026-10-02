@@ -246,14 +246,6 @@ export interface EventGuests {
 	venue: string | null
 	total: number
 	matched: number
-	registrations_closed: boolean
-	// Where registrations are taken: this event's own page, or the external one it uses.
-	registration_link: string | null
-	// Read access alone is a Viewer or Frontdesk, who cannot change the registration state.
-	can_write: boolean
-	// Whether people without an account can register themselves, and how they are verified.
-	allow_guest_booking: boolean
-	guest_verification_method: string
 	guests: EventGuest[]
 	ticket_types: GuestTicketType[]
 	has_next_page: boolean
@@ -601,11 +593,3 @@ export interface EventTicketTypes {
 	guest_verification_method: string
 	ticket_types: TicketTypeItem[]
 }
-
-export type TicketTypeInput = Pick<
-	TicketTypeItem,
-	"title" | "max_tickets_available" | "auto_unpublish_after" | "is_published" | "prices"
-> & { name: string | null }
-
-export type TicketTypeDraft = TicketTypeInput &
-	Pick<TicketTypeItem, "tickets_sold"> & { key: string }
