@@ -124,6 +124,18 @@ const routes: RouteRecordRaw[] = [
 		component: () => import("@/pages/BookTickets.vue"),
 	},
 	{
+		path: "/login",
+		name: "login",
+		meta: { isPublic: true, title: "Log In" },
+		component: () => import("@/pages/LoginPage.vue"),
+	},
+	{
+		path: "/login/embed",
+		name: "login-embed",
+		meta: { isPublic: true, embedded: true },
+		component: () => import("@/pages/LoginEmbed.vue"),
+	},
+	{
 		path: "/event-proposal",
 		name: "event-proposal",
 		meta: { isPublic: true },
