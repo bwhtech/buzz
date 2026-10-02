@@ -220,7 +220,10 @@ interface ProviderLogin {
 
 const { is_open, close } = useLoginDialog()
 
-const pageLocation = (window.top ?? window).location
+// The embed route runs inside the public page's overlay, where the parent page owns the URL.
+const pageLocation = window.location.pathname.endsWith("/login/embed")
+	? window.parent.location
+	: window.location
 
 const current_view = ref<LoginView>("login")
 const error_message = ref("")

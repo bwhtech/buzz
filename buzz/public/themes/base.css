@@ -205,11 +205,13 @@ body {
 	border: 0;
 	background: transparent;
 	opacity: 0;
+	pointer-events: none;
 	transition: opacity 150ms ease-out;
 }
 
 .login-frame[data-ready] {
 	opacity: 1;
+	pointer-events: auto;
 }
 
 body:has(.login-frame:not([data-ready])) {

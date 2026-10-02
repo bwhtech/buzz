@@ -59,7 +59,8 @@ const LOGIN_MESSAGE = "buzz-login"
 const LOGIN_FRAME_FADE_MS = 150
 
 function openLoginFrame(link: HTMLAnchorElement) {
-	if (document.querySelector(".login-frame")) return
+	// A frame still here never became ready (the embed failed to load), so start over.
+	document.querySelector(".login-frame")?.remove()
 	const mode = document.documentElement.dataset.mode === "light" ? "light" : "dark"
 	const frame = document.createElement("iframe")
 	frame.className = "login-frame"
@@ -72,12 +73,13 @@ function openLoginFrame(link: HTMLAnchorElement) {
 function closeLoginFrame(frame: HTMLIFrameElement) {
 	frame.removeAttribute("data-ready")
 	setTimeout(() => frame.remove(), LOGIN_FRAME_FADE_MS)
+	document.querySelector<HTMLAnchorElement>("a[data-login]")?.focus()
 }
 
 window.addEventListener("message", (event) => {
 	if (event.origin !== location.origin || event.data?.type !== LOGIN_MESSAGE) return
 	const frame = document.querySelector<HTMLIFrameElement>(".login-frame")
-	if (!frame) return
+	if (!frame || event.source !== frame.contentWindow) return
 	if (event.data.state === "ready") {
 		frame.setAttribute("data-ready", "")
 		frame.focus()
