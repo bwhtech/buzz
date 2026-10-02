@@ -279,28 +279,33 @@ def get_time_zone_label(time_zone: str | None, reference_datetime: datetime | No
 	Resolution order: tzdata abbreviation for the reference date (DST-aware),
 	then the curated map, then a formatted GMT offset.
 	"""
-	if not time_zone:
+	local_datetime = datetime_in_time_zone(time_zone, reference_datetime)
+	if not local_datetime:
 		return ""
 
-	try:
-		zone = ZoneInfo(time_zone)
-	except (ZoneInfoNotFoundError, ValueError):
-		return ""
-
-	reference = reference_datetime or now_datetime()
-	if reference.tzinfo:
-		moment = reference.astimezone(zone)
-	else:
-		moment = reference.replace(tzinfo=zone)
-
-	abbreviation = moment.tzname()
+	abbreviation = local_datetime.tzname()
 	if re.fullmatch(r"[A-Z]{2,5}", abbreviation):
 		return abbreviation
 
 	if time_zone in TIMEZONE_ABBREVIATIONS:
 		return TIMEZONE_ABBREVIATIONS[time_zone]
 
-	total_minutes = int(moment.utcoffset().total_seconds()) // 60
+	return format_gmt_offset(local_datetime)
+
+
+def datetime_in_time_zone(time_zone: str | None, reference_datetime: datetime | None) -> datetime | None:
+	if not time_zone:
+		return None
+	try:
+		zone = ZoneInfo(time_zone)
+	except (ZoneInfoNotFoundError, ValueError):
+		return None
+	reference = reference_datetime or now_datetime()
+	return reference.astimezone(zone) if reference.tzinfo else reference.replace(tzinfo=zone)
+
+
+def format_gmt_offset(local_datetime: datetime) -> str:
+	total_minutes = int(local_datetime.utcoffset().total_seconds()) // 60
 	sign = "+" if total_minutes >= 0 else "-"
 	hours, minutes = divmod(abs(total_minutes), 60)
 	label = f"GMT{sign}{hours}"
