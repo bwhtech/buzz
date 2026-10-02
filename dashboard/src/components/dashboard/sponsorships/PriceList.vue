@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { FormControl } from "frappe-ui"
+import { FormControl, Tooltip } from "frappe-ui"
+import { TooltipProvider } from "reka-ui"
 import { computed } from "vue"
 
 import PriceInput from "@/components/dashboard/sponsorships/PriceInput.vue"
@@ -8,7 +9,14 @@ import { useEnabledCurrencies } from "@/data/currencies"
 import type { TierPrice } from "@/types"
 
 const prices = defineModel<TierPrice[]>({ required: true })
-defineProps<{ disabled?: boolean }>()
+const props = defineProps<{
+	disabled?: boolean
+	lockedCurrencies?: string[]
+	// Explains a locked row on hover, or on tap since the row takes focus.
+	lockedMessage?: string
+}>()
+
+const isLocked = (row: TierPrice) => Boolean(props.lockedCurrencies?.includes(row.currency))
 
 const enabledCurrencies = useEnabledCurrencies()
 
@@ -45,34 +53,47 @@ function updatePrice(index: number, values: Partial<TierPrice>) {
 </script>
 
 <template>
-	<SortableList
-		v-model="prices"
-		label="Prices"
-		add-label="Add currency"
-		item-name="price"
-		:create-item="createPrice"
-		:min-rows="1"
-		:disabled="disabled"
-	>
-		<template #row="{ item, index }">
-			<div class="grid min-w-0 flex-1 grid-cols-[2fr_1fr] gap-2">
-				<PriceInput
-					:model-value="item.price"
-					aria-label="Price"
-					:currency-symbol="currencyDetails(item.currency)?.symbol || item.currency"
-					:number-format="currencyDetails(item.currency)?.number_format"
-					:disabled="disabled"
-					@update:model-value="updatePrice(index, { price: $event })"
-				/>
-				<FormControl
-					:model-value="item.currency"
-					type="select"
-					aria-label="Currency"
-					:options="currencyOptions(index)"
-					:disabled="disabled"
-					@update:model-value="updatePrice(index, { currency: $event })"
-				/>
-			</div>
-		</template>
-	</SortableList>
+	<!-- A click on a locked row keeps its tooltip open instead of dismissing it. -->
+	<TooltipProvider :delay-duration="300" disable-closing-trigger>
+		<SortableList
+			v-model="prices"
+			label="Prices"
+			add-label="Add currency"
+			item-name="price"
+			:create-item="createPrice"
+			:min-rows="1"
+			:disabled="disabled"
+			:is-locked="isLocked"
+		>
+			<template #row="{ item, index }">
+				<Tooltip :disabled="!isLocked(item)">
+					<template #content>
+						<p class="max-w-64 text-p-xs">{{ lockedMessage }}</p>
+					</template>
+					<div
+						class="grid min-w-0 flex-1 grid-cols-[2fr_1fr] gap-2 rounded-4 focus-visible:outline-none focus-visible:focus-ring"
+						:tabindex="isLocked(item) ? 0 : undefined"
+						:class="{ 'cursor-not-allowed [&_*]:!cursor-not-allowed': isLocked(item) }"
+					>
+						<PriceInput
+							:model-value="item.price"
+							aria-label="Price"
+							:currency-symbol="currencyDetails(item.currency)?.symbol || item.currency"
+							:number-format="currencyDetails(item.currency)?.number_format"
+							:disabled="disabled || isLocked(item)"
+							@update:model-value="updatePrice(index, { price: $event })"
+						/>
+						<FormControl
+							:model-value="item.currency"
+							type="select"
+							aria-label="Currency"
+							:options="currencyOptions(index)"
+							:disabled="disabled || isLocked(item)"
+							@update:model-value="updatePrice(index, { currency: $event })"
+						/>
+					</div>
+				</Tooltip>
+			</template>
+		</SortableList>
+	</TooltipProvider>
 </template>

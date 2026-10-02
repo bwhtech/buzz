@@ -10,7 +10,9 @@ from buzz.api.booking.schemas import (
 CouponResponse = InvalidCouponResponse | DiscountCouponResponse | FreeTicketsCouponResponse
 
 
-def validate_coupon_for_event(coupon_code: str, event: str, user_email: str | None) -> CouponResponse:
+def validate_coupon_for_event(
+	coupon_code: str, event: str, user_email: str | None, currency: str | None = None
+) -> CouponResponse:
 	if not frappe.db.exists("Buzz Coupon Code", coupon_code):
 		return InvalidCouponResponse(valid=False, error=_("Invalid coupon code"))
 
@@ -26,6 +28,10 @@ def validate_coupon_for_event(coupon_code: str, event: str, user_email: str | No
 
 	is_limited, error = coupon.is_user_limit_reached(user=resolve_coupon_user(user_email))
 	if is_limited:
+		return InvalidCouponResponse(valid=False, error=error)
+
+	is_usable, error = coupon.is_usable_in_currency(currency, event)
+	if not is_usable:
 		return InvalidCouponResponse(valid=False, error=error)
 
 	if coupon.coupon_type == "Discount":

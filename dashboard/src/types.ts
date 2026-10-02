@@ -246,14 +246,6 @@ export interface EventGuests {
 	venue: string | null
 	total: number
 	matched: number
-	registrations_closed: boolean
-	// Where registrations are taken: this event's own page, or the external one it uses.
-	registration_link: string | null
-	// Read access alone is a Viewer or Frontdesk, who cannot change the registration state.
-	can_write: boolean
-	// Whether people without an account can register themselves, and how they are verified.
-	allow_guest_booking: boolean
-	guest_verification_method: string
 	guests: EventGuest[]
 	ticket_types: GuestTicketType[]
 	has_next_page: boolean
@@ -392,6 +384,8 @@ export interface AvailableTicketType {
 	remaining_tickets?: number
 	free_add_ons?: string[]
 	add_ons?: string[]
+	prices?: { currency: string; price: number }[]
+	price_note?: string
 }
 
 export interface AvailableAddOn {
@@ -400,6 +394,8 @@ export interface AvailableAddOn {
 	description?: string
 	price?: number
 	currency?: string
+	prices?: { currency: string; price: number }[]
+	price_note?: string
 	options?: string[]
 	user_selects_option?: 0 | 1 | boolean
 }
@@ -571,4 +567,29 @@ export interface EventEnquiries {
 	matched: number
 	enquiries: EventEnquiryItem[]
 	has_next_page: boolean
+}
+
+export interface TicketTypePrice extends TierPrice {
+	tickets_sold?: number
+}
+
+// buzz.api.events.get_event_ticket_types: the ticket types an event sells, for its Tickets page.
+export interface TicketTypeItem {
+	name: string
+	title: string
+	max_tickets_available: number
+	auto_unpublish_after: string | null
+	is_published: boolean
+	tickets_sold: number
+	prices: TicketTypePrice[]
+}
+
+export interface EventTicketTypes {
+	title: string
+	can_write: boolean
+	registration_link: string | null
+	registrations_closed: boolean
+	allow_guest_booking: boolean
+	guest_verification_method: string
+	ticket_types: TicketTypeItem[]
 }

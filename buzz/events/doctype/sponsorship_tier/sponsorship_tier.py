@@ -6,6 +6,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cstr
 
+from buzz.events.doctype.buzz_price.buzz_price import validate_unique_currencies
+
 
 class SponsorshipTier(Document):
 	# begin: auto-generated types
@@ -40,9 +42,7 @@ class SponsorshipTier(Document):
 	def validate_prices(self):
 		if not self.prices:
 			frappe.throw(_("Add at least one price to the sponsorship tier."))
-		currencies = [row.currency for row in self.prices]
-		if len(currencies) != len(set(currencies)):
-			frappe.throw(_("Each currency can have only one price."))
+		validate_unique_currencies(self.prices)
 
 	def price_for(self, currency: str | None = None):
 		"""The price row for a currency; the first row is the default."""

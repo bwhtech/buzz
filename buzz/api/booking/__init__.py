@@ -58,5 +58,7 @@ def get_booking_summary(booking_id: str) -> BookingSummary:
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
-def validate_coupon(coupon_code: str, event: str, user_email: str | None = None) -> coupons.CouponResponse:
-	return coupons.validate_coupon_for_event(coupon_code, event, user_email)
+def validate_coupon(
+	coupon_code: str, event: str, user_email: str | None = None, currency: str | None = None
+) -> coupons.CouponResponse:
+	return coupons.validate_coupon_for_event(coupon_code, event, user_email, currency)

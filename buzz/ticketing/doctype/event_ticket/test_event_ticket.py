@@ -34,7 +34,7 @@ class TestEventTicketEmail(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.test_event.name,
 				"title": "Email Test Ticket",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 			}
 		).insert()
 
@@ -191,7 +191,7 @@ class TestEventTicketZoomMeeting(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"title": "Meeting TT",
 				"event": self.event.name,
-				"currency": "USD",
+				"prices": [{"currency": "USD", "price": 0}],
 			}
 		).insert(ignore_permissions=True, ignore_if_duplicate=True)
 
@@ -348,7 +348,6 @@ class TestGuestTicketEmail(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.event.name,
 				"title": "Guest Email Ticket",
-				"price": 0,
 			}
 		).insert(ignore_permissions=True)
 		self.template = frappe.get_doc(

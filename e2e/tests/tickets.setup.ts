@@ -97,8 +97,6 @@ setup("seed a ticket owned by the attendee", async ({ request, baseURL }) => {
 	const ticketType = await createDoc<NamedDoc>(request, "Event Ticket Type", {
 		event: event.name,
 		title: "Tickets E2E Ticket",
-		price: 0,
-		currency: "INR",
 		is_published: 1,
 	})
 

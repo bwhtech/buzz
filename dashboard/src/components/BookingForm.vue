@@ -6,7 +6,7 @@
 		<!-- Payment Gateway Selection Dialog -->
 		<PaymentGatewayDialog
 			v-model:open="showGatewayDialog"
-			:payment-gateways="paymentGateways"
+			:payment-gateways="gateways"
 			@gateway-selected="onGatewaySelected"
 		/>
 
@@ -217,8 +217,8 @@
 						:key="attendee.id"
 						:attendee="attendee"
 						:index="index"
-						:available-ticket-types="availableTicketTypes"
-						:available-add-ons="availableAddOns"
+						:available-ticket-types="ticketTypes"
+						:available-add-ons="addOns"
 						:custom-fields="ticketCustomFields"
 						:show-remove="attendees.length > 1"
 						:eventDetails="eventDetails"
@@ -241,6 +241,17 @@
 				<!-- Right Side: Coupon, Summary and Submit -->
 				<div class="lg:col-span-1">
 					<div class="sticky top-4 w-full">
+						<div
+							v-if="currencyOptions.length > 1 && !eventDetails.free_event"
+							class="mb-3 flex items-center justify-end gap-1 text-sm text-ink-gray-5"
+						>
+							<span>{{ __("Showing {0} prices", [displayCurrency]) }}</span>
+							<Dropdown :options="currencyMenu">
+								<Button size="sm" variant="ghost" :aria-label="__('Change currency')">
+									{{ __("Change") }}
+								</Button>
+							</Dropdown>
+						</div>
 						<!-- Coupon Code Section -->
 						<div
 							v-if="finalTotal > 0 || couponApplied"
@@ -364,6 +375,20 @@
 							</div>
 						</div>
 
+						<Alert
+							v-if="itemsOnlyInBase.length && displayCurrency !== baseCurrency"
+							class="mb-4"
+							theme="amber"
+							:title="__('This order will be charged in {0}', [baseCurrency])"
+							:description="
+								__('{0} is sold in {1} only. Remove it to pay in {2}.', [
+									itemsOnlyInBase.map((item) => item.title).join(', '),
+									baseCurrency,
+									displayCurrency,
+								])
+							"
+						/>
+
 						<BookingSummary
 							class="mb-6"
 							v-if="!eventDetails.free_event"
@@ -396,6 +421,9 @@
 							>
 								{{ submitButtonText }}
 							</Button>
+							<p v-if="isOtherCurrency" class="mt-2 text-p-xs text-ink-gray-5">
+								{{ __("Pay by card. You're charged in {0}.", [orderCurrency]) }}
+							</p>
 						</div>
 					</div>
 				</div>
@@ -406,7 +434,7 @@
 
 <script setup lang="ts">
 import { useRouteQuery } from "@vueuse/router"
-import { FormControl, toast, useCall } from "frappe-ui"
+import { Alert, Dropdown, FormControl, toast, useCall } from "frappe-ui"
 import { type PropType, computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import LucideAlertCircle from "~icons/lucide/alert-circle"
@@ -580,9 +608,85 @@ if (!props.isGuestMode) {
 }
 
 // --- HELPERS / DERIVED STATE ---
-const addOnsMap = computed(() => Object.fromEntries(props.availableAddOns.map((a) => [a.name, a])))
+type Priced = { price?: number; currency?: string; prices?: { currency: string; price: number }[] }
+
+const baseCurrency = computed(() => props.availableTicketTypes[0]?.currency || "INR")
+const displayCurrency = ref(baseCurrency.value)
+
+const currencyOptions = computed(() => [
+	...new Set(
+		props.availableTicketTypes.flatMap((tt) => (tt.prices ?? []).map((row) => row.currency)),
+	),
+])
+
+const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" })
+
+const currencyMenu = computed(() =>
+	currencyOptions.value.map((currency) => ({
+		label: `${currencyNames.of(currency)} (${currency})`,
+		icon: currency === displayCurrency.value ? "lucide-check" : "lucide-dot",
+		onClick: () => (displayCurrency.value = currency),
+	})),
+)
+
+function priceIn(item: Priced, currency: string) {
+	if (currency === item.currency) return item.price ?? 0
+	if (!item.price) return 0
+	return item.prices?.find((row) => row.currency === currency)?.price
+}
+
+function pricedIn<T extends Priced>(item: T, currency: string): T {
+	const price = priceIn(item, currency)
+	return price === undefined ? item : { ...item, price, currency }
+}
+
+function withBaseOnlyNote<T extends Priced>(item: T): T & { price_note?: string } {
+	if (priceIn(item, displayCurrency.value) !== undefined)
+		return pricedIn(item, displayCurrency.value)
+	return { ...item, price_note: __("{0} only", [baseCurrency.value]) }
+}
+
+const ticketTypes = computed(() => props.availableTicketTypes.map(withBaseOnlyNote))
+const addOns = computed(() => props.availableAddOns.map(withBaseOnlyNote))
+
+const selectedItems = computed(() => {
+	const ticketTypesByName = Object.fromEntries(
+		props.availableTicketTypes.map((tt) => [String(tt.name), tt]),
+	)
+	const addOnsByName = Object.fromEntries(props.availableAddOns.map((addOn) => [addOn.name, addOn]))
+	const items = new Set<AvailableTicketType | AvailableAddOn>()
+	for (const attendee of attendees.value) {
+		const ticketType = ticketTypesByName[String(attendee.ticket_type)]
+		if (ticketType) items.add(ticketType)
+		for (const [name, selection] of Object.entries(attendee.add_ons ?? {})) {
+			if (selection.selected && addOnsByName[name]) items.add(addOnsByName[name])
+		}
+	}
+	return [...items]
+})
+
+const itemsOnlyInBase = computed(() =>
+	selectedItems.value.filter((item) => priceIn(item, displayCurrency.value) === undefined),
+)
+
+const orderCurrency = computed(() =>
+	itemsOnlyInBase.value.length ? baseCurrency.value : displayCurrency.value,
+)
+const isOtherCurrency = computed(() => orderCurrency.value !== baseCurrency.value)
+
+const gateways = computed(() =>
+	isOtherCurrency.value
+		? props.paymentGateways.filter((gateway) => !isOfflineGateway(gateway))
+		: props.paymentGateways,
+)
+
+const addOnsMap = computed(() =>
+	Object.fromEntries(props.availableAddOns.map((a) => [a.name, pricedIn(a, orderCurrency.value)])),
+)
 const ticketTypesMap = computed(() =>
-	Object.fromEntries(props.availableTicketTypes.map((t) => [t.name, t])),
+	Object.fromEntries(
+		props.availableTicketTypes.map((t) => [t.name, pricedIn(t, orderCurrency.value)]),
+	),
 )
 const eventId = computed(() => props.availableTicketTypes[0]?.event || null)
 
@@ -600,13 +704,13 @@ const getDefaultTicketType = () => {
 	const defaultTicketType = props.eventDetails?.default_ticket_type
 	if (defaultTicketType) {
 		// Verify that the default ticket type is available
-		const isAvailable = props.availableTicketTypes.some((tt) => tt.name == defaultTicketType)
+		const isAvailable = ticketTypes.value.some((tt) => tt.name == defaultTicketType)
 		if (isAvailable) {
 			return String(defaultTicketType)
 		}
 	}
 	// Fall back to the first available ticket type
-	return String(props.availableTicketTypes[0]?.name || "")
+	return String(ticketTypes.value[0]?.name || "")
 }
 
 const createNewAttendee = (): BookingAttendee => {
@@ -902,7 +1006,7 @@ watch(
 // Auto-select ticket type based on event's default or if there's only one available
 // Also revalidate stored ticket types (from localStorage) against currently available ones
 watch(
-	() => props.availableTicketTypes,
+	ticketTypes,
 	(newTicketTypes) => {
 		if (newTicketTypes && newTicketTypes.length > 0) {
 			const defaultTicketType = getDefaultTicketType()
@@ -1040,6 +1144,7 @@ async function applyCoupon() {
 	const params: Record<string, any> = {
 		coupon_code: normalizedCode,
 		event: eventId.value,
+		currency: orderCurrency.value,
 	}
 	// Pass user email for guest mode to properly check per-user limits
 	if (props.isGuestMode && guestEmail.value.trim()) {
@@ -1093,6 +1198,10 @@ async function applyCoupon() {
 		couponError.value = result.error
 	}
 }
+
+watch(orderCurrency, () => {
+	if (couponApplied.value) applyCoupon()
+})
 
 function removeCoupon() {
 	couponCode.value = ""
@@ -1221,6 +1330,7 @@ async function submit() {
 		booking_custom_fields:
 			Object.keys(cleanedBookingCustomFields).length > 0 ? cleanedBookingCustomFields : null,
 		utm_parameters: utmParameters.length > 0 ? utmParameters : null,
+		currency: orderCurrency.value,
 		guest_email: props.isGuestMode ? guestEmail.value.trim() : null,
 		guest_full_name: props.isGuestMode ? guestFullName.value.trim() : null,
 		guest_phone: props.isGuestMode && isPhoneOtp.value ? guestPhone.value.trim() : null,
@@ -1261,12 +1371,12 @@ async function submit() {
 
 		// No OTP required - proceed with payment gateway selection
 		if (finalTotal.value > 0) {
-			if (props.paymentGateways.length > 1) {
+			if (gateways.value.length > 1) {
 				pendingPayload.value = final_payload
 				showGatewayDialog.value = true
 				return
-			} else if (props.paymentGateways.length === 1) {
-				const singleGateway = props.paymentGateways[0]
+			} else if (gateways.value.length === 1) {
+				const singleGateway = gateways.value[0]
 				if (isOfflineGateway(singleGateway)) {
 					pendingPayload.value = final_payload
 					selectedOfflineMethod.value =
@@ -1277,18 +1387,18 @@ async function submit() {
 			}
 		}
 
-		selectedGateway.value = props.paymentGateways[0] || null
+		selectedGateway.value = gateways.value[0] || null
 		submitBooking(final_payload, selectedGateway.value)
 		return
 	}
 
 	if (finalTotal.value > 0) {
-		if (props.paymentGateways.length > 1) {
+		if (gateways.value.length > 1) {
 			pendingPayload.value = final_payload
 			showGatewayDialog.value = true
 			return
-		} else if (props.paymentGateways.length === 1) {
-			const singleGateway = props.paymentGateways[0]
+		} else if (gateways.value.length === 1) {
+			const singleGateway = gateways.value[0]
 			if (isOfflineGateway(singleGateway)) {
 				pendingPayload.value = final_payload
 				selectedOfflineMethod.value =
@@ -1299,7 +1409,7 @@ async function submit() {
 		}
 	}
 
-	submitBooking(final_payload, props.paymentGateways[0] || null)
+	submitBooking(final_payload, gateways.value[0] || null)
 }
 
 async function submitBooking(
@@ -1393,13 +1503,13 @@ function submitWithOtp() {
 
 	// After OTP verification, check payment gateway selection
 	if (finalTotal.value > 0) {
-		if (props.paymentGateways.length > 1) {
+		if (gateways.value.length > 1) {
 			pendingPayload.value = payloadWithOtp
 			showOtpModal.value = false
 			showGatewayDialog.value = true
 			return
-		} else if (props.paymentGateways.length === 1) {
-			const singleGateway = props.paymentGateways[0]
+		} else if (gateways.value.length === 1) {
+			const singleGateway = gateways.value[0]
 			if (isOfflineGateway(singleGateway)) {
 				pendingPayload.value = payloadWithOtp
 				selectedOfflineMethod.value =

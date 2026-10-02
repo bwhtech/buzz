@@ -50,8 +50,10 @@ test.describe("Event workspace", () => {
 	})
 
 	test("swaps the sidebar for the event's own destinations", async ({ page }) => {
-		for (const label of ["Details", "Registrations", "Talks"]) {
-			await expect(page.getByRole("link", { name: label })).toBeVisible({ timeout: 15000 })
+		for (const label of ["Details", "Registration", "Guests", "Talks"]) {
+			await expect(page.getByRole("link", { name: label, exact: true })).toBeVisible({
+				timeout: 15000,
+			})
 		}
 		await expect(page.getByRole("button", { name: "Back to events" })).toBeVisible()
 		await expect(page.getByRole("link", { name: "My Tickets" })).toHaveCount(0)
@@ -209,8 +211,6 @@ test.describe("Guest list", () => {
 		const ticketType = await createDoc<{ name: string }>(request, "Event Ticket Type", {
 			event: eventId,
 			title: TICKET_TYPE,
-			price: 0,
-			currency: "INR",
 			is_published: 1,
 		})
 		const addOn = await createDoc<{ name: string }>(request, "Ticket Add-on", {
@@ -242,7 +242,7 @@ test.describe("Guest list", () => {
 	})
 
 	test("lists the event's guests", async ({ page }) => {
-		await page.getByRole("link", { name: "Registrations" }).click()
+		await page.getByRole("link", { name: "Guests" }).click()
 
 		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
 		await expect(page.getByRole("heading", { name: "Guest list" })).toBeVisible()
@@ -252,9 +252,6 @@ test.describe("Guest list", () => {
 		// The count is the number of rows under it, not a separate claim.
 		const registrations = Number(await page.getByText(/^\d+$/).first().textContent())
 		expect(registrations).toBe(GUESTS.length)
-		// The registration state is the actions rail's own control, which reads the state
-		// out and is how it gets changed.
-		await expect(page.getByRole("button", { name: /Registration (Open|Closed)/ })).toBeVisible()
 
 		// Newest registration first, which is the reverse of the seeding above — so each
 		// row is found by its guest rather than by a position the sort order decides. Both
@@ -264,6 +261,17 @@ test.describe("Guest list", () => {
 		await expect(withAddOn).toContainText(TICKET_TYPE)
 		await expect(withAddOn).toContainText(ADD_ON)
 		await expect(rows.filter({ hasText: GUESTS[1].email })).not.toContainText(ADD_ON)
+	})
+
+	test("keeps the registration state beside the tickets", async ({ page }) => {
+		await page.getByRole("link", { name: "Registration", exact: true }).click()
+
+		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/registrations$`))
+		// The registration state is the actions rail's own control, which reads the state
+		// out and is how it gets changed.
+		await expect(page.getByRole("button", { name: /Registration (Open|Closed)/ })).toBeVisible({
+			timeout: 15000,
+		})
 	})
 
 	test("narrows the guest list by search", async ({ page }) => {
@@ -325,7 +333,7 @@ test.describe("Unsaved details", () => {
 		// Save showing is the form registering the edit, so the trip below starts dirty.
 		await expect(page.getByRole("button", { name: "Save" })).toBeVisible()
 
-		await page.getByRole("link", { name: "Registrations" }).click()
+		await page.getByRole("link", { name: "Guests" }).click()
 		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
 		await page.getByRole("link", { name: "Details" }).click()
 
@@ -337,7 +345,7 @@ test.describe("Unsaved details", () => {
 		await page.getByRole("button", { name: "Discard" }).click()
 		await expect(description).toHaveValue("")
 
-		await page.getByRole("link", { name: "Registrations" }).click()
+		await page.getByRole("link", { name: "Guests" }).click()
 		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
 		await page.getByRole("link", { name: "Details" }).click()
 
@@ -376,7 +384,7 @@ test.describe("Unsaved details", () => {
 		await page.getByRole("button", { name: "Save" }).click()
 		await expect(page.getByText("Event saved")).toBeVisible()
 
-		await page.getByRole("link", { name: "Registrations" }).click()
+		await page.getByRole("link", { name: "Guests" }).click()
 		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
 		await page.getByRole("link", { name: "Details" }).click()
 

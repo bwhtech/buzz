@@ -11,6 +11,7 @@ class BookingRequest(APIRequest):
 	attendees: list[dict]
 	event: str
 	coupon_code: str | None = None
+	currency: str | None = None
 	booking_custom_fields: dict | None = None
 	payment_gateway: str | None = None
 	utm_parameters: list[dict] | None = None

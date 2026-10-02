@@ -125,7 +125,6 @@ class BookingTestCase(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.event.name,
 				"title": f"Booking Free {frappe.generate_hash(length=6)}",
-				"price": 0,
 				"is_published": 1,
 			}
 		).insert(ignore_permissions=True)
@@ -242,7 +241,7 @@ class TestProcessBooking(BookingTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.event.name,
 				"title": f"Booking Paid {frappe.generate_hash(length=6)}",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 				"is_published": 1,
 			}
 		).insert(ignore_permissions=True)
@@ -433,7 +432,6 @@ class TestBookingSelectionValidation(BookingTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.foreign_event.name,
 				"title": f"Foreign Ticket {frappe.generate_hash(length=6)}",
-				"price": 0,
 				"is_published": 1,
 			}
 		).insert(ignore_permissions=True)

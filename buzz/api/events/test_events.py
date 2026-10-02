@@ -10,6 +10,7 @@ from buzz.api.events import (
 	get_event,
 	get_event_guests,
 	get_event_registration_trend,
+	get_event_ticket_types,
 	get_my_events,
 	get_verification_methods,
 	remove_co_host,
@@ -539,10 +540,10 @@ class TestGetEventGuests(IntegrationTestCase):
 		)
 		frappe.set_user(self.owner)
 
-		guests = get_event_guests(event)
+		registration = get_event_ticket_types(event)
 
-		self.assertTrue(guests.allow_guest_booking)
-		self.assertEqual(guests.guest_verification_method, "Phone OTP")
+		self.assertTrue(registration.allow_guest_booking)
+		self.assertEqual(registration.guest_verification_method, "Phone OTP")
 
 	def test_leaves_out_a_ticket_that_was_never_submitted(self):
 		event = create_event("Draft Ticket Event", self.team)
@@ -601,13 +602,13 @@ class TestGetEventGuests(IntegrationTestCase):
 		event = create_event("Closed Event", self.team, registrations_close_at="2020-01-01 00:00:00")
 		frappe.set_user(self.owner)
 
-		self.assertTrue(get_event_guests(event).registrations_closed)
+		self.assertTrue(get_event_ticket_types(event).registrations_closed)
 
 	def test_a_new_event_starts_with_registrations_closed(self):
 		event = create_event("New Event", self.team)
 		frappe.set_user(self.owner)
 
-		self.assertTrue(get_event_guests(event).registrations_closed)
+		self.assertTrue(get_event_ticket_types(event).registrations_closed)
 
 	def test_a_cutoff_given_at_creation_is_kept(self):
 		event = create_event("Scheduled Event", self.team, registrations_close_at="2099-01-01 00:00:00")
@@ -621,14 +622,14 @@ class TestGetEventGuests(IntegrationTestCase):
 		duplicate = frappe.copy_doc(source, ignore_no_copy=False).insert(ignore_permissions=True)
 		frappe.set_user(self.owner)
 
-		self.assertTrue(get_event_guests(str(duplicate.name)).registrations_closed)
+		self.assertTrue(get_event_ticket_types(str(duplicate.name)).registrations_closed)
 
 	def test_reports_registrations_open_before_the_event_ends(self):
 		event = create_event("Open Event", self.team)
 		frappe.db.set_value("Buzz Event", event, "registrations_close_at", None)
 		frappe.set_user(self.owner)
 
-		self.assertFalse(get_event_guests(event).registrations_closed)
+		self.assertFalse(get_event_ticket_types(event).registrations_closed)
 
 	def test_names_the_event_for_a_member_who_cannot_edit_it(self):
 		"""The header labels the page off this payload, so read access has to be enough."""
@@ -1044,7 +1045,7 @@ class TestSetRegistrationState(IntegrationTestCase):
 		frappe.set_user(self.owner)
 
 		self.assertTrue(set_registration_state(event, closed=True).registrations_closed)
-		self.assertTrue(get_event_guests(event).registrations_closed)
+		self.assertTrue(get_event_ticket_types(event).registrations_closed)
 
 	def test_opening_clears_the_cutoff(self):
 		event = create_event("Reopened Event", self.team, registrations_close_at="2020-01-01 00:00:00")
@@ -1072,14 +1073,14 @@ class TestSetRegistrationState(IntegrationTestCase):
 		with self.assertRaises(CannotManageEvent):
 			set_registration_state(event, closed=True)
 
-	def test_the_guest_response_tells_a_reader_they_cannot_write(self):
+	def test_the_registration_page_tells_a_reader_they_cannot_write(self):
 		event = create_event("Read Only Event", self.team)
 
 		frappe.set_user(self.viewer)
-		self.assertFalse(get_event_guests(event).can_write)
+		self.assertFalse(get_event_ticket_types(event).can_write)
 
 		frappe.set_user(self.owner)
-		self.assertTrue(get_event_guests(event).can_write)
+		self.assertTrue(get_event_ticket_types(event).can_write)
 
 	def test_an_external_registration_page_is_linked_instead_of_the_buzz_one(self):
 		event = create_event(
@@ -1090,13 +1091,13 @@ class TestSetRegistrationState(IntegrationTestCase):
 		)
 		frappe.set_user(self.owner)
 
-		self.assertEqual(get_event_guests(event).registration_link, "https://tickets.example.com/buzz")
+		self.assertEqual(get_event_ticket_types(event).registration_link, "https://tickets.example.com/buzz")
 
 	def test_an_ordinary_event_is_linked_to_its_own_registration_page(self):
 		event = create_event("Hosted Event", self.team, route="hosted-event")
 		frappe.set_user(self.owner)
 
-		self.assertEqual(get_event_guests(event).registration_link, "/b/register/hosted-event")
+		self.assertEqual(get_event_ticket_types(event).registration_link, "/b/register/hosted-event")
 
 
 class TestVerificationMethods(IntegrationTestCase):

@@ -378,17 +378,12 @@ def event_guests(
 	matched = count_tickets(filters, or_filters) if or_filters or chosen_types else total
 	return EventGuestsResponse(
 		title=doc.title,
-		registration_link=registration_link(doc),
 		start_date=doc.start_date,
 		start_time=doc.start_time,
 		end_date=doc.end_date,
 		venue=doc.get_venue_name(),
 		total=total,
 		matched=matched,
-		registrations_closed=are_registrations_closed(doc),
-		can_write=has_team_access(doc.team, "write", frappe.session.user),
-		allow_guest_booking=bool(doc.allow_guest_booking),
-		guest_verification_method=doc.guest_verification_method or "None",
 		guests=guests,
 		ticket_types=ticket_types_of(event),
 		has_next_page=start + len(guests) < matched,

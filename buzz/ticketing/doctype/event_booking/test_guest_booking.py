@@ -50,7 +50,7 @@ class TestGuestBooking(IntegrationTestCase):
 	def _get_or_create_free_ticket_type(self):
 		existing = frappe.db.get_value(
 			"Event Ticket Type",
-			{"event": self.test_event.name, "price": 0},
+			{"event": self.test_event.name, "title": "Free (Test)"},
 			"name",
 		)
 		if existing:
@@ -61,7 +61,6 @@ class TestGuestBooking(IntegrationTestCase):
 					"doctype": "Event Ticket Type",
 					"event": self.test_event.name,
 					"title": "Free (Test)",
-					"price": 0,
 				}
 			)
 			.insert()

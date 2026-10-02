@@ -67,6 +67,7 @@ class EventBooking(Document):
 		self.validate_ticket_availability()
 		self.fetch_amounts_from_ticket_types()
 		self.set_currency()
+		self.validate_add_ons_currency()
 		self.set_total()
 		self.apply_coupon_if_applicable()
 		self.apply_taxes_if_applicable()
@@ -169,13 +170,17 @@ class EventBooking(Document):
 
 	def fetch_amounts_from_ticket_types(self):
 		for attendee in self.attendees:
-			price, currency = frappe.get_cached_value(
-				"Event Ticket Type", attendee.ticket_type, ["price", "currency"]
-			)
-			# Always set price from ticket type - coupon will discount later
-			attendee.amount = price
-			if not attendee.currency:
-				attendee.currency = currency
+			ticket_type = frappe.get_cached_doc("Event Ticket Type", attendee.ticket_type)
+			attendee.currency = self.currency or ticket_type.prices[0].currency
+			attendee.amount = ticket_type.price_in(attendee.currency)
+
+	def validate_add_ons_currency(self):
+		for attendee in self.attendees:
+			if not attendee.add_ons:
+				continue
+			add_ons = frappe.get_cached_doc("Attendee Ticket Add-on", attendee.add_ons).add_ons
+			if any(row.price and row.currency != self.currency for row in add_ons):
+				frappe.throw(_("Paid add-ons can't be paid in {0}").format(self.currency))
 
 	def on_submit(self):
 		self.validate_coupon_availability()
@@ -668,6 +673,9 @@ class EventBooking(Document):
 			frappe.throw(error_msg)
 
 		if coupon.coupon_type == "Discount":
+			is_usable, error_msg = coupon.is_usable_in_currency(self.currency, self.event)
+			if not is_usable:
+				frappe.throw(error_msg)
 			is_met, error_msg = coupon.is_min_order_met(self.net_amount)
 			if not is_met:
 				frappe.throw(error_msg)
