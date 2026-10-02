@@ -796,8 +796,27 @@ body:has(.login-frame:not([data-ready])) {
 	border-radius: var(--radius);
 }
 
-.link-row:hover .aside-value {
+.link-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+}
+
+.link-label .icon {
+	position: relative;
+	top: 1px;
+	width: 12px;
+	height: 12px;
+	color: var(--ink-muted);
+}
+
+.link-row:hover .link-label {
 	text-decoration: underline;
+}
+
+.link-row:hover .link-label .icon {
+	color: var(--ink-strong);
 }
 
 .narrow-links {
