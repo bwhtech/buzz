@@ -21,6 +21,7 @@ from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import datetime_in_time_zone, format_gmt_offset, get_time_zone_label
 from buzz.www.event.date_range import RANGE_SEPARATOR, EventDateRange, format_time
+from buzz.www.event.link_icons import LINK_ICON_PATHS
 from buzz.www.event.meta import EventMeta
 from buzz.www.event.venue_map import venue_map_url
 from buzz.www.site_header import apply_site_context
@@ -95,6 +96,7 @@ class EventPage:
 			"pages": self.pages(),
 			"tabs": self.tabs(),
 			"hosts": self.hosts(),
+			"links": self.links(),
 			"schedule": self.schedule,
 			"speakers": self.speakers,
 			"sponsor_tiers": self.sponsor_tiers,
@@ -163,6 +165,17 @@ class EventPage:
 	def hosts(self) -> list:
 		hosts = [primary_host_of(self.event.team), *co_hosts_of(self.event.name)]
 		return [host for host in hosts if host]
+
+	def links(self) -> list[dict]:
+		return [
+			{
+				"label": row.label,
+				"url": url,
+				"icon_svg": LINK_ICON_PATHS.get(row.icon) or LINK_ICON_PATHS["link"],
+			}
+			for row in self.event.external_links
+			if (url := web_url(row.url))
+		]
 
 	@cached_property
 	def schedule(self) -> list[dict]:

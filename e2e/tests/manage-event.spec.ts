@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test"
 
-import { callMethod, createDoc, deleteDoc, ensureTestTeam, getDoc } from "../helpers/frappe"
+import {
+	callMethod,
+	createDoc,
+	deleteDoc,
+	ensureTestTeam,
+	getDoc,
+	updateDoc,
+} from "../helpers/frappe"
 
 // Runs under the shared Administrator state, whose team hosts the event seeded by
 // event.setup.ts — the one card guaranteed to carry a Manage button.
@@ -392,5 +399,70 @@ test.describe("Unsaved details", () => {
 		await expect(description).toHaveValue(text, { timeout: 15000 })
 		await expect(page.getByText("Restored your unsaved changes")).toHaveCount(0)
 		await expect(page.getByRole("button", { name: "Save" })).toHaveCount(0)
+	})
+})
+
+type EventLinks = { route: string; external_links: { icon: string; label: string; url: string }[] }
+
+test.describe("Event links", () => {
+	let eventId: string
+
+	test.beforeEach(async ({ page, request }) => {
+		const team = await ensureTestTeam(request)
+		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
+			event: {
+				team,
+				title: `Links Event ${Date.now()}`,
+				start_date: "2030-01-01",
+				start_time: "09:00:00",
+				end_time: "17:00:00",
+			},
+		})
+		eventId = String(event.name)
+		await updateDoc(request, "Buzz Event", eventId, { is_published: 1 })
+		await page.goto(`/b/manage/events/${eventId}/details`)
+	})
+
+	test.afterEach(async ({ request }) => {
+		await deleteDoc(request, "Buzz Event", eventId).catch(() => {})
+	})
+
+	test("adds a link that the event page then shows", async ({ page, request }) => {
+		const links = page
+			.locator("section")
+			.filter({ has: page.getByRole("heading", { name: "Links" }) })
+		await links.getByRole("button", { name: "Add link" }).click({ timeout: 15000 })
+
+		const dialog = page.getByRole("dialog")
+		await dialog.getByRole("textbox", { name: "URL" }).fill("t.me/buzz-e2e")
+		await expect(dialog.getByRole("textbox", { name: "Label" })).toHaveValue("Community chat")
+		await dialog.getByRole("button", { name: "Add link" }).click()
+		await expect(dialog).toBeHidden()
+
+		await page.getByRole("button", { name: "Save" }).click()
+		await expect(page.getByText("Event saved")).toBeVisible()
+
+		const saved = await getDoc<EventLinks>(request, "Buzz Event", eventId)
+		expect(saved.external_links).toMatchObject([
+			{ icon: "message-circle", label: "Community chat", url: "https://t.me/buzz-e2e" },
+		])
+
+		await page.goto(`/events/${saved.route}`)
+		const link = page.locator(".event-aside").getByRole("link", { name: "Community chat" })
+		await expect(link).toHaveAttribute("href", "https://t.me/buzz-e2e")
+	})
+
+	test("refuses an address that is not a web address", async ({ page }) => {
+		const links = page
+			.locator("section")
+			.filter({ has: page.getByRole("heading", { name: "Links" }) })
+		await links.getByRole("button", { name: "Add link" }).click({ timeout: 15000 })
+
+		const dialog = page.getByRole("dialog")
+		await dialog.getByRole("textbox", { name: "URL" }).fill("not a link")
+		await dialog.getByRole("button", { name: "Add link" }).click()
+
+		await expect(dialog.getByText("That doesn't look like a web address.")).toBeVisible()
+		await expect(dialog.getByText("Give the link a name attendees will recognise.")).toBeVisible()
 	})
 })

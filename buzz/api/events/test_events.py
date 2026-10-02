@@ -443,6 +443,34 @@ class TestEventCoHosts(IntegrationTestCase):
 		self.assertEqual(frappe.db.count("Event Host", {"host_name": "Acme Corp", "team": self.team}), 1)
 		self.assertEqual(get_event(self.event).__json__()["co_hosts"][0]["host"], added.host)
 
+	def test_external_links_come_back_in_table_order(self):
+		event = frappe.get_doc("Buzz Event", self.event)
+		event.append(
+			"external_links", {"icon": "map-pin", "label": "Venue map", "url": "https://maps.example.com"}
+		)
+		event.append("external_links", {"label": "Slides", "url": "https://slides.example.com"})
+		event.save()
+
+		links = get_event(self.event).__json__()["external_links"]
+
+		self.assertEqual([link["label"] for link in links], ["Venue map", "Slides"])
+		self.assertEqual(links[0]["icon"], "map-pin")
+		self.assertIsNone(links[1]["icon"])
+
+	def test_an_external_link_needs_a_valid_url(self):
+		event = frappe.get_doc("Buzz Event", self.event)
+		event.append("external_links", {"label": "Broken", "url": "not a url"})
+
+		with self.assertRaises(frappe.ValidationError):
+			event.save()
+
+	def test_an_external_link_must_be_a_web_address(self):
+		event = frappe.get_doc("Buzz Event", self.event)
+		event.append("external_links", {"label": "Script", "url": "javascript:alert(1)"})
+
+		with self.assertRaises(frappe.ValidationError):
+			event.save()
+
 	def test_a_viewer_cannot_add_a_co_host(self):
 		frappe.set_user(self.viewer)
 

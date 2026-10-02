@@ -16,6 +16,7 @@ from buzz.api.events.schemas import (
 	CreatedEvent,
 	DailyRegistrations,
 	EventDetail,
+	EventExternalLink,
 	EventGuest,
 	EventGuestsResponse,
 	EventHostRef,
@@ -161,6 +162,7 @@ def event_detail(event: str) -> EventDetail:
 			"meeting_link": meeting_link_of(row),
 			"primary_host": primary_host_of(row.team),
 			"co_hosts": co_hosts_of(event),
+			"external_links": external_links_of(event),
 		}
 	)
 
@@ -189,6 +191,16 @@ def co_hosts_of(event: str) -> list[EventHostRef]:
 		.orderby(co_host.idx)
 	).run(as_dict=True)
 	return [EventHostRef(host=row.name, label=row.host_name or row.name, logo=row.logo) for row in rows]
+
+
+def external_links_of(event: str) -> list[EventExternalLink]:
+	rows = frappe.get_all(
+		"Event External Link",
+		filters={"parenttype": "Buzz Event", "parent": str(event), "parentfield": "external_links"},
+		fields=["icon", "label", "url"],
+		order_by="idx",
+	)
+	return [EventExternalLink(**row) for row in rows]
 
 
 def create_co_host(

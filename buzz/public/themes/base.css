@@ -773,7 +773,8 @@ body:has(.login-frame:not([data-ready])) {
 	gap: 12px;
 }
 
-.host-row {
+.host-row,
+.link-row {
 	display: flex;
 	align-items: center;
 	gap: 10px;
@@ -789,6 +790,18 @@ body:has(.login-frame:not([data-ready])) {
 	background: var(--surface-raised);
 	color: var(--ink-strong);
 	object-fit: contain;
+}
+
+.link-row {
+	border-radius: var(--radius);
+}
+
+.link-row:hover .aside-value {
+	text-decoration: underline;
+}
+
+.narrow-links {
+	display: none;
 }
 
 /* Listing */
@@ -1151,6 +1164,11 @@ summary:focus-visible {
 	/* The meta row under the title carries when and where on a narrow screen. */
 	.event-aside {
 		display: none;
+	}
+
+	.narrow-links {
+		display: block;
+		margin-bottom: 24px;
 	}
 
 	.prose {

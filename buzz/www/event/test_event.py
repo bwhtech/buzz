@@ -135,6 +135,35 @@ class TestEventPage(IntegrationTestCase):
 			[host.label for host in hosts], ["Event Page Team", "Acme Page Host", "Beta Page Host"]
 		)
 
+	def test_links_keep_table_order_and_drop_unsafe_urls(self):
+		event = frappe.get_doc(
+			"Buzz Event", create_event("Links", self.team, route="links-page-event", is_published=1)
+		)
+		event.append(
+			"external_links", {"icon": "map-pin", "label": "Venue map", "url": "https://maps.example.com"}
+		)
+		event.append("external_links", {"label": "Slides", "url": "https://slides.example.com"})
+		event.save()
+		frappe.db.set_value("Event External Link", event.external_links[1].name, "url", "javascript:alert(1)")
+
+		links = EventPage("links-page-event").as_context()["links"]
+
+		self.assertEqual([link["label"] for link in links], ["Venue map"])
+		self.assertIn("M20 10c0", links[0]["icon_svg"])
+
+	def test_links_render_with_a_fallback_icon(self):
+		event = frappe.get_doc(
+			"Buzz Event", create_event("Rendered Links", self.team, route="rendered-links", is_published=1)
+		)
+		event.append("external_links", {"icon": "unknown", "label": "Join the chat", "url": "https://t.me/x"})
+		event.save()
+
+		html = render("rendered-links")
+
+		self.assertIn('href="https://t.me/x"', html)
+		self.assertIn("Join the chat", html)
+		self.assertIn("M10 13a5", html)
+
 	def test_title_is_escaped(self):
 		frappe.db.set_value("Buzz Event", self.event, "title", "<script>alert(1)</script>")
 		html = render("public-page-event")

@@ -1,6 +1,8 @@
 # Copyright (c) 2025, BWH Studios and contributors
 # For license information, please see license.txt
 
+from urllib.parse import urlparse
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -41,6 +43,7 @@ class BuzzEvent(Document):
 
 		from buzz.events.doctype.buzz_event_form.buzz_event_form import BuzzEventForm
 		from buzz.events.doctype.event_cohost.event_cohost import EventCoHost
+		from buzz.events.doctype.event_external_link.event_external_link import EventExternalLink
 		from buzz.events.doctype.event_featured_speaker.event_featured_speaker import EventFeaturedSpeaker
 		from buzz.events.doctype.event_payment_gateway.event_payment_gateway import EventPaymentGateway
 		from buzz.events.doctype.schedule_item.schedule_item import ScheduleItem
@@ -62,6 +65,7 @@ class BuzzEvent(Document):
 		default_ticket_type: DF.Link | None
 		end_date: DF.Date | None
 		end_time: DF.Time
+		external_links: DF.Table[EventExternalLink]
 		external_registration_page: DF.Check
 		featured_speakers: DF.Table[EventFeaturedSpeaker]
 		free_event: DF.Check
@@ -121,6 +125,7 @@ class BuzzEvent(Document):
 		self.validate_custom_forms()
 		self.clear_unused_location()
 		self.validate_co_hosts()
+		self.validate_external_links()
 		self.set_time_zone_label()
 
 	def clear_unused_location(self):
@@ -144,6 +149,11 @@ class BuzzEvent(Document):
 		if duplicate:
 			label = frappe.db.get_value("Event Host", duplicate, "host_name") or duplicate
 			frappe.throw(_("{0} is already a co-host of this event.").format(label))
+
+	def validate_external_links(self):
+		for row in self.external_links:
+			if urlparse(row.url or "").scheme not in ("http", "https"):
+				frappe.throw(_("Link {0} must start with http:// or https://").format(row.label))
 
 	def set_time_zone_label(self):
 		# validate runs before the mandatory check, so dates may still be empty here
