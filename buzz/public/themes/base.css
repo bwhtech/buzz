@@ -792,31 +792,19 @@ body:has(.login-frame:not([data-ready])) {
 	object-fit: contain;
 }
 
+.links .host-list {
+	gap: 2px;
+}
+
 .link-row {
+	margin-inline: -6px;
+	padding: 6px;
 	border-radius: var(--radius);
+	transition: background-color 150ms ease-out;
 }
 
-.link-label {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	min-width: 0;
-}
-
-.link-label .icon {
-	position: relative;
-	top: 1px;
-	width: 12px;
-	height: 12px;
-	color: var(--ink-muted);
-}
-
-.link-row:hover .link-label {
-	text-decoration: underline;
-}
-
-.link-row:hover .link-label .icon {
-	color: var(--ink-strong);
+.link-row .host-logo {
+	transition: background-color 150ms ease-out;
 }
 
 .narrow-links {
@@ -1136,6 +1124,14 @@ summary:focus-visible {
 
 	.btn-primary:hover {
 		background: var(--accent-hover);
+	}
+
+	.link-row:hover {
+		background: var(--surface-raised);
+	}
+
+	.link-row:hover .host-logo {
+		background: var(--border);
 	}
 
 	.tab:hover,
