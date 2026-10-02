@@ -336,7 +336,7 @@ function handleSignup() {
 	signup_resource.submit({
 		email: form.value.email,
 		full_name: form.value.full_name,
-		redirect_to: window.location.pathname,
+		redirect_to: window.location.pathname + window.location.search,
 	})
 }
 
