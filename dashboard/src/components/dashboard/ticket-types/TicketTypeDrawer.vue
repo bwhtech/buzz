@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Alert, DatePicker, FormControl, toast, useDoc } from "frappe-ui"
+import { Alert, DatePicker, FormControl, Switch, dayjs, toast, useDoc } from "frappe-ui"
 import { computed } from "vue"
 
 import DrawerSaveBar from "@/components/dashboard/sponsorships/DrawerSaveBar.vue"
@@ -44,8 +44,24 @@ const { draft, hasChanges, discardChanges, confirmAndSave } = useDrawerEdits<Tic
 const isInvalid = computed(
 	() =>
 		!draft.value.title?.trim() ||
-		draft.value.prices?.some((row) => !row.currency || !(row.price >= 0)),
+		draft.value.prices?.some((row) => !row.currency || !(row.price >= 0)) ||
+		draft.value.auto_unpublish_after === "",
 )
+
+// No field of its own: on while a date is set. Switching on leaves an empty date ("") for the
+// organiser to pick; switching off clears it, so saving removes the date.
+const autoUnpublish = computed<boolean>({
+	get: () => draft.value.auto_unpublish_after != null,
+	set: (on) => (draft.value.auto_unpublish_after = on ? "" : null),
+})
+
+const closesIn = computed(() => {
+	const date = draft.value.auto_unpublish_after
+	if (!date) return "Pick the last day to sell"
+	const days = dayjs(date).diff(dayjs().startOf("day"), "day")
+	if (days < 0) return "Sales have closed"
+	return days === 0 ? "Sales close today" : `Sales close in ${days} day${days === 1 ? "" : "s"}`
+})
 
 // A price stops being editable once tickets sell in its currency.
 const soldCurrencies = computed(() =>
@@ -140,15 +156,29 @@ async function save(values: TicketTypeValues) {
 				:disabled="!canWrite"
 				@update:model-value="draft.max_tickets_available = Math.max(Number($event) || 0, 0)"
 			/>
-			<DatePicker
-				:model-value="draft.auto_unpublish_after ?? ''"
-				label="Auto Unpublish On"
-				description="Leave empty to sell until the event starts."
-				placeholder="Select date"
-				clearable
-				:disabled="!canWrite"
-				@update:model-value="draft.auto_unpublish_after = $event || null"
-			/>
+			<div class="divide-y divide-outline-gray-1 rounded-4 border border-outline-gray-2">
+				<div class="p-1">
+					<Switch
+						v-model="autoUnpublish"
+						padded
+						label="Close sales automatically"
+						description="When off, it sells until the event starts."
+						:disabled="!canWrite"
+					/>
+				</div>
+				<div v-if="autoUnpublish" class="grid grid-cols-2 items-end gap-3 p-3">
+					<DatePicker
+						:model-value="draft.auto_unpublish_after ?? ''"
+						label="Auto Unpublish On"
+						placeholder="Select date"
+						format="ddd, D MMM YYYY"
+						:min="dayjs().format('YYYY-MM-DD')"
+						:disabled="!canWrite"
+						@update:model-value="draft.auto_unpublish_after = $event"
+					/>
+					<p class="pb-1.5 text-sm tabular-nums text-ink-gray-6">{{ closesIn }}</p>
+				</div>
+			</div>
 		</form>
 
 		<TicketTypeGuests
@@ -157,7 +187,7 @@ async function save(values: TicketTypeValues) {
 			:ticket-type="shownTicketType.name"
 			:count="shownTicketType.tickets_sold"
 		/>
-		<p v-else class="w-full rounded-6 bg-surface-gray-2 p-4 text-base text-ink-gray-5">
+		<p v-else class="w-full rounded-4 bg-surface-gray-1 p-4 text-base text-ink-gray-5">
 			No one has bought this ticket yet.
 		</p>
 

@@ -6,7 +6,7 @@ import type { EventGuests } from "@/types"
 
 const props = defineProps<{ event: string; ticketType: string; count: number }>()
 
-// The card is already gray, so the avatars take color to stand off it.
+// The card is gray, so the avatars take color to stand off it.
 const AVATAR_THEMES = ["blue", "green", "violet"] as const
 
 // Only the three newest holders are drawn; the count comes from the ticket type itself.
@@ -26,7 +26,7 @@ const summary = computed(() => {
 <template>
 	<RouterLink
 		:to="{ name: 'event-guests', params: { eventId: event }, query: { ticket_type: ticketType } }"
-		class="flex w-full items-center gap-3 rounded-6 bg-surface-gray-2 p-4 transition-[background-color,transform] duration-150 ease-out [@media(hover:hover)]:hover:bg-surface-gray-3 active:scale-[0.99] focus-visible:outline-none focus-visible:focus-ring motion-reduce:transform-none"
+		class="flex w-full items-center gap-3 rounded-4 bg-surface-gray-1 p-4 transition-[background-color,transform] duration-150 ease-out [@media(hover:hover)]:hover:bg-surface-gray-2 active:scale-[0.99] focus-visible:outline-none focus-visible:focus-ring motion-reduce:transform-none"
 	>
 		<span class="flex shrink-0 -space-x-1.5" aria-hidden="true">
 			<Avatar
