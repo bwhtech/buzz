@@ -16,6 +16,7 @@ from buzz.api.sponsorships.exceptions import (
 	PaymentNotPermitted,
 	WithdrawalNotPermitted,
 )
+from buzz.ticketing.doctype.event_booking.test_event_booking_refund import make_payment_gateway
 
 ENQUIRY_FIELDS = {
 	"name",
@@ -220,6 +221,7 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 	def test_link_charges_the_chosen_currency(self):
 		self.tier.append("prices", {"currency": "USD", "price": 60})
 		self.tier.save()
+		make_payment_gateway("Razorpay")
 
 		with patch("buzz.payments.get_controller", return_value=MagicMock()):
 			create_sponsorship_payment_link(self.enquiry.name, self.tier.name, "Razorpay", currency="USD")
