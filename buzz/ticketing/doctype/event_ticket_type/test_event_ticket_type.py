@@ -64,6 +64,10 @@ class TestEventTicketTypePrices(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.save_prices(("INR", 1000), ("USD", 0))
 
+	def test_free_ticket_cannot_be_paid_in_another_currency(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.save_prices(("INR", 0), ("USD", 15))
+
 	def test_rejects_a_currency_twice(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.save_prices(("INR", 1000), ("USD", 15), ("USD", 15))

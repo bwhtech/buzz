@@ -57,16 +57,19 @@ class EventTicketType(Document):
 
 	def validate(self):
 		validate_unique_currencies(self.prices)
-		self.validate_paid_in_every_currency()
+		self.validate_free_or_paid_everywhere()
 		self.validate_locked_prices()
 
 	@property
 	def is_free(self) -> bool:
 		return not self.prices[0].price
 
-	def validate_paid_in_every_currency(self):
-		if not self.is_free and not all(row.price for row in self.prices):
-			frappe.throw(_("{0} needs a price above 0 in every currency").format(self.title))
+	# A ticket free in its default currency is free everywhere (see price_in), so a mix of
+	# free and paid rows would quietly give the paid currency away.
+	def validate_free_or_paid_everywhere(self):
+		paid = [bool(row.price) for row in self.prices]
+		if any(paid) and not all(paid):
+			frappe.throw(_("{0} must be free in every currency or paid in every currency").format(self.title))
 
 	def validate_locked_prices(self):
 		before = self.get_doc_before_save()
