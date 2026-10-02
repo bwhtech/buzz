@@ -43,6 +43,15 @@ class SponsorshipTier(Document):
 		if len(currencies) != len(set(currencies)):
 			frappe.throw(_("Each currency can have only one price."))
 
+	def price_for(self, currency: str | None = None):
+		"""The price row for a currency; the first row is the default."""
+		if not currency:
+			return self.prices[0]
+		for row in self.prices:
+			if row.currency == currency:
+				return row
+		frappe.throw(_("This sponsorship tier has no price in {0}.").format(currency))
+
 
 def default_price(tier: frappe._dict) -> float:
 	"""Sort key for tiers fetched with their `prices` rows."""

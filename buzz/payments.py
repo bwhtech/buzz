@@ -68,6 +68,7 @@ def get_payment_link_for_sponsorship(
 	sponsorship_tier: str,
 	redirect_to: str = "/events",
 	payment_gateway: str | None = None,
+	currency: str | None = None,
 ) -> str:
 	tier_doc = frappe.get_cached_doc("Sponsorship Tier", sponsorship_tier)
 	if not tier_doc.enabled:
@@ -78,7 +79,7 @@ def get_payment_link_for_sponsorship(
 			frappe.throw(_("No payment gateway configured for this event"))
 		payment_gateway = gateways[0]
 	event_title = frappe.get_cached_value("Buzz Event", tier_doc.event, "title")
-	price = tier_doc.prices[0]
+	price = tier_doc.price_for(currency)
 	frappe.db.set_value(
 		"Sponsorship Enquiry", sponsorship_enquiry, "tier", sponsorship_tier
 	)  # TODO: rethink later
@@ -103,8 +104,11 @@ def get_payment_link(
 	redirect_to: str = "/events",
 	title: str | None = None,
 ) -> str:
-	payment = record_payment(reference_doctype, reference_docname, amount, currency, payment_gateway)
 	controller = get_controller(payment_gateway)
+	# Not every gateway controller implements this check.
+	if hasattr(controller, "validate_transaction_currency"):
+		controller.validate_transaction_currency(currency)
+	payment = record_payment(reference_doctype, reference_docname, amount, currency, payment_gateway)
 	user_full_name = frappe.get_cached_value("User", frappe.session.user, "full_name")
 
 	payment_details = {

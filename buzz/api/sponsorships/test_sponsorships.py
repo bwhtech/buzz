@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -214,3 +216,17 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 
 		with self.assertRaises(frappe.ValidationError):
 			create_sponsorship_payment_link(self.enquiry.name, self.tier.name)
+
+	def test_link_charges_the_chosen_currency(self):
+		self.tier.append("prices", {"currency": "USD", "price": 60})
+		self.tier.save()
+
+		with patch("buzz.payments.get_controller", return_value=MagicMock()):
+			create_sponsorship_payment_link(self.enquiry.name, self.tier.name, "Razorpay", currency="USD")
+
+		payment = frappe.get_last_doc("Event Payment", {"reference_docname": self.enquiry.name})
+		self.assertEqual((payment.currency, payment.amount), ("USD", 60))
+
+	def test_link_refuses_a_currency_the_tier_has_no_price_in(self):
+		with self.assertRaises(frappe.ValidationError):
+			create_sponsorship_payment_link(self.enquiry.name, self.tier.name, "Razorpay", currency="EUR")
