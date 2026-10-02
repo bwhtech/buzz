@@ -18,6 +18,7 @@ class TierItem(APIResponse):
 	name: str
 	title: str
 	prices: list[TierPrice]
+	slots: int
 	enabled: bool
 	perks: str | None
 	sponsor_count: int

@@ -15,9 +15,10 @@ import { formatWholePriceOrFree } from "@/utils/currency"
 type TierValues = {
 	title: string
 	prices: TierPrice[]
+	slots: number
 	perks: string[]
 }
-type TierDoc = Pick<TierValues, "title" | "prices"> & {
+type TierDoc = Pick<TierValues, "title" | "prices" | "slots"> & {
 	name: string
 	enabled: 0 | 1
 	perks: string
@@ -86,6 +87,7 @@ function toTierValues(tier: SponsorshipTierItem): TierValues {
 	return {
 		title: tier.title,
 		prices: tier.prices.map((row) => ({ ...row })),
+		slots: tier.slots,
 		perks: (tier.perks ?? "").split("\n").filter((perk) => perk.trim()),
 	}
 }
@@ -94,6 +96,7 @@ async function save(values: TierValues) {
 	await tierDoc.setValue.submit({
 		title: values.title.trim(),
 		prices: values.prices,
+		slots: values.slots,
 		perks: values.perks
 			.map((perk) => perk.trim())
 			.filter(Boolean)
@@ -139,6 +142,15 @@ async function save(values: TierValues) {
 				:disabled="!canWrite"
 			/>
 			<PriceList v-model="draft.prices" :disabled="!canWrite" />
+			<FormControl
+				:model-value="draft.slots"
+				type="number"
+				label="Slots"
+				:min="0"
+				description="Leave at 0 for any number of sponsors."
+				:disabled="!canWrite"
+				@update:model-value="draft.slots = Math.max(Number($event) || 0, 0)"
+			/>
 			<PerkList v-model="draft.perks" :disabled="!canWrite" />
 		</form>
 

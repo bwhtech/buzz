@@ -12,7 +12,7 @@ from buzz.api.sponsorships.schemas import (
 from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.permissions import has_team_access
 
-TIER_FIELDS = ["name", "title", "enabled", "perks", {"prices": ["currency", "price"]}]
+TIER_FIELDS = ["name", "title", "enabled", "perks", "slots", {"prices": ["currency", "price"]}]
 SPONSOR_FIELDS = [
 	"name",
 	"company_name",

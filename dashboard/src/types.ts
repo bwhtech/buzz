@@ -503,6 +503,8 @@ export interface SponsorshipTierItem {
 	name: string
 	title: string
 	prices: TierPrice[]
+	/** 0 means unlimited. */
+	slots: number
 	enabled: boolean
 	perks: string | null
 	sponsor_count: number

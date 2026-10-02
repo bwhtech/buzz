@@ -22,6 +22,7 @@ class SponsorshipTier(Document):
 		event: DF.Link
 		perks: DF.SmallText | None
 		prices: DF.Table[BuzzPrice]
+		slots: DF.Int
 		title: DF.Data
 	# end: auto-generated types
 
