@@ -6,8 +6,10 @@ import { useRoute } from "vue-router"
 
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
+import RegistrationActions from "@/components/dashboard/events/RegistrationActions.vue"
 import TicketTypeRow from "@/components/dashboard/ticket-types/TicketTypeRow.vue"
 import { useEventTicketTypes, useSaveEventTicketTypes } from "@/data/ticketTypes"
+import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { TicketTypeDraft, TicketTypeInput, TicketTypeItem } from "@/types"
 import { serverErrorMessage } from "@/utils/serverError"
 
@@ -108,7 +110,7 @@ const errorMessage = computed(() => serverErrorMessage(saveTicketTypes.error || 
 </script>
 
 <template>
-	<EventPageHeader :title="page.data?.title" section="Tickets">
+	<EventPageHeader :title="page.data?.title" section="Registration">
 		<Button
 			v-if="isDirty"
 			variant="solid"
@@ -122,43 +124,57 @@ const errorMessage = computed(() => serverErrorMessage(saveTicketTypes.error || 
 		</template>
 	</EventPageHeader>
 
-	<div class="m-auto w-full max-w-[720px] space-y-6 px-4 py-8">
+	<PageWithSidebar>
 		<EventArchivedAlert :event="eventId" />
 
-		<div>
-			<h2 class="text-xl font-semibold text-ink-gray-9">Tickets</h2>
-			<p class="mt-1 text-p-base text-ink-gray-5">
-				What people can buy for this event. The first price of each ticket is its default.
-			</p>
-		</div>
+		<section class="space-y-3">
+			<div>
+				<h2 class="text-xl font-semibold text-ink-gray-9">Tickets</h2>
+				<p class="mt-1 text-p-base text-ink-gray-5">
+					What people can buy for this event. The first price of each ticket is its default.
+				</p>
+			</div>
 
-		<ErrorMessage v-if="errorMessage" :message="errorMessage" />
+			<ErrorMessage v-if="errorMessage" :message="errorMessage" />
 
-		<div v-if="page.loading && !page.data" class="space-y-2">
-			<Skeleton v-for="row in 3" :key="row" class="h-16 w-full rounded-4" />
-		</div>
+			<div v-if="page.loading && !page.data" class="space-y-2">
+				<Skeleton v-for="row in 3" :key="row" class="h-16 w-full rounded-4" />
+			</div>
 
-		<div v-else-if="page.data" class="space-y-1">
-			<TicketTypeRow
-				v-for="(draft, index) in drafts"
-				:key="draft.key"
-				v-model:ticket-type="drafts[index]"
-				:open="openKey === draft.key"
-				:can-write="canWrite"
-				@toggle="toggle(draft.key)"
-				@remove="removeTicketType(draft.key)"
+			<div v-else-if="page.data" class="space-y-1">
+				<TicketTypeRow
+					v-for="(draft, index) in drafts"
+					:key="draft.key"
+					v-model:ticket-type="drafts[index]"
+					:open="openKey === draft.key"
+					:can-write="canWrite"
+					@toggle="toggle(draft.key)"
+					@remove="removeTicketType(draft.key)"
+				/>
+				<p v-if="!drafts.length" class="px-4 py-3 text-p-base text-ink-gray-5">
+					No ticket types yet.
+				</p>
+				<Button
+					v-if="canWrite"
+					variant="ghost"
+					icon-left="lucide-plus"
+					label="Add ticket type"
+					class="mt-2"
+					@click="addTicketType"
+				/>
+			</div>
+		</section>
+		<template #sidebar>
+			<RegistrationActions
+				v-if="page.data"
+				:event="eventId"
+				:registration-link="page.data.registration_link"
+				:closed="page.data.registrations_closed"
+				:can-write="page.data.can_write"
+				:allow-guest-booking="page.data.allow_guest_booking"
+				:guest-verification-method="page.data.guest_verification_method"
+				@changed="page.reload()"
 			/>
-			<p v-if="!drafts.length" class="px-4 py-3 text-p-base text-ink-gray-5">
-				No ticket types yet.
-			</p>
-			<Button
-				v-if="canWrite"
-				variant="ghost"
-				icon-left="lucide-plus"
-				label="Add ticket type"
-				class="mt-2"
-				@click="addTicketType"
-			/>
-		</div>
-	</div>
+		</template>
+	</PageWithSidebar>
 </template>

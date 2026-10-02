@@ -211,6 +211,10 @@ class TicketTypeItem(APIResponse):
 class EventTicketTypes(APIResponse):
 	title: str
 	can_write: bool
+	registration_link: str | None
+	registrations_closed: bool
+	allow_guest_booking: bool
+	guest_verification_method: str
 	ticket_types: list[TicketTypeItem]
 
 

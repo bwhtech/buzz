@@ -1,9 +1,10 @@
 import frappe
 from frappe.query_builder.functions import Count
 
+from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.exceptions import CannotManageEvent, TicketTypeHasSales, TicketTypeNotFound
 from buzz.api.events.schemas import EventTicketTypes, TicketTypeInput, TicketTypeItem, TicketTypePrice
-from buzz.api.events.services import ensure_event_team_access
+from buzz.api.events.services import ensure_event_team_access, registration_link
 from buzz.permissions import has_team_access
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import tickets_sold_by_currency
 
@@ -32,6 +33,10 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 	return EventTicketTypes(
 		title=doc.title,
 		can_write=has_team_access(doc.team, "write", frappe.session.user),
+		registration_link=registration_link(doc),
+		registrations_closed=are_registrations_closed(doc),
+		allow_guest_booking=bool(doc.allow_guest_booking),
+		guest_verification_method=doc.guest_verification_method or "None",
 		ticket_types=[ticket_type_item(row, sold, sold_by_currency) for row in rows],
 	)
 

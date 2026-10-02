@@ -595,6 +595,10 @@ export interface TicketTypeItem {
 export interface EventTicketTypes {
 	title: string
 	can_write: boolean
+	registration_link: string | null
+	registrations_closed: boolean
+	allow_guest_booking: boolean
+	guest_verification_method: string
 	ticket_types: TicketTypeItem[]
 }
 

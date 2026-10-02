@@ -42,8 +42,8 @@ function eventItems(eventId: string): ManagerNavItem[] {
 	const event = `/manage/events/${eventId}`
 	return [
 		{ label: "Details", icon: "lucide-receipt-text", to: `${event}/details` },
-		{ label: "Tickets", icon: "lucide-ticket", to: `${event}/tickets` },
-		{ label: "Registrations", icon: "lucide-users-round", to: `${event}/guests` },
+		{ label: "Registration", icon: "lucide-ticket", to: `${event}/registrations` },
+		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests` },
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks` },
 		{
 			label: "Announcements",
