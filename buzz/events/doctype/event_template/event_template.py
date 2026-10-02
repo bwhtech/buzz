@@ -120,8 +120,7 @@ def create_template_from_event(event_name: str, template_name: str, options: str
 			filters={"event": event_name},
 			fields=[
 				"title",
-				"price",
-				"currency",
+				{"prices": ["currency", "price"]},
 				"is_published",
 				"max_tickets_available",
 				"auto_unpublish_after",
@@ -132,8 +131,8 @@ def create_template_from_event(event_name: str, template_name: str, options: str
 				"template_ticket_types",
 				{
 					"title": tt.title,
-					"price": tt.price,
-					"currency": tt.currency,
+					"price": tt.prices[0].price,
+					"currency": tt.prices[0].currency,
 					"is_published": tt.is_published,
 					"max_tickets_available": tt.max_tickets_available,
 					"auto_unpublish_after": tt.auto_unpublish_after,

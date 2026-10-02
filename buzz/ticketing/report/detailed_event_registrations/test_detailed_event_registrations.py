@@ -66,7 +66,7 @@ class TestDetailedEventRegistrationsReport(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": event.name,
 				"title": title,
-				"price": price,
+				"prices": [{"currency": "INR", "price": price}],
 				"is_published": True,
 			}
 		).insert()

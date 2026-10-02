@@ -36,7 +36,7 @@ class BookingRefundTestCase(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.event.name,
 				"title": "Refundable",
-				"price": TICKET_PRICE,
+				"prices": [{"currency": "INR", "price": TICKET_PRICE}],
 				"is_published": True,
 			}
 		).insert()
@@ -447,7 +447,7 @@ class TestRefundCeiling(IntegrationTestCase):
 					"doctype": "Event Ticket Type",
 					"event": self.event.name,
 					"title": f"Tier {price}",
-					"price": price,
+					"prices": [{"currency": "INR", "price": price}],
 					"is_published": True,
 				}
 			).insert()

@@ -8,7 +8,9 @@ import { useEnabledCurrencies } from "@/data/currencies"
 import type { TierPrice } from "@/types"
 
 const prices = defineModel<TierPrice[]>({ required: true })
-defineProps<{ disabled?: boolean }>()
+const props = defineProps<{ disabled?: boolean; lockedCurrencies?: string[] }>()
+
+const isLocked = (row: TierPrice) => Boolean(props.lockedCurrencies?.includes(row.currency))
 
 const enabledCurrencies = useEnabledCurrencies()
 
@@ -53,6 +55,7 @@ function updatePrice(index: number, values: Partial<TierPrice>) {
 		:create-item="createPrice"
 		:min-rows="1"
 		:disabled="disabled"
+		:is-locked="isLocked"
 	>
 		<template #row="{ item, index }">
 			<div class="grid min-w-0 flex-1 grid-cols-[2fr_1fr] gap-2">
@@ -61,7 +64,7 @@ function updatePrice(index: number, values: Partial<TierPrice>) {
 					aria-label="Price"
 					:currency-symbol="currencyDetails(item.currency)?.symbol || item.currency"
 					:number-format="currencyDetails(item.currency)?.number_format"
-					:disabled="disabled"
+					:disabled="disabled || isLocked(item)"
 					@update:model-value="updatePrice(index, { price: $event })"
 				/>
 				<FormControl
@@ -69,7 +72,7 @@ function updatePrice(index: number, values: Partial<TierPrice>) {
 					type="select"
 					aria-label="Currency"
 					:options="currencyOptions(index)"
-					:disabled="disabled"
+					:disabled="disabled || isLocked(item)"
 					@update:model-value="updatePrice(index, { currency: $event })"
 				/>
 			</div>

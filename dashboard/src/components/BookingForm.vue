@@ -613,12 +613,11 @@ type Priced = { price?: number; currency?: string; prices?: { currency: string; 
 const baseCurrency = computed(() => props.availableTicketTypes[0]?.currency || "INR")
 const displayCurrency = ref(baseCurrency.value)
 
-const currencyOptions = computed(() => {
-	const others = props.availableTicketTypes.flatMap((tt) =>
-		(tt.prices ?? []).map((row) => row.currency),
-	)
-	return [...new Set([baseCurrency.value, ...others])]
-})
+const currencyOptions = computed(() => [
+	...new Set(
+		props.availableTicketTypes.flatMap((tt) => (tt.prices ?? []).map((row) => row.currency)),
+	),
+])
 
 const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" })
 
@@ -647,7 +646,7 @@ function withBaseOnlyNote<T extends Priced>(item: T): T & { price_note?: string 
 	return { ...item, price_note: __("{0} only", [baseCurrency.value]) }
 }
 
-const displayTicketTypes = computed(() => props.availableTicketTypes.map(withBaseOnlyNote))
+const ticketTypes = computed(() => props.availableTicketTypes.map(withBaseOnlyNote))
 const addOns = computed(() => props.availableAddOns.map(withBaseOnlyNote))
 
 const selectedItems = computed(() => {
@@ -681,7 +680,6 @@ const gateways = computed(() =>
 		: props.paymentGateways,
 )
 
-const ticketTypes = displayTicketTypes
 const addOnsMap = computed(() =>
 	Object.fromEntries(props.availableAddOns.map((a) => [a.name, pricedIn(a, orderCurrency.value)])),
 )

@@ -201,8 +201,6 @@ class TicketTypePrice(APIResponse):
 class TicketTypeItem(APIResponse):
 	name: str
 	title: str
-	price: float
-	currency: str
 	max_tickets_available: int
 	auto_unpublish_after: date | None
 	is_published: bool
@@ -224,7 +222,6 @@ class TicketTypePriceInput(APIRequest):
 class TicketTypeInput(APIRequest):
 	name: str | None = None
 	title: str
-	price: float = 0
 	max_tickets_available: int = 0
 	auto_unpublish_after: date | None = None
 	is_published: bool = True

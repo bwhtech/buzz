@@ -5,7 +5,7 @@ from buzz.api.booking.services import create_add_on_doc
 from buzz.api.booking.test_booking import BookingTestCase
 
 
-class TestOtherCurrencyBooking(BookingTestCase):
+class TestBookingCurrency(BookingTestCase):
 	def setUp(self):
 		super().setUp()
 		self.ticket_type = self.make_ticket_type(usd_price=15)
@@ -16,9 +16,9 @@ class TestOtherCurrencyBooking(BookingTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.event.name,
 				"title": f"Currency Ticket {frappe.generate_hash(length=6)}",
-				"price": 1000,
 				"is_published": 1,
-				"prices": [{"currency": "USD", "price": usd_price}] if usd_price else [],
+				"prices": [{"currency": "INR", "price": 1000}]
+				+ ([{"currency": "USD", "price": usd_price}] if usd_price else []),
 			}
 		).insert(ignore_permissions=True)
 
@@ -53,7 +53,7 @@ class TestOtherCurrencyBooking(BookingTestCase):
 		self.assertEqual(booking.attendees[0].amount, 15)
 		self.assertEqual(booking.total_amount, 15)
 
-	def test_booking_without_a_currency_charges_inr(self):
+	def test_booking_without_a_currency_charges_the_default_price(self):
 		booking = self.make_booking()
 
 		self.assertEqual(booking.currency, "INR")

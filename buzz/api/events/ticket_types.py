@@ -10,11 +10,10 @@ from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import tickets_s
 TICKET_TYPE_FIELDS = [
 	"name",
 	"title",
-	"price",
-	"currency",
 	"max_tickets_available",
 	"auto_unpublish_after",
 	"is_published",
+	{"prices": ["currency", "price"]},
 ]
 
 
@@ -29,22 +28,21 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		ignore_permissions=True,
 	)
 	sold = tickets_sold_by_type(event)
-	prices = prices_by_type([row.name for row in rows])
+	sold_by_currency = tickets_sold_by_currency([row.name for row in rows])
 	return EventTicketTypes(
 		title=doc.title,
 		can_write=has_team_access(doc.team, "write", frappe.session.user),
-		ticket_types=[
-			TicketTypeItem(
-				**{
-					**row,
-					"name": str(row.name),
-					"tickets_sold": sold.get(str(row.name), 0),
-					"prices": prices.get(str(row.name), []),
-				}
-			)
-			for row in rows
-		],
+		ticket_types=[ticket_type_item(row, sold, sold_by_currency) for row in rows],
 	)
+
+
+def ticket_type_item(row, sold: dict, sold_by_currency: dict) -> TicketTypeItem:
+	name = str(row.name)
+	prices = [
+		TicketTypePrice(**price, tickets_sold=sold_by_currency.get((name, price.currency), 0))
+		for price in row.prices
+	]
+	return TicketTypeItem(**{**row, "name": name, "tickets_sold": sold.get(name, 0), "prices": prices})
 
 
 def tickets_sold_by_type(event: str) -> dict[str, int]:
@@ -56,27 +54,6 @@ def tickets_sold_by_type(event: str) -> dict[str, int]:
 		.groupby(ticket.ticket_type)
 	).run()
 	return {str(ticket_type): count for ticket_type, count in rows}
-
-
-def prices_by_type(ticket_types: list) -> dict[str, list[TicketTypePrice]]:
-	rows = frappe.get_all(
-		"Event Ticket Type Price",
-		filters={"parent": ["in", ticket_types], "parenttype": "Event Ticket Type"},
-		fields=["parent", "currency", "price"],
-		order_by="idx asc",
-		ignore_permissions=True,
-	)
-	sold = tickets_sold_by_currency(ticket_types)
-	prices = {}
-	for row in rows:
-		prices.setdefault(str(row.parent), []).append(
-			TicketTypePrice(
-				currency=row.currency,
-				price=row.price,
-				tickets_sold=sold.get((str(row.parent), row.currency), 0),
-			)
-		)
-	return prices
 
 
 class TicketTypesEditor:

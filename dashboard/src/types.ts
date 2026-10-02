@@ -577,9 +577,7 @@ export interface EventEnquiries {
 	has_next_page: boolean
 }
 
-export interface TicketTypePrice {
-	currency: string
-	price: number
+export interface TicketTypePrice extends TierPrice {
 	tickets_sold?: number
 }
 
@@ -587,8 +585,6 @@ export interface TicketTypePrice {
 export interface TicketTypeItem {
 	name: string
 	title: string
-	price: number
-	currency: string
 	max_tickets_available: number
 	auto_unpublish_after: string | null
 	is_published: boolean
@@ -604,8 +600,8 @@ export interface EventTicketTypes {
 
 export type TicketTypeInput = Pick<
 	TicketTypeItem,
-	"title" | "price" | "max_tickets_available" | "auto_unpublish_after" | "is_published" | "prices"
+	"title" | "max_tickets_available" | "auto_unpublish_after" | "is_published" | "prices"
 > & { name: string | null }
 
 export type TicketTypeDraft = TicketTypeInput &
-	Pick<TicketTypeItem, "currency" | "tickets_sold"> & { key: string }
+	Pick<TicketTypeItem, "tickets_sold"> & { key: string }

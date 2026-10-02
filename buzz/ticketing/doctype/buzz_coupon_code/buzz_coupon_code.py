@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import OTHER_CURRENCIES
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import default_currency
 
 
 class BuzzCouponCode(Document):
@@ -102,14 +102,11 @@ class BuzzCouponCode(Document):
 				return False, _("Coupon is not valid for this event category")
 			return True, ""
 
-	@property
-	def uses_fixed_amounts(self) -> bool:
-		return self.coupon_type == "Discount" and bool(
+	def is_usable_in_currency(self, currency: str | None, event: str):
+		uses_fixed_amounts = self.coupon_type == "Discount" and (
 			self.discount_type == "Flat Amount" or self.minimum_order_value or self.maximum_discount_amount
 		)
-
-	def is_usable_in_currency(self, currency: str | None):
-		if currency in OTHER_CURRENCIES and self.uses_fixed_amounts:
+		if currency and uses_fixed_amounts and currency != default_currency(event):
 			return False, _("This coupon can't be used when paying in {0}").format(currency)
 		return True, ""
 

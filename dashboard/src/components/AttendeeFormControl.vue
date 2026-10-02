@@ -118,28 +118,11 @@ import { Badge, Tooltip } from "frappe-ui"
 import { type PropType, computed } from "vue"
 
 import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields"
+import type { AvailableAddOn, AvailableTicketType } from "@/types"
 import { formatPriceOrFree } from "@/utils/currency"
 import { isZoomBackedCategory } from "@/utils/zoomCategory"
 
 import CustomFieldInput from "./CustomFieldInput.vue"
-
-interface AvailableTicketType {
-	name: string | number
-	title?: string
-	price?: number
-	currency?: string
-	price_note?: string
-}
-
-interface AvailableAddOn {
-	name: string
-	title?: string
-	description?: string
-	price?: number
-	price_note?: string
-	options?: string[]
-	user_selects_option?: 0 | 1 | boolean
-}
 
 interface AttendeeAddOnSelection {
 	selected: boolean

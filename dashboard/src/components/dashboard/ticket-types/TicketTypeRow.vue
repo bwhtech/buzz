@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Button, DatePicker, FormControl, Switch, Tooltip } from "frappe-ui"
+import { Button, DatePicker, FormControl, Switch } from "frappe-ui"
 import { computed, ref } from "vue"
 
-import PriceInput from "@/components/dashboard/sponsorships/PriceInput.vue"
+import PriceList from "@/components/dashboard/sponsorships/PriceList.vue"
 import type { TicketTypeDraft } from "@/types"
-import { formatWholePriceOrFree, getCurrencySymbol } from "@/utils/currency"
+import { formatWholePriceOrFree } from "@/utils/currency"
 
 const ticketType = defineModel<TicketTypeDraft>("ticketType", { required: true })
 defineProps<{ open: boolean; canWrite: boolean }>()
@@ -16,19 +16,12 @@ const isSold = computed(() => ticketType.value.tickets_sold > 0)
 const seats = computed(() => ticketType.value.max_tickets_available)
 
 const priceLabel = computed(() =>
-	formatWholePriceOrFree(ticketType.value.price, ticketType.value.currency),
+	ticketType.value.prices.map((row) => formatWholePriceOrFree(row.price, row.currency)).join(" · "),
 )
 
-const usdPrice = computed(() => ticketType.value.prices.find((row) => row.currency === "USD"))
-const isUsdLocked = computed(() => Boolean(usdPrice.value?.tickets_sold))
-
-function setUsdPrice(price: number | null) {
-	const others = ticketType.value.prices.filter((row) => row.currency !== "USD")
-	update(
-		"prices",
-		price === null ? others : [...others, { ...usdPrice.value, currency: "USD", price }],
-	)
-}
+const soldCurrencies = computed(() =>
+	ticketType.value.prices.filter((row) => row.tickets_sold).map((row) => row.currency),
+)
 
 const soldLabel = computed(() =>
 	seats.value
@@ -66,9 +59,6 @@ function updateSeats(value: string | number) {
 				</p>
 				<p class="mt-1 flex items-center gap-2 text-p-sm text-ink-gray-7">
 					{{ priceLabel }}
-					<span v-if="usdPrice" class="text-ink-gray-5">
-						{{ formatWholePriceOrFree(usdPrice.price, "USD") }}
-					</span>
 					<span v-if="!ticketType.is_published" class="text-ink-gray-5">Hidden</span>
 				</p>
 			</div>
@@ -86,7 +76,7 @@ function updateSeats(value: string | number) {
 		</button>
 
 		<div v-if="open" class="space-y-4 px-4 pb-4 pt-1">
-			<div class="grid gap-3 sm:grid-cols-[1fr_10rem_7rem]">
+			<div class="grid gap-3 sm:grid-cols-[1fr_7rem]">
 				<FormControl
 					label="Name"
 					required
@@ -95,16 +85,6 @@ function updateSeats(value: string | number) {
 					:disabled="!canWrite"
 					@update:model-value="update('title', $event)"
 				/>
-				<div class="space-y-1.5">
-					<PriceInput
-						label="Price"
-						:currency-symbol="getCurrencySymbol(ticketType.currency)"
-						:model-value="ticketType.price"
-						:disabled="!canWrite || isSold"
-						@update:model-value="update('price', $event)"
-					/>
-					<p v-if="isSold" class="text-p-xs text-ink-gray-5">Locked after the first sale</p>
-				</div>
 				<FormControl
 					type="number"
 					label="Seats"
@@ -116,43 +96,16 @@ function updateSeats(value: string | number) {
 				/>
 			</div>
 
-			<div class="space-y-2">
-				<p class="text-xs text-ink-gray-5">Other currencies</p>
-				<div v-if="usdPrice" class="flex items-center gap-3">
-					<PriceInput
-						class="w-40"
-						currency-symbol="$"
-						:model-value="usdPrice.price"
-						:disabled="!canWrite || isUsdLocked"
-						@update:model-value="setUsdPrice($event)"
-					/>
-					<span class="text-p-sm text-ink-gray-5">US dollar</span>
-					<Tooltip
-						v-if="isUsdLocked"
-						:text="`${usdPrice.tickets_sold} sold in USD. Price is locked.`"
-					>
-						<span class="lucide-lock ml-auto size-3.5 text-ink-gray-4" aria-label="Locked" />
-					</Tooltip>
-					<Button
-						v-else-if="canWrite"
-						variant="ghost"
-						icon="lucide-x"
-						label="Remove USD price"
-						class="ml-auto"
-						@click="setUsdPrice(null)"
-					/>
-				</div>
-				<p v-if="usdPrice" class="text-p-xs text-ink-gray-5">
-					Enter the USD price yourself. It isn't converted from INR.
-				</p>
-				<Button
-					v-else-if="canWrite"
-					variant="ghost"
-					icon-left="lucide-globe"
-					label="Add USD price"
-					@click="setUsdPrice(0)"
+			<div class="space-y-1.5">
+				<PriceList
+					:model-value="ticketType.prices"
+					:locked-currencies="soldCurrencies"
+					:disabled="!canWrite"
+					@update:model-value="update('prices', $event)"
 				/>
-				<p v-else class="text-p-sm text-ink-gray-5">No other currencies.</p>
+				<p v-if="soldCurrencies.length" class="text-p-xs text-ink-gray-5">
+					A price is locked once tickets sell in its currency.
+				</p>
 			</div>
 
 			<div>

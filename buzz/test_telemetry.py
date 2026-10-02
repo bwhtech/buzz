@@ -161,7 +161,6 @@ class TestTelemetryEvents(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.test_event.name,
 				"title": f"Telemetry Free {frappe.generate_hash(length=6)}",
-				"price": 0,
 			}
 		).insert()
 
@@ -307,7 +306,7 @@ class TestTelemetryEvents(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.test_event.name,
 				"title": f"Telemetry Paid {frappe.generate_hash(length=6)}",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 			}
 		).insert()
 		booking = frappe.get_doc(

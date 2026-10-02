@@ -28,7 +28,6 @@ const toDraft = (row: TicketTypeItem): TicketTypeDraft => ({ ...row, key: row.na
 const toInput = (draft: TicketTypeDraft): TicketTypeInput => ({
 	name: draft.name,
 	title: draft.title.trim(),
-	price: draft.price,
 	max_tickets_available: draft.max_tickets_available,
 	auto_unpublish_after: draft.auto_unpublish_after || null,
 	is_published: draft.is_published,
@@ -42,12 +41,7 @@ const isDirty = computed(
 )
 
 const canSave = computed(
-	() =>
-		isDirty.value &&
-		drafts.value.every(
-			(draft) =>
-				draft.title.trim() && draft.price >= 0 && draft.prices.every((row) => row.price > 0),
-		),
+	() => isDirty.value && drafts.value.every((draft) => draft.title.trim() && draft.prices.length),
 )
 
 function reset(rows: TicketTypeItem[]) {
@@ -71,13 +65,11 @@ function addTicketType() {
 		key,
 		name: null,
 		title: "",
-		price: 0,
-		currency: "INR",
 		max_tickets_available: 0,
 		auto_unpublish_after: null,
 		is_published: true,
 		tickets_sold: 0,
-		prices: [],
+		prices: [{ currency: drafts.value[0]?.prices[0]?.currency ?? "INR", price: 0 }],
 	})
 	openKey.value = key
 }
@@ -136,7 +128,7 @@ const errorMessage = computed(() => serverErrorMessage(saveTicketTypes.error || 
 		<div>
 			<h2 class="text-xl font-semibold text-ink-gray-9">Tickets</h2>
 			<p class="mt-1 text-p-base text-ink-gray-5">
-				What people can buy for this event. Prices are in INR, with an optional USD price.
+				What people can buy for this event. The first price of each ticket is its default.
 			</p>
 		</div>
 

@@ -10,8 +10,9 @@ const props = withDefaults(
 		createItem: () => Item
 		minRows?: number
 		disabled?: boolean
+		isLocked?: (item: Item) => boolean
 	}>(),
-	{ minRows: 0 },
+	{ minRows: 0, isLocked: () => false },
 )
 defineSlots<{ row(props: { item: Item; index: number; add: () => void }): unknown }>()
 
@@ -77,7 +78,7 @@ async function moveWithArrowKeys(event: KeyboardEvent, index: number) {
 				</button>
 				<slot name="row" :item="item" :index="index" :add="addItem" />
 				<button
-					v-if="!disabled && items.length > minRows"
+					v-if="!disabled && items.length > minRows && !isLocked(item)"
 					type="button"
 					class="flex size-7 shrink-0 items-center justify-center rounded-4 text-ink-gray-4 transition-opacity hover:text-ink-gray-7 focus-visible:opacity-100 focus-visible:outline-none focus-visible:focus-ring group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
 					:aria-label="`Remove ${itemName} ${index + 1}`"

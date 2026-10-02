@@ -104,7 +104,14 @@ const eventBookingResource = useCall<Record<string, any>, { event_route: string 
 	params: { event_route: props.eventRoute },
 	onSuccess: (data) => {
 		eventBookingData.availableAddOns = data.available_add_ons || []
-		eventBookingData.availableTicketTypes = data.available_ticket_types || []
+		// A ticket type's first price row is its default price.
+		eventBookingData.availableTicketTypes = (data.available_ticket_types || []).map(
+			(ticketType: AvailableTicketType) => ({
+				...ticketType,
+				price: ticketType.prices?.[0]?.price ?? 0,
+				currency: ticketType.prices?.[0]?.currency,
+			}),
+		)
 		eventBookingData.taxSettings = data.tax_settings || {
 			apply_tax: false,
 			tax_inclusive: false,

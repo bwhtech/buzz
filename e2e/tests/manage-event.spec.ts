@@ -209,8 +209,6 @@ test.describe("Guest list", () => {
 		const ticketType = await createDoc<{ name: string }>(request, "Event Ticket Type", {
 			event: eventId,
 			title: TICKET_TYPE,
-			price: 0,
-			currency: "INR",
 			is_published: 1,
 		})
 		const addOn = await createDoc<{ name: string }>(request, "Ticket Add-on", {

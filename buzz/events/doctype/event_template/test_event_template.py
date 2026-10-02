@@ -193,7 +193,7 @@ class TestEventTemplate(FrappeTestCase):
 
 		# Verify ticket types created (excluding default "Normal" ticket type)
 		ticket_types = frappe.get_all(
-			"Event Ticket Type", filters={"event": event_name, "title": "Standard"}, fields=["title", "price"]
+			"Event Ticket Type", filters={"event": event_name, "title": "Standard"}, fields=["title"]
 		)
 		self.assertEqual(len(ticket_types), 1)
 		self.assertEqual(ticket_types[0].title, "Standard")
@@ -300,8 +300,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Event Ticket Type",
 				"event": event.name,
 				"title": "Premium",
-				"price": 1500,
-				"currency": "INR",
+				"prices": [{"currency": "INR", "price": 1500}],
 				"is_published": 1,
 			}
 		)
@@ -408,8 +407,7 @@ class TestEventTemplate(FrappeTestCase):
 					"doctype": "Event Ticket Type",
 					"event": original_event.name,
 					"title": ticket_data["title"],
-					"price": ticket_data["price"],
-					"currency": "INR",
+					"prices": [{"currency": "INR", "price": ticket_data["price"]}],
 					"is_published": 1,
 				}
 			).insert()
@@ -454,12 +452,12 @@ class TestEventTemplate(FrappeTestCase):
 		new_ticket_types = frappe.get_all(
 			"Event Ticket Type",
 			filters={"event": new_event_name, "title": ["in", ["Early Bird", "Regular", "VIP"]]},
-			fields=["title", "price"],
-			order_by="price",
+			fields=["title", {"prices": ["price"]}],
+			order_by="title",
 		)
 		self.assertEqual(len(new_ticket_types), 3)
 		self.assertEqual(new_ticket_types[0].title, "Early Bird")
-		self.assertEqual(new_ticket_types[0].price, 1000)
+		self.assertEqual(new_ticket_types[0].prices[0].price, 1000)
 
 	# ==================== Edge Case Tests ====================
 

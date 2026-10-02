@@ -22,7 +22,7 @@ from buzz.api.booking.schemas import (
 	PaymentLinkResponse,
 )
 from buzz.payments import get_payment_link_for_booking
-from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import OTHER_CURRENCIES
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import default_currency
 from buzz.utils import ZOOM_BACKED_CATEGORIES, build_event_datetimes
 
 if TYPE_CHECKING:
@@ -53,10 +53,9 @@ class BookingService:
 		return self.finalize(booking)
 
 	def validate_offline_currency(self) -> None:
-		if self.request.is_offline and self.request.currency in OTHER_CURRENCIES:
-			frappe.throw(
-				_("Offline payment isn't available when paying in {0}").format(self.request.currency)
-			)
+		currency = self.request.currency
+		if self.request.is_offline and currency and currency != default_currency(self.request.event):
+			frappe.throw(_("Offline payment isn't available when paying in {0}").format(currency))
 
 	def validate_event(self) -> None:
 		if not self.event.is_published:

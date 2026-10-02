@@ -100,8 +100,7 @@ setup("create test event for booking", async ({ request }) => {
 	const ticketType = await createDoc<NamedDoc>(request, "Event Ticket Type", {
 		event: event.name,
 		title: "Standard Ticket",
-		price: 500,
-		currency: "INR",
+		prices: [{ currency: "INR", price: 500 }],
 		is_published: 1,
 	})
 	console.log(`Created Event Ticket Type: ${ticketType.name}`)

@@ -30,7 +30,7 @@ def validate_coupon_for_event(
 	if is_limited:
 		return InvalidCouponResponse(valid=False, error=error)
 
-	is_usable, error = coupon.is_usable_in_currency(currency)
+	is_usable, error = coupon.is_usable_in_currency(currency, event)
 	if not is_usable:
 		return InvalidCouponResponse(valid=False, error=error)
 
