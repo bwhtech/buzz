@@ -38,7 +38,6 @@ class CheckinTestCase(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.event,
 				"title": f"Checkin Test {frappe.generate_hash(length=6)}",
-				"price": 0,
 			}
 		).insert()
 

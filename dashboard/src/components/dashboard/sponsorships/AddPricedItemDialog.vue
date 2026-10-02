@@ -4,13 +4,19 @@ import { computed, ref, watch } from "vue"
 
 import PriceInput from "@/components/dashboard/sponsorships/PriceInput.vue"
 import { useEnabledCurrencies } from "@/data/currencies"
-import type { FrappeError } from "@/types"
+import type { FrappeError, TierPrice } from "@/types"
 
-type TierDoc = { event: string; title: string; price: number; currency: string }
+type PricedDoc = { event: string; title: string; prices: TierPrice[] }
 
 const DEFAULT_CURRENCY = "INR"
 
-const props = defineProps<{ event: string }>()
+// Adds a sponsorship tier or a ticket type: both are a title and a first price on an event.
+const props = defineProps<{
+	event: string
+	doctype: "Sponsorship Tier" | "Event Ticket Type"
+	itemLabel: string
+	placeholder: string
+}>()
 const isOpen = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ saved: [] }>()
 
@@ -19,7 +25,7 @@ const price = ref(0)
 const currency = ref(DEFAULT_CURRENCY)
 const showErrors = ref(false)
 
-const creator = useNewDoc<TierDoc>("Sponsorship Tier")
+const creator = useNewDoc<PricedDoc>(props.doctype)
 const enabledCurrencies = useEnabledCurrencies()
 
 const currencyOptions = computed(() =>
@@ -53,22 +59,27 @@ async function submit() {
 	Object.assign(creator.doc, {
 		event: props.event,
 		title: title.value.trim(),
-		price: price.value,
-		currency: currency.value,
+		prices: [{ currency: currency.value, price: price.value }],
 	})
 	await creator.submit().catch(() => null)
 	if (creator.error) return
 
-	toast.success("Tier added")
+	toast.success(`${props.itemLabel} added`)
 	emit("saved")
 	isOpen.value = false
 }
 </script>
 
 <template>
-	<Dialog v-model="isOpen" title="Add Tier">
+	<Dialog v-model="isOpen" :title="`Add ${itemLabel}`">
 		<form novalidate class="space-y-4" @submit.prevent="submit">
-			<FormControl v-model="title" label="Title" placeholder="Gold" autocomplete="off" required />
+			<FormControl
+				v-model="title"
+				label="Title"
+				:placeholder="placeholder"
+				autocomplete="off"
+				required
+			/>
 
 			<div class="grid grid-cols-[2fr_1fr] gap-4">
 				<PriceInput
@@ -82,9 +93,7 @@ async function submit() {
 			</div>
 
 			<ErrorMessage
-				:message="
-					showErrors && invalid ? 'A tier needs a title and a price of zero or more.' : errorMessage
-				"
+				:message="showErrors && invalid ? 'Add a title and a price of zero or more.' : errorMessage"
 			/>
 
 			<Button

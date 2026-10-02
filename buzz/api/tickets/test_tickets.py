@@ -93,7 +93,7 @@ class TicketTestCase(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.event.name,
 				"title": f"Tickets Test {frappe.generate_hash(length=6)}",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 			}
 		).insert(ignore_permissions=True)
 

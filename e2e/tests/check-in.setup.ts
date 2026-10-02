@@ -115,8 +115,6 @@ setup("seed check-in event, ticket type and front-desk users", async ({ request,
 	const ticketType = await createDoc<NamedDoc>(request, "Event Ticket Type", {
 		event: event.name,
 		title: "Check-in Ticket",
-		price: 0,
-		currency: "INR",
 		is_published: 1,
 	})
 

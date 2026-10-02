@@ -17,6 +17,7 @@ from frappe.utils import (
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import co_hosts_of, primary_host_of, registration_link
 from buzz.emails import venue_map_url as venue_link
+from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import datetime_in_time_zone, format_gmt_offset, get_time_zone_label
 from buzz.www.event.date_range import RANGE_SEPARATOR, EventDateRange, format_time
@@ -241,9 +242,10 @@ class EventPage:
 		tiers = frappe.get_all(
 			"Sponsorship Tier",
 			filters={"event": self.event.name},
-			fields=["name", "title"],
-			order_by="price desc, creation asc",
+			fields=["name", "title", {"prices": ["price"]}],
+			order_by="creation asc",
 		)
+		tiers.sort(key=default_price, reverse=True)
 		tier_order = [tier.name for tier in tiers] + [None]
 		tier_titles = {tier.name: tier.title for tier in tiers}
 		return [

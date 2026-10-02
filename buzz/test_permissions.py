@@ -56,7 +56,6 @@ def create_ticket_type(event: str) -> str:
 				"doctype": "Event Ticket Type",
 				"event": event,
 				"title": f"Type {frappe.generate_hash(length=6)}",
-				"price": 0,
 			}
 		)
 		.insert(ignore_permissions=True)
@@ -142,7 +141,7 @@ class TestCrossTeamIsolation(TeamPermissionTestCase):
 
 	def test_event_derived_lists_exclude_other_teams(self):
 		ticket_type = frappe.get_doc(
-			{"doctype": "Event Ticket Type", "event": self.event_b, "title": "Hidden", "price": 0}
+			{"doctype": "Event Ticket Type", "event": self.event_b, "title": "Hidden"}
 		).insert(ignore_permissions=True)
 
 		self.as_user(self.alice)
@@ -191,7 +190,7 @@ class TestCrossTeamIsolation(TeamPermissionTestCase):
 
 	def test_opening_another_teams_derived_doc_is_denied(self):
 		ticket_type = frappe.get_doc(
-			{"doctype": "Event Ticket Type", "event": self.event_b, "title": "Denied", "price": 0}
+			{"doctype": "Event Ticket Type", "event": self.event_b, "title": "Denied"}
 		).insert(ignore_permissions=True)
 
 		self.as_user(self.alice)
@@ -450,10 +449,15 @@ class TestNonMemberCarveOuts(TeamPermissionTestCase):
 	def test_published_sponsorship_tier_is_visible_to_non_members(self):
 		published = create_event("Perm Published", self.team_b, is_published=1)
 		visible = frappe.get_doc(
-			{"doctype": "Sponsorship Tier", "event": published, "title": "Gold", "amount": 1}
+			{"doctype": "Sponsorship Tier", "event": published, "title": "Gold", "prices": [{"price": 1}]}
 		).insert(ignore_permissions=True)
 		hidden = frappe.get_doc(
-			{"doctype": "Sponsorship Tier", "event": self.event_b, "title": "Silver", "amount": 1}
+			{
+				"doctype": "Sponsorship Tier",
+				"event": self.event_b,
+				"title": "Silver",
+				"prices": [{"price": 1}],
+			}
 		).insert(ignore_permissions=True)
 
 		self.as_user(self.outsider)
@@ -628,7 +632,7 @@ class TestCheckinIsolation(TeamPermissionTestCase):
 		add_member(self.team_a, frontdesk, "Frontdesk")
 
 		ticket_type = frappe.get_doc(
-			{"doctype": "Event Ticket Type", "event": self.event_b, "title": "Scan", "price": 0}
+			{"doctype": "Event Ticket Type", "event": self.event_b, "title": "Scan"}
 		).insert(ignore_permissions=True)
 		ticket = frappe.get_doc(
 			{

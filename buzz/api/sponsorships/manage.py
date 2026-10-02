@@ -11,7 +11,7 @@ from buzz.api.sponsorships.schemas import (
 )
 from buzz.permissions import has_team_access
 
-TIER_FIELDS = ["name", "title", "price", "currency", "enabled", "perks"]
+TIER_FIELDS = ["name", "title", "enabled", "perks", "slots", {"prices": ["currency", "price"]}]
 SPONSOR_FIELDS = [
 	"name",
 	"company_name",
@@ -33,7 +33,7 @@ def event_sponsorships(event: str) -> EventSponsorshipsResponse:
 		"Sponsorship Tier",
 		filters={"event": event},
 		fields=TIER_FIELDS,
-		order_by="price desc, title asc",
+		order_by="creation asc",
 		ignore_permissions=True,
 	)
 	sponsors = frappe.get_all(

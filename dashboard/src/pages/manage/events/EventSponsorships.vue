@@ -1,21 +1,20 @@
 <script setup lang="ts">
-import { ErrorMessage, Icon, Skeleton } from "frappe-ui"
+import { ErrorMessage, Skeleton } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
-import EmptyState from "@/components/common/EmptyState.vue"
-import SectionHeader from "@/components/common/SectionHeader.vue"
+import ListSection from "@/components/common/ListSection.vue"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
+import AddPricedItemDialog from "@/components/dashboard/sponsorships/AddPricedItemDialog.vue"
 import AddSponsorDialog from "@/components/dashboard/sponsorships/AddSponsorDialog.vue"
 import EnquiriesSection from "@/components/dashboard/sponsorships/EnquiriesSection.vue"
 import EnquiryDrawer from "@/components/dashboard/sponsorships/EnquiryDrawer.vue"
 import EventSponsorshipActions from "@/components/dashboard/sponsorships/EventSponsorshipActions.vue"
 import SponsorCard from "@/components/dashboard/sponsorships/SponsorCard.vue"
 import SponsorDrawer from "@/components/dashboard/sponsorships/SponsorDrawer.vue"
-import TierCard from "@/components/dashboard/sponsorships/TierCard.vue"
-import TierDialog from "@/components/dashboard/sponsorships/TierDialog.vue"
 import TierDrawer from "@/components/dashboard/sponsorships/TierDrawer.vue"
+import TierList from "@/components/dashboard/sponsorships/TierList.vue"
 import { useEventSponsorships } from "@/data/sponsorships"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError } from "@/types"
@@ -40,7 +39,7 @@ const addTierAction = computed(() =>
 
 // Highest-priced tier first, the order a sponsor wall reads in.
 const sponsors = computed(() => {
-	const rank = new Map((page.data?.tiers ?? []).map((tier) => [tier.name, tier.price]))
+	const rank = new Map((page.data?.tiers ?? []).map((tier) => [tier.name, tier.prices[0].price]))
 	return (page.data?.sponsors ?? []).toSorted(
 		(a, b) => (rank.get(b.tier ?? "") ?? 0) - (rank.get(a.tier ?? "") ?? 0),
 	)
@@ -120,45 +119,39 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 
 		<div v-if="page.loading" class="space-y-8">
 			<Skeleton class="h-6 w-24" />
-			<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-				<Skeleton v-for="row in 3" :key="row" class="h-28 w-full rounded-4" />
-			</div>
+			<Skeleton class="h-48 w-full rounded-4" />
 		</div>
 
 		<ErrorMessage v-else-if="page.error" :message="message(page.error)" />
 
 		<template v-else>
-			<section class="space-y-3">
-				<SectionHeader title="Tiers" :count="page.data?.tiers.length" :action="addTierAction" />
-
-				<div v-if="page.data?.tiers.length" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					<TierCard
-						v-for="tier in page.data.tiers"
-						:key="tier.name"
-						:tier="tier"
-						:can-write="page.data.can_write"
-						@open="select('tier', tier.name)"
-					/>
-				</div>
-				<EmptyState
-					v-else
-					title="No tiers yet"
-					description="Tiers set the sponsorship packages and prices applicants choose from."
-				>
-					<template #illustration>
-						<Icon name="lucide-layers" class="size-5 text-ink-gray-5" />
-					</template>
-				</EmptyState>
-			</section>
-
-			<section class="space-y-3">
-				<SectionHeader
-					title="Sponsors"
-					:count="page.data?.sponsors.length"
-					:action="addSponsorAction"
+			<ListSection
+				title="Tiers"
+				:count="page.data?.tiers.length"
+				:action="addTierAction"
+				:empty="!page.data?.tiers.length"
+				empty-title="No tiers yet"
+				empty-description="Tiers set the sponsorship packages and prices applicants choose from."
+				empty-icon="lucide-layers"
+			>
+				<TierList
+					v-if="page.data"
+					:tiers="page.data.tiers"
+					:can-write="page.data.can_write"
+					@open="select('tier', $event)"
 				/>
+			</ListSection>
 
-				<div v-if="sponsors.length" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+			<ListSection
+				title="Sponsors"
+				:count="page.data?.sponsors.length"
+				:action="addSponsorAction"
+				:empty="!sponsors.length"
+				empty-title="No sponsors yet"
+				empty-description="Sponsors appear here once they pay or are confirmed by the team."
+				empty-icon="lucide-handshake"
+			>
+				<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 					<SponsorCard
 						v-for="sponsor in sponsors"
 						:key="sponsor.name"
@@ -166,16 +159,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 						@open="select('sponsor', sponsor.name)"
 					/>
 				</div>
-				<EmptyState
-					v-else
-					title="No sponsors yet"
-					description="Sponsors appear here once they pay or are confirmed by the team."
-				>
-					<template #illustration>
-						<Icon name="lucide-handshake" class="size-5 text-ink-gray-5" />
-					</template>
-				</EmptyState>
-			</section>
+			</ListSection>
 
 			<EnquiriesSection ref="enquiriesSection" :event="eventId" @open="select('enquiry', $event)" />
 		</template>
@@ -222,5 +206,12 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		@added="onSponsorsChanged"
 	/>
 
-	<TierDialog v-model="tierDialogOpen" :event="eventId" @saved="page.reload()" />
+	<AddPricedItemDialog
+		v-model="tierDialogOpen"
+		:event="eventId"
+		doctype="Sponsorship Tier"
+		item-label="Tier"
+		placeholder="Gold"
+		@saved="page.reload()"
+	/>
 </template>

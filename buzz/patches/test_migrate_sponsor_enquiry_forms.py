@@ -116,8 +116,7 @@ class TestMigrateSponsorEnquiryForms(SponsorFormMigrationTestCase):
 				"doctype": "Sponsorship Tier",
 				"event": event.name,
 				"title": "Legacy tier",
-				"price": 100,
-				"currency": "INR",
+				"prices": [{"currency": "INR", "price": 100}],
 			}
 		).insert(ignore_permissions=True)
 		enquiry = frappe.get_doc(

@@ -381,15 +381,15 @@ class TestBuzzEvent(FrappeTestCase):
 		ticket_types = frappe.get_all(
 			"Event Ticket Type",
 			filters={"event": event_name, "title": ["in", ["Early Bird", "Regular"]]},
-			fields=["title", "price", "max_tickets_available"],
-			order_by="price",
+			fields=["title", {"prices": ["price"]}, "max_tickets_available"],
+			order_by="title",
 		)
 		self.assertEqual(len(ticket_types), 2)
 		self.assertEqual(ticket_types[0].title, "Early Bird")
-		self.assertEqual(ticket_types[0].price, 500)
+		self.assertEqual(ticket_types[0].prices[0].price, 500)
 		self.assertEqual(ticket_types[0].max_tickets_available, 100)
 		self.assertEqual(ticket_types[1].title, "Regular")
-		self.assertEqual(ticket_types[1].price, 1000)
+		self.assertEqual(ticket_types[1].prices[0].price, 1000)
 
 	def test_create_from_template_creates_add_ons(self):
 		"""Test that add-ons are created as linked documents"""
@@ -577,8 +577,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Event Ticket Type",
 				"event": event.name,
 				"title": "Gold",
-				"price": 5000,
-				"currency": "INR",
+				"prices": [{"currency": "INR", "price": 5000}],
 				"is_published": 1,
 			}
 		).insert()
@@ -700,8 +699,7 @@ class TestBuzzEvent(FrappeTestCase):
 				"doctype": "Event Ticket Type",
 				"event": original.name,
 				"title": "Platinum",
-				"price": 10000,
-				"currency": "INR",
+				"prices": [{"currency": "INR", "price": 10000}],
 				"is_published": 1,
 				"max_tickets_available": 25,
 			}
@@ -736,10 +734,10 @@ class TestBuzzEvent(FrappeTestCase):
 		platinum_tickets = frappe.get_all(
 			"Event Ticket Type",
 			filters={"event": new_event_name, "title": "Platinum"},
-			fields=["price", "max_tickets_available"],
+			fields=[{"prices": ["price"]}, "max_tickets_available"],
 		)
 		self.assertEqual(len(platinum_tickets), 1)
-		self.assertEqual(platinum_tickets[0].price, 10000)
+		self.assertEqual(platinum_tickets[0].prices[0].price, 10000)
 		self.assertEqual(platinum_tickets[0].max_tickets_available, 25)
 
 	# ==================== Permission Tests ====================

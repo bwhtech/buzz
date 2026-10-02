@@ -9,8 +9,8 @@
   "enabled",
   "event",
   "column_break_vmpf",
-  "price",
-  "currency",
+  "prices",
+  "slots",
   "section_break_perks",
   "perks"
  ],
@@ -41,18 +41,18 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "price",
-   "fieldtype": "Currency",
-   "label": "Price",
-   "non_negative": 1,
-   "options": "currency"
+   "fieldname": "prices",
+   "fieldtype": "Table",
+   "label": "Prices",
+   "options": "Buzz Price",
+   "reqd": 1
   },
   {
-   "default": "INR",
-   "fieldname": "currency",
-   "fieldtype": "Link",
-   "label": "Currency",
-   "options": "Currency"
+   "description": "Leave empty or 0 for unlimited sponsors.",
+   "fieldname": "slots",
+   "fieldtype": "Int",
+   "label": "Slots",
+   "non_negative": 1
   },
   {
    "fieldname": "section_break_perks",
@@ -68,7 +68,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-18 12:30:00.000000",
+ "modified": "2026-10-02 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Sponsorship Tier",

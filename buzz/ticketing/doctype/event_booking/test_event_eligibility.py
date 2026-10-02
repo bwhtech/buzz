@@ -71,8 +71,7 @@ class EligibilityTestCase(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": event or self.event.name,
 				"title": f"Eligibility {frappe.generate_hash(length=6)}",
-				"price": price,
-				"currency": "INR",
+				"prices": [{"currency": "INR", "price": price}],
 				"is_published": 1,
 			}
 		).insert(ignore_permissions=True)

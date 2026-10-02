@@ -8,11 +8,11 @@ import { useRoute } from "vue-router"
 
 import { FilterBar, type FilterGroup, type FilterValues } from "@/components/common/filters"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
-import EventGuestActions from "@/components/dashboard/events/EventGuestActions.vue"
 import EventGuestItem from "@/components/dashboard/events/EventGuestItem.vue"
 import EventGuestSkeleton from "@/components/dashboard/events/EventGuestSkeleton.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import GuestInfoDrawer from "@/components/dashboard/events/GuestInfoDrawer.vue"
+import GuestListExport from "@/components/dashboard/events/GuestListExport.vue"
 import { type GuestOrder, useEventGuests } from "@/composables/useEventGuests"
 import { useUrlFilters } from "@/composables/useUrlFilters"
 import { useRegistrationTrend } from "@/data/events"
@@ -153,7 +153,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 </script>
 
 <template>
-	<EventPageHeader :title="page.data?.title" section="Registrations" />
+	<EventPageHeader :title="page.data?.title" section="Guests" />
 
 	<PageWithSidebar>
 		<EventArchivedAlert :event="eventId" />
@@ -277,17 +277,11 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 			</Transition>
 		</section>
 		<template #sidebar>
-			<EventGuestActions
+			<GuestListExport
 				v-if="page.data"
 				:event="eventId"
 				:title="page.data.title"
-				:registration-link="page.data.registration_link"
-				:closed="!!page.data.registrations_closed"
-				:can-write="!!page.data.can_write"
-				:allow-guest-booking="!!page.data.allow_guest_booking"
-				:guest-verification-method="page.data.guest_verification_method"
 				:query="exportQuery"
-				@changed="page.reload()"
 			/>
 		</template>
 	</PageWithSidebar>

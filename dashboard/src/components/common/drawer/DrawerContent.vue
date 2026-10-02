@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useEventListener } from "@vueuse/core"
 import { DrawerContent, DrawerHandle, DrawerOverlay, DrawerPortal } from "reka-ui"
 
 import { useIsMobile } from "@/composables/useIsMobile"
@@ -13,6 +14,16 @@ withDefaults(
 )
 
 const isMobile = useIsMobile()
+
+// reka starts a swipe on a mouse press over anything but a control and captures the
+// pointer, so the click lands on the drawer instead of what was pressed: a padded
+// switch row's description never toggles it. Handing the pointer back fixes the click.
+// Runs after reka's own listener on the drawer, before the capture takes effect.
+useEventListener(document, "pointerdown", (event: PointerEvent) => {
+	const drawer = (event.target as Element).closest?.(".drawer")
+	if (event.pointerType === "mouse" && drawer?.hasPointerCapture(event.pointerId))
+		drawer.releasePointerCapture(event.pointerId)
+})
 </script>
 
 <template>

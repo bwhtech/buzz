@@ -22,6 +22,7 @@ from buzz.api.booking.schemas import (
 	PaymentLinkResponse,
 )
 from buzz.payments import get_payment_link_for_booking
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import default_currency
 from buzz.utils import ZOOM_BACKED_CATEGORIES, build_event_datetimes
 
 if TYPE_CHECKING:
@@ -43,12 +44,18 @@ class BookingService:
 
 	def process(self) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
 		self.validate_event()
+		self.validate_offline_currency()
 		self.validate_phone_fields()
 		self.validate_add_ons()
 		booking = self.build_booking()
 		booking.insert(ignore_permissions=True)
 		frappe.db.commit()  # nosemgrep: frappe-manual-commit
 		return self.finalize(booking)
+
+	def validate_offline_currency(self) -> None:
+		currency = self.request.currency
+		if self.request.is_offline and currency and currency != default_currency(self.request.event):
+			frappe.throw(_("Offline payment isn't available when paying in {0}").format(currency))
 
 	def validate_event(self) -> None:
 		if not self.event.is_published:
@@ -95,6 +102,7 @@ class BookingService:
 		booking = frappe.new_doc("Event Booking")
 		booking.event = self.request.event
 		booking.coupon_code = self.request.coupon_code
+		booking.currency = self.request.currency
 		booking.user = self.resolve_user()
 		self.apply_invoice_details(booking)
 		self.append_utm_parameters(booking)

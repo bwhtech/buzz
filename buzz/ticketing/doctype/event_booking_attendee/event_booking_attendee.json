@@ -61,7 +61,6 @@
   },
   {
    "default": "INR",
-   "fetch_from": "ticket_type.currency",
    "fieldname": "currency",
    "fieldtype": "Link",
    "label": "Currency",
@@ -69,8 +68,6 @@
    "reqd": 1
   },
   {
-   "fetch_from": "ticket_type.price",
-   "fetch_if_empty": 1,
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
@@ -108,7 +105,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-11-01 11:33:49.166876",
+ "modified": "2026-10-02 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Booking Attendee",

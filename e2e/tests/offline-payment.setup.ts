@@ -126,8 +126,7 @@ setup("create offline payment test event", async ({ request }) => {
 	await createDoc<NamedDoc>(request, "Event Ticket Type", {
 		event: event.name,
 		title: "Standard Ticket",
-		price: 500,
-		currency: "INR",
+		prices: [{ currency: "INR", price: 500 }],
 		is_published: 1,
 	})
 

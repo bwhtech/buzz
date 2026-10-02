@@ -87,8 +87,8 @@ def enquiry_item(row, tier) -> EventEnquiryItem:
 	return EventEnquiryItem(
 		**row,
 		tier_title=(tier.title if tier else row.tier) or "",
-		tier_price=tier.price if tier else None,
-		tier_currency=tier.currency if tier else None,
+		tier_price=tier.prices[0].price if tier else None,
+		tier_currency=tier.prices[0].currency if tier else None,
 	)
 
 
@@ -98,7 +98,7 @@ def tiers_by_name(names: set[str]) -> dict:
 	rows = frappe.get_all(
 		"Sponsorship Tier",
 		filters={"name": ["in", list(names)]},
-		fields=["name", "title", "price", "currency"],
+		fields=["name", "title", {"prices": ["currency", "price"]}],
 		ignore_permissions=True,
 	)
 	# Link values arrive as strings even where the tier autonames to an integer.

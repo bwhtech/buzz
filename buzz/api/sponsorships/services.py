@@ -53,7 +53,9 @@ class SponsorshipService:
 			has_sponsor=bool(sponsor),
 		)
 
-	def payment_link(self, tier_id: str, payment_gateway: str | None = None) -> str:
+	def payment_link(
+		self, tier_id: str, payment_gateway: str | None = None, currency: str | None = None
+	) -> str:
 		if not self.is_owner:
 			PaymentNotPermitted.throw()
 
@@ -62,6 +64,7 @@ class SponsorshipService:
 			tier_id,
 			f"/b/account/sponsorships/{self.enquiry_id}?success=true",
 			payment_gateway=payment_gateway,
+			currency=currency,
 		)
 
 	def withdraw(self) -> None:

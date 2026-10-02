@@ -141,8 +141,6 @@ setup("create guest booking test events", async ({ request }) => {
 		await createDoc<NamedDoc>(request, "Event Ticket Type", {
 			event: event.name,
 			title: "Free Ticket",
-			price: 0,
-			currency: "INR",
 			is_published: 1,
 		})
 

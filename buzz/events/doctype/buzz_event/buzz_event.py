@@ -294,7 +294,7 @@ class BuzzEvent(Document):
 
 	def create_default_records(self):
 		records = [
-			{"doctype": "Sponsorship Tier", "title": "Normal"},
+			{"doctype": "Sponsorship Tier", "title": "Normal", "prices": [{"price": 0}]},
 			{"doctype": "Event Ticket Type", "title": "Normal"},
 		]
 		for record in records:
@@ -529,8 +529,7 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 			ticket_type = frappe.new_doc("Event Ticket Type")
 			ticket_type.event = event.name
 			ticket_type.title = tt.title
-			ticket_type.price = tt.price
-			ticket_type.currency = tt.currency
+			ticket_type.append("prices", {"currency": tt.currency, "price": tt.price})
 			ticket_type.is_published = tt.is_published
 			ticket_type.max_tickets_available = tt.max_tickets_available
 			ticket_type.auto_unpublish_after = tt.auto_unpublish_after
