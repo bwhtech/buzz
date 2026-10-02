@@ -93,6 +93,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 
 	<TicketTypeDrawer
 		v-model:open="drawerOpen"
+		:event="eventId"
 		:ticket-type="selectedTicketType"
 		:can-write="!!page.data?.can_write"
 		@changed="page.reload()"

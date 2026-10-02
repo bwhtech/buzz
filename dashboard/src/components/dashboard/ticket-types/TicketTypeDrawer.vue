@@ -6,6 +6,7 @@ import DrawerSaveBar from "@/components/dashboard/sponsorships/DrawerSaveBar.vue
 import { keepLastValue } from "@/components/dashboard/sponsorships/helpers"
 import PriceList from "@/components/dashboard/sponsorships/PriceList.vue"
 import SponsorshipDrawer from "@/components/dashboard/sponsorships/SponsorshipDrawer.vue"
+import TicketTypeGuests from "@/components/dashboard/ticket-types/TicketTypeGuests.vue"
 import { useDrawerEdits } from "@/composables/useDrawerEdits"
 import type { TicketTypeItem, TierPrice } from "@/types"
 import { formatWholePriceOrFree } from "@/utils/currency"
@@ -17,7 +18,7 @@ type TicketTypeValues = {
 	auto_unpublish_after: string | null
 }
 
-const props = defineProps<{ ticketType: TicketTypeItem | null; canWrite: boolean }>()
+const props = defineProps<{ event: string; ticketType: TicketTypeItem | null; canWrite: boolean }>()
 const open = defineModel<boolean>("open", { required: true })
 const emit = defineEmits<{ changed: [] }>()
 
@@ -149,6 +150,16 @@ async function save(values: TicketTypeValues) {
 				@update:model-value="draft.auto_unpublish_after = $event || null"
 			/>
 		</form>
+
+		<TicketTypeGuests
+			v-if="shownTicketType.tickets_sold"
+			:event="event"
+			:ticket-type="shownTicketType.name"
+			:count="shownTicketType.tickets_sold"
+		/>
+		<p v-else class="w-full rounded-6 bg-surface-gray-2 p-4 text-base text-ink-gray-5">
+			No one has bought this ticket yet.
+		</p>
 
 		<template v-if="canWrite && hasChanges" #footer>
 			<DrawerSaveBar :disabled="isInvalid" @discard="discardChanges" @save="confirmAndSave" />
