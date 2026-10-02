@@ -803,8 +803,18 @@ body:has(.login-frame:not([data-ready])) {
 	transition: background-color 150ms ease-out;
 }
 
-.link-row .host-logo {
-	transition: background-color 150ms ease-out;
+.link-row .host-logo,
+.link-external {
+	transition:
+		background-color 150ms ease-out,
+		color 150ms ease-out;
+}
+
+.link-external {
+	width: 14px;
+	height: 14px;
+	margin-left: auto;
+	color: var(--ink-muted);
 }
 
 .narrow-links {
@@ -1132,6 +1142,10 @@ summary:focus-visible {
 
 	.link-row:hover .host-logo {
 		background: var(--border);
+	}
+
+	.link-row:hover .link-external {
+		color: var(--ink-strong);
 	}
 
 	.tab:hover,
