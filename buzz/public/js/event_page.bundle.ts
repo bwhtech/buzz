@@ -54,3 +54,44 @@ if (modeToggle) {
 	setMode(modeToggle, document.documentElement.dataset.mode || "dark")
 	modeToggle.addEventListener("click", () => toggleMode(modeToggle))
 }
+
+const LOGIN_MESSAGE = "buzz-login"
+const LOGIN_FRAME_FADE_MS = 150
+
+function openLoginFrame(link: HTMLAnchorElement) {
+	if (document.querySelector(".login-frame")) return
+	const mode = document.documentElement.dataset.mode === "light" ? "light" : "dark"
+	const frame = document.createElement("iframe")
+	frame.className = "login-frame"
+	frame.title = link.textContent?.trim() || ""
+	frame.style.colorScheme = mode
+	frame.src = `/b/login/embed?mode=${mode}`
+	document.body.append(frame)
+}
+
+function closeLoginFrame(frame: HTMLIFrameElement) {
+	frame.removeAttribute("data-ready")
+	setTimeout(() => frame.remove(), LOGIN_FRAME_FADE_MS)
+}
+
+window.addEventListener("message", (event) => {
+	if (event.origin !== location.origin || event.data?.type !== LOGIN_MESSAGE) return
+	const frame = document.querySelector<HTMLIFrameElement>(".login-frame")
+	if (!frame) return
+	if (event.data.state === "ready") {
+		frame.setAttribute("data-ready", "")
+		frame.focus()
+	} else if (event.data.state === "success") {
+		location.reload()
+	} else if (event.data.state === "close") {
+		closeLoginFrame(frame)
+	}
+})
+
+document.querySelectorAll<HTMLAnchorElement>("a[data-login]").forEach((link) => {
+	link.addEventListener("click", (event) => {
+		if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+		event.preventDefault()
+		openLoginFrame(link)
+	})
+})

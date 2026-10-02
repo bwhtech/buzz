@@ -1,5 +1,7 @@
 <template>
+	<slot v-if="embedded" />
 	<div
+		v-else
 		class="min-h-screen bg-surface-base text-ink-gray-8"
 		:class="{ 'h-screen overflow-hidden': fullBleed }"
 	>
@@ -31,6 +33,7 @@ const requires_auth = computed(() => !route.meta?.isPublic)
 // meta of the URL being loaded instead.
 const startMeta = router.resolve(router.options.history.location).meta
 const fullBleed = computed(() => Boolean((routerReady.value ? route.meta : startMeta).fullBleed))
+const embedded = computed(() => Boolean((routerReady.value ? route.meta : startMeta).embedded))
 
 router.isReady().then(() => {
 	routerReady.value = true
