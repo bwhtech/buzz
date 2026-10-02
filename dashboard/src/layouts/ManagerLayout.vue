@@ -42,9 +42,8 @@ const items = computed(() =>
 </script>
 
 <template>
+	<!-- Shell and page render while access is pending, so pages show their own skeletons. -->
 	<NotFound v-if="access === 'denied'" />
-	<template v-else-if="access === 'granted'">
-		<ManagerMobileShell v-if="isMobile" :items="items" :show-discover="!eventId" />
-		<ManagerDesktopShell v-else :items="items" :event-id="eventId" :event-title="eventTitle" />
-	</template>
+	<ManagerMobileShell v-else-if="isMobile" :items="items" :show-discover="!eventId" />
+	<ManagerDesktopShell v-else :items="items" :event-id="eventId" :event-title="eventTitle" />
 </template>

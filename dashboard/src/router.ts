@@ -252,7 +252,10 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from, next) => {
-	await loadUser()
+	const userLoaded = loadUser()
+	// The manager shell reads user info reactively, so its pages render their skeletons
+	// while it loads.
+	if (!to.meta.fullBleed) await userLoaded
 	next()
 })
 
