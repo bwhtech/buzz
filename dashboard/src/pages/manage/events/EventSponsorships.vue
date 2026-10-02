@@ -13,9 +13,9 @@ import EnquiryDrawer from "@/components/dashboard/sponsorships/EnquiryDrawer.vue
 import EventSponsorshipActions from "@/components/dashboard/sponsorships/EventSponsorshipActions.vue"
 import SponsorCard from "@/components/dashboard/sponsorships/SponsorCard.vue"
 import SponsorDrawer from "@/components/dashboard/sponsorships/SponsorDrawer.vue"
-import TierCard from "@/components/dashboard/sponsorships/TierCard.vue"
 import TierDialog from "@/components/dashboard/sponsorships/TierDialog.vue"
 import TierDrawer from "@/components/dashboard/sponsorships/TierDrawer.vue"
+import TierList from "@/components/dashboard/sponsorships/TierList.vue"
 import { useEventSponsorships } from "@/data/sponsorships"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError } from "@/types"
@@ -120,9 +120,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 
 		<div v-if="page.loading" class="space-y-8">
 			<Skeleton class="h-6 w-24" />
-			<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-				<Skeleton v-for="row in 3" :key="row" class="h-28 w-full rounded-4" />
-			</div>
+			<Skeleton class="h-48 w-full rounded-4" />
 		</div>
 
 		<ErrorMessage v-else-if="page.error" :message="message(page.error)" />
@@ -131,15 +129,12 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 			<section class="space-y-3">
 				<SectionHeader title="Tiers" :count="page.data?.tiers.length" :action="addTierAction" />
 
-				<div v-if="page.data?.tiers.length" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					<TierCard
-						v-for="tier in page.data.tiers"
-						:key="tier.name"
-						:tier="tier"
-						:can-write="page.data.can_write"
-						@open="select('tier', tier.name)"
-					/>
-				</div>
+				<TierList
+					v-if="page.data?.tiers.length"
+					:tiers="page.data.tiers"
+					:can-write="page.data.can_write"
+					@open="select('tier', $event)"
+				/>
 				<EmptyState
 					v-else
 					title="No tiers yet"
