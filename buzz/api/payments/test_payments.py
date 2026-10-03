@@ -1,7 +1,9 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from buzz.api.events.test_events import create_event
 from buzz.api.payments import get_event_payment_gateways
+from buzz.payments import resolve_payment_gateway
 
 
 class TestGetEventPaymentGateways(IntegrationTestCase):
@@ -47,3 +49,45 @@ class TestGetEventPaymentGateways(IntegrationTestCase):
 		self.set_default(self.gateway)
 
 		self.assertEqual(get_event_payment_gateways(self.event), [self.gateway])
+
+	def test_new_event_starts_with_default_gateway(self):
+		self.set_default(self.gateway)
+		team = frappe.db.get_value("Buzz Event", self.event, "team")
+
+		event = frappe.get_doc("Buzz Event", create_event("Default Gateway Event", team))
+
+		self.assertEqual([row.payment_gateway for row in event.payment_gateways], [self.gateway])
+
+	def test_new_event_keeps_gateways_it_was_created_with(self):
+		self.set_default(self.gateway)
+		other = frappe.get_doc({"doctype": "Payment Gateway", "gateway": f"Other {frappe.generate_hash(6)}"})
+		other.insert()
+		team = frappe.db.get_value("Buzz Event", self.event, "team")
+
+		event = frappe.get_doc(
+			"Buzz Event",
+			create_event("Own Gateway Event", team, payment_gateways=[{"payment_gateway": other.name}]),
+		)
+
+		self.assertEqual([row.payment_gateway for row in event.payment_gateways], [other.name])
+
+	def test_resolve_picks_the_first_gateway_when_none_is_given(self):
+		self.set_gateways([self.gateway])
+
+		self.assertEqual(resolve_payment_gateway(self.event, None), self.gateway)
+
+	def test_resolve_accepts_a_gateway_the_event_uses(self):
+		self.set_gateways([self.gateway])
+
+		self.assertEqual(resolve_payment_gateway(self.event, self.gateway), self.gateway)
+
+	def test_resolve_rejects_a_gateway_the_event_does_not_use(self):
+		self.set_gateways([self.gateway])
+		other = frappe.get_doc({"doctype": "Payment Gateway", "gateway": f"Other {frappe.generate_hash(6)}"})
+
+		with self.assertRaises(frappe.ValidationError):
+			resolve_payment_gateway(self.event, other.insert().name)
+
+	def test_resolve_throws_when_the_event_has_no_gateway(self):
+		with self.assertRaises(frappe.ValidationError):
+			resolve_payment_gateway(self.event, None)

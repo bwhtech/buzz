@@ -11,7 +11,7 @@ defineProps<{ providers: PaymentProviderItem[] }>()
 <template>
 	<ListSection
 		title="Payment Providers"
-		description="Attendees and sponsors pick one of these when they pay. The default comes from site settings and applies until the event adds its own."
+		description="Attendees and sponsors pick one of these when they pay. New events start with the site default."
 		:empty="!providers.length"
 		empty-title="No payment providers"
 		empty-description="Ask a site admin to set a default payment provider."
