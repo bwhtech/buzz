@@ -155,17 +155,20 @@ class TestTeamTaxDetails(IntegrationTestCase):
 		)
 		self.assertEqual(self.settings.tax_id, "22AAAAA0000A1Z5")
 
-	def test_clearing_every_detail_is_allowed(self):
-		self.save_tax_details(
-			legal_name="Acme Events", tax_id="22AAAAA0000A1Z5", billing_address="12 MG Road"
-		)
+	def test_empty_details_are_allowed(self):
 		self.save_tax_details(legal_name="", tax_id="", billing_address="")
 		self.assertIsNone(self.settings.tax_id)
 
-	def test_removing_the_tax_id_clears_the_rest(self):
+	def test_refuses_removing_the_tax_id(self):
 		self.save_tax_details(
 			legal_name="Acme Events", tax_id="22AAAAA0000A1Z5", billing_address="12 MG Road"
 		)
-		self.save_tax_details(tax_id="")
-		self.assertIsNone(self.settings.legal_name)
-		self.assertIsNone(self.settings.billing_address)
+		with self.assertRaises(frappe.ValidationError):
+			self.save_tax_details(legal_name="", tax_id="", billing_address="")
+
+	def test_changing_the_tax_id_is_allowed(self):
+		self.save_tax_details(
+			legal_name="Acme Events", tax_id="22AAAAA0000A1Z5", billing_address="12 MG Road"
+		)
+		self.save_tax_details(tax_id="29BBBBB1111B1Z5")
+		self.assertEqual(self.settings.tax_id, "29BBBBB1111B1Z5")

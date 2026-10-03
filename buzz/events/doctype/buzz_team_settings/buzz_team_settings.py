@@ -60,10 +60,10 @@ class BuzzTeamSettings(Document):
 		"""Tax details are all or nothing: a tax ID alone cannot go on an invoice."""
 		for fieldname in TAX_DETAIL_FIELDS:
 			self.set(fieldname, (self.get(fieldname) or "").strip() or None)
+		if self.tax_id_removed():
+			frappe.throw(_("Tax ID cannot be removed once set. You can change it instead."))
 		if self.tax_id:
 			self.tax_id = self.tax_id.upper()
-		elif self.tax_id_removed():
-			self.legal_name = self.billing_address = None
 		if any(self.get(fieldname) for fieldname in TAX_DETAIL_FIELDS) and not all(
 			self.get(fieldname) for fieldname in TAX_DETAIL_FIELDS
 		):
