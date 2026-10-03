@@ -211,6 +211,14 @@ class PaymentProviderItem(APIResponse):
 	is_default: bool
 
 
+class CurrencyRevenue(APIResponse):
+	currency: str
+	collected: float
+	refunded: float
+	bookings: int
+	tickets: int
+
+
 class EventTicketTypes(APIResponse):
 	title: str
 	can_write: bool
@@ -227,3 +235,4 @@ class EventTicketTypes(APIResponse):
 	can_edit_team: bool
 	ticket_types: list[TicketTypeItem]
 	payment_providers: list[PaymentProviderItem]
+	revenue: list[CurrencyRevenue]

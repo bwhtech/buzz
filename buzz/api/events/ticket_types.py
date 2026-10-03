@@ -1,9 +1,10 @@
 import frappe
-from frappe.query_builder.functions import Count
+from frappe.query_builder.functions import Count, Sum
 from frappe.utils import flt
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.schemas import (
+	CurrencyRevenue,
 	EventTicketTypes,
 	PaymentProviderItem,
 	TicketTypeItem,
@@ -53,6 +54,7 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		can_edit_team=can_manage_members(doc.team),
 		ticket_types=[ticket_type_item(row, sold, sold_by_currency) for row in rows],
 		payment_providers=payment_providers(event),
+		revenue=revenue_by_currency(event),
 	)
 
 
@@ -82,3 +84,44 @@ def tickets_sold_by_type(event: str) -> dict[str, int]:
 		.groupby(ticket.ticket_type)
 	).run()
 	return {str(ticket_type): count for ticket_type, count in rows}
+
+
+def revenue_by_currency(event: str) -> list[CurrencyRevenue]:
+	booking = frappe.qb.DocType("Event Booking")
+	rows = (
+		paid_bookings(event)
+		.select(
+			booking.currency,
+			Sum(booking.total_amount).as_("collected"),
+			Sum(booking.refunded_amount).as_("refunded"),
+			Count(booking.name).as_("bookings"),
+		)
+		.groupby(booking.currency)
+	).run(as_dict=True)
+	tickets = tickets_by_currency(event)
+	return [CurrencyRevenue(**row, tickets=tickets.get(row.currency, 0)) for row in rows]
+
+
+def tickets_by_currency(event: str) -> dict[str, int]:
+	booking = frappe.qb.DocType("Event Booking")
+	ticket = frappe.qb.DocType("Event Ticket")
+	rows = (
+		paid_bookings(event)
+		.join(ticket)
+		.on(ticket.booking == booking.name)
+		.where(ticket.docstatus == 1)
+		.select(booking.currency, Count(ticket.name))
+		.groupby(booking.currency)
+	).run()
+	return dict(rows)
+
+
+def paid_bookings(event: str):
+	"""An offline booking awaiting approval is submitted but not yet money; free ones never are."""
+	booking = frappe.qb.DocType("Event Booking")
+	return frappe.qb.from_(booking).where(
+		(booking.event == event)
+		& (booking.docstatus == 1)
+		& (booking.payment_status == "Paid")
+		& (booking.total_amount > 0)
+	)

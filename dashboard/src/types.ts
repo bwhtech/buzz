@@ -607,6 +607,15 @@ export interface EventTicketTypes {
 	can_edit_team: boolean
 	ticket_types: TicketTypeItem[]
 	payment_providers: PaymentProviderItem[]
+	revenue: CurrencyRevenue[]
+}
+
+export interface CurrencyRevenue {
+	currency: string
+	collected: number
+	refunded: number
+	bookings: number
+	tickets: number
 }
 
 export interface PaymentProviderItem {

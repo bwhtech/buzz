@@ -10,6 +10,7 @@ import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import RegistrationActions from "@/components/dashboard/events/RegistrationActions.vue"
 import AddPricedItemDialog from "@/components/dashboard/sponsorships/AddPricedItemDialog.vue"
 import PaymentProviders from "@/components/dashboard/ticket-types/PaymentProviders.vue"
+import RevenueCards from "@/components/dashboard/ticket-types/RevenueCards.vue"
 import TaxSettings from "@/components/dashboard/ticket-types/TaxSettings.vue"
 import TicketTypeDrawer from "@/components/dashboard/ticket-types/TicketTypeDrawer.vue"
 import TicketTypeList from "@/components/dashboard/ticket-types/TicketTypeList.vue"
@@ -96,6 +97,8 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		<ErrorMessage v-else-if="page.error" :message="message(page.error)" />
 
 		<div v-else-if="page.data" class="space-y-8">
+			<RevenueCards v-if="page.data.revenue.length" :revenue="page.data.revenue" />
+
 			<ListSection
 				title="Ticket Types"
 				description="Types of tickets that a participant can buy for this event"
