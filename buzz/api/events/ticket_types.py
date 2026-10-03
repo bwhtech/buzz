@@ -3,9 +3,15 @@ from frappe.query_builder.functions import Count
 from frappe.utils import flt
 
 from buzz.api.booking.services import are_registrations_closed
-from buzz.api.events.schemas import EventTicketTypes, TicketTypeItem, TicketTypePrice
+from buzz.api.events.schemas import (
+	EventTicketTypes,
+	PaymentProviderItem,
+	TicketTypeItem,
+	TicketTypePrice,
+)
 from buzz.api.events.services import ensure_event_team_access, registration_link
 from buzz.api.events.taxes import team_tax_details
+from buzz.payments import get_payment_gateways_for_event
 from buzz.permissions import can_manage_members, has_team_access
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import tickets_sold_by_currency
 
@@ -46,7 +52,16 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		**team_tax_details(doc.team),
 		can_edit_team=can_manage_members(doc.team),
 		ticket_types=[ticket_type_item(row, sold, sold_by_currency) for row in rows],
+		payment_providers=payment_providers(event),
 	)
+
+
+def payment_providers(event: str) -> list[PaymentProviderItem]:
+	default = frappe.db.get_single_value("Buzz Settings", "default_payment_gateway")
+	return [
+		PaymentProviderItem(name=gateway, is_default=gateway == default)
+		for gateway in get_payment_gateways_for_event(event)
+	]
 
 
 def ticket_type_item(row, sold: dict, sold_by_currency: dict) -> TicketTypeItem:

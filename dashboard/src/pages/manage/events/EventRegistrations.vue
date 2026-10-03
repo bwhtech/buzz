@@ -9,6 +9,7 @@ import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import RegistrationActions from "@/components/dashboard/events/RegistrationActions.vue"
 import AddPricedItemDialog from "@/components/dashboard/sponsorships/AddPricedItemDialog.vue"
+import PaymentProviders from "@/components/dashboard/ticket-types/PaymentProviders.vue"
 import TaxSettings from "@/components/dashboard/ticket-types/TaxSettings.vue"
 import TicketTypeDrawer from "@/components/dashboard/ticket-types/TicketTypeDrawer.vue"
 import TicketTypeList from "@/components/dashboard/ticket-types/TicketTypeList.vue"
@@ -111,6 +112,8 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 					@open="selectedName = $event"
 				/>
 			</ListSection>
+
+			<PaymentProviders :providers="page.data.payment_providers" />
 
 			<TaxSettings
 				:event="eventId"

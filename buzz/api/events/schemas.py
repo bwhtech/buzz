@@ -206,6 +206,11 @@ class TicketTypeItem(APIResponse):
 	prices: list[TicketTypePrice]
 
 
+class PaymentProviderItem(APIResponse):
+	name: str
+	is_default: bool
+
+
 class EventTicketTypes(APIResponse):
 	title: str
 	can_write: bool
@@ -221,3 +226,4 @@ class EventTicketTypes(APIResponse):
 	team_tax_id: str | None
 	can_edit_team: bool
 	ticket_types: list[TicketTypeItem]
+	payment_providers: list[PaymentProviderItem]
