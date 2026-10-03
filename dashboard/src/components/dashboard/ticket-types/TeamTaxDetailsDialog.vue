@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Dialog, type DialogAction, ErrorMessage, FormControl, toast } from "frappe-ui"
+import { Button, Dialog, ErrorMessage, FormControl, toast } from "frappe-ui"
 import { reactive } from "vue"
 
 import { useUpdateTeamTaxDetails } from "@/data/ticketTypes"
@@ -12,26 +12,21 @@ const emit = defineEmits<{ saved: [] }>()
 const details = reactive({ legal_name: "", tax_id: "", billing_address: "" })
 const update = useUpdateTeamTaxDetails()
 
-async function save(close: () => void) {
+async function save() {
 	// submit() resolves on a server error too, so the error is read off the call.
 	await update.submit({ event: props.event, ...details }).catch(() => null)
 	if (update.error) return
 	toast.success("Tax details saved")
 	emit("saved")
-	close()
+	isOpen.value = false
 }
-
-const actions: DialogAction[] = [
-	{ label: "Cancel" },
-	{ label: "Save tax details", variant: "solid", onClick: ({ close }) => save(close) },
-]
 
 const message = (error: unknown) => (error as FrappeError | null)?.message
 </script>
 
 <template>
-	<Dialog v-model="isOpen" size="md" title="Team tax details" :actions="actions">
-		<div class="space-y-4">
+	<Dialog v-model="isOpen" size="md" title="Team tax details">
+		<form class="space-y-4" @submit.prevent="save">
 			<p class="text-p-base text-ink-gray-5">
 				These details apply to every event your team hosts and are required to charge tax on
 				tickets.
@@ -57,6 +52,13 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				:rows="3"
 			/>
 			<ErrorMessage :message="message(update.error)" />
-		</div>
+			<Button
+				type="submit"
+				variant="solid"
+				class="w-full"
+				label="Save tax details"
+				:loading="update.loading"
+			/>
+		</form>
 	</Dialog>
 </template>

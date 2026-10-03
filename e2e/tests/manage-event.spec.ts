@@ -515,7 +515,12 @@ test.describe("Taxes", () => {
 		const dialog = page.getByRole("dialog")
 		await dialog.getByLabel("Tax ID").fill(TAX_DETAILS.tax_id)
 		await dialog.getByRole("button", { name: "Save tax details" }).click()
-		await expect(dialog.getByText("must be filled in together")).toBeVisible()
+		// The browser holds the submit on the first empty required field.
+		const legalName = dialog.getByLabel("Legal name")
+		expect(await legalName.evaluate((input: HTMLInputElement) => input.validity.valueMissing)).toBe(
+			true,
+		)
+		await expect(dialog).toBeVisible()
 
 		await dialog.getByLabel("Legal name").fill(TAX_DETAILS.legal_name)
 		await dialog.getByLabel("Billing address").fill(TAX_DETAILS.billing_address)
