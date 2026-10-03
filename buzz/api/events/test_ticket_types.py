@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -40,19 +42,36 @@ class TicketTypesTestCase(IntegrationTestCase):
 			.name
 		)
 
-	def sell(self, currency="INR"):
-		frappe.get_doc(
-			{
-				"doctype": "Event Booking",
-				"event": self.event,
-				"user": "Administrator",
-				"currency": currency,
-				"payment_status": "Paid",
-				"attendees": [
-					{"ticket_type": self.ticket_type, "first_name": "Buyer", "email": "buyer@example.com"}
-				],
-			}
-		).insert(ignore_permissions=True).submit()
+	def sell(self, currency="INR", attendees=1, payment_status="Paid", ticket_type=None):
+		attendee = {
+			"ticket_type": ticket_type or self.ticket_type,
+			"first_name": "Buyer",
+			"email": "buyer@example.com",
+		}
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "Event Booking",
+					"event": self.event,
+					"user": "Administrator",
+					"currency": currency,
+					"payment_status": payment_status,
+					"attendees": [attendee] * attendees,
+				}
+			)
+			.insert(ignore_permissions=True)
+			.submit()
+		)
+
+	def add_usd_price(self):
+		ticket_type = frappe.get_doc("Event Ticket Type", self.ticket_type)
+		ticket_type.append("prices", {"currency": "USD", "price": 15})
+		ticket_type.save(ignore_permissions=True)
+
+	def revenue(self):
+		frappe.set_user(self.owner)
+		payload = get_event_ticket_types(self.event).__json__()
+		return {row["currency"]: row for row in payload["revenue"]}
 
 
 class TestGetEventTicketTypes(TicketTypesTestCase):
@@ -83,9 +102,7 @@ class TestGetEventTicketTypes(TicketTypesTestCase):
 			get_event_ticket_types(self.event)
 
 	def test_lists_sales_per_currency(self):
-		ticket_type = frappe.get_doc("Event Ticket Type", self.ticket_type)
-		ticket_type.append("prices", {"currency": "USD", "price": 15})
-		ticket_type.save(ignore_permissions=True)
+		self.add_usd_price()
 		self.sell("USD")
 		frappe.set_user(self.owner)
 
@@ -104,3 +121,43 @@ class TestGetEventTicketTypes(TicketTypesTestCase):
 		payload = get_event_ticket_types(self.event).__json__()
 
 		self.assertEqual(payload["payment_providers"], [{"name": default, "is_default": True}])
+
+
+class TestRegistrationRevenue(TicketTypesTestCase):
+	def test_totals_paid_bookings_per_currency(self):
+		self.add_usd_price()
+		self.sell(attendees=2)
+		self.sell("USD")
+
+		revenue = self.revenue()
+
+		self.assertEqual(
+			revenue["INR"],
+			{"currency": "INR", "collected": 2000, "refunded": 0, "bookings": 1, "tickets": 2},
+		)
+		self.assertEqual(
+			revenue["USD"],
+			{"currency": "USD", "collected": 15, "refunded": 0, "bookings": 1, "tickets": 1},
+		)
+
+	def test_leaves_out_unpaid_and_free_bookings(self):
+		self.sell(payment_status="Unpaid")
+		self.sell(ticket_type=self.make_ticket_type("Community pass"))
+
+		self.assertEqual(self.revenue(), {})
+
+	def test_reports_refunds_beside_the_amount_collected(self):
+		booking = self.sell(attendees=2)
+		frappe.db.set_value("Event Booking", booking.name, "refunded_amount", 1000)
+
+		self.assertEqual(self.revenue()["INR"]["refunded"], 1000)
+		self.assertEqual(self.revenue()["INR"]["collected"], 2000)
+
+	# Cancelling a ticket mails the holder, and CI has no outgoing email account.
+	@patch("buzz.ticketing.doctype.event_ticket.event_ticket.send_message_email")
+	def test_counts_only_tickets_still_held(self, _send_message_email):
+		booking = self.sell(attendees=2)
+		ticket = frappe.get_all("Event Ticket", filters={"booking": booking.name}, pluck="name")[0]
+		frappe.get_doc("Event Ticket", ticket).cancel()
+
+		self.assertEqual(self.revenue()["INR"]["tickets"], 1)
