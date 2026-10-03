@@ -55,7 +55,7 @@ async function moveWithArrowKeys(event: KeyboardEvent, index: number) {
 <template>
 	<div class="space-y-1.5">
 		<span class="block text-xs text-ink-gray-5">{{ label }}</span>
-		<ul ref="listElement" class="space-y-0.5">
+		<ul ref="listElement" class="space-y-2">
 			<li
 				v-for="(item, index) in items"
 				:key="index"
@@ -86,6 +86,8 @@ async function moveWithArrowKeys(event: KeyboardEvent, index: number) {
 				>
 					<span class="lucide-x size-4" aria-hidden="true" />
 				</button>
+				<!-- Holds the remove button's width so every row's fields line up. -->
+				<span v-else-if="!disabled" class="size-7 shrink-0" aria-hidden="true" />
 			</li>
 		</ul>
 		<button
