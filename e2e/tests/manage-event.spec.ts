@@ -499,13 +499,20 @@ test.describe("Taxes", () => {
 	}
 
 	test("asks for team tax details before tax can be turned on", async ({ page, request }) => {
-		const team = await getDoc<{ team: string }>(request, "Buzz Event", eventId)
-		await updateDoc(request, "Buzz Team Settings", team.team, {
-			legal_name: null,
-			tax_id: null,
-			billing_address: null,
+		// A tax ID cannot be removed once set, so this runs on a team that never had one.
+		const team = await createDoc<{ name: string }>(request, "Buzz Team", {
+			team_name: `Untaxed Team ${Date.now()}`,
 		})
-		await page.reload()
+		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
+			event: {
+				team: team.name,
+				title: `Untaxed Event ${Date.now()}`,
+				start_date: "2030-01-01",
+				start_time: "09:00:00",
+				end_time: "17:00:00",
+			},
+		})
+		await page.goto(`/b/manage/events/${event.name}/registrations`)
 
 		const alert = page.getByText("Tax details required")
 		await expect(alert).toBeVisible({ timeout: 15000 })
@@ -527,6 +534,7 @@ test.describe("Taxes", () => {
 		await dialog.getByRole("button", { name: "Save tax details" }).click()
 
 		await expect(alert).toBeHidden()
+		await expect(page.getByText(`Invoiced as ${TAX_DETAILS.legal_name}`)).toBeVisible()
 		await expect(page.getByRole("switch", { name: "Charge tax on tickets" })).toBeEnabled()
 	})
 

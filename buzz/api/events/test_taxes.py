@@ -89,10 +89,11 @@ class TaxesTestCase(IntegrationTestCase):
 
 	def test_payload_says_whether_the_team_has_tax_details(self):
 		frappe.set_user(self.owner)
-		self.assertFalse(get_event_ticket_types(self.event).team_has_tax_details)
+		self.assertIsNone(get_event_ticket_types(self.event).team_tax_id)
 
 		update_team_tax_details(self.event, **TAX_DETAILS)
 
 		registration = get_event_ticket_types(self.event)
-		self.assertTrue(registration.team_has_tax_details)
+		self.assertEqual(registration.team_tax_id, "29ABCDE1234F1Z5")
+		self.assertEqual(registration.team_legal_name, TAX_DETAILS["legal_name"])
 		self.assertTrue(registration.can_edit_team)

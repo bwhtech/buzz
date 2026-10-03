@@ -7,15 +7,16 @@ from buzz.api.teams.exceptions import CannotEditTeam
 from buzz.permissions import can_manage_members
 
 
-def team_has_tax_details(team: str) -> bool:
-	return bool(frappe.db.get_value("Buzz Team Settings", team, "tax_id"))
+def team_tax_details(team: str) -> dict:
+	legal_name, tax_id = frappe.db.get_value("Buzz Team Settings", team, ["legal_name", "tax_id"])
+	return {"team_legal_name": legal_name, "team_tax_id": tax_id}
 
 
 def update_tax_settings(
 	event: str, apply_tax: bool, tax_inclusive: bool, tax_label: str, tax_percentage: float
 ) -> None:
 	doc = manageable_event(event)
-	if apply_tax and not team_has_tax_details(doc.team):
+	if apply_tax and not team_tax_details(doc.team)["team_tax_id"]:
 		TaxDetailsMissing.throw()
 	doc.update(
 		{
