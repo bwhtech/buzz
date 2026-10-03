@@ -32,17 +32,10 @@ function remove() {
 </script>
 
 <template>
-	<section class="space-y-2">
-		<div class="flex h-7 items-center justify-between">
+	<section class="space-y-3">
+		<div class="flex items-center justify-between">
 			<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">{{ __("Links") }}</h2>
-			<Button
-				v-if="links.length"
-				variant="ghost"
-				icon="lucide-plus"
-				:aria-label="__('Add link')"
-				:title="__('Add link')"
-				@click="open(null)"
-			/>
+			<Button :label="__('Add')" icon-left="lucide-plus" @click="open(null)" />
 		</div>
 
 		<ul v-if="links.length" class="-mx-2 space-y-0.5">
@@ -53,7 +46,7 @@ function remove() {
 			>
 				<button
 					type="button"
-					class="flex min-w-0 flex-1 items-center gap-3 rounded-4 px-2 py-1.5 text-left"
+					class="flex min-w-0 flex-1 items-center gap-3 rounded-4 px-2 py-1.5 text-left active:bg-surface-gray-3"
 					:aria-label="__('Edit {0}', [link.label])"
 					@click="open(index)"
 				>
@@ -72,17 +65,14 @@ function remove() {
 					icon="lucide-external-link"
 					:link="link.url"
 					:aria-label="__('Open {0}', [link.label])"
-					class="mr-1 opacity-0 transition-opacity duration-150 ease-out group-hover:opacity-100 focus-visible:opacity-100 motion-reduce:transition-none"
+					class="mr-1 transition-opacity [@media(hover:hover)]:opacity-0 duration-150 ease-out group-hover:opacity-100 focus-visible:opacity-100 motion-reduce:transition-none"
 				/>
 			</li>
 		</ul>
 
-		<div v-else class="space-y-3">
-			<p class="text-p-sm text-ink-gray-5">
-				{{ __("Venue map, slides, community chat — anything attendees should have one tap away.") }}
-			</p>
-			<Button icon-left="lucide-plus" :label="__('Add link')" @click="open(null)" />
-		</div>
+		<p v-else class="text-p-sm text-ink-gray-5">
+			{{ __("Venue map, slides, community chat — anything attendees should have one tap away.") }}
+		</p>
 
 		<EventLinkDialog v-model="dialogOpen" :link="editingLink" @submit="commit" @remove="remove" />
 	</section>

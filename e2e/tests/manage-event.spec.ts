@@ -431,12 +431,12 @@ test.describe("Event links", () => {
 		const links = page
 			.locator("section")
 			.filter({ has: page.getByRole("heading", { name: "Links" }) })
-		await links.getByRole("button", { name: "Add link" }).click({ timeout: 15000 })
+		await links.getByRole("button", { name: "Add", exact: true }).click({ timeout: 15000 })
 
 		const dialog = page.getByRole("dialog")
 		await dialog.getByRole("textbox", { name: "URL" }).fill("t.me/buzz-e2e")
 		await expect(dialog.getByRole("textbox", { name: "Label" })).toHaveValue("Community chat")
-		await dialog.getByRole("button", { name: "Add link" }).click()
+		await dialog.getByRole("button", { name: "Add", exact: true }).click()
 		await expect(dialog).toBeHidden()
 
 		await page.getByRole("button", { name: "Save" }).click()
@@ -456,11 +456,11 @@ test.describe("Event links", () => {
 		const links = page
 			.locator("section")
 			.filter({ has: page.getByRole("heading", { name: "Links" }) })
-		await links.getByRole("button", { name: "Add link" }).click({ timeout: 15000 })
+		await links.getByRole("button", { name: "Add", exact: true }).click({ timeout: 15000 })
 
 		const dialog = page.getByRole("dialog")
 		await dialog.getByRole("textbox", { name: "URL" }).fill("not a link")
-		await dialog.getByRole("button", { name: "Add link" }).click()
+		await dialog.getByRole("button", { name: "Add", exact: true }).click()
 
 		await expect(dialog.getByText("That doesn't look like a web address.")).toBeVisible()
 		await expect(dialog.getByText("Give the link a name attendees will recognise.")).toBeVisible()

@@ -2,6 +2,8 @@
 import { Button, Dialog, FormControl } from "frappe-ui"
 import { computed, reactive, ref, watch } from "vue"
 
+import { stripUrlScheme } from "@/components/dashboard/sponsorships/helpers"
+import WebsiteInput from "@/components/dashboard/sponsorships/WebsiteInput.vue"
 import type { EventExternalLink } from "@/types"
 import { LINK_ICONS, isValidUrl, normalizeUrl, suggestLink } from "@/utils/eventLinks"
 
@@ -19,7 +21,7 @@ watch(isOpen, (open) => {
 	Object.assign(draft, {
 		icon: props.link?.icon ?? "",
 		label: props.link?.label ?? "",
-		url: props.link?.url ?? "",
+		url: stripUrlScheme(props.link?.url ?? ""),
 	})
 	showErrors.value = false
 	suggestedLabel = ""
@@ -74,11 +76,9 @@ function remove() {
 <template>
 	<Dialog v-model="isOpen" :title="link ? __('Edit link') : __('Add link')">
 		<form novalidate class="space-y-4" @submit.prevent @keydown.enter="submitOnEnter">
-			<FormControl
+			<WebsiteInput
 				v-model="draft.url"
 				:label="__('URL')"
-				placeholder="https://"
-				autocomplete="off"
 				:error="showErrors ? urlError : undefined"
 			/>
 
@@ -105,25 +105,21 @@ function remove() {
 					/>
 				</div>
 			</div>
+		</form>
 
-			<div class="flex items-center gap-2 pt-2">
+		<template #actions>
+			<div class="flex items-center gap-2">
 				<Button
 					v-if="link"
-					type="button"
 					variant="ghost"
 					theme="red"
 					icon-left="lucide-trash-2"
 					:label="__('Remove')"
 					@click="remove"
 				/>
-				<Button type="button" class="ml-auto" :label="__('Cancel')" @click="isOpen = false" />
-				<Button
-					type="button"
-					variant="solid"
-					:label="link ? __('Update') : __('Add link')"
-					@click="submit"
-				/>
+				<Button class="ml-auto" :label="__('Cancel')" @click="isOpen = false" />
+				<Button variant="solid" :label="link ? __('Update') : __('Add')" @click="submit" />
 			</div>
-		</form>
+		</template>
 	</Dialog>
 </template>
