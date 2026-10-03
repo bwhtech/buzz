@@ -573,6 +573,33 @@ class TestGetEventGuests(IntegrationTestCase):
 		self.assertTrue(registration.allow_guest_booking)
 		self.assertEqual(registration.guest_verification_method, "Phone OTP")
 
+	def test_carries_the_tax_settings(self):
+		event = create_event("Tax Setting Event", self.team)
+		frappe.db.set_value(
+			"Buzz Event",
+			event,
+			{"apply_tax": 1, "tax_inclusive": 1, "tax_label": "VAT", "tax_percentage": 20},
+		)
+		frappe.set_user(self.owner)
+
+		registration = get_event_ticket_types(event)
+
+		self.assertTrue(registration.apply_tax)
+		self.assertTrue(registration.tax_inclusive)
+		self.assertEqual(registration.tax_label, "VAT")
+		self.assertEqual(registration.tax_percentage, 20)
+
+	def test_tax_settings_fall_back_to_gst_defaults(self):
+		event = create_event("Untaxed Event", self.team)
+		frappe.db.set_value("Buzz Event", event, {"tax_label": None, "tax_percentage": 0})
+		frappe.set_user(self.owner)
+
+		registration = get_event_ticket_types(event)
+
+		self.assertFalse(registration.apply_tax)
+		self.assertEqual(registration.tax_label, "GST")
+		self.assertEqual(registration.tax_percentage, 18)
+
 	def test_leaves_out_a_ticket_that_was_never_submitted(self):
 		event = create_event("Draft Ticket Event", self.team)
 		create_ticket(event, "draft-guest@example.com")

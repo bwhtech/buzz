@@ -1,5 +1,6 @@
 import frappe
 from frappe.query_builder.functions import Count
+from frappe.utils import flt
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.schemas import EventTicketTypes, TicketTypeItem, TicketTypePrice
@@ -36,6 +37,11 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		registrations_closed=are_registrations_closed(doc),
 		allow_guest_booking=bool(doc.allow_guest_booking),
 		guest_verification_method=doc.guest_verification_method or "None",
+		apply_tax=bool(doc.apply_tax),
+		tax_inclusive=bool(doc.tax_inclusive),
+		# Same defaults as Buzz Event's validate_tax_settings, so the form opens filled in.
+		tax_label=doc.tax_label or "GST",
+		tax_percentage=flt(doc.tax_percentage) or 18,
 		ticket_types=[ticket_type_item(row, sold, sold_by_currency) for row in rows],
 	)
 

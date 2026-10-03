@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ErrorMessage, Skeleton } from "frappe-ui"
+import { useEventListener } from "@vueuse/core"
+import { Button, ErrorMessage, Skeleton } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
@@ -8,8 +9,10 @@ import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import RegistrationActions from "@/components/dashboard/events/RegistrationActions.vue"
 import AddPricedItemDialog from "@/components/dashboard/sponsorships/AddPricedItemDialog.vue"
+import TaxSettings from "@/components/dashboard/ticket-types/TaxSettings.vue"
 import TicketTypeDrawer from "@/components/dashboard/ticket-types/TicketTypeDrawer.vue"
 import TicketTypeList from "@/components/dashboard/ticket-types/TicketTypeList.vue"
+import { useTaxSettingsForm } from "@/composables/useTaxSettingsForm"
 import { useEventTicketTypes } from "@/data/ticketTypes"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError } from "@/types"
@@ -17,6 +20,19 @@ import type { FrappeError } from "@/types"
 const eventId = useRoute().params.eventId as string
 
 const page = useEventTicketTypes(eventId)
+
+const taxForm = useTaxSettingsForm(
+	eventId,
+	computed(() => page.data ?? undefined),
+	() => page.reload(),
+)
+
+// The page's own save takes the shortcut, as on the Details page.
+useEventListener(document, "keydown", (stroke: KeyboardEvent) => {
+	if (stroke.key !== "s" || !(stroke.metaKey || stroke.ctrlKey) || stroke.altKey) return
+	stroke.preventDefault()
+	if (!stroke.repeat) taxForm.save()
+})
 
 const addDialogOpen = ref(false)
 
@@ -47,7 +63,26 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 </script>
 
 <template>
-	<EventPageHeader :title="page.data?.title" section="Registration" />
+	<EventPageHeader :title="page.data?.title" section="Registration">
+		<Transition
+			enter-active-class="transition duration-150 ease-out motion-reduce:transition-none"
+			enter-from-class="opacity-0 translate-y-1"
+			leave-active-class="transition duration-100 ease-out motion-reduce:transition-none"
+			leave-to-class="opacity-0"
+		>
+			<Button
+				v-if="taxForm.isDirty.value"
+				variant="solid"
+				label="Save"
+				:loading="taxForm.update.loading"
+				@click="taxForm.save"
+			/>
+		</Transition>
+
+		<template #leading>
+			<Button v-if="taxForm.isDirty.value" label="Discard" @click="taxForm.discard" />
+		</template>
+	</EventPageHeader>
 
 	<PageWithSidebar>
 		<EventArchivedAlert :event="eventId" />
@@ -59,23 +94,26 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 
 		<ErrorMessage v-else-if="page.error" :message="message(page.error)" />
 
-		<ListSection
-			v-else-if="page.data"
-			title="Ticket Types"
-			description="Types of tickets that a participant can buy for this event"
-			:count="page.data.ticket_types.length"
-			:action="addAction"
-			:empty="!page.data.ticket_types.length"
-			empty-title="No ticket types yet"
-			empty-description="Add one so people can register."
-			empty-icon="lucide-ticket"
-		>
-			<TicketTypeList
-				:ticket-types="page.data.ticket_types"
-				:can-write="page.data.can_write"
-				@open="selectedName = $event"
-			/>
-		</ListSection>
+		<div v-else-if="page.data" class="space-y-8">
+			<ListSection
+				title="Ticket Types"
+				description="Types of tickets that a participant can buy for this event"
+				:count="page.data.ticket_types.length"
+				:action="addAction"
+				:empty="!page.data.ticket_types.length"
+				empty-title="No ticket types yet"
+				empty-description="Add one so people can register."
+				empty-icon="lucide-ticket"
+			>
+				<TicketTypeList
+					:ticket-types="page.data.ticket_types"
+					:can-write="page.data.can_write"
+					@open="selectedName = $event"
+				/>
+			</ListSection>
+
+			<TaxSettings :form="taxForm" :can-write="page.data.can_write" />
+		</div>
 
 		<template #sidebar>
 			<RegistrationActions

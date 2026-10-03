@@ -598,5 +598,9 @@ export interface EventTicketTypes {
 	registrations_closed: boolean
 	allow_guest_booking: boolean
 	guest_verification_method: string
+	apply_tax: boolean
+	tax_inclusive: boolean
+	tax_label: string
+	tax_percentage: number
 	ticket_types: TicketTypeItem[]
 }

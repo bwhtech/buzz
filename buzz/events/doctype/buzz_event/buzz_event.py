@@ -232,6 +232,8 @@ class BuzzEvent(Document):
 				self.tax_label = "GST"
 			if not self.tax_percentage:
 				self.tax_percentage = 18
+			if not 0 <= self.tax_percentage <= 100:
+				frappe.throw(_("Tax rate must be between 0 and 100"))
 
 	def validate_route(self):
 		if self.is_published and not self.route:

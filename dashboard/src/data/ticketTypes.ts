@@ -8,3 +8,18 @@ export function useEventTicketTypes(event: string) {
 		params: { event },
 	})
 }
+
+export interface TaxSettings {
+	apply_tax: 0 | 1
+	tax_inclusive: 0 | 1
+	tax_label: string
+	tax_percentage: number
+}
+
+export function useUpdateTaxSettings() {
+	return useCall<unknown, { doctype: "Buzz Event"; name: string; fieldname: TaxSettings }>({
+		url: "/api/v2/method/frappe.client.set_value",
+		method: "POST",
+		immediate: false,
+	})
+}

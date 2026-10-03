@@ -213,4 +213,8 @@ class EventTicketTypes(APIResponse):
 	registrations_closed: bool
 	allow_guest_booking: bool
 	guest_verification_method: str
+	apply_tax: bool
+	tax_inclusive: bool
+	tax_label: str
+	tax_percentage: float
 	ticket_types: list[TicketTypeItem]

@@ -467,3 +467,48 @@ test.describe("Event links", () => {
 		await expect(dialog.getByText("Give the link a name attendees will recognise.")).toBeVisible()
 	})
 })
+
+test.describe("Taxes", () => {
+	let eventId: string
+
+	test.beforeEach(async ({ page, request }) => {
+		const team = await ensureTestTeam(request)
+		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
+			event: {
+				team,
+				title: `Tax Settings Event ${Date.now()}`,
+				start_date: "2030-01-01",
+				start_time: "09:00:00",
+				end_time: "17:00:00",
+			},
+		})
+		eventId = String(event.name)
+		await page.goto(`/b/manage/events/${eventId}/registrations`)
+	})
+
+	test("turns tax on with the organiser paying", async ({ page, request }) => {
+		const rate = page.getByLabel("Tax rate")
+		await expect(rate).toBeDisabled({ timeout: 15000 })
+
+		await page.getByRole("switch", { name: "Charge tax on tickets" }).click()
+		await page.getByText("Organiser", { exact: true }).click()
+		await rate.fill("12")
+		await page.getByRole("button", { name: "Save" }).click()
+
+		await expect(page.getByRole("button", { name: "Save" })).toBeHidden()
+		const event = await getDoc<Record<string, number>>(request, "Buzz Event", eventId)
+		expect(event.apply_tax).toBe(1)
+		expect(event.tax_inclusive).toBe(1)
+		expect(event.tax_percentage).toBe(12)
+	})
+
+	test("refuses a tax rate above 100", async ({ page, request }) => {
+		await page.getByRole("switch", { name: "Charge tax on tickets" }).click({ timeout: 15000 })
+		await page.getByLabel("Tax rate").fill("150")
+		await page.getByRole("button", { name: "Save" }).click()
+
+		await expect(page.getByText("Tax rate must be between 0 and 100")).toBeVisible()
+		const event = await getDoc<Record<string, number>>(request, "Buzz Event", eventId)
+		expect(event.apply_tax).toBe(0)
+	})
+})
