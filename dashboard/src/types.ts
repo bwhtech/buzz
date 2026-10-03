@@ -602,5 +602,7 @@ export interface EventTicketTypes {
 	tax_inclusive: boolean
 	tax_label: string
 	tax_percentage: number
+	team_has_tax_details: boolean
+	can_edit_team: boolean
 	ticket_types: TicketTypeItem[]
 }

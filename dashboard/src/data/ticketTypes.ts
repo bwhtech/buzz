@@ -10,15 +10,29 @@ export function useEventTicketTypes(event: string) {
 }
 
 export interface TaxSettings {
-	apply_tax: 0 | 1
-	tax_inclusive: 0 | 1
+	apply_tax: boolean
+	tax_inclusive: boolean
 	tax_label: string
 	tax_percentage: number
 }
 
 export function useUpdateTaxSettings() {
-	return useCall<unknown, { doctype: "Buzz Event"; name: string; fieldname: TaxSettings }>({
-		url: "/api/v2/method/frappe.client.set_value",
+	return useCall<null, TaxSettings & { event: string }>({
+		url: "/api/v2/method/buzz.api.events.update_tax_settings",
+		method: "POST",
+		immediate: false,
+	})
+}
+
+export interface TeamTaxDetails {
+	legal_name: string
+	tax_id: string
+	billing_address: string
+}
+
+export function useUpdateTeamTaxDetails() {
+	return useCall<null, TeamTaxDetails & { event: string }>({
+		url: "/api/v2/method/buzz.api.events.update_team_tax_details",
 		method: "POST",
 		immediate: false,
 	})

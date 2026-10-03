@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { type APIRequestContext, expect, test } from "@playwright/test"
 
 import {
 	callMethod,
@@ -469,6 +469,11 @@ test.describe("Event links", () => {
 })
 
 test.describe("Taxes", () => {
+	const TAX_DETAILS = {
+		legal_name: "Acme Events Pvt Ltd",
+		tax_id: "29ABCDE1234F1Z5",
+		billing_address: "12 MG Road, Bengaluru",
+	}
 	let eventId: string
 
 	test.beforeEach(async ({ page, request }) => {
@@ -486,7 +491,43 @@ test.describe("Taxes", () => {
 		await page.goto(`/b/manage/events/${eventId}/registrations`)
 	})
 
+	async function addTeamTaxDetails(request: APIRequestContext) {
+		await callMethod(request, "buzz.api.events.update_team_tax_details", {
+			event: eventId,
+			...TAX_DETAILS,
+		})
+	}
+
+	test("asks for team tax details before tax can be turned on", async ({ page, request }) => {
+		const team = await getDoc<{ team: string }>(request, "Buzz Event", eventId)
+		await updateDoc(request, "Buzz Team Settings", team.team, {
+			legal_name: null,
+			tax_id: null,
+			billing_address: null,
+		})
+		await page.reload()
+
+		const alert = page.getByText("Tax details required")
+		await expect(alert).toBeVisible({ timeout: 15000 })
+		await expect(page.getByRole("switch", { name: "Charge tax on tickets" })).toBeDisabled()
+
+		await page.getByRole("button", { name: "Add tax details" }).click()
+		const dialog = page.getByRole("dialog")
+		await dialog.getByLabel("Tax ID").fill(TAX_DETAILS.tax_id)
+		await dialog.getByRole("button", { name: "Save tax details" }).click()
+		await expect(dialog.getByText("must be filled in together")).toBeVisible()
+
+		await dialog.getByLabel("Legal name").fill(TAX_DETAILS.legal_name)
+		await dialog.getByLabel("Billing address").fill(TAX_DETAILS.billing_address)
+		await dialog.getByRole("button", { name: "Save tax details" }).click()
+
+		await expect(alert).toBeHidden()
+		await expect(page.getByRole("switch", { name: "Charge tax on tickets" })).toBeEnabled()
+	})
+
 	test("turns tax on with the organiser paying", async ({ page, request }) => {
+		await addTeamTaxDetails(request)
+		await page.reload()
 		const rate = page.getByLabel("Tax rate")
 		await expect(rate).toBeDisabled({ timeout: 15000 })
 
@@ -503,6 +544,8 @@ test.describe("Taxes", () => {
 	})
 
 	test("refuses a tax rate above 100", async ({ page, request }) => {
+		await addTeamTaxDetails(request)
+		await page.reload()
 		await page.getByRole("switch", { name: "Charge tax on tickets" }).click({ timeout: 15000 })
 		await page.getByLabel("Tax rate").fill("150")
 		await page.getByRole("button", { name: "Save" }).click()
@@ -512,7 +555,9 @@ test.describe("Taxes", () => {
 		expect(event.apply_tax).toBe(0)
 	})
 
-	test("asks before leaving with unsaved tax changes", async ({ page }) => {
+	test("asks before leaving with unsaved tax changes", async ({ page, request }) => {
+		await addTeamTaxDetails(request)
+		await page.reload()
 		await page.getByRole("switch", { name: "Charge tax on tickets" }).click({ timeout: 15000 })
 
 		page.once("dialog", (dialog) => dialog.dismiss())

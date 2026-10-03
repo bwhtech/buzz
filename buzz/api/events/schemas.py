@@ -217,4 +217,6 @@ class EventTicketTypes(APIResponse):
 	tax_inclusive: bool
 	tax_label: str
 	tax_percentage: float
+	team_has_tax_details: bool
+	can_edit_team: bool
 	ticket_types: list[TicketTypeItem]

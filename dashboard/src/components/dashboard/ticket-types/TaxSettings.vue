@@ -1,17 +1,57 @@
 <script setup lang="ts">
-import { ErrorMessage, FormControl, Radio, RadioGroup, Switch } from "frappe-ui"
-import { computed } from "vue"
+import { Alert, ErrorMessage, FormControl, Radio, RadioGroup, Switch } from "frappe-ui"
+import { computed, ref } from "vue"
 
 import SectionHeader from "@/components/common/SectionHeader.vue"
+import TeamTaxDetailsDialog from "@/components/dashboard/ticket-types/TeamTaxDetailsDialog.vue"
 import type { TaxSettingsForm } from "@/composables/useTaxSettingsForm"
 
-const props = defineProps<{ form: TaxSettingsForm; canWrite: boolean }>()
+const props = defineProps<{
+	event: string
+	form: TaxSettingsForm
+	canWrite: boolean
+	hasTaxDetails: boolean
+	canEditTeam: boolean
+}>()
+const emit = defineEmits<{ taxDetailsAdded: [] }>()
+
 const { applyTax, payer, taxLabel, taxPercentage } = props.form
-const fieldsDisabled = computed(() => !props.canWrite || !applyTax.value)
+const dialogOpen = ref(false)
+
+// Without tax details the switch only lets an event that already charges tax turn it off.
+const switchDisabled = computed(() => !props.canWrite || (!props.hasTaxDetails && !applyTax.value))
+const fieldsDisabled = computed(() => !props.canWrite || !props.hasTaxDetails || !applyTax.value)
+
+const missingDetailsMessage = computed(() => {
+	const request = props.canEditTeam
+		? "Add your team's tax details to charge tax on tickets."
+		: "A team owner or admin needs to add your team's tax details before tax can be charged on tickets."
+	return `${request} Until then, tickets are sold without tax, and your team is responsible for all tax and accounting obligations on its sales.`
+})
+
+const missingDetailsAction = computed(() =>
+	props.canEditTeam
+		? {
+				label: "Add tax details",
+				onClick: () => {
+					dialogOpen.value = true
+				},
+			}
+		: undefined,
+)
 </script>
 
 <template>
 	<section class="space-y-3">
+		<Alert
+			v-if="!hasTaxDetails"
+			class="mb-6"
+			theme="amber"
+			title="Tax details required"
+			:description="missingDetailsMessage"
+			:primary-action="missingDetailsAction"
+		/>
+
 		<div>
 			<SectionHeader title="Taxes" />
 			<p class="mt-1 text-p-base text-ink-gray-5">Tax charged on every ticket for this event</p>
@@ -22,7 +62,7 @@ const fieldsDisabled = computed(() => !props.canWrite || !applyTax.value)
 			padded
 			label="Charge tax on tickets"
 			description="Applies to new bookings. Existing bookings keep the tax they were charged."
-			:disabled="!canWrite"
+			:disabled="switchDisabled"
 		/>
 
 		<div class="grid gap-3 md:grid-cols-2">
@@ -64,5 +104,7 @@ const fieldsDisabled = computed(() => !props.canWrite || !applyTax.value)
 		</div>
 
 		<ErrorMessage :message="form.errorMessage.value" />
+
+		<TeamTaxDetailsDialog v-model="dialogOpen" :event="event" @saved="emit('taxDetailsAdded')" />
 	</section>
 </template>

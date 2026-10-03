@@ -112,7 +112,14 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				/>
 			</ListSection>
 
-			<TaxSettings :form="taxForm" :can-write="page.data.can_write" />
+			<TaxSettings
+				:event="eventId"
+				:form="taxForm"
+				:can-write="page.data.can_write"
+				:has-tax-details="page.data.team_has_tax_details"
+				:can-edit-team="page.data.can_edit_team"
+				@tax-details-added="page.reload()"
+			/>
 		</div>
 
 		<template #sidebar>

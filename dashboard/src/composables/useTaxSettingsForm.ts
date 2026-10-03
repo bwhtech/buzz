@@ -42,8 +42,8 @@ export function useTaxSettingsForm(
 	)
 
 	const draft = computed<TaxSettings>(() => ({
-		apply_tax: applyTax.value ? 1 : 0,
-		tax_inclusive: payer.value === "organiser" ? 1 : 0,
+		apply_tax: applyTax.value,
+		tax_inclusive: payer.value === "organiser",
 		tax_label: taxLabel.value.trim(),
 		tax_percentage: Number(taxPercentage.value),
 	}))
@@ -52,8 +52,8 @@ export function useTaxSettingsForm(
 		const saved = settings.value
 		if (!saved) return false
 		return (
-			draft.value.apply_tax !== Number(saved.apply_tax) ||
-			draft.value.tax_inclusive !== Number(saved.tax_inclusive) ||
+			draft.value.apply_tax !== saved.apply_tax ||
+			draft.value.tax_inclusive !== saved.tax_inclusive ||
 			draft.value.tax_label !== saved.tax_label ||
 			draft.value.tax_percentage !== saved.tax_percentage
 		)
@@ -70,13 +70,11 @@ export function useTaxSettingsForm(
 
 	async function save() {
 		if (!isDirty.value || update.loading) return
-		try {
-			await update.submit({ doctype: "Buzz Event", name: event, fieldname: draft.value })
-			toast.success("Tax settings saved")
-			onSaved()
-		} catch {
-			// The error stays under the fields.
-		}
+		// submit() resolves on a server error too, so the error is read off the call.
+		await update.submit({ event, ...draft.value }).catch(() => null)
+		if (update.error) return
+		toast.success("Tax settings saved")
+		onSaved()
 	}
 
 	const errorMessage = computed(() => (update.error as FrappeError | null)?.message)

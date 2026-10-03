@@ -5,7 +5,8 @@ from frappe.utils import flt
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.schemas import EventTicketTypes, TicketTypeItem, TicketTypePrice
 from buzz.api.events.services import ensure_event_team_access, registration_link
-from buzz.permissions import has_team_access
+from buzz.api.events.taxes import team_has_tax_details
+from buzz.permissions import can_manage_members, has_team_access
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import tickets_sold_by_currency
 
 TICKET_TYPE_FIELDS = [
@@ -42,6 +43,8 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		# Same defaults as Buzz Event's validate_tax_settings, so the form opens filled in.
 		tax_label=doc.tax_label or "GST",
 		tax_percentage=flt(doc.tax_percentage) or 18,
+		team_has_tax_details=team_has_tax_details(doc.team),
+		can_edit_team=can_manage_members(doc.team),
 		ticket_types=[ticket_type_item(row, sold, sold_by_currency) for row in rows],
 	)
 
