@@ -435,7 +435,8 @@ test.describe("Event links", () => {
 
 		const dialog = page.getByRole("dialog")
 		await dialog.getByRole("textbox", { name: "URL" }).fill("t.me/buzz-e2e")
-		await expect(dialog.getByRole("textbox", { name: "Label" })).toHaveValue("Community chat")
+		await dialog.getByRole("textbox", { name: "Label" }).fill("Community chat")
+		await dialog.getByRole("button", { name: "Community", exact: true }).click()
 		await dialog.getByRole("button", { name: "Add", exact: true }).click()
 		await expect(dialog).toBeHidden()
 

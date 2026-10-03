@@ -81,7 +81,7 @@ function fill(detail: EventDetail) {
 		time_zone: detail.time_zone ?? "",
 		venue: detail.venue?.name ?? "",
 		meeting_link: detail.meeting_link ?? "",
-		external_links: detail.external_links.map(({ icon, label, url }) => ({ icon, label, url })),
+		external_links: detail.external_links.map((link) => ({ ...link })),
 	})
 	// The editor rewrites its own HTML once it mounts, so the baseline is taken after
 	// that settles — otherwise the page loads already dirty.

@@ -5,7 +5,7 @@ import { computed, reactive, ref, watch } from "vue"
 import { stripUrlScheme } from "@/components/dashboard/sponsorships/helpers"
 import WebsiteInput from "@/components/dashboard/sponsorships/WebsiteInput.vue"
 import type { EventExternalLink } from "@/types"
-import { LINK_ICONS, isValidUrl, normalizeUrl, suggestLink } from "@/utils/eventLinks"
+import { LINK_ICONS, isValidUrl } from "@/utils/eventLinks"
 
 const props = defineProps<{ link: EventExternalLink | null }>()
 const isOpen = defineModel<boolean>({ required: true })
@@ -13,33 +13,19 @@ const emit = defineEmits<{ submit: [link: EventExternalLink]; remove: [] }>()
 
 const draft = reactive({ icon: "", label: "", url: "" })
 const showErrors = ref(false)
-let suggestedLabel = ""
-let iconChosen = false
+// WebsiteInput drops the scheme, so an existing http:// link would otherwise save back as https://.
+let scheme = "https://"
 
 watch(isOpen, (open) => {
 	if (!open) return
 	Object.assign(draft, {
-		icon: props.link?.icon ?? "",
+		icon: props.link?.icon || "link",
 		label: props.link?.label ?? "",
 		url: stripUrlScheme(props.link?.url ?? ""),
 	})
 	showErrors.value = false
-	suggestedLabel = ""
-	iconChosen = !!props.link
+	scheme = /^http:\/\//i.test(props.link?.url ?? "") ? "http://" : "https://"
 })
-
-watch(
-	() => draft.url,
-	(url) => {
-		const suggestion = suggestLink(url)
-		if (!suggestion) return
-		if (!draft.label || draft.label === suggestedLabel) {
-			draft.label = suggestion.label
-			suggestedLabel = suggestion.label
-		}
-		if (!iconChosen) draft.icon = suggestion.icon
-	},
-)
 
 const urlError = computed(() => {
 	if (!draft.url.trim()) return __("Add the address people should open.")
@@ -49,15 +35,10 @@ const labelError = computed(() =>
 	draft.label.trim() ? "" : __("Give the link a name attendees will recognise."),
 )
 
-function chooseIcon(icon: string) {
-	iconChosen = true
-	draft.icon = icon
-}
-
 function submit() {
 	showErrors.value = true
 	if (urlError.value || labelError.value) return
-	emit("submit", { icon: draft.icon, label: draft.label.trim(), url: normalizeUrl(draft.url) })
+	emit("submit", { icon: draft.icon, label: draft.label.trim(), url: scheme + draft.url.trim() })
 	isOpen.value = false
 }
 
@@ -101,7 +82,7 @@ function remove() {
 						:title="__(option.label)"
 						:icon="option.icon"
 						:variant="draft.icon === option.value ? 'subtle' : 'ghost'"
-						@click="chooseIcon(option.value)"
+						@click="draft.icon = option.value"
 					/>
 				</div>
 			</div>

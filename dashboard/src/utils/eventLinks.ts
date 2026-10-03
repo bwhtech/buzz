@@ -15,20 +15,6 @@ export const LINK_ICONS = [
 	{ value: "link", label: "Link", icon: "lucide-link" },
 ]
 
-const SUGGESTIONS: [RegExp, string, string][] = [
-	[/github\.com|gitlab\.com/, "folder-git-2", "Repository"],
-	[/youtube\.com|youtu\.be|vimeo\.com/, "circle-play", "Watch the recording"],
-	[/linkedin\.com|x\.com|twitter\.com|instagram\.com/, "users", "Follow us"],
-	[/maps\.app\.goo\.gl|google\.[a-z.]+\/maps|goo\.gl\/maps/, "map-pin", "Venue on Google Maps"],
-	[/docs\.google\.com\/presentation|speakerdeck|slideshare/, "presentation", "Slides"],
-	[/docs\.google\.com\/forms|forms\.gle|typeform/, "clipboard-list", "Form"],
-	[/docs\.google|notion\.(so|site)/, "file-text", "Event notes"],
-	[/discord|t\.me|telegram|chat\.whatsapp|slack\.com/, "message-circle", "Community chat"],
-	[/zoom\.us|meet\.google|teams\.microsoft/, "video", "Join online"],
-	[/photos\.google|photos\.app\.goo\.gl|flickr/, "camera", "Event photos"],
-	[/lu\.ma|calendar/, "calendar", "Add to calendar"],
-]
-
 export function linkIconClass(icon: string | null) {
 	return LINK_ICONS.find((option) => option.value === icon)?.icon ?? "lucide-link"
 }
@@ -54,11 +40,4 @@ export function hostOf(url: string) {
 	} catch {
 		return url
 	}
-}
-
-export function suggestLink(raw: string): { icon: string; label: string } | null {
-	if (!isValidUrl(raw)) return null
-	const url = normalizeUrl(raw)
-	const match = SUGGESTIONS.find(([pattern]) => pattern.test(url))
-	return match ? { icon: match[1], label: match[2] } : { icon: "globe", label: hostOf(url) }
 }
