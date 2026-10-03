@@ -28,12 +28,14 @@ class RefundNotification(BaseModel):
 
 
 def get_payment_gateways_for_event(event: str) -> list[str]:
-	"""Get all payment gateways configured for an event."""
-	return frappe.get_all(
+	"""Get the event's own payment gateways, or the site default when it has none."""
+	gateways = frappe.get_all(
 		"Event Payment Gateway",
 		filters={"parent": event, "parenttype": "Buzz Event"},
 		pluck="payment_gateway",
 	)
+	default = frappe.db.get_single_value("Buzz Settings", "default_payment_gateway")
+	return gateways or ([default] if default else [])
 
 
 def get_controller(payment_gateway):

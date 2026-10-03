@@ -15,6 +15,7 @@ class TestGetEventPaymentGateways(IntegrationTestCase):
 		gateway = {"doctype": "Payment Gateway", "gateway": f"Test Gateway {frappe.generate_hash(6)}"}
 		self.gateway = frappe.get_doc(gateway).insert().name
 		self.set_gateways([])
+		self.set_default(None)
 
 	def tearDown(self):
 		frappe.db.rollback()
@@ -28,10 +29,21 @@ class TestGetEventPaymentGateways(IntegrationTestCase):
 		event.save(ignore_permissions=True)
 		frappe.clear_document_cache("Buzz Event", self.event)
 
-	def test_configured_gateways_are_returned(self):
+	def set_default(self, gateway: str | None):
+		frappe.db.set_single_value("Buzz Settings", "default_payment_gateway", gateway)
+		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
+
+	def test_configured_gateways_override_default(self):
+		other = frappe.get_doc({"doctype": "Payment Gateway", "gateway": f"Other {frappe.generate_hash(6)}"})
+		self.set_default(other.insert().name)
 		self.set_gateways([self.gateway])
 
 		self.assertEqual(get_event_payment_gateways(self.event), [self.gateway])
 
 	def test_no_gateways_configured(self):
 		self.assertEqual(get_event_payment_gateways(self.event), [])
+
+	def test_falls_back_to_default_gateway(self):
+		self.set_default(self.gateway)
+
+		self.assertEqual(get_event_payment_gateways(self.event), [self.gateway])
