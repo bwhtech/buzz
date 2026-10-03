@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
 SEEDED_FIELDS = (
@@ -48,5 +49,26 @@ def get_event_team_settings(event: str | int) -> "BuzzTeamSettings":
 	return get_team_settings(frappe.get_cached_value("Buzz Event", event, "team"))
 
 
+TAX_DETAIL_FIELDS = ("legal_name", "tax_id", "billing_address")
+
+
 class BuzzTeamSettings(Document):
-	pass
+	def validate(self):
+		self.validate_tax_details()
+
+	def validate_tax_details(self):
+		"""Tax details are all or nothing: a tax ID alone cannot go on an invoice."""
+		for fieldname in TAX_DETAIL_FIELDS:
+			self.set(fieldname, (self.get(fieldname) or "").strip() or None)
+		if self.tax_id_removed():
+			frappe.throw(_("Tax ID cannot be removed once set. You can change it instead."))
+		if self.tax_id:
+			self.tax_id = self.tax_id.upper()
+		if any(self.get(fieldname) for fieldname in TAX_DETAIL_FIELDS) and not all(
+			self.get(fieldname) for fieldname in TAX_DETAIL_FIELDS
+		):
+			frappe.throw(_("Legal Name, Tax ID and Billing Address must be filled in together."))
+
+	def tax_id_removed(self) -> bool:
+		previous = self.get_doc_before_save()
+		return bool(previous and previous.tax_id and not self.tax_id)

@@ -1,6 +1,6 @@
 import frappe
 
-from buzz.api.events import services, zoom
+from buzz.api.events import services, taxes, zoom
 from buzz.api.events import ticket_types as ticket_types_service
 from buzz.api.events.schemas import (
 	CreatedEvent,
@@ -113,3 +113,17 @@ def remove_co_host(event: str, host: str) -> None:
 @frappe.whitelist(methods=["GET"])
 def get_event_ticket_types(event: str) -> EventTicketTypes:
 	return ticket_types_service.event_ticket_types(event)
+
+
+@frappe.whitelist(methods=["POST"])
+def update_tax_settings(
+	event: str, apply_tax: bool, tax_inclusive: bool, tax_label: str, tax_percentage: float
+) -> None:
+	"""Charging tax needs the team's tax details on file; turning it off never does."""
+	taxes.update_tax_settings(event, apply_tax, tax_inclusive, tax_label, tax_percentage)
+
+
+@frappe.whitelist(methods=["POST"])
+def update_team_tax_details(event: str, legal_name: str, tax_id: str, billing_address: str) -> None:
+	"""Set the tax details of the team the event belongs to. Owner/Admin only."""
+	taxes.update_team_tax_details(event, legal_name, tax_id, billing_address)

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { type APIRequestContext, expect, test } from "@playwright/test"
 
 import {
 	callMethod,
@@ -465,5 +465,120 @@ test.describe("Event links", () => {
 
 		await expect(dialog.getByText("That doesn't look like a web address.")).toBeVisible()
 		await expect(dialog.getByText("Give the link a name attendees will recognise.")).toBeVisible()
+	})
+})
+
+test.describe("Taxes", () => {
+	const TAX_DETAILS = {
+		legal_name: "Acme Events Pvt Ltd",
+		tax_id: "29ABCDE1234F1Z5",
+		billing_address: "12 MG Road, Bengaluru",
+	}
+	let eventId: string
+
+	test.beforeEach(async ({ page, request }) => {
+		const team = await ensureTestTeam(request)
+		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
+			event: {
+				team,
+				title: `Tax Settings Event ${Date.now()}`,
+				start_date: "2030-01-01",
+				start_time: "09:00:00",
+				end_time: "17:00:00",
+			},
+		})
+		eventId = String(event.name)
+		await page.goto(`/b/manage/events/${eventId}/registrations`)
+	})
+
+	async function addTeamTaxDetails(request: APIRequestContext) {
+		await callMethod(request, "buzz.api.events.update_team_tax_details", {
+			event: eventId,
+			...TAX_DETAILS,
+		})
+	}
+
+	test("asks for team tax details before tax can be turned on", async ({ page, request }) => {
+		// A tax ID cannot be removed once set, so this runs on a team that never had one.
+		const team = await createDoc<{ name: string }>(request, "Buzz Team", {
+			team_name: `Untaxed Team ${Date.now()}`,
+		})
+		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
+			event: {
+				team: team.name,
+				title: `Untaxed Event ${Date.now()}`,
+				start_date: "2030-01-01",
+				start_time: "09:00:00",
+				end_time: "17:00:00",
+			},
+		})
+		await page.goto(`/b/manage/events/${event.name}/registrations`)
+
+		const alert = page.getByText("Tax details required")
+		await expect(alert).toBeVisible({ timeout: 15000 })
+		await expect(page.getByRole("switch", { name: "Charge tax on tickets" })).toBeDisabled()
+
+		await page.getByRole("button", { name: "Add tax details" }).click()
+		const dialog = page.getByRole("dialog")
+		await dialog.getByLabel("Tax ID").fill(TAX_DETAILS.tax_id)
+		await dialog.getByRole("button", { name: "Save tax details" }).click()
+		// The browser holds the submit on the first empty required field.
+		const legalName = dialog.getByLabel("Legal name")
+		expect(await legalName.evaluate((input: HTMLInputElement) => input.validity.valueMissing)).toBe(
+			true,
+		)
+		await expect(dialog).toBeVisible()
+
+		await dialog.getByLabel("Legal name").fill(TAX_DETAILS.legal_name)
+		await dialog.getByLabel("Billing address").fill(TAX_DETAILS.billing_address)
+		await dialog.getByRole("button", { name: "Save tax details" }).click()
+
+		await expect(alert).toBeHidden()
+		await expect(page.getByText(`Invoiced as ${TAX_DETAILS.legal_name}`)).toBeVisible()
+		await expect(page.getByRole("switch", { name: "Charge tax on tickets" })).toBeEnabled()
+	})
+
+	test("turns tax on with the organiser paying", async ({ page, request }) => {
+		await addTeamTaxDetails(request)
+		await page.reload()
+		const rate = page.getByLabel("Tax rate")
+		await expect(rate).toBeDisabled({ timeout: 15000 })
+
+		await page.getByRole("switch", { name: "Charge tax on tickets" }).click()
+		await page.getByText("Organiser", { exact: true }).click()
+		await rate.fill("12")
+		await page.getByRole("button", { name: "Save" }).click()
+
+		await expect(page.getByRole("button", { name: "Save" })).toBeHidden()
+		const event = await getDoc<Record<string, number>>(request, "Buzz Event", eventId)
+		expect(event.apply_tax).toBe(1)
+		expect(event.tax_inclusive).toBe(1)
+		expect(event.tax_percentage).toBe(12)
+	})
+
+	test("refuses a tax rate above 100", async ({ page, request }) => {
+		await addTeamTaxDetails(request)
+		await page.reload()
+		await page.getByRole("switch", { name: "Charge tax on tickets" }).click({ timeout: 15000 })
+		await page.getByLabel("Tax rate").fill("150")
+		await page.getByRole("button", { name: "Save" }).click()
+
+		await expect(page.getByText("Tax rate must be between 0 and 100")).toBeVisible()
+		const event = await getDoc<Record<string, number>>(request, "Buzz Event", eventId)
+		expect(event.apply_tax).toBe(0)
+	})
+
+	test("asks before leaving with unsaved tax changes", async ({ page, request }) => {
+		await addTeamTaxDetails(request)
+		await page.reload()
+		await page.getByRole("switch", { name: "Charge tax on tickets" }).click({ timeout: 15000 })
+
+		page.once("dialog", (dialog) => dialog.dismiss())
+		await page.getByRole("link", { name: "Guests" }).click()
+		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/registrations$`))
+
+		page.once("dialog", (dialog) => dialog.accept())
+		await page.getByRole("link", { name: "Guests" }).click()
+		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
 	})
 })

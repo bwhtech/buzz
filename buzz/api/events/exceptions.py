@@ -26,3 +26,8 @@ class ZoomNotAvailable(BuzzAPIError):
 class EventEnded(BuzzAPIError):
 	title = _lt("Event Has Ended")
 	message = _lt("You cannot convert events that have ended to Zoom meetings.")
+
+
+class TaxDetailsMissing(BuzzAPIError):
+	title = _lt("Tax Details Missing")
+	message = _lt("Add your team's tax details before charging tax on tickets.")

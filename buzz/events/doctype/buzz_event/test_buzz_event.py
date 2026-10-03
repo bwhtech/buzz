@@ -64,6 +64,16 @@ class TestBuzzEvent(FrappeTestCase):
 			event.append("schedule", row)
 		return event
 
+	def test_refuses_a_tax_rate_above_100(self):
+		event = self._make_event_with_schedule([], apply_tax=1, tax_percentage=150)
+		with self.assertRaises(frappe.ValidationError):
+			event.validate_tax_settings()
+
+	def test_refuses_a_negative_tax_rate(self):
+		event = self._make_event_with_schedule([], apply_tax=1, tax_percentage=-5)
+		with self.assertRaises(frappe.ValidationError):
+			event.validate_tax_settings()
+
 	def test_schedule_start_time_after_event_start_is_valid(self):
 		"""Schedule at 11:00 should be valid when event starts at 9:00 (regression: string comparison bug)"""
 		event = self._make_event_with_schedule(
