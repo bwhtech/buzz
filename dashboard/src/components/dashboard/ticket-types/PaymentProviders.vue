@@ -4,12 +4,10 @@ import { Badge } from "frappe-ui"
 import ListSection from "@/components/common/ListSection.vue"
 import PaymentGatewayLogo from "@/components/PaymentGatewayLogo.vue"
 import type { PaymentProviderItem } from "@/types"
-import { paymentGatewayLogo } from "@/utils/paymentGateways"
 
 defineProps<{ providers: PaymentProviderItem[] }>()
 </script>
 
-<!-- A logo stands in for the provider's name when there is one. -->
 <template>
 	<ListSection
 		title="Payment Providers"
@@ -26,12 +24,9 @@ defineProps<{ providers: PaymentProviderItem[] }>()
 				class="flex h-10 items-center gap-2.5 rounded-full border border-outline-gray-2 bg-surface-base pl-4"
 				:class="provider.is_default ? 'pr-3' : 'pr-4'"
 			>
-				<PaymentGatewayLogo
-					v-if="paymentGatewayLogo(provider.name)"
-					:gateway="provider.name"
-					class="h-[18px]"
-				/>
-				<span v-else class="font-mono text-sm text-ink-gray-8">{{ provider.name }}</span>
+				<PaymentGatewayLogo :gateway="provider.name" class="h-[18px]">
+					<span class="font-mono text-sm text-ink-gray-8">{{ provider.name }}</span>
+				</PaymentGatewayLogo>
 				<Badge v-if="provider.is_default" theme="green" size="sm" label="Default" />
 			</li>
 		</ul>

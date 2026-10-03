@@ -1,7 +1,7 @@
 const LOGO_DIRECTORY = "/assets/buzz/images/payment_gateways"
 
 // Brand marks are drawn for one background, so each gateway ships a version per theme.
-export interface PaymentGatewayLogoFiles {
+interface PaymentGatewayLogoFiles {
 	light: string
 	dark: string
 }

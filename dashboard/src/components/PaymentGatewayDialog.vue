@@ -17,10 +17,9 @@
 						@change="selectedGateway = gateway"
 						class="text-ink-gray-6"
 					/>
-					<PaymentGatewayLogo :gateway="gateway" alt="" class="h-5" />
-					<div>
+					<PaymentGatewayLogo :gateway="gateway" class="h-5">
 						<h3 class="font-semibold text-ink-gray-9">{{ gateway }}</h3>
-					</div>
+					</PaymentGatewayLogo>
 				</div>
 			</div>
 		</div>
