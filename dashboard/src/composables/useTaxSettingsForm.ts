@@ -1,5 +1,7 @@
+import { useEventListener } from "@vueuse/core"
 import { toast } from "frappe-ui"
 import { type Ref, computed, ref, watch } from "vue"
+import { onBeforeRouteLeave } from "vue-router"
 
 import { type TaxSettings, useUpdateTaxSettings } from "@/data/ticketTypes"
 import type { EventTicketTypes, FrappeError } from "@/types"
@@ -56,6 +58,13 @@ export function useTaxSettingsForm(
 			draft.value.tax_percentage !== saved.tax_percentage
 		)
 	})
+
+	useEventListener(window, "beforeunload", (unload: BeforeUnloadEvent) => {
+		if (isDirty.value) unload.preventDefault()
+	})
+	onBeforeRouteLeave(
+		() => !isDirty.value || window.confirm("You have unsaved changes. Leave without saving?"),
+	)
 
 	const update = useUpdateTaxSettings()
 

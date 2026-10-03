@@ -511,4 +511,16 @@ test.describe("Taxes", () => {
 		const event = await getDoc<Record<string, number>>(request, "Buzz Event", eventId)
 		expect(event.apply_tax).toBe(0)
 	})
+
+	test("asks before leaving with unsaved tax changes", async ({ page }) => {
+		await page.getByRole("switch", { name: "Charge tax on tickets" }).click({ timeout: 15000 })
+
+		page.once("dialog", (dialog) => dialog.dismiss())
+		await page.getByRole("link", { name: "Guests" }).click()
+		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/registrations$`))
+
+		page.once("dialog", (dialog) => dialog.accept())
+		await page.getByRole("link", { name: "Guests" }).click()
+		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/guests$`))
+	})
 })
