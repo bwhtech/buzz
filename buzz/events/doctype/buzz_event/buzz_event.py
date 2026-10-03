@@ -153,7 +153,7 @@ class BuzzEvent(Document):
 	def validate_external_links(self):
 		for row in self.external_links:
 			if urlparse(row.url or "").scheme not in ("http", "https"):
-				frappe.throw(_("Link {0} must start with http:// or https://").format(row.label))
+				frappe.throw(_("Row {0}: link must start with http:// or https://").format(row.idx))
 
 	def set_time_zone_label(self):
 		# validate runs before the mandatory check, so dates may still be empty here
