@@ -17,9 +17,9 @@
 						@change="selectedGateway = gateway"
 						class="text-ink-gray-6"
 					/>
-					<div>
+					<PaymentGatewayLogo :gateway="gateway" class="h-5">
 						<h3 class="font-semibold text-ink-gray-9">{{ gateway }}</h3>
-					</div>
+					</PaymentGatewayLogo>
 				</div>
 			</div>
 		</div>
@@ -38,6 +38,8 @@
 <script setup lang="ts">
 import { Button, Dialog } from "frappe-ui"
 import { computed, type PropType, ref, watch } from "vue"
+
+import PaymentGatewayLogo from "@/components/PaymentGatewayLogo.vue"
 
 const props = defineProps({
 	open: {

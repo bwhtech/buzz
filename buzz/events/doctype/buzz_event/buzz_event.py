@@ -115,6 +115,12 @@ class BuzzEvent(Document):
 		# Organisers open registrations once tickets and details are ready.
 		if not self.registrations_close_at:
 			self.close_registrations()
+		self.add_default_payment_gateway()
+
+	def add_default_payment_gateway(self):
+		default = frappe.db.get_single_value("Buzz Settings", "default_payment_gateway")
+		if default and not self.payment_gateways:
+			self.append("payment_gateways", {"payment_gateway": default})
 
 	def validate(self):
 		self.validate_dates()

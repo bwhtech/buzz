@@ -21,6 +21,7 @@ class BuzzSettings(Document):
 		allow_ticket_cancellation_request_before_event_start_days: DF.Int
 		allow_transfer_ticket_before_event_start_days: DF.Int
 		auto_send_pitch_deck: DF.Check
+		default_payment_gateway: DF.Link | None
 		default_sponsor_deck_cc: DF.SmallText | None
 		default_sponsor_deck_email_template: DF.Link | None
 		default_sponsor_deck_reply_to: DF.Data | None

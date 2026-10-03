@@ -218,10 +218,18 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			create_sponsorship_payment_link(self.enquiry.name, self.tier.name)
 
+	def use_razorpay(self):
+		make_payment_gateway("Razorpay")
+		event = frappe.get_doc("Buzz Event", self.event)
+		event.payment_gateways = []
+		event.append("payment_gateways", {"payment_gateway": "Razorpay"})
+		event.save(ignore_permissions=True)
+		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event)
+
 	def test_link_charges_the_chosen_currency(self):
 		self.tier.append("prices", {"currency": "USD", "price": 60})
 		self.tier.save()
-		make_payment_gateway("Razorpay")
+		self.use_razorpay()
 
 		with patch("buzz.payments.get_controller", return_value=MagicMock()):
 			create_sponsorship_payment_link(self.enquiry.name, self.tier.name, "Razorpay", currency="USD")
@@ -230,5 +238,7 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 		self.assertEqual((payment.currency, payment.amount), ("USD", 60))
 
 	def test_link_refuses_a_currency_the_tier_has_no_price_in(self):
+		self.use_razorpay()
+
 		with self.assertRaises(frappe.ValidationError):
 			create_sponsorship_payment_link(self.enquiry.name, self.tier.name, "Razorpay", currency="EUR")

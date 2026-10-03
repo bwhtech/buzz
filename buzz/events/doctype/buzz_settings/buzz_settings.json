@@ -16,6 +16,8 @@
   "allow_add_ons_change_before_event_start_days",
   "column_break_hagy",
   "allow_ticket_cancellation_request_before_event_start_days",
+  "payments_tab",
+  "default_payment_gateway",
   "proposals_tab",
   "event_proposals_section",
   "accept_event_proposals",
@@ -94,6 +96,18 @@
    "fieldtype": "Int",
    "label": "Allow Ticket Cancellation Request Before Event Start (Days)",
    "non_negative": 1
+  },
+  {
+   "fieldname": "payments_tab",
+   "fieldtype": "Tab Break",
+   "label": "Payments"
+  },
+  {
+   "description": "Used by events that have no payment gateways of their own.",
+   "fieldname": "default_payment_gateway",
+   "fieldtype": "Link",
+   "label": "Default Payment Gateway",
+   "options": "Payment Gateway"
   },
   {
    "fieldname": "column_break_ehsr",
@@ -302,7 +316,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-30 13:00:00.000000",
+ "modified": "2026-10-03 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",

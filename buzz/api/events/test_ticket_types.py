@@ -93,3 +93,14 @@ class TestGetEventTicketTypes(TicketTypesTestCase):
 
 		row = next(row for row in payload["ticket_types"] if row["name"] == self.ticket_type)
 		self.assertEqual([price["tickets_sold"] for price in row["prices"]], [0, 1])
+
+	def test_lists_payment_providers_and_flags_the_default(self):
+		gateway = {"doctype": "Payment Gateway", "gateway": f"Default Gateway {frappe.generate_hash(6)}"}
+		default = frappe.get_doc(gateway).insert().name
+		frappe.db.set_single_value("Buzz Settings", "default_payment_gateway", default)
+		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
+		frappe.set_user(self.owner)
+
+		payload = get_event_ticket_types(self.event).__json__()
+
+		self.assertEqual(payload["payment_providers"], [{"name": default, "is_default": True}])

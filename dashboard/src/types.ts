@@ -606,4 +606,10 @@ export interface EventTicketTypes {
 	team_tax_id: string | null
 	can_edit_team: boolean
 	ticket_types: TicketTypeItem[]
+	payment_providers: PaymentProviderItem[]
+}
+
+export interface PaymentProviderItem {
+	name: string
+	is_default: boolean
 }

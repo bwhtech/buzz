@@ -87,7 +87,9 @@
 								@change="selectedGateway = gateway"
 								class="text-ink-gray-6"
 							/>
-							<span class="font-medium text-ink-gray-9">{{ gateway }}</span>
+							<PaymentGatewayLogo :gateway="gateway" class="h-5">
+								<span class="font-medium text-ink-gray-9">{{ gateway }}</span>
+							</PaymentGatewayLogo>
 						</div>
 					</div>
 				</div>
@@ -146,6 +148,7 @@
 import { Button, Dialog, ErrorMessage, FormControl, Spinner, useCall, useList } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
+import PaymentGatewayLogo from "@/components/PaymentGatewayLogo.vue"
 import type { TierPrice } from "@/types"
 import { formatCurrency } from "@/utils/currency"
 
