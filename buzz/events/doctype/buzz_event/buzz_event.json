@@ -29,6 +29,8 @@
   "section_break_zukm",
   "short_description",
   "about",
+  "external_links_section",
+  "external_links",
   "tab_2_tab",
   "schedule",
   "website_tab",
@@ -172,6 +174,17 @@
    "fieldname": "about",
    "fieldtype": "Text Editor",
    "label": "About"
+  },
+  {
+   "fieldname": "external_links_section",
+   "fieldtype": "Section Break",
+   "label": "Links"
+  },
+  {
+   "fieldname": "external_links",
+   "fieldtype": "Table",
+   "label": "External Links",
+   "options": "Event External Link"
   },
   {
    "fieldname": "start_time",
@@ -668,7 +681,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-10-01 12:30:00.000000",
+ "modified": "2026-10-02 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

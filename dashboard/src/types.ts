@@ -268,6 +268,12 @@ export interface EventHostRef {
 	logo: string | null
 }
 
+export interface EventExternalLink {
+	icon: string | null
+	label: string
+	url: string
+}
+
 // buzz.api.events.get_event: one event with everything its manage page edits.
 export interface EventDetail {
 	name: string
@@ -290,6 +296,7 @@ export interface EventDetail {
 	is_published: boolean
 	primary_host: EventHostRef | null
 	co_hosts: EventHostRef[]
+	external_links: EventExternalLink[]
 }
 
 // A ticket the user holds, flattened with the context its event carries.

@@ -773,7 +773,8 @@ body:has(.login-frame:not([data-ready])) {
 	gap: 12px;
 }
 
-.host-row {
+.host-row,
+.link-row {
 	display: flex;
 	align-items: center;
 	gap: 10px;
@@ -789,6 +790,35 @@ body:has(.login-frame:not([data-ready])) {
 	background: var(--surface-raised);
 	color: var(--ink-strong);
 	object-fit: contain;
+}
+
+.links .host-list {
+	gap: 2px;
+}
+
+.link-row {
+	margin-inline: -6px;
+	padding: 6px;
+	border-radius: var(--radius);
+	transition: background-color 150ms ease-out;
+}
+
+.link-row .host-logo,
+.link-external {
+	transition:
+		background-color 150ms ease-out,
+		color 150ms ease-out;
+}
+
+.link-external {
+	width: 14px;
+	height: 14px;
+	margin-left: auto;
+	color: var(--ink-muted);
+}
+
+.narrow-links {
+	display: none;
 }
 
 /* Listing */
@@ -1106,6 +1136,18 @@ summary:focus-visible {
 		background: var(--accent-hover);
 	}
 
+	.link-row:hover {
+		background: var(--surface-raised);
+	}
+
+	.link-row:hover .host-logo {
+		background: var(--border);
+	}
+
+	.link-row:hover .link-external {
+		color: var(--ink-strong);
+	}
+
 	.tab:hover,
 	.site-footer a:hover {
 		color: var(--ink-strong);
@@ -1151,6 +1193,11 @@ summary:focus-visible {
 	/* The meta row under the title carries when and where on a narrow screen. */
 	.event-aside {
 		display: none;
+	}
+
+	.narrow-links {
+		display: block;
+		margin-bottom: 24px;
 	}
 
 	.prose {

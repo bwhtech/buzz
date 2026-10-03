@@ -9,6 +9,7 @@ import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
 import EventDetailsSkeleton from "@/components/dashboard/events/EventDetailsSkeleton.vue"
 import EventHosts from "@/components/dashboard/events/EventHosts.vue"
+import EventLinks from "@/components/dashboard/events/EventLinks.vue"
 import EventMedium from "@/components/dashboard/events/EventMedium.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventRoute from "@/components/dashboard/events/EventRoute.vue"
@@ -16,7 +17,7 @@ import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
 import { useFormDraft } from "@/composables/useFormDraft"
 import { eventDetail, updateEvent } from "@/data/events"
 import { session } from "@/data/session"
-import type { EventDetail } from "@/types"
+import type { EventDetail, EventExternalLink } from "@/types"
 import { isEndBeforeStart } from "@/utils/eventDates"
 import { matches } from "@/utils/formDraft"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
@@ -60,6 +61,7 @@ function blank() {
 		time_zone: "",
 		venue: "",
 		meeting_link: "",
+		external_links: [] as EventExternalLink[],
 	}
 }
 
@@ -79,6 +81,7 @@ function fill(detail: EventDetail) {
 		time_zone: detail.time_zone ?? "",
 		venue: detail.venue?.name ?? "",
 		meeting_link: detail.meeting_link ?? "",
+		external_links: detail.external_links.map(({ icon, label, url }) => ({ icon, label, url })),
 	})
 	// The editor rewrites its own HTML once it mounts, so the baseline is taken after
 	// that settles — otherwise the page loads already dirty.
@@ -304,6 +307,8 @@ async function save() {
 						:co-hosts="event.data.co_hosts"
 						@changed="event.reload()"
 					/>
+
+					<EventLinks v-model="form.external_links" class="rounded-6 p-4" />
 				</div>
 			</div>
 		</div>

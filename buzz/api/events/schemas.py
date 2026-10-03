@@ -54,6 +54,12 @@ class EventHostRef(APIResponse):
 	logo: str | None = None
 
 
+class EventExternalLink(APIResponse):
+	icon: str | None = None
+	label: str
+	url: str
+
+
 class EventDetail(APIResponse):
 	"""One event, with everything the manage page edits or shows."""
 
@@ -77,6 +83,7 @@ class EventDetail(APIResponse):
 	is_published: bool
 	primary_host: EventHostRef | None = None
 	co_hosts: list[EventHostRef] = Field(default_factory=list)
+	external_links: list[EventExternalLink] = Field(default_factory=list)
 
 
 class GuestAddOn(APIResponse):
