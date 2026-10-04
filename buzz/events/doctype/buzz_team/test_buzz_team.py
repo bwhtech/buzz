@@ -136,14 +136,13 @@ def create_owned_team(team_name: str, owner: str) -> str:
 
 def payload_for(doctype: str, suffix: str) -> dict:
 	payloads = {
-		"Event Venue": {"name": f"Venue {suffix}", "address": "somewhere"},
-		"Event Host": {"name": f"Host {suffix}"},
+		"Event Venue": {"venue_name": f"Venue {suffix}", "address": "somewhere"},
+		"Event Host": {"host_name": f"Host {suffix}"},
 		"Event Template": {"template_name": f"Template {suffix}"},
 		"Buzz Campaign": {"name": f"Campaign {suffix}", "title": suffix, "description": "why"},
 		"Buzz Event": {
 			"title": f"Event {suffix}",
 			"category": "Test Category",
-			"host": "Test Host",
 			"start_date": "2026-03-05",
 			"end_date": "2026-03-06",
 			"start_time": "09:00:00",
@@ -178,8 +177,9 @@ class TestSetTeamFromSoleMembership(IntegrationTestCase):
 		create_owned_team("Two Teams A", user)
 		create_owned_team("Two Teams B", user)
 
-		with self.assertRaises(frappe.MandatoryError):
-			self.insert_as(user, "Event Venue", "Ambiguous")
+		doc = self.insert_as(user, "Event Venue", "Ambiguous")
+
+		self.assertFalse(doc.team)
 
 	def test_explicit_team_wins_for_a_multi_team_user(self):
 		user = create_user("picks-a-team@example.com", "Tenant")

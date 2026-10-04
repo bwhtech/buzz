@@ -25,10 +25,10 @@
 				>
 					<EditorFixedMenu
 						:items="editorToolbar"
-						class="rounded-t-md border border-b-0 border-outline-gray-2 px-2 py-1"
+						class="rounded-t-5 border border-b-0 border-outline-gray-2 px-2 py-1"
 					/>
 					<EditorContent
-						class="prose-sm py-2 px-3 min-h-[12rem] border border-outline-gray-2 hover:border-outline-gray-3 rounded-b-md bg-surface-gray-3"
+						class="prose-sm py-2 px-3 min-h-[12rem] border border-outline-gray-2 hover:border-outline-gray-3 rounded-b-5 bg-surface-gray-3"
 					/>
 				</Editor>
 			</div>
@@ -59,54 +59,16 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui"
-import {
-	Blockquote,
-	Bold,
-	BulletList,
-	Editor,
-	EditorContent,
-	EditorFixedMenu,
-	HeadingGroup,
-	InsertLink,
-	InsertTable,
-	Italic,
-	OrderedList,
-	RichTextKit,
-	Separator,
-	Strike,
-} from "frappe-ui/editor"
+import { Button, Dialog, FormControl, toast, useCall } from "frappe-ui"
+import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, ref, watch } from "vue"
 
 import PhoneInput from "@/components/PhoneInput.vue"
-import type { FrappeError } from "@/types"
-
-// No upload handler is wired for proposals, so the media extensions are off —
-// otherwise the drop/paste paths would silently fail.
-const editorExtensions = [
-	RichTextKit.configure({
-		heading: { levels: [2, 3, 4, 5, 6] },
-		image: false,
-		imageGroup: false,
-		imageViewer: false,
-		video: false,
-		attachment: false,
-	}),
-]
-
-const editorToolbar = [
-	HeadingGroup,
-	Separator,
-	Bold,
-	Italic,
-	Strike,
-	Separator,
-	BulletList,
-	OrderedList,
-	Blockquote,
-	InsertLink,
-	InsertTable,
-]
+import {
+	richTextExtensions as editorExtensions,
+	richTextToolbar as editorToolbar,
+} from "@/utils/richTextEditor"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps({
 	open: {
@@ -140,9 +102,15 @@ const editForm = ref({
 	phone: "",
 })
 
-// Update resource using frappe.client.set_value
-const updateResource = createResource({
-	url: "frappe.client.set_value",
+// An accepted proposal is edited on its Event Talk; until then, on the proposal itself.
+const updateResource = useCall<unknown, Record<string, string>>({
+	url: computed(() =>
+		props.eventTalkId
+			? `/api/v2/document/Event Talk/${props.eventTalkId}`
+			: `/api/v2/document/Talk Proposal/${props.proposalId}`,
+	),
+	method: "PUT",
+	immediate: false,
 	onSuccess: () => {
 		const message = props.eventTalkId
 			? __("Talk updated successfully")
@@ -151,11 +119,11 @@ const updateResource = createResource({
 		isOpen.value = false
 		emit("updated")
 	},
-	onError: (error: FrappeError) => {
+	onError: (error) => {
 		const message = props.eventTalkId
 			? __("Failed to update talk")
 			: __("Failed to update proposal")
-		toast.error(error.messages?.[0] || message)
+		toast.error(serverErrorMessage(error) || message)
 	},
 })
 
@@ -169,22 +137,14 @@ const handleSave = () => {
 	// Otherwise, update the Talk Proposal doctype
 	if (props.eventTalkId) {
 		updateResource.submit({
-			doctype: "Event Talk",
-			name: props.eventTalkId,
-			fieldname: {
-				title: editForm.value.title,
-				description: editForm.value.description,
-			},
+			title: editForm.value.title,
+			description: editForm.value.description,
 		})
 	} else {
 		updateResource.submit({
-			doctype: "Talk Proposal",
-			name: props.proposalId,
-			fieldname: {
-				title: editForm.value.title,
-				description: editForm.value.description,
-				phone: editForm.value.phone || "",
-			},
+			title: editForm.value.title,
+			description: editForm.value.description,
+			phone: editForm.value.phone || "",
 		})
 	}
 }

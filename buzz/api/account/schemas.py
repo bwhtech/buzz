@@ -16,10 +16,12 @@ class UserInfoResponse(APIResponse):
 	full_name: str | None
 	email: str
 	user_image: str | None
+	bio: str | None
 	# Rows of the User.roles child table, serialized as full documents.
 	roles: list
 	brand_image: str | None
 	language: str | None
+	time_zone: str | None
 
 
 class LanguageOption(APIResponse):

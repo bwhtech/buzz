@@ -5,7 +5,9 @@ import frappe
 from frappe.core.api.user_invitation import invite_by_email
 from frappe.model.document import Document
 
+from buzz.emails import is_full_document, send_message_email
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
+from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import (
 	generate_ics_file,
 	generate_qr_code_file,
@@ -56,6 +58,8 @@ class EventTicket(Document):
 		self.generate_qr_code()
 
 	def on_submit(self):
+		# The ticket email carries the guest's own Zoom link, so registration comes first.
+		self.create_zoom_registration_if_applicable()
 		try:
 			self.send_ticket_email()
 		except Exception as e:
@@ -66,7 +70,6 @@ class EventTicket(Document):
 		# 	self.send_user_invitation()
 		# except Exception as e:
 		# 	frappe.log_error("Error sending user invitation: " + str(e))
-		self.create_zoom_registration_if_applicable()
 
 	@only_if_app_installed("zoom_integration")
 	def create_zoom_registration_if_applicable(self):
@@ -110,8 +113,8 @@ class EventTicket(Document):
 		if not send_ticket_email:
 			return
 
-		event_title, ticket_template, ticket_print_format, venue = frappe.get_cached_value(
-			"Buzz Event", self.event, ["title", "ticket_email_template", "ticket_print_format", "venue"]
+		event_title, ticket_template, ticket_print_format = frappe.get_cached_value(
+			"Buzz Event", self.event, ["title", "ticket_email_template", "ticket_print_format"]
 		)
 
 		team_settings = get_event_team_settings(self.event)
@@ -121,18 +124,22 @@ class EventTicket(Document):
 
 		subject = frappe._("Your ticket to {0} 🎟️").format(event_title)
 		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
+		meeting = OnlineMeeting(event_doc, self)
 		args = {
 			"doc": self,
 			"event_doc": event_doc,
+			"meeting": meeting,
 			"event_title": event_title,
-			"venue": venue,
+			"venue": event_doc.get_venue_name(),
 			"support_email": team_settings.support_email,
 		}
 
 		if ticket_template:
 			email_template = render_email_template(ticket_template, args)
 			subject = email_template.get("subject")
-			content = email_template.get("message")
+			content = email_template.get("message").replace(
+				f'src="{self.qr_code}"', f'embed="{self.qr_code}"'
+			)
 
 		attachments = []
 
@@ -147,7 +154,7 @@ class EventTicket(Document):
 			)
 
 		if event_doc.attach_calendar_invite:
-			ics_content = generate_ics_file(event_doc, self.attendee_email)
+			ics_content = generate_ics_file(event_doc, self.attendee_email, meeting)
 			attachments.append(
 				{
 					"fname": f"{event_doc.title}.ics",
@@ -155,11 +162,14 @@ class EventTicket(Document):
 				}
 			)
 
+		full_document = not ticket_template or is_full_document(content)
 		frappe.sendmail(
 			recipients=[self.attendee_email],
 			subject=subject,
 			content=content if ticket_template else None,
 			template="ticket" if not ticket_template else None,
+			raw_html=full_document,
+			add_css=not full_document,
 			args=args,
 			reference_doctype=self.doctype,
 			reference_name=self.name,
@@ -180,6 +190,7 @@ class EventTicket(Document):
 			doc=self,
 			data=self.name,
 			file_prefix="ticket-qr-code",
+			is_private=True,
 		)
 
 	def on_cancel(self):
@@ -187,11 +198,14 @@ class EventTicket(Document):
 		self.send_cancellation_email()
 
 	def send_cancellation_email(self):
-		event_title = frappe.get_cached_value("Buzz Event", self.event, "title")
-		frappe.sendmail(
+		event = frappe.get_cached_doc("Buzz Event", self.event)
+		send_message_email(
+			title=frappe._("Ticket cancelled"),
+			message=frappe._("<p>Hi {0}, your ticket has been cancelled. Sad to see you go.</p>").format(
+				self.attendee_name
+			),
+			event=event,
 			recipients=self.attendee_email,
-			subject=f"Your ticket to {event_title} is cancelled.",
-			message=f"Hi {self.attendee_name}, your ticket has been cancelled successfully. Sad to see you go.",
-			header=[("Ticket Cancelled"), "red"],
+			subject=f"Your ticket to {event.title} is cancelled.",
 			retry=2,
 		)

@@ -4,7 +4,7 @@
 			<div
 				v-for="gateway in paymentGateways"
 				:key="gateway"
-				class="border border-outline-gray-2 rounded-lg p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
+				class="border border-outline-gray-2 rounded-6 p-4 cursor-pointer transition-all hover:border-outline-gray-3 hover:bg-surface-gray-1"
 				:class="{
 					'border-outline-gray-4 bg-surface-gray-2': selectedGateway === gateway,
 				}"
@@ -17,9 +17,9 @@
 						@change="selectedGateway = gateway"
 						class="text-ink-gray-6"
 					/>
-					<div>
+					<PaymentGatewayLogo :gateway="gateway" class="h-5">
 						<h3 class="font-semibold text-ink-gray-9">{{ gateway }}</h3>
-					</div>
+					</PaymentGatewayLogo>
 				</div>
 			</div>
 		</div>
@@ -38,6 +38,8 @@
 <script setup lang="ts">
 import { Button, Dialog } from "frappe-ui"
 import { computed, type PropType, ref, watch } from "vue"
+
+import PaymentGatewayLogo from "@/components/PaymentGatewayLogo.vue"
 
 const props = defineProps({
 	open: {

@@ -59,7 +59,8 @@ export class CustomFormPage {
 
 	async submitAndExpectResponse(): Promise<{ succeeded: boolean; status: number }> {
 		const responsePromise = this.page.waitForResponse(
-			(resp) => resp.url().includes("submit_custom_form"),
+			(resp) =>
+				resp.url().includes("submit_custom_form") || resp.url().includes("submit_enquiry_form"),
 			{ timeout: 20000 },
 		)
 

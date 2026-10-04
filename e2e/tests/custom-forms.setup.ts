@@ -7,7 +7,15 @@ import {
 	CUSTOM_FORMS_EVENT_ROUTE,
 	MEMBERS_ONLY_FORM_ROUTE,
 } from "../data/custom-forms"
-import { createDoc, docExists, ensureTestTeam, getDoc, getList, updateDoc } from "../helpers/frappe"
+import {
+	createDoc,
+	docExists,
+	ensureEventHost,
+	ensureTestTeam,
+	getDoc,
+	getList,
+	updateDoc,
+} from "../helpers/frappe"
 
 interface NamedDoc {
 	name: string
@@ -35,9 +43,7 @@ setup("setup custom forms on test event", async ({ request }) => {
 		}
 		const team = await ensureTestTeam(request)
 
-		if (!(await docExists(request, "Event Host", testHostName))) {
-			await createDoc(request, "Event Host", { name: testHostName, team })
-		}
+		const host = await ensureEventHost(request, testHostName, team)
 
 		const futureDate = new Date()
 		futureDate.setMonth(futureDate.getMonth() + 1)
@@ -47,7 +53,7 @@ setup("setup custom forms on test event", async ({ request }) => {
 			team,
 			title: "E2E Custom Forms Event",
 			category: testCategoryName,
-			host: testHostName,
+			host,
 			start_date: startDate,
 			route: CUSTOM_FORMS_EVENT_ROUTE,
 			is_published: 1,
@@ -69,12 +75,6 @@ setup("setup custom forms on test event", async ({ request }) => {
 			},
 			{
 				doctype: "Buzz Event Form",
-				form_doctype: "Sponsorship Enquiry",
-				route: "enquire-sponsorship",
-				publish: 1,
-			},
-			{
-				doctype: "Buzz Event Form",
 				form_doctype: "Event Feedback",
 				route: MEMBERS_ONLY_FORM_ROUTE,
 				publish: 1,
@@ -92,13 +92,30 @@ setup("setup custom forms on test event", async ({ request }) => {
 		],
 	})
 
+	const sponsorshipForms = await getList<NamedDoc>(request, "Sponsor Enquiry Form", {
+		filters: { event: ["=", eventName] },
+	})
+	const sponsorshipFormName = sponsorshipForms[0]?.name
+	if (!sponsorshipFormName) {
+		await createDoc(request, "Sponsor Enquiry Form", {
+			event: eventName,
+			route: "enquire-sponsorship",
+			publish: 1,
+		})
+	} else {
+		await updateDoc(request, "Sponsor Enquiry Form", sponsorshipFormName, {
+			route: "enquire-sponsorship",
+			publish: 1,
+		})
+	}
+
 	const updated = await getDoc<{ custom_forms: Array<{ route: string; publish: number }> }>(
 		request,
 		"Buzz Event",
 		eventName,
 	)
 	const publishedForms = (updated.custom_forms || []).filter((f) => f.publish)
-	expect(publishedForms.length).toBe(5)
+	expect(publishedForms.length).toBe(4)
 
 	console.log(
 		`Custom forms enabled on event: ${eventName} (${publishedForms.length} forms: ${publishedForms.map((f) => f.route).join(", ")})`,

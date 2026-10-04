@@ -7,10 +7,10 @@ export interface Byline {
 	rest: string[]
 }
 
-const displayName = (speaker: ProposalSpeaker): string =>
+export const speakerName = (speaker: ProposalSpeaker): string =>
 	[speaker.first_name, speaker.last_name].filter(Boolean).join(" ") || speaker.email
 
-const isReader = (speaker: ProposalSpeaker, reader: string): boolean =>
+export const isReader = (speaker: ProposalSpeaker, reader: string): boolean =>
 	// User emails are stored lowercase; guest-entered speaker emails keep their casing.
 	Boolean(reader) && speaker.email.toLowerCase() === reader.toLowerCase()
 
@@ -19,7 +19,7 @@ function namesReaderFirst(speakers: ProposalSpeaker[], reader: string): string[]
 	const mine = speakers.filter((speaker) => isReader(speaker, reader))
 	const theirs = speakers.filter((speaker) => !isReader(speaker, reader))
 
-	return [...mine.map(() => "You"), ...theirs.map(displayName)]
+	return [...mine.map(() => "You"), ...theirs.map(speakerName)]
 }
 
 export function speakerByline(speakers: ProposalSpeaker[], reader: string): Byline | null {

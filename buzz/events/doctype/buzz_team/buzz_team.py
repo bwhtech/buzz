@@ -32,8 +32,8 @@ def create_default_team_for(user: str) -> "BuzzTeam":
 def set_team_from_sole_membership(doc, event=None):
 	"""Fill an empty team from the user's only enabled membership.
 
-	Zero or several memberships leave it empty, so reqd raises rather than this
-	picking a team on the user's behalf.
+	Zero or several memberships leave it empty rather than this picking a team on
+	the user's behalf; where the field is reqd, that raises.
 	"""
 	if doc.team:
 		return
@@ -85,8 +85,8 @@ class BuzzTeam(Document):
 		"""Users who could still join this team, matched on email or full name.
 
 		Website users are in on purpose: frappe's own `user_query` hides them, but an attendee
-		is as likely to be a colleague as anyone. Adding one to a team grants a role with desk
-		access, which turns them into a System User.
+		is as likely to be a colleague as anyone. Team roles grant no desk access, so they
+		stay Website Users.
 		"""
 		self.check_can_manage_members()
 
@@ -130,7 +130,10 @@ class BuzzTeam(Document):
 		frappe.sendmail(
 			recipients=[user],
 			subject=_("You have been added to {0}").format(self.team_name),
-			message=_("<p>You are now a member of <strong>{0}</strong> on Buzz.</p>").format(self.team_name),
+			template="team_member_added",
+			raw_html=True,
+			add_css=False,
+			args={"team_name": self.team_name},
 			reference_doctype=self.doctype,
 			reference_name=self.name,
 		)

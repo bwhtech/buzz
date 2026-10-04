@@ -24,6 +24,7 @@ from buzz.api.forms.fields import (
 	parse_excluded_fields,
 	validate_excluded_fields,
 )
+from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team
 
 # Renderable Talk Proposal fields (after STANDARD_EXCLUDE_FIELDS + auto-set event/submitted_by):
 #   title (reqd, Data), description (Text Editor), speakers (reqd, Table), phone (Phone)
@@ -31,11 +32,22 @@ TALK_PROPOSAL_EXCLUDE = STANDARD_EXCLUDE_FIELDS | {"event", "submitted_by"}
 
 
 def ensure_prompt_named_record(doctype, name):
-	# Event Category / Event Host use autoname "prompt" -> name set explicitly.
+	# Event Category uses autoname "prompt" -> name set explicitly.
 	if frappe.db.exists(doctype, name):
 		return name
 	doc = frappe.new_doc(doctype)
 	doc.name = name
+	doc.insert(ignore_permissions=True)
+	return doc.name
+
+
+def ensure_event_host(host_name):
+	# Event Host autonames to a hash, so `host_name` is both the label and the lookup key.
+	existing = frappe.db.get_value("Event Host", {"host_name": host_name}, "name")
+	if existing:
+		return existing
+	doc = frappe.new_doc("Event Host")
+	doc.host_name = host_name
 	doc.insert(ignore_permissions=True)
 	return doc.name
 
@@ -45,7 +57,8 @@ class FormsTestCase(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Test Forms Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Test Forms Host")
+		cls.host = ensure_event_host("Test Forms Host")
+		cls.team = create_owned_team(f"Forms Tests {frappe.generate_hash(length=6)}", "Administrator")
 
 	def setUp(self):
 		frappe.set_user("Administrator")
@@ -64,6 +77,7 @@ class FormsTestCase(IntegrationTestCase):
 				"medium": "Online",
 				"category": self.category,
 				"host": self.host,
+				"team": self.team,
 				"is_published": is_published,
 			}
 		)
@@ -129,7 +143,8 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.category = ensure_prompt_named_record("Event Category", "Test Forms Category")
-		cls.host = ensure_prompt_named_record("Event Host", "Test Forms Host")
+		cls.host = ensure_event_host("Test Forms Host")
+		cls.team = create_owned_team(f"Link Field Tests {frappe.generate_hash(length=6)}", "Administrator")
 
 	def make_tier(self, title="Gold Tier"):
 		event = frappe.new_doc("Buzz Event")
@@ -143,11 +158,12 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 				"medium": "Online",
 				"category": self.category,
 				"host": self.host,
+				"team": self.team,
 			}
 		)
 		event.insert(ignore_permissions=True)
 		tier = frappe.new_doc("Sponsorship Tier")
-		tier.update({"event": event.name, "title": title, "price": 1000, "currency": "INR"})
+		tier.update({"event": event.name, "title": title, "prices": [{"currency": "INR", "price": 1000}]})
 		tier.insert(ignore_permissions=True)
 		return tier
 
@@ -157,9 +173,9 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 		self.assertTrue(all(set(option) == {"value", "label"} for option in options))
 
 	def test_no_title_field_label_falls_back_to_name(self):
-		# Event Host has no title field -> label mirrors the name.
-		match = next(o for o in get_link_field_options("Event Host") if o["value"] == self.host)
-		self.assertEqual(match["label"], self.host)
+		# Event Category has no title field -> label mirrors the name.
+		match = next(o for o in get_link_field_options("Event Category") if o["value"] == self.category)
+		self.assertEqual(match["label"], self.category)
 
 	def test_title_field_used_as_label(self):
 		# Sponsorship Tier names are hashes; its title field is the readable label.
@@ -372,13 +388,15 @@ class TestCustomFormCustomFields(FormsTestCase):
 
 class TestCustomFormLinkEventFilter(FormsTestCase):
 	def make_sponsorship_event(self):
-		return self.build_event(
-			form_doctype="Sponsorship Enquiry", route=f"sponsor-{frappe.generate_hash(length=6)}"
-		)
+		event, _ = self.build_event()
+		form = frappe.get_doc("Sponsor Enquiry Form", {"event": event.name})
+		form.publish = 1
+		form.save()
+		return event, form.route
 
 	def make_tier(self, event_name, title):
 		tier = frappe.new_doc("Sponsorship Tier")
-		tier.update({"event": event_name, "title": title, "price": 100, "currency": "INR"})
+		tier.update({"event": event_name, "title": title, "prices": [{"currency": "INR", "price": 100}]})
 		tier.insert(ignore_permissions=True)
 		return tier.name
 

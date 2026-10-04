@@ -18,7 +18,7 @@ export interface SponsorshipEnquiry {
 	/**	Website : Data	*/
 	website?: string
 	/**	Status : Select	*/
-	status?: "Approval Pending" | "Payment Pending" | "Paid" | "Withdrawn"
+	status?: "Approval Pending" | "Payment Pending" | "Paid" | "Cancelled" | "Withdrawn"
 	/**	Tier : Link - Sponsorship Tier	*/
 	tier?: string
 	/**	Country : Link - Country	*/

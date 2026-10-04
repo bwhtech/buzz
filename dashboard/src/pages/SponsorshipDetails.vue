@@ -31,7 +31,7 @@
 		>
 			<div
 				v-if="showSuccessMessage"
-				class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-lg p-4"
+				class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-6 p-4"
 			>
 				<div class="flex items-center">
 					<LucideCheckCircle class="w-6 h-6 text-ink-green-6 mr-3" />
@@ -54,7 +54,7 @@
 		<!-- Sponsorship Confirmation (shown at top if sponsored) -->
 		<div
 			v-if="sponsorDetails"
-			class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-lg p-6"
+			class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-6 p-6"
 		>
 			<div class="flex items-center mb-4">
 				<LucideCheckCircle class="w-6 h-6 text-ink-green-6 mr-3" />
@@ -79,7 +79,7 @@
 		<!-- Withdrawn Alert (shown at top for withdrawn inquiries) -->
 		<div
 			v-if="enquiryDetails.data.enquiry.status === 'Withdrawn'"
-			class="mb-6 bg-surface-red-1 border border-outline-red-1 rounded-lg p-6"
+			class="mb-6 bg-surface-red-1 border border-outline-red-1 rounded-6 p-6"
 		>
 			<div class="flex items-center">
 				<LucideXCircle class="w-6 h-6 text-ink-red-5 mr-3" />
@@ -95,7 +95,7 @@
 		<!-- Approval Pending Alert (shown at top for pending approval) -->
 		<div
 			v-if="enquiryDetails.data.enquiry.status === 'Approval Pending'"
-			class="mb-6 bg-surface-blue-1 border border-outline-blue-1 rounded-lg p-6"
+			class="mb-6 bg-surface-blue-1 border border-outline-blue-1 rounded-6 p-6"
 		>
 			<div class="flex items-center">
 				<LucideClock class="w-6 h-6 text-ink-blue-5 mr-3" />
@@ -112,7 +112,7 @@
 		<!-- Payment Pending Alert (shown at top for pending payments) -->
 		<div
 			v-else-if="enquiryDetails.data.enquiry.status === 'Payment Pending'"
-			class="mb-6 bg-surface-orange-1 border border-outline-orange-1 rounded-lg p-6"
+			class="mb-6 bg-surface-orange-1 border border-outline-orange-1 rounded-6 p-6"
 		>
 			<div class="flex items-center justify-between">
 				<div class="flex items-center">
@@ -133,7 +133,7 @@
 
 		<div class="space-y-6">
 			<!-- Company Information -->
-			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-base border border-outline-gray-1 rounded-6 p-6">
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">Company Information</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 					<div>
@@ -147,7 +147,8 @@
 						<FileUploader
 							@success="(file: { file_url: string }) => updateLogo(file.file_url)"
 							:validateFile="validateIsImageFile"
-							:uploadArgs="logoUploadArgs"
+							:private="false"
+							folder="Home/Attachments"
 						>
 							<template #default="{ openFileSelector, error: uploadError, uploading, progress }">
 								<div class="space-y-2">
@@ -156,7 +157,7 @@
 										<img
 											:src="currentLogo"
 											:alt="companyName"
-											class="h-16 w-auto object-contain border border-outline-gray-1 rounded p-1 contrast-100 brightness-100"
+											class="h-16 w-auto object-contain border border-outline-gray-1 rounded-4 p-1 contrast-100 brightness-100"
 											:class="{
 												'opacity-50': uploading || updateLogoResource.loading,
 											}"
@@ -164,7 +165,7 @@
 									</div>
 									<div v-else class="mb-2">
 										<div
-											class="h-16 w-20 border-2 border-dashed border-outline-gray-2 rounded flex items-center justify-center"
+											class="h-16 w-20 border-2 border-dashed border-outline-gray-2 rounded-4 flex items-center justify-center"
 										>
 											<span class="text-ink-gray-4 text-xs">No Logo</span>
 										</div>
@@ -212,7 +213,7 @@
 			</div>
 
 			<!-- Event & Sponsorship Details -->
-			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-base border border-outline-gray-1 rounded-6 p-6">
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">Sponsorship Details</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
@@ -247,7 +248,7 @@
 			<!-- Event Information (if available) -->
 			<div
 				v-if="enquiryDetails.data.event_details"
-				class="bg-surface-base border border-outline-gray-1 rounded-lg p-6"
+				class="bg-surface-base border border-outline-gray-1 rounded-6 p-6"
 			>
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">Event Information</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -279,8 +280,8 @@
 	</div>
 
 	<div v-else-if="enquiryDetails.error" class="text-center py-8">
-		<div class="text-ink-red-6 text-lg mb-2">Error loading sponsorship details</div>
-		<div class="text-ink-gray-4 text-sm">{{ enquiryDetails.error }}</div>
+		<ErrorMessage class="mb-2" message="Error loading sponsorship details" />
+		<div class="text-ink-gray-4 text-sm">{{ serverErrorMessage(enquiryDetails.error) }}</div>
 	</div>
 
 	<!-- Payment Dialog -->
@@ -299,28 +300,20 @@
 		title="Withdraw Sponsorship Inquiry"
 		message="Are you sure you want to withdraw this sponsorship inquiry? This action cannot be undone."
 		size="lg"
-		:icon="{ name: 'triangle-alert', theme: 'yellow' }"
+		:icon="{ name: 'lucide-triangle-alert', theme: 'amber' }"
 		:actions="[
 			{
 				label: 'Withdraw Inquiry',
 				variant: 'solid',
 				theme: 'red',
-				onClick: () => withdrawResource.submit(),
+				onClick: () => void withdrawResource.submit(),
 			},
 		]"
 	/>
 </template>
 
 <script setup lang="ts">
-import {
-	Badge,
-	Button,
-	Dialog,
-	ErrorMessage,
-	FileUploader,
-	Spinner,
-	createResource,
-} from "frappe-ui"
+import { Badge, Button, Dialog, ErrorMessage, FileUploader, Spinner, useCall } from "frappe-ui"
 import { toast } from "frappe-ui"
 import { dayjsLocal } from "frappe-ui"
 import { computed, ref } from "vue"
@@ -329,7 +322,7 @@ import LucideClock from "~icons/lucide/clock"
 import LucideXCircle from "~icons/lucide/x-circle"
 
 import { usePaymentSuccess } from "@/composables/usePaymentSuccess"
-import type { FrappeError } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 
 import BackButton from "../components/common/BackButton.vue"
 import SponsorshipPaymentDialog from "../components/SponsorshipPaymentDialog.vue"
@@ -344,63 +337,43 @@ const props = defineProps({
 const showPaymentDialog = ref(false)
 const showWithdrawDialog = ref(false)
 
-const enquiryDetails = createResource({
-	url: "buzz.api.sponsorships.get_sponsorship_details",
-	params: {
-		enquiry_id: props.enquiryId,
-	},
-	auto: true,
+const enquiryDetails = useCall<any, { enquiry_id: string }>({
+	url: "/api/v2/method/buzz.api.sponsorships.get_sponsorship_details",
+	params: { enquiry_id: props.enquiryId },
 })
 
-// Resource to withdraw sponsorship inquiry
-const withdrawResource = createResource({
-	url: "buzz.api.sponsorships.withdraw_sponsorship_enquiry",
-	makeParams() {
-		return {
-			enquiry_id: props.enquiryId,
-		}
-	},
+// Extract sponsor details from the response
+const sponsorDetails = computed(() => {
+	return enquiryDetails.data?.sponsor_details || null
+})
+
+const withdrawResource = useCall<unknown, { enquiry_id: string }>({
+	url: "/api/v2/method/buzz.api.sponsorships.withdraw_sponsorship_enquiry",
+	method: "POST",
+	params: () => ({ enquiry_id: props.enquiryId }),
+	immediate: false,
 	onSuccess: () => {
 		toast.success("Inquiry withdrawn successfully")
 		showWithdrawDialog.value = false
-		// Reload the enquiry details to show updated status
 		enquiryDetails.reload()
 	},
-	onError: (err: FrappeError) => {
-		toast.error(err.messages?.[0] || "Failed to withdraw inquiry")
+	onError: (error) => {
+		toast.error(serverErrorMessage(error) || "Failed to withdraw inquiry")
 		showWithdrawDialog.value = false
 	},
 })
 
-// Resource to update company logo
-const updateLogoResource = createResource({
-	url: "frappe.client.set_value",
-	makeParams(fileUrl: string) {
-		// If we have a confirmed sponsor, update the Event Sponsor document
-		if (sponsorDetails.value) {
-			return {
-				doctype: "Event Sponsor",
-				name: sponsorDetails.value.name,
-				fieldname: "company_logo",
-				value: fileUrl,
-			}
-		}
-
-		// If it's still an inquiry, update the Sponsorship Enquiry document
-		return {
-			doctype: "Sponsorship Enquiry",
-			name: props.enquiryId,
-			fieldname: "company_logo",
-			value: fileUrl,
-		}
-	},
-	onSuccess: () => {
-		// Reload the enquiry details to get updated data
-		enquiryDetails.reload()
-	},
-	onError: (err: FrappeError) => {
-		console.error("Failed to update company logo:", err)
-	},
+// The logo lives on the Event Sponsor once the sponsorship is confirmed, and on the enquiry until then.
+const updateLogoResource = useCall<unknown, { company_logo: string }>({
+	url: computed(() =>
+		sponsorDetails.value
+			? `/api/v2/document/Event Sponsor/${sponsorDetails.value.name}`
+			: `/api/v2/document/Sponsorship Enquiry/${props.enquiryId}`,
+	),
+	method: "PUT",
+	immediate: false,
+	onSuccess: () => enquiryDetails.reload(),
+	onError: (error) => console.error("Failed to update company logo:", error),
 })
 
 // Use the payment success composable
@@ -409,11 +382,6 @@ const { showSuccessMessage } = usePaymentSuccess({
 		// Reload the enquiry details to get updated status
 		enquiryDetails.reload()
 	},
-})
-
-// Extract sponsor details from the response
-const sponsorDetails = computed(() => {
-	return enquiryDetails.data?.sponsor_details || null
 })
 
 // Check if inquiry can be withdrawn (not paid and not already withdrawn)
@@ -439,20 +407,12 @@ const companyName = computed(() => {
 	return enquiryDetails.data?.enquiry?.company_name || ""
 })
 
-// Upload arguments for file uploader
-const logoUploadArgs = computed(() => {
-	return {
-		private: false,
-		folder: "Home/Attachments",
-	}
-})
-
 const getStatusTheme = (status: string) => {
 	switch (status) {
 		case "Paid":
 			return "green"
 		case "Payment Pending":
-			return "orange"
+			return "amber"
 		case "Approval Pending":
 			return "blue"
 		case "Withdrawn":
@@ -487,18 +447,5 @@ const validateIsImageFile = (file: File) => {
 	return null
 }
 
-// Update logo after successful upload
-const updateLogo = (fileUrl: string) => {
-	// Update the local data immediately for better UX
-	if (sponsorDetails.value) {
-		// Update sponsor details if it's a confirmed sponsorship
-		sponsorDetails.value.company_logo = fileUrl
-	} else if (enquiryDetails.data?.enquiry) {
-		// Update enquiry details if it's still an inquiry
-		enquiryDetails.data.enquiry.company_logo = fileUrl
-	}
-
-	// Update the document field using the resource
-	updateLogoResource.submit(fileUrl)
-}
+const updateLogo = (fileUrl: string) => updateLogoResource.submit({ company_logo: fileUrl })
 </script>

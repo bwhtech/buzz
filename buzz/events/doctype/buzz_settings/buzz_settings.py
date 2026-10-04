@@ -21,14 +21,20 @@ class BuzzSettings(Document):
 		allow_ticket_cancellation_request_before_event_start_days: DF.Int
 		allow_transfer_ticket_before_event_start_days: DF.Int
 		auto_send_pitch_deck: DF.Check
+		default_payment_gateway: DF.Link | None
 		default_sponsor_deck_cc: DF.SmallText | None
 		default_sponsor_deck_email_template: DF.Link | None
 		default_sponsor_deck_reply_to: DF.Data | None
 		default_ticket_email_template: DF.Link | None
+		event_page_theme: DF.Link | None
 		event_proposal_banner_title: DF.Data | None
 		event_proposal_success_message: DF.MarkdownEditor | None
 		event_proposal_success_title: DF.Data | None
+		google_maps_embed_api_key: DF.Data | None
+		google_maps_enabled: DF.Check
+		google_places_api_key: DF.Password | None
 		login_banner: DF.MarkdownEditor | None
+		show_hosting_banner: DF.Check
 		support_email: DF.Data | None
 	# end: auto-generated types
 

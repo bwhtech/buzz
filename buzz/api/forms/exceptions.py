@@ -35,3 +35,13 @@ class UnknownExcludedFields(BuzzAPIError):
 class MandatoryFieldsHidden(BuzzAPIError):
 	title = _lt("Mandatory Fields")
 	message = _lt("These mandatory fields cannot be hidden on the {form_doctype} form: {fieldnames}")
+
+
+class InvalidAnswer(BuzzAPIError):
+	title = _lt("Invalid Answer")
+	message = _lt("Invalid answer for {label}")
+
+
+class UnknownQuestions(BuzzAPIError):
+	title = _lt("Unknown Questions")
+	message = _lt("Answers contain questions that are not on this form")

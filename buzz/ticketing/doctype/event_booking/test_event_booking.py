@@ -57,7 +57,7 @@ class IntegrationTestEventBooking(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "VIP",
-				"price": TEST_VIP_TICKET_TYPE_PRICE,
+				"prices": [{"currency": "INR", "price": TEST_VIP_TICKET_TYPE_PRICE}],
 			}
 		).insert()
 
@@ -107,7 +107,7 @@ class IntegrationTestEventBooking(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "VIP",
-				"price": TEST_VIP_TICKET_TYPE_PRICE,
+				"prices": [{"currency": "INR", "price": TEST_VIP_TICKET_TYPE_PRICE}],
 			}
 		).insert()
 
@@ -145,7 +145,7 @@ class IntegrationTestEventBooking(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Standard",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 			}
 		).insert()
 
@@ -181,7 +181,7 @@ class IntegrationTestEventBooking(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "VIP",
-				"price": TEST_VIP_TICKET_TYPE_PRICE,
+				"prices": [{"currency": "INR", "price": TEST_VIP_TICKET_TYPE_PRICE}],
 			}
 		).insert()
 
@@ -221,7 +221,7 @@ class IntegrationTestEventBooking(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Standard",
-				"price": 120,
+				"prices": [{"currency": "INR", "price": 120}],
 			}
 		).insert()
 
@@ -257,7 +257,7 @@ class IntegrationTestEventBooking(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "VIP",
-				"price": TEST_VIP_TICKET_TYPE_PRICE,
+				"prices": [{"currency": "INR", "price": TEST_VIP_TICKET_TYPE_PRICE}],
 			}
 		).insert()
 
@@ -285,7 +285,7 @@ class IntegrationTestEventBooking(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "VIP",
-				"price": 500,
+				"prices": [{"currency": "INR", "price": 500}],
 				"is_published": True,
 				"max_tickets_available": 2,
 			}
@@ -296,7 +296,7 @@ class IntegrationTestEventBooking(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Normal",
-				"price": 500,
+				"prices": [{"currency": "INR", "price": 500}],
 				"is_published": True,
 			}
 		).insert()
@@ -389,7 +389,7 @@ class IntegrationTestEventBooking(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Standard",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 			}
 		).insert()
 
@@ -426,7 +426,7 @@ class IntegrationTestEventBooking(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Standard",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 			}
 		).insert()
 
@@ -452,7 +452,7 @@ class IntegrationTestEventBooking(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Standard",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 			}
 		).insert()
 
@@ -492,7 +492,6 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "API Test Ticket",
-				"price": 0,  # Free ticket to avoid payment flow
 				"is_published": True,
 			}
 		).insert()
@@ -564,7 +563,7 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Offline Ticket",
-				"price": 500,
+				"prices": [{"currency": "INR", "price": 500}],
 			}
 		).insert()
 
@@ -602,7 +601,7 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Approval Test Ticket",
-				"price": 500,
+				"prices": [{"currency": "INR", "price": 500}],
 			}
 		).insert()
 
@@ -655,7 +654,7 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Rejection Test Ticket",
-				"price": 500,
+				"prices": [{"currency": "INR", "price": 500}],
 			}
 		).insert()
 
@@ -705,7 +704,7 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Coupon Test Ticket",
-				"price": 500,
+				"prices": [{"currency": "INR", "price": 500}],
 			}
 		).insert()
 
@@ -760,7 +759,7 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Tax Test Ticket",
-				"price": 500,
+				"prices": [{"currency": "INR", "price": 500}],
 			}
 		).insert()
 
@@ -800,7 +799,7 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Payment Method Test",
-				"price": 500,
+				"prices": [{"currency": "INR", "price": 500}],
 			}
 		).insert()
 
@@ -858,7 +857,7 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Offline Draft Test",
-				"price": 500,
+				"prices": [{"currency": "INR", "price": 500}],
 				"is_published": True,
 			}
 		).insert()
@@ -913,7 +912,7 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Offline Approval Test",
-				"price": 500,
+				"prices": [{"currency": "INR", "price": 500}],
 				"is_published": True,
 			}
 		).insert()
@@ -965,7 +964,6 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Free Redirect Test Ticket",
-				"price": 0,
 				"is_published": True,
 			}
 		).insert()
@@ -1000,7 +998,6 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "API Test Ticket No UTM",
-				"price": 0,
 				"is_published": True,
 			}
 		).insert()
@@ -1038,7 +1035,6 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "API Test Ticket Empty UTM",
-				"price": 0,
 				"is_published": True,
 			}
 		).insert()
@@ -1079,7 +1075,6 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Unpublished Test Ticket",
-				"price": 0,
 				"is_published": True,
 			}
 		).insert()
@@ -1110,7 +1105,6 @@ class TestProcessBookingAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Free Ticket",
-				"price": 0,
 			}
 		).insert()
 
@@ -1149,7 +1143,7 @@ class TestBookingConfirmation(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": test_event.name,
 				"title": "Confirmation Test Ticket",
-				"price": 500,
+				"prices": [{"currency": "INR", "price": 500}],
 			}
 		).insert()
 
@@ -1257,7 +1251,7 @@ class TestBookingConfirmationEmail(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.test_event.name,
 				"title": "Confirmation Email Ticket",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 			}
 		).insert()
 
@@ -1419,7 +1413,7 @@ class TestOfflineAcknowledgementEmail(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.test_event.name,
 				"title": "Offline Acknowledgement Ticket",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 			}
 		).insert()
 
@@ -1499,7 +1493,7 @@ class TestOfflineAcknowledgementEmail(IntegrationTestCase):
 			"templates/emails/offline_booking_acknowledgement.html", booking.get_booking_email_args()
 		)
 
-		self.assertIn("Payment Verification Pending", html)
+		self.assertIn("Payment verification pending", html)
 		self.assertIn(booking.name, html)
 		self.assertIn(booking.offline_payment_method, html)
 		self.assertIn(self.ticket_type.title, html)
@@ -1560,7 +1554,6 @@ class TestZoomBackedCategoryBooking(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.event.name,
 				"title": "Zoom Category Ticket",
-				"price": 0,
 				"is_published": True,
 			}
 		).insert()

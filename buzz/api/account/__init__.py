@@ -1,12 +1,12 @@
 import frappe
 from frappe.translate import get_all_translations
 
-from buzz.api.account.exceptions import UnknownLanguage
+from buzz.api.account.exceptions import UnknownLanguage, UnknownTimezone
 from buzz.api.account.schemas import GuestInfoResponse, LanguageOption, UserInfoResponse
-from buzz.api.account.services import get_request_language
+from buzz.api.account.services import accepted_timezones, get_request_language
 
 
-@frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_user_info() -> UserInfoResponse | GuestInfoResponse:
 	if frappe.session.user == "Guest":
 		return GuestInfoResponse(
@@ -25,13 +25,15 @@ def get_user_info() -> UserInfoResponse | GuestInfoResponse:
 		full_name=user.full_name,
 		email=user.email,
 		user_image=user.user_image,
+		bio=user.bio,
 		roles=user.roles,
-		brand_image=frappe.get_single_value("Website Settings", "banner_image"),
+		brand_image=frappe.get_cached_value("Website Settings", "Website Settings", "banner_image"),
 		language=user.language,
+		time_zone=user.time_zone,
 	)
 
 
-@frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_enabled_languages() -> list[LanguageOption]:
 	languages = frappe.get_all(
 		"Language",
@@ -53,7 +55,17 @@ def update_user_language(language_code: str) -> None:
 	frappe.db.set_value("User", frappe.session.user, "language", language_code)
 
 
-@frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+# Deliberately not guest-whitelisted, for the same reason as update_user_language:
+# every guest shares the one `Guest` User.
+@frappe.whitelist(methods=["POST"])
+def update_user_timezone(time_zone: str) -> None:
+	if time_zone not in accepted_timezones():
+		UnknownTimezone.throw(time_zone=time_zone)
+
+	frappe.db.set_value("User", frappe.session.user, "time_zone", time_zone)
+
+
+@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_translations() -> dict:
 	return get_all_translations(get_request_language())
 

@@ -1,8 +1,11 @@
 <template>
 	<div v-if="profile" class="flex w-full items-center justify-between mb-3 sm:mb-5">
-		<FileUploader
-			@success="(file: { file_url: string }) => updateImage(file.file_url)"
+		<ImageCropUploader
+			:aspect-ratio="1"
+			shape="circle"
+			:output-width="512"
 			:validateFile="validateIsImageFile"
+			@success="(file: { file_url: string }) => updateImage(file.file_url)"
 		>
 			<template #default="{ openFileSelector, error: _error }">
 				<div class="flex items-center gap-4">
@@ -53,17 +56,19 @@
 					</div>
 				</div>
 			</template>
-		</FileUploader>
+		</ImageCropUploader>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { Avatar, Dropdown, FileUploader, createResource, toast } from "frappe-ui"
+import { Avatar, Dropdown, toast, useCall } from "frappe-ui"
 import { onMounted, ref } from "vue"
 import LucideCamera from "~icons/lucide/camera"
 
-import type { FrappeError, UserInfo } from "@/types"
+import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
+import type { UserInfo } from "@/types"
 import { validateIsImageFile } from "@/utils"
+import { serverErrorMessage } from "@/utils/serverError"
 
 import { userResource } from "../data/user"
 
@@ -72,25 +77,21 @@ const user: Partial<UserInfo> = userResource.data || {}
 const profile = ref<Partial<UserInfo>>({})
 const error = ref("")
 
-const setUser = createResource({
-	url: "frappe.client.set_value",
-	makeParams() {
-		return {
-			doctype: "User",
-			name: user.name,
-			fieldname: {
-				first_name: profile.value.first_name,
-				last_name: profile.value.last_name,
-				user_image: profile.value.user_image,
-			},
-		}
-	},
+const setUser = useCall<unknown, Partial<UserInfo>>({
+	url: `/api/v2/document/User/${user.name}`,
+	method: "PUT",
+	immediate: false,
+	params: () => ({
+		first_name: profile.value.first_name,
+		last_name: profile.value.last_name,
+		user_image: profile.value.user_image,
+	}),
 	onSuccess: () => {
 		error.value = ""
 		toast.success(__("Profile updated successfully"))
 	},
-	onError: (err: FrappeError) => {
-		error.value = err.messages?.[0] || __("Failed to update profile")
+	onError: (err) => {
+		error.value = serverErrorMessage(err) || __("Failed to update profile")
 	},
 })
 

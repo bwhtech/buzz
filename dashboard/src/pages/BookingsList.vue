@@ -24,7 +24,7 @@
 						row.status === 'Approved' || row.status === 'Confirmed'
 							? 'green'
 							: row.status === 'Approval Pending'
-								? 'orange'
+								? 'amber'
 								: 'red'
 					"
 					variant="subtle"
@@ -39,13 +39,12 @@
 </template>
 
 <script setup lang="ts">
-import { Badge, ListRowItem, ListView, useList } from "frappe-ui"
+import { Badge, useCall } from "frappe-ui"
 import { dayjsLocal } from "frappe-ui"
+import { ListRowItem, ListView } from "frappe-ui/experimental"
 
 import { formatCurrency } from "@/utils/currency"
 import { pluralize } from "@/utils/pluralize"
-
-import { session } from "../data/session"
 
 const columns = [
 	{ label: __("Event"), key: "event_title", width: "220px" },
@@ -56,24 +55,8 @@ const columns = [
 	{ label: __("Status"), key: "status", width: "120px" },
 ]
 
-const bookings = useList({
-	doctype: "Event Booking",
-	fields: [
-		"name",
-		"event",
-		"event.title as event_title",
-		"event.start_date",
-		"event.venue",
-		"docstatus",
-		"total_amount",
-		"currency",
-		"creation",
-		"status",
-		{ attendees: ["ticket_type"] },
-	],
-	filters: { user: session.user, docstatus: ["!=", "0"] },
-	orderBy: "creation desc",
-	cacheKey: "bookings-list",
+const bookings = useCall<any[]>({
+	url: "/api/v2/method/buzz.api.booking.get_my_bookings",
 	onError: console.error,
 	transform(data: any[]) {
 		return data.map((booking: Record<string, any>) => ({

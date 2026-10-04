@@ -4,6 +4,8 @@
 import frappe
 from frappe.model.document import Document
 
+from buzz.utils import make_file_public
+
 
 class EventSponsor(Document):
 	# begin: auto-generated types
@@ -16,6 +18,7 @@ class EventSponsor(Document):
 
 		company_logo: DF.AttachImage
 		company_name: DF.Data
+		contact_email: DF.Data | None
 		country: DF.Link | None
 		enquiry: DF.Link | None
 		event: DF.Link
@@ -23,7 +26,13 @@ class EventSponsor(Document):
 		website: DF.Data | None
 	# end: auto-generated types
 
+	def on_trash(self):
+		"""The enquiry it came from is settled but no longer listed, so it reads as cancelled."""
+		if self.enquiry and frappe.db.exists("Sponsorship Enquiry", self.enquiry):
+			frappe.db.set_value("Sponsorship Enquiry", self.enquiry, "status", "Cancelled")
+
 	def validate(self):
+		self.company_logo = make_file_public(self.company_logo)
 		if not self.enquiry:
 			return
 

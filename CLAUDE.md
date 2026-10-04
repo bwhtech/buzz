@@ -16,6 +16,9 @@ Guidelines for writing good code for a developer:
 12. Keep the verbosity less in new changes (inline comments, docstrings erc). 
     Explain only what's absolutely needed in inline comments.
     Actual changes explanation can be part of commit message. 
+13. Name variables, functions and CSS classes in plain technical terms that read at a
+    glance (`exclude_ended_events`, `end_date`), never quirky or trendy words
+    (`without_ended`, `when`).
 
 ## DocType 
 

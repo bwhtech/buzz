@@ -11,21 +11,27 @@
 			</a>
 			<div class="flex items-center gap-2">
 				<Button variant="ghost" size="md" @click="toggleTheme">
-					<LucideSun v-if="userTheme === 'dark'" class="w-4 h-4" />
-					<LucideMoon v-else class="w-4 h-4" />
+					<LucideSun class="hidden w-4 h-4 dark:block" />
+					<LucideMoon class="w-4 h-4 dark:hidden" />
 				</Button>
 				<LanguageSwitcher />
 				<Button
 					v-if="session.isLoggedIn"
 					:loading="session.logout.loading"
 					@click="session.logout.submit"
-					icon-right="log-out"
+					icon-right="lucide-log-out"
 					variant="ghost"
 					size="md"
 				>
 					{{ __("Log Out") }}
 				</Button>
-				<Button v-else @click="openLoginDialog" icon-right="log-in" variant="ghost" size="md">
+				<Button
+					v-else
+					@click="openLoginDialog"
+					icon-right="lucide-log-in"
+					variant="ghost"
+					size="md"
+				>
 					{{ __("Log In") }}
 				</Button>
 			</div>
@@ -34,8 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { useStorage } from "@vueuse/core"
-import { onMounted } from "vue"
+import { resolvedColorScheme, useColorScheme } from "frappe-ui"
 import LucideMoon from "~icons/lucide/moon"
 import LucideSun from "~icons/lucide/sun"
 
@@ -47,16 +52,9 @@ import BuzzLogo from "./common/BuzzLogo.vue"
 import LanguageSwitcher from "./LanguageSwitcher.vue"
 
 const { open: openLoginDialog } = useLoginDialog()
-const userTheme = useStorage("user-theme", "dark")
-
-onMounted(() => {
-	document.documentElement.setAttribute("data-theme", userTheme.value)
-})
+const { setColorScheme } = useColorScheme()
 
 function toggleTheme() {
-	const currentTheme = userTheme.value
-	const newTheme = currentTheme === "dark" ? "light" : "dark"
-	document.documentElement.setAttribute("data-theme", newTheme)
-	userTheme.value = newTheme
+	setColorScheme(resolvedColorScheme() === "dark" ? "light" : "dark")
 }
 </script>

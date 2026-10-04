@@ -1,3 +1,4 @@
+import type { AdditionalField } from "../Ticketing/AdditionalField"
 import type { ProposalSpeaker } from "./ProposalSpeaker"
 
 export interface TalkProposal {
@@ -25,4 +26,6 @@ export interface TalkProposal {
 	speakers?: ProposalSpeaker[]
 	/**	Phone : Phone	*/
 	phone?: string
+	/**	Additional Fields : Table - Additional Field	*/
+	additional_fields?: AdditionalField[]
 }

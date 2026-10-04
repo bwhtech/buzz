@@ -8,7 +8,7 @@
 	<div v-else-if="bookingDetails.data">
 		<!-- Approval Pending Status -->
 		<div v-if="!bookingDetails.data.event.free_event && isOfflinePaymentPending" class="mb-6">
-			<div class="p-4 rounded-lg border bg-yellow-50 border-yellow-200">
+			<div class="p-4 rounded-6 border bg-yellow-50 border-yellow-200">
 				<div class="flex items-center gap-3">
 					<div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
 						<LucideClock class="w-4 h-4 text-yellow-600" />
@@ -31,7 +31,7 @@
 
 		<!-- Rejected Status -->
 		<div v-if="isBookingRejected" class="mb-6">
-			<div class="p-4 rounded-lg border bg-red-50 border-red-200">
+			<div class="p-4 rounded-6 border bg-red-50 border-red-200">
 				<div class="flex items-center gap-3">
 					<div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
 						<LucideXCircle class="w-4 h-4 text-red-600" />
@@ -102,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { Spinner, createResource } from "frappe-ui"
+import { Spinner, useCall } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 import LucideClock from "~icons/lucide/clock"
@@ -155,11 +155,10 @@ const { showSuccessMessage } = usePaymentSuccess({
 
 const showCancellationDialog = ref(false)
 
-const bookingDetails = createResource({
-	url: "buzz.api.booking.get_booking_details",
+const bookingDetails = useCall<Record<string, any>, { booking_id: string }>({
+	url: "/api/v2/method/buzz.api.booking.get_booking_details",
 	params: { booking_id: props.bookingId },
-	auto: true,
-	onSuccess: (data: Record<string, any>) => {
+	onSuccess: (data) => {
 		// Clear stored booking form data if this was a successful payment
 		if (isPaymentSuccess && data?.event?.route) {
 			const { clearStoredData } = useBookingFormStorage(data.event.route)

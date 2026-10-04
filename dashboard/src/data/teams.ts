@@ -1,18 +1,31 @@
-import { createResource, useCall } from "frappe-ui"
-import { computed, ref, watch } from "vue"
+import { useCall } from "frappe-ui"
+import { computed, ref } from "vue"
 
 import { session } from "@/data/session"
 import type { InviteOutcome, TeamOption, TeamOverview } from "@/types"
 
 const STORAGE_KEY = "buzz:current-team"
 
+// A pending invitation is addressed by team and email: core allows only one per pair.
+interface InviteAction {
+	team: string
+	email: string
+}
+
+interface MemberBatch {
+	team: string
+	users: string[]
+}
+
 const selectedTeamName = ref(localStorage.getItem(STORAGE_KEY) || "")
 
-const teamsResource = createResource<TeamOption[]>({
-	url: "buzz.api.teams.get_my_teams",
-	cache: "My Teams",
-	// Not `auto`: get_my_teams is not allow_guest, so a logged-out visitor on a public
+const teamsResource = useCall<TeamOption[]>({
+	url: "/api/v2/method/buzz.api.teams.get_my_teams",
+	// Uncached: the key is not per-user, and a cached empty list restores as data, so
+	// `isTeamMember` would skip its fetch and keep denying a user who has since joined a team.
+	// Not immediate: get_my_teams is not allow_guest, so a logged-out visitor on a public
 	// booking route would fire a 403 on module load.
+	immediate: false,
 	onSuccess(myTeams: TeamOption[]) {
 		// A revoked membership leaves the stored name pointing at nothing.
 		if (!myTeams.some((team) => team.name === selectedTeamName.value)) {
@@ -33,37 +46,68 @@ export async function isTeamMember(): Promise<boolean> {
 	return teams.value.length > 0
 }
 
-// Scoped to the selected team rather than to a route, so a switch re-reads whatever
-// page is open. v2 path: useCall reads the payload from `data`, which /api/method
-// names `message`.
-const teamOverview = useCall<TeamOverview, { team: string }>({
-	url: "/api/v2/method/buzz.api.teams.get_team_overview",
-	params: () => ({ team: selectedTeamName.value }),
+export function reloadTeams() {
+	return teamsResource.reload()
+}
+
+// v2 path: useCall reads the payload from `data`, which /api/method names `message`.
+export function useTeamOverview(team: string) {
+	return useCall<TeamOverview, { team: string }>({
+		url: "/api/v2/method/buzz.api.teams.get_team_overview",
+		params: { team },
+	})
+}
+
+export const inviteMembers = useCall<
+	InviteOutcome[],
+	{ team: string; invites: { email: string; team_role: string }[] }
+>({
+	url: "/api/v2/method/buzz.api.teams.invite_members",
+	method: "POST",
 	immediate: false,
 })
 
-/**
- * The selected team's details, for the pages that show them.
- *
- * The watcher belongs to the caller rather than to this module: at module scope it
- * would fire as soon as get_my_teams settles, putting a request on every manage page
- * instead of the few that read one. Scoped here it also means the page owns its own
- * first fetch, so `loading` is true before the page paints.
- */
-export function useTeamOverview() {
-	watch(currentTeam, (team) => team && teamOverview.reload(), { immediate: true })
-	return teamOverview
-}
-
-export const removeMember = createResource({
-	url: "buzz.api.teams.remove_member",
-})
-
-export const inviteMembers = createResource<InviteOutcome[]>({
-	url: "buzz.api.teams.invite_members",
+export const updateTeam = useCall<unknown, Record<string, unknown>>({
+	url: "/api/v2/method/buzz.api.teams.update_team",
+	method: "POST",
+	immediate: false,
 })
 
 export function selectTeam(name: string) {
 	selectedTeamName.value = name
 	localStorage.setItem(STORAGE_KEY, name)
+}
+
+// Imperative POSTs: `immediate: false` means nothing fires until `.submit(params)`.
+export function useResendInvite() {
+	return useCall<null, InviteAction>({
+		url: "/api/v2/method/buzz.api.teams.resend_invite",
+		method: "POST",
+		immediate: false,
+	})
+}
+
+export function useRetractInvite() {
+	return useCall<null, InviteAction>({
+		url: "/api/v2/method/buzz.api.teams.retract_invite",
+		method: "POST",
+		immediate: false,
+	})
+}
+
+// Batched: the roster acts on a selection, and a single row is a selection of one.
+export function useRemoveMembers() {
+	return useCall<null, MemberBatch>({
+		url: "/api/v2/method/buzz.api.teams.remove_members",
+		method: "POST",
+		immediate: false,
+	})
+}
+
+export function useChangeRoles() {
+	return useCall<null, MemberBatch & { team_role: string }>({
+		url: "/api/v2/method/buzz.api.teams.change_roles",
+		method: "POST",
+		immediate: false,
+	})
 }

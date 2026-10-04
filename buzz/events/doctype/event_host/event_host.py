@@ -20,9 +20,10 @@ class EventHost(Document):
 		address: DF.SmallText | None
 		by_line: DF.Data | None
 		country: DF.Link | None
+		host_name: DF.Data
 		logo: DF.AttachImage | None
 		social_media_links: DF.Table[SocialMediaLink]
-		team: DF.Link
+		team: DF.Link | None
 	# end: auto-generated types
 
 	pass

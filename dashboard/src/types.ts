@@ -7,6 +7,7 @@ export type { EventBooking } from "@/types/Ticketing/EventBooking"
 export type { EventTicket } from "@/types/Ticketing/EventTicket"
 export type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 export type { FrappeField } from "@/composables/useCustomFields"
+export type { TalkProposal } from "@/types/Proposals/TalkProposal"
 
 import type { FrappeField } from "@/composables/useCustomFields"
 import type { EventTicket } from "@/types/Ticketing/EventTicket"
@@ -29,12 +30,53 @@ export interface ProposalListItem {
 	// Event columns come over a link hop, so a deleted event leaves them null.
 	event_title: string | null
 	start_date: string | null
+	start_time: string | null
 	end_date: string | null
+	venue: string | null
 	banner_image: string | null
+	allow_editing_talks_after_acceptance: boolean
 	status: string
 	creation: string
 	modified: string
 	speakers: ProposalSpeaker[]
+}
+
+// buzz.api.proposals.get_event_proposals: one page of an event's own pipeline.
+export interface EventProposals {
+	title: string | null
+	total: number
+	matched: number
+	proposals: ProposalListItem[]
+	has_next_page: boolean
+	// Read access alone is a Viewer or Frontdesk, who cannot change a status.
+	can_write: boolean
+	// Where talks are proposed, and whether that page still takes them.
+	proposal_link: string | null
+	proposals_closed: boolean
+}
+
+// buzz.api.proposals.accept_proposal
+export interface AcceptedProposal {
+	proposal: string
+	status: string
+	talk: string
+}
+
+// buzz.api.proposals.get_event_proposal_trend
+export interface DailySubmissions {
+	date: string
+	count: number
+}
+
+export interface StatusTotal {
+	status: string
+	count: number
+}
+
+export interface ProposalTrend {
+	total: number
+	per_day: DailySubmissions[]
+	by_status: StatusTotal[]
 }
 
 // A proposal whose event row still resolves — the only kind the timeline can place.
@@ -43,6 +85,7 @@ export type ProposalWithEvent = ProposalListItem & { event_title: string; start_
 // Errors rejected by frappe-ui resources carry server messages beyond Error.
 export interface FrappeError extends Error {
 	messages?: string[]
+	type?: string
 	exc?: string
 	exc_type?: string
 }
@@ -58,17 +101,10 @@ export interface UserInfo {
 	full_name?: string | null
 	email?: string
 	user_image?: string | null
+	bio?: string | null
 	roles?: { role: string }[]
 	language?: string | null
-}
-
-// Rows from buzz.api.teams.get_my_teams: the session user's enabled memberships
-// with the team title and logo joined on.
-export interface TeamOption {
-	name: string
-	team_name: string
-	logo: string | null
-	team_role: string
+	time_zone?: string | null
 }
 
 export interface TeamMember {
@@ -78,21 +114,22 @@ export interface TeamMember {
 	team_role: string
 }
 
-// buzz.api.teams.invite_members: what happened to each address that was submitted.
-export interface InviteOutcome {
-	email: string
-	status: "invited" | "added" | "already_a_member"
-	// Null for an invited stranger — they have no account to carry a name yet.
-	full_name: string | null
+// Rows from buzz.api.teams.get_my_teams: the session user's enabled memberships
+// with the team title, logo and members joined on.
+export interface TeamOption {
+	name: string
+	team_name: string
+	logo: string | null
+	team_role: string
+	members: TeamMember[]
 }
 
-// An invitation nobody has accepted yet — no user, so no name or image.
+// Someone invited by email who has not accepted yet, so has no User row.
 export interface TeamInvite {
 	email: string
 	team_role: string
 }
 
-// buzz.api.teams.get_team_overview: one team with its enabled members.
 export interface TeamOverview {
 	name: string
 	team_name: string
@@ -101,6 +138,13 @@ export interface TeamOverview {
 	my_role: string
 	members: TeamMember[]
 	invites: TeamInvite[]
+}
+
+// buzz.api.teams.invite_members: one row per address, saying which route it took.
+export interface InviteOutcome {
+	email: string
+	status: "added" | "invited" | "already_a_member"
+	full_name?: string | null
 }
 
 // buzz.api.events.get_my_events: events the user's teams host, plus events they
@@ -112,12 +156,43 @@ export interface MyEvent {
 	start_date: string
 	end_date: string | null
 	start_time: string | null
+	end_time: string | null
 	venue: string | null
+	medium: string | null
 	banner_image: string | null
+	allow_editing_talks_after_acceptance: boolean
 	is_host: boolean
+	is_attendee: boolean
 	team: string | null
 	team_name: string | null
 	team_logo: string | null
+}
+
+/** buzz.api.booking.get_booking_summary: one ticket type per line, add-ons beneath. */
+export interface BookingLine {
+	label: string
+	quantity: number
+	amount: number
+	add_ons: BookingLine[]
+}
+
+export interface BookingSummary {
+	name: string
+	booked_by: string | null
+	status: string
+	payment_status: string
+	payment_method: string | null
+	is_offline: boolean
+	currency: string
+	booked_on: string
+	lines: BookingLine[]
+	net_amount: number
+	discount_amount: number
+	coupon_code: string | null
+	tax_amount: number
+	tax_label: string | null
+	tax_percentage: number
+	total_amount: number
 }
 
 export interface MyEvents {
@@ -136,19 +211,67 @@ export interface EventGuest {
 	attendee_name: string | null
 	attendee_email: string | null
 	ticket_type: string | null
+	registered_at: string | null
 	add_ons: GuestAddOn[]
+}
+
+// buzz.api.events.get_event_registration_trend
+export interface DailyRegistrations {
+	date: string
+	ticket_type: string | null
+	count: number
+}
+
+export interface TicketTypeTotal {
+	ticket_type: string | null
+	count: number
+}
+
+export interface RegistrationTrend {
+	total: number
+	per_day: DailyRegistrations[]
+	by_ticket_type: TicketTypeTotal[]
+}
+
+export interface GuestTicketType {
+	name: string
+	title: string | null
 }
 
 export interface EventGuests {
 	title: string | null
+	start_date: string | null
+	start_time: string | null
+	end_date: string | null
+	venue: string | null
 	total: number
-	registrations_closed: boolean
+	matched: number
 	guests: EventGuest[]
+	ticket_types: GuestTicketType[]
+	has_next_page: boolean
+}
+
+export interface VerificationMethods {
+	email: boolean
+	phone: boolean
 }
 
 export interface EventVenueDetail {
 	name: string
 	address: string | null
+}
+
+// One name under "Hosted by": the event's team, or one of its co-hosts.
+export interface EventHostRef {
+	host: string
+	label: string
+	logo: string | null
+}
+
+export interface EventExternalLink {
+	icon: string | null
+	label: string
+	url: string
 }
 
 // buzz.api.events.get_event: one event with everything its manage page edits.
@@ -157,6 +280,7 @@ export interface EventDetail {
 	title: string
 	route: string | null
 	team: string | null
+	modified: string
 	start_date: string
 	end_date: string | null
 	start_time: string | null
@@ -165,28 +289,74 @@ export interface EventDetail {
 	short_description: string | null
 	about: string | null
 	banner_image: string | null
+	allow_editing_talks_after_acceptance: boolean
 	medium: string | null
 	venue: EventVenueDetail | null
 	meeting_link: string | null
 	is_published: boolean
+	primary_host: EventHostRef | null
+	co_hosts: EventHostRef[]
+	external_links: EventExternalLink[]
 }
 
 // A ticket the user holds, flattened with the context its event carries.
 export interface TicketStub {
 	name: string
 	attendee_name: string
+	attendee_email: string | null
 	ticket_type: string
 	qr_code: string | null
+	// A ticket issued outside a booking has none.
+	booking: string | null
 	// Event columns come over a link hop, so a deleted event leaves them null.
 	event_title: string | null
 	start_date: string | null
-	end_date: string | null
 	start_time: string | null
-	venue: string | null
+	end_date: string | null
 }
 
 // A ticket whose event row still resolves — the only kind the ticket UI can draw.
-export type TicketWithEvent = TicketStub & { event_title: string; start_date: string }
+export type TicketWithEvent = TicketStub & {
+	event_title: string
+	start_date: string
+	venue: string | null
+}
+
+// buzz.api.tickets.get_ticket_details. doc, event and booking pass through as whole
+// documents, so only the fields the drawer reads are typed.
+export interface TicketDetails {
+	doc: {
+		name: string
+		first_name: string | null
+		last_name: string | null
+		attendee_name: string
+		attendee_email: string | null
+		ticket_type: string
+		qr_code: string | null
+		booking: string | null
+		creation: string
+	}
+	add_ons: TicketAddOnDetail[]
+	event: { name: string; title: string; route: string | null; ticket_print_format: string | null }
+	venue: string | null
+	// Null for an attendee who did not pay for the ticket themselves.
+	booking: {
+		name: string
+		user: string | null
+		owner: string
+		total_amount: number
+		currency: string
+	} | null
+	ticket_type: { title: string }
+}
+
+export interface TicketAddOnDetail {
+	id: string
+	title: string | null
+	value: string | null
+	price: number | null
+	currency: string | null
+}
 
 // Languages served by the translation API (not a Buzz DocType).
 export interface Language {
@@ -221,6 +391,8 @@ export interface AvailableTicketType {
 	remaining_tickets?: number
 	free_add_ons?: string[]
 	add_ons?: string[]
+	prices?: { currency: string; price: number }[]
+	price_note?: string
 }
 
 export interface AvailableAddOn {
@@ -229,6 +401,8 @@ export interface AvailableAddOn {
 	description?: string
 	price?: number
 	currency?: string
+	prices?: { currency: string; price: number }[]
+	price_note?: string
 	options?: string[]
 	user_selects_option?: 0 | 1 | boolean
 }
@@ -270,4 +444,181 @@ export interface CouponData {
 	ticket_type?: string
 	remaining_tickets?: number
 	[key: string]: any
+}
+
+// buzz.api.communications: a message sent (or scheduled) to an event's guests or speakers.
+export type CommunicationAudience = "Guests" | "Speakers"
+
+export interface CommunicationItem {
+	name: string
+	audience: CommunicationAudience
+	// Comma-joined, the shape the composer keeps the filters in.
+	ticket_types: string
+	statuses: string
+	subject: string
+	message: string
+	recipient_count: number
+	scheduled_at: string | null
+	sent_by: string
+	creation: string
+}
+
+export interface EventCommunications {
+	title: string | null
+	can_write: boolean
+	can_edit_settings: boolean
+	support_email: string | null
+	ticket_types: { name: string; title: string | null }[]
+	statuses: string[]
+	communications: CommunicationItem[]
+}
+
+// What the composer holds between the inline box and the Advanced drawer.
+export interface CommunicationDraft {
+	audience: CommunicationAudience
+	ticket_types: string[]
+	statuses: string[]
+	subject: string
+	message: string
+	scheduled_at: string
+}
+
+// buzz.api.sponsorships.get_event_sponsorships: an event's Sponsor Enquiry Form, as read
+// on the manage page.
+export interface EnquiryFormState {
+	name: string
+	closed: boolean
+	link: string | null
+}
+
+export interface CurrencyItem {
+	name: string
+	symbol: string | null
+	number_format: string | null
+}
+
+export interface TierPrice {
+	currency: string
+	price: number
+}
+
+export interface SponsorshipTierItem {
+	name: string
+	title: string
+	prices: TierPrice[]
+	/** 0 means unlimited. */
+	slots: number
+	enabled: boolean
+	perks: string | null
+	sponsor_count: number
+}
+
+export interface EventSponsorItem {
+	name: string
+	company_name: string
+	company_logo: string | null
+	website: string | null
+	country: string | null
+	contact_email: string | null
+	enquiry: string | null
+	tier: string | null
+	tier_title: string
+}
+
+export interface EnquiryAnswer {
+	label: string
+	value: string | null
+	fieldtype: string | null
+}
+
+export interface EnquiryDetail {
+	name: string
+	company_name: string
+	company_logo: string | null
+	status: string
+	tier: string | null
+	tier_title: string
+	website: string | null
+	country: string | null
+	phone: string | null
+	contact: string | null
+	creation: string
+	modified: string
+	sponsor: string | null
+	answers: EnquiryAnswer[]
+}
+
+export interface EventEnquiryItem {
+	name: string
+	company_name: string
+	company_logo: string | null
+	website: string | null
+	status: string
+	tier: string | null
+	tier_title: string
+	tier_price: number | null
+	tier_currency: string | null
+	creation: string
+}
+
+export interface EventSponsorships {
+	title: string
+	can_write: boolean
+	form: EnquiryFormState | null
+	tiers: SponsorshipTierItem[]
+	sponsors: EventSponsorItem[]
+}
+
+export interface EventEnquiries {
+	total: number
+	matched: number
+	enquiries: EventEnquiryItem[]
+	has_next_page: boolean
+}
+
+export interface TicketTypePrice extends TierPrice {
+	tickets_sold?: number
+}
+
+// buzz.api.events.get_event_ticket_types: the ticket types an event sells, for its Tickets page.
+export interface TicketTypeItem {
+	name: string
+	title: string
+	max_tickets_available: number
+	auto_unpublish_after: string | null
+	is_published: boolean
+	tickets_sold: number
+	prices: TicketTypePrice[]
+}
+
+export interface EventTicketTypes {
+	title: string
+	can_write: boolean
+	registration_link: string | null
+	registrations_closed: boolean
+	allow_guest_booking: boolean
+	guest_verification_method: string
+	apply_tax: boolean
+	tax_inclusive: boolean
+	tax_label: string
+	tax_percentage: number
+	team_legal_name: string | null
+	team_tax_id: string | null
+	can_edit_team: boolean
+	ticket_types: TicketTypeItem[]
+	payment_providers: PaymentProviderItem[]
+	revenue: CurrencyRevenue[]
+}
+
+export interface CurrencyRevenue {
+	currency: string
+	collected: number
+	refunded: number
+	bookings: number
+	tickets: number
+}
+
+export interface PaymentProviderItem {
+	name: string
+	is_default: boolean
 }

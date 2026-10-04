@@ -1,6 +1,14 @@
 import { test as setup } from "@playwright/test"
 
-import { createDoc, deleteDoc, docExists, ensureTestTeam, getList } from "../helpers/frappe"
+import {
+	createDoc,
+	deleteDoc,
+	docExists,
+	ensureEventHost,
+	ensureTestTeam,
+	getList,
+	openRegistrations,
+} from "../helpers/frappe"
 
 interface NamedDoc {
 	name: string
@@ -66,14 +74,7 @@ setup("create test event for booking", async ({ request }) => {
 
 	const team = await ensureTestTeam(request)
 
-	// Create Event Host if it doesn't exist
-	if (!(await docExists(request, "Event Host", testHostName))) {
-		await createDoc(request, "Event Host", {
-			name: testHostName,
-			team,
-		})
-		console.log(`Created Event Host: ${testHostName}`)
-	}
+	const host = await ensureEventHost(request, testHostName, team)
 
 	// Create Buzz Event
 	const futureDate = new Date()
@@ -84,7 +85,7 @@ setup("create test event for booking", async ({ request }) => {
 		team,
 		title: testEventTitle,
 		category: testCategoryName,
-		host: testHostName,
+		host,
 		start_date: startDate,
 		route: testEventRoute,
 		is_published: 1,
@@ -92,14 +93,14 @@ setup("create test event for booking", async ({ request }) => {
 		end_time: "17:00:00",
 		medium: "In Person",
 	})
+	await openRegistrations(request, event.name)
 	console.log(`Created Buzz Event: ${event.name} (route: ${testEventRoute})`)
 
 	// Create Event Ticket Type
 	const ticketType = await createDoc<NamedDoc>(request, "Event Ticket Type", {
 		event: event.name,
 		title: "Standard Ticket",
-		price: 500,
-		currency: "INR",
+		prices: [{ currency: "INR", price: 500 }],
 		is_published: 1,
 	})
 	console.log(`Created Event Ticket Type: ${ticketType.name}`)

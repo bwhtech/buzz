@@ -1,5 +1,7 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
+
+from pydantic import Field
 
 from buzz.api.schemas import APIRequest, APIResponse
 
@@ -9,6 +11,7 @@ class BookingRequest(APIRequest):
 	attendees: list[dict]
 	event: str
 	coupon_code: str | None = None
+	currency: str | None = None
 	booking_custom_fields: dict | None = None
 	payment_gateway: str | None = None
 	utm_parameters: list[dict] | None = None
@@ -71,7 +74,7 @@ class ConfirmationEvent(APIResponse):
 
 
 class ConfirmationVenue(APIResponse):
-	name: Any
+	venue_name: str | None
 	address: str | None
 
 
@@ -140,3 +143,53 @@ class FreeTicketsCouponResponse(APIResponse):
 	ticket_type: Any
 	remaining_tickets: int
 	free_add_ons: list
+
+
+class BookingLine(APIResponse):
+	"""One ticket type on a booking. Its add-ons hang off it and never nest further."""
+
+	label: str
+	quantity: int
+	# Attendee amounts only — every add-on carries its own.
+	amount: float
+	add_ons: list["BookingLine"] = Field(default_factory=list)
+
+
+class BookingSummary(APIResponse):
+	"""A booking as a receipt: who booked it, what was bought and what it cost.
+
+	No ticket, attendee or QR field travels — the card draws none of them. `booked_by` does
+	travel, because a ticket holder may read a receipt somebody else paid for.
+	"""
+
+	name: str
+	booked_by: str | None
+	status: str
+	payment_status: str
+	payment_method: str | None
+	is_offline: bool
+	currency: str
+	booked_on: datetime
+	lines: list[BookingLine]
+	net_amount: float
+	discount_amount: float
+	coupon_code: str | None
+	tax_amount: float
+	tax_label: str | None
+	tax_percentage: float
+	total_amount: float
+
+
+class MyBooking(APIResponse):
+	name: str
+	event: str | None
+	event_title: str | None
+	start_date: date | None
+	venue: str | None
+	docstatus: int
+	total_amount: float
+	currency: str | None
+	creation: datetime
+	status: str | None
+	# Only counted by the list; each row is a plain ticket_type pair.
+	attendees: list

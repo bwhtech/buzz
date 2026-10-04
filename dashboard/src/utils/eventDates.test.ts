@@ -52,3 +52,11 @@ test("a half-filled schedule is not reported as invalid", () => {
 	assert.equal(isEndBeforeStart("2026-08-21", "", "", "09:00:00"), false)
 	assert.equal(isEndBeforeStart("2026-08-21", "", "09:00:00", ""), false)
 })
+
+test("an hour without its leading zero compares by value, not as text", () => {
+	// The API renders a Time field through frappe's `format_timedelta`, which pads the
+	// minutes and seconds but not the hour: 9am arrives as `9:00:00`.
+	assert.equal(isEndBeforeStart("2026-08-21", "", "9:00:00", "18:00:00"), false)
+	assert.equal(isEndBeforeStart("2026-08-21", "", "18:00:00", "9:00:00"), true)
+	assert.equal(isEndBeforeStart("2026-08-21", "", "9:00", "18:00"), false)
+})

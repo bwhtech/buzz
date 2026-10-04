@@ -310,6 +310,18 @@ function set_end_date_limit(frm) {
 }
 
 frappe.ui.form.on("Buzz Event", {
+	async open_sponsor_form(frm) {
+		const result = await frappe.db.get_value(
+			"Sponsor Enquiry Form",
+			{ event: frm.doc.name },
+			"name",
+		)
+		if (result.message?.name) {
+			frappe.set_route("Form", "Sponsor Enquiry Form", result.message.name)
+		} else {
+			frappe.new_doc("Sponsor Enquiry Form", { event: frm.doc.name })
+		}
+	},
 	refresh(frm) {
 		frm.fields_dict.time_zone.set_data(getZoomSupportedTimezones())
 		set_end_date_limit(frm)

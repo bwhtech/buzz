@@ -1,8 +1,14 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.teams import get_my_teams, get_team_overview, remove_member
-from buzz.api.teams.exceptions import CannotManageMembers, NotATeamMember
+from buzz.api.teams import change_roles, get_my_teams, get_team_overview, remove_members, update_team
+from buzz.api.teams.exceptions import (
+	CannotEditTeam,
+	CannotGrantOwnership,
+	CannotManageMembers,
+	NotATeamMember,
+	UnknownTeamRole,
+)
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
 
@@ -53,6 +59,17 @@ class TestGetMyTeams(IntegrationTestCase):
 		frappe.db.set_value("Buzz Team Membership", {"team": team, "user": user}, "enabled", 0)
 
 		self.assertEqual(self.team_names_for(user), [])
+
+	def test_lists_each_teams_enabled_members(self):
+		owner = create_user("switcher-members-owner@example.com", "Owner")
+		viewer = create_user("switcher-members-viewer@example.com", "Viewer")
+		team = create_owned_team("Switcher Members", owner)
+		upsert_membership(team, viewer, "Viewer")
+
+		frappe.set_user(viewer)
+		members = get_my_teams()[0].members
+
+		self.assertEqual([member.user for member in members], [owner, viewer])
 
 	def test_returns_nothing_for_a_user_on_no_team(self):
 		user = create_user("switcher-teamless@example.com", "Teamless")
@@ -143,7 +160,7 @@ class TestRemoveMember(IntegrationTestCase):
 		upsert_membership(team, member, "Manager")
 
 		frappe.set_user(admin)
-		remove_member(team, member)
+		remove_members(team, [member])
 
 		self.assertEqual(self.membership(team, member).enabled, 0)
 
@@ -156,7 +173,7 @@ class TestRemoveMember(IntegrationTestCase):
 
 		frappe.set_user(manager)
 		with self.assertRaises(CannotManageMembers):
-			remove_member(team, member)
+			remove_members(team, [member])
 
 	def test_an_outsider_cannot_remove_anyone(self):
 		outsider = create_user("remove-outsider@example.com", "Outsider")
@@ -165,7 +182,7 @@ class TestRemoveMember(IntegrationTestCase):
 
 		frappe.set_user(outsider)
 		with self.assertRaises(CannotManageMembers):
-			remove_member(team, owner)
+			remove_members(team, [owner])
 
 	def test_the_owner_cannot_be_removed(self):
 		owner = create_user("remove-locked-owner@example.com", "Owner")
@@ -175,7 +192,7 @@ class TestRemoveMember(IntegrationTestCase):
 
 		frappe.set_user(admin)
 		with self.assertRaises(frappe.ValidationError):
-			remove_member(team, owner)
+			remove_members(team, [owner])
 
 	def test_refuses_a_user_who_is_not_on_the_team(self):
 		owner = create_user("remove-stranger-owner@example.com", "Owner")
@@ -184,7 +201,7 @@ class TestRemoveMember(IntegrationTestCase):
 
 		frappe.set_user(owner)
 		with self.assertRaises(NotATeamMember):
-			remove_member(team, stranger)
+			remove_members(team, [stranger])
 
 	def test_removing_the_same_member_twice_is_refused(self):
 		owner = create_user("remove-twice-owner@example.com", "Owner")
@@ -193,10 +210,10 @@ class TestRemoveMember(IntegrationTestCase):
 		upsert_membership(team, member, "Manager")
 
 		frappe.set_user(owner)
-		remove_member(team, member)
+		remove_members(team, [member])
 
 		with self.assertRaises(NotATeamMember):
-			remove_member(team, member)
+			remove_members(team, [member])
 
 	def test_the_desk_role_survives_while_another_team_still_earns_it(self):
 		owner = create_user("remove-roles-owner@example.com", "Owner")
@@ -207,8 +224,196 @@ class TestRemoveMember(IntegrationTestCase):
 		upsert_membership(second, member, "Manager")
 
 		frappe.set_user(owner)
-		remove_member(first, member)
+		remove_members(first, [member])
 		self.assertIn("Event Manager", frappe.get_roles(member))
 
-		remove_member(second, member)
+		remove_members(second, [member])
 		self.assertNotIn("Event Manager", frappe.get_roles(member))
+
+	def test_an_admin_removes_several_members_at_once(self):
+		owner = create_user("remove-batch-owner@example.com", "Owner")
+		first = create_user("remove-batch-first@example.com", "First")
+		second = create_user("remove-batch-second@example.com", "Second")
+		team = create_owned_team("Remove Batch", owner)
+		upsert_membership(team, first, "Manager")
+		upsert_membership(team, second, "Viewer")
+
+		frappe.set_user(owner)
+		remove_members(team, [first, second])
+
+		self.assertEqual(self.membership(team, first).enabled, 0)
+		self.assertEqual(self.membership(team, second).enabled, 0)
+
+
+class TestChangeRole(IntegrationTestCase):
+	# Rollback is per class, not per test — every test owns its users and its team names.
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def role(self, team: str, user: str) -> str:
+		return frappe.db.get_value("Buzz Team Membership", {"team": team, "user": user}, "team_role")
+
+	def test_an_admin_promotes_a_manager(self):
+		owner = create_user("role-owner@example.com", "Owner")
+		admin = create_user("role-admin@example.com", "Admin")
+		member = create_user("role-member@example.com", "Member")
+		team = create_owned_team("Role Promote", owner)
+		upsert_membership(team, admin, "Admin")
+		upsert_membership(team, member, "Manager")
+
+		frappe.set_user(admin)
+		change_roles(team, [member], "Admin")
+
+		self.assertEqual(self.role(team, member), "Admin")
+
+	def test_a_demoted_member_loses_the_desk_role_the_old_one_earned(self):
+		owner = create_user("role-demote-owner@example.com", "Owner")
+		member = create_user("role-demote-member@example.com", "Member")
+		team = create_owned_team("Role Demote", owner)
+		upsert_membership(team, member, "Manager")
+		self.assertIn("Event Manager", frappe.get_roles(member))
+
+		frappe.set_user(owner)
+		change_roles(team, [member], "Viewer")
+
+		self.assertNotIn("Event Manager", frappe.get_roles(member))
+
+	def test_an_admin_may_demote_another_admin(self):
+		owner = create_user("role-peer-owner@example.com", "Owner")
+		admin = create_user("role-peer-admin@example.com", "Admin")
+		peer = create_user("role-peer@example.com", "Peer")
+		team = create_owned_team("Role Peer", owner)
+		upsert_membership(team, admin, "Admin")
+		upsert_membership(team, peer, "Admin")
+
+		frappe.set_user(admin)
+		change_roles(team, [peer], "Viewer")
+
+		self.assertEqual(self.role(team, peer), "Viewer")
+
+	def test_a_manager_cannot_change_anyone(self):
+		owner = create_user("role-manager-owner@example.com", "Owner")
+		manager = create_user("role-manager@example.com", "Manager")
+		member = create_user("role-managers-target@example.com", "Target")
+		team = create_owned_team("Role Manager", owner)
+		upsert_membership(team, manager, "Manager")
+		upsert_membership(team, member, "Viewer")
+
+		frappe.set_user(manager)
+		with self.assertRaises(CannotManageMembers):
+			change_roles(team, [member], "Manager")
+
+	def test_an_outsider_cannot_change_anyone(self):
+		owner = create_user("role-outsider-owner@example.com", "Owner")
+		outsider = create_user("role-outsider@example.com", "Outsider")
+		member = create_user("role-outsiders-target@example.com", "Target")
+		team = create_owned_team("Role Outsider", owner)
+		upsert_membership(team, member, "Viewer")
+
+		frappe.set_user(outsider)
+		with self.assertRaises(CannotManageMembers):
+			change_roles(team, [member], "Manager")
+
+	def test_the_owner_cannot_be_given_another_role(self):
+		owner = create_user("role-locked-owner@example.com", "Owner")
+		admin = create_user("role-owners-admin@example.com", "Admin")
+		team = create_owned_team("Role Owner", owner)
+		upsert_membership(team, admin, "Admin")
+
+		frappe.set_user(admin)
+		with self.assertRaises(frappe.ValidationError):
+			change_roles(team, [owner], "Viewer")
+
+	def test_ownership_cannot_be_granted(self):
+		owner = create_user("role-grant-owner@example.com", "Owner")
+		member = create_user("role-grant-member@example.com", "Member")
+		team = create_owned_team("Role Grant", owner)
+		upsert_membership(team, member, "Manager")
+
+		frappe.set_user(owner)
+		with self.assertRaises(CannotGrantOwnership):
+			change_roles(team, [member], "Owner")
+
+	def test_an_unknown_role_is_refused(self):
+		owner = create_user("role-unknown-owner@example.com", "Owner")
+		member = create_user("role-unknown-member@example.com", "Member")
+		team = create_owned_team("Role Unknown", owner)
+		upsert_membership(team, member, "Manager")
+
+		frappe.set_user(owner)
+		with self.assertRaises(UnknownTeamRole):
+			change_roles(team, [member], "Overlord")
+
+	def test_refuses_a_user_who_is_not_on_the_team(self):
+		owner = create_user("role-stranger-owner@example.com", "Owner")
+		stranger = create_user("role-stranger@example.com", "Stranger")
+		team = create_owned_team("Role Stranger", owner)
+
+		frappe.set_user(owner)
+		with self.assertRaises(NotATeamMember):
+			change_roles(team, [stranger], "Manager")
+
+	def test_refuses_a_member_whose_membership_is_disabled(self):
+		owner = create_user("role-disabled-owner@example.com", "Owner")
+		member = create_user("role-disabled-member@example.com", "Member")
+		team = create_owned_team("Role Disabled", owner)
+		upsert_membership(team, member, "Manager")
+
+		frappe.set_user(owner)
+		remove_members(team, [member])
+
+		with self.assertRaises(NotATeamMember):
+			change_roles(team, [member], "Viewer")
+
+	def test_an_admin_re_roles_several_members_at_once(self):
+		owner = create_user("role-batch-owner@example.com", "Owner")
+		first = create_user("role-batch-first@example.com", "First")
+		second = create_user("role-batch-second@example.com", "Second")
+		team = create_owned_team("Role Batch", owner)
+		upsert_membership(team, first, "Manager")
+		upsert_membership(team, second, "Frontdesk")
+
+		frappe.set_user(owner)
+		change_roles(team, [first, second], "Viewer")
+
+		self.assertEqual(self.role(team, first), "Viewer")
+		self.assertEqual(self.role(team, second), "Viewer")
+
+
+class TestUpdateTeam(IntegrationTestCase):
+	# Rollback is per class, not per test — every test owns its users and its team names.
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_an_admin_renames_the_team_and_sets_its_logo(self):
+		owner = create_user("update-owner@example.com", "Owner")
+		admin = create_user("update-admin@example.com", "Admin")
+		team = create_owned_team("Update Before", owner)
+		upsert_membership(team, admin, "Admin")
+
+		frappe.set_user(admin)
+		update_team(team, "  Update After  ", "/files/logo.png")
+
+		details = frappe.db.get_value("Buzz Team", team, ["team_name", "logo"], as_dict=True)
+		self.assertEqual(details.team_name, "Update After")
+		self.assertEqual(details.logo, "/files/logo.png")
+
+	def test_a_manager_cannot_edit_the_team(self):
+		owner = create_user("update-owner2@example.com", "Owner")
+		manager = create_user("update-manager@example.com", "Manager")
+		team = create_owned_team("Update Locked", owner)
+		upsert_membership(team, manager, "Manager")
+
+		frappe.set_user(manager)
+		with self.assertRaises(CannotEditTeam):
+			update_team(team, "Renamed", None)
+
+	def test_a_blank_name_is_refused(self):
+		owner = create_user("update-owner3@example.com", "Owner")
+		team = create_owned_team("Update Blank", owner)
+
+		frappe.set_user(owner)
+		with self.assertRaises(frappe.ValidationError):
+			update_team(team, "   ", None)

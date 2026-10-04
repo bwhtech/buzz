@@ -341,6 +341,32 @@ test.describe("Sponsorship Enquiry Form", () => {
 
 		await formPage.expectFormVisible()
 	})
+
+	test("should submit an enquiry and offer account details", async ({ page }) => {
+		const formPage = new CustomFormPage(page)
+
+		await formPage.goto(testEventRoute, "enquire-sponsorship")
+		await formPage.waitForFormLoad()
+		await formPage.getInputByLabel("Company Name").fill("E2E Sponsor Company")
+
+		const fileInput = page.locator('input[type="file"]').first()
+		await fileInput.setInputFiles({
+			name: "e2e-logo.png",
+			mimeType: "image/png",
+			buffer: Buffer.from(
+				"89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000000020001e221bc330000000049454e44ae426082",
+				"hex",
+			),
+		})
+		await expect(page.getByRole("button", { name: "Remove image" })).toBeVisible()
+
+		const result = await formPage.submitAndExpectResponse()
+		expect(result.succeeded).toBeTruthy()
+		const enquiryLink = page.getByRole("link", { name: "View your enquiry" })
+		await expect(enquiryLink).toBeVisible()
+		await enquiryLink.click()
+		await expect(page).toHaveURL(/\/account\/sponsorships\/.+/)
+	})
 })
 
 test.describe("Custom Form Edge Cases", () => {
@@ -391,6 +417,14 @@ test.describe("Login Required Form", () => {
 			await formPage.goto(testEventRoute, "feedback")
 			await formPage.waitForFormLoad()
 			await formPage.expectFormVisible()
+		})
+
+		test("gets the public sponsorship form with a Contact Email field", async ({ page }) => {
+			const formPage = new CustomFormPage(page)
+			await formPage.goto(testEventRoute, "enquire-sponsorship")
+			await formPage.waitForFormLoad()
+			await formPage.expectFormVisible()
+			await formPage.expectFieldVisible("Contact Email")
 		})
 	})
 })

@@ -33,6 +33,7 @@ class CustomFieldDefinition(APIResponse):
 
 
 class CustomFormResponse(APIResponse):
+	submission_method: str | None = None
 	# Field shape varies per fieldtype at runtime, so only the envelope is modelled.
 	form_fields: list[dict]
 	custom_fields: list[CustomFieldDefinition]

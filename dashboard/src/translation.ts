@@ -1,4 +1,4 @@
-import { createResource } from "frappe-ui"
+import { useCall } from "frappe-ui"
 import type { App } from "vue"
 
 // replace accepts positional values ({0}, {1}, ...) or a keyed map; values may
@@ -64,10 +64,9 @@ const translate: TranslateFn = (message, replace, context = null) => {
 }
 
 function fetchTranslations(_lang?: string) {
-	createResource({
-		url: "buzz.api.account.get_translations",
-		auto: true,
-		transform: (data: Record<string, string>) => {
+	useCall<Record<string, string>>({
+		url: "/api/v2/method/buzz.api.account.get_translations",
+		onSuccess: (data) => {
 			window.translatedMessages = data
 		},
 	})

@@ -1,0 +1,116 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "field:theme_name",
+ "creation": "2026-09-21 14:37:14.196802",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "theme_name",
+  "color_scheme",
+  "column_break_theme",
+  "enabled",
+  "is_standard",
+  "tokens_section",
+  "tokens"
+ ],
+ "fields": [
+  {
+   "fieldname": "theme_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Theme Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "dark",
+   "fieldname": "color_scheme",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Default Mode",
+   "options": "dark\nlight",
+   "description": "Mode the page opens in until a visitor switches it."
+  },
+  {
+   "fieldname": "column_break_theme",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_standard",
+   "fieldtype": "Check",
+   "label": "Is Standard",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tokens_section",
+   "fieldtype": "Section Break",
+   "label": "Tokens"
+  },
+  {
+   "fieldname": "tokens",
+   "fieldtype": "Table",
+   "label": "Tokens",
+   "options": "Buzz Theme Token"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-21 17:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Events",
+ "name": "Buzz Theme",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Website Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Event Manager"
+  },
+  {
+   "read": 1,
+   "role": "Buzz User"
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "theme_name"
+}

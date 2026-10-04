@@ -9,7 +9,7 @@ _fake = Faker()
 
 
 class EventTicketTypeFactory(BaseFactory[EventTicketType]):
-	"""Free and published by default. `currency` falls back to the field default (INR)."""
+	"""Free and published by default — `before_validate` adds an INR 0 price row."""
 
 	doctype = "Event Ticket Type"
 
@@ -20,10 +20,9 @@ class EventTicketTypeFactory(BaseFactory[EventTicketType]):
 		return {
 			"event": self.overrides.get("event") or BuzzEventFactory.create().name,
 			"title": f"Ticket {_fake.unique.word().capitalize()}",
-			"price": 0,
 			"is_published": 1,
 		}
 
 	@property
 	def paid(self) -> dict[str, Any]:
-		return {"price": 500}
+		return {"prices": [{"currency": "INR", "price": 500}]}

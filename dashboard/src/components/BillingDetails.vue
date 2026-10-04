@@ -1,5 +1,5 @@
 <template>
-	<div class="bg-surface-base border border-outline-gray-3 rounded-xl p-4 md:p-6 mb-6 shadow-sm">
+	<div class="bg-surface-base border border-outline-gray-3 rounded-7 p-4 md:p-6 mb-6 shadow-sm">
 		<h3 class="text-base-medium text-ink-gray-8 border-b pb-2 mb-4">
 			{{ __("Billing Details") }}
 		</h3>

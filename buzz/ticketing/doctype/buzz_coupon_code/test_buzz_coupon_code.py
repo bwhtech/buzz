@@ -33,7 +33,7 @@ class IntegrationTestBuzzCouponCode(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.test_event.name,
 				"title": "Coupon Test Ticket",
-				"price": 500,
+				"prices": [{"currency": "INR", "price": 500}],
 				"is_published": True,
 			}
 		).insert()
@@ -709,7 +709,7 @@ class IntegrationTestBuzzCouponCode(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": other_event.name,
 				"title": "Other Ticket",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 				"is_published": True,
 			}
 		).insert()
@@ -805,7 +805,7 @@ class IntegrationTestBuzzCouponCode(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": other_event.name,
 				"title": "Other Category Ticket",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 				"is_published": True,
 			}
 		).insert()
@@ -879,7 +879,7 @@ class IntegrationTestBuzzCouponCode(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": other_event.name,
 				"title": "Another Event Ticket",
-				"price": 200,
+				"prices": [{"currency": "INR", "price": 200}],
 				"is_published": True,
 			}
 		).insert()
@@ -1099,7 +1099,7 @@ class TestValidateCouponAPI(IntegrationTestCase):
 				"doctype": "Event Ticket Type",
 				"event": self.test_event.name,
 				"title": "API Test Ticket",
-				"price": 100,
+				"prices": [{"currency": "INR", "price": 100}],
 				"is_published": True,
 			}
 		).insert()

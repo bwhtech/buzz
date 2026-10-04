@@ -46,6 +46,14 @@ class TestBuzzTeamMembership(IntegrationTestCase):
 
 		self.assertIn("Event Manager", frappe.get_roles(user))
 
+	def test_membership_keeps_the_user_out_of_desk(self):
+		user = create_user("role-no-desk@example.com", "Portal")
+		team = create_team("No Desk Team")
+
+		add_member(team.name, user, "Manager")
+
+		self.assertEqual(frappe.db.get_value("User", user, "user_type"), "Website User")
+
 	def test_frontdesk_membership_grants_frontdesk_manager_only(self):
 		user = create_user("role-frontdesk@example.com", "Frontdesk")
 		team = create_team("Frontdesk Role Team")

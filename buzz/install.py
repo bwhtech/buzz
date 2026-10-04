@@ -135,22 +135,27 @@ def setup_test_records():
 	test_category = frappe.get_doc({"doctype": "Event Category", "name": "Test Category"}).insert(
 		ignore_if_duplicate=True
 	)
-	test_venue = frappe.get_doc(
-		{"doctype": "Event Venue", "name": "Test Venue", "address": "test", "team": admin_team}
-	).insert(ignore_if_duplicate=True)
-	test_host = frappe.get_doc({"doctype": "Event Host", "name": "Test Host", "team": admin_team}).insert(
-		ignore_if_duplicate=True
+	test_venue = (
+		frappe.db.exists("Event Venue", {"venue_name": "Test Venue"})
+		or frappe.get_doc(
+			{"doctype": "Event Venue", "venue_name": "Test Venue", "address": "test", "team": admin_team}
+		)
+		.insert()
+		.name
 	)
+	test_host = frappe.get_doc(
+		{"doctype": "Event Host", "host_name": "Test Host", "team": admin_team}
+	).insert(ignore_if_duplicate=True)
 
 	test_event_exists = frappe.db.exists("Buzz Event", {"route": "test-route"})
 	if test_event_exists:
 		frappe.delete_doc("Buzz Event", test_event_exists, force=True)
-	frappe.get_doc(
+	test_event = frappe.get_doc(
 		{
 			"doctype": "Buzz Event",
 			"team": admin_team,
 			"category": test_category.name,
-			"venue": test_venue.name,
+			"venue": test_venue,
 			"host": test_host.name,
 			"title": "Test Event",
 			"route": "test-route",
@@ -160,12 +165,14 @@ def setup_test_records():
 			"end_time": "18:00:00",
 		}
 	).insert(ignore_if_duplicate=True)
+	test_event.db_set("registrations_close_at", None)
 
 
 def after_install():
 	create_event_categories()
 	create_talk_proposal_statuses()
 	create_custom_fields()
+	create_administrator_team()
 
 
 def on_migrate():
@@ -173,6 +180,12 @@ def on_migrate():
 	create_event_categories()
 	create_talk_proposal_statuses()
 	create_custom_fields()
+
+
+def create_administrator_team():
+	"""Give a site without teams one owned by Administrator, so /b opens to the manager dashboard."""
+	if not frappe.db.exists("Buzz Team"):
+		create_default_team_for("Administrator")
 
 
 def after_app_install(app_name: str):
@@ -225,6 +238,7 @@ def create_talk_proposal_statuses():
 		{"name": "Rejected", "color": "Red"},
 		{"name": "Replied", "color": "Blue"},
 		{"name": "Duplicate", "color": "Gray"},
+		{"name": "Withdrawn", "color": "Gray"},
 	]
 
 	for status in statuses:

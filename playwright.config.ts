@@ -4,6 +4,7 @@ import { defineConfig, devices } from "@playwright/test"
 const authFile = "e2e/.auth/user.json"
 const frontdeskFile = "e2e/.auth/frontdesk.json"
 const ticketsAttendeeFile = "e2e/.auth/tickets-attendee.json"
+const settingsUserFile = "e2e/.auth/settings-user.json"
 
 /**
  * Playwright configuration for Buzz E2E tests.
@@ -63,7 +64,8 @@ export default defineConfig({
 		},
 		{
 			name: "chromium",
-			testIgnore: /guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets|language/,
+			testIgnore:
+				/guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets|language|user-settings/,
 			use: {
 				...devices["Desktop Chrome"],
 				storageState: authFile,
@@ -153,6 +155,25 @@ export default defineConfig({
 				storageState: ticketsAttendeeFile,
 			},
 			dependencies: ["tickets-setup"],
+		},
+		{
+			name: "user-settings-setup",
+			testMatch: /user-settings\.setup\.ts/,
+			use: {
+				storageState: authFile,
+			},
+			dependencies: ["setup"],
+		},
+		{
+			// Its own user: the spec rewrites the session user's profile, which the shared
+			// session's other specs read.
+			name: "user-settings-chromium",
+			testMatch: /user-settings\.spec\.ts/,
+			use: {
+				...devices["Desktop Chrome"],
+				storageState: settingsUserFile,
+			},
+			dependencies: ["user-settings-setup"],
 		},
 		{
 			name: "language-setup",

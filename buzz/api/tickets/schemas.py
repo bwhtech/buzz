@@ -20,6 +20,7 @@ class TicketDetailsResponse(APIResponse):
 	doc: Any
 	add_ons: list[TicketAddOnDetail]
 	event: Any
+	venue: str | None
 	booking: Any | None
 	ticket_type: Any
 	can_transfer_ticket: bool

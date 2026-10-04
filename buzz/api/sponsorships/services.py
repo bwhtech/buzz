@@ -39,7 +39,7 @@ class SponsorshipService:
 
 	@property
 	def is_owner(self) -> bool:
-		return self.enquiry.owner == frappe.session.user
+		return self.enquiry.is_applicant()
 
 	def details(self) -> SponsorshipDetailsResponse:
 		if not self.is_owner and not frappe.has_permission("Sponsorship Enquiry", "read", self.enquiry):
@@ -53,7 +53,9 @@ class SponsorshipService:
 			has_sponsor=bool(sponsor),
 		)
 
-	def payment_link(self, tier_id: str, payment_gateway: str | None = None) -> str:
+	def payment_link(
+		self, tier_id: str, payment_gateway: str | None = None, currency: str | None = None
+	) -> str:
 		if not self.is_owner:
 			PaymentNotPermitted.throw()
 
@@ -62,6 +64,7 @@ class SponsorshipService:
 			tier_id,
 			f"/b/account/sponsorships/{self.enquiry_id}?success=true",
 			payment_gateway=payment_gateway,
+			currency=currency,
 		)
 
 	def withdraw(self) -> None:
@@ -99,7 +102,7 @@ class SponsorshipService:
 			about=event.about,
 			start_date=event.start_date,
 			end_date=event.end_date,
-			venue=event.venue,
+			venue=event.get_venue_name(),
 			route=event.route,
 		)
 
@@ -117,6 +120,8 @@ class SponsorshipService:
 
 
 def list_user_enquiries() -> list[SponsorshipListItem]:
+	if frappe.session.user == "Guest":
+		return []
 	enquiries = frappe.db.get_all(
 		"Sponsorship Enquiry",
 		filters={"owner": frappe.session.user},

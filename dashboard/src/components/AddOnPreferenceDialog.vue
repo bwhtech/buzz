@@ -42,10 +42,10 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog, FormControl, createResource, toast } from "frappe-ui"
+import { Button, Dialog, FormControl, toast, useCall } from "frappe-ui"
 import { type PropType, computed, ref, watch } from "vue"
 
-import type { FrappeError, TicketAddOn } from "@/types"
+import type { TicketAddOn } from "@/types"
 
 const props = defineProps({
 	modelValue: {
@@ -104,16 +104,18 @@ watch(
 	{ immediate: true },
 )
 
-const savePreferences = createResource({
-	url: "buzz.api.tickets.change_add_on_preference",
+const savePreferences = useCall<unknown, { add_on_id?: string; new_value: string }>({
+	url: "/api/v2/method/buzz.api.tickets.change_add_on_preference",
+	method: "POST",
+	immediate: false,
 	onSuccess: () => {
 		toast.success("Add-on preferences updated successfully!")
 		emit("success")
 		show.value = false
 	},
-	onError: (error: FrappeError) => {
+	onError: (error) => {
 		// Check if this is the specific error about change window closing
-		if (error?.message?.includes("change window has closed")) {
+		if (error.message.includes("change window has closed")) {
 			toast.error(
 				"Add-on changes are not allowed at this time - the change window has closed as the event is approaching.",
 			)
@@ -138,10 +140,9 @@ const handleSave = async () => {
 	// Save each changed preference
 	for (const addon of changes) {
 		const newValue = preferences.value[addon.id ?? ""]
-		await savePreferences.submit({
-			add_on_id: addon.id,
-			new_value: newValue,
-		})
+		await savePreferences.submit({ add_on_id: addon.id, new_value: newValue }).catch(() => null)
+		// The first failure ends the batch; its toast has already said why.
+		if (savePreferences.error) return
 	}
 }
 </script>

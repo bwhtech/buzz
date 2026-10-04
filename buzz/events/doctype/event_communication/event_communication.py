@@ -1,0 +1,43 @@
+# Copyright (c) 2026, BWH Studios and contributors
+# For license information, please see license.txt
+
+import frappe
+from frappe.model.document import Document
+
+from buzz.api.communications.exceptions import NoRecipients
+from buzz.api.communications.services import recipients_of
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
+
+
+class EventCommunication(Document):
+	def validate(self):
+		self.recipients = recipients_of(self.event, self.audience, self.ticket_types, self.statuses)
+		self.recipient_count = len(self.recipients)
+		if not self.recipient_count:
+			NoRecipients.throw()
+
+	def after_insert(self):
+		event = frappe.get_cached_doc("Buzz Event", self.event)
+		frappe.sendmail(
+			recipients=self.recipients,
+			subject=self.subject or event.title,
+			message=self.render(event),
+			raw_html=True,
+			add_css=False,
+			# No team support address yet: replies reach whoever pressed Send.
+			reply_to=get_event_team_settings(self.event).support_email or self.owner,
+			reference_doctype=self.doctype,
+			reference_name=self.name,
+			send_after=self.scheduled_at,
+			# Not queue_separately: that opens SMTP at queue time. One row still mails each
+			# recipient on its own at flush, and past 100 recipients frappe batches by itself.
+			add_unsubscribe_link=0,
+		)
+
+	def render(self, event) -> str:
+		# nosemgrep: frappe-ssti
+		return frappe.render_template(
+			"buzz/templates/emails/event_communication.html",
+			{"event_doc": event, "message": self.message},
+			is_path=True,
+		)

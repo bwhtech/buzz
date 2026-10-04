@@ -5,7 +5,7 @@
 		</div>
 
 		<div v-else-if="submitted" class="text-center">
-			<div class="bg-surface-green-1 border border-outline-green-1 rounded-lg p-8">
+			<div class="bg-surface-green-1 border border-outline-green-1 rounded-6 p-8">
 				<LucideCheckCircle class="w-16 h-16 text-ink-green-6 mx-auto mb-4" />
 				<h2 class="text-ink-green-6 text-2xl-semibold mb-2">
 					{{ form_data?.success_title }}
@@ -28,7 +28,7 @@
 
 		<div v-else-if="form_data">
 			<form
-				class="bg-surface-base border border-outline-gray-1 rounded-lg"
+				class="bg-surface-base border border-outline-gray-1 rounded-6"
 				@submit.prevent="handleSubmit"
 			>
 				<div class="px-6 py-5 border-b border-outline-gray-1">
@@ -64,7 +64,7 @@
 		</div>
 
 		<div v-else-if="load_error" class="text-center">
-			<div class="bg-surface-amber-1 border border-outline-amber-1 rounded-lg p-8">
+			<div class="bg-surface-amber-1 border border-outline-amber-1 rounded-6 p-8">
 				<LucideAlertCircle class="w-16 h-16 text-ink-amber-6 mx-auto mb-4" />
 				<h2 class="text-ink-amber-6 text-2xl-semibold mb-2">
 					{{ __("Not Found") }}
@@ -78,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Spinner, createResource, toast, usePageMeta } from "frappe-ui"
+import { Button, type FrappeResponseError, Spinner, toast, useCall, usePageMeta } from "frappe-ui"
 import { marked } from "marked"
 import { computed, reactive, ref } from "vue"
 import LucideAlertCircle from "~icons/lucide/alert-circle"
@@ -87,7 +87,8 @@ import LucideCheckCircle from "~icons/lucide/check-circle"
 import CustomFieldInput from "@/components/CustomFieldInput.vue"
 import FormFieldSections from "@/components/FormFieldSections.vue"
 import LoginRequired from "@/components/LoginRequired.vue"
-import type { FrappeError, FrappeField } from "@/types"
+import type { FrappeField } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 
 interface ProposalFormData {
 	success_message?: string
@@ -104,7 +105,7 @@ const load_error = ref<string | null>(null)
 
 usePageMeta(() => {
 	const bannerTitle = form_data.value?.banner_title
-	return bannerTitle ? { title: bannerTitle } : null
+	return bannerTitle ? { title: `${bannerTitle} | Buzz` } : null
 })
 
 const rendered_success_message = computed(() => {
@@ -113,10 +114,9 @@ const rendered_success_message = computed(() => {
 	return marked(msg)
 })
 
-const form_data_resource = createResource({
-	url: "buzz.api.forms.get_event_proposal_form_data",
-	auto: true,
-	onSuccess: (data: ProposalFormData) => {
+const form_data_resource = useCall<ProposalFormData>({
+	url: "/api/v2/method/buzz.api.forms.get_event_proposal_form_data",
+	onSuccess: (data) => {
 		form_data.value = data
 		for (const field of data.form_fields || []) {
 			if (field.default) {
@@ -124,24 +124,24 @@ const form_data_resource = createResource({
 			}
 		}
 	},
-	onError: (err: FrappeError) => {
-		if (err.exc_type === "LoginRequired") {
+	onError: (err) => {
+		if ((err as FrappeResponseError).type === "LoginRequired") {
 			login_required.value = true
 			return
 		}
-		load_error.value = err.messages?.[0] || __("Form not found")
+		load_error.value = serverErrorMessage(err) || __("Form not found")
 	},
 })
 
-const submit_resource = createResource({
-	url: "buzz.api.forms.submit_event_proposal",
+const submit_resource = useCall<unknown, { data: Record<string, unknown> }>({
+	url: "/api/v2/method/buzz.api.forms.submit_event_proposal",
+	method: "POST",
+	immediate: false,
 	onSuccess: () => {
 		submitted.value = true
 	},
-	onError: (err: FrappeError) => {
-		const messages = err.messages || []
-		const msg = messages.find((m) => typeof m === "string" && m.trim())
-		toast.error(msg || __("Failed to submit proposal"))
+	onError: (err) => {
+		toast.error(serverErrorMessage(err) || __("Failed to submit proposal"))
 	},
 })
 

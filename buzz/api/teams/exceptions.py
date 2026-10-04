@@ -12,6 +12,10 @@ class CannotManageMembers(NotPermitted):
 	message = _lt("You cannot manage members of this team.")
 
 
+class CannotEditTeam(NotPermitted):
+	message = _lt("You cannot edit this team.")
+
+
 class CannotGrantOwnership(NotPermitted):
 	title = _lt("Not Permitted")
 	message = _lt("Ownership of a team cannot be granted.")
@@ -20,3 +24,8 @@ class CannotGrantOwnership(NotPermitted):
 class UnknownTeamRole(BuzzAPIError):
 	title = _lt("Invalid Role")
 	message = _lt("{team_role} is not a team role.")
+
+
+class NoPendingInvite(BuzzAPIError):
+	title = _lt("No Invitation")
+	message = _lt("There is no pending invitation for {email}.")

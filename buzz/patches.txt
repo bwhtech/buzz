@@ -18,3 +18,14 @@ buzz.patches.rename_free_webinar_to_free_event
 buzz.patches.create_default_teams #2
 buzz.patches.assign_default_team #2
 buzz.patches.create_team_settings_for_existing_teams
+buzz.patches.create_withdrawn_proposal_status
+buzz.patches.backfill_event_host_names
+buzz.patches.backfill_event_co_hosts
+buzz.patches.migrate_sponsor_enquiry_forms
+buzz.patches.generate_event_share_images #30-09-2026
+buzz.patches.make_ticket_qr_codes_private
+buzz.patches.make_sponsor_logos_public
+buzz.patches.set_event_venue_name
+buzz.patches.move_sponsorship_tier_price_to_prices
+buzz.patches.move_ticket_type_price_to_prices
+buzz.patches.create_administrator_team

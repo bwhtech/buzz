@@ -5,6 +5,7 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.api.booking import (
 	get_booking_details,
+	get_booking_summary,
 	get_event_booking_data,
 	process_booking,
 	send_guest_booking_otp,
@@ -46,6 +47,7 @@ GUEST_EVENT_DETAIL_FIELDS = {
 	"time_zone",
 	"time_zone_label",
 	"venue",
+	"venue_name",
 	"medium",
 	"category",
 	"banner_image",
@@ -56,6 +58,27 @@ GUEST_EVENT_DETAIL_FIELDS = {
 	"guest_verification_method",
 	"default_ticket_type",
 }
+
+SUMMARY_FIELDS = {
+	"name",
+	"booked_by",
+	"status",
+	"payment_status",
+	"payment_method",
+	"is_offline",
+	"currency",
+	"booked_on",
+	"lines",
+	"net_amount",
+	"discount_amount",
+	"coupon_code",
+	"tax_amount",
+	"tax_label",
+	"tax_percentage",
+	"total_amount",
+}
+
+LINE_FIELDS = {"label", "quantity", "amount", "add_ons"}
 
 DETAILS_FIELDS = {
 	"doc",
@@ -506,3 +529,119 @@ class TestValidateCoupon(BookingTestCase):
 		)
 		self.assertTrue(payload["valid"])
 		self.assertEqual(payload["max_discount_amount"], 0)
+
+
+class BookingSummaryTestCase(BookingTestCase):
+	"""A booker and an outsider, and the helpers both summary endpoints book through."""
+
+	def setUp(self):
+		super().setUp()
+		for email, first_name in ((BOOKER, "Booking"), (OUTSIDER, "Outsider")):
+			if not frappe.db.exists("User", email):
+				frappe.get_doc(
+					{"doctype": "User", "email": email, "first_name": first_name, "send_welcome_email": 0}
+				).insert(ignore_permissions=True)
+
+	def attendee(self, email="booker@example.com", **overrides):
+		return {
+			"first_name": "Booker",
+			"email": email,
+			"ticket_type": str(self.free_ticket_type.name),
+			**overrides,
+		}
+
+	def booking_of(self, user):
+		"""A paid booking answers with a payment link, not a name, so it is looked up."""
+		return frappe.get_all(
+			"Event Booking",
+			filters={"event": self.event.name, "user": user},
+			order_by="creation desc",
+			pluck="name",
+		)[0]
+
+	def book_as(self, user, attendees=None):
+		frappe.set_user(user)
+		try:
+			# The add-on path builds a payment link from a gateway tests do not configure.
+			with patch("buzz.api.booking.services.get_payment_link_for_booking", return_value="/pay"):
+				request = self.booking_request(attendees=attendees or [self.attendee()])
+				return process_booking(request).__json__().get("booking_name")
+		finally:
+			frappe.set_user("Administrator")
+
+
+class TestGetBookingSummary(BookingSummaryTestCase):
+	"""The single-booking receipt, which is scoped by read access rather than by buyer."""
+
+	def summary_of(self, booking_name, user):
+		frappe.set_user(user)
+		try:
+			return get_booking_summary(booking_name).__json__()
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_the_buyer_reads_their_own_booking(self):
+		booking_name = self.book_as(BOOKER)
+
+		summary = self.summary_of(booking_name, BOOKER)
+
+		self.assertEqual(summary["name"], booking_name)
+		self.assertEqual(set(summary), SUMMARY_FIELDS)
+
+	def test_the_payload_names_no_ticket_and_no_attendee(self):
+		booking_name = self.book_as(BOOKER)
+
+		summary = self.summary_of(booking_name, BOOKER)
+
+		self.assertEqual(set(summary["lines"][0]), LINE_FIELDS)
+
+	def test_two_attendees_on_one_ticket_type_are_one_line(self):
+		booking_name = self.book_as(BOOKER, [self.attendee(), self.attendee("second@example.com")])
+
+		lines = self.summary_of(booking_name, BOOKER)["lines"]
+
+		self.assertEqual(len(lines), 1)
+		self.assertEqual(lines[0]["quantity"], 2)
+		self.assertEqual(lines[0]["label"], self.free_ticket_type.title)
+
+	def test_an_add_on_hangs_off_its_ticket_line(self):
+		add_on = frappe.get_doc(
+			{
+				"doctype": "Ticket Add-on",
+				"event": self.event.name,
+				"title": f"Meal {frappe.generate_hash(length=6)}",
+				"price": 500,
+				"enabled": 1,
+			}
+		).insert(ignore_permissions=True)
+		self.book_as(BOOKER, [self.attendee(add_ons=[{"add_on": add_on.name, "value": "Veg"}])])
+
+		add_ons = self.summary_of(self.booking_of(BOOKER), BOOKER)["lines"][0]["add_ons"]
+
+		self.assertEqual(len(add_ons), 1)
+		self.assertEqual(add_ons[0]["label"], add_on.title)
+		self.assertEqual(add_ons[0]["quantity"], 1)
+		self.assertEqual(add_ons[0]["amount"], 500)
+
+	def test_an_attendee_reads_the_booking_that_paid_for_their_ticket(self):
+		booking_name = self.book_as(BOOKER, [self.attendee(email=OUTSIDER)])
+
+		summary = self.summary_of(booking_name, OUTSIDER)
+
+		self.assertEqual(summary["name"], booking_name)
+
+	def test_nobody_else_reads_it(self):
+		booking_name = self.book_as(BOOKER)
+
+		with self.assertRaises(frappe.PermissionError):
+			self.summary_of(booking_name, OUTSIDER)
+
+	def test_a_cancelled_ticket_stops_being_a_way_in(self):
+		booking_name = self.book_as(BOOKER, [self.attendee(email=OUTSIDER)])
+		# Cancelling a ticket mails its holder, and a test site configures no email account.
+		with patch("frappe.sendmail"):
+			for ticket in frappe.get_all("Event Ticket", {"booking": booking_name}, pluck="name"):
+				frappe.get_doc("Event Ticket", ticket).cancel()
+
+		with self.assertRaises(frappe.PermissionError):
+			self.summary_of(booking_name, OUTSIDER)

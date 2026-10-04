@@ -5,9 +5,12 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cstr, flt
 
+from buzz import telemetry
 from buzz.api.booking.exceptions import RegistrationsClosed
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, are_registrations_closed
+from buzz.emails import is_full_document
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
+from buzz.events.online_meeting import OnlineMeeting
 from buzz.payments import get_controller, mark_payment_as_received
 from buzz.permissions import has_team_access
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
@@ -64,6 +67,7 @@ class EventBooking(Document):
 		self.validate_ticket_availability()
 		self.fetch_amounts_from_ticket_types()
 		self.set_currency()
+		self.validate_add_ons_currency()
 		self.set_total()
 		self.apply_coupon_if_applicable()
 		self.apply_taxes_if_applicable()
@@ -166,17 +170,22 @@ class EventBooking(Document):
 
 	def fetch_amounts_from_ticket_types(self):
 		for attendee in self.attendees:
-			price, currency = frappe.get_cached_value(
-				"Event Ticket Type", attendee.ticket_type, ["price", "currency"]
-			)
-			# Always set price from ticket type - coupon will discount later
-			attendee.amount = price
-			if not attendee.currency:
-				attendee.currency = currency
+			ticket_type = frappe.get_cached_doc("Event Ticket Type", attendee.ticket_type)
+			attendee.currency = self.currency or ticket_type.prices[0].currency
+			attendee.amount = ticket_type.price_in(attendee.currency)
+
+	def validate_add_ons_currency(self):
+		for attendee in self.attendees:
+			if not attendee.add_ons:
+				continue
+			add_ons = frappe.get_cached_doc("Attendee Ticket Add-on", attendee.add_ons).add_ons
+			if any(row.price and row.currency != self.currency for row in add_ons):
+				frappe.throw(_("Paid add-ons can't be paid in {0}").format(self.currency))
 
 	def on_submit(self):
 		self.validate_coupon_availability()
 		self.generate_tickets()
+		self.capture_confirmed()
 
 		try:
 			self.send_booking_confirmation_email()
@@ -186,6 +195,26 @@ class EventBooking(Document):
 				reference_doctype=self.doctype,
 				reference_name=self.name,
 			)
+
+	def capture_confirmed(self):
+		if not self.total_amount:
+			payment = "free"
+		elif self.payment_method == OFFLINE_PAYMENT_METHOD:
+			payment = "offline"
+		else:
+			payment = "online"
+
+		telemetry.capture(
+			"booking_confirmed",
+			{
+				"payment": payment,
+				"attendees": telemetry.count_bucket(len(self.attendees)),
+				"coupon": bool(self.coupon_code),
+				"add_ons": any(attendee.add_ons for attendee in self.attendees),
+				"utm": bool(self.utm_parameters),
+				"taxed": bool(self.tax_amount),
+			},
+		)
 
 	def send_booking_confirmation_email(self):
 		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
@@ -225,11 +254,14 @@ class EventBooking(Document):
 			subject = email_template.get("subject") or subject
 			content = email_template.get("message")
 
+		full_document = not template or is_full_document(content)
 		frappe.sendmail(
 			recipients=[recipient],
 			subject=subject,
 			content=content,
 			template=None if template else builtin,
+			raw_html=full_document,
+			add_css=not full_document,
 			args=args,
 			reference_doctype=self.doctype,
 			reference_name=self.name,
@@ -251,8 +283,9 @@ class EventBooking(Document):
 		return {
 			"doc": self,
 			"event_doc": event_doc,
+			"meeting": OnlineMeeting(event_doc),
 			"event_title": event_doc.title,
-			"venue": event_doc.venue,
+			"venue": event_doc.get_venue_name(),
 			"attendee_rows": self.get_attendee_email_rows(),
 			"support_email": get_event_team_settings(self.event).support_email,
 		}
@@ -640,6 +673,9 @@ class EventBooking(Document):
 			frappe.throw(error_msg)
 
 		if coupon.coupon_type == "Discount":
+			is_usable, error_msg = coupon.is_usable_in_currency(self.currency, self.event)
+			if not is_usable:
+				frappe.throw(error_msg)
 			is_met, error_msg = coupon.is_min_order_met(self.net_amount)
 			if not is_met:
 				frappe.throw(error_msg)

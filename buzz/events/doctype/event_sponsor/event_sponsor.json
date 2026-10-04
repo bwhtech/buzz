@@ -12,6 +12,7 @@
   "event",
   "tier",
   "country",
+  "contact_email",
   "additional_section",
   "enquiry"
  ],
@@ -69,13 +70,19 @@
    "fieldtype": "Link",
    "label": "Country",
    "options": "Country"
+  },
+  {
+   "fieldname": "contact_email",
+   "fieldtype": "Data",
+   "label": "Contact Email",
+   "options": "Email"
   }
  ],
  "grid_page_length": 50,
  "image_field": "company_logo",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-28 16:18:05.658346",
+ "modified": "2026-09-18 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Sponsor",

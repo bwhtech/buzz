@@ -11,7 +11,12 @@ test.describe("Create event", () => {
 		await expect(page).toHaveURL(/\/b\/manage\/team\/events\/new$/, { timeout: 15000 })
 		await expect(page.getByRole("button", { name: "Add a banner" })).toBeVisible()
 		await expect(page.getByRole("textbox", { name: "Event title" })).toBeVisible()
-		// Nothing is filled in yet, so the page must not offer to create anything.
-		await expect(page.getByRole("button", { name: "Create event" })).toBeDisabled()
+		// Nothing is filled in yet, so the button stays live and says what is missing
+		// rather than leaving the organiser guessing what would enable it.
+		const create = page.getByRole("button", { name: "Create", exact: true })
+		await expect(create).toBeEnabled()
+		await create.click()
+		// The schedule is pre-filled, so only the name and the venue are outstanding.
+		await expect(page.getByText("Add name and venue")).toBeVisible()
 	})
 })

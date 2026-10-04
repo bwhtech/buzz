@@ -5,7 +5,7 @@
 		</div>
 
 		<div v-else-if="registered" class="text-center">
-			<div class="bg-surface-green-1 border border-outline-green-1 rounded-lg p-8">
+			<div class="bg-surface-green-1 border border-outline-green-1 rounded-6 p-8">
 				<LucideCheckCircle class="w-16 h-16 text-ink-green-6 mx-auto mb-4" />
 				<h2 class="text-ink-green-6 text-2xl-semibold mb-2">
 					{{ __("Thank you for your interest!") }}
@@ -16,10 +16,7 @@
 			</div>
 		</div>
 
-		<div
-			v-else-if="campaignDoc"
-			class="bg-surface-base border border-outline-gray-1 rounded-lg p-6"
-		>
+		<div v-else-if="campaignDoc" class="bg-surface-base border border-outline-gray-1 rounded-6 p-6">
 			<h1 class="text-ink-gray-9 text-3xl-bold mb-6">
 				{{ campaignDoc.title }}
 			</h1>
@@ -39,13 +36,11 @@
 				{{ __("Register") }}
 			</Button>
 
-			<p v-if="errorMessage" class="text-ink-red-5 text-sm mt-4 text-center">
-				{{ errorMessage }}
-			</p>
+			<ErrorMessage v-if="errorMessage" class="mt-4 text-center" :message="errorMessage" />
 		</div>
 
 		<div v-else-if="error" class="text-center">
-			<div class="bg-surface-red-1 border border-outline-red-1 rounded-lg p-8">
+			<div class="bg-surface-red-1 border border-outline-red-1 rounded-6 p-8">
 				<LucideXCircle class="w-16 h-16 text-ink-red-5 mx-auto mb-4" />
 				<h2 class="text-ink-red-6 text-2xl-semibold mb-2">
 					{{ __("Campaign Not Found") }}
@@ -59,13 +54,13 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Spinner, createResource } from "frappe-ui"
+import { Button, ErrorMessage, Spinner, useCall } from "frappe-ui"
 import { marked } from "marked"
 import { computed, ref } from "vue"
 import LucideCheckCircle from "~icons/lucide/check-circle"
 import LucideXCircle from "~icons/lucide/x-circle"
 
-import type { FrappeError } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 
 interface Campaign {
 	title?: string
@@ -90,28 +85,27 @@ const renderedDescription = computed(() => {
 	return marked(campaignDoc.value.description)
 })
 
-const campaignResource = createResource({
-	url: "buzz.api.campaigns.get_campaign_details",
-	params: {
-		campaign: props.campaign,
-	},
-	auto: true,
-	onSuccess: (data: Campaign) => {
+const campaignResource = useCall<Campaign, { campaign: string }>({
+	url: "/api/v2/method/buzz.api.campaigns.get_campaign_details",
+	params: { campaign: props.campaign },
+	onSuccess: (data) => {
 		campaignDoc.value = data
 	},
-	onError: (err: FrappeError) => {
-		error.value = err.messages?.[0] || __("Campaign not found or not active")
+	onError: (err) => {
+		error.value = serverErrorMessage(err) || __("Campaign not found or not active")
 	},
 })
 
-const registerResource = createResource({
-	url: "buzz.api.campaigns.register_campaign_interest",
+const registerResource = useCall<unknown, { campaign: string }>({
+	url: "/api/v2/method/buzz.api.campaigns.register_campaign_interest",
+	method: "POST",
+	immediate: false,
 	onSuccess: () => {
 		registered.value = true
 		errorMessage.value = null
 	},
-	onError: (err: FrappeError) => {
-		errorMessage.value = err.messages?.[0] || __("Failed to register interest")
+	onError: (err) => {
+		errorMessage.value = serverErrorMessage(err) || __("Failed to register interest")
 	},
 })
 

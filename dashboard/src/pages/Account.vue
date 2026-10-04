@@ -11,9 +11,10 @@
 		/>
 	</div>
 
-	<!-- Desktop: Tabs for navigation -->
+	<!-- Desktop: Tabs for navigation. Unbound in route mode, so selection follows
+	     the URL; the key re-mounts the list when the async Sponsorships tab lands. -->
 	<div class="hidden sm:block">
-		<Tabs as="div" v-model="tabIndex" :tabs="tabs">
+		<Tabs as="div" :key="tabs.length" :tabs="tabs">
 			<template #tab-panel>
 				<div></div>
 			</template>
@@ -26,8 +27,8 @@
 </template>
 
 <script setup lang="ts">
-import { Tabs, createResource } from "frappe-ui"
-import { computed, ref, watch } from "vue"
+import { Tabs, useCall } from "frappe-ui"
+import { computed, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import LucideCalendarDays from "~icons/lucide/calendar-days"
 import LucideCircleDollarSign from "~icons/lucide/circle-dollar-sign"
@@ -39,33 +40,39 @@ import ProfileView from "@/components/ProfileView.vue"
 const route = useRoute()
 const router = useRouter()
 
-const sponsorships = createResource({
-	url: "buzz.api.sponsorships.get_user_sponsorship_inquiries",
-	auto: true,
-	cacheKey: "account-sponsorships-check",
+const sponsorships = useCall<{ name: string }[]>({
+	url: "/api/v2/method/buzz.api.sponsorships.get_user_sponsorship_inquiries",
 	onError: console.error,
 })
 
 const tabs = computed(() => {
 	const accountTabs = [
 		{
+			value: "/account/bookings",
 			label: __("My Bookings"),
 			route: "/account/bookings",
-			icon: LucideCalendarDays,
+			iconLeft: LucideCalendarDays,
 		},
-		{ label: __("My Tickets"), route: "/account/tickets", icon: LucideTicket },
 		{
+			value: "/account/tickets",
+			label: __("My Tickets"),
+			route: "/account/tickets",
+			iconLeft: LucideTicket,
+		},
+		{
+			value: "/account/proposals",
 			label: __("Talk Proposals"),
 			route: "/account/proposals",
-			icon: LucideMegaphone,
+			iconLeft: LucideMegaphone,
 		},
 	]
 
 	if (sponsorships.data?.length) {
 		accountTabs.push({
+			value: "/account/sponsorships",
 			label: __("Sponsorships"),
 			route: "/account/sponsorships",
-			icon: LucideCircleDollarSign,
+			iconLeft: LucideCircleDollarSign,
 		})
 	}
 
@@ -88,25 +95,16 @@ function onSelectChange(value: string) {
 	router.push(value)
 }
 
-// Find the tab index based on current route path
-const getTabIndexFromRoute = () => {
-	const currentPath = route.path
-	const index = tabs.value.findIndex((tab) => currentPath.startsWith(tab.route))
-	return index >= 0 ? index : 0
-}
-
-const tabIndex = ref(getTabIndexFromRoute())
-
+// An unknown /account/* path matches no tab, so send it to the first one — but
+// only once the async Sponsorships tab has settled, or /account/sponsorships
+// would bounce away before its tab exists.
 watch(
-	[() => route.path, () => tabs.value.length, () => sponsorships.loading],
+	[() => route.path, () => tabs.value.length, () => sponsorships.isFinished],
 	() => {
 		const onKnownTab = tabs.value.some((tab) => route.path.startsWith(tab.route))
-		const settled = !sponsorships.loading
-		if (!onKnownTab && settled && route.path.startsWith("/account/")) {
+		if (!onKnownTab && sponsorships.isFinished && route.path.startsWith("/account/")) {
 			router.replace(tabs.value[0].route)
-			return
 		}
-		tabIndex.value = getTabIndexFromRoute()
 	},
 	{ immediate: true },
 )

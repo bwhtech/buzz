@@ -30,6 +30,6 @@ test.describe("Login Modal", () => {
 		await page.getByLabel("Password").fill("wrongpassword")
 		await page.getByRole("button", { name: "Login", exact: true }).click()
 		await expect(page.getByRole("dialog")).toBeVisible()
-		await expect(page.locator(".bg-surface-red-2")).toBeVisible()
+		await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible()
 	})
 })

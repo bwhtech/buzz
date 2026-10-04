@@ -6,7 +6,7 @@
 		<!-- Payment Gateway Selection Dialog -->
 		<PaymentGatewayDialog
 			v-model:open="showGatewayDialog"
-			:payment-gateways="paymentGateways"
+			:payment-gateways="gateways"
 			@gateway-selected="onGatewaySelected"
 		/>
 
@@ -60,7 +60,7 @@
 
 		<!-- Pending State for Guest Offline Booking -->
 		<div v-if="bookingSuccess && bookingPendingVerification" class="text-center py-12 px-4">
-			<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-8 max-w-md mx-auto">
+			<div class="bg-yellow-50 border border-yellow-200 rounded-7 p-8 max-w-md mx-auto">
 				<LucideClock class="w-16 h-16 text-yellow-500 mx-auto mb-4" />
 				<h2 class="text-3xl-semibold text-yellow-800 mb-2">
 					{{ __("Booking Received!") }}
@@ -98,7 +98,7 @@
 
 		<!-- Success State for Guest Booking -->
 		<div v-else-if="bookingSuccess" class="text-center py-12 px-4">
-			<div class="bg-green-50 border border-green-200 rounded-xl p-8 max-w-md mx-auto">
+			<div class="bg-green-50 border border-green-200 rounded-7 p-8 max-w-md mx-auto">
 				<LucideCheckCircle class="w-16 h-16 text-green-500 mx-auto mb-4" />
 				<h2 class="text-3xl-semibold text-green-800 mb-2">
 					{{ isZoomEvent ? __("Registration Confirmed!") : __("Booking Confirmed!") }}
@@ -151,7 +151,7 @@
 					<!-- Guest Contact Section -->
 					<div
 						v-if="props.isGuestMode"
-						class="bg-surface-base border border-outline-gray-3 rounded-xl p-4 md:p-6 mb-6 shadow-sm"
+						class="bg-surface-base border border-outline-gray-3 rounded-7 p-4 md:p-6 mb-6 shadow-sm"
 					>
 						<h3 class="text-sm-semibold text-ink-gray-8 mb-4">
 							{{ __("Your Details") }}
@@ -195,7 +195,7 @@
 					<!-- Booking-level Custom Fields -->
 					<div
 						v-if="bookingCustomFields.length > 0"
-						class="bg-surface-base border border-outline-gray-3 rounded-xl p-4 md:p-6 mb-6 shadow-sm"
+						class="bg-surface-base border border-outline-gray-3 rounded-7 p-4 md:p-6 mb-6 shadow-sm"
 					>
 						<CustomFieldsSection
 							v-model="bookingCustomFieldsData"
@@ -217,8 +217,8 @@
 						:key="attendee.id"
 						:attendee="attendee"
 						:index="index"
-						:available-ticket-types="availableTicketTypes"
-						:available-add-ons="availableAddOns"
+						:available-ticket-types="ticketTypes"
+						:available-add-ons="addOns"
 						:custom-fields="ticketCustomFields"
 						:show-remove="attendees.length > 1"
 						:eventDetails="eventDetails"
@@ -241,10 +241,21 @@
 				<!-- Right Side: Coupon, Summary and Submit -->
 				<div class="lg:col-span-1">
 					<div class="sticky top-4 w-full">
+						<div
+							v-if="currencyOptions.length > 1 && !eventDetails.free_event"
+							class="mb-3 flex items-center justify-end gap-1 text-sm text-ink-gray-5"
+						>
+							<span>{{ __("Showing {0} prices", [displayCurrency]) }}</span>
+							<Dropdown :options="currencyMenu">
+								<Button size="sm" variant="ghost" :aria-label="__('Change currency')">
+									{{ __("Change") }}
+								</Button>
+							</Dropdown>
+						</div>
 						<!-- Coupon Code Section -->
 						<div
 							v-if="finalTotal > 0 || couponApplied"
-							class="bg-surface-base border border-outline-gray-3 rounded-xl p-4 mb-4"
+							class="bg-surface-base border border-outline-gray-3 rounded-7 p-4 mb-4"
 						>
 							<h3 class="text-xs-medium text-ink-gray-6 uppercase tracking-wide mb-2">
 								{{ __("Coupon Code") }}
@@ -267,7 +278,7 @@
 							<!-- Applied state -->
 							<div v-else-if="couponData">
 								<div
-									class="inline-flex flex-col bg-green-50 border border-green-200 rounded-lg px-3 py-2"
+									class="inline-flex flex-col bg-green-50 border border-green-200 rounded-6 px-3 py-2"
 								>
 									<div class="flex items-center gap-2">
 										<LucideCheck class="w-4 h-4 text-green-600" />
@@ -311,7 +322,7 @@
 								>
 									<!-- Compact info grid -->
 									<div class="grid grid-cols-2 gap-2 text-xs">
-										<div class="bg-surface-gray-2 rounded px-2 py-1.5">
+										<div class="bg-surface-gray-2 rounded-4 px-2 py-1.5">
 											<span class="text-ink-gray-5">{{ __("Ticket") }}</span>
 											<div class="text-ink-gray-8 font-medium truncate">
 												{{
@@ -320,7 +331,7 @@
 												}}
 											</div>
 										</div>
-										<div class="bg-surface-gray-2 rounded px-2 py-1.5">
+										<div class="bg-surface-gray-2 rounded-4 px-2 py-1.5">
 											<span class="text-ink-gray-5">{{ __("Available") }}</span>
 											<div class="text-ink-gray-8 font-medium">
 												{{ couponData.remaining_tickets }}
@@ -329,7 +340,7 @@
 									</div>
 
 									<!-- Eligibility indicator -->
-									<div class="flex items-center justify-between bg-green-50 rounded px-2 py-1.5">
+									<div class="flex items-center justify-between bg-green-50 rounded-4 px-2 py-1.5">
 										<span class="text-green-700 text-xs">{{ __("Eligible attendees") }}</span>
 										<span class="text-green-700 text-sm-semibold">
 											{{ matchingAttendeesCount }}/{{ attendees.length }}
@@ -357,12 +368,26 @@
 
 							<div
 								v-if="couponError"
-								class="mt-2 flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg"
+								class="mt-2 flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-6"
 							>
 								<LucideAlertCircle class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
 								<span class="text-sm text-amber-800">{{ couponError }}</span>
 							</div>
 						</div>
+
+						<Alert
+							v-if="itemsOnlyInBase.length && displayCurrency !== baseCurrency"
+							class="mb-4"
+							theme="amber"
+							:title="__('This order will be charged in {0}', [baseCurrency])"
+							:description="
+								__('{0} is sold in {1} only. Remove it to pay in {2}.', [
+									itemsOnlyInBase.map((item) => item.title).join(', '),
+									baseCurrency,
+									displayCurrency,
+								])
+							"
+						/>
 
 						<BookingSummary
 							class="mb-6"
@@ -396,6 +421,9 @@
 							>
 								{{ submitButtonText }}
 							</Button>
+							<p v-if="isOtherCurrency" class="mt-2 text-p-xs text-ink-gray-5">
+								{{ __("Pay by card. You're charged in {0}.", [orderCurrency]) }}
+							</p>
 						</div>
 					</div>
 				</div>
@@ -406,7 +434,7 @@
 
 <script setup lang="ts">
 import { useRouteQuery } from "@vueuse/router"
-import { FormControl, createResource, toast } from "frappe-ui"
+import { Alert, Dropdown, FormControl, toast, useCall } from "frappe-ui"
 import { type PropType, computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import LucideAlertCircle from "~icons/lucide/alert-circle"
@@ -419,13 +447,12 @@ import LucideX from "~icons/lucide/x"
 import BillingDetails from "@/components/BillingDetails.vue"
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
 import { useLoginDialog } from "@/composables/useLoginDialog"
-import { userResource } from "@/data/user"
+import { loadUser, userResource } from "@/data/user"
 import type {
 	AvailableAddOn,
 	AvailableTicketType,
 	BookingAttendee,
 	CouponData,
-	FrappeError,
 	FrappeField,
 	OfflineMethod,
 } from "@/types"
@@ -435,6 +462,7 @@ import {
 } from "@/utils/bookingSuccessRedirect"
 import { formatCurrency, formatPriceOrFree } from "@/utils/currency"
 import { clearBookingCache } from "@/utils/index"
+import { serverErrorMessage } from "@/utils/serverError"
 import { isZoomBackedCategory } from "@/utils/zoomCategory"
 
 import AttendeeFormControl from "./AttendeeFormControl.vue"
@@ -575,15 +603,90 @@ onUnmounted(() => {
 	clearInterval(resendCooldownTimer)
 })
 
-// Ensure user data is loaded (only if not in guest mode)
-if (!props.isGuestMode && !userResource.data) {
-	userResource.fetch()
+if (!props.isGuestMode) {
+	loadUser()
 }
 
 // --- HELPERS / DERIVED STATE ---
-const addOnsMap = computed(() => Object.fromEntries(props.availableAddOns.map((a) => [a.name, a])))
+type Priced = { price?: number; currency?: string; prices?: { currency: string; price: number }[] }
+
+const baseCurrency = computed(() => props.availableTicketTypes[0]?.currency || "INR")
+const displayCurrency = ref(baseCurrency.value)
+
+const currencyOptions = computed(() => [
+	...new Set(
+		props.availableTicketTypes.flatMap((tt) => (tt.prices ?? []).map((row) => row.currency)),
+	),
+])
+
+const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" })
+
+const currencyMenu = computed(() =>
+	currencyOptions.value.map((currency) => ({
+		label: `${currencyNames.of(currency)} (${currency})`,
+		icon: currency === displayCurrency.value ? "lucide-check" : "lucide-dot",
+		onClick: () => (displayCurrency.value = currency),
+	})),
+)
+
+function priceIn(item: Priced, currency: string) {
+	if (currency === item.currency) return item.price ?? 0
+	if (!item.price) return 0
+	return item.prices?.find((row) => row.currency === currency)?.price
+}
+
+function pricedIn<T extends Priced>(item: T, currency: string): T {
+	const price = priceIn(item, currency)
+	return price === undefined ? item : { ...item, price, currency }
+}
+
+function withBaseOnlyNote<T extends Priced>(item: T): T & { price_note?: string } {
+	if (priceIn(item, displayCurrency.value) !== undefined)
+		return pricedIn(item, displayCurrency.value)
+	return { ...item, price_note: __("{0} only", [baseCurrency.value]) }
+}
+
+const ticketTypes = computed(() => props.availableTicketTypes.map(withBaseOnlyNote))
+const addOns = computed(() => props.availableAddOns.map(withBaseOnlyNote))
+
+const selectedItems = computed(() => {
+	const ticketTypesByName = Object.fromEntries(
+		props.availableTicketTypes.map((tt) => [String(tt.name), tt]),
+	)
+	const addOnsByName = Object.fromEntries(props.availableAddOns.map((addOn) => [addOn.name, addOn]))
+	const items = new Set<AvailableTicketType | AvailableAddOn>()
+	for (const attendee of attendees.value) {
+		const ticketType = ticketTypesByName[String(attendee.ticket_type)]
+		if (ticketType) items.add(ticketType)
+		for (const [name, selection] of Object.entries(attendee.add_ons ?? {})) {
+			if (selection.selected && addOnsByName[name]) items.add(addOnsByName[name])
+		}
+	}
+	return [...items]
+})
+
+const itemsOnlyInBase = computed(() =>
+	selectedItems.value.filter((item) => priceIn(item, displayCurrency.value) === undefined),
+)
+
+const orderCurrency = computed(() =>
+	itemsOnlyInBase.value.length ? baseCurrency.value : displayCurrency.value,
+)
+const isOtherCurrency = computed(() => orderCurrency.value !== baseCurrency.value)
+
+const gateways = computed(() =>
+	isOtherCurrency.value
+		? props.paymentGateways.filter((gateway) => !isOfflineGateway(gateway))
+		: props.paymentGateways,
+)
+
+const addOnsMap = computed(() =>
+	Object.fromEntries(props.availableAddOns.map((a) => [a.name, pricedIn(a, orderCurrency.value)])),
+)
 const ticketTypesMap = computed(() =>
-	Object.fromEntries(props.availableTicketTypes.map((t) => [t.name, t])),
+	Object.fromEntries(
+		props.availableTicketTypes.map((t) => [t.name, pricedIn(t, orderCurrency.value)]),
+	),
 )
 const eventId = computed(() => props.availableTicketTypes[0]?.event || null)
 
@@ -601,13 +704,13 @@ const getDefaultTicketType = () => {
 	const defaultTicketType = props.eventDetails?.default_ticket_type
 	if (defaultTicketType) {
 		// Verify that the default ticket type is available
-		const isAvailable = props.availableTicketTypes.some((tt) => tt.name == defaultTicketType)
+		const isAvailable = ticketTypes.value.some((tt) => tt.name == defaultTicketType)
 		if (isAvailable) {
 			return String(defaultTicketType)
 		}
 	}
 	// Fall back to the first available ticket type
-	return String(props.availableTicketTypes[0]?.name || "")
+	return String(ticketTypes.value[0]?.name || "")
 }
 
 const createNewAttendee = (): BookingAttendee => {
@@ -903,7 +1006,7 @@ watch(
 // Auto-select ticket type based on event's default or if there's only one available
 // Also revalidate stored ticket types (from localStorage) against currently available ones
 watch(
-	() => props.availableTicketTypes,
+	ticketTypes,
 	(newTicketTypes) => {
 		if (newTicketTypes && newTicketTypes.length > 0) {
 			const defaultTicketType = getDefaultTicketType()
@@ -964,12 +1067,17 @@ function prefillAttendee(field: string) {
 	if (field === "email" && !first.email) first.email = guestEmail.value
 }
 
-const processBooking = createResource({
-	url: "buzz.api.booking.process_booking",
+const processBooking = useCall<BookingSubmitResponse, { booking: Record<string, unknown> }>({
+	url: "/api/v2/method/buzz.api.booking.process_booking",
+	method: "POST",
+	immediate: false,
 })
 
-const validateCoupon = createResource({
-	url: "buzz.api.booking.validate_coupon",
+// POST although it only reads: a guest's email stays out of the query string.
+const validateCoupon = useCall<Record<string, any>, Record<string, any>>({
+	url: "/api/v2/method/buzz.api.booking.validate_coupon",
+	method: "POST",
+	immediate: false,
 })
 
 function startResendCooldown() {
@@ -983,8 +1091,10 @@ function startResendCooldown() {
 	}, 1000)
 }
 
-const sendOtpResource = createResource({
-	url: "buzz.api.booking.send_guest_booking_otp",
+const sendOtpResource = useCall<unknown, { event: string; identifier: string }>({
+	url: "/api/v2/method/buzz.api.booking.send_guest_booking_otp",
+	method: "POST",
+	immediate: false,
 	onSuccess: () => {
 		showOtpModal.value = true
 		startResendCooldown()
@@ -994,8 +1104,8 @@ const sendOtpResource = createResource({
 				: __("Verification code sent to your email"),
 		)
 	},
-	onError: (error: FrappeError) => {
-		const message = error.messages?.[0] || __("Failed to send verification code")
+	onError: (error) => {
+		const message = serverErrorMessage(error) || __("Failed to send verification code")
 		// Under the field, not in a toast the user has to remember while retyping.
 		if (isPhoneOtp.value) {
 			guestPhoneError.value = message
@@ -1031,19 +1141,18 @@ async function applyCoupon() {
 	couponCode.value = normalizedCode
 
 	couponError.value = ""
-	let result
-	try {
-		const params: Record<string, any> = {
-			coupon_code: normalizedCode,
-			event: eventId.value,
-		}
-		// Pass user email for guest mode to properly check per-user limits
-		if (props.isGuestMode && guestEmail.value.trim()) {
-			params.user_email = guestEmail.value.trim().toLowerCase()
-		}
-		result = await validateCoupon.submit(params)
-	} catch (error) {
-		couponError.value = (error as FrappeError).message || __("Failed to validate coupon")
+	const params: Record<string, any> = {
+		coupon_code: normalizedCode,
+		event: eventId.value,
+		currency: orderCurrency.value,
+	}
+	// Pass user email for guest mode to properly check per-user limits
+	if (props.isGuestMode && guestEmail.value.trim()) {
+		params.user_email = guestEmail.value.trim().toLowerCase()
+	}
+	const result = await validateCoupon.submit(params).catch(() => null)
+	if (validateCoupon.error || !result) {
+		couponError.value = serverErrorMessage(validateCoupon.error) || __("Failed to validate coupon")
 		return
 	}
 
@@ -1089,6 +1198,10 @@ async function applyCoupon() {
 		couponError.value = result.error
 	}
 }
+
+watch(orderCurrency, () => {
+	if (couponApplied.value) applyCoupon()
+})
 
 function removeCoupon() {
 	couponCode.value = ""
@@ -1217,6 +1330,7 @@ async function submit() {
 		booking_custom_fields:
 			Object.keys(cleanedBookingCustomFields).length > 0 ? cleanedBookingCustomFields : null,
 		utm_parameters: utmParameters.length > 0 ? utmParameters : null,
+		currency: orderCurrency.value,
 		guest_email: props.isGuestMode ? guestEmail.value.trim() : null,
 		guest_full_name: props.isGuestMode ? guestFullName.value.trim() : null,
 		guest_phone: props.isGuestMode && isPhoneOtp.value ? guestPhone.value.trim() : null,
@@ -1257,12 +1371,12 @@ async function submit() {
 
 		// No OTP required - proceed with payment gateway selection
 		if (finalTotal.value > 0) {
-			if (props.paymentGateways.length > 1) {
+			if (gateways.value.length > 1) {
 				pendingPayload.value = final_payload
 				showGatewayDialog.value = true
 				return
-			} else if (props.paymentGateways.length === 1) {
-				const singleGateway = props.paymentGateways[0]
+			} else if (gateways.value.length === 1) {
+				const singleGateway = gateways.value[0]
 				if (isOfflineGateway(singleGateway)) {
 					pendingPayload.value = final_payload
 					selectedOfflineMethod.value =
@@ -1273,18 +1387,18 @@ async function submit() {
 			}
 		}
 
-		selectedGateway.value = props.paymentGateways[0] || null
+		selectedGateway.value = gateways.value[0] || null
 		submitBooking(final_payload, selectedGateway.value)
 		return
 	}
 
 	if (finalTotal.value > 0) {
-		if (props.paymentGateways.length > 1) {
+		if (gateways.value.length > 1) {
 			pendingPayload.value = final_payload
 			showGatewayDialog.value = true
 			return
-		} else if (props.paymentGateways.length === 1) {
-			const singleGateway = props.paymentGateways[0]
+		} else if (gateways.value.length === 1) {
+			const singleGateway = gateways.value[0]
 			if (isOfflineGateway(singleGateway)) {
 				pendingPayload.value = final_payload
 				selectedOfflineMethod.value =
@@ -1295,61 +1409,54 @@ async function submit() {
 		}
 	}
 
-	submitBooking(final_payload, props.paymentGateways[0] || null)
+	submitBooking(final_payload, gateways.value[0] || null)
 }
 
-function submitBooking(
+async function submitBooking(
 	payload: any,
 	paymentGateway: any,
 	{ isOtpFlow = false }: { isOtpFlow?: boolean } = {},
 ) {
-	processBooking.submit(
-		{
-			booking: {
-				...payload,
-				payment_gateway: paymentGateway,
-			},
-		},
-		{
-			onSuccess: (data: BookingSubmitResponse) => {
-				clearBookingCache()
+	const data = await processBooking
+		.submit({ booking: { ...payload, payment_gateway: paymentGateway } })
+		.catch(() => null)
 
-				if (isOtpFlow) {
-					clearOtpState()
-				}
+	if (processBooking.error || !data) {
+		onBookingFailed(serverErrorMessage(processBooking.error) || __("Booking failed"), isOtpFlow)
+		return
+	}
 
-				const action = resolveBookingSuccessAction(data, {
-					isGuestMode: props.isGuestMode,
-				})
+	clearBookingCache()
+	if (isOtpFlow) {
+		clearOtpState()
+	}
 
-				if (action.type === "external") {
-					window.location.href = action.url
-				} else if (action.type === "guest-inline") {
-					bookingSuccess.value = true
-					successBookingName.value = action.bookingName
-					bookingPendingVerification.value = action.pendingVerification
-				} else {
-					router.replace(action.path)
-				}
-			},
-			onError: (error: FrappeError) => {
-				const message = error.messages?.[0] || error.message || __("Booking failed")
+	const action = resolveBookingSuccessAction(data, { isGuestMode: props.isGuestMode })
 
-				if (isOtpFlow) {
-					otpCode.value = ""
-					// Close modal on lockout or expired OTP - user must restart
-					if (message.includes("Too many") || message.includes("expired")) {
-						showOtpModal.value = false
-						toast.error(message)
-					} else {
-						otpError.value = message
-					}
-				} else {
-					toast.error(message)
-				}
-			},
-		},
-	)
+	if (action.type === "external") {
+		window.location.href = action.url
+	} else if (action.type === "guest-inline") {
+		bookingSuccess.value = true
+		successBookingName.value = action.bookingName
+		bookingPendingVerification.value = action.pendingVerification
+	} else {
+		router.replace(action.path)
+	}
+}
+
+function onBookingFailed(message: string, isOtpFlow: boolean) {
+	if (!isOtpFlow) {
+		toast.error(message)
+		return
+	}
+	otpCode.value = ""
+	// Close modal on lockout or expired OTP - user must restart
+	if (message.includes("Too many") || message.includes("expired")) {
+		showOtpModal.value = false
+		toast.error(message)
+	} else {
+		otpError.value = message
+	}
 }
 
 function onOfflinePaymentSubmit(data: any) {
@@ -1396,13 +1503,13 @@ function submitWithOtp() {
 
 	// After OTP verification, check payment gateway selection
 	if (finalTotal.value > 0) {
-		if (props.paymentGateways.length > 1) {
+		if (gateways.value.length > 1) {
 			pendingPayload.value = payloadWithOtp
 			showOtpModal.value = false
 			showGatewayDialog.value = true
 			return
-		} else if (props.paymentGateways.length === 1) {
-			const singleGateway = props.paymentGateways[0]
+		} else if (gateways.value.length === 1) {
+			const singleGateway = gateways.value[0]
 			if (isOfflineGateway(singleGateway)) {
 				pendingPayload.value = payloadWithOtp
 				selectedOfflineMethod.value =

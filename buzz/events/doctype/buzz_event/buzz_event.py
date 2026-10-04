@@ -1,14 +1,19 @@
 # Copyright (c) 2025, BWH Studios and contributors
 # For license information, please see license.txt
 
+from urllib.parse import urlparse
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
+from frappe.utils import get_datetime_in_timezone, get_system_timezone
 from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
 
+from buzz import telemetry
 from buzz.api.forms.fields import validate_excluded_fields
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
+from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import create_for_event
 from buzz.utils import get_time_zone_label, only_if_app_installed
 
 # Top-level dashboard route segments (/b/<segment>) an event route must not shadow.
@@ -37,6 +42,8 @@ class BuzzEvent(Document):
 		from frappe.types import DF
 
 		from buzz.events.doctype.buzz_event_form.buzz_event_form import BuzzEventForm
+		from buzz.events.doctype.event_cohost.event_cohost import EventCoHost
+		from buzz.events.doctype.event_external_link.event_external_link import EventExternalLink
 		from buzz.events.doctype.event_featured_speaker.event_featured_speaker import EventFeaturedSpeaker
 		from buzz.events.doctype.event_payment_gateway.event_payment_gateway import EventPaymentGateway
 		from buzz.events.doctype.schedule_item.schedule_item import ScheduleItem
@@ -53,21 +60,25 @@ class BuzzEvent(Document):
 		booking_confirmation_email_template: DF.Link | None
 		card_image: DF.AttachImage | None
 		category: DF.Link
+		co_hosts: DF.Table[EventCoHost]
 		custom_forms: DF.Table[BuzzEventForm]
 		default_ticket_type: DF.Link | None
 		end_date: DF.Date | None
 		end_time: DF.Time
+		external_links: DF.Table[EventExternalLink]
 		external_registration_page: DF.Check
 		featured_speakers: DF.Table[EventFeaturedSpeaker]
 		free_event: DF.Check
 		guest_verification_method: DF.Literal["None", "Email OTP", "Phone OTP"]
-		host: DF.Link
+		host: DF.Link | None
+		is_featured: DF.Check
 		is_published: DF.Check
 		medium: DF.Literal["In Person", "Online"]
 		meeting_link: DF.Data | None
 		meta_image: DF.AttachImage | None
 		name: DF.Int | None
 		offline_acknowledgement_email_template: DF.Link | None
+		og_image: DF.AttachImage | None
 		payment_gateways: DF.Table[EventPaymentGateway]
 		proposal: DF.Link | None
 		registration_url: DF.Data | None
@@ -88,6 +99,7 @@ class BuzzEvent(Document):
 		tax_label: DF.Data | None
 		tax_percentage: DF.Percent
 		team: DF.Link
+		theme: DF.Link | None
 		ticket_email_template: DF.Link | None
 		ticket_print_format: DF.Link | None
 		time_zone: DF.Autocomplete | None
@@ -95,6 +107,20 @@ class BuzzEvent(Document):
 		title: DF.Data
 		venue: DF.Link | None
 	# end: auto-generated types
+
+	def before_insert(self):
+		# Opaque, not a title slug: a new event is published immediately.
+		if not self.route:
+			self.route = frappe.generate_hash(length=8)
+		# Organisers open registrations once tickets and details are ready.
+		if not self.registrations_close_at:
+			self.close_registrations()
+		self.add_default_payment_gateway()
+
+	def add_default_payment_gateway(self):
+		default = frappe.db.get_single_value("Buzz Settings", "default_payment_gateway")
+		if default and not self.payment_gateways:
+			self.append("payment_gateways", {"payment_gateway": default})
 
 	def validate(self):
 		self.validate_dates()
@@ -104,7 +130,8 @@ class BuzzEvent(Document):
 		self.validate_guest_verification_config()
 		self.validate_custom_forms()
 		self.clear_unused_location()
-		self.validate_venue_team()
+		self.validate_co_hosts()
+		self.validate_external_links()
 		self.set_time_zone_label()
 
 	def clear_unused_location(self):
@@ -119,20 +146,20 @@ class BuzzEvent(Document):
 		else:
 			self.meeting_link = None
 
-	def validate_venue_team(self):
-		"""A venue may only be linked by the team that owns it.
+	def get_venue_name(self) -> str | None:
+		return frappe.get_cached_value("Event Venue", self.venue, "venue_name") if self.venue else None
 
-		Nothing downstream re-checks this: the booking confirmation and the calendar
-		invite both read the linked venue's address without a permission check, so a
-		cross-team link publishes the other team's address.
-		"""
-		if not self.venue:
-			return
+	def validate_co_hosts(self):
+		hosts = [row.host for row in self.co_hosts]
+		duplicate = next((host for host in hosts if hosts.count(host) > 1), None)
+		if duplicate:
+			label = frappe.db.get_value("Event Host", duplicate, "host_name") or duplicate
+			frappe.throw(_("{0} is already a co-host of this event.").format(label))
 
-		venue_team = frappe.db.get_value("Event Venue", self.venue, "team")
-		# An unstamped venue predates the team backfill; role permissions still gate it.
-		if venue_team and venue_team != self.team:
-			frappe.throw(_("Venue {0} belongs to another team.").format(self.venue))
+	def validate_external_links(self):
+		for row in self.external_links:
+			if urlparse(row.url or "").scheme not in ("http", "https"):
+				frappe.throw(_("Row {0}: link must start with http:// or https://").format(row.idx))
 
 	def set_time_zone_label(self):
 		# validate runs before the mandatory check, so dates may still be empty here
@@ -145,7 +172,17 @@ class BuzzEvent(Document):
 		self.time_zone_label = get_time_zone_label(self.time_zone, event_start)
 
 	def validate_custom_forms(self):
+		# A new event has no form row yet, but create_default_records is about to make one.
+		sponsor_route = (
+			frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name}, "route")
+			if not self.is_new()
+			else "enquire-sponsorship"
+		)
 		for form in self.custom_forms:
+			if form.form_doctype == "Sponsorship Enquiry":
+				frappe.throw(_("Manage sponsorship intake in Sponsor Enquiry Form."))
+			if sponsor_route and (form.route or "").lower() == sponsor_route.lower():
+				frappe.throw(_("This route is already used by the sponsorship form."))
 			if form.excluded_fields:
 				validate_excluded_fields(form.form_doctype, form.excluded_fields)
 
@@ -201,6 +238,8 @@ class BuzzEvent(Document):
 				self.tax_label = "GST"
 			if not self.tax_percentage:
 				self.tax_percentage = 18
+			if not 0 <= self.tax_percentage <= 100:
+				frappe.throw(_("Tax rate must be between 0 and 100"))
 
 	def validate_route(self):
 		if self.is_published and not self.route:
@@ -219,22 +258,61 @@ class BuzzEvent(Document):
 		if frappe.in_test or not self.allow_guest_booking:
 			return
 
-		if self.guest_verification_method == "Email OTP":
-			has_email = frappe.db.exists("Email Account", {"default_outgoing": 1, "enable_outgoing": 1})
-			if not has_email:
-				frappe.throw(
-					frappe._(
-						"Please configure an outgoing Email Account before enabling Email OTP verification."
-					),
-					title=frappe._("Email Not Configured"),
-				)
+		# Imported here rather than at the top: doctype modules load during boot, and this
+		# pulls frappe.email onto that path for a check only these branches make.
+		from buzz.api.booking.guests import email_otp_available, phone_otp_available
+
+		if self.guest_verification_method == "Email OTP" and not email_otp_available():
+			frappe.throw(
+				_("Please configure an outgoing Email Account before enabling Email OTP verification."),
+				title=_("Email Not Configured"),
+			)
+
+		if self.guest_verification_method == "Phone OTP" and not phone_otp_available():
+			frappe.throw(
+				_(
+					"Please configure SMS Settings, and allow the Guest role to send SMS, "
+					"before enabling Phone OTP verification."
+				),
+				title=_("SMS Not Configured"),
+			)
 
 	def after_insert(self):
 		self.create_default_records()
+		self.capture_created()
+		if self.is_published:
+			self.capture_published()
+
+	def capture_created(self):
+		if self.proposal:
+			source = "proposal"
+		elif self.flags.from_template:
+			source = "template"
+		else:
+			source = "blank"
+
+		telemetry.capture(
+			"event_created",
+			{
+				"source": source,
+				"medium": self.medium,
+				"free_event": bool(self.free_event),
+				"published": bool(self.is_published),
+			},
+		)
+
+	def on_trash(self):
+		# The form is created with the event and is the only doc that is one-per-event, so it
+		# goes with it. Frappe runs this before the link check, which would otherwise refuse
+		# every event delete. Enquiries block the delete on their own link to the event, so
+		# leave their form standing rather than pre-empting that with a worse message.
+		sponsorship_form_id = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
+		if sponsorship_form_id and not frappe.db.exists("Sponsorship Enquiry", {"event": self.name}):
+			frappe.delete_doc("Sponsor Enquiry Form", sponsorship_form_id, ignore_permissions=True)
 
 	def create_default_records(self):
 		records = [
-			{"doctype": "Sponsorship Tier", "title": "Normal"},
+			{"doctype": "Sponsorship Tier", "title": "Normal", "prices": [{"price": 0}]},
 			{"doctype": "Event Ticket Type", "title": "Normal"},
 		]
 		for record in records:
@@ -243,11 +321,33 @@ class BuzzEvent(Document):
 		default_forms = [
 			{"form_doctype": "Event Feedback", "route": "feedback"},
 			{"form_doctype": "Talk Proposal", "route": "propose-talk"},
-			{"form_doctype": "Sponsorship Enquiry", "route": "enquire-sponsorship"},
 		]
 		for form in default_forms:
 			self.append("custom_forms", form)
+		create_for_event(self.name)
 		self.save(ignore_permissions=True)
+
+	def archive_event(self):
+		"""Take the event off the public site, along with the forms and registrations it takes.
+
+		The booking and form gates already refuse an unpublished event; this is the stored
+		state catching up, so publishing again does not reopen everything with it.
+		"""
+		self.is_published = 0
+		self.close_registrations()
+		for form in self.custom_forms:
+			form.publish = 0
+		sponsorship_form_id = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
+		if sponsorship_form_id:
+			sponsorship_form = frappe.get_doc("Sponsor Enquiry Form", sponsorship_form_id)
+			sponsorship_form.publish = 0
+			sponsorship_form.save(ignore_permissions=True)
+		self.save()
+
+	def close_registrations(self):
+		"""Stop new registrations now, read on the event's own wall clock."""
+		timezone = self.time_zone or get_system_timezone()
+		self.registrations_close_at = get_datetime_in_timezone(timezone).replace(tzinfo=None)
 
 	@frappe.whitelist()
 	@only_if_app_installed("zoom_integration", raise_exception=True)
@@ -295,6 +395,30 @@ class BuzzEvent(Document):
 	def on_update(self):
 		self.update_zoom_webinar()
 		self.update_zoom_meeting()
+		self.capture_published_change()
+		self.enqueue_og_image()
+
+	def enqueue_og_image(self):
+		from buzz.events.og_image import EventOgImage, enqueue_generate
+
+		# A live worker would render test events mid-test and race their teardown
+		if frappe.in_test or not (self.is_published and self.route):
+			return
+		try:
+			needs_update = EventOgImage(self).needs_update()
+		except Exception:
+			# The share image is a nicety; it must never block saving the event
+			frappe.log_error(f"Share image check failed for event {self.name}")
+			return
+		if needs_update:
+			enqueue_generate(str(self.name))
+
+	def capture_published_change(self):
+		if not self.flags.in_insert and self.is_published and self.has_value_changed("is_published"):
+			self.capture_published()
+
+	def capture_published(self):
+		telemetry.capture("event_published", {"medium": self.medium, "free_event": bool(self.free_event)})
 
 	@only_if_app_installed("zoom_integration")
 	def update_zoom_webinar(self):
@@ -370,6 +494,7 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 	event.start_date = frappe.utils.today()
 	event.start_time = "09:00:00"
 	event.end_time = "18:00:00"
+	event.flags.from_template = True
 
 	# Apply additional fields first (these are mandatory fields provided by user)
 	for field, value in additional_fields.items():
@@ -422,8 +547,7 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 			ticket_type = frappe.new_doc("Event Ticket Type")
 			ticket_type.event = event.name
 			ticket_type.title = tt.title
-			ticket_type.price = tt.price
-			ticket_type.currency = tt.currency
+			ticket_type.append("prices", {"currency": tt.currency, "price": tt.price})
 			ticket_type.is_published = tt.is_published
 			ticket_type.max_tickets_available = tt.max_tickets_available
 			ticket_type.auto_unpublish_after = tt.auto_unpublish_after
@@ -444,6 +568,10 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 
 	if options.get("custom_fields"):
 		for cf in template.template_custom_fields:
+			# Sponsorship questions live on Sponsor Enquiry Form now; an older template may
+			# still carry one, and recreating it here would fail the event mid-creation.
+			if cf.custom_form_doctype == "Sponsorship Enquiry":
+				continue
 			custom_field = frappe.new_doc("Buzz Custom Field")
 			custom_field.event = event.name
 			custom_field.label = cf.label
@@ -451,6 +579,7 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 			custom_field.fieldtype = cf.fieldtype
 			custom_field.options = cf.options
 			custom_field.applied_to = cf.applied_to
+			custom_field.custom_form_doctype = cf.custom_form_doctype
 			custom_field.enabled = cf.enabled
 			custom_field.mandatory = cf.mandatory
 			custom_field.placeholder = cf.placeholder

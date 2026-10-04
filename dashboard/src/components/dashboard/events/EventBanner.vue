@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import { bannerPattern } from "@public/js/event_banner"
 import { refDebounced } from "@vueuse/core"
-import { Button, ErrorMessage, FileUploader } from "frappe-ui"
+import { Button, ErrorMessage } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
-import { bannerPattern } from "@/utils/eventBanner"
+import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
 
 // The picker is filtered to these, and the file that comes back is checked against the
 // same list: `accept` is a hint the OS may ignore, and a drag-drop never consults it.
@@ -49,16 +50,22 @@ watch(image, () => {
 </script>
 
 <template>
-	<FileUploader
+	<!-- 3:1 because that is the frame below; the crop is baked into the uploaded file, so
+		 every other place the banner appears keeps its own object-cover with no extra
+		 field to carry a position. -->
+	<ImageCropUploader
+		:aspect-ratio="3"
+		:output-width="1500"
+		:optimize="false"
 		:file-types="IMAGE_TYPES"
 		:validate-file="validateImage"
 		@success="(file: { file_url: string }) => (image = file.file_url)"
 	>
-		<template #default="{ openFileSelector, error: uploadError }">
+		<template #default="{ openFileSelector, uploading, error: uploadError }">
 			<!-- The whole banner is the hit area; the button inside stays the -->
 			<!-- keyboard-reachable control, so its press must not fire twice. -->
 			<div
-				class="relative aspect-[3/1] overflow-hidden rounded-xl border border-outline-gray-2"
+				class="relative aspect-[3/1] overflow-hidden rounded-7 border border-outline-gray-2"
 				:class="disabled ? 'cursor-default' : 'cursor-pointer'"
 				@click="!disabled && openFileSelector()"
 			>
@@ -86,7 +93,7 @@ watch(image, () => {
 					@load="loaded = true"
 				/>
 
-				<div class="absolute inset-0 grid place-items-center">
+				<div class="absolute inset-0 flex items-center justify-center gap-2">
 					<Button
 						variant="subtle"
 						icon-left="lucide-image-up"
@@ -94,11 +101,26 @@ watch(image, () => {
 						:disabled="disabled"
 						@click.stop="openFileSelector"
 					/>
+					<!-- Clearing the field is the whole removal: the event carries the file
+						 by URL, and the seeded pattern is already painted underneath. Gone
+						 mid-upload, because the upload that lands would put a banner back. -->
+					<Button
+						v-if="image && !uploading"
+						variant="subtle"
+						icon="lucide-trash-2"
+						label="Remove banner"
+						:disabled="disabled"
+						@click.stop="image = ''"
+					/>
 				</div>
 			</div>
+
+			<p class="mt-2 text-p-sm text-ink-gray-5">
+				{{ __("Use a 3:1 wide image — 1500×500 or 900×300 pixels work well.") }}
+			</p>
 
 			<!-- The slot types its error as {}, so the message needs narrowing. -->
 			<ErrorMessage v-if="uploadError" class="mt-2" :message="String(uploadError)" />
 		</template>
-	</FileUploader>
+	</ImageCropUploader>
 </template>

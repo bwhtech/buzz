@@ -54,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Spinner, createResource } from "frappe-ui"
+import { Button, Spinner, useCall } from "frappe-ui"
 import { computed } from "vue"
 import { useRoute } from "vue-router"
 
@@ -90,11 +90,10 @@ const showPaymentSummary = computed(() => {
 	return booking && (booking.total_amount || 0) > 0
 })
 
-const confirmation = createResource({
-	url: "buzz.api.booking.get_booking_confirmation",
+const confirmation = useCall<Record<string, any>, Record<string, unknown>>({
+	url: "/api/v2/method/buzz.api.booking.get_booking_confirmation",
 	params: { booking_id: props.bookingId, token: route.query.token },
-	auto: true,
-	onSuccess: (data: Record<string, any>) => {
+	onSuccess: (data) => {
 		showSuccess()
 		// Clear any stored booking form data now that the booking is confirmed
 		if (data?.event?.route) {

@@ -1,15 +1,15 @@
-import { createListResource } from "frappe-ui"
+import { useList } from "frappe-ui"
+
+import { type BadgeTheme, badgeDotClass } from "@/utils/badgeTheme"
 
 // Frappe color name (Talk Proposal Status.color) -> frappe-ui Badge theme.
-// frappe-ui's Badge only themes these five colors, so the doctype's color
-// options are limited to match.
-type BadgeTheme = "blue" | "red" | "green" | "gray" | "orange"
+// The doctype's color options are limited to the themes Badge renders.
 
 const COLOR_TO_THEME: Record<string, BadgeTheme> = {
 	Gray: "gray",
 	Green: "green",
 	Blue: "blue",
-	Orange: "orange",
+	Orange: "amber",
 	Red: "red",
 }
 
@@ -18,7 +18,7 @@ const COLOR_TO_THEME: Record<string, BadgeTheme> = {
 const FALLBACK_THEME: Record<string, BadgeTheme> = {
 	Accepted: "green",
 	Shortlisted: "blue",
-	"Review Pending": "orange",
+	"Review Pending": "amber",
 	Rejected: "red",
 	Replied: "blue",
 	Duplicate: "gray",
@@ -32,23 +32,37 @@ const STATUS_ICONS: Record<string, string> = {
 	Rejected: "lucide-circle-x",
 	Replied: "lucide-reply",
 	Duplicate: "lucide-layers-2",
+	Withdrawn: "lucide-circle-slash",
 }
 
 const FALLBACK_ICON = "lucide-squircle-dashed"
 
+// What the state means for the submitter. A status the site added itself gets the
+// fallback: say nothing about a workflow we do not know.
+const STATUS_MESSAGES: Record<string, string> = {
+	"Review Pending":
+		"Your proposal has been submitted and is under review. You can still edit it while it's pending.",
+	Shortlisted: "Your proposal has been shortlisted and is under final consideration.",
+	Accepted: "Congratulations! Your talk proposal has been accepted for the event.",
+	Rejected:
+		"Unfortunately, your proposal was not selected for this event. Thank you for your submission.",
+	Replied: "Read their notes and reply if anything is still open.",
+	Duplicate: "Another proposal for the same event already covers this talk.",
+	Withdrawn: "You withdrew this proposal.",
+}
+
+const FALLBACK_MESSAGE = "The organisers set this status for your proposal."
+
 // Module-level so every caller shares one fetch of the status list.
-const statuses = createListResource({
+const statuses = useList<{ name: string; color?: string }>({
 	doctype: "Talk Proposal Status",
 	fields: ["name", "color"],
-	order_by: "creation asc",
-	auto: true,
+	orderBy: "creation asc",
 })
 
 export function useProposalStatuses() {
 	const getStatusTheme = (status: string): BadgeTheme => {
-		const row = statuses.data?.find(
-			(item: { name: string; color?: string }) => item.name === status,
-		)
+		const row = statuses.data?.find((item) => item.name === status)
 		if (row?.color && COLOR_TO_THEME[row.color]) {
 			return COLOR_TO_THEME[row.color]
 		}
@@ -57,5 +71,9 @@ export function useProposalStatuses() {
 
 	const getStatusIcon = (status: string): string => STATUS_ICONS[status] ?? FALLBACK_ICON
 
-	return { statuses, getStatusTheme, getStatusIcon }
+	const getStatusDot = (status: string): string => badgeDotClass(getStatusTheme(status))
+
+	const getStatusMessage = (status: string): string => STATUS_MESSAGES[status] ?? FALLBACK_MESSAGE
+
+	return { statuses, getStatusTheme, getStatusIcon, getStatusDot, getStatusMessage }
 }

@@ -6,9 +6,25 @@ import pyotp
 from frappe import _
 from frappe.auth import LoginAttemptTracker
 from frappe.core.doctype.sms_settings.sms_settings import send_sms
+from frappe.email.doctype.email_account.email_account import EmailAccount
 from frappe.utils import validate_email_address, validate_phone_number_with_country_code
 
 from buzz.api.booking.exceptions import InvalidOTP, OTPExpired, TooManyOTPAttempts
+from buzz.emails import send_message_email
+
+
+def email_otp_available() -> bool:
+	"""What frappe.sendmail itself resolves through, so mail set in site_config counts."""
+	return bool(EmailAccount.find_default_outgoing())
+
+
+def phone_otp_available() -> bool:
+	"""A gateway, and a Guest allowed to use it: send_sms permission-checks its caller."""
+	if not frappe.db.get_single_value("SMS Settings", "sms_gateway_url"):
+		return False
+
+	allowed = {row.role for row in frappe.get_single("SMS Settings").get("allowed_roles")}
+	return "Guest" in allowed
 
 
 def send_booking_otp(event: int, identifier: str) -> dict | None:
@@ -49,12 +65,15 @@ def send_booking_otp(event: int, identifier: str) -> dict | None:
 def deliver_otp(channel: str, identifier: str, otp_code: str) -> None:
 	try:
 		if channel == "email":
-			frappe.sendmail(
+			send_message_email(
+				title=_("Your verification code"),
+				message=(
+					f"<p>{_('Use this code to confirm your booking:')}</p>"
+					f'<p style="font-size:28px;font-weight:600;letter-spacing:0.2em;color:#171717">{otp_code}</p>'
+					f"<p>{_('It expires in 10 minutes.')}</p>"
+				),
 				recipients=[identifier],
 				subject=_("Your Booking Verification Code"),
-				message=_(
-					"Your verification code is: <b>{0}</b><br><br>This code expires in 10 minutes."
-				).format(otp_code),
 				now=True,
 			)
 		else:

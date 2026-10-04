@@ -1,8 +1,21 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from typing import Literal
 
 from pydantic import Field
 
 from buzz.api.schemas import APIRequest, APIResponse
+
+
+class MyEventFilters(APIRequest):
+	"""Every field narrows the feed; None is no constraint.
+
+	Literals rather than plain strings so an unknown value is refused at the boundary
+	instead of quietly matching nothing.
+	"""
+
+	role: Literal["hosting", "attending"] | None = None
+	team: str | None = None
+	medium: Literal["In Person", "Online"] | None = None
 
 
 class MyEvent(APIResponse):
@@ -12,9 +25,12 @@ class MyEvent(APIResponse):
 	start_date: date
 	end_date: date | None = None
 	start_time: timedelta | None = None
+	end_time: timedelta | None = None
 	venue: str | None = None
+	medium: str | None = None
 	banner_image: str | None = None
 	is_host: bool
+	is_attendee: bool
 	team: str | None = None
 	team_name: str | None = None
 	team_logo: str | None = None
@@ -30,6 +46,20 @@ class EventVenue(APIResponse):
 	address: str | None = None
 
 
+class EventHostRef(APIResponse):
+	"""One name under "Hosted by" — the event's team, or one of its co-hosts."""
+
+	host: str
+	label: str
+	logo: str | None = None
+
+
+class EventExternalLink(APIResponse):
+	icon: str | None = None
+	label: str
+	url: str
+
+
 class EventDetail(APIResponse):
 	"""One event, with everything the manage page edits or shows."""
 
@@ -37,6 +67,7 @@ class EventDetail(APIResponse):
 	title: str
 	route: str | None = None
 	team: str | None = None
+	modified: datetime
 	start_date: date
 	end_date: date | None = None
 	start_time: timedelta | None = None
@@ -50,6 +81,9 @@ class EventDetail(APIResponse):
 	# The organiser's own link, or the one Zoom issued when the meeting was booked.
 	meeting_link: str | None = None
 	is_published: bool
+	primary_host: EventHostRef | None = None
+	co_hosts: list[EventHostRef] = Field(default_factory=list)
+	external_links: list[EventExternalLink] = Field(default_factory=list)
 
 
 class GuestAddOn(APIResponse):
@@ -65,14 +99,56 @@ class EventGuest(APIResponse):
 	attendee_name: str | None = None
 	attendee_email: str | None = None
 	ticket_type: str | None = None
+	# When the ticket was raised, which is when this guest registered.
+	registered_at: datetime | None = None
 	add_ons: list[GuestAddOn] = Field(default_factory=list)
+
+
+class GuestTicketType(APIResponse):
+	"""A ticket type the guest list can be narrowed to."""
+
+	name: str
+	title: str | None = None
 
 
 class EventGuestsResponse(APIResponse):
 	title: str | None = None
+	# The event's own details, so a guest row can be drawn as the ticket it is.
+	start_date: date | None = None
+	start_time: timedelta | None = None
+	end_date: date | None = None
+	venue: str | None = None
+	# Everyone registered, then everyone the current search matches — the second is the
+	# first when nothing is being searched for.
 	total: int
-	registrations_closed: bool
+	matched: int
 	guests: list[EventGuest]
+	ticket_types: list[GuestTicketType] = Field(default_factory=list)
+	has_next_page: bool = False
+
+
+class DailyRegistrations(APIResponse):
+	"""One day of one ticket type. A type nobody bought that day is a zero row."""
+
+	date: date
+	ticket_type: str | None = None
+	count: int
+
+
+class TicketTypeTotal(APIResponse):
+	"""Everyone holding one type, over the event's whole life rather than the window."""
+
+	ticket_type: str | None = None
+	count: int
+
+
+class RegistrationTrend(APIResponse):
+	"""How registration has run, for a card that shows the count and its shape."""
+
+	total: int
+	per_day: list[DailyRegistrations]
+	# All-time, like `total` — the window is a shape over time, a tier is a share of a whole.
+	by_ticket_type: list[TicketTypeTotal] = Field(default_factory=list)
 
 
 class RouteAvailability(APIResponse):
@@ -99,3 +175,64 @@ class NewEvent(APIRequest):
 class CreatedEvent(APIResponse):
 	name: str
 	title: str
+
+
+class RegistrationState(APIResponse):
+	"""Whether the event takes registrations, as the server reads it after a change."""
+
+	registrations_closed: bool
+
+
+class VerificationMethods(APIResponse):
+	"""Which guest verification methods this site is configured to deliver."""
+
+	email: bool = False
+	phone: bool = False
+
+
+class TicketTypePrice(APIResponse):
+	currency: str
+	price: float
+	tickets_sold: int = 0
+
+
+class TicketTypeItem(APIResponse):
+	name: str
+	title: str
+	max_tickets_available: int
+	auto_unpublish_after: date | None
+	is_published: bool
+	tickets_sold: int
+	prices: list[TicketTypePrice]
+
+
+class PaymentProviderItem(APIResponse):
+	name: str
+	is_default: bool
+
+
+class CurrencyRevenue(APIResponse):
+	currency: str
+	collected: float
+	refunded: float
+	bookings: int
+	tickets: int
+
+
+class EventTicketTypes(APIResponse):
+	title: str
+	can_write: bool
+	registration_link: str | None
+	registrations_closed: bool
+	allow_guest_booking: bool
+	guest_verification_method: str
+	apply_tax: bool
+	tax_inclusive: bool
+	tax_label: str
+	tax_percentage: float
+	team_legal_name: str | None
+	team_tax_id: str | None
+	can_edit_team: bool
+	ticket_types: list[TicketTypeItem]
+	payment_providers: list[PaymentProviderItem]
+	revenue: list[CurrencyRevenue]

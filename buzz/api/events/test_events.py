@@ -1,8 +1,21 @@
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, today
+from frappe.utils import add_days, getdate, today
+from pydantic import ValidationError
 
-from buzz.api.events import check_event_route, get_event, get_event_guests, get_my_events
+from buzz.api.events import (
+	add_co_host,
+	archive_event,
+	check_event_route,
+	get_event,
+	get_event_guests,
+	get_event_registration_trend,
+	get_event_ticket_types,
+	get_my_events,
+	get_verification_methods,
+	remove_co_host,
+	set_registration_state,
+)
 from buzz.api.events import create_event as create_event_endpoint
 from buzz.api.events.exceptions import (
 	CannotCreateEvents,
@@ -42,8 +55,6 @@ class TestGetMyEvents(IntegrationTestCase):
 			frappe.get_doc({"doctype": "Event Category", "name": "Test Category"}).insert(
 				ignore_permissions=True
 			)
-		if not frappe.db.exists("Event Host", "Test Host"):
-			frappe.get_doc({"doctype": "Event Host", "name": "Test Host"}).insert(ignore_permissions=True)
 
 		cls.host_user = create_user("events-host@example.com", "Host")
 		cls.attendee = create_user("events-attendee@example.com", "Attendee")
@@ -54,9 +65,9 @@ class TestGetMyEvents(IntegrationTestCase):
 		frappe.set_user("Administrator")
 		self.addCleanup(frappe.set_user, "Administrator")
 
-	def events_of(self, user: str) -> dict[str, list[dict]]:
+	def events_of(self, user: str, **filters) -> dict[str, list[dict]]:
 		frappe.set_user(user)
-		return get_my_events().__json__()
+		return get_my_events(filters or None).__json__()
 
 	def names_in(self, events: list[dict]) -> list[str]:
 		return [event["name"] for event in events]
@@ -161,6 +172,49 @@ class TestGetMyEvents(IntegrationTestCase):
 		self.assertIsNone(row["team_name"])
 		self.assertIsNone(row["team_logo"])
 
+	def test_a_role_filter_keeps_only_hosted_events(self):
+		hosted = create_event("Role Filter Hosted", self.host_team)
+		ticketed = create_event("Role Filter Ticketed", self.other_team)
+		issue_ticket(ticketed, self.host_user)
+
+		names = self.names_in(self.events_of(self.host_user, role="hosting")["upcoming"])
+
+		self.assertIn(hosted, names)
+		self.assertNotIn(ticketed, names)
+
+	def test_a_role_filter_keeps_only_ticketed_events(self):
+		hosted = create_event("Role Filter Own", self.host_team)
+		ticketed = create_event("Role Filter Guest", self.other_team)
+		issue_ticket(ticketed, self.host_user)
+
+		names = self.names_in(self.events_of(self.host_user, role="attending")["upcoming"])
+
+		self.assertIn(ticketed, names)
+		self.assertNotIn(hosted, names)
+
+	def test_a_team_filter_keeps_only_that_teams_events(self):
+		mine = create_event("Team Filter Mine", self.host_team)
+		theirs = create_event("Team Filter Theirs", self.other_team)
+		issue_ticket(theirs, self.host_user)
+
+		names = self.names_in(self.events_of(self.host_user, team=self.host_team)["upcoming"])
+
+		self.assertIn(mine, names)
+		self.assertNotIn(theirs, names)
+
+	def test_a_medium_filter_keeps_only_that_medium(self):
+		online = create_event("Medium Online", self.host_team, medium="Online")
+		in_person = create_event("Medium In Person", self.host_team, medium="In Person")
+
+		names = self.names_in(self.events_of(self.host_user, medium="Online")["upcoming"])
+
+		self.assertIn(online, names)
+		self.assertNotIn(in_person, names)
+
+	def test_an_unknown_filter_value_is_refused(self):
+		with self.assertRaises(ValidationError):
+			self.events_of(self.host_user, role="lurking")
+
 	def test_serializes_every_declared_field(self):
 		create_event("Payload Shape", self.host_team)
 
@@ -175,9 +229,12 @@ class TestGetMyEvents(IntegrationTestCase):
 				"start_date",
 				"end_date",
 				"start_time",
+				"end_time",
 				"venue",
+				"medium",
 				"banner_image",
 				"is_host",
+				"is_attendee",
 				"team",
 				"team_name",
 				"team_logo",
@@ -224,14 +281,6 @@ class TestCreateEvent(IntegrationTestCase):
 		self.assertEqual(event.medium, "In Person")
 		self.assertEqual(event.category, "Meetups")
 
-	def test_mints_one_host_per_team_and_reuses_it(self):
-		first = frappe.get_doc("Buzz Event", create_event_endpoint(self.payload()).name)
-		second = frappe.get_doc("Buzz Event", create_event_endpoint(self.payload(title="Second")).name)
-
-		self.assertTrue(first.host)
-		self.assertEqual(first.host, second.host)
-		self.assertEqual(frappe.db.get_value("Event Host", first.host, "team"), self.team)
-
 	def test_carries_the_optional_fields_through(self):
 		created = create_event_endpoint(
 			self.payload(
@@ -259,27 +308,6 @@ class TestCreateEvent(IntegrationTestCase):
 
 		with self.assertRaises(CannotCreateEvents):
 			create_event_endpoint(self.payload())
-
-	def test_a_venue_from_another_team_is_refused(self):
-		"""The reported vector: a manager naming a venue that belongs to someone else.
-
-		Event Venue is autonamed by prompt, so another team's venue name is guessable,
-		and the booking confirmation reads the linked venue's address without a
-		permission check.
-		"""
-		stranger = create_user("create-event-venue-stranger@example.com", "Stranger")
-		their_team = create_owned_team("Create Event Other Team", stranger)
-		theirs = frappe.get_doc(
-			{
-				"doctype": "Event Venue",
-				"__newname": "Create Event Other Team Hall",
-				"address": "1 Test Street",
-				"team": their_team,
-			}
-		).insert(ignore_permissions=True)
-
-		with self.assertRaises(frappe.exceptions.ValidationError):
-			create_event_endpoint(self.payload(venue=str(theirs.name)))
 
 	def test_zoom_is_refused_when_the_app_is_missing(self):
 		if is_app_installed("zoom_integration"):
@@ -324,12 +352,13 @@ class TestGetEvent(IntegrationTestCase):
 		self.assertEqual(detail["medium"], "Online")
 		self.assertEqual(detail["meeting_link"], "https://example.com/join")
 		self.assertIsNone(detail["venue"])
+		self.assertTrue(detail["modified"])
 
 	def test_resolves_the_venue_with_its_address(self):
 		venue = frappe.get_doc(
 			{
 				"doctype": "Event Venue",
-				"name": "Get Event Venue",
+				"venue_name": "Get Event Venue",
 				"address": "12 Example Street",
 				"team": self.team,
 			}
@@ -361,6 +390,99 @@ class TestGetEvent(IntegrationTestCase):
 
 		with self.assertRaises(EventNotFound):
 			get_event("999999999")
+
+
+class TestEventCoHosts(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("co-host-owner@example.com", "Owner")
+		cls.viewer = create_user("co-host-viewer@example.com", "Viewer")
+		cls.team = create_owned_team("Co-host Team", cls.owner)
+		add_member(cls.team, cls.viewer, "Viewer")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.event = create_event("Co-hosted Event", self.team)
+		frappe.set_user(self.owner)
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_the_team_is_the_primary_host(self):
+		detail = get_event(self.event).__json__()
+
+		self.assertEqual(detail["primary_host"]["host"], self.team)
+		self.assertEqual(detail["primary_host"]["label"], "Co-host Team")
+		self.assertEqual(detail["co_hosts"], [])
+
+	def test_adding_and_removing_a_co_host_round_trips(self):
+		added = add_co_host(self.event, "Acme Corp", by_line="We make things")
+
+		self.assertEqual(get_event(self.event).__json__()["co_hosts"][0]["label"], "Acme Corp")
+		self.assertEqual(frappe.db.get_value("Event Host", added.host, "team"), self.team)
+
+		remove_co_host(self.event, added.host)
+		self.assertEqual(get_event(self.event).__json__()["co_hosts"], [])
+
+	def test_the_same_organisation_cannot_be_added_twice(self):
+		added = add_co_host(self.event, "Acme Corp")
+		event = frappe.get_doc("Buzz Event", self.event)
+		event.append("co_hosts", {"host": added.host})
+
+		with self.assertRaises(frappe.ValidationError):
+			event.save()
+
+	def test_the_same_name_is_not_added_twice(self):
+		added = add_co_host(self.event, "Acme Corp")
+
+		with self.assertRaises(frappe.ValidationError):
+			add_co_host(self.event, "Acme Corp")
+
+		# The second call reuses the team's host rather than minting a second record.
+		self.assertEqual(frappe.db.count("Event Host", {"host_name": "Acme Corp", "team": self.team}), 1)
+		self.assertEqual(get_event(self.event).__json__()["co_hosts"][0]["host"], added.host)
+
+	def test_external_links_come_back_in_table_order(self):
+		event = frappe.get_doc("Buzz Event", self.event)
+		event.append(
+			"external_links", {"icon": "map-pin", "label": "Venue map", "url": "https://maps.example.com"}
+		)
+		event.append("external_links", {"label": "Slides", "url": "https://slides.example.com"})
+		event.save()
+
+		links = get_event(self.event).__json__()["external_links"]
+
+		self.assertEqual([link["label"] for link in links], ["Venue map", "Slides"])
+		self.assertEqual(links[0]["icon"], "map-pin")
+		self.assertIsNone(links[1]["icon"])
+
+	def test_an_external_link_needs_a_valid_url(self):
+		event = frappe.get_doc("Buzz Event", self.event)
+		event.append("external_links", {"label": "Broken", "url": "not a url"})
+
+		with self.assertRaises(frappe.ValidationError):
+			event.save()
+
+	def test_an_external_link_must_be_a_web_address(self):
+		event = frappe.get_doc("Buzz Event", self.event)
+		event.append("external_links", {"label": "Script", "url": "javascript:alert(1)"})
+
+		with self.assertRaises(frappe.ValidationError):
+			event.save()
+
+	def test_a_viewer_cannot_add_a_co_host(self):
+		frappe.set_user(self.viewer)
+
+		with self.assertRaises(CannotManageEvent):
+			add_co_host(self.event, "Acme Corp")
+
+	def test_a_viewer_cannot_remove_a_co_host(self):
+		added = add_co_host(self.event, "Acme Corp")
+		frappe.set_user(self.viewer)
+
+		with self.assertRaises(CannotManageEvent):
+			remove_co_host(self.event, added.host)
 
 
 class TestCheckEventRoute(IntegrationTestCase):
@@ -437,6 +559,47 @@ class TestGetEventGuests(IntegrationTestCase):
 		emails = {guest["attendee_email"] for guest in guests["guests"]}
 		self.assertEqual(emails, {"guest-one@example.com", "guest-two@example.com"})
 
+	def test_carries_the_guest_registration_settings(self):
+		event = create_event("Guest Setting Event", self.team)
+		frappe.db.set_value(
+			"Buzz Event",
+			event,
+			{"allow_guest_booking": 1, "guest_verification_method": "Phone OTP"},
+		)
+		frappe.set_user(self.owner)
+
+		registration = get_event_ticket_types(event)
+
+		self.assertTrue(registration.allow_guest_booking)
+		self.assertEqual(registration.guest_verification_method, "Phone OTP")
+
+	def test_carries_the_tax_settings(self):
+		event = create_event("Tax Setting Event", self.team)
+		frappe.db.set_value(
+			"Buzz Event",
+			event,
+			{"apply_tax": 1, "tax_inclusive": 1, "tax_label": "VAT", "tax_percentage": 20},
+		)
+		frappe.set_user(self.owner)
+
+		registration = get_event_ticket_types(event)
+
+		self.assertTrue(registration.apply_tax)
+		self.assertTrue(registration.tax_inclusive)
+		self.assertEqual(registration.tax_label, "VAT")
+		self.assertEqual(registration.tax_percentage, 20)
+
+	def test_tax_settings_fall_back_to_gst_defaults(self):
+		event = create_event("Untaxed Event", self.team)
+		frappe.db.set_value("Buzz Event", event, {"tax_label": None, "tax_percentage": 0})
+		frappe.set_user(self.owner)
+
+		registration = get_event_ticket_types(event)
+
+		self.assertFalse(registration.apply_tax)
+		self.assertEqual(registration.tax_label, "GST")
+		self.assertEqual(registration.tax_percentage, 18)
+
 	def test_leaves_out_a_ticket_that_was_never_submitted(self):
 		event = create_event("Draft Ticket Event", self.team)
 		create_ticket(event, "draft-guest@example.com")
@@ -494,13 +657,34 @@ class TestGetEventGuests(IntegrationTestCase):
 		event = create_event("Closed Event", self.team, registrations_close_at="2020-01-01 00:00:00")
 		frappe.set_user(self.owner)
 
-		self.assertTrue(get_event_guests(event).registrations_closed)
+		self.assertTrue(get_event_ticket_types(event).registrations_closed)
+
+	def test_a_new_event_starts_with_registrations_closed(self):
+		event = create_event("New Event", self.team)
+		frappe.set_user(self.owner)
+
+		self.assertTrue(get_event_ticket_types(event).registrations_closed)
+
+	def test_a_cutoff_given_at_creation_is_kept(self):
+		event = create_event("Scheduled Event", self.team, registrations_close_at="2099-01-01 00:00:00")
+
+		close_at = frappe.db.get_value("Buzz Event", event, "registrations_close_at")
+		self.assertEqual(str(close_at), "2099-01-01 00:00:00")
+
+	def test_a_duplicated_event_starts_with_registrations_closed(self):
+		event = create_event("Source Event", self.team, registrations_close_at="2099-01-01 00:00:00")
+		source = frappe.get_doc("Buzz Event", event)
+		duplicate = frappe.copy_doc(source, ignore_no_copy=False).insert(ignore_permissions=True)
+		frappe.set_user(self.owner)
+
+		self.assertTrue(get_event_ticket_types(str(duplicate.name)).registrations_closed)
 
 	def test_reports_registrations_open_before_the_event_ends(self):
 		event = create_event("Open Event", self.team)
+		frappe.db.set_value("Buzz Event", event, "registrations_close_at", None)
 		frappe.set_user(self.owner)
 
-		self.assertFalse(get_event_guests(event).registrations_closed)
+		self.assertFalse(get_event_ticket_types(event).registrations_closed)
 
 	def test_names_the_event_for_a_member_who_cannot_edit_it(self):
 		"""The header labels the page off this payload, so read access has to be enough."""
@@ -526,3 +710,544 @@ class TestGetEventGuests(IntegrationTestCase):
 
 		with self.assertRaises(EventNotFound):
 			get_event_guests("999999999")
+
+
+class TestGetEventGuestsPaging(IntegrationTestCase):
+	"""Search, order and paging — the arguments the guest list walks the roll with."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("paging-owner@example.com", "Owner")
+		cls.team = create_owned_team("Paging Team", cls.owner)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def registered(self, event: str, email: str, name: str, at: str) -> str:
+		"""A ticket with a name on it and a registration time of its own.
+
+		Tickets a test writes land in the same second, so `creation` is set explicitly —
+		otherwise the order under test is decided by the name hash.
+		"""
+		ticket = issue_ticket(event, email)
+		frappe.db.set_value(
+			"Event Ticket",
+			ticket,
+			{"first_name": name, "attendee_name": name, "creation": at},
+			update_modified=False,
+		)
+		return ticket
+
+	def roll_call(self, event: str) -> None:
+		self.registered(event, "ana@example.com", "Ana Diaz", "2026-01-01 09:00:00")
+		self.registered(event, "bo@example.com", "Bo Chen", "2026-01-02 09:00:00")
+		self.registered(event, "cy@example.com", "Cy Ferreira", "2026-01-03 09:00:00")
+
+	def test_carries_the_time_the_ticket_was_raised(self):
+		event = create_event("Registered At Event", self.team)
+		self.registered(event, "ana@example.com", "Ana Diaz", "2026-01-01 09:00:00")
+		frappe.set_user(self.owner)
+
+		guest = get_event_guests(event).guests[0]
+
+		self.assertEqual(str(guest.registered_at), "2026-01-01 09:00:00")
+
+	def test_newest_registration_comes_first_by_default(self):
+		event = create_event("Ordered Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		names = [guest.attendee_name for guest in get_event_guests(event).guests]
+
+		self.assertEqual(names, ["Cy Ferreira", "Bo Chen", "Ana Diaz"])
+
+	def test_asc_walks_from_the_oldest_registration(self):
+		event = create_event("Ascending Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		names = [guest.attendee_name for guest in get_event_guests(event, order="asc").guests]
+
+		self.assertEqual(names, ["Ana Diaz", "Bo Chen", "Cy Ferreira"])
+
+	def test_an_unknown_order_falls_back_to_newest_first(self):
+		event = create_event("Odd Order Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, order="name desc; drop table")
+
+		self.assertEqual(guests.guests[0].attendee_name, "Cy Ferreira")
+
+	def test_a_page_carries_only_its_own_slice(self):
+		event = create_event("Paged Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		first = get_event_guests(event, limit=2)
+
+		self.assertEqual([guest.attendee_name for guest in first.guests], ["Cy Ferreira", "Bo Chen"])
+		self.assertTrue(first.has_next_page)
+
+	def test_the_last_page_says_there_is_nothing_after_it(self):
+		event = create_event("Last Page Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		last = get_event_guests(event, start=2, limit=2)
+
+		self.assertEqual([guest.attendee_name for guest in last.guests], ["Ana Diaz"])
+		self.assertFalse(last.has_next_page)
+
+	def test_a_full_final_page_is_still_the_end(self):
+		"""Three guests read two at a time: the second page fills, and nothing follows."""
+		event = create_event("Even Page Event", self.team)
+		self.roll_call(event)
+		self.registered(event, "di@example.com", "Di Okafor", "2026-01-04 09:00:00")
+		frappe.set_user(self.owner)
+
+		self.assertFalse(get_event_guests(event, start=2, limit=2).has_next_page)
+
+	def test_search_matches_a_name(self):
+		event = create_event("Name Search Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, search="chen")
+
+		self.assertEqual([guest.attendee_name for guest in guests.guests], ["Bo Chen"])
+
+	def test_search_matches_an_email(self):
+		event = create_event("Email Search Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, search="cy@")
+
+		self.assertEqual([guest.attendee_email for guest in guests.guests], ["cy@example.com"])
+
+	def test_search_reports_the_match_count_beside_the_registered_count(self):
+		event = create_event("Counted Search Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, search="chen")
+
+		self.assertEqual(guests.total, 3)
+		self.assertEqual(guests.matched, 1)
+
+	def test_without_a_search_every_guest_is_a_match(self):
+		event = create_event("Unsearched Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event)
+
+		self.assertEqual(guests.matched, guests.total)
+
+	def test_a_search_that_matches_nobody_is_empty_rather_than_an_error(self):
+		event = create_event("Empty Search Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, search="nobody-here")
+
+		self.assertEqual(guests.guests, [])
+		self.assertEqual(guests.matched, 0)
+		self.assertEqual(guests.total, 3)
+		self.assertFalse(guests.has_next_page)
+
+	def test_blank_search_is_not_a_filter(self):
+		event = create_event("Blank Search Event", self.team)
+		self.roll_call(event)
+		frappe.set_user(self.owner)
+
+		self.assertEqual(len(get_event_guests(event, search="   ").guests), 3)
+
+
+class TestGetEventGuestsTicketTypeFilter(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("types-owner@example.com", "Owner")
+		cls.team = create_owned_team("Ticket Types Team", cls.owner)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def two_types(self, event: str) -> tuple[str, str]:
+		"""One ticket on each of two types, returning the types in that order."""
+		first = frappe.db.get_value("Event Ticket", issue_ticket(event, "early@example.com"), "ticket_type")
+		second = frappe.db.get_value("Event Ticket", issue_ticket(event, "late@example.com"), "ticket_type")
+		return str(first), str(second)
+
+	def test_lists_the_types_the_event_sells(self):
+		"""Every type, not only the ones someone has bought — an empty tier is still a filter."""
+		event = create_event("Typed Filter Event", self.team)
+		first, second = self.two_types(event)
+		frappe.set_user(self.owner)
+
+		names = {ticket_type.name for ticket_type in get_event_guests(event).ticket_types}
+
+		self.assertLessEqual({first, second}, names)
+
+	def test_narrows_the_list_to_the_chosen_type(self):
+		event = create_event("Narrowed Event", self.team)
+		first, _ = self.two_types(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, ticket_types=first)
+
+		self.assertEqual([guest.attendee_email for guest in guests.guests], ["early@example.com"])
+		self.assertEqual(guests.matched, 1)
+		self.assertEqual(guests.total, 2)
+
+	def test_several_types_are_read_as_any_of_them(self):
+		event = create_event("Any Type Event", self.team)
+		first, second = self.two_types(event)
+		frappe.set_user(self.owner)
+
+		guests = get_event_guests(event, ticket_types=f"{first},{second}")
+
+		self.assertEqual(guests.matched, 2)
+
+	def test_no_chosen_type_is_not_a_filter(self):
+		event = create_event("Untyped Filter Event", self.team)
+		self.two_types(event)
+		frappe.set_user(self.owner)
+
+		self.assertEqual(len(get_event_guests(event, ticket_types="  ").guests), 2)
+
+	def test_search_and_type_narrow_together(self):
+		event = create_event("Combined Filter Event", self.team)
+		first, _ = self.two_types(event)
+		frappe.set_user(self.owner)
+
+		self.assertEqual(get_event_guests(event, search="late@", ticket_types=first).matched, 0)
+		self.assertEqual(get_event_guests(event, search="early@", ticket_types=first).matched, 1)
+
+
+class TestGetEventRegistrationTrend(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("trend-owner@example.com", "Owner")
+		cls.stranger = create_user("trend-stranger@example.com", "Stranger")
+		cls.team = create_owned_team("Trend Team", cls.owner)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def registered_on(self, event: str, email: str, day: str) -> str:
+		ticket = issue_ticket(event, email)
+		frappe.db.set_value("Event Ticket", ticket, "creation", f"{day} 10:00:00", update_modified=False)
+		return frappe.db.get_value("Event Ticket", ticket, "ticket_type")
+
+	def totals_by_day(self, trend) -> dict:
+		"""The stack's own height: every type of a day summed back together."""
+		totals: dict = {}
+		for row in trend.per_day:
+			totals[row.date] = totals.get(row.date, 0) + row.count
+		return totals
+
+	def test_counts_the_tickets_raised_on_each_day(self):
+		event = create_event("Trended Event", self.team)
+		self.registered_on(event, "today-one@example.com", today())
+		self.registered_on(event, "today-two@example.com", today())
+		self.registered_on(event, "yesterday@example.com", add_days(today(), -1))
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=3)
+
+		totals = self.totals_by_day(trend)
+		self.assertEqual(totals[getdate(today())], 2)
+		self.assertEqual(totals[getdate(add_days(today(), -1))], 1)
+		self.assertEqual(trend.total, 3)
+
+	def test_splits_a_day_by_ticket_type(self):
+		event = create_event("Split Event", self.team)
+		# create_ticket raises a type of its own per ticket, so these are two tiers.
+		first = self.registered_on(event, "tier-one@example.com", today())
+		second = self.registered_on(event, "tier-two@example.com", today())
+		titles = {
+			str(first): frappe.db.get_value("Event Ticket Type", first, "title"),
+			str(second): frappe.db.get_value("Event Ticket Type", second, "title"),
+		}
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=2)
+
+		today_rows = {row.ticket_type: row.count for row in trend.per_day if row.date == getdate(today())}
+		for title in titles.values():
+			self.assertEqual(today_rows[title], 1)
+
+	def test_a_quiet_day_is_a_zero_rather_than_a_gap(self):
+		event = create_event("Quiet Day Event", self.team)
+		self.registered_on(event, "quiet@example.com", today())
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=7)
+
+		totals = self.totals_by_day(trend)
+		self.assertEqual(len(totals), 7)
+		self.assertEqual(sorted(totals.values()), [0] * 6 + [1])
+
+	def test_every_type_is_drawn_on_every_day(self):
+		"""A band that vanishes mid-stack reads as a break in the chart, not as nobody buying."""
+		event = create_event("Gridded Event", self.team)
+		self.registered_on(event, "gridded@example.com", today())
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=4)
+
+		types = {row.ticket_type for row in trend.per_day}
+		self.assertEqual(len(trend.per_day), 4 * len(types))
+
+	def test_the_window_ends_on_today(self):
+		event = create_event("Windowed Event", self.team)
+		self.registered_on(event, "windowed@example.com", today())
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=5)
+
+		self.assertEqual(trend.per_day[-1].date, getdate(today()))
+		self.assertEqual(trend.per_day[0].date, getdate(add_days(today(), -4)))
+
+	def test_names_the_ticket_type_rather_than_its_docname(self):
+		event = create_event("Named Type Trend", self.team)
+		ticket_type = self.registered_on(event, "named-type@example.com", today())
+		title = frappe.db.get_value("Event Ticket Type", ticket_type, "title")
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=2)
+
+		self.assertIn(title, {row.ticket_type for row in trend.per_day})
+		self.assertNotIn(str(ticket_type), {row.ticket_type for row in trend.per_day})
+
+	def test_leaves_out_a_ticket_that_was_never_submitted(self):
+		event = create_event("Draft Trend Event", self.team)
+		create_ticket(event, "draft-trend@example.com")
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event)
+
+		self.assertEqual(trend.total, 0)
+		self.assertEqual({row.count for row in trend.per_day}, {0})
+
+	def test_the_type_breakdown_counts_registrations_older_than_the_window(self):
+		"""It sits beside the all-time total, so a fortnight's slice would not add up to it."""
+		event = create_event("Long Running Event", self.team)
+		self.registered_on(event, "ancient@example.com", add_days(today(), -60))
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event, days=7)
+
+		self.assertEqual(sum(row.count for row in trend.by_ticket_type), trend.total)
+		self.assertEqual({row.count for row in trend.per_day}, {0})
+
+	def test_the_type_breakdown_names_the_type_rather_than_its_docname(self):
+		event = create_event("Named Breakdown", self.team)
+		ticket_type = self.registered_on(event, "named-breakdown@example.com", today())
+		title = frappe.db.get_value("Event Ticket Type", ticket_type, "title")
+		frappe.set_user(self.owner)
+
+		trend = get_event_registration_trend(event)
+
+		self.assertIn(title, {row.ticket_type for row in trend.by_ticket_type})
+
+	def test_a_non_member_cannot_read_the_trend(self):
+		event = create_event("Private Trend", self.team)
+		frappe.set_user(self.stranger)
+
+		with self.assertRaises(CannotManageEvent):
+			get_event_registration_trend(event)
+
+	def test_an_unknown_event_is_not_found(self):
+		frappe.set_user(self.owner)
+
+		with self.assertRaises(EventNotFound):
+			get_event_registration_trend("999999999")
+
+
+class TestSetRegistrationState(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+
+		cls.owner = create_user("registration-owner@example.com", "Owner")
+		cls.viewer = create_user("registration-viewer@example.com", "Viewer")
+		cls.team = create_owned_team("Registration Team", cls.owner)
+		add_member(cls.team, cls.viewer, "Viewer")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def test_closing_stops_registrations_now_in_the_events_own_timezone(self):
+		"""A UTC wall clock would sit hours ahead of an event west of UTC, leaving it open."""
+		event = create_event("Pacific Event", self.team, time_zone="US/Pacific")
+		frappe.set_user(self.owner)
+
+		self.assertTrue(set_registration_state(event, closed=True).registrations_closed)
+		self.assertTrue(get_event_ticket_types(event).registrations_closed)
+
+	def test_opening_clears_the_cutoff(self):
+		event = create_event("Reopened Event", self.team, registrations_close_at="2020-01-01 00:00:00")
+		frappe.set_user(self.owner)
+
+		self.assertFalse(set_registration_state(event, closed=False).registrations_closed)
+		self.assertIsNone(frappe.db.get_value("Buzz Event", event, "registrations_close_at"))
+
+	def test_an_ended_event_stays_closed_when_it_is_opened(self):
+		"""Clearing the cutoff cannot reopen it, so the answer says closed rather than done."""
+		event = create_event(
+			"Finished Event",
+			self.team,
+			start_date=add_days(today(), -10),
+			end_date=add_days(today(), -9),
+		)
+		frappe.set_user(self.owner)
+
+		self.assertTrue(set_registration_state(event, closed=False).registrations_closed)
+
+	def test_a_reader_cannot_change_the_registration_state(self):
+		event = create_event("Guarded Event", self.team)
+		frappe.set_user(self.viewer)
+
+		with self.assertRaises(CannotManageEvent):
+			set_registration_state(event, closed=True)
+
+	def test_the_registration_page_tells_a_reader_they_cannot_write(self):
+		event = create_event("Read Only Event", self.team)
+
+		frappe.set_user(self.viewer)
+		self.assertFalse(get_event_ticket_types(event).can_write)
+
+		frappe.set_user(self.owner)
+		self.assertTrue(get_event_ticket_types(event).can_write)
+
+	def test_an_external_registration_page_is_linked_instead_of_the_buzz_one(self):
+		event = create_event(
+			"External Event",
+			self.team,
+			external_registration_page=1,
+			registration_url="https://tickets.example.com/buzz",
+		)
+		frappe.set_user(self.owner)
+
+		self.assertEqual(get_event_ticket_types(event).registration_link, "https://tickets.example.com/buzz")
+
+	def test_an_ordinary_event_is_linked_to_its_own_registration_page(self):
+		event = create_event("Hosted Event", self.team, route="hosted-event")
+		frappe.set_user(self.owner)
+
+		self.assertEqual(get_event_ticket_types(event).registration_link, "/b/register/hosted-event")
+
+
+class TestVerificationMethods(IntegrationTestCase):
+	"""Site configuration, so every case here writes SMS Settings rather than an event."""
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+		# Cleanups run last-registered-first, so the cache is cleared after the rollback:
+		# the Single is cached per request and would otherwise be read back undone.
+		self.addCleanup(frappe.clear_document_cache, "SMS Settings", "SMS Settings")
+		self.addCleanup(frappe.db.rollback)
+
+	def test_phone_needs_a_gateway(self):
+		# Written through the db: an unconfigured Single cannot pass its own mandatory check.
+		frappe.db.set_single_value("SMS Settings", "sms_gateway_url", "")
+
+		self.assertFalse(get_verification_methods().phone)
+
+	def test_phone_needs_the_guest_role_to_be_allowed(self):
+		settings = frappe.get_single("SMS Settings")
+		settings.sms_gateway_url = "https://sms.example.com/send"
+		settings.message_parameter = "message"
+		settings.receiver_parameter = "to"
+		settings.set("allowed_roles", [{"role": "System Manager"}])
+		settings.save()
+
+		self.assertFalse(get_verification_methods().phone)
+
+		settings.append("allowed_roles", {"role": "Guest"})
+		settings.save()
+
+		self.assertTrue(get_verification_methods().phone)
+
+	def test_email_follows_the_outgoing_account(self):
+		# Whatever this site is configured with, the answer is what frappe.sendmail resolves.
+		from frappe.email.doctype.email_account.email_account import EmailAccount
+
+		self.assertEqual(get_verification_methods().email, bool(EmailAccount.find_default_outgoing()))
+
+
+def publish_forms(event: str) -> None:
+	"""`publish` defaults to 0, so the rows have to be opened before a close means anything."""
+	doc = frappe.get_doc("Buzz Event", event)
+	for row in doc.custom_forms:
+		row.publish = 1
+	doc.save(ignore_permissions=True)
+
+
+class TestArchiveEvent(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+		cls.owner = create_user("archive-owner@example.com", "Archive Owner")
+		cls.outsider = create_user("archive-outsider@example.com", "Archive Outsider")
+		cls.team = create_owned_team("Archive Team", cls.owner)
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+
+	def test_archiving_unpublishes_the_event_and_its_forms(self):
+		event = create_event("Archivable Event", self.team, is_published=1)
+		publish_forms(event)
+		frappe.set_user(self.owner)
+
+		archive_event(event)
+
+		doc = frappe.get_doc("Buzz Event", event)
+		self.assertFalse(doc.is_published)
+		self.assertFalse(any(row.publish for row in doc.custom_forms))
+
+	def test_archiving_closes_registrations(self):
+		"""The booking gates stop at `is_published`, but the cutoff has to agree with them."""
+		event = create_event("Open Registrations Event", self.team, is_published=1)
+		frappe.set_user(self.owner)
+
+		archive_event(event)
+
+		self.assertIsNotNone(frappe.db.get_value("Buzz Event", event, "registrations_close_at"))
+
+	def test_archiving_an_archived_event_is_a_no_op(self):
+		"""validate() runs on the way through, so a second archive must not throw."""
+		event = create_event("Already Archived Event", self.team, is_published=0)
+		frappe.set_user(self.owner)
+
+		archive_event(event)
+
+		self.assertFalse(frappe.db.get_value("Buzz Event", event, "is_published"))
+
+	def test_someone_outside_the_team_cannot_archive(self):
+		event = create_event("Guarded Event", self.team, is_published=1)
+		frappe.set_user(self.outsider)
+
+		with self.assertRaises(CannotManageEvent):
+			archive_event(event)
+
+		self.assertTrue(frappe.db.get_value("Buzz Event", event, "is_published"))

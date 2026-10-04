@@ -15,8 +15,10 @@ import {
 	createDoc,
 	deleteDoc,
 	docExists,
+	ensureEventHost,
 	ensureTestTeam,
 	getList,
+	openRegistrations,
 } from "../helpers/frappe"
 
 interface NamedDoc {
@@ -72,9 +74,7 @@ setup("seed a ticket owned by the attendee", async ({ request, baseURL }) => {
 	}
 	const team = await ensureTestTeam(request)
 
-	if (!(await docExists(request, "Event Host", HOST))) {
-		await createDoc(request, "Event Host", { name: HOST, team })
-	}
+	const host = await ensureEventHost(request, HOST, team)
 
 	// Far enough out that every action window (transfer, add-ons, cancellation) is open.
 	const startDate = new Date()
@@ -84,7 +84,7 @@ setup("seed a ticket owned by the attendee", async ({ request, baseURL }) => {
 		team,
 		title: TICKETS_EVENT_TITLE,
 		category: CATEGORY,
-		host: HOST,
+		host,
 		route: TICKETS_EVENT_ROUTE,
 		start_date: startDate.toISOString().split("T")[0],
 		start_time: "09:00:00",
@@ -92,12 +92,11 @@ setup("seed a ticket owned by the attendee", async ({ request, baseURL }) => {
 		medium: "In Person",
 		is_published: 1,
 	})
+	await openRegistrations(request, event.name)
 
 	const ticketType = await createDoc<NamedDoc>(request, "Event Ticket Type", {
 		event: event.name,
 		title: "Tickets E2E Ticket",
-		price: 0,
-		currency: "INR",
 		is_published: 1,
 	})
 

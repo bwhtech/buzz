@@ -45,7 +45,7 @@
 
 		<div
 			v-if="hasCustomizableAddOns && !canChangeAddOns"
-			class="mb-4 bg-surface-amber-1 border border-outline-amber-1 rounded-lg p-4"
+			class="mb-4 bg-surface-amber-1 border border-outline-amber-1 rounded-6 p-4"
 		>
 			<div class="flex items-center">
 				<LucideTriangleAlert class="w-5 h-5 text-ink-amber-5 mr-3" />
@@ -60,7 +60,7 @@
 
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 			<!-- Ticket Information -->
-			<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-6 p-6">
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">
 					{{ __("Ticket Information") }}
 				</h3>
@@ -104,7 +104,7 @@
 			<!-- QR Code Display -->
 			<div
 				v-if="ticketDetails.data.doc.qr_code"
-				class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6"
+				class="bg-surface-elevation-1 border border-outline-gray-1 rounded-6 p-6"
 			>
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">{{ __("QR Code") }}</h3>
 				<div class="flex justify-center">
@@ -112,7 +112,7 @@
 						:src="ticketDetails.data.doc.qr_code"
 						:alt="__('Ticket QR Code')"
 						:title="__('Click to enlarge')"
-						class="max-w-48 h-auto border border-outline-gray-1 rounded contrast-100 brightness-100 cursor-pointer hover:opacity-80 transition-opacity"
+						class="max-w-48 h-auto border border-outline-gray-1 rounded-4 contrast-100 brightness-100 cursor-pointer hover:opacity-80 transition-opacity"
 						@click="showQRExpanded = true"
 					/>
 				</div>
@@ -121,7 +121,7 @@
 			<!-- Add-ons Information -->
 			<div
 				v-if="ticketDetails.data.add_ons && ticketDetails.data.add_ons.length > 0"
-				class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6"
+				class="bg-surface-elevation-1 border border-outline-gray-1 rounded-6 p-6"
 			>
 				<div class="flex justify-between items-center mb-4">
 					<h3 class="text-ink-gray-8 text-lg-semibold">{{ __("Add-ons") }}</h3>
@@ -142,7 +142,7 @@
 					<div
 						v-for="addon in ticketDetails.data.add_ons"
 						:key="addon.name"
-						class="flex justify-between items-center p-3 bg-surface-gray-1 rounded-lg"
+						class="flex justify-between items-center p-3 bg-surface-gray-1 rounded-6"
 					>
 						<div>
 							<p class="font-medium text-ink-gray-9">
@@ -157,7 +157,7 @@
 			</div>
 
 			<!-- Event Information -->
-			<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-6 p-6">
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">
 					{{ __("Event Information") }}
 				</h3>
@@ -192,7 +192,7 @@
 			<!-- Zoom Webinar Access (only shown if webinar is linked) -->
 			<div
 				v-if="ticketDetails.data.zoom_join_url"
-				class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6"
+				class="bg-surface-elevation-1 border border-outline-gray-1 rounded-6 p-6"
 			>
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">
 					{{ __("Webinar Access") }}
@@ -206,7 +206,7 @@
 						:href="ticketDetails.data.zoom_join_url"
 						target="_blank"
 						rel="noopener noreferrer"
-						class="inline-flex items-center gap-2 px-4 py-2 bg-ink-blue-6 text-surface-base rounded-lg hover:bg-blue-700 transition-colors"
+						class="inline-flex items-center gap-2 px-4 py-2 bg-ink-blue-6 text-surface-base rounded-6 hover:bg-blue-700 transition-colors"
 					>
 						<span>{{ __("Join Zoom Webinar") }}</span>
 						<LucideExternalLink class="w-4 h-4" />
@@ -217,7 +217,7 @@
 			<!-- Booking Information (only shown if user owns the booking) -->
 			<div
 				v-if="ticketDetails.data.booking"
-				class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6"
+				class="bg-surface-elevation-1 border border-outline-gray-1 rounded-6 p-6"
 			>
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">
 					{{ __("Booking Information") }}
@@ -280,16 +280,20 @@
 		/>
 
 		<!-- QR Code Expand Dialog -->
-		<QRCodeExpandDialog
-			v-model="showQRExpanded"
-			:qrCodeSrc="ticketDetails.data.doc.qr_code"
-			:altText="__('Ticket QR Code')"
+		<CheckInQrDialog
+			v-model:open="showQRExpanded"
+			:qr-code="ticketDetails.data.doc.qr_code"
+			:attendee-name="ticketDetails.data.doc.attendee_name"
+			:attendee-email="ticketDetails.data.doc.attendee_email"
+			:ticket-type="ticketDetails.data.doc.ticket_type_title"
+			:event-title="ticketDetails.data.doc.event_title"
+			:add-ons="ticketDetails.data.add_ons"
 		/>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { Badge, Button, Spinner, createResource } from "frappe-ui"
+import { Badge, Button, Spinner, useCall } from "frappe-ui"
 import { dayjsLocal } from "frappe-ui"
 import { computed, ref } from "vue"
 import LucideDownload from "~icons/lucide/download"
@@ -298,12 +302,12 @@ import LucideExternalLink from "~icons/lucide/external-link"
 import LucideTriangleAlert from "~icons/lucide/triangle-alert"
 import LucideUserPlus from "~icons/lucide/user-plus"
 
+import CheckInQrDialog from "@/components/dashboard/tickets/CheckInQrDialog.vue"
 import type { TicketAddOn } from "@/types"
 import { formatCurrency } from "@/utils/currency"
 
 import AddOnPreferenceDialog from "../components/AddOnPreferenceDialog.vue"
 import BackButton from "../components/common/BackButton.vue"
-import QRCodeExpandDialog from "../components/QRCodeExpandDialog.vue"
 import TicketTransferDialog from "../components/TicketTransferDialog.vue"
 
 const props = defineProps({
@@ -336,11 +340,10 @@ const showTransferDialog = ref(false)
 const showAddOnPreferenceDialog = ref(false)
 const showQRExpanded = ref(false)
 
-const ticketDetails = createResource({
-	url: "buzz.api.tickets.get_ticket_details",
+const ticketDetails = useCall<any, { ticket_id: string }>({
+	url: "/api/v2/method/buzz.api.tickets.get_ticket_details",
 	params: { ticket_id: props.ticketId },
-	auto: true,
-	transform(data: any) {
+	transform(data) {
 		if (!data) return null
 
 		return {
@@ -370,7 +373,7 @@ const ticketDetails = createResource({
 					: null,
 				formatted_creation: dayjsLocal(data.doc.creation).format("MMMM DD, YYYY [at] h:mm A"),
 				event_title: data.event?.title || "",
-				venue: data.event?.venue || "",
+				venue: data.venue || "",
 				description: data.event?.description || "",
 				ticket_type_title: data.ticket_type?.title || data.doc.ticket_type,
 			},

@@ -1,3 +1,4 @@
+import base64
 import functools
 import re
 from collections.abc import Callable
@@ -121,7 +122,13 @@ def make_qr_image(data: str) -> bytes:
 	return output.getvalue()
 
 
-def generate_qr_code_file(doc, data: str, field_name: str = "qr_code", file_prefix: str = "qr-code") -> str:
+def qr_data_uri(data: str) -> str:
+	return "data:image/png;base64," + base64.b64encode(make_qr_image(data)).decode()
+
+
+def generate_qr_code_file(
+	doc, data: str, field_name: str = "qr_code", file_prefix: str = "qr-code", is_private: bool = False
+) -> str:
 	"""
 	Generate QR code image and attach as File to a document.
 
@@ -129,6 +136,7 @@ def generate_qr_code_file(doc, data: str, field_name: str = "qr_code", file_pref
 	:param data: The data to encode in the QR code
 	:param field_name: The field name to attach the file to (default: "qr_code")
 	:param file_prefix: Prefix for the file name (default: "qr-code")
+	:param is_private: Store the file as private
 	:return: The file URL of the created QR code image
 	"""
 	qr_data = make_qr_image(data)
@@ -140,6 +148,7 @@ def generate_qr_code_file(doc, data: str, field_name: str = "qr_code", file_pref
 			"attached_to_name": doc.name,
 			"attached_to_field": field_name,
 			"file_name": f"{file_prefix}-{doc.name}.png",
+			"is_private": is_private,
 		}
 	).save(ignore_permissions=True)
 	return qr_code_file.file_url
@@ -166,20 +175,24 @@ def build_event_datetimes(event_doc):
 	return start_datetime, end_datetime
 
 
-def generate_ics_file(event_doc, attendee_email: str):
+def generate_ics_file(event_doc, attendee_email: str, meeting):
 	from uuid import uuid4
 
-	from frappe.utils import now_datetime
+	from frappe.utils import get_url, now_datetime
+
+	event_url = get_url(f"/events/{event_doc.route}") if event_doc.is_published and event_doc.route else None
 
 	start_dt, end_dt = build_event_datetimes(event_doc)
-	organizer_name = event_doc.host or event_doc.title
+	organizer_name = frappe.db.get_value("Buzz Team", event_doc.team, "team_name") or event_doc.title
 	organizer_email = frappe.db.get_value(
 		"Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "email_id"
 	)
 
-	venue_address = ""
-	if event_doc.venue:
-		venue_address = frappe.db.get_value("Event Venue", event_doc.venue, "address") or ""
+	# A venue added from a map link may have no address; its name still says where.
+	venue = event_doc.venue and frappe.db.get_value(
+		"Event Venue", event_doc.venue, ["venue_name", "address"], as_dict=True
+	)
+	venue_address = (venue.address or venue.venue_name) if venue else ""
 
 	context = {
 		"uid": uuid4(),
@@ -187,23 +200,39 @@ def generate_ics_file(event_doc, attendee_email: str):
 		"timezone": event_doc.time_zone,
 		"start": start_dt.strftime("%Y%m%dT%H%M%S"),
 		"end": end_dt.strftime("%Y%m%dT%H%M%S"),
-		"title": event_doc.title,
-		"location": venue_address,
+		"title": escape_ics_text(event_doc.title),
+		"location": escape_ics_text(meeting.join_url or venue_address),
+		"conference_url": meeting.join_url,
+		"event_url": event_url,
 		"attendee_email": attendee_email,
-		"description": f"Your ticket for {event_doc.title}",
+		"description": escape_ics_text(ics_description(event_doc, meeting, event_url)),
 		"organizer_name": organizer_name,
 		"organizer_email": organizer_email,
 	}
 
-	# nosemgrep: frappe-semgrep-rules.rules.security.frappe-ssti
+	# nosemgrep: frappe-ssti
 	return frappe.render_template("templates/ics/ics.jinja2", context, is_path=True)
+
+
+def ics_description(event_doc, meeting, event_url: str | None) -> str:
+	lines = [f"Your ticket for {event_doc.title}", event_url]
+	if meeting.join_url:
+		platform_text = f"on {meeting.platform}" if meeting.platform else "online"
+		lines.insert(0, f"Join {platform_text}: {meeting.join_url}\n")
+	return "\n".join(line for line in lines if line)
+
+
+def escape_ics_text(value: str | None) -> str:
+	"""Escape a TEXT value per RFC 5545, so commas and line breaks in it stay inside it."""
+	value = (value or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
+	return value.replace("\r\n", "\\n").replace("\n", "\\n")
 
 
 # Curated abbreviations for zones where tzdata only provides a numeric offset
 # (tzdata dropped invented abbreviations in 2017). Zones with real tzdata
 # abbreviations (IST, EST, CET, ...) never reach this map.
-# ponytail: DST-observing zones here (e.g. Chile) are pinned to their standard
-# form; extend get_time_zone_label with per-date variants if that ever matters.
+# DST-observing zones here (e.g. Chile) are pinned to their standard form; extend
+# get_time_zone_label with per-date variants if that ever matters.
 TIMEZONE_ABBREVIATIONS = {
 	"America/Araguaina": "BRT",
 	"America/Argentina/Buenos_Aires": "ART",
@@ -250,28 +279,33 @@ def get_time_zone_label(time_zone: str | None, reference_datetime: datetime | No
 	Resolution order: tzdata abbreviation for the reference date (DST-aware),
 	then the curated map, then a formatted GMT offset.
 	"""
-	if not time_zone:
+	local_datetime = datetime_in_time_zone(time_zone, reference_datetime)
+	if not local_datetime:
 		return ""
 
-	try:
-		zone = ZoneInfo(time_zone)
-	except (ZoneInfoNotFoundError, ValueError):
-		return ""
-
-	reference = reference_datetime or now_datetime()
-	if reference.tzinfo:
-		moment = reference.astimezone(zone)
-	else:
-		moment = reference.replace(tzinfo=zone)
-
-	abbreviation = moment.tzname()
+	abbreviation = local_datetime.tzname()
 	if re.fullmatch(r"[A-Z]{2,5}", abbreviation):
 		return abbreviation
 
 	if time_zone in TIMEZONE_ABBREVIATIONS:
 		return TIMEZONE_ABBREVIATIONS[time_zone]
 
-	total_minutes = int(moment.utcoffset().total_seconds()) // 60
+	return format_gmt_offset(local_datetime)
+
+
+def datetime_in_time_zone(time_zone: str | None, reference_datetime: datetime | None) -> datetime | None:
+	if not time_zone:
+		return None
+	try:
+		zone = ZoneInfo(time_zone)
+	except (ZoneInfoNotFoundError, ValueError):
+		return None
+	reference = reference_datetime or now_datetime()
+	return reference.astimezone(zone) if reference.tzinfo else reference.replace(tzinfo=zone)
+
+
+def format_gmt_offset(local_datetime: datetime) -> str:
+	total_minutes = int(local_datetime.utcoffset().total_seconds()) // 60
 	sign = "+" if total_minutes >= 0 else "-"
 	hours, minutes = divmod(abs(total_minutes), 60)
 	label = f"GMT{sign}{hours}"
@@ -287,3 +321,21 @@ def render_email_template(template_name: str, args: dict) -> dict:
 	user, which fails for the guest-facing booking and enquiry flows.
 	"""
 	return frappe.get_doc("Email Template", template_name).get_formatted_email(args)
+
+
+def make_file_public(file_url: str | None) -> str | None:
+	"""Move a private file to public and return its new URL, so guests can load it."""
+	if not (file_url or "").startswith("/private/"):
+		return file_url
+	name = frappe.db.get_value("File", {"file_url": file_url})
+	if not name:
+		return file_url
+	file = frappe.get_doc("File", name)
+	file.is_private = 0
+	try:
+		file.save(ignore_permissions=True)
+	except FileNotFoundError:
+		# The file is gone from disk; a broken logo must not block saving its document.
+		frappe.clear_last_message()
+		return file_url
+	return file.file_url

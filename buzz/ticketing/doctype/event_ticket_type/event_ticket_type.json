@@ -7,8 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
-  "price",
-  "currency",
+  "prices",
   "column_break_lrao",
   "event",
   "is_published",
@@ -40,23 +39,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "allow_in_quick_entry": 1,
-   "default": "0",
-   "fieldname": "price",
-   "fieldtype": "Currency",
-   "label": "Price",
-   "non_negative": 1,
-   "options": "currency"
-  },
-  {
-   "default": "INR",
-   "fieldname": "currency",
-   "fieldtype": "Link",
-   "label": "Currency",
-   "options": "Currency",
-   "reqd": 1
-  },
-  {
    "default": "1",
    "fieldname": "is_published",
    "fieldtype": "Check",
@@ -75,6 +57,13 @@
    "fieldname": "auto_unpublish_after",
    "fieldtype": "Date",
    "label": "Auto Unpublish After"
+  },
+  {
+   "description": "The first row is the default price",
+   "fieldname": "prices",
+   "fieldtype": "Table",
+   "label": "Prices",
+   "options": "Buzz Price"
   },
   {
    "fieldname": "stats_section",
@@ -107,7 +96,7 @@
    "link_fieldname": "ticket_type"
   }
  ],
- "modified": "2025-10-28 16:17:49.999214",
+ "modified": "2026-10-02 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Ticket Type",
@@ -157,5 +146,6 @@
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
- "title_field": "title"
+ "title_field": "title",
+ "track_changes": 1
 }

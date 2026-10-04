@@ -1,12 +1,12 @@
 <template>
-	<li class="shadow-md p-4 rounded-lg bg-surface-base border border-outline-gray-2 relative">
+	<li class="shadow-md p-4 rounded-6 bg-surface-base border border-outline-gray-2 relative">
 		<!-- Status Badge -->
 		<div v-if="isCancelled || isCancellationRequested" class="absolute top-2 left-2">
 			<Badge v-if="isCancelled" variant="outline" theme="red" size="sm" :label="__('Cancelled')" />
 			<Badge
 				v-else-if="isCancellationRequested"
 				variant="subtle"
-				theme="orange"
+				theme="amber"
 				size="sm"
 				:label="__('Cancellation Requested')"
 			/>
@@ -38,7 +38,7 @@
 					<div
 						v-for="addon in ticket.add_ons"
 						:key="addon.name"
-						class="bg-surface-gray-1 px-3 py-2 rounded text-xs"
+						class="bg-surface-gray-1 px-3 py-2 rounded-4 text-xs"
 					>
 						<div class="font-medium text-ink-gray-8 mb-1">{{ addon.title }}</div>
 						<div v-if="addon.user_selects_option" class="text-ink-gray-7">
@@ -60,10 +60,13 @@
 		</div>
 
 		<!-- QR Code Expand Dialog -->
-		<QRCodeExpandDialog
-			v-model="showQRExpanded"
-			:qrCodeSrc="ticket.qr_code"
-			:altText="__('QR Code')"
+		<CheckInQrDialog
+			v-model:open="showQRExpanded"
+			:qr-code="ticket.qr_code"
+			:attendee-name="ticket.attendee_name"
+			:attendee-email="ticket.attendee_email"
+			:ticket-type="ticket.ticket_type"
+			:add-ons="ticket.add_ons"
 		/>
 
 		<!-- Ticket Transfer Dialog -->
@@ -88,10 +91,10 @@ import { type Component, computed, ref } from "vue"
 import LucideEdit from "~icons/lucide/edit"
 import LucideUserPen from "~icons/lucide/user-pen"
 
+import CheckInQrDialog from "@/components/dashboard/tickets/CheckInQrDialog.vue"
 import type { TicketAddOn } from "@/types"
 
 import AddOnPreferenceDialog from "./AddOnPreferenceDialog.vue"
-import QRCodeExpandDialog from "./QRCodeExpandDialog.vue"
 import TicketTransferDialog from "./TicketTransferDialog.vue"
 
 interface TicketAction {

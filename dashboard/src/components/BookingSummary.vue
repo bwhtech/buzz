@@ -1,6 +1,6 @@
 <!-- BookingSummary.vue -->
 <template>
-	<div class="bg-surface-gray-1 border border-outline-gray-1 rounded-lg p-4">
+	<div class="bg-surface-gray-1 border border-outline-gray-1 rounded-6 p-4">
 		<h2 class="text-2xl-bold text-ink-gray-9 mb-4">{{ __("Booking Summary") }}</h2>
 
 		<!-- Tickets Section -->

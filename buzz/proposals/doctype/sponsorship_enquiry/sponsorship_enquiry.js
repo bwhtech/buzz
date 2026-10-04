@@ -3,7 +3,7 @@
 
 frappe.ui.form.on("Sponsorship Enquiry", {
 	get_email_recipients(frm, fieldname) {
-		const owner = frm.doc.owner || ""
+		const owner = frm.doc.contact_email || frm.doc.owner || ""
 		return fieldname === "recipients" && owner.includes("@") ? [owner] : []
 	},
 

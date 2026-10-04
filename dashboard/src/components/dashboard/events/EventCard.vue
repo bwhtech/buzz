@@ -1,40 +1,23 @@
 <script setup lang="ts">
-import { Avatar, Button } from "frappe-ui"
+import { bannerPattern } from "@public/js/event_banner"
+import { Avatar, Badge, Button } from "frappe-ui"
 import { computed } from "vue"
-import { RouterLink } from "vue-router"
 
 import type { MyEvent } from "@/types"
-import { dayLabel } from "@/utils/dateLabels"
-import { bannerPattern } from "@/utils/eventBanner"
+import { dayLabel, timeLabel } from "@/utils/dateLabels"
 
 // The Events page files cards under a date heading; a standalone list has to
 // carry the date on the card itself.
-const props = withDefaults(
-	defineProps<{
-		event: MyEvent
-		showDate?: boolean
-		showManage?: boolean
-		// A list where every card is manageable — a team's own events — can drop the
-		// per-card button and make the whole card the way in.
-		routeToManage?: boolean
-	}>(),
-	{ showManage: true },
-)
+const props = defineProps<{ event: MyEvent; showDate?: boolean }>()
 
-// Only a host has anything to manage, whichever way in the caller asked for.
-const linksToManage = computed(() => props.routeToManage && props.event.is_host)
+const emit = defineEmits<{ open: [] }>()
 
-// The button would be a second link inside the first, so the card link wins.
-const canManage = computed(() => props.showManage && !linksToManage.value && props.event.is_host)
+// Manage is the only way into the desk view; the card itself opens the drawer.
+const canManage = computed(() => props.event.is_host)
 
-// Times arrive as a serialized timedelta ("9:00:00"), so the hour needs padding.
-const startTime = computed((): string => {
-	if (!props.event.start_time) return ""
-	const [hour, minute] = props.event.start_time.split(":")
-	return `${hour.padStart(2, "0")}:${minute}`
-})
+const startTime = computed(() => (props.event.start_time ? timeLabel(props.event.start_time) : ""))
 
-const banner = computed(() => ({ backgroundImage: bannerPattern(props.event.name) }))
+const banner = computed(() => ({ backgroundImage: bannerPattern(props.event.title) }))
 
 // Only a host can fix a missing venue; for everyone else it is news, not a warning.
 const venue = computed(() => {
@@ -50,23 +33,30 @@ const venue = computed(() => {
 </script>
 
 <template>
-	<component
-		:is="linksToManage ? RouterLink : 'article'"
-		:to="linksToManage ? `/manage/events/${event.name}` : undefined"
-		class="flex gap-4 border border-outline-gray-2 hover:border-outline-gray-3 rounded-2xl p-3"
+	<article
+		class="event-card relative flex gap-4 border border-outline-gray-2 hover:border-outline-gray-3 rounded-8 p-3"
 	>
+		<!-- Overlay rather than a wrapper: Manage cannot legally nest inside a button.
+		     It sits above the overlay, so both targets work and both are focusable. -->
+		<button
+			type="button"
+			class="absolute inset-0 rounded-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
+			:aria-label="`Open ${event.title}`"
+			@click="emit('open')"
+		/>
+
 		<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
 		<img
 			v-if="event.banner_image"
-			class="h-28 w-28 rounded object-cover object-top"
+			class="size-20 shrink-0 rounded-4 object-cover object-top md:size-30"
 			:src="event.banner_image"
 			:style="banner"
 			loading="lazy"
 			alt=""
 		/>
-		<div v-else class="h-28 w-28 rounded" :style="banner" />
+		<div v-else class="size-20 shrink-0 rounded-4 md:size-30" :style="banner" />
 
-		<div class="flex-1 py-1 flex flex-col justify-between">
+		<div class="min-w-0 flex-1 py-1 flex flex-col justify-between">
 			<div class="flex-1 space-y-2">
 				<p
 					v-if="showDate || startTime"
@@ -82,21 +72,49 @@ const venue = computed(() => {
 					<Avatar :image="event.team_logo || undefined" :label="event.team_name" size="xs" />
 					By {{ event.team_name }}
 				</p>
-			</div>
-
-			<div class="flex justify-between">
-				<p class="mt-2 flex items-center gap-2 text-base text-ink-gray-5">
+				<p class="flex items-center gap-2 text-base text-ink-gray-5">
 					<span class="size-4 shrink-0" :class="[venue.icon, venue.tone]" aria-hidden="true" />
 					{{ venue.label }}
 				</p>
+			</div>
+
+			<div v-if="event.is_attendee || canManage" class="mt-3 flex items-end">
+				<Badge v-if="event.is_attendee" theme="violet" variant="subtle" label="Attending" />
 				<Button
 					v-if="canManage"
+					class="relative z-10 ml-auto max-md:hidden"
 					label="Manage"
-					icon-right="arrow-right"
+					icon-right="lucide-arrow-right"
 					size="sm"
 					:route="`/manage/events/${event.name}`"
 				/>
 			</div>
 		</div>
-	</component>
+
+		<span
+			class="lucide-chevron-right size-4 shrink-0 self-center text-ink-gray-4 md:hidden"
+			aria-hidden="true"
+		/>
+	</article>
 </template>
+
+<style scoped>
+/* A card that is a button has to answer the press. The scale stays near-imperceptible
+   because these are seen dozens of times a session. */
+.event-card {
+	transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+/* Only the overlay opens the drawer, so Manage does not press the card with it. */
+.event-card:has(> button:active) {
+	transform: scale(0.995);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.event-card {
+		transition: none;
+	}
+	.event-card:has(> button:active) {
+		transform: none;
+	}
+}
+</style>

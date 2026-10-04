@@ -4,6 +4,7 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from buzz.api.forms.test_forms import ensure_event_host
 from buzz.events.doctype.buzz_event.buzz_event import create_from_template
 from buzz.events.doctype.event_template.event_template import create_template_from_event
 
@@ -23,12 +24,6 @@ class TestEventTemplate(FrappeTestCase):
 				ignore_permissions=True
 			)
 
-		# Create Event Host if not exists
-		if not frappe.db.exists("Event Host", "Test Host"):
-			frappe.get_doc({"doctype": "Event Host", "host_name": "Test Host"}).insert(
-				ignore_permissions=True
-			)
-
 	def tearDown(self):
 		"""Clean up test data after each test"""
 		frappe.db.rollback()
@@ -42,7 +37,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Test Webinar Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"medium": "Online",
 				"about": "Test description",
 			}
@@ -60,7 +55,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Template with Tickets",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"template_ticket_types": [
 					{
 						"title": "Early Bird",
@@ -86,7 +81,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Template with Add-ons",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"template_add_ons": [
 					{"title": "T-Shirt", "price": 500, "currency": "INR", "enabled": 1},
 					{
@@ -112,7 +107,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Template with Custom Fields",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"template_custom_fields": [
 					{
 						"label": "Company Name",
@@ -148,7 +143,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Full Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"medium": "Online",
 				"about": "Template about text",
 				"apply_tax": 1,
@@ -190,7 +185,7 @@ class TestEventTemplate(FrappeTestCase):
 
 		# Verify event fields
 		self.assertEqual(event.category, "Test Category")
-		self.assertEqual(event.host, "Test Host")
+		self.assertEqual(event.host, ensure_event_host("Test Host"))
 		self.assertEqual(event.medium, "Online")
 		self.assertEqual(event.about, "Template about text")
 		self.assertEqual(event.apply_tax, 1)
@@ -198,7 +193,7 @@ class TestEventTemplate(FrappeTestCase):
 
 		# Verify ticket types created (excluding default "Normal" ticket type)
 		ticket_types = frappe.get_all(
-			"Event Ticket Type", filters={"event": event_name, "title": "Standard"}, fields=["title", "price"]
+			"Event Ticket Type", filters={"event": event_name, "title": "Standard"}, fields=["title"]
 		)
 		self.assertEqual(len(ticket_types), 1)
 		self.assertEqual(ticket_types[0].title, "Standard")
@@ -222,7 +217,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Partial Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"medium": "In Person",
 				"about": "Should not be copied",
 				"template_ticket_types": [
@@ -242,7 +237,7 @@ class TestEventTemplate(FrappeTestCase):
 		self.assertEqual(event.category, "Test Category")
 
 		# Host should be copied (it's mandatory)
-		self.assertEqual(event.host, "Test Host")
+		self.assertEqual(event.host, ensure_event_host("Test Host"))
 
 		# About should NOT be copied
 		self.assertFalse(event.about)
@@ -258,7 +253,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "No Linked Docs Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"template_ticket_types": [
 					{"title": "General", "price": 100, "currency": "INR", "is_published": 1}
 				],
@@ -289,7 +284,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Buzz Event",
 				"title": "Source Event",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"start_date": frappe.utils.today(),
 				"start_time": "09:00:00",
 				"end_time": "18:00:00",
@@ -305,8 +300,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Event Ticket Type",
 				"event": event.name,
 				"title": "Premium",
-				"price": 1500,
-				"currency": "INR",
+				"prices": [{"currency": "INR", "price": 1500}],
 				"is_published": 1,
 			}
 		)
@@ -354,7 +348,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Buzz Event",
 				"title": "Partial Source Event",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"start_date": frappe.utils.today(),
 				"start_time": "09:00:00",
 				"end_time": "18:00:00",
@@ -389,7 +383,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Buzz Event",
 				"title": "Original Conference",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 				"start_date": frappe.utils.today(),
 				"start_time": "09:00:00",
 				"end_time": "18:00:00",
@@ -413,8 +407,7 @@ class TestEventTemplate(FrappeTestCase):
 					"doctype": "Event Ticket Type",
 					"event": original_event.name,
 					"title": ticket_data["title"],
-					"price": ticket_data["price"],
-					"currency": "INR",
+					"prices": [{"currency": "INR", "price": ticket_data["price"]}],
 					"is_published": 1,
 				}
 			).insert()
@@ -459,12 +452,12 @@ class TestEventTemplate(FrappeTestCase):
 		new_ticket_types = frappe.get_all(
 			"Event Ticket Type",
 			filters={"event": new_event_name, "title": ["in", ["Early Bird", "Regular", "VIP"]]},
-			fields=["title", "price"],
-			order_by="price",
+			fields=["title", {"prices": ["price"]}],
+			order_by="title",
 		)
 		self.assertEqual(len(new_ticket_types), 3)
 		self.assertEqual(new_ticket_types[0].title, "Early Bird")
-		self.assertEqual(new_ticket_types[0].price, 1000)
+		self.assertEqual(new_ticket_types[0].prices[0].price, 1000)
 
 	# ==================== Edge Case Tests ====================
 
@@ -476,7 +469,7 @@ class TestEventTemplate(FrappeTestCase):
 				"doctype": "Event Template",
 				"template_name": "Empty Template",
 				"category": "Test Category",
-				"host": "Test Host",
+				"host": ensure_event_host("Test Host"),
 			}
 		)
 		template.insert()

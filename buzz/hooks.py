@@ -21,6 +21,8 @@ before_uninstall = "buzz.uninstall.before_uninstall"
 
 
 website_route_rules = [
+	{"from_route": "/events/<event_route>", "to_route": "event"},
+	{"from_route": "/events/<event_route>/<page_route>", "to_route": "event"},
 	{"from_route": "/b", "to_route": "dashboard"},
 	{"from_route": "/b/<path:app_path>", "to_route": "dashboard"},
 ]
@@ -50,7 +52,12 @@ website_redirects = [
 # Scheduled Tasks
 # ---------------
 
-scheduler_events = {"daily": ["buzz.tasks.unpublish_ticket_types_after_last_date"]}
+scheduler_events = {
+	"daily": [
+		"buzz.tasks.unpublish_ticket_types_after_last_date",
+		"buzz.telemetry_scan.send_site_profile",
+	]
+}
 
 # Testing
 # -------
@@ -69,6 +76,10 @@ doc_events = {
 		"after_insert": "buzz.utils.add_buzz_user_role",
 		"on_update": "buzz.events.doctype.speaker_profile.speaker_profile.update_speaker_display_name",
 	},
+	"Currency": {
+		"on_update": "buzz.api.payments.currencies.clear_currency_cache",
+		"on_trash": "buzz.api.payments.currencies.clear_currency_cache",
+	},
 	# Team-direct doctypes. Descendants derive their team through their event link.
 	**{
 		doctype: {"validate": "buzz.events.doctype.buzz_team.buzz_team.set_team_from_sole_membership"}
@@ -76,7 +87,10 @@ doc_events = {
 	},
 }
 
-fixtures = [{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Frontdesk Manager"]]}}]
+fixtures = [
+	{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Event Manager", "Frontdesk Manager"]]}},
+	{"dt": "Buzz Theme", "filters": {"is_standard": 1}},
+]
 
 user_invitation = {
 	"allowed_roles": {"Event Manager": ["Buzz User"], "Buzz User": ["Buzz User"]},
@@ -95,7 +109,7 @@ add_to_apps_screen = [
 		"name": "buzz",
 		"logo": "/assets/buzz/images/buzz-logo-rounded.png",
 		"title": "Buzz",
-		"route": "/app/buzz",
+		"route": "/b",
 		"has_permission": "buzz.api.account.has_app_permission",
 	}
 ]
@@ -155,11 +169,9 @@ add_to_apps_screen = [
 # Jinja
 # ----------
 
-# add methods and filters to jinja environment
-# jinja = {
-# 	"methods": "events.utils.jinja_methods",
-# 	"filters": "events.utils.jinja_filters"
-# }
+jinja = {
+	"methods": ["buzz.emails.email_event_header", "buzz.emails.email_brand"],
+}
 
 # Installation
 # ------------
@@ -202,6 +214,7 @@ after_migrate = "buzz.install.on_migrate"
 # compose the team scope with the speaker carve-out — one function per doctype per hook.
 
 permission_query_conditions = {
+	"Sponsor Enquiry Form": "buzz.permissions.derived_query_conditions",
 	"Buzz Event": "buzz.permissions.team_query_conditions",
 	"Buzz Campaign": "buzz.permissions.team_query_conditions",
 	"Event Host": "buzz.permissions.team_query_conditions",
@@ -213,6 +226,7 @@ permission_query_conditions = {
 	"Buzz Custom Field": "buzz.permissions.derived_query_conditions",
 	"Event Booking": "buzz.permissions.derived_query_conditions",
 	"Event Check In": "buzz.permissions.derived_query_conditions",
+	"Event Communication": "buzz.permissions.derived_query_conditions",
 	"Event Feedback": "buzz.permissions.derived_query_conditions",
 	"Event Sponsor": "buzz.permissions.derived_query_conditions",
 	"Event Talk": "buzz.permissions.derived_query_conditions",
@@ -233,6 +247,7 @@ permission_query_conditions = {
 standard_queries = {"Buzz Team": "buzz.permissions.team_link_query"}
 
 has_permission = {
+	"Sponsor Enquiry Form": "buzz.permissions.derived_has_permission",
 	"Buzz Event": "buzz.permissions.team_has_permission",
 	"Buzz Campaign": "buzz.permissions.team_has_permission",
 	"Event Host": "buzz.permissions.team_has_permission",
@@ -244,6 +259,7 @@ has_permission = {
 	"Buzz Custom Field": "buzz.permissions.derived_has_permission",
 	"Event Booking": "buzz.permissions.derived_has_permission",
 	"Event Check In": "buzz.permissions.derived_has_permission",
+	"Event Communication": "buzz.permissions.derived_has_permission",
 	"Event Feedback": "buzz.permissions.derived_has_permission",
 	"Event Sponsor": "buzz.permissions.derived_has_permission",
 	"Event Talk": "buzz.permissions.derived_has_permission",

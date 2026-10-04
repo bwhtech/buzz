@@ -12,12 +12,18 @@ test.describe("Manage access", () => {
 		await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible()
 	})
 
-	test("routes a sidebar item with no page yet to the placeholder", async ({ page }) => {
+	test("keeps Sponsorship out of the sidebar until there is an inquiry", async ({ page }) => {
 		await page.goto("/b/manage/events")
-		await page.getByRole("link", { name: "Sponsorship" }).click()
 
-		await expect(page).toHaveURL(/\/b\/manage\/sponsorship$/)
-		await expect(page.getByText("Work in progress")).toBeVisible()
+		// The heading first: the sidebar is only worth counting once the shell has rendered.
+		await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible()
+		await expect(page.getByRole("link", { name: "Sponsorship" })).toHaveCount(0)
+	})
+
+	test("routes a section with no page yet to the placeholder", async ({ page }) => {
+		await page.goto("/b/manage/sponsorship")
+
+		await expect(page.getByText("Work in progress")).toBeVisible({ timeout: 15000 })
 	})
 
 	test("shows a 404 for a manage section that does not exist", async ({ page }) => {

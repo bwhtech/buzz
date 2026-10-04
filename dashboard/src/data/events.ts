@@ -1,45 +1,154 @@
-import { createResource, useCall } from "frappe-ui"
+import { useCall, useDoc, useDoctype } from "frappe-ui"
 
-import type { EventDetail, EventGuests, MyEvents } from "@/types"
+import type {
+	EventDetail,
+	EventHostRef,
+	MyEvents,
+	RegistrationTrend,
+	VerificationMethods,
+} from "@/types"
 
 // v2 path: useCall reads the payload from `data`, which /api/method names `message`.
 // Uncached: cacheKey would persist this user's feed to IndexedDB past a logout.
-export function useMyEvents() {
-	return useCall<MyEvents>({
+export function useMyEvents(filters?: () => Record<string, string>) {
+	return useCall<MyEvents, { filters: string }>({
 		url: "/api/v2/method/buzz.api.events.get_my_events",
+		// JSON in one param: a nested object on a GET serialises to "[object Object]".
+		params: () => ({ filters: JSON.stringify(filters?.() || {}) }),
+		// Off by default, so without this a filter change rewrites the URL and never refetches.
+		refetch: true,
 	})
 }
 
-export const createEvent = createResource<{ name: string; title: string }>({
-	url: "buzz.api.events.create_event",
+export const createEvent = useCall<
+	{ name: string; title: string },
+	{ event: Record<string, unknown> }
+>({
+	url: "/api/v2/method/buzz.api.events.create_event",
+	method: "POST",
+	immediate: false,
 })
+
+/** What the manage shell reads off the event itself: its title, whether it is live, and its page theme. */
+type EventShellDoc = { name: string; title: string; is_published: 0 | 1; theme: string | null }
+
+/**
+ * The event document, shared by everything that reads or flips its publish state.
+ *
+ * useDoc keys into frappe-ui's document store, so the shell's archived banner and the
+ * setting that archives the event work off one reactive doc — a write through `setValue`
+ * lands in both without either knowing about the other.
+ */
+export function useEventDoc(event: () => string) {
+	// The empty string holds the initial fetch until the route param resolves.
+	return useDoc<EventShellDoc>({ doctype: "Buzz Event", name: () => event() || "" })
+}
 
 /** One event with everything its manage page edits. Per page, so it is not a singleton. */
 export function eventDetail(event: string) {
-	return createResource<EventDetail>({
-		url: "buzz.api.events.get_event",
+	return useCall<EventDetail, { event: string }>({
+		url: "/api/v2/method/buzz.api.events.get_event",
 		params: { event },
-		auto: true,
 	})
 }
 
 /**
  * Save edits back onto an event.
  *
- * `set_value` takes a fieldname-to-value map, so the whole form travels as one write —
+ * The document API takes a fieldname-to-value map, so the whole form travels as one write —
  * and the team permission hooks guard Buzz Event, which is why this needs no endpoint of
  * its own.
  */
-export const updateEvent = createResource({ url: "frappe.client.set_value" })
+export const updateEvent = useDoctype<Record<string, unknown>>("Buzz Event").setValue
+
+/** Moves an event between in person and virtual, apart from the page's own Save. */
+export const convertEvent = useDoctype<Record<string, unknown>>("Buzz Event").setValue
+
+/** Books a Zoom meeting and makes the event virtual on it, or changes nothing. */
+export const convertToZoomMeeting = useCall<null, { event: string }>({
+	url: "/api/v2/method/buzz.api.events.convert_to_zoom_meeting",
+	method: "POST",
+	immediate: false,
+})
 
 /** Whether an event can take a route. Routes are the public URL namespace, so they are unique. */
-export const checkEventRoute = createResource({ url: "buzz.api.events.check_event_route" })
+export const checkEventRoute = useCall<
+	{ available: boolean; message: string },
+	{ route: string; event?: string }
+>({
+	url: "/api/v2/method/buzz.api.events.check_event_route",
+	immediate: false,
+})
 
-/** Everyone holding a submitted ticket to an event, with their add-ons and the total. */
-export function eventGuests(event: string) {
-	return createResource<EventGuests>({
-		url: "buzz.api.events.get_event_guests",
+/** Registrations per day for an event, for the card above its guest list. */
+export function useRegistrationTrend(event: string) {
+	return useCall<RegistrationTrend, { event: string }>({
+		url: "/api/v2/method/buzz.api.events.get_event_registration_trend",
 		params: { event },
-		auto: true,
+	})
+}
+
+/**
+ * Which verification methods this site can deliver a guest OTP over. Site configuration
+ * rather than event data, so it is fetched when the settings dialog opens rather than
+ * cached — an admin configuring email mid-session must not be answered from IndexedDB.
+ */
+export function useVerificationMethods() {
+	return useCall<VerificationMethods>({
+		url: "/api/v2/method/buzz.api.events.get_verification_methods",
+		immediate: false,
+	})
+}
+
+/** Add an organisation that has no team here as a co-host of the event. */
+export function useAddCoHost() {
+	return useCall<
+		EventHostRef,
+		{ event: string; host_name: string; logo?: string; by_line?: string; about?: string }
+	>({
+		url: "/api/v2/method/buzz.api.events.add_co_host",
+		method: "POST",
+		immediate: false,
+	})
+}
+
+/**
+ * Whether the session user may write to an event.
+ *
+ * Core's own check, so it runs through Buzz's `team_has_permission` hook and answers for
+ * an unrestricted user too — a System Manager holds no membership, so reading the role off
+ * the loaded teams list would deny them.
+ */
+export function useCanWriteEvent(event: string) {
+	return useCall<
+		{ has_permission: boolean },
+		{ doctype: string; docname: string; perm_type: string }
+	>({
+		url: "/api/v2/method/frappe.client.has_permission",
+		params: { doctype: "Buzz Event", docname: event, perm_type: "write" },
+	})
+}
+
+/**
+ * Take an event and the forms it serves off the public site.
+ *
+ * Archiving is more than the `is_published` write its opposite is — the endpoint also
+ * closes the event's forms — so it does not go through `setValue`. Reload the doc after
+ * it lands: the store has no idea the server moved.
+ */
+export function useArchiveEvent() {
+	return useCall<null, { event: string }>({
+		url: "/api/v2/method/buzz.api.events.archive_event",
+		method: "POST",
+		immediate: false,
+	})
+}
+
+/** Drop a co-host from the event. The Event Host record itself is left alone. */
+export function useRemoveCoHost() {
+	return useCall<null, { event: string; host: string }>({
+		url: "/api/v2/method/buzz.api.events.remove_co_host",
+		method: "POST",
+		immediate: false,
 	})
 }

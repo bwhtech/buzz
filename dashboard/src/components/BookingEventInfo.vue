@@ -1,9 +1,13 @@
 <template>
-	<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-lg p-6">
+	<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-6 p-6">
 		<div class="mb-8 flex items-center justify-between">
 			<h3 class="text-lg-semibold text-ink-gray-9">{{ event.title }}</h3>
 
-			<Button :link="`/events/${event.route}`" icon-left="external-link" variant="subtle" size="sm"
+			<Button
+				:link="`/events/${event.route}`"
+				icon-left="lucide-external-link"
+				variant="subtle"
+				size="sm"
 				>{{ __("Visit Event Page") }}
 			</Button>
 		</div>
@@ -37,7 +41,7 @@
 					<LucideMapPin class="w-4 h-4 mr-2 flex-shrink-0" />
 					<span class="text-sm-medium">{{ __("Venue") }}</span>
 				</div>
-				<p class="text-ink-gray-9 font-medium">{{ venue.name }}</p>
+				<p class="text-ink-gray-9 font-medium">{{ venue.venue_name }}</p>
 				<p v-if="venue.address" class="text-sm text-ink-gray-6 mt-1">
 					{{ venue.address }}
 				</p>

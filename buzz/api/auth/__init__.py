@@ -5,7 +5,7 @@ from frappe.utils.oauth import get_oauth2_authorize_url, get_oauth_keys
 from buzz.api.auth.schemas import LoginContextResponse, ProviderLogin
 
 
-@frappe.whitelist(allow_guest=True)  # nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_login_context(redirect_to: str | None = None) -> LoginContextResponse:
 	raw_banner = frappe.db.get_single_value("Buzz Settings", "login_banner")
 

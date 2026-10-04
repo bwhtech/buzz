@@ -1,0 +1,154 @@
+import { expect, type Page, test } from "@playwright/test"
+
+import { SETTINGS_EMAIL, SETTINGS_FIRST_NAME } from "../data/user-settings"
+
+// Runs as its own user (see user-settings.setup.ts), and every edit is stamped and put back
+// through the dialog, so the tests hold in any order.
+const unique = (prefix: string) => `${prefix} ${Date.now()}`
+
+// Scoped to the dialog: the events page behind it carries its own labels, and a bare
+// getByLabel("Email") also matches an event card's "Open E2E Guest Email OTP" button.
+const settings = (page: Page) => page.getByRole("dialog")
+
+// By test id, not by role: the open settings dialog hides the sidebar from the
+// accessibility tree, and the name assertion below runs while it is open.
+const accountMenu = (page: Page) => page.getByTestId("account-menu")
+
+async function openSettings(page: Page) {
+	await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible()
+	await accountMenu(page).click()
+	await page.getByRole("menuitem", { name: "Settings" }).click()
+	await expect(settings(page).getByRole("heading", { name: "Profile" })).toBeVisible()
+}
+
+test.describe("User settings", () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto("/b/manage/events")
+		await openSettings(page)
+	})
+
+	test("opens the profile tab on the session user", async ({ page }) => {
+		const panel = settings(page)
+
+		await expect(panel.getByLabel("First Name")).toHaveValue(SETTINGS_FIRST_NAME)
+		await expect(panel.getByLabel("Email")).toHaveValue(SETTINGS_EMAIL)
+		await expect(panel.getByRole("button", { name: "Save" })).toHaveCount(0)
+	})
+
+	test("saves a new first name and updates the sidebar", async ({ page }) => {
+		const panel = settings(page)
+		const firstName = panel.getByLabel("First Name")
+		const save = panel.getByRole("button", { name: "Save" })
+		const edited = unique("Buzz")
+
+		await firstName.fill(edited)
+		await expect(save).toBeEnabled()
+		await save.click()
+
+		// The sidebar reads full_name, which the server derives on save.
+		await expect(accountMenu(page)).toContainText(edited)
+
+		await firstName.fill(SETTINGS_FIRST_NAME)
+		await save.click()
+		await expect(save).toHaveCount(0)
+	})
+
+	test("keeps a saved bio across a reload", async ({ page }) => {
+		const bio = settings(page).getByLabel("Bio")
+		const edited = unique("Runs the conference.")
+
+		await bio.fill(edited)
+		await settings(page).getByRole("button", { name: "Save" }).click()
+		await expect(settings(page).getByRole("button", { name: "Save" })).toHaveCount(0)
+
+		await page.reload()
+		await openSettings(page)
+		await expect(settings(page).getByLabel("Bio")).toHaveValue(edited)
+
+		await settings(page).getByLabel("Bio").fill("")
+		await settings(page).getByRole("button", { name: "Save" }).click()
+		await expect(settings(page).getByRole("button", { name: "Save" })).toHaveCount(0)
+	})
+
+	test("emails a password reset link", async ({ page }) => {
+		const panel = settings(page)
+
+		// Stubbed: the test site has no outgoing email account, so the real call throws.
+		await page.route(/reset_password/, (route) =>
+			route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ message: null }),
+			}),
+		)
+
+		await panel.getByRole("button", { name: "Reset Password" }).click()
+		await expect(page.getByText("Password reset link sent to your email")).toBeVisible()
+	})
+
+	test("lists the user's teams and opens one to manage", async ({ page }) => {
+		const panel = settings(page)
+
+		await panel.getByRole("tab", { name: "Teams" }).click()
+		await expect(panel.getByRole("heading", { name: "Your Teams" })).toBeVisible()
+
+		const teams = panel.getByRole("list", { name: "Your teams" }).getByRole("listitem")
+		await expect(teams.first()).toContainText("members", { timeout: 15000 })
+
+		await teams.first().getByRole("button").click()
+
+		// The Manager role can read the roster but not change it.
+		const members = panel.getByRole("list", { name: "Team members" }).getByRole("listitem")
+		await expect(members.first()).toContainText("Owner", { timeout: 15000 })
+		await expect(panel.getByRole("button", { name: "Add member" })).toHaveCount(0)
+
+		await panel.getByRole("button", { name: "Back to teams" }).click()
+		await expect(panel.getByRole("heading", { name: "Your Teams" })).toBeVisible()
+	})
+
+	test("searches the roster of a team", async ({ page }) => {
+		const panel = settings(page)
+
+		await panel.getByRole("tab", { name: "Teams" }).click()
+		const teams = panel.getByRole("list", { name: "Your teams" }).getByRole("listitem")
+		await expect(teams.first()).toContainText("members", { timeout: 15000 })
+		await teams.first().getByRole("button").click()
+
+		const members = panel.getByRole("list", { name: "Team members" }).getByRole("listitem")
+		await expect(members.first()).toContainText("Owner", { timeout: 15000 })
+
+		const search = panel.getByPlaceholder("Search members")
+		await search.fill(SETTINGS_EMAIL)
+		await expect(members).toHaveCount(1)
+		await expect(members.first()).toContainText(SETTINGS_EMAIL)
+
+		await search.fill("nobody-on-this-team")
+		await expect(members).toHaveCount(0)
+		await expect(panel.getByText("No members found")).toBeVisible()
+	})
+})
+
+test.describe("User settings on a phone", () => {
+	test.use({ viewport: { width: 390, height: 844 } })
+
+	test("drills from the tab list into a panel and back", async ({ page }) => {
+		await page.goto("/b/manage/events")
+		await accountMenu(page).click()
+		await page.getByRole("button", { name: "Settings" }).click()
+
+		const dialog = settings(page)
+		const profileTab = dialog.getByRole("tab", { name: "Profile" })
+		await expect(profileTab).toBeVisible()
+		await expect(dialog.getByLabel("First Name")).toBeHidden()
+
+		await profileTab.click()
+		await expect(dialog.getByLabel("First Name")).toHaveValue(SETTINGS_FIRST_NAME)
+		await expect(profileTab).toBeHidden()
+
+		await dialog.getByRole("button", { name: "Back" }).click()
+		await expect(profileTab).toBeVisible()
+
+		await dialog.getByRole("button", { name: "Close" }).click()
+		await expect(dialog).toHaveCount(0)
+	})
+})

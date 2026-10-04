@@ -1,7 +1,6 @@
 import frappe
 from frappe import _
 from frappe.utils import flt
-from payments.utils import get_payment_gateway_controller
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import record_gateway_refund
@@ -29,15 +28,29 @@ class RefundNotification(BaseModel):
 
 
 def get_payment_gateways_for_event(event: str) -> list[str]:
-	"""Get all payment gateways configured for an event."""
-	return frappe.get_all(
+	"""Get the event's own payment gateways, or the site default when it has none."""
+	gateways = frappe.get_all(
 		"Event Payment Gateway",
 		filters={"parent": event, "parenttype": "Buzz Event"},
 		pluck="payment_gateway",
 	)
+	default = frappe.db.get_single_value("Buzz Settings", "default_payment_gateway")
+	return gateways or ([default] if default else [])
+
+
+def resolve_payment_gateway(event: str, payment_gateway: str | None) -> str:
+	"""The gateway the client picked, as long as the event takes payments through it."""
+	gateways = get_payment_gateways_for_event(event)
+	if not gateways:
+		frappe.throw(_("No payment gateway configured for this event"))
+	if payment_gateway and payment_gateway not in gateways:
+		frappe.throw(_("{0} is not a payment gateway for this event").format(payment_gateway))
+	return payment_gateway or gateways[0]
 
 
 def get_controller(payment_gateway):
+	from payments.utils import get_payment_gateway_controller
+
 	return get_payment_gateway_controller(payment_gateway)
 
 
@@ -46,11 +59,7 @@ def get_payment_link_for_booking(
 ) -> str:
 	booking_doc = frappe.get_cached_doc("Event Booking", booking_id)
 	event_title = frappe.get_cached_value("Buzz Event", booking_doc.event, "title")
-	if not payment_gateway:
-		gateways = get_payment_gateways_for_event(booking_doc.event)
-		if not gateways:
-			frappe.throw(_("No payment gateway configured for this event"))
-		payment_gateway = gateways[0]
+	payment_gateway = resolve_payment_gateway(booking_doc.event, payment_gateway)
 	return get_payment_link(
 		"Event Booking",
 		booking_id,
@@ -67,14 +76,14 @@ def get_payment_link_for_sponsorship(
 	sponsorship_tier: str,
 	redirect_to: str = "/events",
 	payment_gateway: str | None = None,
+	currency: str | None = None,
 ) -> str:
 	tier_doc = frappe.get_cached_doc("Sponsorship Tier", sponsorship_tier)
-	if not payment_gateway:
-		gateways = get_payment_gateways_for_event(tier_doc.event)
-		if not gateways:
-			frappe.throw(_("No payment gateway configured for this event"))
-		payment_gateway = gateways[0]
+	if not tier_doc.enabled:
+		frappe.throw(_("This sponsorship tier is no longer available."))
+	payment_gateway = resolve_payment_gateway(tier_doc.event, payment_gateway)
 	event_title = frappe.get_cached_value("Buzz Event", tier_doc.event, "title")
+	price = tier_doc.price_for(currency)
 	frappe.db.set_value(
 		"Sponsorship Enquiry", sponsorship_enquiry, "tier", sponsorship_tier
 	)  # TODO: rethink later
@@ -82,8 +91,8 @@ def get_payment_link_for_sponsorship(
 	return get_payment_link(
 		"Sponsorship Enquiry",
 		sponsorship_enquiry,
-		tier_doc.price,
-		tier_doc.currency,
+		price.price,
+		price.currency,
 		payment_gateway,
 		redirect_to,
 		f"Payment for {tier_doc.title} Sponsorship at {event_title}",
@@ -99,8 +108,11 @@ def get_payment_link(
 	redirect_to: str = "/events",
 	title: str | None = None,
 ) -> str:
-	payment = record_payment(reference_doctype, reference_docname, amount, currency, payment_gateway)
 	controller = get_controller(payment_gateway)
+	# Not every gateway controller implements this check.
+	if hasattr(controller, "validate_transaction_currency"):
+		controller.validate_transaction_currency(currency)
+	payment = record_payment(reference_doctype, reference_docname, amount, currency, payment_gateway)
 	user_full_name = frappe.get_cached_value("User", frappe.session.user, "full_name")
 
 	payment_details = {
@@ -190,7 +202,7 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 			},
 		)
 
-		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+		frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def handle_refund_notification(doctype: str, docname: str) -> None:

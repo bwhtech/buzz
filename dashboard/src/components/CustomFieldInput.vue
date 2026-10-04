@@ -106,7 +106,7 @@
 			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
 		</label>
 		<div v-if="modelValue" class="relative inline-block">
-			<img :src="modelValue" class="h-16 w-16 rounded object-cover border" />
+			<img :src="modelValue" class="h-16 w-16 rounded-4 object-cover border" />
 			<Button
 				variant="subtle"
 				theme="gray"

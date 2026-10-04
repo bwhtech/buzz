@@ -6,10 +6,13 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
+  "enabled",
   "event",
   "column_break_vmpf",
-  "price",
-  "currency"
+  "prices",
+  "slots",
+  "section_break_perks",
+  "perks"
  ],
  "fields": [
   {
@@ -27,28 +30,45 @@
    "reqd": 1
   },
   {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  },
+  {
    "fieldname": "column_break_vmpf",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "price",
-   "fieldtype": "Currency",
-   "label": "Price",
-   "non_negative": 1,
-   "options": "currency"
+   "fieldname": "prices",
+   "fieldtype": "Table",
+   "label": "Prices",
+   "options": "Buzz Price",
+   "reqd": 1
   },
   {
-   "default": "INR",
-   "fieldname": "currency",
-   "fieldtype": "Link",
-   "label": "Currency",
-   "options": "Currency"
+   "description": "Leave empty or 0 for unlimited sponsors.",
+   "fieldname": "slots",
+   "fieldtype": "Int",
+   "label": "Slots",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "section_break_perks",
+   "fieldtype": "Section Break"
+  },
+  {
+   "description": "One perk per line.",
+   "fieldname": "perks",
+   "fieldtype": "Small Text",
+   "label": "Perks"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-28 16:17:50.389537",
+ "modified": "2026-10-02 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Sponsorship Tier",

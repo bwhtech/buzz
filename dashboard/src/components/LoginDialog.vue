@@ -7,17 +7,15 @@
 		</template>
 		<div
 			v-if="login_context?.login_banner"
-			class="rounded-md bg-surface-gray-2 p-3 prose prose-sm max-w-none mb-6"
+			class="rounded-5 bg-surface-gray-2 p-3 prose prose-sm max-w-none mb-6"
 			v-html="login_context.login_banner"
 		/>
 
-		<div v-if="error_message" class="mb-4 rounded-md bg-surface-red-2 p-3 text-sm text-ink-red-6">
-			{{ error_message }}
-		</div>
+		<ErrorMessage v-if="error_message" class="mb-4" :message="error_message" />
 
 		<div
 			v-if="success_message"
-			class="mb-4 rounded-md bg-surface-green-2 p-3 text-sm text-ink-green-6"
+			class="mb-4 rounded-5 bg-surface-green-2 p-3 text-sm text-ink-green-6"
 		>
 			{{ success_message }}
 		</div>
@@ -195,7 +193,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Dialog, FormControl, createResource } from "frappe-ui"
+import { Button, Dialog, ErrorMessage, FormControl, useCall } from "frappe-ui"
 import {
 	type ComponentPublicInstance,
 	type PropType,
@@ -210,6 +208,7 @@ import { useLoginDialog } from "@/composables/useLoginDialog"
 import { session } from "@/data/session"
 import { userResource } from "@/data/user"
 import type { FrappeError } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 
 type LoginView = "login" | "signup" | "forgot-password" | "email-link"
 
@@ -220,6 +219,11 @@ interface ProviderLogin {
 }
 
 const { is_open, close } = useLoginDialog()
+
+// The embed route runs inside the public page's overlay, where the parent page owns the URL.
+const pageLocation = window.location.pathname.endsWith("/login/embed")
+	? window.parent.location
+	: window.location
 
 const current_view = ref<LoginView>("login")
 const error_message = ref("")
@@ -242,10 +246,9 @@ const view_title = computed(() => {
 	return titles[current_view.value] || __("Login")
 })
 
-const login_context_resource = createResource({
-	url: "buzz.api.auth.get_login_context",
-	params: { redirect_to: window.location.href },
-	auto: true,
+const login_context_resource = useCall<Record<string, any>, { redirect_to: string }>({
+	url: "/api/v2/method/buzz.api.auth.get_login_context",
+	params: { redirect_to: pageLocation.href },
 })
 
 const login_context = computed(() => login_context_resource.data)
@@ -266,7 +269,7 @@ const SocialLoginButtons = defineComponent({
 						class: "w-full",
 						type: "button",
 						onClick: () => {
-							window.location.href = provider.auth_url
+							pageLocation.href = provider.auth_url
 						},
 					},
 					{
@@ -321,76 +324,64 @@ function handleLogin() {
 	)
 }
 
-const signup_resource = createResource({
-	url: "frappe.core.doctype.user.user.sign_up",
+const signup_resource = useCall<any[], Record<string, string>>({
+	url: "/api/v2/method/frappe.core.doctype.user.user.sign_up",
+	method: "POST",
+	immediate: false,
+	onSuccess(data) {
+		// sign_up answers [status, message]; status 1 means the verification mail went out.
+		success_message.value =
+			data?.[0] !== 1 && data?.[1] ? data[1] : __("Please check your email to verify your account.")
+	},
+	onError: showError,
 })
 
 function handleSignup() {
 	error_message.value = ""
-	signup_resource.submit(
-		{
-			email: form.value.email,
-			full_name: form.value.full_name,
-			redirect_to: window.location.pathname,
-		},
-		{
-			onSuccess(data: any[]) {
-				if (data && data[0] === 1) {
-					success_message.value = __("Please check your email to verify your account.")
-				} else if (data && data[1]) {
-					success_message.value = data[1]
-				} else {
-					success_message.value = __("Please check your email to verify your account.")
-				}
-			},
-			onError(error: FrappeError) {
-				error_message.value = error.messages?.[0] || __("Something went wrong. Please try again.")
-			},
-		},
-	)
+	signup_resource.submit({
+		email: form.value.email,
+		full_name: form.value.full_name,
+		redirect_to: pageLocation.pathname + pageLocation.search,
+	})
 }
 
-const forgot_password_resource = createResource({
-	url: "frappe.core.doctype.user.user.reset_password",
+const forgot_password_resource = useCall<unknown, { user: string }>({
+	url: "/api/v2/method/frappe.core.doctype.user.user.reset_password",
+	method: "POST",
+	immediate: false,
+	onSuccess() {
+		success_message.value = __("Password reset link has been sent to your email.")
+	},
+	onError: showError,
 })
 
 function handleForgotPassword() {
 	error_message.value = ""
-	forgot_password_resource.submit(
-		{ user: form.value.email },
-		{
-			onSuccess() {
-				success_message.value = __("Password reset link has been sent to your email.")
-			},
-			onError(error: FrappeError) {
-				error_message.value = error.messages?.[0] || __("Something went wrong. Please try again.")
-			},
-		},
-	)
+	forgot_password_resource.submit({ user: form.value.email })
 }
 
-const email_link_resource = createResource({
-	url: "frappe.www.login.send_login_link",
+const email_link_resource = useCall<unknown, { email: string }>({
+	url: "/api/v2/method/frappe.www.login.send_login_link",
+	method: "POST",
+	immediate: false,
+	onSuccess() {
+		success_message.value = __("Login link has been sent to your email.")
+	},
+	onError: showError,
 })
 
 function handleEmailLink() {
 	error_message.value = ""
-	email_link_resource.submit(
-		{ email: form.value.email },
-		{
-			onSuccess() {
-				success_message.value = __("Login link has been sent to your email.")
-			},
-			onError(error: FrappeError) {
-				error_message.value = error.messages?.[0] || __("Something went wrong. Please try again.")
-			},
-		},
-	)
+	email_link_resource.submit({ email: form.value.email })
+}
+
+function showError(error: Error) {
+	error_message.value = serverErrorMessage(error) || __("Something went wrong. Please try again.")
 }
 
 watch(is_open, (value) => {
 	if (value) {
-		login_context_resource.fetch({ redirect_to: window.location.href })
+		login_context_resource.submit({ redirect_to: pageLocation.href })
 	}
 })
 </script>

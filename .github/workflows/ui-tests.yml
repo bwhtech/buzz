@@ -74,6 +74,8 @@ jobs:
       - name: Start Frappe Server
         working-directory: /home/runner/frappe-bench
         run: |
+          # No SMTP on CI: muting still queues Email Queue rows, it only never sends them.
+          bench --site buzz.test set-config mute_emails 1
           bench start &> bench_start.log &
           timeout 60 bash -c \
             'until curl -sf http://buzz.test:8000 > /dev/null; do sleep 1; done'

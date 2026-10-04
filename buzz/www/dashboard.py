@@ -5,19 +5,26 @@ import frappe
 from frappe import _
 from frappe.utils import get_system_timezone
 
+from buzz import telemetry
+from buzz.api.maps.services import place_search_enabled
+from buzz.utils import is_app_installed
+from buzz.www.event.venue_map import google_maps_embed_api_key
+
 no_cache = 1
 
 
 def get_context():
 	csrf_token = frappe.sessions.get_csrf_token()
-	frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+	frappe.db.commit()  # nosemgrep: frappe-manual-commit
 	context = frappe._dict()
 	context.boot = get_boot()
 	context.boot.csrf_token = csrf_token
+	if frappe.session.user != "Guest":
+		telemetry.capture("active_site", interval="1d", on_commit=False)
 	return context
 
 
-# nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+# nosemgrep: guest-whitelisted-method
 @frappe.whitelist(methods=["POST"], allow_guest=True)
 def get_context_for_dev():
 	if not frappe.conf.developer_mode:
@@ -32,5 +39,8 @@ def get_boot():
 			"site_name": frappe.local.site,
 			"read_only_mode": frappe.flags.read_only,
 			"system_timezone": get_system_timezone(),
+			"google_place_search_enabled": place_search_enabled(),
+			"google_maps_embed_api_key": google_maps_embed_api_key(),
+			"zoom_available": is_app_installed("zoom_integration"),
 		}
 	)

@@ -7,7 +7,7 @@
 		</Button>
 	</div>
 
-	<div class="w-4" v-if="proposal.get.loading">
+	<div class="w-4" v-if="proposal.loading">
 		<Spinner />
 	</div>
 
@@ -20,7 +20,7 @@
 		<!-- Accepted Alert -->
 		<div
 			v-if="proposal.doc.status === 'Accepted'"
-			class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-lg p-6"
+			class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-6 p-6"
 		>
 			<div class="flex items-center">
 				<LucideCheckCircle class="w-6 h-6 text-ink-green-6 mr-3" />
@@ -36,7 +36,7 @@
 		<!-- Shortlisted Alert -->
 		<div
 			v-else-if="proposal.doc.status === 'Shortlisted'"
-			class="mb-6 bg-surface-blue-1 border border-outline-blue-1 rounded-lg p-6"
+			class="mb-6 bg-surface-blue-1 border border-outline-blue-1 rounded-6 p-6"
 		>
 			<div class="flex items-center">
 				<LucideStar class="w-6 h-6 text-ink-blue-5 mr-3" />
@@ -52,7 +52,7 @@
 		<!-- Review Pending Alert -->
 		<div
 			v-else-if="proposal.doc.status === 'Review Pending'"
-			class="mb-6 bg-surface-orange-1 border border-outline-orange-1 rounded-lg p-6"
+			class="mb-6 bg-surface-orange-1 border border-outline-orange-1 rounded-6 p-6"
 		>
 			<div class="flex items-center">
 				<LucideClock class="w-6 h-6 text-ink-gray-8 mr-3" />
@@ -72,7 +72,7 @@
 		<!-- Rejected Alert -->
 		<div
 			v-else-if="proposal.doc.status === 'Rejected'"
-			class="mb-6 bg-surface-red-1 border border-outline-red-1 rounded-lg p-6"
+			class="mb-6 bg-surface-red-1 border border-outline-red-1 rounded-6 p-6"
 		>
 			<div class="flex items-center">
 				<LucideXCircle class="w-6 h-6 text-ink-red-5 mr-3" />
@@ -91,7 +91,7 @@
 
 		<div class="space-y-6">
 			<!-- Proposal Information -->
-			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-base border border-outline-gray-1 rounded-6 p-6">
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
 						<label class="block text-sm-medium text-ink-gray-6 mb-1">{{ __("Title") }}</label>
@@ -124,7 +124,7 @@
 			</div>
 
 			<!-- Speakers -->
-			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-base border border-outline-gray-1 rounded-6 p-6">
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">{{ __("Speakers") }}</h3>
 				<ListView
 					v-if="proposal.doc.speakers && proposal.doc.speakers.length > 0"
@@ -137,7 +137,7 @@
 			</div>
 
 			<!-- Description -->
-			<div class="bg-surface-base border border-outline-gray-1 rounded-lg p-6">
+			<div class="bg-surface-base border border-outline-gray-1 rounded-6 p-6">
 				<h3 class="text-ink-gray-8 text-lg-semibold mb-4">{{ __("Description") }}</h3>
 				<div
 					v-if="proposal.doc.description"
@@ -149,9 +149,9 @@
 		</div>
 	</div>
 
-	<div v-else-if="proposal.get.error" class="text-center py-8">
-		<div class="text-ink-red-6 text-lg mb-2">{{ __("Error loading proposal details") }}</div>
-		<div class="text-ink-gray-4 text-sm">{{ proposal.get.error }}</div>
+	<div v-else-if="proposal.error" class="text-center py-8">
+		<ErrorMessage class="mb-2" :message="__('Error loading proposal details')" />
+		<div class="text-ink-gray-4 text-sm">{{ serverErrorMessage(proposal.error) }}</div>
 	</div>
 
 	<!-- Edit Dialog -->
@@ -159,10 +159,10 @@
 		v-if="proposal.doc"
 		v-model:open="showEditDialog"
 		:proposal-id="proposalId"
-		:event-talk-id="isEditingEventTalk ? eventTalk.name : null"
+		:event-talk-id="isEditingEventTalk ? eventTalk?.name : undefined"
 		:initial-data="{
-			title: isEditingEventTalk ? eventTalk.title : proposal.doc.title,
-			description: isEditingEventTalk ? eventTalk.description : proposal.doc.description,
+			title: isEditingEventTalk ? eventTalk?.title : proposal.doc.title,
+			description: isEditingEventTalk ? eventTalk?.description : proposal.doc.description,
 			phone: proposal.doc.phone,
 		}"
 		@updated="onProposalUpdated"
@@ -170,15 +170,8 @@
 </template>
 
 <script setup lang="ts">
-import {
-	Badge,
-	Button,
-	ListView,
-	Spinner,
-	createDocumentResource,
-	createResource,
-	dayjsLocal,
-} from "frappe-ui"
+import { Badge, Button, ErrorMessage, Spinner, dayjsLocal, useDoc, useList } from "frappe-ui"
+import { ListView } from "frappe-ui/experimental"
 import { computed, ref, watch } from "vue"
 import LucideCheckCircle from "~icons/lucide/check-circle"
 import LucideClock from "~icons/lucide/clock"
@@ -188,6 +181,7 @@ import LucideXCircle from "~icons/lucide/x-circle"
 import BackButton from "@/components/common/BackButton.vue"
 import ProposalEditDialog from "@/components/ProposalEditDialog.vue"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps({
 	proposalId: {
@@ -198,41 +192,37 @@ const props = defineProps({
 
 const showEditDialog = ref(false)
 
-const proposal = createDocumentResource({
+const proposal = useDoc<Record<string, any> & { name: string }>({
 	doctype: "Talk Proposal",
 	name: props.proposalId,
-	auto: true,
 })
 
-// Fetch event details including title and allow_editing_talks_after_acceptance
-const eventResource = createResource({
-	url: "frappe.client.get_value",
-	makeParams() {
-		return {
-			doctype: "Buzz Event",
-			filters: { name: proposal.doc?.event },
-			fieldname: ["title", "allow_editing_talks_after_acceptance"],
-		}
-	},
+// Lists of one: a list read returns only the named fields, and needs no read access to
+// the rest of the document.
+const eventResource = useList<Record<string, any> & { name: string }>({
+	doctype: "Buzz Event",
+	filters: () => ({ name: proposal.doc?.event }),
+	fields: ["name", "title", "allow_editing_talks_after_acceptance"],
+	limit: 1,
+	immediate: false,
+	refetch: false,
 })
 
 // Fetch Event Talk record if proposal is accepted
-const eventTalkResource = createResource({
-	url: "frappe.client.get_value",
-	makeParams() {
-		return {
-			doctype: "Event Talk",
-			filters: { proposal: props.proposalId },
-			fieldname: ["name", "title", "description"],
-		}
-	},
+const eventTalkResource = useList<{ name: string; title: string; description: string }>({
+	doctype: "Event Talk",
+	filters: { proposal: props.proposalId },
+	fields: ["name", "title", "description"],
+	limit: 1,
+	immediate: false,
+	refetch: false,
 })
 
 watch(
 	() => proposal.doc?.event,
 	(eventId) => {
 		if (eventId) {
-			eventResource.fetch()
+			eventResource.reload()
 		}
 	},
 	{ immediate: true },
@@ -242,17 +232,17 @@ watch(
 	() => proposal.doc?.status,
 	(status) => {
 		if (status === "Accepted") {
-			eventTalkResource.fetch()
+			eventTalkResource.reload()
 		}
 	},
 	{ immediate: true },
 )
 
-const eventTitle = computed(() => eventResource.data?.title || proposal.doc?.event)
+const eventTitle = computed(() => eventResource.data?.[0]?.title || proposal.doc?.event)
 const allowEditingAfterAcceptance = computed(
-	() => eventResource.data?.allow_editing_talks_after_acceptance,
+	() => eventResource.data?.[0]?.allow_editing_talks_after_acceptance,
 )
-const eventTalk = computed(() => eventTalkResource.data)
+const eventTalk = computed(() => eventTalkResource.data?.[0])
 
 const speakerColumns = [
 	{ label: __("First Name"), key: "first_name" },
@@ -287,7 +277,7 @@ const formatDate = (dateString: string) => {
 const onProposalUpdated = () => {
 	proposal.reload()
 	if (proposal.doc?.status === "Accepted") {
-		eventTalkResource.fetch()
+		eventTalkResource.reload()
 	}
 }
 </script>

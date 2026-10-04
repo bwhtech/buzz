@@ -21,3 +21,13 @@ class CannotCreateEvents(NotPermitted):
 class ZoomNotAvailable(BuzzAPIError):
 	title = _lt("Zoom Not Available")
 	message = _lt("Zoom is not set up on this site, so a Zoom meeting cannot be created.")
+
+
+class EventEnded(BuzzAPIError):
+	title = _lt("Event Has Ended")
+	message = _lt("You cannot convert events that have ended to Zoom meetings.")
+
+
+class TaxDetailsMissing(BuzzAPIError):
+	title = _lt("Tax Details Missing")
+	message = _lt("Add your team's tax details before charging tax on tickets.")

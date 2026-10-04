@@ -8,7 +8,7 @@
 
 			<div class="space-y-4">
 				<!-- Amount -->
-				<div class="text-center p-3 bg-surface-gray-1 rounded">
+				<div class="text-center p-3 bg-surface-gray-1 rounded-4">
 					<div class="text-2xl-bold text-ink-gray-9">
 						{{ formatCurrency(amount, currency) }}
 					</div>
@@ -17,7 +17,7 @@
 				<!-- Payment Details (HTML Content) -->
 				<div
 					v-if="offlineSettings.payment_details"
-					class="prose-sm [&>:first-child]:mt-0 bg-surface-gray-1 border border-outline-gray-1 rounded p-3 text-ink-gray-9"
+					class="prose-sm [&>:first-child]:mt-0 bg-surface-gray-1 border border-outline-gray-1 rounded-4 p-3 text-ink-gray-9"
 					v-html="offlineSettings.payment_details"
 				></div>
 
@@ -46,7 +46,7 @@
 								<span class="truncate">{{ paymentProof.file_name || paymentProof.name }}</span>
 								<button
 									type="button"
-									class="ml-auto p-1 rounded hover:bg-surface-gray-2 text-ink-gray-5 hover:text-ink-gray-8"
+									class="ml-auto p-1 rounded-4 hover:bg-surface-gray-2 text-ink-gray-5 hover:text-ink-gray-8"
 									:title="__('Replace')"
 									@click="openFileSelector"
 								>

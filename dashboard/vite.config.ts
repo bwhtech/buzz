@@ -25,6 +25,8 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "src"),
+			// TypeScript shared with the app's own bundles (bench build), e.g. the event banner.
+			"@public": path.resolve(__dirname, "../buzz/public"),
 			"tailwind.config.js": path.resolve(__dirname, "tailwind.config.js"),
 		},
 	},
@@ -39,5 +41,6 @@ export default defineConfig({
 	},
 	server: {
 		allowedHosts: true,
+		fs: { allow: [".", "../buzz/public/js"] },
 	},
 })

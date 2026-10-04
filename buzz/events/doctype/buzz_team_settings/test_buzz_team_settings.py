@@ -129,3 +129,46 @@ class TestBuzzTeamSettings(IntegrationTestCase):
 			team = create_owned_team("Settings No Zoom", owner)
 
 		self.assertIsNone(get_team_settings(team).get(ZOOM_SEEDED_FIELD))
+
+
+class TestTeamTaxDetails(IntegrationTestCase):
+	def setUp(self):
+		frappe.set_user("Administrator")
+		owner = create_user("team-tax-owner@example.com", "Owner")
+		self.settings = frappe.get_doc("Buzz Team Settings", create_owned_team("Team Tax Team", owner))
+
+	def save_tax_details(self, **values):
+		self.settings.update(values)
+		self.settings.save()
+
+	def test_refuses_a_tax_id_without_the_rest(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.save_tax_details(tax_id="22AAAAA0000A1Z5")
+
+	def test_refuses_a_legal_name_without_a_tax_id(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.save_tax_details(legal_name="Acme Events", billing_address="12 MG Road")
+
+	def test_saves_complete_details_with_an_uppercase_tax_id(self):
+		self.save_tax_details(
+			legal_name="Acme Events", tax_id=" 22aaaaa0000a1z5 ", billing_address="12 MG Road"
+		)
+		self.assertEqual(self.settings.tax_id, "22AAAAA0000A1Z5")
+
+	def test_empty_details_are_allowed(self):
+		self.save_tax_details(legal_name="", tax_id="", billing_address="")
+		self.assertIsNone(self.settings.tax_id)
+
+	def test_refuses_removing_the_tax_id(self):
+		self.save_tax_details(
+			legal_name="Acme Events", tax_id="22AAAAA0000A1Z5", billing_address="12 MG Road"
+		)
+		with self.assertRaises(frappe.ValidationError):
+			self.save_tax_details(legal_name="", tax_id="", billing_address="")
+
+	def test_changing_the_tax_id_is_allowed(self):
+		self.save_tax_details(
+			legal_name="Acme Events", tax_id="22AAAAA0000A1Z5", billing_address="12 MG Road"
+		)
+		self.save_tax_details(tax_id="29BBBBB1111B1Z5")
+		self.assertEqual(self.settings.tax_id, "29BBBBB1111B1Z5")

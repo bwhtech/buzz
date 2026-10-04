@@ -2,7 +2,7 @@
 <template>
 	<div v-if="eventDetails" class="mb-8">
 		<!-- Banner Image -->
-		<div v-if="eventDetails.banner_image" class="relative w-full rounded-lg overflow-hidden mb-6">
+		<div v-if="eventDetails.banner_image" class="relative w-full rounded-6 overflow-hidden mb-6">
 			<img
 				:src="eventDetails.banner_image"
 				:alt="eventDetails.title"
@@ -18,7 +18,7 @@
 		</div>
 
 		<!-- Event Details -->
-		<div class="bg-surface-gray-1 rounded-lg p-6">
+		<div class="bg-surface-gray-1 rounded-6 p-6">
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 text-sm">
 				<!-- Date -->
 				<div v-if="eventDetails.start_date" class="flex flex-col items-start gap-3">
@@ -48,13 +48,13 @@
 				</div>
 
 				<!-- Venue -->
-				<div v-if="eventDetails.venue" class="flex flex-col items-start gap-3">
+				<div v-if="eventDetails.venue_name" class="flex flex-col items-start gap-3">
 					<div class="flex items-center gap-2">
 						<LucideMapPin class="h-4 w-4 text-ink-gray-6" />
 						<p class="text-ink-gray-6 text-base">{{ __("Venue") }}</p>
 					</div>
 					<div>
-						<p class="font-medium text-ink-gray-8">{{ eventDetails.venue }}</p>
+						<p class="font-medium text-ink-gray-8">{{ eventDetails.venue_name }}</p>
 					</div>
 				</div>
 

@@ -47,28 +47,27 @@ class IntegrationTestEventProposal(IntegrationTestCase):
 		company = f"Acme {frappe.generate_hash(length=6)}"
 		proposal = self.make_proposal(host_company=company, about_the_company="We host events.")
 
-		host_name = proposal.create_host()
+		host = proposal.create_host()
 
-		self.assertEqual(host_name, company)
-		self.assertEqual(proposal.host, company)
-		self.assertTrue(frappe.db.exists("Event Host", company))
-		self.assertEqual(frappe.db.get_value("Event Host", company, "about"), "We host events.")
+		self.assertEqual(proposal.host, host)
+		self.assertEqual(frappe.db.get_value("Event Host", host, "host_name"), company)
+		self.assertEqual(frappe.db.get_value("Event Host", host, "about"), "We host events.")
 
 	def test_create_host_reuses_existing_host(self):
 		company = f"Existing {frappe.generate_hash(length=6)}"
 		existing = frappe.new_doc("Event Host")
-		existing.name = company
+		existing.host_name = company
 		existing.insert(ignore_permissions=True)
 
 		proposal = self.make_proposal(host_company=company)
 		proposal.create_host()
 
-		self.assertEqual(proposal.host, company)
+		self.assertEqual(proposal.host, existing.name)
 
 	def test_reuse_fills_only_empty_host_fields(self):
 		# Existing host with empty logo/about -> proposal values fill them in.
 		company = f"Empty {frappe.generate_hash(length=6)}"
-		frappe.get_doc({"doctype": "Event Host", "__newname": company}).insert(ignore_permissions=True)
+		frappe.get_doc({"doctype": "Event Host", "host_name": company}).insert(ignore_permissions=True)
 
 		proposal = self.make_proposal(
 			host_company=company,
@@ -77,7 +76,7 @@ class IntegrationTestEventProposal(IntegrationTestCase):
 		)
 		proposal.create_host()
 
-		host = frappe.get_doc("Event Host", company)
+		host = frappe.get_doc("Event Host", proposal.host)
 		self.assertEqual(host.logo, "/files/proposal-logo.png")
 		self.assertEqual(host.about, "Proposal about.")
 
@@ -87,7 +86,7 @@ class IntegrationTestEventProposal(IntegrationTestCase):
 		frappe.get_doc(
 			{
 				"doctype": "Event Host",
-				"__newname": company,
+				"host_name": company,
 				"logo": "/files/original-logo.png",
 				"about": "Original about.",
 			}
@@ -100,7 +99,7 @@ class IntegrationTestEventProposal(IntegrationTestCase):
 		)
 		proposal.create_host()
 
-		host = frappe.get_doc("Event Host", company)
+		host = frappe.get_doc("Event Host", proposal.host)
 		self.assertEqual(host.logo, "/files/original-logo.png")
 		self.assertEqual(host.about, "Original about.")
 
@@ -122,8 +121,8 @@ class IntegrationTestEventProposal(IntegrationTestCase):
 
 		proposal.submit()
 
-		self.assertEqual(proposal.host, company)
-		self.assertTrue(frappe.db.exists("Event Host", company))
+		self.assertTrue(proposal.host)
+		self.assertEqual(frappe.db.get_value("Event Host", proposal.host, "host_name"), company)
 		self.assertEqual(proposal.status, "Event Created")
 
 	def test_start_and_end_time_are_mandatory(self):

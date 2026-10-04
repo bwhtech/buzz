@@ -23,7 +23,7 @@
 					v-if="eventBookingData.eventDetails?.banner_image"
 					:src="eventBookingData.eventDetails.banner_image"
 					:alt="eventBookingData.eventDetails?.title"
-					class="w-full rounded-lg mb-6 object-cover max-h-48"
+					class="w-full rounded-6 mb-6 object-cover max-h-48"
 				/>
 				<h2 class="text-2xl-semibold text-ink-gray-8 mb-2">
 					{{ __("Registrations Closed") }}
@@ -52,17 +52,11 @@
 </template>
 
 <script setup lang="ts">
-import { Spinner, createResource, usePageMeta } from "frappe-ui"
+import { Spinner, useCall, usePageMeta } from "frappe-ui"
 import { computed, reactive, ref, watch } from "vue"
 
 import { session } from "@/data/session"
-import type {
-	AvailableAddOn,
-	AvailableTicketType,
-	FrappeError,
-	FrappeField,
-	OfflineMethod,
-} from "@/types"
+import type { AvailableAddOn, AvailableTicketType, FrappeField, OfflineMethod } from "@/types"
 
 import BookingForm from "../components/BookingForm.vue"
 
@@ -98,22 +92,26 @@ const isGuest = computed(() => !session.isLoggedIn)
 
 usePageMeta(() => {
 	const eventTitle = eventBookingData.eventDetails?.title
-	return eventTitle ? { title: `${eventTitle} - ${__("Register")}` } : null
+	return eventTitle ? { title: `${__("Register")} | ${eventTitle}` } : null
 })
 
 const goToHome = () => {
 	window.location.href = "/"
 }
 
-const eventBookingResource = createResource({
-	url: "buzz.api.booking.get_event_booking_data",
-	params: {
-		event_route: props.eventRoute,
-	},
-	auto: true,
-	onSuccess: (data: Record<string, any>) => {
+const eventBookingResource = useCall<Record<string, any>, { event_route: string }>({
+	url: "/api/v2/method/buzz.api.booking.get_event_booking_data",
+	params: { event_route: props.eventRoute },
+	onSuccess: (data) => {
 		eventBookingData.availableAddOns = data.available_add_ons || []
-		eventBookingData.availableTicketTypes = data.available_ticket_types || []
+		// A ticket type's first price row is its default price.
+		eventBookingData.availableTicketTypes = (data.available_ticket_types || []).map(
+			(ticketType: AvailableTicketType) => ({
+				...ticketType,
+				price: ticketType.prices?.[0]?.price ?? 0,
+				currency: ticketType.prices?.[0]?.currency,
+			}),
+		)
 		eventBookingData.taxSettings = data.tax_settings || {
 			apply_tax: false,
 			tax_inclusive: false,
@@ -126,8 +124,8 @@ const eventBookingResource = createResource({
 		eventBookingData.offlineMethods = data.offline_methods || []
 		registrationsClosed.value = data.registrations_closed || false
 	},
-	onError: (error: FrappeError) => {
-		if (error.message?.includes("DoesNotExistError")) {
+	onError: (error) => {
+		if (error.message.includes("DoesNotExistError")) {
 			eventNotFound.value = true
 		}
 	},

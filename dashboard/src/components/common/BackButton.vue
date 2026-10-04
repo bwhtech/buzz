@@ -1,5 +1,10 @@
 <template>
-	<Button variant="ghost" icon-left="chevron-left" :route="to" @click="$emit('click', $event)">
+	<Button
+		variant="ghost"
+		icon-left="lucide-chevron-left"
+		:route="to"
+		@click="$emit('click', $event)"
+	>
 		{{ label }}
 	</Button>
 </template>

@@ -1,16 +1,19 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "prompt",
+ "autoname": "hash",
  "creation": "2025-07-19 11:35:15.182035",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "venue_name",
   "team",
+  "map_link",
   "address",
   "column_break_kqaw",
   "type",
   "google_maps_embed_code",
+  "google_place_id",
   "section_break_cexp",
   "longitude",
   "latitude",
@@ -19,11 +22,18 @@
  ],
  "fields": [
   {
+   "fieldname": "venue_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Venue Name",
+   "reqd": 1
+  },
+  {
    "fieldname": "address",
    "fieldtype": "Small Text",
    "in_list_view": 1,
    "label": "Address",
-   "reqd": 1
+   "mandatory_depends_on": "eval:!doc.map_link"
   },
   {
    "fieldname": "location",
@@ -76,18 +86,32 @@
    "fieldtype": "Link",
    "label": "Team",
    "options": "Buzz Team",
-   "reqd": 1,
    "search_index": 1
+  },
+  {
+   "description": "Set when the venue is added from Google Maps search.",
+   "fieldname": "google_place_id",
+   "fieldtype": "Data",
+   "label": "Google Place ID",
+   "no_copy": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "description": "A Google Maps or OpenStreetMap link. The venue's location is read from it when the venue is saved.",
+   "fieldname": "map_link",
+   "fieldtype": "Small Text",
+   "label": "Map Link"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-31 12:00:00.000000",
+ "modified": "2026-09-30 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Venue",
- "naming_rule": "Set by user",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
   {
@@ -118,7 +142,10 @@
  ],
  "quick_entry": 1,
  "row_format": "Dynamic",
+ "search_fields": "venue_name, address",
+ "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "venue_name"
 }

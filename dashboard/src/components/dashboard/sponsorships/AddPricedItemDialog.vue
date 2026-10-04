@@ -1,0 +1,109 @@
+<script setup lang="ts">
+import { Button, Dialog, ErrorMessage, FormControl, toast, useNewDoc } from "frappe-ui"
+import { computed, ref, watch } from "vue"
+
+import PriceInput from "@/components/dashboard/sponsorships/PriceInput.vue"
+import { useEnabledCurrencies } from "@/data/currencies"
+import type { FrappeError, TierPrice } from "@/types"
+
+type PricedDoc = { event: string; title: string; prices: TierPrice[] }
+
+const DEFAULT_CURRENCY = "INR"
+
+// Adds a sponsorship tier or a ticket type: both are a title and a first price on an event.
+const props = defineProps<{
+	event: string
+	doctype: "Sponsorship Tier" | "Event Ticket Type"
+	itemLabel: string
+	placeholder: string
+}>()
+const isOpen = defineModel<boolean>({ required: true })
+const emit = defineEmits<{ saved: [] }>()
+
+const title = ref("")
+const price = ref(0)
+const currency = ref(DEFAULT_CURRENCY)
+const showErrors = ref(false)
+
+const creator = useNewDoc<PricedDoc>(props.doctype)
+const enabledCurrencies = useEnabledCurrencies()
+
+const currencyOptions = computed(() =>
+	(enabledCurrencies.data ?? []).map((enabledCurrency) => enabledCurrency.name),
+)
+const selectedCurrency = computed(() =>
+	enabledCurrencies.data?.find((enabledCurrency) => enabledCurrency.name === currency.value),
+)
+
+const invalid = computed(() => !title.value.trim() || !(price.value >= 0))
+const errorMessage = computed(() => (creator.error as FrappeError | null)?.message)
+
+watch(isOpen, (open) => open && reset())
+
+function reset() {
+	title.value = ""
+	price.value = 0
+	currency.value = currencyOptions.value.includes(DEFAULT_CURRENCY)
+		? DEFAULT_CURRENCY
+		: (currencyOptions.value[0] ?? DEFAULT_CURRENCY)
+	showErrors.value = false
+	creator.reset()
+}
+
+async function submit() {
+	// Enter in a field submits the form too, so guard against a second insert mid-request.
+	if (creator.loading) return
+	showErrors.value = true
+	if (invalid.value) return
+
+	Object.assign(creator.doc, {
+		event: props.event,
+		title: title.value.trim(),
+		prices: [{ currency: currency.value, price: price.value }],
+	})
+	await creator.submit().catch(() => null)
+	if (creator.error) return
+
+	toast.success(`${props.itemLabel} added`)
+	emit("saved")
+	isOpen.value = false
+}
+</script>
+
+<template>
+	<Dialog v-model="isOpen" :title="`Add ${itemLabel}`">
+		<form novalidate class="space-y-4" @submit.prevent="submit">
+			<FormControl
+				v-model="title"
+				label="Title"
+				:placeholder="placeholder"
+				autocomplete="off"
+				required
+			/>
+
+			<div class="grid grid-cols-[2fr_1fr] gap-4">
+				<PriceInput
+					v-model="price"
+					label="Price"
+					required
+					:currency-symbol="selectedCurrency?.symbol || currency"
+					:number-format="selectedCurrency?.number_format"
+				/>
+				<FormControl v-model="currency" type="select" label="Currency" :options="currencyOptions" />
+			</div>
+
+			<ErrorMessage
+				:message="showErrors && invalid ? 'Add a title and a price of zero or more.' : errorMessage"
+			/>
+
+			<Button
+				type="button"
+				variant="solid"
+				class="w-full"
+				label="Add"
+				:loading="creator.loading"
+				@click="submit"
+			/>
+		</form>
+	</Dialog>
+</template>

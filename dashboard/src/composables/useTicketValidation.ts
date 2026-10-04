@@ -1,9 +1,10 @@
-import { createResource, toast } from "frappe-ui"
+import { toast, useCall } from "frappe-ui"
 import { type Ref, ref } from "vue"
 
 import beepFailSound from "@/assets/audio/beep-fail.wav"
 import beepSound from "@/assets/audio/beep.wav"
 import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
+import { serverErrorMessage } from "@/utils/serverError"
 
 interface ValidationTicket {
 	id: string
@@ -89,33 +90,37 @@ const showDebouncedToast = (message: string, type: "error" | "success" = "error"
 }
 
 // Ticket validation resource
-const validateTicketResource = createResource({
-	url: "buzz.api.checkin.validate_ticket_for_checkin",
-	onSuccess: (data: ValidationResult) => {
+const validateTicketResource = useCall<ValidationResult, { ticket_id: string }>({
+	url: "/api/v2/method/buzz.api.checkin.validate_ticket_for_checkin",
+	method: "POST",
+	immediate: false,
+	onSuccess: (data) => {
 		validationResult.value = data
 		showTicketModal.value = true
 		playSuccessSound()
 		isProcessingTicket.value = false
 	},
-	onError: (error: any) => {
+	onError: (error) => {
 		validationResult.value = null
 		isProcessingTicket.value = false
-		showDebouncedToast(error?.messages?.[0] || __("Error validating ticket"))
+		showDebouncedToast(serverErrorMessage(error) || __("Error validating ticket"))
 		playErrorSound()
 	},
 })
 
 // Check-in resource
-const checkInResource = createResource({
-	url: "buzz.api.checkin.checkin_ticket",
-	onSuccess: (data: ValidationResult) => {
+const checkInResource = useCall<ValidationResult, { ticket_id: string }>({
+	url: "/api/v2/method/buzz.api.checkin.checkin_ticket",
+	method: "POST",
+	immediate: false,
+	onSuccess: (data) => {
 		validationResult.value = data
 		showTicketModal.value = false
 		isCheckingIn.value = false
 	},
-	onError: (error: any) => {
+	onError: (error) => {
 		isCheckingIn.value = false
-		showDebouncedToast(error?.messages?.[0] || __("Check-in failed"))
+		showDebouncedToast(serverErrorMessage(error) || __("Check-in failed"))
 		playErrorSound()
 	},
 })

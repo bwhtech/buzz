@@ -8,7 +8,7 @@
 		leave-from-class="opacity-100 transform translate-y-0 scale-100"
 		leave-to-class="opacity-0 transform -translate-y-4 scale-95"
 	>
-		<div v-if="show" class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-lg p-4">
+		<div v-if="show" class="mb-6 bg-surface-green-1 border border-outline-green-1 rounded-6 p-4">
 			<div class="flex items-center">
 				<LucideCheckCircle class="w-6 h-6 text-ink-green-6 mr-3" />
 				<div>

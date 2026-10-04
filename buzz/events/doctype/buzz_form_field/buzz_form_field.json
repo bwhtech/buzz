@@ -1,0 +1,82 @@
+{
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Events",
+ "autoname": "hash",
+ "naming_rule": "Random",
+ "track_changes": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "name": "Buzz Form Field",
+ "istable": 1,
+ "editable_grid": 1,
+ "fields": [
+  {
+   "fieldname": "enabled",
+   "label": "Enabled",
+   "fieldtype": "Check",
+   "default": "1"
+  },
+  {
+   "fieldname": "label",
+   "label": "Label",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "fieldname",
+   "label": "Fieldname",
+   "fieldtype": "Data",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_question",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "fieldtype",
+   "label": "Type",
+   "fieldtype": "Select",
+   "reqd": 1,
+   "default": "Data",
+   "in_list_view": 1,
+   "options": "Data\nCheck\nSmall Text\nPhone\nEmail\nSelect\nDate\nNumber\nMulti Select\nRating\nAttach\nAttach Image"
+  },
+  {
+   "fieldname": "mandatory",
+   "label": "Required",
+   "fieldtype": "Check",
+   "default": "0",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "options",
+   "label": "Options",
+   "fieldtype": "Small Text",
+   "description": "One option per line for Select and Multi Select."
+  },
+  {
+   "fieldname": "placeholder",
+   "label": "Placeholder",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "default_value",
+   "label": "Default Value",
+   "fieldtype": "Data"
+  }
+ ],
+ "field_order": [
+  "enabled",
+  "label",
+  "fieldname",
+  "column_break_question",
+  "fieldtype",
+  "mandatory",
+  "options",
+  "placeholder",
+  "default_value"
+ ],
+ "permissions": []
+}

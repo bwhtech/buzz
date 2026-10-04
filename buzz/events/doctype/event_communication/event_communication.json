@@ -1,0 +1,135 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-09-06 12:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "event",
+  "audience",
+  "column_break_recipients",
+  "ticket_types",
+  "statuses",
+  "recipient_count",
+  "message_section",
+  "subject",
+  "message",
+  "schedule_section",
+  "scheduled_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "event",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event",
+   "options": "Buzz Event",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "audience",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Audience",
+   "options": "Guests\nSpeakers",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_recipients",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.audience == 'Guests'",
+   "description": "Comma-separated Event Ticket Type names. Empty means every guest.",
+   "fieldname": "ticket_types",
+   "fieldtype": "Small Text",
+   "label": "Ticket Types"
+  },
+  {
+   "depends_on": "eval:doc.audience == 'Speakers'",
+   "description": "Comma-separated proposal statuses. Empty means every speaker.",
+   "fieldname": "statuses",
+   "fieldtype": "Small Text",
+   "label": "Proposal Statuses"
+  },
+  {
+   "fieldname": "recipient_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Recipients",
+   "read_only": 1
+  },
+  {
+   "fieldname": "message_section",
+   "fieldtype": "Section Break",
+   "label": "Message"
+  },
+  {
+   "fieldname": "subject",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Subject"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Text Editor",
+   "label": "Message",
+   "reqd": 1
+  },
+  {
+   "fieldname": "schedule_section",
+   "fieldtype": "Section Break",
+   "label": "Schedule"
+  },
+  {
+   "description": "Leave empty to send right away.",
+   "fieldname": "scheduled_at",
+   "fieldtype": "Datetime",
+   "label": "Scheduled At"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-06 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Events",
+ "name": "Event Communication",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "subject",
+ "track_changes": 1
+}

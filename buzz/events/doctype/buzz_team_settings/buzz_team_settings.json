@@ -15,6 +15,11 @@
   "allow_add_ons_change_before_event_start_days",
   "column_break_windows_two",
   "allow_ticket_cancellation_request_before_event_start_days",
+  "tax_details_tab",
+  "legal_name",
+  "tax_id",
+  "column_break_tax",
+  "billing_address",
   "communications_tab",
   "ticketing_emails_section",
   "default_ticket_email_template",
@@ -84,6 +89,34 @@
    "fieldtype": "Int",
    "label": "Allow Ticket Cancellation Request Before Event Start (Days)",
    "non_negative": 1
+  },
+  {
+   "description": "Required to charge tax on tickets.",
+   "fieldname": "tax_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Tax Details"
+  },
+  {
+   "fieldname": "legal_name",
+   "fieldtype": "Data",
+   "label": "Legal Name",
+   "mandatory_depends_on": "eval:doc.tax_id"
+  },
+  {
+   "description": "GSTIN, VAT number or equivalent.",
+   "fieldname": "tax_id",
+   "fieldtype": "Data",
+   "label": "Tax ID"
+  },
+  {
+   "fieldname": "column_break_tax",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "billing_address",
+   "fieldtype": "Small Text",
+   "label": "Billing Address",
+   "mandatory_depends_on": "eval:doc.tax_id"
   },
   {
    "fieldname": "communications_tab",
@@ -163,7 +196,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-04 12:00:00",
+ "modified": "2026-10-03 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Team Settings",

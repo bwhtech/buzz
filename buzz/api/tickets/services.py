@@ -40,11 +40,13 @@ class TicketService:
 			TicketNotAccessible.throw()
 
 		event_id = ticket.event
+		event = frappe.get_cached_doc("Buzz Event", event_id)
 		zoom = self.zoom_registration()
 		return TicketDetailsResponse(
 			doc=ticket,
 			add_ons=self.add_on_details(event_id),
-			event=frappe.get_cached_doc("Buzz Event", event_id),
+			event=event,
+			venue=event.get_venue_name(),
 			booking=self.booking_owned_by_user(),
 			ticket_type=frappe.get_cached_doc("Event Ticket Type", ticket.ticket_type),
 			can_transfer_ticket=windows.is_window_open(event_id, windows.TRANSFER),

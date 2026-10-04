@@ -1,11 +1,30 @@
 import frappe
 from frappe.query_builder import Case
 
-from buzz.api.teams.exceptions import CannotManageMembers, NotATeamMember
+from buzz.api.teams.exceptions import (
+	CannotEditTeam,
+	CannotGrantOwnership,
+	CannotManageMembers,
+	NotATeamMember,
+	UnknownTeamRole,
+)
 from buzz.api.teams.schemas import TeamInvite, TeamMember, TeamOverview
 from buzz.permissions import can_manage_members, team_role_of
 
 TEAM_FIELDS = ("name", "team_name", "slug", "logo")
+
+
+def validate_role(team_role: str) -> None:
+	if team_role == "Owner":
+		CannotGrantOwnership.throw()
+	if team_role not in assignable_roles():
+		UnknownTeamRole.throw(team_role=team_role)
+
+
+def assignable_roles() -> list[str]:
+	"""The membership doctype's own options, minus the one nobody may be given."""
+	options = frappe.get_meta("Buzz Team Membership").get_field("team_role").options
+	return [role for role in options.split("\n") if role and role != "Owner"]
 
 
 def team_overview(team: str) -> TeamOverview:
@@ -86,3 +105,60 @@ def remove_member(team: str, user: str) -> None:
 	# Event Manager holds no write permission on the membership doctype, so the guard above
 	# is the authorization — the same shape as the Desk add-members flow.
 	membership.save(ignore_permissions=True)
+
+
+def change_role(team: str, user: str, team_role: str) -> None:
+	"""Move a member to another role.
+
+	Ownership is out of reach from both ends: `validate_role` refuses it as a target, and
+	the membership controller refuses to take it away from the row that holds it.
+	"""
+	if not can_manage_members(team):
+		CannotManageMembers.throw()
+	validate_role(team_role)
+
+	name = frappe.db.exists("Buzz Team Membership", {"team": team, "user": user, "enabled": 1})
+	if not name:
+		NotATeamMember.throw()
+
+	membership = frappe.get_doc("Buzz Team Membership", name)
+	membership.team_role = team_role
+	# Same shape as `remove_member`: the guard above is the authorization, since Event
+	# Manager holds no write permission on the membership doctype.
+	membership.save(ignore_permissions=True)
+
+
+def remove_members(team: str, users: list[str]) -> None:
+	"""Take several members off a team at once.
+
+	One request is one transaction, so a refusal on any of them takes the whole batch
+	back out — the roster is never left half-changed.
+	"""
+	for user in users:
+		remove_member(team, user)
+
+
+def change_roles(team: str, users: list[str], team_role: str) -> None:
+	"""Move several members to the same role, all-or-nothing like `remove_members`."""
+	for user in users:
+		change_role(team, user, team_role)
+
+
+def update_team(team: str, team_name: str, logo: str | None) -> None:
+	"""Rename a team or change its logo.
+
+	Owner/Admin, the rule `team_doc_has_permission` applies to a write. Desk write on Buzz
+	Team is System Manager only, so the guard here is the authorization and the save skips
+	the doctype check — the same shape as `remove_member`.
+	"""
+	if not can_manage_members(team):
+		CannotEditTeam.throw()
+
+	team_name = team_name.strip()
+	if not team_name:
+		frappe.throw(frappe._("Team name is required"))
+
+	doc = frappe.get_doc("Buzz Team", team)
+	doc.team_name = team_name
+	doc.logo = logo or None
+	doc.save(ignore_permissions=True)

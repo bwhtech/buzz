@@ -15,6 +15,7 @@
 			/>
 			<TextInput
 				type="tel"
+				:variant="variant"
 				:model-value="localNumber"
 				@update:model-value="onNumberInput"
 				:placeholder="placeholder || __('Phone number')"
@@ -25,7 +26,8 @@
 </template>
 
 <script setup lang="ts">
-import { Combobox, ErrorMessage, TextInput, createResource } from "frappe-ui"
+import { Combobox, ErrorMessage, TextInput, useCall } from "frappe-ui"
+import type { PropType } from "vue"
 import { computed, ref, watch } from "vue"
 
 import { DEFAULT_DIAL_CODE, formatPhone, parsePhone } from "@/utils/phone"
@@ -41,6 +43,8 @@ const props = defineProps({
 	placeholder: { type: String, default: "" },
 	required: { type: Boolean, default: false },
 	error: { type: String, default: "" },
+	// Matches the dial-code combobox, which is outline whatever the number field is.
+	variant: { type: String as PropType<"subtle" | "outline" | "ghost">, default: "subtle" },
 })
 
 const emit = defineEmits(["update:modelValue"])
@@ -93,9 +97,9 @@ function emitValue() {
 	emit("update:modelValue", formatPhone(dialCode.value, localNumber.value))
 }
 
-function onDialCodeChange(code: string | null) {
+function onDialCodeChange(code: unknown) {
 	if (code) {
-		dialCode.value = code
+		dialCode.value = String(code)
 		emitValue()
 	}
 }
@@ -106,10 +110,9 @@ function onNumberInput(num: string) {
 	emitValue()
 }
 
-createResource({
-	url: "buzz.api.forms.get_dial_codes",
-	auto: true,
-	onSuccess: (data: DialCode[]) => {
+useCall<DialCode[]>({
+	url: "/api/v2/method/buzz.api.forms.get_dial_codes",
+	onSuccess: (data) => {
 		dialCodesData.value = data
 		syncFromModel(props.modelValue)
 	},
