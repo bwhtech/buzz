@@ -28,3 +28,4 @@ buzz.patches.make_sponsor_logos_public
 buzz.patches.set_event_venue_name
 buzz.patches.move_sponsorship_tier_price_to_prices
 buzz.patches.move_ticket_type_price_to_prices
+buzz.patches.create_administrator_team
