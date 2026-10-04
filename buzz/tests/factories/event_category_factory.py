@@ -11,7 +11,5 @@ class EventCategoryFactory(BaseFactory[EventCategory]):
 
 	@property
 	def default_attributes(self) -> dict[str, Any]:
-		# autoname is "prompt": the name has to come in with the attributes, and it is
-		# the primary key. Faker's `unique` only dedupes within a process, and these
-		# rows outlive a run, so the suffix is a hash.
+		# Prompt-autonamed, and rows outlive a run, so a hash beats Faker's per-process `unique`.
 		return {"name": f"Category {frappe.generate_hash(length=8)}"}

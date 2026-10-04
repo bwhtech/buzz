@@ -9,13 +9,7 @@ _fake = Faker()
 
 
 class BuzzEventFactory(BaseFactory[BuzzEvent]):
-	"""
-	Builds a published online event with a fresh team, category and host. Pass
-	`team=`, `category=` or `host=` to reuse existing records instead.
-
-	`route` is left unset on purpose — `validate_route` derives it from the
-	unique title and deduplicates it.
-	"""
+	"""A published online event. `route` comes from the title in `validate_route`."""
 
 	doctype = "Buzz Event"
 

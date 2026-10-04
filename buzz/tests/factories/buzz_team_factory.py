@@ -7,8 +7,7 @@ from buzz.events.doctype.buzz_team.buzz_team import BuzzTeam
 
 _fake = Faker()
 
-# One reusable owner for teams built as a link target. A fresh user per team runs
-# the suite into Frappe's User creation throttle.
+# Shared so teams built as link targets do not hit the User creation throttle.
 LINK_TEAM_OWNER = "factory-team-owner@example.com"
 
 
@@ -17,16 +16,7 @@ class BuzzTeamFactory(BaseFactory[BuzzTeam]):
 
 	@classmethod
 	def create_owned_by(cls, user: str | None = None, **overrides: Any) -> BuzzTeam:
-		"""
-		Give the team an Owner membership for `user`, defaulting to a shared
-		throwaway owner.
-
-		Prefer this over a bare `create()`: a plain insert makes the session user the
-		Owner, and an Administrator-owned team leaks into
-		`create_default_team_for("Administrator")` for every later run on the site.
-
-		`owner_user` is a flag, and flags only reach the document through overrides.
-		"""
+		"""Prefer over `create()`: an Administrator-owned test team becomes its default team."""
 		from buzz.tests.factories.user_factory import UserFactory
 
 		owner = user or UserFactory.create_once(LINK_TEAM_OWNER).name

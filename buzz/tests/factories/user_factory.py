@@ -13,15 +13,7 @@ class UserFactory(BaseFactory[User]):
 
 	@classmethod
 	def create_once(cls, email: str, **overrides: Any) -> User:
-		"""
-		Reuse the user at `email` if the site already has one.
-
-		Frappe throttles User creation at `throttle_user_limit` (60) per hour
-		(`User.throttle_user_creation`), and test users are not rolled back, so a
-		full suite run that mints a fresh user for every fixture trips it. Use this
-		wherever the identity is fixed and only one record is ever wanted; use
-		`create()` when the test needs a distinct user.
-		"""
+		"""Reuse an existing user: test users leak, and User creation is throttled at 60 an hour."""
 		if frappe.db.exists("User", email):
 			return frappe.get_doc("User", email)
 		return cls.create(email=email, **overrides)
