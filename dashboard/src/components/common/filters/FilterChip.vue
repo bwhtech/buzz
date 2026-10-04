@@ -8,8 +8,8 @@ import {
 	type FilterField,
 	currentOperator,
 	fieldIcon,
-	valueFor,
-	valueInput,
+	valueForOperator,
+	inputTypeFor,
 } from "./fields"
 
 const props = defineProps<{ field: FilterField; autofocus?: boolean }>()
@@ -17,14 +17,16 @@ const condition = defineModel<Condition>({ required: true })
 defineEmits<{ remove: [] }>()
 
 const operator = computed(() => currentOperator(props.field, condition.value))
-const input = computed(() => valueInput(props.field, operator.value))
+const inputType = computed(() => inputTypeFor(props.field, operator.value))
 const value = computed(() => condition.value[2])
-const between = computed(() => operator.value.operator === "between")
+const isRange = computed(() => operator.value.operator === "between")
 
-const setValue = (next: ConditionValue) =>
-	(condition.value = [props.field.key, condition.value[1], next])
-const setEnd = (index: number, end: string) =>
-	setValue((value.value as string[]).map((held, at) => (at === index ? end : held)))
+const setValue = (newValue: ConditionValue) =>
+	(condition.value = [props.field.key, condition.value[1], newValue])
+const setRangeEnd = (index: number, endValue: string) =>
+	setValue(
+		(value.value as string[]).map((current, position) => (position === index ? endValue : current)),
+	)
 
 const operatorOptions = computed(() =>
 	props.field.operators.map((choice) => ({
@@ -32,7 +34,11 @@ const operatorOptions = computed(() =>
 		selected: choice === operator.value,
 		onClick: () => {
 			const previous = operator.value.value ? undefined : value.value
-			condition.value = [props.field.key, choice.operator, valueFor(props.field, choice, previous)]
+			condition.value = [
+				props.field.key,
+				choice.operator,
+				valueForOperator(props.field, choice, previous),
+			]
 		},
 	})),
 )
@@ -43,7 +49,7 @@ const choiceSummary = (selected: { label: string }[]) =>
 		: selected.map((option) => option.label).join(", ") || "Select…"
 
 // Ratings are stored as a fraction of five stars.
-const stars = computed(() => Math.round(Number(value.value || 0) * 5))
+const ratingStars = computed(() => Math.round(Number(value.value || 0) * 5))
 
 const textInput = ref<InstanceType<typeof TextInput> | null>(null)
 // The menu hands focus back to its trigger as it closes, so the input claims it a beat later.
@@ -66,7 +72,7 @@ onMounted(() => props.autofocus && setTimeout(() => textInput.value?.focus(), 50
 		</Dropdown>
 
 		<MultiSelect
-			v-if="input === 'choice'"
+			v-if="inputType === 'choice'"
 			:hide-search="field.options.length < 8"
 			:options="field.options"
 			:model-value="value as string[]"
@@ -81,7 +87,7 @@ onMounted(() => props.autofocus && setTimeout(() => textInput.value?.focus(), 50
 		</MultiSelect>
 
 		<TextInput
-			v-else-if="input === 'text'"
+			v-else-if="inputType === 'text'"
 			ref="textInput"
 			variant="ghost"
 			size="xs"
@@ -92,35 +98,37 @@ onMounted(() => props.autofocus && setTimeout(() => textInput.value?.focus(), 50
 			@update:model-value="setValue(String($event))"
 		/>
 
-		<template v-else-if="input === 'number' || input === 'date'">
-			<template v-for="index in between ? [0, 1] : [0]" :key="index">
+		<template v-else-if="inputType === 'number' || inputType === 'date'">
+			<template v-for="index in isRange ? [0, 1] : [0]" :key="index">
 				<span v-if="index" class="flex items-center px-1.5 text-xs text-ink-gray-5"> and </span>
 				<TextInput
-					v-if="input === 'number'"
+					v-if="inputType === 'number'"
 					type="number"
 					variant="ghost"
 					size="xs"
 					class="w-16 [&_input]:rounded-none"
 					:debounce="300"
 					:aria-label="`${field.label} value`"
-					:model-value="between ? (value as string[])[index] : (value as string)"
-					@update:model-value="between ? setEnd(index, String($event)) : setValue(String($event))"
+					:model-value="isRange ? (value as string[])[index] : (value as string)"
+					@update:model-value="
+						isRange ? setRangeEnd(index, String($event)) : setValue(String($event))
+					"
 				/>
 				<DatePicker
 					v-else
 					variant="ghost"
 					size="xs"
 					class="w-28 [&_button]:rounded-none [&_input]:rounded-none"
-					:model-value="between ? (value as string[])[index] : (value as string)"
-					@update:model-value="between ? setEnd(index, $event || '') : setValue($event || '')"
+					:model-value="isRange ? (value as string[])[index] : (value as string)"
+					@update:model-value="isRange ? setRangeEnd(index, $event || '') : setValue($event || '')"
 				/>
 			</template>
 		</template>
 
-		<div v-else-if="input === 'rating'" class="flex items-center px-2">
+		<div v-else-if="inputType === 'rating'" class="flex items-center px-2">
 			<Rating
 				size="xs"
-				:model-value="stars"
+				:model-value="ratingStars"
 				:max="5"
 				@update:model-value="setValue(String($event / 5))"
 			/>

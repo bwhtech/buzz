@@ -2,7 +2,7 @@ import { refDebounced } from "@vueuse/core"
 import { useCall } from "frappe-ui"
 import { computed, type Ref, ref, watch } from "vue"
 
-import { type Condition, keepsStatus } from "@/components/common/filters"
+import { type Condition, matchesStatusConditions } from "@/components/common/filters"
 import type { ListOrder } from "@/composables/useListQuery"
 import type { EventProposals, ProposalListItem } from "@/types"
 
@@ -75,7 +75,7 @@ export function useEventProposals(
 	 * stays on screen. A row that no longer answers the active filter leaves the list.
 	 */
 	const applyStatus = (name: string, status: string) => {
-		const matchesFilter = keepsStatus(conditions.value, status)
+		const matchesFilter = matchesStatusConditions(conditions.value, status)
 		proposals.value = matchesFilter
 			? proposals.value.map((proposal) =>
 					proposal.name === name ? { ...proposal, status } : proposal,

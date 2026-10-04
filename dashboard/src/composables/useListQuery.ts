@@ -21,16 +21,16 @@ export function useListQuery() {
 	})
 	const order = computed<ListOrder>({
 		get: () => (orderParam.value === "asc" ? "asc" : "desc"),
-		set: (next) => (orderParam.value = next === "asc" ? "asc" : null),
+		set: (value) => (orderParam.value = value === "asc" ? "asc" : null),
 	})
 	// Filters travel as the same JSON the server reads.
 	const conditions = computed<Condition[]>({
 		get: () => parseConditions(filtersParam.value),
-		set: (next) => (filtersParam.value = next.length ? JSON.stringify(next) : null),
+		set: (value) => (filtersParam.value = value.length ? JSON.stringify(value) : null),
 	})
-	const filtering = computed(() => Boolean(search.value.trim() || conditions.value.length))
+	const isFiltered = computed(() => Boolean(search.value.trim() || conditions.value.length))
 
-	return { search, order, conditions, filtering }
+	return { search, order, conditions, isFiltered }
 }
 
 // A hand-edited or truncated link shows the unfiltered list rather than breaking the page.

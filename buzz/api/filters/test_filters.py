@@ -121,8 +121,8 @@ class TestAnswersSavedAsText(IntegrationTestCase):
 		).name
 		cls.fields = question_fields(QUESTIONS)
 
-	def conditions(self, *triples, answered_on=None) -> list:
-		return ListConditions("Sponsorship Enquiry", self.fields, answered_on).frappe_filters(
+	def conditions(self, *triples, answer_parents=None) -> list:
+		return ListConditions("Sponsorship Enquiry", self.fields, answer_parents).frappe_filters(
 			json.dumps(triples)
 		)
 
@@ -133,7 +133,7 @@ class TestAnswersSavedAsText(IntegrationTestCase):
 		self.assertIn(self.ticked, self.conditions(["interests", "like", ["Talk"]])[0][2])
 
 	def test_question_on_a_linked_record_filters_through_its_link(self):
-		answered_on = {"booth": ("Sponsorship Enquiry", "booking")}
-		field, operator, names = self.conditions(["booth", "in", ["1"]], answered_on=answered_on)[0]
+		answer_parents = {"booth": ("Sponsorship Enquiry", "booking")}
+		field, operator, names = self.conditions(["booth", "in", ["1"]], answer_parents=answer_parents)[0]
 		self.assertEqual((field, operator), ("booking", "in"))
 		self.assertIn(self.ticked, names)

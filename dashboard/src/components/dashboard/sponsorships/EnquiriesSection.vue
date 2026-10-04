@@ -14,7 +14,7 @@ import type { FrappeError } from "@/types"
 const props = defineProps<{ event: string }>()
 defineEmits<{ open: [enquiry: string] }>()
 
-const { search, order, conditions, filtering } = useListQuery()
+const { search, order, conditions, isFiltered } = useListQuery()
 
 const { enquiries, applyStatus, loadMore, page, loadingFirstPage, loadingMore } = useEventEnquiries(
 	props.event,
@@ -46,7 +46,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 			search-placeholder="Search by company, email or website"
 		/>
 
-		<p v-if="filtering" aria-live="polite" class="text-sm text-ink-gray-5">
+		<p v-if="isFiltered" aria-live="polite" class="text-sm text-ink-gray-5">
 			{{ page.data?.matched ?? 0 }} of {{ page.data?.total ?? 0 }} enquiries
 		</p>
 
@@ -64,7 +64,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 			<li v-if="loadingMore"><Skeleton class="h-12 w-full rounded-4" /></li>
 		</ul>
 		<EmptyState
-			v-else-if="filtering"
+			v-else-if="isFiltered"
 			title="No matching enquiries"
 			:description="
 				search.trim()

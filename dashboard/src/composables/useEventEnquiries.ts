@@ -2,7 +2,7 @@ import { refDebounced } from "@vueuse/core"
 import { useCall } from "frappe-ui"
 import { computed, type Ref, ref, watch } from "vue"
 
-import { type Condition, keepsStatus } from "@/components/common/filters"
+import { type Condition, matchesStatusConditions } from "@/components/common/filters"
 import type { ListOrder } from "@/composables/useListQuery"
 import type { EventEnquiries, EventEnquiryItem } from "@/types"
 
@@ -56,7 +56,7 @@ export function useEventEnquiries(
 
 	// Patched in place: past the first page a refetch would drop the changed row as a duplicate.
 	const applyStatus = (name: string, status: string) => {
-		const matchesFilter = keepsStatus(conditions.value, status)
+		const matchesFilter = matchesStatusConditions(conditions.value, status)
 		enquiries.value = matchesFilter
 			? enquiries.value.map((row) => (row.name === name ? { ...row, status } : row))
 			: enquiries.value.filter((row) => row.name !== name)

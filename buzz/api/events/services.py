@@ -357,8 +357,8 @@ def event_guests(
 	"""
 	ensure_event_team_access(event)
 
-	filter_fields, answered_on = guest_filter_fields(event)
-	conditions = ListConditions("Event Ticket", filter_fields, answered_on).frappe_filters(filters)
+	filter_fields, answer_parents = guest_filter_fields(event)
+	conditions = ListConditions("Event Ticket", filter_fields, answer_parents).frappe_filters(filters)
 	query_filters = [["event", "=", event], ["docstatus", "=", 1], *conditions]
 	or_filters = guest_search_filters(search)
 	limit = max(1, min(int(limit), 100))
@@ -409,20 +409,20 @@ def guest_filter_fields(event: str) -> tuple[list[FilterField], dict]:
 	Booking questions are answered once per booking, so they filter a ticket through the
 	booking it belongs to. A fieldname asked on both keeps the ticket question.
 	"""
-	types = [(row.name, row.title) for row in ticket_types_of(event)]
+	ticket_types = [(row.name, row.title) for row in ticket_types_of(event)]
 	questions: dict = {}
 	for row in event_questions(event, applied_to=["in", ["Ticket", "Booking"]]):
-		held = questions.get(row.fieldname)
-		if not held or held.applied_to != "Ticket":
+		existing = questions.get(row.fieldname)
+		if not existing or existing.applied_to != "Ticket":
 			questions[row.fieldname] = row
-	answered_on = {
+	answer_parents = {
 		key: ("Event Booking", "booking") for key, row in questions.items() if row.applied_to == "Booking"
 	}
 	fields = [
-		filter_field("ticket_type", _("Ticket type"), "Link", types),
+		filter_field("ticket_type", _("Ticket type"), "Link", ticket_types),
 		*question_fields(questions.values()),
 	]
-	return fields, answered_on
+	return fields, answer_parents
 
 
 TREND_DAYS = 14

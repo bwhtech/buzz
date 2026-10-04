@@ -25,9 +25,9 @@ export type ConditionValue = string | string[]
 /** A Frappe filter triple, sent to the server and kept in the URL as is. */
 export type Condition = [field: string, operator: string, value: ConditionValue]
 
-type ValueInput = "choice" | "text" | "number" | "date" | "rating" | "none"
+type InputType = "choice" | "text" | "number" | "date" | "rating" | "none"
 
-const ICONS: Record<string, string> = {
+const ICONS_BY_FIELDTYPE: Record<string, string> = {
 	Select: "lucide-circle-dot",
 	Link: "lucide-link",
 	Check: "lucide-square-check",
@@ -43,16 +43,16 @@ const ICONS: Record<string, string> = {
 }
 
 // Icons are CSS classes generated from names found in this source, so they cannot come from the server.
-const FIELD_ICONS: Record<string, string> = {
+const ICONS_BY_FIELD_KEY: Record<string, string> = {
 	tier: "lucide-circle-star",
 	ticket_type: "lucide-tag",
 	status: "lucide-circle-dashed",
 }
 
 export const fieldIcon = (field: FilterField) =>
-	FIELD_ICONS[field.key] ?? ICONS[field.fieldtype] ?? "lucide-type"
+	ICONS_BY_FIELD_KEY[field.key] ?? ICONS_BY_FIELDTYPE[field.fieldtype] ?? "lucide-type"
 
-export function valueInput(field: FilterField, operator: FilterOperator): ValueInput {
+export function inputTypeFor(field: FilterField, operator: FilterOperator): InputType {
 	if (operator.value || field.fieldtype.startsWith("Attach")) return "none"
 	if (field.options.length) return "choice"
 	if (field.fieldtype === "Number") return "number"
@@ -68,20 +68,20 @@ export function currentOperator(field: FilterField, [, operator, value]: Conditi
 }
 
 /** Keeps what was typed when the new operator takes the same shape of value. */
-export function valueFor(
+export function valueForOperator(
 	field: FilterField,
-	next: FilterOperator,
+	operator: FilterOperator,
 	previous?: ConditionValue,
 ): ConditionValue {
-	if (next.value) return next.value
-	if (next.operator === "between")
+	if (operator.value) return operator.value
+	if (operator.operator === "between")
 		return Array.isArray(previous) && previous.length === 2 ? previous : ["", ""]
 	if (field.options.length) return Array.isArray(previous) ? previous : []
 	return typeof previous === "string" ? previous : ""
 }
 
 /** Whether a row whose status just changed still answers the list's status conditions. */
-export const keepsStatus = (conditions: Condition[], status: string) =>
+export const matchesStatusConditions = (conditions: Condition[], status: string) =>
 	conditions.every(
 		([field, operator, value]) =>
 			field !== "status" || !value.length || (operator === "in") === value.includes(status),

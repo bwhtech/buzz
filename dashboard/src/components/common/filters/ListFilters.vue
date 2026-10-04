@@ -10,7 +10,7 @@ import {
 	type ConditionValue,
 	type FilterField,
 	fieldIcon,
-	valueFor,
+	valueForOperator,
 } from "./fields"
 import FilterChip from "./FilterChip.vue"
 
@@ -26,39 +26,44 @@ const ORDER_OPTIONS = [
 
 const menuOpen = ref(false)
 // The chip added from the menu without a value takes focus, so typing can start at once.
-const focusIndex = ref<number | null>(null)
+const autofocusIndex = ref<number | null>(null)
 
-const fieldOf = (key: string) => props.fields.find((field) => field.key === key)
+const findField = (key: string) => props.fields.find((field) => field.key === key)
 
 function add(field: FilterField, value?: ConditionValue) {
 	const operator = field.operators[0]
-	if (Array.isArray(value) && mergeInto(field.key, operator.operator, value)) return
+	if (Array.isArray(value) && mergeIntoExistingCondition(field.key, operator.operator, value))
+		return
 	// Read before the write: a route-backed model only updates once the URL does.
-	focusIndex.value = value ? null : conditions.value.length
+	autofocusIndex.value = value ? null : conditions.value.length
 	conditions.value = [
 		...conditions.value,
-		[field.key, operator.operator, value ?? valueFor(field, operator)],
+		[field.key, operator.operator, value ?? valueForOperator(field, operator)],
 	]
 }
 
 // Separate chips are AND-ed, so a second pick on the same "is" chip joins it as "any of"
 // rather than becoming a chip nothing can match.
-function mergeInto(key: string, operator: string, picked: string[]) {
-	const index = conditions.value.findIndex(([field, held]) => field === key && held === operator)
+function mergeIntoExistingCondition(key: string, operator: string, selectedValues: string[]) {
+	const index = conditions.value.findIndex(
+		([field, existingOperator]) => field === key && existingOperator === operator,
+	)
 	if (index < 0) return false
 	const values = conditions.value[index][2] as string[]
-	update(index, [key, operator, [...new Set([...values, ...picked])]])
+	update(index, [key, operator, [...new Set([...values, ...selectedValues])]])
 	return true
 }
 
-const update = (index: number, next: Condition) =>
-	(conditions.value = conditions.value.map((condition, at) => (at === index ? next : condition)))
+const update = (index: number, updated: Condition) =>
+	(conditions.value = conditions.value.map((condition, position) =>
+		position === index ? updated : condition,
+	))
 
 const remove = (index: number) =>
-	(conditions.value = conditions.value.filter((_, at) => at !== index))
+	(conditions.value = conditions.value.filter((_, position) => position !== index))
 
 // Fields with options open onto them, so the first value is picked in the same motion.
-const menuItem = (field: FilterField) => ({
+const fieldMenuItem = (field: FilterField) => ({
 	label: field.label,
 	icon: fieldIcon(field),
 	...(field.options.length
@@ -71,11 +76,11 @@ const menuItem = (field: FilterField) => ({
 		: { onClick: () => add(field) }),
 })
 
-const menu = computed<DropdownOptions>(() =>
+const fieldMenu = computed<DropdownOptions>(() =>
 	(["standard", "question"] as const)
 		.map((section) => ({
 			group: section === "standard" ? "Fields" : "Form questions",
-			options: props.fields.filter((field) => field.section === section).map(menuItem),
+			options: props.fields.filter((field) => field.section === section).map(fieldMenuItem),
 		}))
 		.filter((group) => group.options.length),
 )
@@ -114,7 +119,7 @@ onKeyStroke("f", (event) => {
 				@update:model-value="order = $event === 'asc' ? 'asc' : 'desc'"
 			/>
 			<!-- Rendered before the fields load, so the toolbar does not shift when they arrive. -->
-			<Dropdown v-model:open="menuOpen" :options="menu" align="end">
+			<Dropdown v-model:open="menuOpen" :options="fieldMenu" align="end">
 				<Button
 					:disabled="!fields.length"
 					icon="lucide-list-filter"
@@ -129,15 +134,15 @@ onKeyStroke("f", (event) => {
 			<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
 				<template v-for="(condition, index) in conditions" :key="index">
 					<FilterChip
-						v-if="fieldOf(condition[0])"
-						:field="fieldOf(condition[0])!"
-						:autofocus="focusIndex === index"
+						v-if="findField(condition[0])"
+						:field="findField(condition[0])!"
+						:autofocus="autofocusIndex === index"
 						:model-value="condition"
 						@update:model-value="update(index, $event)"
 						@remove="remove(index)"
 					/>
 				</template>
-				<Dropdown :options="menu" align="start">
+				<Dropdown :options="fieldMenu" align="start">
 					<Button variant="ghost" size="xs" icon="lucide-plus" aria-label="Add filter" />
 				</Dropdown>
 			</div>

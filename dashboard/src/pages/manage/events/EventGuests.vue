@@ -21,7 +21,7 @@ import type { FrappeError } from "@/types"
 const route = useRoute()
 const eventId = route.params.eventId as string
 
-const { search, order, conditions, filtering } = useListQuery()
+const { search, order, conditions, isFiltered } = useListQuery()
 
 const { guests, loadMore, page, loadingFirstPage, loadingMore } = useEventGuests(
 	eventId,
@@ -147,7 +147,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 			/>
 
 			<!-- Announced rather than only drawn: typing changes the list silently otherwise. -->
-			<p v-if="filtering" aria-live="polite" class="text-sm text-ink-gray-5">
+			<p v-if="isFiltered" aria-live="polite" class="text-sm text-ink-gray-5">
 				{{ page.data?.matched ?? 0 }} of {{ page.data?.total ?? 0 }} guests
 			</p>
 

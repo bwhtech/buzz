@@ -16,9 +16,9 @@ KIND_BY_FIELDTYPE = {
 	"Attach": "file",
 	"Attach Image": "file",
 }
-NEGATED = {"not in": "in", "not like": "like"}
+NEGATED_OPERATORS = {"not in": "in", "not like": "like"}
 # Answers saved through `str()` carry Python's spelling: "True" for a tick, ['a', 'b'] for a list.
-CHECKED = ["1", "True", "true"]
+CHECKED_VALUES = ["1", "True", "true"]
 
 
 def kind_of(fieldtype: str) -> str:
@@ -99,19 +99,19 @@ def is_blank(operator: str, value) -> bool:
 class ListConditions:
 	"""Turns the dashboard's `[field, operator, value]` triples into `frappe.get_all` filters."""
 
-	def __init__(self, doctype: str, fields: list[FilterField], answered_on: dict | None = None):
-		"""`answered_on` maps a question answered on a linked record to that record's doctype
+	def __init__(self, doctype: str, fields: list[FilterField], answer_parents: dict | None = None):
+		"""`answer_parents` maps a question answered on a linked record to that record's doctype
 		and the list field linking to it, as a guest's booking questions sit on the booking."""
 		self.doctype = doctype
 		self.fields = {field.key: field for field in fields}
-		self.answered_on = answered_on or {}
+		self.answer_parents = answer_parents or {}
 
-	def frappe_filters(self, raw: str | None) -> list[list]:
-		translated = (self.translate(*triple) for triple in self.parse(raw))
+	def frappe_filters(self, filters_json: str | None) -> list[list]:
+		translated = (self.translate(*triple) for triple in self.parse(filters_json))
 		return [condition for condition in translated if condition]
 
-	def parse(self, raw: str | None) -> list[list]:
-		triples = frappe.parse_json(raw) if raw else []
+	def parse(self, filters_json: str | None) -> list[list]:
+		triples = frappe.parse_json(filters_json) if filters_json else []
 		if not isinstance(triples, list) or any(not self.is_valid(triple) for triple in triples):
 			InvalidFilter.throw()
 		return triples
@@ -127,7 +127,7 @@ class ListConditions:
 			return None
 		field = self.fields[key]
 		if field.section == "question":
-			doctype, link_field = self.answered_on.get(key, (self.doctype, "name"))
+			doctype, link_field = self.answer_parents.get(key, (self.doctype, "name"))
 			return AnswerCondition(doctype, link_field, field, operator, value).name_filter()
 		return [key, operator, f"%{value}%" if "like" in operator else value]
 
@@ -151,53 +151,61 @@ class AnswerCondition:
 
 	def name_filter(self) -> list | None:
 		if self.operator == "is":
-			return [self.link_field, "in" if self.values[0] == "set" else "not in", self.parents()]
+			return [self.link_field, "in" if self.values[0] == "set" else "not in", self.answered_parents()]
 		if self.field.fieldtype == "Check":
 			return self.check_filter()
 		# Negations take the complement, so an unanswered question counts as not matching.
-		positive = NEGATED.get(self.operator, self.operator)
-		return [self.link_field, "not in" if self.operator in NEGATED else "in", self.matching(positive)]
+		positive_operator = NEGATED_OPERATORS.get(self.operator, self.operator)
+		return [
+			self.link_field,
+			"not in" if self.operator in NEGATED_OPERATORS else "in",
+			self.matching_parents(positive_operator),
+		]
 
 	def check_filter(self) -> list | None:
 		"""A Check left unticked may have no row at all, so "No" means "not Yes"."""
-		wanted = set(self.values)
+		selected_values = set(self.values)
 		if self.operator == "not in":
-			wanted = {"0", "1"} - wanted
-		if len(wanted) != 1:
+			selected_values = {"0", "1"} - selected_values
+		if len(selected_values) != 1:
 			return None
-		return [self.link_field, "in" if wanted == {"1"} else "not in", self.parents(["in", CHECKED])]
+		return [
+			self.link_field,
+			"in" if selected_values == {"1"} else "not in",
+			self.answered_parents(["in", CHECKED_VALUES]),
+		]
 
-	def matching(self, operator: str) -> list[str]:
+	def matching_parents(self, operator: str) -> list[str]:
 		kind = kind_of(self.field.fieldtype)
 		if kind in ("number", "date"):
-			return self.compared(operator)
+			return self.compared_parents(operator)
 		if kind == "multi":
 			# A Multi Select answer is a list in text, so each option sits quoted inside it.
 			patterns = [f'%"{option}"%' for option in self.values] + [
 				f"%'{option}'%" for option in self.values
 			]
-			return list({name for pattern in patterns for name in self.parents(["like", pattern])})
+			return list({name for pattern in patterns for name in self.answered_parents(["like", pattern])})
 		if operator == "like":
-			return self.parents(["like", f"%{self.values[0]}%"])
-		return self.parents([operator, self.values if operator == "in" else self.values[0]])
+			return self.answered_parents(["like", f"%{self.values[0]}%"])
+		return self.answered_parents([operator, self.values if operator == "in" else self.values[0]])
 
-	def compared(self, operator: str) -> list[str]:
+	def compared_parents(self, operator: str) -> list[str]:
 		"""Answers are text, so numbers and dates are compared here rather than in SQL."""
 		convert = flt if kind_of(self.field.fieldtype) == "number" else str
 		low, high = convert(self.values[0]), convert(self.values[-1])
-		test = {
+		matches = {
 			"=": lambda answer: answer == low,
 			">": lambda answer: answer > low,
 			"<": lambda answer: answer < low,
 			"between": lambda answer: low <= answer <= high,
 		}[operator]
-		rows = frappe.get_all("Additional Field", filters=self.scope(), fields=["parent", "value"])
-		return [row.parent for row in rows if row.value not in (None, "") and test(convert(row.value))]
+		rows = frappe.get_all("Additional Field", filters=self.answer_filters(), fields=["parent", "value"])
+		return [row.parent for row in rows if row.value not in (None, "") and matches(convert(row.value))]
 
-	def parents(self, value=None) -> list[str]:
-		filters = self.scope()
+	def answered_parents(self, value=None) -> list[str]:
+		filters = self.answer_filters()
 		filters["value"] = value if value is not None else ["is", "set"]
 		return frappe.get_all("Additional Field", filters=filters, pluck="parent")
 
-	def scope(self) -> dict:
+	def answer_filters(self) -> dict:
 		return {"parenttype": self.doctype, "parentfield": "additional_fields", "fieldname": self.field.key}
