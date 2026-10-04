@@ -9,12 +9,15 @@ const props = defineProps<{ event: string; ticketType: string; count: number }>(
 // The card is gray, so the avatars take color to stand off it.
 const AVATAR_THEMES = ["blue", "green", "violet"] as const
 
+// The same filter the guest list reads from its URL, so the link opens on these holders.
+const filters = computed(() => JSON.stringify([["ticket_type", "in", [props.ticketType]]]))
+
 // Only the three newest holders are drawn; the count comes from the ticket type itself.
 const latest = useCall<EventGuests, Record<string, string | number>>({
 	url: "/api/v2/method/buzz.api.events.get_event_guests",
 	params: () => ({
 		event: props.event,
-		filters: JSON.stringify([["ticket_type", "in", [props.ticketType]]]),
+		filters: filters.value,
 		limit: 3,
 	}),
 })
@@ -29,7 +32,7 @@ const summary = computed(() => {
 
 <template>
 	<RouterLink
-		:to="{ name: 'event-guests', params: { eventId: event }, query: { ticket_type: ticketType } }"
+		:to="{ name: 'event-guests', params: { eventId: event }, query: { filters } }"
 		class="flex w-full items-center gap-3 rounded-4 bg-surface-gray-1 p-4 transition-[background-color,transform] duration-150 ease-out [@media(hover:hover)]:hover:bg-surface-gray-2 active:scale-[0.99] focus-visible:outline-none focus-visible:focus-ring motion-reduce:transform-none"
 	>
 		<span class="flex shrink-0 -space-x-1.5" aria-hidden="true">
