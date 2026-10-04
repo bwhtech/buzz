@@ -24,7 +24,7 @@ const between = computed(() => operator.value.operator === "between")
 const setValue = (next: ConditionValue) =>
 	(condition.value = [props.field.key, condition.value[1], next])
 const setEnd = (index: number, end: string) =>
-	setValue(Object.assign([...(value.value as string[])], { [index]: end }))
+	setValue((value.value as string[]).map((held, at) => (at === index ? end : held)))
 
 const operatorOptions = computed(() =>
 	props.field.operators.map((choice) => ({

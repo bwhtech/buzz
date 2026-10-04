@@ -83,6 +83,8 @@ const menu = computed<DropdownOptions>(() =>
 onKeyStroke("f", (event) => {
 	const target = event.target as HTMLElement
 	if (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable) return
+	// A drawer or dialog over the list owns the keyboard.
+	if (!props.fields.length || document.querySelector('[role="dialog"]')) return
 	if (event.metaKey || event.ctrlKey || event.altKey) return
 	event.preventDefault()
 	menuOpen.value = true
@@ -111,8 +113,10 @@ onKeyStroke("f", (event) => {
 				:model-value="order"
 				@update:model-value="order = $event === 'asc' ? 'asc' : 'desc'"
 			/>
-			<Dropdown v-if="fields.length" v-model:open="menuOpen" :options="menu" align="end">
+			<!-- Rendered before the fields load, so the toolbar does not shift when they arrive. -->
+			<Dropdown v-model:open="menuOpen" :options="menu" align="end">
 				<Button
+					:disabled="!fields.length"
 					icon="lucide-list-filter"
 					tooltip="Filter (F)"
 					aria-label="Filter"

@@ -1,5 +1,5 @@
 /** Mirrors `buzz.api.filters.schemas`: the server says what a list can be filtered on. */
-export interface FilterOption {
+interface FilterOption {
 	value: string
 	label: string
 }
@@ -25,7 +25,7 @@ export type ConditionValue = string | string[]
 /** A Frappe filter triple, sent to the server and kept in the URL as is. */
 export type Condition = [field: string, operator: string, value: ConditionValue]
 
-export type ValueInput = "choice" | "text" | "number" | "date" | "rating" | "none"
+type ValueInput = "choice" | "text" | "number" | "date" | "rating" | "none"
 
 const ICONS: Record<string, string> = {
 	Select: "lucide-circle-dot",
@@ -45,6 +45,8 @@ const ICONS: Record<string, string> = {
 // Icons are CSS classes generated from names found in this source, so they cannot come from the server.
 const FIELD_ICONS: Record<string, string> = {
 	tier: "lucide-circle-star",
+	ticket_type: "lucide-tag",
+	status: "lucide-circle-dashed",
 }
 
 export const fieldIcon = (field: FilterField) =>
