@@ -19,7 +19,7 @@ class EventTicketTypeFactory(BaseFactory[EventTicketType]):
 
 		return {
 			"event": self.overrides.get("event") or BuzzEventFactory.create().name,
-			"title": f"Ticket {_fake.unique.word().capitalize()}",
+			"title": f"Ticket {_fake.word().capitalize()}",
 			"is_published": 1,
 		}
 

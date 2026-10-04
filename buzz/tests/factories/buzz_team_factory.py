@@ -24,4 +24,4 @@ class BuzzTeamFactory(BaseFactory[BuzzTeam]):
 
 	@property
 	def default_attributes(self) -> dict[str, Any]:
-		return {"team_name": f"{_fake.unique.word().capitalize()} Team"}
+		return {"team_name": f"{_fake.word().capitalize()} Team"}

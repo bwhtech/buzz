@@ -12,11 +12,11 @@ class UserFactory(BaseFactory[User]):
 	doctype = "User"
 
 	@classmethod
-	def create_once(cls, email: str, **overrides: Any) -> User:
+	def create_once(cls, email: str) -> User:
 		"""Reuse an existing user: test users leak, and User creation is throttled at 60 an hour."""
 		if frappe.db.exists("User", email):
 			return frappe.get_doc("User", email)
-		return cls.create(email=email, **overrides)
+		return cls.create(email=email)
 
 	@property
 	def default_attributes(self) -> dict[str, Any]:

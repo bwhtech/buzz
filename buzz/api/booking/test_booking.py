@@ -14,8 +14,11 @@ from buzz.api.booking import (
 from buzz.api.booking.exceptions import AddOnNotForEvent, InvalidAddOnValue, RegistrationsClosed
 from buzz.api.booking.schemas import BookingRequest
 from buzz.tests.factories import (
+	BuzzCouponCodeFactory,
+	BuzzCustomFieldFactory,
 	BuzzEventFactory,
 	EventTicketTypeFactory,
+	OfflinePaymentMethodFactory,
 	TicketAddOnFactory,
 	UserFactory,
 )
@@ -114,6 +117,9 @@ class BookingTestCase(IntegrationTestCase):
 		frappe.db.set_value("Buzz Event", self.event.name, values)
 		frappe.clear_document_cache("Buzz Event", self.event.name)
 
+	def enable_phone_otp(self):
+		self.set_event({"allow_guest_booking": 1, "guest_verification_method": "Phone OTP"})
+
 	def booking_request(self, **overrides):
 		values = {
 			"attendees": [
@@ -151,9 +157,6 @@ class TestSendGuestBookingOtp(BookingTestCase):
 		response = send_guest_booking_otp(self.event.name, "someone@example.com")
 		self.assertTrue(response["otp"])
 		self.assertTrue(frappe.cache.get_value("guest_booking_otp:email:someone@example.com"))
-
-	def enable_phone_otp(self):
-		self.set_event({"allow_guest_booking": 1, "guest_verification_method": "Phone OTP"})
 
 	def test_alphabetic_phone_is_refused(self):
 		self.enable_phone_otp()
@@ -237,14 +240,7 @@ class TestProcessBooking(BookingTestCase):
 		self.assertIn("Offline payment is not enabled", frappe.local.message_log[-1]["message"])
 
 	def test_offline_booking_awaits_approval(self):
-		frappe.get_doc(
-			{
-				"doctype": "Offline Payment Method",
-				"event": self.event.name,
-				"title": f"Bank Transfer {frappe.generate_hash(length=6)}",
-				"enabled": 1,
-			}
-		).insert(ignore_permissions=True)
+		OfflinePaymentMethodFactory.create(event=self.event.name)
 
 		payload = process_booking(self.make_paid_request(is_offline=True)).__json__()
 		self.assertEqual(set(payload), {"booking_name", "offline_payment"})
@@ -272,14 +268,7 @@ class TestProcessBooking(BookingTestCase):
 		"""Offline is a two-stage conversation: an acknowledgement while the payment is
 		unverified, the existing confirmation only once an approval submits the booking."""
 		self.set_event({"send_ticket_email": 0})
-		frappe.get_doc(
-			{
-				"doctype": "Offline Payment Method",
-				"event": self.event.name,
-				"title": f"Bank Transfer {frappe.generate_hash(length=6)}",
-				"enabled": 1,
-			}
-		).insert(ignore_permissions=True)
+		OfflinePaymentMethodFactory.create(event=self.event.name)
 		request = self.make_paid_request(is_offline=True)
 
 		frappe.set_user(self.booker)
@@ -305,9 +294,11 @@ class TestBookingAddOnPricing(BookingTestCase):
 	"""The add-on price is server-authoritative: it comes from the Ticket Add-on catalog,
 	never from the booking payload. A guest who names their own price must be ignored."""
 
+	ADD_ON_PRICE = 500
+
 	def setUp(self):
 		super().setUp()
-		self.add_on = TicketAddOnFactory.create("paid", event=self.event.name)
+		self.add_on = TicketAddOnFactory.create(event=self.event.name, price=self.ADD_ON_PRICE)
 
 	def book_with_add_on(self, add_on_row):
 		attendees = [
@@ -327,29 +318,32 @@ class TestBookingAddOnPricing(BookingTestCase):
 	def test_client_supplied_price_is_ignored(self):
 		# The exploit payload: a Rs 500 add-on booked for Rs 1.
 		booking = self.book_with_add_on({"add_on": self.add_on.name, "value": "Veg", "price": 1})
-		self.assertEqual(booking.attendees[0].add_on_total, self.add_on.price)
-		self.assertEqual(booking.total_amount, self.add_on.price)
+		self.assertEqual(booking.attendees[0].add_on_total, self.ADD_ON_PRICE)
+		self.assertEqual(booking.total_amount, self.ADD_ON_PRICE)
 
 	def test_price_is_charged_when_omitted(self):
 		# The legitimate payload carries no price; the catalog price must still be charged.
 		booking = self.book_with_add_on({"add_on": self.add_on.name, "value": "Veg"})
-		self.assertEqual(booking.attendees[0].add_on_total, self.add_on.price)
+		self.assertEqual(booking.attendees[0].add_on_total, self.ADD_ON_PRICE)
 
 
 class TestBookingSelectionValidation(BookingTestCase):
 	"""Every selection in the payload must be a legitimate server-side choice for this
 	event. A client cannot name a ticket type or add-on the event never offered."""
 
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.foreign_event = BuzzEventFactory.create()
+
 	def setUp(self):
 		super().setUp()
 		self.add_on = TicketAddOnFactory.create(
-			"paid",
 			event=self.event.name,
+			price=500,
 			user_selects_option=1,
 			options="Vegetarian meal\nNon-veg",
 		)
-
-		self.foreign_event = BuzzEventFactory.create(category=self.event.category, host=self.event.host)
 
 	def attendee(self, **overrides):
 		row = {
@@ -372,7 +366,7 @@ class TestBookingSelectionValidation(BookingTestCase):
 		self.assertIn("not available for this event", frappe.local.message_log[-1]["message"])
 
 	def test_add_on_from_another_event_is_refused(self):
-		foreign_add_on = TicketAddOnFactory.create("paid", event=self.foreign_event.name)
+		foreign_add_on = TicketAddOnFactory.create(event=self.foreign_event.name)
 
 		with self.assertRaises(AddOnNotForEvent):
 			self.book([self.attendee(add_ons=[{"add_on": foreign_add_on.name, "value": True}])])
@@ -396,18 +390,9 @@ class TestBookingSelectionValidation(BookingTestCase):
 class TestBookingPhoneCustomFields(BookingTestCase):
 	def setUp(self):
 		super().setUp()
-		self.phone_field = frappe.get_doc(
-			{
-				"doctype": "Buzz Custom Field",
-				"event": self.event.name,
-				"label": "Contact Number",
-				"fieldname": "contact_number",
-				"fieldtype": "Phone",
-				"applied_to": "Booking",
-				"enabled": 1,
-				"order": 1,
-			}
-		).insert(ignore_permissions=True)
+		self.phone_field = BuzzCustomFieldFactory.create(
+			event=self.event.name, label="Contact Number", fieldname="contact_number", fieldtype="Phone"
+		)
 
 	def test_invalid_booking_level_phone_is_refused(self):
 		with self.assertRaises(frappe.ValidationError):
@@ -427,7 +412,7 @@ class TestBookingPhoneCustomFields(BookingTestCase):
 	def test_a_rejected_phone_does_not_burn_the_guest_otp(self):
 		# The OTP lives in the cache, which no rollback restores, so phone validation has to
 		# run before verify_guest_otp deletes it — otherwise one typo costs the guest a code.
-		self.set_event({"allow_guest_booking": 1, "guest_verification_method": "Phone OTP"})
+		self.enable_phone_otp()
 		otp = send_guest_booking_otp(self.event.name, VALID_PHONE)["otp"]
 		cache_key = f"guest_booking_otp:phone:{VALID_PHONE}"
 		self.addCleanup(frappe.cache.delete_value, cache_key)
@@ -504,16 +489,7 @@ class TestValidateCoupon(BookingTestCase):
 		self.assertEqual(payload, {"valid": False, "error": "Invalid coupon code"})
 
 	def test_discount_coupon_shape(self):
-		coupon = frappe.get_doc(
-			{
-				"doctype": "Buzz Coupon Code",
-				"code": f"BOOKING{frappe.generate_hash(length=6).upper()}",
-				"coupon_type": "Discount",
-				"discount_type": "Percentage",
-				"discount_value": 10,
-				"is_active": 1,
-			}
-		).insert(ignore_permissions=True)
+		coupon = BuzzCouponCodeFactory.create()
 
 		payload = validate_coupon(coupon.name, str(self.event.name)).__json__()
 		self.assertEqual(
@@ -533,14 +509,6 @@ class TestValidateCoupon(BookingTestCase):
 
 class BookingSummaryTestCase(BookingTestCase):
 	"""A booker and an outsider, and the helpers both summary endpoints book through."""
-
-	def setUp(self):
-		super().setUp()
-		for email, first_name in ((BOOKER, "Booking"), (OUTSIDER, "Outsider")):
-			if not frappe.db.exists("User", email):
-				frappe.get_doc(
-					{"doctype": "User", "email": email, "first_name": first_name, "send_welcome_email": 0}
-				).insert(ignore_permissions=True)
 
 	def attendee(self, email="booker@example.com", **overrides):
 		return {
@@ -605,15 +573,7 @@ class TestGetBookingSummary(BookingSummaryTestCase):
 		self.assertEqual(lines[0]["label"], self.free_ticket_type.title)
 
 	def test_an_add_on_hangs_off_its_ticket_line(self):
-		add_on = frappe.get_doc(
-			{
-				"doctype": "Ticket Add-on",
-				"event": self.event.name,
-				"title": f"Meal {frappe.generate_hash(length=6)}",
-				"price": 500,
-				"enabled": 1,
-			}
-		).insert(ignore_permissions=True)
+		add_on = TicketAddOnFactory.create(event=self.event.name, price=500)
 		self.book_as(BOOKER, [self.attendee(add_ons=[{"add_on": add_on.name, "value": "Veg"}])])
 
 		add_ons = self.summary_of(self.booking_of(BOOKER), BOOKER)["lines"][0]["add_ons"]

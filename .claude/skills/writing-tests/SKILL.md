@@ -38,6 +38,11 @@ Faker comes with frappe. Do not add it to `pyproject.toml`.
 8. No `__del_override__`. Cleanup is the per-class rollback; a delete on garbage collection
    can remove a doc a downstream fixture still links to.
 9. Child tables get no factory. Pass them as nested dicts on the parent.
+10. **Assert what you set.** A value the test checks is passed explicitly —
+    `TicketAddOnFactory.create(event=event, price=500)`, then `assertEqual(total, 500)`. Never
+    assert against a value read back from the fixture (`self.add_on.price`): a changed default
+    turns the assertion into a tautology.
+11. **No fixed dates.** Use `add_days(today(), n)`; a hard-coded future date expires.
 
 ## Authoring a factory
 
@@ -81,6 +86,11 @@ class EventTicketTypeFactory(BaseFactory[EventTicketType]):
 
 Precedence: overrides > traits > defaults. An unknown trait raises `TypeError`.
 
+Every `@property` defined on the factory class itself, except `default_attributes`, is a
+trait. Traits are found in the class's own `__dict__`, so a trait inherited from a base
+factory is rejected. A helper value goes in a method or a module constant, not a property.
+Traits run after `self.overrides` is set, so they can honour an override like defaults do.
+
 ## The `flags` passthrough
 
 `frappe.get_doc()` drops `flags` from the attribute dict (`RESERVED_KEYWORDS`), so
@@ -114,6 +124,10 @@ only for a distinct user.
 
 **`before_insert` / `validate` can clobber an override.** Set the field after `.create()` and
 save again.
+
+**`create()` swaps the doc's class** to a generated `TempSubclass` (for the `__del__` hook).
+`isinstance` still holds, but `type(doc) is EventTicketType` is false and `pickle` fails.
+Pass `doc.name`, not the doc, to `frappe.cache` or `frappe.enqueue`. `build()` does not swap.
 
 **Rollback restores a Single but not its cached copy.** A fixture touching
 `Buzz Team Settings` or `Buzz Settings` needs `frappe.clear_document_cache`.

@@ -3,13 +3,13 @@ from typing import Any
 import frappe
 from frappe_factory_bot.frappe_factory_bot.base_factory import BaseFactory
 
-from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import TicketAddon
+from buzz.events.doctype.offline_payment_method.offline_payment_method import OfflinePaymentMethod
 
 
-class TicketAddOnFactory(BaseFactory[TicketAddon]):
-	"""Free and enabled by default — `enabled` and `currency` come from the DocType."""
+class OfflinePaymentMethodFactory(BaseFactory[OfflinePaymentMethod]):
+	"""Enabled by default. Titles are unique per event."""
 
-	doctype = "Ticket Add-on"
+	doctype = "Offline Payment Method"
 
 	@property
 	def default_attributes(self) -> dict[str, Any]:
@@ -17,5 +17,5 @@ class TicketAddOnFactory(BaseFactory[TicketAddon]):
 
 		return {
 			"event": self.overrides.get("event") or BuzzEventFactory.create().name,
-			"title": f"Add-on {frappe.generate_hash(length=6)}",
+			"title": f"Bank Transfer {frappe.generate_hash(length=6)}",
 		}
