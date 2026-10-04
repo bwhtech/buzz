@@ -139,7 +139,7 @@ const fields = computed(() => [
 					</button>
 				</div>
 
-				<div class="flex flex-1 flex-col space-y-4 overflow-y-auto p-4">
+				<div class="flex flex-1 flex-col space-y-4 overflow-y-auto overscroll-contain p-4">
 					<!-- The decision leads: it is what the reviewer opened the drawer to make. -->
 					<Select
 						v-model="status"

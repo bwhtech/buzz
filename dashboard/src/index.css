@@ -1,6 +1,48 @@
 @import "./assets/Inter/inter.css";
 @import "frappe-ui/style.css";
 
+html {
+	/* Landscape iOS inflates text it guesses is too small. */
+	-webkit-text-size-adjust: 100%;
+}
+
+/* Controls fire on tap at once, and a long press never selects their label or pops the
+ * link callout. Content text stays selectable. */
+button,
+a,
+[role="button"],
+[role="tab"] {
+	touch-action: manipulation;
+}
+
+button,
+[role="button"],
+[role="tab"] {
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
+}
+
+/* iOS zooms into a focused field under 16px and stays zoomed. frappe-ui's fields are 14px
+ * through utility classes, hence !important; titles already set larger are left alone. */
+@media (pointer: coarse) {
+	:is(input, textarea, select, [contenteditable="true"]):not(
+			.text-lg,
+			.text-xl,
+			.text-2xl,
+			.text-3xl,
+			.text-4xl
+		) {
+		font-size: 16px !important;
+	}
+}
+
+/* The manager's scroll area keeps its bounce but no longer drags the page into
+ * pull-to-refresh. */
+[data-slot="mobile-shell-scroll"] {
+	overscroll-behavior-y: contain;
+}
+
 /* Fix tabs spacing */
 [role="tablist"] {
 	gap: 1rem;

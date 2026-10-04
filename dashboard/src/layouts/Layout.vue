@@ -2,8 +2,8 @@
 	<slot v-if="embedded" />
 	<div
 		v-else
-		class="min-h-screen bg-surface-base text-ink-gray-8"
-		:class="{ 'h-screen overflow-hidden': fullBleed }"
+		class="min-h-dvh bg-surface-base text-ink-gray-8"
+		:class="{ 'h-dvh overflow-hidden': fullBleed }"
 	>
 		<Navbar v-if="routerReady && !fullBleed" />
 		<div :class="fullBleed ? 'h-full' : 'max-w-4xl py-8 px-4 md:py-12 mx-auto'">

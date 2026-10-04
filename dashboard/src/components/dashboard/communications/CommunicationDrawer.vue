@@ -91,7 +91,10 @@ const viewedWhen = computed(() =>
 			</div>
 
 			<!-- Reading a sent message -->
-			<div v-if="viewing" class="flex flex-1 flex-col space-y-4 overflow-y-auto p-4">
+			<div
+				v-if="viewing"
+				class="flex flex-1 flex-col space-y-4 overflow-y-auto overscroll-contain p-4"
+			>
 				<DrawerTitle class="text-2xl font-semibold text-pretty text-ink-gray-9">
 					{{ viewing.subject || "No subject" }}
 				</DrawerTitle>
@@ -120,7 +123,7 @@ const viewedWhen = computed(() =>
 			</div>
 
 			<!-- Composing -->
-			<div v-else class="flex flex-1 flex-col space-y-4 overflow-y-auto p-4">
+			<div v-else class="flex flex-1 flex-col space-y-4 overflow-y-auto overscroll-contain p-4">
 				<DrawerTitle class="text-2xl font-semibold text-ink-gray-9">New message</DrawerTitle>
 				<DrawerDescription class="sr-only"
 					>Choose who receives it, then write it.</DrawerDescription

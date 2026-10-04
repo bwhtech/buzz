@@ -3,6 +3,7 @@ import { FrappeUIProvider, setConfig, useColorScheme } from "frappe-ui"
 import { watch } from "vue"
 
 import LoginDialog from "@/components/LoginDialog.vue"
+import { useThemeColor } from "@/composables/useThemeColor"
 import { userResource } from "@/data/user"
 
 import Layout from "./layouts/Layout.vue"
@@ -12,6 +13,7 @@ setConfig("localTimezone", window.timezone?.user || null)
 
 // Applies the stored theme on every page, not only those that render a theme toggle.
 useColorScheme()
+useThemeColor()
 
 // The zone the user picked in Preferences wins over the boot value once their info
 // lands, so dates render in it.

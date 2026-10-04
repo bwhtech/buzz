@@ -71,7 +71,7 @@
 						}}
 					</p>
 				</div>
-				<div v-else class="space-y-3 max-h-64 overflow-y-auto">
+				<div v-else class="space-y-3 max-h-64 overflow-y-auto overscroll-contain">
 					<div
 						v-for="ticket in availableTickets"
 						:key="ticket.name"

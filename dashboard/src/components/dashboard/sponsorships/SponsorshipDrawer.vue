@@ -27,7 +27,7 @@ const open = defineModel<boolean>("open", { required: true })
 				</div>
 			</div>
 
-			<div class="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
+			<div class="flex flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
 				<slot name="notice" />
 				<slot />
 			</div>
