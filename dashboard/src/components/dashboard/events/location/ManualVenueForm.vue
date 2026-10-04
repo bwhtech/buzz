@@ -26,7 +26,7 @@ const hasTriedSaving = ref(false)
 const missingFieldsMessage = computed(() => {
 	if (!hasTriedSaving.value) return ""
 	if (!venueName.value.trim()) return "Name is required"
-	if (!(address.value.trim() || mapLink.value.trim())) return "Add an address or a map link"
+	if (!(address.value.trim() || mapLink.value.trim())) return "Address or map link is required"
 	return ""
 })
 
@@ -92,12 +92,7 @@ async function save() {
 		<ErrorMessage :message="missingFieldsMessage || picker.error" />
 		<div class="mt-auto flex justify-end gap-2">
 			<Button type="button" label="Back" @click="$emit('cancel')" />
-			<Button
-				type="submit"
-				variant="solid"
-				label="Add"
-				:loading="isSaving"
-			/>
+			<Button type="submit" variant="solid" label="Add" :loading="isSaving" />
 		</div>
 	</form>
 </template>
