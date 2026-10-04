@@ -259,6 +259,7 @@ async function save() {
 					ref="titleField"
 					v-model="title"
 					rows="1"
+					maxlength="140"
 					aria-label="Event title"
 					placeholder="Name your event"
 					:disabled="!canCreate"

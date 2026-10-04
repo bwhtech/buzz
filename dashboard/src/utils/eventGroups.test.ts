@@ -45,6 +45,16 @@ test("descending input keeps its order", () => {
 	)
 })
 
+test("dateOf files an event under another day", () => {
+	const groups = groupEventsByMonth([event("2026-09-28")], () => "2026-10-04")
+
+	assert.deepEqual(
+		groups.map((group) => group.month),
+		["2026-10"],
+	)
+	assert.equal(groups[0].days[0].date, "2026-10-04")
+})
+
 test("no events produce no groups", () => {
 	assert.deepEqual(groupEventsByMonth([]), [])
 })

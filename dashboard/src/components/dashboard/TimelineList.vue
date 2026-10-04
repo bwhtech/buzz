@@ -58,7 +58,11 @@ const tabOptions = [
 		<div v-else-if="loading" class="space-y-6" aria-busy="true">
 			<span class="sr-only">Loading {{ noun }}…</span>
 			<Skeleton class="h-6 w-40 rounded-4" />
-			<div v-for="row in 3" :key="row" class="grid gap-4 md:grid-cols-[6rem_1fr]">
+			<div
+				v-for="row in 3"
+				:key="row"
+				class="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[6rem_minmax(0,1fr)]"
+			>
 				<div class="flex gap-2 md:block md:space-y-2 md:pt-1">
 					<Skeleton class="h-4 w-14 rounded-4" />
 					<Skeleton class="h-4 w-20 rounded-4" />
@@ -80,7 +84,7 @@ const tabOptions = [
 				<div
 					v-for="day in month.days"
 					:key="day.date"
-					class="grid gap-3 md:grid-cols-[6rem_1fr] md:gap-4"
+					class="grid grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-[6rem_minmax(0,1fr)] md:gap-4"
 				>
 					<div class="flex items-baseline gap-2 md:block md:pt-1">
 						<p class="font-semibold text-ink-gray-8">{{ dayLabel(day.date) }}</p>
@@ -103,6 +107,8 @@ const tabOptions = [
 					</div>
 				</div>
 			</section>
+
+			<slot name="footer" />
 		</div>
 
 		<!-- A div, not a p: the slot takes a block component. -->

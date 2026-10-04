@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { bannerPattern } from "@public/js/event_banner"
 import { Avatar, Badge, Button } from "frappe-ui"
-import { computed } from "vue"
+import { computed, ref } from "vue"
 
 import type { MyEvent } from "@/types"
 import { dayLabel, timeLabel } from "@/utils/dateLabels"
@@ -17,10 +17,20 @@ const canManage = computed(() => props.event.is_host)
 
 const startTime = computed(() => (props.event.start_time ? timeLabel(props.event.start_time) : ""))
 
+// A multi-day event always carries its range: the timeline files it under one day only.
+const dateLabel = computed(() => {
+	const { start_date, end_date } = props.event
+	if (end_date && end_date !== start_date) return `${dayLabel(start_date)} – ${dayLabel(end_date)}`
+	return props.showDate ? dayLabel(start_date) : ""
+})
+
+const bannerFailed = ref(false)
+
 const banner = computed(() => ({ backgroundImage: bannerPattern(props.event.title) }))
 
 // Only a host can fix a missing venue; for everyone else it is news, not a warning.
 const venue = computed(() => {
+	if (props.event.medium === "Online") return { label: "Online", icon: "lucide-video", tone: "" }
 	if (props.event.venue) return { label: props.event.venue, icon: "lucide-map-pin", tone: "" }
 	if (props.event.is_host)
 		return {
@@ -47,34 +57,50 @@ const venue = computed(() => {
 
 		<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
 		<img
-			v-if="event.banner_image"
+			v-if="event.banner_image && !bannerFailed"
 			class="size-20 shrink-0 rounded-4 object-cover object-top md:size-30"
 			:src="event.banner_image"
 			:style="banner"
 			loading="lazy"
 			alt=""
+			@error="bannerFailed = true"
 		/>
 		<div v-else class="size-20 shrink-0 rounded-4 md:size-30" :style="banner" />
 
 		<div class="min-w-0 flex-1 py-1 flex flex-col justify-between">
 			<div class="flex-1 space-y-2">
 				<p
-					v-if="showDate || startTime"
-					class="flex items-center gap-2 text-base tabular-nums text-ink-gray-5"
+					v-if="dateLabel || startTime"
+					class="flex flex-wrap items-center gap-x-2 text-base tabular-nums text-ink-gray-5"
 				>
-					<span v-if="showDate">{{ dayLabel(event.start_date) }}</span>
-					<span v-if="showDate && startTime" class="text-ink-gray-4">·</span>
+					<span v-if="dateLabel" class="whitespace-nowrap">{{ dateLabel }}</span>
+					<span v-if="dateLabel && startTime" class="text-ink-gray-4">·</span>
 					<span v-if="startTime">{{ startTime }}</span>
 				</p>
 
-				<h3 class="font-semibold text-lg text-ink-gray-8">{{ event.title }}</h3>
-				<p v-if="event.team_name" class="flex items-center gap-2 text-sm text-ink-gray-6">
-					<Avatar :image="event.team_logo || undefined" :label="event.team_name" size="xs" />
-					By {{ event.team_name }}
+				<h3
+					class="font-semibold text-lg text-ink-gray-8 [overflow-wrap:anywhere] max-md:line-clamp-3"
+					:title="event.title"
+				>
+					{{ event.title }}
+				</h3>
+				<!-- Top-aligned with the first line: team names and venues are long enough to wrap. -->
+				<p v-if="event.team_name" class="flex items-start gap-2 text-sm text-ink-gray-6">
+					<Avatar
+						class="mt-px"
+						:image="event.team_logo || undefined"
+						:label="event.team_name"
+						size="xs"
+					/>
+					<span class="min-w-0 [overflow-wrap:anywhere]">By {{ event.team_name }}</span>
 				</p>
-				<p class="flex items-center gap-2 text-base text-ink-gray-5">
-					<span class="size-4 shrink-0" :class="[venue.icon, venue.tone]" aria-hidden="true" />
-					{{ venue.label }}
+				<p class="flex items-start gap-2 text-base text-ink-gray-5">
+					<span
+						class="mt-0.5 size-4 shrink-0"
+						:class="[venue.icon, venue.tone]"
+						aria-hidden="true"
+					/>
+					<span class="min-w-0 [overflow-wrap:anywhere]">{{ venue.label }}</span>
 				</p>
 			</div>
 
