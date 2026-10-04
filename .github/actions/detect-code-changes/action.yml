@@ -1,0 +1,56 @@
+name: "Detect Code Changes"
+description: "Reports whether the event touched anything a build or test could care about"
+
+outputs:
+  code:
+    description: "'true' unless this is a pull request that only touched documentation"
+    value: ${{ steps.detect.outputs.code }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Detect
+      id: detect
+      shell: bash -e {0}
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+      run: |
+        # Only a pull request has a base to diff against. push, merge_group,
+        # workflow_dispatch and schedule all guard a branch directly, so they run
+        # everything.
+        if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+          echo "Event is $GITHUB_EVENT_NAME, nothing to diff." >> "$GITHUB_STEP_SUMMARY"
+          echo "code=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        # Fails open: downstream jobs are skipped when this one fails, and a
+        # skipped required check counts as successful, so an API hiccup must
+        # never look like "documentation only".
+        files=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" \
+          --jq '.[].filename') || files=""
+
+        if [ -z "$files" ]; then
+          echo "No file list available, running everything." >> "$GITHUB_STEP_SUMMARY"
+          echo "code=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        code=false
+        while IFS= read -r file; do
+          case "$file" in
+            *.md | docs/* | .claude/* | specs/*) ;;
+            *)
+              echo "Code change: $file" >> "$GITHUB_STEP_SUMMARY"
+              code=true
+              break
+              ;;
+          esac
+        done <<< "$files"
+
+        if [ "$code" = false ]; then
+          echo "Documentation only." >> "$GITHUB_STEP_SUMMARY"
+        fi
+        echo "code=$code" >> "$GITHUB_OUTPUT"
