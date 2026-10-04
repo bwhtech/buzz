@@ -5,3 +5,41 @@
 [role="tablist"] {
 	gap: 1rem;
 }
+
+/* A sheen that travels across text while work is in progress, after frappe/builder's AI panel.
+ * The band moves away from the page colour: pale on light, bright on dark. */
+@keyframes text-shimmer {
+	from {
+		background-position: 200% center;
+	}
+	to {
+		background-position: -200% center;
+	}
+}
+
+.text-shimmer {
+	--shimmer-base: var(--ink-gray-8);
+	--shimmer-peak: var(--ink-gray-4);
+	background: linear-gradient(
+		120deg,
+		var(--shimmer-base) 20%,
+		var(--shimmer-peak) 50%,
+		var(--shimmer-base) 80%
+	);
+	background-size: 200% auto;
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: text-shimmer 2.5s linear infinite;
+}
+
+[data-theme="dark"] .text-shimmer {
+	--shimmer-base: var(--ink-gray-6);
+	--shimmer-peak: var(--ink-gray-9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.text-shimmer {
+		animation: none;
+	}
+}

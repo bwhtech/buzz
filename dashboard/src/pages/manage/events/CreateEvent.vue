@@ -4,13 +4,11 @@ import {
 	Alert,
 	Button,
 	ErrorMessage,
-	LoadingIndicator,
 	PageHeaderBackButton,
 	PageHeaderMobile,
 	toast,
 } from "frappe-ui"
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
-import { TextMorph } from "torph/vue"
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { onBeforeRouteLeave, useRouter } from "vue-router"
 
@@ -335,14 +333,20 @@ async function save() {
 				</section>
 			</div>
 
-			<div v-else class="flex items-center justify-center gap-3 py-24">
-				<span v-if="failed" class="lucide-circle-x size-6 text-ink-red-6" aria-hidden="true" />
-				<LoadingIndicator v-else class="size-6 text-ink-gray-7" />
-				<TextMorph
-					:text="step"
-					class="text-base"
-					:class="failed ? 'text-ink-red-6' : 'text-ink-gray-7'"
-				/>
+			<div v-else class="flex justify-center py-24" aria-live="polite">
+				<!-- type: the shimmer animation never ends, so Vue must time the swap by the fade. -->
+				<Transition
+					mode="out-in"
+					type="transition"
+					enter-active-class="transition-opacity duration-200 ease-out motion-reduce:transition-none"
+					leave-active-class="transition-opacity duration-150 ease-out motion-reduce:transition-none"
+					enter-from-class="opacity-0"
+					leave-to-class="opacity-0"
+				>
+					<span :key="step" class="text-base" :class="failed ? 'text-ink-red-6' : 'text-shimmer'">
+						{{ step }}
+					</span>
+				</Transition>
 			</div>
 		</Transition>
 	</div>
