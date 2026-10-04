@@ -2,16 +2,16 @@ import { refDebounced } from "@vueuse/core"
 import { useCall } from "frappe-ui"
 import { computed, type Ref, ref, watch } from "vue"
 
+import type { Condition } from "@/components/common/filters"
+import type { ListOrder } from "@/composables/useListQuery"
 import type { EventGuest, EventGuests } from "@/types"
 
 export const GUESTS_PAGE_SIZE = 20
 
-export type GuestOrder = "desc" | "asc"
-
 /**
  * One event's guest list, fetched a page at a time.
  *
- * Search and sort live on the server: the browser only ever holds the pages it has
+ * Search, filters and sort live on the server: the browser only ever holds the pages it has
  * walked down to, so a five-hundred-guest event costs the same first paint as a five.
  * A page appends; a change of search or order starts the list over.
  *
@@ -21,8 +21,8 @@ export type GuestOrder = "desc" | "asc"
 export function useEventGuests(
 	event: string,
 	search: Ref<string>,
-	order: Ref<GuestOrder>,
-	ticketTypes: Ref<string[]>,
+	order: Ref<ListOrder>,
+	conditions: Ref<Condition[]>,
 ) {
 	// Typing rewrites the URL, and every rewrite is a request — wait for the pause.
 	const debouncedSearch = refDebounced(search, 300)
@@ -34,8 +34,7 @@ export function useEventGuests(
 		params: () => ({
 			event,
 			search: debouncedSearch.value.trim(),
-			// Comma-joined, the shape the query string already holds them in.
-			ticket_types: ticketTypes.value.join(","),
+			filters: JSON.stringify(conditions.value),
 			order: order.value,
 			start: start.value,
 			limit: GUESTS_PAGE_SIZE,
@@ -57,7 +56,7 @@ export function useEventGuests(
 	// Sync, so the offset is back at zero before useCall's own watcher rebuilds the URL —
 	// a pre-flush reset lets the stale offset go out as a request that is aborted a tick later.
 	watch(
-		[debouncedSearch, order, ticketTypes],
+		[debouncedSearch, order, conditions],
 		() => {
 			start.value = 0
 			guests.value = []

@@ -12,7 +12,11 @@ const AVATAR_THEMES = ["blue", "green", "violet"] as const
 // Only the three newest holders are drawn; the count comes from the ticket type itself.
 const latest = useCall<EventGuests, Record<string, string | number>>({
 	url: "/api/v2/method/buzz.api.events.get_event_guests",
-	params: () => ({ event: props.event, ticket_types: props.ticketType, limit: 3 }),
+	params: () => ({
+		event: props.event,
+		filters: JSON.stringify([["ticket_type", "in", [props.ticketType]]]),
+		limit: 3,
+	}),
 })
 
 const names = computed(() => (latest.data?.guests ?? []).map((guest) => guest.attendee_name ?? ""))

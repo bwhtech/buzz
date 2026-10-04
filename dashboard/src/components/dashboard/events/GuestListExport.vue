@@ -10,7 +10,7 @@ const props = defineProps<{
 	event: string
 	title?: string | null
 	// What the list is currently showing, so the export is the same list.
-	query: { search: string; ticket_types: string; order: string }
+	query: { search: string; filters: string; order: string }
 }>()
 
 const exporting = ref(false)

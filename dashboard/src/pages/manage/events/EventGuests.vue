@@ -1,20 +1,19 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
-import { useRouteQuery } from "@vueuse/router"
 import { ErrorMessage } from "frappe-ui"
 import { DonutChart, NumberCard } from "frappe-ui/charts"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
-import { FilterBar, type FilterGroup, type FilterValues } from "@/components/common/filters"
+import { ListFilters } from "@/components/common/filters"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventGuestItem from "@/components/dashboard/events/EventGuestItem.vue"
 import EventGuestSkeleton from "@/components/dashboard/events/EventGuestSkeleton.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import GuestInfoDrawer from "@/components/dashboard/events/GuestInfoDrawer.vue"
 import GuestListExport from "@/components/dashboard/events/GuestListExport.vue"
-import { type GuestOrder, useEventGuests } from "@/composables/useEventGuests"
-import { useUrlFilters } from "@/composables/useUrlFilters"
+import { useEventGuests } from "@/composables/useEventGuests"
+import { useListQuery } from "@/composables/useListQuery"
 import { useRegistrationTrend } from "@/data/events"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError } from "@/types"
@@ -22,74 +21,21 @@ import type { FrappeError } from "@/types"
 const route = useRoute()
 const eventId = route.params.eventId as string
 
-// Both controls sit in the query string, so a searched or re-sorted list survives a
-// reload and can be handed to someone else as a link. The default order stays implicit:
-// only "oldest first" is worth a param.
-const filters = useUrlFilters(["order", "ticket_type"])
-const searchParam = useRouteQuery<string | null>("q", null)
-
-const search = computed<string>({
-	get: () => searchParam.value ?? "",
-	set: (term) => (searchParam.value = term.trim() ? term : null),
-})
-
-// Read-only: the filter bar owns the write, and routes it through `barFilters` so the
-// order and the type filter land in the query string as one assignment.
-const order = computed<GuestOrder>(() => (filters.value.order?.[0] === "asc" ? "asc" : "desc"))
-
-const ticketTypes = computed(() => filters.value.ticket_type || [])
+const { search, order, conditions, filtering } = useListQuery()
 
 const { guests, loadMore, page, loadingFirstPage, loadingMore } = useEventGuests(
 	eventId,
 	search,
 	order,
-	ticketTypes,
+	conditions,
 )
 
 // The export is the list on screen, not the whole event: same filters, same order.
 const exportQuery = computed(() => ({
 	search: search.value.trim(),
-	ticket_types: ticketTypes.value.join(","),
+	filters: JSON.stringify(conditions.value),
 	order: order.value,
 }))
-
-// The bar speaks in groups of chosen values; sort is one choice, so it reads and writes
-// the single order the list is fetched with.
-// The types come back with the guests, so the filter offers exactly what this event sells.
-const filterGroups = computed<FilterGroup[]>(() => [
-	{
-		key: "order",
-		label: "Sort by",
-		quick: true,
-		single: true,
-		options: [
-			{ value: "desc", label: "Newest first" },
-			{ value: "asc", label: "Oldest first" },
-		],
-	},
-	{
-		key: "ticket_type",
-		label: "Ticket type",
-		options: (page.data?.ticket_types || []).map((type) => ({
-			value: type.name,
-			label: type.title || type.name,
-		})),
-	},
-])
-
-// The bar speaks in groups of chosen values, so sort travels beside the type filter and
-// is unpacked back into the single order the list is fetched with.
-const barFilters = computed<FilterValues>({
-	get: () => ({ order: [order.value], ticket_type: ticketTypes.value }),
-	// One write rather than two: the query string is the store, and a second assignment
-	// would build on the value the first has not landed yet.
-	set: (next) => {
-		filters.value = {
-			order: next.order?.[0] === "asc" ? ["asc"] : [],
-			ticket_type: next.ticket_type || [],
-		}
-	},
-})
 
 const trend = useRegistrationTrend(eventId)
 
@@ -192,20 +138,16 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 		<section class="space-y-3">
 			<h2 class="text-xl font-semibold text-ink-gray-9">Guest list</h2>
 
-			<FilterBar
-				v-model="barFilters"
+			<ListFilters
+				v-model="conditions"
 				v-model:search="search"
-				searchable
+				v-model:order="order"
+				:fields="page.data?.filter_fields ?? []"
 				search-placeholder="Search by name or email"
-				:groups="filterGroups"
 			/>
 
 			<!-- Announced rather than only drawn: typing changes the list silently otherwise. -->
-			<p
-				v-if="search.trim() || ticketTypes.length"
-				aria-live="polite"
-				class="text-sm text-ink-gray-5"
-			>
+			<p v-if="filtering" aria-live="polite" class="text-sm text-ink-gray-5">
 				{{ page.data?.matched ?? 0 }} of {{ page.data?.total ?? 0 }} guests
 			</p>
 
@@ -249,8 +191,8 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 					<p v-else-if="search" class="text-base text-ink-gray-5">
 						Nobody here matches “{{ search }}”.
 					</p>
-					<p v-else-if="ticketTypes.length" class="text-base text-ink-gray-5">
-						Nobody holds one of these ticket types.
+					<p v-else-if="conditions.length" class="text-base text-ink-gray-5">
+						Nobody here matches these filters.
 					</p>
 					<p v-else class="text-base text-ink-gray-5">No guests yet.</p>
 

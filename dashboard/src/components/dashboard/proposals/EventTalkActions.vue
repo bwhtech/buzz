@@ -16,7 +16,7 @@ const props = defineProps<{
 	title?: string | null
 	proposalLink?: string | null
 	// What the list is currently showing, so the export is the same list.
-	query: { search: string; statuses: string; order: string }
+	query: { search: string; filters: string; order: string }
 }>()
 const emit = defineEmits<{ changed: [] }>()
 

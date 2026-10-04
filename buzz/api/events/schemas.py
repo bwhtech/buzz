@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import Field
 
+from buzz.api.filters.schemas import FilterField
 from buzz.api.schemas import APIRequest, APIResponse
 
 
@@ -123,8 +124,8 @@ class EventGuestsResponse(APIResponse):
 	total: int
 	matched: int
 	guests: list[EventGuest]
-	ticket_types: list[GuestTicketType] = Field(default_factory=list)
 	has_next_page: bool = False
+	filter_fields: list[FilterField]
 
 
 class DailyRegistrations(APIResponse):

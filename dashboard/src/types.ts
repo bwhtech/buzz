@@ -54,6 +54,7 @@ export interface EventProposals {
 	// Where talks are proposed, and whether that page still takes them.
 	proposal_link: string | null
 	proposals_closed: boolean
+	filter_fields: FilterField[]
 }
 
 // buzz.api.proposals.accept_proposal
@@ -234,11 +235,6 @@ export interface RegistrationTrend {
 	by_ticket_type: TicketTypeTotal[]
 }
 
-export interface GuestTicketType {
-	name: string
-	title: string | null
-}
-
 export interface EventGuests {
 	title: string | null
 	start_date: string | null
@@ -248,8 +244,8 @@ export interface EventGuests {
 	total: number
 	matched: number
 	guests: EventGuest[]
-	ticket_types: GuestTicketType[]
 	has_next_page: boolean
+	filter_fields: FilterField[]
 }
 
 export interface VerificationMethods {

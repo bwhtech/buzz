@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onKeyStroke } from "@vueuse/core"
-import { Button, Dropdown, type DropdownOptions } from "frappe-ui"
+import { Button, Dropdown, type DropdownOptions, FormControl, Icon, Select } from "frappe-ui"
 import { computed, ref } from "vue"
+
+import type { ListOrder } from "@/composables/useListQuery"
 
 import {
 	type Condition,
@@ -12,8 +14,15 @@ import {
 } from "./fields"
 import FilterChip from "./FilterChip.vue"
 
-const props = defineProps<{ fields: FilterField[] }>()
+const props = defineProps<{ fields: FilterField[]; searchPlaceholder: string }>()
 const conditions = defineModel<Condition[]>({ required: true })
+const search = defineModel<string>("search", { required: true })
+const order = defineModel<ListOrder>("order", { required: true })
+
+const ORDER_OPTIONS = [
+	{ value: "desc", label: "Newest first" },
+	{ value: "asc", label: "Oldest first" },
+]
 
 const menuOpen = ref(false)
 // The chip added from the menu without a value takes focus, so typing can start at once.
@@ -82,9 +91,26 @@ onKeyStroke("f", (event) => {
 
 <template>
 	<div class="space-y-2">
-		<!-- The page's own controls (search, sort) lead the toolbar; Filter closes it. -->
 		<div class="flex flex-wrap items-center gap-2">
-			<slot />
+			<FormControl
+				v-model="search"
+				class="min-w-48 flex-1"
+				size="sm"
+				type="text"
+				:placeholder="searchPlaceholder"
+				:aria-label="searchPlaceholder"
+			>
+				<template #prefix>
+					<Icon name="lucide-search" class="size-4 text-ink-gray-5" />
+				</template>
+			</FormControl>
+			<Select
+				size="sm"
+				aria-label="Sort by"
+				:options="ORDER_OPTIONS"
+				:model-value="order"
+				@update:model-value="order = $event === 'asc' ? 'asc' : 'desc'"
+			/>
 			<Dropdown v-if="fields.length" v-model:open="menuOpen" :options="menu" align="end">
 				<Button
 					icon="lucide-list-filter"

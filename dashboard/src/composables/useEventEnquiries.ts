@@ -2,7 +2,8 @@ import { refDebounced } from "@vueuse/core"
 import { useCall } from "frappe-ui"
 import { computed, type Ref, ref, watch } from "vue"
 
-import type { Condition } from "@/components/common/filters"
+import { type Condition, keepsStatus } from "@/components/common/filters"
+import type { ListOrder } from "@/composables/useListQuery"
 import type { EventEnquiries, EventEnquiryItem } from "@/types"
 
 const PAGE_SIZE = 20
@@ -14,7 +15,7 @@ const PAGE_SIZE = 20
 export function useEventEnquiries(
 	event: string,
 	search: Ref<string>,
-	order: Ref<"asc" | "desc">,
+	order: Ref<ListOrder>,
 	conditions: Ref<Condition[]>,
 ) {
 	const debouncedSearch = refDebounced(search, 300)
@@ -55,7 +56,7 @@ export function useEventEnquiries(
 
 	// Patched in place: past the first page a refetch would drop the changed row as a duplicate.
 	const applyStatus = (name: string, status: string) => {
-		const matchesFilter = conditions.value.every((condition) => keepsStatus(condition, status))
+		const matchesFilter = keepsStatus(conditions.value, status)
 		enquiries.value = matchesFilter
 			? enquiries.value.map((row) => (row.name === name ? { ...row, status } : row))
 			: enquiries.value.filter((row) => row.name !== name)
@@ -74,10 +75,4 @@ export function useEventEnquiries(
 		loadingFirstPage: computed(() => page.loading && start.value === 0),
 		loadingMore: computed(() => page.loading && start.value > 0),
 	}
-}
-
-// Only a status condition can drop a row whose status just changed; other filters still hold.
-function keepsStatus([field, operator, value]: Condition, status: string) {
-	if (field !== "status" || !value.length) return true
-	return (operator === "in") === value.includes(status)
 }

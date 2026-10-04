@@ -17,6 +17,8 @@ KIND_BY_FIELDTYPE = {
 	"Attach Image": "file",
 }
 NEGATED = {"not in": "in", "not like": "like"}
+# Answers saved through `str()` carry Python's spelling: "True" for a tick, ['a', 'b'] for a list.
+CHECKED = ["1", "True", "true"]
 
 
 def kind_of(fieldtype: str) -> str:
@@ -70,6 +72,16 @@ def question_fields(questions) -> list[FilterField]:
 	]
 
 
+def event_questions(event: str, **filters) -> list:
+	"""An event's enabled Buzz Custom Field questions, in form order."""
+	return frappe.get_all(
+		"Buzz Custom Field",
+		filters={"event": event, "enabled": 1, **filters},
+		fields=["fieldname", "label", "fieldtype", "options", "applied_to"],
+		order_by="order asc",
+	)
+
+
 def question_options(row) -> list[tuple[str, str]]:
 	if row.fieldtype == "Check":
 		return [("1", _("Yes")), ("0", _("No"))]
@@ -87,9 +99,12 @@ def is_blank(operator: str, value) -> bool:
 class ListConditions:
 	"""Turns the dashboard's `[field, operator, value]` triples into `frappe.get_all` filters."""
 
-	def __init__(self, doctype: str, fields: list[FilterField]):
+	def __init__(self, doctype: str, fields: list[FilterField], answered_on: dict | None = None):
+		"""`answered_on` maps a question answered on a linked record to that record's doctype
+		and the list field linking to it, as a guest's booking questions sit on the booking."""
 		self.doctype = doctype
 		self.fields = {field.key: field for field in fields}
+		self.answered_on = answered_on or {}
 
 	def frappe_filters(self, raw: str | None) -> list[list]:
 		translated = (self.translate(*triple) for triple in self.parse(raw))
@@ -112,7 +127,8 @@ class ListConditions:
 			return None
 		field = self.fields[key]
 		if field.section == "question":
-			return AnswerCondition(self.doctype, field, operator, value).name_filter()
+			doctype, link_field = self.answered_on.get(key, (self.doctype, "name"))
+			return AnswerCondition(doctype, link_field, field, operator, value).name_filter()
 		return [key, operator, f"%{value}%" if "like" in operator else value]
 
 
@@ -126,20 +142,21 @@ class AnswerCondition:
 	# Name lists grow with how many records answered the question; move to a qb
 	# subquery if a list ever reaches tens of thousands of rows.
 
-	def __init__(self, doctype: str, field: FilterField, operator: str, value):
+	def __init__(self, doctype: str, link_field: str, field: FilterField, operator: str, value):
 		self.doctype = doctype
+		self.link_field = link_field
 		self.field = field
 		self.operator = operator
 		self.values = value if isinstance(value, list) else [value]
 
 	def name_filter(self) -> list | None:
 		if self.operator == "is":
-			return ["name", "in" if self.values[0] == "set" else "not in", self.parents()]
+			return [self.link_field, "in" if self.values[0] == "set" else "not in", self.parents()]
 		if self.field.fieldtype == "Check":
 			return self.check_filter()
 		# Negations take the complement, so an unanswered question counts as not matching.
 		positive = NEGATED.get(self.operator, self.operator)
-		return ["name", "not in" if self.operator in NEGATED else "in", self.matching(positive)]
+		return [self.link_field, "not in" if self.operator in NEGATED else "in", self.matching(positive)]
 
 	def check_filter(self) -> list | None:
 		"""A Check left unticked may have no row at all, so "No" means "not Yes"."""
@@ -148,15 +165,18 @@ class AnswerCondition:
 			wanted = {"0", "1"} - wanted
 		if len(wanted) != 1:
 			return None
-		return ["name", "in" if wanted == {"1"} else "not in", self.parents("1")]
+		return [self.link_field, "in" if wanted == {"1"} else "not in", self.parents(["in", CHECKED])]
 
 	def matching(self, operator: str) -> list[str]:
 		kind = kind_of(self.field.fieldtype)
 		if kind in ("number", "date"):
 			return self.compared(operator)
 		if kind == "multi":
-			# A Multi Select answer is stored as a JSON list, so each option is quoted in it.
-			return list({name for option in self.values for name in self.parents(["like", f'%"{option}"%'])})
+			# A Multi Select answer is a list in text, so each option sits quoted inside it.
+			patterns = [f'%"{option}"%' for option in self.values] + [
+				f"%'{option}'%" for option in self.values
+			]
+			return list({name for pattern in patterns for name in self.parents(["like", pattern])})
 		if operator == "like":
 			return self.parents(["like", f"%{self.values[0]}%"])
 		return self.parents([operator, self.values if operator == "in" else self.values[0]])

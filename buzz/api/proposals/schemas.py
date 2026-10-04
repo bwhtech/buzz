@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta
 
 from pydantic import Field
 
+from buzz.api.filters.schemas import FilterField
 from buzz.api.schemas import APIResponse
 
 
@@ -44,6 +45,7 @@ class EventProposalsResponse(APIResponse):
 	# Where talks are proposed, and whether that page still takes them.
 	proposal_link: str | None = None
 	proposals_closed: bool = False
+	filter_fields: list[FilterField]
 
 
 class ProposalState(APIResponse):

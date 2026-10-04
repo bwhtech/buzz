@@ -33,6 +33,8 @@ from buzz.api.events.schemas import (
 	TicketTypeTotal,
 	VerificationMethods,
 )
+from buzz.api.filters.conditions import ListConditions, event_questions, filter_field, question_fields
+from buzz.api.filters.schemas import FilterField
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
 from buzz.permissions import has_team_access, my_teams
 from buzz.utils import is_app_installed
@@ -340,7 +342,7 @@ def ensure_event_team_access(event: str) -> None:
 def event_guests(
 	event: str,
 	search: str | None = None,
-	ticket_types: str | None = None,
+	filters: str | None = None,
 	order: str = "desc",
 	start: int = 0,
 	limit: int = GUESTS_PAGE_SIZE,
@@ -355,10 +357,9 @@ def event_guests(
 	"""
 	ensure_event_team_access(event)
 
-	filters = {"event": event, "docstatus": 1}
-	chosen_types = ticket_type_filter(ticket_types)
-	if chosen_types:
-		filters["ticket_type"] = ["in", chosen_types]
+	filter_fields, answered_on = guest_filter_fields(event)
+	conditions = ListConditions("Event Ticket", filter_fields, answered_on).frappe_filters(filters)
+	query_filters = [["event", "=", event], ["docstatus", "=", 1], *conditions]
 	or_filters = guest_search_filters(search)
 	limit = max(1, min(int(limit), 100))
 	start = max(0, int(start))
@@ -367,7 +368,7 @@ def event_guests(
 
 	tickets = frappe.get_all(
 		"Event Ticket",
-		filters=filters,
+		filters=query_filters,
 		or_filters=or_filters,
 		fields=["name", "attendee_name", "attendee_email", "ticket_type", "creation"],
 		order_by=f"creation {direction}, name {direction}",
@@ -387,7 +388,7 @@ def event_guests(
 	guests = [EventGuest(**ticket, add_ons=by_ticket.get(ticket.name, [])) for ticket in tickets]
 	doc = frappe.get_cached_doc("Buzz Event", event)
 	total = count_tickets({"event": event, "docstatus": 1})
-	matched = count_tickets(filters, or_filters) if or_filters or chosen_types else total
+	matched = count_tickets(query_filters, or_filters) if or_filters or conditions else total
 	return EventGuestsResponse(
 		title=doc.title,
 		start_date=doc.start_date,
@@ -397,9 +398,31 @@ def event_guests(
 		total=total,
 		matched=matched,
 		guests=guests,
-		ticket_types=ticket_types_of(event),
 		has_next_page=start + len(guests) < matched,
+		filter_fields=filter_fields,
 	)
+
+
+def guest_filter_fields(event: str) -> tuple[list[FilterField], dict]:
+	"""Ticket type, then the event's ticket and booking questions.
+
+	Booking questions are answered once per booking, so they filter a ticket through the
+	booking it belongs to. A fieldname asked on both keeps the ticket question.
+	"""
+	types = [(row.name, row.title) for row in ticket_types_of(event)]
+	questions: dict = {}
+	for row in event_questions(event, applied_to=["in", ["Ticket", "Booking"]]):
+		held = questions.get(row.fieldname)
+		if not held or held.applied_to != "Ticket":
+			questions[row.fieldname] = row
+	answered_on = {
+		key: ("Event Booking", "booking") for key, row in questions.items() if row.applied_to == "Booking"
+	}
+	fields = [
+		filter_field("ticket_type", _("Ticket type"), "Link", types),
+		*question_fields(questions.values()),
+	]
+	return fields, answered_on
 
 
 TREND_DAYS = 14
@@ -482,7 +505,7 @@ def ticket_types_of(event: str) -> list[GuestTicketType]:
 	return [GuestTicketType(name=str(row.name), title=row.title) for row in rows]
 
 
-def count_tickets(filters: dict, or_filters: list[list] | None = None) -> int:
+def count_tickets(filters: dict | list, or_filters: list[list] | None = None) -> int:
 	"""Dict syntax rather than "count(name)": get_all rejects SQL functions written as strings."""
 	rows = frappe.get_all("Event Ticket", filters=filters, or_filters=or_filters, fields=[{"COUNT": "*"}])
 	return rows[0]["COUNT(*)"] if rows else 0

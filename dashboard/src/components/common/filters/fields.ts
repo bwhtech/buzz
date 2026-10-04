@@ -77,3 +77,10 @@ export function valueFor(
 	if (field.options.length) return Array.isArray(previous) ? previous : []
 	return typeof previous === "string" ? previous : ""
 }
+
+/** Whether a row whose status just changed still answers the list's status conditions. */
+export const keepsStatus = (conditions: Condition[], status: string) =>
+	conditions.every(
+		([field, operator, value]) =>
+			field !== "status" || !value.length || (operator === "in") === value.includes(status),
+	)

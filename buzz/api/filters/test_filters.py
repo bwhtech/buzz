@@ -107,3 +107,33 @@ class TestListConditions(IntegrationTestCase):
 			self.matching(["status", "like", "Paid"])
 		with self.assertRaises(InvalidFilter):
 			self.matching([["status"], "in", ["Paid"]])
+
+
+class TestAnswersSavedAsText(IntegrationTestCase):
+	"""Booking and ticket answers go through `str()`, so a tick and a list read differently."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		event = BuzzEventFactory.create().name
+		cls.ticked = SponsorshipEnquiryFactory.create(
+			event=event, additional_fields=answers(booth="True", interests="['Talk', 'Swag']")
+		).name
+		cls.fields = question_fields(QUESTIONS)
+
+	def conditions(self, *triples, answered_on=None) -> list:
+		return ListConditions("Sponsorship Enquiry", self.fields, answered_on).frappe_filters(
+			json.dumps(triples)
+		)
+
+	def test_true_counts_as_ticked(self):
+		self.assertIn(self.ticked, self.conditions(["booth", "in", ["1"]])[0][2])
+
+	def test_python_list_matches_its_options(self):
+		self.assertIn(self.ticked, self.conditions(["interests", "like", ["Talk"]])[0][2])
+
+	def test_question_on_a_linked_record_filters_through_its_link(self):
+		answered_on = {"booth": ("Sponsorship Enquiry", "booking")}
+		field, operator, names = self.conditions(["booth", "in", ["1"]], answered_on=answered_on)[0]
+		self.assertEqual((field, operator), ("booking", "in"))
+		self.assertIn(self.ticked, names)
