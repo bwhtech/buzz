@@ -72,3 +72,4 @@ plans/
 # Claude Code local state
 .claude/worktrees/
 .claude/settings.local.json
+context_local.md
