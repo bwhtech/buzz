@@ -334,19 +334,12 @@ async function save() {
 			</div>
 
 			<div v-else class="flex justify-center py-24" aria-live="polite">
-				<!-- type: the shimmer animation never ends, so Vue must time the swap by the fade. -->
-				<Transition
-					mode="out-in"
-					type="transition"
-					enter-active-class="transition-opacity duration-200 ease-out motion-reduce:transition-none"
-					leave-active-class="transition-opacity duration-150 ease-out motion-reduce:transition-none"
-					enter-from-class="opacity-0"
-					leave-to-class="opacity-0"
-				>
-					<span :key="step" class="text-base" :class="failed ? 'text-ink-red-6' : 'text-shimmer'">
+				<!-- Separate elements: the rise and the shimmer are both CSS animations. -->
+				<span class="fade-up-in [animation-delay:300ms]">
+					<span class="text-base" :class="failed ? 'text-ink-red-6' : 'text-shimmer'">
 						{{ step }}
 					</span>
-				</Transition>
+				</span>
 			</div>
 		</Transition>
 	</div>

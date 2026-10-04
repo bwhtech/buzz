@@ -38,7 +38,23 @@
 	--shimmer-peak: var(--ink-gray-9);
 }
 
+@keyframes fade-up-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.fade-up-in {
+	animation: fade-up-in 0.4s ease both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+	.fade-up-in,
 	.text-shimmer {
 		animation: none;
 	}
