@@ -5,6 +5,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.events.doctype.buzz_team.test_buzz_team import create_user, payload_for
+from buzz.install import create_administrator_team
 from buzz.patches.assign_default_team import execute as backfill_teams
 from buzz.patches.create_default_teams import execute as create_default_teams
 from buzz.patches.create_default_teams import get_enabled_event_managers
@@ -163,3 +164,33 @@ class TestAssignDefaultTeam(IntegrationTestCase):
 		backfill_teams()
 
 		self.assertEqual(frappe.db.count("Buzz Team"), teams)
+
+
+class TestCreateAdministratorTeam(IntegrationTestCase):
+	def setUp(self):
+		frappe.set_user("Administrator")
+
+	def clear_teams(self):
+		frappe.db.savepoint("before_clearing_teams")
+		self.addCleanup(frappe.db.rollback, save_point="before_clearing_teams")
+		for doctype in ("Buzz Team Membership", "Buzz Team Settings", "Buzz Team"):
+			frappe.db.delete(doctype)
+
+	def test_a_site_without_teams_gets_one_owned_by_administrator(self):
+		self.clear_teams()
+
+		create_administrator_team()
+
+		team = frappe.db.get_value(
+			"Buzz Team Membership", {"user": "Administrator", "team_role": "Owner"}, "team"
+		)
+		self.assertTrue(team)
+		self.assertEqual(frappe.db.count("Buzz Team"), 1)
+
+	def test_a_site_with_teams_gets_no_new_team(self):
+		self.clear_teams()
+		frappe.get_doc({"doctype": "Buzz Team", "team_name": "Existing Team"}).insert()
+
+		create_administrator_team()
+
+		self.assertEqual(frappe.db.count("Buzz Team"), 1)

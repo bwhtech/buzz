@@ -172,6 +172,7 @@ def after_install():
 	create_event_categories()
 	create_talk_proposal_statuses()
 	create_custom_fields()
+	create_administrator_team()
 
 
 def on_migrate():
@@ -179,6 +180,12 @@ def on_migrate():
 	create_event_categories()
 	create_talk_proposal_statuses()
 	create_custom_fields()
+
+
+def create_administrator_team():
+	"""Give a site without teams one owned by Administrator, so /b opens to the manager dashboard."""
+	if not frappe.db.exists("Buzz Team"):
+		create_default_team_for("Administrator")
 
 
 def after_app_install(app_name: str):
