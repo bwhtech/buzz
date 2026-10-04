@@ -9,6 +9,7 @@ from buzz.api.sponsorships import (
 )
 from buzz.api.sponsorships.exceptions import EnquiryNotFound, EnquiryStatusLocked, EnquiryTierMissing
 from buzz.api.sponsorships.test_sponsorships import SponsorshipTestCase
+from buzz.tests.factories import SponsorshipEnquiryFactory
 
 TIER_FIELDS = {"name", "title", "prices", "slots", "enabled", "perks", "sponsor_count"}
 SPONSOR_FIELDS = {
@@ -120,11 +121,29 @@ class TestGetEventSponsorshipEnquiries(ManageTestCase):
 		self.make_enquiry(f"Zeta {suffix} Two")
 		frappe.set_user(self.make_member("Manager"))
 
-		response = get_event_sponsorship_enquiries(self.event, search=f"Zeta {suffix}", statuses="Paid")
+		response = get_event_sponsorship_enquiries(
+			self.event, search=f"Zeta {suffix}", filters='[["status", "in", ["Paid"]]]'
+		)
 
 		self.assertEqual([row.name for row in response.enquiries], [paid.name])
 		self.assertEqual(response.matched, 1)
 		self.assertGreaterEqual(response.total, 3)
+
+	def test_form_questions_are_offered_and_filter_the_page(self):
+		# Every event is created with its enquiry form.
+		form = frappe.get_doc("Sponsor Enquiry Form", {"event": self.event})
+		form.append("custom_fields", {"label": "Needs a booth", "fieldname": "booth", "fieldtype": "Check"})
+		form.save()
+		booth = SponsorshipEnquiryFactory.create(
+			event=self.event,
+			additional_fields=[{"fieldname": "booth", "label": "Needs a booth", "value": "1"}],
+		)
+		frappe.set_user(self.make_member("Manager"))
+
+		response = get_event_sponsorship_enquiries(self.event, filters='[["booth", "in", ["1"]]]')
+
+		self.assertIn("booth", [field.key for field in response.filter_fields])
+		self.assertEqual([row.name for row in response.enquiries], [booth.name])
 
 	def test_pages_follow_start_and_limit(self):
 		suffix = frappe.generate_hash(length=6)

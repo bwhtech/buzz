@@ -9,6 +9,7 @@ export type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 export type { FrappeField } from "@/composables/useCustomFields"
 export type { TalkProposal } from "@/types/Proposals/TalkProposal"
 
+import type { FilterField } from "@/components/common/filters/fields"
 import type { FrappeField } from "@/composables/useCustomFields"
 import type { EventTicket } from "@/types/Ticketing/EventTicket"
 import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
@@ -53,6 +54,7 @@ export interface EventProposals {
 	// Where talks are proposed, and whether that page still takes them.
 	proposal_link: string | null
 	proposals_closed: boolean
+	filter_fields: FilterField[]
 }
 
 // buzz.api.proposals.accept_proposal
@@ -233,11 +235,6 @@ export interface RegistrationTrend {
 	by_ticket_type: TicketTypeTotal[]
 }
 
-export interface GuestTicketType {
-	name: string
-	title: string | null
-}
-
 export interface EventGuests {
 	title: string | null
 	start_date: string | null
@@ -247,8 +244,8 @@ export interface EventGuests {
 	total: number
 	matched: number
 	guests: EventGuest[]
-	ticket_types: GuestTicketType[]
 	has_next_page: boolean
+	filter_fields: FilterField[]
 }
 
 export interface VerificationMethods {
@@ -574,6 +571,7 @@ export interface EventEnquiries {
 	matched: number
 	enquiries: EventEnquiryItem[]
 	has_next_page: boolean
+	filter_fields: FilterField[]
 }
 
 export interface TicketTypePrice extends TierPrice {

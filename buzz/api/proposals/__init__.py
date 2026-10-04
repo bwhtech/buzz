@@ -20,17 +20,16 @@ def get_my_proposals() -> list[ProposalListItem]:
 def get_event_proposals(
 	event: str,
 	search: str | None = None,
-	statuses: str | None = None,
+	filters: str | None = None,
 	order: str = "desc",
 	start: int = 0,
 	limit: int = services.PROPOSALS_PAGE_SIZE,
 ) -> EventProposalsResponse:
 	"""One page of the talk proposals submitted to an event, for its team.
 
-	`statuses` is comma-joined rather than a list: a GET query string carries one, and it
-	is the same string the dashboard keeps the filter in.
+	`filters` is a JSON list of `[field, operator, value]`, the string the dashboard keeps in its URL.
 	"""
-	return services.event_proposals(event, search, statuses, order, start, limit)
+	return services.event_proposals(event, search, filters, order, start, limit)
 
 
 @frappe.whitelist()
