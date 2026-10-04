@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
 import { useRouteQuery } from "@vueuse/router"
-import { ErrorMessage, Skeleton } from "frappe-ui"
+import { ErrorMessage, Icon, Skeleton } from "frappe-ui"
 import { DonutChart, NumberCard } from "frappe-ui/charts"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
+import EmptyState from "@/components/common/EmptyState.vue"
 import { FilterBar, type FilterGroup, type FilterValues } from "@/components/common/filters"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
@@ -219,13 +220,28 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 						<Skeleton v-if="loadingMore" class="h-[7.5rem] w-full rounded-8" />
 					</div>
 
-					<p v-else-if="search" class="text-base text-ink-gray-5">
-						No talk here matches “{{ search }}”.
-					</p>
-					<p v-else-if="statuses.length" class="text-base text-ink-gray-5">
-						No talk sits at one of these statuses.
-					</p>
-					<p v-else class="text-base text-ink-gray-5">No talks have been proposed yet.</p>
+					<EmptyState
+						v-else-if="search.trim() || statuses.length"
+						title="No matching talks"
+						:description="
+							search.trim()
+								? `No talk here matches “${search.trim()}”.`
+								: 'No talk sits at one of these statuses.'
+						"
+					>
+						<template #illustration>
+							<Icon name="lucide-filter-x" class="size-5 text-ink-gray-5" />
+						</template>
+					</EmptyState>
+					<EmptyState
+						v-else
+						title="No talks yet"
+						description="Proposals submitted through the call for proposals show up here."
+					>
+						<template #illustration>
+							<Icon name="lucide-mic" class="size-5 text-ink-gray-5" />
+						</template>
+					</EmptyState>
 
 					<div ref="sentinel" aria-hidden="true" />
 

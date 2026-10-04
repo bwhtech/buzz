@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
 import { useRouteQuery } from "@vueuse/router"
-import { ErrorMessage } from "frappe-ui"
+import { ErrorMessage, Icon } from "frappe-ui"
 import { DonutChart, NumberCard } from "frappe-ui/charts"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
+import EmptyState from "@/components/common/EmptyState.vue"
 import { FilterBar, type FilterGroup, type FilterValues } from "@/components/common/filters"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventGuestItem from "@/components/dashboard/events/EventGuestItem.vue"
@@ -246,13 +247,28 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 						<EventGuestSkeleton v-if="loadingMore" :rows="3" />
 					</ul>
 
-					<p v-else-if="search" class="text-base text-ink-gray-5">
-						Nobody here matches “{{ search }}”.
-					</p>
-					<p v-else-if="ticketTypes.length" class="text-base text-ink-gray-5">
-						Nobody holds one of these ticket types.
-					</p>
-					<p v-else class="text-base text-ink-gray-5">No guests yet.</p>
+					<EmptyState
+						v-else-if="search.trim() || ticketTypes.length"
+						title="No matching guests"
+						:description="
+							search.trim()
+								? `Nobody here matches “${search.trim()}”.`
+								: 'Nobody holds one of these ticket types.'
+						"
+					>
+						<template #illustration>
+							<Icon name="lucide-filter-x" class="size-5 text-ink-gray-5" />
+						</template>
+					</EmptyState>
+					<EmptyState
+						v-else
+						title="No guests yet"
+						description="Guests show up here once they book a ticket."
+					>
+						<template #illustration>
+							<Icon name="lucide-users" class="size-5 text-ink-gray-5" />
+						</template>
+					</EmptyState>
 
 					<div ref="sentinel" aria-hidden="true" />
 
