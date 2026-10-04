@@ -19,7 +19,7 @@ let scheme = "https://"
 watch(isOpen, (open) => {
 	if (!open) return
 	Object.assign(draft, {
-		icon: props.link?.icon || "link",
+		icon: props.link?.icon || LINK_ICONS[0].value,
 		label: props.link?.label ?? "",
 		url: stripUrlScheme(props.link?.url ?? ""),
 	})
