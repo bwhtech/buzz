@@ -1,0 +1,183 @@
+import frappe
+from frappe import _
+from frappe.utils import cstr, flt
+
+from buzz.api.filters.exceptions import InvalidFilter
+from buzz.api.filters.schemas import FilterField, FilterOperator, FilterOption
+
+KIND_BY_FIELDTYPE = {
+	"Select": "choice",
+	"Link": "choice",
+	"Check": "choice",
+	"Multi Select": "multi",
+	"Number": "number",
+	"Rating": "number",
+	"Date": "date",
+	"Attach": "file",
+	"Attach Image": "file",
+}
+NEGATED = {"not in": "in", "not like": "like"}
+
+
+def kind_of(fieldtype: str) -> str:
+	return KIND_BY_FIELDTYPE.get(fieldtype, "text")
+
+
+def operators_of(kind: str) -> list[tuple[str, str]]:
+	"""Frappe's own filter operators, labelled the way a list reads them."""
+	return {
+		"choice": [("in", _("is")), ("not in", _("is not"))],
+		"multi": [("like", _("includes")), ("not like", _("excludes"))],
+		"text": [("like", _("contains")), ("not like", _("does not contain")), ("=", _("is exactly"))],
+		"number": [
+			("=", _("is")),
+			(">", _("is more than")),
+			("<", _("is less than")),
+			("between", _("is between")),
+		],
+		"date": [
+			("=", _("is on")),
+			("<", _("is before")),
+			(">", _("is after")),
+			("between", _("is between")),
+		],
+		"file": [],
+	}[kind]
+
+
+def filter_field(key, label, fieldtype, options=(), section="standard") -> FilterField:
+	operators = [FilterOperator(operator=op, label=text) for op, text in operators_of(kind_of(fieldtype))]
+	if section == "question":
+		operators += [
+			FilterOperator(operator="is", value="set", label=_("is answered")),
+			FilterOperator(operator="is", value="not set", label=_("is not answered")),
+		]
+	return FilterField(
+		key=key,
+		label=label,
+		fieldtype=fieldtype,
+		section=section,
+		options=[FilterOption(value=value, label=text) for value, text in options],
+		operators=operators,
+	)
+
+
+def question_fields(questions) -> list[FilterField]:
+	"""Buzz Form Field rows as filters; answers are matched in Additional Field by fieldname."""
+	return [
+		filter_field(row.fieldname, row.label, row.fieldtype, question_options(row), "question")
+		for row in questions
+	]
+
+
+def question_options(row) -> list[tuple[str, str]]:
+	if row.fieldtype == "Check":
+		return [("1", _("Yes")), ("0", _("No"))]
+	if row.fieldtype in ("Select", "Multi Select"):
+		return [(option, option) for option in (row.options or "").splitlines() if option.strip()]
+	return []
+
+
+def is_blank(operator: str, value) -> bool:
+	"""A chip still being filled in narrows nothing; `between` waits for both ends."""
+	values = [cstr(item).strip() for item in (value if isinstance(value, list) else [value])]
+	return not all(values) if operator == "between" else not any(values)
+
+
+class ListConditions:
+	"""Turns the dashboard's `[field, operator, value]` triples into `frappe.get_all` filters."""
+
+	def __init__(self, doctype: str, fields: list[FilterField]):
+		self.doctype = doctype
+		self.fields = {field.key: field for field in fields}
+
+	def frappe_filters(self, raw: str | None) -> list[list]:
+		translated = (self.translate(*triple) for triple in self.parse(raw))
+		return [condition for condition in translated if condition]
+
+	def parse(self, raw: str | None) -> list[list]:
+		triples = frappe.parse_json(raw) if raw else []
+		if not isinstance(triples, list) or any(not self.is_valid(triple) for triple in triples):
+			InvalidFilter.throw()
+		return triples
+
+	def is_valid(self, triple) -> bool:
+		if not isinstance(triple, list) or len(triple) != 3 or not isinstance(triple[0], str):
+			return False
+		field = self.fields.get(triple[0])
+		return bool(field) and any(choice.operator == triple[1] for choice in field.operators)
+
+	def translate(self, key: str, operator: str, value) -> list | None:
+		if is_blank(operator, value):
+			return None
+		field = self.fields[key]
+		if field.section == "question":
+			return AnswerCondition(self.doctype, field, operator, value).name_filter()
+		return [key, operator, f"%{value}%" if "like" in operator else value]
+
+
+class AnswerCondition:
+	"""One condition on a custom question, resolved to the parents whose answer matches.
+
+	The answers live in Additional Field rows, and frappe joins a child table only once, so
+	each question is looked up on its own and lands back on the list as `name in (...)`.
+	"""
+
+	# Name lists grow with how many records answered the question; move to a qb
+	# subquery if a list ever reaches tens of thousands of rows.
+
+	def __init__(self, doctype: str, field: FilterField, operator: str, value):
+		self.doctype = doctype
+		self.field = field
+		self.operator = operator
+		self.values = value if isinstance(value, list) else [value]
+
+	def name_filter(self) -> list | None:
+		if self.operator == "is":
+			return ["name", "in" if self.values[0] == "set" else "not in", self.parents()]
+		if self.field.fieldtype == "Check":
+			return self.check_filter()
+		# Negations take the complement, so an unanswered question counts as not matching.
+		positive = NEGATED.get(self.operator, self.operator)
+		return ["name", "not in" if self.operator in NEGATED else "in", self.matching(positive)]
+
+	def check_filter(self) -> list | None:
+		"""A Check left unticked may have no row at all, so "No" means "not Yes"."""
+		wanted = set(self.values)
+		if self.operator == "not in":
+			wanted = {"0", "1"} - wanted
+		if len(wanted) != 1:
+			return None
+		return ["name", "in" if wanted == {"1"} else "not in", self.parents("1")]
+
+	def matching(self, operator: str) -> list[str]:
+		kind = kind_of(self.field.fieldtype)
+		if kind in ("number", "date"):
+			return self.compared(operator)
+		if kind == "multi":
+			# A Multi Select answer is stored as a JSON list, so each option is quoted in it.
+			return list({name for option in self.values for name in self.parents(["like", f'%"{option}"%'])})
+		if operator == "like":
+			return self.parents(["like", f"%{self.values[0]}%"])
+		return self.parents([operator, self.values if operator == "in" else self.values[0]])
+
+	def compared(self, operator: str) -> list[str]:
+		"""Answers are text, so numbers and dates are compared here rather than in SQL."""
+		convert = flt if kind_of(self.field.fieldtype) == "number" else str
+		low, high = convert(self.values[0]), convert(self.values[-1])
+		test = {
+			"=": lambda answer: answer == low,
+			">": lambda answer: answer > low,
+			"<": lambda answer: answer < low,
+			"between": lambda answer: low <= answer <= high,
+		}[operator]
+		rows = frappe.get_all("Additional Field", filters=self.scope(), fields=["parent", "value"])
+		return [row.parent for row in rows if row.value not in (None, "") and test(convert(row.value))]
+
+	def parents(self, value=None) -> list[str]:
+		filters = self.scope()
+		filters["value"] = value if value is not None else ["is", "set"]
+		return frappe.get_all("Additional Field", filters=filters, pluck="parent")
+
+	def scope(self) -> dict:
+		return {"parenttype": self.doctype, "parentfield": "additional_fields", "fieldname": self.field.key}

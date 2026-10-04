@@ -9,6 +9,7 @@ export type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 export type { FrappeField } from "@/composables/useCustomFields"
 export type { TalkProposal } from "@/types/Proposals/TalkProposal"
 
+import type { FilterField } from "@/components/common/filters/fields"
 import type { FrappeField } from "@/composables/useCustomFields"
 import type { EventTicket } from "@/types/Ticketing/EventTicket"
 import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
@@ -574,6 +575,7 @@ export interface EventEnquiries {
 	matched: number
 	enquiries: EventEnquiryItem[]
 	has_next_page: boolean
+	filter_fields: FilterField[]
 }
 
 export interface TicketTypePrice extends TierPrice {

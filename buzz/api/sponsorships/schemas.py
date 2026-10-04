@@ -1,5 +1,6 @@
 from datetime import date, datetime
 
+from buzz.api.filters.schemas import FilterField
 from buzz.api.schemas import APIResponse
 
 
@@ -64,6 +65,7 @@ class EventEnquiriesResponse(APIResponse):
 	matched: int
 	enquiries: list[EventEnquiryItem]
 	has_next_page: bool = False
+	filter_fields: list[FilterField]
 
 
 class EnquiryAnswer(APIResponse):

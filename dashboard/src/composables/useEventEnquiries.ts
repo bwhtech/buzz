@@ -2,19 +2,20 @@ import { refDebounced } from "@vueuse/core"
 import { useCall } from "frappe-ui"
 import { computed, type Ref, ref, watch } from "vue"
 
+import type { Condition } from "@/components/common/filters"
 import type { EventEnquiries, EventEnquiryItem } from "@/types"
 
 const PAGE_SIZE = 20
 
 /**
  * One event's sponsorship enquiries, a page at a time, the way useEventProposals walks talks.
- * Search, status and sort run on the server; a change of any control starts over.
+ * Search, filters and sort run on the server; a change of any control starts over.
  */
 export function useEventEnquiries(
 	event: string,
 	search: Ref<string>,
 	order: Ref<"asc" | "desc">,
-	statuses: Ref<string[]>,
+	conditions: Ref<Condition[]>,
 ) {
 	const debouncedSearch = refDebounced(search, 300)
 	const start = ref(0)
@@ -25,7 +26,7 @@ export function useEventEnquiries(
 		params: () => ({
 			event,
 			search: debouncedSearch.value.trim(),
-			statuses: statuses.value.join(","),
+			filters: JSON.stringify(conditions.value),
 			order: order.value,
 			start: start.value,
 			limit: PAGE_SIZE,
@@ -44,7 +45,7 @@ export function useEventEnquiries(
 
 	// Sync, so the offset is zero before useCall rebuilds the URL for the new controls.
 	watch(
-		[debouncedSearch, order, statuses],
+		[debouncedSearch, order, conditions],
 		() => {
 			start.value = 0
 			enquiries.value = []
@@ -54,7 +55,7 @@ export function useEventEnquiries(
 
 	// Patched in place: past the first page a refetch would drop the changed row as a duplicate.
 	const applyStatus = (name: string, status: string) => {
-		const matchesFilter = !statuses.value.length || statuses.value.includes(status)
+		const matchesFilter = conditions.value.every((condition) => keepsStatus(condition, status))
 		enquiries.value = matchesFilter
 			? enquiries.value.map((row) => (row.name === name ? { ...row, status } : row))
 			: enquiries.value.filter((row) => row.name !== name)
@@ -73,4 +74,10 @@ export function useEventEnquiries(
 		loadingFirstPage: computed(() => page.loading && start.value === 0),
 		loadingMore: computed(() => page.loading && start.value > 0),
 	}
+}
+
+// Only a status condition can drop a row whose status just changed; other filters still hold.
+function keepsStatus([field, operator, value]: Condition, status: string) {
+	if (field !== "status" || !value.length) return true
+	return (operator === "in") === value.includes(status)
 }
