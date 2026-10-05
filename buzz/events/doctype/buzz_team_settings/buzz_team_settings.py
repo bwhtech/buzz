@@ -49,6 +49,26 @@ def get_event_team_settings(event: str | int) -> "BuzzTeamSettings":
 	return get_team_settings(frappe.get_cached_value("Buzz Event", event, "team"))
 
 
+# A feature flag is any Check field with this prefix, kept at permlevel 1 so only System Manager sets it.
+FEATURE_FLAG_PREFIX = "feature_"
+
+
+def feature_flags(team: str) -> dict[str, bool]:
+	settings = get_team_settings(team)
+	return {
+		field.fieldname: bool(settings.get(field.fieldname))
+		for field in settings.meta.fields
+		if field.fieldtype == "Check" and field.fieldname.startswith(FEATURE_FLAG_PREFIX)
+	}
+
+
+def is_feature_enabled(team: str, flag: str) -> bool:
+	flags = feature_flags(team)
+	if flag not in flags:
+		frappe.throw(_("Unknown feature flag: {0}").format(flag))
+	return flags[flag]
+
+
 TAX_DETAIL_FIELDS = ("legal_name", "tax_id", "billing_address")
 
 

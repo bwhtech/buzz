@@ -124,6 +124,7 @@ export interface TeamOption {
 	logo: string | null
 	team_role: string
 	members: TeamMember[]
+	feature_flags: Record<string, boolean>
 }
 
 // Someone invited by email who has not accepted yet, so has no User row.

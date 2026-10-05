@@ -11,6 +11,8 @@ from buzz.api.teams.exceptions import (
 )
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
+from buzz.tests.factories import BuzzTeamFactory, UserFactory
 
 
 class TestGetMyTeams(IntegrationTestCase):
@@ -70,6 +72,14 @@ class TestGetMyTeams(IntegrationTestCase):
 		members = get_my_teams()[0].members
 
 		self.assertEqual([member.user for member in members], [owner, viewer])
+
+	def test_a_viewer_gets_the_teams_feature_flags(self):
+		user = UserFactory.create_once("switcher-flags-viewer@example.com").name
+		team = BuzzTeamFactory.create_owned_by().name
+		upsert_membership(team, user, "Viewer")
+
+		frappe.set_user(user)
+		self.assertEqual(get_my_teams()[0].feature_flags, feature_flags(team))
 
 	def test_returns_nothing_for_a_user_on_no_team(self):
 		user = create_user("switcher-teamless@example.com", "Teamless")
