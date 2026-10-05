@@ -2,16 +2,16 @@ import { refDebounced } from "@vueuse/core"
 import { useCall } from "frappe-ui"
 import { computed, type Ref, ref, watch } from "vue"
 
+import { type Condition, matchesStatusConditions } from "@/components/common/filters"
+import type { ListOrder } from "@/composables/useListQuery"
 import type { EventProposals, ProposalListItem } from "@/types"
 
 export const PROPOSALS_PAGE_SIZE = 20
 
-export type ProposalOrder = "desc" | "asc"
-
 /**
  * One event's talk proposals, fetched a page at a time.
  *
- * Search, status filter and sort live on the server, so the browser only ever holds the
+ * Search, filters and sort live on the server, so the browser only ever holds the
  * pages it has walked down to. A page appends; a change of any control starts over.
  *
  * The controls are owned by the caller, so they can live in the query string and a
@@ -20,8 +20,8 @@ export type ProposalOrder = "desc" | "asc"
 export function useEventProposals(
 	event: string,
 	search: Ref<string>,
-	order: Ref<ProposalOrder>,
-	statuses: Ref<string[]>,
+	order: Ref<ListOrder>,
+	conditions: Ref<Condition[]>,
 ) {
 	// Typing rewrites the URL, and every rewrite is a request — wait for the pause.
 	const debouncedSearch = refDebounced(search, 300)
@@ -34,7 +34,7 @@ export function useEventProposals(
 			event,
 			search: debouncedSearch.value.trim(),
 			// Comma-joined, the shape the query string already holds them in.
-			statuses: statuses.value.join(","),
+			filters: JSON.stringify(conditions.value),
 			order: order.value,
 			start: start.value,
 			limit: PROPOSALS_PAGE_SIZE,
@@ -59,7 +59,7 @@ export function useEventProposals(
 	// Sync, so the offset is back at zero before useCall's own watcher rebuilds the URL —
 	// a pre-flush reset lets the stale offset go out as a request that is aborted a tick later.
 	watch(
-		[debouncedSearch, order, statuses],
+		[debouncedSearch, order, conditions],
 		() => {
 			start.value = 0
 			proposals.value = []
@@ -75,7 +75,7 @@ export function useEventProposals(
 	 * stays on screen. A row that no longer answers the active filter leaves the list.
 	 */
 	const applyStatus = (name: string, status: string) => {
-		const matchesFilter = !statuses.value.length || statuses.value.includes(status)
+		const matchesFilter = matchesStatusConditions(conditions.value, status)
 		proposals.value = matchesFilter
 			? proposals.value.map((proposal) =>
 					proposal.name === name ? { ...proposal, status } : proposal,

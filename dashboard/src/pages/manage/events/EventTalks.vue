@@ -1,20 +1,18 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
-import { useRouteQuery } from "@vueuse/router"
 import { ErrorMessage, Skeleton } from "frappe-ui"
 import { DonutChart, NumberCard } from "frappe-ui/charts"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
-import { FilterBar, type FilterGroup, type FilterValues } from "@/components/common/filters"
+import { ListFilters } from "@/components/common/filters"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventTalkActions from "@/components/dashboard/proposals/EventTalkActions.vue"
 import EventTalkProposalDrawer from "@/components/dashboard/proposals/EventTalkProposalDrawer.vue"
 import ProposalCard from "@/components/dashboard/proposals/ProposalCard.vue"
-import { type ProposalOrder, useEventProposals } from "@/composables/useEventProposals"
-import { useProposalStatuses } from "@/composables/useProposalStatuses"
-import { useUrlFilters } from "@/composables/useUrlFilters"
+import { useEventProposals } from "@/composables/useEventProposals"
+import { useListQuery } from "@/composables/useListQuery"
 import { useProposalTrend } from "@/data/proposals"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError, ProposalWithEvent } from "@/types"
@@ -22,70 +20,21 @@ import type { FrappeError, ProposalWithEvent } from "@/types"
 const route = useRoute()
 const eventId = route.params.eventId as string
 
-// Both controls sit in the query string, so a searched or re-sorted pipeline survives a
-// reload and can be handed to a co-reviewer as a link.
-const filters = useUrlFilters(["order", "status"])
-const searchParam = useRouteQuery<string | null>("q", null)
-
-const search = computed<string>({
-	get: () => searchParam.value ?? "",
-	set: (term) => (searchParam.value = term.trim() ? term : null),
-})
-
-// Read-only: the filter bar owns the write, and routes it through `barFilters` so the
-// order and the status filter land in the query string as one assignment.
-const order = computed<ProposalOrder>(() => (filters.value.order?.[0] === "asc" ? "asc" : "desc"))
-
-const statuses = computed(() => filters.value.status || [])
+const { search, order, conditions, isFiltered } = useListQuery()
 
 const { proposals, applyStatus, loadMore, page, loadingFirstPage, loadingMore } = useEventProposals(
 	eventId,
 	search,
 	order,
-	statuses,
+	conditions,
 )
-
-const { statuses: statusList, getStatusTheme } = useProposalStatuses()
 
 // The export is the list on screen, not the whole event: same filters, same order.
 const exportQuery = computed(() => ({
 	search: search.value.trim(),
-	statuses: statuses.value.join(","),
+	filters: JSON.stringify(conditions.value),
 	order: order.value,
 }))
-
-const filterGroups = computed<FilterGroup[]>(() => [
-	{
-		key: "order",
-		label: "Sort by",
-		quick: true,
-		single: true,
-		options: [
-			{ value: "desc", label: "Newest first" },
-			{ value: "asc", label: "Oldest first" },
-		],
-	},
-	{
-		key: "status",
-		label: "Status",
-		options: (statusList.data || []).map((status: { name: string }) => ({
-			value: status.name,
-			label: status.name,
-		})),
-	},
-])
-
-const barFilters = computed<FilterValues>({
-	get: () => ({ order: [order.value], status: statuses.value }),
-	// One write rather than two: the query string is the store, and a second assignment
-	// would build on the value the first has not landed yet.
-	set: (next) => {
-		filters.value = {
-			order: next.order?.[0] === "asc" ? ["asc"] : [],
-			status: next.status || [],
-		}
-	},
-})
 
 const trend = useProposalTrend(eventId)
 
@@ -177,16 +126,16 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 		<section class="space-y-3">
 			<h2 class="text-xl font-semibold text-ink-gray-9">Talks</h2>
 
-			<FilterBar
-				v-model="barFilters"
+			<ListFilters
+				v-model="conditions"
 				v-model:search="search"
-				searchable
+				v-model:order="order"
+				:fields="page.data?.filter_fields ?? []"
 				search-placeholder="Search by title or speaker"
-				:groups="filterGroups"
 			/>
 
 			<!-- Announced rather than only drawn: typing changes the list silently otherwise. -->
-			<p v-if="search.trim() || statuses.length" aria-live="polite" class="text-sm text-ink-gray-5">
+			<p v-if="isFiltered" aria-live="polite" class="text-sm text-ink-gray-5">
 				{{ page.data?.matched ?? 0 }} of {{ page.data?.total ?? 0 }} proposals
 			</p>
 
@@ -222,8 +171,8 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 					<p v-else-if="search" class="text-base text-ink-gray-5">
 						No talk here matches “{{ search }}”.
 					</p>
-					<p v-else-if="statuses.length" class="text-base text-ink-gray-5">
-						No talk sits at one of these statuses.
+					<p v-else-if="conditions.length" class="text-base text-ink-gray-5">
+						No talk here matches these filters.
 					</p>
 					<p v-else class="text-base text-ink-gray-5">No talks have been proposed yet.</p>
 

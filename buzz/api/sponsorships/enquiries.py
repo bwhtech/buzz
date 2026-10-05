@@ -1,6 +1,9 @@
 import frappe
+from frappe import _
 
 from buzz.api.events.services import ensure_event_team_access, manageable_event
+from buzz.api.filters.conditions import ListConditions, filter_field, question_fields
+from buzz.api.filters.schemas import FilterField
 from buzz.api.sponsorships.exceptions import EnquiryNotFound, EnquiryStatusLocked, EnquiryTierMissing
 from buzz.api.sponsorships.schemas import (
 	EnquiryAnswer,
@@ -17,7 +20,7 @@ ENQUIRY_FIELDS = ["name", "company_name", "company_logo", "website", "status", "
 def event_enquiries(
 	event: str,
 	search: str | None = None,
-	statuses: str | None = None,
+	filters: str | None = None,
 	order: str = "desc",
 	start: int = 0,
 	limit: int = ENQUIRIES_PAGE_SIZE,
@@ -25,10 +28,9 @@ def event_enquiries(
 	"""One page of an event's sponsorship enquiries; Sponsorship Enquiry grants organisers no role access."""
 	ensure_event_team_access(event)
 
-	filters: dict = {"event": event}
-	chosen = [status for status in (statuses or "").split(",") if status.strip()]
-	if chosen:
-		filters["status"] = ["in", chosen]
+	filter_fields = enquiry_filter_fields(event)
+	conditions = ListConditions("Sponsorship Enquiry", filter_fields).frappe_filters(filters)
+	query_filters = [["event", "=", event], *conditions]
 	or_filters = search_filters(search)
 	limit = max(1, min(int(limit), 100))
 	start = max(0, int(start))
@@ -37,7 +39,7 @@ def event_enquiries(
 
 	rows = frappe.get_all(
 		"Sponsorship Enquiry",
-		filters=filters,
+		filters=query_filters,
 		or_filters=or_filters,
 		fields=ENQUIRY_FIELDS,
 		order_by=f"creation {direction}, name {direction}",
@@ -46,12 +48,38 @@ def event_enquiries(
 		ignore_permissions=True,
 	)
 	total = frappe.db.count("Sponsorship Enquiry", {"event": event})
-	matched = count_enquiries(filters, or_filters) if or_filters or chosen else total
+	matched = count_enquiries(query_filters, or_filters) if or_filters or conditions else total
 	return EventEnquiriesResponse(
 		total=total,
 		matched=matched,
 		enquiries=enquiry_items(rows),
 		has_next_page=start + len(rows) < matched,
+		filter_fields=filter_fields,
+	)
+
+
+def enquiry_filter_fields(event: str) -> list[FilterField]:
+	"""What an enquiry list can be narrowed by: its own fields, then the form's questions."""
+	statuses = frappe.get_meta("Sponsorship Enquiry").get_field("status").options.splitlines()
+	tiers = frappe.get_all("Sponsorship Tier", {"event": event}, ["name", "title"], order_by="creation")
+	return [
+		filter_field("status", _("Status"), "Select", [(status, _(status)) for status in statuses]),
+		filter_field("tier", _("Tier"), "Link", [(str(tier.name), tier.title) for tier in tiers]),
+		filter_field("contact_email", _("Contact email"), "Email"),
+		*question_fields(enquiry_questions(event)),
+	]
+
+
+def enquiry_questions(event: str) -> list:
+	"""Enabled questions on the event's enquiry form; an event has at most one."""
+	form = frappe.db.get_value("Sponsor Enquiry Form", {"event": event})
+	if not form:
+		return []
+	return frappe.get_all(
+		"Buzz Form Field",
+		filters={"parenttype": "Sponsor Enquiry Form", "parent": form, "enabled": 1},
+		fields=["fieldname", "label", "fieldtype", "options"],
+		order_by="idx",
 	)
 
 
@@ -63,7 +91,7 @@ def search_filters(search: str | None) -> list[list] | None:
 	return [[field, "like", f"%{term}%"] for field in ("company_name", "contact_email", "website")]
 
 
-def count_enquiries(filters: dict, or_filters: list[list] | None) -> int:
+def count_enquiries(filters: list, or_filters: list[list] | None) -> int:
 	"""`frappe.db.count` takes no or_filters, so a search has to be counted the long way."""
 	if not or_filters:
 		return frappe.db.count("Sponsorship Enquiry", filters)

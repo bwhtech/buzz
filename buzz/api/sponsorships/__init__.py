@@ -67,13 +67,13 @@ def get_event_sponsorships(event: str) -> EventSponsorshipsResponse:
 def get_event_sponsorship_enquiries(
 	event: str,
 	search: str | None = None,
-	statuses: str | None = None,
+	filters: str | None = None,
 	order: str = "desc",
 	start: int = 0,
 	limit: int = ENQUIRIES_PAGE_SIZE,
 ) -> EventEnquiriesResponse:
-	"""`statuses` is comma-joined, the same string the dashboard keeps the filter in."""
-	return event_enquiries(event, search, statuses, order, start, limit)
+	"""`filters` is a JSON list of `[field, operator, value]`, the string the dashboard keeps in its URL."""
+	return event_enquiries(event, search, filters, order, start, limit)
 
 
 @frappe.whitelist(methods=["GET"])

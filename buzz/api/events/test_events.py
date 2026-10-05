@@ -1,3 +1,5 @@
+import json
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, today
@@ -869,6 +871,10 @@ class TestGetEventGuestsPaging(IntegrationTestCase):
 		self.assertEqual(len(get_event_guests(event, search="   ").guests), 3)
 
 
+def types_filter(*types: str) -> str:
+	return json.dumps([["ticket_type", "in", list(types)]])
+
+
 class TestGetEventGuestsTicketTypeFilter(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
@@ -894,7 +900,10 @@ class TestGetEventGuestsTicketTypeFilter(IntegrationTestCase):
 		first, second = self.two_types(event)
 		frappe.set_user(self.owner)
 
-		names = {ticket_type.name for ticket_type in get_event_guests(event).ticket_types}
+		ticket_type = next(
+			field for field in get_event_guests(event).filter_fields if field.key == "ticket_type"
+		)
+		names = {option.value for option in ticket_type.options}
 
 		self.assertLessEqual({first, second}, names)
 
@@ -903,7 +912,7 @@ class TestGetEventGuestsTicketTypeFilter(IntegrationTestCase):
 		first, _ = self.two_types(event)
 		frappe.set_user(self.owner)
 
-		guests = get_event_guests(event, ticket_types=first)
+		guests = get_event_guests(event, filters=types_filter(first))
 
 		self.assertEqual([guest.attendee_email for guest in guests.guests], ["early@example.com"])
 		self.assertEqual(guests.matched, 1)
@@ -914,7 +923,7 @@ class TestGetEventGuestsTicketTypeFilter(IntegrationTestCase):
 		first, second = self.two_types(event)
 		frappe.set_user(self.owner)
 
-		guests = get_event_guests(event, ticket_types=f"{first},{second}")
+		guests = get_event_guests(event, filters=types_filter(first, second))
 
 		self.assertEqual(guests.matched, 2)
 
@@ -923,15 +932,15 @@ class TestGetEventGuestsTicketTypeFilter(IntegrationTestCase):
 		self.two_types(event)
 		frappe.set_user(self.owner)
 
-		self.assertEqual(len(get_event_guests(event, ticket_types="  ").guests), 2)
+		self.assertEqual(len(get_event_guests(event, filters=types_filter()).guests), 2)
 
 	def test_search_and_type_narrow_together(self):
 		event = create_event("Combined Filter Event", self.team)
 		first, _ = self.two_types(event)
 		frappe.set_user(self.owner)
 
-		self.assertEqual(get_event_guests(event, search="late@", ticket_types=first).matched, 0)
-		self.assertEqual(get_event_guests(event, search="early@", ticket_types=first).matched, 1)
+		self.assertEqual(get_event_guests(event, search="late@", filters=types_filter(first)).matched, 0)
+		self.assertEqual(get_event_guests(event, search="early@", filters=types_filter(first)).matched, 1)
 
 
 class TestGetEventRegistrationTrend(IntegrationTestCase):

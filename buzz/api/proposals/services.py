@@ -5,6 +5,8 @@ from frappe.utils import add_days, get_datetime, getdate, now_datetime
 
 from buzz.api.events.exceptions import CannotManageEvent
 from buzz.api.events.services import ensure_event_team_access
+from buzz.api.filters.conditions import ListConditions, event_questions, filter_field, question_fields
+from buzz.api.filters.schemas import FilterField
 from buzz.api.proposals.exceptions import ProposalFormMissing
 from buzz.api.proposals.schemas import (
 	AcceptedProposal,
@@ -93,7 +95,7 @@ TREND_DAYS = 14
 def event_proposals(
 	event: str,
 	search: str | None = None,
-	statuses: str | None = None,
+	filters: str | None = None,
 	order: str = "desc",
 	start: int = 0,
 	limit: int = PROPOSALS_PAGE_SIZE,
@@ -104,10 +106,9 @@ def event_proposals(
 	"""
 	ensure_event_team_access(event)
 
-	filters: dict = {"event": event}
-	chosen = [status for status in (statuses or "").split(",") if status.strip()]
-	if chosen:
-		filters["status"] = ["in", chosen]
+	filter_fields = proposal_filter_fields(event)
+	conditions = ListConditions("Talk Proposal", filter_fields).frappe_filters(filters)
+	query_filters = [["event", "=", event], *conditions]
 	or_filters = proposal_search_filters(search)
 	limit = max(1, min(int(limit), 100))
 	start = max(0, int(start))
@@ -116,7 +117,7 @@ def event_proposals(
 
 	rows = frappe.get_all(
 		"Talk Proposal",
-		filters=filters,
+		filters=query_filters,
 		or_filters=or_filters,
 		fields=PROPOSAL_LIST_FIELDS,
 		order_by=f"creation {direction}, name {direction}",
@@ -127,7 +128,7 @@ def event_proposals(
 	speakers = speakers_by_proposal([row.name for row in rows])
 
 	total = frappe.db.count("Talk Proposal", {"event": event})
-	matched = count_proposals(filters, or_filters) if or_filters or chosen else total
+	matched = count_proposals(query_filters, or_filters) if or_filters or conditions else total
 	doc = frappe.get_cached_doc("Buzz Event", event)
 	return EventProposalsResponse(
 		title=doc.title,
@@ -138,7 +139,19 @@ def event_proposals(
 		can_write=has_team_access(doc.team, "write", frappe.session.user),
 		proposal_link=proposal_link(doc),
 		proposals_closed=are_proposals_closed(doc),
+		filter_fields=filter_fields,
 	)
+
+
+def proposal_filter_fields(event: str) -> list[FilterField]:
+	"""Status, then the questions on the event's talk proposal form."""
+	statuses = frappe.get_all("Talk Proposal Status", pluck="name", order_by="creation asc")
+	return [
+		filter_field("status", _("Status"), "Select", [(status, _(status)) for status in statuses]),
+		*question_fields(
+			event_questions(event, applied_to="Custom Form", custom_form_doctype="Talk Proposal")
+		),
+	]
 
 
 PROPOSAL_FORM_DOCTYPE = "Talk Proposal"
@@ -208,7 +221,7 @@ def proposal_search_filters(search: str | None) -> list[list] | None:
 	]
 
 
-def count_proposals(filters: dict, or_filters: list[list] | None) -> int:
+def count_proposals(filters: list, or_filters: list[list] | None) -> int:
 	return len(
 		frappe.get_all(
 			"Talk Proposal",
