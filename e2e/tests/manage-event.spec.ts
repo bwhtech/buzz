@@ -70,8 +70,8 @@ test.describe("Event workspace", () => {
 		await page.getByRole("link", { name: "Talks" }).click()
 
 		await expect(page).toHaveURL(/\/b\/manage\/events\/\d+\/talks$/)
-		// Heading rather than text: the sidebar link is named Talks too.
-		await expect(page.getByRole("heading", { name: "Talks", level: 2 })).toBeVisible({
+		// Exact heading: the sidebar link is named Talks, the empty state says "No talks yet".
+		await expect(page.getByRole("heading", { name: "Talks", level: 2, exact: true })).toBeVisible({
 			timeout: 15000,
 		})
 	})
