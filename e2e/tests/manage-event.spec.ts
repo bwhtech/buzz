@@ -503,6 +503,8 @@ test.describe("Taxes", () => {
 		const team = await createDoc<{ name: string }>(request, "Buzz Team", {
 			team_name: `Untaxed Team ${Date.now()}`,
 		})
+		// Tax settings only show for a team with paid events.
+		await updateDoc(request, "Buzz Team Settings", team.name, { feature_paid_events: 1 })
 		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
 			event: {
 				team: team.name,
