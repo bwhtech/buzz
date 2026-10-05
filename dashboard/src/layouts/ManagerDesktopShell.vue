@@ -81,7 +81,7 @@ watch(headerKey, (key, previous) => {
 				class="flex h-full flex-col overflow-hidden rounded-l-6 bg-surface-elevation-1 shadow-base"
 			>
 				<PageHeaderTarget />
-				<div class="min-h-0 flex-1 overflow-y-auto">
+				<div class="relative min-h-0 flex-1 overflow-y-auto">
 					<router-view />
 				</div>
 			</div>

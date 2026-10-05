@@ -94,7 +94,7 @@ const ticket = computed<TicketWithEvent | null>(() => {
 					</div>
 				</div>
 
-				<div class="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
+				<div class="flex flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
 					<PrintedTicket v-if="ticket" :ticket="ticket" static />
 
 					<div class="flex items-center gap-3">

@@ -154,7 +154,7 @@ const updatedAt = computed(() => (loaded.value ? dayjsLocal(loaded.value.modifie
 					</button>
 				</div>
 
-				<div class="flex flex-1 flex-col space-y-4 overflow-y-auto p-4">
+				<div class="flex flex-1 flex-col space-y-4 overflow-y-auto overscroll-contain p-4">
 					<div v-if="!loaded && detail.loading" class="space-y-4">
 						<Skeleton class="h-7 w-40 rounded-4" />
 						<Skeleton class="h-40 w-full rounded-6" />

@@ -196,7 +196,7 @@ const fields = computed(() => [
 					</button>
 				</div>
 
-				<div class="flex flex-1 flex-col space-y-4 overflow-y-auto p-4">
+				<div class="flex flex-1 flex-col space-y-4 overflow-y-auto overscroll-contain p-4">
 					<!-- The status leads: it is the answer the submitter opened the drawer for. -->
 					<Alert
 						:theme="getStatusTheme(proposal.status)"

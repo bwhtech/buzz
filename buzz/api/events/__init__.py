@@ -39,17 +39,16 @@ def get_event(event: str) -> EventDetail:
 def get_event_guests(
 	event: str,
 	search: str | None = None,
-	ticket_types: str | None = None,
+	filters: str | None = None,
 	order: str = "desc",
 	start: int = 0,
 	limit: int = services.GUESTS_PAGE_SIZE,
 ) -> EventGuestsResponse:
 	"""One page of the people holding a submitted ticket to an event, with their add-ons.
 
-	`ticket_types` is comma-joined rather than a list: a GET query string carries one, and
-	it is the same string the dashboard keeps the filter in.
+	`filters` is a JSON list of `[field, operator, value]`, the string the dashboard keeps in its URL.
 	"""
-	return services.event_guests(event, search, ticket_types, order, start, limit)
+	return services.event_guests(event, search, filters, order, start, limit)
 
 
 @frappe.whitelist(methods=["POST"])

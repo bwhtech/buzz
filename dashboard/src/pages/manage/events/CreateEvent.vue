@@ -4,13 +4,11 @@ import {
 	Alert,
 	Button,
 	ErrorMessage,
-	LoadingIndicator,
 	PageHeaderBackButton,
 	PageHeaderMobile,
 	toast,
 } from "frappe-ui"
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
-import { TextMorph } from "torph/vue"
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { onBeforeRouteLeave, useRouter } from "vue-router"
 
@@ -261,6 +259,7 @@ async function save() {
 					ref="titleField"
 					v-model="title"
 					rows="1"
+					maxlength="140"
 					aria-label="Event title"
 					placeholder="Name your event"
 					:disabled="!canCreate"
@@ -335,14 +334,14 @@ async function save() {
 				</section>
 			</div>
 
-			<div v-else class="flex items-center justify-center gap-3 py-24">
-				<span v-if="failed" class="lucide-circle-x size-6 text-ink-red-6" aria-hidden="true" />
-				<LoadingIndicator v-else class="size-6 text-ink-gray-7" />
-				<TextMorph
-					:text="step"
-					class="text-base"
-					:class="failed ? 'text-ink-red-6' : 'text-ink-gray-7'"
-				/>
+			<!-- A little above true centre: a lone line sitting at exactly half reads low. -->
+			<div v-else class="flex min-h-[70dvh] items-center justify-center" aria-live="polite">
+				<!-- Separate elements: the rise and the shimmer are both CSS animations. -->
+				<span class="fade-up-in [animation-delay:300ms]">
+					<span class="text-base" :class="failed ? 'text-ink-red-6' : 'text-shimmer'">
+						{{ step }}
+					</span>
+				</span>
 			</div>
 		</Transition>
 	</div>

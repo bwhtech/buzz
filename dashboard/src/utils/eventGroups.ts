@@ -11,15 +11,19 @@ export interface MonthGroup<T> {
 /**
  * Groups a sorted list of events by month, then by day. Insertion order is kept,
  * so the caller's sort survives — ascending for upcoming, descending for past.
+ * `dateOf` picks the day an event is filed under; it defaults to its start date.
  */
-export function groupEventsByMonth<T extends { start_date: string }>(events: T[]): MonthGroup<T>[] {
+export function groupEventsByMonth<T extends { start_date: string }>(
+	events: T[],
+	dateOf: (event: T) => string = (event) => event.start_date,
+): MonthGroup<T>[] {
 	const months = new Map<string, Map<string, T[]>>()
 
 	for (const event of events) {
-		const month = event.start_date.slice(0, 7)
-		const days = months.get(month) || new Map<string, T[]>()
-		months.set(month, days)
-		days.set(event.start_date, [...(days.get(event.start_date) || []), event])
+		const date = dateOf(event)
+		const days = months.get(date.slice(0, 7)) || new Map<string, T[]>()
+		months.set(date.slice(0, 7), days)
+		days.set(date, [...(days.get(date) || []), event])
 	}
 
 	return [...months].map(([month, days]) => ({

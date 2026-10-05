@@ -126,9 +126,12 @@ const menu = computed<DropdownOptions>(() => [
 					:label="__('Settings')"
 					@click="((sheetOpen = false), openSettings())"
 				/>
+				<!-- Matches the ghost Buttons around it: ItemListRow's own text is lighter and thinner. -->
 				<ItemListRow size="lg">
-					<template #prefix><span class="lucide-sun-moon size-5" aria-hidden="true" /></template>
-					{{ __("Theme") }}
+					<template #prefix>
+						<span class="lucide-sun-moon size-5 text-ink-gray-8" aria-hidden="true" />
+					</template>
+					<span class="font-medium text-ink-gray-8">{{ __("Theme") }}</span>
 					<template #suffix>
 						<TabButtons
 							:model-value="colorScheme"

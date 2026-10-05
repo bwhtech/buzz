@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Icon } from "frappe-ui"
-import { computed } from "vue"
+import { Button, dayjs, Icon } from "frappe-ui"
+import { computed, ref, watch } from "vue"
 
 import EmptyState from "@/components/common/EmptyState.vue"
 import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
@@ -19,7 +19,21 @@ const tab = useTimelineTabQuery()
 const myEvents = useMyEvents()
 
 // The feed arrives already split, so the tab only picks a side.
-const months = computed(() => groupEventsByMonth(myEvents.data?.[tab.value] || []))
+const events = computed(() => myEvents.data?.[tab.value] || [])
+
+// The feed is unpaginated, so a long history renders a page at a time.
+const PAGE_SIZE = 50
+const shownCount = ref(PAGE_SIZE)
+watch(tab, () => (shownCount.value = PAGE_SIZE))
+
+// An event already under way is still on, so it sits under today, not its start date.
+const today = dayjs().format("YYYY-MM-DD")
+const fileUnder = (event: MyEvent) =>
+	tab.value === "upcoming" && event.start_date < today ? today : event.start_date
+
+const months = computed(() =>
+	groupEventsByMonth(events.value.slice(0, shownCount.value), fileUnder),
+)
 
 const drawer = useDrawerSelection<MyEvent>()
 
@@ -52,6 +66,15 @@ const emptyDescription = computed(() =>
 
 		<template #default="{ item }">
 			<EventCard :event="item" @open="drawer.show(item)" />
+		</template>
+
+		<template #footer>
+			<Button
+				v-if="events.length > shownCount"
+				class="w-full"
+				label="Show more"
+				@click="shownCount += PAGE_SIZE"
+			/>
 		</template>
 	</TimelineList>
 

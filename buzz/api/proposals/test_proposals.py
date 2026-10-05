@@ -19,6 +19,8 @@ from buzz.proposals.doctype.talk_proposal.test_talk_proposal import (
 	make_test_user,
 )
 
+ACCEPTED = '[["status", "in", ["Accepted"]]]'
+
 
 def serialized_proposals() -> list[dict]:
 	return [proposal.__json__() for proposal in get_my_proposals()]
@@ -185,7 +187,7 @@ class TestGetEventProposals(IntegrationTestCase):
 			get_event_proposals("does-not-exist")
 
 	def test_status_filter_narrows_the_page(self):
-		self.assertEqual(self.listed(statuses="Accepted"), [self.accepted])
+		self.assertEqual(self.listed(filters=ACCEPTED), [self.accepted])
 
 	def test_search_matches_the_title(self):
 		self.assertEqual(self.listed(search="Kubernetes"), [self.pending])
@@ -198,7 +200,7 @@ class TestGetEventProposals(IntegrationTestCase):
 
 	def test_matched_counts_the_filter_while_total_counts_the_event(self):
 		frappe.set_user(self.manager)
-		response = get_event_proposals(self.event, statuses="Accepted")
+		response = get_event_proposals(self.event, filters=ACCEPTED)
 		self.assertEqual(response.matched, 1)
 		self.assertEqual(response.total, 2)
 
