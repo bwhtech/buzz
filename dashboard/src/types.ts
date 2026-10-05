@@ -604,6 +604,7 @@ export interface EventTicketTypes {
 	team_legal_name: string | null
 	team_tax_id: string | null
 	can_edit_team: boolean
+	paid_events_enabled: boolean
 	ticket_types: TicketTypeItem[]
 	payment_providers: PaymentProviderItem[]
 	revenue: CurrencyRevenue[]

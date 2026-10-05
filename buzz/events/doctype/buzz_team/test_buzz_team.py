@@ -6,6 +6,8 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
 from buzz.patches.assign_default_team import TEAM_DIRECT_DOCTYPES
+from buzz.tests.factories import BuzzTeamFactory
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
 
 OWNER = "team-owner@example.com"
 
@@ -131,7 +133,9 @@ class TestBuzzTeam(IntegrationTestCase):
 def create_owned_team(team_name: str, owner: str) -> str:
 	team = frappe.get_doc({"doctype": "Buzz Team", "team_name": team_name})
 	team.flags.owner_user = owner
-	return team.insert(ignore_permissions=True).name
+	team.insert(ignore_permissions=True)
+	BuzzTeamFactory.set_feature(team.name, PAID_EVENTS_FLAG, 1)
+	return team.name
 
 
 def payload_for(doctype: str, suffix: str) -> dict:

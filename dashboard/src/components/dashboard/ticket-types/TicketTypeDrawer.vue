@@ -18,7 +18,12 @@ type TicketTypeValues = {
 	auto_unpublish_after: string | null
 }
 
-const props = defineProps<{ event: string; ticketType: TicketTypeItem | null; canWrite: boolean }>()
+const props = defineProps<{
+	event: string
+	ticketType: TicketTypeItem | null
+	canWrite: boolean
+	paidEventsEnabled: boolean
+}>()
 const open = defineModel<boolean>("open", { required: true })
 const emit = defineEmits<{ changed: [] }>()
 
@@ -142,6 +147,7 @@ async function save(values: TicketTypeValues) {
 				:disabled="!canWrite"
 			/>
 			<PriceList
+				v-if="paidEventsEnabled"
 				v-model="draft.prices"
 				:locked-currencies="soldCurrencies"
 				locked-message="Tickets have sold at this price, so it can't be changed. To charge a different price, disable this ticket type and add a new one."

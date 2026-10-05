@@ -8,6 +8,8 @@ from buzz.api.events.exceptions import CannotManageEvent
 from buzz.api.events.test_events import create_event
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.test_permissions import add_member
+from buzz.tests.factories import BuzzTeamFactory
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
 
 
 class TicketTypesTestCase(IntegrationTestCase):
@@ -87,6 +89,15 @@ class TestGetEventTicketTypes(TicketTypesTestCase):
 		self.assertEqual(row["prices"], [{"currency": "INR", "price": 1000, "tickets_sold": 1}])
 		self.assertEqual(row["max_tickets_available"], 200)
 		self.assertEqual(row["tickets_sold"], 1)
+
+	def test_reports_whether_the_team_can_sell_paid_tickets(self):
+		frappe.set_user(self.owner)
+		self.assertTrue(get_event_ticket_types(self.event).paid_events_enabled)
+
+		# The team is shared by the class, and rollback is per class.
+		self.addCleanup(BuzzTeamFactory.set_feature, self.team, PAID_EVENTS_FLAG, 1)
+		BuzzTeamFactory.set_feature(self.team, PAID_EVENTS_FLAG, 0)
+		self.assertFalse(get_event_ticket_types(self.event).paid_events_enabled)
 
 	def test_viewer_reads_without_write_access(self):
 		frappe.set_user(self.viewer)

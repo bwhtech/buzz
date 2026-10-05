@@ -16,6 +16,8 @@ const props = defineProps<{
 	doctype: "Sponsorship Tier" | "Event Ticket Type"
 	itemLabel: string
 	placeholder: string
+	// Hides the price inputs, so the item saves at the default free price.
+	freeOnly?: boolean
 }>()
 const isOpen = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ saved: [] }>()
@@ -81,7 +83,7 @@ async function submit() {
 				required
 			/>
 
-			<div class="grid grid-cols-[2fr_1fr] gap-4">
+			<div v-if="!freeOnly" class="grid grid-cols-[2fr_1fr] gap-4">
 				<PriceInput
 					v-model="price"
 					label="Price"

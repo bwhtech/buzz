@@ -1,6 +1,7 @@
 import frappe
 
 from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
 from buzz.utils import delete_custom_fields, get_custom_fields_creator
 
 _create_custom_fields = get_custom_fields_creator("Buzz")
@@ -131,6 +132,9 @@ def setup_test_records():
 
 	# Administrator's only membership, so the team resolves for fixtures that omit one.
 	admin_team = create_default_team_for("Administrator").name
+	# The shared test event sells paid tickets, so its team needs the flag.
+	frappe.db.set_value("Buzz Team Settings", admin_team, PAID_EVENTS_FLAG, 1)
+	frappe.clear_document_cache("Buzz Team Settings", admin_team)
 
 	test_category = frappe.get_doc({"doctype": "Event Category", "name": "Test Category"}).insert(
 		ignore_if_duplicate=True
