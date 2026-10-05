@@ -105,7 +105,7 @@ const endsAt = computed(() => {
 					}"
 				/>
 
-				<div class="flex-1 overflow-y-auto">
+				<div class="flex-1 overflow-y-auto overscroll-contain">
 					<div class="relative p-4">
 						<img
 							v-if="event.banner_image"

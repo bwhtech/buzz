@@ -111,6 +111,7 @@ async function refresh() {
 						class="max-w-sm"
 						:label="__('Team Name')"
 						v-model="form.team_name"
+						:maxlength="140"
 						@blur="save"
 					/>
 

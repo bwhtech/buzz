@@ -1,4 +1,6 @@
+// The first icon is the default for a new link, so it leads the picker.
 export const LINK_ICONS = [
+	{ value: "link", label: "Link", icon: "lucide-link" },
 	{ value: "globe", label: "Website", icon: "lucide-globe" },
 	{ value: "map-pin", label: "Map", icon: "lucide-map-pin" },
 	{ value: "video", label: "Live stream", icon: "lucide-video" },
@@ -12,7 +14,6 @@ export const LINK_ICONS = [
 	{ value: "users", label: "Social", icon: "lucide-users" },
 	{ value: "camera", label: "Photos", icon: "lucide-camera" },
 	{ value: "clipboard-list", label: "Form", icon: "lucide-clipboard-list" },
-	{ value: "link", label: "Link", icon: "lucide-link" },
 ]
 
 export function linkIconClass(icon: string | null) {

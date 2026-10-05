@@ -21,10 +21,14 @@ onMounted(() => form.value?.querySelector("input")?.focus())
 const venueName = ref(props.suggestedName ?? "")
 const address = ref("")
 const isSaving = ref(false)
+const hasTriedSaving = ref(false)
 // Whether a link alone is enough is for the server to say: only it can read the location.
-const isIncomplete = computed(
-	() => !venueName.value.trim() || !(address.value.trim() || mapLink.value.trim()),
-)
+const missingFieldsMessage = computed(() => {
+	if (!hasTriedSaving.value) return ""
+	if (!venueName.value.trim()) return "Name is required"
+	if (!(address.value.trim() || mapLink.value.trim())) return "Address or map link is required"
+	return ""
+})
 
 const mapLinkLocation = useMapLinkLocation()
 let locatedLink = ""
@@ -43,6 +47,8 @@ async function locate() {
 }
 
 async function save() {
+	hasTriedSaving.value = true
+	if (missingFieldsMessage.value) return
 	isSaving.value = true
 	const name = await props.picker.saveManually({
 		venue_name: venueName.value.trim(),
@@ -83,16 +89,10 @@ async function save() {
 			label="Address"
 			placeholder="Optional when the map link shows the place"
 		/>
-		<ErrorMessage :message="picker.error" />
+		<ErrorMessage :message="missingFieldsMessage || picker.error" />
 		<div class="mt-auto flex justify-end gap-2">
 			<Button type="button" label="Back" @click="$emit('cancel')" />
-			<Button
-				type="submit"
-				variant="solid"
-				label="Add venue"
-				:disabled="isIncomplete"
-				:loading="isSaving"
-			/>
+			<Button type="submit" variant="solid" label="Add" :loading="isSaving" />
 		</div>
 	</form>
 </template>
