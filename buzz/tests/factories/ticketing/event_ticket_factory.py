@@ -9,7 +9,7 @@ _fake = Faker()
 
 
 class EventTicketFactory(BaseFactory[EventTicket]):
-	"""A draft ticket on a new free ticket type. The booking flow submits; use `submitted` for that."""
+	"""A draft. The booking flow submits tickets, so use `submitted` for that."""
 
 	doctype = "Event Ticket"
 

@@ -6,8 +6,6 @@ from buzz.events.doctype.buzz_team_membership.buzz_team_membership import BuzzTe
 
 
 class BuzzTeamMembershipFactory(BaseFactory[BuzzTeamMembership]):
-	"""A Manager by default. Pass `team_role` for any other role."""
-
 	doctype = "Buzz Team Membership"
 
 	@property
