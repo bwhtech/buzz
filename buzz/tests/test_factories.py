@@ -30,6 +30,14 @@ class TestFactoryDefaults(IntegrationTestCase):
 
 		self.assertEqual(first.name, second.name)
 
+	def test_create_once_works_under_a_non_admin_session(self):
+		member = UserFactory.create_once("factory-create-once-member@example.com").name
+
+		with self.set_user(member):
+			created = UserFactory.create_once("factory-create-once-other@example.com")
+
+		self.assertTrue(frappe.db.exists("User", created.name))
+
 	def test_owned_team_has_the_given_owner(self):
 		owner = UserFactory.create_once("factory-team-owner-check@example.com").name
 		team = BuzzTeamFactory.create_owned_by(owner)
