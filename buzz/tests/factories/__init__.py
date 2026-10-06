@@ -5,6 +5,7 @@ from buzz.tests.factories.buzz_team_factory import BuzzTeamFactory
 from buzz.tests.factories.event_category_factory import EventCategoryFactory
 from buzz.tests.factories.event_host_factory import EventHostFactory
 from buzz.tests.factories.event_ticket_type_factory import EventTicketTypeFactory
+from buzz.tests.factories.event_venue_factory import EventVenueFactory
 from buzz.tests.factories.offline_payment_method_factory import OfflinePaymentMethodFactory
 from buzz.tests.factories.sponsorship_enquiry_factory import SponsorshipEnquiryFactory
 from buzz.tests.factories.ticket_add_on_factory import TicketAddOnFactory
@@ -18,6 +19,7 @@ __all__ = [
 	"EventCategoryFactory",
 	"EventHostFactory",
 	"EventTicketTypeFactory",
+	"EventVenueFactory",
 	"OfflinePaymentMethodFactory",
 	"SponsorshipEnquiryFactory",
 	"TicketAddOnFactory",

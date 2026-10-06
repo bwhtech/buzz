@@ -3,8 +3,9 @@ from itertools import groupby
 
 import frappe
 from frappe import _
-from frappe.utils import date_diff, format_date, get_url, getdate, today
+from frappe.utils import date_diff, flt, format_date, get_url, getdate, today
 
+from buzz.events.doctype.buzz_team.team_map import TeamMap
 from buzz.www.event.date_range import format_time
 from buzz.www.event.index import public_links
 from buzz.www.event.meta import DESCRIPTION_LENGTH, plain_text
@@ -18,7 +19,13 @@ from buzz.www.events import (
 )
 
 PAST_LIMIT = 30
-EVENT_FIELDS = CARD_FIELDS + TIME_FIELDS
+VENUE_FIELDS = [
+	"venue.latitude as latitude",
+	"venue.longitude as longitude",
+	"venue.city as city",
+	"venue.venue_country as country",
+]
+EVENT_FIELDS = CARD_FIELDS + TIME_FIELDS + VENUE_FIELDS
 
 
 def day_labels(day) -> dict:
@@ -49,6 +56,7 @@ class TeamPage:
 			"upcoming_days": group_by_day(upcoming),
 			"past_days": group_by_day(past),
 			"meta": self.meta(),
+			**TeamMap(upcoming, past).as_context(),
 		}
 
 	def upcoming_events(self) -> list:
@@ -79,7 +87,9 @@ class TeamPage:
 
 	def card(self, event) -> dict:
 		is_online = event.medium == "Online"
+		has_location = not is_online and bool(flt(event.latitude) and flt(event.longitude))
 		return {
+			"route": event.route,
 			"date": str(getdate(event.start_date)),
 			"title": event.title,
 			"url": f"/events/{event.route}",
@@ -89,6 +99,10 @@ class TeamPage:
 			"host_logo": self.team.logo,
 			"place": _("Online") if is_online else event.venue_name,
 			"is_online": is_online,
+			"city": event.city,
+			"country": event.country,
+			"latitude": flt(event.latitude) if has_location else None,
+			"longitude": flt(event.longitude) if has_location else None,
 		}
 
 	def meta(self) -> dict:

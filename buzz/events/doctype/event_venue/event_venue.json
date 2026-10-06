@@ -17,6 +17,8 @@
   "section_break_cexp",
   "longitude",
   "latitude",
+  "city",
+  "venue_country",
   "column_break_xfsv",
   "location"
  ],
@@ -102,12 +104,25 @@
    "fieldname": "map_link",
    "fieldtype": "Small Text",
    "label": "Map Link"
+  },
+  {
+   "description": "Filled from OpenStreetMap when empty.",
+   "fieldname": "city",
+   "fieldtype": "Data",
+   "label": "City"
+  },
+  {
+   "description": "Filled from OpenStreetMap when empty.",
+   "fieldname": "venue_country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "options": "Country"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-30 15:00:00.000000",
+ "modified": "2026-10-06 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Venue",

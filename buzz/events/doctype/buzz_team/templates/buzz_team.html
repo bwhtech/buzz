@@ -13,11 +13,12 @@
 	<meta name="twitter:card" content="summary">
 	<link rel="canonical" href="{{ meta.url }}">
 	<link rel="stylesheet" href="/assets/buzz/themes/team.css">
+	<link rel="stylesheet" href="/assets/buzz/themes/team_map.css">
 {% endautoescape %}{% endblock %}
 
 {% block content %}{% autoescape true %}
 	{% macro event_card(event) %}
-	<a class="team-event-card" href="{{ event.url }}">
+	<a class="team-event-card" href="{{ event.url }}" data-event-card data-country="{{ event.country or '' }}" data-event-route="{{ event.route }}">
 		{% if event.image %}<img class="team-event-card-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="team-event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
 		<span class="team-event-card-body">
 			{% if event.time %}<span class="team-event-card-time">{{ event.time }}</span>{% endif %}
@@ -38,14 +39,32 @@
 
 	{% macro timeline(days, empty_text) %}
 	{% for day in days %}
-	<section class="team-day">
+	<section class="team-day" data-day-group data-day="{{ day.date }}">
 		<h3 class="team-day-heading">{{ day.label }}<span>{{ day.weekday }}</span></h3>
 		<div class="team-day-events">{% for event in day.events %}{{ event_card(event) }}{% endfor %}</div>
 	</section>
 	{% else %}
 	<p class="empty-state">{{ empty_text }}</p>
 	{% endfor %}
+	<p class="empty-state" data-filter-empty hidden>{{ _("No events in this country.") }}</p>
 	{% endmacro %}
+
+	{% macro chevron(path) %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ path }}"/></svg>{% endmacro %}
+
+	{% if has_pins %}
+	<svg class="team-map-defs" width="0" height="0" aria-hidden="true">
+		<defs><path id="world-dots" d="{{ world_dots }}" fill="none" stroke="currentColor" stroke-width="0.55" stroke-linecap="round"/></defs>
+	</svg>
+	<section class="team-map" data-map>
+		<svg class="team-map-svg" viewBox="0 6 360 140" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use class="team-map-land" href="#world-dots"/></svg>
+		<div class="team-map-pins"></div>
+		<div class="team-map-controls" role="group" aria-label="{{ _('Map zoom') }}">
+			<button type="button" data-zoom-to="nearby" aria-pressed="false" hidden>{{ _("Nearby") }}</button>
+			<button type="button" data-zoom-to="world" aria-pressed="true">{{ _("World") }}</button>
+		</div>
+		<p class="team-map-credit">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a></p>
+	</section>
+	{% endif %}
 
 	<main class="event-content team-page">
 		<header class="team-identity">
@@ -55,6 +74,15 @@
 				<p class="team-stats">{% if events_hosted == 1 %}{{ _("1 event hosted") }}{% else %}{{ _("{0} events hosted").format(events_hosted) }}{% endif %}</p>
 			</div>
 		</header>
+
+		{% if countries %}
+		<div class="country-chips" role="group" aria-label="{{ _('Filter by country') }}">
+			<button type="button" class="country-chip" data-country-filter="" aria-pressed="true">{{ _("Everywhere") }}<span>{{ upcoming_count }}</span></button>
+			{% for country in countries %}
+			<button type="button" class="country-chip" data-country-filter="{{ country.name }}" aria-pressed="false">{{ country.name }}<span>{{ country.count }}</span></button>
+			{% endfor %}
+		</div>
+		{% endif %}
 
 		<div class="team-columns">
 			<div class="team-events">
@@ -66,8 +94,23 @@
 				<div data-panel="past" hidden>{{ timeline(past_days, _("No past events.")) }}</div>
 			</div>
 
-			{% if doc.short_description or doc.about or links %}
+			{% set has_events = upcoming_days or past_days %}
+			{% set has_about = doc.short_description or doc.about or links %}
+			{% if has_events or has_about %}
 			<aside class="team-aside">
+				{% if has_events %}
+				<section class="team-about team-calendar" data-calendar>
+					<div class="calendar-header">
+						<h2 class="calendar-title" data-calendar-title></h2>
+						<span class="calendar-nav">
+							<button type="button" class="es-button" data-icon-button="true" data-variant="ghost" data-size="xs" data-calendar-step="-1" aria-label="{{ _('Previous month') }}">{{ chevron("m15 18-6-6 6-6") }}</button>
+							<button type="button" class="es-button" data-icon-button="true" data-variant="ghost" data-size="xs" data-calendar-step="1" aria-label="{{ _('Next month') }}">{{ chevron("m9 18 6-6-6-6") }}</button>
+						</span>
+					</div>
+					<div class="calendar-grid" data-calendar-grid></div>
+				</section>
+				{% endif %}
+				{% if has_about %}
 				<section class="team-about">
 					<h2 class="label">{{ _("About") }}</h2>
 					{% if doc.short_description %}<p class="team-tagline">{{ doc.short_description }}</p>{% endif %}
@@ -83,11 +126,13 @@
 					</ul>
 					{% endif %}
 				</section>
+				{% endif %}
 			</aside>
 			{% endif %}
 		</div>
 	</main>
 
+	<script type="application/json" id="team-page-data">{{ page_data | tojson }}</script>
 {% endautoescape %}{% endblock %}
 
 {% block script %}

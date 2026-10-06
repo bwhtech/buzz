@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from buzz.events.doctype.event_venue.geocode import enqueue_geocode, needs_geocoding
 from buzz.events.doctype.event_venue.map_link import read_map_link
 from buzz.www.event.venue_map import google_maps_url
 
@@ -21,12 +22,14 @@ class EventVenue(Document):
 		from frappe.types import DF
 
 		address: DF.SmallText | None
+		city: DF.Data | None
 		google_maps_embed_code: DF.Code | None
 		google_place_id: DF.Data | None
 		latitude: DF.Float
 		longitude: DF.Float
 		map_link: DF.SmallText | None
 		team: DF.Link | None
+		venue_country: DF.Link | None
 		venue_name: DF.Data
 		type: DF.Literal["Embed Google Maps", "Open Street Map"]
 	# end: auto-generated types
@@ -36,6 +39,13 @@ class EventVenue(Document):
 		self.validate_address()
 		self.set_geojson_for_location()
 		self.remove_fixed_dimensions_from_google_map_embed()
+
+	def on_update(self):
+		# A live worker would call Nominatim mid-test.
+		if frappe.in_test or self.flags.geocoded or not needs_geocoding(self):
+			return
+		if self.has_value_changed("address") or self.has_value_changed("latitude"):
+			enqueue_geocode(self.name)
 
 	def set_location_from_map_link(self):
 		if not self.map_link or not self.has_value_changed("map_link"):
