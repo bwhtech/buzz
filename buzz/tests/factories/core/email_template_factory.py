@@ -13,7 +13,7 @@ class EmailTemplateFactory(BaseFactory[EmailTemplate]):
 
 	@property
 	def default_attributes(self) -> dict[str, Any]:
-		# Prompt-autonamed, and rows outlive a run, so a hash beats Faker's per-process `unique`.
+		# Prompt-autonamed and rows outlive a run, so a hash rather than Faker's `unique`.
 		return {
 			"name": f"Template {frappe.generate_hash(length=8)}",
 			"subject": _fake.sentence(),
