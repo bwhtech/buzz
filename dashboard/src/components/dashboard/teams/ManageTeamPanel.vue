@@ -13,9 +13,10 @@ import { computed, reactive, ref, watch } from "vue"
 import AvatarUploader from "@/components/common/AvatarUploader.vue"
 import AddMembersDialog from "@/components/dashboard/teams/AddMembersDialog.vue"
 import TeamMembersTable from "@/components/dashboard/teams/TeamMembersTable.vue"
+import TeamPublicPage from "@/components/dashboard/teams/TeamPublicPage.vue"
 import { reloadTeams, updateTeam, useTeamOverview } from "@/data/teams"
 import { serverErrorMessage } from "@/utils/serverError"
-import { canManageMembers } from "@/utils/teamRoles"
+import { canEditPublicPage, canManageMembers } from "@/utils/teamRoles"
 
 const props = defineProps<{ team: string; teamName: string }>()
 defineEmits<{ back: [] }>()
@@ -37,6 +38,7 @@ const isAdding = ref(false)
 const overview = useTeamOverview(props.team)
 
 const canManage = computed(() => canManageMembers(overview.data?.my_role))
+const canEditPage = computed(() => canEditPublicPage(overview.data?.my_role))
 
 const form = reactive({ team_name: props.teamName, logo: null as string | null })
 
@@ -117,6 +119,12 @@ async function refresh() {
 
 					<ErrorMessage :message="serverErrorMessage(updateTeam.error)" />
 				</template>
+
+				<TeamPublicPage
+					v-if="canEditPage && overview.data"
+					:team="overview.data"
+					@saved="refresh"
+				/>
 
 				<h3 class="text-base-semibold text-ink-gray-8">{{ __("Team Members") }}</h3>
 

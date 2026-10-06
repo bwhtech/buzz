@@ -138,6 +138,11 @@ export interface TeamOverview {
 	team_name: string
 	slug: string | null
 	logo: string | null
+	is_published: boolean
+	public_url: string | null
+	short_description: string | null
+	about: string | null
+	links: EventExternalLink[]
 	my_role: string
 	members: TeamMember[]
 	invites: TeamInvite[]

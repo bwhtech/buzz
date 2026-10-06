@@ -56,6 +56,18 @@ def web_url(url: str | None) -> str | None:
 	return url if url and urlparse(url).scheme in ("http", "https") else None
 
 
+def public_links(rows) -> list[dict]:
+	return [
+		{
+			"label": row.label,
+			"url": url,
+			"icon_svg": LINK_ICON_PATHS.get(row.icon) or LINK_ICON_PATHS["link"],
+		}
+		for row in rows
+		if (url := web_url(row.url))
+	]
+
+
 def format_full_date(date) -> str:
 	pattern = "EEEE, d MMMM" if date.year == getdate(nowdate()).year else "EEEE, d MMMM y"
 	return format_date(date, pattern)
@@ -167,15 +179,7 @@ class EventPage:
 		return [host for host in hosts if host]
 
 	def links(self) -> list[dict]:
-		return [
-			{
-				"label": row.label,
-				"url": url,
-				"icon_svg": LINK_ICON_PATHS.get(row.icon) or LINK_ICON_PATHS["link"],
-			}
-			for row in self.event.external_links
-			if (url := web_url(row.url))
-		]
+		return public_links(self.event.external_links)
 
 	@cached_property
 	def schedule(self) -> list[dict]:

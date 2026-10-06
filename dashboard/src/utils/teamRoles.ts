@@ -6,6 +6,11 @@ export function canCreateEvents(teamRole: string | undefined): boolean {
 	return Boolean(teamRole && EVENT_WRITE_ROLES.includes(teamRole))
 }
 
+/** Whether a team role may edit the team's public page. Same roles as event editing. */
+export function canEditPublicPage(teamRole: string | undefined): boolean {
+	return canCreateEvents(teamRole)
+}
+
 // Mirrors ADMIN_ROLES in buzz/permissions.py; can_manage_members is the server's check.
 const MEMBER_WRITE_ROLES = ["Owner", "Admin"]
 

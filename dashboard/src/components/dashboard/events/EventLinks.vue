@@ -6,6 +6,10 @@ import EventLinkDialog from "@/components/dashboard/events/EventLinkDialog.vue"
 import type { EventExternalLink } from "@/types"
 import { hostOf, linkIconClass } from "@/utils/eventLinks"
 
+const props = withDefaults(defineProps<{ hint?: string }>(), {
+	hint: "Venue map, slides, community chat — anything attendees should have one tap away.",
+})
+
 const links = defineModel<EventExternalLink[]>({ required: true })
 
 const dialogOpen = ref(false)
@@ -71,7 +75,7 @@ function remove() {
 		</ul>
 
 		<p v-else class="text-p-sm text-ink-gray-5">
-			{{ __("Venue map, slides, community chat — anything attendees should have one tap away.") }}
+			{{ __(props.hint) }}
 		</p>
 
 		<EventLinkDialog v-model="dialogOpen" :link="editingLink" @submit="commit" @remove="remove" />

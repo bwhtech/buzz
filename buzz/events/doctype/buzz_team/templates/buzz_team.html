@@ -1,0 +1,96 @@
+{% extends "buzz/templates/event_page/layout.html" %}
+
+{% block title %}{% autoescape true %}{{ title }}{% endautoescape %}{% endblock %}
+
+{% block meta_block %}{% autoescape true %}
+	<meta name="description" content="{{ meta.description }}">
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="{{ brand.name }}">
+	<meta property="og:title" content="{{ title }}">
+	<meta property="og:description" content="{{ meta.description }}">
+	<meta property="og:url" content="{{ meta.url }}">
+	{% if meta.image %}<meta property="og:image" content="{{ meta.image }}">{% endif %}
+	<meta name="twitter:card" content="summary">
+	<link rel="canonical" href="{{ meta.url }}">
+	<link rel="stylesheet" href="/assets/buzz/themes/team.css">
+{% endautoescape %}{% endblock %}
+
+{% block content %}{% autoescape true %}
+	{% macro event_card(event) %}
+	<a class="team-event-card" href="{{ event.url }}">
+		{% if event.image %}<img class="team-event-card-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="team-event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
+		<span class="team-event-card-body">
+			{% if event.time %}<span class="team-event-card-time">{{ event.time }}</span>{% endif %}
+			<span class="team-event-card-title">{{ event.title }}</span>
+			<span class="team-event-card-host">
+				{% if event.host_logo %}<img class="team-event-card-avatar" src="{{ event.host_logo }}" alt="">{% else %}<span class="team-event-card-avatar" aria-hidden="true">{{ event.host_name[:1] | upper }}</span>{% endif %}
+				{{ _("By {0}").format(event.host_name) }}
+			</span>
+			{% if event.place %}
+			<span class="team-event-card-place meta-item">
+				<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">{% if event.is_online %}<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>{% else %}<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>{% endif %}</svg>
+				{{ event.place }}
+			</span>
+			{% endif %}
+		</span>
+	</a>
+	{% endmacro %}
+
+	{% macro timeline(days, empty_text) %}
+	{% for day in days %}
+	<section class="team-day">
+		<h3 class="team-day-heading">{{ day.label }}<span>{{ day.weekday }}</span></h3>
+		<div class="team-day-events">{% for event in day.events %}{{ event_card(event) }}{% endfor %}</div>
+	</section>
+	{% else %}
+	<p class="empty-state">{{ empty_text }}</p>
+	{% endfor %}
+	{% endmacro %}
+
+	<main class="event-content team-page">
+		<header class="team-identity">
+			{% if doc.logo %}<img class="team-logo" src="{{ doc.logo }}" alt="">{% else %}<span class="team-logo" aria-hidden="true">{{ doc.team_name[:1] | upper }}</span>{% endif %}
+			<div class="team-identity-text">
+				<h1 class="event-title">{{ doc.team_name }}</h1>
+				<p class="team-stats">{% if events_hosted == 1 %}{{ _("1 event hosted") }}{% else %}{{ _("{0} events hosted").format(events_hosted) }}{% endif %}</p>
+			</div>
+		</header>
+
+		<div class="team-columns">
+			<div class="team-events">
+				<div class="es-tab-buttons" role="radiogroup" data-size="md" data-tab-buttons aria-label="{{ _('Events') }}">
+					<button type="button" class="es-pill" data-size="md" role="radio" aria-checked="true" data-state="active" data-tab="upcoming">{{ _("Upcoming") }}</button>
+					<button type="button" class="es-pill" data-size="md" role="radio" aria-checked="false" data-state="inactive" data-tab="past" tabindex="-1">{{ _("Past") }}</button>
+				</div>
+				<div data-panel="upcoming">{{ timeline(upcoming_days, _("No upcoming events.")) }}</div>
+				<div data-panel="past" hidden>{{ timeline(past_days, _("No past events.")) }}</div>
+			</div>
+
+			{% if doc.short_description or doc.about or links %}
+			<aside class="team-aside">
+				<section class="team-about">
+					<h2 class="label">{{ _("About") }}</h2>
+					{% if doc.short_description %}<p class="team-tagline">{{ doc.short_description }}</p>{% endif %}
+					{% if doc.about %}<div class="prose">{{ doc.about | safe }}</div>{% endif %}
+					{% if links %}
+					<ul class="host-list team-links">
+						{% for link in links %}
+						<li><a class="link-row" href="{{ link.url }}" target="_blank" rel="noopener noreferrer">
+							<span class="host-logo"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true">{{ link.icon_svg | safe }}</svg></span>
+							<span class="aside-value">{{ link.label }}</span>
+						</a></li>
+						{% endfor %}
+					</ul>
+					{% endif %}
+				</section>
+			</aside>
+			{% endif %}
+		</div>
+	</main>
+
+{% endautoescape %}{% endblock %}
+
+{% block script %}
+	{{ super() }}
+	<script src="{{ bundled_asset('team_page.bundle.ts') }}" defer></script>
+{% endblock %}

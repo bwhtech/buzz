@@ -60,6 +60,17 @@ def update_team(team: str, team_name: str, logo: str | None = None) -> None:
 
 
 @frappe.whitelist(methods=["POST"])
+def update_public_page(
+	team: str,
+	is_published: bool,
+	links: list[dict],
+	short_description: str | None = None,
+	about: str | None = None,
+) -> None:
+	services.update_public_page(team, is_published, links, short_description, about)
+
+
+@frappe.whitelist(methods=["POST"])
 def resend_invite(team: str, email: str) -> None:
 	invitations.resend_invite(team, email)
 

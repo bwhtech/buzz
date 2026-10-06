@@ -1,6 +1,8 @@
 import frappe
 from frappe.query_builder import Case
+from frappe.utils import get_url
 
+from buzz.api.events.schemas import EventExternalLink
 from buzz.api.teams.exceptions import (
 	CannotEditTeam,
 	CannotGrantOwnership,
@@ -9,9 +11,18 @@ from buzz.api.teams.exceptions import (
 	UnknownTeamRole,
 )
 from buzz.api.teams.schemas import TeamInvite, TeamMember, TeamOverview
-from buzz.permissions import can_manage_members, team_role_of
+from buzz.permissions import WRITE_ROLES, can_manage_members, team_role_of
 
-TEAM_FIELDS = ("name", "team_name", "slug", "logo")
+TEAM_FIELDS = (
+	"name",
+	"team_name",
+	"slug",
+	"logo",
+	"is_published",
+	"route",
+	"short_description",
+	"about",
+)
 
 
 def validate_role(team_role: str) -> None:
@@ -42,8 +53,11 @@ def team_overview(team: str) -> TeamOverview:
 	if not details:
 		NotATeamMember.throw()
 
+	route = details.pop("route")
 	return TeamOverview(
 		**details,
+		public_url=get_url(f"/{route}") if details.is_published and route else None,
+		links=links_of(team),
 		my_role=role,
 		members=members_of(team),
 		invites=pending_invites_for(team),
@@ -161,4 +175,38 @@ def update_team(team: str, team_name: str, logo: str | None) -> None:
 	doc = frappe.get_doc("Buzz Team", team)
 	doc.team_name = team_name
 	doc.logo = logo or None
+	doc.save(ignore_permissions=True)
+
+
+def links_of(team: str) -> list[EventExternalLink]:
+	rows = frappe.get_all(
+		"Event External Link",
+		filters={"parenttype": "Buzz Team", "parent": team, "parentfield": "links"},
+		fields=["icon", "label", "url"],
+		order_by="idx",
+	)
+	return [EventExternalLink(**row) for row in rows]
+
+
+def update_public_page(
+	team: str,
+	is_published: bool,
+	links: list[dict],
+	short_description: str | None,
+	about: str | None,
+) -> None:
+	"""Publish or edit a team's public page.
+
+	Owner/Admin/Manager, the roles that edit the team's events. Desk write on Buzz Team is
+	System Manager only, so the guard here is the authorization — the same shape as
+	`update_team`. The route is not editable here: it is filled on first publish.
+	"""
+	if team_role_of(frappe.session.user, team) not in WRITE_ROLES:
+		CannotEditTeam.throw()
+
+	doc = frappe.get_doc("Buzz Team", team)
+	doc.is_published = int(is_published)
+	doc.short_description = (short_description or "").strip() or None
+	doc.about = about or None
+	doc.set("links", [{key: link.get(key) for key in ("icon", "label", "url")} for link in links])
 	doc.save(ignore_permissions=True)

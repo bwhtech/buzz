@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_guest_to_view": 1,
  "allow_rename": 1,
  "autoname": "BTEAM.####",
  "creation": "2026-07-31 10:00:00",
@@ -9,7 +10,15 @@
   "team_name",
   "slug",
   "section_break_hvmt",
-  "logo"
+  "logo",
+  "public_page_tab",
+  "is_published",
+  "route",
+  "column_break_public",
+  "short_description",
+  "section_break_about",
+  "about",
+  "links"
  ],
  "fields": [
   {
@@ -36,11 +45,57 @@
    "fieldname": "logo",
    "fieldtype": "Attach Image",
    "label": "Logo"
+  },
+  {
+   "fieldname": "public_page_tab",
+   "fieldtype": "Tab Break",
+   "label": "Public Page"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_published",
+   "fieldtype": "Check",
+   "label": "Published"
+  },
+  {
+   "description": "Where the public page lives. Filled as community/<slug> on first publish.",
+   "fieldname": "route",
+   "fieldtype": "Data",
+   "label": "Route",
+   "no_copy": 1,
+   "permlevel": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_public",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "short_description",
+   "fieldtype": "Small Text",
+   "label": "Short Description"
+  },
+  {
+   "fieldname": "section_break_about",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "about",
+   "fieldtype": "Text Editor",
+   "label": "About"
+  },
+  {
+   "fieldname": "links",
+   "fieldtype": "Table",
+   "label": "Links",
+   "options": "Event External Link"
   }
  ],
  "grid_page_length": 50,
+ "has_web_view": 1,
  "image_field": "logo",
  "index_web_pages_for_search": 1,
+ "is_published_field": "is_published",
  "links": [
   {
    "group": "Members",
@@ -53,7 +108,7 @@
    "link_fieldname": "team"
   }
  ],
- "modified": "2026-08-04 17:38:48.007790",
+ "modified": "2026-10-06 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Team",
@@ -81,6 +136,12 @@
    "role": "Event Manager",
    "select": 1,
    "share": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

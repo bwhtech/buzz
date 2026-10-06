@@ -3,12 +3,13 @@
 
 import frappe
 from frappe import _
-from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
+from frappe.website.website_generator import WebsiteGenerator
 
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import create_team_settings
 from buzz.permissions import can_manage_members, my_team_names
+from buzz.www.site_header import apply_site_context
 
 SEARCH_LIMIT = 10
 STANDARD_USERS = ("Administrator", "Guest")
@@ -43,7 +44,7 @@ def set_team_from_sole_membership(doc, event=None):
 		doc.team = teams[0]
 
 
-class BuzzTeam(Document):
+class BuzzTeam(WebsiteGenerator):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -52,17 +53,42 @@ class BuzzTeam(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		from buzz.events.doctype.event_external_link.event_external_link import EventExternalLink
+
+		about: DF.TextEditor | None
+		is_published: DF.Check
+		links: DF.Table[EventExternalLink]
 		logo: DF.AttachImage | None
+		route: DF.Data | None
+		short_description: DF.SmallText | None
 		slug: DF.Data | None
 		team_name: DF.Data
 	# end: auto-generated types
 
+	def autoname(self):
+		# WebsiteGenerator would name the team after its title; the BTEAM.#### series names it.
+		pass
+
 	def onload(self):
+		super().onload()
 		self.set_onload("can_manage_members", can_manage_members(self.name))
 
 	def validate(self):
 		if not self.slug:
 			self.set_slug()
+		# After the slug: the first publish builds the route from it.
+		super().validate()
+
+	def make_route(self) -> str:
+		return f"community/{self.slug}"
+
+	def get_context(self, context):
+		from buzz.events.doctype.buzz_team.team_page import TeamPage
+
+		apply_site_context(context)
+		# The header differs per visitor and the timeline changes by the hour.
+		context.no_cache = 1
+		context.update(TeamPage(self).as_context())
 
 	def set_slug(self):
 		slug = frappe.website.utils.cleanup_page_name(self.team_name).replace("_", "-")
