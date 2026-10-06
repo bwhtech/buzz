@@ -4,43 +4,31 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, EventTicketTypeFactory
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	BuzzTeamFactory,
+	EventBookingFactory,
+	EventTicketTypeFactory,
+)
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
 
 
 class TestEventTicketTypePrices(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.event = BuzzEventFactory.create().name
+
 	def setUp(self):
-		frappe.set_user("Administrator")
-		self.event = frappe.db.get_value("Buzz Event", {"route": "test-route"})
-		self.ticket_type = frappe.get_doc(
-			{
-				"doctype": "Event Ticket Type",
-				"event": self.event,
-				"title": "Priced ticket",
-				"prices": [{"currency": "INR", "price": 1000}, {"currency": "USD", "price": 15}],
-			}
-		).insert()
+		prices = [{"currency": "INR", "price": 1000}, {"currency": "USD", "price": 15}]
+		self.ticket_type = EventTicketTypeFactory.create(event=self.event, prices=prices)
 
-	def tearDown(self):
-		frappe.db.rollback()
-
-	def sell(self, currency):
-		frappe.get_doc(
-			{
-				"doctype": "Event Booking",
-				"event": self.event,
-				"user": "Administrator",
-				"currency": currency,
-				"payment_status": "Paid",
-				"attendees": [
-					{
-						"ticket_type": self.ticket_type.name,
-						"first_name": "Buyer",
-						"email": "buyer@example.com",
-					}
-				],
-			}
-		).insert().submit()
+	def submit_paid_booking(self, currency):
+		attendee = {"ticket_type": self.ticket_type.name, "first_name": "Buyer", "email": "buyer@example.com"}
+		booking = EventBookingFactory.create(
+			event=self.event, currency=currency, payment_status="Paid", attendees=[attendee]
+		)
+		booking.submit()
 
 	def save_prices(self, *prices):
 		self.ticket_type.reload()
@@ -48,14 +36,12 @@ class TestEventTicketTypePrices(IntegrationTestCase):
 		self.ticket_type.save()
 
 	def test_saved_without_prices_is_free_in_inr(self):
-		ticket_type = frappe.get_doc(
-			{"doctype": "Event Ticket Type", "event": self.event, "title": "Free"}
-		).insert()
+		ticket_type = EventTicketTypeFactory.create(event=self.event)
 
 		self.assertEqual([(row.currency, row.price) for row in ticket_type.prices], [("INR", 0)])
 
 	def test_price_is_locked_after_a_sale_in_its_currency(self):
-		self.sell("USD")
+		self.submit_paid_booking("USD")
 
 		self.save_prices(("INR", 1200), ("USD", 15))
 		with self.assertRaises(frappe.ValidationError):
@@ -76,17 +62,20 @@ class TestEventTicketTypePrices(IntegrationTestCase):
 			self.save_prices(("INR", 1000), ("USD", 15), ("USD", 15))
 
 	def test_ticket_type_with_sales_cannot_be_deleted(self):
-		self.sell("INR")
+		self.submit_paid_booking("INR")
 
 		with self.assertRaises(frappe.LinkExistsError):
 			frappe.delete_doc("Event Ticket Type", self.ticket_type.name)
 
 
 class TestPaidEventsFlag(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.event = BuzzEventFactory.create()
+
 	def setUp(self):
-		frappe.set_user("Administrator")
-		self.event = BuzzEventFactory.create()
-		self.addCleanup(frappe.clear_document_cache, "Buzz Team Settings", self.event.team)
+		self.set_paid_events(1)
 
 	def set_paid_events(self, value: int):
 		BuzzTeamFactory.set_settings(self.event.team, {PAID_EVENTS_FLAG: value})
