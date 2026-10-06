@@ -13,7 +13,7 @@ class OfflinePaymentMethodFactory(BaseFactory[OfflinePaymentMethod]):
 
 	@property
 	def default_attributes(self) -> dict[str, Any]:
-		from buzz.tests.factories.buzz_event_factory import BuzzEventFactory
+		from buzz.tests.factories import BuzzEventFactory
 
 		return {
 			"event": self.overrides.get("event") or BuzzEventFactory.create().name,

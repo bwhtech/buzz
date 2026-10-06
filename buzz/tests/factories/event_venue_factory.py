@@ -13,10 +13,10 @@ class EventVenueFactory(BaseFactory[EventVenue]):
 
 	@property
 	def default_attributes(self) -> dict[str, Any]:
-		from buzz.tests.factories.buzz_team_factory import BuzzTeamFactory
+		from buzz.tests.factories import BuzzTeamFactory
 
 		return {
-			"venue_name": _fake.company(),
+			"venue_name": f"{_fake.company()} Hall",
 			"address": _fake.address(),
 			"team": self.overrides.get("team") or BuzzTeamFactory.create_owned_by().name,
 		}

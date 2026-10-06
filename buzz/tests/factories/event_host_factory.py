@@ -13,7 +13,7 @@ class EventHostFactory(BaseFactory[EventHost]):
 
 	@property
 	def default_attributes(self) -> dict[str, Any]:
-		from buzz.tests.factories.buzz_team_factory import BuzzTeamFactory
+		from buzz.tests.factories import BuzzTeamFactory
 
 		return {
 			"host_name": _fake.company(),

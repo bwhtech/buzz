@@ -4,58 +4,21 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from buzz.tests.factories import BuzzEventFactory, OfflinePaymentMethodFactory
+
 
 class TestOfflinePaymentMethod(IntegrationTestCase):
-	def setUp(self):
-		# Clean up any leftover Offline Payment Method records from previous tests
-		frappe.db.delete("Offline Payment Method")
-
 	def test_unique_title_per_event(self):
-		"""Test that two methods with the same title cannot exist for the same event."""
-		test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
-
-		frappe.get_doc(
-			{
-				"doctype": "Offline Payment Method",
-				"title": "Bank Transfer",
-				"event": test_event.name,
-				"enabled": 1,
-			}
-		).insert()
+		event = BuzzEventFactory.create().name
+		OfflinePaymentMethodFactory.create(event=event, title="Bank Transfer")
 
 		with self.assertRaises(frappe.ValidationError):
-			frappe.get_doc(
-				{
-					"doctype": "Offline Payment Method",
-					"title": "Bank Transfer",
-					"event": test_event.name,
-					"enabled": 1,
-				}
-			).insert()
+			OfflinePaymentMethodFactory.create(event=event, title="Bank Transfer")
 
 	def test_same_title_different_events(self):
-		"""Test that two methods with the same title can exist for different events."""
-		events = frappe.get_all("Buzz Event", limit=2, pluck="name")
-		if len(events) < 2:
-			self.skipTest("Need at least 2 events")
+		first, second = BuzzEventFactory.create_list(2)
+		OfflinePaymentMethodFactory.create(event=first.name, title="UPI Payment")
 
-		frappe.get_doc(
-			{
-				"doctype": "Offline Payment Method",
-				"title": "UPI Payment",
-				"event": events[0],
-				"enabled": 1,
-			}
-		).insert()
+		method = OfflinePaymentMethodFactory.create(event=second.name, title="UPI Payment")
 
-		# Should not raise
-		method2 = frappe.get_doc(
-			{
-				"doctype": "Offline Payment Method",
-				"title": "UPI Payment",
-				"event": events[1],
-				"enabled": 1,
-			}
-		).insert()
-
-		self.assertTrue(method2.name)
+		self.assertEqual(method.title, "UPI Payment")

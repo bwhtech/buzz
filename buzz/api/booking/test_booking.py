@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from buzz.api.booking import (
 	get_booking_details,
@@ -12,7 +11,7 @@ from buzz.api.booking import (
 	validate_coupon,
 )
 from buzz.api.booking.exceptions import AddOnNotForEvent, InvalidAddOnValue, RegistrationsClosed
-from buzz.api.booking.schemas import BookingRequest
+from buzz.tests.base_test_cases import BOOKER, OUTSIDER, BookingTestCase
 from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
 	BuzzCustomFieldFactory,
@@ -20,11 +19,8 @@ from buzz.tests.factories import (
 	EventTicketTypeFactory,
 	OfflinePaymentMethodFactory,
 	TicketAddOnFactory,
-	UserFactory,
 )
 
-BOOKER = "booking-owner@example.com"
-OUTSIDER = "booking-outsider@example.com"
 VALID_PHONE = "+91-9000090000"
 
 EVENT_DATA_FIELDS = {
@@ -95,44 +91,6 @@ DETAILS_FIELDS = {
 	"cancellation_requested_tickets",
 	"cancelled_tickets",
 }
-
-
-class BookingTestCase(IntegrationTestCase):
-	@classmethod
-	def setUpClass(cls):
-		super().setUpClass()
-		cls.booker = UserFactory.create_once(BOOKER).name
-		cls.outsider = UserFactory.create_once(OUTSIDER).name
-		cls.event = BuzzEventFactory.create()
-		cls.event.reload()
-
-	def setUp(self):
-		frappe.set_user("Administrator")
-		frappe.clear_messages()
-		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event.name)
-		self.set_event({"is_published": 1, "registrations_close_at": None, "allow_guest_booking": 0})
-		self.free_ticket_type = EventTicketTypeFactory.create(event=self.event.name)
-
-	def set_event(self, values):
-		frappe.db.set_value("Buzz Event", self.event.name, values)
-		frappe.clear_document_cache("Buzz Event", self.event.name)
-
-	def enable_phone_otp(self):
-		self.set_event({"allow_guest_booking": 1, "guest_verification_method": "Phone OTP"})
-
-	def booking_request(self, **overrides):
-		values = {
-			"attendees": [
-				{
-					"first_name": "Booker",
-					"email": "booker@example.com",
-					"ticket_type": str(self.free_ticket_type.name),
-				}
-			],
-			"event": str(self.event.name),
-		}
-		values.update(overrides)
-		return BookingRequest(**values)
 
 
 class TestSendGuestBookingOtp(BookingTestCase):

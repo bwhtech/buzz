@@ -2,31 +2,24 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, now_datetime
 
-from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
-from buzz.test_permissions import add_member, create_event
+from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
 
 
 class TestSponsorEnquiryFormClosing(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		owner = UserFactory.create_once("form-owner@example.com").name
+		cls.team = BuzzTeamFactory.create_owned_by(owner).name
+		cls.manager = cls.add_member("form-manager@example.com", cls.team, "Manager")
+		cls.viewer = cls.add_member("form-viewer@example.com", cls.team, "Viewer")
+		cls.frontdesk = cls.add_member("form-frontdesk@example.com", cls.team, "Frontdesk")
+		other_team = BuzzTeamFactory.create_owned_by().name
+		cls.other_team_manager = cls.add_member("form-other-manager@example.com", other_team, "Manager")
+
 	def setUp(self):
-		frappe.set_user("Administrator")
-		suffix = frappe.generate_hash(length=6)
-		self.owner = create_user(f"form-owner-{suffix}@example.com", "Owner")
-		self.team = create_owned_team(f"Form Team {suffix}", self.owner)
-		self.event = create_event(f"Form {suffix}", self.team, is_published=1)
+		self.event = str(BuzzEventFactory.create(team=self.team).name)
 		self.form = self.form_of(self.event)
-		self.suffix = suffix
-
-	def tearDown(self):
-		frappe.set_user("Administrator")
-		frappe.db.rollback()
-
-	def form_of(self, event: str):
-		return frappe.get_doc("Sponsor Enquiry Form", {"event": event})
-
-	def member(self, team_role: str, team: str | None = None) -> str:
-		user = create_user(f"{team_role.lower()}-{frappe.generate_hash(length=6)}@example.com", team_role)
-		add_member(team or self.team, user, team_role)
-		return user
 
 	def test_closing_and_opening_round_trips(self):
 		self.assertFalse(self.form.set_closed(False))
@@ -58,24 +51,29 @@ class TestSponsorEnquiryFormClosing(IntegrationTestCase):
 			form.set_closed(False)
 
 	def test_team_manager_may_toggle(self):
-		frappe.set_user(self.member("Manager"))
-
-		self.assertTrue(self.form_of(self.event).set_closed(True))
+		with self.set_user(self.manager):
+			self.assertTrue(self.form_of(self.event).set_closed(True))
 
 	def test_outsiders_cannot_write(self):
-		other_owner = create_user(f"other-owner-{self.suffix}@example.com", "Other")
-		other_team = create_owned_team(f"Other Team {self.suffix}", other_owner)
 		outsiders = {
-			"viewer": self.member("Viewer"),
-			"frontdesk": self.member("Frontdesk"),
-			"other team manager": self.member("Manager", other_team),
+			"viewer": self.viewer,
+			"frontdesk": self.frontdesk,
+			"other team manager": self.other_team_manager,
 			"guest": "Guest",
 		}
 		for label, user in outsiders.items():
-			with self.subTest(label):
-				frappe.set_user(user)
+			with self.subTest(label), self.set_user(user):
 				form = frappe.get_doc("Sponsor Enquiry Form", self.form.name, check_permission=False)
 				with self.assertRaises(frappe.PermissionError):
 					form.check_permission("write")
 				with self.assertRaises(frappe.PermissionError):
 					form.set_closed(True)
+
+	@classmethod
+	def add_member(cls, email: str, team: str, team_role: str) -> str:
+		user = UserFactory.create_once(email).name
+		BuzzTeamMembershipFactory.create(team=team, user=user, team_role=team_role)
+		return user
+
+	def form_of(self, event: str):
+		return frappe.get_doc("Sponsor Enquiry Form", {"event": event})

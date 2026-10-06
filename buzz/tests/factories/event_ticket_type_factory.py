@@ -15,7 +15,7 @@ class EventTicketTypeFactory(BaseFactory[EventTicketType]):
 
 	@property
 	def default_attributes(self) -> dict[str, Any]:
-		from buzz.tests.factories.buzz_event_factory import BuzzEventFactory
+		from buzz.tests.factories import BuzzEventFactory
 
 		return {
 			"event": self.overrides.get("event") or BuzzEventFactory.create().name,
@@ -26,3 +26,7 @@ class EventTicketTypeFactory(BaseFactory[EventTicketType]):
 	@property
 	def paid(self) -> dict[str, Any]:
 		return {"prices": [{"currency": "INR", "price": 500}]}
+
+	@property
+	def unpublished(self) -> dict[str, Any]:
+		return {"is_published": 0}

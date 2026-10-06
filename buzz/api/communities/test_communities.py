@@ -23,8 +23,7 @@ from buzz.api.communities.exceptions import (
 	RequestNotRejected,
 )
 from buzz.events.doctype.buzz_team.team_page import TeamPage
-from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
-from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, UserFactory
+from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
 
 SENDMAIL = "buzz.api.communities.notifications.frappe.sendmail"
 
@@ -38,7 +37,7 @@ class CommunityTestCase(IntegrationTestCase):
 		cls.viewer = UserFactory.create_once("community-viewer@example.com").name
 		cls.curator = UserFactory.create_once("community-curator@example.com").name
 		cls.team = BuzzTeamFactory.create_owned_by(cls.organiser, team_name="Chapter Builders").name
-		upsert_membership(cls.team, cls.viewer, "Viewer")
+		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.viewer, team_role="Viewer")
 		cls.community = BuzzTeamFactory.create_owned_by(
 			cls.curator, "community", team_name="Builders United"
 		).name
