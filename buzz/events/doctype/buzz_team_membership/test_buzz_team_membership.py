@@ -7,8 +7,12 @@ import frappe
 from frappe.core.api.user_invitation import invite_by_email
 from frappe.tests import IntegrationTestCase
 
-from buzz.tests.factories import BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
-from buzz.tests.factories.core.user_invitation_factory import UserInvitationFactory
+from buzz.tests.factories import (
+	BuzzTeamFactory,
+	BuzzTeamMembershipFactory,
+	UserFactory,
+	UserInvitationFactory,
+)
 
 OWNER = "membership-owner@example.com"
 MEMBER = "membership-member@example.com"
@@ -254,15 +258,3 @@ class TestInvitationAccept(IntegrationTestCase):
 			filters={"team": self.team, "user": user},
 			fields=["team_role", "enabled"],
 		)
-
-
-# Kept for the modules that still import it.
-def add_member(team: str, user: str, team_role: str = "Manager") -> "frappe.Document":
-	return frappe.get_doc(
-		{
-			"doctype": "Buzz Team Membership",
-			"team": team,
-			"user": user,
-			"team_role": team_role,
-		}
-	).insert()

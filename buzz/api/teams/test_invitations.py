@@ -11,8 +11,12 @@ from buzz.api.teams.exceptions import (
 	NoPendingInvite,
 	UnknownTeamRole,
 )
-from buzz.tests.factories import BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
-from buzz.tests.factories.core.user_invitation_factory import UserInvitationFactory
+from buzz.tests.factories import (
+	BuzzTeamFactory,
+	BuzzTeamMembershipFactory,
+	UserFactory,
+	UserInvitationFactory,
+)
 
 
 class InvitationTestCase(IntegrationTestCase):

@@ -6,9 +6,14 @@ from frappe.utils import add_days, today
 from frappe_factory_bot.frappe_factory_bot.base_factory import BaseFactory
 
 from buzz.events.doctype.additional_event_page.additional_event_page import AdditionalEventPage
-from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, EventHostFactory, UserFactory
-from buzz.tests.factories.events.event_talk_factory import EventTalkFactory
-from buzz.tests.factories.events.speaker_profile_factory import SpeakerProfileFactory
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	BuzzTeamFactory,
+	EventHostFactory,
+	EventTalkFactory,
+	SpeakerProfileFactory,
+	UserFactory,
+)
 from buzz.www.event.index import EventPage
 
 

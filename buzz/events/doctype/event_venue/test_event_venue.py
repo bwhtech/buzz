@@ -14,8 +14,6 @@ from buzz.events.doctype.event_venue.map_link import (
 )
 from buzz.patches.set_event_venue_name import execute as set_event_venue_name
 from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, EventVenueFactory
-
-# `clear_map_link_cache` is imported from here by `buzz.api.maps.test_maps` until the cleanup PR.
 from buzz.tests.utils import clear_map_link_cache
 
 

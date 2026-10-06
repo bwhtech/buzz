@@ -4,7 +4,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.events.doctype.buzz_theme.buzz_theme import resolve_theme, theme_css
-from buzz.tests.factories.events.buzz_theme_factory import BuzzThemeFactory
+from buzz.tests.factories import BuzzThemeFactory
 
 
 class TestBuzzTheme(IntegrationTestCase):

@@ -10,13 +10,11 @@ from buzz.api.forms import submit_event_proposal
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	EventBookingFactory,
+	EventBookingRefundFactory,
 	EventTicketTypeFactory,
 	SponsorshipEnquiryFactory,
 	SponsorshipTierFactory,
 	TalkProposalFactory,
-)
-from buzz.tests.factories.ticketing.event_booking_refund_factory import EventBookingRefundFactory
-from buzz.tests.factories.ticketing.ticket_cancellation_request_factory import (
 	TicketCancellationRequestFactory,
 )
 from buzz.tests.telemetry_capture import captured_names, capturing, properties_of

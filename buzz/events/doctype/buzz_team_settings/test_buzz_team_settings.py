@@ -204,11 +204,6 @@ class TestFeatureFlags(IntegrationTestCase):
 		settings.save()
 
 
-# Kept for the modules that still import them.
-def set_team_settings(team: str, **values):
-	frappe.db.set_value("Buzz Team Settings", team, values)
-
-
 def create_webinar_template() -> str:
 	# Zoom is an optional app, so Buzz owns no factory for its doctypes.
 	name = "Settings Webinar Template"

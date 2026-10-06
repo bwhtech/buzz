@@ -238,10 +238,3 @@ class TestTalkProposalSpeakerChanges(TalkProposalTestCase):
 		"""The speaker stays signed in until the test ends."""
 		self.enterContext(self.set_user(self.speaker_user))
 		return frappe.get_doc("Talk Proposal", name)
-
-
-def make_guest_proposal(event: str, speaker_email: str, title: str | None = None) -> str:
-	"""Kept for `test_communications` until the cleanup PR; new tests use the factory."""
-	return TalkProposalTestCase.create_guest_proposal(
-		event, speaker_email, **({"title": title} if title else {})
-	)

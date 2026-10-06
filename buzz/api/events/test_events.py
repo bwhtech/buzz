@@ -4,8 +4,6 @@ from frappe.utils import add_days, today
 from pydantic import ValidationError
 
 from buzz.api.events import get_my_events
-from buzz.events.doctype.buzz_team.test_buzz_team import payload_for
-from buzz.test_permissions import create_ticket
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
@@ -173,20 +171,3 @@ class TestGetMyEvents(IntegrationTestCase):
 
 	def names_in(self, events: list[dict]) -> list[str]:
 		return [event["name"] for event in events]
-
-
-# Kept for modules that still import them. The cleanup PR deletes them.
-def create_event(title: str, team: str, **overrides) -> str:
-	payload = payload_for("Buzz Event", title) | {
-		"start_date": add_days(today(), 30),
-		"end_date": add_days(today(), 31),
-	}
-	event = frappe.get_doc({**payload, "team": team, **overrides}).insert(ignore_permissions=True)
-	return str(event.name)
-
-
-def issue_ticket(event: str, user: str) -> str:
-	"""The booking flow submits every ticket it generates; the fixture stops at insert."""
-	ticket = create_ticket(event, user)
-	frappe.get_doc("Event Ticket", ticket).submit()
-	return ticket

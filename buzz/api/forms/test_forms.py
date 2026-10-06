@@ -17,27 +17,6 @@ TALK_PROPOSAL_EXCLUDE = STANDARD_EXCLUDE_FIELDS | {"event", "submitted_by"}
 LAYOUT_BREAKS = ("Section Break", "Column Break")
 
 
-def ensure_prompt_named_record(doctype, name):
-	# Event Category uses autoname "prompt" -> name set explicitly.
-	if frappe.db.exists(doctype, name):
-		return name
-	doc = frappe.new_doc(doctype)
-	doc.name = name
-	doc.insert(ignore_permissions=True)
-	return doc.name
-
-
-def ensure_event_host(host_name):
-	# Event Host autonames to a hash, so `host_name` is both the label and the lookup key.
-	existing = frappe.db.get_value("Event Host", {"host_name": host_name}, "name")
-	if existing:
-		return existing
-	doc = frappe.new_doc("Event Host")
-	doc.host_name = host_name
-	doc.insert(ignore_permissions=True)
-	return doc.name
-
-
 class TestParseExcludedFields(UnitTestCase):
 	def test_blank_returns_none(self):
 		for blank in (None, "", "   ", ", ,,"):
