@@ -62,10 +62,11 @@ class TestRemoveMember(MemberRoleTestCase):
 
 	def test_refuses_a_user_who_is_not_on_the_team(self):
 		owner = self.user("remove-stranger-owner@example.com")
+		stranger = self.user("remove-stranger@example.com")
 		team = self.team_with(owner)
 
 		with self.set_user(owner), self.assertRaises(NotATeamMember):
-			remove_members(team, [self.user("remove-stranger@example.com")])
+			remove_members(team, [stranger])
 
 	def test_removing_the_same_member_twice_is_refused(self):
 		owner = self.user("remove-twice-owner@example.com")
@@ -184,10 +185,11 @@ class TestChangeRole(MemberRoleTestCase):
 
 	def test_refuses_a_user_who_is_not_on_the_team(self):
 		owner = self.user("role-stranger-owner@example.com")
+		stranger = self.user("role-stranger@example.com")
 		team = self.team_with(owner)
 
 		with self.set_user(owner), self.assertRaises(NotATeamMember):
-			change_roles(team, [self.user("role-stranger@example.com")], "Manager")
+			change_roles(team, [stranger], "Manager")
 
 	def test_refuses_a_member_whose_membership_is_disabled(self):
 		owner = self.user("role-disabled-owner@example.com")

@@ -172,22 +172,26 @@ class TestCreateAdministratorTeam(IntegrationTestCase):
 
 		create_administrator_team()
 
-		team = frappe.db.get_value(
-			"Buzz Team Membership", {"user": "Administrator", "team_role": "Owner"}, "team"
-		)
-		self.assertTrue(team)
+		self.assertTrue(self.administrator_team())
 		self.assertEqual(frappe.db.count("Buzz Team"), 1)
 
 	def test_a_site_with_teams_gets_no_new_team(self):
 		self.clear_teams()
 		BuzzTeamFactory.create_owned_by()
+		teams = frappe.db.count("Buzz Team")
 
 		create_administrator_team()
 
-		self.assertEqual(frappe.db.count("Buzz Team"), 1)
+		self.assertEqual(frappe.db.count("Buzz Team"), teams)
+		self.assertIsNone(self.administrator_team())
 
 	def clear_teams(self):
 		frappe.db.savepoint("before_clearing_teams")
 		self.addCleanup(frappe.db.rollback, save_point="before_clearing_teams")
 		for doctype in ("Buzz Team Membership", "Buzz Team Settings", "Buzz Team"):
 			frappe.db.delete(doctype)
+
+	def administrator_team(self) -> str | None:
+		return frappe.db.get_value(
+			"Buzz Team Membership", {"user": "Administrator", "team_role": "Owner"}, "team"
+		)
