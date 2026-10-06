@@ -12,7 +12,7 @@ LINK_BOOKER = "factory-booker@example.com"
 
 
 class EventBookingFactory(BaseFactory[EventBooking]):
-	"""A draft booking: one attendee on a new free ticket type. `insert` sets `owner`, so set it after."""
+	"""`insert` sets `owner` to the session user, so set another owner after `create()`."""
 
 	doctype = "Event Booking"
 
@@ -24,10 +24,10 @@ class EventBookingFactory(BaseFactory[EventBooking]):
 		return {
 			"event": event,
 			"user": self.overrides.get("user") or UserFactory.create_once(LINK_BOOKER).name,
-			"attendees": self.overrides.get("attendees") or [self.attendee(event)],
+			"attendees": self.overrides.get("attendees") or [self.attendee_row(event)],
 		}
 
-	def attendee(self, event: str) -> dict[str, Any]:
+	def attendee_row(self, event: str) -> dict[str, Any]:
 		from buzz.tests.factories import EventTicketTypeFactory
 
 		return {
