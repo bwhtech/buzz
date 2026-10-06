@@ -17,9 +17,6 @@ class BuzzThemeFactory(BaseFactory[BuzzTheme]):
 	def default_attributes(self) -> dict[str, Any]:
 		return {
 			"theme_name": f"Theme {frappe.generate_hash(length=8)}",
-			"color_scheme": frappe.db.get_value("Buzz Theme", STANDARD_THEME, "color_scheme"),
-			"enabled": 1,
-			"is_standard": 0,
 			"tokens": standard_tokens(),
 		}
 

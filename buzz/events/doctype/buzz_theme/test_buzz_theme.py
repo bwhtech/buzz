@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.model.document import Document
 from frappe.tests import IntegrationTestCase
 
 from buzz.events.doctype.buzz_theme.buzz_theme import resolve_theme, theme_css
@@ -75,13 +74,6 @@ class TestBuzzTheme(IntegrationTestCase):
 		theme = BuzzThemeFactory.create(enabled=0)
 		self.assertEqual(resolve_theme(theme.name, "Paper"), "Paper")
 		self.assertEqual(resolve_theme(None, "No Such Theme"), "Classic")
-
-
-def copy_of_classic(theme_name: str, **overrides) -> Document:
-	"""Kept until the cleanup PR. New tests use `BuzzThemeFactory`."""
-	theme = frappe.copy_doc(frappe.get_doc("Buzz Theme", "Classic"))
-	theme.update({"theme_name": theme_name, "is_standard": 0, **overrides})
-	return theme
 
 
 def token_row(theme, token: str):

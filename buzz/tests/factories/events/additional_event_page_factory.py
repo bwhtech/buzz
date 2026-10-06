@@ -20,7 +20,3 @@ class AdditionalEventPageFactory(BaseFactory[AdditionalEventPage]):
 			"title": _fake.unique.catch_phrase(),
 			"content": f"<p>{_fake.sentence()}</p>",
 		}
-
-	@property
-	def published(self) -> dict[str, Any]:
-		return {"is_published": 1}
