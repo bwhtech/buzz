@@ -1,15 +1,12 @@
 from typing import Any
 
-from faker import Faker
 from frappe_factory_bot.frappe_factory_bot.base_factory import BaseFactory
 
 from buzz.events.doctype.speaker_profile.speaker_profile import SpeakerProfile
 
-_fake = Faker()
-
 
 class SpeakerProfileFactory(BaseFactory[SpeakerProfile]):
-	"""`user` is unique, so pass one from `UserFactory.create_once` to dodge the User throttle."""
+	"""`display_name` is fetched from the user's full name on save, so name the user instead."""
 
 	doctype = "Speaker Profile"
 
@@ -17,7 +14,4 @@ class SpeakerProfileFactory(BaseFactory[SpeakerProfile]):
 	def default_attributes(self) -> dict[str, Any]:
 		from buzz.tests.factories import UserFactory
 
-		return {
-			"user": self.overrides.get("user") or UserFactory.create().name,
-			"display_name": _fake.name(),
-		}
+		return {"user": self.overrides.get("user") or UserFactory.create().name}

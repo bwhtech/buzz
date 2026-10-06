@@ -44,7 +44,7 @@ class TestEventPage(IntegrationTestCase):
 		self.assertEqual(context["event_date"], expected["event_date"])
 
 	def test_schedule_time_before_ten(self):
-		event = self.create_event()
+		event = self.create_event(start_time="08:00:00")
 		schedule = {
 			"type": "Break",
 			"description": "Coffee",
@@ -58,8 +58,8 @@ class TestEventPage(IntegrationTestCase):
 
 	def test_schedule_talk_shows_title_and_speakers(self):
 		event = self.create_event()
-		speaker_user = UserFactory.create_once("event-page-speaker@example.com").name
-		speaker = SpeakerProfileFactory.create(user=speaker_user, display_name="Asha Rao").name
+		speaker_user = UserFactory.create(first_name="Asha", last_name="Rao").name
+		speaker = SpeakerProfileFactory.create(user=speaker_user).name
 		talk = EventTalkFactory.create(
 			event=event.name, title="Scaling apps", speakers=[{"speaker": speaker}]
 		)

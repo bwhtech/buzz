@@ -30,6 +30,7 @@ class TestCreateEvent(IntegrationTestCase):
 			EventCategoryFactory.create(name=DEFAULT_CATEGORY)
 		cls.owner = UserFactory.create_once("create-event-owner@example.com").name
 		cls.viewer = UserFactory.create_once("create-event-viewer@example.com").name
+		cls.non_member = UserFactory.create_once("create-event-stranger@example.com").name
 		cls.team = BuzzTeamFactory.create_owned_by(cls.owner).name
 		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.viewer, team_role="Viewer")
 
@@ -63,9 +64,7 @@ class TestCreateEvent(IntegrationTestCase):
 			create_event(self.new_event())
 
 	def test_a_non_member_cannot_create_events(self):
-		stranger = UserFactory.create_once("create-event-stranger@example.com").name
-
-		with self.set_user(stranger), self.assertRaises(CannotCreateEvents):
+		with self.set_user(self.non_member), self.assertRaises(CannotCreateEvents):
 			create_event(self.new_event())
 
 	def test_zoom_is_refused_when_the_app_is_missing(self):
