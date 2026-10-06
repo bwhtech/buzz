@@ -9,7 +9,7 @@ _fake = Faker()
 
 
 class TalkProposalFactory(BaseFactory[TalkProposal]):
-	"""One speaker. `validate` sets `submitted_by` to the session user when it is empty."""
+	"""`validate` fills an empty `submitted_by` with the session user."""
 
 	doctype = "Talk Proposal"
 
@@ -25,5 +25,5 @@ class TalkProposalFactory(BaseFactory[TalkProposal]):
 
 	@property
 	def guest_submitted(self) -> dict[str, Any]:
-		"""The public form's `submitted_by`. `insert` still sets `owner` to the session user."""
+		"""`insert` still sets `owner` to the session user."""
 		return {"submitted_by": "Guest"}

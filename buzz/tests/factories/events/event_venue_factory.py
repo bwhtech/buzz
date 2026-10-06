@@ -9,8 +9,6 @@ _fake = Faker()
 
 
 class EventVenueFactory(BaseFactory[EventVenue]):
-	"""A venue with a plain address and no map."""
-
 	doctype = "Event Venue"
 
 	@property
