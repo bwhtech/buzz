@@ -113,7 +113,9 @@ class TestTicketingFactoryTraits(IntegrationTestCase):
 	def test_booking_attendee_uses_a_ticket_type_of_the_event(self):
 		booking = EventBookingFactory.create()
 
-		ticket_type_event = frappe.db.get_value("Event Ticket Type", booking.attendees[0].ticket_type, "event")
+		ticket_type_event = frappe.db.get_value(
+			"Event Ticket Type", booking.attendees[0].ticket_type, "event"
+		)
 		self.assertEqual(ticket_type_event, booking.event)
 
 	def test_membership_takes_a_role(self):
