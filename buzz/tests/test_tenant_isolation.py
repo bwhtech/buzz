@@ -38,7 +38,7 @@ class TenantTestCase(IntegrationTestCase):
 	def setUp(self):
 		self.enterContext(self.set_user("Administrator"))
 
-	def listed(self, user: str, doctype: str, pluck: str = "name") -> list:
+	def list_as(self, user: str, doctype: str, pluck: str = "name") -> list:
 		with self.set_user(user):
 			return frappe.get_list(doctype, pluck=pluck)
 
@@ -47,21 +47,21 @@ class TestCrossTeamIsolation(TenantTestCase):
 	def test_team_direct_lists_exclude_other_teams(self):
 		for doctype in linked_to("Buzz Team") - SELF_SCOPED_DOCTYPES:
 			with self.subTest(doctype=doctype):
-				self.assertNotIn(self.team_b, self.listed(self.alice, doctype, pluck="team"))
+				self.assertNotIn(self.team_b, self.list_as(self.alice, doctype, pluck="team"))
 
 	def test_event_derived_lists_exclude_other_teams(self):
 		ticket_type = EventTicketTypeFactory.create(event=self.event_b)
 
-		self.assertNotIn(ticket_type.name, self.listed(self.alice, "Event Ticket Type"))
+		self.assertNotIn(ticket_type.name, self.list_as(self.alice, "Event Ticket Type"))
 
 	def test_team_lists_exclude_other_teams(self):
-		teams = self.listed(self.alice, "Buzz Team")
+		teams = self.list_as(self.alice, "Buzz Team")
 
 		self.assertIn(self.team_a, teams)
 		self.assertNotIn(self.team_b, teams)
 
 	def test_membership_lists_exclude_other_teams(self):
-		self.assertNotIn(self.team_b, self.listed(self.alice, "Buzz Team Membership", pluck="team"))
+		self.assertNotIn(self.team_b, self.list_as(self.alice, "Buzz Team Membership", pluck="team"))
 
 	def test_every_tenant_doctype_is_wired_to_both_hooks(self):
 		# Catches a new team-owned doctype that nobody registered in hooks.py.
@@ -74,8 +74,7 @@ class TestCrossTeamIsolation(TenantTestCase):
 				self.assertTrue(has_permission.get(doctype))
 
 	def test_every_query_condition_is_valid_sql(self):
-		# Whatever these hooks return is stringified into the WHERE clause, so a
-		# criterion rendered in pypika's default dialect reaches the database as-is.
+		# Hook output is stringified into the WHERE clause, so pypika's ANSI quoting would reach MariaDB.
 		hooks = frappe.get_hooks("permission_query_conditions", app_name="buzz")
 
 		for doctype, methods in hooks.items():
@@ -103,7 +102,7 @@ class TestCrossTeamIsolation(TenantTestCase):
 		frappe.db.set_value("Buzz Event", orphan, "team", None, update_modified=False)
 
 		self.assertIn(orphan, frappe.get_list("Buzz Event", pluck="name"))
-		self.assertNotIn(orphan, self.listed(self.alice, "Buzz Event"))
+		self.assertNotIn(orphan, self.list_as(self.alice, "Buzz Event"))
 		# has_permission tolerates the missing team so a half-migrated site does not hard-break.
 		with self.set_user(self.alice):
 			frappe.get_doc("Buzz Event", orphan).check_permission("read")
@@ -113,7 +112,7 @@ class TestPublicVisibility(TenantTestCase):
 	def test_published_events_stay_visible_to_non_members(self):
 		published = BuzzEventFactory.create(team=self.team_b).name
 
-		events = self.listed(self.outsider, "Buzz Event")
+		events = self.list_as(self.outsider, "Buzz Event")
 
 		self.assertIn(published, events)
 		self.assertNotIn(self.event_b, events)
@@ -123,7 +122,7 @@ class TestPublicVisibility(TenantTestCase):
 		visible = SponsorshipTierFactory.create(event=published).name
 		hidden = SponsorshipTierFactory.create(event=self.event_b).name
 
-		tiers = self.listed(self.outsider, "Sponsorship Tier")
+		tiers = self.list_as(self.outsider, "Sponsorship Tier")
 
 		self.assertIn(visible, tiers)
 		self.assertNotIn(hidden, tiers)
@@ -138,25 +137,25 @@ class TestPublicVisibility(TenantTestCase):
 
 class TestTeamLinkQuery(TenantTestCase):
 	def test_link_search_offers_only_the_users_teams(self):
-		teams = self.searched(self.alice)
+		teams = self.search_teams_as(self.alice)
 
 		self.assertIn(self.team_a, teams)
 		self.assertNotIn(self.team_b, teams)
 
 	def test_link_search_matches_the_team_name(self):
-		self.assertEqual(self.searched(self.alice, "Perm Team A"), [self.team_a])
-		self.assertEqual(self.searched(self.alice, "Perm Team B"), [])
+		self.assertEqual(self.search_teams_as(self.alice, "Perm Team A"), [self.team_a])
+		self.assertEqual(self.search_teams_as(self.alice, "Perm Team B"), [])
 
 	def test_system_manager_is_narrowed_here_despite_reading_every_team(self):
 		# Administrator is on neither team, but the permission hooks let it list both.
 		self.assertIn(self.team_b, frappe.get_list("Buzz Team", pluck="name"))
 
-		self.assertNotIn(self.team_b, self.searched("Administrator"))
+		self.assertNotIn(self.team_b, self.search_teams_as("Administrator"))
 
 	def test_non_member_gets_nothing(self):
-		self.assertEqual(self.searched(self.outsider), [])
+		self.assertEqual(self.search_teams_as(self.outsider), [])
 
-	def searched(self, user: str, txt: str = "") -> list[str]:
+	def search_teams_as(self, user: str, txt: str = "") -> list[str]:
 		with self.set_user(user):
 			results = search_link("Buzz Team", txt, reference_doctype="Buzz Event")
 		return [result["value"] for result in results]
@@ -166,13 +165,13 @@ class TestTalkProposalComposition(TenantTestCase):
 	def test_speaker_sees_own_proposal_without_a_membership(self):
 		mine = self.create_proposal(self.event_b)
 
-		self.assertIn(mine, self.listed(self.outsider, "Talk Proposal"))
+		self.assertIn(mine, self.list_as(self.outsider, "Talk Proposal"))
 
 	def test_team_member_sees_their_teams_proposals_only(self):
 		ours = self.create_proposal(self.event_a)
 		theirs = self.create_proposal(self.event_b)
 
-		proposals = self.listed(self.alice, "Talk Proposal")
+		proposals = self.list_as(self.alice, "Talk Proposal")
 
 		self.assertIn(ours, proposals)
 		self.assertNotIn(theirs, proposals)
@@ -211,5 +210,5 @@ def linked_to(doctype: str) -> set[str]:
 
 
 def tenant_doctypes() -> set[str]:
-	"""Every doctype a team owns, derived from the schema rather than a second hardcoded list."""
+	"""Derived from the schema, so a new team-owned doctype cannot be missed."""
 	return (linked_to("Buzz Team") | linked_to("Buzz Event")) - SELF_SCOPED_DOCTYPES

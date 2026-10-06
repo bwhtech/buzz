@@ -25,7 +25,6 @@ TEAM_DIRECT_FACTORIES = {
 
 
 class TestBuzzTeam(IntegrationTestCase):
-	# Rollback is per class, not per test — every test needs its own team name.
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -114,7 +113,6 @@ class TestBuzzTeam(IntegrationTestCase):
 
 
 class TestSetTeamFromSoleMembership(IntegrationTestCase):
-	# Rollback is per class, not per test — every test owns its user.
 	def test_stamps_the_users_only_team(self):
 		user = UserFactory.create_once("one-team@example.com").name
 		team = BuzzTeamFactory.create_owned_by(user).name
@@ -177,7 +175,7 @@ class TestSetTeamFromSoleMembership(IntegrationTestCase):
 		return doc
 
 
-# Kept for the modules that still import them. Use the factories instead.
+# Kept for the modules that still import them.
 def create_user(email: str, first_name: str) -> str:
 	if not frappe.db.exists("User", email):
 		frappe.get_doc(

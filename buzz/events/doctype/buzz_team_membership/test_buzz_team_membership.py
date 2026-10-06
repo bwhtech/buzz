@@ -16,7 +16,6 @@ INVITER = "invite-owner@example.com"
 
 
 class TestBuzzTeamMembership(IntegrationTestCase):
-	# Rollback is per class, not per test — every test needs its own team and user.
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -136,7 +135,7 @@ class TestBuzzTeamMembership(IntegrationTestCase):
 
 class TestInvitationAccept(IntegrationTestCase):
 	def setUp(self):
-		# Every invitation mails itself out on insert, which needs an outgoing email account.
+		# Mailing needs an outgoing email account.
 		self.enterContext(patch("frappe.sendmail"))
 		self.inviter = UserFactory.create_once(INVITER).name
 		self.team = BuzzTeamFactory.create_owned_by(self.inviter).name
@@ -257,7 +256,7 @@ class TestInvitationAccept(IntegrationTestCase):
 		)
 
 
-# Kept for the modules that still import it. Use BuzzTeamMembershipFactory instead.
+# Kept for the modules that still import it.
 def add_member(team: str, user: str, team_role: str = "Manager") -> "frappe.Document":
 	return frappe.get_doc(
 		{

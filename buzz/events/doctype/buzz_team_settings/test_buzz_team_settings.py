@@ -205,9 +205,8 @@ class TestFeatureFlags(IntegrationTestCase):
 		settings.save()
 
 
-# Kept for the modules that still import them. Use BuzzTeamFactory.set_settings instead.
+# Kept for the modules that still import them.
 def set_team_settings(team: str, **values):
-	"""Write a team's settings the way a test reads them back."""
 	frappe.db.set_value("Buzz Team Settings", team, values)
 
 

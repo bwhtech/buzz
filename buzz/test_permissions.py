@@ -29,7 +29,6 @@ class RoleTestCase(IntegrationTestCase):
 
 	@classmethod
 	def add_members(cls, team: str, *members: tuple[str, str]) -> list[str]:
-		"""Each member is `(email, team_role)`; returns the membership names."""
 		return [
 			BuzzTeamMembershipFactory.create(
 				team=team, user=UserFactory.create_once(email).name, team_role=team_role
@@ -40,11 +39,11 @@ class RoleTestCase(IntegrationTestCase):
 	def setUp(self):
 		self.enterContext(self.set_user("Administrator"))
 
-	def can(self, user: str, ptype: str, doctype: str, doc: str) -> bool:
+	def has_permission_as(self, user: str, ptype: str, doctype: str, doc: str) -> bool:
 		with self.set_user(user):
 			return frappe.has_permission(doctype, ptype, doc=doc)
 
-	def listed(self, user: str, doctype: str, pluck: str = "name") -> list:
+	def list_as(self, user: str, doctype: str, pluck: str = "name") -> list:
 		with self.set_user(user):
 			return frappe.get_list(doctype, pluck=pluck)
 
@@ -61,21 +60,21 @@ class TestRoleMatrix(RoleTestCase):
 		cls.add_members(cls.team_a, (cls.viewer, "Viewer"), (cls.manager, "Manager"), (cls.admin, "Admin"))
 
 	def test_viewer_reads_but_cannot_write(self):
-		self.assertTrue(self.can_on_event_a(self.viewer, "read"))
-		self.assertFalse(self.can_on_event_a(self.viewer, "write"))
+		self.assertTrue(self.has_event_permission(self.viewer, "read"))
+		self.assertFalse(self.has_event_permission(self.viewer, "write"))
 
 	def test_manager_writes_but_cannot_delete(self):
-		self.assertTrue(self.can_on_event_a(self.manager, "write"))
-		self.assertFalse(self.can_on_event_a(self.manager, "delete"))
+		self.assertTrue(self.has_event_permission(self.manager, "write"))
+		self.assertFalse(self.has_event_permission(self.manager, "delete"))
 
 	def test_admin_deletes(self):
-		self.assertTrue(self.can_on_event_a(self.admin, "delete"))
+		self.assertTrue(self.has_event_permission(self.admin, "delete"))
 
 	def test_manager_cannot_write_another_teams_event(self):
-		self.assertFalse(self.can(self.manager, "write", "Buzz Event", self.event_b))
+		self.assertFalse(self.has_permission_as(self.manager, "write", "Buzz Event", self.event_b))
 
-	def can_on_event_a(self, user: str, ptype: str) -> bool:
-		return self.can(user, ptype, "Buzz Event", self.event_a)
+	def has_event_permission(self, user: str, ptype: str) -> bool:
+		return self.has_permission_as(user, ptype, "Buzz Event", self.event_a)
 
 
 class TestTeamSettingsPermissions(RoleTestCase):
@@ -86,20 +85,20 @@ class TestTeamSettingsPermissions(RoleTestCase):
 		cls.add_members(cls.team_a, (cls.manager, "Manager"), (cls.admin, "Admin"))
 
 	def test_manager_reads_but_cannot_write(self):
-		self.assertTrue(self.can_on_settings(self.manager, "read"))
-		self.assertFalse(self.can_on_settings(self.manager, "write"))
+		self.assertTrue(self.has_settings_permission(self.manager, "read"))
+		self.assertFalse(self.has_settings_permission(self.manager, "write"))
 
 	def test_admin_writes(self):
-		self.assertTrue(self.can_on_settings(self.admin, "write"))
+		self.assertTrue(self.has_settings_permission(self.admin, "write"))
 
 	def test_non_member_is_refused(self):
-		self.assertFalse(self.can_on_settings(self.outsider, "read"))
+		self.assertFalse(self.has_settings_permission(self.outsider, "read"))
 
 	def test_another_teams_settings_are_not_listed(self):
-		self.assertNotIn(self.team_b, self.listed(self.alice, "Buzz Team Settings", pluck="team"))
+		self.assertNotIn(self.team_b, self.list_as(self.alice, "Buzz Team Settings", pluck="team"))
 
-	def can_on_settings(self, user: str, ptype: str) -> bool:
-		return self.can(user, ptype, "Buzz Team Settings", self.team_a)
+	def has_settings_permission(self, user: str, ptype: str) -> bool:
+		return self.has_permission_as(user, ptype, "Buzz Team Settings", self.team_a)
 
 
 class TestMultiTeamMembership(RoleTestCase):
@@ -112,30 +111,30 @@ class TestMultiTeamMembership(RoleTestCase):
 		[cls.membership_b] = cls.add_members(cls.team_b, (cls.both_teams_user, "Manager"))
 
 	def test_single_team_member_sees_their_team_and_only_their_team(self):
-		events = self.listed(self.single_team_user, "Buzz Event")
+		events = self.list_as(self.single_team_user, "Buzz Event")
 
 		self.assertIn(self.event_a, events)
 		self.assertNotIn(self.event_b, events)
 
 	def test_single_team_member_writes_their_team_only(self):
-		self.assertTrue(self.can(self.single_team_user, "write", "Buzz Event", self.event_a))
-		self.assertFalse(self.can(self.single_team_user, "write", "Buzz Event", self.event_b))
+		self.assertTrue(self.has_permission_as(self.single_team_user, "write", "Buzz Event", self.event_a))
+		self.assertFalse(self.has_permission_as(self.single_team_user, "write", "Buzz Event", self.event_b))
 
 	def test_member_of_both_teams_sees_both(self):
-		events = self.listed(self.both_teams_user, "Buzz Event")
+		events = self.list_as(self.both_teams_user, "Buzz Event")
 
 		self.assertIn(self.event_a, events)
 		self.assertIn(self.event_b, events)
 
 	def test_member_of_both_teams_writes_both(self):
-		self.assertTrue(self.can(self.both_teams_user, "write", "Buzz Event", self.event_a))
-		self.assertTrue(self.can(self.both_teams_user, "write", "Buzz Event", self.event_b))
+		self.assertTrue(self.has_permission_as(self.both_teams_user, "write", "Buzz Event", self.event_a))
+		self.assertTrue(self.has_permission_as(self.both_teams_user, "write", "Buzz Event", self.event_b))
 
 	def test_member_of_both_teams_sees_derived_rows_from_both(self):
 		ours = EventTicketFactory.create(event=self.event_a).name
 		theirs = EventTicketFactory.create(event=self.event_b).name
 
-		tickets = self.listed(self.both_teams_user, "Event Ticket")
+		tickets = self.list_as(self.both_teams_user, "Event Ticket")
 
 		self.assertIn(ours, tickets)
 		self.assertIn(theirs, tickets)
@@ -146,13 +145,13 @@ class TestMultiTeamMembership(RoleTestCase):
 		membership.save()
 		self.addCleanup(frappe.db.set_value, "Buzz Team Membership", self.membership_b, "enabled", 1)
 
-		events = self.listed(self.both_teams_user, "Buzz Event")
+		events = self.list_as(self.both_teams_user, "Buzz Event")
 
 		self.assertIn(self.event_a, events)
 		self.assertNotIn(self.event_b, events)
 
 
-# Kept for the modules that still import them. Use the factories instead.
+# Kept for the modules that still import them.
 def add_member(team: str, user: str, team_role: str) -> str:
 	return (
 		frappe.get_doc(

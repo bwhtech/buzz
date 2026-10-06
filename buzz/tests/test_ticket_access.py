@@ -28,11 +28,11 @@ class TicketAccessTestCase(IntegrationTestCase):
 	def setUp(self):
 		self.enterContext(self.set_user("Administrator"))
 
-	def listed(self, user: str, doctype: str = "Event Ticket") -> list[str]:
+	def list_as(self, user: str, doctype: str = "Event Ticket") -> list[str]:
 		with self.set_user(user):
 			return frappe.get_list(doctype, pluck="name")
 
-	def can(self, user: str, ptype: str, doctype: str, doc: str) -> bool:
+	def has_permission_as(self, user: str, ptype: str, doctype: str, doc: str) -> bool:
 		with self.set_user(user):
 			return frappe.has_permission(doctype, ptype, doc=doc)
 
@@ -55,7 +55,7 @@ class TestNonMemberCarveOuts(TicketAccessTestCase):
 		mine = self.create_ticket(self.outsider)
 		theirs = self.create_ticket(self.bob)
 
-		tickets = self.listed(self.outsider)
+		tickets = self.list_as(self.outsider)
 
 		self.assertIn(mine, tickets)
 		self.assertNotIn(theirs, tickets)
@@ -63,24 +63,24 @@ class TestNonMemberCarveOuts(TicketAccessTestCase):
 	def test_attendee_lists_a_ticket_someone_else_created(self):
 		mine = self.create_ticket(self.bob, attendee_email=self.outsider)
 
-		self.assertIn(mine, self.listed(self.outsider))
+		self.assertIn(mine, self.list_as(self.outsider))
 
 	def test_booker_lists_a_ticket_held_by_someone_else(self):
 		booking = self.create_booking(self.outsider)
 		theirs = self.create_ticket(self.bob, attendee_email="perm-guest@example.com", booking=booking)
 
-		self.assertIn(theirs, self.listed(self.outsider))
+		self.assertIn(theirs, self.list_as(self.outsider))
 
 	def test_an_unrelated_user_sees_neither_the_ticket_nor_the_booking(self):
 		booking = self.create_booking(self.bob)
 		by_attendee = self.create_ticket(self.bob, attendee_email=self.alice)
 		by_booking = self.create_ticket(self.bob, attendee_email=self.alice, booking=booking)
 
-		tickets = self.listed(self.outsider)
+		tickets = self.list_as(self.outsider)
 
 		self.assertNotIn(by_attendee, tickets)
 		self.assertNotIn(by_booking, tickets)
-		self.assertNotIn(booking, self.listed(self.outsider, "Event Booking"))
+		self.assertNotIn(booking, self.list_as(self.outsider, "Event Booking"))
 
 	def test_an_unrelated_user_cannot_open_someone_elses_ticket(self):
 		theirs = self.create_ticket(self.bob, attendee_email=self.alice)
@@ -93,42 +93,40 @@ class TestNonMemberCarveOuts(TicketAccessTestCase):
 		theirs = self.create_ticket(self.bob, event=orphan, attendee_email=self.alice)
 		frappe.db.set_value("Buzz Event", orphan, "team", None, update_modified=False)
 
-		self.assertNotIn(theirs, self.listed(self.outsider))
+		self.assertNotIn(theirs, self.list_as(self.outsider))
 		with self.set_user(self.outsider), self.assertRaises(frappe.PermissionError):
 			frappe.get_doc("Event Ticket", theirs).check_permission("read")
 
 	def test_attendee_reads_but_cannot_write_their_ticket(self):
 		mine = self.create_ticket(self.bob, attendee_email=self.outsider)
 
-		self.assertTrue(self.can(self.outsider, "read", "Event Ticket", mine))
-		self.assertFalse(self.can(self.outsider, "write", "Event Ticket", mine))
+		self.assertTrue(self.has_permission_as(self.outsider, "read", "Event Ticket", mine))
+		self.assertFalse(self.has_permission_as(self.outsider, "write", "Event Ticket", mine))
 
 	def test_buyer_lists_a_guest_checkout_booking(self):
 		# Guest checkout runs as Administrator, so `owner` never names the buyer.
 		booking = self.create_booking(self.outsider, owner="Administrator")
 
-		self.assertIn(booking, self.listed(self.outsider, "Event Booking"))
+		self.assertIn(booking, self.list_as(self.outsider, "Event Booking"))
 
 	def test_buyer_reads_their_own_booking_but_writes_nothing(self):
-		# Bookings are only ever written by the service flow and by organisers. The
-		# portal reads them; transfers and cancellations go through their own doctypes.
+		# Only the service flow and organisers write bookings; the portal only reads them.
 		mine = self.create_booking(self.outsider, owner="Administrator")
 		theirs = self.create_booking(self.bob)
 
-		self.assertTrue(self.can(self.outsider, "read", "Event Booking", mine))
-		self.assertFalse(self.can(self.outsider, "write", "Event Booking", mine))
-		self.assertFalse(self.can(self.outsider, "write", "Event Booking", theirs))
+		self.assertTrue(self.has_permission_as(self.outsider, "read", "Event Booking", mine))
+		self.assertFalse(self.has_permission_as(self.outsider, "write", "Event Booking", mine))
+		self.assertFalse(self.has_permission_as(self.outsider, "write", "Event Booking", theirs))
 
 	def test_nobody_deletes_a_booking_from_the_portal(self):
-		# Bookings are cancelled, never deleted — the role carries no delete at all, so this
-		# holds for the buyer's own row as much as for a stranger's.
+		# Bookings are cancelled, never deleted, so even the buyer has no delete.
 		mine = self.create_booking(self.outsider)
 		guest_checkout = self.create_booking(self.outsider, owner="Guest")
 		theirs = self.create_booking(self.bob)
 
 		for booking in (mine, guest_checkout, theirs):
 			with self.subTest(booking=booking):
-				self.assertFalse(self.can(self.outsider, "delete", "Event Booking", booking))
+				self.assertFalse(self.has_permission_as(self.outsider, "delete", "Event Booking", booking))
 				with self.set_user(self.outsider), self.assertRaises(frappe.PermissionError):
 					frappe.delete_doc("Event Booking", booking)
 
@@ -145,40 +143,40 @@ class TicketHolderTestCase(TicketAccessTestCase):
 		cls.viewer = UserFactory.create_once("perm-viewer@example.com").name
 		BuzzTeamMembershipFactory.create(team=cls.team_b, user=cls.viewer, team_role="Viewer")
 
-	def held_ticket(self, owner: str | None = None) -> str:
+	def create_held_ticket(self, owner: str | None = None) -> str:
 		return self.create_ticket(owner or self.booker, "submitted", attendee_email=self.holder)
 
 
 class TestTicketHolderVisibility(TicketHolderTestCase):
 	def test_holder_sees_a_guest_booked_ticket(self):
-		ticket = self.held_ticket(owner="Guest")
+		ticket = self.create_held_ticket(owner="Guest")
 
-		self.assertIn(ticket, self.listed(self.holder))
+		self.assertIn(ticket, self.list_as(self.holder))
 
 	def test_booker_still_sees_the_tickets_they_created(self):
-		ticket = self.held_ticket()
+		ticket = self.create_held_ticket()
 
-		self.assertIn(ticket, self.listed(self.booker))
+		self.assertIn(ticket, self.list_as(self.booker))
 
 	def test_team_member_reads_every_ticket_for_their_event(self):
-		ticket = self.held_ticket()
+		ticket = self.create_held_ticket()
 
-		self.assertTrue(self.can(self.bob, "read", "Event Ticket", ticket))
+		self.assertTrue(self.has_permission_as(self.bob, "read", "Event Ticket", ticket))
 
 	def test_viewer_sees_their_teams_tickets(self):
-		ticket = self.held_ticket()
+		ticket = self.create_held_ticket()
 
-		self.assertIn(ticket, self.listed(self.viewer))
+		self.assertIn(ticket, self.list_as(self.viewer))
 
 
 class TestTicketImmutability(TicketHolderTestCase):
 	"""Reading a ticket you hold is a carve-out. Changing one is not."""
 
 	def test_holder_cannot_cancel_or_delete_their_ticket(self):
-		ticket = self.held_ticket()
+		ticket = self.create_held_ticket()
 
-		self.assertFalse(self.can(self.holder, "cancel", "Event Ticket", ticket))
-		self.assertFalse(self.can(self.holder, "delete", "Event Ticket", ticket))
+		self.assertFalse(self.has_permission_as(self.holder, "cancel", "Event Ticket", ticket))
+		self.assertFalse(self.has_permission_as(self.holder, "delete", "Event Ticket", ticket))
 
 	def test_holder_saving_their_ticket_is_refused(self):
 		ticket = self.create_ticket(self.booker, attendee_email=self.holder)
@@ -191,12 +189,12 @@ class TestTicketImmutability(TicketHolderTestCase):
 				doc.save()
 
 	def test_stranger_cannot_write_another_persons_ticket(self):
-		ticket = self.held_ticket()
+		ticket = self.create_held_ticket()
 
-		self.assertFalse(self.can(self.stranger, "write", "Event Ticket", ticket))
+		self.assertFalse(self.has_permission_as(self.stranger, "write", "Event Ticket", ticket))
 
 	def test_submitted_ticket_is_frozen_even_for_administrator(self):
-		doc = frappe.get_doc("Event Ticket", self.held_ticket())
+		doc = frappe.get_doc("Event Ticket", self.create_held_ticket())
 		doc.event = self.event_a
 
 		with self.assertRaises(frappe.UpdateAfterSubmitError):

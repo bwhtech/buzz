@@ -19,10 +19,9 @@ class TestCreateDefaultTeams(IntegrationTestCase):
 		cls.team = BuzzTeamFactory.create_owned_by().name
 
 	def setUp(self):
-		# The patch reads the whole site, so a manager belonging to the database — or to the
-		# previous test — would decide who owns this test's team.
+		# The patch reads every manager on the site, so earlier ones would pick the owner.
 		for user in get_enabled_event_managers():
-			self.retire(user)
+			self.remove_event_manager_role(user)
 
 	def test_every_manager_lands_in_one_shared_team(self):
 		owner = self.create_manager("shared-owner@example.com")
@@ -83,7 +82,7 @@ class TestCreateDefaultTeams(IntegrationTestCase):
 
 	def test_administrator_neither_owns_nor_joins_the_team(self):
 		frappe.get_doc("User", "Administrator").add_roles("Event Manager")
-		self.addCleanup(self.retire, "Administrator")
+		self.addCleanup(self.remove_event_manager_role, "Administrator")
 		manager = self.create_manager("admin-excluded@example.com")
 		colleague = self.create_manager("admin-excluded-peer@example.com")
 		self.create_event_owned_by("Administrator")
@@ -123,7 +122,7 @@ class TestCreateDefaultTeams(IntegrationTestCase):
 		return user.name
 
 	@staticmethod
-	def retire(user: str) -> None:
+	def remove_event_manager_role(user: str) -> None:
 		frappe.get_doc("User", user).remove_roles("Event Manager")
 
 	def create_event_owned_by(self, user: str) -> str:
