@@ -5,16 +5,17 @@ from unittest.mock import Mock, patch
 
 import frappe
 import requests
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, UnitTestCase
 
-from buzz.api.events.test_events import create_event
-from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.events.doctype.event_venue.map_link import (
 	SHORT_LINK_DIGITS,
 	coordinates_of,
 	read_map_link,
 )
 from buzz.patches.set_event_venue_name import execute as set_event_venue_name
+from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, EventVenueFactory
+
+# `clear_map_link_cache` is imported from here by `buzz.api.maps.test_maps` until the cleanup PR.
 from buzz.tests.utils import clear_map_link_cache
 
 
@@ -22,39 +23,31 @@ class IntegrationTestEventVenue(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		cls.team = create_owned_team("Venue Naming Team", create_user("venue-naming@example.com", "Owner"))
-
-	def create_venue(self, venue_name: str):
-		return frappe.get_doc(
-			{
-				"doctype": "Event Venue",
-				"venue_name": venue_name,
-				"address": "1 Test Street",
-				"team": self.team,
-			}
-		).insert(ignore_permissions=True)
+		cls.team = BuzzTeamFactory.create_owned_by().name
 
 	def test_name_is_random_and_venue_name_is_the_label(self):
-		venue = self.create_venue("Town Hall")
+		venue = EventVenueFactory.create(team=self.team, venue_name="Town Hall")
 
 		self.assertNotEqual(venue.name, "Town Hall")
 		self.assertEqual(venue.get_title(), "Town Hall")
 
 	def test_two_venues_can_share_a_venue_name(self):
-		self.assertNotEqual(self.create_venue("Shared Hall").name, self.create_venue("Shared Hall").name)
+		first = EventVenueFactory.create(team=self.team, venue_name="Shared Hall")
+		second = EventVenueFactory.create(team=self.team, venue_name="Shared Hall")
+		self.assertNotEqual(first.name, second.name)
 
 	def test_event_reads_the_current_venue_name(self):
-		venue = self.create_venue("Old Hall")
-		event = frappe.get_doc("Buzz Event", create_event("Venue Name Event", self.team, venue=venue.name))
+		venue = EventVenueFactory.create(team=self.team, venue_name="Old Hall")
+		event = BuzzEventFactory.create("in_person", team=self.team, venue=venue.name)
 		self.assertEqual(event.get_venue_name(), "Old Hall")
 
 		venue.venue_name = "New Hall"
-		venue.save(ignore_permissions=True)
+		venue.save()
 
 		self.assertEqual(event.get_venue_name(), "New Hall")
 
 	def test_patch_copies_the_old_docname_into_venue_name(self):
-		venue = self.create_venue("Legacy Hall")
+		venue = EventVenueFactory.create(team=self.team)
 		frappe.db.set_value("Event Venue", venue.name, "venue_name", "", update_modified=False)
 
 		set_event_venue_name()
@@ -80,7 +73,7 @@ def open_street_map_short_code(latitude: float, longitude: float, zoom: int) -> 
 	return code + "-" * ((zoom + 8) % 3)
 
 
-class TestMapLinkCoordinates(IntegrationTestCase):
+class TestMapLinkCoordinates(UnitTestCase):
 	def setUp(self):
 		clear_map_link_cache()
 
@@ -173,27 +166,32 @@ class TestMapLinkCoordinates(IntegrationTestCase):
 
 
 class TestVenueMapLink(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.team = BuzzTeamFactory.create_owned_by().name
+
 	def setUp(self):
 		clear_map_link_cache()
 
-	def venue(self, **fields):
-		return frappe.get_doc({"doctype": "Event Venue", "venue_name": "Linked Hall", **fields})
-
 	def test_map_link_sets_the_location_and_makes_address_optional(self):
-		venue = self.venue(map_link=GOOGLE_PLACE_LINK).insert(ignore_permissions=True)
+		venue = self.create_venue(map_link=GOOGLE_PLACE_LINK)
 
 		self.assertEqual((venue.type, venue.latitude, venue.longitude), ("Open Street Map", 18.9903, 72.8174))
 		self.assertFalse(venue.address)
 
 	def test_pasted_embed_code_becomes_the_google_embed(self):
 		embed = '<iframe src="https://www.google.com/maps/embed?pb=abc" width="600"></iframe>'
-		venue = self.venue(map_link=embed).insert(ignore_permissions=True)
+		venue = self.create_venue(map_link=embed)
 
 		self.assertEqual(venue.type, "Embed Google Maps")
 		self.assertIn("maps/embed?pb=abc", venue.google_maps_embed_code)
 
 	def test_address_is_required_when_the_link_shows_no_location(self):
 		with self.assertRaises(frappe.ValidationError):
-			self.venue(map_link="https://www.openstreetmap.org/user/someone").insert(ignore_permissions=True)
+			self.create_venue(map_link="https://www.openstreetmap.org/user/someone")
 		with self.assertRaises(frappe.ValidationError):
-			self.venue().insert(ignore_permissions=True)
+			self.create_venue()
+
+	def create_venue(self, **fields):
+		return EventVenueFactory.create(team=self.team, address="", **fields)
