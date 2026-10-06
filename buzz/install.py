@@ -130,46 +130,11 @@ def before_tests():
 def setup_test_records():
 	create_talk_proposal_statuses()
 
-	# Administrator's only membership, so the team resolves for fixtures that omit one.
+	# Administrator's only membership: doctypes that fill `team` from a sole membership
+	# (Event Template, Talk Proposal submissions) resolve to it in tests.
 	admin_team = create_default_team_for("Administrator").name
-	# The shared test event sells paid tickets, so its team needs the flag.
 	frappe.db.set_value("Buzz Team Settings", admin_team, PAID_EVENTS_FLAG, 1)
 	frappe.clear_document_cache("Buzz Team Settings", admin_team)
-
-	test_category = frappe.get_doc({"doctype": "Event Category", "name": "Test Category"}).insert(
-		ignore_if_duplicate=True
-	)
-	test_venue = (
-		frappe.db.exists("Event Venue", {"venue_name": "Test Venue"})
-		or frappe.get_doc(
-			{"doctype": "Event Venue", "venue_name": "Test Venue", "address": "test", "team": admin_team}
-		)
-		.insert()
-		.name
-	)
-	test_host = frappe.get_doc(
-		{"doctype": "Event Host", "host_name": "Test Host", "team": admin_team}
-	).insert(ignore_if_duplicate=True)
-
-	test_event_exists = frappe.db.exists("Buzz Event", {"route": "test-route"})
-	if test_event_exists:
-		frappe.delete_doc("Buzz Event", test_event_exists, force=True)
-	test_event = frappe.get_doc(
-		{
-			"doctype": "Buzz Event",
-			"team": admin_team,
-			"category": test_category.name,
-			"venue": test_venue,
-			"host": test_host.name,
-			"title": "Test Event",
-			"route": "test-route",
-			"start_date": frappe.utils.today(),
-			"start_time": "10:00:00",
-			"end_date": frappe.utils.add_days(frappe.utils.today(), 7),
-			"end_time": "18:00:00",
-		}
-	).insert(ignore_if_duplicate=True)
-	test_event.db_set("registrations_close_at", None)
 
 
 def after_install():
