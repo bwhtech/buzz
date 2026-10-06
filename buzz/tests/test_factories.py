@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -17,7 +19,8 @@ from buzz.tests.factories import (
 
 
 class TestFactoryDefaults(IntegrationTestCase):
-	def test_every_factory_saves_with_its_defaults(self):
+	@patch("frappe.sendmail")  # User Invitation mails on insert, and CI has no outgoing account.
+	def test_every_factory_saves_with_its_defaults(self, sendmail):
 		for name in factories.__all__:
 			factory = getattr(factories, name)
 			with self.subTest(factory=factory.__name__):
