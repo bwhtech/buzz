@@ -13,7 +13,9 @@ interface Pin {
 	x: number
 	y: number
 	country: string | null
-	routes: string[]
+	events: EventCard[]
+	tooltip: HTMLElement
+	locationLabel: string
 }
 
 // The equirectangular world, x = longitude + 180 and y = 90 - latitude, cropped to land.
@@ -21,6 +23,9 @@ const WORLD_VIEW: View = { x: 0, y: 6, w: 360, h: 140 }
 const ZOOM_DURATION_MILLISECONDS = 420
 // The narrowest frame, in degrees: one country on its own is too few dots to read as land.
 const MINIMUM_VIEW_WIDTH = 60
+// Everywhere frames a little wider than one country, so it differs from Nearby even when
+// every event is in the same city.
+const EVERYWHERE_MINIMUM_VIEW_WIDTH = 100
 // Land dots sit on a 1.2° grid and grow with the zoom, within a readable range of sizes.
 const GRID_DEGREES = 1.2
 const DOT_SHARE_OF_GRID = 0.2
@@ -50,14 +55,13 @@ function groupByLocation(events: EventCard[]): EventCard[][] {
 	return [...locations.values()]
 }
 
-function createTooltip(event: EventCard, locationLabel: string): HTMLElement {
-	const tooltip = createElement("span", "team-map-pin-tooltip")
-	tooltip.append(
+// A pin can hold several events; its tooltip shows one of them at a time.
+function fillTooltip(tooltip: HTMLElement, event: EventCard, locationLabel: string) {
+	tooltip.replaceChildren(
 		createElement("strong", "", locationLabel),
 		createElement("span", "", event.title),
 		createElement("span", "", `${formatDay(event.date)} · ${event.time}`),
 	)
-	return tooltip
 }
 
 function createPin(events: EventCard[], isNextEvent: boolean): Pin {
@@ -68,20 +72,23 @@ function createPin(events: EventCard[], isNextEvent: boolean): Pin {
 	link.toggleAttribute("data-next-event", isNextEvent)
 	link.setAttribute("aria-label", `${locationLabel}: ${first.title}`)
 	const count = events.length > 1 ? String(events.length) : ""
-	link.append(createElement("span", "team-map-pin-dot", count), createTooltip(first, locationLabel))
+	const tooltip = createElement("span", "team-map-pin-tooltip")
+	fillTooltip(tooltip, first, locationLabel)
+	link.append(createElement("span", "team-map-pin-dot", count), tooltip)
 	link.addEventListener("click", (click) => {
 		const card = findEventCard(first.route)
 		if (!card?.offsetParent) return
 		click.preventDefault()
 		scrollAndHighlight(card)
 	})
-	const routes = events.map((event) => event.route)
 	return {
 		element: link,
 		x: first.longitude! + 180,
 		y: 90 - first.latitude!,
 		country: first.country,
-		routes,
+		events,
+		tooltip,
+		locationLabel,
 	}
 }
 
@@ -116,9 +123,12 @@ export class TeamMap {
 		this.animateToView(this.targetView())
 	}
 
+	// A hovered card lights its pin, which then shows that card's event rather than the next one.
 	highlightEvent(route: string | null) {
 		for (const pin of this.pins) {
-			pin.element.toggleAttribute("data-highlighted", route !== null && pin.routes.includes(route))
+			const event = pin.events.find((pinEvent) => pinEvent.route === route)
+			pin.element.toggleAttribute("data-highlighted", Boolean(event))
+			fillTooltip(pin.tooltip, event || pin.events[0], pin.locationLabel)
 		}
 	}
 
@@ -134,7 +144,8 @@ export class TeamMap {
 			Math.min(...ys),
 			Math.max(...ys),
 		]
-		const w = Math.max(right - left + 16, MINIMUM_VIEW_WIDTH)
+		const minimumWidth = this.country ? MINIMUM_VIEW_WIDTH : EVERYWHERE_MINIMUM_VIEW_WIDTH
+		const w = Math.max(right - left + 16, minimumWidth)
 		const h = Math.max(bottom - top + 12, 16)
 		return this.fitToAspectRatio({ x: (left + right - w) / 2, y: (top + bottom - h) / 2, w, h })
 	}
