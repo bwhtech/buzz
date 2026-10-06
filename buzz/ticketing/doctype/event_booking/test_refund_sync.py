@@ -20,50 +20,50 @@ class TestRefundNotification(BookingRefundTestCase):
 		self.make_payment()
 
 	def test_a_processed_refund_covering_the_total_marks_the_booking_refunded(self):
-		self.initiate(BOOKING_TOTAL)
+		self.initiate_refund(BOOKING_TOTAL)
 
-		self.notify(self.refund_id(), "processed", BOOKING_TOTAL)
+		self.send_refund_webhook(self.refund_id(), "processed", BOOKING_TOTAL)
 
 		self.assertEqual(self.booking.refund_status, "Refunded")
 		self.assertEqual(self.booking.refunded_amount, BOOKING_TOTAL)
 		self.assertEqual(self.refunds()[0].status, "Processed")
 
 	def test_a_processed_refund_below_the_total_marks_the_booking_partially_refunded(self):
-		self.initiate(CHARGED_PER_TICKET)
+		self.initiate_refund(CHARGED_PER_TICKET)
 
-		self.notify(self.refund_id(), "processed", CHARGED_PER_TICKET)
+		self.send_refund_webhook(self.refund_id(), "processed", CHARGED_PER_TICKET)
 
 		self.assertEqual(self.booking.refund_status, "Partially Refunded")
 		self.assertEqual(self.booking.refunded_amount, CHARGED_PER_TICKET)
 
 	def test_a_full_refund_buzz_never_raised_cancels_every_remaining_ticket(self):
 		# Raised on the Razorpay dashboard: the webhook carries no tickets.
-		self.notify(self.refund_id(), "processed", BOOKING_TOTAL)
+		self.send_refund_webhook(self.refund_id(), "processed", BOOKING_TOTAL)
 
 		self.assertEqual(self.booking.refund_status, "Refunded")
 		self.assertEqual(len(self.refunds()[0].tickets), 2)
 		self.assertEqual([request.docstatus for request in self.cancellation_requests()], [1])
 
 	def test_a_partial_refund_buzz_never_raised_cancels_nothing(self):
-		self.notify(self.refund_id(), "processed", CHARGED_PER_TICKET)
+		self.send_refund_webhook(self.refund_id(), "processed", CHARGED_PER_TICKET)
 
 		self.assertEqual(self.refunds()[0].tickets, [])
 		self.assertEqual(self.cancellation_requests(), [])
 
 	def test_the_same_event_arriving_twice_is_not_counted_twice(self):
-		self.initiate(CHARGED_PER_TICKET)
+		self.initiate_refund(CHARGED_PER_TICKET)
 
-		self.notify(self.refund_id(), "processed", CHARGED_PER_TICKET)
-		self.notify(self.refund_id(), "processed", CHARGED_PER_TICKET)
+		self.send_refund_webhook(self.refund_id(), "processed", CHARGED_PER_TICKET)
+		self.send_refund_webhook(self.refund_id(), "processed", CHARGED_PER_TICKET)
 
 		self.assertEqual(len(self.refunds()), 1)
 		self.assertEqual(self.booking.refunded_amount, CHARGED_PER_TICKET)
 
 	def test_a_failed_refund_is_not_counted_and_cancels_nothing(self):
 		ticket = self.refundable_tickets()[0]
-		self.initiate(CHARGED_PER_TICKET, tickets=[ticket])
+		self.initiate_refund(CHARGED_PER_TICKET, tickets=[ticket])
 
-		self.notify(self.refund_id(), "failed", CHARGED_PER_TICKET)
+		self.send_refund_webhook(self.refund_id(), "failed", CHARGED_PER_TICKET)
 
 		self.assertEqual(self.refunds()[0].status, "Failed")
 		self.assertEqual(self.booking.refunded_amount, 0)
@@ -72,7 +72,7 @@ class TestRefundNotification(BookingRefundTestCase):
 
 	def test_a_webhook_processed_as_guest_still_updates_the_booking(self):
 		# The webhook is an allow_guest endpoint, so its job runs as Guest.
-		self.initiate(CHARGED_PER_TICKET, tickets=self.refundable_tickets()[:1])
+		self.initiate_refund(CHARGED_PER_TICKET, tickets=self.refundable_tickets()[:1])
 		log = self.create_refund_log(self.refund_payload(self.refund_id(), "processed", CHARGED_PER_TICKET))
 
 		with self.set_user("Guest"):
@@ -84,9 +84,9 @@ class TestRefundNotification(BookingRefundTestCase):
 
 	def test_a_processed_refund_raises_and_submits_the_cancellation(self):
 		ticket = self.refundable_tickets()[0]
-		self.initiate(CHARGED_PER_TICKET, tickets=[ticket])
+		self.initiate_refund(CHARGED_PER_TICKET, tickets=[ticket])
 
-		self.notify(self.refund_id(), "processed", CHARGED_PER_TICKET)
+		self.send_refund_webhook(self.refund_id(), "processed", CHARGED_PER_TICKET)
 
 		request = frappe.get_doc("Ticket Cancellation Request", self.refunds()[0].cancellation_request)
 		self.assertEqual((request.status, request.docstatus), ("Accepted", 1))
@@ -94,7 +94,7 @@ class TestRefundNotification(BookingRefundTestCase):
 
 	def test_a_cancellation_that_cannot_go_through_leaves_the_refund_recorded(self):
 		ticket = self.refundable_tickets()[0]
-		self.initiate(CHARGED_PER_TICKET, tickets=[ticket])
+		self.initiate_refund(CHARGED_PER_TICKET, tickets=[ticket])
 
 		with patch("frappe.sendmail", side_effect=Exception("no outgoing email account")):
 			self.refunds()[0].apply_gateway_status("processed", CHARGED_PER_TICKET)
@@ -107,9 +107,9 @@ class TestRefundNotification(BookingRefundTestCase):
 		self.assertEqual(frappe.db.get_value("Event Ticket", ticket, "docstatus"), 1)
 
 	def test_the_integration_request_is_linked_back_to_the_booking(self):
-		self.initiate(CHARGED_PER_TICKET)
+		self.initiate_refund(CHARGED_PER_TICKET)
 
-		log = self.notify(self.refund_id(), "processed", CHARGED_PER_TICKET)
+		log = self.send_refund_webhook(self.refund_id(), "processed", CHARGED_PER_TICKET)
 
 		self.assertEqual(
 			frappe.db.get_value("Integration Request", log, "reference_docname"), self.booking.name
@@ -123,7 +123,6 @@ class TestRefundNotification(BookingRefundTestCase):
 		self.assertEqual(self.refunds(), [])
 
 	def test_a_payload_without_a_refund_is_refused(self):
-		# Only refund events reach this handler, so one without a refund is a defect.
 		log = self.create_refund_log({"event": "refund.processed", "payload": {}})
 
 		self.assertRaises(ValidationError, handle_refund_notification, "Integration Request", log)
@@ -172,7 +171,7 @@ class TestSyncRefunds(BookingRefundTestCase):
 
 	def test_a_refund_buzz_already_holds_is_updated_not_duplicated(self):
 		ticket = self.refundable_tickets()[0]
-		self.initiate(CHARGED_PER_TICKET, tickets=[ticket])
+		self.initiate_refund(CHARGED_PER_TICKET, tickets=[ticket])
 
 		result = self.sync(self.gateway_refund("processed", CHARGED_PER_TICKET))
 
@@ -200,7 +199,7 @@ class TestSyncRefunds(BookingRefundTestCase):
 		self.assertEqual(self.booking.refunded_amount, 0)
 
 	def test_a_refund_the_webhook_recorded_is_not_duplicated_by_a_sync(self):
-		self.notify(self.refund_id(), "processed", CHARGED_PER_TICKET)
+		self.send_refund_webhook(self.refund_id(), "processed", CHARGED_PER_TICKET)
 
 		result = self.sync(self.gateway_refund("processed", CHARGED_PER_TICKET))
 
@@ -218,15 +217,15 @@ class TestSyncRefunds(BookingRefundTestCase):
 		self.assertEqual(self.booking.refunded_amount, CHARGED_PER_TICKET)
 
 	def test_a_checked_in_ticket_is_never_cancelled_by_a_synced_refund(self):
-		used, unused = self.refundable_tickets()
-		self.check_in(used)
+		checked_in_ticket, other_ticket = self.refundable_tickets()
+		self.check_in(checked_in_ticket)
 
 		self.sync(self.gateway_refund("processed", BOOKING_TOTAL))
 
-		self.assertEqual([row.ticket for row in self.refunds()[0].tickets], [unused])
+		self.assertEqual([row.ticket for row in self.refunds()[0].tickets], [other_ticket])
 
 	def test_two_refunds_in_one_batch_cancel_the_tickets_once_they_cover_the_total(self):
-		# Neither half covers the booking alone; the second one pays back the last of it.
+		# Only the second refund brings the total up to the booking amount.
 		self.sync(
 			self.gateway_refund("processed", CHARGED_PER_TICKET, suffix="1"),
 			self.gateway_refund("processed", CHARGED_PER_TICKET, suffix="2"),

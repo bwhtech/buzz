@@ -124,11 +124,9 @@ class TestBookingConfirmationEmail(BookingEmailTestCase):
 
 
 class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
-	"""Sent when an offline booking is created, before the payment is verified."""
-
 	@patch("frappe.sendmail")
 	def test_sends_acknowledgement_to_booker(self, sendmail):
-		booking = self.acknowledge()
+		booking = self.send_acknowledgement()
 
 		sendmail.assert_called_once()
 		self.assertIn(self.email_booker, sendmail.call_args[1]["recipients"])
@@ -137,13 +135,13 @@ class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
 
 	@patch("frappe.sendmail")
 	def test_uses_inline_template_when_none_configured(self, sendmail):
-		self.acknowledge()
+		self.send_acknowledgement()
 
 		self.assertEqual(sendmail.call_args[1]["template"], "offline_booking_acknowledgement")
 
 	@patch("frappe.sendmail")
 	def test_carries_the_booking_summary(self, sendmail):
-		booking = self.acknowledge()
+		booking = self.send_acknowledgement()
 
 		args = sendmail.call_args[1]["args"]
 		self.assertEqual(args["doc"].name, booking.name)
@@ -166,17 +164,16 @@ class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
 	def test_uses_event_template_when_set(self, sendmail):
 		self.set_event({"offline_acknowledgement_email_template": self.create_template("OFFLINE")})
 
-		self.acknowledge()
+		self.send_acknowledgement()
 
 		self.assertIn("OFFLINE", sendmail.call_args[1]["subject"])
 
 	@patch("frappe.sendmail")
 	def test_ignores_the_confirmation_template(self, sendmail):
-		# The acknowledgement has its own template field; the confirmation's must not leak in.
 		self.set_event({"booking_confirmation_email_template": self.create_template("EVENT")})
 		self.set_team_template(self.create_template("TEAM"))
 
-		self.acknowledge()
+		self.send_acknowledgement()
 
 		self.assertEqual(sendmail.call_args[1]["template"], "offline_booking_acknowledgement")
 
@@ -184,7 +181,7 @@ class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
 	def test_respects_event_toggle_off(self, sendmail):
 		self.set_event({"send_booking_confirmation_email": 0})
 
-		self.acknowledge()
+		self.send_acknowledgement()
 
 		sendmail.assert_not_called()
 
@@ -192,12 +189,11 @@ class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
 	def test_skips_system_users(self, sendmail):
 		for user in ("Administrator", "Guest"):
 			with self.subTest(user=user):
-				self.acknowledge(user)
+				self.send_acknowledgement(user)
 
 		sendmail.assert_not_called()
 
 	def create_offline_booking(self, user: str):
-		"""The draft `offline_booking_response` leaves behind: awaiting verification, no tickets."""
 		return self.create_booking(
 			user,
 			payment_method="Offline",
@@ -206,7 +202,7 @@ class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
 			payment_status="Verification Pending",
 		)
 
-	def acknowledge(self, user: str | None = None):
+	def send_acknowledgement(self, user: str | None = None):
 		booking = self.create_offline_booking(user or self.email_booker)
 		booking.send_offline_acknowledgement_email()
 		return booking

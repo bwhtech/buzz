@@ -36,11 +36,11 @@ class TestRefundSummary(BookingRefundTestCase):
 		self.assertEqual(summary["remaining"], 1100)
 
 	def test_a_checked_in_ticket_is_not_offered(self):
-		used = self.refundable_tickets()[0]
-		self.check_in(used)
+		checked_in_ticket = self.refundable_tickets()[0]
+		self.check_in(checked_in_ticket)
 
 		self.assertEqual(len(self.refundable_tickets()), 1)
-		self.assertNotIn(used, self.refundable_tickets())
+		self.assertNotIn(checked_in_ticket, self.refundable_tickets())
 
 
 class TestBookingRefund(BookingRefundTestCase):
@@ -58,7 +58,7 @@ class TestBookingRefund(BookingRefundTestCase):
 	def test_refunding_tickets_records_the_refund_and_marks_it_initiated(self):
 		self.make_payment()
 
-		client = self.initiate(CHARGED_PER_TICKET, tickets=self.refundable_tickets()[:1])
+		client = self.initiate_refund(CHARGED_PER_TICKET, tickets=self.refundable_tickets()[:1])
 
 		client.refund_payment.assert_called_once_with(self.payment.payment_id, CHARGED_PER_TICKET)
 		self.assertEqual(self.booking.refund_status, "Refund Initiated")
@@ -68,12 +68,11 @@ class TestBookingRefund(BookingRefundTestCase):
 		)
 
 	def test_an_unsettled_refund_cancels_nothing_yet(self):
-		# Razorpay can take days. Cancelling tickets before it answers would leave a
-		# customer whose refund fails with neither money nor seat.
+		# A refund can still fail, so tickets are only cancelled once it settles.
 		self.make_payment()
 		ticket = self.refundable_tickets()[0]
 
-		self.initiate(CHARGED_PER_TICKET, tickets=[ticket])
+		self.initiate_refund(CHARGED_PER_TICKET, tickets=[ticket])
 
 		self.assertIsNone(self.refunds()[0].cancellation_request)
 		self.assertEqual(self.cancellation_requests(), [])
@@ -86,7 +85,7 @@ class TestBookingRefund(BookingRefundTestCase):
 
 		# The gateway is patched, so only the ownership check can refuse this.
 		with self.assertRaises(frappe.ValidationError):
-			self.initiate(CHARGED_PER_TICKET, tickets=[foreign_ticket])
+			self.initiate_refund(CHARGED_PER_TICKET, tickets=[foreign_ticket])
 
 		self.assertEqual(self.cancellation_requests(), [])
 		self.assertEqual(frappe.db.get_value("Event Ticket", foreign_ticket, "docstatus"), 1)
@@ -97,16 +96,15 @@ class TestBookingRefund(BookingRefundTestCase):
 		self.check_in(ticket)
 
 		with self.assertRaises(frappe.ValidationError) as raised:
-			self.initiate(CHARGED_PER_TICKET, tickets=[ticket])
+			self.initiate_refund(CHARGED_PER_TICKET, tickets=[ticket])
 
 		self.assertIn("checked in", str(raised.exception))
 		self.assertEqual(self.refunds(), [])
 
 	def test_a_ticket_a_refund_holds_cannot_be_checked_in(self):
-		# The refund has not settled, but the money is on its way back.
 		self.make_payment()
 		ticket = self.refundable_tickets()[0]
-		self.initiate(CHARGED_PER_TICKET, tickets=[ticket])
+		self.initiate_refund(CHARGED_PER_TICKET, tickets=[ticket])
 
 		with self.assertRaises(Conflict):
 			validate_ticket_for_checkin(str(ticket))
@@ -116,15 +114,13 @@ class TestBookingRefund(BookingRefundTestCase):
 	def test_a_custom_amount_refund_cancels_no_tickets(self):
 		self.make_payment()
 
-		self.initiate(100)
+		self.initiate_refund(100)
 
 		self.assertIsNone(self.refunds()[0].cancellation_request)
 		self.assertEqual(self.cancellation_requests(), [])
 
 
 class TestRefundCeiling(BookingRefundTestCase):
-	"""A booking of 2000 + 3000 must never give back more than 5000."""
-
 	ticket_prices = (2000, 3000)
 	attendee_names = ("Cheap", "Pricey")
 
@@ -140,60 +136,59 @@ class TestRefundCeiling(BookingRefundTestCase):
 		self.assertEqual(self.booking.total_amount, 5000)
 
 	def test_a_second_refund_cannot_exceed_what_is_left_after_a_settled_one(self):
-		self.initiate(3000, refund_id=self.refund_id("1"))
-		self.settle(self.refund_id("1"), 3000)
+		self.initiate_refund(3000, refund_id=self.refund_id("1"))
+		self.settle_refund(self.refund_id("1"), 3000)
 
 		with self.assertRaises(frappe.ValidationError) as raised:
-			self.initiate(3000, refund_id=self.refund_id("2"))
+			self.initiate_refund(3000, refund_id=self.refund_id("2"))
 
 		self.assertIn("2,000", str(raised.exception))
 
 	def test_a_second_refund_cannot_exceed_what_is_left_while_the_first_is_still_initiated(self):
-		# The gateway has not settled the first refund, so it cannot be relied on to refuse.
-		self.initiate(3000, refund_id=self.refund_id("1"))
+		self.initiate_refund(3000, refund_id=self.refund_id("1"))
 
 		with self.assertRaises(frappe.ValidationError):
-			self.initiate(3000, refund_id=self.refund_id("2"))
+			self.initiate_refund(3000, refund_id=self.refund_id("2"))
 
 	def test_a_failed_refund_frees_its_amount_again(self):
-		self.initiate(3000, refund_id=self.refund_id("1"))
-		self.fail(self.refund_id("1"), 3000)
+		self.initiate_refund(3000, refund_id=self.refund_id("1"))
+		self.fail_refund(self.refund_id("1"), 3000)
 
-		self.initiate(3000, refund_id=self.refund_id("2"))
+		self.initiate_refund(3000, refund_id=self.refund_id("2"))
 
 		self.assertEqual(len(self.refunds()), 2)
 
 	def test_refunding_exactly_what_is_left_is_allowed(self):
-		self.initiate(3000, refund_id=self.refund_id("1"))
-		self.settle(self.refund_id("1"), 3000)
+		self.initiate_refund(3000, refund_id=self.refund_id("1"))
+		self.settle_refund(self.refund_id("1"), 3000)
 
-		self.initiate(2000, refund_id=self.refund_id("2"))
-		self.settle(self.refund_id("2"), 2000)
+		self.initiate_refund(2000, refund_id=self.refund_id("2"))
+		self.settle_refund(self.refund_id("2"), 2000)
 
 		self.assertEqual(self.booking.refund_status, "Refunded")
 		self.assertEqual(self.booking.refunded_amount, 5000)
 
 	def test_a_ticket_already_refunded_is_not_offered_again(self):
-		cheap, pricey = self.refundable_tickets()
-		self.initiate(3000, tickets=[pricey])
-		self.settle(self.refund_id(), 3000)
+		low_price_ticket, high_price_ticket = self.refundable_tickets()
+		self.initiate_refund(3000, tickets=[high_price_ticket])
+		self.settle_refund(self.refund_id(), 3000)
 
-		self.assertEqual(self.refundable_tickets(), [cheap])
+		self.assertEqual(self.refundable_tickets(), [low_price_ticket])
 		self.assertEqual(self.booking.get_refund_summary()["remaining"], 2000)
 
 	def test_a_ticket_whose_refund_failed_is_offered_again(self):
-		pricey = self.refundable_tickets()[1]
-		self.initiate(3000, tickets=[pricey])
+		high_price_ticket = self.refundable_tickets()[1]
+		self.initiate_refund(3000, tickets=[high_price_ticket])
 
-		self.fail(self.refund_id(), 3000)
+		self.fail_refund(self.refund_id(), 3000)
 
 		self.assertEqual(len(self.refundable_tickets()), 2)
 
-	def settle(self, refund_id: str, amount: float) -> None:
+	def settle_refund(self, refund_id: str, amount: float) -> None:
 		with patch("frappe.sendmail"):
 			self.apply_gateway_status(refund_id, "processed", amount)
 
-	def fail(self, refund_id: str, amount: float) -> None:
+	def fail_refund(self, refund_id: str, amount: float) -> None:
 		self.apply_gateway_status(refund_id, "failed", amount)
 
 	def apply_gateway_status(self, refund_id: str, status: str, amount: float) -> None:

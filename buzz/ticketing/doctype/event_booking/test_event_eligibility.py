@@ -1,12 +1,7 @@
 # Copyright (c) 2026, BWH Studios and contributors
 # For license information, please see license.txt
-"""Who may create an Event Booking, and for which events.
-
-Eligibility (event published, registrations open) used to live only in
-`BookingService`, so the generic document API reached `Document.insert()`
-without it. These pin both halves of the fix: ordinary users cannot write
-bookings at all, and the ones who can are held to their own team's events.
-"""
+"""The generic document API must not skip the eligibility checks `BookingService` runs:
+ordinary users cannot write bookings, and Event Managers only book their own team's events."""
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -79,16 +74,14 @@ class EligibilityTestCase(IntegrationTestCase):
 		return BookingRequest(**values)
 
 	def insert_as(self, session_user: str, **overrides):
-		"""Insert under the caller's own permissions, like the generic document API:
-		no `ignore_permissions`, so role permissions and `validate` decide."""
+		"""No `ignore_permissions`, like the generic document API."""
 		values = {"user": session_user, "currency": "INR", "attendees": [self.attendee_row()], **overrides}
 		with self.set_user(session_user):
 			return EventBookingFactory.create(event=str(self.event.name), **values)
 
 
 class TestOrdinaryUsersCannotWriteBookings(EligibilityTestCase):
-	"""Bookings are only ever written by the service flow, which runs with
-	`ignore_permissions`. Nothing user-facing needs create or write."""
+	"""Only the service flow writes bookings, and it runs with `ignore_permissions`."""
 
 	def test_every_new_user_is_granted_the_buzz_user_role(self):
 		self.assertIn("Buzz User", frappe.get_roles(self.attendee))
@@ -111,8 +104,7 @@ class TestOrdinaryUsersCannotWriteBookings(EligibilityTestCase):
 
 
 class TestEventManagersAreHeldToTheirOwnTeam(EligibilityTestCase):
-	"""`Event Manager` is granted by membership of any team, so the role alone must
-	not open another team's events."""
+	"""Membership of any team grants `Event Manager`, so the role alone must not open other teams' events."""
 
 	def test_an_outsider_may_not_book_an_unpublished_event(self):
 		self.set_event({"is_published": 0})
@@ -172,7 +164,6 @@ class TestLegitimateFlowsStillWork(EligibilityTestCase):
 		self.assertTrue(frappe.db.exists("Event Booking", payload.booking_name))
 
 	def test_an_event_organiser_may_book_their_own_closed_event(self):
-		# Organisers are exempt (comp tickets, pre-launch testing).
 		self.set_event({"is_published": 0})
 		self.close_registrations()
 
@@ -181,8 +172,7 @@ class TestLegitimateFlowsStillWork(EligibilityTestCase):
 		self.assertTrue(frappe.db.exists("Event Booking", booking.name))
 
 	def test_a_draft_booked_while_open_survives_registrations_closing(self):
-		# A trusted flow (payment authorisation, offline approval) must still write a
-		# draft made while open, or a paid booking is stranded.
+		# Payment authorisation and offline approval resave the draft after close.
 		booking = self.insert_as(self.organiser)
 		self.close_registrations()
 
@@ -194,9 +184,6 @@ class TestLegitimateFlowsStillWork(EligibilityTestCase):
 
 
 class TestTheGuardCannotBeSteppedAround(EligibilityTestCase):
-	"""The guard runs on every write, so a draft cannot outlive its event's
-	eligibility by being edited or repointed after the fact."""
-
 	def test_an_outsider_cannot_grow_a_draft_after_registrations_close(self):
 		free_type = str(self.create_ticket_type(price=0).name)
 		booking = self.insert_as(self.outsider, attendees=[self.attendee_row(ticket_type=free_type)])
@@ -213,7 +200,7 @@ class TestTheGuardCannotBeSteppedAround(EligibilityTestCase):
 		self.assertEqual(frappe.db.count("Event Booking Attendee", {"parent": booking.name}), 1)
 
 	def test_a_draft_cannot_be_repointed_at_a_closed_event(self):
-		# Ticket types pin a draft to its event, so it cannot reach a closed one afterwards.
+		# Ticket types pin a draft to its event.
 		booking = self.insert_as(self.organiser)
 		closed_event = BuzzEventFactory.create(
 			team=self.team, registrations_close_at=add_days(now_datetime(), -1)
@@ -227,8 +214,6 @@ class TestTheGuardCannotBeSteppedAround(EligibilityTestCase):
 
 
 class TestWhatValidateAlreadyEnforced(EligibilityTestCase):
-	"""Rules that predate the eligibility guard, kept as guardrails."""
-
 	def test_prices_are_refetched_from_the_ticket_type(self):
 		booking = self.insert_as(self.organiser, attendees=[self.attendee_row(amount=0)])
 

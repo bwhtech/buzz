@@ -7,8 +7,6 @@ from buzz.tests.factories import EventBookingFactory, EventTicketTypeFactory
 
 
 class TestBookingConfirmation(BookingTestCase):
-	"""Token-gated booking confirmation, so a guest can see the booking they just made."""
-
 	def test_access_token_roundtrip(self):
 		token = get_booking_access_token("B-TEST-001")
 

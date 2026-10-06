@@ -63,8 +63,6 @@ class TestProcessBooking(BookingTestCase):
 
 
 class TestZoomBackedCategoryBooking(BookingTestCase):
-	"""Zoom needs a last name on every registrant, for meetings as much as webinars."""
-
 	def test_last_name_required_for_webinar_category(self):
 		self.assertRaises(frappe.ValidationError, self.book_without_last_name, "Webinars")
 

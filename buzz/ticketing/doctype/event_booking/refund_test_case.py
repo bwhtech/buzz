@@ -68,7 +68,7 @@ class BookingRefundTestCase(IntegrationTestCase):
 			payment_gateway=gateway or self.gateway,
 		)
 
-	def initiate(self, amount: float, tickets: list[str] | None = None, refund_id: str | None = None):
+	def initiate_refund(self, amount: float, tickets: list[str] | None = None, refund_id: str | None = None):
 		client = MagicMock()
 		client.refund_payment.return_value = {
 			"id": refund_id or self.refund_id(),
@@ -80,8 +80,7 @@ class BookingRefundTestCase(IntegrationTestCase):
 		self.booking.reload()
 		return client
 
-	def notify(self, refund_id: str, status: str, amount: float) -> str:
-		"""Deliver a Razorpay refund webhook and return its Integration Request."""
+	def send_refund_webhook(self, refund_id: str, status: str, amount: float) -> str:
 		log = self.create_refund_log(self.refund_payload(refund_id, status, amount))
 		self.handle_refund_log(log)
 		return log
