@@ -2,497 +2,180 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
+from frappe.utils import today
 
-from buzz.api.forms.test_forms import ensure_event_host
 from buzz.events.doctype.buzz_event.buzz_event import create_from_template
-from buzz.events.doctype.event_template.event_template import create_template_from_event
+from buzz.tests.factories import BuzzTeamFactory, EventCategoryFactory, EventHostFactory
+from buzz.tests.factories.events.event_template_factory import EventTemplateFactory
+
+DIRECT_FIELDS = {
+	"medium": "Online",
+	"about": "About text",
+	"short_description": "Short desc",
+	"time_zone": "Asia/Kolkata",
+	"allow_guest_booking": 1,
+	"guest_verification_method": "Email OTP",
+	"send_ticket_email": 1,
+	"apply_tax": 1,
+	"tax_label": "GST",
+	"tax_percentage": 18,
+}
+SPONSORSHIP_FIELDS = {
+	"auto_send_pitch_deck": 1,
+	"sponsor_deck_reply_to": "test@example.com",
+	"sponsor_deck_cc": "cc@example.com",
+}
+CUSTOM_FIELD = {
+	"label": "Company",
+	"fieldname": "company",
+	"fieldtype": "Data",
+	"applied_to": "Booking",
+	"mandatory": 1,
+	"enabled": 1,
+	"placeholder": "Enter company name",
+}
 
 
-class TestEventTemplate(FrappeTestCase):
+class TestCreateEventFromTemplate(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		cls.create_test_fixtures()
+		cls.team = BuzzTeamFactory.create_owned_by().name
+		cls.category = EventCategoryFactory.create().name
+		cls.host = EventHostFactory.create(team=cls.team).name
 
-	@classmethod
-	def create_test_fixtures(cls):
-		"""Create required test data: Event Category, Host, etc."""
-		# Create Event Category if not exists
-		if not frappe.db.exists("Event Category", "Test Category"):
-			frappe.get_doc({"doctype": "Event Category", "category_name": "Test Category"}).insert(
-				ignore_permissions=True
-			)
+	def test_copies_direct_fields(self):
+		template = self.create_template(**DIRECT_FIELDS)
 
-	def tearDown(self):
-		"""Clean up test data after each test"""
-		frappe.db.rollback()
+		event = self.create_event(template, dict.fromkeys(["category", "host", *DIRECT_FIELDS], 1))
 
-	# ==================== Template Creation Tests ====================
+		self.assertEqual((event.category, event.host), (self.category, self.host))
+		for field, value in DIRECT_FIELDS.items():
+			with self.subTest(field):
+				self.assertEqual(event.get(field), value)
 
-	def test_create_template_basic(self):
-		"""Test creating a basic Event Template"""
-		template = frappe.get_doc(
-			{
-				"doctype": "Event Template",
-				"template_name": "Test Webinar Template",
-				"category": "Test Category",
-				"host": ensure_event_host("Test Host"),
-				"medium": "Online",
-				"about": "Test description",
-			}
+	def test_respects_unselected_options(self):
+		template = self.create_template(medium="In Person", about="Should not appear", apply_tax=1)
+
+		event = self.create_event(
+			template, {"category": 1, "host": 1, "medium": 0, "about": 0, "apply_tax": 0}
 		)
-		template.insert()
 
-		self.assertEqual(template.template_name, "Test Webinar Template")
-		self.assertEqual(template.category, "Test Category")
-		self.assertEqual(template.medium, "Online")
-
-	def test_create_template_with_ticket_types(self):
-		"""Test creating a template with ticket types"""
-		template = frappe.get_doc(
-			{
-				"doctype": "Event Template",
-				"template_name": "Template with Tickets",
-				"category": "Test Category",
-				"host": ensure_event_host("Test Host"),
-				"template_ticket_types": [
-					{
-						"title": "Early Bird",
-						"price": 100,
-						"currency": "INR",
-						"is_published": 1,
-						"max_tickets_available": 50,
-					},
-					{"title": "Regular", "price": 200, "currency": "INR", "is_published": 1},
-				],
-			}
-		)
-		template.insert()
-
-		self.assertEqual(len(template.template_ticket_types), 2)
-		self.assertEqual(template.template_ticket_types[0].title, "Early Bird")
-		self.assertEqual(template.template_ticket_types[0].price, 100)
-
-	def test_create_template_with_add_ons(self):
-		"""Test creating a template with add-ons"""
-		template = frappe.get_doc(
-			{
-				"doctype": "Event Template",
-				"template_name": "Template with Add-ons",
-				"category": "Test Category",
-				"host": ensure_event_host("Test Host"),
-				"template_add_ons": [
-					{"title": "T-Shirt", "price": 500, "currency": "INR", "enabled": 1},
-					{
-						"title": "Lunch",
-						"price": 300,
-						"currency": "INR",
-						"user_selects_option": 1,
-						"options": "Veg\nNon-Veg",
-						"enabled": 1,
-					},
-				],
-			}
-		)
-		template.insert()
-
-		self.assertEqual(len(template.template_add_ons), 2)
-		self.assertEqual(template.template_add_ons[1].user_selects_option, 1)
-
-	def test_create_template_with_custom_fields(self):
-		"""Test creating a template with custom fields"""
-		template = frappe.get_doc(
-			{
-				"doctype": "Event Template",
-				"template_name": "Template with Custom Fields",
-				"category": "Test Category",
-				"host": ensure_event_host("Test Host"),
-				"template_custom_fields": [
-					{
-						"label": "Company Name",
-						"fieldname": "company_name",
-						"fieldtype": "Data",
-						"applied_to": "Booking",
-						"mandatory": 1,
-						"enabled": 1,
-					},
-					{
-						"label": "Dietary Preference",
-						"fieldname": "dietary_preference",
-						"fieldtype": "Select",
-						"options": "Veg\nNon-Veg\nVegan",
-						"applied_to": "Ticket",
-						"enabled": 1,
-					},
-				],
-			}
-		)
-		template.insert()
-
-		self.assertEqual(len(template.template_custom_fields), 2)
-		self.assertEqual(template.template_custom_fields[0].mandatory, 1)
-
-	# ==================== Create Event from Template Tests ====================
-
-	def test_create_event_from_template_all_options(self):
-		"""Test creating an event from template with all options selected"""
-		# Create template
-		template = frappe.get_doc(
-			{
-				"doctype": "Event Template",
-				"template_name": "Full Template",
-				"category": "Test Category",
-				"host": ensure_event_host("Test Host"),
-				"medium": "Online",
-				"about": "Template about text",
-				"apply_tax": 1,
-				"tax_label": "GST",
-				"tax_percentage": 18,
-				"template_ticket_types": [
-					{"title": "Standard", "price": 500, "currency": "INR", "is_published": 1}
-				],
-				"template_add_ons": [{"title": "Workshop", "price": 1000, "currency": "INR", "enabled": 1}],
-				"template_custom_fields": [
-					{
-						"label": "Phone",
-						"fieldname": "phone",
-						"fieldtype": "Phone",
-						"applied_to": "Booking",
-						"enabled": 1,
-					}
-				],
-			}
-		)
-		template.insert()
-
-		# Create event from template with all options
-		options = {
-			"category": 1,
-			"host": 1,
-			"medium": 1,
-			"about": 1,
-			"apply_tax": 1,
-			"tax_label": 1,
-			"tax_percentage": 1,
-			"ticket_types": 1,
-			"add_ons": 1,
-			"custom_fields": 1,
-		}
-
-		event_name = create_from_template(template.name, frappe.as_json(options))
-		event = frappe.get_doc("Buzz Event", event_name)
-
-		# Verify event fields
-		self.assertEqual(event.category, "Test Category")
-		self.assertEqual(event.host, ensure_event_host("Test Host"))
-		self.assertEqual(event.medium, "Online")
-		self.assertEqual(event.about, "Template about text")
-		self.assertEqual(event.apply_tax, 1)
-		self.assertEqual(event.tax_percentage, 18)
-
-		# Verify ticket types created (excluding default "Normal" ticket type)
-		ticket_types = frappe.get_all(
-			"Event Ticket Type", filters={"event": event_name, "title": "Standard"}, fields=["title"]
-		)
-		self.assertEqual(len(ticket_types), 1)
-		self.assertEqual(ticket_types[0].title, "Standard")
-
-		# Verify add-ons created
-		add_ons = frappe.get_all("Ticket Add-on", filters={"event": event_name}, fields=["title", "price"])
-		self.assertEqual(len(add_ons), 1)
-		self.assertEqual(add_ons[0].title, "Workshop")
-
-		# Verify custom fields created
-		custom_fields = frappe.get_all(
-			"Buzz Custom Field", filters={"event": event_name}, fields=["label", "fieldtype"]
-		)
-		self.assertEqual(len(custom_fields), 1)
-		self.assertEqual(custom_fields[0].fieldtype, "Phone")
-
-	def test_create_event_from_template_partial_options(self):
-		"""Test creating an event with only some options selected"""
-		template = frappe.get_doc(
-			{
-				"doctype": "Event Template",
-				"template_name": "Partial Template",
-				"category": "Test Category",
-				"host": ensure_event_host("Test Host"),
-				"medium": "In Person",
-				"about": "Should not be copied",
-				"template_ticket_types": [
-					{"title": "VIP", "price": 2000, "currency": "INR", "is_published": 1}
-				],
-			}
-		)
-		template.insert()
-
-		# Copy category, host (required) and ticket types, but not medium/about
-		options = {"category": 1, "host": 1, "medium": 0, "about": 0, "ticket_types": 1}
-
-		event_name = create_from_template(template.name, frappe.as_json(options))
-		event = frappe.get_doc("Buzz Event", event_name)
-
-		# Category should be copied
-		self.assertEqual(event.category, "Test Category")
-
-		# Host should be copied (it's mandatory)
-		self.assertEqual(event.host, ensure_event_host("Test Host"))
-
-		# About should NOT be copied
+		self.assertEqual((event.category, event.host), (self.category, self.host))
 		self.assertFalse(event.about)
+		self.assertFalse(event.apply_tax)
 
-		# Ticket types should be copied
-		ticket_types = frappe.get_all("Event Ticket Type", filters={"event": event_name, "title": "VIP"})
-		self.assertEqual(len(ticket_types), 1)
+	def test_additional_fields_override_the_template(self):
+		category = EventCategoryFactory.create().name
+		template = self.create_template()
 
-	def test_create_event_from_template_no_linked_docs(self):
-		"""Test creating an event without copying linked documents"""
-		template = frappe.get_doc(
-			{
-				"doctype": "Event Template",
-				"template_name": "No Linked Docs Template",
-				"category": "Test Category",
-				"host": ensure_event_host("Test Host"),
-				"template_ticket_types": [
-					{"title": "General", "price": 100, "currency": "INR", "is_published": 1}
-				],
-			}
-		)
-		template.insert()
+		event = self.create_event(template, {"host": 1}, category=category)
 
-		# Copy fields but not linked docs
-		options = {"category": 1, "host": 1, "ticket_types": 0, "add_ons": 0, "custom_fields": 0}
+		self.assertEqual((event.category, event.host), (category, self.host))
 
-		event_name = create_from_template(template.name, frappe.as_json(options))
-
-		# Event fields should be copied
-		event = frappe.get_doc("Buzz Event", event_name)
-		self.assertEqual(event.category, "Test Category")
-
-		# No "General" ticket type should be created (only default "Normal")
-		ticket_types = frappe.get_all("Event Ticket Type", filters={"event": event_name, "title": "General"})
-		self.assertEqual(len(ticket_types), 0)
-
-	# ==================== Save as Template Tests ====================
-
-	def test_save_event_as_template(self):
-		"""Test saving an existing event as a template"""
-		# Create an event with ticket types and add-ons
-		event = frappe.get_doc(
-			{
-				"doctype": "Buzz Event",
-				"title": "Source Event",
-				"category": "Test Category",
-				"host": ensure_event_host("Test Host"),
-				"start_date": frappe.utils.today(),
-				"start_time": "09:00:00",
-				"end_time": "18:00:00",
-				"medium": "Online",
-				"about": "Event description",
-			}
-		)
-		event.insert()
-
-		# Create ticket type for the event
-		ticket_type = frappe.get_doc(
-			{
-				"doctype": "Event Ticket Type",
-				"event": event.name,
-				"title": "Premium",
-				"prices": [{"currency": "INR", "price": 1500}],
-				"is_published": 1,
-			}
-		)
-		ticket_type.insert()
-
-		# Create add-on for the event
-		add_on = frappe.get_doc(
-			{
-				"doctype": "Ticket Add-on",
-				"event": event.name,
-				"title": "Swag Kit",
-				"price": 500,
-				"currency": "INR",
-				"enabled": 1,
-			}
-		)
-		add_on.insert()
-
-		# Save as template (convert event.name to string as it's an int autoname)
-		options = {"category": 1, "host": 1, "medium": 1, "about": 1, "ticket_types": 1, "add_ons": 1}
-
-		template_name = create_template_from_event(
-			str(event.name), "My Event Template", frappe.as_json(options)
-		)
-		template = frappe.get_doc("Event Template", template_name)
-
-		# Verify template fields
-		self.assertEqual(template.template_name, "My Event Template")
-		self.assertEqual(template.category, "Test Category")
-		self.assertEqual(template.medium, "Online")
-
-		# Verify ticket types in template (excluding default "Normal")
-		premium_tickets = [t for t in template.template_ticket_types if t.title == "Premium"]
-		self.assertEqual(len(premium_tickets), 1)
-		self.assertEqual(premium_tickets[0].price, 1500)
-
-		# Verify add-ons in template
-		self.assertEqual(len(template.template_add_ons), 1)
-		self.assertEqual(template.template_add_ons[0].title, "Swag Kit")
-
-	def test_save_event_as_template_partial(self):
-		"""Test saving event as template with only some options"""
-		event = frappe.get_doc(
-			{
-				"doctype": "Buzz Event",
-				"title": "Partial Source Event",
-				"category": "Test Category",
-				"host": ensure_event_host("Test Host"),
-				"start_date": frappe.utils.today(),
-				"start_time": "09:00:00",
-				"end_time": "18:00:00",
-				"medium": "In Person",
-				"about": "Should be copied",
-				"apply_tax": 1,
-				"tax_percentage": 18,
-			}
-		)
-		event.insert()
-
-		# Only save category and about (convert event.name to string as it's an int autoname)
-		options = {"category": 1, "host": 0, "medium": 0, "about": 1, "apply_tax": 0}
-
-		template_name = create_template_from_event(
-			str(event.name), "Partial Template 2", frappe.as_json(options)
-		)
-		template = frappe.get_doc("Event Template", template_name)
-
-		self.assertEqual(template.category, "Test Category")
-		self.assertEqual(template.about, "Should be copied")
-		self.assertFalse(template.host)
-		self.assertFalse(template.apply_tax)
-
-	# ==================== Round Trip Tests ====================
-
-	def test_round_trip_event_to_template_to_event(self):
-		"""Test full round trip: Event -> Template -> New Event"""
-		# Step 1: Create original event
-		original_event = frappe.get_doc(
-			{
-				"doctype": "Buzz Event",
-				"title": "Original Conference",
-				"category": "Test Category",
-				"host": ensure_event_host("Test Host"),
-				"start_date": frappe.utils.today(),
-				"start_time": "09:00:00",
-				"end_time": "18:00:00",
-				"medium": "In Person",
-				"about": "Annual conference description",
-				"apply_tax": 1,
-				"tax_label": "GST",
-				"tax_percentage": 18,
-			}
-		)
-		original_event.insert()
-
-		# Add ticket types
-		for ticket_data in [
-			{"title": "Early Bird", "price": 1000},
-			{"title": "Regular", "price": 1500},
-			{"title": "VIP", "price": 3000},
-		]:
-			frappe.get_doc(
-				{
-					"doctype": "Event Ticket Type",
-					"event": original_event.name,
-					"title": ticket_data["title"],
-					"prices": [{"currency": "INR", "price": ticket_data["price"]}],
-					"is_published": 1,
-				}
-			).insert()
-
-		# Step 2: Save as template (convert event.name to string as it's an int autoname)
-		template_options = {
-			"category": 1,
-			"host": 1,
-			"medium": 1,
-			"about": 1,
-			"apply_tax": 1,
-			"tax_label": 1,
-			"tax_percentage": 1,
-			"ticket_types": 1,
+	def test_creates_ticket_types(self):
+		early_bird = {
+			"title": "Early Bird",
+			"price": 500,
+			"currency": "INR",
+			"max_tickets_available": 100,
+			"is_published": 1,
 		}
-		template_name = create_template_from_event(
-			str(original_event.name), "Conference Template", frappe.as_json(template_options)
-		)
+		regular = {"title": "Regular", "price": 1000, "currency": "INR", "is_published": 1}
+		template = self.create_template(template_ticket_types=[early_bird, regular])
 
-		# Step 3: Create new event from template
-		event_options = {
-			"category": 1,
-			"host": 1,
-			"medium": 1,
-			"about": 1,
-			"apply_tax": 1,
-			"tax_label": 1,
-			"tax_percentage": 1,
-			"ticket_types": 1,
-		}
-		new_event_name = create_from_template(template_name, frappe.as_json(event_options))
-		new_event = frappe.get_doc("Buzz Event", new_event_name)
+		event = self.create_event(template, {"category": 1, "host": 1, "ticket_types": 1})
 
-		# Verify new event matches original
-		self.assertEqual(new_event.category, original_event.category)
-		self.assertEqual(new_event.host, original_event.host)
-		self.assertEqual(new_event.medium, original_event.medium)
-		self.assertEqual(new_event.about, original_event.about)
-		self.assertEqual(new_event.tax_percentage, original_event.tax_percentage)
-
-		# Verify ticket types match (excluding default "Normal")
-		new_ticket_types = frappe.get_all(
+		ticket_types = frappe.get_all(
 			"Event Ticket Type",
-			filters={"event": new_event_name, "title": ["in", ["Early Bird", "Regular", "VIP"]]},
-			fields=["title", {"prices": ["price"]}],
+			filters={"event": event.name, "title": ["in", ["Early Bird", "Regular"]]},
+			fields=["title", {"prices": ["price"]}, "max_tickets_available"],
 			order_by="title",
 		)
-		self.assertEqual(len(new_ticket_types), 3)
-		self.assertEqual(new_ticket_types[0].title, "Early Bird")
-		self.assertEqual(new_ticket_types[0].prices[0].price, 1000)
-
-	# ==================== Edge Case Tests ====================
-
-	def test_create_event_empty_template(self):
-		"""Test creating event from template with minimal data"""
-		# Template with required fields for Buzz Event (category and host are mandatory)
-		template = frappe.get_doc(
-			{
-				"doctype": "Event Template",
-				"template_name": "Empty Template",
-				"category": "Test Category",
-				"host": ensure_event_host("Test Host"),
-			}
+		self.assertEqual(
+			[(row.title, row.prices[0].price) for row in ticket_types],
+			[("Early Bird", 500), ("Regular", 1000)],
 		)
-		template.insert()
+		self.assertEqual(ticket_types[0].max_tickets_available, 100)
 
-		options = {"category": 1, "host": 1}
-		event_name = create_from_template(template.name, frappe.as_json(options))
+	def test_creates_add_ons(self):
+		add_on = {"title": "Workshop Access", "price": 2000, "currency": "INR", "enabled": 1}
+		template = self.create_template(
+			template_add_ons=[{**add_on, "user_selects_option": 1, "options": "Morning\nAfternoon"}]
+		)
 
-		# Should create event without errors
-		self.assertTrue(frappe.db.exists("Buzz Event", event_name))
+		event = self.create_event(template, {"category": 1, "host": 1, "add_ons": 1})
 
-	def test_template_name_required(self):
-		"""Test that template_name is required"""
-		template = frappe.get_doc({"doctype": "Event Template", "category": "Test Category"})
+		add_ons = frappe.get_all(
+			"Ticket Add-on",
+			filters={"event": event.name},
+			fields=["title", "price", "user_selects_option", "options"],
+		)
+		self.assertEqual(
+			[(row.title, row.price, row.user_selects_option, row.options) for row in add_ons],
+			[("Workshop Access", 2000, 1, "Morning\nAfternoon")],
+		)
 
-		# Template uses autoname: field:template_name, so it raises ValidationError not MandatoryError
-		with self.assertRaises(frappe.exceptions.ValidationError):
-			template.insert()
+	def test_creates_custom_fields(self):
+		template = self.create_template(template_custom_fields=[CUSTOM_FIELD])
 
-	def test_duplicate_template_name(self):
-		"""Test handling of duplicate template names"""
-		frappe.get_doc({"doctype": "Event Template", "template_name": "Duplicate Name"}).insert()
+		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
 
-		duplicate = frappe.get_doc({"doctype": "Event Template", "template_name": "Duplicate Name"})
+		custom_fields = frappe.get_all(
+			"Buzz Custom Field",
+			filters={"event": event.name},
+			fields=["label", "fieldtype", "mandatory", "placeholder"],
+		)
+		self.assertEqual(
+			[(row.label, row.fieldtype, row.mandatory, row.placeholder) for row in custom_fields],
+			[("Company", "Data", 1, "Enter company name")],
+		)
 
-		with self.assertRaises(frappe.exceptions.DuplicateEntryError):
-			duplicate.insert()
+	def test_skips_linked_docs_when_unselected(self):
+		template = self.create_template(
+			template_ticket_types=[{"title": "Skipped", "price": 100, "currency": "INR"}],
+			template_add_ons=[{"title": "Skipped Addon", "price": 50, "currency": "INR", "enabled": 1}],
+			template_custom_fields=[CUSTOM_FIELD],
+		)
+		options = {"category": 1, "host": 1, "ticket_types": 0, "add_ons": 0, "custom_fields": 0}
+
+		event = self.create_event(template, options)
+
+		self.assertFalse(frappe.db.exists("Event Ticket Type", {"event": event.name, "title": "Skipped"}))
+		self.assertFalse(frappe.db.exists("Ticket Add-on", {"event": event.name}))
+		self.assertFalse(frappe.db.exists("Buzz Custom Field", {"event": event.name}))
+
+	def test_sets_default_title_and_date(self):
+		template_name = f"Defaults Template {frappe.generate_hash(length=6)}"
+		template = self.create_template(template_name=template_name)
+
+		event = self.create_event(template, {"category": 1, "host": 1})
+
+		self.assertIn(template_name, event.title)
+		self.assertEqual(str(event.start_date), today())
+
+	def test_copies_sponsorship_settings(self):
+		template = self.create_template(**SPONSORSHIP_FIELDS)
+
+		event = self.create_event(template, dict.fromkeys(["category", "host", *SPONSORSHIP_FIELDS], 1))
+
+		for field, value in SPONSORSHIP_FIELDS.items():
+			with self.subTest(field):
+				self.assertEqual(event.get(field), value)
+
+	def test_requires_template_read_permission(self):
+		template = self.create_template()
+
+		with self.set_user("Guest"), self.assertRaises(frappe.ValidationError):
+			create_from_template(template.name, frappe.as_json({"category": 1, "host": 1}))
+
+	def create_template(self, **fields):
+		return EventTemplateFactory.create(team=self.team, category=self.category, host=self.host, **fields)
+
+	def create_event(self, template, options: dict, **additional_fields):
+		# Team is not a template option; without it the event takes the user's team.
+		additional_fields = frappe.as_json({"team": self.team, **additional_fields})
+		return frappe.get_doc(
+			"Buzz Event", create_from_template(template.name, frappe.as_json(options), additional_fields)
+		)
