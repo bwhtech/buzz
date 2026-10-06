@@ -15,22 +15,7 @@ from buzz.tests.factories import (
 ACCEPTED = '[["status", "in", ["Accepted"]]]'
 
 
-class ProposalPipelineTestCase(IntegrationTestCase):
-	@classmethod
-	def create_guest_proposal(cls, event: str, speaker_email: str, **values) -> str:
-		"""The public form's submission: `owner` and `submitted_by` are both Guest."""
-		with cls.set_user("Guest"):
-			proposal = TalkProposalFactory.create(
-				"guest_submitted",
-				event=event,
-				speakers=[{"first_name": "Speaker", "email": speaker_email}],
-				flags={"ignore_permissions": True},
-				**values,
-			)
-		return proposal.name
-
-
-class TestGetEventProposals(ProposalPipelineTestCase):
+class TestGetEventProposals(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -39,10 +24,16 @@ class TestGetEventProposals(ProposalPipelineTestCase):
 		cls.team = BuzzTeamFactory.create_owned_by(cls.manager).name
 		cls.event = str(BuzzEventFactory.create(team=cls.team).name)
 		cls.other_event = str(BuzzEventFactory.create(team=cls.team).name)
-		cls.pending = cls.create_guest_proposal(cls.event, "one@example.com", title="Pending Kubernetes")
-		cls.accepted = cls.create_guest_proposal(cls.event, "two@example.com", title="Accepted Rust")
+		cls.pending = TalkProposalFactory.create_as_guest(
+			cls.event, "one@example.com", title="Pending Kubernetes"
+		).name
+		cls.accepted = TalkProposalFactory.create_as_guest(
+			cls.event, "two@example.com", title="Accepted Rust"
+		).name
 		frappe.db.set_value("Talk Proposal", cls.accepted, "status", "Accepted")
-		cls.elsewhere = cls.create_guest_proposal(cls.other_event, "three@example.com", title="Elsewhere Go")
+		cls.elsewhere = TalkProposalFactory.create_as_guest(
+			cls.other_event, "three@example.com", title="Elsewhere Go"
+		).name
 
 	def test_lists_only_this_events_proposals(self):
 		names = self.list_proposal_names()
@@ -111,7 +102,7 @@ class TestGetEventProposals(ProposalPipelineTestCase):
 		return [proposal.name for proposal in self.get_proposals_as_manager(**kwargs).proposals]
 
 
-class TestGetEventProposalTrend(ProposalPipelineTestCase):
+class TestGetEventProposalTrend(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -119,7 +110,7 @@ class TestGetEventProposalTrend(ProposalPipelineTestCase):
 		cls.outsider = UserFactory.create_once("trend-outsider@example.com").name
 		team = BuzzTeamFactory.create_owned_by(cls.manager).name
 		cls.event = str(BuzzEventFactory.create(team=team).name)
-		cls.proposal = cls.create_guest_proposal(cls.event, "trend@example.com")
+		cls.proposal = TalkProposalFactory.create_as_guest(cls.event, "trend@example.com").name
 
 	def setUp(self):
 		self.enterContext(self.set_user(self.manager))
@@ -144,7 +135,7 @@ class TestGetEventProposalTrend(ProposalPipelineTestCase):
 			get_event_proposal_trend(self.event)
 
 
-class TestSetProposalState(ProposalPipelineTestCase):
+class TestSetProposalState(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()

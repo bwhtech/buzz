@@ -8,21 +8,7 @@ from buzz.api.proposals import accept_proposal, get_my_proposals
 from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, TalkProposalFactory, UserFactory
 
 
-class ProposalTestCase(IntegrationTestCase):
-	@classmethod
-	def create_guest_proposal(cls, event: str, speaker_email: str) -> str:
-		"""The public form's submission: `owner` and `submitted_by` are both Guest."""
-		with cls.set_user("Guest"):
-			proposal = TalkProposalFactory.create(
-				"guest_submitted",
-				event=event,
-				speakers=[{"first_name": "Speaker", "email": speaker_email}],
-				flags={"ignore_permissions": True},
-			)
-		return proposal.name
-
-
-class TestGetMyProposals(ProposalTestCase):
+class TestGetMyProposals(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -30,7 +16,7 @@ class TestGetMyProposals(ProposalTestCase):
 		cls.event = str(BuzzEventFactory.create(start_date=cls.start_date, end_date=cls.start_date).name)
 		cls.speaker_user = UserFactory.create_once("speaker-api@example.com").name
 		cls.other_user = UserFactory.create_once("other-api@example.com").name
-		cls.guest_proposal = cls.create_guest_proposal(cls.event, cls.speaker_user)
+		cls.guest_proposal = TalkProposalFactory.create_as_guest(cls.event, cls.speaker_user).name
 
 	def test_returns_guest_submitted_proposal_for_speaker(self):
 		self.assertIn(self.guest_proposal, self.listed_names(self.speaker_user))
@@ -101,7 +87,7 @@ class TestGetMyProposals(ProposalTestCase):
 		return next(row for row in rows if row["name"] == proposal)
 
 
-class TestAcceptProposal(ProposalTestCase):
+class TestAcceptProposal(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -112,7 +98,7 @@ class TestAcceptProposal(ProposalTestCase):
 		cls.event = str(BuzzEventFactory.create(team=team).name)
 
 	def setUp(self):
-		self.proposal = self.create_guest_proposal(self.event, self.speaker)
+		self.proposal = TalkProposalFactory.create_as_guest(self.event, self.speaker).name
 
 	def test_accepting_creates_the_talk_and_sets_the_status(self):
 		with self.set_user(self.manager):

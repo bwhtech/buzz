@@ -103,6 +103,13 @@ class TestProposalFactoryTraits(IntegrationTestCase):
 	def test_guest_submitted_talk_proposal(self):
 		self.assertEqual(TalkProposalFactory.create("guest_submitted").submitted_by, "Guest")
 
+	def test_create_as_guest_is_owned_by_guest(self):
+		proposal = TalkProposalFactory.create_as_guest(
+			BuzzEventFactory.create().name, "guest-speaker@example.com"
+		)
+
+		self.assertEqual((proposal.owner, proposal.submitted_by), ("Guest", "Guest"))
+
 	def test_sponsorship_tier_has_an_inr_price(self):
 		tier = SponsorshipTierFactory.create()
 

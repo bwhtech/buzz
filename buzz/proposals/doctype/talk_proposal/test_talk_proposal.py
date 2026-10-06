@@ -13,19 +13,6 @@ class TalkProposalTestCase(IntegrationTestCase):
 	def create_event_owned_by(cls, user: str) -> str:
 		return str(BuzzEventFactory.create(team=BuzzTeamFactory.create_owned_by(user).name).name)
 
-	@classmethod
-	def create_guest_proposal(cls, event: str, speaker_email: str, **values) -> str:
-		"""The public form's submission: `owner` and `submitted_by` are both Guest."""
-		with cls.set_user("Guest"):
-			proposal = TalkProposalFactory.create(
-				"guest_submitted",
-				event=event,
-				speakers=[{"first_name": "Speaker", "email": speaker_email}],
-				flags={"ignore_permissions": True},
-				**values,
-			)
-		return proposal.name
-
 
 class TestTalkProposalSpeakerAccess(TalkProposalTestCase):
 	@classmethod
@@ -35,7 +22,7 @@ class TestTalkProposalSpeakerAccess(TalkProposalTestCase):
 		cls.other_user = UserFactory.create_once("other-perm@example.com").name
 		cls.manager_user = UserFactory.create_once("manager-perm@example.com").name
 		cls.event = cls.create_event_owned_by(cls.manager_user)
-		cls.guest_proposal = cls.create_guest_proposal(cls.event, cls.speaker_user)
+		cls.guest_proposal = TalkProposalFactory.create_as_guest(cls.event, cls.speaker_user).name
 
 	def test_speaker_can_read_guest_submitted_proposal(self):
 		with self.set_user(self.speaker_user):
@@ -68,7 +55,7 @@ class TestTalkProposalSpeakerAccess(TalkProposalTestCase):
 			self.assertTrue(proposal.has_permission("read"))
 
 	def test_speaker_email_match_is_case_insensitive(self):
-		proposal = self.create_guest_proposal(self.event, "Mixed-Case@Example.COM")
+		proposal = TalkProposalFactory.create_as_guest(self.event, "Mixed-Case@Example.COM").name
 		user = UserFactory.create_once("mixed-case@example.com").name
 
 		with self.set_user(user):
@@ -90,7 +77,9 @@ class TestCreateTalk(TalkProposalTestCase):
 		cls.event = cls.create_event_owned_by(UserFactory.create_once("create-talk-owner@example.com").name)
 
 	def test_create_talk_accepts_the_proposal(self):
-		proposal = frappe.get_doc("Talk Proposal", self.create_guest_proposal(self.event, self.speaker_user))
+		proposal = frappe.get_doc(
+			"Talk Proposal", TalkProposalFactory.create_as_guest(self.event, self.speaker_user).name
+		)
 
 		talk = proposal.create_talk()
 
@@ -99,7 +88,9 @@ class TestCreateTalk(TalkProposalTestCase):
 
 	def test_speaker_without_an_account_gets_a_website_user(self):
 		email = f"new-speaker-{frappe.generate_hash(length=6)}@example.com"
-		proposal = frappe.get_doc("Talk Proposal", self.create_guest_proposal(self.event, email))
+		proposal = frappe.get_doc(
+			"Talk Proposal", TalkProposalFactory.create_as_guest(self.event, email).name
+		)
 
 		proposal.create_talk()
 
@@ -108,7 +99,9 @@ class TestCreateTalk(TalkProposalTestCase):
 	def test_a_member_of_the_events_team_can_accept_a_proposal(self):
 		manager = UserFactory.create_once("create-talk-manager@example.com").name
 		event = self.create_event_owned_by(manager)
-		proposal = frappe.get_doc("Talk Proposal", self.create_guest_proposal(event, self.speaker_user))
+		proposal = frappe.get_doc(
+			"Talk Proposal", TalkProposalFactory.create_as_guest(event, self.speaker_user).name
+		)
 
 		with self.set_user(manager):
 			talk = proposal.run_method("create_talk")
@@ -119,9 +112,9 @@ class TestCreateTalk(TalkProposalTestCase):
 	def test_a_listed_speaker_cannot_accept_their_own_proposal(self):
 		# With a speaker profile in place, only the permission check can stop create_talk.
 		frappe.get_doc(
-			"Talk Proposal", self.create_guest_proposal(self.event, self.speaker_user)
+			"Talk Proposal", TalkProposalFactory.create_as_guest(self.event, self.speaker_user).name
 		).create_talk()
-		proposal = self.create_guest_proposal(self.event, self.speaker_user)
+		proposal = TalkProposalFactory.create_as_guest(self.event, self.speaker_user).name
 
 		with self.set_user(self.speaker_user):
 			# run_doc_method loads the document with a read check and nothing more.
@@ -133,7 +126,9 @@ class TestCreateTalk(TalkProposalTestCase):
 		self.assertEqual(frappe.db.count("Event Talk", {"proposal": proposal}), 0)
 
 	def test_second_create_talk_leaves_no_partial_state(self):
-		proposal = frappe.get_doc("Talk Proposal", self.create_guest_proposal(self.event, self.speaker_user))
+		proposal = frappe.get_doc(
+			"Talk Proposal", TalkProposalFactory.create_as_guest(self.event, self.speaker_user).name
+		)
 		proposal.create_talk()
 
 		proposal.reload()
@@ -229,7 +224,7 @@ class TestTalkProposalSpeakerChanges(TalkProposalTestCase):
 		self.assertEqual(frappe.db.get_value("Talk Proposal", name, "status"), "Accepted")
 
 	def create_proposal(self, event: str | None = None, status: str = "Review Pending") -> str:
-		name = self.create_guest_proposal(event or self.event, self.speaker_user)
+		name = TalkProposalFactory.create_as_guest(event or self.event, self.speaker_user).name
 		if status != "Review Pending":
 			frappe.db.set_value("Talk Proposal", name, "status", status)
 		return name
