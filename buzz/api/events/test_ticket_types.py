@@ -5,10 +5,15 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.api.events import get_event_ticket_types
 from buzz.api.events.exceptions import CannotManageEvent
-from buzz.api.events.test_events import create_event
-from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
-from buzz.test_permissions import add_member
-from buzz.tests.factories import BuzzTeamFactory
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	BuzzTeamFactory,
+	BuzzTeamMembershipFactory,
+	EventBookingFactory,
+	EventTicketTypeFactory,
+	PaymentGatewayFactory,
+	UserFactory,
+)
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
 
 
@@ -16,129 +21,96 @@ class TicketTypesTestCase(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		frappe.set_user("Administrator")
-		cls.owner = create_user("ticket-types-owner@example.com", "Owner")
-		cls.viewer = create_user("ticket-types-viewer@example.com", "Viewer")
-		cls.stranger = create_user("ticket-types-stranger@example.com", "Stranger")
-		cls.team = create_owned_team("Ticket Types Team", cls.owner)
-		add_member(cls.team, cls.viewer, "Viewer")
+		cls.owner = UserFactory.create_once("ticket-types-owner@example.com").name
+		cls.viewer = UserFactory.create_once("ticket-types-viewer@example.com").name
+		cls.outsider = UserFactory.create_once("ticket-types-stranger@example.com").name
+		cls.team = BuzzTeamFactory.create_owned_by(cls.owner).name
+		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.viewer, team_role="Viewer")
 
 	def setUp(self):
-		frappe.set_user("Administrator")
-		self.addCleanup(frappe.set_user, "Administrator")
-		self.event = create_event("Ticket Types Event", self.team)
-		self.ticket_type = self.make_ticket_type("General admission", price=1000, seats=200)
-
-	def make_ticket_type(self, title, price=0, seats=0):
-		return str(
-			frappe.get_doc(
-				{
-					"doctype": "Event Ticket Type",
-					"event": self.event,
-					"title": title,
-					"prices": [{"currency": "INR", "price": price}],
-					"max_tickets_available": seats,
-				}
-			)
-			.insert(ignore_permissions=True)
-			.name
+		self.event = str(BuzzEventFactory.create(team=self.team).name)
+		self.ticket_type = str(
+			EventTicketTypeFactory.create(
+				event=self.event, prices=[{"currency": "INR", "price": 1000}], max_tickets_available=200
+			).name
 		)
 
-	def sell(self, currency="INR", attendees=1, payment_status="Paid", ticket_type=None):
-		attendee = {
-			"ticket_type": ticket_type or self.ticket_type,
-			"first_name": "Buyer",
-			"email": "buyer@example.com",
-		}
-		return (
-			frappe.get_doc(
-				{
-					"doctype": "Event Booking",
-					"event": self.event,
-					"user": "Administrator",
-					"currency": currency,
-					"payment_status": payment_status,
-					"attendees": [attendee] * attendees,
-				}
-			)
-			.insert(ignore_permissions=True)
-			.submit()
+	def create_booking(self, currency="INR", attendees=1, payment_status="Paid", ticket_type=None):
+		attendee = {"ticket_type": ticket_type or self.ticket_type, "first_name": "Buyer"}
+		booking = EventBookingFactory.create(
+			event=self.event,
+			currency=currency,
+			payment_status=payment_status,
+			attendees=[{**attendee, "email": f"buyer-{index}@example.com"} for index in range(attendees)],
 		)
+		booking.submit()
+		return booking
 
 	def add_usd_price(self):
 		ticket_type = frappe.get_doc("Event Ticket Type", self.ticket_type)
 		ticket_type.append("prices", {"currency": "USD", "price": 15})
 		ticket_type.save(ignore_permissions=True)
 
-	def revenue(self):
-		frappe.set_user(self.owner)
-		payload = get_event_ticket_types(self.event).__json__()
-		return {row["currency"]: row for row in payload["revenue"]}
+	def payload_as(self, user: str) -> dict:
+		with self.set_user(user):
+			return get_event_ticket_types(self.event).__json__()
+
+	def revenue(self) -> dict:
+		return {row["currency"]: row for row in self.payload_as(self.owner)["revenue"]}
+
+	def ticket_type_row(self, payload: dict) -> dict:
+		return next(row for row in payload["ticket_types"] if row["name"] == self.ticket_type)
 
 
 class TestGetEventTicketTypes(TicketTypesTestCase):
 	def test_lists_ticket_types_with_tickets_sold(self):
-		self.sell()
-		frappe.set_user(self.owner)
+		self.create_booking()
 
-		payload = get_event_ticket_types(self.event).__json__()
+		payload = self.payload_as(self.owner)
 
 		self.assertTrue(payload["can_write"])
-		row = next(row for row in payload["ticket_types"] if row["name"] == self.ticket_type)
-		self.assertEqual(row["name"], self.ticket_type)
+		row = self.ticket_type_row(payload)
 		self.assertEqual(row["prices"], [{"currency": "INR", "price": 1000, "tickets_sold": 1}])
 		self.assertEqual(row["max_tickets_available"], 200)
 		self.assertEqual(row["tickets_sold"], 1)
 
 	def test_reports_whether_the_team_can_sell_paid_tickets(self):
-		frappe.set_user(self.owner)
-		self.assertTrue(get_event_ticket_types(self.event).paid_events_enabled)
+		self.assertTrue(self.payload_as(self.owner)["paid_events_enabled"])
 
 		# The team is shared by the class, and rollback is per class.
 		self.addCleanup(BuzzTeamFactory.set_settings, self.team, {PAID_EVENTS_FLAG: 1})
 		BuzzTeamFactory.set_settings(self.team, {PAID_EVENTS_FLAG: 0})
-		self.assertFalse(get_event_ticket_types(self.event).paid_events_enabled)
+		self.assertFalse(self.payload_as(self.owner)["paid_events_enabled"])
 
 	def test_viewer_reads_without_write_access(self):
-		frappe.set_user(self.viewer)
+		self.assertFalse(self.payload_as(self.viewer)["can_write"])
 
-		payload = get_event_ticket_types(self.event).__json__()
-
-		self.assertFalse(payload["can_write"])
-
-	def test_stranger_cannot_read(self):
-		frappe.set_user(self.stranger)
-
+	def test_outsider_cannot_read(self):
 		with self.assertRaises(CannotManageEvent):
-			get_event_ticket_types(self.event)
+			self.payload_as(self.outsider)
 
 	def test_lists_sales_per_currency(self):
 		self.add_usd_price()
-		self.sell("USD")
-		frappe.set_user(self.owner)
+		self.create_booking("USD")
 
-		payload = get_event_ticket_types(self.event).__json__()
+		row = self.ticket_type_row(self.payload_as(self.owner))
 
-		row = next(row for row in payload["ticket_types"] if row["name"] == self.ticket_type)
 		self.assertEqual([price["tickets_sold"] for price in row["prices"]], [0, 1])
 
 	def test_lists_payment_providers_and_flags_the_default(self):
-		gateway = {"doctype": "Payment Gateway", "gateway": f"Default Gateway {frappe.generate_hash(6)}"}
-		default = frappe.get_doc(gateway).insert().name
-		frappe.db.set_single_value("Buzz Settings", "default_payment_gateway", default)
-		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
-		frappe.set_user(self.owner)
+		default = PaymentGatewayFactory.create().name
 
-		payload = get_event_ticket_types(self.event).__json__()
+		with self.change_settings("Buzz Settings", default_payment_gateway=default):
+			providers = self.payload_as(self.owner)["payment_providers"]
 
-		self.assertEqual(payload["payment_providers"], [{"name": default, "is_default": True}])
+		self.assertEqual(providers, [{"name": default, "is_default": True}])
 
 
 class TestRegistrationRevenue(TicketTypesTestCase):
 	def test_totals_paid_bookings_per_currency(self):
 		self.add_usd_price()
-		self.sell(attendees=2)
-		self.sell("USD")
+		self.create_booking(attendees=2)
+		self.create_booking("USD")
 
 		revenue = self.revenue()
 
@@ -152,13 +124,13 @@ class TestRegistrationRevenue(TicketTypesTestCase):
 		)
 
 	def test_leaves_out_unpaid_and_free_bookings(self):
-		self.sell(payment_status="Unpaid")
-		self.sell(ticket_type=self.make_ticket_type("Community pass"))
+		self.create_booking(payment_status="Unpaid")
+		self.create_booking(ticket_type=EventTicketTypeFactory.create(event=self.event).name)
 
 		self.assertEqual(self.revenue(), {})
 
 	def test_reports_refunds_beside_the_amount_collected(self):
-		booking = self.sell(attendees=2)
+		booking = self.create_booking(attendees=2)
 		frappe.db.set_value("Event Booking", booking.name, "refunded_amount", 1000)
 
 		self.assertEqual(self.revenue()["INR"]["refunded"], 1000)
@@ -167,7 +139,7 @@ class TestRegistrationRevenue(TicketTypesTestCase):
 	# Cancelling a ticket mails the holder, and CI has no outgoing email account.
 	@patch("buzz.ticketing.doctype.event_ticket.event_ticket.send_message_email")
 	def test_counts_only_tickets_still_held(self, _send_message_email):
-		booking = self.sell(attendees=2)
+		booking = self.create_booking(attendees=2)
 		ticket = frappe.get_all("Event Ticket", filters={"booking": booking.name}, pluck="name")[0]
 		frappe.get_doc("Event Ticket", ticket).cancel()
 
