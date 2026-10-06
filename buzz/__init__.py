@@ -4,6 +4,7 @@ import os
 
 if os.environ.get("CI"):
 	import frappe
-	from frappe.tests.utils import toggle_test_mode
 
-	toggle_test_mode(True)
+	# Not toggle_test_mode: it also writes frappe.local.flags, which does not exist when bench
+	# imports apps for CLI commands. frappe.init seeds local.flags.in_test from this.
+	frappe.in_test = True
