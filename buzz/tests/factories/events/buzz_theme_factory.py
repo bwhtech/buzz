@@ -9,7 +9,7 @@ STANDARD_THEME = "Classic"
 
 
 class BuzzThemeFactory(BaseFactory[BuzzTheme]):
-	"""A custom copy of the standard Classic theme, so every required token is present."""
+	"""A custom copy of Classic, so every required token is present."""
 
 	doctype = "Buzz Theme"
 

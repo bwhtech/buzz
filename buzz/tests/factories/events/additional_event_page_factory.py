@@ -9,8 +9,6 @@ _fake = Faker()
 
 
 class AdditionalEventPageFactory(BaseFactory[AdditionalEventPage]):
-	"""A draft page. A published page takes its route from the title unless one is given."""
-
 	doctype = "Additional Event Page"
 
 	@property

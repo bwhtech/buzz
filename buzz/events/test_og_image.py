@@ -28,7 +28,7 @@ class TestEventOgImage(IntegrationTestCase):
 		generate(self.event)
 		first = self.og_image()
 		generate(self.event)
-		self.assertEqual((self.og_image(), og_files(self.event)), (first, [first]))
+		self.assertEqual((self.og_image(), self.og_files()), (first, [first]))
 
 	def test_changed_event_replaces_its_image(self):
 		generate(self.event)
@@ -36,7 +36,7 @@ class TestEventOgImage(IntegrationTestCase):
 		frappe.db.set_value("Buzz Event", self.event, "title", "Renamed")
 		generate(self.event)
 		self.assertNotEqual(self.og_image(), first)
-		self.assertEqual(og_files(self.event), [self.og_image()])
+		self.assertEqual(self.og_files(), [self.og_image()])
 
 	def test_unpublished_event_is_not_rendered(self):
 		frappe.db.set_value("Buzz Event", self.event, "is_published", 0)
@@ -48,7 +48,7 @@ class TestEventOgImage(IntegrationTestCase):
 		frappe.db.set_value("Buzz Event", self.event, "title", "फ्रैपे यात्रा")
 		generate(self.event)
 		self.assertIsNone(self.og_image())
-		self.assertEqual(og_files(self.event), [])
+		self.assertEqual(self.og_files(), [])
 
 	def test_emoji_title_is_rendered_in_colour(self):
 		frappe.db.set_value("Buzz Event", self.event, "title", "👀")
@@ -92,6 +92,13 @@ class TestEventOgImage(IntegrationTestCase):
 	def og_image(self) -> str:
 		return frappe.db.get_value("Buzz Event", self.event, "og_image")
 
+	def og_files(self) -> list:
+		return frappe.get_all(
+			"File",
+			filters={"attached_to_name": self.event, "attached_to_field": "og_image"},
+			pluck="file_url",
+		)
+
 
 class TestBannerPattern(UnitTestCase):
 	def test_matches_the_page_script(self):
@@ -103,9 +110,3 @@ class TestBannerPattern(UnitTestCase):
 		}
 		for title, values in expected.items():
 			self.assertEqual(tuple(banner_pattern(title).values()), values, title)
-
-
-def og_files(event: str) -> list:
-	return frappe.get_all(
-		"File", filters={"attached_to_name": event, "attached_to_field": "og_image"}, pluck="file_url"
-	)

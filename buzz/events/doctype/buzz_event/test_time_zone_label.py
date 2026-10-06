@@ -32,7 +32,6 @@ class TestTimeZoneLabel(UnitTestCase):
 		)
 
 	def test_gmt_offset_fallback_for_unmapped_zone(self):
-		# Bhutan is outside the curated map; Myanmar and the Marquesas have half-hour offsets.
 		self.assert_labels(
 			{"Asia/Thimphu": "GMT+6", "Asia/Yangon": "GMT+6:30", "Pacific/Marquesas": "GMT-9:30"}
 		)
@@ -59,7 +58,7 @@ class TestEventTimeZoneLabelField(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		event = BuzzEventFactory.create()
-		cls.links = {"team": event.team, "host": event.host, "category": event.category}
+		cls.event_links = {"team": event.team, "host": event.host, "category": event.category}
 
 	def test_label_set_on_insert(self):
 		self.assertEqual(self.create_event(time_zone="Asia/Kolkata").time_zone_label, "IST")
@@ -82,7 +81,6 @@ class TestEventTimeZoneLabelField(IntegrationTestCase):
 		self.assertEqual(event.time_zone_label, "EDT")
 
 	def test_backfill_patch_skips_events_missing_start_fields(self):
-		# Legacy rows can have a time zone without start fields; the patch must not abort.
 		event = self.create_event(time_zone="Asia/Kolkata")
 		frappe.db.set_value(
 			"Buzz Event", event.name, {"start_time": None, "time_zone_label": ""}, update_modified=False
@@ -93,4 +91,4 @@ class TestEventTimeZoneLabelField(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value("Buzz Event", event.name, "time_zone_label"), "")
 
 	def create_event(self, **fields):
-		return BuzzEventFactory.create(**self.links, **fields)
+		return BuzzEventFactory.create(**self.event_links, **fields)

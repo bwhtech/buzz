@@ -174,7 +174,7 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 		return EventTemplateFactory.create(team=self.team, category=self.category, host=self.host, **fields)
 
 	def create_event(self, template, options: dict, **additional_fields):
-		# The team is not a template option; passed here, the event does not fall back to the user's team.
+		# Team is not a template option; without it the event takes the user's team.
 		additional_fields = frappe.as_json({"team": self.team, **additional_fields})
 		return frappe.get_doc(
 			"Buzz Event", create_from_template(template.name, frappe.as_json(options), additional_fields)

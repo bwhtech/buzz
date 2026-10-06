@@ -15,19 +15,17 @@ END_DATE = add_days(today(), 31)
 
 
 class BuzzEventTestCase(IntegrationTestCase):
-	"""Events share one team, host and category, so each build or create adds no other rows."""
-
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
 		event = BuzzEventFactory.create()
-		cls.links = {"team": event.team, "host": event.host, "category": event.category}
+		cls.event_links = {"team": event.team, "host": event.host, "category": event.category}
 
 	def build_event(self, *traits, **fields):
-		return BuzzEventFactory.build(*traits, **self.links, **fields)
+		return BuzzEventFactory.build(*traits, **self.event_links, **fields)
 
 	def create_event(self, **fields):
-		return BuzzEventFactory.create(**self.links, **fields)
+		return BuzzEventFactory.create(**self.event_links, **fields)
 
 
 class TestEventValidation(BuzzEventTestCase):
@@ -72,23 +70,20 @@ class TestEventValidation(BuzzEventTestCase):
 
 class TestEventRoute(BuzzEventTestCase):
 	def test_reserved_routes_are_rejected(self):
-		# An event route becomes /b/<route>, so a dashboard segment would shadow it.
 		for route in RESERVED_EVENT_ROUTES:
 			with self.subTest(route=route), self.assertRaises(frappe.ValidationError):
 				self.create_event(route=route)
 
 	def test_reserved_routes_are_rejected_case_insensitively(self):
-		# vue-router matches paths case-insensitively, so "Account" is shadowed like "account".
+		# vue-router matches paths case-insensitively.
 		for route in ("Account", "BOOKING-SUCCESS", "Register"):
 			with self.subTest(route=route), self.assertRaises(frappe.ValidationError):
 				self.create_event(route=route)
 
 	def test_reserved_routes_cover_dashboard_segments(self):
-		# A static route declared ahead of the /:eventRoute/:formRoute catch-all.
 		self.assertIn("booking-success", RESERVED_EVENT_ROUTES)
 
 	def test_manager_section_is_reserved(self):
-		# /manage ends in a catch-all 404, so an event routed "manage" would lose every custom form.
 		self.assertIn("manage", RESERVED_EVENT_ROUTES)
 
 	def test_unreserved_route_is_accepted(self):
@@ -109,8 +104,6 @@ class TestEventRoute(BuzzEventTestCase):
 
 
 class TestEventLocation(BuzzEventTestCase):
-	"""`generate_ics_file` and the booking page read `venue` without consulting `medium`."""
-
 	def test_turning_an_event_online_drops_its_venue(self):
 		event = self.build_event("in_person")
 		event.medium = "Online"
@@ -122,7 +115,7 @@ class TestEventLocation(BuzzEventTestCase):
 		self.assertEqual(event.meeting_link, "https://example.com/room")
 
 	def test_turning_an_event_in_person_drops_its_meeting_link(self):
-		venue = EventVenueFactory.create(team=self.links["team"]).name
+		venue = EventVenueFactory.create(team=self.event_links["team"]).name
 		event = self.build_event("in_person", venue=venue, meeting_link="https://example.com/room")
 
 		event.clear_unused_location()
@@ -139,7 +132,7 @@ class TestEventLocation(BuzzEventTestCase):
 
 
 class TestGuestVerificationConfig(BuzzEventTestCase):
-	"""Called directly, with the `frappe.in_test` early return lifted so the checks run."""
+	"""`frappe.in_test` is patched off: the check returns early in tests."""
 
 	def test_email_otp_needs_an_outgoing_account(self):
 		with (
@@ -147,7 +140,8 @@ class TestGuestVerificationConfig(BuzzEventTestCase):
 			patch("buzz.api.booking.guests.email_otp_available", return_value=False),
 		):
 			self.assertRaises(
-				frappe.ValidationError, self.event("Email OTP").validate_guest_verification_config
+				frappe.ValidationError,
+				self.event_with_verification("Email OTP").validate_guest_verification_config,
 			)
 
 	def test_phone_otp_needs_sms_a_guest_can_be_sent(self):
@@ -156,7 +150,8 @@ class TestGuestVerificationConfig(BuzzEventTestCase):
 			patch("buzz.api.booking.guests.phone_otp_available", return_value=False),
 		):
 			self.assertRaises(
-				frappe.ValidationError, self.event("Phone OTP").validate_guest_verification_config
+				frappe.ValidationError,
+				self.event_with_verification("Phone OTP").validate_guest_verification_config,
 			)
 
 	def test_a_configured_site_passes(self):
@@ -164,11 +159,11 @@ class TestGuestVerificationConfig(BuzzEventTestCase):
 			patch.object(frappe, "in_test", False),
 			patch("buzz.api.booking.guests.phone_otp_available", return_value=True),
 		):
-			self.event("Phone OTP").validate_guest_verification_config()
+			self.event_with_verification("Phone OTP").validate_guest_verification_config()
 
 	def test_none_needs_nothing_configured(self):
 		with patch.object(frappe, "in_test", False):
-			self.event("None").validate_guest_verification_config()
+			self.event_with_verification("None").validate_guest_verification_config()
 
-	def event(self, method: str):
+	def event_with_verification(self, method: str):
 		return self.build_event(allow_guest_booking=1, guest_verification_method=method)

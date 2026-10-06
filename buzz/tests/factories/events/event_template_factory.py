@@ -7,8 +7,6 @@ from buzz.events.doctype.event_template.event_template import EventTemplate
 
 
 class EventTemplateFactory(BaseFactory[EventTemplate]):
-	"""Category and host are set: an event made from the template needs both."""
-
 	doctype = "Event Template"
 
 	@property

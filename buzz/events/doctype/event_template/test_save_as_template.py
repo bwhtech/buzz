@@ -21,12 +21,7 @@ ALL_OPTIONS = dict.fromkeys(["category", "host", "apply_tax", "ticket_types", *E
 
 class TestSaveEventAsTemplate(IntegrationTestCase):
 	def test_saves_every_selected_option(self):
-		event = BuzzEventFactory.create(apply_tax=1, **EVENT_FIELDS)
-		EventTicketTypeFactory.create(
-			event=event.name, title="Gold", prices=[{"currency": "INR", "price": 5000}]
-		)
-		TicketAddOnFactory.create(event=event.name, title="Parking", price=200)
-		BuzzCustomFieldFactory.create(event=event.name, label="Designation", fieldname="designation")
+		event = self.create_event_with_linked_docs()
 
 		template = self.save_as_template(event, {**ALL_OPTIONS, "add_ons": 1, "custom_fields": 1})
 
@@ -69,6 +64,15 @@ class TestSaveEventAsTemplate(IntegrationTestCase):
 
 		with self.set_user("Guest"), self.assertRaises(frappe.ValidationError):
 			self.save_as_template(event, {"category": 1})
+
+	def create_event_with_linked_docs(self):
+		event = BuzzEventFactory.create(apply_tax=1, **EVENT_FIELDS)
+		EventTicketTypeFactory.create(
+			event=event.name, title="Gold", prices=[{"currency": "INR", "price": 5000}]
+		)
+		TicketAddOnFactory.create(event=event.name, title="Parking", price=200)
+		BuzzCustomFieldFactory.create(event=event.name, label="Designation", fieldname="designation")
+		return event
 
 	def save_as_template(self, event, options: dict):
 		# The event's team is not copied: the template takes Administrator's sole team.
