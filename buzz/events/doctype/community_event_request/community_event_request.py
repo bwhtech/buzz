@@ -27,11 +27,11 @@ class CommunityEventRequest(Document):
 		submitted_by: DF.Link | None
 	# end: auto-generated types
 
-	_DOCTYPE_NAME = "Community Event Request"
-
 	def validate(self):
 		self.event_title, self.event_team = frappe.db.get_value("Buzz Event", self.event, ["title", "team"])
-		self.validate_event()
+		# An unpublished event may still be taken off the page.
+		if self.status != "Rejected":
+			self.validate_event()
 		self.validate_community()
 		self.validate_unique_pair()
 
