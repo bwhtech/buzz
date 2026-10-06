@@ -9,7 +9,7 @@ from buzz.api.sponsorships import (
 )
 from buzz.api.sponsorships.exceptions import EnquiryNotFound, EnquiryStatusLocked, EnquiryTierMissing
 from buzz.tests.base_test_cases import SponsorshipTestCase
-from buzz.tests.factories import SponsorshipEnquiryFactory
+from buzz.tests.factories import BuzzTeamMembershipFactory, SponsorshipEnquiryFactory, UserFactory
 
 TIER_FIELDS = {"name", "title", "prices", "slots", "enabled", "perks", "sponsor_count"}
 SPONSOR_FIELDS = {
@@ -38,92 +38,64 @@ ENQUIRY_FIELDS = {
 
 
 class ManageTestCase(SponsorshipTestCase):
-	def make_member(self, team_role: str) -> str:
-		email = f"sponsorships-{team_role.lower()}-{frappe.generate_hash(length=6)}@example.com"
-		user = frappe.new_doc("User")
-		user.email = email
-		user.first_name = "Team"
-		user.append("roles", {"role": "Buzz User"})
-		user.insert(ignore_permissions=True)
-		frappe.get_doc(
-			{
-				"doctype": "Buzz Team Membership",
-				"team": self.team(),
-				"user": email,
-				"team_role": team_role,
-				"enabled": 1,
-			}
-		).insert(ignore_permissions=True)
-		return email
-
-	def team(self) -> str:
-		return frappe.db.get_value("Buzz Event", self.event, "team")
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		team = frappe.db.get_value("Buzz Event", cls.event, "team")
+		cls.manager = UserFactory.create_once("sponsorships-manager@example.com").name
+		cls.viewer = UserFactory.create_once("sponsorships-viewer@example.com").name
+		BuzzTeamMembershipFactory.create(team=team, user=cls.manager, team_role="Manager")
+		BuzzTeamMembershipFactory.create(team=team, user=cls.viewer, team_role="Viewer")
 
 
 class TestGetEventSponsorships(ManageTestCase):
 	def test_team_member_reads_tiers_and_sponsors(self):
 		self.make_sponsor()
-		frappe.set_user(self.make_member("Manager"))
 
-		response = get_event_sponsorships(self.event)
+		with self.set_user(self.manager):
+			response = get_event_sponsorships(self.event)
 
 		self.assertEqual(set(response.tiers[0].__json__()), TIER_FIELDS)
 		self.assertEqual(set(response.sponsors[0].__json__()), SPONSOR_FIELDS)
 
 	def test_tier_counts_its_sponsors(self):
 		self.make_sponsor()
-		frappe.set_user(self.make_member("Manager"))
 
-		response = get_event_sponsorships(self.event)
+		with self.set_user(self.manager):
+			response = get_event_sponsorships(self.event)
 
 		tier = next(tier for tier in response.tiers if tier.name == self.tier.name)
 		self.assertEqual(tier.sponsor_count, 1)
 
 	def test_non_member_is_refused(self):
-		frappe.set_user(self.make_stranger())
-
-		with self.assertRaises(CannotManageEvent):
+		with self.set_user(self.make_stranger()), self.assertRaises(CannotManageEvent):
 			get_event_sponsorships(self.event)
 
 	def test_viewer_gets_can_write_false(self):
-		frappe.set_user(self.make_member("Viewer"))
-
-		response = get_event_sponsorships(self.event)
+		with self.set_user(self.viewer):
+			response = get_event_sponsorships(self.event)
 
 		self.assertFalse(response.can_write)
 
 
 class TestGetEventSponsorshipEnquiries(ManageTestCase):
-	def make_enquiry(self, company_name: str, status: str = "Approval Pending"):
-		return frappe.get_doc(
-			{
-				"doctype": "Sponsorship Enquiry",
-				"event": self.event,
-				"tier": self.tier.name,
-				"company_name": company_name,
-				"company_logo": "/files/acme.png",
-				"status": status,
-			}
-		).insert()
-
 	def test_rows_carry_tier_title_and_price(self):
-		frappe.set_user(self.make_member("Viewer"))
-
-		response = get_event_sponsorship_enquiries(self.event, search="Acme Corp")
+		with self.set_user(self.viewer):
+			response = get_event_sponsorship_enquiries(self.event, search="Acme Corp")
 
 		row = next(row for row in response.enquiries if row.name == self.enquiry.name)
 		self.assertEqual(set(row.__json__()), ENQUIRY_FIELDS)
-		self.assertEqual((row.tier_title, row.tier_price), (self.tier.title, 5000))
+		self.assertEqual((row.tier_title, row.tier_price), ("Gold", 5000))
 
 	def test_search_and_status_narrow_the_page(self):
 		suffix = frappe.generate_hash(length=6)
-		paid = self.make_enquiry(f"Zeta {suffix}", status="Paid")
-		self.make_enquiry(f"Zeta {suffix} Two")
-		frappe.set_user(self.make_member("Manager"))
+		paid = self.create_enquiry(f"Zeta {suffix}", status="Paid")
+		self.create_enquiry(f"Zeta {suffix} Two")
 
-		response = get_event_sponsorship_enquiries(
-			self.event, search=f"Zeta {suffix}", filters='[["status", "in", ["Paid"]]]'
-		)
+		with self.set_user(self.manager):
+			response = get_event_sponsorship_enquiries(
+				self.event, search=f"Zeta {suffix}", filters='[["status", "in", ["Paid"]]]'
+			)
 
 		self.assertEqual([row.name for row in response.enquiries], [paid.name])
 		self.assertEqual(response.matched, 1)
@@ -138,9 +110,9 @@ class TestGetEventSponsorshipEnquiries(ManageTestCase):
 			event=self.event,
 			additional_fields=[{"fieldname": "booth", "label": "Needs a booth", "value": "1"}],
 		)
-		frappe.set_user(self.make_member("Manager"))
 
-		response = get_event_sponsorship_enquiries(self.event, filters='[["booth", "in", ["1"]]]')
+		with self.set_user(self.manager):
+			response = get_event_sponsorship_enquiries(self.event, filters='[["booth", "in", ["1"]]]')
 
 		self.assertIn("booth", [field.key for field in response.filter_fields])
 		self.assertEqual([row.name for row in response.enquiries], [booth.name])
@@ -148,13 +120,12 @@ class TestGetEventSponsorshipEnquiries(ManageTestCase):
 	def test_pages_follow_start_and_limit(self):
 		suffix = frappe.generate_hash(length=6)
 		for index in range(3):
-			self.make_enquiry(f"Paged {suffix} {index}")
-		frappe.set_user(self.make_member("Manager"))
+			self.create_enquiry(f"Paged {suffix} {index}")
 
-		first = get_event_sponsorship_enquiries(self.event, search=f"Paged {suffix}", order="asc", limit=2)
-		rest = get_event_sponsorship_enquiries(
-			self.event, search=f"Paged {suffix}", order="asc", start=2, limit=2
-		)
+		with self.set_user(self.manager):
+			search = {"search": f"Paged {suffix}", "order": "asc", "limit": 2}
+			first = get_event_sponsorship_enquiries(self.event, **search)
+			rest = get_event_sponsorship_enquiries(self.event, start=2, **search)
 
 		self.assertTrue(first.has_next_page)
 		self.assertFalse(rest.has_next_page)
@@ -162,10 +133,13 @@ class TestGetEventSponsorshipEnquiries(ManageTestCase):
 		self.assertEqual(names, [f"Paged {suffix} {index}" for index in range(3)])
 
 	def test_stranger_is_refused(self):
-		frappe.set_user(self.make_stranger())
-
-		with self.assertRaises(CannotManageEvent):
+		with self.set_user(self.make_stranger()), self.assertRaises(CannotManageEvent):
 			get_event_sponsorship_enquiries(self.event)
+
+	def create_enquiry(self, company_name: str, status: str = "Approval Pending"):
+		return SponsorshipEnquiryFactory.create(
+			event=self.event, tier=self.tier.name, company_name=company_name, status=status
+		)
 
 
 class TestGetEventSponsorshipEnquiry(ManageTestCase):
@@ -173,17 +147,15 @@ class TestGetEventSponsorshipEnquiry(ManageTestCase):
 		self.enquiry.append("additional_fields", {"label": "Budget", "fieldname": "budget", "value": "5000"})
 		self.enquiry.save()
 		sponsor = self.make_sponsor()
-		frappe.set_user(self.make_member("Viewer"))
 
-		detail = get_event_sponsorship_enquiry(self.enquiry.name)
+		with self.set_user(self.viewer):
+			detail = get_event_sponsorship_enquiry(self.enquiry.name)
 
 		self.assertEqual(detail.sponsor, sponsor.name)
 		self.assertEqual([(answer.label, answer.value) for answer in detail.answers], [("Budget", "5000")])
 
 	def test_stranger_is_refused(self):
-		frappe.set_user(self.make_stranger())
-
-		with self.assertRaises(CannotManageEvent):
+		with self.set_user(self.make_stranger()), self.assertRaises(CannotManageEvent):
 			get_event_sponsorship_enquiry(self.enquiry.name)
 
 	def test_unknown_enquiry_is_not_found(self):
@@ -192,25 +164,21 @@ class TestGetEventSponsorshipEnquiry(ManageTestCase):
 
 
 class TestUpdateEnquiryStatus(ManageTestCase):
-	def status(self) -> str:
-		return frappe.db.get_value("Sponsorship Enquiry", self.enquiry.name, "status")
+	def setUp(self):
+		super().setUp()
+		self.enterContext(self.set_user(self.manager))
 
 	def test_manager_moves_the_enquiry_along(self):
-		frappe.set_user(self.make_member("Manager"))
-
 		self.assertEqual(update_enquiry_status(self.enquiry.name, "Payment Pending"), "Payment Pending")
-		self.assertEqual(self.status(), "Payment Pending")
+		self.assertEqual(self.enquiry_status(), "Payment Pending")
 
 	def test_marking_paid_lists_the_sponsor_once(self):
-		frappe.set_user(self.make_member("Manager"))
-
 		update_enquiry_status(self.enquiry.name, "Paid")
 		update_enquiry_status(self.enquiry.name, "Paid")
 
 		self.assertEqual(frappe.db.count("Event Sponsor", {"enquiry": self.enquiry.name}), 1)
 
 	def test_paid_enquiry_keeps_its_status(self):
-		frappe.set_user(self.make_member("Manager"))
 		update_enquiry_status(self.enquiry.name, "Paid")
 
 		with self.assertRaises(EnquiryStatusLocked):
@@ -218,22 +186,20 @@ class TestUpdateEnquiryStatus(ManageTestCase):
 
 	def test_approval_needs_a_tier(self):
 		frappe.db.set_value("Sponsorship Enquiry", self.enquiry.name, "tier", None)
-		frappe.set_user(self.make_member("Manager"))
 
 		with self.assertRaises(EnquiryTierMissing):
 			update_enquiry_status(self.enquiry.name, "Payment Pending")
 
 	def test_unknown_status_is_rejected(self):
-		frappe.set_user(self.make_member("Manager"))
-
 		with self.assertRaises(frappe.ValidationError):
 			update_enquiry_status(self.enquiry.name, "Rejected")
 
 	def test_viewer_and_stranger_are_refused(self):
-		for user in (self.make_member("Viewer"), self.make_stranger()):
-			with self.subTest(user):
-				frappe.set_user(user)
-				with self.assertRaises(CannotManageEvent):
-					update_enquiry_status(self.enquiry.name, "Withdrawn")
-		frappe.set_user("Administrator")
-		self.assertEqual(self.status(), "Approval Pending")
+		for user in (self.viewer, self.make_stranger()):
+			with self.subTest(user), self.set_user(user), self.assertRaises(CannotManageEvent):
+				update_enquiry_status(self.enquiry.name, "Withdrawn")
+
+		self.assertEqual(self.enquiry_status(), "Approval Pending")
+
+	def enquiry_status(self) -> str:
+		return frappe.db.get_value("Sponsorship Enquiry", self.enquiry.name, "status")

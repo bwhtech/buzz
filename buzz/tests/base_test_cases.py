@@ -2,7 +2,14 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.booking.schemas import BookingRequest
-from buzz.tests.factories import BuzzEventFactory, EventTicketTypeFactory, UserFactory
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	EventTicketTypeFactory,
+	SponsorshipEnquiryFactory,
+	SponsorshipTierFactory,
+	UserFactory,
+)
+from buzz.tests.factories.events.event_sponsor_factory import EventSponsorFactory
 
 BOOKER = "booking-owner@example.com"
 OUTSIDER = "booking-outsider@example.com"
@@ -50,52 +57,26 @@ class SponsorshipTestCase(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		cls.event = str(frappe.get_doc("Buzz Event", {"route": "test-route"}).name)
+		cls.event = str(BuzzEventFactory.create().name)
 
 	def setUp(self):
 		self.enterContext(self.set_user("Administrator"))
 		frappe.clear_messages()
-
-		self.tier = frappe.get_doc(
-			{
-				"doctype": "Sponsorship Tier",
-				"event": self.event,
-				"title": f"Sponsorship Test {frappe.generate_hash(length=6)}",
-				"prices": [{"currency": "INR", "price": 5000}],
-			}
-		).insert()
-
-		self.enquiry = frappe.get_doc(
-			{
-				"doctype": "Sponsorship Enquiry",
-				"event": self.event,
-				"tier": self.tier.name,
-				"company_name": "Acme Corp",
-				"company_logo": "/files/acme.png",
-				"status": "Approval Pending",
-			}
-		).insert()
-
-	def tearDown(self):
-		frappe.db.rollback()
+		self.tier = SponsorshipTierFactory.create(
+			event=self.event, title="Gold", prices=[{"currency": "INR", "price": 5000}]
+		)
+		self.enquiry = SponsorshipEnquiryFactory.create(
+			event=self.event, tier=self.tier.name, company_name="Acme Corp", company_logo="/files/acme.png"
+		)
 
 	def make_stranger(self) -> str:
-		email = f"stranger-{frappe.generate_hash(length=6)}@example.com"
-		user = frappe.new_doc("User")
-		user.email = email
-		user.first_name = "Stranger"
-		user.append("roles", {"role": "Buzz User"})
-		user.insert(ignore_permissions=True)
-		return email
+		return UserFactory.create_once("sponsorship-stranger@example.com").name
 
 	def make_sponsor(self):
-		return frappe.get_doc(
-			{
-				"doctype": "Event Sponsor",
-				"event": self.event,
-				"tier": self.tier.name,
-				"company_name": "Acme Corp",
-				"company_logo": "/files/acme.png",
-				"enquiry": self.enquiry.name,
-			}
-		).insert()
+		return EventSponsorFactory.create(
+			event=self.event,
+			tier=self.tier.name,
+			enquiry=self.enquiry.name,
+			company_name="Acme Corp",
+			company_logo="/files/acme.png",
+		)
