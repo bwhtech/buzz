@@ -2,11 +2,11 @@
 # Provision a Frappe bench for Buzz backend tests inside a Claude Code cloud session.
 # Mirrors .github/actions/setup-bench. Safe to re-run: every step skips work already done.
 #
-# Usage:  sudo bash .claude/scripts/setup-cloud-bench.sh
+# Usage:  sudo bash .claude/skills/cloud-bench/setup.sh
 # Then:   as-frappe 'cd ~/frappe-bench && bench --site testbuzz.localhost run-tests --app buzz'
 set -euo pipefail
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 BENCH_USER=frappe
 BENCH_DIR=/home/$BENCH_USER/frappe-bench
 NODE_DIR=/opt/node24
