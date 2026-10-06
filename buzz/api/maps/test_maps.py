@@ -90,6 +90,8 @@ class TestAddPlaceAsVenue(GoogleMapsTestCase):
 		super().setUpClass()
 		cls.owner = UserFactory.create_once("place-venue-owner@example.com").name
 		cls.team = BuzzTeamFactory.create_owned_by(cls.owner).name
+		cls.outsider = UserFactory.create_once("place-venue-outsider@example.com").name
+		BuzzTeamFactory.create_owned_by(cls.outsider)
 
 	def setUp(self):
 		super().setUp()
@@ -135,10 +137,8 @@ class TestAddPlaceAsVenue(GoogleMapsTestCase):
 	@patch("buzz.api.maps.services.requests.request")
 	def test_another_teams_member_cannot_add_to_the_team(self, request):
 		request.return_value = google_answers({"formattedAddress": "Somewhere"})
-		outsider = UserFactory.create_once("place-venue-outsider@example.com").name
-		BuzzTeamFactory.create_owned_by(outsider)
 
-		with self.set_user(outsider), self.assertRaises(frappe.PermissionError):
+		with self.set_user(self.outsider), self.assertRaises(frappe.PermissionError):
 			add_place_as_venue(self.team, "place-3", "Not Mine", "token-1")
 		request.assert_not_called()
 

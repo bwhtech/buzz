@@ -36,6 +36,10 @@ class CommunicationsTestCase(IntegrationTestCase):
 		cls.owner = UserFactory.create_once("comms-owner@example.com").name
 		cls.viewer = UserFactory.create_once("comms-viewer@example.com").name
 		cls.manager = UserFactory.create_once("comms-manager@example.com").name
+		# The list reads User.full_name, so the test pins it rather than trusting a cached name.
+		frappe.db.set_value(
+			"User", cls.manager, {"first_name": "Mira", "last_name": "Sender", "full_name": "Mira Sender"}
+		)
 		cls.team = BuzzTeamFactory.create_owned_by(cls.owner).name
 		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.viewer, team_role="Viewer")
 		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.manager, team_role="Manager")
@@ -171,7 +175,7 @@ class TestGetEventCommunications(CommunicationsTestCase):
 			page = get_event_communications(self.event)
 
 		self.assertEqual([row.name for row in page.communications], [second.name, first.name])
-		self.assertEqual(page.communications[0].sent_by, frappe.utils.get_fullname(self.manager))
+		self.assertEqual(page.communications[0].sent_by, "Mira Sender")
 		self.assertFalse(page.can_write)
 		self.assertFalse(page.can_edit_settings)
 
