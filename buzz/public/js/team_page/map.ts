@@ -95,7 +95,7 @@ function createPin(events: EventCard[], isNextEvent: boolean): Pin {
 /** The dot-matrix map: a pin per location, framed on a country by animating the viewBox. */
 export class TeamMap {
 	private svg: SVGSVGElement
-	private dots: SVGPathElement | null
+	private dots: SVGUseElement | null
 	private pins: Pin[]
 	private view: View
 	private country = ""
@@ -106,7 +106,7 @@ export class TeamMap {
 		upcoming: EventCard[],
 	) {
 		this.svg = root.querySelector("svg")!
-		this.dots = document.querySelector<SVGPathElement>("#world-dots")
+		this.dots = root.querySelector<SVGUseElement>(".team-map-land")
 		const locations = groupByLocation(upcoming.filter((event) => event.latitude !== null))
 		this.pins = locations.map((events, index) => createPin(events, index === 0))
 		root.querySelector(".team-map-pins")!.append(...this.pins.map((pin) => pin.element))

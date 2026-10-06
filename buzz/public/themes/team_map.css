@@ -5,10 +5,6 @@
 	display: none;
 }
 
-.team-map-defs {
-	position: absolute;
-}
-
 .team-map {
 	position: relative;
 	height: clamp(220px, 24vw, 340px);

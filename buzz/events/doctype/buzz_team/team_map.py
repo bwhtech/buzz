@@ -1,16 +1,8 @@
 from collections import Counter
-from functools import cache
-from pathlib import Path
 
 import frappe
 import pytz
 from frappe.utils import today
-
-
-@cache
-def world_dots() -> str:
-	"""Land as one SVG path of dots: a 1.2° grid of Natural Earth 1:50m land, about 140 KB."""
-	return Path(frappe.get_app_path("buzz", "public", "images", "world-dots.txt")).read_text()
 
 
 def country_time_zones(country) -> list[str]:
@@ -26,10 +18,8 @@ class TeamMap:
 		self.past = past
 
 	def as_context(self) -> dict:
-		has_pins = any(event["latitude"] is not None for event in self.upcoming)
 		return {
-			"has_pins": has_pins,
-			"world_dots": world_dots() if has_pins else "",
+			"has_pins": any(event["latitude"] is not None for event in self.upcoming),
 			"countries": self.country_counts(),
 			"upcoming_count": len(self.upcoming),
 			"page_data": {

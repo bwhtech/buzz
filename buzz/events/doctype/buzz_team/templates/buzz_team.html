@@ -58,11 +58,8 @@
 	{% macro chevron(path) %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ path }}"/></svg>{% endmacro %}
 
 	{% if has_pins %}
-	<svg class="team-map-defs" width="0" height="0" aria-hidden="true">
-		<defs><path id="world-dots" d="{{ world_dots }}" fill="none" stroke="currentColor" stroke-width="0.24" stroke-linecap="round"/></defs>
-	</svg>
 	<section class="team-map" data-map>
-		<svg class="team-map-svg" viewBox="0 6 360 140" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use class="team-map-land" href="#world-dots"/></svg>
+		<svg class="team-map-svg" viewBox="0 6 360 140" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use class="team-map-land" stroke-width="0.24" href="/assets/buzz/images/world-dots.svg#world-dots"/></svg>
 		<div class="team-map-pins"></div>
 		<div class="team-map-controls" role="group" aria-label="{{ _('Map zoom') }}">
 			<button type="button" data-zoom-to="nearby" aria-pressed="false" hidden>{{ _("Nearby") }}</button>

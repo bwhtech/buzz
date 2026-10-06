@@ -60,4 +60,3 @@ class TestTeamMap(IntegrationTestCase):
 		context = TeamPage(team).as_context()
 
 		self.assertFalse(context["has_pins"])
-		self.assertEqual(context["world_dots"], "")
