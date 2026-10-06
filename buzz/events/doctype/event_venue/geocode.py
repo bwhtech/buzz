@@ -13,6 +13,8 @@ CITY_KEYS = ("city", "town", "village", "municipality")
 # Nominatim finds nothing for many street-level addresses, Google's especially; their last
 # few parts (locality, city, state, country) still place the venue well enough for a pin.
 ADDRESS_ENDINGS = (4, 3)
+# Up to four lookups a venue at one a second keeps a batch well inside its job timeout.
+GEOCODE_BATCH_SIZE = 200
 
 
 def has_coordinates(venue) -> bool:
@@ -38,10 +40,25 @@ def geocode_venue(venue_name: str) -> None:
 	VenueGeocoder(frappe.get_doc("Event Venue", venue_name)).fill()
 
 
-def geocode_all_venues() -> None:
-	for venue_name in venues_to_geocode():
-		geocode_venue(venue_name)
-		time.sleep(REQUEST_INTERVAL_SECONDS)
+def enqueue_geocode_batch(venue_names: list[str]) -> None:
+	frappe.enqueue(
+		"buzz.events.doctype.event_venue.geocode.geocode_venues",
+		venue_names=venue_names,
+		queue="long",
+		timeout=3600,
+	)
+
+
+def geocode_venues(venue_names: list[str]) -> None:
+	"""Geocodes one batch, then queues the rest, so batches never run side by side."""
+	batch, rest = venue_names[:GEOCODE_BATCH_SIZE], venue_names[GEOCODE_BATCH_SIZE:]
+	try:
+		for venue_name in batch:
+			geocode_venue(venue_name)
+			time.sleep(REQUEST_INTERVAL_SECONDS)
+	finally:
+		if rest:
+			enqueue_geocode_batch(rest)
 
 
 def venues_to_geocode() -> list[str]:

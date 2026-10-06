@@ -1,6 +1,6 @@
-import frappe
+from buzz.events.doctype.event_venue.geocode import enqueue_geocode_batch, venues_to_geocode
 
 
 def execute():
 	"""Venues saved before geocoding have no city or country; fill them in the background."""
-	frappe.enqueue("buzz.events.doctype.event_venue.geocode.geocode_all_venues", queue="long", timeout=3600)
+	enqueue_geocode_batch(venues_to_geocode())

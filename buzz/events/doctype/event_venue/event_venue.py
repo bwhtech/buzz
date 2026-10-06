@@ -44,7 +44,7 @@ class EventVenue(Document):
 		# A live worker would call Nominatim mid-test.
 		if frappe.in_test or self.flags.geocoded or not needs_geocoding(self):
 			return
-		if self.has_value_changed("address") or self.has_value_changed("latitude"):
+		if any(self.has_value_changed(field) for field in ("address", "latitude", "longitude")):
 			enqueue_geocode(self.name)
 
 	def set_location_from_map_link(self):
