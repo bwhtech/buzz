@@ -18,7 +18,7 @@ class BookingTestCase(IntegrationTestCase):
 		cls.event.reload()
 
 	def setUp(self):
-		frappe.set_user("Administrator")
+		self.enterContext(self.set_user("Administrator"))
 		frappe.clear_messages()
 		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event.name)
 		self.set_event({"is_published": 1, "registrations_close_at": None, "allow_guest_booking": 0})
@@ -53,7 +53,7 @@ class SponsorshipTestCase(IntegrationTestCase):
 		cls.event = str(frappe.get_doc("Buzz Event", {"route": "test-route"}).name)
 
 	def setUp(self):
-		frappe.set_user("Administrator")
+		self.enterContext(self.set_user("Administrator"))
 		frappe.clear_messages()
 
 		self.tier = frappe.get_doc(
@@ -77,7 +77,6 @@ class SponsorshipTestCase(IntegrationTestCase):
 		).insert()
 
 	def tearDown(self):
-		frappe.set_user("Administrator")
 		frappe.db.rollback()
 
 	def make_stranger(self) -> str:
