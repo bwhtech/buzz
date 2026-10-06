@@ -34,7 +34,7 @@ class TestRemoveMember(MemberRoleTestCase):
 		with self.set_user(admin):
 			remove_members(team, [member])
 
-		self.assertEqual(self.membership(team, member).enabled, 0)
+		self.assertEqual(self.membership_enabled(team, member), 0)
 
 	def test_a_manager_cannot_remove_anyone(self):
 		manager = self.create_user("remove-manager@example.com")
@@ -105,13 +105,11 @@ class TestRemoveMember(MemberRoleTestCase):
 		with self.set_user(owner):
 			remove_members(team, [first, second])
 
-		self.assertEqual(self.membership(team, first).enabled, 0)
-		self.assertEqual(self.membership(team, second).enabled, 0)
+		self.assertEqual(self.membership_enabled(team, first), 0)
+		self.assertEqual(self.membership_enabled(team, second), 0)
 
-	def membership(self, team: str, user: str) -> dict:
-		return frappe.db.get_value(
-			"Buzz Team Membership", {"team": team, "user": user}, ["name", "enabled"], as_dict=True
-		)
+	def membership_enabled(self, team: str, user: str) -> int:
+		return frappe.db.get_value("Buzz Team Membership", {"team": team, "user": user}, "enabled")
 
 
 class TestChangeRole(MemberRoleTestCase):

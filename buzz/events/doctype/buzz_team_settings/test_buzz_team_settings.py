@@ -92,8 +92,7 @@ class TestBuzzTeamSettings(IntegrationTestCase):
 		return BuzzTeamFactory.create_owned_by(self.owner).name
 
 	def set_globals(self, **values):
-		for fieldname, value in values.items():
-			frappe.db.set_single_value("Buzz Settings", fieldname, value)
+		frappe.db.set_single_value("Buzz Settings", values)
 		frappe.clear_document_cache("Buzz Settings", "Buzz Settings")
 
 	def global_values(self) -> dict:

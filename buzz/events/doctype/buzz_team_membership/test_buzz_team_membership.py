@@ -252,7 +252,7 @@ class TestInvitationAccept(IntegrationTestCase):
 		return frappe.get_all(
 			"Buzz Team Membership",
 			filters={"team": self.team, "user": user},
-			fields=["name", "team_role", "enabled"],
+			fields=["team_role", "enabled"],
 		)
 
 

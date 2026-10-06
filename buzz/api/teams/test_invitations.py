@@ -272,9 +272,7 @@ class TestInviteActions(InvitationTestCase):
 		return team, owner
 
 	def invitation_for(self, email: str) -> dict:
-		return frappe.db.get_value(
-			"User Invitation", {"email": email}, ["name", "key", "status"], as_dict=True
-		)
+		return frappe.db.get_value("User Invitation", {"email": email}, ["key", "status"], as_dict=True)
 
 
 class TestDefaultPath(IntegrationTestCase):

@@ -141,7 +141,8 @@ class TestCreateDefaultTeams(IntegrationTestCase):
 
 class TestAssignDefaultTeam(IntegrationTestCase):
 	def test_backfills_teamless_rows_and_is_idempotent(self):
-		venue = self.create_teamless_venue()
+		venue = EventVenueFactory.create().name
+		frappe.db.set_value("Event Venue", venue, "team", None, update_modified=False)
 
 		backfill_teams()
 		assigned = frappe.db.get_value("Event Venue", venue, "team")
@@ -158,11 +159,6 @@ class TestAssignDefaultTeam(IntegrationTestCase):
 		backfill_teams()
 
 		self.assertEqual(frappe.db.count("Buzz Team"), teams)
-
-	def create_teamless_venue(self) -> str:
-		venue = EventVenueFactory.create()
-		frappe.db.set_value("Event Venue", venue.name, "team", None, update_modified=False)
-		return venue.name
 
 
 class TestCreateAdministratorTeam(IntegrationTestCase):
