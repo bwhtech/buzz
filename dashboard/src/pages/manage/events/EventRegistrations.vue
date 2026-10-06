@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useEventListener } from "@vueuse/core"
-import { Button, ErrorMessage, Skeleton } from "frappe-ui"
+import { Alert, Button, ErrorMessage, Skeleton } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
@@ -97,6 +97,13 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		<ErrorMessage v-else-if="page.error" :message="message(page.error)" />
 
 		<div v-else-if="page.data" class="space-y-8">
+			<Alert
+				v-if="!page.data.paid_events_enabled"
+				theme="amber"
+				title="Paid tickets are not available"
+				description="Ticket types for this event can only be free. Contact your administrator to enable paid tickets."
+			/>
+
 			<RevenueCards v-if="page.data.revenue.length" :revenue="page.data.revenue" />
 
 			<ListSection
@@ -116,17 +123,19 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				/>
 			</ListSection>
 
-			<PaymentProviders :providers="page.data.payment_providers" />
+			<template v-if="page.data.paid_events_enabled">
+				<PaymentProviders :providers="page.data.payment_providers" />
 
-			<TaxSettings
-				:event="eventId"
-				:form="taxForm"
-				:can-write="page.data.can_write"
-				:team-legal-name="page.data.team_legal_name"
-				:team-tax-id="page.data.team_tax_id"
-				:can-edit-team="page.data.can_edit_team"
-				@tax-details-added="page.reload()"
-			/>
+				<TaxSettings
+					:event="eventId"
+					:form="taxForm"
+					:can-write="page.data.can_write"
+					:team-legal-name="page.data.team_legal_name"
+					:team-tax-id="page.data.team_tax_id"
+					:can-edit-team="page.data.can_edit_team"
+					@tax-details-added="page.reload()"
+				/>
+			</template>
 		</div>
 
 		<template #sidebar>
@@ -148,6 +157,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		:event="eventId"
 		:ticket-type="selectedTicketType"
 		:can-write="!!page.data?.can_write"
+		:paid-events-enabled="!!page.data?.paid_events_enabled"
 		@changed="page.reload()"
 	/>
 
@@ -157,6 +167,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		doctype="Event Ticket Type"
 		item-label="Ticket Type"
 		placeholder="General admission"
+		:free-only="!page.data?.paid_events_enabled"
 		@saved="page.reload()"
 	/>
 </template>

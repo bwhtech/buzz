@@ -15,6 +15,7 @@ class TeamOption(APIResponse):
 	team_role: str
 	# The settings list shows who is on each team, not only how many.
 	members: list[TeamMember]
+	feature_flags: dict[str, bool]
 
 
 class InviteOutcome(APIResponse):

@@ -124,6 +124,7 @@ export interface TeamOption {
 	logo: string | null
 	team_role: string
 	members: TeamMember[]
+	feature_flags: Record<string, boolean>
 }
 
 // Someone invited by email who has not accepted yet, so has no User row.
@@ -603,6 +604,7 @@ export interface EventTicketTypes {
 	team_legal_name: string | null
 	team_tax_id: string | null
 	can_edit_team: boolean
+	paid_events_enabled: boolean
 	ticket_types: TicketTypeItem[]
 	payment_providers: PaymentProviderItem[]
 	revenue: CurrencyRevenue[]

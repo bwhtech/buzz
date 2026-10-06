@@ -234,6 +234,7 @@ class EventTicketTypes(APIResponse):
 	team_legal_name: str | None
 	team_tax_id: str | None
 	can_edit_team: bool
+	paid_events_enabled: bool
 	ticket_types: list[TicketTypeItem]
 	payment_providers: list[PaymentProviderItem]
 	revenue: list[CurrencyRevenue]

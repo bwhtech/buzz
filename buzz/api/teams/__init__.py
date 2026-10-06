@@ -2,6 +2,7 @@ import frappe
 
 from buzz.api.teams import invitations, services
 from buzz.api.teams.schemas import InviteOutcome, TeamOption, TeamOverview
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
 
 
 @frappe.whitelist()
@@ -23,7 +24,14 @@ def get_my_teams() -> list[TeamOption]:
 		.where((membership.user == frappe.session.user) & (membership.enabled == 1))
 	).run(as_dict=True)
 
-	return [TeamOption(**my_team, members=services.members_of(my_team.name)) for my_team in my_teams]
+	return [
+		TeamOption(
+			**my_team,
+			members=services.members_of(my_team.name),
+			feature_flags=feature_flags(my_team.name),
+		)
+		for my_team in my_teams
+	]
 
 
 @frappe.whitelist()

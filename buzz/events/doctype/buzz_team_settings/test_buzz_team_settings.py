@@ -4,15 +4,20 @@
 from unittest.mock import patch
 
 import frappe
+from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.tickets.windows import ADD_ON_CHANGE, CANCELLATION, TRANSFER
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import (
+	FEATURE_FLAG_PREFIX,
 	SEEDED_FIELDS,
 	ZOOM_SEEDED_FIELD,
+	feature_flags,
 	get_team_settings,
+	is_feature_enabled,
 )
+from buzz.tests.factories import BuzzTeamFactory, UserFactory
 
 CUTOFF_FIELDS = (TRANSFER, ADD_ON_CHANGE, CANCELLATION)
 
@@ -172,3 +177,55 @@ class TestTeamTaxDetails(IntegrationTestCase):
 		)
 		self.save_tax_details(tax_id="29BBBBB1111B1Z5")
 		self.assertEqual(self.settings.tax_id, "29BBBBB1111B1Z5")
+
+
+TEST_FLAG = "feature_test_flag"
+
+
+class TestFeatureFlags(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		create_custom_field(
+			"Buzz Team Settings",
+			{"fieldname": TEST_FLAG, "label": "Test Flag", "fieldtype": "Check", "permlevel": 1},
+		)
+
+	@classmethod
+	def tearDownClass(cls):
+		super().tearDownClass()
+		frappe.delete_doc("Custom Field", f"Buzz Team Settings-{TEST_FLAG}", force=True)
+		frappe.db.sql_ddl(f"alter table `tabBuzz Team Settings` drop column `{TEST_FLAG}`")
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.addCleanup(frappe.set_user, "Administrator")
+		self.owner = UserFactory.create_once("feature-flag-owner@example.com").name
+		self.team = BuzzTeamFactory.create_owned_by(self.owner).name
+		self.addCleanup(frappe.clear_document_cache, "Buzz Team Settings", self.team)
+
+	def save_flag(self, value: int):
+		settings = frappe.get_doc("Buzz Team Settings", self.team)
+		settings.set(TEST_FLAG, value)
+		settings.save()
+
+	def test_flag_is_off_until_saved_on(self):
+		self.assertFalse(is_feature_enabled(self.team, TEST_FLAG))
+		self.save_flag(1)
+		self.assertTrue(is_feature_enabled(self.team, TEST_FLAG))
+		self.assertEqual(feature_flags(self.team)[TEST_FLAG], True)
+
+	def test_unknown_flag_throws(self):
+		with self.assertRaises(frappe.ValidationError):
+			is_feature_enabled(self.team, "feature_does_not_exist")
+
+	def test_team_owner_cannot_turn_a_flag_on(self):
+		frappe.set_user(self.owner)
+		self.save_flag(1)
+		self.assertFalse(is_feature_enabled(self.team, TEST_FLAG))
+
+	def test_every_flag_is_a_restricted_check_field(self):
+		for field in frappe.get_meta("Buzz Team Settings").fields:
+			if field.fieldname.startswith(FEATURE_FLAG_PREFIX):
+				self.assertEqual(field.fieldtype, "Check", field.fieldname)
+				self.assertGreaterEqual(field.permlevel, 1, field.fieldname)
