@@ -25,9 +25,9 @@ class GuestsTestCase(IntegrationTestCase):
 	def setUp(self):
 		self.event = str(BuzzEventFactory.create(team=self.team, title="Guest List Event").name)
 
-	def guests_as(self, user: str, event: str | None = None, **arguments):
+	def guests_as(self, user: str, **arguments):
 		with self.set_user(user):
-			return get_event_guests(event or self.event, **arguments)
+			return get_event_guests(self.event, **arguments)
 
 
 class TestGetEventGuests(GuestsTestCase):
@@ -84,8 +84,8 @@ class TestGetEventGuests(GuestsTestCase):
 			self.guests_as(outsider)
 
 	def test_an_unknown_event_is_not_found(self):
-		with self.assertRaises(EventNotFound):
-			self.guests_as(self.owner, "999999999")
+		with self.set_user(self.owner), self.assertRaises(EventNotFound):
+			get_event_guests("999999999")
 
 
 class TestGetEventGuestsTicketTypeFilter(GuestsTestCase):

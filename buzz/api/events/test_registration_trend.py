@@ -106,21 +106,20 @@ class TestGetEventRegistrationTrend(IntegrationTestCase):
 			get_event_registration_trend(self.event)
 
 	def test_an_unknown_event_is_not_found(self):
-		with self.assertRaises(EventNotFound):
-			self.trend(event="999999999")
+		with self.set_user(self.owner), self.assertRaises(EventNotFound):
+			get_event_registration_trend("999999999")
 
 	def register_on(self, day: str, ticket_type: str | None = None):
-		# A None override would beat the factory's own new ticket type.
-		ticket_type_override = {"ticket_type": ticket_type} if ticket_type else {}
-		ticket = EventTicketFactory.create("submitted", event=self.event, **ticket_type_override)
+		ticket_type = ticket_type or EventTicketTypeFactory.create(event=self.event).name
+		ticket = EventTicketFactory.create("submitted", event=self.event, ticket_type=ticket_type)
 		frappe.db.set_value("Event Ticket", ticket.name, "creation", f"{day} 10:00:00", update_modified=False)
 
 	def ticket_type(self, title: str) -> str:
 		return EventTicketTypeFactory.create(event=self.event, title=title).name
 
-	def trend(self, event: str | None = None, **arguments):
+	def trend(self, **arguments):
 		with self.set_user(self.owner):
-			return get_event_registration_trend(event or self.event, **arguments)
+			return get_event_registration_trend(self.event, **arguments)
 
 
 def totals_by_day(trend) -> dict:
