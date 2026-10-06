@@ -10,5 +10,5 @@ class PaymentGatewayFactory(BaseFactory[PaymentGateway]):
 
 	@property
 	def default_attributes(self) -> dict[str, Any]:
-		# Named after `gateway`, and rows outlive a run, so a hash beats Faker's per-process `unique`.
+		# Named after `gateway` and rows outlive a run, so a hash rather than Faker's `unique`.
 		return {"gateway": f"Gateway {frappe.generate_hash(length=8)}"}
