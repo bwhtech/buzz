@@ -11,12 +11,6 @@ from buzz.tests.factories import BuzzEventFactory, PaymentGatewayFactory
 from buzz.ticketing.doctype.event_booking.refund_test_case import CHARGED_PER_TICKET, BookingRefundTestCase
 
 
-def make_payment_gateway(gateway: str) -> None:
-	"""Kept for modules that still import it. New tests use `PaymentGatewayFactory`."""
-	if not frappe.db.exists("Payment Gateway", gateway):
-		PaymentGatewayFactory.create(gateway=gateway)
-
-
 class TestRefundSummary(BookingRefundTestCase):
 	def test_each_ticket_carries_its_share_of_the_charged_total(self):
 		summary = self.booking.get_refund_summary()

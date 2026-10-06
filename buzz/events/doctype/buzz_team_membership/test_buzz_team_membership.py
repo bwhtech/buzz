@@ -258,15 +258,3 @@ class TestInvitationAccept(IntegrationTestCase):
 			filters={"team": self.team, "user": user},
 			fields=["team_role", "enabled"],
 		)
-
-
-# Kept for the modules that still import it.
-def add_member(team: str, user: str, team_role: str = "Manager") -> "frappe.Document":
-	return frappe.get_doc(
-		{
-			"doctype": "Buzz Team Membership",
-			"team": team,
-			"user": user,
-			"team_role": team_role,
-		}
-	).insert()

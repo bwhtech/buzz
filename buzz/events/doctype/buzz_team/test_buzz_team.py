@@ -7,20 +7,23 @@ from frappe.tests import IntegrationTestCase
 from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
 from buzz.patches.assign_default_team import TEAM_DIRECT_DOCTYPES
 from buzz.tests.factories import (
+	BuzzCampaignFactory,
 	BuzzEventFactory,
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
 	EventHostFactory,
+	EventTemplateFactory,
 	EventVenueFactory,
 	UserFactory,
 )
-from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
 
 OWNER = "team-owner@example.com"
 TEAM_DIRECT_FACTORIES = {
 	"Buzz Event": BuzzEventFactory,
 	"Event Venue": EventVenueFactory,
 	"Event Host": EventHostFactory,
+	"Event Template": EventTemplateFactory,
+	"Buzz Campaign": BuzzCampaignFactory,
 }
 
 
@@ -165,51 +168,6 @@ class TestSetTeamFromSoleMembership(IntegrationTestCase):
 			return doc.insert(ignore_permissions=True)
 
 	def build_without_team(self, doctype: str, team: str):
-		factory = TEAM_DIRECT_FACTORIES.get(doctype)
-		if factory:
-			doc = factory.build(team=team)
-		else:
-			# Event Template and Buzz Campaign have no factory yet.
-			doc = frappe.get_doc(payload_for(doctype, frappe.generate_hash(length=6)))
+		doc = TEAM_DIRECT_FACTORIES[doctype].build(team=team)
 		doc.team = None
 		return doc
-
-
-# Kept for the modules that still import them.
-def create_user(email: str, first_name: str) -> str:
-	if not frappe.db.exists("User", email):
-		frappe.get_doc(
-			{
-				"doctype": "User",
-				"email": email,
-				"first_name": first_name,
-				"send_welcome_email": 0,
-			}
-		).insert(ignore_permissions=True)
-	return email
-
-
-def create_owned_team(team_name: str, owner: str) -> str:
-	team = frappe.get_doc({"doctype": "Buzz Team", "team_name": team_name})
-	team.flags.owner_user = owner
-	team.insert(ignore_permissions=True)
-	BuzzTeamFactory.set_settings(team.name, {PAID_EVENTS_FLAG: 1})
-	return team.name
-
-
-def payload_for(doctype: str, suffix: str) -> dict:
-	payloads = {
-		"Event Venue": {"venue_name": f"Venue {suffix}", "address": "somewhere"},
-		"Event Host": {"host_name": f"Host {suffix}"},
-		"Event Template": {"template_name": f"Template {suffix}"},
-		"Buzz Campaign": {"name": f"Campaign {suffix}", "title": suffix, "description": "why"},
-		"Buzz Event": {
-			"title": f"Event {suffix}",
-			"category": "Test Category",
-			"start_date": "2026-03-05",
-			"end_date": "2026-03-06",
-			"start_time": "09:00:00",
-			"end_time": "18:00:00",
-		},
-	}
-	return {"doctype": doctype, **payloads[doctype]}
