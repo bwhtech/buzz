@@ -18,6 +18,7 @@ from buzz.www.events import (
 	TIME_FIELDS,
 	exclude_ended_events,
 	has_ended,
+	has_started,
 	upcoming_filters,
 )
 
@@ -112,6 +113,15 @@ class TeamPage:
 	def co_host_names(self) -> dict[str, list[str]]:
 		return co_host_names_by_event([str(event.name) for event in self.upcoming_events + self.past_events])
 
+	@cached_property
+	def attending_events(self) -> set[str]:
+		"""Events the visitor holds a ticket for: the dashboard's Attending rule."""
+		events = [str(event.name) for event in self.upcoming_events + self.past_events]
+		if frappe.session.user == "Guest" or not events:
+			return set()
+		tickets = {"attendee_email": frappe.session.user, "docstatus": 1, "event": ["in", events]}
+		return set(frappe.get_all("Event Ticket", filters=tickets, pluck="event"))
+
 	def event_filters(self) -> dict:
 		"""The team's own events, plus those its community approved."""
 		filters = {"team": self.team.name}
@@ -137,6 +147,8 @@ class TeamPage:
 			"host_logo": event.host_logo,
 			"place": _("Online") if is_online else event.venue_name,
 			"is_online": is_online,
+			"is_live": has_started(event) and not has_ended(event),
+			"is_attending": str(event.name) in self.attending_events,
 			# Past events have ended, so only upcoming cards can say this.
 			"registrations_closed": not has_ended(event) and are_registrations_closed(event),
 			"city": event.city,

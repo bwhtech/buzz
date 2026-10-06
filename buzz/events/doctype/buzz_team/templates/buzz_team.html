@@ -21,8 +21,14 @@
 	<a class="team-event-card" href="{{ event.url }}" data-event-card data-country="{{ event.country or '' }}" data-event-route="{{ event.route }}">
 		{% if event.image %}<img class="team-event-card-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="team-event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
 		<span class="team-event-card-body">
-			{% if event.time or event.registrations_closed %}
-			<span class="team-event-card-time">{{ event.time }}{% if event.registrations_closed %}<span class="es-badge" data-size="sm" data-theme="red">{{ _("Registrations closed") }}</span>{% endif %}</span>
+			{% if event.time or event.is_live or event.is_attending or event.registrations_closed %}
+			<span class="team-event-card-time">
+				{# Like the discover page: a live event says so instead of its start time. #}
+				{% if event.is_live %}<span class="event-card-live"><span class="live-dot"></span>{{ _("Live") }}</span>{% else %}{{ event.time }}{% endif %}
+				{# An attendee already has their place, so closed registrations do not concern them. #}
+				{% if event.is_attending %}<span class="es-badge" data-size="sm" data-theme="violet">{{ _("Attending") }}</span>
+				{% elif event.registrations_closed %}<span class="es-badge" data-size="sm" data-theme="red">{{ _("Registrations closed") }}</span>{% endif %}
+			</span>
 			{% endif %}
 			<span class="team-event-card-title">{{ event.title }}</span>
 			<span class="team-event-card-host">
