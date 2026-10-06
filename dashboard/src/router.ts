@@ -88,12 +88,6 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/events/CreateEvent.vue"),
 			},
 			{
-				path: "community",
-				name: "community-requests",
-				meta: { title: "Community" },
-				component: () => import("@/pages/manage/CommunityRequests.vue"),
-			},
-			{
 				path: "proposals",
 				name: "proposals",
 				meta: { title: "My Proposals" },

@@ -7,12 +7,10 @@ import { useIsMobile } from "@/composables/useIsMobile"
 import { useTeamAccess } from "@/composables/useTeamAccess"
 import { useEventDoc } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
-import { currentTeam } from "@/data/teams"
 import ManagerDesktopShell from "@/layouts/ManagerDesktopShell.vue"
 import ManagerMobileShell from "@/layouts/ManagerMobileShell.vue"
 import NotFound from "@/pages/NotFound.vue"
 import { managerNavigation } from "@/utils/managerNavigation"
-import { canCreateEvents } from "@/utils/teamRoles"
 
 const route = useRoute()
 const access = useTeamAccess()
@@ -39,10 +37,6 @@ const items = computed(() =>
 		eventId: eventId.value,
 		creatingEvent: route.name === "create-event",
 		hasSponsorships: Boolean(sponsorships.data?.length),
-		// Reviewing a community's requests takes the same roles as editing its events.
-		reviewsCommunity: Boolean(
-			currentTeam.value?.is_a_community && canCreateEvents(currentTeam.value.team_role),
-		),
 	}),
 )
 </script>

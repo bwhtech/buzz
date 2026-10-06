@@ -654,19 +654,7 @@ export interface CommunityOption {
 	logo: string | null
 }
 
-export interface EventOption {
-	name: string
-	title: string
-	start_date: string
-	team_name: string
-}
-
 export interface EventRequests {
 	requests: CommunityRequest[]
 	communities: CommunityOption[]
-}
-
-export interface CommunityQueue {
-	pending: CommunityRequest[]
-	approved: CommunityRequest[]
 }

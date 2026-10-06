@@ -4,8 +4,6 @@ from frappe.utils import get_url
 
 from buzz.permissions import WRITE_ROLES
 
-REQUESTS_PAGE = "/b/manage/community"
-
 
 def community_managers(community: str) -> list[str]:
 	filters = {"team": community, "enabled": 1, "team_role": ["in", list(WRITE_ROLES)]}
@@ -37,7 +35,6 @@ def notify_submitted(request) -> None:
 		_("{0} submitted {1}").format(submitting_team, request.event_title),
 		"community_event_submitted",
 		team_name=submitting_team,
-		requests_url=get_url(REQUESTS_PAGE),
 	)
 
 
