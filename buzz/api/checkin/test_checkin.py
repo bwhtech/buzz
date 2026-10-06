@@ -21,12 +21,9 @@ class CheckinTestCase(IntegrationTestCase):
 		self.ticket = EventTicketFactory.create(event=self.event).name
 
 	def create_paid_ticket(self, amount: int) -> str:
-		"""A booking paid through a gateway, and the ticket it issued."""
 		booking = EventBookingFactory.create(event=self.event, payment_status="Paid")
 		booking.submit()
-		ReceivedPaymentFactory.create(
-			amount=amount, currency=booking.currency, reference_docname=booking.name
-		)
+		EventPaymentFactory.create(amount=amount, currency=booking.currency, reference_docname=booking.name)
 		return frappe.db.get_value("Event Ticket", {"booking": booking.name}, "name")
 
 
@@ -84,7 +81,7 @@ class TestCheckinTicket(CheckinTestCase):
 			validate_ticket_for_checkin(self.ticket)
 
 
-class ReceivedPaymentFactory(BaseFactory[EventPayment]):
+class EventPaymentFactory(BaseFactory[EventPayment]):
 	"""Stands in for lane 1's `EventPaymentFactory` until the cleanup PR swaps it in."""
 
 	doctype = "Event Payment"

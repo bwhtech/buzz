@@ -77,11 +77,11 @@ class TestGetEventGuests(GuestsTestCase):
 			get_event(self.event)
 
 	def test_a_non_member_cannot_read_the_guest_list(self):
-		stranger = UserFactory.create_once("guests-stranger@example.com").name
+		outsider = UserFactory.create_once("guests-stranger@example.com").name
 		EventTicketFactory.create("submitted", event=self.event)
 
 		with self.assertRaises(CannotManageEvent):
-			self.guests_as(stranger)
+			self.guests_as(outsider)
 
 	def test_an_unknown_event_is_not_found(self):
 		with self.assertRaises(EventNotFound):
@@ -91,8 +91,8 @@ class TestGetEventGuests(GuestsTestCase):
 class TestGetEventGuestsTicketTypeFilter(GuestsTestCase):
 	def setUp(self):
 		super().setUp()
-		self.first = self.ticket_type_of("early@example.com")
-		self.second = self.ticket_type_of("late@example.com")
+		self.first = self.submit_ticket_on_new_type("early@example.com")
+		self.second = self.submit_ticket_on_new_type("late@example.com")
 
 	def test_lists_the_types_the_event_sells(self):
 		"""Every type, not only the ones someone has bought — an empty tier is still a filter."""
@@ -124,7 +124,7 @@ class TestGetEventGuestsTicketTypeFilter(GuestsTestCase):
 
 		self.assertEqual((late.matched, early.matched), (0, 1))
 
-	def ticket_type_of(self, email: str) -> str:
+	def submit_ticket_on_new_type(self, email: str) -> str:
 		"""Each ticket comes on a ticket type of its own."""
 		return str(EventTicketFactory.create("submitted", event=self.event, attendee_email=email).ticket_type)
 

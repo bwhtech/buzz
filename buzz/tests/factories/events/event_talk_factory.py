@@ -10,8 +10,6 @@ _fake = Faker()
 
 
 class EventTalkFactory(BaseFactory[EventTalk]):
-	"""A talk with no speakers. Pass `speakers=[{"speaker": profile}]` for some."""
-
 	doctype = "Event Talk"
 
 	@property

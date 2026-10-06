@@ -136,11 +136,8 @@ class TestRegistrationSettings(RegistrationTestCase):
 
 
 class TestVerificationMethods(IntegrationTestCase):
-	"""Site configuration, so every case here writes SMS Settings rather than an event."""
-
 	def setUp(self):
-		# Cleanups run last-registered-first, so the cache is cleared after the rollback:
-		# the Single is cached per request and would otherwise be read back undone.
+		# Cleanups run in reverse, so the cached Single is cleared after the rollback.
 		self.addCleanup(frappe.clear_document_cache, "SMS Settings", "SMS Settings")
 		self.addCleanup(frappe.db.rollback)
 

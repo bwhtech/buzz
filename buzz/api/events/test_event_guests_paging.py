@@ -9,8 +9,6 @@ from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, EventTicketF
 
 
 class TestGetEventGuestsPaging(IntegrationTestCase):
-	"""Search, order and paging — the arguments the guest list walks the roll with."""
-
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -21,29 +19,29 @@ class TestGetEventGuestsPaging(IntegrationTestCase):
 		self.event = str(BuzzEventFactory.create(team=self.team).name)
 
 	def test_carries_the_time_the_ticket_was_raised(self):
-		registered_at = self.register("Ana", "Diaz", days_ago=3)
+		registered_at = self.register_guest("Ana", "Diaz", days_ago=3)
 
 		self.assertEqual(self.guests().guests[0].registered_at, registered_at)
 
 	def test_newest_registration_comes_first_by_default(self):
-		self.roll_call()
+		self.register_three_guests()
 
 		self.assertEqual(self.names(self.guests()), ["Cy Ferreira", "Bo Chen", "Ana Diaz"])
 
 	def test_asc_walks_from_the_oldest_registration(self):
-		self.roll_call()
+		self.register_three_guests()
 
 		self.assertEqual(self.names(self.guests(order="asc")), ["Ana Diaz", "Bo Chen", "Cy Ferreira"])
 
 	def test_an_unknown_order_falls_back_to_newest_first(self):
-		self.roll_call()
+		self.register_three_guests()
 
 		guests = self.guests(order="name desc; drop table")
 
 		self.assertEqual(guests.guests[0].attendee_name, "Cy Ferreira")
 
 	def test_a_page_carries_only_its_own_slice(self):
-		self.roll_call()
+		self.register_three_guests()
 
 		first = self.guests(limit=2)
 
@@ -51,7 +49,7 @@ class TestGetEventGuestsPaging(IntegrationTestCase):
 		self.assertTrue(first.has_next_page)
 
 	def test_the_last_page_says_there_is_nothing_after_it(self):
-		self.roll_call()
+		self.register_three_guests()
 
 		last = self.guests(start=2, limit=2)
 
@@ -60,39 +58,39 @@ class TestGetEventGuestsPaging(IntegrationTestCase):
 
 	def test_a_full_final_page_is_still_the_end(self):
 		"""Four guests read two at a time: the second page fills, and nothing follows."""
-		self.roll_call()
-		self.register("Di", "Okafor", days_ago=0)
+		self.register_three_guests()
+		self.register_guest("Di", "Okafor", days_ago=0)
 
 		self.assertFalse(self.guests(start=2, limit=2).has_next_page)
 
 	def test_search_matches_a_name(self):
-		self.roll_call()
+		self.register_three_guests()
 
 		self.assertEqual(self.names(self.guests(search="chen")), ["Bo Chen"])
 
 	def test_search_matches_an_email(self):
-		self.roll_call()
+		self.register_three_guests()
 
 		guests = self.guests(search="cy@")
 
 		self.assertEqual([guest.attendee_email for guest in guests.guests], ["cy@example.com"])
 
 	def test_search_reports_the_match_count_beside_the_registered_count(self):
-		self.roll_call()
+		self.register_three_guests()
 
 		guests = self.guests(search="chen")
 
 		self.assertEqual((guests.total, guests.matched), (3, 1))
 
 	def test_without_a_search_every_guest_is_a_match(self):
-		self.roll_call()
+		self.register_three_guests()
 
 		guests = self.guests()
 
 		self.assertEqual(guests.matched, guests.total)
 
 	def test_a_search_that_matches_nobody_is_empty_rather_than_an_error(self):
-		self.roll_call()
+		self.register_three_guests()
 
 		guests = self.guests(search="nobody-here")
 
@@ -101,16 +99,16 @@ class TestGetEventGuestsPaging(IntegrationTestCase):
 		self.assertFalse(guests.has_next_page)
 
 	def test_blank_search_is_not_a_filter(self):
-		self.roll_call()
+		self.register_three_guests()
 
 		self.assertEqual(len(self.guests(search="   ").guests), 3)
 
-	def roll_call(self):
-		self.register("Ana", "Diaz", days_ago=3)
-		self.register("Bo", "Chen", days_ago=2)
-		self.register("Cy", "Ferreira", days_ago=1)
+	def register_three_guests(self):
+		self.register_guest("Ana", "Diaz", days_ago=3)
+		self.register_guest("Bo", "Chen", days_ago=2)
+		self.register_guest("Cy", "Ferreira", days_ago=1)
 
-	def register(self, first_name: str, last_name: str, days_ago: int) -> datetime:
+	def register_guest(self, first_name: str, last_name: str, days_ago: int) -> datetime:
 		"""Tickets a test writes land in the same second, so `creation` is set to order them."""
 		ticket = EventTicketFactory.create(
 			"submitted",

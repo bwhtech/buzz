@@ -18,7 +18,7 @@ class TestGetEventRegistrationTrend(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.owner = UserFactory.create_once("trend-owner@example.com").name
-		cls.stranger = UserFactory.create_once("trend-stranger@example.com").name
+		cls.outsider = UserFactory.create_once("trend-stranger@example.com").name
 		cls.team = BuzzTeamFactory.create_owned_by(cls.owner).name
 
 	def setUp(self):
@@ -102,7 +102,7 @@ class TestGetEventRegistrationTrend(IntegrationTestCase):
 		self.assertIn("Early Bird", {row.ticket_type for row in self.trend().by_ticket_type})
 
 	def test_a_non_member_cannot_read_the_trend(self):
-		with self.set_user(self.stranger), self.assertRaises(CannotManageEvent):
+		with self.set_user(self.outsider), self.assertRaises(CannotManageEvent):
 			get_event_registration_trend(self.event)
 
 	def test_an_unknown_event_is_not_found(self):
@@ -124,7 +124,6 @@ class TestGetEventRegistrationTrend(IntegrationTestCase):
 
 
 def totals_by_day(trend) -> dict:
-	"""The stack's own height: every type of a day summed back together."""
 	totals: dict = {}
 	for row in trend.per_day:
 		totals[row.date] = totals.get(row.date, 0) + row.count

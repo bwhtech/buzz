@@ -25,69 +25,69 @@ class TestGetMyEvents(IntegrationTestCase):
 		cls.other_team = BuzzTeamFactory.create_owned_by(cls.attendee).name
 
 	def test_returns_unpublished_event_of_own_team_as_host(self):
-		event = create_team_event(self.host_team, "unpublished")
+		event = self.create_team_event(self.host_team, "unpublished")
 
 		self.assertTrue(self.row_of(self.upcoming_of(self.host_user), event)["is_host"])
 
 	def test_returns_ticketed_event_of_another_team_as_guest(self):
-		event = create_team_event(self.host_team)
-		submit_ticket(event, self.attendee)
+		event = self.create_team_event(self.host_team)
+		self.submit_ticket(event, self.attendee)
 
 		self.assertFalse(self.row_of(self.upcoming_of(self.attendee), event)["is_host"])
 
 	def test_returns_hosted_and_ticketed_event_once_as_host(self):
-		event = create_team_event(self.host_team)
-		submit_ticket(event, self.host_user)
+		event = self.create_team_event(self.host_team)
+		self.submit_ticket(event, self.host_user)
 
 		upcoming = self.upcoming_of(self.host_user)
 
-		self.assertEqual(names_in(upcoming).count(event), 1)
+		self.assertEqual(self.names_in(upcoming).count(event), 1)
 		self.assertTrue(self.row_of(upcoming, event)["is_host"])
 
 	def test_ignores_a_draft_ticket(self):
-		event = create_team_event(self.other_team)
+		event = self.create_team_event(self.other_team)
 		EventTicketFactory.create(event=event, attendee_email=self.host_user)
 
 		self.assertNotIn(event, self.all_events_of(self.host_user))
 
 	def test_excludes_another_teams_event_without_a_ticket(self):
-		event = create_team_event(self.other_team, is_published=1)
+		event = self.create_team_event(self.other_team, is_published=1)
 
 		self.assertNotIn(event, self.all_events_of(self.host_user))
 
 	def test_keeps_an_event_in_progress_upcoming(self):
-		event = create_team_event(
+		event = self.create_team_event(
 			self.host_team, start_date=add_days(today(), -1), end_date=add_days(today(), 1)
 		)
 
 		events = self.events_of(self.host_user)
 
-		self.assertIn(event, names_in(events["upcoming"]))
-		self.assertNotIn(event, names_in(events["past"]))
+		self.assertIn(event, self.names_in(events["upcoming"]))
+		self.assertNotIn(event, self.names_in(events["past"]))
 
 	def test_moves_a_finished_event_to_past(self):
-		event = create_team_event(
+		event = self.create_team_event(
 			self.host_team, start_date=add_days(today(), -3), end_date=add_days(today(), -1)
 		)
 
 		events = self.events_of(self.host_user)
 
-		self.assertIn(event, names_in(events["past"]))
-		self.assertNotIn(event, names_in(events["upcoming"]))
+		self.assertIn(event, self.names_in(events["past"]))
+		self.assertNotIn(event, self.names_in(events["upcoming"]))
 
 	def test_drops_hosted_events_once_the_membership_is_disabled(self):
 		member = UserFactory.create_once("events-lapsed@example.com").name
 		membership = BuzzTeamMembershipFactory.create(team=self.host_team, user=member, team_role="Manager")
-		event = create_team_event(self.host_team)
-		self.assertIn(event, names_in(self.upcoming_of(member)))
+		event = self.create_team_event(self.host_team)
+		self.assertIn(event, self.names_in(self.upcoming_of(member)))
 
 		frappe.db.set_value("Buzz Team Membership", membership.name, "enabled", 0)
 
-		self.assertNotIn(event, names_in(self.upcoming_of(member)))
+		self.assertNotIn(event, self.names_in(self.upcoming_of(member)))
 
 	def test_carries_the_organising_team(self):
 		frappe.db.set_value("Buzz Team", self.host_team, "logo", "/files/team-logo.png")
-		event = create_team_event(self.host_team)
+		event = self.create_team_event(self.host_team)
 
 		row = self.row_of(self.upcoming_of(self.host_user), event)
 
@@ -96,9 +96,9 @@ class TestGetMyEvents(IntegrationTestCase):
 		self.assertEqual(row["team_logo"], "/files/team-logo.png")
 
 	def test_survives_an_event_with_no_team(self):
-		event = create_team_event(self.host_team)
+		event = self.create_team_event(self.host_team)
 		frappe.db.set_value("Buzz Event", event, "team", None)
-		submit_ticket(event, self.host_user)
+		self.submit_ticket(event, self.host_user)
 
 		row = self.row_of(self.upcoming_of(self.host_user), event)
 
@@ -109,7 +109,7 @@ class TestGetMyEvents(IntegrationTestCase):
 	def test_a_role_filter_keeps_only_hosted_events(self):
 		hosted, ticketed = self.hosted_and_ticketed()
 
-		names = names_in(self.upcoming_of(self.host_user, role="hosting"))
+		names = self.names_in(self.upcoming_of(self.host_user, role="hosting"))
 
 		self.assertIn(hosted, names)
 		self.assertNotIn(ticketed, names)
@@ -117,7 +117,7 @@ class TestGetMyEvents(IntegrationTestCase):
 	def test_a_role_filter_keeps_only_ticketed_events(self):
 		hosted, ticketed = self.hosted_and_ticketed()
 
-		names = names_in(self.upcoming_of(self.host_user, role="attending"))
+		names = self.names_in(self.upcoming_of(self.host_user, role="attending"))
 
 		self.assertIn(ticketed, names)
 		self.assertNotIn(hosted, names)
@@ -125,16 +125,16 @@ class TestGetMyEvents(IntegrationTestCase):
 	def test_a_team_filter_keeps_only_that_teams_events(self):
 		hosted, ticketed = self.hosted_and_ticketed()
 
-		names = names_in(self.upcoming_of(self.host_user, team=self.host_team))
+		names = self.names_in(self.upcoming_of(self.host_user, team=self.host_team))
 
 		self.assertIn(hosted, names)
 		self.assertNotIn(ticketed, names)
 
 	def test_a_medium_filter_keeps_only_that_medium(self):
-		online = create_team_event(self.host_team, medium="Online")
-		in_person = create_team_event(self.host_team, "in_person")
+		online = self.create_team_event(self.host_team, medium="Online")
+		in_person = self.create_team_event(self.host_team, "in_person")
 
-		names = names_in(self.upcoming_of(self.host_user, medium="Online"))
+		names = self.names_in(self.upcoming_of(self.host_user, medium="Online"))
 
 		self.assertIn(online, names)
 		self.assertNotIn(in_person, names)
@@ -145,9 +145,9 @@ class TestGetMyEvents(IntegrationTestCase):
 
 	def hosted_and_ticketed(self) -> tuple[str, str]:
 		"""One event the host's team runs, and one of another team the host holds a ticket to."""
-		ticketed = create_team_event(self.other_team)
-		submit_ticket(ticketed, self.host_user)
-		return create_team_event(self.host_team), ticketed
+		ticketed = self.create_team_event(self.other_team)
+		self.submit_ticket(ticketed, self.host_user)
+		return self.create_team_event(self.host_team), ticketed
 
 	def events_of(self, user: str, **filters) -> dict[str, list[dict]]:
 		with self.set_user(user):
@@ -158,24 +158,21 @@ class TestGetMyEvents(IntegrationTestCase):
 
 	def all_events_of(self, user: str) -> list[str]:
 		events = self.events_of(user)
-		return names_in(events["upcoming"] + events["past"])
+		return self.names_in(events["upcoming"] + events["past"])
 
 	def row_of(self, events: list[dict], event: str) -> dict:
 		rows = [row for row in events if row["name"] == event]
 		self.assertEqual(len(rows), 1)
 		return rows[0]
 
+	def create_team_event(self, team: str, *traits: str, **overrides) -> str:
+		return str(BuzzEventFactory.create(*traits, team=team, **overrides).name)
 
-def create_team_event(team: str, *traits: str, **overrides) -> str:
-	return str(BuzzEventFactory.create(*traits, team=team, **overrides).name)
+	def submit_ticket(self, event: str, email: str):
+		EventTicketFactory.create("submitted", event=event, attendee_email=email)
 
-
-def submit_ticket(event: str, email: str) -> None:
-	EventTicketFactory.create("submitted", event=event, attendee_email=email)
-
-
-def names_in(events: list[dict]) -> list[str]:
-	return [event["name"] for event in events]
+	def names_in(self, events: list[dict]) -> list[str]:
+		return [event["name"] for event in events]
 
 
 # Kept for modules that still import them. The cleanup PR deletes them.

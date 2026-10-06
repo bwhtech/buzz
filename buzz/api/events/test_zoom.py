@@ -11,7 +11,7 @@ from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, BuzzTeamMemb
 from buzz.utils import is_app_installed
 
 MEETING_CONTROLLER = "zoom_integration.zoom_integration.doctype.zoom_meeting.zoom_meeting"
-BOOK_MEETING = BuzzEvent.create_meeting_on_zoom
+CREATE_MEETING_ON_ZOOM = BuzzEvent.create_meeting_on_zoom
 
 
 class TestConvertToZoomMeeting(IntegrationTestCase):
@@ -34,8 +34,13 @@ class TestConvertToZoomMeeting(IntegrationTestCase):
 
 		response = create_meeting_response()
 		with (
-			patch(f"{MEETING_CONTROLLER}.create_zoom_session", return_value=response) as book,
-			patch.object(BuzzEvent, "create_meeting_on_zoom", autospec=True, side_effect=self.book_meeting),
+			patch(f"{MEETING_CONTROLLER}.create_zoom_session", return_value=response) as create_zoom_session,
+			patch.object(
+				BuzzEvent,
+				"create_meeting_on_zoom",
+				autospec=True,
+				side_effect=self.create_meeting_as_administrator,
+			),
 		):
 			convert_to_zoom_meeting(self.event)
 			frappe.db.set_value("Buzz Event", self.event, "medium", "In Person")
@@ -45,7 +50,7 @@ class TestConvertToZoomMeeting(IntegrationTestCase):
 		self.assertEqual(event.medium, "Online")
 		self.assertFalse(event.venue)
 		self.assertEqual(event.zoom_meeting, str(response["id"]))
-		book.assert_called_once()
+		create_zoom_session.assert_called_once()
 
 	def test_a_zoom_failure_changes_nothing(self):
 		# The request rolls back on the error; the savepoint stands in for it.
@@ -62,12 +67,12 @@ class TestConvertToZoomMeeting(IntegrationTestCase):
 	def test_a_failed_save_books_no_meeting(self):
 		with (
 			patch.object(BuzzEvent, "validate", side_effect=frappe.ValidationError),
-			patch.object(BuzzEvent, "create_meeting_on_zoom") as book,
+			patch.object(BuzzEvent, "create_meeting_on_zoom") as create_meeting,
 		):
 			with self.assertRaises(frappe.ValidationError):
 				convert_to_zoom_meeting(self.event)
 
-		book.assert_not_called()
+		create_meeting.assert_not_called()
 
 	def test_a_viewer_cannot_convert(self):
 		with self.set_user(self.viewer), self.assertRaises(CannotManageEvent):
@@ -77,14 +82,14 @@ class TestConvertToZoomMeeting(IntegrationTestCase):
 		yesterday = add_days(today(), -1)
 		frappe.db.set_value("Buzz Event", self.event, {"start_date": yesterday, "end_date": None})
 
-		with patch.object(BuzzEvent, "create_meeting_on_zoom") as book:
+		with patch.object(BuzzEvent, "create_meeting_on_zoom") as create_meeting:
 			with self.assertRaises(EventEnded):
 				convert_to_zoom_meeting(self.event)
 
-		book.assert_not_called()
+		create_meeting.assert_not_called()
 		self.assertEqual(frappe.db.get_value("Buzz Event", self.event, "medium"), "In Person")
 
-	def book_meeting(self, event: BuzzEvent):
+	def create_meeting_as_administrator(self, event: BuzzEvent):
 		"""The real booking, as Administrator: an organiser holds no Zoom Meeting permission."""
 		with self.set_user("Administrator"):
-			return BOOK_MEETING(event)
+			return CREATE_MEETING_ON_ZOOM(event)

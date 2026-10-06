@@ -25,22 +25,22 @@ class TestGooglePlaceMap(IntegrationTestCase):
 	PLACE = frappe._dict(google_place_id="place-1", type=None, latitude=0, longitude=0)
 
 	def test_place_with_an_embed_key_gets_the_google_embed(self):
-		self.configure(1, "embed-key")
+		self.set_google_maps(1, "embed-key")
 		self.assertEqual(
 			venue_map_url(self.PLACE),
 			"https://www.google.com/maps/embed/v1/place?key=embed-key&q=place_id%3Aplace-1",
 		)
 
 	def test_place_without_an_embed_key_has_no_map(self):
-		self.configure(1, None)
+		self.set_google_maps(1, None)
 		self.assertIsNone(venue_map_url(self.PLACE))
 
 	def test_place_with_the_switch_off_has_no_map(self):
-		self.configure(0, "embed-key")
+		self.set_google_maps(0, "embed-key")
 		self.assertIsNone(venue_map_url(self.PLACE))
 
 	def test_venue_without_a_place_keeps_its_own_map(self):
-		self.configure(1, "embed-key")
+		self.set_google_maps(1, "embed-key")
 		venue = frappe._dict(google_place_id=None, type="Open Street Map", latitude=19.0, longitude=72.8)
 		self.assertIn("openstreetmap.org", venue_map_url(venue))
 
@@ -53,7 +53,7 @@ class TestGooglePlaceMap(IntegrationTestCase):
 			"https://www.google.com/maps/search/?api=1&query=Nehru+Centre&query_place_id=place-1",
 		)
 
-	def configure(self, enabled: int, embed_key: str | None):
+	def set_google_maps(self, enabled: int, embed_key: str | None):
 		self.enterContext(
 			self.change_settings(
 				"Buzz Settings", google_maps_enabled=enabled, google_maps_embed_api_key=embed_key

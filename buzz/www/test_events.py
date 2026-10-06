@@ -20,19 +20,19 @@ class TestEventListing(IntegrationTestCase):
 		cls.team = BuzzTeamFactory.create_owned_by(cls.owner).name
 		cls.slug = f"listing-{frappe.generate_hash(length=8)}"
 		category = EventCategoryFactory.create(slug=cls.slug).name
-		cls.listed = cls.create_event(category=category)
-		cls.unlisted = cls.create_event("unpublished")
-		cls.past = cls.create_event(start_date=add_days(today(), -10), end_date=add_days(today(), -9))
-		cls.ended_today = cls.create_event(
+		cls.listed = cls.create_event_route(category=category)
+		cls.unlisted = cls.create_event_route("unpublished")
+		cls.past = cls.create_event_route(start_date=add_days(today(), -10), end_date=add_days(today(), -9))
+		cls.ended_today = cls.create_event_route(
 			category=category,
 			start_date=today(),
 			end_date=today(),
 			start_time="00:00:00",
 			end_time="00:00:01",
 		)
-		cls.live = cls.create_event(start_date=add_days(today(), -1), end_date=add_days(today(), 1))
-		cls.quiet = cls.create_event()
-		cls.featured = cls.create_event(is_featured=1)
+		cls.live = cls.create_event_route(start_date=add_days(today(), -1), end_date=add_days(today(), 1))
+		cls.quiet = cls.create_event_route()
+		cls.featured = cls.create_event_route(is_featured=1)
 		popular = BuzzEventFactory.create(team=cls.team)
 		EventTicketFactory.create_list(2, "submitted", event=popular.name)
 		cls.popular = popular.route
@@ -102,8 +102,7 @@ class TestEventListing(IntegrationTestCase):
 			self.assertFalse(hosting_banner_visible(is_guest=True))
 
 	@classmethod
-	def create_event(cls, *traits: str, **overrides) -> str:
-		"""The route, which is what the listings hand back."""
+	def create_event_route(cls, *traits: str, **overrides) -> str:
 		return BuzzEventFactory.create(*traits, team=cls.team, **overrides).route
 
 	def popular_routes(self) -> list[str]:
