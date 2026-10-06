@@ -10,13 +10,19 @@ bookings at all, and the ones who can are held to their own team's events.
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import add_days, now_datetime, today
 
 from buzz.api.booking import process_booking
 from buzz.api.booking.exceptions import RegistrationsClosed
 from buzz.api.booking.schemas import BookingRequest
-from buzz.api.forms.test_forms import ensure_event_host, ensure_prompt_named_record
-from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
-from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	BuzzTeamFactory,
+	BuzzTeamMembershipFactory,
+	EventBookingFactory,
+	EventTicketTypeFactory,
+	UserFactory,
+)
 
 ATTENDEE = "eligibility-attendee@example.com"
 ORGANISER = "eligibility-organiser@example.com"
@@ -27,65 +33,35 @@ class EligibilityTestCase(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		cls.category = ensure_prompt_named_record("Event Category", "Eligibility Category")
-		cls.host = ensure_event_host("Eligibility Host")
-		owner = create_user("eligibility-team-owner@example.com", "Eligibility")
-		cls.team = create_owned_team(f"Eligibility Team {frappe.generate_hash(length=6)}", owner)
-		cls.event = cls.make_event()
+		owner = UserFactory.create_once("eligibility-team-owner@example.com").name
+		cls.team = BuzzTeamFactory.create_owned_by(owner).name
+		cls.event = BuzzEventFactory.create(team=cls.team)
 		cls.event.reload()
-
-	@classmethod
-	def make_event(cls, **overrides):
-		values = {
-			"doctype": "Buzz Event",
-			"title": f"Eligibility Event {frappe.generate_hash(length=6)}",
-			"team": cls.team,
-			"start_date": "2030-01-01",
-			"end_date": "2030-01-01",
-			"start_time": "10:00:00",
-			"end_time": "18:00:00",
-			"medium": "Online",
-			"category": cls.category,
-			"host": cls.host,
-			"is_published": 1,
-		}
-		values.update(overrides)
-		return frappe.get_doc(values).insert(ignore_permissions=True)
+		cls.attendee = UserFactory.create_once(ATTENDEE).name
+		cls.organiser = UserFactory.create_once(ORGANISER).name
+		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.organiser, team_role="Manager")
+		# An Event Manager by role, but on a team that does not own `cls.event`.
+		cls.outsider = UserFactory.create_once(OUTSIDER).name
+		BuzzTeamFactory.create_owned_by(cls.outsider)
 
 	def setUp(self):
-		frappe.set_user("Administrator")
+		self.enterContext(self.set_user("Administrator"))
 		frappe.clear_messages()
-		self.addCleanup(frappe.set_user, "Administrator")
 		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event.name)
-
-		self.attendee = create_user(ATTENDEE, "Attendee")
-		self.organiser = create_user(ORGANISER, "Organiser")
-		upsert_membership(self.team, self.organiser, "Manager")
 		self.set_event({"is_published": 1, "registrations_close_at": None, "allow_guest_booking": 0})
+		self.paid_ticket_type = self.create_ticket_type(price=5000)
 
-		self.paid_ticket_type = self.make_ticket_type(price=5000)
-
-	def make_ticket_type(self, event=None, price=0):
-		return frappe.get_doc(
-			{
-				"doctype": "Event Ticket Type",
-				"event": event or self.event.name,
-				"title": f"Eligibility {frappe.generate_hash(length=6)}",
-				"prices": [{"currency": "INR", "price": price}],
-				"is_published": 1,
-			}
-		).insert(ignore_permissions=True)
-
-	def outsider_managing_another_team(self) -> str:
-		"""An Event Manager by role, but on a team that does not own `self.event`."""
-		outsider = create_user(OUTSIDER, "Outsider")
-		other_team = create_owned_team(f"Eligibility Other {frappe.generate_hash(length=6)}", outsider)
-		upsert_membership(other_team, outsider, "Manager")
-		return outsider
+	def create_ticket_type(self, price: float):
+		return EventTicketTypeFactory.create(
+			event=self.event.name, prices=[{"currency": "INR", "price": price}]
+		)
 
 	def set_event(self, values):
 		frappe.db.set_value("Buzz Event", self.event.name, values)
 		frappe.clear_document_cache("Buzz Event", self.event.name)
+
+	def close_registrations(self):
+		self.set_event({"registrations_close_at": add_days(now_datetime(), -1)})
 
 	def attendee_row(self, **overrides) -> dict:
 		row = {
@@ -103,22 +79,11 @@ class EligibilityTestCase(IntegrationTestCase):
 		return BookingRequest(**values)
 
 	def insert_as(self, session_user: str, **overrides):
-		"""Insert under the caller's own permissions, like the generic document API —
+		"""Insert under the caller's own permissions, like the generic document API:
 		no `ignore_permissions`, so role permissions and `validate` decide."""
-		payload = {
-			"doctype": "Event Booking",
-			"event": str(self.event.name),
-			"user": session_user,
-			"currency": "INR",
-			"attendees": [self.attendee_row()],
-		}
-		payload.update(overrides)
-
-		frappe.set_user(session_user)
-		try:
-			return frappe.get_doc(payload).insert()
-		finally:
-			frappe.set_user("Administrator")
+		values = {"user": session_user, "currency": "INR", "attendees": [self.attendee_row()], **overrides}
+		with self.set_user(session_user):
+			return EventBookingFactory.create(event=str(self.event.name), **values)
 
 
 class TestOrdinaryUsersCannotWriteBookings(EligibilityTestCase):
@@ -150,34 +115,31 @@ class TestEventManagersAreHeldToTheirOwnTeam(EligibilityTestCase):
 	not open another team's events."""
 
 	def test_an_outsider_may_not_book_an_unpublished_event(self):
-		outsider = self.outsider_managing_another_team()
 		self.set_event({"is_published": 0})
 
 		with self.assertRaises(frappe.ValidationError):
-			self.insert_as(outsider, user=outsider)
+			self.insert_as(self.outsider)
 
-		self.assertIn("Event Manager", frappe.get_roles(outsider))
+		self.assertIn("Event Manager", frappe.get_roles(self.outsider))
 
 	def test_an_outsider_may_not_book_after_registrations_close(self):
-		outsider = self.outsider_managing_another_team()
-		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})
+		self.close_registrations()
 
 		with self.assertRaises(RegistrationsClosed):
-			self.insert_as(outsider, user=outsider)
+			self.insert_as(self.outsider)
 
 	def test_an_outsider_may_not_book_an_event_that_already_ended(self):
 		# No explicit cutoff, so `are_registrations_closed` falls back to the end datetime.
-		outsider = self.outsider_managing_another_team()
-		self.set_event({"start_date": "2020-01-01", "end_date": "2020-01-01"})
-		self.addCleanup(self.set_event, {"start_date": "2030-01-01", "end_date": "2030-01-01"})
+		self.addCleanup(
+			self.set_event, {"start_date": self.event.start_date, "end_date": self.event.end_date}
+		)
+		self.set_event({"start_date": add_days(today(), -10), "end_date": add_days(today(), -10)})
 
 		with self.assertRaises(RegistrationsClosed):
-			self.insert_as(outsider, user=outsider)
+			self.insert_as(self.outsider)
 
 	def test_an_outsider_may_book_an_open_published_event(self):
-		outsider = self.outsider_managing_another_team()
-
-		booking = self.insert_as(outsider, user=outsider)
+		booking = self.insert_as(self.outsider)
 
 		self.assertTrue(frappe.db.exists("Event Booking", booking.name))
 
@@ -185,47 +147,44 @@ class TestEventManagersAreHeldToTheirOwnTeam(EligibilityTestCase):
 class TestTheServiceFlowRefusesIneligibleEvents(EligibilityTestCase):
 	def test_service_refuses_an_unpublished_event(self):
 		self.set_event({"is_published": 0})
-		frappe.set_user(self.attendee)
 
-		with self.assertRaises(frappe.ValidationError):
+		with self.set_user(self.attendee), self.assertRaises(frappe.ValidationError):
 			process_booking(self.booking_request())
 
 		self.assertIn("Event is not live", frappe.local.message_log[-1]["message"])
 
 	def test_service_refuses_once_registrations_have_closed(self):
-		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})
-		frappe.set_user(self.attendee)
+		self.close_registrations()
 
-		with self.assertRaises(RegistrationsClosed):
+		with self.set_user(self.attendee), self.assertRaises(RegistrationsClosed):
 			process_booking(self.booking_request())
 
 
 class TestLegitimateFlowsStillWork(EligibilityTestCase):
 	def test_the_guard_does_not_apply_to_the_vetted_service_flow(self):
 		# Free ticket keeps the flow off the payment gateway.
-		free_ticket_type = self.make_ticket_type(price=0)
+		free_ticket_type = str(self.create_ticket_type(price=0).name)
+		request = self.booking_request(attendees=[self.attendee_row(ticket_type=free_ticket_type)])
 
-		frappe.set_user(self.attendee)
-		payload = process_booking(
-			self.booking_request(attendees=[self.attendee_row(ticket_type=str(free_ticket_type.name))])
-		).__json__()
+		with self.set_user(self.attendee):
+			payload = process_booking(request)
 
-		self.assertIn("booking_name", payload)
-		self.assertTrue(frappe.db.exists("Event Booking", payload["booking_name"]))
+		self.assertTrue(frappe.db.exists("Event Booking", payload.booking_name))
 
 	def test_an_event_organiser_may_book_their_own_closed_event(self):
 		# Organisers are exempt (comp tickets, pre-launch testing).
-		self.set_event({"is_published": 0, "registrations_close_at": "2020-01-01 00:00:00"})
+		self.set_event({"is_published": 0})
+		self.close_registrations()
 
-		booking = self.insert_as(self.organiser, user=self.organiser)
+		booking = self.insert_as(self.organiser)
 
 		self.assertTrue(frappe.db.exists("Event Booking", booking.name))
 
 	def test_a_draft_booked_while_open_survives_registrations_closing(self):
-		# A draft made while open must stay writable via a trusted flow (payment
-		# authorisation, offline approval) after close, or a paid booking is stranded.
-		booking = self.insert_as(self.organiser, user=self.organiser)
-		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})
+		# A trusted flow (payment authorisation, offline approval) must still write a
+		# draft made while open, or a paid booking is stranded.
+		booking = self.insert_as(self.organiser)
+		self.close_registrations()
 
 		booking.reload()
 		booking.flags.ignore_permissions = True
@@ -239,36 +198,29 @@ class TestTheGuardCannotBeSteppedAround(EligibilityTestCase):
 	eligibility by being edited or repointed after the fact."""
 
 	def test_an_outsider_cannot_grow_a_draft_after_registrations_close(self):
-		free_type = self.make_ticket_type(price=0)
-		outsider = self.outsider_managing_another_team()
-		booking = self.insert_as(
-			outsider,
-			user=outsider,
-			attendees=[self.attendee_row(ticket_type=str(free_type.name))],
-		)
-		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})
+		free_type = str(self.create_ticket_type(price=0).name)
+		booking = self.insert_as(self.outsider, attendees=[self.attendee_row(ticket_type=free_type)])
+		self.close_registrations()
 
-		frappe.set_user(outsider)
-		booking.reload()
-		booking.append(
-			"attendees",
-			self.attendee_row(email="smuggled@example.com", ticket_type=str(free_type.name)),
-		)
-
-		with self.assertRaises(RegistrationsClosed):
-			booking.save()
+		with self.set_user(self.outsider):
+			booking.reload()
+			booking.append(
+				"attendees", self.attendee_row(email="smuggled@example.com", ticket_type=free_type)
+			)
+			with self.assertRaises(RegistrationsClosed):
+				booking.save()
 
 		self.assertEqual(frappe.db.count("Event Booking Attendee", {"parent": booking.name}), 1)
 
 	def test_a_draft_cannot_be_repointed_at_a_closed_event(self):
-		# The guard only runs on creation, so a draft must not be able to reach a
-		# closed event afterwards. Ticket types are what pin it down.
-		booking = self.insert_as(self.organiser, user=self.organiser)
-		closed_event = self.make_event(registrations_close_at="2020-01-01 00:00:00")
+		# Ticket types pin a draft to its event, so it cannot reach a closed one afterwards.
+		booking = self.insert_as(self.organiser)
+		closed_event = BuzzEventFactory.create(
+			team=self.team, registrations_close_at=add_days(now_datetime(), -1)
+		)
 
-		frappe.set_user(self.organiser)
-		booking.event = closed_event.name
-		with self.assertRaises(frappe.ValidationError):
+		with self.set_user(self.organiser), self.assertRaises(frappe.ValidationError):
+			booking.event = closed_event.name
 			booking.save()
 
 		self.assertEqual(frappe.db.get_value("Event Booking", booking.name, "event"), str(self.event.name))
