@@ -15,6 +15,7 @@ const emit = defineEmits<{ saved: [] }>()
 function fromTeam(team: TeamOverview) {
 	return {
 		is_published: team.is_published,
+		is_a_community: team.is_a_community,
 		short_description: team.short_description ?? "",
 		about: team.about ?? "",
 		links: team.links.map((link) => ({ ...link })) as EventExternalLink[],
@@ -67,6 +68,16 @@ async function save() {
 				</p>
 			</div>
 			<Switch v-model="form.is_published" :label="__('Published')" />
+		</div>
+
+		<div v-if="form.is_published" class="flex items-start justify-between gap-4">
+			<div class="space-y-1">
+				<span class="text-base text-ink-gray-8">{{ __("Community") }}</span>
+				<p class="text-p-sm text-ink-gray-5">
+					{{ __("Other teams can submit events. Approved ones show on this page.") }}
+				</p>
+			</div>
+			<Switch v-model="form.is_a_community" :aria-label="__('Community')" />
 		</div>
 
 		<Textarea

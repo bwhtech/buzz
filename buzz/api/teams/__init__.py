@@ -20,7 +20,7 @@ def get_my_teams() -> list[TeamOption]:
 		frappe.qb.from_(membership)
 		.inner_join(team)
 		.on(team.name == membership.team)
-		.select(team.name, team.team_name, team.logo, membership.team_role)
+		.select(team.name, team.team_name, team.logo, team.is_a_community, membership.team_role)
 		.where((membership.user == frappe.session.user) & (membership.enabled == 1))
 	).run(as_dict=True)
 
@@ -66,8 +66,9 @@ def update_public_page(
 	links: list[dict],
 	short_description: str | None = None,
 	about: str | None = None,
+	is_a_community: bool = False,
 ) -> None:
-	services.update_public_page(team, is_published, links, short_description, about)
+	services.update_public_page(team, is_published, links, short_description, about, is_a_community)
 
 
 @frappe.whitelist(methods=["POST"])

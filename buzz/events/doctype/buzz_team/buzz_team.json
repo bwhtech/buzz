@@ -14,6 +14,7 @@
   "public_page_tab",
   "is_published",
   "route",
+  "is_a_community",
   "column_break_public",
   "short_description",
   "section_break_about",
@@ -89,6 +90,14 @@
    "fieldtype": "Table",
    "label": "Links",
    "options": "Event External Link"
+  },
+  {
+   "default": "0",
+   "depends_on": "is_published",
+   "description": "Also lists approved events from other teams.",
+   "fieldname": "is_a_community",
+   "fieldtype": "Check",
+   "label": "Is a Community"
   }
  ],
  "grid_page_length": 50,

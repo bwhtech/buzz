@@ -60,7 +60,7 @@ class TestTeamPage(IntegrationTestCase):
 		)
 
 		self.assertEqual(card["time"], "18:30")
-		self.assertEqual(card["host_name"], "Timeline Builders")
+		self.assertEqual(card["host_names"], "Timeline Builders")
 		self.assertTrue(card["is_online"])
 		self.assertTrue(card["url"].startswith("/events/"))
 

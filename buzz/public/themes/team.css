@@ -137,6 +137,12 @@
 	padding-block: 4px;
 }
 
+.team-event-card-time {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
 .team-event-card-time,
 .team-event-card-place {
 	color: var(--ink-gray-5);

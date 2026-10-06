@@ -19,6 +19,7 @@ TEAM_FIELDS = (
 	"slug",
 	"logo",
 	"is_published",
+	"is_a_community",
 	"route",
 	"short_description",
 	"about",
@@ -194,6 +195,7 @@ def update_public_page(
 	links: list[dict],
 	short_description: str | None,
 	about: str | None,
+	is_a_community: bool = False,
 ) -> None:
 	"""Publish or edit a team's public page.
 
@@ -206,6 +208,7 @@ def update_public_page(
 
 	doc = frappe.get_doc("Buzz Team", team)
 	doc.is_published = int(is_published)
+	doc.is_a_community = int(is_a_community)
 	doc.short_description = (short_description or "").strip() or None
 	doc.about = about or None
 	doc.set("links", [{key: link.get(key) for key in ("icon", "label", "url")} for link in links])

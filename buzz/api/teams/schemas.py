@@ -13,6 +13,7 @@ class TeamOption(APIResponse):
 	name: str
 	team_name: str
 	logo: str | None
+	is_a_community: bool
 	team_role: str
 	# The settings list shows who is on each team, not only how many.
 	members: list[TeamMember]
@@ -37,6 +38,7 @@ class TeamOverview(APIResponse):
 	slug: str | None
 	logo: str | None
 	is_published: bool
+	is_a_community: bool
 	# Absolute page URL while published; None otherwise.
 	public_url: str | None
 	short_description: str | None

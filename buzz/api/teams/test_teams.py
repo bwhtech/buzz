@@ -485,6 +485,11 @@ class TestUpdatePublicPage(IntegrationTestCase):
 		frappe.set_user("Administrator")
 		self.assertNotEqual(frappe.db.get_value("Buzz Team", self.team, "short_description"), "Hijacked")
 
+	def test_a_manager_makes_the_team_a_community(self):
+		self.publish_as(self.manager, is_a_community=True)
+
+		self.assertTrue(get_team_overview(self.team).is_a_community)
+
 	def test_an_unpublished_page_has_no_public_url(self):
 		self.publish_as(self.owner, is_published=False)
 
