@@ -1,100 +1,27 @@
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import add_days, today
 
-from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team
 from buzz.patches.migrate_sponsor_enquiry_forms import SponsorFormMigration
+from buzz.tests.factories import (
+	BuzzCustomFieldFactory,
+	BuzzEventFactory,
+	SponsorshipEnquiryFactory,
+	SponsorshipTierFactory,
+)
 
 
-class SponsorFormMigrationTestCase(IntegrationTestCase):
-	@staticmethod
-	def ensure_category():
-		name = "Sponsor Migration Test Category"
-		if not frappe.db.exists("Event Category", name):
-			frappe.get_doc({"doctype": "Event Category", "name": name}).insert(ignore_permissions=True)
-		return name
-
-	@staticmethod
-	def ensure_host():
-		name = "Sponsor Migration Test Host"
-		host = frappe.db.get_value("Event Host", {"host_name": name})
-		if not host:
-			host = (
-				frappe.get_doc({"doctype": "Event Host", "host_name": name})
-				.insert(ignore_permissions=True)
-				.name
-			)
-		return host
-
+class TestMigrateSponsorEnquiryForms(IntegrationTestCase):
 	def setUp(self):
-		frappe.set_user("Administrator")
+		self.enterContext(self.set_user("Administrator"))
 		frappe.clear_messages()
-		self.category = self.ensure_category()
-		self.host = self.ensure_host()
-		self.team = create_owned_team(f"Sponsor Migration {frappe.generate_hash(length=6)}", "Administrator")
 
 	def tearDown(self):
-		frappe.set_user("Administrator")
+		# The migration reads every event on the site, so one test's conflicts must not reach the next.
 		frappe.db.rollback()
 
-	def make_legacy_event(self):
-		event = frappe.get_doc(
-			{
-				"doctype": "Buzz Event",
-				"title": f"Sponsor Migration {frappe.generate_hash(length=6)}",
-				"start_date": "2030-01-01",
-				"end_date": "2030-01-01",
-				"start_time": "10:00:00",
-				"end_time": "18:00:00",
-				"medium": "Online",
-				"category": self.category,
-				"host": self.host,
-				"team": self.team,
-				"is_published": 1,
-			}
-		).insert(ignore_permissions=True)
-		form = frappe.get_doc("Sponsor Enquiry Form", {"event": event.name})
-		frappe.delete_doc("Sponsor Enquiry Form", form.name, force=1)
-		frappe.clear_document_cache("Buzz Event", event.name)
-		return event
-
-	def add_legacy_form(self, event, **values):
-		row = frappe.get_doc(
-			{
-				"doctype": "Buzz Event Form",
-				"parent": event.name,
-				"parenttype": "Buzz Event",
-				"parentfield": "custom_forms",
-				"form_doctype": "Sponsorship Enquiry",
-				"route": "legacy-sponsor",
-				"publish": 1,
-				"login_required": 1,
-				**values,
-			}
-		)
-		row.db_insert()
-		return row
-
-	def add_legacy_question(self, event, **values):
-		question = frappe.get_doc(
-			{
-				"doctype": "Buzz Custom Field",
-				"event": event.name,
-				"applied_to": "Custom Form",
-				"custom_form_doctype": "Sponsorship Enquiry",
-				"enabled": 1,
-				"label": "Legacy budget",
-				"fieldname": "legacy_budget",
-				"fieldtype": "Number",
-				"order": 1,
-				**values,
-			}
-		)
-		question.db_insert()
-		return question
-
-
-class TestMigrateSponsorEnquiryForms(SponsorFormMigrationTestCase):
 	def test_migrates_settings_questions_and_preserves_existing_enquiries(self):
+		auto_close_at = f"{add_days(today(), 365)} 00:00:00"
 		event = self.make_legacy_event()
 		legacy = self.add_legacy_form(
 			event,
@@ -104,32 +31,20 @@ class TestMigrateSponsorEnquiryForms(SponsorFormMigrationTestCase):
 			success_message="We will reply soon.",
 			closed_title="Closed",
 			closed_message="Try next year.",
-			auto_close_at="2031-01-01 00:00:00",
+			auto_close_at=auto_close_at,
 			excluded_fields="website",
 		)
 		question = self.add_legacy_question(event, mandatory=1, options="unused", order=2)
 		disabled = self.add_legacy_question(
 			event, label="Disabled", fieldname="disabled_question", enabled=0, order=1
 		)
-		tier = frappe.get_doc(
-			{
-				"doctype": "Sponsorship Tier",
-				"event": event.name,
-				"title": "Legacy tier",
-				"prices": [{"currency": "INR", "price": 100}],
-			}
-		).insert(ignore_permissions=True)
-		enquiry = frappe.get_doc(
-			{
-				"doctype": "Sponsorship Enquiry",
-				"event": event.name,
-				"company_name": "Existing Sponsor",
-				"company_logo": "/files/acme.png",
-				"tier": tier.name,
-				"status": "Withdrawn",
-				"additional_fields": [{"fieldname": "legacy_budget", "label": "Legacy budget", "value": "0"}],
-			}
-		).insert(ignore_permissions=True)
+		tier = SponsorshipTierFactory.create(event=event.name)
+		enquiry = SponsorshipEnquiryFactory.create(
+			event=event.name,
+			tier=tier.name,
+			status="Withdrawn",
+			additional_fields=[{"fieldname": "legacy_budget", "label": "Legacy budget", "value": "0"}],
+		)
 		legacy_form_count = frappe.db.count("Buzz Event Form", {"parent": event.name})
 
 		SponsorFormMigration().run()
@@ -141,7 +56,7 @@ class TestMigrateSponsorEnquiryForms(SponsorFormMigrationTestCase):
 		self.assertEqual(form.success_message, "We will reply soon.")
 		self.assertEqual(form.closed_title, "Closed")
 		self.assertEqual(form.closed_message, "Try next year.")
-		self.assertEqual(str(form.auto_close_at), "2031-01-01 00:00:00")
+		self.assertEqual(str(form.auto_close_at), auto_close_at)
 		self.assertEqual(form.excluded_fields, "website")
 		self.assertEqual(
 			[row.fieldname for row in form.custom_fields], ["disabled_question", "legacy_budget"]
@@ -226,3 +141,43 @@ class TestMigrateSponsorEnquiryForms(SponsorFormMigrationTestCase):
 
 		self.assertFalse(frappe.db.exists("Sponsor Enquiry Form", {"event": migratable.name}))
 		self.assertTrue(frappe.db.exists("Buzz Event Form", legacy.name))
+
+	def make_legacy_event(self):
+		"""An event from before Sponsor Enquiry Form: the form every new event gets is removed."""
+		event = BuzzEventFactory.create()
+		form = frappe.db.get_value("Sponsor Enquiry Form", {"event": event.name})
+		frappe.delete_doc("Sponsor Enquiry Form", form, force=1)
+		frappe.clear_document_cache("Buzz Event", event.name)
+		return event
+
+	def add_legacy_form(self, event, **values):
+		row = event.append(
+			"custom_forms",
+			{
+				"form_doctype": "Sponsorship Enquiry",
+				"route": "legacy-sponsor",
+				"publish": 1,
+				"login_required": 1,
+				**values,
+			},
+		)
+		row.db_insert()
+		return row
+
+	def add_legacy_question(self, event, **values):
+		"""Written straight to the table: legacy keys break the rules `validate` now applies."""
+		question = BuzzCustomFieldFactory.build(
+			**{
+				"event": event.name,
+				"applied_to": "Custom Form",
+				"custom_form_doctype": "Sponsorship Enquiry",
+				"label": "Legacy budget",
+				"fieldname": "legacy_budget",
+				"fieldtype": "Number",
+				"enabled": 1,
+				"order": 1,
+				**values,
+			}
+		)
+		question.db_insert()
+		return question

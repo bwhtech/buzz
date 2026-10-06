@@ -10,60 +10,17 @@ from buzz.api.sponsorships import (
 	submit_enquiry_form,
 )
 from buzz.api.sponsorships.exceptions import EnquiryNotAccessible
-from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team
+from buzz.tests.factories import BuzzEventFactory, SponsorshipTierFactory, UserFactory
 
 
 class SponsorFormTestCase(IntegrationTestCase):
-	@staticmethod
-	def ensure_category():
-		name = "Sponsor Form Test Category"
-		if not frappe.db.exists("Event Category", name):
-			frappe.get_doc({"doctype": "Event Category", "name": name}).insert(ignore_permissions=True)
-		return name
-
-	@staticmethod
-	def ensure_host():
-		name = "Sponsor Form Test Host"
-		host = frappe.db.get_value("Event Host", {"host_name": name})
-		if not host:
-			host = (
-				frappe.get_doc({"doctype": "Event Host", "host_name": name})
-				.insert(ignore_permissions=True)
-				.name
-			)
-		return host
-
 	def setUp(self):
-		frappe.set_user("Administrator")
+		self.enterContext(self.set_user("Administrator"))
 		frappe.clear_messages()
-		self.category = self.ensure_category()
-		self.host = self.ensure_host()
-		self.team = create_owned_team(f"Sponsor Forms {frappe.generate_hash(length=6)}", "Administrator")
-		self.event = self.make_event()
+		self.event = BuzzEventFactory.create()
 		self.form = frappe.get_doc("Sponsor Enquiry Form", {"event": self.event.name})
 		self.form.publish = 1
 		self.form.save(ignore_permissions=True)
-
-	def tearDown(self):
-		frappe.set_user("Administrator")
-		frappe.db.rollback()
-
-	def make_event(self):
-		return frappe.get_doc(
-			{
-				"doctype": "Buzz Event",
-				"title": f"Sponsor Form {frappe.generate_hash(length=6)}",
-				"start_date": "2030-01-01",
-				"end_date": "2030-01-01",
-				"start_time": "10:00:00",
-				"end_time": "18:00:00",
-				"medium": "Online",
-				"category": self.category,
-				"host": self.host,
-				"team": self.team,
-				"is_published": 1,
-			}
-		).insert(ignore_permissions=True)
 
 	def form_values(self, **extra):
 		return {"company_name": "Acme", "company_logo": "/files/acme.png", **extra}
@@ -99,10 +56,11 @@ class TestSponsorFormData(SponsorFormTestCase):
 			get_enquiry_form(self.event.route)
 
 	def test_guest_can_open_the_form_with_a_required_contact_email(self):
-		frappe.set_user("Guest")
-		contact = self.contact_field()
+		with self.set_user("Guest"):
+			contact = self.contact_field()
+			closed = get_enquiry_form(self.event.route).closed
 
-		self.assertFalse(get_enquiry_form(self.event.route).closed)
+		self.assertFalse(closed)
 		self.assertTrue(contact["reqd"])
 		self.assertFalse(contact["default"])
 
@@ -117,10 +75,6 @@ class TestSponsorFormData(SponsorFormTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.form.save(ignore_permissions=True)
 
-	def contact_field(self):
-		fields = get_enquiry_form(self.event.route).form_fields
-		return next(field for field in fields if field["fieldname"] == "contact_email")
-
 	def test_archiving_unpublishes_the_form_without_reopening_it_on_republish(self):
 		self.event.archive_event()
 		self.form.reload()
@@ -131,19 +85,12 @@ class TestSponsorFormData(SponsorFormTestCase):
 		self.form.reload()
 		self.assertFalse(self.form.publish)
 
+	def contact_field(self):
+		fields = get_enquiry_form(self.event.route).form_fields
+		return next(field for field in fields if field["fieldname"] == "contact_email")
+
 
 class TestSponsorFormSubmission(SponsorFormTestCase):
-	def make_user(self, email):
-		user = frappe.get_doc(
-			{
-				"doctype": "User",
-				"email": email,
-				"first_name": "Sponsor",
-				"roles": [{"role": "Buzz User"}],
-			}
-		)
-		return user.insert(ignore_permissions=True).name
-
 	def test_submission_records_form_and_drops_forged_values(self):
 		name = submit_enquiry_form(
 			self.event.route,
@@ -187,22 +134,14 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 			submit_enquiry_form(self.event.route, self.form_values(phone="not-a-phone"))
 
 	def test_cross_event_tier_is_rejected(self):
-		other_event = self.make_event()
-		tier = frappe.get_doc(
-			{
-				"doctype": "Sponsorship Tier",
-				"event": other_event.name,
-				"title": "Other tier",
-				"prices": [{"currency": "INR", "price": 100}],
-			}
-		).insert(ignore_permissions=True)
+		tier = SponsorshipTierFactory.create()
 
 		with self.assertRaises(frappe.ValidationError):
 			submit_enquiry_form(self.event.route, self.form_values(tier=tier.name))
 
 	def test_disabled_tier_is_excluded_from_link_options(self):
-		enabled = self.make_tier("Available")
-		disabled = self.make_tier("Retired", enabled=0)
+		enabled = SponsorshipTierFactory.create(event=self.event.name)
+		disabled = SponsorshipTierFactory.create(event=self.event.name, enabled=0)
 
 		tier_field = next(
 			field for field in get_enquiry_form(self.event.route).form_fields if field["fieldname"] == "tier"
@@ -213,24 +152,13 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 		self.assertNotIn(disabled.name, values)
 
 	def test_disabled_tier_submission_is_rejected(self):
-		tier = self.make_tier("Retired", enabled=0)
+		tier = SponsorshipTierFactory.create(event=self.event.name, enabled=0)
 
 		with self.assertRaises(frappe.ValidationError):
 			submit_enquiry_form(self.event.route, self.form_values(tier=tier.name))
 
-	def make_tier(self, title, enabled=1):
-		return frappe.get_doc(
-			{
-				"doctype": "Sponsorship Tier",
-				"event": self.event.name,
-				"title": title,
-				"prices": [{"currency": "INR", "price": 100}],
-				"enabled": enabled,
-			}
-		).insert(ignore_permissions=True)
-
 	def test_guest_submission_requires_a_valid_contact_email(self):
-		frappe.set_user("Guest")
+		self.enterContext(self.set_user("Guest"))
 
 		with self.assertRaises(frappe.MandatoryError):
 			submit_enquiry_form(self.event.route, self.form_values())
@@ -244,18 +172,19 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 		self.assertEqual(enquiry.contact_email, "applicant@example.com")
 
 	def test_contact_email_addresses_mail_but_grants_no_access(self):
-		frappe.set_user("Guest")
-		name = submit_enquiry_form(self.event.route, self.form_values(contact_email="applicant@example.com"))
+		with self.set_user("Guest"):
+			name = submit_enquiry_form(
+				self.event.route, self.form_values(contact_email="applicant@example.com")
+			)
 		enquiry = frappe.get_doc("Sponsorship Enquiry", name)
 
 		self.assertEqual(enquiry.contact_recipient, "applicant@example.com")
 
 		# The address is never verified, so holding that mailbox proves nothing.
-		applicant = self.make_user("applicant@example.com")
-		frappe.set_user(applicant)
-		with self.assertRaises(EnquiryNotAccessible):
-			get_sponsorship_details(name)
-		self.assertNotIn(name, {row.name for row in get_user_sponsorship_inquiries()})
+		with self.set_user(UserFactory.create_once("applicant@example.com").name):
+			with self.assertRaises(EnquiryNotAccessible):
+				get_sponsorship_details(name)
+			self.assertNotIn(name, {row.name for row in get_user_sponsorship_inquiries()})
 
 	def test_custom_answers_validate_required_zero_and_options(self):
 		self.add_question(mandatory=1)
