@@ -122,7 +122,6 @@ export interface TeamOption {
 	name: string
 	team_name: string
 	logo: string | null
-	is_a_community: boolean
 	team_role: string
 	members: TeamMember[]
 	feature_flags: Record<string, boolean>
@@ -628,33 +627,4 @@ export interface CurrencyRevenue {
 export interface PaymentProviderItem {
 	name: string
 	is_default: boolean
-}
-
-// buzz.api.communities: an event's request to be listed on another team's community page.
-export interface CommunityRequest {
-	name: string
-	event: string
-	event_title: string
-	event_route: string | null
-	start_date: string
-	event_team: string
-	event_team_name: string
-	event_team_logo: string | null
-	community: string
-	community_name: string
-	status: "Pending" | "Approved" | "Rejected"
-	submitted_by: string | null
-	submitter_name: string | null
-	review_note: string | null
-}
-
-export interface CommunityOption {
-	name: string
-	team_name: string
-	logo: string | null
-}
-
-export interface EventRequests {
-	requests: CommunityRequest[]
-	communities: CommunityOption[]
 }

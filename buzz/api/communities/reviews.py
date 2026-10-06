@@ -2,8 +2,8 @@ import frappe
 
 from buzz.api.communities.exceptions import CannotReviewRequests, RequestNotApproved, RequestNotPending
 from buzz.api.communities.notifications import notify_reviewed
-from buzz.api.communities.queries import request_rows, upcoming_event_options
-from buzz.api.communities.schemas import CommunityQueue, EventOption
+from buzz.api.communities.queries import request_rows
+from buzz.api.communities.schemas import CommunityQueue
 from buzz.permissions import has_team_access
 
 REQUEST = "Community Event Request"
@@ -50,14 +50,3 @@ class CommunityReview:
 	def set_status(self, request, status: str, note: str | None = None) -> None:
 		request.update({"status": status, "reviewed_by": frappe.session.user, "review_note": note})
 		request.save(ignore_permissions=True)
-
-	def addable_events(self, txt: str) -> list[EventOption]:
-		listed = frappe.get_all(
-			REQUEST, filters={"community": self.community, "status": "Approved"}, pluck="event"
-		)
-		filters = {
-			"team": ["!=", self.community],
-			"name": ["not in", listed],
-			"title": ["like", f"%{txt}%"],
-		}
-		return upcoming_event_options(filters)

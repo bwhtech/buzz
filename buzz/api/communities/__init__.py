@@ -37,11 +37,6 @@ def get_requests(community: str) -> CommunityQueue:
 	return CommunityReview(community).queue()
 
 
-@frappe.whitelist()
-def search_addable_events(community: str, txt: str = "") -> list[EventOption]:
-	return CommunityReview(community).addable_events(txt)
-
-
 @frappe.whitelist(methods=["POST"])
 def approve_request(request: str) -> None:
 	community_review, doc = CommunityReview.from_request(request)

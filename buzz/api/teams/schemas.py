@@ -13,7 +13,6 @@ class TeamOption(APIResponse):
 	name: str
 	team_name: str
 	logo: str | None
-	is_a_community: bool
 	team_role: str
 	# The settings list shows who is on each team, not only how many.
 	members: list[TeamMember]

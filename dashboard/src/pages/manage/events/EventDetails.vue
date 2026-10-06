@@ -7,7 +7,6 @@ import { useRoute } from "vue-router"
 
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
-import EventCommunities from "@/components/dashboard/events/EventCommunities.vue"
 import EventDetailsSkeleton from "@/components/dashboard/events/EventDetailsSkeleton.vue"
 import EventHosts from "@/components/dashboard/events/EventHosts.vue"
 import EventLinks from "@/components/dashboard/events/EventLinks.vue"
@@ -310,12 +309,6 @@ async function save() {
 					/>
 
 					<EventLinks v-model="form.external_links" class="rounded-6 p-4" />
-
-					<EventCommunities
-						class="rounded-6 p-4"
-						:event="eventId"
-						:is-published="event.data.is_published"
-					/>
 				</div>
 			</div>
 		</div>
