@@ -20,20 +20,20 @@ class TestCouponScope(CouponTestCase):
 		coupon = self.create_coupon(applies_to="Event", event=self.event.name)
 
 		with self.assertRaises(frappe.ValidationError):
-			self.book_other_event(coupon)
+			self.create_other_event_booking(coupon)
 
 	def test_coupon_category_scope_validation(self):
 		coupon = self.create_coupon(applies_to="Event Category", event_category=self.event.category)
 
-		self.assert_amounts(self.book(coupon), net=500, discount=50, total=450)
+		self.assert_amounts(self.create_booking(coupon), net=500, discount=50, total=450)
 		with self.assertRaises(frappe.ValidationError):
-			self.book_other_event(coupon)
+			self.create_other_event_booking(coupon)
 
 	def test_coupon_global_scope(self):
 		coupon = self.create_coupon()
 
-		self.assertEqual(self.book(coupon).discount_amount, 50)
-		self.assertEqual(self.book_other_event(coupon).discount_amount, 10)
+		self.assertEqual(self.create_booking(coupon).discount_amount, 50)
+		self.assertEqual(self.create_other_event_booking(coupon).discount_amount, 10)
 
 	def test_specific_event_clears_event_category(self):
 		coupon = BuzzCouponCodeFactory.create(
@@ -59,7 +59,7 @@ class TestCouponScope(CouponTestCase):
 	def create_coupon(self, **overrides) -> str:
 		return BuzzCouponCodeFactory.create("percentage", discount_value=10, **overrides).name
 
-	def book_other_event(self, coupon: str):
+	def create_other_event_booking(self, coupon: str):
 		attendees = attendee_rows(self.other_ticket_type.name, 1)
 		return EventBookingFactory.create(
 			event=self.other_event.name, coupon_code=coupon, attendees=attendees

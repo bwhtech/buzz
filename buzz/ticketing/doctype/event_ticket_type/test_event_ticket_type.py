@@ -23,7 +23,7 @@ class TestEventTicketTypePrices(IntegrationTestCase):
 		prices = [{"currency": "INR", "price": 1000}, {"currency": "USD", "price": 15}]
 		self.ticket_type = EventTicketTypeFactory.create(event=self.event, prices=prices)
 
-	def sell(self, currency):
+	def submit_paid_booking(self, currency):
 		attendee = {"ticket_type": self.ticket_type.name, "first_name": "Buyer", "email": "buyer@example.com"}
 		booking = EventBookingFactory.create(
 			event=self.event, currency=currency, payment_status="Paid", attendees=[attendee]
@@ -41,7 +41,7 @@ class TestEventTicketTypePrices(IntegrationTestCase):
 		self.assertEqual([(row.currency, row.price) for row in ticket_type.prices], [("INR", 0)])
 
 	def test_price_is_locked_after_a_sale_in_its_currency(self):
-		self.sell("USD")
+		self.submit_paid_booking("USD")
 
 		self.save_prices(("INR", 1200), ("USD", 15))
 		with self.assertRaises(frappe.ValidationError):
@@ -62,7 +62,7 @@ class TestEventTicketTypePrices(IntegrationTestCase):
 			self.save_prices(("INR", 1000), ("USD", 15), ("USD", 15))
 
 	def test_ticket_type_with_sales_cannot_be_deleted(self):
-		self.sell("INR")
+		self.submit_paid_booking("INR")
 
 		with self.assertRaises(frappe.LinkExistsError):
 			frappe.delete_doc("Event Ticket Type", self.ticket_type.name)

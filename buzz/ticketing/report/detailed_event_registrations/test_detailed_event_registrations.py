@@ -37,7 +37,7 @@ class TestDetailedEventRegistrationsReport(IntegrationTestCase):
 		self.assertEqual(execute({}), ([], []))
 
 	def test_execute_returns_columns_and_data_with_event_filter(self):
-		self.book()
+		self.create_booking()
 
 		columns, data = execute(self.filters)
 
@@ -69,8 +69,8 @@ class TestDetailedEventRegistrationsReport(IntegrationTestCase):
 		self.assertNotIn(f"addon_{disabled_add_on.name}", fieldnames)
 
 	def test_get_columns_includes_each_utm_name_once(self):
-		self.book(utm_parameters=[{"utm_name": "utm_source", "value": "google"}])
-		self.book(
+		self.create_booking(utm_parameters=[{"utm_name": "utm_source", "value": "google"}])
+		self.create_booking(
 			utm_parameters=[
 				{"utm_name": "utm_source", "value": "facebook"},
 				{"utm_name": "utm_medium", "value": "cpc"},
@@ -93,7 +93,7 @@ class TestDetailedEventRegistrationsReport(IntegrationTestCase):
 
 	def test_get_data_includes_correct_ticket_info(self):
 		attendee = self.attendee(first_name="Test Attendee", email="testattendee@example.com")
-		booking = self.book(attendees=[attendee])
+		booking = self.create_booking(attendees=[attendee])
 
 		row = self.row_for_booking(booking.name)
 
@@ -123,19 +123,19 @@ class TestDetailedEventRegistrationsReport(IntegrationTestCase):
 
 	def test_get_data_falls_back_to_booking_custom_field(self):
 		self.create_custom_field("company", applied_to="Booking")
-		booking = self.book(additional_fields=[additional_field("company", "Acme Inc")])
+		booking = self.create_booking(additional_fields=[additional_field("company", "Acme Inc")])
 
 		self.assertEqual(self.row_for_booking(booking.name)["cf_company"], "Acme Inc")
 
 	def test_get_data_includes_add_on_values(self):
 		add_on = self.create_add_on()
 		add_ons = create_add_on_doc("AddOn User", [{"add_on": add_on.name, "value": "XL"}])
-		booking = self.book(attendees=[self.attendee(add_ons=add_ons.name)])
+		booking = self.create_booking(attendees=[self.attendee(add_ons=add_ons.name)])
 
 		self.assertEqual(self.row_for_booking(booking.name)[f"addon_{add_on.name}"], "XL")
 
 	def test_get_data_includes_utm_values(self):
-		booking = self.book(
+		booking = self.create_booking(
 			utm_parameters=[
 				{"utm_name": "utm_source", "value": "facebook"},
 				{"utm_name": "utm_campaign", "value": "summer_promo"},
@@ -149,7 +149,7 @@ class TestDetailedEventRegistrationsReport(IntegrationTestCase):
 	def test_get_data_handles_multiple_tickets_per_booking(self):
 		standard = self.attendee(email="one@example.com")
 		vip = self.attendee(email="two@example.com", ticket_type=self.vip_type.name)
-		booking = self.book(attendees=[standard, vip])
+		booking = self.create_booking(attendees=[standard, vip])
 
 		rows = {row["attendee_email"]: row for row in self.report_rows() if row["booking_id"] == booking.name}
 
@@ -172,7 +172,7 @@ class TestDetailedEventRegistrationsReport(IntegrationTestCase):
 	def test_report_column_ordering(self):
 		self.create_custom_field("custom_col")
 		add_on = self.create_add_on()
-		self.book(utm_parameters=[{"utm_name": "utm_test", "value": "test"}])
+		self.create_booking(utm_parameters=[{"utm_name": "utm_test", "value": "test"}])
 
 		fieldnames = self.column_fieldnames()
 		positions = [
@@ -182,7 +182,7 @@ class TestDetailedEventRegistrationsReport(IntegrationTestCase):
 
 		self.assertEqual(positions, sorted(positions))
 
-	def book(self, attendees: list[dict] | None = None, **overrides):
+	def create_booking(self, attendees: list[dict] | None = None, **overrides):
 		booking = EventBookingFactory.create(
 			event=self.event, user=self.booker, attendees=attendees or [self.attendee()], **overrides
 		)

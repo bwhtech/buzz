@@ -13,8 +13,6 @@ ADD_ON_PRICE = 200
 
 
 class CouponTestCase(IntegrationTestCase):
-	"""An event with a paid ticket type and a paid add-on, booked with a coupon."""
-
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -22,13 +20,13 @@ class CouponTestCase(IntegrationTestCase):
 		cls.ticket_type = create_paid_ticket_type(cls.event.name)
 		cls.add_on = TicketAddOnFactory.create(event=cls.event.name, price=ADD_ON_PRICE)
 
-	def book(self, coupon: str, count: int = 1, **overrides):
+	def create_booking(self, coupon: str, count: int = 1, **overrides):
 		attendees = attendee_rows(self.ticket_type.name, count)
 		return EventBookingFactory.create(
 			event=self.event.name, coupon_code=coupon, attendees=attendees, **overrides
 		)
 
-	def book_with_add_on(self, coupon: str, count: int = 1):
+	def create_booking_with_add_on(self, coupon: str, count: int = 1):
 		attendees = attendee_rows(self.ticket_type.name, count)
 		add_ons = create_add_on_doc(attendees[0]["first_name"], [{"add_on": self.add_on.name, "value": "XL"}])
 		attendees[0]["add_ons"] = add_ons.name
