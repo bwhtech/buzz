@@ -130,7 +130,6 @@ class TestTimezones(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value("User", "Administrator", "time_zone"), "Asia/Kolkata")
 
 	def test_update_accepts_utc(self):
-		# The dashboard's picker puts UTC at the top of the list.
 		self.set_user_timezone(None)
 
 		update_user_timezone("UTC")

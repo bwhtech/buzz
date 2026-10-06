@@ -6,7 +6,7 @@ from buzz.api.forms import get_event_proposal_form_data, submit_event_proposal
 from buzz.api.forms.exceptions import LoginRequired, ProposalsNotAccepted
 from buzz.tests.factories import EventCategoryFactory
 
-OPEN_TO_GUESTS = {"accept_event_proposals": 1, "allow_guest_event_proposals": 1}
+GUEST_PROPOSAL_SETTINGS = {"accept_event_proposals": 1, "allow_guest_event_proposals": 1}
 
 
 class TestEventProposalForm(IntegrationTestCase):
@@ -19,7 +19,7 @@ class TestEventProposalForm(IntegrationTestCase):
 		frappe.clear_messages()
 		# The rollback restores the settings row but not its cached copy.
 		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
-		self.enterContext(self.change_settings("Buzz Settings", OPEN_TO_GUESTS))
+		self.enterContext(self.change_settings("Buzz Settings", GUEST_PROPOSAL_SETTINGS))
 
 	def test_form_data_carries_the_banner_and_success_copy(self):
 		with self.change_settings(
@@ -49,7 +49,6 @@ class TestEventProposalForm(IntegrationTestCase):
 		submit_event_proposal(data=payload)
 
 		created = self.submitted_proposal(payload["title"])
-		# status is excluded, so a posted value must not stick.
 		self.assertNotEqual(created.status, "Approved")
 		self.assertEqual(created.about, payload["about"])
 
@@ -59,7 +58,7 @@ class TestEventProposalForm(IntegrationTestCase):
 		with self.set_user("Guest"):
 			submit_event_proposal(data=payload)
 
-		# Event Proposal has no submitted_by field, so the proposer is only the doc owner.
+		# Event Proposal has no submitted_by field, so the owner is the proposer.
 		self.assertEqual(self.submitted_proposal(payload["title"]).owner, "Guest")
 
 	def test_submit_blocked_when_proposals_are_closed(self):

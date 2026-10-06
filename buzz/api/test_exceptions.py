@@ -5,7 +5,7 @@ from frappe.tests import UnitTestCase
 from buzz.api.exceptions import BuzzAPIError, Conflict
 
 
-class Parameterized(BuzzAPIError):
+class ParameterizedError(BuzzAPIError):
 	http_status_code = 418
 	title = _lt("Teapot")
 	message = _lt("{item} is not available.")
@@ -27,8 +27,8 @@ class TestBuzzAPIError(UnitTestCase):
 		self.assertIn("conflicts", self.last_message()["message"])
 
 	def test_message_accepts_context(self):
-		with self.assertRaises(Parameterized):
-			Parameterized.throw(item="Chai")
+		with self.assertRaises(ParameterizedError):
+			ParameterizedError.throw(item="Chai")
 
 		self.assertEqual(self.last_message()["message"], "Chai is not available.")
 

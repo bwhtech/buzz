@@ -12,8 +12,7 @@ from buzz.api.forms.fields import (
 )
 from buzz.tests.factories import EventCategoryFactory, EventHostFactory, SponsorshipTierFactory
 
-# Renderable Talk Proposal fields (after STANDARD_EXCLUDE_FIELDS + auto-set event/submitted_by):
-#   title (reqd, Data), description (Text Editor), speakers (reqd, Table), phone (Phone)
+# Leaves title and speakers (both mandatory), description and phone renderable.
 TALK_PROPOSAL_EXCLUDE = STANDARD_EXCLUDE_FIELDS | {"event", "submitted_by"}
 LAYOUT_BREAKS = ("Section Break", "Column Break")
 
@@ -65,7 +64,6 @@ class TestGetFormFields(IntegrationTestCase):
 		self.assertTrue({"title", "description", "speakers", "phone"} <= returned)
 
 	def test_layout_breaks_pass_through(self):
-		# With layout breaks on, section/column breaks are emitted even when other fields are excluded.
 		exclude_fields = TALK_PROPOSAL_EXCLUDE | {"description", "speakers", "phone"}
 		fields = get_form_fields("Talk Proposal", exclude_fields, with_layout_breaks=True)
 
@@ -98,7 +96,7 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 		self.assertTrue(all(set(option) == {"value", "label"} for option in options))
 
 	def test_no_title_field_label_falls_back_to_name(self):
-		# Event Category has no title field -> label mirrors the name.
+		# Event Category has no title field.
 		self.assertEqual(self.label_of("Event Category", self.category), self.category)
 
 	def test_title_field_used_as_label(self):
@@ -110,7 +108,7 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 
 	def test_null_title_falls_back_to_name(self):
 		tier = SponsorshipTierFactory.create().name
-		# Blank the title directly (bypasses the reqd validation) to exercise the fallback.
+		# set_value skips the mandatory check on title.
 		frappe.db.set_value("Sponsorship Tier", tier, "title", "")
 
 		self.assertEqual(self.label_of("Sponsorship Tier", tier), tier)
@@ -124,7 +122,6 @@ class TestValidateExcludedFields(IntegrationTestCase):
 		frappe.clear_messages()
 
 	def test_hiding_mandatory_field_throws(self):
-		# speakers is mandatory; it cannot be hidden.
 		with self.assertRaises(MandatoryFieldsHidden):
 			validate_excluded_fields("Talk Proposal", "speakers")
 
@@ -137,11 +134,10 @@ class TestValidateExcludedFields(IntegrationTestCase):
 		self.assertIn("not_a_field", frappe.local.message_log[-1]["message"])
 
 	def test_hiding_optional_field_passes(self):
-		# phone is optional -> safe to hide.
 		validate_excluded_fields("Talk Proposal", "phone")
 
 	def test_system_field_is_noop(self):
-		# Auto-set/system fields are never rendered; listing them is a harmless no-op.
+		# System fields are never rendered, so listing them does nothing.
 		validate_excluded_fields("Talk Proposal", "event, submitted_by")
 
 	def test_blank_is_noop(self):

@@ -35,7 +35,6 @@ class FormsTestCase(IntegrationTestCase):
 		frappe.clear_messages()
 
 	def build_event(self, **form_row):
-		"""An event carrying one custom form. Returns the inserted event and its form route."""
 		form_row = {
 			"form_doctype": "Talk Proposal",
 			"route": f"propose-{frappe.generate_hash(length=6)}",
@@ -73,14 +72,14 @@ class TestCustomFormResponse(FormsTestCase):
 
 class TestCustomFormExcludedFields(FormsTestCase):
 	def test_get_custom_form_data_hides_excluded_fields(self):
-		returned = self.returned_fields(excluded_fields="phone")
+		returned = self.form_fieldnames(excluded_fields="phone")
 
 		self.assertNotIn("phone", returned)
 		self.assertTrue({"title", "description", "speakers"} <= returned)
 
 	def test_get_custom_form_data_empty_excluded_fields_returns_all(self):
 		self.assertTrue(
-			{"title", "description", "speakers", "phone"} <= self.returned_fields(excluded_fields="")
+			{"title", "description", "speakers", "phone"} <= self.form_fieldnames(excluded_fields="")
 		)
 
 	def test_submit_drops_excluded_field_value(self):
@@ -92,7 +91,6 @@ class TestCustomFormExcludedFields(FormsTestCase):
 		created = self.submitted_proposal("Hidden Phone")
 		self.assertEqual(str(created.event), str(event.name))
 		self.assertFalse(created.phone, f"phone should be dropped but was {created.phone!r}")
-		# Non-excluded fields (and child rows) must still be written.
 		self.assertEqual(created.description, "<p>desc</p>")
 		self.assertEqual(
 			[(row.first_name, row.email) for row in created.speakers], [("Jane", "jane@example.com")]
@@ -111,7 +109,7 @@ class TestCustomFormExcludedFields(FormsTestCase):
 
 		self.assertTrue(frappe.db.exists("Buzz Event", event.name))
 
-	def returned_fields(self, **form_row) -> set[str]:
+	def form_fieldnames(self, **form_row) -> set[str]:
 		event, form_route = self.build_event(**form_row)
 		return {f["fieldname"] for f in get_custom_form_data(event.route, form_route).form_fields}
 
@@ -252,7 +250,7 @@ class TestCustomFormLinkEventFilter(FormsTestCase):
 		self.assertNotIn(other_tier, option_values, "tiers from other events must not leak")
 
 	def test_link_field_without_event_is_not_filtered(self):
-		# Country has no `event` field -> it must keep returning the full list.
+		# Country has no `event` field, so it stays unfiltered.
 		event, form_route = self.build_sponsorship_event()
 
 		self.assertTrue(len(self.link_options(event, form_route, "country")) > 1)

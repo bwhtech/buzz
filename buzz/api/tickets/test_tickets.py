@@ -40,7 +40,6 @@ class TicketTestCase(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		# These tests move the event's start date around, so they own an event.
 		cls.event = BuzzEventFactory.create()
 		UserFactory.create_once(ATTENDEE)
 		UserFactory.create_once(OTHER_USER)
@@ -50,7 +49,7 @@ class TicketTestCase(IntegrationTestCase):
 		# The rollback restores these rows but not their cached copies.
 		self.addCleanup(frappe.clear_document_cache, "Buzz Team Settings", self.event.team)
 		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event.name)
-		# The window checks read the event's team settings, so pin the cutoffs tests reason about.
+		# The window checks read the team's cutoffs.
 		self.set_cutoffs(7)
 		self.set_event_start(30)
 
@@ -209,7 +208,7 @@ class TestCreateCancellationRequest(TicketTestCase):
 		with self.set_user(ATTENDEE):
 			create_cancellation_request(self.booking)
 
-		request = self.last_request()
+		request = self.last_cancellation_request()
 		self.assertTrue(request.cancel_full_booking)
 		self.assertEqual(request.tickets, [])
 
@@ -220,7 +219,7 @@ class TestCreateCancellationRequest(TicketTestCase):
 		with self.set_user(ATTENDEE):
 			create_cancellation_request(self.booking, [first])
 
-		request = self.last_request()
+		request = self.last_cancellation_request()
 		self.assertFalse(request.cancel_full_booking)
 		self.assertEqual([row.ticket for row in request.tickets], [first])
 
@@ -231,19 +230,18 @@ class TestCreateCancellationRequest(TicketTestCase):
 		with self.set_user(ATTENDEE):
 			create_cancellation_request(self.booking, [first, second])
 
-		self.assertTrue(self.last_request().cancel_full_booking)
+		self.assertTrue(self.last_cancellation_request().cancel_full_booking)
 
 	def test_a_ticket_from_another_booking_is_refused(self):
-		# Two tickets on the booking, so naming one stray id stays on the partial path —
-		# a count match short-circuits to a full-booking request before the check runs.
+		# Two tickets keep the request partial: a count match skips the booking check.
 		self.make_ticket(booking=self.booking)
 		self.make_ticket(booking=self.booking)
-		stray = self.make_ticket(booking=self.make_booking().name).name
+		other_booking_ticket = self.make_ticket(booking=self.make_booking().name).name
 
 		with self.set_user(ATTENDEE), self.assertRaises(TicketNotInBooking):
-			create_cancellation_request(self.booking, [stray])
+			create_cancellation_request(self.booking, [other_booking_ticket])
 
-		self.assertIn(stray, frappe.local.message_log[-1]["message"])
+		self.assertIn(other_booking_ticket, frappe.local.message_log[-1]["message"])
 
 	def test_another_user_cannot_request(self):
 		self.make_ticket(booking=self.booking)
@@ -268,5 +266,5 @@ class TestCreateCancellationRequest(TicketTestCase):
 
 		self.assertEqual(frappe.local.message_log[-1]["title"], "Already Requested")
 
-	def last_request(self):
+	def last_cancellation_request(self):
 		return frappe.get_last_doc("Ticket Cancellation Request", filters={"booking": self.booking})

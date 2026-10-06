@@ -11,7 +11,7 @@ from buzz.tests.factories import BuzzTeamFactory, UserFactory
 from buzz.tests.utils import clear_map_link_cache
 
 GOOGLE_MAPS_SETTINGS = {"google_maps_enabled": 1, "google_places_api_key": "secret-places-key"}
-NO_VENUE_RIGHTS = "no-venues@example.com"
+USER_WITHOUT_VENUE_ACCESS = "no-venues@example.com"
 
 SUGGESTIONS = {
 	"suggestions": [
@@ -80,7 +80,10 @@ class TestSearchPlaces(GoogleMapsTestCase):
 			search_places("nehru", "token-1")
 
 	def test_someone_who_cannot_add_venues_is_refused(self):
-		with self.set_user(UserFactory.create_once(NO_VENUE_RIGHTS).name), self.assertRaises(CannotAddVenues):
+		with (
+			self.set_user(UserFactory.create_once(USER_WITHOUT_VENUE_ACCESS).name),
+			self.assertRaises(CannotAddVenues),
+		):
 			search_places("nehru", "token-1")
 
 

@@ -51,8 +51,8 @@ class TestWindows(IntegrationTestCase):
 
 class TestPerTeamWindows(IntegrationTestCase):
 	def test_each_team_enforces_its_own_window(self):
-		strict = self.team_event(cutoff_days=7, days_from_today=5)
-		lenient = self.team_event(cutoff_days=2, days_from_today=5)
+		strict = self.create_team_event(cutoff_days=7, days_from_today=5)
+		lenient = self.create_team_event(cutoff_days=2, days_from_today=5)
 
 		for cutoff_fieldname in CUTOFF_FIELDS:
 			with self.subTest(cutoff_fieldname=cutoff_fieldname):
@@ -60,11 +60,11 @@ class TestPerTeamWindows(IntegrationTestCase):
 				self.assertTrue(is_window_open(lenient, cutoff_fieldname))
 
 	def test_an_explicit_zero_cutoff_is_not_treated_as_unset(self):
-		event = self.team_event(cutoff_days=0, days_from_today=1)
+		event = self.create_team_event(cutoff_days=0, days_from_today=1)
 
 		self.assertTrue(is_window_open(event, TRANSFER))
 
-	def team_event(self, cutoff_days: int, days_from_today: int):
+	def create_team_event(self, cutoff_days: int, days_from_today: int):
 		team = BuzzTeamFactory.create_owned_by().name
 		BuzzTeamFactory.set_settings(team, dict.fromkeys(CUTOFF_FIELDS, cutoff_days))
 		start_date = add_days(today(), days_from_today)

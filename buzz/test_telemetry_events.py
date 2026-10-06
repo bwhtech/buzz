@@ -22,7 +22,7 @@ from buzz.tests.factories.ticketing.ticket_cancellation_request_factory import (
 from buzz.tests.telemetry_capture import captured_names, capturing, properties_of
 from buzz.www import dashboard
 
-SPONSORSHIP_ENQUIRY = "buzz.proposals.doctype.sponsorship_enquiry.sponsorship_enquiry"
+SPONSORSHIP_ENQUIRY_MODULE = "buzz.proposals.doctype.sponsorship_enquiry.sponsorship_enquiry"
 
 
 class TestEventTelemetry(IntegrationTestCase):
@@ -98,7 +98,7 @@ class TestBookingTelemetry(IntegrationTestCase):
 
 	def test_booking_confirmed(self):
 		with capturing() as mock_capture:
-			self.confirmed_booking(attendee_count=2)
+			self.create_confirmed_booking(attendee_count=2)
 
 		properties = properties_of(mock_capture, "booking_confirmed")
 		self.assertEqual(properties["payment"], "free")
@@ -115,7 +115,7 @@ class TestBookingTelemetry(IntegrationTestCase):
 		self.assertNotIn("booking_confirmed", captured_names(mock_capture))
 
 	def test_ticket_checked_in(self):
-		booking = self.confirmed_booking()
+		booking = self.create_confirmed_booking()
 		ticket = frappe.db.get_value("Event Ticket", {"booking": booking.name}, "name")
 
 		with capturing() as mock_capture:
@@ -124,7 +124,7 @@ class TestBookingTelemetry(IntegrationTestCase):
 		self.assertEqual(captured_names(mock_capture), ["ticket_checked_in"])
 
 	def test_tickets_cancelled(self):
-		booking = self.confirmed_booking(attendee_count=2).name
+		booking = self.create_confirmed_booking(attendee_count=2).name
 		ticket = frappe.get_all("Event Ticket", filters={"booking": booking}, pluck="name")[0]
 		request = TicketCancellationRequestFactory.create(
 			"accepted", booking=booking, tickets=[{"ticket": ticket}]
@@ -139,7 +139,7 @@ class TestBookingTelemetry(IntegrationTestCase):
 		)
 
 	def test_full_booking_cancelled_counts_its_tickets(self):
-		booking = self.confirmed_booking(attendee_count=2).name
+		booking = self.create_confirmed_booking(attendee_count=2).name
 		request = TicketCancellationRequestFactory.create("accepted", booking=booking, cancel_full_booking=1)
 
 		with capturing() as mock_capture, patch("frappe.sendmail"):
@@ -167,7 +167,7 @@ class TestBookingTelemetry(IntegrationTestCase):
 			{**telemetry.shared_properties(), "full": True, "covers_tickets": False},
 		)
 
-	def confirmed_booking(self, attendee_count: int = 1):
+	def create_confirmed_booking(self, attendee_count: int = 1):
 		ticket_type = EventTicketTypeFactory.create(event=self.event).name
 		booking = EventBookingFactory.create(
 			event=self.event, attendees=self.attendees(ticket_type, attendee_count)
@@ -192,12 +192,12 @@ class TestProposalTelemetry(IntegrationTestCase):
 		super().setUpClass()
 		cls.event = BuzzEventFactory.create()
 
-	@patch(f"{SPONSORSHIP_ENQUIRY}.SponsorshipEnquiry.send_pitch_deck")
+	@patch(f"{SPONSORSHIP_ENQUIRY_MODULE}.SponsorshipEnquiry.send_pitch_deck")
 	def test_sponsorship_paid(self, _send_pitch_deck):
 		tier = SponsorshipTierFactory.create(event=self.event.name).name
 		enquiry = SponsorshipEnquiryFactory.create(event=self.event.name, tier=tier)
 
-		with capturing() as mock_capture, patch(f"{SPONSORSHIP_ENQUIRY}.mark_payment_as_received"):
+		with capturing() as mock_capture, patch(f"{SPONSORSHIP_ENQUIRY_MODULE}.mark_payment_as_received"):
 			enquiry.on_payment_authorized("Failed")
 			enquiry.on_payment_authorized("Completed")
 
@@ -220,7 +220,7 @@ class TestProposalTelemetry(IntegrationTestCase):
 		self.assertEqual(properties["medium"], "In Person")
 		self.assertFalse(properties["free_event"])
 
-	@patch(f"{SPONSORSHIP_ENQUIRY}.SponsorshipEnquiry.send_pitch_deck")
+	@patch(f"{SPONSORSHIP_ENQUIRY_MODULE}.SponsorshipEnquiry.send_pitch_deck")
 	def test_sponsorship_enquiry_created(self, _send_pitch_deck):
 		with capturing() as mock_capture:
 			SponsorshipEnquiryFactory.create(event=self.event.name)

@@ -57,7 +57,7 @@ class CommunicationsTestCase(IntegrationTestCase):
 	def issue_ticket(self, attendee_email: str) -> str:
 		return EventTicketFactory.create("submitted", event=self.event, attendee_email=attendee_email).name
 
-	def propose_talk(self, speaker_email: str) -> str:
+	def create_talk_proposal(self, speaker_email: str) -> str:
 		speakers = [{"first_name": "Speaker", "email": speaker_email}]
 		return TalkProposalFactory.create(event=self.event, speakers=speakers).name
 
@@ -87,16 +87,16 @@ class TestCountRecipients(CommunicationsTestCase):
 		self.assertEqual(count, 1)
 
 	def test_counts_proposal_speakers_once(self):
-		self.propose_talk("speaker@example.com")
-		self.propose_talk("speaker@example.com")
-		self.propose_talk("second@example.com")
+		self.create_talk_proposal("speaker@example.com")
+		self.create_talk_proposal("speaker@example.com")
+		self.create_talk_proposal("second@example.com")
 
 		with self.set_user(self.owner):
 			self.assertEqual(count_recipients(self.event, "Speakers").count, 2)
 
 	def test_narrows_speakers_by_proposal_status(self):
-		accepted = self.propose_talk("yes@example.com")
-		self.propose_talk("pending@example.com")
+		accepted = self.create_talk_proposal("yes@example.com")
+		self.create_talk_proposal("pending@example.com")
 		frappe.db.set_value("Talk Proposal", accepted, "status", "Accepted")
 
 		with self.set_user(self.owner):
@@ -213,7 +213,7 @@ class TestUpdateSupportEmail(CommunicationsTestCase):
 class TestCommunicationTemplate(CommunicationsTestCase):
 	def test_wraps_the_message_in_the_event_header_and_footer(self):
 		title, route = "Comms Template Night", f"comms-{frappe.generate_hash(length=6)}"
-		html = self.sent_html(title=title, route=route)
+		html = self.sent_email_html(title=title, route=route)
 
 		self.assertIn(title, html)
 		self.assertIn("Bring a jacket.", html)
@@ -223,14 +223,14 @@ class TestCommunicationTemplate(CommunicationsTestCase):
 		self.assertNotIn("Unsubscribe", html)
 
 	def test_shows_the_banner_only_when_the_event_has_one(self):
-		self.assertNotIn("data-banner", self.sent_html())
+		self.assertNotIn("data-banner", self.sent_email_html())
 
 	def test_shows_the_banner_when_the_event_has_one(self):
-		html = self.sent_html(banner_image="/files/banner.png")
+		html = self.sent_email_html(banner_image="/files/banner.png")
 
 		self.assertIn("/files/banner.png", html)
 
-	def sent_html(self, **event_values) -> str:
+	def sent_email_html(self, **event_values) -> str:
 		if event_values:
 			frappe.db.set_value("Buzz Event", self.event, event_values)
 			frappe.clear_document_cache("Buzz Event", self.event)
