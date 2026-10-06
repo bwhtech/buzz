@@ -111,7 +111,7 @@ async function save() {
 		<EventLinks
 			v-model="form.links"
 			class="rounded-6 border border-outline-gray-2 p-4"
-			hint="Website, forum, repository — wherever people can find the team."
+			:hint="__('Website, forum, repository — wherever people can find the team.')"
 		/>
 
 		<ErrorMessage :message="serverErrorMessage(updatePublicPage.error)" />
