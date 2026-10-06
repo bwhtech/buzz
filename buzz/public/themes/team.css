@@ -236,3 +236,73 @@
 		transform: none;
 	}
 }
+
+.team-identity > .es-button {
+	flex-shrink: 0;
+}
+
+/* Community "Submit event": a native dialog over the page. */
+.submit-dialog {
+	width: min(440px, 100% - 32px);
+	padding: 0;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface-raised);
+	color: var(--ink-body);
+}
+
+.submit-dialog::backdrop {
+	background: rgb(0 0 0 / 0.4);
+}
+
+.submit-dialog-body {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 20px;
+}
+
+.submit-dialog-body[hidden] {
+	display: none;
+}
+
+.submit-dialog-title {
+	color: var(--ink-strong);
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.submit-dialog-note {
+	color: var(--ink-muted);
+	font-size: 14px;
+}
+
+.submit-dialog-label {
+	display: block;
+	margin-bottom: 6px;
+	color: var(--ink-muted);
+	font-size: 13px;
+}
+
+.submit-dialog-input {
+	width: 100%;
+	padding: 8px 10px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--surface);
+	color: var(--ink-strong);
+	font: inherit;
+	font-size: 14px;
+}
+
+.submit-dialog-error {
+	color: var(--ink-red-7);
+	font-size: 14px;
+}
+
+.submit-dialog-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 4px;
+}

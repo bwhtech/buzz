@@ -309,6 +309,8 @@ class BuzzEvent(Document):
 		sponsorship_form_id = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
 		if sponsorship_form_id and not frappe.db.exists("Sponsorship Enquiry", {"event": self.name}):
 			frappe.delete_doc("Sponsor Enquiry Form", sponsorship_form_id, ignore_permissions=True)
+		# A community's request to list the event means nothing once the event is gone.
+		frappe.db.delete("Community Event Request", {"event": self.name})
 
 	def create_default_records(self):
 		records = [

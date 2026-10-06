@@ -240,6 +240,7 @@ permission_query_conditions = {
 	"Buzz Team": "buzz.permissions.team_doc_query_conditions",
 	"Buzz Team Membership": "buzz.permissions.membership_query_conditions",
 	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.get_permission_query_conditions",
+	"Community Event Request": "buzz.events.doctype.community_event_request.community_event_request.request_query_conditions",
 }
 
 # Every Buzz Team link field, not one form at a time: the permission hooks let a System
@@ -273,6 +274,7 @@ has_permission = {
 	"Buzz Team": "buzz.permissions.team_doc_has_permission",
 	"Buzz Team Membership": "buzz.permissions.team_admin_has_permission",
 	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.has_talk_proposal_permission",
+	"Community Event Request": "buzz.events.doctype.community_event_request.community_event_request.has_request_permission",
 }
 
 # Document Events

@@ -25,7 +25,9 @@ VENUE_FIELDS = [
 	"venue.city as city",
 	"venue.venue_country as country",
 ]
-EVENT_FIELDS = CARD_FIELDS + TIME_FIELDS + VENUE_FIELDS
+# A community lists other teams' events too, so each card names its event's own team.
+HOST_FIELDS = ["team.team_name as host_name", "team.logo as host_logo"]
+EVENT_FIELDS = CARD_FIELDS + TIME_FIELDS + VENUE_FIELDS + HOST_FIELDS
 
 
 def day_labels(day) -> dict:
@@ -62,7 +64,8 @@ class TeamPage:
 	def upcoming_events(self) -> list:
 		events = frappe.get_all(
 			"Buzz Event",
-			filters=upcoming_filters() | {"team": self.team.name},
+			filters=upcoming_filters(),
+			or_filters=self.event_filters(),
 			fields=EVENT_FIELDS,
 			order_by="start_date asc, start_time asc",
 			limit=LISTING_LIMIT,
@@ -73,17 +76,24 @@ class TeamPage:
 		# By start date: a one-day event leaves end_date blank, and has_ended makes the exact cut.
 		events = frappe.get_all(
 			"Buzz Event",
-			filters={
-				"team": self.team.name,
-				"is_published": 1,
-				"route": ["is", "set"],
-				"start_date": ["<=", today()],
-			},
+			filters={"is_published": 1, "route": ["is", "set"], "start_date": ["<=", today()]},
+			or_filters=self.event_filters(),
 			fields=EVENT_FIELDS,
 			order_by="start_date desc, start_time desc",
 			limit=PAST_LIMIT,
 		)
 		return [event for event in events if has_ended(event)]
+
+	def event_filters(self) -> dict:
+		"""The team's own events, plus those its community approved."""
+		filters = {"team": self.team.name}
+		if self.team.is_a_community:
+			approved = {"community": self.team.name, "status": "Approved"}
+			filters["name"] = [
+				"in",
+				frappe.get_all("Community Event Request", filters=approved, pluck="event"),
+			]
+		return filters
 
 	def card(self, event) -> dict:
 		is_online = event.medium == "Online"
@@ -95,8 +105,8 @@ class TeamPage:
 			"url": f"/events/{event.route}",
 			"image": event.card_image or event.banner_image,
 			"time": format_time(event.start_time),
-			"host_name": self.team.team_name,
-			"host_logo": self.team.logo,
+			"host_name": event.host_name,
+			"host_logo": event.host_logo,
 			"place": _("Online") if is_online else event.venue_name,
 			"is_online": is_online,
 			"city": event.city,

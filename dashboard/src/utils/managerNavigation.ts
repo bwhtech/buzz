@@ -19,9 +19,10 @@ type NavigationContext = {
 	eventId?: string
 	creatingEvent: boolean
 	hasSponsorships: boolean
+	reviewsCommunity: boolean
 }
 
-function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
+function rootItems(hasSponsorships: boolean, reviewsCommunity: boolean): ManagerNavItem[] {
 	const items = [
 		{ label: "Events", icon: "lucide-calendar-days", to: "/manage/events" },
 		{
@@ -31,6 +32,9 @@ function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
 			to: "/manage/proposals",
 		},
 	]
+	if (reviewsCommunity) {
+		items.push({ label: "Community", icon: "lucide-globe", to: "/manage/community" })
+	}
 	// Hidden until the user has an inquiry, the same rule the account page applies.
 	if (hasSponsorships) {
 		items.push({ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" })
@@ -65,5 +69,5 @@ export function managerNavigation(context: NavigationContext): ManagerNavItem[] 
 	// Creating an event is a page of its own; the shell holds only the way out of it.
 	if (context.creatingEvent) return []
 	if (context.eventId) return eventItems(context.eventId)
-	return rootItems(context.hasSponsorships)
+	return rootItems(context.hasSponsorships, context.reviewsCommunity)
 }

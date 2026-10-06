@@ -1,0 +1,15 @@
+{% extends "buzz/templates/emails/base.html" %}
+
+{% block preheader %}{{ team_name }} wants {{ event_title }} listed on {{ community_name }}.{% endblock %}
+{% block title %}An event is waiting for review{% endblock %}
+
+{% block content %}
+<p style="margin:0"><strong style="color:#171717">{{ team_name }}</strong> submitted <strong style="color:#171717">{{ event_title }}</strong> to {{ community_name }}. It shows on the community page once you approve it.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px">
+  <tr>
+    <td style="background-color:#171717;border-radius:8px">
+      <a href="{{ requests_url }}" style="display:block;padding:10px 16px;color:#ffffff;font-size:14px;font-weight:500;text-decoration:none">Review requests</a>
+    </td>
+  </tr>
+</table>
+{% endblock %}

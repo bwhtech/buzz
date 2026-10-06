@@ -73,6 +73,13 @@
 				<h1 class="event-title">{{ doc.team_name }}</h1>
 				<p class="team-stats">{% if events_hosted == 1 %}{{ _("1 event hosted") }}{% else %}{{ _("{0} events hosted").format(events_hosted) }}{% endif %}</p>
 			</div>
+			{% if doc.is_a_community %}
+			{% if is_guest %}
+			<a class="es-button" data-variant="subtle" data-size="md" href="/login?redirect-to=/{{ doc.route }}">{{ _("Submit event") }}</a>
+			{% else %}
+			<button type="button" class="es-button" data-variant="subtle" data-size="md" data-open-submit>{{ _("Submit event") }}</button>
+			{% endif %}
+			{% endif %}
 		</header>
 
 		{% if countries %}
@@ -132,6 +139,31 @@
 		</div>
 	</main>
 
+	{% if doc.is_a_community and not is_guest %}
+	<dialog class="submit-dialog" id="submit-dialog" aria-labelledby="submit-dialog-title" data-community="{{ doc.name }}">
+		<form class="submit-dialog-body" data-submit-form>
+			<h2 class="submit-dialog-title" id="submit-dialog-title">{{ _("Submit an event to {0}").format(doc.team_name) }}</h2>
+			<p class="submit-dialog-note">{{ _("The community's managers review it before it shows on this page.") }}</p>
+			<div data-submit-choice>
+				<label class="submit-dialog-label" for="submit-event">{{ _("Your event") }}</label>
+				<select class="submit-dialog-input" id="submit-event" name="event" required></select>
+			</div>
+			<p class="submit-dialog-note" data-submit-empty hidden>{{ _("None of your teams has an upcoming published event to submit.") }}</p>
+			<p class="submit-dialog-error" role="alert" data-submit-error hidden></p>
+			<div class="submit-dialog-actions">
+				<button type="button" class="es-button" data-variant="ghost" data-size="md" data-close-dialog>{{ _("Cancel") }}</button>
+				<button type="submit" class="es-button" data-variant="solid" data-size="md" data-submit-button>{{ _("Submit for review") }}</button>
+			</div>
+		</form>
+		<div class="submit-dialog-body" data-submit-done hidden>
+			<h2 class="submit-dialog-title">{{ _("Sent for review") }}</h2>
+			<p class="submit-dialog-note">{{ _("It shows here once a manager approves it. We'll email you either way.") }}</p>
+			<div class="submit-dialog-actions">
+				<button type="button" class="es-button" data-variant="solid" data-size="md" data-close-dialog>{{ _("Done") }}</button>
+			</div>
+		</div>
+	</dialog>
+	{% endif %}
 	<script type="application/json" id="team-page-data">{{ page_data | tojson }}</script>
 {% endautoescape %}{% endblock %}
 

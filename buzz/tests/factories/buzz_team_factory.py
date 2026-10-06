@@ -17,12 +17,12 @@ class BuzzTeamFactory(BaseFactory[BuzzTeam]):
 	doctype = "Buzz Team"
 
 	@classmethod
-	def create_owned_by(cls, user: str | None = None, **overrides: Any) -> BuzzTeam:
+	def create_owned_by(cls, user: str | None = None, *traits: str, **overrides: Any) -> BuzzTeam:
 		"""Prefer over `create()`: an Administrator-owned test team becomes its default team."""
 		from buzz.tests.factories.user_factory import UserFactory
 
 		owner = user or UserFactory.create_once(LINK_TEAM_OWNER).name
-		team = cls.create(flags={"owner_user": owner}, **overrides)
+		team = cls.create(*traits, flags={"owner_user": owner}, **overrides)
 		# Paid tickets are the common case in tests; a test about the flag turns it off.
 		cls.set_feature(team.name, PAID_EVENTS_FLAG, 1)
 		return team
@@ -35,3 +35,7 @@ class BuzzTeamFactory(BaseFactory[BuzzTeam]):
 	@property
 	def default_attributes(self) -> dict[str, Any]:
 		return {"team_name": f"{_fake.word().capitalize()} Team"}
+
+	@property
+	def community(self) -> dict[str, Any]:
+		return {"is_published": 1, "is_a_community": 1}
