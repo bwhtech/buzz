@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
 from buzz.api.sponsorships import (
 	create_sponsorship_payment_link,
@@ -16,6 +15,7 @@ from buzz.api.sponsorships.exceptions import (
 	PaymentNotPermitted,
 	WithdrawalNotPermitted,
 )
+from buzz.tests.base_test_cases import SponsorshipTestCase
 from buzz.ticketing.doctype.event_booking.test_event_booking_refund import make_payment_gateway
 
 ENQUIRY_FIELDS = {
@@ -42,62 +42,6 @@ LIST_FIELDS = {
 	"tier_title",
 	"has_sponsor",
 }
-
-
-class SponsorshipTestCase(IntegrationTestCase):
-	@classmethod
-	def setUpClass(cls):
-		super().setUpClass()
-		cls.event = str(frappe.get_doc("Buzz Event", {"route": "test-route"}).name)
-
-	def setUp(self):
-		frappe.set_user("Administrator")
-		frappe.clear_messages()
-
-		self.tier = frappe.get_doc(
-			{
-				"doctype": "Sponsorship Tier",
-				"event": self.event,
-				"title": f"Sponsorship Test {frappe.generate_hash(length=6)}",
-				"prices": [{"currency": "INR", "price": 5000}],
-			}
-		).insert()
-
-		self.enquiry = frappe.get_doc(
-			{
-				"doctype": "Sponsorship Enquiry",
-				"event": self.event,
-				"tier": self.tier.name,
-				"company_name": "Acme Corp",
-				"company_logo": "/files/acme.png",
-				"status": "Approval Pending",
-			}
-		).insert()
-
-	def tearDown(self):
-		frappe.set_user("Administrator")
-		frappe.db.rollback()
-
-	def make_stranger(self) -> str:
-		email = f"stranger-{frappe.generate_hash(length=6)}@example.com"
-		user = frappe.new_doc("User")
-		user.email = email
-		user.first_name = "Stranger"
-		user.append("roles", {"role": "Buzz User"})
-		user.insert(ignore_permissions=True)
-		return email
-
-	def make_sponsor(self):
-		return frappe.get_doc(
-			{
-				"doctype": "Event Sponsor",
-				"event": self.event,
-				"tier": self.tier.name,
-				"company_name": "Acme Corp",
-				"company_logo": "/files/acme.png",
-				"enquiry": self.enquiry.name,
-			}
-		).insert()
 
 
 class TestGetSponsorshipDetails(SponsorshipTestCase):

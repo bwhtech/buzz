@@ -2,7 +2,7 @@ import frappe
 
 from buzz.api.booking import process_booking, validate_coupon
 from buzz.api.booking.services import create_add_on_doc
-from buzz.api.booking.test_booking import BookingTestCase
+from buzz.tests.base_test_cases import BookingTestCase
 
 
 class TestBookingCurrency(BookingTestCase):

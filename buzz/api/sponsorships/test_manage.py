@@ -8,7 +8,7 @@ from buzz.api.sponsorships import (
 	update_enquiry_status,
 )
 from buzz.api.sponsorships.exceptions import EnquiryNotFound, EnquiryStatusLocked, EnquiryTierMissing
-from buzz.api.sponsorships.test_sponsorships import SponsorshipTestCase
+from buzz.tests.base_test_cases import SponsorshipTestCase
 from buzz.tests.factories import SponsorshipEnquiryFactory
 
 TIER_FIELDS = {"name", "title", "prices", "slots", "enabled", "perks", "sponsor_count"}

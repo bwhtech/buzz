@@ -10,12 +10,12 @@ from frappe.tests import IntegrationTestCase
 from buzz.api.events.test_events import create_event
 from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
 from buzz.events.doctype.event_venue.map_link import (
-	MAP_LINK_CACHE_PREFIX,
 	SHORT_LINK_DIGITS,
 	coordinates_of,
 	read_map_link,
 )
 from buzz.patches.set_event_venue_name import execute as set_event_venue_name
+from buzz.tests.utils import clear_map_link_cache
 
 
 class IntegrationTestEventVenue(IntegrationTestCase):
@@ -78,10 +78,6 @@ def open_street_map_short_code(latitude: float, longitude: float, zoom: int) -> 
 	length = -(-(zoom + 8) // 3)
 	code = "".join(SHORT_LINK_DIGITS[(interleaved >> (58 - 6 * index)) & 0x3F] for index in range(length))
 	return code + "-" * ((zoom + 8) % 3)
-
-
-def clear_map_link_cache():
-	frappe.cache.delete_keys(MAP_LINK_CACHE_PREFIX)
 
 
 class TestMapLinkCoordinates(IntegrationTestCase):
