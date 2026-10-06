@@ -19,25 +19,20 @@ class BookingEmailTestCase(BookingTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.email_booker = UserFactory.create_once("booking-email-booker@example.com").name
-		cls.ticket_type = EventTicketTypeFactory.create(
-			event=cls.event.name, title="Email Ticket", prices=[{"currency": "INR", "price": 100}]
-		)
+		cls.ticket_type = EventTicketTypeFactory.create("paid", event=cls.event.name, title="Email Ticket")
 
 	def setUp(self):
 		super().setUp()
 		# Ticket emails stay off, so `frappe.sendmail` only sees the booking email.
 		self.set_event(
 			{
-				"apply_tax": 0,
 				"send_ticket_email": 0,
 				"send_booking_confirmation_email": 1,
 				"booking_confirmation_email_template": None,
 				"offline_acknowledgement_email_template": None,
 			}
 		)
-		BuzzTeamFactory.set_settings(
-			self.event.team, {"default_booking_confirmation_email_template": None, "support_email": None}
-		)
+		self.set_team_template(None)
 
 	def create_booking(self, user: str, **overrides):
 		attendees = [
@@ -123,8 +118,8 @@ class TestBookingConfirmationEmail(BookingEmailTestCase):
 		return booking
 
 
+@patch("frappe.sendmail")
 class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
-	@patch("frappe.sendmail")
 	def test_sends_acknowledgement_to_booker(self, sendmail):
 		booking = self.send_acknowledgement()
 
@@ -133,13 +128,11 @@ class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
 		self.assertEqual(sendmail.call_args[1]["reference_doctype"], "Event Booking")
 		self.assertEqual(sendmail.call_args[1]["reference_name"], booking.name)
 
-	@patch("frappe.sendmail")
 	def test_uses_inline_template_when_none_configured(self, sendmail):
 		self.send_acknowledgement()
 
 		self.assertEqual(sendmail.call_args[1]["template"], "offline_booking_acknowledgement")
 
-	@patch("frappe.sendmail")
 	def test_carries_the_booking_summary(self, sendmail):
 		booking = self.send_acknowledgement()
 
@@ -149,7 +142,7 @@ class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
 		# Ticket types autoname to integers and arrive off the row as strings.
 		self.assertEqual([row["ticket_type_title"] for row in args["attendee_rows"]], ["Email Ticket"])
 
-	def test_builtin_template_renders(self):
+	def test_builtin_template_renders(self, sendmail):
 		# Every other test mocks the send, so only this one catches a broken Jinja tag.
 		booking = self.create_offline_booking(self.email_booker)
 
@@ -160,7 +153,6 @@ class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
 		for text in ("Payment verification pending", booking.name, OFFLINE_METHOD, "Email Ticket"):
 			self.assertIn(text, html)
 
-	@patch("frappe.sendmail")
 	def test_uses_event_template_when_set(self, sendmail):
 		self.set_event({"offline_acknowledgement_email_template": self.create_template("OFFLINE")})
 
@@ -168,7 +160,6 @@ class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
 
 		self.assertIn("OFFLINE", sendmail.call_args[1]["subject"])
 
-	@patch("frappe.sendmail")
 	def test_ignores_the_confirmation_template(self, sendmail):
 		self.set_event({"booking_confirmation_email_template": self.create_template("EVENT")})
 		self.set_team_template(self.create_template("TEAM"))
@@ -177,7 +168,6 @@ class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
 
 		self.assertEqual(sendmail.call_args[1]["template"], "offline_booking_acknowledgement")
 
-	@patch("frappe.sendmail")
 	def test_respects_event_toggle_off(self, sendmail):
 		self.set_event({"send_booking_confirmation_email": 0})
 
@@ -185,7 +175,6 @@ class TestOfflineAcknowledgementEmail(BookingEmailTestCase):
 
 		sendmail.assert_not_called()
 
-	@patch("frappe.sendmail")
 	def test_skips_system_users(self, sendmail):
 		for user in ("Administrator", "Guest"):
 			with self.subTest(user=user):

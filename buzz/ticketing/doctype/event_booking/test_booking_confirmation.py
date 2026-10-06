@@ -56,9 +56,7 @@ class TestBookingConfirmation(BookingTestCase):
 		self.assertEqual(get_booking_confirmation(booking.name).booking.name, booking.name)
 
 	def create_submitted_booking(self):
-		paid_ticket_type = EventTicketTypeFactory.create(
-			event=self.event.name, prices=[{"currency": "INR", "price": 500}]
-		).name
+		paid_ticket_type = EventTicketTypeFactory.create("paid", event=self.event.name).name
 		booking = self.create_booking(paid_ticket_type)
 		booking.submit()
 		return booking

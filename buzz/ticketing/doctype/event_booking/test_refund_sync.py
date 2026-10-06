@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import frappe
 from pydantic import ValidationError
 
+from buzz.api.checkin import checkin_ticket
 from buzz.payments import handle_refund_notification
 from buzz.tests.factories import PaymentGatewayFactory
 from buzz.ticketing.doctype.event_booking.refund_test_case import (
@@ -218,7 +219,7 @@ class TestSyncRefunds(BookingRefundTestCase):
 
 	def test_a_checked_in_ticket_is_never_cancelled_by_a_synced_refund(self):
 		checked_in_ticket, other_ticket = self.refundable_tickets()
-		self.check_in(checked_in_ticket)
+		checkin_ticket(checked_in_ticket)
 
 		self.sync(self.gateway_refund("processed", BOOKING_TOTAL))
 

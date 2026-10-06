@@ -33,12 +33,7 @@ class TestTicketAvailability(BookingTestCase):
 
 	def create_booking(self, *ticket_types: str):
 		attendees = [
-			{
-				"first_name": "John",
-				"last_name": "Doe",
-				"ticket_type": ticket_type,
-				"email": "john@example.com",
-			}
+			{"first_name": "John", "ticket_type": ticket_type, "email": "john@example.com"}
 			for ticket_type in ticket_types
 		]
 		return EventBookingFactory.create(event=self.event.name, attendees=attendees)

@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.checkin import checkin_ticket
 from buzz.payments import handle_refund_notification
 from buzz.tests.factories import (
 	BuzzEventFactory,
@@ -31,18 +30,15 @@ class BookingRefundTestCase(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.event = cls.create_event()
-		cls.ticket_types = [cls.create_ticket_type(price) for price in cls.ticket_prices]
+		cls.ticket_types = [
+			EventTicketTypeFactory.create(event=cls.event, prices=[{"currency": "INR", "price": price}]).name
+			for price in cls.ticket_prices
+		]
 		cls.gateway = razorpay_gateway()
 
 	@classmethod
 	def create_event(cls) -> str:
 		return BuzzEventFactory.create("with_tax", tax_percentage=10).name
-
-	@classmethod
-	def create_ticket_type(cls, price: float) -> str:
-		return EventTicketTypeFactory.create(
-			event=cls.event, prices=[{"currency": "INR", "price": price}]
-		).name
 
 	def setUp(self):
 		self.enterContext(self.set_user("Administrator"))
@@ -95,7 +91,7 @@ class BookingRefundTestCase(IntegrationTestCase):
 		return {"event": f"refund.{status}", "payload": {"refund": {"entity": entity}}}
 
 	def create_refund_log(self, payload: dict) -> str:
-		return IntegrationRequestFactory.create("refund_notification", data=frappe.as_json(payload)).name
+		return IntegrationRequestFactory.create(data=frappe.as_json(payload)).name
 
 	def handle_refund_log(self, log: str) -> None:
 		# Cancelling a ticket emails the attendee, and delivery is not under test.
@@ -118,9 +114,6 @@ class BookingRefundTestCase(IntegrationTestCase):
 
 	def refundable_tickets(self) -> list[str]:
 		return [ticket["ticket"] for ticket in self.booking.get_refund_summary()["tickets"]]
-
-	def check_in(self, ticket: str) -> None:
-		checkin_ticket(str(ticket))
 
 	def cancellation_requests(self) -> list:
 		return frappe.get_all(

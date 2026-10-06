@@ -12,7 +12,3 @@ class IntegrationRequestFactory(BaseFactory[IntegrationRequest]):
 	@property
 	def default_attributes(self) -> dict[str, Any]:
 		return {"integration_request_service": "Razorpay", "is_remote_request": 1, "status": "Queued"}
-
-	@property
-	def refund_notification(self) -> dict[str, Any]:
-		return {"request_description": "Refund Notification"}

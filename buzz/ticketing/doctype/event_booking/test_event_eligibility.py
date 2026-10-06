@@ -4,12 +4,12 @@
 ordinary users cannot write bookings, and Event Managers only book their own team's events."""
 
 import frappe
-from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, now_datetime, today
 
 from buzz.api.booking import process_booking
 from buzz.api.booking.exceptions import RegistrationsClosed
 from buzz.api.booking.schemas import BookingRequest
+from buzz.tests.base_test_cases import BookingTestCase
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
@@ -24,36 +24,22 @@ ORGANISER = "eligibility-organiser@example.com"
 OUTSIDER = "eligibility-outsider@example.com"
 
 
-class EligibilityTestCase(IntegrationTestCase):
+class EligibilityTestCase(BookingTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		owner = UserFactory.create_once("eligibility-team-owner@example.com").name
-		cls.team = BuzzTeamFactory.create_owned_by(owner).name
-		cls.event = BuzzEventFactory.create(team=cls.team)
-		cls.event.reload()
 		cls.attendee = UserFactory.create_once(ATTENDEE).name
 		cls.organiser = UserFactory.create_once(ORGANISER).name
-		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.organiser, team_role="Manager")
+		BuzzTeamMembershipFactory.create(team=cls.event.team, user=cls.organiser)
 		# An Event Manager by role, but on a team that does not own `cls.event`.
 		cls.outsider = UserFactory.create_once(OUTSIDER).name
 		BuzzTeamFactory.create_owned_by(cls.outsider)
 
 	def setUp(self):
-		self.enterContext(self.set_user("Administrator"))
-		frappe.clear_messages()
-		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event.name)
-		self.set_event({"is_published": 1, "registrations_close_at": None, "allow_guest_booking": 0})
-		self.paid_ticket_type = self.create_ticket_type(price=5000)
-
-	def create_ticket_type(self, price: float):
-		return EventTicketTypeFactory.create(
-			event=self.event.name, prices=[{"currency": "INR", "price": price}]
+		super().setUp()
+		self.paid_ticket_type = EventTicketTypeFactory.create(
+			event=self.event.name, prices=[{"currency": "INR", "price": 5000}]
 		)
-
-	def set_event(self, values):
-		frappe.db.set_value("Buzz Event", self.event.name, values)
-		frappe.clear_document_cache("Buzz Event", self.event.name)
 
 	def close_registrations(self):
 		self.set_event({"registrations_close_at": add_days(now_datetime(), -1)})
@@ -155,7 +141,7 @@ class TestTheServiceFlowRefusesIneligibleEvents(EligibilityTestCase):
 class TestLegitimateFlowsStillWork(EligibilityTestCase):
 	def test_the_guard_does_not_apply_to_the_vetted_service_flow(self):
 		# Free ticket keeps the flow off the payment gateway.
-		free_ticket_type = str(self.create_ticket_type(price=0).name)
+		free_ticket_type = str(self.free_ticket_type.name)
 		request = self.booking_request(attendees=[self.attendee_row(ticket_type=free_ticket_type)])
 
 		with self.set_user(self.attendee):
@@ -185,7 +171,7 @@ class TestLegitimateFlowsStillWork(EligibilityTestCase):
 
 class TestTheGuardCannotBeSteppedAround(EligibilityTestCase):
 	def test_an_outsider_cannot_grow_a_draft_after_registrations_close(self):
-		free_type = str(self.create_ticket_type(price=0).name)
+		free_type = str(self.free_ticket_type.name)
 		booking = self.insert_as(self.outsider, attendees=[self.attendee_row(ticket_type=free_type)])
 		self.close_registrations()
 
@@ -203,7 +189,7 @@ class TestTheGuardCannotBeSteppedAround(EligibilityTestCase):
 		# Ticket types pin a draft to its event.
 		booking = self.insert_as(self.organiser)
 		closed_event = BuzzEventFactory.create(
-			team=self.team, registrations_close_at=add_days(now_datetime(), -1)
+			team=self.event.team, registrations_close_at=add_days(now_datetime(), -1)
 		)
 
 		with self.set_user(self.organiser), self.assertRaises(frappe.ValidationError):

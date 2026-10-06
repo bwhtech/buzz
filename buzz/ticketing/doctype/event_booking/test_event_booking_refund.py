@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import frappe
 
-from buzz.api.checkin import validate_ticket_for_checkin
+from buzz.api.checkin import checkin_ticket, validate_ticket_for_checkin
 from buzz.api.exceptions import Conflict
 from buzz.tests.factories import BuzzEventFactory, PaymentGatewayFactory
 from buzz.ticketing.doctype.event_booking.refund_test_case import CHARGED_PER_TICKET, BookingRefundTestCase
@@ -37,7 +37,7 @@ class TestRefundSummary(BookingRefundTestCase):
 
 	def test_a_checked_in_ticket_is_not_offered(self):
 		checked_in_ticket = self.refundable_tickets()[0]
-		self.check_in(checked_in_ticket)
+		checkin_ticket(checked_in_ticket)
 
 		self.assertEqual(len(self.refundable_tickets()), 1)
 		self.assertNotIn(checked_in_ticket, self.refundable_tickets())
@@ -93,7 +93,7 @@ class TestBookingRefund(BookingRefundTestCase):
 	def test_a_ticket_that_has_been_checked_in_is_refused(self):
 		self.make_payment()
 		ticket = self.refundable_tickets()[0]
-		self.check_in(ticket)
+		checkin_ticket(ticket)
 
 		with self.assertRaises(frappe.ValidationError) as raised:
 			self.initiate_refund(CHARGED_PER_TICKET, tickets=[ticket])
@@ -136,8 +136,8 @@ class TestRefundCeiling(BookingRefundTestCase):
 		self.assertEqual(self.booking.total_amount, 5000)
 
 	def test_a_second_refund_cannot_exceed_what_is_left_after_a_settled_one(self):
-		self.initiate_refund(3000, refund_id=self.refund_id("1"))
-		self.settle_refund(self.refund_id("1"), 3000)
+		self.initiate_refund(3000)
+		self.settle_refund(self.refund_id(), 3000)
 
 		with self.assertRaises(frappe.ValidationError) as raised:
 			self.initiate_refund(3000, refund_id=self.refund_id("2"))
@@ -145,22 +145,22 @@ class TestRefundCeiling(BookingRefundTestCase):
 		self.assertIn("2,000", str(raised.exception))
 
 	def test_a_second_refund_cannot_exceed_what_is_left_while_the_first_is_still_initiated(self):
-		self.initiate_refund(3000, refund_id=self.refund_id("1"))
+		self.initiate_refund(3000)
 
 		with self.assertRaises(frappe.ValidationError):
 			self.initiate_refund(3000, refund_id=self.refund_id("2"))
 
 	def test_a_failed_refund_frees_its_amount_again(self):
-		self.initiate_refund(3000, refund_id=self.refund_id("1"))
-		self.fail_refund(self.refund_id("1"), 3000)
+		self.initiate_refund(3000)
+		self.fail_refund(self.refund_id(), 3000)
 
 		self.initiate_refund(3000, refund_id=self.refund_id("2"))
 
 		self.assertEqual(len(self.refunds()), 2)
 
 	def test_refunding_exactly_what_is_left_is_allowed(self):
-		self.initiate_refund(3000, refund_id=self.refund_id("1"))
-		self.settle_refund(self.refund_id("1"), 3000)
+		self.initiate_refund(3000)
+		self.settle_refund(self.refund_id(), 3000)
 
 		self.initiate_refund(2000, refund_id=self.refund_id("2"))
 		self.settle_refund(self.refund_id("2"), 2000)
