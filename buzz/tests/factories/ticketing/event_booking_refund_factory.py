@@ -1,6 +1,5 @@
 from typing import Any
 
-import frappe
 from frappe_factory_bot.frappe_factory_bot.base_factory import BaseFactory
 
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import EventBookingRefund
@@ -18,5 +17,4 @@ class EventBookingRefundFactory(BaseFactory[EventBookingRefund]):
 		return {
 			"booking": self.overrides.get("booking") or EventBookingFactory.create().name,
 			"status": "Initiated",
-			"refund_id": f"rfnd_{frappe.generate_hash(length=10)}",
 		}

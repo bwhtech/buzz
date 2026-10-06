@@ -17,8 +17,3 @@ class TicketCancellationRequestFactory(BaseFactory[TicketCancellationRequest]):
 		from buzz.tests.factories import EventBookingFactory
 
 		return {"booking": self.overrides.get("booking") or EventBookingFactory.create().name}
-
-	@property
-	def accepted(self) -> dict[str, Any]:
-		"""`on_submit` refuses a request that is not accepted."""
-		return {"status": "Accepted"}

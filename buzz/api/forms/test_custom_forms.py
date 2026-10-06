@@ -15,8 +15,6 @@ from buzz.tests.factories import (
 	BuzzCustomFieldFactory,
 	BuzzEventFactory,
 	BuzzTeamFactory,
-	EventCategoryFactory,
-	EventHostFactory,
 	SponsorshipTierFactory,
 )
 
@@ -28,8 +26,6 @@ class FormsTestCase(IntegrationTestCase):
 	def setUpClass(cls):
 		super().setUpClass()
 		cls.team = BuzzTeamFactory.create_owned_by().name
-		cls.category = EventCategoryFactory.create().name
-		cls.host = EventHostFactory.create(team=cls.team).name
 
 	def setUp(self):
 		frappe.clear_messages()
@@ -41,9 +37,7 @@ class FormsTestCase(IntegrationTestCase):
 			"publish": 1,
 			**form_row,
 		}
-		event = BuzzEventFactory.create(
-			team=self.team, category=self.category, host=self.host, custom_forms=[form_row]
-		)
+		event = BuzzEventFactory.create(team=self.team, custom_forms=[form_row])
 		event.reload()
 		return event, form_row["route"]
 

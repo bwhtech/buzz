@@ -50,23 +50,18 @@ class TicketTestCase(IntegrationTestCase):
 		self.addCleanup(frappe.clear_document_cache, "Buzz Team Settings", self.event.team)
 		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event.name)
 		# The window checks read the team's cutoffs.
-		self.set_cutoffs(7)
-		self.set_event_start(30)
-
-	def set_cutoffs(self, days: int):
 		BuzzTeamFactory.set_settings(
-			self.event.team, dict.fromkeys((TRANSFER, ADD_ON_CHANGE, CANCELLATION), days)
+			self.event.team, dict.fromkeys((TRANSFER, ADD_ON_CHANGE, CANCELLATION), 7)
 		)
+		self.set_event_start(30)
 
 	def set_event_start(self, days_from_today: int):
 		start_date = add_days(today(), days_from_today)
 		frappe.db.set_value("Buzz Event", self.event.name, {"start_date": start_date, "end_date": start_date})
 		frappe.clear_document_cache("Buzz Event", self.event.name)
 
-	def make_ticket(self, attendee_email: str = ATTENDEE, booking: str | None = None, **overrides):
-		return EventTicketFactory.create(
-			event=self.event.name, attendee_email=attendee_email, booking=booking, **overrides
-		)
+	def make_ticket(self, attendee_email: str = ATTENDEE, **overrides):
+		return EventTicketFactory.create(event=self.event.name, attendee_email=attendee_email, **overrides)
 
 	def make_booking(self, user: str = ATTENDEE):
 		return EventBookingFactory.create(event=self.event.name, user=user)
@@ -181,7 +176,7 @@ class TestChangeAddOnPreference(TicketTestCase):
 			change_add_on_preference(add_on_value, "Non-veg")
 
 	def test_details_carry_the_selectable_options(self):
-		ticket = self.make_ticket_with_add_on(value="Veg")
+		ticket = self.make_ticket_with_add_on()
 
 		with self.set_user(ATTENDEE):
 			add_ons = get_ticket_details(ticket.name).add_ons
@@ -192,8 +187,8 @@ class TestChangeAddOnPreference(TicketTestCase):
 		# Check fields travel as 0/1, not booleans.
 		self.assertEqual(add_ons[0].user_selects_option, 1)
 
-	def make_ticket_with_add_on(self, value: str = "Veg"):
-		add_on = {"add_on": self.add_on.name, "value": value, "price": 0, "currency": "INR"}
+	def make_ticket_with_add_on(self):
+		add_on = {"add_on": self.add_on.name, "value": "Veg", "price": 0, "currency": "INR"}
 		return self.make_ticket(add_ons=[add_on])
 
 

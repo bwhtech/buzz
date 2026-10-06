@@ -127,7 +127,7 @@ class TestBookingTelemetry(IntegrationTestCase):
 		booking = self.create_confirmed_booking(attendee_count=2).name
 		ticket = frappe.get_all("Event Ticket", filters={"booking": booking}, pluck="name")[0]
 		request = TicketCancellationRequestFactory.create(
-			"accepted", booking=booking, tickets=[{"ticket": ticket}]
+			booking=booking, status="Accepted", tickets=[{"ticket": ticket}]
 		)
 
 		with capturing() as mock_capture, patch("frappe.sendmail"):
@@ -140,7 +140,9 @@ class TestBookingTelemetry(IntegrationTestCase):
 
 	def test_full_booking_cancelled_counts_its_tickets(self):
 		booking = self.create_confirmed_booking(attendee_count=2).name
-		request = TicketCancellationRequestFactory.create("accepted", booking=booking, cancel_full_booking=1)
+		request = TicketCancellationRequestFactory.create(
+			booking=booking, status="Accepted", cancel_full_booking=1
+		)
 
 		with capturing() as mock_capture, patch("frappe.sendmail"):
 			request.submit()
