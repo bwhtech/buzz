@@ -4,12 +4,12 @@ from frappe.tests import IntegrationTestCase
 from buzz.api.booking.schemas import BookingRequest
 from buzz.tests.factories import (
 	BuzzEventFactory,
+	EventSponsorFactory,
 	EventTicketTypeFactory,
 	SponsorshipEnquiryFactory,
 	SponsorshipTierFactory,
 	UserFactory,
 )
-from buzz.tests.factories.events.event_sponsor_factory import EventSponsorFactory
 
 BOOKER = "booking-owner@example.com"
 OUTSIDER = "booking-outsider@example.com"

@@ -4,8 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.tests.factories import EventHostFactory
-from buzz.tests.factories.proposals.event_proposal_factory import EventProposalFactory
+from buzz.tests.factories import EventHostFactory, EventProposalFactory
 
 
 class IntegrationTestEventProposal(IntegrationTestCase):

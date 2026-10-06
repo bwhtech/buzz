@@ -5,7 +5,7 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.api.campaigns import get_campaign_details
 from buzz.api.campaigns.exceptions import CampaignNotActive
-from buzz.tests.factories.events.buzz_campaign_factory import BuzzCampaignFactory
+from buzz.tests.factories import BuzzCampaignFactory
 from buzz.utils import is_app_installed
 
 

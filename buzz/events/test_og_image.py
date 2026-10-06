@@ -7,8 +7,7 @@ from PIL import Image
 
 from buzz.events.banner_pattern import banner_pattern
 from buzz.events.og_image import EventOgImage, generate, theme_colours
-from buzz.tests.factories import BuzzEventFactory, FileFactory
-from buzz.tests.factories.events.buzz_theme_factory import BuzzThemeFactory
+from buzz.tests.factories import BuzzEventFactory, BuzzThemeFactory, FileFactory
 from buzz.www.event.index import EventPage
 
 

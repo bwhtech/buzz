@@ -6,8 +6,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from buzz.events.doctype.buzz_event.buzz_event import create_from_template
-from buzz.tests.factories import BuzzTeamFactory, EventCategoryFactory, EventHostFactory
-from buzz.tests.factories.events.event_template_factory import EventTemplateFactory
+from buzz.tests.factories import BuzzTeamFactory, EventCategoryFactory, EventHostFactory, EventTemplateFactory
 
 DIRECT_FIELDS = {
 	"medium": "Online",

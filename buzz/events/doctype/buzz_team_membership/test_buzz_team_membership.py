@@ -7,8 +7,12 @@ import frappe
 from frappe.core.api.user_invitation import invite_by_email
 from frappe.tests import IntegrationTestCase
 
-from buzz.tests.factories import BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
-from buzz.tests.factories.core.user_invitation_factory import UserInvitationFactory
+from buzz.tests.factories import (
+	BuzzTeamFactory,
+	BuzzTeamMembershipFactory,
+	UserFactory,
+	UserInvitationFactory,
+)
 
 OWNER = "membership-owner@example.com"
 MEMBER = "membership-member@example.com"

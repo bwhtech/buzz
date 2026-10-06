@@ -7,11 +7,11 @@ from buzz.payments import handle_refund_notification
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	EventBookingFactory,
+	EventPaymentFactory,
 	EventTicketTypeFactory,
+	IntegrationRequestFactory,
 	PaymentGatewayFactory,
 )
-from buzz.tests.factories.ticketing.event_payment_factory import EventPaymentFactory
-from buzz.tests.factories.ticketing.integration_request_factory import IntegrationRequestFactory
 from buzz.ticketing.doctype.event_booking.event_booking import RAZORPAY
 
 TICKET_PRICE = 500
