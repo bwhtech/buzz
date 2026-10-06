@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.website.serve import get_response, get_response_content
@@ -7,6 +9,10 @@ from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory
 
 class TestTeamPageRender(IntegrationTestCase):
 	def setUp(self):
+		# CI never runs bench build, so there is no assets.json for bundled_asset to read
+		assets_patch = patch("frappe.utils.get_assets_json", return_value={})
+		assets_patch.start()
+		self.addCleanup(assets_patch.stop)
 		frappe.set_user("Guest")
 		self.addCleanup(frappe.set_user, "Administrator")
 
