@@ -9,13 +9,15 @@
 	border-bottom: 1px solid var(--border);
 }
 
+/* frappe-ui's square 3xl Avatar: 46px, 10px corners, 20px initial. */
 .team-logo {
 	display: grid;
 	flex-shrink: 0;
 	place-items: center;
-	width: 56px;
-	height: 56px;
-	border-radius: 14px;
+	width: calc(var(--spacing) * 11.5);
+	height: calc(var(--spacing) * 11.5);
+	border-radius: 10px;
+	font-size: var(--text-3xl);
 	background: var(--surface-raised);
 	box-shadow: 0 0 0 1px var(--border);
 	color: var(--ink-strong);
@@ -42,7 +44,7 @@
 
 .team-columns {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) 300px;
+	grid-template-columns: minmax(0, 1fr) 248px;
 	gap: 40px;
 	margin-top: 32px;
 }
