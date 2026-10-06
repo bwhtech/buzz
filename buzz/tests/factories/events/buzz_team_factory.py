@@ -29,7 +29,7 @@ class BuzzTeamFactory(BaseFactory[BuzzTeam]):
 
 	@classmethod
 	def set_settings(cls, team: str, values: dict[str, Any]):
-		"""`Buzz Team Settings` is named after its team, not a Single, so `change_settings` does not fit."""
+		"""Not a Single, so `change_settings` cannot set it."""
 		frappe.db.set_value("Buzz Team Settings", team, values)
 		frappe.clear_document_cache("Buzz Team Settings", team)
 
