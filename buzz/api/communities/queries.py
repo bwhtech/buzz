@@ -60,8 +60,3 @@ def upcoming_event_options(filters: dict) -> list[EventOption]:
 		)
 		for event in exclude_ended_events(events)
 	]
-
-
-def not_in_filter(values: list) -> list:
-	# An empty `not in` list is invalid SQL; no row has an empty name.
-	return ["not in", values or [""]]

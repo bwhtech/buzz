@@ -2,7 +2,7 @@ import frappe
 
 from buzz.api.communities.exceptions import CannotSubmitEvent, RequestNotRejected
 from buzz.api.communities.notifications import notify_submitted
-from buzz.api.communities.queries import not_in_filter, request_rows, upcoming_event_options
+from buzz.api.communities.queries import request_rows, upcoming_event_options
 from buzz.api.communities.schemas import CommunityOption, EventOption, EventRequests
 from buzz.permissions import WRITE_ROLES, has_team_access
 
@@ -28,7 +28,7 @@ class EventSubmissions:
 
 	def open_communities(self) -> list[CommunityOption]:
 		asked = frappe.get_all(REQUEST, filters={"event": self.event}, pluck="community")
-		filters = {"is_a_community": 1, "is_published": 1, "name": not_in_filter([*asked, self.team])}
+		filters = {"is_a_community": 1, "is_published": 1, "name": ["not in", [*asked, self.team]]}
 		rows = frappe.get_all(
 			"Buzz Team", filters=filters, fields=["name", "team_name", "logo"], order_by="team_name"
 		)
@@ -76,4 +76,4 @@ def submittable_events(community: str) -> list[EventOption]:
 	if not teams:
 		return []
 	asked = frappe.get_all(REQUEST, filters={"community": community}, pluck="event")
-	return upcoming_event_options({"team": ["in", teams], "name": not_in_filter(asked)})
+	return upcoming_event_options({"team": ["in", teams], "name": ["not in", asked]})

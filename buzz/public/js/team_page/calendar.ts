@@ -5,13 +5,8 @@ const WEEK = Array.from({ length: 7 }, (_, day) => new Date(2023, 0, 1 + day))
 const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: "narrow" })
 const monthFormat = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" })
 
-function pad(value: number): string {
-	return String(value).padStart(2, "0")
-}
-
-function formatIsoDate(date: Date): string {
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
+// Swedish dates are written YYYY-MM-DD, the form the page data uses.
+const isoDateFormat = new Intl.DateTimeFormat("sv-SE")
 
 /** A month grid with a dot on each day that has an event; a dotted day jumps to its group. */
 export class MonthCalendar {
@@ -63,7 +58,9 @@ export class MonthCalendar {
 	}
 
 	private dayCell(number: number): HTMLElement {
-		const date = formatIsoDate(new Date(this.month.getFullYear(), this.month.getMonth(), number))
+		const date = isoDateFormat.format(
+			new Date(this.month.getFullYear(), this.month.getMonth(), number),
+		)
 		const hasEvents = this.datesWithEvents.has(date)
 		const cell = document.createElement(hasEvents ? "button" : "span")
 		cell.className = "calendar-day"

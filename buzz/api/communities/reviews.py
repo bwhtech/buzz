@@ -2,7 +2,7 @@ import frappe
 
 from buzz.api.communities.exceptions import CannotReviewRequests, RequestNotApproved, RequestNotPending
 from buzz.api.communities.notifications import notify_reviewed
-from buzz.api.communities.queries import not_in_filter, request_rows, upcoming_event_options
+from buzz.api.communities.queries import request_rows, upcoming_event_options
 from buzz.api.communities.schemas import CommunityQueue, EventOption
 from buzz.permissions import has_team_access
 
@@ -57,7 +57,7 @@ class CommunityReview:
 		)
 		filters = {
 			"team": ["!=", self.community],
-			"name": not_in_filter(listed),
+			"name": ["not in", listed],
 			"title": ["like", f"%{txt}%"],
 		}
 		return upcoming_event_options(filters)
