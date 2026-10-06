@@ -134,7 +134,7 @@ def create_owned_team(team_name: str, owner: str) -> str:
 	team = frappe.get_doc({"doctype": "Buzz Team", "team_name": team_name})
 	team.flags.owner_user = owner
 	team.insert(ignore_permissions=True)
-	BuzzTeamFactory.set_feature(team.name, PAID_EVENTS_FLAG, 1)
+	BuzzTeamFactory.set_settings(team.name, {PAID_EVENTS_FLAG: 1})
 	return team.name
 
 

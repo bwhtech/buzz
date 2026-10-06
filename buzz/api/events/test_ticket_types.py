@@ -95,8 +95,8 @@ class TestGetEventTicketTypes(TicketTypesTestCase):
 		self.assertTrue(get_event_ticket_types(self.event).paid_events_enabled)
 
 		# The team is shared by the class, and rollback is per class.
-		self.addCleanup(BuzzTeamFactory.set_feature, self.team, PAID_EVENTS_FLAG, 1)
-		BuzzTeamFactory.set_feature(self.team, PAID_EVENTS_FLAG, 0)
+		self.addCleanup(BuzzTeamFactory.set_settings, self.team, {PAID_EVENTS_FLAG: 1})
+		BuzzTeamFactory.set_settings(self.team, {PAID_EVENTS_FLAG: 0})
 		self.assertFalse(get_event_ticket_types(self.event).paid_events_enabled)
 
 	def test_viewer_reads_without_write_access(self):

@@ -89,7 +89,7 @@ class TestPaidEventsFlag(IntegrationTestCase):
 		self.addCleanup(frappe.clear_document_cache, "Buzz Team Settings", self.event.team)
 
 	def set_paid_events(self, value: int):
-		BuzzTeamFactory.set_feature(self.event.team, PAID_EVENTS_FLAG, value)
+		BuzzTeamFactory.set_settings(self.event.team, {PAID_EVENTS_FLAG: value})
 
 	def test_free_ticket_type_saves_without_the_flag(self):
 		self.set_paid_events(0)

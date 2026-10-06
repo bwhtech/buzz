@@ -19,17 +19,18 @@ class BuzzTeamFactory(BaseFactory[BuzzTeam]):
 	@classmethod
 	def create_owned_by(cls, user: str | None = None, **overrides: Any) -> BuzzTeam:
 		"""Prefer over `create()`: an Administrator-owned test team becomes its default team."""
-		from buzz.tests.factories.user_factory import UserFactory
+		from buzz.tests.factories import UserFactory
 
 		owner = user or UserFactory.create_once(LINK_TEAM_OWNER).name
 		team = cls.create(flags={"owner_user": owner}, **overrides)
 		# Paid tickets are the common case in tests; a test about the flag turns it off.
-		cls.set_feature(team.name, PAID_EVENTS_FLAG, 1)
+		cls.set_settings(team.name, {PAID_EVENTS_FLAG: 1})
 		return team
 
 	@classmethod
-	def set_feature(cls, team: str, flag: str, value: int):
-		frappe.db.set_value("Buzz Team Settings", team, flag, value)
+	def set_settings(cls, team: str, values: dict[str, Any]):
+		"""`Buzz Team Settings` is named after its team, not a Single, so `change_settings` does not fit."""
+		frappe.db.set_value("Buzz Team Settings", team, values)
 		frappe.clear_document_cache("Buzz Team Settings", team)
 
 	@property
