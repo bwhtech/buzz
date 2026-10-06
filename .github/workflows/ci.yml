@@ -24,6 +24,10 @@ jobs:
     strategy:
       fail-fast: false
     name: Server
+    # pull-requests: write lets the job post the coverage comment.
+    permissions:
+      contents: read
+      pull-requests: write
 
     env:
       PYTHONWARNINGS: ignore
@@ -65,6 +69,51 @@ jobs:
 
       - name: Run Tests
         working-directory: /home/runner/frappe-bench
-        run: bench --site test_site run-tests --app buzz
+        run: bench --site test_site run-tests --app buzz --coverage
         env:
           TYPE: server
+
+      # Frappe's --coverage omits test folders but not test_*.py files, so the report
+      # is rebuilt from the raw data with the test modules left out.
+      - name: Build coverage report
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        continue-on-error: true
+        # Reported from the app folder so the table shows paths relative to it.
+        working-directory: /home/runner/frappe-bench/apps/buzz
+        run: |
+          ../../env/bin/coverage combine --data-file=../../sites/.coverage ../../sites
+          ../../env/bin/coverage report --data-file=../../sites/.coverage --format=markdown \
+            --skip-empty --omit='*/test_*.py,*/tests/*' > ../../sites/coverage.md
+
+      - name: Comment coverage on the pull request
+        # A fork's token cannot comment, so only same-repo pull requests get one.
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const REPORT = '/home/runner/frappe-bench/sites/coverage.md';
+            const MARKER = '<!-- backend-coverage -->';
+            const MAX_COMMENT_LENGTH = 65000;
+
+            if (!fs.existsSync(REPORT)) return core.info('No coverage report was built.');
+
+            const table = fs.readFileSync(REPORT, 'utf8').trim();
+            const totalRow = table.split('\n').pop();
+            const total = (totalRow.match(/([\d.]+%)/g) || ['unknown']).pop();
+
+            const summary = `${MARKER}\n### Backend test coverage: **${total}**\n\nCommit ${context.payload.pull_request.head.sha.slice(0, 7)}. Test modules are excluded.`;
+            const details = `\n\n<details><summary>Coverage by file</summary>\n\n${table}\n\n</details>`;
+            const body = summary.length + details.length < MAX_COMMENT_LENGTH ? summary + details : summary;
+
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments,
+              { ...context.repo, issue_number });
+            const existing = comments.find((comment) => (comment.body || '').includes(MARKER));
+
+            if (existing) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...context.repo, issue_number, body });
+            }
