@@ -100,7 +100,8 @@ jobs:
             if (!fs.existsSync(REPORT)) return core.info('No coverage report was built.');
 
             const table = fs.readFileSync(REPORT, 'utf8').trim();
-            const totalRow = table.split('\n').pop();
+            // --skip-empty appends a note after the table, so the last line is not the total.
+            const totalRow = table.split('\n').find((line) => line.includes('TOTAL')) || '';
             const total = (totalRow.match(/([\d.]+%)/g) || ['unknown']).pop();
 
             const summary = `${MARKER}\n### Backend test coverage: **${total}**\n\nCommit ${context.payload.pull_request.head.sha.slice(0, 7)}. Test modules are excluded.`;
