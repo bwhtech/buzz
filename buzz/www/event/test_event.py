@@ -1,12 +1,9 @@
-from typing import Any
-
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
-from frappe_factory_bot.frappe_factory_bot.base_factory import BaseFactory
 
-from buzz.events.doctype.additional_event_page.additional_event_page import AdditionalEventPage
 from buzz.tests.factories import (
+	AdditionalEventPageFactory,
 	BuzzEventFactory,
 	BuzzTeamFactory,
 	EventHostFactory,
@@ -168,17 +165,3 @@ def save_schedule(event, row: dict):
 	event.append("schedule", {"date": event.start_date, **row})
 	event.flags.ignore_mandatory = True
 	event.save()
-
-
-class AdditionalEventPageFactory(BaseFactory[AdditionalEventPage]):
-	"""Stands in for lane 3's `AdditionalEventPageFactory` until the cleanup PR swaps it in."""
-
-	doctype = "Additional Event Page"
-
-	@property
-	def default_attributes(self) -> dict[str, Any]:
-		return {
-			"event": self.overrides.get("event") or BuzzEventFactory.create().name,
-			"title": f"Page {frappe.generate_hash(length=6)}",
-			"content": "<p>Page</p>",
-		}

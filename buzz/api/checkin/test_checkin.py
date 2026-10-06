@@ -1,13 +1,14 @@
-from typing import Any
-
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe_factory_bot.frappe_factory_bot.base_factory import BaseFactory
 
 from buzz.api.checkin import checkin_ticket, validate_ticket_for_checkin
 from buzz.api.checkin.exceptions import AlreadyCheckedIn, TicketCancelled, TicketNotFound
-from buzz.tests.factories import BuzzEventFactory, EventBookingFactory, EventTicketFactory
-from buzz.ticketing.doctype.event_payment.event_payment import EventPayment
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	EventBookingFactory,
+	EventPaymentFactory,
+	EventTicketFactory,
+)
 
 
 class CheckinTestCase(IntegrationTestCase):
@@ -23,7 +24,13 @@ class CheckinTestCase(IntegrationTestCase):
 	def create_paid_ticket(self, amount: int) -> str:
 		booking = EventBookingFactory.create(event=self.event, payment_status="Paid")
 		booking.submit()
-		EventPaymentFactory.create(amount=amount, currency=booking.currency, reference_docname=booking.name)
+		EventPaymentFactory.create(
+			"received",
+			reference_doctype="Event Booking",
+			reference_docname=booking.name,
+			amount=amount,
+			currency=booking.currency,
+		)
 		return frappe.db.get_value("Event Ticket", {"booking": booking.name}, "name")
 
 
@@ -79,13 +86,3 @@ class TestCheckinTicket(CheckinTestCase):
 
 		with self.assertRaises(AlreadyCheckedIn):
 			validate_ticket_for_checkin(self.ticket)
-
-
-class EventPaymentFactory(BaseFactory[EventPayment]):
-	"""Stands in for lane 1's `EventPaymentFactory` until the cleanup PR swaps it in."""
-
-	doctype = "Event Payment"
-
-	@property
-	def default_attributes(self) -> dict[str, Any]:
-		return {"user": "Administrator", "reference_doctype": "Event Booking", "payment_received": 1}
