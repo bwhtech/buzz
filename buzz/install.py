@@ -188,7 +188,7 @@ def on_migrate():
 
 def create_administrator_team():
 	"""Give a site without teams one owned by Administrator, so /b opens to the manager dashboard."""
-	if not frappe.db.exists("Buzz Team"):
+	if not frappe.db.count("Buzz Team"):
 		create_default_team_for("Administrator")
 
 
