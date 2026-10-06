@@ -85,7 +85,7 @@ class TestTicketingFactoryTraits(IntegrationTestCase):
 		ticket_type_event = frappe.db.get_value(
 			"Event Ticket Type", booking.attendees[0].ticket_type, "event"
 		)
-		self.assertEqual(ticket_type_event, booking.event)
+		self.assertEqual(ticket_type_event, str(booking.event))
 
 	def test_membership_takes_a_role(self):
 		self.assertEqual(BuzzTeamMembershipFactory.create(team_role="Viewer").team_role, "Viewer")

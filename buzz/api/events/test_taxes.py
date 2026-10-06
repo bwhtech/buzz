@@ -25,7 +25,7 @@ class TaxesTestCase(IntegrationTestCase):
 		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.viewer, team_role="Viewer")
 
 	def setUp(self):
-		self.event = BuzzEventFactory.create(team=self.team).name
+		self.event = str(BuzzEventFactory.create(team=self.team).name)
 		BuzzTeamFactory.set_settings(self.team, dict.fromkeys(TAX_DETAILS))
 
 	def test_refuses_tax_until_the_team_has_tax_details(self):
@@ -41,7 +41,7 @@ class TaxesTestCase(IntegrationTestCase):
 		self.assertEqual((event.apply_tax, event.tax_inclusive, event.tax_percentage), (1, 1, 12))
 
 	def test_turns_tax_off_without_tax_details(self):
-		event = BuzzEventFactory.create("with_tax", team=self.team).name
+		event = str(BuzzEventFactory.create("with_tax", team=self.team).name)
 
 		with self.set_user(self.owner):
 			update_tax_settings(event, False, False, "GST", 18)
