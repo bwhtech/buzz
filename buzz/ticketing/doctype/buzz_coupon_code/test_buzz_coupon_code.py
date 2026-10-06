@@ -5,8 +5,8 @@ import frappe
 from frappe.utils import add_days, today
 
 from buzz.api.booking import validate_coupon
+from buzz.tests.base_test_cases import CouponTestCase
 from buzz.tests.factories import BuzzCouponCodeFactory, UserFactory
-from buzz.ticketing.doctype.buzz_coupon_code.coupon_test_case import CouponTestCase
 
 
 class TestCouponUsageLimits(CouponTestCase):

@@ -17,7 +17,7 @@ from buzz.tests.factories import (
 	TalkProposalFactory,
 	TicketCancellationRequestFactory,
 )
-from buzz.tests.telemetry_capture import captured_names, capturing, properties_of
+from buzz.tests.utils import captured_names, capturing, properties_of
 from buzz.www import dashboard
 
 SPONSORSHIP_ENQUIRY_MODULE = "buzz.proposals.doctype.sponsorship_enquiry.sponsorship_enquiry"

@@ -1,7 +1,7 @@
 import frappe
 
+from buzz.tests.base_test_cases import CouponTestCase
 from buzz.tests.factories import BuzzCouponCodeFactory
-from buzz.ticketing.doctype.buzz_coupon_code.coupon_test_case import CouponTestCase
 
 
 class TestFreeTicketsCoupon(CouponTestCase):

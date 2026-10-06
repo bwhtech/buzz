@@ -7,8 +7,8 @@ import frappe
 
 from buzz.api.checkin import checkin_ticket, validate_ticket_for_checkin
 from buzz.api.exceptions import Conflict
+from buzz.tests.base_test_cases import CHARGED_PER_TICKET, BookingRefundTestCase
 from buzz.tests.factories import BuzzEventFactory, PaymentGatewayFactory
-from buzz.ticketing.doctype.event_booking.refund_test_case import CHARGED_PER_TICKET, BookingRefundTestCase
 
 
 class TestRefundSummary(BookingRefundTestCase):

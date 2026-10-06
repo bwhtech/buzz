@@ -7,7 +7,7 @@ from frappe.tests import IntegrationTestCase, UnitTestCase
 
 from buzz import telemetry, telemetry_scan
 from buzz.tests.factories import BuzzEventFactory
-from buzz.tests.telemetry_capture import capturing, properties_of
+from buzz.tests.utils import capturing, properties_of
 
 
 class TestTelemetryWrapper(IntegrationTestCase):

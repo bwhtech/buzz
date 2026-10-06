@@ -1,11 +1,11 @@
 import frappe
 
-from buzz.tests.factories import BuzzCouponCodeFactory, BuzzEventFactory, EventBookingFactory
-from buzz.ticketing.doctype.buzz_coupon_code.coupon_test_case import (
+from buzz.tests.base_test_cases import (
 	CouponTestCase,
 	attendee_rows,
 	create_paid_ticket_type,
 )
+from buzz.tests.factories import BuzzCouponCodeFactory, BuzzEventFactory, EventBookingFactory
 
 
 class TestCouponScope(CouponTestCase):

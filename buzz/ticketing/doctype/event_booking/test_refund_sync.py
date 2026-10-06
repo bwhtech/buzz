@@ -5,12 +5,12 @@ from pydantic import ValidationError
 
 from buzz.api.checkin import checkin_ticket
 from buzz.payments import handle_refund_notification
-from buzz.tests.factories import PaymentGatewayFactory
-from buzz.ticketing.doctype.event_booking.refund_test_case import (
+from buzz.tests.base_test_cases import (
 	CHARGED_PER_TICKET,
 	GATEWAY_CONTROLLER,
 	BookingRefundTestCase,
 )
+from buzz.tests.factories import PaymentGatewayFactory
 
 BOOKING_TOTAL = 1100
 
