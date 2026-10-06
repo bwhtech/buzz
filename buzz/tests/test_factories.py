@@ -1,56 +1,25 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from buzz.tests import factories
 from buzz.tests.factories import (
-	BuzzCouponCodeFactory,
-	BuzzCustomFieldFactory,
 	BuzzEventFactory,
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
-	EmailTemplateFactory,
 	EventBookingFactory,
-	EventCategoryFactory,
-	EventHostFactory,
 	EventTicketFactory,
 	EventTicketTypeFactory,
 	EventVenueFactory,
-	FileFactory,
-	OfflinePaymentMethodFactory,
-	PaymentGatewayFactory,
-	SponsorshipEnquiryFactory,
 	SponsorshipTierFactory,
 	TalkProposalFactory,
-	TicketAddOnFactory,
-	UserFactory,
-)
-
-FACTORIES = (
-	BuzzCouponCodeFactory,
-	BuzzCustomFieldFactory,
-	BuzzEventFactory,
-	BuzzTeamFactory,
-	BuzzTeamMembershipFactory,
-	EmailTemplateFactory,
-	EventBookingFactory,
-	EventCategoryFactory,
-	EventHostFactory,
-	EventTicketFactory,
-	EventTicketTypeFactory,
-	EventVenueFactory,
-	FileFactory,
-	OfflinePaymentMethodFactory,
-	PaymentGatewayFactory,
-	SponsorshipEnquiryFactory,
-	SponsorshipTierFactory,
-	TalkProposalFactory,
-	TicketAddOnFactory,
 	UserFactory,
 )
 
 
 class TestFactoryDefaults(IntegrationTestCase):
 	def test_every_factory_saves_with_its_defaults(self):
-		for factory in FACTORIES:
+		for name in factories.__all__:
+			factory = getattr(factories, name)
 			with self.subTest(factory=factory.__name__):
 				doc = factory.create()
 				self.assertTrue(frappe.db.exists(factory.doctype, doc.name))
