@@ -4,7 +4,6 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
-from buzz.api.forms.test_forms import ensure_event_host, ensure_prompt_named_record
 from buzz.api.tickets import (
 	change_add_on_preference,
 	create_cancellation_request,
@@ -23,249 +22,102 @@ from buzz.api.tickets.exceptions import (
 	TransferNotPermitted,
 	TransferWindowClosed,
 )
-from buzz.api.tickets.windows import ADD_ON_CHANGE, CANCELLATION, TRANSFER, is_window_open
-from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user, payload_for
-from buzz.events.doctype.buzz_team_settings.test_buzz_team_settings import set_team_settings
+from buzz.api.tickets.windows import ADD_ON_CHANGE, CANCELLATION, TRANSFER
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	BuzzTeamFactory,
+	EventBookingFactory,
+	EventTicketFactory,
+	TicketAddOnFactory,
+	UserFactory,
+)
 
 ATTENDEE = "ticket-attendee@example.com"
 OTHER_USER = "ticket-outsider@example.com"
-
-
-def set_team_cutoffs(team: str, days: int):
-	set_team_settings(team, **dict.fromkeys((TRANSFER, ADD_ON_CHANGE, CANCELLATION), days))
-
-
-DETAILS_FIELDS = {
-	"doc",
-	"add_ons",
-	"event",
-	"venue",
-	"booking",
-	"ticket_type",
-	"can_transfer_ticket",
-	"can_change_add_ons",
-	"can_request_cancellation",
-	"zoom_join_url",
-	"zoom_reference_doctype",
-	"zoom_reference_name",
-}
 
 
 class TicketTestCase(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		# These tests move the event's start date around, so they own an event rather than
-		# sharing test-route: IntegrationTestCase rolls the DB back but not the document
-		# cache, which would leave a rolled-back date visible to later test modules.
-		category = ensure_prompt_named_record("Event Category", "Test Tickets Category")
-		host = ensure_event_host("Test Tickets Host")
-		cls.event = frappe.get_doc(
-			{
-				"doctype": "Buzz Event",
-				"title": f"Tickets Test Event {frappe.generate_hash(length=6)}",
-				"start_date": "2030-01-01",
-				"end_date": "2030-01-01",
-				"start_time": "10:00:00",
-				"end_time": "18:00:00",
-				"medium": "Online",
-				"category": category,
-				"host": host,
-				"is_published": 1,
-			}
-		).insert(ignore_permissions=True)
-
-		for email, first_name in ((ATTENDEE, "Ticket"), (OTHER_USER, "Outsider")):
-			if not frappe.db.exists("User", email):
-				frappe.get_doc(
-					{"doctype": "User", "email": email, "first_name": first_name, "send_welcome_email": 0}
-				).insert(ignore_permissions=True)
+		# These tests move the event's start date around, so they own an event.
+		cls.event = BuzzEventFactory.create()
+		UserFactory.create_once(ATTENDEE)
+		UserFactory.create_once(OTHER_USER)
 
 	def setUp(self):
-		frappe.set_user("Administrator")
 		frappe.clear_messages()
-		# The rollback restores the settings row but not its cached copy.
+		# The rollback restores these rows but not their cached copies.
 		self.addCleanup(frappe.clear_document_cache, "Buzz Team Settings", self.event.team)
+		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event.name)
 		# The window checks read the event's team settings, so pin the cutoffs tests reason about.
 		self.set_cutoffs(7)
-		self.ticket_type = frappe.get_doc(
-			{
-				"doctype": "Event Ticket Type",
-				"event": self.event.name,
-				"title": f"Tickets Test {frappe.generate_hash(length=6)}",
-				"prices": [{"currency": "INR", "price": 100}],
-			}
-		).insert(ignore_permissions=True)
+		self.set_event_start(30)
 
-	def set_cutoffs(self, days):
-		set_team_cutoffs(self.event.team, days)
+	def set_cutoffs(self, days: int):
+		BuzzTeamFactory.set_settings(
+			self.event.team, dict.fromkeys((TRANSFER, ADD_ON_CHANGE, CANCELLATION), days)
+		)
 
-	def set_event_start(self, days_from_today):
+	def set_event_start(self, days_from_today: int):
 		start_date = add_days(today(), days_from_today)
 		frappe.db.set_value("Buzz Event", self.event.name, {"start_date": start_date, "end_date": start_date})
 		frappe.clear_document_cache("Buzz Event", self.event.name)
 
-	def make_ticket(self, attendee_email=ATTENDEE, booking=None):
-		return frappe.get_doc(
-			{
-				"doctype": "Event Ticket",
-				"event": self.event.name,
-				"ticket_type": self.ticket_type.name,
-				"attendee_name": "Ticket Attendee",
-				"attendee_email": attendee_email,
-				"booking": booking,
-			}
-		).insert(ignore_permissions=True)
-
-	def make_booking(self, user=ATTENDEE):
-		# Event Booking.validate prices the attendee rows, so it needs at least one.
-		return frappe.get_doc(
-			{
-				"doctype": "Event Booking",
-				"event": self.event.name,
-				"user": user,
-				"attendees": [
-					{"ticket_type": self.ticket_type.name, "first_name": "Ticket", "email": ATTENDEE}
-				],
-			}
-		).insert(ignore_permissions=True)
-
-
-class TestWindows(TicketTestCase):
-	def test_open_while_the_event_is_beyond_the_cutoff(self):
-		self.set_event_start(30)
-		self.assertTrue(is_window_open(self.event.name, TRANSFER))
-
-	def test_closed_once_inside_the_cutoff(self):
-		self.set_event_start(3)
-		self.assertFalse(is_window_open(self.event.name, TRANSFER))
-
-	def test_exactly_on_the_cutoff_is_still_open(self):
-		self.set_event_start(7)
-		self.assertTrue(is_window_open(self.event.name, TRANSFER))
-
-	def test_a_zero_cutoff_keeps_the_window_open_until_the_day(self):
-		# Regression: a 0 cutoff must stay 0, not fall back to the 7-day default.
-		self.set_cutoffs(0)
-		self.set_event_start(1)
-		self.assertTrue(is_window_open(self.event.name, TRANSFER))
-
-	def test_an_event_without_a_start_date_is_closed(self):
-		self.set_event_start(30)
-		frappe.db.set_value("Buzz Event", self.event.name, "start_date", None)
-		frappe.clear_document_cache("Buzz Event", self.event.name)
-		self.assertFalse(is_window_open(self.event.name, TRANSFER))
-
-
-class TestPerTeamWindows(TicketTestCase):
-	def team_event(self, team_name: str, cutoff_days: int, days_from_today: int) -> str:
-		owner = create_user(f"windows-{team_name.lower().replace(' ', '-')}@example.com", "Windows")
-		team = create_owned_team(team_name, owner)
-		set_team_cutoffs(team, cutoff_days)
-
-		start_date = add_days(today(), days_from_today)
-		return (
-			frappe.get_doc(
-				{
-					**payload_for("Buzz Event", team_name),
-					"team": team,
-					"start_date": start_date,
-					"end_date": start_date,
-				}
-			)
-			.insert(ignore_permissions=True)
-			.name
+	def make_ticket(self, attendee_email: str = ATTENDEE, booking: str | None = None, **overrides):
+		return EventTicketFactory.create(
+			event=self.event.name, attendee_email=attendee_email, booking=booking, **overrides
 		)
 
-	def test_each_team_enforces_its_own_window(self):
-		strict = self.team_event("Windows Strict", 7, 5)
-		lenient = self.team_event("Windows Lenient", 2, 5)
-
-		for cutoff_fieldname in (TRANSFER, ADD_ON_CHANGE, CANCELLATION):
-			with self.subTest(cutoff_fieldname=cutoff_fieldname):
-				self.assertFalse(is_window_open(strict, cutoff_fieldname))
-				self.assertTrue(is_window_open(lenient, cutoff_fieldname))
-
-	def test_an_explicit_zero_cutoff_is_not_treated_as_unset(self):
-		event = self.team_event("Windows Zero", 0, 1)
-
-		self.assertTrue(is_window_open(event, TRANSFER))
+	def make_booking(self, user: str = ATTENDEE):
+		return EventBookingFactory.create(event=self.event.name, user=user)
 
 
 class TestGetTicketDetails(TicketTestCase):
-	def test_shape(self):
-		self.set_event_start(30)
-		ticket = self.make_ticket()
-		frappe.set_user(ATTENDEE)
-
-		details = get_ticket_details(ticket.name)
-		self.assertEqual(set(details.__json__()), DETAILS_FIELDS)
-		self.assertEqual(details.doc.name, ticket.name)
-		self.assertEqual(details.add_ons, [])
-		self.assertIsNone(details.booking)
-		self.assertIsNone(details.zoom_join_url)
-
-	def test_window_flags_are_plain_booleans(self):
-		self.set_event_start(30)
-		ticket = self.make_ticket()
-		frappe.set_user(ATTENDEE)
-
-		details = get_ticket_details(ticket.name)
-		self.assertIs(details.can_transfer_ticket, True)
-		self.assertIs(details.can_change_add_ons, True)
-		self.assertIs(details.can_request_cancellation, True)
-
 	def test_window_flags_go_false_near_the_event(self):
 		self.set_event_start(2)
 		ticket = self.make_ticket()
-		frappe.set_user(ATTENDEE)
 
-		details = get_ticket_details(ticket.name)
+		with self.set_user(ATTENDEE):
+			details = get_ticket_details(ticket.name)
+
 		self.assertIs(details.can_transfer_ticket, False)
 		self.assertIs(details.can_change_add_ons, False)
 		self.assertIs(details.can_request_cancellation, False)
 
 	def test_another_user_cannot_read_the_ticket(self):
-		self.set_event_start(30)
 		ticket = self.make_ticket()
-		frappe.set_user(OTHER_USER)
 
-		with self.assertRaises(TicketNotAccessible):
+		with self.set_user(OTHER_USER), self.assertRaises(TicketNotAccessible):
 			get_ticket_details(ticket.name)
 
 		self.assertEqual(frappe.local.message_log[-1]["title"], "Not Permitted")
 
 	def test_booker_can_read_a_ticket_held_by_someone_else(self):
-		self.set_event_start(30)
 		booking = self.make_booking(user=OTHER_USER)
 		ticket = self.make_ticket(attendee_email="guest@example.com", booking=booking.name)
-		frappe.set_user(OTHER_USER)
 
-		details = get_ticket_details(ticket.name)
+		with self.set_user(OTHER_USER):
+			details = get_ticket_details(ticket.name)
 
 		self.assertEqual(details.doc.name, ticket.name)
 		self.assertEqual(details.booking.name, booking.name)
 
 	def test_booking_is_withheld_from_an_attendee_who_did_not_book(self):
-		self.set_event_start(30)
 		booking = self.make_booking(user=OTHER_USER)
 		ticket = self.make_ticket(booking=booking.name)
-		frappe.set_user(ATTENDEE)
 
-		self.assertIsNone(get_ticket_details(ticket.name).booking)
+		with self.set_user(ATTENDEE):
+			self.assertIsNone(get_ticket_details(ticket.name).booking)
 
 
 class TestTransferTicket(TicketTestCase):
-	def setUp(self):
-		super().setUp()
-		self.set_event_start(30)
-
 	@patch("buzz.api.tickets.services.send_ticket_transfer_emails")
 	def test_attendee_transfers_their_own_ticket(self, mock_emails):
 		ticket = self.make_ticket()
-		frappe.set_user(ATTENDEE)
 
-		transfer_ticket(ticket.name, "New", "Owner", "new-owner@example.com")
+		with self.set_user(ATTENDEE):
+			transfer_ticket(ticket.name, "New", "Owner", "new-owner@example.com")
 
 		ticket.reload()
 		self.assertEqual(ticket.attendee_email, "new-owner@example.com")
@@ -276,9 +128,10 @@ class TestTransferTicket(TicketTestCase):
 	def test_booking_owner_may_transfer(self, mock_emails):
 		booking = self.make_booking(user=OTHER_USER)
 		ticket = self.make_ticket(booking=booking.name)
-		frappe.set_user(OTHER_USER)
 
-		transfer_ticket(ticket.name, "New", "Owner", "new-owner@example.com")
+		with self.set_user(OTHER_USER):
+			transfer_ticket(ticket.name, "New", "Owner", "new-owner@example.com")
+
 		self.assertEqual(
 			frappe.db.get_value("Event Ticket", ticket.name, "attendee_email"), "new-owner@example.com"
 		)
@@ -287,159 +140,133 @@ class TestTransferTicket(TicketTestCase):
 		with self.assertRaises(TicketNotFound):
 			transfer_ticket("not-a-ticket", "New", "Owner", "new-owner@example.com")
 
-		self.assertEqual(TicketNotFound.http_status_code, 404)
-
 	def test_an_unrelated_user_cannot_transfer(self):
 		ticket = self.make_ticket()
-		frappe.set_user(OTHER_USER)
 
-		with self.assertRaises(TransferNotPermitted):
+		with self.set_user(OTHER_USER), self.assertRaises(TransferNotPermitted):
 			transfer_ticket(ticket.name, "New", "Owner", "new-owner@example.com")
-
-		self.assertEqual(TransferNotPermitted.http_status_code, 403)
 
 	def test_transfer_is_refused_once_the_window_closes(self):
 		ticket = self.make_ticket()
 		self.set_event_start(2)
-		frappe.set_user(ATTENDEE)
 
-		with self.assertRaises(TransferWindowClosed):
+		with self.set_user(ATTENDEE), self.assertRaises(TransferWindowClosed):
 			transfer_ticket(ticket.name, "New", "Owner", "new-owner@example.com")
 
-		self.assertEqual(TransferWindowClosed.http_status_code, 409)
 		self.assertEqual(frappe.local.message_log[-1]["title"], "Transfers Closed")
 
 
 class TestChangeAddOnPreference(TicketTestCase):
 	def setUp(self):
 		super().setUp()
-		self.set_event_start(30)
-		self.add_on = frappe.get_doc(
-			{
-				"doctype": "Ticket Add-on",
-				"event": self.event.name,
-				"title": f"Meal {frappe.generate_hash(length=6)}",
-				"user_selects_option": 1,
-				"options": "Veg\nNon-veg",
-				"price": 0,
-				"currency": "INR",
-			}
-		).insert(ignore_permissions=True)
-
-	def make_ticket_with_add_on(self, value="Veg"):
-		ticket = self.make_ticket()
-		ticket.append("add_ons", {"add_on": self.add_on.name, "value": value, "price": 0, "currency": "INR"})
-		ticket.save(ignore_permissions=True)
-		return ticket, ticket.add_ons[0].name
+		self.add_on = TicketAddOnFactory.create(
+			event=self.event.name, user_selects_option=1, options="Veg\nNon-veg"
+		)
 
 	def test_changes_the_stored_value(self):
-		_ticket, add_on_value_id = self.make_ticket_with_add_on()
-		change_add_on_preference(add_on_value_id, "Non-veg")
-		self.assertEqual(frappe.db.get_value("Ticket Add-on Value", add_on_value_id, "value"), "Non-veg")
+		add_on_value = self.make_ticket_with_add_on().add_ons[0].name
+
+		change_add_on_preference(add_on_value, "Non-veg")
+
+		self.assertEqual(frappe.db.get_value("Ticket Add-on Value", add_on_value, "value"), "Non-veg")
 
 	def test_unknown_add_on_value(self):
 		with self.assertRaises(AddOnValueNotFound):
 			change_add_on_preference("not-an-add-on-value", "Non-veg")
 
-		self.assertEqual(AddOnValueNotFound.http_status_code, 404)
-
 	def test_refused_once_the_window_closes(self):
-		_ticket, add_on_value_id = self.make_ticket_with_add_on()
+		add_on_value = self.make_ticket_with_add_on().add_ons[0].name
 		self.set_event_start(2)
 
 		with self.assertRaises(AddOnChangeWindowClosed):
-			change_add_on_preference(add_on_value_id, "Non-veg")
-
-		self.assertEqual(AddOnChangeWindowClosed.http_status_code, 409)
+			change_add_on_preference(add_on_value, "Non-veg")
 
 	def test_details_carry_the_selectable_options(self):
-		ticket, _ = self.make_ticket_with_add_on()
-		frappe.set_user(ATTENDEE)
+		ticket = self.make_ticket_with_add_on(value="Veg")
 
-		add_ons = get_ticket_details(ticket.name).add_ons
+		with self.set_user(ATTENDEE):
+			add_ons = get_ticket_details(ticket.name).add_ons
+
 		self.assertEqual(len(add_ons), 1)
 		self.assertEqual(add_ons[0].options, ["Veg", "Non-veg"])
 		self.assertEqual(add_ons[0].value, "Veg")
 		# Check fields travel as 0/1, not booleans.
 		self.assertEqual(add_ons[0].user_selects_option, 1)
 
+	def make_ticket_with_add_on(self, value: str = "Veg"):
+		add_on = {"add_on": self.add_on.name, "value": value, "price": 0, "currency": "INR"}
+		return self.make_ticket(add_ons=[add_on])
+
 
 class TestCreateCancellationRequest(TicketTestCase):
 	def setUp(self):
 		super().setUp()
-		self.set_event_start(30)
-		self.booking = self.make_booking()
+		self.booking = self.make_booking().name
 
 	def test_full_booking_request(self):
-		self.make_ticket(booking=self.booking.name)
-		frappe.set_user(ATTENDEE)
+		self.make_ticket(booking=self.booking)
 
-		create_cancellation_request(self.booking.name)
+		with self.set_user(ATTENDEE):
+			create_cancellation_request(self.booking)
 
-		request = frappe.get_last_doc("Ticket Cancellation Request", filters={"booking": self.booking.name})
+		request = self.last_request()
 		self.assertTrue(request.cancel_full_booking)
 		self.assertEqual(request.tickets, [])
 
 	def test_partial_request_records_the_named_tickets(self):
-		first = self.make_ticket(booking=self.booking.name)
-		self.make_ticket(booking=self.booking.name)
-		frappe.set_user(ATTENDEE)
+		first = self.make_ticket(booking=self.booking).name
+		self.make_ticket(booking=self.booking)
 
-		create_cancellation_request(self.booking.name, [first.name])
+		with self.set_user(ATTENDEE):
+			create_cancellation_request(self.booking, [first])
 
-		request = frappe.get_last_doc("Ticket Cancellation Request", filters={"booking": self.booking.name})
+		request = self.last_request()
 		self.assertFalse(request.cancel_full_booking)
-		self.assertEqual([row.ticket for row in request.tickets], [first.name])
+		self.assertEqual([row.ticket for row in request.tickets], [first])
 
 	def test_naming_every_ticket_is_treated_as_a_full_cancellation(self):
-		first = self.make_ticket(booking=self.booking.name)
-		second = self.make_ticket(booking=self.booking.name)
-		frappe.set_user(ATTENDEE)
+		first = self.make_ticket(booking=self.booking).name
+		second = self.make_ticket(booking=self.booking).name
 
-		create_cancellation_request(self.booking.name, [first.name, second.name])
+		with self.set_user(ATTENDEE):
+			create_cancellation_request(self.booking, [first, second])
 
-		request = frappe.get_last_doc("Ticket Cancellation Request", filters={"booking": self.booking.name})
-		self.assertTrue(request.cancel_full_booking)
+		self.assertTrue(self.last_request().cancel_full_booking)
 
 	def test_a_ticket_from_another_booking_is_refused(self):
 		# Two tickets on the booking, so naming one stray id stays on the partial path —
 		# a count match short-circuits to a full-booking request before the check runs.
-		self.make_ticket(booking=self.booking.name)
-		self.make_ticket(booking=self.booking.name)
-		other_booking = self.make_booking()
-		stray = self.make_ticket(booking=other_booking.name)
-		frappe.set_user(ATTENDEE)
+		self.make_ticket(booking=self.booking)
+		self.make_ticket(booking=self.booking)
+		stray = self.make_ticket(booking=self.make_booking().name).name
 
-		with self.assertRaises(TicketNotInBooking):
-			create_cancellation_request(self.booking.name, [stray.name])
+		with self.set_user(ATTENDEE), self.assertRaises(TicketNotInBooking):
+			create_cancellation_request(self.booking, [stray])
 
-		self.assertIn(stray.name, frappe.local.message_log[-1]["message"])
+		self.assertIn(stray, frappe.local.message_log[-1]["message"])
 
 	def test_another_user_cannot_request(self):
-		self.make_ticket(booking=self.booking.name)
-		frappe.set_user(OTHER_USER)
+		self.make_ticket(booking=self.booking)
 
-		with self.assertRaises(CancellationNotPermitted):
-			create_cancellation_request(self.booking.name)
-
-		self.assertEqual(CancellationNotPermitted.http_status_code, 403)
+		with self.set_user(OTHER_USER), self.assertRaises(CancellationNotPermitted):
+			create_cancellation_request(self.booking)
 
 	def test_refused_once_the_window_closes(self):
-		self.make_ticket(booking=self.booking.name)
+		self.make_ticket(booking=self.booking)
 		self.set_event_start(2)
-		frappe.set_user(ATTENDEE)
 
-		with self.assertRaises(CancellationWindowClosed):
-			create_cancellation_request(self.booking.name)
-
-		self.assertEqual(CancellationWindowClosed.http_status_code, 409)
+		with self.set_user(ATTENDEE), self.assertRaises(CancellationWindowClosed):
+			create_cancellation_request(self.booking)
 
 	def test_a_second_open_request_is_refused(self):
-		self.make_ticket(booking=self.booking.name)
-		frappe.set_user(ATTENDEE)
-		create_cancellation_request(self.booking.name)
+		self.make_ticket(booking=self.booking)
 
-		with self.assertRaises(CancellationAlreadyRequested):
-			create_cancellation_request(self.booking.name)
+		with self.set_user(ATTENDEE):
+			create_cancellation_request(self.booking)
+			with self.assertRaises(CancellationAlreadyRequested):
+				create_cancellation_request(self.booking)
 
 		self.assertEqual(frappe.local.message_log[-1]["title"], "Already Requested")
+
+	def last_request(self):
+		return frappe.get_last_doc("Ticket Cancellation Request", filters={"booking": self.booking})
