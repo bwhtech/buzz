@@ -51,6 +51,29 @@ class TestGeocodeVenue(IntegrationTestCase):
 		self.assertEqual((venue.city, venue.venue_country), ("Indiranagar", "India"))
 		self.assertIn("/reverse", get.call_args.args[0])
 
+	@patch("buzz.events.doctype.event_venue.geocode.time.sleep")
+	@patch(REQUESTS_GET)
+	def test_a_street_address_nominatim_misses_falls_back_to_its_locality(self, get, sleep):
+		found = [
+			{
+				"lat": "12.9352",
+				"lon": "77.6245",
+				"address": {"suburb": "Koramangala", "city": "Bengaluru", "country_code": "in"},
+			}
+		]
+		get.side_effect = [nominatim_answer([]), nominatim_answer(found)]
+		venue = self.create_venue(
+			address="No. 374, 3rd Block, situated at, Koramangala, Bengaluru, Karnataka 560034, India"
+		)
+
+		geocode_venue(venue.name)
+
+		venue.reload()
+		self.assertEqual((venue.latitude, venue.city), (12.9352, "Bengaluru"))
+		self.assertEqual(
+			get.call_args.kwargs["params"]["q"], "Koramangala, Bengaluru, Karnataka 560034, India"
+		)
+
 	@patch(REQUESTS_GET, side_effect=requests.ConnectionError)
 	def test_a_failed_lookup_leaves_the_venue_as_it_was(self, get):
 		venue = self.create_venue(address="Nowhere in particular")

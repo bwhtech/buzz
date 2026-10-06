@@ -10,6 +10,9 @@ NOMINATIM_URL = "https://nominatim.openstreetmap.org"
 # Nominatim's usage policy allows one request a second.
 REQUEST_INTERVAL_SECONDS = 1
 CITY_KEYS = ("city", "town", "village", "municipality")
+# Nominatim finds nothing for many street-level addresses, Google's especially; their last
+# few parts (locality, city, state, country) still place the venue well enough for a pin.
+ADDRESS_ENDINGS = (4, 3)
 
 
 def has_coordinates(venue) -> bool:
@@ -46,6 +49,13 @@ def venues_to_geocode() -> list[str]:
 	return [venue.name for venue in frappe.get_all("Event Venue", fields=fields) if needs_geocoding(venue)]
 
 
+def address_queries(address: str) -> list[str]:
+	"""The full address, then its shorter endings, without repeats."""
+	parts = [part.strip() for part in address.split(",") if part.strip()]
+	endings = [", ".join(parts[-size:]) for size in ADDRESS_ENDINGS if len(parts) > size]
+	return list(dict.fromkeys([address, *endings]))
+
+
 def country_with_code(code: str | None) -> str | None:
 	return frappe.db.get_value("Country", {"code": code.lower()}) if code else None
 
@@ -74,8 +84,12 @@ class VenueGeocoder:
 			return self.request(
 				"reverse", {"lat": self.venue.latitude, "lon": self.venue.longitude, "zoom": 10}
 			)
-		results = self.request("search", {"q": self.venue.address, "limit": 1})
-		return results[0] if results else None
+		for index, query in enumerate(address_queries(self.venue.address)):
+			if index:
+				time.sleep(REQUEST_INTERVAL_SECONDS)
+			if results := self.request("search", {"q": query, "limit": 1}):
+				return results[0]
+		return None
 
 	def request(self, endpoint: str, params: dict):
 		try:
