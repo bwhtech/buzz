@@ -8,6 +8,7 @@ from buzz.api.booking.services import create_add_on_doc
 from buzz.payments import handle_refund_notification
 from buzz.tests.factories import (
 	BuzzEventFactory,
+	BuzzTeamFactory,
 	EventBookingFactory,
 	EventPaymentFactory,
 	EventSponsorFactory,
@@ -222,6 +223,32 @@ class BookingRefundTestCase(IntegrationTestCase):
 			filters={"booking": self.booking.name},
 			fields=["name", "docstatus"],
 		)
+
+
+class TeamPermissionTestCase(IntegrationTestCase):
+	"""Alice owns team A, Bob owns team B, and each team has one unpublished event."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.alice = UserFactory.create_once("perm-alice@example.com").name
+		cls.bob = UserFactory.create_once("perm-bob@example.com").name
+		cls.outsider = UserFactory.create_once("perm-outsider@example.com").name
+		cls.team_a = BuzzTeamFactory.create_owned_by(cls.alice, team_name="Perm Team A").name
+		cls.team_b = BuzzTeamFactory.create_owned_by(cls.bob, team_name="Perm Team B").name
+		cls.event_a = BuzzEventFactory.create("unpublished", team=cls.team_a).name
+		cls.event_b = BuzzEventFactory.create("unpublished", team=cls.team_b).name
+
+	def setUp(self):
+		self.enterContext(self.set_user("Administrator"))
+
+	def has_permission_as(self, user: str, ptype: str, doctype: str, doc: str) -> bool:
+		with self.set_user(user):
+			return frappe.has_permission(doctype, ptype, doc=doc)
+
+	def list_as(self, user: str, doctype: str, pluck: str = "name") -> list:
+		with self.set_user(user):
+			return frappe.get_list(doctype, pluck=pluck)
 
 
 def create_paid_ticket_type(event, price: int = TICKET_PRICE):

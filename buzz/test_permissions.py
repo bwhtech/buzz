@@ -2,31 +2,16 @@
 # See license.txt
 
 import frappe
-from frappe.tests import IntegrationTestCase
 
+from buzz.tests.base_test_cases import TeamPermissionTestCase
 from buzz.tests.factories import (
-	BuzzEventFactory,
-	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
 	EventTicketFactory,
 	UserFactory,
 )
 
 
-class RoleTestCase(IntegrationTestCase):
-	"""Alice owns team A, Bob owns team B, and each team has one unpublished event."""
-
-	@classmethod
-	def setUpClass(cls):
-		super().setUpClass()
-		cls.alice = UserFactory.create_once("perm-alice@example.com").name
-		cls.bob = UserFactory.create_once("perm-bob@example.com").name
-		cls.outsider = UserFactory.create_once("perm-outsider@example.com").name
-		cls.team_a = BuzzTeamFactory.create_owned_by(cls.alice).name
-		cls.team_b = BuzzTeamFactory.create_owned_by(cls.bob).name
-		cls.event_a = BuzzEventFactory.create("unpublished", team=cls.team_a).name
-		cls.event_b = BuzzEventFactory.create("unpublished", team=cls.team_b).name
-
+class RoleTestCase(TeamPermissionTestCase):
 	@classmethod
 	def add_members(cls, team: str, *members: tuple[str, str]) -> list[str]:
 		return [
@@ -35,17 +20,6 @@ class RoleTestCase(IntegrationTestCase):
 			).name
 			for email, team_role in members
 		]
-
-	def setUp(self):
-		self.enterContext(self.set_user("Administrator"))
-
-	def has_permission_as(self, user: str, ptype: str, doctype: str, doc: str) -> bool:
-		with self.set_user(user):
-			return frappe.has_permission(doctype, ptype, doc=doc)
-
-	def list_as(self, user: str, doctype: str, pluck: str = "name") -> list:
-		with self.set_user(user):
-			return frappe.get_list(doctype, pluck=pluck)
 
 
 class TestRoleMatrix(RoleTestCase):

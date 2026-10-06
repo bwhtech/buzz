@@ -1,14 +1,13 @@
 import frappe
 from frappe.desk.search import search_link
-from frappe.tests import IntegrationTestCase
 
 from buzz.api.checkin import validate_ticket_for_checkin
 from buzz.api.checkin.exceptions import TicketNotFound
 from buzz.api.exceptions import NotPermitted
 from buzz.permissions import team_query_conditions
+from buzz.tests.base_test_cases import TeamPermissionTestCase
 from buzz.tests.factories import (
 	BuzzEventFactory,
-	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
 	EventTicketFactory,
 	EventTicketTypeFactory,
@@ -21,29 +20,7 @@ from buzz.tests.factories import (
 SELF_SCOPED_DOCTYPES = frozenset({"Buzz Team Membership"})
 
 
-class TenantTestCase(IntegrationTestCase):
-	"""Alice owns team A, Bob owns team B, and each team has one unpublished event."""
-
-	@classmethod
-	def setUpClass(cls):
-		super().setUpClass()
-		cls.alice = UserFactory.create_once("perm-alice@example.com").name
-		cls.bob = UserFactory.create_once("perm-bob@example.com").name
-		cls.outsider = UserFactory.create_once("perm-outsider@example.com").name
-		cls.team_a = BuzzTeamFactory.create_owned_by(cls.alice, team_name="Perm Team A").name
-		cls.team_b = BuzzTeamFactory.create_owned_by(cls.bob, team_name="Perm Team B").name
-		cls.event_a = BuzzEventFactory.create("unpublished", team=cls.team_a).name
-		cls.event_b = BuzzEventFactory.create("unpublished", team=cls.team_b).name
-
-	def setUp(self):
-		self.enterContext(self.set_user("Administrator"))
-
-	def list_as(self, user: str, doctype: str, pluck: str = "name") -> list:
-		with self.set_user(user):
-			return frappe.get_list(doctype, pluck=pluck)
-
-
-class TestCrossTeamIsolation(TenantTestCase):
+class TestCrossTeamIsolation(TeamPermissionTestCase):
 	def test_team_direct_lists_exclude_other_teams(self):
 		for doctype in linked_to("Buzz Team") - SELF_SCOPED_DOCTYPES:
 			with self.subTest(doctype=doctype):
@@ -108,7 +85,7 @@ class TestCrossTeamIsolation(TenantTestCase):
 			frappe.get_doc("Buzz Event", orphan).check_permission("read")
 
 
-class TestPublicVisibility(TenantTestCase):
+class TestPublicVisibility(TeamPermissionTestCase):
 	def test_published_events_stay_visible_to_non_members(self):
 		published = BuzzEventFactory.create(team=self.team_b).name
 
@@ -135,7 +112,7 @@ class TestPublicVisibility(TenantTestCase):
 			frappe.get_list("Event Payment", pluck="name")
 
 
-class TestTeamLinkQuery(TenantTestCase):
+class TestTeamLinkQuery(TeamPermissionTestCase):
 	def test_link_search_offers_only_the_users_teams(self):
 		teams = self.search_teams_as(self.alice)
 
@@ -161,7 +138,7 @@ class TestTeamLinkQuery(TenantTestCase):
 		return [result["value"] for result in results]
 
 
-class TestTalkProposalComposition(TenantTestCase):
+class TestTalkProposalComposition(TeamPermissionTestCase):
 	def test_speaker_sees_own_proposal_without_a_membership(self):
 		mine = self.create_proposal(self.event_b)
 
@@ -180,7 +157,7 @@ class TestTalkProposalComposition(TenantTestCase):
 		return TalkProposalFactory.create(event=event, submitted_by=self.outsider).name
 
 
-class TestCheckinIsolation(TenantTestCase):
+class TestCheckinIsolation(TeamPermissionTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
