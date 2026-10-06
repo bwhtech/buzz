@@ -16,9 +16,12 @@ Faker comes with frappe. Do not add it to `pyproject.toml`.
 
 1. **Never** build a fixture with `frappe.get_doc({...}).insert()` or `frappe.new_doc(...)`.
    Use a factory. If the doctype has none, write it first.
-2. One factory per doctype: `buzz/tests/factories/<snake_case_doctype>_factory.py`, class
-   `<PascalCaseDocType>Factory(BaseFactory[<DocClass>])`, re-exported from `__init__.py`.
-   The generic is the real controller class, so the result is typed.
+2. One factory per doctype: `buzz/tests/factories/<package>/<snake_case_doctype>_factory.py`,
+   where `<package>` is `core` (Frappe and payments doctypes), `events`, `ticketing` or
+   `proposals`. Class `<PascalCaseDocType>Factory(BaseFactory[<DocClass>])`, re-exported from
+   `buzz/tests/factories/__init__.py`; import it from `buzz.tests.factories`. The generic is
+   the real controller class, so the result is typed. `buzz/tests/test_factories.py` creates
+   every factory in `__all__`, so a new factory is smoke-tested once it is exported.
 3. `default_attributes` sets only what `.insert()` needs. Leave out fields with a DocType
    default or a controller fallback (`Event Booking.status`, the INR 0 price row
    `Event Ticket Type.before_validate` adds).
@@ -109,11 +112,23 @@ the session user.
 
 ## Traps
 
-**Administrator must not own throwaway teams.** `create_default_team_for` picks the first
-enabled Owner membership, and `process_booking` commits, so its fixtures survive rollback.
-An Administrator-owned test team becomes Administrator's default team on that site, and
-`setup_test_records()` fails with `Venue Test Venue belongs to another team.` Use
+**Administrator must not own throwaway teams.** `setup_test_records()` gives Administrator
+exactly one team, and Event Template and event proposal submissions fill `team` from a sole
+membership. `process_booking` commits, so its fixtures survive rollback. A second
+Administrator team leaks across runs and breaks that lookup. Use
 `BuzzTeamFactory.create_owned_by()`.
+
+**`Buzz Event` names are autoincrement integers.** `.name` is an `int` in memory, and the
+whitelisted APIs type-check `event: str`. Pass `str(event.name)`, and compare against `str(...)`
+when the other side came from the database.
+
+**`get_fullname` caches per process.** A user rebuilt in a later class keeps the earlier
+name in that cache. Set the name the test asserts, and read it from the field the code reads.
+
+**`frappe.set_user` is allowed only in `test_*.py`.** The `frappe-setuser` semgrep rule
+fails CI anywhere else, for example in `buzz/tests/base_test_cases.py` or a factory. Use
+`with self.set_user(user):`, `self.enterContext(self.set_user(user))` in `setUp`, or
+`frappe.tests.classes.context_managers.set_user` outside a test case.
 
 **User creation is throttled** at 60 new users an hour (`User.throttle_user_creation`), and
 test users leak. For a fixed identity use `UserFactory.create_once(email)`; use `create()`
@@ -150,10 +165,17 @@ class BookingTestCase(IntegrationTestCase):
 
 `buzz/api/booking/test_booking.py` is the reference conversion.
 
-Older modules still export ad-hoc helpers — `create_user` / `create_owned_team` /
-`payload_for` in `test_buzz_team.py`, `ensure_prompt_named_record` in `test_forms.py`,
-`create_event` / `create_ticket` in `test_permissions.py`. They retire module by module. Do
-not add new callers.
+Never import from another `test_*.py`. Shared base classes (`BookingTestCase`,
+`CouponTestCase`, `BookingRefundTestCase`, `SponsorshipTestCase`, `TeamPermissionTestCase`)
+live in `buzz/tests/base_test_cases.py`. Shared non-fixture helpers (email queue readers,
+telemetry capture, `clear_map_link_cache`) live in `buzz/tests/utils.py`.
+
+Use the Frappe context managers rather than manual cleanup: `self.set_user`,
+`self.change_settings` (Singles only), `self.freeze_time`, `self.patch_hooks`.
+`Buzz Team Settings` is not a Single, so use `BuzzTeamFactory.set_settings(team, values)`.
+
+CI formats with ruff 0.8.1. Run `uvx ruff@0.8.1 format buzz && uvx ruff@0.8.1 check buzz`
+before pushing; a newer ruff wraps lines differently.
 
 ## Running tests
 
