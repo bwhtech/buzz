@@ -16,7 +16,6 @@ from buzz.tests.factories import BuzzEventFactory, SponsorshipTierFactory, UserF
 class SponsorFormTestCase(IntegrationTestCase):
 	def setUp(self):
 		self.enterContext(self.set_user("Administrator"))
-		frappe.clear_messages()
 		self.event = BuzzEventFactory.create()
 		self.form = frappe.get_doc("Sponsor Enquiry Form", {"event": self.event.name})
 		self.form.publish = 1

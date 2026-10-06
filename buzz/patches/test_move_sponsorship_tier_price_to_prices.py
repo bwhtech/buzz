@@ -9,7 +9,6 @@ class TestMoveSponsorshipTierPriceToPrices(IntegrationTestCase):
 	def setUp(self):
 		if not frappe.db.has_column("Sponsorship Tier", "price"):
 			self.skipTest("The legacy price column is gone from this site.")
-		self.enterContext(self.set_user("Administrator"))
 		self.tier = SponsorshipTierFactory.create().name
 		frappe.db.delete("Buzz Price", {"parent": self.tier})
 		tier = frappe.qb.DocType("Sponsorship Tier")

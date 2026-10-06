@@ -18,8 +18,6 @@ from buzz.api.sponsorships.exceptions import (
 from buzz.tests.base_test_cases import SponsorshipTestCase
 from buzz.tests.factories import PaymentGatewayFactory
 
-SPONSOR_FIELDS = {"name", "company_name", "company_logo", "creation", "event", "tier", "tier_title"}
-
 
 class TestGetSponsorshipDetails(SponsorshipTestCase):
 	def test_enquiry_carries_the_tier_title(self):
@@ -40,7 +38,10 @@ class TestGetSponsorshipDetails(SponsorshipTestCase):
 		response = get_sponsorship_details(self.enquiry.name).__json__()
 
 		self.assertTrue(response["has_sponsor"])
-		self.assertEqual(set(response["sponsor_details"]), SPONSOR_FIELDS)
+		self.assertEqual(
+			set(response["sponsor_details"]),
+			{"name", "company_name", "company_logo", "creation", "event", "tier", "tier_title"},
+		)
 		self.assertEqual(response["sponsor_details"]["name"], sponsor.name)
 		self.assertEqual(response["sponsor_details"]["tier_title"], "Gold")
 
@@ -134,8 +135,7 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 	def add_gateway_to_event(self) -> str:
 		gateway = PaymentGatewayFactory.create().name
 		event = frappe.get_doc("Buzz Event", self.event)
-		event.payment_gateways = []
-		event.append("payment_gateways", {"payment_gateway": gateway})
+		event.set("payment_gateways", [{"payment_gateway": gateway}])
 		event.save(ignore_permissions=True)
 		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event)
 		return gateway

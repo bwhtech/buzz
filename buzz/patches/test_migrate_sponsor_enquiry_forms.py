@@ -12,10 +12,6 @@ from buzz.tests.factories import (
 
 
 class TestMigrateSponsorEnquiryForms(IntegrationTestCase):
-	def setUp(self):
-		self.enterContext(self.set_user("Administrator"))
-		frappe.clear_messages()
-
 	def tearDown(self):
 		# The migration reads every event on the site, so one test's conflicts must not reach the next.
 		frappe.db.rollback()
