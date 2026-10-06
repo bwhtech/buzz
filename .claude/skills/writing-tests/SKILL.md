@@ -16,9 +16,8 @@ Faker comes with frappe. Do not add it to `pyproject.toml`.
 
 1. **Never** build a fixture with `frappe.get_doc({...}).insert()` or `frappe.new_doc(...)`.
    Use a factory. If the doctype has none, write it first.
-2. One factory per doctype: `buzz/tests/factories/<package>/<snake_case_doctype>_factory.py`,
-   where `<package>` is `core` (Frappe and payments doctypes), `events`, `ticketing` or
-   `proposals`. Class `<PascalCaseDocType>Factory(BaseFactory[<DocClass>])`, re-exported from
+2. One factory per doctype: `buzz/tests/factories/<snake_case_doctype>_factory.py`, class
+   `<PascalCaseDocType>Factory(BaseFactory[<DocClass>])`, re-exported from
    `buzz/tests/factories/__init__.py`; import it from `buzz.tests.factories`. The generic is
    the real controller class, so the result is typed. `buzz/tests/test_factories.py` creates
    every factory in `__all__`, so a new factory is smoke-tested once it is exported.

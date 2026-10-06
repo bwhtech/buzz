@@ -14,7 +14,7 @@ class EventPaymentFactory(BaseFactory[EventPayment]):
 	@property
 	def default_attributes(self) -> dict[str, Any]:
 		from buzz.tests.factories import UserFactory
-		from buzz.tests.factories.ticketing.event_booking_factory import LINK_BOOKER
+		from buzz.tests.factories.event_booking_factory import LINK_BOOKER
 
 		return {"user": self.overrides.get("user") or UserFactory.create_once(LINK_BOOKER).name}
 
