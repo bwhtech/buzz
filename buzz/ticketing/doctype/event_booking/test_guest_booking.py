@@ -1,211 +1,100 @@
 # Copyright (c) 2025, BWH Studios and Contributors
 # See license.txt
 
-import uuid
 from base64 import b32encode
 
 import frappe
 import pyotp
-from frappe.tests import IntegrationTestCase
 
-from buzz.api.booking import process_booking as process_booking_endpoint
-from buzz.api.booking.schemas import BookingRequest
+from buzz.api.booking import process_booking
+from buzz.tests.base_test_cases import BookingTestCase
 
-
-def process_booking(**kwargs):
-	return process_booking_endpoint(BookingRequest(**kwargs)).__json__()
+OTP_SECRET = b32encode(b"TESTSECRET").decode("utf-8")
+WRONG_OTP = "000000"
 
 
-class TestGuestBooking(IntegrationTestCase):
+class TestGuestBooking(BookingTestCase):
 	def setUp(self):
-		frappe.set_user("Administrator")
-		self.test_event = frappe.get_doc("Buzz Event", {"route": "test-route"})
-		self.event_name = str(self.test_event.name)
-		self.original_allow_guest = self.test_event.allow_guest_booking
-		self.original_verification = self.test_event.guest_verification_method
-		self.test_event.allow_guest_booking = True
-		self.test_event.guest_verification_method = "None"
-		self.test_event.is_published = True
-		self.test_event.save()
-		self.ticket_type = str(self._get_or_create_free_ticket_type())
+		super().setUp()
+		self.set_event({"allow_guest_booking": 1, "guest_verification_method": "None"})
+		self.email = f"testguest-{frappe.generate_hash(length=8)}@example.com"
+		# process_booking commits, so the guest's User outlives the rollback.
+		self.addCleanup(self.delete_guest_user)
 
-	def tearDown(self):
-		frappe.set_user("Administrator")
-		self.test_event.reload()
-		self.test_event.allow_guest_booking = self.original_allow_guest
-		self.test_event.guest_verification_method = self.original_verification
-		self.test_event.is_published = False
-		self.test_event.save()
+	def test_guest_booking_without_otp_creates_the_booking_and_user(self):
+		with self.set_user("Guest"):
+			payload = self.book_as_guest()
 
-	# --- helpers ---
+		self.assertTrue(frappe.db.exists("Event Booking", payload.booking_name))
+		self.assertIn("Buzz User", frappe.get_roles(self.email))
 
-	def _generate_test_email(self):
-		return f"testguest-{uuid.uuid4().hex[:8]}@example.com"
+	def test_guest_booking_with_otp_clears_the_code(self):
+		self.enable_email_otp()
+		self.store_otp()
 
-	def _cleanup_test_user(self, email):
-		frappe.set_user("Administrator")
-		if frappe.db.exists("User", email):
-			frappe.delete_doc("User", email, force=True)
+		with self.set_user("Guest"):
+			payload = self.book_as_guest(otp=pyotp.HOTP(OTP_SECRET).at(0))
 
-	def _get_or_create_free_ticket_type(self):
-		existing = frappe.db.get_value(
-			"Event Ticket Type",
-			{"event": self.test_event.name, "title": "Free (Test)"},
-			"name",
-		)
-		if existing:
-			return existing
-		return (
-			frappe.get_doc(
-				{
-					"doctype": "Event Ticket Type",
-					"event": self.test_event.name,
-					"title": "Free (Test)",
-				}
-			)
-			.insert()
-			.name
-		)
-
-	def _make_attendees(self, email):
-		return [{"ticket_type": self.ticket_type, "first_name": "Test", "last_name": "Guest", "email": email}]
-
-	# --- tests ---
-
-	def test_guest_booking_without_otp(self):
-		"""Full happy path: guest books with verification='None', booking + user created."""
-		email = self._generate_test_email()
-		try:
-			frappe.set_user("Guest")
-			result = process_booking(
-				attendees=self._make_attendees(email),
-				event=self.event_name,
-				guest_email=email,
-				guest_full_name="Test Guest",
-			)
-			self.assertIn("booking_name", result)
-			self.assertTrue(frappe.db.exists("Event Booking", result["booking_name"]))
-			self.assertTrue(frappe.db.exists("User", email))
-			self.assertIn("Buzz User", frappe.get_roles(email))
-		finally:
-			self._cleanup_test_user(email)
-
-	def test_guest_booking_with_otp(self):
-		"""OTP happy path: cache OTP, pass it in, booking succeeds, OTP cache cleared."""
-		email = self._generate_test_email()
-		self.test_event.guest_verification_method = "Email OTP"
-		self.test_event.save()
-		try:
-			# Simulate OTP generation (same as send_guest_booking_otp)
-			otp_secret = b32encode(b"TESTSECRET").decode("utf-8")
-			otp_code = pyotp.HOTP(otp_secret).at(0)
-			frappe.cache.set_value(
-				f"guest_booking_otp:email:{email.lower().strip()}", otp_secret, expires_in_sec=600
-			)
-
-			frappe.set_user("Guest")
-			result = process_booking(
-				attendees=self._make_attendees(email),
-				event=self.event_name,
-				guest_email=email,
-				guest_full_name="Test Guest",
-				otp=str(otp_code),
-			)
-			self.assertIn("booking_name", result)
-			# OTP cache should be cleared after successful verification
-			self.assertIsNone(frappe.cache.get_value(f"guest_booking_otp:email:{email.lower().strip()}"))
-		finally:
-			self._cleanup_test_user(email)
+		self.assertTrue(frappe.db.exists("Event Booking", payload.booking_name))
+		self.assertIsNone(frappe.cache.get_value(self.otp_cache_key()))
 
 	def test_guest_booking_rejected_when_disabled(self):
-		"""Security gate: allow_guest_booking=False raises AuthenticationError."""
-		self.test_event.allow_guest_booking = False
-		self.test_event.save()
+		self.set_event({"allow_guest_booking": 0})
 
-		frappe.set_user("Guest")
-		with self.assertRaises(frappe.AuthenticationError):
-			process_booking(
-				attendees=self._make_attendees("nobody@example.com"),
-				event=self.event_name,
-				guest_email="nobody@example.com",
-				guest_full_name="Nobody",
-			)
+		with self.set_user("Guest"), self.assertRaises(frappe.AuthenticationError):
+			self.book_as_guest()
 
 	def test_invalid_otp_rejected(self):
-		"""Wrong OTP code raises ValidationError."""
-		email = self._generate_test_email()
-		self.test_event.guest_verification_method = "Email OTP"
-		self.test_event.save()
+		self.enable_email_otp()
+		self.store_otp()
 
-		otp_secret = b32encode(b"TESTSECRET").decode("utf-8")
-		frappe.cache.set_value(
-			f"guest_booking_otp:email:{email.lower().strip()}", otp_secret, expires_in_sec=600
-		)
-
-		frappe.set_user("Guest")
-		with self.assertRaises(frappe.ValidationError):
-			process_booking(
-				attendees=self._make_attendees(email),
-				event=self.event_name,
-				guest_email=email,
-				guest_full_name="Test Guest",
-				otp="000000",
-			)
+		with self.set_user("Guest"), self.assertRaises(frappe.ValidationError):
+			self.book_as_guest(otp=WRONG_OTP)
 
 	def test_guest_booking_requires_email(self):
-		"""Missing email raises ValidationError."""
-		frappe.set_user("Guest")
-		with self.assertRaises(frappe.ValidationError):
-			process_booking(
-				attendees=[
-					{
-						"ticket_type": self.ticket_type,
-						"first_name": "Test",
-						"last_name": "Guest",
-						"email": "t@e.com",
-					}
-				],
-				event=self.event_name,
-				guest_email="",
-				guest_full_name="Test Guest",
-			)
+		with self.set_user("Guest"), self.assertRaises(frappe.ValidationError):
+			self.book_as_guest(guest_email="")
 
 	def test_brute_force_lockout(self):
-		"""Repeated wrong OTPs locks out subsequent attempts.
+		# LoginAttemptTracker(max_consecutive_login_attempts=5) compares with `>`,
+		# so the lockout starts after the sixth failure.
+		self.enable_email_otp()
 
-		LoginAttemptTracker(max_consecutive_login_attempts=5) uses strict >
-		comparison, so lockout triggers after count exceeds the threshold.
-		"""
-		email = self._generate_test_email()
-		self.test_event.guest_verification_method = "Email OTP"
-		self.test_event.save()
+		with self.set_user("Guest"):
+			for _ in range(6):
+				self.store_otp()
+				with self.assertRaises(frappe.ValidationError):
+					self.book_as_guest(otp=WRONG_OTP)
 
-		otp_secret = b32encode(b"TESTSECRET").decode("utf-8")
-		cache_key = f"guest_booking_otp:email:{email.lower().strip()}"
+			self.store_otp()
+			with self.assertRaises(frappe.ValidationError) as raised:
+				self.book_as_guest(otp=WRONG_OTP)
 
-		frappe.set_user("Guest")
+		self.assertIn("Too many failed attempts", str(raised.exception))
 
-		# Exhaust allowed attempts (Frappe's tracker uses > comparison,
-		# so we need max_consecutive_login_attempts + 1 failures to trigger lockout)
-		for _ in range(6):
-			frappe.cache.set_value(cache_key, otp_secret, expires_in_sec=600)
-			with self.assertRaises(frappe.ValidationError):
-				process_booking(
-					attendees=self._make_attendees(email),
-					event=self.event_name,
-					guest_email=email,
-					guest_full_name="Test Guest",
-					otp="000000",
-				)
+	def book_as_guest(self, **overrides):
+		attendees = [
+			{
+				"ticket_type": str(self.free_ticket_type.name),
+				"first_name": "Test",
+				"last_name": "Guest",
+				"email": self.email,
+			}
+		]
+		values = {"guest_email": self.email, "guest_full_name": "Test Guest", **overrides}
+		return process_booking(self.booking_request(attendees=attendees, **values))
 
-		# Next attempt should hit "Too many failed attempts"
-		frappe.cache.set_value(cache_key, otp_secret, expires_in_sec=600)
-		with self.assertRaises(frappe.ValidationError) as ctx:
-			process_booking(
-				attendees=self._make_attendees(email),
-				event=self.event_name,
-				guest_email=email,
-				guest_full_name="Test Guest",
-				otp="000000",
-			)
-		self.assertIn("Too many failed attempts", str(ctx.exception))
+	def enable_email_otp(self):
+		self.set_event({"guest_verification_method": "Email OTP"})
+
+	def store_otp(self):
+		"""What `send_guest_booking_otp` leaves in the cache."""
+		frappe.cache.set_value(self.otp_cache_key(), OTP_SECRET, expires_in_sec=600)
+		self.addCleanup(frappe.cache.delete_value, self.otp_cache_key())
+
+	def otp_cache_key(self) -> str:
+		return f"guest_booking_otp:email:{self.email}"
+
+	def delete_guest_user(self):
+		if frappe.db.exists("User", self.email):
+			frappe.delete_doc("User", self.email, force=True, ignore_permissions=True)
