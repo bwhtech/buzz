@@ -170,7 +170,7 @@ class TestUpdateEnquiryStatus(ManageTestCase):
 
 	def test_manager_moves_the_enquiry_along(self):
 		self.assertEqual(update_enquiry_status(self.enquiry.name, "Payment Pending"), "Payment Pending")
-		self.assertEqual(self.status(), "Payment Pending")
+		self.assertEqual(self.enquiry_status(), "Payment Pending")
 
 	def test_marking_paid_lists_the_sponsor_once(self):
 		update_enquiry_status(self.enquiry.name, "Paid")
@@ -199,7 +199,7 @@ class TestUpdateEnquiryStatus(ManageTestCase):
 			with self.subTest(user), self.set_user(user), self.assertRaises(CannotManageEvent):
 				update_enquiry_status(self.enquiry.name, "Withdrawn")
 
-		self.assertEqual(self.status(), "Approval Pending")
+		self.assertEqual(self.enquiry_status(), "Approval Pending")
 
-	def status(self) -> str:
+	def enquiry_status(self) -> str:
 		return frappe.db.get_value("Sponsorship Enquiry", self.enquiry.name, "status")

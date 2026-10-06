@@ -8,7 +8,21 @@ from buzz.api.proposals import accept_proposal, get_my_proposals
 from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, TalkProposalFactory, UserFactory
 
 
-class TestGetMyProposals(IntegrationTestCase):
+class ProposalTestCase(IntegrationTestCase):
+	@classmethod
+	def create_guest_proposal(cls, event: str, speaker_email: str) -> str:
+		"""The public form's submission: `owner` and `submitted_by` are both Guest."""
+		with cls.set_user("Guest"):
+			proposal = TalkProposalFactory.create(
+				"guest_submitted",
+				event=event,
+				speakers=[{"first_name": "Speaker", "email": speaker_email}],
+				flags={"ignore_permissions": True},
+			)
+		return proposal.name
+
+
+class TestGetMyProposals(ProposalTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -16,7 +30,7 @@ class TestGetMyProposals(IntegrationTestCase):
 		cls.event = str(BuzzEventFactory.create(start_date=cls.start_date, end_date=cls.start_date).name)
 		cls.speaker_user = UserFactory.create_once("speaker-api@example.com").name
 		cls.other_user = UserFactory.create_once("other-api@example.com").name
-		cls.guest_proposal = create_guest_proposal(cls.event, cls.speaker_user)
+		cls.guest_proposal = cls.create_guest_proposal(cls.event, cls.speaker_user)
 
 	def test_returns_guest_submitted_proposal_for_speaker(self):
 		self.assertIn(self.guest_proposal, self.listed_names(self.speaker_user))
@@ -87,7 +101,7 @@ class TestGetMyProposals(IntegrationTestCase):
 		return next(row for row in rows if row["name"] == proposal)
 
 
-class TestAcceptProposal(IntegrationTestCase):
+class TestAcceptProposal(ProposalTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -98,7 +112,7 @@ class TestAcceptProposal(IntegrationTestCase):
 		cls.event = str(BuzzEventFactory.create(team=team).name)
 
 	def setUp(self):
-		self.proposal = create_guest_proposal(self.event, self.speaker)
+		self.proposal = self.create_guest_proposal(self.event, self.speaker)
 
 	def test_accepting_creates_the_talk_and_sets_the_status(self):
 		with self.set_user(self.manager):
@@ -115,7 +129,6 @@ class TestAcceptProposal(IntegrationTestCase):
 		self.assertEqual(len(talk.speakers), 1)
 
 	def test_accepting_twice_reuses_the_talk_rather_than_duplicating_it(self):
-		# A reviewer can move a proposal off Accepted and back; the programme has one entry.
 		with self.set_user(self.manager):
 			first = accept_proposal(self.proposal)
 			frappe.db.set_value("Talk Proposal", self.proposal, "status", "Shortlisted")
@@ -133,15 +146,3 @@ class TestAcceptProposal(IntegrationTestCase):
 	def test_an_outsider_cannot_accept(self):
 		with self.set_user(self.outsider), self.assertRaises(frappe.PermissionError):
 			accept_proposal(self.proposal)
-
-
-def create_guest_proposal(event: str, speaker_email: str) -> str:
-	"""The public form's submission: `owner` and `submitted_by` are both Guest."""
-	with IntegrationTestCase.set_user("Guest"):
-		proposal = TalkProposalFactory.create(
-			"guest_submitted",
-			event=event,
-			speakers=[{"first_name": "Speaker", "email": speaker_email}],
-			flags={"ignore_permissions": True},
-		)
-	return proposal.name

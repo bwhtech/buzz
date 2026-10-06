@@ -15,7 +15,22 @@ from buzz.tests.factories import (
 ACCEPTED = '[["status", "in", ["Accepted"]]]'
 
 
-class TestGetEventProposals(IntegrationTestCase):
+class ProposalPipelineTestCase(IntegrationTestCase):
+	@classmethod
+	def create_guest_proposal(cls, event: str, speaker_email: str, **values) -> str:
+		"""The public form's submission: `owner` and `submitted_by` are both Guest."""
+		with cls.set_user("Guest"):
+			proposal = TalkProposalFactory.create(
+				"guest_submitted",
+				event=event,
+				speakers=[{"first_name": "Speaker", "email": speaker_email}],
+				flags={"ignore_permissions": True},
+				**values,
+			)
+		return proposal.name
+
+
+class TestGetEventProposals(ProposalPipelineTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -24,20 +39,19 @@ class TestGetEventProposals(IntegrationTestCase):
 		cls.team = BuzzTeamFactory.create_owned_by(cls.manager).name
 		cls.event = str(BuzzEventFactory.create(team=cls.team).name)
 		cls.other_event = str(BuzzEventFactory.create(team=cls.team).name)
-		cls.pending = create_guest_proposal(cls.event, "one@example.com", title="Pending Kubernetes")
-		cls.accepted = create_guest_proposal(cls.event, "two@example.com", title="Accepted Rust")
+		cls.pending = cls.create_guest_proposal(cls.event, "one@example.com", title="Pending Kubernetes")
+		cls.accepted = cls.create_guest_proposal(cls.event, "two@example.com", title="Accepted Rust")
 		frappe.db.set_value("Talk Proposal", cls.accepted, "status", "Accepted")
-		cls.elsewhere = create_guest_proposal(cls.other_event, "three@example.com", title="Elsewhere Go")
+		cls.elsewhere = cls.create_guest_proposal(cls.other_event, "three@example.com", title="Elsewhere Go")
 
 	def test_lists_only_this_events_proposals(self):
-		names = self.listed()
+		names = self.list_proposal_names()
 		self.assertIn(self.pending, names)
 		self.assertIn(self.accepted, names)
 		self.assertNotIn(self.elsewhere, names)
 
 	def test_lists_proposals_the_manager_is_not_a_speaker_on(self):
-		# The team reads its whole pipeline, not just the talks it happens to be on.
-		self.assertEqual(self.as_manager().total, 2)
+		self.assertEqual(self.get_proposals_as_manager().total, 2)
 
 	def test_outsider_cannot_read_the_pipeline(self):
 		with self.set_user(self.outsider), self.assertRaises(CannotManageEvent):
@@ -48,35 +62,35 @@ class TestGetEventProposals(IntegrationTestCase):
 			get_event_proposals("does-not-exist")
 
 	def test_status_filter_narrows_the_page(self):
-		self.assertEqual(self.listed(filters=ACCEPTED), [self.accepted])
+		self.assertEqual(self.list_proposal_names(filters=ACCEPTED), [self.accepted])
 
 	def test_search_matches_the_title(self):
-		self.assertEqual(self.listed(search="Kubernetes"), [self.pending])
+		self.assertEqual(self.list_proposal_names(search="Kubernetes"), [self.pending])
 
 	def test_search_matches_a_speaker_email(self):
-		self.assertEqual(self.listed(search="two@example.com"), [self.accepted])
+		self.assertEqual(self.list_proposal_names(search="two@example.com"), [self.accepted])
 
 	def test_search_that_matches_nothing_returns_nothing(self):
-		self.assertEqual(self.listed(search="Fortran"), [])
+		self.assertEqual(self.list_proposal_names(search="Fortran"), [])
 
 	def test_matched_counts_the_filter_while_total_counts_the_event(self):
-		response = self.as_manager(filters=ACCEPTED)
+		response = self.get_proposals_as_manager(filters=ACCEPTED)
 		self.assertEqual(response.matched, 1)
 		self.assertEqual(response.total, 2)
 
 	def test_page_reports_whether_more_are_waiting(self):
-		self.assertTrue(self.as_manager(limit=1).has_next_page)
-		self.assertFalse(self.as_manager(start=1, limit=1).has_next_page)
+		self.assertTrue(self.get_proposals_as_manager(limit=1).has_next_page)
+		self.assertFalse(self.get_proposals_as_manager(start=1, limit=1).has_next_page)
 
 	def test_order_reverses_the_page(self):
-		self.assertEqual(list(reversed(self.listed())), self.listed(order="asc"))
+		self.assertEqual(list(reversed(self.list_proposal_names())), self.list_proposal_names(order="asc"))
 
 	def test_rows_carry_their_speakers(self):
-		row = next(p for p in self.as_manager().proposals if p.name == self.pending)
+		row = next(p for p in self.get_proposals_as_manager().proposals if p.name == self.pending)
 		self.assertEqual([speaker.email for speaker in row.speakers], ["one@example.com"])
 
 	def test_a_writer_is_told_they_may_change_a_status(self):
-		self.assertTrue(self.as_manager().can_write)
+		self.assertTrue(self.get_proposals_as_manager().can_write)
 
 	def test_a_read_only_member_reads_the_pipeline_without_the_write_flag(self):
 		# Viewer and Frontdesk pass the read check the list uses and fail the write one.
@@ -89,15 +103,15 @@ class TestGetEventProposals(IntegrationTestCase):
 		self.assertEqual(response.total, 2)
 		self.assertFalse(response.can_write)
 
-	def as_manager(self, **kwargs):
+	def get_proposals_as_manager(self, **kwargs):
 		with self.set_user(self.manager):
 			return get_event_proposals(self.event, **kwargs)
 
-	def listed(self, **kwargs) -> list[str]:
-		return [proposal.name for proposal in self.as_manager(**kwargs).proposals]
+	def list_proposal_names(self, **kwargs) -> list[str]:
+		return [proposal.name for proposal in self.get_proposals_as_manager(**kwargs).proposals]
 
 
-class TestGetEventProposalTrend(IntegrationTestCase):
+class TestGetEventProposalTrend(ProposalPipelineTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -105,7 +119,7 @@ class TestGetEventProposalTrend(IntegrationTestCase):
 		cls.outsider = UserFactory.create_once("trend-outsider@example.com").name
 		team = BuzzTeamFactory.create_owned_by(cls.manager).name
 		cls.event = str(BuzzEventFactory.create(team=team).name)
-		cls.proposal = create_guest_proposal(cls.event, "trend@example.com")
+		cls.proposal = cls.create_guest_proposal(cls.event, "trend@example.com")
 
 	def setUp(self):
 		self.enterContext(self.set_user(self.manager))
@@ -130,7 +144,7 @@ class TestGetEventProposalTrend(IntegrationTestCase):
 			get_event_proposal_trend(self.event)
 
 
-class TestSetProposalState(IntegrationTestCase):
+class TestSetProposalState(ProposalPipelineTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -150,12 +164,12 @@ class TestSetProposalState(IntegrationTestCase):
 		self.assertFalse(get_event_proposals(self.event).proposals_closed)
 
 	def test_opening_publishes_a_form_that_was_never_published(self):
-		self.unpublish_the_proposal_form()
+		self.unpublish_proposal_form()
 
 		self.assertFalse(set_proposal_state(self.event, closed=False).proposals_closed)
 
 	def test_an_unpublished_form_reads_as_closed(self):
-		self.unpublish_the_proposal_form()
+		self.unpublish_proposal_form()
 
 		self.assertTrue(get_event_proposals(self.event).proposals_closed)
 
@@ -167,22 +181,9 @@ class TestSetProposalState(IntegrationTestCase):
 		with self.set_user(self.outsider), self.assertRaises(CannotManageEvent):
 			set_proposal_state(self.event, closed=True)
 
-	def unpublish_the_proposal_form(self):
+	def unpublish_proposal_form(self):
 		event = frappe.get_doc("Buzz Event", self.event)
 		for row in event.custom_forms:
 			if row.form_doctype == "Talk Proposal":
 				row.publish = 0
 		event.save(ignore_permissions=True)
-
-
-def create_guest_proposal(event: str, speaker_email: str, **values) -> str:
-	"""The public form's submission: `owner` and `submitted_by` are both Guest."""
-	with IntegrationTestCase.set_user("Guest"):
-		proposal = TalkProposalFactory.create(
-			"guest_submitted",
-			event=event,
-			speakers=[{"first_name": "Speaker", "email": speaker_email}],
-			flags={"ignore_permissions": True},
-			**values,
-		)
-	return proposal.name

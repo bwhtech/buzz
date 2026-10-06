@@ -143,7 +143,7 @@ class TestMigrateSponsorEnquiryForms(IntegrationTestCase):
 		self.assertTrue(frappe.db.exists("Buzz Event Form", legacy.name))
 
 	def make_legacy_event(self):
-		"""An event from before Sponsor Enquiry Form: the form every new event gets is removed."""
+		"""An event from before Sponsor Enquiry Form existed."""
 		event = BuzzEventFactory.create()
 		form = frappe.db.get_value("Sponsor Enquiry Form", {"event": event.name})
 		frappe.delete_doc("Sponsor Enquiry Form", form, force=1)
