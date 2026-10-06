@@ -28,8 +28,7 @@ class CouponTestCase(IntegrationTestCase):
 
 	def create_booking_with_add_on(self, coupon: str, count: int = 1):
 		attendees = attendee_rows(self.ticket_type.name, count)
-		add_ons = create_add_on_doc(attendees[0]["first_name"], [{"add_on": self.add_on.name, "value": "XL"}])
-		attendees[0]["add_ons"] = add_ons.name
+		attendees[0]["add_ons"] = create_add_on_doc("", [{"add_on": self.add_on.name, "value": "XL"}]).name
 		return EventBookingFactory.create(event=self.event.name, coupon_code=coupon, attendees=attendees)
 
 	def assert_amounts(self, booking, net: int, discount: int, total: int):

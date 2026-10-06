@@ -36,28 +36,27 @@ class TestCouponScope(CouponTestCase):
 		self.assertEqual(self.create_other_event_booking(coupon).discount_amount, 10)
 
 	def test_specific_event_clears_event_category(self):
-		coupon = BuzzCouponCodeFactory.create(
-			applies_to="Event", event=self.event.name, event_category=self.event.category
-		)
+		coupon = self.create_coupon_with_both_scopes("Event")
 
 		self.assertIsNone(coupon.event_category)
 
 	def test_event_category_clears_event(self):
-		coupon = BuzzCouponCodeFactory.create(
-			applies_to="Event Category", event=self.event.name, event_category=self.event.category
-		)
+		coupon = self.create_coupon_with_both_scopes("Event Category")
 
 		self.assertIsNone(coupon.event)
 
 	def test_all_events_clears_both_scope_fields(self):
-		coupon = BuzzCouponCodeFactory.create(
-			applies_to="", event=self.event.name, event_category=self.event.category
-		)
+		coupon = self.create_coupon_with_both_scopes("")
 
 		self.assertEqual((coupon.event, coupon.event_category), (None, None))
 
 	def create_coupon(self, **overrides) -> str:
 		return BuzzCouponCodeFactory.create("percentage", discount_value=10, **overrides).name
+
+	def create_coupon_with_both_scopes(self, applies_to: str):
+		return BuzzCouponCodeFactory.create(
+			applies_to=applies_to, event=self.event.name, event_category=self.event.category
+		)
 
 	def create_other_event_booking(self, coupon: str):
 		attendees = attendee_rows(self.other_ticket_type.name, 1)
