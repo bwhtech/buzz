@@ -15,9 +15,15 @@
 	overflow: hidden;
 	border-block: 1px solid var(--border);
 	background:
-		radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%),
-		var(--surface);
+		radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, #e3e3e3 12%, transparent), transparent 70%),
+		#0f0f0f;
 	isolation: isolate;
+}
+
+:root[data-mode="light"] .team-map {
+	background:
+		radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, #000000 12%, transparent), transparent 70%),
+		#fafafa;
 }
 
 .team-map-svg {
@@ -27,12 +33,13 @@
 }
 
 .team-map-land {
-	color: var(--ink-muted);
-	opacity: 0.55;
+	color: #969696;
+	opacity: 0.6;
 }
 
 :root[data-mode="light"] .team-map-land {
-	opacity: 0.45;
+	color: #404040;
+	opacity: 0.6;
 }
 
 .team-map-pins {

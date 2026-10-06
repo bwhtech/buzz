@@ -23,8 +23,8 @@ const ZOOM_DURATION_MILLISECONDS = 420
 const MINIMUM_VIEW_WIDTH = 60
 // Land dots sit on a 1.2° grid and grow with the zoom, within a readable range of sizes.
 const GRID_DEGREES = 1.2
-const DOT_SHARE_OF_GRID = 0.45
-const DOT_PIXELS = { minimum: 2.5, maximum: 9 }
+const DOT_SHARE_OF_GRID = 0.2
+const DOT_PIXELS = { minimum: 2.5, maximum: 6 }
 // Within this many pixels of an edge, a tooltip turns away from it.
 const TOOLTIP_EDGE_DISTANCE = { top: 96, side: 120 }
 
