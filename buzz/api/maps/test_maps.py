@@ -2,13 +2,16 @@ from unittest.mock import Mock, patch
 
 import frappe
 import requests
-from frappe.tests import IntegrationTestCase
+from frappe.tests import IntegrationTestCase, UnitTestCase
 
 from buzz.api.maps import add_place_as_venue, locate_map_link, search_places
 from buzz.api.maps.exceptions import CannotAddVenues, PlaceSearchFailed, PlaceSearchNotEnabled
 from buzz.api.maps.services import place_search_enabled
-from buzz.events.doctype.buzz_team.test_buzz_team import create_owned_team, create_user
-from buzz.events.doctype.event_venue.test_event_venue import clear_map_link_cache
+from buzz.tests.factories import BuzzTeamFactory, UserFactory
+from buzz.tests.utils import clear_map_link_cache
+
+GOOGLE_MAPS_SETTINGS = {"google_maps_enabled": 1, "google_places_api_key": "secret-places-key"}
+NO_VENUE_RIGHTS = "no-venues@example.com"
 
 SUGGESTIONS = {
 	"suggestions": [
@@ -27,24 +30,18 @@ SUGGESTIONS = {
 }
 
 
-def configure_google_maps(enabled: int = 1, places_key: str | None = "secret-places-key") -> None:
-	settings = frappe.get_doc("Buzz Settings")
-	settings.google_maps_enabled = enabled
-	settings.google_places_api_key = places_key
-	settings.save()
-
-
 def google_answers(payload: dict) -> Mock:
 	return Mock(json=Mock(return_value=payload), raise_for_status=Mock())
 
 
-class TestSearchPlaces(IntegrationTestCase):
+class GoogleMapsTestCase(IntegrationTestCase):
 	def setUp(self):
-		frappe.set_user("Administrator")
-		self.addCleanup(frappe.set_user, "Administrator")
+		# The rollback restores the settings row but not its cached copy.
 		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
-		configure_google_maps()
+		self.enterContext(self.change_settings("Buzz Settings", GOOGLE_MAPS_SETTINGS))
 
+
+class TestSearchPlaces(GoogleMapsTestCase):
 	@patch("buzz.api.maps.services.requests.request")
 	def test_maps_suggestions_to_predictions_with_the_secret_key(self, post):
 		post.return_value = google_answers(SUGGESTIONS)
@@ -66,18 +63,16 @@ class TestSearchPlaces(IntegrationTestCase):
 		post.assert_not_called()
 
 	def test_disabled_switch_turns_search_off(self):
-		configure_google_maps(enabled=0)
-
-		self.assertFalse(place_search_enabled())
-		with self.assertRaises(PlaceSearchNotEnabled):
-			search_places("nehru", "token-1")
+		with self.change_settings("Buzz Settings", google_maps_enabled=0):
+			self.assertFalse(place_search_enabled())
+			with self.assertRaises(PlaceSearchNotEnabled):
+				search_places("nehru", "token-1")
 
 	def test_missing_key_turns_search_off(self):
-		configure_google_maps(places_key=None)
-
-		self.assertFalse(place_search_enabled())
-		with self.assertRaises(PlaceSearchNotEnabled):
-			search_places("nehru", "token-1")
+		with self.change_settings("Buzz Settings", google_places_api_key=None):
+			self.assertFalse(place_search_enabled())
+			with self.assertRaises(PlaceSearchNotEnabled):
+				search_places("nehru", "token-1")
 
 	@patch("buzz.api.maps.services.requests.request", side_effect=requests.ConnectionError)
 	def test_google_failure_is_a_named_error(self, post):
@@ -85,25 +80,20 @@ class TestSearchPlaces(IntegrationTestCase):
 			search_places("nehru", "token-1")
 
 	def test_someone_who_cannot_add_venues_is_refused(self):
-		frappe.set_user(create_user("no-venues@example.com", "Attendee"))
-
-		with self.assertRaises(CannotAddVenues):
+		with self.set_user(UserFactory.create_once(NO_VENUE_RIGHTS).name), self.assertRaises(CannotAddVenues):
 			search_places("nehru", "token-1")
 
 
-class TestAddPlaceAsVenue(IntegrationTestCase):
+class TestAddPlaceAsVenue(GoogleMapsTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		cls.owner = create_user("place-venue-owner@example.com", "Owner")
-		cls.team = create_owned_team("Place Venue Team", cls.owner)
+		cls.owner = UserFactory.create_once("place-venue-owner@example.com").name
+		cls.team = BuzzTeamFactory.create_owned_by(cls.owner).name
 
 	def setUp(self):
-		frappe.set_user("Administrator")
-		self.addCleanup(frappe.set_user, "Administrator")
-		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
-		configure_google_maps()
-		frappe.set_user(self.owner)
+		super().setUp()
+		self.enterContext(self.set_user(self.owner))
 
 	@patch("buzz.api.maps.services.requests.request")
 	def test_saves_the_place_with_its_address_and_place_id(self, request):
@@ -145,20 +135,17 @@ class TestAddPlaceAsVenue(IntegrationTestCase):
 	@patch("buzz.api.maps.services.requests.request")
 	def test_another_teams_member_cannot_add_to_the_team(self, request):
 		request.return_value = google_answers({"formattedAddress": "Somewhere"})
-		outsider = create_user("place-venue-outsider@example.com", "Outsider")
-		create_owned_team("Place Venue Other Team", outsider)
-		frappe.set_user(outsider)
+		outsider = UserFactory.create_once("place-venue-outsider@example.com").name
+		BuzzTeamFactory.create_owned_by(outsider)
 
-		with self.assertRaises(frappe.PermissionError):
+		with self.set_user(outsider), self.assertRaises(frappe.PermissionError):
 			add_place_as_venue(self.team, "place-3", "Not Mine", "token-1")
 		request.assert_not_called()
 
 
-class TestLocateMapLink(IntegrationTestCase):
+class TestLocateMapLink(UnitTestCase):
 	def setUp(self):
 		clear_map_link_cache()
-		frappe.set_user("Administrator")
-		self.addCleanup(frappe.set_user, "Administrator")
 
 	def test_google_link_gives_coordinates_and_the_place_name(self):
 		link = "https://www.google.com/maps/place/Nehru+Centre/@18.99,72.81,17z/data=!3d18.9903!4d72.8174"
@@ -185,8 +172,10 @@ class TestLocateMapLink(IntegrationTestCase):
 			{"latitude": None, "longitude": None, "name": None, "address": None, "embed_url": None},
 		)
 
-	def test_someone_who_cannot_add_venues_is_refused(self):
-		frappe.set_user(create_user("no-map-links@example.com", "Attendee"))
 
-		with self.assertRaises(CannotAddVenues):
+class TestLocateMapLinkPermission(IntegrationTestCase):
+	def test_someone_who_cannot_add_venues_is_refused(self):
+		user = UserFactory.create_once("no-map-links@example.com").name
+
+		with self.set_user(user), self.assertRaises(CannotAddVenues):
 			locate_map_link("https://www.openstreetmap.org/#map=17/12.9/77.5")
