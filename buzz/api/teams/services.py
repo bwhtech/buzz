@@ -1,6 +1,7 @@
 import frappe
 from frappe.query_builder import Case
-from frappe.utils import get_url
+from frappe.query_builder.functions import Coalesce, Count
+from frappe.utils import get_url, today
 
 from buzz.api.events.schemas import EventExternalLink
 from buzz.api.teams.exceptions import (
@@ -62,6 +63,20 @@ def team_overview(team: str) -> TeamOverview:
 		my_role=role,
 		members=members_of(team),
 		invites=pending_invites_for(team),
+	)
+
+
+def upcoming_event_counts(teams: list[str]) -> dict[str, int]:
+	"""Events each team hosts that have not ended yet, in one query."""
+	if not teams:
+		return {}
+	event = frappe.qb.DocType("Buzz Event")
+	return dict(
+		frappe.qb.from_(event)
+		.select(event.team, Count("*"))
+		.where(event.team.isin(teams) & (Coalesce(event.end_date, event.start_date) >= today()))
+		.groupby(event.team)
+		.run()
 	)
 
 

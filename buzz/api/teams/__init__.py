@@ -7,7 +7,7 @@ from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_fl
 
 @frappe.whitelist()
 def get_my_teams() -> list[TeamOption]:
-	"""Teams the session user belongs to, for the settings dialog.
+	"""Teams the session user belongs to, for the teams page and the settings dialog.
 
 	Reads past permissions on purpose: Buzz Team is readable by Event Manager only, while a
 	Frontdesk or Viewer member still has to see the team they work in. Rows are filtered to
@@ -20,18 +20,27 @@ def get_my_teams() -> list[TeamOption]:
 		frappe.qb.from_(membership)
 		.inner_join(team)
 		.on(team.name == membership.team)
-		.select(team.name, team.team_name, team.logo, membership.team_role)
+		.select(
+			team.name,
+			team.team_name,
+			team.logo,
+			team.is_a_community,
+			team.short_description,
+			membership.team_role,
+		)
 		.where((membership.user == frappe.session.user) & (membership.enabled == 1))
 	).run(as_dict=True)
+	event_counts = services.upcoming_event_counts([my_team.name for my_team in my_teams])
+	return [team_option(my_team, event_counts.get(my_team.name, 0)) for my_team in my_teams]
 
-	return [
-		TeamOption(
-			**my_team,
-			members=services.members_of(my_team.name),
-			feature_flags=feature_flags(my_team.name),
-		)
-		for my_team in my_teams
-	]
+
+def team_option(my_team: dict, upcoming_event_count: int) -> TeamOption:
+	return TeamOption(
+		**my_team,
+		upcoming_event_count=upcoming_event_count,
+		members=services.members_of(my_team.name),
+		feature_flags=feature_flags(my_team.name),
+	)
 
 
 @frappe.whitelist()

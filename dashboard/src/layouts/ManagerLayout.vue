@@ -7,10 +7,11 @@ import { useIsMobile } from "@/composables/useIsMobile"
 import { useTeamAccess } from "@/composables/useTeamAccess"
 import { useEventDoc } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
+import { teams } from "@/data/teams"
 import ManagerDesktopShell from "@/layouts/ManagerDesktopShell.vue"
 import ManagerMobileShell from "@/layouts/ManagerMobileShell.vue"
 import NotFound from "@/pages/NotFound.vue"
-import { managerNavigation } from "@/utils/managerNavigation"
+import { managerNavigation, type Workspace } from "@/utils/managerNavigation"
 
 const route = useRoute()
 const access = useTeamAccess()
@@ -26,15 +27,39 @@ const eventId = computed(() => route.params.eventId as string | undefined)
 const eventDoc = useEventDoc(() => eventId.value ?? "")
 const eventTitle = computed(() => eventDoc.doc?.title ?? "")
 
+// A team opens the same way; its name and logo are already in the teams list.
+const teamId = computed(() => route.params.teamId as string | undefined)
+const team = computed(() => teams.value.find((option) => option.name === teamId.value))
+
+const workspace = computed((): Workspace | undefined => {
+	if (eventId.value)
+		return {
+			title: eventTitle.value,
+			subtitle: "Event Workspace",
+			back: { label: "Back to events", to: "/manage/events" },
+			icon: "lucide-box",
+		}
+	if (teamId.value)
+		return {
+			title: team.value?.team_name ?? "",
+			subtitle: team.value?.is_a_community ? "Community Workspace" : "Team Workspace",
+			back: { label: "Back to teams", to: "/manage/teams" },
+			image: team.value?.logo,
+		}
+	return undefined
+})
+
 usePageMeta(() => {
 	const section = route.meta.title as string | undefined
-	if (!section || !eventTitle.value) return null
-	return { title: `${__(section)} | ${eventTitle.value}` }
+	if (!section || !workspace.value?.title) return null
+	return { title: `${__(section)} | ${workspace.value.title}` }
 })
 
 const items = computed(() =>
 	managerNavigation({
 		eventId: eventId.value,
+		teamId: teamId.value,
+		isCommunity: Boolean(team.value?.is_a_community),
 		creatingEvent: route.name === "create-event",
 		hasSponsorships: Boolean(sponsorships.data?.length),
 	}),
@@ -44,6 +69,6 @@ const items = computed(() =>
 <template>
 	<!-- Shell and page render while access is pending, so pages show their own skeletons. -->
 	<NotFound v-if="access === 'denied'" />
-	<ManagerMobileShell v-else-if="isMobile" :items="items" :show-discover="!eventId" />
-	<ManagerDesktopShell v-else :items="items" :event-id="eventId" :event-title="eventTitle" />
+	<ManagerMobileShell v-else-if="isMobile" :items="items" :show-discover="!workspace" />
+	<ManagerDesktopShell v-else :items="items" :workspace="workspace" />
 </template>

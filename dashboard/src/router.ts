@@ -88,6 +88,40 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/events/CreateEvent.vue"),
 			},
 			{
+				path: "teams",
+				name: "teams",
+				meta: { title: "Teams" },
+				component: () => import("@/pages/manage/MyTeams.vue"),
+			},
+			{
+				path: "teams/:teamId",
+				redirect: (to) => `/manage/teams/${to.params.teamId}/details`,
+			},
+			{
+				path: "teams/:teamId/details",
+				name: "team-details",
+				meta: { title: "Details" },
+				component: () => import("@/pages/manage/teams/TeamDetails.vue"),
+			},
+			{
+				path: "teams/:teamId/members",
+				name: "team-members",
+				meta: { title: "Team Members" },
+				component: () => import("@/pages/manage/teams/TeamMembers.vue"),
+			},
+			{
+				path: "teams/:teamId/submissions",
+				name: "team-submissions",
+				meta: { title: "Community Submissions" },
+				component: () => import("@/pages/manage/teams/TeamSubmissions.vue"),
+			},
+			{
+				path: "teams/:teamId/more",
+				name: "team-more",
+				meta: { title: "More" },
+				component: () => import("@/pages/manage/WorkInProgress.vue"),
+			},
+			{
 				path: "proposals",
 				name: "proposals",
 				meta: { title: "My Proposals" },

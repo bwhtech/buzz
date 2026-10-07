@@ -36,6 +36,9 @@ const teamsResource = useCall<TeamOption[]>({
 
 export const teams = computed((): TeamOption[] => teamsResource.data || [])
 
+// Not `loading`: the list is fetched on demand, so it sits idle before the first call.
+export const teamsLoaded = computed(() => Boolean(teamsResource.data))
+
 export const currentTeam = computed(
 	(): TeamOption | null => teams.value.find((team) => team.name === selectedTeamName.value) || null,
 )

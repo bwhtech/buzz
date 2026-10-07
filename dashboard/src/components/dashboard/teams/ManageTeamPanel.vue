@@ -1,37 +1,18 @@
 <script setup lang="ts">
-import {
-	Button,
-	ErrorMessage,
-	FormControl,
-	SettingsBody,
-	SettingsHeader,
-	Skeleton,
-	toast,
-} from "frappe-ui"
-import { computed, reactive, ref, watch } from "vue"
+import { Button, ErrorMessage, SettingsBody, SettingsHeader, Skeleton } from "frappe-ui"
+import { computed, ref } from "vue"
 
-import AvatarUploader from "@/components/common/AvatarUploader.vue"
 import AddMembersDialog from "@/components/dashboard/teams/AddMembersDialog.vue"
+import TeamIdentityForm from "@/components/dashboard/teams/TeamIdentityForm.vue"
 import TeamMembersTable from "@/components/dashboard/teams/TeamMembersTable.vue"
 import TeamPublicPage from "@/components/dashboard/teams/TeamPublicPage.vue"
-import { reloadTeams, updateTeam, useTeamOverview } from "@/data/teams"
+import TeamRoleGuide from "@/components/dashboard/teams/TeamRoleGuide.vue"
+import { reloadTeams, useTeamOverview } from "@/data/teams"
 import { serverErrorMessage } from "@/utils/serverError"
 import { canEditPublicPage, canManageMembers } from "@/utils/teamRoles"
 
 const props = defineProps<{ team: string; teamName: string }>()
 defineEmits<{ back: [] }>()
-
-// Plain-language reading of the capability matrix in specs/v2/00-teams.
-const ROLES = [
-	{ name: "Owner", can: __("Created the team. Full control, and cannot be removed.") },
-	{ name: "Admin", can: __("Everything an owner can do, except deleting the team.") },
-	{
-		name: "Manager",
-		can: __("Creates and edits events. Cannot delete records or manage members."),
-	},
-	{ name: "Frontdesk", can: __("Checks attendees in at the door, and nothing else.") },
-	{ name: "Viewer", can: __("Reads the team's events and details. Changes nothing.") },
-]
 
 const isAdding = ref(false)
 
@@ -40,34 +21,7 @@ const overview = useTeamOverview(props.team)
 const canManage = computed(() => canManageMembers(overview.data?.my_role))
 const canEditPage = computed(() => canEditPublicPage(overview.data?.my_role))
 
-const form = reactive({ team_name: props.teamName, logo: null as string | null })
-
-// The overview arrives after the panel opens, so the form follows it in.
-watch(
-	() => overview.data,
-	(team) => team && Object.assign(form, { team_name: team.team_name, logo: team.logo }),
-)
-
-const isDirty = computed(
-	() =>
-		!!overview.data &&
-		(form.team_name !== overview.data.team_name || form.logo !== overview.data.logo),
-)
-
-// A logo has no blur: an upload or a remove is the whole gesture.
-watch(() => form.logo, save)
-
 const title = computed(() => overview.data?.team_name ?? props.teamName)
-
-async function save() {
-	if (!isDirty.value || !form.team_name.trim()) return
-
-	await updateTeam.submit({ team: props.team, ...form }).catch(() => null)
-	if (updateTeam.error) return
-
-	await refresh()
-	toast.success(__("Team updated"))
-}
 
 // The teams list behind this view shows member avatars, so it has to follow every change.
 async function refresh() {
@@ -99,26 +53,11 @@ async function refresh() {
 
 		<SettingsBody>
 			<div class="flex flex-col gap-6 pt-6">
-				<template v-if="canManage">
-					<AvatarUploader
-						v-model="form.logo"
-						shape="square"
-						:label="title"
-						:title="__('Team logo')"
-						:description="__('Shown wherever the team appears')"
-					/>
-
-					<FormControl
-						type="text"
-						class="max-w-sm"
-						:label="__('Team Name')"
-						v-model="form.team_name"
-						:maxlength="140"
-						@blur="save"
-					/>
-
-					<ErrorMessage :message="serverErrorMessage(updateTeam.error)" />
-				</template>
+				<TeamIdentityForm
+					v-if="canManage && overview.data"
+					:team="overview.data"
+					@saved="refresh"
+				/>
 
 				<TeamPublicPage
 					v-if="canEditPage && overview.data"
@@ -128,15 +67,7 @@ async function refresh() {
 
 				<h3 class="text-base-semibold text-ink-gray-8">{{ __("Team Members") }}</h3>
 
-				<section class="-mt-3 rounded-7 bg-surface-gray-1 p-4">
-					<h4 class="text-sm font-medium text-ink-gray-7">{{ __("What each role can do") }}</h4>
-					<dl class="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-						<div v-for="role in ROLES" :key="role.name" class="flex gap-2">
-							<dt class="w-20 shrink-0 font-medium text-ink-gray-7">{{ role.name }}</dt>
-							<dd class="text-ink-gray-5">{{ role.can }}</dd>
-						</div>
-					</dl>
-				</section>
+				<TeamRoleGuide class="-mt-3" />
 
 				<ErrorMessage v-if="overview.error" :message="serverErrorMessage(overview.error)" />
 

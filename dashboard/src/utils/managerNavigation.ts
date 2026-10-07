@@ -15,8 +15,20 @@ export const discoverEvents = {
 
 export const openDiscoverEvents = () => window.location.assign(discoverEvents.href)
 
+// The event or team the sidebar has opened into, shown in its header.
+export type Workspace = {
+	title: string
+	subtitle: string
+	back: { label: string; to: string }
+	// An event has an icon; a team shows its logo.
+	icon?: string
+	image?: string | null
+}
+
 type NavigationContext = {
 	eventId?: string
+	teamId?: string
+	isCommunity?: boolean
 	creatingEvent: boolean
 	hasSponsorships: boolean
 }
@@ -30,6 +42,7 @@ function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
 			icon: "lucide-mic",
 			to: "/manage/proposals",
 		},
+		{ label: "Teams", icon: "lucide-users", to: "/manage/teams" },
 	]
 	// Hidden until the user has an inquiry, the same rule the account page applies.
 	if (hasSponsorships) {
@@ -61,9 +74,33 @@ function eventItems(eventId: string): ManagerNavItem[] {
 	]
 }
 
+function teamItems(teamId: string, isCommunity: boolean): ManagerNavItem[] {
+	const team = `/manage/teams/${teamId}`
+	const items = [
+		{ label: "Details", icon: "lucide-receipt-text", to: `${team}/details` },
+		{
+			label: "Team Members",
+			shortLabel: "Members",
+			icon: "lucide-users-round",
+			to: `${team}/members`,
+		},
+	]
+	if (isCommunity) {
+		items.push({
+			label: "Community Submissions",
+			shortLabel: "Submissions",
+			icon: "lucide-inbox",
+			to: `${team}/submissions`,
+		})
+	}
+	items.push({ label: "More", icon: "lucide-ellipsis", to: `${team}/more` })
+	return items
+}
+
 export function managerNavigation(context: NavigationContext): ManagerNavItem[] {
 	// Creating an event is a page of its own; the shell holds only the way out of it.
 	if (context.creatingEvent) return []
 	if (context.eventId) return eventItems(context.eventId)
+	if (context.teamId) return teamItems(context.teamId, Boolean(context.isCommunity))
 	return rootItems(context.hasSponsorships)
 }
