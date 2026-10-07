@@ -7,6 +7,7 @@ import EmptyState from "@/components/common/EmptyState.vue"
 import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
 import EventCard from "@/components/dashboard/events/EventCard.vue"
 import EventDrawer from "@/components/dashboard/events/EventDrawer.vue"
+import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
 import { useMyEvents } from "@/data/events"
@@ -52,7 +53,15 @@ const emptyDescription = computed(() =>
 </script>
 
 <template>
-	<CreateEventHeader title="Events" />
+	<TeamPageHeader v-if="team" section="Events">
+		<Button
+			variant="solid"
+			icon-left="lucide-plus"
+			label="Create Event"
+			:route="{ name: 'create-event' }"
+		/>
+	</TeamPageHeader>
+	<CreateEventHeader v-else title="Events" />
 
 	<TimelineList
 		v-model:tab="tab"

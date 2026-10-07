@@ -21,10 +21,10 @@ test("an event offers its own sections, scoped to its id", () => {
 	assert.ok(items.every((item) => item.to.startsWith("/manage/events/EV-1/")))
 })
 
-test("a team offers its events, scoped to its id", () => {
+test("a team offers its events and people, scoped to its id", () => {
 	const items = managerNavigation({ teamId: "T-1", creatingEvent: false, hasSponsorships: true })
-	assert.deepEqual(labels(items), ["Events"])
-	assert.equal(items[0].to, "/manage/teams/T-1/events")
+	assert.deepEqual(labels(items), ["Events", "People"])
+	assert.ok(items.every((item) => item.to.startsWith("/manage/teams/T-1/")))
 })
 
 test("creating an event offers no destinations", () => {

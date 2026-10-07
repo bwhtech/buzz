@@ -74,7 +74,11 @@ function eventItems(eventId: string): ManagerNavItem[] {
 }
 
 function teamItems(teamId: string): ManagerNavItem[] {
-	return [{ label: "Events", icon: "lucide-calendar-days", to: `/manage/teams/${teamId}/events` }]
+	const team = `/manage/teams/${teamId}`
+	return [
+		{ label: "Events", icon: "lucide-calendar-days", to: `${team}/events` },
+		{ label: "People", icon: "lucide-users-round", to: `${team}/people` },
+	]
 }
 
 export function managerNavigation(context: NavigationContext): ManagerNavItem[] {

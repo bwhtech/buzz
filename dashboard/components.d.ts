@@ -136,6 +136,7 @@ declare module 'vue' {
     TeamCoverCard: typeof import('./src/components/dashboard/teams/TeamCoverCard.vue')['default']
     TeamIdentityForm: typeof import('./src/components/dashboard/teams/TeamIdentityForm.vue')['default']
     TeamMembersTable: typeof import('./src/components/dashboard/teams/TeamMembersTable.vue')['default']
+    TeamPageHeader: typeof import('./src/components/dashboard/teams/TeamPageHeader.vue')['default']
     TeamProfileCard: typeof import('./src/components/dashboard/teams/TeamProfileCard.vue')['default']
     TeamPublicPage: typeof import('./src/components/dashboard/teams/TeamPublicPage.vue')['default']
     TeamRoleGuide: typeof import('./src/components/dashboard/teams/TeamRoleGuide.vue')['default']
