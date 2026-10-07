@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Button, dayjs, Icon } from "frappe-ui"
 import { computed, ref, watch } from "vue"
+import { useRoute } from "vue-router"
 
 import EmptyState from "@/components/common/EmptyState.vue"
 import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
@@ -16,7 +17,11 @@ import { useTimelineTabQuery } from "@/utils/timelineTabs"
 // In the URL, so one link carries the whole view.
 const tab = useTimelineTabQuery()
 
-const myEvents = useMyEvents()
+const route = useRoute()
+
+// A team's workspace lists only that team's events.
+const team = computed(() => route.params.teamId as string | undefined)
+const myEvents = useMyEvents((): Record<string, string> => (team.value ? { team: team.value } : {}))
 
 // The feed arrives already split, so the tab only picks a side.
 const events = computed(() => myEvents.data?.[tab.value] || [])
@@ -38,9 +43,11 @@ const months = computed(() =>
 const drawer = useDrawerSelection<MyEvent>()
 
 const emptyDescription = computed(() =>
-	tab.value === "upcoming"
-		? "Events you host or hold a ticket to will show up here."
-		: "Events you have already attended or hosted will show up here.",
+	team.value
+		? "Events this team hosts will show up here."
+		: tab.value === "upcoming"
+			? "Events you host or hold a ticket to will show up here."
+			: "Events you have already attended or hosted will show up here.",
 )
 </script>
 

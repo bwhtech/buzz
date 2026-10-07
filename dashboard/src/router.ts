@@ -95,31 +95,13 @@ const routes: RouteRecordRaw[] = [
 			},
 			{
 				path: "teams/:teamId",
-				redirect: (to) => `/manage/teams/${to.params.teamId}/details`,
+				redirect: (to) => `/manage/teams/${to.params.teamId}/events`,
 			},
 			{
-				path: "teams/:teamId/details",
-				name: "team-details",
-				meta: { title: "Details" },
-				component: () => import("@/pages/manage/teams/TeamDetails.vue"),
-			},
-			{
-				path: "teams/:teamId/members",
-				name: "team-members",
-				meta: { title: "Team Members" },
-				component: () => import("@/pages/manage/teams/TeamMembers.vue"),
-			},
-			{
-				path: "teams/:teamId/submissions",
-				name: "team-submissions",
-				meta: { title: "Community Submissions" },
-				component: () => import("@/pages/manage/teams/TeamSubmissions.vue"),
-			},
-			{
-				path: "teams/:teamId/more",
-				name: "team-more",
-				meta: { title: "More" },
-				component: () => import("@/pages/manage/WorkInProgress.vue"),
+				path: "teams/:teamId/events",
+				name: "team-events",
+				meta: { title: "Events" },
+				component: () => import("@/pages/manage/MyEvents.vue"),
 			},
 			{
 				path: "proposals",

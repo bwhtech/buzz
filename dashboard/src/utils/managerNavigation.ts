@@ -28,7 +28,6 @@ export type Workspace = {
 type NavigationContext = {
 	eventId?: string
 	teamId?: string
-	isCommunity?: boolean
 	creatingEvent: boolean
 	hasSponsorships: boolean
 }
@@ -74,33 +73,14 @@ function eventItems(eventId: string): ManagerNavItem[] {
 	]
 }
 
-function teamItems(teamId: string, isCommunity: boolean): ManagerNavItem[] {
-	const team = `/manage/teams/${teamId}`
-	const items = [
-		{ label: "Details", icon: "lucide-receipt-text", to: `${team}/details` },
-		{
-			label: "Team Members",
-			shortLabel: "Members",
-			icon: "lucide-users-round",
-			to: `${team}/members`,
-		},
-	]
-	if (isCommunity) {
-		items.push({
-			label: "Community Submissions",
-			shortLabel: "Submissions",
-			icon: "lucide-inbox",
-			to: `${team}/submissions`,
-		})
-	}
-	items.push({ label: "More", icon: "lucide-ellipsis", to: `${team}/more` })
-	return items
+function teamItems(teamId: string): ManagerNavItem[] {
+	return [{ label: "Events", icon: "lucide-calendar-days", to: `/manage/teams/${teamId}/events` }]
 }
 
 export function managerNavigation(context: NavigationContext): ManagerNavItem[] {
 	// Creating an event is a page of its own; the shell holds only the way out of it.
 	if (context.creatingEvent) return []
 	if (context.eventId) return eventItems(context.eventId)
-	if (context.teamId) return teamItems(context.teamId, Boolean(context.isCommunity))
+	if (context.teamId) return teamItems(context.teamId)
 	return rootItems(context.hasSponsorships)
 }

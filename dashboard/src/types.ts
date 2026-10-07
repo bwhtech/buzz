@@ -152,25 +152,6 @@ export interface TeamOverview {
 	invites: TeamInvite[]
 }
 
-// buzz.api.communities.get_requests: one row per event submitted to a community.
-export interface CommunityRequest {
-	name: string
-	event: string
-	event_title: string
-	event_route: string | null
-	start_date: string
-	event_team: string
-	event_team_name: string
-	event_team_logo: string | null
-	status: string
-	submitter_name: string | null
-}
-
-export interface CommunityQueue {
-	pending: CommunityRequest[]
-	approved: CommunityRequest[]
-}
-
 // buzz.api.teams.invite_members: one row per address, saying which route it took.
 export interface InviteOutcome {
 	email: string
