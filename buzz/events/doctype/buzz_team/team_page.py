@@ -1,0 +1,166 @@
+import textwrap
+from collections import defaultdict
+from functools import cached_property
+from itertools import groupby
+
+import frappe
+from frappe import _
+from frappe.utils import date_diff, flt, format_date, get_url, getdate, today
+
+from buzz.api.booking.services import are_registrations_closed
+from buzz.events.doctype.buzz_team.team_map import TeamMap
+from buzz.www.event.date_range import format_time
+from buzz.www.event.index import public_links
+from buzz.www.event.meta import DESCRIPTION_LENGTH, plain_text
+from buzz.www.events import (
+	CARD_FIELDS,
+	LISTING_LIMIT,
+	TIME_FIELDS,
+	exclude_ended_events,
+	has_ended,
+	has_started,
+	upcoming_filters,
+)
+
+PAST_LIMIT = 30
+VENUE_FIELDS = [
+	"venue.latitude as latitude",
+	"venue.longitude as longitude",
+	"venue.city as city",
+	"venue.venue_country as country",
+]
+# A community lists other teams' events too, so each card names its event's own team.
+HOST_FIELDS = ["team.team_name as host_name", "team.logo as host_logo"]
+EVENT_FIELDS = CARD_FIELDS + TIME_FIELDS + VENUE_FIELDS + HOST_FIELDS + ["name", "registrations_close_at"]
+
+
+def day_labels(day) -> dict:
+	relative = {0: _("Today"), 1: _("Tomorrow")}.get(date_diff(day, today()))
+	return {"label": relative or format_date(day, "d MMM"), "weekday": format_date(day, "EEEE")}
+
+
+def group_by_day(cards: list[dict]) -> list[dict]:
+	return [
+		{"date": date, **day_labels(getdate(date)), "events": list(group)}
+		for date, group in groupby(cards, key=lambda card: card["date"])
+	]
+
+
+def co_host_names_by_event(events: list[str]) -> dict[str, list[str]]:
+	"""Co-host names per event, in table order, for every card in one query."""
+	if not events:
+		return {}
+	co_host, host = frappe.qb.DocType("Event CoHost"), frappe.qb.DocType("Event Host")
+	rows = (
+		frappe.qb.from_(co_host)
+		.join(host)
+		.on(host.name == co_host.host)
+		.select(co_host.parent, host.host_name)
+		.where((co_host.parenttype == "Buzz Event") & co_host.parent.isin(events))
+		.orderby(co_host.idx)
+	).run(as_dict=True)
+	names = defaultdict(list)
+	for row in rows:
+		names[row.parent].append(row.host_name)
+	return names
+
+
+class TeamPage:
+	"""Context for a team's public page: identity, links and its own event timeline."""
+
+	def __init__(self, team):
+		self.team = team
+
+	def as_context(self) -> dict:
+		upcoming = [self.card(event) for event in self.upcoming_events]
+		past = [self.card(event) for event in self.past_events]
+		return {
+			"title": self.team.team_name,
+			"links": public_links(self.team.links),
+			"events_hosted": frappe.db.count("Buzz Event", {"team": self.team.name, "is_published": 1}),
+			"upcoming_days": group_by_day(upcoming),
+			"past_days": group_by_day(past),
+			"meta": self.meta(),
+			**TeamMap(upcoming, past).as_context(),
+		}
+
+	@cached_property
+	def upcoming_events(self) -> list:
+		events = frappe.get_all(
+			"Buzz Event",
+			filters=upcoming_filters(),
+			or_filters=self.event_filters(),
+			fields=EVENT_FIELDS,
+			order_by="start_date asc, start_time asc",
+			limit=LISTING_LIMIT,
+		)
+		return exclude_ended_events(events)
+
+	@cached_property
+	def past_events(self) -> list:
+		# By start date: a one-day event leaves end_date blank, and has_ended makes the exact cut.
+		events = frappe.get_all(
+			"Buzz Event",
+			filters={"is_published": 1, "route": ["is", "set"], "start_date": ["<=", today()]},
+			or_filters=self.event_filters(),
+			fields=EVENT_FIELDS,
+			order_by="start_date desc, start_time desc",
+			limit=PAST_LIMIT,
+		)
+		return [event for event in events if has_ended(event)]
+
+	@cached_property
+	def co_host_names(self) -> dict[str, list[str]]:
+		return co_host_names_by_event([str(event.name) for event in self.upcoming_events + self.past_events])
+
+	@cached_property
+	def attending_events(self) -> set[str]:
+		"""Events the visitor holds a ticket for: the dashboard's Attending rule."""
+		events = [str(event.name) for event in self.upcoming_events + self.past_events]
+		if frappe.session.user == "Guest" or not events:
+			return set()
+		tickets = {"attendee_email": frappe.session.user, "docstatus": 1, "event": ["in", events]}
+		return set(frappe.get_all("Event Ticket", filters=tickets, pluck="event"))
+
+	def event_filters(self) -> dict:
+		"""The team's own events, plus those its community approved."""
+		filters = {"team": self.team.name}
+		if self.team.is_a_community:
+			approved = {"community": self.team.name, "status": "Approved"}
+			filters["name"] = [
+				"in",
+				frappe.get_all("Community Event Request", filters=approved, pluck="event"),
+			]
+		return filters
+
+	def card(self, event) -> dict:
+		is_online = event.medium == "Online"
+		has_location = not is_online and bool(flt(event.latitude) and flt(event.longitude))
+		return {
+			"route": event.route,
+			"date": str(getdate(event.start_date)),
+			"title": event.title,
+			"url": f"/events/{event.route}",
+			"image": event.card_image or event.banner_image,
+			"time": format_time(event.start_time),
+			"host_names": ", ".join([event.host_name, *self.co_host_names.get(str(event.name), [])]),
+			"host_logo": event.host_logo,
+			"place": _("Online") if is_online else event.venue_name,
+			"is_online": is_online,
+			"is_live": has_started(event) and not has_ended(event),
+			"is_attending": str(event.name) in self.attending_events,
+			# Past events have ended, so only upcoming cards can say this.
+			"registrations_closed": not has_ended(event) and are_registrations_closed(event),
+			"city": event.city,
+			"country": event.country,
+			"latitude": flt(event.latitude) if has_location else None,
+			"longitude": flt(event.longitude) if has_location else None,
+		}
+
+	def meta(self) -> dict:
+		text = self.team.short_description or plain_text(self.team.about)
+		return {
+			"url": get_url(f"/{self.team.route}"),
+			"description": textwrap.shorten(text, DESCRIPTION_LENGTH, placeholder="…") if text else "",
+			"image": get_url(self.team.logo) if self.team.logo else "",
+		}

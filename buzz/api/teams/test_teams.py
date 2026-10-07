@@ -1,7 +1,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.teams import get_my_teams, get_team_overview, update_team
+from buzz.api.teams import get_my_teams, get_team_overview, update_public_page, update_team
 from buzz.api.teams.exceptions import CannotEditTeam, NotATeamMember
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
 from buzz.tests.factories import BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
@@ -167,3 +167,61 @@ class TestUpdateTeam(TeamTestCase):
 
 		with self.set_user(owner), self.assertRaises(frappe.ValidationError):
 			update_team(team, "   ", None)
+
+
+class TestUpdatePublicPage(TeamTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.owner = UserFactory.create_once("public-page-owner@example.com").name
+		cls.manager = UserFactory.create_once("public-page-manager@example.com").name
+		cls.viewer = UserFactory.create_once("public-page-viewer@example.com").name
+		cls.team = BuzzTeamFactory.create_owned_by(cls.owner, team_name="Public Page Builders").name
+		for user, team_role in ((cls.manager, "Manager"), (cls.viewer, "Viewer")):
+			BuzzTeamMembershipFactory.create(team=cls.team, user=user, team_role=team_role)
+
+	def overview(self):
+		with self.set_user(self.owner):
+			return get_team_overview(self.team)
+
+	def publish_as(self, user: str, **overrides):
+		with self.set_user(user):
+			update_public_page(**({"team": self.team, "is_published": True, "links": []} | overrides))
+
+	def test_a_manager_publishes_the_page(self):
+		self.publish_as(self.manager, short_description="Builders in public.")
+
+		overview = self.overview()
+
+		self.assertTrue(overview.is_published)
+		self.assertEqual(overview.short_description, "Builders in public.")
+		self.assertTrue(
+			overview.public_url.endswith(f"/community/{frappe.db.get_value('Buzz Team', self.team, 'slug')}")
+		)
+
+	def test_links_are_saved_in_order(self):
+		links = [
+			{"icon": "globe", "label": "Site", "url": "https://example.com"},
+			{"icon": "message-circle", "label": "Forum", "url": "https://forum.example.com"},
+		]
+		self.publish_as(self.owner, links=links)
+
+		overview = self.overview()
+
+		self.assertEqual([link.label for link in overview.links], ["Site", "Forum"])
+
+	def test_a_viewer_cannot_edit_the_page(self):
+		with self.assertRaises(CannotEditTeam):
+			self.publish_as(self.viewer, short_description="Hijacked")
+
+		self.assertNotEqual(frappe.db.get_value("Buzz Team", self.team, "short_description"), "Hijacked")
+
+	def test_a_manager_makes_the_team_a_community(self):
+		self.publish_as(self.manager, is_a_community=True)
+
+		self.assertTrue(self.overview().is_a_community)
+
+	def test_an_unpublished_page_has_no_public_url(self):
+		self.publish_as(self.owner, is_published=False)
+
+		self.assertIsNone(self.overview().public_url)

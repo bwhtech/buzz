@@ -1,0 +1,351 @@
+/* Team page: the dot-matrix map strip, country chips and the mini calendar. */
+
+/* Cards set their own display, which would otherwise outrank the country filter's `hidden`. */
+.team-page [hidden] {
+	display: none;
+}
+
+.team-map {
+	position: relative;
+	height: clamp(220px, 24vw, 340px);
+	overflow: hidden;
+	border-block: 1px solid var(--border);
+	background:
+		radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, #e3e3e3 12%, transparent), transparent 70%),
+		#0f0f0f;
+	isolation: isolate;
+}
+
+:root[data-mode="light"] .team-map {
+	background:
+		radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, #000000 12%, transparent), transparent 70%),
+		#fafafa;
+}
+
+.team-map-svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.team-map-land {
+	color: #969696;
+	opacity: 0.6;
+}
+
+:root[data-mode="light"] .team-map-land {
+	color: #404040;
+	opacity: 0.6;
+}
+
+.team-map-pins {
+	position: absolute;
+	inset: 0;
+}
+
+.team-map-pin {
+	position: absolute;
+	top: 0;
+	left: 0;
+	transition: opacity 200ms ease;
+}
+
+.team-map-pin-dot {
+	position: absolute;
+	display: grid;
+	place-items: center;
+	min-width: 12px;
+	height: 12px;
+	padding: 0 3px;
+	border-radius: 999px;
+	background: var(--accent);
+	box-shadow:
+		0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent),
+		0 0 18px color-mix(in srgb, var(--accent) 60%, transparent);
+	color: var(--accent-ink);
+	font-size: 9px;
+	font-weight: 700;
+	line-height: 1;
+	transform: translate(-50%, -50%);
+	transition: transform 160ms var(--ease-out);
+}
+
+.team-map-pin-dot:not(:empty) {
+	min-width: 18px;
+	height: 18px;
+}
+
+/* The next event's pin pulses. */
+.team-map-pin[data-next-event] .team-map-pin-dot::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	box-shadow: 0 0 0 2px var(--accent);
+	animation: pin-pulse 2s var(--ease-out) infinite;
+}
+
+@keyframes pin-pulse {
+	from {
+		opacity: 0.9;
+		transform: scale(1);
+	}
+	to {
+		opacity: 0;
+		transform: scale(2.6);
+	}
+}
+
+.team-map-pin[data-dimmed] {
+	opacity: 0.2;
+}
+
+.team-map-pin[data-highlighted] .team-map-pin-dot,
+.team-map-pin:focus-visible .team-map-pin-dot {
+	transform: translate(-50%, -50%) scale(1.35);
+}
+
+.team-map-pin:focus-visible {
+	outline: none;
+}
+
+.team-map-pin-tooltip {
+	position: absolute;
+	bottom: 14px;
+	left: 0;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	width: max-content;
+	max-width: 220px;
+	padding: 8px 10px;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--surface-raised);
+	box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+	color: var(--ink-muted);
+	font-size: 12px;
+	line-height: 1.4;
+	opacity: 0;
+	pointer-events: none;
+	transform: translate(var(--tooltip-x, -50%), 4px) scale(0.97);
+	transform-origin: bottom center;
+	transition:
+		opacity 150ms ease-out,
+		transform 150ms var(--ease-out);
+}
+
+.team-map-pin-tooltip strong {
+	color: var(--ink-strong);
+	font-weight: 600;
+}
+
+.team-map-pin:hover .team-map-pin-tooltip,
+.team-map-pin:focus-visible .team-map-pin-tooltip,
+.team-map-pin[data-highlighted] .team-map-pin-tooltip {
+	opacity: 1;
+	transform: translate(var(--tooltip-x, -50%), 0) scale(1);
+}
+
+/* Tooltips turn away from the edge they would be clipped at. */
+.team-map-pin[data-tooltip-below] .team-map-pin-tooltip {
+	top: 14px;
+	bottom: auto;
+	transform-origin: top center;
+}
+
+.team-map-pin[data-tooltip-align="start"] .team-map-pin-tooltip {
+	--tooltip-x: -16px;
+}
+
+.team-map-pin[data-tooltip-align="end"] .team-map-pin-tooltip {
+	--tooltip-x: calc(-100% + 16px);
+}
+
+/* Inset like the site header, so the controls line up with the page column. */
+.team-map-controls {
+	position: absolute;
+	right: max(16px, (100% - var(--page-width)) / 2);
+	bottom: 12px;
+	display: flex;
+	gap: 2px;
+	padding: 3px;
+	border-radius: 9px;
+	background: color-mix(in srgb, var(--page-bg) 80%, transparent);
+	backdrop-filter: blur(8px);
+}
+
+.team-map-controls button {
+	padding: 3px 10px;
+	border: 0;
+	border-radius: 6px;
+	background: none;
+	color: var(--ink-muted);
+	font: inherit;
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	transition:
+		background-color 150ms ease,
+		color 150ms ease;
+}
+
+.team-map-controls button[aria-pressed="true"] {
+	background: var(--surface-raised);
+	color: var(--ink-strong);
+}
+
+.team-map-credit {
+	position: absolute;
+	left: max(16px, (100% - var(--page-width)) / 2);
+	bottom: 14px;
+	color: var(--ink-muted);
+	font-size: 11px;
+}
+
+.country-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 16px;
+}
+
+.country-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: none;
+	color: var(--ink-body);
+	font: inherit;
+	font-size: 12px;
+	cursor: pointer;
+	transition:
+		transform 160ms var(--ease-out),
+		background-color 150ms ease,
+		border-color 150ms ease;
+}
+
+.country-chip span {
+	color: var(--ink-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.country-chip[aria-pressed="true"] {
+	border-color: var(--ink-strong);
+	background: var(--surface-raised);
+	color: var(--ink-strong);
+}
+
+.country-chip:active {
+	transform: scale(0.96);
+}
+
+.team-aside > * + * {
+	margin-top: 16px;
+}
+
+.calendar-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+
+.calendar-title {
+	color: var(--ink-strong);
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.calendar-nav {
+	display: flex;
+	gap: 2px;
+}
+
+.calendar-grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 2px;
+	text-align: center;
+}
+
+.calendar-weekday {
+	padding-bottom: 4px;
+	color: var(--ink-muted);
+	font-size: 11px;
+	font-weight: 500;
+}
+
+.calendar-day {
+	position: relative;
+	display: grid;
+	place-items: center;
+	aspect-ratio: 1;
+	border: 0;
+	border-radius: 8px;
+	background: none;
+	color: var(--ink-muted);
+	font: inherit;
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+}
+
+button.calendar-day {
+	color: var(--ink-strong);
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 150ms ease;
+}
+
+.calendar-day[data-today] {
+	box-shadow: inset 0 0 0 1px var(--ink-muted);
+}
+
+.calendar-dot {
+	position: absolute;
+	bottom: 4px;
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: var(--accent);
+}
+
+.calendar-day[data-past] .calendar-dot {
+	background: var(--ink-muted);
+}
+
+/* A calendar day or a pin pointed here: a brief ring so the eye follows. */
+.is-highlighted {
+	animation: highlight-ring 900ms var(--ease-out);
+}
+
+@keyframes highlight-ring {
+	from {
+		box-shadow: 0 0 0 3px var(--accent);
+	}
+	to {
+		box-shadow: 0 0 0 3px transparent;
+	}
+}
+
+@media (hover: hover) and (pointer: fine) {
+	button.calendar-day:hover {
+		background: var(--surface-raised);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.team-map-pin[data-next-event] .team-map-pin-dot::after,
+	.is-highlighted {
+		animation: none;
+	}
+
+	.team-map-pin-tooltip,
+	.team-map-pin-dot,
+	.country-chip {
+		transition: none;
+	}
+}

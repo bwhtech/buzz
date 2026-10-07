@@ -1,0 +1,246 @@
+/* Team page: identity, a day timeline with the dashboard's rail, and an about sidebar. */
+
+.team-identity {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 16px;
+	padding-bottom: 20px;
+	border-bottom: 1px solid var(--border);
+}
+
+/* frappe-ui's square 3xl Avatar: 46px, 10px corners, 20px initial. */
+.team-logo {
+	display: grid;
+	flex-shrink: 0;
+	place-items: center;
+	width: calc(var(--spacing) * 11.5);
+	height: calc(var(--spacing) * 11.5);
+	border-radius: 10px;
+	font-size: var(--text-3xl);
+	background: var(--surface-raised);
+	box-shadow: 0 0 0 1px var(--border);
+	color: var(--ink-strong);
+	font-weight: 600;
+	object-fit: cover;
+}
+
+.team-identity-text {
+	flex: 1;
+	min-width: 240px;
+}
+
+.team-identity .event-title {
+	font-size: 34px;
+	line-height: 1.1;
+}
+
+.team-stats {
+	margin-top: 4px;
+	color: var(--ink-muted);
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+}
+
+.team-columns {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 248px;
+	gap: 40px;
+	margin-top: 32px;
+}
+
+.team-columns:not(:has(.team-aside)) {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+[data-tab-buttons] {
+	margin-bottom: 24px;
+}
+
+/* The dashboard timeline's rail: a dot at each day, a line fading down past its cards. */
+.team-day {
+	position: relative;
+	padding: 0 0 28px 24px;
+}
+
+.team-day::before {
+	content: "";
+	position: absolute;
+	top: 7px;
+	left: 0;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--surface-gray-4);
+}
+
+.team-day::after {
+	content: "";
+	position: absolute;
+	top: 21px;
+	bottom: 0;
+	left: 3.5px;
+	width: 1px;
+	background: linear-gradient(to bottom, var(--outline-gray-2) 75%, transparent);
+}
+
+.team-day-heading {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	margin-bottom: 12px;
+	color: var(--ink-gray-8);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.team-day-heading span {
+	color: var(--ink-gray-5);
+	font-weight: 400;
+}
+
+.team-day-events {
+	display: grid;
+	gap: 12px;
+}
+
+/* Mirrors the dashboard's EventCard. */
+.team-event-card {
+	display: flex;
+	gap: 16px;
+	padding: 12px;
+	border: 1px solid var(--outline-gray-2);
+	border-radius: var(--radius-8);
+	transition:
+		transform 120ms var(--ease-out),
+		border-color 150ms ease;
+}
+
+.team-event-card:active {
+	transform: scale(0.995);
+}
+
+.team-event-card-image {
+	flex-shrink: 0;
+	width: 120px;
+	height: 120px;
+	border-radius: var(--radius-4);
+	background: var(--surface-gray-2);
+	object-fit: cover;
+	object-position: top;
+}
+
+.team-event-card-body {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+	padding-block: 4px;
+}
+
+.team-event-card-time {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.team-event-card-time,
+.team-event-card-place {
+	color: var(--ink-gray-5);
+	font-size: 14px;
+	font-variant-numeric: tabular-nums;
+}
+
+.team-event-card-title {
+	color: var(--ink-gray-8);
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.35;
+	overflow-wrap: anywhere;
+}
+
+.team-event-card-host {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	color: var(--ink-gray-6);
+	font-size: 13px;
+	overflow-wrap: anywhere;
+}
+
+.team-event-card-avatar {
+	display: grid;
+	flex-shrink: 0;
+	place-items: center;
+	width: 16px;
+	height: 16px;
+	margin-top: 1px;
+	border-radius: 50%;
+	background: var(--surface-gray-3);
+	color: var(--ink-gray-6);
+	font-size: 9px;
+	font-weight: 600;
+	object-fit: cover;
+}
+
+.team-aside {
+	position: sticky;
+	top: 76px;
+	align-self: start;
+}
+
+.team-about {
+	padding: 16px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.team-about .label {
+	margin-top: 0;
+}
+
+.team-tagline {
+	margin-bottom: 12px;
+	color: var(--ink-strong);
+}
+
+.team-about .prose {
+	font-size: 14px;
+}
+
+.team-links {
+	gap: 2px;
+	margin-top: 16px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.team-event-card:hover {
+		border-color: var(--outline-gray-3);
+	}
+}
+
+@media (max-width: 900px) {
+	.team-columns {
+		grid-template-columns: 1fr;
+	}
+
+	.team-aside {
+		position: static;
+		order: -1;
+	}
+}
+
+@media (max-width: 760px) {
+	.team-event-card-image {
+		width: 80px;
+		height: 80px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.team-event-card:active {
+		transform: none;
+	}
+}

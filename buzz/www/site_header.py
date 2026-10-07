@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils.user import get_fullname_and_avatar
 from frappe.website.doctype.website_settings.website_settings import get_website_settings
 
 from buzz.events.doctype.buzz_theme.buzz_theme import resolve_theme, theme_css
@@ -27,7 +28,13 @@ class SiteHeader:
 			"brand": self.brand(),
 			"favicon": self.settings.favicon or DEFAULT_FAVICON,
 			"is_guest": self.is_guest,
+			**self.user_info(),
 		}
+
+	def user_info(self) -> dict:
+		# www pages get these from TemplatePage; a website generator's DocumentPage does not.
+		info = get_fullname_and_avatar(frappe.session.user)
+		return {"user": info.name, "fullname": info.fullname, "user_image": info.avatar}
 
 	def brand(self) -> dict:
 		# Same logo the dashboard's navbar shows (brand_image in get_user_info)

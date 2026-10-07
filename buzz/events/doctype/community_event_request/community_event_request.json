@@ -1,0 +1,141 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-10-06 16:57:41.747837",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "event",
+  "event_title",
+  "event_team",
+  "column_break_community",
+  "community",
+  "status",
+  "section_break_review",
+  "submitted_by",
+  "column_break_review",
+  "reviewed_by",
+  "review_note"
+ ],
+ "fields": [
+  {
+   "fieldname": "event",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event",
+   "options": "Buzz Event",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "event.title",
+   "fieldname": "event_title",
+   "fieldtype": "Data",
+   "label": "Event Title",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "event.team",
+   "fieldname": "event_team",
+   "fieldtype": "Link",
+   "label": "Event Team",
+   "options": "Buzz Team",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_community",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "community",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Community",
+   "options": "Buzz Team",
+   "reqd": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending\nApproved\nRejected",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_review",
+   "fieldtype": "Section Break",
+   "label": "Review"
+  },
+  {
+   "fieldname": "submitted_by",
+   "fieldtype": "Link",
+   "label": "Submitted By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_review",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reviewed_by",
+   "fieldtype": "Link",
+   "label": "Reviewed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "review_note",
+   "fieldtype": "Small Text",
+   "label": "Review Note"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-06 16:57:41.747837",
+ "modified_by": "Administrator",
+ "module": "Events",
+ "name": "Community Event Request",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "event_title",
+ "track_changes": 1
+}

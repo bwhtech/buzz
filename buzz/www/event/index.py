@@ -56,6 +56,23 @@ def web_url(url: str | None) -> str | None:
 	return url if url and urlparse(url).scheme in ("http", "https") else None
 
 
+def public_links(rows) -> list[dict]:
+	return [
+		{
+			"label": row.label,
+			"url": url,
+			"icon_svg": LINK_ICON_PATHS.get(row.icon) or LINK_ICON_PATHS["link"],
+		}
+		for row in rows
+		if (url := web_url(row.url))
+	]
+
+
+def team_page_url(team: str | None) -> str | None:
+	route = frappe.db.get_value("Buzz Team", {"name": team, "is_published": 1}, "route") if team else None
+	return f"/{route}" if route else None
+
+
 def format_full_date(date) -> str:
 	pattern = "EEEE, d MMMM" if date.year == getdate(nowdate()).year else "EEEE, d MMMM y"
 	return format_date(date, pattern)
@@ -163,19 +180,13 @@ class EventPage:
 		return get_datetime(f"{self.event.start_date} {self.event.start_time or '00:00:00'}")
 
 	def hosts(self) -> list:
-		hosts = [primary_host_of(self.event.team), *co_hosts_of(self.event.name)]
-		return [host for host in hosts if host]
+		# The team hosting the event links to its public page while that page is published.
+		primary = primary_host_of(self.event.team)
+		hosts = [frappe._dict(primary.__json__(), url=team_page_url(self.event.team))] if primary else []
+		return hosts + [frappe._dict(host.__json__(), url=None) for host in co_hosts_of(self.event.name)]
 
 	def links(self) -> list[dict]:
-		return [
-			{
-				"label": row.label,
-				"url": url,
-				"icon_svg": LINK_ICON_PATHS.get(row.icon) or LINK_ICON_PATHS["link"],
-			}
-			for row in self.event.external_links
-			if (url := web_url(row.url))
-		]
+		return public_links(self.event.external_links)
 
 	@cached_property
 	def schedule(self) -> list[dict]:

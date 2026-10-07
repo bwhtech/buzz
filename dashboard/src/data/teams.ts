@@ -78,6 +78,12 @@ export const updateTeam = useCall<unknown, Record<string, unknown>>({
 	immediate: false,
 })
 
+export const updatePublicPage = useCall<unknown, Record<string, unknown>>({
+	url: "/api/v2/method/buzz.api.teams.update_public_page",
+	method: "POST",
+	immediate: false,
+})
+
 export function selectTeam(name: string) {
 	selectedTeamName.value = name
 	localStorage.setItem(STORAGE_KEY, name)

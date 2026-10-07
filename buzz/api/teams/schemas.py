@@ -1,3 +1,4 @@
+from buzz.api.events.schemas import EventExternalLink
 from buzz.api.schemas import APIResponse
 
 
@@ -35,6 +36,13 @@ class TeamOverview(APIResponse):
 	team_name: str
 	slug: str | None
 	logo: str | None
+	is_published: bool
+	is_a_community: bool
+	# Absolute page URL while published; None otherwise.
+	public_url: str | None
+	short_description: str | None
+	about: str | None
+	links: list[EventExternalLink]
 	my_role: str
 	members: list[TeamMember]
 	# Kept apart from members: these people cannot do anything on the team yet.
