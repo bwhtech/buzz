@@ -45,6 +45,7 @@ const tabOptions = [
 				size="md"
 				:fluid="isMobile"
 			/>
+			<slot name="actions" />
 		</header>
 
 		<div v-if="$slots.controls" class="flex items-center justify-between gap-4">

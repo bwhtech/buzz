@@ -11,7 +11,6 @@ const props = defineProps<{
 	section: string
 	detail?: string
 	back?: RouteLocationRaw
-	teamPageLink?: boolean
 	dirty?: boolean
 }>()
 
@@ -24,7 +23,7 @@ const publicSlug = computed(() =>
 	team.value?.is_published && !props.dirty ? team.value.slug : null,
 )
 
-const items = computed(() => [{ label: teamName.value || "Team" }, { label: props.section }])
+const items = computed(() => [{ label: teamName.value || "Community" }, { label: props.section }])
 </script>
 
 <template>
@@ -39,8 +38,8 @@ const items = computed(() => [{ label: teamName.value || "Team" }, { label: prop
 				<Button
 					variant="ghost"
 					icon="lucide-chevron-left"
-					:label="back ? 'Back' : 'Back to teams'"
-					:route="back ?? { name: 'teams' }"
+					:label="back ? 'Back' : 'Back to communities'"
+					:route="back ?? { name: 'communities' }"
 				/>
 			</slot>
 		</template>
@@ -49,8 +48,8 @@ const items = computed(() => [{ label: teamName.value || "Team" }, { label: prop
 				v-if="publicSlug"
 				variant="ghost"
 				icon="lucide-arrow-up-right"
-				:label="__('Open team page')"
-				:tooltip="__('Open team page')"
+				:label="__('Open community page')"
+				:tooltip="__('Open community page')"
 				@click="openTeamPage(publicSlug)"
 			/>
 			<slot />
@@ -60,13 +59,16 @@ const items = computed(() => [{ label: teamName.value || "Team" }, { label: prop
 	<PageHeader v-else class="border-none bg-surface-elevation-1 pt-2">
 		<Breadcrumbs :items="items" />
 		<div class="flex items-center gap-2">
-			<Button
-				v-if="teamPageLink && publicSlug"
-				:label="__('Team Page')"
-				icon-right="lucide-arrow-up-right"
-				@click="openTeamPage(publicSlug)"
-			/>
 			<slot />
+			<!-- Always shown and always last, so the page's place is known before it is published. -->
+			<Button
+				variant="ghost"
+				:label="__('Community Page')"
+				icon-right="lucide-arrow-up-right"
+				:disabled="!publicSlug"
+				:tooltip="publicSlug ? undefined : __('Publish the community to open its page')"
+				@click="publicSlug && openTeamPage(publicSlug)"
+			/>
 		</div>
 	</PageHeader>
 </template>

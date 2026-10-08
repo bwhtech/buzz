@@ -63,15 +63,7 @@ const emptyDescription = computed(() =>
 </script>
 
 <template>
-	<TeamPageHeader v-if="team" section="Events">
-		<Button
-			v-if="!isMobile"
-			variant="solid"
-			icon-left="lucide-plus"
-			label="Create Event"
-			:route="{ name: 'create-event' }"
-		/>
-	</TeamPageHeader>
+	<TeamPageHeader v-if="team" section="Events" />
 	<CreateEventHeader v-else title="Events" />
 	<FloatingCreateEventButton v-if="team && isMobile" />
 
@@ -84,6 +76,14 @@ const emptyDescription = computed(() =>
 		:loading="myEvents.loading"
 		:error="myEvents.error"
 	>
+		<template v-if="team && !isMobile" #actions>
+			<Button
+				variant="subtle"
+				icon-left="lucide-plus"
+				label="Create Event"
+				:route="{ name: 'create-event' }"
+			/>
+		</template>
 		<template #empty-state>
 			<EmptyState :title="`No ${tab} events`" :description="emptyDescription">
 				<template #illustration>
