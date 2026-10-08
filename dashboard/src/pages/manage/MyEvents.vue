@@ -12,6 +12,7 @@ import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
 import { useIsMobile } from "@/composables/useIsMobile"
+import { finishOpening } from "@/composables/useWorkspaceOpening"
 import { useMyEvents } from "@/data/events"
 import type { MyEvent } from "@/types"
 import { groupEventsByMonth } from "@/utils/eventGroups"
@@ -25,6 +26,13 @@ const isMobile = useIsMobile()
 
 const team = computed(() => route.params.teamId as string | undefined)
 const myEvents = useMyEvents((): Record<string, string> => (team.value ? { team: team.value } : {}))
+
+// The team workspace opens on this page, so its first load ends the opening screen.
+watch(
+	() => !myEvents.loading && Boolean(myEvents.data || myEvents.error),
+	(loaded) => loaded && finishOpening(),
+	{ immediate: true },
+)
 
 // The feed arrives already split, so the tab only picks a side.
 const events = computed(() => myEvents.data?.[tab.value] || [])

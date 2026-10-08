@@ -3,6 +3,7 @@ import { MobileNav, MobileNavItem, MobileShell } from "frappe-ui"
 import { computed } from "vue"
 import { useRoute } from "vue-router"
 
+import WorkspaceOpening from "@/components/dashboard/WorkspaceOpening.vue"
 import { discoverEvents, openDiscoverEvents, type ManagerNavItem } from "@/utils/managerNavigation"
 
 defineProps<{ items: ManagerNavItem[]; showDiscover?: boolean }>()
@@ -19,8 +20,9 @@ const showNav = computed(() => {
 
 <template>
 	<MobileShell>
-		<div class="min-h-full bg-surface-elevation-1">
+		<div class="relative min-h-full bg-surface-elevation-1">
 			<router-view />
+			<WorkspaceOpening />
 		</div>
 
 		<template #nav>

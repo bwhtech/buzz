@@ -12,6 +12,7 @@ import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { onBeforeRouteLeave, useRouter } from "vue-router"
 
+import ProgressStatus from "@/components/common/ProgressStatus.vue"
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
 import EventLocationField from "@/components/dashboard/events/location/EventLocationField.vue"
@@ -334,15 +335,7 @@ async function save() {
 				</section>
 			</div>
 
-			<!-- A little above true centre: a lone line sitting at exactly half reads low. -->
-			<div v-else class="flex min-h-[70dvh] items-center justify-center" aria-live="polite">
-				<!-- Separate elements: the rise and the shimmer are both CSS animations. -->
-				<span class="fade-up-in [animation-delay:300ms]">
-					<span class="text-base" :class="failed ? 'text-ink-red-6' : 'text-shimmer'">
-						{{ step }}
-					</span>
-				</span>
-			</div>
+			<ProgressStatus v-else :text="step" :failed="failed" delayed />
 		</Transition>
 	</div>
 </template>

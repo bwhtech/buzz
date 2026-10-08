@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { DesktopShell, Divider, PageHeaderTarget, Sidebar, SidebarItem } from "frappe-ui"
+import { DesktopShell, Divider, PageHeaderTarget, Sidebar, SidebarItem, Skeleton } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import ManagerSidebarHeader from "@/components/dashboard/ManagerSidebarHeader.vue"
+import WorkspaceOpening from "@/components/dashboard/WorkspaceOpening.vue"
 import UserMenu from "@/components/UserMenu.vue"
+import { openingTeam } from "@/composables/useWorkspaceOpening"
 import {
 	discoverEvents,
 	openDiscoverEvents,
@@ -15,6 +17,9 @@ import {
 const props = defineProps<{ items: ManagerNavItem[]; workspace?: Workspace }>()
 
 const route = useRoute()
+
+// Events, Members, Payments and Settings.
+const WORKSPACE_ITEM_COUNT = 4
 
 // SidebarItem infers this from `to` on paper, but its `active` prop is declared
 // type Boolean, so Vue casts the absent prop to false and the inference never runs.
@@ -54,7 +59,19 @@ watch(headerKey, (key, previous) => {
 				<div class="nav-stage relative mx-2 my-2">
 					<Transition :name="`nav-${direction}`">
 						<div :key="headerKey" class="nav-list flex flex-col gap-0.5">
-							<template v-for="item in items" :key="item.label">
+							<!-- Stands in for the workspace destinations while it opens. -->
+							<template v-if="openingTeam">
+								<div
+									v-for="row in WORKSPACE_ITEM_COUNT"
+									:key="row"
+									class="flex h-7 items-center gap-2 px-2"
+									aria-hidden="true"
+								>
+									<Skeleton class="size-4 rounded-2" />
+									<Skeleton class="h-3 w-24 rounded-2" />
+								</div>
+							</template>
+							<template v-for="item in items" v-else :key="item.label">
 								<Divider v-if="item.startsGroup" class="my-1.5" />
 								<SidebarItem
 									:label="item.label"
@@ -84,12 +101,13 @@ watch(headerKey, (key, previous) => {
 
 		<div class="flex flex-col h-full min-h-0 bg-surface-sidebar py-2 pl-1">
 			<div
-				class="flex h-full flex-col overflow-hidden rounded-l-6 bg-surface-elevation-1 shadow-base"
+				class="relative flex h-full flex-col overflow-hidden rounded-l-6 bg-surface-elevation-1 shadow-base"
 			>
 				<PageHeaderTarget />
 				<div class="relative min-h-0 flex-1 overflow-y-auto">
 					<router-view />
 				</div>
+				<WorkspaceOpening />
 			</div>
 		</div>
 	</DesktopShell>

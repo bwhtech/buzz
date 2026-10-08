@@ -112,6 +112,7 @@ declare module 'vue' {
     PriceList: typeof import('./src/components/dashboard/sponsorships/PriceList.vue')['default']
     PrintedTicket: typeof import('./src/components/dashboard/tickets/PrintedTicket.vue')['default']
     ProfileView: typeof import('./src/components/ProfileView.vue')['default']
+    ProgressStatus: typeof import('./src/components/common/ProgressStatus.vue')['default']
     ProposalCard: typeof import('./src/components/dashboard/proposals/ProposalCard.vue')['default']
     ProposalDrawer: typeof import('./src/components/dashboard/proposals/ProposalDrawer.vue')['default']
     ProposalEditDialog: typeof import('./src/components/ProposalEditDialog.vue')['default']
@@ -163,6 +164,7 @@ declare module 'vue' {
     UserSettingsDialog: typeof import('./src/components/UserSettingsDialog.vue')['default']
     VirtualMeetingOptions: typeof import('./src/components/dashboard/events/VirtualMeetingOptions.vue')['default']
     WebsiteInput: typeof import('./src/components/dashboard/sponsorships/WebsiteInput.vue')['default']
+    WorkspaceOpening: typeof import('./src/components/dashboard/WorkspaceOpening.vue')['default']
     ZoomLogo: typeof import('./src/components/common/ZoomLogo.vue')['default']
   }
 }
