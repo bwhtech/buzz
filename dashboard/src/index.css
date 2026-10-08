@@ -43,8 +43,8 @@ button,
 	overscroll-behavior-y: contain;
 }
 
-/* Fix tabs spacing */
-[role="tablist"] {
+/* Fix tabs spacing; a vertical list keeps frappe-ui's own tighter gap. */
+[role="tablist"]:not([aria-orientation="vertical"]) {
 	gap: 1rem;
 }
 

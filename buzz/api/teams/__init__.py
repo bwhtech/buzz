@@ -76,8 +76,9 @@ def update_public_page(
 	short_description: str | None = None,
 	about: str | None = None,
 	is_a_community: bool = False,
+	slug: str | None = None,
 ) -> None:
-	services.update_public_page(team, is_published, links, short_description, about, is_a_community)
+	services.update_public_page(team, is_published, links, short_description, about, is_a_community, slug)
 
 
 @frappe.whitelist(methods=["POST"])

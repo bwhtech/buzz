@@ -8,6 +8,7 @@ import { updatePublicPage } from "@/data/teams"
 import type { EventExternalLink, TeamOverview } from "@/types"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 import { serverErrorMessage } from "@/utils/serverError"
+import { teamUrl } from "@/utils/teamUrl"
 
 const props = defineProps<{ team: TeamOverview }>()
 const emit = defineEmits<{ saved: [] }>()
@@ -30,6 +31,12 @@ function differsFrom(team: TeamOverview) {
 }
 
 // The panel also reloads the team after a name or logo change; unsaved edits here survive that.
+// The server refuses submissions on a private team, so unpublishing turns them off.
+watch(
+	() => form.is_published,
+	(isPublic) => !isPublic && (form.is_a_community = false),
+)
+
 watch(
 	() => props.team,
 	(team, previous) => {
@@ -55,13 +62,13 @@ async function save() {
 			<div class="space-y-1">
 				<h3 class="text-base-semibold text-ink-gray-8">{{ __("Public page") }}</h3>
 				<a
-					v-if="team.public_url"
-					:href="team.public_url"
+					v-if="team.is_published && team.slug"
+					:href="teamUrl(team.slug)"
 					target="_blank"
 					rel="noopener"
 					class="text-p-sm text-ink-gray-5 underline-offset-2 hover:underline"
 				>
-					{{ team.public_url }}
+					{{ teamUrl(team.slug) }}
 				</a>
 				<p v-else class="text-p-sm text-ink-gray-5">
 					{{ __("Publish to give the team a page anyone can visit.") }}

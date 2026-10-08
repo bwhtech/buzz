@@ -4,6 +4,7 @@ from frappe.query_builder.functions import Coalesce, Count
 from frappe.utils import get_url, today
 
 from buzz.api.events.schemas import EventExternalLink
+from buzz.api.teams import public_page
 from buzz.api.teams.exceptions import (
 	CannotEditTeam,
 	CannotGrantOwnership,
@@ -211,12 +212,13 @@ def update_public_page(
 	short_description: str | None,
 	about: str | None,
 	is_a_community: bool = False,
+	slug: str | None = None,
 ) -> None:
 	"""Publish or edit a team's public page.
 
 	Owner/Admin/Manager, the roles that edit the team's events. Desk write on Buzz Team is
 	System Manager only, so the guard here is the authorization — the same shape as
-	`update_team`. The route is not editable here: it is filled on first publish.
+	`update_team`.
 	"""
 	if team_role_of(frappe.session.user, team) not in WRITE_ROLES:
 		CannotEditTeam.throw()
@@ -224,6 +226,7 @@ def update_public_page(
 	doc = frappe.get_doc("Buzz Team", team)
 	doc.is_published = int(is_published)
 	doc.is_a_community = int(is_a_community)
+	public_page.set_slug(doc, slug)
 	doc.short_description = (short_description or "").strip() or None
 	doc.about = about or None
 	doc.set("links", [{key: link.get(key) for key in ("icon", "label", "url")} for link in links])
