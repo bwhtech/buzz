@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Icon, dayjs } from "frappe-ui"
+import { dayjs } from "frappe-ui"
 import { computed } from "vue"
 
 import EmptyState from "@/components/common/EmptyState.vue"
@@ -61,11 +61,11 @@ const emptyDescription = computed(() =>
 		:error="myProposals.error"
 	>
 		<template #empty-state>
-			<EmptyState :title="`No ${tab} proposals`" :description="emptyDescription">
-				<template #illustration>
-					<Icon name="lucide-mic-off" class="size-5 text-ink-gray-5" />
-				</template>
-			</EmptyState>
+			<EmptyState
+				:title="`No ${tab} proposals`"
+				:description="emptyDescription"
+				icon="lucide-mic-off"
+			/>
 		</template>
 
 		<template #default="{ item }">

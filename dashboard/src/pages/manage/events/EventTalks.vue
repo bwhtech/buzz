@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
-import { ErrorMessage, Icon, Skeleton } from "frappe-ui"
+import { ErrorMessage, Skeleton } from "frappe-ui"
 import { DonutChart, NumberCard } from "frappe-ui/charts"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
@@ -177,20 +177,14 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 								? `No talk here matches “${search.trim()}”.`
 								: 'No talk here matches these filters.'
 						"
-					>
-						<template #illustration>
-							<Icon name="lucide-filter-x" class="size-5 text-ink-gray-5" />
-						</template>
-					</EmptyState>
+						icon="lucide-filter-x"
+					/>
 					<EmptyState
 						v-else
 						title="No talks yet"
 						description="Proposals submitted through the call for proposals show up here."
-					>
-						<template #illustration>
-							<Icon name="lucide-mic" class="size-5 text-ink-gray-5" />
-						</template>
-					</EmptyState>
+						icon="lucide-mic"
+					/>
 
 					<div ref="sentinel" aria-hidden="true" />
 

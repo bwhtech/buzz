@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
-import { ErrorMessage, Icon } from "frappe-ui"
+import { ErrorMessage } from "frappe-ui"
 import { DonutChart, NumberCard } from "frappe-ui/charts"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
@@ -197,20 +197,14 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 								? `Nobody here matches “${search.trim()}”.`
 								: 'Nobody here matches these filters.'
 						"
-					>
-						<template #illustration>
-							<Icon name="lucide-filter-x" class="size-5 text-ink-gray-5" />
-						</template>
-					</EmptyState>
+						icon="lucide-filter-x"
+					/>
 					<EmptyState
 						v-else
 						title="No guests yet"
 						description="Guests show up here once they book a ticket."
-					>
-						<template #illustration>
-							<Icon name="lucide-users" class="size-5 text-ink-gray-5" />
-						</template>
-					</EmptyState>
+						icon="lucide-users"
+					/>
 
 					<div ref="sentinel" aria-hidden="true" />
 
