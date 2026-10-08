@@ -70,6 +70,6 @@ useSaveShortcut(save, isDirty)
 
 		<Skeleton v-if="!overview.data && !overview.error" class="h-64 w-full rounded-5" />
 
-		<TeamTaxDetailsForm v-else-if="overview.data" v-model="form" :editable="canEdit" />
+		<TeamTaxDetailsForm v-else-if="overview.data" :details="form" :editable="canEdit" />
 	</div>
 </template>
