@@ -34,6 +34,12 @@ class TeamInvite(APIResponse):
 	team_role: str
 
 
+class TeamTaxDetails(APIResponse):
+	legal_name: str | None
+	tax_id: str | None
+	billing_address: str | None
+
+
 class TeamOverview(APIResponse):
 	name: str
 	team_name: str
@@ -50,3 +56,5 @@ class TeamOverview(APIResponse):
 	members: list[TeamMember]
 	# Kept apart from members: these people cannot do anything on the team yet.
 	invites: list[TeamInvite]
+	# Every member reads them; only Owner/Admin can change them.
+	tax_details: TeamTaxDetails

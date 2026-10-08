@@ -7,9 +7,11 @@ import EmptyState from "@/components/common/EmptyState.vue"
 import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
 import EventCard from "@/components/dashboard/events/EventCard.vue"
 import EventDrawer from "@/components/dashboard/events/EventDrawer.vue"
+import FloatingCreateEventButton from "@/components/dashboard/FloatingCreateEventButton.vue"
 import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
+import { useIsMobile } from "@/composables/useIsMobile"
 import { useMyEvents } from "@/data/events"
 import type { MyEvent } from "@/types"
 import { groupEventsByMonth } from "@/utils/eventGroups"
@@ -19,6 +21,7 @@ import { useTimelineTabQuery } from "@/utils/timelineTabs"
 const tab = useTimelineTabQuery()
 
 const route = useRoute()
+const isMobile = useIsMobile()
 
 // A team's workspace lists only that team's events.
 const team = computed(() => route.params.teamId as string | undefined)
@@ -55,6 +58,7 @@ const emptyDescription = computed(() =>
 <template>
 	<TeamPageHeader v-if="team" section="Events">
 		<Button
+			v-if="!isMobile"
 			variant="solid"
 			icon-left="lucide-plus"
 			label="Create Event"
@@ -62,10 +66,11 @@ const emptyDescription = computed(() =>
 		/>
 	</TeamPageHeader>
 	<CreateEventHeader v-else title="Events" />
+	<FloatingCreateEventButton v-if="team && isMobile" />
 
 	<TimelineList
 		v-model:tab="tab"
-		heading="Events"
+		:heading="team ? undefined : 'Events'"
 		icon="lucide-calendar-days"
 		noun="events"
 		:months="months"

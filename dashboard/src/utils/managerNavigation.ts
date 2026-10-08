@@ -80,6 +80,8 @@ function teamItems(teamId: string): ManagerNavItem[] {
 	return [
 		{ label: "Events", icon: "lucide-calendar-days", to: `${team}/events` },
 		{ label: "Members", icon: "lucide-users-round", to: `${team}/members` },
+		{ label: "Payments", icon: "lucide-credit-card", to: `${team}/payments` },
+		// Settings stays the last item, whatever is added above it.
 		{ label: "Settings", icon: "lucide-settings", to: `${team}/settings` },
 	]
 }

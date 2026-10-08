@@ -150,6 +150,13 @@ export interface TeamOverview {
 	my_role: string
 	members: TeamMember[]
 	invites: TeamInvite[]
+	tax_details: TeamTaxDetails
+}
+
+export interface TeamTaxDetails {
+	legal_name: string | null
+	tax_id: string | null
+	billing_address: string | null
 }
 
 // buzz.api.teams.invite_members: one row per address, saying which route it took.

@@ -86,7 +86,7 @@ const urlPrefix = `${window.location.hostname}/community/`
 		<Divider />
 
 		<section class="space-y-4">
-			<h2 class="text-base-semibold text-ink-gray-9">{{ __("Access") }}</h2>
+			<h2 class="text-xl font-semibold text-ink-gray-8">{{ __("Access") }}</h2>
 			<div class="divide-y divide-outline-gray-1 rounded-6 border border-outline-gray-2 px-4">
 				<SettingsRow :title="__('Visibility')" :description="__('Who can see the team page.')">
 					<Dropdown :options="visibilityOptions" align="end" :disabled="!settings.canEditPage">
@@ -116,7 +116,7 @@ const urlPrefix = `${window.location.hostname}/community/`
 
 		<EventLinks
 			v-if="settings.canEditPage"
-			heading-class="text-base-semibold text-ink-gray-9"
+			heading-class="text-xl font-semibold text-ink-gray-8"
 			v-model="form.links"
 			:hint="__('Website, forum, repository — wherever people can find the team.')"
 		/>

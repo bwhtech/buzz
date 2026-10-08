@@ -12,7 +12,8 @@ from buzz.api.teams.exceptions import (
 	NotATeamMember,
 	UnknownTeamRole,
 )
-from buzz.api.teams.schemas import TeamInvite, TeamMember, TeamOverview
+from buzz.api.teams.schemas import TeamInvite, TeamMember, TeamOverview, TeamTaxDetails
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import TAX_DETAIL_FIELDS
 from buzz.permissions import WRITE_ROLES, can_manage_members, team_role_of
 
 TEAM_FIELDS = (
@@ -64,7 +65,23 @@ def team_overview(team: str) -> TeamOverview:
 		my_role=role,
 		members=members_of(team),
 		invites=pending_invites_for(team),
+		tax_details=tax_details_of(team),
 	)
+
+
+def tax_details_of(team: str) -> TeamTaxDetails:
+	row = frappe.db.get_value("Buzz Team Settings", team, TAX_DETAIL_FIELDS, as_dict=True)
+	return TeamTaxDetails(**(row or dict.fromkeys(TAX_DETAIL_FIELDS)))
+
+
+def update_tax_details(team: str, legal_name: str, tax_id: str, billing_address: str) -> None:
+	"""Owner/Admin. Buzz Team Settings holds the rules: all three together, and a tax ID
+	can change but never go back to blank."""
+	if not can_manage_members(team):
+		CannotEditTeam.throw()
+	settings = frappe.get_doc("Buzz Team Settings", team)
+	settings.update({"legal_name": legal_name, "tax_id": tax_id, "billing_address": billing_address})
+	settings.save(ignore_permissions=True)
 
 
 def upcoming_event_counts(teams: list[str]) -> dict[str, int]:

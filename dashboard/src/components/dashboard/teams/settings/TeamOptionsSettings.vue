@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SettingsRow, Switch } from "frappe-ui"
+import { Switch } from "frappe-ui"
 
 import type { TeamSettings } from "@/composables/useTeamSettings"
 
@@ -8,10 +8,12 @@ defineProps<{ settings: TeamSettings }>()
 
 <template>
 	<section class="space-y-4">
-		<h2 class="text-base-semibold text-ink-gray-9">{{ __("Community") }}</h2>
-		<div class="divide-y divide-outline-gray-1 rounded-6 border border-outline-gray-2 px-4">
-			<SettingsRow
-				:title="__('Community submissions')"
+		<h2 class="text-xl font-semibold text-ink-gray-8">{{ __("Community") }}</h2>
+		<div class="rounded-6 border border-outline-gray-2 p-1">
+			<Switch
+				v-model="settings.form.is_a_community"
+				padded
+				:label="__('Community submissions')"
 				:description="
 					settings.form.is_published
 						? __(
@@ -19,13 +21,8 @@ defineProps<{ settings: TeamSettings }>()
 							)
 						: __('Make the team public on the Display tab to accept submissions from other teams.')
 				"
-			>
-				<Switch
-					v-model="settings.form.is_a_community"
-					:disabled="!settings.canEditPage || !settings.form.is_published"
-					:aria-label="__('Community submissions')"
-				/>
-			</SettingsRow>
+				:disabled="!settings.canEditPage || !settings.form.is_published"
+			/>
 		</div>
 	</section>
 </template>

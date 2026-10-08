@@ -110,6 +110,12 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/teams/TeamMembers.vue"),
 			},
 			{
+				path: "teams/:teamId/payments",
+				name: "team-payments",
+				meta: { title: "Payments" },
+				component: () => import("@/pages/manage/teams/TeamPayments.vue"),
+			},
+			{
 				path: "teams/:teamId/settings",
 				name: "team-settings",
 				meta: { title: "Settings" },

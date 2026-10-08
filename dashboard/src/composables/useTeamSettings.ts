@@ -5,7 +5,7 @@ import { reloadTeams, updatePublicPage, updateTeam, useTeamOverview } from "@/da
 import type { EventExternalLink, TeamOverview } from "@/types"
 import { canEditPublicPage, canManageMembers } from "@/utils/teamRoles"
 
-function fromTeam(team: TeamOverview) {
+function formFromTeam(team: TeamOverview) {
 	return {
 		team_name: team.team_name,
 		slug: team.slug ?? "",
@@ -29,11 +29,11 @@ const PAGE_FIELDS = [
 	"is_a_community",
 ] as const
 
-type SettingsForm = ReturnType<typeof fromTeam>
-const pageOf = (values: SettingsForm) =>
+type SettingsForm = ReturnType<typeof formFromTeam>
+const publicPageFields = (values: SettingsForm) =>
 	Object.fromEntries(PAGE_FIELDS.map((field) => [field, values[field]]))
 
-const EMPTY = { team_name: "", logo: null, links: [] } as unknown as TeamOverview
+const EMPTY_TEAM = { team_name: "", logo: null, links: [] } as unknown as TeamOverview
 
 /**
  * One form behind the Settings page's single Save. Name and logo go to update_team
@@ -41,11 +41,11 @@ const EMPTY = { team_name: "", logo: null, links: [] } as unknown as TeamOvervie
  */
 export function useTeamSettings(team: string) {
 	const overview = useTeamOverview(team)
-	const form = reactive(fromTeam(EMPTY))
+	const form = reactive(formFromTeam(EMPTY_TEAM))
 
 	watch(
 		() => overview.data,
-		(saved) => saved && Object.assign(form, fromTeam(saved)),
+		(data) => data && Object.assign(form, formFromTeam(data)),
 		{ immediate: true },
 	)
 
@@ -58,12 +58,13 @@ export function useTeamSettings(team: string) {
 	const canManage = computed(() => canManageMembers(overview.data?.my_role))
 	const canEditPage = computed(() => canEditPublicPage(overview.data?.my_role))
 
-	const saved = computed(() => fromTeam(overview.data ?? EMPTY))
+	const savedForm = computed(() => formFromTeam(overview.data ?? EMPTY_TEAM))
 	const identityDirty = computed(
-		() => form.team_name !== saved.value.team_name || form.logo !== saved.value.logo,
+		() => form.team_name !== savedForm.value.team_name || form.logo !== savedForm.value.logo,
 	)
 	const pageDirty = computed(
-		() => JSON.stringify(pageOf(form)) !== JSON.stringify(pageOf(saved.value)),
+		() =>
+			JSON.stringify(publicPageFields(form)) !== JSON.stringify(publicPageFields(savedForm.value)),
 	)
 	const isDirty = computed(() => Boolean(overview.data) && (identityDirty.value || pageDirty.value))
 	const saving = computed(() => updateTeam.loading || updatePublicPage.loading)
@@ -71,7 +72,7 @@ export function useTeamSettings(team: string) {
 	// the error from an earlier save.
 	const error = ref<Error | null>(null)
 
-	async function failed(call: typeof updateTeam, params: Record<string, unknown>) {
+	async function submitHasError(call: typeof updateTeam, params: Record<string, unknown>) {
 		await call.submit(params).catch(() => null)
 		error.value = call.error
 		return Boolean(call.error)
@@ -82,15 +83,19 @@ export function useTeamSettings(team: string) {
 		if (!form.team_name.trim()) return toast.error(__("Team name is required"))
 		error.value = null
 		const identity = { team, team_name: form.team_name, logo: form.logo }
-		if (identityDirty.value && (await failed(updateTeam, identity))) return
-		if (pageDirty.value && (await failed(updatePublicPage, { team, ...pageOf(form) }))) return
+		if (identityDirty.value && (await submitHasError(updateTeam, identity))) return
+		if (
+			pageDirty.value &&
+			(await submitHasError(updatePublicPage, { team, ...publicPageFields(form) }))
+		)
+			return
 		await overview.reload()
 		reloadTeams()
 		toast.success(__("Settings saved"))
 	}
 
 	// A fresh copy: the saved snapshot must never share the links array with the form.
-	const discard = () => Object.assign(form, fromTeam(overview.data ?? EMPTY))
+	const discard = () => Object.assign(form, formFromTeam(overview.data ?? EMPTY_TEAM))
 
 	return reactive({ overview, form, canManage, canEditPage, isDirty, saving, error, save, discard })
 }

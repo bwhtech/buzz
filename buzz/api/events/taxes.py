@@ -3,8 +3,6 @@ from frappe import _
 
 from buzz.api.events.exceptions import TaxDetailsMissing
 from buzz.api.events.services import ensure_event_team_access, manageable_event
-from buzz.api.teams.exceptions import CannotEditTeam
-from buzz.permissions import can_manage_members
 
 
 def team_tax_details(team: str) -> dict:
@@ -31,12 +29,10 @@ def update_tax_settings(
 
 def update_team_tax_details(event: str, legal_name: str, tax_id: str, billing_address: str) -> None:
 	ensure_event_team_access(event)
-	team = frappe.db.get_value("Buzz Event", event, "team")
-	if not can_manage_members(team):
-		CannotEditTeam.throw()
 	# Empty details are valid on the team, but this endpoint exists to add them.
 	if not tax_id.strip():
 		frappe.throw(_("Enter your team's legal name, tax ID and billing address."))
-	settings = frappe.get_doc("Buzz Team Settings", team)
-	settings.update({"legal_name": legal_name, "tax_id": tax_id, "billing_address": billing_address})
-	settings.save(ignore_permissions=True)
+	# Imported here: teams.services reads events.schemas, whose package imports this module.
+	from buzz.api.teams.services import update_tax_details
+
+	update_tax_details(frappe.db.get_value("Buzz Event", event, "team"), legal_name, tax_id, billing_address)

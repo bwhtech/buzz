@@ -82,6 +82,11 @@ def update_public_page(
 
 
 @frappe.whitelist(methods=["POST"])
+def update_tax_details(team: str, legal_name: str, tax_id: str, billing_address: str) -> None:
+	services.update_tax_details(team, legal_name, tax_id, billing_address)
+
+
+@frappe.whitelist(methods=["POST"])
 def resend_invite(team: str, email: str) -> None:
 	invitations.resend_invite(team, email)
 

@@ -81,6 +81,12 @@ export const updateTeam = useCall<unknown, Record<string, unknown>>({
 	immediate: false,
 })
 
+export const updateTaxDetails = useCall<unknown, Record<string, unknown>>({
+	url: "/api/v2/method/buzz.api.teams.update_tax_details",
+	method: "POST",
+	immediate: false,
+})
+
 export const updatePublicPage = useCall<unknown, Record<string, unknown>>({
 	url: "/api/v2/method/buzz.api.teams.update_public_page",
 	method: "POST",
