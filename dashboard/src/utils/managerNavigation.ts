@@ -48,7 +48,7 @@ function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
 	items.push({
 		label: "Communities",
 		icon: "lucide-users-round",
-		to: "/manage/teams",
+		to: "/manage/communities",
 		startsGroup: true,
 	})
 	return items
@@ -78,7 +78,7 @@ function eventItems(eventId: string): ManagerNavItem[] {
 }
 
 function teamItems(teamId: string): ManagerNavItem[] {
-	const team = `/manage/teams/${teamId}`
+	const team = `/manage/communities/${teamId}`
 	return [
 		{ label: "Events", icon: "lucide-calendar-days", to: `${team}/events` },
 		{ label: "Members", icon: "lucide-users-round", to: `${team}/members` },

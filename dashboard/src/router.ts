@@ -88,36 +88,41 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/events/CreateEvent.vue"),
 			},
 			{
-				path: "teams",
-				name: "teams",
+				path: "communities",
+				name: "communities",
 				meta: { title: "Communities" },
 				component: () => import("@/pages/manage/MyTeams.vue"),
 			},
 			{
-				path: "teams/:teamId",
-				redirect: (to) => `/manage/teams/${to.params.teamId}/events`,
+				// Old links from before teams were called communities.
+				path: "teams/:rest(.*)*",
+				redirect: (to) => to.fullPath.replace("/manage/teams", "/manage/communities"),
 			},
 			{
-				path: "teams/:teamId/events",
+				path: "communities/:teamId",
+				redirect: (to) => `/manage/communities/${to.params.teamId}/events`,
+			},
+			{
+				path: "communities/:teamId/events",
 				name: "team-events",
 				meta: { title: "Events" },
 				component: () => import("@/pages/manage/MyEvents.vue"),
 			},
 			{
-				path: "teams/:teamId/members",
+				path: "communities/:teamId/members",
 				name: "team-members",
 				meta: { title: "Members" },
 				component: () => import("@/pages/manage/teams/TeamMembers.vue"),
 			},
 			{
-				path: "teams/:teamId/payments",
+				path: "communities/:teamId/payments",
 				name: "team-payments",
 				meta: { title: "Payments" },
 				component: () => import("@/pages/manage/teams/TeamPayments.vue"),
 			},
 			{
 				// One record with an optional section, so the form survives the list and back.
-				path: "teams/:teamId/settings/:section?",
+				path: "communities/:teamId/settings/:section?",
 				name: "team-settings",
 				meta: { title: "Settings", hideMobileNavWith: "section" },
 				component: () => import("@/pages/manage/teams/TeamSettings.vue"),

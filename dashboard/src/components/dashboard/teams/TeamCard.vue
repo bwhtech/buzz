@@ -16,7 +16,7 @@ const upcomingEvents = computed(() => {
 
 <template>
 	<router-link
-		:to="`/manage/teams/${team.name}`"
+		:to="`/manage/communities/${team.name}`"
 		class="flex flex-col gap-4 rounded-5 border border-outline-gray-2 p-5 transition-[background-color,border-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-outline-gray-3 hover:bg-surface-gray-1 focus-visible:outline-none focus-visible:focus-ring active:scale-[0.99] motion-reduce:active:scale-100"
 	>
 		<Avatar shape="square" size="3xl" :image="team.logo ?? undefined" :label="team.team_name" />
