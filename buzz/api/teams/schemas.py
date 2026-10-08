@@ -13,6 +13,9 @@ class TeamOption(APIResponse):
 	name: str
 	team_name: str
 	logo: str | None
+	# Every team page header links to the public page while the team is published.
+	slug: str | None
+	is_published: bool
 	is_a_community: bool
 	short_description: str | None
 	upcoming_event_count: int

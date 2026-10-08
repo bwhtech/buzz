@@ -1,6 +1,7 @@
 import frappe
 
-from buzz.api.teams import invitations, services
+from buzz.api.events.schemas import RouteAvailability
+from buzz.api.teams import invitations, public_page, services
 from buzz.api.teams.schemas import InviteOutcome, TeamOption, TeamOverview
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
 
@@ -24,6 +25,8 @@ def get_my_teams() -> list[TeamOption]:
 			team.name,
 			team.team_name,
 			team.logo,
+			team.slug,
+			team.is_published,
 			team.is_a_community,
 			team.short_description,
 			membership.team_role,
@@ -79,6 +82,12 @@ def update_public_page(
 	slug: str | None = None,
 ) -> None:
 	services.update_public_page(team, is_published, links, short_description, about, is_a_community, slug)
+
+
+@frappe.whitelist()
+def check_team_slug(team: str, slug: str) -> RouteAvailability:
+	"""Whether a team can move to this address. `team` is the one being edited."""
+	return public_page.slug_availability(team, slug)
 
 
 @frappe.whitelist(methods=["POST"])

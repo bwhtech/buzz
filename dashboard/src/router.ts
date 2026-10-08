@@ -116,9 +116,10 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/teams/TeamPayments.vue"),
 			},
 			{
-				path: "teams/:teamId/settings",
+				// One record with an optional section, so the form survives the list and back.
+				path: "teams/:teamId/settings/:section?",
 				name: "team-settings",
-				meta: { title: "Settings" },
+				meta: { title: "Settings", hideMobileNavWith: "section" },
 				component: () => import("@/pages/manage/teams/TeamSettings.vue"),
 			},
 			{

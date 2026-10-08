@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ErrorMessage, Skeleton, toast } from "frappe-ui"
+import { Button, ErrorMessage, Skeleton, toast } from "frappe-ui"
 import { computed, reactive, watch } from "vue"
 import { useRoute } from "vue-router"
 
@@ -52,7 +52,7 @@ useSaveShortcut(save, isDirty)
 </script>
 
 <template>
-	<TeamPageHeader section="Payments">
+	<TeamPageHeader section="Payments" :dirty="isDirty">
 		<SaveActions
 			v-if="canEdit"
 			:is-dirty="isDirty"
@@ -60,6 +60,9 @@ useSaveShortcut(save, isDirty)
 			@save="save"
 			@discard="discard"
 		/>
+		<template #leading>
+			<Button v-if="canEdit && isDirty" :label="__('Discard')" @click="discard" />
+		</template>
 	</TeamPageHeader>
 
 	<div class="m-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 max-md:pb-24">

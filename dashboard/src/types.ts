@@ -122,6 +122,8 @@ export interface TeamOption {
 	name: string
 	team_name: string
 	logo: string | null
+	slug: string | null
+	is_published: boolean
 	is_a_community: boolean
 	short_description: string | null
 	upcoming_event_count: number

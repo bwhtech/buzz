@@ -67,6 +67,9 @@ export function useTeamSettings(team: string) {
 			JSON.stringify(publicPageFields(form)) !== JSON.stringify(publicPageFields(savedForm.value)),
 	)
 	const isDirty = computed(() => Boolean(overview.data) && (identityDirty.value || pageDirty.value))
+	// Set by the URL field once the server says another team has the slug.
+	const slugTaken = ref(false)
+	const canSave = computed(() => isDirty.value && !slugTaken.value)
 	const saving = computed(() => updateTeam.loading || updatePublicPage.loading)
 	// This save's own failure: the calls are shared, so one skipped this time still holds
 	// the error from an earlier save.
@@ -79,7 +82,7 @@ export function useTeamSettings(team: string) {
 	}
 
 	async function save() {
-		if (!isDirty.value || saving.value) return
+		if (!canSave.value || saving.value) return
 		if (!form.team_name.trim()) return toast.error(__("Team name is required"))
 		error.value = null
 		const identity = { team, team_name: form.team_name, logo: form.logo }
@@ -97,7 +100,19 @@ export function useTeamSettings(team: string) {
 	// A fresh copy: the saved snapshot must never share the links array with the form.
 	const discard = () => Object.assign(form, formFromTeam(overview.data ?? EMPTY_TEAM))
 
-	return reactive({ overview, form, canManage, canEditPage, isDirty, saving, error, save, discard })
+	return reactive({
+		overview,
+		form,
+		canManage,
+		canEditPage,
+		isDirty,
+		slugTaken,
+		canSave,
+		saving,
+		error,
+		save,
+		discard,
+	})
 }
 
 export type TeamSettings = ReturnType<typeof useTeamSettings>
