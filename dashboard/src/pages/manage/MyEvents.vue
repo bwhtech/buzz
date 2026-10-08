@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, dayjs } from "frappe-ui"
+import { Alert, Button, dayjs } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
@@ -83,19 +83,39 @@ const emptyDescription = computed(() =>
 		:error="myEvents.error"
 	>
 		<template v-if="team" #intro>
+			<Alert
+				class="[&_[data-slot=prefix]]:size-7"
+				:description="
+					__(
+						'Your calendar brings together every event your community hosts and every event it features. When you approve an event submitted by another organizer, it shows up here and on your community page.',
+					)
+				"
+			>
+				<template #prefix>
+					<span
+						class="flex size-7 items-center justify-center rounded-5 bg-surface-gray-3 text-ink-gray-9"
+						aria-hidden="true"
+					>
+						<svg viewBox="0 0 16 16" class="size-4" fill="currentColor">
+							<rect x="4" y="1" width="1.5" height="3" rx="0.75" />
+							<rect x="10.5" y="1" width="1.5" height="3" rx="0.75" />
+							<path
+								d="M1.5 5.5a2.5 2.5 0 0 1 2.5-2.5h8a2.5 2.5 0 0 1 2.5 2.5v7a2.5 2.5 0 0 1-2.5 2.5H4a2.5 2.5 0 0 1-2.5-2.5zm3 2.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5m3.5 0a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5m3.5 0a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M4.5 11.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5m3.5 0a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5"
+								fill-rule="evenodd"
+							/>
+						</svg>
+					</span>
+				</template>
+				<template #title>
+					<span class="text-lg font-semibold text-ink-gray-9">
+						{{ __("Welcome to your community calendar") }}
+					</span>
+				</template>
+			</Alert>
 			<PendingSubmissions :community="team" :can-review="canReview" @changed="myEvents.reload()" />
 		</template>
 		<template v-if="team" #heading>
-			<div class="hidden items-center gap-2 md:flex">
-				<h2 class="text-2xl font-semibold text-ink-gray-9">{{ __("Events") }}</h2>
-				<Button
-					variant="subtle"
-					icon="lucide-plus"
-					:label="__('Create Event')"
-					:tooltip="__('Create Event')"
-					:route="{ name: 'create-event' }"
-				/>
-			</div>
+			<h2 class="hidden text-2xl font-semibold text-ink-gray-9 md:block">{{ __("Events") }}</h2>
 		</template>
 		<template #empty-state>
 			<EmptyState :title="`No ${tab} events`" :description="emptyDescription" icon="lucide-ghost" />

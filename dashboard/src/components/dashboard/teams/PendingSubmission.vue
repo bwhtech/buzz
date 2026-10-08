@@ -67,20 +67,20 @@ async function review(action: ReturnType<typeof useReviewAction>, done: string) 
 		</div>
 		<div class="flex shrink-0 gap-2">
 			<Button
-				theme="green"
-				variant="solid"
-				icon-left="lucide-check"
-				:label="__('Approve')"
-				:loading="approve.loading"
-				@click="review(approve, __('Event added to your calendar'))"
-			/>
-			<Button
-				theme="red"
-				variant="solid"
+				variant="ghost"
 				icon-left="lucide-x"
 				:label="__('Remove')"
 				:loading="reject.loading"
+				:disabled="approve.loading"
 				@click="review(reject, __('Submission removed'))"
+			/>
+			<Button
+				variant="subtle"
+				icon-left="lucide-check"
+				:label="__('Approve')"
+				:loading="approve.loading"
+				:disabled="reject.loading"
+				@click="review(approve, __('Event added to your calendar'))"
 			/>
 		</div>
 	</li>
