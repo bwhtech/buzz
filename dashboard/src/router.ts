@@ -104,10 +104,10 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/MyEvents.vue"),
 			},
 			{
-				path: "teams/:teamId/people",
-				name: "team-people",
-				meta: { title: "People" },
-				component: () => import("@/pages/manage/teams/TeamPeople.vue"),
+				path: "teams/:teamId/members",
+				name: "team-members",
+				meta: { title: "Members" },
+				component: () => import("@/pages/manage/teams/TeamMembers.vue"),
 			},
 			{
 				path: "proposals",

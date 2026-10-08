@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem } from "frappe-ui"
+import { DesktopShell, Divider, PageHeaderTarget, Sidebar, SidebarItem } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
@@ -54,14 +54,15 @@ watch(headerKey, (key, previous) => {
 				<div class="nav-stage relative mx-2 my-2">
 					<Transition :name="`nav-${direction}`">
 						<div :key="headerKey" class="nav-list flex flex-col gap-0.5">
-							<SidebarItem
-								v-for="item in items"
-								:key="item.label"
-								:label="item.label"
-								:icon="item.icon"
-								:to="item.to"
-								:active="isActive(item.to)"
-							/>
+							<template v-for="item in items" :key="item.label">
+								<Divider v-if="item.startsGroup" class="my-1.5" />
+								<SidebarItem
+									:label="item.label"
+									:icon="item.icon"
+									:to="item.to"
+									:active="isActive(item.to)"
+								/>
+							</template>
 						</div>
 					</Transition>
 				</div>

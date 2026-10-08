@@ -8,11 +8,12 @@ const labels = (items: { label: string }[]) => items.map((item) => item.label)
 test("the root offers events, proposals and teams", () => {
 	const items = managerNavigation({ creatingEvent: false, hasSponsorships: false })
 	assert.deepEqual(labels(items), ["Events", "Talk Proposals", "Teams"])
+	assert.equal(items.at(-1)?.startsGroup, true)
 })
 
 test("sponsorship appears once the user has an inquiry", () => {
 	const items = managerNavigation({ creatingEvent: false, hasSponsorships: true })
-	assert.deepEqual(labels(items), ["Events", "Talk Proposals", "Teams", "Sponsorship"])
+	assert.deepEqual(labels(items), ["Events", "Talk Proposals", "Sponsorship", "Teams"])
 })
 
 test("an event offers its own sections, scoped to its id", () => {
@@ -21,9 +22,9 @@ test("an event offers its own sections, scoped to its id", () => {
 	assert.ok(items.every((item) => item.to.startsWith("/manage/events/EV-1/")))
 })
 
-test("a team offers its events and people, scoped to its id", () => {
+test("a team offers its events and members, scoped to its id", () => {
 	const items = managerNavigation({ teamId: "T-1", creatingEvent: false, hasSponsorships: true })
-	assert.deepEqual(labels(items), ["Events", "People"])
+	assert.deepEqual(labels(items), ["Events", "Members"])
 	assert.ok(items.every((item) => item.to.startsWith("/manage/teams/T-1/")))
 })
 

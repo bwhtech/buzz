@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, ErrorMessage, Skeleton } from "frappe-ui"
+import { Button, ErrorMessage, Icon, Skeleton } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
@@ -26,9 +26,16 @@ async function refresh() {
 </script>
 
 <template>
-	<TeamPageHeader section="People" />
+	<TeamPageHeader section="Members" />
 
-	<div class="m-auto flex w-full max-w-[800px] flex-col gap-6 px-4 py-8">
+	<div class="m-auto flex w-full max-w-[800px] flex-col gap-6 p-4 max-md:pb-24">
+		<header class="hidden items-center gap-3 md:flex">
+			<div class="rounded-4 bg-surface-gray-3 p-2">
+				<Icon name="lucide-users-round" class="size-6" />
+			</div>
+			<h1 class="text-4xl font-semibold">{{ __("Members") }}</h1>
+		</header>
+
 		<TeamRoleGuide />
 
 		<ErrorMessage v-if="overview.error" :message="serverErrorMessage(overview.error)" />

@@ -3,6 +3,8 @@ export type ManagerNavItem = {
 	shortLabel?: string
 	icon: string
 	to: string
+	// The desktop sidebar draws a divider above an item that starts a new group.
+	startsGroup?: boolean
 }
 
 // /events is a site page outside the dashboard router, so it opens as a full page load.
@@ -33,7 +35,7 @@ type NavigationContext = {
 }
 
 function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
-	const items = [
+	const items: ManagerNavItem[] = [
 		{ label: "Events", icon: "lucide-calendar-days", to: "/manage/events" },
 		{
 			label: "Talk Proposals",
@@ -41,12 +43,12 @@ function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
 			icon: "lucide-mic",
 			to: "/manage/proposals",
 		},
-		{ label: "Teams", icon: "lucide-users", to: "/manage/teams" },
 	]
 	// Hidden until the user has an inquiry, the same rule the account page applies.
 	if (hasSponsorships) {
 		items.push({ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" })
 	}
+	items.push({ label: "Teams", icon: "lucide-users", to: "/manage/teams", startsGroup: true })
 	return items
 }
 
@@ -77,7 +79,7 @@ function teamItems(teamId: string): ManagerNavItem[] {
 	const team = `/manage/teams/${teamId}`
 	return [
 		{ label: "Events", icon: "lucide-calendar-days", to: `${team}/events` },
-		{ label: "People", icon: "lucide-users-round", to: `${team}/people` },
+		{ label: "Members", icon: "lucide-users-round", to: `${team}/members` },
 	]
 }
 
