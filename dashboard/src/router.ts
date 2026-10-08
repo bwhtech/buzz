@@ -88,6 +88,41 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/events/CreateEvent.vue"),
 			},
 			{
+				path: "teams",
+				name: "teams",
+				meta: { title: "Teams" },
+				component: () => import("@/pages/manage/MyTeams.vue"),
+			},
+			{
+				path: "teams/:teamId",
+				redirect: (to) => `/manage/teams/${to.params.teamId}/events`,
+			},
+			{
+				path: "teams/:teamId/events",
+				name: "team-events",
+				meta: { title: "Events" },
+				component: () => import("@/pages/manage/MyEvents.vue"),
+			},
+			{
+				path: "teams/:teamId/members",
+				name: "team-members",
+				meta: { title: "Members" },
+				component: () => import("@/pages/manage/teams/TeamMembers.vue"),
+			},
+			{
+				path: "teams/:teamId/payments",
+				name: "team-payments",
+				meta: { title: "Payments" },
+				component: () => import("@/pages/manage/teams/TeamPayments.vue"),
+			},
+			{
+				// One record with an optional section, so the form survives the list and back.
+				path: "teams/:teamId/settings/:section?",
+				name: "team-settings",
+				meta: { title: "Settings", hideMobileNavWith: "section" },
+				component: () => import("@/pages/manage/teams/TeamSettings.vue"),
+			},
+			{
 				path: "proposals",
 				name: "proposals",
 				meta: { title: "My Proposals" },

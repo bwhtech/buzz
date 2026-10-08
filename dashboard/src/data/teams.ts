@@ -36,6 +36,9 @@ const teamsResource = useCall<TeamOption[]>({
 
 export const teams = computed((): TeamOption[] => teamsResource.data || [])
 
+// Not `loading`: the list is fetched on demand, so it sits idle before the first call.
+export const teamsLoaded = computed(() => Boolean(teamsResource.data))
+
 export const currentTeam = computed(
 	(): TeamOption | null => teams.value.find((team) => team.name === selectedTeamName.value) || null,
 )
@@ -74,6 +77,20 @@ export const inviteMembers = useCall<
 
 export const updateTeam = useCall<unknown, Record<string, unknown>>({
 	url: "/api/v2/method/buzz.api.teams.update_team",
+	method: "POST",
+	immediate: false,
+})
+
+export const checkTeamSlug = useCall<
+	{ available: boolean; message: string },
+	{ team: string; slug: string }
+>({
+	url: "/api/v2/method/buzz.api.teams.check_team_slug",
+	immediate: false,
+})
+
+export const updateTaxDetails = useCall<unknown, Record<string, unknown>>({
+	url: "/api/v2/method/buzz.api.teams.update_tax_details",
 	method: "POST",
 	immediate: false,
 })

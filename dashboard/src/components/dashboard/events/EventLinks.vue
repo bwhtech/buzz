@@ -6,7 +6,10 @@ import EventLinkDialog from "@/components/dashboard/events/EventLinkDialog.vue"
 import type { EventExternalLink } from "@/types"
 import { hostOf, linkIconClass } from "@/utils/eventLinks"
 
-defineProps<{ hint?: string }>()
+withDefaults(defineProps<{ hint?: string; headingClass?: string }>(), {
+	hint: undefined,
+	headingClass: "text-sm font-medium uppercase tracking-wide text-ink-gray-5",
+})
 
 const links = defineModel<EventExternalLink[]>({ required: true })
 
@@ -36,7 +39,7 @@ function remove() {
 <template>
 	<section class="space-y-3">
 		<div class="flex items-center justify-between">
-			<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">{{ __("Links") }}</h2>
+			<h2 :class="headingClass">{{ __("Links") }}</h2>
 			<Button :label="__('Add')" icon-left="lucide-plus" @click="open(null)" />
 		</div>
 

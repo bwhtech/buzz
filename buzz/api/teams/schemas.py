@@ -13,6 +13,12 @@ class TeamOption(APIResponse):
 	name: str
 	team_name: str
 	logo: str | None
+	# Every team page header links to the public page while the team is published.
+	slug: str | None
+	is_published: bool
+	is_a_community: bool
+	short_description: str | None
+	upcoming_event_count: int
 	team_role: str
 	# The settings list shows who is on each team, not only how many.
 	members: list[TeamMember]
@@ -31,6 +37,12 @@ class TeamInvite(APIResponse):
 	team_role: str
 
 
+class TeamTaxDetails(APIResponse):
+	legal_name: str | None
+	tax_id: str | None
+	billing_address: str | None
+
+
 class TeamOverview(APIResponse):
 	name: str
 	team_name: str
@@ -47,3 +59,5 @@ class TeamOverview(APIResponse):
 	members: list[TeamMember]
 	# Kept apart from members: these people cannot do anything on the team yet.
 	invites: list[TeamInvite]
+	# Every member reads them; only Owner/Admin can change them.
+	tax_details: TeamTaxDetails

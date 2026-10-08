@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { Button, dayjs, Icon } from "frappe-ui"
 import { computed, ref, watch } from "vue"
+import { useRoute } from "vue-router"
 
 import EmptyState from "@/components/common/EmptyState.vue"
 import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
 import EventCard from "@/components/dashboard/events/EventCard.vue"
 import EventDrawer from "@/components/dashboard/events/EventDrawer.vue"
+import FloatingCreateEventButton from "@/components/dashboard/FloatingCreateEventButton.vue"
+import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
+import { useIsMobile } from "@/composables/useIsMobile"
 import { useMyEvents } from "@/data/events"
 import type { MyEvent } from "@/types"
 import { groupEventsByMonth } from "@/utils/eventGroups"
@@ -16,7 +20,11 @@ import { useTimelineTabQuery } from "@/utils/timelineTabs"
 // In the URL, so one link carries the whole view.
 const tab = useTimelineTabQuery()
 
-const myEvents = useMyEvents()
+const route = useRoute()
+const isMobile = useIsMobile()
+
+const team = computed(() => route.params.teamId as string | undefined)
+const myEvents = useMyEvents((): Record<string, string> => (team.value ? { team: team.value } : {}))
 
 // The feed arrives already split, so the tab only picks a side.
 const events = computed(() => myEvents.data?.[tab.value] || [])
@@ -38,18 +46,30 @@ const months = computed(() =>
 const drawer = useDrawerSelection<MyEvent>()
 
 const emptyDescription = computed(() =>
-	tab.value === "upcoming"
-		? "Events you host or hold a ticket to will show up here."
-		: "Events you have already attended or hosted will show up here.",
+	team.value
+		? "Events this team hosts will show up here."
+		: tab.value === "upcoming"
+			? "Events you host or hold a ticket to will show up here."
+			: "Events you have already attended or hosted will show up here.",
 )
 </script>
 
 <template>
-	<CreateEventHeader title="Events" />
+	<TeamPageHeader v-if="team" section="Events">
+		<Button
+			v-if="!isMobile"
+			variant="solid"
+			icon-left="lucide-plus"
+			label="Create Event"
+			:route="{ name: 'create-event' }"
+		/>
+	</TeamPageHeader>
+	<CreateEventHeader v-else title="Events" />
+	<FloatingCreateEventButton v-if="team && isMobile" />
 
 	<TimelineList
 		v-model:tab="tab"
-		heading="Events"
+		:heading="team ? undefined : 'Events'"
 		icon="lucide-calendar-days"
 		noun="events"
 		:months="months"

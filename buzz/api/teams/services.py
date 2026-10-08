@@ -1,8 +1,10 @@
 import frappe
 from frappe.query_builder import Case
-from frappe.utils import get_url
+from frappe.query_builder.functions import Coalesce, Count
+from frappe.utils import get_url, today
 
 from buzz.api.events.schemas import EventExternalLink
+from buzz.api.teams import public_page
 from buzz.api.teams.exceptions import (
 	CannotEditTeam,
 	CannotGrantOwnership,
@@ -10,7 +12,8 @@ from buzz.api.teams.exceptions import (
 	NotATeamMember,
 	UnknownTeamRole,
 )
-from buzz.api.teams.schemas import TeamInvite, TeamMember, TeamOverview
+from buzz.api.teams.schemas import TeamInvite, TeamMember, TeamOverview, TeamTaxDetails
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import TAX_DETAIL_FIELDS
 from buzz.permissions import WRITE_ROLES, can_manage_members, team_role_of
 
 TEAM_FIELDS = (
@@ -62,6 +65,35 @@ def team_overview(team: str) -> TeamOverview:
 		my_role=role,
 		members=members_of(team),
 		invites=pending_invites_for(team),
+		tax_details=tax_details_of(team),
+	)
+
+
+def tax_details_of(team: str) -> TeamTaxDetails:
+	row = frappe.db.get_value("Buzz Team Settings", team, TAX_DETAIL_FIELDS, as_dict=True)
+	return TeamTaxDetails(**(row or dict.fromkeys(TAX_DETAIL_FIELDS)))
+
+
+def update_tax_details(team: str, legal_name: str, tax_id: str, billing_address: str) -> None:
+	"""Owner/Admin. Buzz Team Settings holds the rules: all three together, and a tax ID
+	can change but never go back to blank."""
+	if not can_manage_members(team):
+		CannotEditTeam.throw()
+	settings = frappe.get_doc("Buzz Team Settings", team)
+	settings.update({"legal_name": legal_name, "tax_id": tax_id, "billing_address": billing_address})
+	settings.save(ignore_permissions=True)
+
+
+def upcoming_event_counts(teams: list[str]) -> dict[str, int]:
+	if not teams:
+		return {}
+	event = frappe.qb.DocType("Buzz Event")
+	return dict(
+		frappe.qb.from_(event)
+		.select(event.team, Count("*"))
+		.where(event.team.isin(teams) & (Coalesce(event.end_date, event.start_date) >= today()))
+		.groupby(event.team)
+		.run()
 	)
 
 
@@ -196,12 +228,13 @@ def update_public_page(
 	short_description: str | None,
 	about: str | None,
 	is_a_community: bool = False,
+	slug: str | None = None,
 ) -> None:
 	"""Publish or edit a team's public page.
 
 	Owner/Admin/Manager, the roles that edit the team's events. Desk write on Buzz Team is
 	System Manager only, so the guard here is the authorization — the same shape as
-	`update_team`. The route is not editable here: it is filled on first publish.
+	`update_team`.
 	"""
 	if team_role_of(frappe.session.user, team) not in WRITE_ROLES:
 		CannotEditTeam.throw()
@@ -209,6 +242,7 @@ def update_public_page(
 	doc = frappe.get_doc("Buzz Team", team)
 	doc.is_published = int(is_published)
 	doc.is_a_community = int(is_a_community)
+	public_page.set_slug(doc, slug)
 	doc.short_description = (short_description or "").strip() or None
 	doc.about = about or None
 	doc.set("links", [{key: link.get(key) for key in ("icon", "label", "url")} for link in links])

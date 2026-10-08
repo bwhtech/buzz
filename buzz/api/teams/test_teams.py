@@ -1,10 +1,16 @@
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import add_days, today
 
 from buzz.api.teams import get_my_teams, get_team_overview, update_public_page, update_team
 from buzz.api.teams.exceptions import CannotEditTeam, NotATeamMember
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
-from buzz.tests.factories import BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	BuzzTeamFactory,
+	BuzzTeamMembershipFactory,
+	UserFactory,
+)
 
 
 class TeamTestCase(IntegrationTestCase):
@@ -73,6 +79,26 @@ class TestGetMyTeams(TeamTestCase):
 
 		with self.set_user(user):
 			self.assertEqual(get_my_teams()[0].feature_flags, feature_flags(team))
+
+	def test_flags_communities(self):
+		user = self.create_user("switcher-community@example.com")
+		community = BuzzTeamFactory.create_owned_by(user, "community").name
+		self.create_team(user)
+
+		with self.set_user(user):
+			flags = {option.name: option.is_a_community for option in get_my_teams()}
+
+		self.assertEqual(sorted(flags.values()), [False, True])
+		self.assertTrue(flags[community])
+
+	def test_counts_events_that_have_not_ended(self):
+		user = self.create_user("switcher-events@example.com")
+		team = self.create_team(user)
+		BuzzEventFactory.create(team=team)
+		BuzzEventFactory.create(team=team, start_date=add_days(today(), -3), end_date=add_days(today(), -2))
+
+		with self.set_user(user):
+			self.assertEqual(get_my_teams()[0].upcoming_event_count, 1)
 
 	def test_returns_nothing_for_a_user_on_no_team(self):
 		self.assertEqual(self.team_names_for(self.create_user("switcher-teamless@example.com")), [])

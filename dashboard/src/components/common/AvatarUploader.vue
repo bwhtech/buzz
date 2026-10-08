@@ -10,8 +10,9 @@ withDefaults(
 		title: string
 		description?: string
 		shape?: "circle" | "square"
+		size?: "md" | "lg"
 	}>(),
-	{ description: "", shape: "circle" },
+	{ description: "", shape: "circle", size: "md" },
 )
 
 const image = defineModel<string | null>({ required: true })
@@ -30,8 +31,11 @@ const image = defineModel<string | null>({ required: true })
 			<div class="flex items-center gap-4">
 				<button
 					type="button"
-					class="group relative size-16 shrink-0 overflow-hidden bg-surface-gray-3 transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline-none focus-visible:focus-ring active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100"
-					:class="shape === 'circle' ? 'rounded-full' : 'rounded-6'"
+					class="group relative shrink-0 overflow-hidden bg-surface-gray-3 transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline-none focus-visible:focus-ring active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100"
+					:class="[
+						shape === 'circle' ? 'rounded-full' : 'rounded-6',
+						size === 'lg' ? 'size-24' : 'size-16',
+					]"
 					:aria-label="image ? __('Change photo') : __('Upload photo')"
 					@click="openFileSelector"
 				>

@@ -2,6 +2,7 @@
 import { Avatar, Badge, Button, Checkbox, Dropdown, FormControl } from "frappe-ui"
 import { computed, ref } from "vue"
 
+import EmptyState from "@/components/common/EmptyState.vue"
 import SelectionBar from "@/components/common/SelectionBar.vue"
 import ChangeRoleDialog from "@/components/dashboard/teams/ChangeRoleDialog.vue"
 import { useRosterActions } from "@/composables/useRosterActions"
@@ -114,17 +115,20 @@ function refreshed() {
 
 <template>
 	<div class="flex flex-col gap-4">
-		<FormControl
-			v-model="search"
-			type="text"
-			class="max-w-xs"
-			:placeholder="__('Search members')"
-			:aria-label="__('Search members')"
-		>
-			<template #prefix>
-				<span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true" />
-			</template>
-		</FormControl>
+		<div class="flex items-center justify-between gap-2">
+			<FormControl
+				v-model="search"
+				type="text"
+				class="w-full max-w-xs"
+				:placeholder="__('Search members')"
+				:aria-label="__('Search members')"
+			>
+				<template #prefix>
+					<span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true" />
+				</template>
+			</FormControl>
+			<slot name="actions" />
+		</div>
 
 		<!-- relative: the roster is what the selection bar floats over. -->
 		<div class="relative">
@@ -148,16 +152,22 @@ function refreshed() {
 				/>
 			</SelectionBar>
 
-			<div :class="columns" class="pb-2 text-sm text-ink-gray-5">
+			<div v-if="visibleRows.length" :class="columns" class="pb-2 text-sm text-ink-gray-5">
 				<span v-if="canManage" />
 				<span />
 				<span />
 				<span>{{ __("Role") }}</span>
 			</div>
 
-			<p v-if="!visibleRows.length" class="py-3 text-base text-ink-gray-5">
-				{{ __("No members found") }}
-			</p>
+			<EmptyState
+				v-if="!visibleRows.length"
+				:title="__('No members found')"
+				:description="__('Try a different name or email.')"
+			>
+				<template #illustration>
+					<span class="lucide-search size-5 text-ink-gray-5" aria-hidden="true" />
+				</template>
+			</EmptyState>
 
 			<!-- Removing a row would otherwise snap the rest of the list upwards. -->
 			<TransitionGroup tag="ul" name="member" :aria-label="__('Team members')" class="relative">

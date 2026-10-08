@@ -1,6 +1,6 @@
 from frappe import _lt
 
-from buzz.api.exceptions import BuzzAPIError, NotPermitted
+from buzz.api.exceptions import BuzzAPIError, Conflict, NotPermitted
 
 
 class NotATeamMember(NotPermitted):
@@ -29,3 +29,13 @@ class UnknownTeamRole(BuzzAPIError):
 class NoPendingInvite(BuzzAPIError):
 	title = _lt("No Invitation")
 	message = _lt("There is no pending invitation for {email}.")
+
+
+class InvalidTeamSlug(BuzzAPIError):
+	title = _lt("Invalid URL")
+	message = _lt("Use letters, numbers and hyphens for the team's URL.")
+
+
+class TeamSlugTaken(Conflict):
+	title = _lt("URL Taken")
+	message = _lt("Another team already uses {slug}.")

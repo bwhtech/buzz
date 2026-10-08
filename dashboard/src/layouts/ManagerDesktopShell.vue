@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { DesktopShell, PageHeaderTarget, Sidebar, SidebarItem } from "frappe-ui"
+import { DesktopShell, Divider, PageHeaderTarget, Sidebar, SidebarItem } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import ManagerSidebarHeader from "@/components/dashboard/ManagerSidebarHeader.vue"
 import UserMenu from "@/components/UserMenu.vue"
-import { discoverEvents, openDiscoverEvents, type ManagerNavItem } from "@/utils/managerNavigation"
+import {
+	discoverEvents,
+	openDiscoverEvents,
+	type ManagerNavItem,
+	type Workspace,
+} from "@/utils/managerNavigation"
 
-defineProps<{ items: ManagerNavItem[]; eventId?: string; eventTitle: string }>()
+const props = defineProps<{ items: ManagerNavItem[]; workspace?: Workspace }>()
 
 const route = useRoute()
 
@@ -15,10 +20,10 @@ const route = useRoute()
 // type Boolean, so Vue casts the absent prop to false and the inference never runs.
 const isActive = (to: string) => route.path === to
 
-// The header swaps between the brand mark, an event, and the create-event way out.
+// The header swaps between the brand mark, an event or team, and the create-event way out.
 const headerKey = computed(() => {
 	if (route.name === "create-event") return "create"
-	return route.params.eventId ? "event" : "root"
+	return props.workspace ? "workspace" : "root"
 })
 
 // Leaving the root pushes the sidebar left, returning to it pulls back right.
@@ -38,7 +43,7 @@ watch(headerKey, (key, previous) => {
 				<div class="nav-stage relative h-14 shrink-0">
 					<Transition :name="`nav-${direction}`">
 						<div :key="headerKey" class="absolute inset-x-1 top-2 flex items-center">
-							<ManagerSidebarHeader :event-id="eventId" :event-title="eventTitle" />
+							<ManagerSidebarHeader :workspace="workspace" />
 						</div>
 					</Transition>
 				</div>
@@ -49,14 +54,15 @@ watch(headerKey, (key, previous) => {
 				<div class="nav-stage relative mx-2 my-2">
 					<Transition :name="`nav-${direction}`">
 						<div :key="headerKey" class="nav-list flex flex-col gap-0.5">
-							<SidebarItem
-								v-for="item in items"
-								:key="item.label"
-								:label="item.label"
-								:icon="item.icon"
-								:to="item.to"
-								:active="isActive(item.to)"
-							/>
+							<template v-for="item in items" :key="item.label">
+								<Divider v-if="item.startsGroup" class="my-1.5" />
+								<SidebarItem
+									:label="item.label"
+									:icon="item.icon"
+									:to="item.to"
+									:active="isActive(item.to)"
+								/>
+							</template>
 						</div>
 					</Transition>
 				</div>
