@@ -28,7 +28,8 @@ def send_email(request, recipients: list[str], subject: str, template: str, **ar
 
 
 def notify_submitted(request) -> None:
-	submitting_team = team_name(request.event_team)
+	# An external event has no Buzz team; its host stands in.
+	submitting_team = team_name(request.event_team) if request.event_team else request.host
 	send_email(
 		request,
 		community_managers(request.community),

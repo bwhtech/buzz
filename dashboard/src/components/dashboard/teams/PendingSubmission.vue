@@ -19,7 +19,10 @@ const when = computed(() => {
 	// The server sends a time as "9:30:00", without a leading zero.
 	return start_time ? `${date}, ${dayjs(`2000-01-01 ${start_time}`).format("HH:mm")}` : date
 })
-const link = computed(() => props.request.event_route && eventUrl(props.request.event_route))
+// A Buzz event opens its own page; an external one, the platform it lives on.
+const link = computed(() =>
+	props.request.event_route ? eventUrl(props.request.event_route) : props.request.event_url,
+)
 const submitter = computed(() => {
 	const { submitter_name, submitted_by } = props.request
 	return submitter_name && submitter_name !== submitted_by

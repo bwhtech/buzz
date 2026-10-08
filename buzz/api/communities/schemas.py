@@ -18,15 +18,19 @@ class EventOption(APIResponse):
 
 class CommunityRequest(APIResponse):
 	name: str
-	event: str
+	# Unset for an external event, which lives on another platform at `event_url`.
+	event: str | None
+	is_external_event: bool
+	event_url: str | None
 	event_title: str
 	event_route: str | None
 	start_date: date
 	start_time: timedelta | None
-	# The venue, or "Online".
+	# The venue, "Online", or for an external event its location.
 	place: str | None
-	event_team: str
-	event_team_name: str
+	event_team: str | None
+	# The event's team, or for an external event its host.
+	event_team_name: str | None
 	event_team_logo: str | None
 	community: str
 	community_name: str

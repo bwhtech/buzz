@@ -1,5 +1,7 @@
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Coalesce
+from frappe.utils import get_datetime
 
 from buzz.api.communities.schemas import CommunityRequest, EventOption
 from buzz.www.events import TIME_FIELDS, exclude_ended_events, upcoming_filters
@@ -8,16 +10,19 @@ EVENT_OPTION_LIMIT = 20
 
 
 def request_rows(**conditions) -> list[CommunityRequest]:
-	"""Requests matching `conditions`, each with its event and both teams spelled out."""
+	"""Requests matching `conditions`, each with its event and both teams spelled out.
+
+	An external event has no Buzz Event or team: its row comes from the request's own fields.
+	"""
 	request, event, user, venue = (
 		frappe.qb.DocType(name) for name in ("Community Event Request", "Buzz Event", "User", "Event Venue")
 	)
 	event_team, community = frappe.qb.DocType("Buzz Team").as_("event_team"), frappe.qb.DocType("Buzz Team")
 	query = (
 		frappe.qb.from_(request)
-		.join(event)
+		.left_join(event)
 		.on(event.name == request.event)
-		.join(event_team)
+		.left_join(event_team)
 		.on(event_team.name == request.event_team)
 		.join(community)
 		.on(community.name == request.community)
@@ -28,7 +33,12 @@ def request_rows(**conditions) -> list[CommunityRequest]:
 		.select(
 			request.name,
 			request.event,
-			event.title.as_("event_title"),
+			request.event_title,
+			request.is_external_event,
+			request.event_url,
+			request.host,
+			request.event_location,
+			request.start_datetime,
 			event.route.as_("event_route"),
 			event.start_date,
 			event.start_time,
@@ -44,7 +54,7 @@ def request_rows(**conditions) -> list[CommunityRequest]:
 			user.full_name.as_("submitter_name"),
 			request.review_note,
 		)
-		.orderby(event.start_date)
+		.orderby(Coalesce(event.start_date, request.start_datetime))
 	)
 	for field, value in conditions.items():
 		query = query.where(request[field] == value)
@@ -52,8 +62,14 @@ def request_rows(**conditions) -> list[CommunityRequest]:
 
 
 def request_row(row) -> dict:
+	"""Fills an external event's date, time, place and host from the request itself."""
 	medium, venue = row.pop("medium"), row.pop("venue_name")
+	starts_at, location, host = row.pop("start_datetime"), row.pop("event_location"), row.pop("host")
 	row.place = _("Online") if medium == "Online" else venue
+	if row.is_external_event:
+		starts_at = get_datetime(starts_at)
+		start = starts_at - starts_at.replace(hour=0, minute=0, second=0, microsecond=0)
+		row.update(start_date=starts_at.date(), start_time=start, place=location, event_team_name=host)
 	return row
 
 
