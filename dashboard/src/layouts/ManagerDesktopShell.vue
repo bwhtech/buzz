@@ -18,8 +18,8 @@ const props = defineProps<{ items: ManagerNavItem[]; workspace?: Workspace }>()
 
 const route = useRoute()
 
-// Events, Submissions, Members, Payments and Settings.
-const WORKSPACE_ITEM_COUNT = 5
+// Calendar, Members, Payments and Settings.
+const WORKSPACE_ITEM_COUNT = 4
 
 // SidebarItem infers this from `to` on paper, but its `active` prop is declared
 // type Boolean, so Vue casts the absent prop to false and the inference never runs.

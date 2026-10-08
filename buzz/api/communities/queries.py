@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 
 from buzz.api.communities.schemas import CommunityRequest, EventOption
 from buzz.www.events import TIME_FIELDS, exclude_ended_events, upcoming_filters
@@ -8,8 +9,8 @@ EVENT_OPTION_LIMIT = 20
 
 def request_rows(**conditions) -> list[CommunityRequest]:
 	"""Requests matching `conditions`, each with its event and both teams spelled out."""
-	request, event, user = (
-		frappe.qb.DocType(name) for name in ("Community Event Request", "Buzz Event", "User")
+	request, event, user, venue = (
+		frappe.qb.DocType(name) for name in ("Community Event Request", "Buzz Event", "User", "Event Venue")
 	)
 	event_team, community = frappe.qb.DocType("Buzz Team").as_("event_team"), frappe.qb.DocType("Buzz Team")
 	query = (
@@ -22,12 +23,17 @@ def request_rows(**conditions) -> list[CommunityRequest]:
 		.on(community.name == request.community)
 		.left_join(user)
 		.on(user.name == request.submitted_by)
+		.left_join(venue)
+		.on(venue.name == event.venue)
 		.select(
 			request.name,
 			request.event,
 			event.title.as_("event_title"),
 			event.route.as_("event_route"),
 			event.start_date,
+			event.start_time,
+			event.medium,
+			venue.venue_name,
 			request.event_team,
 			event_team.team_name.as_("event_team_name"),
 			event_team.logo.as_("event_team_logo"),
@@ -42,7 +48,13 @@ def request_rows(**conditions) -> list[CommunityRequest]:
 	)
 	for field, value in conditions.items():
 		query = query.where(request[field] == value)
-	return [CommunityRequest(**row) for row in query.run(as_dict=True)]
+	return [CommunityRequest(**request_row(row)) for row in query.run(as_dict=True)]
+
+
+def request_row(row) -> dict:
+	medium, venue = row.pop("medium"), row.pop("venue_name")
+	row.place = _("Online") if medium == "Online" else venue
+	return row
 
 
 def upcoming_event_options(filters: dict) -> list[EventOption]:

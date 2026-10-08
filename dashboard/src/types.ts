@@ -139,6 +139,8 @@ export interface CommunityRequest {
 	event_title: string
 	event_route: string | null
 	start_date: string
+	start_time: string | null
+	place: string | null
 	event_team: string
 	event_team_name: string
 	event_team_logo: string | null

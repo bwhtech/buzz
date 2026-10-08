@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, dayjs, Icon } from "frappe-ui"
+import { Button, dayjs } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
@@ -8,14 +8,17 @@ import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
 import EventCard from "@/components/dashboard/events/EventCard.vue"
 import EventDrawer from "@/components/dashboard/events/EventDrawer.vue"
 import FloatingCreateEventButton from "@/components/dashboard/FloatingCreateEventButton.vue"
+import PendingSubmissions from "@/components/dashboard/teams/PendingSubmissions.vue"
 import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
 import { useIsMobile } from "@/composables/useIsMobile"
 import { finishOpening } from "@/composables/useWorkspaceOpening"
 import { useMyEvents } from "@/data/events"
+import { teams } from "@/data/teams"
 import type { MyEvent } from "@/types"
 import { groupEventsByMonth } from "@/utils/eventGroups"
+import { canEditPublicPage } from "@/utils/teamRoles"
 import { useTimelineTabQuery } from "@/utils/timelineTabs"
 
 // In the URL, so one link carries the whole view.
@@ -26,6 +29,9 @@ const isMobile = useIsMobile()
 
 const team = computed(() => route.params.teamId as string | undefined)
 const myEvents = useMyEvents((): Record<string, string> => (team.value ? { team: team.value } : {}))
+const canReview = computed(() =>
+	canEditPublicPage(teams.value.find((option) => option.name === team.value)?.team_role),
+)
 
 // The team workspace opens on this page, so its first load ends the opening screen.
 watch(
@@ -63,7 +69,7 @@ const emptyDescription = computed(() =>
 </script>
 
 <template>
-	<TeamPageHeader v-if="team" section="Events" />
+	<TeamPageHeader v-if="team" section="Calendar" />
 	<CreateEventHeader v-else title="Events" />
 	<FloatingCreateEventButton v-if="team && isMobile" />
 
@@ -76,20 +82,23 @@ const emptyDescription = computed(() =>
 		:loading="myEvents.loading"
 		:error="myEvents.error"
 	>
-		<template v-if="team && !isMobile" #actions>
-			<Button
-				variant="subtle"
-				icon-left="lucide-plus"
-				label="Create Event"
-				:route="{ name: 'create-event' }"
-			/>
+		<template v-if="team" #intro>
+			<PendingSubmissions :community="team" :can-review="canReview" @changed="myEvents.reload()" />
+		</template>
+		<template v-if="team" #heading>
+			<div class="hidden items-center gap-2 md:flex">
+				<h2 class="text-2xl font-semibold text-ink-gray-9">{{ __("Events") }}</h2>
+				<Button
+					variant="subtle"
+					icon="lucide-plus"
+					:label="__('Create Event')"
+					:tooltip="__('Create Event')"
+					:route="{ name: 'create-event' }"
+				/>
+			</div>
 		</template>
 		<template #empty-state>
-			<EmptyState :title="`No ${tab} events`" :description="emptyDescription">
-				<template #illustration>
-					<Icon name="lucide-ghost" class="size-5 text-ink-gray-5" />
-				</template>
-			</EmptyState>
+			<EmptyState :title="`No ${tab} events`" :description="emptyDescription" icon="lucide-ghost" />
 		</template>
 
 		<template #default="{ item }">
