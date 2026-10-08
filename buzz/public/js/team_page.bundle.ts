@@ -2,7 +2,6 @@
 import { MonthCalendar } from "./team_page/calendar"
 import { TeamMap } from "./team_page/map"
 import { readPageData } from "./team_page/page_data"
-import { SubmitDialog } from "./team_page/submit_dialog"
 import { scrollAndHighlight, showPanel, wireTabs } from "./team_page/timeline"
 
 wireTabs()
@@ -62,9 +61,3 @@ for (const card of document.querySelectorAll<HTMLElement>("[data-event-card]")) 
 const calendarElement = document.querySelector<HTMLElement>("[data-calendar]")
 if (data && calendarElement) new MonthCalendar(calendarElement, data, showDate).render()
 if (data && countryChips.length) filterByCountry(visitorCountry)
-
-const submitDialog = document.querySelector<HTMLDialogElement>("[data-submit-dialog]")
-if (submitDialog) {
-	const dialog = new SubmitDialog(submitDialog)
-	document.querySelector("[data-submit-event]")?.addEventListener("click", () => dialog.open())
-}

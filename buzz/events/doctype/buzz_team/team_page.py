@@ -81,7 +81,6 @@ class TeamPage:
 			"upcoming_days": group_by_day(upcoming),
 			"past_days": group_by_day(past),
 			"meta": self.meta(),
-			"is_guest": frappe.session.user == "Guest",
 			**TeamMap(upcoming, past).as_context(),
 		}
 

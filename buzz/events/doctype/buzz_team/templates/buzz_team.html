@@ -76,13 +76,6 @@
 				<h1 class="event-title">{{ doc.team_name }}</h1>
 				<p class="team-stats">{% if events_hosted == 1 %}{{ _("1 event hosted") }}{% else %}{{ _("{0} events hosted").format(events_hosted) }}{% endif %}</p>
 			</div>
-			{% if doc.accept_community_submissions %}
-			{% if is_guest %}
-			<a class="es-button" data-variant="subtle" data-size="md" href="/login?redirect-to=/{{ doc.route }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>{{ _("Submit event") }}</a>
-			{% else %}
-			<button type="button" class="es-button" data-variant="subtle" data-size="md" data-submit-event><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>{{ _("Submit event") }}</button>
-			{% endif %}
-			{% endif %}
 		</header>
 
 		{% if countries %}
@@ -141,24 +134,6 @@
 			{% endif %}
 		</div>
 	</main>
-
-	{% if doc.accept_community_submissions and not is_guest %}
-	<dialog class="submit-dialog" data-submit-dialog data-community="{{ doc.name }}" aria-labelledby="submit-dialog-title">
-		<form class="submit-dialog-body" data-submit-form>
-			<h2 id="submit-dialog-title" class="submit-dialog-title">{{ _("Submit an event") }}</h2>
-			<p class="submit-dialog-text">{{ _("Pick one of your upcoming events. {0} reviews it before it is listed here.").format(doc.team_name) }}</p>
-			<label class="submit-dialog-field">
-				<span class="label">{{ _("Event") }}</span>
-				<select name="event" required data-submit-events disabled><option value="">{{ _("Loading…") }}</option></select>
-			</label>
-			<p class="submit-dialog-status" role="status" data-submit-status></p>
-			<div class="submit-dialog-actions">
-				<button type="button" class="es-button" data-variant="ghost" data-size="md" data-submit-cancel>{{ _("Cancel") }}</button>
-				<button type="submit" class="es-button" data-variant="solid" data-size="md" data-submit-confirm disabled>{{ _("Submit") }}</button>
-			</div>
-		</form>
-	</dialog>
-	{% endif %}
 
 	<script type="application/json" id="team-page-data">{{ page_data | tojson }}</script>
 {% endautoescape %}{% endblock %}
