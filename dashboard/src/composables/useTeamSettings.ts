@@ -107,7 +107,6 @@ export function useTeamSettings(team: string) {
 		canEditPage,
 		isDirty,
 		slugTaken,
-		canSave,
 		saving,
 		error,
 		save,

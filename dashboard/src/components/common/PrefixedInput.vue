@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { TextInput } from "frappe-ui"
 
-// A text field led by the fixed part of the value, such as a host or a profile URL.
 defineProps<{ prefix: string; placeholder?: string; label: string; disabled?: boolean }>()
 const value = defineModel<string>({ required: true })
 </script>

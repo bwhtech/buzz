@@ -18,7 +18,9 @@ def slug_availability(team: str, slug: str) -> RouteAvailability:
 	"""What the settings field says while someone types. Checks the slug as it would be
 	saved, so the answer matches what set_slug does."""
 	clean = clean_slug(slug)
-	if not clean or slug_taken(team, clean):
+	if not clean:
+		return RouteAvailability(available=False, message=str(InvalidTeamSlug.message))
+	if slug_taken(team, clean):
 		return RouteAvailability(available=False, message=_("This URL is already taken"))
 	return RouteAvailability(available=True, message=_("Available"))
 

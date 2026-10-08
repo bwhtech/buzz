@@ -12,7 +12,6 @@ const emit = defineEmits<{ saved: [] }>()
 
 const form = reactive({ team_name: props.team.team_name, logo: props.team.logo })
 
-// A reload after a save hands in a fresh overview, so the form follows it.
 watch(
 	() => props.team,
 	(team) => Object.assign(form, { team_name: team.team_name, logo: team.logo }),

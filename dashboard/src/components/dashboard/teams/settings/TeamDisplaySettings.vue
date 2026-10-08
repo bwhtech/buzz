@@ -49,14 +49,10 @@ const visibilityOptions = computed(() =>
 	})),
 )
 
-// The host the dashboard is served from, so the field reads as the address it will be.
 const urlPrefix = `${window.location.hostname}/community/`
 
-// As the event route field: ask the server once typing pauses, and only about a slug
-// that is not already this team's.
 type Availability = { available: boolean; message: string }
 const availability = ref<Availability | null>(null)
-// From the first keystroke until the answer, so the field never sits silent.
 const checking = ref(false)
 
 const needsCheck = (slug: string) => {
@@ -77,7 +73,8 @@ watchDebounced(
 	async (slug) => {
 		const team = props.settings.overview.data
 		if (!team || !needsCheck(slug)) return
-		const answer = await checkTeamSlug.submit({ team: team.name, slug })
+		// A failed check says nothing rather than spinning forever; the save still checks.
+		const answer = await checkTeamSlug.submit({ team: team.name, slug }).catch(() => null)
 		// A later keystroke may have overtaken this request while it was in flight.
 		if (form.value.slug !== slug) return
 		checking.value = false
@@ -86,7 +83,6 @@ watchDebounced(
 	{ debounce: 400 },
 )
 
-// Lifted so Save refuses a slug the server has already claimed.
 watch(availability, (answer) => (props.settings.slugTaken = Boolean(answer) && !answer?.available))
 </script>
 
@@ -113,7 +109,6 @@ watch(availability, (answer) => (props.settings.slugTaken = Boolean(answer) && !
 			/>
 
 			<div class="space-y-1">
-				<!-- Ghost variants: no border, so the pair reads as the team's headline and subtitle. -->
 				<TextInput
 					v-model="form.team_name"
 					variant="ghost"
@@ -162,8 +157,6 @@ watch(availability, (answer) => (props.settings.slugTaken = Boolean(answer) && !
 						:placeholder="__('your-team')"
 						:disabled="!settings.canEditPage"
 					/>
-					<!-- Checking shows from the first keystroke; the answer replaces it 400ms after the
-						 last one. Both fade, so neither snaps in and shoves the card. -->
 					<Transition
 						enter-active-class="transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
 						enter-from-class="opacity-0 -translate-y-0.5"

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// Plain-language reading of the capability matrix in specs/v2/00-teams.
 const ROLES = [
 	{ name: "Owner", can: __("Created the team. Full control, and cannot be removed.") },
 	{ name: "Admin", can: __("Everything an owner can do, except deleting the team.") },

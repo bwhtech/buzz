@@ -85,7 +85,6 @@ def update_tax_details(team: str, legal_name: str, tax_id: str, billing_address:
 
 
 def upcoming_event_counts(teams: list[str]) -> dict[str, int]:
-	"""Events each team hosts that have not ended yet, in one query."""
 	if not teams:
 		return {}
 	event = frappe.qb.DocType("Buzz Event")

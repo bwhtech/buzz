@@ -7,14 +7,11 @@ import { useIsMobile } from "@/composables/useIsMobile"
 import { teams } from "@/data/teams"
 import { openTeamPage } from "@/utils/teamUrl"
 
-// detail and back are for a sub-page on a phone: its name beside the team, and where back goes.
-// teamPageLink: also offer the public page link on desktop, which Settings does.
 const props = defineProps<{
 	section: string
 	detail?: string
 	back?: RouteLocationRaw
 	teamPageLink?: boolean
-	// Unsaved edits own the header's ends, so the page link steps aside.
 	dirty?: boolean
 }>()
 
@@ -23,7 +20,6 @@ const route = useRoute()
 
 const team = computed(() => teams.value.find((option) => option.name === route.params.teamId))
 const teamName = computed(() => team.value?.team_name ?? "")
-// Only a published team has a page to open.
 const publicSlug = computed(() =>
 	team.value?.is_published && !props.dirty ? team.value.slug : null,
 )

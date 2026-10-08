@@ -33,11 +33,11 @@ const sectionRoute = (value?: string) => ({
 })
 
 // The desktop tabs keep the plain /settings path, so the sidebar item stays active.
-const pickedTab = ref("display")
+const selectedTab = ref("display")
 const tab = computed({
-	get: () => section.value || pickedTab.value,
+	get: () => section.value || selectedTab.value,
 	set: (value) => {
-		pickedTab.value = value
+		selectedTab.value = value
 		if (section.value) router.replace(sectionRoute(value))
 	},
 })
@@ -83,7 +83,7 @@ const sectionLabel = computed(() => sections.find((item) => item.value === secti
 			<TabList
 				variant="ghost"
 				class="w-44 shrink-0 max-md:w-full max-md:[&>div:first-child]:hidden max-md:[&_[role=tab]]:h-10 max-md:[&_[role=tab]>span>:last-child]:ms-auto max-md:[&_[role=tab]_*]:!text-ink-gray-8"
-				:class="showList ? isMobile && 'phone-back' : 'hidden'"
+				:class="showList ? isMobile && 'enter-from-left' : 'hidden'"
 			>
 				<TabTrigger
 					v-for="item in sections"
@@ -101,14 +101,14 @@ const sectionLabel = computed(() => sections.find((item) => item.value === secti
 			<TabPanel
 				value="display"
 				class="min-w-0 flex-1 focus:outline-none"
-				:class="showSection ? isMobile && 'phone-forward' : 'hidden'"
+				:class="showSection ? isMobile && 'enter-from-right' : 'hidden'"
 			>
 				<TeamDisplaySettings :settings="settings" />
 			</TabPanel>
 			<TabPanel
 				value="options"
 				class="min-w-0 flex-1 focus:outline-none"
-				:class="showSection ? isMobile && 'phone-forward' : 'hidden'"
+				:class="showSection ? isMobile && 'enter-from-right' : 'hidden'"
 			>
 				<TeamOptionsSettings :settings="settings" />
 			</TabPanel>
@@ -117,30 +117,28 @@ const sectionLabel = computed(() => sections.find((item) => item.value === secti
 </template>
 
 <style scoped>
-/* On a phone the list and a section are two screens: a section comes in from the right,
-   the list from the left, as a push and a pop. */
-.phone-forward,
-.phone-back {
+.enter-from-right,
+.enter-from-left {
 	transition:
 		opacity 200ms cubic-bezier(0.23, 1, 0.32, 1),
 		transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 @starting-style {
-	.phone-forward {
+	.enter-from-right {
 		opacity: 0;
 		transform: translateX(12px);
 	}
 
-	.phone-back {
+	.enter-from-left {
 		opacity: 0;
 		transform: translateX(-12px);
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.phone-forward,
-	.phone-back {
+	.enter-from-right,
+	.enter-from-left {
 		transform: none;
 	}
 }

@@ -3,7 +3,6 @@ import { FormControl } from "frappe-ui"
 
 import type { TeamTaxDetails } from "@/types"
 
-// The page owns the form; this edits its fields in place.
 defineProps<{ details: Record<keyof TeamTaxDetails, string>; editable: boolean }>()
 </script>
 

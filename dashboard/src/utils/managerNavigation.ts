@@ -3,7 +3,6 @@ export type ManagerNavItem = {
 	shortLabel?: string
 	icon: string
 	to: string
-	// The desktop sidebar draws a divider above an item that starts a new group.
 	startsGroup?: boolean
 }
 
@@ -17,12 +16,10 @@ export const discoverEvents = {
 
 export const openDiscoverEvents = () => window.location.assign(discoverEvents.href)
 
-// The event or team the sidebar has opened into, shown in its header.
 export type Workspace = {
 	title: string
 	subtitle: string
 	back: { label: string; to: string }
-	// An event has an icon; a team shows its logo.
 	icon?: string
 	image?: string | null
 }

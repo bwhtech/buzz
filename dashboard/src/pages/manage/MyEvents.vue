@@ -23,7 +23,6 @@ const tab = useTimelineTabQuery()
 const route = useRoute()
 const isMobile = useIsMobile()
 
-// A team's workspace lists only that team's events.
 const team = computed(() => route.params.teamId as string | undefined)
 const myEvents = useMyEvents((): Record<string, string> => (team.value ? { team: team.value } : {}))
 

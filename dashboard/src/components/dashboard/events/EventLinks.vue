@@ -8,7 +8,6 @@ import { hostOf, linkIconClass } from "@/utils/eventLinks"
 
 withDefaults(defineProps<{ hint?: string; headingClass?: string }>(), {
 	hint: undefined,
-	// The event Details label; a page with section headings passes its own.
 	headingClass: "text-sm font-medium uppercase tracking-wide text-ink-gray-5",
 })
 

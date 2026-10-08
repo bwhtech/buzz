@@ -6,7 +6,6 @@ defineEmits<{ save: []; discard: [] }>()
 </script>
 
 <template>
-	<!-- These appear mid-edit, so they arrive rather than pop; exit is quicker than entry. -->
 	<Transition
 		enter-active-class="transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
 		enter-from-class="opacity-0 translate-y-1"

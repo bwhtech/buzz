@@ -24,7 +24,6 @@ const showNav = computed(() => {
 		</div>
 
 		<template #nav>
-			<!-- Slides with the sub-page it makes room for; leaving is quicker than coming back. -->
 			<Transition name="mobile-nav">
 				<MobileNav v-if="items.length && showNav">
 					<MobileNavItem
