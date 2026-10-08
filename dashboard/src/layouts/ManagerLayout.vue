@@ -46,7 +46,7 @@ const workspace = computed((): Workspace | undefined => {
 	if (teamId.value)
 		return {
 			title: team.value?.team_name ?? "",
-			subtitle: team.value?.is_a_community ? "Community Workspace" : "Team Workspace",
+			subtitle: "Community Workspace",
 			back: { label: "Back to teams", to: "/manage/teams" },
 			image: team.value?.logo,
 		}

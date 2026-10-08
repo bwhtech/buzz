@@ -28,7 +28,11 @@ class EventSubmissions:
 
 	def open_communities(self) -> list[CommunityOption]:
 		asked = frappe.get_all(REQUEST, filters={"event": self.event}, pluck="community")
-		filters = {"is_a_community": 1, "is_published": 1, "name": ["not in", [*asked, self.team]]}
+		filters = {
+			"accept_community_submissions": 1,
+			"is_published": 1,
+			"name": ["not in", [*asked, self.team]],
+		}
 		rows = frappe.get_all(
 			"Buzz Team", filters=filters, fields=["name", "team_name", "logo"], order_by="team_name"
 		)

@@ -90,7 +90,7 @@ const routes: RouteRecordRaw[] = [
 			{
 				path: "teams",
 				name: "teams",
-				meta: { title: "Teams" },
+				meta: { title: "Communities" },
 				component: () => import("@/pages/manage/MyTeams.vue"),
 			},
 			{

@@ -125,7 +125,7 @@ class TeamPage:
 	def event_filters(self) -> dict:
 		"""The team's own events, plus those its community approved."""
 		filters = {"team": self.team.name}
-		if self.team.is_a_community:
+		if self.team.accept_community_submissions:
 			approved = {"community": self.team.name, "status": "Approved"}
 			filters["name"] = [
 				"in",

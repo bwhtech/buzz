@@ -41,9 +41,9 @@ class CommunityEventRequest(Document):
 
 	def validate_community(self):
 		community = frappe.db.get_value(
-			"Buzz Team", self.community, ["is_a_community", "is_published"], as_dict=True
+			"Buzz Team", self.community, ["accept_community_submissions", "is_published"], as_dict=True
 		)
-		if not (community and community.is_a_community and community.is_published):
+		if not (community and community.accept_community_submissions and community.is_published):
 			frappe.throw(_("{0} is not a published community.").format(self.community))
 		if self.community == self.event_team:
 			frappe.throw(_("A community lists its own events already."))

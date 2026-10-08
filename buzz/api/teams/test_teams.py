@@ -86,7 +86,7 @@ class TestGetMyTeams(TeamTestCase):
 		self.create_team(user)
 
 		with self.set_user(user):
-			flags = {option.name: option.is_a_community for option in get_my_teams()}
+			flags = {option.name: option.accept_community_submissions for option in get_my_teams()}
 
 		self.assertEqual(sorted(flags.values()), [False, True])
 		self.assertTrue(flags[community])
@@ -243,9 +243,9 @@ class TestUpdatePublicPage(TeamTestCase):
 		self.assertNotEqual(frappe.db.get_value("Buzz Team", self.team, "short_description"), "Hijacked")
 
 	def test_a_manager_makes_the_team_a_community(self):
-		self.publish_as(self.manager, is_a_community=True)
+		self.publish_as(self.manager, accept_community_submissions=True)
 
-		self.assertTrue(self.overview().is_a_community)
+		self.assertTrue(self.overview().accept_community_submissions)
 
 	def test_an_unpublished_page_has_no_public_url(self):
 		self.publish_as(self.owner, is_published=False)

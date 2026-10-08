@@ -16,7 +16,7 @@ class TeamOption(APIResponse):
 	# Every team page header links to the public page while the team is published.
 	slug: str | None
 	is_published: bool
-	is_a_community: bool
+	accept_community_submissions: bool
 	short_description: str | None
 	upcoming_event_count: int
 	team_role: str
@@ -49,7 +49,7 @@ class TeamOverview(APIResponse):
 	slug: str | None
 	logo: str | None
 	is_published: bool
-	is_a_community: bool
+	accept_community_submissions: bool
 	# Absolute page URL while published; None otherwise.
 	public_url: str | None
 	short_description: str | None

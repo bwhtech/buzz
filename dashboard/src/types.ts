@@ -124,7 +124,7 @@ export interface TeamOption {
 	logo: string | null
 	slug: string | null
 	is_published: boolean
-	is_a_community: boolean
+	accept_community_submissions: boolean
 	short_description: string | null
 	upcoming_event_count: number
 	team_role: string
@@ -144,7 +144,7 @@ export interface TeamOverview {
 	slug: string | null
 	logo: string | null
 	is_published: boolean
-	is_a_community: boolean
+	accept_community_submissions: boolean
 	public_url: string | null
 	short_description: string | null
 	about: string | null

@@ -39,4 +39,4 @@ class BuzzTeamFactory(BaseFactory[BuzzTeam]):
 
 	@property
 	def community(self) -> dict[str, Any]:
-		return {"is_published": 1, "is_a_community": 1}
+		return {"is_published": 1, "accept_community_submissions": 1}

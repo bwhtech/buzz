@@ -16,7 +16,7 @@ const emit = defineEmits<{ saved: [] }>()
 function fromTeam(team: TeamOverview) {
 	return {
 		is_published: team.is_published,
-		is_a_community: team.is_a_community,
+		accept_community_submissions: team.accept_community_submissions,
 		short_description: team.short_description ?? "",
 		about: team.about ?? "",
 		links: team.links.map((link) => ({ ...link })) as EventExternalLink[],
@@ -34,7 +34,7 @@ function differsFrom(team: TeamOverview) {
 // The server refuses submissions on a private team, so unpublishing turns them off.
 watch(
 	() => form.is_published,
-	(isPublic) => !isPublic && (form.is_a_community = false),
+	(isPublic) => !isPublic && (form.accept_community_submissions = false),
 )
 
 watch(
@@ -84,7 +84,7 @@ async function save() {
 					{{ __("Other teams can submit events. Approved ones show on this page.") }}
 				</p>
 			</div>
-			<Switch v-model="form.is_a_community" :aria-label="__('Community')" />
+			<Switch v-model="form.accept_community_submissions" :aria-label="__('Community')" />
 		</div>
 
 		<Textarea

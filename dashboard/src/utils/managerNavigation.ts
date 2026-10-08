@@ -45,7 +45,12 @@ function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
 	if (hasSponsorships) {
 		items.push({ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" })
 	}
-	items.push({ label: "Teams", icon: "lucide-users", to: "/manage/teams", startsGroup: true })
+	items.push({
+		label: "Communities",
+		icon: "lucide-users-round",
+		to: "/manage/teams",
+		startsGroup: true,
+	})
 	return items
 }
 

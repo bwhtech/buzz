@@ -15,7 +15,7 @@ function formFromTeam(team: TeamOverview) {
 		about: team.about ?? "",
 		links: team.links.map((link) => ({ ...link })) as EventExternalLink[],
 		is_published: team.is_published,
-		is_a_community: team.is_a_community,
+		accept_community_submissions: team.accept_community_submissions,
 	}
 }
 
@@ -26,7 +26,7 @@ const PAGE_FIELDS = [
 	"about",
 	"links",
 	"is_published",
-	"is_a_community",
+	"accept_community_submissions",
 ] as const
 
 type SettingsForm = ReturnType<typeof formFromTeam>
@@ -52,7 +52,7 @@ export function useTeamSettings(team: string) {
 	// The server refuses submissions on a private team, so going private turns them off.
 	watch(
 		() => form.is_published,
-		(isPublic) => !isPublic && (form.is_a_community = false),
+		(isPublic) => !isPublic && (form.accept_community_submissions = false),
 	)
 
 	const canManage = computed(() => canManageMembers(overview.data?.my_role))
