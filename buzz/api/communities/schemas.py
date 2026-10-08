@@ -1,6 +1,6 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
-from buzz.api.schemas import APIResponse
+from buzz.api.schemas import APIRequest, APIResponse
 
 
 class CommunityOption(APIResponse):
@@ -49,3 +49,15 @@ class EventRequests(APIResponse):
 class CommunityQueue(APIResponse):
 	pending: list[CommunityRequest]
 	approved: list[CommunityRequest]
+
+
+class ExternalEvent(APIRequest):
+	"""An event hosted on another platform, such as Luma or KonfHub."""
+
+	event_title: str
+	host: str
+	event_location: str
+	google_place_id: str | None = None
+	start_datetime: datetime
+	end_datetime: datetime
+	event_url: str

@@ -1,8 +1,12 @@
+from datetime import datetime, timedelta
+from urllib.parse import urlparse
+
 import frappe
 from frappe import _
 from frappe.query_builder.functions import Coalesce
 from frappe.utils import get_datetime
 
+from buzz.api.communities.exceptions import EventNotFound
 from buzz.api.communities.schemas import CommunityRequest, EventOption
 from buzz.www.events import TIME_FIELDS, exclude_ended_events, upcoming_filters
 
@@ -68,9 +72,18 @@ def request_row(row) -> dict:
 	row.place = _("Online") if medium == "Online" else venue
 	if row.is_external_event:
 		starts_at = get_datetime(starts_at)
-		start = starts_at - starts_at.replace(hour=0, minute=0, second=0, microsecond=0)
-		row.update(start_date=starts_at.date(), start_time=start, place=location, event_team_name=host)
+		row.update(
+			start_date=starts_at.date(),
+			start_time=time_of_day(starts_at),
+			place=location,
+			event_team_name=host,
+		)
 	return row
+
+
+def time_of_day(moment: datetime) -> timedelta:
+	"""A datetime's time as the timedelta a Time field reads back as."""
+	return moment - moment.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def upcoming_event_options(filters: dict) -> list[EventOption]:
@@ -88,3 +101,12 @@ def upcoming_event_options(filters: dict) -> list[EventOption]:
 		)
 		for event in exclude_ended_events(events)
 	]
+
+
+def find_upcoming_event(url: str) -> EventOption:
+	"""The upcoming published event at a pasted link, or just its route."""
+	route = urlparse(url).path.rstrip("/").rpartition("/")[2]
+	events = upcoming_event_options({"route": route}) if route else []
+	if not events:
+		EventNotFound.throw()
+	return events[0]

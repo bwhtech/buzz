@@ -25,6 +25,12 @@
 	object-fit: cover;
 }
 
+/* Wider than a plain subtle button: it is the page's one call to action. */
+.team-event-action {
+	min-width: 9rem;
+	justify-content: center;
+}
+
 .team-identity-text {
 	flex: 1;
 	min-width: 240px;

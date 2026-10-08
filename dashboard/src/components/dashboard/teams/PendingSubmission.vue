@@ -31,13 +31,11 @@ const submitter = computed(() => {
 })
 
 async function review(action: ReturnType<typeof useReviewAction>, done: string) {
-	try {
-		await action.submit({ request: props.request.name })
-		toast.success(done)
-		emit("changed")
-	} catch (error) {
-		toast.error(serverErrorMessage(error))
-	}
+	// useCall does not reject on a server error; it sets `error`.
+	await action.submit({ request: props.request.name })
+	if (action.error) return toast.error(serverErrorMessage(action.error))
+	toast.success(done)
+	emit("changed")
 }
 </script>
 

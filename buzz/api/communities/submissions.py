@@ -1,9 +1,10 @@
 import frappe
+from frappe.rate_limiter import rate_limit
 
 from buzz.api.communities.exceptions import CannotSubmitEvent, RequestNotRejected
 from buzz.api.communities.notifications import notify_submitted
 from buzz.api.communities.queries import request_rows, upcoming_event_options
-from buzz.api.communities.schemas import CommunityOption, EventOption, EventRequests
+from buzz.api.communities.schemas import CommunityOption, EventOption, EventRequests, ExternalEvent
 from buzz.permissions import WRITE_ROLES, has_team_access
 
 REQUEST = "Community Event Request"
@@ -81,3 +82,21 @@ def submittable_events(community: str) -> list[EventOption]:
 		return []
 	asked = frappe.get_all(REQUEST, filters={"community": community}, pluck="event")
 	return upcoming_event_options({"team": ["in", teams], "name": ["not in", asked]})
+
+
+def external_request(community: str, event: ExternalEvent):
+	"""An unsaved request for an event hosted on another platform."""
+	request = frappe.new_doc(REQUEST)
+	request.update(event.model_dump())
+	request.update({"is_external_event": 1, "community": community, "submitted_by": frappe.session.user})
+	return request
+
+
+# Here, not on the endpoint: stacked under whitelist it hides the ExternalEvent annotation.
+# Open to anyone signed in, and each call emails the community's managers.
+@rate_limit(limit=10, seconds=60 * 60)
+def submit_external_request(community: str, event: ExternalEvent) -> None:
+	"""Anyone signed in may suggest an external event; the community reviews it."""
+	request = external_request(community, event)
+	request.insert(ignore_permissions=True)
+	notify_submitted(request)

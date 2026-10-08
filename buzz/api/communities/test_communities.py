@@ -6,7 +6,9 @@ from frappe.utils import add_days, today
 
 from buzz.api.communities import (
 	add_event,
+	add_external_event,
 	approve_request,
+	find_event,
 	get_event_requests,
 	get_requests,
 	get_submittable_events,
@@ -14,14 +16,17 @@ from buzz.api.communities import (
 	remove_event,
 	resubmit_request,
 	submit_event,
+	submit_external_event,
 	withdraw_request,
 )
 from buzz.api.communities.exceptions import (
 	CannotReviewRequests,
 	CannotSubmitEvent,
+	EventNotFound,
 	RequestNotPending,
 	RequestNotRejected,
 )
+from buzz.api.teams import get_team_events
 from buzz.events.doctype.buzz_team.team_page import TeamPage
 from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
 
@@ -220,6 +225,87 @@ class TestReviewing(CommunityTestCase):
 
 		self.assertEqual([request.event for request in queue.approved], [self.event])
 		self.assertEqual(queue.pending, [])
+
+	def test_a_curator_finds_an_event_by_its_link(self):
+		route = frappe.db.get_value("Buzz Event", self.event, "route")
+		frappe.set_user(self.curator)
+
+		found = find_event(f"https://buzz.example.com/events/{route}/")
+
+		self.assertEqual((found.name, found.title), (self.event, self.event_title))
+		with self.assertRaises(EventNotFound):
+			find_event("https://buzz.example.com/events/no-such-event")
+
+	def test_anyone_signed_in_submits_an_external_event_for_review(self):
+		frappe.set_user(self.viewer)
+
+		submit_external_event(self.community, self.external_event())
+
+		frappe.set_user(self.curator)
+		pending = [row for row in get_requests(self.community).pending if row.is_external_event]
+		self.assertEqual([row.event_title for row in pending], ["Rust Meetup"])
+		self.sendmail.assert_called_once()
+
+	def test_an_external_event_link_must_be_http(self):
+		frappe.set_user(self.viewer)
+
+		with self.assertRaises(frappe.ValidationError):
+			submit_external_event(
+				self.community, self.external_event() | {"event_url": "javascript:alert(1)"}
+			)
+
+	def test_a_curator_adds_an_external_event(self):
+		event = {
+			"event_title": "Rust Meetup",
+			"host": "Rustaceans",
+			"event_location": "WeWork, Bengaluru",
+			"start_datetime": "2026-12-01 18:00:00",
+			"end_datetime": "2026-12-01 20:00:00",
+			"event_url": "https://lu.ma/rust",
+		}
+		self.review(add_external_event, self.community, event)
+		frappe.set_user(self.curator)
+
+		approved = get_requests(self.community).approved
+
+		external = [request for request in approved if request.is_external_event]
+		self.assertEqual(
+			[(row.event_title, row.event_team_name) for row in external], [("Rust Meetup", "Rustaceans")]
+		)
+
+	def test_the_calendar_has_own_featured_and_external_events(self):
+		own = self.create_event("Curators Meetup", team=self.community)
+		self.review(add_event, self.community, self.event)
+		self.review(add_external_event, self.community, self.external_event())
+		frappe.set_user(self.viewer)
+
+		upcoming = get_team_events(self.community).upcoming
+
+		flags = {row.title: (row.is_community_request, row.is_external) for row in upcoming}
+		self.assertEqual(flags["Curators Meetup"], (False, False))
+		self.assertEqual(flags[self.event_title], (True, False))
+		self.assertEqual(flags["Rust Meetup"], (True, True))
+		self.assertIn(own, [row.name for row in upcoming])
+
+	def test_only_curators_are_organizers_on_the_community_page(self):
+		page = TeamPage(frappe.get_doc("Buzz Team", self.community))
+		frappe.set_user(self.curator)
+		self.assertTrue(page.is_organizer())
+		frappe.set_user(self.organiser)
+		self.assertFalse(page.is_organizer())
+		frappe.set_user("Administrator")
+		self.assertFalse(page.is_organizer())
+
+	def external_event(self) -> dict:
+		day = add_days(today(), 20)
+		return {
+			"event_title": "Rust Meetup",
+			"host": "Rustaceans",
+			"event_location": "WeWork, Bengaluru",
+			"start_datetime": f"{day} 18:00:00",
+			"end_datetime": f"{day} 20:00:00",
+			"event_url": "https://lu.ma/rust",
+		}
 
 	def page_titles(self) -> list[str]:
 		context = TeamPage(frappe.get_doc("Buzz Team", self.community)).as_context()

@@ -8,13 +8,14 @@ import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
 import EventCard from "@/components/dashboard/events/EventCard.vue"
 import EventDrawer from "@/components/dashboard/events/EventDrawer.vue"
 import FloatingCreateEventButton from "@/components/dashboard/FloatingCreateEventButton.vue"
+import AddEventMenu from "@/components/dashboard/teams/AddEventMenu.vue"
 import PendingSubmissions from "@/components/dashboard/teams/PendingSubmissions.vue"
 import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
 import { useIsMobile } from "@/composables/useIsMobile"
 import { finishOpening } from "@/composables/useWorkspaceOpening"
-import { useMyEvents } from "@/data/events"
+import { useMyEvents, useTeamEvents } from "@/data/events"
 import { teams } from "@/data/teams"
 import type { MyEvent } from "@/types"
 import { groupEventsByMonth } from "@/utils/eventGroups"
@@ -28,7 +29,8 @@ const route = useRoute()
 const isMobile = useIsMobile()
 
 const team = computed(() => route.params.teamId as string | undefined)
-const myEvents = useMyEvents((): Record<string, string> => (team.value ? { team: team.value } : {}))
+// A team's calendar also lists the events its community approved, which the personal feed leaves out.
+const myEvents = team.value ? useTeamEvents(() => team.value as string) : useMyEvents()
 const canReview = computed(() =>
 	canEditPublicPage(teams.value.find((option) => option.name === team.value)?.team_role),
 )
@@ -115,7 +117,10 @@ const emptyDescription = computed(() =>
 			<PendingSubmissions :community="team" :can-review="canReview" @changed="myEvents.reload()" />
 		</template>
 		<template v-if="team" #heading>
-			<h2 class="hidden text-2xl font-semibold text-ink-gray-9 md:block">{{ __("Events") }}</h2>
+			<div class="hidden items-center gap-2 md:flex">
+				<h2 class="text-2xl font-semibold text-ink-gray-9">{{ __("Events") }}</h2>
+				<AddEventMenu v-if="canReview" :community="team" can-review @added="myEvents.reload()" />
+			</div>
 		</template>
 		<template #empty-state>
 			<EmptyState :title="`No ${tab} events`" :description="emptyDescription" icon="lucide-ghost" />

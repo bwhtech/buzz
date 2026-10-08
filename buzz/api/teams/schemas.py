@@ -1,4 +1,4 @@
-from buzz.api.events.schemas import EventExternalLink
+from buzz.api.events.schemas import EventExternalLink, MyEvent
 from buzz.api.schemas import APIResponse
 
 
@@ -61,3 +61,17 @@ class TeamOverview(APIResponse):
 	invites: list[TeamInvite]
 	# Every member reads them; only Owner/Admin can change them.
 	tax_details: TeamTaxDetails
+
+
+class TeamEvent(MyEvent):
+	"""A calendar row: the team's own event, or one its community approved."""
+
+	is_community_request: bool = False
+	is_external: bool = False
+	# Only an external event has one; a Buzz event lives at its route.
+	event_url: str | None = None
+
+
+class TeamEvents(APIResponse):
+	upcoming: list[TeamEvent]
+	past: list[TeamEvent]

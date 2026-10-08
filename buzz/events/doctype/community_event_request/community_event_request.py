@@ -4,11 +4,11 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import get_datetime
+from frappe.utils import get_datetime, validate_url
 
 from buzz.permissions import WRITE_PTYPES, as_sql, is_unrestricted, my_teams, team_role_of
 
-EXTERNAL_FIELDS = ("event_title", "host", "event_location", "start_datetime", "end_datetime")
+EXTERNAL_FIELDS = ("event_title", "event_url", "host", "event_location", "start_datetime", "end_datetime")
 
 
 class CommunityEventRequest(Document):
@@ -60,6 +60,8 @@ class CommunityEventRequest(Document):
 		labels = [self.meta.get_label(field) for field in EXTERNAL_FIELDS if not self.get(field)]
 		if labels:
 			frappe.throw(_("An external event needs: {0}").format(", ".join(labels)))
+		# Frappe's URL check takes any scheme, and this link renders as an href for curators.
+		validate_url(self.event_url, throw=True, valid_schemes=("http", "https"))
 		if get_datetime(self.end_datetime) < get_datetime(self.start_datetime):
 			frappe.throw(_("The event cannot end before it starts."))
 		self.event = self.event_team = None

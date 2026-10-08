@@ -12,6 +12,8 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AddCoHostDialog: typeof import('./src/components/dashboard/events/AddCoHostDialog.vue')['default']
+    AddEventDialog: typeof import('./src/components/dashboard/teams/AddEventDialog.vue')['default']
+    AddEventMenu: typeof import('./src/components/dashboard/teams/AddEventMenu.vue')['default']
     AddMembersDialog: typeof import('./src/components/dashboard/teams/AddMembersDialog.vue')['default']
     AddOnPreferenceDialog: typeof import('./src/components/AddOnPreferenceDialog.vue')['default']
     AddPricedItemDialog: typeof import('./src/components/dashboard/sponsorships/AddPricedItemDialog.vue')['default']
@@ -75,6 +77,8 @@ declare module 'vue' {
     EventTalkActions: typeof import('./src/components/dashboard/proposals/EventTalkActions.vue')['default']
     EventTalkProposalDrawer: typeof import('./src/components/dashboard/proposals/EventTalkProposalDrawer.vue')['default']
     EventThemeSetting: typeof import('./src/components/dashboard/events/EventThemeSetting.vue')['default']
+    ExistingEventForm: typeof import('./src/components/dashboard/teams/ExistingEventForm.vue')['default']
+    ExternalEventForm: typeof import('./src/components/dashboard/teams/ExternalEventForm.vue')['default']
     FilterChip: typeof import('./src/components/common/filters/FilterChip.vue')['default']
     FloatingCreateEventButton: typeof import('./src/components/dashboard/FloatingCreateEventButton.vue')['default']
     FormFieldSections: typeof import('./src/components/FormFieldSections.vue')['default']

@@ -68,7 +68,8 @@
    "fieldname": "event_url",
    "fieldtype": "Data",
    "label": "Event URL",
-   "options": "URL"
+   "options": "URL",
+   "mandatory_depends_on": "eval:doc.is_external_event"
   },
   {
    "fieldname": "column_break_community",
@@ -187,7 +188,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-08 21:00:00.000000",
+ "modified": "2026-10-09 04:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Community Event Request",

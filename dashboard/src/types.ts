@@ -243,6 +243,13 @@ export interface BookingSummary {
 	total_amount: number
 }
 
+/** buzz.api.teams.get_team_events: a calendar row, the team's own or one its community approved. */
+export interface TeamEvent extends MyEvent {
+	is_community_request: boolean
+	is_external: boolean
+	event_url: string | null
+}
+
 export interface MyEvents {
 	upcoming: MyEvent[]
 	past: MyEvent[]
