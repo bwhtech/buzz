@@ -132,6 +132,29 @@ export interface TeamOption {
 	feature_flags: Record<string, boolean>
 }
 
+// An event another team asked a community to list.
+export interface CommunityRequest {
+	name: string
+	event: string
+	event_title: string
+	event_route: string | null
+	start_date: string
+	event_team: string
+	event_team_name: string
+	event_team_logo: string | null
+	community: string
+	community_name: string
+	status: string
+	submitted_by: string | null
+	submitter_name: string | null
+	review_note: string | null
+}
+
+export interface CommunityQueue {
+	pending: CommunityRequest[]
+	approved: CommunityRequest[]
+}
+
 // Someone invited by email who has not accepted yet, so has no User row.
 export interface TeamInvite {
 	email: string

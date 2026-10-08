@@ -134,6 +134,7 @@ declare module 'vue' {
     SponsorDrawer: typeof import('./src/components/dashboard/sponsorships/SponsorDrawer.vue')['default']
     SponsorshipDrawer: typeof import('./src/components/dashboard/sponsorships/SponsorshipDrawer.vue')['default']
     SponsorshipPaymentDialog: typeof import('./src/components/SponsorshipPaymentDialog.vue')['default']
+    SubmissionRow: typeof import('./src/components/dashboard/teams/SubmissionRow.vue')['default']
     SuccessMessage: typeof import('./src/components/SuccessMessage.vue')['default']
     TaxSettings: typeof import('./src/components/dashboard/ticket-types/TaxSettings.vue')['default']
     TeamCard: typeof import('./src/components/dashboard/teams/TeamCard.vue')['default']
