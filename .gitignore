@@ -55,6 +55,7 @@ jspm_packages/
 .aider*
 
 buzz/public/dashboard/
+buzz/public/islands/
 buzz/public/node_modules
 buzz/www/dashboard.html
 

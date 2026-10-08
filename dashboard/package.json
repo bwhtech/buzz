@@ -5,7 +5,9 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build --base=/assets/buzz/dashboard/ && yarn copy-html-entry",
+		"build": "vite build --base=/assets/buzz/dashboard/ && yarn copy-html-entry && yarn build:islands",
+		"build:islands": "vite build --config vite.islands.config.ts && yarn build:icons",
+		"build:icons": "tailwindcss -c tailwind.icons.config.js -i src/islands/icons.css -o ../buzz/public/islands/icons.css --minify",
 		"preview": "vite preview",
 		"lint": "oxlint --deny-warnings",
 		"typecheck": "./typecheck.sh",

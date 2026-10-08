@@ -1,0 +1,36 @@
+@tailwind components;
+@tailwind utilities;
+
+/* The slice of preflight frappe-ui relies on, kept inside islands. */
+.buzz-island *,
+.buzz-island ::before,
+.buzz-island ::after {
+	box-sizing: border-box;
+	border: 0 solid;
+	/* Tailwind's variable defaults from @tailwind base, which islands leave out: without them
+	   shadow-*, ring-* and transforms compute to nothing. */
+	--tw-translate-x: 0;
+	--tw-translate-y: 0;
+	--tw-rotate: 0;
+	--tw-skew-x: 0;
+	--tw-skew-y: 0;
+	--tw-scale-x: 1;
+	--tw-scale-y: 1;
+	--tw-ring-inset: ;
+	--tw-ring-offset-width: 0px;
+	--tw-ring-offset-color: #fff;
+	--tw-ring-color: #93c5fd80;
+	--tw-ring-offset-shadow: 0 0 #0000;
+	--tw-ring-shadow: 0 0 #0000;
+	--tw-shadow: 0 0 #0000;
+	--tw-shadow-colored: 0 0 #0000;
+}
+
+.buzz-island button,
+.buzz-island input,
+.buzz-island select {
+	font: inherit;
+	color: inherit;
+	margin: 0;
+	background: transparent;
+}
