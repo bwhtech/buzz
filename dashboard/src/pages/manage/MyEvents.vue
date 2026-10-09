@@ -72,7 +72,13 @@ const emptyDescription = computed(() =>
 	<TeamPageHeader v-if="team" section="Calendar" />
 	<CreateEventHeader v-else title="Events" />
 	<template v-if="team && isMobile">
-		<AddEventMenu v-if="canReview" :community="team" can-review @added="myEvents.reload()">
+		<AddEventMenu
+			v-if="canReview"
+			:community="team"
+			can-review
+			match-trigger-width
+			@added="myEvents.reload()"
+		>
 			<FloatingCreateEventButton menu-trigger />
 		</AddEventMenu>
 		<FloatingCreateEventButton v-else />

@@ -10,7 +10,13 @@ import {
 } from "@/components/dashboard/teams/addEventOptions"
 
 // The dashboard calendar renders this, and so does the public community page as an island.
-const props = defineProps<{ community: string; canReview?: boolean; isPublicPage?: boolean }>()
+const props = defineProps<{
+	community: string
+	canReview?: boolean
+	isPublicPage?: boolean
+	// The menu spans its trigger, for a trigger that is a full-width row.
+	matchTriggerWidth?: boolean
+}>()
 defineEmits<{ added: [] }>()
 const isMenuOpen = defineModel<boolean>("open", { default: false })
 
@@ -28,7 +34,12 @@ const label = props.canReview ? __("Add Event") : __("Submit Event")
 </script>
 
 <template>
-	<Dropdown v-model:open="isMenuOpen" :options="options">
+	<Dropdown
+		v-model:open="isMenuOpen"
+		:options="options"
+		:align="matchTriggerWidth ? 'end' : 'start'"
+		:match-trigger-width="matchTriggerWidth"
+	>
 		<slot>
 			<!-- The public page keeps its own espresso button, so the island swaps in unnoticed. -->
 			<button
