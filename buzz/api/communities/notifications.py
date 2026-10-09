@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import get_url
+from frappe.utils import format_datetime, get_url
 
 from buzz.permissions import WRITE_ROLES
 
@@ -14,6 +14,24 @@ def team_name(team: str) -> str:
 	return frappe.db.get_value("Buzz Team", team, "team_name")
 
 
+def submitting_team(request) -> str:
+	# An external event has no Buzz team; its host stands in.
+	return team_name(request.event_team) if request.event_team else request.host
+
+
+def external_event(request) -> dict | None:
+	"""What the email shows for an event hosted elsewhere; a Buzz event gets the base header."""
+	if not request.is_external_event:
+		return None
+	return frappe._dict(
+		title=request.event_title,
+		when=format_datetime(request.start_datetime, "EEE, d MMM yyyy, h:mm a"),
+		place=request.event_location,
+		host=request.host,
+		url=request.event_url,
+	)
+
+
 def send_email(request, recipients: list[str], subject: str, template: str, **args) -> None:
 	frappe.sendmail(
 		recipients=recipients,
@@ -21,21 +39,34 @@ def send_email(request, recipients: list[str], subject: str, template: str, **ar
 		template=template,
 		raw_html=True,
 		add_css=False,
-		args={"event_title": request.event_title, "community_name": team_name(request.community), **args},
+		args={
+			"event_title": request.event_title,
+			"community_name": team_name(request.community),
+			"event_doc": frappe.get_cached_doc("Buzz Event", request.event) if request.event else None,
+			"external_event": external_event(request),
+			**args,
+		},
 		reference_doctype=request.doctype,
 		reference_name=request.name,
 	)
 
 
 def notify_submitted(request) -> None:
-	# An external event has no Buzz team; its host stands in.
-	submitting_team = team_name(request.event_team) if request.event_team else request.host
+	"""Tells the submitter it arrived, and the community's managers it needs a review."""
+	if request.submitted_by:
+		send_email(
+			request,
+			[request.submitted_by],
+			_("{0} was sent to {1}").format(request.event_title, team_name(request.community)),
+			"community_event_received",
+		)
 	send_email(
 		request,
 		community_managers(request.community),
-		_("{0} submitted {1}").format(submitting_team, request.event_title),
+		_("{0} submitted {1}").format(submitting_team(request), request.event_title),
 		"community_event_submitted",
-		team_name=submitting_team,
+		team_name=submitting_team(request),
+		review_url=get_url(f"/b/manage/communities/{request.community}/calendar"),
 	)
 
 

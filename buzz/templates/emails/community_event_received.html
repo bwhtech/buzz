@@ -1,0 +1,11 @@
+{% extends "buzz/templates/emails/base.html" %}
+
+{% block preheader %}{{ community_name | e }} will review {{ event_title | e }}.{% endblock %}
+{% block title %}Your event was sent for review{% endblock %}
+
+{% block content %}
+<p style="margin:0">We sent <strong style="color:#171717">{{ event_title | e }}</strong> to <strong style="color:#171717">{{ community_name | e }}</strong>. Its organizers will review it, and we will email you when they decide.</p>
+{% include "buzz/templates/emails/_community_event.html" %}
+{% endblock %}
+
+{% block reason %}You received this email because you submitted an event to {{ community_name | e }} on Buzz.{% endblock %}

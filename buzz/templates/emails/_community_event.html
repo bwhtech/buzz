@@ -1,0 +1,15 @@
+{#- An event hosted on another platform. A Buzz event shows in the base header instead. -#}
+{% if external_event %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;border:1px solid #e2e2e2;border-radius:8px">
+  <tr>
+    <td style="padding:14px 16px">
+      <div style="font-size:15px;font-weight:600;color:#171717">{{ external_event.title | e }}</div>
+      <div style="font-size:13px;line-height:20px;color:#7c7c7c;margin-top:4px">
+        {{ external_event.when }}{% if external_event.place %} · {{ external_event.place | e }}{% endif %}<br />
+        Hosted by {{ external_event.host | e }}
+      </div>
+      <a href="{{ external_event.url | e }}" style="display:inline-block;margin-top:10px;font-size:13px;font-weight:500;color:#171717;text-decoration:none">Open event link&nbsp;<img src="{{ frappe.get_url('/assets/buzz/images/arrow-up-right.png') }}" alt="" width="12" height="12" style="display:inline-block;width:12px;height:12px;vertical-align:-1px;border:0" /></a>
+    </td>
+  </tr>
+</table>
+{% endif %}

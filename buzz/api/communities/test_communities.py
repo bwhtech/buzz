@@ -74,6 +74,9 @@ class CommunityTestCase(IntegrationTestCase):
 			{"event": event or self.event, "community": community or self.community},
 		)
 
+	def emails(self) -> list[tuple[list[str], str]]:
+		return [(call.kwargs["recipients"], call.kwargs["template"]) for call in self.sendmail.call_args_list]
+
 	def status_of(self, request: str) -> str:
 		return frappe.db.get_value("Community Event Request", request, "status")
 
@@ -112,10 +115,13 @@ class TestSubmitting(CommunityTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.submit(event=draft)
 
-	def test_the_community_managers_are_emailed(self):
+	def test_the_submitter_and_the_community_managers_are_emailed(self):
 		self.submit()
 
-		self.assertEqual(self.sendmail.call_args.kwargs["recipients"], [self.curator])
+		self.assertEqual(
+			self.emails(),
+			[([self.organiser], "community_event_received"), ([self.curator], "community_event_submitted")],
+		)
 
 	def test_communities_already_asked_are_not_offered_again(self):
 		self.submit()
@@ -256,7 +262,10 @@ class TestReviewing(CommunityTestCase):
 		frappe.set_user(self.curator)
 		pending = [row for row in get_requests(self.community).pending if row.is_external_event]
 		self.assertEqual([row.event_title for row in pending], ["Rust Meetup"])
-		self.sendmail.assert_called_once()
+		self.assertEqual(
+			self.emails(),
+			[([self.viewer], "community_event_received"), ([self.curator], "community_event_submitted")],
+		)
 
 	def test_an_external_event_link_must_be_http(self):
 		frappe.set_user(self.viewer)
