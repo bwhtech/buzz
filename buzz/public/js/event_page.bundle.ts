@@ -1,4 +1,5 @@
 import { bannerPattern } from "./event_banner"
+import { EventCountdown } from "./event_countdown"
 
 // The key frappe-ui's useColorScheme keeps the dashboard's choice under, so both share one.
 // Also read by the inline script in the layout's <head>, which applies it before first paint.
@@ -27,6 +28,7 @@ class EventBanner extends HTMLElement {
 }
 
 if (!customElements.get("event-banner")) customElements.define("event-banner", EventBanner)
+if (!customElements.get("event-countdown")) customElements.define("event-countdown", EventCountdown)
 
 function setMode(toggle: HTMLElement, mode: string) {
 	document.documentElement.dataset.mode = mode

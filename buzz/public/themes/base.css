@@ -261,6 +261,118 @@ body:has(.login-frame:not([data-ready])) {
 	border-radius: var(--radius-banner);
 }
 
+/* Countdown pill, straddling the banner's bottom edge like the dashboard's */
+
+.event-banner-frame {
+	position: relative;
+}
+
+.countdown-pill {
+	position: absolute;
+	bottom: 0;
+	left: 50%;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 26px;
+	padding: 0 10px;
+	border-radius: 999px;
+	background: var(--surface-raised);
+	box-shadow:
+		0 0 0 1px var(--border),
+		0 4px 12px rgb(0 0 0 / 0.12);
+	color: var(--ink-muted);
+	font-size: 12px;
+	font-weight: 500;
+	letter-spacing: 0;
+	white-space: nowrap;
+	transform: translate(-50%, 50%);
+	animation: countdown-in 250ms var(--ease-out) both;
+}
+
+.countdown-pill[hidden] {
+	display: none;
+}
+
+.countdown-pill:not([data-live]) :is(.live-dot, .countdown-live),
+.countdown-pill[data-live] .countdown-upcoming {
+	display: none;
+}
+
+.countdown-value {
+	display: inline-flex;
+	color: var(--ink-strong);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.roll-slot {
+	display: inline-grid;
+	overflow: hidden;
+}
+
+.roll-slot > span {
+	grid-area: 1 / 1;
+}
+
+.roll-in {
+	animation: roll-in 300ms var(--ease-out) both;
+}
+
+.roll-out {
+	animation: roll-out 300ms var(--ease-out) both;
+}
+
+.live-dot {
+	position: relative;
+	display: inline-flex;
+	width: 8px;
+	height: 8px;
+}
+
+.live-dot::before,
+.live-dot::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: 999px;
+	background: #16a34a;
+}
+
+.live-dot::before {
+	opacity: 0.75;
+	animation: live-ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes countdown-in {
+	from {
+		opacity: 0;
+		transform: translate(-50%, 50%) scale(0.9);
+	}
+}
+
+@keyframes roll-in {
+	from {
+		opacity: 0;
+		transform: translateY(-70%);
+	}
+}
+
+@keyframes roll-out {
+	to {
+		opacity: 0;
+		transform: translateY(70%);
+	}
+}
+
+@keyframes live-ping {
+	75%,
+	100% {
+		opacity: 0;
+		transform: scale(2);
+	}
+}
+
 .event-intro {
 	display: flex;
 	align-items: center;
@@ -1160,6 +1272,13 @@ summary:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
+	.countdown-pill,
+	.roll-in,
+	.roll-out,
+	.live-dot::before {
+		animation: none;
+	}
+
 	.btn:not([aria-disabled]):active,
 	.es-button:active,
 	.event-card:active,
