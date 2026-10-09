@@ -1,20 +1,15 @@
 <script setup lang="ts">
-import { Badge, Button, Tooltip, dayjs, toast } from "frappe-ui"
+import { Badge, Button, Tooltip, dayjs } from "frappe-ui"
 import { computed } from "vue"
 
 import SubmissionThumbnail from "@/components/dashboard/teams/SubmissionThumbnail.vue"
 import { useIsMobile } from "@/composables/useIsMobile"
-import { useReviewAction } from "@/data/communities"
 import type { CommunityRequest } from "@/types"
-import { serverErrorMessage } from "@/utils/serverError"
 
-const props = defineProps<{ request: CommunityRequest }>()
-const emit = defineEmits<{ changed: []; open: [] }>()
+const props = defineProps<{ request: CommunityRequest; approving: boolean }>()
+const emit = defineEmits<{ open: []; approve: []; reject: [] }>()
 
 const isMobile = useIsMobile()
-
-const approve = useReviewAction("approve_request")
-const reject = useReviewAction("reject_request")
 
 const when = computed(() => {
 	const { start_date, start_time } = props.request
@@ -33,14 +28,6 @@ const details = computed(() => {
 		is_external_event && event_url && `(${new URL(event_url).hostname.replace(/^www\./, "")})`
 	return [when.value, place, [host, site].filter(Boolean).join(" ")].filter(Boolean).join(" · ")
 })
-
-async function review(action: ReturnType<typeof useReviewAction>, done: string) {
-	// useCall does not reject on a server error; it sets `error`.
-	await action.submit({ request: props.request.name })
-	if (action.error) return toast.error(serverErrorMessage(action.error))
-	toast.success(done)
-	emit("changed")
-}
 </script>
 
 <template>
@@ -79,16 +66,15 @@ async function review(action: ReturnType<typeof useReviewAction>, done: string) 
 		</div>
 
 		<div class="relative z-10 flex shrink-0 gap-1.5">
-			<Tooltip :text="__('Remove')">
+			<Tooltip :text="__('Reject')">
 				<Button
 					theme="red"
 					variant="subtle"
 					:size="isMobile ? 'lg' : 'md'"
 					icon="lucide-x"
-					:aria-label="__('Remove {0}', [request.event_title])"
-					:loading="reject.loading"
-					:disabled="approve.loading"
-					@click="review(reject, __('Submission removed'))"
+					:aria-label="__('Reject {0}', [request.event_title])"
+					:disabled="approving"
+					@click="emit('reject')"
 				/>
 			</Tooltip>
 			<Tooltip :text="__('Approve')">
@@ -98,9 +84,8 @@ async function review(action: ReturnType<typeof useReviewAction>, done: string) 
 					:size="isMobile ? 'lg' : 'md'"
 					icon="lucide-check"
 					:aria-label="__('Approve {0}', [request.event_title])"
-					:loading="approve.loading"
-					:disabled="reject.loading"
-					@click="review(approve, __('Event added to your calendar'))"
+					:loading="approving"
+					@click="emit('approve')"
 				/>
 			</Tooltip>
 		</div>

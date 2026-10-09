@@ -128,6 +128,7 @@ declare module 'vue' {
     QuickActionTile: typeof import('./src/components/dashboard/events/QuickActionTile.vue')['default']
     RegistrationActions: typeof import('./src/components/dashboard/events/RegistrationActions.vue')['default']
     RegistrationDialog: typeof import('./src/components/dashboard/events/RegistrationDialog.vue')['default']
+    RejectRequestDialog: typeof import('./src/components/dashboard/teams/RejectRequestDialog.vue')['default']
     RestrictionNotices: typeof import('./src/components/RestrictionNotices.vue')['default']
     RevenueCards: typeof import('./src/components/dashboard/ticket-types/RevenueCards.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

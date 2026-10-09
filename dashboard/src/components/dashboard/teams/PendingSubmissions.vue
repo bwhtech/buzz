@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { Badge, useCall } from "frappe-ui"
+import { Badge, Button, useCall } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import EventDrawer from "@/components/dashboard/events/EventDrawer.vue"
 import PendingSubmission from "@/components/dashboard/teams/PendingSubmission.vue"
+import RejectRequestDialog from "@/components/dashboard/teams/RejectRequestDialog.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
+import { useRequestReview } from "@/composables/useRequestReview"
 import { useRevealOnScroll } from "@/composables/useRevealOnScroll"
 import type { CommunityQueue, CommunityRequest, MyEvent } from "@/types"
 
@@ -29,12 +31,17 @@ const pending = computed(() => queue.data?.pending ?? [])
 const list = ref<HTMLElement | null>(null)
 const { visible, sentinel } = useRevealOnScroll(() => pending.value, 10, list)
 
-const drawer = useDrawerSelection<MyEvent>()
+const drawer = useDrawerSelection<CommunityRequest>()
+const drawerEvent = computed(() => drawer.selected.value && asEvent(drawer.selected.value))
 
 // A Buzz event opens in the drawer; an external one, on the platform it lives on.
 function open(request: CommunityRequest) {
 	if (request.is_external_event) return window.open(request.event_url || "", "_blank", "noopener")
-	drawer.show({
+	drawer.show(request)
+}
+
+function asEvent(request: CommunityRequest): MyEvent {
+	return {
 		name: request.event || request.name,
 		title: request.event_title,
 		route: request.event_route,
@@ -51,12 +58,33 @@ function open(request: CommunityRequest) {
 		team: request.event_team,
 		team_name: request.event_team_name,
 		team_logo: request.event_team_logo,
-	})
+	}
 }
 
 function reviewed() {
 	queue.reload()
 	emit("changed")
+}
+
+const review = useRequestReview(reviewed)
+
+async function approve(request: CommunityRequest) {
+	if (await review.approve(request.name)) drawer.open.value = false
+}
+
+// A rejection asks for a reason first; it goes to the submitter in the email.
+const rejecting = ref<CommunityRequest | null>(null)
+const isRejectOpen = ref(false)
+
+function askToReject(request: CommunityRequest) {
+	rejecting.value = request
+	isRejectOpen.value = true
+}
+
+async function reject(reason: string) {
+	if (!rejecting.value || !(await review.reject(rejecting.value.name, reason))) return
+	isRejectOpen.value = false
+	drawer.open.value = false
 }
 </script>
 
@@ -78,13 +106,44 @@ function reviewed() {
 					v-for="request in visible"
 					:key="request.name"
 					:request="request"
-					@changed="reviewed"
+					:approving="review.approving.value === request.name"
 					@open="open(request)"
+					@approve="approve(request)"
+					@reject="askToReject(request)"
 				/>
 			</TransitionGroup>
 			<div ref="sentinel" aria-hidden="true" />
 		</div>
-		<EventDrawer v-model:open="drawer.open.value" :event="drawer.selected.value" />
+		<EventDrawer v-model:open="drawer.open.value" :event="drawerEvent">
+			<template v-if="drawer.selected.value" #footer>
+				<Button
+					class="flex-1"
+					theme="red"
+					variant="subtle"
+					size="lg"
+					icon-left="lucide-x"
+					:label="__('Reject')"
+					:disabled="review.approving.value === drawer.selected.value.name"
+					@click="askToReject(drawer.selected.value)"
+				/>
+				<Button
+					class="flex-1"
+					theme="green"
+					variant="subtle"
+					size="lg"
+					icon-left="lucide-check"
+					:label="__('Approve')"
+					:loading="review.approving.value === drawer.selected.value.name"
+					@click="approve(drawer.selected.value)"
+				/>
+			</template>
+		</EventDrawer>
+		<RejectRequestDialog
+			v-model="isRejectOpen"
+			:request="rejecting"
+			:loading="review.rejection.loading"
+			@confirm="reject"
+		/>
 	</section>
 </template>
 
