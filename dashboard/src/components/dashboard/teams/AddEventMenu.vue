@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Button, Dropdown } from "frappe-ui"
-import { ref } from "vue"
+import { h, ref } from "vue"
 
 import AddEventDialog from "@/components/dashboard/teams/AddEventDialog.vue"
 import {
@@ -25,11 +25,21 @@ const formType = ref<AddEventForm | null>(null)
 const options = addEventOptions(props.canReview).map((option) => ({
 	label: option.label,
 	icon: option.icon,
+	// A full-width menu is the mobile one, so its rows match the large button that opens it.
+	slots: props.matchTriggerWidth ? largeRowSlots(option.label, option.icon) : undefined,
 	onClick: () => {
 		if (option.type === "create") return window.location.assign(createEventUrl())
 		formType.value = option.type
 	},
 }))
+// frappe-ui menus have no size, so the icon and label carry the large button's height.
+function largeRowSlots(label: string, icon: string) {
+	return {
+		prefix: () => h("span", { class: [icon, "size-5"], "aria-hidden": "true" }),
+		label: () => h("span", { class: "flex h-7 items-center text-lg" }, label),
+	}
+}
+
 const label = props.canReview ? __("Add Event") : __("Submit Event")
 </script>
 
