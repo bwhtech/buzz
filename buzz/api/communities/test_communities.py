@@ -129,6 +129,13 @@ class TestSubmitting(CommunityTestCase):
 		received, submitted = (call.kwargs["reply_to"] for call in self.sendmail.call_args_list)
 		self.assertEqual((received, submitted), (self.curator, self.organiser))
 
+	def test_administrator_is_never_emailed(self):
+		BuzzTeamMembershipFactory.create(team=self.community, user="Administrator", team_role="Manager")
+
+		self.submit()
+
+		self.assertNotIn("Administrator", self.sendmail.call_args.kwargs["recipients"])
+
 	def set_support_email(self, email: str | None) -> None:
 		frappe.db.set_value("Buzz Team Settings", self.community, "support_email", email)
 		frappe.clear_document_cache("Buzz Team Settings", self.community)

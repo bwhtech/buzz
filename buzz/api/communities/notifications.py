@@ -44,9 +44,13 @@ def external_event(request) -> dict | None:
 def send_email(
 	request, recipients: list[str], subject: str, template: str, reply_to: str | None = None, **args
 ) -> None:
+	# Administrator and Guest have no inbox; mail to them only fails.
+	recipients = [user for user in recipients if user not in frappe.STANDARD_USERS]
+	if not recipients:
+		return
 	frappe.sendmail(
 		recipients=recipients,
-		reply_to=reply_to,
+		reply_to=None if reply_to in frappe.STANDARD_USERS else reply_to,
 		subject=subject,
 		template=template,
 		raw_html=True,
