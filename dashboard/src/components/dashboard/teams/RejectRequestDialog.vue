@@ -24,7 +24,7 @@ const submitter = () =>
 			<Textarea
 				v-model="reason"
 				:label="__('Reason')"
-				:placeholder="__('For example: we list events in Mumbai only for now.')"
+				:placeholder="__('Write your reason for rejection')"
 				:rows="3"
 				maxlength="500"
 			/>
