@@ -123,6 +123,25 @@ class TestSubmitting(CommunityTestCase):
 			[([self.organiser], "community_event_received"), ([self.curator], "community_event_submitted")],
 		)
 
+	def test_replies_reach_the_other_side(self):
+		self.submit()
+
+		received, submitted = (call.kwargs["reply_to"] for call in self.sendmail.call_args_list)
+		self.assertEqual((received, submitted), (self.curator, self.organiser))
+
+	def set_support_email(self, email: str | None) -> None:
+		frappe.db.set_value("Buzz Team Settings", self.community, "support_email", email)
+		frappe.clear_document_cache("Buzz Team Settings", self.community)
+
+	def test_a_community_support_email_takes_replies_over_its_owner(self):
+		self.set_support_email("hello@builders.example.com")
+		# Rollback is per class, so the next test must see the community without it.
+		self.addCleanup(self.set_support_email, None)
+
+		self.submit()
+
+		self.assertEqual(self.sendmail.call_args_list[0].kwargs["reply_to"], "hello@builders.example.com")
+
 	def test_communities_already_asked_are_not_offered_again(self):
 		self.submit()
 		frappe.set_user(self.organiser)

@@ -2,12 +2,21 @@ import frappe
 from frappe import _
 from frappe.utils import format_datetime, get_url
 
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 from buzz.permissions import WRITE_ROLES
 
 
 def community_managers(community: str) -> list[str]:
 	filters = {"team": community, "enabled": 1, "team_role": ["in", list(WRITE_ROLES)]}
 	return frappe.get_all("Buzz Team Membership", filters=filters, pluck="user")
+
+
+def community_contact(community: str) -> str | None:
+	"""Where a submitter's reply goes: the community's support email, else its owner."""
+	owner = {"team": community, "enabled": 1, "team_role": "Owner"}
+	return get_team_settings(community).support_email or frappe.db.get_value(
+		"Buzz Team Membership", owner, "user"
+	)
 
 
 def team_name(team: str) -> str:
@@ -32,9 +41,12 @@ def external_event(request) -> dict | None:
 	)
 
 
-def send_email(request, recipients: list[str], subject: str, template: str, **args) -> None:
+def send_email(
+	request, recipients: list[str], subject: str, template: str, reply_to: str | None = None, **args
+) -> None:
 	frappe.sendmail(
 		recipients=recipients,
+		reply_to=reply_to,
 		subject=subject,
 		template=template,
 		raw_html=True,
@@ -59,12 +71,14 @@ def notify_submitted(request) -> None:
 			[request.submitted_by],
 			_("{0} was sent to {1}").format(request.event_title, team_name(request.community)),
 			"community_event_received",
+			reply_to=community_contact(request.community),
 		)
 	send_email(
 		request,
 		community_managers(request.community),
 		_("{0} submitted {1}").format(submitting_team(request), request.event_title),
 		"community_event_submitted",
+		reply_to=request.submitted_by,
 		team_name=submitting_team(request),
 		review_url=get_url(f"/b/manage/communities/{request.community}/calendar"),
 	)
@@ -81,6 +95,7 @@ def notify_reviewed(request) -> None:
 		[request.submitted_by],
 		(_("{0} was approved") if approved else _("{0} was not approved")).format(request.event_title),
 		"community_event_approved" if approved else "community_event_rejected",
+		reply_to=community_contact(request.community),
 		community_url=get_url(f"/{community_route}"),
 		review_note=request.review_note,
 	)
