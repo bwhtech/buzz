@@ -18,6 +18,7 @@ class EventOption(APIResponse):
 
 class CommunityRequest(APIResponse):
 	name: str
+	creation: datetime
 	# Unset for an external event, which lives on another platform at `event_url`.
 	event: str | None
 	is_external_event: bool
@@ -28,6 +29,7 @@ class CommunityRequest(APIResponse):
 	start_time: timedelta | None
 	# The venue, "Online", or for an external event its location.
 	place: str | None
+	banner_image: str | None
 	event_team: str | None
 	# The event's team, or for an external event its host.
 	event_team_name: str | None

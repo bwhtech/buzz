@@ -226,6 +226,18 @@ class TestReviewing(CommunityTestCase):
 		self.assertEqual([request.event for request in queue.approved], [self.event])
 		self.assertEqual(queue.pending, [])
 
+	def test_pending_requests_list_the_newest_submission_first(self):
+		# The older submission starts sooner, so start-date order would list it first.
+		sooner = add_days(today(), 5)
+		older = self.submit(self.create_event("Older", start_date=sooner, end_date=sooner))
+		newer = self.submit()
+		frappe.db.set_value("Community Event Request", older, "creation", "2026-01-01 09:00:00")
+		frappe.set_user(self.curator)
+
+		pending = [row.name for row in get_requests(self.community).pending]
+
+		self.assertLess(pending.index(newer), pending.index(older))
+
 	def test_a_curator_finds_an_event_by_its_link(self):
 		route = frappe.db.get_value("Buzz Event", self.event, "route")
 		frappe.set_user(self.curator)

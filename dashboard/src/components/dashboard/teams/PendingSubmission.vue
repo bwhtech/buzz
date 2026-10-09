@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { Button, dayjs, toast } from "frappe-ui"
+import { Badge, Button, Tooltip, dayjs, toast } from "frappe-ui"
 import { computed } from "vue"
 
+import SubmissionThumbnail from "@/components/dashboard/teams/SubmissionThumbnail.vue"
 import { useReviewAction } from "@/data/communities"
 import type { CommunityRequest } from "@/types"
-import { eventUrl } from "@/utils/eventUrl"
 import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps<{ request: CommunityRequest }>()
-const emit = defineEmits<{ changed: [] }>()
+const emit = defineEmits<{ changed: []; open: [] }>()
 
 const approve = useReviewAction("approve_request")
 const reject = useReviewAction("reject_request")
@@ -19,15 +19,13 @@ const when = computed(() => {
 	// The server sends a time as "9:30:00", without a leading zero.
 	return start_time ? `${date}, ${dayjs(`2000-01-01 ${start_time}`).format("HH:mm")}` : date
 })
-// A Buzz event opens its own page; an external one, the platform it lives on.
-const link = computed(() =>
-	props.request.event_route ? eventUrl(props.request.event_route) : props.request.event_url,
-)
-const submitter = computed(() => {
-	const { submitter_name, submitted_by } = props.request
-	return submitter_name && submitter_name !== submitted_by
-		? `${submitter_name} (${submitted_by})`
-		: submitted_by
+
+const details = computed(() => {
+	const { place, event_team_name, event_url, is_external_event } = props.request
+	const host = event_team_name && `by ${event_team_name}`
+	const site =
+		is_external_event && event_url && `(${new URL(event_url).hostname.replace(/^www\./, "")})`
+	return [when.value, place, [host, site].filter(Boolean).join(" ")].filter(Boolean).join(" · ")
 })
 
 async function review(action: ReturnType<typeof useReviewAction>, done: string) {
@@ -40,46 +38,52 @@ async function review(action: ReturnType<typeof useReviewAction>, done: string) 
 </script>
 
 <template>
-	<li class="flex items-start gap-4 rounded-6 border border-outline-gray-2 p-4">
-		<div class="min-w-0 flex-1 space-y-1">
-			<component
-				:is="link ? 'a' : 'span'"
-				:href="link || undefined"
-				:target="link ? '_blank' : undefined"
-				rel="noopener"
-				class="flex items-center gap-1.5 text-lg font-semibold text-ink-gray-9"
-				:class="{ 'hover:underline': link }"
-			>
+	<li class="relative flex items-center gap-3 bg-surface-base px-4 py-3 hover:bg-surface-gray-1">
+		<!-- Overlay, so the row opens the event while the actions above it stay buttons. -->
+		<button
+			type="button"
+			class="absolute inset-0 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-outline-gray-3"
+			:aria-label="__('Open {0}', [request.event_title])"
+			@click="emit('open')"
+		/>
+		<SubmissionThumbnail :request="request" />
+
+		<div class="min-w-0 flex-1 space-y-0.5">
+			<p class="flex items-center gap-1.5 text-base font-medium text-ink-gray-8">
 				<span class="truncate">{{ request.event_title }}</span>
-				<span
-					v-if="link"
-					class="lucide-square-arrow-out-up-right size-4 shrink-0 text-ink-gray-5"
-				/>
-			</component>
-			<p class="text-base text-ink-gray-6">
-				{{ [when, request.place].filter(Boolean).join(" · ") }}
+				<Badge v-if="request.is_external_event" size="sm" :label="__('External')" />
 			</p>
-			<p v-if="submitter" class="text-sm text-ink-gray-5">
-				{{ __("Submitted by {0}", [submitter]) }}
-			</p>
+			<p class="truncate text-sm text-ink-gray-5">{{ details }}</p>
 		</div>
-		<div class="flex shrink-0 gap-2">
-			<Button
-				variant="ghost"
-				icon-left="lucide-x"
-				:label="__('Remove')"
-				:loading="reject.loading"
-				:disabled="approve.loading"
-				@click="review(reject, __('Submission removed'))"
-			/>
-			<Button
-				variant="subtle"
-				icon-left="lucide-check"
-				:label="__('Approve')"
-				:loading="approve.loading"
-				:disabled="reject.loading"
-				@click="review(approve, __('Event added to your calendar'))"
-			/>
+
+		<div class="hidden shrink-0 text-right text-sm lg:block">
+			<p class="text-ink-gray-7">{{ request.submitter_name || request.submitted_by }}</p>
+			<p class="text-ink-gray-5">{{ dayjs(request.creation).fromNow() }}</p>
+		</div>
+
+		<div class="relative z-10 flex shrink-0 gap-1.5">
+			<Tooltip :text="__('Remove')">
+				<Button
+					theme="red"
+					variant="subtle"
+					icon="lucide-x"
+					:aria-label="__('Remove {0}', [request.event_title])"
+					:loading="reject.loading"
+					:disabled="approve.loading"
+					@click="review(reject, __('Submission removed'))"
+				/>
+			</Tooltip>
+			<Tooltip :text="__('Approve')">
+				<Button
+					theme="green"
+					variant="subtle"
+					icon="lucide-check"
+					:aria-label="__('Approve {0}', [request.event_title])"
+					:loading="approve.loading"
+					:disabled="reject.loading"
+					@click="review(approve, __('Event added to your calendar'))"
+				/>
+			</Tooltip>
 		</div>
 	</li>
 </template>

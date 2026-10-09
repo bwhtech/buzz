@@ -25,7 +25,11 @@ class CommunityReview:
 
 	def queue(self) -> CommunityQueue:
 		return CommunityQueue(
-			pending=request_rows(community=self.community, status="Pending"),
+			pending=sorted(
+				request_rows(community=self.community, status="Pending"),
+				key=lambda row: row.creation,
+				reverse=True,
+			),
 			approved=request_rows(community=self.community, status="Approved"),
 		)
 

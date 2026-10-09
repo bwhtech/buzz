@@ -135,6 +135,7 @@ export interface TeamOption {
 // An event another team asked a community to list.
 export interface CommunityRequest {
 	name: string
+	creation: string
 	event: string | null
 	is_external_event: boolean
 	event_url: string | null
@@ -143,6 +144,7 @@ export interface CommunityRequest {
 	start_date: string
 	start_time: string | null
 	place: string | null
+	banner_image: string | null
 	event_team: string | null
 	event_team_name: string | null
 	event_team_logo: string | null

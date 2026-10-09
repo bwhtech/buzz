@@ -36,6 +36,7 @@ def request_rows(**conditions) -> list[CommunityRequest]:
 		.on(venue.name == event.venue)
 		.select(
 			request.name,
+			request.creation,
 			request.event,
 			request.event_title,
 			request.is_external_event,
@@ -47,6 +48,7 @@ def request_rows(**conditions) -> list[CommunityRequest]:
 			event.start_date,
 			event.start_time,
 			event.medium,
+			event.banner_image,
 			venue.venue_name,
 			request.event_team,
 			event_team.team_name.as_("event_team_name"),
