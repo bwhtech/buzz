@@ -117,10 +117,10 @@ const emptyDescription = computed(() =>
 			<PendingSubmissions :community="team" :can-review="canReview" @changed="myEvents.reload()" />
 		</template>
 		<template v-if="team" #heading>
-			<div class="hidden items-center gap-2 md:flex">
-				<h2 class="text-2xl font-semibold text-ink-gray-9">{{ __("Events") }}</h2>
-				<AddEventMenu v-if="canReview" :community="team" can-review @added="myEvents.reload()" />
-			</div>
+			<h2 class="hidden text-2xl font-semibold text-ink-gray-9 md:block">{{ __("Events") }}</h2>
+		</template>
+		<template v-if="team && canReview && !isMobile" #actions>
+			<AddEventMenu :community="team" can-review @added="myEvents.reload()" />
 		</template>
 		<template #empty-state>
 			<EmptyState :title="`No ${tab} events`" :description="emptyDescription" icon="lucide-ghost" />

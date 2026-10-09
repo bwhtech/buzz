@@ -40,13 +40,16 @@ const tabOptions = [
 				</div>
 				<p class="text-p-base" v-if="description">{{ description }}</p>
 			</div>
-			<TabButtons
-				v-model="tab"
-				class="max-md:w-full"
-				:options="tabOptions"
-				size="md"
-				:fluid="isMobile"
-			/>
+			<div class="flex items-center gap-2 max-md:w-full">
+				<TabButtons
+					v-model="tab"
+					class="max-md:w-full"
+					:options="tabOptions"
+					size="md"
+					:fluid="isMobile"
+				/>
+				<slot name="actions" />
+			</div>
 		</header>
 
 		<div v-if="$slots.controls" class="flex items-center justify-between gap-4">
