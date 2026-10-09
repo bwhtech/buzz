@@ -79,10 +79,11 @@ async function submit() {
 			type="url"
 			:label="__('Event link')"
 			placeholder="https://lu.ma/some-event"
+			maxlength="500"
 			required
 			autofocus
 		/>
-		<FormControl v-model="event.event_title" :label="__('Event name')" required />
+		<FormControl v-model="event.event_title" :label="__('Event name')" maxlength="140" required />
 		<Combobox
 			v-model:query="locationQuery"
 			v-model:open="isLocationOpen"
@@ -95,7 +96,7 @@ async function submit() {
 			:placeholder="event.event_location || __('Search for a place')"
 			@update:model-value="selectPlace"
 		/>
-		<FormControl v-model="event.host" :label="__('Hosted by')" required />
+		<FormControl v-model="event.host" :label="__('Hosted by')" maxlength="140" required />
 		<div class="grid grid-cols-2 gap-3">
 			<DateTimePicker
 				v-model="event.start_datetime"

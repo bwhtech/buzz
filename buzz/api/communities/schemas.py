@@ -1,4 +1,7 @@
 from datetime import date, datetime, timedelta
+from typing import Annotated
+
+from pydantic import Field
 
 from buzz.api.schemas import APIRequest, APIResponse
 
@@ -53,13 +56,18 @@ class CommunityQueue(APIResponse):
 	approved: list[CommunityRequest]
 
 
+# Data columns hold 140 characters; a shared link with tracking parameters runs longer.
+Text140 = Annotated[str, Field(max_length=140)]
+Url = Annotated[str, Field(max_length=500)]
+
+
 class ExternalEvent(APIRequest):
 	"""An event hosted on another platform, such as Luma or KonfHub."""
 
-	event_title: str
-	host: str
-	event_location: str
+	event_title: Text140
+	host: Text140
+	event_location: Text140
 	google_place_id: str | None = None
 	start_datetime: datetime
 	end_datetime: datetime
-	event_url: str
+	event_url: Url

@@ -266,6 +266,17 @@ class TestReviewing(CommunityTestCase):
 				self.community, self.external_event() | {"event_url": "javascript:alert(1)"}
 			)
 
+	def test_an_external_event_keeps_a_long_tracking_link_but_not_a_long_name(self):
+		frappe.set_user(self.viewer)
+		link = "https://lu.ma/rust?" + "utm_source=newsletter&utm_campaign=october-community-roundup&" * 4
+
+		# Rollback is per class, so this goes to the other community and stays out of its tests.
+		submit_external_event(self.other_community, self.external_event() | {"event_url": link})
+
+		self.assertTrue(frappe.db.exists("Community Event Request", {"event_url": link}))
+		with self.assertRaises(frappe.FrappeTypeError):
+			submit_external_event(self.other_community, self.external_event() | {"event_title": "Rust " * 30})
+
 	def test_a_curator_adds_an_external_event(self):
 		event = {
 			"event_title": "Rust Meetup",
