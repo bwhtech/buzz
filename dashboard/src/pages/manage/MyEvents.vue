@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Alert, Button, dayjs } from "frappe-ui"
-import { computed, ref, watch } from "vue"
+import { Alert, dayjs } from "frappe-ui"
+import { computed, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import EmptyState from "@/components/common/EmptyState.vue"
@@ -14,6 +14,7 @@ import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
 import { useIsMobile } from "@/composables/useIsMobile"
+import { useRevealOnScroll } from "@/composables/useRevealOnScroll"
 import { finishOpening } from "@/composables/useWorkspaceOpening"
 import { useMyEvents, useTeamEvents } from "@/data/events"
 import { teams } from "@/data/teams"
@@ -45,25 +46,22 @@ watch(
 // The feed arrives already split, so the tab only picks a side.
 const events = computed(() => myEvents.data?.[tab.value] || [])
 
-// The feed is unpaginated, so a long history renders a page at a time.
-const PAGE_SIZE = 50
-const shownCount = ref(PAGE_SIZE)
-watch(tab, () => (shownCount.value = PAGE_SIZE))
+// The feed is unpaginated, so a long history renders a page at a time as it scrolls.
+const { visible, sentinel, reset } = useRevealOnScroll(() => events.value, 50)
+watch(tab, reset)
 
 // An event already under way is still on, so it sits under today, not its start date.
 const today = dayjs().format("YYYY-MM-DD")
 const fileUnder = (event: MyEvent) =>
 	tab.value === "upcoming" && event.start_date < today ? today : event.start_date
 
-const months = computed(() =>
-	groupEventsByMonth(events.value.slice(0, shownCount.value), fileUnder),
-)
+const months = computed(() => groupEventsByMonth(visible.value, fileUnder))
 
 const drawer = useDrawerSelection<MyEvent>()
 
 const emptyDescription = computed(() =>
 	team.value
-		? "Events this team hosts will show up here."
+		? "Events your community hosts or features will show up here."
 		: tab.value === "upcoming"
 			? "Events you host or hold a ticket to will show up here."
 			: "Events you have already attended or hosted will show up here.",
@@ -73,7 +71,12 @@ const emptyDescription = computed(() =>
 <template>
 	<TeamPageHeader v-if="team" section="Calendar" />
 	<CreateEventHeader v-else title="Events" />
-	<FloatingCreateEventButton v-if="team && isMobile" />
+	<template v-if="team && isMobile">
+		<AddEventMenu v-if="canReview" :community="team" can-review @added="myEvents.reload()">
+			<FloatingCreateEventButton menu-trigger />
+		</AddEventMenu>
+		<FloatingCreateEventButton v-else />
+	</template>
 
 	<TimelineList
 		v-model:tab="tab"
@@ -131,12 +134,7 @@ const emptyDescription = computed(() =>
 		</template>
 
 		<template #footer>
-			<Button
-				v-if="events.length > shownCount"
-				class="w-full"
-				label="Show more"
-				@click="shownCount += PAGE_SIZE"
-			/>
+			<div ref="sentinel" aria-hidden="true" />
 		</template>
 	</TimelineList>
 

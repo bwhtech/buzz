@@ -96,7 +96,7 @@ const venue = computed(() => {
 				</p>
 
 				<h3
-					class="font-semibold text-lg text-ink-gray-8 [overflow-wrap:anywhere] max-md:line-clamp-3"
+					class="font-semibold text-lg text-ink-gray-8 hyphens-auto [overflow-wrap:anywhere] max-md:line-clamp-3"
 					:title="event.title"
 				>
 					{{ event.title }}
@@ -117,7 +117,9 @@ const venue = computed(() => {
 						:class="[venue.icon, venue.tone]"
 						aria-hidden="true"
 					/>
-					<span class="min-w-0 [overflow-wrap:anywhere]">{{ venue.label }}</span>
+					<span class="min-w-0 [overflow-wrap:anywhere] max-md:line-clamp-2" :title="venue.label">
+						{{ venue.label }}
+					</span>
 				</p>
 			</div>
 

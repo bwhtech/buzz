@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { bannerPattern } from "@public/js/event_banner"
-import { computed } from "vue"
+import { computed, ref } from "vue"
 
 import type { CommunityRequest } from "@/types"
 
 // A Buzz event shows its banner; an external one, a link tile.
 const props = defineProps<{ request: CommunityRequest }>()
+
+const bannerFailed = ref(false)
 
 const banner = computed(() => ({ backgroundImage: bannerPattern(props.request.event_title) }))
 </script>
@@ -19,11 +21,12 @@ const banner = computed(() => ({ backgroundImage: bannerPattern(props.request.ev
 		<span class="lucide-link size-5" />
 	</span>
 	<img
-		v-else-if="request.banner_image"
+		v-else-if="request.banner_image && !bannerFailed"
 		class="size-10 shrink-0 rounded-4 object-cover object-top"
 		:src="request.banner_image"
 		:style="banner"
 		alt=""
+		@error="bannerFailed = true"
 	/>
 	<span v-else class="size-10 shrink-0 rounded-4" :style="banner" aria-hidden="true" />
 </template>

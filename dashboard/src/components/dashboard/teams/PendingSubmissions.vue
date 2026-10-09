@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Badge, useCall } from "frappe-ui"
-import { computed, watch } from "vue"
+import { computed, ref, watch } from "vue"
 
 import EventDrawer from "@/components/dashboard/events/EventDrawer.vue"
 import PendingSubmission from "@/components/dashboard/teams/PendingSubmission.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
+import { useRevealOnScroll } from "@/composables/useRevealOnScroll"
 import type { CommunityQueue, CommunityRequest, MyEvent } from "@/types"
 
 const props = defineProps<{ community: string; canReview: boolean }>()
@@ -23,6 +24,10 @@ watch(
 )
 
 const pending = computed(() => queue.data?.pending ?? [])
+
+// A long queue scrolls in its own box, so the calendar below stays a scroll away.
+const list = ref<HTMLElement | null>(null)
+const { visible, sentinel } = useRevealOnScroll(() => pending.value, 10, list)
 
 const drawer = useDrawerSelection<MyEvent>()
 
@@ -64,19 +69,21 @@ function reviewed() {
 			</h2>
 			<p class="text-sm text-ink-gray-5">{{ __("Not on your calendar until approved") }}</p>
 		</div>
-		<TransitionGroup
-			tag="ul"
-			name="pending-row"
-			class="relative divide-y divide-outline-gray-1 overflow-hidden rounded-8 border border-outline-gray-2"
+		<div
+			ref="list"
+			class="max-h-[22rem] overflow-y-auto overscroll-contain rounded-8 border border-outline-gray-2"
 		>
-			<PendingSubmission
-				v-for="request in pending"
-				:key="request.name"
-				:request="request"
-				@changed="reviewed"
-				@open="open(request)"
-			/>
-		</TransitionGroup>
+			<TransitionGroup tag="ul" name="pending-row" class="relative divide-y divide-outline-gray-1">
+				<PendingSubmission
+					v-for="request in visible"
+					:key="request.name"
+					:request="request"
+					@changed="reviewed"
+					@open="open(request)"
+				/>
+			</TransitionGroup>
+			<div ref="sentinel" aria-hidden="true" />
+		</div>
 		<EventDrawer v-model:open="drawer.open.value" :event="drawer.selected.value" />
 	</section>
 </template>

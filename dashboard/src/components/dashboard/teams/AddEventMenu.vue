@@ -29,17 +29,19 @@ const label = props.canReview ? __("Add Event") : __("Submit Event")
 
 <template>
 	<Dropdown v-model:open="isMenuOpen" :options="options">
-		<!-- The public page keeps its own espresso button, so the island swaps in unnoticed. -->
-		<button
-			v-if="isPublicPage"
-			type="button"
-			class="es-button team-event-action"
-			data-variant="subtle"
-			data-size="md"
-		>
-			<span class="icon lucide-plus" aria-hidden="true" />{{ label }}
-		</button>
-		<Button v-else variant="subtle" icon-left="lucide-plus" :label="label" />
+		<slot>
+			<!-- The public page keeps its own espresso button, so the island swaps in unnoticed. -->
+			<button
+				v-if="isPublicPage"
+				type="button"
+				class="es-button team-event-action"
+				data-variant="subtle"
+				data-size="md"
+			>
+				<span class="icon lucide-plus" aria-hidden="true" />{{ label }}
+			</button>
+			<Button v-else variant="subtle" icon-left="lucide-plus" :label="label" />
+		</slot>
 	</Dropdown>
 	<AddEventDialog
 		v-model:form-type="formType"
