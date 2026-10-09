@@ -45,7 +45,7 @@ const filtered = computed(() => {
 						</template>
 					</FormControl>
 
-					<EmptyState v-if="!filtered.length" :title="__('No teams found')" />
+					<EmptyState v-if="!filtered.length" :title="__('No teams found')" icon="lucide-search" />
 
 					<div v-else>
 						<div :class="COLUMNS" class="border-b pb-2 text-sm text-ink-gray-5">

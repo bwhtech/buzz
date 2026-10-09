@@ -77,7 +77,7 @@ class BuzzTeam(WebsiteGenerator):
 		if not self.slug:
 			self.set_slug()
 		# Submissions are listed on the public page, so a private team has nowhere to show them.
-		if self.is_a_community and not self.is_published:
+		if self.accept_community_submissions and not self.is_published:
 			frappe.throw(_("Only a public team can accept community event submissions."))
 		# After the slug: the first publish builds the route from it.
 		super().validate()

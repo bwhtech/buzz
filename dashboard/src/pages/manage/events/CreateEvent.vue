@@ -10,8 +10,9 @@ import {
 } from "frappe-ui"
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
-import { onBeforeRouteLeave, useRouter } from "vue-router"
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router"
 
+import ProgressStatus from "@/components/common/ProgressStatus.vue"
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
 import EventLocationField from "@/components/dashboard/events/location/EventLocationField.vue"
@@ -21,6 +22,7 @@ import { currentTeam } from "@/data/teams"
 import { defaultSchedule } from "@/utils/eventDates"
 import type { ChecklistItem } from "@/utils/eventValidation"
 import { eventDraftChecklist, isDraftComplete } from "@/utils/eventValidation"
+import { resolveLoginRedirect } from "@/utils/loginRedirect"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 import { serverErrorMessage } from "@/utils/serverError"
 import { canCreateEvents } from "@/utils/teamRoles"
@@ -28,6 +30,7 @@ import { currentTimeZone } from "@/utils/timeZones"
 
 const MANAGER_REQUIRED = "Ask an admin to make you a Manager to create events."
 
+const route = useRoute()
 const router = useRouter()
 
 const isMobile = useIsMobile()
@@ -93,7 +96,12 @@ const CREATION_STEPS = [
 	"Booking the venue",
 	"Opening the guest list",
 ]
-const FINAL_STEP = "Opening event page"
+// The page that sent us here, such as a community calendar, gets the organiser back.
+const redirectTo = computed(() => {
+	const target = route.query["redirect-to"]
+	return typeof target === "string" ? target : ""
+})
+const finalStep = computed(() => (redirectTo.value ? "Taking you back" : "Opening event page"))
 const FAILED_STEP = "Failed to create event"
 const STEP_DURATION = 600
 
@@ -197,12 +205,20 @@ async function save() {
 		return
 	}
 
-	step.value = FINAL_STEP
+	step.value = finalStep.value
 	toast.success(`${createEvent.data?.title} created`)
 	await wait(STEP_DURATION)
 	// Someone who walked off mid-save meant it; the toast already says the event exists.
 	if (router.currentRoute.value.name !== "create-event") return
+	if (redirectTo.value) return goBack(redirectTo.value)
 	router.push({ name: "event-details", params: { eventId: createEvent.data?.name } })
+}
+
+// A dashboard page stays in the SPA; a public page, such as a community's, is a full load.
+function goBack(path: string) {
+	const base = router.options.history.base
+	if (path.startsWith(`${base}/`)) return router.push(path.slice(base.length))
+	window.location.assign(resolveLoginRedirect(path, window.location.origin))
 }
 </script>
 
@@ -334,15 +350,7 @@ async function save() {
 				</section>
 			</div>
 
-			<!-- A little above true centre: a lone line sitting at exactly half reads low. -->
-			<div v-else class="flex min-h-[70dvh] items-center justify-center" aria-live="polite">
-				<!-- Separate elements: the rise and the shimmer are both CSS animations. -->
-				<span class="fade-up-in [animation-delay:300ms]">
-					<span class="text-base" :class="failed ? 'text-ink-red-6' : 'text-shimmer'">
-						{{ step }}
-					</span>
-				</span>
-			</div>
+			<ProgressStatus v-else :text="step" :failed="failed" delayed />
 		</Transition>
 	</div>
 </template>

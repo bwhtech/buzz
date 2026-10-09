@@ -8,12 +8,23 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "is_external_event",
   "event",
   "event_title",
   "event_team",
+  "event_url",
   "column_break_community",
   "community",
   "status",
+  "external_event_section",
+  "host",
+  "event_location",
+  "google_place_id",
+  "column_break_external",
+  "start_datetime",
+  "end_datetime",
+  "latitude",
+  "longitude",
   "section_break_review",
   "submitted_by",
   "column_break_review",
@@ -22,20 +33,28 @@
  ],
  "fields": [
   {
+   "default": "0",
+   "description": "An event hosted on another platform, such as Luma or KonfHub.",
+   "fieldname": "is_external_event",
+   "fieldtype": "Check",
+   "label": "Is External Event"
+  },
+  {
    "fieldname": "event",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Event",
-   "options": "Buzz Event",
-   "reqd": 1
+   "mandatory_depends_on": "eval:!doc.is_external_event",
+   "options": "Buzz Event"
   },
   {
    "fetch_from": "event.title",
    "fieldname": "event_title",
    "fieldtype": "Data",
-   "label": "Event Title",
-   "read_only": 1
+   "label": "Event Name",
+   "mandatory_depends_on": "eval:doc.is_external_event",
+   "read_only_depends_on": "eval:!doc.is_external_event"
   },
   {
    "fetch_from": "event.team",
@@ -44,6 +63,14 @@
    "label": "Event Team",
    "options": "Buzz Team",
    "read_only": 1
+  },
+  {
+   "fieldname": "event_url",
+   "length": 500,
+   "fieldtype": "Data",
+   "label": "Event URL",
+   "options": "URL",
+   "mandatory_depends_on": "eval:doc.is_external_event"
   },
   {
    "fieldname": "column_break_community",
@@ -67,6 +94,68 @@
    "label": "Status",
    "options": "Pending\nApproved\nRejected",
    "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.is_external_event",
+   "fieldname": "external_event_section",
+   "fieldtype": "Section Break",
+   "label": "External Event"
+  },
+  {
+   "depends_on": "eval:doc.is_external_event",
+   "fieldname": "host",
+   "fieldtype": "Data",
+   "label": "Host",
+   "mandatory_depends_on": "eval:doc.is_external_event"
+  },
+  {
+   "depends_on": "eval:doc.is_external_event",
+   "description": "The place picked from the Google Maps search.",
+   "fieldname": "event_location",
+   "fieldtype": "Data",
+   "label": "Event Location",
+   "mandatory_depends_on": "eval:doc.is_external_event"
+  },
+  {
+   "depends_on": "eval:doc.is_external_event",
+   "fieldname": "google_place_id",
+   "fieldtype": "Data",
+   "label": "Google Place ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_external",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.is_external_event",
+   "fieldname": "start_datetime",
+   "fieldtype": "Datetime",
+   "label": "Starts At",
+   "mandatory_depends_on": "eval:doc.is_external_event"
+  },
+  {
+   "depends_on": "eval:doc.is_external_event",
+   "fieldname": "end_datetime",
+   "fieldtype": "Datetime",
+   "label": "Ends At",
+   "mandatory_depends_on": "eval:doc.is_external_event"
+  },
+  {
+   "depends_on": "eval:doc.is_external_event",
+   "fieldname": "latitude",
+   "fieldtype": "Float",
+   "label": "Latitude",
+   "precision": "9",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.is_external_event",
+   "fieldname": "longitude",
+   "fieldtype": "Float",
+   "label": "Longitude",
+   "precision": "9",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_review",
@@ -100,7 +189,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-06 16:57:41.747837",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Community Event Request",

@@ -45,7 +45,12 @@ function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
 	if (hasSponsorships) {
 		items.push({ label: "Sponsorship", icon: "lucide-handshake", to: "/manage/sponsorship" })
 	}
-	items.push({ label: "Teams", icon: "lucide-users", to: "/manage/teams", startsGroup: true })
+	items.push({
+		label: "Communities",
+		icon: "lucide-users-round",
+		to: "/manage/communities",
+		startsGroup: true,
+	})
 	return items
 }
 
@@ -73,9 +78,9 @@ function eventItems(eventId: string): ManagerNavItem[] {
 }
 
 function teamItems(teamId: string): ManagerNavItem[] {
-	const team = `/manage/teams/${teamId}`
+	const team = `/manage/communities/${teamId}`
 	return [
-		{ label: "Events", icon: "lucide-calendar-days", to: `${team}/events` },
+		{ label: "Calendar", icon: "lucide-calendar-days", to: `${team}/calendar` },
 		{ label: "Members", icon: "lucide-users-round", to: `${team}/members` },
 		{ label: "Payments", icon: "lucide-credit-card", to: `${team}/payments` },
 		// Settings stays the last item, whatever is added above it.

@@ -12,6 +12,8 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AddCoHostDialog: typeof import('./src/components/dashboard/events/AddCoHostDialog.vue')['default']
+    AddEventDialog: typeof import('./src/components/dashboard/teams/AddEventDialog.vue')['default']
+    AddEventMenu: typeof import('./src/components/dashboard/teams/AddEventMenu.vue')['default']
     AddMembersDialog: typeof import('./src/components/dashboard/teams/AddMembersDialog.vue')['default']
     AddOnPreferenceDialog: typeof import('./src/components/AddOnPreferenceDialog.vue')['default']
     AddPricedItemDialog: typeof import('./src/components/dashboard/sponsorships/AddPricedItemDialog.vue')['default']
@@ -75,6 +77,8 @@ declare module 'vue' {
     EventTalkActions: typeof import('./src/components/dashboard/proposals/EventTalkActions.vue')['default']
     EventTalkProposalDrawer: typeof import('./src/components/dashboard/proposals/EventTalkProposalDrawer.vue')['default']
     EventThemeSetting: typeof import('./src/components/dashboard/events/EventThemeSetting.vue')['default']
+    ExistingEventForm: typeof import('./src/components/dashboard/teams/ExistingEventForm.vue')['default']
+    ExternalEventForm: typeof import('./src/components/dashboard/teams/ExternalEventForm.vue')['default']
     FilterChip: typeof import('./src/components/common/filters/FilterChip.vue')['default']
     FloatingCreateEventButton: typeof import('./src/components/dashboard/FloatingCreateEventButton.vue')['default']
     FormFieldSections: typeof import('./src/components/FormFieldSections.vue')['default']
@@ -103,6 +107,8 @@ declare module 'vue' {
     PaymentGatewayDialog: typeof import('./src/components/PaymentGatewayDialog.vue')['default']
     PaymentGatewayLogo: typeof import('./src/components/PaymentGatewayLogo.vue')['default']
     PaymentProviders: typeof import('./src/components/dashboard/ticket-types/PaymentProviders.vue')['default']
+    PendingSubmission: typeof import('./src/components/dashboard/teams/PendingSubmission.vue')['default']
+    PendingSubmissions: typeof import('./src/components/dashboard/teams/PendingSubmissions.vue')['default']
     PerkList: typeof import('./src/components/dashboard/sponsorships/PerkList.vue')['default']
     PhoneInput: typeof import('./src/components/PhoneInput.vue')['default']
     PreferencesPanel: typeof import('./src/components/settings/PreferencesPanel.vue')['default']
@@ -112,6 +118,7 @@ declare module 'vue' {
     PriceList: typeof import('./src/components/dashboard/sponsorships/PriceList.vue')['default']
     PrintedTicket: typeof import('./src/components/dashboard/tickets/PrintedTicket.vue')['default']
     ProfileView: typeof import('./src/components/ProfileView.vue')['default']
+    ProgressStatus: typeof import('./src/components/common/ProgressStatus.vue')['default']
     ProposalCard: typeof import('./src/components/dashboard/proposals/ProposalCard.vue')['default']
     ProposalDrawer: typeof import('./src/components/dashboard/proposals/ProposalDrawer.vue')['default']
     ProposalEditDialog: typeof import('./src/components/ProposalEditDialog.vue')['default']
@@ -121,6 +128,7 @@ declare module 'vue' {
     QuickActionTile: typeof import('./src/components/dashboard/events/QuickActionTile.vue')['default']
     RegistrationActions: typeof import('./src/components/dashboard/events/RegistrationActions.vue')['default']
     RegistrationDialog: typeof import('./src/components/dashboard/events/RegistrationDialog.vue')['default']
+    RejectRequestDialog: typeof import('./src/components/dashboard/teams/RejectRequestDialog.vue')['default']
     RestrictionNotices: typeof import('./src/components/RestrictionNotices.vue')['default']
     RevenueCards: typeof import('./src/components/dashboard/ticket-types/RevenueCards.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
@@ -133,6 +141,7 @@ declare module 'vue' {
     SponsorDrawer: typeof import('./src/components/dashboard/sponsorships/SponsorDrawer.vue')['default']
     SponsorshipDrawer: typeof import('./src/components/dashboard/sponsorships/SponsorshipDrawer.vue')['default']
     SponsorshipPaymentDialog: typeof import('./src/components/SponsorshipPaymentDialog.vue')['default']
+    SubmissionThumbnail: typeof import('./src/components/dashboard/teams/SubmissionThumbnail.vue')['default']
     SuccessMessage: typeof import('./src/components/SuccessMessage.vue')['default']
     TaxSettings: typeof import('./src/components/dashboard/ticket-types/TaxSettings.vue')['default']
     TeamCard: typeof import('./src/components/dashboard/teams/TeamCard.vue')['default']
@@ -163,6 +172,7 @@ declare module 'vue' {
     UserSettingsDialog: typeof import('./src/components/UserSettingsDialog.vue')['default']
     VirtualMeetingOptions: typeof import('./src/components/dashboard/events/VirtualMeetingOptions.vue')['default']
     WebsiteInput: typeof import('./src/components/dashboard/sponsorships/WebsiteInput.vue')['default']
+    WorkspaceOpening: typeof import('./src/components/dashboard/WorkspaceOpening.vue')['default']
     ZoomLogo: typeof import('./src/components/common/ZoomLogo.vue')['default']
   }
 }

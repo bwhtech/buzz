@@ -3,17 +3,24 @@ import { bannerPattern } from "@public/js/event_banner"
 import { Avatar, Badge, Button } from "frappe-ui"
 import { computed, ref } from "vue"
 
-import type { MyEvent } from "@/types"
+import type { MyEvent, TeamEvent } from "@/types"
 import { dayLabel, timeLabel } from "@/utils/dateLabels"
 
 // The Events page files cards under a date heading; a standalone list has to
 // carry the date on the card itself.
-const props = defineProps<{ event: MyEvent; showDate?: boolean }>()
+// A team calendar row may be an external event, which has no Buzz page or drawer of its own.
+const props = defineProps<{
+	event: MyEvent & Partial<Pick<TeamEvent, "is_external" | "event_url">>
+	showDate?: boolean
+}>()
 
 const emit = defineEmits<{ open: [] }>()
 
 // Manage is the only way into the desk view; the card itself opens the drawer.
 const canManage = computed(() => props.event.is_host)
+
+// An external event opens where it lives, on its own platform.
+const externalUrl = computed(() => (props.event.is_external && props.event.event_url) || "")
 
 const startTime = computed(() => (props.event.start_time ? timeLabel(props.event.start_time) : ""))
 
@@ -48,10 +55,20 @@ const venue = computed(() => {
 	>
 		<!-- Overlay rather than a wrapper: Manage cannot legally nest inside a button.
 		     It sits above the overlay, so both targets work and both are focusable. -->
+		<!-- Static tags: a dynamic `is="button"` resolves to frappe-ui's global Button. -->
+		<a
+			v-if="externalUrl"
+			:href="externalUrl"
+			target="_blank"
+			rel="noopener"
+			:aria-label="`Open ${event.title} in a new tab`"
+			class="event-card-overlay absolute inset-0 rounded-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
+		/>
 		<button
+			v-else
 			type="button"
-			class="absolute inset-0 rounded-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
 			:aria-label="`Open ${event.title}`"
+			class="event-card-overlay absolute inset-0 rounded-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
 			@click="emit('open')"
 		/>
 
@@ -79,7 +96,7 @@ const venue = computed(() => {
 				</p>
 
 				<h3
-					class="font-semibold text-lg text-ink-gray-8 [overflow-wrap:anywhere] max-md:line-clamp-3"
+					class="font-semibold text-lg text-ink-gray-8 hyphens-auto [overflow-wrap:anywhere] max-md:line-clamp-3"
 					:title="event.title"
 				>
 					{{ event.title }}
@@ -100,12 +117,18 @@ const venue = computed(() => {
 						:class="[venue.icon, venue.tone]"
 						aria-hidden="true"
 					/>
-					<span class="min-w-0 [overflow-wrap:anywhere]">{{ venue.label }}</span>
+					<span class="min-w-0 [overflow-wrap:anywhere] max-md:line-clamp-2" :title="venue.label">
+						{{ venue.label }}
+					</span>
 				</p>
 			</div>
 
-			<div v-if="event.is_attendee || canManage" class="mt-3 flex items-end">
+			<div
+				v-if="event.is_attendee || event.is_external || canManage"
+				class="mt-3 flex items-end gap-2"
+			>
 				<Badge v-if="event.is_attendee" theme="violet" variant="subtle" label="Attending" />
+				<Badge v-if="event.is_external" variant="subtle" :label="__('External')" />
 				<Button
 					v-if="canManage"
 					class="relative z-10 ml-auto max-md:hidden"
@@ -131,7 +154,7 @@ const venue = computed(() => {
 	transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 /* Only the overlay opens the drawer, so Manage does not press the card with it. */
-.event-card:has(> button:active) {
+.event-card:has(> .event-card-overlay:active) {
 	transform: scale(0.995);
 }
 
@@ -139,7 +162,7 @@ const venue = computed(() => {
 	.event-card {
 		transition: none;
 	}
-	.event-card:has(> button:active) {
+	.event-card:has(> .event-card-overlay:active) {
 		transform: none;
 	}
 }

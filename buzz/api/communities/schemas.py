@@ -1,6 +1,9 @@
-from datetime import date
+from datetime import date, datetime, timedelta
+from typing import Annotated
 
-from buzz.api.schemas import APIResponse
+from pydantic import Field
+
+from buzz.api.schemas import APIRequest, APIResponse
 
 
 class CommunityOption(APIResponse):
@@ -18,12 +21,21 @@ class EventOption(APIResponse):
 
 class CommunityRequest(APIResponse):
 	name: str
-	event: str
+	creation: datetime
+	# Unset for an external event, which lives on another platform at `event_url`.
+	event: str | None
+	is_external_event: bool
+	event_url: str | None
 	event_title: str
 	event_route: str | None
 	start_date: date
-	event_team: str
-	event_team_name: str
+	start_time: timedelta | None
+	# The venue, "Online", or for an external event its location.
+	place: str | None
+	banner_image: str | None
+	event_team: str | None
+	# The event's team, or for an external event its host.
+	event_team_name: str | None
 	event_team_logo: str | None
 	community: str
 	community_name: str
@@ -42,3 +54,20 @@ class EventRequests(APIResponse):
 class CommunityQueue(APIResponse):
 	pending: list[CommunityRequest]
 	approved: list[CommunityRequest]
+
+
+# Data columns hold 140 characters; a shared link with tracking parameters runs longer.
+Text140 = Annotated[str, Field(max_length=140)]
+Url = Annotated[str, Field(max_length=500)]
+
+
+class ExternalEvent(APIRequest):
+	"""An event hosted on another platform, such as Luma or KonfHub."""
+
+	event_title: Text140
+	host: Text140
+	event_location: Text140
+	google_place_id: str | None = None
+	start_datetime: datetime
+	end_datetime: datetime
+	event_url: Url

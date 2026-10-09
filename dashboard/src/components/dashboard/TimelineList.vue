@@ -28,7 +28,9 @@ const tabOptions = [
 
 <template>
 	<div class="m-auto max-w-[800px] w-full p-4 space-y-6 max-md:pb-24">
+		<slot name="intro" />
 		<header class="flex items-start justify-end md:justify-between">
+			<slot name="heading" />
 			<div v-if="heading" class="hidden md:flex flex-col gap-3 items-start">
 				<div class="flex gap-3 items-center">
 					<div v-if="icon" class="p-2 bg-surface-gray-3 rounded-4">
@@ -38,13 +40,16 @@ const tabOptions = [
 				</div>
 				<p class="text-p-base" v-if="description">{{ description }}</p>
 			</div>
-			<TabButtons
-				v-model="tab"
-				class="max-md:w-full"
-				:options="tabOptions"
-				size="md"
-				:fluid="isMobile"
-			/>
+			<div class="flex items-center gap-2 max-md:w-full">
+				<TabButtons
+					v-model="tab"
+					class="max-md:w-full"
+					:options="tabOptions"
+					size="md"
+					:fluid="isMobile"
+				/>
+				<slot name="actions" />
+			</div>
 		</header>
 
 		<div v-if="$slots.controls" class="flex items-center justify-between gap-4">

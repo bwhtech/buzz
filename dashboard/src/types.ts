@@ -124,12 +124,41 @@ export interface TeamOption {
 	logo: string | null
 	slug: string | null
 	is_published: boolean
-	is_a_community: boolean
+	accept_community_submissions: boolean
 	short_description: string | null
 	upcoming_event_count: number
 	team_role: string
 	members: TeamMember[]
 	feature_flags: Record<string, boolean>
+}
+
+// An event another team asked a community to list.
+export interface CommunityRequest {
+	name: string
+	creation: string
+	event: string | null
+	is_external_event: boolean
+	event_url: string | null
+	event_title: string
+	event_route: string | null
+	start_date: string
+	start_time: string | null
+	place: string | null
+	banner_image: string | null
+	event_team: string | null
+	event_team_name: string | null
+	event_team_logo: string | null
+	community: string
+	community_name: string
+	status: string
+	submitted_by: string | null
+	submitter_name: string | null
+	review_note: string | null
+}
+
+export interface CommunityQueue {
+	pending: CommunityRequest[]
+	approved: CommunityRequest[]
 }
 
 // Someone invited by email who has not accepted yet, so has no User row.
@@ -144,7 +173,7 @@ export interface TeamOverview {
 	slug: string | null
 	logo: string | null
 	is_published: boolean
-	is_a_community: boolean
+	accept_community_submissions: boolean
 	public_url: string | null
 	short_description: string | null
 	about: string | null
@@ -214,6 +243,13 @@ export interface BookingSummary {
 	tax_label: string | null
 	tax_percentage: number
 	total_amount: number
+}
+
+/** buzz.api.teams.get_team_events: a calendar row, the team's own or one its community approved. */
+export interface TeamEvent extends MyEvent {
+	is_community_request: boolean
+	is_external: boolean
+	event_url: string | null
 }
 
 export interface MyEvents {

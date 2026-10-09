@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
-import { ErrorMessage, Icon, Skeleton } from "frappe-ui"
+import { ErrorMessage, Skeleton } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import EmptyState from "@/components/common/EmptyState.vue"
@@ -71,20 +71,14 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 					? `No enquiry matches “${search.trim()}”.`
 					: 'No enquiry matches these filters.'
 			"
-		>
-			<template #illustration>
-				<Icon name="lucide-filter-x" class="size-5 text-ink-gray-5" />
-			</template>
-		</EmptyState>
+			icon="lucide-filter-x"
+		/>
 		<EmptyState
 			v-else
 			title="No enquiries yet"
 			description="Enquiries submitted through the sponsorship form show up here."
-		>
-			<template #illustration>
-				<Icon name="lucide-inbox" class="size-5 text-ink-gray-5" />
-			</template>
-		</EmptyState>
+			icon="lucide-inbox"
+		/>
 		<div ref="sentinel" aria-hidden="true" />
 	</section>
 </template>

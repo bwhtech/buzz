@@ -4,8 +4,11 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import get_datetime, validate_url
 
 from buzz.permissions import WRITE_PTYPES, as_sql, is_unrestricted, my_teams, team_role_of
+
+EXTERNAL_FIELDS = ("event_title", "event_url", "host", "event_location", "start_datetime", "end_datetime")
 
 
 class CommunityEventRequest(Document):
@@ -18,22 +21,50 @@ class CommunityEventRequest(Document):
 		from frappe.types import DF
 
 		community: DF.Link
-		event: DF.Link
+		end_datetime: DF.Datetime | None
+		event: DF.Link | None
+		event_location: DF.Data | None
 		event_team: DF.Link | None
 		event_title: DF.Data | None
+		event_url: DF.Data | None
+		google_place_id: DF.Data | None
+		host: DF.Data | None
+		is_external_event: DF.Check
+		latitude: DF.Float
+		longitude: DF.Float
 		review_note: DF.SmallText | None
 		reviewed_by: DF.Link | None
+		start_datetime: DF.Datetime | None
 		status: DF.Literal["Pending", "Approved", "Rejected"]
 		submitted_by: DF.Link | None
 	# end: auto-generated types
 
 	def validate(self):
+		if self.is_external_event:
+			self.validate_external_event()
+		else:
+			self.validate_buzz_event()
+		self.validate_community()
+
+	def validate_buzz_event(self):
+		if not self.event:
+			frappe.throw(_("Pick the event to list."))
 		self.event_title, self.event_team = frappe.db.get_value("Buzz Event", self.event, ["title", "team"])
 		# An unpublished event may still be taken off the page.
 		if self.status != "Rejected":
 			self.validate_event()
-		self.validate_community()
 		self.validate_unique_pair()
+
+	def validate_external_event(self):
+		# The form marks these mandatory, but only the form: the server checks them here.
+		labels = [self.meta.get_label(field) for field in EXTERNAL_FIELDS if not self.get(field)]
+		if labels:
+			frappe.throw(_("An external event needs: {0}").format(", ".join(labels)))
+		# Frappe's URL check takes any scheme, and this link renders as an href for curators.
+		validate_url(self.event_url, throw=True, valid_schemes=("http", "https"))
+		if get_datetime(self.end_datetime) < get_datetime(self.start_datetime):
+			frappe.throw(_("The event cannot end before it starts."))
+		self.event = self.event_team = None
 
 	def validate_event(self):
 		if not frappe.db.get_value("Buzz Event", self.event, "is_published"):
@@ -41,9 +72,9 @@ class CommunityEventRequest(Document):
 
 	def validate_community(self):
 		community = frappe.db.get_value(
-			"Buzz Team", self.community, ["is_a_community", "is_published"], as_dict=True
+			"Buzz Team", self.community, ["accept_community_submissions", "is_published"], as_dict=True
 		)
-		if not (community and community.is_a_community and community.is_published):
+		if not (community and community.accept_community_submissions and community.is_published):
 			frappe.throw(_("{0} is not a published community.").format(self.community))
 		if self.community == self.event_team:
 			frappe.throw(_("A community lists its own events already."))

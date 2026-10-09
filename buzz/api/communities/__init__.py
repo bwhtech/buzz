@@ -1,8 +1,9 @@
 import frappe
 
+from buzz.api.communities.queries import find_upcoming_event
 from buzz.api.communities.reviews import CommunityReview
-from buzz.api.communities.schemas import CommunityQueue, EventOption, EventRequests
-from buzz.api.communities.submissions import EventSubmissions, submittable_events
+from buzz.api.communities.schemas import CommunityQueue, EventOption, EventRequests, ExternalEvent
+from buzz.api.communities.submissions import EventSubmissions, submit_external_request, submittable_events
 
 
 @frappe.whitelist()
@@ -58,3 +59,18 @@ def remove_event(request: str) -> None:
 @frappe.whitelist(methods=["POST"])
 def add_event(community: str, event: str) -> None:
 	CommunityReview(community).add(event)
+
+
+@frappe.whitelist()
+def find_event(url: str) -> EventOption:
+	return find_upcoming_event(url)
+
+
+@frappe.whitelist(methods=["POST"])
+def add_external_event(community: str, event: ExternalEvent) -> None:
+	CommunityReview(community).add_external_event(event)
+
+
+@frappe.whitelist(methods=["POST"])
+def submit_external_event(community: str, event: ExternalEvent) -> None:
+	submit_external_request(community, event)

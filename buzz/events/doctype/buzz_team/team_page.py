@@ -8,7 +8,9 @@ from frappe import _
 from frappe.utils import date_diff, flt, format_date, get_url, getdate, today
 
 from buzz.api.booking.services import are_registrations_closed
+from buzz.api.maps.services import place_search_enabled
 from buzz.events.doctype.buzz_team.team_map import TeamMap
+from buzz.permissions import role_allows, team_role_of
 from buzz.www.event.date_range import format_time
 from buzz.www.event.index import public_links
 from buzz.www.event.meta import DESCRIPTION_LENGTH, plain_text
@@ -81,6 +83,9 @@ class TeamPage:
 			"upcoming_days": group_by_day(upcoming),
 			"past_days": group_by_day(past),
 			"meta": self.meta(),
+			"is_guest": frappe.session.user == "Guest",
+			"is_organizer": self.is_organizer(),
+			"place_search_enabled": place_search_enabled(),
 			**TeamMap(upcoming, past).as_context(),
 		}
 
@@ -125,7 +130,7 @@ class TeamPage:
 	def event_filters(self) -> dict:
 		"""The team's own events, plus those its community approved."""
 		filters = {"team": self.team.name}
-		if self.team.is_a_community:
+		if self.team.accept_community_submissions:
 			approved = {"community": self.team.name, "status": "Approved"}
 			filters["name"] = [
 				"in",
@@ -156,6 +161,14 @@ class TeamPage:
 			"latitude": flt(event.latitude) if has_location else None,
 			"longitude": flt(event.longitude) if has_location else None,
 		}
+
+	def is_organizer(self) -> bool:
+		"""The community's own curators add events straight away; anyone else submits them.
+
+		Membership, not access: a System Manager outside the team still submits from here.
+		"""
+		team_role = team_role_of(frappe.session.user, self.team.name)
+		return bool(team_role) and role_allows(team_role, "write")
 
 	def meta(self) -> dict:
 		text = self.team.short_description or plain_text(self.team.about)

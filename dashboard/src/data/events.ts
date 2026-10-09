@@ -5,6 +5,7 @@ import type {
 	EventHostRef,
 	MyEvents,
 	RegistrationTrend,
+	TeamEvent,
 	VerificationMethods,
 } from "@/types"
 
@@ -16,6 +17,15 @@ export function useMyEvents(filters?: () => Record<string, string>) {
 		// JSON in one param: a nested object on a GET serialises to "[object Object]".
 		params: () => ({ filters: JSON.stringify(filters?.() || {}) }),
 		// Off by default, so without this a filter change rewrites the URL and never refetches.
+		refetch: true,
+	})
+}
+
+/** A team's calendar: its own events, plus the Buzz and external events its community approved. */
+export function useTeamEvents(team: () => string) {
+	return useCall<{ upcoming: TeamEvent[]; past: TeamEvent[] }, { team: string }>({
+		url: "/api/v2/method/buzz.api.teams.get_team_events",
+		params: () => ({ team: team() }),
 		refetch: true,
 	})
 }

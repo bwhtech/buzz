@@ -51,7 +51,6 @@ const sectionLabel = computed(() => sections.find((item) => item.value === secti
 <template>
 	<TeamPageHeader
 		section="Settings"
-		team-page-link
 		:dirty="settings.isDirty"
 		:detail="isMobile && sectionLabel ? __(sectionLabel) : undefined"
 		:back="isMobile && section ? sectionRoute() : undefined"

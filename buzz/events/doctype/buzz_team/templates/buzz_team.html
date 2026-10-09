@@ -76,6 +76,14 @@
 				<h1 class="event-title">{{ doc.team_name }}</h1>
 				<p class="team-stats">{% if events_hosted == 1 %}{{ _("1 event hosted") }}{% else %}{{ _("{0} events hosted").format(events_hosted) }}{% endif %}</p>
 			</div>
+			{% if doc.accept_community_submissions %}
+			{% set event_action = _("Add Event") if is_organizer else _("Submit Event") %}
+			{% if is_guest %}
+			<a class="es-button team-event-action" data-variant="subtle" data-size="md" href="/b/login?redirect-to=/{{ doc.route }}" data-login><span class="icon lucide-plus" aria-hidden="true"></span>{{ event_action }}</a>
+			{% else %}
+			<button type="button" class="es-button team-event-action" data-variant="subtle" data-size="md" data-island="add-event" data-island-inline data-props='{{ {"community": doc.name, "canReview": is_organizer, "isPublicPage": true} | tojson }}'><span class="icon lucide-plus" aria-hidden="true"></span>{{ event_action }}</button>
+			{% endif %}
+			{% endif %}
 		</header>
 
 		{% if countries %}
@@ -139,6 +147,11 @@
 {% endautoescape %}{% endblock %}
 
 {% block script %}
+	{% if doc.accept_community_submissions and not is_guest %}
+	{% set island = island_script() %}
+	<script>window.google_place_search_enabled = {{ place_search_enabled | tojson }}</script>
+	{% if island %}<script type="module" src="{{ island }}"></script>{% endif %}
+	{% endif %}
 	{{ super() }}
 	<script src="{{ bundled_asset('team_page.bundle.ts') }}" defer></script>
 {% endblock %}

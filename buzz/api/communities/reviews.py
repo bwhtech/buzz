@@ -3,7 +3,8 @@ import frappe
 from buzz.api.communities.exceptions import CannotReviewRequests, RequestNotApproved, RequestNotPending
 from buzz.api.communities.notifications import notify_reviewed
 from buzz.api.communities.queries import request_rows
-from buzz.api.communities.schemas import CommunityQueue
+from buzz.api.communities.schemas import CommunityQueue, ExternalEvent
+from buzz.api.communities.submissions import external_request
 from buzz.permissions import has_team_access
 
 REQUEST = "Community Event Request"
@@ -24,7 +25,11 @@ class CommunityReview:
 
 	def queue(self) -> CommunityQueue:
 		return CommunityQueue(
-			pending=request_rows(community=self.community, status="Pending"),
+			pending=sorted(
+				request_rows(community=self.community, status="Pending"),
+				key=lambda row: row.creation,
+				reverse=True,
+			),
 			approved=request_rows(community=self.community, status="Approved"),
 		)
 
@@ -46,6 +51,9 @@ class CommunityReview:
 		request.update({"event": event, "community": self.community})
 		request.submitted_by = request.submitted_by or frappe.session.user
 		self.set_status(request, "Approved")
+
+	def add_external_event(self, event: ExternalEvent) -> None:
+		self.set_status(external_request(self.community, event), "Approved")
 
 	def set_status(self, request, status: str, note: str | None = None) -> None:
 		request.update({"status": status, "reviewed_by": frappe.session.user, "review_note": note})

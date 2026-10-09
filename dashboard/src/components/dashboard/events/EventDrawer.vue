@@ -167,6 +167,11 @@ const endsAt = computed(() => {
 
 					<EventMyTickets :event="event" class="mx-4 mb-4" />
 				</div>
+
+				<!-- Actions a caller adds for this event, pinned under the scrolling details. -->
+				<div v-if="$slots.footer" class="flex gap-2 border-t border-outline-gray-2 p-4">
+					<slot name="footer" />
+				</div>
 			</template>
 		</DrawerContent>
 	</Drawer>

@@ -8,18 +8,23 @@
  "engine": "InnoDB",
  "field_order": [
   "team_name",
-  "slug",
   "section_break_hvmt",
   "logo",
   "public_page_tab",
+  "publishing_section",
   "is_published",
+  "column_break_route",
   "route",
-  "is_a_community",
-  "column_break_public",
+  "column_break_slug",
+  "slug",
+  "description_section",
   "short_description",
-  "section_break_about",
+  "column_break_about",
   "about",
-  "links"
+  "links_section",
+  "links",
+  "community_section",
+  "accept_community_submissions"
  ],
  "fields": [
   {
@@ -29,14 +34,6 @@
    "in_list_view": 1,
    "label": "Team Name",
    "reqd": 1
-  },
-  {
-   "description": "Used in URLs. Lowercase letters, numbers and hyphens.",
-   "fieldname": "slug",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Slug",
-   "unique": 1
   },
   {
    "fieldname": "section_break_hvmt",
@@ -53,10 +50,18 @@
    "label": "Public Page"
   },
   {
+   "fieldname": "publishing_section",
+   "fieldtype": "Section Break"
+  },
+  {
    "default": "0",
    "fieldname": "is_published",
    "fieldtype": "Check",
    "label": "Published"
+  },
+  {
+   "fieldname": "column_break_route",
+   "fieldtype": "Column Break"
   },
   {
    "description": "Where the public page lives. Filled as community/<slug> on first publish.",
@@ -68,8 +73,20 @@
    "unique": 1
   },
   {
-   "fieldname": "column_break_public",
+   "fieldname": "column_break_slug",
    "fieldtype": "Column Break"
+  },
+  {
+   "description": "Used in URLs. Lowercase letters, numbers and hyphens.",
+   "fieldname": "slug",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Slug",
+   "unique": 1
+  },
+  {
+   "fieldname": "description_section",
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "short_description",
@@ -77,13 +94,17 @@
    "label": "Short Description"
   },
   {
-   "fieldname": "section_break_about",
-   "fieldtype": "Section Break"
+   "fieldname": "column_break_about",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "about",
    "fieldtype": "Text Editor",
    "label": "About"
+  },
+  {
+   "fieldname": "links_section",
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "links",
@@ -92,12 +113,17 @@
    "options": "Event External Link"
   },
   {
+   "fieldname": "community_section",
+   "fieldtype": "Section Break",
+   "label": "Community"
+  },
+  {
    "default": "0",
    "depends_on": "is_published",
-   "description": "Also lists approved events from other teams.",
-   "fieldname": "is_a_community",
+   "description": "Other teams can submit their events. Approved ones are listed on the public page.",
+   "fieldname": "accept_community_submissions",
    "fieldtype": "Check",
-   "label": "Is a Community"
+   "label": "Accept Community Submissions"
   }
  ],
  "grid_page_length": 50,
@@ -117,7 +143,7 @@
    "link_fieldname": "team"
   }
  ],
- "modified": "2026-10-06 14:00:00.000000",
+ "modified": "2026-10-08 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Team",

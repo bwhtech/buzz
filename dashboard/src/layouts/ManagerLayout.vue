@@ -5,6 +5,7 @@ import { useRoute } from "vue-router"
 
 import { useIsMobile } from "@/composables/useIsMobile"
 import { useTeamAccess } from "@/composables/useTeamAccess"
+import { finishOpening, openingTeam } from "@/composables/useWorkspaceOpening"
 import { useEventDoc } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
 import { selectTeam, teams, teamsLoaded } from "@/data/teams"
@@ -32,6 +33,7 @@ const teamId = computed(() => route.params.teamId as string | undefined)
 const team = computed(() => teams.value.find((option) => option.name === teamId.value))
 // The server refuses a non-member too; this keeps them off the page.
 const teamDenied = computed(() => Boolean(teamId.value && teamsLoaded.value && !team.value))
+watch(teamDenied, (denied) => denied && finishOpening())
 // Create Event files the event under the current team, so opening a team makes it current.
 watch(team, (opened) => opened && selectTeam(opened.name), { immediate: true })
 
@@ -46,8 +48,8 @@ const workspace = computed((): Workspace | undefined => {
 	if (teamId.value)
 		return {
 			title: team.value?.team_name ?? "",
-			subtitle: team.value?.is_a_community ? "Community Workspace" : "Team Workspace",
-			back: { label: "Back to teams", to: "/manage/teams" },
+			subtitle: "Community Workspace",
+			back: { label: "Back to communities", to: "/manage/communities" },
 			image: team.value?.logo,
 		}
 	return undefined
@@ -59,13 +61,16 @@ usePageMeta(() => {
 	return { title: `${__(section)} | ${workspace.value.title}` }
 })
 
+// The sidebar empties while a workspace opens, so the old destinations don't linger.
 const items = computed(() =>
-	managerNavigation({
-		eventId: eventId.value,
-		teamId: teamId.value,
-		creatingEvent: route.name === "create-event",
-		hasSponsorships: Boolean(sponsorships.data?.length),
-	}),
+	openingTeam.value
+		? []
+		: managerNavigation({
+				eventId: eventId.value,
+				teamId: teamId.value,
+				creatingEvent: route.name === "create-event",
+				hasSponsorships: Boolean(sponsorships.data?.length),
+			}),
 )
 </script>
 

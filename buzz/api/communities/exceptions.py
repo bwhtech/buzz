@@ -1,6 +1,6 @@
 from frappe import _lt
 
-from buzz.api.exceptions import Conflict, NotPermitted
+from buzz.api.exceptions import Conflict, NotPermitted, ResourceNotFound
 
 
 class CannotSubmitEvent(NotPermitted):
@@ -21,3 +21,7 @@ class RequestNotRejected(Conflict):
 
 class RequestNotApproved(Conflict):
 	message = _lt("Only an approved event can be removed from the community.")
+
+
+class EventNotFound(ResourceNotFound):
+	message = _lt("No upcoming published event lives at this link.")

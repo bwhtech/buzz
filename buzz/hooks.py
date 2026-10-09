@@ -170,7 +170,7 @@ add_to_apps_screen = [
 # ----------
 
 jinja = {
-	"methods": ["buzz.emails.email_event_header", "buzz.emails.email_brand"],
+	"methods": ["buzz.emails.email_event_header", "buzz.emails.email_brand", "buzz.islands.island_script"],
 }
 
 # Installation

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Avatar, Badge, Icon, Tooltip, dayjsLocal } from "frappe-ui"
+import { Avatar, Badge, Tooltip, dayjsLocal } from "frappe-ui"
 
 import EmptyState from "@/components/common/EmptyState.vue"
 import type { CommunicationItem } from "@/types"
@@ -56,9 +56,6 @@ const exact = (row: CommunicationItem) =>
 		v-else
 		title="No announcements yet"
 		description="Anything you send to this event's guests or speakers shows up here."
-	>
-		<template #illustration>
-			<Icon name="lucide-megaphone" class="size-5 text-ink-gray-5" />
-		</template>
-	</EmptyState>
+		icon="lucide-megaphone"
+	/>
 </template>

@@ -1,8 +1,8 @@
 import frappe
 
 from buzz.api.events.schemas import RouteAvailability
-from buzz.api.teams import invitations, public_page, services
-from buzz.api.teams.schemas import InviteOutcome, TeamOption, TeamOverview
+from buzz.api.teams import calendar, invitations, public_page, services
+from buzz.api.teams.schemas import InviteOutcome, TeamEvents, TeamOption, TeamOverview
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
 
 
@@ -27,7 +27,7 @@ def get_my_teams() -> list[TeamOption]:
 			team.logo,
 			team.slug,
 			team.is_published,
-			team.is_a_community,
+			team.accept_community_submissions,
 			team.short_description,
 			membership.team_role,
 		)
@@ -44,6 +44,11 @@ def team_option(my_team: dict, upcoming_event_count: int) -> TeamOption:
 		members=services.members_of(my_team.name),
 		feature_flags=feature_flags(my_team.name),
 	)
+
+
+@frappe.whitelist()
+def get_team_events(team: str) -> TeamEvents:
+	return calendar.team_events(team)
 
 
 @frappe.whitelist()
@@ -78,10 +83,12 @@ def update_public_page(
 	links: list[dict],
 	short_description: str | None = None,
 	about: str | None = None,
-	is_a_community: bool = False,
+	accept_community_submissions: bool = False,
 	slug: str | None = None,
 ) -> None:
-	services.update_public_page(team, is_published, links, short_description, about, is_a_community, slug)
+	services.update_public_page(
+		team, is_published, links, short_description, about, accept_community_submissions, slug
+	)
 
 
 @frappe.whitelist()

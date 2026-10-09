@@ -11,7 +11,7 @@ defineProps<{ settings: TeamSettings }>()
 		<h2 class="text-xl font-semibold text-ink-gray-8">{{ __("Community") }}</h2>
 		<div class="rounded-6 border border-outline-gray-2 p-1">
 			<Switch
-				v-model="settings.form.is_a_community"
+				v-model="settings.form.accept_community_submissions"
 				padded
 				:label="__('Community submissions')"
 				:description="

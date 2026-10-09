@@ -163,11 +163,8 @@ function refreshed() {
 				v-if="!visibleRows.length"
 				:title="__('No members found')"
 				:description="__('Try a different name or email.')"
-			>
-				<template #illustration>
-					<span class="lucide-search size-5 text-ink-gray-5" aria-hidden="true" />
-				</template>
-			</EmptyState>
+				icon="lucide-search"
+			/>
 
 			<!-- Removing a row would otherwise snap the rest of the list upwards. -->
 			<TransitionGroup tag="ul" name="member" :aria-label="__('Team members')" class="relative">

@@ -1,4 +1,4 @@
-from buzz.api.events.schemas import EventExternalLink
+from buzz.api.events.schemas import EventExternalLink, MyEvent
 from buzz.api.schemas import APIResponse
 
 
@@ -16,7 +16,7 @@ class TeamOption(APIResponse):
 	# Every team page header links to the public page while the team is published.
 	slug: str | None
 	is_published: bool
-	is_a_community: bool
+	accept_community_submissions: bool
 	short_description: str | None
 	upcoming_event_count: int
 	team_role: str
@@ -49,7 +49,7 @@ class TeamOverview(APIResponse):
 	slug: str | None
 	logo: str | None
 	is_published: bool
-	is_a_community: bool
+	accept_community_submissions: bool
 	# Absolute page URL while published; None otherwise.
 	public_url: str | None
 	short_description: str | None
@@ -61,3 +61,17 @@ class TeamOverview(APIResponse):
 	invites: list[TeamInvite]
 	# Every member reads them; only Owner/Admin can change them.
 	tax_details: TeamTaxDetails
+
+
+class TeamEvent(MyEvent):
+	"""A calendar row: the team's own event, or one its community approved."""
+
+	is_community_request: bool = False
+	is_external: bool = False
+	# Only an external event has one; a Buzz event lives at its route.
+	event_url: str | None = None
+
+
+class TeamEvents(APIResponse):
+	upcoming: list[TeamEvent]
+	past: list[TeamEvent]
