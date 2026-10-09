@@ -9,6 +9,14 @@ DESCRIPTION_LENGTH = 160
 IMAGE_FIELDS = ("meta_image", "og_image", "banner_image", "card_image")
 
 
+def event_time_zone(event) -> ZoneInfo:
+	# time_zone is free text; a bad value must not take the page down
+	try:
+		return ZoneInfo(event.time_zone or get_system_timezone())
+	except (ZoneInfoNotFoundError, ValueError):
+		return ZoneInfo(get_system_timezone())
+
+
 def plain_text(html: str | None) -> str:
 	return BeautifulSoup(html or "", "html.parser").get_text(" ")
 
@@ -67,14 +75,7 @@ class EventMeta:
 	def event_datetime(self, date, time) -> str:
 		if not time:
 			return getdate(date).isoformat()
-		return datetime.combine(getdate(date), get_time(time), self.time_zone()).isoformat()
-
-	def time_zone(self) -> ZoneInfo:
-		# time_zone is free text; a bad value must not take the page down
-		try:
-			return ZoneInfo(self.event.time_zone or get_system_timezone())
-		except (ZoneInfoNotFoundError, ValueError):
-			return ZoneInfo(get_system_timezone())
+		return datetime.combine(getdate(date), get_time(time), event_time_zone(self.event)).isoformat()
 
 	def end_datetime(self) -> str | None:
 		if not self.event.end_time:

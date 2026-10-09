@@ -91,6 +91,22 @@ class TestEventPageRender(IntegrationTestCase):
 		self.set_event({"meeting_link": "https://notzoom.us.example/j/1"})
 		self.assertEqual(EventPage(self.route).as_context()["online_label"], "Online")
 
+	def test_upcoming_event_renders_a_countdown(self):
+		self.set_event({"time_zone": "Asia/Kolkata", "start_date": "2099-01-05", "start_time": "09:30:00"})
+		html = render(self.route)
+		self.assertIn('starts-at="2099-01-05T09:30:00+05:30"', html)
+
+	def test_ended_event_has_no_countdown(self):
+		self.set_event({"start_date": "2020-01-05", "end_date": "2020-01-05"})
+		self.assertNotIn("<event-countdown", render(self.route))
+
+	def test_event_without_end_time_counts_to_end_of_last_day(self):
+		self.set_event(
+			{"time_zone": "UTC", "start_date": "2099-01-05", "end_date": "2099-01-06", "end_time": None}
+		)
+		countdown = EventPage(self.route).as_context()["countdown"]
+		self.assertEqual(countdown["ends_at"], "2099-01-06T23:59:59+00:00")
+
 	def set_event(self, values: dict):
 		frappe.db.set_value("Buzz Event", self.event, values)
 

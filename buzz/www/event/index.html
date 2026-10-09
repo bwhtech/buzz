@@ -40,11 +40,20 @@
 	{% endmacro %}
 
 	<main class="event-content">
-		{% if event.banner_image %}
-		<img class="event-banner" src="{{ event.banner_image }}" alt="">
-		{% else %}
-		<event-banner class="event-banner" seed="{{ event.title }}"></event-banner>
-		{% endif %}
+		<div class="event-banner-frame">
+			{% if event.banner_image %}
+			<img class="event-banner" src="{{ event.banner_image }}" alt="">
+			{% else %}
+			<event-banner class="event-banner" seed="{{ event.title }}"></event-banner>
+			{% endif %}
+			{% if countdown %}
+			<event-countdown class="countdown-pill" role="timer" starts-at="{{ countdown.starts_at }}" ends-at="{{ countdown.ends_at }}" hidden>
+				<span class="live-dot" aria-hidden="true"></span>
+				<span class="countdown-live">{{ _("Live") }}</span>
+				<span class="countdown-upcoming">{{ _("Starting in") }} <span class="countdown-value" aria-hidden="true"></span></span>
+			</event-countdown>
+			{% endif %}
+		</div>
 
 		<div class="event-intro">
 			<div class="event-heading">
