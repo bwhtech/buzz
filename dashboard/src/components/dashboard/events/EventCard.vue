@@ -55,19 +55,21 @@ const venue = computed(() => {
 	>
 		<!-- Overlay rather than a wrapper: Manage cannot legally nest inside a button.
 		     It sits above the overlay, so both targets work and both are focusable. -->
-		<component
-			:is="externalUrl ? 'a' : 'button'"
-			v-bind="
-				externalUrl
-					? {
-							href: externalUrl,
-							target: '_blank',
-							rel: 'noopener',
-							'aria-label': `Open ${event.title} in a new tab`,
-						}
-					: { type: 'button', 'aria-label': `Open ${event.title}`, onClick: () => emit('open') }
-			"
+		<!-- Static tags: a dynamic `is="button"` resolves to frappe-ui's global Button. -->
+		<a
+			v-if="externalUrl"
+			:href="externalUrl"
+			target="_blank"
+			rel="noopener"
+			:aria-label="`Open ${event.title} in a new tab`"
 			class="event-card-overlay absolute inset-0 rounded-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
+		/>
+		<button
+			v-else
+			type="button"
+			:aria-label="`Open ${event.title}`"
+			class="event-card-overlay absolute inset-0 rounded-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
+			@click="emit('open')"
 		/>
 
 		<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
