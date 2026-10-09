@@ -100,11 +100,16 @@ const routes: RouteRecordRaw[] = [
 			},
 			{
 				path: "communities/:teamId",
-				redirect: (to) => `/manage/communities/${to.params.teamId}/events`,
+				redirect: (to) => `/manage/communities/${to.params.teamId}/calendar`,
 			},
 			{
+				// Old links from before the page was called Calendar.
 				path: "communities/:teamId/events",
-				name: "team-events",
+				redirect: (to) => `/manage/communities/${to.params.teamId}/calendar`,
+			},
+			{
+				path: "communities/:teamId/calendar",
+				name: "team-calendar",
 				meta: { title: "Calendar" },
 				component: () => import("@/pages/manage/MyEvents.vue"),
 			},

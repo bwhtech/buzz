@@ -80,7 +80,7 @@ function eventItems(eventId: string): ManagerNavItem[] {
 function teamItems(teamId: string): ManagerNavItem[] {
 	const team = `/manage/communities/${teamId}`
 	return [
-		{ label: "Calendar", icon: "lucide-calendar-days", to: `${team}/events` },
+		{ label: "Calendar", icon: "lucide-calendar-days", to: `${team}/calendar` },
 		{ label: "Members", icon: "lucide-users-round", to: `${team}/members` },
 		{ label: "Payments", icon: "lucide-credit-card", to: `${team}/payments` },
 		// Settings stays the last item, whatever is added above it.
