@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { Popover, toast, useCall } from "frappe-ui"
-import { computed, ref, watch } from "vue"
+import { Button, Combobox } from "frappe-ui"
+import { computed, nextTick, ref, watch } from "vue"
 
 import TagBadge from "@/components/common/tags/TagBadge.vue"
-import TagMenu from "@/components/common/tags/TagMenu.vue"
-import type { FrappeError, TagColor, TagItem } from "@/types"
+import { TAG_COLORS, tagColorClasses } from "@/components/common/tags/tagColors"
+import { useDocumentTags } from "@/composables/useDocumentTags"
+import type { TagColor, TagItem } from "@/types"
 
 // A record's tags as a chip row; each change applies at once, outside any save bar.
+// Picking a tag adds it, so only unapplied tags are listed. "Create …" swaps in colours.
 const props = defineProps<{
 	team: string
 	documentType: string
@@ -17,70 +19,83 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ changed: [] }>()
 
-// Shown before the server answers; the parent's reload brings the saved tags back in.
-const applied = ref<TagItem[]>([])
-watch(
-	() => props.tags,
-	(tags) => (applied.value = [...tags]),
-	{ immediate: true },
+const { applied, appliedNames, options, setTags, toggle, createTag } = useDocumentTags(props, () =>
+	emit("changed"),
 )
-const appliedNames = computed(() => applied.value.map((tag) => tag.name))
 
-// Tags made here show in the menu before the parent reloads its options.
-const created = ref<TagItem[]>([])
-const menuOptions = computed(() => {
-	const known = new Map([...props.options, ...created.value].map((tag) => [tag.name, tag]))
-	return [...known.values()]
+const open = ref(false)
+const query = ref("")
+const pendingLabel = ref<string | null>(null)
+watch(open, (isOpen) => {
+	query.value = ""
+	if (!isOpen) pendingLabel.value = null
 })
 
-const saveTags = useCall<
-	TagItem[],
-	{ document_type: string; document_name: string; tags: string[] }
->({ url: "/api/v2/method/buzz.api.tags.set_tags", method: "POST", immediate: false })
-const newTagCall = useCall<
-	TagItem,
-	{ team: string; document_type: string; label: string; color: TagColor }
->({ url: "/api/v2/method/buzz.api.tags.create_tag", method: "POST", immediate: false })
+const suggestedColor = computed(() => {
+	const used = new Set(options.value.map((tag) => tag.color))
+	return TAG_COLORS.find((color) => color !== "gray" && !used.has(color)) ?? "blue"
+})
 
-const errorText = (error: unknown) =>
-	(error as FrappeError).messages?.[0] ?? "Could not update tags"
-
-async function setTags(tags: TagItem[]) {
-	const previous = applied.value
-	applied.value = tags
-	await saveTags.submit({
-		document_type: props.documentType,
-		document_name: props.documentName,
-		tags: tags.map((tag) => tag.name),
-	})
-	if (saveTags.error) {
-		applied.value = previous
-		toast.error(errorText(saveTags.error))
-		return
-	}
-	emit("changed")
+const createOption = {
+	type: "custom" as const,
+	key: "create",
+	label: "Create",
+	keepOpen: true,
+	condition: ({ query: typed }: { query: string }) =>
+		typed.trim() !== "" &&
+		!options.value.some((tag) => tag.label.toLowerCase() === typed.trim().toLowerCase()),
+	onClick: ({ query: typed }: { query: string }) => (pendingLabel.value = typed.trim()),
 }
 
-function toggle(tag: TagItem) {
-	const isApplied = appliedNames.value.includes(tag.name)
-	setTags(
-		isApplied ? applied.value.filter((each) => each.name !== tag.name) : [...applied.value, tag],
-	)
-}
+const comboboxOptions = computed(() => {
+	if (pendingLabel.value !== null) return TAG_COLORS.map(colorOption)
+	const unapplied = options.value.filter((tag) => !appliedNames.value.includes(tag.name))
+	return [
+		...unapplied.map((tag) => ({ label: tag.label, value: tag.name, color: tag.color })),
+		createOption,
+	]
+})
 
-// Naming a tag the team already has picks that tag rather than making a second one.
-async function createTag(label: string, color: TagColor) {
-	await newTagCall.submit({
-		team: props.team,
-		document_type: props.documentType,
-		label,
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
+
+// Custom options, like "Create …": their onClick fires on every pick, keyboard or mouse.
+function colorOption(color: TagColor) {
+	return {
+		type: "custom" as const,
+		key: color,
+		label: capitalize(color),
 		color,
-	})
-	if (newTagCall.error) return toast.error(errorText(newTagCall.error))
-	const tag = newTagCall.data!
-	created.value = [...created.value, tag]
-	if (!appliedNames.value.includes(tag.name)) await setTags([...applied.value, tag])
+		keepOpen: true,
+		onClick: () => {
+			createTag(pendingLabel.value!, color)
+			pendingLabel.value = null
+		},
+	}
 }
+
+function onSelect(option: { value: string | number } | null) {
+	const tag = options.value.find((each) => each.name === option?.value)
+	if (tag) setTags([...applied.value, tag])
+}
+
+// Escape or a click outside steps back out of the colour list before it closes the menu.
+function onOpenChange(isOpen: boolean) {
+	if (!isOpen && pendingLabel.value !== null) return (pendingLabel.value = null)
+	open.value = isOpen
+}
+
+// Combobox highlights the first colour; arrow down to the suggested one, as a user would.
+watch(pendingLabel, async (label) => {
+	query.value = ""
+	if (label === null) return
+	await nextTick()
+	requestAnimationFrame(() => {
+		for (let step = 0; step < TAG_COLORS.indexOf(suggestedColor.value); step++)
+			document.activeElement?.dispatchEvent(
+				new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+			)
+	})
+})
 </script>
 
 <template>
@@ -97,7 +112,19 @@ async function createTag(label: string, color: TagColor) {
 				</button>
 			</template>
 		</TagBadge>
-		<Popover v-if="!disabled">
+
+		<Combobox
+			v-if="!disabled"
+			v-model:query="query"
+			trigger="button"
+			:open="open"
+			:options="comboboxOptions"
+			:model-value="null"
+			:placeholder="pendingLabel === null ? 'Search or create tag' : 'Pick a color'"
+			empty-text="Type a name to create a tag"
+			@update:open="onOpenChange"
+			@update:selected-option="onSelect"
+		>
 			<template #trigger>
 				<button
 					type="button"
@@ -108,12 +135,31 @@ async function createTag(label: string, color: TagColor) {
 					<span v-if="!applied.length">Add tag</span>
 				</button>
 			</template>
-			<TagMenu
-				:options="menuOptions"
-				:selected="appliedNames"
-				@toggle="toggle"
-				@create="createTag"
-			/>
-		</Popover>
+
+			<template v-if="pendingLabel !== null" #search-prefix>
+				<Button
+					variant="ghost"
+					size="sm"
+					icon="lucide-chevron-left"
+					aria-label="Back"
+					class="-ml-2"
+					@click="pendingLabel = null"
+				/>
+			</template>
+
+			<template #item-prefix="{ item }">
+				<span
+					v-if="item.color"
+					class="size-2.5 rounded-full"
+					:class="tagColorClasses(item.color).dot"
+				/>
+				<span v-else class="lucide-plus size-4 text-ink-gray-5" aria-hidden="true" />
+			</template>
+			<template #item-label="{ item, query: typed }">
+				<span class="block truncate">
+					{{ item.key === "create" ? `Create “${typed.trim()}”` : item.label }}
+				</span>
+			</template>
+		</Combobox>
 	</div>
 </template>

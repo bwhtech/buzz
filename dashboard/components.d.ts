@@ -146,7 +146,6 @@ declare module 'vue' {
     SuccessMessage: typeof import('./src/components/SuccessMessage.vue')['default']
     TagBadge: typeof import('./src/components/common/tags/TagBadge.vue')['default']
     TagEditor: typeof import('./src/components/common/tags/TagEditor.vue')['default']
-    TagMenu: typeof import('./src/components/common/tags/TagMenu.vue')['default']
     TaxSettings: typeof import('./src/components/dashboard/ticket-types/TaxSettings.vue')['default']
     TeamCard: typeof import('./src/components/dashboard/teams/TeamCard.vue')['default']
     TeamDisplaySettings: typeof import('./src/components/dashboard/teams/settings/TeamDisplaySettings.vue')['default']

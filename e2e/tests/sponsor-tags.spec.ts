@@ -84,9 +84,9 @@ test.describe("Sponsor tags", () => {
 
 		const drawer = page.getByRole("dialog")
 		await drawer.getByRole("button", { name: "Add tag" }).click()
-		await page.getByRole("textbox", { name: "Search or create tag" }).fill(createdLabel)
+		await page.getByPlaceholder("Search or create tag").fill(createdLabel)
 		await page.keyboard.press("Enter")
-		await page.getByRole("option", { name: /green$/i }).click()
+		await page.getByRole("option", { name: "Green" }).click()
 
 		await expect(drawer.getByRole("group", { name: "Tags" })).toContainText(createdLabel)
 		await page.keyboard.press("Escape")
