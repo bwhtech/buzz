@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { Button, Combobox } from "frappe-ui"
+import {
+	Button,
+	Combobox,
+	type ComboboxCustomOption,
+	type ComboboxSelectableOption,
+} from "frappe-ui"
 import { computed, nextTick, ref, watch } from "vue"
 
 import TagBadge from "@/components/common/tags/TagBadge.vue"
@@ -78,8 +83,8 @@ function colorOption(color: TagColor) {
 	}
 }
 
-function addSelectedTag(option: { value: string | number } | null) {
-	const tag = options.value.find((each) => each.name === option?.value)
+function addSelectedTag(option: ComboboxSelectableOption | ComboboxCustomOption | null) {
+	const tag = options.value.find((each) => option?.type !== "custom" && each.name === option?.value)
 	if (tag) setTags([...appliedTags.value, tag])
 }
 
