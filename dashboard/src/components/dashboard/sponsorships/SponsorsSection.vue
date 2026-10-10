@@ -35,7 +35,7 @@ const errorMessage = computed(() => (list.error as FrappeError | null)?.message)
 </script>
 
 <template>
-	<section class="space-y-3">
+	<section class="space-y-3" aria-label="Sponsors">
 		<SectionHeader title="Sponsors" :count="list.data?.total" :action="action" />
 
 		<ListFilters

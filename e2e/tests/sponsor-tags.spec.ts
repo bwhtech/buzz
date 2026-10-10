@@ -98,7 +98,9 @@ test.describe("Sponsor tags", () => {
 		await page.goto(`/b/manage/events/${event}/sponsorships`)
 		await expect(sponsorCard(page, "Acme")).toBeVisible()
 
-		await page.getByRole("button", { name: "Filter" }).click()
+		// The enquiries section has its own Filter button.
+		const sponsorsSection = page.getByRole("region", { name: "Sponsors" })
+		await sponsorsSection.getByRole("button", { name: "Filter" }).click()
 		await page.getByRole("menuitem", { name: "Tags" }).hover()
 		await page.getByRole("menuitem", { name: seededLabel }).click()
 
