@@ -3,7 +3,7 @@ import { Button, Combobox, ErrorMessage, FormControl, dialog, toast, useDoc } fr
 import { computed } from "vue"
 
 import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
-import TagPicker from "@/components/common/TagPicker.vue"
+import TagEditor from "@/components/common/tags/TagEditor.vue"
 import DrawerSaveBar from "@/components/dashboard/sponsorships/DrawerSaveBar.vue"
 import {
 	keepLastValue,
@@ -121,6 +121,15 @@ async function save(values: SponsorValues) {
 		description="Confirmed sponsor"
 	>
 		<template #notice>
+			<TagEditor
+				:team="team"
+				document-type="Event Sponsor"
+				:document-name="shownSponsor.name"
+				:tags="shownSponsor.tags"
+				:options="tags"
+				:disabled="!canWrite"
+				@changed="emit('tagged')"
+			/>
 			<ImageCropUploader
 				:aspect-ratio="1"
 				:output-width="512"
@@ -178,16 +187,6 @@ async function save(values: SponsorValues) {
 				:disabled="!canWrite"
 			/>
 		</form>
-
-		<TagPicker
-			:team="team"
-			document-type="Event Sponsor"
-			:document-name="shownSponsor.name"
-			:tags="shownSponsor.tags"
-			:options="tags"
-			:disabled="!canWrite"
-			@changed="emit('tagged')"
-		/>
 
 		<Button
 			v-if="shownSponsor.enquiry"

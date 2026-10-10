@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "label",
+  "color",
   "team",
   "column_break_type",
   "document_type"
@@ -16,6 +17,15 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Label",
+   "reqd": 1
+  },
+  {
+   "default": "gray",
+   "fieldname": "color",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Color",
+   "options": "gray\nred\norange\nyellow\ngreen\ncyan\nblue\npurple\npink",
    "reqd": 1
   },
   {
@@ -45,7 +55,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-09 12:00:00.000000",
+ "modified": "2026-10-10 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Tag",

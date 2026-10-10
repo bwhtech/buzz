@@ -5,8 +5,8 @@ from buzz.api.tags.services import DocumentTags, create_team_tag
 
 
 @frappe.whitelist(methods=["POST"])
-def create_tag(team: str, document_type: str, label: str) -> TagItem:
-	return create_team_tag(team, document_type, label)
+def create_tag(team: str, document_type: str, label: str, color: str = "gray") -> TagItem:
+	return create_team_tag(team, document_type, label, color)
 
 
 @frappe.whitelist(methods=["POST"])

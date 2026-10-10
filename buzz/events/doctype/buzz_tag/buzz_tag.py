@@ -17,6 +17,7 @@ class BuzzTag(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		color: DF.Literal["gray", "red", "orange", "yellow", "green", "cyan", "blue", "purple", "pink"]
 		document_type: DF.Link
 		label: DF.Data
 		team: DF.Link

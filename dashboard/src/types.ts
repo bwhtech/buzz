@@ -579,9 +579,21 @@ export interface EventSponsorItem {
 }
 
 // buzz.api.tags: a team's tag for one kind of record.
+export type TagColor =
+	| "gray"
+	| "red"
+	| "orange"
+	| "yellow"
+	| "green"
+	| "cyan"
+	| "blue"
+	| "purple"
+	| "pink"
+
 export interface TagItem {
 	name: string
 	label: string
+	color: TagColor
 }
 
 export interface EnquiryAnswer {

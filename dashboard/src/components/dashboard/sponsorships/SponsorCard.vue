@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Badge } from "frappe-ui"
+import { Tooltip } from "frappe-ui"
 
+import { tagColorClasses } from "@/components/common/tags/tagColors"
 import LogoPanel from "@/components/dashboard/sponsorships/LogoPanel.vue"
 import type { EventSponsorItem } from "@/types"
 
@@ -23,13 +24,23 @@ defineEmits<{ open: [] }>()
 		/>
 
 		<span class="flex min-w-0 items-baseline justify-between gap-2 px-1 pb-1">
-			<span class="min-w-0 truncate text-base font-medium text-ink-gray-8">
-				{{ sponsor.company_name }}
+			<span class="flex min-w-0 items-center gap-2">
+				<span class="min-w-0 truncate text-base font-medium text-ink-gray-8">
+					{{ sponsor.company_name }}
+				</span>
+				<!-- Luma's colour dots: the drawer spells the tags out. -->
+				<span
+					v-if="sponsor.tags.length"
+					role="img"
+					class="flex shrink-0 items-center gap-0.5"
+					:aria-label="`Tags: ${sponsor.tags.map((tag) => tag.label).join(', ')}`"
+				>
+					<Tooltip v-for="tag in sponsor.tags" :key="tag.name" :text="tag.label">
+						<span class="size-2 rounded-full" :class="tagColorClasses(tag.color).dot" />
+					</Tooltip>
+				</span>
 			</span>
 			<span class="shrink-0 text-sm text-ink-gray-5">{{ sponsor.tier_title }}</span>
-		</span>
-		<span v-if="sponsor.tags.length" class="flex flex-wrap gap-1 px-1 pb-1">
-			<Badge v-for="tag in sponsor.tags" :key="tag.name" :label="tag.label" theme="gray" />
 		</span>
 	</button>
 </template>

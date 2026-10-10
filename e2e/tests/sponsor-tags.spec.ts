@@ -83,14 +83,15 @@ test.describe("Sponsor tags", () => {
 		await sponsorCard(page, "Acme").click()
 
 		const drawer = page.getByRole("dialog")
-		await drawer.getByRole("button", { name: "Tags" }).click()
-		await page.getByRole("button", { name: "Create Tag" }).click()
-		await page.getByRole("textbox", { name: "Tag name" }).fill(createdLabel)
-		await page.getByRole("button", { name: "Create Tag" }).click()
+		await drawer.getByRole("button", { name: "Add tag" }).click()
+		await page.getByRole("textbox", { name: "Search or create tag" }).fill(createdLabel)
+		await page.keyboard.press("Enter")
+		await page.getByRole("option", { name: /green$/i }).click()
 
-		await expect(drawer.getByRole("button", { name: "Tags" })).toContainText(createdLabel)
+		await expect(drawer.getByRole("group", { name: "Tags" })).toContainText(createdLabel)
 		await page.keyboard.press("Escape")
-		await expect(sponsorCard(page, "Acme")).toContainText(createdLabel)
+		await page.keyboard.press("Escape")
+		await expect(sponsorCard(page, "Acme").getByLabel(`Tags: ${createdLabel}`)).toBeVisible()
 	})
 
 	test("filters the sponsor list by tag", async ({ page }) => {

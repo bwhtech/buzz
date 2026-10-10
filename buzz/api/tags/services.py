@@ -4,6 +4,8 @@ from frappe.query_builder import DocType
 from buzz.api.tags.exceptions import EmptyTagLabel, NotTaggable
 from buzz.api.tags.schemas import TagItem
 
+TAG_FIELDS = ["name", "label", "color"]
+
 
 def is_taggable(document_type: str) -> bool:
 	return document_type in frappe.get_hooks("taggable_doctypes")
@@ -14,27 +16,27 @@ def ensure_taggable(document_type: str):
 		NotTaggable.throw()
 
 
-def create_team_tag(team: str, document_type: str, label: str) -> TagItem:
+def create_team_tag(team: str, document_type: str, label: str, color: str = "gray") -> TagItem:
 	"""A team's tag for one kind of record. Asking for a label the team already has returns that tag."""
 	ensure_taggable(document_type)
 	label = " ".join(label.split())
 	if not label:
 		EmptyTagLabel.throw()
 	values = {"team": team, "document_type": document_type, "label": label}
-	tag = frappe.new_doc("Buzz Tag", **values)
+	tag = frappe.new_doc("Buzz Tag", **values, color=color)
 	tag.check_permission("create")
-	existing = frappe.db.get_value("Buzz Tag", values, ["name", "label"], as_dict=True)
+	existing = frappe.db.get_value("Buzz Tag", values, TAG_FIELDS, as_dict=True)
 	if existing:
 		return TagItem(**existing)
 	tag.insert()
-	return TagItem(name=tag.name, label=tag.label)
+	return TagItem(name=tag.name, label=tag.label, color=tag.color)
 
 
 def team_tags(team: str, document_type: str) -> list[TagItem]:
 	rows = frappe.get_all(
 		"Buzz Tag",
 		filters={"team": team, "document_type": document_type},
-		fields=["name", "label"],
+		fields=TAG_FIELDS,
 		order_by="label asc",
 		ignore_permissions=True,
 	)
@@ -50,13 +52,15 @@ def tags_by_document(document_type: str, names: list) -> dict[str, list[TagItem]
 		frappe.qb.from_(link)
 		.join(tag)
 		.on(tag.name == link.tag)
-		.select(link.document_name, tag.name, tag.label)
+		.select(link.document_name, tag.name, tag.label, tag.color)
 		.where((link.document_type == document_type) & link.document_name.isin([str(n) for n in names]))
 		.orderby(tag.label)
 	).run(as_dict=True)
 	tags = {}
 	for row in rows:
-		tags.setdefault(row.document_name, []).append(TagItem(name=row.name, label=row.label))
+		tags.setdefault(row.document_name, []).append(
+			TagItem(name=row.name, label=row.label, color=row.color)
+		)
 	return tags
 
 

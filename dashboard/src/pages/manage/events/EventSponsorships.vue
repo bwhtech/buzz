@@ -116,7 +116,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 	<PageWithSidebar>
 		<EventArchivedAlert :event="eventId" />
 
-		<div v-if="page.loading" class="space-y-8">
+		<div v-if="page.loading && !page.data" class="space-y-8">
 			<Skeleton class="h-6 w-24" />
 			<Skeleton class="h-48 w-full rounded-4" />
 		</div>

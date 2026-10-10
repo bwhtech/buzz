@@ -34,6 +34,13 @@ class TestCreateTag(TeamPermissionTestCase):
 
 		self.assertNotEqual(sponsor_tag.name, event_tag.name)
 
+	def test_color_is_kept_and_defaults_to_gray(self):
+		with self.set_user(self.alice):
+			colored = create_tag(self.team_a, "Event Sponsor", "Paid", "green")
+			plain = create_tag(self.team_a, "Event Sponsor", "Booth")
+
+		self.assertEqual((colored.color, plain.color), ("green", "gray"))
+
 	def test_existing_label_returns_that_tag(self):
 		first = self.create_as(self.alice, self.team_a, "Follow up")
 		again = self.create_as(self.alice, self.team_a, "  follow   UP ")
