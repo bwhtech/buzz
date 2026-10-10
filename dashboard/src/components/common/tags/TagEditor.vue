@@ -48,12 +48,16 @@ const createOption = {
 	onClick: ({ query: searchText }: { query: string }) => (newTagLabel.value = searchText.trim()),
 }
 
+// Frappe's Data columns are varchar(140).
+const TAG_LABEL_LIMIT = 140
+const isLabelTooLong = computed(() => query.value.trim().length > TAG_LABEL_LIMIT)
+
 const comboboxOptions = computed(() => {
 	if (newTagLabel.value !== null) return TAG_COLORS.map(colorOption)
 	const unapplied = options.value.filter((tag) => !appliedNames.value.includes(tag.name))
 	return [
 		...unapplied.map((tag) => ({ label: tag.label, value: tag.name, color: tag.color })),
-		createOption,
+		{ ...createOption, disabled: isLabelTooLong.value },
 	]
 })
 
@@ -158,9 +162,13 @@ watch(newTagLabel, async (label) => {
 				<span v-else class="lucide-plus size-4 text-ink-gray-5" aria-hidden="true" />
 			</template>
 			<template #item-label="{ item, query: searchText }">
-				<span class="block truncate">
-					{{ item.key === "create" ? `Create “${searchText.trim()}”` : item.label }}
+				<span v-if="item.key !== 'create'" class="block max-w-64 truncate" :title="item.label">
+					{{ item.label }}
 				</span>
+				<span v-else-if="isLabelTooLong"
+					>Tag names can be up to {{ TAG_LABEL_LIMIT }} characters</span
+				>
+				<span v-else class="block max-w-64 truncate">Create “{{ searchText.trim() }}”</span>
 			</template>
 		</Combobox>
 	</div>
