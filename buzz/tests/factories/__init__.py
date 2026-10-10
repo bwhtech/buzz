@@ -3,6 +3,7 @@ from buzz.tests.factories.buzz_campaign_factory import BuzzCampaignFactory
 from buzz.tests.factories.buzz_coupon_code_factory import BuzzCouponCodeFactory
 from buzz.tests.factories.buzz_custom_field_factory import BuzzCustomFieldFactory
 from buzz.tests.factories.buzz_event_factory import BuzzEventFactory
+from buzz.tests.factories.buzz_tag_factory import BuzzTagFactory
 from buzz.tests.factories.buzz_team_factory import BuzzTeamFactory
 from buzz.tests.factories.buzz_team_membership_factory import BuzzTeamMembershipFactory
 from buzz.tests.factories.buzz_theme_factory import BuzzThemeFactory
@@ -40,6 +41,7 @@ __all__ = [
 	"BuzzCouponCodeFactory",
 	"BuzzCustomFieldFactory",
 	"BuzzEventFactory",
+	"BuzzTagFactory",
 	"BuzzTeamFactory",
 	"BuzzTeamMembershipFactory",
 	"BuzzThemeFactory",

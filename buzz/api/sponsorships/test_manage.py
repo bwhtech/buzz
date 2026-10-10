@@ -22,6 +22,7 @@ SPONSOR_FIELDS = {
 	"enquiry",
 	"tier",
 	"tier_title",
+	"tags",
 }
 ENQUIRY_FIELDS = {
 	"name",

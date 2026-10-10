@@ -16,6 +16,9 @@ KIND_BY_FIELDTYPE = {
 	"Attach": "file",
 	"Attach Image": "file",
 }
+# A record's Buzz Tags, matched through its Buzz Tag Link rows.
+TAGS_KEY = "tags"
+
 NEGATED_OPERATORS = {"not in": "in", "not like": "like"}
 # Answers saved through `str()` carry Python's spelling: "True" for a tick, ['a', 'b'] for a list.
 CHECKED_VALUES = ["1", "True", "true"]
@@ -62,6 +65,10 @@ def filter_field(key, label, fieldtype, options=(), section="standard") -> Filte
 		options=[FilterOption(value=value, label=text) for value, text in options],
 		operators=operators,
 	)
+
+
+def tags_field(tags) -> FilterField:
+	return filter_field(TAGS_KEY, _("Tags"), "Link", [(tag.name, tag.label) for tag in tags])
 
 
 def question_fields(questions) -> list[FilterField]:
@@ -125,11 +132,20 @@ class ListConditions:
 	def translate(self, key: str, operator: str, value) -> list | None:
 		if is_blank(operator, value):
 			return None
+		if key == TAGS_KEY:
+			return ["name", operator, self.tagged_names(value)]
 		field = self.fields[key]
 		if field.section == "question":
 			doctype, link_field = self.answer_parents.get(key, (self.doctype, "name"))
 			return AnswerCondition(doctype, link_field, field, operator, value).name_filter()
 		return [key, operator, f"%{value}%" if "like" in operator else value]
+
+	def tagged_names(self, tags: list[str]) -> list[str]:
+		return frappe.get_all(
+			"Buzz Tag Link",
+			filters={"document_type": self.doctype, "tag": ["in", tags]},
+			pluck="document_name",
+		)
 
 
 class AnswerCondition:

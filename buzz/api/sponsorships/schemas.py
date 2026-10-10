@@ -2,6 +2,7 @@ from datetime import date, datetime
 
 from buzz.api.filters.schemas import FilterField
 from buzz.api.schemas import APIResponse
+from buzz.api.tags.schemas import TagItem
 
 
 class EnquiryFormState(APIResponse):
@@ -35,6 +36,7 @@ class EventSponsorItem(APIResponse):
 	enquiry: str | None
 	tier: str | None
 	tier_title: str
+	tags: list[TagItem]
 
 
 class EventEnquiryItem(APIResponse):
@@ -56,6 +58,17 @@ class EventSponsorshipsResponse(APIResponse):
 	form: EnquiryFormState | None
 	tiers: list[TierItem]
 	sponsors: list[EventSponsorItem]
+	team: str
+	# The team's sponsor tags, which the sponsor drawer offers.
+	tags: list[TagItem]
+
+
+class EventSponsorsResponse(APIResponse):
+	"""An event's sponsors after search and filters, with what the list can be filtered by."""
+
+	total: int
+	sponsors: list[EventSponsorItem]
+	filter_fields: list[FilterField]
 
 
 class EventEnquiriesResponse(APIResponse):

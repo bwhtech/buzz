@@ -15,7 +15,9 @@ defineProps<{
 	<div class="flex items-center justify-between gap-2">
 		<h2 class="flex items-baseline gap-2 text-xl font-semibold text-ink-gray-9">
 			{{ title }}
-			<span v-if="count != null" class="text-sm font-normal text-ink-gray-5">{{ count }}</span>
+			<span v-if="count != null" class="text-sm font-normal text-ink-gray-5">{{
+				count.toLocaleString()
+			}}</span>
 		</h2>
 		<Button v-if="action" v-bind="action" />
 	</div>

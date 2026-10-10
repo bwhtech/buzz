@@ -87,6 +87,11 @@ doc_events = {
 	},
 }
 
+# Records a Buzz Tag can be applied to; deleting one also removes its tags.
+taggable_doctypes = ["Event Sponsor", "Buzz Event", "Talk Proposal", "Buzz Team Membership"]
+for _doctype in taggable_doctypes:
+	doc_events.setdefault(_doctype, {})["on_trash"] = "buzz.events.doctype.buzz_tag.buzz_tag.delete_tag_links"
+
 fixtures = [
 	{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Event Manager", "Frontdesk Manager"]]}},
 	{"dt": "Buzz Theme", "filters": {"is_standard": 1}},
@@ -220,6 +225,7 @@ permission_query_conditions = {
 	"Event Host": "buzz.permissions.team_query_conditions",
 	"Event Template": "buzz.permissions.team_query_conditions",
 	"Event Venue": "buzz.permissions.team_query_conditions",
+	"Buzz Tag": "buzz.permissions.team_query_conditions",
 	"Buzz Team Settings": "buzz.permissions.team_query_conditions",
 	"Additional Event Page": "buzz.permissions.derived_query_conditions",
 	"Buzz Coupon Code": "buzz.permissions.derived_query_conditions",
@@ -254,6 +260,7 @@ has_permission = {
 	"Event Host": "buzz.permissions.team_has_permission",
 	"Event Template": "buzz.permissions.team_has_permission",
 	"Event Venue": "buzz.permissions.team_has_permission",
+	"Buzz Tag": "buzz.permissions.team_has_permission",
 	"Buzz Team Settings": "buzz.permissions.team_admin_has_permission",
 	"Additional Event Page": "buzz.permissions.derived_has_permission",
 	"Buzz Coupon Code": "buzz.permissions.derived_has_permission",
@@ -285,9 +292,11 @@ has_permission = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "events.event.get_events"
-# }
+# Desk's tag editor reads and writes Buzz Tags on taggable records.
+override_whitelisted_methods = {
+	f"frappe.desk.doctype.tag.tag.{_method}": f"buzz.api.tags.desk.{_method}"
+	for _method in ("add_tag", "add_tags", "remove_tag", "get_tags")
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,

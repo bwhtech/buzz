@@ -47,6 +47,7 @@ const ICONS_BY_FIELD_KEY: Record<string, string> = {
 	tier: "lucide-circle-star",
 	ticket_type: "lucide-tag",
 	status: "lucide-circle-dashed",
+	tags: "lucide-tags",
 }
 
 export const fieldIcon = (field: FilterField) =>

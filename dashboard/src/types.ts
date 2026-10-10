@@ -575,6 +575,25 @@ export interface EventSponsorItem {
 	enquiry: string | null
 	tier: string | null
 	tier_title: string
+	tags: TagItem[]
+}
+
+// buzz.api.tags: a team's tag for one kind of record.
+export type TagColor =
+	| "gray"
+	| "red"
+	| "orange"
+	| "yellow"
+	| "green"
+	| "cyan"
+	| "blue"
+	| "purple"
+	| "pink"
+
+export interface TagItem {
+	name: string
+	label: string
+	color: TagColor
 }
 
 export interface EnquiryAnswer {
@@ -619,6 +638,14 @@ export interface EventSponsorships {
 	form: EnquiryFormState | null
 	tiers: SponsorshipTierItem[]
 	sponsors: EventSponsorItem[]
+	team: string
+	tags: TagItem[]
+}
+
+export interface EventSponsors {
+	total: number
+	sponsors: EventSponsorItem[]
+	filter_fields: FilterField[]
 }
 
 export interface EventEnquiries {

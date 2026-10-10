@@ -1,0 +1,104 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-09 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "label",
+  "color",
+  "team",
+  "column_break_type",
+  "document_type"
+ ],
+ "fields": [
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Label",
+   "reqd": 1
+  },
+  {
+   "default": "gray",
+   "fieldname": "color",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Color",
+   "options": "gray\nred\norange\nyellow\ngreen\ncyan\nblue\npurple\npink",
+   "reqd": 1
+  },
+  {
+   "fieldname": "team",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Team",
+   "options": "Buzz Team",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "column_break_type",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The kind of record this tag is applied to",
+   "fieldname": "document_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Applies To",
+   "options": "DocType",
+   "reqd": 1,
+   "set_only_once": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-10 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Events",
+ "name": "Buzz Tag",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Buzz User"
+  }
+ ],
+ "quick_entry": 1,
+ "row_format": "Dynamic",
+ "search_fields": "label",
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "label"
+}

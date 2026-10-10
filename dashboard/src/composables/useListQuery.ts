@@ -9,11 +9,12 @@ export type ListOrder = "asc" | "desc"
  * A list's search, sort and filters, held in the query string so a filtered list survives
  * a reload and can be pasted to someone else. `useRouteQuery` writes with `router.replace`,
  * so editing them does not pile up history entries. Defaults drop their param.
+ * `prefix` keeps the params of two lists on one page apart.
  */
-export function useListQuery() {
-	const searchParam = useRouteQuery<string | null>("q", null)
-	const orderParam = useRouteQuery<string | null>("order", null)
-	const filtersParam = useRouteQuery<string | null>("filters", null)
+export function useListQuery(prefix = "") {
+	const searchParam = useRouteQuery<string | null>(`${prefix}q`, null)
+	const orderParam = useRouteQuery<string | null>(`${prefix}order`, null)
+	const filtersParam = useRouteQuery<string | null>(`${prefix}filters`, null)
 
 	const search = computed<string>({
 		get: () => searchParam.value ?? "",

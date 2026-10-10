@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { Tooltip } from "frappe-ui"
+
+import { tagColorClasses } from "@/components/common/tags/tagColors"
 import LogoPanel from "@/components/dashboard/sponsorships/LogoPanel.vue"
 import type { EventSponsorItem } from "@/types"
 
@@ -20,11 +23,28 @@ defineEmits<{ open: [] }>()
 			:name="sponsor.company_name"
 		/>
 
-		<span class="flex min-w-0 items-baseline justify-between gap-2 px-1 pb-1">
-			<span class="min-w-0 truncate text-base font-medium text-ink-gray-8">
-				{{ sponsor.company_name }}
+		<span class="flex min-w-0 flex-col gap-1.5 px-1 pb-1">
+			<!-- Luma's colour dots; the drawer spells the tags out. The row keeps its height
+			     when empty, so titles line up across cards. -->
+			<span
+				role="img"
+				class="flex h-2 items-center gap-0.5 overflow-hidden"
+				:class="!sponsor.tags.length && 'invisible'"
+				:aria-hidden="!sponsor.tags.length || undefined"
+				:aria-label="`Tags: ${sponsor.tags.map((tag) => tag.label).join(', ')}`"
+			>
+				<Tooltip v-for="tag in sponsor.tags" :key="tag.name" :text="tag.label">
+					<span class="size-2 shrink-0 rounded-full" :class="tagColorClasses(tag.color).dot" />
+				</Tooltip>
 			</span>
-			<span class="shrink-0 text-sm text-ink-gray-5">{{ sponsor.tier_title }}</span>
+			<span class="flex min-w-0 flex-col gap-0.5">
+				<span class="truncate text-base font-medium text-ink-gray-8" :title="sponsor.company_name">
+					{{ sponsor.company_name }}
+				</span>
+				<span class="truncate text-sm text-ink-gray-5" :title="sponsor.tier_title">
+					{{ sponsor.tier_title }}
+				</span>
+			</span>
 		</span>
 	</button>
 </template>

@@ -3,6 +3,7 @@ import { Button, Combobox, ErrorMessage, FormControl, dialog, toast, useDoc } fr
 import { computed } from "vue"
 
 import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
+import TagEditor from "@/components/common/tags/TagEditor.vue"
 import DrawerSaveBar from "@/components/dashboard/sponsorships/DrawerSaveBar.vue"
 import {
 	keepLastValue,
@@ -14,7 +15,7 @@ import SponsorshipDrawer from "@/components/dashboard/sponsorships/SponsorshipDr
 import WebsiteInput from "@/components/dashboard/sponsorships/WebsiteInput.vue"
 import { useDrawerEdits } from "@/composables/useDrawerEdits"
 import { useCountries } from "@/data/countries"
-import type { EventSponsorItem, SponsorshipTierItem } from "@/types"
+import type { EventSponsorItem, SponsorshipTierItem, TagItem } from "@/types"
 import { validateIsImageFile } from "@/utils"
 
 type SponsorValues = {
@@ -29,10 +30,12 @@ type SponsorValues = {
 const props = defineProps<{
 	sponsor: EventSponsorItem | null
 	tiers: SponsorshipTierItem[]
+	team: string
+	tags: TagItem[]
 	canWrite: boolean
 }>()
 const open = defineModel<boolean>("open", { required: true })
-const emit = defineEmits<{ changed: []; openEnquiry: [name: string] }>()
+const emit = defineEmits<{ changed: []; tagged: []; openEnquiry: [name: string] }>()
 
 const shownSponsor = keepLastValue(() => props.sponsor)
 
@@ -118,6 +121,15 @@ async function save(values: SponsorValues) {
 		description="Confirmed sponsor"
 	>
 		<template #notice>
+			<TagEditor
+				:team="team"
+				document-type="Event Sponsor"
+				:document-name="shownSponsor.name"
+				:tags="shownSponsor.tags"
+				:options="tags"
+				:disabled="!canWrite"
+				@changed="emit('tagged')"
+			/>
 			<ImageCropUploader
 				:aspect-ratio="1"
 				:output-width="512"
