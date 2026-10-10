@@ -16,66 +16,63 @@ const errorText = (error: unknown) =>
 
 // A record's tags, applied at once and shown before the server answers.
 export function useDocumentTags(source: DocumentTagsSource, onChanged: () => void) {
-	const applied = ref<TagItem[]>([])
+	const appliedTags = ref<TagItem[]>([])
 	watch(
 		() => source.tags,
-		(tags) => (applied.value = [...tags]),
+		(tags) => (appliedTags.value = [...tags]),
 		{ immediate: true },
 	)
-	const appliedNames = computed(() => applied.value.map((tag) => tag.name))
+	const appliedNames = computed(() => appliedTags.value.map((tag) => tag.name))
 
 	// Tags made here show in the menu before the parent reloads its options.
-	const created = ref<TagItem[]>([])
+	const createdTags = ref<TagItem[]>([])
 	const options = computed(() => {
-		const known = new Map([...source.options, ...created.value].map((tag) => [tag.name, tag]))
+		const known = new Map([...source.options, ...createdTags.value].map((tag) => [tag.name, tag]))
 		return [...known.values()]
 	})
 
-	const saveTags = useCall<
+	const setTagsCall = useCall<
 		TagItem[],
 		{ document_type: string; document_name: string; tags: string[] }
 	>({ url: "/api/v2/method/buzz.api.tags.set_tags", method: "POST", immediate: false })
-	const newTagCall = useCall<
+	const createTagCall = useCall<
 		TagItem,
 		{ team: string; document_type: string; label: string; color: TagColor }
 	>({ url: "/api/v2/method/buzz.api.tags.create_tag", method: "POST", immediate: false })
 
 	async function setTags(tags: TagItem[]) {
-		const previous = applied.value
-		applied.value = tags
-		await saveTags.submit({
+		const previous = appliedTags.value
+		appliedTags.value = tags
+		await setTagsCall.submit({
 			document_type: source.documentType,
 			document_name: source.documentName,
 			tags: tags.map((tag) => tag.name),
 		})
-		if (saveTags.error) {
-			applied.value = previous
-			toast.error(errorText(saveTags.error))
+		if (setTagsCall.error) {
+			appliedTags.value = previous
+			toast.error(errorText(setTagsCall.error))
 			return
 		}
 		onChanged()
 	}
 
-	function toggle(tag: TagItem) {
-		const isApplied = appliedNames.value.includes(tag.name)
-		setTags(
-			isApplied ? applied.value.filter((each) => each.name !== tag.name) : [...applied.value, tag],
-		)
+	function removeTag(tag: TagItem) {
+		setTags(appliedTags.value.filter((each) => each.name !== tag.name))
 	}
 
 	// Naming a tag the team already has picks that tag rather than making a second one.
 	async function createTag(label: string, color: TagColor) {
-		await newTagCall.submit({
+		await createTagCall.submit({
 			team: source.team,
 			document_type: source.documentType,
 			label,
 			color,
 		})
-		if (newTagCall.error) return toast.error(errorText(newTagCall.error))
-		const tag = newTagCall.data!
-		created.value = [...created.value, tag]
-		if (!appliedNames.value.includes(tag.name)) await setTags([...applied.value, tag])
+		if (createTagCall.error) return toast.error(errorText(createTagCall.error))
+		const tag = createTagCall.data!
+		createdTags.value = [...createdTags.value, tag]
+		if (!appliedNames.value.includes(tag.name)) await setTags([...appliedTags.value, tag])
 	}
 
-	return { applied, appliedNames, options, setTags, toggle, createTag }
+	return { appliedTags, appliedNames, options, setTags, removeTag, createTag }
 }
