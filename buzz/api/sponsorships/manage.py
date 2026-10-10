@@ -5,23 +5,13 @@ import frappe
 from buzz.api.events.services import ensure_event_team_access
 from buzz.api.sponsorships.schemas import (
 	EnquiryFormState,
-	EventSponsorItem,
 	EventSponsorshipsResponse,
 	TierItem,
 )
+from buzz.api.sponsorships.sponsors import sponsor_items, sponsor_rows, sponsor_tags
 from buzz.permissions import has_team_access
 
 TIER_FIELDS = ["name", "title", "enabled", "perks", "slots", {"prices": ["currency", "price"]}]
-SPONSOR_FIELDS = [
-	"name",
-	"company_name",
-	"company_logo",
-	"website",
-	"country",
-	"contact_email",
-	"enquiry",
-	"tier",
-]
 
 
 def event_sponsorships(event: str) -> EventSponsorshipsResponse:
@@ -36,14 +26,8 @@ def event_sponsorships(event: str) -> EventSponsorshipsResponse:
 		order_by="creation asc",
 		ignore_permissions=True,
 	)
-	sponsors = frappe.get_all(
-		"Event Sponsor",
-		filters={"event": event},
-		fields=SPONSOR_FIELDS,
-		order_by="creation asc",
-		ignore_permissions=True,
-	)
-	tier_titles = {tier.name: tier.title for tier in tiers}
+	sponsors = sponsor_rows({"event": event})
+	tier_titles = {str(tier.name): tier.title for tier in tiers}
 	sponsor_counts = Counter(sponsor.tier for sponsor in sponsors)
 
 	return EventSponsorshipsResponse(
@@ -51,13 +35,9 @@ def event_sponsorships(event: str) -> EventSponsorshipsResponse:
 		can_write=has_team_access(doc.team, "write", frappe.session.user),
 		form=form_state(doc),
 		tiers=[TierItem(**tier, sponsor_count=sponsor_counts[tier.name]) for tier in tiers],
-		sponsors=[
-			EventSponsorItem(
-				**sponsor,
-				tier_title=tier_titles.get(sponsor.tier, sponsor.tier) if sponsor.tier else "",
-			)
-			for sponsor in sponsors
-		],
+		sponsors=sponsor_items(sponsors, tier_titles),
+		team=doc.team,
+		tags=sponsor_tags(event),
 	)
 
 

@@ -13,10 +13,12 @@ from buzz.api.sponsorships.schemas import (
 	EnquiryDetail,
 	EventEnquiriesResponse,
 	EventSponsorshipsResponse,
+	EventSponsorsResponse,
 	SponsorshipDetailsResponse,
 	SponsorshipListItem,
 )
 from buzz.api.sponsorships.services import SponsorshipService, list_user_enquiries
+from buzz.api.sponsorships.sponsors import event_sponsors
 
 
 # nosemgrep: guest-whitelisted-method
@@ -61,6 +63,14 @@ def withdraw_sponsorship_enquiry(enquiry_id: str) -> None:
 @frappe.whitelist(methods=["GET"])
 def get_event_sponsorships(event: str) -> EventSponsorshipsResponse:
 	return event_sponsorships(event)
+
+
+@frappe.whitelist(methods=["GET"])
+def get_event_sponsors(
+	event: str, search: str | None = None, filters: str | None = None, order: str = "desc"
+) -> EventSponsorsResponse:
+	"""`filters` is a JSON list of `[field, operator, value]`, the string the dashboard keeps in its URL."""
+	return event_sponsors(event, search, filters, order)
 
 
 @frappe.whitelist(methods=["GET"])

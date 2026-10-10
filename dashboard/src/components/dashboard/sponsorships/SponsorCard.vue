@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Badge } from "frappe-ui"
+
 import LogoPanel from "@/components/dashboard/sponsorships/LogoPanel.vue"
 import type { EventSponsorItem } from "@/types"
 
@@ -25,6 +27,9 @@ defineEmits<{ open: [] }>()
 				{{ sponsor.company_name }}
 			</span>
 			<span class="shrink-0 text-sm text-ink-gray-5">{{ sponsor.tier_title }}</span>
+		</span>
+		<span v-if="sponsor.tags.length" class="flex flex-wrap gap-1 px-1 pb-1">
+			<Badge v-for="tag in sponsor.tags" :key="tag.name" :label="tag.label" theme="gray" />
 		</span>
 	</button>
 </template>

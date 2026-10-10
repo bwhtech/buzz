@@ -11,8 +11,8 @@ import AddSponsorDialog from "@/components/dashboard/sponsorships/AddSponsorDial
 import EnquiriesSection from "@/components/dashboard/sponsorships/EnquiriesSection.vue"
 import EnquiryDrawer from "@/components/dashboard/sponsorships/EnquiryDrawer.vue"
 import EventSponsorshipActions from "@/components/dashboard/sponsorships/EventSponsorshipActions.vue"
-import SponsorCard from "@/components/dashboard/sponsorships/SponsorCard.vue"
 import SponsorDrawer from "@/components/dashboard/sponsorships/SponsorDrawer.vue"
+import SponsorsSection from "@/components/dashboard/sponsorships/SponsorsSection.vue"
 import TierDrawer from "@/components/dashboard/sponsorships/TierDrawer.vue"
 import TierList from "@/components/dashboard/sponsorships/TierList.vue"
 import { useEventSponsorships } from "@/data/sponsorships"
@@ -36,14 +36,6 @@ const addTierAction = computed(() =>
 			}
 		: null,
 )
-
-// Highest-priced tier first, the order a sponsor wall reads in.
-const sponsors = computed(() => {
-	const rank = new Map((page.data?.tiers ?? []).map((tier) => [tier.name, tier.prices[0].price]))
-	return (page.data?.sponsors ?? []).toSorted(
-		(a, b) => (rank.get(b.tier ?? "") ?? 0) - (rank.get(a.tier ?? "") ?? 0),
-	)
-})
 
 const sponsorDialogOpen = ref(false)
 
@@ -91,6 +83,7 @@ function drawerOpen(kind: Selection["kind"]) {
 }
 
 const enquiriesSection = ref<InstanceType<typeof EnquiriesSection> | null>(null)
+const sponsorsSection = ref<InstanceType<typeof SponsorsSection> | null>(null)
 
 // The row is patched in place; the page reloads for the counts and any sponsor a payment added.
 function onEnquiryStatusChanged(status: string) {
@@ -101,7 +94,13 @@ function onEnquiryStatusChanged(status: string) {
 // Removing a sponsor cancels the enquiry it came from, so that list is stale too.
 function onSponsorsChanged() {
 	page.reload()
+	sponsorsSection.value?.reload()
 	enquiriesSection.value?.reload()
+}
+
+function onSponsorTagged() {
+	page.reload()
+	sponsorsSection.value?.reload()
 }
 
 const tierDrawerOpen = drawerOpen("tier")
@@ -142,24 +141,13 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				/>
 			</ListSection>
 
-			<ListSection
-				title="Sponsors"
-				:count="page.data?.sponsors.length"
+			<SponsorsSection
+				ref="sponsorsSection"
+				:event="eventId"
+				:tiers="page.data?.tiers ?? []"
 				:action="addSponsorAction"
-				:empty="!sponsors.length"
-				empty-title="No sponsors yet"
-				empty-description="Sponsors appear here once they pay or are confirmed by the team."
-				empty-icon="lucide-handshake"
-			>
-				<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-					<SponsorCard
-						v-for="sponsor in sponsors"
-						:key="sponsor.name"
-						:sponsor="sponsor"
-						@open="select('sponsor', sponsor.name)"
-					/>
-				</div>
-			</ListSection>
+				@open="select('sponsor', $event)"
+			/>
 
 			<EnquiriesSection ref="enquiriesSection" :event="eventId" @open="select('enquiry', $event)" />
 		</template>
@@ -186,8 +174,11 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		v-model:open="sponsorDrawerOpen"
 		:sponsor="selectedSponsor"
 		:tiers="page.data?.tiers ?? []"
+		:team="page.data?.team ?? ''"
+		:tags="page.data?.tags ?? []"
 		:can-write="!!page.data?.can_write"
 		@changed="onSponsorsChanged"
+		@tagged="onSponsorTagged"
 		@open-enquiry="select('enquiry', $event)"
 	/>
 

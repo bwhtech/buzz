@@ -31,3 +31,4 @@ buzz.patches.move_ticket_type_price_to_prices
 buzz.patches.create_administrator_team
 buzz.patches.geocode_event_venues
 buzz.patches.rename_is_a_community_field
+buzz.patches.migrate_desk_tags_to_buzz_tags

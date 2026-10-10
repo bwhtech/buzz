@@ -575,6 +575,13 @@ export interface EventSponsorItem {
 	enquiry: string | null
 	tier: string | null
 	tier_title: string
+	tags: TagItem[]
+}
+
+// buzz.api.tags: a team's tag for one kind of record.
+export interface TagItem {
+	name: string
+	label: string
 }
 
 export interface EnquiryAnswer {
@@ -619,6 +626,14 @@ export interface EventSponsorships {
 	form: EnquiryFormState | null
 	tiers: SponsorshipTierItem[]
 	sponsors: EventSponsorItem[]
+	team: string
+	tags: TagItem[]
+}
+
+export interface EventSponsors {
+	total: number
+	sponsors: EventSponsorItem[]
+	filter_fields: FilterField[]
 }
 
 export interface EventEnquiries {

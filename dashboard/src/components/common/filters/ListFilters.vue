@@ -14,7 +14,12 @@ import {
 } from "./fields"
 import FilterChip from "./FilterChip.vue"
 
-const props = defineProps<{ fields: FilterField[]; searchPlaceholder: string }>()
+// Two lists on one page would both open on F, so all but one disable the shortcut.
+const props = defineProps<{
+	fields: FilterField[]
+	searchPlaceholder: string
+	disableShortcut?: boolean
+}>()
 const conditions = defineModel<Condition[]>({ required: true })
 const search = defineModel<string>("search", { required: true })
 const order = defineModel<ListOrder>("order", { required: true })
@@ -89,7 +94,8 @@ onKeyStroke("f", (event) => {
 	const target = event.target as HTMLElement
 	if (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable) return
 	// A drawer or dialog over the list owns the keyboard.
-	if (!props.fields.length || document.querySelector('[role="dialog"]')) return
+	if (props.disableShortcut || !props.fields.length) return
+	if (document.querySelector('[role="dialog"]')) return
 	if (event.metaKey || event.ctrlKey || event.altKey) return
 	event.preventDefault()
 	menuOpen.value = true
@@ -123,9 +129,9 @@ onKeyStroke("f", (event) => {
 				<Button
 					:disabled="!fields.length"
 					icon="lucide-list-filter"
-					tooltip="Filter (F)"
+					:tooltip="disableShortcut ? 'Filter' : 'Filter (F)'"
 					aria-label="Filter"
-					aria-keyshortcuts="F"
+					:aria-keyshortcuts="disableShortcut ? undefined : 'F'"
 				/>
 			</Dropdown>
 		</div>
