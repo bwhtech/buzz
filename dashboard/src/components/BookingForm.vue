@@ -51,7 +51,7 @@
 			<template #actions>
 				<div class="flex justify-end space-x-3">
 					<Button variant="ghost" @click="clearOtpState">{{ __("Cancel") }}</Button>
-					<Button variant="solid" :loading="processBooking.loading" @click="submitWithOtp">
+					<Button variant="solid" :loading="isSubmitting" @click="submitWithOtp">
 						{{ __("Verify & Book") }}
 					</Button>
 				</div>
@@ -140,7 +140,7 @@
 				:amount="finalTotal"
 				:currency="totalCurrency"
 				:offline-settings="activeOfflineSettings"
-				:loading="processBooking.loading"
+				:loading="isSubmitting"
 				:custom-fields="activeOfflineCustomFields"
 				@submit="onOfflinePaymentSubmit"
 				@cancel="showOfflineDialog = false"
@@ -417,7 +417,7 @@
 								size="lg"
 								class="w-full"
 								type="submit"
-								:loading="processBooking.loading || sendOtpResource.loading"
+								:loading="isSubmitting || sendOtpResource.loading"
 							>
 								{{ submitButtonText }}
 							</Button>
@@ -433,6 +433,7 @@
 </template>
 
 <script setup lang="ts">
+import { useEventListener } from "@vueuse/core"
 import { useRouteQuery } from "@vueuse/router"
 import { Alert, Dropdown, FormControl, toast, useCall } from "frappe-ui"
 import { type PropType, computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue"
@@ -1073,6 +1074,14 @@ const processBooking = useCall<BookingSubmitResponse, { booking: Record<string, 
 	immediate: false,
 })
 
+// The gateway page can take seconds to load after the booking call returns.
+const redirectingToPayment = ref(false)
+const isSubmitting = computed(() => processBooking.loading || redirectingToPayment.value)
+// Going back from the gateway restores this page from the back-forward cache.
+useEventListener(window, "pageshow", (event: PageTransitionEvent) => {
+	if (event.persisted) redirectingToPayment.value = false
+})
+
 // POST although it only reads: a guest's email stays out of the query string.
 const validateCoupon = useCall<Record<string, any>, Record<string, any>>({
 	url: "/api/v2/method/buzz.api.booking.validate_coupon",
@@ -1251,7 +1260,7 @@ const validateForm = () => {
 
 // --- FORM SUBMISSION ---
 async function submit() {
-	if (processBooking.loading) return
+	if (isSubmitting.value) return
 
 	if (requiresLogin.value) {
 		openLoginDialog()
@@ -1434,6 +1443,7 @@ async function submitBooking(
 	const action = resolveBookingSuccessAction(data, { isGuestMode: props.isGuestMode })
 
 	if (action.type === "external") {
+		redirectingToPayment.value = true
 		window.location.href = action.url
 	} else if (action.type === "guest-inline") {
 		bookingSuccess.value = true
@@ -1550,7 +1560,7 @@ const requiresLogin = computed(() => {
 })
 
 const submitButtonText = computed(() => {
-	if (processBooking.loading) {
+	if (isSubmitting.value) {
 		return __("Processing...")
 	}
 
