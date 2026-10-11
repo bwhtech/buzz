@@ -62,7 +62,7 @@ class SponsorshipService:
 		return get_payment_link_for_sponsorship(
 			self.enquiry_id,
 			tier_id,
-			f"/b/account/sponsorships/{self.enquiry_id}",
+			f"/b/account/sponsorships/{self.enquiry_id}?success=true",
 			payment_gateway=payment_gateway,
 			currency=currency,
 		)

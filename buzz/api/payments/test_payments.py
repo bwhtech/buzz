@@ -1,7 +1,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.payments import get_event_payment_gateways
+from buzz.api.payments import get_event_payment_gateways, get_payment_gateway_logos
 from buzz.payments import resolve_payment_gateway
 from buzz.tests.base_test_cases import make_payment_gateway
 from buzz.tests.factories import BuzzEventFactory
@@ -70,3 +70,19 @@ class TestGetEventPaymentGateways(IntegrationTestCase):
 
 	def gateways_on(self, event: str) -> list[str]:
 		return [row.payment_gateway for row in frappe.get_doc("Buzz Event", event).payment_gateways]
+
+
+class TestGetPaymentGatewayLogos(IntegrationTestCase):
+	def test_every_enabled_gateway_comes_with_its_logo_for_both_themes(self):
+		gateway = make_payment_gateway()
+
+		logos = {row.name: row for row in get_payment_gateway_logos()}
+
+		self.assertTrue(logos[gateway].logo.startswith("/assets/bwh_payments/"))
+		self.assertTrue(logos[gateway].logo_dark.startswith("/assets/bwh_payments/"))
+
+	def test_a_disabled_gateway_has_no_logo_listed(self):
+		gateway = make_payment_gateway()
+		frappe.get_doc("Payment Gateway Profile", gateway).update({"enabled": 0}).save()
+
+		self.assertNotIn(gateway, [row.name for row in get_payment_gateway_logos()])

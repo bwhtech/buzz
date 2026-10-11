@@ -148,7 +148,7 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 		payment = frappe.get_last_doc("Event Payment", {"reference_docname": self.enquiry.name})
 		self.assertEqual(
 			frappe.db.get_value("Gateway Payment Request", payment.payment_request, "redirect_to"),
-			f"/b/account/sponsorships/{self.enquiry.name}",
+			f"/b/account/sponsorships/{self.enquiry.name}?success=true",
 		)
 
 	def add_gateway_to_event(self) -> str:
