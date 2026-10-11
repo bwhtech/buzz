@@ -3,14 +3,15 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.api.payments import get_event_payment_gateways
 from buzz.payments import resolve_payment_gateway
-from buzz.tests.factories import BuzzEventFactory, PaymentGatewayFactory
+from buzz.tests.base_test_cases import make_payment_gateway
+from buzz.tests.factories import BuzzEventFactory
 
 
 class TestGetEventPaymentGateways(IntegrationTestCase):
 	def setUp(self):
 		self.enterContext(self.change_settings("Buzz Settings", default_payment_gateway=None))
-		self.gateway = PaymentGatewayFactory.create().name
-		self.other_gateway = PaymentGatewayFactory.create().name
+		self.gateway = make_payment_gateway()
+		self.other_gateway = make_payment_gateway()
 
 	def test_configured_gateways_override_default(self):
 		event = self.create_event(self.gateway)
@@ -38,6 +39,12 @@ class TestGetEventPaymentGateways(IntegrationTestCase):
 			event = self.create_event(self.other_gateway)
 
 		self.assertEqual(self.gateways_on(event), [self.other_gateway])
+
+	def test_a_disabled_gateway_is_not_offered(self):
+		event = self.create_event(self.gateway, self.other_gateway)
+		frappe.get_doc("Payment Gateway Profile", self.other_gateway).update({"enabled": 0}).save()
+
+		self.assertEqual(get_event_payment_gateways(event), [self.gateway])
 
 	def test_resolve_picks_the_first_gateway_when_none_is_given(self):
 		self.assertEqual(resolve_payment_gateway(self.create_event(self.gateway), None), self.gateway)

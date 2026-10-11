@@ -124,12 +124,9 @@ async function syncRefunds(frm) {
 	const { message } = await frm.call("sync_refunds")
 
 	frappe.show_alert({
-		message: message.refunds
-			? __("Razorpay has {0} refund(s) on this payment, {1} new here.", [
-					message.refunds,
-					message.created,
-				])
-			: __("Razorpay has no refunds on this payment."),
+		message: message.pending
+			? __("{0} refund(s) are still waiting on the payment provider.", [message.pending])
+			: __("Every refund on this booking is settled."),
 		indicator: "blue",
 	})
 
@@ -144,7 +141,7 @@ async function showRefundDialog(frm) {
 	if (refundable <= 0) {
 		frappe.msgprint({
 			title: __("Nothing Left to Refund"),
-			message: __("Every rupee on this booking is already refunded or waiting on the gateway."),
+			message: __("This booking is already refunded in full, or waiting on the payment provider."),
 			indicator: "orange",
 		})
 		return
@@ -199,18 +196,21 @@ async function showRefundDialog(frm) {
 			frappe.confirm(question, async () => {
 				dialog.hide()
 				frappe.show_alert({
-					message: __("Sending the refund to Razorpay..."),
+					message: __("Sending the refund to the payment provider..."),
 					indicator: "blue",
 				})
 
-				await frm.call("refund", { amount, tickets: selected })
+				const { message: refundStatus } = await frm.call("refund", { amount, tickets: selected })
 
 				frappe.show_alert({
-					message: selected.length
-						? __(
-								"Refund initiated. Razorpay confirms it separately, and the tickets are queued for cancellation review.",
-							)
-						: __("Refund initiated. Razorpay confirms it separately."),
+					message:
+						refundStatus !== "Refund Initiated"
+							? __("Refund settled.")
+							: selected.length
+								? __(
+										"Refund initiated. The tickets are cancelled once the payment provider confirms it.",
+									)
+								: __("Refund initiated. The payment provider confirms it separately."),
 					indicator: "green",
 				})
 				frm.reload_doc()

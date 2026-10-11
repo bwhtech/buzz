@@ -1,26 +1,23 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import frappe
+from bwh_payments import testing as payment_testing
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.booking.schemas import BookingRequest
 from buzz.api.booking.services import create_add_on_doc
-from buzz.payments import handle_refund_notification
+from buzz.payments import get_payment_link_for_booking
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
 	EventBookingFactory,
-	EventPaymentFactory,
 	EventSponsorFactory,
 	EventTicketTypeFactory,
-	IntegrationRequestFactory,
-	PaymentGatewayFactory,
 	SponsorshipEnquiryFactory,
 	SponsorshipTierFactory,
 	TicketAddOnFactory,
 	UserFactory,
 )
-from buzz.ticketing.doctype.event_booking.event_booking import RAZORPAY
 
 BOOKER = "booking-owner@example.com"
 OUTSIDER = "booking-outsider@example.com"
@@ -28,7 +25,6 @@ TICKET_PRICE = 500
 ADD_ON_PRICE = 200
 # 500 per ticket with 10% tax on top.
 CHARGED_PER_TICKET = 550.0
-GATEWAY_CONTROLLER = "buzz.ticketing.doctype.event_booking.event_booking.get_controller"
 
 
 class BookingTestCase(IntegrationTestCase):
@@ -123,7 +119,8 @@ class CouponTestCase(IntegrationTestCase):
 
 
 class BookingRefundTestCase(IntegrationTestCase):
-	"""A paid booking of one ticket per price in `ticket_prices`, on an event with 10% tax."""
+	"""A booking of one ticket per price in `ticket_prices`, paid through the test gateway, on an event
+	with 10% tax."""
 
 	ticket_prices = (TICKET_PRICE, TICKET_PRICE)
 	attendee_names = ("John", "Jenny")
@@ -131,79 +128,73 @@ class BookingRefundTestCase(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
+		# bwh_payments commits each refund before calling the gateway; held here so the class
+		# rollback still undoes the bookings and refunds.
+		cls.held_commits = payment_testing.without_commits()
+		cls.held_commits.__enter__()
+		cls.gateway = make_payment_gateway()
 		cls.event = cls.create_event()
 		cls.ticket_types = [
 			EventTicketTypeFactory.create(event=cls.event, prices=[{"currency": "INR", "price": price}]).name
 			for price in cls.ticket_prices
 		]
-		cls.gateway = razorpay_gateway()
+
+	@classmethod
+	def tearDownClass(cls):
+		cls.held_commits.__exit__(None, None, None)
+		super().tearDownClass()
 
 	@classmethod
 	def create_event(cls) -> str:
-		return BuzzEventFactory.create("with_tax", tax_percentage=10).name
+		return BuzzEventFactory.create(
+			"with_tax", tax_percentage=10, payment_gateways=[{"payment_gateway": cls.gateway}]
+		).name
 
 	def setUp(self):
 		self.enterContext(self.set_user("Administrator"))
+		payment_testing.reset()
 		self.booking = self.create_paid_booking(self.attendee_names, self.ticket_types)
 
-	def create_paid_booking(self, names, ticket_types):
+	def create_booking(self, names, ticket_types):
 		attendees = [
 			{"ticket_type": ticket_type, "first_name": name, "email": f"{name.lower()}@example.com"}
 			for name, ticket_type in zip(names, ticket_types, strict=True)
 		]
-		booking = EventBookingFactory.create(event=self.event, attendees=attendees, payment_status="Paid")
-		booking.submit()
+		return EventBookingFactory.create(event=self.event, attendees=attendees)
+
+	def create_paid_booking(self, names, ticket_types):
+		booking = self.create_booking(names, ticket_types)
+		get_payment_link_for_booking(booking.name)
+		# Confirming the payment is what submits the booking.
+		payment_testing.pay(self.get_payment(booking.name).payment_request)
+		booking.reload()
 		return booking
 
-	def make_payment(self, gateway: str | None = None):
-		self.payment = EventPaymentFactory.create(
-			"received",
-			user=self.booking.user,
-			amount=self.booking.total_amount,
-			currency=self.booking.currency,
-			reference_doctype="Event Booking",
-			reference_docname=self.booking.name,
-			payment_gateway=gateway or self.gateway,
-		)
+	def get_payment(self, booking: str | None = None):
+		return frappe.get_last_doc("Event Payment", {"reference_docname": booking or self.booking.name})
 
-	def initiate_refund(self, amount: float, tickets: list[str] | None = None, refund_id: str | None = None):
-		client = MagicMock()
-		client.refund_payment.return_value = {
-			"id": refund_id or self.refund_id(),
-			"status": "pending",
-			"amount": int(amount * 100),
-		}
-		with patch(GATEWAY_CONTROLLER, return_value=client):
-			self.booking.refund(amount=amount, tickets=tickets)
+	@property
+	def payment(self):
+		return self.get_payment()
+
+	def initiate_refund(self, amount: float, tickets: list[str] | None = None):
+		"""Refund through the gateway, which answers that the refund is pending."""
+		payment_testing.set_next_refund_status("Pending")
+		self.booking.refund(amount=amount, tickets=tickets)
 		self.booking.reload()
-		return client
 
-	def send_refund_webhook(self, refund_id: str, status: str, amount: float) -> str:
-		log = self.create_refund_log(self.refund_payload(refund_id, status, amount))
-		self.handle_refund_log(log)
-		return log
-
-	def refund_payload(self, refund_id: str, status: str, amount: float) -> dict:
-		entity = {
-			"id": refund_id,
-			"status": status,
-			"amount": int(amount * 100),
-			"payment_id": self.payment.payment_id,
-		}
-		return {"event": f"refund.{status}", "payload": {"refund": {"entity": entity}}}
-
-	def create_refund_log(self, payload: dict) -> str:
-		return IntegrationRequestFactory.create(data=frappe.as_json(payload)).name
-
-	def handle_refund_log(self, log: str) -> None:
+	def settle_refund(self, refund, status: str = "Processed") -> None:
+		"""The gateway's webhook reports a refund raised from Buzz as Processed or Failed."""
 		# Cancelling a ticket emails the attendee, and delivery is not under test.
 		with patch("frappe.sendmail"):
-			handle_refund_notification("Integration Request", log)
+			payment_testing.send_refund_webhook(refund.gateway_refund, status)
 		self.booking.reload()
 
-	def refund_id(self, suffix: str = "1") -> str:
-		"""Refund ids are unique in the database, and rollback is per class."""
-		return f"rfnd_{self._testMethodName}_{suffix}"
+	def refund_outside_buzz(self, amount: float, status: str = "Processed") -> None:
+		"""The gateway's webhook reports a refund raised from its own dashboard."""
+		with patch("frappe.sendmail"):
+			payment_testing.send_external_refund_webhook(self.payment.payment_request, amount, status)
+		self.booking.reload()
 
 	def refunds(self) -> list:
 		names = frappe.get_all(
@@ -266,8 +257,6 @@ def attendee_rows(ticket_type, count: int) -> list[dict]:
 	]
 
 
-def razorpay_gateway() -> str:
-	"""Refunds only go through a gateway named Razorpay, so this name is fixed."""
-	if not frappe.db.exists("Payment Gateway", RAZORPAY):
-		PaymentGatewayFactory.create(gateway=RAZORPAY)
-	return RAZORPAY
+def make_payment_gateway(name: str | None = None) -> str:
+	"""An enabled payment gateway on bwh_payments' in-memory test gateway."""
+	return payment_testing.configure_test_gateway(name or f"Gateway {frappe.generate_hash(length=8)}")

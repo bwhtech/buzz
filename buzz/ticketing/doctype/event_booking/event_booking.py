@@ -1,6 +1,7 @@
 # Copyright (c) 2025, BWH Studios and contributors
 # For license information, please see license.txt
 import frappe
+from bwh_payments import api as payments
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cstr, flt
@@ -11,7 +12,7 @@ from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, are_registrations_
 from buzz.emails import is_full_document
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.events.online_meeting import OnlineMeeting
-from buzz.payments import get_controller, mark_payment_as_received
+from buzz.payments import mark_payment_as_received
 from buzz.permissions import has_team_access
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
@@ -19,8 +20,6 @@ from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	record_gateway_refund,
 )
 from buzz.utils import render_email_template
-
-RAZORPAY = "Razorpay"
 
 
 class EventBooking(Document):
@@ -513,61 +512,40 @@ class EventBooking(Document):
 		frappe.only_for("System Manager")
 
 		payment = self.get_received_payment()
-		if payment.payment_gateway != RAZORPAY:
-			frappe.throw(_("Refunds are only supported for Razorpay at the moment"))
-
 		tickets = frappe.parse_json(tickets) if isinstance(tickets, str) else tickets
 		self.validate_refund(flt(amount), tickets)
-
-		refund = get_controller(payment.payment_gateway).refund_payment(payment.payment_id, flt(amount))
 
 		# The picked tickets are only recorded here. They are cancelled once the
 		# gateway settles the refund, since a refund can still fail. A custom
 		# amount maps to no ticket, so it cancels nothing.
-		frappe.get_doc(
+		refund = frappe.get_doc(
 			{
 				"doctype": "Event Booking Refund",
 				"booking": self.name,
 				"payment": payment.name,
-				"refund_id": refund.get("id"),
 				"status": "Initiated",
-				"amount": flt(refund.get("amount")) / 100,
+				"amount": flt(amount),
 				"currency": self.currency,
 				"tickets": [{"ticket": ticket} for ticket in tickets or []],
 			}
 		).insert()
+		gateway_refund = payments.refund(payment.payment_request, flt(amount), reference=refund.name)
+		frappe.db.set_value("Event Booking Refund", refund.name, "refund_id", gateway_refund.refund_id)
 
-		self.set_refund_status()
+		return frappe.db.get_value("Event Booking", self.name, "refund_status")
 
-		return self.refund_status
+	def on_refund_update(self, gateway_refund) -> None:
+		"""bwh_payments reports a refund on this booking's payment, from Buzz or the gateway's dashboard."""
+		record_gateway_refund(self.name, gateway_refund)
 
 	@frappe.whitelist()
 	def sync_refunds(self) -> dict:
-		"""Reconcile this booking's refunds against what Razorpay actually holds."""
+		"""Ask the gateway about every refund on this booking that has not settled yet."""
 		frappe.only_for("System Manager")
 
-		payment = self.get_received_payment()
-		if payment.payment_gateway != RAZORPAY:
-			frappe.throw(_("Refunds are only supported for Razorpay at the moment"))
-
-		# Razorpay lists the newest refund first, and each one recorded moves what
-		# is left to refund, so they are applied in the order they were raised.
-		refunds = list(reversed(get_controller(payment.payment_gateway).fetch_refunds(payment.payment_id)))
-
-		return {
-			"refunds": len(refunds),
-			"created": sum(self.record_refund(payment, refund) for refund in refunds),
-		}
-
-	def record_refund(self, payment, gateway_refund: dict) -> bool:
-		"""Record one gateway refund against this booking. True when it was new."""
-		return record_gateway_refund(
-			booking=self.name,
-			payment=payment.name,
-			refund_id=gateway_refund.get("id"),
-			status=gateway_refund.get("status"),
-			amount=flt(gateway_refund.get("amount")) / 100,
-		)
+		payments.sync_refunds(self.get_received_payment().payment_request)
+		statuses = frappe.get_all("Event Booking Refund", filters={"booking": self.name}, pluck="status")
+		return {"refunds": len(statuses), "pending": statuses.count("Initiated")}
 
 	def validate_refund(self, amount: float, tickets: list[str] | None = None) -> None:
 		summary = self.get_refund_summary()
@@ -619,12 +597,12 @@ class EventBooking(Document):
 				"reference_docname": self.name,
 				"payment_received": 1,
 			},
-			fields=["name", "payment_gateway", "payment_id", "amount"],
+			fields=["name", "payment_gateway", "payment_request", "amount"],
 			order_by="creation desc",
 			limit=1,
 		)
 
-		if not payment or not payment[0].payment_id:
+		if not payment or not payment[0].payment_request:
 			frappe.throw(_("No received payment found for this booking"))
 
 		return payment[0]

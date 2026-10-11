@@ -1,6 +1,5 @@
-from unittest.mock import MagicMock, patch
-
 import frappe
+from bwh_payments import testing as payment_testing
 
 from buzz.api.sponsorships import (
 	create_sponsorship_payment_link,
@@ -15,8 +14,7 @@ from buzz.api.sponsorships.exceptions import (
 	PaymentNotPermitted,
 	WithdrawalNotPermitted,
 )
-from buzz.tests.base_test_cases import SponsorshipTestCase
-from buzz.tests.factories import PaymentGatewayFactory
+from buzz.tests.base_test_cases import SponsorshipTestCase, make_payment_gateway
 
 
 class TestGetSponsorshipDetails(SponsorshipTestCase):
@@ -120,8 +118,7 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 		self.tier.save()
 		gateway = self.add_gateway_to_event()
 
-		with patch("buzz.payments.get_controller", return_value=MagicMock()):
-			create_sponsorship_payment_link(self.enquiry.name, self.tier.name, gateway, currency="USD")
+		create_sponsorship_payment_link(self.enquiry.name, self.tier.name, gateway, currency="USD")
 
 		payment = frappe.get_last_doc("Event Payment", {"reference_docname": self.enquiry.name})
 		self.assertEqual((payment.currency, payment.amount), ("USD", 60))
@@ -132,8 +129,30 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			create_sponsorship_payment_link(self.enquiry.name, self.tier.name, gateway, currency="EUR")
 
+	def test_paying_the_link_makes_the_enquirer_a_sponsor(self):
+		gateway = self.add_gateway_to_event()
+		create_sponsorship_payment_link(self.enquiry.name, self.tier.name, gateway)
+		payment = frappe.get_last_doc("Event Payment", {"reference_docname": self.enquiry.name})
+
+		payment_testing.pay(payment.payment_request)
+
+		self.assertEqual(frappe.db.get_value("Sponsorship Enquiry", self.enquiry.name, "status"), "Paid")
+		self.assertTrue(frappe.db.exists("Event Sponsor", {"enquiry": self.enquiry.name}))
+		self.assertEqual(frappe.db.get_value("Event Payment", payment.name, "payment_received"), 1)
+
+	def test_the_sponsor_comes_back_to_their_enquiry_after_paying(self):
+		gateway = self.add_gateway_to_event()
+
+		create_sponsorship_payment_link(self.enquiry.name, self.tier.name, gateway)
+
+		payment = frappe.get_last_doc("Event Payment", {"reference_docname": self.enquiry.name})
+		self.assertEqual(
+			frappe.db.get_value("Gateway Payment Request", payment.payment_request, "redirect_to"),
+			f"/b/account/sponsorships/{self.enquiry.name}",
+		)
+
 	def add_gateway_to_event(self) -> str:
-		gateway = PaymentGatewayFactory.create().name
+		gateway = make_payment_gateway()
 		event = frappe.get_doc("Buzz Event", self.event)
 		event.set("payment_gateways", [{"payment_gateway": gateway}])
 		event.save(ignore_permissions=True)
