@@ -99,10 +99,10 @@ const { showSuccessMessage, showSuccess } = usePaymentSuccess({
 })
 
 // The shopper's return proves nothing; only a paid (or free) booking is confirmed.
-const isConfirmed = computed(() => {
-	const data = confirmation.data
+function isBookingConfirmed(data: Record<string, any> | null | undefined) {
 	return Boolean(data?.event?.free_event || data?.booking?.payment_status === "Paid")
-})
+}
+const isConfirmed = computed(() => isBookingConfirmed(confirmation.data))
 
 const showPaymentSummary = computed(() => {
 	const booking = confirmation.data?.booking
@@ -113,7 +113,8 @@ const confirmation = useCall<Record<string, any>, Record<string, unknown>>({
 	url: "/api/v2/method/buzz.api.booking.get_booking_confirmation",
 	params: { booking_id: props.bookingId, token: route.query.token },
 	onSuccess: (data) => {
-		if (!isConfirmed.value) return
+		// useCall runs onSuccess before it sets confirmation.data, so read the response itself.
+		if (!isBookingConfirmed(data)) return
 		showSuccess()
 		// Clear any stored booking form data now that the booking is confirmed
 		if (data?.event?.route) {
