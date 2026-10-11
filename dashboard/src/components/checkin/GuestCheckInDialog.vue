@@ -1,16 +1,23 @@
 <script setup lang="ts">
-import { Avatar, Badge, Button, Dialog, ErrorMessage, dayjsLocal, toast, useCall } from "frappe-ui"
-import { computed, watch } from "vue"
+import { Avatar, Badge, BottomSheet, Button, Dialog, ErrorMessage, dayjsLocal } from "frappe-ui"
+import { computed } from "vue"
 
-import DetailRow from "@/components/common/DetailRow.vue"
+import { useIsMobile } from "@/composables/useIsMobile"
 import type { EventGuest } from "@/types"
-import { serverErrorMessage } from "@/utils/serverError"
 
-const props = defineProps<{ guest: EventGuest | null; payment?: string | null }>()
+const props = defineProps<{
+	guest: EventGuest | null
+	payment?: string | null
+	busy?: boolean
+	error?: string
+}>()
 
 const open = defineModel<boolean>("open", { required: true })
 
-const emit = defineEmits<{ checkedIn: [ticket: string, at: string] }>()
+const emit = defineEmits<{ checkIn: [] }>()
+
+// A dialog at the desk, a sheet from the bottom edge on a phone held in one hand.
+const isMobile = useIsMobile()
 
 const name = computed(
 	() => props.guest?.attendee_name || props.guest?.attendee_email || "Unnamed guest",
@@ -21,93 +28,74 @@ const checkedInAt = computed(() =>
 )
 
 const registeredAt = computed(() =>
-	props.guest?.registered_at
-		? dayjsLocal(props.guest.registered_at).format("D MMM YYYY, h:mm A")
-		: null,
+	props.guest?.registered_at ? dayjsLocal(props.guest.registered_at).format("D MMM YYYY") : null,
 )
 
-interface CheckInResponse {
-	message: string
-	ticket: { id: string; check_in_time: string }
-}
-
-const checkIn = useCall<CheckInResponse, { ticket_id: string }>({
-	url: "/api/v2/method/buzz.api.checkin.checkin_ticket",
-	method: "POST",
-	immediate: false,
-	onSuccess: (data) => {
-		emit("checkedIn", data.ticket.id, data.ticket.check_in_time)
-		toast.success(data.message)
-		open.value = false
-	},
-})
-
-// The next guest opens clean, without the last one's error.
-watch(
-	() => props.guest?.name,
-	() => checkIn.reset(),
+const facts = computed(() =>
+	[props.payment, registeredAt.value && `Registered ${registeredAt.value}`].filter(Boolean),
 )
+
+const addOnLabel = (addOn: EventGuest["add_ons"][number]) =>
+	addOn.value ? `${addOn.title}: ${addOn.value}` : addOn.title
 </script>
 
 <template>
-	<Dialog v-model:open="open" size="md" :show-close-button="false">
-		<template #title>
+	<component
+		:is="isMobile ? BottomSheet : Dialog"
+		v-model:open="open"
+		v-bind="isMobile ? {} : { bare: true, size: 'md' }"
+	>
+		<div v-if="guest" class="flex flex-col gap-4 p-5">
 			<div class="flex items-center gap-3">
 				<Avatar :label="name" size="2xl" />
 				<div class="min-w-0 flex-1">
 					<p class="truncate text-lg font-semibold text-ink-gray-9">{{ name }}</p>
-					<p v-if="guest?.attendee_email" class="truncate text-base font-normal text-ink-gray-5">
+					<p v-if="guest.attendee_email" class="truncate text-base text-ink-gray-5">
 						{{ guest.attendee_email }}
 					</p>
 				</div>
-				<Badge
-					v-if="checkedInAt"
-					theme="green"
-					variant="subtle"
-					size="lg"
-					:label="`Checked in · ${checkedInAt}`"
-				/>
-				<Badge v-else variant="subtle" size="lg" label="Not checked in" />
-			</div>
-		</template>
-
-		<div v-if="guest" class="space-y-5">
-			<!-- The tier is what the desk acts on, so it reads at a glance rather than as a row. -->
-			<div class="space-y-1.5">
-				<p class="text-sm font-medium text-ink-gray-7">Ticket</p>
-				<p class="rounded-7 bg-surface-gray-2 px-3 py-2.5 text-lg font-medium text-ink-gray-9">
-					{{ guest.ticket_type || "—" }}
-				</p>
-			</div>
-
-			<dl class="space-y-2 text-base">
-				<DetailRow
-					v-for="addOn in guest.add_ons"
-					:key="addOn.title"
-					:label="addOn.title"
-					:value="addOn.value || 'Yes'"
-				/>
-				<DetailRow v-if="registeredAt" label="Registered" :value="registeredAt" />
-				<DetailRow v-if="payment" label="Paid" :value="payment" />
-			</dl>
-
-			<ErrorMessage :message="serverErrorMessage(checkIn.error)" />
-		</div>
-
-		<template #actions="{ close }">
-			<div class="flex gap-2">
 				<Button
-					variant="solid"
-					theme="green"
-					size="lg"
-					class="flex-1 transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
-					:label="checkedInAt ? `Checked in at ${checkedInAt}` : 'Check in'"
-					:disabled="Boolean(checkedInAt)"
-					:loading="checkIn.loading"
-					@click="guest && checkIn.submit({ ticket_id: guest.name })"
+					v-if="!isMobile"
+					variant="ghost"
+					icon="lucide-x"
+					aria-label="Close"
+					@click="open = false"
 				/>
-				<Button size="lg" label="Close" @click="close" />
 			</div>
-		</template>
-	</Dialog>
+
+			<!-- The tier is what the desk acts on, so it is set large enough to read at arm's length. -->
+			<div
+				class="flex items-baseline justify-between gap-3 rounded-7 bg-surface-gray-2 px-4 py-3.5"
+			>
+				<span class="truncate font-display text-4xl uppercase leading-none text-ink-gray-9">
+					{{ guest.ticket_type || "Ticket" }}
+				</span>
+				<span v-if="facts.length" class="shrink-0 text-right text-sm text-ink-gray-5">
+					{{ facts.join(" · ") }}
+				</span>
+			</div>
+
+			<div v-if="guest.add_ons.length" class="flex flex-wrap gap-1.5">
+				<Badge
+					v-for="addOn in guest.add_ons"
+					:key="addOnLabel(addOn)"
+					variant="subtle"
+					:label="addOnLabel(addOn)"
+				/>
+			</div>
+
+			<ErrorMessage :message="error" />
+
+			<Button
+				variant="solid"
+				theme="green"
+				class="!h-14 w-full rounded-[14px] !text-lg transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
+				:icon-left="checkedInAt ? 'lucide-check' : undefined"
+				:label="checkedInAt ? `Checked in at ${checkedInAt}` : 'Check in'"
+				:disabled="Boolean(checkedInAt)"
+				:loading="busy"
+				@click="emit('checkIn')"
+			/>
+		</div>
+	</component>
 </template>

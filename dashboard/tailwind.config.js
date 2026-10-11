@@ -15,7 +15,11 @@ export default {
 		"./node_modules/frappe-ui/experimental/**/*.{vue,js,ts,jsx,tsx}",
 	],
 	theme: {
-		extend: {},
+		extend: {
+			fontFamily: {
+				display: ['"League Gothic"', '"Arial Narrow"', "sans-serif"],
+			},
+		},
 	},
 	plugins: [],
 }

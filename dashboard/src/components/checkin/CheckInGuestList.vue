@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
-import { Button, Dialog, Icon, TabButtons, TextInput, dayjsLocal } from "frappe-ui"
+import { Button, Dialog, Icon, TabButtons, TextInput, dayjsLocal, toast, useCall } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
+import CheckInGuestRow from "@/components/checkin/CheckInGuestRow.vue"
 import GuestCheckInDialog from "@/components/checkin/GuestCheckInDialog.vue"
 import EmptyState from "@/components/common/EmptyState.vue"
-import EventGuestItem from "@/components/dashboard/events/EventGuestItem.vue"
-import EventGuestSkeleton from "@/components/dashboard/events/EventGuestSkeleton.vue"
 import QRScanner from "@/components/QRScanner.vue"
 import { useEventGuests } from "@/composables/useEventGuests"
 import type { ListOrder } from "@/composables/useListQuery"
@@ -53,7 +52,7 @@ const startsAt = computed(() => {
 	const data = page.data
 	if (!data?.start_date) return ""
 	const date = dayjsLocal(`${data.start_date}T${data.start_time || "00:00:00"}`)
-	return date.format(data.start_time ? "D MMM, h:mm A" : "D MMM")
+	return date.format(data.start_time ? "ddd D MMM, h:mm A" : "ddd D MMM")
 })
 
 const selectedGuest = ref<EventGuest | null>(null)
@@ -61,6 +60,7 @@ const payment = ref<string | null>(null)
 const guestOpen = ref(false)
 
 const openGuest = (guest: EventGuest, paid: string | null = null) => {
+	checkInCall.reset()
 	selectedGuest.value = guest
 	payment.value = paid
 	guestOpen.value = true
@@ -68,9 +68,41 @@ const openGuest = (guest: EventGuest, paid: string | null = null) => {
 
 // Rows are patched in place rather than refetched, so the pages already scrolled through stay.
 const markCheckedIn = (ticket: string, at: string) => {
-	const row = guests.value.find((guest) => guest.name === ticket)
-	if (row) row.checked_in_at = at
+	for (const guest of [guests.value.find((row) => row.name === ticket), selectedGuest.value])
+		if (guest?.name === ticket) guest.checked_in_at = at
 	localCheckIns.value += 1
+}
+
+interface CheckInResponse {
+	message: string
+	ticket: { id: string; check_in_time: string }
+}
+
+// One check-in at a time: the row or dialog that started it shows the spinner.
+const busyTicket = ref<string | null>(null)
+
+const checkInCall = useCall<CheckInResponse, { ticket_id: string }>({
+	url: "/api/v2/method/buzz.api.checkin.checkin_ticket",
+	method: "POST",
+	immediate: false,
+	onSuccess: (data) => {
+		busyTicket.value = null
+		markCheckedIn(data.ticket.id, data.ticket.check_in_time)
+		toast.success(data.message)
+		// Long enough to see the button turn into "Checked in", then out of the way.
+		if (guestOpen.value) setTimeout(() => (guestOpen.value = false), 600)
+	},
+	onError: (error) => {
+		busyTicket.value = null
+		// An open dialog shows the error itself; a row has nowhere else to say it.
+		if (!guestOpen.value) toast.error(serverErrorMessage(error) || "Check-in failed")
+	},
+})
+
+const checkIn = (ticket: string) => {
+	if (busyTicket.value) return
+	busyTicket.value = ticket
+	checkInCall.submit({ ticket_id: ticket })
 }
 
 const sentinel = ref<HTMLElement | null>(null)
@@ -117,7 +149,7 @@ watch(guestOpen, (open) => {
 </script>
 
 <template>
-	<div class="mx-auto w-full max-w-3xl space-y-4 p-4 max-md:pb-24">
+	<div class="mx-auto w-full max-w-3xl space-y-5 px-4 pb-24 pt-6">
 		<EmptyState
 			v-if="page.error"
 			title="Access denied"
@@ -126,11 +158,10 @@ watch(guestOpen, (open) => {
 		/>
 
 		<template v-else>
-			<header class="flex items-start justify-between gap-4">
-				<div class="min-w-0">
-					<h1 class="truncate text-xl font-semibold text-ink-gray-9">
-						{{ page.data?.title || "Check in" }}
-					</h1>
+			<header class="flex items-end justify-between gap-4">
+				<div class="min-w-0 space-y-1.5">
+					<h1 class="font-display text-5xl uppercase leading-[0.95] text-ink-gray-9">Check-in</h1>
+					<p class="truncate text-base font-semibold text-ink-gray-9">{{ page.data?.title }}</p>
 					<p class="truncate text-base text-ink-gray-5">
 						{{ [startsAt, page.data?.venue].filter(Boolean).join(" · ") }}
 					</p>
@@ -142,39 +173,45 @@ watch(guestOpen, (open) => {
 				v-model="search"
 				type="search"
 				size="md"
-				placeholder="Search for a guest…"
-				aria-label="Search for a guest"
+				placeholder="Search by name or email"
+				aria-label="Search guests"
 			>
 				<template #prefix>
 					<Icon name="lucide-search" class="size-4 text-ink-gray-5" />
 				</template>
 			</TextInput>
 
-			<TabButtons v-model="tab" variant="underline" :options="tabs">
+			<!-- w-full so the underline rail runs the whole column, not just under the tabs. -->
+			<TabButtons v-model="tab" variant="underline" class="w-full" :options="tabs">
 				<template #suffix="{ button }">
 					<span class="tabular-nums text-ink-gray-5">{{ countOf(button.value) }}</span>
 				</template>
 			</TabButtons>
 
-			<ul
-				v-if="loadingFirstPage"
-				class="divide-y divide-outline-gray-1 overflow-hidden rounded-7 border border-outline-gray-2"
-			>
-				<EventGuestSkeleton :rows="6" />
+			<p class="text-p-sm text-ink-gray-5">
+				Tap <span class="font-medium text-ink-gray-7">Check in</span> as a guest arrives, or tap
+				their name to see their ticket. <span class="font-medium text-ink-gray-7">Scan</span>
+				reads the QR code on a ticket.
+			</p>
+
+			<ul v-if="loadingFirstPage" class="flex flex-col gap-2" aria-busy="true">
+				<li
+					v-for="row in 6"
+					:key="row"
+					class="h-[62px] animate-pulse rounded-[14px] bg-surface-gray-1"
+				/>
 			</ul>
 
-			<ul
-				v-else-if="guests.length"
-				class="divide-y divide-outline-gray-1 overflow-hidden rounded-7 border border-outline-gray-2"
-			>
-				<EventGuestItem
+			<ul v-else-if="guests.length" class="flex flex-col gap-2">
+				<CheckInGuestRow
 					v-for="guest in guests"
 					:key="guest.name"
 					:guest="guest"
-					:selected="guestOpen && guest.name === selectedGuest?.name"
+					:busy="busyTicket === guest.name && !guestOpen"
 					@open="openGuest(guest)"
+					@check-in="checkIn(guest.name)"
 				/>
-				<EventGuestSkeleton v-if="loadingMore" :rows="3" />
+				<li v-if="loadingMore" class="h-[62px] animate-pulse rounded-[14px] bg-surface-gray-1" />
 			</ul>
 
 			<EmptyState
@@ -185,7 +222,13 @@ watch(guestOpen, (open) => {
 			/>
 			<EmptyState
 				v-else
-				:title="tab === '1' ? 'Nobody has checked in yet' : 'No guests here'"
+				:title="
+					tab === '1'
+						? 'Nobody has checked in yet'
+						: tab === '0'
+							? 'Everyone is in'
+							: 'No guests yet'
+				"
 				icon="lucide-users"
 			/>
 
@@ -200,7 +243,9 @@ watch(guestOpen, (open) => {
 			v-model:open="guestOpen"
 			:guest="selectedGuest"
 			:payment="payment"
-			@checked-in="markCheckedIn"
+			:busy="busyTicket === selectedGuest?.name"
+			:error="serverErrorMessage(checkInCall.error)"
+			@check-in="selectedGuest && checkIn(selectedGuest.name)"
 		/>
 	</div>
 </template>
