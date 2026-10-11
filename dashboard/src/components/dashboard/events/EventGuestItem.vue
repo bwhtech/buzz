@@ -57,6 +57,7 @@ const hidden = computed(() => props.guest.add_ons.slice(VISIBLE_ADD_ONS))
 					<Badge theme="blue" variant="subtle" :label="`+${hidden.length}`" />
 				</Tooltip>
 				<Badge v-if="guest.ticket_type" variant="subtle" :label="guest.ticket_type" />
+				<Badge v-if="guest.checked_in_at" theme="green" variant="subtle" label="Checked in" />
 			</span>
 		</button>
 	</li>

@@ -23,6 +23,12 @@ export function useEventGuests(
 	search: Ref<string>,
 	order: Ref<ListOrder>,
 	conditions: Ref<Condition[]>,
+	// The check-in page reads the same list through its own, stricter endpoint, narrowed to
+	// who has or has not arrived ("1" / "0", empty for everyone).
+	{
+		url = "/api/v2/method/buzz.api.events.get_event_guests",
+		checkedIn = ref(""),
+	}: { url?: string; checkedIn?: Ref<string> } = {},
 ) {
 	// Typing rewrites the URL, and every rewrite is a request — wait for the pause.
 	const debouncedSearch = refDebounced(search, 300)
@@ -30,7 +36,7 @@ export function useEventGuests(
 	const guests = ref<EventGuest[]>([])
 
 	const page = useCall<EventGuests, Record<string, string | number>>({
-		url: "/api/v2/method/buzz.api.events.get_event_guests",
+		url,
 		params: () => ({
 			event,
 			search: debouncedSearch.value.trim(),
@@ -38,6 +44,7 @@ export function useEventGuests(
 			order: order.value,
 			start: start.value,
 			limit: GUESTS_PAGE_SIZE,
+			checked_in: checkedIn.value,
 		}),
 		// Off by default, so without this a new page or search would never be fetched.
 		refetch: true,
@@ -56,7 +63,7 @@ export function useEventGuests(
 	// Sync, so the offset is back at zero before useCall's own watcher rebuilds the URL —
 	// a pre-flush reset lets the stale offset go out as a request that is aborted a tick later.
 	watch(
-		[debouncedSearch, order, conditions],
+		[debouncedSearch, order, conditions, checkedIn],
 		() => {
 			start.value = 0
 			guests.value = []

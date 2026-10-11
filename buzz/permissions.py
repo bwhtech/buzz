@@ -7,6 +7,7 @@ from frappe.query_builder.builder import QueryBuilder
 
 WRITE_ROLES = frozenset({"Owner", "Admin", "Manager"})
 ADMIN_ROLES = frozenset({"Owner", "Admin"})
+CHECKIN_ROLES = frozenset({"Owner", "Admin", "Manager", "Frontdesk"})
 WRITE_PTYPES = frozenset({"write", "create", "submit", "cancel", "amend", "delete"})
 
 # Attendees, sponsors and speakers reach their own rows without any membership.
@@ -128,6 +129,11 @@ def has_team_access(team: str | None, ptype: str, user: str) -> bool:
 
 	team_role = team_role_of(user, team)
 	return bool(team_role) and role_allows(team_role, ptype)
+
+
+def can_check_in(team: str | None, user: str) -> bool:
+	"""Front-desk work on a team's events. Unlike has_team_access, an unstamped event fails closed."""
+	return is_unrestricted(user) or team_role_of(user, team) in CHECKIN_ROLES
 
 
 def team_query_conditions(user: str | None = None, doctype: str | None = None, **kwargs) -> str | None:

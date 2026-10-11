@@ -270,6 +270,8 @@ export interface EventGuest {
 	ticket_type: string | null
 	registered_at: string | null
 	add_ons: GuestAddOn[]
+	// Today's check-in, if the guest has arrived.
+	checked_in_at?: string | null
 }
 
 // buzz.api.events.get_event_registration_trend
@@ -298,6 +300,7 @@ export interface EventGuests {
 	venue: string | null
 	total: number
 	matched: number
+	checked_in: number
 	guests: EventGuest[]
 	has_next_page: boolean
 	filter_fields: FilterField[]

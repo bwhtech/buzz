@@ -1,13 +1,22 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.checkin import checkin_ticket, validate_ticket_for_checkin
+from buzz.api.checkin import (
+	checkin_ticket,
+	get_checkin_events,
+	get_checkin_guests,
+	validate_ticket_for_checkin,
+)
 from buzz.api.checkin.exceptions import AlreadyCheckedIn, TicketCancelled, TicketNotFound
+from buzz.api.exceptions import NotPermitted
 from buzz.tests.factories import (
 	BuzzEventFactory,
+	BuzzTeamFactory,
+	BuzzTeamMembershipFactory,
 	EventBookingFactory,
 	EventPaymentFactory,
 	EventTicketFactory,
+	UserFactory,
 )
 
 
@@ -86,3 +95,74 @@ class TestCheckinTicket(CheckinTestCase):
 
 		with self.assertRaises(AlreadyCheckedIn):
 			validate_ticket_for_checkin(self.ticket)
+
+
+class TestCheckinAccess(IntegrationTestCase):
+	"""Front-desk work is for the event's own team, at Frontdesk or above."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		owner = UserFactory.create_once("checkin-owner@example.com").name
+		other_owner = UserFactory.create_once("checkin-other-owner@example.com").name
+		cls.team = BuzzTeamFactory.create_owned_by(owner).name
+		cls.other_team = BuzzTeamFactory.create_owned_by(other_owner).name
+		cls.event = str(BuzzEventFactory.create(team=cls.team).name)
+		cls.other_event = str(BuzzEventFactory.create(team=cls.other_team).name)
+
+		cls.frontdesk = cls.member("checkin-frontdesk@example.com", "Frontdesk")
+		cls.manager = cls.member("checkin-manager@example.com", "Manager")
+		cls.viewer = cls.member("checkin-viewer@example.com", "Viewer")
+		# Front desk on one team, only a Viewer on the other.
+		BuzzTeamMembershipFactory.create(team=cls.other_team, user=cls.frontdesk, team_role="Viewer")
+
+	@classmethod
+	def member(cls, email: str, team_role: str) -> str:
+		user = UserFactory.create_once(email).name
+		BuzzTeamMembershipFactory.create(team=cls.team, user=user, team_role=team_role)
+		return user
+
+	def setUp(self):
+		frappe.clear_messages()
+
+	def test_frontdesk_and_manager_can_check_in(self):
+		for user in (self.frontdesk, self.manager):
+			ticket = EventTicketFactory.create(event=self.event).name
+			with self.set_user(user):
+				self.assertTrue(checkin_ticket(ticket).ticket.is_checked_in)
+
+	def test_viewer_cannot_check_in(self):
+		ticket = EventTicketFactory.create(event=self.event).name
+		with self.set_user(self.viewer), self.assertRaises(NotPermitted):
+			validate_ticket_for_checkin(ticket)
+
+	def test_frontdesk_role_does_not_carry_to_another_team(self):
+		ticket = EventTicketFactory.create(event=self.other_event).name
+		with self.set_user(self.frontdesk), self.assertRaises(NotPermitted):
+			checkin_ticket(ticket)
+
+	def test_events_list_only_the_front_desk_teams(self):
+		with self.set_user(self.frontdesk):
+			events = {event.name for event in get_checkin_events()}
+
+		self.assertIn(self.event, events)
+		self.assertNotIn(self.other_event, events)
+
+	def test_viewer_cannot_open_the_guest_list(self):
+		with self.set_user(self.viewer), self.assertRaises(NotPermitted):
+			get_checkin_guests(self.event)
+
+	def test_guest_list_splits_on_todays_check_in(self):
+		event = str(BuzzEventFactory.create(team=self.team).name)
+		arrived, waiting = (EventTicketFactory.create("submitted", event=event).name for _ in range(2))
+		with self.set_user(self.frontdesk):
+			checkin_ticket(arrived)
+			everyone = get_checkin_guests(event).__json__()
+			checked_in = get_checkin_guests(event, checked_in="1").__json__()
+			not_checked_in = get_checkin_guests(event, checked_in="0").__json__()
+
+		self.assertEqual(everyone["checked_in"], 1)
+		self.assertEqual([guest["name"] for guest in checked_in["guests"]], [arrived])
+		self.assertIsNotNone(checked_in["guests"][0]["checked_in_at"])
+		self.assertEqual([guest["name"] for guest in not_checked_in["guests"]], [waiting])
+		self.assertEqual(not_checked_in["matched"], 1)

@@ -1,13 +1,5 @@
 <template>
-	<div
-		class="bg-white dark:bg-gray-800 rounded-6 shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
-	>
-		<div class="p-4 border-b border-gray-200 dark:border-gray-700">
-			<h3 class="font-medium text-gray-900 dark:text-white">
-				{{ __("Scan Ticket QR Code") }}
-			</h3>
-		</div>
-
+	<div class="overflow-hidden rounded-7 border border-outline-gray-2">
 		<!-- Scanner Container -->
 		<div class="relative">
 			<div
@@ -19,14 +11,14 @@
 			<!-- Processing Overlay -->
 			<div
 				v-if="isProcessingTicket"
-				class="absolute inset-0 bg-white dark:bg-gray-800 bg-opacity-75 flex items-center justify-center"
+				class="absolute inset-0 flex items-center justify-center bg-surface-elevation-1/75"
 			>
 				<Spinner class="w-8 h-8" />
 			</div>
 		</div>
 
 		<!-- Scanner Controls -->
-		<div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+		<div class="border-t border-outline-gray-2 bg-surface-gray-1 p-4">
 			<div class="flex gap-2">
 				<Button @click="startScanner" v-if="!scannerActive" variant="outline" class="flex-1">
 					<template #prefix>
@@ -46,7 +38,7 @@
 			</div>
 
 			<!-- Manual Entry -->
-			<div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+			<div class="mt-3 border-t border-outline-gray-2 pt-3">
 				<div class="flex gap-2">
 					<TextInput
 						v-model="manualTicketId"

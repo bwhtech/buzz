@@ -103,6 +103,7 @@ class EventGuest(APIResponse):
 	# When the ticket was raised, which is when this guest registered.
 	registered_at: datetime | None = None
 	add_ons: list[GuestAddOn] = Field(default_factory=list)
+	checked_in_at: datetime | None = None
 
 
 class GuestTicketType(APIResponse):
@@ -123,6 +124,8 @@ class EventGuestsResponse(APIResponse):
 	# first when nothing is being searched for.
 	total: int
 	matched: int
+	# Guests checked in today, which is what the front desk counts against.
+	checked_in: int = 0
 	guests: list[EventGuest]
 	has_next_page: bool = False
 	filter_fields: list[FilterField]

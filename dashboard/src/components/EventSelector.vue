@@ -48,17 +48,10 @@
 </template>
 
 <script setup lang="ts">
-import { Spinner, dayjsLocal, useList } from "frappe-ui"
+import { Spinner, dayjsLocal, useCall } from "frappe-ui"
 import { ListView } from "frappe-ui/experimental"
 
 import type { BuzzEvent } from "@/types"
-
-defineProps({
-	selectedEvent: {
-		type: Object,
-		default: null,
-	},
-})
 
 const emit = defineEmits(["select"])
 
@@ -89,14 +82,9 @@ const formatTimestamp = (date?: string, time?: string) => {
 	return `${formattedDate} ${formattedTime}`
 }
 
-const eventsResource = useList<BuzzEvent & { name: string }>({
-	doctype: "Buzz Event",
-	fields: ["name", "title", "start_date", "start_time", "end_date", "end_time"],
-	orderBy: "start_date desc",
-	filters: {
-		is_published: 1,
-		end_date: [">=", dayjsLocal().format("YYYY-MM-DD")],
-	},
+// Only the events whose team the user works the front desk for.
+const eventsResource = useCall<BuzzEvent[]>({
+	url: "/api/v2/method/buzz.api.checkin.get_checkin_events",
 	transform(data) {
 		return data.map((event) => ({
 			...event,
