@@ -4,6 +4,9 @@ from bwh_payments.migrate.frappe_payments import import_gateways
 
 
 def execute():
+	if "payments" not in frappe.get_installed_apps():
+		return
+
 	PaymentHistoryMigration().run()
 
 
