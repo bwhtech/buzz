@@ -130,7 +130,7 @@ class TestSyncRefunds(BookingRefundTestCase):
 
 		result = self.sync()
 
-		self.assertEqual(result, {"refunds": 1, "pending": 0})
+		self.assertEqual(result, {"pending": 0})
 		self.assertEqual(self.refunds()[0].status, "Processed")
 		self.assertEqual(self.booking.refunded_amount, CHARGED_PER_TICKET)
 		self.assertEqual(frappe.db.get_value("Event Ticket", ticket, "docstatus"), 2)
@@ -149,11 +149,11 @@ class TestSyncRefunds(BookingRefundTestCase):
 
 		result = self.sync()
 
-		self.assertEqual(result, {"refunds": 1, "pending": 1})
+		self.assertEqual(result, {"pending": 1})
 		self.assertEqual(self.refunds()[0].status, "Initiated")
 
 	def test_a_payment_with_no_refunds_changes_nothing(self):
-		self.assertEqual(self.sync(), {"refunds": 0, "pending": 0})
+		self.assertEqual(self.sync(), {"pending": 0})
 		self.assertEqual(self.booking.refund_status, "")
 
 	def test_sync_is_refused_without_a_received_payment(self):

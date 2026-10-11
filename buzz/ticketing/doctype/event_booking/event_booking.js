@@ -202,17 +202,15 @@ async function showRefundDialog(frm) {
 
 				const { message: refundStatus } = await frm.call("refund", { amount, tickets: selected })
 
-				frappe.show_alert({
-					message:
-						refundStatus !== "Refund Initiated"
-							? __("Refund settled.")
-							: selected.length
-								? __(
-										"Refund initiated. The tickets are cancelled once the payment provider confirms it.",
-									)
-								: __("Refund initiated. The payment provider confirms it separately."),
-					indicator: "green",
-				})
+				let message = __("Refund initiated. The payment provider confirms it separately.")
+				if (refundStatus !== "Refund Initiated") {
+					message = __("Refund settled.")
+				} else if (selected.length) {
+					message = __(
+						"Refund initiated. The tickets are cancelled once the payment provider confirms it.",
+					)
+				}
+				frappe.show_alert({ message, indicator: "green" })
 				frm.reload_doc()
 			})
 		},

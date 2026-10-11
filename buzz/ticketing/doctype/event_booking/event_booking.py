@@ -544,8 +544,9 @@ class EventBooking(Document):
 		frappe.only_for("System Manager")
 
 		payments.sync_refunds(self.get_received_payment().payment_request)
-		statuses = frappe.get_all("Event Booking Refund", filters={"booking": self.name}, pluck="status")
-		return {"refunds": len(statuses), "pending": statuses.count("Initiated")}
+		return {
+			"pending": frappe.db.count("Event Booking Refund", {"booking": self.name, "status": "Initiated"})
+		}
 
 	def validate_refund(self, amount: float, tickets: list[str] | None = None) -> None:
 		summary = self.get_refund_summary()
