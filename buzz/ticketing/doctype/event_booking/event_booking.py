@@ -508,7 +508,7 @@ class EventBooking(Document):
 
 	@frappe.whitelist()
 	def refund(self, amount: float, tickets: list[str] | None = None) -> str:
-		"""Refund `amount` against this booking's payment."""
+		"""Refund `amount` against this booking's payment and return the refund's status."""
 		frappe.only_for("System Manager")
 
 		payment = self.get_received_payment()
@@ -532,7 +532,7 @@ class EventBooking(Document):
 		gateway_refund = payments.refund(payment.payment_request, flt(amount), reference=refund.name)
 		frappe.db.set_value("Event Booking Refund", refund.name, "refund_id", gateway_refund.refund_id)
 
-		return frappe.db.get_value("Event Booking", self.name, "refund_status")
+		return frappe.db.get_value("Event Booking Refund", refund.name, "status")
 
 	def on_refund_update(self, gateway_refund) -> None:
 		"""bwh_payments reports a refund on this booking's payment, from Buzz or the gateway's dashboard."""

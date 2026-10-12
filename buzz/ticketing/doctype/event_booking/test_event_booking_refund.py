@@ -69,6 +69,14 @@ class TestBookingRefund(BookingRefundTestCase):
 		self.assertEqual(self.booking.refund_status, "Partially Refunded")
 		self.assertEqual(frappe.db.get_value("Event Ticket", ticket, "docstatus"), 2)
 
+	def test_refund_returns_its_own_status_not_the_bookings(self):
+		payment_testing.set_next_refund_status("Processed")
+		with patch("frappe.sendmail"):
+			self.booking.refund(amount=CHARGED_PER_TICKET)
+
+		payment_testing.set_next_refund_status("Pending")
+		self.assertEqual(self.booking.refund(amount=CHARGED_PER_TICKET), "Initiated")
+
 	def test_a_refund_the_gateway_refuses_is_recorded_as_failed(self):
 		payment_testing.set_next_refund_status("Failed")
 

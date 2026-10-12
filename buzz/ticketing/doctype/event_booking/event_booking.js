@@ -203,7 +203,7 @@ async function showRefundDialog(frm) {
 				const { message: refundStatus } = await frm.call("refund", { amount, tickets: selected })
 
 				let message = __("Refund initiated. The payment provider confirms it separately.")
-				if (refundStatus !== "Refund Initiated") {
+				if (refundStatus === "Processed") {
 					message = __("Refund settled.")
 				} else if (selected.length) {
 					message = __(
