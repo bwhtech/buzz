@@ -63,7 +63,7 @@
 	{% endmacro %}
 
 	<main class="event-content event-layout">
-		<div class="event-banner-frame">
+		<div class="event-banner-frame"{% if banner_color %} style="--banner-color: {{ banner_color }}"{% endif %}>
 			{% if event.banner_image %}
 			<img class="event-banner" src="{{ event.banner_image }}" alt="" data-fade-in onload="this.dataset.loaded = ''">
 			{% else %}

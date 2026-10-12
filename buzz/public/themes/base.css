@@ -212,10 +212,13 @@ body {
 	border-radius: var(--radius-banner);
 }
 
-/* Holds the countdown pill (countdown.css) on the banner's bottom edge */
+/* Holds the countdown pill (countdown.css) on the banner's bottom edge. The banner's average
+   colour fills it until the image fades in over it. */
 
 .event-banner-frame {
 	position: relative;
+	border-radius: var(--radius-banner);
+	background-color: var(--banner-color, transparent);
 }
 
 .event-intro {
