@@ -63,7 +63,7 @@ function eventItems(eventId: string): ManagerNavItem[] {
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks` },
 		{ label: "Announcements", icon: "lucide-megaphone", to: `${event}/communications` },
 		{ label: "Sponsorships", icon: "lucide-handshake", to: `${event}/sponsorships` },
-		{ label: "Settings", icon: "lucide-settings", to: `${event}/more` },
+		{ label: "Settings", icon: "lucide-settings", to: `${event}/settings` },
 	]
 }
 

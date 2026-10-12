@@ -72,11 +72,13 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/events/EventSponsorships.vue"),
 			},
 			{
-				path: "events/:eventId/more",
-				name: "event-more",
+				path: "events/:eventId/settings",
+				name: "event-settings",
 				meta: { title: "Settings" },
-				component: () => import("@/pages/manage/events/EventMore.vue"),
+				component: () => import("@/pages/manage/events/EventSettings.vue"),
 			},
+			// Old links and bookmarks.
+			{ path: "events/:eventId/more", redirect: { name: "event-settings" } },
 			{
 				path: "events/:eventId/:section",
 				component: () => import("@/pages/manage/WorkInProgress.vue"),

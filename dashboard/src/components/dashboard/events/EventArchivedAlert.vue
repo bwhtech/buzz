@@ -29,7 +29,7 @@ const visible = computed(() => archived.value && isMobile.value === props.banner
 		<template #description>
 			{{ __("The event page is offline and its forms are no longer accepting responses.") }}
 			<RouterLink
-				:to="`/manage/events/${event}/more`"
+				:to="`/manage/events/${event}/settings`"
 				class="font-medium underline underline-offset-2"
 			>
 				{{ __("Unarchive the event") }}
