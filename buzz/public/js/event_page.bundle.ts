@@ -1,5 +1,6 @@
 import { bannerPattern } from "./event_banner"
 import { EventCountdown } from "./event_countdown"
+import { mountVenueMaps } from "./venue_map"
 
 // The key frappe-ui's useColorScheme keeps the dashboard's choice under, so both share one.
 // Also read by the inline script in the layout's <head>, which applies it before first paint.
@@ -56,3 +57,5 @@ if (modeToggle) {
 	setMode(modeToggle, document.documentElement.dataset.mode || "dark")
 	modeToggle.addEventListener("click", () => toggleMode(modeToggle))
 }
+
+mountVenueMaps()

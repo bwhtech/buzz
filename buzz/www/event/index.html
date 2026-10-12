@@ -22,6 +22,14 @@
 	<span class="aside-value">{{ host.label }}</span>
 	{% endmacro %}
 
+	{% macro place_link(name, link) %}
+	{%- if link -%}
+	<a class="venue-link" href="{{ link | e }}" target="_blank" rel="noopener noreferrer">{{ name }}<svg class="icon" viewBox="5 5 14 14" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
+	{%- else -%}
+	{{ name }}
+	{%- endif -%}
+	{% endmacro %}
+
 	{% macro link_list(class_name) %}
 	<section class="{{ class_name }} links">
 		<h2 class="label">{{ _("Links") }}</h2>
@@ -206,17 +214,36 @@
 				{% if venue %}
 				<section class="aside-block venue">
 					<h2 class="label">{{ _("Where") }}</h2>
+					{% if venue.locations %}
+					<button type="button" class="venue-dot-map" data-venue-map data-leaflet-script="{{ bundled_asset('leaflet.bundle.js') }}" data-leaflet-style="{{ bundled_asset('leaflet.bundle.css') }}" aria-label="{{ _('Show the {0} locations on a map').format(venue.locations | length) }}">
+						<svg class="dot-map-land" viewBox="0 6 360 140" preserveAspectRatio="none" aria-hidden="true"><use stroke-width="1.6" href="/assets/buzz/images/world-dots-coarse.svg#world-dots-coarse"/></svg>
+						<span class="dot-map-pins">
+							{% for location in venue.locations if location.pin %}
+							<span class="dot-map-pin" style="left: {{ location.pin.x }}%; top: {{ location.pin.y }}%"></span>
+							{% endfor %}
+						</span>
+					</button>
+					<script type="application/json" data-venue-locations>{{ venue.locations | tojson }}</script>
+					<dialog class="venue-map-dialog" aria-label="{{ _('Map of {0}').format(venue.name) }}">
+						<form method="dialog"><button class="venue-map-close" aria-label="{{ _('Close') }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></form>
+						<div class="venue-map-canvas"></div>
+					</dialog>
+					<ul class="venue-locations">
+						{% for location in venue.locations %}
+						<li>
+							{% if location.label %}<p class="aside-note venue-location-label">{{ location.label }}</p>{% endif %}
+							<p class="aside-value">{{ place_link(location.venue_name, location.map_link) }}</p>
+							{% if location.address %}<p class="aside-note">{{ location.address }}</p>{% endif %}
+						</li>
+						{% endfor %}
+					</ul>
+					{% else %}
 					{% if venue.map_url %}
 					<iframe class="venue-map" src="{{ venue.map_url }}" title="{{ _('Map of {0}').format(venue.name) }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
 					{% endif %}
-					<p class="aside-value">
-						{%- if venue.link -%}
-						<a class="venue-link" href="{{ venue.link | e }}" target="_blank" rel="noopener noreferrer">{{ venue.name }}<svg class="icon" viewBox="5 5 14 14" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
-						{%- else -%}
-						{{ venue.name }}
-						{%- endif -%}
-					</p>
+					<p class="aside-value">{{ place_link(venue.name, venue.link) }}</p>
 					{% if venue.address %}<p class="aside-note">{{ venue.address }}</p>{% endif %}
+					{% endif %}
 				</section>
 				{% endif %}
 
