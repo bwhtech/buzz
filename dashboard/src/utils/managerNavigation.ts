@@ -61,19 +61,9 @@ function eventItems(eventId: string): ManagerNavItem[] {
 		{ label: "Registration", icon: "lucide-ticket", to: `${event}/registrations` },
 		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests` },
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks` },
-		{
-			label: "Announcements",
-			shortLabel: "Announce",
-			icon: "lucide-megaphone",
-			to: `${event}/communications`,
-		},
-		{
-			label: "Sponsorships",
-			shortLabel: "Sponsors",
-			icon: "lucide-handshake",
-			to: `${event}/sponsorships`,
-		},
-		{ label: "More", icon: "lucide-ellipsis", to: `${event}/more` },
+		{ label: "Announcements", icon: "lucide-megaphone", to: `${event}/communications` },
+		{ label: "Sponsorships", icon: "lucide-handshake", to: `${event}/sponsorships` },
+		{ label: "Settings", icon: "lucide-settings", to: `${event}/more` },
 	]
 }
 

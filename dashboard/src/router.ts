@@ -74,7 +74,7 @@ const routes: RouteRecordRaw[] = [
 			{
 				path: "events/:eventId/more",
 				name: "event-more",
-				meta: { title: "More" },
+				meta: { title: "Settings" },
 				component: () => import("@/pages/manage/events/EventMore.vue"),
 			},
 			{

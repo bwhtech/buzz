@@ -106,6 +106,7 @@ declare module 'vue' {
     ManagerSidebarHeader: typeof import('./src/components/dashboard/ManagerSidebarHeader.vue')['default']
     ManageTeamPanel: typeof import('./src/components/dashboard/teams/ManageTeamPanel.vue')['default']
     ManualVenueForm: typeof import('./src/components/dashboard/events/location/ManualVenueForm.vue')['default']
+    MobileMoreSheet: typeof import('./src/components/dashboard/MobileMoreSheet.vue')['default']
     Navbar: typeof import('./src/components/Navbar.vue')['default']
     OfflinePaymentDialog: typeof import('./src/components/OfflinePaymentDialog.vue')['default']
     PasswordSection: typeof import('./src/components/settings/PasswordSection.vue')['default']

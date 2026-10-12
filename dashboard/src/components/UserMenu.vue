@@ -17,7 +17,10 @@ import { computed, inject, ref } from "vue"
 import UserSettingsDialog from "@/components/UserSettingsDialog.vue"
 import { session } from "@/data/session"
 
-withDefaults(defineProps<{ variant?: "sidebar" | "sheet" }>(), { variant: "sidebar" })
+// hideTrigger: the sheet opens from elsewhere, through v-model:sheet-open.
+withDefaults(defineProps<{ variant?: "sidebar" | "sheet"; hideTrigger?: boolean }>(), {
+	variant: "sidebar",
+})
 
 const isCollapsed = inject(
 	sidebarCollapsedKey,
@@ -27,7 +30,7 @@ const isCollapsed = inject(
 const { colorScheme, setColorScheme } = useColorScheme()
 
 const settingsOpen = ref(false)
-const sheetOpen = ref(false)
+const sheetOpen = defineModel<boolean>("sheetOpen", { default: false })
 
 const NEW_ISSUE_URL = "https://github.com/bwhtech/buzz/issues/new"
 
@@ -100,6 +103,7 @@ const menu = computed<DropdownOptions>(() => [
 <template>
 	<template v-if="variant === 'sheet'">
 		<Button
+			v-if="!hideTrigger"
 			variant="ghost"
 			:aria-label="__('Account menu')"
 			data-testid="account-menu"

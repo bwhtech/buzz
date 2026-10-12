@@ -95,7 +95,7 @@ async function unarchive() {
 </script>
 
 <template>
-	<EventPageHeader :title="event.doc?.title" section="More" />
+	<EventPageHeader :title="event.doc?.title" section="Settings" />
 
 	<div class="m-auto w-full max-w-[800px] space-y-8 px-4 py-8">
 		<section class="space-y-3">
