@@ -26,7 +26,9 @@ class RegistrationCard:
 		if self.event.external_registration_page:
 			return self.open_card("")
 		if not self.ticket_types:
-			return self.sold_out_card() if self.has_published_tickets() else self.open_card("")
+			if self.has_published_tickets():
+				return self.card("sold-out", _("Sold out"), _("All tickets have been taken."))
+			return self.open_card("")
 		return self.open_card(self.ticket_summary())
 
 	def registered_card(self) -> dict:
@@ -35,28 +37,22 @@ class RegistrationCard:
 			if self.event.send_ticket_email
 			else _("Your booking is confirmed.")
 		)
-		return self.card(
-			"registered", _("You're registered"), note, action=(_("View ticket"), "/b/account/bookings")
-		)
-
-	def sold_out_card(self) -> dict:
-		return self.card("sold-out", _("Sold out"), _("All tickets have been taken."))
+		return self.card("registered", _("You're registered"), note, _("View ticket"), "/b/account/bookings")
 
 	def has_published_tickets(self) -> bool:
 		return bool(frappe.db.exists("Event Ticket Type", {"event": self.event.name, "is_published": 1}))
 
 	def open_card(self, subtitle: str) -> dict:
-		action = (_("Register"), registration_link(self.event))
-		return self.card("open", _("Registration open"), subtitle, action=action, primary=True)
+		register_url = registration_link(self.event)
+		return self.card("open", _("Registration open"), subtitle, _("Register"), register_url, primary=True)
 
-	def card(self, state, title, subtitle, action=None, primary=False) -> dict:
-		label, url = action or (None, None)
+	def card(self, state, title, subtitle, action_label=None, action_url=None, primary=False) -> dict:
 		return {
 			"state": state,
 			"title": title,
 			"subtitle": subtitle,
-			"action_label": label,
-			"action_url": url,
+			"action_label": action_label,
+			"action_url": action_url,
 			"primary": primary,
 		}
 
@@ -71,12 +67,10 @@ class RegistrationCard:
 		return get_available_ticket_types(self.event.name)
 
 	def ticket_summary(self) -> str:
-		ticket_types = self.ticket_types
-		return " · ".join(
-			part for part in [self.price_label(ticket_types), self.spots_label(ticket_types)] if part
-		)
+		return " · ".join(part for part in [self.price_label(), self.spots_label()] if part)
 
-	def price_label(self, ticket_types) -> str:
+	def price_label(self) -> str:
+		ticket_types = self.ticket_types
 		paid = [ticket_type.prices[0] for ticket_type in ticket_types if not ticket_type.is_free]
 		if not paid:
 			return _("Free")
@@ -86,8 +80,8 @@ class RegistrationCard:
 			return _("Free, or from {0}").format(price)
 		return _("From {0}").format(price) if len(paid) > 1 else price
 
-	def spots_label(self, ticket_types) -> str | None:
-		remaining = [ticket_type.remaining_tickets for ticket_type in ticket_types]
+	def spots_label(self) -> str | None:
+		remaining = [ticket_type.remaining_tickets for ticket_type in self.ticket_types]
 		if -1 in remaining:
 			return None
 		return _("{0} spots left").format(sum(remaining))
