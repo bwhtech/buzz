@@ -1348,6 +1348,19 @@ summary:focus-visible {
 		margin-inline: 0;
 	}
 
+	/* The icon sits beside the title and subtitle instead of above them, to save height. */
+	.side-card-head {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		align-items: center;
+		column-gap: 12px;
+	}
+
+	.side-card-icon {
+		grid-row: span 2;
+		margin-bottom: 0;
+	}
+
 	.event-meta {
 		display: flex;
 	}
