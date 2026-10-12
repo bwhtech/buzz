@@ -11,6 +11,19 @@ from buzz.events.doctype.event_venue.geocode import enqueue_geocode, needs_geoco
 from buzz.events.doctype.event_venue.map_link import read_map_link
 from buzz.www.event.venue_map import google_maps_url
 
+# A venue with multiple locations keeps where it is only in its locations.
+GROUP_CLEARED_FIELDS = (
+	"address",
+	"map_link",
+	"latitude",
+	"longitude",
+	"location",
+	"google_place_id",
+	"google_maps_embed_code",
+	"city",
+	"venue_country",
+)
+
 
 class EventVenue(Document):
 	# begin: auto-generated types
@@ -21,31 +34,87 @@ class EventVenue(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		from buzz.events.doctype.event_venue_location.event_venue_location import EventVenueLocation
+
 		address: DF.SmallText | None
 		city: DF.Data | None
 		google_maps_embed_code: DF.Code | None
 		google_place_id: DF.Data | None
+		has_multiple_locations: DF.Check
 		latitude: DF.Float
+		locations: DF.Table[EventVenueLocation]
 		longitude: DF.Float
 		map_link: DF.SmallText | None
 		team: DF.Link | None
 		venue_country: DF.Link | None
-		venue_name: DF.Data
+		venue_name: DF.Data | None
 		type: DF.Literal["Embed Google Maps", "Open Street Map"]
 	# end: auto-generated types
 
 	def validate(self):
+		if self.has_multiple_locations:
+			self.set_up_as_group()
+			return
+		self.locations = []
 		self.set_location_from_map_link()
 		self.validate_address()
 		self.set_geojson_for_location()
 		self.remove_fixed_dimensions_from_google_map_embed()
 
 	def on_update(self):
+		if self.has_value_changed("venue_name") and not self.has_multiple_locations:
+			self.rename_groups()
+		self.geocode_if_moved()
+
+	def geocode_if_moved(self):
 		# A live worker would call Nominatim mid-test.
-		if frappe.in_test or self.flags.geocoded or not needs_geocoding(self):
+		if frappe.in_test or self.flags.geocoded or self.has_multiple_locations or not needs_geocoding(self):
 			return
 		if any(self.has_value_changed(field) for field in ("address", "latitude", "longitude")):
 			enqueue_geocode(self.name)
+
+	def rename_groups(self):
+		"""A group's name is made from its locations' names, so it follows them."""
+		groups = frappe.get_all(
+			"Event Venue Location", filters={"venue": self.name, "parenttype": "Event Venue"}, pluck="parent"
+		)
+		for group in set(groups):
+			frappe.get_doc("Event Venue", group).save(ignore_permissions=True)
+
+	def set_up_as_group(self):
+		venues = [row.venue for row in self.locations if row.venue]
+		found = {
+			venue.name: venue
+			for venue in frappe.get_all(
+				"Event Venue",
+				filters={"name": ["in", venues]},
+				fields=["name", "venue_name", "team", "has_multiple_locations"],
+			)
+		}
+		self.validate_locations(venues, found)
+		self.venue_name = " · ".join(found[venue].venue_name for venue in venues)
+		self.clear_location_fields()
+
+	def validate_locations(self, venues: list[str], found: dict) -> None:
+		if len(venues) < 2:
+			frappe.throw(_("Add at least two locations to a venue with multiple locations."))
+		if len(set(venues)) < len(venues):
+			frappe.throw(_("Each location can be added only once."))
+		if (
+			self.name in venues
+			or self.is_a_location()
+			or any(found[venue].has_multiple_locations for venue in venues)
+		):
+			frappe.throw(_("A location cannot itself have multiple locations."))
+		if self.team and any(found[venue].team != self.team for venue in venues):
+			frappe.throw(_("Locations must be venues of the same team."))
+
+	def is_a_location(self) -> bool:
+		return bool(not self.is_new() and frappe.db.exists("Event Venue Location", {"venue": self.name}))
+
+	def clear_location_fields(self):
+		for field in GROUP_CLEARED_FIELDS:
+			self.set(field, None)
 
 	def set_location_from_map_link(self):
 		if not self.map_link or not self.has_value_changed("map_link"):
