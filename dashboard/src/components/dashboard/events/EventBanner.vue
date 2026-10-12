@@ -50,12 +50,15 @@ watch(image, () => {
 </script>
 
 <template>
-	<!-- 2:1 to match the event page's banner; the crop is baked into the uploaded file, so
+	<!-- Always a JPEG: a banner needs no transparency, a 2400px PNG photo runs to megabytes,
+		 and link previews read JPEG everywhere.
+		 2:1 to match the event page's banner; the crop is baked into the uploaded file, so
 		 every other place the banner appears keeps its own object-cover with no extra
 		 field to carry a position. -->
 	<ImageCropUploader
 		:aspect-ratio="2"
 		:output-width="2400"
+		output-type="image/jpeg"
 		:optimize="false"
 		:file-types="IMAGE_TYPES"
 		:validate-file="validateImage"

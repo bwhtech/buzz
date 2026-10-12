@@ -16,8 +16,10 @@ const props = withDefaults(
 		shape?: "circle" | "rect"
 		/** Long edge of the exported image; the short one follows from the ratio. */
 		outputWidth?: number
+		/** Forces the export format; by default a PNG stays a PNG and anything else is a JPEG. */
+		outputType?: "image/jpeg" | "image/png"
 	}>(),
-	{ shape: "rect", outputWidth: 1024 },
+	{ shape: "rect", outputWidth: 1024, outputType: undefined },
 )
 
 const frame = useTemplateRef<HTMLElement>("frame")
@@ -56,7 +58,9 @@ const renderedSize = computed(() => {
 // PNG survives as PNG so a logo keeps its transparent background — JPEG has none to
 // keep, and an unpainted canvas encodes as black. Everything else is a photograph,
 // where JPEG is far smaller for the same picture.
-const outputType = computed(() => (props.file.type === "image/png" ? "image/png" : "image/jpeg"))
+const outputType = computed(
+	() => props.outputType ?? (props.file.type === "image/png" ? "image/png" : "image/jpeg"),
+)
 
 const wrapStyle = computed(() => ({
 	transform: `translate(-50%, -50%) translate(${offset.value.x}px, ${offset.value.y}px)`,
@@ -162,6 +166,12 @@ async function getCroppedBlob(): Promise<Blob | null> {
 	canvas.height = Math.round(props.outputWidth / props.aspectRatio)
 	const context = canvas.getContext("2d")
 	if (!context) return null
+
+	// A JPEG has no transparency; without a fill, see-through pixels would turn black.
+	if (outputType.value === "image/jpeg") {
+		context.fillStyle = "#fff"
+		context.fillRect(0, 0, canvas.width, canvas.height)
+	}
 
 	const exportRatio = props.outputWidth / width
 	const scale = baseScale.value * zoom.value * exportRatio
