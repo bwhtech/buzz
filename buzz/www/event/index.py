@@ -24,6 +24,7 @@ from buzz.utils import datetime_in_time_zone, format_gmt_offset, get_time_zone_l
 from buzz.www.event.date_range import RANGE_SEPARATOR, EventDateRange, format_time
 from buzz.www.event.link_icons import LINK_ICON_PATHS
 from buzz.www.event.meta import EventMeta, event_time_zone
+from buzz.www.event.registration import ProposalCard, RegistrationCard
 from buzz.www.event.venue_map import venue_map_url
 from buzz.www.site_header import apply_site_context
 
@@ -123,6 +124,8 @@ class EventPage:
 			"online_label": OnlineMeeting(self.event).label,
 			"register_url": registration_link(self.event),
 			"registrations_closed": are_registrations_closed(self.event),
+			"registration": RegistrationCard(self.event).as_dict(),
+			"proposal_card": ProposalCard(self.event).as_dict(),
 			"countdown": event_countdown(self.event) if self.event.show_countdown else None,
 		}
 		meta = EventMeta(self.event, self.page, context)
