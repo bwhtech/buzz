@@ -74,6 +74,9 @@ export const updateEvent = useDoctype<Record<string, unknown>>("Buzz Event").set
 /** Turns the banner countdown on or off, apart from the page's own Save. */
 export const setShowCountdown = useDoctype<Record<string, unknown>>("Buzz Event").setValue
 
+/** Sets or clears the banner the moment its crop is uploaded, apart from the page's own Save. */
+export const setBanner = useDoctype<Record<string, unknown>>("Buzz Event").setValue
+
 /** Moves an event between in person and virtual, apart from the page's own Save. */
 export const convertEvent = useDoctype<Record<string, unknown>>("Buzz Event").setValue
 

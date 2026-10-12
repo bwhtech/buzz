@@ -17,7 +17,7 @@ import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventRoute from "@/components/dashboard/events/EventRoute.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
 import { useFormDraft } from "@/composables/useFormDraft"
-import { eventDetail, updateEvent } from "@/data/events"
+import { eventDetail, setBanner, updateEvent } from "@/data/events"
 import { session } from "@/data/session"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { EventDetail, EventExternalLink } from "@/types"
@@ -160,11 +160,24 @@ async function adoptLocation() {
 	saved.value = { ...saved.value, ...location }
 }
 
+// Saved as soon as the crop is uploaded (or the banner removed), so it goes into both the
+// form and its baseline, like a converted location.
+async function saveBanner(bannerImage: string) {
+	await setBanner.submit({ name: eventId, banner_image: bannerImage || null }).catch(() => null)
+	if (setBanner.error) return
+	form.banner_image = bannerImage
+	saved.value = { ...saved.value, banner_image: bannerImage }
+	await event.reload()
+	toast.success(bannerImage ? "Banner updated" : "Banner removed")
+}
+
 function discard() {
 	if (event.data) fill(event.data)
 }
 
-const errorMessage = computed(() => serverErrorMessage(updateEvent.error))
+const errorMessage = computed(
+	() => serverErrorMessage(updateEvent.error) || serverErrorMessage(setBanner.error),
+)
 
 async function save() {
 	if (!canSave.value || updateEvent.loading) return
@@ -227,7 +240,11 @@ async function save() {
 			<!-- Wrapped: the banner's hidden file input would otherwise take space-y margin. -->
 			<div>
 				<!-- The saved schedule, not the form: the pill shows what the event page shows. -->
-				<EventBanner v-model="form.banner_image" :seed="form.title">
+				<EventBanner
+					:model-value="form.banner_image"
+					:seed="form.title"
+					@update:model-value="saveBanner"
+				>
 					<template v-if="showCountdown && event.data.countdown" #default>
 						<BannerCountdown
 							:starts-at="event.data.countdown.starts_at"
