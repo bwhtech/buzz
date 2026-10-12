@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Button, call, toast } from "frappe-ui"
 import { ref } from "vue"
+import { useRouter } from "vue-router"
 
-import { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
+import QuickActionTile, { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
 import type { EventGuest, EventGuests } from "@/types"
 import { downloadCsv } from "@/utils/csv"
 
@@ -14,6 +15,12 @@ const props = defineProps<{
 }>()
 
 const exporting = ref(false)
+const router = useRouter()
+
+function openCheckIn() {
+	const { href } = router.resolve({ name: "check-in", params: { eventName: props.event } })
+	window.open(href, "_blank")
+}
 
 // The list is paged, so the export walks it: a hundred at a time until the server says
 // there is no next page.
@@ -54,15 +61,26 @@ async function exportGuests() {
 
 <template>
 	<h3 class="text-p-sm font-medium text-ink-gray-5">Quick actions</h3>
-	<Button
-		:class="`w-full !justify-start ${PRESSABLE}`"
-		variant="ghost"
-		label="Download CSV"
-		:loading="exporting"
-		@click="exportGuests"
-	>
-		<template #prefix>
-			<span class="lucide-download size-4" aria-hidden="true" />
-		</template>
-	</Button>
+	<div class="flex flex-col rounded-4 p-1 bg-surface-gray-2">
+		<QuickActionTile
+			icon="lucide-qr-code"
+			title="Check in guests"
+			subtitle="Scan or search"
+			tone="gray"
+			@click="openCheckIn"
+		/>
+	</div>
+	<section class="pt-1">
+		<Button
+			:class="`w-full !justify-start ${PRESSABLE}`"
+			variant="ghost"
+			label="Download CSV"
+			:loading="exporting"
+			@click="exportGuests"
+		>
+			<template #prefix>
+				<span class="lucide-download size-4" aria-hidden="true" />
+			</template>
+		</Button>
+	</section>
 </template>
