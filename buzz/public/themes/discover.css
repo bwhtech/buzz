@@ -90,10 +90,6 @@
 	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
-.featured-cards .event-card-image {
-	aspect-ratio: 2 / 1;
-}
-
 .category-cards {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));

@@ -109,12 +109,12 @@ const endsAt = computed(() => {
 					<div class="relative p-4">
 						<img
 							v-if="event.banner_image"
-							class="aspect-video w-full rounded-6 object-cover border"
+							class="aspect-[2/1] w-full rounded-6 object-cover border"
 							:src="event.banner_image"
 							:style="banner"
 							alt=""
 						/>
-						<div v-else class="aspect-video w-full rounded-6 border" :style="banner" />
+						<div v-else class="aspect-[2/1] w-full rounded-6 border" :style="banner" />
 
 						<EventCountdownPill
 							:event="event"
