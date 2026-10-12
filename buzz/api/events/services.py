@@ -22,7 +22,6 @@ from buzz.api.events.schemas import (
 	EventGuest,
 	EventGuestsResponse,
 	EventHostRef,
-	EventVenue,
 	GuestAddOn,
 	GuestTicketType,
 	MyEvent,
@@ -39,6 +38,7 @@ from buzz.api.filters.conditions import ListConditions, event_questions, filter_
 from buzz.api.filters.schemas import FilterField
 from buzz.events.countdown import event_countdown
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
+from buzz.events.doctype.event_venue.details import venue_details
 from buzz.permissions import has_team_access, my_teams
 from buzz.utils import is_app_installed
 
@@ -164,7 +164,7 @@ def event_detail(event: str) -> EventDetail:
 		**row
 		| {
 			"name": str(row.name),
-			"venue": venue_of(row.venue),
+			"venue": venue_details(row.venue),
 			"meeting_link": meeting_link_of(row),
 			"primary_host": primary_host_of(row.team),
 			"co_hosts": co_hosts_of(event),
@@ -257,13 +257,6 @@ def manageable_event(event: str) -> BuzzEvent:
 	if not has_team_access(doc.team, "write", frappe.session.user):
 		CannotManageEvent.throw()
 	return doc
-
-
-def venue_of(venue: str | None) -> EventVenue | None:
-	if not venue:
-		return None
-	address = frappe.db.get_value("Event Venue", venue, "address")
-	return EventVenue(name=venue, address=address)
 
 
 def meeting_link_of(row) -> str | None:

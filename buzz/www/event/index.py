@@ -16,12 +16,13 @@ from frappe.utils import (
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import co_hosts_of, primary_host_of, registration_link
-from buzz.emails import venue_map_url as venue_link
 from buzz.events.countdown import event_countdown
+from buzz.events.doctype.event_venue.details import VenueLocation, venue_details
 from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import datetime_in_time_zone, format_gmt_offset, get_time_zone_label
 from buzz.www.event.date_range import RANGE_SEPARATOR, EventDateRange, format_time
+from buzz.www.event.dot_map import pin_position
 from buzz.www.event.link_icons import LINK_ICON_PATHS
 from buzz.www.event.meta import EventMeta, event_time_zone
 from buzz.www.event.venue_map import venue_map_url
@@ -284,27 +285,25 @@ class EventPage:
 		]
 
 	def venue(self) -> dict | None:
-		if self.event.medium == "Online" or not self.event.venue:
-			return None
-		venue = frappe.db.get_value(
-			"Event Venue",
-			self.event.venue,
-			[
-				"venue_name",
-				"address",
-				"type",
-				"google_maps_embed_code",
-				"google_place_id",
-				"latitude",
-				"longitude",
-			],
-			as_dict=True,
-		)
-		if not venue:
+		details = self.event.medium != "Online" and venue_details(self.event.venue)
+		if not details:
 			return None
 		return {
-			"name": venue.venue_name,
-			"address": venue.address,
-			"map_url": venue_map_url(venue),
-			"link": venue_link(self.event.venue),
+			"name": details.venue_name,
+			"address": details.address,
+			"link": details.map_link,
+			"map_url": None if details.has_multiple_locations else self.venue_map_url(),
+			"locations": [located(location) for location in details.locations]
+			if details.has_multiple_locations
+			else [],
 		}
+
+	def venue_map_url(self) -> str | None:
+		return venue_map_url(frappe.get_cached_doc("Event Venue", self.event.venue))
+
+
+def located(location: VenueLocation) -> dict:
+	"""A location with its pin on the dot map, when its coordinates are known."""
+	has_coordinates = location.latitude and location.longitude
+	pin = pin_position(location.latitude, location.longitude) if has_coordinates else None
+	return {**location.__json__(), "pin": pin}

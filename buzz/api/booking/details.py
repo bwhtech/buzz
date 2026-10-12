@@ -10,10 +10,10 @@ from buzz.api.booking.schemas import (
 	ConfirmationBooking,
 	ConfirmationEvent,
 	ConfirmationTicket,
-	ConfirmationVenue,
 )
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, verify_booking_access_token
 from buzz.api.tickets import windows
+from buzz.events.doctype.event_venue.details import venue_details
 from buzz.utils import qr_data_uri
 
 TICKET_FIELDS = [
@@ -48,7 +48,7 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 			short_description=event_doc.get("short_description"),
 			free_event=event_doc.get("free_event"),
 		),
-		venue=get_confirmation_venue(event_doc.venue),
+		venue=venue_details(event_doc.venue),
 		booking=ConfirmationBooking(
 			name=booking_doc.name,
 			total_amount=booking_doc.total_amount,
@@ -65,13 +65,6 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 		# Guests read this with a token and no session, so the private QR file is inlined
 		tickets=[ConfirmationTicket(**{**ticket, "qr_code": qr_data_uri(ticket.name)}) for ticket in tickets],
 	)
-
-
-def get_confirmation_venue(venue_id: str | None) -> ConfirmationVenue | None:
-	if not venue_id:
-		return None
-	venue_doc = frappe.get_cached_doc("Event Venue", venue_id)
-	return ConfirmationVenue(venue_name=venue_doc.venue_name, address=venue_doc.get("address"))
 
 
 def build_booking_details(booking_id: str) -> BookingDetailsResponse:
@@ -91,7 +84,7 @@ def build_booking_details(booking_id: str) -> BookingDetailsResponse:
 		doc=booking_doc,
 		tickets=tickets,
 		event=event_doc,
-		venue=frappe.get_cached_doc("Event Venue", event_doc.venue) if event_doc.venue else None,
+		venue=venue_details(event_doc.venue),
 		can_transfer_ticket=windows.is_window_open(event_doc.name, windows.TRANSFER),
 		can_change_add_ons=windows.is_window_open(event_doc.name, windows.ADD_ON_CHANGE),
 		can_request_cancellation=windows.is_window_open(event_doc.name, windows.CANCELLATION),

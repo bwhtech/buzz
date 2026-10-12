@@ -312,9 +312,23 @@ export interface VerificationMethods {
 	phone: boolean
 }
 
-export interface EventVenueDetail {
-	name: string
+export interface VenueLocation {
+	venue_name: string
+	label: string | null
 	address: string | null
+	latitude: number | null
+	longitude: number | null
+	map_link: string | null
+}
+
+// A single venue lists itself as its only location.
+export interface VenueDetails {
+	name: string
+	venue_name: string
+	address: string | null
+	map_link: string | null
+	has_multiple_locations: boolean
+	locations: VenueLocation[]
 }
 
 // One name under "Hosted by": the event's team, or one of its co-hosts.
@@ -347,7 +361,7 @@ export interface EventDetail {
 	banner_image: string | null
 	allow_editing_talks_after_acceptance: boolean
 	medium: string | null
-	venue: EventVenueDetail | null
+	venue: VenueDetails | null
 	meeting_link: string | null
 	is_published: boolean
 	show_countdown: boolean

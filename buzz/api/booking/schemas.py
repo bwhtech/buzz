@@ -4,6 +4,7 @@ from typing import Any
 from pydantic import Field
 
 from buzz.api.schemas import APIRequest, APIResponse
+from buzz.events.doctype.event_venue.details import VenueDetails
 
 
 class BookingRequest(APIRequest):
@@ -73,11 +74,6 @@ class ConfirmationEvent(APIResponse):
 	free_event: int | None
 
 
-class ConfirmationVenue(APIResponse):
-	venue_name: str | None
-	address: str | None
-
-
 class ConfirmationBooking(APIResponse):
 	name: str
 	total_amount: float | None
@@ -102,18 +98,18 @@ class ConfirmationTicket(APIResponse):
 
 class BookingConfirmationResponse(APIResponse):
 	event: ConfirmationEvent
-	venue: ConfirmationVenue | None
+	venue: VenueDetails | None
 	booking: ConfirmationBooking
 	tickets: list[ConfirmationTicket]
 
 
 class BookingDetailsResponse(APIResponse):
-	# doc, event, venue and the ticket rows are documents or aliased query rows;
+	# doc, event and the ticket rows are documents or aliased query rows;
 	# they pass through untyped to keep the wire shape.
 	doc: Any
 	tickets: list
 	event: Any
-	venue: Any
+	venue: VenueDetails | None
 	can_transfer_ticket: bool
 	can_change_add_ons: bool
 	can_request_cancellation: bool

@@ -1,7 +1,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase, UnitTestCase
 
-from buzz.emails import venue_map_url as email_venue_map_url
+from buzz.events.doctype.event_venue.details import venue_details
 from buzz.tests.factories import EventVenueFactory
 from buzz.www.event.venue_map import google_maps_url, open_street_map_url, venue_map_url
 
@@ -49,7 +49,7 @@ class TestGooglePlaceMap(IntegrationTestCase):
 			venue_name="Nehru Centre", address="Worli", google_place_id="place-1"
 		)
 		self.assertEqual(
-			email_venue_map_url(venue.name),
+			venue_details(venue.name).map_link,
 			"https://www.google.com/maps/search/?api=1&query=Nehru+Centre&query_place_id=place-1",
 		)
 

@@ -89,14 +89,16 @@ class EventMeta:
 		mode = "Online" if self.is_online() else "Offline"
 		return f"https://schema.org/{mode}EventAttendanceMode"
 
-	def location(self) -> dict | None:
+	def location(self) -> dict | list[dict] | None:
 		# The canonical page, never the join link
 		if self.is_online():
 			return {"@type": "VirtualLocation", "url": self.url()}
 		venue = self.context["venue"]
 		if not venue:
 			return None
-		return {"@type": "Place", "name": venue["name"], "address": venue["address"] or venue["name"]}
+		if venue["locations"]:
+			return [place(location["venue_name"], location["address"]) for location in venue["locations"]]
+		return place(venue["name"], venue["address"])
 
 	def organizer(self) -> dict | None:
 		hosts = self.context["hosts"]
@@ -107,3 +109,7 @@ class EventMeta:
 		if not register_url or self.context["registrations_closed"]:
 			return None
 		return {"@type": "Offer", "url": get_url(register_url), "availability": "https://schema.org/InStock"}
+
+
+def place(name: str, address: str | None) -> dict:
+	return {"@type": "Place", "name": name, "address": address or name}
