@@ -36,6 +36,7 @@
   "website_tab",
   "is_published",
   "is_featured",
+  "show_countdown",
   "route",
   "default_ticket_type",
   "column_break_ndtl",
@@ -246,6 +247,13 @@
    "fieldtype": "Check",
    "label": "Featured",
    "permlevel": 1
+  },
+  {
+   "default": "0",
+   "description": "Shows the time until the event starts on the event page banner.",
+   "fieldname": "show_countdown",
+   "fieldtype": "Check",
+   "label": "Show Event Countdown"
   },
   {
    "fieldname": "tab_2_tab",
@@ -681,7 +689,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-10-02 12:00:00.000000",
+ "modified": "2026-10-12 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

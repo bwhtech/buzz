@@ -35,6 +35,7 @@ from buzz.api.events.schemas import (
 )
 from buzz.api.filters.conditions import ListConditions, event_questions, filter_field, question_fields
 from buzz.api.filters.schemas import FilterField
+from buzz.events.countdown import event_countdown
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
 from buzz.permissions import has_team_access, my_teams
 from buzz.utils import is_app_installed
@@ -143,6 +144,7 @@ DETAIL_FIELDS = (
 	"venue",
 	"meeting_link",
 	"is_published",
+	"show_countdown",
 )
 
 
@@ -165,6 +167,7 @@ def event_detail(event: str) -> EventDetail:
 			"primary_host": primary_host_of(row.team),
 			"co_hosts": co_hosts_of(event),
 			"external_links": external_links_of(event),
+			"countdown": event_countdown(row),
 		}
 	)
 

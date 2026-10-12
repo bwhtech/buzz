@@ -20,7 +20,10 @@ export default defineConfig({
 				outDir: "../buzz/public/dashboard",
 			},
 		}),
-		vue(),
+		vue({
+			// The event page's custom elements, shared with the dashboard.
+			template: { compilerOptions: { isCustomElement: (tag) => tag === "event-countdown" } },
+		}),
 	],
 	resolve: {
 		alias: {

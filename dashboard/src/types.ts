@@ -346,6 +346,9 @@ export interface EventDetail {
 	venue: EventVenueDetail | null
 	meeting_link: string | null
 	is_published: boolean
+	show_countdown: boolean
+	// Null once the event is over.
+	countdown: { starts_at: string; ends_at: string } | null
 	primary_host: EventHostRef | null
 	co_hosts: EventHostRef[]
 	external_links: EventExternalLink[]

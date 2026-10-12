@@ -61,6 +61,11 @@ class EventExternalLink(APIResponse):
 	url: str
 
 
+class EventCountdown(APIResponse):
+	starts_at: str
+	ends_at: str
+
+
 class EventDetail(APIResponse):
 	"""One event, with everything the manage page edits or shows."""
 
@@ -82,6 +87,9 @@ class EventDetail(APIResponse):
 	# The organiser's own link, or the one Zoom issued when the meeting was booked.
 	meeting_link: str | None = None
 	is_published: bool
+	show_countdown: bool = False
+	# None once the event is over.
+	countdown: EventCountdown | None = None
 	primary_host: EventHostRef | None = None
 	co_hosts: list[EventHostRef] = Field(default_factory=list)
 	external_links: list[EventExternalLink] = Field(default_factory=list)

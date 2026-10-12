@@ -1,5 +1,3 @@
-from datetime import datetime
-from datetime import time as clock_time
 from functools import cached_property
 from itertools import groupby
 from urllib.parse import urlparse
@@ -19,6 +17,7 @@ from frappe.utils import (
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import co_hosts_of, primary_host_of, registration_link
 from buzz.emails import venue_map_url as venue_link
+from buzz.events.countdown import event_countdown
 from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import datetime_in_time_zone, format_gmt_offset, get_time_zone_label
@@ -124,22 +123,10 @@ class EventPage:
 			"online_label": OnlineMeeting(self.event).label,
 			"register_url": registration_link(self.event),
 			"registrations_closed": are_registrations_closed(self.event),
-			"countdown": self.countdown(),
+			"countdown": event_countdown(self.event) if self.event.show_countdown else None,
 		}
 		meta = EventMeta(self.event, self.page, context)
 		return context | {"meta": meta.as_dict(), "structured_data": meta.structured_data()}
-
-	def countdown(self) -> dict | None:
-		# An event with no closing time runs to the end of its last day; past that, no countdown.
-		# Whole seconds: JavaScript only promises to parse milliseconds.
-		zone = event_time_zone(self.event)
-		start_time = get_time(self.event.start_time) if self.event.start_time else clock_time.min
-		end_time = get_time(self.event.end_time) if self.event.end_time else clock_time(23, 59, 59)
-		starts_at = datetime.combine(getdate(self.event.start_date), start_time, zone)
-		ends_at = datetime.combine(getdate(self.event.end_date or self.event.start_date), end_time, zone)
-		if ends_at <= datetime.now(zone):
-			return None
-		return {"starts_at": starts_at.isoformat(), "ends_at": ends_at.isoformat()}
 
 	def tabs(self) -> list[dict]:
 		sections = [

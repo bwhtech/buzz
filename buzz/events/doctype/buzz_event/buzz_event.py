@@ -88,6 +88,7 @@ class BuzzEvent(Document):
 		send_booking_confirmation_email: DF.Check
 		send_ticket_email: DF.Check
 		short_description: DF.SmallText | None
+		show_countdown: DF.Check
 		show_sponsorship_section: DF.Check
 		sponsor_deck_attachments: DF.Table[SponsorshipDeckItem]
 		sponsor_deck_cc: DF.SmallText | None

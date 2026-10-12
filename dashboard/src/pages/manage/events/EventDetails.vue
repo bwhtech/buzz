@@ -5,8 +5,10 @@ import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
+import BannerCountdown from "@/components/dashboard/events/BannerCountdown.vue"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
+import EventDetailsActions from "@/components/dashboard/events/EventDetailsActions.vue"
 import EventDetailsSkeleton from "@/components/dashboard/events/EventDetailsSkeleton.vue"
 import EventHosts from "@/components/dashboard/events/EventHosts.vue"
 import EventLinks from "@/components/dashboard/events/EventLinks.vue"
@@ -17,6 +19,7 @@ import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
 import { useFormDraft } from "@/composables/useFormDraft"
 import { eventDetail, updateEvent } from "@/data/events"
 import { session } from "@/data/session"
+import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { EventDetail, EventExternalLink } from "@/types"
 import { isEndBeforeStart } from "@/utils/eventDates"
 import { matches } from "@/utils/formDraft"
@@ -27,6 +30,14 @@ const route = useRoute()
 const eventId = route.params.eventId as string
 
 const event = eventDetail(eventId)
+
+// Saved on its own by the sidebar switch, outside the form and its Save.
+const showCountdown = ref(false)
+watch(
+	() => event.data?.show_countdown,
+	(show) => (showCountdown.value = !!show),
+	{ immediate: true },
+)
 
 type EventForm = ReturnType<typeof blank>
 
@@ -208,14 +219,22 @@ async function save() {
 		enter-active-class="transition-opacity duration-200 ease-out motion-reduce:transition-none"
 		enter-from-class="opacity-0"
 	>
-		<div v-if="event.data" class="m-auto w-full max-w-[800px] space-y-8 px-4 py-8">
+		<PageWithSidebar v-if="event.data">
 			<EventArchivedAlert :event="eventId" />
 
 			<ErrorMessage v-if="errorMessage" :message="errorMessage" />
 
 			<!-- Wrapped: the banner's hidden file input would otherwise take space-y margin. -->
 			<div class="max-md:px-4">
-				<EventBanner v-model="form.banner_image" :seed="form.title" />
+				<!-- The saved schedule, not the form: the pill shows what the event page shows. -->
+				<EventBanner v-model="form.banner_image" :seed="form.title">
+					<template v-if="showCountdown && event.data.countdown" #default>
+						<BannerCountdown
+							:starts-at="event.data.countdown.starts_at"
+							:ends-at="event.data.countdown.ends_at"
+						/>
+					</template>
+				</EventBanner>
 			</div>
 
 			<div class="grid grid-cols-1 gap-8 md:grid-cols-5">
@@ -311,6 +330,15 @@ async function save() {
 					<EventLinks v-model="form.external_links" class="rounded-6 p-4" />
 				</div>
 			</div>
-		</div>
+
+			<template #sidebar>
+				<EventDetailsActions
+					v-model:show-countdown="showCountdown"
+					:event="eventId"
+					:route="event.data.route"
+					@changed="event.reload()"
+				/>
+			</template>
+		</PageWithSidebar>
 	</Transition>
 </template>
