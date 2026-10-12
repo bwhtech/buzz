@@ -50,12 +50,12 @@ watch(image, () => {
 </script>
 
 <template>
-	<!-- 3:1 because that is the frame below; the crop is baked into the uploaded file, so
+	<!-- 2:1 to match the event page's banner; the crop is baked into the uploaded file, so
 		 every other place the banner appears keeps its own object-cover with no extra
 		 field to carry a position. -->
 	<ImageCropUploader
-		:aspect-ratio="3"
-		:output-width="1500"
+		:aspect-ratio="2"
+		:output-width="2400"
 		:optimize="false"
 		:file-types="IMAGE_TYPES"
 		:validate-file="validateImage"
@@ -67,7 +67,7 @@ watch(image, () => {
 				<!-- The whole banner is the hit area; the button inside stays the -->
 				<!-- keyboard-reachable control, so its press must not fire twice. -->
 				<div
-					class="relative aspect-[3/1] overflow-hidden rounded-7 border border-outline-gray-2 max-md:-mx-4 max-md:rounded-none max-md:border-x-0"
+					class="relative aspect-[2/1] overflow-hidden rounded-7 border border-outline-gray-2 max-md:-mx-4 max-md:rounded-none max-md:border-x-0"
 					:class="disabled ? 'cursor-default' : 'cursor-pointer'"
 					@click="!disabled && openFileSelector()"
 				>
@@ -121,7 +121,7 @@ watch(image, () => {
 			</div>
 
 			<p class="text-p-sm text-ink-gray-5" :class="$slots.default ? 'mt-6' : 'mt-2'">
-				{{ __("Use a 3:1 wide image — 1500×500 or 900×300 pixels work well.") }}
+				{{ __("Use a 2:1 wide image — 2400×1200 or 1200×600 pixels work well.") }}
 			</p>
 
 			<!-- The slot types its error as {}, so the message needs narrowing. -->
