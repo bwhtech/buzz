@@ -250,7 +250,7 @@ watch(validationResult, (result) => {
 					</div>
 					<Button
 						size="lg"
-						:icon-left="scanning ? 'lucide-x' : 'lucide-scan-line'"
+						:icon-left="scanning ? 'lucide-x' : 'lucide-scan-barcode'"
 						:label="scanning ? 'Close' : 'Scan'"
 						class="ml-auto shrink-0 transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
 						@click="scanning = !scanning"

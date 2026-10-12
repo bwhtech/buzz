@@ -3,7 +3,7 @@ import { Button, call, toast } from "frappe-ui"
 import { ref } from "vue"
 import { useRouter } from "vue-router"
 
-import QuickActionTile, { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
+import { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
 import type { EventGuest, EventGuests } from "@/types"
 import { downloadCsv } from "@/utils/csv"
 
@@ -61,16 +61,17 @@ async function exportGuests() {
 
 <template>
 	<h3 class="text-p-sm font-medium text-ink-gray-5">Quick actions</h3>
-	<div class="flex flex-col rounded-4 p-1 bg-surface-gray-2">
-		<QuickActionTile
-			icon="lucide-qr-code"
-			title="Check in guests"
-			subtitle="Scan or search"
-			tone="gray"
-			@click="openCheckIn"
-		/>
-	</div>
 	<section class="pt-1">
+		<Button
+			:class="`w-full !justify-start ${PRESSABLE}`"
+			variant="ghost"
+			label="Check in guests"
+			@click="openCheckIn"
+		>
+			<template #prefix>
+				<span class="lucide-scan-barcode size-4" aria-hidden="true" />
+			</template>
+		</Button>
 		<Button
 			:class="`w-full !justify-start ${PRESSABLE}`"
 			variant="ghost"
