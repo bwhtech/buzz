@@ -1,41 +1,21 @@
 import frappe
+from bwh_payments import api as payments
 from frappe import _
-from frappe.utils import flt
-from pydantic import AliasPath, BaseModel, ConfigDict, Field
-
-from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import record_gateway_refund
-
-
-class RefundNotification(BaseModel):
-	"""The refund a Razorpay `refund.processed` or `refund.failed` webhook carries.
-
-	The fields sit at `payload.refund.entity` in the webhook body, and every one
-	of them is mandatory: the payments app hands us refund events only, and a
-	refund event without them is broken rather than uninteresting.
-	"""
-
-	model_config = ConfigDict(extra="ignore")
-
-	refund_id: str = Field(validation_alias=AliasPath("payload", "refund", "entity", "id"))
-	payment_id: str = Field(validation_alias=AliasPath("payload", "refund", "entity", "payment_id"))
-	status: str = Field(validation_alias=AliasPath("payload", "refund", "entity", "status"))
-	amount_in_minor_unit: int = Field(validation_alias=AliasPath("payload", "refund", "entity", "amount"))
-
-	@property
-	def amount(self) -> float:
-		"""What the gateway refunded, in the major unit the booking is priced in."""
-		return flt(self.amount_in_minor_unit) / 100
 
 
 def get_payment_gateways_for_event(event: str) -> list[str]:
-	"""Get the event's own payment gateways, or the site default when it has none."""
+	"""Get the event's own payment gateways, or the site default when it has none.
+
+	Only enabled gateways are returned, so a gateway switched off in bwh_payments is never offered.
+	"""
 	gateways = frappe.get_all(
 		"Event Payment Gateway",
 		filters={"parent": event, "parenttype": "Buzz Event"},
 		pluck="payment_gateway",
 	)
 	default = frappe.db.get_single_value("Buzz Settings", "default_payment_gateway")
-	return gateways or ([default] if default else [])
+	enabled = set(payments.get_payment_gateways())
+	return [gateway for gateway in gateways or [default] if gateway in enabled]
 
 
 def resolve_payment_gateway(event: str, payment_gateway: str | None) -> str:
@@ -48,17 +28,10 @@ def resolve_payment_gateway(event: str, payment_gateway: str | None) -> str:
 	return payment_gateway or gateways[0]
 
 
-def get_controller(payment_gateway):
-	from payments.utils import get_payment_gateway_controller
-
-	return get_payment_gateway_controller(payment_gateway)
-
-
 def get_payment_link_for_booking(
 	booking_id: str, redirect_to: str = "/events", payment_gateway: str | None = None
 ) -> str:
 	booking_doc = frappe.get_cached_doc("Event Booking", booking_id)
-	event_title = frappe.get_cached_value("Buzz Event", booking_doc.event, "title")
 	payment_gateway = resolve_payment_gateway(booking_doc.event, payment_gateway)
 	return get_payment_link(
 		"Event Booking",
@@ -67,7 +40,6 @@ def get_payment_link_for_booking(
 		booking_doc.currency,
 		payment_gateway,
 		redirect_to=redirect_to,
-		title=f"Payment for {event_title}",
 	)
 
 
@@ -82,7 +54,6 @@ def get_payment_link_for_sponsorship(
 	if not tier_doc.enabled:
 		frappe.throw(_("This sponsorship tier is no longer available."))
 	payment_gateway = resolve_payment_gateway(tier_doc.event, payment_gateway)
-	event_title = frappe.get_cached_value("Buzz Event", tier_doc.event, "title")
 	price = tier_doc.price_for(currency)
 	frappe.db.set_value(
 		"Sponsorship Enquiry", sponsorship_enquiry, "tier", sponsorship_tier
@@ -95,7 +66,6 @@ def get_payment_link_for_sponsorship(
 		price.currency,
 		payment_gateway,
 		redirect_to,
-		f"Payment for {tier_doc.title} Sponsorship at {event_title}",
 	)
 
 
@@ -106,35 +76,32 @@ def get_payment_link(
 	currency: str,
 	payment_gateway: str,
 	redirect_to: str = "/events",
-	title: str | None = None,
 ) -> str:
-	controller = get_controller(payment_gateway)
-	# Not every gateway controller implements this check.
-	if hasattr(controller, "validate_transaction_currency"):
-		controller.validate_transaction_currency(currency)
+	"""Open a checkout and return its URL. bwh_payments brings the shopper back to `redirect_to`."""
+	payments.validate_currency(payment_gateway, currency)
 	payment = record_payment(reference_doctype, reference_docname, amount, currency, payment_gateway)
-	user_full_name = frappe.get_cached_value("User", frappe.session.user, "full_name")
+	payment_request = payments.create_payment(
+		reference_doctype,
+		reference_docname,
+		amount,
+		currency,
+		payment_gateway,
+		redirect_to=redirect_to,
+		**get_customer_details(),
+	)
+	payment.db_set({"payment_request": payment_request.name, "order_id": payment_request.order_ref})
+	return payment_request.order_url
 
-	payment_details = {
-		"amount": amount,
-		"title": title or f"Payment for {reference_doctype}: {reference_docname}",
-		"description": f"{user_full_name}'s payment for {reference_doctype} (#{reference_docname})",
-		"reference_doctype": reference_doctype,
-		"reference_docname": reference_docname,
-		"payer_email": frappe.session.user,
-		"payer_name": user_full_name,
-		"currency": currency,
-		"payment_gateway": payment_gateway,
-		"redirect_to": redirect_to,
-		"payment": payment.name,
+
+def get_customer_details() -> dict:
+	if frappe.session.user == "Guest":
+		return {}
+	first_name, last_name = frappe.get_cached_value("User", frappe.session.user, ["first_name", "last_name"])
+	return {
+		"customer_email": frappe.session.user,
+		"customer_forenames": first_name,
+		"customer_surname": last_name,
 	}
-	if payment_gateway == "Razorpay" or payment_gateway == "Paymob":
-		order = controller.create_order(**payment_details)
-		payment_details.update({"order_id": order.get("id")})
-
-	url = controller.get_payment_url(**payment_details)
-
-	return url
 
 
 def record_payment(
@@ -160,82 +127,21 @@ def record_payment(
 
 
 def mark_payment_as_received(reference_doctype: str, reference_docname: str):
-	if frappe.in_test:
-		return
-
-	request = frappe.get_all(
-		"Integration Request",
-		{
-			"reference_doctype": reference_doctype,
-			"reference_docname": reference_docname,
-		},
-		order_by="creation desc",
-		limit=1,
-	)
-
-	if len(request):
-		data = frappe.db.get_value("Integration Request", request[0].name, "data")
-		data = frappe.parse_json(data)
-
-		payment_gateway = data.get("payment_gateway")
-		if payment_gateway == "Razorpay":
-			payment_id = "razorpay_payment_id"
-
-		elif payment_gateway == "Paymob":
-			payment_id = "paymob_payment_id"
-
-		elif payment_gateway == "PayPal":
-			payment_id = "transaction_id"
-
-		elif "Stripe" in payment_gateway:
-			payment_id = "stripe_token_id"
-		else:
-			payment_id = "order_id"
-
-		frappe.db.set_value(
-			"Event Payment",
-			data.payment,
-			{
-				"payment_received": 1,
-				"payment_id": data.get(payment_id),
-				"order_id": data.get("order_id"),
-			},
-		)
-
-		frappe.db.commit()  # nosemgrep: frappe-manual-commit
-
-
-def handle_refund_notification(doctype: str, docname: str) -> None:
-	"""Apply a gateway refund webhook to the booking whose payment it belongs to."""
-	# Returns nothing on purpose: `call_hook_method` stops at the first handler
-	# that returns a value.
-	payload = frappe.parse_json(frappe.db.get_value(doctype, docname, "data"))
-	notification = RefundNotification.model_validate(payload)
-
-	payment = frappe.db.get_value(
-		"Event Payment",
-		{"payment_id": notification.payment_id},
-		["name", "reference_doctype", "reference_docname"],
+	"""Mark the Event Payment whose checkout bwh_payments has confirmed as received."""
+	payment_request = frappe.db.get_value(
+		"Gateway Payment Request",
+		{"ref_doctype": reference_doctype, "ref_docname": reference_docname, "status": "Paid"},
+		["name", "gateway_transaction_ref"],
 		as_dict=True,
+		order_by="creation desc",
 	)
-
-	if not payment or payment.reference_doctype != "Event Booking":
+	if not payment_request:
 		return
-
-	# The same event arrives more than once, so the refund is keyed on its id.
-	record_gateway_refund(
-		booking=payment.reference_docname,
-		payment=payment.name,
-		refund_id=notification.refund_id,
-		status=notification.status,
-		amount=notification.amount,
-	)
 
 	frappe.db.set_value(
-		doctype,
-		docname,
-		{"reference_doctype": "Event Booking", "reference_docname": payment.reference_docname},
-		update_modified=False,
+		"Event Payment",
+		{"payment_request": payment_request.name},
+		{"payment_received": 1, "payment_id": payment_request.gateway_transaction_ref},
 	)
 
 

@@ -15,6 +15,7 @@
   "payment_received",
   "section_break_mcjj",
   "payment_gateway",
+  "payment_request",
   "column_break_oauu",
   "payment_id",
   "order_id"
@@ -87,7 +88,15 @@
    "fieldname": "payment_gateway",
    "fieldtype": "Link",
    "label": "Payment Gateway",
-   "options": "Payment Gateway"
+   "options": "Payment Gateway Profile"
+  },
+  {
+   "fieldname": "payment_request",
+   "fieldtype": "Link",
+   "label": "Payment Request",
+   "options": "Gateway Payment Request",
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,

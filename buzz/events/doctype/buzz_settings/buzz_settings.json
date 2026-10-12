@@ -107,7 +107,7 @@
    "fieldname": "default_payment_gateway",
    "fieldtype": "Link",
    "label": "Default Payment Gateway",
-   "options": "Payment Gateway"
+   "options": "Payment Gateway Profile"
   },
   {
    "fieldname": "column_break_ehsr",

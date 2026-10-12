@@ -14,7 +14,8 @@ COMMITTED_STATUSES = ("Initiated", "Processed")
 # What the gateway settled on. Anything else is still in flight.
 FINAL_STATUSES = ("Processed", "Failed")
 
-GATEWAY_STATUSES = {"processed": "Processed", "failed": "Failed"}
+# bwh_payments refund statuses to this refund's.
+GATEWAY_STATUSES = {"Pending": "Initiated", "Processed": "Processed", "Failed": "Failed"}
 
 
 class EventBookingRefund(Document):
@@ -34,6 +35,7 @@ class EventBookingRefund(Document):
 		booking: DF.Link
 		cancellation_request: DF.Link | None
 		currency: DF.Link | None
+		gateway_refund: DF.Link | None
 		payment: DF.Link | None
 		refund_id: DF.Data | None
 		status: DF.Literal["Initiated", "Processed", "Failed"]
@@ -100,20 +102,18 @@ class EventBookingRefund(Document):
 		)
 
 
-def record_gateway_refund(
-	booking: str, payment: str | None, refund_id: str, status: str, amount: float
-) -> bool:
-	"""Create or update the refund `refund_id` names. True when it was new.
+def record_gateway_refund(booking: str, gateway_refund) -> bool:
+	"""Create or update the refund behind a bwh_payments Gateway Refund. True when it was new.
 
-	Used for refunds the gateway reports, from the webhook or a sync — never for
-	one raised from the Desk, which records the tickets an operator picked.
+	A refund raised from the Desk comes back with its name as `reference`. One raised on the
+	gateway's dashboard has none, so the tickets it covers are worked out here.
 	"""
 	# The webhook job and a Desk sync can both be recording refunds on this
 	# booking. Serialising them here is what lets the reads below see every
 	# refund that came before, rather than a picture from an instant ago.
 	frappe.db.get_value("Event Booking", booking, "name", for_update=True)
 
-	existing = frappe.db.exists("Event Booking Refund", {"refund_id": refund_id})
+	existing = find_refund(booking, gateway_refund)
 	if existing:
 		refund = frappe.get_doc("Event Booking Refund", existing)
 	else:
@@ -121,16 +121,29 @@ def record_gateway_refund(
 			{
 				"doctype": "Event Booking Refund",
 				"booking": booking,
-				"payment": payment,
-				"refund_id": refund_id,
+				"payment": frappe.db.get_value(
+					"Event Payment", {"payment_request": gateway_refund.payment_request}, "name"
+				),
 				"currency": frappe.db.get_value("Event Booking", booking, "currency"),
-				"tickets": [{"ticket": ticket} for ticket in tickets_a_refund_covers(booking, amount)],
+				"tickets": [
+					{"ticket": ticket} for ticket in tickets_a_refund_covers(booking, gateway_refund.amount)
+				],
 			}
 		).insert(ignore_permissions=True)
 
-	refund.apply_gateway_status(gateway_status=status, amount=amount)
+	refund.gateway_refund = gateway_refund.name
+	refund.refund_id = gateway_refund.refund_id or refund.refund_id
+	refund.apply_gateway_status(gateway_status=gateway_refund.status, amount=gateway_refund.amount)
 
 	return not existing
+
+
+def find_refund(booking: str, gateway_refund) -> str | None:
+	if gateway_refund.reference and frappe.db.exists(
+		"Event Booking Refund", {"name": gateway_refund.reference, "booking": booking}
+	):
+		return gateway_refund.reference
+	return frappe.db.exists("Event Booking Refund", {"gateway_refund": gateway_refund.name})
 
 
 def tickets_a_refund_covers(booking: str, amount: float) -> list[str]:

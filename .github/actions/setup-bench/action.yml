@@ -81,8 +81,8 @@ runs:
       env:
         EXTRA_APP_URL: ${{ inputs.extra-app-url }}
       run: |
-        # buzz lists frappe/payments in required_apps, so it must precede install-app.
-        bench get-app --skip-assets https://github.com/frappe/payments
+        # buzz lists bwhtech/bwh_payments in required_apps, so it must precede install-app.
+        bench get-app --skip-assets --branch v1-stable https://github.com/bwhtech/bwh_payments
 
         # Test-only: buzz/tests/factories imports frappe_factory_bot. No install-app —
         # the app ships no DocTypes, and get-app already pip-installs it into the env.

@@ -556,6 +556,12 @@ export interface CurrencyItem {
 	number_format: string | null
 }
 
+export interface PaymentGatewayLogo {
+	name: string
+	logo: string
+	logo_dark: string
+}
+
 export interface TierPrice {
 	currency: string
 	price: number

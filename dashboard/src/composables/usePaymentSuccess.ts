@@ -8,6 +8,7 @@ interface PaymentSuccessOptions {
 	messageDuration?: number
 	enableConfetti?: boolean
 	cleanupUrl?: boolean
+	checkOnMount?: boolean
 }
 
 interface PaymentSuccessReturn {
@@ -27,10 +28,17 @@ interface PaymentSuccessReturn {
  * @param {number} options.messageDuration - How long to show success message in milliseconds (default: 10000)
  * @param {boolean} options.enableConfetti - Whether to trigger confetti animation (default: true)
  * @param {boolean} options.cleanupUrl - Whether to clean up success parameter from URL (default: true)
+ * @param {boolean} options.checkOnMount - Whether `?success=true` alone triggers the flow (default: true)
  * @returns {Object} - Returns reactive state and helper functions
  */
 export function usePaymentSuccess(options: PaymentSuccessOptions = {}): PaymentSuccessReturn {
-	const { onSuccess, messageDuration = 10000, enableConfetti = true, cleanupUrl = true } = options
+	const {
+		onSuccess,
+		messageDuration = 10000,
+		enableConfetti = true,
+		cleanupUrl = true,
+		checkOnMount = true,
+	} = options
 
 	const route = useRoute()
 	const router = useRouter()
@@ -95,7 +103,7 @@ export function usePaymentSuccess(options: PaymentSuccessOptions = {}): PaymentS
 
 	// Auto-check for success on mount
 	onMounted(() => {
-		checkForSuccess()
+		if (checkOnMount) checkForSuccess()
 	})
 
 	return {

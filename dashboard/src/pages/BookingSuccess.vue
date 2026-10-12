@@ -10,11 +10,24 @@
 			:is-registration="confirmation.data.event.free_event"
 		/>
 
-		<h2 class="text-4xl-bold text-ink-gray-9 mb-4">
+		<h2 v-if="isConfirmed" class="text-4xl-bold text-ink-gray-9 mb-4">
 			{{
 				confirmation.data.event.free_event ? __("Registration Confirmed") : __("Booking Confirmed")
 			}}
 		</h2>
+		<div v-else class="mb-6">
+			<h2 class="text-4xl-bold text-ink-gray-9 mb-2">{{ __("Payment Pending") }}</h2>
+			<p class="text-ink-gray-6 mb-4">
+				{{
+					__(
+						"We have not received your payment yet. If you have paid, it can take a minute to reach us.",
+					)
+				}}
+			</p>
+			<Button variant="outline" :loading="confirmation.loading" @click="confirmation.reload()">
+				{{ __("Check again") }}
+			</Button>
+		</div>
 
 		<!-- Event Information and Payment Summary in two columns -->
 		<div class="grid grid-cols-1 gap-6 mb-6" :class="{ 'lg:grid-cols-2': showPaymentSummary }">
@@ -85,6 +98,12 @@ const { showSuccessMessage, showSuccess } = usePaymentSuccess({
 	cleanupUrl: false,
 })
 
+// The shopper's return proves nothing; only a paid (or free) booking is confirmed.
+function isBookingConfirmed(data: Record<string, any> | null | undefined) {
+	return Boolean(data?.event?.free_event || data?.booking?.payment_status === "Paid")
+}
+const isConfirmed = computed(() => isBookingConfirmed(confirmation.data))
+
 const showPaymentSummary = computed(() => {
 	const booking = confirmation.data?.booking
 	return booking && (booking.total_amount || 0) > 0
@@ -94,6 +113,8 @@ const confirmation = useCall<Record<string, any>, Record<string, unknown>>({
 	url: "/api/v2/method/buzz.api.booking.get_booking_confirmation",
 	params: { booking_id: props.bookingId, token: route.query.token },
 	onSuccess: (data) => {
+		// useCall runs onSuccess before it sets confirmation.data, so read the response itself.
+		if (!isBookingConfirmed(data)) return
 		showSuccess()
 		// Clear any stored booking form data now that the booking is confirmed
 		if (data?.event?.route) {
