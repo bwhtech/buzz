@@ -6,6 +6,7 @@ from frappe.utils import cstr, format_date, format_time, today
 
 from buzz.api.checkin.exceptions import (
 	AlreadyCheckedIn,
+	NotCheckedIn,
 	TicketCancelled,
 	TicketNotFound,
 	TicketRefunded,
@@ -110,10 +111,31 @@ class CheckinService:
 		if self.ticket.booking and self.ticket_id in get_committed_tickets(self.ticket.booking):
 			TicketRefunded.throw()
 
-		existing = frappe.db.exists("Event Check In", {"ticket": self.ticket_id, "date": self.date})
+		existing = self.todays_checkin()
 		if existing:
 			creation = frappe.db.get_value("Event Check In", existing, "creation")
 			AlreadyCheckedIn.throw(checked_in_at=f"{format_date(creation)} at {format_time(creation)}")
+
+	def undo_checkin(self) -> CheckinResponse:
+		existing = self.todays_checkin()
+		if not existing:
+			NotCheckedIn.throw()
+
+		# Cancelled rather than deleted, so the record of the mistaken check-in stays.
+		checkin_doc = frappe.get_doc("Event Check In", existing)
+		checkin_doc.flags.ignore_permissions = True
+		checkin_doc.cancel()
+		return CheckinResponse(
+			message=_("Undid the check-in for {attendee_name}").format(
+				attendee_name=self.ticket.attendee_name
+			),
+			ticket=self.ticket_details(),
+		)
+
+	def todays_checkin(self) -> str | None:
+		return frappe.db.exists(
+			"Event Check In", {"ticket": self.ticket_id, "date": self.date, "docstatus": 1}
+		)
 
 	def record_checkin(self) -> "EventCheckIn":
 		checkin_doc = frappe.new_doc("Event Check In")

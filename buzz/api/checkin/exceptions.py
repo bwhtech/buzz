@@ -21,3 +21,8 @@ class TicketRefunded(Conflict):
 class AlreadyCheckedIn(Conflict):
 	title = _lt("Already Checked In")
 	message = _lt("This ticket was already checked in today, at {checked_in_at}.")
+
+
+class NotCheckedIn(Conflict):
+	title = _lt("Not Checked In")
+	message = _lt("This ticket has not been checked in today.")

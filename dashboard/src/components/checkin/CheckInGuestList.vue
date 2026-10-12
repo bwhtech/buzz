@@ -61,16 +61,17 @@ const guestOpen = ref(false)
 
 const openGuest = (guest: EventGuest, paid: string | null = null) => {
 	checkInCall.reset()
+	undoCall.reset()
 	selectedGuest.value = guest
 	payment.value = paid
 	guestOpen.value = true
 }
 
 // Rows are patched in place rather than refetched, so the pages already scrolled through stay.
-const markCheckedIn = (ticket: string, at: string) => {
+const setCheckedIn = (ticket: string, at: string | null) => {
 	for (const guest of [guests.value.find((row) => row.name === ticket), selectedGuest.value])
 		if (guest?.name === ticket) guest.checked_in_at = at
-	localCheckIns.value += 1
+	localCheckIns.value += at ? 1 : -1
 }
 
 interface CheckInResponse {
@@ -87,7 +88,7 @@ const checkInCall = useCall<CheckInResponse, { ticket_id: string }>({
 	immediate: false,
 	onSuccess: (data) => {
 		busyTicket.value = null
-		markCheckedIn(data.ticket.id, data.ticket.check_in_time)
+		setCheckedIn(data.ticket.id, data.ticket.check_in_time)
 		toast.success(data.message)
 		// Long enough to see the button turn into "Checked in", then out of the way.
 		if (guestOpen.value) setTimeout(() => (guestOpen.value = false), 600)
@@ -103,6 +104,25 @@ const checkIn = (ticket: string) => {
 	if (busyTicket.value) return
 	busyTicket.value = ticket
 	checkInCall.submit({ ticket_id: ticket })
+}
+
+// Undo lives only in the guest dialog, so its errors show there too.
+const undoCall = useCall<CheckInResponse, { ticket_id: string }>({
+	url: "/api/v2/method/buzz.api.checkin.undo_checkin",
+	method: "POST",
+	immediate: false,
+	onSuccess: (data) => {
+		busyTicket.value = null
+		setCheckedIn(data.ticket.id, null)
+		toast.success(data.message)
+	},
+	onError: () => (busyTicket.value = null),
+})
+
+const undoCheckIn = (ticket: string) => {
+	if (busyTicket.value) return
+	busyTicket.value = ticket
+	undoCall.submit({ ticket_id: ticket })
 }
 
 const sentinel = ref<HTMLElement | null>(null)
@@ -256,8 +276,9 @@ watch(guestOpen, (open) => {
 			:guest="selectedGuest"
 			:payment="payment"
 			:busy="busyTicket === selectedGuest?.name"
-			:error="serverErrorMessage(checkInCall.error)"
+			:error="serverErrorMessage(checkInCall.error || undoCall.error)"
 			@check-in="selectedGuest && checkIn(selectedGuest.name)"
+			@undo="selectedGuest && undoCheckIn(selectedGuest.name)"
 		/>
 	</div>
 </template>

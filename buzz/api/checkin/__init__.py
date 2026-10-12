@@ -16,6 +16,11 @@ def checkin_ticket(ticket_id: str) -> CheckinResponse:
 	return CheckinService(ticket_id).checkin()
 
 
+@frappe.whitelist(methods=["POST"])
+def undo_checkin(ticket_id: str) -> CheckinResponse:
+	return CheckinService(ticket_id).undo_checkin()
+
+
 @frappe.whitelist()
 def get_checkin_events() -> list[CheckinEvent]:
 	return checkin_events()

@@ -14,7 +14,7 @@ const props = defineProps<{
 
 const open = defineModel<boolean>("open", { required: true })
 
-const emit = defineEmits<{ checkIn: [] }>()
+const emit = defineEmits<{ checkIn: []; undo: [] }>()
 
 // A dialog at the desk, a sheet from the bottom edge on a phone held in one hand.
 const isMobile = useIsMobile()
@@ -86,13 +86,29 @@ const addOnLabel = (addOn: EventGuest["add_ons"][number]) =>
 
 			<ErrorMessage :message="error" />
 
+			<template v-if="checkedInAt">
+				<div
+					class="flex h-14 items-center justify-center gap-2 rounded-[14px] bg-surface-green-2 text-lg font-medium text-ink-green-7"
+				>
+					<span class="lucide-check size-5" aria-hidden="true" />
+					Checked in at {{ checkedInAt }}
+				</div>
+				<!-- Undo is for a mis-tap, so it stays quiet under the state it reverses. -->
+				<Button
+					variant="ghost"
+					label="Undo check-in"
+					icon-left="lucide-undo-2"
+					class="self-center"
+					:loading="busy"
+					@click="emit('undo')"
+				/>
+			</template>
 			<Button
+				v-else
 				variant="solid"
 				theme="green"
 				class="!h-14 w-full rounded-[14px] !text-lg transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
-				:icon-left="checkedInAt ? 'lucide-check' : undefined"
-				:label="checkedInAt ? `Checked in at ${checkedInAt}` : 'Check in'"
-				:disabled="Boolean(checkedInAt)"
+				label="Check in"
 				:loading="busy"
 				@click="emit('checkIn')"
 			/>
