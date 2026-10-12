@@ -225,7 +225,7 @@ async function save() {
 			<ErrorMessage v-if="errorMessage" :message="errorMessage" />
 
 			<!-- Wrapped: the banner's hidden file input would otherwise take space-y margin. -->
-			<div class="max-md:px-4">
+			<div>
 				<!-- The saved schedule, not the form: the pill shows what the event page shows. -->
 				<EventBanner v-model="form.banner_image" :seed="form.title">
 					<template v-if="showCountdown && event.data.countdown" #default>
@@ -238,7 +238,7 @@ async function save() {
 			</div>
 
 			<div class="grid grid-cols-1 gap-8 md:grid-cols-5">
-				<div class="space-y-8 max-md:px-4 md:col-span-3">
+				<div class="space-y-8 md:col-span-3">
 					<div class="space-y-2">
 						<!-- Plain field on purpose: this is the page's headline, not a labelled one.
 						 A textarea rather than an input so a long name wraps; Enter is swallowed
@@ -288,11 +288,11 @@ async function save() {
 					</section>
 				</div>
 
-				<div class="space-y-4 md:col-span-2">
+				<div class="space-y-4 max-md:-mx-4 md:col-span-2">
 					<!-- Every section in this column carries the same padding, so their labels
 					     share one left edge. -->
 					<EventRoute
-						class="rounded-6 p-4"
+						class="p-4 md:rounded-6"
 						v-model="form.route"
 						v-model:taken="routeTaken"
 						:event="eventId"
@@ -307,7 +307,7 @@ async function save() {
 						v-model:time-zone="form.time_zone"
 					/>
 
-					<section class="space-y-3 rounded-6 p-4">
+					<section class="space-y-3 p-4 md:rounded-6">
 						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
 						<EventMedium
 							v-model:venue="form.venue"
@@ -320,14 +320,14 @@ async function save() {
 					</section>
 
 					<EventHosts
-						class="rounded-6 p-4"
+						class="p-4 md:rounded-6"
 						:event="eventId"
 						:primary-host="event.data.primary_host"
 						:co-hosts="event.data.co_hosts"
 						@changed="event.reload()"
 					/>
 
-					<EventLinks v-model="form.external_links" class="rounded-6 p-4" />
+					<EventLinks v-model="form.external_links" class="p-4 md:rounded-6" />
 				</div>
 			</div>
 

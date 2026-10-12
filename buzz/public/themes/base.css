@@ -1164,8 +1164,12 @@ summary:focus-visible {
 }
 
 @media (max-width: 720px) {
+	/* Bleeds past the 16px page gutter to the screen edges. */
 	.event-banner {
-		border: 1px solid var(--border);
+		width: calc(100% + 32px);
+		margin-inline: -16px;
+		border-block: 1px solid var(--border);
+		border-radius: 0;
 	}
 
 	.event-meta {

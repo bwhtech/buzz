@@ -88,7 +88,7 @@ const zoneOptions = computed(() =>
 
 <template>
 	<!-- The heading and card travel with the fields: both pages present them this way. -->
-	<section class="space-y-3 rounded-6 bg-surface-gray-1/90 p-4">
+	<section class="space-y-3 bg-surface-gray-1/90 p-4 md:rounded-6">
 		<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">When</h2>
 
 		<div class="space-y-6">

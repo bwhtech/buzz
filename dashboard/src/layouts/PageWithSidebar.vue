@@ -12,6 +12,8 @@
 			<slot />
 		</div>
 
+		<hr v-if="$slots.sidebar" class="mx-auto w-1/2 border-outline-gray-2 md:hidden" />
+
 		<aside
 			v-if="$slots.sidebar"
 			class="w-full shrink-0 space-y-3 pt-1 lg:sticky lg:top-8 lg:w-56 lg:self-start"
