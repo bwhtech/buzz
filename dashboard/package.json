@@ -36,6 +36,7 @@
 		"prosemirror-view": "^1.42.1"
 	},
 	"devDependencies": {
+		"@tailwindcss/typography": "^0.5.16",
 		"@types/canvas-confetti": "^1.9.0",
 		"@types/node": "^25.2.0",
 		"@vitejs/plugin-vue": "^6.0.8",

@@ -220,11 +220,6 @@ interface ProviderLogin {
 
 const { is_open, close } = useLoginDialog()
 
-// The embed route runs inside the public page's overlay, where the parent page owns the URL.
-const pageLocation = window.location.pathname.endsWith("/login/embed")
-	? window.parent.location
-	: window.location
-
 const current_view = ref<LoginView>("login")
 const error_message = ref("")
 const success_message = ref("")
@@ -248,7 +243,7 @@ const view_title = computed(() => {
 
 const login_context_resource = useCall<Record<string, any>, { redirect_to: string }>({
 	url: "/api/v2/method/buzz.api.auth.get_login_context",
-	params: { redirect_to: pageLocation.href },
+	params: { redirect_to: window.location.href },
 })
 
 const login_context = computed(() => login_context_resource.data)
@@ -269,7 +264,7 @@ const SocialLoginButtons = defineComponent({
 						class: "w-full",
 						type: "button",
 						onClick: () => {
-							pageLocation.href = provider.auth_url
+							window.location.href = provider.auth_url
 						},
 					},
 					{
@@ -341,7 +336,7 @@ function handleSignup() {
 	signup_resource.submit({
 		email: form.value.email,
 		full_name: form.value.full_name,
-		redirect_to: pageLocation.pathname + pageLocation.search,
+		redirect_to: window.location.pathname + window.location.search,
 	})
 }
 
@@ -381,7 +376,7 @@ function showError(error: Error) {
 
 watch(is_open, (value) => {
 	if (value) {
-		login_context_resource.submit({ redirect_to: pageLocation.href })
+		login_context_resource.submit({ redirect_to: window.location.href })
 	}
 })
 </script>

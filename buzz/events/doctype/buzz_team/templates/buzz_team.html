@@ -79,7 +79,7 @@
 			{% if doc.accept_community_submissions %}
 			{% set event_action = _("Add Event") if is_organizer else _("Submit Event") %}
 			{% if is_guest %}
-			<a class="es-button team-event-action" data-variant="subtle" data-size="md" href="/b/login?redirect-to=/{{ doc.route }}" data-login><span class="icon lucide-plus" aria-hidden="true"></span>{{ event_action }}</a>
+			<a class="es-button team-event-action" data-variant="subtle" data-size="md" href="/b/login?redirect-to=/{{ doc.route }}" data-island="login"><span class="icon lucide-plus" aria-hidden="true"></span>{{ event_action }}</a>
 			{% else %}
 			<button type="button" class="es-button team-event-action" data-variant="subtle" data-size="md" data-island="add-event" data-island-inline data-props='{{ {"community": doc.name, "canReview": is_organizer, "isPublicPage": true} | tojson }}'><span class="icon lucide-plus" aria-hidden="true"></span>{{ event_action }}</button>
 			{% endif %}
@@ -148,9 +148,7 @@
 
 {% block script %}
 	{% if doc.accept_community_submissions and not is_guest %}
-	{% set island = island_script() %}
 	<script>window.google_place_search_enabled = {{ place_search_enabled | tojson }}</script>
-	{% if island %}<script type="module" src="{{ island }}"></script>{% endif %}
 	{% endif %}
 	{{ super() }}
 	<script src="{{ bundled_asset('team_page.bundle.ts') }}" defer></script>

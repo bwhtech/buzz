@@ -1,3 +1,4 @@
+import typography from "@tailwindcss/typography"
 import frappeUIPreset from "frappe-ui/tailwind"
 
 import lucideIconsPlugin from "./node_modules/frappe-ui/tailwind/lucideIconsPlugin.js"
@@ -5,8 +6,8 @@ import lucideIconsPlugin from "./node_modules/frappe-ui/tailwind/lucideIconsPlug
 import themePlugin from "./node_modules/frappe-ui/tailwind/plugin.js"
 
 export default {
-	// Without forms and typography, which no island uses.
-	presets: [{ ...frappeUIPreset, plugins: [themePlugin, lucideIconsPlugin] }],
+	// Without forms, whose base styles would reach the page's own inputs.
+	presets: [{ ...frappeUIPreset, plugins: [typography, themePlugin, lucideIconsPlugin] }],
 	// Utilities apply only inside islands, and preflight stays off, so the page keeps its styles.
 	important: ".buzz-island",
 	corePlugins: { preflight: false },
@@ -16,6 +17,7 @@ export default {
 		"./src/islands/**/*.{vue,ts}",
 		"./src/components/dashboard/teams/{AddEventMenu,AddEventDialog,ExistingEventForm,ExternalEventForm}.vue",
 		"./src/components/dashboard/teams/addEventOptions.ts",
+		"./src/components/LoginDialog.vue",
 		"./node_modules/frappe-ui/src/components/{Button,Dialog,Dropdown,FormControl,TextInput,Combobox,DatePicker,ErrorMessage,Toast,Popover,shared}/**/*.{vue,ts}",
 		// Add each dashboard component an island imports, and the frappe-ui component folders
 		// it uses, e.g. "./node_modules/frappe-ui/src/components/{Button,Dialog}/**/*.{vue,ts}".

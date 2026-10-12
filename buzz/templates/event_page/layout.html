@@ -51,7 +51,7 @@
 				<svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
 			</button>
 			{% if is_guest %}
-			<a class="es-button" data-variant="ghost" data-size="md" href="/b/login?redirect-to={{ meta.url | urlencode }}" data-login>{{ _("Log in") }}</a>
+			<a class="es-button" data-variant="ghost" data-size="md" href="/b/login?redirect-to={{ meta.url | urlencode }}" data-island="login">{{ _("Log in") }}</a>
 			{% else %}
 			<details class="user-menu">
 				<summary aria-label="{{ _('Account') }}">
@@ -115,6 +115,8 @@
 {% block base_scripts %}{% endblock %}
 
 {% block script %}
+	{% set island = island_script() %}
+	{% if island %}<script type="module" src="{{ island }}"></script>{% endif %}
 	<script>
 		document.addEventListener("click", (event) => {
 			document.querySelectorAll("details[open]").forEach((menu) => menu.contains(event.target) || menu.removeAttribute("open"))
