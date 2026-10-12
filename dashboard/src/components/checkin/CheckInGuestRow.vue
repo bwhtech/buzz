@@ -23,12 +23,12 @@ const detail = computed(() =>
 
 <template>
 	<li
-		class="flex items-center gap-3 rounded-[14px] py-2.5 pl-3.5 pr-2.5 transition-colors duration-200 ease-out motion-reduce:transition-none"
+		class="flex flex-wrap items-center gap-3 rounded-[14px] py-2.5 pl-3.5 pr-2.5 transition-colors duration-200 ease-out motion-reduce:transition-none"
 		:class="checkedInAt ? 'bg-surface-green-2' : 'bg-surface-gray-1'"
 	>
 		<button
 			type="button"
-			class="flex min-w-0 flex-1 flex-col gap-0.5 rounded-4 py-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+			class="flex min-w-0 flex-1 basis-40 flex-col gap-0.5 rounded-4 py-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
 			:aria-label="`Open ${name}`"
 			@click="emit('open')"
 		>
@@ -55,7 +55,7 @@ const detail = computed(() =>
 				v-if="checkedInAt"
 				key="checked-in"
 				role="img"
-				class="grid min-w-[6.5rem] place-items-center text-ink-green-7"
+				class="ml-auto grid min-w-[6.5rem] place-items-center text-ink-green-7"
 				:aria-label="`${name} is checked in`"
 			>
 				<span class="lucide-check size-5" aria-hidden="true" />
@@ -67,7 +67,7 @@ const detail = computed(() =>
 				theme="green"
 				size="md"
 				label="Check in"
-				class="min-w-[6.5rem] transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
+				class="ml-auto min-w-[6.5rem] transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none dark:!text-white"
 				:aria-label="`Check in ${name}`"
 				:loading="busy"
 				@click="emit('checkIn')"

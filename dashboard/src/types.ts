@@ -298,6 +298,7 @@ export interface EventGuests {
 	start_time: string | null
 	end_date: string | null
 	venue: string | null
+	route: string | null
 	total: number
 	matched: number
 	checked_in: number

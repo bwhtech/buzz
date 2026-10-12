@@ -120,6 +120,7 @@ class EventGuestsResponse(APIResponse):
 	start_time: timedelta | None = None
 	end_date: date | None = None
 	venue: str | None = None
+	route: str | None = None
 	# Everyone registered, then everyone the current search matches — the second is the
 	# first when nothing is being searched for.
 	total: int

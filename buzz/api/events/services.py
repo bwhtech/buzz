@@ -282,7 +282,7 @@ GUESTS_PAGE_SIZE = 20
 
 
 def guest_search_filters(search: str | None) -> list[list] | None:
-	"""Name or email, matched loosely — the two things a manager reads off the row."""
+	"""Name, email or ticket ID, matched loosely."""
 	term = (search or "").strip()
 	if not term:
 		return None
@@ -290,6 +290,7 @@ def guest_search_filters(search: str | None) -> list[list] | None:
 	return [
 		["attendee_name", "like", f"%{term}%"],
 		["attendee_email", "like", f"%{term}%"],
+		["name", "like", f"%{term}%"],
 	]
 
 
@@ -406,6 +407,7 @@ def event_guests(
 		start_time=doc.start_time,
 		end_date=doc.end_date,
 		venue=doc.get_venue_name(),
+		route=doc.route if doc.is_published else None,
 		total=total,
 		matched=matched,
 		checked_in=len(arrivals),

@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
-import { Button, Dialog, Icon, TabButtons, TextInput, dayjsLocal, toast, useCall } from "frappe-ui"
+import {
+	Button,
+	Icon,
+	LoadingText,
+	TabButtons,
+	TextInput,
+	dayjsLocal,
+	toast,
+	useCall,
+} from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import CheckInGuestRow from "@/components/checkin/CheckInGuestRow.vue"
@@ -9,7 +18,11 @@ import EmptyState from "@/components/common/EmptyState.vue"
 import QRScanner from "@/components/QRScanner.vue"
 import { useEventGuests } from "@/composables/useEventGuests"
 import type { ListOrder } from "@/composables/useListQuery"
-import { type ValidationResult, useTicketValidation } from "@/composables/useTicketValidation"
+import {
+	type ValidationResult,
+	playSuccessBeep,
+	useTicketValidation,
+} from "@/composables/useTicketValidation"
 import type { EventGuest } from "@/types"
 import { formatPriceOrFree } from "@/utils/currency"
 import { serverErrorMessage } from "@/utils/serverError"
@@ -20,7 +33,7 @@ const search = ref("")
 // "1" and "0" narrow the list on the server; anything else is everyone.
 const tab = ref("all")
 
-const { guests, loadMore, page, loadingFirstPage, loadingMore } = useEventGuests(
+const { guests, loadMore, page, loadingFirstPage, loadingMore, searchPending } = useEventGuests(
 	props.event,
 	search,
 	ref<ListOrder>("desc"),
@@ -31,10 +44,37 @@ const { guests, loadMore, page, loadingFirstPage, loadingMore } = useEventGuests
 // Check-ins made here since the last fetch. A fetch carries the server's own count, which
 // already includes them, so the tally starts over with every response.
 const localCheckIns = ref(0)
+// The search the shown rows belong to.
+const loadedSearch = ref("")
 watch(
 	() => page.data,
-	() => (localCheckIns.value = 0),
+	() => {
+		localCheckIns.value = 0
+		loadedSearch.value = search.value.trim()
+	},
 )
+
+const initialLoading = computed(() => !page.data && !page.error)
+const reloading = computed(
+	() => !initialLoading.value && (searchPending.value || loadingFirstPage.value),
+)
+
+const emptyState = computed(() => {
+	if (loadedSearch.value)
+		return {
+			title: `No guests match “${loadedSearch.value}”`,
+			description:
+				tab.value === "all"
+					? "Check the spelling, or search by email or ticket ID."
+					: "Check the spelling, or look under All.",
+			icon: "lucide-search-x",
+		}
+	const titles: Record<string, string> = {
+		"1": "Nobody has checked in yet",
+		"0": "Everyone is in",
+	}
+	return { title: titles[tab.value] ?? "No guests yet", icon: "lucide-users" }
+})
 
 const total = computed(() => page.data?.total ?? 0)
 const checkedInCount = computed(() => (page.data?.checked_in ?? 0) + localCheckIns.value)
@@ -46,7 +86,7 @@ const tabs = computed(() => [
 ])
 
 const countOf = (value: string | number) =>
-	tabs.value.find((option) => option.value === value)?.count
+	new Intl.NumberFormat().format(tabs.value.find((option) => option.value === value)?.count ?? 0)
 
 const startsAt = computed(() => {
 	const data = page.data
@@ -89,6 +129,7 @@ const checkInCall = useCall<CheckInResponse, { ticket_id: string }>({
 	onSuccess: (data) => {
 		busyTicket.value = null
 		setCheckedIn(data.ticket.id, data.ticket.check_in_time)
+		playSuccessBeep()
 		toast.success(data.message)
 		// Long enough to see the button turn into "Checked in", then out of the way.
 		if (guestOpen.value) setTimeout(() => (guestOpen.value = false), 600)
@@ -125,15 +166,16 @@ const undoCheckIn = (ticket: string) => {
 	undoCall.submit({ ticket_id: ticket })
 }
 
+const stickySentinel = ref<HTMLElement | null>(null)
+const isSticky = ref(false)
+useIntersectionObserver(stickySentinel, ([entry]) => (isSticky.value = !entry?.isIntersecting))
+
 const sentinel = ref<HTMLElement | null>(null)
 useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore(), {
 	rootMargin: "400px",
 })
 
-// Scanning: a valid ticket swaps the camera for the guest, and closing the guest goes
-// back to the camera, so a queue is worked without reaching for the Scan button each time.
 const scanning = ref(false)
-const resumeScan = ref(false)
 const { validationResult } = useTicketValidation()
 
 const guestFromScan = ({ ticket }: Required<Pick<ValidationResult, "ticket">>): EventGuest =>
@@ -152,19 +194,11 @@ const guestFromScan = ({ ticket }: Required<Pick<ValidationResult, "ticket">>): 
 watch(validationResult, (result) => {
 	if (!result?.ticket) return
 	const paid = result.payment_details
-	scanning.value = false
-	resumeScan.value = true
 	openGuest(
 		guestFromScan({ ticket: result.ticket }),
 		paid ? formatPriceOrFree(paid.amount, paid.currency) : null,
 	)
 	validationResult.value = null
-})
-
-watch(guestOpen, (open) => {
-	if (open || !resumeScan.value) return
-	resumeScan.value = false
-	scanning.value = true
 })
 </script>
 
@@ -178,47 +212,78 @@ watch(guestOpen, (open) => {
 		/>
 
 		<template v-else>
-			<!-- The event is what the desk has to be sure of, so it carries the display type. -->
-			<header class="flex items-end justify-between gap-4">
-				<div class="min-w-0 space-y-2">
-					<p class="text-sm font-medium uppercase tracking-wider text-ink-gray-5">Check-in</p>
-					<h1
-						v-if="page.data"
-						class="line-clamp-2 font-display text-[2.75rem] uppercase leading-[0.95] text-ink-gray-9 md:text-[3.5rem]"
-					>
-						{{ page.data.title }}
-					</h1>
-					<div v-else class="h-12 w-64 max-w-full animate-pulse rounded-4 bg-surface-gray-2" />
-					<p class="truncate text-base text-ink-gray-5">
-						{{ [startsAt, page.data?.venue].filter(Boolean).join(" · ") }}
-					</p>
-				</div>
+			<nav class="-mx-2 -mb-2 flex items-center justify-between gap-2">
 				<Button
-					size="lg"
-					icon-left="lucide-scan-line"
-					label="Scan"
-					class="shrink-0 transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
-					@click="scanning = true"
+					variant="ghost"
+					icon-left="lucide-arrow-left"
+					label="Event dashboard"
+					:route="{ name: 'event-guests', params: { eventId: event } }"
 				/>
-			</header>
+				<Button
+					v-if="page.data?.route"
+					variant="ghost"
+					icon-right="lucide-arrow-up-right"
+					label="Event page"
+					:link="`/events/${page.data.route}`"
+				/>
+			</nav>
 
-			<TextInput
-				v-model="search"
-				type="search"
-				size="md"
-				placeholder="Search by name or email"
-				aria-label="Search guests"
+			<div ref="stickySentinel" aria-hidden="true" />
+			<!-- The event is what the desk has to be sure of, so it carries the display type. -->
+			<div
+				class="sticky top-0 z-10 -mx-4 -my-3 space-y-5 border-b bg-surface-base/90 px-4 py-3 backdrop-blur-md backdrop-saturate-150 transition-colors duration-150 ease-out"
+				:class="isSticky ? 'border-outline-gray-2' : 'border-transparent'"
 			>
-				<template #prefix>
-					<Icon name="lucide-search" class="size-4 text-ink-gray-5" />
-				</template>
-			</TextInput>
+				<header class="flex flex-wrap items-end justify-between gap-4">
+					<div class="min-w-0 flex-1 basis-56 space-y-2">
+						<p class="text-sm font-medium uppercase tracking-wider text-ink-gray-5">Check-in</p>
+						<h1
+							v-if="page.data"
+							class="line-clamp-2 font-display text-[2.75rem] uppercase leading-[0.95] text-ink-gray-9 md:text-[3.5rem]"
+						>
+							{{ page.data.title }}
+						</h1>
+						<div v-else class="h-12 w-64 max-w-full animate-pulse rounded-4 bg-surface-gray-2" />
+						<p class="truncate text-base text-ink-gray-5">
+							{{ [startsAt, page.data?.venue].filter(Boolean).join(" · ") }}
+						</p>
+					</div>
+					<Button
+						size="lg"
+						:icon-left="scanning ? 'lucide-x' : 'lucide-scan-line'"
+						:label="scanning ? 'Close' : 'Scan'"
+						class="ml-auto shrink-0 transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
+						@click="scanning = !scanning"
+					/>
+				</header>
 
-			<TabButtons v-model="tab" :options="tabs">
-				<template #suffix="{ button }">
-					<span class="tabular-nums text-ink-gray-5">{{ countOf(button.value) }}</span>
-				</template>
-			</TabButtons>
+				<Transition name="shutter">
+					<QRScanner v-if="scanning" :paused="guestOpen" />
+				</Transition>
+
+				<TextInput
+					v-model="search"
+					type="search"
+					size="md"
+					placeholder="Search by name, email or ticket ID"
+					aria-label="Search guests"
+				>
+					<template #prefix>
+						<Icon name="lucide-search" class="size-4 text-ink-gray-5" />
+					</template>
+					<template #suffix>
+						<LoadingText v-if="reloading && search.trim()" text="Searching" class="!text-sm" />
+					</template>
+				</TextInput>
+			</div>
+
+			<div class="-mx-4 overflow-x-auto px-4">
+				<TabButtons v-model="tab" :options="tabs" class="w-max">
+					<template #suffix="{ button }">
+						<span class="tabular-nums text-ink-gray-5">{{ countOf(button.value) }}</span>
+					</template>
+				</TabButtons>
+			</div>
 
 			<p class="text-p-sm text-ink-gray-5">
 				Tap <span class="font-medium text-ink-gray-7">Check in</span> as a guest arrives, or tap
@@ -226,7 +291,7 @@ watch(guestOpen, (open) => {
 				reads the QR code on a ticket.
 			</p>
 
-			<ul v-if="loadingFirstPage" class="flex flex-col gap-2" aria-busy="true">
+			<ul v-if="initialLoading" class="flex flex-col gap-2" aria-busy="true">
 				<li
 					v-for="row in 6"
 					:key="row"
@@ -234,42 +299,31 @@ watch(guestOpen, (open) => {
 				/>
 			</ul>
 
-			<ul v-else-if="guests.length" class="flex flex-col gap-2">
-				<CheckInGuestRow
-					v-for="guest in guests"
-					:key="guest.name"
-					:guest="guest"
-					:busy="busyTicket === guest.name && !guestOpen"
-					@open="openGuest(guest)"
-					@check-in="checkIn(guest.name)"
-				/>
-				<li v-if="loadingMore" class="h-[62px] animate-pulse rounded-[14px] bg-surface-gray-1" />
-			</ul>
-
-			<EmptyState
-				v-else-if="search.trim()"
-				title="No matching guests"
-				:description="`Nobody here matches “${search.trim()}”.`"
-				icon="lucide-search-x"
-			/>
-			<EmptyState
+			<div
 				v-else
-				:title="
-					tab === '1'
-						? 'Nobody has checked in yet'
-						: tab === '0'
-							? 'Everyone is in'
-							: 'No guests yet'
-				"
-				icon="lucide-users"
-			/>
+				class="transition-opacity duration-150 ease-out motion-reduce:transition-none"
+				:class="{ 'opacity-50': reloading }"
+				:aria-busy="reloading"
+			>
+				<ul v-if="guests.length" class="flex flex-col gap-2">
+					<CheckInGuestRow
+						v-for="guest in guests"
+						:key="guest.name"
+						:guest="guest"
+						:busy="busyTicket === guest.name && !guestOpen"
+						@open="openGuest(guest)"
+						@check-in="checkIn(guest.name)"
+					/>
+					<li v-if="loadingMore" class="h-[62px] animate-pulse rounded-[14px] bg-surface-gray-1" />
+				</ul>
+
+				<EmptyState v-else v-bind="emptyState">
+					<Button v-if="loadedSearch" label="Clear search" @click="search = ''" />
+				</EmptyState>
+			</div>
 
 			<div ref="sentinel" aria-hidden="true" />
 		</template>
-
-		<Dialog v-model:open="scanning" title="Scan ticket" size="md">
-			<QRScanner />
-		</Dialog>
 
 		<GuestCheckInDialog
 			v-model:open="guestOpen"
@@ -282,3 +336,27 @@ watch(guestOpen, (open) => {
 		/>
 	</div>
 </template>
+
+<style scoped>
+.shutter-enter-active {
+	transition:
+		grid-template-rows 350ms cubic-bezier(0.23, 1, 0.32, 1),
+		clip-path 500ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.shutter-leave-active {
+	transition:
+		grid-template-rows 250ms ease-in,
+		clip-path 200ms ease-in;
+}
+.shutter-enter-from,
+.shutter-leave-to {
+	grid-template-rows: 0fr;
+	clip-path: circle(0% at 50% 50%);
+}
+@media (prefers-reduced-motion: reduce) {
+	.shutter-enter-active,
+	.shutter-leave-active {
+		transition: none;
+	}
+}
+</style>

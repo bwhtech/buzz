@@ -139,6 +139,7 @@ declare module 'vue' {
     SaveActions: typeof import('./src/components/dashboard/teams/SaveActions.vue')['default']
     SectionHeader: typeof import('./src/components/common/SectionHeader.vue')['default']
     SelectionBar: typeof import('./src/components/common/SelectionBar.vue')['default']
+    SiteHeader: typeof import('./src/components/SiteHeader.vue')['default']
     SortableList: typeof import('./src/components/dashboard/sponsorships/SortableList.vue')['default']
     SponsorCard: typeof import('./src/components/dashboard/sponsorships/SponsorCard.vue')['default']
     SponsorDrawer: typeof import('./src/components/dashboard/sponsorships/SponsorDrawer.vue')['default']

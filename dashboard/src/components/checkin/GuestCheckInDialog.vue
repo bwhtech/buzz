@@ -46,11 +46,11 @@ const addOnLabel = (addOn: EventGuest["add_ons"][number]) =>
 		v-bind="isMobile ? {} : { bare: true, size: 'md' }"
 	>
 		<div v-if="guest" class="flex flex-col gap-4 p-5">
-			<div class="flex items-center gap-3">
+			<div class="flex items-start gap-3">
 				<Avatar :label="name" size="2xl" />
 				<div class="min-w-0 flex-1">
-					<p class="truncate text-lg font-semibold text-ink-gray-9">{{ name }}</p>
-					<p v-if="guest.attendee_email" class="truncate text-base text-ink-gray-5">
+					<p class="break-words text-lg font-semibold text-ink-gray-9">{{ name }}</p>
+					<p v-if="guest.attendee_email" class="break-all text-base text-ink-gray-5">
 						{{ guest.attendee_email }}
 					</p>
 				</div>
@@ -64,25 +64,30 @@ const addOnLabel = (addOn: EventGuest["add_ons"][number]) =>
 			</div>
 
 			<!-- The tier is what the desk acts on, so it is set large enough to read at arm's length. -->
-			<div
-				class="flex items-baseline justify-between gap-3 rounded-7 bg-surface-gray-2 px-4 py-3.5"
-			>
-				<span class="truncate font-display text-4xl uppercase leading-none text-ink-gray-9">
+			<div class="flex flex-col gap-1.5 rounded-7 bg-surface-gray-2 px-4 py-3.5">
+				<span
+					class="line-clamp-2 break-words font-display text-4xl uppercase leading-none text-ink-gray-9"
+					:title="guest.ticket_type || undefined"
+				>
 					{{ guest.ticket_type || "Ticket" }}
 				</span>
-				<span v-if="facts.length" class="shrink-0 text-right text-sm text-ink-gray-5">
+				<span v-if="facts.length" class="text-sm text-ink-gray-5">
 					{{ facts.join(" · ") }}
 				</span>
 			</div>
 
-			<div v-if="guest.add_ons.length" class="flex flex-wrap gap-1.5">
-				<Badge
-					v-for="addOn in guest.add_ons"
-					:key="addOnLabel(addOn)"
-					variant="subtle"
-					:label="addOnLabel(addOn)"
-				/>
-			</div>
+			<section v-if="guest.add_ons.length" class="space-y-1.5">
+				<h3 class="text-sm font-medium text-ink-gray-5">Add-ons</h3>
+				<div class="flex flex-wrap gap-1.5">
+					<Badge
+						v-for="addOn in guest.add_ons"
+						:key="addOnLabel(addOn)"
+						variant="subtle"
+						:label="addOnLabel(addOn)"
+						class="!h-auto max-w-full !whitespace-normal break-words py-0.5"
+					/>
+				</div>
+			</section>
 
 			<ErrorMessage :message="error" />
 
@@ -107,7 +112,7 @@ const addOnLabel = (addOn: EventGuest["add_ons"][number]) =>
 				v-else
 				variant="solid"
 				theme="green"
-				class="!h-14 w-full rounded-[14px] !text-lg transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
+				class="!h-14 w-full rounded-[14px] !text-lg dark:!text-white transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
 				label="Check in"
 				:loading="busy"
 				@click="emit('checkIn')"

@@ -5,7 +5,10 @@
 		class="min-h-dvh bg-surface-base text-ink-gray-8"
 		:class="{ 'h-dvh overflow-hidden': fullBleed }"
 	>
-		<Navbar v-if="routerReady && !fullBleed" />
+		<template v-if="routerReady && !fullBleed">
+			<SiteHeader v-if="route.meta.siteHeader" />
+			<Navbar v-else />
+		</template>
 		<div :class="fullBleed ? 'h-full' : 'max-w-4xl py-8 px-4 md:py-12 mx-auto'">
 			<template v-if="!routerReady">
 				<ManagerShellPlaceholder v-if="fullBleed" />
@@ -22,6 +25,7 @@ import { useRoute, useRouter } from "vue-router"
 
 import LoginRequired from "@/components/LoginRequired.vue"
 import Navbar from "@/components/Navbar.vue"
+import SiteHeader from "@/components/SiteHeader.vue"
 import { session } from "@/data/session"
 import ManagerShellPlaceholder from "@/layouts/ManagerShellPlaceholder.vue"
 

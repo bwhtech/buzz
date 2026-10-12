@@ -62,14 +62,9 @@ export function useEventGuests(
 
 	// Sync, so the offset is back at zero before useCall's own watcher rebuilds the URL —
 	// a pre-flush reset lets the stale offset go out as a request that is aborted a tick later.
-	watch(
-		[debouncedSearch, order, conditions, checkedIn],
-		() => {
-			start.value = 0
-			guests.value = []
-		},
-		{ flush: "sync" },
-	)
+	watch([debouncedSearch, order, conditions, checkedIn], () => (start.value = 0), {
+		flush: "sync",
+	})
 
 	const loadMore = () => {
 		if (page.loading || !page.data?.has_next_page) return
@@ -83,5 +78,6 @@ export function useEventGuests(
 		// The first page is the only one that leaves the list empty while it loads.
 		loadingFirstPage: computed(() => page.loading && start.value === 0),
 		loadingMore: computed(() => page.loading && start.value > 0),
+		searchPending: computed(() => search.value.trim() !== debouncedSearch.value.trim()),
 	}
 }

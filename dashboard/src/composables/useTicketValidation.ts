@@ -53,6 +53,8 @@ const playSound = (sound: string): void => {
 	new Audio(sound).play()
 }
 
+export const playSuccessBeep = (): void => playSound(beepSound)
+
 const showDebouncedToast = (message: string): void => {
 	const now = Date.now()
 	if (lastToastMessage === message && now - lastToastTime < TOAST_DEBOUNCE_MS) return
@@ -68,7 +70,7 @@ const validateTicketResource = useCall<ValidationResult, { ticket_id: string }>(
 	onSuccess: (data) => {
 		validationResult.value = data
 		isProcessingTicket.value = false
-		playSound(beepSound)
+		playSuccessBeep()
 	},
 	onError: (error) => {
 		validationResult.value = null
