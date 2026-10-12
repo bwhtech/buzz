@@ -1,8 +1,10 @@
+from datetime import datetime
+
 import frappe
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.functions import Count, Date
-from frappe.utils import add_days, getdate
+from frappe.utils import add_days, getdate, today
 
 from buzz.api.booking.guests import email_otp_available, phone_otp_available
 from buzz.api.booking.services import are_registrations_closed
@@ -283,7 +285,7 @@ GUESTS_PAGE_SIZE = 20
 
 
 def guest_search_filters(search: str | None) -> list[list] | None:
-	"""Name or email, matched loosely — the two things a manager reads off the row."""
+	"""Name, email or ticket ID, matched loosely."""
 	term = (search or "").strip()
 	if not term:
 		return None
@@ -291,6 +293,7 @@ def guest_search_filters(search: str | None) -> list[list] | None:
 	return [
 		["attendee_name", "like", f"%{term}%"],
 		["attendee_email", "like", f"%{term}%"],
+		["name", "like", f"%{term}%"],
 	]
 
 
@@ -349,6 +352,7 @@ def event_guests(
 	order: str = "desc",
 	start: int = 0,
 	limit: int = GUESTS_PAGE_SIZE,
+	checked_in: str | None = None,
 ) -> EventGuestsResponse:
 	"""One page of the people holding a ticket to an event.
 
@@ -356,12 +360,17 @@ def event_guests(
 	access is the bar: this shows the team what it already sees through the doctype.
 
 	Ordered by when the ticket was registered, newest first by default, so a page is a
-	stable slice as the caller walks down the list.
+	stable slice as the caller walks down the list. `checked_in` is "1" or "0" to keep only
+	the guests who have, or have not, checked in today.
 	"""
 	ensure_event_team_access(event)
 
 	filter_fields, answer_parents = guest_filter_fields(event)
 	conditions = ListConditions("Event Ticket", filter_fields, answer_parents).frappe_filters(filters)
+	arrivals = checked_in_today(event)
+	if checked_in in ("0", "1"):
+		operator = "in" if checked_in == "1" else "not in"
+		conditions.append(["name", operator, list(arrivals) or [""]])
 	query_filters = [["event", "=", event], ["docstatus", "=", 1], *conditions]
 	or_filters = guest_search_filters(search)
 	limit = max(1, min(int(limit), 100))
@@ -388,7 +397,10 @@ def event_guests(
 		ticket["registered_at"] = ticket.pop("creation")
 		ticket["ticket_type"] = type_titles.get(ticket.ticket_type) or ticket.ticket_type
 
-	guests = [EventGuest(**ticket, add_ons=by_ticket.get(ticket.name, [])) for ticket in tickets]
+	guests = [
+		EventGuest(**ticket, add_ons=by_ticket.get(ticket.name, []), checked_in_at=arrivals.get(ticket.name))
+		for ticket in tickets
+	]
 	doc = frappe.get_cached_doc("Buzz Event", event)
 	total = count_tickets({"event": event, "docstatus": 1})
 	matched = count_tickets(query_filters, or_filters) if or_filters or conditions else total
@@ -398,12 +410,33 @@ def event_guests(
 		start_time=doc.start_time,
 		end_date=doc.end_date,
 		venue=doc.get_venue_name(),
+		route=doc.route if doc.is_published else None,
 		total=total,
 		matched=matched,
+		checked_in=len(arrivals),
 		guests=guests,
 		has_next_page=start + len(guests) < matched,
 		filter_fields=filter_fields,
 	)
+
+
+def checked_in_today(event: str) -> dict[str, datetime]:
+	"""When each of the event's submitted tickets checked in today, keyed by ticket."""
+	# Query builder: the team check in the caller is the authorization.
+	checkin, ticket = frappe.qb.DocType("Event Check In"), frappe.qb.DocType("Event Ticket")
+	rows = (
+		frappe.qb.from_(checkin)
+		.join(ticket)
+		.on(ticket.name == checkin.ticket)
+		.select(checkin.ticket, checkin.creation)
+		.where(
+			(checkin.event == event)
+			& (checkin.date == today())
+			& (checkin.docstatus == 1)
+			& (ticket.docstatus == 1)
+		)
+	).run(as_dict=True)
+	return {row.ticket: row.creation for row in rows}
 
 
 def guest_filter_fields(event: str) -> tuple[list[FilterField], dict]:

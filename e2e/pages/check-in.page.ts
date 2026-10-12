@@ -4,19 +4,19 @@ export class CheckInPage {
 	private page: Page
 	accessDeniedMessage: Locator
 	manualTicketInput: Locator
-	lastScanResult: Locator
 	ticketModal: Locator
+	private scanButton: Locator
 	private checkButton: Locator
 	private checkInButton: Locator
 
 	constructor(page: Page) {
 		this.page = page
-		this.accessDeniedMessage = page.getByText("Access Denied")
+		this.accessDeniedMessage = page.getByText("Access denied")
 		this.manualTicketInput = page.getByPlaceholder("Enter ticket ID manually")
+		this.scanButton = page.getByRole("button", { name: "Scan", exact: true })
 		this.checkButton = page.getByRole("button", { name: "Check", exact: true })
 		this.ticketModal = page.getByRole("dialog")
-		this.checkInButton = page.getByRole("button", { name: "Check In", exact: true })
-		this.lastScanResult = page.getByText("Last Scan Result")
+		this.checkInButton = page.getByRole("button", { name: "Check in", exact: true })
 	}
 
 	async goto(eventName?: string): Promise<void> {
@@ -29,20 +29,18 @@ export class CheckInPage {
 		await this.checkButton.click()
 	}
 
-	/**
-	 * Clicks Check In and waits for the request to land. The "Last Scan Result" panel is not a
-	 * usable signal — it is already on screen from the preceding validate call.
-	 */
+	/** Clicks Check in and waits for the request to land; the scanner then reopens on its own. */
 	async confirmCheckIn(): Promise<void> {
 		const recorded = this.page.waitForResponse(
 			(response) => response.url().includes("checkin_ticket") && response.status() === 200,
 		)
 		await this.checkInButton.click()
 		await recorded
-		await expect(this.ticketModal).toBeHidden()
+		await expect(this.manualTicketInput).toBeVisible()
 	}
 
 	async expectScannerVisible(): Promise<void> {
+		await this.scanButton.click({ timeout: 15000 })
 		await expect(this.manualTicketInput).toBeVisible({ timeout: 15000 })
 		await expect(this.accessDeniedMessage).toBeHidden()
 	}

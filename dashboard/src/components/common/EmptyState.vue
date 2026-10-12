@@ -19,5 +19,6 @@ defineProps<{
 
 		<h2 class="text-lg-medium text-ink-gray-8">{{ title }}</h2>
 		<p v-if="description" class="text-base text-ink-gray-5">{{ description }}</p>
+		<div v-if="$slots.default" class="mt-2"><slot /></div>
 	</div>
 </template>

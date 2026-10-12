@@ -6,7 +6,7 @@ import beepSound from "@/assets/audio/beep.wav"
 import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 import { serverErrorMessage } from "@/utils/serverError"
 
-interface ValidationTicket {
+export interface ValidationTicket {
 	id: string
 	attendee_name: string
 	attendee_email: string
@@ -35,138 +35,61 @@ interface PaymentDetails {
 	currency?: string
 }
 
-interface ValidationResult {
+export interface ValidationResult {
 	message?: string
 	error?: string
 	ticket?: ValidationTicket
 	payment_details?: PaymentDetails
 }
 
-interface TicketValidationState {
-	isProcessingTicket: Ref<boolean>
-	isCheckingIn: Ref<boolean>
-	validationResult: Ref<ValidationResult | null>
-	showTicketModal: Ref<boolean>
-	validateTicket: (ticketId: string) => void
-	checkInTicket: () => void
-	clearResults: () => void
-	closeModal: () => void
-}
-
-let ticketValidationState: TicketValidationState | null = null
-
 const isProcessingTicket = ref(false)
-const isCheckingIn = ref(false)
 const validationResult = ref<ValidationResult | null>(null)
-const showTicketModal = ref(false)
 
 let lastToastMessage: string | null = null
 let lastToastTime = 0
 const TOAST_DEBOUNCE_MS = 500
 
-const playSuccessSound = (): void => {
-	const audio = new Audio(beepSound)
-	audio.play()
+const playSound = (sound: string): void => {
+	new Audio(sound).play()
 }
 
-const playErrorSound = (): void => {
-	const audio = new Audio(beepFailSound)
-	audio.play()
-}
+export const playSuccessBeep = (): void => playSound(beepSound)
 
-const showDebouncedToast = (message: string, type: "error" | "success" = "error"): void => {
+const showDebouncedToast = (message: string): void => {
 	const now = Date.now()
-	if (lastToastMessage === message && now - lastToastTime < TOAST_DEBOUNCE_MS) {
-		return
-	}
+	if (lastToastMessage === message && now - lastToastTime < TOAST_DEBOUNCE_MS) return
 	lastToastMessage = message
 	lastToastTime = now
-
-	if (type === "error") {
-		toast.error(message)
-	} else {
-		toast.success(message)
-	}
+	toast.error(message)
 }
 
-// Ticket validation resource
 const validateTicketResource = useCall<ValidationResult, { ticket_id: string }>({
 	url: "/api/v2/method/buzz.api.checkin.validate_ticket_for_checkin",
 	method: "POST",
 	immediate: false,
 	onSuccess: (data) => {
 		validationResult.value = data
-		showTicketModal.value = true
-		playSuccessSound()
 		isProcessingTicket.value = false
+		playSuccessBeep()
 	},
 	onError: (error) => {
 		validationResult.value = null
 		isProcessingTicket.value = false
 		showDebouncedToast(serverErrorMessage(error) || __("Error validating ticket"))
-		playErrorSound()
+		playSound(beepFailSound)
 	},
 })
 
-// Check-in resource
-const checkInResource = useCall<ValidationResult, { ticket_id: string }>({
-	url: "/api/v2/method/buzz.api.checkin.checkin_ticket",
-	method: "POST",
-	immediate: false,
-	onSuccess: (data) => {
-		validationResult.value = data
-		showTicketModal.value = false
-		isCheckingIn.value = false
-	},
-	onError: (error) => {
-		isCheckingIn.value = false
-		showDebouncedToast(serverErrorMessage(error) || __("Check-in failed"))
-		playErrorSound()
-	},
-})
+const validateTicket = (ticketId: string): void => {
+	isProcessingTicket.value = true
+	validateTicketResource.submit({ ticket_id: ticketId })
+}
 
-export function useTicketValidation(): TicketValidationState {
-	if (ticketValidationState) {
-		return ticketValidationState
-	}
-
-	// Methods
-	const validateTicket = (ticketId: string): void => {
-		isProcessingTicket.value = true
-		validateTicketResource.submit({ ticket_id: ticketId })
-	}
-
-	const checkInTicket = (): void => {
-		if (!validationResult.value?.ticket?.id) return
-
-		isCheckingIn.value = true
-		checkInResource.submit({ ticket_id: validationResult.value.ticket.id })
-	}
-
-	const clearResults = (): void => {
-		validationResult.value = null
-		isProcessingTicket.value = false
-		isCheckingIn.value = false
-		showTicketModal.value = false
-	}
-
-	const closeModal = (): void => {
-		showTicketModal.value = false
-	}
-
-	ticketValidationState = {
-		// State
-		isProcessingTicket,
-		isCheckingIn,
-		validationResult,
-		showTicketModal,
-
-		// Methods
-		validateTicket,
-		checkInTicket,
-		clearResults,
-		closeModal,
-	}
-
-	return ticketValidationState
+/** Scan state shared by the scanner and the page that opens the scanned guest. */
+export function useTicketValidation(): {
+	isProcessingTicket: Ref<boolean>
+	validationResult: Ref<ValidationResult | null>
+	validateTicket: (ticketId: string) => void
+} {
+	return { isProcessingTicket, validationResult, validateTicket }
 }

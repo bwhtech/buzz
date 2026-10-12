@@ -6,18 +6,20 @@ from frappe.utils import cstr, format_date, format_time, today
 
 from buzz.api.checkin.exceptions import (
 	AlreadyCheckedIn,
+	NotCheckedIn,
 	TicketCancelled,
 	TicketNotFound,
 	TicketRefunded,
 )
 from buzz.api.checkin.schemas import (
+	CheckinEvent,
 	CheckinResponse,
 	PaymentDetails,
 	TicketAddOn,
 	TicketCheckinDetails,
 )
 from buzz.api.exceptions import NotPermitted
-from buzz.permissions import has_team_access
+from buzz.permissions import CHECKIN_ROLES, can_check_in, is_unrestricted
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import get_committed_tickets
 
 if TYPE_CHECKING:
@@ -28,19 +30,45 @@ if TYPE_CHECKING:
 CANCELLED = 2
 
 
+def ensure_can_check_in(event: str) -> None:
+	team = frappe.db.get_value("Buzz Event", event, "team")
+	if not can_check_in(team, frappe.session.user):
+		NotPermitted.throw()
+
+
+def checkin_events() -> list[CheckinEvent]:
+	"""Events not yet over, on the teams the user works the front desk for."""
+	filters = {"is_published": 1, "end_date": [">=", today()]}
+	user = frappe.session.user
+	if not is_unrestricted(user):
+		teams = frappe.get_all(
+			"Buzz Team Membership",
+			filters={"user": user, "enabled": 1, "team_role": ["in", list(CHECKIN_ROLES)]},
+			pluck="team",
+		)
+		filters["team"] = ["in", teams or [""]]
+
+	rows = frappe.get_all(
+		"Buzz Event",
+		filters=filters,
+		fields=["name", "title", "start_date", "start_time", "end_date", "end_time"],
+		order_by="start_date asc",
+		ignore_permissions=True,
+	)
+	return [CheckinEvent(**{**row, "name": str(row.name)}) for row in rows]
+
+
 class CheckinService:
-	"""Front-desk check-in for a single ticket. Restricted to Frontdesk Manager."""
+	"""Front-desk check-in for a single ticket, by a team member at Frontdesk or above."""
 
 	def __init__(self, ticket_id: str):
-		frappe.only_for("Frontdesk Manager", True)
 		if not frappe.db.exists("Event Ticket", ticket_id):
 			TicketNotFound.throw()
 
 		self.ticket_id = ticket_id
 		self.date = today()
 		# Both endpoints route through here, so one team check covers them.
-		if not has_team_access(self.event.team, "read", frappe.session.user):
-			NotPermitted.throw()
+		ensure_can_check_in(self.ticket.event)
 
 	@property
 	def ticket(self) -> "EventTicket":
@@ -83,10 +111,31 @@ class CheckinService:
 		if self.ticket.booking and self.ticket_id in get_committed_tickets(self.ticket.booking):
 			TicketRefunded.throw()
 
-		existing = frappe.db.exists("Event Check In", {"ticket": self.ticket_id, "date": self.date})
+		existing = self.todays_checkin()
 		if existing:
 			creation = frappe.db.get_value("Event Check In", existing, "creation")
 			AlreadyCheckedIn.throw(checked_in_at=f"{format_date(creation)} at {format_time(creation)}")
+
+	def undo_checkin(self) -> CheckinResponse:
+		existing = self.todays_checkin()
+		if not existing:
+			NotCheckedIn.throw()
+
+		# Cancelled rather than deleted, so the record of the mistaken check-in stays.
+		checkin_doc = frappe.get_doc("Event Check In", existing)
+		checkin_doc.flags.ignore_permissions = True
+		checkin_doc.cancel()
+		return CheckinResponse(
+			message=_("Undid the check-in for {attendee_name}").format(
+				attendee_name=self.ticket.attendee_name
+			),
+			ticket=self.ticket_details(),
+		)
+
+	def todays_checkin(self) -> str | None:
+		return frappe.db.exists(
+			"Event Check In", {"ticket": self.ticket_id, "date": self.date, "docstatus": 1}
+		)
 
 	def record_checkin(self) -> "EventCheckIn":
 		checkin_doc = frappe.new_doc("Event Check In")

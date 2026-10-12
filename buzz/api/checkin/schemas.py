@@ -40,3 +40,12 @@ class CheckinResponse(APIResponse):
 	message: str
 	ticket: TicketCheckinDetails
 	payment_details: PaymentDetails | None = None
+
+
+class CheckinEvent(APIResponse):
+	name: str
+	title: str
+	start_date: date | None
+	start_time: timedelta | None
+	end_date: date | None
+	end_time: timedelta | None

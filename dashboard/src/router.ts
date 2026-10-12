@@ -158,8 +158,8 @@ const routes: RouteRecordRaw[] = [
 		path: "/check-in/:eventName?",
 		name: "check-in",
 		props: true,
-		meta: { title: "Check In" },
-		component: () => import("@/pages/CheckInScanner.vue"),
+		meta: { title: "Check In", siteHeader: true },
+		component: () => import("@/pages/CheckIn.vue"),
 	},
 	{
 		path: "/register/:eventRoute",
