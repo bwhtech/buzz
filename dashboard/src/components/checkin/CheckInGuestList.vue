@@ -149,7 +149,7 @@ watch(guestOpen, (open) => {
 </script>
 
 <template>
-	<div class="mx-auto w-full max-w-3xl space-y-5 px-4 pb-24 pt-6">
+	<div class="space-y-5 pb-24">
 		<EmptyState
 			v-if="page.error"
 			title="Access denied"
@@ -158,15 +158,28 @@ watch(guestOpen, (open) => {
 		/>
 
 		<template v-else>
+			<!-- The event is what the desk has to be sure of, so it carries the display type. -->
 			<header class="flex items-end justify-between gap-4">
-				<div class="min-w-0 space-y-1.5">
-					<h1 class="font-display text-5xl uppercase leading-[0.95] text-ink-gray-9">Check-in</h1>
-					<p class="truncate text-base font-semibold text-ink-gray-9">{{ page.data?.title }}</p>
+				<div class="min-w-0 space-y-2">
+					<p class="text-sm font-medium uppercase tracking-wider text-ink-gray-5">Check-in</p>
+					<h1
+						v-if="page.data"
+						class="line-clamp-2 font-display text-[2.75rem] uppercase leading-[0.95] text-ink-gray-9 md:text-[3.5rem]"
+					>
+						{{ page.data.title }}
+					</h1>
+					<div v-else class="h-12 w-64 max-w-full animate-pulse rounded-4 bg-surface-gray-2" />
 					<p class="truncate text-base text-ink-gray-5">
 						{{ [startsAt, page.data?.venue].filter(Boolean).join(" · ") }}
 					</p>
 				</div>
-				<Button size="md" icon-left="lucide-scan-line" label="Scan" @click="scanning = true" />
+				<Button
+					size="lg"
+					icon-left="lucide-scan-line"
+					label="Scan"
+					class="shrink-0 transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
+					@click="scanning = true"
+				/>
 			</header>
 
 			<TextInput
@@ -181,8 +194,7 @@ watch(guestOpen, (open) => {
 				</template>
 			</TextInput>
 
-			<!-- w-full so the underline rail runs the whole column, not just under the tabs. -->
-			<TabButtons v-model="tab" variant="underline" class="w-full" :options="tabs">
+			<TabButtons v-model="tab" :options="tabs">
 				<template #suffix="{ button }">
 					<span class="tabular-nums text-ink-gray-5">{{ countOf(button.value) }}</span>
 				</template>

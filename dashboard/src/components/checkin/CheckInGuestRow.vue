@@ -24,7 +24,7 @@ const detail = computed(() =>
 <template>
 	<li
 		class="flex items-center gap-3 rounded-[14px] py-2.5 pl-3.5 pr-2.5 transition-colors duration-200 ease-out motion-reduce:transition-none"
-		:class="checkedInAt ? 'bg-surface-green-1' : 'bg-surface-gray-1'"
+		:class="checkedInAt ? 'bg-surface-green-2' : 'bg-surface-gray-1'"
 	>
 		<button
 			type="button"
@@ -33,30 +33,45 @@ const detail = computed(() =>
 			@click="emit('open')"
 		>
 			<span class="truncate text-base font-semibold text-ink-gray-9">{{ name }}</span>
-			<span v-if="checkedInAt" class="truncate text-sm text-ink-green-6">
-				Checked in at {{ checkedInAt }}
-			</span>
-			<span v-else class="truncate text-sm text-ink-gray-5">{{ detail }}</span>
+			<Transition
+				mode="out-in"
+				enter-from-class="opacity-0"
+				enter-active-class="transition-opacity duration-200 ease-out"
+			>
+				<span v-if="checkedInAt" key="checked-in" class="truncate text-sm text-ink-green-7">
+					Checked in at {{ checkedInAt }}
+				</span>
+				<span v-else key="detail" class="truncate text-sm text-ink-gray-5">{{ detail }}</span>
+			</Transition>
 		</button>
 
-		<Button
-			v-if="checkedInAt"
-			variant="ghost"
-			icon="lucide-check"
-			class="min-w-[6.5rem] text-ink-green-6"
-			:aria-label="`${name} is checked in`"
-			disabled
-		/>
-		<Button
-			v-else
-			variant="solid"
-			theme="green"
-			size="md"
-			label="Check in"
-			class="min-w-[6.5rem] transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
-			:aria-label="`Check in ${name}`"
-			:loading="busy"
-			@click="emit('checkIn')"
-		/>
+		<!-- Only the arrival of the check mark animates; the button it replaces leaves at once. -->
+		<Transition
+			mode="out-in"
+			enter-from-class="opacity-0 scale-90 motion-reduce:scale-100"
+			enter-active-class="transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
+		>
+			<span
+				v-if="checkedInAt"
+				key="checked-in"
+				role="img"
+				class="grid min-w-[6.5rem] place-items-center text-ink-green-7"
+				:aria-label="`${name} is checked in`"
+			>
+				<span class="lucide-check size-5" aria-hidden="true" />
+			</span>
+			<Button
+				v-else
+				key="check-in"
+				variant="solid"
+				theme="green"
+				size="md"
+				label="Check in"
+				class="min-w-[6.5rem] transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
+				:aria-label="`Check in ${name}`"
+				:loading="busy"
+				@click="emit('checkIn')"
+			/>
+		</Transition>
 	</li>
 </template>

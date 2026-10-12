@@ -11,9 +11,8 @@ const router = useRouter()
 
 <template>
 	<CheckInGuestList v-if="eventName" :key="eventName" :event="eventName" />
-	<div v-else class="mx-auto w-full max-w-3xl p-4">
-		<EventSelector
-			@select="(event) => router.push({ name: 'check-in', params: { eventName: event.name } })"
-		/>
-	</div>
+	<EventSelector
+		v-else
+		@select="(event) => router.push({ name: 'check-in', params: { eventName: event.name } })"
+	/>
 </template>
