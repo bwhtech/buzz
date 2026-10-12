@@ -1337,6 +1337,17 @@ summary:focus-visible {
 		border-radius: 0;
 	}
 
+	/* On the event page the frame bleeds instead, so its placeholder colour reaches the edges too. */
+	.event-banner-frame {
+		margin-inline: -16px;
+		border-radius: 0;
+	}
+
+	.event-banner-frame .event-banner {
+		width: 100%;
+		margin-inline: 0;
+	}
+
 	.event-meta {
 		display: flex;
 	}
