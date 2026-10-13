@@ -95,6 +95,7 @@ for _doctype in taggable_doctypes:
 fixtures = [
 	{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Event Manager", "Frontdesk Manager"]]}},
 	{"dt": "Buzz Theme", "filters": {"is_standard": 1}},
+	{"dt": "Event Topic", "filters": {"is_standard": 1}},
 ]
 
 user_invitation = {

@@ -1,0 +1,138 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:07.984436",
+  "name": "Art & Culture"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.183877",
+  "name": "Books"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.186184",
+  "name": "Community"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.187118",
+  "name": "Crypto"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.188165",
+  "name": "Design"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.189148",
+  "name": "Education"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.189833",
+  "name": "Film"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.190531",
+  "name": "Food & Drinks"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.191587",
+  "name": "Gaming"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.192595",
+  "name": "Health & Wellness"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.193701",
+  "name": "Music"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.194702",
+  "name": "Photography"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.195599",
+  "name": "Science"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.196537",
+  "name": "Sports & Fitness"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.197455",
+  "name": "Startups"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.198305",
+  "name": "Tech"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Event Topic",
+  "enabled": 1,
+  "is_standard": 1,
+  "modified": "2026-10-13 20:32:08.199047",
+  "name": "Travel"
+ }
+]
