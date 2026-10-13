@@ -169,6 +169,7 @@ def event_detail(event: str) -> EventDetail:
 			"primary_host": primary_host_of(row.team),
 			"co_hosts": co_hosts_of(event),
 			"external_links": external_links_of(event),
+			"topics": topics_of(event),
 			"countdown": event_countdown(row),
 		}
 	)
@@ -208,6 +209,15 @@ def external_links_of(event: str) -> list[EventExternalLink]:
 		order_by="idx",
 	)
 	return [EventExternalLink(**row) for row in rows]
+
+
+def topics_of(event: str) -> list[str]:
+	return frappe.get_all(
+		"Event Topic Link",
+		filters={"parenttype": "Buzz Event", "parent": str(event), "parentfield": "topics"},
+		pluck="topic",
+		order_by="idx",
+	)
 
 
 def create_co_host(

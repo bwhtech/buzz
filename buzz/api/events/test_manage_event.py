@@ -16,6 +16,7 @@ from buzz.tests.factories import (
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
 	EventCategoryFactory,
+	EventTopicFactory,
 	EventVenueFactory,
 	UserFactory,
 )
@@ -112,6 +113,14 @@ class TestGetEvent(IntegrationTestCase):
 		self.assertEqual(detail["meeting_link"], "https://example.com/join")
 		self.assertIsNone(detail["venue"])
 		self.assertTrue(detail["modified"])
+
+	def test_returns_topics_in_the_order_they_were_saved(self):
+		topics = [EventTopicFactory.create().name for _ in range(2)]
+		event = self.create_team_event(topics=[{"topic": topic} for topic in reversed(topics)])
+
+		detail = self.detail_as(self.owner, event)
+
+		self.assertEqual(detail["topics"], list(reversed(topics)))
 
 	def test_resolves_the_venue_with_its_address(self):
 		venue = EventVenueFactory.create(team=self.team, address="12 Example Street").name

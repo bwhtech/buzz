@@ -89,6 +89,7 @@ class EventDetail(APIResponse):
 	primary_host: EventHostRef | None = None
 	co_hosts: list[EventHostRef] = Field(default_factory=list)
 	external_links: list[EventExternalLink] = Field(default_factory=list)
+	topics: list[str] = Field(default_factory=list)
 
 
 class GuestAddOn(APIResponse):
