@@ -7,6 +7,7 @@ import frappe
 import requests
 from frappe.tests import IntegrationTestCase, UnitTestCase
 
+from buzz.events.doctype.event_venue.event_venue import MULTIPLE_LOCATIONS_FLAG
 from buzz.events.doctype.event_venue.map_link import (
 	SHORT_LINK_DIGITS,
 	coordinates_of,
@@ -112,6 +113,16 @@ class IntegrationTestGroupVenue(IntegrationTestCase):
 		group.save()
 
 		self.assertEqual(group.locations, [])
+
+	def test_team_without_the_flag_cannot_add_a_group_but_keeps_its_own(self):
+		group = self.group(self.hall, self.brewpub).insert()
+		# The team is shared by the class, and rollback is per class.
+		self.addCleanup(BuzzTeamFactory.set_settings, self.team, {MULTIPLE_LOCATIONS_FLAG: 1})
+		BuzzTeamFactory.set_settings(self.team, {MULTIPLE_LOCATIONS_FLAG: 0})
+
+		self.assertRaises(frappe.ValidationError, self.group(self.hall, self.brewpub).insert)
+		group.locations[0].label = "Main stage"
+		group.save()
 
 
 GOOGLE_PLACE_LINK = (
