@@ -24,3 +24,10 @@ def add_place_as_venue(team: str, place_id: str, name: str, session_token: str) 
 def locate_map_link(link: str) -> MapLinkLocation:
 	"""Where a pasted Google Maps or OpenStreetMap link points, for the add-venue preview."""
 	return services.locate_map_link(link)
+
+
+@frappe.whitelist()
+@rate_limit(limit=30, seconds=60)
+def locate_address(address: str) -> MapLinkLocation:
+	"""Where OpenStreetMap puts an address, for previewing a Google Maps place on the map."""
+	return services.locate_address(address)
