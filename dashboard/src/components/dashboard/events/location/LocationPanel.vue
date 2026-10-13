@@ -10,13 +10,13 @@ import LocationResults from "@/components/dashboard/events/location/LocationResu
 import ManualVenueForm from "@/components/dashboard/events/location/ManualVenueForm.vue"
 import type { LocationPicker } from "@/components/dashboard/events/location/useLocationPicker"
 import type { LocationSelection } from "@/components/dashboard/events/location/useLocationSelection"
-import { isFeatureEnabled } from "@/data/teams"
 
 const props = defineProps<{
 	picker: LocationPicker
 	selection: LocationSelection
 	title: string
 	canPickZoom: boolean
+	canPickMultiple: boolean
 	showHeader?: boolean
 }>()
 const emit = defineEmits<{ picked: [venue: string]; zoom: [] }>()
@@ -27,9 +27,7 @@ const MODES = [
 ]
 
 // A venue that already has several locations keeps the switch when the flag is off.
-const canPickMultiple = computed(
-	() => isFeatureEnabled("feature_multiple_locations") || props.selection.selected.length > 0,
-)
+const showModes = computed(() => props.canPickMultiple || props.selection.selected.length > 0)
 const isAddingManually = ref(false)
 const mode = computed({
 	get: () => (props.selection.isMultiple ? "multiple" : "single"),
@@ -65,7 +63,7 @@ function savedManually(venue: string) {
 		/>
 		<template v-else>
 			<div class="flex flex-col gap-2 px-3 pb-1">
-				<TabButtons v-if="canPickMultiple" v-model="mode" :options="MODES" fluid />
+				<TabButtons v-if="showModes" v-model="mode" :options="MODES" fluid />
 				<TextInput
 					v-model="picker.query"
 					placeholder="Search a venue or a place"

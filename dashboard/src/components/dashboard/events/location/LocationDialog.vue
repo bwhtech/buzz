@@ -12,6 +12,7 @@ import LocationsMap from "@/components/dashboard/events/location/LocationsMap.vu
 import { useLocationPicker } from "@/components/dashboard/events/location/useLocationPicker"
 import { useLocationSelection } from "@/components/dashboard/events/location/useLocationSelection"
 import { useIsMobile } from "@/composables/useIsMobile"
+import { isFeatureEnabled } from "@/data/teams"
 import { useVenueLocations, venues } from "@/data/venues"
 
 // Pages that book Zoom another way leave the Zoom option out; a site without Zoom never shows it.
@@ -27,6 +28,8 @@ const picker = useLocationPicker(() => props.team, isOpen)
 const selection = useLocationSelection(picker)
 const groupLocations = useVenueLocations(() => props.venue)
 const canPickZoom = computed(() => props.showZoom && Boolean(window.zoom_available))
+// An event page does not switch the current team, so the flag is read for the event's team.
+const canPickMultiple = computed(() => isFeatureEnabled("feature_multiple_locations", props.team))
 const hasChosen = computed(() => selection.isMultiple && selection.chosen.length > 0)
 const useLabel = computed(() => {
 	if (!selection.isMultiple) return "Use this location"
@@ -92,6 +95,7 @@ const mapProps = computed(() => ({
 				:selection="selection"
 				:title="title"
 				:can-pick-zoom="canPickZoom"
+				:can-pick-multiple="canPickMultiple"
 				show-header
 				@picked="pick"
 				@zoom="pickZoom"
@@ -208,6 +212,7 @@ const mapProps = computed(() => ({
 						:selection="selection"
 						:title="title"
 						:can-pick-zoom="canPickZoom"
+						:can-pick-multiple="canPickMultiple"
 						@picked="pick"
 						@zoom="pickZoom"
 					/>
