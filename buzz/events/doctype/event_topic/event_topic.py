@@ -14,5 +14,6 @@ class EventTopic(Document):
 		from frappe.types import DF
 
 		enabled: DF.Check
+		icon_svg: DF.Code | None
 		is_standard: DF.Check
 	# end: auto-generated types

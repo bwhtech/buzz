@@ -9,7 +9,8 @@
  "engine": "InnoDB",
  "field_order": [
   "enabled",
-  "is_standard"
+  "is_standard",
+  "icon_svg"
  ],
  "fields": [
   {
@@ -25,12 +26,19 @@
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Is Standard"
+  },
+  {
+   "description": "Shown on the /events page. Use a single-colour SVG; its shape is drawn in the text colour.",
+   "fieldname": "icon_svg",
+   "fieldtype": "Code",
+   "label": "Icon SVG",
+   "options": "HTML"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-13 21:00:00.000000",
+ "modified": "2026-10-13 21:30:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Topic",
