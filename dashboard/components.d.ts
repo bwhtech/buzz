@@ -82,6 +82,7 @@ declare module 'vue' {
     EventTalkActions: typeof import('./src/components/dashboard/proposals/EventTalkActions.vue')['default']
     EventTalkProposalDrawer: typeof import('./src/components/dashboard/proposals/EventTalkProposalDrawer.vue')['default']
     EventThemeSetting: typeof import('./src/components/dashboard/events/EventThemeSetting.vue')['default']
+    EventTopics: typeof import('./src/components/dashboard/events/EventTopics.vue')['default']
     ExistingEventForm: typeof import('./src/components/dashboard/teams/ExistingEventForm.vue')['default']
     ExternalEventForm: typeof import('./src/components/dashboard/teams/ExternalEventForm.vue')['default']
     FilterChip: typeof import('./src/components/common/filters/FilterChip.vue')['default']

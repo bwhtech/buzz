@@ -16,6 +16,7 @@ import EventMedium from "@/components/dashboard/events/EventMedium.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventRoute from "@/components/dashboard/events/EventRoute.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
+import EventTopics from "@/components/dashboard/events/EventTopics.vue"
 import { useFormDraft } from "@/composables/useFormDraft"
 import { eventDetail, setBanner, updateEvent } from "@/data/events"
 import { session } from "@/data/session"
@@ -73,6 +74,7 @@ function blank() {
 		venue: "",
 		meeting_link: "",
 		external_links: [] as EventExternalLink[],
+		topics: [] as string[],
 	}
 }
 
@@ -93,6 +95,7 @@ function fill(detail: EventDetail) {
 		venue: detail.venue?.name ?? "",
 		meeting_link: detail.meeting_link ?? "",
 		external_links: detail.external_links.map((link) => ({ ...link })),
+		topics: [...detail.topics],
 	})
 	// The editor rewrites its own HTML once it mounts, so the baseline is taken after
 	// that settles — otherwise the page loads already dirty.
@@ -188,7 +191,9 @@ async function save() {
 	)
 	const submitted = { ...form }
 
-	await updateEvent.submit({ name: eventId, ...fields }).catch(() => null)
+	await updateEvent
+		.submit({ name: eventId, ...fields, topics: form.topics.map((topic) => ({ topic })) })
+		.catch(() => null)
 	if (updateEvent.error) return
 
 	// What the server now holds, not what the form holds — an edit made while the save
@@ -323,6 +328,8 @@ async function save() {
 						v-model:end-time="form.end_time"
 						v-model:time-zone="form.time_zone"
 					/>
+
+					<EventTopics v-model="form.topics" class="p-4 md:rounded-6" />
 
 					<section class="space-y-3 p-4 md:rounded-6">
 						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>

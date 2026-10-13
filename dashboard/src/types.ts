@@ -370,6 +370,7 @@ export interface EventDetail {
 	primary_host: EventHostRef | null
 	co_hosts: EventHostRef[]
 	external_links: EventExternalLink[]
+	topics: string[]
 }
 
 // A ticket the user holds, flattened with the context its event carries.
