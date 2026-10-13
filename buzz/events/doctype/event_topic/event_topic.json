@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_bulk_edit": 1,
+ "allow_guest_to_view": 1,
  "allow_rename": 0,
  "autoname": "prompt",
  "creation": "2026-10-13 20:30:55.243662",
@@ -10,7 +11,11 @@
  "field_order": [
   "enabled",
   "is_standard",
-  "icon_svg"
+  "icon_svg",
+  "public_page_tab",
+  "is_published",
+  "route",
+  "short_description"
  ],
  "fields": [
   {
@@ -33,12 +38,39 @@
    "fieldtype": "Code",
    "label": "Icon SVG",
    "options": "HTML"
+  },
+  {
+   "fieldname": "public_page_tab",
+   "fieldtype": "Tab Break",
+   "label": "Public Page"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_published",
+   "fieldtype": "Check",
+   "label": "Published"
+  },
+  {
+   "description": "Where the public page lives, at the site root. Filled from the name on first publish.",
+   "fieldname": "route",
+   "fieldtype": "Data",
+   "label": "Route",
+   "no_copy": 1,
+   "unique": 1
+  },
+  {
+   "description": "Shown under the topic name on its public page.",
+   "fieldname": "short_description",
+   "fieldtype": "Small Text",
+   "label": "Short Description"
   }
  ],
  "grid_page_length": 50,
+ "has_web_view": 1,
  "index_web_pages_for_search": 1,
+ "is_published_field": "is_published",
  "links": [],
- "modified": "2026-10-13 21:30:00.000000",
+ "modified": "2026-10-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Topic",

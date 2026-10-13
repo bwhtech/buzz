@@ -89,11 +89,29 @@ def enabled_categories() -> list:
 
 
 def enabled_topics() -> list:
-	return frappe.get_all("Event Topic", filters={"enabled": 1}, fields=["name", "icon_svg"], order_by="name")
+	return frappe.get_all(
+		"Event Topic",
+		filters={"enabled": 1},
+		fields=["name", "icon_svg", "route", "is_published"],
+		order_by="name",
+	)
 
 
 def topic_url(topic: str) -> str:
 	return f"/events?topic={quote(topic)}"
+
+
+def events_with_topic(topic: str) -> list[str]:
+	return frappe.get_all(
+		"Event Topic Link",
+		filters={"parenttype": "Buzz Event", "parentfield": "topics", "topic": topic},
+		pluck="parent",
+	)
+
+
+def topic_page_url(topic) -> str:
+	"""A published topic has its own page; the rest filter the events listing."""
+	return f"/{topic.route}" if topic.is_published else topic_url(topic.name)
 
 
 def category_url(slug: str) -> str:
@@ -167,7 +185,7 @@ class DiscoverPage:
 		return [
 			{
 				"name": topic.name,
-				"url": topic_url(topic.name),
+				"url": topic_page_url(topic),
 				"icon_url": icon_url(topic.icon_svg),
 				"event_count": counts.get(topic.name, 0),
 			}
@@ -246,12 +264,7 @@ class TopicListing(EventListing):
 		return topic_url(self.listing.name)
 
 	def event_filters(self) -> dict:
-		events = frappe.get_all(
-			"Event Topic Link",
-			filters={"parenttype": "Buzz Event", "parentfield": "topics", "topic": self.listing.name},
-			pluck="parent",
-		)
-		return {"name": ["in", events or [""]]}
+		return {"name": ["in", events_with_topic(self.listing.name) or [""]]}
 
 	def tabs(self) -> list[dict]:
 		return [
