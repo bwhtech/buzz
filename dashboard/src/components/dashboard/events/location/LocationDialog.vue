@@ -102,8 +102,9 @@ function pickZoom() {
 <template>
 	<Dialog v-model="isOpen" size="3xl" :title="isAddingManually ? 'Add venue manually' : title">
 		<!-- Dialog's `size` only caps the width. This height is the one the results scroll
-		 inside, and the manual form shares it, so switching does not resize the dialog. -->
-		<div class="grid gap-4 md:h-96 md:grid-cols-2">
+		 inside, and the manual form shares it, so switching does not resize the dialog.
+		 `grid-cols-1` is minmax(0, 1fr): an implicit column widens to the longest address. -->
+		<div class="grid grid-cols-1 gap-4 md:h-96 md:grid-cols-2">
 			<Transition
 				mode="out-in"
 				enter-active-class="transition-opacity duration-150 ease-out"
