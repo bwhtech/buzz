@@ -22,7 +22,7 @@ from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import datetime_in_time_zone, format_gmt_offset, get_time_zone_label
 from buzz.www.event.date_range import RANGE_SEPARATOR, EventDateRange, format_time
-from buzz.www.event.dot_map import pin_position
+from buzz.www.event.dot_map import DotMap
 from buzz.www.event.link_icons import LINK_ICON_PATHS
 from buzz.www.event.meta import EventMeta, event_time_zone
 from buzz.www.event.venue_map import venue_map_url
@@ -288,22 +288,42 @@ class EventPage:
 		details = self.event.medium != "Online" and venue_details(self.event.venue)
 		if not details:
 			return None
-		return {
+		venue = {
 			"name": details.venue_name,
 			"address": details.address,
 			"link": details.map_link,
-			"map_url": None if details.has_multiple_locations else self.venue_map_url(),
-			"locations": [located(location) for location in details.locations]
-			if details.has_multiple_locations
-			else [],
+			"map_url": None,
+			"locations": [],
+			"dot_map": None,
 		}
+		if not details.has_multiple_locations:
+			return venue | {"map_url": self.venue_map_url()}
+		return venue | LocationsMap(details.locations).as_context()
 
 	def venue_map_url(self) -> str | None:
 		return venue_map_url(frappe.get_cached_doc("Event Venue", self.event.venue))
 
 
-def located(location: VenueLocation) -> dict:
-	"""A location with its pin on the dot map, when its coordinates are known."""
-	has_coordinates = location.latitude and location.longitude
-	pin = pin_position(location.latitude, location.longitude) if has_coordinates else None
-	return {**location.__json__(), "pin": pin}
+class LocationsMap:
+	"""A grouped venue's locations, each with its pin on a dot map framed around them."""
+
+	def __init__(self, locations: list[VenueLocation]):
+		self.locations = locations
+		self.pinned = [location for location in locations if location.latitude and location.longitude]
+		coordinates = [(location.latitude, location.longitude) for location in self.pinned]
+		self.dot_map = DotMap(coordinates) if coordinates else None
+
+	def as_context(self) -> dict:
+		return {
+			"locations": [self.located(location) for location in self.locations],
+			"dot_map": self.dot_map
+			and {
+				"view_box": str(self.dot_map.view),
+				"dots_url": self.dot_map.dots_url,
+				"dot_width": self.dot_map.dot_width,
+			},
+		}
+
+	def located(self, location: VenueLocation) -> dict:
+		pin = self.dot_map.pin(location.latitude, location.longitude) if location in self.pinned else None
+		return {**location.__json__(), "pin": pin}
