@@ -34,6 +34,11 @@
 	stroke-linecap: round;
 }
 
+:root[data-mode="light"] .dot-map-land {
+	color: #404040;
+	opacity: 0.6;
+}
+
 .dot-map-pin,
 .location-number {
 	display: grid;
