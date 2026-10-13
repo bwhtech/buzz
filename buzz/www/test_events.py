@@ -7,12 +7,20 @@ from buzz.tests.factories import (
 	BuzzTeamFactory,
 	EventCategoryFactory,
 	EventTicketFactory,
+	EventTopicFactory,
 	UserFactory,
 )
-from buzz.www.events import DiscoverPage, EventListing, event_card, hosting_banner_visible, icon_url
+from buzz.www.events import (
+	CategoryListing,
+	DiscoverPage,
+	TopicListing,
+	event_card,
+	hosting_banner_visible,
+	icon_url,
+)
 
 
-class TestEventListing(IntegrationTestCase):
+class TestCategoryListing(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -20,11 +28,13 @@ class TestEventListing(IntegrationTestCase):
 		cls.team = BuzzTeamFactory.create_owned_by(cls.owner).name
 		cls.slug = f"listing-{frappe.generate_hash(length=8)}"
 		category = EventCategoryFactory.create(slug=cls.slug).name
-		cls.listed = cls.create_event_route(category=category)
+		cls.topic = EventTopicFactory.create().name
+		cls.listed = cls.create_event_route(category=category, topics=[{"topic": cls.topic}])
 		cls.unlisted = cls.create_event_route("unpublished")
 		cls.past = cls.create_event_route(start_date=add_days(today(), -10), end_date=add_days(today(), -9))
 		cls.ended_today = cls.create_event_route(
 			category=category,
+			topics=[{"topic": cls.topic}],
 			start_date=today(),
 			end_date=today(),
 			start_time="00:00:00",
@@ -72,9 +82,9 @@ class TestEventListing(IntegrationTestCase):
 		writable = frappe.get_meta("Buzz Event").get_permlevel_access("write", user=self.owner)
 		self.assertNotIn(1, writable)
 
-	def test_category_counts_only_published_upcoming_events(self):
-		categories = {category["slug"]: category for category in DiscoverPage().categories()}
-		self.assertEqual(categories[self.slug]["event_count"], 1)
+	def test_topic_counts_only_published_upcoming_events(self):
+		topics = {topic["name"]: topic for topic in DiscoverPage().topics()}
+		self.assertEqual(topics[self.topic]["event_count"], 1)
 
 	def test_icon_url_is_never_markup(self):
 		url = icon_url("<svg><script>alert(1)</script></svg>")
@@ -83,16 +93,24 @@ class TestEventListing(IntegrationTestCase):
 		self.assertEqual(icon_url(None), "")
 
 	def test_category_filter(self):
-		routes = {card["url"] for card in EventListing(self.slug).as_context()["events"]}
+		routes = {card["url"] for card in CategoryListing(self.slug).as_context()["events"]}
 		self.assertEqual(routes, {f"/events/{self.listed}"})
 
 	def test_category_page_points_at_itself(self):
-		url = EventListing(self.slug).as_context()["meta"]["url"]
+		url = CategoryListing(self.slug).as_context()["meta"]["url"]
 		self.assertTrue(url.endswith(f"/events?category={self.slug}"))
 
 	def test_unknown_category_is_not_found(self):
 		with self.assertRaises(frappe.PageDoesNotExistError):
-			EventListing("no-such-category")
+			CategoryListing("no-such-category")
+
+	def test_topic_filter(self):
+		routes = {card["url"] for card in TopicListing(self.topic).as_context()["events"]}
+		self.assertEqual(routes, {f"/events/{self.listed}"})
+
+	def test_unknown_topic_is_not_found(self):
+		with self.assertRaises(frappe.PageDoesNotExistError):
+			TopicListing("no-such-topic")
 
 	def test_hosting_banner_only_for_guests_with_setting_on(self):
 		with self.change_settings("Buzz Settings", show_hosting_banner=1):
