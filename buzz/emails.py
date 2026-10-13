@@ -3,6 +3,7 @@ from urllib.parse import urlencode, urlparse
 import frappe
 from frappe.utils import get_url
 
+from buzz.events.doctype.event_venue.details import venue_details
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import build_event_datetimes, get_time_zone_label
 
@@ -18,29 +19,10 @@ def email_event_header(event) -> dict:
 		title=event.title,
 		start_time=f"{start.strftime('%-I:%M %p')} {label}".strip(),
 		venue=event.get_venue_name() or OnlineMeeting(event).label,
-		venue_map_url=venue_map_url(event.venue),
+		venue_map_url=(details := venue_details(event.venue)) and details.map_link,
 		url=get_url(f"/events/{event.route}") if event.is_published and event.route else None,
 		banner_url=get_url(event.banner_image) if event.banner_image else None,
 	)
-
-
-def venue_map_url(venue: str | None) -> str | None:
-	venue = venue and frappe.db.get_value(
-		"Event Venue",
-		venue,
-		["venue_name", "address", "latitude", "longitude", "google_place_id", "map_link"],
-		as_dict=True,
-	)
-	if not venue:
-		return None
-	# The organiser's own link wins. Pasted embed code is markup, not somewhere to go.
-	if urlparse(venue.map_link or "").scheme in ("http", "https"):
-		return venue.map_link
-	if venue.google_place_id:
-		place = {"api": 1, "query": venue.venue_name, "query_place_id": venue.google_place_id}
-		return f"https://www.google.com/maps/search/?{urlencode(place)}"
-	query = f"{venue.latitude},{venue.longitude}" if venue.latitude and venue.longitude else venue.address
-	return f"https://www.google.com/maps/search/?{urlencode({'api': 1, 'query': query})}" if query else None
 
 
 def email_brand() -> dict:

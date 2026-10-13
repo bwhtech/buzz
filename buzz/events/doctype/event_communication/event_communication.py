@@ -11,7 +11,7 @@ from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_
 
 class EventCommunication(Document):
 	def validate(self):
-		self.recipients = recipients_of(self.event, self.audience, self.ticket_types, self.statuses)
+		self.recipients = recipients_of(self.event, self.audience, self.filters)
 		self.recipient_count = len(self.recipients)
 		if not self.recipient_count:
 			NoRecipients.throw()

@@ -4,8 +4,18 @@ import LocationRowSkeleton from "@/components/dashboard/events/location/Location
 import type { LocationPicker } from "@/components/dashboard/events/location/useLocationPicker"
 import type { PlacePrediction, Venue } from "@/data/venues"
 
-defineProps<{ picker: LocationPicker; activeKey?: string }>()
-defineEmits<{ venue: [venue: Venue]; place: [place: PlacePrediction]; manual: [] }>()
+// `selected` is set when several places are being picked: rows then check on and off.
+const props = defineProps<{ picker: LocationPicker; activeKey?: string; selected?: string[] }>()
+defineEmits<{
+	venue: [venue: Venue]
+	place: [place: PlacePrediction]
+	manual: []
+	hover: [venue: string | null]
+}>()
+
+function numberOf(venue: string) {
+	return (props.selected?.indexOf(venue) ?? -1) + 1 || undefined
+}
 </script>
 
 <template>
@@ -20,7 +30,11 @@ defineEmits<{ venue: [venue: Venue]; place: [place: PlacePrediction]; manual: []
 				:title="venue.venue_name"
 				:subtitle="venue.address"
 				:active="activeKey === venue.name"
+				:checked="selected ? selected.includes(venue.name) : undefined"
+				:number="numberOf(venue.name)"
 				@click="$emit('venue', venue)"
+				@pointerenter="$emit('hover', venue.name)"
+				@pointerleave="$emit('hover', null)"
 			/>
 		</section>
 		<!-- Earlier results stay up while the next search runs; the skeleton is only for a first one. -->
@@ -34,6 +48,7 @@ defineEmits<{ venue: [venue: Venue]; place: [place: PlacePrediction]; manual: []
 				:title="place.name"
 				:subtitle="place.address"
 				:active="activeKey === place.place_id"
+				:checked="selected ? false : undefined"
 				@click="$emit('place', place)"
 			/>
 		</section>

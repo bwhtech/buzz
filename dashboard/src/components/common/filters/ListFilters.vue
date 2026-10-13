@@ -17,12 +17,13 @@ import FilterChip from "./FilterChip.vue"
 // Two lists on one page would both open on F, so all but one disable the shortcut.
 const props = defineProps<{
 	fields: FilterField[]
-	searchPlaceholder: string
+	searchPlaceholder?: string
 	disableShortcut?: boolean
 }>()
 const conditions = defineModel<Condition[]>({ required: true })
-const search = defineModel<string>("search", { required: true })
-const order = defineModel<ListOrder>("order", { required: true })
+// Unbound, the search box and sort select are left out: the default slot takes their place.
+const search = defineModel<string>("search")
+const order = defineModel<ListOrder>("order")
 
 const ORDER_OPTIONS = [
 	{ value: "desc", label: "Newest first" },
@@ -104,8 +105,10 @@ onKeyStroke("f", (event) => {
 
 <template>
 	<div class="space-y-2">
-		<div class="flex flex-wrap items-center gap-2">
+		<div class="flex flex-wrap items-end gap-2">
+			<slot />
 			<FormControl
+				v-if="search !== undefined"
 				v-model="search"
 				class="min-w-48 flex-1"
 				size="sm"
@@ -118,6 +121,7 @@ onKeyStroke("f", (event) => {
 				</template>
 			</FormControl>
 			<Select
+				v-if="order !== undefined"
 				size="sm"
 				aria-label="Sort by"
 				:options="ORDER_OPTIONS"

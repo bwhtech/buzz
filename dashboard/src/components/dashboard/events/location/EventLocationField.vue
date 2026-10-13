@@ -68,6 +68,7 @@ function clear() {
 		<LocationDialog
 			v-model="isOpen"
 			:team="team"
+			:venue="venue"
 			:show-zoom="showZoom"
 			@picked="pickVenue"
 			@zoom="pickZoom"

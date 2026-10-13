@@ -9,8 +9,7 @@
   "event",
   "audience",
   "column_break_recipients",
-  "ticket_types",
-  "statuses",
+  "filters",
   "recipient_count",
   "message_section",
   "subject",
@@ -34,7 +33,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Audience",
-   "options": "Guests\nSpeakers",
+   "options": "Guests\nSpeakers\nSponsors",
    "reqd": 1
   },
   {
@@ -42,18 +41,11 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:doc.audience == 'Guests'",
-   "description": "Comma-separated Event Ticket Type names. Empty means every guest.",
-   "fieldname": "ticket_types",
-   "fieldtype": "Small Text",
-   "label": "Ticket Types"
-  },
-  {
-   "depends_on": "eval:doc.audience == 'Speakers'",
-   "description": "Comma-separated proposal statuses. Empty means every speaker.",
-   "fieldname": "statuses",
-   "fieldtype": "Small Text",
-   "label": "Proposal Statuses"
+   "description": "JSON list of [field, operator, value] conditions, as the dashboard lists send them. Empty means everyone in the audience.",
+   "fieldname": "filters",
+   "fieldtype": "Code",
+   "label": "Filters",
+   "options": "JSON"
   },
   {
    "fieldname": "recipient_count",
@@ -94,7 +86,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-06 12:00:00",
+ "modified": "2026-10-13 12:00:00",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Communication",

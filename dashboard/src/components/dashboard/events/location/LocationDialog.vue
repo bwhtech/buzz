@@ -1,84 +1,58 @@
 <script setup lang="ts">
-import { Button, Dialog, Divider, ScrollArea, Skeleton, TextInput } from "frappe-ui"
-import { computed, ref, watch } from "vue"
+// Picks an event's location over a map of the team's places: one place, or several for a
+// venue with multiple locations. A dialog on desktop; a full-screen map with a sheet on phones.
+import { Button, Dialog } from "frappe-ui"
+import { DialogClose, DialogContent, DialogPortal, DialogRoot, DialogTitle } from "reka-ui"
+import { computed, watch } from "vue"
 
-import ZoomLogo from "@/components/common/ZoomLogo.vue"
-import LocationMap from "@/components/dashboard/events/location/LocationMap.vue"
-import LocationResults from "@/components/dashboard/events/location/LocationResults.vue"
-import ManualVenueForm from "@/components/dashboard/events/location/ManualVenueForm.vue"
+import ChosenPlaces from "@/components/dashboard/events/location/ChosenPlaces.vue"
+import LocationNumber from "@/components/dashboard/events/location/LocationNumber.vue"
+import LocationPanel from "@/components/dashboard/events/location/LocationPanel.vue"
+import LocationsMap from "@/components/dashboard/events/location/LocationsMap.vue"
 import { useLocationPicker } from "@/components/dashboard/events/location/useLocationPicker"
-import type { MapLinkLocation, PlacePrediction, Venue } from "@/data/venues"
-
-interface Preview {
-	key: string
-	title: string
-	address: string | null
-	source: string
-	placeId?: string | null
-	latitude?: number
-	longitude?: number
-	use: () => Promise<string | null> | string
-}
+import { useLocationSelection } from "@/components/dashboard/events/location/useLocationSelection"
+import { useIsMobile } from "@/composables/useIsMobile"
+import { useVenueLocations, venues } from "@/data/venues"
 
 // Pages that book Zoom another way leave the Zoom option out; a site without Zoom never shows it.
-const props = withDefaults(defineProps<{ team: string; showZoom?: boolean; title?: string }>(), {
-	showZoom: true,
-	title: "Add location",
-})
-const canPickZoom = computed(() => props.showZoom && Boolean(window.zoom_available))
+const props = withDefaults(
+	defineProps<{ team: string; showZoom?: boolean; title?: string; venue?: string }>(),
+	{ showZoom: true, title: "Add location", venue: "" },
+)
 const isOpen = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ picked: [venue: string]; zoom: [] }>()
 
+const isMobile = useIsMobile()
 const picker = useLocationPicker(() => props.team, isOpen)
-const preview = ref<Preview | null>(null)
-const isAddingManually = ref(false)
-const isSaving = ref(false)
-// What the manual form's map link turned out to point at, with the name typed so far.
-const manualLocation = ref<(MapLinkLocation & { title: string }) | null>(null)
-
-watch(isOpen, (open) => {
-	if (!open) return
-	preview.value = null
-	isAddingManually.value = false
+const selection = useLocationSelection(picker)
+const groupLocations = useVenueLocations(() => props.venue)
+const canPickZoom = computed(() => props.showZoom && Boolean(window.zoom_available))
+const hasChosen = computed(() => selection.isMultiple && selection.chosen.length > 0)
+const useLabel = computed(() => {
+	if (!selection.isMultiple) return "Use this location"
+	const count = selection.chosen.length
+	return count < 2 ? "Pick at least 2 locations" : `Use ${count} locations`
+})
+const canUse = computed(() =>
+	selection.isMultiple ? selection.chosen.length > 1 : Boolean(selection.preview),
+)
+const hint = computed(() => {
+	if (selection.isMultiple)
+		return selection.chosen.length ? "" : "Click dots on the map or venues in the list"
+	return selection.preview ? "" : "Pick a venue to see it on the map"
 })
 
-function previewVenue(venue: Venue) {
-	preview.value = {
-		key: venue.name,
-		title: venue.venue_name,
-		address: venue.address,
-		source: "Saved venue",
-		placeId: venue.google_place_id,
-		latitude: venue.latitude,
-		longitude: venue.longitude,
-		use: () => venue.name,
-	}
-}
-
-function previewPlace(place: PlacePrediction) {
-	preview.value = {
-		key: place.place_id,
-		title: place.name,
-		address: place.address,
-		source: "From Google Maps",
-		placeId: place.place_id,
-		use: () => picker.savePlace(place),
-	}
-}
-
-const isLocating = ref(false)
-
-function showManualLocation(location: MapLinkLocation | null, title: string) {
-	isLocating.value = false
-	manualLocation.value = location && { ...location, title }
-}
-
-function addManually() {
-	preview.value = null
-	manualLocation.value = null
-	isLocating.value = false
-	isAddingManually.value = true
-}
+// Changing a venue with several locations starts from its places.
+watch(isOpen, (open) => {
+	if (!open) return
+	selection.reset()
+	const current = venues.data?.find((venue) => venue.name === props.venue)
+	if (!current?.has_multiple_locations) return
+	groupLocations
+		.submit()
+		.then((group) => group && selection.reset(group.locations.map((row) => row.venue)))
+		.catch(() => {})
+})
 
 function pick(venue: string | null) {
 	if (!venue) return
@@ -86,139 +60,173 @@ function pick(venue: string | null) {
 	isOpen.value = false
 }
 
-async function usePreview() {
-	if (!preview.value) return
-	isSaving.value = true
-	pick(await preview.value.use())
-	isSaving.value = false
+function use() {
+	selection.save().then(pick)
 }
 
 function pickZoom() {
 	emit("zoom")
 	isOpen.value = false
 }
+
+const mapProps = computed(() => ({
+	places: selection.places,
+	selected: selection.isMultiple ? selection.selected : [],
+	active: selection.isMultiple ? null : selection.activeName,
+	hovered: selection.hovered,
+}))
 </script>
 
 <template>
-	<Dialog v-model="isOpen" size="3xl" :title="isAddingManually ? 'Add venue manually' : title">
-		<!-- Dialog's `size` only caps the width. This height is the one the results scroll
-		 inside, and the manual form shares it, so switching does not resize the dialog. -->
-		<div class="grid gap-4 md:h-96 md:grid-cols-2">
+	<Dialog v-if="!isMobile" v-model="isOpen" bare size="5xl">
+		<div class="relative h-[min(600px,calc(100dvh-6rem))] bg-surface-gray-2">
+			<LocationsMap
+				class="absolute inset-0"
+				v-bind="mapProps"
+				:padding="{ top: 48, right: hasChosen ? 300 : 48, bottom: 48, left: 372 }"
+				@pick="selection.pickVenue"
+			/>
+			<LocationPanel
+				class="absolute bottom-3 left-3 top-3 z-10 w-[340px] overflow-hidden rounded-6 border border-outline-gray-1 bg-surface-elevation-1 shadow-lg"
+				:picker="picker"
+				:selection="selection"
+				:title="title"
+				:can-pick-zoom="canPickZoom"
+				show-header
+				@picked="pick"
+				@zoom="pickZoom"
+			/>
 			<Transition
-				mode="out-in"
-				enter-active-class="transition-opacity duration-150 ease-out"
-				enter-from-class="opacity-0"
-				leave-active-class="transition-opacity duration-100 ease-out"
-				leave-to-class="opacity-0"
+				enter-active-class="transition duration-200 ease-out"
+				enter-from-class="opacity-0 scale-[0.97]"
+				leave-active-class="transition duration-150 ease-out"
+				leave-to-class="opacity-0 scale-[0.97]"
 			>
-				<ManualVenueForm
-					v-if="isAddingManually"
-					:picker="picker"
-					:suggested-name="picker.query.trim()"
-					@saved="pick"
-					@cancel="isAddingManually = false"
-					@locating="isLocating = true"
-					@located="showManualLocation"
+				<ChosenPlaces
+					v-if="hasChosen"
+					v-model="selection.selected"
+					class="absolute right-3 top-3 z-10 max-h-[calc(100%-1.5rem)] w-[272px] origin-top-right rounded-6 border border-outline-gray-1 bg-surface-elevation-1 shadow-lg"
+					:places="selection.chosen"
+					:hovered="selection.hovered"
+					:is-saving="selection.isSaving"
+					@hover="selection.hovered = $event"
+					@use="use"
 				/>
-				<div v-else class="flex min-h-0 flex-col gap-3">
-					<TextInput
-						v-model="picker.query"
-						placeholder="Search a venue or a place"
-						autofocus
-						@keydown.enter.prevent="picker.isUnmatched && addManually()"
-					>
-						<template #prefix>
-							<span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true" />
+				<div
+					v-else-if="!selection.isMultiple && selection.preview"
+					class="absolute bottom-3 right-3 z-10 flex w-[300px] origin-bottom-right flex-col gap-1.5 rounded-6 border border-outline-gray-1 bg-surface-elevation-1 p-3.5 shadow-lg"
+				>
+					<p class="flex items-center gap-1.5 text-sm text-ink-gray-5">
+						{{ selection.preview.source }}
+						<template v-if="selection.isLocating">
+							<span aria-hidden="true">·</span>
+							<span class="lucide-loader-circle size-3 animate-spin" aria-hidden="true" />
+							<span role="status">Finding on map</span>
 						</template>
-					</TextInput>
-					<ScrollArea class="h-72 shrink-0">
-						<LocationResults
-							:picker="picker"
-							:active-key="preview?.key"
-							:inert="isSaving"
-							class="transition-opacity duration-150 ease-out"
-							:class="isSaving && 'opacity-60'"
-							@venue="previewVenue"
-							@place="previewPlace"
-							@manual="addManually"
-						/>
-					</ScrollArea>
-					<ErrorMessage :message="picker.error" />
-					<Divider />
-					<div class="flex gap-2">
-						<Button
-							variant="ghost"
-							icon-left="lucide-map-pin-plus"
-							label="Add manually"
-							@click="addManually"
-						/>
-						<Button v-if="canPickZoom" variant="ghost" label="Zoom meeting" @click="pickZoom">
-							<template #prefix>
-								<ZoomLogo class="size-4" color="var(--ink-gray-5)" />
-							</template>
-						</Button>
-					</div>
+					</p>
+					<p class="text-lg font-semibold text-ink-gray-9">{{ selection.preview.title }}</p>
+					<p v-if="selection.preview.address" class="mb-1.5 text-p-sm text-ink-gray-6">
+						{{ selection.preview.address }}
+					</p>
+					<Button variant="solid" :label="useLabel" :loading="selection.isSaving" @click="use" />
 				</div>
 			</Transition>
-
-			<div class="flex min-h-72 flex-col overflow-hidden rounded-5 bg-surface-gray-1 md:min-h-0">
-				<template v-if="preview">
-					<LocationMap
-						class="h-48"
-						:place-id="preview.placeId"
-						:latitude="preview.latitude"
-						:longitude="preview.longitude"
-						:title="preview.title"
-					>
-						<div class="flex h-48 items-center justify-center text-ink-gray-4">
-							<span class="lucide-map size-8" aria-hidden="true" />
-						</div>
-					</LocationMap>
-					<div class="flex flex-1 flex-col gap-1 p-4">
-						<p class="text-sm text-ink-gray-5">{{ preview.source }}</p>
-						<p class="text-lg font-medium text-ink-gray-9">{{ preview.title }}</p>
-						<p v-if="preview.address" class="text-p-sm text-ink-gray-6">
-							{{ preview.address }}
-						</p>
-						<Button
-							class="mt-auto w-full"
-							variant="solid"
-							label="Use this location"
-							:loading="isSaving"
-							@click="usePreview"
-						/>
-					</div>
-				</template>
-				<div v-else-if="isAddingManually && isLocating" class="flex-1" aria-busy="true">
-					<span class="sr-only">Reading the map link…</span>
-					<Skeleton class="size-full min-h-48 rounded-none" />
-				</div>
-				<LocationMap
-					v-else-if="isAddingManually && manualLocation"
-					class="h-full min-h-48"
-					:latitude="manualLocation.latitude"
-					:longitude="manualLocation.longitude"
-					:embed-url="manualLocation.embed_url"
-					:title="manualLocation.title"
+			<p
+				v-if="hint"
+				class="pointer-events-none absolute bottom-5 left-[364px] right-3 z-10 flex justify-center"
+			>
+				<span
+					class="rounded-full border border-outline-gray-1 bg-surface-elevation-1 px-3 py-1.5 text-p-sm text-ink-gray-7 shadow-md"
 				>
-					<div class="flex flex-1 items-center justify-center p-6 text-center text-ink-gray-5">
-						<p class="text-p-sm">This link does not show a location. Add the address instead.</p>
-					</div>
-				</LocationMap>
-				<div
-					v-else
-					class="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-ink-gray-5"
-				>
-					<span class="lucide-map-pin size-6" aria-hidden="true" />
-					<p class="text-p-sm">
-						{{
-							isAddingManually
-								? "Paste a map link to see the place here."
-								: "Pick a venue or a place to see it here before you add it."
-						}}
-					</p>
-				</div>
-			</div>
+					{{ hint }}
+				</span>
+			</p>
 		</div>
 	</Dialog>
+
+	<DialogRoot v-else v-model:open="isOpen">
+		<DialogPortal>
+			<DialogContent class="fixed inset-0 z-50 bg-surface-gray-2" :aria-describedby="undefined">
+				<LocationsMap
+					class="absolute inset-0"
+					v-bind="mapProps"
+					:padding="{ top: hasChosen ? 150 : 90, right: 28, bottom: 420, left: 28 }"
+					@pick="selection.pickVenue"
+				/>
+				<div
+					class="absolute inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-10 flex flex-col gap-2"
+				>
+					<div class="flex items-center gap-2">
+						<DialogClose as-child>
+							<Button
+								class="!size-11 shrink-0 !rounded-full shadow-md"
+								variant="outline"
+								icon="lucide-x"
+								aria-label="Close"
+							/>
+						</DialogClose>
+						<DialogTitle
+							class="flex h-11 flex-1 items-center rounded-full border border-outline-gray-1 bg-surface-elevation-1 px-4 text-lg font-semibold text-ink-gray-9 shadow-md"
+						>
+							{{ title }}
+						</DialogTitle>
+					</div>
+					<TransitionGroup
+						v-if="hasChosen"
+						tag="ol"
+						class="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]"
+						enter-active-class="transition duration-200 ease-out"
+						enter-from-class="opacity-0 scale-95"
+					>
+						<li
+							v-for="(place, index) in selection.chosen"
+							:key="place.name"
+							class="flex h-9 max-w-[180px] shrink-0 items-center gap-1.5 rounded-full border border-outline-gray-1 bg-surface-elevation-1 px-1 shadow-sm"
+						>
+							<LocationNumber :number="index + 1" class="!size-6" />
+							<span class="truncate text-sm text-ink-gray-8">{{ place.venue_name }}</span>
+							<Button
+								size="sm"
+								variant="ghost"
+								icon="lucide-x"
+								class="!rounded-full"
+								:aria-label="`Remove ${place.venue_name}`"
+								@click="selection.pickVenue(place)"
+							/>
+						</li>
+					</TransitionGroup>
+				</div>
+				<div
+					class="absolute inset-x-0 bottom-0 z-10 flex h-[min(390px,60dvh)] flex-col rounded-t-[20px] border-t border-outline-gray-1 bg-surface-elevation-1 shadow-2xl"
+				>
+					<div class="flex justify-center pb-2.5 pt-2" aria-hidden="true">
+						<span class="h-1 w-9 rounded-full bg-surface-gray-4" />
+					</div>
+					<LocationPanel
+						class="min-h-0 flex-1"
+						:picker="picker"
+						:selection="selection"
+						:title="title"
+						:can-pick-zoom="canPickZoom"
+						@picked="pick"
+						@zoom="pickZoom"
+					/>
+					<div
+						v-if="selection.isMultiple ? hasChosen : selection.preview"
+						class="border-t border-outline-gray-1 px-4 pb-[max(1.75rem,env(safe-area-inset-bottom))] pt-3"
+					>
+						<Button
+							class="w-full"
+							size="lg"
+							variant="solid"
+							:label="useLabel"
+							:disabled="!canUse"
+							:loading="selection.isSaving"
+							@click="use"
+						/>
+					</div>
+				</div>
+			</DialogContent>
+		</DialogPortal>
+	</DialogRoot>
 </template>

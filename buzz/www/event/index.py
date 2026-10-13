@@ -16,13 +16,14 @@ from frappe.utils import (
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import co_hosts_of, primary_host_of, registration_link
-from buzz.emails import venue_map_url as venue_link
 from buzz.events.countdown import event_countdown
+from buzz.events.doctype.event_venue.details import VenueLocation, venue_details
 from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import datetime_in_time_zone, format_gmt_offset, get_time_zone_label
 from buzz.www.event.banner_color import banner_color
 from buzz.www.event.date_range import RANGE_SEPARATOR, EventDateRange, format_time
+from buzz.www.event.dot_map import DotMap
 from buzz.www.event.link_icons import LINK_ICON_PATHS
 from buzz.www.event.meta import EventMeta, event_time_zone
 from buzz.www.event.registration import ProposalCard, RegistrationCard
@@ -289,27 +290,45 @@ class EventPage:
 		]
 
 	def venue(self) -> dict | None:
-		if self.event.medium == "Online" or not self.event.venue:
+		details = self.event.medium != "Online" and venue_details(self.event.venue)
+		if not details:
 			return None
-		venue = frappe.db.get_value(
-			"Event Venue",
-			self.event.venue,
-			[
-				"venue_name",
-				"address",
-				"type",
-				"google_maps_embed_code",
-				"google_place_id",
-				"latitude",
-				"longitude",
-			],
-			as_dict=True,
-		)
-		if not venue:
-			return None
-		return {
-			"name": venue.venue_name,
-			"address": venue.address,
-			"map_url": venue_map_url(venue),
-			"link": venue_link(self.event.venue),
+		venue = {
+			"name": details.venue_name,
+			"address": details.address,
+			"link": details.map_link,
+			"map_url": None,
+			"locations": [],
+			"dot_map": None,
 		}
+		if not details.has_multiple_locations:
+			return venue | {"map_url": self.venue_map_url()}
+		return venue | LocationsMap(details.locations).as_context()
+
+	def venue_map_url(self) -> str | None:
+		return venue_map_url(frappe.get_cached_doc("Event Venue", self.event.venue))
+
+
+class LocationsMap:
+	"""A grouped venue's locations, each with its pin on a dot map framed around them."""
+
+	def __init__(self, locations: list[VenueLocation]):
+		self.locations = locations
+		self.pinned = [location for location in locations if location.latitude and location.longitude]
+		coordinates = [(location.latitude, location.longitude) for location in self.pinned]
+		self.dot_map = DotMap(coordinates) if coordinates else None
+
+	def as_context(self) -> dict:
+		return {
+			"locations": [self.located(location) for location in self.locations],
+			"dot_map": self.dot_map
+			and {
+				"view_box": str(self.dot_map.view),
+				"dots_url": self.dot_map.dots_url,
+				"dot_width": self.dot_map.dot_width,
+			},
+		}
+
+	def located(self, location: VenueLocation) -> dict:
+		pin = self.dot_map.pin(location.latitude, location.longitude) if location in self.pinned else None
+		return {**location.__json__(), "pin": pin}

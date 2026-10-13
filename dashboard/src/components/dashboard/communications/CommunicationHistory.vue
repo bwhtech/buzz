@@ -55,7 +55,7 @@ const exact = (row: CommunicationItem) =>
 	<EmptyState
 		v-else
 		title="No announcements yet"
-		description="Anything you send to this event's guests or speakers shows up here."
+		description="Anything you send to this event's guests, speakers or sponsors shows up here."
 		icon="lucide-megaphone"
 	/>
 </template>

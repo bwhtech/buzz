@@ -17,11 +17,12 @@ def get_event_communications(event: str) -> EventCommunicationsResponse:
 
 
 @frappe.whitelist()
-def count_recipients(
-	event: str, audience: str, ticket_types: str | None = None, statuses: str | None = None
-) -> RecipientCount:
-	"""How many people a message with these recipients would reach right now."""
-	return services.count_recipients(event, audience, ticket_types, statuses)
+def count_recipients(event: str, audience: str, filters: str | None = None) -> RecipientCount:
+	"""How many people a message with these recipients would reach right now.
+
+	`filters` is a JSON list of `[field, operator, value]`, the same the audience's list page sends.
+	"""
+	return services.count_recipients(event, audience, filters)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -30,14 +31,11 @@ def send_communication(
 	audience: str,
 	message: str,
 	subject: str = "",
-	ticket_types: str = "",
-	statuses: str = "",
+	filters: str = "",
 	scheduled_at: datetime | None = None,
 ) -> CommunicationItem:
 	"""Queue a message to the audience now, or at `scheduled_at`."""
-	return services.send_communication(
-		event, audience, message, subject, ticket_types, statuses, scheduled_at
-	)
+	return services.send_communication(event, audience, message, subject, filters, scheduled_at)
 
 
 @frappe.whitelist(methods=["POST"])

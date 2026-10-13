@@ -32,6 +32,16 @@ const canSend = computed(() => props.canWrite && hasText(draft.value.message) &&
 				:options="audienceOptions"
 				:disabled="!canWrite"
 			/>
+			<!-- Filters picked in the drawer still apply here, so the box says so. -->
+			<button
+				v-if="draft.conditions.length"
+				type="button"
+				class="text-ink-gray-5 underline-offset-2 hover:underline"
+				@click="emit('advanced')"
+			>
+				matching {{ draft.conditions.length }}
+				{{ draft.conditions.length === 1 ? "filter" : "filters" }}
+			</button>
 		</p>
 
 		<Editor

@@ -14,8 +14,7 @@ export function useEventCommunications(event: string) {
 export type RecipientQuery = {
 	event: string
 	audience: string
-	ticket_types: string
-	statuses: string
+	filters: string
 }
 
 export function useRecipientCount(params: () => RecipientQuery) {

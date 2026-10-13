@@ -53,6 +53,67 @@ class IntegrationTestEventVenue(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value("Event Venue", venue.name, "venue_name"), venue.name)
 
 
+class IntegrationTestGroupVenue(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.team = BuzzTeamFactory.create_owned_by().name
+		cls.hall = EventVenueFactory.create(team=cls.team, venue_name="Main Hall").name
+		cls.brewpub = EventVenueFactory.create(team=cls.team, venue_name="Brewpub").name
+
+	def group(self, *venues: str, **overrides):
+		return EventVenueFactory.build(
+			team=self.team,
+			has_multiple_locations=1,
+			locations=[{"venue": venue} for venue in venues],
+			**overrides,
+		)
+
+	def test_group_is_named_after_its_locations_and_holds_no_location_itself(self):
+		group = self.group(self.hall, self.brewpub, latitude=12.97, longitude=77.59).insert()
+
+		self.assertEqual(group.venue_name, "Main Hall · Brewpub")
+		self.assertFalse(group.address or group.latitude or group.longitude)
+
+	def test_group_rejects_invalid_locations(self):
+		nested = self.group(self.hall, self.brewpub).insert().name
+		other_team = EventVenueFactory.create().name
+		cases = {
+			"single location": [self.hall],
+			"repeated location": [self.hall, self.hall],
+			"nested group": [self.hall, nested],
+			"another team's venue": [self.hall, other_team],
+		}
+		for case, venues in cases.items():
+			with self.subTest(case), self.assertRaises(frappe.ValidationError):
+				self.group(*venues).insert()
+
+	def test_renaming_a_location_renames_its_group(self):
+		hall = EventVenueFactory.create(team=self.team, venue_name="Old Hall")
+		group = self.group(hall.name, self.brewpub).insert()
+
+		hall.venue_name = "New Hall"
+		hall.save()
+
+		self.assertEqual(frappe.db.get_value("Event Venue", group.name, "venue_name"), "New Hall · Brewpub")
+
+	def test_a_location_cannot_become_a_group(self):
+		hall = EventVenueFactory.create(team=self.team)
+		self.group(hall.name, self.brewpub).insert()
+
+		hall.update(
+			{"has_multiple_locations": 1, "locations": [{"venue": self.brewpub}, {"venue": self.hall}]}
+		)
+		self.assertRaises(frappe.ValidationError, hall.save)
+
+	def test_unticking_the_flag_drops_the_locations(self):
+		group = self.group(self.hall, self.brewpub).insert()
+		group.update({"has_multiple_locations": 0, "address": "1 Park Street"})
+		group.save()
+
+		self.assertEqual(group.locations, [])
+
+
 GOOGLE_PLACE_LINK = (
 	"https://www.google.com/maps/place/Nehru+Centre/@18.99,72.81,17z/data=!3m1!4b1!4m6!3m5"
 	"!1s0x3be7ce8d!8m2!3d18.9903!4d72.8174!16zL20vMGZf"

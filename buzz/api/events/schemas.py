@@ -5,6 +5,7 @@ from pydantic import Field
 
 from buzz.api.filters.schemas import FilterField
 from buzz.api.schemas import APIRequest, APIResponse
+from buzz.events.doctype.event_venue.details import VenueDetails
 
 
 class MyEventFilters(APIRequest):
@@ -40,11 +41,6 @@ class MyEvent(APIResponse):
 class MyEventsResponse(APIResponse):
 	upcoming: list[MyEvent]
 	past: list[MyEvent]
-
-
-class EventVenue(APIResponse):
-	name: str
-	address: str | None = None
 
 
 class EventHostRef(APIResponse):
@@ -83,7 +79,7 @@ class EventDetail(APIResponse):
 	about: str | None = None
 	banner_image: str | None = None
 	medium: str | None = None
-	venue: EventVenue | None = None
+	venue: VenueDetails | None = None
 	# The organiser's own link, or the one Zoom issued when the meeting was booked.
 	meeting_link: str | None = None
 	is_published: bool
