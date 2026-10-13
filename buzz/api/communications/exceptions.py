@@ -15,4 +15,4 @@ class CannotSendCommunication(NotPermitted):
 
 class UnknownAudience(BuzzAPIError):
 	title = _lt("Unknown Audience")
-	message = _lt("{audience} is not an audience. Choose Guests or Speakers.")
+	message = _lt("{audience} is not an audience. Choose Guests, Speakers or Sponsors.")

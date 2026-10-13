@@ -297,11 +297,6 @@ def guest_search_filters(search: str | None) -> list[list] | None:
 	]
 
 
-def ticket_type_filter(ticket_types: str | None) -> list[str]:
-	"""The chosen types, as the comma-joined list the query string carries them in."""
-	return [chosen for chosen in (ticket_types or "").split(",") if chosen.strip()]
-
-
 def registration_link(doc) -> str | None:
 	"""An event that sends people elsewhere is managed elsewhere: link where they land."""
 	if doc.external_registration_page:
