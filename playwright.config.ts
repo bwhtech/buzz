@@ -21,7 +21,7 @@ export default defineConfig({
 	fullyParallel: false, // Sequential for Frappe state consistency
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
-	workers: 1, // Single worker for Frappe session management
+	workers: process.env.CI ? 3 : 1,
 	reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "html",
 
 	timeout: 60000,
