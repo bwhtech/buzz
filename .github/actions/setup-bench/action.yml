@@ -23,6 +23,7 @@ runs:
       run: echo "127.0.0.1 ${{ inputs.site-name }}" | sudo tee -a /etc/hosts
 
     - uses: actions/setup-python@v5
+      id: python
       with:
         python-version: "3.14"
 
@@ -61,7 +62,29 @@ runs:
           exit 1
         fi
 
+    # frappe moves dozens of commits a day, so the cache is keyed by date and any
+    # older bench is restored and fast-forwarded instead of rebuilt.
+    - name: Compute bench cache key
+      id: bench-key
+      shell: bash -e {0}
+      env:
+        EXTRA_APP_URL: ${{ inputs.extra-app-url }}
+        PYTHON_VERSION: ${{ steps.python.outputs.python-version }}
+      run: |
+        prefix="bench-v1-${RUNNER_OS}-py${PYTHON_VERSION}-ffb-48904d0-$(basename "${EXTRA_APP_URL:-none}" .git)-"
+        echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
+        echo "key=$prefix$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore bench
+      id: bench-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ~/frappe-bench
+        key: ${{ steps.bench-key.outputs.key }}
+        restore-keys: ${{ steps.bench-key.outputs.prefix }}
+
     - name: Init bench
+      if: steps.bench-cache.outputs.cache-matched-key == ''
       shell: bash -e {0}
       run: |
         bench init ~/frappe-bench \
@@ -75,7 +98,8 @@ runs:
         # socketio stays: the dashboard opens a socket on boot (dashboard/src/main.ts).
         sed -i '/^watch:/d;/^schedule:/d' Procfile
 
-    - name: Get apps
+    - name: Get dependency apps
+      if: steps.bench-cache.outputs.cache-matched-key == ''
       shell: bash -e {0}
       working-directory: /home/runner/frappe-bench
       env:
@@ -88,6 +112,7 @@ runs:
         # the app ships no DocTypes, and get-app already pip-installs it into the env.
         # Pinned to a reviewed commit: the repo has no tags and `bench get-app --branch`
         # rejects a SHA, so clone and check out before handing bench the local path.
+        # The pin is part of the bench cache key.
         git clone https://github.com/harshtandiya/frappe_factory_bot /tmp/frappe_factory_bot
         git -C /tmp/frappe_factory_bot checkout 48904d0df778513934e92a4e7663c74bfe31bc56
         bench get-app --skip-assets /tmp/frappe_factory_bot
@@ -96,7 +121,35 @@ runs:
           bench get-app --skip-assets "$EXTRA_APP_URL"
         fi
 
-        bench get-app --skip-assets buzz "$GITHUB_WORKSPACE"
+    - name: Update cached apps
+      if: steps.bench-cache.outputs.cache-matched-key != ''
+      shell: bash -e {0}
+      working-directory: /home/runner/frappe-bench
+      env:
+        EXTRA_APP_URL: ${{ inputs.extra-app-url }}
+      run: |
+        for app in frappe payments ${EXTRA_APP_URL:+$(basename "$EXTRA_APP_URL" .git)}; do
+          branch=$(git -C "apps/$app" branch --show-current)
+          git -C "apps/$app" fetch --quiet --depth 1 upstream "$branch"
+          git -C "apps/$app" reset --quiet --hard FETCH_HEAD
+          git -C "apps/$app" log -1 --format="$app %h %cs %s"
+        done
+
+        bench setup requirements
+
+    # Saved before buzz is added. Pull requests only read, so branch-scoped copies
+    # don't push develop's cache out of the repository quota.
+    - name: Save bench
+      if: steps.bench-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
+      uses: actions/cache/save@v4
+      with:
+        path: ~/frappe-bench
+        key: ${{ steps.bench-key.outputs.key }}
+
+    - name: Get buzz
+      shell: bash -e {0}
+      working-directory: /home/runner/frappe-bench
+      run: bench get-app --skip-assets buzz "$GITHUB_WORKSPACE"
 
     - name: Install requirements
       shell: bash -e {0}
