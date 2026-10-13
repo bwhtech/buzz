@@ -9,7 +9,7 @@ export type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 export type { FrappeField } from "@/composables/useCustomFields"
 export type { TalkProposal } from "@/types/Proposals/TalkProposal"
 
-import type { FilterField } from "@/components/common/filters/fields"
+import type { Condition, FilterField } from "@/components/common/filters/fields"
 import type { FrappeField } from "@/composables/useCustomFields"
 import type { EventTicket } from "@/types/Ticketing/EventTicket"
 import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
@@ -505,15 +505,14 @@ export interface CouponData {
 	[key: string]: any
 }
 
-// buzz.api.communications: a message sent (or scheduled) to an event's guests or speakers.
-export type CommunicationAudience = "Guests" | "Speakers"
+// buzz.api.communications: a message sent (or scheduled) to an event's guests, speakers or sponsors.
+export type CommunicationAudience = "Guests" | "Speakers" | "Sponsors"
 
 export interface CommunicationItem {
 	name: string
 	audience: CommunicationAudience
-	// Comma-joined, the shape the composer keeps the filters in.
-	ticket_types: string
-	statuses: string
+	// JSON conditions, as the audience's list page sends them.
+	filters: string
 	subject: string
 	message: string
 	recipient_count: number
@@ -527,16 +526,15 @@ export interface EventCommunications {
 	can_write: boolean
 	can_edit_settings: boolean
 	support_email: string | null
-	ticket_types: { name: string; title: string | null }[]
-	statuses: string[]
+	// The filters each audience's own list page offers.
+	filter_fields: Record<CommunicationAudience, FilterField[]>
 	communications: CommunicationItem[]
 }
 
 // What the composer holds between the inline box and the Advanced drawer.
 export interface CommunicationDraft {
 	audience: CommunicationAudience
-	ticket_types: string[]
-	statuses: string[]
+	conditions: Condition[]
 	subject: string
 	message: string
 	scheduled_at: string
