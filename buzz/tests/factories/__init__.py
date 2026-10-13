@@ -19,6 +19,7 @@ from buzz.tests.factories.event_talk_factory import EventTalkFactory
 from buzz.tests.factories.event_template_factory import EventTemplateFactory
 from buzz.tests.factories.event_ticket_factory import EventTicketFactory
 from buzz.tests.factories.event_ticket_type_factory import EventTicketTypeFactory
+from buzz.tests.factories.event_topic_factory import EventTopicFactory
 from buzz.tests.factories.event_venue_factory import EventVenueFactory
 from buzz.tests.factories.file_factory import FileFactory
 from buzz.tests.factories.integration_request_factory import IntegrationRequestFactory
@@ -57,6 +58,7 @@ __all__ = [
 	"EventTemplateFactory",
 	"EventTicketFactory",
 	"EventTicketTypeFactory",
+	"EventTopicFactory",
 	"EventVenueFactory",
 	"FileFactory",
 	"IntegrationRequestFactory",

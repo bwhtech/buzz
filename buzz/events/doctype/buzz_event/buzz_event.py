@@ -31,6 +31,8 @@ RESERVED_EVENT_ROUTES = {
 	"manage",
 }
 
+MAX_TOPICS = 5
+
 
 class BuzzEvent(Document):
 	# begin: auto-generated types
@@ -46,6 +48,7 @@ class BuzzEvent(Document):
 		from buzz.events.doctype.event_external_link.event_external_link import EventExternalLink
 		from buzz.events.doctype.event_featured_speaker.event_featured_speaker import EventFeaturedSpeaker
 		from buzz.events.doctype.event_payment_gateway.event_payment_gateway import EventPaymentGateway
+		from buzz.events.doctype.event_topic_link.event_topic_link import EventTopicLink
 		from buzz.events.doctype.schedule_item.schedule_item import ScheduleItem
 		from buzz.proposals.doctype.sponsorship_deck_item.sponsorship_deck_item import SponsorshipDeckItem
 
@@ -106,6 +109,7 @@ class BuzzEvent(Document):
 		time_zone: DF.Autocomplete | None
 		time_zone_label: DF.Data | None
 		title: DF.Data
+		topics: DF.TableMultiSelect[EventTopicLink]
 		venue: DF.Link | None
 	# end: auto-generated types
 
@@ -133,6 +137,7 @@ class BuzzEvent(Document):
 		self.clear_unused_location()
 		self.validate_co_hosts()
 		self.validate_external_links()
+		self.validate_topics()
 		self.set_time_zone_label()
 
 	def clear_unused_location(self):
@@ -161,6 +166,10 @@ class BuzzEvent(Document):
 		for row in self.external_links:
 			if urlparse(row.url or "").scheme not in ("http", "https"):
 				frappe.throw(_("Row {0}: link must start with http:// or https://").format(row.idx))
+
+	def validate_topics(self):
+		if len(self.topics) > MAX_TOPICS:
+			frappe.throw(_("An event can have at most {0} topics.").format(MAX_TOPICS))
 
 	def set_time_zone_label(self):
 		# validate runs before the mandatory check, so dates may still be empty here

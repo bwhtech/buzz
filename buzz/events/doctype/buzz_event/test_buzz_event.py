@@ -7,8 +7,8 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
-from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES
-from buzz.tests.factories import BuzzEventFactory, EventVenueFactory
+from buzz.events.doctype.buzz_event.buzz_event import MAX_TOPICS, RESERVED_EVENT_ROUTES
+from buzz.tests.factories import BuzzEventFactory, EventTopicFactory, EventVenueFactory
 
 START_DATE = add_days(today(), 30)
 END_DATE = add_days(today(), 31)
@@ -66,6 +66,19 @@ class TestEventValidation(BuzzEventTestCase):
 			end_time="18:00:00",
 			schedule=[row],
 		)
+
+
+class TestEventTopics(BuzzEventTestCase):
+	def topics(self, count: int) -> list[dict]:
+		return [{"topic": EventTopicFactory.create().name} for _ in range(count)]
+
+	def test_saves_up_to_the_topic_limit(self):
+		event = self.create_event(topics=self.topics(MAX_TOPICS))
+		self.assertEqual(len(event.topics), MAX_TOPICS)
+
+	def test_refuses_more_topics_than_the_limit(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_event(topics=self.topics(MAX_TOPICS + 1))
 
 
 class TestEventRoute(BuzzEventTestCase):
