@@ -116,7 +116,14 @@ const mapProps = computed(() => ({
 					v-else-if="!selection.isMultiple && selection.preview"
 					class="absolute bottom-3 right-3 z-10 flex w-[300px] origin-bottom-right flex-col gap-1.5 rounded-6 border border-outline-gray-1 bg-surface-elevation-1 p-3.5 shadow-lg"
 				>
-					<p class="text-sm text-ink-gray-5">{{ selection.preview.source }}</p>
+					<p class="flex items-center gap-1.5 text-sm text-ink-gray-5">
+						{{ selection.preview.source }}
+						<template v-if="selection.isLocating">
+							<span aria-hidden="true">·</span>
+							<span class="lucide-loader-circle size-3 animate-spin" aria-hidden="true" />
+							<span role="status">Finding on map</span>
+						</template>
+					</p>
 					<p class="text-lg font-semibold text-ink-gray-9">{{ selection.preview.title }}</p>
 					<p v-if="selection.preview.address" class="mb-1.5 text-p-sm text-ink-gray-6">
 						{{ selection.preview.address }}

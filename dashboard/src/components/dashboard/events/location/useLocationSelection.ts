@@ -91,8 +91,10 @@ export function useLocationSelection(picker: LocationPicker) {
 		addressLocation
 			.submit({ address: place.address || place.name })
 			.then((location) => {
-				// A later pick may have replaced this one while it was being located.
-				if (activePlace.value !== place || !location?.latitude || !location.longitude) return
+				// A later pick may have replaced this one while it was being located. Compared by id:
+				// the ref holds a reactive copy, never the object that was clicked.
+				const isStale = activePlace.value?.place_id !== place.place_id
+				if (isStale || !location?.latitude || !location.longitude) return
 				placePin.value = {
 					name: place.place_id,
 					venue_name: place.name,
@@ -122,6 +124,10 @@ export function useLocationSelection(picker: LocationPicker) {
 		chosen,
 		places,
 		preview,
+		// A Google Maps place is being looked up on OpenStreetMap and has no pin yet.
+		isLocating: computed(() =>
+			Boolean(activePlace.value && !placePin.value && addressLocation.loading),
+		),
 		activeName: computed(() => active.value?.name ?? activePlace.value?.place_id ?? null),
 		reset,
 		setMultiple,

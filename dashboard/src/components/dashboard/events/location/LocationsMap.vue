@@ -122,14 +122,14 @@ function routeLine(): GeoJSONSourceSpecification["data"] {
 }
 
 function addRoute() {
-	const color = getComputedStyle(document.documentElement).getPropertyValue("--ink-gray-6")
 	map!.addSource("route", { type: "geojson", data: routeLine() })
 	map!.addLayer({
 		id: "route",
 		type: "line",
 		source: "route",
 		layout: { "line-cap": "round" },
-		paint: { "line-color": color.trim() || "#888", "line-width": 2, "line-dasharray": [0.1, 3.5] },
+		// MapLibre cannot parse the theme's oklch() colours; this grey reads on both map styles.
+		paint: { "line-color": "#888", "line-width": 2, "line-dasharray": [0.1, 3.5] },
 	})
 }
 
