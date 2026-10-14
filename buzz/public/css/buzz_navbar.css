@@ -92,8 +92,8 @@
 	display: none;
 }
 
-:root[data-mode="dark"] .buzz-navbar-icon-moon,
-:root[data-mode="light"] .buzz-navbar-icon-sun {
+:root[data-mode="dark"] [data-mode-toggle] .buzz-navbar-icon-moon,
+:root[data-mode="light"] [data-mode-toggle] .buzz-navbar-icon-sun {
 	display: none;
 }
 
@@ -283,7 +283,69 @@
 	display: none;
 }
 
-/* Small screens swap the top bar links for one menu. */
+.buzz-navbar-menu-heading[data-section],
+.buzz-navbar-preferences {
+	margin-top: 4px;
+	border-top: 1px solid var(--navbar-border);
+}
+
+.buzz-navbar-menu-heading[data-section] {
+	padding-top: 10px;
+}
+
+.buzz-navbar-preferences {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 6px 4px;
+}
+
+.buzz-navbar-preferences .buzz-navbar-button {
+	position: relative;
+	gap: 4px;
+	height: 28px;
+	padding: 0 6px;
+}
+
+.buzz-navbar-language-code {
+	font-size: 12px;
+	letter-spacing: 0.04em;
+}
+
+/* Invisible over its label, so a tap opens the platform's own picker. */
+.buzz-navbar-preferences select {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	opacity: 0;
+	cursor: pointer;
+	/* iOS zooms into selects under 16px */
+	font-size: 16px;
+}
+
+.buzz-navbar-segmented {
+	display: flex;
+	gap: 2px;
+	padding: 2px;
+	border-radius: 8px;
+	background: var(--navbar-border);
+}
+
+.buzz-navbar-menu .buzz-navbar-segmented button {
+	display: grid;
+	place-items: center;
+	height: 24px;
+	padding: 0 10px;
+	color: var(--navbar-muted);
+}
+
+.buzz-navbar-menu .buzz-navbar-segmented [aria-pressed="true"] {
+	background: var(--navbar-bg);
+	color: var(--navbar-ink);
+}
+
+/* Small screens keep the brand and one menu holding everything else. */
 @media (max-width: 640px) {
 	/* Anchored to the header, not the button, so the menu spans the screen inside the gutters. */
 	.buzz-navbar .buzz-navbar-mobile {
@@ -297,9 +359,8 @@
 		left: 16px;
 	}
 
-	.buzz-navbar-links,
-	.buzz-navbar-search-label,
-	.buzz-navbar kbd {
+	.buzz-navbar-end > :not(.buzz-navbar-mobile),
+	.buzz-navbar-start .buzz-navbar-links {
 		display: none;
 	}
 }
