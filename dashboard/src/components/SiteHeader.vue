@@ -9,6 +9,7 @@ import SiteNavLinks from "@/components/SiteNavLinks.vue"
 import { useLoginDialog } from "@/composables/useLoginDialog"
 import { session } from "@/data/session"
 import { userResource } from "@/data/user"
+import { mobileMenu } from "@/utils/navbar"
 
 const router = useRouter()
 const { open: openLoginDialog } = useLoginDialog()
@@ -53,6 +54,15 @@ const menu = computed(() => [
 		</div>
 		<div class="flex items-center gap-2">
 			<SiteNavLinks :links="endLinks" align="end" />
+			<Dropdown v-if="navbar?.links.length" :options="mobileMenu(navbar.links)" align="end">
+				<Button
+					class="sm:hidden"
+					variant="ghost"
+					size="md"
+					icon="lucide-menu"
+					:aria-label="__('Menu')"
+				/>
+			</Dropdown>
 			<!-- A placeholder until the command palette exists. -->
 			<Button v-if="navbar?.show_search" variant="outline" size="md" :aria-label="__('Search')">
 				<template #prefix><span class="lucide-search size-4" aria-hidden="true" /></template>

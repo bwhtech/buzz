@@ -31,6 +31,20 @@
 	</div>
 	<div class="buzz-navbar-end">
 		<nav class="buzz-navbar-links" aria-label="{{ _('Secondary') }}">{{ nav_links(navbar.links | selectattr("right")) }}</nav>
+		{% if navbar.links %}
+		<details class="buzz-navbar-mobile">
+			<summary class="buzz-navbar-button" data-icon-only aria-label="{{ _('Menu') }}">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+			</summary>
+			<nav class="buzz-navbar-menu" aria-label="{{ _('Main') }}">
+				{% for link in navbar.links if link.url and not link.child_items %}{{ nav_link(link) }}{% endfor %}
+				{% for link in navbar.links if link.child_items %}
+				<span class="buzz-navbar-menu-heading">{{ link.label }}</span>
+				{% for child in link.child_items %}{{ nav_link(child) }}{% endfor %}
+				{% endfor %}
+			</nav>
+		</details>
+		{% endif %}
 		{% if navbar.show_search %}
 		<button type="button" class="buzz-navbar-button" data-variant="outline" aria-label="{{ _('Search') }}" aria-keyshortcuts="Meta+K">
 			<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>

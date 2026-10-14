@@ -279,8 +279,24 @@
 	}
 }
 
-/* No mobile menu yet: the top bar links hide on small screens and stay reachable from the footer. */
+.buzz-navbar-mobile {
+	display: none;
+}
+
+/* Small screens swap the top bar links for one menu. */
 @media (max-width: 640px) {
+	/* Anchored to the header, not the button, so the menu spans the screen inside the gutters. */
+	.buzz-navbar .buzz-navbar-mobile {
+		display: block;
+		position: static;
+	}
+
+	.buzz-navbar-mobile .buzz-navbar-menu {
+		top: 100%;
+		right: 16px;
+		left: 16px;
+	}
+
 	.buzz-navbar-links,
 	.buzz-navbar-search-label,
 	.buzz-navbar kbd {
