@@ -34,6 +34,6 @@
     "oxlint": "1.80.0"
   },
   "dependencies": {
-    "maplibre-gl": "5.23.0"
+    "maplibre-gl": "5.11.0"
   }
 }
