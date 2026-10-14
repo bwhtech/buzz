@@ -34,7 +34,6 @@ class EventTicket(Document):
 		attendee_email: DF.Data
 		attendee_name: DF.Data
 		booking: DF.Link | None
-		coupon_used: DF.Link | None
 		event: DF.Link | None
 		first_name: DF.Data
 		last_name: DF.Data | None
@@ -54,7 +53,6 @@ class EventTicket(Document):
 		self.attendee_name = f"{self.first_name or ''} {self.last_name or ''}".strip()
 
 	def before_submit(self):
-		self.validate_coupon_usage()
 		self.generate_qr_code()
 
 	def on_submit(self):
@@ -176,14 +174,6 @@ class EventTicket(Document):
 			now=now,
 			attachments=attachments,
 		)
-
-	def validate_coupon_usage(self):
-		if not self.coupon_used:
-			return
-
-		coupon = frappe.get_cached_doc("Bulk Ticket Coupon", self.coupon_used)
-		if coupon.is_used_up():
-			frappe.throw(frappe._("Coupon has been already used up maximum number of times!"))
 
 	def generate_qr_code(self):
 		self.qr_code = generate_qr_code_file(
