@@ -1,0 +1,139 @@
+{%- set header = buzz_navbar() -%}
+{%- set navbar = header.navbar -%}
+{%- macro nav_link(link, class_name="") -%}
+<a{% if class_name %} class="{{ class_name }}"{% endif %} href="{{ link.url }}"{% if link.open_in_new_tab %} target="_blank" rel="noopener"{% endif %}>{{ link.label }}</a>
+{%- endmacro -%}
+{%- macro nav_links(links) -%}
+{%- for link in links -%}
+{%- if link.child_items %}
+<details>
+	<summary class="buzz-navbar-button">{{ link.label }}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+	<div class="buzz-navbar-menu">{% for child in link.child_items %}{{ nav_link(child) }}{% endfor %}</div>
+</details>
+{%- elif link.url %}
+{{ nav_link(link, "buzz-navbar-button") }}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+{% autoescape true %}
+<link rel="stylesheet" href="/assets/buzz/css/buzz_navbar.css?v={{ build_version }}">
+<header class="buzz-navbar"{% if not header.is_guest %} data-logged-in{% endif %}>
+	<div class="buzz-navbar-start">
+		<a class="buzz-navbar-brand" href="/">
+			{% if header.brand.is_default %}
+			<span class="buzz-navbar-default-logo" role="img" aria-label="{{ header.brand.name }}"></span>
+			{% else %}
+			<img data-logo-mode="light" src="{{ header.brand.logo }}" alt="{{ header.brand.name }}">
+			<img data-logo-mode="dark" src="{{ header.brand.logo_dark }}" alt="{{ header.brand.name }}">
+			{% endif %}
+		</a>
+		<nav class="buzz-navbar-links" aria-label="{{ _('Main') }}">{{ nav_links(navbar.links | rejectattr("right")) }}</nav>
+	</div>
+	<div class="buzz-navbar-end">
+		<nav class="buzz-navbar-links" aria-label="{{ _('Secondary') }}">{{ nav_links(navbar.links | selectattr("right")) }}</nav>
+		{% if navbar.show_search %}
+		<button type="button" class="buzz-navbar-button" data-variant="outline" aria-label="{{ _('Search') }}" aria-keyshortcuts="Meta+K">
+			<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+			<span class="buzz-navbar-search-label">{{ _("Search") }}</span>
+			<kbd>⌘K</kbd>
+		</button>
+		{% endif %}
+		{% if navbar.call_to_action and navbar.call_to_action_url %}
+		<a class="buzz-navbar-button" data-variant="solid" href="{{ navbar.call_to_action_url }}">{{ _(navbar.call_to_action) }}</a>
+		{% endif %}
+		{% if default_mode %}
+		<button type="button" class="buzz-navbar-button" data-icon-only data-mode-toggle aria-label="{{ _('Dark mode') }}">
+			<svg class="buzz-navbar-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+			<svg class="buzz-navbar-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+		</button>
+		{% endif %}
+		{% if navbar.show_language_picker and header.languages %}
+		{% set current = header.languages | selectattr("language_code", "equalto", header.language) | first %}
+		<details>
+			<summary class="buzz-navbar-button" aria-label="{{ _('Change language') }}">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+				<span lang="{{ header.language }}">{{ current.language_name if current else header.language }}</span>
+			</summary>
+			<div class="buzz-navbar-menu">
+				{% for language in header.languages %}
+				<button type="button" lang="{{ language.language_code }}" data-language="{{ language.language_code }}"{% if language.language_code == header.language %} aria-current="true"{% endif %}>{{ language.language_name }}</button>
+				{% endfor %}
+			</div>
+		</details>
+		{% endif %}
+		{% if not header.is_guest %}
+		<details class="buzz-navbar-account">
+			<summary aria-label="{{ _('Account') }}">
+				{% if header.user_image %}
+				<img class="buzz-navbar-avatar" src="{{ header.user_image }}" alt="">
+				{% else %}
+				<span class="buzz-navbar-avatar">{{ (header.fullname or header.user)[:1] | upper }}</span>
+				{% endif %}
+			</summary>
+			<div class="buzz-navbar-menu">
+				<span class="buzz-navbar-menu-heading">{{ header.fullname }}</span>
+				<a href="/b">{{ _("Dashboard") }}</a>
+				<button type="button" data-logout>{{ _("Log out") }}</button>
+			</div>
+		</details>
+		{% elif navbar.show_login %}
+		<a class="buzz-navbar-button" href="/b/login?redirect-to={{ ('/' ~ (path or '')) | urlencode }}" data-island="login">{{ _("Log in") }}</a>
+		{% endif %}
+	</div>
+</header>
+{% endautoescape %}
+<script>
+	{
+		const navbar = document.querySelector(".buzz-navbar")
+		const csrfToken = () => window.frappe?.csrf_token || window.csrf_token
+
+		document.addEventListener("click", (event) => {
+			navbar.querySelectorAll("details[open]").forEach((menu) => menu.contains(event.target) || menu.removeAttribute("open"))
+		})
+
+		navbar.querySelector("[data-logout]")?.addEventListener("click", async () => {
+			await fetch("/api/method/logout", { method: "POST", headers: { "X-Frappe-CSRF-Token": csrfToken() } })
+			location.reload()
+		})
+
+		// As in the dashboard: a user's language lives on their User, a guest's in a per-browser cookie.
+		async function setLanguage(languageCode) {
+			if (navbar.hasAttribute("data-logged-in")) {
+				await fetch("/api/v2/method/buzz.api.account.update_user_language", {
+					method: "POST",
+					headers: { "Content-Type": "application/json", "X-Frappe-CSRF-Token": csrfToken() },
+					body: JSON.stringify({ language_code: languageCode }),
+				})
+			} else {
+				document.cookie = `preferred_language=${encodeURIComponent(languageCode)}; path=/; max-age=31536000; SameSite=Lax`
+			}
+			location.reload()
+		}
+
+		navbar.querySelectorAll("[data-language]").forEach((button) => {
+			button.addEventListener("click", () => setLanguage(button.dataset.language))
+		})
+
+		// "theme" is the key frappe-ui's useColorScheme keeps the dashboard's choice under, and the key
+		// the event layout's <head> script reads to apply the mode before first paint.
+		const modeToggle = navbar.querySelector("[data-mode-toggle]")
+		const setMode = (mode) => {
+			document.documentElement.dataset.mode = mode
+			modeToggle.setAttribute("aria-pressed", String(mode === "dark"))
+		}
+
+		modeToggle?.addEventListener("click", () => {
+			const mode = document.documentElement.dataset.mode === "dark" ? "light" : "dark"
+			// A crossfade hides the whole palette swapping in one frame; skipped for reduced motion.
+			const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches
+			if (document.startViewTransition && !reduceMotion) document.startViewTransition(() => setMode(mode))
+			else setMode(mode)
+			try {
+				localStorage.setItem("theme", mode)
+			} catch {
+				// Storage can be blocked; the switch still holds for this page view.
+			}
+		})
+		if (modeToggle) setMode(document.documentElement.dataset.mode || "dark")
+	}
+</script>

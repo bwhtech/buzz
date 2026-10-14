@@ -92,11 +92,30 @@ export interface FrappeError extends Error {
 	exc_type?: string
 }
 
-// buzz.api.account.get_user_info: every field but is_logged_in and brand_image
+export interface NavbarLink {
+	label: string
+	url: string | null
+	open_in_new_tab: boolean
+	right: boolean
+	child_items: NavbarLink[]
+}
+
+// Website Settings' navbar fields.
+export interface Navbar {
+	links: NavbarLink[]
+	call_to_action: string | null
+	call_to_action_url: string | null
+	show_login: boolean
+	show_search: boolean
+	show_language_picker: boolean
+}
+
+// buzz.api.account.get_user_info: every field but is_logged_in, brand_image and navbar
 // is absent for guests, so the session fields stay optional.
 export interface UserInfo {
 	is_logged_in: boolean
 	brand_image: string | null
+	navbar: Navbar
 	name?: string
 	first_name?: string | null
 	last_name?: string | null

@@ -7,6 +7,10 @@
  "field_order": [
   "general_section",
   "support_email",
+  "whitelabel_section",
+  "app_logo",
+  "column_break_whitelabel",
+  "app_logo_dark",
   "event_page_section",
   "event_page_theme",
   "show_hosting_banner",
@@ -129,6 +133,30 @@
    "fieldtype": "Data",
    "label": "Support Email",
    "options": "Email"
+  },
+  {
+   "description": "Replaces the Buzz logo on public pages. Upload both logos or neither.",
+   "fieldname": "whitelabel_section",
+   "fieldtype": "Section Break",
+   "label": "Whitelabel"
+  },
+  {
+   "fieldname": "app_logo",
+   "fieldtype": "Attach Image",
+   "label": "App Logo",
+   "description": "Shown in light mode",
+   "mandatory_depends_on": "eval:doc.app_logo_dark"
+  },
+  {
+   "fieldname": "column_break_whitelabel",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "app_logo_dark",
+   "fieldtype": "Attach Image",
+   "label": "App Logo (Dark)",
+   "description": "Shown in dark mode",
+   "mandatory_depends_on": "eval:doc.app_logo"
   },
   {
    "fieldname": "proposals_tab",
@@ -316,7 +344,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-03 13:00:00.000000",
+ "modified": "2026-10-14 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",

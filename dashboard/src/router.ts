@@ -160,7 +160,7 @@ const routes: RouteRecordRaw[] = [
 		path: "/check-in/:eventName?",
 		name: "check-in",
 		props: true,
-		meta: { title: "Check In", siteHeader: true },
+		meta: { title: "Check In" },
 		component: () => import("@/pages/CheckIn.vue"),
 	},
 	{
