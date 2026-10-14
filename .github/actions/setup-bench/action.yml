@@ -14,6 +14,10 @@ inputs:
     description: "Git URL of one more app to install before buzz. App name is the last path segment."
     required: false
     default: ""
+  frappe-branch:
+    description: "Branch of frappe and payments to install. Empty uses each repo's default branch."
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -63,8 +67,11 @@ runs:
 
     - name: Init bench
       shell: bash -e {0}
+      env:
+        FRAPPE_BRANCH: ${{ inputs.frappe-branch }}
       run: |
         bench init ~/frappe-bench \
+          ${FRAPPE_BRANCH:+--frappe-branch "$FRAPPE_BRANCH"} \
           --skip-redis-config-generation \
           --skip-assets \
           --no-backups \
@@ -80,9 +87,10 @@ runs:
       working-directory: /home/runner/frappe-bench
       env:
         EXTRA_APP_URL: ${{ inputs.extra-app-url }}
+        FRAPPE_BRANCH: ${{ inputs.frappe-branch }}
       run: |
         # buzz lists frappe/payments in required_apps, so it must precede install-app.
-        bench get-app --skip-assets https://github.com/frappe/payments
+        bench get-app --skip-assets ${FRAPPE_BRANCH:+--branch "$FRAPPE_BRANCH"} https://github.com/frappe/payments
 
         # Test-only: buzz/tests/factories imports frappe_factory_bot. No install-app —
         # the app ships no DocTypes, and get-app already pip-installs it into the env.

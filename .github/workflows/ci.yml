@@ -23,7 +23,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-    name: Server
+      matrix:
+        include:
+          # Empty branch installs frappe's default branch (develop).
+          - name: Server
+            frappe-branch: ""
+          - name: Server (version-16)
+            frappe-branch: version-16
+    name: ${{ matrix.name }}
     # pull-requests: write lets the job post the coverage comment.
     permissions:
       contents: read
@@ -66,6 +73,7 @@ jobs:
         with:
           # test_buzz_event imports zoom_integration.tests.zoom_fixtures.
           extra-app-url: https://github.com/bwhtech/zoom_integration
+          frappe-branch: ${{ matrix.frappe-branch }}
 
       - name: Run Tests
         working-directory: /home/runner/frappe-bench
@@ -76,7 +84,7 @@ jobs:
       # Frappe's --coverage omits test folders but not test_*.py files, so the report
       # is rebuilt from the raw data with the test modules left out.
       - name: Build coverage report
-        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.frappe-branch == '' }}
         continue-on-error: true
         # Reported from the app folder so the table shows paths relative to it.
         working-directory: /home/runner/frappe-bench/apps/buzz
@@ -87,7 +95,7 @@ jobs:
 
       - name: Comment coverage on the pull request
         # A fork's token cannot comment, so only same-repo pull requests get one.
-        if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.frappe-branch == '' && github.event.pull_request.head.repo.full_name == github.repository }}
         continue-on-error: true
         uses: actions/github-script@v9
         with:
