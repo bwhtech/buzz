@@ -56,6 +56,7 @@ class SiteHeader:
 		return {
 			"logo": buzz_settings.app_logo or DEFAULT_LOGO,
 			"logo_dark": buzz_settings.app_logo_dark,
+			"icon": buzz_settings.app_icon,
 			"name": self.settings.app_name or "Buzz",
 			"is_default": not buzz_settings.app_logo,
 		}

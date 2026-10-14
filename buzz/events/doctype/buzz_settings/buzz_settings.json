@@ -7,10 +7,6 @@
  "field_order": [
   "general_section",
   "support_email",
-  "whitelabel_section",
-  "app_logo",
-  "column_break_whitelabel",
-  "app_logo_dark",
   "event_page_section",
   "event_page_theme",
   "show_hosting_banner",
@@ -20,6 +16,13 @@
   "allow_add_ons_change_before_event_start_days",
   "column_break_hagy",
   "allow_ticket_cancellation_request_before_event_start_days",
+  "whitelabel_tab",
+  "whitelabel_section",
+  "app_logo",
+  "column_break_whitelabel",
+  "app_logo_dark",
+  "app_icon_section",
+  "app_icon",
   "payments_tab",
   "default_payment_gateway",
   "proposals_tab",
@@ -135,10 +138,10 @@
    "options": "Email"
   },
   {
-   "description": "Replaces the Buzz logo on public pages. Upload both logos or neither.",
+   "description": "Replaces the Buzz logo on public pages and the dashboard. Upload both logos or neither.",
    "fieldname": "whitelabel_section",
    "fieldtype": "Section Break",
-   "label": "Whitelabel"
+   "label": "Logo"
   },
   {
    "fieldname": "app_logo",
@@ -338,13 +341,29 @@
    "fieldname": "google_maps_embed_api_key",
    "fieldtype": "Data",
    "label": "Maps Embed API Key"
+  },
+  {
+   "fieldname": "whitelabel_tab",
+   "fieldtype": "Tab Break",
+   "label": "Whitelabel"
+  },
+  {
+   "fieldname": "app_icon_section",
+   "fieldtype": "Section Break",
+   "label": "Icon"
+  },
+  {
+   "fieldname": "app_icon",
+   "fieldtype": "Attach Image",
+   "label": "App Icon",
+   "description": "A square mark shown when the dashboard sidebar is collapsed"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-14 13:00:00.000000",
+ "modified": "2026-10-14 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",

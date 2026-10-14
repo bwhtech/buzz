@@ -20,6 +20,7 @@ class BuzzSettings(Document):
 		allow_guest_event_proposals: DF.Check
 		allow_ticket_cancellation_request_before_event_start_days: DF.Int
 		allow_transfer_ticket_before_event_start_days: DF.Int
+		app_icon: DF.AttachImage | None
 		app_logo: DF.AttachImage | None
 		app_logo_dark: DF.AttachImage | None
 		auto_send_pitch_deck: DF.Check

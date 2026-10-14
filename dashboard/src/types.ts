@@ -113,6 +113,7 @@ export interface Navbar {
 export interface Brand {
 	logo: string
 	logo_dark: string | null
+	icon: string | null
 	name: string
 	is_default: boolean
 }

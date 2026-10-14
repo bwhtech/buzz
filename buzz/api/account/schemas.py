@@ -20,6 +20,8 @@ class Navbar(APIResponse):
 class Brand(APIResponse):
 	logo: str
 	logo_dark: str | None
+	# Square mark for the collapsed dashboard sidebar.
+	icon: str | None
 	name: str
 	# No whitelabel logo is set, so clients draw the Buzz wordmark.
 	is_default: bool
