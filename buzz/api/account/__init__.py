@@ -13,7 +13,7 @@ def get_user_info() -> UserInfoResponse | GuestInfoResponse:
 	if frappe.session.user == "Guest":
 		return GuestInfoResponse(
 			is_logged_in=False,
-			brand_image=header.brand_image(),
+			brand=header.brand(),
 			navbar=header.navbar(),
 			language=get_request_language(),
 		)
@@ -30,7 +30,7 @@ def get_user_info() -> UserInfoResponse | GuestInfoResponse:
 		user_image=user.user_image,
 		bio=user.bio,
 		roles=user.roles,
-		brand_image=header.brand_image(),
+		brand=header.brand(),
 		navbar=header.navbar(),
 		language=user.language,
 		time_zone=user.time_zone,

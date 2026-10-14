@@ -125,12 +125,6 @@
 	color: var(--navbar-bg);
 }
 
-.buzz-navbar-button[data-variant="outline"] {
-	border-color: var(--navbar-border);
-	color: var(--navbar-muted);
-	font-weight: 400;
-}
-
 .buzz-navbar-button[data-icon-only] {
 	width: 32px;
 	padding: 0;
@@ -138,17 +132,6 @@
 
 .buzz-navbar-button:active {
 	transform: scale(0.97);
-}
-
-.buzz-navbar kbd {
-	padding: 0 4px;
-	border: 1px solid var(--navbar-border);
-	border-radius: 4px;
-	background: none;
-	box-shadow: none;
-	color: var(--navbar-muted);
-	font: inherit;
-	font-size: 12px;
 }
 
 .buzz-navbar details {

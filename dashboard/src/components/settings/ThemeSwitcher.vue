@@ -17,7 +17,11 @@ interface Pane {
 
 const { colorScheme, setColorScheme } = useColorScheme()
 
-const brandImage = computed(() => userResource.data?.brand_image)
+const brand = computed(() => userResource.data?.brand)
+const paneLogo = (tone: Pane["tone"]) => {
+	if (!brand.value || brand.value.is_default) return null
+	return tone === "dark" ? brand.value.logo_dark || brand.value.logo : brand.value.logo
+}
 
 const themeOptions = computed<
 	{ value: ColorScheme; label: string; panes: Pane[]; bars: boolean }[]
@@ -92,7 +96,12 @@ const themeOptions = computed<
 						</div>
 						<div class="flex min-h-[41px] items-start justify-between gap-2 p-2.5 pb-1 pr-0">
 							<div class="flex flex-1 items-center gap-1">
-								<img v-if="brandImage" :src="brandImage" class="size-5 object-cover" alt="" />
+								<img
+									v-if="paneLogo(pane.tone)"
+									:src="paneLogo(pane.tone) ?? undefined"
+									class="h-5 w-auto max-w-16 object-contain"
+									alt=""
+								/>
 								<BuzzLogo v-else class="size-5 shrink-0 text-ink-gray-5" />
 							</div>
 							<div v-if="option.bars" class="flex flex-1 flex-col gap-[5px]">

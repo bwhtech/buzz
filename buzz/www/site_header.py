@@ -51,9 +51,6 @@ class SiteHeader:
 		info = get_fullname_and_avatar(frappe.session.user)
 		return {"user": info.name, "fullname": info.fullname, "user_image": info.avatar}
 
-	def brand_image(self) -> str | None:
-		return self.settings.banner_image or self.settings.app_logo
-
 	def brand(self) -> dict:
 		buzz_settings = frappe.get_cached_doc("Buzz Settings")
 		return {
@@ -70,7 +67,6 @@ class SiteHeader:
 			"call_to_action": self.settings.call_to_action,
 			"call_to_action_url": self.settings.call_to_action_url,
 			"show_login": not self.settings.hide_login,
-			"show_search": bool(self.settings.navbar_search),
 			"show_language_picker": bool(self.settings.show_language_picker),
 		}
 

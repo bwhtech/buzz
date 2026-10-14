@@ -106,15 +106,22 @@ export interface Navbar {
 	call_to_action: string | null
 	call_to_action_url: string | null
 	show_login: boolean
-	show_search: boolean
 	show_language_picker: boolean
 }
 
-// buzz.api.account.get_user_info: every field but is_logged_in, brand_image and navbar
+// Buzz Settings' whitelabel logos; `is_default` means none is set and the Buzz wordmark shows.
+export interface Brand {
+	logo: string
+	logo_dark: string | null
+	name: string
+	is_default: boolean
+}
+
+// buzz.api.account.get_user_info: every field but is_logged_in, brand and navbar
 // is absent for guests, so the session fields stay optional.
 export interface UserInfo {
 	is_logged_in: boolean
-	brand_image: string | null
+	brand: Brand
 	navbar: Navbar
 	name?: string
 	first_name?: string | null

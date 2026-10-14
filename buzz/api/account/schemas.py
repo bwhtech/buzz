@@ -14,13 +14,20 @@ class Navbar(APIResponse):
 	call_to_action: str | None
 	call_to_action_url: str | None
 	show_login: bool
-	show_search: bool
 	show_language_picker: bool
+
+
+class Brand(APIResponse):
+	logo: str
+	logo_dark: str | None
+	name: str
+	# No whitelabel logo is set, so clients draw the Buzz wordmark.
+	is_default: bool
 
 
 class GuestInfoResponse(APIResponse):
 	is_logged_in: bool
-	brand_image: str | None
+	brand: Brand
 	navbar: Navbar
 	# Resolved per browser, so the switcher can show a guest the language in effect.
 	language: str
@@ -37,7 +44,7 @@ class UserInfoResponse(APIResponse):
 	bio: str | None
 	# Rows of the User.roles child table, serialized as full documents.
 	roles: list
-	brand_image: str | None
+	brand: Brand
 	navbar: Navbar
 	language: str | None
 	time_zone: str | None

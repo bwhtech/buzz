@@ -50,13 +50,6 @@
 	</div>
 	<div class="buzz-navbar-end">
 		<nav class="buzz-navbar-links" aria-label="{{ _('Secondary') }}">{{ nav_links(navbar.links | selectattr("right")) }}</nav>
-		{% if navbar.show_search %}
-		<button type="button" class="buzz-navbar-button" data-variant="outline" aria-label="{{ _('Search') }}" aria-keyshortcuts="Meta+K">
-			<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-			<span>{{ _("Search") }}</span>
-			<kbd>⌘K</kbd>
-		</button>
-		{% endif %}
 		{% if navbar.call_to_action and navbar.call_to_action_url %}
 		<a class="buzz-navbar-button" data-variant="solid" href="{{ navbar.call_to_action_url }}">{{ _(navbar.call_to_action) }}</a>
 		{% endif %}
