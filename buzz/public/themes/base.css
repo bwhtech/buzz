@@ -724,7 +724,7 @@ body {
 .date-timeline {
 	position: relative;
 	display: grid;
-	gap: 10px;
+	gap: 16px;
 	margin: 0;
 	padding: 0 0 0 16px;
 	list-style: none;
@@ -732,12 +732,12 @@ body {
 	font-size: 14px;
 }
 
-/* The rail joins the two dots */
-.date-timeline::before {
+/* The rail runs from each dot down to the next one, past the 16px gap. */
+.date-timeline li:not(:last-child)::after {
 	position: absolute;
 	top: 10px;
-	bottom: 10px;
-	left: 3px;
+	bottom: -22px;
+	left: -13px;
 	width: 1px;
 	background: var(--border);
 	content: "";
@@ -745,8 +745,8 @@ body {
 
 .date-timeline li {
 	position: relative;
-	display: flex;
-	column-gap: 4px;
+	display: grid;
+	gap: 2px;
 }
 
 .date-timeline li::before {
@@ -763,8 +763,6 @@ body {
 }
 
 .date-timeline-label {
-	flex-shrink: 0;
-	width: 52px;
 	color: var(--ink-muted);
 }
 
