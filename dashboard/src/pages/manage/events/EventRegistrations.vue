@@ -12,12 +12,13 @@ import AddPricedItemDialog from "@/components/dashboard/sponsorships/AddPricedIt
 import PaymentProviders from "@/components/dashboard/ticket-types/PaymentProviders.vue"
 import RevenueCards from "@/components/dashboard/ticket-types/RevenueCards.vue"
 import TaxSettings from "@/components/dashboard/ticket-types/TaxSettings.vue"
+import TicketCategoryDialog from "@/components/dashboard/ticket-types/TicketCategoryDialog.vue"
 import TicketTypeDrawer from "@/components/dashboard/ticket-types/TicketTypeDrawer.vue"
 import TicketTypeList from "@/components/dashboard/ticket-types/TicketTypeList.vue"
 import { useTaxSettingsForm } from "@/composables/useTaxSettingsForm"
 import { useEventTicketTypes } from "@/data/ticketTypes"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
-import type { FrappeError } from "@/types"
+import type { FrappeError, TicketCategoryItem } from "@/types"
 
 const eventId = useRoute().params.eventId as string
 
@@ -48,6 +49,14 @@ const addAction = computed(() =>
 			}
 		: null,
 )
+
+const categoryDialogOpen = ref(false)
+const editedCategory = ref<TicketCategoryItem | null>(null)
+
+function openCategoryDialog(category: TicketCategoryItem | null) {
+	editedCategory.value = category
+	categoryDialogOpen.value = true
+}
 
 // Held by name so a reload keeps the drawer pointing at fresh data.
 const selectedName = ref<string | null>(null)
@@ -116,10 +125,20 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				empty-description="Add one so people can register."
 				empty-icon="lucide-ticket"
 			>
+				<template v-if="page.data.can_write" #actions>
+					<Button
+						label="Add Category"
+						variant="ghost"
+						icon-left="lucide-folder-plus"
+						@click="openCategoryDialog(null)"
+					/>
+				</template>
 				<TicketTypeList
 					:ticket-types="page.data.ticket_types"
+					:categories="page.data.categories"
 					:can-write="page.data.can_write"
 					@open="selectedName = $event"
+					@edit-category="openCategoryDialog"
 				/>
 			</ListSection>
 
@@ -156,9 +175,17 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		v-model:open="drawerOpen"
 		:event="eventId"
 		:ticket-type="selectedTicketType"
+		:categories="page.data?.categories ?? []"
 		:can-write="!!page.data?.can_write"
 		:paid-events-enabled="!!page.data?.paid_events_enabled"
 		@changed="page.reload()"
+	/>
+
+	<TicketCategoryDialog
+		v-model="categoryDialogOpen"
+		:event="eventId"
+		:category="editedCategory"
+		@saved="page.reload()"
 	/>
 
 	<AddPricedItemDialog

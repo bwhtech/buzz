@@ -180,6 +180,7 @@ declare module 'vue' {
     ThemeSwitcher: typeof import('./src/components/settings/ThemeSwitcher.vue')['default']
     TicketBookingDetails: typeof import('./src/components/dashboard/tickets/TicketBookingDetails.vue')['default']
     TicketCard: typeof import('./src/components/TicketCard.vue')['default']
+    TicketCategoryDialog: typeof import('./src/components/dashboard/ticket-types/TicketCategoryDialog.vue')['default']
     TicketsSection: typeof import('./src/components/TicketsSection.vue')['default']
     TicketTransferDialog: typeof import('./src/components/TicketTransferDialog.vue')['default']
     TicketTypeDrawer: typeof import('./src/components/dashboard/ticket-types/TicketTypeDrawer.vue')['default']

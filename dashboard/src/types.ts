@@ -723,9 +723,17 @@ export interface TicketTypePrice extends TierPrice {
 }
 
 // buzz.api.events.get_event_ticket_types: the ticket types an event sells, for its Tickets page.
+export interface TicketCategoryItem {
+	name: string
+	title: string
+	description: string | null
+	sort_order: number
+}
+
 export interface TicketTypeItem {
 	name: string
 	title: string
+	category: string | null
 	max_tickets_available: number
 	auto_unpublish_after: string | null
 	is_published: boolean
@@ -748,6 +756,7 @@ export interface EventTicketTypes {
 	team_tax_id: string | null
 	can_edit_team: boolean
 	paid_events_enabled: boolean
+	categories: TicketCategoryItem[]
 	ticket_types: TicketTypeItem[]
 	payment_providers: PaymentProviderItem[]
 	revenue: CurrencyRevenue[]

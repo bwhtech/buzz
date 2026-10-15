@@ -19,7 +19,9 @@ defineProps<{
 <template>
 	<section class="space-y-3">
 		<div>
-			<SectionHeader :title="title" :count="count" :action="action" />
+			<SectionHeader :title="title" :count="count" :action="action">
+				<template v-if="$slots.actions" #actions><slot name="actions" /></template>
+			</SectionHeader>
 			<p v-if="description" class="mt-1 text-p-base text-ink-gray-5">{{ description }}</p>
 		</div>
 		<EmptyState
