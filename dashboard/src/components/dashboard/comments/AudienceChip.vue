@@ -40,6 +40,7 @@ const options = computed(() => [
 <template>
 	<Dropdown v-model:open="open" :options="options" side="top" align="start">
 		<Button
+			size="xs"
 			:variant="toRecipients ? 'outline' : 'ghost'"
 			:icon-left="toRecipients ? 'lucide-mail' : 'lucide-lock'"
 			icon-right="lucide-chevron-down"

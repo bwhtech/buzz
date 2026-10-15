@@ -70,7 +70,7 @@ function post(content: string, toSpeakers: boolean) {
 
 <template>
 	<div class="flex min-h-0 flex-1 flex-col">
-		<div class="flex-1 space-y-8 overflow-y-auto overscroll-contain px-6 pt-2 pb-6">
+		<div class="scroll-fade flex-1 space-y-8 overflow-y-auto overscroll-contain px-6 pt-2 pb-6">
 			<ProposalProperties :speakers="speakers" :fields="fields" />
 
 			<section class="space-y-2">
@@ -110,6 +110,12 @@ function post(content: string, toSpeakers: boolean) {
 </template>
 
 <style scoped>
+/* The timeline fades into the composer instead of being cut at its edge. The fade is
+   as tall as the bottom padding, so the last entry is never faded once scrolled to. */
+.scroll-fade {
+	mask-image: linear-gradient(to bottom, black calc(100% - 1.5rem), transparent);
+}
+
 .description {
 	transition: opacity 200ms cubic-bezier(0.23, 1, 0.32, 1);
 }

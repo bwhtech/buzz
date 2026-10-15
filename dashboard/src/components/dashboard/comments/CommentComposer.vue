@@ -71,7 +71,11 @@ function submit(isEmpty: boolean) {
 					@keydown.meta.enter="submit(isEmpty)"
 					@keydown.ctrl.enter="submit(isEmpty)"
 				>
-					<EditorContent class="max-h-48 min-h-16 overflow-y-auto py-1 text-base text-ink-gray-8" />
+					<!-- Typed text stays 16px so iOS does not zoom the page on focus; only the
+					     placeholder is smaller. -->
+					<EditorContent
+						class="max-h-48 min-h-10 overflow-y-auto py-1 text-base text-ink-gray-8 [&_p.is-editor-empty]:before:text-sm"
+					/>
 					<!-- Always laid out, only revealed, so focusing the field never shifts the composer. -->
 					<div
 						class="composer-footer flex items-center gap-2 pt-1"
@@ -85,8 +89,15 @@ function submit(isEmpty: boolean) {
 							:recipients-label="recipientsLabel!"
 						/>
 						<div class="ml-auto flex items-center gap-2">
-							<Button v-if="editing" variant="ghost" label="Cancel" @click="emit('cancel')" />
 							<Button
+								v-if="editing"
+								size="xs"
+								variant="ghost"
+								label="Cancel"
+								@click="emit('cancel')"
+							/>
+							<Button
+								size="xs"
 								variant="solid"
 								:label="editing ? 'Save' : toRecipients ? 'Send email' : 'Comment'"
 								:disabled="isEmpty"
