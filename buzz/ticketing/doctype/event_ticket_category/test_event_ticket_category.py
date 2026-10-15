@@ -16,6 +16,16 @@ class TestEventTicketCategory(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			EventTicketCategoryFactory.create(event=self.event, title=" workshops ")
 
+	def test_saves_changes_to_an_existing_category(self):
+		self.category.sort_order = 4
+		self.category.save()
+		self.assertEqual(frappe.db.get_value("Event Ticket Category", self.category.name, "sort_order"), 4)
+
+	def test_rejects_moving_to_another_event(self):
+		self.category.event = BuzzEventFactory.create().name
+		with self.assertRaises(frappe.ValidationError):
+			self.category.save()
+
 	def test_allows_the_same_title_in_another_event(self):
 		EventTicketCategoryFactory.create(title="Workshops")
 

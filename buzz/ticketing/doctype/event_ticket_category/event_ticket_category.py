@@ -23,7 +23,15 @@ class EventTicketCategory(Document):
 
 	def validate(self):
 		self.title = (self.title or "").strip()
+		self.validate_event_unchanged()
 		self.validate_unique_title()
+
+	# Not set_only_once: Buzz Event names are autoincrement ints, and Frappe compares the
+	# reloaded int with the saved string, which fails every save.
+	def validate_event_unchanged(self):
+		before = self.get_doc_before_save()
+		if before and str(before.event) != str(self.event):
+			frappe.throw(_("A ticket category cannot move to another event"))
 
 	# The default collation compares titles case-insensitively.
 	def validate_unique_title(self):

@@ -38,8 +38,7 @@
    "in_standard_filter": 1,
    "label": "Event",
    "options": "Buzz Event",
-   "reqd": 1,
-   "set_only_once": 1
+   "reqd": 1
   },
   {
    "default": "0",
