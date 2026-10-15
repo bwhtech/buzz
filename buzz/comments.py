@@ -1,9 +1,7 @@
 import frappe
 from frappe import _
 from frappe.desk.notifications import extract_mentions
-from frappe.utils import escape_html, get_fullname, get_url
-
-from buzz.emails import send_message_email
+from frappe.utils import get_fullname, get_url
 
 DASHBOARD_ROUTES = {"Talk Proposal": "/b/manage/events/{event}/talks?proposal={name}"}
 
@@ -74,19 +72,36 @@ def notify_mentioned_members(comment) -> None:
 	mentioned = (set(extract_mentions(comment.content)) & members) - {comment.owner}
 	if not mentioned:
 		return
-	send_message_email(
-		title=_("{0} mentioned you in a comment").format(get_fullname(comment.owner)),
-		message=comment.content + open_link(comment.reference_doctype, comment.reference_name),
+	args = note_email_args(comment.reference_doctype, comment.reference_name, comment.owner, comment.content)
+	frappe.sendmail(
 		recipients=sorted(mentioned),
+		subject=_("{0} mentioned you on {1}").format(args["author"], args["record_title"]),
+		template="comment_mention",
+		args={
+			**args,
+			"button_url": dashboard_url(comment.reference_doctype, comment.reference_name),
+			"button_label": _("Open in Buzz"),
+		},
+		raw_html=True,
+		add_css=False,
 		reference_doctype=comment.reference_doctype,
 		reference_name=comment.reference_name,
 	)
 
 
-def open_link(doctype: str, name: str) -> str:
+def note_email_args(doctype: str, name: str, author: str, note: str) -> dict:
+	"""What the note emails render: the note, who wrote it, and the record and event it is on."""
+	record = frappe.db.get_value(doctype, name, ["title", "event"], as_dict=True)
+	return {
+		"author": get_fullname(author),
+		"note": note,
+		"record_title": record.title,
+		"event_doc": frappe.get_cached_doc("Buzz Event", record.event) if record.event else None,
+	}
+
+
+def dashboard_url(doctype: str, name: str) -> str | None:
 	route = DASHBOARD_ROUTES.get(doctype)
 	if not route:
-		return ""
-	event = frappe.db.get_value(doctype, name, "event")
-	url = get_url(route.format(event=event, name=name))
-	return f'<p><a href="{escape_html(url)}">{_("Open in Buzz")}</a></p>'
+		return None
+	return get_url(route.format(event=frappe.db.get_value(doctype, name, "event"), name=name))

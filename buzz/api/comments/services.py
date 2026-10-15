@@ -8,7 +8,7 @@ from buzz.api.comments.exceptions import CannotDeleteComment, NoRecipients, NotC
 from buzz.api.comments.schemas import ActivityEntry
 from buzz.api.teams.schemas import TeamMember
 from buzz.api.teams.services import members_of
-from buzz.comments import is_commentable, team_of
+from buzz.comments import is_commentable, note_email_args, team_of
 from buzz.permissions import ADMIN_ROLES, has_team_access, is_unrestricted, team_role_of
 
 
@@ -23,6 +23,20 @@ def proposal_speaker_emails(proposal: str) -> list[str]:
 
 # Who a note can be emailed to, for records that have someone outside the team.
 EMAIL_RECIPIENTS = {"Talk Proposal": proposal_speaker_emails}
+
+
+def render_email(template: str, args: dict) -> str:
+	# nosemgrep: frappe-ssti
+	return frappe.render_template(f"buzz/templates/emails/{template}.html", args, is_path=True)
+
+
+def send_in_layout(communication: str, html: str) -> None:
+	"""Sends a stored Communication with `html` as its body, keeping its message-id so
+	replies thread onto it."""
+	message = frappe.get_doc("Communication", communication).sendmail_input_dict(raw_html=True, add_css=False)
+	if not message:
+		frappe.throw(frappe._("No outgoing email account is set up."), exc=frappe.OutgoingEmailError)
+	frappe.sendmail(**{**message, "content": html})
 
 
 class DocumentComments:
@@ -79,14 +93,17 @@ class DocumentComments:
 		recipients = recipient_source(self.reference_name) if recipient_source else []
 		if not recipients:
 			NoRecipients.throw()
-		title = frappe.db.get_value(self.reference_doctype, self.reference_name, "title")
+		# Comment.validate cleans a note; Communication stores what it is given.
+		note = sanitize_html(content, always_sanitize=True)
+		args = note_email_args(self.reference_doctype, self.reference_name, frappe.session.user, note)
+		# Stored as the plain note for the activity feed; sent in the Buzz email layout.
 		communication = make_communication(
 			doctype=self.reference_doctype,
 			name=self.reference_name,
-			subject=frappe._("Notes on {0}").format(title),
-			# Comment.validate cleans a note; Communication stores what it is given.
-			content=sanitize_html(content, always_sanitize=True),
+			subject=frappe._("A note on {0}").format(args["record_title"]),
+			content=note,
 			recipients=recipients,
-			send_email=True,
-		)
-		return communication["name"]
+			send_email=False,
+		)["name"]
+		send_in_layout(communication, render_email("proposal_note", args))
+		return communication
