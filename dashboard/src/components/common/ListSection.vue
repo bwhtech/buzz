@@ -24,6 +24,8 @@ defineProps<{
 			</SectionHeader>
 			<p v-if="description" class="mt-1 text-p-base text-ink-gray-5">{{ description }}</p>
 		</div>
+		<!-- Controls under the description, shown even while the list is empty. -->
+		<slot name="toolbar" />
 		<EmptyState
 			v-if="empty"
 			:title="emptyTitle"

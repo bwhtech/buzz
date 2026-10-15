@@ -40,22 +40,27 @@ const viewOptions = [
 		empty-description="Add one so people can register."
 		empty-icon="lucide-ticket"
 	>
-		<template #actions>
-			<TabButtons v-if="!isMobile" v-model="view" :options="viewOptions" />
-			<Button
-				v-if="page.can_write && !isMobile"
-				variant="ghost"
-				icon-left="lucide-folder-plus"
-				label="New Category"
-				@click="$emit('addCategory')"
-			/>
-			<Button
-				v-if="page.can_write"
-				variant="outline"
-				icon-left="lucide-plus"
-				label="Add"
-				@click="$emit('add', '')"
-			/>
+		<template #toolbar>
+			<div class="flex items-center gap-2">
+				<TabButtons v-if="!isMobile" v-model="view" :options="viewOptions" />
+				<template v-if="page.can_write">
+					<Button
+						v-if="!isMobile"
+						class="ml-auto"
+						variant="ghost"
+						icon-left="lucide-folder-plus"
+						label="New Category"
+						@click="$emit('addCategory')"
+					/>
+					<Button
+						:class="{ 'ml-auto': isMobile }"
+						variant="outline"
+						icon-left="lucide-plus"
+						label="Add"
+						@click="$emit('add', '')"
+					/>
+				</template>
+			</div>
 		</template>
 
 		<TicketTypeChips
