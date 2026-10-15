@@ -746,6 +746,7 @@ body {
 .date-timeline li {
 	position: relative;
 	display: flex;
+	column-gap: 4px;
 }
 
 .date-timeline li::before {
