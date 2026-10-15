@@ -257,23 +257,23 @@ body {
 	margin-top: 24px;
 }
 
-/* Scrolls sideways on a narrow screen instead of widening the page. */
+/* Matches the dashboard editor, so column widths saved there carry over. */
 .prose table {
-	display: block;
-	max-width: 100%;
-	overflow-x: auto;
+	width: 100%;
+	table-layout: fixed;
 	border-collapse: collapse;
 	font-variant-numeric: tabular-nums;
 }
 
 .prose :is(th, td) {
-	padding: 8px 24px 8px 0;
-	border-bottom: 1px solid var(--border);
+	padding: 8px;
+	border: 1px solid var(--outline-gray-2);
 	text-align: start;
 	vertical-align: top;
 }
 
 .prose th {
+	background: var(--surface-gray-2);
 	color: var(--ink);
 	font-weight: var(--font-weight-semibold);
 }
