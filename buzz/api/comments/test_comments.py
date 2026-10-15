@@ -7,6 +7,7 @@ from buzz.api.comments import add_comment, delete_comment, get_activity, get_men
 from buzz.api.comments.exceptions import CannotDeleteComment, NotCommentable, NotTeamMember
 from buzz.tests.base_test_cases import TeamPermissionTestCase
 from buzz.tests.factories import BuzzTeamMembershipFactory, CommentFactory, TalkProposalFactory, UserFactory
+from buzz.tests.utils import mute_outgoing_email
 
 SPEAKER = "comments-speaker@example.com"
 
@@ -36,6 +37,7 @@ class TestDocumentComments(TeamPermissionTestCase):
 
 	def setUp(self):
 		super().setUp()
+		mute_outgoing_email(self)
 		self.proposal = TalkProposalFactory.create(
 			event=self.event_a, speakers=[{"first_name": "Speaker", "email": SPEAKER}]
 		).name

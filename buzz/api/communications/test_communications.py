@@ -25,12 +25,7 @@ from buzz.tests.factories import (
 	TalkProposalFactory,
 	UserFactory,
 )
-from buzz.tests.utils import html_part, queued_emails, queued_recipients
-
-
-def forget_outgoing_account() -> None:
-	if hasattr(frappe.local, "outgoing_email_account"):
-		delattr(frappe.local, "outgoing_email_account")
+from buzz.tests.utils import html_part, mute_outgoing_email, queued_emails, queued_recipients
 
 
 class CommunicationsTestCase(IntegrationTestCase):
@@ -49,13 +44,7 @@ class CommunicationsTestCase(IntegrationTestCase):
 		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.manager, team_role="Manager")
 
 	def setUp(self):
-		# CI has no outgoing account. Muted, frappe queues against a dummy one and never sends;
-		# the dummy is cached on frappe.local, so it is dropped before the next module runs.
-		frappe.flags.mute_emails = True
-		self.addCleanup(setattr, frappe.flags, "mute_emails", False)
-		self.addCleanup(forget_outgoing_account)
-		# CI never builds assets, and every email inlines email.bundle.css through this lookup.
-		self.enterContext(patch("frappe.utils.get_assets_json", return_value={}))
+		mute_outgoing_email(self)
 		self.event = str(BuzzEventFactory.create(team=self.team).name)
 
 	def issue_ticket(self, attendee_email: str, **values) -> str:
