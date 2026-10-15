@@ -18,6 +18,8 @@ const props = defineProps<{
 	placeholder: string
 	// Hides the price inputs, so the item saves at the default free price.
 	freeOnly?: boolean
+	// Extra fields saved on the new item, such as a ticket type's category.
+	defaults?: Record<string, unknown>
 }>()
 const isOpen = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ saved: [] }>()
@@ -59,6 +61,7 @@ async function submit() {
 	if (invalid.value) return
 
 	Object.assign(creator.doc, {
+		...props.defaults,
 		event: props.event,
 		title: title.value.trim(),
 		prices: [{ currency: currency.value, price: price.value }],

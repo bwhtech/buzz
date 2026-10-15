@@ -4,7 +4,6 @@ import { Alert, Button, ErrorMessage, Skeleton } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
-import ListSection from "@/components/common/ListSection.vue"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import RegistrationActions from "@/components/dashboard/events/RegistrationActions.vue"
@@ -14,8 +13,9 @@ import RevenueCards from "@/components/dashboard/ticket-types/RevenueCards.vue"
 import TaxSettings from "@/components/dashboard/ticket-types/TaxSettings.vue"
 import TicketCategoryDialog from "@/components/dashboard/ticket-types/TicketCategoryDialog.vue"
 import TicketTypeDrawer from "@/components/dashboard/ticket-types/TicketTypeDrawer.vue"
-import TicketTypeList from "@/components/dashboard/ticket-types/TicketTypeList.vue"
+import TicketTypesSection from "@/components/dashboard/ticket-types/TicketTypesSection.vue"
 import { useTaxSettingsForm } from "@/composables/useTaxSettingsForm"
+import { useTicketTypeOrganizer } from "@/composables/useTicketTypeOrganizer"
 import { useEventTicketTypes } from "@/data/ticketTypes"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError, TicketCategoryItem } from "@/types"
@@ -37,18 +37,18 @@ useEventListener(document, "keydown", (stroke: KeyboardEvent) => {
 	if (!stroke.repeat) taxForm.save()
 })
 
-const addDialogOpen = ref(false)
-
-const addAction = computed(() =>
-	page.data?.can_write
-		? {
-				label: "Add",
-				variant: "outline" as const,
-				iconLeft: "lucide-plus",
-				onClick: () => (addDialogOpen.value = true),
-			}
-		: null,
+const organizer = useTicketTypeOrganizer(
+	computed(() => page.data),
+	() => page.reload(),
 )
+
+const addDialogOpen = ref(false)
+const addToCategory = ref("")
+
+function openAddDialog(category: string) {
+	addToCategory.value = category
+	addDialogOpen.value = true
+}
 
 const categoryDialogOpen = ref(false)
 const editedCategory = ref<TicketCategoryItem | null>(null)
@@ -115,32 +115,14 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 
 			<RevenueCards v-if="page.data.revenue.length" :revenue="page.data.revenue" />
 
-			<ListSection
-				title="Ticket Types"
-				description="Types of tickets that a participant can buy for this event"
-				:count="page.data.ticket_types.length"
-				:action="addAction"
-				:empty="!page.data.ticket_types.length"
-				empty-title="No ticket types yet"
-				empty-description="Add one so people can register."
-				empty-icon="lucide-ticket"
-			>
-				<template v-if="page.data.can_write" #actions>
-					<Button
-						label="Add Category"
-						variant="ghost"
-						icon-left="lucide-folder-plus"
-						@click="openCategoryDialog(null)"
-					/>
-				</template>
-				<TicketTypeList
-					:ticket-types="page.data.ticket_types"
-					:categories="page.data.categories"
-					:can-write="page.data.can_write"
-					@open="selectedName = $event"
-					@edit-category="openCategoryDialog"
-				/>
-			</ListSection>
+			<TicketTypesSection
+				:page="page.data"
+				:organizer="organizer"
+				@open="selectedName = $event"
+				@add="openAddDialog"
+				@add-category="openCategoryDialog(null)"
+				@edit-category="openCategoryDialog"
+			/>
 
 			<template v-if="page.data.paid_events_enabled">
 				<PaymentProviders :providers="page.data.payment_providers" />
@@ -195,6 +177,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		item-label="Ticket Type"
 		placeholder="General admission"
 		:free-only="!page.data?.paid_events_enabled"
+		:defaults="addToCategory ? { category: addToCategory } : undefined"
 		@saved="page.reload()"
 	/>
 </template>

@@ -23,7 +23,7 @@ const formatPrice = (row: TierPrice) => formatWholePriceOrFree(row.price, row.cu
 <template>
 	<button
 		type="button"
-		class="grid w-full grid-cols-1 items-center gap-3 rounded-4 border border-outline-gray-2 p-3 text-left transition-[background-color,transform] duration-150 ease-out [@media(hover:hover)]:enabled:hover:bg-surface-gray-1 enabled:active:scale-[0.99] focus-visible:outline-none focus-visible:focus-ring disabled:cursor-default motion-reduce:transform-none sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_1rem]"
+		class="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-4 border border-outline-gray-2 p-3 text-left transition-[background-color,transform] duration-150 ease-out [@media(hover:hover)]:enabled:hover:bg-surface-gray-1 enabled:active:scale-[0.99] focus-visible:outline-none focus-visible:focus-ring disabled:cursor-default motion-reduce:transform-none sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_1rem]"
 		:class="{ 'opacity-60': muted }"
 		:disabled="disabled"
 	>
@@ -35,7 +35,7 @@ const formatPrice = (row: TierPrice) => formatWholePriceOrFree(row.price, row.cu
 			<span class="block text-sm text-ink-gray-5">{{ subtitle }}</span>
 		</span>
 
-		<span class="min-w-0 space-y-1">
+		<span class="min-w-0 space-y-1 max-sm:text-right">
 			<span class="block truncate text-base font-semibold tabular-nums text-ink-gray-9">
 				{{ prices[0] && formatPrice(prices[0]) }}
 			</span>
@@ -44,7 +44,7 @@ const formatPrice = (row: TierPrice) => formatWholePriceOrFree(row.price, row.cu
 			</span>
 		</span>
 
-		<span class="min-w-0 space-y-1.5">
+		<span class="min-w-0 space-y-1.5 max-sm:col-span-2">
 			<span class="block text-sm tabular-nums text-ink-gray-6">{{ usageLabel }}</span>
 			<!-- The label above already reads the same count out. -->
 			<Progress
