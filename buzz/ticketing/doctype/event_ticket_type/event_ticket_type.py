@@ -46,6 +46,7 @@ class EventTicketType(Document):
 		from buzz.events.doctype.buzz_price.buzz_price import BuzzPrice
 
 		auto_unpublish_after: DF.Date | None
+		category: DF.Link | None
 		event: DF.Link
 		is_published: DF.Check
 		max_tickets_available: DF.Int
@@ -63,6 +64,12 @@ class EventTicketType(Document):
 		self.validate_free_or_paid_everywhere()
 		self.validate_locked_prices()
 		self.validate_paid_events_enabled()
+		self.validate_category_event()
+
+	def validate_category_event(self):
+		filters = {"name": self.category, "event": self.event}
+		if self.category and not frappe.db.exists("Event Ticket Category", filters):
+			frappe.throw(_("The ticket category of {0} belongs to another event").format(self.title))
 
 	@property
 	def is_free(self) -> bool:

@@ -18,6 +18,7 @@ from buzz.tests.factories.event_proposal_factory import EventProposalFactory
 from buzz.tests.factories.event_sponsor_factory import EventSponsorFactory
 from buzz.tests.factories.event_talk_factory import EventTalkFactory
 from buzz.tests.factories.event_template_factory import EventTemplateFactory
+from buzz.tests.factories.event_ticket_category_factory import EventTicketCategoryFactory
 from buzz.tests.factories.event_ticket_factory import EventTicketFactory
 from buzz.tests.factories.event_ticket_type_factory import EventTicketTypeFactory
 from buzz.tests.factories.event_topic_factory import EventTopicFactory
@@ -58,6 +59,7 @@ __all__ = [
 	"EventSponsorFactory",
 	"EventTalkFactory",
 	"EventTemplateFactory",
+	"EventTicketCategoryFactory",
 	"EventTicketFactory",
 	"EventTicketTypeFactory",
 	"EventTopicFactory",
