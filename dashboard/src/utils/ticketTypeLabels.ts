@@ -7,7 +7,7 @@ const isSoldOut = (ticketType: TicketTypeItem) =>
 	ticketType.tickets_sold >= ticketType.max_tickets_available
 
 export function ticketTypeBadge(ticketType: TicketTypeItem) {
-	if (!ticketType.is_published) return { label: "Disabled", theme: "red" as const }
+	if (!ticketType.is_published) return { label: "Disabled", theme: "gray" as const }
 	return isSoldOut(ticketType) ? { label: "Sold out", theme: "amber" as const } : null
 }
 
@@ -19,8 +19,9 @@ export function salesLabel(ticketType: TicketTypeItem) {
 // A ticket type without a seat count sells any number of tickets.
 export function seatsLabel(ticketType: TicketTypeItem) {
 	const seats = ticketType.max_tickets_available
-	if (!seats) return `Unlimited · ${ticketType.tickets_sold} sold`
-	return `${ticketType.tickets_sold} of ${seats} sold`
+	const sold = ticketType.tickets_sold.toLocaleString()
+	if (!seats) return `Unlimited · ${sold} sold`
+	return `${sold} of ${seats.toLocaleString()} sold`
 }
 
 export function soldPercent(ticketType: TicketTypeItem) {

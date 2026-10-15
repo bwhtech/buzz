@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Badge, Button, Icon } from "frappe-ui"
+import { Badge, Icon } from "frappe-ui"
 import { reactive } from "vue"
 
 import type { TicketTypeOrganizer } from "@/composables/useTicketTypeOrganizer"
@@ -33,31 +33,42 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 			v-on="canWrite ? organizer.drag.zone(group.key) : {}"
 		>
 			<header class="group flex min-h-8 items-center gap-1.5 pl-1">
-				<Button
-					variant="ghost"
-					size="sm"
-					icon="lucide-chevron-down"
-					:aria-label="collapsed.has(group.key) ? 'Expand' : 'Collapse'"
-					:aria-expanded="!collapsed.has(group.key)"
-					class="transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
-					:class="{ '-rotate-90': collapsed.has(group.key) }"
-					@click="toggle(group.key)"
-				/>
-				<h3
-					class="text-base font-semibold"
-					:class="group.category ? 'text-ink-gray-9' : 'text-ink-gray-6'"
-				>
-					{{ group.title }}
-				</h3>
-				<Badge
-					theme="gray"
-					variant="subtle"
-					class="tabular-nums"
-					:label="String(group.ticketTypes.length)"
-				/>
-				<span class="min-w-0 flex-1 truncate text-sm text-ink-gray-5">{{
-					group.category?.description
-				}}</span>
+				<div class="min-w-0 flex-1">
+					<h3>
+						<button
+							type="button"
+							class="flex max-w-full items-center gap-1.5 rounded-3 py-0.5 text-left focus-visible:outline-none focus-visible:focus-ring"
+							:aria-expanded="!collapsed.has(group.key)"
+							@click="toggle(group.key)"
+						>
+							<Icon
+								name="lucide-chevron-down"
+								class="size-4 shrink-0 text-ink-gray-5 transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
+								:class="{ '-rotate-90': collapsed.has(group.key) }"
+								aria-hidden="true"
+							/>
+							<span
+								class="min-w-0 text-base font-semibold [overflow-wrap:anywhere]"
+								:class="group.category ? 'text-ink-gray-9' : 'text-ink-gray-6'"
+							>
+								{{ group.title }}
+							</span>
+							<Badge
+								theme="gray"
+								variant="subtle"
+								class="tabular-nums"
+								:label="String(group.ticketTypes.length)"
+							/>
+						</button>
+					</h3>
+					<p
+						v-if="group.category?.description"
+						class="truncate pl-[22px] text-sm text-ink-gray-5"
+						:title="group.category.description"
+					>
+						{{ group.category.description }}
+					</p>
+				</div>
 				<TicketCategoryActions
 					v-if="canWrite"
 					:category="group.category"

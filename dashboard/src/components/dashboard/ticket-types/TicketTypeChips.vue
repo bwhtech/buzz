@@ -47,8 +47,10 @@ const chips = computed(() => [
 				:aria-pressed="activeKey === chip.key"
 				@click="selected = chip.key"
 			>
-				{{ chip.title }}
-				<span v-if="chip.count != null" class="tabular-nums opacity-70">{{ chip.count }}</span>
+				<span class="inline-block max-w-48 truncate align-bottom" :title="chip.title">{{
+					chip.title
+				}}</span>
+				<span v-if="chip.count != null" class="ml-1 tabular-nums opacity-70">{{ chip.count }}</span>
 			</Button>
 			<Button
 				v-if="canWrite"
@@ -65,7 +67,7 @@ const chips = computed(() => [
 			<header v-if="selectedGroup" class="flex items-start gap-2 px-0.5 pb-1">
 				<div class="min-w-0 flex-1">
 					<h3 class="text-base font-semibold text-ink-gray-9">{{ group.title }}</h3>
-					<p v-if="group.category?.description" class="text-p-sm text-ink-gray-5">
+					<p v-if="group.category?.description" class="line-clamp-3 text-p-sm text-ink-gray-5">
 						{{ group.category.description }}
 					</p>
 				</div>

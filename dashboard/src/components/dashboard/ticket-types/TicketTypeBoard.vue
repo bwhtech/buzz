@@ -43,13 +43,14 @@ const edgeMask = computed(() => {
 			:class="
 				organizer.dropTarget.value === group.key
 					? 'border-outline-gray-4 bg-surface-gray-2'
-					: 'border-transparent bg-surface-gray-1'
+					: 'border-transparent bg-surface-gray-1 dark:bg-surface-base'
 			"
 			v-on="canWrite ? organizer.drag.zone(group.key) : {}"
 		>
 			<header class="group flex min-h-7 items-center gap-1.5 pl-1">
 				<h3
 					class="truncate text-sm font-semibold"
+					:title="group.title"
 					:class="group.category ? 'text-ink-gray-9' : 'text-ink-gray-6'"
 				>
 					{{ group.title }}
@@ -79,7 +80,7 @@ const edgeMask = computed(() => {
 					v-for="ticketType in group.ticketTypes"
 					:key="ticketType.name"
 					type="button"
-					class="flex flex-col gap-2.5 rounded-4 border border-outline-gray-2 bg-surface-base p-3 text-left transition-[box-shadow,opacity,transform] duration-150 ease-out focus-visible:outline-none focus-visible:focus-ring enabled:active:scale-[0.98] [@media(hover:hover)]:enabled:hover:shadow-sm motion-reduce:transform-none"
+					class="flex flex-col gap-2.5 rounded-4 border border-outline-gray-2 bg-surface-elevation-2 p-3 text-left transition-[box-shadow,opacity,transform] duration-150 ease-out focus-visible:outline-none focus-visible:focus-ring enabled:active:scale-[0.98] [@media(hover:hover)]:enabled:hover:shadow-sm motion-reduce:transform-none"
 					:class="
 						organizer.dragging.value === ticketType.name
 							? 'opacity-40'
@@ -90,16 +91,21 @@ const edgeMask = computed(() => {
 					v-on="canWrite ? organizer.drag.handle(ticketType) : {}"
 					@click="$emit('open', ticketType.name)"
 				>
-					<span class="flex items-start justify-between gap-2">
-						<span class="min-w-0 space-y-0.5">
-							<span class="block text-sm font-medium text-ink-gray-9">{{ ticketType.title }}</span>
-							<span class="block text-xs text-ink-gray-5">{{ salesLabel(ticketType) }}</span>
-						</span>
-						<span class="whitespace-nowrap text-sm font-semibold tabular-nums text-ink-gray-8">
-							{{
-								ticketType.prices[0] &&
-								formatWholePriceOrFree(ticketType.prices[0].price, ticketType.prices[0].currency)
-							}}
+					<span class="space-y-0.5">
+						<span
+							class="line-clamp-3 text-sm font-medium text-ink-gray-9 [overflow-wrap:anywhere]"
+							:title="ticketType.title"
+							>{{ ticketType.title }}</span
+						>
+						<span class="block text-xs text-ink-gray-5">{{ salesLabel(ticketType) }}</span>
+					</span>
+					<span class="text-sm font-semibold tabular-nums text-ink-gray-8">
+						{{
+							ticketType.prices[0] &&
+							formatWholePriceOrFree(ticketType.prices[0].price, ticketType.prices[0].currency)
+						}}
+						<span v-if="ticketType.prices.length > 1" class="text-xs font-normal text-ink-gray-5">
+							+{{ ticketType.prices.length - 1 }}
 						</span>
 					</span>
 					<Progress
