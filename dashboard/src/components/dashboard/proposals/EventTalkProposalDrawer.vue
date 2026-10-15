@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { useEventListener } from "@vueuse/core"
 import { Button, Dialog, Select, call, dayjsLocal, toast } from "frappe-ui"
-import { computed, onBeforeUnmount, ref, watch } from "vue"
+import { computed, ref, watch } from "vue"
 
 import {
 	Drawer,
@@ -11,6 +10,7 @@ import {
 	DrawerTitle,
 } from "@/components/common/drawer"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
+import { useHeldWrite } from "@/composables/useHeldWrite"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
 import { useAcceptProposal, useProposal } from "@/data/proposals"
 import type { ProposalListItem, ProposalSpeaker } from "@/types"
@@ -62,14 +62,7 @@ const selectedStatus = computed({
 	set: (next: string) => requestStatus(next),
 })
 
-const UNDO_WINDOW_MS = 5000
-
-interface HeldStatus {
-	write: () => void
-	timer: number
-}
-
-let held: HeldStatus | null = null
+const heldStatus = useHeldWrite()
 
 // Accepting is the one status that is not a status write: it creates the talk the
 // programme is made of, and an account for any speaker who has none. Worth a confirmation.
@@ -89,34 +82,17 @@ function requestStatus(next: string) {
 }
 
 function holdStatus(name: string, next: string, previous: string) {
-	flushHeldStatus()
+	const restore = () => props.proposal?.name === name && (status.value = previous)
 	status.value = next
-	const hold = {
+	heldStatus.hold({
+		message: `Marked ${next.toLowerCase()}`,
 		write: () => saveStatus(name, next),
-		timer: window.setTimeout(flushHeldStatus, UNDO_WINDOW_MS),
-	}
-	held = hold
-	toast.success(`Marked ${next.toLowerCase()}`, {
-		duration: UNDO_WINDOW_MS,
-		action: { label: "Undo", onClick: () => undoStatus(hold, name, previous) },
+		undo: restore,
+		revert: () => {
+			restore()
+			saveStatus(name, previous)
+		},
 	})
-}
-
-function flushHeldStatus() {
-	if (!held) return
-	clearTimeout(held.timer)
-	const { write } = held
-	held = null
-	write()
-}
-
-// Hovering the toast pauses its countdown but not the hold, so Undo can land after the
-// write went out: then it writes the previous status back.
-function undoStatus(hold: HeldStatus, name: string, previous: string) {
-	if (props.proposal?.name === name) status.value = previous
-	if (held !== hold) return saveStatus(name, previous)
-	clearTimeout(hold.timer)
-	held = null
 }
 
 // Bound to the proposal's name, not the drawer's document, because the drawer may have
@@ -136,19 +112,10 @@ async function saveStatus(name: string, next: string) {
 	}
 }
 
-// A held write still goes out when the drawer's page goes away. Closing the tab also
-// asks first, so the request has time to finish before the page unloads.
-onBeforeUnmount(flushHeldStatus)
-useEventListener(window, "beforeunload", (event: BeforeUnloadEvent) => {
-	if (!held) return
-	flushHeldStatus()
-	event.preventDefault()
-})
-
 async function acceptProposal() {
 	const name = props.proposal?.name
 	if (!name) return
-	flushHeldStatus()
+	heldStatus.flush()
 	try {
 		await accept.submit({ proposal: name })
 		status.value = ACCEPTED
