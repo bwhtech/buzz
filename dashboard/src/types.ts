@@ -136,13 +136,19 @@ export interface UserInfo {
 	time_zone?: string | null
 }
 
-export interface DocumentComment {
+export interface ActivityEntry {
 	name: string
-	content: string
+	kind: "comment" | "email" | "change" | "created"
 	owner: string
 	owner_name: string
 	owner_image: string | null
 	creation: string
+	content: string | null
+	recipients: string[]
+	received: boolean
+	field: string | null
+	old_value: string | null
+	new_value: string | null
 }
 
 export interface TeamMember {

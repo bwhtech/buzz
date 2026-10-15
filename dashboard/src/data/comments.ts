@@ -1,13 +1,13 @@
 import { useCall } from "frappe-ui"
 
-import type { DocumentComment, TeamMember } from "@/types"
+import type { ActivityEntry, TeamMember } from "@/types"
 
 type Reference = { reference_doctype: string; reference_name: string }
 
 // Uncached: a team's notes must not outlive a logout in IndexedDB.
-export function useComments(reference: () => Reference) {
-	return useCall<DocumentComment[], Reference>({
-		url: "/api/v2/method/buzz.api.comments.get_comments",
+export function useActivity(reference: () => Reference) {
+	return useCall<ActivityEntry[], Reference>({
+		url: "/api/v2/method/buzz.api.comments.get_activity",
 		params: reference,
 	})
 }
