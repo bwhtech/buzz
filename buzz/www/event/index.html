@@ -247,7 +247,7 @@
 					</div>
 					<ol class="date-timeline">
 						{% for label, date_and_time in [(_("Starts"), date_range.start), (_("Ends"), date_range.end)] %}
-						<li><span class="date-timeline-label">{{ label }}</span> {{ date_and_time.date }}{% if date_and_time.time %} <span class="date-timeline-time">· {{ date_and_time.time }}</span>{% endif %}</li>
+						<li><span class="date-timeline-label">{{ label }}</span> <span>{{ date_and_time.date }}{% if date_and_time.time %} <span class="date-timeline-time">· {{ date_and_time.time }}</span>{% endif %}</span></li>
 						{% endfor %}
 					</ol>
 					<p class="aside-note">{{ _("Times in {0}").format(timezone_label_with_offset) }}</p>

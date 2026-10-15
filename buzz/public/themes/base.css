@@ -745,6 +745,7 @@ body {
 
 .date-timeline li {
 	position: relative;
+	display: flex;
 }
 
 .date-timeline li::before {
@@ -761,13 +762,14 @@ body {
 }
 
 .date-timeline-label {
-	display: inline-block;
+	flex-shrink: 0;
 	width: 52px;
 	color: var(--ink-muted);
 }
 
 .date-timeline-time {
 	color: var(--ink-muted);
+	white-space: nowrap;
 	font-variant-numeric: tabular-nums;
 }
 
