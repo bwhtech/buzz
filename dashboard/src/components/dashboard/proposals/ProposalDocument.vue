@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ErrorMessage, Skeleton, dayjsLocal, toast } from "frappe-ui"
+import { Badge, ErrorMessage, Skeleton, dayjsLocal, toast } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import CommentComposer from "@/components/dashboard/comments/CommentComposer.vue"
@@ -87,17 +87,15 @@ function post(content: string, toSpeakers: boolean) {
 			</section>
 
 			<section class="space-y-4">
-				<h3 class="flex items-baseline gap-2 text-lg font-semibold text-ink-gray-9">
+				<h3 class="flex items-center gap-2 text-lg font-semibold text-ink-gray-9">
 					Activity
-					<span v-if="noteCount" class="text-sm font-normal text-ink-gray-4 tabular-nums">{{
-						noteCount
-					}}</span>
+					<Badge v-if="noteCount" :label="String(noteCount)" />
 				</h3>
 				<DocumentActivity :feed="feed" :names="names" created-label="submitted this proposal" />
 			</section>
 		</div>
 
-		<div class="shrink-0 space-y-2 px-6 pt-2 pb-5">
+		<div class="shrink-0 space-y-2 px-3 pt-2 pb-3">
 			<ErrorMessage :message="feed.adding.error" />
 			<CommentComposer
 				v-model="draft"

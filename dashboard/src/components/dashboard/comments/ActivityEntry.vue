@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Avatar, Dropdown, dayjsLocal } from "frappe-ui"
+import { Avatar, Button, Dropdown, Tooltip, dayjsLocal } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import { sessionUser } from "@/data/session"
@@ -23,6 +23,7 @@ const editing = ref(false)
 const draft = ref("")
 
 const posted = computed(() => dayjsLocal(props.entry.creation))
+const exactTime = computed(() => posted.value.format("D MMM YYYY, h:mm A"))
 const isNote = computed(() => props.entry.kind === "comment" || props.entry.kind === "email")
 const isAuthor = computed(
 	() => props.entry.kind === "comment" && props.entry.owner === sessionUser(),
@@ -67,21 +68,19 @@ function save(content: string) {
 			<div class="min-w-0 flex-1">
 				<div class="flex items-center gap-2">
 					<span class="truncate text-base font-medium text-ink-gray-8">{{ entry.owner_name }}</span>
-					<time
-						class="shrink-0 text-sm text-ink-gray-5"
-						:datetime="entry.creation"
-						:title="posted.format('D MMM YYYY, h:mm A')"
-					>
-						{{ posted.fromNow() }}
-					</time>
+					<Tooltip :text="exactTime">
+						<time class="shrink-0 text-sm text-ink-gray-5" :datetime="entry.creation">
+							{{ posted.fromNow() }}
+						</time>
+					</Tooltip>
 					<Dropdown v-if="isAuthor && !editing" class="ml-auto" :options="actions" align="end">
-						<button
-							type="button"
-							class="entry-menu rounded-4 p-0.5 text-ink-gray-5 hover:bg-surface-gray-2 hover:text-ink-gray-7"
+						<Button
+							class="entry-menu"
+							variant="ghost"
+							size="sm"
+							icon="lucide-ellipsis"
 							aria-label="Comment actions"
-						>
-							<span class="lucide-ellipsis size-4" aria-hidden="true" />
-						</button>
+						/>
 					</Dropdown>
 				</div>
 				<CommentComposer
@@ -133,9 +132,9 @@ function save(content: string) {
 				</template>
 				<template v-else>{{ createdLabel }}</template>
 				·
-				<time :datetime="entry.creation" :title="posted.format('D MMM YYYY, h:mm A')">{{
-					posted.fromNow()
-				}}</time>
+				<Tooltip :text="exactTime">
+					<time :datetime="entry.creation">{{ posted.fromNow() }}</time>
+				</Tooltip>
 			</p>
 		</template>
 	</li>

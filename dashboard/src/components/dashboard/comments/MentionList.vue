@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Avatar } from "frappe-ui"
+import { Avatar, ItemListRow } from "frappe-ui"
 import { ref, watch } from "vue"
 
 export interface MentionItem {
@@ -44,25 +44,28 @@ defineExpose({ onKeyDown })
 <template>
 	<div
 		v-if="items.length"
-		class="mention-list w-64 rounded-8 bg-surface-elevation-3 p-1 shadow-xl ring-1 ring-outline-gray-1"
+		class="mention-list w-64 rounded-5 bg-surface-elevation-3 p-1 shadow-xl ring-1 ring-outline-gray-1"
 		role="listbox"
 		aria-label="Team members"
 	>
-		<button
+		<ItemListRow
 			v-for="(item, index) in items"
 			:key="item.id"
-			type="button"
 			role="option"
+			:active="index === active"
 			:aria-selected="index === active"
-			class="flex w-full items-center gap-2.5 rounded-6 px-2 py-1.5 text-left"
-			:class="index === active && 'bg-surface-gray-2'"
+			class="cursor-pointer"
 			@mousedown.prevent="pick(index)"
 			@mousemove="active = index"
 		>
-			<Avatar size="sm" :label="item.label" :image="item.image ?? undefined" />
-			<span class="min-w-0 flex-1 truncate text-base text-ink-gray-8">{{ item.label }}</span>
-			<span class="text-xs text-ink-gray-5">{{ item.role }}</span>
-		</button>
+			<template #prefix>
+				<Avatar size="sm" :label="item.label" :image="item.image ?? undefined" />
+			</template>
+			<template #label>{{ item.label }}</template>
+			<template #suffix>
+				<span class="text-xs text-ink-gray-5">{{ item.role }}</span>
+			</template>
+		</ItemListRow>
 	</div>
 </template>
 
