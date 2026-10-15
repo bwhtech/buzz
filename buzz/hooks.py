@@ -93,6 +93,7 @@ for _doctype in taggable_doctypes:
 	doc_events.setdefault(_doctype, {})["on_trash"] = "buzz.events.doctype.buzz_tag.buzz_tag.delete_tag_links"
 
 commentable_doctypes = ["Talk Proposal"]
+doc_events["Communication"] = {"after_insert": "buzz.comments.notify_team_of_email"}
 extend_doctype_class = {"Comment": ["buzz.comments.TeamComment"]}
 
 fixtures = [

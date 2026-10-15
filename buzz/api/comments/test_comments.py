@@ -3,7 +3,7 @@ from unittest.mock import patch
 import frappe
 from frappe.desk.form.utils import update_comment
 
-from buzz.api.comments import add_comment, delete_comment, get_comments, get_mention_members
+from buzz.api.comments import add_comment, delete_comment, get_activity, get_mention_members
 from buzz.api.comments.exceptions import CannotDeleteComment, NotCommentable, NotTeamMember
 from buzz.tests.base_test_cases import TeamPermissionTestCase
 from buzz.tests.factories import BuzzTeamMembershipFactory, CommentFactory, TalkProposalFactory, UserFactory
@@ -44,15 +44,18 @@ class TestDocumentComments(TeamPermissionTestCase):
 		with self.set_user(user):
 			return add_comment("Talk Proposal", self.proposal, content, **kwargs)
 
-	def list_as(self, user: str) -> list:
+	def feed_as(self, user: str) -> list:
 		with self.set_user(user):
-			return get_comments("Talk Proposal", self.proposal)
+			return get_activity("Talk Proposal", self.proposal)
+
+	def comments_as(self, user: str) -> list:
+		return [entry for entry in self.feed_as(user) if entry.kind == "comment"]
 
 	def test_every_member_comments_and_reads_the_thread(self):
 		self.add_as(self.alice, "<p>First</p>")
 		self.add_as(self.viewer, "<p>Second</p>")
 
-		comments = self.list_as(self.manager)
+		comments = self.comments_as(self.manager)
 
 		self.assertEqual([c.owner for c in comments], [self.alice, self.viewer])
 		self.assertIn("Second", comments[1].content)
@@ -62,7 +65,7 @@ class TestDocumentComments(TeamPermissionTestCase):
 
 		for user in (self.speaker, self.outsider, self.bob):
 			with self.assertRaises(NotTeamMember):
-				self.list_as(user)
+				self.feed_as(user)
 			with self.assertRaises(NotTeamMember):
 				self.add_as(user)
 
@@ -75,7 +78,7 @@ class TestDocumentComments(TeamPermissionTestCase):
 
 	def test_other_doctypes_are_refused(self):
 		with self.set_user(self.alice), self.assertRaises(NotCommentable):
-			get_comments("Buzz Event", str(self.event_a))
+			get_activity("Buzz Event", str(self.event_a))
 
 	def test_note_is_not_cached_on_the_proposal(self):
 		self.add_as(self.alice)
@@ -111,14 +114,39 @@ class TestDocumentComments(TeamPermissionTestCase):
 
 		self.assertEqual(emailed_to(self.proposal), set())
 
-	def test_note_can_be_emailed_to_speakers(self):
-		self.add_as(self.manager, "<p>Slow down on slide 4</p>", email_recipients=True)
+	def test_note_emailed_to_speakers_is_an_email_not_a_comment(self):
+		name = self.add_as(self.manager, "<p>Slow down on slide 4</p>", email_recipients=True)
 
-		communication = frappe.get_last_doc(
-			"Communication", filters={"reference_doctype": "Talk Proposal", "reference_name": self.proposal}
-		)
-		self.assertEqual(communication.recipients, SPEAKER)
-		self.assertIn("slide 4", communication.content)
+		communication = frappe.get_doc("Communication", name)
+		self.assertEqual((communication.reference_name, communication.recipients), (self.proposal, SPEAKER))
+		self.assertEqual(self.comments_as(self.manager), [])
+
+	def test_emailed_note_is_sanitized(self):
+		name = self.add_as(self.manager, '<p>Hi</p><img src=x onerror="alert(1)">', email_recipients=True)
+
+		self.assertNotIn("onerror", frappe.db.get_value("Communication", name, "content"))
+
+	def test_feed_holds_creation_notes_emails_and_status_changes_in_order(self):
+		self.add_as(self.alice, "<p>Mock went well</p>")
+		self.add_as(self.manager, "<p>Slow down on slide 4</p>", email_recipients=True)
+		self.change_proposal(status="Shortlisted")
+
+		feed = self.feed_as(self.viewer)
+
+		self.assertEqual([entry.kind for entry in feed], ["created", "comment", "email", "change"])
+		self.assertEqual(feed[2].recipients, [SPEAKER])
+		self.assertEqual((feed[3].field, feed[3].new_value), ("status", "Shortlisted"))
+
+	def test_untracked_field_edits_stay_out_of_the_feed(self):
+		self.change_proposal(phone="+91-9820000000")
+
+		self.assertEqual([entry.kind for entry in self.feed_as(self.alice)], ["created"])
+
+	def change_proposal(self, **values):
+		proposal = frappe.get_doc("Talk Proposal", self.proposal)
+		proposal.update(values)
+		# Frappe skips Version rows under tests unless asked for them.
+		proposal.save(ignore_version=False)
 
 	def test_author_edits_through_frappe(self):
 		name = self.add_as(self.viewer)
@@ -145,12 +173,7 @@ class TestDocumentComments(TeamPermissionTestCase):
 			delete_comment(name)
 
 	def test_activity_logs_cannot_be_deleted(self):
-		log = frappe.get_doc(
-			doctype="Comment",
-			comment_type="Info",
-			reference_doctype="Talk Proposal",
-			reference_name=self.proposal,
-		).insert(ignore_permissions=True)
+		log = CommentFactory.create(comment_type="Info", reference_name=self.proposal)
 
 		with self.set_user(self.alice), self.assertRaises(frappe.DoesNotExistError):
 			delete_comment(log.name)

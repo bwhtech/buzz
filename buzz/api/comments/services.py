@@ -1,11 +1,11 @@
 import frappe
 from frappe.core.doctype.communication.email import make as make_communication
-from frappe.desk.form.load import get_comments
 from frappe.desk.form.utils import add_comment
-from frappe.utils import get_fullname
+from frappe.utils import get_fullname, sanitize_html
 
+from buzz.api.comments.activity import ActivityFeed
 from buzz.api.comments.exceptions import CannotDeleteComment, NoRecipients, NotCommentable, NotTeamMember
-from buzz.api.comments.schemas import CommentItem
+from buzz.api.comments.schemas import ActivityEntry
 from buzz.api.teams.schemas import TeamMember
 from buzz.api.teams.services import members_of
 from buzz.comments import is_commentable, team_of
@@ -50,20 +50,20 @@ class DocumentComments:
 			frappe.throw(frappe._("Comment not found"), frappe.DoesNotExistError)
 		return cls(reference.reference_doctype, reference.reference_name)
 
-	def list(self) -> list[CommentItem]:
-		comments = get_comments(self.reference_doctype, self.reference_name)[::-1]
-		users = self.user_details({comment.owner for comment in comments})
-		return [self.comment_item(comment, users.get(comment.owner)) for comment in comments]
+	def activity(self) -> list[ActivityEntry]:
+		return ActivityFeed(self.reference_doctype, self.reference_name).entries()
 
 	def members(self) -> list[TeamMember]:
 		return members_of(self.team)
 
 	def add(self, content: str, email_recipients: bool = False) -> str:
-		user = frappe.session.user
-		comment = add_comment(self.reference_doctype, self.reference_name, content, user, get_fullname(user))
+		"""A team note is a Comment; one emailed to the record's outside party is a Communication."""
 		if email_recipients:
-			self.email(comment.content)
-		return comment.name
+			return self.email(content)
+		user = frappe.session.user
+		return add_comment(
+			self.reference_doctype, self.reference_name, content, user, get_fullname(user)
+		).name
 
 	def delete(self, name: str) -> None:
 		if not self.can_delete(frappe.db.get_value("Comment", name, "owner")):
@@ -74,35 +74,19 @@ class DocumentComments:
 		user = frappe.session.user
 		return owner == user or is_unrestricted(user) or team_role_of(user, self.team) in ADMIN_ROLES
 
-	def email(self, content: str) -> None:
+	def email(self, content: str) -> str:
 		recipient_source = EMAIL_RECIPIENTS.get(self.reference_doctype)
 		recipients = recipient_source(self.reference_name) if recipient_source else []
 		if not recipients:
 			NoRecipients.throw()
 		title = frappe.db.get_value(self.reference_doctype, self.reference_name, "title")
-		make_communication(
+		communication = make_communication(
 			doctype=self.reference_doctype,
 			name=self.reference_name,
 			subject=frappe._("Notes on {0}").format(title),
-			content=content,
+			# Comment.validate cleans a note; Communication stores what it is given.
+			content=sanitize_html(content, always_sanitize=True),
 			recipients=recipients,
 			send_email=True,
 		)
-
-	@staticmethod
-	def user_details(users: set[str]) -> dict:
-		rows = frappe.get_all(
-			"User", filters={"name": ("in", list(users))}, fields=["name", "full_name", "user_image"]
-		)
-		return {row.name: row for row in rows}
-
-	@staticmethod
-	def comment_item(comment, user) -> CommentItem:
-		return CommentItem(
-			name=comment.name,
-			content=comment.content,
-			owner=comment.owner,
-			owner_name=(user and user.full_name) or comment.owner,
-			owner_image=user and user.user_image,
-			creation=comment.creation,
-		)
+		return communication["name"]

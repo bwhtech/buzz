@@ -1,13 +1,14 @@
 import frappe
 
-from buzz.api.comments.schemas import CommentItem
+from buzz.api.comments.schemas import ActivityEntry
 from buzz.api.comments.services import DocumentComments
 from buzz.api.teams.schemas import TeamMember
 
 
 @frappe.whitelist()
-def get_comments(reference_doctype: str, reference_name: str) -> list[CommentItem]:
-	return DocumentComments(reference_doctype, reference_name).list()
+def get_activity(reference_doctype: str, reference_name: str) -> list[ActivityEntry]:
+	"""Notes, emails, tracked field changes and the record's creation, oldest first."""
+	return DocumentComments(reference_doctype, reference_name).activity()
 
 
 @frappe.whitelist()
@@ -19,7 +20,8 @@ def get_mention_members(reference_doctype: str, reference_name: str) -> list[Tea
 def add_comment(
 	reference_doctype: str, reference_name: str, content: str, email_recipients: bool = False
 ) -> str:
-	"""`email_recipients` also emails the note to the record's outside party, such as its speakers."""
+	"""With `email_recipients`, the note is emailed to the record's outside party, such as its speakers,
+	instead of being kept as a team note."""
 	return DocumentComments(reference_doctype, reference_name).add(content, email_recipients)
 
 

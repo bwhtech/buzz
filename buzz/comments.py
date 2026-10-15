@@ -25,6 +25,18 @@ def team_members(team: str | None) -> list[str]:
 	return frappe.get_all("Buzz Team Membership", filters={"team": team, "enabled": 1}, pluck="user")
 
 
+def publish_to_team(doctype: str, name: str) -> None:
+	"""Tells open drawers to refetch, without carrying the note itself."""
+	message = {"reference_doctype": doctype, "reference_name": name}
+	for user in team_members(team_of(doctype, name)):
+		frappe.publish_realtime("buzz_comment_update", message, user=user, after_commit=True)
+
+
+def notify_team_of_email(doc, method=None) -> None:
+	if is_commentable(doc.reference_doctype) and doc.reference_name:
+		publish_to_team(doc.reference_doctype, doc.reference_name)
+
+
 class TeamComment:
 	"""Keeps notes on team records within the team.
 
@@ -54,9 +66,7 @@ class TeamComment:
 	def notify_change(self, action: str):
 		if not self.is_team_note():
 			return super().notify_change(action)
-		message = {"reference_doctype": self.reference_doctype, "reference_name": self.reference_name}
-		for user in team_members(team_of(self.reference_doctype, self.reference_name)):
-			frappe.publish_realtime("buzz_comment_update", message, user=user, after_commit=True)
+		publish_to_team(self.reference_doctype, self.reference_name)
 
 
 def notify_mentioned_members(comment) -> None:
