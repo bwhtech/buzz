@@ -75,8 +75,8 @@ const drawerOpen = computed<boolean>({
 
 // The row is patched rather than refetched — see applyStatus. The card above counts the
 // whole pipeline, so it is the one thing that does have to go back to the server.
-const onStatusChanged = (status: string) => {
-	if (selectedId.value) applyStatus(selectedId.value, status)
+const onStatusChanged = (proposal: string, status: string) => {
+	applyStatus(proposal, status)
 	trend.reload()
 }
 

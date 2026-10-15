@@ -24,6 +24,11 @@ useEventListener(document, "pointerdown", (event: PointerEvent) => {
 	if (event.pointerType === "mouse" && drawer?.hasPointerCapture(event.pointerId))
 		drawer.releasePointerCapture(event.pointerId)
 })
+
+// A toast sits outside the drawer, and pressing its action is not a dismissal.
+function keepOpenForToasts(event: Event) {
+	if ((event.target as Element | null)?.closest?.("[data-sonner-toaster]")) event.preventDefault()
+}
 </script>
 
 <template>
@@ -37,7 +42,11 @@ useEventListener(document, "pointerdown", (event: PointerEvent) => {
 	<DrawerPortal v-else>
 		<DrawerOverlay class="drawer-overlay fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" />
 
-		<DrawerContent :data-size="size" class="drawer bg-surface-elevation-2 shadow-2xl">
+		<DrawerContent
+			:data-size="size"
+			class="drawer bg-surface-elevation-2 shadow-2xl"
+			@interact-outside="keepOpenForToasts"
+		>
 			<DrawerHandle
 				v-if="showSwipeHandle"
 				class="drawer-handle mx-auto my-3 h-1.5 w-12 shrink-0 rounded-full bg-surface-gray-4"

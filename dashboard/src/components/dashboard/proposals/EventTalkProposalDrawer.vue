@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Button, Dialog, Select, dayjsLocal, toast } from "frappe-ui"
-import { computed, ref, watch } from "vue"
+import { useEventListener } from "@vueuse/core"
+import { Button, Dialog, Select, call, dayjsLocal, toast } from "frappe-ui"
+import { computed, onBeforeUnmount, ref, watch } from "vue"
 
 import {
 	Drawer,
@@ -20,7 +21,7 @@ const props = defineProps<{ proposal: ProposalListItem | null; canWrite?: boolea
 
 const open = defineModel<boolean>("open", { required: true })
 
-const emit = defineEmits<{ changed: [status: string] }>()
+const emit = defineEmits<{ changed: [proposal: string, status: string] }>()
 
 const { statuses, getStatusDot } = useProposalStatuses()
 
@@ -53,10 +54,22 @@ const statusOptions = computed(() =>
 	(statuses.data || []).map((row: { name: string }) => ({ value: row.name, label: row.name })),
 )
 
-// Picking a status only arms the change: the button beside it is what writes it, so a
-// mis-click on a decision the speaker gets told about is still recoverable. A reader the
-// server would refuse never gets the control — read access alone is a Viewer or Frontdesk.
-const changed = computed(() => Boolean(status.value) && status.value !== props.proposal?.status)
+// Picking a status holds the write for as long as the toast offers Undo, so a mis-click
+// never reaches the server. Accepting is the exception below, and a reader the server
+// would refuse never gets the control — read access alone is a Viewer or Frontdesk.
+const selectedStatus = computed({
+	get: () => status.value,
+	set: (next: string) => requestStatus(next),
+})
+
+const UNDO_WINDOW_MS = 5000
+
+interface HeldStatus {
+	write: () => void
+	timer: number
+}
+
+let held: HeldStatus | null = null
 
 // Accepting is the one status that is not a status write: it creates the talk the
 // programme is made of, and an account for any speaker who has none. Worth a confirmation.
@@ -65,35 +78,80 @@ const ACCEPTED = "Accepted"
 const accept = useAcceptProposal()
 const confirmingAcceptance = ref(false)
 
-const saving = computed(() => proposalDoc.setValue.loading || accept.loading)
-
-function updateStatus() {
-	if (!changed.value) return
-	if (status.value === ACCEPTED) {
+function requestStatus(next: string) {
+	const name = props.proposal?.name
+	if (!name || !next || next === status.value) return
+	if (next === ACCEPTED) {
 		confirmingAcceptance.value = true
 		return
 	}
-	write(() => proposalDoc.setValue.submit({ status: status.value }))
+	holdStatus(name, next, status.value)
 }
+
+function holdStatus(name: string, next: string, previous: string) {
+	flushHeldStatus()
+	status.value = next
+	const hold = {
+		write: () => saveStatus(name, next),
+		timer: window.setTimeout(flushHeldStatus, UNDO_WINDOW_MS),
+	}
+	held = hold
+	toast.success(`Marked ${next.toLowerCase()}`, {
+		duration: UNDO_WINDOW_MS,
+		action: { label: "Undo", onClick: () => undoStatus(hold, name, previous) },
+	})
+}
+
+function flushHeldStatus() {
+	if (!held) return
+	clearTimeout(held.timer)
+	const { write } = held
+	held = null
+	write()
+}
+
+// Hovering the toast pauses its countdown but not the hold, so Undo can land after the
+// write went out: then it writes the previous status back.
+function undoStatus(hold: HeldStatus, name: string, previous: string) {
+	if (props.proposal?.name === name) status.value = previous
+	if (held !== hold) return saveStatus(name, previous)
+	clearTimeout(hold.timer)
+	held = null
+}
+
+// Bound to the proposal's name, not the drawer's document, because the drawer may have
+// moved to another proposal by the time a held write goes out.
+async function saveStatus(name: string, next: string) {
+	try {
+		await call("frappe.client.set_value", {
+			doctype: "Talk Proposal",
+			name,
+			fieldname: "status",
+			value: next,
+		})
+		emit("changed", name, next)
+	} catch {
+		if (props.proposal?.name === name) status.value = props.proposal.status
+		toast.error("Could not change the status")
+	}
+}
+
+// A held write still goes out when the drawer's page goes away.
+onBeforeUnmount(flushHeldStatus)
+useEventListener(window, "beforeunload", flushHeldStatus)
 
 async function acceptProposal() {
 	const name = props.proposal?.name
 	if (!name) return
-	if (await write(() => accept.submit({ proposal: name }))) confirmingAcceptance.value = false
-}
-
-async function write(save: () => Promise<unknown>): Promise<boolean> {
+	flushHeldStatus()
 	try {
-		await save()
-		toast.success(`Marked ${status.value.toLowerCase()}`)
-		emit("changed", status.value)
-		return true
+		await accept.submit({ proposal: name })
+		status.value = ACCEPTED
+		confirmingAcceptance.value = false
+		toast.success("Marked accepted")
+		emit("changed", name, ACCEPTED)
 	} catch {
-		// The select goes back to what is actually stored, so the header stops offering
-		// an update that has already failed.
-		status.value = props.proposal?.status || ""
 		toast.error("Could not change the status")
-		return false
 	}
 }
 
@@ -128,15 +186,15 @@ const lastUpdated = computed(() => (props.proposal ? dayjsLocal(props.proposal.m
 					</div>
 
 					<!-- The decision leads: it is what the reviewer opened the drawer to make. -->
-					<div class="mt-4 flex items-center gap-2">
+					<div class="mt-4">
 						<Select
-							v-model="status"
+							v-model="selectedStatus"
 							class="w-fit"
 							size="md"
 							aria-label="Review status"
 							side="bottom"
 							:options="statusOptions"
-							:disabled="!canWrite || saving"
+							:disabled="!canWrite || accept.loading"
 						>
 							<!-- The trigger reuses this slot for the selected option, so the dot is
 							     defined once and shows in both places. -->
@@ -148,12 +206,6 @@ const lastUpdated = computed(() => (props.proposal ? dayjsLocal(props.proposal.m
 								/>
 							</template>
 						</Select>
-						<!-- Arriving rather than appearing: the buttons showing up is the
-						     confirmation that the pick registered. -->
-						<div v-if="canWrite && changed" class="status-actions flex items-center gap-2">
-							<Button variant="solid" label="Update" :loading="saving" @click="updateStatus" />
-							<Button label="Cancel" @click="status = proposal.status" />
-						</div>
 					</div>
 
 					<DrawerTitle class="mt-3 text-4xl font-semibold text-pretty text-ink-gray-9">
@@ -198,25 +250,8 @@ const lastUpdated = computed(() => (props.proposal ? dayjsLocal(props.proposal.m
 </template>
 
 <style scoped>
-.status-actions,
 .copy-id {
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.status-actions {
-	transition:
-		opacity 160ms var(--ease-out),
-		transform 160ms var(--ease-out);
-}
-
-@starting-style {
-	.status-actions {
-		opacity: 0;
-		transform: translateX(-4px);
-	}
-}
-
-.copy-id {
 	transition:
 		color 160ms var(--ease-out),
 		transform 160ms var(--ease-out);
@@ -230,12 +265,6 @@ const lastUpdated = computed(() => (props.proposal ? dayjsLocal(props.proposal.m
 @media (prefers-reduced-motion: reduce) {
 	.copy-id:active {
 		transform: none;
-	}
-
-	@starting-style {
-		.status-actions {
-			transform: none;
-		}
 	}
 }
 </style>

@@ -102,3 +102,9 @@ button,
 		animation: none;
 	}
 }
+
+/* A modal drawer or dialog turns off pointer events on body; toasts and their actions
+   stay clickable above it. */
+[data-sonner-toaster] {
+	pointer-events: auto;
+}
