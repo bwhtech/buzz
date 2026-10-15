@@ -465,6 +465,35 @@ body {
 	margin-bottom: 24px;
 }
 
+/* Mirrors frappe-ui's Alert in its banner layout. */
+.manage-alert {
+	display: grid;
+	justify-items: start;
+	gap: 4px;
+	padding: 12px;
+	border-radius: var(--radius-6);
+	background: var(--surface-gray-1);
+}
+
+.manage-alert-title {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--ink-gray-8);
+}
+
+.manage-alert-title .icon {
+	color: var(--ink-gray-7);
+}
+
+.manage-alert-description {
+	color: var(--ink-gray-6);
+}
+
+.manage-alert-action {
+	margin-top: 8px;
+}
+
 .side-card {
 	border: 1px solid var(--border);
 	border-radius: var(--radius);

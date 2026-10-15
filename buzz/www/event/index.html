@@ -227,6 +227,13 @@
 
 		<aside class="event-aside">
 			<div class="side-cards">
+				{% if manage_url %}
+				<section class="manage-alert" role="status">
+					<p class="manage-alert-title text-base-medium"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>{{ _("You manage this event") }}</p>
+					<p class="manage-alert-description text-p-base">{{ _("Edit details, tickets and guests from the dashboard.") }}</p>
+					<a class="es-button manage-alert-action" data-variant="outline" data-size="md" href="{{ manage_url }}">{{ _("Open dashboard") }}</a>
+				</section>
+				{% endif %}
 				{% call side_card(registration, registration.state, "ticket-card") %}
 				{% if registration.state == "open" and not is_guest %}
 				<p class="side-card-identity">

@@ -130,9 +130,14 @@ class EventPage:
 			"registration": RegistrationCard(self.event).as_dict(),
 			"proposal_card": ProposalCard(self.event).as_dict(),
 			"countdown": event_countdown(self.event) if self.event.show_countdown else None,
+			"manage_url": self.manage_url(),
 		}
 		meta = EventMeta(self.event, self.page, context)
 		return context | {"meta": meta.as_dict(), "structured_data": meta.structured_data()}
+
+	def manage_url(self) -> str | None:
+		if frappe.has_permission("Buzz Event", "write", self.event):
+			return f"/b/manage/events/{self.event.name}/details"
 
 	def tabs(self) -> list[dict]:
 		sections = [
