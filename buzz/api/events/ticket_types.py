@@ -16,6 +16,7 @@ from buzz.api.events.taxes import team_tax_details
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import is_feature_enabled
 from buzz.payments import get_payment_gateways_for_event
 from buzz.permissions import can_manage_members, has_team_access
+from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	PAID_EVENTS_FLAG,
 	tickets_sold_by_currency,
@@ -67,14 +68,7 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 
 
 def ticket_categories(event: str) -> list[TicketCategoryItem]:
-	rows = frappe.get_all(
-		"Event Ticket Category",
-		filters={"event": event},
-		fields=["name", "title", "description", "sort_order"],
-		order_by="sort_order asc, creation asc",
-		ignore_permissions=True,
-	)
-	return [TicketCategoryItem(**row) for row in rows]
+	return [TicketCategoryItem(**row) for row in get_ordered_categories(event)]
 
 
 def payment_providers(event: str) -> list[PaymentProviderItem]:

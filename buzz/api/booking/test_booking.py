@@ -16,6 +16,7 @@ from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
 	BuzzCustomFieldFactory,
 	BuzzEventFactory,
+	EventTicketCategoryFactory,
 	EventTicketTypeFactory,
 	OfflinePaymentMethodFactory,
 	TicketAddOnFactory,
@@ -27,6 +28,7 @@ EVENT_DATA_FIELDS = {
 	"registrations_closed",
 	"event_details",
 	"available_ticket_types",
+	"ticket_categories",
 	"available_add_ons",
 	"tax_settings",
 	"custom_fields",
@@ -147,6 +149,19 @@ class TestGetEventBookingData(BookingTestCase):
 		frappe.set_user("Guest")
 		payload = get_event_booking_data(self.event.route).__json__()
 		self.assertEqual(set(payload["event_details"]), GUEST_EVENT_DETAIL_FIELDS)
+
+	def test_ticket_types_follow_category_order_with_uncategorized_last(self):
+		later = EventTicketCategoryFactory.create(event=self.event.name, sort_order=2)
+		first = EventTicketCategoryFactory.create(event=self.event.name, sort_order=1)
+		EventTicketCategoryFactory.create(event=self.event.name, sort_order=0)
+		in_later = EventTicketTypeFactory.create(event=self.event.name, category=later.name)
+		in_first = EventTicketTypeFactory.create(event=self.event.name, category=first.name)
+
+		payload = get_event_booking_data(self.event.route)
+		names = [row.name for row in payload.available_ticket_types]
+		self.assertEqual(names[:2], [in_first.name, in_later.name])
+		self.assertTrue(all(not row.category for row in payload.available_ticket_types[2:]))
+		self.assertEqual([row["name"] for row in payload.ticket_categories], [first.name, later.name])
 
 	def test_registrations_closed_flag(self):
 		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})

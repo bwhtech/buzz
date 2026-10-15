@@ -6,6 +6,7 @@ from frappe import _
 from buzz.api.booking.schemas import EventBookingDataResponse, TaxSettings
 from buzz.api.booking.services import are_registrations_closed
 from buzz.payments import get_payment_gateways_for_event
+from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 
 if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
@@ -21,10 +22,14 @@ def build_event_booking_data(event_route: str) -> EventBookingDataResponse:
 	offline_methods = get_offline_methods(event_doc.name)
 	payment_gateways += [method["title"] for method in offline_methods]
 
+	categories = get_ordered_categories(event_doc.name)
+	ticket_types = get_available_ticket_types(event_doc.name, categories)
+
 	return EventBookingDataResponse(
 		registrations_closed=are_registrations_closed(event_doc),
 		event_details=get_event_details(event_doc),
-		available_ticket_types=get_available_ticket_types(event_doc.name),
+		available_ticket_types=ticket_types,
+		ticket_categories=categories_in_use(categories, ticket_types),
 		available_add_ons=get_available_add_ons(event_doc.name),
 		tax_settings=TaxSettings(
 			apply_tax=event_doc.apply_tax,
@@ -67,16 +72,26 @@ def get_event_details(event_doc: "BuzzEvent"):
 	}
 
 
-def get_available_ticket_types(event_id: str) -> list:
+# Ordered by category, then creation. Uncategorized ticket types come last.
+def get_available_ticket_types(event_id: str, categories: list[dict]) -> list:
 	published_ticket_types = frappe.db.get_all(
-		"Event Ticket Type", filters={"is_published": True, "event": event_id}, pluck="name"
+		"Event Ticket Type",
+		filters={"is_published": True, "event": event_id},
+		pluck="name",
+		order_by="creation asc",
 	)
 	available_ticket_types = []
 	for ticket_type in published_ticket_types:
 		ticket_type_doc = frappe.get_cached_doc("Event Ticket Type", ticket_type)
 		if ticket_type_doc.are_tickets_available(1):
 			available_ticket_types.append(ticket_type_doc)
-	return available_ticket_types
+	position = {category["name"]: index for index, category in enumerate(categories)}
+	return sorted(available_ticket_types, key=lambda row: position.get(row.category, len(position)))
+
+
+def categories_in_use(categories: list[dict], ticket_types: list) -> list[dict]:
+	used = {ticket_type.category for ticket_type in ticket_types}
+	return [category for category in categories if category["name"] in used]
 
 
 def get_available_add_ons(event_id: str) -> list:

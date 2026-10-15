@@ -42,3 +42,14 @@ class EventTicketCategory(Document):
 		filters = {"event": self.event, "title": self.title, "name": ("!=", self.name)}
 		if frappe.db.exists("Event Ticket Category", filters):
 			frappe.throw(_("A ticket category named {0} already exists for this event").format(self.title))
+
+
+# Display order: lowest sort_order first, ties by creation.
+def get_ordered_categories(event: str) -> list[dict]:
+	return frappe.get_all(
+		"Event Ticket Category",
+		filters={"event": event},
+		fields=["name", "title", "description", "sort_order"],
+		order_by="sort_order asc, creation asc",
+		ignore_permissions=True,
+	)

@@ -55,6 +55,7 @@ class EventBookingDataResponse(APIResponse):
 	registrations_closed: bool
 	event_details: Any
 	available_ticket_types: list
+	ticket_categories: list
 	available_add_ons: list
 	tax_settings: TaxSettings
 	custom_fields: list
