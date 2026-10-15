@@ -257,6 +257,31 @@ body {
 	margin-top: 24px;
 }
 
+/* Scrolls sideways on a narrow screen instead of widening the page. */
+.prose table {
+	display: block;
+	max-width: 100%;
+	overflow-x: auto;
+	border-collapse: collapse;
+	font-variant-numeric: tabular-nums;
+}
+
+.prose :is(th, td) {
+	padding: 8px 24px 8px 0;
+	border-bottom: 1px solid var(--border);
+	text-align: start;
+	vertical-align: top;
+}
+
+.prose th {
+	color: var(--ink);
+	font-weight: var(--font-weight-semibold);
+}
+
+.prose :is(th, td) > * {
+	margin: 0;
+}
+
 /* Editors wrap heading text in <strong>; `bolder` would push it past semibold. */
 .prose :is(h1, h2, h3, h4, h5, h6) strong {
 	font-weight: inherit;
