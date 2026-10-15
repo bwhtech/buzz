@@ -73,7 +73,7 @@ def get_event_details(event_doc: "BuzzEvent"):
 
 
 # Ordered by category, then creation. Uncategorized ticket types come last.
-def get_available_ticket_types(event_id: str, categories: list[dict]) -> list:
+def get_available_ticket_types(event_id: str, categories: list[dict] | None = None) -> list:
 	published_ticket_types = frappe.db.get_all(
 		"Event Ticket Type",
 		filters={"is_published": True, "event": event_id},
@@ -85,7 +85,7 @@ def get_available_ticket_types(event_id: str, categories: list[dict]) -> list:
 		ticket_type_doc = frappe.get_cached_doc("Event Ticket Type", ticket_type)
 		if ticket_type_doc.are_tickets_available(1):
 			available_ticket_types.append(ticket_type_doc)
-	position = {category["name"]: index for index, category in enumerate(categories)}
+	position = {category["name"]: index for index, category in enumerate(categories or [])}
 	return sorted(available_ticket_types, key=lambda row: position.get(row.category, len(position)))
 
 

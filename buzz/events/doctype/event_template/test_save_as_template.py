@@ -67,9 +67,10 @@ class TestSaveEventAsTemplate(IntegrationTestCase):
 		)
 		EventTicketTypeFactory.create(event=original.name, title="Lab", category=workshops.name)
 
-		template = self.save_as_template(original, {"ticket_types": 1})
+		options = {"category": 1, "ticket_types": 1}
+		template = self.save_as_template(original, options)
 		team = frappe.as_json({"team": original.team})
-		new_event = create_from_template(template.name, frappe.as_json({"ticket_types": 1}), team)
+		new_event = create_from_template(template.name, frappe.as_json(options), team)
 
 		category = frappe.get_value(
 			"Event Ticket Category",
