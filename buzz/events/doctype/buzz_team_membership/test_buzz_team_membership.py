@@ -220,6 +220,16 @@ class TestInvitationAccept(IntegrationTestCase):
 
 		self.assertEqual(self.memberships_of(email), [])
 
+	def test_accept_works_for_a_system_manager_outside_the_team(self):
+		system_manager = UserFactory.create_once("invite-system-manager@example.com")
+		system_manager.add_roles("System Manager")
+		email = "invitee-of-system-manager@example.com"
+		invitation = self.invite(email, inviter=system_manager.name)
+
+		invitation.accept(ignore_permissions=True)
+
+		self.assertEqual(len(self.memberships_of(email)), 1)
+
 	def test_accept_is_refused_when_the_invitation_grants_ownership(self):
 		email = "invitee-owner@example.com"
 		invitation = self.invite(email, "Owner")

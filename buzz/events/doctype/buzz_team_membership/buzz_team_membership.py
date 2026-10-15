@@ -7,6 +7,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from buzz.permissions import can_manage_members
+
 if TYPE_CHECKING:
 	from frappe.core.doctype.user.user import User
 	from frappe.core.doctype.user_invitation.user_invitation import UserInvitation
@@ -19,7 +21,6 @@ TEAM_ROLE_TO_FRAPPE_ROLE = {
 	"Frontdesk": "Frontdesk Manager",
 }
 MANAGED_FRAPPE_ROLES = set(TEAM_ROLE_TO_FRAPPE_ROLE.values())
-INVITING_TEAM_ROLES = ("Owner", "Admin")
 
 
 def on_invitation_accepted(invitation: "UserInvitation", user: "User", user_inserted: bool) -> None:
@@ -35,10 +36,8 @@ def on_invitation_accepted(invitation: "UserInvitation", user: "User", user_inse
 	if team_role == "Owner":
 		frappe.throw(_("An invitation cannot grant ownership of a team."))
 
-	inviter_role = frappe.db.get_value(
-		"Buzz Team Membership", {"team": team, "user": invitation.invited_by, "enabled": 1}, "team_role"
-	)
-	if inviter_role not in INVITING_TEAM_ROLES:
+	# Same rule as invite time, so a System Manager's invitation can be accepted too.
+	if not can_manage_members(team, invitation.invited_by):
 		frappe.throw(_("{0} cannot invite members to this team.").format(invitation.invited_by))
 
 	upsert_membership(team, user.name, team_role)
