@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, Icon } from "frappe-ui"
+import { Badge, Button, Icon } from "frappe-ui"
 import { reactive } from "vue"
 
 import type { TicketTypeOrganizer } from "@/composables/useTicketTypeOrganizer"
@@ -24,11 +24,11 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 		<section
 			v-for="(group, index) in organizer.groups.value"
 			:key="group.key"
-			class="-m-1 space-y-1.5 rounded-xl p-1 outline-dashed outline-[1.5px] transition-colors duration-150 ease-out"
+			class="-m-1 space-y-1.5 rounded-6 border border-dashed p-1 transition-colors duration-150 ease-out"
 			:class="
 				organizer.dropTarget.value === group.key
-					? 'bg-surface-gray-1 outline-outline-gray-4'
-					: 'outline-transparent'
+					? 'border-outline-gray-4 bg-surface-gray-1'
+					: 'border-transparent'
 			"
 			v-on="canWrite ? organizer.drag.zone(group.key) : {}"
 		>
@@ -49,9 +49,12 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 				>
 					{{ group.title }}
 				</h3>
-				<span class="rounded-full bg-surface-gray-2 px-1.5 text-sm tabular-nums text-ink-gray-5">
-					{{ group.ticketTypes.length }}
-				</span>
+				<Badge
+					theme="gray"
+					variant="subtle"
+					class="tabular-nums"
+					:label="String(group.ticketTypes.length)"
+				/>
 				<span class="min-w-0 flex-1 truncate text-sm text-ink-gray-5">{{
 					group.category?.description
 				}}</span>
@@ -67,7 +70,13 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 				/>
 			</header>
 
-			<ul v-if="!collapsed.has(group.key)" class="space-y-2">
+			<TransitionGroup
+				v-if="!collapsed.has(group.key)"
+				tag="ul"
+				class="space-y-2"
+				enter-active-class="transition duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
+				enter-from-class="-translate-y-1 opacity-0"
+			>
 				<li
 					v-for="ticketType in group.ticketTypes"
 					:key="ticketType.name"
@@ -84,6 +93,7 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 				</li>
 				<li
 					v-if="!group.ticketTypes.length"
+					key="empty"
 					class="rounded-4 border border-dashed border-outline-gray-2 p-4 text-center text-sm text-ink-gray-5"
 				>
 					{{
@@ -92,7 +102,7 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 							: "No ticket types yet. Drag one here or add one."
 					}}
 				</li>
-			</ul>
+			</TransitionGroup>
 		</section>
 
 		<p

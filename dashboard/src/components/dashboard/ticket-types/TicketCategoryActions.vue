@@ -1,76 +1,83 @@
 <script setup lang="ts">
-import { Button, Tooltip } from "frappe-ui"
+import { Button, Dropdown } from "frappe-ui"
 import { computed } from "vue"
 
 import type { TicketCategoryItem } from "@/types"
 
-// Board columns run left to right, grouped sections top to bottom.
+// Board columns run left to right, grouped sections top to bottom. A narrow board header
+// folds the category actions into a menu.
 const props = defineProps<{
 	category: TicketCategoryItem | null
 	first?: boolean
 	last?: boolean
 	horizontal?: boolean
+	menu?: boolean
 }>()
-defineEmits<{ edit: []; remove: []; add: []; move: [step: -1 | 1] }>()
+const emit = defineEmits<{ edit: []; remove: []; add: []; move: [step: -1 | 1] }>()
 
-const arrows = computed(() =>
-	props.horizontal
-		? { back: ["lucide-arrow-left", "Move left"], forward: ["lucide-arrow-right", "Move right"] }
-		: { back: ["lucide-arrow-up", "Move up"], forward: ["lucide-arrow-down", "Move down"] },
-)
+const arrows = computed(() => [
+	{
+		icon: props.horizontal ? "lucide-arrow-left" : "lucide-arrow-up",
+		label: props.horizontal ? "Move left" : "Move up",
+		disabled: props.first,
+		onClick: () => emit("move", -1),
+	},
+	{
+		icon: props.horizontal ? "lucide-arrow-right" : "lucide-arrow-down",
+		label: props.horizontal ? "Move right" : "Move down",
+		disabled: props.last,
+		onClick: () => emit("move", 1),
+	},
+])
+
+const categoryActions = [
+	{ icon: "lucide-pencil", label: "Edit category", onClick: () => emit("edit") },
+	{ icon: "lucide-trash-2", label: "Delete category", onClick: () => emit("remove") },
+]
+
+const menuOptions = computed(() => [
+	categoryActions[0],
+	...arrows.value.filter((arrow) => !arrow.disabled),
+	{ ...categoryActions[1], theme: "red" as const },
+])
 </script>
 
 <template>
 	<div class="flex shrink-0 items-center">
-		<template v-if="category">
+		<Dropdown
+			v-if="category && menu"
+			:options="menuOptions"
+			align="end"
+			:button="{ variant: 'ghost', icon: 'lucide-ellipsis', label: 'Category actions' }"
+		/>
+		<template v-else-if="category">
 			<!-- Reordering is occasional: the arrows wait for a pointer over the header. -->
 			<div
 				v-if="!(first && last)"
 				class="flex transition-opacity duration-150 ease-out [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100"
 			>
-				<Tooltip :text="arrows.back[1]">
-					<Button
-						variant="ghost"
-						:icon="arrows.back[0]"
-						:aria-label="arrows.back[1]"
-						:disabled="first"
-						@click="$emit('move', -1)"
-					/>
-				</Tooltip>
-				<Tooltip :text="arrows.forward[1]">
-					<Button
-						variant="ghost"
-						:icon="arrows.forward[0]"
-						:aria-label="arrows.forward[1]"
-						:disabled="last"
-						@click="$emit('move', 1)"
-					/>
-				</Tooltip>
+				<Button
+					v-for="arrow in arrows"
+					:key="arrow.label"
+					variant="ghost"
+					v-bind="arrow"
+					:tooltip="arrow.label"
+				/>
 			</div>
-			<Tooltip text="Edit category">
-				<Button
-					variant="ghost"
-					icon="lucide-pencil"
-					aria-label="Edit category"
-					@click="$emit('edit')"
-				/>
-			</Tooltip>
-			<Tooltip text="Delete category">
-				<Button
-					variant="ghost"
-					icon="lucide-trash-2"
-					aria-label="Delete category"
-					@click="$emit('remove')"
-				/>
-			</Tooltip>
-		</template>
-		<Tooltip text="Add ticket type">
 			<Button
+				v-for="action in categoryActions"
+				:key="action.label"
 				variant="ghost"
-				icon="lucide-plus"
-				aria-label="Add ticket type"
-				@click="$emit('add')"
+				v-bind="action"
+				:tooltip="action.label"
 			/>
-		</Tooltip>
+		</template>
+		<Button
+			variant="ghost"
+			icon="lucide-plus"
+			label="Add ticket type"
+			tooltip="Add ticket type"
+			@click="$emit('add')"
+		/>
 	</div>
 </template>
