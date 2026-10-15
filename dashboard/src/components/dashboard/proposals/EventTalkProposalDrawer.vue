@@ -1,5 +1,17 @@
 <script setup lang="ts">
-import { Avatar, Button, Dialog, Select, Skeleton, dayjsLocal, toast } from "frappe-ui"
+import {
+	Avatar,
+	Button,
+	Dialog,
+	Select,
+	Skeleton,
+	TabList,
+	TabPanel,
+	Tabs,
+	TabTrigger,
+	dayjsLocal,
+	toast,
+} from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import {
@@ -9,6 +21,7 @@ import {
 	DrawerDescription,
 	DrawerTitle,
 } from "@/components/common/drawer"
+import DocumentComments from "@/components/dashboard/comments/DocumentComments.vue"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
 import { useAcceptProposal, useProposal } from "@/data/proposals"
@@ -96,6 +109,12 @@ async function write(save: () => Promise<unknown>): Promise<boolean> {
 	}
 }
 
+const tab = ref("details")
+watch(
+	() => props.proposal?.name,
+	() => (tab.value = "details"),
+)
+
 const copyId = useCopyToClipboard()
 
 // One theme per speaker, stable across renders so a face keeps its colour.
@@ -171,51 +190,66 @@ const fields = computed(() => [
 						{{ submittedOn }}
 					</DrawerDescription>
 
-					<!-- Who is proposing this leads: the panel decides on people as much as topics. -->
-					<div v-if="speakers.length" class="space-y-2">
-						<h3 class="text-base text-ink-gray-5">Speakers</h3>
-						<ul class="space-y-1">
-							<li
-								v-for="speaker in speakers"
-								:key="speaker.email"
-								class="flex min-w-0 items-center gap-2 rounded-4 px-1 py-1 transition-colors hover:bg-surface-gray-1"
-							>
-								<Avatar
-									size="md"
-									:label="speakerName(speaker)"
-									:theme="avatarTheme(speaker.email)"
+					<Tabs v-model="tab">
+						<TabList>
+							<TabTrigger value="details" label="Details" />
+							<TabTrigger value="comments" label="Comments" />
+						</TabList>
+						<TabPanel value="details" class="space-y-4 pt-4 focus:outline-none">
+							<!-- Who is proposing this leads: the panel decides on people as much as topics. -->
+							<div v-if="speakers.length" class="space-y-2">
+								<h3 class="text-base text-ink-gray-5">Speakers</h3>
+								<ul class="space-y-1">
+									<li
+										v-for="speaker in speakers"
+										:key="speaker.email"
+										class="flex min-w-0 items-center gap-2 rounded-4 px-1 py-1 transition-colors hover:bg-surface-gray-1"
+									>
+										<Avatar
+											size="md"
+											:label="speakerName(speaker)"
+											:theme="avatarTheme(speaker.email)"
+										/>
+										<span class="min-w-0 truncate text-base text-ink-gray-8">
+											{{ speakerName(speaker) }}
+										</span>
+										<span class="ml-auto min-w-0 truncate text-base text-ink-gray-5">
+											{{ speaker.email }}
+										</span>
+									</li>
+								</ul>
+							</div>
+
+							<div class="grid grid-cols-2 gap-x-5 gap-y-3">
+								<div v-for="field in fields" :key="field.label" class="space-y-0.5">
+									<p class="text-base text-ink-gray-5">{{ field.label }}</p>
+									<p class="text-base text-ink-gray-8">{{ field.value }}</p>
+								</div>
+							</div>
+
+							<div class="space-y-2">
+								<h3 class="text-base text-ink-gray-5">Description</h3>
+								<!-- Only the document carries the description, so it arrives a beat later. -->
+								<Skeleton v-if="proposalDoc.loading" class="h-16 w-full rounded-4" />
+								<!-- Description is a Text Editor field, so it arrives as sanitized HTML. -->
+								<div
+									v-else-if="proposalDoc.doc?.description"
+									class="description prose prose-sm max-w-none text-base leading-[1.6] text-ink-gray-7"
+									v-html="proposalDoc.doc.description"
 								/>
-								<span class="min-w-0 truncate text-base text-ink-gray-8">
-									{{ speakerName(speaker) }}
-								</span>
-								<span class="ml-auto min-w-0 truncate text-base text-ink-gray-5">
-									{{ speaker.email }}
-								</span>
-							</li>
-						</ul>
-					</div>
-
-					<div class="grid grid-cols-2 gap-x-5 gap-y-3">
-						<div v-for="field in fields" :key="field.label" class="space-y-0.5">
-							<p class="text-base text-ink-gray-5">{{ field.label }}</p>
-							<p class="text-base text-ink-gray-8">{{ field.value }}</p>
-						</div>
-					</div>
-
-					<div class="space-y-2">
-						<h3 class="text-base text-ink-gray-5">Description</h3>
-						<!-- Only the document carries the description, so it arrives a beat later. -->
-						<Skeleton v-if="proposalDoc.loading" class="h-16 w-full rounded-4" />
-						<!-- Description is a Text Editor field, so it arrives as sanitized HTML. -->
-						<div
-							v-else-if="proposalDoc.doc?.description"
-							class="description prose prose-sm max-w-none text-base leading-[1.6] text-ink-gray-7"
-							v-html="proposalDoc.doc.description"
-						/>
-						<p v-else class="text-base leading-[1.6] text-ink-gray-7">
-							No description was submitted.
-						</p>
-					</div>
+								<p v-else class="text-base leading-[1.6] text-ink-gray-7">
+									No description was submitted.
+								</p>
+							</div>
+						</TabPanel>
+						<TabPanel value="comments" class="pt-4 focus:outline-none">
+							<DocumentComments
+								doctype="Talk Proposal"
+								:name="proposal.name"
+								email-label="Send to speakers"
+							/>
+						</TabPanel>
+					</Tabs>
 				</div>
 				<Dialog
 					v-model:open="confirmingAcceptance"

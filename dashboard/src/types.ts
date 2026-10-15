@@ -136,6 +136,15 @@ export interface UserInfo {
 	time_zone?: string | null
 }
 
+export interface DocumentComment {
+	name: string
+	content: string
+	owner: string
+	owner_name: string
+	owner_image: string | null
+	creation: string
+}
+
 export interface TeamMember {
 	user: string
 	full_name: string | null
