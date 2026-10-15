@@ -62,8 +62,32 @@ const chips = computed(() => [
 		</div>
 
 		<section v-for="group in visibleGroups" :key="group.key" class="space-y-1.5">
+			<header v-if="selectedGroup" class="flex items-start gap-2 px-0.5 pb-1">
+				<div class="min-w-0 flex-1">
+					<h3 class="text-base font-semibold text-ink-gray-9">{{ group.title }}</h3>
+					<p v-if="group.category?.description" class="text-p-sm text-ink-gray-5">
+						{{ group.category.description }}
+					</p>
+				</div>
+				<template v-if="canWrite && group.category">
+					<Button
+						size="md"
+						variant="ghost"
+						icon="lucide-pencil"
+						label="Edit category"
+						@click="$emit('editCategory', group.category)"
+					/>
+					<Button
+						size="md"
+						variant="ghost"
+						icon="lucide-trash-2"
+						label="Delete category"
+						@click="organizer.remove(group.category)"
+					/>
+				</template>
+			</header>
 			<h3
-				v-if="!selectedGroup && groups.length > 1"
+				v-else-if="groups.length > 1"
 				class="flex items-baseline gap-1.5 px-0.5 text-sm font-semibold text-ink-gray-7"
 			>
 				{{ group.title }}
@@ -84,23 +108,5 @@ const chips = computed(() => [
 				No ticket types in this category yet
 			</p>
 		</section>
-
-		<div v-if="canWrite && selectedGroup?.category" class="flex gap-2">
-			<Button
-				size="md"
-				variant="subtle"
-				icon-left="lucide-pencil"
-				label="Edit"
-				@click="$emit('editCategory', selectedGroup.category)"
-			/>
-			<Button
-				size="md"
-				variant="subtle"
-				theme="red"
-				icon-left="lucide-trash-2"
-				label="Delete category"
-				@click="organizer.remove(selectedGroup.category)"
-			/>
-		</div>
 	</div>
 </template>
