@@ -15,6 +15,7 @@ DIRECT_FIELDS = {
 	"time_zone": "Asia/Kolkata",
 	"allow_guest_booking": 1,
 	"guest_verification_method": "Email OTP",
+	"prevent_duplicate_registrations": 1,
 	"send_ticket_email": 1,
 	"apply_tax": 1,
 	"tax_label": "GST",

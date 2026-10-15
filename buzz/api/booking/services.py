@@ -12,6 +12,7 @@ from frappe.utils import (
 	validate_phone_number_with_country_code,
 )
 from frappe.utils.password import get_encryption_key
+from pypika import CustomFunction
 
 from buzz.api.booking.exceptions import AddOnNotForEvent, InvalidAddOnValue, RegistrationsClosed
 from buzz.api.booking.guests import get_or_create_guest_user, verify_guest_otp
@@ -44,6 +45,7 @@ class BookingService:
 
 	def process(self) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
 		self.validate_event()
+		self.validate_duplicate_attendee_emails()
 		self.validate_offline_currency()
 		self.validate_phone_fields()
 		self.validate_add_ons()
@@ -62,6 +64,41 @@ class BookingService:
 			frappe.throw(_("Event is not live"))
 		if are_registrations_closed(self.event):
 			RegistrationsClosed.throw()
+
+	def validate_duplicate_attendee_emails(self) -> None:
+		if not self.event.prevent_duplicate_registrations:
+			return
+
+		emails = [
+			str(attendee.get("email") or "").strip().lower()
+			for attendee in self.request.attendees
+			if str(attendee.get("email") or "").strip()
+		]
+		normalized_emails = set(emails)
+		if len(normalized_emails) < len(emails):
+			frappe.throw(_("This email address already has a registration for this event"))
+		if not normalized_emails:
+			return
+
+		# Serialize duplicate checks for this event so concurrent requests cannot both pass.
+		frappe.db.get_value("Buzz Event", self.request.event, "name", for_update=True)
+		booking = frappe.qb.DocType("Event Booking")
+		attendee = frappe.qb.DocType("Event Booking Attendee")
+		lower = CustomFunction("LOWER", ["value"])
+		trim = CustomFunction("TRIM", ["value"])
+		normalized_attendee_email = lower(trim(attendee.email))
+		duplicate = (
+			frappe.qb.from_(attendee)
+			.join(booking)
+			.on(attendee.parent == booking.name)
+			.where(booking.event == self.request.event)
+			.where(booking.docstatus < 2)
+			.where(normalized_attendee_email.isin(normalized_emails))
+			.select(attendee.name)
+			.limit(1)
+		).run()
+		if duplicate:
+			frappe.throw(_("This email address already has a registration for this event"))
 
 	def validate_phone_fields(self) -> None:
 		"""Validate every Phone custom field, booking-level and attendee-level, before

@@ -16,6 +16,7 @@
   "venue",
   "allow_guest_booking",
   "guest_verification_method",
+  "prevent_duplicate_registrations",
   "section_break_details",
   "time_zone",
   "short_description",
@@ -107,6 +108,12 @@
    "fieldtype": "Select",
    "label": "Guest Verification Method",
    "options": "None\nEmail OTP\nPhone OTP"
+  },
+  {
+   "default": "0",
+   "fieldname": "prevent_duplicate_registrations",
+   "fieldtype": "Check",
+   "label": "Prevent Duplicate Registrations"
   },
   {
    "fieldname": "section_break_details",
