@@ -110,10 +110,33 @@ function post(content: string, toSpeakers: boolean) {
 </template>
 
 <style scoped>
-/* The timeline fades into the composer instead of being cut at its edge. The fade is
-   as tall as the bottom padding, so the last entry is never faded once scrolled to. */
+/* The timeline fades into the composer instead of being cut at its edge. The bottom
+   fade is as tall as the bottom padding, so the last entry is never faded once scrolled
+   to. The top fade grows in with the first 24px of scroll, so nothing fades at rest;
+   without scroll-driven animations it simply stays off. */
+@property --top-fade {
+	syntax: "<length>";
+	inherits: false;
+	initial-value: 0px;
+}
+
 .scroll-fade {
-	mask-image: linear-gradient(to bottom, black calc(100% - 1.5rem), transparent);
+	mask-image: linear-gradient(
+		to bottom,
+		transparent,
+		black var(--top-fade),
+		black calc(100% - 1.5rem),
+		transparent
+	);
+	animation: top-fade-in linear both;
+	animation-timeline: scroll(self);
+	animation-range: 0 1.5rem;
+}
+
+@keyframes top-fade-in {
+	to {
+		--top-fade: 1.5rem;
+	}
 }
 
 .description {

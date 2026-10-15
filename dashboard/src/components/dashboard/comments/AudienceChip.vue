@@ -7,7 +7,11 @@ export interface Recipient {
 	email: string
 }
 
-const props = defineProps<{ recipients: Recipient[]; recipientsLabel: string }>()
+const props = defineProps<{
+	recipients: Recipient[]
+	recipientsLabel: string
+	size?: "xs" | "sm"
+}>()
 
 // True means the note goes out by email instead of staying with the team.
 const toRecipients = defineModel<boolean>({ required: true })
@@ -40,7 +44,7 @@ const options = computed(() => [
 <template>
 	<Dropdown v-model:open="open" :options="options" side="top" align="start">
 		<Button
-			size="xs"
+			:size="size"
 			:variant="toRecipients ? 'outline' : 'ghost'"
 			:icon-left="toRecipients ? 'lucide-mail' : 'lucide-lock'"
 			icon-right="lucide-chevron-down"

@@ -15,6 +15,7 @@ const props = defineProps<{
 	names: Record<string, string>
 	createdLabel: string
 	saving?: boolean
+	fresh?: boolean
 }>()
 
 const emit = defineEmits<{ update: [content: string]; delete: [] }>()
@@ -50,7 +51,7 @@ function save(content: string) {
 </script>
 
 <template>
-	<li class="entry relative flex gap-3" :class="!last && 'pb-6'">
+	<li class="entry relative flex gap-3" :class="!last && 'pb-6'" :data-fresh="fresh || undefined">
 		<!-- The rail runs from under this marker to the next one. -->
 		<span
 			v-if="!last"
@@ -141,7 +142,7 @@ function save(content: string) {
 </template>
 
 <style scoped>
-.entry {
+.entry[data-fresh] {
 	transition:
 		opacity 220ms cubic-bezier(0.23, 1, 0.32, 1),
 		transform 220ms cubic-bezier(0.23, 1, 0.32, 1);
@@ -149,7 +150,7 @@ function save(content: string) {
 
 /* A freshly posted note settles in rather than appearing. */
 @starting-style {
-	.entry {
+	.entry[data-fresh] {
 		opacity: 0;
 		transform: translateY(4px);
 	}
@@ -170,7 +171,7 @@ function save(content: string) {
 
 @media (prefers-reduced-motion: reduce) {
 	@starting-style {
-		.entry {
+		.entry[data-fresh] {
 			transform: none;
 		}
 	}

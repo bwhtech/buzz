@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ErrorMessage, Skeleton } from "frappe-ui"
-import { computed } from "vue"
+import { computed, ref, watch } from "vue"
 
 import type { useDocumentActivity } from "@/composables/useDocumentActivity"
 
@@ -13,6 +13,18 @@ const props = defineProps<{
 }>()
 
 const entries = computed(() => props.feed.activity.data ?? [])
+// What the timeline opened with shows at once; only entries added while it is open
+// animate in.
+const loadedNames = ref<Set<string> | null>(null)
+watch(
+	entries,
+	(list) => {
+		if (props.feed.activity.data && !loadedNames.value)
+			loadedNames.value = new Set(list.map((entry) => entry.name))
+	},
+	{ immediate: true },
+)
+
 const hasNotes = computed(() =>
 	entries.value.some((entry) => entry.kind === "comment" || entry.kind === "email"),
 )
@@ -28,6 +40,7 @@ const hasNotes = computed(() =>
 				:key="entry.name"
 				:entry="entry"
 				:last="index === entries.length - 1"
+				:fresh="Boolean(loadedNames && !loadedNames.has(entry.name))"
 				:members="feed.members.data || []"
 				:names="names"
 				:created-label="createdLabel"

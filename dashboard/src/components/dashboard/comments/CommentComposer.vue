@@ -4,6 +4,7 @@ import { Avatar, Button } from "frappe-ui"
 import { CommentKit, Editor, EditorContent } from "frappe-ui/editor"
 import { computed, ref, watch } from "vue"
 
+import { useIsMobile } from "@/composables/useIsMobile"
 import { userResource } from "@/data/user"
 import type { TeamMember } from "@/types"
 
@@ -39,6 +40,10 @@ const extensions = [
 	mentionSuggestion(() => props.members),
 ]
 
+// The composer is pinned under a phone's short sheet, so its controls are compact there.
+const isMobile = useIsMobile()
+const buttonSize = computed(() => (isMobile.value ? "xs" : "sm"))
+
 function submit(isEmpty: boolean) {
 	if (!isEmpty && !props.loading) emit("submit", draft.value, toRecipients.value)
 }
@@ -71,10 +76,10 @@ function submit(isEmpty: boolean) {
 					@keydown.meta.enter="submit(isEmpty)"
 					@keydown.ctrl.enter="submit(isEmpty)"
 				>
-					<!-- Typed text stays 16px so iOS does not zoom the page on focus; only the
-					     placeholder is smaller. -->
+					<!-- On a phone typed text is lifted to 16px (index.css) so iOS does not zoom on
+					     focus; the placeholder stays smaller there to keep the pinned composer quiet. -->
 					<EditorContent
-						class="max-h-48 min-h-10 overflow-y-auto py-1 text-base text-ink-gray-8 [&_p.is-editor-empty]:before:text-sm"
+						class="max-h-48 min-h-10 overflow-y-auto py-1 text-base text-ink-gray-8 [&_p.is-editor-empty]:before:text-sm md:[&_p.is-editor-empty]:before:text-base"
 					/>
 					<!-- Always laid out, only revealed, so focusing the field never shifts the composer. -->
 					<div
@@ -87,17 +92,18 @@ function submit(isEmpty: boolean) {
 							v-model:open="chipOpen"
 							:recipients="recipients!"
 							:recipients-label="recipientsLabel!"
+							:size="buttonSize"
 						/>
 						<div class="ml-auto flex items-center gap-2">
 							<Button
 								v-if="editing"
-								size="xs"
+								:size="buttonSize"
 								variant="ghost"
 								label="Cancel"
 								@click="emit('cancel')"
 							/>
 							<Button
-								size="xs"
+								:size="buttonSize"
 								variant="solid"
 								:label="editing ? 'Save' : toRecipients ? 'Send email' : 'Comment'"
 								:disabled="isEmpty"
