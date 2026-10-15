@@ -24,10 +24,6 @@ watch(
 	},
 	{ immediate: true },
 )
-
-const hasNotes = computed(() =>
-	entries.value.some((entry) => entry.kind === "comment" || entry.kind === "email"),
-)
 </script>
 
 <template>
@@ -49,7 +45,10 @@ const hasNotes = computed(() =>
 				@delete="feed.remove(entry.name)"
 			/>
 		</ul>
-		<p v-if="feed.activity.data && !hasNotes" class="text-sm text-pretty text-ink-gray-5">
+		<p
+			v-if="feed.activity.data && !feed.noteCount.value"
+			class="text-sm text-pretty text-ink-gray-5"
+		>
 			No notes yet. Only your team sees them; mention someone with @ to loop them in.
 		</p>
 	</div>

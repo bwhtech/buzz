@@ -48,11 +48,6 @@ const recipients = computed(() =>
 const names = computed(() =>
 	Object.fromEntries(recipients.value.map((person) => [person.email, person.name])),
 )
-const noteCount = computed(
-	() =>
-		(feed.activity.data ?? []).filter((entry) => entry.kind === "comment" || entry.kind === "email")
-			.length,
-)
 
 const draft = ref("")
 
@@ -89,7 +84,7 @@ function post(content: string, toSpeakers: boolean) {
 			<section class="space-y-4">
 				<h3 class="flex items-center gap-2 text-lg font-semibold text-ink-gray-9">
 					Activity
-					<Badge v-if="noteCount" :label="String(noteCount)" />
+					<Badge v-if="feed.noteCount.value" :label="String(feed.noteCount.value)" />
 				</h3>
 				<DocumentActivity :feed="feed" :names="names" created-label="submitted this proposal" />
 			</section>

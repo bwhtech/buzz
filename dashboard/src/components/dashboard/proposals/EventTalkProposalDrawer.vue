@@ -136,9 +136,14 @@ async function saveStatus(name: string, next: string) {
 	}
 }
 
-// A held write still goes out when the drawer's page goes away.
+// A held write still goes out when the drawer's page goes away. Closing the tab also
+// asks first, so the request has time to finish before the page unloads.
 onBeforeUnmount(flushHeldStatus)
-useEventListener(window, "beforeunload", flushHeldStatus)
+useEventListener(window, "beforeunload", (event: BeforeUnloadEvent) => {
+	if (!held) return
+	flushHeldStatus()
+	event.preventDefault()
+})
 
 async function acceptProposal() {
 	const name = props.proposal?.name

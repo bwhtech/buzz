@@ -1,4 +1,4 @@
-import { onBeforeUnmount } from "vue"
+import { computed, onBeforeUnmount } from "vue"
 
 import {
 	useActivity,
@@ -11,7 +11,6 @@ import { useSocket } from "@/socket"
 
 type ActivityUpdate = { reference_doctype: string; reference_name: string }
 
-// Edit and delete failures show through each call's `error`, so the rejection is dropped.
 const ignore = () => {}
 
 /**
@@ -26,6 +25,12 @@ export function useDocumentActivity(doctype: string, name: () => string) {
 	const adding = useAddComment()
 	const updating = useUpdateComment()
 	const deleting = useDeleteComment()
+
+	const noteCount = computed(
+		() =>
+			(activity.data ?? []).filter((entry) => entry.kind === "comment" || entry.kind === "email")
+				.length,
+	)
 
 	const reload = () => activity.reload()
 
@@ -43,5 +48,5 @@ export function useDocumentActivity(doctype: string, name: () => string) {
 	socket?.on("buzz_comment_update", onUpdate)
 	onBeforeUnmount(() => socket?.off("buzz_comment_update", onUpdate))
 
-	return { activity, members, adding, updating, deleting, add, update, remove, reload }
+	return { activity, members, noteCount, adding, updating, deleting, add, update, remove, reload }
 }
