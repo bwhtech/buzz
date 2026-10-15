@@ -36,3 +36,8 @@ class TestEventTicketCategory(IntegrationTestCase):
 	def test_ticket_type_rejects_a_category_of_another_event(self):
 		with self.assertRaises(frappe.ValidationError):
 			EventTicketTypeFactory.create(category=self.category.name)
+
+	def test_deleting_leaves_its_ticket_types_uncategorized(self):
+		ticket_type = EventTicketTypeFactory.create(event=self.event, category=self.category.name)
+		self.category.delete()
+		self.assertIsNone(frappe.db.get_value("Event Ticket Type", ticket_type.name, "category"))

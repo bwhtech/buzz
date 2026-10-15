@@ -33,6 +33,10 @@ class EventTicketCategory(Document):
 		if before and str(before.event) != str(self.event):
 			frappe.throw(_("A ticket category cannot move to another event"))
 
+	# Runs before Frappe's link check, so the delete goes through with ticket types left uncategorized.
+	def on_trash(self):
+		frappe.db.set_value("Event Ticket Type", {"category": self.name}, "category", None)
+
 	# The default collation compares titles case-insensitively.
 	def validate_unique_title(self):
 		filters = {"event": self.event, "title": self.title, "name": ("!=", self.name)}
