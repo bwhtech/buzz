@@ -15,6 +15,7 @@ class EventTemplateTicketType(Document):
 		from frappe.types import DF
 
 		auto_unpublish_after: DF.Date | None
+		category: DF.Data | None
 		currency: DF.Link
 		is_published: DF.Check
 		max_tickets_available: DF.Int

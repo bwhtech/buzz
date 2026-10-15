@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
+
 
 class EventTemplate(Document):
 	# begin: auto-generated types
@@ -16,9 +18,12 @@ class EventTemplate(Document):
 		from frappe.types import DF
 
 		from buzz.events.doctype.event_payment_gateway.event_payment_gateway import EventPaymentGateway
-		from buzz.events.doctype.event_template_add_on.event_template_add_on import EventTemplateAddOn
+		from buzz.events.doctype.event_template_add_on.event_template_add_on import EventTemplateAddon
 		from buzz.events.doctype.event_template_custom_field.event_template_custom_field import (
 			EventTemplateCustomField,
+		)
+		from buzz.events.doctype.event_template_ticket_category.event_template_ticket_category import (
+			EventTemplateTicketCategory,
 		)
 		from buzz.events.doctype.event_template_ticket_type.event_template_ticket_type import (
 			EventTemplateTicketType,
@@ -26,13 +31,16 @@ class EventTemplate(Document):
 		from buzz.proposals.doctype.sponsorship_deck_item.sponsorship_deck_item import SponsorshipDeckItem
 
 		about: DF.TextEditor | None
+		allow_guest_booking: DF.Check
 		apply_tax: DF.Check
 		auto_send_pitch_deck: DF.Check
 		banner_image: DF.AttachImage | None
 		category: DF.Link | None
+		guest_verification_method: DF.Literal["None", "Email OTP", "Phone OTP"]
 		host: DF.Link | None
 		medium: DF.Literal["In Person", "Online"]
 		payment_gateways: DF.Table[EventPaymentGateway]
+		send_ticket_email: DF.Check
 		short_description: DF.SmallText | None
 		sponsor_deck_attachments: DF.Table[SponsorshipDeckItem]
 		sponsor_deck_cc: DF.SmallText | None
@@ -41,9 +49,10 @@ class EventTemplate(Document):
 		tax_label: DF.Data | None
 		tax_percentage: DF.Percent
 		team: DF.Link
-		template_add_ons: DF.Table[EventTemplateAddOn]
+		template_add_ons: DF.Table[EventTemplateAddon]
 		template_custom_fields: DF.Table[EventTemplateCustomField]
 		template_name: DF.Data
+		template_ticket_categories: DF.Table[EventTemplateTicketCategory]
 		template_ticket_types: DF.Table[EventTemplateTicketType]
 		ticket_email_template: DF.Link | None
 		ticket_print_format: DF.Link | None
@@ -115,11 +124,19 @@ def create_template_from_event(event_name: str, template_name: str, options: str
 
 	# Copy linked documents (Ticket Types, Add-ons, Custom Fields)
 	if options.get("ticket_types"):
+		categories = get_ordered_categories(event_name)
+		for category in categories:
+			template.append(
+				"template_ticket_categories",
+				{key: category[key] for key in ("title", "description", "sort_order")},
+			)
+		category_titles = {category.name: category.title for category in categories}
 		ticket_types = frappe.get_all(
 			"Event Ticket Type",
 			filters={"event": event_name},
 			fields=[
 				"title",
+				"category",
 				{"prices": ["currency", "price"]},
 				"is_published",
 				"max_tickets_available",
@@ -131,6 +148,7 @@ def create_template_from_event(event_name: str, template_name: str, options: str
 				"template_ticket_types",
 				{
 					"title": tt.title,
+					"category": category_titles.get(tt.category),
 					"price": tt.prices[0].price,
 					"currency": tt.prices[0].currency,
 					"is_published": tt.is_published,

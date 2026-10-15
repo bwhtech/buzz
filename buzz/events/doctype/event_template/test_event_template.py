@@ -98,6 +98,23 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 		)
 		self.assertEqual(ticket_types[0].max_tickets_available, 100)
 
+	def test_creates_ticket_categories_and_links_ticket_types(self):
+		template = self.create_template(
+			template_ticket_categories=[{"title": "Workshops", "description": "Hands-on", "sort_order": 2}],
+			template_ticket_types=[
+				{"title": "Lab", "category": "Workshops", "price": 0, "currency": "INR", "is_published": 1}
+			],
+		)
+
+		event = self.create_event(template, {"category": 1, "host": 1, "ticket_types": 1})
+
+		category = frappe.get_value(
+			"Event Ticket Category", {"event": event.name}, ["name", "title", "sort_order"], as_dict=True
+		)
+		self.assertEqual((category.title, category.sort_order), ("Workshops", 2))
+		lab = frappe.get_value("Event Ticket Type", {"event": event.name, "title": "Lab"}, "category")
+		self.assertEqual(lab, category.name)
+
 	def test_creates_add_ons(self):
 		add_on = {"title": "Workshop Access", "price": 2000, "currency": "INR", "enabled": 1}
 		template = self.create_template(

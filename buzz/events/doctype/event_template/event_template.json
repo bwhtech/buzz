@@ -43,6 +43,7 @@
   "column_break_custom",
   "ticket_print_format",
   "ticket_types_tab",
+  "template_ticket_categories",
   "template_ticket_types",
   "add_ons_tab",
   "template_add_ons",
@@ -289,12 +290,18 @@
    "options": "Buzz Team",
    "reqd": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "template_ticket_categories",
+   "fieldtype": "Table",
+   "label": "Ticket Categories",
+   "options": "Event Template Ticket Category"
   }
  ],
  "image_field": "banner_image",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-31 12:00:00.000000",
+ "modified": "2026-10-15 22:26:29.370897",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Template",
@@ -327,6 +334,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",

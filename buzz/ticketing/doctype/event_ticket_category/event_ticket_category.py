@@ -53,3 +53,20 @@ def get_ordered_categories(event: str) -> list[dict]:
 		order_by="sort_order asc, creation asc",
 		ignore_permissions=True,
 	)
+
+
+# Creates an event's categories from template rows. Maps each title to the new category's name.
+def create_ticket_categories(event: str, rows) -> dict[str, str]:
+	names = {}
+	for row in rows:
+		category = frappe.get_doc(
+			{
+				"doctype": "Event Ticket Category",
+				"event": event,
+				"title": row.title,
+				"description": row.description,
+				"sort_order": row.sort_order,
+			}
+		).insert()
+		names[category.title] = category.name
+	return names

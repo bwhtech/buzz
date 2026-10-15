@@ -14,6 +14,7 @@ from buzz import telemetry
 from buzz.api.forms.fields import validate_excluded_fields
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import create_for_event
+from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import create_ticket_categories
 from buzz.utils import get_time_zone_label, only_if_app_installed
 
 # Top-level dashboard route segments (/b/<segment>) an event route must not shadow.
@@ -555,10 +556,12 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 
 	# Create linked documents (Ticket Types, Add-ons, Custom Fields)
 	if options.get("ticket_types"):
+		category_names = create_ticket_categories(event.name, template.template_ticket_categories)
 		for tt in template.template_ticket_types:
 			ticket_type = frappe.new_doc("Event Ticket Type")
 			ticket_type.event = event.name
 			ticket_type.title = tt.title
+			ticket_type.category = category_names.get(tt.category)
 			ticket_type.append("prices", {"currency": tt.currency, "price": tt.price})
 			ticket_type.is_published = tt.is_published
 			ticket_type.max_tickets_available = tt.max_tickets_available
