@@ -509,6 +509,14 @@ export interface AvailableTicketType {
 	add_ons?: string[]
 	prices?: { currency: string; price: number }[]
 	price_note?: string
+	category?: string | null
+}
+
+// buzz.api.booking.get_event_booking_data: categories that hold an available ticket type.
+export interface BookingTicketCategory {
+	name: string
+	title: string
+	description: string | null
 }
 
 export interface AvailableAddOn {

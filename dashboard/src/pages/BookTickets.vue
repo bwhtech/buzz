@@ -39,6 +39,7 @@
 				v-if="eventBookingData.availableAddOns && eventBookingData.availableTicketTypes"
 				:availableAddOns="eventBookingData.availableAddOns"
 				:availableTicketTypes="eventBookingData.availableTicketTypes"
+				:ticketCategories="eventBookingData.ticketCategories"
 				:taxSettings="eventBookingData.taxSettings || {}"
 				:eventDetails="eventBookingData.eventDetails || {}"
 				:customFields="eventBookingData.customFields || []"
@@ -56,13 +57,20 @@ import { Spinner, useCall, usePageMeta } from "frappe-ui"
 import { computed, reactive, ref, watch } from "vue"
 
 import { session } from "@/data/session"
-import type { AvailableAddOn, AvailableTicketType, FrappeField, OfflineMethod } from "@/types"
+import type {
+	AvailableAddOn,
+	AvailableTicketType,
+	BookingTicketCategory,
+	FrappeField,
+	OfflineMethod,
+} from "@/types"
 
 import BookingForm from "../components/BookingForm.vue"
 
 const eventBookingData = reactive<{
 	availableAddOns: AvailableAddOn[] | null
 	availableTicketTypes: AvailableTicketType[] | null
+	ticketCategories: BookingTicketCategory[]
 	taxSettings: Record<string, any> | null
 	eventDetails: Record<string, any> | null
 	customFields: FrappeField[] | null
@@ -71,6 +79,7 @@ const eventBookingData = reactive<{
 }>({
 	availableAddOns: null,
 	availableTicketTypes: null,
+	ticketCategories: [],
 	taxSettings: null,
 	eventDetails: null,
 	customFields: null,
@@ -112,6 +121,7 @@ const eventBookingResource = useCall<Record<string, any>, { event_route: string 
 				currency: ticketType.prices?.[0]?.currency,
 			}),
 		)
+		eventBookingData.ticketCategories = data.ticket_categories || []
 		eventBookingData.taxSettings = data.tax_settings || {
 			apply_tax: false,
 			tax_inclusive: false,

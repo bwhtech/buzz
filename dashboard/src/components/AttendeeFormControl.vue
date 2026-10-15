@@ -46,17 +46,14 @@
 			<!-- Ticket Type -->
 
 			<!-- Show selector only if there are multiple ticket types -->
+			<!-- Categories group the options; frappe-ui's Select has no groups, Combobox does. -->
 			<FormControl
 				v-if="availableTicketTypes.length > 1 && !(isZoomEvent && eventDetails.free_event)"
 				v-model="attendee.ticket_type"
 				:label="__('Ticket Type')"
-				type="select"
-				:options="
-					availableTicketTypes.map((tt) => ({
-						label: `${__(tt.title ?? '')} (${formatPriceOrFree(tt.price, tt.currency)}${tt.price_note ? ` · ${tt.price_note}` : ''})`,
-						value: String(tt.name),
-					}))
-				"
+				:type="ticketCategories.length ? 'combobox' : 'select'"
+				trigger="button"
+				:options="ticketTypeOptions"
 			/>
 
 			<!-- Custom Fields for Tickets integrated with basic fields -->
@@ -118,8 +115,9 @@ import { Badge, Tooltip } from "frappe-ui"
 import { type PropType, computed } from "vue"
 
 import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields"
-import type { AvailableAddOn, AvailableTicketType } from "@/types"
+import type { AvailableAddOn, AvailableTicketType, BookingTicketCategory } from "@/types"
 import { formatPriceOrFree } from "@/utils/currency"
+import { groupTicketTypes } from "@/utils/ticketCategories"
 import { isZoomBackedCategory } from "@/utils/zoomCategory"
 
 import CustomFieldInput from "./CustomFieldInput.vue"
@@ -143,6 +141,7 @@ const props = defineProps({
 		type: Array as PropType<AvailableTicketType[]>,
 		required: true,
 	},
+	ticketCategories: { type: Array as PropType<BookingTicketCategory[]>, default: () => [] },
 	availableAddOns: { type: Array as PropType<AvailableAddOn[]>, required: true },
 	customFields: { type: Array as PropType<FrappeField[]>, default: () => [] },
 	showRemove: { type: Boolean, default: false },
@@ -156,6 +155,19 @@ const props = defineProps({
 defineEmits(["remove"])
 
 const isZoomEvent = computed(() => isZoomBackedCategory(props.eventDetails.category))
+
+const ticketTypeOption = (ticketType: AvailableTicketType) => ({
+	label: `${__(ticketType.title ?? "")} (${formatPriceOrFree(ticketType.price, ticketType.currency)}${ticketType.price_note ? ` · ${ticketType.price_note}` : ""})`,
+	value: String(ticketType.name),
+})
+
+const ticketTypeOptions = computed(() => {
+	if (!props.ticketCategories.length) return props.availableTicketTypes.map(ticketTypeOption)
+	return groupTicketTypes(props.availableTicketTypes, props.ticketCategories).map((group) => ({
+		group: group.category ? __(group.category.title) : __("Other tickets"),
+		options: group.ticketTypes.map(ticketTypeOption),
+	}))
+})
 
 // Helper methods to safely access add-on properties
 const ensureAddOnExists = (addOnName: string) => {

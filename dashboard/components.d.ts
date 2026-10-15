@@ -182,6 +182,7 @@ declare module 'vue' {
     TicketCard: typeof import('./src/components/TicketCard.vue')['default']
     TicketCategoryActions: typeof import('./src/components/dashboard/ticket-types/TicketCategoryActions.vue')['default']
     TicketCategoryDialog: typeof import('./src/components/dashboard/ticket-types/TicketCategoryDialog.vue')['default']
+    TicketOverview: typeof import('./src/components/TicketOverview.vue')['default']
     TicketsSection: typeof import('./src/components/TicketsSection.vue')['default']
     TicketTransferDialog: typeof import('./src/components/TicketTransferDialog.vue')['default']
     TicketTypeBoard: typeof import('./src/components/dashboard/ticket-types/TicketTypeBoard.vue')['default']

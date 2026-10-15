@@ -212,12 +212,15 @@
 						:tax-label="taxLabel"
 					/>
 
+					<TicketOverview :ticket-types="ticketTypes" :categories="ticketCategories" />
+
 					<AttendeeFormControl
 						v-for="(attendee, index) in attendees"
 						:key="attendee.id"
 						:attendee="attendee"
 						:index="index"
 						:available-ticket-types="ticketTypes"
+						:ticket-categories="ticketCategories"
 						:available-add-ons="addOns"
 						:custom-fields="ticketCustomFields"
 						:show-remove="attendees.length > 1"
@@ -452,6 +455,7 @@ import type {
 	AvailableAddOn,
 	AvailableTicketType,
 	BookingAttendee,
+	BookingTicketCategory,
 	CouponData,
 	FrappeField,
 	OfflineMethod,
@@ -472,6 +476,7 @@ import EventDetailsHeader from "./EventDetailsHeader.vue"
 import OfflinePaymentDialog from "./OfflinePaymentDialog.vue"
 import PaymentGatewayDialog from "./PaymentGatewayDialog.vue"
 import PhoneInput from "./PhoneInput.vue"
+import TicketOverview from "./TicketOverview.vue"
 
 const router = useRouter()
 const route = useRoute()
@@ -497,6 +502,10 @@ const props = defineProps({
 	},
 	availableTicketTypes: {
 		type: Array as PropType<AvailableTicketType[]>,
+		default: () => [],
+	},
+	ticketCategories: {
+		type: Array as PropType<BookingTicketCategory[]>,
 		default: () => [],
 	},
 	taxSettings: {
