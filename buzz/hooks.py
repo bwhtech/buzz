@@ -92,6 +92,9 @@ taggable_doctypes = ["Event Sponsor", "Buzz Event", "Talk Proposal", "Buzz Team 
 for _doctype in taggable_doctypes:
 	doc_events.setdefault(_doctype, {})["on_trash"] = "buzz.events.doctype.buzz_tag.buzz_tag.delete_tag_links"
 
+commentable_doctypes = ["Talk Proposal"]
+extend_doctype_class = {"Comment": ["buzz.comments.TeamComment"]}
+
 fixtures = [
 	{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Event Manager", "Frontdesk Manager"]]}},
 	{"dt": "Buzz Theme", "filters": {"is_standard": 1}},
