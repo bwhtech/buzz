@@ -10,6 +10,7 @@ from buzz.tests.factories import (
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
 	EventBookingFactory,
+	EventTicketCategoryFactory,
 	EventTicketTypeFactory,
 	PaymentGatewayFactory,
 	UserFactory,
@@ -73,6 +74,16 @@ class TestGetEventTicketTypes(TicketTypesTestCase):
 		self.assertEqual(row["prices"], [{"currency": "INR", "price": 1000, "tickets_sold": 1}])
 		self.assertEqual(row["max_tickets_available"], 200)
 		self.assertEqual(row["tickets_sold"], 1)
+
+	def test_lists_categories_in_display_order(self):
+		late = EventTicketCategoryFactory.create(event=self.event, title="Workshops", sort_order=2)
+		early = EventTicketCategoryFactory.create(event=self.event, title="Conference", sort_order=1)
+		frappe.db.set_value("Event Ticket Type", self.ticket_type, "category", early.name)
+
+		payload = self.payload_as(self.owner)
+
+		self.assertEqual([row["name"] for row in payload["categories"]], [early.name, late.name])
+		self.assertEqual(self.ticket_type_row(payload)["category"], early.name)
 
 	def test_reports_whether_the_team_can_sell_paid_tickets(self):
 		self.assertTrue(self.payload_as(self.owner)["paid_events_enabled"])

@@ -206,9 +206,17 @@ class TicketTypePrice(APIResponse):
 	tickets_sold: int = 0
 
 
+class TicketCategoryItem(APIResponse):
+	name: str
+	title: str
+	description: str | None
+	sort_order: int
+
+
 class TicketTypeItem(APIResponse):
 	name: str
 	title: str
+	category: str | None
 	max_tickets_available: int
 	auto_unpublish_after: date | None
 	is_published: bool
@@ -244,6 +252,7 @@ class EventTicketTypes(APIResponse):
 	team_tax_id: str | None
 	can_edit_team: bool
 	paid_events_enabled: bool
+	categories: list[TicketCategoryItem]
 	ticket_types: list[TicketTypeItem]
 	payment_providers: list[PaymentProviderItem]
 	revenue: list[CurrencyRevenue]

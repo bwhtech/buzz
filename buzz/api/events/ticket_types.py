@@ -7,6 +7,7 @@ from buzz.api.events.schemas import (
 	CurrencyRevenue,
 	EventTicketTypes,
 	PaymentProviderItem,
+	TicketCategoryItem,
 	TicketTypeItem,
 	TicketTypePrice,
 )
@@ -23,6 +24,7 @@ from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 TICKET_TYPE_FIELDS = [
 	"name",
 	"title",
+	"category",
 	"max_tickets_available",
 	"auto_unpublish_after",
 	"is_published",
@@ -57,10 +59,22 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		**team_tax_details(doc.team),
 		can_edit_team=can_manage_members(doc.team),
 		paid_events_enabled=is_feature_enabled(doc.team, PAID_EVENTS_FLAG),
+		categories=ticket_categories(event),
 		ticket_types=[ticket_type_item(row, sold, sold_by_currency) for row in rows],
 		payment_providers=payment_providers(event),
 		revenue=revenue_by_currency(event),
 	)
+
+
+def ticket_categories(event: str) -> list[TicketCategoryItem]:
+	rows = frappe.get_all(
+		"Event Ticket Category",
+		filters={"event": event},
+		fields=["name", "title", "description", "sort_order"],
+		order_by="sort_order asc, creation asc",
+		ignore_permissions=True,
+	)
+	return [TicketCategoryItem(**row) for row in rows]
 
 
 def payment_providers(event: str) -> list[PaymentProviderItem]:
