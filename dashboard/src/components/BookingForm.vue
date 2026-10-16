@@ -4,7 +4,7 @@
 			v-model:open="otp.open"
 			v-model:code="otp.code"
 			:is-phone="isPhoneOtp"
-			:identifier="isPhoneOtp ? guestPhone : guestEmail"
+			:identifier="isPhoneOtp ? billing.buyer_phone : billing.buyer_email"
 			:error="otp.error"
 			:resend-cooldown="otp.cooldown"
 			:resending="otp.sending"
@@ -118,14 +118,9 @@
 						<DetailsStep
 							v-else-if="step.id === 'details'"
 							v-model:booking-custom-fields-data="bookingCustomFieldsData"
-							v-model:invoice-requested="invoiceRequested"
-							v-model:tax-id="taxId"
-							v-model:billing-address="billingAddress"
-							:buyer="me"
-							:show-buyer="isGuestMode"
-							:needs-phone="isPhoneOtp"
+							:billing="billing"
+							:phone-required="isGuestMode && isPhoneOtp"
 							:phone-error="otp.phoneError"
-							:last-name-required="isZoomEvent"
 							:booking-custom-fields="bookingCustomFields"
 							:show-invoice="tax.apply"
 							:tax-label="tax.label"
@@ -148,7 +143,7 @@
 				</Transition>
 
 				<aside v-if="!isMobile" class="sticky top-6 flex flex-col gap-3">
-					<div class="overflow-hidden rounded-7 border border-outline-gray-2 bg-surface-gray-1">
+					<div class="overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-gray-1">
 						<div class="flex items-center justify-between gap-2 px-4 pb-3 pt-4">
 							<h2 class="text-lg font-semibold text-ink-gray-9">{{ __("Order summary") }}</h2>
 							<Badge v-if="currencies.length > 1" :label="currency" />
@@ -318,10 +313,7 @@ const {
 	guestFirstName,
 	guestLastName,
 	guestEmail,
-	guestPhone,
-	invoiceRequested,
-	taxId,
-	billingAddress,
+	billing,
 } = useBookingFormStorage(props.eventRoute)
 
 // The person registering: the guest's contact, or prefilled from the signed-in user.
@@ -329,7 +321,6 @@ const me = reactive({
 	first_name: guestFirstName,
 	last_name: guestLastName,
 	email: guestEmail,
-	phone: guestPhone,
 })
 
 if (!props.isGuestMode) loadUser()
@@ -466,7 +457,7 @@ const pricing = useOrderPricing({
 	taxSettings: () => props.taxSettings,
 	currency,
 	eventId,
-	guestEmail: () => (props.isGuestMode ? guestEmail.value : null),
+	guestEmail: () => (props.isGuestMode ? billing.value.buyer_email || guestEmail.value : null),
 })
 const { netAmount, discountAmount, tax, taxAmount, total, totalBeforeDiscount } = pricing
 const coupon = reactive(pricing.coupon)
@@ -512,11 +503,11 @@ const validation = useRegistrationValidation({
 	ticketCustomFields,
 	bookingCustomFields,
 	bookingCustomFieldsData,
-	invoiceRequested,
-	billingAddress,
+	billing,
 	selectedGateway,
-	isGuest: () => props.isGuestMode,
-	needsPhone: () => isPhoneOtp.value,
+	invoiceShown: () => tax.value.apply,
+	taxIsGst: () => tax.value.label.trim().toUpperCase() === "GST",
+	phoneRequired: () => props.isGuestMode && isPhoneOtp.value,
 	lastNameRequired: () => isZoomEvent.value,
 })
 const { meErrors, attendeeErrorList, detailsErrors } = validation
@@ -525,10 +516,8 @@ const steps = computed(() =>
 	buildSteps({
 		ticketCount: attendees.value.length,
 		completeAttendees: validation.completeAttendees.value,
-		showDetails: props.isGuestMode || bookingCustomFields.value.length > 0 || tax.value.apply,
 		showPayment: total.value > 0 && gateways.value.length > 1,
 		paid: netAmount.value > 0,
-		isGuest: props.isGuestMode,
 		totalLabel: formatWholePriceOrFree(total.value, currency.value),
 	}),
 )
@@ -537,7 +526,6 @@ const stepCopy = computed(() =>
 	copyFor(step.value.id, {
 		free: Boolean(props.eventDetails.free_event),
 		paid: netAmount.value > 0,
-		isGuest: props.isGuestMode,
 	}),
 )
 
@@ -576,10 +564,22 @@ function back() {
 const otpState = useGuestOtp(
 	() => props.eventDetails.name,
 	() => isPhoneOtp.value,
-	() => (isPhoneOtp.value ? guestPhone.value : guestEmail.value),
+	() => (isPhoneOtp.value ? billing.value.buyer_phone : billing.value.buyer_email),
 )
 const otp = reactive(otpState)
-watch(guestPhone, () => (otpState.phoneError.value = ""))
+watch(
+	() => billing.value.buyer_phone,
+	() => (otpState.phoneError.value = ""),
+)
+// The buyer starts as the person registering.
+watch(
+	() => step.value.id,
+	(id) => {
+		if (id !== "details") return
+		billing.value.buyer_name ||= `${me.first_name} ${me.last_name}`.trim()
+		billing.value.buyer_email ||= me.email
+	},
+)
 
 const { submit, verifyOtp, submitOffline, offlineMethod, showOfflineDialog, completed, placing } =
 	useBookingSubmit({
@@ -611,6 +611,8 @@ function buildPayload() {
 		.filter(([key, value]) => key.toLowerCase().startsWith("utm_") && value)
 		.map(([key, value]) => ({ utm_name: key, value: String(value) }))
 	const guest = props.isGuestMode
+	const { buyer_name, buyer_email, buyer_phone, invoice_requested, ...invoice } = billing.value
+	const wantsInvoice = tax.value.apply && invoice_requested
 	return {
 		event: eventId.value,
 		attendees: attendees.value.map((attendee) =>
@@ -623,14 +625,23 @@ function buildPayload() {
 		),
 		utm_parameters: utmParameters.length ? utmParameters : null,
 		currency: currency.value,
-		guest_email: guest ? guestEmail.value.trim() : null,
-		guest_full_name: guest ? `${guestFirstName.value} ${guestLastName.value}`.trim() : null,
-		guest_phone: guest && isPhoneOtp.value ? guestPhone.value.trim() : null,
-		invoice_requested: invoiceRequested.value,
-		tax_id: invoiceRequested.value ? taxId.value?.trim() : null,
-		billing_address: invoiceRequested.value ? billingAddress.value?.trim() : null,
+		buyer_name: buyer_name.trim(),
+		buyer_email: buyer_email.trim(),
+		buyer_phone: buyer_phone.trim() || null,
+		// A guest's account is made for the buyer.
+		guest_email: guest ? buyer_email.trim() : null,
+		guest_full_name: guest ? buyer_name.trim() : null,
+		guest_phone: guest && isPhoneOtp.value ? buyer_phone.trim() : null,
+		invoice_requested: wantsInvoice,
+		...(wantsInvoice ? trimmed(invoice) : {}),
 		hold_token: holdToken.value,
 	}
+}
+
+function trimmed(values: Record<string, string>) {
+	return Object.fromEntries(
+		Object.entries(values).map(([key, value]) => [key, value.trim() || null]),
+	)
 }
 
 const successTitle = computed(() => {
@@ -641,10 +652,11 @@ const successTitle = computed(() => {
 const successMessage = computed(() => {
 	if (completed.value?.pendingVerification)
 		return __("Your payment is awaiting verification. We'll email {0} once it's confirmed.", [
-			guestEmail.value,
+			billing.value.buyer_email,
 		])
-	if (isZoomEvent.value) return __("You'll receive an invite at {0} shortly.", [guestEmail.value])
-	return __("Your tickets have been sent to {0}.", [guestEmail.value])
+	if (isZoomEvent.value)
+		return __("You'll receive an invite at {0} shortly.", [billing.value.buyer_email])
+	return __("Your tickets have been sent to {0}.", [billing.value.buyer_email])
 })
 
 // --- LIFECYCLE ---

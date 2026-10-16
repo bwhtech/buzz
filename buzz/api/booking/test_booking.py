@@ -10,7 +10,12 @@ from buzz.api.booking import (
 	send_guest_booking_otp,
 	validate_coupon,
 )
-from buzz.api.booking.exceptions import AddOnNotForEvent, InvalidAddOnValue, RegistrationsClosed
+from buzz.api.booking.exceptions import (
+	AddOnNotForEvent,
+	InvalidAddOnValue,
+	InvoiceDetailsMissing,
+	RegistrationsClosed,
+)
 from buzz.tests.base_test_cases import BOOKER, OUTSIDER, BookingTestCase
 from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
@@ -578,3 +583,46 @@ class TestGetBookingSummary(BookingSummaryTestCase):
 
 		with self.assertRaises(frappe.PermissionError):
 			self.summary_of(booking_name, OUTSIDER)
+
+
+class TestBookingBuyerAndInvoice(BookingTestCase):
+	def booked(self, **overrides):
+		booking_name = process_booking(self.booking_request(**overrides)).booking_name
+		return frappe.get_doc("Event Booking", booking_name)
+
+	def test_buyer_details_are_stored(self):
+		booking = self.booked(
+			buyer_name="Priya Rao", buyer_email="priya@example.com", buyer_phone="+91-9845012345"
+		)
+		self.assertEqual(
+			(booking.buyer_name, booking.buyer_email, booking.buyer_phone),
+			("Priya Rao", "priya@example.com", "+91-9845012345"),
+		)
+
+	def test_buyer_falls_back_to_the_booking_user(self):
+		booking = self.booked()
+		self.assertEqual(booking.buyer_email, "admin@example.com")
+
+	def test_invoice_details_are_stored_when_the_event_charges_tax(self):
+		self.set_event({"apply_tax": 1})
+		booking = self.booked(
+			invoice_requested=True,
+			tax_id="29ABCDE1234F1Z5",
+			business_name="Acme Pvt Ltd",
+			billing_address="12 MG Road, Bengaluru",
+			billing_state="Karnataka",
+		)
+		self.assertEqual(
+			(booking.invoice_requested, booking.tax_id, booking.business_name, booking.billing_state),
+			(1, "29ABCDE1234F1Z5", "Acme Pvt Ltd", "Karnataka"),
+		)
+
+	def test_an_invoice_without_a_business_name_is_refused(self):
+		self.set_event({"apply_tax": 1})
+		with self.assertRaises(InvoiceDetailsMissing):
+			process_booking(self.booking_request(invoice_requested=True, tax_id="29ABCDE1234F1Z5"))
+
+	def test_invoice_details_are_ignored_without_tax(self):
+		self.set_event({"apply_tax": 0})
+		booking = self.booked(invoice_requested=True, tax_id="29ABCDE1234F1Z5", business_name="Acme Pvt Ltd")
+		self.assertEqual((booking.invoice_requested, booking.business_name), (0, None))

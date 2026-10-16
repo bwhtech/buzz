@@ -7,13 +7,19 @@ from frappe import _
 from frappe.utils import (
 	get_datetime,
 	get_datetime_in_timezone,
+	get_fullname,
 	get_system_timezone,
 	validate_email_address,
 	validate_phone_number_with_country_code,
 )
 from frappe.utils.password import get_encryption_key
 
-from buzz.api.booking.exceptions import AddOnNotForEvent, InvalidAddOnValue, RegistrationsClosed
+from buzz.api.booking.exceptions import (
+	AddOnNotForEvent,
+	InvalidAddOnValue,
+	InvoiceDetailsMissing,
+	RegistrationsClosed,
+)
 from buzz.api.booking.guests import get_or_create_guest_user, verify_guest_otp
 from buzz.api.booking.schemas import (
 	BookingRequest,
@@ -109,6 +115,7 @@ class BookingService:
 		booking.currency = self.request.currency
 		booking.hold_token = self.request.hold_token
 		booking.user = self.resolve_user()
+		self.apply_buyer_details(booking)
 		self.apply_invoice_details(booking)
 		self.append_utm_parameters(booking)
 		self.append_custom_fields(booking)
@@ -152,12 +159,31 @@ class BookingService:
 			frappe.throw(_("Full name is required for guest booking"))
 		return full_name
 
+	# Who pays and receives the confirmation; falls back to the guest contact or the booking user.
+	def apply_buyer_details(self, booking: "EventBooking") -> None:
+		request = self.request
+		booking.buyer_email = (
+			request.buyer_email or request.guest_email or frappe.db.get_value("User", booking.user, "email")
+		)
+		booking.buyer_name = request.buyer_name or request.guest_full_name or get_fullname(booking.user)
+		booking.buyer_phone = request.buyer_phone or request.guest_phone
+		if booking.buyer_email:
+			validate_email_address(booking.buyer_email, throw=True)
+
 	def apply_invoice_details(self, booking: "EventBooking") -> None:
 		if not (self.event.apply_tax and self.request.invoice_requested):
 			return
-		booking.invoice_requested = 1
-		booking.tax_id = self.request.tax_id
-		booking.billing_address = self.request.billing_address
+		if not (self.request.tax_id and self.request.business_name):
+			InvoiceDetailsMissing.throw()
+		booking.update(
+			{
+				"invoice_requested": 1,
+				"tax_id": self.request.tax_id,
+				"business_name": self.request.business_name,
+				"billing_address": self.request.billing_address,
+				"billing_state": self.request.billing_state,
+			}
+		)
 
 	def append_utm_parameters(self, booking: "EventBooking") -> None:
 		for utm_parameter in self.request.utm_parameters or []:

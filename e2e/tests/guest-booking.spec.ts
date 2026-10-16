@@ -14,9 +14,7 @@ test.describe("Guest Booking UX", () => {
 		await bookingPage.goToAttendees()
 		await bookingPage.fillMyDetails("Test", "Guest", "test@example.com")
 
-		const firstTicket = page.locator("article").first()
-		await expect(firstTicket.getByLabel("First name")).toHaveValue("Test")
-		await expect(firstTicket.getByLabel("Email")).toHaveValue("test@example.com")
+		await expect(page.getByText("Issued to you")).toBeVisible()
 
 		await bookingPage.continue()
 		await expect(page.getByLabel("Email").first()).toHaveValue("test@example.com")

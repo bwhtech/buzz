@@ -70,7 +70,9 @@ export class BookingPage {
 			await this.continueButton.click()
 			await expect(this.continueButton).not.toHaveText(label)
 		}
-		await this.page.getByRole("radio", { name: new RegExp(method) }).click()
+		// With a single payment method there is no payment step to pick from.
+		const option = this.page.getByRole("radio", { name: new RegExp(method) })
+		if (await option.count()) await option.click()
 		await this.continueButton.click()
 	}
 

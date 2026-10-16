@@ -1,62 +1,90 @@
 <template>
 	<div class="flex flex-col gap-3 md:gap-4">
-		<div
-			class="flex flex-col gap-1 rounded-[14px] border border-outline-gray-1 bg-surface-gray-1 p-3.5 md:rounded-7 md:px-4"
-		>
-			<Checkbox
-				:model-value="allForMe"
-				:indeterminate="someForMe && !allForMe"
-				:label="__('All tickets are for me')"
-				@update:model-value="setAllForMe(Boolean($event))"
-			/>
-			<p class="pl-6 text-p-sm text-ink-gray-5 text-pretty">
-				{{ __("Issue all {0} tickets to you and fill your details once", [attendees.length]) }}
-			</p>
+		<!-- No gap here: a closed Collapse would still leave one below the box. -->
+		<div>
+			<div
+				class="flex flex-col gap-1 rounded-5 border border-outline-gray-1 bg-surface-gray-1 p-3.5 md:px-4"
+			>
+				<Checkbox
+					:model-value="allForMe"
+					:label="__('All tickets are for me')"
+					@update:model-value="setAllForMe(Boolean($event))"
+				/>
+				<p class="pl-6 text-p-sm text-ink-gray-5 text-pretty">
+					{{
+						attendees.length === 1
+							? __("Issue the ticket to {0}", [myName])
+							: __("Issue all {0} tickets to {1} and skip the per-ticket forms", [
+									attendees.length,
+									myName,
+								])
+					}}
+				</p>
+			</div>
+
+			<Collapse :open="allForMe">
+				<section class="mt-3 overflow-hidden rounded-5 border border-outline-gray-2 md:mt-4">
+					<h2
+						class="border-b border-outline-gray-1 px-4 py-3 text-base font-semibold text-ink-gray-9"
+					>
+						{{ __("Your details") }}
+					</h2>
+					<div class="grid grid-cols-1 items-start gap-3.5 p-4 md:grid-cols-2">
+						<FormControl
+							v-model="me.first_name"
+							:label="__('First name')"
+							:size="inputSize"
+							:error="showErrors ? meErrors.first_name : undefined"
+							required
+							autocomplete="given-name"
+						/>
+						<FormControl
+							v-model="me.last_name"
+							:label="__('Last name')"
+							:size="inputSize"
+							:error="showErrors ? meErrors.last_name : undefined"
+							:required="lastNameRequired"
+							autocomplete="family-name"
+						/>
+						<FormControl
+							v-model="me.email"
+							type="email"
+							:label="__('Email')"
+							:size="inputSize"
+							:error="showErrors ? meErrors.email : undefined"
+							required
+							autocomplete="email"
+						/>
+					</div>
+					<div
+						v-if="!hasExtras"
+						class="flex flex-col gap-2 border-t border-outline-gray-1 px-4 pb-4 pt-3"
+					>
+						<h3 class="text-xs font-semibold uppercase tracking-[0.04em] text-ink-gray-5">
+							{{ __("Issued to you") }}
+						</h3>
+						<ul class="flex flex-col gap-2">
+							<li
+								v-for="(attendee, index) in attendees"
+								:key="attendee.id"
+								class="flex justify-between gap-3 text-p-sm"
+							>
+								<span class="text-ink-gray-8">{{ __(titleOf(attendee)) }}</span>
+								<span class="text-right text-ink-gray-5">{{ subtitle(attendee, index) }}</span>
+							</li>
+						</ul>
+					</div>
+				</section>
+			</Collapse>
 		</div>
 
-		<Collapse :open="someForMe">
-			<section class="overflow-hidden rounded-[14px] border border-outline-gray-2 md:rounded-7">
-				<h2
-					class="border-b border-outline-gray-1 px-4 py-3 text-base font-semibold text-ink-gray-9"
-				>
-					{{ __("Your details") }}
-				</h2>
-				<div class="grid grid-cols-1 items-start gap-3.5 p-4 md:grid-cols-3">
-					<FormControl
-						v-model="me.first_name"
-						:label="__('First name')"
-						:size="inputSize"
-						:error="showErrors ? meErrors.first_name : undefined"
-						required
-						autocomplete="given-name"
-					/>
-					<FormControl
-						v-model="me.last_name"
-						:label="__('Last name')"
-						:size="inputSize"
-						:error="showErrors ? meErrors.last_name : undefined"
-						:required="lastNameRequired"
-						autocomplete="family-name"
-					/>
-					<FormControl
-						v-model="me.email"
-						type="email"
-						:label="__('Email')"
-						:size="inputSize"
-						:error="showErrors ? meErrors.email : undefined"
-						required
-						autocomplete="email"
-					/>
-				</div>
-			</section>
-		</Collapse>
-
 		<AttendeeCard
-			v-for="(attendee, index) in attendees"
+			v-for="(attendee, index) in shownCards"
 			:key="attendee.id"
 			:attendee="attendee"
+			:me="me"
 			:index="index"
-			:ticket-title="ticketTypesByName[String(attendee.ticket_type)]?.title ?? ''"
+			:ticket-title="titleOf(attendee)"
 			:subtitle="subtitle(attendee, index)"
 			:add-ons="addOns"
 			:custom-fields="customFields"
@@ -66,9 +94,10 @@
 			:collapsible="collapsible"
 			:open="openIndex === index"
 			:has-next="index < attendees.length - 1"
+			:identity-hidden="allForMe"
 			@toggle="openIndex = openIndex === index ? -1 : index"
 			@next="openIndex = index + 1"
-			@update:is-me="attendee.is_me = $event"
+			@update:is-me="setIsMe(attendee, $event)"
 		/>
 	</div>
 </template>
@@ -106,7 +135,11 @@ const props = defineProps<{
 const openIndex = ref(0)
 const inputSize = computed(() => (props.collapsible ? "lg" : "sm"))
 const allForMe = computed(() => props.attendees.every((attendee) => attendee.is_me))
-const someForMe = computed(() => props.attendees.some((attendee) => attendee.is_me))
+const myName = computed(() => `${props.me.first_name} ${props.me.last_name}`.trim() || __("you"))
+
+// With every ticket issued to the registrant, cards remain only to ask for add-ons and fields.
+const hasExtras = computed(() => props.addOns.length > 0 || props.customFields.length > 0)
+const shownCards = computed(() => (allForMe.value && !hasExtras.value ? [] : props.attendees))
 
 const ticketTypesByName = computed(() =>
 	Object.fromEntries(props.ticketTypes.map((ticketType) => [String(ticketType.name), ticketType])),
@@ -123,8 +156,20 @@ watch(
 	},
 )
 
+// Unticking hands the other tickets back to their own forms.
 function setAllForMe(value: boolean) {
-	for (const attendee of props.attendees) attendee.is_me = value
+	props.attendees.forEach((attendee, index) => setIsMe(attendee, value || index === 0))
+}
+
+// A ticket that stops being the registrant's starts with an empty form.
+function setIsMe(attendee: BookingAttendee, value: boolean) {
+	if (attendee.is_me && !value)
+		Object.assign(attendee, { first_name: "", last_name: "", email: "" })
+	attendee.is_me = value
+}
+
+function titleOf(attendee: BookingAttendee) {
+	return ticketTypesByName.value[String(attendee.ticket_type)]?.title ?? ""
 }
 
 function subtitle(attendee: BookingAttendee, index: number) {

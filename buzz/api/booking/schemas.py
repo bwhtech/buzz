@@ -23,9 +23,14 @@ class BookingRequest(APIRequest):
 	payment_proof: str | None = None
 	is_offline: bool = False
 	offline_payment_method: str | None = None
+	buyer_name: str | None = None
+	buyer_email: str | None = None
+	buyer_phone: str | None = None
 	invoice_requested: bool = False
 	tax_id: str | None = None
+	business_name: str | None = None
 	billing_address: str | None = None
+	billing_state: str | None = None
 	hold_token: str | None = None
 
 

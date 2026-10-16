@@ -8,7 +8,7 @@
 			<div
 				v-for="gateway in gateways"
 				:key="gateway"
-				class="rounded-[14px] border transition-colors duration-200 ease-out md:rounded-7"
+				class="rounded-5 border transition-colors duration-200 ease-out"
 				:class="selected === gateway ? 'border-outline-gray-9' : 'border-outline-gray-2'"
 			>
 				<Radio :value="gateway" class="w-full p-3.5 md:px-4" :description="description(gateway)">

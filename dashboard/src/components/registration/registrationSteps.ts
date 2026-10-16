@@ -3,10 +3,8 @@ import type { RegistrationStep, RegistrationStepId } from "./useRegistrationStep
 interface StepState {
 	ticketCount: number
 	completeAttendees: number
-	showDetails: boolean
 	showPayment: boolean
 	paid: boolean
-	isGuest: boolean
 	totalLabel: string
 }
 
@@ -28,21 +26,16 @@ export function buildSteps(state: StepState): RegistrationStep[] {
 			sub: __("{0} of {1} complete", [state.completeAttendees, count]),
 		},
 	]
-	if (state.showDetails) {
-		steps.push({
-			id: "details",
-			label: state.paid ? __("Billing") : __("Your details"),
-			sub: state.isGuest ? __("Contact details") : __("Invoice and booking details"),
-		})
-	}
+	steps.push({
+		id: "details",
+		label: state.paid ? __("Billing") : __("Your details"),
+		sub: state.paid ? __("Buyer and tax details") : __("Contact details"),
+	})
 	if (state.showPayment) steps.push({ id: "payment", label: __("Payment"), sub: state.totalLabel })
 	return steps
 }
 
-export function stepCopy(
-	id: RegistrationStepId,
-	event: { free: boolean; paid: boolean; isGuest: boolean },
-) {
+export function stepCopy(id: RegistrationStepId, event: { free: boolean; paid: boolean }) {
 	const copy: Record<RegistrationStepId, { title: string; description: string }> = {
 		tickets: {
 			title: __("Choose tickets"),
@@ -56,9 +49,9 @@ export function stepCopy(
 		},
 		details: {
 			title: event.paid ? __("Billing") : __("Your details"),
-			description: event.isGuest
-				? __("Who's registering, and where to send the confirmation.")
-				: __("Booking details and whether you need a tax invoice."),
+			description: event.paid
+				? __("Who's paying, and whether you need a tax invoice.")
+				: __("Where to send the confirmation."),
 		},
 		payment: { title: __("Payment"), description: __("Choose how you'd like to pay.") },
 	}

@@ -1,7 +1,5 @@
 <template>
-	<article
-		class="overflow-hidden rounded-[14px] border border-outline-gray-2 bg-surface-base md:rounded-7"
-	>
+	<article class="overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-base">
 		<button
 			v-if="collapsible"
 			type="button"
@@ -33,6 +31,7 @@
 				<span class="truncate text-p-sm text-ink-gray-5">{{ subtitle }}</span>
 			</div>
 			<Checkbox
+				v-if="!identityHidden"
 				:model-value="attendee.is_me"
 				:label="__('This is me')"
 				@update:model-value="emit('update:isMe', Boolean($event))"
@@ -45,7 +44,7 @@
 				:class="{ 'border-t border-outline-gray-1': collapsible }"
 			>
 				<Checkbox
-					v-if="collapsible"
+					v-if="collapsible && !identityHidden"
 					:model-value="attendee.is_me"
 					:label="__('This is me')"
 					@update:model-value="emit('update:isMe', Boolean($event))"
@@ -53,34 +52,33 @@
 				<div
 					class="grid grid-cols-1 items-start gap-3.5 md:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]"
 				>
-					<FormControl
-						v-model="attendee.first_name"
-						:label="__('First name')"
-						:size="inputSize"
-						:disabled="attendee.is_me"
-						:error="showErrors ? errors.first_name : undefined"
-						required
-						autocomplete="given-name"
-					/>
-					<FormControl
-						v-model="attendee.last_name"
-						:label="__('Last name')"
-						:size="inputSize"
-						:disabled="attendee.is_me"
-						:error="showErrors ? errors.last_name : undefined"
-						:required="lastNameRequired"
-						autocomplete="family-name"
-					/>
-					<FormControl
-						v-model="attendee.email"
-						type="email"
-						:label="__('Email')"
-						:size="inputSize"
-						:disabled="attendee.is_me"
-						:error="showErrors ? errors.email : undefined"
-						required
-						autocomplete="email"
-					/>
+					<template v-if="!identityHidden">
+						<FormControl
+							v-model="identity.first_name"
+							:label="__('First name')"
+							:size="inputSize"
+							:error="showErrors ? errors.first_name : undefined"
+							required
+							autocomplete="given-name"
+						/>
+						<FormControl
+							v-model="identity.last_name"
+							:label="__('Last name')"
+							:size="inputSize"
+							:error="showErrors ? errors.last_name : undefined"
+							:required="lastNameRequired"
+							autocomplete="family-name"
+						/>
+						<FormControl
+							v-model="identity.email"
+							type="email"
+							:label="__('Email')"
+							:size="inputSize"
+							:error="showErrors ? errors.email : undefined"
+							required
+							autocomplete="email"
+						/>
+					</template>
 					<CustomFieldInput
 						v-for="field in customFields"
 						:key="field.fieldname"
@@ -117,11 +115,13 @@ import type { AvailableAddOn, BookingAttendee } from "@/types"
 
 import CustomFieldInput from "../CustomFieldInput.vue"
 import AttendeeAddOns from "./AttendeeAddOns.vue"
-import type { AttendeeErrors } from "./attendeeValidation"
+import type { AttendeeErrors, AttendeeIdentity } from "./attendeeValidation"
 import Collapse from "./Collapse.vue"
 
 const props = defineProps<{
 	attendee: BookingAttendee
+	// The registering person; a "This is me" ticket edits their details.
+	me: AttendeeIdentity
 	index: number
 	ticketTitle: string
 	subtitle: string
@@ -133,10 +133,13 @@ const props = defineProps<{
 	collapsible?: boolean
 	open?: boolean
 	hasNext?: boolean
+	// The ticket is issued to the person registering, so only its extras are asked for.
+	identityHidden?: boolean
 }>()
 const emit = defineEmits<{ toggle: []; next: []; "update:isMe": [isMe: boolean] }>()
 
 const inputSize = computed(() => (props.collapsible ? "lg" : "sm"))
+const identity = computed(() => (props.attendee.is_me ? props.me : props.attendee))
 const isComplete = computed(() => !Object.keys(props.errors).length)
 const displayName = computed(
 	() => `${props.attendee.first_name} ${props.attendee.last_name}`.trim() || __("Unassigned"),

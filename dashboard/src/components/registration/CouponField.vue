@@ -1,7 +1,7 @@
 <template>
 	<div
 		v-if="applied"
-		class="flex items-center gap-2.5 rounded-6 border border-dashed border-outline-green-3 bg-surface-green-1 py-2.5 pl-3 pr-2.5 motion-safe:animate-[coupon-in_220ms_cubic-bezier(0.23,1,0.32,1)]"
+		class="flex items-center gap-2.5 rounded-5 border border-dashed border-outline-green-3 bg-surface-green-1 py-2.5 pl-3 pr-2.5 motion-safe:animate-[coupon-in_220ms_cubic-bezier(0.23,1,0.32,1)]"
 	>
 		<span
 			class="flex size-7 flex-none items-center justify-center rounded-5 bg-surface-green-2 text-ink-green-7"

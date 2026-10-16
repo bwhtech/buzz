@@ -1,7 +1,7 @@
 <template>
 	<div class="flex justify-center px-4 py-8 md:py-12">
 		<div
-			class="w-full max-w-[480px] overflow-hidden rounded-[16px] border border-outline-gray-2 bg-surface-gray-1 motion-safe:animate-[registration-in_280ms_cubic-bezier(0.23,1,0.32,1)]"
+			class="w-full max-w-[480px] overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-gray-1 motion-safe:animate-[registration-in_280ms_cubic-bezier(0.23,1,0.32,1)]"
 		>
 			<div class="flex flex-col gap-2.5 px-5 pb-5 pt-6 md:px-7 md:pt-7">
 				<span

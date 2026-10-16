@@ -17,7 +17,7 @@
 				</p>
 			</div>
 			<ul
-				class="flex flex-col divide-y divide-outline-gray-2 overflow-hidden rounded-[14px] border border-outline-gray-2 md:rounded-7"
+				class="flex flex-col divide-y divide-outline-gray-2 overflow-hidden rounded-5 border border-outline-gray-2"
 			>
 				<li
 					v-for="ticketType in group.ticketTypes"

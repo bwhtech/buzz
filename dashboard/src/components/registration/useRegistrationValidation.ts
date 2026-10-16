@@ -1,25 +1,41 @@
 import { computed, type Ref } from "vue"
 
+import type { BillingDetails } from "@/composables/useBookingFormStorage"
 import type { FrappeField } from "@/composables/useCustomFields"
 import type { BookingAttendee } from "@/types"
 
-import { attendeeErrors, type AttendeeErrors, type AttendeeIdentity } from "./attendeeValidation"
+import {
+	attendeeErrors,
+	type AttendeeErrors,
+	type AttendeeIdentity,
+	isValidEmail,
+} from "./attendeeValidation"
 import type { RegistrationStepId } from "./useRegistrationSteps"
 
 // Fields that show their error under the input; the rest are named under the button.
-const INLINE_FIELDS = new Set(["first_name", "last_name", "email", "phone", "billing_address"])
+const INLINE_FIELDS = new Set([
+	"first_name",
+	"last_name",
+	"email",
+	"buyer_name",
+	"buyer_email",
+	"buyer_phone",
+	"tax_id",
+	"business_name",
+])
+const GSTIN_LENGTH = 15
 
 interface ValidationInputs {
-	me: AttendeeIdentity & { phone: string }
+	me: AttendeeIdentity
 	attendees: Ref<BookingAttendee[]>
 	ticketCustomFields: Ref<FrappeField[]>
 	bookingCustomFields: Ref<FrappeField[]>
 	bookingCustomFieldsData: Ref<Record<string, any>>
-	invoiceRequested: Ref<boolean>
-	billingAddress: Ref<string>
+	billing: Ref<BillingDetails>
+	invoiceShown: () => boolean
+	taxIsGst: () => boolean
 	selectedGateway: Ref<string | null>
-	isGuest: () => boolean
-	needsPhone: () => boolean
+	phoneRequired: () => boolean
 	lastNameRequired: () => boolean
 }
 
@@ -39,18 +55,30 @@ export function useRegistrationValidation(inputs: ValidationInputs) {
 	)
 
 	const detailsErrors = computed(() => {
-		const errors: AttendeeErrors = inputs.isGuest() ? { ...meErrors.value } : {}
-		if (inputs.isGuest() && inputs.needsPhone() && !inputs.me.phone.trim())
-			errors.phone = __("Enter a phone number")
+		const billing = inputs.billing.value
+		const errors: AttendeeErrors = {}
+		if (!billing.buyer_name.trim()) errors.buyer_name = __("Enter your name")
+		if (!isValidEmail(billing.buyer_email)) errors.buyer_email = __("Enter a valid email address")
+		if (inputs.phoneRequired() && !billing.buyer_phone.trim())
+			errors.buyer_phone = __("Enter a phone number")
 		for (const field of inputs.bookingCustomFields.value) {
 			const value = inputs.bookingCustomFieldsData.value[field.fieldname]
 			if (field.mandatory && (value == null || !String(value).trim()))
 				errors[field.fieldname] = __("{0} is required", [__(field.label)])
 		}
-		if (inputs.invoiceRequested.value && !inputs.billingAddress.value?.trim())
-			errors.billing_address = __("Enter a billing address")
-		return errors
+		return { ...errors, ...invoiceErrors(billing) }
 	})
+
+	function invoiceErrors(billing: BillingDetails): AttendeeErrors {
+		if (!inputs.invoiceShown() || !billing.invoice_requested) return {}
+		const errors: AttendeeErrors = {}
+		const taxId = billing.tax_id.trim()
+		if (!taxId) errors.tax_id = __("Enter your tax ID")
+		else if (inputs.taxIsGst() && taxId.length !== GSTIN_LENGTH)
+			errors.tax_id = __("Enter a 15-character GSTIN")
+		if (!billing.business_name.trim()) errors.business_name = __("Enter the business name")
+		return errors
+	}
 
 	function errorsFor(stepId: RegistrationStepId): AttendeeErrors[] {
 		if (stepId === "tickets")

@@ -45,3 +45,8 @@ class TooManyTicketsHeld(BuzzAPIError):
 	http_status_code = 429
 	title = _lt("Too Many Tickets Held")
 	message = _lt("You can hold at most {limit} tickets at a time.")
+
+
+class InvoiceDetailsMissing(BuzzAPIError):
+	title = _lt("Invoice Details Missing")
+	message = _lt("A tax invoice needs your tax ID and business name.")

@@ -49,6 +49,11 @@ class EventBooking(Document):
 		amended_from: DF.Link | None
 		attendees: DF.Table[EventBookingAttendee]
 		billing_address: DF.SmallText | None
+		billing_state: DF.Data | None
+		business_name: DF.Data | None
+		buyer_email: DF.Data | None
+		buyer_name: DF.Data | None
+		buyer_phone: DF.Data | None
 		coupon_code: DF.Link | None
 		currency: DF.Link
 		discount_amount: DF.Currency

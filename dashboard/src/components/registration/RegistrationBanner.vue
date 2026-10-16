@@ -5,7 +5,7 @@
 				v-if="eventDetails.banner_image"
 				:src="eventDetails.banner_image"
 				:alt="eventDetails.title"
-				class="h-28 w-[200px] flex-none rounded-7 border border-outline-gray-2 object-cover"
+				class="h-28 w-[200px] flex-none rounded-5 border border-outline-gray-2 object-cover"
 			/>
 			<div class="flex min-w-0 flex-[1_1_320px] flex-col gap-3">
 				<h1 class="font-display text-[44px] uppercase leading-none text-ink-gray-9 text-balance">

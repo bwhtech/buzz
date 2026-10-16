@@ -37,8 +37,7 @@ test.describe("Event Registration Page", () => {
 		await bookingPage.goToAttendees()
 
 		await bookingPage.fillAttendeeDetails("John Doe", "john.doe@example.com")
-		const firstAttendee = page.locator("article").first()
-		await expect(firstAttendee.getByLabel("Email")).toHaveValue("john.doe@example.com")
+		await expect(page.getByLabel("Email").first()).toHaveValue("john.doe@example.com")
 
 		if (await bookingPage.addOnCheckboxes.count()) {
 			await bookingPage.addOnCheckboxes.first().click()
