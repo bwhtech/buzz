@@ -1,6 +1,8 @@
 # Copyright (c) 2025, BWH Studios and Contributors
 # See license.txt
 
+from unittest.mock import patch
+
 import frappe
 
 from buzz.api.booking import process_booking
@@ -36,10 +38,11 @@ class TestTicketAvailability(BookingTestCase):
 		booking = self.create_booking(paid)
 		EventTicketFactory.create("submitted", event=self.event.name, ticket_type=paid)
 
-		booking.on_payment_authorized("Completed")
+		with patch("buzz.ticketing.doctype.event_booking.event_booking.frappe.log_error") as log_error:
+			booking.on_payment_authorized("Completed")
 
 		self.assertEqual(booking.docstatus, 1)
-		self.assertTrue(frappe.db.exists("Error Log", {"reference_name": booking.name}))
+		self.assertEqual(log_error.call_args.kwargs["reference_name"], booking.name)
 
 	def test_late_payment_books_a_ticket_type_unpublished_meanwhile(self):
 		paid = EventTicketTypeFactory.create("paid", event=self.event.name).name
