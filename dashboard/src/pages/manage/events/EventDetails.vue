@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useEventListener, useTextareaAutosize } from "@vueuse/core"
 import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
-import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
@@ -14,10 +13,11 @@ import EventHosts from "@/components/dashboard/events/EventHosts.vue"
 import EventLinks from "@/components/dashboard/events/EventLinks.vue"
 import EventMedium from "@/components/dashboard/events/EventMedium.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
-import EventPages from "@/components/dashboard/events/EventPages.vue"
 import EventRoute from "@/components/dashboard/events/EventRoute.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
 import EventTopics from "@/components/dashboard/events/EventTopics.vue"
+import EventAboutEditor from "@/components/dashboard/events/pages/EventAboutEditor.vue"
+import EventPages from "@/components/dashboard/events/pages/EventPages.vue"
 import { useFormDraft } from "@/composables/useFormDraft"
 import { eventDetail, setBanner, updateEvent } from "@/data/events"
 import { session } from "@/data/session"
@@ -25,7 +25,6 @@ import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { EventDetail, EventExternalLink } from "@/types"
 import { isEndBeforeStart } from "@/utils/eventDates"
 import { matches } from "@/utils/formDraft"
-import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 import { serverErrorMessage } from "@/utils/serverError"
 
 const route = useRoute()
@@ -286,28 +285,12 @@ async function save() {
 						/>
 					</div>
 
-					<section class="space-y-3">
-						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
-						<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
-						 itself: the height and scrolling land on the editable area rather than on a
-						 wrapper, and the whole box takes a click. -->
-						<div
-							class="overflow-hidden rounded-6 border border-outline-gray-2 transition-colors duration-150 ease-out focus-within:border-outline-gray-4 motion-reduce:transition-none"
-						>
-							<Editor
-								v-model="form.about"
-								:extensions="richTextExtensions"
-								placeholder="What is this event about?"
-							>
-								<EditorFixedMenu
-									:items="richTextToolbar"
-									class="overflow-x-auto border-b border-outline-gray-2 px-2 py-1"
-								/>
-								<EditorContent
-									class="prose-sm h-48 max-w-none overflow-y-auto p-3 text-ink-gray-8 focus:outline-none"
-								/>
-							</Editor>
+					<section>
+						<div class="mb-2.5 flex items-baseline justify-between gap-3">
+							<h2 class="text-base font-semibold text-ink-gray-9">{{ __("About") }}</h2>
+							<span class="text-sm text-ink-gray-5">{{ __("Always shown first") }}</span>
 						</div>
+						<EventAboutEditor v-model="form.about" />
 					</section>
 
 					<!-- The event's own extra tabs. Keyed by event: useEventPages resolves its
