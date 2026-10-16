@@ -107,6 +107,7 @@ class BookingService:
 		booking.event = self.request.event
 		booking.coupon_code = self.request.coupon_code
 		booking.currency = self.request.currency
+		booking.hold_token = self.request.hold_token
 		booking.user = self.resolve_user()
 		self.apply_invoice_details(booking)
 		self.append_utm_parameters(booking)

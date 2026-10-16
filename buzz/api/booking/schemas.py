@@ -26,6 +26,15 @@ class BookingRequest(APIRequest):
 	invoice_requested: bool = False
 	tax_id: str | None = None
 	billing_address: str | None = None
+	hold_token: str | None = None
+
+
+class TicketHoldResponse(APIResponse):
+	hold_token: str
+	# None when nothing is held: no tickets asked for, or none of them has a limit.
+	expires_in_seconds: int | None
+	# Tickets this hold can still have, by ticket type. Ticket types without a limit are left out.
+	remaining: dict[str, int]
 
 
 class FreeBookingResponse(APIResponse):

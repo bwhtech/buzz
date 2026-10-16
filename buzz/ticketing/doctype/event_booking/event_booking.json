@@ -43,6 +43,7 @@
   "billing_address",
   "section_break_sdfp",
   "amended_from",
+  "hold_token",
   "marketing_tab",
   "utm_parameters"
  ],
@@ -56,6 +57,13 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "hold_token",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Hold Token",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_sdfp",
@@ -308,7 +316,7 @@
    "link_fieldname": "booking"
   }
  ],
- "modified": "2026-08-17 13:00:00.000000",
+ "modified": "2026-10-16 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Booking",

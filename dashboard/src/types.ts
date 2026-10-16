@@ -506,11 +506,19 @@ export interface AvailableTicketType {
 	currency?: string
 	description?: string
 	remaining_tickets?: number
+	max_tickets_available?: number
 	free_add_ons?: string[]
 	add_ons?: string[]
 	prices?: { currency: string; price: number }[]
 	price_note?: string
 	category?: string | null
+}
+
+// buzz.api.booking.hold_tickets
+export interface TicketHold {
+	hold_token: string
+	expires_in_seconds: number | null
+	remaining: Record<string, number>
 }
 
 // buzz.api.booking.get_event_booking_data: categories that hold an available ticket type.

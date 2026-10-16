@@ -21,6 +21,7 @@ from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	record_gateway_refund,
 )
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import lock_ticket_types
+from buzz.ticketing.doctype.ticket_hold.ticket_hold import release_hold
 from buzz.utils import render_email_template
 
 RAZORPAY = "Razorpay"
@@ -47,6 +48,7 @@ class EventBooking(Document):
 		currency: DF.Link
 		discount_amount: DF.Currency
 		event: DF.Link
+		hold_token: DF.Data | None
 		invoice_requested: DF.Check
 		naming_series: DF.Literal["B.###"]
 		net_amount: DF.Currency
@@ -166,7 +168,7 @@ class EventBooking(Document):
 		if not ticket_type.is_published:
 			frappe.throw(_("{0} tickets no longer available!").format(ticket_type.title))
 
-		remaining = ticket_type.get_remaining_tickets(for_update=True)
+		remaining = ticket_type.get_remaining_tickets(for_update=True, hold_token=self.hold_token)
 		if remaining == -1 or remaining >= quantity:
 			return
 		frappe.throw(
@@ -202,6 +204,7 @@ class EventBooking(Document):
 	def on_submit(self):
 		self.validate_coupon_availability()
 		self.generate_tickets()
+		release_hold(self.hold_token)
 		self.capture_confirmed()
 
 		try:

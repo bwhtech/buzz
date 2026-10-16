@@ -414,6 +414,14 @@
 							:total-currency="totalCurrency"
 						/>
 
+						<TicketHoldTimer
+							class="mb-4"
+							:seconds-left="secondsLeft"
+							:expired="expired"
+							@hold-again="holdAgain"
+						/>
+						<ErrorMessage class="mb-4" :message="holdErrorMessage" />
+
 						<div class="w-full">
 							<Button
 								variant="solid"
@@ -450,6 +458,7 @@ import LucideX from "~icons/lucide/x"
 import BillingDetails from "@/components/BillingDetails.vue"
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
 import { useLoginDialog } from "@/composables/useLoginDialog"
+import { useTicketHold } from "@/composables/useTicketHold"
 import { loadUser, userResource } from "@/data/user"
 import type {
 	AvailableAddOn,
@@ -476,6 +485,7 @@ import EventDetailsHeader from "./EventDetailsHeader.vue"
 import OfflinePaymentDialog from "./OfflinePaymentDialog.vue"
 import PaymentGatewayDialog from "./PaymentGatewayDialog.vue"
 import PhoneInput from "./PhoneInput.vue"
+import TicketHoldTimer from "./TicketHoldTimer.vue"
 import TicketOverview from "./TicketOverview.vue"
 
 const router = useRouter()
@@ -697,7 +707,31 @@ const ticketTypesMap = computed(() =>
 		props.availableTicketTypes.map((t) => [t.name, pricedIn(t, orderCurrency.value)]),
 	),
 )
-const eventId = computed(() => props.availableTicketTypes[0]?.event || null)
+
+const eventId = computed(() => {
+	const event = props.availableTicketTypes[0]?.event
+	return event ? String(event) : null
+})
+
+// Ticket types with a limit are the only ones a hold reserves.
+const heldQuantities = computed(() => {
+	const limited = new Set(
+		props.availableTicketTypes.filter((t) => t.max_tickets_available).map((t) => String(t.name)),
+	)
+	const quantities: Record<string, number> = {}
+	for (const attendee of attendees.value) {
+		const name = String(attendee.ticket_type)
+		if (limited.has(name)) quantities[name] = (quantities[name] ?? 0) + 1
+	}
+	return quantities
+})
+
+const { holdToken, secondsLeft, expired, holdError, holdAgain, keepHold } = useTicketHold(
+	props.eventRoute,
+	eventId,
+	heldQuantities,
+)
+const holdErrorMessage = computed(() => serverErrorMessage(holdError.value))
 
 // Separate custom fields by applied_to
 const bookingCustomFields = computed(() =>
@@ -1346,6 +1380,7 @@ async function submit() {
 		invoice_requested: invoiceRequested.value,
 		tax_id: invoiceRequested.value ? taxId.value?.trim() : null,
 		billing_address: invoiceRequested.value ? billingAddress.value?.trim() : null,
+		hold_token: holdToken.value,
 	}
 
 	if (props.isGuestMode) {
@@ -1435,6 +1470,7 @@ async function submitBooking(
 		return
 	}
 
+	keepHold()
 	clearBookingCache()
 	if (isOtpFlow) {
 		clearOtpState()

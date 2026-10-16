@@ -35,6 +35,7 @@ from buzz.tests.factories.ticket_add_on_factory import TicketAddOnFactory
 from buzz.tests.factories.ticket_cancellation_request_factory import (
 	TicketCancellationRequestFactory,
 )
+from buzz.tests.factories.ticket_hold_factory import TicketHoldFactory
 from buzz.tests.factories.user_factory import UserFactory
 from buzz.tests.factories.user_invitation_factory import UserInvitationFactory
 
@@ -74,6 +75,7 @@ __all__ = [
 	"TalkProposalFactory",
 	"TicketAddOnFactory",
 	"TicketCancellationRequestFactory",
+	"TicketHoldFactory",
 	"UserFactory",
 	"UserInvitationFactory",
 ]

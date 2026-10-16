@@ -2,6 +2,7 @@ import frappe
 from frappe.rate_limiter import rate_limit
 
 from buzz.api.booking import coupons, details, event_data, guests, my_bookings
+from buzz.api.booking.holds import TicketHoldService
 from buzz.api.booking.schemas import (
 	BookingConfirmationResponse,
 	BookingDetailsResponse,
@@ -12,8 +13,10 @@ from buzz.api.booking.schemas import (
 	MyBooking,
 	OfflineBookingResponse,
 	PaymentLinkResponse,
+	TicketHoldResponse,
 )
 from buzz.api.booking.services import BookingService
+from buzz.ticketing.doctype.ticket_hold import ticket_hold
 
 
 # nosemgrep: guest-whitelisted-method
@@ -34,6 +37,18 @@ def process_booking(
 	booking: BookingRequest,
 ) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
 	return BookingService(booking).process()
+
+
+# nosemgrep: guest-whitelisted-method
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+def hold_tickets(event: int, quantities: dict, hold_token: str | None = None) -> TicketHoldResponse:
+	return TicketHoldService(event, quantities, hold_token).hold()
+
+
+# nosemgrep: guest-whitelisted-method
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+def release_hold(hold_token: str) -> None:
+	ticket_hold.release_hold(hold_token)
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method

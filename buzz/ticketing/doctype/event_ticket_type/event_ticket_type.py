@@ -8,6 +8,7 @@ from frappe.query_builder.functions import Count
 
 from buzz.events.doctype.buzz_price.buzz_price import validate_unique_currencies
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import is_feature_enabled
+from buzz.ticketing.doctype.ticket_hold.ticket_hold import held_quantities
 
 PAID_EVENTS_FLAG = "feature_paid_events"
 
@@ -114,10 +115,9 @@ class EventTicketType(Document):
 				return row.price
 		frappe.throw(_("{0} tickets can't be paid in {1}").format(self.title, currency))
 
-	def are_tickets_available(self, num_tickets: int) -> bool:
-		if self.remaining_tickets != -1 and self.remaining_tickets < num_tickets:
-			return False
-		return True
+	def are_tickets_available(self, num_tickets: int, hold_token: str | None = None) -> bool:
+		remaining = self.get_remaining_tickets(hold_token=hold_token)
+		return remaining == -1 or remaining >= num_tickets
 
 	@property
 	def tickets_sold(self) -> int:
@@ -129,10 +129,12 @@ class EventTicketType(Document):
 		"""Returns -1 if no limit, otherwise the number of remaining tickets."""
 		return self.get_remaining_tickets()
 
-	def get_remaining_tickets(self, for_update: bool = False) -> int:
+	def get_remaining_tickets(self, for_update: bool = False, hold_token: str | None = None) -> int:
+		"""Tickets neither sold nor held by anyone but `hold_token`, or -1 if no limit."""
 		if not self.max_tickets_available:
 			return -1
-		return self.max_tickets_available - self.count_tickets_sold(for_update)
+		held = held_quantities([self.name], hold_token, for_update).get(str(self.name), 0)
+		return self.max_tickets_available - self.count_tickets_sold(for_update) - held
 
 	def count_tickets_sold(self, for_update: bool = False) -> int:
 		"""With `for_update`, a locking read: under REPEATABLE READ a plain count reads the

@@ -44,6 +44,7 @@ async function cleanUpPreviousRun(request) {
 		filters: { title: ["=", HOLDS_EVENT_TITLE] },
 	})
 	for (const event of events) {
+		await deleteRows(request, "Ticket Hold", event.name)
 		await deleteRows(request, "Event Ticket", event.name, true)
 		await deleteRows(request, "Event Booking", event.name, true)
 		for (const doctype of ["Event Ticket Type", "Sponsorship Tier"]) {
