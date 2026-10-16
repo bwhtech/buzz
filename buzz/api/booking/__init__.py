@@ -39,8 +39,13 @@ def process_booking(
 	return BookingService(booking).process()
 
 
+def hold_tickets_rate_limit() -> int:
+	return 60 if frappe.session.user == "Guest" else 300
+
+
 # nosemgrep: guest-whitelisted-method
 @frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=hold_tickets_rate_limit, seconds=600)
 def hold_tickets(event: int, quantities: dict, hold_token: str | None = None) -> TicketHoldResponse:
 	return TicketHoldService(event, quantities, hold_token).hold()
 

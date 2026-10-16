@@ -54,10 +54,11 @@ website_redirects = [
 # ---------------
 
 scheduler_events = {
+	"hourly": ["buzz.ticketing.doctype.ticket_hold.ticket_hold.delete_expired_holds"],
 	"daily": [
 		"buzz.tasks.unpublish_ticket_types_after_last_date",
 		"buzz.telemetry_scan.send_site_profile",
-	]
+	],
 }
 
 # Testing

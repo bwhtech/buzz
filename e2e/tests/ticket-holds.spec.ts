@@ -100,6 +100,14 @@ test("parallel holds never hold more tickets than the capacity", async ({ reques
 
 	expect(fulfilled(results)).toBe(HOLDS_CAPACITY)
 	expect(await heldQuantity(request, ticketType)).toBe(HOLDS_CAPACITY)
+
+	// One network holds at most 20 tickets, and the specs below hold more.
+	for (const result of results) {
+		if (result.status === "fulfilled") {
+			const { hold_token } = result.value as { hold_token: string }
+			await callMethod(request, "buzz.api.booking.release_hold", { hold_token })
+		}
+	}
 })
 
 test.describe("booking form", () => {

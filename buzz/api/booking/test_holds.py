@@ -4,7 +4,7 @@ import frappe
 from frappe.utils import add_to_date, now_datetime
 
 from buzz.api.booking import get_event_booking_data, hold_tickets, process_booking, release_hold
-from buzz.api.booking.exceptions import RegistrationsClosed, TicketsUnavailable
+from buzz.api.booking.exceptions import RegistrationsClosed, TicketsUnavailable, TooManyTicketsHeld
 from buzz.tests.base_test_cases import BookingTestCase
 from buzz.tests.factories import (
 	BuzzEventFactory,
@@ -14,7 +14,7 @@ from buzz.tests.factories import (
 	OfflinePaymentMethodFactory,
 	TicketHoldFactory,
 )
-from buzz.ticketing.doctype.ticket_hold.ticket_hold import PAYMENT_HOLD_MINUTES
+from buzz.ticketing.doctype.ticket_hold.ticket_hold import PAYMENT_HOLD_MINUTES, delete_expired_holds
 from buzz.utils import build_event_datetimes
 from buzz.www.event.registration import RegistrationCard
 
@@ -283,3 +283,38 @@ class TestAvailabilityView(HoldTestCase):
 		EventTicketFactory.create("submitted", event=event.name, ticket_type=ticket_type.name)
 
 		self.assertEqual(RegistrationCard(event).as_dict()["state"], "sold-out")
+
+
+class TestHoldLimits(HoldTestCase):
+	def setUp(self):
+		super().setUp()
+		self.ticket_type = EventTicketTypeFactory.create(event=self.event.name, max_tickets_available=50)
+		self.name = str(self.ticket_type.name)
+		previous_ip = getattr(frappe.local, "request_ip", None)
+		# Unique per test: the hold endpoint commits, so an earlier run's holds outlive rollback.
+		frappe.local.request_ip = frappe.generate_hash(length=12)
+		self.addCleanup(setattr, frappe.local, "request_ip", previous_ip)
+
+	def test_one_network_holds_at_most_twenty_tickets(self):
+		token = self.hold(15).hold_token
+		self.hold(20, token)
+
+		with self.assertRaises(TooManyTicketsHeld):
+			self.hold(1)
+
+	def test_another_network_still_holds(self):
+		self.hold(20)
+		frappe.local.request_ip = frappe.generate_hash(length=12)
+
+		self.assertEqual(self.hold(1).remaining, {self.name: 30})
+
+
+class TestExpiredHoldCleanup(HoldTestCase):
+	def test_deletes_expired_holds_only(self):
+		expired = TicketHoldFactory.create("expired", ticket_type=self.ticket_type.name)
+		live = TicketHoldFactory.create(ticket_type=self.ticket_type.name)
+
+		delete_expired_holds()
+
+		self.assertFalse(frappe.db.exists("Ticket Hold", expired.name))
+		self.assertTrue(frappe.db.exists("Ticket Hold", live.name))

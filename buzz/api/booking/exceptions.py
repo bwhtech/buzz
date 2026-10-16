@@ -39,3 +39,9 @@ class InvalidAddOnValue(BuzzAPIError):
 class TicketsUnavailable(Conflict):
 	title = _lt("Tickets Unavailable")
 	message = _lt("Only {remaining} {ticket_type} tickets are left.")
+
+
+class TooManyTicketsHeld(BuzzAPIError):
+	http_status_code = 429
+	title = _lt("Too Many Tickets Held")
+	message = _lt("You can hold at most {limit} tickets at a time.")

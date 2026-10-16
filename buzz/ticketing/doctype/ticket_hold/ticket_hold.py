@@ -50,6 +50,22 @@ def held_quantities(ticket_types: list, exclude_token: str | None = None, for_up
 	return {str(ticket_type): int(quantity) for ticket_type, quantity in query.run()}
 
 
+def held_from_ip(ip_address: str, exclude_token: str | None = None) -> int:
+	hold = frappe.qb.DocType("Ticket Hold")
+	query = (
+		frappe.qb.from_(hold)
+		.select(Sum(hold.quantity))
+		.where((hold.ip_address == ip_address) & (hold.expires_at > now_datetime()))
+	)
+	if exclude_token:
+		query = query.where(hold.hold_token != exclude_token)
+	return int(query.run()[0][0] or 0)
+
+
+def delete_expired_holds() -> None:
+	frappe.db.delete("Ticket Hold", {"expires_at": ("<=", now_datetime())})
+
+
 def live_hold_expiry(hold_token: str | None):
 	"""When the token's live hold ends, or None if it has none."""
 	if not hold_token:
