@@ -7,6 +7,8 @@ from frappe.query_builder.functions import Max, Sum
 from frappe.utils import add_to_date, now_datetime
 
 HOLD_MINUTES = 10
+# How long a paid draft keeps its tickets while the person is on the payment page.
+PAYMENT_HOLD_MINUTES = 15
 
 
 class TicketHold(Document):
@@ -83,6 +85,11 @@ def set_hold(hold_token: str, event: str, quantities: dict, expires_at) -> None:
 				"ip_address": getattr(frappe.local, "request_ip", None),
 			}
 		).insert(ignore_permissions=True)
+
+
+def extend_hold(hold_token: str | None, expires_at) -> None:
+	if hold_token:
+		frappe.db.set_value("Ticket Hold", {"hold_token": hold_token}, "expires_at", expires_at)
 
 
 def release_hold(hold_token: str | None) -> None:

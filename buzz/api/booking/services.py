@@ -254,6 +254,7 @@ class BookingService:
 		booking.payment_status = "Verification Pending"
 		booking.flags.ignore_permissions = True
 		booking.save()
+		booking.hold_until_approval()
 		self.attach_payment_proof(booking)
 		self.acknowledge_offline_booking(booking)
 		return OfflineBookingResponse(booking_name=booking.name, offline_payment=True)

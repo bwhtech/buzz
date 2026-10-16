@@ -6,7 +6,15 @@ from frappe.utils import add_to_date, now_datetime
 from buzz.api.booking import hold_tickets, process_booking, release_hold
 from buzz.api.booking.exceptions import RegistrationsClosed, TicketsUnavailable
 from buzz.tests.base_test_cases import BookingTestCase
-from buzz.tests.factories import BuzzEventFactory, EventTicketTypeFactory, TicketHoldFactory
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	EventBookingFactory,
+	EventTicketTypeFactory,
+	OfflinePaymentMethodFactory,
+	TicketHoldFactory,
+)
+from buzz.ticketing.doctype.ticket_hold.ticket_hold import PAYMENT_HOLD_MINUTES
+from buzz.utils import build_event_datetimes
 
 
 class HoldTestCase(BookingTestCase):
@@ -168,3 +176,73 @@ class TestBookingWithHold(HoldTestCase):
 		frappe.db.rollback()
 
 		self.assertEqual(self.holds_of(token), 1)
+
+
+class TestDraftBookingHold(HoldTestCase):
+	def setUp(self):
+		super().setUp()
+		self.set_event({"apply_tax": 0})
+		self.ticket_type = EventTicketTypeFactory.create(
+			"paid", event=self.event.name, max_tickets_available=10
+		)
+		self.name = str(self.ticket_type.name)
+
+	def draft(self, quantity: int, **overrides):
+		attendees = [
+			{"first_name": "Payer", "email": "payer@example.com", "ticket_type": self.name}
+		] * quantity
+		return EventBookingFactory.create(event=self.event.name, attendees=attendees, **overrides)
+
+	def hold_expiry(self, hold_token: str):
+		return frappe.db.get_value("Ticket Hold", {"hold_token": hold_token}, "expires_at")
+
+	def test_a_paid_draft_holds_through_the_payment_window(self):
+		start = now_datetime()
+		with self.freeze_time(start):
+			booking = self.draft(2, hold_token=self.hold(2).hold_token)
+
+		self.assertEqual(
+			self.hold_expiry(booking.hold_token), add_to_date(start, minutes=PAYMENT_HOLD_MINUTES)
+		)
+		self.assertEqual(self.ticket_type.remaining_tickets, 8)
+
+	def test_a_paid_draft_without_a_hold_still_holds(self):
+		booking = self.draft(3)
+
+		self.assertTrue(booking.hold_token)
+		self.assertEqual(self.ticket_type.remaining_tickets, 7)
+
+	def test_an_offline_draft_holds_until_the_event_ends(self):
+		booking = frappe.get_doc("Event Booking", self.book_offline().booking_name)
+
+		_start, event_end = build_event_datetimes(frappe.get_doc("Buzz Event", self.event.name))
+		self.assertEqual(self.hold_expiry(booking.hold_token), event_end)
+
+	def test_rejecting_an_offline_draft_releases_its_hold(self):
+		booking = frappe.get_doc("Event Booking", self.book_offline().booking_name)
+
+		booking.reject_booking()
+
+		self.assertEqual(self.holds_of(booking.hold_token), 0)
+
+	def test_approving_an_offline_draft_turns_its_hold_into_tickets(self):
+		booking = frappe.get_doc("Event Booking", self.book_offline().booking_name)
+
+		booking.approve_booking()
+
+		self.assertEqual(self.holds_of(booking.hold_token), 0)
+		self.assertEqual(self.ticket_type.remaining_tickets, 9)
+
+	def test_a_payment_turns_the_hold_into_tickets(self):
+		booking = self.draft(2)
+
+		booking.on_payment_authorized("Completed")
+
+		self.assertEqual(self.holds_of(booking.hold_token), 0)
+		self.assertEqual(self.ticket_type.remaining_tickets, 8)
+
+	def book_offline(self):
+		method = str(OfflinePaymentMethodFactory.create(event=self.event.name).name)
+		attendees = [{"first_name": "Offline", "email": "offline@example.com", "ticket_type": self.name}]
+		request = self.booking_request(attendees=attendees, is_offline=True, offline_payment_method=method)
+		return process_booking(request)
