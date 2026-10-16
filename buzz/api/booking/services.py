@@ -169,6 +169,8 @@ class BookingService:
 		booking.buyer_phone = request.buyer_phone or request.guest_phone
 		if booking.buyer_email:
 			validate_email_address(booking.buyer_email, throw=True)
+		if booking.buyer_phone:
+			validate_phone_number_with_country_code(booking.buyer_phone, _("Phone Number"))
 
 	def apply_invoice_details(self, booking: "EventBooking") -> None:
 		if not (self.event.apply_tax and self.request.invoice_requested):

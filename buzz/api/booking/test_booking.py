@@ -600,6 +600,10 @@ class TestBookingBuyerAndInvoice(BookingTestCase):
 			("Priya Rao", "priya@example.com", "+91-9845012345"),
 		)
 
+	def test_an_invalid_buyer_phone_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			process_booking(self.booking_request(buyer_phone="not a phone"))
+
 	def test_buyer_falls_back_to_the_booking_user(self):
 		booking = self.booked()
 		self.assertEqual(booking.buyer_email, "admin@example.com")

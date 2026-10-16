@@ -167,7 +167,7 @@ const routes: RouteRecordRaw[] = [
 		path: "/register/:eventRoute",
 		props: true,
 		name: "event-booking",
-		meta: { isPublic: true, wide: true, ownHeader: true },
+		meta: { isPublic: true, wide: true },
 		component: () => import("@/pages/BookTickets.vue"),
 	},
 	{

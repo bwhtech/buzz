@@ -3,9 +3,8 @@
 		<div class="flex h-[52px] items-center gap-1 px-1.5">
 			<button
 				type="button"
-				class="flex size-11 flex-none items-center justify-center rounded-5 text-ink-gray-8 transition-transform duration-150 ease-out active:scale-[0.92] active:bg-surface-gray-2 disabled:invisible"
-				:disabled="current === 0"
-				:aria-label="__('Back')"
+				class="flex size-11 flex-none items-center justify-center rounded-5 text-ink-gray-8 transition-transform duration-150 ease-out active:scale-[0.92] active:bg-surface-gray-2"
+				:aria-label="current === 0 ? __('Back to event') : __('Back')"
 				@click="emit('back')"
 			>
 				<LucideChevronLeft class="size-5" />

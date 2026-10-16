@@ -46,6 +46,7 @@ import LucideArrowLeft from "~icons/lucide/arrow-left"
 import LucideMoon from "~icons/lucide/moon"
 import LucideTimer from "~icons/lucide/timer"
 
+import { formatCountdown } from "@/utils/eventDates"
 import { eventPath } from "@/utils/eventUrl"
 
 import { useEventDateLabels } from "./useEventDateLabels"
@@ -60,10 +61,7 @@ const { setColorScheme } = useColorScheme()
 
 const { dateLabel, venueLabel } = useEventDateLabels(() => props.eventDetails)
 const subtitle = computed(() => [dateLabel.value, venueLabel.value].filter(Boolean).join(" · "))
-const clock = computed(() => {
-	const seconds = props.secondsLeft ?? 0
-	return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`
-})
+const clock = computed(() => formatCountdown(props.secondsLeft ?? 0))
 
 // The event page is served outside the SPA's /b base.
 const backToEvent = () => window.location.assign(eventPath(props.eventRoute))

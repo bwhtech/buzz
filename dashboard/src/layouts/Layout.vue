@@ -3,7 +3,7 @@
 		class="min-h-dvh bg-surface-base text-ink-gray-8"
 		:class="{ 'h-dvh overflow-hidden': fullBleed }"
 	>
-		<template v-if="routerReady && !fullBleed && !meta.ownHeader">
+		<template v-if="routerReady && !fullBleed && !siteHeaderHidden">
 			<SiteHeader />
 		</template>
 		<div :class="contentClass">
@@ -24,6 +24,7 @@ import LoginRequired from "@/components/LoginRequired.vue"
 import SiteHeader from "@/components/SiteHeader.vue"
 import { session } from "@/data/session"
 import ManagerShellPlaceholder from "@/layouts/ManagerShellPlaceholder.vue"
+import { siteHeaderHidden } from "@/utils/navbar"
 
 const route = useRoute()
 const router = useRouter()

@@ -1,4 +1,4 @@
-import { computed, ref, type Ref } from "vue"
+import { computed, ref, watch, type Ref } from "vue"
 
 export type RegistrationStepId = "tickets" | "attendees" | "details" | "summary"
 
@@ -16,6 +16,10 @@ export function useRegistrationSteps(steps: Ref<RegistrationStep[]>) {
 	const step = computed(() => steps.value[Math.min(current.value, steps.value.length - 1)])
 	const isLast = computed(() => current.value >= steps.value.length - 1)
 	const tried = computed(() => triedSteps.value.has(step.value.id))
+	watch(
+		() => steps.value.length,
+		(count) => (current.value = Math.min(current.value, count - 1)),
+	)
 
 	function go(index: number) {
 		direction.value = index > current.value ? 1 : -1

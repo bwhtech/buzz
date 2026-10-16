@@ -105,7 +105,7 @@ import type { AttendeeErrors } from "./attendeeValidation"
 import Collapse from "./Collapse.vue"
 import { INDIAN_STATES } from "./indianStates"
 import RegistrationPanel from "./RegistrationPanel.vue"
-import { isGstLabel, taxIdLabel as taxIdLabelFor } from "./registrationSteps"
+import { isGstLabel, taxIdFieldLabel } from "./registrationSteps"
 
 const props = defineProps<{
 	billing: BillingDetails
@@ -124,7 +124,7 @@ const bookingCustomFieldsData = defineModel<Record<string, any>>("bookingCustomF
 })
 
 const isGst = computed(() => isGstLabel(props.taxLabel))
-const taxIdLabel = computed(() => taxIdLabelFor(props.taxLabel))
+const taxIdLabel = computed(() => taxIdFieldLabel(props.taxLabel))
 const inputSize = computed(() => (props.large ? "lg" : "sm"))
 const shown = (error?: string) => (props.showErrors ? error : undefined)
 </script>

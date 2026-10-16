@@ -18,11 +18,10 @@
 import { Button } from "frappe-ui"
 import { computed } from "vue"
 
+import { formatCountdown } from "@/utils/eventDates"
+
 const props = defineProps<{ secondsLeft: number | null; expired: boolean }>()
 const emit = defineEmits<{ holdAgain: [] }>()
 
-const clock = computed(() => {
-	const seconds = props.secondsLeft ?? 0
-	return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`
-})
+const clock = computed(() => formatCountdown(props.secondsLeft ?? 0))
 </script>

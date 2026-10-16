@@ -1,4 +1,9 @@
+import { ref } from "vue"
+
 import type { NavbarLink } from "@/types"
+
+// Set by pages that draw their own header, such as the booking form.
+export const siteHeaderHidden = ref(false)
 
 export const linkTarget = (link: NavbarLink) => (link.open_in_new_tab ? "_blank" : undefined)
 

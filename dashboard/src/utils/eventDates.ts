@@ -76,3 +76,7 @@ export function defaultSchedule(now: Date = new Date()) {
 		endTime: localTime(end),
 	}
 }
+
+/** Minutes and seconds left, such as 9:05. */
+export const formatCountdown = (seconds: number) =>
+	`${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`

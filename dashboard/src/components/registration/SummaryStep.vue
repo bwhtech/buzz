@@ -48,7 +48,7 @@
 		</section>
 
 		<section class="overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-gray-1">
-			<OrderSummary v-bind="totals" />
+			<slot name="totals" />
 		</section>
 
 		<slot />
@@ -63,8 +63,7 @@ import type { BillingDetails } from "@/composables/useBookingFormStorage"
 import type { AvailableAddOn, AvailableTicketType, BookingAttendee } from "@/types"
 import { formatWholePriceOrFree } from "@/utils/currency"
 
-import OrderSummary from "./OrderSummary.vue"
-import { taxIdLabel } from "./registrationSteps"
+import { taxIdFieldLabel } from "./registrationSteps"
 import SummaryCardHeader from "./SummaryCardHeader.vue"
 import { useEventDateLabels } from "./useEventDateLabels"
 import type { RegistrationStepId } from "./useRegistrationSteps"
@@ -80,7 +79,6 @@ const props = defineProps<{
 	taxLabel: string
 	currency: string
 	showCurrency: boolean
-	totals: InstanceType<typeof OrderSummary>["$props"]
 }>()
 const emit = defineEmits<{ edit: [step: RegistrationStepId] }>()
 
@@ -120,7 +118,7 @@ const billingRows = computed(() => {
 	]
 	if (props.invoiceShown && billing.invoice_requested)
 		rows.push(
-			{ label: taxIdLabel(props.taxLabel), value: billing.tax_id },
+			{ label: taxIdFieldLabel(props.taxLabel), value: billing.tax_id },
 			{ label: __("Business Name"), value: billing.business_name },
 			...(billing.billing_state ? [{ label: __("State"), value: billing.billing_state }] : []),
 		)

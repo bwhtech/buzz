@@ -137,9 +137,11 @@
 							:tax-label="tax.label"
 							:currency="currency"
 							:show-currency="currencies.length > 1"
-							:totals="{ ...summaryProps, lines: undefined }"
 							@edit="goToStep"
 						>
+							<template #totals>
+								<OrderSummary v-bind="summaryProps" :lines="undefined" />
+							</template>
 							<PaymentStep
 								v-model="selectedGateway"
 								:gateways="gateways"
@@ -256,6 +258,7 @@ import {
 	computed,
 	nextTick,
 	onMounted,
+	onUnmounted,
 	reactive,
 	ref,
 	watch,
@@ -276,6 +279,8 @@ import type {
 	OfflineMethod,
 } from "@/types"
 import { formatWholePriceOrFree } from "@/utils/currency"
+import { eventPath } from "@/utils/eventUrl"
+import { siteHeaderHidden } from "@/utils/navbar"
 import { serverErrorMessage } from "@/utils/serverError"
 import { isZoomBackedCategory } from "@/utils/zoomCategory"
 
@@ -587,6 +592,7 @@ function next() {
 
 function back() {
 	if (current.value > 0) go(current.value - 1)
+	else window.location.assign(eventPath(props.eventRoute))
 }
 
 // --- SUBMIT ---
@@ -689,6 +695,10 @@ const successMessage = computed(() => {
 })
 
 // --- LIFECYCLE ---
+// The checkout header replaces the site header until the booking is done.
+watch(completed, (done) => (siteHeaderHidden.value = !done), { immediate: true })
+onUnmounted(() => (siteHeaderHidden.value = false))
+
 function fillMeFromUser() {
 	const user = userResource.data
 	if (props.isGuestMode || !user || me.email) return
