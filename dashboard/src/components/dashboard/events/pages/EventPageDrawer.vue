@@ -38,11 +38,16 @@ watch(open, (isOpen) => {
 	})
 })
 
+// The editor stamps table-of-contents ids on headings, which is not an edit.
+function withoutHeadingIds(html: string) {
+	return html.replace(/ (?:data-toc-id|id)="[^"]*"/g, "")
+}
+
 const isDirty = computed(
 	() =>
 		isNew.value ||
 		form.title !== props.page.title ||
-		form.content !== (props.page.content ?? "") ||
+		withoutHeadingIds(form.content) !== withoutHeadingIds(props.page.content ?? "") ||
 		form.is_published !== Boolean(props.page.is_published),
 )
 

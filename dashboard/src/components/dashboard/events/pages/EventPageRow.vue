@@ -19,8 +19,13 @@ const emit = defineEmits<{
 	delete: []
 }>()
 
+// Blocks end with a space, so a heading does not run into the line after it.
 function plainText(html: string) {
-	return new DOMParser().parseFromString(html || "", "text/html").body.textContent?.trim() ?? ""
+	const body = new DOMParser().parseFromString(html || "", "text/html").body
+	body
+		.querySelectorAll("p, li, h1, h2, h3, h4, h5, h6, blockquote")
+		.forEach((block) => block.append(" "))
+	return body.textContent?.replace(/\s+/g, " ").trim() ?? ""
 }
 
 const excerpt = computed(() => plainText(props.page.content))
