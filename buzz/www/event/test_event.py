@@ -119,6 +119,17 @@ class TestEventPage(IntegrationTestCase):
 		self.assertEqual(context["meta"]["title"], f"Venue · {context['event'].title}")
 		self.assertIsNone(context["structured_data"])
 
+	def test_additional_pages_are_tabbed_in_display_order(self):
+		# A fresh event: the class shares one event and rolls back per class, so pages
+		# another test created would otherwise sit in this list too.
+		event = self.create_event()
+		AdditionalEventPageFactory.create(event=event.name, title="Travel", is_published=1, display_order=2)
+		AdditionalEventPageFactory.create(
+			event=event.name, title="Code of conduct", is_published=1, display_order=1
+		)
+		pages = EventPage(event.route).as_context()["pages"]
+		self.assertEqual([page["title"] for page in pages], ["Code of conduct", "Travel"])
+
 	def test_tabs_list_only_sections_with_content(self):
 		self.assertEqual([tab["key"] for tab in self.context()["tabs"]], ["about"])
 

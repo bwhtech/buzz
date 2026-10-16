@@ -153,7 +153,7 @@ class EventPage:
 			"Additional Event Page",
 			filters={"event": self.event.name, "is_published": 1, "route": ["is", "set"]},
 			fields=["title", "route"],
-			order_by="creation",
+			order_by="display_order asc, creation asc",
 		)
 
 	def event_date(self) -> dict:

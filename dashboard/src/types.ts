@@ -2,6 +2,7 @@
 // src/types/*; interfaces below cover shapes the dashboard sees that the stored
 // schema does not describe (API-joined/computed fields and non-DocType data).
 
+export type { AdditionalEventPage } from "@/types/Events/AdditionalEventPage"
 export type { BuzzEvent } from "@/types/Events/BuzzEvent"
 export type { EventBooking } from "@/types/Ticketing/EventBooking"
 export type { EventTicket } from "@/types/Ticketing/EventTicket"

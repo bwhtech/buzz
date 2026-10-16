@@ -15,6 +15,7 @@ class AdditionalEventPage(Document):
 		from frappe.types import DF
 
 		content: DF.TextEditor
+		display_order: DF.Int
 		event: DF.Link
 		is_published: DF.Check
 		route: DF.Data | None
@@ -26,8 +27,12 @@ class AdditionalEventPage(Document):
 		self.validate_duplicate()
 
 	def validate_route(self):
-		if self.is_published and not self.route:
-			self.route = frappe.website.utils.cleanup_page_name(self.title).replace("_", "-")
+		# The title is the only name an author writes; the slug follows it, so a rename
+		# moves the public URL rather than leaving the page on a title it no longer has.
+		# The field stays read_only, and Desk shows the result.
+		self.route = frappe.website.utils.cleanup_page_name(self.title).replace("_", "-")
+		if not self.route:
+			frappe.throw(frappe._("Give the page a title with letters or numbers."))
 
 	def validate_duplicate(self):
 		if not self.route:

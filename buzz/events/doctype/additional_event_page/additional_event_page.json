@@ -10,6 +10,7 @@
   "column_break_gagp",
   "event",
   "is_published",
+  "display_order",
   "section_break_pifr",
   "content"
  ],
@@ -37,7 +38,8 @@
   {
    "fieldname": "route",
    "fieldtype": "Data",
-   "label": "Route"
+   "label": "Route",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_gagp",
@@ -52,12 +54,19 @@
    "fieldname": "is_published",
    "fieldtype": "Check",
    "label": "Is Published?"
+  },
+  {
+   "default": "0",
+   "description": "Custom pages show on the event page in this order.",
+   "fieldname": "display_order",
+   "fieldtype": "Int",
+   "label": "Display Order"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-01 16:45:14.211143",
+ "modified": "2026-10-16 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Additional Event Page",
@@ -73,6 +82,13 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "Event Manager",
    "write": 1
   }
  ],

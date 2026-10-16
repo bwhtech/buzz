@@ -17,6 +17,8 @@ export interface AdditionalEventPage {
 	event: string
 	/**	Is Published? : Check	*/
 	is_published?: 0 | 1
+	/**	Display Order : Int	*/
+	display_order?: number
 	/**	Content : Text Editor	*/
 	content: string
 }
