@@ -13,12 +13,16 @@ const RESIZE_DELAY_MS = 400
  * expiry; the form shows the countdown and releases the hold when the person leaves.
  * `quantities` maps ticket type name to count, for ticket types with a limit only.
  */
+export function holdTokenKey(eventRoute: string) {
+	return `ticket-hold-${eventRoute}`
+}
+
 export function useTicketHold(
 	eventRoute: string,
 	eventId: Ref<string | null>,
 	quantities: Ref<Record<string, number>>,
 ) {
-	const holdToken = useSessionStorage<string | null>(`ticket-hold-${eventRoute}`, null)
+	const holdToken = useSessionStorage<string | null>(holdTokenKey(eventRoute), null)
 	const deadline = ref<number | null>(null)
 	const now = ref(Date.now())
 	let keepOnLeave = false
@@ -79,7 +83,12 @@ export function useTicketHold(
 		deadline.value = null
 	}
 
-	watch(quantities, () => !expired.value && scheduleHold(), { deep: true, immediate: true })
+	// The booking data poll rebuilds the ticket types, which recomputes equal quantities.
+	watch(
+		() => JSON.stringify(quantities.value),
+		() => !expired.value && scheduleHold(),
+		{ immediate: true },
+	)
 	useIntervalFn(() => {
 		now.value = Date.now()
 	}, 1000)

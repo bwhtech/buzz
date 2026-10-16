@@ -3,18 +3,20 @@ from unittest.mock import patch
 import frappe
 from frappe.utils import add_to_date, now_datetime
 
-from buzz.api.booking import hold_tickets, process_booking, release_hold
+from buzz.api.booking import get_event_booking_data, hold_tickets, process_booking, release_hold
 from buzz.api.booking.exceptions import RegistrationsClosed, TicketsUnavailable
 from buzz.tests.base_test_cases import BookingTestCase
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	EventBookingFactory,
+	EventTicketFactory,
 	EventTicketTypeFactory,
 	OfflinePaymentMethodFactory,
 	TicketHoldFactory,
 )
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import PAYMENT_HOLD_MINUTES
 from buzz.utils import build_event_datetimes
+from buzz.www.event.registration import RegistrationCard
 
 
 class HoldTestCase(BookingTestCase):
@@ -246,3 +248,38 @@ class TestDraftBookingHold(HoldTestCase):
 		attendees = [{"first_name": "Offline", "email": "offline@example.com", "ticket_type": self.name}]
 		request = self.booking_request(attendees=attendees, is_offline=True, offline_payment_method=method)
 		return process_booking(request)
+
+
+class TestAvailabilityView(HoldTestCase):
+	def listed(self, hold_token: str | None = None) -> list[str]:
+		data = get_event_booking_data(self.event.route, hold_token)
+		return [str(ticket_type.name) for ticket_type in data.available_ticket_types]
+
+	def test_a_ticket_type_held_in_full_is_listed_only_for_its_hold(self):
+		token = self.hold(10).hold_token
+
+		self.assertNotIn(self.name, self.listed())
+		self.assertIn(self.name, self.listed(token))
+
+	def open_event(self):
+		"""A fresh event, so no booking of Administrator's marks it as registered, without the
+		default ticket type a new event gets."""
+		event = BuzzEventFactory.create()
+		frappe.db.set_value("Buzz Event", event.name, "registrations_close_at", None)
+		frappe.db.set_value("Event Ticket Type", {"event": event.name}, "is_published", 0)
+		return frappe.get_doc("Buzz Event", event.name)
+
+	def test_the_event_page_shows_reserved_while_tickets_are_held(self):
+		event = self.open_event()
+		ticket_type = EventTicketTypeFactory.create(event=event.name, max_tickets_available=2)
+
+		TicketHoldFactory.create(ticket_type=ticket_type.name, quantity=2)
+
+		self.assertEqual(RegistrationCard(event).as_dict()["state"], "reserved")
+
+	def test_the_event_page_shows_sold_out_when_nothing_is_held(self):
+		event = self.open_event()
+		ticket_type = EventTicketTypeFactory.create(event=event.name, max_tickets_available=1)
+		EventTicketFactory.create("submitted", event=event.name, ticket_type=ticket_type.name)
+
+		self.assertEqual(RegistrationCard(event).as_dict()["state"], "sold-out")

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
 
 
-def build_event_booking_data(event_route: str) -> EventBookingDataResponse:
+def build_event_booking_data(event_route: str, hold_token: str | None = None) -> EventBookingDataResponse:
 	event_doc = frappe.get_cached_doc("Buzz Event", {"route": event_route})
 
 	if not event_doc.is_published:
@@ -23,7 +23,7 @@ def build_event_booking_data(event_route: str) -> EventBookingDataResponse:
 	payment_gateways += [method["title"] for method in offline_methods]
 
 	categories = get_ordered_categories(event_doc.name)
-	ticket_types = get_available_ticket_types(event_doc.name, categories)
+	ticket_types = get_available_ticket_types(event_doc.name, categories, hold_token)
 
 	return EventBookingDataResponse(
 		registrations_closed=are_registrations_closed(event_doc),
@@ -72,15 +72,18 @@ def get_event_details(event_doc: "BuzzEvent"):
 	}
 
 
-# Ordered by category, then newest first. Uncategorized ticket types come last.
-def get_available_ticket_types(event_id: str, categories: list[dict] | None = None) -> list:
+# Ordered by category, then newest first. Uncategorized ticket types come last. Tickets held by
+# `hold_token` count as available, so a form still lists the ticket type its own hold used up.
+def get_available_ticket_types(
+	event_id: str, categories: list[dict] | None = None, hold_token: str | None = None
+) -> list:
 	published_ticket_types = frappe.db.get_all(
 		"Event Ticket Type", filters={"is_published": True, "event": event_id}, pluck="name"
 	)
 	available_ticket_types = []
 	for ticket_type in published_ticket_types:
 		ticket_type_doc = frappe.get_cached_doc("Event Ticket Type", ticket_type)
-		if ticket_type_doc.are_tickets_available(1):
+		if ticket_type_doc.are_tickets_available(1, hold_token):
 			available_ticket_types.append(ticket_type_doc)
 	position = {category["name"]: index for index, category in enumerate(categories or [])}
 	return sorted(available_ticket_types, key=lambda row: position.get(row.category, len(position)))

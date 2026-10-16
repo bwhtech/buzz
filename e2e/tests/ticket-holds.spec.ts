@@ -149,3 +149,51 @@ test.describe("booking form", () => {
 		expect(await heldQuantity(request, ticketType)).toBe(0)
 	})
 })
+
+test.describe("availability", () => {
+	let event: string
+	let ticketType: string
+	let holdToken: string
+
+	test.beforeEach(async ({ request }) => {
+		event = await eventName(request)
+		ticketType = await soleTicketType(request, event, `Busy Ticket ${Date.now()}`, 5)
+		const hold = await callMethod<{ hold_token: string }>(
+			request,
+			"buzz.api.booking.hold_tickets",
+			{
+				event,
+				quantities: { [ticketType]: 5 },
+			},
+		)
+		holdToken = hold.hold_token
+	})
+
+	test.afterEach(async ({ request }) => {
+		await callMethod(request, "buzz.api.booking.release_hold", { hold_token: holdToken })
+	})
+
+	test("the booking form returns once another person's hold is released", async ({
+		page,
+		request,
+	}) => {
+		await page.clock.install()
+		await page.goto(`/b/register/${HOLDS_EVENT_ROUTE}`)
+		await expect(page.getByText("No tickets available right now")).toBeVisible()
+
+		await callMethod(request, "buzz.api.booking.release_hold", { hold_token: holdToken })
+		await page.clock.runFor(20_000)
+
+		await expect(page.getByText(HELD_TEXT)).toBeVisible()
+	})
+
+	test("the event page shows the tickets as reserved", async ({ browser }) => {
+		const guest = await browser.newContext({ storageState: { cookies: [], origins: [] } })
+		const page = await guest.newPage()
+
+		await page.goto(`/events/${HOLDS_EVENT_ROUTE}`)
+
+		await expect(page.getByText("All tickets are reserved")).toBeVisible()
+		await guest.close()
+	})
+})

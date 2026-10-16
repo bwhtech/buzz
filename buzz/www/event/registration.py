@@ -8,6 +8,7 @@ from buzz.api.booking.event_data import get_available_ticket_types
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import registration_link
 from buzz.api.proposals.services import are_proposals_closed, proposal_form_row, proposal_link
+from buzz.ticketing.doctype.ticket_hold.ticket_hold import held_quantities
 
 
 class RegistrationCard:
@@ -26,10 +27,20 @@ class RegistrationCard:
 		if self.event.external_registration_page:
 			return self.open_card("")
 		if not self.ticket_types:
-			if self.has_published_tickets():
-				return self.card("sold-out", _("Sold out"), _("All tickets have been taken."))
-			return self.open_card("")
+			return self.unavailable_card()
 		return self.open_card(self.ticket_summary())
+
+	def unavailable_card(self) -> dict:
+		published = self.published_ticket_types()
+		if not published:
+			return self.open_card("")
+		if any(held_quantities(published).values()):
+			return self.card(
+				"reserved",
+				_("All tickets are reserved"),
+				_("People are checking out. Tickets come back if they don't finish."),
+			)
+		return self.card("sold-out", _("Sold out"), _("All tickets have been taken."))
 
 	def registered_card(self) -> dict:
 		note = (
@@ -39,8 +50,9 @@ class RegistrationCard:
 		)
 		return self.card("registered", _("You're registered"), note, _("View ticket"), "/b/account/bookings")
 
-	def has_published_tickets(self) -> bool:
-		return bool(frappe.db.exists("Event Ticket Type", {"event": self.event.name, "is_published": 1}))
+	def published_ticket_types(self) -> list:
+		filters = {"event": self.event.name, "is_published": 1}
+		return frappe.get_all("Event Ticket Type", filters=filters, pluck="name")
 
 	def open_card(self, subtitle: str) -> dict:
 		register_url = registration_link(self.event)

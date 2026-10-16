@@ -27,8 +27,8 @@ def send_guest_booking_otp(event: int, identifier: str) -> dict | None:
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
-def get_event_booking_data(event_route: str) -> EventBookingDataResponse:
-	return event_data.build_event_booking_data(event_route)
+def get_event_booking_data(event_route: str, hold_token: str | None = None) -> EventBookingDataResponse:
+	return event_data.build_event_booking_data(event_route, hold_token)
 
 
 # nosemgrep: guest-whitelisted-method
