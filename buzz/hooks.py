@@ -43,6 +43,8 @@ website_redirects = [
 		"forward_query_parameters": True,
 	},
 	{"source": r"/dashboard/(.*)", "target": r"/b/\1", "forward_query_parameters": True},
+	# Additional event pages used to have their own URL; they are tabs on the event page now.
+	{"source": r"/events/([^/]+)/[^/]+", "target": r"/events/\1", "forward_query_parameters": True},
 	# Bare /dashboard has no trailing slash for the catch-all above to match, and
 	# www/dashboard.html would otherwise serve the SPA shell under the wrong base.
 	{"source": r"/dashboard", "target": "/b", "forward_query_parameters": True},
