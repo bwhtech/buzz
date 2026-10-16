@@ -46,7 +46,7 @@ def build_event_booking_data(event_route: str, hold_token: str | None = None) ->
 
 def get_event_details(event_doc: "BuzzEvent"):
 	if frappe.session.user != "Guest":
-		return event_doc
+		return {**event_doc.as_dict(), "venue_name": event_doc.get_venue_name()}
 
 	return {
 		"name": event_doc.name,

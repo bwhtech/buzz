@@ -148,7 +148,8 @@ class TestGetEventBookingData(BookingTestCase):
 		payload = response.__json__()
 		self.assertEqual(set(payload), EVENT_DATA_FIELDS)
 		self.assertFalse(payload["registrations_closed"])
-		self.assertEqual(payload["event_details"].name, self.event.name)
+		self.assertEqual(payload["event_details"]["name"], self.event.name)
+		self.assertEqual(payload["event_details"]["venue_name"], self.event.get_venue_name())
 
 	def test_guests_get_a_trimmed_event(self):
 		frappe.set_user("Guest")
