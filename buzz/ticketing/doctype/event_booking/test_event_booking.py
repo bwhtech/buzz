@@ -31,6 +31,32 @@ class TestTicketAvailability(BookingTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.create_booking(normal)
 
+	def test_late_payment_books_a_sold_out_ticket_type(self):
+		paid = EventTicketTypeFactory.create("paid", event=self.event.name, max_tickets_available=1).name
+		booking = self.create_booking(paid)
+		EventTicketFactory.create("submitted", event=self.event.name, ticket_type=paid)
+
+		booking.on_payment_authorized("Completed")
+
+		self.assertEqual(booking.docstatus, 1)
+		self.assertTrue(frappe.db.exists("Error Log", {"reference_name": booking.name}))
+
+	def test_late_payment_books_a_ticket_type_unpublished_meanwhile(self):
+		paid = EventTicketTypeFactory.create("paid", event=self.event.name).name
+		booking = self.create_booking(paid)
+		frappe.db.set_value("Event Ticket Type", paid, "is_published", 0)
+		frappe.clear_document_cache("Event Ticket Type", paid)
+
+		booking.on_payment_authorized("Completed")
+
+		self.assertEqual(booking.docstatus, 1)
+
+	def test_counts_tickets_with_a_locking_read(self):
+		ticket_type = EventTicketTypeFactory.create(event=self.event.name, max_tickets_available=3)
+		EventTicketFactory.create("submitted", event=self.event.name, ticket_type=ticket_type.name)
+
+		self.assertEqual(ticket_type.get_remaining_tickets(for_update=True), 2)
+
 	def create_booking(self, *ticket_types: str):
 		attendees = [
 			{"first_name": "John", "ticket_type": ticket_type, "email": "john@example.com"}

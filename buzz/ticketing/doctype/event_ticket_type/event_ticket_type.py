@@ -122,11 +122,54 @@ class EventTicketType(Document):
 	@property
 	def tickets_sold(self) -> int:
 		"""Returns the number of tickets sold for this ticket type."""
-		return frappe.db.count("Event Ticket", {"ticket_type": self.name, "docstatus": 1})
+		return self.count_tickets_sold()
 
 	@property
 	def remaining_tickets(self) -> int:
 		"""Returns -1 if no limit, otherwise the number of remaining tickets."""
+		return self.get_remaining_tickets()
+
+	def get_remaining_tickets(self, for_update: bool = False) -> int:
 		if not self.max_tickets_available:
 			return -1
-		return self.max_tickets_available - self.tickets_sold
+		return self.max_tickets_available - self.count_tickets_sold(for_update)
+
+	def count_tickets_sold(self, for_update: bool = False) -> int:
+		"""With `for_update`, a locking read: under REPEATABLE READ a plain count reads the
+		transaction's snapshot and misses tickets another booking committed after it."""
+		ticket = frappe.qb.DocType("Event Ticket")
+		query = (
+			frappe.qb.from_(ticket)
+			.select(Count(ticket.name))
+			.where((ticket.ticket_type == self.name) & (ticket.docstatus == 1))
+		)
+		if for_update:
+			query = query.for_update()
+		return query.run()[0][0]
+
+
+def start_capacity_transaction() -> None:
+	"""Start a READ COMMITTED transaction for a write that changes ticket availability.
+
+	Under REPEATABLE READ with `innodb_snapshot_isolation` (on by default since MariaDB 11.6),
+	a row another booking changed after this transaction's first read can't be locked: the
+	naming series alone fails every concurrent booking but one with "Record has changed since
+	last read". READ COMMITTED reads the latest committed rows once the lock is held.
+	"""
+	frappe.db.sql("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
+	frappe.db.commit()  # nosemgrep: frappe-manual-commit
+
+
+def lock_ticket_types(names: list) -> None:
+	"""Lock the ticket type rows, in name order so two bookings can't deadlock, until the
+	transaction ends. Bookings of the same ticket type then check capacity one at a time."""
+	if not names:
+		return
+	ticket_type = frappe.qb.DocType("Event Ticket Type")
+	(
+		frappe.qb.from_(ticket_type)
+		.select(ticket_type.name)
+		.where(ticket_type.name.isin(names))
+		.orderby(ticket_type.name)
+		.for_update()
+	).run()

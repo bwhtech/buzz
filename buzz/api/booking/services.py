@@ -22,7 +22,10 @@ from buzz.api.booking.schemas import (
 	PaymentLinkResponse,
 )
 from buzz.payments import get_payment_link_for_booking
-from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import default_currency
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
+	default_currency,
+	start_capacity_transaction,
+)
 from buzz.utils import ZOOM_BACKED_CATEGORIES, build_event_datetimes
 
 if TYPE_CHECKING:
@@ -43,6 +46,7 @@ class BookingService:
 		return frappe.get_cached_doc("Buzz Event", self.request.event)
 
 	def process(self) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
+		start_capacity_transaction()
 		self.validate_event()
 		self.validate_offline_currency()
 		self.validate_phone_fields()

@@ -1,5 +1,7 @@
 # Copyright (c) 2025, BWH Studios and contributors
 # For license information, please see license.txt
+from collections import Counter
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -18,6 +20,7 @@ from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_tickets,
 	record_gateway_refund,
 )
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import lock_ticket_types
 from buzz.utils import render_email_template
 
 RAZORPAY = "Razorpay"
@@ -148,25 +151,39 @@ class EventBooking(Document):
 				self.total_amount += self.tax_amount
 
 	def validate_ticket_availability(self):
-		num_tickets_by_type = {}
-		for attendee in self.attendees:
-			if attendee.ticket_type not in num_tickets_by_type:
-				num_tickets_by_type[attendee.ticket_type] = 0
-			num_tickets_by_type[attendee.ticket_type] += 1
+		quantities = Counter(str(attendee.ticket_type) for attendee in self.attendees)
+		ticket_types = [frappe.get_cached_doc("Event Ticket Type", name) for name in quantities]
+		lock_ticket_types([row.name for row in ticket_types if row.max_tickets_available])
+		for ticket_type in ticket_types:
+			self.validate_ticket_type(ticket_type, quantities[str(ticket_type.name)])
 
-		for ticket_type, num_tickets in num_tickets_by_type.items():
-			ticket_type_doc = frappe.get_cached_doc("Event Ticket Type", ticket_type)
-			if str(ticket_type_doc.event) != str(self.event):
-				frappe.throw(_("{0} is not available for this event").format(ticket_type_doc.title))
-			if not ticket_type_doc.is_published:
-				frappe.throw(frappe._(f"{ticket_type_doc.title} tickets no longer available!"))
+	def validate_ticket_type(self, ticket_type, quantity: int):
+		if str(ticket_type.event) != str(self.event):
+			frappe.throw(_("{0} is not available for this event").format(ticket_type.title))
+		if self.flags.ignore_capacity:
+			self.log_if_oversold(ticket_type, quantity)
+			return
+		if not ticket_type.is_published:
+			frappe.throw(_("{0} tickets no longer available!").format(ticket_type.title))
 
-			if not ticket_type_doc.are_tickets_available(num_tickets):
-				frappe.throw(
-					frappe._(
-						f"Only {ticket_type_doc.remaining_tickets} tickets available for {ticket_type_doc.title}, you are trying to book {num_tickets}!"
-					)
-				)
+		remaining = ticket_type.get_remaining_tickets(for_update=True)
+		if remaining == -1 or remaining >= quantity:
+			return
+		frappe.throw(
+			_("Only {0} tickets available for {1}, you are trying to book {2}!").format(
+				remaining, ticket_type.title, quantity
+			)
+		)
+
+	def log_if_oversold(self, ticket_type, quantity: int):
+		remaining = ticket_type.get_remaining_tickets(for_update=True)
+		if remaining == -1 or remaining >= quantity:
+			return
+		frappe.log_error(
+			title=_("{0} oversold by a payment that arrived late").format(ticket_type.title),
+			reference_doctype=self.doctype,
+			reference_name=self.name,
+		)
 
 	def fetch_amounts_from_ticket_types(self):
 		for attendee in self.attendees:
@@ -411,6 +428,8 @@ class EventBooking(Document):
 	def on_payment_authorized(self, payment_status: str):
 		if payment_status in ("Authorized", "Completed"):
 			# payment success, submit the booking
+			# The money is taken, so a ticket type that sold out meanwhile must not fail it.
+			self.flags.ignore_capacity = True
 			self.payment_status = "Paid"
 			self.status = "Confirmed"
 			self.update_payment_record()
