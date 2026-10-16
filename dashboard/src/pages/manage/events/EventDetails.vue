@@ -310,10 +310,9 @@ async function save() {
 						</div>
 					</section>
 
-					<!-- The event's own extra pages, each an extra tab on its public page. Keyed by
-					     event: useEventPages resolves its filters once, and Details is reused when
-					     the route moves between events. -->
-					<EventPages :key="eventId" :event="eventId" :route="event.data?.route" />
+					<!-- The event's own extra tabs. Keyed by event: useEventPages resolves its
+					     filters once, and Details is reused when the route moves between events. -->
+					<EventPages :key="eventId" :event="eventId" />
 				</div>
 
 				<div class="space-y-4 max-md:-mx-4 md:col-span-2">

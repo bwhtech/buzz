@@ -18,14 +18,6 @@ class IntegrationTestAdditionalEventPage(IntegrationTestCase):
 		self.team = BuzzTeamFactory.create_owned_by(self.owner, team_name="Page Team").name
 		self.event = BuzzEventFactory.create(team=self.team).name
 
-	def test_route_follows_the_title(self):
-		page = AdditionalEventPageFactory.create(event=self.event, title="Travel & Stay")
-		self.assertEqual(page.route, "travel-stay")
-
-		page.title = "Getting there"
-		page.save()
-		self.assertEqual(page.route, "getting-there")
-
 	def test_the_same_title_on_one_event_is_refused(self):
 		AdditionalEventPageFactory.create(event=self.event, title="FAQ")
 		with self.assertRaises(frappe.ValidationError):
@@ -36,9 +28,10 @@ class IntegrationTestAdditionalEventPage(IntegrationTestCase):
 		other_event = BuzzEventFactory.create(team=self.team).name
 		self.assertTrue(AdditionalEventPageFactory.create(event=other_event, title="FAQ").name)
 
-	def test_a_title_with_no_letters_is_refused(self):
-		with self.assertRaises(frappe.ValidationError):
-			AdditionalEventPageFactory.create(event=self.event, title="!!!")
+	def test_a_page_keeps_its_title(self):
+		# The title is the tab's label; it is no longer turned into a slug.
+		page = AdditionalEventPageFactory.create(event=self.event, title="Travel & Stay")
+		self.assertEqual(page.title, "Travel & Stay")
 
 	def test_a_team_manager_can_manage_pages(self):
 		with self.set_user(self.owner):

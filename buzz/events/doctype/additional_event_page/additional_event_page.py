@@ -23,25 +23,14 @@ class AdditionalEventPage(Document):
 	# end: auto-generated types
 
 	def validate(self):
-		self.validate_route()
 		self.validate_duplicate()
 
-	def validate_route(self):
-		# The title is the only name an author writes; the slug follows it, so a rename
-		# moves the public URL rather than leaving the page on a title it no longer has.
-		# The field stays read_only, and Desk shows the result.
-		self.route = frappe.website.utils.cleanup_page_name(self.title).replace("_", "-")
-		if not self.route:
-			frappe.throw(frappe._("Give the page a title with letters or numbers."))
-
 	def validate_duplicate(self):
-		if not self.route:
-			return
-
+		# The title is the tab's label, so two pages of one event cannot share one.
 		if frappe.db.exists(
 			"Additional Event Page",
-			{"route": self.route, "event": self.event, "name": ["!=", self.name]},
+			{"title": self.title, "event": self.event, "name": ["!=", self.name]},
 		):
 			frappe.throw(
-				frappe._("An Additional Event Page with the same route already exists for this event.")
+				frappe._("An Additional Event Page with the same title already exists for this event.")
 			)

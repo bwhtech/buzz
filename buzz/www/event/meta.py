@@ -24,15 +24,14 @@ def plain_text(html: str | None) -> str:
 class EventMeta:
 	"""Share and search metadata for an event page, built from the page context."""
 
-	def __init__(self, event, page, context: dict):
+	def __init__(self, event, context: dict):
 		self.event = event
-		self.page = page
 		self.context = context
 
 	def as_dict(self) -> dict:
 		image = self.image()
 		return {
-			"title": f"{self.page.title} · {self.event.title}" if self.page else self.event.title,
+			"title": self.event.title,
 			"description": self.description(),
 			"image": image,
 			"url": self.url(),
@@ -40,7 +39,7 @@ class EventMeta:
 		}
 
 	def url(self) -> str:
-		return get_url(f"/events/{self.event.route}" + (f"/{self.page.route}" if self.page else ""))
+		return get_url(f"/events/{self.event.route}")
 
 	def description(self) -> str:
 		text = self.event.short_description or plain_text(self.event.about)
@@ -53,8 +52,6 @@ class EventMeta:
 		return get_url(public) if public else ""
 
 	def structured_data(self) -> dict | None:
-		if self.page:
-			return None
 		image = self.image()
 		data = {
 			"@context": "https://schema.org",

@@ -34,7 +34,7 @@ no_cache = 1
 
 
 def get_context(context):
-	page = EventPage(frappe.form_dict.event_route, frappe.form_dict.page_route)
+	page = EventPage(frappe.form_dict.event_route)
 	apply_site_context(context, page.event.theme)
 	context.update(page.as_context())
 
@@ -87,24 +87,12 @@ def not_found():
 
 
 class EventPage:
-	def __init__(self, route: str, page_route: str | None = None):
+	def __init__(self, route: str):
 		# get_doc skips the team permission hooks, which would hide every event from a Guest
 		name = frappe.db.get_value("Buzz Event", {"route": route, "is_published": 1})
 		if not name:
 			not_found()
 		self.event = frappe.get_doc("Buzz Event", name)
-		self.page = self.load_page(page_route) if page_route else None
-
-	def load_page(self, page_route: str) -> frappe._dict:
-		page = frappe.db.get_value(
-			"Additional Event Page",
-			{"event": self.event.name, "route": page_route, "is_published": 1},
-			["title", "route", "content"],
-			as_dict=True,
-		)
-		if not page:
-			not_found()
-		return page
 
 	def as_context(self) -> dict:
 		context = {
@@ -114,7 +102,6 @@ class EventPage:
 			"date_range": EventDateRange(self.event).as_dict(),
 			"timezone_label_with_offset": self.timezone_label_with_offset(),
 			"timezone_label": self.timezone_label,
-			"page": self.page,
 			"pages": self.pages(),
 			"tabs": self.tabs(),
 			"hosts": self.hosts(),
@@ -132,7 +119,7 @@ class EventPage:
 			"countdown": event_countdown(self.event) if self.event.show_countdown else None,
 			"manage_url": self.manage_url(),
 		}
-		meta = EventMeta(self.event, self.page, context)
+		meta = EventMeta(self.event, context)
 		return context | {"meta": meta.as_dict(), "structured_data": meta.structured_data()}
 
 	def manage_url(self) -> str | None:
@@ -149,10 +136,12 @@ class EventPage:
 		return [{"key": key, "label": label} for key, label, content in sections if content]
 
 	def pages(self) -> list[dict]:
+		# Keyed by document name: the tab and its panel are siblings in the markup, so the
+		# pair needs an id, and a page may be renamed without the tab changing.
 		return frappe.get_all(
 			"Additional Event Page",
-			filters={"event": self.event.name, "is_published": 1, "route": ["is", "set"]},
-			fields=["title", "route"],
+			filters={"event": self.event.name, "is_published": 1},
+			fields=["name as key", "title as label", "content"],
 			order_by="display_order asc, creation asc",
 		)
 

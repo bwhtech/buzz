@@ -325,30 +325,17 @@ body {
 	display: none;
 }
 
-.event-main:has(#tab-about:checked) #panel-about,
-.event-main:has(#tab-schedule:checked) #panel-schedule,
-.event-main:has(#tab-speakers:checked) #panel-speakers,
-.event-main:has(#tab-sponsors:checked) #panel-sponsors {
-	display: block;
-	transition: opacity 120ms var(--ease-out);
+/* A panel fades in as it is shown; the one leaving goes at once, so the two never overlap.
+   Which panel a tab shows is keyed by a page's document name, so those two rules are written
+   in the template, where the keys are known. */
+.tab-panel {
+	animation: tab-panel-in 120ms var(--ease-out);
 }
 
-/* A panel fades in as it is shown; the one leaving goes at once, so the two never overlap. */
-@starting-style {
-	.event-main:has(#tab-about:checked) #panel-about,
-	.event-main:has(#tab-schedule:checked) #panel-schedule,
-	.event-main:has(#tab-speakers:checked) #panel-speakers,
-	.event-main:has(#tab-sponsors:checked) #panel-sponsors {
+@keyframes tab-panel-in {
+	from {
 		opacity: 0;
 	}
-}
-
-.event-main:has(#tab-about:checked) [for="tab-about"],
-.event-main:has(#tab-schedule:checked) [for="tab-schedule"],
-.event-main:has(#tab-speakers:checked) [for="tab-speakers"],
-.event-main:has(#tab-sponsors:checked) [for="tab-sponsors"] {
-	border-bottom-color: var(--ink-strong);
-	color: var(--ink-strong);
 }
 
 /* The active tab already names the panel; the heading stays for screen readers. */
@@ -1234,6 +1221,10 @@ summary:focus-visible {
 	.es-button:active,
 	.event-card:active {
 		transform: none;
+	}
+
+	.tab-panel {
+		animation: none;
 	}
 }
 

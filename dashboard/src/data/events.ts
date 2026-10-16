@@ -74,7 +74,7 @@ export function useEventPages(event: string) {
 	return useList<AdditionalEventPage>({
 		doctype: "Additional Event Page",
 		filters: { event },
-		fields: ["name", "title", "route", "content", "is_published", "display_order"],
+		fields: ["name", "title", "content", "is_published", "display_order"],
 		orderBy: "display_order asc, creation asc",
 		limit: 100,
 	})

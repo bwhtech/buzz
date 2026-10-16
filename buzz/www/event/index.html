@@ -1,6 +1,24 @@
 {% extends "buzz/templates/event_page/layout.html" %}
 
+{# Built-in sections and the event's own pages share one tab strip. #}
+{% set tab_items = tabs + pages %}
+
 {% block title %}{% autoescape true %}{{ meta.title }}{% endautoescape %}{% endblock %}
+
+{% block head %}
+{{ super() }}
+{# A tab is a radio input and a panel is its sibling, so which panel shows is decided by a
+   rule naming the checked key. A page's key is its document name, known only at render time,
+   so those rules are written here. #}
+{% if tab_items | length > 1 %}
+<style>
+	{% for tab in tab_items %}
+	.event-main:has(#tab-{{ tab.key }}:checked) [for="tab-{{ tab.key }}"]{border-bottom-color:var(--ink-strong);color:var(--ink-strong)}
+	.event-main:has(#tab-{{ tab.key }}:checked) #panel-{{ tab.key }}{display:block}
+	{% endfor %}
+</style>
+{% endif %}
+{% endblock %}
 
 {% block meta_block %}{% autoescape true %}
 	<meta name="description" content="{{ meta.description }}">
@@ -141,25 +159,12 @@
 
 		<div class="event-main">
 			{% if links %}{{ link_list("narrow-links") }}{% endif %}
-			{% if page %}
-			<nav class="tabs">
-				<a class="tab" href="/events/{{ event.route }}">{{ _("Overview") }}</a>
-				{% for item in pages %}
-				<a class="tab" href="/events/{{ event.route }}/{{ item.route }}"{% if item.route == page.route %} aria-current="page"{% endif %}>{{ item.title }}</a>
-				{% endfor %}
-			</nav>
-			<section class="section">
-				<h2 class="section-title">{{ page.title }}</h2>
-				<div class="prose">{{ page.content | safe }}</div>
-			</section>
-			{% else %}
-			{% if tabs | length + pages | length > 1 %}
-			{% for tab in tabs %}
+			{% if tab_items | length > 1 %}
+			{% for tab in tab_items %}
 			<input class="tab-input" type="radio" name="tab" id="tab-{{ tab.key }}"{% if loop.first %} checked{% endif %}>
 			{% endfor %}
 			<nav class="tabs">
-				{% for tab in tabs %}<label class="tab" for="tab-{{ tab.key }}">{{ tab.label }}</label>{% endfor %}
-				{% for item in pages %}<a class="tab" href="/events/{{ event.route }}/{{ item.route }}">{{ item.title }}</a>{% endfor %}
+				{% for tab in tab_items %}<label class="tab" for="tab-{{ tab.key }}">{{ tab.label }}</label>{% endfor %}
 			</nav>
 			{% endif %}
 
@@ -229,7 +234,13 @@
 				{% endfor %}
 			</section>
 			{% endif %}
-			{% endif %}
+
+			{% for page in pages %}
+			<section class="section tab-panel" id="panel-{{ page.key }}">
+				<h2 class="section-title">{{ page.label }}</h2>
+				<div class="prose">{{ page.content | safe }}</div>
+			</section>
+			{% endfor %}
 		</div>
 
 		<aside class="event-aside">

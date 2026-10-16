@@ -5,10 +5,9 @@ import { computed, ref } from "vue"
 import EventPageDrawer from "@/components/dashboard/events/EventPageDrawer.vue"
 import { useEventPages } from "@/data/events"
 import type { AdditionalEventPage } from "@/types"
-import { eventPath } from "@/utils/eventUrl"
 import { serverErrorMessage } from "@/utils/serverError"
 
-const props = defineProps<{ event: string; route?: string | null }>()
+const props = defineProps<{ event: string }>()
 
 const pages = useEventPages(props.event)
 
@@ -75,15 +74,6 @@ async function remove() {
 						><span class="sr-only">{{ __("Published") }}</span></template
 					>
 				</Switch>
-				<!-- The tab only exists on the public page once it is published, so the link
-				     appears with it. -->
-				<Button
-					v-if="route && page.is_published"
-					variant="ghost"
-					icon="lucide-external-link"
-					:link="`${eventPath(route)}/${page.route}`"
-					:aria-label="__('Open {0}', [page.title])"
-				/>
 				<Button
 					variant="ghost"
 					icon="lucide-trash-2"
@@ -107,7 +97,7 @@ async function remove() {
 
 		<div class="flex items-center gap-2">
 			<p v-if="!rows.length" class="text-p-sm text-ink-gray-5">
-				{{ __("Extra pages for the event site — an FAQ, a code of conduct, travel notes.") }}
+				{{ __("Extra tabs on the event page — an FAQ, a code of conduct, travel notes.") }}
 			</p>
 			<Button
 				class="ml-auto shrink-0"
@@ -122,7 +112,7 @@ async function remove() {
 		<Dialog v-model:open="confirmingDelete" :title="__('Delete page')" size="md">
 			<div class="space-y-3">
 				<p class="text-p-base text-ink-gray-7">
-					{{ __("Removes this tab from the event page. Its link will stop working.") }}
+					{{ __("Removes this tab from the event page.") }}
 				</p>
 				<ErrorMessage :message="serverErrorMessage(pages.delete.error)" />
 			</div>

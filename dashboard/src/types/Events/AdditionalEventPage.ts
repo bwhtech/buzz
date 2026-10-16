@@ -11,8 +11,6 @@ export interface AdditionalEventPage {
 	idx?: number
 	/**	Title : Data	*/
 	title: string
-	/**	Route : Data	*/
-	route?: string
 	/**	Event : Link - Buzz Event	*/
 	event: string
 	/**	Is Published? : Check	*/

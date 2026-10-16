@@ -6,7 +6,6 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
-  "route",
   "column_break_gagp",
   "event",
   "is_published",
@@ -36,12 +35,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "route",
-   "fieldtype": "Data",
-   "label": "Route",
-   "read_only": 1
-  },
-  {
    "fieldname": "column_break_gagp",
    "fieldtype": "Column Break"
   },
@@ -66,7 +59,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-16 09:00:00.000000",
+ "modified": "2026-10-16 11:30:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Additional Event Page",

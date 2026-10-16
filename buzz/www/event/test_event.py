@@ -102,33 +102,30 @@ class TestEventPage(IntegrationTestCase):
 		self.assertEqual([link["label"] for link in links], ["Venue map"])
 		self.assertIn("M20 10c0", links[0]["icon_svg"])
 
-	def test_additional_page(self):
-		AdditionalEventPageFactory.create(event=self.event, title="Travel", is_published=1)
-		context = self.context("travel")
-		self.assertEqual(context["page"].title, "Travel")
-		self.assertEqual([page.route for page in context["pages"]], ["travel"])
-
-	def test_unpublished_additional_page_is_not_found(self):
-		AdditionalEventPageFactory.create(event=self.event, title="Draft", route="draft")
-		with self.assertRaises(frappe.PageDoesNotExistError):
-			self.context("draft")
-
-	def test_additional_page_title_names_both(self):
-		AdditionalEventPageFactory.create(event=self.event, title="Venue", is_published=1)
-		context = self.context("venue")
-		self.assertEqual(context["meta"]["title"], f"Venue · {context['event'].title}")
-		self.assertIsNone(context["structured_data"])
-
-	def test_additional_pages_are_tabbed_in_display_order(self):
+	def test_additional_page_is_listed_with_its_content(self):
 		# A fresh event: the class shares one event and rolls back per class, so pages
 		# another test created would otherwise sit in this list too.
+		event = self.create_event()
+		page = AdditionalEventPageFactory.create(
+			event=event.name, title="Travel", content="<p>Trains</p>", is_published=1
+		)
+		pages = EventPage(event.route).as_context()["pages"]
+		self.assertEqual([(row["key"], row["label"]) for row in pages], [(page.name, "Travel")])
+		self.assertIn("Trains", pages[0]["content"])
+
+	def test_unpublished_additional_page_is_hidden(self):
+		event = self.create_event()
+		AdditionalEventPageFactory.create(event=event.name, title="Draft")
+		self.assertEqual(EventPage(event.route).as_context()["pages"], [])
+
+	def test_additional_pages_are_tabbed_in_display_order(self):
 		event = self.create_event()
 		AdditionalEventPageFactory.create(event=event.name, title="Travel", is_published=1, display_order=2)
 		AdditionalEventPageFactory.create(
 			event=event.name, title="Code of conduct", is_published=1, display_order=1
 		)
 		pages = EventPage(event.route).as_context()["pages"]
-		self.assertEqual([page["title"] for page in pages], ["Code of conduct", "Travel"])
+		self.assertEqual([row["label"] for row in pages], ["Code of conduct", "Travel"])
 
 	def test_tabs_list_only_sections_with_content(self):
 		self.assertEqual([tab["key"] for tab in self.context()["tabs"]], ["about"])
@@ -164,8 +161,8 @@ class TestEventPage(IntegrationTestCase):
 	def set_event(self, values: dict):
 		frappe.db.set_value("Buzz Event", self.event, values)
 
-	def context(self, page: str | None = None) -> dict:
-		return EventPage(self.route, page).as_context()
+	def context(self) -> dict:
+		return EventPage(self.route).as_context()
 
 	def create_event(self, **overrides):
 		"""Read back, so the tests edit a plain document rather than the factory's subclass."""
