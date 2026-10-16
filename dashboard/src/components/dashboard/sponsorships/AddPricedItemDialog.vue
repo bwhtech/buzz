@@ -20,11 +20,14 @@ const props = defineProps<{
 	freeOnly?: boolean
 	// Extra fields saved on the new item, such as a ticket type's category.
 	defaults?: Record<string, unknown>
+	// Asks for an optional description, shown under the title where the item is sold.
+	describable?: boolean
 }>()
 const isOpen = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ saved: [] }>()
 
 const title = ref("")
+const description = ref("")
 const price = ref(0)
 const currency = ref(DEFAULT_CURRENCY)
 const showErrors = ref(false)
@@ -46,6 +49,7 @@ watch(isOpen, (open) => open && reset())
 
 function reset() {
 	title.value = ""
+	description.value = ""
 	price.value = 0
 	currency.value = currencyOptions.value.includes(DEFAULT_CURRENCY)
 		? DEFAULT_CURRENCY
@@ -64,6 +68,7 @@ async function submit() {
 		...props.defaults,
 		event: props.event,
 		title: title.value.trim(),
+		...(props.describable ? { description: description.value.trim() } : {}),
 		prices: [{ currency: currency.value, price: price.value }],
 	})
 	await creator.submit().catch(() => null)
@@ -84,6 +89,14 @@ async function submit() {
 				:placeholder="placeholder"
 				autocomplete="off"
 				required
+			/>
+			<FormControl
+				v-if="describable"
+				v-model="description"
+				type="textarea"
+				label="Description"
+				placeholder="Talks, expo and lunch on both days"
+				:rows="2"
 			/>
 
 			<div v-if="!freeOnly" class="grid grid-cols-[2fr_1fr] gap-4">

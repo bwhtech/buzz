@@ -32,7 +32,10 @@ class TicketTypesTestCase(IntegrationTestCase):
 		self.event = str(BuzzEventFactory.create(team=self.team).name)
 		self.ticket_type = str(
 			EventTicketTypeFactory.create(
-				event=self.event, prices=[{"currency": "INR", "price": 1000}], max_tickets_available=200
+				event=self.event,
+				prices=[{"currency": "INR", "price": 1000}],
+				max_tickets_available=200,
+				description="Talks, expo and lunch",
 			).name
 		)
 
@@ -73,6 +76,7 @@ class TestGetEventTicketTypes(TicketTypesTestCase):
 		row = self.ticket_type_row(payload)
 		self.assertEqual(row["prices"], [{"currency": "INR", "price": 1000, "tickets_sold": 1}])
 		self.assertEqual(row["max_tickets_available"], 200)
+		self.assertEqual(row["description"], "Talks, expo and lunch")
 		self.assertEqual(row["tickets_sold"], 1)
 
 	def test_lists_categories_in_display_order(self):

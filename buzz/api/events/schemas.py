@@ -216,6 +216,7 @@ class TicketCategoryItem(APIResponse):
 class TicketTypeItem(APIResponse):
 	name: str
 	title: str
+	description: str | None
 	category: str | None
 	max_tickets_available: int
 	auto_unpublish_after: date | None

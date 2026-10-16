@@ -750,6 +750,7 @@ export interface TicketCategoryItem {
 export interface TicketTypeItem {
 	name: string
 	title: string
+	description: string | null
 	category: string | null
 	max_tickets_available: number
 	auto_unpublish_after: string | null

@@ -25,6 +25,7 @@ from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 TICKET_TYPE_FIELDS = [
 	"name",
 	"title",
+	"description",
 	"category",
 	"max_tickets_available",
 	"auto_unpublish_after",

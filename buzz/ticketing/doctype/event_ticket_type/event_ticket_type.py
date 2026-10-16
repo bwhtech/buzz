@@ -48,6 +48,7 @@ class EventTicketType(Document):
 
 		auto_unpublish_after: DF.Date | None
 		category: DF.Link | None
+		description: DF.SmallText | None
 		event: DF.Link
 		is_published: DF.Check
 		max_tickets_available: DF.Int

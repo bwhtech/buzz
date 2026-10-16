@@ -13,6 +13,7 @@ import { formatWholePriceOrFree } from "@/utils/currency"
 
 type TicketTypeValues = {
 	title: string
+	description: string
 	category: string
 	prices: TierPrice[]
 	max_tickets_available: number
@@ -94,6 +95,7 @@ const publishedAlert = computed(() =>
 function toValues(ticketType: TicketTypeItem): TicketTypeValues {
 	return {
 		title: ticketType.title,
+		description: ticketType.description ?? "",
 		category: ticketType.category ?? "",
 		prices: ticketType.prices.map(({ currency, price }) => ({ currency, price })),
 		max_tickets_available: ticketType.max_tickets_available,
@@ -114,7 +116,11 @@ async function togglePublished() {
 }
 
 async function save(values: TicketTypeValues) {
-	await ticketTypeDoc.setValue.submit({ ...values, title: values.title.trim() })
+	await ticketTypeDoc.setValue.submit({
+		...values,
+		title: values.title.trim(),
+		description: values.description.trim(),
+	})
 	if (ticketTypeDoc.setValue.error) throw ticketTypeDoc.setValue.error
 	emit("changed")
 }
@@ -152,6 +158,15 @@ async function save(values: TicketTypeValues) {
 				required
 				placeholder="General admission"
 				autocomplete="off"
+				:disabled="!canWrite"
+			/>
+			<FormControl
+				v-model="draft.description"
+				type="textarea"
+				label="Description"
+				placeholder="Talks, expo and lunch on both days"
+				description="Shown below the name on the booking page."
+				:rows="2"
 				:disabled="!canWrite"
 			/>
 			<FormControl

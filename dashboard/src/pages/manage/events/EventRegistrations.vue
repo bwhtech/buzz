@@ -176,6 +176,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		doctype="Event Ticket Type"
 		item-label="Ticket Type"
 		placeholder="General admission"
+		describable
 		:free-only="!page.data?.paid_events_enabled"
 		:defaults="addToCategory ? { category: addToCategory } : undefined"
 		@saved="page.reload()"
