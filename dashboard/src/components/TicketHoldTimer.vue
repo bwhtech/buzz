@@ -1,7 +1,7 @@
 <template>
 	<div
 		v-if="secondsLeft !== null"
-		class="flex items-center justify-between gap-3 rounded bg-surface-gray-2 px-3 py-2 text-p-sm text-ink-gray-7"
+		class="flex items-center justify-between gap-3 rounded-6 bg-surface-gray-2 px-3 py-2 text-p-sm text-ink-gray-7"
 	>
 		<span v-if="expired">{{
 			__("Your hold has expired. These tickets may go to someone else.")
