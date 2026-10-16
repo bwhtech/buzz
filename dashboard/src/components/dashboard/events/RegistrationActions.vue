@@ -15,6 +15,7 @@ const props = defineProps<{
 	registrationLink?: string | null
 	allowGuestBooking: boolean
 	guestVerificationMethod: string
+	preventDuplicateRegistrations: boolean
 }>()
 const emit = defineEmits<{ changed: [] }>()
 
@@ -71,6 +72,7 @@ const actions = computed<QuickAction[]>(() =>
 		:event="event"
 		:enabled="allowGuestBooking"
 		:method="guestVerificationMethod"
+		:prevent-duplicates="preventDuplicateRegistrations"
 		@changed="emit('changed')"
 	/>
 </template>

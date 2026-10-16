@@ -86,6 +86,15 @@ class TestRegistrationSettings(RegistrationTestCase):
 
 		self.assertTrue(registration.allow_guest_booking)
 		self.assertEqual(registration.guest_verification_method, "Phone OTP")
+		self.assertFalse(registration.prevent_duplicate_registrations)
+
+	def test_carries_duplicate_registration_setting(self):
+		event = self.create_event()
+		frappe.db.set_value("Buzz Event", event, "prevent_duplicate_registrations", 1)
+
+		registration = self.registration_as(self.owner, event)
+
+		self.assertTrue(registration.prevent_duplicate_registrations)
 
 	def test_carries_the_tax_settings(self):
 		event = self.create_event()

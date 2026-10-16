@@ -52,6 +52,7 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		registrations_closed=are_registrations_closed(doc),
 		allow_guest_booking=bool(doc.allow_guest_booking),
 		guest_verification_method=doc.guest_verification_method or "None",
+		prevent_duplicate_registrations=bool(doc.prevent_duplicate_registrations),
 		apply_tax=bool(doc.apply_tax),
 		tax_inclusive=bool(doc.tax_inclusive),
 		# Same defaults as Buzz Event's validate_tax_settings, so the form opens filled in.
