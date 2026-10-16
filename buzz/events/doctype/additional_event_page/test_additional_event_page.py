@@ -28,26 +28,15 @@ class IntegrationTestAdditionalEventPage(IntegrationTestCase):
 		other_event = BuzzEventFactory.create(team=self.team).name
 		self.assertTrue(AdditionalEventPageFactory.create(event=other_event, title="FAQ").name)
 
-	def test_a_page_keeps_its_title(self):
-		# The title is the tab's label; it is no longer turned into a slug.
-		page = AdditionalEventPageFactory.create(event=self.event, title="Travel & Stay")
-		self.assertEqual(page.title, "Travel & Stay")
-
 	def test_a_team_manager_can_manage_pages(self):
 		with self.set_user(self.owner):
-			page = frappe.get_doc(
-				{
-					"doctype": "Additional Event Page",
-					"event": self.event,
-					"title": "Travel",
-					"content": "<p>How to get there</p>",
-				}
-			).insert()
+			page = AdditionalEventPageFactory.create(event=self.event, title="Travel")
 			page.content = "<p>Trains and planes</p>"
 			page.save()
 			page.delete()
 
-	def test_an_outsider_cannot_read_pages(self):
-		AdditionalEventPageFactory.create(event=self.event, title="Travel")
+	def test_another_teams_manager_cannot_read_pages(self):
+		page = AdditionalEventPageFactory.create(event=self.event, title="Travel")
 		outsider = UserFactory.create_once("additional-page-outsider@example.com").name
-		self.assertFalse(frappe.has_permission("Additional Event Page", "read", user=outsider))
+		BuzzTeamFactory.create_owned_by(outsider, team_name="Other Page Team")
+		self.assertFalse(frappe.has_permission("Additional Event Page", "read", doc=page, user=outsider))

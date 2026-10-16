@@ -18,7 +18,6 @@ class AdditionalEventPage(Document):
 		display_order: DF.Int
 		event: DF.Link
 		is_published: DF.Check
-		route: DF.Data | None
 		title: DF.Data
 	# end: auto-generated types
 
