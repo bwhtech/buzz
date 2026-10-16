@@ -39,7 +39,7 @@ watch([about, focused], () => nextTick().then(measure))
 <template>
 	<div
 		ref="box"
-		class="overflow-hidden rounded-4 border transition-colors duration-150 ease-out motion-reduce:transition-none"
+		class="overflow-hidden rounded-4 border transition-colors duration-150 ease motion-reduce:transition-none"
 		:class="focused ? 'border-outline-gray-4' : 'border-outline-gray-2'"
 		@focusin="focused = true"
 		@focusout="onFocusOut"
@@ -49,13 +49,19 @@ watch([about, focused], () => nextTick().then(measure))
 			:extensions="richTextExtensions"
 			placeholder="What is this event about?"
 		>
-			<EditorFixedMenu
-				v-show="focused"
-				:items="richTextToolbar"
-				class="overflow-x-auto border-b border-outline-gray-1 px-2 py-1"
-			/>
+			<!-- Fades in rather than popping, since it pushes the text down as it appears. -->
+			<Transition
+				enter-active-class="transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
+				enter-from-class="opacity-0"
+			>
+				<EditorFixedMenu
+					v-show="focused"
+					:items="richTextToolbar"
+					class="overflow-x-auto border-b border-outline-gray-1 px-2 py-1"
+				/>
+			</Transition>
 			<EditorContent
-				class="prose-sm min-h-30 max-w-none p-3 text-ink-gray-8 transition-[max-height] duration-200 focus:outline-none motion-reduce:transition-none"
+				class="prose-sm min-h-30 max-w-none p-3 text-ink-gray-8 transition-[max-height] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] focus:outline-none motion-reduce:transition-none"
 				:class="[
 					focused ? 'max-h-[30rem] overflow-y-auto' : 'max-h-52 overflow-hidden',
 					{

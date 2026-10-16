@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Badge, Button, Dialog, Dropdown, ErrorMessage, toast } from "frappe-ui"
+import { Badge, Button, Dialog, Dropdown, ErrorMessage, ItemListRow, toast } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import EventPageDrawer from "@/components/dashboard/events/pages/EventPageDrawer.vue"
@@ -9,6 +9,7 @@ import {
 	type EventPageTemplate,
 	eventPageTemplates,
 } from "@/components/dashboard/events/pages/eventPageTemplates"
+import { useEventPageOrder } from "@/components/dashboard/events/pages/useEventPageOrder"
 import { useEventPages } from "@/data/events"
 import type { AdditionalEventPage } from "@/types"
 import { serverErrorMessage } from "@/utils/serverError"
@@ -17,13 +18,20 @@ const props = defineProps<{ event: string }>()
 
 const pages = useEventPages(props.event)
 
-// Held locally so a drag lands at once; the server order replaces it once every write is in.
-const order = ref<AdditionalEventPage[]>([])
-const reordering = ref(false)
+const { order, animateMoves, move, draggedIndex, overIndex, dropAt, endDrag, moveWithArrowKeys } =
+	useEventPageOrder(pages)
+
+// A new page can land out of view, so it lights up briefly to show where it went.
+const flashedName = ref<string | null>(null)
+let flashTimer: ReturnType<typeof setTimeout>
 watch(
-	() => pages.data,
-	(data) => !reordering.value && (order.value = [...(data ?? [])]),
-	{ immediate: true },
+	() => pages.insert.data?.name,
+	(name) => {
+		if (!name) return
+		flashedName.value = name
+		clearTimeout(flashTimer)
+		flashTimer = setTimeout(() => (flashedName.value = null), 900)
+	},
 )
 
 const titles = computed(() => new Set(order.value.map((page) => page.title)))
@@ -97,38 +105,6 @@ async function duplicate(page: AdditionalEventPage) {
 	if (pages.insert.error) toast.error(serverErrorMessage(pages.insert.error))
 }
 
-async function move(fromIndex: number, toIndex: number) {
-	if (toIndex < 0 || toIndex >= order.value.length || fromIndex === toIndex) return
-	const reordered = [...order.value]
-	reordered.splice(toIndex, 0, ...reordered.splice(fromIndex, 1))
-	order.value = reordered
-	reordering.value = true
-	await Promise.all(
-		reordered.map((page, index) =>
-			page.display_order === index + 1
-				? null
-				: pages.setValue.submit({ name: page.name, display_order: index + 1 }).catch(() => null),
-		),
-	)
-	reordering.value = false
-	if (pages.setValue.error) toast.error(serverErrorMessage(pages.setValue.error))
-	await pages.reload()
-}
-
-const draggedIndex = ref<number | null>(null)
-
-function dropAt(index: number) {
-	if (draggedIndex.value !== null) move(draggedIndex.value, index)
-	draggedIndex.value = null
-}
-
-function moveWithArrowKeys(event: KeyboardEvent, index: number) {
-	const offset = { ArrowUp: -1, ArrowDown: 1 }[event.key]
-	if (!offset) return
-	event.preventDefault()
-	move(index, index + offset)
-}
-
 const pendingDelete = ref<AdditionalEventPage | null>(null)
 const confirmingDelete = computed({
 	get: () => pendingDelete.value !== null,
@@ -190,31 +166,54 @@ async function remove() {
 			</div>
 		</div>
 
-		<ul
+		<TransitionGroup
 			v-else
-			class="flex flex-col gap-px overflow-hidden rounded-4 border border-outline-gray-2 bg-outline-gray-1"
+			tag="ul"
+			class="relative flex flex-col gap-0.5 rounded-4 border border-outline-gray-2 p-1"
+			:move-class="
+				animateMoves
+					? 'transition-transform duration-200 ease-[cubic-bezier(0.77,0,0.175,1)] motion-reduce:transition-none'
+					: ''
+			"
+			enter-active-class="transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
+			enter-from-class="translate-y-1 opacity-0 motion-reduce:translate-y-0"
+			leave-active-class="absolute inset-x-1 transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
+			leave-to-class="opacity-0"
 		>
-			<li
+			<ItemListRow
 				v-for="(page, index) in order"
 				:key="page.name"
-				class="flex items-center gap-1 bg-surface-base py-2.5 pl-1 pr-2 transition-colors hover:bg-surface-gray-1"
-				:class="{ 'opacity-40': draggedIndex === index }"
+				as="li"
+				size="lg"
+				class="relative cursor-pointer !pl-1 active:bg-surface-gray-3 [@media(hover:hover)]:hover:bg-surface-gray-2"
+				:class="{
+					'opacity-40': draggedIndex === index,
+					'!bg-surface-gray-3': flashedName === page.name,
+				}"
 				@click="edit(page)"
-				@dragover.prevent
+				@dragover.prevent="overIndex = index"
 				@drop="dropAt(index)"
 			>
-				<button
-					type="button"
-					draggable="true"
-					class="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-4 text-ink-gray-4 hover:text-ink-gray-7 focus-visible:outline-none focus-visible:focus-ring"
-					:aria-label="__('Reorder {0}', [page.title])"
-					@click.stop
-					@dragstart="draggedIndex = index"
-					@dragend="draggedIndex = null"
-					@keydown="moveWithArrowKeys($event, index)"
-				>
-					<span class="lucide-grip-vertical size-4" aria-hidden="true" />
-				</button>
+				<template #prefix>
+					<Button
+						variant="ghost"
+						icon="lucide-grip-vertical"
+						draggable="true"
+						class="cursor-grab text-ink-gray-4 active:cursor-grabbing"
+						:aria-label="__('Reorder {0}', [page.title])"
+						@click.stop
+						@dragstart="draggedIndex = index"
+						@dragend="endDrag"
+						@keydown="moveWithArrowKeys($event, index)"
+					/>
+				</template>
+				<!-- Where the dragged row will land: above this one when moving up, below when down. -->
+				<span
+					v-if="draggedIndex !== null && overIndex === index && draggedIndex !== index"
+					class="pointer-events-none absolute inset-x-2 h-0.5 rounded-full bg-surface-gray-6"
+					:class="draggedIndex < index ? '-bottom-0.5' : '-top-0.5'"
+					aria-hidden="true"
+				/>
 				<EventPageRow
 					:page="page"
 					:published="isPublished(page)"
@@ -225,23 +224,19 @@ async function remove() {
 					@move="move(index, index + $event)"
 					@delete="pendingDelete = page"
 				/>
-			</li>
-			<li class="bg-surface-base">
+			</ItemListRow>
+			<li key="add">
 				<Dropdown :options="addOptions" align="start">
-					<button
-						type="button"
-						class="flex w-full items-center gap-3 px-3 py-2.5 text-left text-base text-ink-gray-5 transition-colors hover:bg-surface-gray-1 hover:text-ink-gray-8 focus-visible:outline-none focus-visible:focus-ring"
-					>
-						<span
-							class="grid size-8 place-items-center rounded-3 border border-dashed border-outline-gray-3"
-						>
-							<span class="lucide-plus size-4" aria-hidden="true" />
-						</span>
-						{{ __("Add page") }}
-					</button>
+					<Button
+						variant="ghost"
+						size="md"
+						icon-left="lucide-plus"
+						:label="__('Add page')"
+						class="w-full !justify-start !text-ink-gray-5 hover:!text-ink-gray-8"
+					/>
 				</Dropdown>
 			</li>
-		</ul>
+		</TransitionGroup>
 
 		<EventPageDrawer
 			v-model:open="drawerOpen"

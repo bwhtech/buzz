@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, ErrorMessage, Switch, toast } from "frappe-ui"
+import { Breadcrumbs, Button, ErrorMessage, Switch, toast } from "frappe-ui"
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, reactive, watch } from "vue"
 
@@ -52,6 +52,11 @@ function hasText(html: string) {
 
 const canSave = computed(() => isDirty.value && Boolean(form.title.trim()) && hasText(form.content))
 
+const crumbs = computed(() => [
+	{ label: __("Pages"), onClick: () => (open.value = false) },
+	{ label: form.title || __("Untitled page") },
+])
+
 const write = computed(() => (isNew.value ? props.pages.insert : props.pages.setValue))
 
 async function save() {
@@ -82,10 +87,8 @@ async function save() {
 			<div
 				class="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-outline-gray-1 pl-5 pr-2.5"
 			>
-				<DrawerTitle class="flex min-w-0 items-center gap-1.5 text-sm">
-					<span class="text-ink-gray-5">{{ __("Pages") }}</span>
-					<span class="text-ink-gray-4" aria-hidden="true">/</span>
-					<span class="truncate text-ink-gray-8">{{ form.title || __("Untitled page") }}</span>
+				<DrawerTitle class="min-w-0">
+					<Breadcrumbs :items="crumbs" />
 				</DrawerTitle>
 				<DrawerDescription class="sr-only">
 					{{ __("An extra tab on the event's public page.") }}
@@ -108,7 +111,7 @@ async function save() {
 				</div>
 
 				<div
-					class="overflow-hidden rounded-4 border border-outline-gray-2 transition-colors duration-150 ease-out focus-within:border-outline-gray-4 motion-reduce:transition-none"
+					class="overflow-hidden rounded-4 border border-outline-gray-2 transition-colors duration-150 ease focus-within:border-outline-gray-4 motion-reduce:transition-none"
 				>
 					<Editor
 						v-model="form.content"
