@@ -19,7 +19,7 @@
 				</span>
 				<span
 					v-if="index < steps.length - 1"
-					class="my-1 min-h-[26px] w-px flex-1 bg-outline-gray-2"
+					class="my-1 min-h-[26px] flex-1 border-l border-outline-gray-2"
 				/>
 			</div>
 			<div class="flex flex-col gap-0.5 pb-[18px] pt-0.5">

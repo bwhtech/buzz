@@ -157,7 +157,7 @@ async function save(values: TierValues) {
 		<section class="space-y-2">
 			<div class="flex items-center gap-3">
 				<h3 class="text-xs uppercase tracking-wide text-ink-gray-5">Sponsors</h3>
-				<span class="h-px flex-1 bg-outline-gray-1" aria-hidden="true" />
+				<span class="flex-1 border-t border-outline-gray-1" aria-hidden="true" />
 				<span class="text-xs tabular-nums text-ink-gray-5">{{ sponsorsInTier.length }}</span>
 			</div>
 			<div v-if="sponsorsInTier.length" class="grid grid-cols-2 gap-3">
