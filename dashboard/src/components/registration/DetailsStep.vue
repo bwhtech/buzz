@@ -77,13 +77,14 @@
 						:rows="2"
 						autocomplete="street-address"
 					/>
-					<FormControl
-						v-model="billing.billing_state"
-						type="select"
+					<Combobox
+						:model-value="billing.billing_state || null"
 						:label="__('State')"
 						:size="inputSize"
-						:placeholder="__('Select state')"
+						:placeholder="__('Search state')"
 						:options="INDIAN_STATES"
+						open-on-click
+						@update:model-value="billing.billing_state = String($event ?? '')"
 					/>
 				</div>
 			</Collapse>
@@ -92,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { Checkbox, FormControl } from "frappe-ui"
+import { Checkbox, Combobox, FormControl } from "frappe-ui"
 import { computed } from "vue"
 
 import type { BillingDetails } from "@/composables/useBookingFormStorage"
