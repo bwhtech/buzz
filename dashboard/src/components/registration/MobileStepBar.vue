@@ -16,9 +16,7 @@
 					{{ __("Step {0} of {1} · {2}", [current + 1, steps.length, steps[current]?.label]) }}
 				</span>
 			</div>
-			<div class="flex w-11 flex-none justify-center">
-				<HoldPill v-if="secondsLeft" compact :seconds-left="secondsLeft" />
-			</div>
+			<div class="w-11 flex-none" />
 		</div>
 		<div class="flex gap-1 px-4 pb-2.5 pt-0.5" aria-hidden="true">
 			<div
@@ -38,14 +36,12 @@
 <script setup lang="ts">
 import LucideChevronLeft from "~icons/lucide/chevron-left"
 
-import HoldPill from "./HoldPill.vue"
 import type { RegistrationStep } from "./useRegistrationSteps"
 
 defineProps<{
 	title: string
 	steps: RegistrationStep[]
 	current: number
-	secondsLeft: number | null
 }>()
 const emit = defineEmits<{ back: [] }>()
 </script>

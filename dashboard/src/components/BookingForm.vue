@@ -47,12 +47,11 @@
 				:title="__(eventDetails.title)"
 				:steps="steps"
 				:current="current"
-				:seconds-left="expired ? null : secondsLeft"
 				@back="back"
 			/>
 
 			<form
-				class="mx-auto grid max-w-6xl items-start gap-10 px-4 pb-36 pt-5 md:px-6 lg:grid-cols-[190px_minmax(0,1fr)_320px] lg:pb-16 lg:pt-7"
+				class="mx-auto grid max-w-6xl items-start gap-10 px-4 pb-48 pt-5 md:px-6 lg:grid-cols-[190px_minmax(0,1fr)_320px] lg:pb-16 lg:pt-7"
 				:class="{ 'max-w-xl': isMobile }"
 				novalidate
 				@submit.prevent="next"
@@ -71,10 +70,6 @@
 						class="flex min-w-0 flex-col gap-6"
 						:style="{ '--direction': direction }"
 					>
-						<MobileEventCard
-							v-if="isMobile && step.id === 'tickets'"
-							:event-details="eventDetails"
-						/>
 						<header class="flex flex-col gap-1.5">
 							<h1 class="text-xl font-semibold tracking-[-0.01em] text-ink-gray-9 md:text-2xl">
 								{{ stepCopy.title }}
@@ -200,6 +195,13 @@
 					"
 					@open-summary="showSummarySheet = true"
 				>
+					<template #notice>
+						<TicketHoldTimer
+							:seconds-left="secondsLeft"
+							:expired="expired"
+							@hold-again="holdAgain"
+						/>
+					</template>
 					<Button
 						variant="solid"
 						size="lg"
@@ -268,7 +270,6 @@ import CheckoutHeader from "./registration/CheckoutHeader.vue"
 import CouponField from "./registration/CouponField.vue"
 import CurrencySwitch from "./registration/CurrencySwitch.vue"
 import DetailsStep from "./registration/DetailsStep.vue"
-import MobileEventCard from "./registration/MobileEventCard.vue"
 import MobileStepBar from "./registration/MobileStepBar.vue"
 import MobileTotalBar from "./registration/MobileTotalBar.vue"
 import OrderSummary from "./registration/OrderSummary.vue"
