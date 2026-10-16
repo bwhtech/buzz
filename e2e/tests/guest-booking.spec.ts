@@ -74,7 +74,7 @@ test.describe("Guest Booking", () => {
 		await bookingPage.goToAttendees()
 		await bookingPage.fillMyDetails("Test", "Guest Phone", email)
 		await bookingPage.continue()
-		await page.locator('input[placeholder="Enter your phone number"]').fill(phone)
+		await page.getByPlaceholder("Phone number").fill(phone)
 
 		const otpResponsePromise = page.waitForResponse(
 			(resp) => resp.url().includes("send_guest_booking_otp") && resp.status() === 200,
@@ -107,7 +107,7 @@ test.describe("Guest Booking", () => {
 		// A well-formed but too-short number passes PhoneInput's digit filter and is
 		// caught by the server, which reports it under the field rather than as a toast.
 		await bookingPage.continue()
-		const phoneInput = page.locator('input[placeholder="Enter your phone number"]')
+		const phoneInput = page.getByPlaceholder("Phone number")
 		await phoneInput.fill("12345")
 		await bookingPage.submit()
 

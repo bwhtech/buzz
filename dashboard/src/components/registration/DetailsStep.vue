@@ -25,6 +25,7 @@
 				<PhoneInput
 					v-model="billing.buyer_phone"
 					:label="__('Phone')"
+					:size="inputSize"
 					:error="phoneError || shown(errors.buyer_phone)"
 					:required="phoneRequired"
 				/>

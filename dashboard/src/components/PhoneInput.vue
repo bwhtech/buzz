@@ -1,13 +1,12 @@
 <template>
 	<div class="space-y-1.5">
-		<label class="text-xs text-ink-gray-5 block">
-			{{ __(label) }}
-			<span v-if="required" class="text-ink-red-8">*</span>
-		</label>
 		<TextInput
 			class="[&_input]:ps-[calc(var(--dial-code-width)+0.75rem)]"
 			:style="{ '--dial-code-width': `${dialCodeWidth}px` }"
 			type="tel"
+			:label="__(label)"
+			:required="required"
+			:size="size"
 			:variant="variant"
 			:model-value="localNumber"
 			@update:model-value="onNumberInput"
@@ -19,7 +18,7 @@
 						class="!gap-0.5 !px-1.5"
 						trigger="button"
 						variant="ghost"
-						size="sm"
+						:size="size"
 						:model-value="dialCode"
 						@update:model-value="onDialCodeChange"
 						:options="dialCodeOptions"
@@ -52,6 +51,7 @@ const props = defineProps({
 	required: { type: Boolean, default: false },
 	error: { type: String, default: "" },
 	variant: { type: String as PropType<"subtle" | "outline" | "ghost">, default: "subtle" },
+	size: { type: String as PropType<"sm" | "md" | "lg">, default: "sm" },
 })
 
 const emit = defineEmits(["update:modelValue"])
