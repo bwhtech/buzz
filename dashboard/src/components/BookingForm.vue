@@ -36,9 +36,10 @@
 		</RegistrationComplete>
 
 		<template v-else>
-			<RegistrationBanner
+			<CheckoutHeader
 				v-if="!isMobile"
 				:event-details="eventDetails"
+				:event-route="eventRoute"
 				:seconds-left="expired ? null : secondsLeft"
 			/>
 			<MobileStepBar
@@ -58,7 +59,7 @@
 			>
 				<RegistrationStepRail
 					v-if="!isMobile"
-					class="sticky top-6"
+					class="sticky top-20"
 					:steps="steps"
 					:current="current"
 					@go="go"
@@ -142,7 +143,7 @@
 					</section>
 				</Transition>
 
-				<aside v-if="!isMobile" class="sticky top-6 flex flex-col gap-3">
+				<aside v-if="!isMobile" class="sticky top-20 flex flex-col gap-3">
 					<div class="overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-gray-1">
 						<div class="flex items-center justify-between gap-2 px-4 pb-3 pt-4">
 							<h2 class="text-lg font-semibold text-ink-gray-9">{{ __("Order summary") }}</h2>
@@ -263,6 +264,7 @@ import { isZoomBackedCategory } from "@/utils/zoomCategory"
 
 import OfflinePaymentDialog from "./OfflinePaymentDialog.vue"
 import AttendeesStep from "./registration/AttendeesStep.vue"
+import CheckoutHeader from "./registration/CheckoutHeader.vue"
 import CouponField from "./registration/CouponField.vue"
 import CurrencySwitch from "./registration/CurrencySwitch.vue"
 import DetailsStep from "./registration/DetailsStep.vue"
@@ -272,7 +274,6 @@ import MobileTotalBar from "./registration/MobileTotalBar.vue"
 import OrderSummary from "./registration/OrderSummary.vue"
 import OtpDialog from "./registration/OtpDialog.vue"
 import PaymentStep from "./registration/PaymentStep.vue"
-import RegistrationBanner from "./registration/RegistrationBanner.vue"
 import RegistrationComplete from "./registration/RegistrationComplete.vue"
 import RegistrationStepRail from "./registration/RegistrationStepRail.vue"
 import { buildSteps, stepCopy as copyFor } from "./registration/registrationSteps"

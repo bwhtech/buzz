@@ -3,7 +3,7 @@
 		class="min-h-dvh bg-surface-base text-ink-gray-8"
 		:class="{ 'h-dvh overflow-hidden': fullBleed }"
 	>
-		<template v-if="routerReady && !fullBleed">
+		<template v-if="routerReady && !fullBleed && !meta.ownHeader">
 			<SiteHeader />
 		</template>
 		<div :class="contentClass">
