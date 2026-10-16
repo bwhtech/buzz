@@ -184,6 +184,8 @@ declare module 'vue' {
     SponsorsSection: typeof import('./src/components/dashboard/sponsorships/SponsorsSection.vue')['default']
     SubmissionThumbnail: typeof import('./src/components/dashboard/teams/SubmissionThumbnail.vue')['default']
     SuccessMessage: typeof import('./src/components/SuccessMessage.vue')['default']
+    SummaryCardHeader: typeof import('./src/components/registration/SummaryCardHeader.vue')['default']
+    SummaryStep: typeof import('./src/components/registration/SummaryStep.vue')['default']
     TagBadge: typeof import('./src/components/common/tags/TagBadge.vue')['default']
     TagEditor: typeof import('./src/components/common/tags/TagEditor.vue')['default']
     TaxSettings: typeof import('./src/components/dashboard/ticket-types/TaxSettings.vue')['default']

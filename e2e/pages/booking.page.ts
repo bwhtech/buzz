@@ -1,6 +1,7 @@
 import { expect, Locator, Page } from "@playwright/test"
 
-// The registration flow: tickets, attendees, then billing and payment when the event needs them.
+// The registration flow: tickets, attendees, details, then a summary for paid orders.
+const ADVANCES = /Continue to|Review booking/
 export class BookingPage {
 	private page: Page
 	addOnCheckboxes: Locator
@@ -57,20 +58,20 @@ export class BookingPage {
 		for (let step = 0; step < 4; step++) {
 			const label = (await this.continueButton.textContent()) ?? ""
 			await this.continueButton.click()
-			if (!label.includes("Continue to")) return
+			if (!ADVANCES.test(label)) return
 			await expect(this.continueButton).not.toHaveText(label)
 		}
 	}
 
-	// Continues to the payment step and pays with the named method.
+	// Continues to the summary step and pays with the named method.
 	async payWith(method: string): Promise<void> {
-		for (let step = 0; step < 3; step++) {
+		for (let step = 0; step < 4; step++) {
 			const label = (await this.continueButton.textContent()) ?? ""
-			if (!label.includes("Continue to")) break
+			if (!ADVANCES.test(label)) break
 			await this.continueButton.click()
 			await expect(this.continueButton).not.toHaveText(label)
 		}
-		// With a single payment method there is no payment step to pick from.
+		// With a single payment method there is nothing to pick on the summary.
 		const option = this.page.getByRole("radio", { name: new RegExp(method) })
 		if (await option.count()) await option.click()
 		await this.continueButton.click()

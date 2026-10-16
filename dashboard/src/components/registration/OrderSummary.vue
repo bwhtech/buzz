@@ -1,9 +1,9 @@
 <template>
 	<div class="flex flex-col text-p-sm">
-		<p v-if="!lines.length" class="px-4 pb-4 text-ink-gray-5">
+		<p v-if="lines && !lines.length" class="px-4 pb-4 text-ink-gray-5">
 			{{ __("No tickets selected yet") }}
 		</p>
-		<ul v-else class="flex flex-col gap-2.5 px-4 pb-3.5">
+		<ul v-else-if="lines" class="flex flex-col gap-2.5 px-4 pb-3.5">
 			<li v-for="line in lines" :key="line.key" class="flex justify-between gap-3">
 				<div class="flex min-w-0 flex-col">
 					<span class="text-ink-gray-8">{{ __(line.title) }}</span>
@@ -17,7 +17,10 @@
 		<div v-if="$slots.coupon" class="border-t border-outline-gray-2 px-4 py-3">
 			<slot name="coupon" />
 		</div>
-		<dl class="flex flex-col gap-1.5 border-t border-outline-gray-2 px-4 py-3 tabular-nums">
+		<dl
+			class="flex flex-col gap-1.5 border-outline-gray-2 px-4 py-3 tabular-nums"
+			:class="{ 'border-t': lines || $slots.coupon }"
+		>
 			<template v-if="totals.subtotal > 0">
 				<!-- An inclusive price with no discount makes the subtotal the total. -->
 				<div
@@ -73,7 +76,8 @@ export interface OrderTotals {
 }
 
 const props = defineProps<{
-	lines: SummaryLineItem[]
+	// Left out where only the totals are shown.
+	lines?: SummaryLineItem[]
 	totals: OrderTotals
 	currency: string
 	taxLabel: string

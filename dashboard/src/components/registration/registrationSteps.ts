@@ -3,8 +3,8 @@ import type { RegistrationStep, RegistrationStepId } from "./useRegistrationStep
 interface StepState {
 	ticketCount: number
 	completeAttendees: number
-	showPayment: boolean
 	paid: boolean
+	payable: boolean
 	totalLabel: string
 }
 
@@ -31,7 +31,7 @@ export function buildSteps(state: StepState): RegistrationStep[] {
 		label: state.paid ? __("Billing") : __("Your details"),
 		sub: state.paid ? __("Buyer and tax details") : __("Contact details"),
 	})
-	if (state.showPayment) steps.push({ id: "payment", label: __("Payment"), sub: state.totalLabel })
+	if (state.payable) steps.push({ id: "summary", label: __("Summary"), sub: state.totalLabel })
 	return steps
 }
 
@@ -53,7 +53,15 @@ export function stepCopy(id: RegistrationStepId, event: { free: boolean; paid: b
 				? __("Who's paying, and whether you need a tax invoice.")
 				: __("Where to send the confirmation."),
 		},
-		payment: { title: __("Payment"), description: __("Choose how you'd like to pay.") },
+		summary: {
+			title: __("Review your booking"),
+			description: __("Check everything before you pay. Use Edit on any section to change it."),
+		},
 	}
 	return copy[id]
 }
+
+export const isGstLabel = (taxLabel: string) => taxLabel.trim().toUpperCase() === "GST"
+
+export const taxIdLabel = (taxLabel: string) =>
+	isGstLabel(taxLabel) ? "GSTIN" : __("{0} number", [__(taxLabel)])

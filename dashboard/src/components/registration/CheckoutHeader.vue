@@ -19,6 +19,8 @@
 			<div class="flex items-center justify-end gap-3">
 				<span
 					v-if="secondsLeft"
+					role="timer"
+					:aria-label="__('Tickets held for {0}', [clock])"
 					class="flex items-center gap-1.5 text-p-sm tabular-nums text-ink-gray-6"
 				>
 					<LucideTimer class="size-3.5" />
@@ -56,11 +58,7 @@ const props = defineProps<{
 
 const { setColorScheme } = useColorScheme()
 
-const { dateLabel } = useEventDateLabels(() => props.eventDetails)
-const venueLabel = computed(
-	() =>
-		props.eventDetails.venue_name || (props.eventDetails.medium === "Online" ? __("Online") : ""),
-)
+const { dateLabel, venueLabel } = useEventDateLabels(() => props.eventDetails)
 const subtitle = computed(() => [dateLabel.value, venueLabel.value].filter(Boolean).join(" · "))
 const clock = computed(() => {
 	const seconds = props.secondsLeft ?? 0

@@ -1,6 +1,10 @@
 <template>
 	<div class="flex flex-col gap-2">
+		<h2 v-if="gateways.length > 1" class="pb-1 text-base font-semibold text-ink-gray-9">
+			{{ __("Pay with") }}
+		</h2>
 		<RadioGroup
+			v-if="gateways.length > 1"
 			:model-value="selected ?? undefined"
 			@update:model-value="selected = String($event)"
 			:aria-label="__('Payment method')"

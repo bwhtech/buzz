@@ -22,5 +22,9 @@ export function useEventDateLabels(eventDetails: MaybeRefOrGetter<Record<string,
 		return time_zone_label ? `${range} ${time_zone_label}` : range
 	})
 
-	return { startDate, dateLabel, timeLabel }
+	const venueLabel = computed(
+		() => event.value.venue_name || (event.value.medium === "Online" ? __("Online") : ""),
+	)
+
+	return { startDate, dateLabel, timeLabel, venueLabel }
 }

@@ -1,6 +1,6 @@
 import { computed, ref, type Ref } from "vue"
 
-export type RegistrationStepId = "tickets" | "attendees" | "details" | "payment"
+export type RegistrationStepId = "tickets" | "attendees" | "details" | "summary"
 
 export interface RegistrationStep {
 	id: RegistrationStepId

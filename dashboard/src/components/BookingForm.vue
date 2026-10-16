@@ -71,7 +71,7 @@
 						:style="{ '--direction': direction }"
 					>
 						<header class="flex flex-col gap-1.5">
-							<h1 class="text-xl font-semibold tracking-[-0.01em] text-ink-gray-9 md:text-2xl">
+							<h1 class="text-xl-semibold tracking-[-0.01em] text-ink-gray-9 md:text-2xl-semibold">
 								{{ stepCopy.title }}
 							</h1>
 							<p class="text-base text-ink-gray-6 text-pretty">{{ stepCopy.description }}</p>
@@ -125,12 +125,27 @@
 							:large="isMobile"
 						/>
 
-						<PaymentStep
+						<SummaryStep
 							v-else
-							v-model="selectedGateway"
-							:gateways="gateways"
-							:offline-gateways="offlineGatewayTitles"
-						/>
+							:event-details="eventDetails"
+							:attendees="attendees"
+							:me="me"
+							:ticket-types-map="ticketTypesMap"
+							:add-ons-map="addOnsMap"
+							:billing="billing"
+							:invoice-shown="tax.apply"
+							:tax-label="tax.label"
+							:currency="currency"
+							:show-currency="currencies.length > 1"
+							:totals="{ ...summaryProps, lines: undefined }"
+							@edit="goToStep"
+						>
+							<PaymentStep
+								v-model="selectedGateway"
+								:gateways="gateways"
+								:offline-gateways="offlineGatewayTitles"
+							/>
+						</SummaryStep>
 
 						<p v-if="isMobile && showStepError" class="text-center text-p-sm text-ink-red-6">
 							{{ stepErrorMessage }}
@@ -210,7 +225,7 @@
 						:loading="submitting"
 						:disabled="!attendees.length"
 					>
-						{{ isLast ? ctaLabel : __("Continue") }}
+						{{ mobileCtaLabel }}
 					</Button>
 				</MobileTotalBar>
 			</form>
@@ -277,7 +292,8 @@ import OtpDialog from "./registration/OtpDialog.vue"
 import PaymentStep from "./registration/PaymentStep.vue"
 import RegistrationComplete from "./registration/RegistrationComplete.vue"
 import RegistrationStepRail from "./registration/RegistrationStepRail.vue"
-import { buildSteps, stepCopy as copyFor } from "./registration/registrationSteps"
+import { buildSteps, isGstLabel, stepCopy as copyFor } from "./registration/registrationSteps"
+import SummaryStep from "./registration/SummaryStep.vue"
 import TicketTierPicker from "./registration/TicketTierPicker.vue"
 import {
 	attendeePayload,
@@ -287,7 +303,7 @@ import {
 import { pricedIn, useCurrencySwitch } from "./registration/useCurrencySwitch"
 import { useGuestOtp } from "./registration/useGuestOtp"
 import { useOrderPricing } from "./registration/useOrderPricing"
-import { useRegistrationSteps } from "./registration/useRegistrationSteps"
+import { type RegistrationStepId, useRegistrationSteps } from "./registration/useRegistrationSteps"
 import { useRegistrationValidation } from "./registration/useRegistrationValidation"
 import TicketHoldTimer from "./TicketHoldTimer.vue"
 
@@ -508,7 +524,7 @@ const validation = useRegistrationValidation({
 	billing,
 	selectedGateway,
 	invoiceShown: () => tax.value.apply,
-	taxIsGst: () => tax.value.label.trim().toUpperCase() === "GST",
+	taxIsGst: () => isGstLabel(tax.value.label),
 	phoneRequired: () => props.isGuestMode && isPhoneOtp.value,
 	lastNameRequired: () => isZoomEvent.value,
 })
@@ -518,8 +534,8 @@ const steps = computed(() =>
 	buildSteps({
 		ticketCount: attendees.value.length,
 		completeAttendees: validation.completeAttendees.value,
-		showPayment: total.value > 0 && gateways.value.length > 1,
 		paid: netAmount.value > 0,
+		payable: total.value > 0,
 		totalLabel: formatWholePriceOrFree(total.value, currency.value),
 	}),
 )
@@ -535,13 +551,24 @@ const stepErrors = computed(() => validation.errorsFor(step.value.id))
 const showStepError = computed(() => tried.value && stepErrors.value.length > 0)
 const stepErrorMessage = computed(() => validation.summarize(stepErrors.value))
 
+const nextStep = computed(() => steps.value[current.value + 1])
+const totalLabel = computed(() => formatWholePriceOrFree(total.value, currency.value))
 const ctaLabel = computed(() => {
-	if (!isLast.value)
-		return __("Continue to {0}", [steps.value[current.value + 1].label.toLowerCase()])
+	if (nextStep.value?.id === "summary") return __("Review booking")
+	if (nextStep.value) return __("Continue to {0}", [nextStep.value.label.toLowerCase()])
 	if (placing.value) return __("Processing...")
-	if (total.value > 0) return __("Pay {0}", [formatWholePriceOrFree(total.value, currency.value)])
+	if (total.value > 0) return __("Proceed to pay {0}", [totalLabel.value])
 	return isZoomEvent.value || props.eventDetails.free_event ? __("Register") : __("Book Tickets")
 })
+const mobileCtaLabel = computed(() => {
+	if (nextStep.value?.id === "summary") return __("Review")
+	if (nextStep.value) return __("Continue")
+	return total.value > 0 && !placing.value ? __("Pay {0}", [totalLabel.value]) : ctaLabel.value
+})
+
+function goToStep(id: RegistrationStepId) {
+	go(steps.value.findIndex((candidate) => candidate.id === id))
+}
 
 function next() {
 	if (requiresLogin.value) return openLoginDialog()

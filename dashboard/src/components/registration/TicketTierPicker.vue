@@ -34,7 +34,7 @@
 						</span>
 					</div>
 					<div class="flex items-center justify-between gap-4 md:justify-end">
-						<span class="text-lg font-semibold tabular-nums text-ink-gray-9 md:text-base">
+						<span class="text-lg-semibold tabular-nums text-ink-gray-9 md:text-base-semibold">
 							{{ formatWholePriceOrFree(ticketType.price, ticketType.currency) }}
 						</span>
 						<div class="flex min-w-[104px] justify-end">
