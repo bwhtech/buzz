@@ -6,21 +6,20 @@ import { BookingPage } from "../pages"
 const uid = Date.now()
 
 test.describe("Guest Booking UX", () => {
-	test("guest details auto-fill to Attendee 1", async ({ page }) => {
+	test("guest details fill the first ticket and the buyer", async ({ page }) => {
 		const bookingPage = new BookingPage(page)
 		await bookingPage.goto("guest-no-otp-e2e")
 		await bookingPage.waitForFormLoad()
 
-		await page.locator('input[placeholder="Enter your first name"]').fill("Test")
-		await page.locator('input[placeholder="Enter your last name"]').fill("Guest")
-		await page.locator('input[placeholder="Enter your email"]').fill("test@example.com")
-		await page.locator('input[placeholder="Enter your email"]').blur()
+		await bookingPage.goToAttendees()
+		await bookingPage.fillMyDetails("Test", "Guest", "test@example.com")
 
-		await expect(page.locator('input[placeholder="Enter first name"]').first()).toHaveValue("Test")
-		await expect(page.locator('input[placeholder="Enter last name"]').first()).toHaveValue("Guest")
-		await expect(page.locator('input[placeholder="Enter email address"]').first()).toHaveValue(
-			"test@example.com",
-		)
+		const firstTicket = page.locator("article").first()
+		await expect(firstTicket.getByLabel("First name")).toHaveValue("Test")
+		await expect(firstTicket.getByLabel("Email")).toHaveValue("test@example.com")
+
+		await bookingPage.continue()
+		await expect(page.getByLabel("Email").first()).toHaveValue("test@example.com")
 	})
 })
 
@@ -31,10 +30,8 @@ test.describe("Guest Booking", () => {
 		await bookingPage.goto("guest-no-otp-e2e")
 		await bookingPage.waitForFormLoad()
 
-		await page.locator('input[placeholder="Enter your first name"]').fill("Test")
-		await page.locator('input[placeholder="Enter your last name"]').fill("Guest")
-		await page.locator('input[placeholder="Enter your email"]').fill(email)
-		await page.locator('input[placeholder="Enter your email"]').blur()
+		await bookingPage.goToAttendees()
+		await bookingPage.fillMyDetails("Test", "Guest", email)
 
 		await bookingPage.submit()
 
@@ -47,10 +44,8 @@ test.describe("Guest Booking", () => {
 		await bookingPage.goto("guest-email-otp-e2e")
 		await bookingPage.waitForFormLoad()
 
-		await page.locator('input[placeholder="Enter your first name"]').fill("Test")
-		await page.locator('input[placeholder="Enter your last name"]').fill("Guest Email")
-		await page.locator('input[placeholder="Enter your email"]').fill(email)
-		await page.locator('input[placeholder="Enter your email"]').blur()
+		await bookingPage.goToAttendees()
+		await bookingPage.fillMyDetails("Test", "Guest Email", email)
 
 		const otpResponsePromise = page.waitForResponse(
 			(resp) => resp.url().includes("send_guest_booking_otp") && resp.status() === 200,
@@ -63,7 +58,7 @@ test.describe("Guest Booking", () => {
 		const otp = otpData.data?.otp
 		expect(otp).toBeTruthy()
 
-		await expect(page.getByText("Verify Your Email")).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText("Verify your email")).toBeVisible({ timeout: 10000 })
 
 		await page.locator('input[placeholder="123456"]').fill(otp!)
 		await page.getByRole("button", { name: "Verify & Book" }).click()
@@ -78,10 +73,9 @@ test.describe("Guest Booking", () => {
 		await bookingPage.goto("guest-phone-otp-e2e")
 		await bookingPage.waitForFormLoad()
 
-		await page.locator('input[placeholder="Enter your first name"]').fill("Test")
-		await page.locator('input[placeholder="Enter your last name"]').fill("Guest Phone")
-		await page.locator('input[placeholder="Enter your email"]').fill(email)
-		await page.locator('input[placeholder="Enter your email"]').blur() // triggers auto-fill
+		await bookingPage.goToAttendees()
+		await bookingPage.fillMyDetails("Test", "Guest Phone", email)
+		await bookingPage.continue()
 		await page.locator('input[placeholder="Enter your phone number"]').fill(phone)
 
 		const otpResponsePromise = page.waitForResponse(
@@ -95,7 +89,7 @@ test.describe("Guest Booking", () => {
 		const otp = otpData.data?.otp
 		expect(otp).toBeTruthy()
 
-		await expect(page.getByText("Verify Your Phone")).toBeVisible({ timeout: 10000 })
+		await expect(page.getByText("Verify your phone")).toBeVisible({ timeout: 10000 })
 
 		await page.locator('input[placeholder="123456"]').fill(otp!)
 		await page.getByRole("button", { name: "Verify & Book" }).click()
@@ -109,18 +103,17 @@ test.describe("Guest Booking", () => {
 		await bookingPage.goto("guest-phone-otp-e2e")
 		await bookingPage.waitForFormLoad()
 
-		await page.locator('input[placeholder="Enter your first name"]').fill("Test")
-		await page.locator('input[placeholder="Enter your last name"]').fill("Guest Phone")
-		await page.locator('input[placeholder="Enter your email"]').fill(email)
-		await page.locator('input[placeholder="Enter your email"]').blur()
+		await bookingPage.goToAttendees()
+		await bookingPage.fillMyDetails("Test", "Guest Phone", email)
 
 		// A well-formed but too-short number passes PhoneInput's digit filter and is
 		// caught by the server, which reports it under the field rather than as a toast.
+		await bookingPage.continue()
 		const phoneInput = page.locator('input[placeholder="Enter your phone number"]')
 		await phoneInput.fill("12345")
 		await bookingPage.submit()
 
 		await expect(page.getByText("is not valid")).toBeVisible({ timeout: 10000 })
-		await expect(page.getByText("Verify Your Phone")).toBeHidden()
+		await expect(page.getByText("Verify your phone")).toBeHidden()
 	})
 })

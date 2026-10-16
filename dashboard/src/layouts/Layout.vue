@@ -6,7 +6,7 @@
 		<template v-if="routerReady && !fullBleed">
 			<SiteHeader />
 		</template>
-		<div :class="fullBleed ? 'h-full' : 'max-w-4xl py-8 px-4 md:py-12 mx-auto'">
+		<div :class="contentClass">
 			<template v-if="!routerReady">
 				<ManagerShellPlaceholder v-if="fullBleed" />
 			</template>
@@ -32,7 +32,13 @@ const requires_auth = computed(() => !route.meta?.isPublic)
 // Until the first navigation settles, `route` is the empty start location, so read the
 // meta of the URL being loaded instead.
 const startMeta = router.resolve(router.options.history.location).meta
-const fullBleed = computed(() => Boolean((routerReady.value ? route.meta : startMeta).fullBleed))
+const meta = computed(() => (routerReady.value ? route.meta : startMeta))
+const fullBleed = computed(() => Boolean(meta.value.fullBleed))
+// Wide pages lay out their own width under the site header.
+const contentClass = computed(() => {
+	if (fullBleed.value) return "h-full"
+	return meta.value.wide ? "" : "max-w-4xl py-8 px-4 md:py-12 mx-auto"
+})
 
 router.isReady().then(() => {
 	routerReady.value = true

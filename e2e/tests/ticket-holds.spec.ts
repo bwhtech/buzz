@@ -7,13 +7,14 @@ import {
 	HOLDS_TICKET_TITLE,
 } from "../data/ticket-holds"
 import { callMethod, createDoc, getList, updateDoc } from "../helpers/frappe"
+import { BookingPage } from "../pages"
 
 interface NamedDoc {
 	name: string
 }
 
 const PARALLEL_REQUESTS = 25
-const HELD_TEXT = "Your tickets are held for"
+const HELD_TEXT = "Held for"
 
 async function eventName(request): Promise<string> {
 	const [event] = await getList<NamedDoc>(request, "Buzz Event", {
@@ -123,8 +124,8 @@ test.describe("booking form", () => {
 		await expect(page.getByText(HELD_TEXT)).toBeVisible()
 		await expect.poll(() => heldQuantity(request, ticketType)).toBe(1)
 
-		await page.getByRole("button", { name: "Add Another Attendee" }).click()
-		await page.getByRole("button", { name: "Add Another Attendee" }).click()
+		await page.getByRole("button", { name: /^Add one / }).click()
+		await page.getByRole("button", { name: /^Add one / }).click()
 		await expect.poll(() => heldQuantity(request, ticketType)).toBe(3)
 
 		await page.goto("about:blank")
@@ -147,7 +148,7 @@ test.describe("booking form", () => {
 		await page.goto(`/b/register/${HOLDS_EVENT_ROUTE}`)
 		await expect(page.getByText(HELD_TEXT)).toBeVisible()
 
-		await page.locator('button[type="submit"]').click()
+		await new BookingPage(page).submit()
 		await page.waitForURL(/booking/)
 
 		const tickets = await getList<NamedDoc>(request, "Event Ticket", {

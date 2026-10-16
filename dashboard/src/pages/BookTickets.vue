@@ -99,7 +99,7 @@ const eventBookingData = reactive<{
 	taxSettings: Record<string, any> | null
 	eventDetails: Record<string, any> | null
 	customFields: FrappeField[] | null
-	paymentGateways: Record<string, any>[]
+	paymentGateways: string[]
 	offlineMethods: OfflineMethod[]
 }>({
 	availableAddOns: null,
