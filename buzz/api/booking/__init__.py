@@ -1,7 +1,7 @@
 import frappe
 from frappe.rate_limiter import rate_limit
 
-from buzz.api.booking import coupons, details, event_data, guests, my_bookings
+from buzz.api.booking import coupons, details, downloads, event_data, guests, my_bookings
 from buzz.api.booking.holds import TicketHoldService
 from buzz.api.booking.schemas import (
 	BookingConfirmationResponse,
@@ -59,6 +59,16 @@ def release_hold(hold_token: str) -> None:
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_booking_confirmation(booking_id: str, token: str | None = None) -> BookingConfirmationResponse:
 	return details.build_booking_confirmation(booking_id, token)
+
+
+@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
+def get_calendar_invite(booking_id: str, token: str | None = None) -> None:
+	downloads.calendar_invite(booking_id, token)
+
+
+@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
+def download_tickets(booking_id: str, token: str | None = None) -> None:
+	downloads.tickets_pdf(booking_id, token)
 
 
 @frappe.whitelist()
