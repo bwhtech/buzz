@@ -1,9 +1,20 @@
 import frappe
 
-from buzz.api.booking import get_booking_confirmation, process_booking
+from buzz.api.booking import (
+	download_tickets,
+	get_booking_confirmation,
+	get_calendar_invite,
+	process_booking,
+)
+from buzz.api.booking.downloads import inlined_qr
 from buzz.api.booking.services import get_booking_access_token, verify_booking_access_token
 from buzz.tests.base_test_cases import BookingTestCase
-from buzz.tests.factories import EventBookingFactory, EventTicketTypeFactory
+from buzz.tests.factories import (
+	EventBookingFactory,
+	EventPaymentFactory,
+	EventTicketTypeFactory,
+	PaymentGatewayFactory,
+)
 
 
 class TestBookingConfirmation(BookingTestCase):
@@ -54,6 +65,68 @@ class TestBookingConfirmation(BookingTestCase):
 		booking = self.create_submitted_booking()
 
 		self.assertEqual(get_booking_confirmation(booking.name).booking.name, booking.name)
+
+	def test_confirmation_names_the_gateway_an_online_payment_went_through(self):
+		booking = self.create_submitted_booking()
+		gateway = PaymentGatewayFactory.create().name
+		EventPaymentFactory.create(
+			"received",
+			reference_doctype="Event Booking",
+			reference_docname=booking.name,
+			payment_gateway=gateway,
+		)
+
+		self.assertEqual(get_booking_confirmation(booking.name).booking.payment_method, gateway)
+
+	def test_guest_with_a_valid_token_downloads_the_calendar_invite(self):
+		booking = self.create_submitted_booking()
+		token = get_booking_access_token(booking.name)
+
+		with self.set_user("Guest"):
+			get_calendar_invite(booking.name, token=token)
+
+		self.assertEqual(frappe.response.type, "download")
+		self.assertEqual(frappe.response.filename, f"{self.event.title}.ics")
+		self.assertIn(f"SUMMARY:{self.event.title}", frappe.response.filecontent)
+
+	def test_guest_with_a_bad_token_gets_no_calendar_invite(self):
+		booking = self.create_submitted_booking()
+
+		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
+			get_calendar_invite(booking.name, token="wrong-token")
+
+	def test_guest_with_a_valid_token_downloads_the_tickets(self):
+		booking = self.create_submitted_booking()
+		token = get_booking_access_token(booking.name)
+
+		with self.set_user("Guest"):
+			download_tickets(booking.name, token=token)
+
+		self.assertEqual(frappe.response.filename, f"Tickets-{booking.name}.pdf")
+		self.assertTrue(frappe.response.filecontent.startswith(b"%PDF"))
+		self.assertFalse(frappe.flags.ignore_print_permissions)
+
+	def test_tickets_print_with_the_qr_inlined_and_the_stored_file_untouched(self):
+		booking = self.create_submitted_booking()
+		ticket = frappe.db.get_value(
+			"Event Ticket", {"booking": booking.name}, ["name", "qr_code"], as_dict=True
+		)
+
+		self.assertTrue(inlined_qr(ticket.name).qr_code.startswith("data:image/png;base64,"))
+		self.assertEqual(frappe.db.get_value("Event Ticket", ticket.name, "qr_code"), ticket.qr_code)
+
+	def test_a_token_opens_only_its_own_booking(self):
+		booking = self.create_submitted_booking()
+		other_token = get_booking_access_token(self.create_submitted_booking().name)
+
+		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
+			download_tickets(booking.name, token=other_token)
+
+	def test_a_signed_in_outsider_gets_no_tickets(self):
+		booking = self.create_submitted_booking()
+
+		with self.set_user(self.outsider), self.assertRaises(frappe.PermissionError):
+			download_tickets(booking.name)
 
 	def create_submitted_booking(self):
 		paid_ticket_type = EventTicketTypeFactory.create("paid", event=self.event.name).name

@@ -3,43 +3,74 @@
 		<Spinner />
 	</div>
 
-	<div v-else-if="confirmation.data">
-		<!-- Success message + confetti -->
-		<SuccessMessage
-			:show="showSuccessMessage"
-			:is-registration="confirmation.data.event.free_event"
-		/>
+	<div v-else-if="confirmation.data" class="mx-auto flex max-w-[600px] flex-col gap-9 pb-16">
+		<div class="flex flex-col gap-7">
+			<SuccessHero :event-title="event.title" :ticket-count="confirmation.data.tickets.length" />
 
-		<h2 class="text-4xl-bold text-ink-gray-9 mb-4">
-			{{
-				confirmation.data.event.free_event ? __("Registration Confirmed") : __("Booking Confirmed")
-			}}
-		</h2>
+			<EventSummaryCard
+				class="fade-up-in"
+				style="animation-delay: 160ms"
+				:event="event"
+				:venue="confirmation.data.venue"
+				:booking-id="bookingId"
+			/>
 
-		<!-- Event Information and Payment Summary in two columns -->
-		<div class="grid grid-cols-1 gap-6 mb-6" :class="{ 'lg:grid-cols-2': showPaymentSummary }">
-			<BookingEventInfo :event="confirmation.data.event" :venue="confirmation.data.venue" />
-
-			<BookingFinancialSummary v-if="showPaymentSummary" :booking="confirmation.data.booking" />
+			<div class="fade-up-in flex flex-wrap justify-center gap-2" style="animation-delay: 220ms">
+				<Button
+					size="md"
+					variant="solid"
+					icon-left="lucide-calendar-plus"
+					:label="__('Add to calendar')"
+					:link="bookingFileUrl('get_calendar_invite')"
+				/>
+				<Button
+					v-if="confirmation.data.venue?.map_link"
+					size="md"
+					variant="subtle"
+					icon-left="lucide-navigation"
+					:label="__('Get directions')"
+					:link="confirmation.data.venue.map_link"
+				/>
+				<Button
+					v-if="event.route"
+					size="md"
+					variant="subtle"
+					icon-left="lucide-link"
+					:label="__('Invite a friend')"
+					@click="copyToClipboard(eventUrl(event.route), __('Event link copied'))"
+				/>
+			</div>
 		</div>
 
-		<!-- Tickets (read-only) -->
-		<TicketsSection
+		<TicketRows
+			class="fade-up-in"
+			style="animation-delay: 260ms"
 			:tickets="confirmation.data.tickets"
-			:can-request-cancellation="false"
-			:can-transfer-tickets="false"
-			:can-change-add-ons="false"
+			:download-url="bookingFileUrl('download_tickets')"
 		/>
 
-		<!-- Manage bookings CTA -->
-		<div class="mt-6 flex justify-center">
-			<Button v-if="!session.isLoggedIn" variant="outline" @click="openLoginDialog()">
-				{{ __("Log in to manage bookings") }}
-			</Button>
-			<Button v-else variant="outline" :link="`/b/account/bookings/${bookingId}`">
+		<BookingFinancialSummary
+			v-if="showPaymentSummary"
+			class="fade-up-in"
+			style="animation-delay: 340ms"
+			:booking="confirmation.data.booking"
+		>
+			<template #footer>{{ paymentLine }}</template>
+		</BookingFinancialSummary>
+
+		<p class="fade-up-in text-center text-p-sm text-ink-gray-5" style="animation-delay: 400ms">
+			{{ __("Need to change a name or cancel?") }}
+			<RouterLink
+				v-if="session.isLoggedIn"
+				:to="`/account/bookings/${bookingId}`"
+				class="text-ink-gray-8 hover:underline"
+			>
 				{{ __("Manage booking") }}
-			</Button>
-		</div>
+			</RouterLink>
+			<button v-else class="text-ink-gray-8 hover:underline" @click="openLoginDialog()">
+				{{ __("Log in to manage bookings") }}
+			</button>
+		</p>
 	</div>
 
 	<!-- Error / invalid token -->
@@ -54,19 +85,20 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Spinner, useCall } from "frappe-ui"
+import { Button, Spinner, dayjsLocal, useCall } from "frappe-ui"
 import { computed } from "vue"
 import { useRoute } from "vue-router"
 
+import EventSummaryCard from "@/components/booking-success/EventSummaryCard.vue"
+import SuccessHero from "@/components/booking-success/SuccessHero.vue"
+import TicketRows from "@/components/booking-success/TicketRows.vue"
+import BookingFinancialSummary from "@/components/BookingFinancialSummary.vue"
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
+import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useLoginDialog } from "@/composables/useLoginDialog"
-import { usePaymentSuccess } from "@/composables/usePaymentSuccess"
 import { session } from "@/data/session"
-
-import BookingEventInfo from "../components/BookingEventInfo.vue"
-import BookingFinancialSummary from "../components/BookingFinancialSummary.vue"
-import SuccessMessage from "../components/SuccessMessage.vue"
-import TicketsSection from "../components/TicketsSection.vue"
+import { triggerCelebrationConfetti } from "@/utils/confetti"
+import { eventUrl } from "@/utils/eventUrl"
 
 const props = defineProps({
 	bookingId: {
@@ -77,29 +109,34 @@ const props = defineProps({
 
 const route = useRoute()
 const { open: openLoginDialog } = useLoginDialog()
-
-// Confetti + success message, always on for this page. Keep the token in the
-// URL (cleanupUrl: false) so a refresh can still re-fetch the booking.
-const { showSuccessMessage, showSuccess } = usePaymentSuccess({
-	enableConfetti: true,
-	cleanupUrl: false,
-})
-
-const showPaymentSummary = computed(() => {
-	const booking = confirmation.data?.booking
-	return booking && (booking.total_amount || 0) > 0
-})
+const copyToClipboard = useCopyToClipboard()
 
 const confirmation = useCall<Record<string, any>, Record<string, unknown>>({
 	url: "/api/v2/method/buzz.api.booking.get_booking_confirmation",
 	params: { booking_id: props.bookingId, token: route.query.token },
 	onSuccess: (data) => {
-		showSuccess()
-		// Clear any stored booking form data now that the booking is confirmed
+		triggerCelebrationConfetti()
 		if (data?.event?.route) {
 			const { clearStoredData } = useBookingFormStorage(data.event.route)
 			clearStoredData()
 		}
 	},
 })
+
+const event = computed(() => confirmation.data!.event)
+
+// Files the confirmation hands out; a guest proves access with the page's own token.
+function bookingFileUrl(method: string) {
+	const params = new URLSearchParams({ booking_id: props.bookingId })
+	if (route.query.token) params.set("token", String(route.query.token))
+	return `/api/v2/method/buzz.api.booking.${method}?${params}`
+}
+
+const paymentLine = computed(() => {
+	const { payment_method, booked_on } = confirmation.data!.booking
+	const bookedOn = dayjsLocal(booked_on).format("MMM D, YYYY, h:mm A")
+	return [payment_method, bookedOn].filter(Boolean).join(" · ")
+})
+
+const showPaymentSummary = computed(() => (confirmation.data?.booking.total_amount || 0) > 0)
 </script>

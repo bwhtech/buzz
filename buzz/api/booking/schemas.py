@@ -101,6 +101,8 @@ class ConfirmationBooking(APIResponse):
 	tax_percentage: float | None
 	discount_amount: float | None
 	coupon_code: str | None
+	payment_method: str | None
+	booked_on: datetime
 
 
 class ConfirmationTicket(APIResponse):
