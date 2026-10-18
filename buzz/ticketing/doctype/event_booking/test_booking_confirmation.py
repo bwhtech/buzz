@@ -151,6 +151,6 @@ def stub_pdf_rendering() -> ExitStack:
 	return stack
 
 
-def add_blank_page(html: str, options=None, output=None):
+def add_blank_page(html: str, options=None, output=None, **kwargs):
 	output.add_blank_page(width=100, height=100)
 	return output
