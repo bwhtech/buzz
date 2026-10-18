@@ -19,7 +19,7 @@ from buzz.api.proposals.schemas import (
 	StatusTotal,
 )
 from buzz.events.doctype.event_venue.event_venue import set_venue_names
-from buzz.permissions import derived_has_permission, has_team_access
+from buzz.permissions import derived_has_permission, has_section_permission
 
 # The columns behind one proposal card. The event ones come over a link hop, so a
 # deleted event leaves them empty.
@@ -104,7 +104,7 @@ def event_proposals(
 
 	Read access to the event's team is the bar, the same one its guest list uses.
 	"""
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "talks")
 
 	filter_fields = proposal_filter_fields(event)
 	conditions = ListConditions("Talk Proposal", filter_fields).frappe_filters(filters)
@@ -136,7 +136,7 @@ def event_proposals(
 		matched=matched,
 		proposals=[ProposalListItem(**row, speakers=speakers.get(row.name, [])) for row in rows],
 		has_next_page=start + len(rows) < matched,
-		can_write=has_team_access(doc.team, "write", frappe.session.user),
+		can_write=has_section_permission(event, "talks", "write", frappe.session.user),
 		proposal_link=proposal_link(doc),
 		proposals_closed=are_proposals_closed(doc),
 		filter_fields=filter_fields,
@@ -183,7 +183,7 @@ def set_proposal_state(event: str, closed: bool) -> ProposalState:
 	and also publishes the form, since an unpublished one takes nothing either.
 	"""
 	doc = frappe.get_doc("Buzz Event", event)
-	if not has_team_access(doc.team, "write", frappe.session.user):
+	if not has_section_permission(event, "talks", "write", frappe.session.user):
 		CannotManageEvent.throw()
 
 	row = proposal_form_row(doc)
@@ -239,7 +239,7 @@ def proposal_trend(event: str, days: int = TREND_DAYS) -> ProposalTrend:
 	Every day of the window is zero-filled: the series is read as a shape, and a missing
 	row would draw as a shorter week rather than a quiet one.
 	"""
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "talks")
 
 	days = max(2, min(int(days), 90))
 	window = [add_days(getdate(), -offset) for offset in reversed(range(days))]

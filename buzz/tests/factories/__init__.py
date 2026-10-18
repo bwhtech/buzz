@@ -1,7 +1,9 @@
 from buzz.tests.factories.additional_event_page_factory import AdditionalEventPageFactory
+from buzz.tests.factories.attendee_ticket_add_on_factory import AttendeeTicketAddOnFactory
 from buzz.tests.factories.buzz_campaign_factory import BuzzCampaignFactory
 from buzz.tests.factories.buzz_coupon_code_factory import BuzzCouponCodeFactory
 from buzz.tests.factories.buzz_custom_field_factory import BuzzCustomFieldFactory
+from buzz.tests.factories.buzz_event_collaborator_factory import BuzzEventCollaboratorFactory
 from buzz.tests.factories.buzz_event_factory import BuzzEventFactory
 from buzz.tests.factories.buzz_tag_factory import BuzzTagFactory
 from buzz.tests.factories.buzz_team_factory import BuzzTeamFactory
@@ -41,9 +43,11 @@ from buzz.tests.factories.user_invitation_factory import UserInvitationFactory
 
 __all__ = [
 	"AdditionalEventPageFactory",
+	"AttendeeTicketAddOnFactory",
 	"BuzzCampaignFactory",
 	"BuzzCouponCodeFactory",
 	"BuzzCustomFieldFactory",
+	"BuzzEventCollaboratorFactory",
 	"BuzzEventFactory",
 	"BuzzTagFactory",
 	"BuzzTeamFactory",

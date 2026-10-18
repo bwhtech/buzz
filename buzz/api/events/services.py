@@ -39,7 +39,12 @@ from buzz.api.filters.schemas import FilterField
 from buzz.events.countdown import event_countdown
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
 from buzz.events.doctype.event_venue.details import venue_details
-from buzz.permissions import has_team_access, my_teams
+from buzz.permissions import (
+	events_with_section_access,
+	get_section_access,
+	has_section_permission,
+	has_team_access,
+)
 from buzz.utils import is_app_installed
 
 
@@ -64,7 +69,7 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 	team = frappe.qb.DocType("Buzz Team")
 	venue = frappe.qb.DocType("Event Venue")
 
-	hosted = event.team.isin(my_teams(user))
+	hosted = event.name.isin(events_with_section_access(user, "details"))
 	ticketed = event.name.isin(
 		frappe.qb.from_(ticket)
 		.select(ticket.event)
@@ -157,7 +162,7 @@ def event_detail(event: str) -> EventDetail:
 		EventNotFound.throw()
 
 	# Read is not enough: this payload backs the page that edits the event.
-	if not has_team_access(row.team, "write", frappe.session.user):
+	if not has_section_permission(event, "details", "write", frappe.session.user):
 		CannotManageEvent.throw()
 
 	return EventDetail(
@@ -262,9 +267,9 @@ def remove_co_host(event: str, host: str) -> None:
 	doc.save()
 
 
-def manageable_event(event: str) -> BuzzEvent:
+def manageable_event(event: str, section: str = "details") -> BuzzEvent:
 	doc = frappe.get_doc("Buzz Event", event)
-	if not has_team_access(doc.team, "write", frappe.session.user):
+	if not has_section_permission(event, section, "write", frappe.session.user):
 		CannotManageEvent.throw()
 	return doc
 
@@ -314,12 +319,12 @@ def set_registration_state(event: str, closed: bool) -> RegistrationState:
 	wall clock and opening clears the cutoff. Opening cannot beat the event's end date,
 	which closes registrations on its own — hence the state rather than an acknowledgement.
 	"""
-	doc = manageable_event(event)
+	doc = manageable_event(event, "ticketing")
 	if closed:
 		doc.close_registrations()
 	else:
 		doc.registrations_close_at = None
-	doc.save()
+	doc.save(ignore_permissions=True)
 	return RegistrationState(registrations_closed=are_registrations_closed(doc))
 
 
@@ -333,13 +338,22 @@ def verification_methods() -> VerificationMethods:
 	return VerificationMethods(email=email_otp_available(), phone=phone_otp_available())
 
 
-def ensure_event_team_access(event: str) -> None:
-	"""Read access to the event's team is the bar for everything a manage page shows."""
+def ensure_event_team_access(event: str, section: str | None) -> None:
+	"""Read access to the event's section is the bar for everything a manage page shows.
+
+	`section` None is team-level data, which a collaborator never reaches.
+	"""
 	if not frappe.db.exists("Buzz Event", event):
 		EventNotFound.throw()
 
+	user = frappe.session.user
 	team = frappe.db.get_value("Buzz Event", event, "team")
-	if not has_team_access(team, "read", frappe.session.user):
+	allowed = (
+		has_section_permission(event, section, "read", user)
+		if section
+		else has_team_access(team, "read", user)
+	)
+	if not allowed:
 		CannotManageEvent.throw()
 
 
@@ -361,7 +375,7 @@ def event_guests(
 	stable slice as the caller walks down the list. `checked_in` is "1" or "0" to keep only
 	the guests who have, or have not, checked in today.
 	"""
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "guests")
 
 	filter_fields, answer_parents = guest_filter_fields(event)
 	conditions = ListConditions("Event Ticket", filter_fields, answer_parents).frappe_filters(filters)
@@ -469,7 +483,7 @@ def registration_trend(event: str, days: int = TREND_DAYS) -> RegistrationTrend:
 	is read as a shape, and a missing row would draw as a shorter week or a band that
 	disappears mid-stack rather than a quiet one.
 	"""
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "guests")
 
 	days = max(2, min(int(days), 90))
 	window = [add_days(getdate(), -offset) for offset in reversed(range(days))]
