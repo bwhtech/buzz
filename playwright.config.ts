@@ -34,7 +34,7 @@ export default defineConfig({
 	use: {
 		baseURL: process.env.BASE_URL || "http://buzz.test:8000",
 		trace: "on-first-retry",
-		video: "retain-on-failure",
+		video: "on-first-retry",
 		screenshot: "only-on-failure",
 		actionTimeout: 15000,
 		navigationTimeout: 30000,
