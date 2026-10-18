@@ -70,7 +70,17 @@ def sync_frappe_roles(user: str):
 
 	Recomputed, not incremented: losing one membership must not remove a role another earns.
 	"""
-	earned = earned_frappe_roles(user)
+	team_roles = frappe.get_all(
+		"Buzz Team Membership",
+		filters={"user": user, "enabled": 1},
+		pluck="team_role",
+	)
+	earned = {
+		TEAM_ROLE_TO_FRAPPE_ROLE[team_role]
+		for team_role in team_roles
+		if team_role in TEAM_ROLE_TO_FRAPPE_ROLE
+	}
+
 	user_doc = frappe.get_doc("User", user)
 	held = {row.role for row in user_doc.roles} & MANAGED_FRAPPE_ROLES
 	if held == earned:
@@ -82,19 +92,6 @@ def sync_frappe_roles(user: str):
 	user_doc.set("roles", [row for row in user_doc.roles if row.role not in held - earned])
 	user_doc.append_roles(*earned)
 	user_doc.save()
-
-
-def earned_frappe_roles(user: str) -> set[str]:
-	team_roles = frappe.get_all(
-		"Buzz Team Membership",
-		filters={"user": user, "enabled": 1},
-		pluck="team_role",
-	)
-	return {
-		TEAM_ROLE_TO_FRAPPE_ROLE[team_role]
-		for team_role in team_roles
-		if team_role in TEAM_ROLE_TO_FRAPPE_ROLE
-	}
 
 
 class BuzzTeamMembership(Document):
