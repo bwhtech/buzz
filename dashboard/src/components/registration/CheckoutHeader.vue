@@ -30,7 +30,7 @@
 					variant="ghost"
 					:tooltip="__('Toggle theme')"
 					:aria-label="__('Toggle theme')"
-					@click="toggleTheme"
+					@click="toggleColorScheme"
 				>
 					<template #icon><LucideMoon class="size-4" /></template>
 				</Button>
@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, resolvedColorScheme, useColorScheme } from "frappe-ui"
+import { Button, useColorScheme } from "frappe-ui"
 import { computed } from "vue"
 import LucideArrowLeft from "~icons/lucide/arrow-left"
 import LucideMoon from "~icons/lucide/moon"
@@ -57,7 +57,7 @@ const props = defineProps<{
 	secondsLeft: number | null
 }>()
 
-const { setColorScheme } = useColorScheme()
+const { toggleColorScheme } = useColorScheme()
 
 const { dateLabel, venueLabel } = useEventDateLabels(() => props.eventDetails)
 const subtitle = computed(() => [dateLabel.value, venueLabel.value].filter(Boolean).join(" · "))
@@ -65,5 +65,4 @@ const clock = computed(() => formatCountdown(props.secondsLeft ?? 0))
 
 // The event page is served outside the SPA's /b base.
 const backToEvent = () => window.location.assign(eventPath(props.eventRoute))
-const toggleTheme = () => setColorScheme(resolvedColorScheme() === "dark" ? "light" : "dark")
 </script>

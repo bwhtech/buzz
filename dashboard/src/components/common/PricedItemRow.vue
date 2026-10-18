@@ -63,7 +63,7 @@ const allPrices = (prices: TierPrice[]) => prices.map(formatPrice).join(" · ")
 
 		<Icon
 			v-if="!disabled"
-			name="lucide-chevron-right"
+			icon="lucide-chevron-right"
 			class="hidden size-4 text-ink-gray-4 sm:block"
 		/>
 	</button>

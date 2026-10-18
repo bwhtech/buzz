@@ -13,7 +13,7 @@ defineProps<{
 	<div class="flex flex-col items-center gap-2 py-12 text-center">
 		<div v-if="icon || $slots.illustration" class="mb-1 flex rounded-4 bg-surface-gray-2 p-2">
 			<slot name="illustration">
-				<Icon :name="icon" class="size-5 text-ink-gray-5" />
+				<Icon :icon="icon" class="size-5 text-ink-gray-5" />
 			</slot>
 		</div>
 

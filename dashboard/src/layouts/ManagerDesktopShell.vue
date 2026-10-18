@@ -76,7 +76,7 @@ watch(headerKey, (key, previous) => {
 								<SidebarItem
 									:label="item.label"
 									:icon="item.icon"
-									:to="item.to"
+									:route="item.to"
 									:active="isActive(item.to)"
 								/>
 							</template>

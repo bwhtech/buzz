@@ -22,7 +22,7 @@ export function mentionSuggestion(members: MaybeRefOrGetter<TeamMember[]>) {
 		name: "teamMention",
 		trigger: "@",
 		allowSpaces: true,
-		component: MentionList,
+		listComponent: MentionList,
 		floatingOptions: { placement: "top-start", offset: 6 },
 		items: (query) =>
 			toValue(members)

@@ -117,7 +117,7 @@ onKeyStroke("f", (event) => {
 				:aria-label="searchPlaceholder"
 			>
 				<template #prefix>
-					<Icon name="lucide-search" class="size-4 text-ink-gray-5" />
+					<Icon icon="lucide-search" class="size-4 text-ink-gray-5" />
 				</template>
 			</FormControl>
 			<Select

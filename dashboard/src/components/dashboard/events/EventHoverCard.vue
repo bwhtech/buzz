@@ -29,7 +29,7 @@ const startsAt = computed(() => {
 </script>
 
 <template>
-	<HoverCard :hover-delay="0.15" align="start">
+	<HoverCard :hover-delay="150" align="start">
 		<template #trigger>
 			<span
 				class="relative z-10 font-medium transition-colors hover:text-ink-gray-9"

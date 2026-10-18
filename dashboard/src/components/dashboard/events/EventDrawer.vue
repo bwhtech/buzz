@@ -155,7 +155,7 @@ const endsAt = computed(() => {
 								class="flex size-11 shrink-0 items-center justify-center rounded-5 border border-outline-gray-2"
 							>
 								<Icon
-									:name="event.venue ? 'lucide-map-pin' : 'lucide-map-pin-off'"
+									:icon="event.venue ? 'lucide-map-pin' : 'lucide-map-pin-off'"
 									class="size-5 text-ink-gray-6"
 								/>
 							</div>

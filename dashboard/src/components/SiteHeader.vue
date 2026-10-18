@@ -1,12 +1,5 @@
 <script setup lang="ts">
-import {
-	Avatar,
-	Button,
-	Dropdown,
-	type DropdownOptions,
-	resolvedColorScheme,
-	useColorScheme,
-} from "frappe-ui"
+import { Avatar, Button, Dropdown, type DropdownOptions, useColorScheme } from "frappe-ui"
 import { computed } from "vue"
 import { useRouter } from "vue-router"
 
@@ -21,11 +14,10 @@ import { mobileMenu } from "@/utils/navbar"
 
 const router = useRouter()
 const { open: openLoginDialog } = useLoginDialog()
-const { colorScheme, setColorScheme } = useColorScheme()
+const { resolvedColorScheme, setColorScheme } = useColorScheme()
 const { options: languageOptions } = useLanguageMenu()
 
-// Reads `colorScheme` so the menu's switch follows changes made elsewhere.
-const isDark = computed(() => colorScheme.value && resolvedColorScheme() === "dark")
+const isDark = computed(() => resolvedColorScheme.value === "dark")
 const setDark = (dark: boolean) => setColorScheme(dark ? "dark" : "light")
 
 // Website Settings' navbar fields and Buzz Settings' logos, as the Buzz Navbar web template renders them.

@@ -20,7 +20,7 @@
 			<div class="flex gap-2">
 				<Button
 					variant="outline"
-					:link="`/api/method/frappe.utils.print_format.download_pdf?doctype=Event%20Ticket&name=${ticketId}&format=Buzz%20Print%20Format&no_letterhead=1&letterhead=No%20Letterhead&settings=%7B%7D&_lang=en&pdf_generator=wkhtmltopdf`"
+					:href="`/api/method/frappe.utils.print_format.download_pdf?doctype=Event%20Ticket&name=${ticketId}&format=Buzz%20Print%20Format&no_letterhead=1&letterhead=No%20Letterhead&settings=%7B%7D&_lang=en&pdf_generator=wkhtmltopdf`"
 					size="sm"
 				>
 					<template #prefix>

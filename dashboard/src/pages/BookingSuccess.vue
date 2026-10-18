@@ -21,7 +21,7 @@
 					variant="solid"
 					icon-left="lucide-calendar-plus"
 					:label="__('Add to calendar')"
-					:link="bookingFileUrl('get_calendar_invite')"
+					:href="bookingFileUrl('get_calendar_invite')"
 				/>
 				<Button
 					v-if="confirmation.data.venue?.map_link"
@@ -29,7 +29,7 @@
 					variant="subtle"
 					icon-left="lucide-navigation"
 					:label="__('Get directions')"
-					:link="confirmation.data.venue.map_link"
+					:href="confirmation.data.venue.map_link"
 				/>
 				<Button
 					v-if="event.route"

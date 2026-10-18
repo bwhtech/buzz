@@ -42,7 +42,7 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 							@click="toggle(group.key)"
 						>
 							<Icon
-								name="lucide-chevron-down"
+								icon="lucide-chevron-down"
 								class="size-4 shrink-0 text-ink-gray-5 transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
 								:class="{ '-rotate-90': collapsed.has(group.key) }"
 								aria-hidden="true"
@@ -120,7 +120,7 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 			v-if="canWrite && organizer.groups.value.length > 1"
 			class="flex items-center gap-1.5 text-sm text-ink-gray-5"
 		>
-			<Icon name="lucide-move" class="size-3.5" aria-hidden="true" />
+			<Icon icon="lucide-move" class="size-3.5" aria-hidden="true" />
 			Drag ticket types between categories to move them.
 		</p>
 	</div>

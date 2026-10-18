@@ -49,7 +49,7 @@ defineEmits<{ toggle: [] }>()
 			:class="`w-full !justify-start ${PRESSABLE}`"
 			variant="ghost"
 			:label="action.label"
-			:link="action.link"
+			:href="action.link"
 			:loading="action.loading"
 			@click="action.onClick?.()"
 		>

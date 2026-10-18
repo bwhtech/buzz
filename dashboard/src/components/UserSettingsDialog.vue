@@ -134,7 +134,7 @@ async function save(fields: Partial<Profile> = { ...form }) {
 </script>
 
 <template>
-	<SettingsDialog v-model:open="open" v-model:tab="tab" size="6xl" :shortcut="false">
+	<SettingsDialog v-model:open="open" v-model:tab="tab" size="6xl" :keyboard-shortcut="false">
 		<template #title>{{ __("Settings") }}</template>
 
 		<header

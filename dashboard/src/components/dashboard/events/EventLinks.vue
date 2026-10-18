@@ -68,7 +68,7 @@ function remove() {
 				<Button
 					variant="ghost"
 					icon="lucide-external-link"
-					:link="link.url"
+					:href="link.url"
 					:aria-label="__('Open {0}', [link.label])"
 					class="mr-1 transition-opacity [@media(hover:hover)]:opacity-0 duration-150 ease-out group-hover:opacity-100 focus-visible:opacity-100 motion-reduce:transition-none"
 				/>

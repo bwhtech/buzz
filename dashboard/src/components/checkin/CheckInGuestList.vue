@@ -224,7 +224,7 @@ watch(validationResult, (result) => {
 					variant="ghost"
 					icon-right="lucide-arrow-up-right"
 					label="Event page"
-					:link="`/events/${page.data.route}`"
+					:href="`/events/${page.data.route}`"
 				/>
 			</nav>
 
@@ -269,7 +269,7 @@ watch(validationResult, (result) => {
 					aria-label="Search guests"
 				>
 					<template #prefix>
-						<Icon name="lucide-search" class="size-4 text-ink-gray-5" />
+						<Icon icon="lucide-search" class="size-4 text-ink-gray-5" />
 					</template>
 					<template #suffix>
 						<LoadingText v-if="reloading && search.trim()" text="Searching" class="!text-sm" />

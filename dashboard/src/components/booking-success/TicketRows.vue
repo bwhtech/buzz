@@ -31,7 +31,7 @@ function toggle(index: number) {
 				variant="ghost"
 				icon-left="lucide-download"
 				:label="__('Download all')"
-				:link="downloadUrl"
+				:href="downloadUrl"
 			/>
 		</div>
 

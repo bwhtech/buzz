@@ -96,6 +96,7 @@
 		</label>
 		<Rating
 			:model-value="Math.round((modelValue || 0) * 5)"
+			size="md"
 			@update:model-value="$emit('update:modelValue', $event / 5)"
 		/>
 	</div>
