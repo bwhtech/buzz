@@ -566,7 +566,7 @@ body {
 .side-card-identity {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 10px;
 	margin-bottom: 12px;
 	font-size: 13px;
 	white-space: nowrap;
@@ -577,15 +577,25 @@ body {
 	display: none;
 }
 
-.user-avatar {
-	width: 20px;
-	height: 20px;
-	font-size: 11px;
+.side-card-identity .user-avatar {
+	flex-shrink: 0;
+	width: 32px;
+	height: 32px;
+	font-size: 13px;
+}
+
+.side-card-identity-text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	line-height: 1.35;
 }
 
 .side-card-identity-name {
+	overflow: hidden;
 	color: var(--ink-strong);
 	font-weight: 500;
+	text-overflow: ellipsis;
 }
 
 .side-card-identity-email {
@@ -641,6 +651,72 @@ body {
 .ticket-card .side-card-body::after {
 	right: -10px;
 	clip-path: inset(0 50% 0 0);
+}
+
+/* A person who holds tickets sees them as a stub tucked behind the registration card. */
+.ticket-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	/* The cards' 16px gap, plus 14px tucked under the registration card */
+	margin: 0 12px -30px;
+	padding: 12px 14px 26px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius) var(--radius) 0 0;
+	background: var(--surface-raised);
+}
+
+.ticket-stack + .ticket-card {
+	position: relative;
+}
+
+.ticket-stack-note {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	min-width: 0;
+	color: var(--ink-muted);
+	font-size: 13px;
+	line-height: 1.35;
+	font-variant-numeric: tabular-nums;
+}
+
+.ticket-stack-text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.ticket-stack-title {
+	color: var(--ink-strong);
+	font-weight: 500;
+}
+
+.booked-dot {
+	flex-shrink: 0;
+	/* Centred on the first line of text */
+	margin: 6px 3px 0;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--ink-green-3);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink-green-3) 18%, transparent);
+}
+
+.ticket-stack-link {
+	display: none;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
+	color: var(--ink-strong);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.ticket-stack-link .icon {
+	width: 14px;
+	height: 14px;
+	transition: transform 160ms var(--ease-out);
 }
 
 .event-aside .label:first-child {
@@ -965,6 +1041,14 @@ body {
 	.side-card {
 		animation-name: page-fade-in;
 	}
+
+	.ticket-stack {
+		animation-name: page-fade-in;
+	}
+
+	.ticket-stack-link .icon {
+		transition: none;
+	}
 }
 
 .empty-state {
@@ -1102,6 +1186,18 @@ span.footer-logo {
 	}
 }
 
+/* The ticket stub slides out from behind the card once the card has landed. */
+.ticket-stack {
+	animation: ticket-stack-in 280ms var(--ease-out) 120ms both;
+}
+
+@keyframes ticket-stack-in {
+	from {
+		opacity: 0;
+		transform: translateY(12px);
+	}
+}
+
 .es-button {
 	transition:
 		transform 160ms var(--ease-out),
@@ -1202,6 +1298,10 @@ summary:focus-visible {
 		color: var(--ink-strong);
 	}
 
+	.ticket-stack-link:hover .icon {
+		transform: translateX(2px);
+	}
+
 	.tab:hover,
 	.site-footer a:hover {
 		color: var(--ink-strong);
@@ -1259,6 +1359,21 @@ summary:focus-visible {
 	.side-card-icon {
 		grid-row: span 2;
 		margin-bottom: 0;
+	}
+
+	/* On a narrow screen the stub keeps to one row, with a text link in place of the button. */
+	.ticket-stack {
+		flex-direction: row;
+		align-items: center;
+		padding: 10px 14px 24px;
+	}
+
+	.ticket-stack-button {
+		display: none;
+	}
+
+	.ticket-stack-link {
+		display: inline-flex;
 	}
 
 	.event-meta {

@@ -18,8 +18,9 @@ class RegistrationCard:
 		self.event = event
 
 	def as_dict(self) -> dict:
-		if self.is_registered():
-			return self.registered_card()
+		return self.state_card() | {"booked": self.booked_tickets()}
+
+	def state_card(self) -> dict:
 		if are_registrations_closed(self.event):
 			return self.card(
 				"closed", _("Registrations closed"), _("This event is not taking registrations.")
@@ -42,13 +43,12 @@ class RegistrationCard:
 			)
 		return self.card("sold-out", _("Sold out"), _("All tickets have been taken."))
 
-	def registered_card(self) -> dict:
-		note = (
-			_("Your ticket is in your inbox.")
-			if self.event.send_ticket_email
-			else _("Your booking is confirmed.")
-		)
-		return self.card("registered", _("You're registered"), note, _("View ticket"), "/b/account/bookings")
+	def booked_tickets(self) -> dict | None:
+		count = self.booked_ticket_count
+		if not count:
+			return None
+		label = _("1 ticket") if count == 1 else _("{0} tickets").format(count)
+		return {"label": label, "url": "/b/account/bookings"}
 
 	def published_ticket_types(self) -> list:
 		filters = {"event": self.event.name, "is_published": 1}
@@ -56,7 +56,8 @@ class RegistrationCard:
 
 	def open_card(self, subtitle: str) -> dict:
 		register_url = registration_link(self.event)
-		return self.card("open", _("Registration open"), subtitle, _("Register"), register_url, primary=True)
+		label = _("Book more tickets") if self.booked_ticket_count else _("Register")
+		return self.card("open", _("Registration open"), subtitle, label, register_url, primary=True)
 
 	def card(self, state, title, subtitle, action_label=None, action_url=None, primary=False) -> dict:
 		return {
@@ -68,11 +69,17 @@ class RegistrationCard:
 			"primary": primary,
 		}
 
-	def is_registered(self) -> bool:
-		user = frappe.session.user
-		return user != "Guest" and bool(
-			frappe.db.exists("Event Booking", {"event": self.event.name, "user": user, "docstatus": 1})
+	@cached_property
+	def booked_ticket_count(self) -> int:
+		if frappe.session.user == "Guest":
+			return 0
+		bookings = frappe.get_all(
+			"Event Booking",
+			filters={"event": self.event.name, "user": frappe.session.user, "docstatus": 1},
+			pluck="name",
 		)
+		filters = {"booking": ["in", bookings], "docstatus": 1}
+		return frappe.db.count("Event Ticket", filters) if bookings else 0
 
 	@cached_property
 	def ticket_types(self) -> list:

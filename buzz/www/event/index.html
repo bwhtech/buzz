@@ -101,7 +101,6 @@
 
 	{% macro card_icon(name) %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
 		{%- if name == "open" %}<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 17v2M13 11v2"/>
-		{%- elif name == "registered" %}<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
 		{%- elif name == "proposal" %}<path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/>
 		{%- else %}<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>
 		{%- endif %}</svg>{% endmacro %}
@@ -245,11 +244,18 @@
 
 		<aside class="event-aside">
 			<div class="side-cards">
+				{% if registration.booked %}
+				<div class="ticket-stack">
+					<p class="ticket-stack-note"><span class="booked-dot" aria-hidden="true"></span><span class="ticket-stack-text"><span class="ticket-stack-title">{{ _("You're registered") }}</span><span>{{ registration.booked.label }}</span></span></p>
+					<a class="es-button ticket-stack-button" data-variant="outline" data-size="sm" href="{{ registration.booked.url }}">{{ _("View tickets") }}</a>
+					<a class="ticket-stack-link" href="{{ registration.booked.url }}">{{ _("View") }}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+				</div>
+				{% endif %}
 				{% call side_card(registration, registration.state, "ticket-card") %}
 				{% if registration.state == "open" and not is_guest %}
 				<p class="side-card-identity">
 					{% if user_image %}<img class="user-avatar" src="{{ user_image }}" alt="">{% else %}<span class="user-avatar">{{ (fullname or user)[:1] | upper }}</span>{% endif %}
-					<span class="side-card-identity-name">{{ fullname }}</span><span class="side-card-identity-email">{{ user }}</span>
+					<span class="side-card-identity-text"><span class="side-card-identity-name">{{ fullname }}</span><span class="side-card-identity-email">{{ user }}</span></span>
 				</p>
 				{% endif %}
 				{% endcall %}
