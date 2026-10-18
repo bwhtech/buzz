@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DesktopShell, Divider, PageHeaderTarget, Sidebar, SidebarItem, Skeleton } from "frappe-ui"
+import { Divider, PageHeaderTarget, Sidebar, SidebarItem, Skeleton } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
@@ -39,67 +39,65 @@ watch(headerKey, (key, previous) => {
 </script>
 
 <template>
-	<!-- scroll=false: the rounded panel below owns its own scroll. -->
-	<DesktopShell :scroll="false">
-		<template #sidebar>
-			<Sidebar>
-				<!-- px-1: puts the header mark on the item-icon centerline, in every state.
+	<!-- Not DesktopShell: it points page headers at its own bar, outside the rounded panel. -->
+	<div class="flex h-full">
+		<Sidebar>
+			<!-- px-1: puts the header mark on the item-icon centerline, in every state.
 				     h-14 holds the height while two states overlap mid-transition. -->
-				<div class="nav-stage relative h-14 shrink-0">
-					<Transition :name="`nav-${direction}`">
-						<div :key="headerKey" class="absolute inset-x-1 top-2 flex items-center">
-							<ManagerSidebarHeader :workspace="workspace" />
-						</div>
-					</Transition>
-				</div>
+			<div class="nav-stage relative h-14 shrink-0">
+				<Transition :name="`nav-${direction}`">
+					<div :key="headerKey" class="absolute inset-x-1 top-2 flex items-center">
+						<ManagerSidebarHeader :workspace="workspace" />
+					</div>
+				</Transition>
+			</div>
 
-				<!-- One block, not per row: absolute rows would all collapse onto the
+			<!-- One block, not per row: absolute rows would all collapse onto the
 				     container's corner. my-2, not py-2: the leaving list anchors to the
 				     padding box, so padding here would lift it out of line. -->
-				<div class="nav-stage relative mx-2 my-2">
-					<Transition :name="`nav-${direction}`">
-						<div :key="headerKey" class="nav-list flex flex-col gap-0.5">
-							<!-- Stands in for the workspace destinations while it opens. -->
-							<template v-if="openingTeam">
-								<div
-									v-for="row in WORKSPACE_ITEM_COUNT"
-									:key="row"
-									class="flex h-7 items-center gap-2 px-2"
-									aria-hidden="true"
-								>
-									<Skeleton class="size-4 rounded-2" />
-									<Skeleton class="h-3 w-24 rounded-2" />
-								</div>
-							</template>
-							<template v-for="item in items" v-else :key="item.label">
-								<Divider v-if="item.startsGroup" class="my-1.5" />
-								<SidebarItem
-									:label="item.label"
-									:icon="item.icon"
-									:route="item.to"
-									:active="isActive(item.to)"
-								/>
-							</template>
-						</div>
-					</Transition>
-				</div>
-
-				<div class="mt-auto flex flex-col gap-2 px-2 py-2">
-					<SidebarItem
-						:label="discoverEvents.label"
-						:icon="discoverEvents.icon"
-						:on-click="openDiscoverEvents"
-					>
-						<template #suffix>
-							<span class="lucide-arrow-up-right mr-2 size-3.5 text-ink-gray-4" />
+			<div class="nav-stage relative mx-2 my-2">
+				<Transition :name="`nav-${direction}`">
+					<div :key="headerKey" class="nav-list flex flex-col gap-0.5">
+						<!-- Stands in for the workspace destinations while it opens. -->
+						<template v-if="openingTeam">
+							<div
+								v-for="row in WORKSPACE_ITEM_COUNT"
+								:key="row"
+								class="flex h-7 items-center gap-2 px-2"
+								aria-hidden="true"
+							>
+								<Skeleton class="size-4 rounded-2" />
+								<Skeleton class="h-3 w-24 rounded-2" />
+							</div>
 						</template>
-					</SidebarItem>
-					<UserMenu />
-				</div>
-			</Sidebar>
-		</template>
+						<template v-for="item in items" v-else :key="item.label">
+							<Divider v-if="item.startsGroup" class="my-1.5" />
+							<SidebarItem
+								:label="item.label"
+								:icon="item.icon"
+								:route="item.to"
+								:active="isActive(item.to)"
+							/>
+						</template>
+					</div>
+				</Transition>
+			</div>
 
-		<div class="flex flex-col h-full min-h-0 bg-surface-sidebar py-2 pl-1">
+			<div class="mt-auto flex flex-col gap-2 px-2 py-2">
+				<SidebarItem
+					:label="discoverEvents.label"
+					:icon="discoverEvents.icon"
+					:on-click="openDiscoverEvents"
+				>
+					<template #suffix>
+						<span class="lucide-arrow-up-right mr-2 size-3.5 text-ink-gray-4" />
+					</template>
+				</SidebarItem>
+				<UserMenu />
+			</div>
+		</Sidebar>
+
+		<div class="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-surface-sidebar py-2 pl-1">
 			<div
 				class="relative flex h-full flex-col overflow-hidden rounded-l-6 bg-surface-elevation-1 shadow-base"
 			>
@@ -110,7 +108,7 @@ watch(headerKey, (key, previous) => {
 				<WorkspaceOpening />
 			</div>
 		</div>
-	</DesktopShell>
+	</div>
 </template>
 
 <style scoped>
