@@ -28,6 +28,17 @@ from buzz.tests.utils import html_part, mute_outgoing_email
 
 COLLABORATOR = "Buzz Event Collaborator"
 LOG_IN = "buzz.api.events.collaborators.log_in_as"
+
+
+def password_login(enabled: bool):
+	"""Patches the one setting accept reads; saving System Settings fails on a bare site."""
+	original = frappe.get_system_settings
+	return patch(
+		"frappe.get_system_settings",
+		side_effect=lambda key: (not enabled) if key == "disable_user_pass_login" else original(key),
+	)
+
+
 KEY_PATTERN = r"key=([0-9a-f]+)"
 
 
@@ -202,7 +213,7 @@ class TestAccept(CollaboratorInviteTestCase):
 
 		with (
 			self.set_user("Guest"),
-			self.change_settings("System Settings", disable_user_pass_login=1),
+			password_login(enabled=False),
 			patch(LOG_IN) as log_in,
 		):
 			accept_collaborator_invite(key)
@@ -217,7 +228,7 @@ class TestAccept(CollaboratorInviteTestCase):
 
 		with (
 			self.set_user("Guest"),
-			self.change_settings("System Settings", disable_user_pass_login=0),
+			password_login(enabled=True),
 			patch(LOG_IN) as log_in,
 		):
 			result = accept_collaborator_invite(key)

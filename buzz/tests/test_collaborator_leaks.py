@@ -217,7 +217,9 @@ class TestRegistrationPageWrites(LeakTestCase):
 class TestCollaboratorNeedsASection(LeakTestCase):
 	def test_details_view_alone_is_refused(self):
 		with self.assertRaises(frappe.ValidationError):
-			BuzzEventCollaboratorFactory.create(event=self.event_a, email="leak-empty@example.com")
+			BuzzEventCollaboratorFactory.create(
+				event=self.event_a, email="leak-empty@example.com", guests_access=""
+			)
 
 	def test_details_edit_alone_is_allowed(self):
 		BuzzEventCollaboratorFactory.create(
