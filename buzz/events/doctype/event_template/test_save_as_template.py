@@ -6,6 +6,7 @@ from buzz.events.doctype.event_template.event_template import create_template_fr
 from buzz.tests.factories import (
 	BuzzCustomFieldFactory,
 	BuzzEventFactory,
+	EventTicketCategoryFactory,
 	EventTicketTypeFactory,
 	TicketAddOnFactory,
 )
@@ -58,6 +59,30 @@ class TestSaveEventAsTemplate(IntegrationTestCase):
 			with self.subTest(field):
 				self.assertEqual(copied.get(field), original.get(field))
 		self.assertEqual(self.ticket_type_values(new_event, "Platinum"), [(10000, 25)])
+
+	def test_round_trip_keeps_ticket_categories(self):
+		original = BuzzEventFactory.create()
+		workshops = EventTicketCategoryFactory.create(
+			event=original.name, title="Workshops", description="Hands-on", sort_order=3
+		)
+		EventTicketTypeFactory.create(event=original.name, title="Lab", category=workshops.name)
+
+		options = {"category": 1, "ticket_types": 1}
+		template = self.save_as_template(original, options)
+		team = frappe.as_json({"team": original.team})
+		new_event = create_from_template(template.name, frappe.as_json(options), team)
+
+		category = frappe.get_value(
+			"Event Ticket Category",
+			{"event": new_event},
+			["name", "title", "description", "sort_order"],
+			as_dict=True,
+		)
+		self.assertEqual(
+			(category.title, category.description, category.sort_order), ("Workshops", "Hands-on", 3)
+		)
+		lab = frappe.get_value("Event Ticket Type", {"event": new_event, "title": "Lab"}, "category")
+		self.assertEqual(lab, category.name)
 
 	def test_requires_template_create_permission(self):
 		event = BuzzEventFactory.create()

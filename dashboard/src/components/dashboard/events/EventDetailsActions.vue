@@ -33,7 +33,7 @@ async function toggle(show: boolean) {
 		:class="`w-full !justify-start ${PRESSABLE}`"
 		variant="ghost"
 		label="Go to event page"
-		:link="eventPath(route)"
+		:href="eventPath(route)"
 	>
 		<template #prefix>
 			<span class="lucide-arrow-up-right size-4" aria-hidden="true" />

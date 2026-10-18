@@ -97,13 +97,13 @@ const zoneOptions = computed(() =>
 					class="grid grid-cols-2 divide-x divide-outline-gray-2 overflow-hidden rounded-4 border border-outline-gray-2 bg-surface-base"
 				>
 					<DateTimePicker v-model="startAt" :min="today" :disabled="disabled">
-						<template #trigger="{ toggle, open }">
+						<template #trigger="{ setOpen, open }">
 							<button
 								id="event-schedule-start"
 								type="button"
 								:class="[cellClass, open && 'bg-surface-gray-1']"
 								:disabled="disabled"
-								@click="toggle"
+								@click="setOpen(!open)"
 							>
 								<span class="text-xs text-ink-gray-5">Start</span>
 								<span class="truncate text-base text-ink-gray-9">
@@ -114,13 +114,13 @@ const zoneOptions = computed(() =>
 					</DateTimePicker>
 
 					<DateTimePicker v-model="endAt" :min="earliestEnd" :disabled="disabled">
-						<template #trigger="{ toggle, open }">
+						<template #trigger="{ setOpen, open }">
 							<button
 								id="event-schedule-end"
 								type="button"
 								:class="[cellClass, open && 'bg-surface-gray-1']"
 								:disabled="disabled"
-								@click="toggle"
+								@click="setOpen(!open)"
 							>
 								<span class="text-xs text-ink-gray-5">End</span>
 								<span class="truncate text-base text-ink-gray-9">

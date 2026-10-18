@@ -1,6 +1,7 @@
-import { useCall, useDoc, useDoctype } from "frappe-ui"
+import { useCall, useDoc, useDoctype, useList } from "frappe-ui"
 
 import type {
+	AdditionalEventPage,
 	EventDetail,
 	EventHostRef,
 	MyEvents,
@@ -63,6 +64,25 @@ export function eventDetail(event: string) {
 }
 
 /**
+ * An event's additional pages: the extra tabs on its public page.
+ *
+ * One list, so the section list and the editor drawer share frappe-ui's row store — a save
+ * patches the row already on screen, and insert/delete refetch. Called with a resolved
+ * event, so the section remounts per event rather than watching a route param.
+ */
+export function useEventPages(event: string) {
+	return useList<AdditionalEventPage>({
+		doctype: "Additional Event Page",
+		filters: { event },
+		fields: ["name", "title", "content", "is_published", "display_order"],
+		orderBy: "display_order asc, creation asc",
+		limit: 100,
+	})
+}
+
+export type EventPagesList = ReturnType<typeof useEventPages>
+
+/**
  * Save edits back onto an event.
  *
  * The document API takes a fieldname-to-value map, so the whole form travels as one write —
@@ -73,6 +93,9 @@ export const updateEvent = useDoctype<Record<string, unknown>>("Buzz Event").set
 
 /** Turns the banner countdown on or off, apart from the page's own Save. */
 export const setShowCountdown = useDoctype<Record<string, unknown>>("Buzz Event").setValue
+
+/** Sets or clears the banner the moment its crop is uploaded, apart from the page's own Save. */
+export const setBanner = useDoctype<Record<string, unknown>>("Buzz Event").setValue
 
 /** Moves an event between in person and virtual, apart from the page's own Save. */
 export const convertEvent = useDoctype<Record<string, unknown>>("Buzz Event").setValue

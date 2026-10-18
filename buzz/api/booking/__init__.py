@@ -1,7 +1,8 @@
 import frappe
 from frappe.rate_limiter import rate_limit
 
-from buzz.api.booking import coupons, details, event_data, guests, my_bookings
+from buzz.api.booking import coupons, details, downloads, event_data, guests, my_bookings
+from buzz.api.booking.holds import TicketHoldService
 from buzz.api.booking.schemas import (
 	BookingConfirmationResponse,
 	BookingDetailsResponse,
@@ -12,8 +13,10 @@ from buzz.api.booking.schemas import (
 	MyBooking,
 	OfflineBookingResponse,
 	PaymentLinkResponse,
+	TicketHoldResponse,
 )
 from buzz.api.booking.services import BookingService
+from buzz.ticketing.doctype.ticket_hold import ticket_hold
 
 
 # nosemgrep: guest-whitelisted-method
@@ -24,8 +27,8 @@ def send_guest_booking_otp(event: int, identifier: str) -> dict | None:
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
-def get_event_booking_data(event_route: str) -> EventBookingDataResponse:
-	return event_data.build_event_booking_data(event_route)
+def get_event_booking_data(event_route: str, hold_token: str | None = None) -> EventBookingDataResponse:
+	return event_data.build_event_booking_data(event_route, hold_token)
 
 
 # nosemgrep: guest-whitelisted-method
@@ -36,9 +39,36 @@ def process_booking(
 	return BookingService(booking).process()
 
 
+def hold_tickets_rate_limit() -> int:
+	return 60 if frappe.session.user == "Guest" else 300
+
+
+# nosemgrep: guest-whitelisted-method
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=hold_tickets_rate_limit, seconds=600)
+def hold_tickets(event: int, quantities: dict, hold_token: str | None = None) -> TicketHoldResponse:
+	return TicketHoldService(event, quantities, hold_token).hold()
+
+
+# nosemgrep: guest-whitelisted-method
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+def release_hold(hold_token: str) -> None:
+	ticket_hold.release_hold(hold_token)
+
+
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_booking_confirmation(booking_id: str, token: str | None = None) -> BookingConfirmationResponse:
 	return details.build_booking_confirmation(booking_id, token)
+
+
+@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
+def get_calendar_invite(booking_id: str, token: str | None = None) -> None:
+	downloads.calendar_invite(booking_id, token)
+
+
+@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
+def download_tickets(booking_id: str, token: str | None = None) -> None:
+	downloads.tickets_pdf(booking_id, token)
 
 
 @frappe.whitelist()

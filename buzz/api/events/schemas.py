@@ -5,6 +5,7 @@ from pydantic import Field
 
 from buzz.api.filters.schemas import FilterField
 from buzz.api.schemas import APIRequest, APIResponse
+from buzz.events.doctype.event_venue.details import VenueDetails
 
 
 class MyEventFilters(APIRequest):
@@ -40,11 +41,6 @@ class MyEvent(APIResponse):
 class MyEventsResponse(APIResponse):
 	upcoming: list[MyEvent]
 	past: list[MyEvent]
-
-
-class EventVenue(APIResponse):
-	name: str
-	address: str | None = None
 
 
 class EventHostRef(APIResponse):
@@ -83,7 +79,7 @@ class EventDetail(APIResponse):
 	about: str | None = None
 	banner_image: str | None = None
 	medium: str | None = None
-	venue: EventVenue | None = None
+	venue: VenueDetails | None = None
 	# The organiser's own link, or the one Zoom issued when the meeting was booked.
 	meeting_link: str | None = None
 	is_published: bool
@@ -93,6 +89,7 @@ class EventDetail(APIResponse):
 	primary_host: EventHostRef | None = None
 	co_hosts: list[EventHostRef] = Field(default_factory=list)
 	external_links: list[EventExternalLink] = Field(default_factory=list)
+	topics: list[str] = Field(default_factory=list)
 
 
 class GuestAddOn(APIResponse):
@@ -209,9 +206,18 @@ class TicketTypePrice(APIResponse):
 	tickets_sold: int = 0
 
 
+class TicketCategoryItem(APIResponse):
+	name: str
+	title: str
+	description: str | None
+	sort_order: int
+
+
 class TicketTypeItem(APIResponse):
 	name: str
 	title: str
+	description: str | None
+	category: str | None
 	max_tickets_available: int
 	auto_unpublish_after: date | None
 	is_published: bool
@@ -248,6 +254,7 @@ class EventTicketTypes(APIResponse):
 	team_tax_id: str | None
 	can_edit_team: bool
 	paid_events_enabled: bool
+	categories: list[TicketCategoryItem]
 	ticket_types: list[TicketTypeItem]
 	payment_providers: list[PaymentProviderItem]
 	revenue: list[CurrencyRevenue]

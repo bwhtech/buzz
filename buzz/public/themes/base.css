@@ -52,58 +52,6 @@ body {
 	margin-inline: auto;
 }
 
-/* Full-bleed so the blur and the edge span the screen; the padding keeps content on the page column.
-   Content blurring through, and an edge that appears once scrolled, show the page continues above. */
-.site-header {
-	position: sticky;
-	top: 0;
-	z-index: 10;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 16px;
-	padding: 16px max(16px, (100% - var(--page-width)) / 2);
-	border-bottom: 1px solid transparent;
-	background: color-mix(in srgb, var(--page-bg) 80%, transparent);
-	backdrop-filter: blur(12px) saturate(1.5);
-	animation: header-edge linear both;
-	animation-timeline: scroll();
-	animation-range: 0 24px;
-}
-
-@keyframes header-edge {
-	to {
-		border-bottom-color: var(--border);
-	}
-}
-
-.site-brand img {
-	width: auto;
-	height: 24px;
-}
-
-/* The bundled wordmark is used as a shape only, painted in the ink colour each theme pairs with its background. */
-.default-logo {
-	display: block;
-	height: 24px;
-	aspect-ratio: 313 / 244;
-	background-color: var(--ink);
-	mask: url("/assets/buzz/images/buzz-logo-no-bg.svg") center / contain no-repeat;
-}
-
-.mode-toggle {
-	display: grid;
-	place-items: center;
-	width: 32px;
-	height: 32px;
-	padding: 0;
-	border: 0;
-	border-radius: 8px;
-	background: none;
-	color: var(--ink-strong);
-	cursor: pointer;
-}
-
 .icon {
 	flex-shrink: 0;
 	width: 16px;
@@ -115,74 +63,9 @@ body {
 	stroke-linejoin: round;
 }
 
-:root[data-mode="dark"] .icon-moon,
-:root[data-mode="light"] .icon-sun {
+:root:not([data-mode="dark"]) [data-logo-mode="dark"],
+:root[data-mode="dark"] [data-logo-mode="light"] {
 	display: none;
-}
-
-.site-nav {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-}
-
-.site-nav details {
-	position: relative;
-}
-
-.site-nav summary {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	cursor: pointer;
-	list-style: none;
-	color: var(--ink-strong);
-	font-size: 14px;
-	font-weight: 500;
-}
-
-.site-nav summary::-webkit-details-marker {
-	display: none;
-}
-
-.menu {
-	position: absolute;
-	right: 0;
-	top: calc(100% + 8px);
-	z-index: 10;
-	display: flex;
-	flex-direction: column;
-	min-width: 180px;
-	padding: 4px;
-	background: var(--surface-raised);
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-}
-
-.menu a,
-.menu button,
-.menu-heading {
-	padding: 6px 10px;
-	border: 0;
-	border-radius: 6px;
-	background: none;
-	color: var(--ink-strong);
-	font: inherit;
-	font-size: 13px;
-	text-align: left;
-}
-
-.menu [aria-current] {
-	background: var(--border);
-}
-
-.menu a,
-.menu button {
-	cursor: pointer;
-}
-
-.menu-heading {
-	color: var(--ink-muted);
 }
 
 .user-avatar {
@@ -194,33 +77,6 @@ body {
 	background: var(--surface-raised);
 	color: var(--ink-strong);
 	object-fit: cover;
-}
-
-/* Buttons */
-
-.btn {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	padding: 8px 16px;
-	border-radius: 8px;
-	font-size: 14px;
-	font-weight: 500;
-}
-
-.btn-primary {
-	background: var(--accent);
-	color: var(--accent-ink);
-}
-
-.btn-secondary {
-	border: 1px solid var(--border);
-	color: var(--ink-strong);
-}
-
-.btn[aria-disabled="true"] {
-	color: var(--ink-muted);
-	cursor: not-allowed;
 }
 
 /* Hero */
@@ -239,10 +95,13 @@ body {
 	border-radius: var(--radius-banner);
 }
 
-/* Holds the countdown pill (countdown.css) on the banner's bottom edge */
+/* Holds the countdown pill (countdown.css) on the banner's bottom edge. The banner's average
+   colour fills it until the image fades in over it. */
 
 .event-banner-frame {
 	position: relative;
+	border-radius: var(--radius-banner);
+	background-color: var(--banner-color, transparent);
 }
 
 .event-intro {
@@ -302,18 +161,41 @@ body {
 	gap: 8px;
 }
 
-.event-actions {
-	flex-shrink: 0;
+/* Layout: banner, title and content share the wide column; the side panel runs beside them
+   from the top of the page. */
+
+.event-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+	grid-template-rows: auto auto auto 1fr;
+	grid-template-areas:
+		"manage aside"
+		"banner aside"
+		"intro aside"
+		"main aside";
+	column-gap: 32px;
+	align-items: start;
 }
 
-/* Columns */
+.event-layout .event-banner-frame {
+	grid-area: banner;
+}
 
-.event-columns {
-	display: grid;
-	grid-template-columns: minmax(0, var(--measure)) var(--aside);
-	justify-content: space-between;
-	gap: 40px;
-	margin-top: 40px;
+.event-layout .event-banner {
+	aspect-ratio: 2 / 1;
+}
+
+.event-layout .event-intro {
+	grid-area: intro;
+}
+
+.event-main {
+	grid-area: main;
+	margin-top: 32px;
+}
+
+.event-aside {
+	grid-area: aside;
 }
 
 .section + .section {
@@ -376,6 +258,31 @@ body {
 	margin-top: 24px;
 }
 
+/* Matches the dashboard editor, so column widths saved there carry over. */
+.prose table {
+	width: 100%;
+	table-layout: fixed;
+	border-collapse: collapse;
+	font-variant-numeric: tabular-nums;
+}
+
+.prose :is(th, td) {
+	padding: 8px;
+	border: 1px solid var(--outline-gray-2);
+	text-align: start;
+	vertical-align: top;
+}
+
+.prose th {
+	background: var(--surface-gray-2);
+	color: var(--ink);
+	font-weight: var(--font-weight-semibold);
+}
+
+.prose :is(th, td) > * {
+	margin: 0;
+}
+
 /* Editors wrap heading text in <strong>; `bolder` would push it past semibold. */
 .prose :is(h1, h2, h3, h4, h5, h6) strong {
 	font-weight: inherit;
@@ -418,19 +325,17 @@ body {
 	display: none;
 }
 
-.event-main:has(#tab-about:checked) #panel-about,
-.event-main:has(#tab-schedule:checked) #panel-schedule,
-.event-main:has(#tab-speakers:checked) #panel-speakers,
-.event-main:has(#tab-sponsors:checked) #panel-sponsors {
-	display: block;
+/* A panel fades in as it is shown; the one leaving goes at once, so the two never overlap.
+   Which panel a tab shows is keyed by a page's document name, so those two rules are written
+   in the template, where the keys are known. */
+.tab-panel {
+	animation: tab-panel-in 120ms var(--ease-out);
 }
 
-.event-main:has(#tab-about:checked) [for="tab-about"],
-.event-main:has(#tab-schedule:checked) [for="tab-schedule"],
-.event-main:has(#tab-speakers:checked) [for="tab-speakers"],
-.event-main:has(#tab-sponsors:checked) [for="tab-sponsors"] {
-	border-bottom-color: var(--ink-strong);
-	color: var(--ink-strong);
+@keyframes tab-panel-in {
+	from {
+		opacity: 0;
+	}
 }
 
 /* The active tab already names the panel; the heading stays for screen readers. */
@@ -566,6 +471,254 @@ body {
 
 /* Aside */
 
+.side-cards {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+/* Mirrors frappe-ui's Alert in its row layout. */
+.manage-alert {
+	grid-area: manage;
+	display: flex;
+	align-items: center;
+	height: 40px;
+	margin-bottom: 16px;
+	padding: 6px 6px 6px 14px;
+	border-radius: var(--radius-6);
+	background: var(--surface-gray-1);
+}
+
+.manage-alert-icon {
+	flex-shrink: 0;
+	width: 16px;
+	height: 16px;
+	margin-right: 8px;
+	color: var(--ink-gray-7);
+	fill: currentColor;
+}
+
+.manage-alert-title {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	color: var(--ink-gray-8);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.manage-alert-action {
+	--bt-fg: var(--ink-gray-7);
+	flex-shrink: 0;
+	margin-left: 6px;
+}
+
+.side-card {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.side-card-head {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	padding: 20px;
+}
+
+.side-card-icon {
+	display: grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	margin-bottom: 14px;
+	border-radius: 10px;
+	background: var(--surface-raised);
+	color: var(--ink-strong);
+}
+
+.side-card-title {
+	color: var(--ink-strong);
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.3;
+	text-wrap: balance;
+}
+
+.side-card-subtitle {
+	margin-top: 2px;
+	color: var(--ink-muted);
+	font-size: 13px;
+	line-height: 1.45;
+	font-variant-numeric: tabular-nums;
+	text-wrap: pretty;
+}
+
+.side-card-body {
+	padding: 0 20px 20px;
+}
+
+.side-card-action {
+	width: 100%;
+}
+
+.side-card-identity {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 12px;
+	font-size: 13px;
+	white-space: nowrap;
+}
+
+.side-card-identity :root:not([data-mode="dark"]) [data-logo-mode="dark"],
+:root[data-mode="dark"] [data-logo-mode="light"] {
+	display: none;
+}
+
+.side-card-identity .user-avatar {
+	flex-shrink: 0;
+	width: 32px;
+	height: 32px;
+	font-size: 13px;
+}
+
+.side-card-identity-text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	line-height: 1.35;
+}
+
+.side-card-identity-name {
+	overflow: hidden;
+	color: var(--ink-strong);
+	font-weight: 500;
+	text-overflow: ellipsis;
+}
+
+.side-card-identity-email {
+	overflow: hidden;
+	color: var(--ink-muted);
+	text-overflow: ellipsis;
+}
+
+/* Registration is a ticket: its title in the title face, its action behind a torn edge. */
+
+.ticket-card .side-card-title {
+	color: var(--ink-title);
+	font-family: var(--font-title);
+	font-size: 32px;
+	font-weight: 400;
+	line-height: 1.05;
+	letter-spacing: 0.017em;
+}
+
+.ticket-card:is([data-state="closed"], [data-state="sold-out"]) .side-card-title {
+	color: var(--ink-muted);
+}
+
+.ticket-card .side-card-subtitle {
+	margin-top: 4px;
+}
+
+.ticket-card .side-card-body {
+	position: relative;
+	padding-top: 20px;
+	background: repeating-linear-gradient(90deg, var(--border) 0 6px, transparent 6px 12px) top left / 100% 1px
+		no-repeat;
+}
+
+/* Half-circle notches where the ticket tears; each shows only its inner half. */
+.ticket-card .side-card-body::before,
+.ticket-card .side-card-body::after {
+	content: "";
+	position: absolute;
+	top: -10px;
+	width: 18px;
+	height: 18px;
+	border: 1px solid var(--border);
+	border-radius: 50%;
+	background: var(--page-bg);
+}
+
+.ticket-card .side-card-body::before {
+	left: -10px;
+	clip-path: inset(0 0 0 50%);
+}
+
+.ticket-card .side-card-body::after {
+	right: -10px;
+	clip-path: inset(0 50% 0 0);
+}
+
+/* A person who holds tickets sees them as a stub tucked behind the registration card. */
+.ticket-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	/* The cards' 16px gap, plus 14px tucked under the registration card */
+	margin: 0 12px -30px;
+	padding: 12px 14px 26px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius) var(--radius) 0 0;
+	background: var(--surface-raised);
+}
+
+.ticket-stack + .ticket-card {
+	position: relative;
+}
+
+.ticket-stack-note {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	min-width: 0;
+	color: var(--ink-muted);
+	font-size: 13px;
+	line-height: 1.35;
+	font-variant-numeric: tabular-nums;
+}
+
+.ticket-stack-text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.ticket-stack-title {
+	color: var(--ink-strong);
+	font-weight: 500;
+}
+
+.booked-dot {
+	flex-shrink: 0;
+	/* Centred on the first line of text */
+	margin: 6px 3px 0;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--ink-green-3);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink-green-3) 18%, transparent);
+}
+
+.ticket-stack-link {
+	display: none;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
+	color: var(--ink-strong);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.ticket-stack-link .icon {
+	width: 14px;
+	height: 14px;
+	transition: transform 160ms var(--ease-out);
+}
+
 .event-aside .label:first-child {
 	margin-top: 0;
 }
@@ -696,7 +849,7 @@ body {
 .date-timeline {
 	position: relative;
 	display: grid;
-	gap: 10px;
+	gap: 16px;
 	margin: 0;
 	padding: 0 0 0 16px;
 	list-style: none;
@@ -704,12 +857,12 @@ body {
 	font-size: 14px;
 }
 
-/* The rail joins the two dots */
-.date-timeline::before {
+/* The rail runs from each dot down to the next one, past the 16px gap. */
+.date-timeline li:not(:last-child)::after {
 	position: absolute;
 	top: 10px;
-	bottom: 10px;
-	left: 3px;
+	bottom: -22px;
+	left: -13px;
 	width: 1px;
 	background: var(--border);
 	content: "";
@@ -717,6 +870,8 @@ body {
 
 .date-timeline li {
 	position: relative;
+	display: grid;
+	gap: 2px;
 }
 
 .date-timeline li::before {
@@ -733,13 +888,12 @@ body {
 }
 
 .date-timeline-label {
-	display: inline-block;
-	width: 52px;
 	color: var(--ink-muted);
 }
 
 .date-timeline-time {
 	color: var(--ink-muted);
+	white-space: nowrap;
 	font-variant-numeric: tabular-nums;
 }
 
@@ -826,7 +980,7 @@ body {
 .event-card-image {
 	display: block;
 	width: 100%;
-	aspect-ratio: 3 / 1;
+	aspect-ratio: 2 / 1;
 	margin-bottom: 8px;
 	border-radius: var(--radius);
 	background: var(--surface-raised);
@@ -882,6 +1036,18 @@ body {
 @media (prefers-reduced-motion: reduce) {
 	.live-dot::before {
 		animation: none;
+	}
+
+	.side-card {
+		animation-name: page-fade-in;
+	}
+
+	.ticket-stack {
+		animation-name: page-fade-in;
+	}
+
+	.ticket-stack-link .icon {
+		transition: none;
 	}
 }
 
@@ -1004,10 +1170,35 @@ span.footer-logo {
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.btn,
-.es-button,
-.mode-toggle,
-.site-nav summary {
+.side-card {
+	animation: side-card-in 240ms var(--ease-out) both;
+}
+
+/* The second card follows the first in, so the pair reads as a sequence. */
+.side-card + .side-card {
+	animation-delay: 60ms;
+}
+
+@keyframes side-card-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px) scale(0.99);
+	}
+}
+
+/* The ticket stub slides out from behind the card once the card has landed. */
+.ticket-stack {
+	animation: ticket-stack-in 280ms var(--ease-out) 120ms both;
+}
+
+@keyframes ticket-stack-in {
+	from {
+		opacity: 0;
+		transform: translateY(12px);
+	}
+}
+
+.es-button {
 	transition:
 		transform 160ms var(--ease-out),
 		background-color 150ms ease,
@@ -1015,10 +1206,7 @@ span.footer-logo {
 		color 150ms ease;
 }
 
-.btn:not([aria-disabled]):active,
-.es-button:active,
-.mode-toggle:active,
-.site-nav summary:active {
+.es-button:active {
 	transform: scale(0.97);
 }
 
@@ -1032,8 +1220,6 @@ span.footer-logo {
 }
 
 .tab,
-.menu a,
-.menu button,
 .site-footer a {
 	transition:
 		color 150ms ease,
@@ -1041,17 +1227,15 @@ span.footer-logo {
 		border-color 150ms ease;
 }
 
-.menu {
-	transform-origin: top right;
-	transition:
-		opacity 150ms var(--ease-out),
-		transform 150ms var(--ease-out);
-}
+/* The banner and map fade in once loaded instead of popping in. Their inline onload marks them,
+   so a cached image is shown before first paint; without scripting nothing is hidden. */
+@media (scripting: enabled) {
+	[data-fade-in] {
+		transition: opacity 200ms ease-out;
+	}
 
-@starting-style {
-	.site-nav details[open] .menu {
+	[data-fade-in]:not([data-loaded]) {
 		opacity: 0;
-		transform: scale(0.97) translateY(-4px);
 	}
 }
 
@@ -1066,11 +1250,6 @@ span.footer-logo {
 		navigation: auto;
 		types: page;
 	}
-}
-
-/* Named so they stay put while the content fades; a plain crossfade ghosts two layouts over each other. */
-.site-header {
-	view-transition-name: site-header;
 }
 
 :root:active-view-transition-type(page)::view-transition-old(root) {
@@ -1107,19 +1286,6 @@ summary:focus-visible {
 
 /* Touch devices fire hover on tap, so hover styles only apply to real pointers. */
 @media (hover: hover) and (pointer: fine) {
-	.mode-toggle:hover {
-		background: var(--surface-raised);
-	}
-
-	.menu a:hover,
-	.menu button:hover {
-		background: var(--border);
-	}
-
-	.btn-primary:hover {
-		background: var(--accent-hover);
-	}
-
 	.link-row:hover {
 		background: var(--surface-raised);
 	}
@@ -1130,6 +1296,10 @@ summary:focus-visible {
 
 	.link-row:hover .link-external {
 		color: var(--ink-strong);
+	}
+
+	.ticket-stack-link:hover .icon {
+		transform: translateX(2px);
 	}
 
 	.tab:hover,
@@ -1148,18 +1318,13 @@ summary:focus-visible {
 		animation: none;
 	}
 
-	.btn:not([aria-disabled]):active,
 	.es-button:active,
-	.event-card:active,
-	.mode-toggle:active,
-	.site-nav summary:active {
+	.event-card:active {
 		transform: none;
 	}
 
-	@starting-style {
-		.site-nav details[open] .menu {
-			transform: none;
-		}
+	.tab-panel {
+		animation: none;
 	}
 }
 
@@ -1172,18 +1337,65 @@ summary:focus-visible {
 		border-radius: 0;
 	}
 
+	/* On the event page the frame bleeds instead, so its placeholder colour reaches the edges too. */
+	.event-banner-frame {
+		margin-inline: -16px;
+		border-radius: 0;
+	}
+
+	.event-banner-frame .event-banner {
+		width: 100%;
+		margin-inline: 0;
+	}
+
+	/* The icon sits beside the title and subtitle instead of above them, to save height. */
+	.side-card-head {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		align-items: center;
+		column-gap: 12px;
+	}
+
+	.side-card-icon {
+		grid-row: span 2;
+		margin-bottom: 0;
+	}
+
+	/* On a narrow screen the stub keeps to one row, with a text link in place of the button. */
+	.ticket-stack {
+		flex-direction: row;
+		align-items: center;
+		padding: 10px 14px 24px;
+	}
+
+	.ticket-stack-button {
+		display: none;
+	}
+
+	.ticket-stack-link {
+		display: inline-flex;
+	}
+
 	.event-meta {
 		display: flex;
 	}
 
-	.event-intro {
-		flex-direction: column;
-		align-items: stretch;
-		gap: 20px;
+	.event-layout {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-areas:
+			"manage"
+			"banner"
+			"intro"
+			"aside"
+			"main";
 	}
 
-	/* The meta row under the title carries when and where on a narrow screen. */
+	/* The meta row under the title carries when and where on a narrow screen; the cards stay. */
 	.event-aside {
+		margin-top: 20px;
+	}
+
+	.event-aside > :not(.side-cards) {
 		display: none;
 	}
 
@@ -1201,10 +1413,6 @@ summary:focus-visible {
 	.tabs {
 		margin-inline: -16px;
 		padding-inline: 16px;
-	}
-
-	.event-columns {
-		grid-template-columns: minmax(0, 1fr);
 	}
 
 	.schedule-row {

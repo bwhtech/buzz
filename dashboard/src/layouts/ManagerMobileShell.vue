@@ -45,7 +45,7 @@ const showNav = computed(() => {
 						:key="item.label"
 						:label="item.shortLabel ?? item.label"
 						:icon="item.icon"
-						:to="item.to"
+						:route="item.to"
 						:active="route.path === item.to"
 					/>
 					<MobileNavItem

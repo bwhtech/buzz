@@ -16,14 +16,17 @@ from frappe.utils import (
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import co_hosts_of, primary_host_of, registration_link
-from buzz.emails import venue_map_url as venue_link
 from buzz.events.countdown import event_countdown
+from buzz.events.doctype.event_venue.details import VenueLocation, venue_details
 from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import datetime_in_time_zone, format_gmt_offset, get_time_zone_label
+from buzz.www.event.banner_color import banner_color
 from buzz.www.event.date_range import RANGE_SEPARATOR, EventDateRange, format_time
+from buzz.www.event.dot_map import DotMap
 from buzz.www.event.link_icons import LINK_ICON_PATHS
 from buzz.www.event.meta import EventMeta, event_time_zone
+from buzz.www.event.registration import ProposalCard, RegistrationCard
 from buzz.www.event.venue_map import venue_map_url
 from buzz.www.site_header import apply_site_context
 
@@ -31,7 +34,7 @@ no_cache = 1
 
 
 def get_context(context):
-	page = EventPage(frappe.form_dict.event_route, frappe.form_dict.page_route)
+	page = EventPage(frappe.form_dict.event_route)
 	apply_site_context(context, page.event.theme)
 	context.update(page.as_context())
 
@@ -84,33 +87,21 @@ def not_found():
 
 
 class EventPage:
-	def __init__(self, route: str, page_route: str | None = None):
+	def __init__(self, route: str):
 		# get_doc skips the team permission hooks, which would hide every event from a Guest
 		name = frappe.db.get_value("Buzz Event", {"route": route, "is_published": 1})
 		if not name:
 			not_found()
 		self.event = frappe.get_doc("Buzz Event", name)
-		self.page = self.load_page(page_route) if page_route else None
-
-	def load_page(self, page_route: str) -> frappe._dict:
-		page = frappe.db.get_value(
-			"Additional Event Page",
-			{"event": self.event.name, "route": page_route, "is_published": 1},
-			["title", "route", "content"],
-			as_dict=True,
-		)
-		if not page:
-			not_found()
-		return page
 
 	def as_context(self) -> dict:
 		context = {
 			"event": self.event,
+			"banner_color": banner_color(self.event.banner_image),
 			"event_date": self.event_date(),
 			"date_range": EventDateRange(self.event).as_dict(),
 			"timezone_label_with_offset": self.timezone_label_with_offset(),
 			"timezone_label": self.timezone_label,
-			"page": self.page,
 			"pages": self.pages(),
 			"tabs": self.tabs(),
 			"hosts": self.hosts(),
@@ -123,10 +114,17 @@ class EventPage:
 			"online_label": OnlineMeeting(self.event).label,
 			"register_url": registration_link(self.event),
 			"registrations_closed": are_registrations_closed(self.event),
+			"registration": RegistrationCard(self.event).as_dict(),
+			"proposal_card": ProposalCard(self.event).as_dict(),
 			"countdown": event_countdown(self.event) if self.event.show_countdown else None,
+			"manage_url": self.manage_url(),
 		}
-		meta = EventMeta(self.event, self.page, context)
+		meta = EventMeta(self.event, context)
 		return context | {"meta": meta.as_dict(), "structured_data": meta.structured_data()}
+
+	def manage_url(self) -> str | None:
+		if frappe.has_permission("Buzz Event", "write", self.event):
+			return f"/b/manage/events/{self.event.name}/details"
 
 	def tabs(self) -> list[dict]:
 		sections = [
@@ -138,11 +136,13 @@ class EventPage:
 		return [{"key": key, "label": label} for key, label, content in sections if content]
 
 	def pages(self) -> list[dict]:
+		# Keyed by document name: the tab and its panel are siblings in the markup, so the
+		# pair needs an id, and a page may be renamed without the tab changing.
 		return frappe.get_all(
 			"Additional Event Page",
-			filters={"event": self.event.name, "is_published": 1, "route": ["is", "set"]},
-			fields=["title", "route"],
-			order_by="creation",
+			filters={"event": self.event.name, "is_published": 1},
+			fields=["name as key", "title as label", "content"],
+			order_by="display_order asc, creation asc",
 		)
 
 	def event_date(self) -> dict:
@@ -284,27 +284,45 @@ class EventPage:
 		]
 
 	def venue(self) -> dict | None:
-		if self.event.medium == "Online" or not self.event.venue:
+		details = self.event.medium != "Online" and venue_details(self.event.venue)
+		if not details:
 			return None
-		venue = frappe.db.get_value(
-			"Event Venue",
-			self.event.venue,
-			[
-				"venue_name",
-				"address",
-				"type",
-				"google_maps_embed_code",
-				"google_place_id",
-				"latitude",
-				"longitude",
-			],
-			as_dict=True,
-		)
-		if not venue:
-			return None
-		return {
-			"name": venue.venue_name,
-			"address": venue.address,
-			"map_url": venue_map_url(venue),
-			"link": venue_link(self.event.venue),
+		venue = {
+			"name": details.venue_name,
+			"address": details.address,
+			"link": details.map_link,
+			"map_url": None,
+			"locations": [],
+			"dot_map": None,
 		}
+		if not details.has_multiple_locations:
+			return venue | {"map_url": self.venue_map_url()}
+		return venue | LocationsMap(details.locations).as_context()
+
+	def venue_map_url(self) -> str | None:
+		return venue_map_url(frappe.get_cached_doc("Event Venue", self.event.venue))
+
+
+class LocationsMap:
+	"""A grouped venue's locations, each with its pin on a dot map framed around them."""
+
+	def __init__(self, locations: list[VenueLocation]):
+		self.locations = locations
+		self.pinned = [location for location in locations if location.latitude and location.longitude]
+		coordinates = [(location.latitude, location.longitude) for location in self.pinned]
+		self.dot_map = DotMap(coordinates) if coordinates else None
+
+	def as_context(self) -> dict:
+		return {
+			"locations": [self.located(location) for location in self.locations],
+			"dot_map": self.dot_map
+			and {
+				"view_box": str(self.dot_map.view),
+				"dots_url": self.dot_map.dots_url,
+				"dot_width": self.dot_map.dot_width,
+			},
+		}
+
+	def located(self, location: VenueLocation) -> dict:
+		pin = self.dot_map.pin(location.latitude, location.longitude) if location in self.pinned else None
+		return {**location.__json__(), "pin": pin}

@@ -4,6 +4,7 @@ from typing import Any
 from pydantic import Field
 
 from buzz.api.schemas import APIRequest, APIResponse
+from buzz.events.doctype.event_venue.details import VenueDetails
 
 
 class BookingRequest(APIRequest):
@@ -22,9 +23,23 @@ class BookingRequest(APIRequest):
 	payment_proof: str | None = None
 	is_offline: bool = False
 	offline_payment_method: str | None = None
+	buyer_name: str | None = None
+	buyer_email: str | None = None
+	buyer_phone: str | None = None
 	invoice_requested: bool = False
 	tax_id: str | None = None
+	business_name: str | None = None
 	billing_address: str | None = None
+	billing_state: str | None = None
+	hold_token: str | None = None
+
+
+class TicketHoldResponse(APIResponse):
+	hold_token: str
+	# None when nothing is held: no tickets asked for, or none of them has a limit.
+	expires_in_seconds: int | None
+	# Tickets this hold can still have, by ticket type. Ticket types without a limit are left out.
+	remaining: dict[str, int]
 
 
 class FreeBookingResponse(APIResponse):
@@ -54,6 +69,7 @@ class EventBookingDataResponse(APIResponse):
 	registrations_closed: bool
 	event_details: Any
 	available_ticket_types: list
+	ticket_categories: list
 	available_add_ons: list
 	tax_settings: TaxSettings
 	custom_fields: list
@@ -73,11 +89,6 @@ class ConfirmationEvent(APIResponse):
 	free_event: int | None
 
 
-class ConfirmationVenue(APIResponse):
-	venue_name: str | None
-	address: str | None
-
-
 class ConfirmationBooking(APIResponse):
 	name: str
 	total_amount: float | None
@@ -90,6 +101,8 @@ class ConfirmationBooking(APIResponse):
 	tax_percentage: float | None
 	discount_amount: float | None
 	coupon_code: str | None
+	payment_method: str | None
+	booked_on: datetime
 
 
 class ConfirmationTicket(APIResponse):
@@ -102,18 +115,18 @@ class ConfirmationTicket(APIResponse):
 
 class BookingConfirmationResponse(APIResponse):
 	event: ConfirmationEvent
-	venue: ConfirmationVenue | None
+	venue: VenueDetails | None
 	booking: ConfirmationBooking
 	tickets: list[ConfirmationTicket]
 
 
 class BookingDetailsResponse(APIResponse):
-	# doc, event, venue and the ticket rows are documents or aliased query rows;
+	# doc, event and the ticket rows are documents or aliased query rows;
 	# they pass through untyped to keep the wire shape.
 	doc: Any
 	tickets: list
 	event: Any
-	venue: Any
+	venue: VenueDetails | None
 	can_transfer_ticket: bool
 	can_change_add_ons: bool
 	can_request_cancellation: bool

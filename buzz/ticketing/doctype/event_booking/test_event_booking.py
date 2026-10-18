@@ -1,6 +1,8 @@
 # Copyright (c) 2025, BWH Studios and Contributors
 # See license.txt
 
+from unittest.mock import patch
+
 import frappe
 
 from buzz.api.booking import process_booking
@@ -30,6 +32,33 @@ class TestTicketAvailability(BookingTestCase):
 		frappe.clear_document_cache("Event Ticket Type", normal)
 		with self.assertRaises(frappe.ValidationError):
 			self.create_booking(normal)
+
+	def test_late_payment_books_a_sold_out_ticket_type(self):
+		paid = EventTicketTypeFactory.create("paid", event=self.event.name, max_tickets_available=1).name
+		booking = self.create_booking(paid)
+		EventTicketFactory.create("submitted", event=self.event.name, ticket_type=paid)
+
+		with patch("buzz.ticketing.doctype.event_booking.event_booking.frappe.log_error") as log_error:
+			booking.on_payment_authorized("Completed")
+
+		self.assertEqual(booking.docstatus, 1)
+		self.assertEqual(log_error.call_args.kwargs["reference_name"], booking.name)
+
+	def test_late_payment_books_a_ticket_type_unpublished_meanwhile(self):
+		paid = EventTicketTypeFactory.create("paid", event=self.event.name).name
+		booking = self.create_booking(paid)
+		frappe.db.set_value("Event Ticket Type", paid, "is_published", 0)
+		frappe.clear_document_cache("Event Ticket Type", paid)
+
+		booking.on_payment_authorized("Completed")
+
+		self.assertEqual(booking.docstatus, 1)
+
+	def test_counts_tickets_with_a_locking_read(self):
+		ticket_type = EventTicketTypeFactory.create(event=self.event.name, max_tickets_available=3)
+		EventTicketFactory.create("submitted", event=self.event.name, ticket_type=ticket_type.name)
+
+		self.assertEqual(ticket_type.get_remaining_tickets(for_update=True), 2)
 
 	def create_booking(self, *ticket_types: str):
 		attendees = [

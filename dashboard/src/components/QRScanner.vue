@@ -17,7 +17,7 @@
 						class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-gray-2 p-6 text-center"
 						role="status"
 					>
-						<Icon :name="statusIcon" class="size-6 text-ink-gray-5" />
+						<Icon :icon="statusIcon" class="size-6 text-ink-gray-5" />
 						<LoadingText v-if="status !== 'blocked'" :text="statusMessage" />
 						<p v-else class="text-p-base text-ink-gray-6">{{ statusMessage }}</p>
 					</div>

@@ -1,6 +1,10 @@
 <template>
 	<div>
-		<div v-if="eventBookingResource.loading" class="flex justify-center py-16">
+		<!-- First load only: the availability poll must not unmount the form and drop its hold. -->
+		<div
+			v-if="eventBookingResource.loading && !eventBookingResource.data"
+			class="flex justify-center py-16"
+		>
 			<Spinner class="w-8 h-8" />
 		</div>
 		<div v-else-if="eventNotFound" class="flex flex-col items-center justify-center py-16 px-4">
@@ -34,11 +38,29 @@
 				<Button variant="solid" size="lg" @click="goToHome">{{ __("Browse Other Events") }}</Button>
 			</div>
 		</div>
+		<div
+			v-else-if="!eventBookingData.availableTicketTypes?.length"
+			class="flex flex-col items-center justify-center py-16 px-4"
+		>
+			<div class="text-center max-w-md">
+				<h2 class="text-2xl-semibold text-ink-gray-8 mb-2">
+					{{ __("No tickets available right now") }}
+				</h2>
+				<p class="text-ink-gray-6">
+					{{
+						__(
+							"Some tickets may be held by people checking out. They come back if they don't finish, and this page updates when they do.",
+						)
+					}}
+				</p>
+			</div>
+		</div>
 		<div v-else>
 			<BookingForm
 				v-if="eventBookingData.availableAddOns && eventBookingData.availableTicketTypes"
 				:availableAddOns="eventBookingData.availableAddOns"
 				:availableTicketTypes="eventBookingData.availableTicketTypes"
+				:ticketCategories="eventBookingData.ticketCategories"
 				:taxSettings="eventBookingData.taxSettings || {}"
 				:eventDetails="eventBookingData.eventDetails || {}"
 				:customFields="eventBookingData.customFields || []"
@@ -52,25 +74,37 @@
 </template>
 
 <script setup lang="ts">
+import { useIntervalFn } from "@vueuse/core"
 import { Spinner, useCall, usePageMeta } from "frappe-ui"
 import { computed, reactive, ref, watch } from "vue"
 
+import { holdTokenKey } from "@/composables/useTicketHold"
 import { session } from "@/data/session"
-import type { AvailableAddOn, AvailableTicketType, FrappeField, OfflineMethod } from "@/types"
+import type {
+	AvailableAddOn,
+	AvailableTicketType,
+	BookingTicketCategory,
+	FrappeField,
+	OfflineMethod,
+} from "@/types"
 
 import BookingForm from "../components/BookingForm.vue"
+
+const AVAILABILITY_POLL_MS = 20_000
 
 const eventBookingData = reactive<{
 	availableAddOns: AvailableAddOn[] | null
 	availableTicketTypes: AvailableTicketType[] | null
+	ticketCategories: BookingTicketCategory[]
 	taxSettings: Record<string, any> | null
 	eventDetails: Record<string, any> | null
 	customFields: FrappeField[] | null
-	paymentGateways: Record<string, any>[]
+	paymentGateways: string[]
 	offlineMethods: OfflineMethod[]
 }>({
 	availableAddOns: null,
 	availableTicketTypes: null,
+	ticketCategories: [],
 	taxSettings: null,
 	eventDetails: null,
 	customFields: null,
@@ -99,9 +133,18 @@ const goToHome = () => {
 	window.location.href = "/"
 }
 
-const eventBookingResource = useCall<Record<string, any>, { event_route: string }>({
+// The form's own hold counts as available, so a reload still lists the tickets it holds.
+const bookingDataParams = () => {
+	const holdToken = sessionStorage.getItem(holdTokenKey(props.eventRoute))
+	return { event_route: props.eventRoute, ...(holdToken ? { hold_token: holdToken } : {}) }
+}
+
+const eventBookingResource = useCall<
+	Record<string, any>,
+	{ event_route: string; hold_token?: string }
+>({
 	url: "/api/v2/method/buzz.api.booking.get_event_booking_data",
-	params: { event_route: props.eventRoute },
+	params: bookingDataParams,
 	onSuccess: (data) => {
 		eventBookingData.availableAddOns = data.available_add_ons || []
 		// A ticket type's first price row is its default price.
@@ -112,6 +155,7 @@ const eventBookingResource = useCall<Record<string, any>, { event_route: string 
 				currency: ticketType.prices?.[0]?.currency,
 			}),
 		)
+		eventBookingData.ticketCategories = data.ticket_categories || []
 		eventBookingData.taxSettings = data.tax_settings || {
 			apply_tax: false,
 			tax_inclusive: false,
@@ -130,6 +174,11 @@ const eventBookingResource = useCall<Record<string, any>, { event_route: string 
 		}
 	},
 })
+
+// Other people's holds come and go, so the ticket types on offer are refreshed.
+useIntervalFn(() => {
+	if (document.visibilityState === "visible") eventBookingResource.reload()
+}, AVAILABILITY_POLL_MS)
 
 watch(
 	() => session.isLoggedIn,

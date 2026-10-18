@@ -5,6 +5,7 @@ import requests
 
 from buzz.api.maps.exceptions import CannotAddVenues, PlaceSearchFailed, PlaceSearchNotEnabled
 from buzz.api.maps.schemas import MapLinkLocation, PlacePrediction
+from buzz.events.doctype.event_venue.geocode import VenueGeocoder
 from buzz.events.doctype.event_venue.map_link import read_map_link
 from buzz.www.event.venue_map import google_maps_url
 
@@ -27,6 +28,15 @@ def locate_map_link(link: str) -> MapLinkLocation:
 	place = read_map_link(link)
 	latitude, longitude = place.coordinates or (None, None)
 	return MapLinkLocation(latitude=latitude, longitude=longitude, name=place.name, address=place.address)
+
+
+def locate_address(address: str) -> MapLinkLocation:
+	"""Where OpenStreetMap puts an address, to preview a Google Maps place before it is saved."""
+	if not frappe.has_permission("Event Venue", "create"):
+		CannotAddVenues.throw()
+	place = frappe.new_doc("Event Venue", address=address)
+	VenueGeocoder(place).locate()
+	return MapLinkLocation(latitude=place.latitude or None, longitude=place.longitude or None)
 
 
 class GooglePlaces:
@@ -60,6 +70,9 @@ class GooglePlaces:
 		# Checked before the billed Place Details call, not left to insert().
 		venue.check_permission("create")
 		venue.address = self.address_of(place_id, session_token) or name
+		# Located now rather than after saving, so the new venue has its pin straight away.
+		# The coordinates come from OpenStreetMap: Google's may not be kept.
+		VenueGeocoder(venue).locate()
 		return venue.insert().name
 
 	def address_of(self, place_id: str, session_token: str) -> str | None:

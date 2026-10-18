@@ -7,6 +7,7 @@ from frappe import _
 from frappe.utils import (
 	get_datetime,
 	get_datetime_in_timezone,
+	get_fullname,
 	get_system_timezone,
 	validate_email_address,
 	validate_phone_number_with_country_code,
@@ -14,7 +15,12 @@ from frappe.utils import (
 from frappe.utils.password import get_encryption_key
 from pypika import CustomFunction
 
-from buzz.api.booking.exceptions import AddOnNotForEvent, InvalidAddOnValue, RegistrationsClosed
+from buzz.api.booking.exceptions import (
+	AddOnNotForEvent,
+	InvalidAddOnValue,
+	InvoiceDetailsMissing,
+	RegistrationsClosed,
+)
 from buzz.api.booking.guests import get_or_create_guest_user, verify_guest_otp
 from buzz.api.booking.schemas import (
 	BookingRequest,
@@ -23,7 +29,10 @@ from buzz.api.booking.schemas import (
 	PaymentLinkResponse,
 )
 from buzz.payments import get_payment_link_for_booking
-from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import default_currency
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
+	default_currency,
+	start_capacity_transaction,
+)
 from buzz.utils import ZOOM_BACKED_CATEGORIES, build_event_datetimes
 
 if TYPE_CHECKING:
@@ -44,6 +53,7 @@ class BookingService:
 		return frappe.get_cached_doc("Buzz Event", self.request.event)
 
 	def process(self) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
+		start_capacity_transaction()
 		self.validate_event()
 		self.validate_duplicate_attendee_emails()
 		self.validate_offline_currency()
@@ -140,7 +150,9 @@ class BookingService:
 		booking.event = self.request.event
 		booking.coupon_code = self.request.coupon_code
 		booking.currency = self.request.currency
+		booking.hold_token = self.request.hold_token
 		booking.user = self.resolve_user()
+		self.apply_buyer_details(booking)
 		self.apply_invoice_details(booking)
 		self.append_utm_parameters(booking)
 		self.append_custom_fields(booking)
@@ -184,12 +196,33 @@ class BookingService:
 			frappe.throw(_("Full name is required for guest booking"))
 		return full_name
 
+	# Who pays and receives the confirmation; falls back to the guest contact or the booking user.
+	def apply_buyer_details(self, booking: "EventBooking") -> None:
+		request = self.request
+		booking.buyer_email = (
+			request.buyer_email or request.guest_email or frappe.db.get_value("User", booking.user, "email")
+		)
+		booking.buyer_name = request.buyer_name or request.guest_full_name or get_fullname(booking.user)
+		booking.buyer_phone = request.buyer_phone or request.guest_phone
+		if booking.buyer_email:
+			validate_email_address(booking.buyer_email, throw=True)
+		if booking.buyer_phone:
+			validate_phone_number_with_country_code(booking.buyer_phone, _("Phone Number"))
+
 	def apply_invoice_details(self, booking: "EventBooking") -> None:
 		if not (self.event.apply_tax and self.request.invoice_requested):
 			return
-		booking.invoice_requested = 1
-		booking.tax_id = self.request.tax_id
-		booking.billing_address = self.request.billing_address
+		if not (self.request.tax_id and self.request.business_name):
+			InvoiceDetailsMissing.throw()
+		booking.update(
+			{
+				"invoice_requested": 1,
+				"tax_id": self.request.tax_id,
+				"business_name": self.request.business_name,
+				"billing_address": self.request.billing_address,
+				"billing_state": self.request.billing_state,
+			}
+		)
 
 	def append_utm_parameters(self, booking: "EventBooking") -> None:
 		for utm_parameter in self.request.utm_parameters or []:
@@ -286,6 +319,7 @@ class BookingService:
 		booking.payment_status = "Verification Pending"
 		booking.flags.ignore_permissions = True
 		booking.save()
+		booking.hold_until_approval()
 		self.attach_payment_proof(booking)
 		self.acknowledge_offline_booking(booking)
 		return OfflineBookingResponse(booking_name=booking.name, offline_payment=True)

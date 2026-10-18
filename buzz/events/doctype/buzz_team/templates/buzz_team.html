@@ -17,56 +17,10 @@
 {% endautoescape %}{% endblock %}
 
 {% block content %}{% autoescape true %}
-	{% macro event_card(event) %}
-	<a class="team-event-card" href="{{ event.url }}" data-event-card data-country="{{ event.country or '' }}" data-event-route="{{ event.route }}">
-		{% if event.image %}<img class="team-event-card-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="team-event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
-		<span class="team-event-card-body">
-			<span class="team-event-card-time">
-				{# Like the discover page: a live event says so instead of its start time. #}
-				{% if event.is_live %}<span class="event-card-live"><span class="live-dot"></span>{{ _("Live") }}</span>{% else %}{{ event.time }}{% endif %}
-				{# An attendee already has their place, so closed registrations do not concern them. #}
-				{% if event.is_attending %}<span class="es-badge" data-size="sm" data-theme="violet">{{ _("Attending") }}</span>
-				{% elif event.registrations_closed %}<span class="es-badge" data-size="sm" data-theme="red">{{ _("Registrations closed") }}</span>{% endif %}
-			</span>
-			<span class="team-event-card-title">{{ event.title }}</span>
-			<span class="team-event-card-host">
-				{% if event.host_logo %}<img class="team-event-card-avatar" src="{{ event.host_logo }}" alt="">{% else %}<span class="team-event-card-avatar" aria-hidden="true">{{ event.host_names[:1] | upper }}</span>{% endif %}
-				{{ _("By {0}").format(event.host_names) }}
-			</span>
-			{% if event.place %}
-			<span class="team-event-card-place meta-item">
-				<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">{% if event.is_online %}<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>{% else %}<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>{% endif %}</svg>
-				{{ event.place }}
-			</span>
-			{% endif %}
-		</span>
-	</a>
-	{% endmacro %}
-
-	{% macro timeline(days, empty_text) %}
-	{% for day in days %}
-	<section class="team-day" data-day-group data-day="{{ day.date }}">
-		<h3 class="team-day-heading">{{ day.label }}<span>{{ day.weekday }}</span></h3>
-		<div class="team-day-events">{% for event in day.events %}{{ event_card(event) }}{% endfor %}</div>
-	</section>
-	{% else %}
-	<p class="empty-state">{{ empty_text }}</p>
-	{% endfor %}
-	<p class="empty-state" data-filter-empty hidden>{{ _("No events in this country.") }}</p>
-	{% endmacro %}
-
-	{% macro chevron(path) %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ path }}"/></svg>{% endmacro %}
+	{% from "buzz/templates/event_page/timeline.html" import timeline, month_calendar, dot_map with context %}
 
 	{% if has_pins %}
-	<section class="team-map" data-map>
-		<svg class="team-map-svg" viewBox="0 6 360 140" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use class="team-map-land" stroke-width="0.24" href="/assets/buzz/images/world-dots.svg#world-dots"/></svg>
-		<div class="team-map-pins"></div>
-		<div class="team-map-controls" role="group" aria-label="{{ _('Map zoom') }}">
-			<button type="button" data-zoom-to="nearby" aria-pressed="false" hidden>{{ _("Nearby") }}</button>
-			<button type="button" data-zoom-to="world" aria-pressed="true">{{ _("Everywhere") }}</button>
-		</div>
-		<p class="team-map-credit">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a></p>
-	</section>
+	{{ dot_map() }}
 	{% endif %}
 
 	<main class="event-content team-page">
@@ -97,12 +51,7 @@
 
 		<div class="team-columns">
 			<div class="team-events">
-				<div class="es-tab-buttons" role="radiogroup" data-size="md" data-tab-buttons aria-label="{{ _('Events') }}">
-					<button type="button" class="es-pill" data-size="md" role="radio" aria-checked="true" data-state="active" data-tab="upcoming">{{ _("Upcoming") }}</button>
-					<button type="button" class="es-pill" data-size="md" role="radio" aria-checked="false" data-state="inactive" data-tab="past" tabindex="-1">{{ _("Past") }}</button>
-				</div>
-				<div data-panel="upcoming">{{ timeline(upcoming_days, _("No upcoming events.")) }}</div>
-				<div data-panel="past" hidden>{{ timeline(past_days, _("No past events.")) }}</div>
+				{{ timeline(upcoming_days, past_days) }}
 			</div>
 
 			{% set has_events = upcoming_days or past_days %}
@@ -110,16 +59,7 @@
 			{% if has_events or has_about %}
 			<aside class="team-aside">
 				{% if has_events %}
-				<section class="team-about team-calendar" data-calendar>
-					<div class="calendar-header">
-						<h2 class="calendar-title" data-calendar-title></h2>
-						<span class="calendar-nav">
-							<button type="button" class="es-button" data-icon-button="true" data-variant="ghost" data-size="xs" data-calendar-step="-1" aria-label="{{ _('Previous month') }}">{{ chevron("m15 18-6-6 6-6") }}</button>
-							<button type="button" class="es-button" data-icon-button="true" data-variant="ghost" data-size="xs" data-calendar-step="1" aria-label="{{ _('Next month') }}">{{ chevron("m9 18 6-6-6-6") }}</button>
-						</span>
-					</div>
-					<div class="calendar-grid" data-calendar-grid></div>
-				</section>
+				{{ month_calendar() }}
 				{% endif %}
 				{% if has_about %}
 				<section class="team-about">

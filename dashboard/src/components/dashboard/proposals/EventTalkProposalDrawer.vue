@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Avatar, Button, Dialog, Select, Skeleton, dayjsLocal, toast } from "frappe-ui"
+import { Button, Dialog, Select, call, dayjsLocal, toast } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import {
@@ -10,16 +10,18 @@ import {
 	DrawerTitle,
 } from "@/components/common/drawer"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
+import { useHeldWrite } from "@/composables/useHeldWrite"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
 import { useAcceptProposal, useProposal } from "@/data/proposals"
 import type { ProposalListItem, ProposalSpeaker } from "@/types"
-import { speakerName } from "@/utils/speakerByline"
+
+import ProposalDocument from "./ProposalDocument.vue"
 
 const props = defineProps<{ proposal: ProposalListItem | null; canWrite?: boolean }>()
 
 const open = defineModel<boolean>("open", { required: true })
 
-const emit = defineEmits<{ changed: [status: string] }>()
+const emit = defineEmits<{ changed: [proposal: string, status: string] }>()
 
 const { statuses, getStatusDot } = useProposalStatuses()
 
@@ -52,10 +54,15 @@ const statusOptions = computed(() =>
 	(statuses.data || []).map((row: { name: string }) => ({ value: row.name, label: row.name })),
 )
 
-// Picking a status only arms the change: the footer's button is what writes it, so a
-// mis-click on a decision the speaker gets told about is still recoverable. A reader the
-// server would refuse never gets the control — read access alone is a Viewer or Frontdesk.
-const changed = computed(() => Boolean(status.value) && status.value !== props.proposal?.status)
+// Picking a status holds the write for as long as the toast offers Undo, so a mis-click
+// never reaches the server. Accepting is the exception below, and a reader the server
+// would refuse never gets the control — read access alone is a Viewer or Frontdesk.
+const selectedStatus = computed({
+	get: () => status.value,
+	set: (next: string) => requestStatus(next),
+})
+
+const heldStatus = useHeldWrite()
 
 // Accepting is the one status that is not a status write: it creates the talk the
 // programme is made of, and an account for any speaker who has none. Worth a confirmation.
@@ -64,159 +71,133 @@ const ACCEPTED = "Accepted"
 const accept = useAcceptProposal()
 const confirmingAcceptance = ref(false)
 
-const saving = computed(() => proposalDoc.setValue.loading || accept.loading)
-
-function updateStatus() {
-	if (!changed.value) return
-	if (status.value === ACCEPTED) {
+function requestStatus(next: string) {
+	const name = props.proposal?.name
+	if (!name || !next || next === status.value) return
+	if (next === ACCEPTED) {
 		confirmingAcceptance.value = true
 		return
 	}
-	write(() => proposalDoc.setValue.submit({ status: status.value }))
+	holdStatus(name, next, status.value)
+}
+
+function holdStatus(name: string, next: string, previous: string) {
+	const restore = () => props.proposal?.name === name && (status.value = previous)
+	status.value = next
+	heldStatus.hold({
+		message: `Marked ${next.toLowerCase()}`,
+		write: () => saveStatus(name, next),
+		undo: restore,
+		revert: () => {
+			restore()
+			saveStatus(name, previous)
+		},
+	})
+}
+
+// Bound to the proposal's name, not the drawer's document, because the drawer may have
+// moved to another proposal by the time a held write goes out.
+async function saveStatus(name: string, next: string) {
+	try {
+		await call("frappe.client.set_value", {
+			doctype: "Talk Proposal",
+			name,
+			fieldname: "status",
+			value: next,
+		})
+		emit("changed", name, next)
+	} catch {
+		if (props.proposal?.name === name) status.value = props.proposal.status
+		toast.error("Could not change the status")
+	}
 }
 
 async function acceptProposal() {
 	const name = props.proposal?.name
 	if (!name) return
-	if (await write(() => accept.submit({ proposal: name }))) confirmingAcceptance.value = false
-}
-
-async function write(save: () => Promise<unknown>): Promise<boolean> {
+	heldStatus.flush()
 	try {
-		await save()
-		toast.success(`Marked ${status.value.toLowerCase()}`)
-		emit("changed", status.value)
-		return true
+		await accept.submit({ proposal: name })
+		status.value = ACCEPTED
+		confirmingAcceptance.value = false
+		toast.success("Marked accepted")
+		emit("changed", name, ACCEPTED)
 	} catch {
-		// The select goes back to what is actually stored, so the footer stops offering
-		// an update that has already failed.
-		status.value = props.proposal?.status || ""
 		toast.error("Could not change the status")
-		return false
 	}
 }
 
 const copyId = useCopyToClipboard()
 
-// One theme per speaker, stable across renders so a face keeps its colour.
-const AVATAR_THEMES = ["blue", "green", "amber", "red", "violet"] as const
-const avatarTheme = (email: string) => {
-	const seed = [...email].reduce((total, character) => total + character.charCodeAt(0), 0)
-	return AVATAR_THEMES[seed % AVATAR_THEMES.length]
-}
-
-// creation and modified are full timestamps in the site's timezone, so these convert.
-const submittedOn = computed(() =>
-	props.proposal ? dayjsLocal(props.proposal.creation).format("D MMM YYYY") : "",
-)
-const lastUpdated = computed(() =>
-	props.proposal ? dayjsLocal(props.proposal.modified).format("D MMM'YY, h:mm A") : "",
-)
-
-// The reviewer's own reading order: who and when first, then the form's own answers.
-const fields = computed(() => [
-	{ label: "Submitted on", value: submittedOn.value },
-	{ label: "Phone", value: proposalDoc.doc?.phone || "—" },
-	...(proposalDoc.doc?.additional_fields || [])
-		.filter((field) => field.value)
-		.map((field) => ({ label: field.label, value: field.value })),
-])
+// modified is a full timestamp in the site's timezone, so this converts.
+const lastUpdated = computed(() => (props.proposal ? dayjsLocal(props.proposal.modified) : null))
 </script>
 
 <template>
 	<Drawer v-model:open="open" swipe-direction="right">
-		<DrawerContent size="lg">
+		<DrawerContent size="xl">
 			<template v-if="proposal">
-				<div class="flex items-center gap-2 p-4 pb-0">
-					<DrawerCloseButton label="Close proposal" />
-					<button
-						type="button"
-						class="copy-id cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5 hover:text-ink-gray-7"
-						:aria-label="`Copy proposal id ${proposal.name}`"
-						@click="copyId(proposal.name)"
-					>
-						#{{ proposal.name }}
-					</button>
-				</div>
+				<header class="shrink-0 px-6 pt-4 pb-2">
+					<div class="flex items-center gap-2">
+						<DrawerCloseButton label="Close proposal" />
+						<button
+							type="button"
+							class="copy-id cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5 hover:text-ink-gray-7"
+							:aria-label="`Copy proposal id ${proposal.name}`"
+							@click="copyId(proposal.name)"
+						>
+							#{{ proposal.name }}
+						</button>
+						<span
+							v-if="lastUpdated"
+							class="ml-auto text-sm text-ink-gray-5"
+							:title="lastUpdated.format('D MMM YYYY, h:mm A')"
+						>
+							Updated {{ lastUpdated.fromNow() }}
+						</span>
+					</div>
 
-				<div class="flex flex-1 flex-col space-y-4 overflow-y-auto overscroll-contain p-4">
 					<!-- The decision leads: it is what the reviewer opened the drawer to make. -->
-					<Select
-						v-model="status"
-						class="w-fit"
-						size="md"
-						aria-label="Review status"
-						side="bottom"
-						:options="statusOptions"
-						:disabled="!canWrite || saving"
-					>
-						<!-- The trigger reuses this slot for the selected option, so the dot is
-						     defined once and shows in both places. -->
-						<template #item-prefix="{ item }">
-							<span
-								class="size-2 shrink-0 rounded-full transition-colors duration-150"
-								:class="getStatusDot(String(item.value))"
-								aria-hidden="true"
-							/>
-						</template>
-					</Select>
+					<div class="mt-4">
+						<Select
+							v-model="selectedStatus"
+							class="w-fit"
+							size="md"
+							aria-label="Review status"
+							side="bottom"
+							:options="statusOptions"
+							:disabled="!canWrite || accept.loading"
+						>
+							<!-- The trigger reuses this slot for the selected option, so the dot is
+							     defined once and shows in both places. -->
+							<template #item-prefix="{ item }">
+								<span
+									class="size-2 shrink-0 rounded-full transition-colors duration-150"
+									:class="getStatusDot(String(item.value))"
+									aria-hidden="true"
+								/>
+							</template>
+						</Select>
+					</div>
 
-					<DrawerTitle class="text-4xl font-semibold text-pretty text-ink-gray-9">
+					<DrawerTitle class="mt-3 text-4xl font-semibold text-pretty text-ink-gray-9">
 						{{ proposal.title }}
 					</DrawerTitle>
-					<!-- Spoken, not drawn: the speakers and the date are both below, and reka
-					     wants the panel described. -->
+					<!-- Spoken, not drawn: the speakers are listed below, and reka wants the
+					     panel described. -->
 					<DrawerDescription class="sr-only">
-						{{ speakers.length }} speaker{{ speakers.length === 1 ? "" : "s" }}, submitted
-						{{ submittedOn }}
+						{{ speakers.length }} speaker{{ speakers.length === 1 ? "" : "s" }}
 					</DrawerDescription>
+				</header>
 
-					<!-- Who is proposing this leads: the panel decides on people as much as topics. -->
-					<div v-if="speakers.length" class="space-y-2">
-						<h3 class="text-base text-ink-gray-5">Speakers</h3>
-						<ul class="space-y-1">
-							<li
-								v-for="speaker in speakers"
-								:key="speaker.email"
-								class="flex min-w-0 items-center gap-2 rounded-4 px-1 py-1 transition-colors hover:bg-surface-gray-1"
-							>
-								<Avatar
-									size="md"
-									:label="speakerName(speaker)"
-									:theme="avatarTheme(speaker.email)"
-								/>
-								<span class="min-w-0 truncate text-base text-ink-gray-8">
-									{{ speakerName(speaker) }}
-								</span>
-								<span class="ml-auto min-w-0 truncate text-base text-ink-gray-5">
-									{{ speaker.email }}
-								</span>
-							</li>
-						</ul>
-					</div>
+				<ProposalDocument
+					:key="proposal.name"
+					:proposal="proposal"
+					:doc="proposalDoc.doc"
+					:loading="proposalDoc.loading"
+					:speakers="speakers"
+				/>
 
-					<div class="grid grid-cols-2 gap-x-5 gap-y-3">
-						<div v-for="field in fields" :key="field.label" class="space-y-0.5">
-							<p class="text-base text-ink-gray-5">{{ field.label }}</p>
-							<p class="text-base text-ink-gray-8">{{ field.value }}</p>
-						</div>
-					</div>
-
-					<div class="space-y-2">
-						<h3 class="text-base text-ink-gray-5">Description</h3>
-						<!-- Only the document carries the description, so it arrives a beat later. -->
-						<Skeleton v-if="proposalDoc.loading" class="h-16 w-full rounded-4" />
-						<!-- Description is a Text Editor field, so it arrives as sanitized HTML. -->
-						<div
-							v-else-if="proposalDoc.doc?.description"
-							class="description prose prose-sm max-w-none text-base leading-[1.6] text-ink-gray-7"
-							v-html="proposalDoc.doc.description"
-						/>
-						<p v-else class="text-base leading-[1.6] text-ink-gray-7">
-							No description was submitted.
-						</p>
-					</div>
-				</div>
 				<Dialog
 					v-model:open="confirmingAcceptance"
 					title="Accept this talk?"
@@ -236,62 +217,13 @@ const fields = computed(() => [
 					</template>
 				</Dialog>
 			</template>
-
-			<template v-if="proposal" #footer>
-				<!-- Arriving rather than appearing: the buttons showing up is the confirmation
-				     that the pick registered, so the footer is not allowed to jump. -->
-				<div v-if="canWrite && changed" class="status-actions flex items-center gap-2">
-					<Button
-						variant="solid"
-						size="md"
-						label="Update"
-						:loading="saving"
-						@click="updateStatus"
-					/>
-					<Button size="md" label="Cancel" @click="status = proposal.status" />
-				</div>
-				<p class="ml-auto flex items-center gap-1 text-xs text-ink-gray-5">
-					<span class="lucide-clock-fading size-3.5 shrink-0" aria-hidden="true" />
-					Last updated {{ lastUpdated }}
-				</p>
-			</template>
 		</DrawerContent>
 	</Drawer>
 </template>
 
 <style scoped>
-.status-actions,
-.description,
 .copy-id {
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.status-actions {
-	transition:
-		opacity 160ms var(--ease-out),
-		transform 160ms var(--ease-out);
-}
-
-@starting-style {
-	.status-actions {
-		opacity: 0;
-		transform: translateY(4px);
-	}
-}
-
-/* The description lands a beat after the row it belongs to, so it fades in rather than
-   replacing its own skeleton in one frame. */
-.description {
-	transition: opacity 200ms var(--ease-out);
-}
-
-@starting-style {
-	.description {
-		opacity: 0;
-	}
-}
-
-.copy-id {
 	transition:
 		color 160ms var(--ease-out),
 		transform 160ms var(--ease-out);
@@ -305,12 +237,6 @@ const fields = computed(() => [
 @media (prefers-reduced-motion: reduce) {
 	.copy-id:active {
 		transform: none;
-	}
-
-	@starting-style {
-		.status-actions {
-			transform: none;
-		}
 	}
 }
 </style>

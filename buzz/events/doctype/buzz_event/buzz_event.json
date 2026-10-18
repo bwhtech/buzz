@@ -9,6 +9,7 @@
   "title",
   "team",
   "category",
+  "topics",
   "free_event",
   "medium",
   "column_break_cxqh",
@@ -125,6 +126,13 @@
    "label": "Category",
    "options": "Event Category",
    "reqd": 1
+  },
+  {
+   "description": "Up to 5 topics the event is about.",
+   "fieldname": "topics",
+   "fieldtype": "Table MultiSelect",
+   "label": "Topics",
+   "options": "Event Topic Link"
   },
   {
    "depends_on": "eval:doc.medium!=\"Online\"",
@@ -697,7 +705,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-10-12 12:00:00.000000",
+ "modified": "2026-10-13 20:31:14.630563",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

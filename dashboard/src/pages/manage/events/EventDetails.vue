@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useEventListener, useTextareaAutosize } from "@vueuse/core"
 import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
-import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
@@ -16,14 +15,16 @@ import EventMedium from "@/components/dashboard/events/EventMedium.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventRoute from "@/components/dashboard/events/EventRoute.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
+import EventTopics from "@/components/dashboard/events/EventTopics.vue"
+import EventAboutEditor from "@/components/dashboard/events/pages/EventAboutEditor.vue"
+import EventPages from "@/components/dashboard/events/pages/EventPages.vue"
 import { useFormDraft } from "@/composables/useFormDraft"
-import { eventDetail, updateEvent } from "@/data/events"
+import { eventDetail, setBanner, updateEvent } from "@/data/events"
 import { session } from "@/data/session"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { EventDetail, EventExternalLink } from "@/types"
 import { isEndBeforeStart } from "@/utils/eventDates"
 import { matches } from "@/utils/formDraft"
-import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 import { serverErrorMessage } from "@/utils/serverError"
 
 const route = useRoute()
@@ -73,6 +74,7 @@ function blank() {
 		venue: "",
 		meeting_link: "",
 		external_links: [] as EventExternalLink[],
+		topics: [] as string[],
 	}
 }
 
@@ -93,6 +95,7 @@ function fill(detail: EventDetail) {
 		venue: detail.venue?.name ?? "",
 		meeting_link: detail.meeting_link ?? "",
 		external_links: detail.external_links.map((link) => ({ ...link })),
+		topics: [...detail.topics],
 	})
 	// The editor rewrites its own HTML once it mounts, so the baseline is taken after
 	// that settles — otherwise the page loads already dirty.
@@ -160,11 +163,24 @@ async function adoptLocation() {
 	saved.value = { ...saved.value, ...location }
 }
 
+// Saved as soon as the crop is uploaded (or the banner removed), so it goes into both the
+// form and its baseline, like a converted location.
+async function saveBanner(bannerImage: string) {
+	await setBanner.submit({ name: eventId, banner_image: bannerImage || null }).catch(() => null)
+	if (setBanner.error) return
+	form.banner_image = bannerImage
+	saved.value = { ...saved.value, banner_image: bannerImage }
+	await event.reload()
+	toast.success(bannerImage ? "Banner updated" : "Banner removed")
+}
+
 function discard() {
 	if (event.data) fill(event.data)
 }
 
-const errorMessage = computed(() => serverErrorMessage(updateEvent.error))
+const errorMessage = computed(
+	() => serverErrorMessage(updateEvent.error) || serverErrorMessage(setBanner.error),
+)
 
 async function save() {
 	if (!canSave.value || updateEvent.loading) return
@@ -175,7 +191,9 @@ async function save() {
 	)
 	const submitted = { ...form }
 
-	await updateEvent.submit({ name: eventId, ...fields }).catch(() => null)
+	await updateEvent
+		.submit({ name: eventId, ...fields, topics: form.topics.map((topic) => ({ topic })) })
+		.catch(() => null)
 	if (updateEvent.error) return
 
 	// What the server now holds, not what the form holds — an edit made while the save
@@ -227,7 +245,11 @@ async function save() {
 			<!-- Wrapped: the banner's hidden file input would otherwise take space-y margin. -->
 			<div>
 				<!-- The saved schedule, not the form: the pill shows what the event page shows. -->
-				<EventBanner v-model="form.banner_image" :seed="form.title">
+				<EventBanner
+					:model-value="form.banner_image"
+					:seed="form.title"
+					@update:model-value="saveBanner"
+				>
 					<template v-if="showCountdown && event.data.countdown" #default>
 						<BannerCountdown
 							:starts-at="event.data.countdown.starts_at"
@@ -263,29 +285,17 @@ async function save() {
 						/>
 					</div>
 
-					<section class="space-y-3">
-						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
-						<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
-						 itself: the height and scrolling land on the editable area rather than on a
-						 wrapper, and the whole box takes a click. -->
-						<div
-							class="overflow-hidden rounded-6 border border-outline-gray-2 transition-colors duration-150 ease-out focus-within:border-outline-gray-4 motion-reduce:transition-none"
-						>
-							<Editor
-								v-model="form.about"
-								:extensions="richTextExtensions"
-								placeholder="What is this event about?"
-							>
-								<EditorFixedMenu
-									:items="richTextToolbar"
-									class="overflow-x-auto border-b border-outline-gray-2 px-2 py-1"
-								/>
-								<EditorContent
-									class="prose-sm h-48 max-w-none overflow-y-auto p-3 text-ink-gray-8 focus:outline-none"
-								/>
-							</Editor>
+					<section>
+						<div class="mb-2.5 flex items-baseline justify-between gap-3">
+							<h2 class="text-base font-semibold text-ink-gray-9">{{ __("About") }}</h2>
+							<span class="text-sm text-ink-gray-5">{{ __("Always shown first") }}</span>
 						</div>
+						<EventAboutEditor v-model="form.about" />
 					</section>
+
+					<!-- The event's own extra tabs. Keyed by event: useEventPages resolves its
+					     filters once, and Details is reused when the route moves between events. -->
+					<EventPages :key="eventId" :event="eventId" />
 				</div>
 
 				<div class="space-y-4 max-md:-mx-4 md:col-span-2">
@@ -306,6 +316,8 @@ async function save() {
 						v-model:end-time="form.end_time"
 						v-model:time-zone="form.time_zone"
 					/>
+
+					<EventTopics v-model="form.topics" class="p-4 md:rounded-6" />
 
 					<section class="space-y-3 p-4 md:rounded-6">
 						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>

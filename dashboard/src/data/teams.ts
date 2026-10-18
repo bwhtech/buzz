@@ -43,9 +43,10 @@ export const currentTeam = computed(
 	(): TeamOption | null => teams.value.find((team) => team.name === selectedTeamName.value) || null,
 )
 
-// Flags are the current team's `feature_` Check fields on Buzz Team Settings.
-export function isFeatureEnabled(flag: string): boolean {
-	return currentTeam.value?.feature_flags[flag] ?? false
+// Flags are a team's `feature_` Check fields on Buzz Team Settings; the current team by default.
+export function isFeatureEnabled(flag: string, teamName?: string): boolean {
+	const team = teamName ? teams.value.find((option) => option.name === teamName) : currentTeam.value
+	return team?.feature_flags[flag] ?? false
 }
 
 export async function isTeamMember(): Promise<boolean> {

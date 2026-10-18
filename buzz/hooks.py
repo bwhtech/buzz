@@ -22,7 +22,6 @@ before_uninstall = "buzz.uninstall.before_uninstall"
 
 website_route_rules = [
 	{"from_route": "/events/<event_route>", "to_route": "event"},
-	{"from_route": "/events/<event_route>/<page_route>", "to_route": "event"},
 	{"from_route": "/b", "to_route": "dashboard"},
 	{"from_route": "/b/<path:app_path>", "to_route": "dashboard"},
 ]
@@ -44,6 +43,8 @@ website_redirects = [
 		"forward_query_parameters": True,
 	},
 	{"source": r"/dashboard/(.*)", "target": r"/b/\1", "forward_query_parameters": True},
+	# Additional event pages used to have their own URL; they are tabs on the event page now.
+	{"source": r"/events/([^/]+)/[^/]+", "target": r"/events/\1", "forward_query_parameters": True},
 	# Bare /dashboard has no trailing slash for the catch-all above to match, and
 	# www/dashboard.html would otherwise serve the SPA shell under the wrong base.
 	{"source": r"/dashboard", "target": "/b", "forward_query_parameters": True},
@@ -53,10 +54,11 @@ website_redirects = [
 # ---------------
 
 scheduler_events = {
+	"hourly": ["buzz.ticketing.doctype.ticket_hold.ticket_hold.delete_expired_holds"],
 	"daily": [
 		"buzz.tasks.unpublish_ticket_types_after_last_date",
 		"buzz.telemetry_scan.send_site_profile",
-	]
+	],
 }
 
 # Testing
@@ -92,9 +94,14 @@ taggable_doctypes = ["Event Sponsor", "Buzz Event", "Talk Proposal", "Buzz Team 
 for _doctype in taggable_doctypes:
 	doc_events.setdefault(_doctype, {})["on_trash"] = "buzz.events.doctype.buzz_tag.buzz_tag.delete_tag_links"
 
+commentable_doctypes = ["Talk Proposal"]
+doc_events["Communication"] = {"after_insert": "buzz.comments.notify_team_of_email"}
+extend_doctype_class = {"Comment": ["buzz.comments.TeamComment"]}
+
 fixtures = [
 	{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Event Manager", "Frontdesk Manager"]]}},
 	{"dt": "Buzz Theme", "filters": {"is_standard": 1}},
+	{"dt": "Event Topic", "filters": {"is_standard": 1}},
 ]
 
 user_invitation = {
@@ -175,7 +182,12 @@ add_to_apps_screen = [
 # ----------
 
 jinja = {
-	"methods": ["buzz.emails.email_event_header", "buzz.emails.email_brand", "buzz.islands.island_script"],
+	"methods": [
+		"buzz.emails.email_event_header",
+		"buzz.emails.email_brand",
+		"buzz.islands.island_script",
+		"buzz.www.site_header.buzz_navbar",
+	],
 }
 
 # Installation
@@ -237,12 +249,14 @@ permission_query_conditions = {
 	"Event Sponsor": "buzz.permissions.derived_query_conditions",
 	"Event Talk": "buzz.permissions.derived_query_conditions",
 	"Event Ticket": "buzz.permissions.derived_query_conditions",
+	"Event Ticket Category": "buzz.permissions.derived_query_conditions",
 	"Event Ticket Type": "buzz.permissions.derived_query_conditions",
 	"Event Track": "buzz.permissions.derived_query_conditions",
 	"Offline Payment Method": "buzz.permissions.derived_query_conditions",
 	"Sponsorship Enquiry": "buzz.permissions.derived_query_conditions",
 	"Sponsorship Tier": "buzz.permissions.derived_query_conditions",
 	"Ticket Add-on": "buzz.permissions.derived_query_conditions",
+	"Ticket Hold": "buzz.permissions.derived_query_conditions",
 	"Buzz Team": "buzz.permissions.team_doc_query_conditions",
 	"Buzz Team Membership": "buzz.permissions.membership_query_conditions",
 	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.get_permission_query_conditions",
@@ -272,12 +286,14 @@ has_permission = {
 	"Event Sponsor": "buzz.permissions.derived_has_permission",
 	"Event Talk": "buzz.permissions.derived_has_permission",
 	"Event Ticket": "buzz.permissions.derived_has_permission",
+	"Event Ticket Category": "buzz.permissions.derived_has_permission",
 	"Event Ticket Type": "buzz.permissions.derived_has_permission",
 	"Event Track": "buzz.permissions.derived_has_permission",
 	"Offline Payment Method": "buzz.permissions.derived_has_permission",
 	"Sponsorship Enquiry": "buzz.permissions.derived_has_permission",
 	"Sponsorship Tier": "buzz.permissions.derived_has_permission",
 	"Ticket Add-on": "buzz.permissions.derived_has_permission",
+	"Ticket Hold": "buzz.permissions.derived_has_permission",
 	"Buzz Team": "buzz.permissions.team_doc_has_permission",
 	"Buzz Team Membership": "buzz.permissions.team_admin_has_permission",
 	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.has_talk_proposal_permission",

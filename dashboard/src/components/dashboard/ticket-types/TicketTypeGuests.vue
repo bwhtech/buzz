@@ -50,6 +50,6 @@ const summary = computed(() => {
 			</span>
 			<span class="block truncate text-sm text-ink-gray-5">{{ summary }}</span>
 		</span>
-		<Icon name="lucide-chevron-right" class="size-4 text-ink-gray-5" />
+		<Icon icon="lucide-chevron-right" class="size-4 text-ink-gray-5" />
 	</RouterLink>
 </template>

@@ -6,7 +6,7 @@ import { Skeleton } from "frappe-ui"
 	<!-- Shaped like the loaded page rather than a generic block, so the content settles
 		 into the boxes instead of replacing them. -->
 	<div class="m-auto w-full max-w-[800px] space-y-8 px-4 py-8">
-		<Skeleton class="aspect-[3/1] w-full rounded-7" />
+		<Skeleton class="aspect-[2/1] w-full rounded-7" />
 
 		<div class="grid gap-8 md:grid-cols-5">
 			<div class="space-y-8 md:col-span-3">

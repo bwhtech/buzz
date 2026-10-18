@@ -19,6 +19,9 @@ defineProps<{
 				count.toLocaleString()
 			}}</span>
 		</h2>
-		<Button v-if="action" v-bind="action" />
+		<div class="flex items-center gap-2">
+			<slot name="actions" />
+			<Button v-if="action" v-bind="action" />
+		</div>
 	</div>
 </template>

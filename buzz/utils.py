@@ -9,6 +9,8 @@ import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.utils import now_datetime
 
+from buzz.events.doctype.event_venue.details import venue_details
+
 # Categories whose events are run through Zoom. Keyed to the Zoom session doctype each
 # one creates, so a lookup doubles as the "is this Zoom-backed?" check.
 ZOOM_BACKED_CATEGORIES = {"Webinars": "webinar", "Zoom Meeting": "meeting"}
@@ -189,9 +191,7 @@ def generate_ics_file(event_doc, attendee_email: str, meeting):
 	)
 
 	# A venue added from a map link may have no address; its name still says where.
-	venue = event_doc.venue and frappe.db.get_value(
-		"Event Venue", event_doc.venue, ["venue_name", "address"], as_dict=True
-	)
+	venue = venue_details(event_doc.venue)
 	venue_address = (venue.address or venue.venue_name) if venue else ""
 
 	context = {

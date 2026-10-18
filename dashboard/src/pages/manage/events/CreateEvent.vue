@@ -225,7 +225,7 @@ function goBack(path: string) {
 <template>
 	<PageHeaderMobile v-if="isMobile" title="Create event">
 		<template #prefix>
-			<PageHeaderBackButton :to="{ name: 'events' }" />
+			<PageHeaderBackButton :fallback-route="{ name: 'events' }" />
 		</template>
 		<template #suffix>
 			<Button variant="solid" label="Create" :loading="submitting" @click="save" />

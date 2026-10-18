@@ -7,6 +7,7 @@ from buzz.api.events.schemas import (
 	CurrencyRevenue,
 	EventTicketTypes,
 	PaymentProviderItem,
+	TicketCategoryItem,
 	TicketTypeItem,
 	TicketTypePrice,
 )
@@ -15,6 +16,7 @@ from buzz.api.events.taxes import team_tax_details
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import is_feature_enabled
 from buzz.payments import get_payment_gateways_for_event
 from buzz.permissions import can_manage_members, has_team_access
+from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	PAID_EVENTS_FLAG,
 	tickets_sold_by_currency,
@@ -23,6 +25,8 @@ from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 TICKET_TYPE_FIELDS = [
 	"name",
 	"title",
+	"description",
+	"category",
 	"max_tickets_available",
 	"auto_unpublish_after",
 	"is_published",
@@ -58,10 +62,15 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		**team_tax_details(doc.team),
 		can_edit_team=can_manage_members(doc.team),
 		paid_events_enabled=is_feature_enabled(doc.team, PAID_EVENTS_FLAG),
+		categories=ticket_categories(event),
 		ticket_types=[ticket_type_item(row, sold, sold_by_currency) for row in rows],
 		payment_providers=payment_providers(event),
 		revenue=revenue_by_currency(event),
 	)
+
+
+def ticket_categories(event: str) -> list[TicketCategoryItem]:
+	return [TicketCategoryItem(**row) for row in get_ordered_categories(event)]
 
 
 def payment_providers(event: str) -> list[PaymentProviderItem]:

@@ -34,7 +34,7 @@ const tabOptions = [
 			<div v-if="heading" class="hidden md:flex flex-col gap-3 items-start">
 				<div class="flex gap-3 items-center">
 					<div v-if="icon" class="p-2 bg-surface-gray-3 rounded-4">
-						<Icon :name="icon" class="size-6" />
+						<Icon :icon="icon" class="size-6" />
 					</div>
 					<h1 class="font-semibold text-4xl">{{ heading }}</h1>
 				</div>

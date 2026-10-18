@@ -1,0 +1,227 @@
+/* Topic page: the team page's columns under an identity hero, with the map in the aside. */
+
+.topic-page .team-columns {
+	grid-template-columns: minmax(0, 1fr) 300px;
+	margin-top: 40px;
+}
+
+.topic-hero {
+	display: flex;
+	align-items: flex-start;
+	gap: 20px;
+	padding-bottom: 24px;
+	border-bottom: 1px solid var(--border);
+}
+
+.topic-icon {
+	flex-shrink: 0;
+	width: 64px;
+	height: 64px;
+	padding: 16px;
+	border-radius: 16px;
+	background: color-mix(in srgb, var(--accent) 14%, transparent);
+	color: var(--accent);
+}
+
+.topic-icon svg,
+.topic-empty-icon svg {
+	width: 100%;
+	height: 100%;
+}
+
+.topic-hero-text {
+	flex: 1;
+	min-width: 0;
+}
+
+.topic-hero .event-title {
+	font-size: 48px;
+	line-height: 1.05;
+}
+
+.topic-description {
+	margin-top: 6px;
+	max-width: 60ch;
+	color: var(--ink-muted);
+}
+
+.topic-stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 12px;
+	color: var(--ink-muted);
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+}
+
+.topic-stats b {
+	color: var(--ink-strong);
+	font-weight: 600;
+}
+
+/* Entrance: the icon draws its strokes, the text rises in a short stagger once the page
+   transition (base.css, 60ms + 180ms) is mostly done. 120 exceeds the longest stroke in a 24-unit icon, so each draws whole without pathLength. */
+.topic-hero .topic-icon :is(path, circle, rect, line, polyline) {
+	stroke-dasharray: 120;
+	animation: topic-draw 500ms var(--ease-out) both;
+}
+
+.topic-hero-text > * {
+	animation: topic-rise 280ms var(--ease-out) 120ms both;
+}
+
+.topic-hero-text > :nth-child(2) {
+	animation-delay: 160ms;
+}
+
+.topic-hero-text > :nth-child(3) {
+	animation-delay: 200ms;
+}
+
+@keyframes topic-draw {
+	from {
+		stroke-dashoffset: 120;
+	}
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+
+@keyframes topic-rise {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+}
+
+.topic-aside {
+	display: grid;
+	gap: 16px;
+}
+
+.topic-aside .team-map {
+	height: 200px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+
+/* The strip's edge offsets assume a full-width map; the aside box needs tighter corners. */
+.topic-aside .team-map-controls {
+	right: 8px;
+	bottom: 8px;
+}
+
+.topic-aside .team-map-credit {
+	left: 10px;
+	bottom: 10px;
+}
+
+.topic-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.topic-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 28px;
+	padding: 0 10px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	color: var(--ink-muted);
+	font-size: 13px;
+	transition:
+		border-color 150ms ease,
+		color 150ms ease,
+		transform 120ms var(--ease-out);
+}
+
+.topic-chip:active {
+	transform: scale(0.97);
+}
+
+.topic-chip-icon {
+	width: 14px;
+	height: 14px;
+	background: currentColor;
+	mask: var(--icon) center / contain no-repeat;
+}
+
+.topic-empty {
+	display: grid;
+	justify-items: center;
+	gap: 10px;
+	padding: 48px 24px;
+	border: 1px dashed var(--outline-gray-3);
+	border-radius: var(--radius-8);
+	text-align: center;
+}
+
+.topic-empty-icon {
+	width: 56px;
+	height: 56px;
+	padding: 14px;
+	border-radius: 50%;
+	background: var(--surface-gray-2);
+	color: var(--ink-gray-6);
+}
+
+.topic-empty h2 {
+	color: var(--ink-gray-8);
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.topic-empty p {
+	max-width: 36ch;
+	color: var(--ink-gray-5);
+	font-size: 14px;
+}
+
+.topic-empty .es-button {
+	margin-top: 6px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.topic-chip:hover {
+		border-color: var(--outline-gray-3);
+		color: var(--ink-strong);
+	}
+}
+
+@media (max-width: 900px) {
+	.topic-page .team-columns {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 760px) {
+	.topic-hero .event-title {
+		font-size: 36px;
+	}
+
+	.topic-icon {
+		width: 52px;
+		height: 52px;
+		padding: 13px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.topic-hero .topic-icon :is(path, circle, rect, line, polyline) {
+		animation: none;
+	}
+
+	.topic-hero-text > * {
+		animation-name: page-fade-in;
+		animation-duration: 180ms;
+	}
+
+	.topic-chip:active {
+		transition: none;
+		transform: none;
+	}
+}

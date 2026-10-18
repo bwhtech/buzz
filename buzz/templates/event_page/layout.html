@@ -20,6 +20,8 @@
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Newsreader:wght@400&display=swap">
+	{# Before the Buzz styles, so they win over Bootstrap's page-wide rules #}
+	{% if native_navbar %}{{ include_style("website.bundle.css") | safe }}{% endif %}
 	<link rel="stylesheet" href="{{ bundled_asset('espresso.bundle.css') }}">
 	<link rel="stylesheet" href="/assets/buzz/themes/countdown.css?v={{ build_version }}">
 	<link rel="stylesheet" href="/assets/buzz/themes/base.css?v={{ build_version }}">
@@ -31,45 +33,6 @@
 	<script type="speculationrules">
 		{"prefetch": [{"where": {"href_matches": "/events*"}, "eagerness": "moderate"}]}
 	</script>
-{% endautoescape %}{% endblock %}
-
-{% block navbar %}{% autoescape true %}
-	<header class="site-header">
-		<a class="site-brand" href="/">
-			{% if brand.is_default %}
-			<span class="default-logo" role="img" aria-label="{{ brand.name }}"></span>
-			{% else %}
-			<img src="{{ brand.logo }}" alt="{{ brand.name }}">
-			{% endif %}
-		</a>
-		<nav class="site-nav">
-			{% if not is_guest %}
-			<a class="es-button" data-variant="ghost" data-size="md" href="/b/manage/team/events/new">{{ _("Create Event") }}</a>
-			{% endif %}
-			<button type="button" class="mode-toggle" data-mode-toggle aria-label="{{ _('Dark mode') }}">
-				<svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-				<svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-			</button>
-			{% if is_guest %}
-			<a class="es-button" data-variant="ghost" data-size="md" href="/b/login?redirect-to={{ meta.url | urlencode }}" data-island="login">{{ _("Log in") }}</a>
-			{% else %}
-			<details class="user-menu">
-				<summary aria-label="{{ _('Account') }}">
-					{% if user_image %}
-					<img class="user-avatar" src="{{ user_image }}" alt="">
-					{% else %}
-					<span class="user-avatar">{{ (fullname or user)[:1] | upper }}</span>
-					{% endif %}
-				</summary>
-				<div class="menu">
-					<span class="menu-heading">{{ fullname }}</span>
-					<a href="/b">{{ _("Dashboard") }}</a>
-					<button type="button" data-logout>{{ _("Log out") }}</button>
-				</div>
-			</details>
-			{% endif %}
-		</nav>
-	</header>
 {% endautoescape %}{% endblock %}
 
 {% block footer %}{% autoescape true %}
@@ -84,7 +47,8 @@
 					{% elif brand.is_default %}
 					<span class="footer-logo" role="img" aria-label="{{ brand.name }}"></span>
 					{% else %}
-					<img class="footer-logo" src="{{ brand.logo }}" alt="{{ brand.name }}">
+					<img class="footer-logo" data-logo-mode="light" src="{{ brand.logo }}" alt="{{ brand.name }}">
+					<img class="footer-logo" data-logo-mode="dark" src="{{ brand.logo_dark }}" alt="{{ brand.name }}">
 					{% endif %}
 				</a>
 				{% if footer_address %}<p class="footer-address">{{ footer_address }}</p>{% endif %}
@@ -112,18 +76,9 @@
 	</footer>
 {% endautoescape %}{% endblock %}
 
-{% block base_scripts %}{% endblock %}
+{% block base_scripts %}{% if native_navbar %}{{ super() }}{% endif %}{% endblock %}
 
 {% block script %}
 	{% set island = island_script() %}
 	{% if island %}<script type="module" src="{{ island }}"></script>{% endif %}
-	<script>
-		document.addEventListener("click", (event) => {
-			document.querySelectorAll("details[open]").forEach((menu) => menu.contains(event.target) || menu.removeAttribute("open"))
-		})
-		document.querySelector("[data-logout]")?.addEventListener("click", async () => {
-			await fetch("/api/method/logout", { method: "POST", headers: { "X-Frappe-CSRF-Token": frappe.csrf_token } })
-			location.reload()
-		})
-	</script>
 {% endblock %}

@@ -1,0 +1,12 @@
+{% extends "buzz/templates/emails/base.html" %}
+
+{% block preheader %}{{ author }} mentioned you on {{ record_title }}.{% endblock %}
+{% block title %}{{ author }} mentioned you{% endblock %}
+
+{% block content %}
+<p style="margin:0 0 16px">On <strong style="color:#171717">{{ record_title }}</strong></p>
+<div style="border-left:3px solid #e2e2e2;padding-left:16px;color:#383838">{{ note }}</div>
+{% if button_url %}{% include "buzz/templates/emails/_button.html" %}{% endif %}
+{% endblock %}
+
+{% block reason %}You received this email because a teammate mentioned you in a note on Buzz. Only your team can see these notes.{% endblock %}

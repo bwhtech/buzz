@@ -12,7 +12,7 @@ import { teams, teamsLoaded } from "@/data/teams"
 	<div class="m-auto w-full max-w-[800px] space-y-8 p-4 max-md:pb-24">
 		<header class="hidden items-center gap-3 md:flex">
 			<div class="rounded-4 bg-surface-gray-3 p-2">
-				<Icon name="lucide-users-round" class="size-6" />
+				<Icon icon="lucide-users-round" class="size-6" />
 			</div>
 			<h1 class="text-4xl font-semibold">Communities</h1>
 		</header>

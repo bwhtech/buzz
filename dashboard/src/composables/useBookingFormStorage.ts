@@ -26,11 +26,10 @@ export function useBookingFormStorage(eventRoute: string) {
 	const guestFirstName = useStorage(`${storageKeyPrefix}-guest-first-name`, "")
 	const guestLastName = useStorage(`${storageKeyPrefix}-guest-last-name`, "")
 	const guestEmail = useStorage(`${storageKeyPrefix}-guest-email`, "")
-	const guestPhone = useStorage(`${storageKeyPrefix}-guest-phone`, "")
-
-	const invoiceRequested = useStorage(`${storageKeyPrefix}-invoice-requested`, false)
-	const taxId = useStorage(`${storageKeyPrefix}-tax-id`, "")
-	const billingAddress = useStorage(`${storageKeyPrefix}-billing-address`, "")
+	// Who pays, and the tax invoice they asked for; saved on the Event Booking as is.
+	const billing = useStorage(`${storageKeyPrefix}-billing`, emptyBilling(), undefined, {
+		mergeDefaults: true,
+	})
 
 	/**
 	 * Clear all stored booking form data
@@ -43,10 +42,7 @@ export function useBookingFormStorage(eventRoute: string) {
 		guestFirstName.value = ""
 		guestLastName.value = ""
 		guestEmail.value = ""
-		guestPhone.value = ""
-		invoiceRequested.value = false
-		taxId.value = ""
-		billingAddress.value = ""
+		billing.value = emptyBilling()
 	}
 
 	/**
@@ -63,11 +59,23 @@ export function useBookingFormStorage(eventRoute: string) {
 		guestFirstName,
 		guestLastName,
 		guestEmail,
-		guestPhone,
-		invoiceRequested,
-		taxId,
-		billingAddress,
+		billing,
 		clearStoredData,
 		hasStoredData,
 	}
 }
+
+export function emptyBilling() {
+	return {
+		buyer_name: "",
+		buyer_email: "",
+		buyer_phone: "",
+		invoice_requested: false,
+		tax_id: "",
+		business_name: "",
+		billing_address: "",
+		billing_state: "",
+	}
+}
+
+export type BillingDetails = ReturnType<typeof emptyBilling>

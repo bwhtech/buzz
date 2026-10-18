@@ -90,17 +90,26 @@
 	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
-.featured-cards .event-card-image {
-	aspect-ratio: 2 / 1;
-}
-
-.category-cards {
+.topic-cards {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-	gap: 16px;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 12px;
 }
 
-.category-card {
+@media (min-width: 560px) {
+	.topic-cards {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+@media (min-width: 800px) {
+	.topic-cards {
+		grid-template-columns: repeat(4, 1fr);
+		gap: 16px;
+	}
+}
+
+.topic-card {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
@@ -114,25 +123,28 @@
 		border-color 150ms ease;
 }
 
-.category-card-icon {
-	width: 32px;
-	height: 32px;
+/* Drawn as a mask so single-colour SVG icons follow the theme's ink colour. */
+.topic-card-icon {
+	width: 24px;
+	height: 24px;
 	margin-bottom: 8px;
+	background-color: var(--ink-strong);
+	mask: var(--icon) center / contain no-repeat;
 }
 
-.category-card-name {
+.topic-card-name {
 	margin-top: auto;
 	color: var(--ink-strong);
 	font-weight: 500;
 }
 
-.category-card-count {
+.topic-card-count {
 	color: var(--ink-muted);
 	font-size: 13px;
 }
 
 @media (hover: hover) and (pointer: fine) {
-	.category-card:hover {
+	.topic-card:hover {
 		border-color: var(--ink-muted);
 	}
 }
@@ -141,7 +153,7 @@
 	flex-shrink: 0;
 }
 
-.category-card:active {
+.topic-card:active {
 	transform: scale(0.97);
 }
 
@@ -150,7 +162,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.category-card:active,
+	.topic-card:active,
 	.event-row:active {
 		transform: none;
 	}

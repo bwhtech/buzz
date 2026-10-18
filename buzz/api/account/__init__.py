@@ -4,14 +4,17 @@ from frappe.translate import get_all_translations
 from buzz.api.account.exceptions import UnknownLanguage, UnknownTimezone
 from buzz.api.account.schemas import GuestInfoResponse, LanguageOption, UserInfoResponse
 from buzz.api.account.services import accepted_timezones, get_request_language
+from buzz.www.site_header import SiteHeader
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_user_info() -> UserInfoResponse | GuestInfoResponse:
+	header = SiteHeader()
 	if frappe.session.user == "Guest":
 		return GuestInfoResponse(
 			is_logged_in=False,
-			brand_image=frappe.get_cached_value("Website Settings", "Website Settings", "banner_image"),
+			brand=header.brand(),
+			navbar=header.navbar(),
 			language=get_request_language(),
 		)
 
@@ -27,7 +30,8 @@ def get_user_info() -> UserInfoResponse | GuestInfoResponse:
 		user_image=user.user_image,
 		bio=user.bio,
 		roles=user.roles,
-		brand_image=frappe.get_cached_value("Website Settings", "Website Settings", "banner_image"),
+		brand=header.brand(),
+		navbar=header.navbar(),
 		language=user.language,
 		time_zone=user.time_zone,
 	)

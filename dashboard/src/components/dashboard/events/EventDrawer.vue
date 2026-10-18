@@ -109,12 +109,12 @@ const endsAt = computed(() => {
 					<div class="relative p-4">
 						<img
 							v-if="event.banner_image"
-							class="aspect-video w-full rounded-6 object-cover border"
+							class="aspect-[2/1] w-full rounded-6 object-cover border"
 							:src="event.banner_image"
 							:style="banner"
 							alt=""
 						/>
-						<div v-else class="aspect-video w-full rounded-6 border" :style="banner" />
+						<div v-else class="aspect-[2/1] w-full rounded-6 border" :style="banner" />
 
 						<EventCountdownPill
 							:event="event"
@@ -155,7 +155,7 @@ const endsAt = computed(() => {
 								class="flex size-11 shrink-0 items-center justify-center rounded-5 border border-outline-gray-2"
 							>
 								<Icon
-									:name="event.venue ? 'lucide-map-pin' : 'lucide-map-pin-off'"
+									:icon="event.venue ? 'lucide-map-pin' : 'lucide-map-pin-off'"
 									class="size-5 text-ink-gray-6"
 								/>
 							</div>

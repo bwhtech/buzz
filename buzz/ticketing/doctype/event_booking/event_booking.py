@@ -1,9 +1,11 @@
 # Copyright (c) 2025, BWH Studios and contributors
 # For license information, please see license.txt
+from collections import Counter
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cstr, flt
+from frappe.utils import add_to_date, cstr, flt, now_datetime
 
 from buzz import telemetry
 from buzz.api.booking.exceptions import RegistrationsClosed
@@ -18,7 +20,14 @@ from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_tickets,
 	record_gateway_refund,
 )
-from buzz.utils import render_email_template
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import lock_ticket_types
+from buzz.ticketing.doctype.ticket_hold.ticket_hold import (
+	PAYMENT_HOLD_MINUTES,
+	extend_hold,
+	release_hold,
+	set_hold,
+)
+from buzz.utils import build_event_datetimes, render_email_template
 
 RAZORPAY = "Razorpay"
 
@@ -40,10 +49,16 @@ class EventBooking(Document):
 		amended_from: DF.Link | None
 		attendees: DF.Table[EventBookingAttendee]
 		billing_address: DF.SmallText | None
+		billing_state: DF.Data | None
+		business_name: DF.Data | None
+		buyer_email: DF.Data | None
+		buyer_name: DF.Data | None
+		buyer_phone: DF.Data | None
 		coupon_code: DF.Link | None
 		currency: DF.Link
 		discount_amount: DF.Currency
 		event: DF.Link
+		hold_token: DF.Data | None
 		invoice_requested: DF.Check
 		naming_series: DF.Literal["B.###"]
 		net_amount: DF.Currency
@@ -147,26 +162,75 @@ class EventBooking(Document):
 				self.tax_amount = self.total_amount * (self.tax_percentage / 100)
 				self.total_amount += self.tax_amount
 
+	def ticket_quantities(self) -> Counter:
+		return Counter(str(attendee.ticket_type) for attendee in self.attendees)
+
 	def validate_ticket_availability(self):
-		num_tickets_by_type = {}
-		for attendee in self.attendees:
-			if attendee.ticket_type not in num_tickets_by_type:
-				num_tickets_by_type[attendee.ticket_type] = 0
-			num_tickets_by_type[attendee.ticket_type] += 1
+		quantities = self.ticket_quantities()
+		ticket_types = [frappe.get_cached_doc("Event Ticket Type", name) for name in quantities]
+		lock_ticket_types([row.name for row in ticket_types if row.max_tickets_available])
+		for ticket_type in ticket_types:
+			self.validate_ticket_type(ticket_type, quantities[str(ticket_type.name)])
 
-		for ticket_type, num_tickets in num_tickets_by_type.items():
-			ticket_type_doc = frappe.get_cached_doc("Event Ticket Type", ticket_type)
-			if str(ticket_type_doc.event) != str(self.event):
-				frappe.throw(_("{0} is not available for this event").format(ticket_type_doc.title))
-			if not ticket_type_doc.is_published:
-				frappe.throw(frappe._(f"{ticket_type_doc.title} tickets no longer available!"))
+	def validate_ticket_type(self, ticket_type, quantity: int):
+		if str(ticket_type.event) != str(self.event):
+			frappe.throw(_("{0} is not available for this event").format(ticket_type.title))
+		if self.flags.ignore_capacity:
+			self.log_if_oversold(ticket_type, quantity)
+			return
+		if not ticket_type.is_published:
+			frappe.throw(_("{0} tickets no longer available!").format(ticket_type.title))
 
-			if not ticket_type_doc.are_tickets_available(num_tickets):
-				frappe.throw(
-					frappe._(
-						f"Only {ticket_type_doc.remaining_tickets} tickets available for {ticket_type_doc.title}, you are trying to book {num_tickets}!"
-					)
-				)
+		remaining = ticket_type.get_remaining_tickets(for_update=True, hold_token=self.hold_token)
+		if remaining == -1 or remaining >= quantity:
+			return
+		frappe.throw(
+			_("Only {0} tickets available for {1}, you are trying to book {2}!").format(
+				remaining, ticket_type.title, quantity
+			)
+		)
+
+	def log_if_oversold(self, ticket_type, quantity: int):
+		remaining = ticket_type.get_remaining_tickets(for_update=True)
+		if remaining == -1 or remaining >= quantity:
+			return
+		frappe.log_error(
+			title=_("{0} oversold by a payment that arrived late").format(ticket_type.title),
+			reference_doctype=self.doctype,
+			reference_name=self.name,
+		)
+
+	def after_insert(self):
+		self.hold_draft_tickets()
+
+	def hold_draft_tickets(self):
+		"""A draft that waits for payment or approval keeps its tickets held, so they can't sell
+		out under it. Runs right after `validate_ticket_availability` locked the ticket types
+		and checked capacity, so it can create the hold even if the form's hold lapsed."""
+		if not self.total_amount:
+			return
+		quantities = {
+			name: quantity
+			for name, quantity in self.ticket_quantities().items()
+			if frappe.get_cached_value("Event Ticket Type", name, "max_tickets_available")
+		}
+		if not quantities:
+			return
+		if not self.hold_token:
+			self.db_set("hold_token", frappe.generate_hash(length=32), update_modified=False)
+		set_hold(self.hold_token, self.event, quantities, self.draft_hold_expiry())
+
+	def draft_hold_expiry(self):
+		if self.payment_method == OFFLINE_PAYMENT_METHOD:
+			return self.event_end()
+		return add_to_date(now_datetime(), minutes=PAYMENT_HOLD_MINUTES)
+
+	def event_end(self):
+		_start, end = build_event_datetimes(frappe.get_cached_doc("Buzz Event", self.event))
+		return end
+
+	def hold_until_approval(self):
+		extend_hold(self.hold_token, self.event_end())
 
 	def fetch_amounts_from_ticket_types(self):
 		for attendee in self.attendees:
@@ -185,6 +249,7 @@ class EventBooking(Document):
 	def on_submit(self):
 		self.validate_coupon_availability()
 		self.generate_tickets()
+		release_hold(self.hold_token)
 		self.capture_confirmed()
 
 		try:
@@ -411,6 +476,8 @@ class EventBooking(Document):
 	def on_payment_authorized(self, payment_status: str):
 		if payment_status in ("Authorized", "Completed"):
 			# payment success, submit the booking
+			# The money is taken, so a ticket type that sold out meanwhile must not fail it.
+			self.flags.ignore_capacity = True
 			self.payment_status = "Paid"
 			self.status = "Confirmed"
 			self.update_payment_record()
@@ -650,6 +717,7 @@ class EventBooking(Document):
 		self.flags.ignore_permissions = True
 		self.discard()
 		self.db_set("status", "Rejected")
+		release_hold(self.hold_token)
 		frappe.msgprint(_("Booking has been rejected!"))
 
 	def apply_coupon_if_applicable(self):

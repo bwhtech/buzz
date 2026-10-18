@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from buzz.api.events.schemas import GuestTicketType
+from buzz.api.filters.schemas import FilterField
 from buzz.api.schemas import APIResponse
 
 
@@ -11,8 +11,8 @@ class RecipientCount(APIResponse):
 class CommunicationItem(APIResponse):
 	name: str
 	audience: str
-	ticket_types: str
-	statuses: str
+	# JSON `[field, operator, value]` triples, as the dashboard lists send them.
+	filters: str
 	subject: str
 	message: str
 	recipient_count: int
@@ -27,6 +27,5 @@ class EventCommunicationsResponse(APIResponse):
 	# Owner/Admin only: the support email belongs to the team, not the event.
 	can_edit_settings: bool
 	support_email: str | None
-	ticket_types: list[GuestTicketType]
-	statuses: list[str]
+	filter_fields: dict[str, list[FilterField]]
 	communications: list[CommunicationItem]

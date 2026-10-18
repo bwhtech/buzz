@@ -61,7 +61,8 @@ const sinceYesterday = computed(() => {
 
 // The proposal is what is held, not its position. A card can be opened while a search is
 // still settling, and by the time the new page lands an index points at a different talk.
-const selectedId = ref<string | null>(null)
+// A mention email links here with `?proposal=`, so the drawer opens on that proposal.
+const selectedId = ref<string | null>((route.query.proposal as string) || null)
 
 const selected = computed(
 	() => proposals.value.find((proposal) => proposal.name === selectedId.value) ?? null,
@@ -74,8 +75,8 @@ const drawerOpen = computed<boolean>({
 
 // The row is patched rather than refetched — see applyStatus. The card above counts the
 // whole pipeline, so it is the one thing that does have to go back to the server.
-const onStatusChanged = (status: string) => {
-	if (selectedId.value) applyStatus(selectedId.value, status)
+const onStatusChanged = (proposal: string, status: string) => {
+	applyStatus(proposal, status)
 	trend.reload()
 }
 

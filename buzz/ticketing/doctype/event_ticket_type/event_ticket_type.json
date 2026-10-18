@@ -7,6 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
+  "description",
+  "category",
   "prices",
   "column_break_lrao",
   "event",
@@ -33,6 +35,18 @@
    "fieldtype": "Data",
    "label": "Title",
    "reqd": 1
+  },
+  {
+   "description": "Shown below the title on the booking page",
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "label": "Category",
+   "options": "Event Ticket Category"
   },
   {
    "fieldname": "column_break_lrao",
@@ -96,7 +110,7 @@
    "link_fieldname": "ticket_type"
   }
  ],
- "modified": "2026-10-02 20:00:00.000000",
+ "modified": "2026-10-16 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Ticket Type",

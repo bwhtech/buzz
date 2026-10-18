@@ -63,7 +63,7 @@ onMounted(() => props.autofocus && setTimeout(() => textInput.value?.focus(), 50
 		class="flex h-6 items-stretch divide-x divide-outline-gray-2 rounded-3 bg-surface-base ring-1 ring-outline-gray-2 [&>div]:flex"
 	>
 		<span class="flex items-center gap-1 px-2 text-xs text-ink-gray-8">
-			<Icon :name="fieldIcon(field)" class="size-3.5 text-ink-gray-5" />
+			<Icon :icon="fieldIcon(field)" class="size-3.5 text-ink-gray-5" />
 			{{ field.label }}
 		</span>
 

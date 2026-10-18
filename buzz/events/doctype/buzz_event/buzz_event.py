@@ -14,6 +14,7 @@ from buzz import telemetry
 from buzz.api.forms.fields import validate_excluded_fields
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import create_for_event
+from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import create_ticket_categories
 from buzz.utils import get_time_zone_label, only_if_app_installed
 
 # Top-level dashboard route segments (/b/<segment>) an event route must not shadow.
@@ -31,6 +32,8 @@ RESERVED_EVENT_ROUTES = {
 	"manage",
 }
 
+MAX_TOPICS = 5
+
 
 class BuzzEvent(Document):
 	# begin: auto-generated types
@@ -46,6 +49,7 @@ class BuzzEvent(Document):
 		from buzz.events.doctype.event_external_link.event_external_link import EventExternalLink
 		from buzz.events.doctype.event_featured_speaker.event_featured_speaker import EventFeaturedSpeaker
 		from buzz.events.doctype.event_payment_gateway.event_payment_gateway import EventPaymentGateway
+		from buzz.events.doctype.event_topic_link.event_topic_link import EventTopicLink
 		from buzz.events.doctype.schedule_item.schedule_item import ScheduleItem
 		from buzz.proposals.doctype.sponsorship_deck_item.sponsorship_deck_item import SponsorshipDeckItem
 
@@ -107,6 +111,7 @@ class BuzzEvent(Document):
 		time_zone: DF.Autocomplete | None
 		time_zone_label: DF.Data | None
 		title: DF.Data
+		topics: DF.TableMultiSelect[EventTopicLink]
 		venue: DF.Link | None
 	# end: auto-generated types
 
@@ -134,6 +139,7 @@ class BuzzEvent(Document):
 		self.clear_unused_location()
 		self.validate_co_hosts()
 		self.validate_external_links()
+		self.validate_topics()
 		self.set_time_zone_label()
 
 	def clear_unused_location(self):
@@ -162,6 +168,10 @@ class BuzzEvent(Document):
 		for row in self.external_links:
 			if urlparse(row.url or "").scheme not in ("http", "https"):
 				frappe.throw(_("Row {0}: link must start with http:// or https://").format(row.idx))
+
+	def validate_topics(self):
+		if len(self.topics) > MAX_TOPICS:
+			frappe.throw(_("An event can have at most {0} topics.").format(MAX_TOPICS))
 
 	def set_time_zone_label(self):
 		# validate runs before the mandatory check, so dates may still be empty here
@@ -548,10 +558,12 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 
 	# Create linked documents (Ticket Types, Add-ons, Custom Fields)
 	if options.get("ticket_types"):
+		category_names = create_ticket_categories(event.name, template.template_ticket_categories)
 		for tt in template.template_ticket_types:
 			ticket_type = frappe.new_doc("Event Ticket Type")
 			ticket_type.event = event.name
 			ticket_type.title = tt.title
+			ticket_type.category = category_names.get(tt.category)
 			ticket_type.append("prices", {"currency": tt.currency, "price": tt.price})
 			ticket_type.is_published = tt.is_published
 			ticket_type.max_tickets_available = tt.max_tickets_available

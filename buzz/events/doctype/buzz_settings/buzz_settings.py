@@ -20,6 +20,9 @@ class BuzzSettings(Document):
 		allow_guest_event_proposals: DF.Check
 		allow_ticket_cancellation_request_before_event_start_days: DF.Int
 		allow_transfer_ticket_before_event_start_days: DF.Int
+		app_icon: DF.AttachImage | None
+		app_logo: DF.AttachImage | None
+		app_logo_dark: DF.AttachImage | None
 		auto_send_pitch_deck: DF.Check
 		default_payment_gateway: DF.Link | None
 		default_sponsor_deck_cc: DF.SmallText | None
@@ -41,6 +44,11 @@ class BuzzSettings(Document):
 	def validate(self):
 		"""Validate the settings."""
 		self.validate_transfer_days()
+		self.validate_app_logos()
+
+	def validate_app_logos(self):
+		if bool(self.app_logo) != bool(self.app_logo_dark):
+			frappe.throw(_("Upload both the light and dark App Logo, or neither."))
 
 	def validate_transfer_days(self):
 		"""Validate that transfer days is a reasonable value."""

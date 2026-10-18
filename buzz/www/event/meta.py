@@ -24,15 +24,14 @@ def plain_text(html: str | None) -> str:
 class EventMeta:
 	"""Share and search metadata for an event page, built from the page context."""
 
-	def __init__(self, event, page, context: dict):
+	def __init__(self, event, context: dict):
 		self.event = event
-		self.page = page
 		self.context = context
 
 	def as_dict(self) -> dict:
 		image = self.image()
 		return {
-			"title": f"{self.page.title} · {self.event.title}" if self.page else self.event.title,
+			"title": self.event.title,
 			"description": self.description(),
 			"image": image,
 			"url": self.url(),
@@ -40,7 +39,7 @@ class EventMeta:
 		}
 
 	def url(self) -> str:
-		return get_url(f"/events/{self.event.route}" + (f"/{self.page.route}" if self.page else ""))
+		return get_url(f"/events/{self.event.route}")
 
 	def description(self) -> str:
 		text = self.event.short_description or plain_text(self.event.about)
@@ -53,8 +52,6 @@ class EventMeta:
 		return get_url(public) if public else ""
 
 	def structured_data(self) -> dict | None:
-		if self.page:
-			return None
 		image = self.image()
 		data = {
 			"@context": "https://schema.org",
@@ -89,14 +86,16 @@ class EventMeta:
 		mode = "Online" if self.is_online() else "Offline"
 		return f"https://schema.org/{mode}EventAttendanceMode"
 
-	def location(self) -> dict | None:
+	def location(self) -> dict | list[dict] | None:
 		# The canonical page, never the join link
 		if self.is_online():
 			return {"@type": "VirtualLocation", "url": self.url()}
 		venue = self.context["venue"]
 		if not venue:
 			return None
-		return {"@type": "Place", "name": venue["name"], "address": venue["address"] or venue["name"]}
+		if venue["locations"]:
+			return [place(location["venue_name"], location["address"]) for location in venue["locations"]]
+		return place(venue["name"], venue["address"])
 
 	def organizer(self) -> dict | None:
 		hosts = self.context["hosts"]
@@ -107,3 +106,7 @@ class EventMeta:
 		if not register_url or self.context["registrations_closed"]:
 			return None
 		return {"@type": "Offer", "url": get_url(register_url), "availability": "https://schema.org/InStock"}
+
+
+def place(name: str, address: str | None) -> dict:
+	return {"@type": "Place", "name": name, "address": address or name}

@@ -10,12 +10,18 @@ from buzz.api.booking import (
 	send_guest_booking_otp,
 	validate_coupon,
 )
-from buzz.api.booking.exceptions import AddOnNotForEvent, InvalidAddOnValue, RegistrationsClosed
+from buzz.api.booking.exceptions import (
+	AddOnNotForEvent,
+	InvalidAddOnValue,
+	InvoiceDetailsMissing,
+	RegistrationsClosed,
+)
 from buzz.tests.base_test_cases import BOOKER, OUTSIDER, BookingTestCase
 from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
 	BuzzCustomFieldFactory,
 	BuzzEventFactory,
+	EventTicketCategoryFactory,
 	EventTicketTypeFactory,
 	OfflinePaymentMethodFactory,
 	TicketAddOnFactory,
@@ -27,6 +33,7 @@ EVENT_DATA_FIELDS = {
 	"registrations_closed",
 	"event_details",
 	"available_ticket_types",
+	"ticket_categories",
 	"available_add_ons",
 	"tax_settings",
 	"custom_fields",
@@ -141,12 +148,26 @@ class TestGetEventBookingData(BookingTestCase):
 		payload = response.__json__()
 		self.assertEqual(set(payload), EVENT_DATA_FIELDS)
 		self.assertFalse(payload["registrations_closed"])
-		self.assertEqual(payload["event_details"].name, self.event.name)
+		self.assertEqual(payload["event_details"]["name"], self.event.name)
+		self.assertEqual(payload["event_details"]["venue_name"], self.event.get_venue_name())
 
 	def test_guests_get_a_trimmed_event(self):
 		frappe.set_user("Guest")
 		payload = get_event_booking_data(self.event.route).__json__()
 		self.assertEqual(set(payload["event_details"]), GUEST_EVENT_DETAIL_FIELDS)
+
+	def test_ticket_types_follow_category_order_with_uncategorized_last(self):
+		later = EventTicketCategoryFactory.create(event=self.event.name, sort_order=2)
+		first = EventTicketCategoryFactory.create(event=self.event.name, sort_order=1)
+		EventTicketCategoryFactory.create(event=self.event.name, sort_order=0)
+		in_later = EventTicketTypeFactory.create(event=self.event.name, category=later.name)
+		in_first = EventTicketTypeFactory.create(event=self.event.name, category=first.name)
+
+		payload = get_event_booking_data(self.event.route)
+		names = [row.name for row in payload.available_ticket_types]
+		self.assertEqual(names[:2], [in_first.name, in_later.name])
+		self.assertTrue(all(not row.category for row in payload.available_ticket_types[2:]))
+		self.assertEqual([row["name"] for row in payload.ticket_categories], [first.name, later.name])
 
 	def test_registrations_closed_flag(self):
 		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})
@@ -563,3 +584,50 @@ class TestGetBookingSummary(BookingSummaryTestCase):
 
 		with self.assertRaises(frappe.PermissionError):
 			self.summary_of(booking_name, OUTSIDER)
+
+
+class TestBookingBuyerAndInvoice(BookingTestCase):
+	def booked(self, **overrides):
+		booking_name = process_booking(self.booking_request(**overrides)).booking_name
+		return frappe.get_doc("Event Booking", booking_name)
+
+	def test_buyer_details_are_stored(self):
+		booking = self.booked(
+			buyer_name="Priya Rao", buyer_email="priya@example.com", buyer_phone="+91-9845012345"
+		)
+		self.assertEqual(
+			(booking.buyer_name, booking.buyer_email, booking.buyer_phone),
+			("Priya Rao", "priya@example.com", "+91-9845012345"),
+		)
+
+	def test_an_invalid_buyer_phone_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			process_booking(self.booking_request(buyer_phone="not a phone"))
+
+	def test_buyer_falls_back_to_the_booking_user(self):
+		booking = self.booked()
+		self.assertEqual(booking.buyer_email, "admin@example.com")
+
+	def test_invoice_details_are_stored_when_the_event_charges_tax(self):
+		self.set_event({"apply_tax": 1})
+		booking = self.booked(
+			invoice_requested=True,
+			tax_id="29ABCDE1234F1Z5",
+			business_name="Acme Pvt Ltd",
+			billing_address="12 MG Road, Bengaluru",
+			billing_state="Karnataka",
+		)
+		self.assertEqual(
+			(booking.invoice_requested, booking.tax_id, booking.business_name, booking.billing_state),
+			(1, "29ABCDE1234F1Z5", "Acme Pvt Ltd", "Karnataka"),
+		)
+
+	def test_an_invoice_without_a_business_name_is_refused(self):
+		self.set_event({"apply_tax": 1})
+		with self.assertRaises(InvoiceDetailsMissing):
+			process_booking(self.booking_request(invoice_requested=True, tax_id="29ABCDE1234F1Z5"))
+
+	def test_invoice_details_are_ignored_without_tax(self):
+		self.set_event({"apply_tax": 0})
+		booking = self.booked(invoice_requested=True, tax_id="29ABCDE1234F1Z5", business_name="Acme Pvt Ltd")
+		self.assertEqual((booking.invoice_requested, booking.business_name), (0, None))
