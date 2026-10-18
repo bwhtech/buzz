@@ -1,3 +1,6 @@
+from contextlib import ExitStack
+from unittest.mock import patch
+
 import frappe
 
 from buzz.api.booking import (
@@ -99,7 +102,7 @@ class TestBookingConfirmation(BookingTestCase):
 		booking = self.create_submitted_booking()
 		token = get_booking_access_token(booking.name)
 
-		with self.set_user("Guest"):
+		with self.set_user("Guest"), stub_pdf_rendering():
 			download_tickets(booking.name, token=token)
 
 		self.assertEqual(frappe.response.filename, f"Tickets-{booking.name}.pdf")
@@ -137,3 +140,17 @@ class TestBookingConfirmation(BookingTestCase):
 	def create_booking(self, ticket_type: str):
 		attendees = [{"ticket_type": ticket_type, "first_name": "Conf", "email": "conf@example.com"}]
 		return EventBookingFactory.create(event=self.event.name, attendees=attendees)
+
+
+def stub_pdf_rendering() -> ExitStack:
+	# CI never runs bench build, so printview has no assets.json and wkhtmltopdf
+	# has no server to fetch the print styles from
+	stack = ExitStack()
+	stack.enter_context(patch("frappe.utils.get_assets_json", return_value={}))
+	stack.enter_context(patch("frappe.utils.pdf.get_pdf", side_effect=add_blank_page))
+	return stack
+
+
+def add_blank_page(html: str, options=None, output=None):
+	output.add_blank_page(width=100, height=100)
+	return output
