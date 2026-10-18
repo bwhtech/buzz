@@ -122,6 +122,8 @@ class BuzzEvent(Document):
 		if not self.registrations_close_at:
 			self.close_registrations()
 		self.add_default_payment_gateway()
+		self.append("custom_forms", {"form_doctype": "Event Feedback", "route": "feedback"})
+		self.append("custom_forms", {"form_doctype": "Talk Proposal", "route": "propose-talk"})
 
 	def add_default_payment_gateway(self):
 		default = frappe.db.get_single_value("Buzz Settings", "default_payment_gateway")
@@ -330,15 +332,7 @@ class BuzzEvent(Document):
 		]
 		for record in records:
 			frappe.get_doc({**record, "event": self.name}).insert(ignore_permissions=True)
-
-		default_forms = [
-			{"form_doctype": "Event Feedback", "route": "feedback"},
-			{"form_doctype": "Talk Proposal", "route": "propose-talk"},
-		]
-		for form in default_forms:
-			self.append("custom_forms", form)
 		create_for_event(self.name)
-		self.save(ignore_permissions=True)
 
 	def archive_event(self):
 		"""Take the event off the public site, along with the forms and registrations it takes.
