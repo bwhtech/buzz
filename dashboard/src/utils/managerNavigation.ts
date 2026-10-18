@@ -1,9 +1,14 @@
+import type { EventAccess, EventSection } from "@/types"
+
 export type ManagerNavItem = {
 	label: string
 	shortLabel?: string
 	icon: string
 	to: string
 	startsGroup?: boolean
+	// The event section that gates this item, and the level it needs.
+	section?: EventSection
+	needs?: "Edit"
 }
 
 // /events is a site page outside the dashboard router, so it opens as a full page load.
@@ -29,6 +34,8 @@ type NavigationContext = {
 	teamId?: string
 	creatingEvent: boolean
 	hasSponsorships: boolean
+	// The user's level per section of the open event; without it every item shows.
+	access?: EventAccess | null
 }
 
 function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
@@ -54,17 +61,56 @@ function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
 	return items
 }
 
-function eventItems(eventId: string): ManagerNavItem[] {
+function eventItems(eventId: string, access?: EventAccess | null): ManagerNavItem[] {
 	const event = `/manage/events/${eventId}`
-	return [
-		{ label: "Details", icon: "lucide-receipt-text", to: `${event}/details` },
-		{ label: "Registration", icon: "lucide-ticket", to: `${event}/registrations` },
-		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests` },
-		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks` },
-		{ label: "Announcements", icon: "lucide-megaphone", to: `${event}/communications` },
-		{ label: "Sponsorships", icon: "lucide-handshake", to: `${event}/sponsorships` },
-		{ label: "Settings", icon: "lucide-settings", to: `${event}/settings` },
+	const items: ManagerNavItem[] = [
+		// The details page edits the event, so it needs more than view.
+		{
+			label: "Details",
+			icon: "lucide-receipt-text",
+			to: `${event}/details`,
+			section: "details",
+			needs: "Edit",
+		},
+		{
+			label: "Registration",
+			icon: "lucide-ticket",
+			to: `${event}/registrations`,
+			section: "ticketing",
+		},
+		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests`, section: "guests" },
+		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks`, section: "talks" },
+		{
+			label: "Announcements",
+			icon: "lucide-megaphone",
+			to: `${event}/communications`,
+			section: "communications",
+		},
+		{
+			label: "Sponsorships",
+			icon: "lucide-handshake",
+			to: `${event}/sponsorships`,
+			section: "sponsors",
+		},
+		{
+			label: "Settings",
+			icon: "lucide-settings",
+			to: `${event}/settings`,
+			section: "details",
+			needs: "Edit",
+		},
 	]
+	return access ? items.filter((item) => isAllowed(item, access)) : items
+}
+
+function isAllowed(item: ManagerNavItem, access: EventAccess): boolean {
+	const level = item.section && access[item.section]
+	return Boolean(level) && (!item.needs || level === item.needs)
+}
+
+/** Where an event opens: its first destination the user may use. */
+export function firstEventPath(eventId: string, access: EventAccess): string | undefined {
+	return eventItems(eventId, access)[0]?.to
 }
 
 function teamItems(teamId: string): ManagerNavItem[] {
@@ -81,7 +127,7 @@ function teamItems(teamId: string): ManagerNavItem[] {
 export function managerNavigation(context: NavigationContext): ManagerNavItem[] {
 	// Creating an event is a page of its own; the shell holds only the way out of it.
 	if (context.creatingEvent) return []
-	if (context.eventId) return eventItems(context.eventId)
+	if (context.eventId) return eventItems(context.eventId, context.access)
 	if (context.teamId) return teamItems(context.teamId)
 	return rootItems(context.hasSponsorships)
 }

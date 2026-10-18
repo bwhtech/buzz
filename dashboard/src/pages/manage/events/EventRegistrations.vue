@@ -133,6 +133,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 					:can-write="page.data.can_write"
 					:team-legal-name="page.data.team_legal_name"
 					:team-tax-id="page.data.team_tax_id"
+					:has-team-tax-details="page.data.has_team_tax_details"
 					:can-edit-team="page.data.can_edit_team"
 					@tax-details-added="page.reload()"
 				/>
