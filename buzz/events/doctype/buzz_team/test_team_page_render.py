@@ -43,6 +43,14 @@ class TestTeamPageRender(IntegrationTestCase):
 
 		self.assertEqual(response.status_code, 200)
 
+	def test_only_a_manager_is_offered_the_dashboard(self):
+		team = self.published_team("Managed Builders")
+		dashboard = f'href="/b/manage/communities/{team.name}"'
+
+		self.assertNotIn(dashboard, get_response_content(f"/{team.route}"))
+		frappe.set_user("Administrator")
+		self.assertIn(dashboard, get_response_content(f"/{team.route}"))
+
 	def test_a_team_with_no_events_still_renders(self):
 		team = self.published_team("Empty Builders")
 

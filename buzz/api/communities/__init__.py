@@ -1,9 +1,18 @@
 import frappe
+from frappe.rate_limiter import rate_limit
 
+from buzz.api.communities import creation
 from buzz.api.communities.queries import find_upcoming_event
 from buzz.api.communities.reviews import CommunityReview
-from buzz.api.communities.schemas import CommunityQueue, EventOption, EventRequests, ExternalEvent
+from buzz.api.communities.schemas import (
+	CommunityQueue,
+	CreatedCommunity,
+	EventOption,
+	EventRequests,
+	ExternalEvent,
+)
 from buzz.api.communities.submissions import EventSubmissions, submit_external_request, submittable_events
+from buzz.api.events.schemas import RouteAvailability
 
 
 @frappe.whitelist()
@@ -74,3 +83,21 @@ def add_external_event(community: str, event: ExternalEvent) -> None:
 @frappe.whitelist(methods=["POST"])
 def submit_external_event(community: str, event: ExternalEvent) -> None:
 	submit_external_request(community, event)
+
+
+# nosemgrep: guest-whitelisted-method
+@frappe.whitelist(allow_guest=True)
+@rate_limit(limit=60, seconds=60)
+def check_community_slug(slug: str) -> RouteAvailability:
+	return creation.slug_availability(slug)
+
+
+def creation_limit() -> int:
+	# Unlimited in developer mode, so the flow can be tried over and over.
+	return 10**6 if frappe.conf.developer_mode else 5
+
+
+@frappe.whitelist(methods=["POST"])
+@rate_limit(limit=creation_limit, seconds=60 * 60)
+def create_community(team_name: str, slug: str) -> CreatedCommunity:
+	return creation.create_community(team_name, slug)

@@ -1,6 +1,7 @@
 import { useCall } from "frappe-ui"
 import { computed, ref } from "vue"
 
+import { hasCollaborations } from "@/data/collaborators"
 import { session } from "@/data/session"
 import type { InviteOutcome, TeamOption, TeamOverview } from "@/types"
 
@@ -53,6 +54,12 @@ export async function isTeamMember(): Promise<boolean> {
 	if (!session.isLoggedIn) return false
 	if (!teamsResource.data) await teamsResource.fetch()
 	return teams.value.length > 0
+}
+
+/** The manage dashboard is for team members and for people invited to an event. */
+export async function hasManageAccess(): Promise<boolean> {
+	if (!session.isLoggedIn) return false
+	return (await isTeamMember()) || hasCollaborations()
 }
 
 export function reloadTeams() {

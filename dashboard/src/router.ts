@@ -1,7 +1,10 @@
+import { call } from "frappe-ui"
 import { type RouteRecordRaw, createRouter, createWebHistory } from "vue-router"
 
-import { isTeamMember } from "@/data/teams"
+import { hasManageAccess } from "@/data/teams"
 import { loadUser } from "@/data/user"
+import type { EventAccess } from "@/types"
+import { firstEventPath } from "@/utils/managerNavigation"
 
 const APP_NAME = "Buzz"
 
@@ -12,8 +15,15 @@ const routes: RouteRecordRaw[] = [
 		// Never rendered — the guard always redirects — but a record needs a component.
 		component: { render: () => null },
 		beforeEnter: async () => ({
-			name: (await isTeamMember()) ? "manage" : "bookings-tab",
+			name: (await hasManageAccess()) ? "manage" : "bookings-tab",
 		}),
+	},
+	{
+		// Outside the manage shell: the invitee may not be logged in, or on any team.
+		path: "/manage/collaborator-invite",
+		name: "collaborator-invite",
+		meta: { isPublic: true, title: "Event Invitation" },
+		component: () => import("@/pages/manage/CollaboratorInvite.vue"),
 	},
 	{
 		path: "/manage",
@@ -33,7 +43,15 @@ const routes: RouteRecordRaw[] = [
 			},
 			{
 				path: "events/:eventId",
-				redirect: (to) => `/manage/events/${to.params.eventId}/details`,
+				// A collaborator may not have Details; open the first section they have.
+				component: { render: () => null },
+				beforeEnter: async (to) => {
+					const eventId = to.params.eventId as string
+					const access = await call<EventAccess>("buzz.api.events.collaborators.get_event_access", {
+						event: eventId,
+					})
+					return firstEventPath(eventId, access) ?? "/manage/events"
+				},
 			},
 			{
 				path: "events/:eventId/details",

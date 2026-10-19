@@ -25,3 +25,12 @@ class RequestNotApproved(Conflict):
 
 class EventNotFound(ResourceNotFound):
 	message = _lt("No upcoming published event lives at this link.")
+
+
+class CommunitiesDisabled(NotPermitted):
+	message = _lt("Communities are not enabled on this site.")
+
+
+class LoginRequired(NotPermitted):
+	http_status_code = 401
+	message = _lt("Log in to create a community.")

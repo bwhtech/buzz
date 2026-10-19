@@ -14,16 +14,39 @@
 	<link rel="canonical" href="{{ meta.url }}">
 	<link rel="stylesheet" href="/assets/buzz/themes/team.css">
 	<link rel="stylesheet" href="/assets/buzz/themes/team_map.css">
+	{# A community just created on /community grows out of the create form. Runs before the
+	   first render, as pagereveal needs; see dashboard/src/islands/create-community/reveal.ts. #}
+	<script>
+		(() => {
+			const created = JSON.parse(sessionStorage.getItem("buzz:community-created") || "null")
+			if (!created?.from || matchMedia("(prefers-reduced-motion: reduce)").matches) return
+			const style = document.createElement("style")
+			style.textContent = "@view-transition { navigation: auto; } ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }"
+			document.head.append(style)
+			addEventListener("pagereveal", (event) => {
+				event.viewTransition?.ready.then(() =>
+					document.documentElement.animate(
+						{ clipPath: [`inset(${created.from} round 12px)`, "inset(0px 0px 0px 0px round 0px)"] },
+						{ duration: 520, easing: "cubic-bezier(0.23, 1, 0.32, 1)", pseudoElement: "::view-transition-new(root)" },
+					),
+				)
+			}, { once: true })
+		})()
+	</script>
 {% endautoescape %}{% endblock %}
 
 {% block content %}{% autoescape true %}
 	{% from "buzz/templates/event_page/timeline.html" import timeline, month_calendar, dot_map with context %}
+	{% from "buzz/templates/event_page/manage_alert.html" import manage_alert with context %}
 
 	{% if has_pins %}
 	{{ dot_map() }}
 	{% endif %}
 
 	<main class="event-content team-page">
+		{% if manage_url %}
+		{{ manage_alert(_("You have manage access for this community"), manage_url) }}
+		{% endif %}
 		<header class="team-identity">
 			{% if doc.logo %}<img class="team-logo" src="{{ doc.logo }}" alt="">{% else %}<span class="team-logo" aria-hidden="true">{{ doc.team_name[:1] | upper }}</span>{% endif %}
 			<div class="team-identity-text">

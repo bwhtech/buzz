@@ -4,6 +4,8 @@
 import frappe
 from frappe import _
 
+from buzz.booking_permissions import ensure_guests_access, guest_section_events
+
 
 def execute(filters: dict | None = None):
 	"""Return columns and data for the report.
@@ -47,12 +49,13 @@ def get_data(filters: dict) -> list[dict]:
 	The report data is a list of rows, with each row being a list of cell values.
 	"""
 	event = filters.get("event")
+	ensure_guests_access(event)
 
 	if event:
 		return [get_summary_for_event(event)]
 
 	data = []
-	events = frappe.db.get_all("Buzz Event", pluck="name")
+	events = guest_section_events()
 	for event in events:
 		summary = get_summary_for_event(event)
 		summary["event"] = event

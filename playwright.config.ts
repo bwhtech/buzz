@@ -18,10 +18,11 @@ const settingsUserFile = "e2e/.auth/settings-user.json"
  */
 export default defineConfig({
 	testDir: "./e2e/tests",
-	fullyParallel: false, // Sequential for Frappe state consistency
+	// Specs run in parallel; tests within a spec keep their order.
+	fullyParallel: false,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
-	workers: 1, // Single worker for Frappe session management
+	workers: 4,
 	reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "html",
 
 	timeout: 60000,
@@ -33,7 +34,7 @@ export default defineConfig({
 	use: {
 		baseURL: process.env.BASE_URL || "http://buzz.test:8000",
 		trace: "on-first-retry",
-		video: "retain-on-failure",
+		video: "on-first-retry",
 		screenshot: "only-on-failure",
 		actionTimeout: 15000,
 		navigationTimeout: 30000,
@@ -47,7 +48,7 @@ export default defineConfig({
 		},
 		{
 			name: "event-setup",
-			testMatch: /event\.setup\.ts/,
+			testMatch: /\/event\.setup\.ts$/,
 			use: {
 				storageState: authFile,
 			},
@@ -65,12 +66,13 @@ export default defineConfig({
 		{
 			name: "chromium",
 			testIgnore:
-				/guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets|language|user-settings|ticket-holds/,
+				/guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets|language|user-settings|ticket-holds|offline-payment/,
 			use: {
 				...devices["Desktop Chrome"],
 				storageState: authFile,
 			},
-			dependencies: ["setup", "event-setup"],
+			// user-settings-setup seeds the member manage-access.spec.ts runs one test as.
+			dependencies: ["setup", "event-setup", "user-settings-setup"],
 		},
 		{
 			name: "guest-event-setup",

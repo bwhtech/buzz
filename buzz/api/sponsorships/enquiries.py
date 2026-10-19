@@ -26,7 +26,7 @@ def event_enquiries(
 	limit: int = ENQUIRIES_PAGE_SIZE,
 ) -> EventEnquiriesResponse:
 	"""One page of an event's sponsorship enquiries; Sponsorship Enquiry grants organisers no role access."""
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "sponsors")
 
 	filter_fields = enquiry_filter_fields(event)
 	conditions = ListConditions("Sponsorship Enquiry", filter_fields).frappe_filters(filters)
@@ -138,7 +138,7 @@ def enquiry_detail(enquiry: str) -> EnquiryDetail:
 	event = frappe.db.get_value("Sponsorship Enquiry", enquiry, "event")
 	if not event:
 		EnquiryNotFound.throw()
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "sponsors")
 
 	doc = frappe.get_doc("Sponsorship Enquiry", enquiry)
 	return EnquiryDetail(
@@ -173,7 +173,7 @@ def set_enquiry_status(enquiry: str, status: str) -> str:
 	if not frappe.db.exists("Sponsorship Enquiry", enquiry):
 		EnquiryNotFound.throw()
 	doc = frappe.get_doc("Sponsorship Enquiry", enquiry)
-	manageable_event(doc.event)
+	manageable_event(doc.event, "sponsors")
 
 	if doc.status in LOCKED_STATUSES and status != doc.status:
 		EnquiryStatusLocked.throw()

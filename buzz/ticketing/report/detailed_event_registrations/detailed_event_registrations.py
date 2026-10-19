@@ -4,11 +4,14 @@
 import frappe
 from frappe import _
 
+from buzz.booking_permissions import ensure_guests_access
+
 
 def execute(filters=None):
 	if not filters:
 		filters = {}
 
+	ensure_guests_access(filters.get("event"))
 	if not filters.get("event"):
 		return [], []
 

@@ -31,10 +31,23 @@ runs:
         python-version: "3.14"
 
     - uses: actions/setup-node@v4
+      if: inputs.build-assets == 'true'
       with:
         node-version: "24"
         cache: yarn
         cache-dependency-path: dashboard/yarn.lock
+
+    - name: Skip yarn installs
+      if: inputs.build-assets != 'true'
+      shell: bash -e {0}
+      run: |
+        # bench runs `yarn install` for every app even with --skip-assets, and nothing here
+        # builds assets. A no-op yarn saves the installs and the Node 24 requirement.
+        shim="${RUNNER_TEMP}/yarn-shim"
+        mkdir -p "$shim"
+        printf '#!/bin/sh\necho "yarn $* skipped: assets are not built"\n' > "$shim/yarn"
+        chmod +x "$shim/yarn"
+        echo "$shim" >> "$GITHUB_PATH"
 
     - uses: astral-sh/setup-uv@v6
       with:

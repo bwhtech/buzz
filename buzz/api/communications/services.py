@@ -15,7 +15,7 @@ from buzz.api.filters.schemas import FilterField
 from buzz.api.proposals.services import proposal_filter_fields
 from buzz.api.sponsorships.sponsors import sponsor_filter_fields
 from buzz.api.teams.exceptions import CannotEditTeam
-from buzz.permissions import can_manage_members, has_team_access
+from buzz.permissions import can_manage_members, has_section_permission
 
 
 def guest_emails(event: str, filters: str | None) -> list[str]:
@@ -68,7 +68,7 @@ def filter_fields_by_audience(event: str) -> dict[str, list[FilterField]]:
 
 
 def count_recipients(event: str, audience: str, filters: str | None):
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "communications")
 	return RecipientCount(count=len(recipients_of(event, audience, filters)))
 
 
@@ -85,8 +85,8 @@ def send_communication(
 	scheduled_at: datetime | None,
 ) -> CommunicationItem:
 	"""Insert the record; its controller resolves the recipients and hands them to sendmail."""
-	ensure_event_team_access(event)
-	if not has_team_access(team_of(event), "write", frappe.session.user):
+	ensure_event_team_access(event, "communications")
+	if not has_section_permission(event, "communications", "write", frappe.session.user):
 		CannotSendCommunication.throw()
 
 	doc = frappe.get_doc(
@@ -118,7 +118,7 @@ def item_of(row, sent_by: str) -> CommunicationItem:
 
 
 def event_communications(event: str) -> EventCommunicationsResponse:
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "communications")
 	team = team_of(event)
 	rows = frappe.get_all(
 		"Event Communication",
@@ -143,7 +143,7 @@ def event_communications(event: str) -> EventCommunicationsResponse:
 	settings = frappe.get_cached_doc("Buzz Team Settings", team)
 	return EventCommunicationsResponse(
 		title=frappe.get_cached_value("Buzz Event", event, "title"),
-		can_write=has_team_access(team, "write", frappe.session.user),
+		can_write=has_section_permission(event, "communications", "write", frappe.session.user),
 		can_edit_settings=can_manage_members(team),
 		support_email=settings.support_email or None,
 		filter_fields=filter_fields_by_audience(event),
@@ -152,7 +152,7 @@ def event_communications(event: str) -> EventCommunicationsResponse:
 
 
 def update_support_email(event: str, support_email: str) -> None:
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "communications")
 	team = team_of(event)
 	if not can_manage_members(team):
 		CannotEditTeam.throw()

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import { discoverEvents, managerNavigation } from "./managerNavigation.ts"
+import { discoverEvents, firstEventPath, managerNavigation } from "./managerNavigation.ts"
 
 const labels = (items: { label: string }[]) => items.map((item) => item.label)
 
@@ -35,4 +35,41 @@ test("creating an event offers no destinations", () => {
 
 test("discover events leaves the dashboard for the public events page", () => {
 	assert.equal(discoverEvents.href, "/events")
+})
+
+const guestsOnly = {
+	details: "View",
+	guests: "View",
+	ticketing: null,
+	talks: null,
+	sponsors: null,
+	communications: null,
+} as const
+
+test("a collaborator sees only the sections they were granted", () => {
+	const items = managerNavigation({
+		eventId: "EV-1",
+		creatingEvent: false,
+		hasSponsorships: false,
+		access: guestsOnly,
+	})
+	assert.deepEqual(labels(items), ["Details", "Guests"])
+})
+
+test("settings needs edit access to the event details", () => {
+	const items = managerNavigation({
+		eventId: "EV-1",
+		creatingEvent: false,
+		hasSponsorships: false,
+		access: { ...guestsOnly, details: "Edit" },
+	})
+	assert.deepEqual(labels(items), ["Details", "Guests", "Settings"])
+})
+
+test("an event opens on the first section the user has", () => {
+	assert.equal(firstEventPath("EV-1", guestsOnly), "/manage/events/EV-1/details")
+	assert.equal(
+		firstEventPath("EV-1", { ...guestsOnly, details: null as never }),
+		"/manage/events/EV-1/guests",
+	)
 })

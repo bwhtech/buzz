@@ -1,0 +1,67 @@
+/* The landing page's community page preview: the real page's markup and styles, in a browser window. */
+
+/* The real page's map controls sit inside the page width; here, inside the window's padding. */
+.preview-window {
+	--page-width: calc(100% - 2 * var(--preview-padding));
+	--preview-padding: clamp(16px, 4vw, 40px);
+	position: relative;
+	max-width: 1040px;
+	max-height: 680px;
+	margin-inline: auto;
+	overflow: hidden;
+	border: 1px solid var(--border);
+	border-radius: 16px;
+	background: var(--page-bg);
+	box-shadow: var(--landing-shadow);
+}
+
+/* A glimpse, not the whole page: the window stops partway down its events and fades out. */
+.preview-window::after {
+	content: "";
+	position: absolute;
+	inset: auto 0 0;
+	height: 120px;
+	background: linear-gradient(to bottom, transparent, var(--page-bg));
+	pointer-events: none;
+}
+
+.preview-chrome {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	height: 40px;
+	padding-inline: 14px;
+	border-bottom: 1px solid var(--border);
+	background: var(--surface);
+}
+
+.preview-dots {
+	display: flex;
+	gap: 6px;
+}
+
+.preview-dots span {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: var(--border);
+}
+
+.preview-url {
+	margin-inline: auto;
+	padding: 3px 12px;
+	border-radius: 6px;
+	background: var(--surface-raised);
+	color: var(--ink-muted);
+	font-size: 12px;
+}
+
+.preview-window .team-map {
+	height: 200px;
+	border-top: 0;
+}
+
+.preview-body {
+	padding: 24px var(--preview-padding) 8px;
+	text-align: left;
+}
