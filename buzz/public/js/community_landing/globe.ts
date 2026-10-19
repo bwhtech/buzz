@@ -1,6 +1,7 @@
-import createGlobe, { type COBEOptions, type Marker } from "cobe"
+import createGlobe, { type COBEOptions } from "cobe"
 
 import { reducedMotion } from "../team_page/page_data"
+import { MarkerReveal } from "./markers"
 
 type Globe = ReturnType<typeof createGlobe>
 
@@ -8,18 +9,6 @@ const ACCENT: [number, number, number] = [0.95, 0.42, 0.1]
 const AUTO_ROTATE_SPEED = 0.0028
 const DRAG_SENSITIVITY = 220
 const MOMENTUM_DECAY = 0.94
-
-const MARKERS: Marker[] = [
-	[52.5, 13.4, 0.07],
-	[12.97, 77.6, 0.07],
-	[37.8, -122.4, 0.07],
-	[35.7, 139.7, 0.07],
-	[51.5, -0.1, 0.045],
-	[40.7, -74, 0.045],
-	[-33.9, 151.2, 0.07],
-	[19.4, -99.1, 0.045],
-	[1.35, 103.8, 0.045],
-].map(([latitude, longitude, size]): Marker => ({ location: [latitude, longitude], size }))
 
 const LIGHT = {
 	dark: 0,
@@ -45,6 +34,7 @@ export class CommunityGlobe {
 	private velocity = 0
 	private dragX: number | null = null
 	private isVisible = true
+	private markers = new MarkerReveal(reducedMotion.matches)
 
 	static mount(canvas: HTMLCanvasElement): CommunityGlobe {
 		return new CommunityGlobe(canvas)
@@ -75,19 +65,21 @@ export class CommunityGlobe {
 			theta: 0.28,
 			mapSamples: 28000,
 			markerColor: ACCENT,
-			markers: MARKERS,
+			markers: this.markers.current(performance.now()),
 			onRender: (state) => this.onRender(state),
 		})
 		this.globe.toggle(this.isVisible)
 		requestAnimationFrame(() => this.canvas.toggleAttribute("data-ready", true))
 	}
 
-	private onRender(state: Record<string, number>) {
+	private onRender(state: Record<string, unknown>) {
 		if (this.dragX === null) {
 			this.velocity *= MOMENTUM_DECAY
 			this.phi += (reducedMotion.matches ? 0 : AUTO_ROTATE_SPEED) + this.velocity
 		}
 		state.phi = this.phi
+		const markers = this.markers.update(this.phi, performance.now())
+		if (markers) state.markers = markers
 		state.width = this.size()
 		state.height = this.size()
 	}
