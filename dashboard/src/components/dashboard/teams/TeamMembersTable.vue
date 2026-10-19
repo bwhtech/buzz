@@ -9,6 +9,7 @@ import { useRosterActions } from "@/composables/useRosterActions"
 import { useRowSelection } from "@/composables/useRowSelection"
 import { session } from "@/data/session"
 import type { TeamMember, TeamOverview } from "@/types"
+import { invitationActions } from "@/utils/invitationActions"
 import { canManageMembers } from "@/utils/teamRoles"
 import { matchesQuery, rosterRows, type RosterRow } from "@/utils/teamRoster"
 
@@ -68,7 +69,13 @@ function canAdminister(member: TeamMember) {
 // An invitation is resent or retracted; a member is re-roled or removed.
 function actionsFor(row: RosterRow) {
 	const member = row.member
-	if (!member) return canManage.value ? inviteActions(row) : []
+	if (!member) {
+		if (!canManage.value) return []
+		return invitationActions({
+			resend: () => actions.resend(row),
+			retract: () => actions.confirmRetract(row),
+		})
+	}
 	if (!canAdminister(member)) return []
 	return [
 		{
@@ -81,22 +88,6 @@ function actionsFor(row: RosterRow) {
 			icon: "lucide-trash-2",
 			theme: "red" as const,
 			onClick: () => actions.confirmRemove([member]),
-		},
-	]
-}
-
-function inviteActions(row: RosterRow) {
-	return [
-		{
-			label: __("Resend"),
-			icon: "lucide-arrow-up-from-line",
-			onClick: () => actions.resend(row),
-		},
-		{
-			label: __("Retract"),
-			icon: "lucide-shredder",
-			theme: "red" as const,
-			onClick: () => actions.confirmRetract(row),
 		},
 	]
 }
