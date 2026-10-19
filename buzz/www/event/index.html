@@ -36,6 +36,7 @@
 {% endautoescape %}{% endblock %}
 
 {% block content %}{% autoescape true %}
+	{% from "buzz/templates/event_page/manage_alert.html" import manage_alert with context %}
 	{% macro host_identity(host) %}
 	{% if host.logo %}<img class="host-logo" src="{{ host.logo }}" alt="">{% else %}<span class="host-logo">{{ host.label[:1] | upper }}</span>{% endif %}
 	<span class="aside-value">{{ host.label }}</span>
@@ -123,11 +124,7 @@
 
 	<main class="event-content event-layout">
 		{% if manage_url %}
-		<div class="manage-alert" role="status">
-			<svg class="manage-alert-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1C11.866 1 15 4.13401 15 8C15 11.866 11.866 15 8 15C4.13401 15 1 11.866 1 8C1 4.13401 4.13401 1 8 1ZM8 6.93652C7.72386 6.93652 7.5 7.16038 7.5 7.43652V11.1436C7.50005 11.4197 7.72389 11.6436 8 11.6436C8.27611 11.6436 8.49995 11.4197 8.5 11.1436V7.43652C8.5 7.16038 8.27614 6.93652 8 6.93652ZM8 4C7.51675 4 7.125 4.39175 7.125 4.875C7.125 5.35825 7.51675 5.75 8 5.75C8.48325 5.75 8.875 5.35825 8.875 4.875C8.875 4.39175 8.48325 4 8 4Z"/></svg>
-			<p class="manage-alert-title text-base-medium">{{ _("You have manage access for this event") }}</p>
-			<a class="es-button manage-alert-action" data-variant="ghost" data-size="sm" href="{{ manage_url }}">{{ _("Manage") }}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
-		</div>
+		{{ manage_alert(_("You have manage access for this event"), manage_url) }}
 		{% endif %}
 		<div class="event-banner-frame"{% if banner_color %} style="--banner-color: {{ banner_color }}"{% endif %}>
 			{% if event.banner_image %}

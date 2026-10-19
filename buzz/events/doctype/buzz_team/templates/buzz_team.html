@@ -37,12 +37,16 @@
 
 {% block content %}{% autoescape true %}
 	{% from "buzz/templates/event_page/timeline.html" import timeline, month_calendar, dot_map with context %}
+	{% from "buzz/templates/event_page/manage_alert.html" import manage_alert with context %}
 
 	{% if has_pins %}
 	{{ dot_map() }}
 	{% endif %}
 
 	<main class="event-content team-page">
+		{% if manage_url %}
+		{{ manage_alert(_("You have manage access for this community"), manage_url) }}
+		{% endif %}
 		<header class="team-identity">
 			{% if doc.logo %}<img class="team-logo" src="{{ doc.logo }}" alt="">{% else %}<span class="team-logo" aria-hidden="true">{{ doc.team_name[:1] | upper }}</span>{% endif %}
 			<div class="team-identity-text">
