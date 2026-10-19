@@ -9,7 +9,7 @@ type Loader = () => Promise<{ default: Component }>
 // Each island's name, as a page's data-island names it, to its component.
 const ISLANDS: Record<string, Loader> = {
 	"add-event": () => import("@/components/dashboard/teams/AddEventMenu.vue"),
-	"create-community": () => import("./CreateCommunityIsland.vue"),
+	"create-community": () => import("./create-community/CreateCommunityIsland.vue"),
 	login: () => import("./LoginIsland.vue"),
 }
 
@@ -35,6 +35,9 @@ function mountToasts(root: HTMLElement) {
 		root.appendChild(document.createElement("div")),
 	)
 }
+
+// For a toast on a page where no island has opened.
+export const ensureToasts = () => hasToasts || mountToasts(createRoot())
 
 function createRoot(): HTMLElement {
 	const root = document.createElement("div")

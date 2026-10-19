@@ -92,7 +92,12 @@ def check_community_slug(slug: str) -> RouteAvailability:
 	return creation.slug_availability(slug)
 
 
+def creation_limit() -> int:
+	# Unlimited in developer mode, so the flow can be tried over and over.
+	return 10**6 if frappe.conf.developer_mode else 5
+
+
 @frappe.whitelist(methods=["POST"])
-@rate_limit(limit=5, seconds=60 * 60)
+@rate_limit(limit=creation_limit, seconds=60 * 60)
 def create_community(team_name: str, slug: str) -> CreatedCommunity:
 	return creation.create_community(team_name, slug)

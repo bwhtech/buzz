@@ -1,0 +1,337 @@
+<template>
+	<div>
+		<div
+			v-if="login_context?.login_banner"
+			class="rounded-5 bg-surface-gray-2 p-3 prose prose-sm max-w-none mb-6"
+			v-html="login_context.login_banner"
+		/>
+
+		<ErrorMessage v-if="error_message" class="mb-4" :message="error_message" />
+
+		<div
+			v-if="success_message"
+			class="mb-4 rounded-5 bg-surface-green-2 p-3 text-sm text-ink-green-6"
+		>
+			{{ success_message }}
+		</div>
+
+		<form v-if="current_view === 'login'" class="space-y-4" @submit.prevent="handleLogin">
+			<template v-if="!login_context?.disable_user_pass_login">
+				<FormControl
+					type="email"
+					:label="__('Email')"
+					:placeholder="__('Enter your email')"
+					v-model="form.email"
+					required
+					@keydown.enter="focusPassword"
+				/>
+				<FormControl
+					ref="password_input"
+					type="password"
+					:label="__('Password')"
+					:placeholder="__('Enter your password')"
+					v-model="form.password"
+					required
+				/>
+				<div class="flex justify-end">
+					<button
+						type="button"
+						class="text-sm text-ink-gray-5 hover:text-ink-gray-7"
+						@click="switchView('forgot-password')"
+					>
+						{{ __("Forgot Password?") }}
+					</button>
+				</div>
+				<Button variant="solid" class="w-full" type="submit" :loading="session.login.loading">
+					{{ __("Login") }}
+				</Button>
+			</template>
+
+			<template v-if="has_social_logins || login_context?.login_with_email_link">
+				<div class="flex items-center gap-2.5 text-sm text-ink-gray-4">
+					<span class="h-px flex-1 bg-outline-gray-2" />
+					{{ __("or") }}
+					<span class="h-px flex-1 bg-outline-gray-2" />
+				</div>
+
+				<SocialLoginButtons :provider-logins="login_context?.provider_logins" />
+
+				<template v-if="login_context?.login_with_email_link">
+					<Button variant="subtle" class="w-full" type="button" @click="switchView('email-link')">
+						{{ __("Login with Email Link") }}
+					</Button>
+				</template>
+			</template>
+
+			<div v-if="!login_context?.disable_signup" class="text-center text-sm text-ink-gray-5">
+				{{ __("Don't have an account?") }}
+				<button
+					type="button"
+					class="font-semibold text-ink-gray-9 hover:text-ink-gray-8"
+					@click="switchView('signup')"
+				>
+					{{ __("Sign up") }}
+				</button>
+			</div>
+		</form>
+
+		<form v-else-if="current_view === 'signup'" class="space-y-4" @submit.prevent="handleSignup">
+			<FormControl
+				type="text"
+				:label="__('Full Name')"
+				:placeholder="__('Enter your full name')"
+				v-model="form.full_name"
+				required
+			/>
+			<FormControl
+				type="email"
+				:label="__('Email')"
+				:placeholder="__('Enter your email')"
+				v-model="form.email"
+				required
+			/>
+			<Button variant="solid" class="w-full" type="submit" :loading="signup_resource.loading">
+				{{ __("Sign Up") }}
+			</Button>
+
+			<template v-if="has_social_logins">
+				<div class="flex items-center gap-2.5 text-sm text-ink-gray-4">
+					<span class="h-px flex-1 bg-outline-gray-2" />
+					{{ __("or") }}
+					<span class="h-px flex-1 bg-outline-gray-2" />
+				</div>
+
+				<SocialLoginButtons :provider-logins="login_context?.provider_logins" />
+			</template>
+
+			<div class="text-center text-sm text-ink-gray-5">
+				{{ __("Already have an account?") }}
+				<button
+					type="button"
+					class="font-medium text-ink-gray-7 hover:text-ink-gray-9"
+					@click="switchView('login')"
+				>
+					{{ __("Login") }}
+				</button>
+			</div>
+		</form>
+
+		<form
+			v-else-if="current_view === 'forgot-password'"
+			class="space-y-4"
+			@submit.prevent="handleForgotPassword"
+		>
+			<p class="text-sm text-ink-gray-5">
+				{{ __("Enter your email address and we'll send you a link to reset your password.") }}
+			</p>
+			<FormControl
+				type="email"
+				:label="__('Email')"
+				:placeholder="__('Enter your email')"
+				v-model="form.email"
+				required
+			/>
+			<Button
+				variant="solid"
+				class="w-full"
+				type="submit"
+				:loading="forgot_password_resource.loading"
+			>
+				{{ __("Reset Password") }}
+			</Button>
+			<div class="text-center">
+				<button
+					type="button"
+					class="text-sm text-ink-gray-5 hover:text-ink-gray-7"
+					@click="switchView('login')"
+				>
+					{{ __("Back to Login") }}
+				</button>
+			</div>
+		</form>
+
+		<form
+			v-else-if="current_view === 'email-link'"
+			class="space-y-4"
+			@submit.prevent="handleEmailLink"
+		>
+			<p class="text-sm text-ink-gray-5">
+				{{ __("We'll send you a one-time login link to your email address.") }}
+			</p>
+			<FormControl
+				type="email"
+				:label="__('Email')"
+				:placeholder="__('Enter your email')"
+				v-model="form.email"
+				required
+			/>
+			<Button variant="solid" class="w-full" type="submit" :loading="email_link_resource.loading">
+				{{ __("Send Login Link") }}
+			</Button>
+			<div class="text-center">
+				<button
+					type="button"
+					class="text-sm text-ink-gray-5 hover:text-ink-gray-7"
+					@click="switchView('login')"
+				>
+					{{ __("Back to Login") }}
+				</button>
+			</div>
+		</form>
+	</div>
+</template>
+
+<script setup lang="ts">
+import { Button, ErrorMessage, FormControl, useCall } from "frappe-ui"
+import { type ComponentPublicInstance, type PropType, computed, defineComponent, h, ref } from "vue"
+
+import { session } from "@/data/session"
+import { userResource } from "@/data/user"
+import type { FrappeError } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
+
+export type LoginView = "login" | "signup" | "forgot-password" | "email-link"
+
+interface ProviderLogin {
+	auth_url: string
+	icon?: string
+	provider_name: string
+}
+
+// The parent titles the form by its view.
+const current_view = defineModel<LoginView>("view", { default: "login" })
+const error_message = ref("")
+const success_message = ref("")
+const password_input = ref<ComponentPublicInstance | null>(null)
+
+const form = ref({
+	email: "",
+	password: "",
+	full_name: "",
+})
+
+const login_context_resource = useCall<Record<string, any>, { redirect_to: string }>({
+	url: "/api/v2/method/buzz.api.auth.get_login_context",
+	params: { redirect_to: window.location.href },
+})
+
+const login_context = computed(() => login_context_resource.data)
+
+const has_social_logins = computed(() => login_context.value?.provider_logins?.length > 0)
+
+const SocialLoginButtons = defineComponent({
+	props: {
+		providerLogins: { type: Array as PropType<ProviderLogin[]>, default: () => [] },
+	},
+	setup(props) {
+		return () =>
+			props.providerLogins.map((provider) =>
+				h(
+					Button,
+					{
+						variant: "subtle",
+						class: "w-full",
+						type: "button",
+						onClick: () => {
+							window.location.href = provider.auth_url
+						},
+					},
+					{
+						...(provider.icon
+							? {
+									prefix: () =>
+										h("img", {
+											src: provider.icon,
+											class: "h-4 w-4",
+											alt: provider.provider_name,
+										}),
+								}
+							: {}),
+						default: () => __("Continue with {0}", [provider.provider_name]),
+					},
+				),
+			)
+	},
+})
+
+function focusPassword() {
+	password_input.value?.$el?.querySelector("input")?.focus()
+}
+
+function switchView(view: LoginView) {
+	current_view.value = view
+	error_message.value = ""
+	success_message.value = ""
+}
+
+function handleLogin() {
+	error_message.value = ""
+	session.login.submit(
+		{ email: form.value.email, password: form.value.password },
+		{
+			onSuccess() {
+				userResource.reload()
+				session.user = session.login.data?.user || document.cookie.match(/user_id=([^;]+)/)?.[1]
+			},
+			onError(error: FrappeError) {
+				error_message.value = error.messages?.[0] || __("Invalid email or password.")
+			},
+		},
+	)
+}
+
+const signup_resource = useCall<any[], Record<string, string>>({
+	url: "/api/v2/method/frappe.core.doctype.user.user.sign_up",
+	method: "POST",
+	immediate: false,
+	onSuccess(data) {
+		// sign_up answers [status, message]; status 1 means the verification mail went out.
+		success_message.value =
+			data?.[0] !== 1 && data?.[1] ? data[1] : __("Please check your email to verify your account.")
+	},
+	onError: showError,
+})
+
+function handleSignup() {
+	error_message.value = ""
+	signup_resource.submit({
+		email: form.value.email,
+		full_name: form.value.full_name,
+		redirect_to: window.location.pathname + window.location.search,
+	})
+}
+
+const forgot_password_resource = useCall<unknown, { user: string }>({
+	url: "/api/v2/method/frappe.core.doctype.user.user.reset_password",
+	method: "POST",
+	immediate: false,
+	onSuccess() {
+		success_message.value = __("Password reset link has been sent to your email.")
+	},
+	onError: showError,
+})
+
+function handleForgotPassword() {
+	error_message.value = ""
+	forgot_password_resource.submit({ user: form.value.email })
+}
+
+const email_link_resource = useCall<unknown, { email: string }>({
+	url: "/api/v2/method/frappe.www.login.send_login_link",
+	method: "POST",
+	immediate: false,
+	onSuccess() {
+		success_message.value = __("Login link has been sent to your email.")
+	},
+	onError: showError,
+})
+
+function handleEmailLink() {
+	error_message.value = ""
+	email_link_resource.submit({ email: form.value.email })
+}
+
+function showError(error: Error) {
+	error_message.value = serverErrorMessage(error) || __("Something went wrong. Please try again.")
+}
+</script>
