@@ -414,6 +414,7 @@ export interface EventDetail {
 	co_hosts: EventHostRef[]
 	external_links: EventExternalLink[]
 	topics: string[]
+	can_write: boolean
 }
 
 // A ticket the user holds, flattened with the context its event carries.

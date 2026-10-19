@@ -14,6 +14,7 @@ import {
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 
 const about = defineModel<string>({ required: true })
+defineProps<{ readonly?: boolean }>()
 
 const box = ref<HTMLElement>()
 const focused = ref(false)
@@ -46,6 +47,7 @@ watch([about, focused], () => nextTick().then(measure))
 	>
 		<Editor
 			v-model="about"
+			:editable="!readonly"
 			:extensions="richTextExtensions"
 			placeholder="What is this event about?"
 		>

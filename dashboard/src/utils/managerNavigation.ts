@@ -64,14 +64,8 @@ function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
 function eventItems(eventId: string, access?: EventAccess | null): ManagerNavItem[] {
 	const event = `/manage/events/${eventId}`
 	const items: ManagerNavItem[] = [
-		// The details page edits the event, so it needs more than view.
-		{
-			label: "Details",
-			icon: "lucide-receipt-text",
-			to: `${event}/details`,
-			section: "details",
-			needs: "Edit",
-		},
+		// View opens the details page with its fields locked.
+		{ label: "Details", icon: "lucide-receipt-text", to: `${event}/details`, section: "details" },
 		{
 			label: "Registration",
 			icon: "lucide-ticket",

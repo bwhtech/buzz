@@ -53,10 +53,10 @@ test("a collaborator sees only the sections they were granted", () => {
 		hasSponsorships: false,
 		access: guestsOnly,
 	})
-	assert.deepEqual(labels(items), ["Guests"])
+	assert.deepEqual(labels(items), ["Details", "Guests"])
 })
 
-test("details and settings need edit access to the event", () => {
+test("settings needs edit access to the event details", () => {
 	const items = managerNavigation({
 		eventId: "EV-1",
 		creatingEvent: false,
@@ -67,5 +67,9 @@ test("details and settings need edit access to the event", () => {
 })
 
 test("an event opens on the first section the user has", () => {
-	assert.equal(firstEventPath("EV-1", guestsOnly), "/manage/events/EV-1/guests")
+	assert.equal(firstEventPath("EV-1", guestsOnly), "/manage/events/EV-1/details")
+	assert.equal(
+		firstEventPath("EV-1", { ...guestsOnly, details: null as never }),
+		"/manage/events/EV-1/guests",
+	)
 })

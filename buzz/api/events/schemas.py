@@ -90,6 +90,7 @@ class EventDetail(APIResponse):
 	co_hosts: list[EventHostRef] = Field(default_factory=list)
 	external_links: list[EventExternalLink] = Field(default_factory=list)
 	topics: list[str] = Field(default_factory=list)
+	can_write: bool = False
 
 
 class GuestAddOn(APIResponse):

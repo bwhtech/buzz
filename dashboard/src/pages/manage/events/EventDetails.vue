@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useEventListener, useTextareaAutosize } from "@vueuse/core"
-import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
+import { Alert, Button, ErrorMessage, Textarea, toast } from "frappe-ui"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
@@ -31,6 +31,8 @@ const route = useRoute()
 const eventId = route.params.eventId as string
 
 const event = eventDetail(eventId)
+// Details View opens this page with every field locked; the server refuses the writes anyway.
+const canWrite = computed(() => !!event.data?.can_write)
 
 // Saved on its own by the sidebar switch, outside the form and its Save.
 const showCountdown = ref(false)
@@ -240,14 +242,24 @@ async function save() {
 		<PageWithSidebar v-if="event.data">
 			<EventArchivedAlert :event="eventId" />
 
+			<Alert
+				v-if="!canWrite"
+				theme="gray"
+				:title="__('You can view this event, but not edit it')"
+				:description="
+					__('To make changes, ask the team that runs this event to give you edit access.')
+				"
+			/>
+
 			<ErrorMessage v-if="errorMessage" :message="errorMessage" />
 
 			<!-- Wrapped: the banner's hidden file input would otherwise take space-y margin. -->
-			<div>
+			<fieldset :disabled="!canWrite" class="min-w-0">
 				<!-- The saved schedule, not the form: the pill shows what the event page shows. -->
 				<EventBanner
 					:model-value="form.banner_image"
 					:seed="form.title"
+					:disabled="!canWrite"
 					@update:model-value="saveBanner"
 				>
 					<template v-if="showCountdown && event.data.countdown" #default>
@@ -257,9 +269,9 @@ async function save() {
 						/>
 					</template>
 				</EventBanner>
-			</div>
+			</fieldset>
 
-			<div class="grid grid-cols-1 gap-8 md:grid-cols-5">
+			<fieldset :disabled="!canWrite" class="grid min-w-0 grid-cols-1 gap-8 md:grid-cols-5">
 				<div class="space-y-8 md:col-span-3">
 					<div class="space-y-2">
 						<!-- Plain field on purpose: this is the page's headline, not a labelled one.
@@ -290,12 +302,12 @@ async function save() {
 							<h2 class="text-base font-semibold text-ink-gray-9">{{ __("About") }}</h2>
 							<span class="text-sm text-ink-gray-5">{{ __("Always shown first") }}</span>
 						</div>
-						<EventAboutEditor v-model="form.about" />
+						<EventAboutEditor v-model="form.about" :readonly="!canWrite" />
 					</section>
 
 					<!-- The event's own extra tabs. Keyed by event: useEventPages resolves its
 					     filters once, and Details is reused when the route moves between events. -->
-					<EventPages :key="eventId" :event="eventId" />
+					<EventPages :key="eventId" :event="eventId" :readonly="!canWrite" />
 				</div>
 
 				<div class="space-y-4 max-md:-mx-4 md:col-span-2">
@@ -341,15 +353,17 @@ async function save() {
 
 					<EventLinks v-model="form.external_links" class="p-4 md:rounded-6" />
 				</div>
-			</div>
+			</fieldset>
 
 			<template #sidebar>
-				<EventDetailsActions
-					v-model:show-countdown="showCountdown"
-					:event="eventId"
-					:route="event.data.route"
-					@changed="event.reload()"
-				/>
+				<fieldset :disabled="!canWrite" class="min-w-0">
+					<EventDetailsActions
+						v-model:show-countdown="showCountdown"
+						:event="eventId"
+						:route="event.data.route"
+						@changed="event.reload()"
+					/>
+				</fieldset>
 			</template>
 		</PageWithSidebar>
 	</Transition>

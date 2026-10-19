@@ -161,8 +161,8 @@ def event_detail(event: str) -> EventDetail:
 	if not row:
 		EventNotFound.throw()
 
-	# Read is not enough: this payload backs the page that edits the event.
-	if not has_section_permission(event, "details", "write", frappe.session.user):
+	user = frappe.session.user
+	if not has_section_permission(event, "details", "read", user):
 		CannotManageEvent.throw()
 
 	return EventDetail(
@@ -176,6 +176,8 @@ def event_detail(event: str) -> EventDetail:
 			"external_links": external_links_of(event),
 			"topics": topics_of(event),
 			"countdown": event_countdown(row),
+			# Details View opens the same page with its fields locked.
+			"can_write": has_section_permission(event, "details", "write", user),
 		}
 	)
 

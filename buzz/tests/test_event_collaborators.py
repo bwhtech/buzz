@@ -4,7 +4,8 @@
 import frappe
 
 from buzz.api.checkin.services import checkin_events, ensure_can_check_in
-from buzz.api.events import get_my_events
+from buzz.api.events import get_event, get_my_events
+from buzz.api.events.exceptions import CannotManageEvent
 from buzz.api.exceptions import NotPermitted
 from buzz.api.teams import get_my_teams
 from buzz.permissions import (
@@ -236,6 +237,22 @@ class TestAccessLevels(CollaboratorTestCase):
 	def test_edit_in_one_section_is_not_edit_in_another(self):
 		self.assertFalse(has_section_permission(self.event_a, "ticketing", "write", self.editor))
 		self.assertTrue(has_section_permission(self.event_a, "details", "write", self.editor))
+
+	def test_details_view_opens_the_event_read_only(self):
+		with self.set_user(self.viewer):
+			self.assertFalse(get_event(str(self.event_a)).can_write)
+			with self.assertRaises(CannotManageEvent):
+				get_event(str(self.event_a2))
+
+	def test_details_edit_opens_the_event_writable(self):
+		with self.set_user(self.editor):
+			self.assertTrue(get_event(str(self.event_a)).can_write)
+
+	def test_details_view_lists_the_events_extra_pages_only(self):
+		listed = self.list_names(self.viewer, "Additional Event Page")
+
+		self.assertIn(self.rows["details"][self.event_a], listed)
+		self.assertNotIn(self.rows["details"][self.event_a2], listed)
 
 	def test_event_write_follows_details_level(self):
 		self.assertTrue(self.has_permission_as(self.editor, "write", "Buzz Event", self.event_a))
