@@ -1,0 +1,156 @@
+{% extends "buzz/templates/event_page/layout.html" %}
+
+{% block title %}{% autoescape true %}{{ title }}{% endautoescape %}{% endblock %}
+
+{% block meta_block %}{% autoescape true %}
+	<meta name="description" content="{{ meta.description }}">
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="{{ brand.name }}">
+	<meta property="og:title" content="{{ title }}">
+	<meta property="og:description" content="{{ meta.description }}">
+	<meta property="og:url" content="{{ meta.url }}">
+	<meta name="twitter:card" content="summary">
+	<link rel="canonical" href="{{ meta.url }}">
+	<link rel="stylesheet" href="/assets/buzz/themes/team.css?v={{ build_version }}">
+	<link rel="stylesheet" href="/assets/buzz/themes/team_map.css?v={{ build_version }}">
+	<link rel="stylesheet" href="/assets/buzz/themes/community.css?v={{ build_version }}">
+	<link rel="stylesheet" href="/assets/buzz/themes/community_preview.css?v={{ build_version }}">
+	<link rel="stylesheet" href="/assets/buzz/themes/community_features.css?v={{ build_version }}">
+{% endautoescape %}{% endblock %}
+
+{% block content %}{% autoescape true %}
+	{% from "buzz/templates/event_page/timeline.html" import timeline, month_calendar, dot_map with context %}
+	{% macro icon(path) %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ path }}"/></svg>{% endmacro %}
+	{% set arrow_right = "M5 12h14m-7-7 7 7-7 7" %}
+	{% set check = "M20 6 9 17l-5-5" %}
+	{% set plus = "M5 12h14M12 5v14" %}
+
+	{% macro follow_button(size) %}
+	<button type="button" class="es-button" data-variant="solid" data-size="{{ size }}" data-follow aria-pressed="false">
+		<span class="follow-icon" data-unfollowed>{{ icon(plus) }}</span><span class="follow-icon" data-followed>{{ icon(check) }}</span>
+		<span data-unfollowed>{{ _("Follow") }}</span><span data-followed>{{ _("Following") }}</span>
+	</button>
+	{% endmacro %}
+
+	{% macro followers() %}<span data-unfollowed>1,248</span><span data-followed>1,249</span>{% endmacro %}
+
+	{% macro create_button() %}
+	<a class="es-button" data-variant="solid" data-size="lg" href="#">{{ _("Create a community") }}{{ icon(arrow_right) }}</a>
+	{% endmacro %}
+
+	<main class="community-landing" data-following="false">
+		<section class="landing-hero">
+			<span class="hero-pill"><span class="hero-pill-tag">{{ _("New") }}</span>{{ _("Buzz Communities is live") }}</span>
+			<h1 class="hero-title">{{ _("Communities") }}</h1>
+			<p class="hero-subtitle">{{ meta.description }}</p>
+			<div class="hero-actions">{{ create_button() }}</div>
+			<div class="hero-globe"><canvas data-globe aria-label="{{ _('A globe of communities around the world') }}" role="img"></canvas></div>
+		</section>
+
+		<section class="landing-section landing-preview">
+			<header class="section-heading">
+				<span class="section-eyebrow">{{ _("Your community page") }}</span>
+				<h2 class="section-title">{{ _("One link for everything you host") }}</h2>
+				<p class="section-text">{{ _("Upcoming events, past highlights and a live calendar — on a page that looks good without any setup.") }}</p>
+			</header>
+
+			<div class="preview-window">
+				<div class="preview-chrome" aria-hidden="true">
+					<span class="preview-dots"><span></span><span></span><span></span></span>
+					<span class="preview-url">buzz.events/stardio</span>
+				</div>
+				{% if has_pins %}{{ dot_map() }}{% endif %}
+				<div class="team-page preview-body">
+					<header class="team-identity">
+						<span class="team-logo" aria-hidden="true">S</span>
+						<div class="team-identity-text">
+							<h3 class="event-title">Stardio</h3>
+							<p class="team-stats">{{ _("38 events hosted") }} · {{ followers() }} {{ _("followers") }}</p>
+						</div>
+						<span class="es-button team-event-action" data-variant="subtle" data-size="md"><span class="icon lucide-plus" aria-hidden="true"></span>{{ _("Submit Event") }}</span>
+						{{ follow_button("md") }}
+					</header>
+
+					{% if countries %}
+					<div class="country-chips" role="group" aria-label="{{ _('Filter by country') }}">
+						<button type="button" class="country-chip" data-country-filter="" aria-pressed="true">{{ _("Everywhere") }}<span>{{ upcoming_count }}</span></button>
+						{% for country in countries %}
+						<button type="button" class="country-chip" data-country-filter="{{ country.name }}" aria-pressed="false">{{ country.name }}<span>{{ country.count }}</span></button>
+						{% endfor %}
+					</div>
+					{% endif %}
+
+					<div class="team-columns">
+						<div class="team-events">{{ timeline(upcoming_days, past_days) }}</div>
+						<aside class="team-aside">{{ month_calendar() }}</aside>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="landing-section">
+			<h2 class="section-title features-title">{{ _("Everything your community runs on") }}</h2>
+			<div class="feature-grid">
+				<article class="feature-card" data-demo="off">
+					<div class="feature-demo">
+						<div class="demo-field"><span>{{ _("Community name") }}</span><span class="demo-input">Stardio</span></div>
+						<div class="demo-field"><span>{{ _("Handle") }}</span><span class="demo-input" data-muted>buzz.events/<b>stardio</b></span></div>
+						<div class="demo-swap">
+							<button type="button" class="es-button" data-variant="solid" data-size="md" data-when="off" data-demo-trigger>{{ _("Create community") }}</button>
+							<p class="demo-success" data-when="on">{{ icon(check) }}{{ _("Your page is live") }}</p>
+						</div>
+					</div>
+					<h3 class="feature-title">{{ _("Create in minutes") }}</h3>
+					<p class="feature-text">{{ _("Pick a name and handle. Your page, map and calendar are ready instantly.") }}</p>
+				</article>
+
+				<article class="feature-card" data-demo="off">
+					<div class="feature-demo">
+						<div class="demo-submission">
+							<p class="demo-submission-head"><b>Design Systems Night</b><span class="es-badge" data-size="sm" data-theme="gray">{{ _("External") }}</span></p>
+							<p class="demo-meta">{{ _("Submitted by Ana · lu.ma · 14 Nov") }}</p>
+							<div class="demo-swap">
+								<span class="demo-buttons" data-when="off">
+									<button type="button" class="es-button" data-variant="subtle" data-size="sm">{{ _("Decline") }}</button>
+									<button type="button" class="es-button" data-variant="solid" data-size="sm" data-demo-trigger>{{ _("Feature it") }}</button>
+								</span>
+								<p class="demo-success" data-when="on">{{ icon("M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm4 12 2 2 4-4") }}{{ _("Added to your calendar") }}</p>
+							</div>
+						</div>
+					</div>
+					<h3 class="feature-title">{{ _("Take submissions") }}</h3>
+					<p class="feature-text">{{ _("Accept events hosted on Buzz or anywhere else, and feature the ones you love.") }}</p>
+				</article>
+
+				<article class="feature-card">
+					<div class="feature-demo">
+						<div class="demo-follow">
+							<span class="demo-logo" aria-hidden="true">S</span>
+							<div class="demo-follow-text"><b>Stardio</b><span>{{ followers() }} {{ _("followers") }}</span></div>
+							{{ follow_button("sm") }}
+						</div>
+						<p class="demo-notification">{{ icon("M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9m4.3 13a1.94 1.94 0 0 0 3.4 0") }}<span>{{ _("New from Stardio:") }} <b>Night Market</b> · {{ _("now") }}</span></p>
+					</div>
+					<h3 class="feature-title">{{ _("Followers hear first") }}</h3>
+					<p class="feature-text">{{ _("People subscribe once. Every new event reaches them the moment you add it.") }}</p>
+				</article>
+			</div>
+		</section>
+
+		<section class="landing-section">
+			<div class="landing-cta">
+				<h2 class="section-title">{{ _("Your people are already out there.") }}</h2>
+				<p class="section-text">{{ _("Start a community on Buzz — it's free.") }}</p>
+				{{ create_button() }}
+			</div>
+		</section>
+	</main>
+
+	<script type="application/json" id="team-page-data">{{ page_data | tojson }}</script>
+{% endautoescape %}{% endblock %}
+
+{% block script %}
+	{{ super() }}
+	<script src="{{ bundled_asset('team_page.bundle.ts') }}" defer></script>
+	<script src="{{ bundled_asset('community_landing.bundle.ts') }}" defer></script>
+{% endblock %}

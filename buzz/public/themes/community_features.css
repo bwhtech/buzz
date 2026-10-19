@@ -1,0 +1,187 @@
+/* The landing page's feature cards, each with a small demo a visitor can press. */
+
+.feature-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+	gap: 16px;
+}
+
+.feature-card {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 24px;
+	border: 1px solid var(--border);
+	border-radius: 16px;
+	background: var(--page-bg);
+}
+
+.feature-demo {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 10px;
+	height: 200px;
+	margin-bottom: 18px;
+	padding: 20px;
+	border-radius: 12px;
+	background: var(--surface);
+}
+
+.feature-title {
+	color: var(--ink-strong);
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.feature-text {
+	color: var(--ink-muted);
+	font-size: 14px;
+	line-height: 1.5;
+}
+
+.demo-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	color: var(--ink-muted);
+	font-size: 12px;
+}
+
+.demo-input {
+	display: flex;
+	align-items: center;
+	height: 32px;
+	padding-inline: 10px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--page-bg);
+	color: var(--ink-strong);
+	font-size: 14px;
+}
+
+.demo-input[data-muted] {
+	border-color: transparent;
+	background: var(--surface-raised);
+	color: var(--ink-muted);
+}
+
+.demo-submission,
+.demo-follow,
+.demo-notification {
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--page-bg);
+}
+
+.demo-submission {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 12px;
+	box-shadow: 0 2px 8px rgb(0 0 0 / 0.04);
+}
+
+.demo-submission-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	font-size: 14px;
+}
+
+.demo-buttons {
+	display: flex;
+	gap: 6px;
+}
+
+/* Both states share one grid cell, so the swap crossfades in place without a layout jump. */
+.demo-swap {
+	display: grid;
+}
+
+.demo-swap > * {
+	grid-area: 1 / 1;
+	transition: opacity 200ms ease, filter 200ms ease, transform 200ms var(--ease-out);
+}
+
+[data-demo="off"] .demo-swap [data-when="on"],
+[data-demo="on"] .demo-swap [data-when="off"] {
+	opacity: 0;
+	filter: blur(2px);
+	transform: scale(0.97);
+	pointer-events: none;
+	visibility: hidden;
+}
+
+.demo-success {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	height: 32px;
+	border-radius: 8px;
+	background: var(--surface-green-2);
+	color: var(--ink-green-7);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.demo-submission .demo-success {
+	justify-content: flex-start;
+	height: 28px;
+	background: none;
+	font-size: 12px;
+}
+
+.demo-follow {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 12px;
+}
+
+.demo-logo {
+	width: 32px;
+	height: 32px;
+	border-radius: 8px;
+	background: var(--ink-strong);
+	color: var(--page-bg);
+}
+
+.demo-follow-text {
+	display: flex;
+	flex-direction: column;
+	margin-right: auto;
+	color: var(--ink-muted);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+
+.demo-follow-text b {
+	font-size: 14px;
+}
+
+/* Kept in the layout while hidden, so following only slides it in. */
+.demo-notification {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 12px;
+	color: var(--ink-muted);
+	font-size: 12px;
+	transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+}
+
+[data-following="false"] .demo-notification {
+	opacity: 0;
+	transform: translateY(-6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	[data-demo="off"] .demo-swap [data-when="on"],
+	[data-demo="on"] .demo-swap [data-when="off"],
+	[data-following="false"] .demo-notification {
+		transform: none;
+	}
+}
