@@ -6,6 +6,9 @@ from frappe.website.website_generator import WebsiteGenerator
 
 from buzz.www.site_header import apply_site_context
 
+# Paths the app serves itself; a topic named after one moves aside instead of hiding the page.
+RESERVED_ROUTES = {"community"}
+
 
 class EventTopic(WebsiteGenerator):
 	# begin: auto-generated types
@@ -31,7 +34,8 @@ class EventTopic(WebsiteGenerator):
 		super().validate()
 
 	def make_route(self) -> str:
-		return cleanup_page_name(self.name)
+		route = cleanup_page_name(self.name)
+		return f"{route}-events" if route in RESERVED_ROUTES else route
 
 	def get_context(self, context):
 		from buzz.events.doctype.event_topic.topic_page import TopicPage
