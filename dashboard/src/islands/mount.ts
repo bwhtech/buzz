@@ -9,6 +9,7 @@ type Loader = () => Promise<{ default: Component }>
 // Each island's name, as a page's data-island names it, to its component.
 const ISLANDS: Record<string, Loader> = {
 	"add-event": () => import("@/components/dashboard/teams/AddEventMenu.vue"),
+	"create-community": () => import("./CreateCommunityIsland.vue"),
 	login: () => import("./LoginIsland.vue"),
 }
 

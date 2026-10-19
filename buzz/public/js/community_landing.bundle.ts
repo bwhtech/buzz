@@ -27,3 +27,12 @@ for (const button of document.querySelectorAll<HTMLButtonElement>("[data-follow]
 		}
 	})
 }
+
+// The closing call to action, and a return from login or signup, open the hero's dialog.
+const createTrigger = document.querySelector<HTMLElement>('[data-island="create-community"]')
+for (const button of document.querySelectorAll<HTMLElement>("[data-create-community]")) {
+	button.addEventListener("click", () => createTrigger?.click())
+}
+if (new URLSearchParams(window.location.search).has("create")) {
+	window.addEventListener("load", () => createTrigger?.click())
+}

@@ -71,3 +71,8 @@ class ExternalEvent(APIRequest):
 	start_datetime: datetime
 	end_datetime: datetime
 	event_url: Url
+
+
+class CreatedCommunity(APIResponse):
+	team: str
+	route: str

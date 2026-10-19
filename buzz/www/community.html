@@ -34,8 +34,9 @@
 
 	{% macro followers() %}<span data-unfollowed>1,248</span><span data-followed>1,249</span>{% endmacro %}
 
-	{% macro create_button() %}
-	<a class="es-button" data-variant="solid" data-size="lg" href="#">{{ _("Create a community") }}{{ icon(arrow_right) }}</a>
+	{# One island for every button, so the dialog keeps a single draft. #}
+	{% macro create_button(is_island) %}
+	<button type="button" class="es-button" data-variant="solid" data-size="lg" {% if is_island %}data-island="create-community"{% else %}data-create-community{% endif %}>{{ _("Create a community") }}{{ icon(arrow_right) }}</button>
 	{% endmacro %}
 
 	<main class="community-landing" data-following="false">
@@ -43,7 +44,7 @@
 			<span class="hero-pill"><span class="hero-pill-tag">{{ _("New") }}</span>{{ _("Buzz Communities is live") }}</span>
 			<h1 class="hero-title">{{ _("Communities") }}</h1>
 			<p class="hero-subtitle">{{ meta.description }}</p>
-			<div class="hero-actions">{{ create_button() }}</div>
+			<div class="hero-actions">{{ create_button(true) }}</div>
 			<div class="hero-globe"><canvas data-globe aria-label="{{ _('A globe of communities around the world') }}" role="img"></canvas></div>
 		</section>
 
@@ -141,7 +142,7 @@
 			<div class="landing-cta">
 				<h2 class="section-title">{{ _("Your people are already out there.") }}</h2>
 				<p class="section-text">{{ _("Start a community on Buzz — it's free.") }}</p>
-				{{ create_button() }}
+				{{ create_button(false) }}
 			</div>
 		</section>
 	</main>
