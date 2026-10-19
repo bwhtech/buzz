@@ -131,11 +131,11 @@ class TestGetEvent(IntegrationTestCase):
 		self.assertEqual(detail["venue"]["name"], venue)
 		self.assertEqual(detail["venue"]["address"], "12 Example Street")
 
-	def test_a_viewer_cannot_open_the_manage_payload(self):
+	def test_a_viewer_opens_the_manage_payload_read_only(self):
 		event = self.create_team_event()
 
-		with self.assertRaises(CannotManageEvent):
-			self.detail_as(self.viewer, event)
+		self.assertFalse(self.detail_as(self.viewer, event)["can_write"])
+		self.assertTrue(self.detail_as(self.owner, event)["can_write"])
 
 	def test_a_non_member_cannot_open_the_manage_payload(self):
 		event = self.create_team_event()

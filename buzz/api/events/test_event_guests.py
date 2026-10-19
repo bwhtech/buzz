@@ -73,8 +73,8 @@ class TestGetEventGuests(GuestsTestCase):
 		BuzzTeamMembershipFactory.create(team=self.team, user=viewer, team_role="Viewer")
 
 		self.assertEqual(self.guests_as(viewer).title, "Guest List Event")
-		with self.set_user(viewer), self.assertRaises(CannotManageEvent):
-			get_event(self.event)
+		with self.set_user(viewer):
+			self.assertFalse(get_event(self.event).can_write)
 
 	def test_a_non_member_cannot_read_the_guest_list(self):
 		outsider = UserFactory.create_once("guests-stranger@example.com").name

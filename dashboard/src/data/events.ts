@@ -2,6 +2,7 @@ import { useCall, useDoc, useDoctype, useList } from "frappe-ui"
 
 import type {
 	AdditionalEventPage,
+	EventAccess,
 	EventDetail,
 	EventHostRef,
 	MyEvents,
@@ -41,7 +42,13 @@ export const createEvent = useCall<
 })
 
 /** What the manage shell reads off the event itself: its title, whether it is live, and its page theme. */
-type EventShellDoc = { name: string; title: string; is_published: 0 | 1; theme: string | null }
+type EventShellDoc = {
+	name: string
+	title: string
+	team: string | null
+	is_published: 0 | 1
+	theme: string | null
+}
 
 /**
  * The event document, shared by everything that reads or flips its publish state.
@@ -53,6 +60,16 @@ type EventShellDoc = { name: string; title: string; is_published: 0 | 1; theme: 
 export function useEventDoc(event: () => string) {
 	// The empty string holds the initial fetch until the route param resolves.
 	return useDoc<EventShellDoc>({ doctype: "Buzz Event", name: () => event() || "" })
+}
+
+/** The session user's level in each section of an event, for the sidebar and the page gates. */
+export function useEventAccess(event: () => string) {
+	return useCall<EventAccess, { event: string }>({
+		url: "/api/v2/method/buzz.api.events.collaborators.get_event_access",
+		params: () => ({ event: event() }),
+		// Held until the route param resolves.
+		immediate: false,
+	})
 }
 
 /** One event with everything its manage page edits. Per page, so it is not a singleton. */

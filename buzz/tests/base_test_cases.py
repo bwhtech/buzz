@@ -226,7 +226,7 @@ class BookingRefundTestCase(IntegrationTestCase):
 
 
 class TeamPermissionTestCase(IntegrationTestCase):
-	"""Alice owns team A, Bob owns team B, and each team has one unpublished event."""
+	"""Alice owns team A, Bob owns team B. Team A has two unpublished events, team B has one."""
 
 	@classmethod
 	def setUpClass(cls):
@@ -237,6 +237,7 @@ class TeamPermissionTestCase(IntegrationTestCase):
 		cls.team_a = BuzzTeamFactory.create_owned_by(cls.alice, team_name="Perm Team A").name
 		cls.team_b = BuzzTeamFactory.create_owned_by(cls.bob, team_name="Perm Team B").name
 		cls.event_a = BuzzEventFactory.create("unpublished", team=cls.team_a).name
+		cls.event_a2 = BuzzEventFactory.create("unpublished", team=cls.team_a).name
 		cls.event_b = BuzzEventFactory.create("unpublished", team=cls.team_b).name
 
 	def setUp(self):

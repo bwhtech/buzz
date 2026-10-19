@@ -14,7 +14,8 @@ import { useEventPages } from "@/data/events"
 import type { AdditionalEventPage } from "@/types"
 import { serverErrorMessage } from "@/utils/serverError"
 
-const props = defineProps<{ event: string }>()
+// Read-only rows open nothing: the editor drawer renders outside the page's locked fields.
+const props = defineProps<{ event: string; readonly?: boolean }>()
 
 const pages = useEventPages(props.event)
 
@@ -43,6 +44,7 @@ const drawerOpen = ref(false)
 const selected = ref<Partial<AdditionalEventPage>>({})
 
 function edit(page: Partial<AdditionalEventPage>) {
+	if (props.readonly) return
 	selected.value = page
 	drawerOpen.value = true
 }

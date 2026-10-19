@@ -13,7 +13,8 @@ def team_tax_details(team: str) -> dict:
 def update_tax_settings(
 	event: str, apply_tax: bool, tax_inclusive: bool, tax_label: str, tax_percentage: float
 ) -> None:
-	doc = manageable_event(event)
+	# Tax settings sit on the registration page, so they follow the ticketing section.
+	doc = manageable_event(event, "ticketing")
 	if apply_tax and not team_tax_details(doc.team)["team_tax_id"]:
 		TaxDetailsMissing.throw()
 	doc.update(
@@ -24,11 +25,11 @@ def update_tax_settings(
 			"tax_percentage": tax_percentage,
 		}
 	)
-	doc.save()
+	doc.save(ignore_permissions=True)
 
 
 def update_team_tax_details(event: str, legal_name: str, tax_id: str, billing_address: str) -> None:
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, None)
 	# Empty details are valid on the team, but this endpoint exists to add them.
 	if not tax_id.strip():
 		frappe.throw(_("Enter your team's legal name, tax ID and billing address."))

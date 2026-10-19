@@ -6,7 +6,7 @@ import { useRoute } from "vue-router"
 import { useIsMobile } from "@/composables/useIsMobile"
 import { useTeamAccess } from "@/composables/useTeamAccess"
 import { finishOpening, openingTeam } from "@/composables/useWorkspaceOpening"
-import { useEventDoc } from "@/data/events"
+import { useEventAccess, useEventDoc } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
 import { selectTeam, teams, teamsLoaded } from "@/data/teams"
 import ManagerDesktopShell from "@/layouts/ManagerDesktopShell.vue"
@@ -27,6 +27,10 @@ const eventId = computed(() => route.params.eventId as string | undefined)
 // fetch between them.
 const eventDoc = useEventDoc(() => eventId.value ?? "")
 const eventTitle = computed(() => eventDoc.doc?.title ?? "")
+
+// Per section: a collaborator sees only the destinations they were granted.
+const eventAccess = useEventAccess(() => eventId.value ?? "")
+watch(eventId, (id) => id && eventAccess.fetch(), { immediate: true })
 
 // A team opens the same way; its name and logo are already in the teams list.
 const teamId = computed(() => route.params.teamId as string | undefined)
@@ -63,13 +67,14 @@ usePageMeta(() => {
 
 // The sidebar empties while a workspace opens, so the old destinations don't linger.
 const items = computed(() =>
-	openingTeam.value
+	openingTeam.value || (eventId.value && !eventAccess.data)
 		? []
 		: managerNavigation({
 				eventId: eventId.value,
 				teamId: teamId.value,
 				creatingEvent: route.name === "create-event",
 				hasSponsorships: Boolean(sponsorships.data?.length),
+				access: eventAccess.data,
 			}),
 )
 </script>

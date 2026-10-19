@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from buzz.permissions import can_manage_members
+from buzz.permissions import EDIT, SECTIONS, can_manage_members
 
 if TYPE_CHECKING:
 	from frappe.core.doctype.user.user import User
@@ -65,6 +65,22 @@ def upsert_membership(team: str, user: str, team_role: str) -> bool:
 	return True
 
 
+def collaborator_frappe_roles(user: str) -> set[str]:
+	"""Any Edit section lets the doctype role permissions allow writes; the row hooks still scope them."""
+	rows = frappe.get_all(
+		"Buzz Event Collaborator",
+		filters={"user": user, "status": "Accepted"},
+		fields=[f"{section}_access" for section in SECTIONS],
+	)
+	roles = set()
+	for row in rows:
+		if EDIT in row.values():
+			roles.add("Event Manager")
+		if row.guests_access == EDIT:
+			roles.add("Frontdesk Manager")
+	return roles
+
+
 def sync_frappe_roles(user: str):
 	"""Recompute a user's managed roles across every enabled membership.
 
@@ -80,6 +96,8 @@ def sync_frappe_roles(user: str):
 		for team_role in team_roles
 		if team_role in TEAM_ROLE_TO_FRAPPE_ROLE
 	}
+
+	earned |= collaborator_frappe_roles(user)
 
 	user_doc = frappe.get_doc("User", user)
 	held = {row.role for row in user_doc.roles} & MANAGED_FRAPPE_ROLES

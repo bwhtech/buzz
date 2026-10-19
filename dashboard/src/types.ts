@@ -414,6 +414,7 @@ export interface EventDetail {
 	co_hosts: EventHostRef[]
 	external_links: EventExternalLink[]
 	topics: string[]
+	can_write: boolean
 }
 
 // A ticket the user holds, flattened with the context its event carries.
@@ -772,6 +773,7 @@ export interface EventTicketTypes {
 	tax_percentage: number
 	team_legal_name: string | null
 	team_tax_id: string | null
+	has_team_tax_details: boolean
 	can_edit_team: boolean
 	paid_events_enabled: boolean
 	categories: TicketCategoryItem[]
@@ -792,3 +794,24 @@ export interface PaymentProviderItem {
 	name: string
 	is_default: boolean
 }
+
+export type EventSection =
+	| "details"
+	| "guests"
+	| "ticketing"
+	| "talks"
+	| "sponsors"
+	| "communications"
+
+export type SectionLevel = "View" | "Edit"
+
+// buzz.api.events.collaborators.get_event_access: null means no access to that section.
+export type EventAccess = Record<EventSection, SectionLevel | null>
+
+// A `Buzz Event Collaborator` row; a blank level is no access.
+export type EventCollaborator = {
+	name: string
+	email: string
+	user: string | null
+	status: "Pending" | "Accepted" | "Revoked"
+} & { [Section in EventSection as `${Section}_access`]: SectionLevel | "" }

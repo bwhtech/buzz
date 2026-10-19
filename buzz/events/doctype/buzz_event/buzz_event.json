@@ -614,6 +614,7 @@
    "in_standard_filter": 1,
    "label": "Team",
    "options": "Buzz Team",
+   "set_only_once": 1,
    "reqd": 1,
    "search_index": 1
   },
@@ -697,7 +698,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-10-13 20:31:14.630563",
+ "modified": "2026-10-19 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

@@ -15,7 +15,7 @@ from buzz.api.events.services import ensure_event_team_access, registration_link
 from buzz.api.events.taxes import team_tax_details
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import is_feature_enabled
 from buzz.payments import get_payment_gateways_for_event
-from buzz.permissions import can_manage_members, has_team_access
+from buzz.permissions import can_manage_members, has_section_permission, has_team_access
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	PAID_EVENTS_FLAG,
@@ -35,7 +35,7 @@ TICKET_TYPE_FIELDS = [
 
 
 def event_ticket_types(event: str) -> EventTicketTypes:
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "ticketing")
 	doc = frappe.get_cached_doc("Buzz Event", event)
 	rows = frappe.get_all(
 		"Event Ticket Type",
@@ -48,7 +48,7 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 	sold_by_currency = tickets_sold_by_currency([row.name for row in rows])
 	return EventTicketTypes(
 		title=doc.title,
-		can_write=has_team_access(doc.team, "write", frappe.session.user),
+		can_write=has_section_permission(event, "ticketing", "write", frappe.session.user),
 		registration_link=registration_link(doc),
 		registrations_closed=are_registrations_closed(doc),
 		allow_guest_booking=bool(doc.allow_guest_booking),
@@ -58,7 +58,7 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		# Same defaults as Buzz Event's validate_tax_settings, so the form opens filled in.
 		tax_label=doc.tax_label or "GST",
 		tax_percentage=flt(doc.tax_percentage) or 18,
-		**team_tax_details(doc.team),
+		**visible_tax_details(doc.team),
 		can_edit_team=can_manage_members(doc.team),
 		paid_events_enabled=is_feature_enabled(doc.team, PAID_EVENTS_FLAG),
 		categories=ticket_categories(event),
@@ -66,6 +66,15 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		payment_providers=payment_providers(event),
 		revenue=revenue_by_currency(event),
 	)
+
+
+def visible_tax_details(team: str) -> dict:
+	"""The team's legal identity stays with its members; a collaborator only works on the event."""
+	details = team_tax_details(team)
+	has_details = bool(details["team_tax_id"])
+	if not has_team_access(team, "read", frappe.session.user):
+		details = {"team_legal_name": None, "team_tax_id": None}
+	return details | {"has_team_tax_details": has_details}
 
 
 def ticket_categories(event: str) -> list[TicketCategoryItem]:

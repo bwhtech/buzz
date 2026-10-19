@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.utils import formatdate
 
+from buzz.booking_permissions import ensure_guests_access
+
 
 def execute(filters: dict | None = None):
 	"""Return columns and data for the report.
@@ -14,6 +16,7 @@ def execute(filters: dict | None = None):
 	every time the report is refreshed or a filter is updated.
 	"""
 	event = filters.get("event")
+	ensure_guests_access(event)
 	if not event:
 		return [], []
 
