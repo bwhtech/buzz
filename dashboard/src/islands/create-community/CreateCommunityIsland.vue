@@ -14,7 +14,6 @@ import { openCreatedCommunity } from "./reveal"
 import SettingUpStep from "./SettingUpStep.vue"
 
 type Step = "url" | "name" | "login" | "creating"
-type CreatedCommunity = { team: string; route: string }
 
 const isOpen = defineModel<boolean>("open", { required: true })
 const portalTarget = usePortalTarget()
@@ -36,7 +35,7 @@ const { availability, checking } = useSlugAvailability(slug, (value) =>
 	checkSlug.submit({ slug: value }),
 )
 
-const createCommunity = useCall<CreatedCommunity, { team_name: string; slug: string }>({
+const createCommunity = useCall<{ route: string }, { team_name: string; slug: string }>({
 	url: "/api/v2/method/buzz.api.communities.create_community",
 	method: "POST",
 	immediate: false,
@@ -82,13 +81,15 @@ const tasks = computed(() => [
 	__("Publishing your page"),
 ])
 const tasksDone = ref(0)
+// A retry starts a new run; an older run still waiting stops instead of ticking this one.
+let run = 0
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 // Paces every task but the last, which ends only once the community exists.
-async function paceTasks() {
+async function paceTasks(current: number) {
 	for (let done = 1; done < tasks.value.length; done++) {
 		await wait(TASK_MS)
-		if (!busy.value) return
+		if (current !== run) return
 		tasksDone.value = done
 	}
 	await wait(TASK_MS)
@@ -97,12 +98,15 @@ async function paceTasks() {
 async function create() {
 	tasksDone.value = 0
 	step.value = "creating"
-	const paced = paceTasks()
+	const paced = paceTasks(++run)
 	// A failure rejects and stays on createCommunity.error, which the name step shows.
 	const created = await createCommunity
 		.submit({ team_name: teamName.value.trim(), slug: slug.value })
 		.catch(() => null)
-	if (!created) return (step.value = "name")
+	if (!created) {
+		run++
+		return (step.value = "name")
+	}
 	await paced
 	tasksDone.value = tasks.value.length
 	await wait(TASK_MS)

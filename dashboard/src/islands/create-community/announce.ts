@@ -25,9 +25,11 @@ export function announceCreatedCommunity({ name, url }: CreatedNotice) {
 	const copy = (event: MouseEvent) => {
 		// Keeps the toast up, to say it worked in place.
 		event.preventDefault()
-		navigator.clipboard
-			.writeText(url)
-			.then(() => show(translate("Copied"), (again) => again.preventDefault()))
+		const settle = (label: string) => show(label, (again) => again.preventDefault())
+		navigator.clipboard.writeText(url).then(
+			() => settle(translate("Copied")),
+			() => settle(translate("Could not copy")),
+		)
 	}
 	setTimeout(() => show(translate("Copy link"), copy), AFTER_REVEAL_MS)
 }

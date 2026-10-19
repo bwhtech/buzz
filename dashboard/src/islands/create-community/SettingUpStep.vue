@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{ name: string; tasks: string[]; done: number }>()
+import { computed } from "vue"
+
+const props = defineProps<{ name: string; tasks: string[]; done: number }>()
 
 const ICONS = {
 	done: "task-check lucide-circle-check text-ink-green-6",
@@ -7,8 +9,11 @@ const ICONS = {
 		"lucide-circle-dashed text-ink-gray-7 animate-spin [animation-duration:2.4s] motion-reduce:animate-none",
 	pending: "lucide-circle text-ink-gray-3",
 }
-const stateOf = (index: number, done: number) =>
-	index < done ? "done" : index === done ? "active" : "pending"
+const states = computed(() =>
+	props.tasks.map((_, index) =>
+		index < props.done ? "done" : index === props.done ? "active" : "pending",
+	),
+)
 </script>
 
 <template>
@@ -23,14 +28,14 @@ const stateOf = (index: number, done: number) =>
 				v-for="(task, index) in tasks"
 				:key="task"
 				class="task flex items-center gap-2.5 text-lg transition-colors duration-200"
-				:class="stateOf(index, done) === 'pending' ? 'text-ink-gray-5' : 'text-ink-gray-9'"
+				:class="states[index] === 'pending' ? 'text-ink-gray-5' : 'text-ink-gray-9'"
 				:style="{ animationDelay: `${index * 50}ms` }"
 			>
 				<!-- Keyed, so a finished task mounts a fresh check that pops in. -->
 				<span
-					:key="stateOf(index, done)"
+					:key="states[index]"
 					class="size-[18px] shrink-0"
-					:class="ICONS[stateOf(index, done)]"
+					:class="ICONS[states[index]]"
 					aria-hidden="true"
 				/>
 				{{ task }}

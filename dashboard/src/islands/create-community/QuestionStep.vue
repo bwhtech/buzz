@@ -6,7 +6,6 @@ const props = defineProps<{
 	placeholder: string
 	cta: string
 	disabled?: boolean
-	loading?: boolean
 	// Rewrites each keystroke, so the field never shows what the value cannot hold.
 	format?: (value: string) => string
 }>()
@@ -20,7 +19,7 @@ function onInput(event: Event) {
 	value.value = formatted
 }
 
-const submit = () => props.disabled || props.loading || emit("submit")
+const submit = () => props.disabled || emit("submit")
 </script>
 
 <template>
@@ -48,7 +47,6 @@ const submit = () => props.disabled || props.loading || emit("submit")
 				icon-right="lucide-arrow-right"
 				:label="cta"
 				:disabled="disabled"
-				:loading="loading"
 			/>
 			<span class="flex items-center gap-1.5 text-sm text-ink-gray-5 max-sm:hidden">
 				{{ __("or press") }}
