@@ -7,11 +7,13 @@ import SlugStatus from "@/components/common/SlugStatus.vue"
 import LoginForm from "@/components/LoginForm.vue"
 import { type Availability, useSlugAvailability } from "@/composables/useSlugAvailability"
 import { session } from "@/data/session"
+import { serverErrorMessage } from "@/utils/serverError"
 
 import QuestionStep from "./QuestionStep.vue"
 import { openCreatedCommunity } from "./reveal"
+import SettingUpStep from "./SettingUpStep.vue"
 
-type Step = "url" | "name" | "login"
+type Step = "url" | "name" | "login" | "creating"
 type CreatedCommunity = { team: string; route: string }
 
 const isOpen = defineModel<boolean>("open", { required: true })
@@ -34,24 +36,19 @@ const { availability, checking } = useSlugAvailability(slug, (value) =>
 	checkSlug.submit({ slug: value }),
 )
 
-// Stays busy while the new page loads.
-const opening = ref(false)
 const createCommunity = useCall<CreatedCommunity, { team_name: string; slug: string }>({
 	url: "/api/v2/method/buzz.api.communities.create_community",
 	method: "POST",
 	immediate: false,
-	onSuccess: (created) => {
-		opening.value = true
-		openCreatedCommunity(teamName.value.trim(), created.route, stepRoot.value)
-	},
 })
 
-const busy = computed(() => createCommunity.loading || opening.value)
+// Stays busy from the create call until the new page loads.
+const busy = computed(() => step.value === "creating")
 
 const steps = computed<Step[]>(() =>
 	session.isLoggedIn ? ["url", "name"] : ["url", "name", "login"],
 )
-const reached = (index: number) => index <= steps.value.indexOf(step.value)
+const reached = (index: number) => busy.value || index <= steps.value.indexOf(step.value)
 
 // While typing: lowercase, a hyphen for anything else, no doubled hyphens.
 const toSlug = (value: string) =>
@@ -73,10 +70,43 @@ function claimUrl() {
 }
 
 function nameCommunity() {
-	if (session.isLoggedIn)
-		return createCommunity.submit({ team_name: teamName.value.trim(), slug: slug.value })
+	if (session.isLoggedIn) return create()
 	keepDraftInUrl()
 	step.value = "login"
+}
+
+const TASK_MS = 380
+const tasks = computed(() => [
+	__("Reserving {0}", [pageUrl.value]),
+	__("Setting up your calendar"),
+	__("Publishing your page"),
+])
+const tasksDone = ref(0)
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// Paces every task but the last, which ends only once the community exists.
+async function paceTasks() {
+	for (let done = 1; done < tasks.value.length; done++) {
+		await wait(TASK_MS)
+		if (!busy.value) return
+		tasksDone.value = done
+	}
+	await wait(TASK_MS)
+}
+
+async function create() {
+	tasksDone.value = 0
+	step.value = "creating"
+	const paced = paceTasks()
+	// A failure rejects and stays on createCommunity.error, which the name step shows.
+	const created = await createCommunity
+		.submit({ team_name: teamName.value.trim(), slug: slug.value })
+		.catch(() => null)
+	if (!created) return (step.value = "name")
+	await paced
+	tasksDone.value = tasks.value.length
+	await wait(TASK_MS)
+	openCreatedCommunity(teamName.value.trim(), created.route, stepRoot.value)
 }
 
 // Login reloads the page and signup returns through the verification email to this URL,
@@ -157,7 +187,6 @@ function focusStep() {
 								:placeholder="__('Night Owls Bengaluru')"
 								:cta="session.isLoggedIn ? __('Create community') : __('Continue')"
 								:disabled="!teamName.trim()"
-								:loading="busy"
 								@submit="nameCommunity"
 							>
 								<template #back>
@@ -170,7 +199,10 @@ function focusStep() {
 									/>
 								</template>
 								<template #status>
-									<ErrorMessage v-if="createCommunity.error" :message="createCommunity.error" />
+									<ErrorMessage
+										v-if="createCommunity.error"
+										:message="serverErrorMessage(createCommunity.error)"
+									/>
 									<span v-else>{{
 										__("Shown at the top of your page. You can change it later.")
 									}}</span>
@@ -202,6 +234,8 @@ function focusStep() {
 								</div>
 								<LoginForm />
 							</div>
+
+							<SettingUpStep v-else :name="teamName.trim()" :tasks="tasks" :done="tasksDone" />
 						</div>
 					</Transition>
 				</main>
