@@ -35,7 +35,7 @@ class CommunityLanding:
 		team_map = TeamMap(upcoming, past).as_context()
 		# Opens on every event: a visitor's own country would filter the preview down to one or two.
 		team_map["page_data"]["time_zone_countries"] = {}
-		description = _("Your community's page, events and followers — wherever in the world they gather.")
+		description = _("Host events, gather your people and grow together. One page, free to start.")
 		return {
 			"title": _("Communities"),
 			"meta": frappe._dict(description=description, url=get_url("/community")),
