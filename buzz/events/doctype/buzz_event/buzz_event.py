@@ -30,6 +30,7 @@ RESERVED_EVENT_ROUTES = {
 	"event-proposal",
 	"events",
 	"manage",
+	"playground",
 }
 
 MAX_TOPICS = 5

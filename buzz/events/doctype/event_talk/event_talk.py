@@ -27,5 +27,7 @@ class EventTalk(Document):
 	# end: auto-generated types
 
 	def validate(self):
-		if frappe.db.exists("Event Talk", {"proposal": self.proposal, "name": ["!=", self.name]}):
+		if self.proposal and frappe.db.exists(
+			"Event Talk", {"proposal": self.proposal, "name": ["!=", self.name]}
+		):
 			frappe.throw(_("Talk already created for this proposal!"))

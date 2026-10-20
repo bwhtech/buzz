@@ -189,6 +189,12 @@ const routes: RouteRecordRaw[] = [
 		component: () => import("@/pages/BookTickets.vue"),
 	},
 	{
+		path: "/playground",
+		name: "playground",
+		meta: { isPublic: true, title: "Playground" },
+		component: () => import("@/pages/Playground.vue"),
+	},
+	{
 		path: "/login",
 		name: "login",
 		meta: { isPublic: true, title: "Log In" },

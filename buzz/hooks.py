@@ -54,7 +54,10 @@ website_redirects = [
 # ---------------
 
 scheduler_events = {
-	"hourly": ["buzz.ticketing.doctype.ticket_hold.ticket_hold.delete_expired_holds"],
+	"hourly": [
+		"buzz.ticketing.doctype.ticket_hold.ticket_hold.delete_expired_holds",
+		"buzz.playground.cleanup.delete_expired_sandboxes",
+	],
 	"daily": [
 		"buzz.tasks.unpublish_ticket_types_after_last_date",
 		"buzz.telemetry_scan.send_site_profile",
@@ -96,6 +99,7 @@ for _doctype in taggable_doctypes:
 
 commentable_doctypes = ["Talk Proposal"]
 doc_events["Communication"] = {"after_insert": "buzz.comments.notify_team_of_email"}
+doc_events["Email Queue"] = {"after_insert": "buzz.playground.inbox.capture_email"}
 extend_doctype_class = {"Comment": ["buzz.comments.TeamComment"]}
 
 fixtures = [
@@ -216,7 +220,7 @@ jinja = {
 
 # before_app_uninstall = "events.utils.before_app_uninstall"
 after_app_uninstall = "buzz.install.after_app_uninstall"
-after_migrate = "buzz.install.on_migrate"
+after_migrate = ["buzz.install.on_migrate", "buzz.playground.configure_site"]
 
 # Desk Notifications
 # ------------------

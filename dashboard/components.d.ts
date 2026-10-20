@@ -145,6 +145,8 @@ declare module 'vue' {
     PendingSubmissions: typeof import('./src/components/dashboard/teams/PendingSubmissions.vue')['default']
     PerkList: typeof import('./src/components/dashboard/sponsorships/PerkList.vue')['default']
     PhoneInput: typeof import('./src/components/PhoneInput.vue')['default']
+    PlaygroundBar: typeof import('./src/components/playground/PlaygroundBar.vue')['default']
+    PlaygroundInbox: typeof import('./src/components/playground/PlaygroundInbox.vue')['default']
     PreferencesPanel: typeof import('./src/components/settings/PreferencesPanel.vue')['default']
     PrefixedInput: typeof import('./src/components/common/PrefixedInput.vue')['default']
     PricedItemRow: typeof import('./src/components/common/PricedItemRow.vue')['default']

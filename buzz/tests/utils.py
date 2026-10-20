@@ -78,7 +78,8 @@ def properties_of(mock_capture, event: str) -> dict:
 
 
 # Buzz Team Membership carries a team column but is scoped by its own pair of hooks.
-SELF_SCOPED_DOCTYPES = frozenset({"Buzz Team Membership"})
+# Playground Sandbox is System Manager only; visitors reach it through buzz.api.playground.
+SELF_SCOPED_DOCTYPES = frozenset({"Buzz Team Membership", "Playground Sandbox"})
 
 
 def linked_to(doctype: str) -> set[str]:
