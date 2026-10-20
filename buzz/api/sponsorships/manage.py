@@ -9,14 +9,14 @@ from buzz.api.sponsorships.schemas import (
 	TierItem,
 )
 from buzz.api.sponsorships.sponsors import sponsor_items, sponsor_rows, sponsor_tags
-from buzz.permissions import has_team_access
+from buzz.permissions import has_section_permission
 
 TIER_FIELDS = ["name", "title", "enabled", "perks", "slots", {"prices": ["currency", "price"]}]
 
 
 def event_sponsorships(event: str) -> EventSponsorshipsResponse:
 	"""Tiers, confirmed sponsors and the enquiry form state for one event's manage page."""
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "sponsors")
 	doc = frappe.get_cached_doc("Buzz Event", event)
 
 	tiers = frappe.get_all(
@@ -32,7 +32,7 @@ def event_sponsorships(event: str) -> EventSponsorshipsResponse:
 
 	return EventSponsorshipsResponse(
 		title=doc.title,
-		can_write=has_team_access(doc.team, "write", frappe.session.user),
+		can_write=has_section_permission(event, "sponsors", "write", frappe.session.user),
 		form=form_state(doc),
 		tiers=[TierItem(**tier, sponsor_count=sponsor_counts[tier.name]) for tier in tiers],
 		sponsors=sponsor_items(sponsors, tier_titles),

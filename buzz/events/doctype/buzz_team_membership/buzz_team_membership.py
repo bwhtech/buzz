@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from buzz.permissions import can_manage_members
+from buzz.permissions import EDIT, SECTIONS, can_manage_members
 
 if TYPE_CHECKING:
 	from frappe.core.doctype.user.user import User
@@ -65,6 +65,22 @@ def upsert_membership(team: str, user: str, team_role: str) -> bool:
 	return True
 
 
+def collaborator_frappe_roles(user: str) -> set[str]:
+	"""Any Edit section lets the doctype role permissions allow writes; the row hooks still scope them."""
+	rows = frappe.get_all(
+		"Buzz Event Collaborator",
+		filters={"user": user, "status": "Accepted"},
+		fields=[f"{section}_access" for section in SECTIONS],
+	)
+	roles = set()
+	for row in rows:
+		if EDIT in row.values():
+			roles.add("Event Manager")
+		if row.guests_access == EDIT:
+			roles.add("Frontdesk Manager")
+	return roles
+
+
 def sync_frappe_roles(user: str):
 	"""Recompute a user's managed roles across every enabled membership.
 
@@ -81,12 +97,19 @@ def sync_frappe_roles(user: str):
 		if team_role in TEAM_ROLE_TO_FRAPPE_ROLE
 	}
 
+	earned |= collaborator_frappe_roles(user)
+
 	user_doc = frappe.get_doc("User", user)
+	held = {row.role for row in user_doc.roles} & MANAGED_FRAPPE_ROLES
+	if held == earned:
+		return
+
 	# Roles follow from the membership, not from whoever triggered the save — a team admin
 	# adding a member, or a Guest accepting an invitation, has no write access to User.
 	user_doc.flags.ignore_permissions = True
-	user_doc.add_roles(*earned)
-	user_doc.remove_roles(*(MANAGED_FRAPPE_ROLES - earned))
+	user_doc.set("roles", [row for row in user_doc.roles if row.role not in held - earned])
+	user_doc.append_roles(*earned)
+	user_doc.save()
 
 
 class BuzzTeamMembership(Document):

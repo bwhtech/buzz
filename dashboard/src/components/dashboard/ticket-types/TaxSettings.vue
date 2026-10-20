@@ -12,13 +12,15 @@ const props = defineProps<{
 	canWrite: boolean
 	teamLegalName: string | null
 	teamTaxId: string | null
+	// Collaborators learn that the details exist, not what they are.
+	hasTeamTaxDetails: boolean
 	canEditTeam: boolean
 }>()
 const emit = defineEmits<{ taxDetailsAdded: [] }>()
 
 const { applyTax, payer, taxLabel, taxPercentage } = props.form
 const dialogOpen = ref(false)
-const hasTaxDetails = computed(() => !!props.teamTaxId)
+const hasTaxDetails = computed(() => props.hasTeamTaxDetails)
 
 // Without tax details the switch only lets an event that already charges tax turn it off.
 const switchDisabled = computed(() => !props.canWrite || (!hasTaxDetails.value && !applyTax.value))
@@ -59,7 +61,7 @@ const missingDetailsAction = computed(() =>
 			<p class="mt-1 text-p-base text-ink-gray-5">Tax charged on every ticket for this event</p>
 		</div>
 
-		<p v-if="hasTaxDetails" class="flex items-center gap-1.5 text-p-sm text-ink-gray-6">
+		<p v-if="teamTaxId" class="flex items-center gap-1.5 text-p-sm text-ink-gray-6">
 			<span class="lucide-landmark size-3.5 shrink-0 text-ink-gray-5" aria-hidden="true" />
 			<span>
 				Invoiced as <span class="font-medium text-ink-gray-8">{{ teamLegalName }}</span> · Tax ID

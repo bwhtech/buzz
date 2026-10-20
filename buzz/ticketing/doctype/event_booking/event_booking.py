@@ -14,7 +14,7 @@ from buzz.emails import is_full_document
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.payments import get_controller, mark_payment_as_received
-from buzz.permissions import has_team_access
+from buzz.permissions import has_section_permission
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
 	get_committed_tickets,
@@ -96,7 +96,7 @@ class EventBooking(Document):
 			return
 
 		event = frappe.get_cached_doc("Buzz Event", self.event)
-		if has_team_access(event.team, "create", frappe.session.user):
+		if has_section_permission(event.name, "guests", "create", frappe.session.user):
 			return
 
 		if not event.is_published:

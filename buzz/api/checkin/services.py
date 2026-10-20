@@ -19,7 +19,7 @@ from buzz.api.checkin.schemas import (
 	TicketCheckinDetails,
 )
 from buzz.api.exceptions import NotPermitted
-from buzz.permissions import CHECKIN_ROLES, can_check_in, is_unrestricted
+from buzz.permissions import CHECKIN_ROLES, EDIT, can_check_in, is_unrestricted
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import get_committed_tickets
 
 if TYPE_CHECKING:
@@ -31,26 +31,36 @@ CANCELLED = 2
 
 
 def ensure_can_check_in(event: str) -> None:
-	team = frappe.db.get_value("Buzz Event", event, "team")
-	if not can_check_in(team, frappe.session.user):
+	if not can_check_in(event, frappe.session.user):
 		NotPermitted.throw()
 
 
 def checkin_events() -> list[CheckinEvent]:
-	"""Events not yet over, on the teams the user works the front desk for."""
+	"""Events not yet over, on the teams the user works the front desk for, or that they collaborate on."""
 	filters = {"is_published": 1, "end_date": [">=", today()]}
 	user = frappe.session.user
+	or_filters = None
 	if not is_unrestricted(user):
 		teams = frappe.get_all(
 			"Buzz Team Membership",
 			filters={"user": user, "enabled": 1, "team_role": ["in", list(CHECKIN_ROLES)]},
 			pluck="team",
 		)
-		filters["team"] = ["in", teams or [""]]
+		collaborating = frappe.get_all(
+			"Buzz Event Collaborator",
+			filters={"user": user, "status": "Accepted", "guests_access": EDIT},
+			pluck="event",
+		)
+		or_filters = [
+			[field, "in", names] for field, names in (("team", teams), ("name", collaborating)) if names
+		]
+		if not or_filters:
+			return []
 
 	rows = frappe.get_all(
 		"Buzz Event",
 		filters=filters,
+		or_filters=or_filters,
 		fields=["name", "title", "start_date", "start_time", "end_date", "end_time"],
 		order_by="start_date asc",
 		ignore_permissions=True,

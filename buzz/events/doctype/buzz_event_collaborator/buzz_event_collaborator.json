@@ -1,0 +1,185 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-19 10:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "invitation_tab",
+  "event",
+  "team",
+  "email",
+  "user",
+  "column_break_invite",
+  "status",
+  "invited_by",
+  "invited_at",
+  "invite_key_hash",
+  "access_tab",
+  "details_access",
+  "guests_access",
+  "ticketing_access",
+  "column_break_access",
+  "talks_access",
+  "sponsors_access",
+  "communications_access"
+ ],
+ "fields": [
+  {
+   "fieldname": "invitation_tab",
+   "fieldtype": "Tab Break",
+   "label": "Invitation"
+  },
+  {
+   "fieldname": "event",
+   "fieldtype": "Link",
+   "label": "Event",
+   "options": "Buzz Event",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "team",
+   "fieldtype": "Link",
+   "label": "Team",
+   "options": "Buzz Team",
+   "fetch_from": "event.team",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_invite",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pending\nAccepted\nRevoked",
+   "default": "Pending",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "invited_by",
+   "fieldtype": "Link",
+   "label": "Invited By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invited_at",
+   "fieldtype": "Datetime",
+   "label": "Invited At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invite_key_hash",
+   "fieldtype": "Data",
+   "label": "Invite Key Hash",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "access_tab",
+   "fieldtype": "Tab Break",
+   "label": "Access"
+  },
+  {
+   "fieldname": "details_access",
+   "fieldtype": "Select",
+   "label": "Details",
+   "options": "View\nEdit",
+   "default": "View",
+   "reqd": 1,
+   "description": "Overview, details and settings"
+  },
+  {
+   "fieldname": "guests_access",
+   "fieldtype": "Select",
+   "label": "Guests",
+   "options": "\nView\nEdit"
+  },
+  {
+   "fieldname": "ticketing_access",
+   "fieldtype": "Select",
+   "label": "Ticketing",
+   "options": "\nView\nEdit"
+  },
+  {
+   "fieldname": "column_break_access",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "talks_access",
+   "fieldtype": "Select",
+   "label": "Talks",
+   "options": "\nView\nEdit"
+  },
+  {
+   "fieldname": "sponsors_access",
+   "fieldtype": "Select",
+   "label": "Sponsors",
+   "options": "\nView\nEdit"
+  },
+  {
+   "fieldname": "communications_access",
+   "fieldtype": "Select",
+   "label": "Communications",
+   "options": "\nView\nEdit"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-19 10:00:00",
+ "modified_by": "Administrator",
+ "module": "Events",
+ "name": "Buzz Event Collaborator",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager",
+   "select": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

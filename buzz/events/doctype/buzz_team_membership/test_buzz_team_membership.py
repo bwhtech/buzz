@@ -68,6 +68,15 @@ class TestBuzzTeamMembership(IntegrationTestCase):
 
 		self.assertIn("Event Manager", frappe.get_roles(user))
 
+	def test_a_membership_that_earns_no_new_role_leaves_the_user_unsaved(self):
+		user = UserFactory.create_once("role-unchanged@example.com").name
+		self.add_member(self.create_team(), user, "Manager")
+		modified = frappe.db.get_value("User", user, "modified")
+
+		self.add_member(self.create_team(), user, "Admin")
+
+		self.assertEqual(frappe.db.get_value("User", user, "modified"), modified)
+
 	def test_deleting_a_membership_revokes_its_role(self):
 		user = UserFactory.create_once("role-deleted@example.com").name
 		membership = self.add_member(self.create_team(), user, "Manager")

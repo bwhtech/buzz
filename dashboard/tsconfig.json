@@ -22,7 +22,8 @@
 			"@/*": ["src/*"],
 			"@public/*": ["../buzz/public/*"],
 			"tslib": ["/node_modules/tslib/tslib.d.ts"],
-			"maplibre-gl": ["node_modules/maplibre-gl"]
+			"maplibre-gl": ["node_modules/maplibre-gl"],
+			"cobe": ["node_modules/cobe"]
 		},
 		"lib": ["esnext", "dom", "dom.iterable", "scripthost"]
 	},

@@ -1,19 +1,9 @@
 <script setup lang="ts">
-import { watchDebounced } from "@vueuse/core"
-import {
-	Avatar,
-	Button,
-	Divider,
-	Dropdown,
-	LoadingText,
-	SettingsRow,
-	Textarea,
-	TextInput,
-} from "frappe-ui"
+import { Avatar, Button, Divider, Dropdown, SettingsRow, Textarea, TextInput } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import AvatarUploader from "@/components/common/AvatarUploader.vue"
-import PrefixedInput from "@/components/common/PrefixedInput.vue"
+import SlugInput, { type Availability } from "@/components/common/SlugInput.vue"
 import EventLinks from "@/components/dashboard/events/EventLinks.vue"
 import type { TeamSettings } from "@/composables/useTeamSettings"
 import { checkTeamSlug } from "@/data/teams"
@@ -51,37 +41,9 @@ const visibilityOptions = computed(() =>
 
 const urlPrefix = `${window.location.hostname}/community/`
 
-type Availability = { available: boolean; message: string }
 const availability = ref<Availability | null>(null)
-const checking = ref(false)
-
-const needsCheck = (slug: string) => {
-	const team = props.settings.overview.data
-	return Boolean(team && slug.trim() && slug !== team.slug)
-}
-
-watch(
-	() => form.value.slug,
-	(slug) => {
-		availability.value = null
-		checking.value = needsCheck(slug)
-	},
-)
-
-watchDebounced(
-	() => form.value.slug,
-	async (slug) => {
-		const team = props.settings.overview.data
-		if (!team || !needsCheck(slug)) return
-		// A failed check says nothing rather than spinning forever; the save still checks.
-		const answer = await checkTeamSlug.submit({ team: team.name, slug }).catch(() => null)
-		// A later keystroke may have overtaken this request while it was in flight.
-		if (form.value.slug !== slug) return
-		checking.value = false
-		availability.value = answer
-	},
-	{ debounce: 400 },
-)
+const checkSlug = (slug: string) =>
+	checkTeamSlug.submit({ team: props.settings.overview.data!.name, slug })
 
 watch(availability, (answer) => (props.settings.slugTaken = Boolean(answer) && !answer?.available))
 </script>
@@ -150,40 +112,16 @@ watch(availability, (answer) => (props.settings.slugTaken = Boolean(answer) && !
 						:title="__('Public URL')"
 						:description="__('Where the team page lives. Changing it moves the page.')"
 					/>
-					<PrefixedInput
+					<SlugInput
 						v-model="form.slug"
+						v-model:availability="availability"
 						:prefix="urlPrefix"
 						:label="__('Public URL')"
 						:placeholder="__('your-team')"
 						:disabled="!settings.canEditPage"
+						:saved-slug="settings.overview.data?.slug"
+						:check="checkSlug"
 					/>
-					<Transition
-						enter-active-class="transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
-						enter-from-class="opacity-0 -translate-y-0.5"
-						leave-active-class="transition duration-100 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
-						leave-to-class="opacity-0"
-						mode="out-in"
-					>
-						<LoadingText
-							v-if="checking"
-							key="checking"
-							class="pt-1.5 !text-sm"
-							:text="__('Checking availability')"
-						/>
-						<p
-							v-else-if="availability"
-							key="answer"
-							class="flex items-center gap-1 pt-1.5 text-sm"
-							:class="availability.available ? 'text-ink-green-6' : 'text-ink-amber-7'"
-						>
-							<span
-								class="size-3.5 shrink-0"
-								:class="availability.available ? 'lucide-check' : 'lucide-triangle-alert'"
-								aria-hidden="true"
-							/>
-							{{ availability.message }}
-						</p>
-					</Transition>
 				</div>
 			</div>
 		</section>

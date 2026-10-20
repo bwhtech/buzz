@@ -3,9 +3,12 @@ import { Button, Skeleton, dialog, toast } from "frappe-ui"
 import { computed } from "vue"
 import { useRoute } from "vue-router"
 
+import CollaboratorsPanel from "@/components/dashboard/events/collaborators/CollaboratorsPanel.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventThemeSetting from "@/components/dashboard/events/EventThemeSetting.vue"
 import { useArchiveEvent, useCanWriteEvent, useEventDoc } from "@/data/events"
+import { teams } from "@/data/teams"
+import { canManageMembers } from "@/utils/teamRoles"
 
 // A settings row and the group it belongs to. The page renders whatever this describes,
 // so a new setting is an entry here rather than another block of markup.
@@ -33,6 +36,11 @@ const canWrite = useCanWriteEvent(eventId)
 const archived = computed(() => !event.doc?.is_published)
 
 const busy = computed(() => event.setValue.loading || archiveEvent.loading)
+
+// The same people who manage the team's members manage an event's collaborators.
+const canManageCollaborators = computed(() =>
+	canManageMembers(teams.value.find((team) => team.name === event.doc?.team)?.team_role),
+)
 
 const settingGroups = computed<SettingGroup[]>(() => [
 	{ name: "danger", title: __("Danger"), settings: [archiveSetting()] },
@@ -104,6 +112,8 @@ async function unarchive() {
 				<EventThemeSetting :event="eventId" :disabled="!canWrite.data?.has_permission" />
 			</div>
 		</section>
+
+		<CollaboratorsPanel v-if="canManageCollaborators" :event="eventId" />
 
 		<section v-for="group in settingGroups" :key="group.name" class="space-y-3">
 			<h2 class="text-lg font-semibold text-ink-gray-9">{{ group.title }}</h2>

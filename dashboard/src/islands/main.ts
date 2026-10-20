@@ -1,3 +1,5 @@
+import { CREATED_KEY } from "./create-community/reveal"
+
 // Mounts an island the first time its trigger is clicked; its code is fetched once the page is idle.
 const triggers = document.querySelectorAll<HTMLElement>("[data-island]")
 
@@ -23,4 +25,13 @@ function prefetchIslands() {
 
 if (triggers.length) {
 	window.addEventListener("load", () => (window.requestIdleCallback || setTimeout)(prefetchIslands))
+}
+
+// A community just created on /community; see create-community/reveal.ts.
+const created = sessionStorage.getItem(CREATED_KEY)
+if (created) {
+	sessionStorage.removeItem(CREATED_KEY)
+	import("./create-community/announce").then(({ announceCreatedCommunity }) =>
+		announceCreatedCommunity(JSON.parse(created)),
+	)
 }

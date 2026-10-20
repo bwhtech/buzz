@@ -35,3 +35,4 @@ buzz.patches.migrate_desk_tags_to_buzz_tags
 buzz.patches.move_communication_recipients_to_filters
 buzz.patches.disable_unshipped_event_topics
 buzz.patches.use_buzz_navbar
+buzz.patches.move_community_topic_route

@@ -85,6 +85,7 @@ class TeamPage:
 			"meta": self.meta(),
 			"is_guest": frappe.session.user == "Guest",
 			"is_organizer": self.is_organizer(),
+			"manage_url": self.manage_url(),
 			"place_search_enabled": place_search_enabled(),
 			**TeamMap(upcoming, past).as_context(),
 		}
@@ -161,6 +162,10 @@ class TeamPage:
 			"latitude": flt(event.latitude) if has_location else None,
 			"longitude": flt(event.longitude) if has_location else None,
 		}
+
+	def manage_url(self) -> str | None:
+		if frappe.has_permission("Buzz Team", "write", self.team):
+			return f"/b/manage/communities/{self.team.name}"
 
 	def is_organizer(self) -> bool:
 		"""The community's own curators add events straight away; anyone else submits them.

@@ -76,6 +76,11 @@ jobs:
         run: |
           # No SMTP on CI: muting still queues Email Queue rows, it only never sends them.
           bench --site buzz.test set-config mute_emails 1
+          # bench serve is one Python process; the parallel Playwright workers need several.
+          # Frappe creates the encryption key on first use, and separate gunicorn workers
+          # would each create their own, so guest booking tokens would not verify across them.
+          bench --site buzz.test execute frappe.utils.password.get_encryption_key > /dev/null
+          sed -i "s|^web: .*|web: cd sites \&\& ../env/bin/gunicorn -b 127.0.0.1:8000 -w 4 -t 120 'frappe.app:application_with_statics()'|" Procfile
           bench start &> bench_start.log &
           timeout 60 bash -c \
             'until curl -sf http://buzz.test:8000 > /dev/null; do sleep 1; done'

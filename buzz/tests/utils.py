@@ -75,3 +75,18 @@ def properties_of(mock_capture, event: str) -> dict:
 	if len(matches) != 1:
 		raise AssertionError(f"expected one {event}, got {captured_names(mock_capture)}")
 	return matches[0]
+
+
+# Buzz Team Membership carries a team column but is scoped by its own pair of hooks.
+SELF_SCOPED_DOCTYPES = frozenset({"Buzz Team Membership"})
+
+
+def linked_to(doctype: str) -> set[str]:
+	"""Doctypes with a Link field named after `doctype`'s short name, e.g. `team` -> Buzz Team."""
+	fieldname = doctype.replace("Buzz ", "").lower()
+	parents = frappe.get_all(
+		"DocField",
+		filters={"fieldname": fieldname, "fieldtype": "Link", "options": doctype},
+		pluck="parent",
+	)
+	return {parent for parent in parents if not frappe.get_meta(parent).istable}

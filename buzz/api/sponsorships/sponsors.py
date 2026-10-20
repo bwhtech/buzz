@@ -25,7 +25,7 @@ def event_sponsors(
 	event: str, search: str | None = None, filters: str | None = None, order: str = "desc"
 ) -> EventSponsorsResponse:
 	"""An event's sponsors narrowed by search and filters; few enough per event to skip paging."""
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "sponsors")
 	filter_fields = sponsor_filter_fields(event)
 	conditions = ListConditions("Event Sponsor", filter_fields).frappe_filters(filters)
 	# Interpolated into ORDER BY, so it can only ever be one of two literals.

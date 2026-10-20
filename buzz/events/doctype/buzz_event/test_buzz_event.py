@@ -109,6 +109,14 @@ class TestEventRoute(BuzzEventTestCase):
 		self.assertTrue(event.is_published)
 		self.assertRegex(event.route, r"^[0-9a-f]{8}$")
 
+	def test_new_event_comes_with_the_default_forms_in_one_save(self):
+		# A second save rewrites the forms table, which deadlocks two events created at once.
+		event = self.create_event()
+
+		creation, modified = frappe.db.get_value("Buzz Event", event.name, ["creation", "modified"])
+		self.assertEqual(creation, modified)
+		self.assertEqual([form.route for form in event.custom_forms], ["feedback", "propose-talk"])
+
 	def test_generated_routes_are_unique(self):
 		self.assertNotEqual(self.create_event().route, self.create_event().route)
 
