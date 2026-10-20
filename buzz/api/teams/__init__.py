@@ -28,6 +28,7 @@ def get_my_teams() -> list[TeamOption]:
 			team.slug,
 			team.is_published,
 			team.accept_community_submissions,
+			team.is_personal,
 			team.short_description,
 			membership.team_role,
 		)
@@ -35,6 +36,11 @@ def get_my_teams() -> list[TeamOption]:
 	).run(as_dict=True)
 	event_counts = services.upcoming_event_counts([my_team.name for my_team in my_teams])
 	return [team_option(my_team, event_counts.get(my_team.name, 0)) for my_team in my_teams]
+
+
+@frappe.whitelist(methods=["POST"])
+def create_personal_team() -> str:
+	return services.create_personal_team()
 
 
 def team_option(my_team: dict, upcoming_event_count: int) -> TeamOption:

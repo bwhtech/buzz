@@ -27,6 +27,7 @@ def get_user_info() -> UserInfoResponse | GuestInfoResponse:
 		last_name=user.last_name,
 		full_name=user.full_name,
 		email=user.email,
+		username=user.username,
 		user_image=user.user_image,
 		bio=user.bio,
 		roles=user.roles,

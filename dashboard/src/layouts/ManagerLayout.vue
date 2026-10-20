@@ -8,7 +8,7 @@ import { useTeamAccess } from "@/composables/useTeamAccess"
 import { finishOpening, openingTeam } from "@/composables/useWorkspaceOpening"
 import { useEventAccess, useEventDoc } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
-import { selectTeam, teams, teamsLoaded } from "@/data/teams"
+import { selectTeam, teamLabel, teams, teamsLoaded } from "@/data/teams"
 import ManagerDesktopShell from "@/layouts/ManagerDesktopShell.vue"
 import ManagerMobileShell from "@/layouts/ManagerMobileShell.vue"
 import NotFound from "@/pages/NotFound.vue"
@@ -18,6 +18,12 @@ const route = useRoute()
 const access = useTeamAccess()
 const isMobile = useIsMobile()
 const sponsorships = useMySponsorships()
+
+// Without a team, someone can still host in their own name once personal teams are on.
+// The teams check lets them stay once that first event creates their personal team.
+const allowCreateWithoutTeam = computed(
+	() => Boolean(window.personal_teams_enabled) && route.name === "create-event",
+)
 
 // An event opens into the same shell with its own destinations.
 const eventId = computed(() => route.params.eventId as string | undefined)
@@ -51,7 +57,7 @@ const workspace = computed((): Workspace | undefined => {
 		}
 	if (teamId.value)
 		return {
-			title: team.value?.team_name ?? "",
+			title: team.value ? teamLabel(team.value) : "",
 			subtitle: "Community Workspace",
 			back: { label: "Back to communities", to: "/manage/communities" },
 			image: team.value?.logo,
@@ -81,7 +87,9 @@ const items = computed(() =>
 
 <template>
 	<!-- Shell and page render while access is pending, so pages show their own skeletons. -->
-	<NotFound v-if="access === 'denied' || teamDenied" />
+	<NotFound
+		v-if="(access === 'denied' && !teams.length && !allowCreateWithoutTeam) || teamDenied"
+	/>
 	<ManagerMobileShell v-else-if="isMobile" :items="items" :show-discover="!workspace" />
 	<ManagerDesktopShell v-else :items="items" :workspace="workspace" />
 </template>

@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { Icon, Skeleton } from "frappe-ui"
+import { computed } from "vue"
 
 import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
+import PersonalTeamCard from "@/components/dashboard/teams/PersonalTeamCard.vue"
 import TeamCard from "@/components/dashboard/teams/TeamCard.vue"
 import { teams, teamsLoaded } from "@/data/teams"
+
+const personalTeamsEnabled = Boolean(window.personal_teams_enabled)
+const personalTeam = computed(() => teams.value.find((team) => team.is_personal) ?? null)
+const otherTeams = computed(() => teams.value.filter((team) => !team.is_personal))
 </script>
 
 <template>
@@ -27,12 +33,17 @@ import { teams, teamsLoaded } from "@/data/teams"
 		</div>
 
 		<div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+			<PersonalTeamCard
+				v-if="personalTeamsEnabled || personalTeam"
+				:team="personalTeam"
+				class="fade-up-in [animation-duration:200ms] [animation-timing-function:cubic-bezier(0.23,1,0.32,1)]"
+			/>
 			<TeamCard
-				v-for="(team, index) in teams"
+				v-for="(team, index) in otherTeams"
 				:key="team.name"
 				:team="team"
 				class="fade-up-in [animation-duration:200ms] [animation-timing-function:cubic-bezier(0.23,1,0.32,1)]"
-				:style="{ animationDelay: `${index * 40}ms` }"
+				:style="{ animationDelay: `${(index + 1) * 40}ms` }"
 			/>
 		</div>
 	</div>

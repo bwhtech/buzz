@@ -38,6 +38,7 @@ from buzz.api.filters.conditions import ListConditions, event_questions, filter_
 from buzz.api.filters.schemas import FilterField
 from buzz.events.countdown import event_countdown
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
+from buzz.events.doctype.buzz_team.buzz_team import personal_team_owner
 from buzz.events.doctype.event_venue.details import venue_details
 from buzz.permissions import (
 	events_with_section_access,
@@ -186,7 +187,10 @@ def primary_host_of(team: str | None) -> EventHostRef | None:
 	"""The team hosting the event."""
 	if not team:
 		return None
-	row = frappe.db.get_value("Buzz Team", team, ["team_name", "logo"], as_dict=True)
+	row = frappe.db.get_value("Buzz Team", team, ["team_name", "logo", "is_personal"], as_dict=True)
+	if row and row.is_personal:
+		owner = personal_team_owner(team)
+		return EventHostRef(host=team, label=owner.full_name, logo=owner.user_image)
 	return EventHostRef(host=team, label=row.team_name or team, logo=row.logo) if row else None
 
 

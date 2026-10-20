@@ -5,7 +5,7 @@ import { computed, ref } from "vue"
 import EmptyState from "@/components/common/EmptyState.vue"
 import UserGroup from "@/components/common/UserGroup.vue"
 import ManageTeamPanel from "@/components/dashboard/teams/ManageTeamPanel.vue"
-import { teams } from "@/data/teams"
+import { teamLabel, teams } from "@/data/teams"
 import type { TeamOption } from "@/types"
 
 const COLUMNS = "grid grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_1.5rem] items-center gap-4 pl-3"
@@ -69,7 +69,7 @@ const filtered = computed(() => {
 											:label="team.team_name"
 										/>
 										<span class="truncate text-base font-medium text-ink-gray-8">{{
-											team.team_name
+											teamLabel(team)
 										}}</span>
 									</div>
 

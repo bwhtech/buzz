@@ -7,6 +7,7 @@ from frappe.utils import get_system_timezone
 
 from buzz import telemetry
 from buzz.api.maps.services import place_search_enabled
+from buzz.events.doctype.buzz_team.buzz_team import personal_teams_enabled
 from buzz.utils import is_app_installed
 from buzz.www.event.venue_map import google_maps_embed_api_key
 
@@ -42,5 +43,6 @@ def get_boot():
 			"google_place_search_enabled": place_search_enabled(),
 			"google_maps_embed_api_key": google_maps_embed_api_key(),
 			"zoom_available": is_app_installed("zoom_integration"),
+			"personal_teams_enabled": personal_teams_enabled(),
 		}
 	)

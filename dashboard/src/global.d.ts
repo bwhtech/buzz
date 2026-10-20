@@ -7,6 +7,7 @@ interface Window {
 	google_place_search_enabled?: boolean
 	google_maps_embed_api_key?: string | null
 	zoom_available?: boolean
+	personal_teams_enabled?: boolean
 }
 
 declare module "*.wav" {

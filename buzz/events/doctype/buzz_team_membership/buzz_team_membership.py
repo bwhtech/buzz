@@ -142,6 +142,7 @@ class BuzzTeamMembership(Document):
 	def validate(self):
 		self.validate_duplicate()
 		self.validate_owner_is_locked()
+		self.validate_personal_team_has_one_member()
 
 	def validate_duplicate(self):
 		existing = frappe.db.exists(
@@ -150,6 +151,11 @@ class BuzzTeamMembership(Document):
 		)
 		if existing:
 			frappe.throw(_("{0} is already a member of this team.").format(self.user))
+
+	def validate_personal_team_has_one_member(self):
+		others = frappe.db.exists("Buzz Team Membership", {"team": self.team, "name": ("!=", self.name)})
+		if others and frappe.db.get_value("Buzz Team", self.team, "is_personal"):
+			frappe.throw(_("A personal team has only its owner as a member."))
 
 	def validate_owner_is_locked(self):
 		# Locking the row outright means ownership can never be transferred. Relax to

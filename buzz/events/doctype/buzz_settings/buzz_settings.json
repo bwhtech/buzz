@@ -9,6 +9,9 @@
   "support_email",
   "communities_section",
   "enable_communities",
+  "personal_teams_section",
+  "enable_personal_teams",
+  "create_personal_team_on_signup",
   "event_page_section",
   "event_page_theme",
   "show_hosting_banner",
@@ -71,6 +74,25 @@
    "fieldname": "enable_communities",
    "fieldtype": "Check",
    "label": "Enable Communities"
+  },
+  {
+   "fieldname": "personal_teams_section",
+   "fieldtype": "Section Break",
+   "label": "Personal Teams"
+  },
+  {
+   "default": "0",
+   "description": "People can host events in their own name, with a profile at /u/<username>.",
+   "fieldname": "enable_personal_teams",
+   "fieldtype": "Check",
+   "label": "Enable Personal Teams"
+  },
+  {
+   "default": "0",
+   "depends_on": "enable_personal_teams",
+   "fieldname": "create_personal_team_on_signup",
+   "fieldtype": "Check",
+   "label": "Create Personal Team on Sign Up"
   },
   {
    "fieldname": "event_page_section",
@@ -377,7 +399,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-19 12:30:00.000000",
+ "modified": "2026-10-20 23:43:49.827251",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",

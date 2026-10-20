@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.naming import append_number_if_name_exists
+from frappe.utils import get_fullname
 from frappe.website.website_generator import WebsiteGenerator
 
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
@@ -28,6 +29,47 @@ def create_default_team_for(user: str) -> "BuzzTeam":
 	# The patch creates teams for other users, so the owner cannot come from the session.
 	team.flags.owner_user = user
 	return team.insert(ignore_permissions=True)
+
+
+def create_personal_team_for(user: str) -> "BuzzTeam":
+	"""Give a user a team to host events in their own name. Idempotent."""
+	if owned := personal_team_of(user):
+		return frappe.get_doc("Buzz Team", owned)
+
+	fill_blank_username(user)
+	team = frappe.get_doc({"doctype": "Buzz Team", "team_name": get_fullname(user), "is_personal": 1})
+	team.flags.owner_user = user
+	return team.insert(ignore_permissions=True)
+
+
+def personal_teams_enabled() -> bool:
+	return bool(frappe.db.get_single_value("Buzz Settings", "enable_personal_teams"))
+
+
+def create_personal_team_on_signup(doc, event=None):
+	if personal_teams_enabled() and frappe.db.get_single_value(
+		"Buzz Settings", "create_personal_team_on_signup"
+	):
+		create_personal_team_for(doc.name)
+
+
+def personal_team_of(user: str) -> str | None:
+	owned = frappe.get_all("Buzz Team Membership", filters={"user": user, "team_role": "Owner"}, pluck="team")
+	return frappe.db.get_value("Buzz Team", {"name": ("in", owned), "is_personal": 1}) if owned else None
+
+
+def personal_team_owner(team: str) -> frappe._dict:
+	user = frappe.db.get_value("Buzz Team Membership", {"team": team, "team_role": "Owner"}, "user")
+	return frappe.db.get_value("User", user, ["full_name", "user_image", "username"], as_dict=True)
+
+
+def fill_blank_username(user: str):
+	# Frappe leaves a Website User's username blank when their first name is taken.
+	if frappe.db.get_value("User", user, "username"):
+		return
+	base = frappe.scrub(frappe.db.get_value("User", user, "first_name") or user.split("@")[0])
+	username = append_number_if_name_exists("User", base, fieldname="username")
+	frappe.db.set_value("User", user, "username", username)
 
 
 def set_team_from_sole_membership(doc, event=None):
@@ -56,6 +98,7 @@ class BuzzTeam(WebsiteGenerator):
 		from buzz.events.doctype.event_external_link.event_external_link import EventExternalLink
 
 		about: DF.TextEditor | None
+		is_personal: DF.Check
 		is_published: DF.Check
 		links: DF.Table[EventExternalLink]
 		logo: DF.AttachImage | None
@@ -76,6 +119,8 @@ class BuzzTeam(WebsiteGenerator):
 	def validate(self):
 		if not self.slug:
 			self.set_slug()
+		if self.is_personal:
+			self.is_published = self.accept_community_submissions = 0
 		# Submissions are listed on the public page, so a private team has nowhere to show them.
 		if self.accept_community_submissions and not self.is_published:
 			frappe.throw(_("Only a public team can accept community event submissions."))

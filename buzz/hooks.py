@@ -22,6 +22,7 @@ before_uninstall = "buzz.uninstall.before_uninstall"
 
 website_route_rules = [
 	{"from_route": "/events/<event_route>", "to_route": "event"},
+	{"from_route": "/u/<username>", "to_route": "user_profile"},
 	{"from_route": "/b", "to_route": "dashboard"},
 	{"from_route": "/b/<path:app_path>", "to_route": "dashboard"},
 ]
@@ -75,7 +76,10 @@ handle_refund_notification = "buzz.payments.handle_refund_notification"
 
 doc_events = {
 	"User": {
-		"after_insert": "buzz.utils.add_buzz_user_role",
+		"after_insert": [
+			"buzz.utils.add_buzz_user_role",
+			"buzz.events.doctype.buzz_team.buzz_team.create_personal_team_on_signup",
+		],
 		"on_update": "buzz.events.doctype.speaker_profile.speaker_profile.update_speaker_display_name",
 	},
 	"Currency": {

@@ -42,6 +42,7 @@ class UserInfoResponse(APIResponse):
 	last_name: str | None
 	full_name: str | None
 	email: str
+	username: str | None
 	user_image: str | None
 	bio: str | None
 	# Rows of the User.roles child table, serialized as full documents.

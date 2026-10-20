@@ -17,6 +17,7 @@ from frappe.utils import (
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import co_hosts_of, primary_host_of, registration_link
 from buzz.events.countdown import event_countdown
+from buzz.events.doctype.buzz_team.buzz_team import personal_team_owner, personal_teams_enabled
 from buzz.events.doctype.event_venue.details import VenueLocation, venue_details
 from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.events.online_meeting import OnlineMeeting
@@ -72,9 +73,15 @@ def public_links(rows) -> list[dict]:
 	]
 
 
-def team_page_url(team: str | None) -> str | None:
-	route = frappe.db.get_value("Buzz Team", {"name": team, "is_published": 1}, "route") if team else None
-	return f"/{route}" if route else None
+def host_page_url(team: str | None) -> str | None:
+	"""A personal team links to its owner's profile, any other team to its published page."""
+	if not team:
+		return None
+	row = frappe.db.get_value("Buzz Team", team, ["is_personal", "is_published", "route"], as_dict=True)
+	if row.is_personal:
+		username = personal_team_owner(team).username
+		return f"/u/{username}" if username and personal_teams_enabled() else None
+	return f"/{row.route}" if row.is_published and row.route else None
 
 
 def format_full_date(date) -> str:
@@ -182,9 +189,9 @@ class EventPage:
 		return get_datetime(f"{self.event.start_date} {self.event.start_time or '00:00:00'}")
 
 	def hosts(self) -> list:
-		# The team hosting the event links to its public page while that page is published.
+		# The hosting team links to its public page, or a personal team to its owner's profile.
 		primary = primary_host_of(self.event.team)
-		hosts = [frappe._dict(primary.__json__(), url=team_page_url(self.event.team))] if primary else []
+		hosts = [frappe._dict(primary.__json__(), url=host_page_url(self.event.team))] if primary else []
 		return hosts + [frappe._dict(host.__json__(), url=None) for host in co_hosts_of(self.event.name)]
 
 	def links(self) -> list[dict]:

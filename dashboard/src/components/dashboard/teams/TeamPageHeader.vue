@@ -4,7 +4,7 @@ import { computed } from "vue"
 import { type RouteLocationRaw, useRoute } from "vue-router"
 
 import { useIsMobile } from "@/composables/useIsMobile"
-import { teams } from "@/data/teams"
+import { teamLabel, teams } from "@/data/teams"
 import { openTeamPage } from "@/utils/teamUrl"
 
 const props = defineProps<{
@@ -18,7 +18,7 @@ const isMobile = useIsMobile()
 const route = useRoute()
 
 const team = computed(() => teams.value.find((option) => option.name === route.params.teamId))
-const teamName = computed(() => team.value?.team_name ?? "")
+const teamName = computed(() => (team.value ? teamLabel(team.value) : ""))
 const publicSlug = computed(() =>
 	team.value?.is_published && !props.dirty ? team.value.slug : null,
 )
