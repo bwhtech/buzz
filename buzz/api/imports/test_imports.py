@@ -24,7 +24,8 @@ class CheckInImportTest(IntegrationTestCase):
 		cls.event = str(BuzzEventFactory.create(team=cls.team).name)
 		cls.ticket = EventTicketFactory.create("submitted", event=cls.event, attendee_email="ada@example.com")
 		cls.cancelled = EventTicketFactory.create("submitted", event=cls.event)
-		cls.cancelled.cancel()
+		# As test_checkin does: cancel() sends an email, which needs a mail account.
+		frappe.db.set_value("Event Ticket", cls.cancelled.name, "docstatus", 2)
 
 	def setUp(self):
 		self.enterContext(self.set_user(self.owner))
