@@ -2,6 +2,7 @@
 # See license.txt
 
 from base64 import b32encode
+from unittest.mock import patch
 
 import frappe
 import pyotp
@@ -66,7 +67,8 @@ class TestGuestBooking(BookingTestCase):
 		self.set_event({"prevent_duplicate_registrations": 1})
 		with self.set_user("Guest"):
 			payload = self.book_as_guest()
-		frappe.get_doc("Event Booking", payload.booking_name).cancel()
+		with patch("frappe.sendmail"):
+			frappe.get_doc("Event Booking", payload.booking_name).cancel()
 
 		with self.set_user("Guest"):
 			new_payload = self.book_as_guest()
@@ -83,9 +85,9 @@ class TestGuestBooking(BookingTestCase):
 
 	def test_same_email_can_register_for_a_different_event(self):
 		self.set_event({"prevent_duplicate_registrations": 1})
+		other_event = self.create_other_event()
 		with self.set_user("Guest"):
 			self.book_as_guest()
-			other_event = self.create_other_event()
 			payload = self.book_as_guest(event=other_event.name, ticket_type=self.other_ticket_type.name)
 
 		self.assertTrue(frappe.db.exists("Event Booking", payload.booking_name))
