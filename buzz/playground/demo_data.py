@@ -31,6 +31,8 @@ class DemoData:
 		frappe.flags.seeding_playground = True
 		try:
 			self.enable_features()
+			category = frappe.get_doc({"doctype": "Event Category", "name": CATEGORY})
+			category.insert(ignore_permissions=True, ignore_if_duplicate=True)
 			self.host = insert("Event Host", host_name="Acme Community", team=self.team).name
 			conference = self.create_conference()
 			self.create_meetup()
@@ -45,8 +47,6 @@ class DemoData:
 		settings.save(ignore_permissions=True)
 
 	def create_event(self, title: str, days_from_today: int, **fields) -> str:
-		if not frappe.db.exists("Event Category", CATEGORY):
-			insert("Event Category", name=CATEGORY)
 		event_date = add_days(today(), days_from_today)
 		event = insert(
 			"Buzz Event",
@@ -139,7 +139,12 @@ class DemoData:
 		self, event: str, ticket_type: str, guests, paid: bool = False, user: str | None = None
 	) -> list[str]:
 		attendees = [
-			{"ticket_type": ticket_type, "first_name": first, "last_name": last, "email": self.email(first)}
+			{
+				"ticket_type": ticket_type,
+				"first_name": first,
+				"last_name": last,
+				"email": f"{first.lower()}@example.com",
+			}
 			for first, last in guests
 		]
 		booking = frappe.get_doc(
@@ -156,6 +161,3 @@ class DemoData:
 		booking.insert()
 		booking.submit()
 		return frappe.get_all("Event Ticket", filters={"booking": booking.name}, pluck="name")
-
-	def email(self, first_name: str) -> str:
-		return f"{first_name.lower()}@example.com"

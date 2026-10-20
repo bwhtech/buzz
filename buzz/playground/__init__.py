@@ -30,5 +30,5 @@ def playground_boot() -> dict | None:
 
 def configure_site():
 	"""Frappe stores rendered PDFs on the Email Queue as the sender, which a visitor cannot write to."""
-	if is_playground():
+	if frappe.db.get_single_value("System Settings", "store_attached_pdf_document"):
 		frappe.db.set_single_value("System Settings", "store_attached_pdf_document", 0)

@@ -7,7 +7,7 @@ from buzz.api.playground.exceptions import NotInSandbox, PlaygroundDisabled, Unk
 from buzz.api.playground.schemas import InboxAttachment, InboxEmail, RedirectResponse
 from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
-from buzz.playground import is_playground, sandbox_of
+from buzz.playground import configure_site, is_playground, sandbox_of
 from buzz.playground.cleanup import delete_sandbox
 from buzz.playground.demo_data import DemoData
 
@@ -24,6 +24,7 @@ PERSONAS = {
 
 def start() -> RedirectResponse:
 	require_playground()
+	configure_site()
 	return log_in(create_sandbox(), "organizer")
 
 

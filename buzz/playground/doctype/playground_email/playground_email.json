@@ -22,7 +22,8 @@
    "label": "Sandbox",
    "options": "Playground Sandbox",
    "in_list_view": 1,
-   "in_standard_filter": 1
+   "in_standard_filter": 1,
+   "search_index": 1
   },
   {
    "fieldname": "subject",
@@ -69,7 +70,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-20 12:00:00.000000",
+ "modified": "2026-10-20 18:30:00.000000",
  "modified_by": "Administrator",
  "module": "Playground",
  "name": "Playground Email",

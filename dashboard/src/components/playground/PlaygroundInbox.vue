@@ -26,7 +26,7 @@ const selected = computed(
 	() => emails.value.find((email) => email.name === selectedName.value) ?? emails.value[0],
 )
 // Links leave the sandboxed frame for a new tab instead of navigating inside it.
-const document = computed(() => `<base target="_blank">${selected.value?.message ?? ""}`)
+const emailHtml = computed(() => `<base target="_blank">${selected.value?.message ?? ""}`)
 
 function downloadUrl(file: string) {
 	return `/api/method/buzz.api.playground.download_attachment?file=${encodeURIComponent(file)}`
@@ -70,7 +70,7 @@ function downloadUrl(file: string) {
 					</div>
 				</div>
 				<iframe
-					:srcdoc="document"
+					:srcdoc="emailHtml"
 					sandbox="allow-popups allow-popups-to-escape-sandbox"
 					class="w-full flex-1 rounded border border-outline-gray-2 bg-white"
 				/>

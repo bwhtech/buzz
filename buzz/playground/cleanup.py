@@ -11,8 +11,13 @@ def delete_expired_sandboxes():
 		"Playground Sandbox", filters={"expires_on": ["<", now_datetime()]}, pluck="name"
 	)
 	for sandbox in expired:
-		delete_sandbox(sandbox)
-		frappe.db.commit()  # nosemgrep: frappe-manual-commit -- one sandbox at a time keeps transactions small
+		try:
+			delete_sandbox(sandbox)
+			# One sandbox per transaction, so a failure skips only that sandbox.
+			frappe.db.commit()  # nosemgrep: frappe-manual-commit
+		except Exception:
+			frappe.db.rollback()
+			frappe.log_error("Playground sandbox cleanup failed", reference_doctype="Playground Sandbox")
 
 
 def delete_sandbox(name: str):

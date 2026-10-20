@@ -2,12 +2,12 @@ from unittest.mock import MagicMock, patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import add_to_date, now_datetime
 
 from buzz.api.playground import download_attachment, get_inbox, reset, start, switch_persona
 from buzz.api.playground.exceptions import NotInSandbox, PlaygroundDisabled, UnknownPersona
 from buzz.api.playground.services import create_sandbox
-from buzz.playground import configure_site
-from buzz.playground.cleanup import delete_sandbox
+from buzz.playground.cleanup import delete_expired_sandboxes, delete_sandbox
 from buzz.tests.factories import EventBookingFactory
 
 PLAYGROUND_CONF = {"buzz_playground": 1, "mute_emails": 1}
@@ -65,9 +65,10 @@ class TestSandbox(PlaygroundTestCase):
 		with self.assertRaises(PlaygroundDisabled):
 			start()
 
-	def test_configure_site_stops_storing_pdfs_on_the_email_queue(self):
+	def test_start_stops_storing_pdfs_on_the_email_queue(self):
 		self.addCleanup(frappe.db.set_single_value, "System Settings", "store_attached_pdf_document", 1)
-		configure_site()
+		frappe.db.set_single_value("System Settings", "store_attached_pdf_document", 1)
+		start()
 		self.assertFalse(frappe.db.get_single_value("System Settings", "store_attached_pdf_document"))
 
 	def test_switch_persona_logs_in_that_persona(self):
@@ -90,6 +91,17 @@ class TestSandbox(PlaygroundTestCase):
 		sandbox = create_sandbox()
 		with self.set_user(sandbox.organizer), self.assertRaises(UnknownPersona):
 			switch_persona("Administrator")
+
+	def test_expired_sandboxes_are_deleted(self):
+		sandbox = create_sandbox()
+		frappe.db.set_value(
+			"Playground Sandbox", sandbox.name, "expires_on", add_to_date(now_datetime(), hours=-1)
+		)
+
+		with patch.object(frappe.db, "commit"):
+			delete_expired_sandboxes()
+
+		self.assertFalse(frappe.db.exists("Playground Sandbox", sandbox.name))
 
 	def test_delete_sandbox_removes_its_team_events_and_users(self):
 		sandbox = create_sandbox()

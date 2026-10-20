@@ -220,7 +220,7 @@ jinja = {
 
 # before_app_uninstall = "events.utils.before_app_uninstall"
 after_app_uninstall = "buzz.install.after_app_uninstall"
-after_migrate = ["buzz.install.on_migrate", "buzz.playground.configure_site"]
+after_migrate = "buzz.install.on_migrate"
 
 # Desk Notifications
 # ------------------
