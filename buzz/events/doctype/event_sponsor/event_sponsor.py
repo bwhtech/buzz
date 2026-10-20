@@ -16,7 +16,7 @@ class EventSponsor(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		company_logo: DF.AttachImage
+		company_logo: DF.AttachImage | None
 		company_name: DF.Data
 		contact_email: DF.Data | None
 		country: DF.Link | None

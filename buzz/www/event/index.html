@@ -221,7 +221,7 @@
 					<ul class="sponsor-list">
 						{% for sponsor in tier.sponsors %}
 						<li>
-							{% set content %}<img class="sponsor-logo" src="{{ sponsor.company_logo }}" alt=""><span class="sponsor-name">{{ sponsor.company_name }}</span>{% endset %}
+							{% set content %}{% if sponsor.company_logo %}<img class="sponsor-logo" src="{{ sponsor.company_logo }}" alt="">{% endif %}<span class="sponsor-name">{{ sponsor.company_name }}</span>{% endset %}
 							{% if sponsor.website %}<a class="sponsor" href="{{ sponsor.website }}" rel="noopener" target="_blank">{{ content }}</a>{% else %}<div class="sponsor">{{ content }}</div>{% endif %}
 						</li>
 						{% endfor %}
