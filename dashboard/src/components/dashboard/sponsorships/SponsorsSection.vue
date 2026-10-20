@@ -36,7 +36,9 @@ const errorMessage = computed(() => (list.error as FrappeError | null)?.message)
 
 <template>
 	<section class="space-y-3" aria-label="Sponsors">
-		<SectionHeader title="Sponsors" :count="list.data?.total" :action="action" />
+		<SectionHeader title="Sponsors" :count="list.data?.total" :action="action">
+			<template #actions><slot name="actions" /></template>
+		</SectionHeader>
 
 		<ListFilters
 			v-if="list.data?.total || isFiltered"

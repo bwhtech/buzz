@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ErrorMessage, Skeleton } from "frappe-ui"
+import { Button, ErrorMessage, Skeleton } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
 import ListSection from "@/components/common/ListSection.vue"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
+import ImportDialog from "@/components/dashboard/imports/ImportDialog.vue"
 import AddPricedItemDialog from "@/components/dashboard/sponsorships/AddPricedItemDialog.vue"
 import AddSponsorDialog from "@/components/dashboard/sponsorships/AddSponsorDialog.vue"
 import EnquiriesSection from "@/components/dashboard/sponsorships/EnquiriesSection.vue"
@@ -16,6 +17,7 @@ import SponsorsSection from "@/components/dashboard/sponsorships/SponsorsSection
 import TierDrawer from "@/components/dashboard/sponsorships/TierDrawer.vue"
 import TierList from "@/components/dashboard/sponsorships/TierList.vue"
 import { useEventSponsorships } from "@/data/sponsorships"
+import { isFeatureEnabled } from "@/data/teams"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError } from "@/types"
 
@@ -38,6 +40,8 @@ const addTierAction = computed(() =>
 )
 
 const sponsorDialogOpen = ref(false)
+const importOpen = ref(false)
+const canImport = computed(() => !!page.data?.can_write && isFeatureEnabled("feature_data_import"))
 
 function openSponsorDialog() {
 	sponsorDialogOpen.value = true
@@ -147,7 +151,16 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				:tiers="page.data?.tiers ?? []"
 				:action="addSponsorAction"
 				@open="select('sponsor', $event)"
-			/>
+			>
+				<template v-if="canImport" #actions>
+					<Button
+						variant="ghost"
+						icon-left="lucide-upload"
+						label="Import"
+						@click="importOpen = true"
+					/>
+				</template>
+			</SponsorsSection>
 
 			<EnquiriesSection ref="enquiriesSection" :event="eventId" @open="select('enquiry', $event)" />
 		</template>
@@ -168,6 +181,14 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		:can-write="!!page.data?.can_write"
 		@changed="page.reload()"
 		@open-sponsor="select('sponsor', $event)"
+	/>
+
+	<ImportDialog
+		v-if="canImport"
+		v-model="importOpen"
+		:event="eventId"
+		type="sponsors"
+		@imported="onSponsorsChanged"
 	/>
 
 	<SponsorDrawer

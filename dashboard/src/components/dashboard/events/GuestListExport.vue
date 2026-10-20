@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Button, call, toast } from "frappe-ui"
-import { ref } from "vue"
+import { computed, ref } from "vue"
 import { useRouter } from "vue-router"
 
 import { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
+import ImportDialog from "@/components/dashboard/imports/ImportDialog.vue"
+import { isFeatureEnabled } from "@/data/teams"
 import type { EventGuest, EventGuests } from "@/types"
 import { downloadCsv } from "@/utils/csv"
 
@@ -15,6 +17,8 @@ const props = defineProps<{
 }>()
 
 const exporting = ref(false)
+const importOpen = ref(false)
+const canImport = computed(() => isFeatureEnabled("feature_data_import"))
 const router = useRouter()
 
 function openCheckIn() {
@@ -83,5 +87,18 @@ async function exportGuests() {
 				<span class="lucide-download size-4" aria-hidden="true" />
 			</template>
 		</Button>
+		<Button
+			v-if="canImport"
+			:class="`w-full !justify-start ${PRESSABLE}`"
+			variant="ghost"
+			label="Import check-ins"
+			@click="importOpen = true"
+		>
+			<template #prefix>
+				<span class="lucide-upload size-4" aria-hidden="true" />
+			</template>
+		</Button>
 	</section>
+
+	<ImportDialog v-if="canImport" v-model="importOpen" :event="event" type="checkins" />
 </template>

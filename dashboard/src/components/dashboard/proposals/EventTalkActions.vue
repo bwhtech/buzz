@@ -5,7 +5,9 @@ import { computed, ref } from "vue"
 import QuickActionsRail, {
 	type QuickAction,
 } from "@/components/dashboard/events/QuickActionsRail.vue"
+import ImportDialog from "@/components/dashboard/imports/ImportDialog.vue"
 import ProposalsDialog from "@/components/dashboard/proposals/ProposalsDialog.vue"
+import { isFeatureEnabled } from "@/data/teams"
 import type { EventProposals, ProposalListItem } from "@/types"
 import { downloadCsv } from "@/utils/csv"
 
@@ -21,6 +23,8 @@ const props = defineProps<{
 const emit = defineEmits<{ changed: [] }>()
 
 const dialogOpen = ref(false)
+const importOpen = ref(false)
+const canImport = computed(() => props.canWrite && isFeatureEnabled("feature_data_import"))
 const exporting = ref(false)
 
 // The list is paged, so the export walks it: a hundred at a time until the server says
@@ -74,6 +78,9 @@ const actions = computed<QuickAction[]>(() =>
 			loading: exporting.value,
 			onClick: exportProposals,
 		},
+		canImport.value
+			? { icon: "lucide-upload", label: "Import talks", onClick: () => (importOpen.value = true) }
+			: null,
 	].filter((action) => action !== null),
 )
 </script>
@@ -94,5 +101,13 @@ const actions = computed<QuickAction[]>(() =>
 		:event="event"
 		:closed="closed"
 		@changed="emit('changed')"
+	/>
+
+	<ImportDialog
+		v-if="canImport"
+		v-model="importOpen"
+		:event="event"
+		type="talks"
+		@imported="emit('changed')"
 	/>
 </template>
