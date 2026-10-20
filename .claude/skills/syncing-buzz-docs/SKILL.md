@@ -43,11 +43,22 @@ status table names the develop SHA the docs last matched.
    booking steps. Confirm every label you write against these dumps or the Vue source.
 5. **Edit pages** in `wiki-media/docs/`. A new page needs `order:` in its front matter, or
    it lands last in its group.
-6. **Media.** Add scenes to `stills.mjs` / `stills_attendee.mjs`, run them, review a contact
+6. **Media.** Add scenes to `stills.mjs` / `stills_attendee.mjs`. Every still ships in a
+   light and a dark version. Run each scene twice: `node stills.mjs <scene>`, then
+   `THEME=dark node stills.mjs <scene>`, which writes `<name>-dark.png`. Review a contact
    sheet (`../../../env/bin/python sheet.py out.png shots/*.png`), then `bash to_webp.sh` and
-   `frappectl -s bwh_docs file upload ./_upload_v2/<file>.webp`. Videos: `node record.mjs
-   <scene> --shots` to dry-run, reseed, then record for real. Review frames with ffmpeg
-   before upload.
+   `frappectl -s bwh_docs file upload ./_upload_v2/<file>.webp` for both files. Put the
+   image on the page as a `<picture>` block, in exactly this shape (the wiki editor reads
+   only this shape; indent all four lines inside a list item):
+   ```html
+   <picture>
+     <source srcset="/files/<name>-dark.webp" media="(prefers-color-scheme: dark)">
+     <img src="/files/<name>.webp" alt="<alt text>">
+   </picture>
+   ```
+   The wiki points the dark source at its own theme toggle, not only the OS setting.
+   Videos: light only. `node record.mjs <scene> --shots` to dry-run, reseed, then record
+   for real. Review frames with ffmpeg before upload.
 7. **Publish.** `wikictl sync wiki-media/docs -n`, then `sync`, then `publish --yes`. Check
    every `/files/...` and `/buzz/...` link with curl.
 8. **Record state.** Add a row to the `CONTEXT.md` status table with the CR and the develop
@@ -64,4 +75,6 @@ status table names the develop SHA the docs last matched.
 | A dry run left data behind (accepted talk, new event) | `--shots` still clicks. Reseed before the real recording. |
 | Price fields missing on Registration | The team lacks `feature_paid_events`. `seed_event.py` turns it on. |
 | `grep '__('` finds nothing; zsh "no matches found" | Use `grep -F` for `__(`, and quote `--include` globs. |
+| Dark shot of a page comes out light | `lib.mjs` sets both Playwright's `colorScheme` and the `theme` localStorage key. A script that skips `open()` from `lib.mjs` gets neither. |
+| Alt text shows `&#x27;` in the wiki editor | Escape only `&` and `"` in `<img alt>`, as the wiki editor does. |
 | Full-page screenshot shows only the viewport | The dashboard scrolls an inner pane. Clip to the section's bounding box instead. |
