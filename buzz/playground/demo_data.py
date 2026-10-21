@@ -163,7 +163,16 @@ class DemoData:
 				"last_name": last_name,
 				"email": f"{first_name.lower()}@example.com",
 			}
-			insert("Talk Proposal", event=event, title=title, status="Review Pending", speakers=[speaker])
+			# As the public form submits it. Left blank it would take the session user, which on a
+			# reset is the previous sandbox's organizer, deleted right after.
+			insert(
+				"Talk Proposal",
+				event=event,
+				title=title,
+				status="Review Pending",
+				speakers=[speaker],
+				submitted_by="Guest",
+			)
 
 	def publish_community(self):
 		team = frappe.get_doc("Buzz Team", self.team)
