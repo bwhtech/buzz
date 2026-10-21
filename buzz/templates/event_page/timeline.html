@@ -26,14 +26,18 @@
 </a>
 {% endautoescape %}{% endmacro %}
 
-{% macro day_groups(days, empty_text) %}{% autoescape true %}
+{% macro day_groups(days, empty_title, empty_text) %}{% autoescape true %}
 {% for day in days %}
 <section class="team-day" data-day-group data-day="{{ day.date }}">
 	<h3 class="team-day-heading">{{ day.label }}<span>{{ day.weekday }}</span></h3>
 	<div class="team-day-events">{% for event in day.events %}{{ event_card(event) }}{% endfor %}</div>
 </section>
 {% else %}
-<p class="empty-state">{{ empty_text }}</p>
+<div class="timeline-empty">
+	<span class="timeline-empty-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg></span>
+	<p class="timeline-empty-title">{{ empty_title }}</p>
+	<p class="empty-state">{{ empty_text }}</p>
+</div>
 {% endfor %}
 <p class="empty-state" data-filter-empty hidden>{{ _("No events in this country.") }}</p>
 {% endautoescape %}{% endmacro %}
@@ -43,8 +47,8 @@
 	<button type="button" class="es-pill" data-size="md" role="radio" aria-checked="true" data-state="active" data-tab="upcoming">{{ _("Upcoming") }}</button>
 	<button type="button" class="es-pill" data-size="md" role="radio" aria-checked="false" data-state="inactive" data-tab="past" tabindex="-1">{{ _("Past") }}</button>
 </div>
-<div data-panel="upcoming">{{ day_groups(upcoming_days, _("No upcoming events.")) }}</div>
-<div data-panel="past" hidden>{{ day_groups(past_days, _("No past events.")) }}</div>
+<div data-panel="upcoming">{{ day_groups(upcoming_days, _("No upcoming events"), _("New events will show up here once they are scheduled.")) }}</div>
+<div data-panel="past" hidden>{{ day_groups(past_days, _("No past events"), _("Events show up here after they end.")) }}</div>
 {% endautoescape %}{% endmacro %}
 
 {% macro chevron(path) %}{% autoescape true %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ path }}"/></svg>{% endautoescape %}{% endmacro %}

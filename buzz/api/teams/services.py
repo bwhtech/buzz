@@ -10,9 +10,11 @@ from buzz.api.teams.exceptions import (
 	CannotGrantOwnership,
 	CannotManageMembers,
 	NotATeamMember,
+	PersonalTeamsDisabled,
 	UnknownTeamRole,
 )
 from buzz.api.teams.schemas import TeamInvite, TeamMember, TeamOverview, TeamTaxDetails
+from buzz.events.doctype.buzz_team.buzz_team import create_personal_team_for, personal_teams_enabled
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import TAX_DETAIL_FIELDS
 from buzz.permissions import WRITE_ROLES, can_manage_members, team_role_of
 
@@ -27,6 +29,12 @@ TEAM_FIELDS = (
 	"short_description",
 	"about",
 )
+
+
+def create_personal_team() -> str:
+	if not personal_teams_enabled():
+		PersonalTeamsDisabled.throw()
+	return create_personal_team_for(frappe.session.user).name
 
 
 def validate_role(team_role: str) -> None:

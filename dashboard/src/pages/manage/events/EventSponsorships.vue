@@ -6,6 +6,7 @@ import { useRoute } from "vue-router"
 import ListSection from "@/components/common/ListSection.vue"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
+import ImportDialog from "@/components/dashboard/imports/ImportDialog.vue"
 import AddPricedItemDialog from "@/components/dashboard/sponsorships/AddPricedItemDialog.vue"
 import AddSponsorDialog from "@/components/dashboard/sponsorships/AddSponsorDialog.vue"
 import EnquiriesSection from "@/components/dashboard/sponsorships/EnquiriesSection.vue"
@@ -38,6 +39,8 @@ const addTierAction = computed(() =>
 )
 
 const sponsorDialogOpen = ref(false)
+const importOpen = ref(false)
+const canImport = computed(() => !!page.data?.can_write && !!page.data?.import_enabled)
 
 function openSponsorDialog() {
 	sponsorDialogOpen.value = true
@@ -156,7 +159,9 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 			<EventSponsorshipActions
 				:form="page.data.form"
 				:can-write="!!page.data.can_write"
+				:can-import="canImport"
 				@changed="page.reload()"
+				@import="importOpen = true"
 			/>
 		</template>
 	</PageWithSidebar>
@@ -168,6 +173,13 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		:can-write="!!page.data?.can_write"
 		@changed="page.reload()"
 		@open-sponsor="select('sponsor', $event)"
+	/>
+
+	<ImportDialog
+		v-if="canImport"
+		v-model="importOpen"
+		:event="eventId"
+		@imported="onSponsorsChanged"
 	/>
 
 	<SponsorDrawer

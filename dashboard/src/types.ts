@@ -130,6 +130,7 @@ export interface UserInfo {
 	last_name?: string | null
 	full_name?: string | null
 	email?: string
+	username?: string | null
 	user_image?: string | null
 	bio?: string | null
 	roles?: { role: string }[]
@@ -168,6 +169,7 @@ export interface TeamOption {
 	slug: string | null
 	is_published: boolean
 	accept_community_submissions: boolean
+	is_personal: boolean
 	short_description: string | null
 	upcoming_event_count: number
 	team_role: string
@@ -720,6 +722,7 @@ export interface EventSponsorships {
 	sponsors: EventSponsorItem[]
 	team: string
 	tags: TagItem[]
+	import_enabled: boolean
 }
 
 export interface EventSponsors {

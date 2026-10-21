@@ -17,6 +17,7 @@ class TeamOption(APIResponse):
 	slug: str | None
 	is_published: bool
 	accept_community_submissions: bool
+	is_personal: bool
 	short_description: str | None
 	upcoming_event_count: int
 	team_role: str

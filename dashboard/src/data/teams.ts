@@ -1,4 +1,4 @@
-import { useCall } from "frappe-ui"
+import { toast, useCall } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import { hasCollaborations } from "@/data/collaborators"
@@ -34,6 +34,22 @@ const teamsResource = useCall<TeamOption[]>({
 		}
 	},
 })
+
+/** A personal team reads as "Personal" next to the user's other teams. */
+export function teamLabel(team: Pick<TeamOption, "team_name" | "is_personal">): string {
+	return team.is_personal ? __("Personal") : team.team_name
+}
+
+export function isPersonalTeam(name: string): boolean {
+	return Boolean(teams.value.find((team) => team.name === name)?.is_personal)
+}
+
+export function upcomingEventsLabel(count: number): string {
+	if (!count) return __("No upcoming events")
+	return count === 1 ? __("1 upcoming event") : __("{0} upcoming events", [String(count)])
+}
+
+export const personalTeamsEnabled = Boolean(window.personal_teams_enabled)
 
 export const teams = computed((): TeamOption[] => teamsResource.data || [])
 
@@ -112,6 +128,22 @@ export const updatePublicPage = useCall<unknown, Record<string, unknown>>({
 export function selectTeam(name: string) {
 	selectedTeamName.value = name
 	localStorage.setItem(STORAGE_KEY, name)
+}
+
+const createPersonalTeam = useCall<string>({
+	url: "/api/v2/method/buzz.api.teams.create_personal_team",
+	method: "POST",
+	immediate: false,
+})
+
+/** Make the user's personal team current, creating it first if they have none. */
+export async function selectPersonalTeam() {
+	// A second call while the first is in flight would create a second team.
+	if (createPersonalTeam.loading) return
+	const name = await createPersonalTeam.submit().catch(() => null)
+	if (!name) return toast.error(__("Could not create your personal team"))
+	await reloadTeams()
+	selectTeam(name)
 }
 
 // Imperative POSTs: `immediate: false` means nothing fires until `.submit(params)`.

@@ -7,6 +7,10 @@ class NotATeamMember(NotPermitted):
 	message = _lt("You are not a member of this team.")
 
 
+class PersonalTeamsDisabled(NotPermitted):
+	message = _lt("Personal teams are not enabled on this site.")
+
+
 class CannotManageMembers(NotPermitted):
 	title = _lt("Not Permitted")
 	message = _lt("You cannot manage members of this team.")

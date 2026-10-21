@@ -5,6 +5,7 @@ from faker import Faker
 from frappe_factory_bot.frappe_factory_bot.base_factory import BaseFactory
 
 from buzz.events.doctype.buzz_team.buzz_team import BuzzTeam
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import IMPORT_FLAG
 from buzz.events.doctype.event_venue.event_venue import MULTIPLE_LOCATIONS_FLAG
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
 
@@ -25,7 +26,7 @@ class BuzzTeamFactory(BaseFactory[BuzzTeam]):
 		owner = user or UserFactory.create_once(LINK_TEAM_OWNER).name
 		team = cls.create(*traits, flags={"owner_user": owner}, **overrides)
 		# Flagged features are on in tests; a test about a flag turns it off.
-		cls.set_settings(team.name, {PAID_EVENTS_FLAG: 1, MULTIPLE_LOCATIONS_FLAG: 1})
+		cls.set_settings(team.name, {PAID_EVENTS_FLAG: 1, MULTIPLE_LOCATIONS_FLAG: 1, IMPORT_FLAG: 1})
 		return team
 
 	@classmethod

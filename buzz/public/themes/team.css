@@ -63,6 +63,42 @@
 	margin-bottom: 24px;
 }
 
+.timeline-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	padding: 48px 24px;
+	border: 1px dashed var(--outline-gray-2);
+	border-radius: var(--radius-xl);
+	text-align: center;
+}
+
+.timeline-empty-icon {
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	margin-bottom: 8px;
+	border-radius: var(--radius-full);
+	background: var(--surface-gray-2);
+	color: var(--ink-gray-5);
+}
+
+.timeline-empty-icon .icon {
+	width: 20px;
+	height: 20px;
+}
+
+.timeline-empty p {
+	margin: 0;
+}
+
+.timeline-empty-title {
+	color: var(--ink-gray-8);
+	font-weight: 500;
+}
+
 /* The dashboard timeline's rail: a dot at each day, a line fading down past its cards. */
 .team-day {
 	position: relative;

@@ -8,6 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "team_name",
+  "is_personal",
   "section_break_hvmt",
   "logo",
   "public_page_tab",
@@ -34,6 +35,15 @@
    "in_list_view": 1,
    "label": "Team Name",
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Hosts events in the owner's own name. The owner is its only member.",
+   "fieldname": "is_personal",
+   "fieldtype": "Check",
+   "label": "Is Personal",
+   "read_only": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "section_break_hvmt",
@@ -143,7 +153,7 @@
    "link_fieldname": "team"
   }
  ],
- "modified": "2026-10-08 12:00:00.000000",
+ "modified": "2026-10-20 23:43:49.827251",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Team",

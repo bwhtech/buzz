@@ -56,8 +56,8 @@ class TestTeamPageRender(IntegrationTestCase):
 
 		html = get_response_content(f"/{team.route}")
 
-		self.assertIn("No upcoming events.", html)
-		self.assertIn("No past events.", html)
+		self.assertIn("No upcoming events", html)
+		self.assertIn("No past events", html)
 
 	def test_unpublishing_takes_the_page_down_at_once(self):
 		team = self.published_team("Fleeting Builders")

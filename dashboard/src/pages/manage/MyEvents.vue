@@ -119,7 +119,7 @@ const emptyDescription = computed(() =>
 				</template>
 				<template #title>
 					<span class="text-lg font-semibold text-ink-gray-9">
-						{{ __("Welcome to your community calendar") }}
+						{{ __("Welcome to your calendar") }}
 					</span>
 				</template>
 			</Alert>

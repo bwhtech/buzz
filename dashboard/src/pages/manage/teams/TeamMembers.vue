@@ -4,10 +4,11 @@ import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
 import AddMembersDialog from "@/components/dashboard/teams/AddMembersDialog.vue"
+import PersonalMembers from "@/components/dashboard/teams/PersonalMembers.vue"
 import TeamMembersTable from "@/components/dashboard/teams/TeamMembersTable.vue"
 import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue"
 import TeamRoleGuide from "@/components/dashboard/teams/TeamRoleGuide.vue"
-import { reloadTeams, useTeamOverview } from "@/data/teams"
+import { isPersonalTeam, reloadTeams, useTeamOverview } from "@/data/teams"
 import { serverErrorMessage } from "@/utils/serverError"
 import { canManageMembers } from "@/utils/teamRoles"
 
@@ -15,6 +16,7 @@ const route = useRoute()
 const teamId = route.params.teamId as string
 const overview = useTeamOverview(teamId)
 
+const isPersonal = computed(() => isPersonalTeam(teamId))
 const canManage = computed(() => canManageMembers(overview.data?.my_role))
 const isAdding = ref(false)
 
@@ -29,29 +31,33 @@ async function refresh() {
 	<TeamPageHeader section="Members" />
 
 	<div class="m-auto flex w-full max-w-[800px] flex-col gap-6 p-4 max-md:pb-24">
-		<TeamRoleGuide />
+		<PersonalMembers v-if="isPersonal" />
 
-		<ErrorMessage v-if="overview.error" :message="serverErrorMessage(overview.error)" />
+		<template v-else>
+			<TeamRoleGuide />
 
-		<TeamMembersTable v-else-if="overview.data" :team="overview.data" @changed="refresh">
-			<template #actions>
-				<Button
-					v-if="canManage"
-					variant="subtle"
-					icon-left="lucide-plus"
-					:label="__('Add member')"
-					@click="isAdding = true"
-				/>
-			</template>
-		</TeamMembersTable>
+			<ErrorMessage v-if="overview.error" :message="serverErrorMessage(overview.error)" />
 
-		<ul v-else :aria-label="__('Loading members')">
-			<li v-for="row in 3" :key="row" class="flex items-center gap-3 py-2">
-				<Skeleton class="size-8 shrink-0 rounded-full" />
-				<Skeleton class="h-4 w-36 rounded-4" />
-				<Skeleton class="ml-auto h-4 w-16 rounded-4" />
-			</li>
-		</ul>
+			<TeamMembersTable v-else-if="overview.data" :team="overview.data" @changed="refresh">
+				<template #actions>
+					<Button
+						v-if="canManage"
+						variant="subtle"
+						icon-left="lucide-plus"
+						:label="__('Add member')"
+						@click="isAdding = true"
+					/>
+				</template>
+			</TeamMembersTable>
+
+			<ul v-else :aria-label="__('Loading members')">
+				<li v-for="row in 3" :key="row" class="flex items-center gap-3 py-2">
+					<Skeleton class="size-8 shrink-0 rounded-full" />
+					<Skeleton class="h-4 w-36 rounded-4" />
+					<Skeleton class="ml-auto h-4 w-16 rounded-4" />
+				</li>
+			</ul>
+		</template>
 	</div>
 
 	<AddMembersDialog v-model="isAdding" :team="teamId" @success="refresh" />

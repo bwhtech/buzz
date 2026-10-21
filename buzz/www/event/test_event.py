@@ -2,6 +2,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
+from buzz.events.doctype.buzz_team.buzz_team import create_personal_team_for
 from buzz.tests.factories import (
 	AdditionalEventPageFactory,
 	BuzzEventFactory,
@@ -87,6 +88,28 @@ class TestEventPage(IntegrationTestCase):
 		self.assertEqual(
 			[host.label for host in hosts], ["Event Page Team", "Acme Page Host", "Beta Page Host"]
 		)
+
+	def test_personal_team_is_hosted_by_its_owner(self):
+		user = UserFactory.create(first_name="Mira", last_name="Host", user_image="/files/mira.png").name
+		team = create_personal_team_for(user).name
+		event = BuzzEventFactory.create(team=team)
+
+		with self.change_settings("Buzz Settings", enable_personal_teams=1):
+			host = EventPage(event.route).as_context()["hosts"][0]
+
+		username = frappe.db.get_value("User", user, "username")
+		self.assertEqual(
+			(host.label, host.logo, host.url), ("Mira Host", "/files/mira.png", f"/u/{username}")
+		)
+
+	def test_personal_host_is_not_linked_while_personal_teams_are_off(self):
+		team = create_personal_team_for(UserFactory.create().name).name
+		event = BuzzEventFactory.create(team=team)
+
+		with self.change_settings("Buzz Settings", enable_personal_teams=0):
+			host = EventPage(event.route).as_context()["hosts"][0]
+
+		self.assertIsNone(host.url)
 
 	def test_links_keep_table_order_and_drop_unsafe_urls(self):
 		event = self.create_event()
