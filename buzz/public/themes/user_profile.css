@@ -1,0 +1,89 @@
+/* /u/<username>: a person's avatar, bio and links over their events. */
+
+.profile {
+	--profile-strong: var(--ink-gray-9);
+	--profile-muted: var(--ink-gray-5);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 680px;
+	margin: 0 auto;
+	padding: 56px 16px 96px;
+	color: var(--ink-gray-7);
+	font-family: "Inter", system-ui, sans-serif;
+	text-align: center;
+}
+
+.profile-avatar {
+	display: grid;
+	place-items: center;
+	width: 96px;
+	height: 96px;
+	margin-bottom: 20px;
+	border-radius: var(--radius-full);
+	object-fit: cover;
+	background: var(--surface-gray-2);
+	box-shadow: 0 0 0 1px var(--outline-gray-1);
+	color: var(--ink-gray-6);
+	font-size: 36px;
+	font-weight: 500;
+}
+
+.profile-name {
+	margin: 0;
+	color: var(--profile-strong);
+	font-size: 28px;
+	font-weight: 600;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
+	text-wrap: balance;
+}
+
+.profile-handle {
+	margin: 6px 0 0;
+	color: var(--profile-muted);
+}
+
+.profile-bio {
+	max-width: 56ch;
+	margin: 16px 0 0;
+	font-size: 15px;
+	text-wrap: pretty;
+}
+
+.profile-links {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 2px;
+	margin-top: 16px;
+}
+
+.profile-events {
+	width: 100%;
+	margin-top: 48px;
+	text-align: left;
+}
+
+/* The shared timeline cards, under centred tabs. Every event is the owner's, so no host line. */
+.profile [data-tab-buttons] {
+	width: fit-content;
+	margin: 0 auto 24px;
+}
+
+.profile .team-event-card-host {
+	display: none;
+}
+
+/* Espresso buttons and pills ship without press feedback. */
+.profile .es-button,
+.profile .es-pill {
+	transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.profile .es-button:active,
+.profile .es-pill:active {
+	transform: scale(0.97);
+}

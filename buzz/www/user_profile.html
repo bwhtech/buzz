@@ -1,1 +1,44 @@
-{% extends "buzz/events/doctype/buzz_team/templates/buzz_team.html" %}
+{% extends "buzz/templates/event_page/layout.html" %}
+
+{% block title %}{% autoescape true %}{{ title }}{% endautoescape %}{% endblock %}
+
+{% block meta_block %}{% autoescape true %}
+	<meta name="description" content="{{ meta.description }}">
+	<meta property="og:type" content="profile">
+	<meta property="og:site_name" content="{{ brand.name }}">
+	<meta property="og:title" content="{{ title }}">
+	<meta property="og:description" content="{{ meta.description }}">
+	<meta property="og:url" content="{{ meta.url }}">
+	{% if meta.image %}<meta property="og:image" content="{{ meta.image }}">{% endif %}
+	<meta name="twitter:card" content="summary">
+	<link rel="canonical" href="{{ meta.url }}">
+	<link rel="stylesheet" href="/assets/buzz/themes/team.css">
+	<link rel="stylesheet" href="/assets/buzz/themes/user_profile.css?v={{ build_version }}">
+{% endautoescape %}{% endblock %}
+
+{% block content %}{% autoescape true %}
+	{% from "buzz/templates/event_page/timeline.html" import timeline with context %}
+
+	<main class="profile">
+		{% if profile.user_image %}<img class="profile-avatar" src="{{ profile.user_image }}" alt="">{% else %}<span class="profile-avatar" aria-hidden="true">{{ profile.full_name[:1] | upper }}</span>{% endif %}
+		<h1 class="profile-name">{{ profile.full_name }}</h1>
+		<p class="profile-handle">@{{ profile.username }}{% if profile.location %} · {{ profile.location }}{% endif %}</p>
+		{% if profile.bio %}<p class="profile-bio">{{ profile.bio }}</p>{% endif %}
+		{% if links %}
+		<div class="profile-links">
+			{% for link in links %}
+			<a class="es-button" data-variant="ghost" data-size="md" data-icon-button="true" href="{{ link.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ link.label }}" title="{{ link.label }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true">{{ link.icon_svg | safe }}</svg></a>
+			{% endfor %}
+		</div>
+		{% endif %}
+
+		<section class="profile-events">
+			{{ timeline(upcoming_days, past_days) }}
+		</section>
+	</main>
+{% endautoescape %}{% endblock %}
+
+{% block script %}
+	{{ super() }}
+	<script src="{{ bundled_asset('user_profile.bundle.ts') }}" defer></script>
+{% endblock %}
