@@ -9,7 +9,9 @@ readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     # "frappe~=15.0.0" # Installed and managed by bench.
-    "qrcode[pil]~=8.2"
+    "qrcode[pil]~=8.2",
+    # Above frappe's Pillow pin for decoder security fixes.
+    "Pillow>=13.0.0",
 ]
 
 [build-system]
