@@ -64,7 +64,8 @@ class TestPersonalTeam(IntegrationTestCase):
 		first_name = f"Wren{frappe.generate_hash(length=4)}"
 		taken = UserFactory.create(first_name=first_name)
 		blank = UserFactory.create(first_name=first_name)
-		self.assertFalse(blank.username)
+		# Older Frappe leaves a taken first name's username blank; newer suffixes it.
+		frappe.db.set_value("User", blank.name, "username", None)
 
 		create_personal_team_for(blank.name)
 
