@@ -114,6 +114,15 @@ class TestAcceptProposal(IntegrationTestCase):
 
 		self.assertEqual(len(talk.speakers), 1)
 
+	def test_accepting_creates_an_account_for_a_speaker_without_one(self):
+		email = "accept-new-speaker@example.com"
+		proposal = TalkProposalFactory.create_as_guest(self.event, email).name
+
+		with self.set_user(self.manager):
+			accept_proposal(proposal)
+
+		self.assertTrue(frappe.db.exists("Speaker Profile", {"user": email}))
+
 	def test_accepting_twice_reuses_the_talk_rather_than_duplicating_it(self):
 		with self.set_user(self.manager):
 			first = accept_proposal(self.proposal)
