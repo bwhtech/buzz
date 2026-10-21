@@ -5,8 +5,8 @@ from frappe import _
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.proposals.services import are_proposals_closed
-from buzz.playground import main_event
-from buzz.playground.demo_data import PROPOSALS
+from buzz.playground import main_event, sandbox_teams
+from buzz.playground.demo_data import COMMUNITY_REQUESTS, PROPOSALS
 
 if TYPE_CHECKING:
 	from buzz.playground.doctype.playground_sandbox.playground_sandbox import PlaygroundSandbox
@@ -27,6 +27,16 @@ class PlaygroundChecklist:
 		self.own_event = frappe.db.get_value(
 			"Buzz Event",
 			{"team": self.team, "creation": [">", sandbox.creation]},
+			order_by="creation desc",
+		)
+		self.community = frappe.db.get_value(
+			"Buzz Team",
+			{
+				"name": ["in", sandbox_teams(sandbox)],
+				"is_published": 1,
+				"is_personal": 0,
+				"creation": [">", sandbox.creation],
+			},
 			order_by="creation desc",
 		)
 
@@ -212,38 +222,59 @@ class PlaygroundChecklist:
 		return self.group("sponsors", _("Bring in sponsors"), steps)
 
 	def community_group(self) -> dict:
-		slug = frappe.db.get_value("Buzz Team", self.team, "slug")
+		community = self.community
+		manage = f"/b/manage/communities/{community}/events"
+		seeded = [request[0] for request in COMMUNITY_REQUESTS]
 		steps = [
 			self.step(
 				"approve_request",
 				_("Approve an event request"),
 				_("Other hosts asked to list events on your community. Approve one."),
-				f"/b/manage/communities/{self.team}/events",
-				self.exists(
+				manage,
+				community
+				and self.exists(
 					"Community Event Request",
-					community=self.team,
+					community=community,
 					status="Approved",
-					creation=["<", self.sandbox.creation],
+					event_title=["in", seeded],
 				),
 			),
 			self.step(
 				"add_external_event",
 				_("Add an event from elsewhere"),
 				_("List an event hosted on another site."),
-				f"/b/manage/communities/{self.team}/events",
-				self.added("Community Event Request", community=self.team, is_external_event=1),
+				manage,
+				community
+				and self.exists(
+					"Community Event Request",
+					community=community,
+					is_external_event=1,
+					event_title=["not in", seeded],
+				),
 				optional=True,
 			),
 			self.step(
 				"view_community_page",
 				_("See your community page"),
 				_("Your events and the ones you approved, on one public page."),
-				f"/community/{slug}",
+				f"/community/{community and frappe.db.get_value('Buzz Team', community, 'slug')}",
 				False,
 				completes_on="visit",
 			),
 		]
-		return self.group("community", _("Grow your community"), steps)
+		for step in steps:
+			step["locked"] = not community
+		create = self.step(
+			"create_community",
+			_("Create a community"),
+			_(
+				"A community is your public page: your events, plus ones other hosts ask to list"
+				" with you. Pick a URL and a name to make yours."
+			),
+			"/community",
+			bool(community),
+		)
+		return self.group("community", _("Grow your community"), [create, *steps])
 
 	def team_group(self) -> dict:
 		team = f"/b/manage/communities/{self.team}"
@@ -320,6 +351,7 @@ class PlaygroundChecklist:
 			"add_tier": "Add Tier",
 			"add_sponsor": "Add Manually",
 			"review_enquiry": "Initech",
+			"create_community": _("Create a community"),
 			"approve_request": _("Approve"),
 			"add_external_event": _("Add Event"),
 			"invite_collaborator": _("Invite collaborator"),

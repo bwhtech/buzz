@@ -1,7 +1,7 @@
 import frappe
 from frappe.utils import now_datetime
 
-from buzz.playground import is_playground
+from buzz.playground import is_playground, sandbox_teams
 
 
 def delete_expired_sandboxes():
@@ -26,10 +26,11 @@ def delete_sandbox(name: str):
 	Raw deletes, because bookings and tickets are submitted and `delete_doc` refuses them.
 	"""
 	sandbox = frappe.get_doc("Playground Sandbox", name)
-	events = frappe.get_all("Buzz Event", filters={"team": sandbox.team}, pluck="name")
+	teams = sandbox_teams(sandbox)
+	events = frappe.get_all("Buzz Event", filters={"team": ["in", teams]}, pluck="name")
 	delete_records_linked_to("Buzz Event", events)
-	delete_records_linked_to("Buzz Team", [sandbox.team])
-	delete_records("Buzz Team", [sandbox.team])
+	delete_records_linked_to("Buzz Team", teams)
+	delete_records("Buzz Team", teams)
 	delete_records("Playground Email", frappe.get_all("Playground Email", {"sandbox": name}, pluck="name"))
 	sandbox.delete(ignore_permissions=True)
 	for user in sandbox.personas:

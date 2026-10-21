@@ -44,9 +44,22 @@ def add_noindex_header(response, request):
 
 
 def configure_site():
-	"""Frappe stores rendered PDFs on the Email Queue as the sender, which a visitor cannot write to."""
+	"""Frappe stores rendered PDFs on the Email Queue as the sender, which a visitor cannot write to.
+
+	Communities are on, so a visitor can create one from /community.
+	"""
 	if frappe.db.get_single_value("System Settings", "store_attached_pdf_document"):
 		frappe.db.set_single_value("System Settings", "store_attached_pdf_document", 0)
+	if not frappe.db.get_single_value("Buzz Settings", "enable_communities"):
+		frappe.db.set_single_value("Buzz Settings", "enable_communities", 1)
+
+
+def sandbox_teams(sandbox) -> list[str]:
+	"""The seeded team plus every community the organizer created."""
+	owned = frappe.get_all(
+		"Buzz Team Membership", {"user": sandbox.organizer, "team_role": "Owner"}, pluck="team"
+	)
+	return list({sandbox.team, *owned})
 
 
 def main_event(sandbox) -> dict | None:

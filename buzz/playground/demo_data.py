@@ -2,6 +2,7 @@ import frappe
 from frappe.utils import add_days, add_to_date, now_datetime, today
 
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
+from buzz.playground import is_playground, sandbox_of
 
 CATEGORY = "Technology"
 LOGO = "/assets/buzz/images/buzz-logo.png"
@@ -27,8 +28,8 @@ PROPOSALS = (
 	("Postgres tricks for busy launches", "Marco", "Rossi"),
 )
 COMMUNITY_REQUESTS = (
-	("Bangalore JS Night", "JS Bangalore", "https://example.com/js-night", 10),
-	("Design Systems Meetup", "Pixel Club", "https://example.com/design-systems", 21),
+	("FOSS Meetup Bengaluru", "FOSS United", "https://fossunited.org", 10),
+	("Frappe Developer Meetup", "Frappe", "https://frappe.io", 21),
 )
 
 
@@ -51,7 +52,6 @@ class DemoData:
 			category = frappe.get_doc({"doctype": "Event Category", "name": CATEGORY})
 			category.insert(ignore_permissions=True, ignore_if_duplicate=True)
 			self.host = insert("Event Host", host_name="Acme Community", team=self.team).name
-			self.publish_community()
 			conference = self.create_conference()
 			self.create_meetup()
 			self.create_past_event()
@@ -128,16 +128,12 @@ class DemoData:
 		return event
 
 	def create_meetup(self):
-		event = self.create_event(
-			"Frontend Meetup", 14, medium="Online", meeting_link="https://meet.example.com/buzz"
-		)
+		event = self.create_event("Frontend Meetup", 14, medium="Online", meeting_link="https://bwh.tech")
 		ticket_type = self.ticket_type(event, "Free", 0, max_tickets_available=50)
 		self.book(event, ticket_type, GUESTS[3:9])
 
 	def create_past_event(self):
-		event = self.create_event(
-			"Open Source Day", -20, medium="Online", meeting_link="https://meet.example.com/osd"
-		)
+		event = self.create_event("Open Source Day", -20, medium="Online", meeting_link="https://bwh.tech")
 		tickets = self.book(event, self.ticket_type(event, "Free", 0), GUESTS[:4])
 		for ticket in tickets[:3]:
 			insert("Event Check In", event=event, ticket=ticket).submit()
@@ -174,24 +170,6 @@ class DemoData:
 				submitted_by="Guest",
 			)
 
-	def publish_community(self):
-		team = frappe.get_doc("Buzz Team", self.team)
-		team.update({"is_published": 1, "accept_community_submissions": 1})
-		team.save(ignore_permissions=True)
-		for title, host, url, days_from_today in COMMUNITY_REQUESTS:
-			starts_at = add_to_date(now_datetime(), days=days_from_today)
-			insert(
-				"Community Event Request",
-				community=self.team,
-				is_external_event=1,
-				event_title=title,
-				host=host,
-				event_url=url,
-				event_location="Bengaluru",
-				start_datetime=starts_at,
-				end_datetime=add_to_date(starts_at, hours=3),
-			)
-
 	def create_talks(self, event: str):
 		for title in ("Shipping with Frappe", "Designing for events", "Scaling ticket sales"):
 			insert("Event Talk", event=event, title=title, submitted_by=self.organizer)
@@ -222,3 +200,22 @@ class DemoData:
 		booking.insert()
 		booking.submit()
 		return frappe.get_all("Event Ticket", filters={"booking": booking.name}, pluck="name")
+
+
+def seed_community_requests(team, method=None):
+	"""A community the visitor creates gets event requests from other hosts to review."""
+	if not (is_playground() and team.is_published and sandbox_of(frappe.session.user)):
+		return
+	for title, host, url, days_from_today in COMMUNITY_REQUESTS:
+		starts_at = add_to_date(now_datetime(), days=days_from_today)
+		insert(
+			"Community Event Request",
+			community=team.name,
+			is_external_event=1,
+			event_title=title,
+			host=host,
+			event_url=url,
+			event_location="Bengaluru",
+			start_datetime=starts_at,
+			end_datetime=add_to_date(starts_at, hours=3),
+		)

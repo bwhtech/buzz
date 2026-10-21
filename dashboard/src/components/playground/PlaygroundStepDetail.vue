@@ -27,6 +27,8 @@ const personaLabels: Record<string, string> = {
 			icon-right="lucide-arrow-right"
 			@click="emit('go', step)"
 		/>
-		<span v-else class="text-p-sm text-ink-gray-5">{{ __("Create an event first.") }}</span>
+		<span v-else class="text-p-sm text-ink-gray-5">{{
+			__("Finish the first step in this group to unlock this.")
+		}}</span>
 	</div>
 </template>

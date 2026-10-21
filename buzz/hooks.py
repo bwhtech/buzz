@@ -104,6 +104,7 @@ for _doctype in taggable_doctypes:
 commentable_doctypes = ["Talk Proposal"]
 doc_events["Communication"] = {"after_insert": "buzz.comments.notify_team_of_email"}
 doc_events["Email Queue"] = {"after_insert": "buzz.playground.inbox.capture_email"}
+doc_events.setdefault("Buzz Team", {})["after_insert"] = "buzz.playground.demo_data.seed_community_requests"
 extend_doctype_class = {"Comment": ["buzz.comments.TeamComment"]}
 
 fixtures = [
