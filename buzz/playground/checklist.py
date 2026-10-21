@@ -47,7 +47,7 @@ class PlaygroundChecklist:
 			self.conference_group(),
 			self.sponsor_group(),
 			self.community_group(),
-			self.team_group(),
+			self.collaborator_group(),
 		]
 
 	def launch_group(self) -> dict:
@@ -177,6 +177,14 @@ class PlaygroundChecklist:
 				self.added("Event Check In", event=["in", self.events]),
 				persona="front_desk",
 			),
+			self.step(
+				"add_tax_details",
+				_("Add tax details"),
+				_("Legal name and tax ID go on invoices."),
+				f"/b/manage/communities/{self.team}/payments",
+				self.exists("Buzz Team Settings", name=self.team, tax_id=["is", "set"]),
+				optional=True,
+			),
 		]
 		return self.group(
 			"conference",
@@ -227,6 +235,16 @@ class PlaygroundChecklist:
 		seeded = [request[0] for request in COMMUNITY_REQUESTS]
 		steps = [
 			self.step(
+				"add_member",
+				_("Add a team member"),
+				_(
+					"Invite a teammate by email and pick their role. The role decides what they can"
+					" change, from running the whole community to only checking guests in."
+				),
+				f"/b/manage/communities/{community}/members",
+				community and self.has_teammate(community),
+			),
+			self.step(
 				"approve_request",
 				_("Approve an event request"),
 				_("Other hosts asked to list events on your community. Approve one."),
@@ -276,35 +294,20 @@ class PlaygroundChecklist:
 		)
 		return self.group("community", _("Grow your community"), [create, *steps])
 
-	def team_group(self) -> dict:
-		team = f"/b/manage/communities/{self.team}"
+	def collaborator_group(self) -> dict:
 		steps = [
 			self.step(
 				"invite_collaborator",
 				_("Invite a collaborator"),
-				_("Give someone outside your team access to parts of an event."),
+				_(
+					"Give someone outside your team access to parts of one event, such as talks or"
+					" check-in, without making them a team member."
+				),
 				f"/b/manage/events/{self.conference.name}/settings",
 				self.exists("Buzz Event Collaborator", event=self.conference.name),
 			),
-			self.step(
-				"add_member",
-				_("Add a team member"),
-				_("Invite a teammate by email."),
-				f"{team}/members",
-				self.added("Buzz Team Membership", team=self.team)
-				or self.added("User Invitation", app_name="buzz"),
-				optional=True,
-			),
-			self.step(
-				"add_tax_details",
-				_("Add tax details"),
-				_("Legal name and tax ID go on invoices."),
-				f"{team}/payments",
-				self.exists("Buzz Team Settings", name=self.team, tax_id=["is", "set"]),
-				optional=True,
-			),
 		]
-		return self.group("team", _("Work with your team"), steps)
+		return self.group("collaborators", _("Work with collaborators"), steps)
 
 	def group(self, name: str, title: str, steps: list[dict]) -> dict:
 		return {"name": name, "title": title, "steps": steps}
@@ -357,6 +360,12 @@ class PlaygroundChecklist:
 			"invite_collaborator": _("Invite collaborator"),
 			"add_member": _("Add member"),
 		}
+
+	def has_teammate(self, community: str) -> bool:
+		"""Someone besides the organizer joined, or was invited to, the community."""
+		return self.exists(
+			"Buzz Team Membership", team=community, user=["!=", self.sandbox.organizer]
+		) or self.exists("User Invitation", buzz_team=community, app_name="buzz")
 
 	def exists(self, doctype: str, **filters) -> bool:
 		return bool(frappe.db.exists(doctype, filters))
