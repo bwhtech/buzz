@@ -226,7 +226,8 @@ class TeamPage:
 		}
 
 	def manage_url(self) -> str | None:
-		if frappe.has_permission("Buzz Team", "write", self.team):
+		# Team Owners and Admins lack doctype write, which only System Manager holds
+		if self.is_organizer() or frappe.has_permission("Buzz Team", "write", self.team):
 			return f"/b/manage/communities/{self.team.name}"
 
 	def is_organizer(self) -> bool:
