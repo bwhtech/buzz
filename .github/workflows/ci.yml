@@ -69,6 +69,8 @@ jobs:
           # test_buzz_event imports zoom_integration.tests.zoom_fixtures.
           extra-app-url: https://github.com/bwhtech/zoom_integration
           frappe-branch: ${{ matrix.frappe-branch }}
+          # Deploys build with version-16's older esbuild, which rejects syntax develop accepts.
+          build-assets: ${{ matrix.frappe-branch == 'version-16' }}
 
       - name: Run Tests
         working-directory: /home/runner/frappe-bench

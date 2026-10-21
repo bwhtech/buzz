@@ -7,7 +7,7 @@ inputs:
     required: false
     default: "test_site"
   build-assets:
-    description: "Run `bench build`. Only needed by jobs that hit the UI."
+    description: "Run `bench build`. Needed by jobs that hit the UI or check the build."
     required: false
     default: "false"
   extra-app-url:
