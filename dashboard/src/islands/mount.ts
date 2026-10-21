@@ -11,6 +11,7 @@ const ISLANDS: Record<string, Loader> = {
 	"add-event": () => import("@/components/dashboard/teams/AddEventMenu.vue"),
 	"create-community": () => import("./create-community/CreateCommunityIsland.vue"),
 	login: () => import("./LoginIsland.vue"),
+	playground: () => import("@/components/playground/PlaygroundBar.vue"),
 }
 
 // As in the SPA: createResource posts to /api/method/<url>, not a GET on the bare url.

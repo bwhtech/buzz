@@ -81,4 +81,9 @@
 {% block script %}
 	{% set island = island_script() %}
 	{% if island %}<script type="module" src="{{ island }}"></script>{% endif %}
+	{% set playground = playground_boot() %}
+	{% if island and playground and playground.hours_left is not none %}
+	<script>window.playground = {{ playground | tojson }}</script>
+	<div data-island="playground" data-island-auto hidden></div>
+	{% endif %}
 {% endblock %}

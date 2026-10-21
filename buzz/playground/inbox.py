@@ -1,3 +1,4 @@
+import base64
 import email
 from email import policy
 from email.message import EmailMessage
@@ -61,7 +62,19 @@ class CapturedEmail:
 		if not part:
 			return ""
 		content = part.get_content()
-		return content if part.get_content_subtype() == "html" else f"<pre>{escape(content)}</pre>"
+		if part.get_content_subtype() != "html":
+			return f"<pre>{escape(content)}</pre>"
+		return self.inline_images(content)
+
+	def inline_images(self, html: str) -> str:
+		"""The inbox frame cannot resolve `cid:` links, so inline images go in as data URIs."""
+		for part in self.message.walk():
+			if content_id := part.get("Content-ID"):
+				data = base64.b64encode(part.get_payload(decode=True)).decode()
+				html = html.replace(
+					f"cid:{content_id.strip('<>')}", f"data:{part.get_content_type()};base64,{data}"
+				)
+		return html
 
 	def save_attachments(self, email_name: str):
 		for part in self.message.iter_attachments():

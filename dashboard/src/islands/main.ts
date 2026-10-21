@@ -12,6 +12,11 @@ for (const trigger of triggers) {
 	})
 }
 
+// Islands that open with the page rather than on a click, such as the playground bar.
+for (const trigger of document.querySelectorAll<HTMLElement>("[data-island-auto]")) {
+	import("./mount").then(({ openIsland }) => openIsland(trigger))
+}
+
 type Connection = { saveData?: boolean; effectiveType?: string }
 const connection = (navigator as Navigator & { connection?: Connection }).connection
 

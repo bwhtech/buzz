@@ -81,7 +81,7 @@ onBeforeUnmount(() => socket?.off("playground_email", onEmail))
 			v-if="playground?.signup_url"
 			variant="solid"
 			class="rounded-full"
-			:link="playground.signup_url"
+			:href="playground.signup_url"
 		>
 			<span class="sm:hidden">{{ __("Sign up") }}</span>
 			<span class="hidden sm:inline">{{ __("Create your real account") }}</span>
