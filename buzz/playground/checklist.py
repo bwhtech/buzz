@@ -254,8 +254,7 @@ class PlaygroundChecklist:
 				"add_member",
 				_("Add a team member"),
 				_(
-					"Invite a teammate by email and pick their role. The role decides what they can"
-					" change, from running the whole community to only checking guests in."
+					"Invite a teammate by email and pick their role. The role decides what they can change, from running the whole community to only checking guests in."
 				),
 				f"/b/manage/communities/{community}/members",
 				community and self.has_teammate(community),
@@ -305,8 +304,7 @@ class PlaygroundChecklist:
 			"create_community",
 			_("Create a community"),
 			_(
-				"A community is your public page: your events, plus ones other hosts ask to list"
-				" with you. Pick a URL and a name to make yours."
+				"A community is your public page: your events, plus ones other hosts ask to list with you. Pick a URL and a name to make yours."
 			),
 			"/community",
 			bool(community),
@@ -320,8 +318,7 @@ class PlaygroundChecklist:
 				"invite_collaborator",
 				_("Invite a collaborator"),
 				_(
-					"Give someone outside your team access to parts of one event, such as talks or"
-					" check-in, without making them a team member."
+					"Give someone outside your team access to parts of one event, such as talks or check-in, without making them a team member."
 				),
 				f"/b/manage/events/{self.conference.name}/settings",
 				self.exists("Buzz Event Collaborator", event=self.conference.name),
