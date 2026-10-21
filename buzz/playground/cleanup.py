@@ -58,8 +58,9 @@ def delete_records(doctype: str, names: list):
 	files = frappe.get_all(
 		"File", filters={"attached_to_doctype": doctype, "attached_to_name": ["in", names]}, pluck="name"
 	)
-	for file in files:
-		frappe.delete_doc("File", file, ignore_permissions=True)
 	for table in frappe.get_meta(doctype).get_table_fields():
 		frappe.db.delete(table.options, {"parent": ["in", names], "parenttype": doctype})
 	frappe.db.delete(doctype, {"name": ["in", names]})
+	# After the records: File refuses to delete while a record's Attach field still points to it.
+	for file in files:
+		frappe.delete_doc("File", file, ignore_permissions=True)
