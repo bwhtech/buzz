@@ -69,8 +69,8 @@ class CapturedEmail:
 	def inline_images(self, html: str) -> str:
 		"""The inbox frame cannot resolve `cid:` links, so inline images go in as data URIs."""
 		for part in self.message.walk():
-			if content_id := part.get("Content-ID"):
-				data = base64.b64encode(part.get_payload(decode=True)).decode()
+			if (content_id := part.get("Content-ID")) and (payload := part.get_payload(decode=True)):
+				data = base64.b64encode(payload).decode()
 				html = html.replace(
 					f"cid:{content_id.strip('<>')}", f"data:{part.get_content_type()};base64,{data}"
 				)

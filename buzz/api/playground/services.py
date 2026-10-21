@@ -85,7 +85,7 @@ def landing_page(sandbox: "PlaygroundSandbox", persona: str) -> str:
 			"route",
 			order_by="start_date desc",
 		)
-		return f"/events/{route}"
+		return f"/events/{route}" if route else "/events"
 	return "/b/manage"
 
 
@@ -133,12 +133,13 @@ def attachments_by_email(emails: list[str]) -> dict[str, list[InboxAttachment]]:
 
 
 def download_attachment(file_name: str):
-	file = frappe.get_doc("File", file_name)
-	sandbox = file.attached_to_doctype == "Playground Email" and frappe.db.get_value(
-		"Playground Email", file.attached_to_name, "sandbox"
+	sandbox = require_sandbox().name
+	email = frappe.db.get_value(
+		"File", {"name": file_name, "attached_to_doctype": "Playground Email"}, "attached_to_name"
 	)
-	if sandbox != require_sandbox().name:
+	if not email or frappe.db.get_value("Playground Email", email, "sandbox") != sandbox:
 		NotInSandbox.throw()
+	file = frappe.get_doc("File", file_name)
 	frappe.local.response.update(
 		{"type": "download", "filename": file.file_name, "filecontent": file.get_content()}
 	)

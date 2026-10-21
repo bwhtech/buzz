@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, useCall } from "frappe-ui"
+import { Button, ErrorMessage, useCall } from "frappe-ui"
 
 import { serverErrorMessage } from "@/utils/serverError"
 
@@ -32,6 +32,6 @@ const start = useCall<{ redirect_to: string }>({
 		>
 			{{ __("Start exploring") }}
 		</Button>
-		<p v-else class="text-base text-ink-red-4">{{ serverErrorMessage(start.error) }}</p>
+		<ErrorMessage v-else :message="serverErrorMessage(start.error)" />
 	</div>
 </template>

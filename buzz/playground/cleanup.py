@@ -36,7 +36,7 @@ def delete_sandbox(name: str):
 		frappe.delete_doc("User", user, force=True, ignore_permissions=True)
 
 
-# ponytail: only direct links to the event or team; records two hops away (payments) stay behind.
+# Only direct links to the event or team; records two hops away (payments) stay behind.
 def delete_records_linked_to(doctype: str, names: list):
 	if not names:
 		return
