@@ -171,13 +171,18 @@ class TalkProposal(Document):
 							"user_type": "Website User",
 						}
 					)
-					.insert()
+					# Checked above: only System Manager may create a User, not the event's team.
+					.insert(ignore_permissions=True)
 					.name
 				)
 
 			speaker_profile = frappe.db.exists("Speaker Profile", {"user": user})
 			if not speaker_profile:
-				speaker_profile = frappe.get_doc({"doctype": "Speaker Profile", "user": user}).insert().name
+				speaker_profile = (
+					frappe.get_doc({"doctype": "Speaker Profile", "user": user})
+					.insert(ignore_permissions=True)
+					.name
+				)
 
 			talk.append("speakers", {"speaker": speaker_profile})
 
