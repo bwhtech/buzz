@@ -4,27 +4,31 @@ import { reducedMotion } from "../team_page/page_data"
 import { MarkerReveal } from "./markers"
 
 type Globe = ReturnType<typeof createGlobe>
+type ThemeOptions = Pick<
+	COBEOptions,
+	"dark" | "diffuse" | "mapBrightness" | "baseColor" | "glowColor"
+>
 
 const ACCENT: [number, number, number] = [0.95, 0.42, 0.1]
 const AUTO_ROTATE_SPEED = 0.0028
 const DRAG_SENSITIVITY = 220
 const MOMENTUM_DECAY = 0.94
 
-const LIGHT = {
+const LIGHT: ThemeOptions = {
 	dark: 0,
 	diffuse: 0.6,
 	mapBrightness: 1.4,
 	baseColor: [1, 1, 1],
 	glowColor: [0.96, 0.96, 0.96],
-} satisfies Partial<COBEOptions>
+}
 
-const DARK = {
+const DARK: ThemeOptions = {
 	dark: 1,
 	diffuse: 1.4,
 	mapBrightness: 5,
 	baseColor: [0.32, 0.32, 0.32],
 	glowColor: [0.16, 0.16, 0.16],
-} satisfies Partial<COBEOptions>
+}
 
 // A draggable globe that drifts on its own, keeps a flick's momentum, and redraws when the page
 // switches between light and dark.
