@@ -34,8 +34,8 @@ def listing_filters() -> dict:
 	if not is_playground():
 		return {}
 	sandbox = sandbox_of(frappe.session.user)
-	team = sandbox and frappe.db.get_value("Playground Sandbox", sandbox, "team")
-	return {"team": ["in", [team or ""]]}
+	teams = sandbox_teams(frappe.get_doc("Playground Sandbox", sandbox)) if sandbox else []
+	return {"team": ["in", teams or [""]]}
 
 
 def add_noindex_header(response, request):
