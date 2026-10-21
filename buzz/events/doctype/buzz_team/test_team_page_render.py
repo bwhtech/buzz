@@ -4,7 +4,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.website.serve import get_response, get_response_content
 
-from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory
+from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, UserFactory
 
 
 class TestTeamPageRender(IntegrationTestCase):
@@ -50,6 +50,14 @@ class TestTeamPageRender(IntegrationTestCase):
 		self.assertNotIn(dashboard, get_response_content(f"/{team.route}"))
 		frappe.set_user("Administrator")
 		self.assertIn(dashboard, get_response_content(f"/{team.route}"))
+
+	def test_a_team_owner_is_offered_the_dashboard(self):
+		owner = UserFactory.create_once("community-page-owner@example.com").name
+		frappe.set_user("Administrator")
+		team = BuzzTeamFactory.create_owned_by(owner, team_name="Owned Builders", is_published=1)
+		frappe.set_user(owner)
+
+		self.assertIn(f'href="/b/manage/communities/{team.name}"', get_response_content(f"/{team.route}"))
 
 	def test_a_team_with_no_events_still_renders(self):
 		team = self.published_team("Empty Builders")
