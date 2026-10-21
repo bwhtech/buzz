@@ -69,6 +69,7 @@
 
 /* The shared timeline cards, under centred tabs. Every event is the owner's, so no host line. */
 .profile [data-tab-buttons] {
+	display: flex;
 	width: fit-content;
 	margin: 0 auto 24px;
 }
