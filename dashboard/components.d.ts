@@ -154,6 +154,7 @@ declare module 'vue' {
     PersonalTeamCard: typeof import('./src/components/dashboard/teams/PersonalTeamCard.vue')['default']
     PhoneInput: typeof import('./src/components/PhoneInput.vue')['default']
     PlaygroundBar: typeof import('./src/components/playground/PlaygroundBar.vue')['default']
+    PlaygroundChecklist: typeof import('./src/components/playground/PlaygroundChecklist.vue')['default']
     PlaygroundInbox: typeof import('./src/components/playground/PlaygroundInbox.vue')['default']
     PreferencesPanel: typeof import('./src/components/settings/PreferencesPanel.vue')['default']
     PrefixedInput: typeof import('./src/components/common/PrefixedInput.vue')['default']

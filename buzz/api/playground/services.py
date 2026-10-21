@@ -1,13 +1,14 @@
 from typing import TYPE_CHECKING
 
 import frappe
-from frappe.utils import add_to_date, now_datetime, today
+from frappe.utils import add_to_date, now_datetime
 
 from buzz.api.playground.exceptions import NotInSandbox, PlaygroundDisabled, UnknownPersona
-from buzz.api.playground.schemas import InboxAttachment, InboxEmail, RedirectResponse
+from buzz.api.playground.schemas import ChecklistStep, InboxAttachment, InboxEmail, RedirectResponse
 from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
-from buzz.playground import configure_site, is_playground, sandbox_of
+from buzz.playground import configure_site, is_playground, main_event, sandbox_of
+from buzz.playground.checklist import PlaygroundChecklist
 from buzz.playground.cleanup import delete_sandbox
 from buzz.playground.demo_data import DemoData
 
@@ -36,10 +37,18 @@ def reset() -> RedirectResponse:
 	return response
 
 
-def switch_persona(persona: str) -> RedirectResponse:
+def switch_persona(persona: str, redirect_to: str | None = None) -> RedirectResponse:
 	if persona not in PERSONAS:
 		UnknownPersona.throw(persona=persona)
-	return log_in(require_sandbox(), persona)
+	response = log_in(require_sandbox(), persona)
+	# Same-site paths only, so the endpoint never redirects off the playground.
+	if redirect_to and redirect_to.startswith("/") and not redirect_to.startswith(("//", "/\\")):
+		response.redirect_to = redirect_to
+	return response
+
+
+def get_checklist() -> list[ChecklistStep]:
+	return [ChecklistStep(**step) for step in PlaygroundChecklist(require_sandbox()).steps()]
 
 
 def create_sandbox() -> "PlaygroundSandbox":
@@ -79,13 +88,8 @@ def landing_page(sandbox: "PlaygroundSandbox", persona: str) -> str:
 	if persona == "front_desk":
 		return "/b/check-in"
 	if persona == "attendee":
-		route = frappe.db.get_value(
-			"Buzz Event",
-			{"team": sandbox.team, "start_date": [">=", today()]},
-			"route",
-			order_by="start_date desc",
-		)
-		return f"/events/{route}" if route else "/events"
+		event = main_event(sandbox.team)
+		return f"/events/{event.route}" if event else "/events"
 	return "/b/manage"
 
 

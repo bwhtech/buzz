@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import cint, now_datetime, time_diff_in_hours
+from frappe.utils import cint, now_datetime, time_diff_in_hours, today
 
 
 def is_playground() -> bool:
@@ -28,7 +28,32 @@ def playground_boot() -> dict | None:
 	}
 
 
+def listing_filters() -> dict:
+	"""Public listings on a playground show only the viewer's own sandbox, never other visitors'."""
+	if not is_playground():
+		return {}
+	sandbox = sandbox_of(frappe.session.user)
+	team = sandbox and frappe.db.get_value("Playground Sandbox", sandbox, "team")
+	return {"team": ["in", [team or ""]]}
+
+
+def add_noindex_header(response, request):
+	if is_playground():
+		response.headers["X-Robots-Tag"] = "noindex, nofollow"
+
+
 def configure_site():
 	"""Frappe stores rendered PDFs on the Email Queue as the sender, which a visitor cannot write to."""
 	if frappe.db.get_single_value("System Settings", "store_attached_pdf_document"):
 		frappe.db.set_single_value("System Settings", "store_attached_pdf_document", 0)
+
+
+def main_event(team: str) -> dict | None:
+	"""The sandbox's furthest upcoming event, which the attendee and checklist steps point at."""
+	return frappe.db.get_value(
+		"Buzz Event",
+		{"team": team, "start_date": [">=", today()]},
+		["name", "route"],
+		as_dict=True,
+		order_by="start_date desc",
+	)

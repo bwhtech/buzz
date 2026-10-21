@@ -4,6 +4,7 @@ import { onBeforeUnmount, ref } from "vue"
 
 import { useSocket } from "@/socket"
 
+import PlaygroundChecklist from "./PlaygroundChecklist.vue"
 import PlaygroundInbox from "./PlaygroundInbox.vue"
 
 const playground = window.playground
@@ -49,7 +50,7 @@ onBeforeUnmount(() => socket?.off("playground_email", onEmail))
 <template>
 	<!-- Phones: left-aligned above the bottom tab bar, beside the floating create button. -->
 	<div
-		class="fixed bottom-20 left-4 z-50 flex items-center gap-1 rounded-full border border-outline-gray-2 bg-surface-white p-1 shadow-xl sm:bottom-4 sm:left-1/2 sm:-translate-x-1/2 sm:pl-4"
+		class="fixed bottom-20 left-4 z-50 flex items-center gap-1 rounded-full border border-outline-gray-2 bg-surface-elevation-2 p-1 shadow-xl sm:bottom-4 sm:left-1/2 sm:-translate-x-1/2 sm:pl-4"
 	>
 		<span class="hidden whitespace-nowrap text-sm text-ink-gray-7 sm:inline">
 			{{ __("Playground · resets in {0}h", [playground?.hours_left]) }}
@@ -88,4 +89,6 @@ onBeforeUnmount(() => socket?.off("playground_email", onEmail))
 		</Button>
 	</div>
 	<PlaygroundInbox v-model="inboxOpen" />
+	<!-- Outside the bar: its translate would anchor this fixed card to the bar. -->
+	<PlaygroundChecklist />
 </template>

@@ -88,6 +88,14 @@ class DemoData:
 			user_selects_option=1,
 		)
 		insert("Ticket Add-on", event=event, title="Workshop pass", price=499)
+		# Paid tickets book without a payment gateway; the organizer confirms them.
+		insert(
+			"Offline Payment Method",
+			event=event,
+			title="Pay at the venue",
+			enabled=1,
+			description="Pay at the registration desk. The organizer confirms your booking.",
+		)
 		insert(
 			"Buzz Coupon Code",
 			coupon_type="Discount",

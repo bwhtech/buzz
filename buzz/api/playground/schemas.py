@@ -5,6 +5,14 @@ class RedirectResponse(APIResponse):
 	redirect_to: str
 
 
+class ChecklistStep(APIResponse):
+	name: str
+	title: str
+	persona: str
+	path: str
+	completed: bool
+
+
 class InboxAttachment(APIResponse):
 	name: str
 	file_name: str

@@ -16,6 +16,7 @@ from frappe.utils import (
 	today,
 )
 
+from buzz.playground import listing_filters
 from buzz.www.event.index import format_day, not_found
 from buzz.www.site_header import apply_site_context
 
@@ -55,7 +56,8 @@ def hosting_banner_visible(is_guest: bool) -> bool:
 
 def upcoming_filters() -> dict:
 	# A day of slack for events in timezones behind the site's; exclude_ended_events makes the exact cut.
-	return {"is_published": 1, "route": ["is", "set"], "end_date": [">=", add_days(today(), -1)]}
+	filters = {"is_published": 1, "route": ["is", "set"], "end_date": [">=", add_days(today(), -1)]}
+	return filters | listing_filters()
 
 
 def current_time_in_event_timezone(event) -> datetime:

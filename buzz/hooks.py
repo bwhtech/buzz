@@ -353,7 +353,7 @@ override_whitelisted_methods = {
 # Request Events
 # ----------------
 # before_request = ["events.utils.before_request"]
-# after_request = ["events.utils.after_request"]
+after_request = ["buzz.playground.add_noindex_header"]
 
 # Job Events
 # ----------
