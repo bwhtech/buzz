@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import add_days, add_to_date, now_datetime, today
+from frappe.utils import add_days, add_to_date, get_datetime, today
 
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
 from buzz.playground import is_playground, sandbox_of
@@ -207,7 +207,7 @@ def seed_community_requests(team, method=None):
 	if not (is_playground() and team.is_published and sandbox_of(frappe.session.user)):
 		return
 	for title, host, url, days_from_today in COMMUNITY_REQUESTS:
-		starts_at = add_to_date(now_datetime(), days=days_from_today)
+		starts_at = get_datetime(f"{add_days(today(), days_from_today)} 18:00:00")
 		insert(
 			"Community Event Request",
 			community=team.name,
