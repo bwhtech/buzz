@@ -22,17 +22,18 @@ class PlaygroundChecklist:
 	def __init__(self, sandbox: "PlaygroundSandbox"):
 		self.sandbox = sandbox
 		self.team = sandbox.team
-		self.events = frappe.get_all("Buzz Event", {"team": self.team}, pluck="name")
+		teams = sandbox_teams(sandbox)
+		self.events = frappe.get_all("Buzz Event", {"team": ["in", teams]}, pluck="name")
 		self.conference = main_event(sandbox)
 		self.own_event = frappe.db.get_value(
 			"Buzz Event",
-			{"team": self.team, "creation": [">", sandbox.creation]},
+			{"team": ["in", teams], "creation": [">", sandbox.creation]},
 			order_by="creation desc",
 		)
 		self.community = frappe.db.get_value(
 			"Buzz Team",
 			{
-				"name": ["in", sandbox_teams(sandbox)],
+				"name": ["in", teams],
 				"is_published": 1,
 				"is_personal": 0,
 				"creation": [">", sandbox.creation],
@@ -62,6 +63,7 @@ class PlaygroundChecklist:
 				f"{manage}/registrations",
 				# The event comes with a default ticket type.
 				event and frappe.db.count("Event Ticket Type", {"event": event}) > 1,
+				target="Add ticket type",
 			),
 			self.step(
 				"add_ticket_category",
@@ -70,6 +72,7 @@ class PlaygroundChecklist:
 				f"{manage}/registrations",
 				event and self.exists("Event Ticket Category", event=event),
 				optional=True,
+				target="New Category",
 			),
 			self.step(
 				"open_registrations",
@@ -77,6 +80,7 @@ class PlaygroundChecklist:
 				_("New events start closed. Open registrations from the Registrations tab."),
 				f"{manage}/registrations",
 				doc and not are_registrations_closed(doc),
+				target="Registration Closed",
 			),
 			self.step(
 				"open_proposals",
@@ -84,6 +88,7 @@ class PlaygroundChecklist:
 				_("Open the Talks tab and start taking proposals."),
 				f"{manage}/talks",
 				doc and not are_proposals_closed(doc),
+				target="Proposals Closed",
 			),
 			self.step(
 				"add_event_page",
@@ -92,6 +97,7 @@ class PlaygroundChecklist:
 				f"{manage}/details",
 				event and self.exists("Additional Event Page", event=event),
 				optional=True,
+				target="FAQ",
 			),
 		]
 		for step in steps:
@@ -102,6 +108,7 @@ class PlaygroundChecklist:
 			_("Start your own event. The next steps set it up."),
 			"/b/manage/team/events/new",
 			bool(event),
+			target="Name your event",
 		)
 		return self.group("launch", _("Launch your event"), [create, *steps])
 
@@ -133,6 +140,7 @@ class PlaygroundChecklist:
 				event_page,
 				self.added("Event Booking", user=self.sandbox.attendee, docstatus=["<", 2]),
 				persona="attendee",
+				target=_("Book more tickets"),
 			),
 		]
 		return self.group("attendee", _("Attend as a guest"), steps)
@@ -148,6 +156,7 @@ class PlaygroundChecklist:
 				_("Open a proposal in Talks and accept it. It joins the schedule."),
 				f"{manage}/talks",
 				self.exists("Talk Proposal", event=conference.name, status="Accepted"),
+				target=_("Open {0}").format(PROPOSALS[0][0]),
 			),
 			self.step(
 				"email_speaker",
@@ -161,6 +170,7 @@ class PlaygroundChecklist:
 					communication_type="Communication",
 				),
 				optional=True,
+				target=_("Open {0}").format(PROPOSALS[0][0]),
 			),
 			self.step(
 				"email_guests",
@@ -168,6 +178,7 @@ class PlaygroundChecklist:
 				_("Write to every guest from Communications. Emails land in the inbox."),
 				f"{manage}/communications",
 				self.added("Event Communication", event=["in", self.events]),
+				target="Recipients",
 			),
 			self.step(
 				"check_in",
@@ -176,6 +187,7 @@ class PlaygroundChecklist:
 				"/b/check-in",
 				self.added("Event Check In", event=["in", self.events]),
 				persona="front_desk",
+				target=self.conference.title,
 			),
 			self.step(
 				"add_tax_details",
@@ -203,6 +215,7 @@ class PlaygroundChecklist:
 				path,
 				False,
 				completes_on="click",
+				target="Gold",
 			),
 			self.step(
 				"add_tier",
@@ -210,6 +223,7 @@ class PlaygroundChecklist:
 				_("Gold is set up. Add another tier with its price and perks."),
 				path,
 				self.added("Sponsorship Tier", event=event),
+				target="Add Tier",
 			),
 			self.step(
 				"add_sponsor",
@@ -217,6 +231,7 @@ class PlaygroundChecklist:
 				_("Add a company to a tier by hand."),
 				path,
 				self.added("Event Sponsor", event=event),
+				target="Add Manually",
 			),
 			self.step(
 				"review_enquiry",
@@ -225,14 +240,15 @@ class PlaygroundChecklist:
 				path,
 				self.exists("Sponsorship Enquiry", event=event, status=["!=", "Approval Pending"]),
 				optional=True,
+				target="Initech",
 			),
 		]
 		return self.group("sponsors", _("Bring in sponsors"), steps)
 
 	def community_group(self) -> dict:
 		community = self.community
-		manage = f"/b/manage/communities/{community}/events"
-		seeded = [request[0] for request in COMMUNITY_REQUESTS]
+		calendar_path = f"/b/manage/communities/{community}/calendar"
+		seeded_titles = [request[0] for request in COMMUNITY_REQUESTS]
 		steps = [
 			self.step(
 				"add_member",
@@ -243,33 +259,36 @@ class PlaygroundChecklist:
 				),
 				f"/b/manage/communities/{community}/members",
 				community and self.has_teammate(community),
+				target=_("Add member"),
 			),
 			self.step(
 				"approve_request",
 				_("Approve an event request"),
 				_("Other hosts asked to list events on your community. Approve one."),
-				manage,
+				calendar_path,
 				community
 				and self.exists(
 					"Community Event Request",
 					community=community,
 					status="Approved",
-					event_title=["in", seeded],
+					event_title=["in", seeded_titles],
 				),
+				target=_("Approve"),
 			),
 			self.step(
 				"add_external_event",
 				_("Add an event from elsewhere"),
 				_("List an event hosted on another site."),
-				manage,
+				calendar_path,
 				community
 				and self.exists(
 					"Community Event Request",
 					community=community,
 					is_external_event=1,
-					event_title=["not in", seeded],
+					event_title=["not in", seeded_titles],
 				),
 				optional=True,
+				target=_("Add Event"),
 			),
 			self.step(
 				"view_community_page",
@@ -291,6 +310,7 @@ class PlaygroundChecklist:
 			),
 			"/community",
 			bool(community),
+			target=_("Create a community"),
 		)
 		return self.group("community", _("Grow your community"), [create, *steps])
 
@@ -305,6 +325,7 @@ class PlaygroundChecklist:
 				),
 				f"/b/manage/events/{self.conference.name}/settings",
 				self.exists("Buzz Event Collaborator", event=self.conference.name),
+				target=_("Invite collaborator"),
 			),
 		]
 		return self.group("collaborators", _("Work with collaborators"), steps)
@@ -322,6 +343,7 @@ class PlaygroundChecklist:
 		persona: str = "organizer",
 		optional: bool = False,
 		completes_on: str | None = None,
+		target: str | None = None,
 	) -> dict:
 		return {
 			"name": name,
@@ -333,32 +355,8 @@ class PlaygroundChecklist:
 			"optional": optional,
 			"locked": False,
 			"completes_on": completes_on,
-			"target": self.targets().get(name),
-		}
-
-	def targets(self) -> dict[str, str]:
-		"""Labels of the controls each step's spotlight points at, matched as a prefix."""
-		return {
-			"create_event": "Name your event",
-			"add_ticket_type": "Add ticket type",
-			"add_ticket_category": "New Category",
-			"open_registrations": "Registration Closed",
-			"open_proposals": "Proposals Closed",
-			"add_event_page": "FAQ",
-			"book_ticket": _("Book more tickets"),
-			"accept_proposal": _("Open {0}").format(PROPOSALS[0][0]),
-			"email_speaker": _("Open {0}").format(PROPOSALS[0][0]),
-			"email_guests": "Recipients",
-			"check_in": self.conference.title,
-			"open_tier": "Gold",
-			"add_tier": "Add Tier",
-			"add_sponsor": "Add Manually",
-			"review_enquiry": "Initech",
-			"create_community": _("Create a community"),
-			"approve_request": _("Approve"),
-			"add_external_event": _("Add Event"),
-			"invite_collaborator": _("Invite collaborator"),
-			"add_member": _("Add member"),
+			# Label of the control the spotlight points at, matched as a prefix.
+			"target": target,
 		}
 
 	def has_teammate(self, community: str) -> bool:

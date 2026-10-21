@@ -1,4 +1,4 @@
-import { createGlobalState, useStorage } from "@vueuse/core"
+import { StorageSerializers, createGlobalState, useSessionStorage, useStorage } from "@vueuse/core"
 
 export interface ChecklistStep {
 	name: string
@@ -20,7 +20,12 @@ export interface ChecklistGroup {
 }
 
 // Survives the full page load a persona switch makes, and no further.
-export const SPOTLIGHT_KEY = "playground-spotlight"
+// Shared, so the checklist steps aside while the spotlight shows.
+export const useSpotlightStep = createGlobalState(() =>
+	useSessionStorage<ChecklistStep | null>("playground-spotlight", null, {
+		serializer: StorageSerializers.object,
+	}),
+)
 
 // A page visit or a click leaves no record to read back, so the browser remembers it per sandbox.
 // One shared ref: the spotlight records a click the checklist has to show at once.

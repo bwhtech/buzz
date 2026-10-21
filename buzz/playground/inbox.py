@@ -98,7 +98,10 @@ class CapturedEmail:
 			return None
 		doc = frappe.get_doc(doctype, name)
 		team = doc.get("team") or (doc.get("event") and frappe.db.get_value("Buzz Event", doc.event, "team"))
-		return team and frappe.db.get_value("Playground Sandbox", {"team": team})
+		owner = team and frappe.db.get_value(
+			"Buzz Team Membership", {"team": team, "team_role": "Owner"}, "user"
+		)
+		return owner and sandbox_of(owner)
 
 	def notify(self, doc):
 		if not doc.sandbox:

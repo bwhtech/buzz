@@ -2,20 +2,20 @@
 import { Button } from "frappe-ui"
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 
-import { type ChecklistStep, SPOTLIGHT_KEY, useBrowserCompletedSteps } from "./checklist"
+import { useBrowserCompletedSteps, useSpotlightStep } from "./checklist"
 
 const CONTROLS = "button, a, input, textarea, [role=button], [role=tab]"
 const FIND_TIMEOUT_MS = 10000
 
-const step = ref<ChecklistStep>()
-const box = ref<DOMRect>()
-const hint = ref<HTMLElement>()
+const spotlightStep = useSpotlightStep()
+const targetRect = ref<DOMRect>()
+const hintCard = ref<HTMLElement>()
 const completedSteps = useBrowserCompletedSteps()
-let target: HTMLElement | undefined
-let frame = 0
+let targetElement: HTMLElement | undefined
+let animationFrameId = 0
 
 // innerText, not textContent: it keeps the break between a tile's title and its state.
-function label(element: HTMLElement) {
+function controlLabel(element: HTMLElement) {
 	const text = element.getAttribute("aria-label") || (element as HTMLInputElement).placeholder
 	return (text || element.innerText || "").replace(/\s+/g, " ").trim()
 }
@@ -25,41 +25,43 @@ function findTarget(text: string) {
 		(element) =>
 			element.offsetParent &&
 			!element.closest("[data-playground]") &&
-			label(element).startsWith(text),
+			controlLabel(element).startsWith(text),
 	)
 }
 
 // The page renders after an API call, so look until the control shows up or time runs out.
 function waitForTarget(text: string) {
 	const startedAt = Date.now()
-	const look = () => {
-		target = findTarget(text)
-		if (target) return show(target)
-		if (Date.now() - startedAt < FIND_TIMEOUT_MS) frame = requestAnimationFrame(look)
+	const tryFindTarget = () => {
+		targetElement = findTarget(text)
+		if (targetElement) return showTarget(targetElement)
+		if (Date.now() - startedAt < FIND_TIMEOUT_MS)
+			animationFrameId = requestAnimationFrame(tryFindTarget)
 		else dismiss()
 	}
-	look()
+	tryFindTarget()
 }
 
-function show(element: HTMLElement) {
+function showTarget(element: HTMLElement) {
 	element.scrollIntoView({ block: "center", behavior: "smooth" })
-	const follow = () => {
-		box.value = element.getBoundingClientRect()
-		frame = requestAnimationFrame(follow)
+	const trackTargetPosition = () => {
+		targetRect.value = element.getBoundingClientRect()
+		animationFrameId = requestAnimationFrame(trackTargetPosition)
 	}
-	follow()
+	trackTargetPosition()
 }
 
 function dismiss() {
-	cancelAnimationFrame(frame)
-	sessionStorage.removeItem(SPOTLIGHT_KEY)
-	step.value = box.value = target = undefined
+	cancelAnimationFrame(animationFrameId)
+	spotlightStep.value = null
+	targetRect.value = targetElement = undefined
 }
 
 function onPointerDown(event: PointerEvent) {
-	if (!step.value || hint.value?.contains(event.target as Node)) return
-	if (step.value.completes_on === "click" && target?.contains(event.target as Node)) {
-		completedSteps.add(step.value.name)
+	const step = spotlightStep.value
+	if (!step || hintCard.value?.contains(event.target as Node)) return
+	if (step.completes_on === "click" && targetElement?.contains(event.target as Node)) {
+		completedSteps.add(step.name)
 	}
 	dismiss()
 }
@@ -67,16 +69,15 @@ function onPointerDown(event: PointerEvent) {
 const onKeyDown = (event: KeyboardEvent) => event.key === "Escape" && dismiss()
 
 onMounted(() => {
-	const saved = sessionStorage.getItem(SPOTLIGHT_KEY)
-	if (!saved) return
-	step.value = JSON.parse(saved)
-	if (step.value?.target) waitForTarget(step.value.target)
+	const target = spotlightStep.value?.target
+	if (!target) return dismiss()
+	waitForTarget(target)
 	document.addEventListener("pointerdown", onPointerDown, true)
 	document.addEventListener("keydown", onKeyDown)
 })
 
 onBeforeUnmount(() => {
-	cancelAnimationFrame(frame)
+	cancelAnimationFrame(animationFrameId)
 	document.removeEventListener("pointerdown", onPointerDown, true)
 	document.removeEventListener("keydown", onKeyDown)
 })
@@ -86,7 +87,7 @@ const GAP = 12
 const HINT_WIDTH = 256
 
 const cutoutStyle = computed(() => {
-	const rect = box.value!
+	const rect = targetRect.value!
 	return {
 		transform: `translate(${rect.left - PADDING}px, ${rect.top - PADDING}px)`,
 		width: `${rect.width + PADDING * 2}px`,
@@ -96,8 +97,8 @@ const cutoutStyle = computed(() => {
 
 // Below the control when it fits, above it otherwise; right-aligned to it near the right edge.
 const hintStyle = computed(() => {
-	const rect = box.value!
-	const height = hint.value?.offsetHeight ?? 120
+	const rect = targetRect.value!
+	const height = hintCard.value?.offsetHeight ?? 120
 	const fitsBelow = rect.bottom + PADDING + GAP + height < window.innerHeight
 	const top = fitsBelow ? rect.bottom + PADDING + GAP : rect.top - PADDING - GAP - height
 	const overflowsRight = rect.left + HINT_WIDTH > window.innerWidth - 16
@@ -107,7 +108,7 @@ const hintStyle = computed(() => {
 </script>
 
 <template>
-	<template v-if="step && box">
+	<template v-if="spotlightStep && targetRect">
 		<!-- Pointer events pass through, so the highlighted control stays clickable. -->
 		<div
 			data-playground
@@ -116,15 +117,15 @@ const hintStyle = computed(() => {
 			:style="cutoutStyle"
 		/>
 		<div
-			ref="hint"
+			ref="hintCard"
 			data-playground
 			role="status"
 			class="spotlight-hint fixed z-[60] flex flex-col gap-3 rounded-5 border border-outline-gray-2 bg-surface-elevation-2 p-4 shadow-xl"
 			:style="hintStyle"
 		>
 			<div class="flex flex-col gap-1">
-				<span class="text-base-semibold text-ink-gray-9">{{ step.title }}</span>
-				<span class="text-p-sm text-ink-gray-6">{{ step.description }}</span>
+				<span class="text-base-semibold text-ink-gray-9">{{ spotlightStep.title }}</span>
+				<span class="text-p-sm text-ink-gray-6">{{ spotlightStep.description }}</span>
 			</div>
 			<Button class="self-start" :label="__('Got it')" @click="dismiss" />
 		</div>

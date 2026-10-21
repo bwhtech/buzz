@@ -9,8 +9,8 @@ import { useIsMobile } from "@/composables/useIsMobile"
 import {
 	type ChecklistGroup,
 	type ChecklistStep,
-	SPOTLIGHT_KEY,
 	useBrowserCompletedSteps,
+	useSpotlightStep,
 } from "./checklist"
 import PlaygroundStepDetail from "./PlaygroundStepDetail.vue"
 
@@ -22,6 +22,14 @@ const checklist = useCall<ChecklistGroup[]>({
 const open = useStorage("playground-checklist-open", window.innerWidth >= 640)
 watch(open, (isOpen) => isOpen && checklist.reload())
 
+// A pill while the spotlight shows, so the card never covers the control it points at.
+const spotlightStep = useSpotlightStep()
+const showCard = computed(() => open.value && !spotlightStep.value)
+function openCard() {
+	spotlightStep.value = null
+	open.value = true
+}
+
 // The bar outlives dashboard navigation, so reload after each route change. Public pages
 // have no router: every visit there is a full page load.
 const removeRouteHook = useRouter()?.afterEach(() => checklist.reload())
@@ -32,11 +40,11 @@ onBeforeUnmount(() => removeRouteHook?.())
 const visibility = useDocumentVisibility()
 useIntervalFn(() => open.value && visibility.value === "visible" && checklist.reload(), 10000)
 
-const listLength = useStorage<"essentials" | "everything">(
+const stepFilter = useStorage<"essentials" | "everything">(
 	"playground-checklist-length",
 	"essentials",
 )
-const lengthOptions = [
+const stepFilterOptions = [
 	{ label: __("Essentials"), value: "essentials" },
 	{ label: __("Everything"), value: "everything" },
 ]
@@ -48,7 +56,7 @@ const isDone = (step: ChecklistStep) =>
 const groups = computed(() =>
 	(checklist.data ?? []).map((group) => ({
 		...group,
-		steps: group.steps.filter((step) => listLength.value === "everything" || !step.optional),
+		steps: group.steps.filter((step) => stepFilter.value === "everything" || !step.optional),
 	})),
 )
 const steps = computed(() => groups.value.flatMap((group) => group.steps))
@@ -116,7 +124,7 @@ const switchPersona = useCall<{ redirect_to: string }, { persona: string; redire
 function go(step: ChecklistStep) {
 	openGroup.value = groups.value.find((group) => group.steps.includes(step))?.name ?? ""
 	if (step.completes_on === "visit") browserCompleted.add(step.name)
-	if (step.target) sessionStorage.setItem(SPOTLIGHT_KEY, JSON.stringify(step))
+	if (step.target) spotlightStep.value = step
 	switchPersona.submit({ persona: step.persona, redirect_to: step.path })
 }
 
@@ -138,11 +146,11 @@ function selectStep(step: ChecklistStep) {
 		@mouseleave="hideDetail"
 	>
 		<Button
-			v-if="!open"
+			v-if="!showCard"
 			class="rounded-full shadow-xl"
 			:aria-label="__('Getting started')"
 			:icon-left="allDone ? 'lucide-circle-check' : 'lucide-list-checks'"
-			@click="open = true"
+			@click="openCard"
 		>
 			<span class="hidden sm:inline">{{ __("Getting started") }}</span>
 			<span class="tabular-nums text-ink-gray-5 sm:ml-1">{{ done }}/{{ steps.length }}</span>
@@ -183,7 +191,7 @@ function selectStep(step: ChecklistStep) {
 							@click="open = false"
 						/>
 					</div>
-					<TabButtons v-model="listLength" fluid :options="lengthOptions" />
+					<TabButtons v-model="stepFilter" fluid :options="stepFilterOptions" />
 				</div>
 				<div class="flex flex-col gap-0.5 overflow-y-auto p-2">
 					<div v-for="group in groups" :key="group.name" class="flex flex-col">

@@ -45,19 +45,18 @@ class DemoData:
 		self.organizer = organizer
 		self.attendee = attendee
 
-	def create(self) -> str:
+	def create(self):
 		frappe.flags.seeding_playground = True
 		try:
 			self.enable_features()
 			category = frappe.get_doc({"doctype": "Event Category", "name": CATEGORY})
 			category.insert(ignore_permissions=True, ignore_if_duplicate=True)
 			self.host = insert("Event Host", host_name="Acme Community", team=self.team).name
-			conference = self.create_conference()
+			self.create_conference()
 			self.create_meetup()
 			self.create_past_event()
 		finally:
 			frappe.flags.seeding_playground = False
-		return conference
 
 	def enable_features(self):
 		settings = frappe.get_doc("Buzz Team Settings", self.team)
@@ -90,7 +89,7 @@ class DemoData:
 			frappe.db.delete(doctype, {"event": event, "title": "Normal"})
 		return event
 
-	def create_conference(self) -> str:
+	def create_conference(self):
 		venue = insert(
 			"Event Venue",
 			venue_name="Bangalore International Centre",
@@ -125,7 +124,6 @@ class DemoData:
 		for start in range(2, len(GUESTS), 5):
 			self.book(event, regular, GUESTS[start : start + 5], paid=True)
 		self.book(event, regular, [("Sam", "Attendee")], paid=True, user=self.attendee)
-		return event
 
 	def create_meetup(self):
 		event = self.create_event("Frontend Meetup", 14, medium="Online", meeting_link="https://bwh.tech")
