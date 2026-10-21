@@ -1,15 +1,18 @@
 import textwrap
 from collections import defaultdict
+from datetime import datetime
 from functools import cached_property
 from itertools import groupby
 
 import frappe
 from frappe import _
-from frappe.utils import date_diff, flt, format_date, get_url, getdate, today
+from frappe.utils import date_diff, flt, format_date, get_datetime, get_time, get_url, getdate, today
 
 from buzz.api.booking.services import are_registrations_closed
+from buzz.api.communities.queries import time_of_day
 from buzz.api.maps.services import place_search_enabled
 from buzz.events.doctype.buzz_team.team_map import TeamMap
+from buzz.events.doctype.community_event_request.community_event_request import approved_external_requests
 from buzz.permissions import role_allows, team_role_of
 from buzz.www.event.date_range import format_time
 from buzz.www.event.index import public_links
@@ -67,6 +70,51 @@ def co_host_names_by_event(events: list[str]) -> dict[str, list[str]]:
 	return names
 
 
+def starts_at(event) -> datetime:
+	return datetime.combine(getdate(event.start_date), get_time(event.start_time))
+
+
+def external_event(request) -> frappe._dict:
+	"""An approved external request in the shape of a Buzz Event row."""
+	start, end = get_datetime(request.start_datetime), get_datetime(request.end_datetime)
+	return frappe._dict(
+		name=request.name,
+		title=request.event_title,
+		event_url=request.event_url,
+		host_name=request.host,
+		venue_name=request.event_location,
+		start_date=start.date(),
+		start_time=time_of_day(start),
+		end_date=end.date(),
+		end_time=time_of_day(end),
+		is_external=True,
+	)
+
+
+def external_card(event) -> dict:
+	"""Opens the host's own page; it has no image or coordinates, so it stays off the map."""
+	return {
+		"route": event.name,
+		"date": str(event.start_date),
+		"title": event.title,
+		"url": event.event_url,
+		"is_external": True,
+		"image": None,
+		"time": format_time(event.start_time),
+		"host_names": event.host_name,
+		"host_logo": None,
+		"place": event.venue_name,
+		"is_online": False,
+		"is_live": has_started(event) and not has_ended(event),
+		"is_attending": False,
+		"registrations_closed": False,
+		"city": None,
+		"country": None,
+		"latitude": None,
+		"longitude": None,
+	}
+
+
 class TeamPage:
 	"""Context for a team's public page: identity, links and its own event timeline."""
 
@@ -100,7 +148,8 @@ class TeamPage:
 			order_by="start_date asc, start_time asc",
 			limit=LISTING_LIMIT,
 		)
-		return exclude_ended_events(events)
+		external = exclude_ended_events(self.external_events)
+		return sorted(exclude_ended_events(events) + external, key=starts_at)[:LISTING_LIMIT]
 
 	@cached_property
 	def past_events(self) -> list:
@@ -113,16 +162,27 @@ class TeamPage:
 			order_by="start_date desc, start_time desc",
 			limit=PAST_LIMIT,
 		)
-		return [event for event in events if has_ended(event)]
+		ended = [event for event in events + self.external_events if has_ended(event)]
+		return sorted(ended, key=starts_at, reverse=True)[:PAST_LIMIT]
+
+	@cached_property
+	def external_events(self) -> list:
+		if not self.team.accept_community_submissions:
+			return []
+		return [external_event(request) for request in approved_external_requests(self.team.name)]
+
+	@cached_property
+	def buzz_event_names(self) -> list[str]:
+		return [str(event.name) for event in self.upcoming_events + self.past_events if not event.is_external]
 
 	@cached_property
 	def co_host_names(self) -> dict[str, list[str]]:
-		return co_host_names_by_event([str(event.name) for event in self.upcoming_events + self.past_events])
+		return co_host_names_by_event(self.buzz_event_names)
 
 	@cached_property
 	def attending_events(self) -> set[str]:
 		"""Events the visitor holds a ticket for: the dashboard's Attending rule."""
-		events = [str(event.name) for event in self.upcoming_events + self.past_events]
+		events = self.buzz_event_names
 		if frappe.session.user == "Guest" or not events:
 			return set()
 		tickets = {"attendee_email": frappe.session.user, "docstatus": 1, "event": ["in", events]}
@@ -140,6 +200,8 @@ class TeamPage:
 		return filters
 
 	def card(self, event) -> dict:
+		if event.is_external:
+			return external_card(event)
 		is_online = event.medium == "Online"
 		has_location = not is_online and bool(flt(event.latitude) and flt(event.longitude))
 		return {
