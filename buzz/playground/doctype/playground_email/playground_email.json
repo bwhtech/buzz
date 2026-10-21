@@ -19,17 +19,17 @@
   {
    "fieldname": "sandbox",
    "fieldtype": "Link",
-   "label": "Sandbox",
-   "options": "Playground Sandbox",
    "in_list_view": 1,
    "in_standard_filter": 1,
+   "label": "Sandbox",
+   "options": "Playground Sandbox",
    "search_index": 1
   },
   {
    "fieldname": "subject",
    "fieldtype": "Small Text",
-   "label": "Subject",
-   "in_list_view": 1
+   "in_list_view": 1,
+   "label": "Subject"
   },
   {
    "fieldname": "column_break_addresses",
@@ -38,8 +38,8 @@
   {
    "fieldname": "recipient",
    "fieldtype": "Data",
-   "label": "Recipient",
-   "in_list_view": 1
+   "in_list_view": 1,
+   "label": "Recipient"
   },
   {
    "fieldname": "sender",
@@ -66,11 +66,12 @@
   {
    "fieldname": "message",
    "fieldtype": "Long Text",
+   "ignore_xss_filter": 1,
    "label": "Message"
   }
  ],
  "links": [],
- "modified": "2026-10-20 18:30:00.000000",
+ "modified": "2026-10-21 20:49:32.389359",
  "modified_by": "Administrator",
  "module": "Playground",
  "name": "Playground Email",
