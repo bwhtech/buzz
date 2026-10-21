@@ -8,9 +8,20 @@ class RedirectResponse(APIResponse):
 class ChecklistStep(APIResponse):
 	name: str
 	title: str
+	description: str
 	persona: str
 	path: str
 	completed: bool
+	optional: bool
+	locked: bool
+	completes_on: str | None
+	target: str | None
+
+
+class ChecklistGroup(APIResponse):
+	name: str
+	title: str
+	steps: list[ChecklistStep]
 
 
 class InboxAttachment(APIResponse):

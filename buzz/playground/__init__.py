@@ -24,6 +24,7 @@ def playground_boot() -> dict | None:
 	expires_on = sandbox and frappe.db.get_value("Playground Sandbox", sandbox, "expires_on")
 	return {
 		"signup_url": frappe.conf.get("buzz_playground_signup_url"),
+		"sandbox": sandbox,
 		"hours_left": expires_on and max(0, round(time_diff_in_hours(expires_on, now_datetime()))),
 	}
 
@@ -48,12 +49,12 @@ def configure_site():
 		frappe.db.set_single_value("System Settings", "store_attached_pdf_document", 0)
 
 
-def main_event(team: str) -> dict | None:
-	"""The sandbox's furthest upcoming event, which the attendee and checklist steps point at."""
+def main_event(sandbox) -> dict | None:
+	"""The seeded conference: the furthest upcoming event made before the visitor arrived."""
 	return frappe.db.get_value(
 		"Buzz Event",
-		{"team": team, "start_date": [">=", today()]},
-		["name", "route"],
+		{"team": sandbox.team, "start_date": [">=", today()], "creation": ["<", sandbox.creation]},
+		["name", "route", "title"],
 		as_dict=True,
 		order_by="start_date desc",
 	)

@@ -1,18 +1,35 @@
 import frappe
-from frappe.utils import add_days, today
+from frappe.utils import add_days, add_to_date, now_datetime, today
 
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
 
 CATEGORY = "Technology"
 LOGO = "/assets/buzz/images/buzz-logo.png"
-GUESTS = [
-	("Priya", "Sharma"),
-	("Arjun", "Mehta"),
-	("Sara", "Khan"),
-	("Rahul", "Verma"),
-	("Ananya", "Iyer"),
-	("Vikram", "Rao"),
-]
+FIRST_NAMES = (
+	"Priya",
+	"Arjun",
+	"Sara",
+	"Rahul",
+	"Ananya",
+	"Vikram",
+	"Meera",
+	"Kabir",
+	"Isha",
+	"Dev",
+	"Nisha",
+)
+LAST_NAMES = ("Sharma", "Mehta", "Khan", "Verma", "Iyer")
+GUESTS = [(first, last) for last in LAST_NAMES for first in FIRST_NAMES]
+PROPOSALS = (
+	("Offline-first event check-in", "Leela", "Nair"),
+	("What we learned running 40 meetups", "Tom", "Fischer"),
+	("Accessible ticketing flows", "Aisha", "Bello"),
+	("Postgres tricks for busy launches", "Marco", "Rossi"),
+)
+COMMUNITY_REQUESTS = (
+	("Bangalore JS Night", "JS Bangalore", "https://example.com/js-night", 10),
+	("Design Systems Meetup", "Pixel Club", "https://example.com/design-systems", 21),
+)
 
 
 def insert(doctype: str, **fields):
@@ -34,6 +51,7 @@ class DemoData:
 			category = frappe.get_doc({"doctype": "Event Category", "name": CATEGORY})
 			category.insert(ignore_permissions=True, ignore_if_duplicate=True)
 			self.host = insert("Event Host", host_name="Acme Community", team=self.team).name
+			self.publish_community()
 			conference = self.create_conference()
 			self.create_meetup()
 			self.create_past_event()
@@ -44,6 +62,9 @@ class DemoData:
 	def enable_features(self):
 		settings = frappe.get_doc("Buzz Team Settings", self.team)
 		settings.update(dict.fromkeys(feature_flags(self.team), 1))
+		# No deck template exists, so each enquiry would only log an error trying to send one.
+		# The event carries its own toggle as well; create_event turns that off.
+		settings.auto_send_pitch_deck = 0
 		settings.save(ignore_permissions=True)
 
 	def create_event(self, title: str, days_from_today: int, **fields) -> str:
@@ -61,6 +82,7 @@ class DemoData:
 			# New events start closed; demo guests book until the doors open.
 			registrations_close_at=f"{event_date} 10:00:00",
 			short_description=f"{title}, a Buzz Playground demo event.",
+			auto_send_pitch_deck=0,
 			**fields,
 		).name
 		# Replaced by the demo's own tiers.
@@ -88,14 +110,6 @@ class DemoData:
 			user_selects_option=1,
 		)
 		insert("Ticket Add-on", event=event, title="Workshop pass", price=499)
-		# Paid tickets book without a payment gateway; the organizer confirms them.
-		insert(
-			"Offline Payment Method",
-			event=event,
-			title="Pay at the venue",
-			enabled=1,
-			description="Pay at the registration desk. The organizer confirms your booking.",
-		)
 		insert(
 			"Buzz Coupon Code",
 			coupon_type="Discount",
@@ -105,8 +119,11 @@ class DemoData:
 		)
 		self.create_sponsors(event)
 		self.create_talks(event)
+		self.create_proposals(event)
 		self.book(event, early_bird, GUESTS[:2], paid=True)
-		self.book(event, regular, GUESTS[2:5], paid=True)
+		# Five guests a booking gives the announcement step a full guest list.
+		for start in range(2, len(GUESTS), 5):
+			self.book(event, regular, GUESTS[start : start + 5], paid=True)
 		self.book(event, regular, [("Sam", "Attendee")], paid=True, user=self.attendee)
 		return event
 
@@ -115,7 +132,7 @@ class DemoData:
 			"Frontend Meetup", 14, medium="Online", meeting_link="https://meet.example.com/buzz"
 		)
 		ticket_type = self.ticket_type(event, "Free", 0, max_tickets_available=50)
-		self.book(event, ticket_type, GUESTS[3:])
+		self.book(event, ticket_type, GUESTS[3:9])
 
 	def create_past_event(self):
 		event = self.create_event(
@@ -130,14 +147,41 @@ class DemoData:
 		return insert("Event Ticket Type", event=event, title=title, prices=prices, **fields).name
 
 	def create_sponsors(self, event: str):
-		for tier_title, price, company in (("Gold", 100000, "Globex"), ("Silver", 50000, "Initech")):
-			tier = insert(
-				"Sponsorship Tier",
-				event=event,
-				title=tier_title,
-				prices=[{"currency": "INR", "price": price}],
+		tier = insert(
+			"Sponsorship Tier", event=event, title="Gold", prices=[{"currency": "INR", "price": 100000}]
+		)
+		insert("Event Sponsor", event=event, tier=tier.name, company_name="Globex", company_logo=LOGO)
+		for company in ("Initech", "Umbrella Labs"):
+			insert(
+				"Sponsorship Enquiry", event=event, tier=tier.name, company_name=company, company_logo=LOGO
 			)
-			insert("Event Sponsor", event=event, tier=tier.name, company_name=company, company_logo=LOGO)
+
+	def create_proposals(self, event: str):
+		for title, first_name, last_name in PROPOSALS:
+			speaker = {
+				"first_name": first_name,
+				"last_name": last_name,
+				"email": f"{first_name.lower()}@example.com",
+			}
+			insert("Talk Proposal", event=event, title=title, status="Review Pending", speakers=[speaker])
+
+	def publish_community(self):
+		team = frappe.get_doc("Buzz Team", self.team)
+		team.update({"is_published": 1, "accept_community_submissions": 1})
+		team.save(ignore_permissions=True)
+		for title, host, url, days_from_today in COMMUNITY_REQUESTS:
+			starts_at = add_to_date(now_datetime(), days=days_from_today)
+			insert(
+				"Community Event Request",
+				community=self.team,
+				is_external_event=1,
+				event_title=title,
+				host=host,
+				event_url=url,
+				event_location="Bengaluru",
+				start_datetime=starts_at,
+				end_datetime=add_to_date(starts_at, hours=3),
+			)
 
 	def create_talks(self, event: str):
 		for title in ("Shipping with Frappe", "Designing for events", "Scaling ticket sales"):
@@ -151,7 +195,7 @@ class DemoData:
 				"ticket_type": ticket_type,
 				"first_name": first,
 				"last_name": last,
-				"email": f"{first.lower()}@example.com",
+				"email": f"{first.lower()}.{last.lower()}@example.com",
 			}
 			for first, last in guests
 		]

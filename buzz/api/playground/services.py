@@ -4,7 +4,7 @@ import frappe
 from frappe.utils import add_to_date, now_datetime
 
 from buzz.api.playground.exceptions import NotInSandbox, PlaygroundDisabled, UnknownPersona
-from buzz.api.playground.schemas import ChecklistStep, InboxAttachment, InboxEmail, RedirectResponse
+from buzz.api.playground.schemas import ChecklistGroup, InboxAttachment, InboxEmail, RedirectResponse
 from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
 from buzz.playground import configure_site, is_playground, main_event, sandbox_of
@@ -47,8 +47,8 @@ def switch_persona(persona: str, redirect_to: str | None = None) -> RedirectResp
 	return response
 
 
-def get_checklist() -> list[ChecklistStep]:
-	return [ChecklistStep(**step) for step in PlaygroundChecklist(require_sandbox()).steps()]
+def get_checklist() -> list[ChecklistGroup]:
+	return [ChecklistGroup(**group) for group in PlaygroundChecklist(require_sandbox()).groups()]
 
 
 def create_sandbox() -> "PlaygroundSandbox":
@@ -88,7 +88,7 @@ def landing_page(sandbox: "PlaygroundSandbox", persona: str) -> str:
 	if persona == "front_desk":
 		return "/b/check-in"
 	if persona == "attendee":
-		event = main_event(sandbox.team)
+		event = main_event(sandbox)
 		return f"/events/{event.route}" if event else "/events"
 	return "/b/manage"
 

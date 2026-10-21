@@ -156,6 +156,8 @@ declare module 'vue' {
     PlaygroundBar: typeof import('./src/components/playground/PlaygroundBar.vue')['default']
     PlaygroundChecklist: typeof import('./src/components/playground/PlaygroundChecklist.vue')['default']
     PlaygroundInbox: typeof import('./src/components/playground/PlaygroundInbox.vue')['default']
+    PlaygroundSpotlight: typeof import('./src/components/playground/PlaygroundSpotlight.vue')['default']
+    PlaygroundStepDetail: typeof import('./src/components/playground/PlaygroundStepDetail.vue')['default']
     PreferencesPanel: typeof import('./src/components/settings/PreferencesPanel.vue')['default']
     PrefixedInput: typeof import('./src/components/common/PrefixedInput.vue')['default']
     PricedItemRow: typeof import('./src/components/common/PricedItemRow.vue')['default']
