@@ -43,6 +43,7 @@ const otherTeams = computed(() => teams.value.filter((team) => !team.is_personal
 				:key="team.name"
 				:team="team"
 				class="fade-up-in [animation-duration:200ms] [animation-timing-function:cubic-bezier(0.23,1,0.32,1)]"
+				:class="{ 'col-start-1': index === 0 }"
 				:style="{ animationDelay: `${(index + 1) * 40}ms` }"
 			/>
 		</div>

@@ -20,6 +20,7 @@ const pattern = {
 		line: "var(--outline-gray-1)",
 		surface: "transparent",
 	}),
+	maskImage: "linear-gradient(to top right, transparent 15%, black 85%)",
 }
 
 async function create() {
