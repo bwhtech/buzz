@@ -40,6 +40,10 @@ export function teamLabel(team: Pick<TeamOption, "team_name" | "is_personal">): 
 	return team.is_personal ? __("Personal") : team.team_name
 }
 
+export function isPersonalTeam(name: string): boolean {
+	return Boolean(teams.value.find((team) => team.name === name)?.is_personal)
+}
+
 export function upcomingEventsLabel(count: number): string {
 	if (!count) return __("No upcoming events")
 	return count === 1 ? __("1 upcoming event") : __("{0} upcoming events", [String(count)])

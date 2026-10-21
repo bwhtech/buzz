@@ -146,6 +146,8 @@ declare module 'vue' {
     PendingSubmission: typeof import('./src/components/dashboard/teams/PendingSubmission.vue')['default']
     PendingSubmissions: typeof import('./src/components/dashboard/teams/PendingSubmissions.vue')['default']
     PerkList: typeof import('./src/components/dashboard/sponsorships/PerkList.vue')['default']
+    PersonalMembers: typeof import('./src/components/dashboard/teams/PersonalMembers.vue')['default']
+    PersonalProfileSettings: typeof import('./src/components/dashboard/teams/settings/PersonalProfileSettings.vue')['default']
     PersonalTeamCard: typeof import('./src/components/dashboard/teams/PersonalTeamCard.vue')['default']
     PhoneInput: typeof import('./src/components/PhoneInput.vue')['default']
     PreferencesPanel: typeof import('./src/components/settings/PreferencesPanel.vue')['default']
