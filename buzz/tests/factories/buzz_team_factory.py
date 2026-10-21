@@ -4,8 +4,8 @@ import frappe
 from faker import Faker
 from frappe_factory_bot.frappe_factory_bot.base_factory import BaseFactory
 
-from buzz.api.imports.services import IMPORT_FLAG
 from buzz.events.doctype.buzz_team.buzz_team import BuzzTeam
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import IMPORT_FLAG
 from buzz.events.doctype.event_venue.event_venue import MULTIPLE_LOCATIONS_FLAG
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
 

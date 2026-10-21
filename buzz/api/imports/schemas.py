@@ -17,7 +17,13 @@ class ImportColumn(APIResponse):
 
 class ImportRowError(APIResponse):
 	row: int
+	title: str | None = None
 	reason: str
+
+
+class ImportPreviewRow(APIResponse):
+	row: int
+	values: dict[str, str | None]
 
 
 class ImportIssue(APIResponse):
@@ -39,6 +45,19 @@ class ImportIssue(APIResponse):
 	rows: list[ImportRowError] = Field(default_factory=list)
 
 
+class ImportStatus(APIResponse):
+	"""Where a background import is: queued, running with a count, or done with its result."""
+
+	state: Literal["queued", "running", "done"]
+	done: int = 0
+	total: int = 0
+	imported: int = 0
+	failed: list[ImportRowError] = Field(default_factory=list)
+	header: list[str] = Field(default_factory=list)
+	failed_cells: list[list[str]] = Field(default_factory=list)
+	error: str | None = None
+
+
 class ImportCheck(APIResponse):
 	total_rows: int
 	ready_rows: int
@@ -47,5 +66,5 @@ class ImportCheck(APIResponse):
 	columns: list[ImportColumn]
 	issues: list[ImportIssue]
 	notes: list[str]
-	# Check-ins only: the event's days, offered when the file has no date column.
-	days: list[ImportOption] = Field(default_factory=list)
+	# The first ready rows, for the review step before the import starts.
+	preview: list[ImportPreviewRow] = Field(default_factory=list)

@@ -61,6 +61,8 @@ class EventSponsorshipsResponse(APIResponse):
 	team: str
 	# The team's sponsor tags, which the sponsor drawer offers.
 	tags: list[TagItem]
+	# The event's team may not be the one selected in the dashboard, so the flag rides here.
+	import_enabled: bool = False
 
 
 class EventSponsorsResponse(APIResponse):

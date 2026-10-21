@@ -2,21 +2,20 @@
 import { Button, FormControl } from "frappe-ui"
 import { computed } from "vue"
 
-import type { ImportIssue } from "@/components/dashboard/imports/importTypes"
+import { type ImportIssue, sponsorCount } from "@/components/dashboard/imports/importTypes"
 
 const props = defineProps<{ issue: ImportIssue }>()
 const emit = defineEmits<{ choose: [choice: string | null] }>()
 
 const resolved = computed(() => props.issue.choice !== null)
 
-const rows = (count: number) => `${count} ${count === 1 ? "row" : "rows"}`
-
 const title = computed(() => {
 	const { kind, column, label, value, count } = props.issue
 	if (kind === "column") return `Column “${column}” isn’t matched`
 	if (kind === "missing") return `No column holds ${label}`
-	if (kind === "value") return `${label} “${value}” doesn’t match anything here (${rows(count)})`
-	return resolved.value ? `${rows(count)} skipped` : `${rows(count)} can’t be imported`
+	const items = sponsorCount(count)
+	if (kind === "value") return `${label} “${value}” doesn’t match anything here (${items})`
+	return resolved.value ? `${items} skipped` : `${items} can’t be imported`
 })
 
 const detail = computed(() => {
@@ -29,9 +28,11 @@ const detail = computed(() => {
 	}
 	if (kind === "missing") return "Match a column to it under Columns."
 	if (kind === "value") return "Pick what it stands for."
-	const shown = props.issue.rows.slice(0, 3).map((row) => `Row ${row.row}: ${row.reason}`)
-	return shown.join(" · ") + (props.issue.count > 3 ? ` · and ${props.issue.count - 3} more` : "")
+	return resolved.value ? "They stay out of this import." : "Fix them in the file, or skip them."
 })
+
+// The server sends the first fifty bad rows.
+const hiddenRows = computed(() => props.issue.count - props.issue.rows.length)
 
 const valueChoice = computed({
 	get: () => props.issue.choice ?? "",
@@ -83,6 +84,23 @@ const valueOptions = computed(() => [
 				@click="emit('choose', resolved ? null : 'skip')"
 			/>
 		</div>
+
+		<ul
+			v-if="issue.kind === 'rows' && !resolved"
+			class="ml-6 max-h-48 divide-y divide-outline-gray-1 overflow-y-auto rounded-3 bg-surface-white text-p-sm"
+		>
+			<li v-for="row in issue.rows" :key="row.row" class="flex items-baseline gap-3 px-2.5 py-1.5">
+				<span class="w-12 shrink-0 tabular-nums text-ink-gray-5">Row {{ row.row }}</span>
+				<span
+					class="w-36 shrink-0 truncate"
+					:class="row.title ? 'font-medium text-ink-gray-9' : 'italic text-ink-gray-5'"
+				>
+					{{ row.title || "No name" }}
+				</span>
+				<span class="min-w-0 flex-1 text-ink-gray-7">{{ row.reason }}</span>
+			</li>
+			<li v-if="hiddenRows > 0" class="px-2.5 py-1.5 text-ink-gray-5">And {{ hiddenRows }} more</li>
+		</ul>
 
 		<FormControl
 			v-if="issue.kind === 'value'"

@@ -720,6 +720,7 @@ export interface EventSponsorships {
 	sponsors: EventSponsorItem[]
 	team: string
 	tags: TagItem[]
+	import_enabled: boolean
 }
 
 export interface EventSponsors {

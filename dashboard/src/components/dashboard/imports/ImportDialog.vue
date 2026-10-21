@@ -2,7 +2,6 @@
 import { useEventListener } from "@vueuse/core"
 import {
 	Button,
-	Checkbox,
 	Dialog,
 	ErrorMessage,
 	FormControl,
@@ -13,40 +12,39 @@ import {
 import { computed, reactive, ref, watch } from "vue"
 
 import ImportIssueCard from "@/components/dashboard/imports/ImportIssueCard.vue"
-import ImportStatusCard from "@/components/dashboard/imports/ImportStatusCard.vue"
+import ImportPreview from "@/components/dashboard/imports/ImportPreview.vue"
 import {
-	IMPORTS,
 	type ImportCheck,
 	type ImportIssue,
-	type ImportType,
+	sponsorCount,
 } from "@/components/dashboard/imports/importTypes"
+import { useImportStatus } from "@/components/dashboard/imports/useImportStatus"
 import type { FrappeError } from "@/types"
 import { downloadCsv } from "@/utils/csv"
 
-const props = defineProps<{ event: string; type: ImportType }>()
+const props = defineProps<{ event: string }>()
 const open = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ imported: [] }>()
 
-const config = computed(() => IMPORTS[props.type])
+// The template's header row: the server matches these labels exactly.
+const TEMPLATE_COLUMNS = ["Company Name", "Tier", "Website", "Country", "Contact Email", "Logo URL"]
 
 type Source = { file_url?: string; text?: string; name: string }
 type Choices = {
 	columns: Record<string, string>
 	values: Record<string, Record<string, string>>
 	skip_invalid: boolean
-	date?: string
 }
 
 const source = ref<Source | null>(null)
+const step = ref<"check" | "review">("check")
 const choices = reactive<Choices>({ columns: {}, values: {}, skip_invalid: false })
-const sendEmails = ref(false)
 const showColumns = ref(false)
-const status = ref<InstanceType<typeof ImportStatusCard> | null>(null)
+const status = useImportStatus(props.event, () => emit("imported"))
 const uploader = useFileUpload()
 
 const params = () => ({
 	event: props.event,
-	import_type: props.type,
 	file_url: source.value?.file_url,
 	text: source.value?.text,
 	choices: JSON.stringify(choices),
@@ -57,7 +55,7 @@ const checkCall = useCall<ImportCheck, ReturnType<typeof params>>({
 	method: "POST",
 	immediate: false,
 })
-const startCall = useCall<null, ReturnType<typeof params> & { send_emails: boolean }>({
+const startCall = useCall<null, ReturnType<typeof params>>({
 	url: "/api/v2/method/buzz.api.imports.start_import",
 	method: "POST",
 	immediate: false,
@@ -67,6 +65,7 @@ const startCall = useCall<null, ReturnType<typeof params> & { send_emails: boole
 watch(choices, () => source.value && checkCall.submit(params()), { deep: true })
 
 const check = computed(() => (source.value ? checkCall.data : null))
+const canReview = computed(() => !!check.value?.ready && check.value.ready_rows > 0)
 const openIssues = computed(
 	() =>
 		check.value?.issues.filter((issue) => issue.kind === "missing" || issue.choice === null)
@@ -79,19 +78,15 @@ const fieldOptions = computed(() => [
 	{ label: "Don’t import", value: "" },
 	...(check.value?.fields ?? []).map((field) => ({ label: field.label, value: field.value })),
 ])
-const dayOptions = computed(() =>
-	(check.value?.days ?? []).map((day) => ({ label: day.label, value: day.value })),
-)
-const count = (n: number) => `${n} ${n === 1 ? config.value.one : config.value.noun}`
 const message = (error: unknown) => (error as FrappeError | null)?.message
 
-function useSource(next: Source) {
+function useSource(next: Source | null) {
 	source.value = next
+	step.value = "check"
 	// New objects, so the deep watcher sends the check once for the new file.
 	choices.columns = {}
 	choices.values = {}
 	choices.skip_invalid = false
-	delete choices.date
 }
 
 async function addFile(file: File | undefined) {
@@ -120,21 +115,23 @@ function choose(issue: ImportIssue, choice: string | null) {
 const columnChoice = (column: string, field: string | null) =>
 	choices.columns[column] ?? field ?? ""
 
-const downloadTemplate = () =>
-	downloadCsv(`${config.value.noun} template.csv`, [config.value.columns])
+const downloadTemplate = () => downloadCsv("sponsors template.csv", [TEMPLATE_COLUMNS])
 
 async function start() {
-	await startCall.submit({ ...params(), send_emails: sendEmails.value }).catch(() => null)
+	const total = check.value?.ready_rows ?? 0
+	await startCall.submit(params()).catch(() => null)
 	if (startCall.error) return
-	status.value?.start()
+	status.start(total)
 	open.value = false
 }
 </script>
 
 <template>
-	<Dialog v-model="open" :title="config.title" size="xl" @after-leave="source = null">
+	<Dialog v-model="open" :title="'Import sponsors'" size="xl" @after-leave="useSource(null)">
 		<div v-if="!source" class="space-y-3">
-			<p class="text-p-base text-ink-gray-6">{{ config.intro }}</p>
+			<p class="text-p-base text-ink-gray-6">
+				Add sponsors on the event's tiers. A logo is optional.
+			</p>
 			<label
 				class="flex cursor-pointer flex-col items-center gap-2 rounded-7 border border-dashed border-outline-gray-3 bg-surface-gray-1 px-5 py-9 text-center focus-within:focus-ring"
 				@dragover.prevent
@@ -160,7 +157,7 @@ async function start() {
 				You can also paste rows copied from Google Sheets or Excel.
 			</p>
 			<div class="flex flex-wrap items-center justify-between gap-2 text-p-sm text-ink-gray-6">
-				<span>Needs {{ config.needs }}. Everything else is optional.</span>
+				<span>Needs Company Name and Tier. Everything else is optional.</span>
 				<Button
 					variant="ghost"
 					size="sm"
@@ -177,29 +174,26 @@ async function start() {
 				<span class="lucide-file-spreadsheet size-4 text-ink-green-6" aria-hidden="true" />
 				<span class="truncate font-medium text-ink-gray-9">{{ source.name }}</span>
 				<span v-if="check">· {{ check.total_rows }} rows</span>
-				<Button variant="ghost" size="sm" label="Replace" @click="source = null" />
+				<Button variant="ghost" size="sm" label="Replace" @click="useSource(null)" />
 			</div>
 
 			<ErrorMessage :message="message(checkCall.error)" />
 			<Skeleton v-if="!check && !checkCall.error" class="h-24 w-full" />
 
-			<template v-if="check">
+			<ImportPreview
+				v-else-if="check && step === 'review'"
+				:check="check"
+				:title="`${sponsorCount(check.ready_rows)} to import`"
+			/>
+
+			<template v-else-if="check">
 				<p class="text-lg font-semibold text-ink-gray-9">
 					{{
 						openIssues
 							? `${openIssues} ${openIssues === 1 ? "thing" : "things"} to sort out`
-							: `${count(check.ready_rows)} ready to import`
+							: `${sponsorCount(check.ready_rows)} ready to import`
 					}}
 				</p>
-
-				<FormControl
-					v-if="dayOptions.length > 1"
-					v-model="choices.date"
-					type="select"
-					label="Check-in day"
-					description="Your file has no date column."
-					:options="dayOptions"
-				/>
 
 				<div v-if="check.issues.length" class="space-y-2">
 					<ImportIssueCard
@@ -243,25 +237,31 @@ async function start() {
 		</div>
 
 		<template v-if="source" #actions>
-			<div class="flex flex-wrap items-center justify-end gap-3">
-				<Checkbox
-					v-if="config.emailLabel"
-					v-model="sendEmails"
-					class="me-auto"
-					:label="config.emailLabel"
+			<div v-if="step === 'review'" class="flex items-center justify-end gap-3">
+				<Button
+					variant="ghost"
+					icon-left="lucide-arrow-left"
+					label="Back"
+					@click="step = 'check'"
 				/>
+				<Button
+					variant="solid"
+					:label="`Import ${sponsorCount(check?.ready_rows ?? 0)}`"
+					:loading="startCall.loading"
+					@click="start"
+				/>
+			</div>
+			<div v-else class="flex items-center justify-end gap-3">
 				<Button variant="ghost" label="Cancel" @click="open = false" />
 				<Button
 					variant="solid"
-					:label="`Import ${count(check?.ready_rows ?? 0)}`"
-					:disabled="!check?.ready || !check.ready_rows"
-					:loading="startCall.loading"
-					@click="start"
+					icon-right="lucide-arrow-right"
+					:label="`Review ${sponsorCount(check?.ready_rows ?? 0)}`"
+					:disabled="!canReview"
+					@click="step = 'review'"
 				/>
 			</div>
 			<ErrorMessage class="mt-2" :message="message(startCall.error)" />
 		</template>
 	</Dialog>
-
-	<ImportStatusCard ref="status" :event="event" :type="type" @imported="emit('imported')" />
 </template>

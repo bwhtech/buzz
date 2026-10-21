@@ -1,55 +1,4 @@
-export type ImportType = "checkins" | "talks" | "sponsors"
-
-type ImportConfig = {
-	title: string
-	// Matches the server's Importer.noun, which tags the socket messages.
-	noun: string
-	one: string
-	intro: string
-	needs: string
-	// The template's header row: the server matches these labels exactly.
-	columns: string[]
-	emailLabel?: string
-}
-
-export const IMPORTS: Record<ImportType, ImportConfig> = {
-	checkins: {
-		title: "Import check-ins",
-		noun: "check-ins",
-		one: "check-in",
-		intro: "Check guests in from a front-desk list. Guests are not emailed.",
-		needs: "a Ticket ID or an Email column",
-		columns: ["Ticket ID", "Email", "Date"],
-	},
-	talks: {
-		title: "Import talks",
-		noun: "talks",
-		one: "talk",
-		intro: "Add accepted talks and their speakers. New speakers get a profile.",
-		needs: "Title and Speaker Email",
-		columns: [
-			"Title",
-			"Description",
-			"Speaker Email",
-			"Speaker Name",
-			"Designation",
-			"Company",
-			"Track",
-			"Date",
-			"Start Time",
-			"End Time",
-		],
-		emailLabel: "Email new speakers a welcome",
-	},
-	sponsors: {
-		title: "Import sponsors",
-		noun: "sponsors",
-		one: "sponsor",
-		intro: "Add sponsors on the event's tiers. A logo is optional.",
-		needs: "Company Name and Tier",
-		columns: ["Company Name", "Tier", "Website", "Country", "Contact Email", "Logo URL"],
-	},
-}
+export const sponsorCount = (n: number) => `${n} ${n === 1 ? "sponsor" : "sponsors"}`
 
 export type ImportOption = { value: string; label: string }
 
@@ -63,8 +12,12 @@ export type ImportIssue = {
 	value: string | null
 	count: number
 	options: ImportOption[]
-	rows: { row: number; reason: string }[]
+	rows: ImportRowError[]
 }
+
+export type ImportRowError = { row: number; title: string | null; reason: string }
+
+export type ImportPreviewRow = { row: number; values: Record<string, string | null> }
 
 export type ImportCheck = {
 	total_rows: number
@@ -74,16 +27,17 @@ export type ImportCheck = {
 	columns: { column: string; field: string | null }[]
 	issues: ImportIssue[]
 	notes: string[]
-	days: ImportOption[]
+	preview: ImportPreviewRow[]
 }
 
-export type ImportDone = {
-	event: string
-	import_type: string
-	imported?: number
-	failed?: { row: number; reason: string }[]
-	notes?: string[]
-	header?: string[]
-	failed_cells?: string[][]
-	error?: string
+// buzz.api.imports.get_import_status
+export type ImportStatus = {
+	state: "queued" | "running" | "done"
+	done: number
+	total: number
+	imported: number
+	failed: ImportRowError[]
+	header: string[]
+	failed_cells: string[][]
+	error: string | null
 }

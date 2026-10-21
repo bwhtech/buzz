@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, ErrorMessage, Skeleton } from "frappe-ui"
+import { ErrorMessage, Skeleton } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
@@ -17,7 +17,6 @@ import SponsorsSection from "@/components/dashboard/sponsorships/SponsorsSection
 import TierDrawer from "@/components/dashboard/sponsorships/TierDrawer.vue"
 import TierList from "@/components/dashboard/sponsorships/TierList.vue"
 import { useEventSponsorships } from "@/data/sponsorships"
-import { isFeatureEnabled } from "@/data/teams"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError } from "@/types"
 
@@ -41,7 +40,7 @@ const addTierAction = computed(() =>
 
 const sponsorDialogOpen = ref(false)
 const importOpen = ref(false)
-const canImport = computed(() => !!page.data?.can_write && isFeatureEnabled("feature_data_import"))
+const canImport = computed(() => !!page.data?.can_write && !!page.data?.import_enabled)
 
 function openSponsorDialog() {
 	sponsorDialogOpen.value = true
@@ -151,16 +150,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				:tiers="page.data?.tiers ?? []"
 				:action="addSponsorAction"
 				@open="select('sponsor', $event)"
-			>
-				<template v-if="canImport" #actions>
-					<Button
-						variant="ghost"
-						icon-left="lucide-upload"
-						label="Import"
-						@click="importOpen = true"
-					/>
-				</template>
-			</SponsorsSection>
+			/>
 
 			<EnquiriesSection ref="enquiriesSection" :event="eventId" @open="select('enquiry', $event)" />
 		</template>
@@ -169,7 +159,9 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 			<EventSponsorshipActions
 				:form="page.data.form"
 				:can-write="!!page.data.can_write"
+				:can-import="canImport"
 				@changed="page.reload()"
+				@import="importOpen = true"
 			/>
 		</template>
 	</PageWithSidebar>
@@ -187,7 +179,6 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		v-if="canImport"
 		v-model="importOpen"
 		:event="eventId"
-		type="sponsors"
 		@imported="onSponsorsChanged"
 	/>
 

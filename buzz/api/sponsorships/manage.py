@@ -9,6 +9,7 @@ from buzz.api.sponsorships.schemas import (
 	TierItem,
 )
 from buzz.api.sponsorships.sponsors import sponsor_items, sponsor_rows, sponsor_tags
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import IMPORT_FLAG, is_feature_enabled
 from buzz.permissions import has_section_permission
 
 TIER_FIELDS = ["name", "title", "enabled", "perks", "slots", {"prices": ["currency", "price"]}]
@@ -38,6 +39,7 @@ def event_sponsorships(event: str) -> EventSponsorshipsResponse:
 		sponsors=sponsor_items(sponsors, tier_titles),
 		team=doc.team,
 		tags=sponsor_tags(event),
+		import_enabled=is_feature_enabled(doc.team, IMPORT_FLAG),
 	)
 
 

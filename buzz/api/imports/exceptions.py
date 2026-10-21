@@ -1,11 +1,11 @@
 from frappe import _lt
 
-from buzz.api.exceptions import BuzzAPIError, NotPermitted
+from buzz.api.exceptions import BuzzAPIError, Conflict, NotPermitted
 
 
-class UnknownImportType(BuzzAPIError):
-	title = _lt("Unknown Import")
-	message = _lt("There is no import for {import_type}.")
+class ImportRunning(Conflict):
+	title = _lt("Import Running")
+	message = _lt("An import is already running for this event. Wait for it to finish.")
 
 
 class ImportsNotEnabled(NotPermitted):
