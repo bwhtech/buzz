@@ -58,7 +58,7 @@ def personal_team_of(user: str) -> str | None:
 	return frappe.db.get_value("Buzz Team", {"name": ("in", owned), "is_personal": 1}) if owned else None
 
 
-def personal_team_owner(team: str) -> frappe._dict:
+def personal_team_owner(team: str) -> frappe._dict | None:
 	user = frappe.db.get_value("Buzz Team Membership", {"team": team, "team_role": "Owner"}, "user")
 	return frappe.db.get_value("User", user, ["full_name", "user_image", "username"], as_dict=True)
 

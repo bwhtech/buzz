@@ -3,10 +3,16 @@ import { Avatar, Button, Combobox } from "frappe-ui"
 import { computed, watchEffect } from "vue"
 
 import { session } from "@/data/session"
-import { currentTeam, selectPersonalTeam, selectTeam, teams, teamsLoaded } from "@/data/teams"
+import {
+	currentTeam,
+	personalTeamsEnabled,
+	selectPersonalTeam,
+	selectTeam,
+	teams,
+	teamsLoaded,
+} from "@/data/teams"
 import { NEW_PERSONAL_TEAM, eventTeamOptions } from "@/utils/eventTeamOptions"
 
-const personalTeamsEnabled = Boolean(window.personal_teams_enabled)
 const options = computed(() =>
 	eventTeamOptions(teams.value, {
 		personalTeamsEnabled,

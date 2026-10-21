@@ -188,8 +188,8 @@ def primary_host_of(team: str | None) -> EventHostRef | None:
 	if not team:
 		return None
 	row = frappe.db.get_value("Buzz Team", team, ["team_name", "logo", "is_personal"], as_dict=True)
-	if row and row.is_personal:
-		owner = personal_team_owner(team)
+	owner = personal_team_owner(team) if row and row.is_personal else None
+	if owner:
 		return EventHostRef(host=team, label=owner.full_name, logo=owner.user_image)
 	return EventHostRef(host=team, label=row.team_name or team, logo=row.logo) if row else None
 

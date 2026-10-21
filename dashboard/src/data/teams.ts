@@ -45,6 +45,8 @@ export function upcomingEventsLabel(count: number): string {
 	return count === 1 ? __("1 upcoming event") : __("{0} upcoming events", [String(count)])
 }
 
+export const personalTeamsEnabled = Boolean(window.personal_teams_enabled)
+
 export const teams = computed((): TeamOption[] => teamsResource.data || [])
 
 // Not `loading`: the list is fetched on demand, so it sits idle before the first call.

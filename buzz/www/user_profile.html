@@ -12,7 +12,7 @@
 	{% if meta.image %}<meta property="og:image" content="{{ meta.image }}">{% endif %}
 	<meta name="twitter:card" content="summary">
 	<link rel="canonical" href="{{ meta.url }}">
-	<link rel="stylesheet" href="/assets/buzz/themes/team.css">
+	<link rel="stylesheet" href="/assets/buzz/themes/team.css?v={{ build_version }}">
 	<link rel="stylesheet" href="/assets/buzz/themes/user_profile.css?v={{ build_version }}">
 {% endautoescape %}{% endblock %}
 

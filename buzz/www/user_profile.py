@@ -20,7 +20,6 @@ def get_profile_user(username: str | None) -> frappe._dict:
 	user = get_user_by_username(username) if personal_teams_enabled() and username else None
 	if not user:
 		raise frappe.PageDoesNotExistError
-	user.username = username
 	return user
 
 
@@ -38,7 +37,7 @@ def get_profile_team(user: frappe._dict):
 
 
 def get_user_by_username(username: str) -> frappe._dict | None:
-	fields = ["name", "full_name", "user_image", "bio", "location"]
+	fields = ["name", "username", "full_name", "user_image", "bio", "location"]
 	return frappe.db.get_value("User", {"username": username, "enabled": 1}, fields, as_dict=True)
 
 

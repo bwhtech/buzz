@@ -5,9 +5,8 @@ import { computed } from "vue"
 import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
 import PersonalTeamCard from "@/components/dashboard/teams/PersonalTeamCard.vue"
 import TeamCard from "@/components/dashboard/teams/TeamCard.vue"
-import { teams, teamsLoaded } from "@/data/teams"
+import { personalTeamsEnabled, teams, teamsLoaded } from "@/data/teams"
 
-const personalTeamsEnabled = Boolean(window.personal_teams_enabled)
 const personalTeam = computed(() => teams.value.find((team) => team.is_personal) ?? null)
 const otherTeams = computed(() => teams.value.filter((team) => !team.is_personal))
 </script>

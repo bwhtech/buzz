@@ -1,8 +1,6 @@
 /* /u/<username>: a person's avatar, bio and links over their events. */
 
 .profile {
-	--profile-strong: var(--ink-gray-9);
-	--profile-muted: var(--ink-gray-5);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -33,7 +31,7 @@
 
 .profile-name {
 	margin: 0;
-	color: var(--profile-strong);
+	color: var(--ink-gray-9);
 	font-size: 28px;
 	font-weight: 600;
 	line-height: 1.2;
@@ -43,7 +41,7 @@
 
 .profile-handle {
 	margin: 6px 0 0;
-	color: var(--profile-muted);
+	color: var(--ink-gray-5);
 }
 
 .profile-bio {

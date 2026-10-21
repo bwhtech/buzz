@@ -78,9 +78,11 @@ def host_page_url(team: str | None) -> str | None:
 	if not team:
 		return None
 	row = frappe.db.get_value("Buzz Team", team, ["is_personal", "is_published", "route"], as_dict=True)
+	if not row:
+		return None
 	if row.is_personal:
-		username = personal_team_owner(team).username
-		return f"/u/{username}" if username and personal_teams_enabled() else None
+		owner = personal_team_owner(team)
+		return f"/u/{owner.username}" if owner and owner.username and personal_teams_enabled() else None
 	return f"/{row.route}" if row.is_published and row.route else None
 
 

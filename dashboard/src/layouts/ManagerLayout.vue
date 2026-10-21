@@ -8,7 +8,7 @@ import { useTeamAccess } from "@/composables/useTeamAccess"
 import { finishOpening, openingTeam } from "@/composables/useWorkspaceOpening"
 import { useEventAccess, useEventDoc } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
-import { selectTeam, teamLabel, teams, teamsLoaded } from "@/data/teams"
+import { personalTeamsEnabled, selectTeam, teamLabel, teams, teamsLoaded } from "@/data/teams"
 import ManagerDesktopShell from "@/layouts/ManagerDesktopShell.vue"
 import ManagerMobileShell from "@/layouts/ManagerMobileShell.vue"
 import NotFound from "@/pages/NotFound.vue"
@@ -21,9 +21,7 @@ const sponsorships = useMySponsorships()
 
 // Without a team, someone can still host in their own name once personal teams are on.
 // The teams check lets them stay once that first event creates their personal team.
-const allowCreateWithoutTeam = computed(
-	() => Boolean(window.personal_teams_enabled) && route.name === "create-event",
-)
+const allowCreateWithoutTeam = computed(() => personalTeamsEnabled && route.name === "create-event")
 
 // An event opens into the same shell with its own destinations.
 const eventId = computed(() => route.params.eventId as string | undefined)
