@@ -4,7 +4,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.website.serve import get_response, get_response_content
 
-from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory
+from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, CommunityEventRequestFactory, UserFactory
 
 
 class TestTeamPageRender(IntegrationTestCase):
@@ -35,6 +35,18 @@ class TestTeamPageRender(IntegrationTestCase):
 		self.assertIn("Rendered Meetup", html)
 		self.assertIn("es-tab-buttons", html)
 
+	def test_an_external_event_opens_its_own_site_in_a_new_tab(self):
+		team = self.published_team("Linking Builders", accept_community_submissions=1)
+		frappe.set_user("Administrator")
+		CommunityEventRequestFactory.create(
+			"approved", community=team.name, event_url="https://example.com/rust"
+		)
+		frappe.set_user("Guest")
+
+		html = get_response_content(f"/{team.route}")
+
+		self.assertIn('href="https://example.com/rust" target="_blank" rel="noopener"', html)
+
 	def test_a_signed_in_visitor_sees_the_page(self):
 		team = self.published_team("Signed In Builders")
 		frappe.set_user("Administrator")
@@ -50,6 +62,14 @@ class TestTeamPageRender(IntegrationTestCase):
 		self.assertNotIn(dashboard, get_response_content(f"/{team.route}"))
 		frappe.set_user("Administrator")
 		self.assertIn(dashboard, get_response_content(f"/{team.route}"))
+
+	def test_a_team_owner_is_offered_the_dashboard(self):
+		owner = UserFactory.create_once("community-page-owner@example.com").name
+		frappe.set_user("Administrator")
+		team = BuzzTeamFactory.create_owned_by(owner, team_name="Owned Builders", is_published=1)
+		frappe.set_user(owner)
+
+		self.assertIn(f'href="/b/manage/communities/{team.name}"', get_response_content(f"/{team.route}"))
 
 	def test_a_team_with_no_events_still_renders(self):
 		team = self.published_team("Empty Builders")

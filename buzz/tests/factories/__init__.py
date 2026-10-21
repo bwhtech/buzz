@@ -10,6 +10,7 @@ from buzz.tests.factories.buzz_team_factory import BuzzTeamFactory
 from buzz.tests.factories.buzz_team_membership_factory import BuzzTeamMembershipFactory
 from buzz.tests.factories.buzz_theme_factory import BuzzThemeFactory
 from buzz.tests.factories.comment_factory import CommentFactory
+from buzz.tests.factories.community_event_request_factory import CommunityEventRequestFactory
 from buzz.tests.factories.email_template_factory import EmailTemplateFactory
 from buzz.tests.factories.event_booking_factory import EventBookingFactory
 from buzz.tests.factories.event_booking_refund_factory import EventBookingRefundFactory
@@ -54,6 +55,7 @@ __all__ = [
 	"BuzzTeamMembershipFactory",
 	"BuzzThemeFactory",
 	"CommentFactory",
+	"CommunityEventRequestFactory",
 	"EmailTemplateFactory",
 	"EventBookingFactory",
 	"EventBookingRefundFactory",

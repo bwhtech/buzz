@@ -3,7 +3,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, format_date, getdate, today
 
 from buzz.events.doctype.buzz_team.team_page import TeamPage, day_labels
-from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory
+from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, CommunityEventRequestFactory
 
 
 def event_titles(days: list[dict]) -> list[str]:
@@ -87,3 +87,64 @@ class TestTeamPage(IntegrationTestCase):
 		labels = [link["label"] for link in TeamPage(team).as_context()["links"]]
 
 		self.assertEqual(labels, ["Site"])
+
+
+def create_request(community: str, title: str, offset: int, *traits, **overrides):
+	day = add_days(today(), offset)
+	attributes = {
+		"community": community,
+		"event_title": title,
+		"start_datetime": f"{day} 18:00:00",
+		"end_datetime": f"{day} 20:00:00",
+	}
+	return CommunityEventRequestFactory.create(*traits, **(attributes | overrides))
+
+
+class TestTeamPageExternalEvents(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+		cls.community = BuzzTeamFactory.create_owned_by(None, "community", team_name="External Builders")
+		community = cls.community.name
+		create_request(community, "Rust Meetup", 5, "approved", event_url="https://example.com/rust")
+		create_request(community, "Pending Meetup", 5)
+		create_request(community, "Rejected Meetup", 5, status="Rejected")
+		create_request(community, "Ended Meetup", -3, "approved")
+		day = add_days(today(), 2)
+		BuzzEventFactory.create(title="Own Meetup", team=community, start_date=day, end_date=day)
+
+	def context(self, team: str | None = None) -> dict:
+		return TeamPage(frappe.get_doc("Buzz Team", team or self.community.name)).as_context()
+
+	def test_an_approved_external_event_is_upcoming_in_date_order(self):
+		titles = event_titles(self.context()["upcoming_days"])
+
+		self.assertLess(titles.index("Own Meetup"), titles.index("Rust Meetup"))
+		self.assertNotIn("Pending Meetup", titles)
+		self.assertNotIn("Rejected Meetup", titles)
+
+	def test_an_external_card_links_out_and_stays_off_the_map(self):
+		days = self.context()["upcoming_days"]
+		card = next(event for day in days for event in day["events"] if event["title"] == "Rust Meetup")
+
+		self.assertEqual(card["url"], "https://example.com/rust")
+		self.assertTrue(card["is_external"])
+		self.assertIsNone(card["latitude"])
+		self.assertEqual(card["time"], "18:00")
+
+	def test_an_ended_external_event_is_past(self):
+		context = self.context()
+
+		self.assertIn("Ended Meetup", event_titles(context["past_days"]))
+		self.assertNotIn("Ended Meetup", event_titles(context["upcoming_days"]))
+
+	def test_events_hosted_counts_only_own_events(self):
+		self.assertEqual(self.context()["events_hosted"], 1)
+
+	def test_a_team_not_accepting_submissions_hides_external_events(self):
+		team = BuzzTeamFactory.create_owned_by(None, "community")
+		create_request(team.name, "Closed Meetup", 5, "approved")
+		team.db_set("accept_community_submissions", 0)
+
+		self.assertNotIn("Closed Meetup", event_titles(self.context(team.name)["upcoming_days"]))

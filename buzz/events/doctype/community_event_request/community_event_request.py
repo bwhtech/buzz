@@ -87,6 +87,15 @@ class CommunityEventRequest(Document):
 			)
 
 
+def approved_external_requests(community: str) -> list:
+	"""Events hosted on other sites that the community approved."""
+	return frappe.get_all(
+		"Community Event Request",
+		filters={"community": community, "status": "Approved", "is_external_event": 1},
+		fields=["name", *EXTERNAL_FIELDS],
+	)
+
+
 def on_doctype_update():
 	# validate_unique_pair names the clash; the index stops two concurrent inserts.
 	frappe.db.add_unique("Community Event Request", ["event", "community"])
