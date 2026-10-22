@@ -111,9 +111,9 @@ class DemoData:
 		insert("Ticket Add-on", event=event, title="Workshop pass", price=499)
 		insert(
 			"Buzz Coupon Code",
-			coupon_type="Discount",
+			code="BUZZ20",
 			discount_type="Percentage",
-			discount_value=20,
+			discount_percentage=20,
 			event=event,
 		)
 		self.create_sponsors(event)

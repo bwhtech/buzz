@@ -64,13 +64,19 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 			tax_label=booking_doc.tax_label,
 			tax_percentage=booking_doc.tax_percentage,
 			discount_amount=booking_doc.discount_amount,
-			coupon_code=booking_doc.coupon_code,
+			coupon_code=coupon_code_of(booking_doc),
 			payment_method=payment_method(booking_doc),
 			booked_on=booking_doc.creation,
 		),
 		# Guests read this with a token and no session, so the private QR file is inlined
 		tickets=[ConfirmationTicket(**{**ticket, "qr_code": qr_data_uri(ticket.name)}) for ticket in tickets],
 	)
+
+
+def coupon_code_of(booking) -> str | None:
+	"""The code buyers typed. Automatic coupons have none."""
+	if booking.coupon_code:
+		return frappe.db.get_value("Buzz Coupon Code", booking.coupon_code, "code")
 
 
 def payment_method(booking) -> str | None:
@@ -98,7 +104,7 @@ def build_booking_details(booking_id: str) -> BookingDetailsResponse:
 	)
 
 	return BookingDetailsResponse(
-		doc=booking_doc,
+		doc=frappe._dict(booking_doc.as_dict(no_nulls=True), coupon_code=coupon_code_of(booking_doc)),
 		tickets=tickets,
 		event=event_doc,
 		venue=venue_details(event_doc.venue),
@@ -254,7 +260,7 @@ def summarize_booking(booking, titles: dict[str, str], add_ons: dict[str, list])
 		lines=build_lines(booking, titles, add_ons),
 		net_amount=flt(booking.net_amount),
 		discount_amount=flt(booking.discount_amount),
-		coupon_code=booking.coupon_code,
+		coupon_code=coupon_code_of(booking),
 		tax_amount=flt(booking.tax_amount),
 		tax_label=booking.tax_label,
 		tax_percentage=flt(booking.tax_percentage),
@@ -263,12 +269,7 @@ def summarize_booking(booking, titles: dict[str, str], add_ons: dict[str, list])
 
 
 def build_lines(booking, titles: dict[str, str], add_ons: dict[str, list]) -> list[BookingLine]:
-	"""One line per ticket type, with the add-ons bought against it beneath.
-
-	Line amounts are the stored attendee amounts. A Free Tickets coupon zeroes
-	those after the subtotal has already counted them, so under that coupon the lines sum
-	to less than `net_amount` and the discount line makes up the difference.
-	"""
+	"""One line per ticket type, with the add-ons bought against it beneath."""
 	lines: dict[str, BookingLine] = {}
 	# Two add-ons of one event may carry the same title, so the sub-lines are keyed by
 	# add-on id and the title is only ever displayed.

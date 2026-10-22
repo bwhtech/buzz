@@ -15,6 +15,7 @@ from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.payments import get_controller, mark_payment_as_received
 from buzz.permissions import has_section_permission
+from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
 	get_committed_tickets,
@@ -384,47 +385,12 @@ class EventBooking(Document):
 		]
 
 	def validate_coupon_availability(self):
-		"""Re-validate coupon with lock to prevent race condition."""
+		"""Re-check usage limits under a row lock so concurrent bookings can't overuse the coupon."""
 		if not self.coupon_code:
 			return
-
-		# Lock coupon row to prevent concurrent over-allocation
 		coupon = frappe.get_doc("Buzz Coupon Code", self.coupon_code, for_update=True)
-
-		if coupon.coupon_type == "Free Tickets":
-			# Count claimed tickets excluding current booking (since it's already docstatus=1 during on_submit)
-			claimed = self.get_free_tickets_claimed_excluding_self(coupon)
-			remaining = coupon.number_of_free_tickets - claimed
-
-			# Count only attendees that were actually discounted (amount == 0)
-			# This supports partial allocation where user books more tickets than remaining free
-			coupon_ticket_type = str(coupon.ticket_type) if coupon.ticket_type else ""
-			tickets_discounted = len(
-				[a for a in self.attendees if str(a.ticket_type) == coupon_ticket_type and a.amount == 0]
-			)
-
-			if remaining < tickets_discounted:
-				frappe.throw(_("Only {0} free tickets remaining").format(remaining))
-
-	def get_free_tickets_claimed_excluding_self(self, coupon):
-		"""Get free tickets claimed excluding current booking."""
-		from frappe.query_builder.functions import Count
-
-		EventBooking = frappe.qb.DocType("Event Booking")
-		EventBookingAttendee = frappe.qb.DocType("Event Booking Attendee")
-
-		count = (
-			frappe.qb.from_(EventBookingAttendee)
-			.join(EventBooking)
-			.on(EventBooking.name == EventBookingAttendee.parent)
-			.where(EventBooking.coupon_code == coupon.name)
-			.where(EventBooking.docstatus == 1)
-			.where(EventBooking.name != self.name)
-			.where(EventBookingAttendee.ticket_type == coupon.ticket_type)
-			.select(Count(EventBookingAttendee.name))
-		).run()[0][0]
-
-		return count or 0
+		if reason := coupon.limit_reason(self):
+			frappe.throw(reason)
 
 	def generate_tickets(self):
 		for attendee in self.attendees:
@@ -722,73 +688,19 @@ class EventBooking(Document):
 
 	def apply_coupon_if_applicable(self):
 		self.discount_amount = 0
+		coupon = self.get_coupon()
+		self.coupon_code = coupon.name if coupon else None
+		if coupon:
+			self.discount_amount = coupon.discount_for(self)
+			self.total_amount = self.net_amount - self.discount_amount
 
+	def get_coupon(self) -> BuzzCouponCode | None:
 		if not self.coupon_code:
-			return
-
-		coupon = frappe.get_cached_doc("Buzz Coupon Code", self.coupon_code)
-
-		is_valid, error_msg = coupon.is_valid_for_event(self.event)
-		if not is_valid:
-			frappe.throw(error_msg)
-
-		is_available, error_msg = coupon.is_usage_available()
-		if not is_available:
-			frappe.throw(error_msg)
-
-		is_limited, error_msg = coupon.is_user_limit_reached(user=self.user)
-		if is_limited:
-			frappe.throw(error_msg)
-
-		if coupon.coupon_type == "Discount":
-			is_usable, error_msg = coupon.is_usable_in_currency(self.currency, self.event)
-			if not is_usable:
-				frappe.throw(error_msg)
-			is_met, error_msg = coupon.is_min_order_met(self.net_amount)
-			if not is_met:
-				frappe.throw(error_msg)
-			if coupon.discount_type == "Percentage":
-				calculated_discount = self.net_amount * (coupon.discount_value / 100)
-				if coupon.maximum_discount_amount > 0:
-					self.discount_amount = min(calculated_discount, coupon.maximum_discount_amount)
-				else:
-					self.discount_amount = calculated_discount
-			else:
-				self.discount_amount = min(coupon.discount_value, self.net_amount)
-
-			self.total_amount = self.net_amount - self.discount_amount
-
-		# Free Tickets - only discount attendees with matching ticket type
-		elif coupon.coupon_type == "Free Tickets":
-			remaining = coupon.number_of_free_tickets - coupon.free_tickets_claimed
-			free_add_on_names = [row.add_on for row in coupon.free_add_ons]
-
-			# Only discount attendees with matching ticket type
-			# Use str() to handle int/string type mismatch in document names
-			coupon_ticket_type = str(coupon.ticket_type) if coupon.ticket_type else ""
-			discounted = 0
-			for attendee in self.attendees:
-				if discounted >= remaining:
-					break
-				attendee_ticket_type = str(attendee.ticket_type) if attendee.ticket_type else ""
-				if attendee_ticket_type != coupon_ticket_type:
-					continue
-
-				self.discount_amount += attendee.amount
-				attendee.amount = 0
-				discounted += 1
-
-				# Discount free add-ons for this attendee
-				if attendee.add_ons and free_add_on_names:
-					add_on_doc = frappe.get_cached_doc("Attendee Ticket Add-on", attendee.add_ons)
-					for add_on_row in add_on_doc.add_ons:
-						if add_on_row.add_on in free_add_on_names:
-							self.discount_amount += add_on_row.price
-
-			if discounted == 0:
-				frappe.throw(_("No attendees with eligible ticket type for this coupon"))
-
-			self.total_amount = self.net_amount - self.discount_amount
+			return BuzzCouponCode.best_automatic(self)
+		coupon = frappe.get_doc("Buzz Coupon Code", self.coupon_code)
+		if reason := coupon.unusable_reason(self):
+			frappe.throw(reason)
+		return coupon
 
 
 def get_checked_in_tickets(tickets: list[str]) -> set[str]:

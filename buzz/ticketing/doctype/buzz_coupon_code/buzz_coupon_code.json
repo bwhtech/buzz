@@ -1,225 +1,208 @@
 {
  "actions": [],
- "allow_rename": 1,
- "autoname": "field:code",
+ "autoname": "hash",
  "creation": "2025-12-30 19:40:20.803479",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "code",
-  "coupon_type",
-  "applies_to",
-  "column_break_hhol",
-  "is_active",
+  "details_section",
   "event",
-  "event_category",
-  "section_break_nvvh",
-  "ticket_type",
-  "number_of_free_tickets",
+  "coupon_type",
+  "code",
+  "column_break_details",
+  "enabled",
+  "description",
+  "discount_section",
   "discount_type",
-  "discount_value",
-  "column_break_pbrj",
-  "maximum_discount_amount",
-  "minimum_order_value",
-  "validity_limits_section",
-  "valid_from",
-  "valid_till",
-  "column_break_elot",
-  "max_usage_count",
-  "max_usage_per_user",
-  "section_break_ygde",
-  "free_add_ons",
-  "usage_statistics_section",
-  "times_used",
-  "column_break_zogd",
-  "free_tickets_claimed"
+  "column_break_discount",
+  "discount_percentage",
+  "discount_amounts",
+  "eligibility_section",
+  "applies_to_all_ticket_types",
+  "ticket_types",
+  "minimum_section",
+  "minimum_requirement",
+  "column_break_minimum",
+  "minimum_order_amounts",
+  "minimum_ticket_count",
+  "limits_section",
+  "usage_limit",
+  "once_per_buyer",
+  "column_break_limits",
+  "expires_on"
  ],
  "fields": [
   {
-   "description": "Leave empty to auto-generate",
-   "fieldname": "code",
-   "fieldtype": "Data",
-   "label": "Code",
-   "set_only_once": 1,
-   "unique": 1
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Details"
   },
   {
+   "fieldname": "event",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event",
+   "options": "Buzz Event",
+   "reqd": 1
+  },
+  {
+   "default": "Promo Code",
    "fieldname": "coupon_type",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Coupon Type",
-   "options": "Free Tickets\nDiscount",
+   "options": "Promo Code\nAutomatic",
    "reqd": 1
   },
   {
+   "depends_on": "eval:doc.coupon_type == 'Promo Code'",
+   "fieldname": "code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Code",
+   "mandatory_depends_on": "eval:doc.coupon_type == 'Promo Code'"
+  },
+  {
+   "fieldname": "column_break_details",
+   "fieldtype": "Column Break"
+  },
+  {
    "default": "1",
-   "fieldname": "is_active",
+   "fieldname": "enabled",
    "fieldtype": "Check",
-   "label": "Is Active"
+   "in_list_view": 1,
+   "label": "Enabled"
   },
   {
-   "depends_on": "eval:doc.coupon_type == 'Free Tickets' || doc.applies_to == 'Event'",
-   "fieldname": "event",
-   "fieldtype": "Link",
-   "label": "Event",
-   "mandatory_depends_on": "eval:doc.coupon_type == 'Free Tickets' || doc.applies_to == 'Event'",
-   "options": "Buzz Event"
+   "description": "Only organizers see this",
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
   },
   {
-   "depends_on": "eval:doc.applies_to == 'Event Category'",
-   "fieldname": "event_category",
-   "fieldtype": "Link",
-   "label": "Event Category",
-   "mandatory_depends_on": "eval:doc.applies_to == 'Event Category'",
-   "options": "Event Category"
+   "fieldname": "discount_section",
+   "fieldtype": "Section Break",
+   "label": "Discount"
   },
   {
-   "depends_on": "eval:doc.coupon_type == 'Free Tickets'",
-   "fieldname": "ticket_type",
-   "fieldtype": "Link",
-   "label": "Ticket Type",
-   "mandatory_depends_on": "eval:doc.coupon_type == 'Free Tickets'",
-   "options": "Event Ticket Type"
-  },
-  {
-   "depends_on": "eval:doc.coupon_type == 'Free Tickets'",
-   "fieldname": "number_of_free_tickets",
-   "fieldtype": "Int",
-   "label": "Number of Free Tickets",
-   "mandatory_depends_on": "eval:doc.coupon_type == 'Free Tickets'",
-   "non_negative": 1
-  },
-  {
-   "depends_on": "eval:doc.coupon_type == 'Free Tickets'",
-   "fieldname": "free_add_ons",
-   "fieldtype": "Table",
-   "label": "Free Add-ons",
-   "options": "Coupon Free Add-on"
-  },
-  {
-   "depends_on": "eval:doc.coupon_type == 'Discount'",
+   "default": "Percentage",
    "fieldname": "discount_type",
    "fieldtype": "Select",
    "label": "Discount Type",
-   "mandatory_depends_on": "eval:doc.coupon_type == 'Discount'",
-   "options": "Percentage\nFlat Amount"
+   "options": "Percentage\nFlat Amount",
+   "reqd": 1
   },
   {
-   "depends_on": "eval:doc.coupon_type == 'Discount'",
-   "fieldname": "discount_value",
-   "fieldtype": "Float",
-   "label": "Discount Value",
-   "mandatory_depends_on": "eval:doc.coupon_type == 'Discount'",
-   "non_negative": 1
-  },
-  {
-   "depends_on": "eval:doc.coupon_type == 'Discount'",
-   "description": "0 is unlimited",
-   "fieldname": "max_usage_count",
-   "fieldtype": "Int",
-   "label": "Max Usage Count",
-   "non_negative": 1
-  },
-  {
-   "depends_on": "eval:doc.coupon_type == 'Discount'",
-   "fieldname": "times_used",
-   "fieldtype": "Int",
-   "is_virtual": 1,
-   "label": "Times Used",
-   "read_only": 1
-  },
-  {
-   "depends_on": "eval:doc.coupon_type == 'Free Tickets'",
-   "fieldname": "free_tickets_claimed",
-   "fieldtype": "Int",
-   "is_virtual": 1,
-   "label": "Free Tickets Claimed",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_hhol",
+   "fieldname": "column_break_discount",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "section_break_nvvh",
-   "fieldtype": "Section Break"
+   "depends_on": "eval:doc.discount_type == 'Percentage'",
+   "fieldname": "discount_percentage",
+   "fieldtype": "Percent",
+   "label": "Discount Percentage",
+   "mandatory_depends_on": "eval:doc.discount_type == 'Percentage'"
   },
   {
-   "fieldname": "column_break_pbrj",
-   "fieldtype": "Column Break"
+   "depends_on": "eval:doc.discount_type == 'Flat Amount'",
+   "description": "One amount per currency the booking can be paid in",
+   "fieldname": "discount_amounts",
+   "fieldtype": "Table",
+   "label": "Discount Amounts",
+   "mandatory_depends_on": "eval:doc.discount_type == 'Flat Amount'",
+   "options": "Buzz Price"
   },
   {
-   "depends_on": "eval:doc.coupon_type == 'Discount' && doc.discount_type == 'Percentage'",
-   "fieldname": "maximum_discount_amount",
-   "fieldtype": "Float",
-   "label": "Maximum Discount Amount",
-   "non_negative": 1
-  },
-  {
-   "fieldname": "section_break_ygde",
-   "fieldtype": "Section Break"
-  },
-  {
-   "depends_on": "eval:doc.coupon_type == 'Discount'",
-   "fieldname": "minimum_order_value",
-   "fieldtype": "Float",
-   "label": "Minimum Order Value",
-   "non_negative": 1
-  },
-  {
-   "fieldname": "validity_limits_section",
+   "fieldname": "eligibility_section",
    "fieldtype": "Section Break",
-   "label": "Validity & Limits"
+   "label": "Eligibility"
   },
   {
-   "description": "Coupon active from this date (leave empty for immediate)",
-   "fieldname": "valid_from",
-   "fieldtype": "Date",
-   "label": "Valid From"
+   "default": "1",
+   "fieldname": "applies_to_all_ticket_types",
+   "fieldtype": "Check",
+   "label": "Applies to All Ticket Types"
   },
   {
-   "description": "Coupon expires after this date (leave empty for no expiry)",
-   "fieldname": "valid_till",
-   "fieldtype": "Date",
-   "label": "Valid Till"
+   "depends_on": "eval:!doc.applies_to_all_ticket_types",
+   "fieldname": "ticket_types",
+   "fieldtype": "Table MultiSelect",
+   "label": "Ticket Types",
+   "mandatory_depends_on": "eval:!doc.applies_to_all_ticket_types",
+   "options": "Buzz Coupon Ticket Type"
   },
   {
-   "fieldname": "column_break_elot",
+   "fieldname": "minimum_section",
+   "fieldtype": "Section Break",
+   "label": "Minimum Requirement"
+  },
+  {
+   "default": "None",
+   "fieldname": "minimum_requirement",
+   "fieldtype": "Select",
+   "label": "Minimum Requirement",
+   "options": "None\nMinimum Order Amount\nMinimum Ticket Count"
+  },
+  {
+   "fieldname": "column_break_minimum",
    "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.minimum_requirement == 'Minimum Order Amount'",
+   "description": "Compared with the subtotal of eligible tickets",
+   "fieldname": "minimum_order_amounts",
+   "fieldtype": "Table",
+   "label": "Minimum Order Amounts",
+   "mandatory_depends_on": "eval:doc.minimum_requirement == 'Minimum Order Amount'",
+   "options": "Buzz Price"
+  },
+  {
+   "depends_on": "eval:doc.minimum_requirement == 'Minimum Ticket Count'",
+   "fieldname": "minimum_ticket_count",
+   "fieldtype": "Int",
+   "label": "Minimum Ticket Count",
+   "mandatory_depends_on": "eval:doc.minimum_requirement == 'Minimum Ticket Count'",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "limits_section",
+   "fieldtype": "Section Break",
+   "label": "Limits"
   },
   {
    "default": "0",
-   "description": "0 = unlimited",
-   "fieldname": "max_usage_per_user",
+   "description": "Number of bookings. 0 is unlimited",
+   "fieldname": "usage_limit",
    "fieldtype": "Int",
-   "label": "Max Usage Per User",
+   "label": "Usage Limit",
    "non_negative": 1
   },
   {
-   "fieldname": "usage_statistics_section",
-   "fieldtype": "Section Break",
-   "label": "Usage Statistics"
+   "default": "0",
+   "fieldname": "once_per_buyer",
+   "fieldtype": "Check",
+   "label": "Once per Buyer"
   },
   {
-   "fieldname": "column_break_zogd",
+   "fieldname": "column_break_limits",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "applies_to",
-   "fieldtype": "Select",
-   "label": "Applies To",
-   "options": "\nEvent\nEvent Category",
-   "read_only_depends_on": "eval:doc.coupon_type == 'Free Tickets'"
+   "description": "Usable through the whole day",
+   "fieldname": "expires_on",
+   "fieldtype": "Date",
+   "label": "Expires On"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-12 10:38:02.737227",
+ "modified": "2026-10-22 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Buzz Coupon Code",
- "naming_rule": "By fieldname",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
   {
@@ -249,7 +232,10 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "code",
+ "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "code"
 }

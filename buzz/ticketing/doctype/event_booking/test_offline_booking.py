@@ -54,7 +54,7 @@ class TestOfflineBooking(BookingTestCase):
 		self.assertEqual(self.ticket_count(booking.name), 0)
 
 	def test_offline_booking_applies_a_coupon(self):
-		coupon = BuzzCouponCodeFactory.create(discount_type="Percentage", discount_value=10).name
+		coupon = BuzzCouponCodeFactory.create(event=self.event.name, discount_percentage=10).name
 
 		booking = self.create_offline_booking(coupon_code=coupon)
 

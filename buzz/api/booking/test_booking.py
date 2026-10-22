@@ -8,11 +8,11 @@ from buzz.api.booking import (
 	get_event_booking_data,
 	process_booking,
 	send_guest_booking_otp,
-	validate_coupon,
 )
 from buzz.api.booking.exceptions import (
 	AddOnNotForEvent,
 	InvalidAddOnValue,
+	InvalidCoupon,
 	InvoiceDetailsMissing,
 	RegistrationsClosed,
 )
@@ -462,28 +462,17 @@ class TestGetBookingDetails(BookingTestCase):
 		self.assertEqual(get_booking_details(booking_name).doc.name, booking_name)
 
 
-class TestValidateCoupon(BookingTestCase):
-	def test_unknown_coupon(self):
-		payload = validate_coupon("NO-SUCH-COUPON", str(self.event.name)).__json__()
-		self.assertEqual(payload, {"valid": False, "error": "Invalid coupon code"})
+class TestBookingCouponCode(BookingTestCase):
+	def test_typed_code_is_resolved_to_the_coupon(self):
+		coupon = BuzzCouponCodeFactory.create(event=self.event.name, code="WELCOME")
 
-	def test_discount_coupon_shape(self):
-		coupon = BuzzCouponCodeFactory.create()
+		booking_name = process_booking(self.booking_request(coupon_code="welcome")).__json__()["booking_name"]
 
-		payload = validate_coupon(coupon.name, str(self.event.name)).__json__()
-		self.assertEqual(
-			set(payload),
-			{
-				"valid",
-				"coupon_type",
-				"discount_type",
-				"discount_value",
-				"max_discount_amount",
-				"min_order_value",
-			},
-		)
-		self.assertTrue(payload["valid"])
-		self.assertEqual(payload["max_discount_amount"], 0)
+		self.assertEqual(frappe.db.get_value("Event Booking", booking_name, "coupon_code"), coupon.name)
+
+	def test_unknown_code_is_refused(self):
+		with self.assertRaises(InvalidCoupon):
+			process_booking(self.booking_request(coupon_code="NO-SUCH-CODE"))
 
 
 class BookingSummaryTestCase(BookingTestCase):

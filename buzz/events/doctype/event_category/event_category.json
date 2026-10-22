@@ -56,13 +56,8 @@
  "grid_page_length": 50,
  "image_field": "banner_image",
  "index_web_pages_for_search": 1,
- "links": [
-  {
-   "link_doctype": "Buzz Coupon Code",
-   "link_fieldname": "event_category"
-  }
- ],
- "modified": "2026-05-08 12:38:57.139602",
+ "links": [],
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Category",

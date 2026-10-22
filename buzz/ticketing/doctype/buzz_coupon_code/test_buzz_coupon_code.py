@@ -2,121 +2,86 @@
 # See license.txt
 
 import frappe
-from frappe.utils import add_days, today
 
-from buzz.api.booking import validate_coupon
 from buzz.tests.base_test_cases import CouponTestCase
-from buzz.tests.factories import BuzzCouponCodeFactory, UserFactory
+from buzz.tests.factories import BuzzCouponCodeFactory, BuzzEventFactory, EventTicketTypeFactory
 
 
-class TestCouponUsageLimits(CouponTestCase):
-	@classmethod
-	def setUpClass(cls):
-		super().setUpClass()
-		cls.booker = UserFactory.create_once("coupon-booker@example.com").name
-		cls.other_booker = UserFactory.create_once("coupon-other-booker@example.com").name
+class TestCouponValidation(CouponTestCase):
+	def test_event_is_required(self):
+		with self.assertRaises(frappe.MandatoryError):
+			BuzzCouponCodeFactory.create(event=None)
 
-	def test_discount_coupon_usage_limit_enforced(self):
-		coupon = BuzzCouponCodeFactory.create("percentage", max_usage_count=2).name
-		self.create_booking(coupon).submit()
-		self.create_booking(coupon).submit()
+	def test_code_is_stripped_and_uppercased(self):
+		coupon = self.create_coupon(code="  summer10 ")
+
+		self.assertEqual(coupon.code, "SUMMER10")
+
+	def test_promo_code_needs_a_code(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_coupon(code=None)
+
+	def test_duplicate_code_on_same_event_rejected(self):
+		self.create_coupon(code="DUPLICATE", enabled=0)
 
 		with self.assertRaises(frappe.ValidationError):
-			self.create_booking(coupon)
+			self.create_coupon(code="duplicate")
 
-	def test_discount_coupon_unlimited_usage(self):
-		coupon = BuzzCouponCodeFactory.create("percentage", max_usage_count=0)
+	def test_same_code_on_another_event_allowed(self):
+		self.create_coupon(code="SHARED")
 
-		for _ in range(5):
-			self.create_booking(coupon.name).submit()
+		coupon = BuzzCouponCodeFactory.create(code="SHARED")
 
-		self.assertEqual(coupon.times_used, 5)
+		self.assertEqual(coupon.code, "SHARED")
 
-	def test_inactive_coupon_rejected(self):
-		coupon = BuzzCouponCodeFactory.create("percentage", is_active=0).name
+	def test_automatic_coupon_clears_code(self):
+		coupon = self.create_coupon("automatic", code="IGNORED")
+
+		self.assertIsNone(coupon.code)
+
+	def test_percentage_must_be_above_zero(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_coupon(discount_percentage=0)
+
+	def test_percentage_cannot_exceed_100(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_coupon(discount_percentage=150)
+
+	def test_flat_amount_needs_a_row(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_coupon("flat", discount_amounts=[])
+
+	def test_flat_amount_must_be_positive(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_coupon("flat", discount_amounts=[{"currency": "INR", "price": 0}])
+
+	def test_flat_amount_currencies_must_be_unique(self):
+		rows = [{"currency": "INR", "price": 100}, {"currency": "INR", "price": 200}]
 
 		with self.assertRaises(frappe.ValidationError):
-			self.create_booking(coupon)
+			self.create_coupon("flat", discount_amounts=rows)
 
-	def test_max_usage_per_user_enforced(self):
-		coupon = BuzzCouponCodeFactory.create("percentage", max_usage_per_user=1).name
-		self.create_booking(coupon, user=self.booker).submit()
+	def test_scoped_coupon_needs_ticket_types(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_coupon(applies_to_all_ticket_types=0, ticket_types=[])
 
-		with self.set_user(self.booker):
-			response = validate_coupon_payload(coupon, self.event.name)
+	def test_ticket_type_from_another_event_rejected(self):
+		other = EventTicketTypeFactory.create(event=BuzzEventFactory.create().name)
 
-		self.assertFalse(response["valid"])
-		self.assertIn("maximum usage limit", response["error"].lower())
+		with self.assertRaises(frappe.ValidationError):
+			self.create_coupon(applies_to_all_ticket_types=0, ticket_types=[{"ticket_type": other.name}])
 
-	def test_per_user_limit_does_not_affect_other_users(self):
-		coupon = BuzzCouponCodeFactory.create("percentage", max_usage_per_user=1).name
-		self.create_booking(coupon, user=self.booker).submit()
+	def test_minimum_order_amount_needs_a_row(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_coupon(minimum_requirement="Minimum Order Amount", minimum_order_amounts=[])
 
-		with self.set_user(self.other_booker):
-			self.assertTrue(validate_coupon_payload(coupon, self.event.name)["valid"])
+	def test_minimum_ticket_count_must_be_positive(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_coupon(minimum_requirement="Minimum Ticket Count", minimum_ticket_count=0)
 
+	def test_find_promo_ignores_case_and_event(self):
+		coupon = self.create_coupon(code="FINDME")
+		BuzzCouponCodeFactory.create(code="FINDME")
 
-class TestValidateCouponAPI(CouponTestCase):
-	def test_validate_coupon_returns_discount_info(self):
-		coupon = BuzzCouponCodeFactory.create("percentage", discount_value=25).name
-
-		response = validate_coupon_payload(coupon, self.event.name)
-
-		self.assertTrue(response["valid"])
-		self.assertEqual(
-			(response["coupon_type"], response["discount_type"], response["discount_value"]),
-			("Discount", "Percentage", 25),
-		)
-
-	def test_validate_coupon_returns_max_and_min_values(self):
-		coupon = BuzzCouponCodeFactory.create(
-			"percentage", discount_value=30, maximum_discount_amount=500, minimum_order_value=200
-		).name
-
-		response = validate_coupon_payload(coupon, self.event.name)
-
-		self.assertTrue(response["valid"])
-		self.assertEqual((response["max_discount_amount"], response["min_order_value"]), (500, 200))
-
-	def test_validate_coupon_returns_free_tickets_info(self):
-		coupon = BuzzCouponCodeFactory.create(
-			"free_tickets", event=self.event.name, ticket_type=self.ticket_type.name, number_of_free_tickets=3
-		).name
-
-		response = validate_coupon_payload(coupon, self.event.name)
-
-		self.assertTrue(response["valid"])
-		self.assertEqual((response["coupon_type"], response["remaining_tickets"]), ("Free Tickets", 3))
-
-	def test_validate_coupon_invalid_code(self):
-		response = validate_coupon_payload("INVALIDCODE", self.event.name)
-
-		self.assertFalse(response["valid"])
-		self.assertIn("error", response)
-
-	def test_coupon_not_yet_active(self):
-		coupon = BuzzCouponCodeFactory.create("percentage", valid_from=add_days(today(), 1)).name
-
-		response = validate_coupon_payload(coupon, self.event.name)
-
-		self.assertFalse(response["valid"])
-		self.assertIn("not yet active", response["error"].lower())
-
-	def test_expired_coupon_rejected(self):
-		coupon = BuzzCouponCodeFactory.create("percentage", valid_till=add_days(today(), -1)).name
-
-		response = validate_coupon_payload(coupon, self.event.name)
-
-		self.assertFalse(response["valid"])
-		self.assertIn("expired", response["error"].lower())
-
-	def test_coupon_within_validity_period(self):
-		coupon = BuzzCouponCodeFactory.create(
-			"percentage", valid_from=add_days(today(), -1), valid_till=add_days(today(), 7)
-		).name
-
-		self.assertTrue(validate_coupon_payload(coupon, self.event.name)["valid"])
-
-
-def validate_coupon_payload(coupon: str, event) -> dict:
-	return validate_coupon(coupon, str(event)).__json__()
+		self.assertEqual(type(coupon).find_promo(self.event.name, " findme").name, coupon.name)
+		self.assertIsNone(type(coupon).find_promo(self.event.name, "MISSING"))

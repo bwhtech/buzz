@@ -7,6 +7,7 @@ from buzz.api.booking.schemas import BookingRequest
 from buzz.api.booking.services import create_add_on_doc
 from buzz.payments import handle_refund_notification
 from buzz.tests.factories import (
+	BuzzCouponCodeFactory,
 	BuzzEventFactory,
 	BuzzTeamFactory,
 	EventBookingFactory,
@@ -106,13 +107,16 @@ class CouponTestCase(IntegrationTestCase):
 		cls.ticket_type = create_paid_ticket_type(cls.event.name)
 		cls.add_on = TicketAddOnFactory.create(event=cls.event.name, price=ADD_ON_PRICE)
 
-	def create_booking(self, coupon: str, count: int = 1, **overrides):
+	def create_coupon(self, *traits, **overrides):
+		return BuzzCouponCodeFactory.create(*traits, event=self.event.name, **overrides)
+
+	def create_booking(self, coupon: str | None = None, count: int = 1, **overrides):
 		attendees = attendee_rows(self.ticket_type.name, count)
 		return EventBookingFactory.create(
 			event=self.event.name, coupon_code=coupon, attendees=attendees, **overrides
 		)
 
-	def create_booking_with_add_on(self, coupon: str, count: int = 1):
+	def create_booking_with_add_on(self, coupon: str | None = None, count: int = 1):
 		attendees = attendee_rows(self.ticket_type.name, count)
 		attendees[0]["add_ons"] = create_add_on_doc("", [{"add_on": self.add_on.name, "value": "XL"}]).name
 		return EventBookingFactory.create(event=self.event.name, coupon_code=coupon, attendees=attendees)

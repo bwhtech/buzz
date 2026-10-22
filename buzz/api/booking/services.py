@@ -17,6 +17,7 @@ from frappe.utils.password import get_encryption_key
 from buzz.api.booking.exceptions import (
 	AddOnNotForEvent,
 	InvalidAddOnValue,
+	InvalidCoupon,
 	InvoiceDetailsMissing,
 	RegistrationsClosed,
 )
@@ -28,6 +29,7 @@ from buzz.api.booking.schemas import (
 	PaymentLinkResponse,
 )
 from buzz.payments import get_payment_link_for_booking
+from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	default_currency,
 	start_capacity_transaction,
@@ -111,7 +113,7 @@ class BookingService:
 	def build_booking(self) -> "EventBooking":
 		booking = frappe.new_doc("Event Booking")
 		booking.event = self.request.event
-		booking.coupon_code = self.request.coupon_code
+		booking.coupon_code = self.resolve_coupon()
 		booking.currency = self.request.currency
 		booking.hold_token = self.request.hold_token
 		booking.user = self.resolve_user()
@@ -121,6 +123,14 @@ class BookingService:
 		self.append_custom_fields(booking)
 		self.append_attendees(booking)
 		return booking
+
+	def resolve_coupon(self) -> str | None:
+		if not self.request.coupon_code:
+			return None
+		coupon = BuzzCouponCode.find_promo(self.request.event, self.request.coupon_code)
+		if not coupon:
+			InvalidCoupon.throw()
+		return coupon.name
 
 	def resolve_user(self) -> str:
 		if frappe.session.user != "Guest":

@@ -8,6 +8,8 @@ from buzz.api.booking.schemas import (
 	BookingDetailsResponse,
 	BookingRequest,
 	BookingSummary,
+	DiscountQuote,
+	DiscountQuoteRequest,
 	EventBookingDataResponse,
 	FreeBookingResponse,
 	MyBooking,
@@ -87,8 +89,8 @@ def get_booking_summary(booking_id: str) -> BookingSummary:
 	return details.build_booking_summary(booking_id)
 
 
-@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
-def validate_coupon(
-	coupon_code: str, event: str, user_email: str | None = None, currency: str | None = None
-) -> coupons.CouponResponse:
-	return coupons.validate_coupon_for_event(coupon_code, event, user_email, currency)
+# nosemgrep: guest-whitelisted-method
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=60, seconds=60)
+def get_discount(quote: DiscountQuoteRequest) -> DiscountQuote:
+	return coupons.quote_discount(quote)
