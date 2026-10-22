@@ -66,7 +66,7 @@ export default defineConfig({
 		{
 			name: "chromium",
 			testIgnore:
-				/guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets|language|user-settings|ticket-holds|offline-payment/,
+				/guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets|language|user-settings|ticket-holds|offline-payment|coupons/,
 			use: {
 				...devices["Desktop Chrome"],
 				storageState: authFile,
@@ -213,6 +213,23 @@ export default defineConfig({
 			dependencies: ["offline-payment-setup"],
 		},
 
+		{
+			name: "coupons-setup",
+			testMatch: /coupons\.setup\.ts/,
+			use: {
+				storageState: authFile,
+			},
+			dependencies: ["setup"],
+		},
+		{
+			name: "coupons-chromium",
+			testMatch: /coupons\.spec\.ts/,
+			use: {
+				...devices["Desktop Chrome"],
+				storageState: authFile,
+			},
+			dependencies: ["coupons-setup"],
+		},
 		{
 			name: "ticket-holds-setup",
 			testMatch: /ticket-holds\.setup\.ts/,
