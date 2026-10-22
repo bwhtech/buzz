@@ -1,6 +1,8 @@
 import { StorageSerializers, createGlobalState, useSessionStorage, useStorage } from "@vueuse/core"
 import { computed, watch } from "vue"
 
+import { checklistEvents } from "@/utils/checklistEvents"
+
 export interface ChecklistStep {
 	name: string
 	title: string
@@ -53,12 +55,15 @@ export function trackCompletedSteps(
 			group.steps.filter(isDone).map((step) => ({ step: step.name, group: group.name })),
 		),
 	)
+	const essentials = computed(() =>
+		(groups() ?? []).flatMap((group) =>
+			group.steps.filter((step) => !step.optional).map((step) => step.name),
+		),
+	)
 	watch(doneSteps, (steps) => {
 		if (!groups()?.length) return
-		for (const step of steps) {
-			if (sent.value && !sent.value.includes(step.step)) {
-				window.posthog?.capture("checklist_step_completed", step)
-			}
+		for (const [name, properties] of checklistEvents(sent.value, steps, essentials.value)) {
+			window.posthog?.capture(name, properties)
 		}
 		sent.value = steps.map((step) => step.step)
 	})

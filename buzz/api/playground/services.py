@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 
 import frappe
-from frappe.utils import add_to_date, now_datetime
+from frappe.utils import add_to_date, now_datetime, time_diff_in_seconds
 
-from buzz.analytics import capture
+from buzz.analytics import capture, persona_of
 from buzz.api.playground.exceptions import NotInSandbox, PlaygroundDisabled, UnknownPersona
 from buzz.api.playground.schemas import ChecklistGroup, InboxAttachment, InboxEmail, RedirectResponse
 from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
@@ -28,13 +28,15 @@ def start() -> RedirectResponse:
 	require_playground()
 	configure_site()
 	sandbox = create_sandbox()
-	capture("playground_started", sandbox.name, {"sandbox": sandbox.name})
+	capture("playground_started", sandbox.name, {"sandbox": sandbox.name, "persona": "organizer"})
 	return log_in(sandbox, "organizer")
 
 
 def reset() -> RedirectResponse:
-	old_sandbox = require_sandbox().name
-	capture("playground_reset", old_sandbox, {"sandbox": old_sandbox})
+	sandbox = require_sandbox()
+	old_sandbox = sandbox.name
+	age_minutes = round(time_diff_in_seconds(now_datetime(), sandbox.creation) / 60)
+	capture("playground_reset", old_sandbox, visitor_properties(sandbox, sandbox_age_minutes=age_minutes))
 	# Log in first: deleting the session's own user clears the login cookies.
 	response = start()
 	delete_sandbox(old_sandbox)
@@ -44,11 +46,17 @@ def reset() -> RedirectResponse:
 def switch_persona(persona: str, redirect_to: str | None = None) -> RedirectResponse:
 	if persona not in PERSONAS:
 		UnknownPersona.throw(persona=persona)
-	response = log_in(require_sandbox(), persona)
+	sandbox = require_sandbox()
+	capture("persona_switched", sandbox.name, visitor_properties(sandbox, to_persona=persona))
+	response = log_in(sandbox, persona)
 	# Same-site paths only, so the endpoint never redirects off the playground.
 	if redirect_to and redirect_to.startswith("/") and not redirect_to.startswith(("//", "/\\")):
 		response.redirect_to = redirect_to
 	return response
+
+
+def visitor_properties(sandbox: "PlaygroundSandbox", **extra) -> dict:
+	return {"sandbox": sandbox.name, "persona": persona_of(sandbox.name, frappe.session.user), **extra}
 
 
 def get_checklist() -> list[ChecklistGroup]:

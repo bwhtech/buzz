@@ -16,11 +16,13 @@ class TestPosthogGate(IntegrationTestCase):
 			self.assertIsNone(analytics.posthog_config())
 
 	def test_off_in_developer_mode(self):
-		with patch.dict(frappe.conf, {"posthog_api_key": "phc_test", "developer_mode": 1}):
+		with patch.dict(
+			frappe.conf, {"posthog_api_key": "phc_test", "posthog_force_enabled": 0, "developer_mode": 1}
+		):
 			self.assertFalse(analytics.is_enabled())
 
 	def test_follows_the_telemetry_opt_out(self):
-		conf = {"posthog_api_key": "phc_test", "developer_mode": 0}
+		conf = {"posthog_api_key": "phc_test", "posthog_force_enabled": 0, "developer_mode": 0}
 		with patch.dict(frappe.conf, conf), patch("frappe.get_system_settings", return_value=0):
 			self.assertFalse(analytics.is_enabled())
 		with patch.dict(frappe.conf, conf), patch("frappe.get_system_settings", return_value=1):
