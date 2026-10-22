@@ -90,7 +90,9 @@ jobs:
           # --ignore-scripts skips the postinstall that reinstalls the whole
           # dashboard tree; the tests only need @playwright/test.
           yarn install --frozen-lockfile --ignore-scripts
-          npx playwright install --with-deps --only-shell chromium
+          # No --with-deps: the runner image already has Chromium's libraries, and
+          # the apt fonts it adds are only needed by screenshot assertions.
+          npx playwright install --only-shell chromium
 
       - name: Run Playwright Tests
         run: npx playwright test

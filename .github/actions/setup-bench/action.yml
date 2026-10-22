@@ -56,27 +56,21 @@ runs:
           **/pyproject.toml
           **/requirements*.txt
 
-    - name: Install system deps and bench
+    - name: Install bench and the MariaDB client
       shell: bash -e {0}
       run: |
-        install_db_client() {
-          # `apt-get update` is most of the cost, so only pay for it if the
-          # runner's package lists are too stale to resolve.
-          sudo apt-get -qq install -y --no-install-recommends mariadb-client \
-            || { sudo apt-get -qq update \
-                 && sudo apt-get -qq install -y --no-install-recommends mariadb-client; }
-        }
-
-        # apt and uv share no inputs.
-        install_db_client &> "${RUNNER_TEMP}/apt.log" &
-        apt_pid=$!
+        # The MariaDB service container already ships the client, so run it there
+        # instead of installing mariadb-client from apt, whose mirror can stall for
+        # minutes. Frappe pipes SQL to `mariadb --host=127.0.0.1 --port=3306`, which
+        # inside the container reaches the same server.
+        container=$(docker ps --quiet --filter publish=3306)
+        shim="${RUNNER_TEMP}/mariadb-shim"
+        mkdir -p "$shim"
+        printf '#!/bin/sh\nexec docker exec -i %s mariadb "$@"\n' "$container" > "$shim/mariadb"
+        chmod +x "$shim/mariadb"
+        echo "$shim" >> "$GITHUB_PATH"
 
         uv tool install frappe-bench
-
-        if ! wait "$apt_pid"; then
-          cat "${RUNNER_TEMP}/apt.log"
-          exit 1
-        fi
 
     - name: Init bench
       shell: bash -e {0}
