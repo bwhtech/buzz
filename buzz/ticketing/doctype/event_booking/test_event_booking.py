@@ -54,6 +54,13 @@ class TestTicketAvailability(BookingTestCase):
 
 		self.assertEqual(booking.docstatus, 1)
 
+	def test_refuses_booking_once_oversold_by_one(self):
+		vip = EventTicketTypeFactory.create(event=self.event.name, max_tickets_available=1).name
+		EventTicketFactory.create_list(2, "submitted", event=self.event.name, ticket_type=vip)
+
+		with self.assertRaises(frappe.ValidationError):
+			self.create_booking(vip)
+
 	def test_counts_tickets_with_a_locking_read(self):
 		ticket_type = EventTicketTypeFactory.create(event=self.event.name, max_tickets_available=3)
 		EventTicketFactory.create("submitted", event=self.event.name, ticket_type=ticket_type.name)

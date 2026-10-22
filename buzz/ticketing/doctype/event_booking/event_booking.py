@@ -192,7 +192,7 @@ class EventBooking(Document):
 		)
 
 	def log_if_oversold(self, ticket_type, quantity: int):
-		remaining = ticket_type.get_remaining_tickets(for_update=True)
+		remaining = ticket_type.get_remaining_tickets(for_update=True, hold_token=self.hold_token)
 		if remaining == -1 or remaining >= quantity:
 			return
 		frappe.log_error(
