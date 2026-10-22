@@ -62,6 +62,8 @@ export function trackCompletedSteps(
 	)
 	watch(doneSteps, (steps) => {
 		if (!groups()?.length) return
+		// Past the baseline, wait for PostHog rather than mark steps sent that it never saw.
+		if (sent.value && !window.posthog) return
 		for (const [name, properties] of checklistEvents(sent.value, steps, essentials.value)) {
 			window.posthog?.capture(name, properties)
 		}

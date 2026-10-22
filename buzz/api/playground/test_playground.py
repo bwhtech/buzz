@@ -150,6 +150,12 @@ class TestFlowEvents(PlaygroundTestCase):
 		self.assertEqual(properties["persona"], "organizer")
 		self.assertEqual(properties["to_persona"], "front_desk")
 
+	def test_staying_on_the_same_persona_is_not_a_switch(self):
+		sandbox = create_sandbox()
+		with self.set_user(sandbox.organizer):
+			switch_persona("organizer")
+		self.capture.assert_not_called()
+
 
 class TestInbox(PlaygroundTestCase):
 	@classmethod

@@ -34,12 +34,11 @@ def start() -> RedirectResponse:
 
 def reset() -> RedirectResponse:
 	sandbox = require_sandbox()
-	old_sandbox = sandbox.name
 	age_minutes = round(time_diff_in_seconds(now_datetime(), sandbox.creation) / 60)
-	capture("playground_reset", old_sandbox, visitor_properties(sandbox, sandbox_age_minutes=age_minutes))
+	capture("playground_reset", sandbox.name, visitor_properties(sandbox, sandbox_age_minutes=age_minutes))
 	# Log in first: deleting the session's own user clears the login cookies.
 	response = start()
-	delete_sandbox(old_sandbox)
+	delete_sandbox(sandbox.name)
 	return response
 
 
@@ -47,7 +46,10 @@ def switch_persona(persona: str, redirect_to: str | None = None) -> RedirectResp
 	if persona not in PERSONAS:
 		UnknownPersona.throw(persona=persona)
 	sandbox = require_sandbox()
-	capture("persona_switched", sandbox.name, visitor_properties(sandbox, to_persona=persona))
+	properties = visitor_properties(sandbox, to_persona=persona)
+	# Checklist steps call this for every step, mostly without changing persona.
+	if properties["persona"] != persona:
+		capture("persona_switched", sandbox.name, properties)
 	response = log_in(sandbox, persona)
 	# Same-site paths only, so the endpoint never redirects off the playground.
 	if redirect_to and redirect_to.startswith("/") and not redirect_to.startswith(("//", "/\\")):
