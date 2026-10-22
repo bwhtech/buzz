@@ -151,7 +151,10 @@ runs:
           SET GLOBAL innodb_flush_log_at_trx_commit = 0;
           SET GLOBAL sync_binlog = 0;"
 
-        bench new-site --db-root-password root --admin-password admin "$SITE"
+        # '%': the site user must also log in from inside the service container,
+        # where the mariadb shim runs, not just from the runner's bridge address.
+        bench new-site --db-root-password root --admin-password admin \
+          --mariadb-user-host-login-scope='%' "$SITE"
 
         if [ -n "$EXTRA_APP_URL" ]; then
           bench --site "$SITE" install-app "$(basename "$EXTRA_APP_URL" .git)"
