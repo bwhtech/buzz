@@ -194,6 +194,7 @@ jinja = {
 	"methods": [
 		"buzz.emails.email_event_header",
 		"buzz.emails.email_brand",
+		"buzz.analytics.posthog_config",
 		"buzz.islands.island_script",
 		"buzz.playground.playground_boot",
 		"buzz.www.site_header.buzz_navbar",

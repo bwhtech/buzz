@@ -6,6 +6,7 @@ from frappe import _
 from frappe.utils import get_system_timezone
 
 from buzz import telemetry
+from buzz.analytics import posthog_config
 from buzz.api.maps.services import place_search_enabled
 from buzz.events.doctype.buzz_team.buzz_team import personal_teams_enabled
 from buzz.playground import playground_boot
@@ -45,6 +46,7 @@ def get_boot():
 			"google_maps_embed_api_key": google_maps_embed_api_key(),
 			"zoom_available": is_app_installed("zoom_integration"),
 			"playground": playground_boot(),
+			"posthog_config": posthog_config(),
 			"personal_teams_enabled": personal_teams_enabled(),
 		}
 	)

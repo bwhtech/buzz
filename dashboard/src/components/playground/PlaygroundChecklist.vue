@@ -10,6 +10,7 @@ import {
 	type ChecklistGroup,
 	type ChecklistStep,
 	useBrowserCompletedSteps,
+	trackCompletedSteps,
 	useSpotlightStep,
 } from "./checklist"
 import PlaygroundStepDetail from "./PlaygroundStepDetail.vue"
@@ -52,6 +53,7 @@ const stepFilterOptions = [
 const browserCompleted = useBrowserCompletedSteps()
 const isDone = (step: ChecklistStep) =>
 	step.completed || browserCompleted.names.value.includes(step.name)
+trackCompletedSteps(() => checklist.data ?? undefined, isDone)
 
 const groups = computed(() =>
 	(checklist.data ?? []).map((group) => ({

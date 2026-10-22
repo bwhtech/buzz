@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 import frappe
 from frappe.utils import add_to_date, now_datetime
 
+from buzz.analytics import capture
 from buzz.api.playground.exceptions import NotInSandbox, PlaygroundDisabled, UnknownPersona
 from buzz.api.playground.schemas import ChecklistGroup, InboxAttachment, InboxEmail, RedirectResponse
 from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
@@ -26,11 +27,14 @@ PERSONAS = {
 def start() -> RedirectResponse:
 	require_playground()
 	configure_site()
-	return log_in(create_sandbox(), "organizer")
+	sandbox = create_sandbox()
+	capture("playground_started", sandbox.name, {"sandbox": sandbox.name})
+	return log_in(sandbox, "organizer")
 
 
 def reset() -> RedirectResponse:
 	old_sandbox = require_sandbox().name
+	capture("playground_reset", old_sandbox, {"sandbox": old_sandbox})
 	# Log in first: deleting the session's own user clears the login cookies.
 	response = start()
 	delete_sandbox(old_sandbox)

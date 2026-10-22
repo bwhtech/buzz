@@ -1,4 +1,5 @@
 import { StorageSerializers, createGlobalState, useSessionStorage, useStorage } from "@vueuse/core"
+import { computed, watch } from "vue"
 
 export interface ChecklistStep {
 	name: string
@@ -34,3 +35,31 @@ export const useBrowserCompletedSteps = createGlobalState(() => {
 	const add = (name: string) => names.value.includes(name) || names.value.push(name)
 	return { names, add }
 })
+
+// Remembered per sandbox, so a step done just before a full page load is still sent, and only once.
+// Steps already done on the first load are a baseline, not events.
+export function trackCompletedSteps(
+	groups: () => ChecklistGroup[] | undefined,
+	isDone: (step: ChecklistStep) => boolean,
+) {
+	const sent = useStorage<string[] | null>(
+		`playground-sent-steps-${window.playground?.sandbox}`,
+		null,
+		undefined,
+		{ serializer: StorageSerializers.object },
+	)
+	const doneSteps = computed(() =>
+		(groups() ?? []).flatMap((group) =>
+			group.steps.filter(isDone).map((step) => ({ step: step.name, group: group.name })),
+		),
+	)
+	watch(doneSteps, (steps) => {
+		if (!groups()?.length) return
+		for (const step of steps) {
+			if (sent.value && !sent.value.includes(step.step)) {
+				window.posthog?.capture("checklist_step_completed", step)
+			}
+		}
+		sent.value = steps.map((step) => step.step)
+	})
+}

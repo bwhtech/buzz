@@ -13,6 +13,13 @@ interface Window {
 		hours_left: number | null
 	} | null
 	personal_teams_enabled?: boolean
+	posthog_config?: {
+		api_key: string
+		host: string
+		sandbox: string | null
+		persona: string | null
+	} | null
+	posthog?: { capture(event: string, properties?: Record<string, unknown>): void }
 }
 
 declare module "*.wav" {

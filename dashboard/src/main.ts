@@ -16,7 +16,7 @@ import App from "./App.vue"
 import { applyLanguageFromQuery } from "./composables/useLanguage"
 import router from "./router"
 import { initSocket } from "./socket"
-import { installTelemetry } from "./telemetry"
+import { installTelemetry, loadPosthog } from "./telemetry"
 import translationPlugin from "./translation"
 
 import "./index.css"
@@ -49,7 +49,10 @@ if (process.env.NODE_ENV === "development") {
 	fetch("/api/v2/method/buzz.www.dashboard.get_context_for_dev", { method: "POST" })
 		.then((response) => response.json())
 		.then(({ data }) => Object.assign(window, data))
+		.then(loadPosthog)
 		.catch(() => {})
+} else {
+	loadPosthog()
 }
 
 const socket = initSocket()
