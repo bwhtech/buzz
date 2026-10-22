@@ -259,3 +259,50 @@ class EventTicketTypes(APIResponse):
 	ticket_types: list[TicketTypeItem]
 	payment_providers: list[PaymentProviderItem]
 	revenue: list[CurrencyRevenue]
+
+
+class CurrencyAmount(APIResponse):
+	currency: str
+	amount: float
+
+
+class CurrencyPrice(APIResponse):
+	currency: str
+	price: float
+
+
+class CouponTicketType(APIResponse):
+	name: str
+	title: str
+	prices: list[CurrencyPrice]
+
+
+class CouponItem(APIResponse):
+	name: str
+	coupon_type: Literal["Promo Code", "Automatic"]
+	code: str
+	description: str | None
+	enabled: bool
+	discount_type: Literal["Percentage", "Flat Amount"]
+	discount_percentage: float
+	discount_amounts: list[CurrencyPrice]
+	applies_to_all_ticket_types: bool
+	ticket_types: list[str]
+	minimum_requirement: Literal["None", "Minimum Order Amount", "Minimum Ticket Count"]
+	minimum_order_amounts: list[CurrencyPrice]
+	minimum_ticket_count: int
+	usage_limit: int
+	once_per_buyer: bool
+	starts_on: date | None
+	expires_on: date | None
+	times_used: int
+	status: Literal["Active", "Disabled", "Used up", "Ended", "Scheduled"]
+
+
+class EventCoupons(APIResponse):
+	title: str
+	can_write: bool
+	registration_link: str | None
+	coupons: list[CouponItem]
+	ticket_types: list[CouponTicketType]
+	discounted: list[CurrencyAmount]
