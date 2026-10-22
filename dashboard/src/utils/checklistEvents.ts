@@ -1,4 +1,4 @@
-export interface DoneStep {
+export type DoneStep = {
 	step: string
 	group: string
 }
