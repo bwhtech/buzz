@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -56,6 +57,8 @@ class TestCapture(IntegrationTestCase):
 		enqueue.assert_called_once()
 		self.assertTrue(enqueue.call_args.kwargs["enqueue_after_commit"])
 		self.assertEqual(enqueue.call_args.kwargs["payload"]["distinct_id"], "sandbox-1")
+		properties = enqueue.call_args.kwargs["payload"]["properties"]
+		self.assertEqual(properties["$host"], urlparse(frappe.utils.get_url()).netloc)
 
 	def test_sends_nothing_without_a_key(self):
 		with patch.dict(frappe.conf, {"posthog_api_key": None}), patch("frappe.enqueue") as enqueue:

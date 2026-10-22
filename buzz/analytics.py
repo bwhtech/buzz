@@ -1,6 +1,7 @@
 """PostHog product analytics: page views, session replay and playground funnel events."""
 
 from contextlib import suppress
+from urllib.parse import urlparse
 
 import frappe
 import requests
@@ -45,7 +46,7 @@ def capture(event: str, distinct_id: str, properties: dict | None = None) -> Non
 			"api_key": frappe.conf.posthog_api_key,
 			"event": event,
 			"distinct_id": distinct_id,
-			"properties": properties or {},
+			"properties": {"$host": urlparse(frappe.utils.get_url()).netloc, **(properties or {})},
 		}
 		frappe.enqueue(send, payload=payload, queue="short", enqueue_after_commit=True)
 
