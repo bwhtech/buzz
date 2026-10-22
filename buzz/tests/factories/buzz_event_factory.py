@@ -11,7 +11,7 @@ _fake = Faker()
 
 
 class BuzzEventFactory(BaseFactory[BuzzEvent]):
-	"""A published online event. `route` comes from the title in `validate_route`."""
+	"""A published online event. `route` comes from the title on insert."""
 
 	doctype = "Buzz Event"
 

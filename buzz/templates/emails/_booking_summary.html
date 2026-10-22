@@ -23,7 +23,7 @@
   </tr>
   {% if doc.discount_amount %}
   <tr>
-    <td style="padding:4px 0;{{ muted_style }}">Discount{% if doc.coupon_code %} ({{ doc.coupon_code }}){% endif %}</td>
+    <td style="padding:4px 0;{{ muted_style }}">{% set coupon = frappe.db.get_value("Buzz Coupon Code", doc.coupon_code, "code") if doc.coupon_code %}Discount{% if coupon %} ({{ coupon }}){% endif %}</td>
     <td align="right" style="padding:4px 0;color:#171717">&minus; {{ frappe.utils.fmt_money(doc.discount_amount, currency=doc.currency) }}</td>
   </tr>
   {% endif %}

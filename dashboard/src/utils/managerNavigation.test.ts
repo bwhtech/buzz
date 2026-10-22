@@ -18,7 +18,16 @@ test("sponsorship appears once the user has an inquiry", () => {
 
 test("an event offers its own sections, scoped to its id", () => {
 	const items = managerNavigation({ eventId: "EV-1", creatingEvent: false, hasSponsorships: true })
-	assert.equal(items.length, 7)
+	assert.deepEqual(labels(items), [
+		"Details",
+		"Registration",
+		"Coupons",
+		"Guests",
+		"Talks",
+		"Announcements",
+		"Sponsorships",
+		"Settings",
+	])
 	assert.ok(items.every((item) => item.to.startsWith("/manage/events/EV-1/")))
 })
 

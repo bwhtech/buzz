@@ -135,27 +135,21 @@ class BookingDetailsResponse(APIResponse):
 	cancelled_tickets: list[str]
 
 
-class InvalidCouponResponse(APIResponse):
-	valid: bool
+class DiscountQuoteRequest(APIRequest):
+	event: str
+	currency: str
+	ticket_types: list[str]
+	coupon_code: str | None = None
+	buyer_email: str | None = None
+
+
+class DiscountQuote(APIResponse):
+	"""`coupon_code` is the typed code when a promo applied; `offer_name` names the automatic offer."""
+
+	discount_amount: float
+	coupon_code: str | None
 	error: str | None
-
-
-class DiscountCouponResponse(APIResponse):
-	valid: bool
-	coupon_type: str
-	discount_type: str | None
-	discount_value: float | None
-	# `or 0` fallbacks put a literal int 0 on the wire; a plain float would coerce it to 0.0.
-	max_discount_amount: int | float
-	min_order_value: int | float
-
-
-class FreeTicketsCouponResponse(APIResponse):
-	valid: bool
-	coupon_type: str
-	ticket_type: Any
-	remaining_tickets: int
-	free_add_ons: list
+	offer_name: str | None = None
 
 
 class BookingLine(APIResponse):

@@ -8,7 +8,7 @@ withDefaults(
 	defineProps<{
 		showSwipeHandle?: boolean
 		// Governs the cross axis: width for a side drawer, height for a bottom or top one.
-		size?: "md" | "lg" | "xl"
+		size?: "md" | "lg" | "xl" | "2xl"
 	}>(),
 	{ showSwipeHandle: true, size: "md" },
 )
@@ -37,7 +37,7 @@ function keepOpenForToasts(event: Event) {
 	<div
 		v-if="isMobile"
 		class="flex flex-col"
-		:class="size === 'xl' ? 'h-[calc(90dvh-26px)]' : 'min-h-[75dvh]'"
+		:class="size === 'xl' || size === '2xl' ? 'h-[calc(90dvh-26px)]' : 'min-h-[75dvh]'"
 	>
 		<slot />
 		<div v-if="$slots.footer" class="mt-auto flex shrink-0 items-center gap-2 p-4">
@@ -121,6 +121,11 @@ function keepOpenForToasts(event: Event) {
 }
 .drawer[data-size="xl"] {
 	--drawer-width: max(28rem, 50vw);
+	--drawer-height: max(28rem, 50dvh);
+}
+/* Room for a form beside a side panel. */
+.drawer[data-size="2xl"] {
+	--drawer-width: 54rem;
 	--drawer-height: max(28rem, 50dvh);
 }
 

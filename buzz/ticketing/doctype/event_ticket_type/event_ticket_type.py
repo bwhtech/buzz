@@ -135,7 +135,8 @@ class EventTicketType(Document):
 		if not self.max_tickets_available:
 			return -1
 		held = held_quantities([self.name], hold_token, for_update).get(str(self.name), 0)
-		return self.max_tickets_available - self.count_tickets_sold(for_update) - held
+		# Late payments can oversell, and a negative count must not read as -1 (no limit).
+		return max(0, self.max_tickets_available - self.count_tickets_sold(for_update) - held)
 
 	def count_tickets_sold(self, for_update: bool = False) -> int:
 		"""With `for_update`, a locking read: under REPEATABLE READ a plain count reads the

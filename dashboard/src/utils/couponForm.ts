@@ -1,0 +1,136 @@
+import type { CouponItem, CouponTicketType, TierPrice } from "@/types"
+
+export type CouponValues = Pick<
+	CouponItem,
+	| "coupon_type"
+	| "code"
+	| "description"
+	| "discount_type"
+	| "discount_percentage"
+	| "discount_amounts"
+	| "applies_to_all_ticket_types"
+	| "ticket_types"
+	| "minimum_requirement"
+	| "minimum_order_amounts"
+	| "minimum_ticket_count"
+	| "usage_limit"
+	| "once_per_buyer"
+	| "starts_on"
+	| "expires_on"
+>
+
+export function blankCouponValues(): CouponValues {
+	return {
+		coupon_type: "Promo Code",
+		code: "",
+		description: "",
+		discount_type: "Percentage",
+		discount_percentage: 0,
+		discount_amounts: [],
+		applies_to_all_ticket_types: true,
+		ticket_types: [],
+		minimum_requirement: "None",
+		minimum_order_amounts: [],
+		minimum_ticket_count: 0,
+		usage_limit: 0,
+		once_per_buyer: true,
+		starts_on: null,
+		expires_on: null,
+	}
+}
+
+export function couponValuesOf(coupon: CouponItem): CouponValues {
+	const fields = Object.keys(blankCouponValues()) as (keyof CouponValues)[]
+	// A JSON copy, since structuredClone refuses the reactive proxies a page's data arrives in.
+	const values = Object.fromEntries(
+		fields.map((field) => [field, JSON.parse(JSON.stringify(coupon[field] ?? null))]),
+	)
+	return {
+		...(values as CouponValues),
+		code: coupon.code ?? "",
+		description: coupon.description ?? "",
+	}
+}
+
+const isPaid = (ticketType: CouponTicketType) => ticketType.prices.some((row) => row.price > 0)
+
+export function eligibleTicketTypes(values: CouponValues, ticketTypes: CouponTicketType[]) {
+	return ticketTypes.filter(
+		(ticketType) =>
+			isPaid(ticketType) &&
+			(values.applies_to_all_ticket_types || values.ticket_types.includes(ticketType.name)),
+	)
+}
+
+export function couponCurrencies(values: CouponValues, ticketTypes: CouponTicketType[]) {
+	const currencies = eligibleTicketTypes(values, ticketTypes).flatMap((ticketType) =>
+		ticketType.prices.filter((row) => row.price > 0).map((row) => row.currency),
+	)
+	return [...new Set(currencies)]
+}
+
+function coversCurrencies(rows: TierPrice[], currencies: string[]) {
+	return currencies.every((currency) =>
+		rows.some((row) => row.currency === currency && row.price > 0),
+	)
+}
+
+function hasValidDiscount(values: CouponValues, currencies: string[]) {
+	if (values.discount_type === "Flat Amount")
+		return coversCurrencies(values.discount_amounts, currencies)
+	return values.discount_percentage > 0 && values.discount_percentage <= 100
+}
+
+function hasValidMinimum(values: CouponValues, currencies: string[]) {
+	if (values.minimum_requirement === "Minimum Ticket Count") return values.minimum_ticket_count > 0
+	if (values.minimum_requirement === "Minimum Order Amount")
+		return coversCurrencies(values.minimum_order_amounts, currencies)
+	return true
+}
+
+const PROMO_CODE_PATTERN = /^[A-Z0-9_-]+$/
+
+/** Letters, digits, hyphens and underscores only, upper-cased: what checkout can match. */
+export const cleanPromoCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9_-]/g, "")
+
+export function isCouponValid(values: CouponValues, ticketTypes: CouponTicketType[]) {
+	const currencies = couponCurrencies(values, ticketTypes)
+	if (!currencies.length) return false
+	if (!values.code?.trim()) return false
+	if (
+		values.coupon_type === "Promo Code" &&
+		!PROMO_CODE_PATTERN.test(values.code.trim().toUpperCase())
+	)
+		return false
+	if (values.starts_on && values.expires_on && values.starts_on > values.expires_on) return false
+	return hasValidDiscount(values, currencies) && hasValidMinimum(values, currencies)
+}
+
+const onlyCurrencies = (rows: TierPrice[], currencies: string[]) =>
+	rows.filter((row) => currencies.includes(row.currency))
+
+/** The values as the doctype stores them. */
+export function couponDocValues(values: CouponValues, ticketTypes: CouponTicketType[]) {
+	const currencies = couponCurrencies(values, ticketTypes)
+	return {
+		...values,
+		code:
+			values.coupon_type === "Promo Code" ? values.code.trim().toUpperCase() : values.code.trim(),
+		description: values.description?.trim() ?? "",
+		starts_on: values.starts_on || null,
+		expires_on: values.expires_on || null,
+		discount_amounts: onlyCurrencies(values.discount_amounts, currencies),
+		minimum_order_amounts: onlyCurrencies(values.minimum_order_amounts, currencies),
+		ticket_types: values.applies_to_all_ticket_types
+			? []
+			: values.ticket_types.map((ticket_type) => ({ ticket_type })),
+	}
+}
+
+const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+/** Eight characters, without look-alikes such as O and 0. */
+export function generateCode() {
+	const picks = crypto.getRandomValues(new Uint32Array(8))
+	return Array.from(picks, (pick) => CODE_ALPHABET[pick % CODE_ALPHABET.length]).join("")
+}

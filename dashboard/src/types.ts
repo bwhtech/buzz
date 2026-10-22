@@ -567,19 +567,12 @@ export interface OfflineMethod {
 	custom_fields?: FrappeField[]
 }
 
-export interface CouponData {
-	id?: string
-	title?: string
-	description?: string
-	coupon_type?: string
-	discount_type?: string
-	discount_value?: number
-	max_discount_amount?: number
-	min_order_value?: number
-	free_add_ons?: string[]
-	ticket_type?: string
-	remaining_tickets?: number
-	[key: string]: any
+// buzz.api.booking.get_discount: coupon_code is null when an automatic coupon applied.
+export interface DiscountQuote {
+	discount_amount: number
+	coupon_code: string | null
+	error: string | null
+	offer_name: string | null
 }
 
 // buzz.api.communications: a message sent (or scheduled) to an event's guests, speakers or sponsors.
@@ -818,3 +811,44 @@ export type EventCollaborator = {
 	user: string | null
 	status: "Pending" | "Accepted" | "Revoked"
 } & { [Section in EventSection as `${Section}_access`]: SectionLevel | "" }
+
+export type CouponStatus = "Active" | "Disabled" | "Used up" | "Ended" | "Scheduled"
+
+export interface CouponItem {
+	name: string
+	coupon_type: "Promo Code" | "Automatic"
+	/** Typed at checkout for a promo code; the offer name for an automatic one. */
+	code: string
+	description: string | null
+	enabled: boolean
+	discount_type: "Percentage" | "Flat Amount"
+	discount_percentage: number
+	discount_amounts: TierPrice[]
+	applies_to_all_ticket_types: boolean
+	ticket_types: string[]
+	minimum_requirement: "None" | "Minimum Order Amount" | "Minimum Ticket Count"
+	minimum_order_amounts: TierPrice[]
+	minimum_ticket_count: number
+	/** 0 means unlimited. */
+	usage_limit: number
+	once_per_buyer: boolean
+	starts_on: string | null
+	expires_on: string | null
+	times_used: number
+	status: CouponStatus
+}
+
+export interface CouponTicketType {
+	name: string
+	title: string
+	prices: TierPrice[]
+}
+
+export interface EventCoupons {
+	title: string
+	can_write: boolean
+	registration_link: string | null
+	coupons: CouponItem[]
+	ticket_types: CouponTicketType[]
+	discounted: { currency: string; amount: number }[]
+}

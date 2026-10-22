@@ -50,3 +50,8 @@ class TooManyTicketsHeld(BuzzAPIError):
 class InvoiceDetailsMissing(BuzzAPIError):
 	title = _lt("Invoice Details Missing")
 	message = _lt("A tax invoice needs your tax ID and business name.")
+
+
+class InvalidCoupon(BuzzAPIError):
+	title = _lt("Invalid Code")
+	message = _lt("Invalid or expired code")

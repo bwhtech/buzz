@@ -15,6 +15,7 @@ from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.payments import get_controller, mark_payment_as_received
 from buzz.permissions import has_section_permission
+from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
 	get_committed_tickets,
@@ -175,7 +176,7 @@ class EventBooking(Document):
 	def validate_ticket_type(self, ticket_type, quantity: int):
 		if str(ticket_type.event) != str(self.event):
 			frappe.throw(_("{0} is not available for this event").format(ticket_type.title))
-		if self.flags.ignore_capacity:
+		if self.flags.payment_received:
 			self.log_if_oversold(ticket_type, quantity)
 			return
 		if not ticket_type.is_published:
@@ -191,7 +192,7 @@ class EventBooking(Document):
 		)
 
 	def log_if_oversold(self, ticket_type, quantity: int):
-		remaining = ticket_type.get_remaining_tickets(for_update=True)
+		remaining = ticket_type.get_remaining_tickets(for_update=True, hold_token=self.hold_token)
 		if remaining == -1 or remaining >= quantity:
 			return
 		frappe.log_error(
@@ -247,7 +248,7 @@ class EventBooking(Document):
 				frappe.throw(_("Paid add-ons can't be paid in {0}").format(self.currency))
 
 	def on_submit(self):
-		self.validate_coupon_availability()
+		self.log_if_coupon_overused()
 		self.generate_tickets()
 		release_hold(self.hold_token)
 		self.capture_confirmed()
@@ -383,48 +384,18 @@ class EventBooking(Document):
 			for attendee in self.attendees
 		]
 
-	def validate_coupon_availability(self):
-		"""Re-validate coupon with lock to prevent race condition."""
-		if not self.coupon_code:
+	def log_if_coupon_overused(self):
+		"""`validate` checks the limit before payment; a late payment is booked even past it."""
+		if not (self.flags.payment_received and self.coupon_code):
 			return
-
-		# Lock coupon row to prevent concurrent over-allocation
-		coupon = frappe.get_doc("Buzz Coupon Code", self.coupon_code, for_update=True)
-
-		if coupon.coupon_type == "Free Tickets":
-			# Count claimed tickets excluding current booking (since it's already docstatus=1 during on_submit)
-			claimed = self.get_free_tickets_claimed_excluding_self(coupon)
-			remaining = coupon.number_of_free_tickets - claimed
-
-			# Count only attendees that were actually discounted (amount == 0)
-			# This supports partial allocation where user books more tickets than remaining free
-			coupon_ticket_type = str(coupon.ticket_type) if coupon.ticket_type else ""
-			tickets_discounted = len(
-				[a for a in self.attendees if str(a.ticket_type) == coupon_ticket_type and a.amount == 0]
-			)
-
-			if remaining < tickets_discounted:
-				frappe.throw(_("Only {0} free tickets remaining").format(remaining))
-
-	def get_free_tickets_claimed_excluding_self(self, coupon):
-		"""Get free tickets claimed excluding current booking."""
-		from frappe.query_builder.functions import Count
-
-		EventBooking = frappe.qb.DocType("Event Booking")
-		EventBookingAttendee = frappe.qb.DocType("Event Booking Attendee")
-
-		count = (
-			frappe.qb.from_(EventBookingAttendee)
-			.join(EventBooking)
-			.on(EventBooking.name == EventBookingAttendee.parent)
-			.where(EventBooking.coupon_code == coupon.name)
-			.where(EventBooking.docstatus == 1)
-			.where(EventBooking.name != self.name)
-			.where(EventBookingAttendee.ticket_type == coupon.ticket_type)
-			.select(Count(EventBookingAttendee.name))
-		).run()[0][0]
-
-		return count or 0
+		coupon = frappe.get_doc("Buzz Coupon Code", self.coupon_code)
+		if not coupon.usage_limit or coupon.times_used(exclude=self.name) < coupon.usage_limit:
+			return
+		frappe.log_error(
+			title=_("Coupon {0} overused by a payment that arrived late").format(coupon.name),
+			reference_doctype=self.doctype,
+			reference_name=self.name,
+		)
 
 	def generate_tickets(self):
 		for attendee in self.attendees:
@@ -476,8 +447,8 @@ class EventBooking(Document):
 	def on_payment_authorized(self, payment_status: str):
 		if payment_status in ("Authorized", "Completed"):
 			# payment success, submit the booking
-			# The money is taken, so a ticket type that sold out meanwhile must not fail it.
-			self.flags.ignore_capacity = True
+			# The money is taken, so a sold-out ticket type or stale coupon must not fail it.
+			self.flags.payment_received = True
 			self.payment_status = "Paid"
 			self.status = "Confirmed"
 			self.update_payment_record()
@@ -702,6 +673,7 @@ class EventBooking(Document):
 		frappe.only_for("Event Manager")
 
 		self.status = "Approved"
+		self.flags.payment_received = True
 		if self.payment_status == "Verification Pending":
 			self.payment_status = "Paid"
 
@@ -722,73 +694,23 @@ class EventBooking(Document):
 
 	def apply_coupon_if_applicable(self):
 		self.discount_amount = 0
+		coupon = self.get_coupon()
+		self.coupon_code = coupon.name if coupon else None
+		if coupon:
+			self.discount_amount = coupon.discount_for(self)
+			self.total_amount = self.net_amount - self.discount_amount
 
+	def get_coupon(self) -> BuzzCouponCode | None:
+		if self.flags.payment_received:
+			# The buyer paid this price, so keep the coupon it was quoted with.
+			return frappe.get_doc("Buzz Coupon Code", self.coupon_code) if self.coupon_code else None
+		BuzzCouponCode.lock_for(self)
 		if not self.coupon_code:
-			return
-
-		coupon = frappe.get_cached_doc("Buzz Coupon Code", self.coupon_code)
-
-		is_valid, error_msg = coupon.is_valid_for_event(self.event)
-		if not is_valid:
-			frappe.throw(error_msg)
-
-		is_available, error_msg = coupon.is_usage_available()
-		if not is_available:
-			frappe.throw(error_msg)
-
-		is_limited, error_msg = coupon.is_user_limit_reached(user=self.user)
-		if is_limited:
-			frappe.throw(error_msg)
-
-		if coupon.coupon_type == "Discount":
-			is_usable, error_msg = coupon.is_usable_in_currency(self.currency, self.event)
-			if not is_usable:
-				frappe.throw(error_msg)
-			is_met, error_msg = coupon.is_min_order_met(self.net_amount)
-			if not is_met:
-				frappe.throw(error_msg)
-			if coupon.discount_type == "Percentage":
-				calculated_discount = self.net_amount * (coupon.discount_value / 100)
-				if coupon.maximum_discount_amount > 0:
-					self.discount_amount = min(calculated_discount, coupon.maximum_discount_amount)
-				else:
-					self.discount_amount = calculated_discount
-			else:
-				self.discount_amount = min(coupon.discount_value, self.net_amount)
-
-			self.total_amount = self.net_amount - self.discount_amount
-
-		# Free Tickets - only discount attendees with matching ticket type
-		elif coupon.coupon_type == "Free Tickets":
-			remaining = coupon.number_of_free_tickets - coupon.free_tickets_claimed
-			free_add_on_names = [row.add_on for row in coupon.free_add_ons]
-
-			# Only discount attendees with matching ticket type
-			# Use str() to handle int/string type mismatch in document names
-			coupon_ticket_type = str(coupon.ticket_type) if coupon.ticket_type else ""
-			discounted = 0
-			for attendee in self.attendees:
-				if discounted >= remaining:
-					break
-				attendee_ticket_type = str(attendee.ticket_type) if attendee.ticket_type else ""
-				if attendee_ticket_type != coupon_ticket_type:
-					continue
-
-				self.discount_amount += attendee.amount
-				attendee.amount = 0
-				discounted += 1
-
-				# Discount free add-ons for this attendee
-				if attendee.add_ons and free_add_on_names:
-					add_on_doc = frappe.get_cached_doc("Attendee Ticket Add-on", attendee.add_ons)
-					for add_on_row in add_on_doc.add_ons:
-						if add_on_row.add_on in free_add_on_names:
-							self.discount_amount += add_on_row.price
-
-			if discounted == 0:
-				frappe.throw(_("No attendees with eligible ticket type for this coupon"))
-
-			self.total_amount = self.net_amount - self.discount_amount
+			return BuzzCouponCode.best_automatic(self)
+		coupon = frappe.get_doc("Buzz Coupon Code", self.coupon_code)
+		if reason := coupon.unusable_reason(self):
+			frappe.throw(reason)
+		return coupon
 
 
 def get_checked_in_tickets(tickets: list[str]) -> set[str]:

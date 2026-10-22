@@ -9,6 +9,7 @@ from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
 from frappe.utils import get_datetime_in_timezone, get_system_timezone
 from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
+from frappe.website.utils import cleanup_page_name
 
 from buzz import telemetry
 from buzz.api.forms.fields import validate_excluded_fields
@@ -116,9 +117,8 @@ class BuzzEvent(Document):
 	# end: auto-generated types
 
 	def before_insert(self):
-		# Opaque, not a title slug: a new event is published immediately.
 		if not self.route:
-			self.route = frappe.generate_hash(length=8)
+			self.route = self.make_route()
 		# Organisers open registrations once tickets and details are ready.
 		if not self.registrations_close_at:
 			self.close_registrations()
@@ -257,8 +257,7 @@ class BuzzEvent(Document):
 
 	def validate_route(self):
 		if self.is_published and not self.route:
-			route = frappe.website.utils.cleanup_page_name(self.title).replace("_", "-")
-			self.route = append_number_if_name_exists("Buzz Event", route, fieldname="route")
+			self.route = self.make_route()
 
 		# Compared lowercased: vue-router matches paths case-insensitively, so a
 		# route like "Account" shadows /b/account just as "account" would.
@@ -266,6 +265,13 @@ class BuzzEvent(Document):
 			frappe.throw(
 				_("'{0}' is a reserved route and cannot be used as an event route.").format(self.route)
 			)
+
+	def make_route(self):
+		# Room for the "-<n>" suffix within the 140-char Data field.
+		slug = cleanup_page_name(self.title).replace("_", "-")[:130].strip("-")
+		if not slug or slug in RESERVED_EVENT_ROUTES:
+			slug = f"{slug}-event".lstrip("-")
+		return append_number_if_name_exists("Buzz Event", slug, fieldname="route")
 
 	def validate_guest_verification_config(self):
 		"""Ensure email/SMS is configured when OTP verification is enabled."""

@@ -485,6 +485,8 @@ const pricing = useOrderPricing({
 const { netAmount, discountAmount, tax, taxAmount, total, totalBeforeDiscount } = pricing
 const coupon = reactive(pricing.coupon)
 
+// The typed code, or the automatic offer's name when no code is applied.
+const discountName = computed(() => (coupon.applied ? coupon.appliedCode : coupon.offerName))
 const summaryProps = computed(() => ({
 	lines: pricing.lines.value,
 	totals: {
@@ -498,10 +500,7 @@ const summaryProps = computed(() => ({
 	taxLabel: tax.value.label,
 	taxPercentage: tax.value.percentage,
 	taxInclusive: tax.value.inclusive,
-	discountLabel:
-		coupon.data?.coupon_type === "Free Tickets"
-			? __("Free tickets · {0}", [coupon.code])
-			: __("Discount · {0}", [coupon.code]),
+	discountLabel: discountName.value ? __("Discount · {0}", [discountName.value]) : __("Discount"),
 }))
 
 const showCoupon = computed(() => netAmount.value > 0 || coupon.applied)
@@ -653,7 +652,7 @@ function buildPayload() {
 		attendees: attendees.value.map((attendee) =>
 			attendeePayload(attendee, ticketCustomFields.value),
 		),
-		coupon_code: coupon.applied ? coupon.code.trim() : null,
+		coupon_code: coupon.appliedCode || null,
 		booking_custom_fields: cleanCustomFields(
 			bookingCustomFieldsData.value,
 			bookingCustomFields.value,

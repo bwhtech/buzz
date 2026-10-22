@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { Icon } from "frappe-ui"
+import { Button, type ButtonProps, Icon } from "frappe-ui"
 
 defineProps<{
 	title: string
 	description?: string
 	// A lucide-* name; the illustration slot stays for anything richer.
 	icon?: string
+	// A solid button under the text; the default slot takes anything else.
+	action?: (ButtonProps & { onClick: () => void }) | null
 }>()
 </script>
 
@@ -19,6 +21,8 @@ defineProps<{
 
 		<h2 class="text-lg-medium text-ink-gray-8">{{ title }}</h2>
 		<p v-if="description" class="text-base text-ink-gray-5">{{ description }}</p>
-		<div v-if="$slots.default" class="mt-2"><slot /></div>
+		<div v-if="$slots.default || action" class="mt-2">
+			<slot><Button variant="solid" v-bind="action" /></slot>
+		</div>
 	</div>
 </template>

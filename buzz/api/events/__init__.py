@@ -1,9 +1,10 @@
 import frappe
 
-from buzz.api.events import services, taxes, zoom
+from buzz.api.events import coupons, services, taxes, zoom
 from buzz.api.events import ticket_types as ticket_types_service
 from buzz.api.events.schemas import (
 	CreatedEvent,
+	EventCoupons,
 	EventDetail,
 	EventGuestsResponse,
 	EventHostRef,
@@ -112,6 +113,11 @@ def remove_co_host(event: str, host: str) -> None:
 @frappe.whitelist(methods=["GET"])
 def get_event_ticket_types(event: str) -> EventTicketTypes:
 	return ticket_types_service.event_ticket_types(event)
+
+
+@frappe.whitelist()
+def get_event_coupons(event: str) -> EventCoupons:
+	return coupons.event_coupons(event)
 
 
 @frappe.whitelist(methods=["POST"])
