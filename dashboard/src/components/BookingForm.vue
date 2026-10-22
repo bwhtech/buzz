@@ -498,10 +498,7 @@ const summaryProps = computed(() => ({
 	taxLabel: tax.value.label,
 	taxPercentage: tax.value.percentage,
 	taxInclusive: tax.value.inclusive,
-	discountLabel:
-		coupon.data?.coupon_type === "Free Tickets"
-			? __("Free tickets · {0}", [coupon.code])
-			: __("Discount · {0}", [coupon.code]),
+	discountLabel: coupon.applied ? __("Discount · {0}", [coupon.appliedCode]) : __("Discount"),
 }))
 
 const showCoupon = computed(() => netAmount.value > 0 || coupon.applied)
@@ -653,7 +650,7 @@ function buildPayload() {
 		attendees: attendees.value.map((attendee) =>
 			attendeePayload(attendee, ticketCustomFields.value),
 		),
-		coupon_code: coupon.applied ? coupon.code.trim() : null,
+		coupon_code: coupon.appliedCode || null,
 		booking_custom_fields: cleanCustomFields(
 			bookingCustomFieldsData.value,
 			bookingCustomFields.value,

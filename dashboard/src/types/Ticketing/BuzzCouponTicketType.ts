@@ -1,4 +1,4 @@
-export interface CouponFreeAddOn {
+export interface BuzzCouponTicketType {
 	name: string
 	creation: string
 	modified: string
@@ -9,6 +9,6 @@ export interface CouponFreeAddOn {
 	parentfield?: string
 	parenttype?: string
 	idx?: number
-	/**	Add-on : Link - Ticket Add-on	*/
-	add_on: string
+	/**	Ticket Type : Link - Event Ticket Type	*/
+	ticket_type: string
 }

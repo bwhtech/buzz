@@ -567,19 +567,11 @@ export interface OfflineMethod {
 	custom_fields?: FrappeField[]
 }
 
-export interface CouponData {
-	id?: string
-	title?: string
-	description?: string
-	coupon_type?: string
-	discount_type?: string
-	discount_value?: number
-	max_discount_amount?: number
-	min_order_value?: number
-	free_add_ons?: string[]
-	ticket_type?: string
-	remaining_tickets?: number
-	[key: string]: any
+// buzz.api.booking.get_discount: coupon_code is null when an automatic coupon applied.
+export interface DiscountQuote {
+	discount_amount: number
+	coupon_code: string | null
+	error: string | null
 }
 
 // buzz.api.communications: a message sent (or scheduled) to an event's guests, speakers or sponsors.
