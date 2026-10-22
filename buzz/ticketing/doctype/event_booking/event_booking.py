@@ -176,7 +176,7 @@ class EventBooking(Document):
 	def validate_ticket_type(self, ticket_type, quantity: int):
 		if str(ticket_type.event) != str(self.event):
 			frappe.throw(_("{0} is not available for this event").format(ticket_type.title))
-		if self.flags.ignore_capacity:
+		if self.flags.payment_received:
 			self.log_if_oversold(ticket_type, quantity)
 			return
 		if not ticket_type.is_published:
@@ -248,7 +248,7 @@ class EventBooking(Document):
 				frappe.throw(_("Paid add-ons can't be paid in {0}").format(self.currency))
 
 	def on_submit(self):
-		self.validate_coupon_availability()
+		self.log_if_coupon_overused()
 		self.generate_tickets()
 		release_hold(self.hold_token)
 		self.capture_confirmed()
@@ -384,13 +384,18 @@ class EventBooking(Document):
 			for attendee in self.attendees
 		]
 
-	def validate_coupon_availability(self):
-		"""Re-check usage limits under a row lock so concurrent bookings can't overuse the coupon."""
-		if not self.coupon_code:
+	def log_if_coupon_overused(self):
+		"""`validate` checks the limit before payment; a late payment is booked even past it."""
+		if not (self.flags.payment_received and self.coupon_code):
 			return
-		coupon = frappe.get_doc("Buzz Coupon Code", self.coupon_code, for_update=True)
-		if reason := coupon.limit_reason(self):
-			frappe.throw(reason)
+		coupon = frappe.get_doc("Buzz Coupon Code", self.coupon_code)
+		if not coupon.usage_limit or coupon.times_used(exclude=self.name) < coupon.usage_limit:
+			return
+		frappe.log_error(
+			title=_("Coupon {0} overused by a payment that arrived late").format(coupon.name),
+			reference_doctype=self.doctype,
+			reference_name=self.name,
+		)
 
 	def generate_tickets(self):
 		for attendee in self.attendees:
@@ -442,8 +447,8 @@ class EventBooking(Document):
 	def on_payment_authorized(self, payment_status: str):
 		if payment_status in ("Authorized", "Completed"):
 			# payment success, submit the booking
-			# The money is taken, so a ticket type that sold out meanwhile must not fail it.
-			self.flags.ignore_capacity = True
+			# The money is taken, so a sold-out ticket type or stale coupon must not fail it.
+			self.flags.payment_received = True
 			self.payment_status = "Paid"
 			self.status = "Confirmed"
 			self.update_payment_record()
@@ -668,6 +673,7 @@ class EventBooking(Document):
 		frappe.only_for("Event Manager")
 
 		self.status = "Approved"
+		self.flags.payment_received = True
 		if self.payment_status == "Verification Pending":
 			self.payment_status = "Paid"
 
@@ -695,6 +701,10 @@ class EventBooking(Document):
 			self.total_amount = self.net_amount - self.discount_amount
 
 	def get_coupon(self) -> BuzzCouponCode | None:
+		if self.flags.payment_received:
+			# The buyer paid this price, so keep the coupon it was quoted with.
+			return frappe.get_doc("Buzz Coupon Code", self.coupon_code) if self.coupon_code else None
+		BuzzCouponCode.lock_for(self)
 		if not self.coupon_code:
 			return BuzzCouponCode.best_automatic(self)
 		coupon = frappe.get_doc("Buzz Coupon Code", self.coupon_code)

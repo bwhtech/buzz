@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, cstr, flt, fmt_money, getdate
+from frappe.query_builder.functions import Count
+from frappe.utils import add_to_date, cint, cstr, flt, fmt_money, getdate, now_datetime
 
 if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
@@ -101,6 +102,24 @@ class BuzzCouponCode(Document):
 		best = max(usable, key=lambda coupon: coupon.discount_for(booking), default=None)
 		return best if best and best.discount_for(booking) > 0 else None
 
+	@classmethod
+	def lock_for(cls, booking: "EventBooking") -> None:
+		"""Lock the limited coupons the booking can use, in name order, so bookings check usage
+		limits one at a time until the transaction ends."""
+		coupon = frappe.qb.DocType("Buzz Coupon Code")
+		query = (
+			frappe.qb.from_(coupon)
+			.select(coupon.name)
+			.where(coupon.usage_limit > 0)
+			.orderby(coupon.name)
+			.for_update()
+		)
+		if booking.coupon_code:
+			query = query.where(coupon.name == booking.coupon_code)
+		else:
+			query = query.where((coupon.event == booking.event) & (coupon.coupon_type == "Automatic"))
+		query.run()
+
 	def is_open(self, event: str) -> bool:
 		expired = self.expires_on and getdate() > getdate(self.expires_on)
 		return bool(self.enabled) and not expired and str(self.event) == str(event)
@@ -113,7 +132,7 @@ class BuzzCouponCode(Document):
 		return self.limit_reason(booking) or self.eligibility_reason(booking)
 
 	def limit_reason(self, booking: "EventBooking") -> str | None:
-		if self.usage_limit and self.times_used(exclude=booking.name) >= self.usage_limit:
+		if self.usage_limit and self.times_taken(booking) >= self.usage_limit:
 			return _("This coupon has reached its usage limit")
 		if self.once_per_buyer and self.times_used_by(booking.buyer_email, exclude=booking.name):
 			return _("You have already used this coupon")
@@ -164,6 +183,29 @@ class BuzzCouponCode(Document):
 			return 0
 		filters = {**self.usage_filters(exclude), "buyer_email": buyer_email.strip().lower()}
 		return frappe.db.count("Event Booking", filters)
+
+	def times_taken(self, booking: "EventBooking") -> int:
+		return self.times_used(exclude=booking.name) + self.times_reserved(booking)
+
+	def times_reserved(self, booking: "EventBooking") -> int:
+		"""Drafts other buyers are still paying for: online ones for the payment window,
+		offline ones until approved or rejected."""
+		from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
+		from buzz.ticketing.doctype.ticket_hold.ticket_hold import PAYMENT_HOLD_MINUTES
+
+		draft = frappe.qb.DocType("Event Booking")
+		window_start = add_to_date(now_datetime(), minutes=-PAYMENT_HOLD_MINUTES)
+		query = (
+			frappe.qb.from_(draft)
+			.select(Count(draft.name))
+			.where((draft.coupon_code == self.name) & (draft.docstatus == 0))
+			.where(draft.name != cstr(booking.name))
+			.where((draft.payment_method == OFFLINE_PAYMENT_METHOD) | (draft.creation > window_start))
+			.where(draft.buyer_email.isnotnull())
+		)
+		if booking.buyer_email:
+			query = query.where(draft.buyer_email != booking.buyer_email.strip().lower())
+		return query.run()[0][0]
 
 	def usage_filters(self, exclude: str | None) -> dict:
 		filters = {"coupon_code": self.name, "docstatus": 1}

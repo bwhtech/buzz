@@ -1,5 +1,7 @@
+from unittest.mock import patch
+
 import frappe
-from frappe.utils import add_days, today
+from frappe.utils import add_days, add_to_date, now_datetime, today
 
 from buzz.tests.base_test_cases import CouponTestCase
 
@@ -102,3 +104,116 @@ class TestCouponOncePerBuyer(CouponTestCase):
 
 		with self.assertRaises(frappe.ValidationError):
 			second.submit()
+
+
+class TestCouponAfterPayment(CouponTestCase):
+	"""The money is taken, so a coupon that went stale meanwhile must not fail the booking."""
+
+	def test_limit_reached_meanwhile_keeps_the_discount(self):
+		coupon = self.create_coupon(usage_limit=1).name
+		paid = self.create_booking(coupon)
+		self.create_booking(coupon).submit()
+
+		with patch("buzz.ticketing.doctype.event_booking.event_booking.frappe.log_error") as log_error:
+			paid.on_payment_authorized("Completed")
+
+		self.assert_confirmed_with_discount(paid, 50)
+		self.assertEqual(log_error.call_args.kwargs["reference_name"], paid.name)
+
+	def test_late_payment_beside_an_unpaid_reservation_is_not_logged(self):
+		coupon = self.create_coupon(usage_limit=1).name
+		late = self.create_booking(coupon, buyer_email="late@example.com")
+		with self.freeze_time(add_to_date(now_datetime(), minutes=16), tick=True):
+			self.create_booking(coupon, buyer_email="next@example.com")
+
+			with patch("buzz.ticketing.doctype.event_booking.event_booking.frappe.log_error") as log_error:
+				late.on_payment_authorized("Completed")
+
+		self.assertFalse(log_error.called)
+
+	def test_buyer_used_it_meanwhile_keeps_the_discount(self):
+		coupon = self.create_coupon(once_per_buyer=1).name
+		paid = self.create_booking(coupon, buyer_email="twice@example.com")
+		self.create_booking(coupon, buyer_email="twice@example.com").submit()
+
+		paid.on_payment_authorized("Completed")
+
+		self.assert_confirmed_with_discount(paid, 50)
+
+	def test_expired_meanwhile_keeps_the_discount(self):
+		paid = self.create_booking(self.create_coupon(expires_on=today()).name)
+
+		with self.freeze_time(add_days(today(), 1), tick=True):
+			paid.on_payment_authorized("Completed")
+
+		self.assert_confirmed_with_discount(paid, 50)
+
+	def test_disabled_meanwhile_keeps_the_discount(self):
+		coupon = self.create_coupon().name
+		paid = self.create_booking(coupon)
+		frappe.db.set_value("Buzz Coupon Code", coupon, "enabled", 0)
+
+		paid.on_payment_authorized("Completed")
+
+		self.assert_confirmed_with_discount(paid, 50)
+
+	def test_automatic_coupon_added_meanwhile_is_not_applied(self):
+		paid = self.create_booking()
+		self.create_coupon("automatic")
+
+		paid.on_payment_authorized("Completed")
+
+		self.assert_confirmed_with_discount(paid, 0)
+		self.assertIsNone(paid.coupon_code)
+
+	def test_offline_approval_after_disable_keeps_the_discount(self):
+		coupon = self.create_coupon().name
+		offline = self.create_booking(coupon, payment_method="Offline")
+		frappe.db.set_value("Buzz Coupon Code", coupon, "enabled", 0)
+
+		offline.approve_booking()
+
+		self.assert_confirmed_with_discount(offline, 50)
+
+	def assert_confirmed_with_discount(self, booking, discount: int):
+		self.assertEqual((booking.docstatus, booking.discount_amount), (1, discount))
+
+
+class TestCouponReservations(CouponTestCase):
+	"""A draft waiting for payment holds a use, so the last use can't be paid for twice."""
+
+	def test_paying_draft_reserves_the_last_use(self):
+		coupon = self.create_coupon(usage_limit=1).name
+		self.create_booking(coupon, buyer_email="first@example.com")
+
+		with self.assertRaises(frappe.ValidationError):
+			self.create_booking(coupon, buyer_email="second@example.com")
+
+	def test_reservation_lapses_after_the_payment_window(self):
+		coupon = self.create_coupon(usage_limit=1).name
+		self.create_booking(coupon, buyer_email="first@example.com")
+
+		with self.freeze_time(add_to_date(now_datetime(), minutes=16), tick=True):
+			booking = self.create_booking(coupon, buyer_email="second@example.com")
+
+		self.assertEqual(booking.discount_amount, 50)
+
+	def test_own_draft_does_not_block_a_retry(self):
+		coupon = self.create_coupon(usage_limit=1).name
+		self.create_booking(coupon, buyer_email="retry@example.com")
+
+		booking = self.create_booking(coupon, buyer_email="retry@example.com")
+
+		self.assertEqual(booking.discount_amount, 50)
+
+	def test_offline_draft_reserves_until_rejected(self):
+		coupon = self.create_coupon(usage_limit=1).name
+		offline = self.create_booking(coupon, buyer_email="first@example.com", payment_method="Offline")
+
+		with self.freeze_time(add_to_date(now_datetime(), minutes=16), tick=True):
+			with self.assertRaises(frappe.ValidationError):
+				self.create_booking(coupon, buyer_email="second@example.com")
+			offline.reject_booking()
+			booking = self.create_booking(coupon, buyer_email="second@example.com")
+
+		self.assertEqual(booking.discount_amount, 50)
