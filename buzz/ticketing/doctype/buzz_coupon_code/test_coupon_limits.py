@@ -64,7 +64,9 @@ class TestCouponUsageLimit(CouponTestCase):
 		self.create_booking(coupon)
 		cancelled = self.create_booking(coupon)
 		cancelled.submit()
-		cancelled.cancel()
+		# Cancelling mails each attendee, and a test site configures no email account.
+		with patch("frappe.sendmail"):
+			cancelled.cancel()
 
 		self.create_booking(coupon).submit()
 
@@ -121,6 +123,11 @@ class TestCouponOncePerBuyer(CouponTestCase):
 
 class TestCouponAfterPayment(CouponTestCase):
 	"""The money is taken, so a coupon that went stale meanwhile must not fail the booking."""
+
+	def setUp(self):
+		super().setUp()
+		# Confirming mails the tickets; without an email account that failure lands in log_error.
+		self.enterContext(patch("frappe.sendmail"))
 
 	def test_limit_reached_meanwhile_keeps_the_discount(self):
 		coupon = self.create_coupon(usage_limit=1).name
