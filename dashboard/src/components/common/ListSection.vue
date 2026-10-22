@@ -13,6 +13,7 @@ defineProps<{
 	emptyTitle: string
 	emptyDescription: string
 	emptyIcon: string
+	emptyAction?: (ButtonProps & { onClick: () => void }) | null
 }>()
 </script>
 
@@ -31,6 +32,7 @@ defineProps<{
 			:title="emptyTitle"
 			:description="emptyDescription"
 			:icon="emptyIcon"
+			:action="emptyAction"
 		/>
 		<slot v-else />
 	</section>

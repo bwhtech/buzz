@@ -811,3 +811,44 @@ export type EventCollaborator = {
 	user: string | null
 	status: "Pending" | "Accepted" | "Revoked"
 } & { [Section in EventSection as `${Section}_access`]: SectionLevel | "" }
+
+export type CouponStatus = "Active" | "Disabled" | "Used up" | "Ended" | "Scheduled"
+
+export interface CouponItem {
+	name: string
+	coupon_type: "Promo Code" | "Automatic"
+	/** Typed at checkout for a promo code; the offer name for an automatic one. */
+	code: string
+	description: string | null
+	enabled: boolean
+	discount_type: "Percentage" | "Flat Amount"
+	discount_percentage: number
+	discount_amounts: TierPrice[]
+	applies_to_all_ticket_types: boolean
+	ticket_types: string[]
+	minimum_requirement: "None" | "Minimum Order Amount" | "Minimum Ticket Count"
+	minimum_order_amounts: TierPrice[]
+	minimum_ticket_count: number
+	/** 0 means unlimited. */
+	usage_limit: number
+	once_per_buyer: boolean
+	starts_on: string | null
+	expires_on: string | null
+	times_used: number
+	status: CouponStatus
+}
+
+export interface CouponTicketType {
+	name: string
+	title: string
+	prices: TierPrice[]
+}
+
+export interface EventCoupons {
+	title: string
+	can_write: boolean
+	registration_link: string | null
+	coupons: CouponItem[]
+	ticket_types: CouponTicketType[]
+	discounted: { currency: string; amount: number }[]
+}

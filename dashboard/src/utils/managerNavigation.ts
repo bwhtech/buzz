@@ -72,6 +72,12 @@ function eventItems(eventId: string, access?: EventAccess | null): ManagerNavIte
 			to: `${event}/registrations`,
 			section: "ticketing",
 		},
+		{
+			label: "Coupons",
+			icon: "lucide-ticket-percent",
+			to: `${event}/coupons`,
+			section: "ticketing",
+		},
 		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests`, section: "guests" },
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks`, section: "talks" },
 		{

@@ -223,7 +223,7 @@ export default defineConfig({
 		},
 		{
 			name: "coupons-chromium",
-			testMatch: /coupons\.spec\.ts/,
+			testMatch: /coupons(-dashboard)?\.spec\.ts/,
 			use: {
 				...devices["Desktop Chrome"],
 				storageState: authFile,
