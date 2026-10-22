@@ -59,15 +59,17 @@ runs:
     - name: Install bench and the MariaDB client
       shell: bash -e {0}
       run: |
-        # The MariaDB service container already ships the client, so run it there
+        # The MariaDB service container already ships the client tools, so run them there
         # instead of installing mariadb-client from apt, whose mirror can stall for
         # minutes. Frappe pipes SQL to `mariadb --host=127.0.0.1 --port=3306`, which
         # inside the container reaches the same server.
         container=$(docker ps --quiet --filter publish=3306)
         shim="${RUNNER_TEMP}/mariadb-shim"
         mkdir -p "$shim"
-        printf '#!/bin/sh\nexec docker exec -i %s mariadb "$@"\n' "$container" > "$shim/mariadb"
-        chmod +x "$shim/mariadb"
+        for tool in mariadb mariadb-dump; do
+          printf '#!/bin/sh\nexec docker exec -i %s %s "$@"\n' "$container" "$tool" > "$shim/$tool"
+          chmod +x "$shim/$tool"
+        done
         echo "$shim" >> "$GITHUB_PATH"
 
         uv tool install frappe-bench
