@@ -485,6 +485,8 @@ const pricing = useOrderPricing({
 const { netAmount, discountAmount, tax, taxAmount, total, totalBeforeDiscount } = pricing
 const coupon = reactive(pricing.coupon)
 
+// The typed code, or the automatic offer's name when no code is applied.
+const discountName = computed(() => (coupon.applied ? coupon.appliedCode : coupon.offerName))
 const summaryProps = computed(() => ({
 	lines: pricing.lines.value,
 	totals: {
@@ -498,7 +500,7 @@ const summaryProps = computed(() => ({
 	taxLabel: tax.value.label,
 	taxPercentage: tax.value.percentage,
 	taxInclusive: tax.value.inclusive,
-	discountLabel: coupon.applied ? __("Discount · {0}", [coupon.appliedCode]) : __("Discount"),
+	discountLabel: discountName.value ? __("Discount · {0}", [discountName.value]) : __("Discount"),
 }))
 
 const showCoupon = computed(() => netAmount.value > 0 || coupon.applied)

@@ -572,6 +572,7 @@ export interface DiscountQuote {
 	discount_amount: number
 	coupon_code: string | null
 	error: string | null
+	offer_name: string | null
 }
 
 // buzz.api.communications: a message sent (or scheduled) to an event's guests, speakers or sponsors.

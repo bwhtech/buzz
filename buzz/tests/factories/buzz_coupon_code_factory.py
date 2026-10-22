@@ -25,7 +25,7 @@ class BuzzCouponCodeFactory(BaseFactory[BuzzCouponCode]):
 
 	@property
 	def automatic(self) -> dict[str, Any]:
-		return {"coupon_type": "Automatic", "code": None}
+		return {"coupon_type": "Automatic", "code": f"Group discount {frappe.generate_hash(length=4)}"}
 
 	@property
 	def flat(self) -> dict[str, Any]:

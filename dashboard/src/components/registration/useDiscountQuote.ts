@@ -119,6 +119,8 @@ export function useDiscountQuote(inputs: PricingInputs, netAmount: Ref<number>) 
 		applied,
 		loading: computed(() => quoteCall.loading),
 		discountAmount,
+		// The automatic offer's name, when no code is applied.
+		offerName: computed(() => quote.value?.offer_name ?? null),
 		note,
 		apply,
 		remove,

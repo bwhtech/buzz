@@ -144,11 +144,12 @@ class DiscountQuoteRequest(APIRequest):
 
 
 class DiscountQuote(APIResponse):
-	"""`coupon_code` is the typed code when a promo applied; an automatic discount has none."""
+	"""`coupon_code` is the typed code when a promo applied; `offer_name` names the automatic offer."""
 
 	discount_amount: float
 	coupon_code: str | None
 	error: str | None
+	offer_name: str | None = None
 
 
 class BookingLine(APIResponse):

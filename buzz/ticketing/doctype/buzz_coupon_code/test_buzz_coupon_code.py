@@ -2,6 +2,7 @@
 # See license.txt
 
 import frappe
+from frappe.utils import add_days, today
 
 from buzz.tests.base_test_cases import CouponTestCase
 from buzz.tests.factories import BuzzCouponCodeFactory, BuzzEventFactory, EventTicketTypeFactory
@@ -34,10 +35,26 @@ class TestCouponValidation(CouponTestCase):
 
 		self.assertEqual(coupon.code, "SHARED")
 
-	def test_automatic_coupon_clears_code(self):
-		coupon = self.create_coupon("automatic", code="IGNORED")
+	def test_promo_code_rejects_spaces_and_symbols(self):
+		for code in ("EARLY BIRD", "SAVE20%", "HI!"):
+			with self.subTest(code=code), self.assertRaises(frappe.ValidationError):
+				self.create_coupon(code=code)
 
-		self.assertIsNone(coupon.code)
+	def test_promo_code_allows_hyphens_and_underscores(self):
+		self.assertEqual(self.create_coupon(code="early-bird_26").code, "EARLY-BIRD_26")
+
+	def test_automatic_coupon_keeps_its_name_as_typed(self):
+		coupon = self.create_coupon("automatic", code=" Group of 5+ ")
+
+		self.assertEqual(coupon.code, "Group of 5+")
+
+	def test_automatic_coupon_needs_a_name(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_coupon("automatic", code=" ")
+
+	def test_start_after_expiry_rejected(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_coupon(starts_on=add_days(today(), 5), expires_on=add_days(today(), 2))
 
 	def test_percentage_must_be_above_zero(self):
 		with self.assertRaises(frappe.ValidationError):

@@ -74,7 +74,7 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 
 
 def coupon_code_of(booking) -> str | None:
-	"""The code buyers typed. Automatic coupons have none."""
+	"""The code buyers typed, or an automatic offer's name."""
 	if booking.coupon_code:
 		return frappe.db.get_value("Buzz Coupon Code", booking.coupon_code, "code")
 

@@ -1,6 +1,7 @@
 from frappe.utils import add_days, today
 
 from buzz.api.booking import get_discount
+from buzz.api.booking.details import coupon_code_of
 from buzz.api.booking.schemas import DiscountQuoteRequest
 from buzz.tests.base_test_cases import CouponTestCase, create_paid_ticket_type
 from buzz.tests.factories import BuzzCouponCodeFactory, BuzzEventFactory, EventTicketTypeFactory
@@ -19,14 +20,16 @@ class QuoteTestCase(CouponTestCase):
 
 class TestCouponQuote(QuoteTestCase):
 	def test_no_coupons_quotes_zero(self):
-		self.assertEqual(self.quote(), {"discount_amount": 0, "coupon_code": None, "error": None})
+		self.assertEqual(
+			self.quote(), {"discount_amount": 0, "coupon_code": None, "error": None, "offer_name": None}
+		)
 
 	def test_promo_code_quote(self):
 		self.create_coupon(code="QUOTE20", discount_percentage=20)
 
 		self.assertEqual(
 			self.quote(2, coupon_code="quote20"),
-			{"discount_amount": 200, "coupon_code": "QUOTE20", "error": None},
+			{"discount_amount": 200, "coupon_code": "QUOTE20", "error": None, "offer_name": None},
 		)
 
 	def test_unknown_disabled_expired_and_other_event_codes_share_one_message(self):
@@ -36,7 +39,8 @@ class TestCouponQuote(QuoteTestCase):
 
 		for code in ("NOPE", "OFF", "OLD", "ELSEWHERE"):
 			self.assertEqual(
-				self.quote(coupon_code=code), {"discount_amount": 0, "coupon_code": None, "error": INVALID}
+				self.quote(coupon_code=code),
+				{"discount_amount": 0, "coupon_code": None, "error": INVALID, "offer_name": None},
 			)
 
 	def test_specific_message_once_code_is_real(self):
@@ -66,10 +70,13 @@ class TestAutomaticCouponSelection(QuoteTestCase):
 
 	def test_best_automatic_is_picked_and_promo_beats_it(self):
 		self.create_coupon("automatic", discount_percentage=10)
-		self.create_coupon("automatic", discount_percentage=40)
+		self.create_coupon("automatic", discount_percentage=40, code="Forty off")
 		self.create_coupon(code="SMALL", discount_percentage=5)
 
-		self.assertEqual(self.quote(), {"discount_amount": 200, "coupon_code": None, "error": None})
+		self.assertEqual(
+			self.quote(),
+			{"discount_amount": 200, "coupon_code": None, "error": None, "offer_name": "Forty off"},
+		)
 		self.assertEqual(self.quote(coupon_code="SMALL")["discount_amount"], 25)
 
 	def test_tie_picks_oldest_and_booking_stores_it(self):
@@ -85,3 +92,13 @@ class TestAutomaticCouponSelection(QuoteTestCase):
 		self.ticket_type = EventTicketTypeFactory.create(event=self.event.name)
 
 		self.assertIsNone(self.create_booking().coupon_code)
+
+	def test_quote_names_the_automatic_offer(self):
+		self.create_coupon("automatic", code="Group of 5+", discount_percentage=40)
+
+		self.assertEqual(self.quote()["offer_name"], "Group of 5+")
+
+	def test_receipt_names_the_automatic_offer(self):
+		self.create_coupon("automatic", code="Group of 5+")
+
+		self.assertEqual(coupon_code_of(self.create_booking()), "Group of 5+")

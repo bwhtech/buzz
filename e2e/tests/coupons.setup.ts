@@ -1,6 +1,6 @@
 import { test as setup } from "@playwright/test"
 
-import { COUPON_EVENT_ROUTE, COUPON_EVENT_TITLE } from "../data/coupons"
+import { AUTOMATIC_OFFER_TITLE, COUPON_EVENT_ROUTE, COUPON_EVENT_TITLE } from "../data/coupons"
 import {
 	createDoc,
 	deleteDoc,
@@ -77,7 +77,11 @@ setup("seed an event with an automatic coupon and a promo code", async ({ reques
 	await createDoc(
 		request,
 		"Buzz Coupon Code",
-		percentageCoupon(event.name, { coupon_type: "Automatic", discount_percentage: 10 }),
+		percentageCoupon(event.name, {
+			coupon_type: "Automatic",
+			code: AUTOMATIC_OFFER_TITLE,
+			discount_percentage: 10,
+		}),
 	)
 	await createDoc(
 		request,

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test"
 
-import { COUPON_EVENT_ROUTE } from "../data/coupons"
+import { AUTOMATIC_OFFER_TITLE, COUPON_EVENT_ROUTE } from "../data/coupons"
 import { BookingPage } from "../pages"
 
 async function openBookingForm(page: Page) {
@@ -11,6 +11,8 @@ async function openBookingForm(page: Page) {
 }
 
 const summary = (page: Page) => page.locator("aside")
+const automaticDiscount = (page: Page) =>
+	summary(page).locator("dt", { hasText: `Discount · ${AUTOMATIC_OFFER_TITLE}` })
 
 async function applyCode(page: Page, code: string) {
 	await page.getByRole("button", { name: "Add discount code" }).click()
@@ -23,7 +25,7 @@ test.describe("Coupons", () => {
 		page,
 	}) => {
 		await openBookingForm(page)
-		await expect(summary(page).locator("dt", { hasText: /^Discount$/ })).toBeVisible()
+		await expect(automaticDiscount(page)).toBeVisible()
 		await expect(
 			summary(page)
 				.getByText(/₹100$/)
@@ -32,7 +34,7 @@ test.describe("Coupons", () => {
 
 		await applyCode(page, "E2EPROMO")
 		await expect(summary(page).locator("dt", { hasText: "Discount · E2EPROMO" })).toBeVisible()
-		await expect(summary(page).locator("dt", { hasText: /^Discount$/ })).toHaveCount(0)
+		await expect(automaticDiscount(page)).toHaveCount(0)
 		await expect(
 			summary(page)
 				.getByText(/₹50$/)
@@ -40,7 +42,7 @@ test.describe("Coupons", () => {
 		).toBeVisible()
 
 		await page.getByRole("button", { name: "Remove code" }).click()
-		await expect(summary(page).locator("dt", { hasText: /^Discount$/ })).toBeVisible()
+		await expect(automaticDiscount(page)).toBeVisible()
 		await expect(
 			summary(page)
 				.getByText(/₹100$/)
@@ -52,6 +54,6 @@ test.describe("Coupons", () => {
 		await openBookingForm(page)
 		await applyCode(page, "NOSUCHCODE")
 		await expect(page.getByText("Invalid or expired code")).toBeVisible()
-		await expect(summary(page).locator("dt", { hasText: /^Discount$/ })).toBeVisible()
+		await expect(automaticDiscount(page)).toBeVisible()
 	})
 })

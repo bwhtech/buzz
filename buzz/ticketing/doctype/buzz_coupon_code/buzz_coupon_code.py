@@ -1,6 +1,7 @@
 # Copyright (c) 2025, BWH Studios and contributors
 # For license information, please see license.txt
 
+import re
 from typing import TYPE_CHECKING
 
 import frappe
@@ -11,6 +12,9 @@ from frappe.utils import add_to_date, cint, cstr, flt, fmt_money, getdate, now_d
 
 if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
+
+
+PROMO_CODE_PATTERN = re.compile(r"[A-Z0-9_-]+")
 
 
 class BuzzCouponCode(Document):
@@ -41,6 +45,7 @@ class BuzzCouponCode(Document):
 		minimum_requirement: DF.Literal["None", "Minimum Order Amount", "Minimum Ticket Count"]
 		minimum_ticket_count: DF.Int
 		once_per_buyer: DF.Check
+		starts_on: DF.Date | None
 		ticket_types: DF.TableMultiSelect[BuzzCouponTicketType]
 		usage_limit: DF.Int
 	# end: auto-generated types
@@ -51,13 +56,21 @@ class BuzzCouponCode(Document):
 		self.validate_discount()
 		self.validate_ticket_types()
 		self.validate_minimum()
+		self.validate_schedule()
 
 	def normalize_code(self):
-		self.code = cstr(self.code).strip().upper() or None
-		if self.coupon_type == "Automatic":
-			self.code = None
-		elif not self.code:
-			frappe.throw(_("A promo code needs a code"))
+		"""A promo's code is typed at checkout; an automatic coupon's code is its offer name."""
+		self.code = cstr(self.code).strip() or None
+		if not self.code:
+			frappe.throw(_("A coupon needs a code"))
+		if self.coupon_type == "Promo Code":
+			self.code = self.code.upper()
+			if not PROMO_CODE_PATTERN.fullmatch(self.code):
+				frappe.throw(_("A promo code can only have letters, numbers, hyphens and underscores"))
+
+	def validate_schedule(self):
+		if self.starts_on and self.expires_on and getdate(self.starts_on) > getdate(self.expires_on):
+			frappe.throw(_("The coupon can't start after it expires"))
 
 	def validate_unique_code(self):
 		filters = {"event": self.event, "code": self.code, "name": ["!=", self.name]}
@@ -121,8 +134,9 @@ class BuzzCouponCode(Document):
 		query.run()
 
 	def is_open(self, event: str) -> bool:
+		started = not self.starts_on or getdate() >= getdate(self.starts_on)
 		expired = self.expires_on and getdate() > getdate(self.expires_on)
-		return bool(self.enabled) and not expired and str(self.event) == str(event)
+		return bool(self.enabled) and started and not expired and str(self.event) == str(event)
 
 	def unusable_reason(self, booking: "EventBooking") -> str | None:
 		from buzz.api.booking.exceptions import InvalidCoupon

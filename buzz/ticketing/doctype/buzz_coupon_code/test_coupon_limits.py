@@ -37,6 +37,19 @@ class TestCouponExpiry(CouponTestCase):
 			self.create_booking(coupon)
 
 
+class TestCouponSchedule(CouponTestCase):
+	def test_refused_before_it_starts(self):
+		coupon = self.create_coupon(starts_on=add_days(today(), 1)).name
+
+		with self.assertRaises(frappe.ValidationError):
+			self.create_booking(coupon)
+
+	def test_usable_on_the_start_day(self):
+		coupon = self.create_coupon(starts_on=today()).name
+
+		self.assertEqual(self.create_booking(coupon).discount_amount, 50)
+
+
 class TestCouponUsageLimit(CouponTestCase):
 	def test_refused_once_limit_is_reached(self):
 		coupon = self.create_coupon(usage_limit=2).name

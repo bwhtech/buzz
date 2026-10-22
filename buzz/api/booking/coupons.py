@@ -11,7 +11,10 @@ def quote_discount(request: DiscountQuoteRequest) -> DiscountQuote:
 	if not request.coupon_code:
 		coupon = BuzzCouponCode.best_automatic(booking)
 		return DiscountQuote(
-			discount_amount=coupon.discount_for(booking) if coupon else 0, coupon_code=None, error=None
+			discount_amount=coupon.discount_for(booking) if coupon else 0,
+			coupon_code=None,
+			error=None,
+			offer_name=coupon.code if coupon else None,
 		)
 	coupon = BuzzCouponCode.find_promo(request.event, request.coupon_code)
 	error = coupon.unusable_reason(booking) if coupon else str(InvalidCoupon.message)
