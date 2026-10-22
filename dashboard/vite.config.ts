@@ -4,8 +4,17 @@ import vue from "@vitejs/plugin-vue"
 import frappeui from "frappe-ui/vite"
 import { defineConfig } from "vite"
 
+// Jinja only renders in the built page Frappe serves; the dev server would show it as text.
+const frappeMetaTags = {
+	name: "frappe-meta-tags",
+	apply: "build" as const,
+	transformIndexHtml: (html: string) =>
+		html.replace("</title>", '</title>\n    {% include "templates/includes/meta_block.html" %}'),
+}
+
 export default defineConfig({
 	plugins: [
+		frappeMetaTags,
 		frappeui({
 			frappeProxy: {
 				port: 8080,
