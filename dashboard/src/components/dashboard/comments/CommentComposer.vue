@@ -5,6 +5,7 @@ import { computed, ref, watch } from "vue"
 
 import type { EmailCopies } from "@/data/comments"
 import type { TeamMember } from "@/types"
+import { trimTrailingEmptyParagraphs } from "@/utils/communicationText"
 
 import { mentionSuggestion } from "./mentionSuggestion"
 import RecipientRow from "./RecipientRow.vue"
@@ -70,7 +71,10 @@ watch(draft, (value) => {
 function submit(isEmpty: boolean) {
 	if (isEmpty || props.loading) return
 	sent.value = true
-	emit("submit", draft.value, emailing.value, { cc: cc.value, bcc: bcc.value })
+	emit("submit", trimTrailingEmptyParagraphs(draft.value), emailing.value, {
+		cc: cc.value,
+		bcc: bcc.value,
+	})
 }
 </script>
 

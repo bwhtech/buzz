@@ -5,6 +5,7 @@ import { computed, ref } from "vue"
 import { sessionUser } from "@/data/session"
 import type { ActivityEntry, TeamMember } from "@/types"
 import type { BadgeTheme } from "@/utils/badgeTheme"
+import { trimTrailingEmptyParagraphs } from "@/utils/communicationText"
 
 import ActivityEmail from "./ActivityEmail.vue"
 import CommentComposer from "./CommentComposer.vue"
@@ -153,7 +154,7 @@ function save(content: string) {
 			<div
 				v-else
 				class="max-w-[68ch] text-base leading-[1.6] text-pretty break-words text-ink-gray-8 [&_.mention]:rounded-4 [&_.mention]:bg-surface-gray-2 [&_.mention]:px-1 [&_.mention]:font-medium [&_.mention]:text-ink-gray-9 [&_p+p]:mt-2"
-				v-html="entry.content"
+				v-html="trimTrailingEmptyParagraphs(entry.content || '')"
 			/>
 		</div>
 	</li>

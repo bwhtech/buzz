@@ -3,6 +3,7 @@ import { Button, Tooltip } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import type { ActivityEntry } from "@/types"
+import { trimTrailingEmptyParagraphs } from "@/utils/communicationText"
 
 const props = defineProps<{
 	entry: ActivityEntry
@@ -99,7 +100,7 @@ const cue = computed(() =>
 			<!-- Sanitized by the comments API and Frappe's inbox; replies are rebuilt from escaped text. -->
 			<div
 				class="max-w-[68ch] text-base leading-[1.6] text-pretty break-words text-ink-gray-8 [&_p+p]:mt-2.5"
-				v-html="entry.content"
+				v-html="trimTrailingEmptyParagraphs(entry.content || '')"
 			/>
 			<div v-if="entry.attachments.length" class="flex flex-wrap gap-1.5">
 				<Button
