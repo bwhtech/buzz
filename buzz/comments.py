@@ -3,6 +3,8 @@ from frappe import _
 from frappe.desk.notifications import extract_mentions
 from frappe.utils import get_fullname, get_url
 
+from buzz.subscriptions import Subscriptions
+
 DASHBOARD_ROUTES = {"Talk Proposal": "/b/manage/events/{event}/talks?proposal={name}"}
 
 
@@ -31,8 +33,26 @@ def publish_to_team(doctype: str, name: str) -> None:
 
 
 def notify_team_of_email(doc, method=None) -> None:
-	if is_commentable(doc.reference_doctype) and doc.reference_name:
-		publish_to_team(doc.reference_doctype, doc.reference_name)
+	if not (is_commentable(doc.reference_doctype) and doc.reference_name):
+		return
+	publish_to_team(doc.reference_doctype, doc.reference_name)
+	if doc.communication_type == "Communication" and doc.sent_or_received == "Received":
+		notify_subscribers(
+			doc.reference_doctype,
+			doc.reference_name,
+			_("{0} replied on {1}"),
+			doc.sender_full_name or doc.sender,
+			from_user=None,
+		)
+
+
+def notify_subscribers(
+	doctype: str, name: str, subject: str, author: str, from_user: str | None, skip: set[str] = frozenset()
+) -> None:
+	title = frappe.db.get_value(doctype, name, "title")
+	Subscriptions(doctype, name).notify(
+		subject.format(author, title), from_user, dashboard_url(doctype, name), skip
+	)
 
 
 class TeamComment:
@@ -48,8 +68,23 @@ class TeamComment:
 	def after_insert(self):
 		if not self.is_team_note():
 			return super().after_insert()
-		notify_mentioned_members(self)
+		mentioned = notify_mentioned_members(self)
+		self.subscribe_participants(mentioned)
+		notify_subscribers(
+			self.reference_doctype,
+			self.reference_name,
+			_("{0} commented on {1}"),
+			get_fullname(self.owner),
+			from_user=self.owner,
+			skip=mentioned,
+		)
 		self.notify_change("add")
+
+	def subscribe_participants(self, mentioned: set[str]):
+		subscriptions = Subscriptions(self.reference_doctype, self.reference_name)
+		subscriptions.subscribe(self.owner)
+		for user in mentioned:
+			subscriptions.follow(user)
 
 	def on_update(self):
 		if not self.is_team_note():
@@ -67,11 +102,12 @@ class TeamComment:
 		publish_to_team(self.reference_doctype, self.reference_name)
 
 
-def notify_mentioned_members(comment) -> None:
+def notify_mentioned_members(comment) -> set[str]:
+	"""Emails the team members a note mentions, and returns them."""
 	members = set(team_members(team_of(comment.reference_doctype, comment.reference_name)))
 	mentioned = (set(extract_mentions(comment.content)) & members) - {comment.owner}
 	if not mentioned:
-		return
+		return mentioned
 	args = note_email_args(comment.reference_doctype, comment.reference_name, comment.owner, comment.content)
 	frappe.sendmail(
 		recipients=sorted(mentioned),
@@ -87,6 +123,7 @@ def notify_mentioned_members(comment) -> None:
 		reference_doctype=comment.reference_doctype,
 		reference_name=comment.reference_name,
 	)
+	return mentioned
 
 
 def note_email_args(doctype: str, name: str, author: str, note: str) -> dict:

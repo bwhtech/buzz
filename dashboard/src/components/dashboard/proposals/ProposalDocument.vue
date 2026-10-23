@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ErrorMessage, Skeleton, TabButtons, dayjsLocal, toast } from "frappe-ui"
+import { Button, ErrorMessage, Skeleton, TabButtons, Tooltip, dayjsLocal, toast } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import CommentComposer from "@/components/dashboard/comments/CommentComposer.vue"
@@ -23,6 +23,7 @@ const props = defineProps<{
 const feed = useDocumentActivity("Talk Proposal", () => props.proposal.name)
 const activityCount = computed(() => feed.activity.data?.length ?? 0)
 const { getStatusTheme } = useProposalStatuses()
+const subscribed = computed(() => Boolean(feed.subscription.data))
 
 // A status change is a line in the feed.
 watch(
@@ -118,8 +119,36 @@ function post(content: string, toSpeakers: boolean, copies: EmailCopies) {
 							{{ activityCount }}
 						</span>
 					</h3>
-					<TabButtons v-if="activityCount" v-model="feed.filter.value" :options="activityFilters" />
+					<div class="flex items-center gap-2">
+						<TabButtons
+							v-if="activityCount"
+							v-model="feed.filter.value"
+							:options="activityFilters"
+						/>
+						<Tooltip
+							:text="
+								subscribed
+									? 'Stop notifications for this proposal'
+									: 'Get notified of new notes and replies'
+							"
+						>
+							<Button
+								variant="ghost"
+								:aria-label="subscribed ? 'Unsubscribe' : 'Subscribe'"
+								:aria-pressed="subscribed"
+								:loading="feed.subscribing.loading"
+								@click="feed.toggleSubscription"
+							>
+								<span
+									:class="subscribed ? 'lucide-bell-ring' : 'lucide-bell-off'"
+									class="size-4 text-ink-gray-6"
+									aria-hidden="true"
+								/>
+							</Button>
+						</Tooltip>
+					</div>
 				</div>
+				<ErrorMessage :message="feed.subscribing.error" />
 				<DocumentActivity
 					:feed="feed"
 					:names="names"
