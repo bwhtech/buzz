@@ -157,21 +157,24 @@ body {
 
 .meta-item {
 	display: inline-flex;
-	align-items: flex-start;
+	align-items: center;
 	gap: 8px;
+	max-width: 100%;
 }
 
-.meta-item .meta-icon {
-	margin-top: 0.2em;
+.meta-venue-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-.meta-locations {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	margin: 0;
-	padding: 0;
-	list-style: none;
+.meta-more-locations {
+	flex: none;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: radial-gradient(closest-side, var(--surface-gray-2), transparent);
+	color: var(--ink-strong);
+	font-size: 0.85em;
 }
 
 /* Layout: banner, title and content share the wide column; the side panel runs beside them

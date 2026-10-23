@@ -125,7 +125,7 @@ class TestEventPageRender(IntegrationTestCase):
 		countdown = EventPage(self.route).as_context()["countdown"]
 		self.assertEqual(countdown["ends_at"], "2099-01-06T23:59:59+00:00")
 
-	def test_grouped_venue_lists_each_location_on_its_own_line_in_the_meta(self):
+	def test_grouped_venue_shows_first_location_and_count_of_the_rest_in_the_meta(self):
 		BuzzTeamFactory.set_settings(self.team, {MULTIPLE_LOCATIONS_FLAG: 1})
 		self.addCleanup(BuzzTeamFactory.set_settings, self.team, {MULTIPLE_LOCATIONS_FLAG: 0})
 		museum = EventVenueFactory.create(team=self.team, venue_name="National Museum").name
@@ -137,9 +137,10 @@ class TestEventPageRender(IntegrationTestCase):
 		)
 		self.set_event({"medium": "In Person", "venue": group.name})
 
-		meta = re.search(r'<ul class="meta-locations">(.*?)</ul>', render(self.route), re.DOTALL).group(1)
+		page = render(self.route)
 
-		self.assertEqual(re.findall(r"<li>(.*?)</li>", meta), ["Day 1: National Museum", "Millennium Hotel"])
+		self.assertIn('<span class="meta-venue-name">National Museum</span>', page)
+		self.assertIn(">+1</span>", page)
 
 	def set_event(self, values: dict):
 		frappe.db.set_value("Buzz Event", self.event, values)
