@@ -60,8 +60,6 @@ declare module 'vue' {
     CouponLimits: typeof import('./src/components/dashboard/coupons/CouponLimits.vue')['default']
     CouponOptionCards: typeof import('./src/components/dashboard/coupons/CouponOptionCards.vue')['default']
     CouponRows: typeof import('./src/components/dashboard/coupons/CouponRows.vue')['default']
-    CouponSidebar: typeof import('./src/components/dashboard/coupons/CouponSidebar.vue')['default']
-    CouponTable: typeof import('./src/components/dashboard/coupons/CouponTable.vue')['default']
     CouponTypeStep: typeof import('./src/components/dashboard/coupons/CouponTypeStep.vue')['default']
     CreateEventHeader: typeof import('./src/components/dashboard/CreateEventHeader.vue')['default']
     CurrencyAmounts: typeof import('./src/components/dashboard/coupons/CurrencyAmounts.vue')['default']
