@@ -1,5 +1,5 @@
 <template>
-	<div class="flex flex-col gap-3 border-t border-outline-gray-1 pt-3">
+	<div class="flex flex-col gap-3 border-t border-outline-gray-1 pt-3 first:border-t-0 first:pt-0">
 		<span class="text-xs font-semibold uppercase tracking-[0.04em] text-ink-gray-5">
 			{{ __("Add-ons") }}
 		</span>
