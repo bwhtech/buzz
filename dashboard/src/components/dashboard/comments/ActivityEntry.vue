@@ -160,6 +160,18 @@ function save(content: string) {
 </template>
 
 <style scoped>
+/* The rail: each entry draws from its marker to the next one's, past the 18px list gap,
+   so the line stops at the last entry. */
+.entry:not(:last-child)::before {
+	content: "";
+	position: absolute;
+	top: 8px;
+	bottom: -26px;
+	left: 13.5px;
+	width: 1px;
+	background: var(--surface-gray-3);
+}
+
 .entry[data-fresh] {
 	transition:
 		opacity 220ms cubic-bezier(0.23, 1, 0.32, 1),

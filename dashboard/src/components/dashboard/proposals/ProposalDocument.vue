@@ -81,7 +81,7 @@ function post(content: string, toSpeakers: boolean, copies: EmailCopies) {
 
 <template>
 	<div class="flex min-h-0 flex-1 flex-col">
-		<div class="scroll-fade flex-1 space-y-8 overflow-y-auto overscroll-contain px-6 pt-2 pb-6">
+		<div class="scroll-fade flex-1 space-y-8 overflow-y-auto overscroll-contain px-6 pt-2 pb-16">
 			<ProposalProperties :speakers="speakers" :fields="fields" />
 
 			<section class="space-y-2">
@@ -124,7 +124,7 @@ function post(content: string, toSpeakers: boolean, copies: EmailCopies) {
 			</section>
 		</div>
 
-		<div class="shrink-0 space-y-2 border-t border-outline-gray-1 px-5 pt-3 pb-4">
+		<div class="shrink-0 space-y-2 px-5 pt-3 pb-4">
 			<ErrorMessage :message="feed.adding.error" />
 			<CommentComposer
 				v-model="draft"
@@ -154,7 +154,9 @@ function post(content: string, toSpeakers: boolean, copies: EmailCopies) {
 		to bottom,
 		transparent,
 		black var(--top-fade),
-		black calc(100% - 1.5rem),
+		black calc(100% - 4rem),
+		rgb(0 0 0 / 0.7) calc(100% - 2.5rem),
+		rgb(0 0 0 / 0.3) calc(100% - 1.25rem),
 		transparent
 	);
 	animation: top-fade-in linear both;

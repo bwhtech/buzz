@@ -106,11 +106,13 @@ const cue = computed(() =>
 					v-for="file in entry.attachments"
 					:key="file.url"
 					:href="file.url"
-					variant="outline"
-					size="sm"
-					icon-left="lucide-paperclip"
+					variant="subtle"
+					size="xs"
 				>
-					<span class="max-w-48 truncate">{{ file.name }}</span>
+					<template #prefix>
+						<span class="lucide-paperclip size-3 text-ink-gray-5" aria-hidden="true" />
+					</template>
+					<span class="max-w-48 truncate text-ink-gray-6">{{ file.name }}</span>
 					<template #suffix>
 						<span class="text-ink-gray-5">{{ fileSize(file.size) }}</span>
 					</template>

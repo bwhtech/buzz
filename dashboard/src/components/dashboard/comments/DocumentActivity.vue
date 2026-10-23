@@ -39,13 +39,7 @@ watch(
 	<div class="space-y-5">
 		<Skeleton v-if="feed.activity.loading && !feed.activity.data" class="h-16 w-full rounded-4" />
 		<ErrorMessage :message="feed.activity.error || feed.updating.error || feed.deleting.error" />
-		<ul v-if="entries.length" class="relative flex flex-col gap-[18px]">
-			<!-- One rail runs behind every entry's lane, from the first marker to the last. -->
-			<span
-				v-if="entries.length > 1"
-				class="absolute top-2 bottom-6 left-[13.5px] w-px bg-surface-gray-3"
-				aria-hidden="true"
-			/>
+		<ul v-if="entries.length" class="flex flex-col gap-[18px]">
 			<ActivityEntryRow
 				v-for="entry in entries"
 				:key="entry.name"

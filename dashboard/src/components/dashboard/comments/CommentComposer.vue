@@ -83,11 +83,11 @@ function submit(isEmpty: boolean) {
 	>
 		<template #default="{ editor, isEmpty }">
 			<div
-				class="overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-base shadow-sm"
+				class="composer overflow-hidden rounded-5 bg-surface-base"
 				@keydown.meta.enter="submit(isEmpty)"
 				@keydown.ctrl.enter="submit(isEmpty)"
 			>
-				<div v-if="canEmail" class="flex items-center gap-2 pt-2 pr-2.5 pl-2">
+				<div v-if="canEmail" class="flex items-center gap-2 px-3 pt-3">
 					<TabButtons v-model="mode" :options="modes" />
 					<span class="ml-auto truncate text-sm text-ink-gray-5">{{ hint }}</span>
 				</div>
@@ -109,7 +109,7 @@ function submit(isEmpty: boolean) {
 					class="max-h-48 min-h-[4.5rem] overflow-y-auto px-3.5 pt-3 pb-1 text-base leading-[1.55] text-ink-gray-8"
 				/>
 
-				<div class="flex items-center gap-1 px-2 pt-1.5 pb-2">
+				<div class="flex items-center gap-1 px-3 pt-2 pb-3">
 					<Button
 						v-if="!editing"
 						variant="ghost"
@@ -140,3 +140,24 @@ function submit(isEmpty: boolean) {
 		</template>
 	</Editor>
 </template>
+
+<style scoped>
+/* Layered so the box lifts off the feed: a hairline edge in place of a border, a tight
+   contact shadow, and a wide soft one. Typing deepens it a step. */
+.composer {
+	box-shadow:
+		0 0 0 0.5px rgb(0 0 0 / 0.08),
+		0 1px 2px rgb(0 0 0 / 0.04),
+		0 6px 16px -4px rgb(0 0 0 / 0.08),
+		0 16px 40px -12px rgb(0 0 0 / 0.1);
+	transition: box-shadow 200ms ease;
+}
+
+.composer:focus-within {
+	box-shadow:
+		0 0 0 0.5px rgb(0 0 0 / 0.12),
+		0 1px 2px rgb(0 0 0 / 0.05),
+		0 8px 20px -4px rgb(0 0 0 / 0.1),
+		0 20px 48px -12px rgb(0 0 0 / 0.14);
+}
+</style>
