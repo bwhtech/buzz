@@ -75,3 +75,11 @@ export async function installTelemetry(router: Router): Promise<void> {
 
 	trackPageviews(client, router)
 }
+
+// Product analytics, apart from Pulse. The script is not bundled: it loads PostHog from its CDN.
+export function loadPosthog(): void {
+	if (!window.posthog_config) return
+	const script = document.createElement("script")
+	script.src = "/assets/buzz/js/lib/posthog.js"
+	document.head.append(script)
+}

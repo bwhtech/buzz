@@ -103,11 +103,15 @@ class TestEventRoute(BuzzEventTestCase):
 		route = f"conference-{frappe.generate_hash(length=6)}"
 		self.assertEqual(self.create_event(route=route).route, route)
 
-	def test_new_event_is_published_with_a_hashed_route(self):
+	def test_new_event_is_published_with_a_title_slug_route(self):
 		# None lets the DocType default apply on insert.
-		event = self.create_event(is_published=None)
+		suffix = frappe.generate_hash(length=6)
+		event = self.create_event(is_published=None, title=f"Frappe Conf: {suffix}!")
 		self.assertTrue(event.is_published)
-		self.assertRegex(event.route, r"^[0-9a-f]{8}$")
+		self.assertEqual(event.route, f"frappe-conf-{suffix}")
+
+	def test_title_that_slugs_to_a_reserved_route_gets_a_suffix(self):
+		self.assertEqual(self.create_event(title="Account").route, "account-event")
 
 	def test_new_event_comes_with_the_default_forms_in_one_save(self):
 		# A second save rewrites the forms table, which deadlocks two events created at once.
@@ -117,8 +121,10 @@ class TestEventRoute(BuzzEventTestCase):
 		self.assertEqual(creation, modified)
 		self.assertEqual([form.route for form in event.custom_forms], ["feedback", "propose-talk"])
 
-	def test_generated_routes_are_unique(self):
-		self.assertNotEqual(self.create_event().route, self.create_event().route)
+	def test_same_title_routes_get_a_number_suffix(self):
+		title = f"Meetup {frappe.generate_hash(length=6)}"
+		first = self.create_event(title=title).route
+		self.assertEqual(self.create_event(title=title).route, f"{first}-1")
 
 	def test_explicitly_unpublished_event_stays_a_draft(self):
 		self.assertFalse(self.create_event(is_published=0).is_published)

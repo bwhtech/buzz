@@ -25,6 +25,7 @@
 	<link rel="stylesheet" href="{{ bundled_asset('espresso.bundle.css') }}">
 	<link rel="stylesheet" href="/assets/buzz/themes/countdown.css?v={{ build_version }}">
 	<link rel="stylesheet" href="/assets/buzz/themes/base.css?v={{ build_version }}">
+	<link rel="stylesheet" href="/assets/buzz/themes/date_badge.css?v={{ build_version }}">
 	<link rel="stylesheet" href="/assets/buzz/islands/icons.css">
 	<style>{{ theme_css }}</style>
 	<script src="{{ bundled_asset('event_page.bundle.ts') }}" defer></script>
@@ -85,5 +86,10 @@
 	{% if island and playground and playground.hours_left is not none %}
 	<script>window.playground = {{ playground | tojson }}</script>
 	<div data-island="playground" data-island-auto hidden></div>
+	{% endif %}
+	{% set posthog = posthog_config() %}
+	{% if posthog %}
+	<script>window.posthog_config = {{ posthog | tojson }}</script>
+	<script src="/assets/buzz/js/lib/posthog.js" defer></script>
 	{% endif %}
 {% endblock %}

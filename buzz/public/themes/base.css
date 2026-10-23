@@ -786,38 +786,6 @@ body {
 	gap: 14px;
 }
 
-.date-badge {
-	display: flex;
-	flex-direction: column;
-	flex-shrink: 0;
-	width: 48px;
-	overflow: hidden;
-	border: 1px solid var(--border);
-	border-radius: 8px;
-	text-align: center;
-}
-
-.date-badge-month {
-	padding: 3px 0;
-	background: var(--surface-raised);
-	color: var(--ink-muted);
-	font-size: 10px;
-	font-weight: 600;
-	letter-spacing: 0.08em;
-	line-height: 1;
-	text-transform: uppercase;
-}
-
-/* Trimmed to the digits' cap height and baseline, so the padding is even above and below. */
-.date-badge-day {
-	padding: 8px 4px;
-	color: var(--ink-strong);
-	font-family: var(--font-title);
-	font-size: 24px;
-	line-height: 1.2;
-	text-box: trim-both cap alphabetic;
-}
-
 .date-range {
 	display: grid;
 	gap: 12px;

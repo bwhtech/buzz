@@ -10,6 +10,7 @@ from frappe.utils import cstr, getdate
 
 from buzz import telemetry
 from buzz.permissions import as_sql, derived_criterion, derived_has_permission
+from buzz.proposals.description import DescriptionFormatter
 
 
 def get_speaker_query_conditions(user: str) -> Criterion:
@@ -71,6 +72,7 @@ class TalkProposal(Document):
 
 		additional_fields: DF.Table[AdditionalField]
 		description: DF.TextEditor | None
+		formatted_description: DF.TextEditor | None
 		event: DF.Link
 		phone: DF.Phone | None
 		speakers: DF.Table[ProposalSpeaker]
@@ -78,6 +80,10 @@ class TalkProposal(Document):
 		submitted_by: DF.Link | None
 		title: DF.Data
 	# end: auto-generated types
+
+	@property
+	def formatted_description(self) -> str:
+		return DescriptionFormatter(self.description).html()
 
 	@property
 	def speaker_emails(self) -> set[str]:

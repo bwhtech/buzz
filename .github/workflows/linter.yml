@@ -21,7 +21,7 @@ concurrency:
 jobs:
   linter:
     name: 'Frappe Linter'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event_name != 'schedule'
 
     steps:
@@ -42,7 +42,7 @@ jobs:
 
   deps-vulnerable-check:
     name: 'Vulnerable Dependency Check'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Off merge_group/push so a newly published CVE can't block a queued merge.
     if: github.event_name == 'pull_request' || github.event_name == 'schedule'
 

@@ -116,6 +116,47 @@ class TestSandbox(PlaygroundTestCase):
 			self.assertFalse(frappe.db.exists("User", user))
 
 
+class TestFlowEvents(PlaygroundTestCase):
+	def setUp(self):
+		super().setUp()
+		self.capture = self.enterContext(patch("buzz.api.playground.services.capture"))
+
+	def event(self, name: str) -> dict:
+		return next(call.args[2] for call in self.capture.call_args_list if call.args[0] == name)
+
+	def test_start_records_the_organizer_persona(self):
+		start()
+		self.assertEqual(self.event("playground_started")["persona"], "organizer")
+
+	def test_reset_records_the_persona_and_sandbox_age(self):
+		sandbox = create_sandbox()
+		frappe.db.set_value(
+			"Playground Sandbox", sandbox.name, "creation", add_to_date(now_datetime(), hours=-2)
+		)
+		with self.set_user(sandbox.attendee):
+			reset()
+
+		properties = self.event("playground_reset")
+		self.assertEqual(properties["sandbox"], sandbox.name)
+		self.assertEqual(properties["persona"], "attendee")
+		self.assertEqual(properties["sandbox_age_minutes"], 120)
+
+	def test_switch_persona_records_both_personas(self):
+		sandbox = create_sandbox()
+		with self.set_user(sandbox.organizer):
+			switch_persona("front_desk")
+
+		properties = self.event("persona_switched")
+		self.assertEqual(properties["persona"], "organizer")
+		self.assertEqual(properties["to_persona"], "front_desk")
+
+	def test_staying_on_the_same_persona_is_not_a_switch(self):
+		sandbox = create_sandbox()
+		with self.set_user(sandbox.organizer):
+			switch_persona("organizer")
+		self.capture.assert_not_called()
+
+
 class TestInbox(PlaygroundTestCase):
 	@classmethod
 	def setUpClass(cls):
