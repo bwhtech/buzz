@@ -3,6 +3,7 @@ import { ErrorMessage, Skeleton } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import type { useDocumentActivity } from "@/composables/useDocumentActivity"
+import type { BadgeTheme } from "@/utils/badgeTheme"
 
 import ActivityEntryRow from "./ActivityEntry.vue"
 
@@ -10,6 +11,7 @@ const props = defineProps<{
 	feed: ReturnType<typeof useDocumentActivity>
 	names: Record<string, string>
 	createdLabel: string
+	changeTheme?: (value: string) => BadgeTheme
 }>()
 
 const entries = computed(() => props.feed.activity.data ?? [])
@@ -37,12 +39,18 @@ watch(
 	<div class="space-y-5">
 		<Skeleton v-if="feed.activity.loading && !feed.activity.data" class="h-16 w-full rounded-4" />
 		<ErrorMessage :message="feed.activity.error || feed.updating.error || feed.deleting.error" />
-		<ul v-if="entries.length">
+		<ul v-if="entries.length" class="relative flex flex-col gap-[18px]">
+			<!-- One rail runs behind every entry's lane, from the first marker to the last. -->
+			<span
+				v-if="entries.length > 1"
+				class="absolute top-2 bottom-6 left-[13.5px] w-px bg-surface-gray-3"
+				aria-hidden="true"
+			/>
 			<ActivityEntryRow
-				v-for="(entry, index) in entries"
+				v-for="entry in entries"
 				:key="entry.name"
 				:entry="entry"
-				:last="index === entries.length - 1"
+				:change-theme="changeTheme"
 				:fresh="Boolean(loadedNames && !loadedNames.has(entry.name))"
 				:folded="entry.kind === 'email' && !openEmails.has(entry.name)"
 				:members="feed.members.data || []"

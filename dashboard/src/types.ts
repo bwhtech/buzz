@@ -156,6 +156,7 @@ export interface ActivityEntry {
 	snippet: string | null
 	attachments: EmailAttachment[]
 	recipients: string[]
+	cc: string[]
 	received: boolean
 	field: string | null
 	old_value: string | null

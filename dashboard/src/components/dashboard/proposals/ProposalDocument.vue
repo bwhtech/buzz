@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { Badge, ErrorMessage, Skeleton, TabButtons, dayjsLocal, toast } from "frappe-ui"
+import { ErrorMessage, Skeleton, TabButtons, dayjsLocal, toast } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import CommentComposer from "@/components/dashboard/comments/CommentComposer.vue"
 import DocumentActivity from "@/components/dashboard/comments/DocumentActivity.vue"
 import { useDocumentActivity } from "@/composables/useDocumentActivity"
+import { useProposalStatuses } from "@/composables/useProposalStatuses"
+import type { EmailCopies } from "@/data/comments"
 import type { ProposalListItem, ProposalSpeaker, TalkProposal } from "@/types"
 import { speakerName } from "@/utils/speakerByline"
 
@@ -19,6 +21,8 @@ const props = defineProps<{
 
 // The drawer keys this by proposal, so the feed always belongs to one proposal.
 const feed = useDocumentActivity("Talk Proposal", () => props.proposal.name)
+const activityCount = computed(() => feed.activity.data?.length ?? 0)
+const { getStatusTheme } = useProposalStatuses()
 
 // A status change is a line in the feed.
 watch(
@@ -63,8 +67,8 @@ const description = computed(() =>
 		: props.doc?.description,
 )
 
-function post(content: string, toSpeakers: boolean) {
-	feed.add(content, toSpeakers).then(
+function post(content: string, toSpeakers: boolean, copies: EmailCopies) {
+	feed.add(content, toSpeakers, copies).then(
 		() => {
 			draft.value = ""
 			if (toSpeakers)
@@ -107,19 +111,26 @@ function post(content: string, toSpeakers: boolean) {
 			<section class="space-y-4">
 				<h3 class="flex items-center gap-2 text-lg font-semibold text-ink-gray-9">
 					Activity
-					<Badge v-if="feed.noteCount.value" :label="String(feed.noteCount.value)" />
+					<span v-if="activityCount" class="text-base font-normal text-ink-gray-5 tabular-nums">
+						{{ activityCount }}
+					</span>
 				</h3>
-				<DocumentActivity :feed="feed" :names="names" created-label="submitted this proposal" />
+				<DocumentActivity
+					:feed="feed"
+					:names="names"
+					:change-theme="getStatusTheme"
+					created-label="submitted this proposal"
+				/>
 			</section>
 		</div>
 
-		<div class="shrink-0 space-y-2 px-3 pt-2 pb-3">
+		<div class="shrink-0 space-y-2 border-t border-outline-gray-1 px-5 pt-3 pb-4">
 			<ErrorMessage :message="feed.adding.error" />
 			<CommentComposer
 				v-model="draft"
 				:members="feed.members.data || []"
 				:recipients="recipients"
-				recipients-label="speakers"
+				:sender="feed.sender.data"
 				:loading="feed.adding.loading"
 				@submit="post"
 			/>

@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ActivityEmail: typeof import('./src/components/dashboard/comments/ActivityEmail.vue')['default']
     ActivityEntry: typeof import('./src/components/dashboard/comments/ActivityEntry.vue')['default']
     AddCoHostDialog: typeof import('./src/components/dashboard/events/AddCoHostDialog.vue')['default']
     AddEventDialog: typeof import('./src/components/dashboard/teams/AddEventDialog.vue')['default']
@@ -185,6 +186,7 @@ declare module 'vue' {
     QuantityStepper: typeof import('./src/components/registration/QuantityStepper.vue')['default']
     QuickActionsRail: typeof import('./src/components/dashboard/events/QuickActionsRail.vue')['default']
     QuickActionTile: typeof import('./src/components/dashboard/events/QuickActionTile.vue')['default']
+    RecipientRow: typeof import('./src/components/dashboard/comments/RecipientRow.vue')['default']
     RegistrationActions: typeof import('./src/components/dashboard/events/RegistrationActions.vue')['default']
     RegistrationComplete: typeof import('./src/components/registration/RegistrationComplete.vue')['default']
     RegistrationDialog: typeof import('./src/components/dashboard/events/RegistrationDialog.vue')['default']
