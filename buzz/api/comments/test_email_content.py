@@ -72,3 +72,32 @@ class TestEmailContent(UnitTestCase):
 		]
 		attachments = email_attachments(files, content, EmailContent(content).body_image_sources())
 		self.assertEqual([attachment.name for attachment in attachments], ["slides.pdf"])
+
+	def test_thanks_mid_message_keeps_the_rest(self):
+		body = EmailContent(
+			"<p>Thanks!</p><p>Also we need a projector and two mics for the session.</p><p>Bob</p>"
+		).body()
+		self.assertIn("projector", body)
+		self.assertIn("Bob", body)
+
+	def test_plain_text_with_an_address_folds_the_quote(self):
+		email = EmailContent("Hi team,\nWe will present.\n\nOn Mon, 5 Oct, Bob <b@x.com> wrote:\n> old line")
+		self.assertEqual(email.body(), "<p>Hi team,<br>We will present.</p>")
+		self.assertIn("Bob &lt;b@x.com&gt; wrote:", email.quoted_body())
+		self.assertIn("old line", email.quoted_body())
+
+	def test_a_from_line_in_the_message_is_not_a_quote(self):
+		email = EmailContent("<div>Good point.</div><div>From: Monday on we move</div><div>Rest of it</div>")
+		self.assertIn("Rest of it", email.body())
+		self.assertEqual(email.quoted_body(), "")
+
+	def test_a_later_quote_header_is_found(self):
+		email = EmailContent(
+			"<p>On Monday Ann wrote:<b> a draft</b></p><div>On Mon, Bob wrote:</div><div>old</div>"
+		)
+		self.assertIn("a draft", email.body())
+		self.assertIn("old", email.quoted_body())
+
+	def test_files_without_a_url_are_skipped(self):
+		files = [frappe._dict(file_name="folder", file_url=None, file_size=0)]
+		self.assertEqual(email_attachments(files, "<p>x</p>", []), [])

@@ -84,13 +84,9 @@ def clean_line(line: str) -> str:
 	text = re.sub(r"<[^>]+>", "", line).strip()
 	if not text or re.fullmatch(r"[-_=*~]{3,}", text):
 		return ""
-	return balanced(line)
+	# Reparsing closes inline tags a line break split across lines.
+	return str(BeautifulSoup(line, "html.parser"))
 
 
-def balanced(html: str) -> str:
-	"""Closes inline tags a line break split across lines."""
-	return str(BeautifulSoup(html, "html.parser"))
-
-
-def plain_text(html: str) -> str:
-	return BeautifulSoup(html, "html.parser").get_text()
+def plain_text(html: str | None, separator: str = "") -> str:
+	return BeautifulSoup(html or "", "html.parser").get_text(separator)

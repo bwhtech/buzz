@@ -113,7 +113,8 @@ def email_attachments(files: list, content: str, body_images: list[str]) -> list
 	return [
 		EmailAttachment(name=file.file_name, url=file.file_url, size=file.file_size or 0)
 		for file in files
-		if file.file_url not in content or any(source.startswith(file.file_url) for source in body_images)
+		if file.file_url
+		and (file.file_url not in content or any(source.startswith(file.file_url) for source in body_images))
 	]
 
 

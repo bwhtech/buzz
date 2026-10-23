@@ -1,4 +1,5 @@
 import re
+from html import escape
 
 from bs4 import BeautifulSoup, Tag
 
@@ -19,7 +20,14 @@ QUOTE_SELECTORS = ", ".join(
 	]
 )
 SIGNATURE_SELECTORS = ".gmail_signature, .gmail_signature_prefix, .moz-signature, #Signature"
-QUOTE_HEADER = re.compile(r"^(On .{4,200} wrote:|-+ ?Original Message ?-+|From: .+)$", re.IGNORECASE)
+# "From:" alone is Outlook's bold label; with text after it, an address must follow.
+QUOTE_HEADER = re.compile(r"^(On .{4,200} wrote:|-+ ?Original Message ?-+|From:( .*@.*)?)$", re.IGNORECASE)
+PLAIN_QUOTE_HEADER = re.compile(
+	r"^(On [^\n]{4,200}\n?[^\n]{0,100}wrote:|-+ ?Original Message ?-+|From: .+\n(Sent|Date): |>)",
+	re.IGNORECASE | re.MULTILINE,
+)
+# A tag name ends at a space, a slash or ">", which an address such as <b@x.com> never does.
+HTML_TAG = re.compile(r"</?[a-zA-Z][a-zA-Z0-9]*[\s/>]")
 SIGN_OFF = re.compile(
 	r"^((many |warm |kind |best )?(thanks|regards)( (&|and) regards)?|best|cheers|sincerely|"
 	r"thank you|warmly)[,.!]?$",
@@ -38,9 +46,12 @@ class EmailContent:
 
 	def __init__(self, html: str):
 		# A text/plain email is stored as is, and its line breaks are its only structure.
-		self.plain = not re.search(r"<[a-zA-Z][^>]*>", html or "")
+		self.plain = not HTML_TAG.search(html or "")
+		if self.plain:
+			html, self.quoted = split_plain_quote(html or "")
 		self.soup = BeautifulSoup(html or "", "html.parser")
-		self.quoted = self.extract_quote()
+		if not self.plain:
+			self.quoted = self.extract_quote()
 		for node in self.soup.select(SIGNATURE_SELECTORS):
 			node.decompose()
 		self.image_sources = self.mark_images()
@@ -78,9 +89,15 @@ class EmailContent:
 		return html
 
 	def quote_header(self) -> Tag | None:
-		for text in self.soup.find_all(string=QUOTE_HEADER):
-			return text.parent if text.parent.get_text(strip=True) == text.strip() else None
-		return None
+		texts = self.soup.find_all(string=QUOTE_HEADER)
+		return next((text.parent for text in texts if text.parent.get_text(strip=True) == text.strip()), None)
+
+
+def split_plain_quote(text: str) -> tuple[str, str]:
+	"""The written part and the quoted thread of a text/plain email, both escaped for HTML."""
+	header = PLAIN_QUOTE_HEADER.search(text)
+	cut = header.start() if header else len(text)
+	return escape(text[:cut], quote=False), escape(text[cut:], quote=False)
 
 
 def following(node) -> list:
@@ -100,15 +117,18 @@ def signed_off(paragraphs: list[list[str]]) -> list[list[str]]:
 		if DEVICE_SIGNATURE.match(text):
 			return trimmed(paragraphs, lines[:position])
 		if SIGN_OFF.match(text):
-			name = [entry for entry in lines[position + 1 :] if line_text(entry[1])][:1]
+			name = next((entry for entry in lines[position + 1 :] if line_text(entry[1])), None)
+			# A sentence after "Thanks!" means the message goes on; a sign-off is followed by a name.
+			if name and not is_name(line_text(name[1])):
+				continue
 			# Images beside the name are the signature's, not the message's.
-			keep = [(index, line)] + [
-				(entry[0], IMAGE_MARKER.sub("", entry[1]))
-				for entry in name
-				if len(line_text(entry[1])) <= NAME_LINE_LIMIT
-			]
+			keep = [(index, line)] + ([(name[0], IMAGE_MARKER.sub("", name[1]))] if name else [])
 			return trimmed(paragraphs, lines[:position] + keep)
 	return paragraphs
+
+
+def is_name(text: str) -> bool:
+	return len(text) <= NAME_LINE_LIMIT and not text.endswith((".", "?", "!"))
 
 
 def line_text(line: str) -> str:
@@ -123,8 +143,11 @@ def trimmed(paragraphs: list[list[str]], kept: list[tuple[int, str]]) -> list[li
 
 
 def without_markers(paragraphs: list[list[str]]) -> list[list[str]]:
-	stripped = [[IMAGE_MARKER.sub("", line).strip() for line in paragraph] for paragraph in paragraphs]
-	return [kept for kept in ([line for line in paragraph if line] for paragraph in stripped) if kept]
+	stripped = (
+		[kept for line in paragraph if (kept := IMAGE_MARKER.sub("", line).strip())]
+		for paragraph in paragraphs
+	)
+	return [paragraph for paragraph in stripped if paragraph]
 
 
 def to_html(paragraphs: list[list[str]]) -> str:

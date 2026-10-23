@@ -61,6 +61,8 @@ const canFormat = computed(
 	() =>
 		!!props.doc?.formatted_description && props.doc.formatted_description !== props.doc.description,
 )
+// Answers saved from a plain textarea carry their line breaks as raw newlines.
+const hasTags = computed(() => /<[a-z][a-z0-9]*[\s/>]/i.test(props.doc?.description || ""))
 const description = computed(() =>
 	canFormat.value && !showOriginal.value
 		? props.doc?.formatted_description
@@ -102,7 +104,7 @@ function post(content: string, toSpeakers: boolean, copies: EmailCopies) {
 				<div
 					v-else-if="description"
 					class="description prose prose-sm max-w-none text-base leading-[1.6] text-ink-gray-7"
-					:class="showOriginal && 'whitespace-pre-line'"
+					:class="showOriginal && !hasTags && 'whitespace-pre-line'"
 					v-html="description"
 				/>
 				<p v-else class="text-base text-ink-gray-5">No description was submitted.</p>

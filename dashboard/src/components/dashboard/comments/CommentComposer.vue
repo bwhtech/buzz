@@ -59,9 +59,11 @@ const extensions = [
 
 // Mode and copies are chosen per message: the parent clears the draft once it is sent.
 const sent = ref(false)
+// Any edit after a failed send clears the flag, so a later manual clear keeps the mode.
 watch(draft, (value) => {
-	if (value || !sent.value) return
+	const clearedBySend = !value && sent.value
 	sent.value = false
+	if (!clearedBySend) return
 	mode.value = "note"
 	cc.value = []
 	bcc.value = []
