@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ActivityEmail: typeof import('./src/components/dashboard/comments/ActivityEmail.vue')['default']
     ActivityEntry: typeof import('./src/components/dashboard/comments/ActivityEntry.vue')['default']
     AddCoHostDialog: typeof import('./src/components/dashboard/events/AddCoHostDialog.vue')['default']
     AddEventDialog: typeof import('./src/components/dashboard/teams/AddEventDialog.vue')['default']
@@ -60,8 +61,6 @@ declare module 'vue' {
     CouponLimits: typeof import('./src/components/dashboard/coupons/CouponLimits.vue')['default']
     CouponOptionCards: typeof import('./src/components/dashboard/coupons/CouponOptionCards.vue')['default']
     CouponRows: typeof import('./src/components/dashboard/coupons/CouponRows.vue')['default']
-    CouponSidebar: typeof import('./src/components/dashboard/coupons/CouponSidebar.vue')['default']
-    CouponTable: typeof import('./src/components/dashboard/coupons/CouponTable.vue')['default']
     CouponTypeStep: typeof import('./src/components/dashboard/coupons/CouponTypeStep.vue')['default']
     CreateEventHeader: typeof import('./src/components/dashboard/CreateEventHeader.vue')['default']
     CurrencyAmounts: typeof import('./src/components/dashboard/coupons/CurrencyAmounts.vue')['default']
@@ -187,6 +186,7 @@ declare module 'vue' {
     QuantityStepper: typeof import('./src/components/registration/QuantityStepper.vue')['default']
     QuickActionsRail: typeof import('./src/components/dashboard/events/QuickActionsRail.vue')['default']
     QuickActionTile: typeof import('./src/components/dashboard/events/QuickActionTile.vue')['default']
+    RecipientRow: typeof import('./src/components/dashboard/comments/RecipientRow.vue')['default']
     RegistrationActions: typeof import('./src/components/dashboard/events/RegistrationActions.vue')['default']
     RegistrationComplete: typeof import('./src/components/registration/RegistrationComplete.vue')['default']
     RegistrationDialog: typeof import('./src/components/dashboard/events/RegistrationDialog.vue')['default']

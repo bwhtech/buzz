@@ -138,6 +138,12 @@ export interface UserInfo {
 	time_zone?: string | null
 }
 
+export interface EmailAttachment {
+	name: string
+	url: string
+	size: number
+}
+
 export interface ActivityEntry {
 	name: string
 	kind: "comment" | "email" | "change" | "created"
@@ -146,7 +152,11 @@ export interface ActivityEntry {
 	owner_image: string | null
 	creation: string
 	content: string | null
+	quoted_content: string | null
+	snippet: string | null
+	attachments: EmailAttachment[]
 	recipients: string[]
+	cc: string[]
 	received: boolean
 	field: string | null
 	old_value: string | null

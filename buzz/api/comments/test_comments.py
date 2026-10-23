@@ -3,7 +3,13 @@ from unittest.mock import patch
 import frappe
 from frappe.desk.form.utils import update_comment
 
-from buzz.api.comments import add_comment, delete_comment, get_activity, get_mention_members
+from buzz.api.comments import (
+	add_comment,
+	delete_comment,
+	get_activity,
+	get_email_sender,
+	get_mention_members,
+)
 from buzz.api.comments.exceptions import CannotDeleteComment, NotCommentable, NotTeamMember
 from buzz.tests.base_test_cases import TeamPermissionTestCase
 from buzz.tests.factories import BuzzTeamMembershipFactory, CommentFactory, TalkProposalFactory, UserFactory
@@ -122,6 +128,25 @@ class TestDocumentComments(TeamPermissionTestCase):
 		communication = frappe.get_doc("Communication", name)
 		self.assertEqual((communication.reference_name, communication.recipients), (self.proposal, SPEAKER))
 		self.assertEqual(self.comments_as(self.manager), [])
+
+	def test_emailed_note_copies_cc_and_bcc(self):
+		self.add_as(
+			self.manager,
+			email_recipients=True,
+			cc=["programme@example.com"],
+			bcc=["archive@example.com"],
+		)
+
+		self.assertEqual(emailed_to(self.proposal), {SPEAKER, "programme@example.com", "archive@example.com"})
+		self.assertEqual(self.feed_as(self.viewer)[-1].cc, ["programme@example.com"])
+
+	def test_invalid_cc_address_is_refused(self):
+		with self.assertRaises(frappe.InvalidEmailAddressError):
+			self.add_as(self.manager, email_recipients=True, cc=["not-an-address"])
+
+	def test_email_sender_is_hidden_from_outsiders(self):
+		with self.set_user(self.bob), self.assertRaises(NotTeamMember):
+			get_email_sender("Talk Proposal", self.proposal)
 
 	def test_emailed_note_is_sanitized(self):
 		name = self.add_as(self.manager, '<p>Hi</p><img src=x onerror="alert(1)">', email_recipients=True)

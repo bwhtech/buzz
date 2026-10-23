@@ -7,7 +7,8 @@ const SEPARATOR = /[\s,;]+/
 const emails = defineModel<string[]>({ required: true })
 const draft = defineModel<string>("draft", { required: true })
 // `rejected` says why an address cannot be invited, or "" when it can.
-defineProps<{ id: string; rejected: (email: string) => string }>()
+// `bare` drops the field's own surface, for rows that sit inside another box.
+defineProps<{ id: string; rejected: (email: string) => string; bare?: boolean }>()
 
 const input = ref<HTMLInputElement>()
 
@@ -51,7 +52,12 @@ defineExpose({ focus: () => input.value?.focus() })
 <template>
 	<!-- The whole field takes the click, so the chips never leave a dead zone. -->
 	<div
-		class="flex min-h-8 cursor-text flex-wrap items-center gap-1 rounded-4 bg-surface-gray-2 p-1 transition-[background-color,box-shadow] duration-150 ease-out focus-within:bg-surface-elevation-2 focus-within:ring-2 focus-within:ring-outline-gray-3 hover:bg-surface-gray-3 focus-within:hover:bg-surface-elevation-2 motion-reduce:transition-none"
+		class="flex cursor-text flex-wrap items-center gap-1"
+		:class="
+			bare
+				? 'min-h-[26px]'
+				: 'min-h-8 rounded-4 bg-surface-gray-2 p-1 transition-[background-color,box-shadow] duration-150 ease-out focus-within:bg-surface-elevation-2 focus-within:ring-2 focus-within:ring-outline-gray-3 hover:bg-surface-gray-3 focus-within:hover:bg-surface-elevation-2 motion-reduce:transition-none'
+		"
 		@click="input?.focus()"
 	>
 		<Badge
@@ -93,20 +99,25 @@ defineExpose({ focus: () => input.value?.focus() })
 </template>
 
 <style scoped>
+/* A transition, not a keyframe, so chips added in quick succession never restart. */
 .email-chip {
-	animation: chip-in 160ms cubic-bezier(0.23, 1, 0.32, 1);
+	transition:
+		opacity 160ms cubic-bezier(0.23, 1, 0.32, 1),
+		transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-@keyframes chip-in {
-	from {
+@starting-style {
+	.email-chip {
 		opacity: 0;
 		transform: scale(0.9);
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.email-chip {
-		animation: none;
+	@starting-style {
+		.email-chip {
+			transform: none;
+		}
 	}
 }
 </style>

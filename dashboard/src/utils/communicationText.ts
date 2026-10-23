@@ -12,6 +12,11 @@ export function plainText(html: string): string {
 
 export const hasText = (html: string) => plainText(html).length > 0
 
+// The editor leaves an empty paragraph behind when Enter is pressed last; dropped so a
+// note does not end in a blank line.
+export const trimTrailingEmptyParagraphs = (html: string) =>
+	html.replace(/(<p>(\s|&nbsp;|<br\s*\/?>)*<\/p>)+$/, "")
+
 export function excerpt(html: string, length = 90): string {
 	const text = plainText(html)
 	return text.length > length ? `${text.slice(0, length).trimEnd()}…` : text

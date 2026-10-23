@@ -14,6 +14,7 @@
   "speakers",
   "section_break_yqfb",
   "description",
+  "formatted_description",
   "section_break_ouiw",
   "phone",
   "section_break_additional",
@@ -59,6 +60,14 @@
    "fieldname": "description",
    "fieldtype": "Text Editor",
    "label": "Description"
+  },
+  {
+   "fieldname": "formatted_description",
+   "fieldtype": "Text Editor",
+   "hidden": 1,
+   "is_virtual": 1,
+   "label": "Formatted Description",
+   "read_only": 1
   },
   {
    "fieldname": "speakers",

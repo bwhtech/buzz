@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { Badge, ErrorMessage, Skeleton, dayjsLocal, toast } from "frappe-ui"
+import { ErrorMessage, Skeleton, TabButtons, dayjsLocal, toast } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import CommentComposer from "@/components/dashboard/comments/CommentComposer.vue"
 import DocumentActivity from "@/components/dashboard/comments/DocumentActivity.vue"
-import { useDocumentActivity } from "@/composables/useDocumentActivity"
+import { activityFilters, useDocumentActivity } from "@/composables/useDocumentActivity"
+import { useProposalStatuses } from "@/composables/useProposalStatuses"
+import type { EmailCopies } from "@/data/comments"
 import type { ProposalListItem, ProposalSpeaker, TalkProposal } from "@/types"
 import { speakerName } from "@/utils/speakerByline"
 
@@ -19,6 +21,8 @@ const props = defineProps<{
 
 // The drawer keys this by proposal, so the feed always belongs to one proposal.
 const feed = useDocumentActivity("Talk Proposal", () => props.proposal.name)
+const activityCount = computed(() => feed.activity.data?.length ?? 0)
+const { getStatusTheme } = useProposalStatuses()
 
 // A status change is a line in the feed.
 watch(
@@ -51,8 +55,22 @@ const names = computed(() =>
 
 const draft = ref("")
 
-function post(content: string, toSpeakers: boolean) {
-	feed.add(content, toSpeakers).then(
+const descriptionView = ref<"formatted" | "original">("formatted")
+const showOriginal = computed(() => descriptionView.value === "original")
+const canFormat = computed(
+	() =>
+		!!props.doc?.formatted_description && props.doc.formatted_description !== props.doc.description,
+)
+// Answers saved from a plain textarea carry their line breaks as raw newlines.
+const hasTags = computed(() => /<[a-z][a-z0-9]*[\s/>]/i.test(props.doc?.description || ""))
+const description = computed(() =>
+	canFormat.value && !showOriginal.value
+		? props.doc?.formatted_description
+		: props.doc?.description,
+)
+
+function post(content: string, toSpeakers: boolean, copies: EmailCopies) {
+	feed.add(content, toSpeakers, copies).then(
 		() => {
 			draft.value = ""
 			if (toSpeakers)
@@ -65,38 +83,59 @@ function post(content: string, toSpeakers: boolean) {
 
 <template>
 	<div class="flex min-h-0 flex-1 flex-col">
-		<div class="scroll-fade flex-1 space-y-8 overflow-y-auto overscroll-contain px-6 pt-2 pb-6">
+		<div class="scroll-fade flex-1 space-y-8 overflow-y-auto overscroll-contain px-6 pt-2 pb-16">
 			<ProposalProperties :speakers="speakers" :fields="fields" />
 
 			<section class="space-y-2">
-				<h3 class="text-lg font-semibold text-ink-gray-9">Description</h3>
+				<div class="flex items-center justify-between gap-2">
+					<h3 class="text-lg font-semibold text-ink-gray-9">Description</h3>
+					<TabButtons
+						v-if="canFormat"
+						v-model="descriptionView"
+						:options="[
+							{ label: 'Formatted', value: 'formatted' },
+							{ label: 'Original', value: 'original' },
+						]"
+					/>
+				</div>
 				<!-- Only the document carries the description, so it arrives a beat later. -->
 				<Skeleton v-if="loading" class="h-16 w-full rounded-4" />
 				<!-- Description is a Text Editor field, so it arrives as sanitized HTML. -->
 				<div
-					v-else-if="doc?.description"
+					v-else-if="description"
 					class="description prose prose-sm max-w-none text-base leading-[1.6] text-ink-gray-7"
-					v-html="doc.description"
+					:class="showOriginal && !hasTags && 'whitespace-pre-line'"
+					v-html="description"
 				/>
 				<p v-else class="text-base text-ink-gray-5">No description was submitted.</p>
 			</section>
 
 			<section class="space-y-4">
-				<h3 class="flex items-center gap-2 text-lg font-semibold text-ink-gray-9">
-					Activity
-					<Badge v-if="feed.noteCount.value" :label="String(feed.noteCount.value)" />
-				</h3>
-				<DocumentActivity :feed="feed" :names="names" created-label="submitted this proposal" />
+				<div class="flex items-center justify-between gap-2">
+					<h3 class="flex items-center gap-2 text-lg font-semibold text-ink-gray-9">
+						Activity
+						<span v-if="activityCount" class="text-base font-normal text-ink-gray-5 tabular-nums">
+							{{ activityCount }}
+						</span>
+					</h3>
+					<TabButtons v-if="activityCount" v-model="feed.filter.value" :options="activityFilters" />
+				</div>
+				<DocumentActivity
+					:feed="feed"
+					:names="names"
+					:change-theme="getStatusTheme"
+					created-label="submitted this proposal"
+				/>
 			</section>
 		</div>
 
-		<div class="shrink-0 space-y-2 px-3 pt-2 pb-3">
+		<div class="shrink-0 space-y-2 px-5 pt-3 pb-4">
 			<ErrorMessage :message="feed.adding.error" />
 			<CommentComposer
 				v-model="draft"
 				:members="feed.members.data || []"
 				:recipients="recipients"
-				recipients-label="speakers"
+				:sender="feed.sender.data"
 				:loading="feed.adding.loading"
 				@submit="post"
 			/>
@@ -120,7 +159,9 @@ function post(content: string, toSpeakers: boolean) {
 		to bottom,
 		transparent,
 		black var(--top-fade),
-		black calc(100% - 1.5rem),
+		black calc(100% - 4rem),
+		rgb(0 0 0 / 0.7) calc(100% - 2.5rem),
+		rgb(0 0 0 / 0.3) calc(100% - 1.25rem),
 		transparent
 	);
 	animation: top-fade-in linear both;
