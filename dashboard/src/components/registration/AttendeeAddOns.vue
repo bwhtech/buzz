@@ -16,15 +16,15 @@
 					{{ addOn.price_note || formatWholePriceOrFree(addOn.price, addOn.currency) }}
 				</span>
 			</div>
-			<FormControl
-				v-if="addOn.user_selects_option && selection(addOn).selected"
-				v-model="selection(addOn).option"
-				class="ml-6"
-				type="select"
-				size="sm"
-				:aria-label="__('{0} option', [__(addOn.title ?? '')])"
-				:options="(addOn.options ?? []).map((option) => ({ label: __(option), value: option }))"
-			/>
+			<div v-if="addOn.user_selects_option && selection(addOn).selected" class="pl-6">
+				<FormControl
+					v-model="selection(addOn).option"
+					type="select"
+					size="sm"
+					:aria-label="__('{0} option', [__(addOn.title ?? '')])"
+					:options="(addOn.options ?? []).map((option) => ({ label: __(option), value: option }))"
+				/>
+			</div>
 		</div>
 	</div>
 </template>
