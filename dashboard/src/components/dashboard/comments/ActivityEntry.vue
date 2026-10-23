@@ -16,12 +16,15 @@ const props = defineProps<{
 	createdLabel: string
 	saving?: boolean
 	fresh?: boolean
+	// An earlier email in a thread starts folded to its first line.
+	folded?: boolean
 }>()
 
 const emit = defineEmits<{ update: [content: string]; delete: [] }>()
 
 const editing = ref(false)
 const showQuoted = ref(false)
+const folded = ref(props.folded)
 const draft = ref("")
 
 const posted = computed(() => dayjsLocal(props.entry.creation))
@@ -39,6 +42,12 @@ const actions = [
 	{ label: "Edit", icon: "lucide-pencil", onClick: startEditing },
 	{ label: "Delete", icon: "lucide-trash-2", theme: "red" as const, onClick: () => emit("delete") },
 ]
+
+function fileSize(bytes: number) {
+	return bytes >= 1024 * 1024
+		? `${(bytes / 1024 / 1024).toFixed(1)} MB`
+		: `${Math.max(1, Math.round(bytes / 1024))} KB`
+}
 
 function startEditing() {
 	draft.value = props.entry.content || ""
@@ -75,6 +84,15 @@ function save(content: string) {
 							{{ posted.fromNow() }}
 						</time>
 					</Tooltip>
+					<Button
+						v-if="entry.kind === 'email'"
+						class="ml-auto"
+						variant="ghost"
+						size="sm"
+						:icon="folded ? 'lucide-chevron-down' : 'lucide-chevron-up'"
+						:aria-label="folded ? 'Expand email' : 'Collapse email'"
+						@click="folded = !folded"
+					/>
 					<Dropdown v-if="isAuthor && !editing" class="ml-auto" :options="actions" align="end">
 						<Button
 							class="entry-menu"
@@ -95,12 +113,33 @@ function save(content: string) {
 					@submit="save"
 					@cancel="editing = false"
 				/>
+				<button
+					v-else-if="folded"
+					class="mt-0.5 block w-full truncate text-left text-base text-ink-gray-6"
+					@click="folded = false"
+				>
+					{{ entry.snippet }}
+				</button>
 				<!-- Notes are sanitized by Comment.validate, emails by the comments API and Frappe's inbox. -->
 				<div
 					v-else
 					class="mt-0.5 text-base leading-relaxed text-pretty break-words text-ink-gray-7 [&_.mention]:rounded-4 [&_.mention]:bg-surface-gray-2 [&_.mention]:px-1 [&_.mention]:font-medium [&_.mention]:text-ink-gray-8 [&_p+p]:mt-2"
 					v-html="entry.content"
 				/>
+				<div v-if="!folded && entry.attachments?.length" class="mt-2 flex flex-wrap gap-1.5">
+					<a
+						v-for="file in entry.attachments"
+						:key="file.url"
+						:href="file.url"
+						target="_blank"
+						rel="noopener"
+						class="inline-flex h-7 items-center gap-1.5 rounded-5 bg-surface-gray-2 px-2 text-sm text-ink-gray-7 hover:bg-surface-gray-3"
+					>
+						<span class="lucide-paperclip size-3.5 text-ink-gray-5" aria-hidden="true" />
+						<span class="max-w-48 truncate">{{ file.name }}</span>
+						<span class="text-ink-gray-5">{{ fileSize(file.size) }}</span>
+					</a>
+				</div>
 				<p
 					v-if="entry.kind === 'email'"
 					class="mt-1.5 flex items-center gap-1.5 text-sm text-ink-gray-5"
@@ -112,7 +151,7 @@ function save(content: string) {
 					/>
 					{{ entry.received ? "Replied by email" : `Emailed to ${recipientNames}` }}
 					<button
-						v-if="entry.quoted_content"
+						v-if="entry.quoted_content && !folded"
 						class="ml-1 rounded-4 px-1 hover:bg-surface-gray-2 hover:text-ink-gray-8"
 						@click="showQuoted = !showQuoted"
 					>
@@ -120,7 +159,7 @@ function save(content: string) {
 					</button>
 				</p>
 				<div
-					v-if="showQuoted"
+					v-if="showQuoted && !folded"
 					class="mt-2 border-l-2 border-outline-gray-2 pl-3 text-sm leading-relaxed text-ink-gray-6 [&_p+p]:mt-2"
 					v-html="entry.quoted_content"
 				/>

@@ -27,6 +27,9 @@ SIGN_OFF = re.compile(
 )
 DEVICE_SIGNATURE = re.compile(r"^(sent from my .+|get outlook for .+)$", re.IGNORECASE)
 NAME_LINE_LIMIT = 40
+SNIPPET_LENGTH = 200
+# Stands in for an image while lines are cut, so what survives tells which images were in the body.
+IMAGE_MARKER = re.compile(r"\x01(\d+)\x01")
 
 
 class EmailContent:
@@ -40,9 +43,26 @@ class EmailContent:
 		self.quoted = self.extract_quote()
 		for node in self.soup.select(SIGNATURE_SELECTORS):
 			node.decompose()
+		self.image_sources = self.mark_images()
+		self.paragraphs = signed_off(HTMLLines(str(self.soup), self.plain).paragraphs())
 
 	def body(self) -> str:
-		return to_html(signed_off(HTMLLines(str(self.soup), self.plain).paragraphs()))
+		return to_html(without_markers(self.paragraphs))
+
+	def snippet(self) -> str:
+		return " ".join(plain_text(re.sub(r"</p>|<br>", " ", self.body())).split())[:SNIPPET_LENGTH]
+
+	def body_image_sources(self) -> list[str]:
+		"""Images placed in what was written, as opposed to the signature or the quote."""
+		lines = "".join(line for paragraph in self.paragraphs for line in paragraph)
+		return [self.image_sources[int(index)] for index in IMAGE_MARKER.findall(lines)]
+
+	def mark_images(self) -> list[str]:
+		sources = []
+		for image in self.soup.find_all("img"):
+			image.replace_with(f"\x01{len(sources)}\x01")
+			sources.append(image.get("src") or "")
+		return sources
 
 	def quoted_body(self) -> str:
 		return to_html(HTMLLines(self.quoted, self.plain).paragraphs()) if self.quoted else ""
@@ -80,10 +100,19 @@ def signed_off(paragraphs: list[list[str]]) -> list[list[str]]:
 		if DEVICE_SIGNATURE.match(text):
 			return trimmed(paragraphs, lines[:position])
 		if SIGN_OFF.match(text):
-			name = lines[position + 1 : position + 2]
-			keep = [(index, line)] + [entry for entry in name if len(plain_text(entry[1])) <= NAME_LINE_LIMIT]
+			name = [entry for entry in lines[position + 1 :] if line_text(entry[1])][:1]
+			# Images beside the name are the signature's, not the message's.
+			keep = [(index, line)] + [
+				(entry[0], IMAGE_MARKER.sub("", entry[1]))
+				for entry in name
+				if len(line_text(entry[1])) <= NAME_LINE_LIMIT
+			]
 			return trimmed(paragraphs, lines[:position] + keep)
 	return paragraphs
+
+
+def line_text(line: str) -> str:
+	return IMAGE_MARKER.sub("", plain_text(line)).strip()
 
 
 def trimmed(paragraphs: list[list[str]], kept: list[tuple[int, str]]) -> list[list[str]]:
@@ -91,6 +120,11 @@ def trimmed(paragraphs: list[list[str]], kept: list[tuple[int, str]]) -> list[li
 	for index, line in kept:
 		result.setdefault(index, []).append(line)
 	return list(result.values())
+
+
+def without_markers(paragraphs: list[list[str]]) -> list[list[str]]:
+	stripped = [[IMAGE_MARKER.sub("", line).strip() for line in paragraph] for paragraph in paragraphs]
+	return [kept for kept in ([line for line in paragraph if line] for paragraph in stripped) if kept]
 
 
 def to_html(paragraphs: list[list[str]]) -> str:

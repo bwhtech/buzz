@@ -3,7 +3,7 @@ from frappe.desk.form.load import get_comments
 from frappe.utils import parse_addr, split_emails
 
 from buzz.api.comments.email_content import EmailContent
-from buzz.api.comments.schemas import ActivityEntry
+from buzz.api.comments.schemas import ActivityEntry, EmailAttachment
 
 # Field changes worth a line in the timeline, read from the record's Version history.
 TRACKED_FIELDS = {"Talk Proposal": ["status"]}
@@ -56,7 +56,8 @@ class ActivityFeed:
 				"sent_or_received",
 			],
 		)
-		return [email_row(row) for row in rows]
+		files = attached_files([row.name for row in rows])
+		return [email_row(row, files.get(row.name, [])) for row in rows]
 
 	def changes(self) -> list[dict]:
 		fields = TRACKED_FIELDS.get(self.reference_doctype, [])
@@ -71,22 +72,47 @@ class ActivityFeed:
 		return {doctype_field: self.reference_doctype, name_field: str(self.reference_name), **extra}
 
 
-def email_row(row) -> dict:
+def email_row(row, files: list) -> dict:
 	sender_name, sender_email = parse_addr(row.sender)
 	received = row.sent_or_received == "Received"
 	# A reply carries the thread, a signature and the sender's styling; a sent note is our own.
-	email = EmailContent(row.content) if received else None
+	email = EmailContent(row.content)
 	return {
 		"name": row.name,
 		"kind": "email",
 		"owner": sender_email,
 		"display_name": row.sender_full_name or sender_name,
 		"creation": row.creation,
-		"content": email.body() if email else row.content,
-		"quoted_content": email.quoted_body() if email else None,
+		"content": email.body() if received else row.content,
+		"quoted_content": email.quoted_body() if received else None,
+		"snippet": email.snippet(),
+		"attachments": email_attachments(files, row.content or "", email.body_image_sources()),
 		"recipients": split_emails(row.recipients or ""),
 		"received": received,
 	}
+
+
+def attached_files(communications: list[str]) -> dict[str, list]:
+	rows = frappe.get_all(
+		"File",
+		filters={"attached_to_doctype": "Communication", "attached_to_name": ("in", communications)},
+		fields=["attached_to_name", "file_name", "file_url", "file_size"],
+		order_by="creation asc",
+	)
+	files: dict[str, list] = {}
+	for row in rows:
+		files.setdefault(row.attached_to_name, []).append(row)
+	return files
+
+
+def email_attachments(files: list, content: str, body_images: list[str]) -> list[EmailAttachment]:
+	"""Attached files, plus images placed in the message; logos and banners in the signature or
+	the quoted thread are left out."""
+	return [
+		EmailAttachment(name=file.file_name, url=file.file_url, size=file.file_size or 0)
+		for file in files
+		if file.file_url not in content or any(source.startswith(file.file_url) for source in body_images)
+	]
 
 
 def field_changes(version, fields: list[str]) -> list[dict]:

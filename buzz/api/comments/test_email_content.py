@@ -1,7 +1,9 @@
 from pathlib import Path
 
+import frappe
 from frappe.tests import UnitTestCase
 
+from buzz.api.comments.activity import email_attachments
 from buzz.api.comments.email_content import EmailContent
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -46,3 +48,27 @@ class TestEmailContent(UnitTestCase):
 	def test_scripts_and_unsafe_links_do_not_survive(self):
 		body = EmailContent('<p>Hi <a href="javascript:alert(1)">x</a><script>alert(1)</script></p>').body()
 		self.assertEqual(body, "<p>Hi <a>x</a></p>")
+
+	def test_snippet_reads_as_one_line(self):
+		self.assertEqual(
+			reply("outlook_reply.html").snippet(),
+			"Hello Harsh, Please find the updated abstract below. I have also attached the slides. "
+			"Warm Regards, Priya Raman",
+		)
+
+	def test_only_images_in_the_message_count_as_its_own(self):
+		email = EmailContent(
+			'<div>See the floor plan:</div><div><img src="/private/files/plan.png?fid=1"></div>'
+			'<div>Thanks,</div><div>Ravi <img src="/private/files/linkedin.png?fid=2"></div>'
+			'<div><img src="/private/files/logo.png?fid=3"></div>'
+		)
+		self.assertEqual(email.body_image_sources(), ["/private/files/plan.png?fid=1"])
+
+	def test_attachments_leave_out_signature_images(self):
+		content = '<p>Slides attached.</p><p>Thanks,<br>Ravi</p><img src="/private/files/logo.png?fid=3">'
+		files = [
+			frappe._dict(file_name="slides.pdf", file_url="/private/files/slides.pdf", file_size=2_400_000),
+			frappe._dict(file_name="logo.png", file_url="/private/files/logo.png", file_size=4_000),
+		]
+		attachments = email_attachments(files, content, EmailContent(content).body_image_sources())
+		self.assertEqual([attachment.name for attachment in attachments], ["slides.pdf"])

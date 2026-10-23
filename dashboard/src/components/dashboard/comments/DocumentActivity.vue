@@ -13,6 +13,13 @@ const props = defineProps<{
 }>()
 
 const entries = computed(() => props.feed.activity.data ?? [])
+// Only the latest email each way opens; earlier ones in the thread fold to a line.
+const openEmails = computed(() => {
+	const emails = entries.value.filter((entry) => entry.kind === "email")
+	const latest = (received: boolean) =>
+		emails.filter((entry) => entry.received === received).at(-1)?.name
+	return new Set([latest(true), latest(false)])
+})
 // What the timeline opened with shows at once; only entries added while it is open
 // animate in.
 const loadedNames = ref<Set<string> | null>(null)
@@ -37,6 +44,7 @@ watch(
 				:entry="entry"
 				:last="index === entries.length - 1"
 				:fresh="Boolean(loadedNames && !loadedNames.has(entry.name))"
+				:folded="entry.kind === 'email' && !openEmails.has(entry.name)"
 				:members="feed.members.data || []"
 				:names="names"
 				:created-label="createdLabel"
