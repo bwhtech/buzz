@@ -7,7 +7,7 @@
 	<a class="buzz-event-card-target" href="{{ event.url }}" aria-label="{{ event.title }}"{% if event.is_external %} target="_blank" rel="noopener"{% endif %}></a>
 	<div class="buzz-event-card-cover">
 		{% if event.image %}<img class="buzz-event-card-image" src="{{ event.image }}" loading="lazy" alt="">{% else %}<event-banner class="buzz-event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
-		<span class="buzz-event-card-date" aria-hidden="true"><span class="buzz-event-card-date-month">{{ frappe.utils.format_date(event.date, "MMM") }}</span><span class="buzz-event-card-date-day">{{ frappe.utils.format_date(event.date, "d") }}</span></span>
+		<span class="date-badge" data-size="sm" aria-hidden="true"><span class="date-badge-month">{{ frappe.utils.format_date(event.date, "MMM") }}</span><span class="date-badge-day">{{ frappe.utils.format_date(event.date, "d") }}</span></span>
 	</div>
 	<div class="buzz-event-card-body">
 		<p class="buzz-event-card-time">

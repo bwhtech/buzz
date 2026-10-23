@@ -1,0 +1,45 @@
+/* A calendar date badge, shared by the dashboard's DateBadge.vue and the Jinja pages.
+   Event pages colour it from their theme tokens; elsewhere it falls back to espresso. */
+.date-badge {
+	display: flex;
+	flex-direction: column;
+	flex-shrink: 0;
+	width: 48px;
+	overflow: hidden;
+	border: 1px solid var(--border, var(--outline-gray-2));
+	border-radius: var(--radius-4);
+	background: var(--surface, var(--surface-base));
+	line-height: 1;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+
+.date-badge-month {
+	padding: 4px 0;
+	background: var(--surface-raised, var(--surface-gray-2));
+	color: var(--ink-muted, var(--ink-gray-6));
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.date-badge-day {
+	padding: 8px 0;
+	color: var(--ink-strong, var(--ink-gray-9));
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.date-badge[data-size="sm"] {
+	width: 40px;
+}
+
+.date-badge[data-size="sm"] .date-badge-month {
+	padding: 2px 0;
+}
+
+.date-badge[data-size="sm"] .date-badge-day {
+	padding: 4px 0;
+	font-size: 16px;
+}

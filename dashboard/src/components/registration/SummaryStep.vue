@@ -1,15 +1,7 @@
 <template>
 	<div class="flex flex-col gap-3">
 		<section class="flex items-center gap-3.5 rounded-5 border border-outline-gray-2 px-4 py-3">
-			<div
-				v-if="eventDetails.start_date"
-				class="flex size-11 flex-none flex-col items-center justify-center rounded-5 bg-surface-gray-2 leading-none"
-			>
-				<span class="text-[10px] font-semibold uppercase tracking-[0.04em] text-ink-gray-5">
-					{{ startDate.format("MMM") }}
-				</span>
-				<span class="text-lg font-semibold text-ink-gray-9">{{ startDate.format("D") }}</span>
-			</div>
+			<DateBadge v-if="eventDetails.start_date" :date="eventDetails.start_date" />
 			<div class="flex min-w-0 flex-col gap-0.5">
 				<span class="text-base font-semibold text-ink-gray-9">{{ __(eventDetails.title) }}</span>
 				<span class="text-p-sm text-ink-gray-5 text-pretty">{{ eventLine }}</span>
@@ -59,6 +51,7 @@
 import { Avatar } from "frappe-ui"
 import { computed } from "vue"
 
+import DateBadge from "@/components/common/DateBadge.vue"
 import type { BillingDetails } from "@/composables/useBookingFormStorage"
 import type { AvailableAddOn, AvailableTicketType, BookingAttendee } from "@/types"
 import { formatWholePriceOrFree } from "@/utils/currency"
@@ -82,7 +75,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ edit: [step: RegistrationStepId] }>()
 
-const { startDate, dateLabel, timeLabel, venueLabel } = useEventDateLabels(() => props.eventDetails)
+const { dateLabel, timeLabel, venueLabel } = useEventDateLabels(() => props.eventDetails)
 const eventLine = computed(() =>
 	[dateLabel.value, timeLabel.value, venueLabel.value].filter(Boolean).join(" · "),
 )

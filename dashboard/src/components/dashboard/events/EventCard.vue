@@ -4,6 +4,7 @@ import { bannerPattern } from "@public/js/event_banner"
 import { Avatar, Badge, Button, dayjs } from "frappe-ui"
 import { computed, ref } from "vue"
 
+import DateBadge from "@/components/common/DateBadge.vue"
 import type { EventCardLayout } from "@/composables/useEventCardLayout"
 import type { MyEvent, TeamEvent } from "@/types"
 import { dayLabel, timeLabel } from "@/utils/dateLabels"
@@ -90,10 +91,7 @@ const venue = computed(() => {
 				@error="bannerFailed = true"
 			/>
 			<div v-else class="buzz-event-card-image" :style="banner" />
-			<span class="buzz-event-card-date" aria-hidden="true">
-				<span class="buzz-event-card-date-month">{{ start.format("MMM") }}</span>
-				<span class="buzz-event-card-date-day">{{ start.format("D") }}</span>
-			</span>
+			<DateBadge :date="event.start_date" size="sm" />
 		</div>
 
 		<div class="buzz-event-card-body">

@@ -77,9 +77,8 @@
 
 .buzz-event-card-meta {
 	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 4px 8px;
+	flex-direction: column;
+	gap: 2px;
 	min-width: 0;
 }
 
@@ -137,7 +136,7 @@
 }
 
 /* Shown by the cover layout only. */
-.buzz-event-card-date,
+.buzz-event-card-cover .date-badge,
 .buzz-event-card-weekday {
 	display: none;
 }
@@ -212,36 +211,14 @@
 	display: contents;
 }
 
-.buzz-event-card[data-layout="cover"] .buzz-event-card-date {
+.buzz-event-card[data-layout="cover"] .buzz-event-card-cover .date-badge {
 	position: absolute;
 	top: 10px;
 	left: 10px;
 	display: flex;
-	flex-direction: column;
-	width: 40px;
-	overflow: hidden;
-	border-radius: var(--radius-4);
+	border: none;
 	background: var(--surface-elevation-1);
 	box-shadow: var(--shadow-sm);
-	text-align: center;
-	font-variant-numeric: tabular-nums;
-}
-
-.buzz-event-card-date-month {
-	padding: 2px 0;
-	background: var(--surface-gray-3);
-	color: var(--ink-gray-5);
-	font-size: 10px;
-	font-weight: 600;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-}
-
-.buzz-event-card-date-day {
-	padding: 2px 0 3px;
-	color: var(--ink-gray-9);
-	font-size: 16px;
-	font-weight: 600;
 }
 
 /* Pressing answers the press; only the overlay presses, so Manage does not press the card. */
