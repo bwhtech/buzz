@@ -56,14 +56,16 @@ runs:
           **/pyproject.toml
           **/requirements*.txt
 
-    - name: Install bench and the MariaDB client
+    - name: Install bench and shim the MariaDB client
       shell: bash -e {0}
       run: |
         # The MariaDB service container already ships the client tools, so run them there
         # instead of installing mariadb-client from apt, whose mirror can stall for
         # minutes. Frappe pipes SQL to `mariadb --host=127.0.0.1 --port=3306`, which
-        # inside the container reaches the same server.
+        # inside the container reaches the same server. Only stdin and stdout cross into
+        # the container: host paths and sockets passed as arguments do not exist there.
         container=$(docker ps --quiet --filter publish=3306)
+        [ -n "$container" ] || { echo "::error::No service container publishes port 3306"; exit 1; }
         shim="${RUNNER_TEMP}/mariadb-shim"
         mkdir -p "$shim"
         for tool in mariadb mariadb-dump; do
