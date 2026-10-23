@@ -15,6 +15,11 @@
 		box-shadow 160ms var(--event-card-ease);
 }
 
+/* The row layout compacts on the list's width, not the viewport's: a sidebar can squeeze it. */
+.buzz-event-card-list {
+	container-type: inline-size;
+}
+
 /* Stretched over the card so the whole card is the target; actions sit above it. */
 .buzz-event-card-target {
 	position: absolute;
@@ -73,6 +78,10 @@
 	font-weight: 600;
 	line-height: 1.35;
 	overflow-wrap: anywhere;
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
 }
 
 .buzz-event-card-meta {
@@ -88,6 +97,12 @@
 	gap: 6px;
 	min-width: 0;
 	overflow-wrap: anywhere;
+}
+
+.buzz-event-card-truncate {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .buzz-event-card-meta-item > :first-child {
@@ -158,13 +173,6 @@
 	border-radius: var(--radius-4);
 }
 
-.buzz-event-card[data-layout="row"] .buzz-event-card-title {
-	display: -webkit-box;
-	overflow: hidden;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 2;
-}
-
 .buzz-event-card[data-layout="row"] .buzz-event-card-status {
 	grid-area: status;
 	align-self: start;
@@ -197,8 +205,15 @@
 	top: 10px;
 	right: 10px;
 	z-index: 1;
+	gap: 4px;
 	/* Badges only; a press on the corner still opens the card. */
 	pointer-events: none;
+}
+
+/* Solid on a cover, so the badges read over any image; the Jinja card's badges are static. */
+.buzz-event-card[data-layout="cover"] .buzz-event-card-status .es-badge {
+	background: var(--c-solid-bg);
+	color: var(--c-solid-fg);
 }
 
 .buzz-event-card[data-layout="cover"] .buzz-event-card-actions {
@@ -241,23 +256,22 @@
 	}
 }
 
-@media (max-width: 760px) {
+@container (max-width: 560px) {
 	.buzz-event-card[data-layout="row"] {
 		grid-template-areas:
-			"cover body"
-			"cover status";
-		grid-template-columns: 112px minmax(0, 1fr);
+			"cover body body"
+			"cover status actions";
+		grid-template-columns: 112px minmax(0, 1fr) auto;
 		gap: 0 12px;
 	}
 
-	.buzz-event-card[data-layout="row"] .buzz-event-card-status {
+	.buzz-event-card[data-layout="row"] :is(.buzz-event-card-status, .buzz-event-card-actions) {
 		align-self: end;
-		justify-content: flex-start;
 		padding-top: 8px;
 	}
 
-	.buzz-event-card[data-layout="row"] .buzz-event-card-actions {
-		display: none;
+	.buzz-event-card[data-layout="row"] .buzz-event-card-status {
+		justify-content: flex-start;
 	}
 }
 

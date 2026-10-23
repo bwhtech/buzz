@@ -15,16 +15,16 @@
 			{# Like the discover page: a live event says so instead of its start time. #}
 			{% if event.is_live %}<span class="event-card-live"><span class="live-dot"></span>{{ _("Live") }}</span>{% else %}<span>{{ event.time }}</span>{% endif %}
 		</p>
-		<h3 class="buzz-event-card-title">{{ event.title }}</h3>
+		<h3 class="buzz-event-card-title" title="{{ event.title }}" dir="auto">{{ event.title }}</h3>
 		<p class="buzz-event-card-meta">
 			<span class="buzz-event-card-meta-item buzz-event-card-host">
 				{% if event.host_logo %}<img class="buzz-event-card-avatar" src="{{ event.host_logo }}" alt="">{% else %}<span class="buzz-event-card-avatar" aria-hidden="true">{{ event.host_names[:1] | upper }}</span>{% endif %}
-				<span>{{ event.host_names }}</span>
+				<span class="buzz-event-card-truncate" title="{{ event.host_names }}" dir="auto">{{ event.host_names }}</span>
 			</span>
 			{% if event.place %}
 			<span class="buzz-event-card-meta-item">
 				<svg class="buzz-event-card-icon" viewBox="0 0 24 24" aria-hidden="true">{% if event.is_online %}<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>{% else %}<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>{% endif %}</svg>
-				<span>{{ event.place }}</span>
+				<span dir="auto">{{ event.place }}</span>
 			</span>
 			{% endif %}
 		</p>
@@ -39,7 +39,7 @@
 {% for day in days %}
 <section class="team-day" data-day-group data-day="{{ day.date }}">
 	<h3 class="team-day-heading">{{ day.label }}<span>{{ day.weekday }}</span></h3>
-	<div class="team-day-events">{% for event in day.events %}{{ event_card(event) }}{% endfor %}</div>
+	<div class="team-day-events buzz-event-card-list">{% for event in day.events %}{{ event_card(event) }}{% endfor %}</div>
 </section>
 {% else %}
 <div class="timeline-empty">

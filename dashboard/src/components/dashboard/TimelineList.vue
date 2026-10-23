@@ -127,7 +127,7 @@ const layoutOptions = [
 								></div>
 							</div>
 
-							<div class="space-y-6">
+							<div class="buzz-event-card-list space-y-6">
 								<template v-for="item in day.events" :key="item.name">
 									<slot :item="item" />
 								</template>

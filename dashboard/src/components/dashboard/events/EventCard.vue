@@ -7,7 +7,7 @@ import { computed, ref } from "vue"
 import DateBadge from "@/components/common/DateBadge.vue"
 import type { EventCardLayout } from "@/composables/useEventCardLayout"
 import type { MyEvent, TeamEvent } from "@/types"
-import { dayLabel, timeLabel } from "@/utils/dateLabels"
+import { dayLabel, rangeLabel, timeLabel } from "@/utils/dateLabels"
 
 // The timeline files row cards under a date heading; a standalone list has to carry the date
 // on the card itself. A cover card always does, on its cover.
@@ -39,9 +39,12 @@ const startTime = computed(() => (props.event.start_time ? timeLabel(props.event
 // A multi-day event always carries its range: the timeline files it under one day only.
 const dateLabel = computed(() => {
 	const { start_date, end_date } = props.event
-	if (end_date && end_date !== start_date) return `${dayLabel(start_date)} – ${dayLabel(end_date)}`
+	if (end_date && end_date !== start_date) return rangeLabel(start_date, end_date)
 	return props.showDate ? dayLabel(start_date) : ""
 })
+
+// Solid on a cover, so the badges read over any image.
+const badgeVariant = computed(() => (props.layout === "cover" ? "solid" : "subtle"))
 
 const bannerFailed = ref(false)
 const banner = computed(() => ({ backgroundImage: bannerPattern(props.event.title) }))
@@ -105,16 +108,18 @@ const venue = computed(() => {
 				<span v-if="startTime">{{ startTime }}</span>
 			</p>
 
-			<h3 class="buzz-event-card-title" :title="event.title">{{ event.title }}</h3>
+			<h3 class="buzz-event-card-title" :title="event.title" dir="auto">{{ event.title }}</h3>
 
 			<p class="buzz-event-card-meta">
 				<span v-if="event.team_name" class="buzz-event-card-meta-item">
 					<Avatar :image="event.team_logo || undefined" :label="event.team_name" size="xs" />
-					<span>{{ event.team_name }}</span>
+					<span class="buzz-event-card-truncate" :title="event.team_name" dir="auto">{{
+						event.team_name
+					}}</span>
 				</span>
 				<span class="buzz-event-card-meta-item" :class="venue.tone">
 					<span class="size-3.5" :class="venue.icon" aria-hidden="true" />
-					<span class="line-clamp-2" :title="venue.label">{{ venue.label }}</span>
+					<span class="line-clamp-2" :title="venue.label" dir="auto">{{ venue.label }}</span>
 				</span>
 			</p>
 		</div>
@@ -124,8 +129,8 @@ const venue = computed(() => {
 			class="buzz-event-card-status"
 		>
 			<slot name="status">
-				<Badge v-if="event.is_attendee" theme="violet" variant="subtle" label="Attending" />
-				<Badge v-if="event.is_external" variant="subtle" :label="__('External')" />
+				<Badge v-if="event.is_attendee" theme="violet" :variant="badgeVariant" label="Attending" />
+				<Badge v-if="event.is_external" :variant="badgeVariant" :label="__('External')" />
 			</slot>
 		</div>
 
