@@ -53,6 +53,7 @@ class ActivityFeed:
 				"sender",
 				"sender_full_name",
 				"recipients",
+				"cc",
 				"sent_or_received",
 			],
 		)
@@ -88,6 +89,7 @@ def email_row(row, files: list) -> dict:
 		"snippet": email.snippet(),
 		"attachments": email_attachments(files, row.content or "", email.body_image_sources()),
 		"recipients": split_emails(row.recipients or ""),
+		"cc": split_emails(row.cc or ""),
 		"received": received,
 	}
 

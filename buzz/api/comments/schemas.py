@@ -24,6 +24,7 @@ class ActivityEntry(APIResponse):
 	snippet: str | None = None
 	attachments: list[EmailAttachment] = Field(default_factory=list)
 	recipients: list[str] = Field(default_factory=list)
+	cc: list[str] = Field(default_factory=list)
 	received: bool = False
 	field: str | None = None
 	old_value: str | None = None

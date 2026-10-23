@@ -1,7 +1,7 @@
 import frappe
 from frappe.core.doctype.communication.email import make as make_communication
 from frappe.desk.form.utils import add_comment
-from frappe.utils import get_fullname, sanitize_html
+from frappe.utils import get_fullname, sanitize_html, validate_email_address
 
 from buzz.api.comments.activity import ActivityFeed
 from buzz.api.comments.exceptions import CannotDeleteComment, NoRecipients, NotCommentable, NotTeamMember
@@ -70,10 +70,16 @@ class DocumentComments:
 	def members(self) -> list[TeamMember]:
 		return members_of(self.team)
 
-	def add(self, content: str, email_recipients: bool = False) -> str:
+	def add(
+		self,
+		content: str,
+		email_recipients: bool = False,
+		cc: list[str] | None = None,
+		bcc: list[str] | None = None,
+	) -> str:
 		"""A team note is a Comment; one emailed to the record's outside party is a Communication."""
 		if email_recipients:
-			return self.email(content)
+			return self.email(content, cc or [], bcc or [])
 		user = frappe.session.user
 		return add_comment(
 			self.reference_doctype, self.reference_name, content, user, get_fullname(user)
@@ -88,11 +94,16 @@ class DocumentComments:
 		user = frappe.session.user
 		return owner == user or is_unrestricted(user) or team_role_of(user, self.team) in ADMIN_ROLES
 
-	def email(self, content: str) -> str:
+	def email_sender(self) -> str | None:
+		return frappe.db.get_value("Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "email_id")
+
+	def email(self, content: str, cc: list[str], bcc: list[str]) -> str:
 		recipient_source = EMAIL_RECIPIENTS.get(self.reference_doctype)
 		recipients = recipient_source(self.reference_name) if recipient_source else []
 		if not recipients:
 			NoRecipients.throw()
+		for address in [*cc, *bcc]:
+			validate_email_address(address, throw=True)
 		# Comment.validate cleans a note; Communication stores what it is given.
 		note = sanitize_html(content, always_sanitize=True)
 		args = note_email_args(self.reference_doctype, self.reference_name, frappe.session.user, note)
@@ -103,6 +114,8 @@ class DocumentComments:
 			subject=frappe._("A note on {0}").format(args["record_title"]),
 			content=note,
 			recipients=recipients,
+			cc=cc,
+			bcc=bcc,
 			send_email=False,
 		)["name"]
 		send_in_layout(communication, render_email("proposal_note", args))

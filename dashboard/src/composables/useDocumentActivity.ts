@@ -3,7 +3,9 @@ import { computed, onBeforeUnmount } from "vue"
 import {
 	useActivity,
 	useAddComment,
+	type EmailCopies,
 	useDeleteComment,
+	useEmailSender,
 	useMentionMembers,
 	useUpdateComment,
 } from "@/data/comments"
@@ -22,6 +24,7 @@ export function useDocumentActivity(doctype: string, name: () => string) {
 
 	const activity = useActivity(reference)
 	const members = useMentionMembers(reference)
+	const sender = useEmailSender(reference)
 	const adding = useAddComment()
 	const updating = useUpdateComment()
 	const deleting = useDeleteComment()
@@ -34,8 +37,10 @@ export function useDocumentActivity(doctype: string, name: () => string) {
 
 	const reload = () => activity.reload()
 
-	const add = (content: string, emailRecipients: boolean) =>
-		adding.submit({ ...reference(), content, email_recipients: emailRecipients }).then(reload)
+	const add = (content: string, emailRecipients: boolean, copies?: EmailCopies) =>
+		adding
+			.submit({ ...reference(), content, email_recipients: emailRecipients, ...copies })
+			.then(reload)
 	const update = (comment: string, content: string) =>
 		updating.submit({ name: comment, content }).then(reload, ignore)
 	const remove = (comment: string) => deleting.submit({ name: comment }).then(reload, ignore)
@@ -48,5 +53,17 @@ export function useDocumentActivity(doctype: string, name: () => string) {
 	socket?.on("buzz_comment_update", onUpdate)
 	onBeforeUnmount(() => socket?.off("buzz_comment_update", onUpdate))
 
-	return { activity, members, noteCount, adding, updating, deleting, add, update, remove, reload }
+	return {
+		activity,
+		members,
+		sender,
+		noteCount,
+		adding,
+		updating,
+		deleting,
+		add,
+		update,
+		remove,
+		reload,
+	}
 }
