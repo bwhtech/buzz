@@ -28,11 +28,17 @@ class DescriptionFormatter:
 		return "".join(block for lines in self.paragraphs for block in self.blocks(lines))
 
 	def blocks(self, lines: list[str]) -> list[str]:
-		if len(lines) > 1 and all(BULLET.match(plain_text(line)) for line in lines[1:]):
-			return [*self.blocks(lines[:1]), as_list([BULLET.sub("", line) for line in lines[1:]])]
-		if len(lines) > 1:
-			return [block for line in lines for block in self.blocks([line])]
-		return self.line_blocks(MARKDOWN_BOLD.sub(r"<strong>\1</strong>", lines[0]))
+		"""Each line is its own block, except that runs of bullet lines become one list."""
+		blocks, items = [], []
+		for line in lines:
+			if BULLET.match(plain_text(line)):
+				items.append(BULLET.sub("", line))
+				continue
+			if items:
+				blocks.append(as_list(items))
+				items = []
+			blocks.extend(self.line_blocks(MARKDOWN_BOLD.sub(r"<strong>\1</strong>", line)))
+		return [*blocks, as_list(items)] if items else blocks
 
 	def line_blocks(self, line: str) -> list[str]:
 		lead, items, numbered = split_items(line)
@@ -52,8 +58,9 @@ class DescriptionFormatter:
 
 
 def is_structured(html: str) -> bool:
-	"""A description already laid out in an editor is shown as written."""
-	return bool(STRUCTURE.search(html)) or len(re.findall(r"<p[\s>]", html)) >= 3
+	"""A description with lists or headings was laid out in an editor and is shown as written;
+	paragraphs alone may still hide a typed list."""
+	return bool(STRUCTURE.search(html))
 
 
 def split_items(line: str) -> tuple[str, list[str], bool]:

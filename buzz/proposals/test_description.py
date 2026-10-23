@@ -35,3 +35,11 @@ class TestDescriptionFormatter(UnitTestCase):
 
 	def test_text_is_escaped(self):
 		self.assertEqual(formatted("<script>x</script>1 < 2"), "<p>1 &lt; 2</p>")
+
+	def test_typed_list_inside_paragraphs_still_becomes_a_list(self):
+		html = formatted("<p>Line one.</p><p>In this talk:<br>- point A<br>- point B</p><p>Closing line.</p>")
+		self.assertEqual(
+			html,
+			"<p>Line one.</p><h4>In this talk</h4><ul><li>point A</li><li>point B</li></ul>"
+			"<p>Closing line.</p>",
+		)
