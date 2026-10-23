@@ -4,7 +4,7 @@ import { computed, ref, watch } from "vue"
 
 import CommentComposer from "@/components/dashboard/comments/CommentComposer.vue"
 import DocumentActivity from "@/components/dashboard/comments/DocumentActivity.vue"
-import { useDocumentActivity } from "@/composables/useDocumentActivity"
+import { activityFilters, useDocumentActivity } from "@/composables/useDocumentActivity"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
 import type { EmailCopies } from "@/data/comments"
 import type { ProposalListItem, ProposalSpeaker, TalkProposal } from "@/types"
@@ -109,12 +109,15 @@ function post(content: string, toSpeakers: boolean, copies: EmailCopies) {
 			</section>
 
 			<section class="space-y-4">
-				<h3 class="flex items-center gap-2 text-lg font-semibold text-ink-gray-9">
-					Activity
-					<span v-if="activityCount" class="text-base font-normal text-ink-gray-5 tabular-nums">
-						{{ activityCount }}
-					</span>
-				</h3>
+				<div class="flex items-center justify-between gap-2">
+					<h3 class="flex items-center gap-2 text-lg font-semibold text-ink-gray-9">
+						Activity
+						<span v-if="activityCount" class="text-base font-normal text-ink-gray-5 tabular-nums">
+							{{ activityCount }}
+						</span>
+					</h3>
+					<TabButtons v-if="activityCount" v-model="feed.filter.value" :options="activityFilters" />
+				</div>
 				<DocumentActivity
 					:feed="feed"
 					:names="names"
