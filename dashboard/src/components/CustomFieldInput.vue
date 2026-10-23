@@ -75,7 +75,7 @@
 		:placeholder="getFieldPlaceholder(field)"
 	/>
 
-	<div v-else-if="isTextareaField(field.fieldtype)" class="space-y-1.5">
+	<div v-else-if="field.fieldtype === 'Small Text'" class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(field.label) }}
 			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
@@ -216,7 +216,6 @@ import {
 	getFormControlType,
 	isDateField,
 	isDateTimeField,
-	isTextareaField,
 } from "@/composables/useCustomFields"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 

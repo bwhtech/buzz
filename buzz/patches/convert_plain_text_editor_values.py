@@ -16,7 +16,7 @@ TEXT_EDITOR_FIELDS = {
 def plain_text_to_html(value: str) -> str:
 	"""Blank lines separate paragraphs and single line breaks become <br>."""
 	paragraphs = BLANK_LINES.split(escape_html(value.replace("\r\n", "\n").strip()))
-	return "".join(f"<p>{paragraph.replace(chr(10), '<br>')}</p>" for paragraph in paragraphs)
+	return "".join(f"<p>{'<br>'.join(paragraph.splitlines())}</p>" for paragraph in paragraphs)
 
 
 def needs_conversion(value: str | None) -> bool:

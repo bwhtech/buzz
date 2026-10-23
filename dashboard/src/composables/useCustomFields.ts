@@ -73,10 +73,6 @@ export function isDateTimeField(fieldtype: string): boolean {
 	return fieldtype === "Datetime"
 }
 
-export function isTextareaField(fieldtype: string): boolean {
-	return fieldtype === "Small Text"
-}
-
 /**
  * Get field options for select fields
  * @param {Object} field - Field definition object
