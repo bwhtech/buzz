@@ -31,6 +31,7 @@ class EventCheckinZone(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		self.validate_event_unchanged()
 		if not self.is_default:
 			return
 		if not self.enabled:
@@ -39,6 +40,12 @@ class EventCheckinZone(Document):
 			"Event Check-in Zone", {"event": self.event, "is_default": 1, "name": ["!=", self.name]}
 		):
 			frappe.throw(_("This event already has a default zone."))
+
+	def validate_event_unchanged(self):
+		# Not set_only_once: Buzz Event is autoincrement-named, and that check compares int to str.
+		before = self.get_doc_before_save()
+		if before and str(before.event) != str(self.event):
+			frappe.throw(_("A zone cannot move to another event."))
 
 	def on_trash(self):
 		if self.is_default:

@@ -31,12 +31,31 @@ class TestEventCheckinZone(IntegrationTestCase):
 		zone = self.default()
 		zone.enabled = 0
 
+		with self.assertRaises(frappe.ValidationError) as raised:
+			zone.save()
+
+		self.assertIn("cannot be disabled", str(raised.exception))
+
+	def test_a_zone_can_be_edited(self):
+		zone = EventCheckinZoneFactory.create(event=self.event)
+		zone.title = "Workshop Hall"
+		zone.enabled = 0
+		zone.save()
+
+		self.assertEqual(frappe.db.get_value("Event Check-in Zone", zone.name, "title"), "Workshop Hall")
+
+	def test_a_zone_cannot_move_to_another_event(self):
+		zone = EventCheckinZoneFactory.create(event=self.event)
+		zone.event = BuzzEventFactory.create().name
+
 		with self.assertRaises(frappe.ValidationError):
 			zone.save()
 
 	def test_an_event_has_only_one_default_zone(self):
-		with self.assertRaises(frappe.ValidationError):
+		with self.assertRaises(frappe.ValidationError) as raised:
 			EventCheckinZoneFactory.create(event=self.event, is_default=1)
+
+		self.assertIn("already has a default zone", str(raised.exception))
 
 	def test_a_zone_without_check_ins_can_be_deleted(self):
 		zone = EventCheckinZoneFactory.create(event=self.event)
