@@ -19,8 +19,20 @@ export function useMentionMembers(reference: () => Reference) {
 	})
 }
 
+export type EmailCopies = { cc: string[]; bcc: string[] }
+
+export function useEmailSender(reference: () => Reference) {
+	return useCall<string | null, Reference>({
+		url: "/api/v2/method/buzz.api.comments.get_email_sender",
+		params: reference,
+	})
+}
+
 export function useAddComment() {
-	return useCall<string, Reference & { content: string; email_recipients: boolean }>({
+	return useCall<
+		string,
+		Reference & { content: string; email_recipients: boolean } & Partial<EmailCopies>
+	>({
 		url: "/api/v2/method/buzz.api.comments.add_comment",
 		method: "POST",
 		immediate: false,

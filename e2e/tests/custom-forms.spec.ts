@@ -222,7 +222,7 @@ test.describe("Talk Proposal Form", () => {
 		if (await addSpeakersButton.isVisible({ timeout: 2000 }).catch(() => false)) {
 			await addSpeakersButton.click()
 
-			const dialog = page.locator('[role="dialog"]')
+			const dialog = page.locator('[role="dialog"][data-state="open"]')
 			await expect(dialog).toBeVisible({ timeout: 5000 })
 
 			const firstNameInput = dialog
