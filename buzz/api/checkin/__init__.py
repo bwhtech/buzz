@@ -7,18 +7,19 @@ from buzz.api.events.services import GUESTS_PAGE_SIZE, event_guests
 
 
 @frappe.whitelist()
-def validate_ticket_for_checkin(ticket_id: str) -> CheckinResponse:
-	return CheckinService(ticket_id).validate()
+def validate_ticket_for_checkin(ticket_id: str, zone: str | None = None) -> CheckinResponse:
+	"""With no zone, the ticket-level checks only: the caller picks a zone from `zones`."""
+	return CheckinService(ticket_id, zone).validate()
 
 
 @frappe.whitelist(methods=["POST"])
-def checkin_ticket(ticket_id: str) -> CheckinResponse:
-	return CheckinService(ticket_id).checkin()
+def checkin_ticket(ticket_id: str, zone: str | None = None) -> CheckinResponse:
+	return CheckinService(ticket_id, zone).checkin()
 
 
 @frappe.whitelist(methods=["POST"])
-def undo_checkin(ticket_id: str) -> CheckinResponse:
-	return CheckinService(ticket_id).undo_checkin()
+def undo_checkin(ticket_id: str, zone: str | None = None) -> CheckinResponse:
+	return CheckinService(ticket_id, zone).undo_checkin()
 
 
 @frappe.whitelist()
@@ -33,7 +34,8 @@ def get_checkin_guests(
 	checked_in: str | None = None,
 	start: int = 0,
 	limit: int = GUESTS_PAGE_SIZE,
+	zone: str | None = None,
 ) -> EventGuestsResponse:
 	"""The guest list, for someone who can check its guests in."""
 	ensure_can_check_in(event)
-	return event_guests(event, search, start=start, limit=limit, checked_in=checked_in)
+	return event_guests(event, search, start=start, limit=limit, checked_in=checked_in, zone=zone)

@@ -1,5 +1,7 @@
 from datetime import date, datetime, timedelta
 
+from pydantic import Field
+
 from buzz.api.schemas import APIResponse
 
 
@@ -36,10 +38,19 @@ class TicketCheckinDetails(APIResponse):
 	check_in_date: str | None = None
 
 
+class ZoneStatus(APIResponse):
+	name: str
+	title: str
+	allowed: bool
+	checked_in_at: datetime | None = None
+
+
 class CheckinResponse(APIResponse):
 	message: str
 	ticket: TicketCheckinDetails
 	payment_details: PaymentDetails | None = None
+	# The event's enabled zones, default first, with this ticket's state at each.
+	zones: list[ZoneStatus] = Field(default_factory=list)
 
 
 class CheckinEvent(APIResponse):
