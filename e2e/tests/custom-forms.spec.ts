@@ -139,15 +139,15 @@ test.describe("Talk Proposal Form", () => {
 		await formPage.expectSubmitButtonVisible()
 	})
 
-	test("should display description textarea", async ({ page }) => {
+	test("should display description editor", async ({ page }) => {
 		const formPage = new CustomFormPage(page)
 
 		await formPage.goto(testEventRoute, "propose-talk")
 		await formPage.waitForFormLoad()
 
-		const textarea = page.locator("textarea").first()
-		const hasTextarea = await textarea.isVisible({ timeout: 2000 }).catch(() => false)
-		expect(hasTextarea).toBeTruthy()
+		// The description is a Text Editor field, which renders the rich text editor.
+		const editor = page.locator('[contenteditable="true"]').first()
+		await expect(editor).toBeVisible({ timeout: 2000 })
 	})
 
 	test("should display phone input if present", async ({ page }) => {
@@ -172,10 +172,10 @@ test.describe("Talk Proposal Form", () => {
 		await titleInput.fill("Introduction to E2E Testing")
 		await expect(titleInput).toHaveValue("Introduction to E2E Testing")
 
-		const textarea = page.locator("textarea").first()
-		if (await textarea.isVisible({ timeout: 1000 }).catch(() => false)) {
-			await textarea.fill("A comprehensive talk about writing E2E tests with Playwright.")
-			await expect(textarea).toHaveValue(
+		const descriptionEditor = page.locator('[contenteditable="true"]').first()
+		if (await descriptionEditor.isVisible({ timeout: 1000 }).catch(() => false)) {
+			await descriptionEditor.fill("A comprehensive talk about writing E2E tests with Playwright.")
+			await expect(descriptionEditor).toContainText(
 				"A comprehensive talk about writing E2E tests with Playwright.",
 			)
 		}
@@ -213,9 +213,9 @@ test.describe("Talk Proposal Form", () => {
 		const titleInput = formPage.getInputByLabel("Title")
 		await titleInput.fill("E2E Test Talk: Automated Testing Best Practices")
 
-		const textarea = page.locator("textarea").first()
-		if (await textarea.isVisible({ timeout: 2000 }).catch(() => false)) {
-			await textarea.fill("This talk covers best practices for writing robust E2E tests.")
+		const descriptionEditor = page.locator('[contenteditable="true"]').first()
+		if (await descriptionEditor.isVisible({ timeout: 2000 }).catch(() => false)) {
+			await descriptionEditor.fill("This talk covers best practices for writing robust E2E tests.")
 		}
 
 		const addSpeakersButton = page.locator('button:has-text("Add Speakers")')
