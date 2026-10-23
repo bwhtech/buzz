@@ -74,7 +74,7 @@ export function isDateTimeField(fieldtype: string): boolean {
 }
 
 export function isTextareaField(fieldtype: string): boolean {
-	return fieldtype === "Text Editor" || fieldtype === "Small Text"
+	return fieldtype === "Small Text"
 }
 
 /**
