@@ -206,7 +206,7 @@
 				<MobileTotalBar
 					v-else
 					:count-label="countLabel"
-					:total="formatWholePriceOrFree(total, currency)"
+					:total="attendees.length ? formatWholePriceOrFree(total, currency) : '—'"
 					:before="
 						discountAmount > 0 ? formatWholePriceOrFree(totalBeforeDiscount, currency) : undefined
 					"
@@ -513,6 +513,7 @@ const couponProps = computed(() => ({
 
 const countLabel = computed(() => {
 	const count = attendees.value.length
+	if (!count) return __("No tickets selected")
 	const tickets = count === 1 ? __("1 ticket") : __("{0} tickets", [count])
 	if (total.value <= 0) return `${tickets} · ${__("Free")}`
 	return tax.value.apply ? `${tickets} · ${__("incl. {0}", [__(tax.value.label)])}` : tickets
