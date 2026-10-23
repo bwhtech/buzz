@@ -21,6 +21,7 @@ const props = defineProps<{
 const emit = defineEmits<{ update: [content: string]; delete: [] }>()
 
 const editing = ref(false)
+const showQuoted = ref(false)
 const draft = ref("")
 
 const posted = computed(() => dayjsLocal(props.entry.creation))
@@ -110,7 +111,19 @@ function save(content: string) {
 						aria-hidden="true"
 					/>
 					{{ entry.received ? "Replied by email" : `Emailed to ${recipientNames}` }}
+					<button
+						v-if="entry.quoted_content"
+						class="ml-1 rounded-4 px-1 hover:bg-surface-gray-2 hover:text-ink-gray-8"
+						@click="showQuoted = !showQuoted"
+					>
+						{{ showQuoted ? "Hide previous message" : "Show previous message" }}
+					</button>
 				</p>
+				<div
+					v-if="showQuoted"
+					class="mt-2 border-l-2 border-outline-gray-2 pl-3 text-sm leading-relaxed text-ink-gray-6 [&_p+p]:mt-2"
+					v-html="entry.quoted_content"
+				/>
 			</div>
 		</template>
 

@@ -146,6 +146,7 @@ export interface ActivityEntry {
 	owner_image: string | null
 	creation: string
 	content: string | null
+	quoted_content: string | null
 	recipients: string[]
 	received: boolean
 	field: string | null

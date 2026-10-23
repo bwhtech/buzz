@@ -2,6 +2,7 @@ import frappe
 from frappe.desk.form.load import get_comments
 from frappe.utils import parse_addr, split_emails
 
+from buzz.api.comments.email_content import EmailContent
 from buzz.api.comments.schemas import ActivityEntry
 
 # Field changes worth a line in the timeline, read from the record's Version history.
@@ -72,15 +73,19 @@ class ActivityFeed:
 
 def email_row(row) -> dict:
 	sender_name, sender_email = parse_addr(row.sender)
+	received = row.sent_or_received == "Received"
+	# A reply carries the thread, a signature and the sender's styling; a sent note is our own.
+	email = EmailContent(row.content) if received else None
 	return {
 		"name": row.name,
 		"kind": "email",
 		"owner": sender_email,
 		"display_name": row.sender_full_name or sender_name,
 		"creation": row.creation,
-		"content": row.content,
+		"content": email.body() if email else row.content,
+		"quoted_content": email.quoted_body() if email else None,
 		"recipients": split_emails(row.recipients or ""),
-		"received": row.sent_or_received == "Received",
+		"received": received,
 	}
 
 

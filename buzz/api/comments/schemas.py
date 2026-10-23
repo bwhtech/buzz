@@ -14,6 +14,7 @@ class ActivityEntry(APIResponse):
 	owner_image: str | None = None
 	creation: datetime
 	content: str | None = None
+	quoted_content: str | None = None
 	recipients: list[str] = Field(default_factory=list)
 	received: bool = False
 	field: str | None = None
