@@ -15,6 +15,7 @@ from buzz.tests.factories.email_template_factory import EmailTemplateFactory
 from buzz.tests.factories.event_booking_factory import EventBookingFactory
 from buzz.tests.factories.event_booking_refund_factory import EventBookingRefundFactory
 from buzz.tests.factories.event_category_factory import EventCategoryFactory
+from buzz.tests.factories.event_check_in_zone_factory import EventCheckinZoneFactory
 from buzz.tests.factories.event_host_factory import EventHostFactory
 from buzz.tests.factories.event_payment_factory import EventPaymentFactory
 from buzz.tests.factories.event_proposal_factory import EventProposalFactory
@@ -60,6 +61,7 @@ __all__ = [
 	"EventBookingFactory",
 	"EventBookingRefundFactory",
 	"EventCategoryFactory",
+	"EventCheckinZoneFactory",
 	"EventHostFactory",
 	"EventPaymentFactory",
 	"EventProposalFactory",
