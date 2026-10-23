@@ -1,29 +1,38 @@
 {# The listing format shared by team and topic pages: a day timeline beside a calendar and map.
    Import `with context` so the macros see `_`; each escapes its own output. team_page.bundle.ts wires the behaviour. #}
+{# The markup and classes of the dashboard's EventCard.vue; themes/event_card.css styles both.
+   data-layout is "row" here, and card_layout.ts switches it to "cover" for viewers who chose cards. #}
 {% macro event_card(event) %}{% autoescape true %}
-<a class="team-event-card" href="{{ event.url }}"{% if event.is_external %} target="_blank" rel="noopener"{% endif %} data-event-card data-country="{{ event.country or '' }}" data-event-route="{{ event.route }}">
-	{% if event.image %}<img class="team-event-card-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="team-event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
-	<span class="team-event-card-body">
-		<span class="team-event-card-time">
+<article class="buzz-event-card" data-layout="row" data-event-card data-country="{{ event.country or '' }}" data-event-route="{{ event.route }}">
+	<a class="buzz-event-card-target" href="{{ event.url }}" aria-label="{{ event.title }}"{% if event.is_external %} target="_blank" rel="noopener"{% endif %}></a>
+	<div class="buzz-event-card-cover">
+		{% if event.image %}<img class="buzz-event-card-image" src="{{ event.image }}" loading="lazy" alt="">{% else %}<event-banner class="buzz-event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
+		<span class="buzz-event-card-date" aria-hidden="true"><span class="buzz-event-card-date-month">{{ frappe.utils.format_date(event.date, "MMM") }}</span><span class="buzz-event-card-date-day">{{ frappe.utils.format_date(event.date, "d") }}</span></span>
+	</div>
+	<div class="buzz-event-card-body">
+		<p class="buzz-event-card-time">
+			<span class="buzz-event-card-weekday"><span>{{ frappe.utils.format_date(event.date, "EEE") }}</span>{% if event.is_live or event.time %}<span class="buzz-event-card-separator">·</span>{% endif %}</span>
 			{# Like the discover page: a live event says so instead of its start time. #}
-			{% if event.is_live %}<span class="event-card-live"><span class="live-dot"></span>{{ _("Live") }}</span>{% else %}{{ event.time }}{% endif %}
-			{# An attendee already has their place, so closed registrations do not concern them. #}
-			{% if event.is_attending %}<span class="es-badge" data-size="sm" data-theme="violet">{{ _("Attending") }}</span>
-			{% elif event.registrations_closed %}<span class="es-badge" data-size="sm" data-theme="red">{{ _("Registrations closed") }}</span>{% endif %}
-		</span>
-		<span class="team-event-card-title">{{ event.title }}</span>
-		<span class="team-event-card-host">
-			{% if event.host_logo %}<img class="team-event-card-avatar" src="{{ event.host_logo }}" alt="">{% else %}<span class="team-event-card-avatar" aria-hidden="true">{{ event.host_names[:1] | upper }}</span>{% endif %}
-			{{ _("By {0}").format(event.host_names) }}
-		</span>
-		{% if event.place %}
-		<span class="team-event-card-place meta-item">
-			<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">{% if event.is_online %}<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>{% else %}<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>{% endif %}</svg>
-			{{ event.place }}
-		</span>
-		{% endif %}
-	</span>
-</a>
+			{% if event.is_live %}<span class="event-card-live"><span class="live-dot"></span>{{ _("Live") }}</span>{% else %}<span>{{ event.time }}</span>{% endif %}
+		</p>
+		<h3 class="buzz-event-card-title">{{ event.title }}</h3>
+		<p class="buzz-event-card-meta">
+			<span class="buzz-event-card-meta-item buzz-event-card-host">
+				{% if event.host_logo %}<img class="buzz-event-card-avatar" src="{{ event.host_logo }}" alt="">{% else %}<span class="buzz-event-card-avatar" aria-hidden="true">{{ event.host_names[:1] | upper }}</span>{% endif %}
+				<span>{{ event.host_names }}</span>
+			</span>
+			{% if event.place %}
+			<span class="buzz-event-card-meta-item">
+				<svg class="buzz-event-card-icon" viewBox="0 0 24 24" aria-hidden="true">{% if event.is_online %}<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>{% else %}<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>{% endif %}</svg>
+				<span>{{ event.place }}</span>
+			</span>
+			{% endif %}
+		</p>
+	</div>
+	{# An attendee already has their place, so closed registrations do not concern them. #}
+	{% if event.is_attending %}<div class="buzz-event-card-status"><span class="es-badge" data-size="sm" data-theme="violet">{{ _("Attending") }}</span></div>
+	{% elif event.registrations_closed %}<div class="buzz-event-card-status"><span class="es-badge" data-size="sm" data-theme="red">{{ _("Registrations closed") }}</span></div>{% endif %}
+</article>
 {% endautoescape %}{% endmacro %}
 
 {% macro day_groups(days, empty_title, empty_text) %}{% autoescape true %}
@@ -43,12 +52,20 @@
 {% endautoescape %}{% endmacro %}
 
 {% macro timeline(upcoming_days, past_days) %}{% autoescape true %}
-<div class="es-tab-buttons" role="radiogroup" data-size="md" data-tab-buttons aria-label="{{ _('Events') }}">
-	<button type="button" class="es-pill" data-size="md" role="radio" aria-checked="true" data-state="active" data-tab="upcoming">{{ _("Upcoming") }}</button>
-	<button type="button" class="es-pill" data-size="md" role="radio" aria-checked="false" data-state="inactive" data-tab="past" tabindex="-1">{{ _("Past") }}</button>
+<div class="timeline-controls">
+	<div class="es-tab-buttons" role="radiogroup" data-size="md" data-tab-buttons aria-label="{{ _('Events') }}">
+		<button type="button" class="es-pill" data-size="md" role="radio" aria-checked="true" data-state="active" data-tab="upcoming">{{ _("Upcoming") }}</button>
+		<button type="button" class="es-pill" data-size="md" role="radio" aria-checked="false" data-state="inactive" data-tab="past" tabindex="-1">{{ _("Past") }}</button>
+	</div>
+	<div class="es-tab-buttons" role="radiogroup" data-size="md" data-layout-buttons aria-label="{{ _('Card layout') }}">
+		<button type="button" class="es-pill" data-size="md" role="radio" aria-checked="true" data-state="active" data-card-layout="row" aria-label="{{ _('Timeline') }}"><svg class="buzz-event-card-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 9H3M21 15H3"/></svg></button>
+		<button type="button" class="es-pill" data-size="md" role="radio" aria-checked="false" data-state="inactive" data-card-layout="cover" aria-label="{{ _('Cards') }}" tabindex="-1"><svg class="buzz-event-card-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></button>
+	</div>
 </div>
 <div data-panel="upcoming">{{ day_groups(upcoming_days, _("No upcoming events"), _("New events will show up here once they are scheduled.")) }}</div>
 <div data-panel="past" hidden>{{ day_groups(past_days, _("No past events"), _("Events show up here after they end.")) }}</div>
+{# Inline, so a viewer who chose cards never sees the rows first; card_layout.ts owns the switch. #}
+<script>try{if(localStorage.getItem("buzz:event-card-layout")==="cover"){document.documentElement.dataset.cardLayout="cover";document.querySelectorAll("[data-event-card]").forEach(function(card){card.dataset.layout="cover"})}}catch(error){}</script>
 {% endautoescape %}{% endmacro %}
 
 {% macro chevron(path) %}{% autoescape true %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ path }}"/></svg>{% endautoescape %}{% endmacro %}

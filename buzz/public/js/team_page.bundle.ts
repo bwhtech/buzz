@@ -1,10 +1,12 @@
 // A team page: Upcoming / Past tabs, and with events, the map, country chips and calendar.
 import { MonthCalendar } from "./team_page/calendar"
+import { wireCardLayout } from "./team_page/card_layout"
 import { TeamMap } from "./team_page/map"
 import { readPageData } from "./team_page/page_data"
 import { scrollAndHighlight, showPanel, wireTabs } from "./team_page/timeline"
 
 wireTabs()
+wireCardLayout()
 
 const data = readPageData()
 const mapElement = document.querySelector<HTMLElement>("[data-map]")

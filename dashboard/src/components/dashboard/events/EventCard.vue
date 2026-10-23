@@ -1,27 +1,38 @@
 <script setup lang="ts">
+import "@public/themes/event_card.css"
 import { bannerPattern } from "@public/js/event_banner"
-import { Avatar, Badge, Button } from "frappe-ui"
+import { Avatar, Badge, Button, dayjs } from "frappe-ui"
 import { computed, ref } from "vue"
 
+import type { EventCardLayout } from "@/composables/useEventCardLayout"
 import type { MyEvent, TeamEvent } from "@/types"
 import { dayLabel, timeLabel } from "@/utils/dateLabels"
 
-// The Events page files cards under a date heading; a standalone list has to
-// carry the date on the card itself.
+// The timeline files row cards under a date heading; a standalone list has to carry the date
+// on the card itself. A cover card always does, on its cover.
 // A team calendar row may be an external event, which has no Buzz page or drawer of its own.
-const props = defineProps<{
-	event: MyEvent & Partial<Pick<TeamEvent, "is_external" | "event_url">>
-	showDate?: boolean
-}>()
+const props = withDefaults(
+	defineProps<{
+		event: MyEvent & Partial<Pick<TeamEvent, "is_external" | "event_url">>
+		layout?: EventCardLayout
+		showDate?: boolean
+	}>(),
+	{ layout: "row" },
+)
 
 const emit = defineEmits<{ open: [] }>()
 
-// Manage is the only way into the desk view; the card itself opens the drawer.
-const canManage = computed(() => props.event.is_host)
+defineSlots<{
+	/** Beside the time on a row, on the cover's corner on a cover card. */
+	status?: () => unknown
+	/** Trailing CTA; defaults to Manage for hosts. */
+	actions?: () => unknown
+}>()
 
 // An external event opens where it lives, on its own platform.
 const externalUrl = computed(() => (props.event.is_external && props.event.event_url) || "")
 
+const start = computed(() => dayjs(props.event.start_date))
 const startTime = computed(() => (props.event.start_time ? timeLabel(props.event.start_time) : ""))
 
 // A multi-day event always carries its range: the timeline files it under one day only.
@@ -32,7 +43,6 @@ const dateLabel = computed(() => {
 })
 
 const bannerFailed = ref(false)
-
 const banner = computed(() => ({ backgroundImage: bannerPattern(props.event.title) }))
 
 // Only a host can fix a missing venue; for everyone else it is news, not a warning.
@@ -43,127 +53,94 @@ const venue = computed(() => {
 		return {
 			label: "Location missing",
 			icon: "lucide-triangle-alert",
-			tone: "text-ink-amber-6",
+			tone: "buzz-event-card-warning",
 		}
 	return { label: "Venue to be announced", icon: "lucide-map-pin-off", tone: "" }
 })
 </script>
 
 <template>
-	<article
-		class="event-card relative flex gap-4 border border-outline-gray-2 hover:border-outline-gray-3 rounded-8 p-3"
-	>
-		<!-- Overlay rather than a wrapper: Manage cannot legally nest inside a button.
-		     It sits above the overlay, so both targets work and both are focusable. -->
+	<article class="buzz-event-card" :data-layout="layout">
 		<!-- Static tags: a dynamic `is="button"` resolves to frappe-ui's global Button. -->
 		<a
 			v-if="externalUrl"
+			class="buzz-event-card-target"
 			:href="externalUrl"
 			target="_blank"
 			rel="noopener"
 			:aria-label="`Open ${event.title} in a new tab`"
-			class="event-card-overlay absolute inset-0 rounded-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
 		/>
 		<button
 			v-else
 			type="button"
+			class="buzz-event-card-target"
 			:aria-label="`Open ${event.title}`"
-			class="event-card-overlay absolute inset-0 rounded-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-3"
 			@click="emit('open')"
 		/>
 
-		<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
-		<img
-			v-if="event.banner_image && !bannerFailed"
-			class="size-20 shrink-0 rounded-4 object-cover object-top md:size-30"
-			:src="event.banner_image"
-			:style="banner"
-			loading="lazy"
-			alt=""
-			@error="bannerFailed = true"
-		/>
-		<div v-else class="size-20 shrink-0 rounded-4 md:size-30" :style="banner" />
+		<div class="buzz-event-card-cover">
+			<!-- The pattern also backs the image, so the slot is never blank while it loads. -->
+			<img
+				v-if="event.banner_image && !bannerFailed"
+				class="buzz-event-card-image"
+				:src="event.banner_image"
+				:style="banner"
+				loading="lazy"
+				alt=""
+				@error="bannerFailed = true"
+			/>
+			<div v-else class="buzz-event-card-image" :style="banner" />
+			<span class="buzz-event-card-date" aria-hidden="true">
+				<span class="buzz-event-card-date-month">{{ start.format("MMM") }}</span>
+				<span class="buzz-event-card-date-day">{{ start.format("D") }}</span>
+			</span>
+		</div>
 
-		<div class="min-w-0 flex-1 py-1 flex flex-col justify-between">
-			<div class="flex-1 space-y-2">
-				<p
-					v-if="dateLabel || startTime"
-					class="flex flex-wrap items-center gap-x-2 text-base tabular-nums text-ink-gray-5"
-				>
-					<span v-if="dateLabel" class="whitespace-nowrap">{{ dateLabel }}</span>
-					<span v-if="dateLabel && startTime" class="text-ink-gray-4">·</span>
-					<span v-if="startTime">{{ startTime }}</span>
-				</p>
+		<div class="buzz-event-card-body">
+			<p v-if="dateLabel || startTime || layout === 'cover'" class="buzz-event-card-time">
+				<span v-if="dateLabel" class="whitespace-nowrap">{{ dateLabel }}</span>
+				<span v-else class="buzz-event-card-weekday">
+					<span>{{ start.format("ddd") }}</span>
+					<span v-if="startTime" class="buzz-event-card-separator">·</span>
+				</span>
+				<span v-if="dateLabel && startTime" class="buzz-event-card-separator">·</span>
+				<span v-if="startTime">{{ startTime }}</span>
+			</p>
 
-				<h3
-					class="font-semibold text-lg text-ink-gray-8 hyphens-auto [overflow-wrap:anywhere] max-md:line-clamp-3"
-					:title="event.title"
-				>
-					{{ event.title }}
-				</h3>
-				<!-- Top-aligned with the first line: team names and venues are long enough to wrap. -->
-				<p v-if="event.team_name" class="flex items-start gap-2 text-sm text-ink-gray-6">
-					<Avatar
-						class="mt-px"
-						:image="event.team_logo || undefined"
-						:label="event.team_name"
-						size="xs"
-					/>
-					<span class="min-w-0 [overflow-wrap:anywhere]">By {{ event.team_name }}</span>
-				</p>
-				<p class="flex items-start gap-2 text-base text-ink-gray-5">
-					<span
-						class="mt-0.5 size-4 shrink-0"
-						:class="[venue.icon, venue.tone]"
-						aria-hidden="true"
-					/>
-					<span class="min-w-0 [overflow-wrap:anywhere] max-md:line-clamp-2" :title="venue.label">
-						{{ venue.label }}
-					</span>
-				</p>
-			</div>
+			<h3 class="buzz-event-card-title" :title="event.title">{{ event.title }}</h3>
 
-			<div
-				v-if="event.is_attendee || event.is_external || canManage"
-				class="mt-3 flex items-end gap-2"
-			>
+			<p class="buzz-event-card-meta">
+				<span v-if="event.team_name" class="buzz-event-card-meta-item">
+					<Avatar :image="event.team_logo || undefined" :label="event.team_name" size="xs" />
+					<span>{{ event.team_name }}</span>
+				</span>
+				<span class="buzz-event-card-meta-item" :class="venue.tone">
+					<span class="size-3.5" :class="venue.icon" aria-hidden="true" />
+					<span class="line-clamp-2" :title="venue.label">{{ venue.label }}</span>
+				</span>
+			</p>
+		</div>
+
+		<div
+			v-if="$slots.status || event.is_attendee || event.is_external"
+			class="buzz-event-card-status"
+		>
+			<slot name="status">
 				<Badge v-if="event.is_attendee" theme="violet" variant="subtle" label="Attending" />
 				<Badge v-if="event.is_external" variant="subtle" :label="__('External')" />
+			</slot>
+		</div>
+
+		<div v-if="$slots.actions || event.is_host" class="buzz-event-card-actions">
+			<!-- Manage is the only way into the desk view; the card itself opens the drawer. -->
+			<slot name="actions">
 				<Button
-					v-if="canManage"
-					class="relative z-10 ml-auto max-md:hidden"
 					label="Manage"
 					icon-right="lucide-arrow-right"
 					size="sm"
 					:route="`/manage/events/${event.name}`"
 				/>
-			</div>
+			</slot>
 		</div>
-
-		<span
-			class="lucide-chevron-right size-4 shrink-0 self-center text-ink-gray-4 md:hidden"
-			aria-hidden="true"
-		/>
 	</article>
 </template>
-
-<style scoped>
-/* A card that is a button has to answer the press. The scale stays near-imperceptible
-   because these are seen dozens of times a session. */
-.event-card {
-	transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-/* Only the overlay opens the drawer, so Manage does not press the card with it. */
-.event-card:has(> .event-card-overlay:active) {
-	transform: scale(0.995);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.event-card {
-		transition: none;
-	}
-	.event-card:has(> .event-card-overlay:active) {
-		transform: none;
-	}
-}
-</style>

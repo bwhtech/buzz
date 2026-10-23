@@ -1,6 +1,7 @@
 <script setup lang="ts" generic="T extends { name: string }">
 import { ErrorMessage, Icon, Skeleton, TabButtons } from "frappe-ui"
 
+import type { EventCardLayout } from "@/composables/useEventCardLayout"
 import { useIsMobile } from "@/composables/useIsMobile"
 import { dayLabel, monthLabel, weekday } from "@/utils/dateLabels"
 import type { MonthGroup } from "@/utils/eventGroups"
@@ -17,12 +18,19 @@ defineProps<{
 }>()
 
 const tab = defineModel<TimelineTab>("tab", { required: true })
+// Bound only by lists that offer both card shapes; a cover grid drops the day rail.
+const layout = defineModel<EventCardLayout>("layout")
 
 const isMobile = useIsMobile()
 
 const tabOptions = [
 	{ label: "Upcoming", value: "upcoming" },
 	{ label: "Past", value: "past" },
+]
+
+const layoutOptions = [
+	{ label: "Timeline", value: "row", icon: "lucide-rows-3" },
+	{ label: "Cards", value: "cover", icon: "lucide-layout-grid" },
 ]
 </script>
 
@@ -48,6 +56,7 @@ const tabOptions = [
 					size="md"
 					:fluid="isMobile"
 				/>
+				<TabButtons v-if="layout" v-model="layout" :options="layoutOptions" size="md" />
 				<slot name="actions" />
 			</div>
 		</header>
@@ -86,31 +95,41 @@ const tabOptions = [
 					{{ monthLabel(month.month) }}
 				</h2>
 
-				<div
-					v-for="day in month.days"
-					:key="day.date"
-					class="grid grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-[6rem_minmax(0,1fr)] md:gap-4"
-				>
-					<div class="flex items-baseline gap-2 md:block md:pt-1">
-						<p class="font-semibold text-ink-gray-8">{{ dayLabel(day.date) }}</p>
-						<p class="text-base text-ink-gray-5">{{ weekday(day.date) }}</p>
-					</div>
-
-					<div class="relative space-y-1 pb-4 md:pl-6 md:pb-7">
-						<div class="absolute -left-4 hidden md:flex flex-col items-center h-full">
-							<span class="size-2 rounded-full bg-surface-gray-4" aria-hidden="true" />
-							<div
-								class="w-px h-full bg-gradient-to-b from-outline-gray-2 from-75% to-transparent"
-							></div>
-						</div>
-
-						<div class="space-y-6">
-							<template v-for="item in day.events" :key="item.name">
-								<slot :item="item" />
-							</template>
-						</div>
-					</div>
+				<div v-if="layout === 'cover'" class="grid grid-cols-1 gap-5 md:grid-cols-2">
+					<template v-for="day in month.days" :key="day.date">
+						<template v-for="item in day.events" :key="item.name">
+							<slot :item="item" />
+						</template>
+					</template>
 				</div>
+
+				<template v-else>
+					<div
+						v-for="day in month.days"
+						:key="day.date"
+						class="grid grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-[6rem_minmax(0,1fr)] md:gap-4"
+					>
+						<div class="flex items-baseline gap-2 md:block md:pt-1">
+							<p class="font-semibold text-ink-gray-8">{{ dayLabel(day.date) }}</p>
+							<p class="text-base text-ink-gray-5">{{ weekday(day.date) }}</p>
+						</div>
+
+						<div class="relative space-y-1 pb-4 md:pl-6 md:pb-7">
+							<div class="absolute -left-4 hidden md:flex flex-col items-center h-full">
+								<span class="size-2 rounded-full bg-surface-gray-4" aria-hidden="true" />
+								<div
+									class="w-px h-full bg-gradient-to-b from-outline-gray-2 from-75% to-transparent"
+								></div>
+							</div>
+
+							<div class="space-y-6">
+								<template v-for="item in day.events" :key="item.name">
+									<slot :item="item" />
+								</template>
+							</div>
+						</div>
+					</div>
+				</template>
 			</section>
 
 			<slot name="footer" />
