@@ -74,7 +74,7 @@ function save(content: string) {
 				size="md"
 				:label="entry.owner_name"
 				:image="entry.owner_image ?? undefined"
-				class="ring-[3px] ring-surface-base"
+				class="ring-[3px] ring-[color:var(--surface-base)]"
 			/>
 		</div>
 

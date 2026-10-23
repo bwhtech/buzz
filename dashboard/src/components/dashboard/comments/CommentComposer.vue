@@ -83,7 +83,7 @@ function submit(isEmpty: boolean) {
 	>
 		<template #default="{ editor, isEmpty }">
 			<div
-				class="overflow-hidden rounded-6 border border-outline-gray-2 bg-surface-base shadow-sm"
+				class="overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-base shadow-sm"
 				@keydown.meta.enter="submit(isEmpty)"
 				@keydown.ctrl.enter="submit(isEmpty)"
 			>
@@ -92,25 +92,16 @@ function submit(isEmpty: boolean) {
 					<span class="ml-auto truncate text-sm text-ink-gray-5">{{ hint }}</span>
 				</div>
 
-				<div v-if="emailing" class="mx-0.5 flex flex-col border-b border-outline-gray-1 py-1.5">
+				<div
+					v-if="emailing"
+					class="reveal mx-0.5 flex flex-col border-b border-outline-gray-1 py-1.5"
+				>
 					<RecipientRow label="To" :fixed="recipients!.map((recipient) => recipient.name)">
-						<button
-							v-if="!showCc"
-							class="rounded-3 px-1.5 py-0.5 text-sm text-ink-gray-5 hover:bg-surface-gray-2 hover:text-ink-gray-9"
-							@click="showCc = true"
-						>
-							Cc
-						</button>
-						<button
-							v-if="!showBcc"
-							class="rounded-3 px-1.5 py-0.5 text-sm text-ink-gray-5 hover:bg-surface-gray-2 hover:text-ink-gray-9"
-							@click="showBcc = true"
-						>
-							Bcc
-						</button>
+						<Button v-if="!showCc" variant="ghost" size="sm" label="Cc" @click="showCc = true" />
+						<Button v-if="!showBcc" variant="ghost" size="sm" label="Bcc" @click="showBcc = true" />
 					</RecipientRow>
-					<RecipientRow v-if="showCc" v-model="cc" label="Cc" />
-					<RecipientRow v-if="showBcc" v-model="bcc" label="Bcc" />
+					<RecipientRow v-if="showCc" v-model="cc" class="reveal" label="Cc" />
+					<RecipientRow v-if="showBcc" v-model="bcc" class="reveal" label="Bcc" />
 				</div>
 
 				<!-- On a phone typed text is lifted to 16px (index.css) so iOS does not zoom on focus. -->

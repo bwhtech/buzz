@@ -96,7 +96,28 @@ button,
 	animation: fade-up-in 0.4s ease both;
 }
 
+/* Content a click reveals in place, such as a folded email body. Short because it
+   runs many times a session. */
+.reveal {
+	transition:
+		opacity 150ms cubic-bezier(0.23, 1, 0.32, 1),
+		transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@starting-style {
+	.reveal {
+		opacity: 0;
+		transform: translateY(-2px);
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
+	@starting-style {
+		.reveal {
+			transform: none;
+		}
+	}
+
 	.fade-up-in,
 	.text-shimmer {
 		animation: none;

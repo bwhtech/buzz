@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Tooltip } from "frappe-ui"
+import { Button, Tooltip } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import type { ActivityEntry } from "@/types"
@@ -43,15 +43,15 @@ const cue = computed(() =>
 <template>
 	<!-- Sent emails sit on gray, replies on white with an outline, so direction reads at a glance. -->
 	<div
-		class="flex min-w-0 flex-1 flex-col gap-2.5 rounded-6 border px-3.5 py-3"
+		class="flex min-w-0 flex-1 flex-col gap-2.5 rounded-5 border px-3.5 py-3"
 		:class="
 			entry.received
 				? 'border-outline-gray-2 bg-surface-base'
-				: 'border-transparent bg-surface-gray-2'
+				: 'border-transparent bg-surface-gray-1'
 		"
 	>
 		<button
-			class="flex min-w-0 items-center gap-2 text-left"
+			class="group flex min-w-0 items-center gap-2 text-left"
 			:aria-expanded="open"
 			@click="open = !open"
 		>
@@ -70,17 +70,21 @@ const cue = computed(() =>
 				</time>
 			</Tooltip>
 			<span
-				:class="open ? 'lucide-chevron-up' : 'lucide-chevron-down'"
-				class="size-3.5 shrink-0 text-ink-gray-5"
+				class="lucide-chevron-down size-3.5 shrink-0 text-ink-gray-5 transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none [@media(hover:hover)]:group-hover:text-ink-gray-8"
+				:class="open && 'rotate-180'"
 				aria-hidden="true"
 			/>
 		</button>
 
-		<button v-if="!open" class="truncate text-left text-sm text-ink-gray-6" @click="open = true">
+		<button
+			v-if="!open"
+			class="reveal truncate text-left text-sm text-ink-gray-6 [@media(hover:hover)]:hover:text-ink-gray-8"
+			@click="open = true"
+		>
 			{{ entry.snippet }}
 		</button>
 
-		<div v-else class="flex min-w-0 flex-col gap-3">
+		<div v-else class="reveal flex min-w-0 flex-col gap-3">
 			<p class="flex flex-wrap gap-x-3 gap-y-1 text-sm text-ink-gray-5">
 				<span>
 					{{ entry.received ? "From" : "To" }}
@@ -98,30 +102,32 @@ const cue = computed(() =>
 				v-html="entry.content"
 			/>
 			<div v-if="entry.attachments.length" class="flex flex-wrap gap-1.5">
-				<a
+				<Button
 					v-for="file in entry.attachments"
 					:key="file.url"
 					:href="file.url"
-					target="_blank"
-					rel="noopener"
-					class="inline-flex h-[26px] items-center gap-1.5 rounded-4 bg-surface-gray-2 px-2 text-sm text-ink-gray-7 hover:bg-surface-gray-3"
+					variant="outline"
+					size="sm"
+					icon-left="lucide-paperclip"
 				>
-					<span class="lucide-paperclip size-3.5 text-ink-gray-5" aria-hidden="true" />
 					<span class="max-w-48 truncate">{{ file.name }}</span>
-					<span class="text-ink-gray-5">{{ fileSize(file.size) }}</span>
-				</a>
+					<template #suffix>
+						<span class="text-ink-gray-5">{{ fileSize(file.size) }}</span>
+					</template>
+				</Button>
 			</div>
 			<div v-if="entry.quoted_content" class="flex flex-col gap-2">
-				<button
-					class="inline-flex h-[22px] items-center gap-1.5 self-start rounded-3 bg-surface-gray-2 px-2 text-sm text-ink-gray-6 hover:bg-surface-gray-3"
+				<Button
+					class="self-start"
+					variant="outline"
+					size="sm"
+					icon-left="lucide-ellipsis"
+					:label="showQuoted ? 'Hide previous message' : 'Show previous message'"
 					@click="showQuoted = !showQuoted"
-				>
-					<span class="lucide-ellipsis size-3.5" aria-hidden="true" />
-					{{ showQuoted ? "Hide previous message" : "Show previous message" }}
-				</button>
+				/>
 				<div
 					v-if="showQuoted"
-					class="max-w-[68ch] border-l-2 border-outline-gray-2 py-0.5 pl-3 text-sm leading-[1.55] text-ink-gray-6 [&_p+p]:mt-1.5"
+					class="reveal max-w-[68ch] border-l-2 border-outline-gray-2 py-0.5 pl-3 text-sm leading-[1.55] text-ink-gray-6 [&_p+p]:mt-1.5"
 					v-html="entry.quoted_content"
 				/>
 			</div>
