@@ -157,8 +157,21 @@ body {
 
 .meta-item {
 	display: inline-flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: 8px;
+}
+
+.meta-item .meta-icon {
+	margin-top: 0.2em;
+}
+
+.meta-locations {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
 }
 
 /* Layout: banner, title and content share the wide column; the side panel runs beside them

@@ -7,7 +7,8 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import set_request
 from frappe.website.serve import get_response_content
 
-from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, UserFactory
+from buzz.events.doctype.event_venue.event_venue import MULTIPLE_LOCATIONS_FLAG
+from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, EventVenueFactory, UserFactory
 from buzz.www.event.index import EventPage
 from buzz.www.site_header import DEFAULT_FAVICON
 
@@ -123,6 +124,22 @@ class TestEventPageRender(IntegrationTestCase):
 		)
 		countdown = EventPage(self.route).as_context()["countdown"]
 		self.assertEqual(countdown["ends_at"], "2099-01-06T23:59:59+00:00")
+
+	def test_grouped_venue_lists_each_location_on_its_own_line_in_the_meta(self):
+		BuzzTeamFactory.set_settings(self.team, {MULTIPLE_LOCATIONS_FLAG: 1})
+		self.addCleanup(BuzzTeamFactory.set_settings, self.team, {MULTIPLE_LOCATIONS_FLAG: 0})
+		museum = EventVenueFactory.create(team=self.team, venue_name="National Museum").name
+		hotel = EventVenueFactory.create(team=self.team, venue_name="Millennium Hotel").name
+		group = EventVenueFactory.create(
+			team=self.team,
+			has_multiple_locations=1,
+			locations=[{"venue": museum, "label": "Day 1"}, {"venue": hotel}],
+		)
+		self.set_event({"medium": "In Person", "venue": group.name})
+
+		meta = re.search(r'<ul class="meta-locations">(.*?)</ul>', render(self.route), re.DOTALL).group(1)
+
+		self.assertEqual(re.findall(r"<li>(.*?)</li>", meta), ["Day 1: National Museum", "Millennium Hotel"])
 
 	def set_event(self, values: dict):
 		frappe.db.set_value("Buzz Event", self.event, values)
