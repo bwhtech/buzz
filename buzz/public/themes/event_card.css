@@ -12,7 +12,7 @@
 		transform 160ms var(--event-card-ease),
 		background-color 150ms ease,
 		border-color 150ms ease,
-		box-shadow 200ms ease;
+		box-shadow 160ms var(--event-card-ease);
 }
 
 /* Stretched over the card so the whole card is the target; actions sit above it. */
@@ -42,7 +42,7 @@
 	height: 100%;
 	background-size: cover;
 	object-fit: cover;
-	transition: transform 300ms var(--event-card-ease);
+	transition: transform 200ms var(--event-card-ease);
 }
 
 .buzz-event-card-body {
@@ -223,7 +223,7 @@
 
 /* Pressing answers the press; only the overlay presses, so Manage does not press the card. */
 .buzz-event-card:has(> .buzz-event-card-target:active) {
-	transform: scale(0.995);
+	transform: scale(0.99);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -234,11 +234,10 @@
 	.buzz-event-card[data-layout="cover"]:hover {
 		border-color: var(--outline-gray-2);
 		box-shadow: var(--shadow-md);
-		transform: translateY(-2px);
 	}
 
 	.buzz-event-card:hover .buzz-event-card-image {
-		transform: scale(1.04);
+		transform: scale(1.02);
 	}
 }
 
@@ -269,7 +268,6 @@
 	}
 
 	.buzz-event-card:has(> .buzz-event-card-target:active),
-	.buzz-event-card:hover,
 	.buzz-event-card:hover .buzz-event-card-image {
 		transform: none;
 	}

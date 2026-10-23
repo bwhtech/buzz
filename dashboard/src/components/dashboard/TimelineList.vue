@@ -72,19 +72,24 @@ const layoutOptions = [
 		<div v-else-if="loading" class="space-y-6" aria-busy="true">
 			<span class="sr-only">Loading {{ noun }}…</span>
 			<Skeleton class="h-6 w-40 rounded-4" />
-			<div
-				v-for="row in 3"
-				:key="row"
-				class="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[6rem_minmax(0,1fr)]"
-			>
-				<div class="flex gap-2 md:block md:space-y-2 md:pt-1">
-					<Skeleton class="h-4 w-14 rounded-4" />
-					<Skeleton class="h-4 w-20 rounded-4" />
-				</div>
-				<div class="md:pb-7 md:pl-6">
-					<Skeleton class="h-28 w-full rounded-8" />
-				</div>
+			<div v-if="layout === 'cover'" class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+				<Skeleton v-for="card in 3" :key="card" class="aspect-[4/5] w-full rounded-6" />
 			</div>
+			<template v-else>
+				<div
+					v-for="row in 3"
+					:key="row"
+					class="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[6rem_minmax(0,1fr)]"
+				>
+					<div class="flex gap-2 md:block md:space-y-2 md:pt-1">
+						<Skeleton class="h-4 w-14 rounded-4" />
+						<Skeleton class="h-4 w-20 rounded-4" />
+					</div>
+					<div class="md:pb-7 md:pl-6">
+						<Skeleton class="h-28 w-full rounded-8" />
+					</div>
+				</div>
+			</template>
 		</div>
 
 		<div v-else class="relative space-y-6">
@@ -95,7 +100,7 @@ const layoutOptions = [
 					{{ monthLabel(month.month) }}
 				</h2>
 
-				<div v-if="layout === 'cover'" class="grid grid-cols-1 gap-5 md:grid-cols-2">
+				<div v-if="layout === 'cover'" class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
 					<template v-for="day in month.days" :key="day.date">
 						<template v-for="item in day.events" :key="item.name">
 							<slot :item="item" />
