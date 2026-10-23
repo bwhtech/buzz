@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 import frappe
 from frappe.desk.form.load import get_comments
 from frappe.utils import parse_addr, split_emails
@@ -98,7 +100,7 @@ def attached_files(communications: list[str]) -> dict[str, list]:
 	rows = frappe.get_all(
 		"File",
 		filters={"attached_to_doctype": "Communication", "attached_to_name": ("in", communications)},
-		fields=["attached_to_name", "file_name", "file_url", "file_size"],
+		fields=["name", "attached_to_name", "file_name", "file_url", "file_size"],
 		order_by="creation asc",
 	)
 	files: dict[str, list] = {}
@@ -111,11 +113,16 @@ def email_attachments(files: list, content: str, body_images: list[str]) -> list
 	"""Attached files, plus images placed in the message; logos and banners in the signature or
 	the quoted thread are left out."""
 	return [
-		EmailAttachment(name=file.file_name, url=file.file_url, size=file.file_size or 0)
+		EmailAttachment(name=file.file_name, url=attachment_url(file.name), size=file.file_size or 0)
 		for file in files
 		if file.file_url
 		and (file.file_url not in content or any(source.startswith(file.file_url) for source in body_images))
 	]
+
+
+def attachment_url(file: str) -> str:
+	# Served through the comments API: team roles cannot open a Communication's private files directly.
+	return f"/api/v2/method/buzz.api.comments.get_email_attachment?name={quote(file)}"
 
 
 def field_changes(version, fields: list[str]) -> list[dict]:

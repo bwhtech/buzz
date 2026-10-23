@@ -67,8 +67,12 @@ class TestEmailContent(UnitTestCase):
 	def test_attachments_leave_out_signature_images(self):
 		content = '<p>Slides attached.</p><p>Thanks,<br>Ravi</p><img src="/private/files/logo.png?fid=3">'
 		files = [
-			frappe._dict(file_name="slides.pdf", file_url="/private/files/slides.pdf", file_size=2_400_000),
-			frappe._dict(file_name="logo.png", file_url="/private/files/logo.png", file_size=4_000),
+			frappe._dict(
+				name="f1", file_name="slides.pdf", file_url="/private/files/slides.pdf", file_size=2_400_000
+			),
+			frappe._dict(
+				name="f2", file_name="logo.png", file_url="/private/files/logo.png", file_size=4_000
+			),
 		]
 		attachments = email_attachments(files, content, EmailContent(content).body_image_sources())
 		self.assertEqual([attachment.name for attachment in attachments], ["slides.pdf"])

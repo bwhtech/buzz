@@ -1,7 +1,8 @@
 import frappe
+from werkzeug.wrappers import Response
 
 from buzz.api.comments.schemas import ActivityEntry
-from buzz.api.comments.services import DocumentComments
+from buzz.api.comments.services import DocumentComments, email_attachment
 from buzz.api.teams.schemas import TeamMember
 
 
@@ -20,6 +21,11 @@ def get_mention_members(reference_doctype: str, reference_name: str) -> list[Tea
 def get_email_sender(reference_doctype: str, reference_name: str) -> str | None:
 	"""The address a note emailed from this record is sent from."""
 	return DocumentComments(reference_doctype, reference_name).email_sender()
+
+
+@frappe.whitelist()
+def get_email_attachment(name: str) -> Response:
+	return email_attachment(name)
 
 
 @frappe.whitelist(methods=["POST"])

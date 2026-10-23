@@ -2,9 +2,17 @@ import frappe
 from frappe.core.doctype.communication.email import make as make_communication
 from frappe.desk.form.utils import add_comment
 from frappe.utils import get_fullname, sanitize_html, validate_email_address
+from frappe.utils.response import send_private_file
+from werkzeug.wrappers import Response
 
 from buzz.api.comments.activity import ActivityFeed
-from buzz.api.comments.exceptions import CannotDeleteComment, NoRecipients, NotCommentable, NotTeamMember
+from buzz.api.comments.exceptions import (
+	AttachmentNotFound,
+	CannotDeleteComment,
+	NoRecipients,
+	NotCommentable,
+	NotTeamMember,
+)
 from buzz.api.comments.schemas import ActivityEntry
 from buzz.api.teams.schemas import TeamMember
 from buzz.api.teams.services import members_of
@@ -23,6 +31,23 @@ def proposal_speaker_emails(proposal: str) -> list[str]:
 
 # Who a note can be emailed to, for records that have someone outside the team.
 EMAIL_RECIPIENTS = {"Talk Proposal": proposal_speaker_emails}
+
+
+def email_attachment(file: str) -> Response:
+	"""A file on an email in a record's activity, for members of the record's team only. Frappe's
+	own file check needs Communication read access, which team roles do not have."""
+	attached_to = frappe.db.get_value(
+		"File", file, ["attached_to_doctype", "attached_to_name", "file_url", "file_name"], as_dict=True
+	)
+	if not attached_to or attached_to.attached_to_doctype != "Communication":
+		AttachmentNotFound.throw()
+	reference = frappe.db.get_value(
+		"Communication", attached_to.attached_to_name, ["reference_doctype", "reference_name"], as_dict=True
+	)
+	if not (reference and reference.reference_doctype and reference.reference_name):
+		AttachmentNotFound.throw()
+	DocumentComments(reference.reference_doctype, reference.reference_name)
+	return send_private_file(attached_to.file_url.split("/private", 1)[1], attached_to.file_name)
 
 
 def render_email(template: str, args: dict) -> str:

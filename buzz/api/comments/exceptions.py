@@ -1,6 +1,6 @@
 from frappe import _lt
 
-from buzz.api.exceptions import BuzzAPIError, NotPermitted
+from buzz.api.exceptions import BuzzAPIError, NotPermitted, ResourceNotFound
 
 
 class NotCommentable(BuzzAPIError):
@@ -16,6 +16,11 @@ class NotTeamMember(NotPermitted):
 class CannotDeleteComment(NotPermitted):
 	title = _lt("Not Permitted")
 	message = _lt("Only the author or a team admin can delete this comment.")
+
+
+class AttachmentNotFound(ResourceNotFound):
+	title = _lt("Not Found")
+	message = _lt("This attachment does not exist.")
 
 
 class NoRecipients(BuzzAPIError):
