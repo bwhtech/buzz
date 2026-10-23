@@ -101,7 +101,9 @@ const ticketRows = computed(() =>
 )
 
 function selectedAddOns(attendee: BookingAttendee) {
-	return Object.entries(attendee.add_ons ?? {}).filter(([, selection]) => selection.selected)
+	return Object.entries(attendee.add_ons ?? {}).filter(
+		([name, selection]) => selection.selected && props.addOnsMap[name],
+	)
 }
 
 function addOnLabels(attendee: BookingAttendee) {
