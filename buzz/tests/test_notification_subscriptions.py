@@ -99,3 +99,10 @@ class TestNotificationSubscriptions(TeamPermissionTestCase):
 
 		with self.set_user(self.outsider), self.assertRaises(NotTeamMember):
 			set_subscription("Talk Proposal", self.proposal, True)
+
+	def test_user_whose_name_is_not_their_email_is_notified(self):
+		self.subscriptions.subscribe("Administrator")
+
+		self.comment_as(self.manager)
+
+		self.assertEqual(len(self.notifications_for("Administrator")), 1)

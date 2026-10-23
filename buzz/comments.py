@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 from frappe.desk.notifications import extract_mentions
-from frappe.utils import get_fullname, get_url
+from frappe.utils import get_fullname, get_url, strip_html
 
 from buzz.subscriptions import Subscriptions
 
@@ -37,22 +37,32 @@ def notify_team_of_email(doc, method=None) -> None:
 		return
 	publish_to_team(doc.reference_doctype, doc.reference_name)
 	if doc.communication_type == "Communication" and doc.sent_or_received == "Received":
-		notify_subscribers(
-			doc.reference_doctype,
-			doc.reference_name,
-			_("{0} replied on {1}"),
-			doc.sender_full_name or doc.sender,
-			from_user=None,
-		)
+		notify_subscribers(doc, _("{0} replied on {1}"), doc.sender_full_name or doc.sender, from_user=None)
 
 
 def notify_subscribers(
-	doctype: str, name: str, subject: str, author: str, from_user: str | None, skip: set[str] = frozenset()
+	source, subject: str, author: str, from_user: str | None, skip: set[str] = frozenset()
 ) -> None:
+	"""Tells everyone following the note's or email's record, with a plain-text preview of it."""
+	doctype, name = source.reference_doctype, source.reference_name
 	title = frappe.db.get_value(doctype, name, "title")
 	Subscriptions(doctype, name).notify(
-		subject.format(author, title), from_user, dashboard_url(doctype, name), skip
+		source,
+		subject.format(author, title),
+		from_user,
+		dashboard_url(doctype, name),
+		content=snippet_of(source),
+		skip=skip,
 	)
+
+
+def snippet_of(source) -> str:
+	# Imported here: buzz.api.comments imports this module.
+	from buzz.api.comments.email_content import SNIPPET_LENGTH, EmailContent
+
+	if source.doctype == "Communication":
+		return EmailContent(source.content).snippet()
+	return " ".join(strip_html(source.content or "").split())[:SNIPPET_LENGTH]
 
 
 class TeamComment:
@@ -71,12 +81,7 @@ class TeamComment:
 		mentioned = notify_mentioned_members(self)
 		self.subscribe_participants(mentioned)
 		notify_subscribers(
-			self.reference_doctype,
-			self.reference_name,
-			_("{0} commented on {1}"),
-			get_fullname(self.owner),
-			from_user=self.owner,
-			skip=mentioned,
+			self, _("{0} commented on {1}"), get_fullname(self.owner), from_user=self.owner, skip=mentioned
 		)
 		self.notify_change("add")
 

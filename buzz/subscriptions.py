@@ -1,5 +1,6 @@
 import frappe
 from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
+from frappe.model.document import Document
 
 DOCTYPE = "Buzz Notification Subscription"
 NOTIFICATION_TYPE = "Buzz Activity"
@@ -40,13 +41,27 @@ class Subscriptions:
 	def users(self) -> list[str]:
 		return frappe.get_all(DOCTYPE, filters={**self.reference, "subscribed": 1}, pluck="user")
 
-	def notify(self, subject: str, from_user: str, link: str | None, skip: set[str] = frozenset()) -> None:
-		"""Frappe drops `from_user` itself and emails each user unless they turned this type off."""
+	def emails(self, skip: set[str]) -> list[str]:
+		"""Frappe looks notification recipients up by email, which is not always the user's name."""
 		users = [user for user in self.users() if user not in skip]
-		if not users:
+		return frappe.get_all("User", filters={"name": ("in", users)}, pluck="email") if users else []
+
+	def notify(
+		self,
+		source: Document,
+		subject: str,
+		from_user: str | None,
+		link: str | None,
+		content: str | None = None,
+		skip: set[str] = frozenset(),
+	) -> None:
+		"""`source` is the note or email that caused it. Frappe drops `from_user` itself and
+		emails each user unless they turned this type off."""
+		emails = self.emails(skip)
+		if not emails:
 			return
 		enqueue_create_notification(
-			users,
+			emails,
 			{
 				"type": NOTIFICATION_TYPE,
 				"subject": subject,
@@ -54,5 +69,8 @@ class Subscriptions:
 				"document_type": self.reference["reference_doctype"],
 				"document_name": self.reference["reference_name"],
 				"link": link,
+				"source_doctype": source.doctype,
+				"source_name": source.name,
+				"email_content": content,
 			},
 		)

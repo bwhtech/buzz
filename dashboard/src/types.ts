@@ -163,6 +163,27 @@ export interface ActivityEntry {
 	new_value: string | null
 }
 
+export interface NotificationEntry {
+	name: string
+	kind: "comment" | "reply"
+	actor: string
+	actor_image: string | null
+	snippet: string | null
+	creation: string
+	read: boolean
+}
+
+// buzz.api.notifications.get_notifications: one group per record, newest first.
+export interface NotificationGroup {
+	reference_doctype: string
+	reference_name: string
+	title: string | null
+	event_title: string | null
+	link: string | null
+	subscribed: boolean
+	notifications: NotificationEntry[]
+}
+
 export interface TeamMember {
 	user: string
 	full_name: string | null
