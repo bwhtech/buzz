@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Badge, ErrorMessage, Skeleton, dayjsLocal, toast } from "frappe-ui"
+import { Badge, ErrorMessage, Skeleton, TabButtons, dayjsLocal, toast } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import CommentComposer from "@/components/dashboard/comments/CommentComposer.vue"
@@ -51,6 +51,18 @@ const names = computed(() =>
 
 const draft = ref("")
 
+const descriptionView = ref<"formatted" | "original">("formatted")
+const showOriginal = computed(() => descriptionView.value === "original")
+const canFormat = computed(
+	() =>
+		!!props.doc?.formatted_description && props.doc.formatted_description !== props.doc.description,
+)
+const description = computed(() =>
+	canFormat.value && !showOriginal.value
+		? props.doc?.formatted_description
+		: props.doc?.description,
+)
+
 function post(content: string, toSpeakers: boolean) {
 	feed.add(content, toSpeakers).then(
 		() => {
@@ -69,14 +81,25 @@ function post(content: string, toSpeakers: boolean) {
 			<ProposalProperties :speakers="speakers" :fields="fields" />
 
 			<section class="space-y-2">
-				<h3 class="text-lg font-semibold text-ink-gray-9">Description</h3>
+				<div class="flex items-center justify-between gap-2">
+					<h3 class="text-lg font-semibold text-ink-gray-9">Description</h3>
+					<TabButtons
+						v-if="canFormat"
+						v-model="descriptionView"
+						:options="[
+							{ label: 'Formatted', value: 'formatted' },
+							{ label: 'Original', value: 'original' },
+						]"
+					/>
+				</div>
 				<!-- Only the document carries the description, so it arrives a beat later. -->
 				<Skeleton v-if="loading" class="h-16 w-full rounded-4" />
 				<!-- Description is a Text Editor field, so it arrives as sanitized HTML. -->
 				<div
-					v-else-if="doc?.description"
+					v-else-if="description"
 					class="description prose prose-sm max-w-none text-base leading-[1.6] text-ink-gray-7"
-					v-html="doc.description"
+					:class="showOriginal && 'whitespace-pre-line'"
+					v-html="description"
 				/>
 				<p v-else class="text-base text-ink-gray-5">No description was submitted.</p>
 			</section>
