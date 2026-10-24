@@ -4,6 +4,7 @@ from buzz.api.events.schemas import RouteAvailability
 from buzz.api.teams import calendar, invitations, public_page, services
 from buzz.api.teams.schemas import InviteOutcome, TeamEvents, TeamOption, TeamOverview
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
+from buzz.permissions import INTEGRATION_ROLE
 
 
 @frappe.whitelist()
@@ -32,7 +33,11 @@ def get_my_teams() -> list[TeamOption]:
 			team.short_description,
 			membership.team_role,
 		)
-		.where((membership.user == frappe.session.user) & (membership.enabled == 1))
+		.where(
+			(membership.user == frappe.session.user)
+			& (membership.enabled == 1)
+			& (membership.team_role != INTEGRATION_ROLE)
+		)
 	).run(as_dict=True)
 	event_counts = services.upcoming_event_counts([my_team.name for my_team in my_teams])
 	return [team_option(my_team, event_counts.get(my_team.name, 0)) for my_team in my_teams]
