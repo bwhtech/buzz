@@ -34,6 +34,7 @@ class CommunityEventRequest(Document):
 		longitude: DF.Float
 		review_note: DF.SmallText | None
 		reviewed_by: DF.Link | None
+		source_id: DF.Data | None
 		start_datetime: DF.Datetime | None
 		status: DF.Literal["Pending", "Approved", "Rejected"]
 		submitted_by: DF.Link | None
@@ -99,6 +100,7 @@ def approved_external_requests(community: str) -> list:
 def on_doctype_update():
 	# validate_unique_pair names the clash; the index stops two concurrent inserts.
 	frappe.db.add_unique("Community Event Request", ["event", "community"])
+	frappe.db.add_unique("Community Event Request", ["community", "source_id"])
 
 
 def has_request_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:
