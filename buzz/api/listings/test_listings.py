@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
@@ -60,7 +62,7 @@ class TestPartnerListings(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value(REQUEST, names[0], "event_title"), "Renamed Meetup")
 
 	def test_upsert_stores_system_time(self):
-		with self.change_settings("System Settings", {"time_zone": "Asia/Kolkata"}):
+		with patch("buzz.api.listings.services.get_system_timezone", return_value="Asia/Kolkata"):
 			self.upsert(start_datetime=f"{add_days(today(), 20)}T12:30:00+00:00")
 		start = frappe.db.get_value(REQUEST, self.request_names()[0], "start_datetime")
 		self.assertEqual(start.strftime("%H:%M"), "18:00")
