@@ -29,6 +29,10 @@ class BuzzTheme(Document):
 		tokens: DF.Table[BuzzThemeToken]
 	# end: auto-generated types
 
+	def before_insert(self):
+		if not self.tokens:
+			self.set("tokens", default_tokens())
+
 	def validate(self):
 		self.validate_standard_theme()
 		self.validate_tokens()
@@ -54,6 +58,19 @@ class BuzzTheme(Document):
 	def on_trash(self):
 		self.validate_standard_theme()
 		theme_css.clear_cache()
+
+
+def default_tokens() -> list[dict]:
+	"""A new theme starts as a copy of the default standard theme's tokens."""
+	standard = frappe.get_all("Buzz Theme", filters={"is_standard": 1}, pluck="name", order_by="creation asc")
+	if not standard:
+		return []
+	return frappe.get_all(
+		"Buzz Theme Token",
+		filters={"parenttype": "Buzz Theme", "parent": standard[0]},
+		fields=["token", "type", "value", "dark_value"],
+		order_by="idx",
+	)
 
 
 def can_change_standard_themes() -> bool:
