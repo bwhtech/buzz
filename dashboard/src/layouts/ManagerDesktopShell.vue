@@ -98,10 +98,11 @@ watch(headerKey, (key, previous) => {
 				<UserMenu />
 			</div>
 		</Sidebar>
+		<!-- Zero-width column panels dock into, flush with the sidebar edge and over the page. -->
+		<div id="sidebar-panel" class="relative z-30 w-0 shrink-0" />
 
 		<div class="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-surface-sidebar py-2 pl-1">
 			<div
-				id="shell-content"
 				class="relative flex h-full flex-col overflow-hidden rounded-l-6 bg-surface-elevation-1 shadow-base"
 			>
 				<PageHeaderTarget />

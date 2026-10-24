@@ -139,16 +139,16 @@ function openNotification(item: NotificationItem) {
 		</SidebarItem>
 	</div>
 
-	<Teleport defer to="#shell-content">
+	<Teleport defer to="#sidebar-panel">
 		<Transition name="panel">
 			<aside
 				v-if="open"
 				ref="panel"
 				role="dialog"
 				aria-labelledby="notifications-title"
-				class="absolute inset-y-0 left-0 z-30 flex w-[400px] max-w-full flex-col border-r border-outline-gray-1 bg-surface-elevation-2 shadow-xl"
+				class="absolute inset-y-0 left-0 flex w-[400px] flex-col border-x border-outline-gray-1 bg-surface-elevation-2 shadow-lg"
 			>
-				<header class="flex flex-col gap-3 border-b border-outline-gray-1 pt-3.5 pr-3 pb-3 pl-5">
+				<header class="flex flex-col gap-3 border-b border-outline-gray-1 pt-[18px] pr-3 pb-3 pl-5">
 					<div class="flex items-center gap-1">
 						<div class="flex flex-1 items-center gap-2">
 							<h2 id="notifications-title" class="text-lg font-semibold text-ink-gray-9">
