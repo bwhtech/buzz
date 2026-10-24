@@ -1,7 +1,7 @@
 import frappe
 
-from buzz.api.notifications.schemas import NotificationEntry, NotificationGroup
-from buzz.subscriptions import NOTIFICATION_TYPE, Subscriptions
+from buzz.api.notifications.schemas import Notification
+from buzz.subscriptions import NOTIFICATION_TYPE
 
 LIMIT = 50
 LOG_FIELDS = [
@@ -19,38 +19,34 @@ LOG_FIELDS = [
 
 
 class NotificationInbox:
-	"""One user's Buzz notifications, grouped by the record they happened on."""
+	"""One user's Buzz notifications."""
 
 	def __init__(self, user: str):
 		self.user = user
 		self.filters = {"for_user": user, "type": NOTIFICATION_TYPE}
 
-	def groups(self) -> list[NotificationGroup]:
+	def notifications(self) -> list[Notification]:
 		logs = frappe.get_all(
 			"Notification Log", filters=self.filters, fields=LOG_FIELDS, order_by="creation desc", limit=LIMIT
 		)
-		actors = Actors(logs)
-		by_record: dict[tuple, list] = {}
-		for log in logs:
-			by_record.setdefault((log.document_type, log.document_name), []).append(log)
-		return [self.group(reference, rows, actors) for reference, rows in by_record.items()]
+		actors, records = Actors(logs), Records(logs)
+		return [Notification(**actors.of(log), **records.of(log), **self.basics(log)) for log in logs]
 
-	def group(self, reference: tuple, logs: list, actors: "Actors") -> NotificationGroup:
-		doctype, name = reference
-		record = frappe.db.get_value(doctype, name, ["title", "event"], as_dict=True) or {}
-		return NotificationGroup(
-			reference_doctype=doctype,
-			reference_name=name,
-			title=record.get("title"),
-			event_title=frappe.db.get_value("Buzz Event", record.get("event"), "title"),
-			link=logs[0].link,
-			subscribed=Subscriptions(doctype, name).is_subscribed(self.user),
-			notifications=[actors.entry(log) for log in logs],
-		)
+	@staticmethod
+	def basics(log) -> dict:
+		return {
+			"name": log.name,
+			"snippet": log.email_content,
+			"creation": log.creation,
+			"read": bool(log.read),
+			"reference_doctype": log.document_type,
+			"reference_name": log.document_name,
+			"link": log.link,
+		}
 
-	def mark_as_read(self, reference_doctype: str, reference_name: str) -> None:
-		filters = {**self.filters, "document_type": reference_doctype, "document_name": reference_name}
-		frappe.db.set_value("Notification Log", {**filters, "read": 0}, "read", 1, update_modified=False)
+	def mark_as_read(self, filters: dict | None = None) -> None:
+		filters = {**self.filters, **(filters or {}), "read": 0}
+		frappe.db.set_value("Notification Log", filters, "read", 1, update_modified=False)
 
 
 class Actors:
@@ -63,24 +59,35 @@ class Actors:
 		self.users = rows_by_name("User", users, ["full_name", "user_image"])
 		self.emails = rows_by_name("Communication", emails, ["sender", "sender_full_name"])
 
-	def entry(self, log) -> NotificationEntry:
+	def of(self, log) -> dict:
+		if email := self.emails.get(log.source_name):
+			return {"kind": "reply", "actor": email.sender_full_name or email.sender}
 		user = self.users.get(log.from_user)
-		email = self.emails.get(log.source_name)
-		return NotificationEntry(
-			name=log.name,
-			kind="reply" if email else "comment",
-			actor=self.name_of(user, email) or log.from_user or "",
-			actor_image=user.user_image if user else None,
-			snippet=log.email_content,
-			creation=log.creation,
-			read=bool(log.read),
-		)
+		return {
+			"kind": "comment",
+			"actor": (user and user.full_name) or log.from_user or "",
+			"actor_image": user and user.user_image,
+		}
 
-	@staticmethod
-	def name_of(user, email) -> str | None:
-		if email:
-			return email.sender_full_name or email.sender
-		return user.full_name if user else None
+
+class Records:
+	"""The title and event of each record the notifications are about."""
+
+	def __init__(self, logs: list):
+		by_doctype: dict[str, set] = {}
+		for log in logs:
+			by_doctype.setdefault(log.document_type, set()).add(log.document_name)
+		self.rows = {
+			doctype: rows_by_name(doctype, list(names), ["title", "event"])
+			for doctype, names in by_doctype.items()
+		}
+		events = {row.event for rows in self.rows.values() for row in rows.values() if row.event}
+		self.events = rows_by_name("Buzz Event", list(events), ["title"])
+
+	def of(self, log) -> dict:
+		record = self.rows.get(log.document_type, {}).get(log.document_name)
+		event = record and self.events.get(record.event)
+		return {"title": record and record.title, "event_title": event and event.title}
 
 
 def rows_by_name(doctype: str, names: list[str], fields: list[str]) -> dict:

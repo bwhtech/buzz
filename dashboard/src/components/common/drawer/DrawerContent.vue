@@ -4,6 +4,9 @@ import { DrawerContent, DrawerHandle, DrawerOverlay, DrawerPortal } from "reka-u
 
 import { useIsMobile } from "@/composables/useIsMobile"
 
+// Listeners such as `@open-auto-focus` belong on reka's content, not the wrapper.
+defineOptions({ inheritAttrs: false })
+
 withDefaults(
 	defineProps<{
 		showSwipeHandle?: boolean
@@ -49,6 +52,7 @@ function keepOpenForToasts(event: Event) {
 		<DrawerOverlay class="drawer-overlay fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" />
 
 		<DrawerContent
+			v-bind="$attrs"
 			:data-size="size"
 			class="drawer bg-surface-elevation-2 shadow-2xl"
 			@interact-outside="keepOpenForToasts"

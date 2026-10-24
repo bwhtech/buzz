@@ -1,5 +1,5 @@
 from buzz.api.comments import add_comment
-from buzz.api.notifications import get_notifications, mark_as_read
+from buzz.api.notifications import get_notifications, mark_all_as_read, mark_as_read
 from buzz.subscriptions import Subscriptions
 from buzz.tests.base_test_cases import TeamPermissionTestCase
 from buzz.tests.factories import (
@@ -37,45 +37,42 @@ class TestNotifications(TeamPermissionTestCase):
 		with self.set_user(user):
 			add_comment("Talk Proposal", proposal, content)
 
-	def groups_as(self, user: str) -> list:
+	def notifications_as(self, user: str) -> list:
+		proposals = (self.first, self.second)
 		with self.set_user(user):
-			return get_notifications()
+			return [entry for entry in get_notifications() if entry.reference_name in proposals]
 
-	def test_groups_notes_and_replies_by_talk_newest_first(self):
+	def test_lists_notes_and_replies_newest_first_with_their_talk(self):
 		self.comment_as(self.manager, self.first, "<p>Push for the <b>main hall</b></p>")
-		self.comment_as(self.manager, self.second, "<p>Overlaps with the sync talk?</p>")
 		CommunicationFactory.create(
-			reference_name=self.first,
+			reference_name=self.second,
 			sender=SPEAKER,
 			sender_full_name="Meera Krishnan",
 			content="<p>Slides attached</p>",
 		)
 
-		groups = self.groups_as(self.alice)
+		reply, note = self.notifications_as(self.alice)
 
-		self.assertEqual([group.reference_name for group in groups], [self.first, self.second])
-		first = groups[0]
-		self.assertEqual(first.title, "Scaling Postgres")
-		self.assertTrue(first.subscribed)
-		reply, note = first.notifications
 		self.assertEqual(
-			(reply.kind, reply.actor, reply.snippet), ("reply", "Meera Krishnan", "Slides attached")
+			(reply.kind, reply.actor, reply.snippet, reply.title),
+			("reply", "Meera Krishnan", "Slides attached", "Offline-first apps"),
 		)
-		self.assertEqual((note.kind, note.snippet), ("comment", "Push for the main hall"))
-		# The manager commented, so only the speaker's reply reaches them.
-		[manager_group] = self.groups_as(self.manager)
-		self.assertEqual([entry.kind for entry in manager_group.notifications], ["reply"])
+		self.assertEqual(
+			(note.kind, note.snippet, note.title), ("comment", "Push for the main hall", "Scaling Postgres")
+		)
+		self.assertFalse(note.read)
 
-	def test_mark_as_read_clears_one_talk_for_the_session_user(self):
+	def test_marks_one_or_all_as_read_for_the_session_user_only(self):
 		self.comment_as(self.manager, self.first, "<p>One</p>")
 		self.comment_as(self.manager, self.second, "<p>Two</p>")
+		Subscriptions("Talk Proposal", self.first).subscribe(self.bob)
+		self.comment_as(self.manager, self.first, "<p>Three</p>")
 
 		with self.set_user(self.alice):
-			mark_as_read("Talk Proposal", self.first)
+			mark_as_read(self.notifications_as(self.alice)[-1].name)
+		self.assertEqual([entry.read for entry in self.notifications_as(self.alice)], [False, False, True])
 
-		read = {
-			group.reference_name: [entry.read for entry in group.notifications]
-			for group in self.groups_as(self.alice)
-			if group.reference_name in (self.first, self.second)
-		}
-		self.assertEqual(read, {self.first: [True], self.second: [False]})
+		with self.set_user(self.alice):
+			mark_all_as_read()
+		self.assertTrue(all(entry.read for entry in self.notifications_as(self.alice)))
+		self.assertEqual([entry.read for entry in self.notifications_as(self.bob)], [False])

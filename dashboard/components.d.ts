@@ -149,7 +149,7 @@ declare module 'vue' {
     MobileMoreSheet: typeof import('./src/components/dashboard/MobileMoreSheet.vue')['default']
     MobileStepBar: typeof import('./src/components/registration/MobileStepBar.vue')['default']
     MobileTotalBar: typeof import('./src/components/registration/MobileTotalBar.vue')['default']
-    NotificationGroupCard: typeof import('./src/components/dashboard/notifications/NotificationGroupCard.vue')['default']
+    NotificationRow: typeof import('./src/components/dashboard/notifications/NotificationRow.vue')['default']
     NotificationsDrawer: typeof import('./src/components/dashboard/notifications/NotificationsDrawer.vue')['default']
     OfflinePaymentDialog: typeof import('./src/components/OfflinePaymentDialog.vue')['default']
     OrderSummary: typeof import('./src/components/registration/OrderSummary.vue')['default']

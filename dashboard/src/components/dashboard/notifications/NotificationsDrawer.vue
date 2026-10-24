@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { Button, ErrorMessage, SidebarItem, Skeleton, TabButtons } from "frappe-ui"
+import {
+	Badge,
+	Button,
+	ErrorMessage,
+	SidebarItem,
+	Skeleton,
+	TabButtons,
+	Tooltip,
+	dayjsLocal,
+} from "frappe-ui"
 import { computed, onBeforeUnmount, ref } from "vue"
 import { useRouter } from "vue-router"
 
@@ -10,46 +19,97 @@ import {
 	DrawerDescription,
 	DrawerTitle,
 } from "@/components/common/drawer"
-import { useSetSubscription } from "@/data/comments"
-import { useMarkAsRead, useNotifications } from "@/data/notifications"
+import { useMarkAllAsRead, useMarkAsRead, useNotifications } from "@/data/notifications"
 import { useSocket } from "@/socket"
-import type { NotificationGroup } from "@/types"
+import type { NotificationItem } from "@/types"
 
-import NotificationGroupCard from "./NotificationGroupCard.vue"
+import NotificationRow from "./NotificationRow.vue"
+
+type Filter = "all" | "unread" | "mentions" | "updates"
 
 const router = useRouter()
 const notifications = useNotifications()
 const marking = useMarkAsRead()
-const subscribing = useSetSubscription()
+const markingAll = useMarkAllAsRead()
 
 const open = ref(false)
-const filter = ref<"unread" | "all">("unread")
+const filter = ref<Filter>("all")
 
-const groups = computed(() => notifications.data ?? [])
-const isUnread = (group: NotificationGroup) => group.notifications.some((entry) => !entry.read)
-const unreadCount = computed(
-	() => groups.value.flatMap((group) => group.notifications).filter((entry) => !entry.read).length,
+const FILTERS: { label: string; value: Filter }[] = [
+	{ label: "All", value: "all" },
+	{ label: "Unread", value: "unread" },
+	{ label: "Mentions", value: "mentions" },
+	{ label: "Updates", value: "updates" },
+]
+
+// Notes and replies are people talking to you; status changes and publishing will be updates.
+const CONVERSATION_KINDS = new Set<NotificationItem["kind"]>(["comment", "reply"])
+const MATCHES: Record<Filter, (item: NotificationItem) => boolean> = {
+	all: () => true,
+	unread: (item) => !item.read,
+	mentions: (item) => CONVERSATION_KINDS.has(item.kind),
+	updates: (item) => !CONVERSATION_KINDS.has(item.kind),
+}
+
+// Read locally first, so the dot fades on click instead of after the round trip.
+const readLocally = ref(new Set<string>())
+const items = computed(() =>
+	(notifications.data ?? []).map((item) =>
+		readLocally.value.has(item.name) ? { ...item, read: true } : item,
+	),
 )
-const visible = computed(() =>
-	filter.value === "all" ? groups.value : groups.value.filter(isUnread),
-)
+const unreadCount = computed(() => items.value.filter((item) => !item.read).length)
+const visible = computed(() => items.value.filter(MATCHES[filter.value]))
+
+function dayOf(creation: string) {
+	const day = dayjsLocal(creation)
+	if (day.isToday()) return "Today"
+	if (day.isSame(dayjsLocal().subtract(1, "day"), "day")) return "Yesterday"
+	return "Earlier"
+}
+
+const sections = computed(() => {
+	const byDay = new Map<string, NotificationItem[]>()
+	for (const item of visible.value) {
+		const day = dayOf(item.creation)
+		byDay.set(day, [...(byDay.get(day) ?? []), item])
+	}
+	return [...byDay].map(([label, rows]) => ({ label, rows }))
+})
+
+const EMPTY: Record<Filter, string> = {
+	all: "No notifications yet",
+	unread: "You're all caught up",
+	mentions: "No notes or replies yet",
+	updates: "No updates yet",
+}
 
 const ignore = () => {}
 const reload = () => notifications.reload()
-const reference = (group: NotificationGroup) => ({
-	reference_doctype: group.reference_doctype,
-	reference_name: group.reference_name,
-})
 
 // Frappe pushes this to the user whenever a Notification Log is created for them.
 const socket = useSocket()
 socket?.on("notification", reload)
 onBeforeUnmount(() => socket?.off("notification", reload))
 
-const markRead = (group: NotificationGroup) => marking.submit(reference(group)).then(reload, ignore)
+function markRead(item: NotificationItem) {
+	readLocally.value = new Set(readLocally.value).add(item.name)
+	marking.submit({ name: item.name }).catch(ignore)
+}
 
-const toggleSubscription = (group: NotificationGroup) =>
-	subscribing.submit({ ...reference(group), subscribed: !group.subscribed }).then(reload, ignore)
+function markAllRead() {
+	readLocally.value = new Set(items.value.map((item) => item.name))
+	markingAll.submit().then(reload, ignore)
+}
+
+// Focus lands on the tabs, not the first header button, whose tooltip would pop on every open.
+const tabs = ref<HTMLElement | null>(null)
+function focusTabs(event: Event) {
+	event.preventDefault()
+	tabs.value
+		?.querySelector<HTMLElement>("[aria-selected=true], [data-state=active], button")
+		?.focus()
+}
 
 // Links are absolute and carry the router base.
 function routeOf(link: string) {
@@ -57,10 +117,10 @@ function routeOf(link: string) {
 	return url.pathname.replace(/^\/b(?=\/)/, "") + url.search
 }
 
-function openRecord(group: NotificationGroup) {
+function openNotification(item: NotificationItem) {
+	if (!item.read) markRead(item)
 	open.value = false
-	if (isUnread(group)) markRead(group)
-	if (group.link) router.push(routeOf(group.link))
+	if (item.link) router.push(routeOf(item.link))
 }
 </script>
 
@@ -79,85 +139,80 @@ function openRecord(group: NotificationGroup) {
 	</SidebarItem>
 
 	<Drawer v-model:open="open" swipe-direction="left">
-		<DrawerContent>
-			<header class="flex items-center justify-between gap-2 px-5 pt-5 pb-3">
-				<DrawerTitle class="text-lg font-semibold text-ink-gray-9">Notifications</DrawerTitle>
-				<DrawerDescription class="sr-only">
-					New notes and speaker replies on talks you follow
-				</DrawerDescription>
+		<DrawerContent @open-auto-focus="focusTabs">
+			<header class="flex flex-col gap-3 border-b border-outline-gray-1 pt-3.5 pr-3 pb-3 pl-5">
 				<div class="flex items-center gap-1">
-					<TabButtons
-						v-model="filter"
-						:options="[
-							{ label: 'Unread', value: 'unread' },
-							{ label: 'All', value: 'all' },
-						]"
-					/>
+					<div class="flex flex-1 items-center gap-2">
+						<DrawerTitle class="text-lg font-semibold text-ink-gray-9">Notifications</DrawerTitle>
+						<Badge v-if="unreadCount" :label="String(unreadCount)" />
+					</div>
+					<DrawerDescription class="sr-only">
+						New notes and speaker replies on talks you follow
+					</DrawerDescription>
+					<Tooltip text="Mark all as read">
+						<Button
+							variant="ghost"
+							size="sm"
+							icon="lucide-check-check"
+							aria-label="Mark all as read"
+							:disabled="!unreadCount"
+							@click="markAllRead"
+						/>
+					</Tooltip>
 					<DrawerClose as-child>
 						<Button variant="ghost" size="sm" icon="lucide-x" aria-label="Close" />
 					</DrawerClose>
 				</div>
+				<div ref="tabs" class="pr-2">
+					<TabButtons v-model="filter" :options="FILTERS" fluid />
+				</div>
 			</header>
 
-			<div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4">
+			<div class="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-2 pt-1.5 pb-4">
 				<ErrorMessage
-					class="px-2 pb-2"
-					:message="notifications.error || marking.error || subscribing.error"
+					class="px-3 py-2"
+					:message="notifications.error || marking.error || markingAll.error"
 				/>
-				<div v-if="notifications.loading && !notifications.data" class="space-y-3">
-					<Skeleton v-for="row in 3" :key="row" class="h-28 w-full rounded-6" />
+				<div v-if="notifications.loading && !notifications.data" class="space-y-1 px-1 pt-2">
+					<Skeleton v-for="row in 5" :key="row" class="h-14 w-full rounded-[10px]" />
 				</div>
 				<div
-					v-else-if="!visible.length"
-					class="flex flex-col items-center gap-2 px-6 pt-16 pb-10 text-center"
+					v-else-if="!sections.length"
+					class="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center"
 				>
-					<span class="lucide-bell size-5 text-ink-gray-4" aria-hidden="true" />
-					<p class="text-base text-ink-gray-6">
-						{{ filter === "unread" ? "You're all caught up" : "No notifications yet" }}
-					</p>
-					<p class="text-sm text-ink-gray-5">
-						Notes and speaker replies on talks you follow show up here.
-					</p>
+					<span class="lucide-inbox size-5 text-ink-gray-5" aria-hidden="true" />
+					<p class="text-base text-ink-gray-5">{{ EMPTY[filter] }}</p>
 				</div>
-				<TransitionGroup v-else tag="div" name="notification" class="relative space-y-3">
-					<NotificationGroupCard
-						v-for="group in visible"
-						:key="`${group.reference_doctype}:${group.reference_name}`"
-						:group="group"
-						@open="openRecord(group)"
-						@read="markRead(group)"
-						@toggle-subscription="toggleSubscription(group)"
-					/>
-				</TransitionGroup>
+				<section v-for="section in sections" v-else :key="section.label">
+					<h3 class="px-3 pt-2.5 pb-1 text-sm text-ink-gray-5">{{ section.label }}</h3>
+					<TransitionGroup tag="ul" name="notification" class="relative">
+						<li v-for="item in section.rows" :key="item.name">
+							<NotificationRow :notification="item" @open="openNotification(item)" />
+						</li>
+					</TransitionGroup>
+				</section>
 			</div>
 		</DrawerContent>
 	</Drawer>
 </template>
 
 <style scoped>
-/* A card read away from the Unread tab fades out, and the ones below close the gap. */
+/* A row read away from the Unread tab fades out, and the ones below close the gap. */
 .notification-move {
 	transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 .notification-leave-active {
 	position: absolute;
 	inset-inline: 0;
-	transition:
-		opacity 150ms ease-out,
-		transform 150ms ease-out;
+	transition: opacity 150ms ease-out;
 }
 .notification-leave-to {
 	opacity: 0;
-	transform: scale(0.98);
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.notification-move,
-	.notification-leave-active {
-		transition: opacity 150ms ease-out;
-	}
-	.notification-leave-to {
-		transform: none;
+	.notification-move {
+		transition: none;
 	}
 }
 </style>
