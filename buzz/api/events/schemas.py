@@ -119,6 +119,11 @@ class GuestTicketType(APIResponse):
 	title: str | None = None
 
 
+class ZoneOption(APIResponse):
+	name: str
+	title: str
+
+
 class EventGuestsResponse(APIResponse):
 	title: str | None = None
 	# The event's own details, so a guest row can be drawn as the ticket it is.
@@ -136,6 +141,8 @@ class EventGuestsResponse(APIResponse):
 	guests: list[EventGuest]
 	has_next_page: bool = False
 	filter_fields: list[FilterField]
+	# The event's enabled check-in zones, default first.
+	zones: list[ZoneOption] = Field(default_factory=list)
 
 
 class DailyRegistrations(APIResponse):

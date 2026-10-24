@@ -1,21 +1,34 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import add_days, today
 
 from buzz.api.checkin import (
 	checkin_ticket,
 	get_checkin_events,
 	get_checkin_guests,
+	undo_checkin,
 	validate_ticket_for_checkin,
 )
-from buzz.api.checkin.exceptions import AlreadyCheckedIn, TicketCancelled, TicketNotFound
+from buzz.api.checkin.exceptions import (
+	AlreadyCheckedIn,
+	NotAllowedInZone,
+	NotCheckedIn,
+	TicketCancelled,
+	TicketNotFound,
+)
+from buzz.api.events.exceptions import ZoneNotFound
 from buzz.api.exceptions import NotPermitted
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
 	EventBookingFactory,
+	EventCheckinZoneFactory,
 	EventPaymentFactory,
 	EventTicketFactory,
+	EventTicketTypeFactory,
 	UserFactory,
 )
 
@@ -88,13 +101,106 @@ class TestCheckinTicket(CheckinTestCase):
 		with self.assertRaises(AlreadyCheckedIn):
 			checkin_ticket(self.ticket)
 
-		self.assertIn("already checked in today", frappe.local.message_log[-1]["message"])
+		self.assertIn("already checked in at Main Entrance", frappe.local.message_log[-1]["message"])
 
-	def test_validation_rejects_an_already_checked_in_ticket(self):
+	def test_validation_at_a_zone_rejects_an_already_checked_in_ticket(self):
 		checkin_ticket(self.ticket)
+		default = frappe.db.get_value("Event Check-in Zone", {"event": self.event, "is_default": 1})
 
 		with self.assertRaises(AlreadyCheckedIn):
-			validate_ticket_for_checkin(self.ticket)
+			validate_ticket_for_checkin(self.ticket, zone=default)
+
+
+class TestCheckinZones(CheckinTestCase):
+	def zone(self, *traits, **overrides) -> str:
+		return EventCheckinZoneFactory.create(*traits, event=self.event, **overrides).name
+
+	def checkin_rows(self) -> list[str]:
+		return frappe.get_all("Event Check In", filters={"ticket": self.ticket, "docstatus": 1}, pluck="zone")
+
+	def test_no_zone_checks_in_at_the_default_zone(self):
+		checkin_ticket(self.ticket)
+
+		default = frappe.db.get_value("Event Check-in Zone", {"event": self.event, "is_default": 1})
+		self.assertEqual(self.checkin_rows(), [default])
+
+	def test_zones_on_the_same_day_are_independent(self):
+		checkin_ticket(self.ticket)
+		checkin_ticket(self.ticket, zone=self.zone())
+
+		self.assertEqual(len(self.checkin_rows()), 2)
+
+	def test_once_per_event_refuses_the_next_day(self):
+		zone = self.zone("once_per_event")
+		checkin_ticket(self.ticket, zone=zone)
+
+		with patch("buzz.api.checkin.services.today", return_value=add_days(today(), 1)):
+			with self.assertRaises(AlreadyCheckedIn):
+				checkin_ticket(self.ticket, zone=zone)
+
+	def test_once_per_day_allows_the_next_day(self):
+		checkin_ticket(self.ticket)
+
+		with patch("buzz.api.checkin.services.today", return_value=add_days(today(), 1)):
+			checkin_ticket(self.ticket)
+
+		self.assertEqual(len(self.checkin_rows()), 2)
+
+	def test_a_ticket_type_rule_refuses_other_ticket_types(self):
+		vip = EventTicketTypeFactory.create(event=self.event).name
+		zone = self.zone(ticket_types=[{"ticket_type": vip}])
+
+		with self.assertRaises(NotAllowedInZone):
+			checkin_ticket(self.ticket, zone=zone)
+
+		ticket = EventTicketFactory.create(event=self.event, ticket_type=vip).name
+		self.assertTrue(checkin_ticket(ticket, zone=zone).ticket.is_checked_in)
+
+	def test_a_disabled_zone_is_refused(self):
+		with self.assertRaises(ZoneNotFound):
+			checkin_ticket(self.ticket, zone=self.zone("disabled"))
+
+	def test_a_zone_of_another_event_is_refused(self):
+		other_zone = EventCheckinZoneFactory.create().name
+
+		with self.assertRaises(ZoneNotFound):
+			validate_ticket_for_checkin(self.ticket, zone=other_zone)
+
+	def test_undo_is_per_zone(self):
+		zone = self.zone()
+		checkin_ticket(self.ticket, zone=zone)
+
+		with self.assertRaises(NotCheckedIn):
+			undo_checkin(self.ticket)
+
+		undo_checkin(self.ticket, zone=zone)
+		self.assertEqual(self.checkin_rows(), [])
+
+	def test_validate_with_no_zone_reports_every_zone(self):
+		zone = self.zone()
+		checkin_ticket(self.ticket)
+
+		zones = validate_ticket_for_checkin(self.ticket).__json__()["zones"]
+		added = next(row for row in zones if row["name"] == zone)
+
+		self.assertEqual(zones[0]["title"], "Main Entrance")
+		self.assertIsNotNone(zones[0]["checked_in_at"])
+		self.assertIsNone(added["checked_in_at"])
+		self.assertTrue(added["allowed"])
+
+	def test_guest_list_status_follows_the_zone(self):
+		zone = self.zone()
+		ticket = EventTicketFactory.create("submitted", event=self.event).name
+		checkin_ticket(ticket, zone=zone)
+
+		event = str(self.event)
+		at_default = get_checkin_guests(event, checked_in="1").__json__()
+		at_zone = get_checkin_guests(event, checked_in="1", zone=zone).__json__()
+
+		self.assertNotIn(ticket, [guest["name"] for guest in at_default["guests"]])
+		self.assertIn(ticket, [guest["name"] for guest in at_zone["guests"]])
+		self.assertIsNotNone(at_zone["guests"][0]["checked_in_at"])
+		self.assertIn(zone, [row["name"] for row in at_zone["zones"]])
 
 
 class TestCheckinAccess(IntegrationTestCase):

@@ -5,6 +5,7 @@ import { DonutChart, NumberCard } from "frappe-ui/charts"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
+import CheckInZoneSelect from "@/components/checkin/CheckInZoneSelect.vue"
 import EmptyState from "@/components/common/EmptyState.vue"
 import { ListFilters } from "@/components/common/filters"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
@@ -24,11 +25,14 @@ const eventId = route.params.eventId as string
 
 const { search, order, conditions, isFiltered } = useListQuery()
 
+const zone = ref("")
+
 const { guests, loadMore, page, loadingFirstPage, loadingMore } = useEventGuests(
 	eventId,
 	search,
 	order,
 	conditions,
+	{ zone },
 )
 
 // The export is the list on screen, not the whole event: same filters, same order.
@@ -138,6 +142,13 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 
 		<section class="space-y-3">
 			<h2 class="text-xl font-semibold text-ink-gray-9">Guest list</h2>
+
+			<CheckInZoneSelect
+				:model-value="zone || page.data?.zones[0]?.name || ''"
+				:zones="page.data?.zones ?? []"
+				class="w-48"
+				@update:model-value="zone = $event"
+			/>
 
 			<ListFilters
 				v-model="conditions"

@@ -3,6 +3,7 @@ import { type Ref, ref } from "vue"
 
 import beepFailSound from "@/assets/audio/beep-fail.wav"
 import beepSound from "@/assets/audio/beep.wav"
+import type { ZoneStatus } from "@/types"
 import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 import { serverErrorMessage } from "@/utils/serverError"
 
@@ -40,10 +41,13 @@ export interface ValidationResult {
 	error?: string
 	ticket?: ValidationTicket
 	payment_details?: PaymentDetails
+	zones?: ZoneStatus[]
 }
 
 const isProcessingTicket = ref(false)
 const validationResult = ref<ValidationResult | null>(null)
+// The zone scans are checked against; empty checks the ticket alone.
+const scanZone = ref("")
 
 let lastToastMessage: string | null = null
 let lastToastTime = 0
@@ -63,7 +67,7 @@ const showDebouncedToast = (message: string): void => {
 	toast.error(message)
 }
 
-const validateTicketResource = useCall<ValidationResult, { ticket_id: string }>({
+const validateTicketResource = useCall<ValidationResult, { ticket_id: string; zone?: string }>({
 	url: "/api/v2/method/buzz.api.checkin.validate_ticket_for_checkin",
 	method: "POST",
 	immediate: false,
@@ -82,7 +86,10 @@ const validateTicketResource = useCall<ValidationResult, { ticket_id: string }>(
 
 const validateTicket = (ticketId: string): void => {
 	isProcessingTicket.value = true
-	validateTicketResource.submit({ ticket_id: ticketId })
+	validateTicketResource.submit({
+		ticket_id: ticketId,
+		...(scanZone.value && { zone: scanZone.value }),
+	})
 }
 
 /** Scan state shared by the scanner and the page that opens the scanned guest. */
@@ -90,6 +97,7 @@ export function useTicketValidation(): {
 	isProcessingTicket: Ref<boolean>
 	validationResult: Ref<ValidationResult | null>
 	validateTicket: (ticketId: string) => void
+	scanZone: Ref<string>
 } {
-	return { isProcessingTicket, validationResult, validateTicket }
+	return { isProcessingTicket, validationResult, validateTicket, scanZone }
 }

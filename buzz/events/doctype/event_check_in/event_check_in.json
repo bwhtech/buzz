@@ -9,6 +9,7 @@
   "date",
   "column_break_fxzb",
   "ticket",
+  "zone",
   "section_break_tt1x",
   "amended_from"
  ],
@@ -51,13 +52,22 @@
    "fieldname": "date",
    "fieldtype": "Date",
    "label": "Date"
+  },
+  {
+   "fieldname": "zone",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Zone",
+   "options": "Event Check-in Zone",
+   "reqd": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-10-18 16:51:30.061975",
+ "modified": "2026-10-23 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Check In",

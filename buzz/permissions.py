@@ -20,6 +20,7 @@ DOCTYPE_SECTION = {
 	"Event Booking": "guests",
 	"Event Ticket": "guests",
 	"Event Check In": "guests",
+	"Event Check-in Zone": "guests",
 	"Event Feedback": "guests",
 	"Event Ticket Type": "ticketing",
 	"Event Ticket Category": "ticketing",

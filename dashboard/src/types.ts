@@ -325,7 +325,7 @@ export interface EventGuest {
 	ticket_type: string | null
 	registered_at: string | null
 	add_ons: GuestAddOn[]
-	// Today's check-in, if the guest has arrived.
+	// Today's check-in in the chosen zone, if the guest has arrived.
 	checked_in_at?: string | null
 }
 
@@ -347,6 +347,16 @@ export interface RegistrationTrend {
 	by_ticket_type: TicketTypeTotal[]
 }
 
+export interface GuestZone {
+	name: string
+	title: string
+}
+
+export interface ZoneStatus extends GuestZone {
+	allowed: boolean
+	checked_in_at: string | null
+}
+
 export interface EventGuests {
 	title: string | null
 	start_date: string | null
@@ -360,6 +370,7 @@ export interface EventGuests {
 	guests: EventGuest[]
 	has_next_page: boolean
 	filter_fields: FilterField[]
+	zones: GuestZone[]
 }
 
 export interface VerificationMethods {

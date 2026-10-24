@@ -36,3 +36,4 @@ buzz.patches.disable_unshipped_event_topics
 buzz.patches.use_buzz_navbar
 buzz.patches.move_community_topic_route
 buzz.patches.restructure_coupon_codes
+buzz.patches.add_default_check_in_zones
