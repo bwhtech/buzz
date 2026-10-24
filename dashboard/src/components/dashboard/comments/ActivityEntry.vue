@@ -21,6 +21,7 @@ const props = defineProps<{
 	saving?: boolean
 	fresh?: boolean
 	folded?: boolean
+	highlighted?: boolean
 }>()
 
 const emit = defineEmits<{ update: [content: string]; delete: [] }>()
@@ -54,7 +55,12 @@ function save(content: string) {
 </script>
 
 <template>
-	<li class="entry relative flex items-start gap-3" :data-fresh="fresh || undefined">
+	<li
+		class="entry relative flex items-start gap-3"
+		:data-entry="entry.name"
+		:data-fresh="fresh || undefined"
+		:data-highlighted="highlighted || undefined"
+	>
 		<!-- The rail lane: a ringed icon for events, an avatar for notes and emails. -->
 		<div
 			class="relative z-[1] flex w-7 shrink-0 justify-center"
@@ -184,6 +190,29 @@ function save(content: string) {
 	.entry[data-fresh] {
 		opacity: 0;
 		transform: translateY(4px);
+	}
+}
+
+/* A linked entry holds a tint long enough to be found, then lets it go. */
+.entry[data-highlighted]::after {
+	content: "";
+	position: absolute;
+	inset: -6px -8px;
+	z-index: -1;
+	border-radius: 10px;
+	background: var(--surface-gray-2);
+	opacity: 0;
+	animation: highlight-fade 2400ms ease both;
+}
+
+.entry[data-highlighted] {
+	isolation: isolate;
+}
+
+@keyframes highlight-fade {
+	0%,
+	50% {
+		opacity: 1;
 	}
 }
 

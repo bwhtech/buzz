@@ -58,9 +58,10 @@ const sinceYesterday = computed(() => {
 
 // The proposal is what is held, not its position. A card can be opened while a search is
 // still settling, and by the time the new page lands an index points at a different talk.
-// Mention emails and notifications link here with `?proposal=`.
-const { selectedId, selected } = useDeepLinkedRecord({
+// Mention emails and notifications link here with `?proposal=`, and `&activity=` for the note.
+const { selectedId, selected, linkedEntry } = useDeepLinkedRecord({
 	param: "proposal",
+	entryParam: "activity",
 	rows: proposals,
 	fetchOne,
 	notFound: __("This talk isn't available"),
@@ -224,6 +225,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 	<EventTalkProposalDrawer
 		v-model:open="drawerOpen"
 		:proposal="selected"
+		:linked-entry="linkedEntry"
 		:can-write="page.data?.can_write"
 		@changed="onStatusChanged"
 	/>

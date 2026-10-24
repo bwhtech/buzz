@@ -17,6 +17,7 @@ const props = defineProps<{
 	doc: TalkProposal | null | undefined
 	loading: boolean
 	speakers: ProposalSpeaker[]
+	linkedEntry?: string | null
 }>()
 
 // The drawer keys this by proposal, so the feed always belongs to one proposal.
@@ -154,6 +155,7 @@ function post(content: string, toSpeakers: boolean, copies: EmailCopies) {
 					:names="names"
 					:change-theme="getStatusTheme"
 					created-label="submitted this proposal"
+					:linked-entry="linkedEntry"
 				/>
 			</section>
 		</div>
