@@ -117,6 +117,12 @@ class TestDocumentComments(TeamPermissionTestCase):
 
 		self.assertEqual(emailed_to(self.proposal), {self.manager})
 
+	def test_mention_email_links_to_the_note(self):
+		with patch("frappe.sendmail") as sendmail:
+			name = self.add_as(self.alice, f"<p>{mention(self.manager)} take a look</p>")
+
+		self.assertTrue(sendmail.call_args.kwargs["args"]["button_url"].endswith(f"&activity={name}"))
+
 	def test_plain_note_emails_no_one(self):
 		self.add_as(self.alice)
 

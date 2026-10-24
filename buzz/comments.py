@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 import frappe
 from frappe import _
 from frappe.desk.notifications import extract_mentions
@@ -50,7 +52,7 @@ def notify_subscribers(
 		source,
 		subject.format(author, title),
 		from_user,
-		dashboard_url(doctype, name),
+		dashboard_url(doctype, name, activity=source.name),
 		content=snippet_of(source),
 		skip=skip,
 	)
@@ -120,7 +122,9 @@ def notify_mentioned_members(comment) -> set[str]:
 		template="comment_mention",
 		args={
 			**args,
-			"button_url": dashboard_url(comment.reference_doctype, comment.reference_name),
+			"button_url": dashboard_url(
+				comment.reference_doctype, comment.reference_name, activity=comment.name
+			),
 			"button_label": _("Open in Buzz"),
 		},
 		raw_html=True,
@@ -142,8 +146,10 @@ def note_email_args(doctype: str, name: str, author: str, note: str) -> dict:
 	}
 
 
-def dashboard_url(doctype: str, name: str) -> str | None:
+def dashboard_url(doctype: str, name: str, activity: str | None = None) -> str | None:
+	"""`activity` is the note or email the link scrolls the record's activity to."""
 	route = DASHBOARD_ROUTES.get(doctype)
 	if not route:
 		return None
-	return get_url(route.format(event=frappe.db.get_value(doctype, name, "event"), name=name))
+	url = route.format(event=frappe.db.get_value(doctype, name, "event"), name=name)
+	return get_url(f"{url}&{urlencode({'activity': activity})}" if activity else url)

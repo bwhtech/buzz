@@ -48,13 +48,13 @@ class TestNotificationSubscriptions(TeamPermissionTestCase):
 
 	def test_comment_subscribes_author_and_notifies_other_subscribers(self):
 		self.comment_as(self.alice)
-		self.comment_as(self.manager)
+		comment = self.comment_as(self.manager)
 
 		self.assertTrue(self.subscriptions.is_subscribed(self.alice))
 		[notification] = self.notifications_for(self.alice)
 		self.assertEqual(notification.type, "Buzz Activity")
 		self.assertEqual(notification.from_user, self.manager)
-		self.assertIn(f"proposal={self.proposal}", notification.link)
+		self.assertIn(f"proposal={self.proposal}&activity={comment}", notification.link)
 		self.assertEqual(self.notifications_for(self.manager), [])
 
 	def test_unsubscribed_member_is_skipped_until_they_comment_again(self):
