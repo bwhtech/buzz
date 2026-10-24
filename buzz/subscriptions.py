@@ -74,3 +74,32 @@ class Subscriptions:
 				"email_content": content,
 			},
 		)
+
+
+def delete_record_subscriptions(doc, method=None):
+	"""Frappe ignores these links on delete (`ignore_links_on_delete`), so the rows go afterwards."""
+	frappe.enqueue(
+		delete_subscriptions,
+		filters={"reference_doctype": doc.doctype, "reference_name": doc.name},
+		enqueue_after_commit=True,
+		now=frappe.in_test,
+	)
+
+
+def delete_subscriptions(filters: dict) -> None:
+	frappe.db.delete(DOCTYPE, filters)
+
+
+def drop_team_subscriptions(team: str, user: str) -> None:
+	"""Unsubscribes a member who left `team` from its records. Someone re-added before
+	this runs keeps them."""
+	from buzz.comments import team_of
+
+	if frappe.db.exists("Buzz Team Membership", {"team": team, "user": user, "enabled": 1}):
+		return
+	rows = frappe.get_all(
+		DOCTYPE, filters={"user": user}, fields=["name", "reference_doctype", "reference_name"]
+	)
+	names = [row.name for row in rows if team_of(row.reference_doctype, row.reference_name) == team]
+	if names:
+		delete_subscriptions({"name": ("in", names)})

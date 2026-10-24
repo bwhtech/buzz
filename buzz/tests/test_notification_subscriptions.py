@@ -2,6 +2,7 @@ import frappe
 
 from buzz.api.comments import add_comment, get_subscription, set_subscription
 from buzz.api.comments.exceptions import NotTeamMember
+from buzz.api.teams.services import remove_member
 from buzz.subscriptions import Subscriptions
 from buzz.tests.base_test_cases import TeamPermissionTestCase
 from buzz.tests.factories import (
@@ -106,3 +107,26 @@ class TestNotificationSubscriptions(TeamPermissionTestCase):
 		self.comment_as(self.manager)
 
 		self.assertEqual(len(self.notifications_for("Administrator")), 1)
+
+	def test_deleting_a_talk_drops_its_subscriptions(self):
+		self.subscriptions.subscribe(self.alice)
+
+		frappe.delete_doc("Talk Proposal", self.proposal)
+
+		self.assertFalse(
+			frappe.db.exists("Buzz Notification Subscription", {"reference_name": self.proposal})
+		)
+
+	def test_leaving_a_team_drops_subscriptions_on_its_records_only(self):
+		member = UserFactory.create_once("subscriptions-leaver@example.com").name
+		for team in (self.team_a, self.team_b):
+			BuzzTeamMembershipFactory.create(team=team, user=member, team_role="Manager")
+		other_team = Subscriptions("Talk Proposal", TalkProposalFactory.create(event=self.event_b).name)
+		self.subscriptions.subscribe(member)
+		other_team.subscribe(member)
+
+		with self.set_user(self.alice):
+			remove_member(self.team_a, member)
+
+		self.assertIsNone(self.subscriptions.row(member))
+		self.assertTrue(other_team.is_subscribed(member))
