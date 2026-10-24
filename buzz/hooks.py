@@ -99,9 +99,15 @@ doc_events = {
 # Records a Buzz Tag can be applied to; deleting one also removes its tags.
 taggable_doctypes = ["Event Sponsor", "Buzz Event", "Talk Proposal", "Buzz Team Membership"]
 for _doctype in taggable_doctypes:
-	doc_events.setdefault(_doctype, {})["on_trash"] = "buzz.events.doctype.buzz_tag.buzz_tag.delete_tag_links"
+	doc_events.setdefault(_doctype, {}).setdefault("on_trash", []).append(
+		"buzz.events.doctype.buzz_tag.buzz_tag.delete_tag_links"
+	)
 
 commentable_doctypes = ["Talk Proposal"]
+for _doctype in commentable_doctypes:
+	doc_events.setdefault(_doctype, {}).setdefault("on_trash", []).append(
+		"buzz.subscriptions.delete_record_subscriptions"
+	)
 doc_events["Communication"] = {"after_insert": "buzz.comments.notify_team_of_email"}
 doc_events["Email Queue"] = {"after_insert": "buzz.playground.inbox.capture_email"}
 doc_events.setdefault("Buzz Team", {})["after_insert"] = "buzz.playground.demo_data.seed_community_requests"
@@ -111,6 +117,7 @@ fixtures = [
 	{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Event Manager", "Frontdesk Manager"]]}},
 	{"dt": "Buzz Theme", "filters": {"is_standard": 1}},
 	{"dt": "Event Topic", "filters": {"is_standard": 1}},
+	{"dt": "Notification Type", "filters": {"name": "Buzz Activity"}},
 ]
 
 user_invitation = {
@@ -120,7 +127,11 @@ user_invitation = {
 }
 
 
-ignore_links_on_delete = ["Ticket Cancellation Request", "Ticket Add-on Value"]
+ignore_links_on_delete = [
+	"Ticket Cancellation Request",
+	"Ticket Add-on Value",
+	"Buzz Notification Subscription",
+]
 
 after_app_install = "buzz.install.after_app_install"
 

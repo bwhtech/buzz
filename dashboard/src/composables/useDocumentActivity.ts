@@ -7,6 +7,8 @@ import {
 	useDeleteComment,
 	useEmailSender,
 	useMentionMembers,
+	useSetSubscription,
+	useSubscription,
 	useUpdateComment,
 } from "@/data/comments"
 import { useSocket } from "@/socket"
@@ -44,6 +46,8 @@ export function useDocumentActivity(doctype: string, name: () => string) {
 	const adding = useAddComment()
 	const updating = useUpdateComment()
 	const deleting = useDeleteComment()
+	const subscription = useSubscription(reference)
+	const subscribing = useSetSubscription()
 
 	const noteCount = computed(
 		() =>
@@ -66,11 +70,17 @@ export function useDocumentActivity(doctype: string, name: () => string) {
 			.then(() => {
 				// What was just posted must be in view, whatever the filter hid.
 				filter.value = "all"
+				// Posting subscribes the author.
+				subscription.reload()
 				return reload()
 			})
 	const update = (comment: string, content: string) =>
 		updating.submit({ name: comment, content }).then(reload, ignore)
 	const remove = (comment: string) => deleting.submit({ name: comment }).then(reload, ignore)
+	const toggleSubscription = () =>
+		subscribing
+			.submit({ ...reference(), subscribed: !subscription.data })
+			.then(() => subscription.reload(), ignore)
 
 	// The server sends this to team members only, without the note itself.
 	const socket = useSocket()
@@ -90,6 +100,9 @@ export function useDocumentActivity(doctype: string, name: () => string) {
 		adding,
 		updating,
 		deleting,
+		subscription,
+		subscribing,
+		toggleSubscription,
 		add,
 		update,
 		remove,

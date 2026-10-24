@@ -18,6 +18,7 @@ from buzz.api.teams.schemas import TeamMember
 from buzz.api.teams.services import members_of
 from buzz.comments import is_commentable, note_email_args, team_of
 from buzz.permissions import ADMIN_ROLES, has_team_access, is_unrestricted, team_role_of
+from buzz.subscriptions import Subscriptions
 
 
 def proposal_speaker_emails(proposal: str) -> list[str]:
@@ -119,6 +120,15 @@ class DocumentComments:
 		user = frappe.session.user
 		return owner == user or is_unrestricted(user) or team_role_of(user, self.team) in ADMIN_ROLES
 
+	def subscriptions(self) -> Subscriptions:
+		return Subscriptions(self.reference_doctype, self.reference_name)
+
+	def is_subscribed(self) -> bool:
+		return self.subscriptions().is_subscribed(frappe.session.user)
+
+	def set_subscribed(self, subscribed: bool) -> None:
+		self.subscriptions().set(frappe.session.user, subscribed)
+
 	def email_sender(self) -> str | None:
 		return frappe.db.get_value("Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "email_id")
 
@@ -144,4 +154,5 @@ class DocumentComments:
 			send_email=False,
 		)["name"]
 		send_in_layout(communication, render_email("proposal_note", args))
+		self.set_subscribed(True)
 		return communication

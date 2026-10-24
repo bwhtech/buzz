@@ -37,3 +37,5 @@ buzz.patches.use_buzz_navbar
 buzz.patches.move_community_topic_route
 buzz.patches.restructure_coupon_codes
 buzz.patches.convert_plain_text_editor_values
+buzz.patches.subscribe_talk_participants
+buzz.patches.email_buzz_activity

@@ -130,6 +130,8 @@ class BuzzTeamMembership(Document):
 	def on_update(self):
 		# Fires on insert too — Document._action is "save" for both.
 		sync_frappe_roles(self.user)
+		if self.has_value_changed("enabled") and not self.enabled:
+			self.drop_subscriptions()
 
 	def on_trash(self):
 		if self.team_role == "Owner":
@@ -138,6 +140,16 @@ class BuzzTeamMembership(Document):
 	def after_delete(self):
 		# Not on_trash — that runs before the row is gone, so it would still be counted.
 		sync_frappe_roles(self.user)
+		self.drop_subscriptions()
+
+	def drop_subscriptions(self):
+		frappe.enqueue(
+			"buzz.subscriptions.drop_team_subscriptions",
+			team=self.team,
+			user=self.user,
+			enqueue_after_commit=True,
+			now=frappe.in_test,
+		)
 
 	def validate(self):
 		self.validate_duplicate()

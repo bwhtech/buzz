@@ -149,6 +149,8 @@ declare module 'vue' {
     MobileMoreSheet: typeof import('./src/components/dashboard/MobileMoreSheet.vue')['default']
     MobileStepBar: typeof import('./src/components/registration/MobileStepBar.vue')['default']
     MobileTotalBar: typeof import('./src/components/registration/MobileTotalBar.vue')['default']
+    NotificationRow: typeof import('./src/components/dashboard/notifications/NotificationRow.vue')['default']
+    NotificationsPanel: typeof import('./src/components/dashboard/notifications/NotificationsPanel.vue')['default']
     OfflinePaymentDialog: typeof import('./src/components/OfflinePaymentDialog.vue')['default']
     OrderSummary: typeof import('./src/components/registration/OrderSummary.vue')['default']
     OtpDialog: typeof import('./src/components/registration/OtpDialog.vue')['default']

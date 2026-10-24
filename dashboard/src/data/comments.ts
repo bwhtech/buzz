@@ -28,6 +28,21 @@ export function useEmailSender(reference: () => Reference) {
 	})
 }
 
+export function useSubscription(reference: () => Reference) {
+	return useCall<boolean, Reference>({
+		url: "/api/v2/method/buzz.api.comments.get_subscription",
+		params: reference,
+	})
+}
+
+export function useSetSubscription() {
+	return useCall<null, Reference & { subscribed: boolean }>({
+		url: "/api/v2/method/buzz.api.comments.set_subscription",
+		method: "POST",
+		immediate: false,
+	})
+}
+
 export function useAddComment() {
 	return useCall<
 		string,
