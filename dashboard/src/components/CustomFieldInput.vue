@@ -75,7 +75,7 @@
 		:placeholder="getFieldPlaceholder(field)"
 	/>
 
-	<div v-else-if="isTextareaField(field.fieldtype)" class="space-y-1.5">
+	<div v-else-if="field.fieldtype === 'Small Text'" class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(field.label) }}
 			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
@@ -87,6 +87,26 @@
 			:required="!!field.mandatory"
 			variant="outline"
 		/>
+	</div>
+
+	<div v-else-if="field.fieldtype === 'Text Editor'" class="space-y-1.5">
+		<label class="text-xs text-ink-gray-5 block">
+			{{ __(field.label) }}
+			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
+		</label>
+		<Editor
+			v-model="richTextValue"
+			:extensions="richTextExtensions"
+			:placeholder="getFieldPlaceholder(field)"
+		>
+			<EditorFixedMenu
+				:items="richTextToolbar"
+				class="rounded-t-5 border border-b-0 border-outline-gray-2 px-2 py-1"
+			/>
+			<EditorContent
+				class="prose-sm py-2 px-3 min-h-[8rem] border border-outline-gray-2 hover:border-outline-gray-3 rounded-b-5 bg-surface-gray-3"
+			/>
+		</Editor>
 	</div>
 
 	<div v-else-if="field.fieldtype === 'Rating'" class="space-y-1.5">
@@ -184,6 +204,7 @@ import {
 	Rating,
 	Textarea,
 } from "frappe-ui"
+import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, type PropType } from "vue"
 import LucideX from "~icons/lucide/x"
 
@@ -195,8 +216,8 @@ import {
 	getFormControlType,
 	isDateField,
 	isDateTimeField,
-	isTextareaField,
 } from "@/composables/useCustomFields"
+import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 
 const props = defineProps({
 	field: {
@@ -223,6 +244,16 @@ const multiSelectProxy = computed({
 			const values = val.map((item) => item.value || item)
 			model.value = values.join(",")
 		}
+	},
+})
+
+// An emptied editor emits an empty paragraph, which mandatory checks would accept.
+const EMPTY_EDITOR_HTML = /^(<p>(<br\s*\/?>)?<\/p>)?$/
+
+const richTextValue = computed({
+	get: () => model.value || "",
+	set: (html: string) => {
+		model.value = EMPTY_EDITOR_HTML.test(html) ? "" : html
 	},
 })
 

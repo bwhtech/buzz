@@ -159,6 +159,22 @@ body {
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
+	max-width: 100%;
+}
+
+.meta-venue-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.meta-more-locations {
+	flex: none;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: radial-gradient(closest-side, var(--surface-gray-2), transparent);
+	color: var(--ink-strong);
+	font-size: 0.85em;
 }
 
 /* Layout: banner, title and content share the wide column; the side panel runs beside them

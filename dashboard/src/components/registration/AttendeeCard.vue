@@ -50,6 +50,7 @@
 					@update:model-value="emit('update:isMe', Boolean($event))"
 				/>
 				<div
+					v-if="!identityHidden || customFields.length"
 					class="grid grid-cols-1 items-start gap-3.5 md:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]"
 				>
 					<template v-if="!identityHidden">
