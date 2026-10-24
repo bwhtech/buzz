@@ -1,5 +1,3 @@
-from urllib.parse import urlencode
-
 import frappe
 from frappe import _
 from frappe.desk.notifications import extract_mentions
@@ -152,4 +150,4 @@ def dashboard_url(doctype: str, name: str, activity: str | None = None) -> str |
 	if not route:
 		return None
 	url = route.format(event=frappe.db.get_value(doctype, name, "event"), name=name)
-	return get_url(f"{url}&{urlencode({'activity': activity})}" if activity else url)
+	return get_url(f"{url}&activity={activity}" if activity else url)
