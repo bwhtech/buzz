@@ -4,7 +4,7 @@ import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import ManagerSidebarHeader from "@/components/dashboard/ManagerSidebarHeader.vue"
-import NotificationsDrawer from "@/components/dashboard/notifications/NotificationsDrawer.vue"
+import NotificationsPanel from "@/components/dashboard/notifications/NotificationsPanel.vue"
 import WorkspaceOpening from "@/components/dashboard/WorkspaceOpening.vue"
 import UserMenu from "@/components/UserMenu.vue"
 import { openingTeam } from "@/composables/useWorkspaceOpening"
@@ -85,7 +85,7 @@ watch(headerKey, (key, previous) => {
 			</div>
 
 			<div class="mt-auto flex flex-col gap-2 px-2 py-2">
-				<NotificationsDrawer />
+				<NotificationsPanel />
 				<SidebarItem
 					:label="discoverEvents.label"
 					:icon="discoverEvents.icon"
@@ -101,6 +101,7 @@ watch(headerKey, (key, previous) => {
 
 		<div class="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-surface-sidebar py-2 pl-1">
 			<div
+				id="shell-content"
 				class="relative flex h-full flex-col overflow-hidden rounded-l-6 bg-surface-elevation-1 shadow-base"
 			>
 				<PageHeaderTarget />
