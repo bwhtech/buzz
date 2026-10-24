@@ -6,7 +6,7 @@
   "color_scheme": "dark",
   "enabled": 1,
   "is_standard": 1,
-  "modified": "2026-09-21 17:00:00.000000",
+  "modified": "2026-10-24 12:00:00.000000",
   "tokens": [
    {
     "doctype": "Buzz Theme Token",
@@ -136,6 +136,22 @@
     "doctype": "Buzz Theme Token",
     "parentfield": "tokens",
     "parenttype": "Buzz Theme",
+    "token": "font-title",
+    "type": "Font",
+    "value": "League Gothic"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "title-size",
+    "type": "Dimension",
+    "value": "40px"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
     "token": "radius",
     "type": "Dimension",
     "value": "10px"
@@ -147,22 +163,6 @@
     "token": "radius-banner",
     "type": "Dimension",
     "value": "12px"
-   },
-   {
-    "doctype": "Buzz Theme Token",
-    "parentfield": "tokens",
-    "parenttype": "Buzz Theme",
-    "token": "measure",
-    "type": "Dimension",
-    "value": "510px"
-   },
-   {
-    "doctype": "Buzz Theme Token",
-    "parentfield": "tokens",
-    "parenttype": "Buzz Theme",
-    "token": "aside",
-    "type": "Dimension",
-    "value": "250px"
    },
    {
     "doctype": "Buzz Theme Token",
@@ -181,7 +181,7 @@
   "color_scheme": "light",
   "enabled": 1,
   "is_standard": 1,
-  "modified": "2026-09-21 17:00:00.000000",
+  "modified": "2026-10-24 12:00:00.000000",
   "tokens": [
    {
     "doctype": "Buzz Theme Token",
@@ -311,6 +311,22 @@
     "doctype": "Buzz Theme Token",
     "parentfield": "tokens",
     "parenttype": "Buzz Theme",
+    "token": "font-title",
+    "type": "Font",
+    "value": "League Gothic"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
+    "token": "title-size",
+    "type": "Dimension",
+    "value": "40px"
+   },
+   {
+    "doctype": "Buzz Theme Token",
+    "parentfield": "tokens",
+    "parenttype": "Buzz Theme",
     "token": "radius",
     "type": "Dimension",
     "value": "6px"
@@ -322,22 +338,6 @@
     "token": "radius-banner",
     "type": "Dimension",
     "value": "8px"
-   },
-   {
-    "doctype": "Buzz Theme Token",
-    "parentfield": "tokens",
-    "parenttype": "Buzz Theme",
-    "token": "measure",
-    "type": "Dimension",
-    "value": "510px"
-   },
-   {
-    "doctype": "Buzz Theme Token",
-    "parentfield": "tokens",
-    "parenttype": "Buzz Theme",
-    "token": "aside",
-    "type": "Dimension",
-    "value": "250px"
    },
    {
     "doctype": "Buzz Theme Token",

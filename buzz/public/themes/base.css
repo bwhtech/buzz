@@ -126,15 +126,18 @@ body {
 	src: url("/assets/buzz/fonts/LeagueGothic-Latin.woff2") format("woff2");
 }
 
-/* The title face, shared by the date badge so both always match. */
-:root {
-	--font-title: "League Gothic", var(--font-display);
+/* Solid buttons take the theme's accent. Unlayered, so it wins over espresso's layered default. */
+.es-button:not([data-theme]) {
+	--bt-solid-bg: var(--accent);
+	--bt-solid-bg-hover: var(--accent-hover);
+	--bt-solid-bg-active: var(--accent-hover);
+	--bt-solid-fg: var(--accent-ink);
 }
 
 .event-title {
 	color: var(--ink-title);
 	font-family: var(--font-title);
-	font-size: 40px;
+	font-size: var(--title-size);
 	font-weight: 400;
 	line-height: 1.2;
 	letter-spacing: 0.017em;
