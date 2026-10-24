@@ -9,7 +9,7 @@ from frappe.website.website_generator import WebsiteGenerator
 
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import create_team_settings
-from buzz.permissions import can_manage_members, my_team_names
+from buzz.permissions import PEOPLE, can_manage_members, my_team_names
 from buzz.www.site_header import apply_site_context
 
 SEARCH_LIMIT = 10
@@ -179,7 +179,7 @@ class BuzzTeam(WebsiteGenerator):
 		return [{"value": user.name, "description": user.full_name} for user in users]
 
 	def member_users(self) -> list[str]:
-		return frappe.get_all("Buzz Team Membership", filters={"team": self.name, "enabled": 1}, pluck="user")
+		return frappe.get_all("Buzz Team Membership", filters={**PEOPLE, "team": self.name}, pluck="user")
 
 	def check_can_manage_members(self):
 		if not can_manage_members(self.name):
