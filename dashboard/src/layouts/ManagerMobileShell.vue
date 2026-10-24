@@ -33,7 +33,7 @@ const showNav = computed(() => {
 <template>
 	<MobileShell>
 		<div class="relative min-h-full bg-surface-elevation-1">
-			<router-view />
+			<router-view :key="$route.params.eventId as string" />
 			<WorkspaceOpening />
 		</div>
 

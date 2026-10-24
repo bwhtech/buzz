@@ -371,6 +371,7 @@ def event_guests(
 	start: int = 0,
 	limit: int = GUESTS_PAGE_SIZE,
 	checked_in: str | None = None,
+	name: str | None = None,
 ) -> EventGuestsResponse:
 	"""One page of the people holding a ticket to an event.
 
@@ -389,6 +390,8 @@ def event_guests(
 	if checked_in in ("0", "1"):
 		operator = "in" if checked_in == "1" else "not in"
 		conditions.append(["name", operator, list(arrivals) or [""]])
+	if name:
+		conditions.append(["name", "=", name])
 	query_filters = [["event", "=", event], ["docstatus", "=", 1], *conditions]
 	or_filters = guest_search_filters(search)
 	limit = max(1, min(int(limit), 100))

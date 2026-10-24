@@ -201,8 +201,10 @@ test.describe("Guest list", () => {
 	]
 
 	let eventId: string
+	let ticketNames: string[]
 
 	test.beforeEach(async ({ page, request }) => {
+		ticketNames = []
 		const team = await ensureTestTeam(request)
 		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
 			event: {
@@ -230,7 +232,7 @@ test.describe("Guest list", () => {
 		})
 
 		for (const [index, guest] of GUESTS.entries()) {
-			const ticket = await createDoc(request, "Event Ticket", {
+			const ticket = await createDoc<{ name: string }>(request, "Event Ticket", {
 				event: eventId,
 				ticket_type: ticketType.name,
 				attendee_name: guest.name,
@@ -243,6 +245,7 @@ test.describe("Guest list", () => {
 			// A draft ticket belongs to a booking still being paid for; only a submitted
 			// one is somebody coming.
 			await callMethod(request, "frappe.client.submit", { doc: ticket })
+			ticketNames.push(ticket.name)
 		}
 
 		await page.goto(`/b/manage/events/${eventId}/details`)
@@ -279,6 +282,14 @@ test.describe("Guest list", () => {
 		await expect(page.getByRole("button", { name: /Registration (Open|Closed)/ })).toBeVisible({
 			timeout: 15000,
 		})
+	})
+
+	test("opens a linked guest the filtered list leaves out", async ({ page }) => {
+		await page.goto(`/b/manage/events/${eventId}/guests?q=Grace&guest=${ticketNames[0]}`)
+
+		await expect(page.getByRole("dialog")).toContainText(GUESTS[0].email, { timeout: 15000 })
+		// The param is read once and dropped; the search stays.
+		await expect(page).toHaveURL(new RegExp(`/guests\\?q=Grace$`))
 	})
 
 	test("narrows the guest list by search", async ({ page }) => {

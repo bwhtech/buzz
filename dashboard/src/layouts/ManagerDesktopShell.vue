@@ -103,7 +103,7 @@ watch(headerKey, (key, previous) => {
 			>
 				<PageHeaderTarget />
 				<div class="relative min-h-0 flex-1 overflow-y-auto">
-					<router-view />
+					<router-view :key="$route.params.eventId as string" />
 				</div>
 				<WorkspaceOpening />
 			</div>

@@ -13,6 +13,7 @@ import EventGuestSkeleton from "@/components/dashboard/events/EventGuestSkeleton
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import GuestInfoDrawer from "@/components/dashboard/events/GuestInfoDrawer.vue"
 import GuestListExport from "@/components/dashboard/events/GuestListExport.vue"
+import { useDeepLinkedRecord } from "@/composables/useDeepLinkedRecord"
 import { useEventGuests } from "@/composables/useEventGuests"
 import { useListQuery } from "@/composables/useListQuery"
 import { useRegistrationTrend } from "@/data/events"
@@ -24,7 +25,7 @@ const eventId = route.params.eventId as string
 
 const { search, order, conditions, isFiltered } = useListQuery()
 
-const { guests, loadMore, page, loadingFirstPage, loadingMore } = useEventGuests(
+const { guests, fetchOne, loadMore, page, loadingFirstPage, loadingMore } = useEventGuests(
 	eventId,
 	search,
 	order,
@@ -73,13 +74,17 @@ const sinceYesterday = computed(() => {
 
 // The ticket is what is held, not its position. A row can be opened while a search is
 // still settling, and by the time the new page lands an index points at a different guest.
-const selectedId = ref<string | null>(null)
+// A `?guest=` link opens that ticket; one past the loaded pages has no neighbours to step to.
+const { selectedId, selected: selectedGuest } = useDeepLinkedRecord({
+	param: "guest",
+	rows: guests,
+	fetchOne,
+	notFound: __("This guest isn't available"),
+})
 
 const selectedIndex = computed(() =>
 	guests.value.findIndex((guest) => guest.name === selectedId.value),
 )
-
-const selectedGuest = computed(() => guests.value[selectedIndex.value] ?? null)
 
 const drawerOpen = computed<boolean>({
 	get: () => selectedGuest.value !== null,

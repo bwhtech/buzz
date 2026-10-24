@@ -44,12 +44,14 @@ def get_event_guests(
 	order: str = "desc",
 	start: int = 0,
 	limit: int = services.GUESTS_PAGE_SIZE,
+	name: str | None = None,
 ) -> EventGuestsResponse:
 	"""One page of the people holding a submitted ticket to an event, with their add-ons.
 
 	`filters` is a JSON list of `[field, operator, value]`, the string the dashboard keeps in its URL.
+	`name` narrows the page to that one ticket, for opening it from a link.
 	"""
-	return services.event_guests(event, search, filters, order, start, limit)
+	return services.event_guests(event, search, filters, order, start, limit, name=name)
 
 
 @frappe.whitelist(methods=["POST"])

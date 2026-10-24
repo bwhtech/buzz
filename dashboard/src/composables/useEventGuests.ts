@@ -60,6 +60,11 @@ export function useEventGuests(
 		},
 	})
 
+	// One ticket by name, through the same permission check, for a link to a row not loaded.
+	const lookup = useCall<EventGuests, Record<string, string | number>>({ url, immediate: false })
+	const fetchOne = async (name: string) =>
+		(await lookup.submit({ event, name, limit: 1 }))?.guests[0] ?? null
+
 	// Sync, so the offset is back at zero before useCall's own watcher rebuilds the URL —
 	// a pre-flush reset lets the stale offset go out as a request that is aborted a tick later.
 	watch([debouncedSearch, order, conditions, checkedIn], () => (start.value = 0), {
@@ -73,6 +78,7 @@ export function useEventGuests(
 
 	return {
 		guests,
+		fetchOne,
 		loadMore,
 		page,
 		// The first page is the only one that leaves the list empty while it loads.
