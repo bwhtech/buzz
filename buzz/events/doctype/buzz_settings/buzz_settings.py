@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+LISTING_FIELDS = ("list_on_buzz_events", "buzz_events_url", "buzz_events_api_key", "buzz_events_api_secret")
+
 
 class BuzzSettings(Document):
 	# begin: auto-generated types
@@ -24,6 +26,9 @@ class BuzzSettings(Document):
 		app_logo: DF.AttachImage | None
 		app_logo_dark: DF.AttachImage | None
 		auto_send_pitch_deck: DF.Check
+		buzz_events_api_key: DF.Data | None
+		buzz_events_api_secret: DF.Password | None
+		buzz_events_url: DF.Data | None
 		default_payment_gateway: DF.Link | None
 		default_sponsor_deck_cc: DF.SmallText | None
 		default_sponsor_deck_email_template: DF.Link | None
@@ -37,6 +42,7 @@ class BuzzSettings(Document):
 		google_maps_embed_api_key: DF.Data | None
 		google_maps_enabled: DF.Check
 		google_places_api_key: DF.Password | None
+		list_on_buzz_events: DF.Check
 		login_banner: DF.MarkdownEditor | None
 		show_hosting_banner: DF.Check
 		support_email: DF.Data | None
@@ -46,6 +52,19 @@ class BuzzSettings(Document):
 		"""Validate the settings."""
 		self.validate_transfer_days()
 		self.validate_app_logos()
+		self.validate_buzz_events_url()
+
+	def on_update(self):
+		listing_changed = any(self.has_value_changed(field) for field in LISTING_FIELDS)
+		if self.list_on_buzz_events and listing_changed:
+			frappe.enqueue(
+				"buzz.events.buzz_events_listing.sync_all_events", queue="long", enqueue_after_commit=True
+			)
+
+	def validate_buzz_events_url(self):
+		# The API secret travels in a header, so it must not go over plain HTTP.
+		if self.list_on_buzz_events and not (self.buzz_events_url or "").startswith("https://"):
+			frappe.throw(_("The buzz.events URL must start with https://."))
 
 	def validate_app_logos(self):
 		if bool(self.app_logo) != bool(self.app_logo_dark):
