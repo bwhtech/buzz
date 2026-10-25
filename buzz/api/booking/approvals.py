@@ -17,7 +17,9 @@ from buzz.api.booking.schemas import (
 	SetApprovalResponse,
 )
 from buzz.api.booking.services import verify_booking_access_token
+from buzz.api.events.exceptions import CannotManageEvent
 from buzz.api.events.services import manageable_event
+from buzz.permissions import has_section_permission
 from buzz.ticketing.approval import PENDING_APPROVAL, approval_ticket_types
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import start_capacity_transaction
 
@@ -28,9 +30,17 @@ class ApprovalService:
 	def __init__(self, event: str):
 		self.event = manageable_event(event, "guests")
 
-	def pending_names(self) -> list[str]:
-		filters = {**PENDING_APPROVAL, "event": self.event.name}
-		return frappe.get_all("Event Booking", filters=filters, order_by="creation asc", pluck="name")
+	def pending_filters(self) -> dict:
+		return {**PENDING_APPROVAL, "event": self.event.name}
+
+	def pending_names(self, limit: int | None = None) -> list[str]:
+		return frappe.get_all(
+			"Event Booking",
+			filters=self.pending_filters(),
+			order_by="creation asc",
+			pluck="name",
+			limit=limit,
+		)
 
 	def pending_booking(self, name: str):
 		booking = frappe.get_doc("Event Booking", name)
@@ -38,12 +48,12 @@ class ApprovalService:
 			BookingNotPending.throw()
 		return booking
 
-	def pending_bookings(self) -> PendingBookingsResponse:
-		bookings = [frappe.get_doc("Event Booking", name) for name in self.pending_names()]
+	def pending_bookings(self, limit: int = 100) -> PendingBookingsResponse:
+		bookings = [frappe.get_doc("Event Booking", name) for name in self.pending_names(limit)]
 		titles = ticket_type_titles(bookings)
 		declined_users = self.previously_declined_users()
 		return PendingBookingsResponse(
-			total=len(bookings),
+			total=frappe.db.count("Event Booking", self.pending_filters()),
 			bookings=[
 				pending_booking_row(booking, titles, booking.user in declined_users) for booking in bookings
 			],
@@ -76,9 +86,14 @@ class ApprovalService:
 
 	def decline(self, names: list[str], message: str | None) -> DeclineBookingsResponse:
 		reason = (message or "").strip() or None
+		declined = []
 		for name in names:
-			self.pending_booking(name).decline_request(reason)
-		return DeclineBookingsResponse(declined=names)
+			try:
+				self.pending_booking(name).decline_request(reason)
+			except BookingNotPending:
+				continue
+			declined.append(name)
+		return DeclineBookingsResponse(declined=declined)
 
 	def released_requests(self, ticket_type: str | None) -> list[str]:
 		"""Pending requests that stop needing approval once it is turned off for
@@ -106,6 +121,8 @@ class ApprovalService:
 	def set_approval(
 		self, enabled: bool, ticket_type: str | None, pending_action: Literal["keep", "approve", "decline"]
 	) -> SetApprovalResponse:
+		if not has_section_permission(self.event.name, "ticketing", "write", frappe.session.user):
+			CannotManageEvent.throw()
 		setting = self.approval_setting(ticket_type)
 		released = [] if enabled else self.released_requests(ticket_type)
 		setting.requires_approval = int(enabled)
@@ -159,17 +176,18 @@ def is_pending_request(booking) -> bool:
 
 
 def withdraw_request(name: str, token: str | None) -> None:
-	booking = frappe.get_doc("Event Booking", name)
-	if booking.user != frappe.session.user and not verify_booking_access_token(name, token):
+	owner = frappe.db.get_value("Event Booking", name, "user")
+	if not owner or (owner != frappe.session.user and not verify_booking_access_token(name, token)):
 		CannotWithdrawBooking.throw()
+	booking = frappe.get_doc("Event Booking", name)
 	if not is_pending_request(booking):
 		BookingNotPending.throw()
 	booking.discard_as("Withdrawn")
 
 
 @frappe.whitelist()
-def get_pending_bookings(event: str) -> PendingBookingsResponse:
-	return ApprovalService(event).pending_bookings()
+def get_pending_bookings(event: str, limit: int = 100) -> PendingBookingsResponse:
+	return ApprovalService(event).pending_bookings(limit)
 
 
 @frappe.whitelist(methods=["POST"])

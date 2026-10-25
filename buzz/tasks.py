@@ -14,6 +14,13 @@ def unpublish_ticket_types_after_last_date():
 	)
 
 
+def expire_request(name: str):
+	try:
+		frappe.get_doc("Event Booking", name).discard_as("Expired")
+	except Exception:
+		frappe.log_error(title=f"Could not expire approval request {name}")
+
+
 def expire_pending_approval_requests():
 	"""Requests still waiting once their event has ended can never be approved."""
 	pending = frappe.get_all("Event Booking", filters=PENDING_APPROVAL, fields=["name", "event"])
@@ -24,4 +31,4 @@ def expire_pending_approval_requests():
 	}
 	for row in pending:
 		if row.event in ended_events:
-			frappe.get_doc("Event Booking", row.name).discard_as("Expired")
+			expire_request(row.name)

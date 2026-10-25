@@ -291,7 +291,10 @@ class BookingService:
 		booking.send_approval_email(
 			"booking_approval_pending", _("Your request to join {0} is pending").format(self.event.title)
 		)
-		notify_hosts_of_request(booking)
+		try:
+			notify_hosts_of_request(booking)
+		except Exception:
+			frappe.log_error(title="Could not notify hosts of an approval request")
 		return FreeBookingResponse(
 			booking_name=booking.name, redirect_to=success_path(booking.name), approval_pending=True
 		)

@@ -40,11 +40,14 @@ const emit = defineEmits<{ toggle: []; approve: []; decline: [] }>()
 				</li>
 			</ul>
 
-			<dl v-if="booking.answers.length" class="space-y-0.5 text-sm">
-				<div v-for="answer in booking.answers" :key="answer.label" class="flex gap-2">
+			<dl
+				v-if="booking.answers.length"
+				class="grid grid-cols-[10rem_1fr] gap-x-3 gap-y-0.5 text-sm"
+			>
+				<template v-for="answer in booking.answers" :key="answer.label">
 					<dt class="text-ink-gray-5">{{ answer.label }}</dt>
 					<dd class="text-ink-gray-8">{{ answer.value }}</dd>
-				</div>
+				</template>
 			</dl>
 
 			<p class="text-sm text-ink-gray-5">

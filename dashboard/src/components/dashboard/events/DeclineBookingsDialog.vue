@@ -13,16 +13,16 @@ watch(isOpen, (open) => open && (message.value = ""))
 <template>
 	<Dialog
 		v-model="isOpen"
-		:title="count === 1 ? 'Decline this request?' : `Decline ${count} requests?`"
+		:title="count === 1 ? __('Decline this request?') : __('Decline {0} requests?', [count])"
 	>
 		<div class="space-y-3">
 			<p class="text-base text-ink-gray-5">
-				They get an email, and can request to join again later.
+				{{ __("They get an email, and can request to join again later.") }}
 			</p>
 			<Textarea
 				v-model="message"
-				label="Message (optional)"
-				placeholder="Add a note for the guest"
+				:label="__('Message (optional)')"
+				:placeholder="__('Add a note for the guest')"
 				:rows="3"
 				maxlength="500"
 			/>
@@ -33,11 +33,11 @@ watch(isOpen, (open) => open && (message.value = ""))
 				<Button
 					theme="red"
 					variant="solid"
-					label="Decline"
+					:label="__('Decline')"
 					:loading="loading"
 					@click="emit('confirm', message)"
 				/>
-				<Button variant="outline" label="Cancel" @click="close" />
+				<Button variant="outline" :label="__('Cancel')" @click="close" />
 			</div>
 		</template>
 	</Dialog>

@@ -127,8 +127,12 @@ class EventBooking(Document):
 
 	def before_submit(self):
 		"""Set status before submit based on payment method."""
-		if self.is_awaiting_approval:
+		# `submit` has already set docstatus to 1 here, so `is_awaiting_approval` can't be used.
+		if self.requires_approval and not self.flags.approving:
 			frappe.throw(_("This booking is waiting for approval. Please use the Approve or Reject button."))
+
+		if self.flags.approving and self.total_amount:
+			frappe.throw(_("This request now has a price and can't be approved. Decline it instead."))
 
 		# Skip if already approved (submission triggered by approve_booking)
 		if self.status == "Approved":
@@ -204,7 +208,7 @@ class EventBooking(Document):
 		if self.flags.payment_received:
 			self.log_if_oversold(ticket_type, quantity)
 			return
-		if not ticket_type.is_published:
+		if not ticket_type.is_published and not self.flags.approving:
 			frappe.throw(_("{0} tickets no longer available!").format(ticket_type.title))
 
 		remaining = ticket_type.get_remaining_tickets(for_update=True, hold_token=self.hold_token)

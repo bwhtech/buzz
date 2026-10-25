@@ -31,7 +31,6 @@ VALID_PHONE = "+91-9000090000"
 
 EVENT_DATA_FIELDS = {
 	"registrations_closed",
-	"requires_approval",
 	"event_details",
 	"available_ticket_types",
 	"ticket_categories",

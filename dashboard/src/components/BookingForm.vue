@@ -387,7 +387,7 @@ function inCurrency<T extends AvailableTicketType | AvailableAddOn>(item: T) {
 const ticketTypes = computed(() => props.availableTicketTypes.map(inCurrency))
 const addOns = computed(() => props.availableAddOns.map(inCurrency))
 const ticketTypesMap = computed(() =>
-	Object.fromEntries(ticketTypes.value.map((t) => [String(t.name), t])),
+	Object.fromEntries(ticketTypes.value.map((ticketType) => [String(ticketType.name), ticketType])),
 )
 const addOnsMap = computed(() => Object.fromEntries(addOns.value.map((a) => [a.name, a])))
 
@@ -422,7 +422,9 @@ const quantities = computed(() => {
 // Ticket types with a limit are the only ones a hold reserves.
 const heldQuantities = computed(() => {
 	const limited = new Set(
-		props.availableTicketTypes.filter((t) => t.max_tickets_available).map((t) => String(t.name)),
+		props.availableTicketTypes
+			.filter((ticketType) => ticketType.max_tickets_available)
+			.map((ticketType) => String(ticketType.name)),
 	)
 	return Object.fromEntries(Object.entries(quantities.value).filter(([name]) => limited.has(name)))
 })
@@ -563,7 +565,12 @@ const requiresApproval = computed(() =>
 	needsApproval(
 		!!props.eventDetails.requires_approval,
 		attendees.value.map((attendee) => String(attendee.ticket_type)),
-		Object.fromEntries(ticketTypes.value.map((t) => [String(t.name), t.requires_approval])),
+		Object.fromEntries(
+			ticketTypes.value.map((ticketType) => [
+				String(ticketType.name),
+				ticketType.requires_approval,
+			]),
+		),
 	),
 )
 const totalLabel = computed(() => formatWholePriceOrFree(total.value, currency.value))

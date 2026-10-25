@@ -81,8 +81,11 @@ const copy = computed(() => COPY[props.state])
 
 async function withdrawRequest() {
 	const token = route.query.token ? String(route.query.token) : undefined
-	await withdraw.submit({ booking: props.bookingId, token })
-	if (withdraw.error) return toast.error(serverErrorMessage(withdraw.error))
+	try {
+		await withdraw.submit({ booking: props.bookingId, token })
+	} catch (error) {
+		return toast.error(serverErrorMessage(error))
+	}
 	toast.success(__("Request withdrawn"))
 	emit("changed")
 }

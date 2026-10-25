@@ -22,7 +22,7 @@ def is_event_wide_approval(event: str) -> bool:
 
 def booking_needs_approval(event: str, ticket_types) -> bool:
 	return is_event_wide_approval(event) or bool(
-		approval_ticket_types(event) & {str(t) for t in ticket_types}
+		approval_ticket_types(event) & {str(ticket_type) for ticket_type in ticket_types}
 	)
 
 

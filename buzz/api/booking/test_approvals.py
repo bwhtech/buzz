@@ -176,6 +176,38 @@ class TestApprovalEndpoints(ApprovalTestCase):
 				with self.set_user(user), self.assertRaises(CannotManageEvent):
 					call()
 
+	def test_set_approval_needs_ticketing_write(self):
+		frontdesk = self.make_organizer("Frontdesk")
+
+		with self.set_user(frontdesk), self.assertRaises(CannotManageEvent):
+			set_approval(self.event_name(), False, str(self.approval_ticket_type.name))
+
+		self.approval_ticket_type.reload()
+		self.assertEqual(self.approval_ticket_type.requires_approval, 1)
+
+	def test_decline_skips_requests_that_are_no_longer_pending(self):
+		decided = self.request_to_join(self.guest_one)
+		waiting = self.request_to_join(self.guest_two)
+		frappe.get_doc("Event Booking", decided).decline_request()
+
+		with self.set_user(self.organizer):
+			result = decline_bookings(self.event_name(), [decided, waiting], None)
+
+		self.assertEqual(result.declined, [waiting])
+
+	def test_pending_list_is_capped_but_reports_the_total(self):
+		self.request_to_join(self.guest_one)
+		self.request_to_join(self.guest_two)
+
+		with self.set_user(self.organizer):
+			payload = get_pending_bookings(self.event_name(), limit=1)
+
+		self.assertEqual((payload.total, len(payload.bookings)), (2, 1))
+
+	def test_withdrawing_an_unknown_booking_looks_like_a_refusal(self):
+		with self.set_user("Guest"), self.assertRaises(CannotWithdrawBooking):
+			withdraw_booking("no-such-booking")
+
 	def test_a_viewer_cannot_decide_requests(self):
 		viewer = self.make_organizer("Viewer")
 

@@ -208,6 +208,21 @@ class TestApprovalDecision(ApprovalTestCase):
 
 		self.assertEqual((self.booking.docstatus, self.booking.status), (1, "Confirmed"))
 
+	def test_approving_still_works_after_sales_closed(self):
+		frappe.db.set_value("Event Ticket Type", self.approval_ticket_type.name, "is_published", 0)
+
+		self.booking.approve_request()
+
+		self.assertEqual(frappe.db.get_value("Event Booking", self.booking.name, "docstatus"), 1)
+
+	def test_a_request_that_now_has_a_price_cannot_be_approved(self):
+		frappe.db.set_value("Buzz Price", {"parent": self.approval_ticket_type.name}, "price", 500)
+
+		with self.assertRaises(frappe.ValidationError):
+			self.booking.approve_request()
+
+		self.assertEqual(frappe.db.get_value("Event Booking", self.booking.name, "docstatus"), 0)
+
 	def test_a_pending_request_cannot_be_submitted_directly(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.booking.submit()

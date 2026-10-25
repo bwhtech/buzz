@@ -46,7 +46,7 @@ async function requestToJoin(browser: Browser, requester: Requester) {
 
 	await bookingPage.goto(APPROVAL_EVENT_ROUTE)
 	await bookingPage.waitForFormLoad()
-	await expect(page.getByText("Requires approval")).toBeVisible()
+	await expect(page.getByText("Requires approval").first()).toBeVisible()
 	await bookingPage.goToAttendees()
 	await bookingPage.fillMyDetails(requester.name, "E2E", requester.email)
 	await expect(page.locator('button[type="submit"]')).toHaveText(/Request to join/)
@@ -95,6 +95,7 @@ test.describe("Approval-required registration", () => {
 		await expect(pendingRow(page, requester)).toHaveCount(0)
 
 		await guestPage.reload()
+		await expect(guestPage.getByText("Add to calendar").first()).toBeVisible()
 		await expect(guestPage.getByText("Pending approval")).toHaveCount(0)
 		const booking = await bookingOf(baseURL!, requester)
 		expect(booking.docstatus).toBe(1)
@@ -109,10 +110,11 @@ test.describe("Approval-required registration", () => {
 		await pendingRow(page, requester).getByRole("button", { name: "Decline" }).click()
 		await page.getByLabel("Message (optional)").fill("The event is full of speakers")
 		await page.getByRole("dialog").getByRole("button", { name: "Decline" }).click()
+		await expect(page.getByRole("dialog")).toHaveCount(0)
 		await expect(pendingRow(page, requester)).toHaveCount(0)
 
 		await guestPage.reload()
-		await expect(guestPage.getByText("Request declined")).toBeVisible()
+		await expect(guestPage.getByText("Request declined").first()).toBeVisible()
 		await expect(guestPage.getByText("The event is full of speakers")).toBeVisible()
 		await context.close()
 	})
@@ -129,8 +131,8 @@ test.describe("Approval-required registration", () => {
 		await approval.click()
 
 		const dialog = page.getByRole("dialog")
-		await expect(dialog.getByText("1 request is still waiting")).toBeVisible()
-		await expect(dialog.getByText("Keep them pending")).toBeVisible()
+		await expect(dialog.getByText("1 request is still waiting").first()).toBeVisible()
+		await expect(dialog.getByText("Keep them pending").first()).toBeVisible()
 		await dialog.getByRole("button", { name: "Confirm" }).click()
 		await expect(dialog).toHaveCount(0)
 

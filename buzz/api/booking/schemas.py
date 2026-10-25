@@ -68,7 +68,6 @@ class EventBookingDataResponse(APIResponse):
 	# event_details and the list fields carry documents or meta-defined rows; typing
 	# them would reshape the payload.
 	registrations_closed: bool
-	requires_approval: bool
 	event_details: Any
 	available_ticket_types: list
 	ticket_categories: list

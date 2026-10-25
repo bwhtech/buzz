@@ -10,9 +10,9 @@ const isOpen = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ confirm: [action: PendingAction] }>()
 
 const OPTIONS = [
-	{ label: "Keep them pending", value: "keep", dot: badgeDotClass("amber") },
-	{ label: "Approve all", value: "approve", dot: badgeDotClass("green") },
-	{ label: "Decline all", value: "decline", dot: badgeDotClass("red") },
+	{ label: __("Keep them pending"), value: "keep", dot: badgeDotClass("amber") },
+	{ label: __("Approve all"), value: "approve", dot: badgeDotClass("green") },
+	{ label: __("Decline all"), value: "decline", dot: badgeDotClass("red") },
 ]
 
 const action = ref<PendingAction>("keep")
@@ -25,9 +25,13 @@ const dotOf = (value: string | number | undefined) =>
 <template>
 	<Dialog
 		v-model="isOpen"
-		:title="`${count} ${count === 1 ? 'request is' : 'requests are'} still waiting. What should happen to them?`"
+		:title="
+			count === 1
+				? __('1 request is still waiting. What should happen to it?')
+				: __('{0} requests are still waiting. What should happen to them?', [count])
+		"
 	>
-		<Select v-model="action" class="w-full" :options="OPTIONS" aria-label="Waiting requests">
+		<Select v-model="action" class="w-full" :options="OPTIONS" :aria-label="__('Waiting requests')">
 			<template #prefix="{ selectedOption }">
 				<span class="size-2 shrink-0 rounded-full" :class="dotOf(selectedOption?.value)" />
 			</template>
@@ -40,11 +44,11 @@ const dotOf = (value: string | number | undefined) =>
 			<div class="flex gap-2">
 				<Button
 					variant="solid"
-					label="Confirm"
+					:label="__('Confirm')"
 					:loading="loading"
 					@click="emit('confirm', action)"
 				/>
-				<Button variant="outline" label="Cancel" @click="close" />
+				<Button variant="outline" :label="__('Cancel')" @click="close" />
 			</div>
 		</template>
 	</Dialog>
