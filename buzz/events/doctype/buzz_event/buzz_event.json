@@ -88,9 +88,6 @@
   "offline_acknowledgement_email_template",
   "talks_section",
   "allow_editing_talks_after_acceptance",
-  "custom_forms_tab",
-  "forms_section",
-  "custom_forms",
   "connections_tab",
   "proposal"
  ],
@@ -329,16 +326,6 @@
    "label": "Ticket Print Format",
    "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Event Ticket\"]]",
    "options": "Print Format"
-  },
-  {
-   "fieldname": "forms_section",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "custom_forms",
-   "fieldtype": "Table",
-   "label": "Custom Forms",
-   "options": "Buzz Event Form"
   },
   {
    "fieldname": "talks_section",
@@ -602,11 +589,6 @@
    "fieldtype": "Datetime",
    "label": "Registrations Close At",
    "no_copy": 1
-  },
-  {
-   "fieldname": "custom_forms_tab",
-   "fieldtype": "Tab Break",
-   "label": "Forms"
   },
   {
    "fieldname": "team",

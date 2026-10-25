@@ -6,7 +6,14 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from buzz.events.doctype.buzz_event.buzz_event import create_from_template
-from buzz.tests.factories import BuzzTeamFactory, EventCategoryFactory, EventHostFactory, EventTemplateFactory
+from buzz.events.doctype.event_template.event_template import template_custom_fields
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	BuzzTeamFactory,
+	EventCategoryFactory,
+	EventHostFactory,
+	EventTemplateFactory,
+)
 
 DIRECT_FIELDS = {
 	"medium": "Online",
@@ -89,7 +96,7 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 		ticket_types = frappe.get_all(
 			"Event Ticket Type",
 			filters={"event": event.name, "title": ["in", ["Early Bird", "Regular"]]},
-			fields=["title", {"prices": ["price"]}, "max_tickets_available"],
+			fields=["name", "title", {"prices": ["price"]}, "max_tickets_available"],
 			order_by="title",
 		)
 		self.assertEqual(
@@ -148,6 +155,44 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 			[("Company", "Data", 1, "Enter company name")],
 		)
 
+	def test_copies_form_questions_onto_the_new_events_form(self):
+		template = self.create_template(
+			template_custom_fields=[
+				{
+					**CUSTOM_FIELD,
+					"label": "Dietary Preference",
+					"fieldname": "dietary_preference",
+					"mandatory": 0,
+					"placeholder": "",
+					"applied_to": "Custom Form",
+					"custom_form_doctype": "Event Feedback",
+				}
+			]
+		)
+
+		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
+
+		form = frappe.get_doc("Buzz Form", {"event": event.name, "form_doctype": "Event Feedback"})
+		self.assertEqual([question.label for question in form.questions], ["Dietary Preference"])
+		# A form question is no longer a Buzz Custom Field.
+		self.assertFalse(frappe.db.exists("Buzz Custom Field", {"event": event.name}))
+
+	def test_skips_form_questions_for_a_form_the_event_has_not(self):
+		for form_doctype in ("Sponsorship Enquiry", "Buzz Tag"):
+			with self.subTest(form_doctype):
+				template = self.create_template(
+					template_custom_fields=[
+						{**CUSTOM_FIELD, "applied_to": "Custom Form", "custom_form_doctype": form_doctype}
+					]
+				)
+
+				event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
+
+				forms = frappe.get_all("Buzz Form", filters={"event": event.name}, pluck="name")
+				self.assertFalse(
+					frappe.db.exists("Buzz Form Field", {"parent": ["in", forms], "parenttype": "Buzz Form"})
+				)
+
 	def test_skips_linked_docs_when_unselected(self):
 		template = self.create_template(
 			template_ticket_types=[{"title": "Skipped", "price": 100, "currency": "INR"}],
@@ -195,3 +240,35 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 		return frappe.get_doc(
 			"Buzz Event", create_from_template(template.name, frappe.as_json(options), additional_fields)
 		)
+
+
+class TestTemplateFormQuestions(IntegrationTestCase):
+	"""The save side of the copy: every question of the event's forms becomes a template row."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.team = BuzzTeamFactory.create_owned_by().name
+
+	def setUp(self):
+		self.event = BuzzEventFactory.create(team=self.team)
+
+	def test_form_questions_become_custom_form_rows(self):
+		self.add_question("Event Feedback", "Dietary", "dietary")
+
+		rows = template_custom_fields(str(self.event.name))
+
+		self.assertEqual(
+			[(row["fieldname"], row["applied_to"], row["custom_form_doctype"]) for row in rows],
+			[("dietary", "Custom Form", "Event Feedback")],
+		)
+
+	def test_sponsorship_questions_stay_out(self):
+		self.add_question("Sponsorship Enquiry", "Extra", "extra")
+
+		self.assertEqual(template_custom_fields(str(self.event.name)), [])
+
+	def add_question(self, form_doctype: str, label: str, fieldname: str):
+		form = frappe.get_doc("Buzz Form", {"event": self.event.name, "form_doctype": form_doctype})
+		form.append("questions", {"label": label, "fieldname": fieldname, "fieldtype": "Data", "enabled": 1})
+		form.save(ignore_permissions=True)

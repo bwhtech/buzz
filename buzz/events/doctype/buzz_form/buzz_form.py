@@ -85,11 +85,6 @@ class BuzzForm(Document):
 		taken = frappe.get_all(
 			"Buzz Form", filters={"event": self.event, "name": ["!=", self.name or ""]}, pluck="route"
 		)
-		taken += frappe.get_all(
-			"Buzz Event Form",
-			filters={"parent": self.event, "parenttype": "Buzz Event"},
-			pluck="route",
-		)
 		return any(route and route.lower() == self.route.lower() for route in taken)
 
 	def validate_questions(self):

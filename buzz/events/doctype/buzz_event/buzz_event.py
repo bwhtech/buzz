@@ -12,8 +12,7 @@ from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
 from frappe.website.utils import cleanup_page_name
 
 from buzz import telemetry
-from buzz.api.forms.fields import validate_excluded_fields
-from buzz.events.doctype.buzz_form.form_types import FORM_TYPES, create_sponsorship_form
+from buzz.events.doctype.buzz_form.form_types import SPONSORSHIP_FORM_DOCTYPE, create_default_forms
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 from buzz.events.doctype.event_check_in_zone.event_check_in_zone import create_default_zone
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import create_ticket_categories
@@ -47,7 +46,6 @@ class BuzzEvent(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from buzz.events.doctype.buzz_event_form.buzz_event_form import BuzzEventForm
 		from buzz.events.doctype.event_cohost.event_cohost import EventCoHost
 		from buzz.events.doctype.event_external_link.event_external_link import EventExternalLink
 		from buzz.events.doctype.event_featured_speaker.event_featured_speaker import EventFeaturedSpeaker
@@ -68,7 +66,6 @@ class BuzzEvent(Document):
 		card_image: DF.AttachImage | None
 		category: DF.Link
 		co_hosts: DF.Table[EventCoHost]
-		custom_forms: DF.Table[BuzzEventForm]
 		default_ticket_type: DF.Link | None
 		end_date: DF.Date | None
 		end_time: DF.Time
@@ -124,8 +121,6 @@ class BuzzEvent(Document):
 		if not self.registrations_close_at:
 			self.close_registrations()
 		self.add_default_payment_gateway()
-		self.append("custom_forms", {"form_doctype": "Event Feedback", "route": "feedback"})
-		self.append("custom_forms", {"form_doctype": "Talk Proposal", "route": "propose-talk"})
 
 	def add_default_payment_gateway(self):
 		default = frappe.db.get_single_value("Buzz Settings", "default_payment_gateway")
@@ -138,7 +133,6 @@ class BuzzEvent(Document):
 		self.validate_route()
 		self.validate_tax_settings()
 		self.validate_guest_verification_config()
-		self.validate_custom_forms()
 		self.clear_unused_location()
 		self.validate_co_hosts()
 		self.validate_external_links()
@@ -185,22 +179,6 @@ class BuzzEvent(Document):
 		# computed at event start so DST zones get the abbreviation in effect then
 		event_start = get_datetime(f"{self.start_date} {self.start_time}")
 		self.time_zone_label = get_time_zone_label(self.time_zone, event_start)
-
-	def validate_custom_forms(self):
-		form_routes = self.form_routes()
-		for form in self.custom_forms:
-			if form.form_doctype in FORM_TYPES:
-				frappe.throw(_("Manage {0} forms in Buzz Form.").format(_(form.form_doctype)))
-			if any(route and route.lower() == (form.route or "").lower() for route in form_routes):
-				frappe.throw(_("This route is already used by another form of this event."))
-			if form.excluded_fields:
-				validate_excluded_fields(form.form_doctype, form.excluded_fields)
-
-	def form_routes(self) -> list[str]:
-		# A new event has no form yet, but create_default_records is about to make one.
-		if self.is_new():
-			return ["enquire-sponsorship"]
-		return frappe.get_all("Buzz Form", filters={"event": self.name}, pluck="route")
 
 	def validate_schedule(self):
 		end_date = self.end_date or self.start_date
@@ -346,7 +324,7 @@ class BuzzEvent(Document):
 		]
 		for record in records:
 			frappe.get_doc({**record, "event": self.name}).insert(ignore_permissions=True)
-		create_sponsorship_form(self.name)
+		create_default_forms(self.name)
 		create_default_zone(self.name)
 
 	def archive_event(self):
@@ -357,8 +335,6 @@ class BuzzEvent(Document):
 		"""
 		self.is_published = 0
 		self.close_registrations()
-		for form in self.custom_forms:
-			form.publish = 0
 		for name in frappe.get_all("Buzz Form", {"event": self.name}, pluck="name"):
 			form = frappe.get_doc("Buzz Form", name)
 			form.publish = 0
@@ -590,24 +566,70 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 			add_on.insert()
 
 	if options.get("custom_fields"):
-		for cf in template.template_custom_fields:
-			# Sponsorship questions live on the event's sponsorship form now; an older template
-			# may still carry one, and recreating it here would fail the event mid-creation.
-			if cf.custom_form_doctype == "Sponsorship Enquiry":
-				continue
-			custom_field = frappe.new_doc("Buzz Custom Field")
-			custom_field.event = event.name
-			custom_field.label = cf.label
-			custom_field.fieldname = cf.fieldname
-			custom_field.fieldtype = cf.fieldtype
-			custom_field.options = cf.options
-			custom_field.applied_to = cf.applied_to
-			custom_field.custom_form_doctype = cf.custom_form_doctype
-			custom_field.enabled = cf.enabled
-			custom_field.mandatory = cf.mandatory
-			custom_field.placeholder = cf.placeholder
-			custom_field.default_value = cf.default_value
-			custom_field.order = cf.order
-			custom_field.insert()
+		copy_custom_fields(event, template.template_custom_fields)
 
 	return event.name
+
+
+QUESTION_FIELD_NAMES = (
+	"label",
+	"fieldname",
+	"fieldtype",
+	"options",
+	"enabled",
+	"mandatory",
+	"placeholder",
+	"default_value",
+)
+
+
+def copy_custom_fields(event, template_fields):
+	"""Questions go to the doctype they are asked on: a form's table, or Buzz Custom Field."""
+	forms = {}
+	for field in template_fields:
+		# Sponsorship questions live on the event's sponsorship form now; an older template
+		# may still carry one, and recreating it here would fail the event mid-creation.
+		if field.custom_form_doctype == SPONSORSHIP_FORM_DOCTYPE:
+			continue
+		if field.applied_to == "Custom Form":
+			add_form_question(forms, event.name, field)
+		else:
+			create_custom_field(event.name, field)
+	for form in forms.values():
+		if form:
+			form.save(ignore_permissions=True)
+
+
+def add_form_question(forms: dict, event_name: str, field):
+	"""A template may name a form this event has not got; its question is dropped."""
+	if field.custom_form_doctype not in forms:
+		forms[field.custom_form_doctype] = form_of(event_name, field.custom_form_doctype)
+	form = forms[field.custom_form_doctype]
+	if form:
+		form.append("questions", {name: field.get(name) for name in QUESTION_FIELD_NAMES})
+
+
+def form_of(event_name: str, form_doctype: str):
+	"""The event's form of that doctype, made with the event; a template may name another."""
+	form_name = frappe.db.get_value("Buzz Form", {"event": event_name, "form_doctype": form_doctype}, "name")
+	return frappe.get_doc("Buzz Form", form_name) if form_name else None
+
+
+def create_custom_field(event_name: str, field):
+	frappe.get_doc(
+		{
+			"doctype": "Buzz Custom Field",
+			"event": event_name,
+			"label": field.label,
+			"fieldname": field.fieldname,
+			"fieldtype": field.fieldtype,
+			"options": field.options,
+			"applied_to": field.applied_to,
+			"custom_form_doctype": field.custom_form_doctype,
+			"enabled": field.enabled,
+			"mandatory": field.mandatory,
+			"placeholder": field.placeholder,
+			"default_value": field.default_value,
+			"order": field.order,
+		}
+	).insert(ignore_permissions=True)

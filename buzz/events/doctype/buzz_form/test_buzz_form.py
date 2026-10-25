@@ -114,8 +114,8 @@ class TestBuzzFormValidation(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			BuzzFormFactory.create(event=self.event.name, route="shared-route")
 
-	def test_a_buzz_event_form_row_route_is_refused(self):
-		# Every event opens with "feedback" and "propose-talk" rows.
+	def test_a_default_form_route_is_refused(self):
+		# Every event opens with its own feedback and talk proposal forms.
 		with self.assertRaises(frappe.ValidationError):
 			BuzzFormFactory.create(event=self.event.name, route="propose-talk")
 
@@ -130,6 +130,17 @@ class TestBuzzFormValidation(IntegrationTestCase):
 			BuzzFormFactory.create(
 				event=self.event.name, form_doctype="Sponsorship Enquiry", route="another-sponsorship"
 			)
+
+	def test_a_second_talk_proposal_form_for_one_event_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			BuzzFormFactory.create(
+				event=self.event.name, form_doctype="Talk Proposal", route="another-proposal"
+			)
+
+	def test_two_feedback_forms_with_different_routes_are_allowed(self):
+		for route in ("first-feedback", "second-feedback"):
+			with self.subTest(route):
+				self.assertTrue(BuzzFormFactory.create(event=self.event.name, route=route).name)
 
 	def test_contact_email_cannot_be_excluded(self):
 		self.form.excluded_fields = "contact_email"
@@ -232,3 +243,9 @@ class TestFormTypes(IntegrationTestCase):
 
 	def test_sponsorship_forms_are_one_per_event(self):
 		self.assertTrue(form_type("Sponsorship Enquiry").one_per_event)
+
+	def test_talk_proposal_forms_are_one_per_event(self):
+		self.assertTrue(form_type("Talk Proposal").one_per_event)
+
+	def test_other_custom_forms_may_repeat(self):
+		self.assertFalse(form_type("Event Feedback").one_per_event)

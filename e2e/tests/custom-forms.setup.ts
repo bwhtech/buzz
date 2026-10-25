@@ -1,4 +1,4 @@
-import { test as setup, expect } from "@playwright/test"
+import { test as setup, expect, type APIRequestContext } from "@playwright/test"
 
 import {
 	CLOSED_FORM_MESSAGE,
@@ -12,7 +12,6 @@ import {
 	docExists,
 	ensureEventHost,
 	ensureTestTeam,
-	getDoc,
 	getList,
 	updateDoc,
 } from "../helpers/frappe"
@@ -64,62 +63,60 @@ setup("setup custom forms on test event", async ({ request }) => {
 		eventName = event.name
 	}
 
-	await updateDoc(request, "Buzz Event", eventName, {
-		custom_forms: [
-			{ doctype: "Buzz Event Form", form_doctype: "Event Feedback", route: "feedback", publish: 1 },
-			{
-				doctype: "Buzz Event Form",
-				form_doctype: "Talk Proposal",
-				route: "propose-talk",
-				publish: 1,
-			},
-			{
-				doctype: "Buzz Event Form",
-				form_doctype: "Event Feedback",
-				route: MEMBERS_ONLY_FORM_ROUTE,
-				publish: 1,
-				login_required: 1,
-			},
-			{
-				doctype: "Buzz Event Form",
-				form_doctype: "Event Feedback",
-				route: CLOSED_FORM_ROUTE,
-				publish: 1,
-				auto_close_at: "2020-01-01 00:00:00",
-				closed_title: CLOSED_FORM_TITLE,
-				closed_message: CLOSED_FORM_MESSAGE,
-			},
-		],
-	})
-
-	const sponsorshipForms = await getList<NamedDoc>(request, "Buzz Form", {
-		filters: { event: ["=", eventName], form_doctype: ["=", "Sponsorship Enquiry"] },
-	})
-	const sponsorshipFormName = sponsorshipForms[0]?.name
-	if (!sponsorshipFormName) {
-		await createDoc(request, "Buzz Form", {
-			event: eventName,
-			form_doctype: "Sponsorship Enquiry",
-			title: "Sponsorship enquiry",
-			route: "enquire-sponsorship",
+	const forms = [
+		{ form_doctype: "Event Feedback", route: "feedback", publish: 1 },
+		{ form_doctype: "Talk Proposal", route: "propose-talk", publish: 1 },
+		{
+			form_doctype: "Event Feedback",
+			route: MEMBERS_ONLY_FORM_ROUTE,
 			publish: 1,
-		})
-	} else {
-		await updateDoc(request, "Buzz Form", sponsorshipFormName, {
-			route: "enquire-sponsorship",
+			login_required: 1,
+		},
+		{
+			form_doctype: "Event Feedback",
+			route: CLOSED_FORM_ROUTE,
 			publish: 1,
-		})
+			auto_close_at: "2020-01-01 00:00:00",
+			closed_title: CLOSED_FORM_TITLE,
+			closed_message: CLOSED_FORM_MESSAGE,
+		},
+		{ form_doctype: "Sponsorship Enquiry", route: "enquire-sponsorship", publish: 1 },
+	]
+	for (const form of forms) {
+		await ensureForm(request, eventName, form)
 	}
 
-	const updated = await getDoc<{ custom_forms: Array<{ route: string; publish: number }> }>(
-		request,
-		"Buzz Event",
-		eventName,
-	)
-	const publishedForms = (updated.custom_forms || []).filter((f) => f.publish)
-	expect(publishedForms.length).toBe(4)
+	const publishedForms = await getList<NamedDoc>(request, "Buzz Form", {
+		filters: { event: ["=", eventName], publish: ["=", 1] },
+	})
+	expect(publishedForms.length).toBe(forms.length)
 
 	console.log(
-		`Custom forms enabled on event: ${eventName} (${publishedForms.length} forms: ${publishedForms.map((f) => f.route).join(", ")})`,
+		`Custom forms enabled on event: ${eventName} (${publishedForms.length} forms: ${forms.map((form) => form.route).join(", ")})`,
 	)
 })
+
+interface FormInput {
+	form_doctype: string
+	route: string
+	publish: number
+	login_required?: number
+	auto_close_at?: string
+	closed_title?: string
+	closed_message?: string
+}
+
+async function ensureForm(
+	request: APIRequestContext,
+	eventName: string,
+	form: FormInput,
+): Promise<void> {
+	const forms = await getList<NamedDoc>(request, "Buzz Form", {
+		filters: { event: ["=", eventName], route: ["=", form.route] },
+	})
+	if (forms.length > 0) {
+		await updateDoc(request, "Buzz Form", forms[0].name, form)
+		return
+	}
+	await createDoc(request, "Buzz Form", { event: eventName, title: form.form_doctype, ...form })
+}

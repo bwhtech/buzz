@@ -1,13 +1,9 @@
-from functools import cached_property
-
 import frappe
 from frappe import _
 
 from buzz.api.forms.answers import CustomAnswers
-from buzz.api.forms.conditions import parse_conditions
-from buzz.api.forms.exceptions import FormNotAvailable, SubmissionsClosed
+from buzz.api.forms.exceptions import SubmissionsClosed
 from buzz.api.forms.fields import get_form_fields
-from buzz.api.forms.schemas import CustomFieldDefinition
 from buzz.api.forms.services import CustomFormService
 from buzz.events.doctype.buzz_form.form_types import ENQUIRY_FIELDS
 
@@ -22,16 +18,6 @@ class SponsorFormService(CustomFormService):
 		response = super().form_data()
 		response.submission_method = SUBMISSION_METHOD
 		return response
-
-	@cached_property
-	def form(self):
-		"""The event's published sponsorship form, in place of a custom_forms row."""
-		form_id = frappe.db.get_value(
-			"Buzz Form", {"event": self.event.name, "route": self.form_route, "publish": 1}
-		)
-		if not form_id:
-			FormNotAvailable.throw()
-		return frappe.get_doc("Buzz Form", form_id)
 
 	@property
 	def form_doctype(self):
@@ -60,25 +46,6 @@ class SponsorFormService(CustomFormService):
 				field["reqd"] = 1
 				field["default"] = session_user_email()
 		return fields
-
-	def custom_field_definitions(self):
-		return [
-			CustomFieldDefinition(
-				label=question.label,
-				fieldname=question.fieldname,
-				fieldtype=question.fieldtype,
-				options=question.options,
-				mandatory=question.mandatory,
-				placeholder=question.placeholder,
-				default_value=question.default_value,
-				description=question.description,
-				depends_on=parse_conditions(question.depends_on),
-				mandatory_depends_on=parse_conditions(question.mandatory_depends_on),
-				order=question.idx,
-			)
-			for question in self.form.questions
-			if question.enabled
-		]
 
 	def submit(self, data, custom_fields_data=None) -> str:
 		"""Record one enquiry against this form and return its name."""

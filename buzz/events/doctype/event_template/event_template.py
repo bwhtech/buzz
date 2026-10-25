@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from buzz.events.doctype.buzz_form.form_types import SPONSORSHIP_FORM_DOCTYPE
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 
 
@@ -178,40 +179,68 @@ def create_template_from_event(event_name: str, template_name: str, options: str
 			)
 
 	if options.get("custom_fields"):
-		custom_fields = frappe.get_all(
-			"Buzz Custom Field",
-			filters={"event": event_name},
-			fields=[
-				"label",
-				"fieldname",
-				"fieldtype",
-				"options",
-				"applied_to",
-				"custom_form_doctype",
-				"enabled",
-				"mandatory",
-				"placeholder",
-				"default_value",
-				"order",
-			],
-		)
-		for cf in custom_fields:
-			template.append(
-				"template_custom_fields",
-				{
-					"label": cf.label,
-					"fieldname": cf.fieldname,
-					"fieldtype": cf.fieldtype,
-					"options": cf.options,
-					"applied_to": cf.applied_to,
-					"custom_form_doctype": cf.custom_form_doctype,
-					"enabled": cf.enabled,
-					"mandatory": cf.mandatory,
-					"placeholder": cf.placeholder,
-					"default_value": cf.default_value,
-					"order": cf.order,
-				},
-			)
+		for custom_field in template_custom_fields(event_name):
+			template.append("template_custom_fields", custom_field)
 
 	template.insert()
 	return template.name
+
+
+TEMPLATE_FIELD_NAMES = (
+	"label",
+	"fieldname",
+	"fieldtype",
+	"options",
+	"applied_to",
+	"custom_form_doctype",
+	"enabled",
+	"mandatory",
+	"placeholder",
+	"default_value",
+	"order",
+)
+QUESTION_FIELD_NAMES = (
+	"label",
+	"fieldname",
+	"fieldtype",
+	"options",
+	"enabled",
+	"mandatory",
+	"placeholder",
+	"default_value",
+)
+
+
+def template_custom_fields(event_name: str) -> list[dict]:
+	"""Booking and ticket questions, then the questions of every other form of the event."""
+	fields = frappe.get_all(
+		"Buzz Custom Field",
+		filters={"event": event_name, "applied_to": ["!=", "Custom Form"]},
+		fields=list(TEMPLATE_FIELD_NAMES),
+	)
+	# Sponsorship questions stay on the event's own sponsorship form, which every event has.
+	forms = {
+		form.name: form.form_doctype
+		for form in frappe.get_all(
+			"Buzz Form",
+			filters={"event": event_name, "form_doctype": ["!=", SPONSORSHIP_FORM_DOCTYPE]},
+			fields=["name", "form_doctype"],
+		)
+	}
+	questions = frappe.get_all(
+		"Buzz Form Field",
+		filters={"parenttype": "Buzz Form", "parent": ["in", list(forms)]},
+		fields=["parent", *QUESTION_FIELD_NAMES],
+		order_by="parent, idx",
+	)
+	return [
+		*fields,
+		*(
+			{
+				**{name: question.get(name) for name in QUESTION_FIELD_NAMES},
+				"applied_to": "Custom Form",
+				"custom_form_doctype": forms[question.parent],
+			}
+			for question in questions
+		),
+	]

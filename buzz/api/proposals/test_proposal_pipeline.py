@@ -177,8 +177,6 @@ class TestSetProposalState(IntegrationTestCase):
 			set_proposal_state(self.event, closed=True)
 
 	def unpublish_proposal_form(self):
-		event = frappe.get_doc("Buzz Event", self.event)
-		for row in event.custom_forms:
-			if row.form_doctype == "Talk Proposal":
-				row.publish = 0
-		event.save(ignore_permissions=True)
+		form = frappe.get_doc("Buzz Form", {"event": self.event, "form_doctype": "Talk Proposal"})
+		form.publish = 0
+		form.save(ignore_permissions=True)

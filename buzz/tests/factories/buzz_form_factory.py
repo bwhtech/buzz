@@ -19,6 +19,7 @@ class BuzzFormFactory(BaseFactory[BuzzForm]):
 		return {
 			"title": f"Form {_fake.unique.catch_phrase()}",
 			"event": self.overrides.get("event") or BuzzEventFactory.create().name,
-			"form_doctype": "Talk Proposal",
+			# Talk Proposal is one per event; every event already has one.
+			"form_doctype": self.overrides.get("form_doctype") or "Event Feedback",
 			"route": f"form-{frappe.generate_hash(length=6)}",
 		}

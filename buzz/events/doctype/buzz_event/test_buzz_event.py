@@ -114,12 +114,17 @@ class TestEventRoute(BuzzEventTestCase):
 		self.assertEqual(self.create_event(title="Account").route, "account-event")
 
 	def test_new_event_comes_with_the_default_forms_in_one_save(self):
-		# A second save rewrites the forms table, which deadlocks two events created at once.
+		# A second save would rewrite the event, which deadlocks two events created at once.
 		event = self.create_event()
 
 		creation, modified = frappe.db.get_value("Buzz Event", event.name, ["creation", "modified"])
 		self.assertEqual(creation, modified)
-		self.assertEqual([form.route for form in event.custom_forms], ["feedback", "propose-talk"])
+		forms = frappe.get_all(
+			"Buzz Form", filters={"event": event.name}, fields=["route", "publish"], order_by="route"
+		)
+		self.assertEqual([form.route for form in forms], ["enquire-sponsorship", "feedback", "propose-talk"])
+		# Organisers open each form when they mean to take submissions.
+		self.assertFalse(any(form.publish for form in forms))
 
 	def test_same_title_routes_get_a_number_suffix(self):
 		title = f"Meetup {frappe.generate_hash(length=6)}"

@@ -110,6 +110,6 @@ class TestSaveEventAsTemplate(IntegrationTestCase):
 		ticket_types = frappe.get_all(
 			"Event Ticket Type",
 			filters={"event": event, "title": title},
-			fields=[{"prices": ["price"]}, "max_tickets_available"],
+			fields=["name", {"prices": ["price"]}, "max_tickets_available"],
 		)
 		return [(row.prices[0].price, row.max_tickets_available) for row in ticket_types]

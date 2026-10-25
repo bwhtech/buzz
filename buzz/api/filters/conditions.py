@@ -89,6 +89,19 @@ def event_questions(event: str, **filters) -> list:
 	)
 
 
+def form_questions(event: str, form_doctype: str) -> list:
+	"""The enabled questions of the event's form of that doctype, in form order."""
+	form_name = frappe.db.get_value("Buzz Form", {"event": event, "form_doctype": form_doctype}, "name")
+	if not form_name:
+		return []
+	return frappe.get_all(
+		"Buzz Form Field",
+		filters={"parenttype": "Buzz Form", "parent": form_name, "enabled": 1},
+		fields=["fieldname", "label", "fieldtype", "options"],
+		order_by="idx",
+	)
+
+
 def question_options(row) -> list[tuple[str, str]]:
 	if row.fieldtype == "Check":
 		return [("1", _("Yes")), ("0", _("No"))]

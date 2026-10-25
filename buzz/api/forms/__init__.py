@@ -31,13 +31,10 @@ def submit_custom_form(
 
 
 def form_service(event_route: str, form_route: str):
-	event_name = CustomFormService(event_route, form_route).event.name
-	form_doctype = frappe.db.get_value(
-		"Buzz Form", {"event": event_name, "route": form_route, "publish": 1}, "form_doctype"
-	)
-	service_path = FORM_SERVICES.get(form_doctype)
+	service = CustomFormService(event_route, form_route)
+	service_path = FORM_SERVICES.get(service.form_doctype)
 	if not service_path:
-		return CustomFormService(event_route, form_route)
+		return service
 	return frappe.get_attr(service_path)(event_route, form_route)
 
 

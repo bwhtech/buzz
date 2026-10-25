@@ -292,15 +292,6 @@ function show_save_as_template_dialog(frm) {
 	dialog.show()
 }
 
-frappe.ui.form.on("Buzz Event Form", {
-	copy_to_clipboard(frm, cdt, cdn) {
-		const row = frappe.get_doc(cdt, cdn)
-		const url = `${window.location.origin}/b/${frm.doc.route}/${row.route}`
-		navigator.clipboard.writeText(url)
-		frappe.show_alert({ message: __("Link copied!"), indicator: "green" })
-	},
-})
-
 // min_date on the df is only read when the control builds its picker,
 // so the datepicker instance has to be updated directly.
 function set_end_date_limit(frm) {

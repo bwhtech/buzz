@@ -1,9 +1,13 @@
+import re
+
 import frappe
-from frappe import _
+from frappe import _, scrub
 
 from buzz.api.forms.fields import parse_excluded_fields
 
 SPONSORSHIP_FORM_DOCTYPE = "Sponsorship Enquiry"
+TALK_PROPOSAL_FORM_DOCTYPE = "Talk Proposal"
+EVENT_FEEDBACK_FORM_DOCTYPE = "Event Feedback"
 
 ENQUIRY_FIELDS = frozenset(
 	{"company_name", "company_logo", "website", "tier", "country", "phone", "contact_email"}
@@ -36,20 +40,52 @@ class SponsorshipFormType(FormType):
 		form.login_required = 0
 
 
-FORM_TYPES = {SPONSORSHIP_FORM_DOCTYPE: SponsorshipFormType()}
+class TalkProposalFormType(FormType):
+	one_per_event = True
+
+
+FORM_TYPES = {
+	SPONSORSHIP_FORM_DOCTYPE: SponsorshipFormType(),
+	TALK_PROPOSAL_FORM_DOCTYPE: TalkProposalFormType(),
+}
+
+# Created with every event, unpublished: an organiser opens one when they mean to.
+DEFAULT_FORMS = (
+	(SPONSORSHIP_FORM_DOCTYPE, "enquire-sponsorship", "Sponsorship enquiry"),
+	(EVENT_FEEDBACK_FORM_DOCTYPE, "feedback", "Feedback"),
+	(TALK_PROPOSAL_FORM_DOCTYPE, "propose-talk", "Talk proposal"),
+)
 
 
 def form_type(form_doctype: str) -> FormType:
 	return FORM_TYPES.get(form_doctype, FormType())
 
 
-def create_sponsorship_form(event: str):
-	return frappe.get_doc(
-		{
-			"doctype": "Buzz Form",
-			"title": "Sponsorship enquiry",
-			"event": event,
-			"form_doctype": SPONSORSHIP_FORM_DOCTYPE,
-			"route": "enquire-sponsorship",
-		}
-	).insert(ignore_permissions=True)
+def create_default_forms(event: str):
+	for form_doctype, route, title in DEFAULT_FORMS:
+		frappe.get_doc(
+			{
+				"doctype": "Buzz Form",
+				"title": title,
+				"event": event,
+				"form_doctype": form_doctype,
+				"route": route,
+			}
+		).insert(ignore_permissions=True)
+
+
+def usable_fieldname(label_or_fieldname: str, taken: set, reserved: frozenset) -> str:
+	"""Legacy questions were never held to the new key rules, so reshape rather than refuse.
+
+	A site whose form asks for a "Website" is ordinary, and failing the whole migrate over it
+	strands every other event. Old answers keep their own fieldname copy, so a rename here
+	only affects what arrives next.
+	"""
+	name = re.sub(r"[^a-z0-9_]", "_", scrub(label_or_fieldname or ""))
+	if not name[:1].isalpha():
+		name = f"question_{name}"
+	candidate, suffix = name, 2
+	while candidate in taken or candidate in reserved:
+		candidate, suffix = f"{name}_{suffix}", suffix + 1
+	taken.add(candidate)
+	return candidate

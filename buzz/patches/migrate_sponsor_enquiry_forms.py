@@ -1,10 +1,8 @@
-import re
-
 import frappe
-from frappe import _, scrub
+from frappe import _
 from frappe.model.document import Document
 
-from buzz.events.doctype.buzz_form.form_types import ENQUIRY_FIELDS
+from buzz.events.doctype.buzz_form.form_types import ENQUIRY_FIELDS, usable_fieldname
 
 SETTINGS = (
 	"route",
@@ -84,22 +82,6 @@ class SponsorFormMigration:
 		taken = set()
 		for question in questions:
 			row = {key: question.get(key) for key in QUESTION_FIELDS}
-			row["fieldname"] = self.usable_fieldname(row, taken)
+			row["fieldname"] = usable_fieldname(row["fieldname"] or row["label"], taken, ENQUIRY_FIELDS)
 			form.append("custom_fields", row)
 		return form, legacy, questions
-
-	def usable_fieldname(self, question, taken):
-		"""Legacy questions were never held to the new key rules, so reshape rather than refuse.
-
-		A site whose sponsorship form asks for a "Website" is ordinary, and failing the whole
-		migrate over it strands every other event. Old answers keep their own fieldname copy,
-		so a rename here only affects what arrives next.
-		"""
-		name = re.sub(r"[^a-z0-9_]", "_", scrub(question.get("fieldname") or question.get("label") or ""))
-		if not name[:1].isalpha():
-			name = f"question_{name}"
-		candidate, suffix = name, 2
-		while candidate in taken or candidate in ENQUIRY_FIELDS:
-			candidate, suffix = f"{name}_{suffix}", suffix + 1
-		taken.add(candidate)
-		return candidate

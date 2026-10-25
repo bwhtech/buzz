@@ -22,7 +22,7 @@ class TestArchiveEvent(IntegrationTestCase):
 
 		doc = frappe.get_doc("Buzz Event", event)
 		self.assertFalse(doc.is_published)
-		self.assertFalse(any(row.publish for row in doc.custom_forms))
+		self.assertFalse(published_forms(event))
 
 	def test_archiving_closes_registrations(self):
 		"""The booking gates stop at `is_published`, but the cutoff has to agree with them."""
@@ -58,8 +58,10 @@ class TestArchiveEvent(IntegrationTestCase):
 
 
 def publish_forms(event: str):
-	"""`publish` defaults to 0, so the rows have to be opened before a close means anything."""
-	doc = frappe.get_doc("Buzz Event", event)
-	for row in doc.custom_forms:
-		row.publish = 1
-	doc.save(ignore_permissions=True)
+	"""`publish` defaults to 0, so the forms have to be opened before a close means anything."""
+	for name in frappe.get_all("Buzz Form", {"event": event}, pluck="name"):
+		frappe.db.set_value("Buzz Form", name, "publish", 1)
+
+
+def published_forms(event: str) -> list[str]:
+	return frappe.get_all("Buzz Form", {"event": event, "publish": 1}, pluck="name")

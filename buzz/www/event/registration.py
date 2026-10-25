@@ -7,7 +7,7 @@ from frappe.utils import fmt_money, format_date
 from buzz.api.booking.event_data import get_available_ticket_types
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import registration_link
-from buzz.api.proposals.services import are_proposals_closed, proposal_form_row, proposal_link
+from buzz.api.proposals.services import are_proposals_closed, proposal_form, proposal_link
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import held_quantities
 
 
@@ -124,7 +124,7 @@ class ProposalCard:
 		}
 
 	def closing_note(self) -> str:
-		closes_at = proposal_form_row(self.event).auto_close_at
+		closes_at = proposal_form(self.event).auto_close_at
 		if not closes_at:
 			return _("Submit a talk for this event.")
 		return _("Submissions close {0}.").format(format_date(closes_at, "d MMM"))
