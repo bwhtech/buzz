@@ -27,10 +27,10 @@ const hidden = computed(() => props.guest.add_ons.slice(VISIBLE_ADD_ONS))
 </script>
 
 <template>
-	<li>
+	<li class="flex items-center">
 		<button
 			type="button"
-			class="flex min-h-12 w-full items-center gap-3 px-3.5 py-2 text-left transition-colors duration-150 ease-out hover:bg-surface-gray-1 active:bg-surface-gray-2 motion-reduce:transition-none"
+			class="flex min-h-12 min-w-0 flex-1 items-center gap-3 px-3.5 py-2 text-left transition-colors duration-150 ease-out hover:bg-surface-gray-1 active:bg-surface-gray-2 motion-reduce:transition-none"
 			:class="selected && 'bg-surface-gray-2'"
 			:aria-label="`Open ${name}`"
 			@click="emit('open')"
@@ -62,5 +62,8 @@ const hidden = computed(() => props.guest.add_ons.slice(VISIBLE_ADD_ONS))
 
 			<GuestZoneDots v-if="guest.zones?.length" :zones="guest.zones" />
 		</button>
+		<div v-if="$slots.actions" class="flex shrink-0 items-center gap-1 pr-3.5">
+			<slot name="actions" />
+		</div>
 	</li>
 </template>

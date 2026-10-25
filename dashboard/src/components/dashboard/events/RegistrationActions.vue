@@ -15,8 +15,10 @@ const props = defineProps<{
 	registrationLink?: string | null
 	allowGuestBooking: boolean
 	guestVerificationMethod: string
+	requiresApproval: boolean
+	hasPricedItems: boolean
 }>()
-const emit = defineEmits<{ changed: [] }>()
+const emit = defineEmits<{ changed: []; approvalChange: [enabled: boolean] }>()
 
 const dialogOpen = ref(false)
 const guestDialogOpen = ref(false)
@@ -30,6 +32,11 @@ const guestSubtitle = computed(() => {
 	if (!props.allowGuestBooking) return "Disabled"
 	const verification = VERIFICATION_LABELS[props.guestVerificationMethod]
 	return verification ? `Enabled · ${verification}` : "Enabled"
+})
+
+const approvalSubtitle = computed(() => {
+	if (props.requiresApproval) return "Required for all tickets"
+	return props.hasPricedItems ? "Free tickets only" : "Off"
 })
 
 const actions = computed<QuickAction[]>(() =>
@@ -56,6 +63,14 @@ const actions = computed<QuickAction[]>(() =>
 			:tone="allowGuestBooking ? 'violet' : 'gray'"
 			:disabled="!canWrite"
 			@click="guestDialogOpen = true"
+		/>
+		<QuickActionTile
+			icon="lucide-user-check"
+			title="Approval"
+			:subtitle="approvalSubtitle"
+			:tone="requiresApproval ? 'amber' : 'gray'"
+			:disabled="!canWrite || (hasPricedItems && !requiresApproval)"
+			@click="emit('approvalChange', !requiresApproval)"
 		/>
 	</QuickActionsRail>
 

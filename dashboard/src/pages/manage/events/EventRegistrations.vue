@@ -9,7 +9,6 @@ import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import RegistrationActions from "@/components/dashboard/events/RegistrationActions.vue"
 import AddPricedItemDialog from "@/components/dashboard/sponsorships/AddPricedItemDialog.vue"
 import ApprovalOffDialog from "@/components/dashboard/ticket-types/ApprovalOffDialog.vue"
-import ApprovalSettings from "@/components/dashboard/ticket-types/ApprovalSettings.vue"
 import PaymentProviders from "@/components/dashboard/ticket-types/PaymentProviders.vue"
 import RevenueCards from "@/components/dashboard/ticket-types/RevenueCards.vue"
 import TaxSettings from "@/components/dashboard/ticket-types/TaxSettings.vue"
@@ -142,12 +141,6 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				@edit-category="openCategoryDialog"
 			/>
 
-			<ApprovalSettings
-				:page="page.data"
-				:has-priced-tickets="hasPricedTickets"
-				@change="approval.change($event)"
-			/>
-
 			<template v-if="page.data.paid_events_enabled">
 				<PaymentProviders :providers="page.data.payment_providers" />
 
@@ -173,7 +166,10 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				:can-write="page.data.can_write"
 				:allow-guest-booking="page.data.allow_guest_booking"
 				:guest-verification-method="page.data.guest_verification_method"
+				:requires-approval="page.data.requires_approval"
+				:has-priced-items="hasPricedTickets"
 				@changed="page.reload()"
+				@approval-change="approval.change($event)"
 			/>
 		</template>
 	</PageWithSidebar>
