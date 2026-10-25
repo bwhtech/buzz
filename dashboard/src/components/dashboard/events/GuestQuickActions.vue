@@ -3,7 +3,8 @@ import { Button, call, toast } from "frappe-ui"
 import { ref } from "vue"
 import { useRouter } from "vue-router"
 
-import { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
+import QuickActionTile, { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
+import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import type { EventGuest, EventGuests } from "@/types"
 import { downloadCsv } from "@/utils/csv"
 
@@ -11,16 +12,23 @@ const props = defineProps<{
 	event: string
 	title?: string | null
 	// What the list is currently showing, so the export is the same list.
-	query: { search: string; filters: string; order: string }
+	query: { search: string; filters: string; order: string; zone: string }
+	checkedIn: number
+	total: number
 }>()
 
 const exporting = ref(false)
 const router = useRouter()
 
-function openCheckIn() {
-	const { href } = router.resolve({ name: "check-in", params: { eventName: props.event } })
-	window.open(href, "_blank")
-}
+const copyToClipboard = useCopyToClipboard()
+
+const checkInHref = () =>
+	router.resolve({ name: "check-in", params: { eventName: props.event } }).href
+
+const openCheckIn = () => window.open(checkInHref(), "_blank")
+
+const copyCheckInLink = () =>
+	copyToClipboard(new URL(checkInHref(), window.location.origin).href, "Check-in link copied")
 
 // The list is paged, so the export walks it: a hundred at a time until the server says
 // there is no next page.
@@ -57,30 +65,39 @@ async function exportGuests() {
 		exporting.value = false
 	}
 }
+
+const actions = [
+	{ label: "Copy check-in link", icon: "lucide-link", run: copyCheckInLink },
+	{
+		label: "Manage zones",
+		icon: "lucide-settings-2",
+		run: () => router.push({ name: "event-settings", params: { eventId: props.event } }),
+	},
+	{ label: "Download CSV", icon: "lucide-download", run: exportGuests },
+]
 </script>
 
 <template>
 	<h3 class="text-p-sm font-medium text-ink-gray-5">Quick actions</h3>
-	<section class="pt-1">
+	<QuickActionTile
+		icon="lucide-scan-line"
+		title="Check-in"
+		:subtitle="`${checkedIn} of ${total} checked in`"
+		tone="green"
+		@click="openCheckIn"
+	/>
+	<section>
 		<Button
+			v-for="action in actions"
+			:key="action.label"
 			:class="`w-full !justify-start ${PRESSABLE}`"
 			variant="ghost"
-			label="Check in guests"
-			@click="openCheckIn"
+			:label="action.label"
+			:loading="action.label === 'Download CSV' && exporting"
+			@click="action.run"
 		>
 			<template #prefix>
-				<span class="lucide-scan-barcode size-4" aria-hidden="true" />
-			</template>
-		</Button>
-		<Button
-			:class="`w-full !justify-start ${PRESSABLE}`"
-			variant="ghost"
-			label="Download CSV"
-			:loading="exporting"
-			@click="exportGuests"
-		>
-			<template #prefix>
-				<span class="lucide-download size-4" aria-hidden="true" />
+				<span class="size-4" :class="action.icon" aria-hidden="true" />
 			</template>
 		</Button>
 	</section>

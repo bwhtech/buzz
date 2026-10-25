@@ -123,7 +123,6 @@ declare module 'vue' {
     FormFieldSections: typeof import('./src/components/FormFieldSections.vue')['default']
     GuestCheckInDialog: typeof import('./src/components/checkin/GuestCheckInDialog.vue')['default']
     GuestInfoDrawer: typeof import('./src/components/dashboard/events/GuestInfoDrawer.vue')['default']
-    GuestListExport: typeof import('./src/components/dashboard/events/GuestListExport.vue')['default']
     GuestQuickActions: typeof import('./src/components/dashboard/events/GuestQuickActions.vue')['default']
     GuestRegistrationDialog: typeof import('./src/components/dashboard/events/GuestRegistrationDialog.vue')['default']
     GuestStatCards: typeof import('./src/components/dashboard/events/GuestStatCards.vue')['default']
