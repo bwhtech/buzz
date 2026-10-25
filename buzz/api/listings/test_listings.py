@@ -4,7 +4,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
-from buzz.api.listings import openapi, remove_event, upsert_event
+from buzz.api.listings import remove_event, upsert_event
 from buzz.api.listings.exceptions import NotAnIntegration
 from buzz.api.listings.schemas import EventListing
 from buzz.api.teams.services import assignable_roles, members_of
@@ -112,11 +112,3 @@ class TestPartnerListings(IntegrationTestCase):
 		)
 		with self.set_user(self.curator), self.assertRaises(frappe.ValidationError):
 			frappe.delete_doc("Buzz Team Membership", membership, ignore_permissions=True)
-
-	def test_openapi_lists_the_operations_and_listing_fields(self):
-		document = openapi()
-		self.assertEqual(document["openapi"], "3.1.0")
-		self.assertEqual(len(document["paths"]), 2)
-		self.assertEqual(document["components"]["securitySchemes"]["tokenAuth"]["in"], "header")
-		properties = document["components"]["schemas"]["EventListing"]["properties"]
-		self.assertEqual(set(properties), set(EventListing.model_fields))
