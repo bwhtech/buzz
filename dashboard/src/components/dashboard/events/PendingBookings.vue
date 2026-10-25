@@ -100,7 +100,8 @@ async function confirmDecline(message: string) {
 			<template #actions>
 				<Tooltip text="Approve">
 					<Button
-						variant="ghost"
+						variant="subtle"
+						theme="green"
 						icon="lucide-check"
 						aria-label="Approve"
 						:disabled="busy"
@@ -109,7 +110,8 @@ async function confirmDecline(message: string) {
 				</Tooltip>
 				<Tooltip text="Decline">
 					<Button
-						variant="ghost"
+						variant="subtle"
+						theme="red"
 						icon="lucide-x"
 						aria-label="Decline"
 						:disabled="busy"

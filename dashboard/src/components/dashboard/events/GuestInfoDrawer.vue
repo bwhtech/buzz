@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Avatar, Badge, Button, Tooltip, dayjsLocal } from "frappe-ui"
+import { Alert, Avatar, Badge, Button, Tooltip, dayjsLocal } from "frappe-ui"
 import { computed } from "vue"
 
 import DetailRow from "@/components/common/DetailRow.vue"
@@ -114,23 +114,18 @@ const ticket = computed<TicketWithEvent | null>(() => {
 						</div>
 					</div>
 
-					<div
+					<Alert
 						v-if="request"
-						class="space-y-3 rounded-lg border border-outline-gray-2 bg-surface-gray-1 p-4"
-					>
-						<div class="space-y-1">
-							<p class="text-base font-medium text-ink-gray-9">
-								{{ name }} has requested to join this event
-							</p>
-							<p class="text-sm text-ink-gray-5">
-								Approve to issue their ticket, or decline to let them know.
-							</p>
-						</div>
-						<div class="flex gap-2">
-							<Button variant="solid" label="Approve" @click="emit('approve')" />
-							<Button variant="solid" theme="red" label="Decline" @click="emit('decline')" />
-						</div>
-					</div>
+						:title="`${name} has requested to join this event`"
+						description="Approve to issue their ticket, or decline to let them know."
+						:primary-action="{ label: 'Approve', variant: 'solid', onClick: () => emit('approve') }"
+						:secondary-action="{
+							label: 'Decline',
+							variant: 'solid',
+							theme: 'red',
+							onClick: () => emit('decline'),
+						}"
+					/>
 
 					<dl class="space-y-3 text-base">
 						<DetailRow v-if="request" label="Ticket type">
