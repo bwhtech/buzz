@@ -4,7 +4,7 @@ import { computed, ref } from "vue"
 
 import { serverErrorMessage } from "@/utils/serverError"
 
-import CheckInZoneDialog from "./CheckInZoneDialog.vue"
+import CheckInZoneDrawer from "./CheckInZoneDrawer.vue"
 import { type CheckInZone, useCheckInZones, useEventTicketTypes } from "./checkInZones"
 
 const props = defineProps<{ event: string; disabled?: boolean }>()
@@ -12,7 +12,7 @@ const props = defineProps<{ event: string; disabled?: boolean }>()
 const zones = useCheckInZones(props.event)
 const ticketTypes = useEventTicketTypes(props.event)
 
-const isDialogOpen = ref(false)
+const isDrawerOpen = ref(false)
 const editing = ref<CheckInZone | null>(null)
 
 const ticketTypeTitles = computed(
@@ -21,7 +21,7 @@ const ticketTypeTitles = computed(
 
 function open(zone: CheckInZone | null) {
 	editing.value = zone
-	isDialogOpen.value = true
+	isDrawerOpen.value = true
 }
 
 function ticketTypesLabel(zone: CheckInZone) {
@@ -89,8 +89,8 @@ async function toggleEnabled(zone: CheckInZone, enabled: boolean) {
 			</ul>
 		</div>
 
-		<CheckInZoneDialog
-			v-model:open="isDialogOpen"
+		<CheckInZoneDrawer
+			v-model:open="isDrawerOpen"
 			:event="event"
 			:zone="editing"
 			:zones="zones"
