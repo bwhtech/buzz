@@ -278,7 +278,6 @@ watch(validationResult, (result) => {
 							{{ [startsAt, page.data?.venue].filter(Boolean).join(" · ") }}
 						</p>
 					</div>
-					<CheckInZoneSelect v-model="selectedZone" :zones="zones" any-zone class="w-40" />
 					<Button
 						size="lg"
 						:icon-left="scanning ? 'lucide-x' : 'lucide-scan-barcode'"
@@ -292,20 +291,32 @@ watch(validationResult, (result) => {
 					<QRScanner v-if="scanning" :paused="guestOpen" />
 				</Transition>
 
-				<TextInput
-					v-model="search"
-					type="search"
-					size="md"
-					placeholder="Search by name, email or ticket ID"
-					aria-label="Search guests"
-				>
-					<template #prefix>
-						<Icon icon="lucide-search" class="size-4 text-ink-gray-5" />
-					</template>
-					<template #suffix>
-						<LoadingText v-if="reloading && search.trim()" text="Searching" class="!text-sm" />
-					</template>
-				</TextInput>
+				<!-- Who and where, side by side: the search takes three parts, the zone one, never
+				     narrower than a zone name. -->
+				<div class="flex gap-2">
+					<TextInput
+						v-model="search"
+						class="min-w-0 flex-[3]"
+						type="search"
+						size="md"
+						placeholder="Search by name, email or ticket ID"
+						aria-label="Search guests"
+					>
+						<template #prefix>
+							<Icon icon="lucide-search" class="size-4 text-ink-gray-5" />
+						</template>
+						<template #suffix>
+							<LoadingText v-if="reloading && search.trim()" text="Searching" class="!text-sm" />
+						</template>
+					</TextInput>
+					<CheckInZoneSelect
+						v-model="selectedZone"
+						:zones="zones"
+						any-zone
+						size="md"
+						class="min-w-32 flex-1"
+					/>
+				</div>
 			</div>
 
 			<div class="-mx-4 overflow-x-auto px-4">
