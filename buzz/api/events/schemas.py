@@ -99,6 +99,13 @@ class GuestAddOn(APIResponse):
 	value: str | None = None
 
 
+class ZoneStatus(APIResponse):
+	name: str
+	title: str
+	allowed: bool
+	checked_in_at: datetime | None = None
+
+
 class EventGuest(APIResponse):
 	"""One ticket. A person who booked twice holds two, and appears twice."""
 
@@ -110,6 +117,8 @@ class EventGuest(APIResponse):
 	registered_at: datetime | None = None
 	add_ons: list[GuestAddOn] = Field(default_factory=list)
 	checked_in_at: datetime | None = None
+	# Where the guest stands at each enabled zone, default first.
+	zones: list[ZoneStatus] = Field(default_factory=list)
 
 
 class GuestTicketType(APIResponse):
@@ -122,6 +131,10 @@ class GuestTicketType(APIResponse):
 class ZoneOption(APIResponse):
 	name: str
 	title: str
+	is_default: bool = False
+	# Guests checked in at the zone, out of the tickets it lets in.
+	checked_in: int = 0
+	eligible: int = 0
 
 
 class EventGuestsResponse(APIResponse):
@@ -138,6 +151,8 @@ class EventGuestsResponse(APIResponse):
 	matched: int
 	# Guests checked in today, which is what the front desk counts against.
 	checked_in: int = 0
+	# Guests checked in at one zone or more.
+	checked_in_any_zone: int = 0
 	guests: list[EventGuest]
 	has_next_page: bool = False
 	filter_fields: list[FilterField]

@@ -4,7 +4,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.functions import Count, Date
-from frappe.utils import add_days, getdate, today
+from frappe.utils import add_days, getdate
 
 from buzz.api.booking.guests import email_otp_available, phone_otp_available
 from buzz.api.booking.services import are_registrations_closed
@@ -12,9 +12,9 @@ from buzz.api.events.exceptions import (
 	CannotCreateEvents,
 	CannotManageEvent,
 	EventNotFound,
-	ZoneNotFound,
 	ZoomNotAvailable,
 )
+from buzz.api.events.guest_zones import GuestZones, guest_list_zone
 from buzz.api.events.schemas import (
 	CreatedEvent,
 	DailyRegistrations,
@@ -34,18 +34,12 @@ from buzz.api.events.schemas import (
 	RouteAvailability,
 	TicketTypeTotal,
 	VerificationMethods,
-	ZoneOption,
 )
 from buzz.api.filters.conditions import ListConditions, event_questions, filter_field, question_fields
 from buzz.api.filters.schemas import FilterField
 from buzz.events.countdown import event_countdown
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
 from buzz.events.doctype.buzz_team.buzz_team import personal_team_owner
-from buzz.events.doctype.event_check_in_zone.event_check_in_zone import (
-	ONCE_PER_EVENT,
-	default_zone,
-	enabled_zones,
-)
 from buzz.events.doctype.event_venue.details import venue_details
 from buzz.permissions import (
 	events_with_section_access,
@@ -379,6 +373,7 @@ def event_guests(
 	limit: int = GUESTS_PAGE_SIZE,
 	checked_in: str | None = None,
 	zone: str | None = None,
+	eligible_only: bool = False,
 ) -> EventGuestsResponse:
 	"""One page of the people holding a ticket to an event.
 
@@ -388,12 +383,16 @@ def event_guests(
 	Ordered by when the ticket was registered, newest first by default, so a page is a
 	stable slice as the caller walks down the list. `checked_in` is "1" or "0" to keep only
 	the guests who have, or have not, checked in today, at `zone` or the default zone.
+	`eligible_only` keeps only the tickets `zone` lets in.
 	"""
 	ensure_event_team_access(event, "guests")
 
 	filter_fields, answer_parents = guest_filter_fields(event)
 	conditions = ListConditions("Event Ticket", filter_fields, answer_parents).frappe_filters(filters)
-	arrivals = checked_in_today(event, zone)
+	guest_zones = GuestZones(event)
+	arrivals = guest_zones.arrivals[guest_list_zone(event, zone)]
+	if zone and eligible_only and (types := guest_zones.ticket_types.get(zone)):
+		conditions.append(["ticket_type", "in", list(types)])
 	if checked_in in ("0", "1"):
 		operator = "in" if checked_in == "1" else "not in"
 		conditions.append(["name", operator, list(arrivals) or [""]])
@@ -419,6 +418,7 @@ def event_guests(
 	type_titles = titles_of("Event Ticket Type", {ticket.ticket_type for ticket in tickets})
 
 	for ticket in tickets:
+		ticket["zones"] = guest_zones.statuses(ticket.name, ticket.ticket_type)
 		# The response names it registered_at, and the model forbids a field it does not declare.
 		ticket["registered_at"] = ticket.pop("creation")
 		ticket["ticket_type"] = type_titles.get(ticket.ticket_type) or ticket.ticket_type
@@ -440,49 +440,12 @@ def event_guests(
 		total=total,
 		matched=matched,
 		checked_in=len(arrivals),
+		checked_in_any_zone=guest_zones.checked_in_any_zone(),
 		guests=guests,
 		has_next_page=start + len(guests) < matched,
 		filter_fields=filter_fields,
-		zones=[ZoneOption(name=row.name, title=row.title) for row in enabled_zones(event)],
+		zones=guest_zones.options(),
 	)
-
-
-def checked_in_today(event: str, zone: str | None = None) -> dict[str, datetime]:
-	"""When each of the event's submitted tickets checked in at the zone, keyed by ticket.
-
-	Today for a "Once per day" zone, at any time for a "Once per event" one.
-	"""
-	zone = guest_list_zone(event, zone)
-	# Query builder: the team check in the caller is the authorization.
-	checkin, ticket = frappe.qb.DocType("Event Check In"), frappe.qb.DocType("Event Ticket")
-	condition = (
-		(checkin.event == event)
-		& (checkin.zone == zone.name)
-		& (checkin.docstatus == 1)
-		& (ticket.docstatus == 1)
-	)
-	if zone.repeat_rule != ONCE_PER_EVENT:
-		condition &= checkin.date == today()
-	rows = (
-		frappe.qb.from_(checkin)
-		.join(ticket)
-		.on(ticket.name == checkin.ticket)
-		.select(checkin.ticket, checkin.creation)
-		.where(condition)
-	).run(as_dict=True)
-	return {row.ticket: row.creation for row in rows}
-
-
-def guest_list_zone(event: str, zone: str | None) -> frappe._dict:
-	row = frappe.db.get_value(
-		"Event Check-in Zone",
-		{"name": zone or default_zone(event), "event": event},
-		["name", "repeat_rule"],
-		as_dict=True,
-	)
-	if not row:
-		ZoneNotFound.throw()
-	return row
 
 
 def guest_filter_fields(event: str) -> tuple[list[FilterField], dict]:

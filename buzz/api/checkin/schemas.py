@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta
 
 from pydantic import Field
 
+from buzz.api.events.schemas import ZoneStatus
 from buzz.api.schemas import APIResponse
 
 
@@ -36,13 +37,6 @@ class TicketCheckinDetails(APIResponse):
 	booking_id: str | None
 	add_ons: list[TicketAddOn]
 	check_in_date: str | None = None
-
-
-class ZoneStatus(APIResponse):
-	name: str
-	title: str
-	allowed: bool
-	checked_in_at: datetime | None = None
 
 
 class CheckinResponse(APIResponse):

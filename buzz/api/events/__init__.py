@@ -50,7 +50,7 @@ def get_event_guests(
 
 	`filters` is a JSON list of `[field, operator, value]`, the string the dashboard keeps in its URL.
 	"""
-	return services.event_guests(event, search, filters, order, start, limit, zone=zone)
+	return services.event_guests(event, search, filters, order, start, limit, zone=zone, eligible_only=True)
 
 
 @frappe.whitelist(methods=["POST"])
