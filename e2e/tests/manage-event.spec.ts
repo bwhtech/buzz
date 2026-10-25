@@ -260,7 +260,8 @@ test.describe("Guest list", () => {
 		await expect(rows).toHaveCount(GUESTS.length, { timeout: 15000 })
 
 		// The count is the number of rows under it, not a separate claim.
-		const registrations = Number(await page.getByText(/^\d+$/).first().textContent())
+		const registered = page.locator('[data-slot="chart-card"]', { hasText: "Registered" })
+		const registrations = Number(await registered.getByText(/^\d+$/).first().textContent())
 		expect(registrations).toBe(GUESTS.length)
 
 		// Newest registration first, which is the reverse of the seeding above — so each
