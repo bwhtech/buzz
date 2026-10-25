@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useEventListener } from "@vueuse/core"
 import { Alert, Button, ErrorMessage, Skeleton } from "frappe-ui"
-import { computed, ref } from "vue"
+import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
@@ -72,6 +72,12 @@ function openCategoryDialog(category: TicketCategoryItem | null) {
 
 // Held by name so a reload keeps the drawer pointing at fresh data.
 const selectedName = ref<string | null>(null)
+
+// The drawer would sit over the dialog that asks about waiting requests, so it steps aside.
+watch(
+	() => approval.waiting.value,
+	(waiting) => waiting && (selectedName.value = null),
+)
 
 const selectedTicketType = computed(
 	() => page.data?.ticket_types.find((row) => row.name === selectedName.value) ?? null,
