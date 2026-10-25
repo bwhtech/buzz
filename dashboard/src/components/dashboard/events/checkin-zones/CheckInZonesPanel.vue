@@ -5,7 +5,12 @@ import { computed, ref } from "vue"
 import { serverErrorMessage } from "@/utils/serverError"
 
 import CheckInZoneDrawer from "./CheckInZoneDrawer.vue"
-import { type CheckInZone, useCheckInZones, useEventTicketTypes } from "./checkInZones"
+import {
+	type CheckInZone,
+	useCheckInZones,
+	useEventTicketTypes,
+	zoneRulesLabel,
+} from "./checkInZones"
 
 const props = defineProps<{ event: string; disabled?: boolean }>()
 
@@ -15,20 +20,9 @@ const ticketTypes = useEventTicketTypes(props.event)
 const isDrawerOpen = ref(false)
 const editing = ref<CheckInZone | null>(null)
 
-const ticketTypeTitles = computed(
-	() => new Map((ticketTypes.data ?? []).map((row) => [row.name, row.title])),
-)
-
 function open(zone: CheckInZone | null) {
 	editing.value = zone
 	isDrawerOpen.value = true
-}
-
-function ticketTypesLabel(zone: CheckInZone) {
-	if (!zone.ticket_types.length) return __("All tickets")
-	return zone.ticket_types
-		.map((row) => ticketTypeTitles.value.get(row.ticket_type) ?? row.ticket_type)
-		.join(", ")
 }
 
 async function toggleEnabled(zone: CheckInZone, enabled: boolean) {
@@ -76,7 +70,7 @@ async function toggleEnabled(zone: CheckInZone, enabled: boolean) {
 							<Badge v-if="zone.is_default" size="sm" :label="__('Default')" />
 						</span>
 						<span class="truncate text-p-sm text-ink-gray-5">
-							{{ __(zone.repeat_rule) }} · {{ ticketTypesLabel(zone) }}
+							{{ zoneRulesLabel(zone, ticketTypes.data ?? []) }}
 						</span>
 					</button>
 					<Switch

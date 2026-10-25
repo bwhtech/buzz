@@ -16,7 +16,7 @@ import GuestQuickActions from "@/components/dashboard/events/GuestQuickActions.v
 import GuestStatCards from "@/components/dashboard/events/GuestStatCards.vue"
 import { useEventGuests } from "@/composables/useEventGuests"
 import { useListQuery } from "@/composables/useListQuery"
-import { useRegistrationTrend } from "@/data/events"
+import { useCanWriteEvent, useRegistrationTrend } from "@/data/events"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError } from "@/types"
 
@@ -44,6 +44,7 @@ const exportQuery = computed(() => ({
 }))
 
 const trend = useRegistrationTrend(eventId)
+const canWrite = useCanWriteEvent(eventId)
 
 const message = (error: unknown) => (error as FrappeError | null)?.message
 
@@ -99,6 +100,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 				v-model="zone"
 				:event="eventId"
 				:stats="page.data?.zones ?? []"
+				:read-only="!canWrite.data?.has_permission"
 				@changed="page.reload()"
 			/>
 		</section>

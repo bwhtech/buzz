@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { HoverCard, ItemListRow, dayjsLocal } from "frappe-ui"
+import { HoverCard, ItemListRow } from "frappe-ui"
 import { computed } from "vue"
 
 import type { ZoneStatus } from "@/types"
+import { checkInTimeLabel } from "@/utils/dateLabels"
 
 const props = defineProps<{ zones: ZoneStatus[] }>()
 
 const status = (zone: ZoneStatus) => {
-	if (zone.checked_in_at) return dayjsLocal(zone.checked_in_at).format("h:mm A")
+	if (zone.checked_in_at) return checkInTimeLabel(zone.checked_in_at)
 	return zone.allowed ? "Not checked in" : "Not allowed"
 }
 

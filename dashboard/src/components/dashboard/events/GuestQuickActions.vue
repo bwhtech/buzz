@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Button, call, toast } from "frappe-ui"
-import { ref } from "vue"
+import { computed, ref } from "vue"
 import { useRouter } from "vue-router"
 
 import QuickActionTile, { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
@@ -66,15 +66,16 @@ async function exportGuests() {
 	}
 }
 
-const actions = [
-	{ label: "Copy check-in link", icon: "lucide-link", run: copyCheckInLink },
+const actions = computed(() => [
+	{ label: "Copy check-in link", icon: "lucide-link", run: copyCheckInLink, loading: false },
 	{
 		label: "Manage zones",
 		icon: "lucide-settings-2",
 		run: () => router.push({ name: "event-settings", params: { eventId: props.event } }),
+		loading: false,
 	},
-	{ label: "Download CSV", icon: "lucide-download", run: exportGuests },
-]
+	{ label: "Download CSV", icon: "lucide-download", run: exportGuests, loading: exporting.value },
+])
 </script>
 
 <template>
@@ -93,7 +94,7 @@ const actions = [
 			:class="`w-full !justify-start ${PRESSABLE}`"
 			variant="ghost"
 			:label="action.label"
-			:loading="action.label === 'Download CSV' && exporting"
+			:loading="action.loading"
 			@click="action.run"
 		>
 			<template #prefix>

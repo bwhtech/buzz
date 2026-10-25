@@ -42,3 +42,14 @@ export function useEventTicketTypes(event: string) {
 		limit: 100,
 	})
 }
+
+/** "Once per day · VIP only", or "· All tickets" when the zone lets every ticket in. */
+export function zoneRulesLabel(zone: CheckInZone, ticketTypes: { name: string; title: string }[]) {
+	const titles = new Map(ticketTypes.map((row) => [row.name, row.title]))
+	const tickets = zone.ticket_types.length
+		? __("{0} only", [
+				zone.ticket_types.map((row) => titles.get(row.ticket_type) ?? row.ticket_type).join(", "),
+			])
+		: __("All tickets")
+	return `${__(zone.repeat_rule)} · ${tickets}`
+}

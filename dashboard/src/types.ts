@@ -348,7 +348,9 @@ export interface GuestZone {
 	eligible?: number
 }
 
-export interface ZoneStatus extends GuestZone {
+export interface ZoneStatus {
+	name: string
+	title: string
 	allowed: boolean
 	checked_in_at: string | null
 }

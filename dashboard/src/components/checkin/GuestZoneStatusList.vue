@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Button, dayjsLocal } from "frappe-ui"
+import { Button } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import type { ZoneStatus } from "@/types"
+import { checkInTimeLabel as time } from "@/utils/dateLabels"
 
 const props = defineProps<{
 	zones: ZoneStatus[]
@@ -20,8 +21,6 @@ const act = (action: "checkIn" | "undo", zone: string) => {
 	if (action === "undo") emit("undo", zone)
 	else emit("checkIn", zone)
 }
-
-const time = (at: string) => dayjsLocal(at).format("h:mm A")
 
 const rows = computed(() =>
 	props.zone

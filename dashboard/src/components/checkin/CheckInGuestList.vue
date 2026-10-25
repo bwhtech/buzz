@@ -17,7 +17,7 @@ import CheckInZoneSelect from "@/components/checkin/CheckInZoneSelect.vue"
 import GuestCheckInDialog from "@/components/checkin/GuestCheckInDialog.vue"
 import EmptyState from "@/components/common/EmptyState.vue"
 import QRScanner from "@/components/QRScanner.vue"
-import { useCheckInZone, useZoneStatuses } from "@/composables/useCheckInZone"
+import { useCheckInZone } from "@/composables/useCheckInZone"
 import { useEventGuests } from "@/composables/useEventGuests"
 import type { ListOrder } from "@/composables/useListQuery"
 import {
@@ -37,7 +37,7 @@ const tab = ref("all")
 
 // The zone drives the list itself, and the zones come back with the list.
 const zones = ref<GuestZone[]>([])
-const { selected: selectedZone, isAnyZone, zone, defaultZone } = useCheckInZone(props.event, zones)
+const { selected: selectedZone, zone, defaultZone } = useCheckInZone(props.event, zones)
 
 const { guests, loadMore, page, loadingFirstPage, loadingMore, searchPending } = useEventGuests(
 	props.event,
@@ -46,7 +46,8 @@ const { guests, loadMore, page, loadingFirstPage, loadingMore, searchPending } =
 	ref([]),
 	{ url: "/api/v2/method/buzz.api.checkin.get_checkin_guests", checkedIn: tab, zone },
 )
-const { statuses: zoneStatuses, load: loadZoneStatuses } = useZoneStatuses()
+// Where the open guest stands at each zone; the row carries it, a check-in refreshes it.
+const zoneStatuses = ref<ZoneStatus[]>([])
 
 // Check-ins made here since the last fetch. A fetch carries the server's own count, which
 // already includes them, so the tally starts over with every response.
@@ -115,8 +116,7 @@ const openGuest = (
 	checkInCall.reset()
 	undoCall.reset()
 	selectedGuest.value = guest
-	zoneStatuses.value = scannedStatuses ?? []
-	if (!scannedStatuses) loadZoneStatuses(guest.name)
+	zoneStatuses.value = scannedStatuses ?? guest.zones
 	payment.value = paid
 	guestOpen.value = true
 }
@@ -128,6 +128,12 @@ const setCheckedIn = (ticket: string, at: string | null) => {
 	for (const guest of [guests.value.find((row) => row.name === ticket), selectedGuest.value])
 		if (guest?.name === ticket) guest.checked_in_at = at
 	localCheckIns.value += at ? 1 : -1
+}
+
+const updateZones = (ticket: string, statuses: ZoneStatus[]) => {
+	zoneStatuses.value = statuses
+	const row = guests.value.find((guest) => guest.name === ticket)
+	if (row) row.zones = statuses
 }
 
 interface CheckInResponse {
@@ -145,12 +151,13 @@ const checkInCall = useCall<CheckInResponse, { ticket_id: string; zone?: string 
 	immediate: false,
 	onSuccess: (data) => {
 		busyTicket.value = null
-		zoneStatuses.value = data.zones
+		updateZones(data.ticket.id, data.zones)
 		setCheckedIn(data.ticket.id, data.ticket.check_in_time)
 		playSuccessBeep()
 		toast.success(data.message)
 		// Long enough to see the button turn into "Checked in", then out of the way.
-		if (guestOpen.value) setTimeout(() => (guestOpen.value = false), 600)
+		// In "Any zone" mode the dialog lists more zones to act on, so it stays.
+		if (guestOpen.value && zone.value) setTimeout(() => (guestOpen.value = false), 600)
 	},
 	onError: (error) => {
 		busyTicket.value = null
@@ -180,7 +187,7 @@ const undoCall = useCall<CheckInResponse, { ticket_id: string; zone?: string }>(
 	immediate: false,
 	onSuccess: (data) => {
 		busyTicket.value = null
-		zoneStatuses.value = data.zones
+		updateZones(data.ticket.id, data.zones)
 		setCheckedIn(data.ticket.id, null)
 		toast.success(data.message)
 	},
@@ -374,7 +381,7 @@ watch(validationResult, (result) => {
 			:busy="busyTicket === selectedGuest?.name"
 			:error="serverErrorMessage(checkInCall.error || undoCall.error)"
 			:zones="zoneStatuses"
-			:zone="isAnyZone ? '' : zone"
+			:zone="zone"
 			@check-in="selectedGuest && checkIn(selectedGuest.name, $event)"
 			@undo="selectedGuest && undoCheckIn(selectedGuest.name, $event)"
 		/>
