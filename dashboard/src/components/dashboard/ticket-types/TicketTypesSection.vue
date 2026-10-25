@@ -39,27 +39,23 @@ const viewOptions = [
 		empty-title="No ticket types yet"
 		empty-description="Add one so people can register."
 		empty-icon="lucide-ticket"
+		:empty-action="
+			page.can_write
+				? { label: 'Add ticket type', iconLeft: 'lucide-plus', onClick: () => $emit('add', '') }
+				: null
+		"
 	>
 		<template #toolbar>
 			<div class="flex items-center gap-2">
 				<TabButtons v-if="!isMobile" v-model="view" :options="viewOptions" />
-				<template v-if="page.can_write">
-					<Button
-						v-if="!isMobile"
-						class="ml-auto"
-						variant="ghost"
-						icon-left="lucide-folder-plus"
-						label="New Category"
-						@click="$emit('addCategory')"
-					/>
-					<Button
-						:class="{ 'ml-auto': isMobile }"
-						variant="outline"
-						icon-left="lucide-plus"
-						label="Add"
-						@click="$emit('add', '')"
-					/>
-				</template>
+				<Button
+					v-if="page.can_write && !isMobile"
+					class="ml-auto"
+					variant="outline"
+					icon-left="lucide-folder-plus"
+					label="New Category"
+					@click="$emit('addCategory')"
+				/>
 			</div>
 		</template>
 
@@ -68,6 +64,7 @@ const viewOptions = [
 			:organizer="organizer"
 			:can-write="page.can_write"
 			@open="$emit('open', $event)"
+			@add="$emit('add', $event)"
 			@add-category="$emit('addCategory')"
 			@edit-category="$emit('editCategory', $event)"
 		/>
@@ -82,6 +79,14 @@ const viewOptions = [
 					"
 					:disabled="!page.can_write"
 					@click="$emit('open', ticketType.name)"
+				/>
+			</li>
+			<li v-if="page.can_write">
+				<Button
+					variant="ghost"
+					icon-left="lucide-plus"
+					label="Add ticket type"
+					@click="$emit('add', '')"
 				/>
 			</li>
 		</ul>
