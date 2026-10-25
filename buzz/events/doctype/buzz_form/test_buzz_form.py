@@ -1,3 +1,5 @@
+import json
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, now_datetime
@@ -8,6 +10,7 @@ from buzz.tests.factories import (
 	BuzzFormFactory,
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
+	SponsorshipTierFactory,
 	UserFactory,
 )
 
@@ -168,11 +171,56 @@ class TestBuzzFormValidation(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			form.save()
 
+	def test_a_condition_that_is_not_json_is_refused(self):
+		self.add_question(fieldname="budget", depends_on="[not json")
+
+		with self.assertRaises(frappe.ValidationError):
+			self.form.save()
+
+	def test_an_unknown_condition_operator_is_refused(self):
+		self.add_question(fieldname="budget", depends_on=condition("tier", "like", "Gold"))
+
+		with self.assertRaisesRegex(frappe.ValidationError, "Condition on Budget"):
+			self.form.save()
+
+	def test_a_condition_naming_its_own_question_is_refused(self):
+		self.add_question(fieldname="budget", depends_on=condition("budget", ">", 5000))
+
+		with self.assertRaises(frappe.ValidationError):
+			self.form.save()
+
+	def test_a_condition_naming_a_question_below_is_refused(self):
+		self.add_question(fieldname="budget", depends_on=condition("spend", ">", 5000))
+		self.add_question(fieldname="spend")
+
+		with self.assertRaises(frappe.ValidationError):
+			self.form.save()
+
+	def test_a_condition_naming_a_tier_of_another_event_is_refused(self):
+		tier = SponsorshipTierFactory.create()
+		self.add_question(fieldname="budget", depends_on=condition("tier", "=", tier.name))
+
+		with self.assertRaises(frappe.ValidationError):
+			self.form.save()
+
+	def test_valid_conditions_save(self):
+		tier = SponsorshipTierFactory.create(event=self.event.name)
+		self.add_question(fieldname="budget", depends_on=condition("tier", "=", tier.name))
+		self.add_question(fieldname="spend", mandatory_depends_on=condition("budget", ">", 5000))
+
+		self.form.save()
+
+		self.assertEqual(len(self.form.questions), 2)
+
 	def add_question(self, **question):
 		self.form.append(
 			"questions",
 			{"label": "Budget", "fieldtype": "Number", "enabled": 1, **question},
 		)
+
+
+def condition(fieldname: str, operator: str, value) -> str:
+	return json.dumps([[fieldname, operator, value]])
 
 
 class TestFormTypes(IntegrationTestCase):

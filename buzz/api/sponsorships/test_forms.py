@@ -1,3 +1,5 @@
+import json
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -225,3 +227,63 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 				self.form_values(),
 				custom_fields_data={"budget": 10, "newsletter": 1, "unknown": "x"},
 			)
+
+
+class TestSponsorFormConditions(SponsorFormTestCase):
+	def setUp(self):
+		super().setUp()
+		self.gold = SponsorshipTierFactory.create(event=self.event.name, title="Gold")
+		self.silver = SponsorshipTierFactory.create(event=self.event.name, title="Silver")
+
+	def test_an_answer_to_a_hidden_question_is_dropped(self):
+		self.add_question(depends_on=condition("tier", "=", self.gold.name))
+
+		name = submit_enquiry_form(
+			self.event.route, self.form_values(tier=self.silver.name), custom_fields_data={"budget": 1000}
+		)
+
+		self.assertEqual(self.answers_of(name), {})
+
+	def test_a_shown_question_keeps_its_answer(self):
+		self.add_question(depends_on=condition("tier", "=", self.gold.name))
+
+		name = submit_enquiry_form(
+			self.event.route, self.form_values(tier=self.gold.name), custom_fields_data={"budget": 1000}
+		)
+
+		self.assertEqual(self.answers_of(name), {"budget": "1000"})
+
+	def test_a_hidden_mandatory_question_does_not_block_submit(self):
+		self.add_question(mandatory=1, depends_on=condition("tier", "=", self.gold.name))
+
+		self.assertTrue(submit_enquiry_form(self.event.route, self.form_values(tier=self.silver.name)))
+		with self.assertRaises(frappe.MandatoryError):
+			submit_enquiry_form(self.event.route, self.form_values(tier=self.gold.name))
+
+	def test_a_conditionally_required_question_must_be_answered_when_shown(self):
+		self.add_question(mandatory_depends_on=condition("tier", "=", self.gold.name))
+
+		with self.assertRaises(frappe.MandatoryError):
+			submit_enquiry_form(self.event.route, self.form_values(tier=self.gold.name))
+		self.assertTrue(submit_enquiry_form(self.event.route, self.form_values(tier=self.silver.name)))
+
+	def test_form_data_carries_help_text_and_conditions(self):
+		self.add_question(description="In dollars", depends_on=condition("tier", "=", self.gold.name))
+
+		definition = self.definition_of("budget")
+
+		self.assertEqual(definition.description, "In dollars")
+		self.assertEqual(definition.depends_on, [["tier", "=", self.gold.name]])
+		self.assertIsNone(definition.mandatory_depends_on)
+
+	def definition_of(self, fieldname: str):
+		definitions = get_enquiry_form(self.event.route).custom_fields
+		return next(definition for definition in definitions if definition.fieldname == fieldname)
+
+	def answers_of(self, enquiry: str) -> dict:
+		rows = frappe.get_doc("Sponsorship Enquiry", enquiry).additional_fields
+		return {row.fieldname: row.value for row in rows}
+
+
+def condition(fieldname: str, operator: str, value) -> str:
+	return json.dumps([[fieldname, operator, value]])

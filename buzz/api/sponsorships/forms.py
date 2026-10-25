@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 
 from buzz.api.forms.answers import CustomAnswers
+from buzz.api.forms.conditions import parse_conditions
 from buzz.api.forms.exceptions import FormNotAvailable, SubmissionsClosed
 from buzz.api.forms.fields import get_form_fields
 from buzz.api.forms.schemas import CustomFieldDefinition
@@ -70,6 +71,9 @@ class SponsorFormService(CustomFormService):
 				mandatory=question.mandatory,
 				placeholder=question.placeholder,
 				default_value=question.default_value,
+				description=question.description,
+				depends_on=parse_conditions(question.depends_on),
+				mandatory_depends_on=parse_conditions(question.mandatory_depends_on),
 				order=question.idx,
 			)
 			for question in self.form.questions
@@ -87,10 +91,8 @@ class SponsorFormService(CustomFormService):
 		enquiry = frappe.get_doc(self.build_doc_data(values))
 		enquiry.enquiry_form = self.form.name
 		enquiry.contact_email = enquiry.contact_email or session_user_email()
-		enquiry.set(
-			"additional_fields",
-			CustomAnswers(self.form.questions).rows(frappe.parse_json(custom_fields_data) or {}),
-		)
+		answers = frappe.parse_json(custom_fields_data) or {}
+		enquiry.set("additional_fields", CustomAnswers(self.form.questions).rows(answers, context=values))
 		self.validate_tier_belongs_to_event(enquiry.tier)
 		return enquiry.insert(ignore_permissions=True).name
 

@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.utils import cstr, getdate, validate_email_address, validate_phone_number_with_country_code
 
+from buzz.api.forms.conditions import is_required, is_shown
 from buzz.api.forms.exceptions import InvalidAnswer, UnknownQuestions
 
 
@@ -35,15 +36,22 @@ class CustomAnswers:
 	def __init__(self, definitions):
 		self.definitions = {row.fieldname: row for row in definitions if row.enabled}
 
-	def rows(self, values: dict) -> list[dict]:
-		"""Return `additional_fields` rows, rejecting anything the form did not ask for."""
+	def rows(self, values: dict, context: dict | None = None) -> list[dict]:
+		"""Return `additional_fields` rows, rejecting anything the form did not ask for.
+
+		`context` holds the standard field values a condition may name, such as an
+		enquiry's tier; answers are merged in on top of it.
+		"""
 		if not isinstance(values, dict) or values.keys() - self.definitions.keys():
 			UnknownQuestions.throw()
+		condition_values = {**(context or {}), **values}
 		rows = []
 		for fieldname, question in self.definitions.items():
+			if not is_shown(question, condition_values):
+				continue
 			value = values.get(fieldname)
 			if value is None or value == "" or value == []:
-				if question.mandatory:
+				if is_required(question, condition_values):
 					frappe.throw(_("{0} is required.").format(question.label), frappe.MandatoryError)
 				continue
 			self.validate_value(question, value)

@@ -29,6 +29,9 @@ class CustomFieldDefinition(APIResponse):
 	mandatory: int
 	placeholder: str | None
 	default_value: str | None
+	description: str | None = None
+	depends_on: list | None = None
+	mandatory_depends_on: list | None = None
 	order: int
 
 

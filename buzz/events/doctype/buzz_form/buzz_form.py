@@ -6,6 +6,7 @@ from frappe.model.document import Document
 from frappe.utils import cstr, get_datetime, now_datetime
 
 from buzz.api.forms.fields import validate_excluded_fields
+from buzz.events.doctype.buzz_form.condition_validator import ConditionValidator
 from buzz.events.doctype.buzz_form.form_types import form_type
 
 ROUTE_PATTERN = r"[a-zA-Z0-9_-]+"
@@ -58,6 +59,7 @@ class BuzzForm(Document):
 		self.validate_route()
 		validate_excluded_fields(self.form_doctype, self.excluded_fields)
 		self.validate_questions()
+		self.validate_conditions()
 		self.validate_published_event()
 		self.validate_collects_answers()
 		form_type(self.form_doctype).validate(self)
@@ -111,6 +113,9 @@ class BuzzForm(Document):
 	def saved_question_fieldnames(self) -> dict[str, str]:
 		before = self.get_doc_before_save()
 		return {question.name: question.fieldname for question in before.questions} if before else {}
+
+	def validate_conditions(self):
+		ConditionValidator(self).validate()
 
 	def validate_published_event(self):
 		if not self.publish or self.flags.migrating:

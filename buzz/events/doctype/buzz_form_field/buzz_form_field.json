@@ -65,6 +65,30 @@
    "fieldname": "default_value",
    "label": "Default Value",
    "fieldtype": "Data"
+  },
+  {
+   "fieldname": "description",
+   "label": "Help Text",
+   "fieldtype": "Small Text",
+   "description": "Shown under the question."
+  },
+  {
+   "fieldname": "section_break_conditions",
+   "label": "Conditions",
+   "fieldtype": "Section Break",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "depends_on",
+   "label": "Show When",
+   "fieldtype": "JSON",
+   "description": "List of [fieldname, operator, value] triples that must all match. Empty means always shown."
+  },
+  {
+   "fieldname": "mandatory_depends_on",
+   "label": "Required When",
+   "fieldtype": "JSON",
+   "description": "Same format as Show When. The question is required when all triples match."
   }
  ],
  "field_order": [
@@ -76,7 +100,11 @@
   "mandatory",
   "options",
   "placeholder",
-  "default_value"
+  "default_value",
+  "description",
+  "section_break_conditions",
+  "depends_on",
+  "mandatory_depends_on"
  ],
  "permissions": []
 }

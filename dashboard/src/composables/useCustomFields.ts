@@ -17,6 +17,10 @@ export interface FrappeField {
 	reqd?: number | boolean
 	default?: string | number | boolean
 	default_value?: string | number | boolean
+	description?: string
+	// [fieldname, operator, value] triples that must all match; empty means always shown.
+	depends_on?: [string, string, unknown][] | null
+	mandatory_depends_on?: [string, string, unknown][] | null
 	link_options?: SelectOption[]
 	applied_to?: string
 }
