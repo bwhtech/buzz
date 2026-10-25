@@ -73,7 +73,8 @@ class TestSectionWiring(CollaboratorTestCase):
 		hooks = frappe.get_hooks("permission_query_conditions", app_name="buzz")
 		derived = {doctype for doctype, methods in hooks.items() if "derived_query_conditions" in methods[0]}
 
-		self.assertEqual(derived - set(DOCTYPE_SECTION), set())
+		# A Buzz Form takes its section from the doctype it collects.
+		self.assertEqual(derived - set(DOCTYPE_SECTION) - {"Buzz Form"}, set())
 
 	def test_every_section_is_mapped(self):
 		self.assertEqual(set(DOCTYPE_SECTION.values()), set(SECTIONS))

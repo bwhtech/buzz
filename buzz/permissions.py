@@ -39,8 +39,13 @@ DOCTYPE_SECTION = {
 	"Event Sponsor": "sponsors",
 	"Sponsorship Tier": "sponsors",
 	"Sponsorship Enquiry": "sponsors",
-	"Sponsor Enquiry Form": "sponsors",
 	"Event Communication": "communications",
+}
+
+# A Buzz Form collects the rows of one doctype, so it belongs to that doctype's section.
+FORM_DOCTYPES_BY_SECTION = {
+	section: [doctype for doctype, mapped in DOCTYPE_SECTION.items() if mapped == section]
+	for section in SECTIONS
 }
 
 # Attendees, sponsors and speakers reach their own rows without any membership.
@@ -257,11 +262,30 @@ def team_query_conditions(user: str | None = None, doctype: str | None = None, *
 	return as_sql(table.team.isin(my_teams(user)))
 
 
+def form_section(form_doctype: str | None) -> str:
+	return DOCTYPE_SECTION.get(form_doctype, "details")
+
+
+def form_criterion(user: str, table) -> Criterion:
+	"""A form is visible to whoever may read the rows it collects."""
+	criterion = table.form_doctype.notin(list(DOCTYPE_SECTION)) & table.event.isin(
+		events_with_section_access(user, "details")
+	)
+	for section, doctypes in FORM_DOCTYPES_BY_SECTION.items():
+		criterion |= table.form_doctype.isin(doctypes) & table.event.isin(
+			events_with_section_access(user, section)
+		)
+	return criterion
+
+
 def derived_criterion(user: str, doctype: str | None) -> Criterion | None:
 	if is_unrestricted(user):
 		return None
 
 	table = frappe.qb.DocType(doctype)
+	if doctype == "Buzz Form":
+		return form_criterion(user, table)
+
 	criterion = table.event.isin(events_with_section_access(user, DOCTYPE_SECTION[doctype]))
 	if doctype in OWNER_VISIBLE_DOCTYPES:
 		criterion |= table.owner == user
@@ -319,7 +343,8 @@ def derived_has_permission(doc, ptype: str = "read", user: str | None = None, **
 		# rows hold personal data, so they get no such pass — the checks above are the way in.
 		return is_unrestricted(user)
 
-	return has_section_permission(doc.event, DOCTYPE_SECTION[doc.doctype], ptype, user)
+	section = form_section(doc.form_doctype) if doc.doctype == "Buzz Form" else DOCTYPE_SECTION[doc.doctype]
+	return has_section_permission(doc.event, section, ptype, user)
 
 
 def team_doc_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:

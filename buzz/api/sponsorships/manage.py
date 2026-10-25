@@ -44,8 +44,9 @@ def event_sponsorships(event: str) -> EventSponsorshipsResponse:
 
 
 def form_state(doc) -> EnquiryFormState | None:
-	if not frappe.db.exists("Sponsor Enquiry Form", {"event": doc.name}):
+	form_name = frappe.db.get_value("Buzz Form", {"event": doc.name, "form_doctype": "Sponsorship Enquiry"})
+	if not form_name:
 		return None
-	form = frappe.get_doc("Sponsor Enquiry Form", {"event": doc.name})
+	form = frappe.get_doc("Buzz Form", form_name)
 	link = f"/b/{doc.route}/{form.route}" if doc.route else None
 	return EnquiryFormState(name=form.name, closed=form.is_closed, link=link)

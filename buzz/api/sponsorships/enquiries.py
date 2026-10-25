@@ -71,13 +71,13 @@ def enquiry_filter_fields(event: str) -> list[FilterField]:
 
 
 def enquiry_questions(event: str) -> list:
-	"""Enabled questions on the event's enquiry form; an event has at most one."""
-	form = frappe.db.get_value("Sponsor Enquiry Form", {"event": event})
+	"""Enabled questions on the event's sponsorship form; an event has at most one."""
+	form = frappe.db.get_value("Buzz Form", {"event": event, "form_doctype": "Sponsorship Enquiry"})
 	if not form:
 		return []
 	return frappe.get_all(
 		"Buzz Form Field",
-		filters={"parenttype": "Sponsor Enquiry Form", "parent": form, "enabled": 1},
+		filters={"parenttype": "Buzz Form", "parent": form, "enabled": 1},
 		fields=["fieldname", "label", "fieldtype", "options"],
 		order_by="idx",
 	)

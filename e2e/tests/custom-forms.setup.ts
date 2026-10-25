@@ -92,18 +92,20 @@ setup("setup custom forms on test event", async ({ request }) => {
 		],
 	})
 
-	const sponsorshipForms = await getList<NamedDoc>(request, "Sponsor Enquiry Form", {
-		filters: { event: ["=", eventName] },
+	const sponsorshipForms = await getList<NamedDoc>(request, "Buzz Form", {
+		filters: { event: ["=", eventName], form_doctype: ["=", "Sponsorship Enquiry"] },
 	})
 	const sponsorshipFormName = sponsorshipForms[0]?.name
 	if (!sponsorshipFormName) {
-		await createDoc(request, "Sponsor Enquiry Form", {
+		await createDoc(request, "Buzz Form", {
 			event: eventName,
+			form_doctype: "Sponsorship Enquiry",
+			title: "Sponsorship enquiry",
 			route: "enquire-sponsorship",
 			publish: 1,
 		})
 	} else {
-		await updateDoc(request, "Sponsor Enquiry Form", sponsorshipFormName, {
+		await updateDoc(request, "Buzz Form", sponsorshipFormName, {
 			route: "enquire-sponsorship",
 			publish: 1,
 		})

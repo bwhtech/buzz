@@ -104,8 +104,8 @@ class TestGetEventSponsorshipEnquiries(ManageTestCase):
 
 	def test_form_questions_are_offered_and_filter_the_page(self):
 		# Every event is created with its enquiry form.
-		form = frappe.get_doc("Sponsor Enquiry Form", {"event": self.event})
-		form.append("custom_fields", {"label": "Needs a booth", "fieldname": "booth", "fieldtype": "Check"})
+		form = frappe.get_doc("Buzz Form", {"event": self.event, "form_doctype": "Sponsorship Enquiry"})
+		form.append("questions", {"label": "Needs a booth", "fieldname": "booth", "fieldtype": "Check"})
 		form.save()
 		booth = SponsorshipEnquiryFactory.create(
 			event=self.event,

@@ -13,9 +13,9 @@ from frappe.website.utils import cleanup_page_name
 
 from buzz import telemetry
 from buzz.api.forms.fields import validate_excluded_fields
+from buzz.events.doctype.buzz_form.form_types import FORM_TYPES, create_sponsorship_form
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 from buzz.events.doctype.event_check_in_zone.event_check_in_zone import create_default_zone
-from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import create_for_event
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import create_ticket_categories
 from buzz.utils import get_time_zone_label, only_if_app_installed
 
@@ -187,19 +187,20 @@ class BuzzEvent(Document):
 		self.time_zone_label = get_time_zone_label(self.time_zone, event_start)
 
 	def validate_custom_forms(self):
-		# A new event has no form row yet, but create_default_records is about to make one.
-		sponsor_route = (
-			frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name}, "route")
-			if not self.is_new()
-			else "enquire-sponsorship"
-		)
+		form_routes = self.form_routes()
 		for form in self.custom_forms:
-			if form.form_doctype == "Sponsorship Enquiry":
-				frappe.throw(_("Manage sponsorship intake in Sponsor Enquiry Form."))
-			if sponsor_route and (form.route or "").lower() == sponsor_route.lower():
-				frappe.throw(_("This route is already used by the sponsorship form."))
+			if form.form_doctype in FORM_TYPES:
+				frappe.throw(_("Manage {0} forms in Buzz Form.").format(_(form.form_doctype)))
+			if any(route and route.lower() == (form.route or "").lower() for route in form_routes):
+				frappe.throw(_("This route is already used by another form of this event."))
 			if form.excluded_fields:
 				validate_excluded_fields(form.form_doctype, form.excluded_fields)
+
+	def form_routes(self) -> list[str]:
+		# A new event has no form yet, but create_default_records is about to make one.
+		if self.is_new():
+			return ["enquire-sponsorship"]
+		return frappe.get_all("Buzz Form", filters={"event": self.name}, pluck="route")
 
 	def validate_schedule(self):
 		end_date = self.end_date or self.start_date
@@ -323,13 +324,13 @@ class BuzzEvent(Document):
 		)
 
 	def on_trash(self):
-		# The form is created with the event and is the only doc that is one-per-event, so it
-		# goes with it. Frappe runs this before the link check, which would otherwise refuse
-		# every event delete. Enquiries block the delete on their own link to the event, so
-		# leave their form standing rather than pre-empting that with a worse message.
-		sponsorship_form_id = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
-		if sponsorship_form_id and not frappe.db.exists("Sponsorship Enquiry", {"event": self.name}):
-			frappe.delete_doc("Sponsor Enquiry Form", sponsorship_form_id, ignore_permissions=True)
+		# Forms are created with the event, so they go with it. Frappe runs this before the
+		# link check, which would otherwise refuse every event delete. Enquiries block the
+		# delete on their own link to the event, so leave their forms standing rather than
+		# pre-empting that with a worse message.
+		if not frappe.db.exists("Sponsorship Enquiry", {"event": self.name}):
+			for form in frappe.get_all("Buzz Form", {"event": self.name}, pluck="name"):
+				frappe.delete_doc("Buzz Form", form, ignore_permissions=True)
 		# A community's request to list the event means nothing once the event is gone.
 		frappe.db.delete("Community Event Request", {"event": self.name})
 		# Zones come with the event, the default one included. Check-ins block the delete on
@@ -345,7 +346,7 @@ class BuzzEvent(Document):
 		]
 		for record in records:
 			frappe.get_doc({**record, "event": self.name}).insert(ignore_permissions=True)
-		create_for_event(self.name)
+		create_sponsorship_form(self.name)
 		create_default_zone(self.name)
 
 	def archive_event(self):
@@ -358,11 +359,10 @@ class BuzzEvent(Document):
 		self.close_registrations()
 		for form in self.custom_forms:
 			form.publish = 0
-		sponsorship_form_id = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
-		if sponsorship_form_id:
-			sponsorship_form = frappe.get_doc("Sponsor Enquiry Form", sponsorship_form_id)
-			sponsorship_form.publish = 0
-			sponsorship_form.save(ignore_permissions=True)
+		for name in frappe.get_all("Buzz Form", {"event": self.name}, pluck="name"):
+			form = frappe.get_doc("Buzz Form", name)
+			form.publish = 0
+			form.save(ignore_permissions=True)
 		self.save()
 
 	def close_registrations(self):
@@ -591,8 +591,8 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 
 	if options.get("custom_fields"):
 		for cf in template.template_custom_fields:
-			# Sponsorship questions live on Sponsor Enquiry Form now; an older template may
-			# still carry one, and recreating it here would fail the event mid-creation.
+			# Sponsorship questions live on the event's sponsorship form now; an older template
+			# may still carry one, and recreating it here would fail the event mid-creation.
 			if cf.custom_form_doctype == "Sponsorship Enquiry":
 				continue
 			custom_field = frappe.new_doc("Buzz Custom Field")

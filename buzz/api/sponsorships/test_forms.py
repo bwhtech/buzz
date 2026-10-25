@@ -17,7 +17,9 @@ class SponsorFormTestCase(IntegrationTestCase):
 	def setUp(self):
 		self.enterContext(self.set_user("Administrator"))
 		self.event = BuzzEventFactory.create()
-		self.form = frappe.get_doc("Sponsor Enquiry Form", {"event": self.event.name})
+		self.form = frappe.get_doc(
+			"Buzz Form", {"event": self.event.name, "form_doctype": "Sponsorship Enquiry"}
+		)
 		self.form.publish = 1
 		self.form.save(ignore_permissions=True)
 
@@ -26,7 +28,7 @@ class SponsorFormTestCase(IntegrationTestCase):
 
 	def add_question(self, **question):
 		self.form.append(
-			"custom_fields",
+			"questions",
 			{
 				"label": "Budget",
 				"fieldname": "budget",

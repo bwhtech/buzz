@@ -656,7 +656,7 @@ export interface CommunicationDraft {
 	scheduled_at: string
 }
 
-// buzz.api.sponsorships.get_event_sponsorships: an event's Sponsor Enquiry Form, as read
+// buzz.api.sponsorships.get_event_sponsorships: an event's sponsorship Buzz Form, as read
 // on the manage page.
 export interface EnquiryFormState {
 	name: string

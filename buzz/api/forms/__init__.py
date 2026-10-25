@@ -8,6 +8,9 @@ from buzz.api.forms.services import (
 	get_event_proposal_form,
 )
 
+# A form doctype that needs its own service, by dotted path: importing it here would cycle.
+FORM_SERVICES = {"Sponsorship Enquiry": "buzz.api.sponsorships.forms.SponsorFormService"}
+
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_dial_codes() -> list:
@@ -28,12 +31,14 @@ def submit_custom_form(
 
 
 def form_service(event_route: str, form_route: str):
-	from buzz.api.sponsorships.forms import SponsorFormService
-
-	service = CustomFormService(event_route, form_route)
-	if frappe.db.exists("Sponsor Enquiry Form", {"event": service.event.name, "route": form_route}):
-		return SponsorFormService(event_route, form_route)
-	return service
+	event_name = CustomFormService(event_route, form_route).event.name
+	form_doctype = frappe.db.get_value(
+		"Buzz Form", {"event": event_name, "route": form_route, "publish": 1}, "form_doctype"
+	)
+	service_path = FORM_SERVICES.get(form_doctype)
+	if not service_path:
+		return CustomFormService(event_route, form_route)
+	return frappe.get_attr(service_path)(event_route, form_route)
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method

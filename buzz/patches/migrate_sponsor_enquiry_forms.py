@@ -2,8 +2,9 @@ import re
 
 import frappe
 from frappe import _, scrub
+from frappe.model.document import Document
 
-from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import ENQUIRY_FIELDS
+from buzz.events.doctype.buzz_form.form_types import ENQUIRY_FIELDS
 
 SETTINGS = (
 	"route",
@@ -28,6 +29,8 @@ QUESTION_FIELDS = (
 
 
 def execute():
+	if not frappe.db.exists("DocType", "Sponsor Enquiry Form"):
+		return
 	SponsorFormMigration().run()
 
 
@@ -74,19 +77,15 @@ class SponsorFormMigration:
 			fields=["name", *QUESTION_FIELDS],
 			order_by="order asc, creation asc",
 		)
-		form = frappe.get_doc(
-			{"doctype": "Sponsor Enquiry Form", "event": event, "route": "enquire-sponsorship"}
-		)
+		# The controller is gone from the app; the Buzz Form port validates every row instead.
+		form = Document({"doctype": "Sponsor Enquiry Form", "event": event, "route": "enquire-sponsorship"})
 		if legacy:
 			form.update({key: legacy.get(key) for key in SETTINGS})
-			form.flags.legacy_form_row = legacy.name
 		taken = set()
 		for question in questions:
 			row = {key: question.get(key) for key in QUESTION_FIELDS}
 			row["fieldname"] = self.usable_fieldname(row, taken)
 			form.append("custom_fields", row)
-		form.flags.migrating_sponsorship = True
-		form.validate()
 		return form, legacy, questions
 
 	def usable_fieldname(self, question, taken):

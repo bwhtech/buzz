@@ -49,7 +49,7 @@ class BuzzCustomField(Document):
 			and self.applied_to == "Custom Form"
 			and self.custom_form_doctype == "Sponsorship Enquiry"
 		):
-			frappe.throw(_("Add sponsorship questions to Sponsor Enquiry Form."))
+			frappe.throw(_("Add sponsorship questions to the event's Buzz Form."))
 		if not self.fieldname:
 			self.fieldname = frappe.scrub(self.label)
 

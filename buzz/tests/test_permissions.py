@@ -5,6 +5,8 @@ import frappe
 
 from buzz.tests.base_test_cases import TeamPermissionTestCase
 from buzz.tests.factories import (
+	BuzzEventCollaboratorFactory,
+	BuzzFormFactory,
 	BuzzTeamMembershipFactory,
 	EventTicketFactory,
 	UserFactory,
@@ -123,3 +125,23 @@ class TestMultiTeamMembership(RoleTestCase):
 
 		self.assertIn(self.event_a, events)
 		self.assertNotIn(self.event_b, events)
+
+
+class TestBuzzFormSection(RoleTestCase):
+	def test_a_collaborator_reads_only_the_form_of_their_section(self):
+		collaborator = UserFactory.create_once("perm-sponsor-collaborator@example.com").name
+		BuzzEventCollaboratorFactory.create(
+			"accepted", event=self.event_a, email=collaborator, sponsors_access="Edit"
+		)
+		sponsorship = self.sponsorship_form(self.event_a)
+		talks = BuzzFormFactory.create(event=self.event_a)
+
+		self.assertTrue(self.has_permission_as(collaborator, "read", "Buzz Form", sponsorship.name))
+		self.assertFalse(self.has_permission_as(collaborator, "read", "Buzz Form", talks.name))
+
+		listed = self.list_as(collaborator, "Buzz Form")
+		self.assertIn(sponsorship.name, listed)
+		self.assertNotIn(talks.name, listed)
+
+	def sponsorship_form(self, event: str):
+		return frappe.get_doc("Buzz Form", {"event": event, "form_doctype": "Sponsorship Enquiry"})

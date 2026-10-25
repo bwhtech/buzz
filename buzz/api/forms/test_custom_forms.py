@@ -251,7 +251,7 @@ class TestCustomFormLinkEventFilter(FormsTestCase):
 
 	def build_sponsorship_event(self):
 		event, _ = self.build_event()
-		form = frappe.get_doc("Sponsor Enquiry Form", {"event": event.name})
+		form = frappe.get_doc("Buzz Form", {"event": event.name, "form_doctype": "Sponsorship Enquiry"})
 		form.publish = 1
 		form.save()
 		return event, form.route

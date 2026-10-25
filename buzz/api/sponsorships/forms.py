@@ -8,14 +8,14 @@ from buzz.api.forms.exceptions import FormNotAvailable, SubmissionsClosed
 from buzz.api.forms.fields import get_form_fields
 from buzz.api.forms.schemas import CustomFieldDefinition
 from buzz.api.forms.services import CustomFormService
-from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import ENQUIRY_FIELDS
+from buzz.events.doctype.buzz_form.form_types import ENQUIRY_FIELDS
 
 ENQUIRY_DOCTYPE = "Sponsorship Enquiry"
 SUBMISSION_METHOD = "buzz.api.sponsorships.submit_enquiry_form"
 
 
 class SponsorFormService(CustomFormService):
-	"""Serve the event's Sponsor Enquiry Form through the shared custom form machinery."""
+	"""Serve the event's sponsorship Buzz Form through the shared custom form machinery."""
 
 	def form_data(self):
 		response = super().form_data()
@@ -24,13 +24,13 @@ class SponsorFormService(CustomFormService):
 
 	@cached_property
 	def form(self):
-		"""The event's published Sponsor Enquiry Form, in place of a custom_forms row."""
+		"""The event's published sponsorship form, in place of a custom_forms row."""
 		form_id = frappe.db.get_value(
-			"Sponsor Enquiry Form", {"event": self.event.name, "route": self.form_route, "publish": 1}
+			"Buzz Form", {"event": self.event.name, "route": self.form_route, "publish": 1}
 		)
 		if not form_id:
 			FormNotAvailable.throw()
-		return frappe.get_doc("Sponsor Enquiry Form", form_id)
+		return frappe.get_doc("Buzz Form", form_id)
 
 	@property
 	def form_doctype(self):
@@ -72,7 +72,7 @@ class SponsorFormService(CustomFormService):
 				default_value=question.default_value,
 				order=question.idx,
 			)
-			for question in self.form.custom_fields
+			for question in self.form.questions
 			if question.enabled
 		]
 
@@ -89,7 +89,7 @@ class SponsorFormService(CustomFormService):
 		enquiry.contact_email = enquiry.contact_email or session_user_email()
 		enquiry.set(
 			"additional_fields",
-			CustomAnswers(self.form.custom_fields).rows(frappe.parse_json(custom_fields_data) or {}),
+			CustomAnswers(self.form.questions).rows(frappe.parse_json(custom_fields_data) or {}),
 		)
 		self.validate_tier_belongs_to_event(enquiry.tier)
 		return enquiry.insert(ignore_permissions=True).name
