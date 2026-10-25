@@ -76,8 +76,8 @@ const ticketTypes = computed(() => {
 						:style="{ width: `${ticketType.percent}%` }"
 					/>
 				</div>
-				<ul class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-gray-6">
-					<li
+				<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-gray-6">
+					<span
 						v-for="ticketType in ticketTypes"
 						:key="ticketType.title"
 						class="inline-flex min-w-0 items-center gap-1.5"
@@ -85,11 +85,11 @@ const ticketTypes = computed(() => {
 						<span class="size-1.5 shrink-0 rounded-full" :class="ticketType.shade" />
 						<span class="truncate">{{ ticketType.title }}</span>
 						<span class="tabular-nums text-ink-gray-9">{{ ticketType.count }}</span>
-					</li>
-					<li v-if="trend && !ticketTypes.length" class="text-ink-gray-5">
+					</span>
+					<span v-if="trend && !ticketTypes.length" class="text-ink-gray-5">
 						{{ __("No tickets yet") }}
-					</li>
-				</ul>
+					</span>
+				</div>
 			</div>
 		</ChartCard>
 	</div>
