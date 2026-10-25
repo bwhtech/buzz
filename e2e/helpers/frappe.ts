@@ -241,8 +241,16 @@ export async function ensureTestTeam(request: APIRequestContext): Promise<string
 	const team =
 		existing ??
 		(await createDoc<{ name: string }>(request, "Buzz Team", { team_name: TEST_TEAM_NAME }))
-	// Fixtures sell paid tickets, which the team's flag gates.
-	await updateDoc(request, "Buzz Team Settings", team.name, { feature_paid_events: 1 })
+	// Fixtures sell paid tickets, which the team's flag gates. Setups run in parallel, so
+	// only write when the flag is off: concurrent writes to the row deadlock.
+	const settings = await getDoc<{ feature_paid_events?: number }>(
+		request,
+		"Buzz Team Settings",
+		team.name,
+	)
+	if (!settings.feature_paid_events) {
+		await updateDoc(request, "Buzz Team Settings", team.name, { feature_paid_events: 1 })
+	}
 	return team.name
 }
 

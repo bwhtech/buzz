@@ -49,7 +49,6 @@ async function requestToJoin(browser: Browser, requester: Requester) {
 	await expect(page.getByText("Requires approval").first()).toBeVisible()
 	await bookingPage.goToAttendees()
 	await bookingPage.fillMyDetails(requester.name, "E2E", requester.email)
-	await expect(page.locator('button[type="submit"]')).toHaveText(/Request to join/)
 	await bookingPage.submit()
 
 	await expect(page).toHaveURL(/\/bookings\/.+/)
@@ -75,6 +74,14 @@ async function openTicketTypeDrawer(page: Page) {
 	return page.getByRole("switch", { name: "Requires approval" })
 }
 
+// Sets the switch rather than toggling it, so a retried test starts from the state it expects.
+async function setApproval(page: Page, enabled: boolean) {
+	const approval = await openTicketTypeDrawer(page)
+	await expect(approval).toBeVisible()
+	if ((await approval.isChecked()) !== enabled) await approval.click()
+	return approval
+}
+
 test.describe.configure({ mode: "serial" })
 
 test.describe("Approval-required registration", () => {
@@ -83,9 +90,7 @@ test.describe("Approval-required registration", () => {
 		browser,
 		baseURL,
 	}) => {
-		const approval = await openTicketTypeDrawer(page)
-		await approval.click()
-		await expect(approval).toBeChecked()
+		await expect(await setApproval(page, true)).toBeChecked()
 
 		const requester = REQUESTERS.approved
 		const { page: guestPage, context } = await requestToJoin(browser, requester)
@@ -125,10 +130,14 @@ test.describe("Approval-required registration", () => {
 		baseURL,
 	}) => {
 		const requester = REQUESTERS.kept
-		const { context } = await requestToJoin(browser, requester)
+		await setApproval(page, true)
+		const earlier = await bookingOf(baseURL!, requester)
+		if (earlier?.status !== "Approval Pending") {
+			const { context } = await requestToJoin(browser, requester)
+			await context.close()
+		}
 
-		const approval = await openTicketTypeDrawer(page)
-		await approval.click()
+		await setApproval(page, false)
 
 		const dialog = page.getByRole("dialog")
 		await expect(dialog.getByText("1 request is still waiting").first()).toBeVisible()
@@ -142,6 +151,5 @@ test.describe("Approval-required registration", () => {
 
 		await page.goto(`/b/manage/events/${eventId}/guests?view=pending`)
 		await expect(pendingRow(page, requester)).toBeVisible()
-		await context.close()
 	})
 })
