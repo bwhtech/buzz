@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Avatar, Badge, Tooltip, dayjsLocal } from "frappe-ui"
+import { Avatar, Badge, Tooltip } from "frappe-ui"
 import { computed } from "vue"
 
+import GuestZoneDots from "@/components/dashboard/events/GuestZoneDots.vue"
 import type { EventGuest } from "@/types"
 
 const props = defineProps<{ guest: EventGuest; selected?: boolean }>()
@@ -20,17 +21,6 @@ const VISIBLE_ADD_ONS = 2
 
 const label = (addOn: EventGuest["add_ons"][number]) =>
 	addOn.value ? `${addOn.title}: ${addOn.value}` : addOn.title
-
-// One dot per enabled zone, so a glance down the list shows who has been where.
-const zoneLabel = (zone: EventGuest["zones"][number]) => {
-	if (zone.checked_in_at) return `${zone.title}: ${dayjsLocal(zone.checked_in_at).format("h:mm A")}`
-	return `${zone.title}: ${zone.allowed ? "Not checked in" : "Not allowed"}`
-}
-
-const zoneDot = (zone: EventGuest["zones"][number]) => {
-	if (zone.checked_in_at) return "bg-surface-green-6"
-	return zone.allowed ? "bg-surface-gray-4" : "border border-outline-gray-4"
-}
 
 const shown = computed(() => props.guest.add_ons.slice(0, VISIBLE_ADD_ONS))
 const hidden = computed(() => props.guest.add_ons.slice(VISIBLE_ADD_ONS))
@@ -70,20 +60,7 @@ const hidden = computed(() => props.guest.add_ons.slice(VISIBLE_ADD_ONS))
 				<Badge v-if="guest.ticket_type" variant="subtle" :label="guest.ticket_type" />
 			</span>
 
-			<Tooltip v-if="guest.zones?.length" :text="guest.zones.map(zoneLabel).join(' · ')">
-				<span
-					class="flex shrink-0 gap-1 p-1"
-					role="img"
-					:aria-label="guest.zones.map(zoneLabel).join(', ')"
-				>
-					<span
-						v-for="zone in guest.zones"
-						:key="zone.name"
-						class="size-2 rounded-full transition-colors duration-200 ease-out"
-						:class="zoneDot(zone)"
-					/>
-				</span>
-			</Tooltip>
+			<GuestZoneDots v-if="guest.zones?.length" :zones="guest.zones" />
 		</button>
 	</li>
 </template>

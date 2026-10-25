@@ -126,6 +126,7 @@ declare module 'vue' {
     GuestQuickActions: typeof import('./src/components/dashboard/events/GuestQuickActions.vue')['default']
     GuestRegistrationDialog: typeof import('./src/components/dashboard/events/GuestRegistrationDialog.vue')['default']
     GuestStatCards: typeof import('./src/components/dashboard/events/GuestStatCards.vue')['default']
+    GuestZoneDots: typeof import('./src/components/dashboard/events/GuestZoneDots.vue')['default']
     GuestZoneStatusList: typeof import('./src/components/checkin/GuestZoneStatusList.vue')['default']
     ImageCropper: typeof import('./src/components/common/ImageCropper.vue')['default']
     ImageCropUploader: typeof import('./src/components/common/ImageCropUploader.vue')['default']
