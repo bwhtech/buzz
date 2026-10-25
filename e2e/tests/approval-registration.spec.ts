@@ -6,7 +6,7 @@ import {
 	REQUESTERS,
 } from "../data/approval-registration"
 import { newApiContext } from "../helpers/auth"
-import { getList } from "../helpers/frappe"
+import { callMethod, getList } from "../helpers/frappe"
 import { BookingPage } from "../pages"
 
 type Requester = (typeof REQUESTERS)[keyof typeof REQUESTERS]
@@ -31,6 +31,7 @@ async function bookingOf(baseURL: string, requester: Requester) {
 		{
 			fields: ["name", "docstatus", "status"],
 			filters: { event: eventId, user: requester.email },
+			orderBy: "creation desc",
 			limit: 1,
 		},
 	)
@@ -38,8 +39,21 @@ async function bookingOf(baseURL: string, requester: Requester) {
 	return booking
 }
 
+// A retried test would otherwise hit the one-pending-request-per-guest rule.
+async function declineEarlierRequest(baseURL: string, requester: Requester) {
+	const earlier = await bookingOf(baseURL, requester)
+	if (earlier?.status !== "Approval Pending") return
+	const api = await newApiContext(baseURL)
+	await callMethod(api, "buzz.api.booking.approvals.decline_bookings", {
+		event: eventId,
+		bookings: [earlier.name],
+	})
+	await api.dispose()
+}
+
 // The requester signs in on a context of their own, so the organizer keeps the shared session.
-async function requestToJoin(browser: Browser, requester: Requester) {
+async function requestToJoin(browser: Browser, requester: Requester, baseURL: string) {
+	await declineEarlierRequest(baseURL, requester)
 	const context = await browser.newContext({ storageState: requester.statePath })
 	const page = await context.newPage()
 	const bookingPage = new BookingPage(page)
@@ -65,7 +79,7 @@ function pendingRow(page: Page, requester: Requester) {
 
 async function openPendingList(page: Page) {
 	await page.goto(`/b/manage/events/${eventId}/guests?view=pending`)
-	await expect(page.getByRole("button", { name: /^Pending \(\d+\)$/ })).toBeVisible()
+	await expect(page.getByRole("radio", { name: /^Pending \(\d+\)$/ })).toBeVisible()
 }
 
 async function openTicketTypeDrawer(page: Page) {
@@ -93,7 +107,7 @@ test.describe("Approval-required registration", () => {
 		await expect(await setApproval(page, true)).toBeChecked()
 
 		const requester = REQUESTERS.approved
-		const { page: guestPage, context } = await requestToJoin(browser, requester)
+		const { page: guestPage, context } = await requestToJoin(browser, requester, baseURL!)
 
 		await openPendingList(page)
 		await pendingRow(page, requester).getByRole("button", { name: "Approve" }).click()
@@ -107,9 +121,9 @@ test.describe("Approval-required registration", () => {
 		await context.close()
 	})
 
-	test("a declined request shows as declined to the guest", async ({ page, browser }) => {
+	test("a declined request shows as declined to the guest", async ({ page, browser, baseURL }) => {
 		const requester = REQUESTERS.declined
-		const { page: guestPage, context } = await requestToJoin(browser, requester)
+		const { page: guestPage, context } = await requestToJoin(browser, requester, baseURL!)
 
 		await openPendingList(page)
 		await pendingRow(page, requester).getByRole("button", { name: "Decline" }).click()
@@ -133,7 +147,7 @@ test.describe("Approval-required registration", () => {
 		await setApproval(page, true)
 		const earlier = await bookingOf(baseURL!, requester)
 		if (earlier?.status !== "Approval Pending") {
-			const { context } = await requestToJoin(browser, requester)
+			const { context } = await requestToJoin(browser, requester, baseURL!)
 			await context.close()
 		}
 
