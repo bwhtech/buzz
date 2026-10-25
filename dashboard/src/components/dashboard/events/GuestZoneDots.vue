@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HoverCard, dayjsLocal } from "frappe-ui"
+import { HoverCard, ItemListRow, dayjsLocal } from "frappe-ui"
 import { computed } from "vue"
 
 import type { ZoneStatus } from "@/types"
@@ -39,30 +39,24 @@ const summary = computed(() =>
 		</template>
 
 		<div class="flex w-72 flex-col gap-0.5 p-2">
-			<div class="flex justify-between gap-3 px-1.5 pb-1.5 text-xs text-ink-gray-5">
+			<div class="flex justify-between gap-3 px-2 pb-1.5 text-xs text-ink-gray-5">
 				<span>Zones</span>
 				<span class="tabular-nums">{{ checkedIn }} of {{ allowed }} zones checked in</span>
 			</div>
-			<div
-				v-for="zone in zones"
-				:key="zone.name"
-				class="flex min-h-7 items-center gap-2.5 px-1.5 text-sm"
-			>
-				<span class="size-2 shrink-0 rounded-full" :class="dotClass(zone)" />
-				<span
-					class="min-w-0 flex-1 truncate"
-					:class="zone.allowed ? 'text-ink-gray-8' : 'text-ink-gray-5'"
-					:title="zone.title"
-				>
-					{{ zone.title }}
-				</span>
-				<span
-					class="shrink-0 tabular-nums"
-					:class="zone.checked_in_at ? 'text-ink-gray-8' : 'text-ink-gray-5'"
-				>
-					{{ status(zone) }}
-				</span>
-			</div>
+			<ItemListRow v-for="zone in zones" :key="zone.name" :disabled="!zone.allowed">
+				<template #prefix>
+					<span class="size-2 shrink-0 rounded-full" :class="dotClass(zone)" />
+				</template>
+				<span class="truncate" :title="zone.title">{{ zone.title }}</span>
+				<template #suffix>
+					<span
+						class="text-sm tabular-nums"
+						:class="zone.checked_in_at ? 'text-ink-gray-8' : 'text-ink-gray-5'"
+					>
+						{{ status(zone) }}
+					</span>
+				</template>
+			</ItemListRow>
 		</div>
 	</HoverCard>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Badge, Button } from "frappe-ui"
+import { Badge, Button, Progress } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import type { GuestZone } from "@/types"
@@ -108,12 +108,7 @@ const toggle = (name: string) => (selected.value = selected.value === name ? "" 
 					</span>
 					<span class="text-ink-gray-5">{{ card.percent }}%</span>
 				</div>
-				<div class="h-1 overflow-hidden rounded-full bg-surface-gray-2">
-					<div
-						class="h-full rounded-full bg-surface-green-6 transition-[width] duration-300 ease-out motion-reduce:transition-none"
-						:style="{ width: `${card.percent}%` }"
-					/>
-				</div>
+				<Progress :value="card.percent" size="md" />
 			</div>
 		</div>
 
