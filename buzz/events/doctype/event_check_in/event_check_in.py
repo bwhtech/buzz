@@ -32,6 +32,8 @@ class EventCheckIn(Document):
 			self.zone = default_zone(self.event)
 
 	def validate(self):
+		if not self.zone:
+			frappe.throw(_("This event has no check-in zone."))
 		# Buzz Event is autoincrement-named, so the link value may arrive as an int.
 		if str(frappe.db.get_value("Event Check-in Zone", self.zone, "event")) != str(self.event):
 			frappe.throw(_("The zone belongs to another event."))

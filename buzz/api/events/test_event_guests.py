@@ -1,10 +1,11 @@
 import json
 
+import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.checkin import checkin_ticket
 from buzz.api.events import get_event, get_event_guests
-from buzz.api.events.exceptions import CannotManageEvent, EventNotFound
+from buzz.api.events.exceptions import CannotManageEvent, EventNotFound, ZoneNotFound
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
@@ -167,3 +168,9 @@ class TestGuestZones(GuestsTestCase):
 		guests = self.guests_as(self.owner, zone=self.lounge)
 
 		self.assertEqual([guest.name for guest in guests.guests], [self.vip_ticket])
+
+	def test_a_disabled_zone_cannot_narrow_the_list(self):
+		frappe.db.set_value("Event Check-in Zone", self.lounge, "enabled", 0)
+
+		with self.assertRaises(ZoneNotFound):
+			self.guests_as(self.owner, zone=self.lounge)

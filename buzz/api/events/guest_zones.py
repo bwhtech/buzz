@@ -101,7 +101,9 @@ def zone_arrivals(event: str) -> defaultdict[str, dict[str, datetime]]:
 
 
 def guest_list_zone(event: str, zone: str | None) -> str:
-	name = frappe.db.get_value("Event Check-in Zone", {"name": zone or default_zone(event), "event": event})
+	name = frappe.db.get_value(
+		"Event Check-in Zone", {"name": zone or default_zone(event), "event": event, "enabled": 1}
+	)
 	if not name:
 		ZoneNotFound.throw()
 	return str(name)

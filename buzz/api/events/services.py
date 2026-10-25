@@ -373,7 +373,6 @@ def event_guests(
 	limit: int = GUESTS_PAGE_SIZE,
 	checked_in: str | None = None,
 	zone: str | None = None,
-	eligible_only: bool = False,
 ) -> EventGuestsResponse:
 	"""One page of the people holding a ticket to an event.
 
@@ -383,7 +382,7 @@ def event_guests(
 	Ordered by when the ticket was registered, newest first by default, so a page is a
 	stable slice as the caller walks down the list. `checked_in` is "1" or "0" to keep only
 	the guests who have, or have not, checked in today, at `zone` or the default zone.
-	`eligible_only` keeps only the tickets `zone` lets in.
+	A `zone` also keeps only the tickets it lets in.
 	"""
 	ensure_event_team_access(event, "guests")
 
@@ -391,7 +390,7 @@ def event_guests(
 	conditions = ListConditions("Event Ticket", filter_fields, answer_parents).frappe_filters(filters)
 	guest_zones = GuestZones(event)
 	arrivals = guest_zones.arrivals[guest_list_zone(event, zone)]
-	if zone and eligible_only and (types := guest_zones.ticket_types.get(zone)):
+	if zone and (types := guest_zones.ticket_types.get(zone)):
 		conditions.append(["ticket_type", "in", list(types)])
 	if checked_in in ("0", "1"):
 		operator = "in" if checked_in == "1" else "not in"

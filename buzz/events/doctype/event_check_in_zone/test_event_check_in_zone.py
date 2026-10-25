@@ -5,7 +5,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.events.doctype.event_check_in_zone.event_check_in_zone import default_zone
-from buzz.tests.factories import BuzzEventFactory, EventCheckinZoneFactory
+from buzz.tests.factories import BuzzEventFactory, EventCheckinZoneFactory, EventTicketTypeFactory
 
 
 class TestEventCheckinZone(IntegrationTestCase):
@@ -70,3 +70,9 @@ class TestEventCheckinZone(IntegrationTestCase):
 		event.run_method("on_trash")
 
 		self.assertFalse(frappe.db.exists("Event Check-in Zone", {"event": event.name}))
+
+	def test_a_zone_refuses_another_events_ticket_type(self):
+		foreign = EventTicketTypeFactory.create(event=BuzzEventFactory.create().name).name
+
+		with self.assertRaises(frappe.ValidationError):
+			EventCheckinZoneFactory.create(event=self.event, ticket_types=[{"ticket_type": foreign}])

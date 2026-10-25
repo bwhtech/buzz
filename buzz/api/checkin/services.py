@@ -122,6 +122,8 @@ class CheckinService:
 
 	def checkin(self) -> CheckinResponse:
 		self.ensure_ticket_valid()
+		# Two desks scanning one ticket at once: the second waits here, then sees the first.
+		frappe.db.get_value("Event Ticket", self.ticket_id, "name", for_update=True)
 		self.ensure_zone_allows()
 		checkin_doc = self.record_checkin()
 
@@ -151,9 +153,8 @@ class CheckinService:
 		if not self.zone.allows(self.ticket.ticket_type):
 			NotAllowedInZone.throw(zone=self.zone.title)
 
-		existing = self.zone.existing_checkin(self.ticket_id, self.date)
-		if existing:
-			creation = frappe.db.get_value("Event Check In", existing, "creation")
+		if existing := self.zone.existing_checkin(self.ticket_id, self.date):
+			creation = existing.creation
 			AlreadyCheckedIn.throw(
 				zone=self.zone.title, checked_in_at=f"{format_date(creation)} at {format_time(creation)}"
 			)
@@ -164,7 +165,7 @@ class CheckinService:
 			NotCheckedIn.throw(zone=self.zone.title)
 
 		# Cancelled rather than deleted, so the record of the mistaken check-in stays.
-		checkin_doc = frappe.get_doc("Event Check In", existing)
+		checkin_doc = frappe.get_doc("Event Check In", existing.name)
 		checkin_doc.flags.ignore_permissions = True
 		checkin_doc.cancel()
 		return CheckinResponse(
@@ -187,7 +188,7 @@ class CheckinService:
 			name=zone.name,
 			title=zone.title,
 			allowed=zone.allows(self.ticket.ticket_type),
-			checked_in_at=frappe.db.get_value("Event Check In", existing, "creation") if existing else None,
+			checked_in_at=existing.creation if existing else None,
 		)
 
 	def record_checkin(self) -> "EventCheckIn":

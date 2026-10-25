@@ -32,6 +32,7 @@ class EventCheckinZone(Document):
 
 	def validate(self):
 		self.validate_event_unchanged()
+		self.validate_ticket_types()
 		if not self.is_default:
 			return
 		if not self.enabled:
@@ -47,6 +48,13 @@ class EventCheckinZone(Document):
 		if before and str(before.event) != str(self.event):
 			frappe.throw(_("A zone cannot move to another event."))
 
+	def validate_ticket_types(self):
+		types = [row.ticket_type for row in self.ticket_types]
+		if types and frappe.db.count(
+			"Event Ticket Type", {"name": ["in", types], "event": self.event}
+		) != len(set(types)):
+			frappe.throw(_("A zone can only allow ticket types of its own event."))
+
 	def on_trash(self):
 		if self.is_default:
 			frappe.throw(_("The default zone cannot be deleted."))
@@ -54,11 +62,12 @@ class EventCheckinZone(Document):
 	def allows(self, ticket_type: str | None) -> bool:
 		return not self.ticket_types or ticket_type in {row.ticket_type for row in self.ticket_types}
 
-	def existing_checkin(self, ticket: str, date: str) -> str | None:
+	def existing_checkin(self, ticket: str, date: str) -> frappe._dict | None:
+		"""The submitted check-in's name and creation, if the ticket has one here."""
 		filters = {"ticket": ticket, "zone": self.name, "docstatus": 1}
 		if self.repeat_rule != ONCE_PER_EVENT:
 			filters["date"] = date
-		return frappe.db.exists("Event Check In", filters)
+		return frappe.db.get_value("Event Check In", filters, ["name", "creation"], as_dict=True)
 
 
 def default_zone(event: str) -> str | None:
