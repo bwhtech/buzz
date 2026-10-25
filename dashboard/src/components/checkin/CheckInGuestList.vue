@@ -19,6 +19,7 @@ import EmptyState from "@/components/common/EmptyState.vue"
 import QRScanner from "@/components/QRScanner.vue"
 import { useCheckInZone } from "@/composables/useCheckInZone"
 import { useEventGuests } from "@/composables/useEventGuests"
+import { useIsMobile } from "@/composables/useIsMobile"
 import type { ListOrder } from "@/composables/useListQuery"
 import {
 	type ValidationResult,
@@ -210,6 +211,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 })
 
 const scanning = ref(false)
+const isMobile = useIsMobile()
 const { validationResult, scanZone } = useTicketValidation()
 watch(zone, (value) => (scanZone.value = value), { immediate: true })
 
@@ -286,6 +288,7 @@ watch(validationResult, (result) => {
 						</p>
 					</div>
 					<Button
+						v-if="!isMobile"
 						size="lg"
 						:icon-left="scanning ? 'lucide-x' : 'lucide-scan-barcode'"
 						:label="scanning ? 'Close' : 'Scan'"
@@ -298,12 +301,12 @@ watch(validationResult, (result) => {
 					<QRScanner v-if="scanning" :paused="guestOpen" />
 				</Transition>
 
-				<!-- Who and where, side by side: the search takes three parts, the zone one, never
-				     narrower than a zone name. -->
-				<div class="flex gap-2">
+				<!-- Who and where: stacked on a phone; side by side from sm, the search taking three
+				     parts and the zone one, never narrower than a zone name. -->
+				<div class="flex flex-col gap-2 sm:flex-row">
 					<TextInput
 						v-model="search"
-						class="min-w-0 flex-[3]"
+						class="sm:min-w-0 sm:flex-[3]"
 						type="search"
 						size="md"
 						placeholder="Search by name, email or ticket ID"
@@ -321,7 +324,7 @@ watch(validationResult, (result) => {
 						:zones="zones"
 						any-zone
 						size="md"
-						class="min-w-32 flex-1"
+						class="sm:min-w-32 sm:flex-1"
 					/>
 				</div>
 			</div>
@@ -372,6 +375,21 @@ watch(validationResult, (result) => {
 			</div>
 
 			<div ref="sentinel" aria-hidden="true" />
+
+			<!-- On a phone Scan is the thumb's main job, so it floats where the thumb rests. -->
+			<div
+				v-if="isMobile"
+				class="pointer-events-none fixed inset-x-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-20 flex justify-center"
+			>
+				<Button
+					class="pointer-events-auto shadow-lg transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97] motion-reduce:transition-none"
+					variant="solid"
+					size="lg"
+					:icon-left="scanning ? 'lucide-x' : 'lucide-scan-barcode'"
+					:label="scanning ? 'Close' : 'Scan'"
+					@click="scanning = !scanning"
+				/>
+			</div>
 		</template>
 
 		<GuestCheckInDialog
