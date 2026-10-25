@@ -15,6 +15,7 @@
   "is_published",
   "auto_unpublish_after",
   "max_tickets_available",
+  "requires_approval",
   "stats_section",
   "tickets_sold",
   "column_break_ygut",
@@ -100,6 +101,13 @@
   {
    "fieldname": "column_break_ygut",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Guests send a request that an organizer approves. Only for free tickets.",
+   "fieldname": "requires_approval",
+   "fieldtype": "Check",
+   "label": "Requires Approval"
   }
  ],
  "grid_page_length": 50,
@@ -110,7 +118,7 @@
    "link_fieldname": "ticket_type"
   }
  ],
- "modified": "2026-10-16 12:00:00.000000",
+ "modified": "2026-10-25 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Ticket Type",

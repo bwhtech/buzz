@@ -8,6 +8,7 @@ from frappe.query_builder.functions import Count
 
 from buzz.events.doctype.buzz_price.buzz_price import validate_unique_currencies
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import is_feature_enabled
+from buzz.ticketing.approval import validate_free_only
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import held_quantities
 
 PAID_EVENTS_FLAG = "feature_paid_events"
@@ -54,6 +55,7 @@ class EventTicketType(Document):
 		max_tickets_available: DF.Int
 		name: DF.Int | None
 		prices: DF.Table[BuzzPrice]
+		requires_approval: DF.Check
 		title: DF.Data
 	# end: auto-generated types
 
@@ -67,6 +69,12 @@ class EventTicketType(Document):
 		self.validate_locked_prices()
 		self.validate_paid_events_enabled()
 		self.validate_category_event()
+		self.validate_approval_needs_free_tickets()
+
+	def validate_approval_needs_free_tickets(self):
+		validate_free_only(
+			self.event, bool(self.requires_approval), not self.is_free, None if self.is_new() else self.name
+		)
 
 	def validate_category_event(self):
 		filters = {"name": self.category, "event": self.event}

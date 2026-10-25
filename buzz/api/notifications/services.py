@@ -78,7 +78,7 @@ class Records:
 		for log in logs:
 			by_doctype.setdefault(log.document_type, set()).add(log.document_name)
 		self.rows = {
-			doctype: rows_by_name(doctype, list(names), ["title", "event"])
+			doctype: rows_by_name(doctype, list(names), record_fields(doctype))
 			for doctype, names in by_doctype.items()
 		}
 		events = {row.event for rows in self.rows.values() for row in rows.values() if row.event}
@@ -88,6 +88,11 @@ class Records:
 		record = self.rows.get(log.document_type, {}).get(log.document_name)
 		event = record and self.events.get(record.event)
 		return {"title": record and record.title, "event_title": event and event.title}
+
+
+def record_fields(doctype: str) -> list[str]:
+	meta = frappe.get_meta(doctype)
+	return [field for field in ("title", "event") if meta.has_field(field)]
 
 
 def rows_by_name(doctype: str, names: list[str], fields: list[str]) -> dict:

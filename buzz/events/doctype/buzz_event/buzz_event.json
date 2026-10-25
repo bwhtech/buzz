@@ -53,6 +53,7 @@
   "guest_verification_method",
   "auto_closures_section",
   "registrations_close_at",
+  "requires_approval",
   "section_break_kwlt",
   "featured_speakers",
   "payments_tab",
@@ -621,6 +622,13 @@
   {
    "fieldname": "column_break_rgkz",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Every registration waits for an organizer's approval. Only for events with free tickets.",
+   "fieldname": "requires_approval",
+   "fieldtype": "Check",
+   "label": "Require Approval for All Tickets"
   }
  ],
  "grid_page_length": 50,
@@ -698,7 +706,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-10-19 11:00:00.000000",
+ "modified": "2026-10-25 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

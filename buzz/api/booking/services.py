@@ -29,11 +29,13 @@ from buzz.api.booking.schemas import (
 	PaymentLinkResponse,
 )
 from buzz.payments import get_payment_link_for_booking
+from buzz.ticketing.approval import notify_hosts_of_request
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	default_currency,
 	start_capacity_transaction,
 )
+from buzz.ticketing.doctype.ticket_hold.ticket_hold import release_hold
 from buzz.utils import ZOOM_BACKED_CATEGORIES, build_event_datetimes
 
 if TYPE_CHECKING:
@@ -270,6 +272,8 @@ class BookingService:
 	def finalize(
 		self, booking: "EventBooking"
 	) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
+		if booking.requires_approval:
+			return self.approval_pending_response(booking)
 		if booking.total_amount == 0:
 			return self.free_booking_response(booking)
 		if self.request.is_offline:
@@ -279,9 +283,17 @@ class BookingService:
 	def free_booking_response(self, booking: "EventBooking") -> FreeBookingResponse:
 		booking.flags.ignore_permissions = True
 		booking.submit()
+		return FreeBookingResponse(booking_name=booking.name, redirect_to=success_path(booking.name))
+
+	def approval_pending_response(self, booking: "EventBooking") -> FreeBookingResponse:
+		"""The booking stays a draft with no tickets held until an organizer decides."""
+		release_hold(booking.hold_token)
+		booking.send_approval_email(
+			"booking_approval_pending", _("Your request to join {0} is pending").format(self.event.title)
+		)
+		notify_hosts_of_request(booking)
 		return FreeBookingResponse(
-			booking_name=booking.name,
-			redirect_to=f"/booking-success/{booking.name}?token={get_booking_access_token(booking.name)}",
+			booking_name=booking.name, redirect_to=success_path(booking.name), approval_pending=True
 		)
 
 	def offline_booking_response(self, booking: "EventBooking") -> OfflineBookingResponse:
@@ -344,16 +356,25 @@ class BookingService:
 		)
 
 
-def are_registrations_closed(event_doc) -> bool:
-	event_timezone = event_doc.time_zone or get_system_timezone()
-	current_datetime_in_event_timezone = get_datetime_in_timezone(event_timezone).replace(tzinfo=None)
+def success_path(booking_name: str) -> str:
+	return f"/booking-success/{booking_name}?token={get_booking_access_token(booking_name)}"
 
+
+def current_datetime_in_event_timezone(event_doc):
+	return get_datetime_in_timezone(event_doc.time_zone or get_system_timezone()).replace(tzinfo=None)
+
+
+def has_event_ended(event_doc) -> bool:
+	_event_start_datetime, event_end_datetime = build_event_datetimes(event_doc)
+	return current_datetime_in_event_timezone(event_doc) > event_end_datetime
+
+
+def are_registrations_closed(event_doc) -> bool:
 	if event_doc.registrations_close_at:
-		return current_datetime_in_event_timezone > get_datetime(event_doc.registrations_close_at)
+		return current_datetime_in_event_timezone(event_doc) > get_datetime(event_doc.registrations_close_at)
 
 	# No explicit cutoff set - registrations close once the event itself has ended.
-	_event_start_datetime, event_end_datetime = build_event_datetimes(event_doc)
-	return current_datetime_in_event_timezone > event_end_datetime
+	return has_event_ended(event_doc)
 
 
 def resolve_attendee_names(attendee: dict) -> tuple[str, str]:

@@ -8,13 +8,14 @@ from frappe.model.document import Document
 from frappe.utils import add_to_date, cstr, flt, now_datetime
 
 from buzz import telemetry
-from buzz.api.booking.exceptions import RegistrationsClosed
+from buzz.api.booking.exceptions import ApprovalRequestPending, RegistrationsClosed
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, are_registrations_closed
 from buzz.emails import is_full_document
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.payments import get_controller, mark_payment_as_received
 from buzz.permissions import has_section_permission
+from buzz.ticketing.approval import PENDING_APPROVAL, booking_needs_approval
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
@@ -68,7 +69,9 @@ class EventBooking(Document):
 		payment_status: DF.Literal["Unpaid", "Paid", "Verification Pending"]
 		refund_status: DF.Literal["", "Refund Initiated", "Partially Refunded", "Refunded"]
 		refunded_amount: DF.Currency
-		status: DF.Literal["Confirmed", "Approval Pending", "Approved", "Rejected"]
+		rejection_reason: DF.SmallText | None
+		requires_approval: DF.Check
+		status: DF.Literal["Confirmed", "Approval Pending", "Approved", "Rejected", "Withdrawn", "Expired"]
 		tax_amount: DF.Currency
 		tax_id: DF.Data | None
 		tax_label: DF.Data | None
@@ -80,6 +83,7 @@ class EventBooking(Document):
 
 	def validate(self):
 		self.validate_event_registration_is_open()
+		self.validate_no_duplicate_request()
 		self.validate_ticket_availability()
 		self.fetch_amounts_from_ticket_types()
 		self.set_currency()
@@ -105,8 +109,27 @@ class EventBooking(Document):
 		if are_registrations_closed(event):
 			RegistrationsClosed.throw()
 
+	def before_insert(self):
+		organizer_added = has_section_permission(self.event, "guests", "create", frappe.session.user)
+		self.requires_approval = int(
+			not organizer_added and booking_needs_approval(self.event, self.ticket_quantities())
+		)
+
+	@property
+	def is_awaiting_approval(self) -> bool:
+		return bool(self.requires_approval) and self.docstatus == 0 and not self.flags.approving
+
+	def validate_no_duplicate_request(self):
+		if self.is_new() and self.requires_approval:
+			filters = {**PENDING_APPROVAL, "event": self.event, "user": self.user}
+			if frappe.db.exists("Event Booking", filters):
+				ApprovalRequestPending.throw()
+
 	def before_submit(self):
 		"""Set status before submit based on payment method."""
+		if self.is_awaiting_approval:
+			frappe.throw(_("This booking is waiting for approval. Please use the Approve or Reject button."))
+
 		# Skip if already approved (submission triggered by approve_booking)
 		if self.status == "Approved":
 			return
@@ -167,6 +190,8 @@ class EventBooking(Document):
 		return Counter(str(attendee.ticket_type) for attendee in self.attendees)
 
 	def validate_ticket_availability(self):
+		if self.is_awaiting_approval:
+			return
 		quantities = self.ticket_quantities()
 		ticket_types = [frappe.get_cached_doc("Event Ticket Type", name) for name in quantities]
 		lock_ticket_types([row.name for row in ticket_types if row.max_tickets_available])
@@ -285,6 +310,10 @@ class EventBooking(Document):
 	def send_booking_confirmation_email(self):
 		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
 		team_settings = get_event_team_settings(self.event)
+		approved = bool(self.requires_approval)
+		subject = _("Your booking for {0} is confirmed ✅").format(event_doc.title)
+		if approved:
+			subject = _("You're in: your request to join {0} was approved").format(event_doc.title)
 		# Fallback to the team default if event-level not set
 		self.send_booking_email(
 			template=(
@@ -292,8 +321,20 @@ class EventBooking(Document):
 				or team_settings.default_booking_confirmation_email_template
 			),
 			builtin="booking_confirmation",
-			subject=_("Your booking for {0} is confirmed ✅").format(event_doc.title),
+			subject=subject,
+			always=approved,
 		)
+
+	def send_approval_email(self, builtin: str, subject: str) -> None:
+		"""Request updates are sent whatever the event's confirmation email switch says."""
+		try:
+			self.send_booking_email(template=None, builtin=builtin, subject=subject, always=True)
+		except Exception:
+			frappe.log_error(
+				title="Booking approval email failed",
+				reference_doctype=self.doctype,
+				reference_name=self.name,
+			)
 
 	def send_offline_acknowledgement_email(self):
 		"""Tell the booker their offline payment is awaiting verification. Sent while the
@@ -307,8 +348,10 @@ class EventBooking(Document):
 			),
 		)
 
-	def send_booking_email(self, template: str | None, builtin: str, subject: str) -> None:
-		recipient = self.get_booking_email_recipient()
+	def send_booking_email(
+		self, template: str | None, builtin: str, subject: str, always: bool = False
+	) -> None:
+		recipient = self.get_booking_email_recipient(always)
 		if not recipient:
 			return
 
@@ -333,13 +376,15 @@ class EventBooking(Document):
 			reference_name=self.name,
 		)
 
-	def get_booking_email_recipient(self) -> str | None:
+	def get_booking_email_recipient(self, always: bool = False) -> str | None:
 		"""Who to email about this booking, or None when nobody should be emailed."""
 		# Never email system/placeholder users — they are not real recipients.
 		if self.user in ("Administrator", "Guest"):
 			return None
 
-		if not frappe.get_cached_value("Buzz Event", self.event, "send_booking_confirmation_email"):
+		if not always and not frappe.get_cached_value(
+			"Buzz Event", self.event, "send_booking_confirmation_email"
+		):
 			return None
 
 		return frappe.db.get_value("User", self.user, "email") or self.user
@@ -351,6 +396,7 @@ class EventBooking(Document):
 			"event_doc": event_doc,
 			"meeting": OnlineMeeting(event_doc),
 			"event_title": event_doc.title,
+			"approved": bool(self.requires_approval),
 			"venue": event_doc.get_venue_name(),
 			"attendee_rows": self.get_attendee_email_rows(),
 			"support_email": get_event_team_settings(self.event).support_email,
@@ -671,6 +717,10 @@ class EventBooking(Document):
 	def approve_booking(self):
 		"""Approve the booking and submit it to generate tickets."""
 		frappe.only_for("Event Manager")
+		if self.requires_approval:
+			self.approve_request()
+			frappe.msgprint(_("Request has been approved!"))
+			return
 
 		self.status = "Approved"
 		self.flags.payment_received = True
@@ -685,12 +735,27 @@ class EventBooking(Document):
 	def reject_booking(self):
 		"""Reject and discard the booking."""
 		frappe.only_for("Event Manager")
+		self.decline_request()
+		frappe.msgprint(_("Booking has been rejected!"))
 
+	def approve_request(self) -> None:
+		self.flags.ignore_permissions = True
+		self.flags.approving = True
+		self.submit()
+
+	def decline_request(self, reason: str | None = None) -> None:
+		self.discard_as("Rejected", reason)
+		if self.requires_approval:
+			event_title = frappe.get_cached_value("Buzz Event", self.event, "title")
+			self.send_approval_email(
+				"booking_declined", _("Update on your request to join {0}").format(event_title)
+			)
+
+	def discard_as(self, status: str, reason: str | None = None) -> None:
 		self.flags.ignore_permissions = True
 		self.discard()
-		self.db_set("status", "Rejected")
+		self.db_set({"status": status, "rejection_reason": reason})
 		release_hold(self.hold_token)
-		frappe.msgprint(_("Booking has been rejected!"))
 
 	def apply_coupon_if_applicable(self):
 		self.discount_amount = 0

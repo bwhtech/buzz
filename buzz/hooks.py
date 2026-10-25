@@ -61,6 +61,7 @@ scheduler_events = {
 	],
 	"daily": [
 		"buzz.tasks.unpublish_ticket_types_after_last_date",
+		"buzz.tasks.expire_pending_approval_requests",
 		"buzz.telemetry_scan.send_site_profile",
 	],
 }

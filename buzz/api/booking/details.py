@@ -67,6 +67,8 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 			coupon_code=coupon_code_of(booking_doc),
 			payment_method=payment_method(booking_doc),
 			booked_on=booking_doc.creation,
+			requires_approval=bool(booking_doc.requires_approval),
+			rejection_reason=booking_doc.rejection_reason,
 		),
 		# Guests read this with a token and no session, so the private QR file is inlined
 		tickets=[ConfirmationTicket(**{**ticket, "qr_code": qr_data_uri(ticket.name)}) for ticket in tickets],
@@ -255,6 +257,8 @@ def summarize_booking(booking, titles: dict[str, str], add_ons: dict[str, list])
 		payment_status=booking.payment_status,
 		payment_method=booking.offline_payment_method or booking.payment_method,
 		is_offline=booking.payment_method == OFFLINE_PAYMENT_METHOD,
+		requires_approval=bool(booking.requires_approval),
+		rejection_reason=booking.rejection_reason,
 		currency=booking.currency,
 		booked_on=booking.creation,
 		lines=build_lines(booking, titles, add_ons),

@@ -26,9 +26,11 @@ const props = defineProps<{
 	categories: TicketCategoryItem[]
 	canWrite: boolean
 	paidEventsEnabled: boolean
+	eventRequiresApproval: boolean
+	hasPricedTickets: boolean
 }>()
 const open = defineModel<boolean>("open", { required: true })
-const emit = defineEmits<{ changed: [] }>()
+const emit = defineEmits<{ changed: []; approvalChange: [enabled: boolean] }>()
 
 const shownTicketType = keepLastValue(() => props.ticketType)
 
@@ -62,6 +64,20 @@ const autoUnpublish = computed<boolean>({
 	get: () => draft.value.auto_unpublish_after != null,
 	set: (on) => (draft.value.auto_unpublish_after = on ? "" : null),
 })
+
+const approvalHint = computed(() => {
+	if (props.eventRequiresApproval) return "Every ticket already needs approval."
+	if (props.hasPricedTickets && !props.ticketType?.requires_approval)
+		return "Approval only works with free tickets."
+	return "Guests send a request and you approve or decline it."
+})
+
+const approvalDisabled = computed(
+	() =>
+		!props.canWrite ||
+		props.eventRequiresApproval ||
+		(props.hasPricedTickets && !props.ticketType?.requires_approval),
+)
 
 const closesIn = computed(() => {
 	const date = draft.value.auto_unpublish_after
@@ -194,6 +210,16 @@ async function save(values: TicketTypeValues) {
 				@update:model-value="draft.max_tickets_available = Math.max(Number($event) || 0, 0)"
 			/>
 			<div class="divide-y divide-outline-gray-1 rounded-4 border border-outline-gray-2">
+				<div class="p-1">
+					<Switch
+						:model-value="shownTicketType.requires_approval"
+						padded
+						label="Requires approval"
+						:description="approvalHint"
+						:disabled="approvalDisabled"
+						@update:model-value="emit('approvalChange', $event)"
+					/>
+				</div>
 				<div class="p-1">
 					<Switch
 						v-model="autoUnpublish"

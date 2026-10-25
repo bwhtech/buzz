@@ -5,10 +5,13 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from buzz.ticketing.approval import validate_free_only
+
 
 class TicketAddon(Document):
 	def validate(self):
 		self.validate_duplicate_title()
+		validate_free_only(self.event, False, bool(self.price))
 
 	def validate_duplicate_title(self):
 		if frappe.db.exists(

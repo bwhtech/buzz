@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
-import { ErrorMessage } from "frappe-ui"
+import { useRouteQuery } from "@vueuse/router"
+import { ErrorMessage, TabButtons } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
@@ -14,10 +15,13 @@ import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import GuestInfoDrawer from "@/components/dashboard/events/GuestInfoDrawer.vue"
 import GuestQuickActions from "@/components/dashboard/events/GuestQuickActions.vue"
 import GuestStatCards from "@/components/dashboard/events/GuestStatCards.vue"
+import PendingBookings from "@/components/dashboard/events/PendingBookings.vue"
 import { useDeepLinkedRecord } from "@/composables/useDeepLinkedRecord"
 import { useEventGuests } from "@/composables/useEventGuests"
 import { useListQuery } from "@/composables/useListQuery"
+import { usePendingBookings } from "@/data/approvals"
 import { useCanWriteEvent, useRegistrationTrend } from "@/data/events"
+import { useEventTicketTypes } from "@/data/ticketTypes"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError } from "@/types"
 
@@ -46,6 +50,29 @@ const exportQuery = computed(() => ({
 
 const trend = useRegistrationTrend(eventId)
 const canWrite = useCanWriteEvent(eventId)
+
+// Only organizers who can approve get the pending list; for anyone else the call fails and
+// the segment stays hidden.
+const pending = usePendingBookings(eventId)
+const ticketTypes = useEventTicketTypes(eventId)
+const approvalOn = computed(
+	() =>
+		!!ticketTypes.data?.requires_approval ||
+		!!ticketTypes.data?.ticket_types.some((ticketType) => ticketType.requires_approval),
+)
+const pendingCount = computed(() => pending.data?.total ?? 0)
+const showPending = computed(() => !pending.error && (pendingCount.value > 0 || approvalOn.value))
+const view = useRouteQuery<string>("view", "guests")
+const viewingPending = computed(() => showPending.value && view.value === "pending")
+const viewOptions = computed(() => [
+	{ label: "Guests", value: "guests" },
+	{ label: `Pending (${pendingCount.value})`, value: "pending" },
+])
+
+function reloadAfterReview() {
+	pending.reload()
+	page.reload()
+}
 
 const message = (error: unknown) => (error as FrappeError | null)?.message
 
@@ -110,7 +137,23 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 			/>
 		</section>
 
-		<section class="space-y-3">
+		<TabButtons
+			v-if="showPending"
+			class="w-full sm:w-72"
+			fluid
+			:options="viewOptions"
+			:model-value="viewingPending ? 'pending' : 'guests'"
+			@update:model-value="view = String($event)"
+		/>
+
+		<PendingBookings
+			v-if="viewingPending"
+			:event="eventId"
+			:pending="pending.data"
+			@changed="reloadAfterReview"
+		/>
+
+		<section v-else class="space-y-3">
 			<h2 class="text-lg font-semibold text-ink-gray-9">
 				{{ selectedZone ? `Guest list · ${selectedZone.title}` : "Guest list" }}
 			</h2>

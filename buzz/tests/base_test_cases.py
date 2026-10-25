@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from buzz.api.booking import process_booking
 from buzz.api.booking.schemas import BookingRequest
 from buzz.api.booking.services import create_add_on_doc
 from buzz.payments import handle_refund_notification
@@ -10,6 +11,7 @@ from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
 	BuzzEventFactory,
 	BuzzTeamFactory,
+	BuzzTeamMembershipFactory,
 	EventBookingFactory,
 	EventPaymentFactory,
 	EventSponsorFactory,
@@ -21,6 +23,7 @@ from buzz.tests.factories import (
 	TicketAddOnFactory,
 	UserFactory,
 )
+from buzz.tests.utils import mute_outgoing_email
 from buzz.ticketing.doctype.event_booking.event_booking import RAZORPAY
 
 BOOKER = "booking-owner@example.com"
@@ -68,6 +71,35 @@ class BookingTestCase(IntegrationTestCase):
 		}
 		values.update(overrides)
 		return BookingRequest(**values)
+
+
+class ApprovalTestCase(BookingTestCase):
+	"""A fresh event per test: approval requests are committed by `process_booking`, so they
+	would otherwise pile up in the pending list of a shared event."""
+
+	def setUp(self):
+		self.event = BuzzEventFactory.create()
+		self.event.reload()
+		super().setUp()
+		mute_outgoing_email(self)
+		self.approval_ticket_type = EventTicketTypeFactory.create("requires_approval", event=self.event.name)
+
+	def make_organizer(self, role: str = "Manager") -> str:
+		organizer = UserFactory.create_once(f"approval-{role.lower()}@example.com").name
+		BuzzTeamMembershipFactory.create(team=self.event.team, user=organizer, team_role=role)
+		return organizer
+
+	def attendees_for(self, *ticket_types) -> list[dict]:
+		return [
+			{"first_name": f"Guest {index}", "email": f"guest{index}@example.com", "ticket_type": str(name)}
+			for index, name in enumerate(ticket_types)
+		]
+
+	def request_to_join(self, user: str | None = None, *ticket_types) -> str:
+		"""The booking a guest gets from the registration form, by default on the approval ticket type."""
+		attendees = self.attendees_for(*(ticket_types or (self.approval_ticket_type.name,)))
+		with self.set_user(user or self.booker):
+			return process_booking(self.booking_request(attendees=attendees)).booking_name
 
 
 class SponsorshipTestCase(IntegrationTestCase):

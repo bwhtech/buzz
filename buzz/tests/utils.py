@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from email import message_from_string
+from email import message_from_string, policy
 from unittest.mock import patch
 
 import frappe
@@ -91,3 +91,14 @@ def linked_to(doctype: str) -> set[str]:
 		pluck="parent",
 	)
 	return {parent for parent in parents if not frappe.get_meta(parent).istable}
+
+
+def queued_booking_emails(booking: str) -> list:
+	"""Parsed messages queued against a booking, oldest first."""
+	rows = frappe.get_all(
+		"Email Queue",
+		filters={"reference_doctype": "Event Booking", "reference_name": booking},
+		fields=["message"],
+		order_by="creation asc",
+	)
+	return [message_from_string(row.message, policy=policy.default) for row in rows]

@@ -27,6 +27,7 @@ def build_event_booking_data(event_route: str, hold_token: str | None = None) ->
 
 	return EventBookingDataResponse(
 		registrations_closed=are_registrations_closed(event_doc),
+		requires_approval=bool(event_doc.requires_approval),
 		event_details=get_event_details(event_doc),
 		available_ticket_types=ticket_types,
 		ticket_categories=categories_in_use(categories, ticket_types),
@@ -69,6 +70,7 @@ def get_event_details(event_doc: "BuzzEvent"):
 		"allow_guest_booking": event_doc.allow_guest_booking,
 		"guest_verification_method": event_doc.guest_verification_method,
 		"default_ticket_type": event_doc.default_ticket_type,
+		"requires_approval": event_doc.requires_approval,
 	}
 
 

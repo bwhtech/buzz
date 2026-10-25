@@ -20,18 +20,11 @@
 			<template #cell="{ item, row, column, align }">
 				<Badge
 					v-if="column.key === 'status'"
-					:theme="
-						row.status === 'Approved' || row.status === 'Confirmed'
-							? 'green'
-							: row.status === 'Approval Pending'
-								? 'amber'
-								: 'red'
-					"
+					:theme="statusBadge(row).theme"
+					:label="statusBadge(row).label"
 					variant="subtle"
 					size="sm"
-				>
-					{{ item }}
-				</Badge>
+				/>
 				<ListRowItem v-else :column="column" :row="row" :item="item" :align="align" />
 			</template>
 		</ListView>
@@ -43,6 +36,7 @@ import { Badge, useCall } from "frappe-ui"
 import { dayjsLocal } from "frappe-ui"
 import { ListRowItem, ListView } from "frappe-ui/experimental"
 
+import { bookingStatusBadge } from "@/utils/bookingApproval"
 import { formatCurrency } from "@/utils/currency"
 import { pluralize } from "@/utils/pluralize"
 
@@ -54,6 +48,9 @@ const columns = [
 	{ label: __("Amount Paid"), key: "formatted_amount", width: "110px" },
 	{ label: __("Status"), key: "status", width: "120px" },
 ]
+
+// Statuses without a name of their own (the "Pending" placeholder) keep the server's wording.
+const statusBadge = (row: Record<string, any>) => bookingStatusBadge(row.status)
 
 const bookings = useCall<any[]>({
 	url: "/api/v2/method/buzz.api.booking.get_my_bookings",

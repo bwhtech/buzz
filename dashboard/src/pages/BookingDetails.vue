@@ -6,7 +6,16 @@
 	</div>
 
 	<div v-else-if="bookingDetails.data">
-		<!-- Approval Pending Status -->
+		<BookingApprovalNotice
+			v-if="approval"
+			class="mb-6"
+			:booking-id="bookingId"
+			:state="approval"
+			:rejection-reason="bookingDetails.data.doc.rejection_reason"
+			@changed="bookingDetails.reload()"
+		/>
+
+		<!-- Offline payment awaiting verification -->
 		<div v-if="!bookingDetails.data.event.free_event && isOfflinePaymentPending" class="mb-6">
 			<div class="p-4 rounded-6 border bg-yellow-50 border-yellow-200">
 				<div class="flex items-center gap-3">
@@ -77,7 +86,7 @@
 
 		<!-- Tickets Section -->
 		<TicketsSection
-			v-if="!bookingDetails.data.event.free_event && !isOfflinePaymentPending"
+			v-if="!bookingDetails.data.event.free_event && !isOfflinePaymentPending && !approval"
 			:tickets="bookingDetails.data.tickets"
 			:can-request-cancellation="canRequestCancellation"
 			:can-transfer-tickets="canTransferTickets"
@@ -110,7 +119,9 @@ import LucideXCircle from "~icons/lucide/x-circle"
 
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
 import { usePaymentSuccess } from "@/composables/usePaymentSuccess"
+import { approvalState } from "@/utils/bookingApproval"
 
+import BookingApprovalNotice from "../components/BookingApprovalNotice.vue"
 import BookingEventInfo from "../components/BookingEventInfo.vue"
 import BookingFinancialSummary from "../components/BookingFinancialSummary.vue"
 import BookingHeader from "../components/BookingHeader.vue"
@@ -129,12 +140,14 @@ const props = defineProps({
 })
 
 // Check if this is an offline payment that is not yet verified
+const approval = computed(() => approvalState(bookingDetails.data?.doc ?? {}))
+
 const isOfflinePaymentPending = computed(() => {
-	return bookingDetails.data?.doc?.status === "Approval Pending"
+	return bookingDetails.data?.doc?.status === "Approval Pending" && !approval.value
 })
 
 const isBookingRejected = computed(() => {
-	return bookingDetails.data?.doc?.status === "Rejected"
+	return bookingDetails.data?.doc?.status === "Rejected" && !approval.value
 })
 
 // Hide the payment summary for free bookings (total_amount == 0)
@@ -145,7 +158,7 @@ const showPaymentSummary = computed(() => {
 
 // Check if this is a successful payment redirect (check URL immediately)
 const isPaymentSuccess = route.query.success === "true"
-const isConfirmationPending = route.query.offline === "true"
+const isConfirmationPending = route.query.offline === "true" || route.query.approval === "true"
 
 // Use payment success composable for UI effects (confetti, message, URL cleanup)
 // Disable confetti when booking is pending approval (e.g. offline payments)
