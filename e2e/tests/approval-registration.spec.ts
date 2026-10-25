@@ -51,7 +51,7 @@ async function requestToJoin(browser: Browser, requester: Requester) {
 	await bookingPage.fillMyDetails(requester.name, "E2E", requester.email)
 	await bookingPage.submit()
 
-	await expect(page).toHaveURL(/\/bookings\/.+/)
+	await expect(page).toHaveURL(/\/booking-success\/.+/)
 	await expect(page.getByText("Pending approval").first()).toBeVisible({ timeout: 30000 })
 	return { page, context }
 }
