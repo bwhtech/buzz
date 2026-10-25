@@ -3,7 +3,7 @@ from frappe import _
 from frappe.desk.notifications import extract_mentions
 from frappe.utils import get_fullname, get_url, strip_html
 
-from buzz.permissions import PEOPLE
+from buzz.permissions import HUMAN_MEMBER_FILTERS
 from buzz.subscriptions import Subscriptions
 
 DASHBOARD_ROUTES = {"Talk Proposal": "/b/manage/events/{event}/talks?proposal={name}"}
@@ -23,7 +23,9 @@ def team_of(doctype: str, name: str) -> str | None:
 def team_members(team: str | None) -> list[str]:
 	if not team:
 		return []
-	return frappe.get_all("Buzz Team Membership", filters={**PEOPLE, "team": team}, pluck="user")
+	return frappe.get_all(
+		"Buzz Team Membership", filters={**HUMAN_MEMBER_FILTERS, "team": team}, pluck="user"
+	)
 
 
 def publish_to_team(doctype: str, name: str) -> None:

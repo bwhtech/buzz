@@ -172,10 +172,15 @@ class BuzzTeamMembership(Document):
 
 	def validate_integration_role(self):
 		"""Only a System Manager creates, changes or toggles a bot membership."""
-		previous = self.get_doc_before_save()
-		involved = INTEGRATION_ROLE in (self.team_role, previous and previous.team_role)
-		changed = self.is_new() or self.has_value_changed("team_role") or self.has_value_changed("enabled")
-		if involved and changed and not is_unrestricted(frappe.session.user):
+		previous_membership = self.get_doc_before_save()
+		integration_role_involved = INTEGRATION_ROLE in (
+			self.team_role,
+			previous_membership and previous_membership.team_role,
+		)
+		role_or_enabled_changed = (
+			self.is_new() or self.has_value_changed("team_role") or self.has_value_changed("enabled")
+		)
+		if integration_role_involved and role_or_enabled_changed and not is_unrestricted(frappe.session.user):
 			frappe.throw(_("Only a System Manager can manage the Integration role."))
 
 	def validate_personal_team_has_one_member(self):

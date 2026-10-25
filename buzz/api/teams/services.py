@@ -16,7 +16,13 @@ from buzz.api.teams.exceptions import (
 from buzz.api.teams.schemas import TeamInvite, TeamMember, TeamOverview, TeamTaxDetails
 from buzz.events.doctype.buzz_team.buzz_team import create_personal_team_for, personal_teams_enabled
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import TAX_DETAIL_FIELDS
-from buzz.permissions import INTEGRATION_ROLE, PEOPLE, WRITE_ROLES, can_manage_members, team_role_of
+from buzz.permissions import (
+	HUMAN_MEMBER_FILTERS,
+	INTEGRATION_ROLE,
+	WRITE_ROLES,
+	can_manage_members,
+	team_role_of,
+)
 
 TEAM_FIELDS = (
 	"name",
@@ -153,7 +159,7 @@ def remove_member(team: str, user: str) -> None:
 	if not can_manage_members(team):
 		CannotManageMembers.throw()
 
-	name = frappe.db.exists("Buzz Team Membership", {**PEOPLE, "team": team, "user": user})
+	name = frappe.db.exists("Buzz Team Membership", {**HUMAN_MEMBER_FILTERS, "team": team, "user": user})
 	if not name:
 		NotATeamMember.throw()
 
@@ -174,7 +180,7 @@ def change_role(team: str, user: str, team_role: str) -> None:
 		CannotManageMembers.throw()
 	validate_role(team_role)
 
-	name = frappe.db.exists("Buzz Team Membership", {**PEOPLE, "team": team, "user": user})
+	name = frappe.db.exists("Buzz Team Membership", {**HUMAN_MEMBER_FILTERS, "team": team, "user": user})
 	if not name:
 		NotATeamMember.throw()
 

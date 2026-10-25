@@ -11,7 +11,7 @@ CHECKIN_ROLES = frozenset({"Owner", "Admin", "Manager", "Frontdesk"})
 # A bot role for partner sites: it holds a membership but no access of its own.
 INTEGRATION_ROLE = "Integration"
 # Filters for the people on a team, leaving out integration users.
-PEOPLE = {"enabled": 1, "team_role": ["!=", INTEGRATION_ROLE]}
+HUMAN_MEMBER_FILTERS = {"enabled": 1, "team_role": ["!=", INTEGRATION_ROLE]}
 WRITE_PTYPES = frozenset({"write", "create", "submit", "cancel", "amend", "delete"})
 
 SECTIONS = ("details", "guests", "ticketing", "talks", "sponsors", "communications")
@@ -78,7 +78,9 @@ def my_teams(user: str) -> QueryBuilder:
 
 
 def my_team_names(user: str) -> list[str]:
-	return frappe.get_all("Buzz Team Membership", filters={**PEOPLE, "user": user}, pluck="team")
+	return frappe.get_all(
+		"Buzz Team Membership", filters={**HUMAN_MEMBER_FILTERS, "user": user}, pluck="team"
+	)
 
 
 @frappe.whitelist()
@@ -158,7 +160,9 @@ def belongs_to_user(doc, user: str) -> bool:
 def team_role_of(user: str, team: str | None) -> str | None:
 	if not team:
 		return None
-	return frappe.db.get_value("Buzz Team Membership", {**PEOPLE, "user": user, "team": team}, "team_role")
+	return frappe.db.get_value(
+		"Buzz Team Membership", {**HUMAN_MEMBER_FILTERS, "user": user, "team": team}, "team_role"
+	)
 
 
 def role_allows(team_role: str, ptype: str) -> bool:

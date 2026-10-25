@@ -19,12 +19,12 @@ class PartnerListings:
 			NotAnIntegration.throw()
 		self.community = teams[0]
 
-	def find(self, source_id: str) -> str | None:
+	def find_request_name(self, source_id: str) -> str | None:
 		return frappe.db.get_value(REQUEST, {"community": self.community, "source_id": source_id})
 
 	def upsert(self, listing: EventListing) -> None:
 		"""A request the community took down stays down; only its details follow the partner."""
-		name = self.find(listing.source_id)
+		name = self.find_request_name(listing.source_id)
 		request = frappe.get_doc(REQUEST, name) if name else self.new_request(listing)
 		request.update(in_system_time_zone(listing.model_dump()))
 		request.save(ignore_permissions=True)
@@ -35,7 +35,7 @@ class PartnerListings:
 		return request
 
 	def remove(self, source_id: str) -> None:
-		if name := self.find(source_id):
+		if name := self.find_request_name(source_id):
 			frappe.delete_doc(REQUEST, name, ignore_permissions=True)
 
 
