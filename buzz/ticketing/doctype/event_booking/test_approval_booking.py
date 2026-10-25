@@ -216,7 +216,10 @@ class TestApprovalDecision(ApprovalTestCase):
 		self.assertEqual(frappe.db.get_value("Event Booking", self.booking.name, "docstatus"), 1)
 
 	def test_a_request_that_now_has_a_price_cannot_be_approved(self):
-		frappe.db.set_value("Buzz Price", {"parent": self.approval_ticket_type.name}, "price", 500)
+		ticket_type = str(self.approval_ticket_type.name)
+		filters = {"parenttype": "Event Ticket Type", "parent": ticket_type}
+		frappe.db.set_value("Buzz Price", filters, "price", 500)
+		frappe.clear_document_cache("Event Ticket Type", ticket_type)
 
 		with self.assertRaises(frappe.ValidationError):
 			self.booking.approve_request()
