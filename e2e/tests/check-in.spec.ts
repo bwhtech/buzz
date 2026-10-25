@@ -108,7 +108,7 @@ test.describe("Check-in scanner", () => {
 
 		await checkInPage.submitTicketId(ticketId)
 
-		await checkInPage.expectToast(/already checked in today/i)
+		await checkInPage.expectToast(/already checked in at/i)
 	})
 })
 
