@@ -45,7 +45,7 @@ async function declineEarlierRequest(baseURL: string, requester: Requester) {
 	if (earlier?.status !== "Approval Pending") return
 	const api = await newApiContext(baseURL)
 	await callMethod(api, "buzz.api.booking.approvals.decline_bookings", {
-		event: eventId,
+		event: String(eventId),
 		bookings: [earlier.name],
 	})
 	await api.dispose()
@@ -74,7 +74,7 @@ function pendingRow(page: Page, requester: Requester) {
 	return page
 		.getByRole("listitem")
 		.filter({ hasText: requester.email })
-		.filter({ has: page.getByRole("button", { name: "Approve" }) })
+		.filter({ has: page.getByRole("button", { name: "Approve", exact: true }) })
 }
 
 async function openPendingList(page: Page) {
@@ -110,7 +110,7 @@ test.describe("Approval-required registration", () => {
 		const { page: guestPage, context } = await requestToJoin(browser, requester, baseURL!)
 
 		await openPendingList(page)
-		await pendingRow(page, requester).getByRole("button", { name: "Approve" }).click()
+		await pendingRow(page, requester).getByRole("button", { name: "Approve", exact: true }).click()
 		await expect(pendingRow(page, requester)).toHaveCount(0)
 
 		await guestPage.reload()
@@ -126,9 +126,9 @@ test.describe("Approval-required registration", () => {
 		const { page: guestPage, context } = await requestToJoin(browser, requester, baseURL!)
 
 		await openPendingList(page)
-		await pendingRow(page, requester).getByRole("button", { name: "Decline" }).click()
+		await pendingRow(page, requester).getByRole("button", { name: "Decline", exact: true }).click()
 		await page.getByLabel("Message (optional)").fill("The event is full of speakers")
-		await page.getByRole("dialog").getByRole("button", { name: "Decline" }).click()
+		await page.getByRole("dialog").getByRole("button", { name: "Decline", exact: true }).click()
 		await expect(page.getByRole("dialog")).toHaveCount(0)
 		await expect(pendingRow(page, requester)).toHaveCount(0)
 
