@@ -62,3 +62,11 @@ class TestEventCheckinZone(IntegrationTestCase):
 		zone.delete()
 
 		self.assertFalse(frappe.db.exists("Event Check-in Zone", zone.name))
+
+	def test_deleting_an_event_deletes_its_zones(self):
+		event = BuzzEventFactory.create()
+		EventCheckinZoneFactory.create(event=event.name)
+
+		event.run_method("on_trash")
+
+		self.assertFalse(frappe.db.exists("Event Check-in Zone", {"event": event.name}))

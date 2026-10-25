@@ -332,6 +332,11 @@ class BuzzEvent(Document):
 			frappe.delete_doc("Sponsor Enquiry Form", sponsorship_form_id, ignore_permissions=True)
 		# A community's request to list the event means nothing once the event is gone.
 		frappe.db.delete("Community Event Request", {"event": self.name})
+		# Zones come with the event, the default one included. Check-ins block the delete on
+		# their own link to the event, so the zones stay while any exist.
+		if not frappe.db.exists("Event Check In", {"event": self.name}):
+			for zone in frappe.get_all("Event Check-in Zone", {"event": self.name}, pluck="name"):
+				frappe.delete_doc("Event Check-in Zone", zone, ignore_permissions=True, ignore_on_trash=True)
 
 	def create_default_records(self):
 		records = [
