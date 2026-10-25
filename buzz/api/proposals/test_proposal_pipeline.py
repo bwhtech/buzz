@@ -94,6 +94,10 @@ class TestGetEventProposals(IntegrationTestCase):
 		self.assertEqual(response.total, 2)
 		self.assertFalse(response.can_write)
 
+	def test_name_narrows_the_page_to_that_proposal_of_this_event(self):
+		self.assertEqual(self.list_proposal_names(name=self.accepted), [self.accepted])
+		self.assertEqual(self.list_proposal_names(name=self.elsewhere), [])
+
 	def get_proposals_as_manager(self, **kwargs):
 		with self.set_user(self.manager):
 			return get_event_proposals(self.event, **kwargs)

@@ -1,0 +1,288 @@
+/* The event card, shared by the dashboard's EventCard.vue and the Jinja event_card macro.
+   One markup, two layouts: a timeline row and a cover card, picked by data-layout. */
+.buzz-event-card {
+	--event-card-ease: cubic-bezier(0.23, 1, 0.32, 1);
+	position: relative;
+	display: grid;
+	border: 1px solid var(--outline-gray-1);
+	border-radius: var(--radius-6);
+	color: var(--ink-gray-6);
+	font-size: 13px;
+	transition:
+		transform 160ms var(--event-card-ease),
+		background-color 150ms ease,
+		border-color 150ms ease,
+		box-shadow 160ms var(--event-card-ease);
+}
+
+/* The row layout compacts on the list's width, not the viewport's: a sidebar can squeeze it. */
+.buzz-event-card-list {
+	container-type: inline-size;
+}
+
+/* Stretched over the card so the whole card is the target; actions sit above it. */
+.buzz-event-card-target {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	border-radius: inherit;
+}
+
+.buzz-event-card-target:focus-visible {
+	outline: 2px solid var(--outline-gray-4);
+	outline-offset: 2px;
+}
+
+.buzz-event-card-cover {
+	position: relative;
+	grid-area: cover;
+	aspect-ratio: 2 / 1;
+	overflow: hidden;
+	background: var(--surface-gray-2);
+}
+
+.buzz-event-card-image {
+	display: block;
+	width: 100%;
+	height: 100%;
+	background-size: cover;
+	object-fit: cover;
+	transition: transform 200ms var(--event-card-ease);
+}
+
+.buzz-event-card-body {
+	display: flex;
+	grid-area: body;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.buzz-event-card-time {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	color: var(--ink-gray-5);
+	font-variant-numeric: tabular-nums;
+}
+
+.buzz-event-card-separator {
+	color: var(--ink-gray-4);
+}
+
+.buzz-event-card-title {
+	margin: 0;
+	color: var(--ink-gray-9);
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.35;
+	overflow-wrap: anywhere;
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+.buzz-event-card-meta {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.buzz-event-card-meta-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.buzz-event-card-truncate {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.buzz-event-card-meta-item > :first-child {
+	flex-shrink: 0;
+}
+
+.buzz-event-card-icon {
+	width: 14px;
+	height: 14px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.buzz-event-card-avatar {
+	display: grid;
+	place-items: center;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--surface-gray-3);
+	color: var(--ink-gray-6);
+	font-size: 9px;
+	font-weight: 600;
+	object-fit: cover;
+}
+
+.buzz-event-card-warning {
+	color: var(--ink-amber-6);
+}
+
+.buzz-event-card-status,
+.buzz-event-card-actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+/* Above the overlay, so a Manage button or a badge link stays its own target. */
+.buzz-event-card-actions {
+	position: relative;
+	z-index: 2;
+	grid-area: actions;
+}
+
+/* Shown by the cover layout only. */
+.buzz-event-card-cover .date-badge,
+.buzz-event-card-weekday {
+	display: none;
+}
+
+/* 1a: cover, details, and a trailing column for status and the manager's CTA. */
+.buzz-event-card[data-layout="row"] {
+	grid-template-areas:
+		"cover body status"
+		"cover body actions";
+	grid-template-columns: 168px minmax(0, 1fr) auto;
+	grid-template-rows: 1fr auto;
+	align-items: center;
+	gap: 0 16px;
+	padding: 12px;
+}
+
+.buzz-event-card[data-layout="row"] .buzz-event-card-cover {
+	align-self: start;
+	border-radius: var(--radius-4);
+}
+
+.buzz-event-card[data-layout="row"] .buzz-event-card-status {
+	grid-area: status;
+	align-self: start;
+	justify-content: flex-end;
+}
+
+.buzz-event-card[data-layout="row"] .buzz-event-card-actions {
+	align-self: end;
+	justify-content: flex-end;
+}
+
+/* 1b: full-bleed cover with the date on it, details beneath, the CTA in a footer. */
+.buzz-event-card[data-layout="cover"] {
+	grid-template-areas:
+		"cover"
+		"body"
+		"actions";
+	grid-template-rows: auto 1fr auto;
+	overflow: hidden;
+	background: var(--surface-elevation-1);
+}
+
+.buzz-event-card[data-layout="cover"] .buzz-event-card-body {
+	gap: 6px;
+	padding: 14px 14px 12px;
+}
+
+.buzz-event-card[data-layout="cover"] .buzz-event-card-status {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	z-index: 1;
+	gap: 4px;
+	/* Badges only; a press on the corner still opens the card. */
+	pointer-events: none;
+}
+
+/* Solid on a cover, so the badges read over any image; the Jinja card's badges are static. */
+.buzz-event-card[data-layout="cover"] .buzz-event-card-status .es-badge {
+	background: var(--c-solid-bg);
+	color: var(--c-solid-fg);
+}
+
+.buzz-event-card[data-layout="cover"] .buzz-event-card-actions {
+	justify-content: flex-end;
+	padding: 10px 14px;
+	border-top: 1px solid var(--outline-gray-1);
+}
+
+.buzz-event-card[data-layout="cover"] .buzz-event-card-weekday {
+	display: contents;
+}
+
+.buzz-event-card[data-layout="cover"] .buzz-event-card-cover .date-badge {
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	display: flex;
+	border: none;
+	background: var(--surface-elevation-1);
+	box-shadow: var(--shadow-sm);
+}
+
+/* Pressing answers the press; only the overlay presses, so Manage does not press the card. */
+.buzz-event-card:has(> .buzz-event-card-target:active) {
+	transform: scale(0.99);
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.buzz-event-card[data-layout="row"]:hover {
+		background: var(--surface-gray-1);
+	}
+
+	.buzz-event-card[data-layout="cover"]:hover {
+		border-color: var(--outline-gray-2);
+		box-shadow: var(--shadow-md);
+	}
+
+	.buzz-event-card:hover .buzz-event-card-image {
+		transform: scale(1.02);
+	}
+}
+
+@container (max-width: 560px) {
+	.buzz-event-card[data-layout="row"] {
+		grid-template-areas:
+			"cover body body"
+			"cover status actions";
+		grid-template-columns: 112px minmax(0, 1fr) auto;
+		gap: 0 12px;
+	}
+
+	.buzz-event-card[data-layout="row"] :is(.buzz-event-card-status, .buzz-event-card-actions) {
+		align-self: end;
+		padding-top: 8px;
+	}
+
+	.buzz-event-card[data-layout="row"] .buzz-event-card-status {
+		justify-content: flex-start;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.buzz-event-card,
+	.buzz-event-card-image {
+		transition: none;
+	}
+
+	.buzz-event-card:has(> .buzz-event-card-target:active),
+	.buzz-event-card:hover .buzz-event-card-image {
+		transform: none;
+	}
+}

@@ -2,8 +2,9 @@ import textwrap
 from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from bs4 import BeautifulSoup
 from frappe.utils import get_system_timezone, get_time, get_url, getdate
+
+from buzz.html_lines import plain_text
 
 DESCRIPTION_LENGTH = 160
 IMAGE_FIELDS = ("meta_image", "og_image", "banner_image", "card_image")
@@ -15,10 +16,6 @@ def event_time_zone(event) -> ZoneInfo:
 		return ZoneInfo(event.time_zone or get_system_timezone())
 	except (ZoneInfoNotFoundError, ValueError):
 		return ZoneInfo(get_system_timezone())
-
-
-def plain_text(html: str | None) -> str:
-	return BeautifulSoup(html or "", "html.parser").get_text(" ")
 
 
 class EventMeta:
@@ -42,7 +39,7 @@ class EventMeta:
 		return get_url(f"/events/{self.event.route}")
 
 	def description(self) -> str:
-		text = self.event.short_description or plain_text(self.event.about)
+		text = self.event.short_description or plain_text(self.event.about, " ")
 		return textwrap.shorten(text, DESCRIPTION_LENGTH, placeholder="…")
 
 	def image(self) -> str:

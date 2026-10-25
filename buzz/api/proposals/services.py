@@ -99,6 +99,7 @@ def event_proposals(
 	order: str = "desc",
 	start: int = 0,
 	limit: int = PROPOSALS_PAGE_SIZE,
+	name: str | None = None,
 ) -> EventProposalsResponse:
 	"""One page of the talk proposals submitted to an event, newest first by default.
 
@@ -108,6 +109,8 @@ def event_proposals(
 
 	filter_fields = proposal_filter_fields(event)
 	conditions = ListConditions("Talk Proposal", filter_fields).frappe_filters(filters)
+	if name:
+		conditions.append(["name", "=", name])
 	query_filters = [["event", "=", event], *conditions]
 	or_filters = proposal_search_filters(search)
 	limit = max(1, min(int(limit), 100))

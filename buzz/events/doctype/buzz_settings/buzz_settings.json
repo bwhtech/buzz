@@ -59,6 +59,13 @@
   "default_sponsor_deck_reply_to",
   "column_break_sponsor",
   "default_sponsor_deck_cc",
+  "buzz_events_tab",
+  "buzz_events_section",
+  "list_on_buzz_events",
+  "buzz_events_url",
+  "column_break_buzz_events",
+  "buzz_events_api_key",
+  "buzz_events_api_secret",
   "section_break_vtep",
   "custom_fields_go_after_this"
  ],
@@ -379,6 +386,50 @@
    "label": "Maps Embed API Key"
   },
   {
+   "fieldname": "buzz_events_tab",
+   "fieldtype": "Tab Break",
+   "label": "buzz.events"
+  },
+  {
+   "fieldname": "buzz_events_section",
+   "fieldtype": "Section Break",
+   "label": "Partner Listing"
+  },
+  {
+   "default": "0",
+   "description": "Lists your published events on your community page on buzz.events. Save again to resync.",
+   "fieldname": "list_on_buzz_events",
+   "fieldtype": "Check",
+   "label": "List Events on buzz.events"
+  },
+  {
+   "default": "https://buzz.events",
+   "depends_on": "list_on_buzz_events",
+   "fieldname": "buzz_events_url",
+   "fieldtype": "Data",
+   "label": "buzz.events URL",
+   "mandatory_depends_on": "list_on_buzz_events"
+  },
+  {
+   "fieldname": "column_break_buzz_events",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "list_on_buzz_events",
+   "description": "From the integration user buzz.events gave your team.",
+   "fieldname": "buzz_events_api_key",
+   "fieldtype": "Data",
+   "label": "API Key",
+   "mandatory_depends_on": "list_on_buzz_events"
+  },
+  {
+   "depends_on": "list_on_buzz_events",
+   "fieldname": "buzz_events_api_secret",
+   "fieldtype": "Password",
+   "label": "API Secret",
+   "mandatory_depends_on": "list_on_buzz_events"
+  },
+  {
    "fieldname": "whitelabel_tab",
    "fieldtype": "Tab Break",
    "label": "Whitelabel"
@@ -399,7 +450,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-20 23:43:49.827251",
+ "modified": "2026-10-24 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",

@@ -126,15 +126,18 @@ body {
 	src: url("/assets/buzz/fonts/LeagueGothic-Latin.woff2") format("woff2");
 }
 
-/* The title face, shared by the date badge so both always match. */
-:root {
-	--font-title: "League Gothic", var(--font-display);
+/* Solid buttons take the theme's accent. Unlayered, so it wins over espresso's layered default. */
+.es-button:not([data-theme]) {
+	--bt-solid-bg: var(--accent);
+	--bt-solid-bg-hover: var(--accent-hover);
+	--bt-solid-bg-active: var(--accent-hover);
+	--bt-solid-fg: var(--accent-ink);
 }
 
 .event-title {
 	color: var(--ink-title);
 	font-family: var(--font-title);
-	font-size: 40px;
+	font-size: var(--title-size);
 	font-weight: 400;
 	line-height: 1.2;
 	letter-spacing: 0.017em;
@@ -159,6 +162,22 @@ body {
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
+	max-width: 100%;
+}
+
+.meta-venue-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.meta-more-locations {
+	flex: none;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: radial-gradient(closest-side, var(--surface-gray-2), transparent);
+	color: var(--ink-strong);
+	font-size: 0.85em;
 }
 
 /* Layout: banner, title and content share the wide column; the side panel runs beside them
@@ -784,38 +803,6 @@ body {
 	display: flex;
 	align-items: center;
 	gap: 14px;
-}
-
-.date-badge {
-	display: flex;
-	flex-direction: column;
-	flex-shrink: 0;
-	width: 48px;
-	overflow: hidden;
-	border: 1px solid var(--border);
-	border-radius: 8px;
-	text-align: center;
-}
-
-.date-badge-month {
-	padding: 3px 0;
-	background: var(--surface-raised);
-	color: var(--ink-muted);
-	font-size: 10px;
-	font-weight: 600;
-	letter-spacing: 0.08em;
-	line-height: 1;
-	text-transform: uppercase;
-}
-
-/* Trimmed to the digits' cap height and baseline, so the padding is even above and below. */
-.date-badge-day {
-	padding: 8px 4px;
-	color: var(--ink-strong);
-	font-family: var(--font-title);
-	font-size: 24px;
-	line-height: 1.2;
-	text-box: trim-both cap alphabetic;
 }
 
 .date-range {

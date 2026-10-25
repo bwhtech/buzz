@@ -14,6 +14,12 @@ export function dayLabel(date: string): string {
 	return day.format("D MMM")
 }
 
+// A range crossing into another year names both years; "20 Nov – 1 Jul" reads as going backwards.
+export function rangeLabel(start: string, end: string): string {
+	if (dayjs(start).isSame(end, "year")) return `${dayLabel(start)} – ${dayLabel(end)}`
+	return `${dayjs(start).format("D MMM YYYY")} – ${dayjs(end).format("D MMM YYYY")}`
+}
+
 export function weekday(date: string): string {
 	return dayjs(date).format("dddd")
 }

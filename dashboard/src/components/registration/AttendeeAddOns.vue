@@ -1,5 +1,5 @@
 <template>
-	<div class="flex flex-col gap-3 border-t border-outline-gray-1 pt-3">
+	<div class="flex flex-col gap-3 border-t border-outline-gray-1 pt-3 first:border-t-0 first:pt-0">
 		<span class="text-xs font-semibold uppercase tracking-[0.04em] text-ink-gray-5">
 			{{ __("Add-ons") }}
 		</span>
@@ -16,15 +16,15 @@
 					{{ addOn.price_note || formatWholePriceOrFree(addOn.price, addOn.currency) }}
 				</span>
 			</div>
-			<FormControl
-				v-if="addOn.user_selects_option && selection(addOn).selected"
-				v-model="selection(addOn).option"
-				class="ml-6"
-				type="select"
-				size="sm"
-				:aria-label="__('{0} option', [__(addOn.title ?? '')])"
-				:options="(addOn.options ?? []).map((option) => ({ label: __(option), value: option }))"
-			/>
+			<div v-if="addOn.user_selects_option && selection(addOn).selected" class="pl-6">
+				<FormControl
+					v-model="selection(addOn).option"
+					type="select"
+					size="sm"
+					:aria-label="__('{0} option', [__(addOn.title ?? '')])"
+					:options="(addOn.options ?? []).map((option) => ({ label: __(option), value: option }))"
+				/>
+			</div>
 		</div>
 	</div>
 </template>

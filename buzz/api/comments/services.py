@@ -1,15 +1,24 @@
 import frappe
 from frappe.core.doctype.communication.email import make as make_communication
 from frappe.desk.form.utils import add_comment
-from frappe.utils import get_fullname, sanitize_html
+from frappe.utils import get_fullname, sanitize_html, validate_email_address
+from frappe.utils.response import send_private_file
+from werkzeug.wrappers import Response
 
 from buzz.api.comments.activity import ActivityFeed
-from buzz.api.comments.exceptions import CannotDeleteComment, NoRecipients, NotCommentable, NotTeamMember
+from buzz.api.comments.exceptions import (
+	AttachmentNotFound,
+	CannotDeleteComment,
+	NoRecipients,
+	NotCommentable,
+	NotTeamMember,
+)
 from buzz.api.comments.schemas import ActivityEntry
 from buzz.api.teams.schemas import TeamMember
 from buzz.api.teams.services import members_of
 from buzz.comments import is_commentable, note_email_args, team_of
 from buzz.permissions import ADMIN_ROLES, has_team_access, is_unrestricted, team_role_of
+from buzz.subscriptions import Subscriptions
 
 
 def proposal_speaker_emails(proposal: str) -> list[str]:
@@ -23,6 +32,23 @@ def proposal_speaker_emails(proposal: str) -> list[str]:
 
 # Who a note can be emailed to, for records that have someone outside the team.
 EMAIL_RECIPIENTS = {"Talk Proposal": proposal_speaker_emails}
+
+
+def email_attachment(file: str) -> Response:
+	"""A file on an email in a record's activity, for members of the record's team only. Frappe's
+	own file check needs Communication read access, which team roles do not have."""
+	attached_to = frappe.db.get_value(
+		"File", file, ["attached_to_doctype", "attached_to_name", "file_url", "file_name"], as_dict=True
+	)
+	if not attached_to or attached_to.attached_to_doctype != "Communication":
+		AttachmentNotFound.throw()
+	reference = frappe.db.get_value(
+		"Communication", attached_to.attached_to_name, ["reference_doctype", "reference_name"], as_dict=True
+	)
+	if not (reference and reference.reference_doctype and reference.reference_name):
+		AttachmentNotFound.throw()
+	DocumentComments(reference.reference_doctype, reference.reference_name)
+	return send_private_file(attached_to.file_url.split("/private", 1)[1], attached_to.file_name)
 
 
 def render_email(template: str, args: dict) -> str:
@@ -70,10 +96,16 @@ class DocumentComments:
 	def members(self) -> list[TeamMember]:
 		return members_of(self.team)
 
-	def add(self, content: str, email_recipients: bool = False) -> str:
+	def add(
+		self,
+		content: str,
+		email_recipients: bool = False,
+		cc: list[str] | None = None,
+		bcc: list[str] | None = None,
+	) -> str:
 		"""A team note is a Comment; one emailed to the record's outside party is a Communication."""
 		if email_recipients:
-			return self.email(content)
+			return self.email(content, cc or [], bcc or [])
 		user = frappe.session.user
 		return add_comment(
 			self.reference_doctype, self.reference_name, content, user, get_fullname(user)
@@ -88,11 +120,25 @@ class DocumentComments:
 		user = frappe.session.user
 		return owner == user or is_unrestricted(user) or team_role_of(user, self.team) in ADMIN_ROLES
 
-	def email(self, content: str) -> str:
+	def subscriptions(self) -> Subscriptions:
+		return Subscriptions(self.reference_doctype, self.reference_name)
+
+	def is_subscribed(self) -> bool:
+		return self.subscriptions().is_subscribed(frappe.session.user)
+
+	def set_subscribed(self, subscribed: bool) -> None:
+		self.subscriptions().set(frappe.session.user, subscribed)
+
+	def email_sender(self) -> str | None:
+		return frappe.db.get_value("Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "email_id")
+
+	def email(self, content: str, cc: list[str], bcc: list[str]) -> str:
 		recipient_source = EMAIL_RECIPIENTS.get(self.reference_doctype)
 		recipients = recipient_source(self.reference_name) if recipient_source else []
 		if not recipients:
 			NoRecipients.throw()
+		for address in [*cc, *bcc]:
+			validate_email_address(address, throw=True)
 		# Comment.validate cleans a note; Communication stores what it is given.
 		note = sanitize_html(content, always_sanitize=True)
 		args = note_email_args(self.reference_doctype, self.reference_name, frappe.session.user, note)
@@ -103,7 +149,10 @@ class DocumentComments:
 			subject=frappe._("A note on {0}").format(args["record_title"]),
 			content=note,
 			recipients=recipients,
+			cc=cc,
+			bcc=bcc,
 			send_email=False,
 		)["name"]
 		send_in_layout(communication, render_email("proposal_note", args))
+		self.set_subscribed(True)
 		return communication

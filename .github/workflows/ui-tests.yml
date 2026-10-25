@@ -21,7 +21,8 @@ concurrency:
 
 jobs:
   ui-tests:
-    runs-on: ubuntu-latest
+    # Pinned: the ubuntu-26.04 image lacks libmysqlclient.so.21 and Playwright support
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     name: Playwright E2E Tests
 

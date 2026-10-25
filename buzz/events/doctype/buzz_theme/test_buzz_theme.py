@@ -4,6 +4,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.events.doctype.buzz_theme.buzz_theme import resolve_theme, theme_css
+from buzz.events.doctype.buzz_theme.tokens import FONT_STACKS
 from buzz.tests.factories import BuzzThemeFactory
 
 
@@ -69,6 +70,23 @@ class TestBuzzTheme(IntegrationTestCase):
 		css = theme_css(theme.name)
 		self.assertNotIn("display: none", css)
 		self.assertNotIn("--accent:", css)
+
+	def test_new_theme_without_tokens_starts_from_the_standard_theme(self):
+		theme = BuzzThemeFactory.create(tokens=[])
+		self.assertEqual(token_row(theme, "font-title").value, "League Gothic")
+
+	def test_title_font_and_size_are_theme_choices(self):
+		theme = BuzzThemeFactory.build()
+		set_token(theme, "font-title", "Georgia")
+		set_token(theme, "title-size", "32px")
+		theme.insert()
+		css = theme_css(theme.name)
+		self.assertIn("--font-title: Georgia, serif;", css)
+		self.assertIn("--title-size: 32px;", css)
+
+	def test_font_stacks_survive_autoescape(self):
+		for stack in FONT_STACKS.values():
+			self.assertNotIn('"', stack)
 
 	def test_resolve_theme_skips_disabled(self):
 		theme = BuzzThemeFactory.create(enabled=0)

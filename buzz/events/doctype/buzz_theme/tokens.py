@@ -17,15 +17,16 @@ REQUIRED_TOKENS = {
 	"accent-ink": "Color",
 	"font-body": "Font",
 	"font-display": "Font",
+	"font-title": "Font",
+	"title-size": "Dimension",
 	"radius": "Dimension",
 	"radius-banner": "Dimension",
-	"measure": "Dimension",
-	"aside": "Dimension",
 	"page-width": "Dimension",
 }
 
 # Fonts are picked by name, never typed: a free-text stack is a way out of the CSS rule.
 FONT_STACKS = {
+	"League Gothic": "League Gothic, Impact, sans-serif",
 	"Inter": "InterVar, Inter, system-ui, sans-serif",
 	"Newsreader": "Newsreader, Georgia, serif",
 	"System": "system-ui, sans-serif",

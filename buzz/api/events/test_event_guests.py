@@ -64,6 +64,14 @@ class TestGetEventGuests(GuestsTestCase):
 
 		self.assertEqual(self.guests_as(self.owner).guests[0].ticket_type, "Early Bird")
 
+	def test_name_narrows_the_page_to_that_ticket(self):
+		wanted = EventTicketFactory.create("submitted", event=self.event).name
+		EventTicketFactory.create("submitted", event=self.event)
+
+		guests = self.guests_as(self.owner, name=wanted).guests
+
+		self.assertEqual([guest.name for guest in guests], [wanted])
+
 	def test_an_event_with_no_guests_is_empty_rather_than_an_error(self):
 		guests = self.guests_as(self.owner)
 

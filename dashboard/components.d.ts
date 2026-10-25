@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ActivityEmail: typeof import('./src/components/dashboard/comments/ActivityEmail.vue')['default']
     ActivityEntry: typeof import('./src/components/dashboard/comments/ActivityEntry.vue')['default']
     AddCoHostDialog: typeof import('./src/components/dashboard/events/AddCoHostDialog.vue')['default']
     AddEventDialog: typeof import('./src/components/dashboard/teams/AddEventDialog.vue')['default']
@@ -23,7 +24,6 @@ declare module 'vue' {
     AttendeeAddOns: typeof import('./src/components/registration/AttendeeAddOns.vue')['default']
     AttendeeCard: typeof import('./src/components/registration/AttendeeCard.vue')['default']
     AttendeesStep: typeof import('./src/components/registration/AttendeesStep.vue')['default']
-    AudienceChip: typeof import('./src/components/dashboard/comments/AudienceChip.vue')['default']
     AvatarUploader: typeof import('./src/components/common/AvatarUploader.vue')['default']
     BackButton: typeof import('./src/components/common/BackButton.vue')['default']
     BannerCountdown: typeof import('./src/components/dashboard/events/BannerCountdown.vue')['default']
@@ -70,6 +70,7 @@ declare module 'vue' {
     CurrencySwitch: typeof import('./src/components/registration/CurrencySwitch.vue')['default']
     CustomFieldInput: typeof import('./src/components/CustomFieldInput.vue')['default']
     CustomFieldsSection: typeof import('./src/components/CustomFieldsSection.vue')['default']
+    DateBadge: typeof import('./src/components/common/DateBadge.vue')['default']
     DetailRow: typeof import('./src/components/common/DetailRow.vue')['default']
     DetailsStep: typeof import('./src/components/registration/DetailsStep.vue')['default']
     DocumentActivity: typeof import('./src/components/dashboard/comments/DocumentActivity.vue')['default']
@@ -155,6 +156,8 @@ declare module 'vue' {
     MobileMoreSheet: typeof import('./src/components/dashboard/MobileMoreSheet.vue')['default']
     MobileStepBar: typeof import('./src/components/registration/MobileStepBar.vue')['default']
     MobileTotalBar: typeof import('./src/components/registration/MobileTotalBar.vue')['default']
+    NotificationRow: typeof import('./src/components/dashboard/notifications/NotificationRow.vue')['default']
+    NotificationsPanel: typeof import('./src/components/dashboard/notifications/NotificationsPanel.vue')['default']
     OfflinePaymentDialog: typeof import('./src/components/OfflinePaymentDialog.vue')['default']
     OrderSummary: typeof import('./src/components/registration/OrderSummary.vue')['default']
     OtpDialog: typeof import('./src/components/registration/OtpDialog.vue')['default']
@@ -192,6 +195,7 @@ declare module 'vue' {
     QuantityStepper: typeof import('./src/components/registration/QuantityStepper.vue')['default']
     QuickActionsRail: typeof import('./src/components/dashboard/events/QuickActionsRail.vue')['default']
     QuickActionTile: typeof import('./src/components/dashboard/events/QuickActionTile.vue')['default']
+    RecipientRow: typeof import('./src/components/dashboard/comments/RecipientRow.vue')['default']
     RegistrationActions: typeof import('./src/components/dashboard/events/RegistrationActions.vue')['default']
     RegistrationComplete: typeof import('./src/components/registration/RegistrationComplete.vue')['default']
     RegistrationDialog: typeof import('./src/components/dashboard/events/RegistrationDialog.vue')['default']

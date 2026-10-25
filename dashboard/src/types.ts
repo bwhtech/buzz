@@ -138,6 +138,12 @@ export interface UserInfo {
 	time_zone?: string | null
 }
 
+export interface EmailAttachment {
+	name: string
+	url: string
+	size: number
+}
+
 export interface ActivityEntry {
 	name: string
 	kind: "comment" | "email" | "change" | "created"
@@ -146,11 +152,31 @@ export interface ActivityEntry {
 	owner_image: string | null
 	creation: string
 	content: string | null
+	quoted_content: string | null
+	snippet: string | null
+	attachments: EmailAttachment[]
 	recipients: string[]
+	cc: string[]
 	received: boolean
 	field: string | null
 	old_value: string | null
 	new_value: string | null
+}
+
+// buzz.api.notifications.get_notifications: newest first.
+export interface NotificationItem {
+	name: string
+	kind: "comment" | "reply"
+	actor: string
+	actor_image: string | null
+	snippet: string | null
+	creation: string
+	read: boolean
+	reference_doctype: string
+	reference_name: string
+	title: string | null
+	event_title: string | null
+	link: string | null
 }
 
 export interface TeamMember {

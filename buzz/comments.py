@@ -1,7 +1,10 @@
 import frappe
 from frappe import _
 from frappe.desk.notifications import extract_mentions
-from frappe.utils import get_fullname, get_url
+from frappe.utils import get_fullname, get_url, strip_html
+
+from buzz.permissions import HUMAN_MEMBER_FILTERS
+from buzz.subscriptions import Subscriptions
 
 DASHBOARD_ROUTES = {"Talk Proposal": "/b/manage/events/{event}/talks?proposal={name}"}
 
@@ -20,7 +23,9 @@ def team_of(doctype: str, name: str) -> str | None:
 def team_members(team: str | None) -> list[str]:
 	if not team:
 		return []
-	return frappe.get_all("Buzz Team Membership", filters={"team": team, "enabled": 1}, pluck="user")
+	return frappe.get_all(
+		"Buzz Team Membership", filters={**HUMAN_MEMBER_FILTERS, "team": team}, pluck="user"
+	)
 
 
 def publish_to_team(doctype: str, name: str) -> None:
@@ -31,8 +36,36 @@ def publish_to_team(doctype: str, name: str) -> None:
 
 
 def notify_team_of_email(doc, method=None) -> None:
-	if is_commentable(doc.reference_doctype) and doc.reference_name:
-		publish_to_team(doc.reference_doctype, doc.reference_name)
+	if not (is_commentable(doc.reference_doctype) and doc.reference_name):
+		return
+	publish_to_team(doc.reference_doctype, doc.reference_name)
+	if doc.communication_type == "Communication" and doc.sent_or_received == "Received":
+		notify_subscribers(doc, _("{0} replied on {1}"), doc.sender_full_name or doc.sender, from_user=None)
+
+
+def notify_subscribers(
+	source, subject: str, author: str, from_user: str | None, skip: set[str] = frozenset()
+) -> None:
+	"""Tells everyone following the note's or email's record, with a plain-text preview of it."""
+	doctype, name = source.reference_doctype, source.reference_name
+	title = frappe.db.get_value(doctype, name, "title")
+	Subscriptions(doctype, name).notify(
+		source,
+		subject.format(author, title),
+		from_user,
+		dashboard_url(doctype, name, activity=source.name),
+		content=snippet_of(source),
+		skip=skip,
+	)
+
+
+def snippet_of(source) -> str:
+	# Imported here: buzz.api.comments imports this module.
+	from buzz.api.comments.email_content import SNIPPET_LENGTH, EmailContent
+
+	if source.doctype == "Communication":
+		return EmailContent(source.content).snippet()
+	return " ".join(strip_html(source.content or "").split())[:SNIPPET_LENGTH]
 
 
 class TeamComment:
@@ -48,8 +81,18 @@ class TeamComment:
 	def after_insert(self):
 		if not self.is_team_note():
 			return super().after_insert()
-		notify_mentioned_members(self)
+		mentioned = notify_mentioned_members(self)
+		self.subscribe_participants(mentioned)
+		notify_subscribers(
+			self, _("{0} commented on {1}"), get_fullname(self.owner), from_user=self.owner, skip=mentioned
+		)
 		self.notify_change("add")
+
+	def subscribe_participants(self, mentioned: set[str]):
+		subscriptions = Subscriptions(self.reference_doctype, self.reference_name)
+		subscriptions.subscribe(self.owner)
+		for user in mentioned:
+			subscriptions.follow(user)
 
 	def on_update(self):
 		if not self.is_team_note():
@@ -67,11 +110,12 @@ class TeamComment:
 		publish_to_team(self.reference_doctype, self.reference_name)
 
 
-def notify_mentioned_members(comment) -> None:
+def notify_mentioned_members(comment) -> set[str]:
+	"""Emails the team members a note mentions, and returns them."""
 	members = set(team_members(team_of(comment.reference_doctype, comment.reference_name)))
 	mentioned = (set(extract_mentions(comment.content)) & members) - {comment.owner}
 	if not mentioned:
-		return
+		return mentioned
 	args = note_email_args(comment.reference_doctype, comment.reference_name, comment.owner, comment.content)
 	frappe.sendmail(
 		recipients=sorted(mentioned),
@@ -79,7 +123,9 @@ def notify_mentioned_members(comment) -> None:
 		template="comment_mention",
 		args={
 			**args,
-			"button_url": dashboard_url(comment.reference_doctype, comment.reference_name),
+			"button_url": dashboard_url(
+				comment.reference_doctype, comment.reference_name, activity=comment.name
+			),
 			"button_label": _("Open in Buzz"),
 		},
 		raw_html=True,
@@ -87,6 +133,7 @@ def notify_mentioned_members(comment) -> None:
 		reference_doctype=comment.reference_doctype,
 		reference_name=comment.reference_name,
 	)
+	return mentioned
 
 
 def note_email_args(doctype: str, name: str, author: str, note: str) -> dict:
@@ -100,8 +147,10 @@ def note_email_args(doctype: str, name: str, author: str, note: str) -> dict:
 	}
 
 
-def dashboard_url(doctype: str, name: str) -> str | None:
+def dashboard_url(doctype: str, name: str, activity: str | None = None) -> str | None:
+	"""`activity` is the note or email the link scrolls the record's activity to."""
 	route = DASHBOARD_ROUTES.get(doctype)
 	if not route:
 		return None
-	return get_url(route.format(event=frappe.db.get_value(doctype, name, "event"), name=name))
+	url = route.format(event=frappe.db.get_value(doctype, name, "event"), name=name)
+	return get_url(f"{url}&activity={activity}" if activity else url)

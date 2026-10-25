@@ -4,6 +4,7 @@ import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import ManagerSidebarHeader from "@/components/dashboard/ManagerSidebarHeader.vue"
+import NotificationsPanel from "@/components/dashboard/notifications/NotificationsPanel.vue"
 import WorkspaceOpening from "@/components/dashboard/WorkspaceOpening.vue"
 import UserMenu from "@/components/UserMenu.vue"
 import { openingTeam } from "@/composables/useWorkspaceOpening"
@@ -84,6 +85,7 @@ watch(headerKey, (key, previous) => {
 			</div>
 
 			<div class="mt-auto flex flex-col gap-2 px-2 py-2">
+				<NotificationsPanel />
 				<SidebarItem
 					:label="discoverEvents.label"
 					:icon="discoverEvents.icon"
@@ -96,6 +98,8 @@ watch(headerKey, (key, previous) => {
 				<UserMenu />
 			</div>
 		</Sidebar>
+		<!-- Zero-width column panels dock into, flush with the sidebar edge and over the page. -->
+		<div id="sidebar-panel" class="relative z-30 w-0 shrink-0" />
 
 		<div class="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-surface-sidebar py-2 pl-1">
 			<div
@@ -103,7 +107,7 @@ watch(headerKey, (key, previous) => {
 			>
 				<PageHeaderTarget />
 				<div class="relative min-h-0 flex-1 overflow-y-auto">
-					<router-view />
+					<router-view :key="$route.params.eventId as string" />
 				</div>
 				<WorkspaceOpening />
 			</div>

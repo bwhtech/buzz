@@ -13,6 +13,7 @@ import PendingSubmissions from "@/components/dashboard/teams/PendingSubmissions.
 import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
+import { useEventCardLayout } from "@/composables/useEventCardLayout"
 import { useIsMobile } from "@/composables/useIsMobile"
 import { useRevealOnScroll } from "@/composables/useRevealOnScroll"
 import { finishOpening } from "@/composables/useWorkspaceOpening"
@@ -58,6 +59,7 @@ const fileUnder = (event: MyEvent) =>
 const months = computed(() => groupEventsByMonth(visible.value, fileUnder))
 
 const drawer = useDrawerSelection<MyEvent>()
+const layout = useEventCardLayout()
 
 const emptyDescription = computed(() =>
 	team.value
@@ -86,6 +88,7 @@ const emptyDescription = computed(() =>
 
 	<TimelineList
 		v-model:tab="tab"
+		v-model:layout="layout"
 		:heading="team ? undefined : 'Events'"
 		icon="lucide-calendar-days"
 		noun="events"
@@ -126,7 +129,9 @@ const emptyDescription = computed(() =>
 			<PendingSubmissions :community="team" :can-review="canReview" @changed="myEvents.reload()" />
 		</template>
 		<template v-if="team" #heading>
-			<h2 class="hidden text-2xl font-semibold text-ink-gray-9 md:block">{{ __("Events") }}</h2>
+			<h2 class="hidden text-2xl font-semibold text-ink-gray-9 md:block">
+				{{ __("Events") }}
+			</h2>
 		</template>
 		<template v-if="team && canReview && !isMobile" #actions>
 			<AddEventMenu :community="team" can-review @added="myEvents.reload()" />
@@ -136,7 +141,7 @@ const emptyDescription = computed(() =>
 		</template>
 
 		<template #default="{ item }">
-			<EventCard :event="item" @open="drawer.show(item)" />
+			<EventCard :event="item" :layout="layout" @open="drawer.show(item)" />
 		</template>
 
 		<template #footer>

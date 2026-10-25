@@ -201,8 +201,10 @@ test.describe("Guest list", () => {
 	]
 
 	let eventId: string
+	let ticketNames: string[]
 
 	test.beforeEach(async ({ page, request }) => {
+		ticketNames = []
 		const team = await ensureTestTeam(request)
 		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
 			event: {
@@ -230,7 +232,7 @@ test.describe("Guest list", () => {
 		})
 
 		for (const [index, guest] of GUESTS.entries()) {
-			const ticket = await createDoc(request, "Event Ticket", {
+			const ticket = await createDoc<{ name: string }>(request, "Event Ticket", {
 				event: eventId,
 				ticket_type: ticketType.name,
 				attendee_name: guest.name,
@@ -243,6 +245,7 @@ test.describe("Guest list", () => {
 			// A draft ticket belongs to a booking still being paid for; only a submitted
 			// one is somebody coming.
 			await callMethod(request, "frappe.client.submit", { doc: ticket })
+			ticketNames.push(ticket.name)
 		}
 
 		await page.goto(`/b/manage/events/${eventId}/details`)
@@ -281,6 +284,14 @@ test.describe("Guest list", () => {
 		})
 	})
 
+	test("opens a linked guest the filtered list leaves out", async ({ page }) => {
+		await page.goto(`/b/manage/events/${eventId}/guests?q=Grace&guest=${ticketNames[0]}`)
+
+		await expect(page.getByRole("dialog")).toContainText(GUESTS[0].email, { timeout: 15000 })
+		// The param is read once and dropped; the search stays.
+		await expect(page).toHaveURL(new RegExp(`/guests\\?q=Grace$`))
+	})
+
 	test("narrows the guest list by search", async ({ page }) => {
 		await page.goto(`/b/manage/events/${eventId}/guests`)
 
@@ -305,6 +316,55 @@ test.describe("Guest list", () => {
 // The details form holds edits in memory, so moving between sections used to drop them.
 // They are kept in localStorage now; this block seeds its own event rather than leaving
 // the shared one dirty for the specs above.
+test.describe("Talk links", () => {
+	const NOTES = Array.from({ length: 12 }, (_, index) => `Review note ${index + 1}`)
+
+	let eventId: string
+	let proposal: string
+	let notes: string[]
+
+	test.beforeEach(async ({ request }) => {
+		const team = await ensureTestTeam(request)
+		const event = await callMethod<{ name: string }>(request, "buzz.api.events.create_event", {
+			event: {
+				team,
+				title: `Talk Links Event ${Date.now()}`,
+				start_date: "2030-01-01",
+				start_time: "09:00:00",
+				end_time: "17:00:00",
+			},
+		})
+		eventId = String(event.name)
+		const doc = await createDoc<{ name: string }>(request, "Talk Proposal", {
+			event: eventId,
+			title: "Linked Talk",
+			speakers: [{ first_name: "Ada", email: "ada@example.com" }],
+		})
+		proposal = doc.name
+		notes = []
+		for (const note of NOTES) {
+			notes.push(
+				await callMethod<string>(request, "buzz.api.comments.add_comment", {
+					reference_doctype: "Talk Proposal",
+					reference_name: proposal,
+					content: `<p>${note}</p>`,
+				}),
+			)
+		}
+	})
+
+	test("scrolls to and highlights the linked note", async ({ page }) => {
+		await page.goto(
+			`/b/manage/events/${eventId}/talks?proposal=${proposal}&activity=${notes.at(-1)}`,
+		)
+
+		const entry = page.locator(`[data-entry="${notes.at(-1)}"]`)
+		await expect(entry).toHaveAttribute("data-highlighted")
+		await expect(entry).toBeInViewport()
+		await expect(page).toHaveURL(new RegExp(`/events/${eventId}/talks$`))
+	})
+})
+
 test.describe("Unsaved details", () => {
 	let eventId: string
 

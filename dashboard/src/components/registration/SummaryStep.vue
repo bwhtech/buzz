@@ -1,15 +1,7 @@
 <template>
 	<div class="flex flex-col gap-3">
 		<section class="flex items-center gap-3.5 rounded-5 border border-outline-gray-2 px-4 py-3">
-			<div
-				v-if="eventDetails.start_date"
-				class="flex size-11 flex-none flex-col items-center justify-center rounded-5 bg-surface-gray-2 leading-none"
-			>
-				<span class="text-[10px] font-semibold uppercase tracking-[0.04em] text-ink-gray-5">
-					{{ startDate.format("MMM") }}
-				</span>
-				<span class="text-lg font-semibold text-ink-gray-9">{{ startDate.format("D") }}</span>
-			</div>
+			<DateBadge v-if="eventDetails.start_date" :date="eventDetails.start_date" />
 			<div class="flex min-w-0 flex-col gap-0.5">
 				<span class="text-base font-semibold text-ink-gray-9">{{ __(eventDetails.title) }}</span>
 				<span class="text-p-sm text-ink-gray-5 text-pretty">{{ eventLine }}</span>
@@ -28,6 +20,11 @@
 					<div class="flex min-w-0 flex-1 flex-col">
 						<span class="truncate text-base font-semibold text-ink-gray-9">{{ row.holder }}</span>
 						<span class="truncate text-p-sm text-ink-gray-5">{{ row.email }}</span>
+						<div v-if="row.addOns.length" class="flex flex-wrap gap-1 pt-1">
+							<Badge v-for="addOn in row.addOns" :key="addOn" theme="gray" variant="subtle">
+								{{ addOn }}
+							</Badge>
+						</div>
 					</div>
 					<div class="flex flex-none flex-col items-end gap-0.5">
 						<span class="text-p-sm text-ink-gray-8">{{ row.ticket }}</span>
@@ -56,9 +53,10 @@
 </template>
 
 <script setup lang="ts">
-import { Avatar } from "frappe-ui"
+import { Avatar, Badge } from "frappe-ui"
 import { computed } from "vue"
 
+import DateBadge from "@/components/common/DateBadge.vue"
 import type { BillingDetails } from "@/composables/useBookingFormStorage"
 import type { AvailableAddOn, AvailableTicketType, BookingAttendee } from "@/types"
 import { formatWholePriceOrFree } from "@/utils/currency"
@@ -82,7 +80,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ edit: [step: RegistrationStepId] }>()
 
-const { startDate, dateLabel, timeLabel, venueLabel } = useEventDateLabels(() => props.eventDetails)
+const { dateLabel, timeLabel, venueLabel } = useEventDateLabels(() => props.eventDetails)
 const eventLine = computed(() =>
 	[dateLabel.value, timeLabel.value, venueLabel.value].filter(Boolean).join(" · "),
 )
@@ -95,17 +93,34 @@ const ticketRows = computed(() =>
 			key: attendee.id,
 			holder: `${person.first_name} ${person.last_name}`.trim(),
 			email: person.email,
+			addOns: addOnLabels(attendee),
 			ticket: __(ticketType?.title ?? ""),
 			price: formatWholePriceOrFree(attendeeAmount(attendee, ticketType), props.currency),
 		}
 	}),
 )
 
-function attendeeAmount(attendee: BookingAttendee, ticketType?: AvailableTicketType) {
-	const addOns = Object.entries(attendee.add_ons ?? {}).filter(
-		([, selection]) => selection.selected,
+function selectedAddOns(attendee: BookingAttendee) {
+	return Object.entries(attendee.add_ons ?? {}).filter(
+		([name, selection]) => selection.selected && props.addOnsMap[name],
 	)
-	const addOnsTotal = addOns.reduce((sum, [name]) => sum + (props.addOnsMap[name]?.price ?? 0), 0)
+}
+
+function addOnLabels(attendee: BookingAttendee) {
+	return selectedAddOns(attendee).map(([name, selection]) => {
+		const addOn = props.addOnsMap[name]
+		const title = __(addOn?.title ?? "")
+		return addOn?.user_selects_option && selection.option
+			? `${title} · ${__(selection.option)}`
+			: title
+	})
+}
+
+function attendeeAmount(attendee: BookingAttendee, ticketType?: AvailableTicketType) {
+	const addOnsTotal = selectedAddOns(attendee).reduce(
+		(sum, [name]) => sum + (props.addOnsMap[name]?.price ?? 0),
+		0,
+	)
 	return (ticketType?.price ?? 0) + addOnsTotal
 }
 
