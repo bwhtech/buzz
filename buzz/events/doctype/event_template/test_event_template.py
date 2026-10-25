@@ -140,19 +140,41 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 			[("Workshop Access", 2000, 1, "Morning\nAfternoon")],
 		)
 
-	def test_creates_custom_fields(self):
+	def test_copies_registration_questions_onto_the_new_events_form(self):
 		template = self.create_template(template_custom_fields=[CUSTOM_FIELD])
 
 		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
 
-		custom_fields = frappe.get_all(
-			"Buzz Custom Field",
-			filters={"event": event.name},
-			fields=["label", "fieldtype", "mandatory", "placeholder"],
-		)
+		form = frappe.get_doc("Buzz Form", {"event": event.name, "form_doctype": "Event Booking"})
 		self.assertEqual(
-			[(row.label, row.fieldtype, row.mandatory, row.placeholder) for row in custom_fields],
-			[("Company", "Data", 1, "Enter company name")],
+			[
+				(
+					question.label,
+					question.fieldtype,
+					question.mandatory,
+					question.placeholder,
+					question.asked_per,
+				)
+				for question in form.questions
+			],
+			[("Company", "Data", 1, "Enter company name", "Booking")],
+		)
+		# A registration question is no longer a Buzz Custom Field.
+		self.assertFalse(frappe.db.exists("Buzz Custom Field", {"event": event.name}))
+
+	def test_copies_offline_payment_questions_as_custom_fields(self):
+		field = {
+			**CUSTOM_FIELD,
+			"label": "Reference",
+			"fieldname": "reference",
+			"applied_to": "Offline Payment Form",
+		}
+		template = self.create_template(template_custom_fields=[field])
+
+		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
+
+		self.assertTrue(
+			frappe.db.exists("Buzz Custom Field", {"event": event.name, "fieldname": "reference"})
 		)
 
 	def test_copies_form_questions_onto_the_new_events_form(self):
@@ -263,12 +285,32 @@ class TestTemplateFormQuestions(IntegrationTestCase):
 			[("dietary", "Custom Form", "Event Feedback")],
 		)
 
+	def test_registration_questions_keep_their_asked_per(self):
+		self.add_question("Event Booking", "Company", "company", asked_per="Booking")
+		self.add_question("Event Booking", "Diet", "diet", asked_per="Attendee")
+
+		rows = template_custom_fields(str(self.event.name))
+
+		self.assertEqual(
+			[(row["fieldname"], row["applied_to"], row["custom_form_doctype"]) for row in rows],
+			[("company", "Booking", None), ("diet", "Ticket", None)],
+		)
+
 	def test_sponsorship_questions_stay_out(self):
 		self.add_question("Sponsorship Enquiry", "Extra", "extra")
 
 		self.assertEqual(template_custom_fields(str(self.event.name)), [])
 
-	def add_question(self, form_doctype: str, label: str, fieldname: str):
+	def add_question(self, form_doctype: str, label: str, fieldname: str, asked_per: str = "Attendee"):
 		form = frappe.get_doc("Buzz Form", {"event": self.event.name, "form_doctype": form_doctype})
-		form.append("questions", {"label": label, "fieldname": fieldname, "fieldtype": "Data", "enabled": 1})
+		form.append(
+			"questions",
+			{
+				"label": label,
+				"fieldname": fieldname,
+				"fieldtype": "Data",
+				"enabled": 1,
+				"asked_per": asked_per,
+			},
+		)
 		form.save(ignore_permissions=True)

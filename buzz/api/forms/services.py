@@ -54,12 +54,16 @@ class CustomFormService:
 
 	@cached_property
 	def form(self) -> "BuzzForm":
+		# Imported here: form_types reads this package, so a module-level import cycles.
+		from buzz.events.doctype.buzz_form.form_types import form_type
+
 		form_name = frappe.db.get_value(
 			"Buzz Form", {"event": self.event.name, "route": self.form_route, "publish": 1}, "name"
 		)
-		if not form_name:
+		form = frappe.get_doc("Buzz Form", form_name) if form_name else None
+		if not form or not form_type(form.form_doctype).has_page:
 			FormNotAvailable.throw()
-		return frappe.get_doc("Buzz Form", form_name)
+		return form
 
 	@property
 	def form_doctype(self) -> str:

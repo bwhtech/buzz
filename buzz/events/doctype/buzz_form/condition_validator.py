@@ -4,6 +4,7 @@ from frappe.utils import cstr
 
 from buzz.api.forms.conditions import LIST_OPERATORS, OPERATORS, parse_conditions
 from buzz.api.forms.fields import get_exclude_fields, get_renderable_fields
+from buzz.events.doctype.buzz_form.form_types import form_type
 
 IS_VALUES = ("set", "not set")
 VALUE_FIELDTYPES = frozenset({"Select", "Link"})
@@ -41,14 +42,18 @@ class ConditionValidator:
 		fieldname, operator, expected = condition
 		if operator not in OPERATORS:
 			self.invalid(question, _("{0} is not a supported operator.").format(operator))
-		if fieldname not in self.fieldnames_above and fieldname not in self.standard_fields:
+		fields = {
+			**self.standard_fields,
+			**form_type(self.form.form_doctype).condition_fields(self.form, question),
+		}
+		if fieldname not in self.fieldnames_above and fieldname not in fields:
 			self.invalid(question, _("{0} is not a field above this question.").format(fieldname))
 		if operator == "is" and expected not in IS_VALUES:
 			self.invalid(question, _("Use 'set' or 'not set' with the 'is' operator."))
 		if operator in LIST_OPERATORS and not isinstance(expected, list):
 			self.invalid(question, _("Use a list of values with the '{0}' operator.").format(operator))
-		if fieldname in self.standard_fields and operator != "is":
-			self.validate_standard_values(question, self.standard_fields[fieldname], expected)
+		if fieldname in fields and operator != "is":
+			self.validate_standard_values(question, fields[fieldname], expected)
 
 	def validate_standard_values(self, question, field, expected):
 		if field.fieldtype not in VALUE_FIELDTYPES:

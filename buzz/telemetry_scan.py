@@ -14,7 +14,7 @@ RECORD_COUNTS = {
 	"add_ons": ("Ticket Add-on", {}),
 	"coupons": ("Buzz Coupon Code", {}),
 	"event_templates": ("Event Template", {}),
-	"custom_fields": ("Buzz Custom Field", {}),
+	"custom_fields": ("Buzz Form Field", {"parenttype": "Buzz Form"}),
 	"offline_payment_methods": ("Offline Payment Method", {}),
 	"tickets_issued": ("Event Ticket", {"docstatus": 1}),
 	"check_ins": ("Event Check In", {"docstatus": 1}),

@@ -46,5 +46,7 @@ class BuzzCustomField(Document):
 	def validate(self):
 		if self.is_new() and self.enabled and self.applied_to == "Custom Form":
 			frappe.throw(_("Add form questions on the Buzz Form."))
+		if self.is_new() and self.enabled and self.applied_to in ("Booking", "Ticket"):
+			frappe.throw(_("Add registration questions on the event's registration form."))
 		if not self.fieldname:
 			self.fieldname = frappe.scrub(self.label)

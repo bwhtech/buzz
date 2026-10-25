@@ -8,6 +8,11 @@ from buzz.api.forms.fields import parse_excluded_fields
 SPONSORSHIP_FORM_DOCTYPE = "Sponsorship Enquiry"
 TALK_PROPOSAL_FORM_DOCTYPE = "Talk Proposal"
 EVENT_FEEDBACK_FORM_DOCTYPE = "Event Feedback"
+REGISTRATION_FORM_DOCTYPE = "Event Booking"
+REGISTRATION_ROUTE = "register"
+# What the booking page and the registration report call each kind of registration question.
+APPLIED_TO_BY_ASKED_PER = {"Booking": "Booking", "Attendee": "Ticket"}
+ASKED_PER_BY_APPLIED_TO = {applied_to: asked_per for asked_per, applied_to in APPLIED_TO_BY_ASKED_PER.items()}
 
 ENQUIRY_FIELDS = frozenset(
 	{"company_name", "company_logo", "website", "tier", "country", "phone", "contact_email"}
@@ -16,7 +21,15 @@ ENQUIRY_FIELDS = frozenset(
 
 class FormType:
 	one_per_event = False
+	has_page = True
 	reserved_fieldnames = frozenset()
+
+	def question_key(self, question):
+		return question.fieldname
+
+	def condition_fields(self, form, question) -> dict:
+		"""Fields a condition on this question may name besides the form's own fields."""
+		return {}
 
 	def validate(self, form):
 		if self.one_per_event and self.others_for_event(form):
@@ -44,16 +57,33 @@ class TalkProposalFormType(FormType):
 	one_per_event = True
 
 
+class RegistrationFormType(FormType):
+	one_per_event = True
+	has_page = False  # registration is served by /book-tickets, not /b/<event>/<route>
+
+	def question_key(self, question):
+		# A booking and an attendee question may share a fieldname.
+		return (question.asked_per, question.fieldname)
+
+	def condition_fields(self, form, question) -> dict:
+		if question.asked_per != "Attendee":
+			return {}
+		return {"ticket_type": frappe.get_meta("Event Booking Attendee").get_field("ticket_type")}
+
+
 FORM_TYPES = {
 	SPONSORSHIP_FORM_DOCTYPE: SponsorshipFormType(),
 	TALK_PROPOSAL_FORM_DOCTYPE: TalkProposalFormType(),
+	REGISTRATION_FORM_DOCTYPE: RegistrationFormType(),
 }
 
 # Created with every event, unpublished: an organiser opens one when they mean to.
+# Registration is the exception: it has no page to open.
 DEFAULT_FORMS = (
 	(SPONSORSHIP_FORM_DOCTYPE, "enquire-sponsorship", "Sponsorship enquiry"),
 	(EVENT_FEEDBACK_FORM_DOCTYPE, "feedback", "Feedback"),
 	(TALK_PROPOSAL_FORM_DOCTYPE, "propose-talk", "Talk proposal"),
+	(REGISTRATION_FORM_DOCTYPE, REGISTRATION_ROUTE, "Registration"),
 )
 
 
@@ -70,6 +100,7 @@ def create_default_forms(event: str):
 				"event": event,
 				"form_doctype": form_doctype,
 				"route": route,
+				"publish": int(form_doctype == REGISTRATION_FORM_DOCTYPE),
 			}
 		).insert(ignore_permissions=True)
 

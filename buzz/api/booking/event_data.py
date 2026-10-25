@@ -5,8 +5,22 @@ from frappe import _
 
 from buzz.api.booking.schemas import EventBookingDataResponse, TaxSettings
 from buzz.api.booking.services import are_registrations_closed
+from buzz.api.filters.conditions import form_questions
+from buzz.api.forms.conditions import parse_conditions
+from buzz.events.doctype.buzz_form.form_types import APPLIED_TO_BY_ASKED_PER, REGISTRATION_FORM_DOCTYPE
 from buzz.payments import get_payment_gateways_for_event
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
+
+CUSTOM_FIELD_NAMES = (
+	"label",
+	"fieldname",
+	"fieldtype",
+	"options",
+	"mandatory",
+	"placeholder",
+	"default_value",
+	"description",
+)
 
 if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
@@ -37,7 +51,7 @@ def build_event_booking_data(event_route: str, hold_token: str | None = None) ->
 			tax_label=event_doc.tax_label or "Tax",
 			tax_percentage=event_doc.tax_percentage or 0,
 		),
-		custom_fields=get_custom_fields(event_doc.name, applied_to=None),
+		custom_fields=get_registration_custom_fields(event_doc.name),
 		payment_gateways=payment_gateways,
 		offline_payment_enabled=len(offline_methods) > 0,
 		offline_methods=offline_methods,
@@ -104,12 +118,21 @@ def get_available_add_ons(event_id: str) -> list:
 	return add_ons
 
 
-def get_custom_fields(
-	event_id: str, applied_to: str | None, offline_payment_method: str | None = None
-) -> list:
-	filters = {"event": event_id, "enabled": 1}
-	if applied_to:
-		filters["applied_to"] = applied_to
+def get_registration_custom_fields(event_id: str) -> list[dict]:
+	return [
+		{
+			**{name: question.get(name) for name in CUSTOM_FIELD_NAMES},
+			"depends_on": parse_conditions(question.depends_on),
+			"mandatory_depends_on": parse_conditions(question.mandatory_depends_on),
+			"applied_to": APPLIED_TO_BY_ASKED_PER[question.asked_per],
+			"order": question.idx,
+		}
+		for question in form_questions(event_id, REGISTRATION_FORM_DOCTYPE)
+	]
+
+
+def get_custom_fields(event_id: str, applied_to: str, offline_payment_method: str | None = None) -> list:
+	filters = {"event": event_id, "enabled": 1, "applied_to": applied_to}
 	if offline_payment_method:
 		filters["offline_payment_method"] = offline_payment_method
 	return frappe.db.get_all("Buzz Custom Field", filters=filters, fields=["*"], order_by="order")

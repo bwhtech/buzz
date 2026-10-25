@@ -18,6 +18,21 @@ KIND_BY_FIELDTYPE = {
 }
 # A record's Buzz Tags, matched through its Buzz Tag Link rows.
 TAGS_KEY = "tags"
+QUESTION_FIELDS = [
+	"fieldname",
+	"label",
+	"fieldtype",
+	"options",
+	"enabled",
+	"mandatory",
+	"placeholder",
+	"default_value",
+	"description",
+	"depends_on",
+	"mandatory_depends_on",
+	"asked_per",
+	"idx",
+]
 
 NEGATED_OPERATORS = {"not in": "in", "not like": "like"}
 # Answers saved through `str()` carry Python's spelling: "True" for a tick, ['a', 'b'] for a list.
@@ -79,25 +94,18 @@ def question_fields(questions) -> list[FilterField]:
 	]
 
 
-def event_questions(event: str, **filters) -> list:
-	"""An event's enabled Buzz Custom Field questions, in form order."""
-	return frappe.get_all(
-		"Buzz Custom Field",
-		filters={"event": event, "enabled": 1, **filters},
-		fields=["fieldname", "label", "fieldtype", "options", "applied_to"],
-		order_by="order asc",
-	)
-
-
-def form_questions(event: str, form_doctype: str) -> list:
+def form_questions(event: str, form_doctype: str, asked_per: str | None = None) -> list:
 	"""The enabled questions of the event's form of that doctype, in form order."""
 	form_name = frappe.db.get_value("Buzz Form", {"event": event, "form_doctype": form_doctype}, "name")
 	if not form_name:
 		return []
+	filters = {"parenttype": "Buzz Form", "parent": form_name, "enabled": 1}
+	if asked_per:
+		filters["asked_per"] = asked_per
 	return frappe.get_all(
 		"Buzz Form Field",
-		filters={"parenttype": "Buzz Form", "parent": form_name, "enabled": 1},
-		fields=["fieldname", "label", "fieldtype", "options"],
+		filters=filters,
+		fields=QUESTION_FIELDS,
 		order_by="idx",
 	)
 

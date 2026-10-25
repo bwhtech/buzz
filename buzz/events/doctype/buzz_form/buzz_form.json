@@ -77,7 +77,7 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.form_doctype!='Sponsorship Enquiry'",
+   "depends_on": "eval:!['Sponsorship Enquiry','Event Booking'].includes(doc.form_doctype)",
    "fieldname": "login_required",
    "fieldtype": "Check",
    "label": "Login Required"
@@ -91,7 +91,8 @@
    "description": "Comma-separated field names to hide from the form. Leave empty to show all. Mandatory fields cannot be hidden.",
    "fieldname": "excluded_fields",
    "fieldtype": "Small Text",
-   "label": "Excluded Fields"
+   "label": "Excluded Fields",
+   "depends_on": "eval:doc.form_doctype!='Event Booking'"
   },
   {
    "fieldname": "questions_tab",
@@ -107,7 +108,8 @@
   {
    "fieldname": "messages_tab",
    "fieldtype": "Tab Break",
-   "label": "Messages"
+   "label": "Messages",
+   "depends_on": "eval:doc.form_doctype!='Event Booking'"
   },
   {
    "fieldname": "success_title",

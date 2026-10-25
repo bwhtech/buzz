@@ -122,9 +122,13 @@ class TestEventRoute(BuzzEventTestCase):
 		forms = frappe.get_all(
 			"Buzz Form", filters={"event": event.name}, fields=["route", "publish"], order_by="route"
 		)
-		self.assertEqual([form.route for form in forms], ["enquire-sponsorship", "feedback", "propose-talk"])
-		# Organisers open each form when they mean to take submissions.
-		self.assertFalse(any(form.publish for form in forms))
+		self.assertEqual(
+			[form.route for form in forms],
+			["enquire-sponsorship", "feedback", "propose-talk", "register"],
+		)
+		# Organisers open each page form when they mean to take submissions; registration is
+		# always open, it has no page of its own.
+		self.assertEqual([form.route for form in forms if form.publish], ["register"])
 
 	def test_same_title_routes_get_a_number_suffix(self):
 		title = f"Meetup {frappe.generate_hash(length=6)}"

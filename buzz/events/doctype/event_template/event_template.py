@@ -5,7 +5,11 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from buzz.events.doctype.buzz_form.form_types import SPONSORSHIP_FORM_DOCTYPE
+from buzz.events.doctype.buzz_form.form_types import (
+	APPLIED_TO_BY_ASKED_PER,
+	REGISTRATION_FORM_DOCTYPE,
+	SPONSORSHIP_FORM_DOCTYPE,
+)
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 
 
@@ -211,11 +215,17 @@ QUESTION_FIELD_NAMES = (
 )
 
 
+def template_form_scope(form_doctype: str, asked_per: str) -> dict:
+	if form_doctype == REGISTRATION_FORM_DOCTYPE:
+		return {"applied_to": APPLIED_TO_BY_ASKED_PER[asked_per], "custom_form_doctype": None}
+	return {"applied_to": "Custom Form", "custom_form_doctype": form_doctype}
+
+
 def template_custom_fields(event_name: str) -> list[dict]:
-	"""Booking and ticket questions, then the questions of every other form of the event."""
+	"""Offline payment questions, then the questions of every form of the event."""
 	fields = frappe.get_all(
 		"Buzz Custom Field",
-		filters={"event": event_name, "applied_to": ["!=", "Custom Form"]},
+		filters={"event": event_name, "applied_to": "Offline Payment Form"},
 		fields=list(TEMPLATE_FIELD_NAMES),
 	)
 	# Sponsorship questions stay on the event's own sponsorship form, which every event has.
@@ -230,7 +240,7 @@ def template_custom_fields(event_name: str) -> list[dict]:
 	questions = frappe.get_all(
 		"Buzz Form Field",
 		filters={"parenttype": "Buzz Form", "parent": ["in", list(forms)]},
-		fields=["parent", *QUESTION_FIELD_NAMES],
+		fields=["parent", "asked_per", *QUESTION_FIELD_NAMES],
 		order_by="parent, idx",
 	)
 	return [
@@ -238,8 +248,7 @@ def template_custom_fields(event_name: str) -> list[dict]:
 		*(
 			{
 				**{name: question.get(name) for name in QUESTION_FIELD_NAMES},
-				"applied_to": "Custom Form",
-				"custom_form_doctype": forms[question.parent],
+				**template_form_scope(forms[question.parent], question.asked_per),
 			}
 			for question in questions
 		),

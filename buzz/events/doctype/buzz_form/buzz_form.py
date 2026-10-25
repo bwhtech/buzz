@@ -88,8 +88,9 @@ class BuzzForm(Document):
 		return any(route and route.lower() == self.route.lower() for route in taken)
 
 	def validate_questions(self):
-		reserved = form_type(self.form_doctype).reserved_fieldnames
-		used_fieldnames = set()
+		type_rules = form_type(self.form_doctype)
+		reserved = type_rules.reserved_fieldnames
+		used_keys = set()
 		saved_fieldnames = self.saved_question_fieldnames()
 		for question in self.questions:
 			question.fieldname = question.fieldname or frappe.scrub(question.label or "")
@@ -99,11 +100,11 @@ class BuzzForm(Document):
 						"Question fieldnames must start with a letter and contain lowercase letters, numbers or underscores."
 					)
 				)
-			if question.fieldname in used_fieldnames or question.fieldname in reserved:
+			if type_rules.question_key(question) in used_keys or question.fieldname in reserved:
 				frappe.throw(_("Duplicate or reserved question fieldname: {0}").format(question.fieldname))
 			if saved_fieldnames.get(question.name) not in (None, question.fieldname):
 				frappe.throw(_("A saved question's fieldname cannot be changed. Add a new question instead."))
-			used_fieldnames.add(question.fieldname)
+			used_keys.add(type_rules.question_key(question))
 
 	def saved_question_fieldnames(self) -> dict[str, str]:
 		before = self.get_doc_before_save()
@@ -113,7 +114,7 @@ class BuzzForm(Document):
 		ConditionValidator(self).validate()
 
 	def validate_published_event(self):
-		if not self.publish or self.flags.migrating:
+		if not self.publish or self.flags.migrating or not form_type(self.form_doctype).has_page:
 			return
 		if not frappe.db.get_value("Buzz Event", self.event, "is_published"):
 			frappe.throw(_("Publish the event before opening its form."))

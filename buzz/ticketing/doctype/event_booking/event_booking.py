@@ -10,7 +10,9 @@ from frappe.utils import add_to_date, cstr, flt, now_datetime
 from buzz import telemetry
 from buzz.api.booking.exceptions import RegistrationsClosed
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, are_registrations_closed
+from buzz.api.filters.conditions import form_questions
 from buzz.emails import is_full_document
+from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.payments import get_controller, mark_payment_as_received
@@ -420,12 +422,8 @@ class EventBooking(Document):
 					except (ValueError, TypeError):
 						custom_fields_data = {}
 
-				# Get custom field definitions for this event to get proper labels and types
-				custom_field_defs = frappe.db.get_all(
-					"Buzz Custom Field",
-					filters={"event": self.event, "enabled": 1, "applied_to": "Ticket"},
-					fields=["fieldname", "label", "fieldtype"],
-				)
+				# The event's attendee questions give each answer its label and type.
+				custom_field_defs = form_questions(self.event, REGISTRATION_FORM_DOCTYPE, "Attendee")
 				custom_field_map = {cf["fieldname"]: cf for cf in custom_field_defs}
 
 				for field_name, field_value in custom_fields_data.items():

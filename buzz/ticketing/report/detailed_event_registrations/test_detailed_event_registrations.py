@@ -5,8 +5,8 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.api.booking.services import create_add_on_doc
 from buzz.tests.factories import (
-	BuzzCustomFieldFactory,
 	BuzzEventFactory,
+	BuzzFormFactory,
 	EventBookingFactory,
 	EventTicketFactory,
 	EventTicketTypeFactory,
@@ -197,9 +197,14 @@ class TestDetailedEventRegistrationsReport(IntegrationTestCase):
 			"submitted", event=self.event, ticket_type=self.standard_type.name, **overrides
 		)
 
-	def create_custom_field(self, fieldname: str, **overrides):
-		return BuzzCustomFieldFactory.create(
-			event=self.event, label=fieldname.replace("_", " ").title(), fieldname=fieldname, **overrides
+	def create_custom_field(self, fieldname: str, applied_to: str = "Booking", **overrides):
+		asked_per = "Attendee" if applied_to == "Ticket" else "Booking"
+		return BuzzFormFactory.add_question(
+			self.event,
+			label=fieldname.replace("_", " ").title(),
+			fieldname=fieldname,
+			asked_per=asked_per,
+			**overrides,
 		)
 
 	def create_add_on(self):

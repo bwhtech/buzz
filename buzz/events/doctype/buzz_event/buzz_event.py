@@ -12,7 +12,12 @@ from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
 from frappe.website.utils import cleanup_page_name
 
 from buzz import telemetry
-from buzz.events.doctype.buzz_form.form_types import SPONSORSHIP_FORM_DOCTYPE, create_default_forms
+from buzz.events.doctype.buzz_form.form_types import (
+	ASKED_PER_BY_APPLIED_TO,
+	REGISTRATION_FORM_DOCTYPE,
+	SPONSORSHIP_FORM_DOCTYPE,
+	create_default_forms,
+)
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 from buzz.events.doctype.event_check_in_zone.event_check_in_zone import create_default_zone
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import create_ticket_categories
@@ -584,17 +589,17 @@ QUESTION_FIELD_NAMES = (
 
 
 def copy_custom_fields(event, template_fields):
-	"""Questions go to the doctype they are asked on: a form's table, or Buzz Custom Field."""
+	"""Questions go to the form they are asked on; offline payment questions stay custom fields."""
 	forms = {}
 	for field in template_fields:
 		# Sponsorship questions live on the event's sponsorship form now; an older template
 		# may still carry one, and recreating it here would fail the event mid-creation.
 		if field.custom_form_doctype == SPONSORSHIP_FORM_DOCTYPE:
 			continue
-		if field.applied_to == "Custom Form":
-			add_form_question(forms, event.name, field)
-		else:
+		if field.applied_to == "Offline Payment Form":
 			create_custom_field(event.name, field)
+		else:
+			add_form_question(forms, event.name, field)
 	for form in forms.values():
 		if form:
 			form.save(ignore_permissions=True)
@@ -602,11 +607,16 @@ def copy_custom_fields(event, template_fields):
 
 def add_form_question(forms: dict, event_name: str, field):
 	"""A template may name a form this event has not got; its question is dropped."""
-	if field.custom_form_doctype not in forms:
-		forms[field.custom_form_doctype] = form_of(event_name, field.custom_form_doctype)
-	form = forms[field.custom_form_doctype]
+	asked_per = ASKED_PER_BY_APPLIED_TO.get(field.applied_to)
+	form_doctype = REGISTRATION_FORM_DOCTYPE if asked_per else field.custom_form_doctype
+	if form_doctype not in forms:
+		forms[form_doctype] = form_of(event_name, form_doctype)
+	form = forms[form_doctype]
 	if form:
-		form.append("questions", {name: field.get(name) for name in QUESTION_FIELD_NAMES})
+		question = {name: field.get(name) for name in QUESTION_FIELD_NAMES}
+		if asked_per:
+			question["asked_per"] = asked_per
+		form.append("questions", question)
 
 
 def form_of(event_name: str, form_doctype: str):

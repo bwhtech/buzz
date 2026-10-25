@@ -152,6 +152,12 @@ class TestCustomFormAccess(FormsTestCase):
 		with self.assertRaises(FormNotAvailable):
 			get_custom_form_data(event.route, form_route)
 
+	def test_a_form_type_without_a_page_is_not_available(self):
+		event, _ = self.build_event()
+		# The registration form is published, but /book-tickets serves it.
+		with self.assertRaises(FormNotAvailable):
+			form_service(event.route, "register")
+
 	def test_guest_needs_login_when_form_requires_it(self):
 		event, form_route = self.build_event(login_required=1)
 

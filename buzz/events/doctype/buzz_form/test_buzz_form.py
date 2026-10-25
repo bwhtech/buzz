@@ -10,6 +10,7 @@ from buzz.tests.factories import (
 	BuzzFormFactory,
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
+	EventTicketTypeFactory,
 	SponsorshipTierFactory,
 	UserFactory,
 )
@@ -247,5 +248,80 @@ class TestFormTypes(IntegrationTestCase):
 	def test_talk_proposal_forms_are_one_per_event(self):
 		self.assertTrue(form_type("Talk Proposal").one_per_event)
 
+	def test_registration_forms_are_one_per_event_without_a_page(self):
+		registration = form_type("Event Booking")
+
+		self.assertTrue(registration.one_per_event)
+		self.assertFalse(registration.has_page)
+
 	def test_other_custom_forms_may_repeat(self):
 		self.assertFalse(form_type("Event Feedback").one_per_event)
+
+
+class TestRegistrationForm(IntegrationTestCase):
+	def setUp(self):
+		self.event = BuzzEventFactory.create()
+		self.form = frappe.get_doc("Buzz Form", {"event": self.event.name, "form_doctype": "Event Booking"})
+
+	def test_every_event_starts_with_a_published_registration_form(self):
+		self.assertEqual(self.form.route, "register")
+		self.assertTrue(self.form.publish)
+
+	def test_a_second_registration_form_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			BuzzFormFactory.create(event=self.event.name, form_doctype="Event Booking", route="register-2")
+
+	def test_a_booking_and_an_attendee_question_may_share_a_fieldname(self):
+		self.add_question(asked_per="Booking", fieldname="company")
+		self.add_question(asked_per="Attendee", fieldname="company")
+
+		self.form.save()
+
+		self.assertEqual([question.fieldname for question in self.form.questions], ["company", "company"])
+
+	def test_two_questions_of_one_kind_may_not_share_a_fieldname(self):
+		self.add_question(asked_per="Booking", fieldname="company")
+		self.add_question(asked_per="Booking", fieldname="company")
+
+		with self.assertRaises(frappe.ValidationError):
+			self.form.save()
+
+	def test_an_attendee_question_may_show_for_a_ticket_type(self):
+		ticket_type = EventTicketTypeFactory.create(event=self.event.name)
+		self.add_question(
+			asked_per="Attendee",
+			fieldname="diet",
+			depends_on=condition("ticket_type", "in", [ticket_type.name]),
+		)
+
+		self.form.save()
+
+		self.assertEqual(len(self.form.questions), 1)
+
+	def test_a_booking_question_may_not_name_a_ticket_type(self):
+		ticket_type = EventTicketTypeFactory.create(event=self.event.name)
+		self.add_question(
+			asked_per="Booking",
+			fieldname="diet",
+			depends_on=condition("ticket_type", "in", [ticket_type.name]),
+		)
+
+		with self.assertRaises(frappe.ValidationError):
+			self.form.save()
+
+	def test_a_ticket_type_of_another_event_is_refused(self):
+		foreign_ticket_type = EventTicketTypeFactory.create()
+		self.add_question(
+			asked_per="Attendee",
+			fieldname="diet",
+			depends_on=condition("ticket_type", "in", [foreign_ticket_type.name]),
+		)
+
+		with self.assertRaises(frappe.ValidationError):
+			self.form.save()
+
+	def add_question(self, **question):
+		self.form.append(
+			"questions",
+			{"label": "Question", "fieldtype": "Data", "enabled": 1, "asked_per": "Attendee", **question},
+		)
