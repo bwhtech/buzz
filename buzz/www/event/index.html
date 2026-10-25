@@ -55,11 +55,11 @@
 		<div class="venue-map-sheet">
 			<aside class="venue-map-sidebar">
 				<header class="venue-map-header">
+					<form method="dialog"><button class="venue-map-close" aria-label="{{ _('Close') }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></form>
 					<div>
 						<h2 id="venue-map-title" class="venue-map-title">{{ _("Locations") }}</h2>
 						<p class="aside-note">{{ _("{0} places").format(venue.locations | length) }}</p>
 					</div>
-					<form method="dialog"><button class="venue-map-close" aria-label="{{ _('Close') }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></form>
 				</header>
 				<ol class="venue-map-list">
 					{% for location in venue.locations %}
