@@ -87,7 +87,8 @@ setup("setup custom forms on test event", async ({ request }) => {
 	}
 
 	const publishedForms = await getList<NamedDoc>(request, "Buzz Form", {
-		filters: { event: ["=", eventName], publish: ["=", 1] },
+		// The registration form stays published and closes by cutoff instead.
+		filters: { event: ["=", eventName], publish: ["=", 1], form_doctype: ["!=", "Event Booking"] },
 	})
 	expect(publishedForms.length).toBe(forms.length)
 
