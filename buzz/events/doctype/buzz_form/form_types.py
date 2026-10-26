@@ -14,6 +14,21 @@ REGISTRATION_FORM_DOCTYPE = "Event Booking"
 REGISTRATION_ROUTE = "register"
 # What the booking page and the registration report call each kind of registration question.
 APPLIED_TO_BY_ASKED_PER = {"Booking": "Booking", "Attendee": "Ticket"}
+# What a template carries of each question; the form it belongs to travels beside it.
+QUESTION_FIELD_NAMES = (
+	"enabled",
+	"label",
+	"fieldname",
+	"fieldtype",
+	"options",
+	"mandatory",
+	"placeholder",
+	"default_value",
+	"description",
+	"depends_on",
+	"mandatory_depends_on",
+	"asked_per",
+)
 ASKED_PER_BY_APPLIED_TO = {applied_to: asked_per for asked_per, applied_to in APPLIED_TO_BY_ASKED_PER.items()}
 
 ENQUIRY_FIELDS = frozenset(

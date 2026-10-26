@@ -5,11 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from buzz.events.doctype.buzz_form.form_types import (
-	APPLIED_TO_BY_ASKED_PER,
-	REGISTRATION_FORM_DOCTYPE,
-	SPONSORSHIP_FORM_DOCTYPE,
-)
+from buzz.events.doctype.buzz_form.form_types import QUESTION_FIELD_NAMES, SPONSORSHIP_FORM_DOCTYPE
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 
 
@@ -190,44 +186,7 @@ def create_template_from_event(event_name: str, template_name: str, options: str
 	return template.name
 
 
-TEMPLATE_FIELD_NAMES = (
-	"label",
-	"fieldname",
-	"fieldtype",
-	"options",
-	"applied_to",
-	"custom_form_doctype",
-	"enabled",
-	"mandatory",
-	"placeholder",
-	"default_value",
-	"order",
-)
-QUESTION_FIELD_NAMES = (
-	"label",
-	"fieldname",
-	"fieldtype",
-	"options",
-	"enabled",
-	"mandatory",
-	"placeholder",
-	"default_value",
-)
-
-
-def template_form_scope(form_doctype: str, asked_per: str) -> dict:
-	if form_doctype == REGISTRATION_FORM_DOCTYPE:
-		return {"applied_to": APPLIED_TO_BY_ASKED_PER[asked_per], "custom_form_doctype": None}
-	return {"applied_to": "Custom Form", "custom_form_doctype": form_doctype}
-
-
 def template_custom_fields(event_name: str) -> list[dict]:
-	"""Offline payment questions, then the questions of every form of the event."""
-	fields = frappe.get_all(
-		"Buzz Custom Field",
-		filters={"event": event_name, "applied_to": "Offline Payment Form"},
-		fields=list(TEMPLATE_FIELD_NAMES),
-	)
 	# Sponsorship questions stay on the event's own sponsorship form, which every event has.
 	forms = {
 		form.name: form.form_doctype
@@ -240,16 +199,13 @@ def template_custom_fields(event_name: str) -> list[dict]:
 	questions = frappe.get_all(
 		"Buzz Form Field",
 		filters={"parenttype": "Buzz Form", "parent": ["in", list(forms)]},
-		fields=["parent", "asked_per", *QUESTION_FIELD_NAMES],
+		fields=["parent", *QUESTION_FIELD_NAMES],
 		order_by="parent, idx",
 	)
 	return [
-		*fields,
-		*(
-			{
-				**{name: question.get(name) for name in QUESTION_FIELD_NAMES},
-				**template_form_scope(forms[question.parent], question.asked_per),
-			}
-			for question in questions
-		),
+		{
+			**{name: question.get(name) for name in QUESTION_FIELD_NAMES},
+			"form_doctype": forms[question.parent],
+		}
+		for question in questions
 	]

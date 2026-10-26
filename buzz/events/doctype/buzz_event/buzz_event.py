@@ -12,9 +12,7 @@ from frappe.website.utils import cleanup_page_name
 
 from buzz import telemetry
 from buzz.events.doctype.buzz_form.form_types import (
-	ASKED_PER_BY_APPLIED_TO,
-	REGISTRATION_FORM_DOCTYPE,
-	SPONSORSHIP_FORM_DOCTYPE,
+	QUESTION_FIELD_NAMES,
 	create_default_forms,
 )
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
@@ -565,70 +563,19 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 	return event.name
 
 
-QUESTION_FIELD_NAMES = (
-	"label",
-	"fieldname",
-	"fieldtype",
-	"options",
-	"enabled",
-	"mandatory",
-	"placeholder",
-	"default_value",
-)
-
-
 def copy_custom_fields(event, template_fields):
-	"""Questions go to the form they are asked on; offline payment questions stay custom fields."""
+	"""A template may name a form this event has not got; its questions are dropped."""
 	forms = {}
 	for field in template_fields:
-		# Sponsorship questions live on the event's sponsorship form now; an older template
-		# may still carry one, and recreating it here would fail the event mid-creation.
-		if field.custom_form_doctype == SPONSORSHIP_FORM_DOCTYPE:
-			continue
-		if field.applied_to == "Offline Payment Form":
-			create_custom_field(event.name, field)
-		else:
-			add_form_question(forms, event.name, field)
-	for form in forms.values():
-		if form:
-			form.save(ignore_permissions=True)
-
-
-def add_form_question(forms: dict, event_name: str, field):
-	"""A template may name a form this event has not got; its question is dropped."""
-	asked_per = ASKED_PER_BY_APPLIED_TO.get(field.applied_to)
-	form_doctype = REGISTRATION_FORM_DOCTYPE if asked_per else field.custom_form_doctype
-	if form_doctype not in forms:
-		forms[form_doctype] = form_of(event_name, form_doctype)
-	form = forms[form_doctype]
-	if form:
-		question = {name: field.get(name) for name in QUESTION_FIELD_NAMES}
-		if asked_per:
-			question["asked_per"] = asked_per
-		form.append("questions", question)
+		if field.form_doctype not in forms:
+			forms[field.form_doctype] = form_of(event.name, field.form_doctype)
+		if form := forms[field.form_doctype]:
+			form.append("questions", {name: field.get(name) for name in QUESTION_FIELD_NAMES})
+	for form in filter(None, forms.values()):
+		form.save(ignore_permissions=True)
 
 
 def form_of(event_name: str, form_doctype: str):
 	"""The event's form of that doctype, made with the event; a template may name another."""
 	form_name = frappe.db.get_value("Buzz Form", {"event": event_name, "form_doctype": form_doctype}, "name")
 	return frappe.get_doc("Buzz Form", form_name) if form_name else None
-
-
-def create_custom_field(event_name: str, field):
-	frappe.get_doc(
-		{
-			"doctype": "Buzz Custom Field",
-			"event": event_name,
-			"label": field.label,
-			"fieldname": field.fieldname,
-			"fieldtype": field.fieldtype,
-			"options": field.options,
-			"applied_to": field.applied_to,
-			"custom_form_doctype": field.custom_form_doctype,
-			"enabled": field.enabled,
-			"mandatory": field.mandatory,
-			"placeholder": field.placeholder,
-			"default_value": field.default_value,
-			"order": field.order,
-		}
-	).insert(ignore_permissions=True)

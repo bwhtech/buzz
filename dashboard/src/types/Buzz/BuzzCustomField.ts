@@ -24,7 +24,7 @@ export interface BuzzCustomField {
 	/**	Default Value : Data	*/
 	default_value?: string
 	/**	Applied To : Select	*/
-	applied_to?: "Booking" | "Ticket" | "Feedback"
+	applied_to?: "Offline Payment Form"
 	/**	Type : Select	*/
 	fieldtype: "Data" | "Phone" | "Email" | "Select" | "Date" | "Number" | "Multi Select" | "Text"
 	/**	Options : Small Text	*/

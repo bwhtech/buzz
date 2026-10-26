@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _
 from frappe.model.document import Document
 
 
@@ -15,8 +14,7 @@ class BuzzCustomField(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		applied_to: DF.Literal["Booking", "Ticket", "Offline Payment Form", "Custom Form"]
-		custom_form_doctype: DF.Link | None
+		applied_to: DF.Literal["Offline Payment Form"]
 		default_value: DF.Data | None
 		enabled: DF.Check
 		event: DF.Link
@@ -44,9 +42,5 @@ class BuzzCustomField(Document):
 	# end: auto-generated types
 
 	def validate(self):
-		if self.is_new() and self.enabled and self.applied_to == "Custom Form":
-			frappe.throw(_("Add form questions on the Buzz Form."))
-		if self.is_new() and self.enabled and self.applied_to in ("Booking", "Ticket"):
-			frappe.throw(_("Add registration questions on the event's registration form."))
 		if not self.fieldname:
 			self.fieldname = frappe.scrub(self.label)

@@ -35,8 +35,8 @@ class TestSaveEventAsTemplate(IntegrationTestCase):
 		self.assertEqual([row.price for row in template.template_ticket_types if row.title == "Gold"], [5000])
 		self.assertEqual([row.title for row in template.template_add_ons], ["Parking"])
 		self.assertEqual(
-			[(row.label, row.applied_to) for row in template.template_custom_fields],
-			[("Designation", "Booking")],
+			[(row.label, row.form_doctype, row.asked_per) for row in template.template_custom_fields],
+			[("Designation", "Event Booking", "Booking")],
 		)
 
 	def test_saves_only_the_selected_options(self):

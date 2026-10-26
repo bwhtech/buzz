@@ -184,7 +184,9 @@ function render_save_template_options(dialog, frm) {
 		},
 		{
 			id: "custom-fields-option",
-			doctype: "Buzz Custom Field",
+			// Questions live on the event's forms; this counts the forms that have any.
+			doctype: "Buzz Form",
+			filters: { "questions.name": ["is", "set"] },
 			option: "custom_fields",
 			label: __("Custom Fields"),
 		},
@@ -193,7 +195,7 @@ function render_save_template_options(dialog, frm) {
 	for (let item of linked_doctypes) {
 		frappe.call({
 			method: "frappe.client.get_count",
-			args: { doctype: item.doctype, filters: { event: doc.name } },
+			args: { doctype: item.doctype, filters: { event: doc.name, ...item.filters } },
 			callback: function (r) {
 				let count = r.message || 0
 				$wrapper.find(`#${item.id}`).html(`

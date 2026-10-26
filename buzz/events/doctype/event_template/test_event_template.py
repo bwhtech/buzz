@@ -36,11 +36,19 @@ CUSTOM_FIELD = {
 	"label": "Company",
 	"fieldname": "company",
 	"fieldtype": "Data",
-	"applied_to": "Booking",
+	"form_doctype": "Event Booking",
+	"asked_per": "Booking",
 	"mandatory": 1,
 	"enabled": 1,
 	"placeholder": "Enter company name",
 }
+
+
+def form_questions(event: str) -> list[str]:
+	forms = frappe.get_all("Buzz Form", filters={"event": event}, pluck="name")
+	return frappe.get_all(
+		"Buzz Form Field", {"parenttype": "Buzz Form", "parent": ["in", forms]}, pluck="name"
+	)
 
 
 class TestCreateEventFromTemplate(IntegrationTestCase):
@@ -159,23 +167,6 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 			],
 			[("Company", "Data", 1, "Enter company name", "Booking")],
 		)
-		# A registration question is no longer a Buzz Custom Field.
-		self.assertFalse(frappe.db.exists("Buzz Custom Field", {"event": event.name}))
-
-	def test_copies_offline_payment_questions_as_custom_fields(self):
-		field = {
-			**CUSTOM_FIELD,
-			"label": "Reference",
-			"fieldname": "reference",
-			"applied_to": "Offline Payment Form",
-		}
-		template = self.create_template(template_custom_fields=[field])
-
-		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
-
-		self.assertTrue(
-			frappe.db.exists("Buzz Custom Field", {"event": event.name, "fieldname": "reference"})
-		)
 
 	def test_copies_form_questions_onto_the_new_events_form(self):
 		template = self.create_template(
@@ -186,8 +177,7 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 					"fieldname": "dietary_preference",
 					"mandatory": 0,
 					"placeholder": "",
-					"applied_to": "Custom Form",
-					"custom_form_doctype": "Event Feedback",
+					"form_doctype": "Event Feedback",
 				}
 			]
 		)
@@ -196,24 +186,13 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 
 		form = frappe.get_doc("Buzz Form", {"event": event.name, "form_doctype": "Event Feedback"})
 		self.assertEqual([question.label for question in form.questions], ["Dietary Preference"])
-		# A form question is no longer a Buzz Custom Field.
-		self.assertFalse(frappe.db.exists("Buzz Custom Field", {"event": event.name}))
 
 	def test_skips_form_questions_for_a_form_the_event_has_not(self):
-		for form_doctype in ("Sponsorship Enquiry", "Buzz Tag"):
-			with self.subTest(form_doctype):
-				template = self.create_template(
-					template_custom_fields=[
-						{**CUSTOM_FIELD, "applied_to": "Custom Form", "custom_form_doctype": form_doctype}
-					]
-				)
+		template = self.create_template(template_custom_fields=[{**CUSTOM_FIELD, "form_doctype": "Buzz Tag"}])
 
-				event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
+		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
 
-				forms = frappe.get_all("Buzz Form", filters={"event": event.name}, pluck="name")
-				self.assertFalse(
-					frappe.db.exists("Buzz Form Field", {"parent": ["in", forms], "parenttype": "Buzz Form"})
-				)
+		self.assertFalse(form_questions(event.name))
 
 	def test_skips_linked_docs_when_unselected(self):
 		template = self.create_template(
@@ -227,7 +206,7 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 
 		self.assertFalse(frappe.db.exists("Event Ticket Type", {"event": event.name, "title": "Skipped"}))
 		self.assertFalse(frappe.db.exists("Ticket Add-on", {"event": event.name}))
-		self.assertFalse(frappe.db.exists("Buzz Custom Field", {"event": event.name}))
+		self.assertFalse(form_questions(event.name))
 
 	def test_sets_default_title_and_date(self):
 		template_name = f"Defaults Template {frappe.generate_hash(length=6)}"
@@ -275,14 +254,14 @@ class TestTemplateFormQuestions(IntegrationTestCase):
 	def setUp(self):
 		self.event = BuzzEventFactory.create(team=self.team)
 
-	def test_form_questions_become_custom_form_rows(self):
+	def test_form_questions_name_their_form(self):
 		self.add_question("Event Feedback", "Dietary", "dietary")
 
 		rows = template_custom_fields(str(self.event.name))
 
 		self.assertEqual(
-			[(row["fieldname"], row["applied_to"], row["custom_form_doctype"]) for row in rows],
-			[("dietary", "Custom Form", "Event Feedback")],
+			[(row["fieldname"], row["form_doctype"]) for row in rows],
+			[("dietary", "Event Feedback")],
 		)
 
 	def test_registration_questions_keep_their_asked_per(self):
@@ -292,8 +271,8 @@ class TestTemplateFormQuestions(IntegrationTestCase):
 		rows = template_custom_fields(str(self.event.name))
 
 		self.assertEqual(
-			[(row["fieldname"], row["applied_to"], row["custom_form_doctype"]) for row in rows],
-			[("company", "Booking", None), ("diet", "Ticket", None)],
+			[(row["fieldname"], row["form_doctype"], row["asked_per"]) for row in rows],
+			[("company", "Event Booking", "Booking"), ("diet", "Event Booking", "Attendee")],
 		)
 
 	def test_sponsorship_questions_stay_out(self):
