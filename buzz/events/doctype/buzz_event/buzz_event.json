@@ -39,22 +39,33 @@
   "is_featured",
   "show_countdown",
   "route",
-  "default_ticket_type",
   "column_break_ndtl",
-  "external_registration_page",
-  "registration_url",
   "meta_image",
   "og_image",
   "card_image",
   "theme",
+  "section_break_kwlt",
+  "featured_speakers",
+  "registrations_tab",
+  "default_ticket_type",
+  "external_registration_page",
+  "registration_url",
   "section_break_rmtj",
   "allow_guest_booking",
   "column_break_lzcw",
   "guest_verification_method",
-  "auto_closures_section",
-  "registrations_close_at",
-  "section_break_kwlt",
-  "featured_speakers",
+  "ticket_email_section",
+  "send_ticket_email",
+  "section_break_uoke",
+  "attach_calendar_invite",
+  "ticket_email_template",
+  "column_break_ukql",
+  "attach_email_ticket",
+  "ticket_print_format",
+  "booking_confirmation_email_section",
+  "send_booking_confirmation_email",
+  "booking_confirmation_email_template",
+  "offline_acknowledgement_email_template",
   "payments_tab",
   "section_break_owtc",
   "payment_gateways",
@@ -75,17 +86,6 @@
   "column_break_rgkz",
   "sponsor_deck_attachments",
   "customisations_tab",
-  "send_ticket_email",
-  "section_break_uoke",
-  "attach_calendar_invite",
-  "ticket_email_template",
-  "column_break_ukql",
-  "attach_email_ticket",
-  "ticket_print_format",
-  "booking_confirmation_email_section",
-  "send_booking_confirmation_email",
-  "booking_confirmation_email_template",
-  "offline_acknowledgement_email_template",
   "talks_section",
   "allow_editing_talks_after_acceptance",
   "connections_tab",
@@ -580,17 +580,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "auto_closures_section",
-   "fieldtype": "Section Break",
-   "label": "Auto Closures"
-  },
-  {
-   "fieldname": "registrations_close_at",
-   "fieldtype": "Datetime",
-   "label": "Registrations Close At",
-   "no_copy": 1
-  },
-  {
    "fieldname": "team",
    "fieldtype": "Link",
    "in_standard_filter": 1,
@@ -603,6 +592,16 @@
   {
    "fieldname": "column_break_rgkz",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "registrations_tab",
+   "fieldtype": "Tab Break",
+   "label": "Registrations"
+  },
+  {
+   "fieldname": "ticket_email_section",
+   "fieldtype": "Section Break",
+   "label": "Ticket Email"
   }
  ],
  "grid_page_length": 50,
@@ -680,7 +679,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-10-19 11:00:00.000000",
+ "modified": "2026-10-26 10:14:20.675063",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

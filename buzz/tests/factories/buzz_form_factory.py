@@ -49,3 +49,10 @@ class BuzzFormFactory(BaseFactory[BuzzForm]):
 		form.set("questions", [])
 		form.save(ignore_permissions=True)
 		return form
+
+	@classmethod
+	def set_registration_cutoff(cls, event, close_at=None):
+		"""None leaves registrations open until the event ends."""
+		frappe.db.set_value(
+			"Buzz Form", {"event": event, "form_doctype": "Event Booking"}, "auto_close_at", close_at
+		)

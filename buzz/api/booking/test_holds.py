@@ -8,6 +8,7 @@ from buzz.api.booking.exceptions import RegistrationsClosed, TicketsUnavailable,
 from buzz.tests.base_test_cases import BookingTestCase
 from buzz.tests.factories import (
 	BuzzEventFactory,
+	BuzzFormFactory,
 	EventBookingFactory,
 	EventTicketFactory,
 	EventTicketTypeFactory,
@@ -104,7 +105,7 @@ class TestHoldTickets(HoldTestCase):
 			hold_tickets(self.event.name, {str(unpublished.name): 1})
 
 	def test_refuses_closed_registrations(self):
-		self.set_event({"registrations_close_at": add_to_date(now_datetime(), days=-1)})
+		BuzzFormFactory.set_registration_cutoff(self.event.name, add_to_date(now_datetime(), days=-1))
 
 		with self.assertRaises(RegistrationsClosed):
 			self.hold(1)
@@ -265,7 +266,7 @@ class TestAvailabilityView(HoldTestCase):
 		"""A fresh event, so no booking of Administrator's marks it as registered, without the
 		default ticket type a new event gets."""
 		event = BuzzEventFactory.create()
-		frappe.db.set_value("Buzz Event", event.name, "registrations_close_at", None)
+		BuzzFormFactory.set_registration_cutoff(event.name, None)
 		frappe.db.set_value("Event Ticket Type", {"event": event.name}, "is_published", 0)
 		return frappe.get_doc("Buzz Event", event.name)
 

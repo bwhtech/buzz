@@ -3,7 +3,7 @@ import re
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cstr, get_datetime, now_datetime
+from frappe.utils import cstr
 
 from buzz.api.forms.fields import validate_excluded_fields
 from buzz.events.doctype.buzz_form.condition_validator import ConditionValidator
@@ -41,16 +41,15 @@ class BuzzForm(Document):
 
 	@property
 	def is_closed(self) -> bool:
-		if not self.publish:
-			return True
-		return bool(self.auto_close_at) and get_datetime(self.auto_close_at) < now_datetime()
+		return form_type(self.form_doctype).is_closed(self)
 
 	@frappe.whitelist(methods=["POST"])
 	def set_closed(self, closed: bool) -> bool:
-		"""Close by unpublishing, so no cutoff is written in a time zone the event may not share."""
-		self.publish = 0 if closed else 1
-		if not closed:
-			self.auto_close_at = None
+		type_rules = form_type(self.form_doctype)
+		if closed:
+			type_rules.close(self)
+		else:
+			type_rules.open(self)
 		self.save()
 		return self.is_closed
 

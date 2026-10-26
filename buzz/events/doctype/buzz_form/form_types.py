@@ -2,8 +2,10 @@ import re
 
 import frappe
 from frappe import _, scrub
+from frappe.utils import get_datetime, get_datetime_in_timezone, get_system_timezone
 
 from buzz.api.forms.fields import parse_excluded_fields
+from buzz.utils import build_event_datetimes
 
 SPONSORSHIP_FORM_DOCTYPE = "Sponsorship Enquiry"
 TALK_PROPOSAL_FORM_DOCTYPE = "Talk Proposal"
@@ -19,6 +21,33 @@ ENQUIRY_FIELDS = frozenset(
 )
 
 
+def event_now(time_zone: str | None):
+	"""The current wall clock of the event's time zone, which is how cutoffs are written."""
+	return get_datetime_in_timezone(time_zone or get_system_timezone()).replace(tzinfo=None)
+
+
+def is_form_closed(publish, auto_close_at, time_zone: str | None) -> bool:
+	if not publish:
+		return True
+	return bool(auto_close_at) and get_datetime(auto_close_at) < event_now(time_zone)
+
+
+def is_registration_closed(publish, auto_close_at, event) -> bool:
+	"""Without a cutoff, registration closes once the event itself has ended."""
+	if is_form_closed(publish, auto_close_at, event.time_zone):
+		return True
+	return not auto_close_at and event_now(event.time_zone) > build_event_datetimes(event)[1]
+
+
+def event_time_zone(event: str) -> str | None:
+	return frappe.get_cached_value("Buzz Event", event, "time_zone")
+
+
+def registration_form(event: str):
+	name = frappe.db.get_value("Buzz Form", {"event": event, "form_doctype": REGISTRATION_FORM_DOCTYPE})
+	return frappe.get_doc("Buzz Form", name)
+
+
 class FormType:
 	one_per_event = False
 	has_page = True
@@ -30,6 +59,16 @@ class FormType:
 	def condition_fields(self, form, question) -> dict:
 		"""Fields a condition on this question may name besides the form's own fields."""
 		return {}
+
+	def is_closed(self, form) -> bool:
+		return is_form_closed(form.publish, form.auto_close_at, event_time_zone(form.event))
+
+	def close(self, form):
+		form.publish = 0
+
+	def open(self, form):
+		form.publish = 1
+		form.auto_close_at = None
 
 	def validate(self, form):
 		if self.one_per_event and self.others_for_event(form):
@@ -65,6 +104,14 @@ class RegistrationFormType(FormType):
 		# A booking and an attendee question may share a fieldname.
 		return (question.asked_per, question.fieldname)
 
+	def is_closed(self, form) -> bool:
+		event = frappe.get_cached_doc("Buzz Event", form.event)
+		return is_registration_closed(form.publish, form.auto_close_at, event)
+
+	def close(self, form):
+		form.publish = 1
+		form.auto_close_at = event_now(event_time_zone(form.event))
+
 	def condition_fields(self, form, question) -> dict:
 		if question.asked_per != "Attendee":
 			return {}
@@ -93,7 +140,7 @@ def form_type(form_doctype: str) -> FormType:
 
 def create_default_forms(event: str):
 	for form_doctype, route, title in DEFAULT_FORMS:
-		frappe.get_doc(
+		form = frappe.get_doc(
 			{
 				"doctype": "Buzz Form",
 				"title": title,
@@ -102,7 +149,11 @@ def create_default_forms(event: str):
 				"route": route,
 				"publish": int(form_doctype == REGISTRATION_FORM_DOCTYPE),
 			}
-		).insert(ignore_permissions=True)
+		)
+		if form_doctype == REGISTRATION_FORM_DOCTYPE:
+			# Organisers open registrations once tickets and details are ready.
+			form_type(form_doctype).close(form)
+		form.insert(ignore_permissions=True)
 
 
 def usable_fieldname(label_or_fieldname: str, taken: set, reserved: frozenset) -> str:

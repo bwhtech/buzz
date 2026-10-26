@@ -9,6 +9,7 @@ from buzz.payments import handle_refund_notification
 from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
 	BuzzEventFactory,
+	BuzzFormFactory,
 	BuzzTeamFactory,
 	EventBookingFactory,
 	EventPaymentFactory,
@@ -45,7 +46,8 @@ class BookingTestCase(IntegrationTestCase):
 		self.enterContext(self.set_user("Administrator"))
 		frappe.clear_messages()
 		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event.name)
-		self.set_event({"is_published": 1, "registrations_close_at": None, "allow_guest_booking": 0})
+		self.set_event({"is_published": 1, "allow_guest_booking": 0})
+		BuzzFormFactory.set_registration_cutoff(self.event.name, None)
 		self.free_ticket_type = EventTicketTypeFactory.create(event=self.event.name)
 
 	def set_event(self, values):

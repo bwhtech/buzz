@@ -3,7 +3,12 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, format_date, getdate, today
 
 from buzz.events.doctype.buzz_team.team_page import TeamPage, day_labels
-from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, CommunityEventRequestFactory
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	BuzzFormFactory,
+	BuzzTeamFactory,
+	CommunityEventRequestFactory,
+)
 
 
 def event_titles(days: list[dict]) -> list[str]:
@@ -63,6 +68,18 @@ class TestTeamPage(IntegrationTestCase):
 		self.assertEqual(card["host_names"], "Timeline Builders")
 		self.assertTrue(card["is_online"])
 		self.assertTrue(card["url"].startswith("/events/"))
+
+	def test_card_says_whether_registrations_are_closed(self):
+		# Its own team, so the counts the other tests read stay put.
+		team = BuzzTeamFactory.create_owned_by().name
+		open_event = self.create_event("Open Meetup", 8, team=team)
+		BuzzFormFactory.set_registration_cutoff(open_event.name, None)
+		self.create_event("Closed Meetup", 8, team=team)
+		days = TeamPage(frappe.get_doc("Buzz Team", team)).as_context()["upcoming_days"]
+		cards = {event["title"]: event for day in days for event in day["events"]}
+
+		self.assertFalse(cards["Open Meetup"]["registrations_closed"])
+		self.assertTrue(cards["Closed Meetup"]["registrations_closed"])
 
 	def test_day_labels_are_relative_then_dates(self):
 		self.assertEqual(day_labels(getdate(today()))["label"], "Today")

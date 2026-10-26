@@ -267,6 +267,17 @@ class TestRegistrationForm(IntegrationTestCase):
 		self.assertEqual(self.form.route, "register")
 		self.assertTrue(self.form.publish)
 
+	def test_a_new_registration_form_starts_closed(self):
+		self.assertTrue(self.form.auto_close_at)
+		self.assertTrue(self.form.is_closed)
+
+	def test_closing_registration_keeps_the_form_published(self):
+		self.assertFalse(self.form.set_closed(False))
+		self.assertIsNone(self.form.auto_close_at)
+
+		self.assertTrue(self.form.set_closed(True))
+		self.assertTrue(self.form.publish)
+
 	def test_a_second_registration_form_is_refused(self):
 		with self.assertRaises(frappe.ValidationError):
 			BuzzFormFactory.create(event=self.event.name, form_doctype="Event Booking", route="register-2")

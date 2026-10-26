@@ -44,3 +44,4 @@ buzz.patches.add_default_check_in_zones
 buzz.patches.move_sponsor_enquiry_forms_to_buzz_form
 buzz.patches.move_event_forms_to_buzz_form
 buzz.patches.move_registration_questions_to_buzz_form
+buzz.patches.move_registration_close_to_buzz_form

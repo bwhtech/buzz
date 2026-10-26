@@ -8,9 +8,9 @@ import frappe
 from frappe import _
 from frappe.utils import date_diff, flt, format_date, get_datetime, get_time, get_url, getdate, today
 
-from buzz.api.booking.services import are_registrations_closed
 from buzz.api.communities.queries import time_of_day
 from buzz.api.maps.services import place_search_enabled
+from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE, is_registration_closed
 from buzz.events.doctype.buzz_team.team_map import TeamMap
 from buzz.events.doctype.community_event_request.community_event_request import approved_external_requests
 from buzz.permissions import role_allows, team_role_of
@@ -36,7 +36,7 @@ VENUE_FIELDS = [
 ]
 # A community lists other teams' events too, so each card names its event's own team.
 HOST_FIELDS = ["team.team_name as host_name", "team.logo as host_logo"]
-EVENT_FIELDS = CARD_FIELDS + TIME_FIELDS + VENUE_FIELDS + HOST_FIELDS + ["name", "registrations_close_at"]
+EVENT_FIELDS = CARD_FIELDS + TIME_FIELDS + VENUE_FIELDS + HOST_FIELDS + ["name"]
 
 
 def day_labels(day) -> dict:
@@ -180,6 +180,21 @@ class TeamPage:
 		return co_host_names_by_event(self.buzz_event_names)
 
 	@cached_property
+	def registration_forms(self) -> dict:
+		if not self.buzz_event_names:
+			return {}
+		forms = frappe.get_all(
+			"Buzz Form",
+			filters={"event": ["in", self.buzz_event_names], "form_doctype": REGISTRATION_FORM_DOCTYPE},
+			fields=["event", "publish", "auto_close_at"],
+		)
+		return {str(form.event): form for form in forms}
+
+	def registrations_closed(self, event) -> bool:
+		form = self.registration_forms.get(str(event.name))
+		return not form or is_registration_closed(form.publish, form.auto_close_at, event)
+
+	@cached_property
 	def attending_events(self) -> set[str]:
 		"""Events the visitor holds a ticket for: the dashboard's Attending rule."""
 		events = self.buzz_event_names
@@ -218,7 +233,7 @@ class TeamPage:
 			"is_live": has_started(event) and not has_ended(event),
 			"is_attending": str(event.name) in self.attending_events,
 			# Past events have ended, so only upcoming cards can say this.
-			"registrations_closed": not has_ended(event) and are_registrations_closed(event),
+			"registrations_closed": not has_ended(event) and self.registrations_closed(event),
 			"city": event.city,
 			"country": event.country,
 			"latitude": flt(event.latitude) if has_location else None,

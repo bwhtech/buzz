@@ -171,7 +171,7 @@ class TestGetEventBookingData(BookingTestCase):
 		self.assertEqual([row["name"] for row in payload.ticket_categories], [first.name, later.name])
 
 	def test_registrations_closed_flag(self):
-		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})
+		BuzzFormFactory.set_registration_cutoff(self.event.name, "2020-01-01 00:00:00")
 		self.assertTrue(get_event_booking_data(self.event.route).registrations_closed)
 
 	def test_unpublished_event_is_not_found(self):
@@ -220,7 +220,7 @@ class TestProcessBooking(BookingTestCase):
 		self.assertIn("Event is not live", frappe.local.message_log[-1]["message"])
 
 	def test_closed_registrations_are_refused(self):
-		self.set_event({"registrations_close_at": "2020-01-01 00:00:00"})
+		BuzzFormFactory.set_registration_cutoff(self.event.name, "2020-01-01 00:00:00")
 		with self.assertRaises(RegistrationsClosed):
 			process_booking(self.booking_request())
 		self.assertEqual(RegistrationsClosed.http_status_code, 409)

@@ -3,7 +3,7 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.api.events import archive_event
 from buzz.api.events.exceptions import CannotManageEvent
-from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, UserFactory
+from buzz.tests.factories import BuzzEventFactory, BuzzFormFactory, BuzzTeamFactory, UserFactory
 
 
 class TestArchiveEvent(IntegrationTestCase):
@@ -14,7 +14,7 @@ class TestArchiveEvent(IntegrationTestCase):
 		cls.outsider = UserFactory.create_once("archive-outsider@example.com").name
 		cls.team = BuzzTeamFactory.create_owned_by(cls.owner).name
 
-	def test_archiving_unpublishes_the_event_and_its_forms(self):
+	def test_archiving_unpublishes_the_event_and_closes_its_forms(self):
 		event = self.create_event(is_published=1)
 		publish_forms(event)
 
@@ -22,16 +22,18 @@ class TestArchiveEvent(IntegrationTestCase):
 
 		doc = frappe.get_doc("Buzz Event", event)
 		self.assertFalse(doc.is_published)
-		self.assertFalse(published_forms(event))
+		self.assertTrue(all(form.is_closed for form in event_forms(event)))
 
 	def test_archiving_closes_registrations(self):
 		"""The booking gates stop at `is_published`, but the cutoff has to agree with them."""
 		event = self.create_event(is_published=1)
-		frappe.db.set_value("Buzz Event", event, "registrations_close_at", None)
+		BuzzFormFactory.set_registration_cutoff(event, None)
 
 		self.archive_as(self.owner, event)
 
-		self.assertIsNotNone(frappe.db.get_value("Buzz Event", event, "registrations_close_at"))
+		form = frappe.get_doc("Buzz Form", {"event": event, "form_doctype": "Event Booking"})
+		self.assertTrue(form.publish)
+		self.assertIsNotNone(form.auto_close_at)
 
 	def test_archiving_an_archived_event_is_a_no_op(self):
 		"""validate() runs on the way through, so a second archive must not throw."""
@@ -63,5 +65,8 @@ def publish_forms(event: str):
 		frappe.db.set_value("Buzz Form", name, "publish", 1)
 
 
-def published_forms(event: str) -> list[str]:
-	return frappe.get_all("Buzz Form", {"event": event, "publish": 1}, pluck="name")
+def event_forms(event: str) -> list:
+	return [
+		frappe.get_doc("Buzz Form", name)
+		for name in frappe.get_all("Buzz Form", {"event": event}, pluck="name")
+	]

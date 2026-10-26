@@ -277,5 +277,5 @@ export async function ensureEventHost(
 
 // New events start with registrations closed.
 export async function openRegistrations(request: APIRequestContext, event: string): Promise<void> {
-	await updateDoc(request, "Buzz Event", event, { registrations_close_at: null })
+	await callMethod(request, "buzz.api.events.set_registration_state", { event, closed: false })
 }

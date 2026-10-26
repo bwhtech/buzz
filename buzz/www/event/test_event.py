@@ -6,6 +6,7 @@ from buzz.events.doctype.buzz_team.buzz_team import create_personal_team_for
 from buzz.tests.factories import (
 	AdditionalEventPageFactory,
 	BuzzEventFactory,
+	BuzzFormFactory,
 	BuzzTeamFactory,
 	EventHostFactory,
 	EventTalkFactory,
@@ -178,7 +179,7 @@ class TestEventPage(IntegrationTestCase):
 		self.assertEqual(data["location"], {"@type": "VirtualLocation", "url": data["url"]})
 
 	def test_no_offer_when_registrations_are_closed(self):
-		self.set_event({"registrations_close_at": f"{add_days(today(), -30)} 00:00:00"})
+		BuzzFormFactory.set_registration_cutoff(self.event, f"{add_days(today(), -30)} 00:00:00")
 		self.assertNotIn("offers", self.context()["structured_data"])
 
 	def set_event(self, values: dict):

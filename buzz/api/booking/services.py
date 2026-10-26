@@ -6,10 +6,7 @@ import frappe
 from frappe import _
 from frappe.utils import (
 	cstr,
-	get_datetime,
-	get_datetime_in_timezone,
 	get_fullname,
-	get_system_timezone,
 	validate_email_address,
 	validate_phone_number_with_country_code,
 )
@@ -31,14 +28,14 @@ from buzz.api.booking.schemas import (
 )
 from buzz.api.filters.conditions import form_questions
 from buzz.api.forms.answers import CustomAnswers
-from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE
+from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE, is_registration_closed
 from buzz.payments import get_payment_link_for_booking
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	default_currency,
 	start_capacity_transaction,
 )
-from buzz.utils import ZOOM_BACKED_CATEGORIES, build_event_datetimes
+from buzz.utils import ZOOM_BACKED_CATEGORIES
 
 if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
@@ -338,15 +335,13 @@ class BookingService:
 
 
 def are_registrations_closed(event_doc) -> bool:
-	event_timezone = event_doc.time_zone or get_system_timezone()
-	current_datetime_in_event_timezone = get_datetime_in_timezone(event_timezone).replace(tzinfo=None)
-
-	if event_doc.registrations_close_at:
-		return current_datetime_in_event_timezone > get_datetime(event_doc.registrations_close_at)
-
-	# No explicit cutoff set - registrations close once the event itself has ended.
-	_event_start_datetime, event_end_datetime = build_event_datetimes(event_doc)
-	return current_datetime_in_event_timezone > event_end_datetime
+	form = frappe.db.get_value(
+		"Buzz Form",
+		{"event": event_doc.name, "form_doctype": REGISTRATION_FORM_DOCTYPE},
+		["publish", "auto_close_at"],
+		as_dict=True,
+	)
+	return not form or is_registration_closed(form.publish, form.auto_close_at, event_doc)
 
 
 def resolve_attendee_names(attendee: dict) -> tuple[str, str]:

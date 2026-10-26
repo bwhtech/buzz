@@ -7,7 +7,6 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
-from frappe.utils import get_datetime_in_timezone, get_system_timezone
 from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
 from frappe.website.utils import cleanup_page_name
 
@@ -91,7 +90,6 @@ class BuzzEvent(Document):
 		payment_gateways: DF.Table[EventPaymentGateway]
 		proposal: DF.Link | None
 		registration_url: DF.Data | None
-		registrations_close_at: DF.Datetime | None
 		route: DF.Data | None
 		schedule: DF.Table[ScheduleItem]
 		send_booking_confirmation_email: DF.Check
@@ -122,9 +120,6 @@ class BuzzEvent(Document):
 	def before_insert(self):
 		if not self.route:
 			self.route = self.make_route()
-		# Organisers open registrations once tickets and details are ready.
-		if not self.registrations_close_at:
-			self.close_registrations()
 		self.add_default_payment_gateway()
 
 	def add_default_payment_gateway(self):
@@ -339,17 +334,11 @@ class BuzzEvent(Document):
 		state catching up, so publishing again does not reopen everything with it.
 		"""
 		self.is_published = 0
-		self.close_registrations()
 		for name in frappe.get_all("Buzz Form", {"event": self.name}, pluck="name"):
 			form = frappe.get_doc("Buzz Form", name)
-			form.publish = 0
-			form.save(ignore_permissions=True)
+			form.flags.ignore_permissions = True
+			form.set_closed(True)
 		self.save()
-
-	def close_registrations(self):
-		"""Stop new registrations now, read on the event's own wall clock."""
-		timezone = self.time_zone or get_system_timezone()
-		self.registrations_close_at = get_datetime_in_timezone(timezone).replace(tzinfo=None)
 
 	@frappe.whitelist()
 	@only_if_app_installed("zoom_integration", raise_exception=True)

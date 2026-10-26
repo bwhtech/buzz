@@ -1,10 +1,16 @@
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, get_datetime, today
+from frappe.utils import add_days, today
 
 from buzz.api.events import get_event_ticket_types, get_verification_methods, set_registration_state
 from buzz.api.events.exceptions import CannotManageEvent
-from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	BuzzFormFactory,
+	BuzzTeamFactory,
+	BuzzTeamMembershipFactory,
+	UserFactory,
+)
 
 
 class RegistrationTestCase(IntegrationTestCase):
@@ -34,11 +40,12 @@ class TestSetRegistrationState(RegistrationTestCase):
 		self.assertTrue(self.registration_as(self.owner, event).registrations_closed)
 
 	def test_opening_clears_the_cutoff(self):
-		event = self.create_event(registrations_close_at=days_from_now(-30))
+		event = self.create_event()
+		BuzzFormFactory.set_registration_cutoff(event, days_from_now(-30))
 
 		with self.set_user(self.owner):
 			self.assertFalse(set_registration_state(event, closed=False).registrations_closed)
-		self.assertIsNone(frappe.db.get_value("Buzz Event", event, "registrations_close_at"))
+		self.assertIsNone(registration_cutoff(event))
 
 	def test_an_ended_event_stays_closed_when_it_is_opened(self):
 		"""Clearing the cutoff cannot reopen it, so the answer says closed rather than done."""
@@ -108,29 +115,24 @@ class TestRegistrationSettings(RegistrationTestCase):
 		self.assertEqual((registration.tax_label, registration.tax_percentage), ("GST", 18))
 
 	def test_reports_registrations_closed_once_the_cutoff_has_passed(self):
-		event = self.create_event(registrations_close_at=days_from_now(-30))
+		event = self.create_event()
+		BuzzFormFactory.set_registration_cutoff(event, days_from_now(-30))
 
 		self.assertTrue(self.registration_as(self.owner, event).registrations_closed)
 
 	def test_a_new_event_starts_with_registrations_closed(self):
 		self.assertTrue(self.registration_as(self.owner, self.create_event()).registrations_closed)
 
-	def test_a_cutoff_given_at_creation_is_kept(self):
-		close_at = days_from_now(60)
-		event = self.create_event(registrations_close_at=close_at)
-
-		saved = frappe.db.get_value("Buzz Event", event, "registrations_close_at")
-		self.assertEqual(get_datetime(saved), get_datetime(close_at))
-
 	def test_a_duplicated_event_starts_with_registrations_closed(self):
-		source = frappe.get_doc("Buzz Event", self.create_event(registrations_close_at=days_from_now(60)))
+		source = frappe.get_doc("Buzz Event", self.create_event())
+		BuzzFormFactory.set_registration_cutoff(source.name, days_from_now(60))
 		duplicate = frappe.copy_doc(source, ignore_no_copy=False).insert(ignore_permissions=True)
 
 		self.assertTrue(self.registration_as(self.owner, str(duplicate.name)).registrations_closed)
 
 	def test_reports_registrations_open_before_the_event_ends(self):
 		event = self.create_event()
-		frappe.db.set_value("Buzz Event", event, "registrations_close_at", None)
+		BuzzFormFactory.set_registration_cutoff(event, None)
 
 		self.assertFalse(self.registration_as(self.owner, event).registrations_closed)
 
@@ -167,6 +169,12 @@ class TestVerificationMethods(IntegrationTestCase):
 		from frappe.email.doctype.email_account.email_account import EmailAccount
 
 		self.assertEqual(get_verification_methods().email, bool(EmailAccount.find_default_outgoing()))
+
+
+def registration_cutoff(event: str):
+	return frappe.db.get_value(
+		"Buzz Form", {"event": event, "form_doctype": "Event Booking"}, "auto_close_at"
+	)
 
 
 def days_from_now(days: int) -> str:
