@@ -799,6 +799,7 @@ export interface TicketTypeItem {
 	max_tickets_available: number
 	auto_unpublish_after: string | null
 	is_published: boolean
+	is_hidden: boolean
 	tickets_sold: number
 	prices: TicketTypePrice[]
 }
@@ -864,12 +865,12 @@ export type CouponStatus = "Active" | "Disabled" | "Used up" | "Ended" | "Schedu
 
 export interface CouponItem {
 	name: string
-	coupon_type: "Promo Code" | "Automatic"
-	/** Typed at checkout for a promo code; the offer name for an automatic one. */
+	coupon_type: "Promo Code" | "Automatic" | "Access Code"
+	/** Typed at checkout for a promo or access code; the offer name for an automatic one. */
 	code: string
 	description: string | null
 	enabled: boolean
-	discount_type: "Percentage" | "Flat Amount"
+	discount_type: "Percentage" | "Flat Amount" | "None"
 	discount_percentage: number
 	discount_amounts: TierPrice[]
 	applies_to_all_ticket_types: boolean
@@ -890,6 +891,7 @@ export interface CouponTicketType {
 	name: string
 	title: string
 	prices: TierPrice[]
+	is_hidden?: boolean
 }
 
 export interface EventCoupons {

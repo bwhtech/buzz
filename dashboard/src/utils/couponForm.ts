@@ -52,13 +52,24 @@ export function couponValuesOf(coupon: CouponItem): CouponValues {
 	}
 }
 
+/** Promo and access codes are typed by participants; an automatic offer is only named. */
+export const isTypedCode = (values: Pick<CouponValues, "coupon_type">) =>
+	values.coupon_type !== "Automatic"
+
+export const isAccessCode = (values: Pick<CouponValues, "coupon_type">) =>
+	values.coupon_type === "Access Code"
+
+// An access code always names the hidden types it unlocks.
+const coversAllTicketTypes = (values: CouponValues) =>
+	values.applies_to_all_ticket_types && !isAccessCode(values)
+
 const isPaid = (ticketType: CouponTicketType) => ticketType.prices.some((row) => row.price > 0)
 
 export function eligibleTicketTypes(values: CouponValues, ticketTypes: CouponTicketType[]) {
 	return ticketTypes.filter(
 		(ticketType) =>
 			isPaid(ticketType) &&
-			(values.applies_to_all_ticket_types || values.ticket_types.includes(ticketType.name)),
+			(coversAllTicketTypes(values) || values.ticket_types.includes(ticketType.name)),
 	)
 }
 
@@ -76,6 +87,7 @@ function coversCurrencies(rows: TierPrice[], currencies: string[]) {
 }
 
 function hasValidDiscount(values: CouponValues, currencies: string[]) {
+	if (values.discount_type === "None") return true
 	if (values.discount_type === "Flat Amount")
 		return coversCurrencies(values.discount_amounts, currencies)
 	return values.discount_percentage > 0 && values.discount_percentage <= 100
@@ -95,12 +107,10 @@ export const cleanPromoCode = (code: string) => code.toUpperCase().replace(/[^A-
 
 export function isCouponValid(values: CouponValues, ticketTypes: CouponTicketType[]) {
 	const currencies = couponCurrencies(values, ticketTypes)
-	if (!currencies.length) return false
+	// An access code can unlock free tickets, so it needs a scope rather than a price.
+	if (isAccessCode(values) ? !values.ticket_types.length : !currencies.length) return false
 	if (!values.code?.trim()) return false
-	if (
-		values.coupon_type === "Promo Code" &&
-		!PROMO_CODE_PATTERN.test(values.code.trim().toUpperCase())
-	)
+	if (isTypedCode(values) && !PROMO_CODE_PATTERN.test(values.code.trim().toUpperCase()))
 		return false
 	if (values.starts_on && values.expires_on && values.starts_on > values.expires_on) return false
 	return hasValidDiscount(values, currencies) && hasValidMinimum(values, currencies)
@@ -114,14 +124,14 @@ export function couponDocValues(values: CouponValues, ticketTypes: CouponTicketT
 	const currencies = couponCurrencies(values, ticketTypes)
 	return {
 		...values,
-		code:
-			values.coupon_type === "Promo Code" ? values.code.trim().toUpperCase() : values.code.trim(),
+		code: isTypedCode(values) ? values.code.trim().toUpperCase() : values.code.trim(),
+		applies_to_all_ticket_types: coversAllTicketTypes(values),
 		description: values.description?.trim() ?? "",
 		starts_on: values.starts_on || null,
 		expires_on: values.expires_on || null,
 		discount_amounts: onlyCurrencies(values.discount_amounts, currencies),
 		minimum_order_amounts: onlyCurrencies(values.minimum_order_amounts, currencies),
-		ticket_types: values.applies_to_all_ticket_types
+		ticket_types: coversAllTicketTypes(values)
 			? []
 			: values.ticket_types.map((ticket_type) => ({ ticket_type })),
 	}

@@ -15,8 +15,24 @@ export function amountsLabel(rows: TierPrice[]) {
 }
 
 export function discountLabel(coupon: CouponItem) {
+	if (coupon.discount_type === "None") return "No discount"
 	if (coupon.discount_type === "Percentage") return `${coupon.discount_percentage}% off`
 	return `${amountsLabel(coupon.discount_amounts)} off`
+}
+
+const TYPE_LABELS: Record<CouponItem["coupon_type"], string> = {
+	"Promo Code": "Promo code",
+	Automatic: "Automatic",
+	"Access Code": "Access code",
+}
+
+export const typeLabel = (coupon: CouponItem) => TYPE_LABELS[coupon.coupon_type]
+
+/** The registration page with the code filled in, so the link unlocks the hidden tickets. */
+export function accessCodeLink(registrationLink: string, code: string) {
+	const url = new URL(registrationLink, window.location.origin)
+	url.searchParams.set("code", code)
+	return url.toString()
 }
 
 export function scopeLabel(coupon: CouponItem, ticketTypes: CouponTicketType[]) {

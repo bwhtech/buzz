@@ -1,6 +1,15 @@
 <script setup lang="ts">
-import { Alert, DatePicker, FormControl, Switch, dayjs, toast, useDoc } from "frappe-ui"
-import { computed } from "vue"
+import {
+	Alert,
+	DatePicker,
+	ErrorMessage,
+	FormControl,
+	Switch,
+	dayjs,
+	toast,
+	useDoc,
+} from "frappe-ui"
+import { computed, ref } from "vue"
 
 import DrawerSaveBar from "@/components/dashboard/sponsorships/DrawerSaveBar.vue"
 import { keepLastValue } from "@/components/dashboard/sponsorships/helpers"
@@ -10,11 +19,13 @@ import TicketTypeGuests from "@/components/dashboard/ticket-types/TicketTypeGues
 import { useDrawerEdits } from "@/composables/useDrawerEdits"
 import type { TicketCategoryItem, TicketTypeItem, TierPrice } from "@/types"
 import { formatWholePriceOrFree } from "@/utils/currency"
+import { serverErrorMessage } from "@/utils/serverError"
 
 type TicketTypeValues = {
 	title: string
 	description: string
 	category: string
+	is_hidden: boolean
 	prices: TierPrice[]
 	max_tickets_available: number
 	auto_unpublish_after: string | null
@@ -32,7 +43,9 @@ const emit = defineEmits<{ changed: [] }>()
 
 const shownTicketType = keepLastValue(() => props.ticketType)
 
-const ticketTypeDoc = useDoc<TicketTypeValues & { name: string; is_published: 0 | 1 }>({
+const ticketTypeDoc = useDoc<
+	Omit<TicketTypeValues, "is_hidden"> & { name: string; is_published: 0 | 1; is_hidden: 0 | 1 }
+>({
 	doctype: "Event Ticket Type",
 	name: () => props.ticketType?.name ?? "",
 	immediate: false,
@@ -97,18 +110,24 @@ function toValues(ticketType: TicketTypeItem): TicketTypeValues {
 		title: ticketType.title,
 		description: ticketType.description ?? "",
 		category: ticketType.category ?? "",
+		is_hidden: ticketType.is_hidden,
 		prices: ticketType.prices.map(({ currency, price }) => ({ currency, price })),
 		max_tickets_available: ticketType.max_tickets_available,
 		auto_unpublish_after: ticketType.auto_unpublish_after,
 	}
 }
 
+const publishError = ref("")
+
 async function togglePublished() {
 	if (!props.ticketType) return
 	const enabling = !props.ticketType.is_published
-	await ticketTypeDoc.setValue.submit({ is_published: enabling ? 1 : 0 })
+	publishError.value = ""
+	await ticketTypeDoc.setValue.submit({ is_published: enabling ? 1 : 0 }).catch(() => null)
 	if (ticketTypeDoc.setValue.error) {
-		toast.error("Could not update the ticket type. Try again.")
+		publishError.value =
+			serverErrorMessage(ticketTypeDoc.setValue.error) ||
+			"Could not update the ticket type. Try again."
 		return
 	}
 	toast.success(enabling ? "Ticket type enabled" : "Ticket type disabled")
@@ -118,6 +137,7 @@ async function togglePublished() {
 async function save(values: TicketTypeValues) {
 	await ticketTypeDoc.setValue.submit({
 		...values,
+		is_hidden: values.is_hidden ? 1 : 0,
 		title: values.title.trim(),
 		description: values.description.trim(),
 	})
@@ -149,9 +169,19 @@ async function save(values: TicketTypeValues) {
 						: undefined
 				"
 			/>
+			<ErrorMessage class="mt-2" :message="publishError" />
 		</template>
 
 		<form novalidate class="space-y-4" @submit.prevent>
+			<div v-if="shownTicketType.is_published" class="rounded-4 border border-outline-gray-2 p-1">
+				<Switch
+					v-model="draft.is_hidden"
+					padded
+					label="Hidden — only available with an access code"
+					description="Not shown on the booking page until a participant enters a valid access code."
+					:disabled="!canWrite"
+				/>
+			</div>
 			<FormControl
 				v-model="draft.title"
 				label="Name"

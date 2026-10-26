@@ -17,6 +17,8 @@ import {
 	cleanPromoCode,
 	couponCurrencies,
 	generateCode,
+	isAccessCode,
+	isTypedCode,
 } from "@/utils/couponForm"
 import { amountsLabel } from "@/utils/couponLabels"
 
@@ -30,7 +32,14 @@ const QUICK_PERCENTAGES = [10, 15, 25, 50]
 
 const isPaid = (ticketType: CouponTicketType) => ticketType.prices.some((row) => row.price > 0)
 
-const isCode = computed(() => values.value.coupon_type === "Promo Code")
+const isCode = computed(() => isTypedCode(values.value))
+const forAccessCode = computed(() => isAccessCode(values.value))
+const selectableTicketTypes = computed(() =>
+	forAccessCode.value
+		? props.ticketTypes.filter((ticketType) => ticketType.is_hidden)
+		: props.ticketTypes,
+)
+const canSelect = (ticketType: CouponTicketType) => forAccessCode.value || isPaid(ticketType)
 const currencies = computed(() => couponCurrencies(values.value, props.ticketTypes))
 
 const scopeOptions = [
@@ -38,7 +47,8 @@ const scopeOptions = [
 	{ label: "Specific ticket types", value: "specific" },
 ]
 const scope = computed({
-	get: () => (values.value.applies_to_all_ticket_types ? "all" : "specific"),
+	get: () =>
+		values.value.applies_to_all_ticket_types && !forAccessCode.value ? "all" : "specific",
 	set: (picked) => {
 		values.value.applies_to_all_ticket_types = picked === "all"
 		// Narrowing starts from every paid ticket type, so the organiser unticks rather than hunts.
@@ -168,6 +178,10 @@ const hasInvalidCode = computed(
 				</div>
 			</div>
 
+			<p v-else-if="values.discount_type === 'None'" class="text-sm text-ink-gray-5">
+				No discount. The code only unlocks the tickets, at their regular price.
+			</p>
+
 			<div v-else class="space-y-2">
 				<CurrencyAmounts
 					v-model="values.discount_amounts"
@@ -190,16 +204,23 @@ const hasInvalidCode = computed(
 			</div>
 
 			<div class="space-y-2">
-				<TabButtons v-model="scope" fluid :options="scopeOptions" />
+				<TabButtons v-if="!forAccessCode" v-model="scope" fluid :options="scopeOptions" />
+				<p v-else class="text-sm text-ink-gray-5">
+					{{
+						selectableTicketTypes.length
+							? "The hidden ticket types this code unlocks"
+							: "Hide a ticket type first, then pick it here."
+					}}
+				</p>
 				<div v-if="scope === 'specific'" class="rounded-4 border border-outline-gray-2 p-1">
 					<Checkbox
-						v-for="ticketType in ticketTypes"
+						v-for="ticketType in selectableTicketTypes"
 						:key="ticketType.name"
 						padded
 						:label="ticketType.title"
 						:description="priceLabel(ticketType)"
 						:model-value="values.ticket_types.includes(ticketType.name)"
-						:disabled="disabled || !isPaid(ticketType)"
+						:disabled="disabled || !canSelect(ticketType)"
 						@update:model-value="toggleTicketType(ticketType.name, !!$event)"
 					/>
 				</div>

@@ -69,11 +69,24 @@ const title = computed(() => {
 	return shownCoupon.value?.code ?? ""
 })
 
+const TYPE_TITLES = {
+	"Promo Code": "Promo code",
+	Automatic: "Automatic",
+	"Access Code": "Access code",
+}
+const DISCOUNT_TITLES = {
+	Percentage: "Percentage off",
+	"Flat Amount": "Fixed amount off",
+	None: "No discount",
+}
+const TYPE_ICONS = {
+	"Promo Code": "lucide-ticket-percent",
+	Automatic: "lucide-zap",
+	"Access Code": "lucide-key-round",
+}
+
 const typeSummary = computed(() =>
-	[
-		draft.value.coupon_type === "Automatic" ? "Automatic" : "Promo code",
-		draft.value.discount_type === "Percentage" ? "Percentage off" : "Fixed amount off",
-	].join(" · "),
+	[TYPE_TITLES[draft.value.coupon_type], DISCOUNT_TITLES[draft.value.discount_type]].join(" · "),
 )
 
 // A coupon someone has used keeps its type, so past receipts still read true.
@@ -211,9 +224,7 @@ function goBack() {
 							<div class="flex items-center gap-3 rounded-4 bg-surface-gray-1 py-2 pl-3 pr-1.5">
 								<span
 									class="size-4 shrink-0 text-ink-gray-6"
-									:class="
-										draft.coupon_type === 'Automatic' ? 'lucide-zap' : 'lucide-ticket-percent'
-									"
+									:class="TYPE_ICONS[draft.coupon_type]"
 									aria-hidden="true"
 								/>
 								<span class="flex-1 text-sm text-ink-gray-8">{{ typeSummary }}</span>

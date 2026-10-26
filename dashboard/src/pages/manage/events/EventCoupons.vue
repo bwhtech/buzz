@@ -21,12 +21,13 @@ const page = useEventCoupons(eventId)
 
 const isMobile = useIsMobile()
 
-type Filter = "all" | "Promo Code" | "Automatic"
+type Filter = "all" | "Promo Code" | "Automatic" | "Access Code"
 const filter = ref<Filter>("all")
 const FILTERS: { label: string; value: Filter }[] = [
 	{ label: "All", value: "all" },
 	{ label: "Codes", value: "Promo Code" },
 	{ label: "Automatic", value: "Automatic" },
+	{ label: "Access codes", value: "Access Code" },
 ]
 const matchesFilter = (coupon: { coupon_type: string }, value: Filter) =>
 	value === "all" || coupon.coupon_type === value
@@ -87,8 +88,8 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 			</div>
 
 			<ListSection
-				title="Coupons"
-				description="Discounts participants redeem with a code, or that apply on their own when an order qualifies"
+				title="Coupons & Access Codes"
+				description="Discounts participants redeem with a code, or that apply on their own when an order qualifies, and codes that unlock hidden tickets"
 				:count="hasCoupons ? page.data.coupons.length : null"
 				:empty="!hasCoupons"
 				empty-title="No coupons yet"
@@ -118,12 +119,14 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 					v-if="isMobile"
 					:coupons="coupons"
 					:ticket-types="page.data.ticket_types"
+					:registration-link="page.data.registration_link"
 					@open="openCoupon"
 				/>
 				<CouponCards
 					v-else
 					:coupons="coupons"
 					:ticket-types="page.data.ticket_types"
+					:registration-link="page.data.registration_link"
 					@open="openCoupon"
 				/>
 				<!-- Room to scroll the last row clear of the floating button. -->
