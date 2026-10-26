@@ -3,7 +3,7 @@ import frappe
 from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
 from buzz.utils import delete_custom_fields, get_custom_fields_creator
-from buzz.www.site_header import BUZZ_NAVBAR
+from buzz.www.site_header import BUZZ_FOOTER, BUZZ_NAVBAR
 
 _create_custom_fields = get_custom_fields_creator("Buzz")
 
@@ -144,6 +144,7 @@ def after_install():
 	create_custom_fields()
 	create_administrator_team()
 	use_buzz_navbar()
+	use_buzz_footer()
 
 
 def use_buzz_navbar():
@@ -153,6 +154,13 @@ def use_buzz_navbar():
 	frappe.db.set_single_value(
 		"Website Settings", {"navbar_template": BUZZ_NAVBAR, "show_language_picker": 1}
 	)
+
+
+def use_buzz_footer():
+	"""Pick Buzz Footer, unless the site already chose a footer."""
+	if frappe.db.get_single_value("Website Settings", "footer_template"):
+		return
+	frappe.db.set_single_value("Website Settings", "footer_template", BUZZ_FOOTER)
 
 
 def on_migrate():

@@ -9,6 +9,7 @@ from frappe.website.doctype.website_settings.website_settings import (
 from buzz.events.doctype.buzz_theme.buzz_theme import resolve_theme, theme_css
 
 BUZZ_NAVBAR = "Buzz Navbar"
+BUZZ_FOOTER = "Buzz Footer"
 DEFAULT_LOGO = "/assets/buzz/images/buzz-logo-no-bg.svg"
 DEFAULT_FAVICON = "/assets/buzz/dashboard/favicon.png"
 
@@ -18,8 +19,10 @@ def apply_site_context(context, preferred_theme: str | None = None):
 	context.update(SiteHeader().as_context())
 	# Event pages skip frappe-web.bundle.js, which other apps' web scripts expect
 	context.update(body_class="event-page", web_include_js=["website_script.js"], web_include_icons=[])
-	# Frappe's own navbar needs its website CSS and JS, which these pages otherwise skip
-	context.native_navbar = context.get("navbar_template") != BUZZ_NAVBAR
+	# Frappe's own navbar and footer need its website CSS and JS, which these pages otherwise skip
+	context.needs_frappe_website_assets = (
+		context.get("navbar_template") != BUZZ_NAVBAR or context.get("footer_template") != BUZZ_FOOTER
+	)
 	theme = resolve_theme(preferred_theme, frappe.db.get_single_value("Buzz Settings", "event_page_theme"))
 	context.theme_css = theme_css(theme) if theme else ""
 	context.default_mode = frappe.db.get_value("Buzz Theme", theme, "color_scheme") if theme else "dark"
