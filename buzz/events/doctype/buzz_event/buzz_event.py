@@ -573,6 +573,7 @@ def copy_template_questions(event, template_fields):
 			forms[field.form_doctype] = event_form(event.name, field.form_doctype)
 		if form := forms[field.form_doctype]:
 			form.append("questions", {name: field.get(name) for name in QUESTION_FIELD_NAMES})
-	for form in filter(None, forms.values()):
-		ConditionValidator(form).drop_link_conditions()
-		form.save(ignore_permissions=True)
+	for form in forms.values():
+		if form:
+			ConditionValidator(form).drop_link_conditions()
+			form.save(ignore_permissions=True)

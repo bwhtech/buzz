@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.utils import cstr
 
 SOURCE_DOCTYPE = "Sponsor Enquiry Form"
 TARGET_FORM_DOCTYPE = "Sponsorship Enquiry"
@@ -65,7 +66,9 @@ class SponsorFormMigration:
 		try:
 			form.validate()
 		except frappe.ValidationError as error:
-			frappe.throw(_("Cannot move the sponsorship form of event {0}: {1}").format(form.event, error))
+			frappe.throw(
+				_("Cannot move the sponsorship form of event {0}: {1}").format(form.event, cstr(error))
+			)
 
 	def pending_rows(self) -> list:
 		moved = set(frappe.get_all("Buzz Form", pluck="name"))

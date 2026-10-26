@@ -104,7 +104,7 @@ class EventFormMigration:
 		try:
 			form.validate()
 		except frappe.ValidationError as error:
-			frappe.throw(_("Cannot move the custom form of event {0}: {1}").format(form.event, error))
+			frappe.throw(_("Cannot move the custom form of event {0}: {1}").format(form.event, cstr(error)))
 
 	def insert_forms(self, forms: list):
 		for form in forms:

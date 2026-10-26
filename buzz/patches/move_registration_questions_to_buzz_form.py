@@ -105,5 +105,5 @@ class RegistrationMigration:
 			form.validate()
 		except frappe.ValidationError as error:
 			frappe.throw(
-				_("Cannot move the registration questions of event {0}: {1}").format(form.event, error)
+				_("Cannot move the registration questions of event {0}: {1}").format(form.event, cstr(error))
 			)
