@@ -1,6 +1,11 @@
 import { test, expect, type Page } from "@playwright/test"
 
-import { AUTOMATIC_OFFER_TITLE, COUPON_EVENT_ROUTE } from "../data/coupons"
+import {
+	ACCESS_CODE,
+	AUTOMATIC_OFFER_TITLE,
+	COUPON_EVENT_ROUTE,
+	HIDDEN_TICKET_TITLE,
+} from "../data/coupons"
 import { BookingPage } from "../pages"
 
 async function openBookingForm(page: Page) {
@@ -55,5 +60,47 @@ test.describe("Coupons", () => {
 		await applyCode(page, "NOSUCHCODE")
 		await expect(page.getByText("Invalid or expired code")).toBeVisible()
 		await expect(automaticDiscount(page)).toBeVisible()
+	})
+})
+
+test.describe("Access codes", () => {
+	test("the hidden ticket stays off the form without a code", async ({ page }) => {
+		const bookingPage = new BookingPage(page)
+		await bookingPage.goto(COUPON_EVENT_ROUTE)
+		await bookingPage.waitForFormLoad()
+		await expect(page.getByText(HIDDEN_TICKET_TITLE)).toHaveCount(0)
+	})
+
+	test("an access link shows the hidden ticket and books it", async ({ page }) => {
+		const bookingPage = new BookingPage(page)
+		await bookingPage.goto(`${COUPON_EVENT_ROUTE}?code=${ACCESS_CODE}`)
+		await bookingPage.waitForFormLoad()
+		await expect(page.getByText(HIDDEN_TICKET_TITLE)).toBeVisible()
+
+		const hiddenTicketAdd = page.getByRole("button", { name: `Add ${HIDDEN_TICKET_TITLE}` })
+		if (await hiddenTicketAdd.count()) await hiddenTicketAdd.click()
+		const standardRemove = page.getByRole("button", { name: "Remove one Standard Ticket" })
+		if (await standardRemove.count()) await standardRemove.click()
+
+		await bookingPage.goToAttendees()
+		await bookingPage.fillAttendeeDetails("Insider Guest", "insider@example.com")
+		await bookingPage.submit()
+		await expect(page.getByText("You're going to")).toBeVisible({ timeout: 30000 })
+	})
+
+	test("a typed code unlocks the ticket and a wrong code shows an error", async ({ page }) => {
+		const bookingPage = new BookingPage(page)
+		await bookingPage.goto(COUPON_EVENT_ROUTE)
+		await bookingPage.waitForFormLoad()
+
+		await page.getByRole("button", { name: "Have an access code?" }).click()
+		await page.getByLabel("Access code").fill("NOSUCHCODE")
+		await page.getByRole("button", { name: "Apply", exact: true }).click()
+		await expect(page.getByText("Invalid or expired code").first()).toBeVisible()
+		await expect(page.getByText(HIDDEN_TICKET_TITLE)).toHaveCount(0)
+
+		await page.getByLabel("Access code").fill(ACCESS_CODE)
+		await page.getByRole("button", { name: "Apply", exact: true }).click()
+		await expect(page.getByText(HIDDEN_TICKET_TITLE)).toBeVisible()
 	})
 })
