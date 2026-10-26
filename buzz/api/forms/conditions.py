@@ -8,9 +8,9 @@ LIST_OPERATORS = frozenset({"in", "not in"})
 NUMBER_OPERATORS = frozenset({">", "<", ">=", "<="})
 
 
-def matches(conditions, values: dict) -> bool:
+def all_conditions_match(conditions, values: dict) -> bool:
 	"""Every [fieldname, operator, value] triple holds. Empty conditions always match."""
-	return all(holds(condition, values) for condition in parse_conditions(conditions) or [])
+	return all(condition_matches(condition, values) for condition in parse_conditions(conditions) or [])
 
 
 def parse_conditions(conditions) -> list | None:
@@ -19,7 +19,7 @@ def parse_conditions(conditions) -> list | None:
 
 
 def is_shown(question, values: dict) -> bool:
-	return matches(question.depends_on, values)
+	return all_conditions_match(question.depends_on, values)
 
 
 def is_required(question, values: dict) -> bool:
@@ -27,10 +27,10 @@ def is_required(question, values: dict) -> bool:
 	if not is_shown(question, values):
 		return False
 	required_when = parse_conditions(question.mandatory_depends_on)
-	return bool(question.mandatory) or (bool(required_when) and matches(required_when, values))
+	return bool(question.mandatory) or (bool(required_when) and all_conditions_match(required_when, values))
 
 
-def holds(condition, values: dict) -> bool:
+def condition_matches(condition, values: dict) -> bool:
 	fieldname, operator, expected = condition
 	value = values.get(fieldname)
 	# A Multi Select answer is a list: it is in the expected values when any of them is.

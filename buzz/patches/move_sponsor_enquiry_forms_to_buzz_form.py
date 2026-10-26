@@ -28,12 +28,12 @@ QUESTION_FIELDS = (
 def execute():
 	if not (frappe.db.exists("DocType", SOURCE_DOCTYPE) and frappe.db.table_exists(SOURCE_DOCTYPE)):
 		return
-	forms = SponsorForms()
+	forms = SponsorFormMigration()
 	forms.move()
 	forms.delete_source()
 
 
-class SponsorForms:
+class SponsorFormMigration:
 	def move(self):
 		forms = self.build_forms()
 		for form in forms:

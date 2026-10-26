@@ -7,7 +7,7 @@ from frappe.utils import cstr
 from buzz.events.doctype.buzz_form.form_types import (
 	REGISTRATION_FORM_DOCTYPE,
 	REGISTRATION_ROUTE,
-	usable_fieldname,
+	unique_fieldname,
 )
 
 ASKED_PER_BY_APPLIED_TO = {"Booking": "Booking", "Ticket": "Attendee"}
@@ -94,7 +94,7 @@ class RegistrationMigration:
 		for legacy in legacy_rows:
 			asked_per = ASKED_PER_BY_APPLIED_TO[legacy.applied_to]
 			row = {name: legacy.get(name) for name in QUESTION_FIELDS}
-			row["fieldname"] = usable_fieldname(
+			row["fieldname"] = unique_fieldname(
 				row["fieldname"] or row["label"], taken[asked_per], frozenset()
 			)
 			rows.append({**row, "asked_per": asked_per})

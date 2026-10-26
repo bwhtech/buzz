@@ -6,7 +6,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from buzz.events.doctype.buzz_event.buzz_event import create_from_template
-from buzz.events.doctype.event_template.event_template import template_custom_fields
+from buzz.events.doctype.event_template.event_template import event_template_questions
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
@@ -281,7 +281,7 @@ class TestTemplateFormQuestions(IntegrationTestCase):
 	def test_form_questions_name_their_form(self):
 		self.add_question("Event Feedback", "Dietary", "dietary")
 
-		rows = template_custom_fields(str(self.event.name))
+		rows = event_template_questions(str(self.event.name))
 
 		self.assertEqual(
 			[(row["fieldname"], row["form_doctype"]) for row in rows],
@@ -292,7 +292,7 @@ class TestTemplateFormQuestions(IntegrationTestCase):
 		self.add_question("Event Booking", "Company", "company", asked_per="Booking")
 		self.add_question("Event Booking", "Diet", "diet", asked_per="Attendee")
 
-		rows = template_custom_fields(str(self.event.name))
+		rows = event_template_questions(str(self.event.name))
 
 		self.assertEqual(
 			[(row["fieldname"], row["form_doctype"], row["asked_per"]) for row in rows],
@@ -302,7 +302,7 @@ class TestTemplateFormQuestions(IntegrationTestCase):
 	def test_sponsorship_questions_stay_out(self):
 		self.add_question("Sponsorship Enquiry", "Extra", "extra")
 
-		self.assertEqual(template_custom_fields(str(self.event.name)), [])
+		self.assertEqual(event_template_questions(str(self.event.name)), [])
 
 	def add_question(self, form_doctype: str, label: str, fieldname: str, asked_per: str = "Attendee"):
 		form = frappe.get_doc("Buzz Form", {"event": self.event.name, "form_doctype": form_doctype})

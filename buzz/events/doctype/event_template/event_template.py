@@ -179,14 +179,14 @@ def create_template_from_event(event_name: str, template_name: str, options: str
 			)
 
 	if options.get("custom_fields"):
-		for custom_field in template_custom_fields(event_name):
+		for custom_field in event_template_questions(event_name):
 			template.append("template_custom_fields", custom_field)
 
 	template.insert()
 	return template.name
 
 
-def template_custom_fields(event_name: str) -> list[dict]:
+def event_template_questions(event_name: str) -> list[dict]:
 	# Sponsorship questions stay on the event's own sponsorship form, which every event has.
 	forms = {
 		form.name: form.form_doctype

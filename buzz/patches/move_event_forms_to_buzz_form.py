@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import cstr
 
-from buzz.events.doctype.buzz_form.form_types import SPONSORSHIP_FORM_DOCTYPE, form_type, usable_fieldname
+from buzz.events.doctype.buzz_form.form_types import SPONSORSHIP_FORM_DOCTYPE, form_type, unique_fieldname
 
 SOURCE_DOCTYPE = "Buzz Event Form"
 SETTINGS = (
@@ -96,7 +96,7 @@ class EventFormMigration:
 		rows = []
 		for question in questions:
 			row = {fieldname: question.get(fieldname) for fieldname in QUESTION_FIELDS}
-			row["fieldname"] = usable_fieldname(row["fieldname"] or row["label"], taken, reserved)
+			row["fieldname"] = unique_fieldname(row["fieldname"] or row["label"], taken, reserved)
 			rows.append(row)
 		return rows
 

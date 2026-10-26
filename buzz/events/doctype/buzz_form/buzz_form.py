@@ -10,7 +10,7 @@ from buzz.events.doctype.buzz_form.condition_validator import ConditionValidator
 from buzz.events.doctype.buzz_form.form_types import form_type
 
 ROUTE_PATTERN = r"[a-zA-Z0-9_-]+"
-QUESTION_FIELDNAMES = r"[a-z][a-z0-9_]*"
+FIELDNAME_PATTERN = r"[a-z][a-z0-9_]*"
 
 
 class BuzzForm(Document):
@@ -45,11 +45,11 @@ class BuzzForm(Document):
 
 	@frappe.whitelist(methods=["POST"])
 	def set_closed(self, closed: bool) -> bool:
-		type_rules = form_type(self.form_doctype)
+		form_rules = form_type(self.form_doctype)
 		if closed:
-			type_rules.close(self)
+			form_rules.close(self)
 		else:
-			type_rules.open(self)
+			form_rules.open(self)
 		self.save()
 		return self.is_closed
 
@@ -87,23 +87,23 @@ class BuzzForm(Document):
 		return any(route and route.lower() == self.route.lower() for route in taken)
 
 	def validate_questions(self):
-		type_rules = form_type(self.form_doctype)
-		reserved = type_rules.reserved_fieldnames
+		form_rules = form_type(self.form_doctype)
+		reserved = form_rules.reserved_fieldnames
 		used_keys = set()
 		saved_fieldnames = self.saved_question_fieldnames()
 		for question in self.questions:
 			question.fieldname = question.fieldname or frappe.scrub(question.label or "")
-			if not re.fullmatch(QUESTION_FIELDNAMES, question.fieldname):
+			if not re.fullmatch(FIELDNAME_PATTERN, question.fieldname):
 				frappe.throw(
 					_(
 						"Question fieldnames must start with a letter and contain lowercase letters, numbers or underscores."
 					)
 				)
-			if type_rules.question_key(question) in used_keys or question.fieldname in reserved:
+			if form_rules.question_key(question) in used_keys or question.fieldname in reserved:
 				frappe.throw(_("Duplicate or reserved question fieldname: {0}").format(question.fieldname))
 			if saved_fieldnames.get(question.name) not in (None, question.fieldname):
 				frappe.throw(_("A saved question's fieldname cannot be changed. Add a new question instead."))
-			used_keys.add(type_rules.question_key(question))
+			used_keys.add(form_rules.question_key(question))
 
 	def saved_question_fieldnames(self) -> dict[str, str]:
 		before = self.get_doc_before_save()

@@ -266,7 +266,7 @@ def form_section(form_doctype: str | None) -> str:
 	return DOCTYPE_SECTION.get(form_doctype, "details")
 
 
-def form_criterion(user: str, table) -> Criterion:
+def form_query_criterion(user: str, table) -> Criterion:
 	"""A form is visible to whoever may read the rows it collects."""
 	criterion = table.form_doctype.notin(list(DOCTYPE_SECTION)) & table.event.isin(
 		events_with_section_access(user, "details")
@@ -284,7 +284,7 @@ def derived_criterion(user: str, doctype: str | None) -> Criterion | None:
 
 	table = frappe.qb.DocType(doctype)
 	if doctype == "Buzz Form":
-		return form_criterion(user, table)
+		return form_query_criterion(user, table)
 
 	criterion = table.event.isin(events_with_section_access(user, DOCTYPE_SECTION[doctype]))
 	if doctype in OWNER_VISIBLE_DOCTYPES:

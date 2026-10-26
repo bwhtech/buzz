@@ -560,12 +560,12 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 			add_on.insert()
 
 	if options.get("custom_fields"):
-		copy_custom_fields(event, template.template_custom_fields)
+		copy_template_questions(event, template.template_custom_fields)
 
 	return event.name
 
 
-def copy_custom_fields(event, template_fields):
+def copy_template_questions(event, template_fields):
 	"""A template may name a form this event has not got; its questions are dropped."""
 	forms = {}
 	for field in template_fields:

@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from buzz.events.doctype.buzz_form.form_types import ENQUIRY_FIELDS, usable_fieldname
+from buzz.events.doctype.buzz_form.form_types import ENQUIRY_FIELDS, unique_fieldname
 
 SETTINGS = (
 	"route",
@@ -82,6 +82,6 @@ class SponsorFormMigration:
 		taken = set()
 		for question in questions:
 			row = {key: question.get(key) for key in QUESTION_FIELDS}
-			row["fieldname"] = usable_fieldname(row["fieldname"] or row["label"], taken, ENQUIRY_FIELDS)
+			row["fieldname"] = unique_fieldname(row["fieldname"] or row["label"], taken, ENQUIRY_FIELDS)
 			form.append("custom_fields", row)
 		return form, legacy, questions

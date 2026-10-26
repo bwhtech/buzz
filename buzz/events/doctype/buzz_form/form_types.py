@@ -35,7 +35,7 @@ ENQUIRY_FIELDS = frozenset(
 )
 
 
-def event_now(time_zone: str | None):
+def now_in_event_time_zone(time_zone: str | None):
 	"""The current wall clock of the event's time zone, which is how cutoffs are written."""
 	return get_datetime_in_timezone(time_zone or get_system_timezone()).replace(tzinfo=None)
 
@@ -43,14 +43,16 @@ def event_now(time_zone: str | None):
 def is_form_closed(publish, auto_close_at, time_zone: str | None) -> bool:
 	if not publish:
 		return True
-	return bool(auto_close_at) and get_datetime(auto_close_at) < event_now(time_zone)
+	return bool(auto_close_at) and get_datetime(auto_close_at) < now_in_event_time_zone(time_zone)
 
 
 def is_registration_closed(form, event) -> bool:
 	"""No form takes no registrations; without a cutoff, they close once the event has ended."""
 	if not form or is_form_closed(form.publish, form.auto_close_at, event.time_zone):
 		return True
-	return not form.auto_close_at and event_now(event.time_zone) > build_event_datetimes(event)[1]
+	return (
+		not form.auto_close_at and now_in_event_time_zone(event.time_zone) > build_event_datetimes(event)[1]
+	)
 
 
 def event_time_zone(event: str) -> str | None:
@@ -86,10 +88,10 @@ class FormType:
 		form.auto_close_at = None
 
 	def validate(self, form):
-		if self.one_per_event and self.others_for_event(form):
+		if self.one_per_event and self.other_forms_of_event(form):
 			frappe.throw(_("This event already has a {0} form.").format(_(form.form_doctype)))
 
-	def others_for_event(self, form) -> list[str]:
+	def other_forms_of_event(self, form) -> list[str]:
 		filters = {"event": form.event, "form_doctype": form.form_doctype}
 		if form.name:
 			filters["name"] = ["!=", form.name]
@@ -107,15 +109,15 @@ class SponsorshipFormType(FormType):
 		form.login_required = 0
 
 
-def close_at_now(form):
+def close_with_cutoff(form):
 	"""Close by cutoff, keeping the page up to show its closed message."""
 	form.publish = 1
-	form.auto_close_at = event_now(event_time_zone(form.event))
+	form.auto_close_at = now_in_event_time_zone(event_time_zone(form.event))
 
 
 class TalkProposalFormType(FormType):
 	one_per_event = True
-	close = staticmethod(close_at_now)
+	close = staticmethod(close_with_cutoff)
 
 
 class RegistrationFormType(FormType):
@@ -130,7 +132,7 @@ class RegistrationFormType(FormType):
 		event = frappe.get_cached_doc("Buzz Event", form.event)
 		return is_registration_closed(form, event)
 
-	close = staticmethod(close_at_now)
+	close = staticmethod(close_with_cutoff)
 
 	def condition_fields(self, form, question) -> dict:
 		if question.asked_per != "Attendee":
@@ -175,7 +177,7 @@ def create_default_forms(event: str):
 		form.insert(ignore_permissions=True)
 
 
-def usable_fieldname(label_or_fieldname: str, taken: set, reserved: frozenset) -> str:
+def unique_fieldname(label_or_fieldname: str, taken: set, reserved: frozenset) -> str:
 	"""Legacy questions were never held to the new key rules, so reshape rather than refuse.
 
 	A site whose form asks for a "Website" is ordinary, and failing the whole migrate over it

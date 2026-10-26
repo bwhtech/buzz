@@ -2,7 +2,7 @@ import frappe
 from frappe.tests import UnitTestCase
 
 from buzz.api.forms.answers import CustomAnswers
-from buzz.api.forms.conditions import is_required, is_shown, matches
+from buzz.api.forms.conditions import all_conditions_match, is_required, is_shown
 
 
 def question(**fields) -> frappe._dict:
@@ -20,25 +20,25 @@ def question(**fields) -> frappe._dict:
 
 class TestMatches(UnitTestCase):
 	def test_no_conditions_always_match(self):
-		self.assertTrue(matches(None, {}))
-		self.assertTrue(matches([], {"tier": "Gold"}))
-		self.assertTrue(matches("[]", {"tier": "Gold"}))
+		self.assertTrue(all_conditions_match(None, {}))
+		self.assertTrue(all_conditions_match([], {"tier": "Gold"}))
+		self.assertTrue(all_conditions_match("[]", {"tier": "Gold"}))
 
 	def test_equals_and_not_equals(self):
 		condition = [["tier", "=", "Gold"]]
 
-		self.assertTrue(matches(condition, {"tier": "Gold"}))
-		self.assertFalse(matches(condition, {"tier": "Silver"}))
-		self.assertTrue(matches([["tier", "!=", "Gold"]], {"tier": "Silver"}))
-		self.assertFalse(matches([["tier", "!=", "Gold"]], {"tier": "Gold"}))
+		self.assertTrue(all_conditions_match(condition, {"tier": "Gold"}))
+		self.assertFalse(all_conditions_match(condition, {"tier": "Silver"}))
+		self.assertTrue(all_conditions_match([["tier", "!=", "Gold"]], {"tier": "Silver"}))
+		self.assertFalse(all_conditions_match([["tier", "!=", "Gold"]], {"tier": "Gold"}))
 
 	def test_in_and_not_in(self):
 		condition = [["tier", "in", ["Gold", "Silver"]]]
 
-		self.assertTrue(matches(condition, {"tier": "Gold"}))
-		self.assertFalse(matches(condition, {"tier": "Bronze"}))
-		self.assertTrue(matches([["tier", "not in", ["Gold"]]], {"tier": "Bronze"}))
-		self.assertFalse(matches([["tier", "not in", ["Gold"]]], {"tier": "Gold"}))
+		self.assertTrue(all_conditions_match(condition, {"tier": "Gold"}))
+		self.assertFalse(all_conditions_match(condition, {"tier": "Bronze"}))
+		self.assertTrue(all_conditions_match([["tier", "not in", ["Gold"]]], {"tier": "Bronze"}))
+		self.assertFalse(all_conditions_match([["tier", "not in", ["Gold"]]], {"tier": "Gold"}))
 
 	def test_comparisons(self):
 		cases = [
@@ -53,36 +53,36 @@ class TestMatches(UnitTestCase):
 		]
 		for operator, value, expected in cases:
 			with self.subTest(operator=operator, value=value):
-				self.assertIs(matches([["budget", operator, 5000]], {"budget": value}), expected)
+				self.assertIs(all_conditions_match([["budget", operator, 5000]], {"budget": value}), expected)
 
 	def test_comparisons_read_text_and_blank_answers_as_numbers(self):
-		self.assertTrue(matches([["budget", ">", 5000]], {"budget": "6000"}))
-		self.assertFalse(matches([["budget", ">", 5000]], {}))
+		self.assertTrue(all_conditions_match([["budget", ">", 5000]], {"budget": "6000"}))
+		self.assertFalse(all_conditions_match([["budget", ">", 5000]], {}))
 
 	def test_is_set_and_is_not_set(self):
-		self.assertTrue(matches([["tier", "is", "set"]], {"tier": "Gold"}))
-		self.assertFalse(matches([["tier", "is", "set"]], {"tier": None}))
-		self.assertFalse(matches([["tier", "is", "set"]], {}))
-		self.assertTrue(matches([["tier", "is", "not set"]], {}))
-		self.assertFalse(matches([["tier", "is", "not set"]], {"tier": "Gold"}))
+		self.assertTrue(all_conditions_match([["tier", "is", "set"]], {"tier": "Gold"}))
+		self.assertFalse(all_conditions_match([["tier", "is", "set"]], {"tier": None}))
+		self.assertFalse(all_conditions_match([["tier", "is", "set"]], {}))
+		self.assertTrue(all_conditions_match([["tier", "is", "not set"]], {}))
+		self.assertFalse(all_conditions_match([["tier", "is", "not set"]], {"tier": "Gold"}))
 
 	def test_every_triple_must_match(self):
 		condition = [["tier", "=", "Gold"], ["budget", ">", 5000]]
 
-		self.assertTrue(matches(condition, {"tier": "Gold", "budget": 6000}))
-		self.assertFalse(matches(condition, {"tier": "Gold", "budget": 4000}))
-		self.assertFalse(matches(condition, {"tier": "Silver", "budget": 6000}))
+		self.assertTrue(all_conditions_match(condition, {"tier": "Gold", "budget": 6000}))
+		self.assertFalse(all_conditions_match(condition, {"tier": "Gold", "budget": 4000}))
+		self.assertFalse(all_conditions_match(condition, {"tier": "Silver", "budget": 6000}))
 
 	def test_json_conditions_are_read(self):
-		self.assertTrue(matches('[["tier", "=", "Gold"]]', {"tier": "Gold"}))
+		self.assertTrue(all_conditions_match('[["tier", "=", "Gold"]]', {"tier": "Gold"}))
 
 	def test_multi_select_matches_when_any_item_is_in_the_list(self):
 		condition = [["topics", "in", ["ai", "web"]]]
 
-		self.assertTrue(matches(condition, {"topics": ["web", "ops"]}))
-		self.assertFalse(matches(condition, {"topics": ["ops"]}))
-		self.assertTrue(matches([["topics", "not in", ["ai"]]], {"topics": ["ops"]}))
-		self.assertFalse(matches([["topics", "not in", ["ai"]]], {"topics": ["ai", "ops"]}))
+		self.assertTrue(all_conditions_match(condition, {"topics": ["web", "ops"]}))
+		self.assertFalse(all_conditions_match(condition, {"topics": ["ops"]}))
+		self.assertTrue(all_conditions_match([["topics", "not in", ["ai"]]], {"topics": ["ops"]}))
+		self.assertFalse(all_conditions_match([["topics", "not in", ["ai"]]], {"topics": ["ai", "ops"]}))
 
 
 class TestShowingAndRequiring(UnitTestCase):
