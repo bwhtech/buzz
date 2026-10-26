@@ -188,7 +188,7 @@ function render_save_template_options(dialog, frm) {
 			doctype: "Buzz Form",
 			filters: { "questions.name": ["is", "set"] },
 			option: "custom_fields",
-			label: __("Custom Fields"),
+			label: __("Forms with questions"),
 		},
 	]
 

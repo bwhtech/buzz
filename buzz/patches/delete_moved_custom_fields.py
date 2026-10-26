@@ -32,6 +32,8 @@ def moved_rows_by_form() -> list:
 			where applied_to in %(applied_to)s
 			group by 1, 2
 		) moved
+		# Rows of a deleted event have no form to move to; they are deleted with the rest.
+		join `tabBuzz Event` event on event.name = moved.event
 		left join `tabBuzz Form` form on form.event = moved.event and form.form_doctype = moved.form_doctype
 		""",
 		{"registration": REGISTRATION_FORM_DOCTYPE, "applied_to": MOVED_APPLIED_TO},

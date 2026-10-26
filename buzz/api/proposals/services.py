@@ -18,6 +18,8 @@ from buzz.api.proposals.schemas import (
 	ProposalTrend,
 	StatusTotal,
 )
+from buzz.events.doctype.buzz_form.form_types import TALK_PROPOSAL_FORM_DOCTYPE as PROPOSAL_FORM_DOCTYPE
+from buzz.events.doctype.buzz_form.form_types import event_form
 from buzz.events.doctype.event_venue.event_venue import set_venue_names
 from buzz.permissions import derived_has_permission, has_section_permission
 
@@ -155,15 +157,9 @@ def proposal_filter_fields(event: str) -> list[FilterField]:
 	]
 
 
-PROPOSAL_FORM_DOCTYPE = "Talk Proposal"
-
-
 def proposal_form(event):
 	"""The event's talk proposal form — the Buzz Form its public submission page is served from."""
-	form_name = frappe.db.get_value(
-		"Buzz Form", {"event": event.name, "form_doctype": PROPOSAL_FORM_DOCTYPE}, "name"
-	)
-	return frappe.get_doc("Buzz Form", form_name) if form_name else None
+	return event_form(event.name, PROPOSAL_FORM_DOCTYPE)
 
 
 def proposal_link(event) -> str | None:

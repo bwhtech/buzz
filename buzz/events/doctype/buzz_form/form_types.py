@@ -29,7 +29,6 @@ QUESTION_FIELD_NAMES = (
 	"mandatory_depends_on",
 	"asked_per",
 )
-ASKED_PER_BY_APPLIED_TO = {applied_to: asked_per for asked_per, applied_to in APPLIED_TO_BY_ASKED_PER.items()}
 
 ENQUIRY_FIELDS = frozenset(
 	{"company_name", "company_logo", "website", "tier", "country", "phone", "contact_email"}
@@ -47,20 +46,21 @@ def is_form_closed(publish, auto_close_at, time_zone: str | None) -> bool:
 	return bool(auto_close_at) and get_datetime(auto_close_at) < event_now(time_zone)
 
 
-def is_registration_closed(publish, auto_close_at, event) -> bool:
-	"""Without a cutoff, registration closes once the event itself has ended."""
-	if is_form_closed(publish, auto_close_at, event.time_zone):
+def is_registration_closed(form, event) -> bool:
+	"""No form takes no registrations; without a cutoff, they close once the event has ended."""
+	if not form or is_form_closed(form.publish, form.auto_close_at, event.time_zone):
 		return True
-	return not auto_close_at and event_now(event.time_zone) > build_event_datetimes(event)[1]
+	return not form.auto_close_at and event_now(event.time_zone) > build_event_datetimes(event)[1]
 
 
 def event_time_zone(event: str) -> str | None:
 	return frappe.get_cached_value("Buzz Event", event, "time_zone")
 
 
-def registration_form(event: str):
-	name = frappe.db.get_value("Buzz Form", {"event": event, "form_doctype": REGISTRATION_FORM_DOCTYPE})
-	return frappe.get_doc("Buzz Form", name)
+def event_form(event: str, form_doctype: str):
+	"""The event's form of that doctype; every event gets the default ones, a template may name another."""
+	name = frappe.db.get_value("Buzz Form", {"event": event, "form_doctype": form_doctype})
+	return frappe.get_doc("Buzz Form", name) if name else None
 
 
 class FormType:
@@ -107,8 +107,15 @@ class SponsorshipFormType(FormType):
 		form.login_required = 0
 
 
+def close_at_now(form):
+	"""Close by cutoff, keeping the page up to show its closed message."""
+	form.publish = 1
+	form.auto_close_at = event_now(event_time_zone(form.event))
+
+
 class TalkProposalFormType(FormType):
 	one_per_event = True
+	close = staticmethod(close_at_now)
 
 
 class RegistrationFormType(FormType):
@@ -121,11 +128,9 @@ class RegistrationFormType(FormType):
 
 	def is_closed(self, form) -> bool:
 		event = frappe.get_cached_doc("Buzz Event", form.event)
-		return is_registration_closed(form.publish, form.auto_close_at, event)
+		return is_registration_closed(form, event)
 
-	def close(self, form):
-		form.publish = 1
-		form.auto_close_at = event_now(event_time_zone(form.event))
+	close = staticmethod(close_at_now)
 
 	def condition_fields(self, form, question) -> dict:
 		if question.asked_per != "Attendee":
@@ -139,8 +144,7 @@ FORM_TYPES = {
 	REGISTRATION_FORM_DOCTYPE: RegistrationFormType(),
 }
 
-# Created with every event, unpublished: an organiser opens one when they mean to.
-# Registration is the exception: it has no page to open.
+# Created with every event, closed: an organiser opens one when they mean to.
 DEFAULT_FORMS = (
 	(SPONSORSHIP_FORM_DOCTYPE, "enquire-sponsorship", "Sponsorship enquiry"),
 	(EVENT_FEEDBACK_FORM_DOCTYPE, "feedback", "Feedback"),
@@ -162,7 +166,7 @@ def create_default_forms(event: str):
 				"event": event,
 				"form_doctype": form_doctype,
 				"route": route,
-				"publish": int(form_doctype == REGISTRATION_FORM_DOCTYPE),
+				"publish": 0,
 			}
 		)
 		if form_doctype == REGISTRATION_FORM_DOCTYPE:

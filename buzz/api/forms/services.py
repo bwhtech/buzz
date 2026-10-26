@@ -7,7 +7,6 @@ from frappe.geo.country_info import get_all as get_all_countries
 from frappe.utils.data import sbool
 
 from buzz.api.forms.answers import CustomAnswers
-from buzz.api.forms.conditions import parse_conditions
 from buzz.api.forms.exceptions import (
 	EventNotFound,
 	FormNotAvailable,
@@ -21,6 +20,7 @@ from buzz.api.forms.fields import (
 	get_exclude_fields,
 	get_form_fields,
 	get_renderable_fields,
+	question_definition,
 )
 from buzz.api.forms.schemas import (
 	CustomFieldDefinition,
@@ -138,19 +138,7 @@ class CustomFormService:
 
 	def custom_field_definitions(self) -> list[CustomFieldDefinition]:
 		return [
-			CustomFieldDefinition(
-				label=question.label,
-				fieldname=question.fieldname,
-				fieldtype=question.fieldtype,
-				options=question.options,
-				mandatory=question.mandatory,
-				placeholder=question.placeholder,
-				default_value=question.default_value,
-				description=question.description,
-				depends_on=parse_conditions(question.depends_on),
-				mandatory_depends_on=parse_conditions(question.mandatory_depends_on),
-				order=question.idx,
-			)
+			CustomFieldDefinition(**question_definition(question))
 			for question in self.form.questions
 			if question.enabled
 		]

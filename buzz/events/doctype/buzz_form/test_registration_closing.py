@@ -88,4 +88,4 @@ class TestRegistrationClosing(IntegrationTestCase):
 
 	def is_closed(self, event, now: datetime) -> bool:
 		with patch("buzz.events.doctype.buzz_form.form_types.get_datetime_in_timezone", return_value=now):
-			return is_registration_closed(1, event.close_at, event)
+			return is_registration_closed(frappe._dict(publish=1, auto_close_at=event.close_at), event)

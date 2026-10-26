@@ -39,7 +39,7 @@ from buzz.api.filters.conditions import ListConditions, filter_field, form_quest
 from buzz.api.filters.schemas import FilterField
 from buzz.events.countdown import event_countdown
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
-from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE, registration_form
+from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE, event_form
 from buzz.events.doctype.buzz_team.buzz_team import personal_team_owner
 from buzz.events.doctype.event_venue.details import venue_details
 from buzz.permissions import (
@@ -323,9 +323,10 @@ def registration_link(doc) -> str | None:
 def set_registration_state(event: str, closed: bool) -> RegistrationState:
 	"""Answer with the state the server ends up in: opening cannot beat the event's end date."""
 	doc = manageable_event(event, "ticketing")
-	form = registration_form(doc.name)
-	form.flags.ignore_permissions = True
-	form.set_closed(closed)
+	# Without a registration form an event takes no registrations, which is already closed.
+	if form := event_form(doc.name, REGISTRATION_FORM_DOCTYPE):
+		form.flags.ignore_permissions = True
+		form.set_closed(closed)
 	return RegistrationState(registrations_closed=are_registrations_closed(doc))
 
 

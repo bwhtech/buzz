@@ -40,16 +40,16 @@ class CustomAnswers:
 		"""Return `additional_fields` rows, rejecting anything the form did not ask for.
 
 		`context` holds the standard field values a condition may name, such as an
-		enquiry's tier; answers are merged in on top of it.
+		enquiry's tier. Conditions name questions above, so only shown answers join it.
 		"""
 		if not isinstance(values, dict) or values.keys() - self.definitions.keys():
 			UnknownQuestions.throw()
-		condition_values = {**(context or {}), **values}
+		condition_values = dict(context or {})
 		rows = []
 		for fieldname, question in self.definitions.items():
 			if not is_shown(question, condition_values):
 				continue
-			value = values.get(fieldname)
+			value = condition_values[fieldname] = values.get(fieldname)
 			if value is None or value == "" or value == []:
 				if is_required(question, condition_values):
 					frappe.throw(_("{0} is required.").format(question.label), frappe.MandatoryError)

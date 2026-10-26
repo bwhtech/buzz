@@ -6,21 +6,10 @@ from frappe import _
 from buzz.api.booking.schemas import EventBookingDataResponse, TaxSettings
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.filters.conditions import form_questions
-from buzz.api.forms.conditions import parse_conditions
+from buzz.api.forms.fields import question_definition
 from buzz.events.doctype.buzz_form.form_types import APPLIED_TO_BY_ASKED_PER, REGISTRATION_FORM_DOCTYPE
 from buzz.payments import get_payment_gateways_for_event
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
-
-CUSTOM_FIELD_NAMES = (
-	"label",
-	"fieldname",
-	"fieldtype",
-	"options",
-	"mandatory",
-	"placeholder",
-	"default_value",
-	"description",
-)
 
 if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
@@ -120,13 +109,7 @@ def get_available_add_ons(event_id: str) -> list:
 
 def get_registration_custom_fields(event_id: str) -> list[dict]:
 	return [
-		{
-			**{name: question.get(name) for name in CUSTOM_FIELD_NAMES},
-			"depends_on": parse_conditions(question.depends_on),
-			"mandatory_depends_on": parse_conditions(question.mandatory_depends_on),
-			"applied_to": APPLIED_TO_BY_ASKED_PER[question.asked_per],
-			"order": question.idx,
-		}
+		{**question_definition(question), "applied_to": APPLIED_TO_BY_ASKED_PER[question.asked_per]}
 		for question in form_questions(event_id, REGISTRATION_FORM_DOCTYPE)
 	]
 

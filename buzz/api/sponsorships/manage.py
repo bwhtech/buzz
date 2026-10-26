@@ -9,6 +9,7 @@ from buzz.api.sponsorships.schemas import (
 	TierItem,
 )
 from buzz.api.sponsorships.sponsors import sponsor_items, sponsor_rows, sponsor_tags
+from buzz.events.doctype.buzz_form.form_types import SPONSORSHIP_FORM_DOCTYPE, event_form
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import IMPORT_FLAG, is_feature_enabled
 from buzz.permissions import has_section_permission
 
@@ -44,9 +45,8 @@ def event_sponsorships(event: str) -> EventSponsorshipsResponse:
 
 
 def form_state(doc) -> EnquiryFormState | None:
-	form_name = frappe.db.get_value("Buzz Form", {"event": doc.name, "form_doctype": "Sponsorship Enquiry"})
-	if not form_name:
+	form = event_form(doc.name, SPONSORSHIP_FORM_DOCTYPE)
+	if not form:
 		return None
-	form = frappe.get_doc("Buzz Form", form_name)
 	link = f"/b/{doc.route}/{form.route}" if doc.route else None
 	return EnquiryFormState(name=form.name, closed=form.is_closed, link=link)

@@ -42,10 +42,7 @@ class ConditionValidator:
 		fieldname, operator, expected = condition
 		if operator not in OPERATORS:
 			self.invalid(question, _("{0} is not a supported operator.").format(operator))
-		fields = {
-			**self.standard_fields,
-			**form_type(self.form.form_doctype).condition_fields(self.form, question),
-		}
+		fields = self.fields_for(question)
 		if fieldname not in self.fieldnames_above and fieldname not in fields:
 			self.invalid(question, _("{0} is not a field above this question.").format(fieldname))
 		if operator == "is" and expected not in IS_VALUES:
@@ -54,6 +51,21 @@ class ConditionValidator:
 			self.invalid(question, _("Use a list of values with the '{0}' operator.").format(operator))
 		if fieldname in fields and operator != "is":
 			self.validate_standard_values(question, fields[fieldname], expected)
+
+	def fields_for(self, question) -> dict:
+		return {
+			**self.standard_fields,
+			**form_type(self.form.form_doctype).condition_fields(self.form, question),
+		}
+
+	def drop_link_conditions(self):
+		"""A Link value names a record of one event, so a condition copied to another cannot hold."""
+		for question in self.form.questions:
+			fields = self.fields_for(question)
+			for key in ("depends_on", "mandatory_depends_on"):
+				rows = parse_conditions(question.get(key)) or []
+				kept = [row for row in rows if getattr(fields.get(row[0]), "fieldtype", None) != "Link"]
+				question.set(key, frappe.as_json(kept) if kept else None)
 
 	def validate_standard_values(self, question, field, expected):
 		if field.fieldtype not in VALUE_FIELDTYPES:

@@ -191,8 +191,7 @@ class TeamPage:
 		return {str(form.event): form for form in forms}
 
 	def registrations_closed(self, event) -> bool:
-		form = self.registration_forms.get(str(event.name))
-		return not form or is_registration_closed(form.publish, form.auto_close_at, event)
+		return is_registration_closed(self.registration_forms.get(str(event.name)), event)
 
 	@cached_property
 	def attending_events(self) -> set[str]:

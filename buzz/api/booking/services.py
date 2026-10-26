@@ -341,7 +341,7 @@ def are_registrations_closed(event_doc) -> bool:
 		["publish", "auto_close_at"],
 		as_dict=True,
 	)
-	return not form or is_registration_closed(form.publish, form.auto_close_at, event_doc)
+	return is_registration_closed(form, event_doc)
 
 
 def resolve_attendee_names(attendee: dict) -> tuple[str, str]:

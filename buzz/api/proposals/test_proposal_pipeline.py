@@ -158,6 +158,13 @@ class TestSetProposalState(IntegrationTestCase):
 		self.assertFalse(set_proposal_state(self.event, closed=False).proposals_closed)
 		self.assertFalse(get_event_proposals(self.event).proposals_closed)
 
+	def test_closing_keeps_the_form_page_up_with_its_closed_message(self):
+		set_proposal_state(self.event, closed=True)
+
+		form = frappe.get_doc("Buzz Form", {"event": self.event, "form_doctype": "Talk Proposal"})
+		self.assertTrue(form.publish)
+		self.assertTrue(form.auto_close_at)
+
 	def test_opening_publishes_a_form_that_was_never_published(self):
 		self.unpublish_proposal_form()
 

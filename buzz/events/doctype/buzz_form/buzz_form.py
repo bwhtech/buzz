@@ -113,7 +113,7 @@ class BuzzForm(Document):
 		ConditionValidator(self).validate()
 
 	def validate_published_event(self):
-		if not self.publish or self.flags.migrating or not form_type(self.form_doctype).has_page:
+		if self.flags.migrating or not form_type(self.form_doctype).has_page or self.is_closed:
 			return
 		if not frappe.db.get_value("Buzz Event", self.event, "is_published"):
 			frappe.throw(_("Publish the event before opening its form."))

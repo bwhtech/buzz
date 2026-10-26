@@ -5,12 +5,12 @@ from frappe import _
 from frappe.utils import cstr
 
 from buzz.events.doctype.buzz_form.form_types import (
-	ASKED_PER_BY_APPLIED_TO,
 	REGISTRATION_FORM_DOCTYPE,
 	REGISTRATION_ROUTE,
 	usable_fieldname,
 )
 
+ASKED_PER_BY_APPLIED_TO = {"Booking": "Booking", "Ticket": "Attendee"}
 QUESTION_FIELDS = (
 	"enabled",
 	"label",

@@ -4,6 +4,7 @@ from frappe.utils import cstr, flt
 
 from buzz.api.filters.exceptions import InvalidFilter
 from buzz.api.filters.schemas import FilterField, FilterOperator, FilterOption
+from buzz.events.doctype.buzz_form.form_types import QUESTION_FIELD_NAMES
 
 KIND_BY_FIELDTYPE = {
 	"Select": "choice",
@@ -18,21 +19,7 @@ KIND_BY_FIELDTYPE = {
 }
 # A record's Buzz Tags, matched through its Buzz Tag Link rows.
 TAGS_KEY = "tags"
-QUESTION_FIELDS = [
-	"fieldname",
-	"label",
-	"fieldtype",
-	"options",
-	"enabled",
-	"mandatory",
-	"placeholder",
-	"default_value",
-	"description",
-	"depends_on",
-	"mandatory_depends_on",
-	"asked_per",
-	"idx",
-]
+QUESTION_FIELDS = [*QUESTION_FIELD_NAMES, "idx"]
 
 NEGATED_OPERATORS = {"not in": "in", "not like": "like"}
 # Answers saved through `str()` carry Python's spelling: "True" for a tick, ['a', 'b'] for a list.

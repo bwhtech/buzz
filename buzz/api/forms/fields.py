@@ -2,6 +2,7 @@ import frappe
 from frappe.model import DEFAULT_FIELDS, display_fieldtypes
 from frappe.utils import cstr, now_datetime, today
 
+from buzz.api.forms.conditions import parse_conditions
 from buzz.api.forms.exceptions import MandatoryFieldsHidden, UnknownExcludedFields
 
 LAYOUT_FIELDTYPES = set(display_fieldtypes)
@@ -158,3 +159,25 @@ def is_renderable_form_field(df, exclude_fields: set) -> bool:
 
 def is_layout_break(df, exclude_fields: set) -> bool:
 	return df.fieldtype in LAYOUT_BREAK_FIELDTYPES and df.fieldname not in exclude_fields
+
+
+DEFINITION_FIELDS = (
+	"label",
+	"fieldname",
+	"fieldtype",
+	"options",
+	"mandatory",
+	"placeholder",
+	"default_value",
+	"description",
+)
+
+
+def question_definition(question) -> dict:
+	"""A form question as the public form and the booking page render it."""
+	return {
+		**{name: question.get(name) for name in DEFINITION_FIELDS},
+		"depends_on": parse_conditions(question.depends_on),
+		"mandatory_depends_on": parse_conditions(question.mandatory_depends_on),
+		"order": question.idx,
+	}

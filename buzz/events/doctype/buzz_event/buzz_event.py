@@ -11,9 +11,11 @@ from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
 from frappe.website.utils import cleanup_page_name
 
 from buzz import telemetry
+from buzz.events.doctype.buzz_form.condition_validator import ConditionValidator
 from buzz.events.doctype.buzz_form.form_types import (
 	QUESTION_FIELD_NAMES,
 	create_default_forms,
+	event_form,
 )
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 from buzz.events.doctype.event_check_in_zone.event_check_in_zone import create_default_zone
@@ -568,14 +570,9 @@ def copy_custom_fields(event, template_fields):
 	forms = {}
 	for field in template_fields:
 		if field.form_doctype not in forms:
-			forms[field.form_doctype] = form_of(event.name, field.form_doctype)
+			forms[field.form_doctype] = event_form(event.name, field.form_doctype)
 		if form := forms[field.form_doctype]:
 			form.append("questions", {name: field.get(name) for name in QUESTION_FIELD_NAMES})
 	for form in filter(None, forms.values()):
+		ConditionValidator(form).drop_link_conditions()
 		form.save(ignore_permissions=True)
-
-
-def form_of(event_name: str, form_doctype: str):
-	"""The event's form of that doctype, made with the event; a template may name another."""
-	form_name = frappe.db.get_value("Buzz Form", {"event": event_name, "form_doctype": form_doctype}, "name")
-	return frappe.get_doc("Buzz Form", form_name) if form_name else None

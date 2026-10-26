@@ -1,6 +1,7 @@
 import frappe
 from frappe.tests import UnitTestCase
 
+from buzz.api.forms.answers import CustomAnswers
 from buzz.api.forms.conditions import is_required, is_shown, matches
 
 
@@ -108,3 +109,17 @@ class TestShowingAndRequiring(UnitTestCase):
 
 		self.assertFalse(is_required(hidden, {"tier": "Silver"}))
 		self.assertTrue(is_required(hidden, {"tier": "Gold"}))
+
+
+class TestAnswerRows(UnitTestCase):
+	def test_a_hidden_answer_does_not_steer_later_questions(self):
+		"""The stale answer of a hidden question must not make a question below it required."""
+		sponsor = question(label="Sponsor?", fieldname="sponsor", depends_on=[["tier", "=", "Gold"]])
+		budget = question(mandatory_depends_on=[["sponsor", "=", "yes"]])
+		answers = CustomAnswers([answer_definition(sponsor), answer_definition(budget)])
+
+		self.assertEqual(answers.rows({"sponsor": "yes"}, context={"tier": "Silver"}), [])
+
+
+def answer_definition(row) -> frappe._dict:
+	return frappe._dict({**row, "enabled": 1, "fieldtype": "Data"})
