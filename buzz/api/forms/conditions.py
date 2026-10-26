@@ -1,9 +1,11 @@
 import frappe
-from frappe.utils import compare
+from frappe.utils import compare, flt
 
 OPERATORS = frozenset({"=", "!=", "in", "not in", ">", "<", ">=", "<=", "is"})
 
 LIST_OPERATORS = frozenset({"in", "not in"})
+
+NUMBER_OPERATORS = frozenset({">", "<", ">=", "<="})
 
 
 def matches(conditions, values: dict) -> bool:
@@ -35,4 +37,6 @@ def holds(condition, values: dict) -> bool:
 	if isinstance(value, list) and operator in LIST_OPERATORS:
 		found = any(item in expected for item in value)
 		return found if operator == "in" else not found
+	if operator in NUMBER_OPERATORS:
+		return compare(flt(value), operator, flt(expected))
 	return compare(value, operator, expected)

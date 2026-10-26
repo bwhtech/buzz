@@ -54,6 +54,10 @@ class TestMatches(UnitTestCase):
 			with self.subTest(operator=operator, value=value):
 				self.assertIs(matches([["budget", operator, 5000]], {"budget": value}), expected)
 
+	def test_comparisons_read_text_and_blank_answers_as_numbers(self):
+		self.assertTrue(matches([["budget", ">", 5000]], {"budget": "6000"}))
+		self.assertFalse(matches([["budget", ">", 5000]], {}))
+
 	def test_is_set_and_is_not_set(self):
 		self.assertTrue(matches([["tier", "is", "set"]], {"tier": "Gold"}))
 		self.assertFalse(matches([["tier", "is", "set"]], {"tier": None}))
