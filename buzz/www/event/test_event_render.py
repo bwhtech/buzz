@@ -60,6 +60,13 @@ class TestEventPageRender(IntegrationTestCase):
 			self.assertNotIn(asset, html)
 		self.assertEqual(html.count('property="og:title"'), 1)
 
+	def test_page_renders_the_footer_the_site_chose(self):
+		with self.change_settings("Website Settings", footer_template="Standard Footer"):
+			html = render(self.route)
+		self.assertNotIn("buzz-footer", html)
+		self.assertIn("web-footer", html)
+		self.assertIn("website.bundle", html)
+
 	def test_favicon_falls_back_to_buzz(self):
 		settings = frappe.get_single("Website Settings")
 		self.addCleanup(frappe.clear_document_cache, "Website Settings", "Website Settings")

@@ -216,7 +216,6 @@ jinja = {
 		"buzz.islands.island_script",
 		"buzz.playground.playground_boot",
 		"buzz.www.site_header.buzz_navbar",
-		"buzz.www.site_footer.buzz_footer",
 	],
 }
 
