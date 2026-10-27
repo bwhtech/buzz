@@ -63,6 +63,7 @@ GUEST_EVENT_DETAIL_FIELDS = {
 	"allow_guest_booking",
 	"guest_verification_method",
 	"default_ticket_type",
+	"requires_approval",
 }
 
 SUMMARY_FIELDS = {
@@ -72,6 +73,8 @@ SUMMARY_FIELDS = {
 	"payment_status",
 	"payment_method",
 	"is_offline",
+	"requires_approval",
+	"rejection_reason",
 	"currency",
 	"booked_on",
 	"lines",
@@ -182,7 +185,7 @@ class TestGetEventBookingData(BookingTestCase):
 class TestProcessBooking(BookingTestCase):
 	def test_free_booking_redirects_to_success(self):
 		payload = process_booking(self.booking_request()).__json__()
-		self.assertEqual(set(payload), {"booking_name", "redirect_to"})
+		self.assertEqual(set(payload), {"booking_name", "redirect_to", "approval_pending"})
 		self.assertEqual(frappe.db.get_value("Event Booking", payload["booking_name"], "docstatus"), 1)
 
 	def test_unpublished_event_is_refused(self):

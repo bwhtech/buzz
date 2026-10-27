@@ -28,8 +28,8 @@
 		<RegistrationComplete
 			v-if="completed"
 			:title="successTitle"
-			:reference="completed.pendingVerification ? completed.bookingName : undefined"
-			:pending="completed.pendingVerification"
+			:reference="showsPendingState ? completed.bookingName : undefined"
+			:pending="showsPendingState"
 			@login="openLoginDialog()"
 		>
 			{{ successMessage }}
@@ -92,6 +92,7 @@
 								:quantities="quantities"
 								:currency="currency"
 								:stepper-size="isMobile ? 'lg' : 'sm'"
+								:event-requires-approval="!!eventDetails.requires_approval"
 								@change="changeQuantity"
 							/>
 						</div>
@@ -278,6 +279,7 @@ import type {
 	FrappeField,
 	OfflineMethod,
 } from "@/types"
+import { needsApproval } from "@/utils/bookingApproval"
 import { formatWholePriceOrFree } from "@/utils/currency"
 import { eventPath } from "@/utils/eventUrl"
 import { siteHeaderHidden } from "@/utils/navbar"
@@ -385,7 +387,7 @@ function inCurrency<T extends AvailableTicketType | AvailableAddOn>(item: T) {
 const ticketTypes = computed(() => props.availableTicketTypes.map(inCurrency))
 const addOns = computed(() => props.availableAddOns.map(inCurrency))
 const ticketTypesMap = computed(() =>
-	Object.fromEntries(ticketTypes.value.map((t) => [String(t.name), t])),
+	Object.fromEntries(ticketTypes.value.map((ticketType) => [String(ticketType.name), ticketType])),
 )
 const addOnsMap = computed(() => Object.fromEntries(addOns.value.map((a) => [a.name, a])))
 
@@ -420,7 +422,9 @@ const quantities = computed(() => {
 // Ticket types with a limit are the only ones a hold reserves.
 const heldQuantities = computed(() => {
 	const limited = new Set(
-		props.availableTicketTypes.filter((t) => t.max_tickets_available).map((t) => String(t.name)),
+		props.availableTicketTypes
+			.filter((ticketType) => ticketType.max_tickets_available)
+			.map((ticketType) => String(ticketType.name)),
 	)
 	return Object.fromEntries(Object.entries(quantities.value).filter(([name]) => limited.has(name)))
 })
@@ -557,12 +561,25 @@ const showStepError = computed(() => tried.value && stepErrors.value.length > 0)
 const stepErrorMessage = computed(() => validation.summarize(stepErrors.value))
 
 const nextStep = computed(() => steps.value[current.value + 1])
+const requiresApproval = computed(() =>
+	needsApproval(
+		!!props.eventDetails.requires_approval,
+		attendees.value.map((attendee) => String(attendee.ticket_type)),
+		Object.fromEntries(
+			ticketTypes.value.map((ticketType) => [
+				String(ticketType.name),
+				ticketType.requires_approval,
+			]),
+		),
+	),
+)
 const totalLabel = computed(() => formatWholePriceOrFree(total.value, currency.value))
 const ctaLabel = computed(() => {
 	if (nextStep.value?.id === "summary") return __("Review booking")
 	if (nextStep.value) return __("Continue to {0}", [nextStep.value.label.toLowerCase()])
 	if (placing.value) return __("Processing...")
 	if (total.value > 0) return __("Proceed to pay {0}", [totalLabel.value])
+	if (requiresApproval.value) return __("Request to join")
 	return isZoomEvent.value || props.eventDetails.free_event ? __("Register") : __("Book Tickets")
 })
 const mobileCtaLabel = computed(() => {
@@ -679,12 +696,21 @@ function trimmed(values: Record<string, string>) {
 	)
 }
 
+const showsPendingState = computed(
+	() => !!(completed.value?.pendingVerification || completed.value?.approvalPending),
+)
+
 const successTitle = computed(() => {
+	if (completed.value?.approvalPending) return __("Request sent")
 	if (completed.value?.pendingVerification) return __("Booking received")
 	return isZoomEvent.value ? __("Registration confirmed") : __("You're registered")
 })
 
 const successMessage = computed(() => {
+	if (completed.value?.approvalPending)
+		return __("Pending approval. We'll email {0} once the organizer decides.", [
+			billing.value.buyer_email,
+		])
 	if (completed.value?.pendingVerification)
 		return __("Your payment is awaiting verification. We'll email {0} once it's confirmed.", [
 			billing.value.buyer_email,

@@ -1,0 +1,10 @@
+{% extends "buzz/templates/emails/base.html" %}
+
+{% block preheader %}An update on your request to join {{ event_title }}.{% endblock %}
+{% block title %}Update on your request{% endblock %}
+
+{% block content %}
+<p style="margin:0 0 24px">
+  {% if doc.rejection_reason %}{{ doc.rejection_reason | e }}{% else %}The organizer wasn't able to confirm your spot this time.{% endif %}
+</p>
+{% endblock %}

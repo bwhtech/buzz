@@ -45,6 +45,7 @@ class TicketHoldResponse(APIResponse):
 class FreeBookingResponse(APIResponse):
 	booking_name: str
 	redirect_to: str
+	approval_pending: bool = False
 
 
 class OfflineBookingResponse(APIResponse):
@@ -103,6 +104,8 @@ class ConfirmationBooking(APIResponse):
 	coupon_code: str | None
 	payment_method: str | None
 	booked_on: datetime
+	requires_approval: bool
+	rejection_reason: str | None
 
 
 class ConfirmationTicket(APIResponse):
@@ -175,6 +178,8 @@ class BookingSummary(APIResponse):
 	payment_status: str
 	payment_method: str | None
 	is_offline: bool
+	requires_approval: bool
+	rejection_reason: str | None
 	currency: str
 	booked_on: datetime
 	lines: list[BookingLine]
@@ -200,3 +205,53 @@ class MyBooking(APIResponse):
 	status: str | None
 	# Only counted by the list; each row is a plain ticket_type pair.
 	attendees: list
+
+
+class PendingAttendee(APIResponse):
+	full_name: str
+	email: str | None
+	ticket_type: str
+
+
+class PendingAnswer(APIResponse):
+	label: str | None
+	value: str | None
+
+
+class PendingBooking(APIResponse):
+	name: str
+	buyer_name: str | None
+	buyer_email: str | None
+	requested_at: datetime
+	previously_declined: bool
+	attendees: list[PendingAttendee]
+	answers: list[PendingAnswer]
+
+
+class PendingBookingsResponse(APIResponse):
+	total: int
+	bookings: list[PendingBooking]
+
+
+class FailedApproval(APIResponse):
+	booking: str
+	error: str
+
+
+class ApproveBookingsResponse(APIResponse):
+	approved: list[str]
+	failed: list[FailedApproval]
+
+
+class DeclineBookingsResponse(APIResponse):
+	declined: list[str]
+
+
+class AffectedRequestsResponse(APIResponse):
+	count: int
+
+
+class SetApprovalResponse(APIResponse):
+	approved: int
+	failed: int
+	declined: int

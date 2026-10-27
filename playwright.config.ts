@@ -66,7 +66,7 @@ export default defineConfig({
 		{
 			name: "chromium",
 			testIgnore:
-				/guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets|language|user-settings|ticket-holds|offline-payment|coupons/,
+				/guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets|language|user-settings|ticket-holds|offline-payment|coupons|approval-registration/,
 			use: {
 				...devices["Desktop Chrome"],
 				storageState: authFile,
@@ -229,6 +229,24 @@ export default defineConfig({
 				storageState: authFile,
 			},
 			dependencies: ["coupons-setup"],
+		},
+		{
+			name: "approval-registration-setup",
+			testMatch: /approval-registration\.setup\.ts/,
+			use: {
+				storageState: authFile,
+			},
+			dependencies: ["setup"],
+		},
+		{
+			// The organizer runs on the shared session; each requester gets a context of their own.
+			name: "approval-registration-chromium",
+			testMatch: /approval-registration\.spec\.ts/,
+			use: {
+				...devices["Desktop Chrome"],
+				storageState: authFile,
+			},
+			dependencies: ["approval-registration-setup"],
 		},
 		{
 			name: "ticket-holds-setup",

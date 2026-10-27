@@ -4,7 +4,6 @@ import { computed, ref } from "vue"
 import { useRouter } from "vue-router"
 
 import QuickActionTile, { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
-import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import type { EventGuest, EventGuests } from "@/types"
 import { downloadCsv } from "@/utils/csv"
 
@@ -20,15 +19,10 @@ const props = defineProps<{
 const exporting = ref(false)
 const router = useRouter()
 
-const copyToClipboard = useCopyToClipboard()
-
 const checkInHref = () =>
 	router.resolve({ name: "check-in", params: { eventName: props.event } }).href
 
 const openCheckIn = () => window.open(checkInHref(), "_blank")
-
-const copyCheckInLink = () =>
-	copyToClipboard(new URL(checkInHref(), window.location.origin).href, "Check-in link copied")
 
 // The list is paged, so the export walks it: a hundred at a time until the server says
 // there is no next page.
@@ -67,7 +61,6 @@ async function exportGuests() {
 }
 
 const actions = computed(() => [
-	{ label: "Copy check-in link", icon: "lucide-link", run: copyCheckInLink, loading: false },
 	{
 		label: "Manage zones",
 		icon: "lucide-settings-2",

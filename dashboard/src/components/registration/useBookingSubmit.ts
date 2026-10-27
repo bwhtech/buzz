@@ -37,7 +37,11 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 
 	const offlineMethod = ref<OfflineMethod | null>(null)
 	const pendingPayload = ref<Payload | null>(null)
-	const completed = ref<{ bookingName: string; pendingVerification: boolean } | null>(null)
+	const completed = ref<{
+		bookingName: string
+		pendingVerification: boolean
+		approvalPending: boolean
+	} | null>(null)
 
 	const processBooking = useCall<BookingSubmitResponse, { booking: Payload }>({
 		url: "/api/v2/method/buzz.api.booking.process_booking",
@@ -108,6 +112,7 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 			completed.value = {
 				bookingName: action.bookingName,
 				pendingVerification: action.pendingVerification,
+				approvalPending: action.approvalPending,
 			}
 	}
 

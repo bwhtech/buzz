@@ -16,6 +16,7 @@ from buzz.api.forms.fields import validate_excluded_fields
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 from buzz.events.doctype.event_check_in_zone.event_check_in_zone import create_default_zone
 from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import create_for_event
+from buzz.ticketing.approval import validate_free_only
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import create_ticket_categories
 from buzz.utils import get_time_zone_label, only_if_app_installed
 
@@ -90,6 +91,7 @@ class BuzzEvent(Document):
 		proposal: DF.Link | None
 		registration_url: DF.Data | None
 		registrations_close_at: DF.Datetime | None
+		requires_approval: DF.Check
 		route: DF.Data | None
 		schedule: DF.Table[ScheduleItem]
 		send_booking_confirmation_email: DF.Check
@@ -137,6 +139,7 @@ class BuzzEvent(Document):
 		self.validate_schedule()
 		self.validate_route()
 		self.validate_tax_settings()
+		self.validate_approval_needs_free_tickets()
 		self.validate_guest_verification_config()
 		self.validate_custom_forms()
 		self.clear_unused_location()
@@ -255,6 +258,10 @@ class BuzzEvent(Document):
 				self.tax_percentage = 18
 			if not 0 <= self.tax_percentage <= 100:
 				frappe.throw(_("Tax rate must be between 0 and 100"))
+
+	def validate_approval_needs_free_tickets(self):
+		if self.requires_approval and not self.is_new():
+			validate_free_only(self.name, True, False)
 
 	def validate_route(self):
 		if self.is_published and not self.route:

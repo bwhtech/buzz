@@ -9,12 +9,18 @@ export interface BookingSubmitResponse {
 	payment_link?: string
 	redirect_to?: string
 	offline_payment?: boolean
+	approval_pending?: boolean
 }
 
 export type BookingSuccessAction =
 	| { type: "external"; url: string }
 	| { type: "route"; path: string }
-	| { type: "guest-inline"; bookingName: string; pendingVerification: boolean }
+	| {
+			type: "guest-inline"
+			bookingName: string
+			pendingVerification: boolean
+			approvalPending: boolean
+	  }
 
 export function resolveBookingSuccessAction(
 	data: BookingSubmitResponse,
@@ -38,7 +44,16 @@ export function resolveBookingSuccessAction(
 	// A guest has no session to read /bookings/<name> with, so an offline booking stays
 	// inline and says so instead of claiming tickets were sent.
 	if (isGuestMode) {
-		return { type: "guest-inline", bookingName, pendingVerification: !!data.offline_payment }
+		return {
+			type: "guest-inline",
+			bookingName,
+			pendingVerification: !!data.offline_payment,
+			approvalPending: !!data.approval_pending,
+		}
+	}
+
+	if (data.approval_pending) {
+		return { type: "route", path: `/bookings/${bookingName}?success=true&approval=true` }
 	}
 
 	if (data.offline_payment) {

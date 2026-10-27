@@ -1,11 +1,11 @@
 {% extends "buzz/templates/emails/base.html" %}
 
-{% block preheader %}Your booking for {{ event_title }} is confirmed.{% endblock %}
-{% block title %}Booking confirmed{% endblock %}
+{% block preheader %}{% if approved %}Your request to join {{ event_title }} was approved.{% else %}Your booking for {{ event_title }} is confirmed.{% endif %}{% endblock %}
+{% block title %}{% if approved %}You're in!{% else %}Booking confirmed{% endif %}{% endblock %}
 
 {% block content %}
 <p style="margin:0 0 24px">
-  Thanks for booking.{% if event_doc.send_ticket_email %} Each attendee gets their own ticket{% if not meeting.is_online %} with an entry QR code{% endif %} by email.{% endif %}
+  {% if approved %}The organizer approved your request.{% else %}Thanks for booking.{% endif %}{% if event_doc.send_ticket_email %} Each attendee gets their own ticket{% if not meeting.is_online %} with an entry QR code{% endif %} by email.{% endif %}
 </p>
 {% set email_type = "booking" %}
 {% include "buzz/templates/emails/_join_meeting.html" %}

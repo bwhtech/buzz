@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import { useEventListener } from "@vueuse/core"
 import { Alert, Button, ErrorMessage, Skeleton } from "frappe-ui"
-import { computed, ref } from "vue"
+import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import RegistrationActions from "@/components/dashboard/events/RegistrationActions.vue"
 import AddPricedItemDialog from "@/components/dashboard/sponsorships/AddPricedItemDialog.vue"
+import ApprovalOffDialog from "@/components/dashboard/ticket-types/ApprovalOffDialog.vue"
 import PaymentProviders from "@/components/dashboard/ticket-types/PaymentProviders.vue"
 import RevenueCards from "@/components/dashboard/ticket-types/RevenueCards.vue"
 import TaxSettings from "@/components/dashboard/ticket-types/TaxSettings.vue"
 import TicketCategoryDialog from "@/components/dashboard/ticket-types/TicketCategoryDialog.vue"
 import TicketTypeDrawer from "@/components/dashboard/ticket-types/TicketTypeDrawer.vue"
 import TicketTypesSection from "@/components/dashboard/ticket-types/TicketTypesSection.vue"
+import { useApprovalToggle } from "@/composables/useApprovalToggle"
 import { useTaxSettingsForm } from "@/composables/useTaxSettingsForm"
 import { useTicketTypeOrganizer } from "@/composables/useTicketTypeOrganizer"
 import { useEventTicketTypes } from "@/data/ticketTypes"
@@ -42,6 +44,15 @@ const organizer = useTicketTypeOrganizer(
 	() => page.reload(),
 )
 
+const approval = useApprovalToggle(eventId, () => page.reload())
+
+const approvalDialogOpen = computed<boolean>({
+	get: () => approval.waiting.value !== null,
+	set: (open) => !open && (approval.waiting.value = null),
+})
+
+const hasPricedTickets = computed(() => Boolean(page.data?.has_priced_items))
+
 const addDialogOpen = ref(false)
 const addToCategory = ref("")
 
@@ -60,6 +71,12 @@ function openCategoryDialog(category: TicketCategoryItem | null) {
 
 // Held by name so a reload keeps the drawer pointing at fresh data.
 const selectedName = ref<string | null>(null)
+
+// The drawer would sit over the dialog that asks about waiting requests, so it steps aside.
+watch(
+	() => approval.waiting.value,
+	(waiting) => waiting && (selectedName.value = null),
+)
 
 const selectedTicketType = computed(
 	() => page.data?.ticket_types.find((row) => row.name === selectedName.value) ?? null,
@@ -149,7 +166,10 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				:can-write="page.data.can_write"
 				:allow-guest-booking="page.data.allow_guest_booking"
 				:guest-verification-method="page.data.guest_verification_method"
+				:requires-approval="page.data.requires_approval"
+				:has-priced-items="hasPricedTickets"
 				@changed="page.reload()"
+				@approval-change="approval.change($event)"
 			/>
 		</template>
 	</PageWithSidebar>
@@ -161,7 +181,17 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		:categories="page.data?.categories ?? []"
 		:can-write="!!page.data?.can_write"
 		:paid-events-enabled="!!page.data?.paid_events_enabled"
+		:event-requires-approval="!!page.data?.requires_approval"
+		:has-priced-tickets="hasPricedTickets"
 		@changed="page.reload()"
+		@approval-change="approval.change($event, selectedName ?? undefined)"
+	/>
+
+	<ApprovalOffDialog
+		v-model="approvalDialogOpen"
+		:count="approval.waiting.value?.count ?? 0"
+		:loading="approval.saving()"
+		@confirm="approval.confirm"
 	/>
 
 	<TicketCategoryDialog

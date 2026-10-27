@@ -561,6 +561,7 @@ export interface AvailableTicketType {
 	prices?: { currency: string; price: number }[]
 	price_note?: string
 	category?: string | null
+	requires_approval?: boolean
 }
 
 // buzz.api.booking.hold_tickets
@@ -798,6 +799,7 @@ export interface TicketTypeItem {
 	max_tickets_available: number
 	auto_unpublish_after: string | null
 	is_published: boolean
+	requires_approval: boolean
 	tickets_sold: number
 	prices: TicketTypePrice[]
 }
@@ -818,6 +820,8 @@ export interface EventTicketTypes {
 	has_team_tax_details: boolean
 	can_edit_team: boolean
 	paid_events_enabled: boolean
+	requires_approval: boolean
+	has_priced_items: boolean
 	categories: TicketCategoryItem[]
 	ticket_types: TicketTypeItem[]
 	payment_providers: PaymentProviderItem[]
@@ -897,4 +901,33 @@ export interface EventCoupons {
 	coupons: CouponItem[]
 	ticket_types: CouponTicketType[]
 	discounted: { currency: string; amount: number }[]
+}
+
+// buzz.api.booking.approvals
+export type PendingAction = "keep" | "approve" | "decline"
+
+export interface PendingBooking {
+	name: string
+	buyer_name: string
+	buyer_email: string
+	requested_at: string
+	previously_declined: boolean
+	attendees: { full_name: string; email: string; ticket_type: string }[]
+	answers: { label: string; value: string }[]
+}
+
+export interface PendingBookings {
+	total: number
+	bookings: PendingBooking[]
+}
+
+export interface ApproveBookingsResult {
+	approved: string[]
+	failed: { booking: string; error: string }[]
+}
+
+export interface SetApprovalResult {
+	approved: number
+	failed: number
+	declined: number
 }

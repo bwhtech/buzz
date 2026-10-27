@@ -244,6 +244,7 @@ class TicketTypeItem(APIResponse):
 	max_tickets_available: int
 	auto_unpublish_after: date | None
 	is_published: bool
+	requires_approval: bool
 	tickets_sold: int
 	prices: list[TicketTypePrice]
 
@@ -277,6 +278,8 @@ class EventTicketTypes(APIResponse):
 	has_team_tax_details: bool
 	can_edit_team: bool
 	paid_events_enabled: bool
+	requires_approval: bool
+	has_priced_items: bool
 	categories: list[TicketCategoryItem]
 	ticket_types: list[TicketTypeItem]
 	payment_providers: list[PaymentProviderItem]

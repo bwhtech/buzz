@@ -8,7 +8,10 @@ const isSoldOut = (ticketType: TicketTypeItem) =>
 
 export function ticketTypeBadge(ticketType: TicketTypeItem) {
 	if (!ticketType.is_published) return { label: "Disabled", theme: "gray" as const }
-	return isSoldOut(ticketType) ? { label: "Sold out", theme: "amber" as const } : null
+	if (isSoldOut(ticketType)) return { label: "Sold out", theme: "amber" as const }
+	return ticketType.requires_approval
+		? { label: "Requires approval", theme: "gray" as const }
+		: null
 }
 
 export function salesLabel(ticketType: TicketTypeItem) {

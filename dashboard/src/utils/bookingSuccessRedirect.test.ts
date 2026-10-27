@@ -33,6 +33,7 @@ test("guest with no redirect_to and no payment_link falls back to inline confirm
 		type: "guest-inline",
 		bookingName: "B-0003",
 		pendingVerification: false,
+		approvalPending: false,
 	})
 })
 
@@ -45,6 +46,7 @@ test("guest offline booking stays inline but is pending verification", () => {
 		type: "guest-inline",
 		bookingName: "B-0006",
 		pendingVerification: true,
+		approvalPending: false,
 	})
 })
 
@@ -67,4 +69,25 @@ test("logged-in booking with none of the above falls back to bookings page", () 
 test("a response with no booking name and no payment link throws", () => {
 	assert.throws(() => resolveBookingSuccessAction({}, { isGuestMode: false }), /booking name/)
 	assert.throws(() => resolveBookingSuccessAction({}, { isGuestMode: true }), /booking name/)
+})
+
+test("guest approval request stays inline and is pending approval", () => {
+	const action = resolveBookingSuccessAction(
+		{ booking_name: "B-0007", approval_pending: true },
+		{ isGuestMode: true },
+	)
+	assert.deepEqual(action, {
+		type: "guest-inline",
+		bookingName: "B-0007",
+		pendingVerification: false,
+		approvalPending: true,
+	})
+})
+
+test("logged-in approval request routes to the booking with the approval flag", () => {
+	const action = resolveBookingSuccessAction(
+		{ booking_name: "B-0008", approval_pending: true },
+		{ isGuestMode: false },
+	)
+	assert.deepEqual(action, { type: "route", path: "/bookings/B-0008?success=true&approval=true" })
 })

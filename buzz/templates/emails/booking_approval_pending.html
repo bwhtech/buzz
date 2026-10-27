@@ -1,0 +1,13 @@
+{% extends "buzz/templates/emails/base.html" %}
+
+{% block preheader %}Your request to join {{ event_title }} is pending.{% endblock %}
+{% block title %}Request received{% endblock %}
+
+{% block content %}
+<p style="margin:0 0 24px">
+  The organizer reviews every request. We will email you once they decide.
+  <strong style="color:#171717">No ticket has been issued yet.</strong>
+</p>
+{% set total_label = "Total" %}
+{% include "buzz/templates/emails/_booking_summary.html" %}
+{% endblock %}

@@ -28,5 +28,9 @@ class EventTicketTypeFactory(BaseFactory[EventTicketType]):
 		return {"prices": [{"currency": "INR", "price": 500}]}
 
 	@property
+	def requires_approval(self) -> dict[str, Any]:
+		return {"requires_approval": 1}
+
+	@property
 	def unpublished(self) -> dict[str, Any]:
 		return {"is_published": 0}

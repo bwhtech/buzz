@@ -16,6 +16,7 @@ from buzz.api.events.taxes import team_tax_details
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import is_feature_enabled
 from buzz.payments import get_payment_gateways_for_event
 from buzz.permissions import can_manage_members, has_section_permission, has_team_access
+from buzz.ticketing.approval import has_priced_items
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	PAID_EVENTS_FLAG,
@@ -30,6 +31,7 @@ TICKET_TYPE_FIELDS = [
 	"max_tickets_available",
 	"auto_unpublish_after",
 	"is_published",
+	"requires_approval",
 	{"prices": ["currency", "price"]},
 ]
 
@@ -61,6 +63,8 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		**visible_tax_details(doc.team),
 		can_edit_team=can_manage_members(doc.team),
 		paid_events_enabled=is_feature_enabled(doc.team, PAID_EVENTS_FLAG),
+		requires_approval=bool(doc.requires_approval),
+		has_priced_items=has_priced_items(event),
 		categories=ticket_categories(event),
 		ticket_types=[ticket_type_item(row, sold, sold_by_currency) for row in rows],
 		payment_providers=payment_providers(event),

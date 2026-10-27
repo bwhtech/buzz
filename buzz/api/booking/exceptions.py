@@ -1,6 +1,6 @@
 from frappe import _lt
 
-from buzz.api.exceptions import BuzzAPIError, Conflict
+from buzz.api.exceptions import BuzzAPIError, Conflict, NotPermitted
 
 
 class TooManyOTPAttempts(BuzzAPIError):
@@ -55,3 +55,23 @@ class InvoiceDetailsMissing(BuzzAPIError):
 class InvalidCoupon(BuzzAPIError):
 	title = _lt("Invalid Code")
 	message = _lt("Invalid or expired code")
+
+
+class ApprovalNeedsFreeTickets(BuzzAPIError):
+	title = _lt("Approval Needs Free Tickets")
+	message = _lt("Approval only works with free tickets. Turn off approval first.")
+
+
+class ApprovalRequestPending(Conflict):
+	title = _lt("Request Pending")
+	message = _lt("You already have a request pending for this event")
+
+
+class BookingNotPending(Conflict):
+	title = _lt("Request Not Pending")
+	message = _lt("This request is no longer waiting for approval.")
+
+
+class CannotWithdrawBooking(NotPermitted):
+	title = _lt("Not Permitted")
+	message = _lt("You cannot withdraw this request.")

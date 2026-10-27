@@ -69,6 +69,7 @@ def get_event_details(event_doc: "BuzzEvent"):
 		"allow_guest_booking": event_doc.allow_guest_booking,
 		"guest_verification_method": event_doc.guest_verification_method,
 		"default_ticket_type": event_doc.default_ticket_type,
+		"requires_approval": event_doc.requires_approval,
 	}
 
 
