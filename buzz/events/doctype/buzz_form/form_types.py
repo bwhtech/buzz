@@ -1,4 +1,5 @@
 import re
+from typing import ClassVar
 
 import frappe
 from frappe import _, scrub
@@ -73,13 +74,20 @@ class FormType:
 	reserved_fieldnames = frozenset()
 	# Standard fields the organiser may move or rename but never hide.
 	locked_fieldnames = frozenset()
+	# The only standard fields offered, in order, with the label the booking page shows.
+	# None offers every renderable field under its doctype label.
+	core_fields: ClassVar[dict[str, str] | None] = None
 	answers_field = "additional_fields"
 
 	def standard_fields(self, form_doctype: str) -> dict:
-		"""The doctype's own fields the form offers; a form without a page renders none."""
-		if not self.has_page:
-			return {}
-		return get_renderable_fields(form_doctype, system_exclude_fields(form_doctype))
+		"""The doctype's own fields the form offers."""
+		fields = get_renderable_fields(form_doctype, system_exclude_fields(form_doctype))
+		if self.core_fields is not None:
+			return {fieldname: fields[fieldname] for fieldname in self.core_fields}
+		return fields if self.has_page else {}
+
+	def default_label(self, fieldname: str, df) -> str:
+		return (self.core_fields or {}).get(fieldname) or df.label
 
 	def is_closed(self, form) -> bool:
 		return is_form_closed(form.publish, form.auto_close_at, event_time_zone(form.event))
@@ -131,6 +139,12 @@ class TalkProposalFormType(FormType):
 class RegistrationFormType(FormType):
 	one_per_event = True
 	has_page = False  # registration is served by /book-tickets, not /b/<event>/<route>
+	core_fields: ClassVar[dict[str, str]] = {
+		"buyer_name": "Full name",
+		"buyer_email": "Email",
+		"buyer_phone": "Phone",
+	}
+	locked_fieldnames = frozenset({"buyer_name", "buyer_email"})
 
 	def is_closed(self, form) -> bool:
 		event = frappe.get_cached_doc("Buzz Event", form.event)
@@ -144,6 +158,12 @@ class AttendeeFormType(FormType):
 
 	one_per_event = True
 	has_page = False
+	core_fields: ClassVar[dict[str, str]] = {
+		"first_name": "First name",
+		"last_name": "Last name",
+		"email": "Email",
+	}
+	locked_fieldnames = frozenset({"first_name", "email"})
 	answers_field = "custom_fields"
 
 	def is_closed(self, form) -> bool:

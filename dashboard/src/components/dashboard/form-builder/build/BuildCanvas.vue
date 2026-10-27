@@ -23,8 +23,6 @@ const props = defineProps<{
 	editor: QuestionEditor
 	device: "desktop" | "mobile"
 	preview: boolean
-	// What the booking page always asks before these questions.
-	fixedFields?: string[]
 }>()
 defineEmits<{ openLogic: [] }>()
 
@@ -187,21 +185,6 @@ watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.fo
 					@leave-down="focusRow(0, 'label')"
 				/>
 
-				<p
-					v-if="fixedFields?.length"
-					class="mb-3 flex flex-wrap items-center gap-1.5 text-p-sm text-ink-gray-5"
-				>
-					<span class="lucide-lock size-3.5" aria-hidden="true" />
-					Always asked:
-					<span
-						v-for="label in fixedFields"
-						:key="label"
-						class="rounded-5 bg-surface-gray-2 px-1.5 py-0.5 text-ink-gray-7"
-					>
-						{{ label }}
-					</span>
-				</p>
-
 				<StepBar
 					v-if="hasSteps && steps.steps.value.length > 1"
 					:steps="steps"
@@ -279,6 +262,19 @@ watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.fo
 							@pick="addItem"
 							@leave-up="focusRow(stepRows.length - 1, 'label')"
 						/>
+					</div>
+				</div>
+
+				<div
+					v-if="form.form_doctype === 'Event Booking'"
+					class="mt-4 flex gap-3 rounded-5 border border-dashed border-outline-gray-3 p-4"
+				>
+					<span class="lucide-receipt-text mt-0.5 size-4 text-ink-gray-5" aria-hidden="true" />
+					<div class="flex flex-col gap-1">
+						<span class="text-base font-medium text-ink-gray-8">Tax invoice</span>
+						<span class="text-p-sm text-ink-gray-5">
+							Shown when the event charges tax: tax ID, business name, billing address and state.
+						</span>
 					</div>
 				</div>
 

@@ -336,7 +336,10 @@ class TestAttendeeForm(IntegrationTestCase):
 
 		self.attendee_form.save()
 
-		self.assertEqual([question.fieldname for question in self.attendee_form.questions], ["company"])
+		self.assertEqual(
+			[question.fieldname for question in self.attendee_form.questions if not question.is_standard],
+			["company"],
+		)
 
 	def test_a_question_may_show_for_a_ticket_type(self):
 		ticket_type = EventTicketTypeFactory.create(event=self.event.name)
@@ -348,7 +351,9 @@ class TestAttendeeForm(IntegrationTestCase):
 
 		self.attendee_form.save()
 
-		self.assertEqual(len(self.attendee_form.questions), 1)
+		self.assertEqual(
+			len([question for question in self.attendee_form.questions if not question.is_standard]), 1
+		)
 
 	def test_a_ticket_type_of_another_event_is_refused(self):
 		foreign_ticket_type = EventTicketTypeFactory.create()

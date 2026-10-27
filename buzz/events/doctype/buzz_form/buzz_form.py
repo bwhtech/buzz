@@ -100,11 +100,17 @@ class BuzzForm(Document):
 
 	def sync_standard_rows(self):
 		"""Every field the form type offers keeps a row, so organisers can order, rename or hide it."""
-		fields = form_type(self.form_doctype).standard_fields(self.form_doctype)
+		kind = form_type(self.form_doctype)
+		fields = kind.standard_fields(self.form_doctype)
 		rows = [row for row in self.questions if not row.is_standard or row.fieldname in fields]
 		present = {row.fieldname for row in rows if row.is_standard}
 		missing = [
-			{"is_standard": 1, "fieldname": fieldname, "label": df.label, "enabled": 1}
+			{
+				"is_standard": 1,
+				"fieldname": fieldname,
+				"label": kind.default_label(fieldname, df),
+				"enabled": 1,
+			}
 			for fieldname, df in fields.items()
 			if fieldname not in present
 		]
@@ -126,7 +132,7 @@ class BuzzForm(Document):
 			MandatoryFieldsHidden.throw(form_doctype=_(self.form_doctype), fieldnames=", ".join(hidden))
 		for row in self.questions:
 			if row.is_standard:
-				row.label = row.label or fields[row.fieldname].label
+				row.label = row.label or kind.default_label(row.fieldname, fields[row.fieldname])
 
 	def validate_questions(self):
 		reserved = form_type(self.form_doctype).reserved_fieldnames

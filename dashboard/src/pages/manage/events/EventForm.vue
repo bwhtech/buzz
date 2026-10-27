@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useEventListener } from "@vueuse/core"
+import { breakpointsTailwind, useBreakpoints, useEventListener } from "@vueuse/core"
 import { useRouteQuery } from "@vueuse/router"
 import { ErrorMessage, Spinner, TabButtons } from "frappe-ui"
 import { computed, ref, watch } from "vue"
@@ -7,8 +7,10 @@ import { onBeforeRouteLeave, useRoute } from "vue-router"
 
 import BuildCanvas from "@/components/dashboard/form-builder/build/BuildCanvas.vue"
 import { useQuestionEditor } from "@/components/dashboard/form-builder/build/useQuestionEditor"
+import { fieldType } from "@/components/dashboard/form-builder/fieldTypes"
 import FormBuilderLayout from "@/components/dashboard/form-builder/FormBuilderLayout.vue"
 import LogicTab from "@/components/dashboard/form-builder/logic/LogicTab.vue"
+import RegistrationFormRail from "@/components/dashboard/form-builder/RegistrationFormRail.vue"
 import SettingsTab from "@/components/dashboard/form-builder/settings/SettingsTab.vue"
 import { useFormBuilder } from "@/components/dashboard/form-builder/useFormBuilder"
 import type { FrappeError } from "@/types"
@@ -23,12 +25,30 @@ const builders = computed(() => (isRegistration.value ? [builder, attendee] : [b
 
 const SCOPES = [
 	{ label: "Attendees · each ticket", value: "attendee" },
-	{ label: "Booking · once", value: "booking" },
+	{ label: "Billing · once", value: "booking" },
 ]
-const FIXED_FIELDS: Record<string, string[]> = {
-	attendee: ["First name", "Last name", "Email"],
-	booking: ["Name", "Email"],
-}
+const fieldCount = (one: typeof builder) =>
+	(one.draft.value?.questions ?? []).filter(
+		(question) => fieldType(question.fieldtype).group !== "Layout",
+	).length
+const railItems = computed(() => [
+	{
+		value: "attendee",
+		label: "Attendees",
+		description: "For each ticket",
+		icon: "lucide-users",
+		count: fieldCount(attendee),
+	},
+	{
+		value: "booking",
+		label: "Billing",
+		description: "Buyer and tax details",
+		icon: "lucide-receipt",
+		count: fieldCount(builder),
+	},
+])
+// The rail sits beside the 760px canvas, which leaves it room from xl up.
+const isNarrow = useBreakpoints(breakpointsTailwind).smaller("xl")
 const scope = ref("attendee")
 const active = computed(() =>
 	isRegistration.value && scope.value === "attendee" ? attendee : builder,
@@ -70,12 +90,18 @@ useEventListener(window, "beforeunload", (event) => dirty.value && event.prevent
 		</div>
 		<div v-else class="flex h-full flex-col">
 			<div
-				v-if="isRegistration && tab !== 'settings'"
+				v-if="isRegistration && tab !== 'settings' && isNarrow"
 				class="flex justify-center bg-surface-base pt-3"
 			>
 				<TabButtons v-model="scope" :options="SCOPES" />
 			</div>
-			<div class="min-h-0 flex-1">
+			<div class="relative min-h-0 flex-1">
+				<RegistrationFormRail
+					v-if="isRegistration && tab !== 'settings' && !isNarrow"
+					v-model="scope"
+					:items="railItems"
+					class="absolute left-2 top-2 z-10"
+				/>
 				<BuildCanvas
 					v-if="tab === 'build'"
 					:key="scope"
@@ -84,7 +110,6 @@ useEventListener(window, "beforeunload", (event) => dirty.value && event.prevent
 					:editor="editor"
 					:device="device"
 					:preview="preview"
-					:fixed-fields="isRegistration ? FIXED_FIELDS[scope] : undefined"
 					@open-logic="tab = 'logic'"
 				/>
 				<LogicTab

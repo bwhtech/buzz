@@ -165,6 +165,7 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 					question.placeholder,
 				)
 				for question in form.questions
+				if not question.is_standard
 			],
 			[("Company", "Data", 1, "Enter company name")],
 		)
