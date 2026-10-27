@@ -70,7 +70,7 @@ defineExpose({ focus: () => input.value?.focus() })
 		</div>
 		<div
 			v-if="isSearching"
-			class="absolute left-8 top-full z-20 mt-1 max-h-[340px] w-80 overflow-y-auto rounded-5 bg-surface-modal p-1 shadow-xl ring-1 ring-outline-gray-1"
+			class="absolute left-8 top-full z-20 mt-1 max-h-[340px] w-80 overflow-y-auto rounded-5 bg-surface-elevation-3 p-1 shadow-xl ring-1 ring-outline-gray-1"
 			role="listbox"
 		>
 			<p v-if="!items.length" class="px-2.5 py-2 text-p-sm text-ink-gray-5">No field matches</p>

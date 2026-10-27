@@ -170,7 +170,7 @@ export const presetsFor = (formDoctype: string): Preset[] =>
 export const takesSteps = (formDoctype: string) =>
 	!["Event Booking", "Event Booking Attendee"].includes(formDoctype)
 
-// Steps come from "Add step", so page breaks stay out of the add-field menu.
+// Page breaks come only from "Add step", never as a field of their own.
 export const paletteTypesFor = (): string[] =>
 	Object.entries(FIELD_TYPES)
 		.filter(([key, type]) => type.group !== "Standard" && key !== "Page Break")
@@ -185,6 +185,14 @@ export interface MenuItem {
 }
 
 const GROUP_ORDER: FieldGroup[] = ["Basic", "Choice", "Media", "Layout"]
+
+export const ADD_STEP: MenuItem = {
+	key: "Add step",
+	label: "Add step",
+	icon: FIELD_TYPES["Page Break"].icon,
+	hint: "",
+	fields: [],
+}
 
 // What the add-field menu and the palette offer, grouped and filtered by the search text.
 export function fieldMenu(formDoctype: string, query = ""): { group: string; items: MenuItem[] }[] {
@@ -213,5 +221,7 @@ export function fieldMenu(formDoctype: string, query = ""): { group: string; ite
 			fields: preset.fields,
 		}))
 	groups.splice(1, 0, { group: "Ready-made", items: presets })
+	if (takesSteps(formDoctype) && matches(ADD_STEP.label))
+		groups.find((group) => group.group === "Layout")?.items.push(ADD_STEP)
 	return groups.filter((group) => group.items.length)
 }

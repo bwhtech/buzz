@@ -5,7 +5,7 @@ import { computed, nextTick, ref, toRaw, watch } from "vue"
 
 import { useIsMobile } from "@/composables/useIsMobile"
 
-import { type MenuItem, takesSteps } from "../fieldTypes"
+import { ADD_STEP, type MenuItem, takesSteps } from "../fieldTypes"
 import type { BuzzFormDoc, DoctypeField, FormQuestion } from "../useFormBuilder"
 import AddFieldSheet from "./AddFieldSheet.vue"
 import FieldComposer from "./FieldComposer.vue"
@@ -104,6 +104,7 @@ function endDrag() {
 
 // New fields land after the selected one, or at the end of the step on screen.
 function addItem(item: MenuItem) {
+	if (item === ADD_STEP) return steps.add()
 	const selected = selectedIndex.value
 	const { start, end } = steps.step.value
 	const at = selected >= start && selected < end ? selected + 1 : end
