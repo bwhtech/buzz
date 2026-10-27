@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BottomSheet, Button } from "frappe-ui"
+import { BottomSheet, Button, Tooltip } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import { useIsMobile } from "@/composables/useIsMobile"
@@ -13,6 +13,8 @@ import { emptyRule } from "./ruleOptions"
 const form = defineModel<BuzzFormDoc>({ required: true })
 const props = defineProps<{ doctypeFields: DoctypeField[]; editor: QuestionEditor }>()
 defineEmits<{ openBuild: [] }>()
+
+const NO_TARGETS = "Add a question first: core fields are always asked"
 
 // Rules act on the form's own questions; core fields always show.
 const targets = computed(() =>
@@ -63,14 +65,15 @@ function remove(index: number) {
 						Show, hide or require fields based on earlier answers
 					</p>
 				</div>
-				<Button
-					v-if="!isPhone"
-					variant="solid"
-					icon-left="lucide-plus"
-					label="Add rule"
-					:disabled="!targets.length"
-					@click="addRule"
-				/>
+				<Tooltip v-if="!isPhone" :text="NO_TARGETS" :disabled="!!targets.length">
+					<Button
+						variant="solid"
+						icon-left="lucide-plus"
+						label="Add rule"
+						:disabled="!targets.length"
+						@click="addRule"
+					/>
+				</Tooltip>
 			</header>
 
 			<RuleCard
@@ -106,9 +109,10 @@ function remove(index: number) {
 					/>
 				</template>
 				<template v-else>
-					<p class="text-p-base font-medium text-ink-gray-8">Add a question first</p>
+					<p class="text-p-base font-medium text-ink-gray-8">Logic needs a question you add</p>
 					<p class="max-w-[340px] text-p-sm text-ink-gray-5">
-						Rules show, hide or require the questions you add. Core fields are always asked.
+						This form only has core fields, and those are always asked, so no rule can change them.
+						Add a question in Build to show, hide or require it based on answers.
 					</p>
 					<Button
 						class="mt-2"
