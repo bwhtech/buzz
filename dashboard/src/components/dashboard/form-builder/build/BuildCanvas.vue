@@ -3,8 +3,11 @@ import { breakpointsTailwind, useBreakpoints, useEventListener } from "@vueuse/c
 import { BottomSheet, Button } from "frappe-ui"
 import { computed, ref, toRaw, watch } from "vue"
 
+import { useIsMobile } from "@/composables/useIsMobile"
+
 import { type MenuItem, takesSteps } from "../fieldTypes"
 import type { BuzzFormDoc, DoctypeField, FormQuestion } from "../useFormBuilder"
+import AddFieldSheet from "./AddFieldSheet.vue"
 import FieldComposer from "./FieldComposer.vue"
 import FieldInspector from "./FieldInspector.vue"
 import FieldRow from "./FieldRow.vue"
@@ -33,6 +36,9 @@ const isNarrow = useBreakpoints(breakpointsTailwind).smaller("lg")
 // The phone preview sits in a card on a grey canvas; on a real phone the form fills the screen.
 const inCard = computed(() => props.device === "mobile" && !isNarrow.value)
 const twoColumns = computed(() => props.device === "desktop" && !isNarrow.value)
+// A phone gets field cards, a step navigator and an add-field sheet instead of hover tools.
+const isPhone = useIsMobile()
+const addSheetOpen = ref(false)
 
 const stepRows = computed(() => {
 	const { start, end } = steps.step.value
@@ -134,7 +140,11 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 		<div
 			class="h-full overflow-y-auto"
 			:class="
-				inCard ? 'bg-surface-gray-1 px-4 pb-20 pt-6' : 'bg-surface-base px-0 pb-24 pt-6 lg:pt-12'
+				inCard
+					? 'bg-surface-gray-1 px-4 pb-20 pt-6'
+					: isPhone
+						? 'bg-surface-base pb-36 pt-5'
+						: 'bg-surface-base pb-24 pt-6 lg:pt-12'
 			"
 			@click="editor.selected.value = null"
 		>
@@ -163,9 +173,21 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 					</span>
 				</p>
 
-				<StepBar v-if="hasSteps" :steps="steps" :compact="!twoColumns" :editable="!preview" />
+				<StepBar
+					v-if="hasSteps"
+					:steps="steps"
+					:questions="form.questions"
+					:compact="isPhone"
+					:tight="!twoColumns"
+					:editable="!preview"
+				/>
 
-				<div class="-mx-3 grid grid-cols-2 gap-y-1.5" @dragover.prevent @drop.prevent="onDrop">
+				<div
+					class="grid grid-cols-2"
+					:class="isPhone ? 'gap-y-2' : '-mx-3 gap-y-1.5'"
+					@dragover.prevent
+					@drop.prevent="onDrop"
+				>
 					<div
 						v-for="{ question, index } in stepRows"
 						:key="questionKey(question)"
@@ -187,13 +209,14 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 							:editor="editor"
 							:conditional="rulesActingOn(question) > 0"
 							:preview="preview"
+							:compact="isPhone"
 							:is-first="index === 0"
 							:is-last="index === form.questions.length - 1"
 							@dragstart="dragged = question"
 						/>
 					</div>
 					<div
-						v-if="!preview"
+						v-if="!preview && !isPhone"
 						class="relative col-span-2 mt-1.5"
 						@dragover.prevent="dropIndex = steps.step.value.end"
 						@click.stop
@@ -245,6 +268,22 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 				/>
 			</aside>
 		</Transition>
+		<template v-if="isPhone && !preview">
+			<Button
+				variant="solid"
+				size="lg"
+				icon-left="lucide-plus"
+				label="Add field"
+				class="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-20 -translate-x-1/2 shadow-xl"
+				@click="addSheetOpen = true"
+			/>
+			<AddFieldSheet
+				v-model:open="addSheetOpen"
+				:form-doctype="form.form_doctype"
+				:step-name="steps.step.value.name"
+				@pick="addItem"
+			/>
+		</template>
 		<BottomSheet v-if="isNarrow" v-model:open="inspectorOpen" title="Field settings">
 			<FieldInspector
 				v-if="selectedIndex >= 0"

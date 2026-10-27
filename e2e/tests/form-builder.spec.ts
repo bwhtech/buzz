@@ -185,22 +185,19 @@ test("registration edits attendee and booking questions, with ticket-type chips"
 test.describe("on a phone", () => {
 	test.use({ viewport: { width: 390, height: 844 } })
 
-	test("fields added from the composer open their settings in a sheet", async ({
+	test("fields are added from a sheet and open their settings from the card menu", async ({
 		page,
 		request,
 	}) => {
 		const { event, form } = await builderForm(request)
 		await page.goto(`/b/manage/events/${event}/forms/${form}`)
 
-		const composer = page.getByRole("combobox", { name: "Add a field" })
-		await composer.fill("/email")
-		await composer.press("Enter")
+		await page.getByRole("button", { name: "Add field" }).click()
+		await page.getByRole("dialog").getByRole("button", { name: "Email" }).click()
 		await expect(page.getByRole("textbox", { name: "Label of Email field" })).toBeVisible()
 
-		const row = page
-			.locator('[draggable="true"]')
-			.filter({ has: page.getByRole("textbox", { name: "Label of Email field" }) })
-		await row.getByRole("button", { name: "Field settings" }).click()
+		await page.getByRole("button", { name: "More actions" }).last().click()
+		await page.getByRole("dialog").getByRole("button", { name: "Field settings" }).click()
 		await expect(page.getByRole("dialog").getByText("Placeholder")).toBeVisible()
 	})
 })

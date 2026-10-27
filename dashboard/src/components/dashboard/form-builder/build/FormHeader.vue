@@ -46,7 +46,7 @@ const blurOnEnter = (keydown: KeyboardEvent) => (keydown.target as HTMLElement).
 			:readonly="props.readonly"
 			placeholder="Untitled form"
 			aria-label="Form name"
-			class="mt-1.5 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[30px] font-semibold leading-[1.25] tracking-[-0.02em] text-ink-gray-9 outline-none [field-sizing:content] [text-wrap:balance] placeholder:text-ink-gray-4 focus:ring-0"
+			class="mt-1.5 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[26px] md:text-[30px] font-semibold leading-[1.25] tracking-[-0.02em] text-ink-gray-9 outline-none [field-sizing:content] [text-wrap:balance] placeholder:text-ink-gray-4 focus:ring-0"
 			@keydown.enter.prevent="blurOnEnter"
 			@click.stop
 		/>

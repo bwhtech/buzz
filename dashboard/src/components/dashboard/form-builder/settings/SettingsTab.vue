@@ -101,7 +101,9 @@ async function copyLink() {
 		</nav>
 
 		<div ref="scroller" class="min-w-0 flex-1 overflow-y-auto" @scroll.passive="onScroll">
-			<div class="mx-auto flex max-w-[720px] flex-col gap-9 px-4 pb-[120px] pt-7 sm:px-8">
+			<div
+				class="mx-auto flex max-w-[720px] flex-col gap-6 px-4 pb-[120px] pt-5 md:gap-9 md:px-8 md:pt-7"
+			>
 				<SettingsSection id="settings-general" title="General">
 					<SettingsRow
 						title="Form type"

@@ -31,8 +31,9 @@ export function useSteps(questions: () => FormQuestion[]) {
 	const step = computed(() => steps.value[Math.min(current.value, steps.value.length - 1)])
 	const stepIndex = computed(() => steps.value.indexOf(step.value))
 
-	function rename(name: string) {
-		if (step.value.breakIndex >= 0) questions()[step.value.breakIndex].label = name
+	function rename(name: string, index = stepIndex.value) {
+		const target = steps.value[index]
+		if (target.breakIndex >= 0) questions()[target.breakIndex].label = name
 		else questions().unshift(pageBreak(name))
 	}
 
@@ -42,10 +43,12 @@ export function useSteps(questions: () => FormQuestion[]) {
 	}
 
 	// The step's questions join the one before it.
-	function remove() {
-		if (step.value.breakIndex < 0) return
-		questions().splice(step.value.breakIndex, 1)
-		current.value = Math.max(0, stepIndex.value - 1)
+	function remove(index = stepIndex.value) {
+		const target = steps.value[index]
+		if (index === 0 || target.breakIndex < 0) return
+		const showing = stepIndex.value
+		questions().splice(target.breakIndex, 1)
+		current.value = index <= showing ? showing - 1 : showing
 	}
 
 	const go = (index: number) => (current.value = index)

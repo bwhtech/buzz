@@ -2,6 +2,7 @@
 import { Badge, Button, Dropdown, Tooltip } from "frappe-ui"
 import { computed, ref, toRaw, watch } from "vue"
 
+import ActionSheet from "../ActionSheet.vue"
 import { FIELD_TYPES, fieldType } from "../fieldTypes"
 import type { DoctypeField, FormQuestion } from "../useFormBuilder"
 import FieldPreview from "./FieldPreview.vue"
@@ -15,6 +16,8 @@ const props = defineProps<{
 	preview: boolean
 	isFirst: boolean
 	isLast: boolean
+	// On a phone the row is a card: a tap opens its settings, ⋯ opens its actions.
+	compact?: boolean
 }>()
 const emit = defineEmits<{ dragstart: [DragEvent] }>()
 
@@ -84,6 +87,12 @@ const moreOptions = computed(() => [
 	},
 ])
 
+const actionsOpen = ref(false)
+const sheetActions = computed(() => [
+	{ label: "Field settings", icon: "lucide-settings-2", onClick: openSettings },
+	...moreOptions.value,
+])
+
 function select() {
 	if (!props.preview) props.editor.selected.value = question.value
 }
@@ -96,6 +105,40 @@ function openSettings() {
 
 <template>
 	<div
+		v-if="compact"
+		ref="row"
+		class="flex items-start gap-1 rounded-5 py-2 pl-3.5 pr-1 transition-transform duration-150 active:scale-[0.99]"
+		:class="[
+			isLayout ? '' : 'bg-surface-base ring-1 ring-inset',
+			isSelected && editor.settingsOpen.value ? 'ring-outline-gray-5' : 'ring-outline-gray-2',
+			{ 'opacity-50': !question.enabled && !preview },
+		]"
+		@click.stop="!preview && openSettings()"
+	>
+		<div class="min-w-0 flex-1 py-2">
+			<FieldPreview v-model="question" :doctype-field="doctypeField" readonly />
+			<div
+				v-if="!preview && (isStandard || !question.enabled || conditional || isHalf)"
+				class="mt-2.5 flex flex-wrap gap-1"
+			>
+				<Badge v-if="isStandard" label="Core" theme="gray" size="sm" />
+				<Badge v-if="!question.enabled" label="Hidden" theme="gray" size="sm" />
+				<Badge v-if="conditional" label="Conditional" theme="blue" size="sm" />
+				<Badge v-if="isHalf" label="Half width" theme="gray" size="sm" />
+			</div>
+		</div>
+		<Button
+			v-if="!preview"
+			variant="ghost"
+			size="lg"
+			icon="lucide-ellipsis"
+			label="More actions"
+			@click.stop="actionsOpen = true"
+		/>
+		<ActionSheet v-model:open="actionsOpen" :title="question.label" :actions="sheetActions" />
+	</div>
+	<div
+		v-else
 		ref="row"
 		class="group relative rounded-5 px-3 py-2.5 transition-[background-color,box-shadow,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
 		:class="[
@@ -140,7 +183,7 @@ function openSettings() {
 					<span class="lucide-chevrons-up-down size-3 text-ink-gray-4" aria-hidden="true" />
 				</button>
 			</Dropdown>
-			<span class="mx-0.5 h-4 w-px bg-outline-gray-2" aria-hidden="true" />
+			<span class="mx-0.5 h-4 w-px bg-surface-gray-3" aria-hidden="true" />
 			<Tooltip
 				v-if="!isLayout && !doctypeField?.locked"
 				:text="question.mandatory ? 'Make optional' : 'Make mandatory'"

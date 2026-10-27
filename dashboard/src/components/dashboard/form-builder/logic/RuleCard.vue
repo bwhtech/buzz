@@ -20,6 +20,8 @@ const props = defineProps<{
 	questions: FormQuestion[]
 	doctypeFields: DoctypeField[]
 	ensureFieldname: (question: FormQuestion) => string
+	// A summary on a phone: tapping the card opens the editable rule in a sheet.
+	readonly?: boolean
 }>()
 defineEmits<{ duplicate: []; delete: [] }>()
 
@@ -86,7 +88,12 @@ function addCondition() {
 }
 
 // A new rule opens with a condition to fill in.
-onMounted(() => rule.value.conditions.length || addCondition())
+onMounted(() => props.readonly || rule.value.conditions.length || addCondition())
+
+const listLabel = (condition: Condition) =>
+	(Array.isArray(condition[2]) ? condition[2] : [])
+		.map((value) => valueLabel(fieldOf(condition), value))
+		.join(", ") || "pick…"
 
 function addAction() {
 	const target = targets.value.find(
@@ -98,9 +105,10 @@ function addAction() {
 
 <template>
 	<article
-		class="relative flex flex-col gap-2.5 rounded-5 bg-surface-base pb-3.5 pl-[18px] pr-4 pt-4 ring-1 ring-inset ring-outline-gray-2 sm:pr-20"
+		class="relative flex flex-col gap-2.5 rounded-5 bg-surface-base pb-3.5 pl-[18px] pr-4 pt-4 ring-1 ring-inset ring-outline-gray-2"
+		:class="{ 'pr-20': !readonly }"
 	>
-		<div class="absolute right-2.5 top-2.5 flex gap-0.5">
+		<div v-if="!readonly" class="absolute right-2.5 top-2.5 flex gap-0.5">
 			<Tooltip text="Duplicate rule">
 				<Button
 					variant="ghost"
@@ -133,21 +141,22 @@ function addAction() {
 					kind="join"
 					:label="rule.match === 'any' ? 'or' : 'and'"
 					:aria-label="`Match ${rule.match === 'any' ? 'all' : 'any'} conditions`"
-					@click="rule.match = rule.match === 'any' ? 'all' : 'any'"
+					@click="readonly || (rule.match = rule.match === 'any' ? 'all' : 'any')"
 				/>
 			</span>
 			<LogicPill
 				:label="fieldOf(condition)?.label ?? condition[0]"
-				:options="fieldOptions(index)"
+				:options="readonly ? undefined : fieldOptions(index)"
 			/>
 			<LogicPill
 				kind="word"
 				:label="operatorOf(condition)?.label ?? condition[1]"
-				:options="operatorOptions(index)"
+				:options="readonly ? undefined : operatorOptions(index)"
 			/>
 			<template v-if="!operatorOf(condition)?.fixed">
+				<LogicPill v-if="readonly && operatorOf(condition)?.list" :label="listLabel(condition)" />
 				<MultiSelect
-					v-if="operatorOf(condition)?.list && fieldOf(condition)?.values"
+					v-else-if="operatorOf(condition)?.list && fieldOf(condition)?.values"
 					:model-value="Array.isArray(condition[2]) ? condition[2] : []"
 					@update:model-value="
 						(items: any[]) => (condition[2] = items.map((item) => item?.value ?? item))
@@ -159,8 +168,9 @@ function addAction() {
 				<LogicPill
 					v-else-if="fieldOf(condition)?.values"
 					:label="valueLabel(fieldOf(condition), condition[2])"
-					:options="valueOptions(index)"
+					:options="readonly ? undefined : valueOptions(index)"
 				/>
+				<LogicPill v-else-if="readonly" :label="String(condition[2] || 'a value')" />
 				<input
 					v-else
 					v-model="condition[2] as string"
@@ -170,6 +180,7 @@ function addAction() {
 				/>
 			</template>
 			<button
+				v-if="!readonly"
 				type="button"
 				class="grid size-[22px] place-items-center rounded-5 text-ink-gray-4 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-8"
 				aria-label="Remove condition"
@@ -182,7 +193,7 @@ function addAction() {
 			<span class="w-11 text-p-base font-medium text-ink-gray-6">If</span>
 			<span class="text-p-sm text-ink-gray-5">no conditions yet, so this rule never runs</span>
 		</div>
-		<div class="flex pl-11">
+		<div v-if="!readonly" class="flex pl-11">
 			<button
 				type="button"
 				class="-ml-1.5 rounded-5 px-1.5 py-0.5 text-p-sm text-ink-gray-5 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-9"
@@ -203,11 +214,14 @@ function addAction() {
 			<LogicPill
 				:kind="action[0] as 'show' | 'hide' | 'require'"
 				:label="action[0]"
-				:options="actionOptions(index)"
+				:options="readonly ? undefined : actionOptions(index)"
 			/>
-			<LogicPill :label="labelOf(action[1])" :options="targetOptions(index)" />
+			<LogicPill
+				:label="labelOf(action[1])"
+				:options="readonly ? undefined : targetOptions(index)"
+			/>
 			<button
-				v-if="rule.actions.length > 1"
+				v-if="!readonly && rule.actions.length > 1"
 				type="button"
 				class="grid size-[22px] place-items-center rounded-5 text-ink-gray-4 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-8"
 				aria-label="Remove action"
@@ -216,7 +230,7 @@ function addAction() {
 				<span class="lucide-x size-3" aria-hidden="true" />
 			</button>
 		</div>
-		<div class="flex pl-11">
+		<div v-if="!readonly" class="flex pl-11">
 			<button
 				type="button"
 				class="-ml-1.5 rounded-5 px-1.5 py-0.5 text-p-sm text-ink-gray-5 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-9"

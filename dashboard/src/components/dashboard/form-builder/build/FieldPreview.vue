@@ -34,14 +34,15 @@ const blurOnEnter = (event: KeyboardEvent) => (event.target as HTMLElement).blur
 			<input
 				v-model="question.label"
 				:readonly="readonly"
-				class="min-w-[120px] flex-1 border-0 bg-transparent p-0 text-ink-gray-9 outline-none focus:ring-0"
-				:class="
+				class="border-0 bg-transparent p-0 text-ink-gray-9 outline-none focus:ring-0"
+				:class="[
+					readonly ? 'max-w-full [field-sizing:content]' : 'min-w-[120px] flex-1',
 					fieldtype === 'Heading'
 						? 'text-lg font-semibold'
 						: fieldtype === 'Paragraph'
 							? 'text-p-base'
-							: 'text-[14px] font-medium'
-				"
+							: 'text-[14px] font-medium',
+				]"
 				:aria-label="`Label of ${fieldType(fieldtype).label} field`"
 				@keydown.enter="blurOnEnter"
 			/>
