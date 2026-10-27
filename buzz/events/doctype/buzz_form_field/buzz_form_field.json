@@ -82,7 +82,7 @@
   },
   {
    "fieldname": "description",
-   "label": "Help Text",
+   "label": "Description",
    "fieldtype": "Small Text",
    "description": "Shown under the question."
   }
@@ -102,5 +102,5 @@
   "description"
  ],
  "permissions": [],
- "modified": "2026-10-27 14:00:00.000000"
+ "modified": "2026-10-27 18:00:00.000000"
 }

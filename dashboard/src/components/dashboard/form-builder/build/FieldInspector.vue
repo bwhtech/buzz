@@ -108,7 +108,7 @@ const mandatory = computed({
 				v-if="!['Divider', 'Page Break'].includes(fieldtype)"
 				:model-value="question.description ?? ''"
 				@update:model-value="question.description = $event"
-				:label="fieldtype === 'Paragraph' ? 'Text' : 'Help text'"
+				:label="fieldtype === 'Paragraph' ? 'Text' : 'Description'"
 				:rows="fieldtype === 'Paragraph' ? 4 : 2"
 			/>
 			<Textarea
