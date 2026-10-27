@@ -161,7 +161,12 @@ test("registration edits attendee and booking questions, with ticket-type chips"
 	})
 	await page.goto(`/b/manage/events/${event.name}/forms/${form.name}`)
 
-	await expect(page.getByText("Always asked:")).toContainText("First name")
+	const rail = page.getByRole("navigation", { name: "Registration forms" })
+	await expect(rail.getByRole("button", { name: /^Attendees/ })).toHaveAttribute("aria-current")
+	await expect(page.getByText("Core", { exact: true })).toHaveCount(3)
+	for (const label of ["First name", "Last name", "Email"]) {
+		await expect(page.getByLabel(new RegExp(`: ${label}$`))).toBeVisible()
+	}
 	const composer = page.getByRole("combobox", { name: "Add a field" })
 	await composer.fill("Seat preference")
 	await composer.press("Enter")
@@ -178,9 +183,41 @@ test("registration edits attendee and booking questions, with ticket-type chips"
 	await expect(page.getByRole("button", { name: "Seat preference" })).toBeVisible()
 
 	await page.getByRole("radio", { name: "Build" }).click()
-	await page.getByRole("radio", { name: "Booking · once" }).click()
-	await expect(page.getByText("Always asked:")).not.toContainText("First name")
+	await rail.getByRole("button", { name: /^Billing/ }).click()
+	for (const label of ["Full name", "Email", "Phone"]) {
+		await expect(page.getByLabel(new RegExp(`: ${label}$`))).toBeVisible()
+	}
+	await expect(page.getByText("Tax invoice")).toBeVisible()
 	// Nothing is saved: other specs read this event's registration questions.
+})
+
+test("registration settings hold the confirmation and link preview, and the form is reachable", async ({
+	page,
+	request,
+}) => {
+	const [event] = await getList<NamedDoc & { title: string; route: string }>(
+		request,
+		"Buzz Event",
+		{
+			filters: { route: ["=", CUSTOM_FORMS_EVENT_ROUTE] },
+			fields: ["name", "title", "route"],
+		},
+	)
+	const [form] = await getList<NamedDoc>(request, "Buzz Form", {
+		filters: { event: ["=", event.name], form_doctype: ["=", "Event Booking"] },
+	})
+	await page.goto(`/b/manage/events/${event.name}/forms/${form.name}`)
+
+	const popupPromise = page.waitForEvent("popup")
+	await page.getByRole("button", { name: "Go to form" }).click()
+	expect((await popupPromise).url()).toContain(`/b/register/${event.route}`)
+
+	await page.getByRole("radio", { name: "Settings" }).click()
+	const messages = page.locator("#settings-messages")
+	await expect(messages.getByLabel("Title").first()).toBeVisible()
+	await expect(messages.getByLabel("Message")).toBeVisible()
+	await expect(messages.getByRole("radio")).toHaveCount(0)
+	await expect(page.locator("#settings-preview")).toContainText(`Register for ${event.title}`)
 })
 
 test.describe("on a phone", () => {

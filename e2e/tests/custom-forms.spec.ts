@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test"
+import { test, expect, type APIRequestContext } from "@playwright/test"
 
 import {
 	ATTENDEE_EMAIL,
@@ -12,7 +12,7 @@ import {
 	MEMBERS_ONLY_FORM_ROUTE,
 } from "../data/custom-forms"
 import { newApiContext } from "../helpers/auth"
-import { callMethod, getDoc, getList } from "../helpers/frappe"
+import { callMethod, getDoc, getList, updateDoc } from "../helpers/frappe"
 import { BookingPage, CustomFormPage } from "../pages"
 
 test.describe("Event Feedback Form", () => {
@@ -501,7 +501,88 @@ test.describe("Registration Questions", () => {
 		})
 		await admin.dispose()
 	})
+
+	test("renamed and hidden core fields and the custom confirmation show on the booking page", async ({
+		page,
+		baseURL,
+	}) => {
+		const admin = await newApiContext(baseURL!)
+		await withCoreRows(
+			admin,
+			{
+				"Event Booking Attendee": {
+					questions: { first_name: { label: "Given name" }, last_name: { enabled: 0 } },
+				},
+				"Event Booking": {
+					questions: { buyer_name: { label: "Name on invoice" } },
+					success_title: "Welcome aboard",
+					success_message: "See you **soon**",
+				},
+			},
+			async () => {
+				const bookingPage = new BookingPage(page)
+				await bookingPage.goto(testEventRoute)
+				await bookingPage.waitForFormLoad()
+				await bookingPage.goToAttendees()
+				await page.getByLabel("Given name").first().fill("Core")
+				await expect(page.getByLabel("Last name")).toHaveCount(0)
+				await page.getByLabel("Email").first().fill(ATTENDEE_EMAIL)
+				await bookingPage.continue()
+				await page.getByLabel(BOOKING_QUESTION.label).fill("Acme")
+				await expect(page.getByLabel("Name on invoice")).toBeVisible()
+				await bookingPage.submit()
+
+				await expect(page.getByRole("heading", { name: "Welcome aboard" })).toBeVisible({
+					timeout: 30000,
+				})
+				await expect(page.locator("strong", { hasText: "soon" })).toBeVisible()
+			},
+		)
+		await admin.dispose()
+	})
 })
+
+interface RegistrationRow {
+	fieldname: string
+	label: string
+	enabled: number
+}
+
+// Edits core rows of the event's registration forms and puts the forms back after the callback.
+async function withCoreRows(
+	admin: APIRequestContext,
+	changes: Record<string, Record<string, any>>,
+	run: () => Promise<void>,
+): Promise<void> {
+	const [event] = await getList<{ name: string }>(admin, "Buzz Event", {
+		filters: { route: ["=", testEventRoute] },
+	})
+	const forms = await getList<{ name: string; form_doctype: string }>(admin, "Buzz Form", {
+		filters: { event: ["=", event.name], form_doctype: ["in", Object.keys(changes)] },
+		fields: ["name", "form_doctype"],
+	})
+	const originals = await Promise.all(
+		forms.map((form) => getDoc<Record<string, any>>(admin, "Buzz Form", form.name)),
+	)
+	try {
+		for (const [index, form] of forms.entries()) {
+			const { questions: edits, ...rest } = changes[form.form_doctype]
+			await updateDoc(admin, "Buzz Form", form.name, {
+				...rest,
+				questions: originals[index].questions.map((row: RegistrationRow) => ({
+					...row,
+					...edits?.[row.fieldname],
+				})),
+			})
+		}
+		await run()
+	} finally {
+		for (const [index, form] of forms.entries()) {
+			const { questions, success_title = null, success_message = null } = originals[index]
+			await updateDoc(admin, "Buzz Form", form.name, { questions, success_title, success_message })
+		}
+	}
+}
 
 function answers(doc: AnsweredDoc): Record<string, string> {
 	return Object.fromEntries((doc.additional_fields ?? []).map((row) => [row.fieldname, row.value]))
