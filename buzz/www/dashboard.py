@@ -34,8 +34,11 @@ def form_link_preview(path: str) -> dict | None:
 	if len(parts) != 3 or parts[0] != "b":
 		return None
 	from buzz.api.forms import form_service
+	from buzz.api.forms.services import RegistrationFormService
 
 	try:
+		if parts[1] == "register":
+			return RegistrationFormService(parts[2]).link_preview()
 		return form_service(parts[1], parts[2]).link_preview()
 	except frappe.ValidationError:
 		frappe.clear_messages()

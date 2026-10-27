@@ -120,11 +120,14 @@ class CustomFormService:
 		form, event = self.form, self.event
 		image = form.meta_image or form.og_image or event.meta_image or event.og_image or event.banner_image
 		return {
-			"title": form.meta_title or f"{form.title} · {event.title}",
+			"title": form.meta_title or self.default_preview_title(),
 			"description": form.meta_description or self.default_preview_description(),
 			# Link crawlers ignore a relative image path.
 			"image": get_url(image) if image else None,
 		}
+
+	def default_preview_title(self) -> str:
+		return f"{self.form.title} · {self.event.title}"
 
 	def default_preview_description(self) -> str:
 		intro = self.form.description or self.event.short_description or ""
@@ -134,7 +137,11 @@ class CustomFormService:
 		close_at = self.form.auto_close_at
 		if not close_at or self.form.is_closed:
 			return ""
-		submissions = {"Talk Proposal": _("Proposals"), "Sponsorship Enquiry": _("Enquiries")}
+		submissions = {
+			"Talk Proposal": _("Proposals"),
+			"Sponsorship Enquiry": _("Enquiries"),
+			"Event Booking": _("Registrations"),
+		}
 		return _("{0} close on {1}.").format(
 			submissions.get(self.form_doctype, _("Submissions")), format_date(close_at, "d MMM")
 		)
@@ -214,6 +221,25 @@ class CustomFormService:
 			{fieldname: value for fieldname, value in data.items() if fieldname in allowed_fieldnames}
 		)
 		return doc_data
+
+
+class RegistrationFormService(CustomFormService):
+	"""The event's booking page, previewed through its registration form."""
+
+	def __init__(self, event_route: str):
+		super().__init__(event_route, form_route="")
+
+	@cached_property
+	def form(self) -> "BuzzForm":
+		form_name = frappe.db.get_value(
+			"Buzz Form", {"event": self.event.name, "form_doctype": "Event Booking"}, "name"
+		)
+		if not form_name:
+			FormNotAvailable.throw()
+		return frappe.get_doc("Buzz Form", form_name)
+
+	def default_preview_title(self) -> str:
+		return _("Register for {0}").format(self.event.title)
 
 
 def get_event_proposal_settings():

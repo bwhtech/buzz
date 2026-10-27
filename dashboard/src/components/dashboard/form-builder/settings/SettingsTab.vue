@@ -28,8 +28,9 @@ const props = defineProps<{ eventId: string }>()
 const REGISTRATION = ["Event Booking", "Event Booking Attendee"]
 const hasPage = computed(() => !REGISTRATION.includes(form.value.form_doctype))
 const isAttendeeForm = computed(() => form.value.form_doctype === "Event Booking Attendee")
-// The booking page shows the registration form's own confirmation, but has no redirect.
-const hasConfirmation = computed(() => hasPage.value || form.value.form_doctype === "Event Booking")
+// The booking page takes the registration form's confirmation and link preview, but has no redirect.
+const isBookingForm = computed(() => form.value.form_doctype === "Event Booking")
+const hasConfirmation = computed(() => hasPage.value || isBookingForm.value)
 const takesLogin = computed(
 	() => hasPage.value && form.value.form_doctype !== "Sponsorship Enquiry",
 )
@@ -54,7 +55,7 @@ const SECTIONS = computed(
 			},
 			takesLogin.value && { id: "responses", label: "Responses", icon: "lucide-inbox" },
 			hasConfirmation.value && { id: "messages", label: "Messages", icon: "lucide-message-square" },
-			hasPage.value && { id: "preview", label: "Link preview", icon: "lucide-share-2" },
+			hasConfirmation.value && { id: "preview", label: "Link preview", icon: "lucide-share-2" },
 		].filter(Boolean) as { id: string; label: string; icon: string }[],
 )
 
@@ -295,7 +296,7 @@ const copyLink = () => copy(link.value, "Link copied")
 				</SettingsSection>
 
 				<SettingsSection
-					v-if="hasPage"
+					v-if="hasConfirmation"
 					id="settings-preview"
 					title="Link preview"
 					description="How the form link looks when shared on WhatsApp, Slack or social"
@@ -307,6 +308,7 @@ const copyLink = () => copy(link.value, "Link copied")
 						:event-image="event.doc?.meta_image || event.doc?.og_image || event.doc?.banner_image"
 						:event-time-zone="event.doc?.time_zone"
 						:noun="kind.noun"
+						:default-title="isBookingForm ? `Register for ${event.doc?.title ?? ''}` : undefined"
 					/>
 				</SettingsSection>
 			</div>

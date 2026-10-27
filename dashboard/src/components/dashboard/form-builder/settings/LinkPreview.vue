@@ -17,6 +17,8 @@ const props = defineProps<{
 	eventTimeZone?: string | null
 	// What the form collects, such as "proposals".
 	noun: string
+	// The booking page names itself; other forms pair their title with the event's.
+	defaultTitle?: string
 }>()
 
 const host = window.location.hostname
@@ -24,7 +26,7 @@ const host = window.location.hostname
 const ASPECT_RATIO = 1200 / 630
 
 const image = computed(() => form.value.meta_image || form.value.og_image || props.eventImage)
-const title = computed(() => `${form.value.title} · ${props.eventTitle}`)
+const title = computed(() => props.defaultTitle || `${form.value.title} · ${props.eventTitle}`)
 
 // The close date is on the event's clock, as the server compares it.
 const closingNote = computed(() => {
@@ -85,9 +87,12 @@ const description = computed(() =>
 				<ErrorMessage v-if="error" class="mt-2" :message="error" />
 			</template>
 		</ImageCropUploader>
-		<p v-if="!form.meta_image" class="-mt-2 text-p-sm text-ink-gray-5">
+		<p v-if="!form.meta_image && !defaultTitle" class="-mt-2 text-p-sm text-ink-gray-5">
 			Without an upload, the link shows an image made from the form's title and the event's banner,
 			drawn when you save.
+		</p>
+		<p v-else-if="!form.meta_image" class="-mt-2 text-p-sm text-ink-gray-5">
+			Without an upload, the link shows the event's share image.
 		</p>
 		<TextInput
 			:model-value="form.meta_title ?? ''"
