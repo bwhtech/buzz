@@ -196,7 +196,7 @@ const fieldCount = (index: number) => {
 				size="sm"
 				icon="lucide-trash-2"
 				label="Remove step"
-				@click="steps.remove"
+				@click="steps.remove()"
 			/>
 		</Tooltip>
 		<Button
