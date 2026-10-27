@@ -52,7 +52,7 @@ class TestSponsorFormData(SponsorFormTestCase):
 		dedicated = get_enquiry_form(self.event.route)
 		generic = get_custom_form_data(self.event.route, self.form.route)
 
-		self.assertEqual(dedicated.form_title, "Sponsorship Enquiry")
+		self.assertEqual(dedicated.form_title, self.form.title)
 		self.assertEqual(dedicated.submission_method, "buzz.api.sponsorships.submit_enquiry_form")
 		self.assertEqual(generic.submission_method, dedicated.submission_method)
 

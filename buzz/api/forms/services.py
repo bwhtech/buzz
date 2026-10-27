@@ -89,7 +89,7 @@ class CustomFormService:
 			form_fields=self.renderable_fields(),
 			custom_fields=self.custom_field_definitions(),
 			logic_rules=parse_rules(form.logic_rules),
-			form_title=self.form_doctype,
+			form_title=form.title or self.form_doctype,
 			form_description=form.description,
 			submit_label=form.submit_label,
 			event=self.event_summary(),
@@ -106,7 +106,7 @@ class CustomFormService:
 		return CustomFormResponse(
 			form_fields=[],
 			custom_fields=[],
-			form_title=self.form_doctype,
+			form_title=form.title or self.form_doctype,
 			event=self.event_summary(),
 			closed=True,
 			closed_title=form.closed_title or _("Submissions Closed"),

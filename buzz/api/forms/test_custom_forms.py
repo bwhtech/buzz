@@ -67,14 +67,16 @@ class TestCustomFormResponse(FormsTestCase):
 		self.assertEqual(data.event.name, str(event.name))
 		self.assertIsInstance(data.__json__()["event"]["name"], str)
 
-	def test_open_form_carries_success_copy(self):
-		event, form_route = self.build_event(success_title="Nice one", success_message="See you there")
+	def test_open_form_carries_its_title_and_success_copy(self):
+		event, form_route = self.build_event(
+			title="Speak at our meetup", success_title="Nice one", success_message="See you there"
+		)
 
 		data = get_custom_form_data(event.route, form_route)
 
 		self.assertFalse(data.closed)
 		self.assertEqual((data.success_title, data.success_message), ("Nice one", "See you there"))
-		self.assertEqual(data.form_title, "Talk Proposal")
+		self.assertEqual(data.form_title, "Speak at our meetup")
 
 
 class TestCustomFormStandardRows(FormsTestCase):
