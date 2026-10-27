@@ -51,6 +51,7 @@ const blurOnEnter = (keydown: KeyboardEvent) => (keydown.target as HTMLElement).
 			@click.stop
 		/>
 		<input
+			v-if="!props.readonly || form.description"
 			v-model="form.description"
 			:readonly="props.readonly"
 			placeholder="Add a short intro"
