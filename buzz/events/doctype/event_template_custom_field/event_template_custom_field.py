@@ -32,6 +32,12 @@ class EventTemplateCustomField(Document):
 			"Rating",
 			"Attach",
 			"Attach Image",
+			"URL",
+			"Radio",
+			"Heading",
+			"Paragraph",
+			"Divider",
+			"Page Break",
 		]
 		form_doctype: DF.Link
 		label: DF.Data
@@ -42,6 +48,7 @@ class EventTemplateCustomField(Document):
 		parentfield: DF.Data
 		parenttype: DF.Data
 		placeholder: DF.Data | None
+		width: DF.Literal["Full", "Half"]
 	# end: auto-generated types
 
 	pass

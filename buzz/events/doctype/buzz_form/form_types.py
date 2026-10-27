@@ -24,6 +24,7 @@ QUESTION_FIELD_NAMES = (
 	"fieldtype",
 	"options",
 	"mandatory",
+	"width",
 	"placeholder",
 	"default_value",
 	"description",
