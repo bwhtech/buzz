@@ -242,7 +242,8 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 						variant="solid"
 						size="lg"
 						:label="isLastStep ? form.submit_label || 'Submit' : 'Next'"
-						@click="!isLastStep && steps.go(steps.stepIndex.value + 1)"
+						:disabled="isLastStep"
+						@click="steps.go(steps.stepIndex.value + 1)"
 					/>
 				</div>
 			</div>

@@ -199,6 +199,12 @@ test.describe("on a phone", () => {
 		await page.getByRole("button", { name: "More actions" }).last().click()
 		await page.getByRole("dialog").getByRole("button", { name: "Field settings" }).click()
 		await expect(page.getByRole("dialog").getByText("Placeholder")).toBeVisible()
+		await page.keyboard.press("Escape")
+
+		await page.getByRole("button", { name: "More actions" }).last().click()
+		await page.getByRole("button", { name: "Turn into · Email" }).click()
+		await page.getByRole("dialog").getByRole("button", { name: "Dropdown" }).click()
+		await expect(page.getByRole("textbox", { name: "Label of Dropdown field" })).toBeVisible()
 	})
 })
 

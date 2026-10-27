@@ -6,6 +6,7 @@ import ActionSheet from "../ActionSheet.vue"
 import { FIELD_TYPES, fieldType } from "../fieldTypes"
 import type { DoctypeField, FormQuestion } from "../useFormBuilder"
 import FieldPreview from "./FieldPreview.vue"
+import TypeSheet from "./TypeSheet.vue"
 import type { QuestionEditor } from "./useQuestionEditor"
 
 const question = defineModel<FormQuestion>({ required: true })
@@ -87,8 +88,15 @@ const moreOptions = computed(() => [
 ])
 
 const actionsOpen = ref(false)
+const typeSheetOpen = ref(false)
 const sheetActions = computed(() => [
 	{ label: "Field settings", icon: "lucide-settings-2", onClick: openSettings },
+	{
+		label: `Turn into · ${type.value.label}`,
+		icon: "lucide-repeat-2",
+		disabled: isStandard.value,
+		onClick: () => (typeSheetOpen.value = true),
+	},
 	...moreOptions.value,
 ])
 
@@ -135,6 +143,12 @@ function openSettings() {
 			@click.stop="actionsOpen = true"
 		/>
 		<ActionSheet v-model:open="actionsOpen" :title="question.label" :actions="sheetActions" />
+		<TypeSheet
+			v-model:open="typeSheetOpen"
+			:groups="convertTargets"
+			:current="question.fieldtype"
+			@pick="(fieldtype) => editor.convert(question, fieldtype)"
+		/>
 	</div>
 	<div
 		v-else
