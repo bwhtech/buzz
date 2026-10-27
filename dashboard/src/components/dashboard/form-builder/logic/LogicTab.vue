@@ -5,12 +5,21 @@ import { computed, ref } from "vue"
 import { useIsMobile } from "@/composables/useIsMobile"
 
 import type { QuestionEditor } from "../build/useQuestionEditor"
+import { fieldType } from "../fieldTypes"
 import type { BuzzFormDoc, DoctypeField } from "../useFormBuilder"
 import RuleCard from "./RuleCard.vue"
 import { emptyRule } from "./ruleOptions"
 
 const form = defineModel<BuzzFormDoc>({ required: true })
 const props = defineProps<{ doctypeFields: DoctypeField[]; editor: QuestionEditor }>()
+defineEmits<{ openBuild: [] }>()
+
+// Rules act on the form's own questions; core fields always show.
+const targets = computed(() =>
+	form.value.questions.filter(
+		(question) => !question.is_standard && fieldType(question.fieldtype).group !== "Layout",
+	),
+)
 
 // On a phone, rules list as summaries and the one tapped is edited in a sheet.
 const isPhone = useIsMobile()
@@ -22,7 +31,7 @@ const sheetOpen = computed({
 
 // The last question has the most answers above it to depend on.
 function addRule() {
-	const last = form.value.questions.findLast((question) => !question.is_standard)
+	const last = targets.value.at(-1)
 	if (!last) return
 	form.value.logic_rules.push(emptyRule(props.editor.ensureFieldname(last)))
 	if (isPhone.value) editing.value = form.value.logic_rules.length - 1
@@ -59,6 +68,7 @@ function remove(index: number) {
 					variant="solid"
 					icon-left="lucide-plus"
 					label="Add rule"
+					:disabled="!targets.length"
 					@click="addRule"
 				/>
 			</header>
@@ -81,22 +91,37 @@ function remove(index: number) {
 				v-if="!form.logic_rules.length"
 				class="flex flex-col items-center gap-2 rounded-5 border border-dashed border-outline-gray-3 px-6 py-10 text-center sm:py-12"
 			>
-				<p class="text-p-base font-medium text-ink-gray-8">No rules yet</p>
-				<p class="max-w-[340px] text-p-sm text-ink-gray-5">
-					A rule reads like a sentence. If someone picks Workshop, then show Max participants.
-				</p>
-				<Button
-					v-if="!isPhone"
-					class="mt-2"
-					variant="subtle"
-					icon-left="lucide-plus"
-					label="Add rule"
-					@click="addRule"
-				/>
+				<template v-if="targets.length">
+					<p class="text-p-base font-medium text-ink-gray-8">No rules yet</p>
+					<p class="max-w-[340px] text-p-sm text-ink-gray-5">
+						A rule reads like a sentence. If someone picks Workshop, then show Max participants.
+					</p>
+					<Button
+						v-if="!isPhone"
+						class="mt-2"
+						variant="subtle"
+						icon-left="lucide-plus"
+						label="Add rule"
+						@click="addRule"
+					/>
+				</template>
+				<template v-else>
+					<p class="text-p-base font-medium text-ink-gray-8">Add a question first</p>
+					<p class="max-w-[340px] text-p-sm text-ink-gray-5">
+						Rules show, hide or require the questions you add. Core fields are always asked.
+					</p>
+					<Button
+						class="mt-2"
+						variant="subtle"
+						icon-left="lucide-layout-list"
+						label="Go to Build"
+						@click="$emit('openBuild')"
+					/>
+				</template>
 			</div>
 
 			<Button
-				v-if="isPhone"
+				v-if="isPhone && targets.length"
 				class="w-full"
 				size="lg"
 				icon-left="lucide-plus"

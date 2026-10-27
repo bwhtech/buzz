@@ -97,6 +97,7 @@ useEventListener(window, "beforeunload", (event) => dirty.value && event.prevent
 					v-model="active.draft.value!"
 					:doctype-fields="Object.values(active.doctypeFields.value)"
 					:editor="editor"
+					@open-build="tab = 'build'"
 				/>
 				<SettingsTab v-else v-model="builder.draft.value!" :event-id="eventId" />
 			</div>
