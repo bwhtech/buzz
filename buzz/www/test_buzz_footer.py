@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import set_request
@@ -11,7 +13,11 @@ class TestBuzzFooter(IntegrationTestCase):
 		frappe.set_user("Guest")
 		self.addCleanup(frappe.set_user, "Administrator")
 		set_request(method="GET", path="/login")
-		with self.change_settings("Website Settings", footer_template=BUZZ_FOOTER):
+		# CI never runs bench build, so there is no assets.json for bundled_asset to read
+		with (
+			self.change_settings("Website Settings", footer_template=BUZZ_FOOTER),
+			patch("frappe.utils.get_assets_json", return_value={}),
+		):
 			html = get_response_content("/login")
 		self.assertIn("buzz-footer", html)
 		self.assertIn(buzz_navbar()["brand"]["name"], html)
