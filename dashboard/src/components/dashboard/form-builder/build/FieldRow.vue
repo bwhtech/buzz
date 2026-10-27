@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Badge, Button, Dropdown, Tooltip } from "frappe-ui"
+import { Badge, Button, Combobox, Dropdown, Tooltip } from "frappe-ui"
 import { computed, ref, toRaw, watch } from "vue"
 
 import ActionSheet from "../ActionSheet.vue"
@@ -33,19 +33,18 @@ const isLayout = computed(() => type.value.group === "Layout")
 const isStandard = computed(() => !!question.value.is_standard)
 const isHalf = computed(() => question.value.width === "Half")
 
-const convertTargets = computed(() =>
-	Object.entries(FIELD_TYPES)
-		.filter(([key, item]) =>
-			isLayout.value
-				? ["Heading", "Paragraph"].includes(key)
-				: !["Layout", "Standard"].includes(item.group),
-		)
-		.map(([key, item]) => ({
-			label: item.label,
-			icon: item.icon,
-			onClick: () => props.editor.convert(question.value, key),
-		})),
-)
+// Searchable, grouped like the add-field menu.
+const convertTargets = computed(() => {
+	const groups: Record<string, { label: string; value: string; icon: string }[]> = {}
+	for (const [key, item] of Object.entries(FIELD_TYPES)) {
+		const offered = isLayout.value
+			? ["Heading", "Paragraph"].includes(key)
+			: !["Layout", "Standard"].includes(item.group)
+		if (offered)
+			(groups[item.group] ??= []).push({ label: item.label, value: key, icon: item.icon })
+	}
+	return Object.entries(groups).map(([group, options]) => ({ group, options }))
+})
 
 const moreOptions = computed(() => [
 	{
@@ -172,17 +171,30 @@ function openSettings() {
 				<span :class="[type.icon, 'size-3.5']" aria-hidden="true" />
 				<span class="whitespace-nowrap">{{ type.label }}</span>
 			</span>
-			<Dropdown v-else :options="convertTargets">
-				<button
-					type="button"
-					class="flex h-7 items-center gap-1.5 rounded-5 pl-2 pr-1.5 text-p-xs text-ink-gray-7 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2"
-					:aria-label="`Turn ${type.label} into another type`"
-				>
-					<span :class="[type.icon, 'size-3.5']" aria-hidden="true" />
-					<span class="whitespace-nowrap">{{ type.label }}</span>
-					<span class="lucide-chevrons-up-down size-3 text-ink-gray-4" aria-hidden="true" />
-				</button>
-			</Dropdown>
+			<Combobox
+				v-else
+				trigger="button"
+				:model-value="question.fieldtype"
+				:options="convertTargets"
+				placeholder="Search field types"
+				empty-text="No field type matches"
+				align="start"
+				@update:model-value="
+					(fieldtype) => fieldtype && editor.convert(question, String(fieldtype))
+				"
+			>
+				<template #trigger>
+					<button
+						type="button"
+						class="flex h-7 items-center gap-1.5 rounded-5 pl-2 pr-1.5 text-p-xs text-ink-gray-7 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2"
+						:aria-label="`Turn ${type.label} into another type`"
+					>
+						<span :class="[type.icon, 'size-3.5']" aria-hidden="true" />
+						<span class="whitespace-nowrap">{{ type.label }}</span>
+						<span class="lucide-chevrons-up-down size-3 text-ink-gray-4" aria-hidden="true" />
+					</button>
+				</template>
+			</Combobox>
 			<span class="mx-0.5 h-4 w-px bg-surface-gray-3" aria-hidden="true" />
 			<Tooltip
 				v-if="!isLayout && !doctypeField?.locked"
