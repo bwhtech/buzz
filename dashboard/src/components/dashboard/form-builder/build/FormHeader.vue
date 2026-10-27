@@ -29,7 +29,7 @@ const blurOnEnter = (keydown: KeyboardEvent) => (keydown.target as HTMLElement).
 	<div class="mb-4 flex flex-col gap-2.5 border-b border-outline-gray-1 pb-6">
 		<div class="flex flex-wrap items-center gap-2 text-p-sm text-ink-gray-5">
 			<span
-				class="grid size-5 place-items-center rounded-3 bg-surface-gray-7 text-ink-base"
+				class="grid size-5 place-items-center rounded-3 bg-surface-gray-10 text-ink-base"
 				aria-hidden="true"
 			>
 				<span class="lucide-calendar size-3" />

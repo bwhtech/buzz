@@ -171,7 +171,7 @@ async function publish(on = true) {
 						{{ section.label }}
 						<span
 							class="absolute inset-x-[20%] -bottom-px h-0.5 rounded-full transition-colors duration-150"
-							:class="tab === section.value ? 'bg-surface-gray-7' : 'bg-transparent'"
+							:class="tab === section.value ? 'bg-surface-gray-10' : 'bg-transparent'"
 							aria-hidden="true"
 						/>
 					</button>

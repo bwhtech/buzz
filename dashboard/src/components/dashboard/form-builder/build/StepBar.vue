@@ -77,7 +77,7 @@ const fieldCount = (index: number) => {
 					v-for="index in count"
 					:key="index"
 					class="h-1 flex-1 rounded-full transition-colors duration-200"
-					:class="index - 1 <= current ? 'bg-surface-gray-7' : 'bg-surface-gray-3'"
+					:class="index - 1 <= current ? 'bg-surface-gray-10' : 'bg-surface-gray-3'"
 				/>
 			</div>
 		</div>
@@ -94,7 +94,7 @@ const fieldCount = (index: number) => {
 						class="grid size-8 shrink-0 place-items-center rounded-full text-p-sm font-semibold"
 						:class="
 							index === current
-								? 'bg-surface-gray-7 text-ink-base'
+								? 'bg-surface-gray-10 text-ink-base'
 								: 'bg-surface-gray-2 text-ink-gray-7'
 						"
 						:aria-label="`Go to step ${index + 1}`"
@@ -150,8 +150,8 @@ const fieldCount = (index: number) => {
 				<span
 					class="grid size-[22px] place-items-center rounded-full text-p-xs font-semibold transition-colors duration-200"
 					:class="
-						index <= steps.stepIndex.value
-							? 'bg-surface-gray-7 text-ink-base'
+						index === steps.stepIndex.value
+							? 'bg-surface-gray-10 text-ink-base'
 							: 'bg-surface-base text-ink-gray-5 ring-1 ring-inset ring-outline-gray-3'
 					"
 				>
