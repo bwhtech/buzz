@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-	Badge,
 	Button,
 	DateTimePicker,
 	Sidebar,
@@ -29,15 +28,6 @@ const isAttendeeForm = computed(() => form.value.form_doctype === "Event Booking
 const takesLogin = computed(
 	() => hasPage.value && form.value.form_doctype !== "Sponsorship Enquiry",
 )
-
-const FORM_TYPES: Record<string, string> = {
-	"Talk Proposal": "Call for proposals",
-	"Event Booking": "Registration",
-	"Event Booking Attendee": "Registration",
-	"Sponsorship Enquiry": "Sponsorship enquiry",
-	"Event Feedback": "Feedback",
-}
-const formType = computed(() => FORM_TYPES[form.value.form_doctype] ?? "Custom form")
 
 const SECTIONS = computed(
 	() =>
@@ -124,18 +114,6 @@ async function copyLink() {
 				class="mx-auto flex max-w-[720px] flex-col gap-6 px-4 pb-[120px] pt-5 md:gap-9 md:px-8 md:pt-7"
 			>
 				<SettingsSection id="settings-general" title="General">
-					<SettingsRow
-						title="Form type"
-						:description="
-							isAttendeeForm
-								? 'Attendee questions follow the registration form: it opens, closes and confirms bookings'
-								: 'What this form collects for the event'
-						"
-					>
-						<div class="flex sm:justify-end">
-							<Badge theme="green" variant="subtle" size="lg" :label="formType" />
-						</div>
-					</SettingsRow>
 					<SettingsRow title="Title" description="Shown at the top of the form">
 						<TextInput aria-label="Title" v-model="form.title" />
 					</SettingsRow>
