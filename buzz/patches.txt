@@ -41,6 +41,7 @@ buzz.patches.subscribe_talk_participants
 buzz.patches.email_buzz_activity
 buzz.patches.add_title_theme_tokens
 buzz.patches.add_default_check_in_zones
+buzz.patches.use_buzz_footer
 buzz.patches.move_sponsor_enquiry_forms_to_buzz_form
 buzz.patches.move_event_forms_to_buzz_form
 buzz.patches.move_registration_questions_to_buzz_form

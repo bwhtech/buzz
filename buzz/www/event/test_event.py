@@ -13,7 +13,7 @@ from buzz.tests.factories import (
 	SpeakerProfileFactory,
 	UserFactory,
 )
-from buzz.www.event.index import EventPage
+from buzz.www.event.index import EventPage, join_parts
 
 
 class TestEventPage(IntegrationTestCase):
@@ -75,6 +75,10 @@ class TestEventPage(IntegrationTestCase):
 		row = context["schedule"][0]["rows"][0]
 		self.assertEqual((row["title"], row["speakers"]), ("Scaling apps", "Asha Rao"))
 		self.assertEqual(context["speakers"][0]["name"], "Asha Rao")
+
+	def test_join_parts_strips_spaces_around_each_part(self):
+		self.assertEqual(join_parts(["Engineer ", " Frappe"], ", "), "Engineer, Frappe")
+		self.assertEqual(join_parts(["  ", "Frappe"], ", "), "Frappe")
 
 	def test_time_zone_falls_back_to_system(self):
 		self.set_event({"time_zone": "", "time_zone_label": ""})

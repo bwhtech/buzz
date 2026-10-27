@@ -46,7 +46,6 @@ body {
 
 /* Header */
 
-.site-footer,
 .event-content {
 	width: min(var(--page-width), 100% - 32px);
 	margin-inline: auto;
@@ -1042,115 +1041,6 @@ body {
 	color: var(--ink-muted);
 }
 
-/* Footer */
-
-.site-footer {
-	display: flex;
-	flex-direction: column;
-	gap: 64px;
-	margin-top: 32px;
-	padding: 32px 8px 24px;
-	border-top: 1px solid var(--border);
-	color: var(--ink-muted);
-	font-size: 13px;
-}
-
-.footer-main {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
-	gap: 32px;
-}
-
-.footer-about {
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: 12px;
-}
-
-.footer-logo {
-	width: auto;
-	height: 24px;
-}
-
-/* The bundled wordmark as a shape, in the footer's muted ink. */
-span.footer-logo {
-	aspect-ratio: 313 / 244;
-	background-color: currentColor;
-	mask: url("/assets/buzz/images/buzz-logo-no-bg.svg") center / contain no-repeat;
-}
-
-.footer-address {
-	max-width: 28ch;
-	white-space: pre-line;
-}
-
-.footer-groups {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-	gap: 24px;
-}
-
-.footer-group-label {
-	margin-bottom: 10px;
-	color: var(--ink-strong);
-	font-size: 13px;
-	font-weight: 500;
-}
-
-.footer-groups ul {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-
-.footer-bottom,
-.footer-end {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 4px 16px;
-}
-
-.footer-end {
-	margin-left: auto;
-}
-
-.site-footer a {
-	display: flex;
-}
-
-.back-to-top {
-	align-items: center;
-	gap: 6px;
-}
-
-.back-to-top .icon {
-	width: 14px;
-	height: 14px;
-}
-
-@media (max-width: 640px) {
-	.footer-main {
-		grid-template-columns: 1fr;
-	}
-
-	.footer-end {
-		margin-left: 0;
-	}
-}
-
-@media (pointer: coarse) {
-	.site-footer a {
-		min-height: 44px;
-		align-items: center;
-	}
-
-	.footer-groups ul {
-		gap: 0;
-	}
-}
-
 /* Motion */
 
 :root {
@@ -1206,8 +1096,7 @@ span.footer-logo {
 	transform: scale(0.98);
 }
 
-.tab,
-.site-footer a {
+.tab {
 	transition:
 		color 150ms ease,
 		background-color 150ms ease,
@@ -1289,8 +1178,7 @@ summary:focus-visible {
 		transform: translateX(2px);
 	}
 
-	.tab:hover,
-	.site-footer a:hover {
+	.tab:hover {
 		color: var(--ink-strong);
 	}
 

@@ -1,0 +1,14 @@
+{
+ "creation": "2026-10-26 12:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Web Template",
+ "fields": [],
+ "idx": 0,
+ "modified": "2026-10-26 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Buzz",
+ "name": "Buzz Footer",
+ "owner": "Administrator",
+ "standard": 1,
+ "type": "Footer"
+}

@@ -49,7 +49,8 @@ def format_day(date) -> str:
 
 
 def join_parts(parts: list, separator: str) -> str:
-	return separator.join([part for part in parts if part])
+	stripped_parts = [part.strip() for part in parts if part]
+	return separator.join([part for part in stripped_parts if part])
 
 
 def format_time_range(start, end) -> str:

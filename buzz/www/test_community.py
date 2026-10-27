@@ -24,7 +24,7 @@ class TestCommunityLanding(IntegrationTestCase):
 		self.assertIn("data-globe", html)
 		self.assertIn("es-tab-buttons", html)
 		self.assertIn("team-page-data", html)
-		self.assertIn("site-footer", html)
+		self.assertIn("buzz-footer", html)
 
 	def test_the_page_is_not_found_while_communities_are_off(self):
 		with self.change_settings("Buzz Settings", enable_communities=0):
