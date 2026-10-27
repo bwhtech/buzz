@@ -58,3 +58,19 @@ class EventProposalFormResponse(APIResponse):
 	banner_title: str
 	success_title: str
 	success_message: str
+
+
+class DoctypeField(APIResponse):
+	"""A field of the form's doctype: a core row when offered, and a name conditions may test."""
+
+	fieldname: str
+	fieldtype: str
+	label: str
+	options: str | None = None
+	link_options: list[dict] | None = None
+	offered: bool
+	locked: bool
+
+
+class FormBuilderFields(APIResponse):
+	fields: list[DoctypeField]

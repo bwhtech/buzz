@@ -198,7 +198,7 @@ def event_template_questions(event_name: str) -> list[dict]:
 	}
 	questions = frappe.get_all(
 		"Buzz Form Field",
-		filters={"parenttype": "Buzz Form", "parent": ["in", list(forms)]},
+		filters={"parenttype": "Buzz Form", "parent": ["in", list(forms)], "is_standard": 0},
 		fields=["parent", *QUESTION_FIELD_NAMES],
 		order_by="parent, idx",
 	)

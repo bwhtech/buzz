@@ -88,7 +88,7 @@ def form_questions(event: str, form_doctype: str) -> list:
 		return []
 	return frappe.get_all(
 		"Buzz Form Field",
-		filters={"parenttype": "Buzz Form", "parent": form_name, "enabled": 1},
+		filters={"parenttype": "Buzz Form", "parent": form_name, "enabled": 1, "is_standard": 0},
 		fields=QUESTION_FIELDS,
 		order_by="idx",
 	)

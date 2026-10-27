@@ -5,7 +5,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cstr
 
-from buzz.api.forms.fields import validate_excluded_fields
+from buzz.api.forms.exceptions import MandatoryFieldsHidden
 from buzz.events.doctype.buzz_form.condition_validator import ConditionValidator
 from buzz.events.doctype.buzz_form.form_types import form_type, unique_fieldname
 
@@ -29,7 +29,6 @@ class BuzzForm(Document):
 		closed_title: DF.Data | None
 		description: DF.SmallText | None
 		event: DF.Link
-		excluded_fields: DF.SmallText | None
 		form_doctype: DF.Link
 		login_required: DF.Check
 		publish: DF.Check
@@ -57,7 +56,8 @@ class BuzzForm(Document):
 	def validate(self):
 		self.validate_unchanged_fields()
 		self.validate_route()
-		validate_excluded_fields(self.form_doctype, self.excluded_fields)
+		self.sync_standard_rows()
+		self.validate_standard_rows()
 		self.validate_questions()
 		self.validate_conditions()
 		self.validate_event_is_published()
@@ -87,19 +87,53 @@ class BuzzForm(Document):
 		)
 		return any(route and route.lower() == self.route.lower() for route in taken)
 
+	def sync_standard_rows(self):
+		"""Every field the form type offers keeps a row, so organisers can order, rename or hide it."""
+		fields = form_type(self.form_doctype).standard_fields(self.form_doctype)
+		rows = [row for row in self.questions if not row.is_standard or row.fieldname in fields]
+		present = {row.fieldname for row in rows if row.is_standard}
+		missing = [
+			{"is_standard": 1, "fieldname": fieldname, "label": df.label, "enabled": 1}
+			for fieldname, df in fields.items()
+			if fieldname not in present
+		]
+		self.set("questions", [*missing, *rows])
+		for index, row in enumerate(self.questions, start=1):
+			row.idx = index
+
+	def validate_standard_rows(self):
+		kind = form_type(self.form_doctype)
+		fields = kind.standard_fields(self.form_doctype)
+		hidden = [
+			row.label or row.fieldname
+			for row in self.questions
+			if row.is_standard
+			and not row.enabled
+			and (fields[row.fieldname].reqd or row.fieldname in kind.locked_fieldnames)
+		]
+		if hidden:
+			MandatoryFieldsHidden.throw(form_doctype=_(self.form_doctype), fieldnames=", ".join(hidden))
+		for row in self.questions:
+			if row.is_standard:
+				row.label = row.label or fields[row.fieldname].label
+
 	def validate_questions(self):
 		reserved = form_type(self.form_doctype).reserved_fieldnames
 		self.set_missing_fieldnames(reserved)
 		used_fieldnames = set()
 		saved_fieldnames = self.saved_question_fieldnames()
 		for question in self.questions:
+			if not question.is_standard and not question.fieldtype:
+				frappe.throw(_("Pick a type for {0}.").format(question.label))
 			if not re.fullmatch(FIELDNAME_PATTERN, question.fieldname):
 				frappe.throw(
 					_(
 						"Question fieldnames must start with a letter and contain lowercase letters, numbers or underscores."
 					)
 				)
-			if question.fieldname in used_fieldnames or question.fieldname in reserved:
+			if question.fieldname in used_fieldnames or (
+				question.fieldname in reserved and not question.is_standard
+			):
 				frappe.throw(_("Duplicate or reserved question fieldname: {0}").format(question.fieldname))
 			if saved_fieldnames.get(question.name) not in (None, question.fieldname):
 				frappe.throw(_("A saved question's fieldname cannot be changed. Add a new question instead."))
@@ -126,5 +160,7 @@ class BuzzForm(Document):
 
 	def validate_answers_field(self):
 		answers_field = form_type(self.form_doctype).answers_field
-		if self.questions and not frappe.get_meta(self.form_doctype).has_field(answers_field):
+		if any(not question.is_standard for question in self.questions) and not frappe.get_meta(
+			self.form_doctype
+		).has_field(answers_field):
 			frappe.throw(_("{0} has no field to store answers in.").format(self.form_doctype))

@@ -3,7 +3,6 @@ from frappe.model import DEFAULT_FIELDS, display_fieldtypes
 from frappe.utils import cstr, now_datetime, today
 
 from buzz.api.forms.conditions import parse_conditions
-from buzz.api.forms.exceptions import MandatoryFieldsHidden, UnknownExcludedFields
 
 LAYOUT_FIELDTYPES = set(display_fieldtypes)
 LAYOUT_BREAK_FIELDTYPES = {"Column Break", "Section Break"}
@@ -109,44 +108,14 @@ def get_auto_set_fields(form_doctype: str) -> dict[str, str]:
 	}
 
 
-def parse_excluded_fields(value: str | None) -> set | None:
-	if not value:
-		return None
-	fieldnames = {fieldname.strip() for fieldname in value.split(",") if fieldname.strip()}
-	return fieldnames or None
-
-
 def get_renderable_fields(form_doctype: str, exclude_fields: set) -> dict:
 	meta = frappe.get_meta(form_doctype)
 	return {df.fieldname: df for df in meta.fields if is_renderable_form_field(df, exclude_fields)}
 
 
-def get_exclude_fields(form_doctype: str, excluded_fields: str | None) -> set:
-	auto_set = set(get_auto_set_fields(form_doctype))
-	return STANDARD_EXCLUDE_FIELDS | auto_set | (parse_excluded_fields(excluded_fields) or set())
-
-
-def validate_excluded_fields(form_doctype: str, excluded_fields: str | None) -> None:
-	excluded = parse_excluded_fields(excluded_fields)
-	if not excluded:
-		return
-
-	meta = frappe.get_meta(form_doctype)
-	system_exclude = STANDARD_EXCLUDE_FIELDS | set(get_auto_set_fields(form_doctype))
-	# Blacklisting a system/auto-set field is a harmless no-op (it is never rendered anyway),
-	# so they count as known names; only genuine typos are rejected.
-	known_fieldnames = {df.fieldname for df in meta.fields} | system_exclude
-
-	unknown = excluded - known_fieldnames
-	if unknown:
-		UnknownExcludedFields.throw(form_doctype=form_doctype, fieldnames=", ".join(sorted(unknown)))
-
-	renderable = get_renderable_fields(form_doctype, system_exclude)
-	hidden_mandatory = {
-		fieldname for fieldname in excluded if fieldname in renderable and renderable[fieldname].reqd
-	}
-	if hidden_mandatory:
-		MandatoryFieldsHidden.throw(form_doctype=form_doctype, fieldnames=", ".join(sorted(hidden_mandatory)))
+def system_exclude_fields(form_doctype: str) -> set:
+	"""Fields the system sets, which no form ever asks for."""
+	return STANDARD_EXCLUDE_FIELDS | set(get_auto_set_fields(form_doctype))
 
 
 def is_renderable_form_field(df, exclude_fields: set) -> bool:

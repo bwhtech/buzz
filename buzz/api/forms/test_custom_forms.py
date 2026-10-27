@@ -9,7 +9,6 @@ from buzz.api.forms.exceptions import (
 	LoginRequired,
 	MandatoryFieldsHidden,
 	SubmissionsClosed,
-	UnknownExcludedFields,
 	UnknownQuestions,
 )
 from buzz.tests.factories import (
@@ -78,20 +77,23 @@ class TestCustomFormResponse(FormsTestCase):
 		self.assertEqual(data.form_title, "Talk Proposal")
 
 
-class TestCustomFormExcludedFields(FormsTestCase):
-	def test_get_custom_form_data_hides_excluded_fields(self):
-		returned = self.form_fieldnames(excluded_fields="phone")
+class TestCustomFormStandardRows(FormsTestCase):
+	def test_every_offered_field_gets_a_row(self):
+		event, _ = self.build_event()
+
+		rows = [
+			row.fieldname for row in self.form_of(event.name, "Talk Proposal").questions if row.is_standard
+		]
+		self.assertEqual(set(rows), {"title", "speakers", "description", "phone"})
+
+	def test_a_hidden_field_is_not_rendered(self):
+		returned = self.form_fieldnames(*self.build_event_hiding("phone"))
 
 		self.assertNotIn("phone", returned)
 		self.assertTrue({"title", "description", "speakers"} <= returned)
 
-	def test_get_custom_form_data_empty_excluded_fields_returns_all(self):
-		self.assertTrue(
-			{"title", "description", "speakers", "phone"} <= self.form_fieldnames(excluded_fields="")
-		)
-
-	def test_submit_drops_excluded_field_value(self):
-		event, form_route = self.build_event(excluded_fields="phone")
+	def test_submit_drops_hidden_field_value(self):
+		event, form_route = self.build_event_hiding("phone")
 		data = {"title": "Hidden Phone", "description": "<p>desc</p>", "speakers": SPEAKERS}
 
 		self.submit(event.route, form_route, data={**data, "phone": "+919999999999"})
@@ -104,21 +106,37 @@ class TestCustomFormExcludedFields(FormsTestCase):
 			[(row.first_name, row.email) for row in created.speakers], [("Jane", "jane@example.com")]
 		)
 
-	def test_save_hiding_mandatory_throws(self):
+	def test_hiding_a_mandatory_field_throws(self):
 		with self.assertRaises(MandatoryFieldsHidden):
-			self.build_event(excluded_fields="speakers")
+			self.build_event_hiding("speakers")
 
-	def test_save_with_unknown_field_throws(self):
-		with self.assertRaises(UnknownExcludedFields):
-			self.build_event(excluded_fields="phone, bogus_field")
+	def test_rows_render_in_form_order_with_their_label(self):
+		event, form_route = self.build_event()
+		form = self.form_of(event.name, "Talk Proposal")
+		phone = next(row for row in form.questions if row.fieldname == "phone")
+		phone.label = "Mobile"
+		form.set("questions", [phone, *(row for row in form.questions if row is not phone)])
+		form.save(ignore_permissions=True)
 
-	def test_save_hiding_optional_field_succeeds(self):
-		event, _ = self.build_event(excluded_fields="phone")
+		first = get_custom_form_data(event.route, form_route).form_fields[0]
+		self.assertEqual((first["fieldname"], first["label"]), ("phone", "Mobile"))
 
-		self.assertTrue(frappe.db.exists("Buzz Event", event.name))
+	def test_a_question_cannot_take_a_standard_fieldname(self):
+		event, _ = self.build_event()
 
-	def form_fieldnames(self, **form_row) -> set[str]:
-		event, form_route = self.build_event(**form_row)
+		with self.assertRaises(frappe.ValidationError):
+			self.add_question(self.form_of(event.name, "Talk Proposal"), fieldname="title")
+
+	def build_event_hiding(self, *fieldnames):
+		event, form_route = self.build_event()
+		form = self.form_of(event.name, "Talk Proposal")
+		for row in form.questions:
+			if row.fieldname in fieldnames:
+				row.enabled = 0
+		form.save(ignore_permissions=True)
+		return event, form_route
+
+	def form_fieldnames(self, event, form_route) -> set[str]:
 		return {f["fieldname"] for f in get_custom_form_data(event.route, form_route).form_fields}
 
 
@@ -221,8 +239,8 @@ class TestCustomFormCustomFields(FormsTestCase):
 		custom_fields = get_custom_form_data(event.route, form_route).custom_fields
 
 		self.assertEqual([field.label for field in custom_fields], ["Dietary Preference"])
-		# Check fields travel as 0/1, not booleans.
-		self.assertEqual((custom_fields[0].mandatory, custom_fields[0].order), (1, 1))
+		# Check fields travel as 0/1, not booleans; the question follows the four core rows.
+		self.assertEqual((custom_fields[0].mandatory, custom_fields[0].order), (1, 5))
 
 	def test_submitted_values_land_in_additional_fields(self):
 		created = self.submit_with_question("Answered", {"dietary_preference": "Vegetarian"})

@@ -1,6 +1,6 @@
 import frappe
 
-from buzz.api.forms import get_custom_form_data
+from buzz.api.forms import get_custom_form_data, get_form_builder_fields
 from buzz.api.forms.exceptions import InvalidAnswer, UnknownQuestions
 from buzz.api.forms.test_custom_forms import FormsTestCase
 from buzz.tests.factories import BuzzEventFactory
@@ -25,7 +25,8 @@ class TestFormLayout(FormsTestCase):
 			{"label": "Divider", "fieldtype": "Divider"}, {"label": "Divider", "fieldtype": "Divider"}
 		)
 
-		self.assertEqual([question.fieldname for question in form.questions], ["divider", "divider_2"])
+		questions = [question.fieldname for question in form.questions if not question.is_standard]
+		self.assertEqual(questions, ["divider", "divider_2"])
 
 	def test_layout_rows_take_no_answer(self):
 		event, _ = self.feedback_form(
@@ -71,3 +72,17 @@ class TestFormLayout(FormsTestCase):
 
 		self.assertEqual((data.form_description, data.submit_label), ("Tell us how it went", "Send feedback"))
 		self.assertEqual(data.custom_fields[0].width, "Half")
+
+
+class TestFormBuilderFields(FormsTestCase):
+	def test_lists_offered_and_locked_doctype_fields(self):
+		event = BuzzEventFactory.create(team=self.team)
+		form = self.form_of(event.name, "Sponsorship Enquiry")
+
+		fields = {field.fieldname: field for field in get_form_builder_fields(form.name).fields}
+
+		self.assertTrue(fields["contact_email"].offered and fields["contact_email"].locked)
+		self.assertFalse(fields["phone"].locked)
+		self.assertTrue(
+			all(field.offered for field in fields.values() if field.fieldname in ("tier", "company_name"))
+		)

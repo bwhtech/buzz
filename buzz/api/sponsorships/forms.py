@@ -1,9 +1,7 @@
 import frappe
 from frappe import _
 
-from buzz.api.forms.fields import get_form_fields
 from buzz.api.forms.services import CustomFormService
-from buzz.events.doctype.buzz_form.form_types import ENQUIRY_FIELDS
 
 ENQUIRY_DOCTYPE = "Sponsorship Enquiry"
 SUBMISSION_METHOD = "buzz.api.sponsorships.submit_enquiry_form"
@@ -24,21 +22,8 @@ class SponsorFormService(CustomFormService):
 	def check_login(self):
 		"""Sponsor enquiry forms are always public."""
 
-	@property
-	def exclude_fields(self):
-		"""Hide every enquiry field except the ones an applicant is meant to fill in."""
-		internal = {
-			field.fieldname
-			for field in frappe.get_meta(self.form_doctype).fields
-			if field.fieldtype not in ("Section Break", "Column Break")
-		} - ENQUIRY_FIELDS
-		# Every applicant gives a contact address, even on forms saved while it could be hidden.
-		return (super().exclude_fields | internal) - {"contact_email"}
-
 	def renderable_fields(self):
-		fields = get_form_fields(
-			self.form_doctype, self.exclude_fields, with_layout_breaks=True, event=self.event.name
-		)
+		fields = super().renderable_fields()
 		for field in fields:
 			if field["fieldname"] == "contact_email":
 				field["reqd"] = 1

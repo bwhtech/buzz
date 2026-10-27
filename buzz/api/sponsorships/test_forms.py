@@ -86,7 +86,9 @@ class TestSponsorFormData(SponsorFormTestCase):
 		self.assertEqual(contact["default"], APPLICANT)
 
 	def test_hiding_contact_email_is_refused(self):
-		self.form.excluded_fields = "contact_email"
+		for row in self.form.questions:
+			if row.fieldname == "contact_email":
+				row.enabled = 0
 		with self.assertRaises(frappe.ValidationError):
 			self.form.save(ignore_permissions=True)
 

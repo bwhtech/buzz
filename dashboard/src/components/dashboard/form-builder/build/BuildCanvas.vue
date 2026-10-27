@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import EmptyState from "@/components/common/EmptyState.vue"
 
-import type { BuzzFormDoc } from "../useFormBuilder"
+import type { BuzzFormDoc, DoctypeField } from "../useFormBuilder"
 import FieldRow from "./FieldRow.vue"
 
 const form = defineModel<BuzzFormDoc>({ required: true })
+defineProps<{ doctypeFields: Record<string, DoctypeField> }>()
 </script>
 
 <template>
@@ -27,12 +28,13 @@ const form = defineModel<BuzzFormDoc>({ required: true })
 					v-for="(question, index) in form.questions"
 					:key="question.name ?? index"
 					v-model="form.questions[index]"
+					:doctype-field="question.is_standard ? doctypeFields[question.fieldname] : undefined"
 				/>
 			</div>
 			<EmptyState
 				v-else
 				title="No questions yet"
-				description="Questions you add show up on the form after its own fields."
+				description="Add questions to ask more than the form's own fields."
 				icon="lucide-list-plus"
 			/>
 		</div>

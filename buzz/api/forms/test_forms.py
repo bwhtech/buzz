@@ -1,33 +1,17 @@
 import frappe
-from frappe.tests import IntegrationTestCase, UnitTestCase
+from frappe.tests import IntegrationTestCase
 
 from buzz.api.forms import get_dial_codes
-from buzz.api.forms.exceptions import MandatoryFieldsHidden, UnknownExcludedFields
 from buzz.api.forms.fields import (
 	STANDARD_EXCLUDE_FIELDS,
 	get_form_fields,
 	get_link_field_options,
-	parse_excluded_fields,
-	validate_excluded_fields,
 )
 from buzz.tests.factories import EventCategoryFactory, EventHostFactory, SponsorshipTierFactory
 
 # Leaves title and speakers (both mandatory), description and phone renderable.
 TALK_PROPOSAL_EXCLUDE = STANDARD_EXCLUDE_FIELDS | {"event", "submitted_by"}
 LAYOUT_BREAKS = ("Section Break", "Column Break")
-
-
-class TestParseExcludedFields(UnitTestCase):
-	def test_blank_returns_none(self):
-		for blank in (None, "", "   ", ", ,,"):
-			with self.subTest(blank=blank):
-				self.assertIsNone(parse_excluded_fields(blank))
-
-	def test_trims_and_drops_empties(self):
-		self.assertEqual(parse_excluded_fields("a, b ,,c"), {"a", "b", "c"})
-
-	def test_single_field(self):
-		self.assertEqual(parse_excluded_fields("title"), {"title"})
 
 
 class TestGetFormFields(IntegrationTestCase):
@@ -94,34 +78,6 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 
 	def label_of(self, doctype: str, name: str) -> str:
 		return next(o["label"] for o in get_link_field_options(doctype) if o["value"] == name)
-
-
-class TestValidateExcludedFields(IntegrationTestCase):
-	def setUp(self):
-		frappe.clear_messages()
-
-	def test_hiding_mandatory_field_throws(self):
-		with self.assertRaises(MandatoryFieldsHidden):
-			validate_excluded_fields("Talk Proposal", "speakers")
-
-		self.assertIn("speakers", frappe.local.message_log[-1]["message"])
-
-	def test_unknown_field_throws(self):
-		with self.assertRaises(UnknownExcludedFields):
-			validate_excluded_fields("Talk Proposal", "phone, not_a_field")
-
-		self.assertIn("not_a_field", frappe.local.message_log[-1]["message"])
-
-	def test_hiding_optional_field_passes(self):
-		validate_excluded_fields("Talk Proposal", "phone")
-
-	def test_system_field_is_noop(self):
-		# System fields are never rendered, so listing them does nothing.
-		validate_excluded_fields("Talk Proposal", "event, submitted_by")
-
-	def test_blank_is_noop(self):
-		validate_excluded_fields("Talk Proposal", "")
-		validate_excluded_fields("Talk Proposal", None)
 
 
 class TestDialCodes(IntegrationTestCase):

@@ -16,11 +16,12 @@ from buzz.api.forms.exceptions import (
 )
 from buzz.api.forms.fields import (
 	EVENT_PROPOSAL_EXCLUDE_FIELDS,
+	build_field,
 	get_auto_set_fields,
-	get_exclude_fields,
 	get_form_fields,
 	get_renderable_fields,
 	question_definition,
+	system_exclude_fields,
 )
 from buzz.api.forms.schemas import (
 	CustomFieldDefinition,
@@ -130,19 +131,28 @@ class CustomFormService:
 		)
 
 	@property
-	def exclude_fields(self) -> set:
-		return get_exclude_fields(self.form_doctype, self.form.excluded_fields)
+	def standard_rows(self) -> list:
+		"""The doctype's own fields the form asks for, in the order the organiser set."""
+		return [row for row in self.form.questions if row.is_standard and row.enabled]
 
 	def renderable_fields(self) -> list[dict]:
-		return get_form_fields(
-			self.form_doctype, self.exclude_fields, with_layout_breaks=True, event=self.event.name
-		)
+		fields = get_renderable_fields(self.form_doctype, system_exclude_fields(self.form_doctype))
+		return [
+			{
+				**build_field(fields[row.fieldname], self.event.name),
+				"label": row.label,
+				"width": row.width,
+				"order": row.idx,
+			}
+			for row in self.standard_rows
+			if row.fieldname in fields
+		]
 
 	def custom_field_definitions(self) -> list[CustomFieldDefinition]:
 		return [
 			CustomFieldDefinition(**question_definition(question))
 			for question in self.form.questions
-			if question.enabled
+			if question.enabled and not question.is_standard
 		]
 
 	def submit(self, data: dict | str, custom_fields_data: dict | str | None = None) -> str:
@@ -169,7 +179,7 @@ class CustomFormService:
 		for fieldname, source in get_auto_set_fields(form_doctype).items():
 			doc_data[fieldname] = self.event.name if source == "from_route" else frappe.session.user
 
-		allowed_fieldnames = get_renderable_fields(form_doctype, self.exclude_fields)
+		allowed_fieldnames = {row.fieldname for row in self.standard_rows}
 		doc_data.update(
 			{fieldname: value for fieldname, value in data.items() if fieldname in allowed_fieldnames}
 		)

@@ -49,3 +49,4 @@ buzz.patches.move_registration_close_to_buzz_form
 buzz.patches.reshape_event_template_questions
 buzz.patches.delete_moved_custom_fields
 buzz.patches.drop_buzz_event_form_table
+buzz.patches.move_excluded_fields_to_standard_rows

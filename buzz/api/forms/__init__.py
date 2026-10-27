@@ -1,6 +1,7 @@
 import frappe
 
-from buzz.api.forms.schemas import CustomFormResponse, EventProposalFormResponse
+from buzz.api.forms.builder import FormBuilderService
+from buzz.api.forms.schemas import CustomFormResponse, EventProposalFormResponse, FormBuilderFields
 from buzz.api.forms.services import (
 	CustomFormService,
 	create_event_proposal,
@@ -47,3 +48,8 @@ def get_event_proposal_form_data() -> EventProposalFormResponse:
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def submit_event_proposal(data: dict | str) -> None:
 	create_event_proposal(data)
+
+
+@frappe.whitelist()
+def get_form_builder_fields(form: str) -> FormBuilderFields:
+	return FormBuilderService(form).fields()

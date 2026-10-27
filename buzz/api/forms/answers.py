@@ -53,7 +53,9 @@ class CustomAnswers:
 
 	def __init__(self, definitions):
 		self.definitions = {
-			row.fieldname: row for row in definitions if row.enabled and row.fieldtype not in LAYOUT_TYPES
+			row.fieldname: row
+			for row in definitions
+			if row.enabled and not row.is_standard and row.fieldtype not in LAYOUT_TYPES
 		}
 
 	def rows(self, values: dict, context: dict | None = None) -> list[dict]:

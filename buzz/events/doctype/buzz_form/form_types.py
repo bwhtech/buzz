@@ -4,7 +4,7 @@ import frappe
 from frappe import _, scrub
 from frappe.utils import get_datetime, get_datetime_in_timezone, get_system_timezone
 
-from buzz.api.forms.fields import parse_excluded_fields
+from buzz.api.forms.fields import get_renderable_fields, system_exclude_fields
 from buzz.utils import build_event_datetimes
 
 SPONSORSHIP_FORM_DOCTYPE = "Sponsorship Enquiry"
@@ -70,7 +70,15 @@ class FormType:
 	one_per_event = False
 	has_page = True
 	reserved_fieldnames = frozenset()
+	# Standard fields the organiser may move or rename but never hide.
+	locked_fieldnames = frozenset()
 	answers_field = "additional_fields"
+
+	def standard_fields(self, form_doctype: str) -> dict:
+		"""The doctype's own fields the form offers; a form without a page renders none."""
+		if not self.has_page:
+			return {}
+		return get_renderable_fields(form_doctype, system_exclude_fields(form_doctype))
 
 	def is_closed(self, form) -> bool:
 		return is_form_closed(form.publish, form.auto_close_at, event_time_zone(form.event))
@@ -96,11 +104,15 @@ class FormType:
 class SponsorshipFormType(FormType):
 	one_per_event = True
 	reserved_fieldnames = ENQUIRY_FIELDS
+	locked_fieldnames = frozenset({"contact_email"})
+
+	def standard_fields(self, form_doctype: str) -> dict:
+		"""An enquiry also holds the team's own notes; applicants see only these."""
+		fields = super().standard_fields(form_doctype)
+		return {fieldname: df for fieldname, df in fields.items() if fieldname in ENQUIRY_FIELDS}
 
 	def validate(self, form):
 		super().validate(form)
-		if "contact_email" in (parse_excluded_fields(form.excluded_fields) or set()):
-			frappe.throw(_("Contact Email cannot be hidden."))
 		form.login_required = 0
 
 

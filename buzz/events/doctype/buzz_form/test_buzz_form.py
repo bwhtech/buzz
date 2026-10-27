@@ -143,8 +143,10 @@ class TestBuzzFormValidation(IntegrationTestCase):
 			with self.subTest(route):
 				self.assertTrue(BuzzFormFactory.create(event=self.event.name, route=route).name)
 
-	def test_contact_email_cannot_be_excluded(self):
-		self.form.excluded_fields = "contact_email"
+	def test_contact_email_cannot_be_hidden(self):
+		for row in self.form.questions:
+			if row.fieldname == "contact_email":
+				row.enabled = 0
 
 		with self.assertRaises(frappe.ValidationError):
 			self.form.save()
@@ -171,7 +173,7 @@ class TestBuzzFormValidation(IntegrationTestCase):
 	def test_a_saved_fieldname_cannot_be_renamed(self):
 		self.add_question(fieldname="budget")
 		self.form.save()
-		self.form.questions[0].fieldname = "spend"
+		self.form.questions[-1].fieldname = "spend"
 
 		with self.assertRaises(frappe.ValidationError):
 			self.form.save()
@@ -222,7 +224,7 @@ class TestBuzzFormValidation(IntegrationTestCase):
 
 		self.form.save()
 
-		self.assertEqual(len(self.form.questions), 2)
+		self.assertEqual(len([row for row in self.form.questions if not row.is_standard]), 2)
 
 	def add_question(self, **question):
 		self.form.append(

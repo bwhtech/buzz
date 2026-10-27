@@ -18,6 +18,14 @@
    "default": "1"
   },
   {
+   "fieldname": "is_standard",
+   "label": "Standard Field",
+   "fieldtype": "Check",
+   "default": "0",
+   "read_only": 1,
+   "description": "A field of the form's own doctype. It can be renamed, moved or hidden, not removed."
+  },
+  {
    "fieldname": "label",
    "label": "Label",
    "fieldtype": "Data",
@@ -38,7 +46,6 @@
    "fieldname": "fieldtype",
    "label": "Type",
    "fieldtype": "Select",
-   "reqd": 1,
    "default": "Data",
    "in_list_view": 1,
    "options": "Data\nCheck\nSmall Text\nPhone\nEmail\nSelect\nDate\nNumber\nMulti Select\nRating\nAttach\nAttach Image\nURL\nRadio\nHeading\nParagraph\nDivider\nPage Break"
@@ -100,6 +107,7 @@
  ],
  "field_order": [
   "enabled",
+  "is_standard",
   "label",
   "fieldname",
   "column_break_question",
@@ -115,5 +123,5 @@
   "mandatory_depends_on"
  ],
  "permissions": [],
- "modified": "2026-10-27 12:00:00.000000"
+ "modified": "2026-10-27 13:00:00.000000"
 }

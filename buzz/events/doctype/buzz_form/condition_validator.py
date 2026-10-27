@@ -3,7 +3,7 @@ from frappe import _
 from frappe.utils import cstr
 
 from buzz.api.forms.conditions import LIST_OPERATORS, OPERATORS, parse_conditions
-from buzz.api.forms.fields import get_exclude_fields, get_renderable_fields
+from buzz.api.forms.fields import get_renderable_fields, system_exclude_fields
 
 IS_OPERATOR_VALUES = ("set", "not set")
 VALIDATED_FIELDTYPES = frozenset({"Select", "Link"})
@@ -14,8 +14,9 @@ class ConditionValidator:
 
 	def __init__(self, form):
 		self.form = form
+		# Every renderable field, page or not: attendee questions name the ticket type.
 		self.standard_fields = get_renderable_fields(
-			form.form_doctype, get_exclude_fields(form.form_doctype, form.excluded_fields)
+			form.form_doctype, system_exclude_fields(form.form_doctype)
 		)
 		self.fieldnames_above = set()
 

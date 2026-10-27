@@ -47,7 +47,9 @@ CUSTOM_FIELD = {
 def form_questions(event: str) -> list[str]:
 	forms = frappe.get_all("Buzz Form", filters={"event": event}, pluck="name")
 	return frappe.get_all(
-		"Buzz Form Field", {"parenttype": "Buzz Form", "parent": ["in", forms]}, pluck="name"
+		"Buzz Form Field",
+		{"parenttype": "Buzz Form", "parent": ["in", forms], "is_standard": 0},
+		pluck="name",
 	)
 
 
@@ -184,7 +186,8 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
 
 		form = frappe.get_doc("Buzz Form", {"event": event.name, "form_doctype": "Event Feedback"})
-		self.assertEqual([question.label for question in form.questions], ["Dietary Preference"])
+		questions = [question.label for question in form.questions if not question.is_standard]
+		self.assertEqual(questions, ["Dietary Preference"])
 
 	def test_drops_conditions_that_name_another_events_records(self):
 		"""A ticket type belongs to the template's source event; a question-to-question condition travels."""

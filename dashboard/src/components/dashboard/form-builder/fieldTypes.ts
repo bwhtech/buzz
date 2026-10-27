@@ -1,4 +1,4 @@
-export type FieldGroup = "Basic" | "Choice" | "Media" | "Layout"
+export type FieldGroup = "Basic" | "Choice" | "Media" | "Layout" | "Standard"
 
 export interface FieldType {
 	label: string
@@ -26,6 +26,10 @@ export const FIELD_TYPES: Record<string, FieldType> = {
 	Paragraph: { label: "Paragraph", icon: "lucide-pilcrow", group: "Layout" },
 	Divider: { label: "Divider", icon: "lucide-minus", group: "Layout" },
 	"Page Break": { label: "Page break", icon: "lucide-separator-horizontal", group: "Layout" },
+	// Only the form's own fields use these; they are never offered in the palette.
+	"Text Editor": { label: "Rich text", icon: "lucide-text", group: "Standard" },
+	Table: { label: "List", icon: "lucide-rows-3", group: "Standard" },
+	Link: { label: "Dropdown", icon: "lucide-circle-chevron-down", group: "Standard" },
 }
 
 export const CHOICE_TYPES = ["Select", "Radio", "Multi Select"]

@@ -1,8 +1,9 @@
-import { useDoc } from "frappe-ui"
+import { useCall, useDoc } from "frappe-ui"
 import { computed, ref } from "vue"
 
 export interface FormQuestion {
 	name?: string
+	is_standard?: 0 | 1
 	label: string
 	fieldname: string
 	fieldtype: string
@@ -25,6 +26,17 @@ export interface BuzzFormDoc {
 	publish: 0 | 1
 	questions: FormQuestion[]
 	[key: string]: unknown
+}
+
+// A field of the form's doctype, as the builder API describes it.
+export interface DoctypeField {
+	fieldname: string
+	fieldtype: string
+	label: string
+	options: string | null
+	link_options: { value: string; label: string }[] | null
+	offered: boolean
+	locked: boolean
 }
 
 // What the builder edits; everything else on the doc is the server's to set.
@@ -51,7 +63,15 @@ export function useFormBuilder(formName: () => string) {
 		reset((await form.setValue.submit(values)) as BuzzFormDoc)
 	}
 
-	return { form, draft, dirty, save }
+	const fieldsCall = useCall<{ fields: DoctypeField[] }, { form: string }>({
+		url: "/api/v2/method/buzz.api.forms.get_form_builder_fields",
+		params: () => ({ form: formName() }),
+	})
+	const doctypeFields = computed(() =>
+		Object.fromEntries((fieldsCall.data?.fields ?? []).map((field) => [field.fieldname, field])),
+	)
+
+	return { form, draft, dirty, save, doctypeFields }
 }
 
 export type FormBuilder = ReturnType<typeof useFormBuilder>

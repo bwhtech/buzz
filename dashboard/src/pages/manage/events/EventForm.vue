@@ -28,6 +28,10 @@ useEventListener(window, "beforeunload", (event) => builder.dirty.value && event
 		<div v-else-if="!draft" class="grid h-full place-items-center">
 			<Spinner class="size-5" />
 		</div>
-		<BuildCanvas v-else-if="tab === 'build'" v-model="draft" />
+		<BuildCanvas
+			v-else-if="tab === 'build'"
+			v-model="draft"
+			:doctype-fields="builder.doctypeFields.value"
+		/>
 	</FormBuilderLayout>
 </template>
