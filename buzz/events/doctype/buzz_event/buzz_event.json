@@ -51,6 +51,7 @@
   "allow_guest_booking",
   "column_break_lzcw",
   "guest_verification_method",
+  "prevent_duplicate_registrations",
   "auto_closures_section",
   "registrations_close_at",
   "section_break_kwlt",
@@ -561,6 +562,13 @@
    "fieldtype": "Select",
    "label": "Guest Verification Method",
    "options": "None\nEmail OTP\nPhone OTP"
+  },
+  {
+   "default": "0",
+   "description": "Allow each email address to register only once for this event.",
+   "fieldname": "prevent_duplicate_registrations",
+   "fieldtype": "Check",
+   "label": "Prevent Duplicate Registrations"
   },
   {
    "default": "1",

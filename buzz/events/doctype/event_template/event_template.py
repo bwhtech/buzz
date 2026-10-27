@@ -30,6 +30,7 @@ class EventTemplate(Document):
 		)
 		from buzz.proposals.doctype.sponsorship_deck_item.sponsorship_deck_item import SponsorshipDeckItem
 
+		prevent_duplicate_registrations: DF.Check
 		about: DF.TextEditor | None
 		allow_guest_booking: DF.Check
 		apply_tax: DF.Check
@@ -96,6 +97,7 @@ def create_template_from_event(event_name: str, template_name: str, options: str
 		"venue": "venue",
 		"allow_guest_booking": "allow_guest_booking",
 		"guest_verification_method": "guest_verification_method",
+		"prevent_duplicate_registrations": "prevent_duplicate_registrations",
 		"time_zone": "time_zone",
 		"send_ticket_email": "send_ticket_email",
 		"ticket_email_template": "ticket_email_template",

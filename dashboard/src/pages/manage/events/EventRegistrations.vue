@@ -149,6 +149,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				:can-write="page.data.can_write"
 				:allow-guest-booking="page.data.allow_guest_booking"
 				:guest-verification-method="page.data.guest_verification_method"
+				:prevent-duplicate-registrations="page.data.prevent_duplicate_registrations"
 				@changed="page.reload()"
 			/>
 		</template>

@@ -15,13 +15,19 @@ import { computed, ref, watch } from "vue"
 import { useVerificationMethods } from "@/data/events"
 import type { VerificationMethods } from "@/types"
 
-const props = defineProps<{ event: string; enabled: boolean; method: string }>()
+const props = defineProps<{
+	event: string
+	enabled: boolean
+	method: string
+	preventDuplicates: boolean
+}>()
 const isOpen = defineModel<boolean>({ required: true })
 const emit = defineEmits<{ changed: [] }>()
 
 const enabled = ref(props.enabled)
 // The doctype's own option strings, so nothing has to be mapped on the way out.
 const method = ref(props.method)
+const preventDuplicates = ref(props.preventDuplicates)
 
 // Site configuration, so it is read on every open rather than once: an admin can set up
 // email while the organiser has the page sitting there.
@@ -31,6 +37,7 @@ watch(isOpen, (open) => {
 	if (!open) return
 	enabled.value = props.enabled
 	method.value = props.method
+	preventDuplicates.value = props.preventDuplicates
 	methods.submit()
 })
 
@@ -85,6 +92,7 @@ async function save(close: () => void) {
 			fieldname: {
 				allow_guest_booking: enabled.value ? 1 : 0,
 				guest_verification_method: method.value,
+				prevent_duplicate_registrations: preventDuplicates.value ? 1 : 0,
 			},
 		})
 		toast.success("Guest registration settings saved")
@@ -119,6 +127,13 @@ const actions = computed<DialogAction[]>(() => [
 				padded
 				label="Accept guest registrations"
 				description="Guests can register themselves from the registration page."
+			/>
+
+			<Switch
+				v-model="preventDuplicates"
+				padded
+				label="Prevent duplicate registrations"
+				description="Each email address can register only once for this event."
 			/>
 
 			<!-- Skeletons rather than enabled options: an option drawn before the site's
