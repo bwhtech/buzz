@@ -221,16 +221,17 @@ useEventListener(window, "keydown", (keydown: KeyboardEvent) => {
 			<TabButtons v-model="tab" :options="TABS" />
 
 			<div class="flex items-center justify-end gap-1.5">
-				<Tooltip v-if="live && link" text="Go to form">
-					<Button
-						variant="ghost"
-						icon="lucide-arrow-up-right"
-						label="Go to form"
-						@click="openForm"
-					/>
-				</Tooltip>
-				<template v-if="tab === 'build'">
-					<Tooltip :text="preview ? 'Back to editing' : 'Preview'">
+				<!-- Ghost buttons pad their icons, so side by side they need no gap to look even. -->
+				<div v-if="(live && link) || tab === 'build'" class="flex">
+					<Tooltip v-if="live && link" text="Go to form">
+						<Button
+							variant="ghost"
+							icon="lucide-arrow-up-right"
+							label="Go to form"
+							@click="openForm"
+						/>
+					</Tooltip>
+					<Tooltip v-if="tab === 'build'" :text="preview ? 'Back to editing' : 'Preview'">
 						<Button
 							:variant="preview ? 'subtle' : 'ghost'"
 							:icon="preview ? 'lucide-pencil' : 'lucide-eye'"
@@ -238,6 +239,8 @@ useEventListener(window, "keydown", (keydown: KeyboardEvent) => {
 							@click="preview = !preview"
 						/>
 					</Tooltip>
+				</div>
+				<template v-if="tab === 'build'">
 					<TabButtons v-model="device" :options="DEVICES" />
 					<span class="mx-1 h-4 w-px bg-surface-gray-3" aria-hidden="true" />
 				</template>
