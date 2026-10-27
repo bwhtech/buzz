@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useEventListener } from "@vueuse/core"
+import { useRouteQuery } from "@vueuse/router"
 import { ErrorMessage, Spinner, TabButtons } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 import { onBeforeRouteLeave, useRoute } from "vue-router"
@@ -34,7 +35,11 @@ const active = computed(() =>
 )
 const draft = computed(() => active.value.draft.value)
 
-const tab = ref("build")
+// The tab lives in the address, so a reload or a shared link opens the same one.
+const TABS = ["build", "logic", "settings"]
+const tab = useRouteQuery<string>("tab", "build", {
+	transform: (value) => (TABS.includes(value) ? value : "build"),
+})
 const device = ref<"desktop" | "mobile">("desktop")
 const preview = ref(false)
 const editor = useQuestionEditor(
