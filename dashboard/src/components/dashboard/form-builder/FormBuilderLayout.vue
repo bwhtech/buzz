@@ -2,6 +2,7 @@
 import { Breadcrumbs, Button, TabButtons, toast } from "frappe-ui"
 import { computed } from "vue"
 
+import { useIsMobile } from "@/composables/useIsMobile"
 import { useEventDoc } from "@/data/events"
 import type { FrappeError } from "@/types"
 
@@ -36,11 +37,18 @@ const crumbs = computed(() => [
 	{ label: draft.value?.title || "Form" },
 ])
 
-const TABS = [
-	{ label: "Build", value: "build", iconLeft: "lucide-layout-list" },
-	{ label: "Logic", value: "logic", iconLeft: "lucide-workflow" },
-	{ label: "Settings", value: "settings", iconLeft: "lucide-settings-2" },
-]
+const isMobile = useIsMobile()
+
+// On a phone the tabs keep only their icons, with the label as their accessible name.
+const TABS = computed(() =>
+	[
+		{ label: "Build", value: "build", icon: "lucide-layout-list" },
+		{ label: "Logic", value: "logic", icon: "lucide-workflow" },
+		{ label: "Settings", value: "settings", icon: "lucide-settings-2" },
+	].map(({ icon, ...option }) =>
+		isMobile.value ? { ...option, icon } : { ...option, iconLeft: icon },
+	),
+)
 
 const dirty = computed(() => props.builders.some((builder) => builder.dirty.value))
 const saving = computed(() => props.builders.some((builder) => builder.form.setValue.loading))
@@ -58,7 +66,7 @@ async function save() {
 <template>
 	<div class="flex h-full min-h-0 flex-col">
 		<header
-			class="flex h-12 shrink-0 items-center gap-3 border-b border-outline-gray-1 bg-surface-base px-4"
+			class="flex h-12 shrink-0 items-center gap-2 border-b border-outline-gray-1 bg-surface-base px-2 sm:gap-3 sm:px-4"
 		>
 			<div class="flex min-w-0 flex-1 items-center gap-1">
 				<Button
@@ -67,10 +75,13 @@ async function save() {
 					:label="`Back to ${section.label}`"
 					:route="section.route"
 				/>
-				<Breadcrumbs class="min-w-0" :items="crumbs" />
+				<Breadcrumbs v-if="!isMobile" class="min-w-0" :items="crumbs" />
+				<span v-else class="truncate text-p-base font-medium text-ink-gray-9">{{
+					draft?.title
+				}}</span>
 			</div>
 			<TabButtons v-model="tab" :options="TABS" />
-			<div class="flex flex-1 justify-end">
+			<div class="flex justify-end sm:flex-1">
 				<Button variant="solid" label="Save" :disabled="!dirty" :loading="saving" @click="save" />
 			</div>
 		</header>

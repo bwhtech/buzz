@@ -1,4 +1,4 @@
-import { ref, toRaw } from "vue"
+import { ref, toRaw, watch } from "vue"
 
 import type { LogicRule } from "@/utils/formLogic"
 
@@ -52,6 +52,9 @@ function fieldnameFrom(label: string, taken: Set<string>): string {
 
 export function useQuestionEditor(questions: () => FormQuestion[], rules: () => LogicRule[]) {
 	const selected = ref<FormQuestion | null>(null)
+	// On a phone, settings open as a sheet only when asked for, so tapping a label edits it.
+	const settingsOpen = ref(false)
+	watch(selected, (question) => question || (settingsOpen.value = false))
 
 	const indexOf = (question: FormQuestion) =>
 		questions().findIndex((row) => toRaw(row) === toRaw(question))
@@ -125,6 +128,7 @@ export function useQuestionEditor(questions: () => FormQuestion[], rules: () => 
 
 	return {
 		selected,
+		settingsOpen,
 		indexOf,
 		insert,
 		insertAfterSelection,

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useEventListener } from "@vueuse/core"
+import { breakpointsTailwind, useBreakpoints, useEventListener } from "@vueuse/core"
+import { BottomSheet, Button } from "frappe-ui"
 import { computed, ref, toRaw } from "vue"
 
 import type { MenuItem } from "../fieldTypes"
@@ -22,11 +23,40 @@ defineEmits<{ addRule: [FormQuestion] }>()
 const editor = props.editor
 const composer = ref<InstanceType<typeof FieldComposer> | null>(null)
 
-const doctypeFieldOf = (question: FormQuestion) =>
-	question.is_standard ? props.doctypeFields[question.fieldname] : undefined
 const selectedIndex = computed(() =>
 	editor.selected.value ? editor.indexOf(editor.selected.value) : -1,
 )
+
+// Below lg the side panel is gone: settings and the palette open as bottom sheets.
+const isNarrow = useBreakpoints(breakpointsTailwind).smaller("lg")
+const paletteOpen = ref(false)
+const inspectorOpen = computed({
+	get: () => isNarrow.value && selectedIndex.value >= 0 && editor.settingsOpen.value,
+	set: (open) => (editor.settingsOpen.value = open),
+})
+
+// The side panel and the phone sheet show the same settings.
+const inspectorProps = computed(() => {
+	const question = form.value.questions[selectedIndex.value]
+	return {
+		doctypeField: doctypeFieldOf(question),
+		editor,
+		ruleCount: rulesActingOn(question),
+		rules: form.value.logic_rules,
+		ticketTypes:
+			form.value.form_doctype === "Event Booking Attendee"
+				? props.doctypeFields.ticket_type?.link_options
+				: null,
+	}
+})
+
+function addFromSheet(item: MenuItem) {
+	paletteOpen.value = false
+	addItem(item)
+}
+
+const doctypeFieldOf = (question: FormQuestion) =>
+	question.is_standard ? props.doctypeFields[question.fieldname] : undefined
 
 // What is being dragged: a row being moved, or a palette item being added.
 const dragged = ref<FormQuestion | MenuItem | null>(null)
@@ -174,15 +204,7 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 				v-if="selectedIndex >= 0"
 				:key="questionKey(form.questions[selectedIndex])"
 				v-model="form.questions[selectedIndex]"
-				:doctype-field="doctypeFieldOf(form.questions[selectedIndex])"
-				:editor="editor"
-				:rule-count="rulesActingOn(form.questions[selectedIndex])"
-				:rules="form.logic_rules"
-				:ticket-types="
-					form.form_doctype === 'Event Booking Attendee'
-						? doctypeFields.ticket_type?.link_options
-						: null
-				"
+				v-bind="inspectorProps"
 				@add-rule="$emit('addRule', form.questions[selectedIndex])"
 			/>
 			<FieldPalette
@@ -192,5 +214,26 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 				@dragstart="(item) => (dragged = item)"
 			/>
 		</aside>
+		<BottomSheet v-if="isNarrow" v-model:open="inspectorOpen" title="Field settings">
+			<FieldInspector
+				v-if="selectedIndex >= 0"
+				:key="questionKey(form.questions[selectedIndex])"
+				v-model="form.questions[selectedIndex]"
+				v-bind="inspectorProps"
+				@add-rule="$emit('addRule', form.questions[selectedIndex])"
+			/>
+		</BottomSheet>
+		<BottomSheet v-if="isNarrow" v-model:open="paletteOpen" title="Add a field">
+			<FieldPalette :form-doctype="form.form_doctype" @pick="addFromSheet" />
+		</BottomSheet>
+		<Button
+			v-if="isNarrow"
+			variant="solid"
+			size="lg"
+			icon="lucide-plus"
+			label="Add a field"
+			class="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-10 !size-12 !rounded-full shadow-lg active:scale-95 transition-transform duration-150"
+			@click="paletteOpen = true"
+		/>
 	</div>
 </template>

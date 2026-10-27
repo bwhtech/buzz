@@ -172,3 +172,26 @@ test("registration edits attendee and booking questions, with ticket-type chips"
 	await expect(page.getByText("Always asked:")).not.toContainText("First name")
 	// Nothing is saved: other specs read this event's registration questions.
 })
+
+test.describe("on a phone", () => {
+	test.use({ viewport: { width: 390, height: 844 } })
+
+	test("fields are added from a sheet and their settings open from the row menu", async ({
+		page,
+		request,
+	}) => {
+		const { event, form } = await builderForm(request)
+		await page.goto(`/b/manage/events/${event}/forms/${form}`)
+
+		await page.getByRole("button", { name: "Add a field" }).click()
+		await page.getByRole("dialog").getByRole("button", { name: "Email" }).click()
+		await expect(page.getByRole("textbox", { name: "Label of Email field" })).toBeVisible()
+
+		const row = page
+			.locator('[draggable="true"]')
+			.filter({ has: page.getByRole("textbox", { name: "Label of Email field" }) })
+		await row.getByRole("button", { name: "More actions" }).click()
+		await page.getByRole("menuitem", { name: "Field settings" }).click()
+		await expect(page.getByRole("dialog").getByText("Placeholder")).toBeVisible()
+	})
+})

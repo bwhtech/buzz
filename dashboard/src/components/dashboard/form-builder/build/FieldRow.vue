@@ -44,6 +44,14 @@ const convertTargets = computed(() =>
 
 const moreOptions = computed(() => [
 	{
+		label: "Field settings",
+		icon: "lucide-settings-2",
+		onClick: () => {
+			props.editor.selected.value = question.value
+			props.editor.settingsOpen.value = true
+		},
+	},
+	{
 		label: "Turn into",
 		icon: "lucide-repeat-2",
 		disabled: isStandard.value,
