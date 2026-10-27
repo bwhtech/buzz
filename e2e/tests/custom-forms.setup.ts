@@ -143,7 +143,7 @@ async function ensureForm(
 		filters: { event: ["=", eventName], route: ["=", form.route] },
 	})
 	if (forms.length > 0) {
-		await updateDoc(request, "Buzz Form", forms[0].name, form)
+		await updateDoc(request, "Buzz Form", forms[0].name, { title: form.form_doctype, ...form })
 		return
 	}
 	await createDoc(request, "Buzz Form", { event: eventName, title: form.form_doctype, ...form })
