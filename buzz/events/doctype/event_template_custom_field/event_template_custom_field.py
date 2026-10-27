@@ -14,7 +14,6 @@ class EventTemplateCustomField(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		asked_per: DF.Literal["Booking", "Attendee"]
 		default_value: DF.Data | None
 		depends_on: DF.JSON | None
 		description: DF.SmallText | None

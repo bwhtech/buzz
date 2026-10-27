@@ -78,7 +78,7 @@ class TestCountRecipients(CommunicationsTestCase):
 		self.assertEqual(self.count("Guests", ["ticket_type", "in", [str(ticket.ticket_type)]]), 1)
 
 	def test_narrows_guests_by_a_ticket_question(self):
-		BuzzFormFactory.add_question(self.event, label="Diet", asked_per="Attendee")
+		BuzzFormFactory.add_question(self.event, "Event Booking Attendee", label="Diet")
 		self.issue_ticket("veg@example.com", additional_fields=[{"fieldname": "diet", "value": "Veg"}])
 		self.issue_ticket("vegan@example.com", additional_fields=[{"fieldname": "diet", "value": "Vegan"}])
 		self.issue_ticket("blank@example.com")

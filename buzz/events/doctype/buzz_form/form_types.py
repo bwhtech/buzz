@@ -12,8 +12,10 @@ TALK_PROPOSAL_FORM_DOCTYPE = "Talk Proposal"
 EVENT_FEEDBACK_FORM_DOCTYPE = "Event Feedback"
 REGISTRATION_FORM_DOCTYPE = "Event Booking"
 REGISTRATION_ROUTE = "register"
-# What the booking page and the registration report call each kind of registration question.
-APPLIED_TO_BY_ASKED_PER = {"Booking": "Booking", "Attendee": "Ticket"}
+ATTENDEE_FORM_DOCTYPE = "Event Booking Attendee"
+ATTENDEE_ROUTE = "register-attendee"
+# What the booking page and the registration report call each registration form's questions.
+APPLIED_TO_BY_FORM_DOCTYPE = {REGISTRATION_FORM_DOCTYPE: "Booking", ATTENDEE_FORM_DOCTYPE: "Ticket"}
 # What a template carries of each question; the form it belongs to travels beside it.
 QUESTION_FIELD_NAMES = (
 	"enabled",
@@ -27,7 +29,6 @@ QUESTION_FIELD_NAMES = (
 	"description",
 	"depends_on",
 	"mandatory_depends_on",
-	"asked_per",
 )
 
 ENQUIRY_FIELDS = frozenset(
@@ -69,9 +70,7 @@ class FormType:
 	one_per_event = False
 	has_page = True
 	reserved_fieldnames = frozenset()
-
-	def question_key(self, question):
-		return question.fieldname
+	answers_field = "additional_fields"
 
 	def condition_fields(self, form, question) -> dict:
 		"""Fields a condition on this question may name besides the form's own fields."""
@@ -124,26 +123,39 @@ class RegistrationFormType(FormType):
 	one_per_event = True
 	has_page = False  # registration is served by /book-tickets, not /b/<event>/<route>
 
-	def question_key(self, question):
-		# A booking and an attendee question may share a fieldname.
-		return (question.asked_per, question.fieldname)
-
 	def is_closed(self, form) -> bool:
 		event = frappe.get_cached_doc("Buzz Event", form.event)
 		return is_registration_closed(form, event)
 
 	close = staticmethod(close_with_cutoff)
 
+
+class AttendeeFormType(FormType):
+	"""Questions asked once per attendee; the registration form owns every setting."""
+
+	one_per_event = True
+	has_page = False
+	answers_field = "custom_fields"
+
+	def is_closed(self, form) -> bool:
+		event = frappe.get_cached_doc("Buzz Event", form.event)
+		return is_registration_closed(event_form(form.event, REGISTRATION_FORM_DOCTYPE), event)
+
+	def close(self, form):
+		pass
+
+	def open(self, form):
+		pass
+
 	def condition_fields(self, form, question) -> dict:
-		if question.asked_per != "Attendee":
-			return {}
-		return {"ticket_type": frappe.get_meta("Event Booking Attendee").get_field("ticket_type")}
+		return {"ticket_type": frappe.get_meta(ATTENDEE_FORM_DOCTYPE).get_field("ticket_type")}
 
 
 FORM_TYPES = {
 	SPONSORSHIP_FORM_DOCTYPE: SponsorshipFormType(),
 	TALK_PROPOSAL_FORM_DOCTYPE: TalkProposalFormType(),
 	REGISTRATION_FORM_DOCTYPE: RegistrationFormType(),
+	ATTENDEE_FORM_DOCTYPE: AttendeeFormType(),
 }
 
 # Created with every event, closed: an organiser opens one when they mean to.
@@ -152,6 +164,7 @@ DEFAULT_FORMS = (
 	(EVENT_FEEDBACK_FORM_DOCTYPE, "feedback", "Feedback"),
 	(TALK_PROPOSAL_FORM_DOCTYPE, "propose-talk", "Talk proposal"),
 	(REGISTRATION_FORM_DOCTYPE, REGISTRATION_ROUTE, "Registration"),
+	(ATTENDEE_FORM_DOCTYPE, ATTENDEE_ROUTE, "Attendee details"),
 )
 
 

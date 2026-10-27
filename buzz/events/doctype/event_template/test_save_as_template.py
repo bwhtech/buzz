@@ -35,8 +35,8 @@ class TestSaveEventAsTemplate(IntegrationTestCase):
 		self.assertEqual([row.price for row in template.template_ticket_types if row.title == "Gold"], [5000])
 		self.assertEqual([row.title for row in template.template_add_ons], ["Parking"])
 		self.assertEqual(
-			[(row.label, row.form_doctype, row.asked_per) for row in template.template_custom_fields],
-			[("Designation", "Event Booking", "Booking")],
+			[(row.label, row.form_doctype) for row in template.template_custom_fields],
+			[("Designation", "Event Booking")],
 		)
 
 	def test_saves_only_the_selected_options(self):
@@ -99,9 +99,7 @@ class TestSaveEventAsTemplate(IntegrationTestCase):
 			event=event.name, title="Gold", prices=[{"currency": "INR", "price": 5000}]
 		)
 		TicketAddOnFactory.create(event=event.name, title="Parking", price=200)
-		BuzzFormFactory.add_question(
-			event.name, label="Designation", fieldname="designation", asked_per="Booking"
-		)
+		BuzzFormFactory.add_question(event.name, label="Designation", fieldname="designation")
 		return event
 
 	def save_as_template(self, event, options: dict):

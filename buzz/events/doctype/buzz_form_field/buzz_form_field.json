@@ -44,15 +44,6 @@
    "options": "Data\nCheck\nSmall Text\nPhone\nEmail\nSelect\nDate\nNumber\nMulti Select\nRating\nAttach\nAttach Image"
   },
   {
-   "fieldname": "asked_per",
-   "label": "Asked Per",
-   "fieldtype": "Select",
-   "options": "Booking\nAttendee",
-   "default": "Attendee",
-   "depends_on": "eval:parent.form_doctype=='Event Booking'",
-   "description": "Booking questions are asked once per booking, Attendee questions once per attendee."
-  },
-  {
    "fieldname": "mandatory",
    "label": "Required",
    "fieldtype": "Check",
@@ -106,7 +97,6 @@
   "fieldname",
   "column_break_question",
   "fieldtype",
-  "asked_per",
   "mandatory",
   "options",
   "placeholder",
@@ -116,5 +106,6 @@
   "depends_on",
   "mandatory_depends_on"
  ],
- "permissions": []
+ "permissions": [],
+ "modified": "2026-10-27 12:00:00.000000"
 }

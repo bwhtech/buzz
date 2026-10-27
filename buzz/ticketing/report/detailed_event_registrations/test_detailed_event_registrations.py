@@ -198,12 +198,12 @@ class TestDetailedEventRegistrationsReport(IntegrationTestCase):
 		)
 
 	def create_custom_field(self, fieldname: str, applied_to: str = "Booking", **overrides):
-		asked_per = "Attendee" if applied_to == "Ticket" else "Booking"
+		form_doctype = "Event Booking Attendee" if applied_to == "Ticket" else "Event Booking"
 		return BuzzFormFactory.add_question(
 			self.event,
+			form_doctype,
 			label=fieldname.replace("_", " ").title(),
 			fieldname=fieldname,
-			asked_per=asked_per,
 			**overrides,
 		)
 

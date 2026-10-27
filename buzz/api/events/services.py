@@ -39,7 +39,11 @@ from buzz.api.filters.conditions import ListConditions, filter_field, form_quest
 from buzz.api.filters.schemas import FilterField
 from buzz.events.countdown import event_countdown
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
-from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE, event_form
+from buzz.events.doctype.buzz_form.form_types import (
+	ATTENDEE_FORM_DOCTYPE,
+	REGISTRATION_FORM_DOCTYPE,
+	event_form,
+)
 from buzz.events.doctype.buzz_team.buzz_team import personal_team_owner
 from buzz.events.doctype.event_venue.details import venue_details
 from buzz.permissions import (
@@ -452,14 +456,11 @@ def guest_filter_fields(event: str) -> tuple[list[FilterField], dict]:
 	booking it belongs to. A fieldname asked on both keeps the ticket question.
 	"""
 	ticket_types = [(row.name, row.title) for row in ticket_types_of(event)]
-	questions: dict = {}
-	for row in form_questions(event, REGISTRATION_FORM_DOCTYPE):
-		existing = questions.get(row.fieldname)
-		if not existing or existing.asked_per != "Attendee":
-			questions[row.fieldname] = row
-	answer_parents = {
-		key: ("Event Booking", "booking") for key, row in questions.items() if row.asked_per == "Booking"
-	}
+	questions = {row.fieldname: row for row in form_questions(event, REGISTRATION_FORM_DOCTYPE)}
+	answer_parents = {fieldname: ("Event Booking", "booking") for fieldname in questions}
+	for row in form_questions(event, ATTENDEE_FORM_DOCTYPE):
+		questions[row.fieldname] = row
+		answer_parents.pop(row.fieldname, None)
 	fields = [
 		filter_field("ticket_type", _("Ticket type"), "Link", ticket_types),
 		*question_fields(questions.values()),

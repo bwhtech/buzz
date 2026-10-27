@@ -35,7 +35,6 @@ class BuzzFormFactory(BaseFactory[BuzzForm]):
 				"label": label,
 				"fieldname": question.get("fieldname") or frappe.scrub(label),
 				"fieldtype": "Data",
-				"asked_per": question.get("asked_per") or "Attendee",
 				**question,
 			},
 		)

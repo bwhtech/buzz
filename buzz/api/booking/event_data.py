@@ -5,9 +5,8 @@ from frappe import _
 
 from buzz.api.booking.schemas import EventBookingDataResponse, TaxSettings
 from buzz.api.booking.services import are_registrations_closed
-from buzz.api.filters.conditions import form_questions
+from buzz.api.filters.conditions import registration_questions
 from buzz.api.forms.fields import question_definition
-from buzz.events.doctype.buzz_form.form_types import APPLIED_TO_BY_ASKED_PER, REGISTRATION_FORM_DOCTYPE
 from buzz.payments import get_payment_gateways_for_event
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 
@@ -109,8 +108,8 @@ def get_available_add_ons(event_id: str) -> list:
 
 def get_registration_custom_fields(event_id: str) -> list[dict]:
 	return [
-		{**question_definition(question), "applied_to": APPLIED_TO_BY_ASKED_PER[question.asked_per]}
-		for question in form_questions(event_id, REGISTRATION_FORM_DOCTYPE)
+		{**question_definition(question), "applied_to": question.applied_to}
+		for question in registration_questions(event_id)
 	]
 
 

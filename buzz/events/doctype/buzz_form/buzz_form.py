@@ -87,9 +87,8 @@ class BuzzForm(Document):
 		return any(route and route.lower() == self.route.lower() for route in taken)
 
 	def validate_questions(self):
-		form_rules = form_type(self.form_doctype)
-		reserved = form_rules.reserved_fieldnames
-		used_keys = set()
+		reserved = form_type(self.form_doctype).reserved_fieldnames
+		used_fieldnames = set()
 		saved_fieldnames = self.saved_question_fieldnames()
 		for question in self.questions:
 			question.fieldname = question.fieldname or frappe.scrub(question.label or "")
@@ -99,11 +98,11 @@ class BuzzForm(Document):
 						"Question fieldnames must start with a letter and contain lowercase letters, numbers or underscores."
 					)
 				)
-			if form_rules.question_key(question) in used_keys or question.fieldname in reserved:
+			if question.fieldname in used_fieldnames or question.fieldname in reserved:
 				frappe.throw(_("Duplicate or reserved question fieldname: {0}").format(question.fieldname))
 			if saved_fieldnames.get(question.name) not in (None, question.fieldname):
 				frappe.throw(_("A saved question's fieldname cannot be changed. Add a new question instead."))
-			used_keys.add(form_rules.question_key(question))
+			used_fieldnames.add(question.fieldname)
 
 	def saved_question_fieldnames(self) -> dict[str, str]:
 		before = self.get_doc_before_save()
@@ -119,7 +118,6 @@ class BuzzForm(Document):
 			frappe.throw(_("Publish the event before opening its form."))
 
 	def validate_collects_answers(self):
-		if self.questions and not frappe.get_meta(self.form_doctype).has_field("additional_fields"):
-			frappe.throw(
-				_("{0} has no Additional Fields table to store answers in.").format(self.form_doctype)
-			)
+		answers_field = form_type(self.form_doctype).answers_field
+		if self.questions and not frappe.get_meta(self.form_doctype).has_field(answers_field):
+			frappe.throw(_("{0} has no field to store answers in.").format(self.form_doctype))

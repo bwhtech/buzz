@@ -12,7 +12,6 @@
   "fieldname",
   "column_break_question",
   "fieldtype",
-  "asked_per",
   "mandatory",
   "options",
   "placeholder",
@@ -61,15 +60,6 @@
    "default": "Data",
    "in_list_view": 1,
    "options": "Data\nCheck\nSmall Text\nPhone\nEmail\nSelect\nDate\nNumber\nMulti Select\nRating\nAttach\nAttach Image"
-  },
-  {
-   "fieldname": "asked_per",
-   "label": "Asked Per",
-   "fieldtype": "Select",
-   "options": "Booking\nAttendee",
-   "default": "Attendee",
-   "depends_on": "eval:doc.form_doctype=='Event Booking'",
-   "description": "Booking questions are asked once per booking, Attendee questions once per attendee."
   },
   {
    "fieldname": "mandatory",
@@ -122,7 +112,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-10-26 10:25:47.571179",
+ "modified": "2026-10-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Template Custom Field",

@@ -124,7 +124,7 @@ class TestEventRoute(BuzzEventTestCase):
 		)
 		self.assertEqual(
 			[form.route for form in forms],
-			["enquire-sponsorship", "feedback", "propose-talk", "register"],
+			["enquire-sponsorship", "feedback", "propose-talk", "register", "register-attendee"],
 		)
 		# Organisers open each page form when they mean to take submissions; registration is
 		# always open, it has no page of its own.

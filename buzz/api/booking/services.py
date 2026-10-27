@@ -28,7 +28,11 @@ from buzz.api.booking.schemas import (
 )
 from buzz.api.filters.conditions import form_questions
 from buzz.api.forms.answers import CustomAnswers
-from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE, is_registration_closed
+from buzz.events.doctype.buzz_form.form_types import (
+	ATTENDEE_FORM_DOCTYPE,
+	REGISTRATION_FORM_DOCTYPE,
+	is_registration_closed,
+)
 from buzz.payments import get_payment_link_for_booking
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
@@ -83,22 +87,18 @@ class BookingService:
 		verify_guest_otp deletes the code from the cache, and no rollback puts it back, so an
 		answer rejected later in build_booking would cost the guest a fresh OTP.
 		"""
-		questions = self.registration_questions()
-		self.booking_answers = self.answer_rows(questions["Booking"], self.request.booking_custom_fields)
+		event = self.request.event
+		booking_questions = form_questions(event, REGISTRATION_FORM_DOCTYPE)
+		attendee_questions = form_questions(event, ATTENDEE_FORM_DOCTYPE)
+		self.booking_answers = self.answer_rows(booking_questions, self.request.booking_custom_fields)
 		self.attendee_answers = [
 			self.answer_rows(
-				questions["Attendee"],
+				attendee_questions,
 				attendee.get("custom_fields"),
 				{"ticket_type": cstr(attendee.get("ticket_type"))},
 			)
 			for attendee in self.request.attendees
 		]
-
-	def registration_questions(self) -> dict:
-		return {
-			asked_per: form_questions(self.request.event, REGISTRATION_FORM_DOCTYPE, asked_per)
-			for asked_per in ("Booking", "Attendee")
-		}
 
 	def answer_rows(self, questions: list, values: dict | None, context: dict | None = None) -> list[dict]:
 		return CustomAnswers(questions).rows(values or {}, context)

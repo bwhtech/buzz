@@ -12,7 +12,7 @@ from buzz.api.booking.exceptions import RegistrationsClosed
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, are_registrations_closed
 from buzz.api.filters.conditions import form_questions
 from buzz.emails import is_full_document
-from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE
+from buzz.events.doctype.buzz_form.form_types import ATTENDEE_FORM_DOCTYPE
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.payments import get_controller, mark_payment_as_received
@@ -423,7 +423,7 @@ class EventBooking(Document):
 						custom_fields_data = {}
 
 				# The event's attendee questions give each answer its label and type.
-				custom_field_defs = form_questions(self.event, REGISTRATION_FORM_DOCTYPE, "Attendee")
+				custom_field_defs = form_questions(self.event, ATTENDEE_FORM_DOCTYPE)
 				custom_field_map = {cf["fieldname"]: cf for cf in custom_field_defs}
 
 				for field_name, field_value in custom_fields_data.items():

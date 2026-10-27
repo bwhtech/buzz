@@ -43,8 +43,9 @@ DOCTYPE_SECTION = {
 }
 
 # A Buzz Form collects the rows of one doctype, so it belongs to that doctype's section.
+FORM_SECTION = {**DOCTYPE_SECTION, "Event Booking Attendee": "guests"}
 FORM_DOCTYPES_BY_SECTION = {
-	section: [doctype for doctype, mapped in DOCTYPE_SECTION.items() if mapped == section]
+	section: [doctype for doctype, mapped in FORM_SECTION.items() if mapped == section]
 	for section in SECTIONS
 }
 
@@ -263,12 +264,12 @@ def team_query_conditions(user: str | None = None, doctype: str | None = None, *
 
 
 def form_section(form_doctype: str | None) -> str:
-	return DOCTYPE_SECTION.get(form_doctype, "details")
+	return FORM_SECTION.get(form_doctype, "details")
 
 
 def form_query_criterion(user: str, table) -> Criterion:
 	"""A form is visible to whoever may read the rows it collects."""
-	criterion = table.form_doctype.notin(list(DOCTYPE_SECTION)) & table.event.isin(
+	criterion = table.form_doctype.notin(list(FORM_SECTION)) & table.event.isin(
 		events_with_section_access(user, "details")
 	)
 	for section, doctypes in FORM_DOCTYPES_BY_SECTION.items():

@@ -38,7 +38,6 @@ CUSTOM_FIELD = {
 	"fieldname": "company",
 	"fieldtype": "Data",
 	"form_doctype": "Event Booking",
-	"asked_per": "Booking",
 	"mandatory": 1,
 	"enabled": 1,
 	"placeholder": "Enter company name",
@@ -162,11 +161,10 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 					question.fieldtype,
 					question.mandatory,
 					question.placeholder,
-					question.asked_per,
 				)
 				for question in form.questions
 			],
-			[("Company", "Data", 1, "Enter company name", "Booking")],
+			[("Company", "Data", 1, "Enter company name")],
 		)
 
 	def test_copies_form_questions_onto_the_new_events_form(self):
@@ -195,12 +193,12 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 		answer_condition = [["company", "is", "set"]]
 		template = self.create_template(
 			template_custom_fields=[
-				{**CUSTOM_FIELD, "asked_per": "Attendee"},
+				{**CUSTOM_FIELD, "form_doctype": "Event Booking Attendee"},
 				{
 					**CUSTOM_FIELD,
 					"label": "Role",
 					"fieldname": "role",
-					"asked_per": "Attendee",
+					"form_doctype": "Event Booking Attendee",
 					"depends_on": frappe.as_json(ticket_condition + answer_condition),
 				},
 			]
@@ -208,7 +206,7 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 
 		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
 
-		form = frappe.get_doc("Buzz Form", {"event": event.name, "form_doctype": "Event Booking"})
+		form = frappe.get_doc("Buzz Form", {"event": event.name, "form_doctype": "Event Booking Attendee"})
 		self.assertEqual(frappe.parse_json(form.questions[1].depends_on), answer_condition)
 
 	def test_skips_form_questions_for_a_form_the_event_has_not(self):
@@ -288,15 +286,15 @@ class TestTemplateFormQuestions(IntegrationTestCase):
 			[("dietary", "Event Feedback")],
 		)
 
-	def test_registration_questions_keep_their_asked_per(self):
-		self.add_question("Event Booking", "Company", "company", asked_per="Booking")
-		self.add_question("Event Booking", "Diet", "diet", asked_per="Attendee")
+	def test_registration_questions_name_their_form(self):
+		self.add_question("Event Booking", "Company", "company")
+		self.add_question("Event Booking Attendee", "Diet", "diet")
 
 		rows = event_template_questions(str(self.event.name))
 
-		self.assertEqual(
-			[(row["fieldname"], row["form_doctype"], row["asked_per"]) for row in rows],
-			[("company", "Event Booking", "Booking"), ("diet", "Event Booking", "Attendee")],
+		self.assertCountEqual(
+			[(row["fieldname"], row["form_doctype"]) for row in rows],
+			[("company", "Event Booking"), ("diet", "Event Booking Attendee")],
 		)
 
 	def test_sponsorship_questions_stay_out(self):
@@ -304,7 +302,7 @@ class TestTemplateFormQuestions(IntegrationTestCase):
 
 		self.assertEqual(event_template_questions(str(self.event.name)), [])
 
-	def add_question(self, form_doctype: str, label: str, fieldname: str, asked_per: str = "Attendee"):
+	def add_question(self, form_doctype: str, label: str, fieldname: str):
 		form = frappe.get_doc("Buzz Form", {"event": self.event.name, "form_doctype": form_doctype})
 		form.append(
 			"questions",
@@ -313,7 +311,6 @@ class TestTemplateFormQuestions(IntegrationTestCase):
 				"fieldname": fieldname,
 				"fieldtype": "Data",
 				"enabled": 1,
-				"asked_per": asked_per,
 			},
 		)
 		form.save(ignore_permissions=True)

@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 
-from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE
+from buzz.events.doctype.buzz_form.form_types import ATTENDEE_FORM_DOCTYPE, REGISTRATION_FORM_DOCTYPE
 
 MOVED_APPLIED_TO = ("Booking", "Ticket", "Custom Form")
 
@@ -26,7 +26,12 @@ def moved_rows_by_form() -> list:
 		"""
 		select moved.event, moved.form_doctype, moved.moved, form.name as form
 		from (
-			select event, if(applied_to = 'Custom Form', custom_form_doctype, %(registration)s) as form_doctype,
+			select event,
+				case applied_to
+					when 'Custom Form' then custom_form_doctype
+					when 'Ticket' then %(attendee)s
+					else %(registration)s
+				end as form_doctype,
 				count(*) as moved
 			from `tabBuzz Custom Field`
 			where applied_to in %(applied_to)s
@@ -36,6 +41,10 @@ def moved_rows_by_form() -> list:
 		join `tabBuzz Event` event on event.name = moved.event
 		left join `tabBuzz Form` form on form.event = moved.event and form.form_doctype = moved.form_doctype
 		""",
-		{"registration": REGISTRATION_FORM_DOCTYPE, "applied_to": MOVED_APPLIED_TO},
+		{
+			"registration": REGISTRATION_FORM_DOCTYPE,
+			"attendee": ATTENDEE_FORM_DOCTYPE,
+			"applied_to": MOVED_APPLIED_TO,
+		},
 		as_dict=True,
 	)

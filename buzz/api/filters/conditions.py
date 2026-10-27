@@ -4,7 +4,7 @@ from frappe.utils import cstr, flt
 
 from buzz.api.filters.exceptions import InvalidFilter
 from buzz.api.filters.schemas import FilterField, FilterOperator, FilterOption
-from buzz.events.doctype.buzz_form.form_types import QUESTION_FIELD_NAMES
+from buzz.events.doctype.buzz_form.form_types import APPLIED_TO_BY_FORM_DOCTYPE, QUESTION_FIELD_NAMES
 
 KIND_BY_FIELDTYPE = {
 	"Select": "choice",
@@ -81,20 +81,26 @@ def question_fields(questions) -> list[FilterField]:
 	]
 
 
-def form_questions(event: str, form_doctype: str, asked_per: str | None = None) -> list:
+def form_questions(event: str, form_doctype: str) -> list:
 	"""The enabled questions of the event's form of that doctype, in form order."""
 	form_name = frappe.db.get_value("Buzz Form", {"event": event, "form_doctype": form_doctype}, "name")
 	if not form_name:
 		return []
-	filters = {"parenttype": "Buzz Form", "parent": form_name, "enabled": 1}
-	if asked_per:
-		filters["asked_per"] = asked_per
 	return frappe.get_all(
 		"Buzz Form Field",
-		filters=filters,
+		filters={"parenttype": "Buzz Form", "parent": form_name, "enabled": 1},
 		fields=QUESTION_FIELDS,
 		order_by="idx",
 	)
+
+
+def registration_questions(event: str) -> list:
+	"""Booking then attendee questions, each tagged with what the booking page calls it."""
+	return [
+		frappe._dict(question, applied_to=applied_to)
+		for form_doctype, applied_to in APPLIED_TO_BY_FORM_DOCTYPE.items()
+		for question in form_questions(event, form_doctype)
+	]
 
 
 def question_options(row) -> list[tuple[str, str]]:

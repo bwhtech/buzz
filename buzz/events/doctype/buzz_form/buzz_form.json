@@ -66,18 +66,20 @@
    "fieldname": "route",
    "fieldtype": "Data",
    "label": "Route",
-   "reqd": 1
+   "reqd": 1,
+   "depends_on": "eval:doc.form_doctype!='Event Booking Attendee'"
   },
   {
    "default": "0",
    "fieldname": "publish",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Published"
+   "label": "Published",
+   "depends_on": "eval:doc.form_doctype!='Event Booking Attendee'"
   },
   {
    "default": "0",
-   "depends_on": "eval:!['Sponsorship Enquiry','Event Booking'].includes(doc.form_doctype)",
+   "depends_on": "eval:!['Sponsorship Enquiry','Event Booking','Event Booking Attendee'].includes(doc.form_doctype)",
    "fieldname": "login_required",
    "fieldtype": "Check",
    "label": "Login Required"
@@ -85,14 +87,15 @@
   {
    "fieldname": "auto_close_at",
    "fieldtype": "Datetime",
-   "label": "Close At"
+   "label": "Close At",
+   "depends_on": "eval:doc.form_doctype!='Event Booking Attendee'"
   },
   {
    "description": "Comma-separated field names to hide from the form. Leave empty to show all. Mandatory fields cannot be hidden.",
    "fieldname": "excluded_fields",
    "fieldtype": "Small Text",
    "label": "Excluded Fields",
-   "depends_on": "eval:doc.form_doctype!='Event Booking'"
+   "depends_on": "eval:!['Event Booking','Event Booking Attendee'].includes(doc.form_doctype)"
   },
   {
    "fieldname": "questions_tab",
@@ -109,7 +112,7 @@
    "fieldname": "messages_tab",
    "fieldtype": "Tab Break",
    "label": "Messages",
-   "depends_on": "eval:doc.form_doctype!='Event Booking'"
+   "depends_on": "eval:!['Event Booking','Event Booking Attendee'].includes(doc.form_doctype)"
   },
   {
    "fieldname": "success_title",
@@ -142,7 +145,7 @@
    "link_fieldname": "enquiry_form"
   }
  ],
- "modified": "2026-10-26 00:00:00.000000",
+ "modified": "2026-10-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Form",
