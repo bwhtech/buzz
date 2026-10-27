@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useEventListener } from "@vueuse/core"
 import { Button, TabButtons, toast, Tooltip } from "frappe-ui"
 import { computed, ref } from "vue"
 
@@ -89,6 +90,13 @@ async function publish(on = true) {
 		toast.error((error as FrappeError).message || "Could not save the form")
 	}
 }
+
+// ⌘S does what the main button does; a live form with nothing to save stays live.
+useEventListener(window, "keydown", (keydown: KeyboardEvent) => {
+	if (!(keydown.metaKey || keydown.ctrlKey) || keydown.key !== "s") return
+	keydown.preventDefault()
+	if (!saving.value && (dirty.value || !live.value)) publish()
+})
 </script>
 
 <template>
@@ -235,13 +243,14 @@ async function publish(on = true) {
 				<Tooltip v-if="live && !dirty" text="Stop accepting submissions">
 					<Button variant="ghost" label="Unpublish" :loading="saving" @click="publish(false)" />
 				</Tooltip>
-				<Button
-					v-else
-					variant="solid"
-					:label="live ? 'Publish changes' : 'Publish'"
-					:loading="saving"
-					@click="publish()"
-				/>
+				<Tooltip v-else text="⌘S">
+					<Button
+						variant="solid"
+						:label="live ? 'Publish changes' : 'Publish'"
+						:loading="saving"
+						@click="publish()"
+					/>
+				</Tooltip>
 			</div>
 		</header>
 		<main class="min-h-0 flex-1 overflow-hidden bg-surface-base">
