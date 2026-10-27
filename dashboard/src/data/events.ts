@@ -63,8 +63,9 @@ type EventShellDoc = {
  * lands in both without either knowing about the other.
  */
 export function useEventDoc(event: () => string) {
-	// The empty string holds the initial fetch until the route param resolves.
-	return useDoc<EventShellDoc>({ doctype: "Buzz Event", name: () => event() || "" })
+	// The empty string holds the initial fetch until the route param resolves. Saved docs
+	// return autoincrement links as numbers, which useDoc cannot take as a name.
+	return useDoc<EventShellDoc>({ doctype: "Buzz Event", name: () => String(event() || "") })
 }
 
 /** The session user's level in each section of an event, for the sidebar and the page gates. */
