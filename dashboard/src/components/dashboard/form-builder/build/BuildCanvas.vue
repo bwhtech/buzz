@@ -8,12 +8,13 @@ import FieldComposer from "./FieldComposer.vue"
 import FieldInspector from "./FieldInspector.vue"
 import FieldPalette from "./FieldPalette.vue"
 import FieldRow from "./FieldRow.vue"
-import { newQuestion, questionKey, useQuestionEditor } from "./useQuestionEditor"
+import { type QuestionEditor, newQuestion, questionKey } from "./useQuestionEditor"
 
 const form = defineModel<BuzzFormDoc>({ required: true })
-const props = defineProps<{ doctypeFields: Record<string, DoctypeField> }>()
+const props = defineProps<{ doctypeFields: Record<string, DoctypeField>; editor: QuestionEditor }>()
+defineEmits<{ addRule: [FormQuestion] }>()
 
-const editor = useQuestionEditor(() => form.value.questions)
+const editor = props.editor
 const composer = ref<InstanceType<typeof FieldComposer> | null>(null)
 
 const doctypeFieldOf = (question: FormQuestion) =>
@@ -51,6 +52,11 @@ function addItem(item: MenuItem, at?: number) {
 	if (at === undefined) editor.insertAfterSelection(added)
 	else editor.insert(at, added)
 }
+
+const rulesActingOn = (question: FormQuestion) =>
+	form.value.logic_rules.filter((rule) =>
+		rule.actions.some(([, target]) => target === question.fieldname),
+	).length
 
 function isTyping(event: KeyboardEvent) {
 	const target = event.target as HTMLElement
@@ -151,6 +157,8 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 				v-model="form.questions[selectedIndex]"
 				:doctype-field="doctypeFieldOf(form.questions[selectedIndex])"
 				:editor="editor"
+				:rule-count="rulesActingOn(form.questions[selectedIndex])"
+				@add-rule="$emit('addRule', form.questions[selectedIndex])"
 			/>
 			<FieldPalette
 				v-else

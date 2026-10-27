@@ -106,6 +106,7 @@
 							:categories="ticketCategories"
 							:add-ons="addOns"
 							:custom-fields="ticketCustomFields"
+							:fields-for="ticketFieldsFor"
 							:show-errors="tried"
 							:last-name-required="isZoomEvent"
 							:collapsible="isMobile"
@@ -280,6 +281,7 @@ import type {
 } from "@/types"
 import { formatWholePriceOrFree } from "@/utils/currency"
 import { eventPath } from "@/utils/eventUrl"
+import { applyLogic, type LogicRule } from "@/utils/formLogic"
 import { siteHeaderHidden } from "@/utils/navbar"
 import { serverErrorMessage } from "@/utils/serverError"
 import { isZoomBackedCategory } from "@/utils/zoomCategory"
@@ -319,6 +321,8 @@ const props = defineProps({
 	taxSettings: { type: Object as PropType<Record<string, any>>, default: () => ({}) },
 	eventDetails: { type: Object as PropType<Record<string, any>>, default: () => ({}) },
 	customFields: { type: Array as PropType<FrappeField[]>, default: () => [] },
+	// Show, hide and require rules per registration form, keyed like a field's applied_to.
+	logicRules: { type: Object as PropType<Record<string, LogicRule[]>>, default: () => ({}) },
 	eventRoute: { type: String, required: true },
 	paymentGateways: { type: Array as PropType<string[]>, default: () => [] },
 	isGuestMode: { type: Boolean, default: false },
@@ -352,11 +356,26 @@ const isZoomEvent = computed(() => isZoomBackedCategory(props.eventDetails.categ
 const isPhoneOtp = computed(() => props.eventDetails.guest_verification_method === "Phone OTP")
 const requiresLogin = computed(() => props.isGuestMode && !props.eventDetails?.allow_guest_booking)
 const bookingCustomFields = computed(() =>
-	props.customFields.filter((field) => field.applied_to === "Booking"),
+	applyLogic(
+		props.customFields.filter((field) => field.applied_to === "Booking"),
+		props.logicRules.Booking || [],
+		billing.value,
+		bookingCustomFieldsData.value,
+	),
 )
 const ticketCustomFields = computed(() =>
 	props.customFields.filter((field) => field.applied_to === "Ticket"),
 )
+// The attendee questions each ticket asks: rules may name the ticket type or answers above.
+function ticketFieldsFor(attendee: BookingAttendee) {
+	return applyLogic(
+		ticketCustomFields.value,
+		props.logicRules.Ticket || [],
+		{ ...attendee, ticket_type: String(attendee.ticket_type ?? "") },
+		attendee.custom_fields || {},
+	)
+}
+
 const eventId = computed(() =>
 	props.availableTicketTypes[0]?.event ? String(props.availableTicketTypes[0].event) : null,
 )
@@ -523,7 +542,7 @@ const countLabel = computed(() => {
 const validation = useRegistrationValidation({
 	me,
 	attendees,
-	ticketCustomFields,
+	ticketFieldsFor,
 	bookingCustomFields,
 	bookingCustomFieldsData,
 	billing,
@@ -651,7 +670,7 @@ function buildPayload() {
 	return {
 		event: eventId.value,
 		attendees: attendees.value.map((attendee) =>
-			attendeePayload(attendee, ticketCustomFields.value),
+			attendeePayload(attendee, ticketFieldsFor(attendee)),
 		),
 		coupon_code: coupon.appliedCode || null,
 		booking_custom_fields: cleanCustomFields(

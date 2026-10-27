@@ -12,7 +12,7 @@ from frappe.utils import (
 	validate_url,
 )
 
-from buzz.api.forms.conditions import is_required, is_shown
+from buzz.api.forms.conditions import FormLogic
 from buzz.api.forms.exceptions import InvalidAnswer, UnknownQuestions
 
 
@@ -51,7 +51,8 @@ CHECK_VALUES = (0, 1, "0", "1", False, True)
 class CustomAnswers:
 	"""Validate submitted answers against the question definitions on a form."""
 
-	def __init__(self, definitions):
+	def __init__(self, definitions, rules=None):
+		self.logic = FormLogic(rules)
 		self.definitions = {
 			row.fieldname: row
 			for row in definitions
@@ -69,11 +70,11 @@ class CustomAnswers:
 		condition_values = dict(context or {})
 		rows = []
 		for fieldname, question in self.definitions.items():
-			if not is_shown(question, condition_values):
+			if not self.logic.is_shown(question, condition_values):
 				continue
 			value = condition_values[fieldname] = values.get(fieldname)
 			if value is None or value == "" or value == []:
-				if is_required(question, condition_values):
+				if self.logic.is_required(question, condition_values):
 					frappe.throw(_("{0} is required.").format(question.label), frappe.MandatoryError)
 				continue
 			self.validate_value(question, value)

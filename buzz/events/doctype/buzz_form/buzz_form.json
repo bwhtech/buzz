@@ -18,6 +18,7 @@
   "auto_close_at",
   "questions_tab",
   "questions",
+  "logic_rules",
   "messages_tab",
   "submit_label",
   "success_title",
@@ -109,6 +110,12 @@
    "options": "Buzz Form Field"
   },
   {
+   "fieldname": "logic_rules",
+   "fieldtype": "JSON",
+   "label": "Logic Rules",
+   "description": "List of {match: all or any, conditions: [[fieldname, operator, value]], actions: [[show, hide or require, question]]}."
+  },
+  {
    "fieldname": "messages_tab",
    "fieldtype": "Tab Break",
    "label": "Messages",
@@ -150,7 +157,7 @@
    "link_fieldname": "enquiry_form"
   }
  ],
- "modified": "2026-10-27 13:00:00.000000",
+ "modified": "2026-10-27 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Form",

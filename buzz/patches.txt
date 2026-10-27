@@ -50,3 +50,4 @@ buzz.patches.reshape_event_template_questions
 buzz.patches.delete_moved_custom_fields
 buzz.patches.drop_buzz_event_form_table
 buzz.patches.move_excluded_fields_to_standard_rows
+buzz.patches.move_question_conditions_to_logic_rules

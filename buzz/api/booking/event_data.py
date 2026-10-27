@@ -5,7 +5,7 @@ from frappe import _
 
 from buzz.api.booking.schemas import EventBookingDataResponse, TaxSettings
 from buzz.api.booking.services import are_registrations_closed
-from buzz.api.filters.conditions import registration_questions
+from buzz.api.filters.conditions import registration_logic_rules, registration_questions
 from buzz.api.forms.fields import question_definition
 from buzz.payments import get_payment_gateways_for_event
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
@@ -40,6 +40,7 @@ def build_event_booking_data(event_route: str, hold_token: str | None = None) ->
 			tax_percentage=event_doc.tax_percentage or 0,
 		),
 		custom_fields=get_registration_custom_fields(event_doc.name),
+		logic_rules=registration_logic_rules(event_doc.name),
 		payment_gateways=payment_gateways,
 		offline_payment_enabled=len(offline_methods) > 0,
 		offline_methods=offline_methods,

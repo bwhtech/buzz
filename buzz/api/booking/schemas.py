@@ -73,6 +73,8 @@ class EventBookingDataResponse(APIResponse):
 	available_add_ons: list
 	tax_settings: TaxSettings
 	custom_fields: list
+	# Show, hide and require rules per registration form, keyed like custom_fields' applied_to.
+	logic_rules: dict
 	payment_gateways: list[str]
 	offline_payment_enabled: bool
 	offline_methods: list

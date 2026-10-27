@@ -31,8 +31,6 @@ class CustomFieldDefinition(APIResponse):
 	default_value: str | None
 	description: str | None = None
 	width: str | None = "Full"
-	depends_on: list | None = None
-	mandatory_depends_on: list | None = None
 	order: int
 
 
@@ -41,6 +39,8 @@ class CustomFormResponse(APIResponse):
 	# Field shape varies per fieldtype at runtime, so only the envelope is modelled.
 	form_fields: list[dict]
 	custom_fields: list[CustomFieldDefinition]
+	# Show, hide and require rules over the questions; the server applies them again on submit.
+	logic_rules: list | None = None
 	form_title: str
 	form_description: str | None = None
 	submit_label: str | None = None

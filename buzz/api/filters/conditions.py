@@ -4,6 +4,8 @@ from frappe.utils import cstr, flt
 
 from buzz.api.filters.exceptions import InvalidFilter
 from buzz.api.filters.schemas import FilterField, FilterOperator, FilterOption
+from buzz.api.forms.answers import LAYOUT_TYPES
+from buzz.api.forms.conditions import parse_rules
 from buzz.events.doctype.buzz_form.form_types import APPLIED_TO_BY_FORM_DOCTYPE, QUESTION_FIELD_NAMES
 
 KIND_BY_FIELDTYPE = {
@@ -78,6 +80,7 @@ def question_fields(questions) -> list[FilterField]:
 	return [
 		filter_field(row.fieldname, row.label, row.fieldtype, question_options(row), "question")
 		for row in questions
+		if row.fieldtype not in LAYOUT_TYPES
 	]
 
 
@@ -92,6 +95,18 @@ def form_questions(event: str, form_doctype: str) -> list:
 		fields=QUESTION_FIELDS,
 		order_by="idx",
 	)
+
+
+def form_logic_rules(event: str, form_doctype: str) -> str | None:
+	return frappe.db.get_value("Buzz Form", {"event": event, "form_doctype": form_doctype}, "logic_rules")
+
+
+def registration_logic_rules(event: str) -> dict:
+	"""Each registration form's rules, keyed the way registration_questions tags its questions."""
+	return {
+		applied_to: parse_rules(form_logic_rules(event, form_doctype))
+		for form_doctype, applied_to in APPLIED_TO_BY_FORM_DOCTYPE.items()
+	}
 
 
 def registration_questions(event: str) -> list:

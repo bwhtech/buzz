@@ -1,6 +1,8 @@
 import { useCall, useDoc } from "frappe-ui"
 import { computed, ref } from "vue"
 
+import type { LogicRule } from "@/utils/formLogic"
+
 export interface FormQuestion {
 	name?: string
 	is_standard?: 0 | 1
@@ -25,6 +27,7 @@ export interface BuzzFormDoc {
 	route: string
 	publish: 0 | 1
 	questions: FormQuestion[]
+	logic_rules: LogicRule[]
 	[key: string]: unknown
 }
 
@@ -40,7 +43,7 @@ export interface DoctypeField {
 }
 
 // What the builder edits; everything else on the doc is the server's to set.
-const EDITABLE_FIELDS = ["title", "description", "questions"] as const
+const EDITABLE_FIELDS = ["title", "description", "questions", "logic_rules"] as const
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 
@@ -50,7 +53,12 @@ export function useFormBuilder(formName: () => string) {
 	const savedSnapshot = ref("")
 
 	function reset(doc: BuzzFormDoc) {
-		draft.value = copy(doc)
+		const rules = doc.logic_rules as unknown
+		// JSON fields arrive as text; the builder edits the list.
+		draft.value = {
+			...copy(doc),
+			logic_rules: typeof rules === "string" ? JSON.parse(rules) : (rules ?? []),
+		}
 		savedSnapshot.value = JSON.stringify(draft.value)
 	}
 	const dirty = computed(() => !!draft.value && JSON.stringify(draft.value) !== savedSnapshot.value)

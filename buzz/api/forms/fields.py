@@ -2,8 +2,6 @@ import frappe
 from frappe.model import DEFAULT_FIELDS, display_fieldtypes
 from frappe.utils import cstr, now_datetime, today
 
-from buzz.api.forms.conditions import parse_conditions
-
 LAYOUT_FIELDTYPES = set(display_fieldtypes)
 LAYOUT_BREAK_FIELDTYPES = {"Column Break", "Section Break"}
 
@@ -147,7 +145,5 @@ def question_definition(question) -> dict:
 	"""A form question as the public form and the booking page render it."""
 	return {
 		**{name: question.get(name) for name in DEFINITION_FIELDS},
-		"depends_on": parse_conditions(question.depends_on),
-		"mandatory_depends_on": parse_conditions(question.mandatory_depends_on),
 		"order": question.idx,
 	}

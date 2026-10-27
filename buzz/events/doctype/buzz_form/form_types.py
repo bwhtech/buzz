@@ -27,9 +27,9 @@ QUESTION_FIELD_NAMES = (
 	"placeholder",
 	"default_value",
 	"description",
-	"depends_on",
-	"mandatory_depends_on",
 )
+# A template keeps each question's own show and required conditions; a form keeps them as rules.
+TEMPLATE_CONDITION_ACTIONS = {"depends_on": "show", "mandatory_depends_on": "require"}
 
 ENQUIRY_FIELDS = frozenset(
 	{"company_name", "company_logo", "website", "tier", "country", "phone", "contact_email"}
@@ -193,6 +193,35 @@ def create_default_forms(event: str):
 			# Organisers open registrations once tickets and details are ready.
 			form_type(form_doctype).close(form)
 		form.insert(ignore_permissions=True)
+
+
+def template_rules(field) -> list[dict]:
+	"""A template question's own conditions, as rules on the form it joins."""
+	return [
+		{
+			"match": "all",
+			"conditions": frappe.parse_json(field.get(key)),
+			"actions": [[action, field.fieldname]],
+		}
+		for key, action in TEMPLATE_CONDITION_ACTIONS.items()
+		if field.get(key)
+	]
+
+
+def template_conditions(rules: list[dict], fieldname: str) -> dict:
+	"""The reverse: a rule a template can carry acts on this one question alone, matching all."""
+	conditions = {}
+	for key, action in TEMPLATE_CONDITION_ACTIONS.items():
+		rule = next(
+			(
+				rule
+				for rule in rules
+				if rule.get("match", "all") == "all" and rule.get("actions") == [[action, fieldname]]
+			),
+			None,
+		)
+		conditions[key] = frappe.as_json(rule["conditions"], indent=None) if rule else None
+	return conditions
 
 
 def unique_fieldname(label_or_fieldname: str, taken: set, reserved: frozenset) -> str:

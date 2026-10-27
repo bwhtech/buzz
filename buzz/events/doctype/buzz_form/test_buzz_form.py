@@ -185,16 +185,17 @@ class TestBuzzFormValidation(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			form.save()
 
-	def test_a_condition_that_is_not_json_is_refused(self):
-		self.add_question(fieldname="budget", depends_on="[not json")
+	def test_rules_that_are_not_json_are_refused(self):
+		self.add_question(fieldname="budget")
+		self.form.logic_rules = "[not json"
 
 		with self.assertRaises(frappe.ValidationError):
 			self.form.save()
 
 	def test_an_unknown_condition_operator_is_refused(self):
-		self.add_question(fieldname="budget", depends_on=condition("tier", "like", "Gold"))
+		self.add_question(fieldname="budget", depends_on=condition("tier", "~", "Gold"))
 
-		with self.assertRaisesRegex(frappe.ValidationError, "Condition on Budget"):
+		with self.assertRaisesRegex(frappe.ValidationError, "Logic rule"):
 			self.form.save()
 
 	def test_a_condition_naming_its_own_question_is_refused(self):
@@ -227,9 +228,8 @@ class TestBuzzFormValidation(IntegrationTestCase):
 		self.assertEqual(len([row for row in self.form.questions if not row.is_standard]), 2)
 
 	def add_question(self, **question):
-		self.form.append(
-			"questions",
-			{"label": "Budget", "fieldtype": "Number", "enabled": 1, **question},
+		BuzzFormFactory.append_question(
+			self.form, **{"label": "Budget", "fieldtype": "Number", "enabled": 1, **question}
 		)
 
 
@@ -367,4 +367,6 @@ class TestAttendeeForm(IntegrationTestCase):
 
 
 def add_registration_question(form, **question):
-	form.append("questions", {"label": "Question", "fieldtype": "Data", "enabled": 1, **question})
+	BuzzFormFactory.append_question(
+		form, **{"label": "Question", "fieldtype": "Data", "enabled": 1, **question}
+	)

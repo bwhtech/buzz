@@ -210,7 +210,8 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
 
 		form = frappe.get_doc("Buzz Form", {"event": event.name, "form_doctype": "Event Booking Attendee"})
-		self.assertEqual(frappe.parse_json(form.questions[1].depends_on), answer_condition)
+		rules = frappe.parse_json(form.logic_rules)
+		self.assertEqual([rule["conditions"] for rule in rules], [answer_condition])
 
 	def test_skips_form_questions_for_a_form_the_event_has_not(self):
 		template = self.create_template(template_custom_fields=[{**CUSTOM_FIELD, "form_doctype": "Buzz Tag"}])

@@ -11,11 +11,13 @@ from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
 from frappe.website.utils import cleanup_page_name
 
 from buzz import telemetry
+from buzz.api.forms.conditions import parse_rules
 from buzz.events.doctype.buzz_form.condition_validator import ConditionValidator
 from buzz.events.doctype.buzz_form.form_types import (
 	QUESTION_FIELD_NAMES,
 	create_default_forms,
 	event_form,
+	template_rules,
 )
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 from buzz.events.doctype.event_check_in_zone.event_check_in_zone import create_default_zone
@@ -573,6 +575,8 @@ def copy_template_questions(event, template_fields):
 			forms[field.form_doctype] = event_form(event.name, field.form_doctype)
 		if form := forms[field.form_doctype]:
 			form.append("questions", {name: field.get(name) for name in QUESTION_FIELD_NAMES})
+			rules = parse_rules(form.logic_rules) + template_rules(field)
+			form.logic_rules = frappe.as_json(rules, indent=None) if rules else None
 	for form in forms.values():
 		if form:
 			ConditionValidator(form).drop_link_conditions()

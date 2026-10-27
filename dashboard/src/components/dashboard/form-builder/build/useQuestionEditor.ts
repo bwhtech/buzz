@@ -1,5 +1,7 @@
 import { ref, toRaw } from "vue"
 
+import type { LogicRule } from "@/utils/formLogic"
+
 import { CHOICE_TYPES, fieldType, type PresetField } from "../fieldTypes"
 import type { FormQuestion } from "../useFormBuilder"
 
@@ -36,7 +38,19 @@ export function newQuestion(field: PresetField): FormQuestion {
 	}
 }
 
-export function useQuestionEditor(questions: () => FormQuestion[]) {
+// A rule needs a name for the question before the server would give it one on save.
+function fieldnameFrom(label: string, taken: Set<string>): string {
+	let name = label
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "_")
+		.replace(/^_+|_+$/g, "")
+	if (!/^[a-z]/.test(name)) name = `question_${name}`
+	let candidate = name
+	for (let suffix = 2; taken.has(candidate); suffix++) candidate = `${name}_${suffix}`
+	return candidate
+}
+
+export function useQuestionEditor(questions: () => FormQuestion[], rules: () => LogicRule[]) {
 	const selected = ref<FormQuestion | null>(null)
 
 	const indexOf = (question: FormQuestion) =>
@@ -58,8 +72,40 @@ export function useQuestionEditor(questions: () => FormQuestion[]) {
 		])
 	}
 
+	function ensureFieldname(question: FormQuestion): string {
+		if (!question.fieldname) {
+			const taken = new Set(
+				questions()
+					.map((row) => row.fieldname)
+					.filter(Boolean),
+			)
+			question.fieldname = fieldnameFrom(question.label || question.fieldtype, taken)
+		}
+		return question.fieldname
+	}
+
+	// A deleted question takes its conditions and actions along; a rule it emptied goes too.
+	function dropFromRules(fieldname: string) {
+		const kept = rules()
+			.map((rule) => ({
+				rule: {
+					...rule,
+					conditions: rule.conditions.filter(([name]) => name !== fieldname),
+					actions: rule.actions.filter(([, target]) => target !== fieldname),
+				},
+				hadConditions: rule.conditions.length > 0,
+			}))
+			.filter(
+				({ rule, hadConditions }) =>
+					rule.actions.length && (rule.conditions.length || !hadConditions),
+			)
+			.map(({ rule }) => rule)
+		rules().splice(0, rules().length, ...kept)
+	}
+
 	function remove(question: FormQuestion) {
 		if (question.is_standard) return
+		if (question.fieldname) dropFromRules(question.fieldname)
 		questions().splice(indexOf(question), 1)
 		if (selected.value && toRaw(selected.value) === toRaw(question)) selected.value = null
 	}
@@ -77,7 +123,17 @@ export function useQuestionEditor(questions: () => FormQuestion[]) {
 		question.fieldtype = fieldtype
 	}
 
-	return { selected, indexOf, insert, insertAfterSelection, duplicate, remove, move, convert }
+	return {
+		selected,
+		indexOf,
+		insert,
+		insertAfterSelection,
+		duplicate,
+		remove,
+		move,
+		convert,
+		ensureFieldname,
+	}
 }
 
 export type QuestionEditor = ReturnType<typeof useQuestionEditor>

@@ -87,7 +87,7 @@
 			:ticket-title="titleOf(attendee)"
 			:subtitle="subtitle(attendee, index)"
 			:add-ons="addOns"
-			:custom-fields="customFields"
+			:custom-fields="fieldsFor(attendee)"
 			:errors="errors[index]"
 			:show-errors="showErrors"
 			:last-name-required="lastNameRequired"
@@ -127,6 +127,8 @@ const props = defineProps<{
 	categories: BookingTicketCategory[]
 	addOns: AvailableAddOn[]
 	customFields: FrappeField[]
+	// The questions one attendee is asked once rules have run.
+	fieldsFor: (attendee: BookingAttendee) => FrappeField[]
 	showErrors: boolean
 	lastNameRequired: boolean
 	collapsible: boolean

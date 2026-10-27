@@ -26,7 +26,7 @@ from buzz.api.booking.schemas import (
 	OfflineBookingResponse,
 	PaymentLinkResponse,
 )
-from buzz.api.filters.conditions import form_questions
+from buzz.api.filters.conditions import form_logic_rules, form_questions
 from buzz.api.forms.answers import CustomAnswers
 from buzz.events.doctype.buzz_form.form_types import (
 	ATTENDEE_FORM_DOCTYPE,
@@ -90,8 +90,13 @@ class BookingService:
 		"""
 		# A condition may name any standard field the form shows, so each gets the values sent.
 		event = self.request.event
-		booking_questions = CustomAnswers(form_questions(event, REGISTRATION_FORM_DOCTYPE))
-		attendee_questions = CustomAnswers(form_questions(event, ATTENDEE_FORM_DOCTYPE))
+		booking_questions = CustomAnswers(
+			form_questions(event, REGISTRATION_FORM_DOCTYPE),
+			form_logic_rules(event, REGISTRATION_FORM_DOCTYPE),
+		)
+		attendee_questions = CustomAnswers(
+			form_questions(event, ATTENDEE_FORM_DOCTYPE), form_logic_rules(event, ATTENDEE_FORM_DOCTYPE)
+		)
 		self.booking_answers = booking_questions.rows(
 			self.request.booking_custom_fields or {}, self.request.model_dump()
 		)

@@ -11,16 +11,24 @@ interface NamedDoc {
 }
 
 // A form of its own, so renaming its questions never touches what other specs read.
-async function builderForm(request: APIRequestContext): Promise<{ event: string; form: string }> {
+async function builderForm(
+	request: APIRequestContext,
+	questions: Record<string, string>[] = [
+		{ label: "Favourite brew", fieldname: "favourite_brew", fieldtype: "Data" },
+	],
+): Promise<{ event: string; form: string }> {
 	const [event] = await getList<NamedDoc>(request, "Buzz Event", {
 		filters: { route: ["=", CUSTOM_FORMS_EVENT_ROUTE] },
 	})
-	const questions = [{ label: "Favourite brew", fieldname: "favourite_brew", fieldtype: "Data" }]
 	const [existing] = await getList<NamedDoc>(request, "Buzz Form", {
 		filters: { event: ["=", event.name], route: ["=", FORM_ROUTE] },
 	})
 	if (existing) {
-		await updateDoc(request, "Buzz Form", existing.name, { questions, publish: 1 })
+		await updateDoc(request, "Buzz Form", existing.name, {
+			questions,
+			publish: 1,
+			logic_rules: null,
+		})
 		return { event: event.name, form: existing.name }
 	}
 	const form = await createDoc<NamedDoc>(request, "Buzz Form", {
@@ -87,4 +95,32 @@ test("questions added, dragged and deleted in the builder save in order", async 
 	)
 	const questions = saved.questions.filter((row) => !row.is_standard).map((row) => row.label)
 	expect(questions).toEqual(["Roast level", "Favourite brew"])
+})
+
+test("a rule built in the Logic tab shows a question only for the chosen answer", async ({
+	page,
+	request,
+}) => {
+	const { event, form } = await builderForm(request, [
+		{ label: "Level", fieldname: "level", fieldtype: "Select", options: "Beginner\nAdvanced" },
+		{ label: "Outline", fieldname: "outline", fieldtype: "Data" },
+	])
+	await page.goto(`/b/manage/events/${event}/forms/${form}`)
+	await page.getByRole("radio", { name: "Logic" }).click()
+	await page.getByRole("button", { name: "New rule" }).click()
+
+	// The rule acts on the last question and opens on the form's first field.
+	await page.getByRole("button", { name: "How can we improve?" }).click()
+	await page.getByRole("menuitem", { name: "Level" }).click()
+	await page.getByRole("button", { name: "Beginner" }).click()
+	await page.getByRole("menuitem", { name: "Advanced" }).click()
+	await page.getByRole("button", { name: "Save" }).click()
+	await expect(page.getByText("Form saved")).toBeVisible()
+
+	const formPage = new CustomFormPage(page)
+	await formPage.goto(CUSTOM_FORMS_EVENT_ROUTE, FORM_ROUTE)
+	await expect(page.getByText("Outline")).toBeHidden()
+	await page.getByRole("combobox", { name: "Level" }).click()
+	await page.getByRole("option", { name: "Advanced" }).click()
+	await expect(page.getByText("Outline")).toBeVisible()
 })

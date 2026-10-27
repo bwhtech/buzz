@@ -7,7 +7,12 @@ import type { DoctypeField, FormQuestion } from "../useFormBuilder"
 import type { QuestionEditor } from "./useQuestionEditor"
 
 const question = defineModel<FormQuestion>({ required: true })
-const props = defineProps<{ doctypeField?: DoctypeField; editor: QuestionEditor }>()
+const props = defineProps<{
+	doctypeField?: DoctypeField
+	editor: QuestionEditor
+	ruleCount: number
+}>()
+defineEmits<{ addRule: [] }>()
 
 const fieldtype = computed(() => props.doctypeField?.fieldtype ?? question.value.fieldtype)
 const type = computed(() => fieldType(fieldtype.value))
@@ -97,6 +102,18 @@ const mandatory = computed({
 				/>
 				<Switch v-if="!doctypeField?.locked" v-model="enabled" label="Show on the form" />
 			</div>
+
+			<section v-if="!question.is_standard" class="space-y-2 border-t border-outline-gray-1 pt-4">
+				<h3 class="text-p-sm font-medium text-ink-gray-8">Logic</h3>
+				<p class="text-p-sm text-ink-gray-5">
+					{{
+						ruleCount
+							? `${ruleCount} ${ruleCount === 1 ? "rule changes" : "rules change"} this field.`
+							: "Always asked, unless a rule says otherwise."
+					}}
+				</p>
+				<Button icon-left="lucide-workflow" label="Add a rule" @click="$emit('addRule')" />
+			</section>
 		</div>
 
 		<footer v-if="!question.is_standard" class="flex gap-2 border-t border-outline-gray-1 p-3">

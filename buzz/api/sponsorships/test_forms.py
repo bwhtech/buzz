@@ -12,7 +12,7 @@ from buzz.api.sponsorships import (
 	submit_enquiry_form,
 )
 from buzz.api.sponsorships.exceptions import EnquiryNotAccessible
-from buzz.tests.factories import BuzzEventFactory, SponsorshipTierFactory, UserFactory
+from buzz.tests.factories import BuzzEventFactory, BuzzFormFactory, SponsorshipTierFactory, UserFactory
 
 APPLICANT = "sponsor-applicant@example.com"
 
@@ -40,15 +40,9 @@ class SponsorFormTestCase(IntegrationTestCase):
 		return {"company_name": "Acme", "company_logo": "/files/acme.png", **extra}
 
 	def add_question(self, **question):
-		self.form.append(
-			"questions",
-			{
-				"label": "Budget",
-				"fieldname": "budget",
-				"fieldtype": "Number",
-				"enabled": 1,
-				**question,
-			},
+		BuzzFormFactory.append_question(
+			self.form,
+			**{"label": "Budget", "fieldname": "budget", "fieldtype": "Number", "enabled": 1, **question},
 		)
 		self.form.save(ignore_permissions=True)
 
@@ -276,14 +270,13 @@ class TestSponsorFormConditions(SponsorFormTestCase):
 			self.submit(self.event.route, self.form_values(tier=self.gold.name))
 		self.assertTrue(self.submit(self.event.route, self.form_values(tier=self.silver.name)))
 
-	def test_form_data_carries_help_text_and_conditions(self):
+	def test_form_data_carries_help_text_and_rules(self):
 		self.add_question(description="In dollars", depends_on=condition("tier", "=", self.gold.name))
 
-		definition = self.definition_of("budget")
-
-		self.assertEqual(definition.description, "In dollars")
-		self.assertEqual(definition.depends_on, [["tier", "=", self.gold.name]])
-		self.assertIsNone(definition.mandatory_depends_on)
+		self.assertEqual(self.definition_of("budget").description, "In dollars")
+		rules = get_enquiry_form(self.event.route).logic_rules
+		self.assertEqual(rules[0]["conditions"], [["tier", "=", self.gold.name]])
+		self.assertEqual(rules[0]["actions"], [["show", "budget"]])
 
 	def definition_of(self, fieldname: str):
 		definitions = get_enquiry_form(self.event.route).custom_fields

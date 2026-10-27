@@ -7,6 +7,7 @@ from frappe.geo.country_info import get_all as get_all_countries
 from frappe.utils.data import sbool
 
 from buzz.api.forms.answers import CustomAnswers
+from buzz.api.forms.conditions import parse_rules
 from buzz.api.forms.exceptions import (
 	EventNotFound,
 	FormNotAvailable,
@@ -87,6 +88,7 @@ class CustomFormService:
 		return CustomFormResponse(
 			form_fields=self.renderable_fields(),
 			custom_fields=self.custom_field_definitions(),
+			logic_rules=parse_rules(form.logic_rules),
 			form_title=self.form_doctype,
 			form_description=form.description,
 			submit_label=form.submit_label,
@@ -165,7 +167,10 @@ class CustomFormService:
 			frappe.throw(_("Could not read the submitted form. Please reload the page and try again."))
 		answers = frappe.parse_json(custom_fields_data) or {}
 		doc = frappe.get_doc(self.build_doc_data(values))
-		doc.set("additional_fields", CustomAnswers(self.form.questions).rows(answers, context=values))
+		doc.set(
+			"additional_fields",
+			CustomAnswers(self.form.questions, self.form.logic_rules).rows(answers, context=values),
+		)
 		self.prepare_submission(doc)
 		return doc.insert(ignore_permissions=True).name
 

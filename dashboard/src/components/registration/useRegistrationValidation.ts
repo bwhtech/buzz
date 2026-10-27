@@ -28,7 +28,7 @@ const GSTIN_LENGTH = 15
 interface ValidationInputs {
 	me: AttendeeIdentity
 	attendees: Ref<BookingAttendee[]>
-	ticketCustomFields: Ref<FrappeField[]>
+	ticketFieldsFor: (attendee: BookingAttendee) => FrappeField[]
 	bookingCustomFields: Ref<FrappeField[]>
 	bookingCustomFieldsData: Ref<Record<string, any>>
 	billing: Ref<BillingDetails>
@@ -46,7 +46,7 @@ export function useRegistrationValidation(inputs: ValidationInputs) {
 
 	const attendeeErrorList = computed(() =>
 		inputs.attendees.value.map((attendee) =>
-			attendeeErrors(attendee, inputs.lastNameRequired(), inputs.ticketCustomFields.value),
+			attendeeErrors(attendee, inputs.lastNameRequired(), inputs.ticketFieldsFor(attendee)),
 		),
 	)
 

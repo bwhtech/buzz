@@ -5,7 +5,12 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from buzz.events.doctype.buzz_form.form_types import QUESTION_FIELD_NAMES, SPONSORSHIP_FORM_DOCTYPE
+from buzz.api.forms.conditions import parse_rules
+from buzz.events.doctype.buzz_form.form_types import (
+	QUESTION_FIELD_NAMES,
+	SPONSORSHIP_FORM_DOCTYPE,
+	template_conditions,
+)
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 
 
@@ -189,11 +194,11 @@ def create_template_from_event(event_name: str, template_name: str, options: str
 def event_template_questions(event_name: str) -> list[dict]:
 	# Sponsorship questions stay on the event's own sponsorship form, which every event has.
 	forms = {
-		form.name: form.form_doctype
+		form.name: form
 		for form in frappe.get_all(
 			"Buzz Form",
 			filters={"event": event_name, "form_doctype": ["!=", SPONSORSHIP_FORM_DOCTYPE]},
-			fields=["name", "form_doctype"],
+			fields=["name", "form_doctype", "logic_rules"],
 		)
 	}
 	questions = frappe.get_all(
@@ -205,7 +210,8 @@ def event_template_questions(event_name: str) -> list[dict]:
 	return [
 		{
 			**{name: question.get(name) for name in QUESTION_FIELD_NAMES},
-			"form_doctype": forms[question.parent],
+			**template_conditions(parse_rules(forms[question.parent].logic_rules), question.fieldname),
+			"form_doctype": forms[question.parent].form_doctype,
 		}
 		for question in questions
 	]

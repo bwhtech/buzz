@@ -184,6 +184,7 @@ import LoginRequired from "@/components/LoginRequired.vue"
 import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields"
 import { session } from "@/data/session"
 import type { FrappeError } from "@/types"
+import { applyLogic, type LogicRule } from "@/utils/formLogic"
 
 interface FormFieldDef {
 	fieldname: string
@@ -207,6 +208,7 @@ interface CustomFormData {
 	form_title?: string
 	form_fields?: FormFieldDef[]
 	custom_fields?: FormFieldDef[]
+	logic_rules?: LogicRule[]
 	event?: Record<string, any>
 	closed?: boolean
 	closed_title?: string
@@ -362,12 +364,19 @@ function isAttachField(field: FormFieldDef) {
 }
 
 // The form's own fields and its questions, in the order the organiser set.
-const items = computed(() =>
-	[
+// Questions the rules hide drop out, and each shown one carries its effective mandatory flag.
+const items = computed(() => {
+	const shown = applyLogic(
+		formData.value?.custom_fields || [],
+		formData.value?.logic_rules || [],
+		formValues,
+		customFieldValues.value,
+	)
+	return [
 		...(formData.value?.form_fields || []).map((field) => ({ ...field, isQuestion: false })),
-		...(formData.value?.custom_fields || []).map((field) => ({ ...field, isQuestion: true })),
-	].toSorted((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-)
+		...shown.map((field) => ({ ...field, isQuestion: true })),
+	].toSorted((a, b) => (a.order ?? 0) - (b.order ?? 0))
+})
 
 // Page breaks split the form into steps.
 const steps = computed(() => {
@@ -399,8 +408,8 @@ function handleSubmit() {
 		}
 	}
 
-	for (const field of formData.value?.custom_fields || []) {
-		if (!field.mandatory) continue
+	for (const field of items.value) {
+		if (!field.isQuestion || !field.mandatory) continue
 		const val = customFieldValues.value[field.fieldname]
 		const isEmpty = val == null || val === "" || (Array.isArray(val) && val.length === 0)
 		if (isEmpty) {
@@ -423,7 +432,12 @@ function handleSubmit() {
 		event_route: props.eventRoute,
 		form_route: props.formRoute,
 		data,
-		custom_fields_data: customFieldValues.value,
+		// A hidden question's answer is dropped by the server too; it is not sent at all.
+		custom_fields_data: Object.fromEntries(
+			items.value
+				.filter((field) => field.isQuestion && field.fieldname in customFieldValues.value)
+				.map((field) => [field.fieldname, customFieldValues.value[field.fieldname]]),
+		),
 	})
 }
 </script>
