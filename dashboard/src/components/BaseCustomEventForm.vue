@@ -331,10 +331,19 @@ const submitResource = useCall<string | null, Record<string, any>>({
 	},
 })
 
+// Upload fields render no native input, so the browser cannot enforce required on them.
+function isAttachField(field: FormFieldDef) {
+	return field.fieldtype === "Attach" || field.fieldtype === "Attach Image"
+}
+
 function handleSubmit() {
 	for (const field of formData.value?.form_fields || []) {
 		if (field.fieldtype === "Table" && field.reqd && !tableData[field.fieldname]?.length) {
 			toast.error(__("Please add at least one {0}", [__(field.label)]))
+			return
+		}
+		if (isAttachField(field) && field.reqd && !formValues[field.fieldname]) {
+			toast.error(__("{0} is required", [__(field.label)]))
 			return
 		}
 	}
