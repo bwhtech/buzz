@@ -40,15 +40,20 @@ const CHECK_VALUES = [
 	{ label: "checked", value: 1 },
 	{ label: "not checked", value: 0 },
 ]
+// A rating is saved as a share of five stars.
+const RATING_VALUES = [1, 2, 3, 4, 5].map((stars) => ({
+	label: `${stars} ${stars === 1 ? "star" : "stars"}`,
+	value: stars / 5,
+}))
 
 export function operatorsFor(field: RuleField | undefined): Operator[] {
 	const keys =
 		field?.fieldtype === "Check"
 			? ["="]
-			: field?.values
-				? ["=", "!=", "in", "not in", "set", "not set"]
-				: ["Number", "Rating"].includes(field?.fieldtype ?? "")
-					? ["=", "!=", ">", "<", "set", "not set"]
+			: ["Number", "Rating"].includes(field?.fieldtype ?? "")
+				? ["=", "!=", ">", "<", "set", "not set"]
+				: field?.values
+					? ["=", "!=", "in", "not in", "set", "not set"]
 					: ["=", "!=", "like", "set", "not set"]
 	return keys.map((key) => OPERATORS[key])
 }
@@ -69,6 +74,7 @@ function valuesOf(
 	links?: DoctypeField["link_options"],
 ) {
 	if (fieldtype === "Check") return CHECK_VALUES
+	if (fieldtype === "Rating") return RATING_VALUES
 	if (links) return links
 	if (CHOICE_TYPES.includes(fieldtype)) return lines(options)
 	return null

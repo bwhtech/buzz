@@ -79,10 +79,10 @@ const inspectorProps = computed(() => {
 const doctypeFieldOf = (question: FormQuestion) =>
 	question.is_standard ? props.doctypeFields[question.fieldname] : undefined
 
-const rulesActingOn = (question: FormQuestion) =>
-	form.value.logic_rules.filter((rule) =>
+const hasRule = (question: FormQuestion) =>
+	form.value.logic_rules.some((rule) =>
 		rule.actions.some(([, target]) => target === question.fieldname),
-	).length
+	)
 
 const drag = useCanvasDrag(
 	() => stepRows.value,
@@ -250,11 +250,11 @@ watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.fo
 							v-model="form.questions[index]"
 							:doctype-field="doctypeFieldOf(question)"
 							:editor="editor"
-							:conditional="rulesActingOn(question) > 0"
+							:conditional="hasRule(question)"
 							:preview="preview"
 							:compact="isPhone"
-							:is-first="index === 0"
-							:is-last="index === form.questions.length - 1"
+							:is-first="position === 0"
+							:is-last="position === stepRows.length - 1"
 							:data-row="questionKey(question)"
 							@dragstart="drag.start(question, $event)"
 							@navigate="(step, part) => focusRow(position + step, part)"

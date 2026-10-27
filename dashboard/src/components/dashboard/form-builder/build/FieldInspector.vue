@@ -96,9 +96,7 @@ const ruleFieldsAbove = computed(() =>
 			<FormControl
 				v-if="!['Divider', 'Paragraph'].includes(fieldtype)"
 				v-model="question.label"
-				:label="
-					fieldtype === 'Page Break' ? 'Step name' : fieldtype === 'Heading' ? 'Heading' : 'Label'
-				"
+				:label="fieldtype === 'Heading' ? 'Heading' : 'Label'"
 			/>
 			<FormControl
 				v-if="takesPlaceholder && !question.is_standard"
@@ -113,7 +111,7 @@ const ruleFieldsAbove = computed(() =>
 				/>
 			</div>
 			<Textarea
-				v-else-if="!['Divider', 'Page Break'].includes(fieldtype)"
+				v-else-if="fieldtype !== 'Divider'"
 				:model-value="question.description ?? ''"
 				@update:model-value="question.description = $event"
 				label="Description"
@@ -124,7 +122,8 @@ const ruleFieldsAbove = computed(() =>
 			<TicketTypePicker
 				v-if="ticketTypes?.length && !isLayout && !question.is_standard"
 				:rules="rules"
-				:fieldname="editor.ensureFieldname(question)"
+				:fieldname="question.fieldname"
+				:ensure-fieldname="() => editor.ensureFieldname(question)"
 				:ticket-types="ticketTypes"
 			/>
 

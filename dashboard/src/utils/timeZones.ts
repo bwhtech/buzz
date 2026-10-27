@@ -132,3 +132,15 @@ export function zoneCountry(zone: string): string {
 export function zoneSearchText(zone: string): string {
 	return [zoneCity(zone), zoneCountry(zone), zoneGenericName(zone)].filter(Boolean).join(", ")
 }
+
+/** Now on a zone's clock, as the naive "YYYY-MM-DD HH:mm:ss" that event datetimes are stored in. */
+export function wallClockIn(zone: string | null | undefined, at: Date = new Date()): string {
+	try {
+		return at.toLocaleString("sv-SE", { timeZone: zone || undefined })
+	} catch {
+		return at.toLocaleString("sv-SE")
+	}
+}
+
+/** A stored naive datetime as a Date on UTC's clock, so two of them subtract without a zone. */
+export const wallClockDate = (value: string) => new Date(`${value.replace(" ", "T")}Z`)

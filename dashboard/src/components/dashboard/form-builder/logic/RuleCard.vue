@@ -4,6 +4,7 @@ import { computed, ref } from "vue"
 
 import type { LogicRule } from "@/utils/formLogic"
 
+import { fieldType } from "../fieldTypes"
 import type { DoctypeField, FormQuestion } from "../useFormBuilder"
 import ConditionList from "./ConditionList.vue"
 import LogicPill from "./LogicPill.vue"
@@ -19,12 +20,17 @@ const props = defineProps<{
 }>()
 defineEmits<{ duplicate: []; delete: [] }>()
 
-const targets = computed(() => props.questions.filter((question) => !question.is_standard))
+// Layout rows are never hidden: a hidden step would leave the form without its pages.
+const targets = computed(() =>
+	props.questions.filter(
+		(question) => !question.is_standard && fieldType(question.fieldtype).group !== "Layout",
+	),
+)
 const firstTarget = computed(() =>
 	Math.min(
-		...rule.value.actions.map(([, target]) =>
-			props.questions.findIndex((question) => question.fieldname === target),
-		),
+		...rule.value.actions
+			.map(([, target]) => props.questions.findIndex((question) => question.fieldname === target))
+			.filter((index) => index >= 0),
 	),
 )
 const fields = computed(() => ruleFields(props.doctypeFields, props.questions, firstTarget.value))

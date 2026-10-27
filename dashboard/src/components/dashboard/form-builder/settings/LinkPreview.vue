@@ -4,6 +4,7 @@ import { computed } from "vue"
 
 import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
 import { validateIsImageFile } from "@/utils"
+import { wallClockDate, wallClockIn } from "@/utils/timeZones"
 
 import type { BuzzFormDoc } from "../useFormBuilder"
 
@@ -13,6 +14,9 @@ const props = defineProps<{
 	eventTitle: string
 	eventDescription?: string | null
 	eventImage?: string | null
+	eventTimeZone?: string | null
+	// What the form collects, such as "proposals".
+	noun: string
 }>()
 
 const host = window.location.hostname
@@ -22,15 +26,17 @@ const ASPECT_RATIO = 1200 / 630
 const image = computed(() => form.value.meta_image || form.value.og_image || props.eventImage)
 const title = computed(() => `${form.value.title} · ${props.eventTitle}`)
 
-const SUBMISSIONS: Record<string, string> = {
-	"Talk Proposal": "Proposals",
-	"Sponsorship Enquiry": "Enquiries",
-}
+// The close date is on the event's clock, as the server compares it.
 const closingNote = computed(() => {
 	const closeAt = form.value.auto_close_at
-	if (!closeAt || new Date(closeAt) <= new Date()) return ""
-	const date = new Date(closeAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })
-	return `${SUBMISSIONS[form.value.form_doctype] ?? "Submissions"} close on ${date}.`
+	if (!closeAt || closeAt <= wallClockIn(props.eventTimeZone)) return ""
+	const date = wallClockDate(closeAt).toLocaleDateString(undefined, {
+		day: "numeric",
+		month: "short",
+		timeZone: "UTC",
+	})
+	const noun = props.noun.charAt(0).toUpperCase() + props.noun.slice(1)
+	return `${noun} close on ${date}.`
 })
 const description = computed(() =>
 	[form.value.description || props.eventDescription, closingNote.value].filter(Boolean).join(" "),

@@ -270,12 +270,8 @@ const multiSelectProxy = computed({
 		return Array.isArray(model.value) ? model.value : String(model.value).split(",")
 	},
 	set(val) {
-		if (!val || val.length === 0) {
-			model.value = ""
-		} else {
-			const values = val.map((item) => item.value || item)
-			model.value = values.join(",")
-		}
+		// The server takes a Multi Select answer as a list.
+		model.value = (val ?? []).map((item) => item.value || item)
 	},
 })
 

@@ -22,10 +22,11 @@ class ConditionValidator:
 		self.standard_fields = get_renderable_fields(
 			form.form_doctype, system_exclude_fields(form.form_doctype)
 		)
+		# A step is never a rule's target: hiding one would leave the form without its page.
 		self.positions = {
 			question.fieldname: index
 			for index, question in enumerate(form.questions)
-			if not question.is_standard
+			if not question.is_standard and question.fieldtype != "Page Break"
 		}
 
 	def validate(self):

@@ -53,6 +53,9 @@ def generate_form(form_name: str):
 	from buzz.events.doctype.buzz_form.form_types import form_type
 	from buzz.events.form_og_image import FormOgImage
 
+	# The form may be deleted before the job runs
+	if not frappe.db.exists("Buzz Form", form_name):
+		return
 	form = frappe.get_doc("Buzz Form", form_name)
 	if form.publish and form_type(form.form_doctype).has_page:
 		render_if_stale(FormOgImage(form))

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import frappe
 from frappe import _
 from frappe.geo.country_info import get_all as get_all_countries
-from frappe.utils.data import format_date, get_datetime, get_url, now_datetime, sbool
+from frappe.utils.data import format_date, get_url, sbool
 
 from buzz.api.forms.answers import CustomAnswers
 from buzz.api.forms.conditions import parse_rules
@@ -132,7 +132,7 @@ class CustomFormService:
 
 	def closing_note(self) -> str:
 		close_at = self.form.auto_close_at
-		if not close_at or get_datetime(close_at) <= now_datetime():
+		if not close_at or self.form.is_closed:
 			return ""
 		submissions = {"Talk Proposal": _("Proposals"), "Sponsorship Enquiry": _("Enquiries")}
 		return _("{0} close on {1}.").format(

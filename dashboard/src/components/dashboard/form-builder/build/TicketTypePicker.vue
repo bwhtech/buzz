@@ -9,6 +9,7 @@ import { setTicketTypes, ticketTypesOf } from "../logic/ticketTypeRule"
 const props = defineProps<{
 	rules: LogicRule[]
 	fieldname: string
+	ensureFieldname: () => string
 	ticketTypes: { value: string; label: string }[]
 }>()
 
@@ -18,7 +19,7 @@ function toggle(ticketType: string) {
 	const next = chosen.value.includes(ticketType)
 		? chosen.value.filter((value) => value !== ticketType)
 		: [...chosen.value, ticketType]
-	setTicketTypes(props.rules, props.fieldname, next)
+	setTicketTypes(props.rules, props.ensureFieldname(), next)
 }
 </script>
 

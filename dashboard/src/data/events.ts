@@ -53,6 +53,7 @@ type EventShellDoc = {
 	start_time?: string | null
 	end_time?: string | null
 	time_zone_label?: string | null
+	time_zone?: string | null
 	short_description?: string | null
 	banner_image?: string | null
 	meta_image?: string | null

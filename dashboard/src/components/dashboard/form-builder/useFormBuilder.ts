@@ -105,8 +105,23 @@ export function useFormBuilder(formName: () => string) {
 
 	async function save() {
 		if (!draft.value) return
+		const sent = JSON.stringify(draft.value)
 		const values = Object.fromEntries(EDITABLE_FIELDS.map((key) => [key, draft.value![key]]))
-		reset((await form.setValue.submit(values)) as BuzzFormDoc)
+		const saved = (await form.setValue.submit(values)) as BuzzFormDoc
+		// Edits typed while the save was in flight stay in the draft for the next save.
+		if (JSON.stringify(draft.value) === sent) adopt(saved)
+		else savedSnapshot.value = sent
+	}
+
+	// Takes the saved form into the question objects already on screen, so a selection survives.
+	function adopt(doc: BuzzFormDoc) {
+		const shown = draft.value!.questions
+		reset(doc)
+		if (shown.length !== doc.questions.length) return
+		draft.value!.questions = draft.value!.questions.map((question, index) =>
+			Object.assign(shown[index], question),
+		)
+		savedSnapshot.value = JSON.stringify(draft.value)
 	}
 
 	const fieldsCall = useCall<

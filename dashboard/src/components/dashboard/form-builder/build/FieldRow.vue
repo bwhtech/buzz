@@ -78,13 +78,13 @@ const moreOptions = computed(() => [
 		label: "Move up",
 		icon: "lucide-arrow-up",
 		disabled: props.isFirst,
-		onClick: () => props.editor.move(question.value, props.editor.indexOf(question.value) - 1),
+		onClick: () => emit("move", -1),
 	},
 	{
 		label: "Move down",
 		icon: "lucide-arrow-down",
 		disabled: props.isLast,
-		onClick: () => props.editor.move(question.value, props.editor.indexOf(question.value) + 2),
+		onClick: () => emit("move", 1),
 	},
 	{
 		label: "Delete",
@@ -110,6 +110,14 @@ const sheetActions = computed(() => [
 
 function select() {
 	if (!props.preview) props.editor.selected.value = question.value
+}
+
+// Text fields drop out of dragging while focused: Firefox won't place a caret in a draggable row.
+const editing = ref(false)
+function onFocusIn(event: FocusEvent) {
+	const target = event.target as HTMLElement
+	editing.value = target.isContentEditable || target.tagName === "INPUT"
+	select()
 }
 
 function openSettings() {
@@ -207,10 +215,11 @@ function onKeydown(event: KeyboardEvent) {
 					: '[@media(hover:hover)]:hover:bg-surface-gray-1',
 			{ 'opacity-50': !question.enabled && !preview },
 		]"
-		:draggable="!preview"
+		:draggable="!preview && !editing"
 		:tabindex="preview ? undefined : 0"
 		:aria-label="preview ? undefined : `${type.label}: ${question.label}`"
-		@focusin="select"
+		@focusin="onFocusIn"
+		@focusout="editing = false"
 		@keydown="onKeydown"
 		@click.stop="select"
 		@dblclick="openSettings"

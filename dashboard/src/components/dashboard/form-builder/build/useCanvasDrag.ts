@@ -71,7 +71,10 @@ export function useCanvasDrag(
 
 	function start(question: FormQuestion, event: DragEvent) {
 		dragged.value = question
-		if (event.dataTransfer) event.dataTransfer.effectAllowed = "move"
+		if (!event.dataTransfer) return
+		event.dataTransfer.effectAllowed = "move"
+		// Firefox only starts a drag that carries data.
+		event.dataTransfer.setData("text/plain", "")
 	}
 
 	function over({ question, index }: StepRow, event: DragEvent) {
@@ -114,7 +117,7 @@ export function useCanvasDrag(
 		const target = drop.value
 		if (!question || !target) return end()
 		const formerPartner = partnerOf(question, null)
-		const joined = target.edge === "swap" ? null : questions()[target.index]
+		const joined = ["left", "right"].includes(target.edge) ? questions()[target.index] : null
 		if (target.edge === "swap") swap(question, questions()[target.index])
 		else if (target.edge === "left" || target.edge === "right")
 			sitBeside(question, target.index, target.edge)

@@ -30,6 +30,12 @@ function removeIfEmpty(index: number, keydown: KeyboardEvent) {
 
 const dragged = ref<number | null>(null)
 
+function startDrag(index: number, event: DragEvent) {
+	dragged.value = index
+	// Firefox only starts a drag that carries data.
+	event.dataTransfer?.setData("text/plain", "")
+}
+
 // Reordered while dragging, so the list moves under the pointer.
 function dragOver(index: number) {
 	if (dragged.value === null || dragged.value === index) return
@@ -54,7 +60,7 @@ function dragOver(index: number) {
 					draggable="true"
 					class="grid h-7 w-4 shrink-0 cursor-grab place-items-center text-ink-gray-5 active:cursor-grabbing"
 					aria-hidden="true"
-					@dragstart="dragged = index"
+					@dragstart="startDrag(index, $event)"
 					@dragend="dragged = null"
 				>
 					<span class="lucide-grip-vertical size-4" />

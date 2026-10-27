@@ -133,8 +133,9 @@ test("settings change the public form's button and confirmation", async ({ page,
 	await updateDoc(request, "Buzz Form", form, { submit_label: null, success_title: null })
 	await page.goto(`/b/manage/events/${event}/forms/${form}`)
 	await page.getByRole("radio", { name: "Settings" }).click()
-	await page.getByLabel("Button label").fill("Send it")
-	await page.getByLabel("Confirmation title").fill("Got it, thanks")
+	await page.getByLabel("Submit button text").fill("Send it")
+	// The confirmation's Title comes before the closed form's.
+	await page.locator("#settings-messages").getByLabel("Title").first().fill("Got it, thanks")
 	await page.getByRole("button", { name: /^Publish/ }).click()
 	await expect(page.getByText("Form saved")).toBeVisible()
 

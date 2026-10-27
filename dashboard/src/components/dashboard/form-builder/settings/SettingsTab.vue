@@ -8,11 +8,11 @@ import {
 	TabButtons,
 	Textarea,
 	TextInput,
-	toast,
 } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import UrlField from "@/components/UrlField.vue"
+import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useEventDoc } from "@/data/events"
 
 import type { BuzzFormDoc } from "../useFormBuilder"
@@ -39,13 +39,13 @@ const FORM_KINDS: Record<string, { label: string; noun: string }> = {
 	"Sponsorship Enquiry": { label: "Sponsorship enquiry", noun: "enquiries" },
 }
 const kind = computed(
-	() => FORM_KINDS[form.value.form_doctype] ?? { label: "Custom form", noun: "responses" },
+	() => FORM_KINDS[form.value.form_doctype] ?? { label: "Custom form", noun: "submissions" },
 )
 
 const SECTIONS = computed(
 	() =>
 		[
-			(hasPage.value || !isAttendeeForm.value) && {
+			!isAttendeeForm.value && {
 				id: "sharing",
 				label: "Sharing",
 				icon: "lucide-link",
@@ -110,16 +110,16 @@ function jump(id: string) {
 	active.value = id
 	jumping = true
 	scroller.value!.addEventListener("scrollend", stopJumping, { once: true })
+	// Safari before 18.2 never fires scrollend.
+	setTimeout(stopJumping, 1000)
 	const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches
 	document
 		.getElementById(`settings-${id}`)
 		?.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" })
 }
 
-async function copyLink() {
-	await navigator.clipboard.writeText(link.value)
-	toast.success("Link copied")
-}
+const copy = useCopyToClipboard()
+const copyLink = () => copy(link.value, "Link copied")
 </script>
 
 <template>
@@ -153,13 +153,14 @@ async function copyLink() {
 					<p class="mt-1 text-p-base text-ink-gray-5">{{ form.form_doctype }} · {{ kind.label }}</p>
 				</header>
 
-				<FormStatus :live="!!form.publish" :close-at="form.auto_close_at" :noun="kind.noun" />
+				<FormStatus
+					:live="!!form.publish"
+					:close-at="form.auto_close_at"
+					:time-zone="event.doc?.time_zone"
+					:noun="kind.noun"
+				/>
 
-				<SettingsSection
-					v-if="SECTIONS.some((section) => section.id === 'sharing')"
-					id="settings-sharing"
-					title="Sharing"
-				>
+				<SettingsSection v-if="!isAttendeeForm" id="settings-sharing" title="Sharing">
 					<SettingsRow
 						v-if="hasPage"
 						title="Form link"
@@ -300,6 +301,8 @@ async function copyLink() {
 						:event-title="event.doc?.title ?? ''"
 						:event-description="event.doc?.short_description"
 						:event-image="event.doc?.meta_image || event.doc?.og_image || event.doc?.banner_image"
+						:event-time-zone="event.doc?.time_zone"
+						:noun="kind.noun"
 					/>
 				</SettingsSection>
 			</div>

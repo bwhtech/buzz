@@ -3,6 +3,7 @@ import { useEventListener } from "@vueuse/core"
 import { Button, TabButtons, toast, Tooltip } from "frappe-ui"
 import { computed, ref } from "vue"
 
+import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useIsMobile } from "@/composables/useIsMobile"
 import { useEventDoc } from "@/data/events"
 import type { FrappeError } from "@/types"
@@ -57,6 +58,7 @@ const link = computed(() => {
 	return `${window.location.origin}/b/${event.doc?.route ?? ""}/${form.route}`
 })
 const openForm = () => window.open(link.value, "_blank")
+const copy = useCopyToClipboard()
 const publishMenuOpen = ref(false)
 const publishActions = computed(() => [
 	...(link.value
@@ -64,10 +66,7 @@ const publishActions = computed(() => [
 				{
 					label: "Copy link",
 					icon: "lucide-link",
-					onClick: async () => {
-						await navigator.clipboard.writeText(link.value)
-						toast.success("Link copied")
-					},
+					onClick: () => copy(link.value, "Link copied"),
 				},
 				{ label: "Open form", icon: "lucide-external-link", onClick: openForm },
 			]
@@ -93,7 +92,7 @@ async function publish(on = true) {
 
 // ⌘S does what the main button does; a live form with nothing to save stays live.
 useEventListener(window, "keydown", (keydown: KeyboardEvent) => {
-	if (!(keydown.metaKey || keydown.ctrlKey) || keydown.key !== "s") return
+	if (!(keydown.metaKey || keydown.ctrlKey) || keydown.key.toLowerCase() !== "s") return
 	keydown.preventDefault()
 	if (!saving.value && (dirty.value || !live.value)) publish()
 })
