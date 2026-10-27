@@ -51,11 +51,13 @@ const status = computed(() => {
 	return { label: "Live", dot: "bg-surface-green-3" }
 })
 
-// Registration lives on the booking page, so only other forms have a link of their own.
+// Registration is served by the booking page; other forms have a page of their own.
 const link = computed(() => {
 	const form = draft.value
-	if (!form || ["Event Booking", "Event Booking Attendee"].includes(form.form_doctype)) return ""
-	return `${window.location.origin}/b/${event.doc?.route ?? ""}/${form.route}`
+	if (!form || !event.doc?.route) return ""
+	const isRegistration = ["Event Booking", "Event Booking Attendee"].includes(form.form_doctype)
+	const path = isRegistration ? `register/${event.doc.route}` : `${event.doc.route}/${form.route}`
+	return `${window.location.origin}/b/${path}`
 })
 const openForm = () => window.open(link.value, "_blank")
 const copy = useCopyToClipboard()
