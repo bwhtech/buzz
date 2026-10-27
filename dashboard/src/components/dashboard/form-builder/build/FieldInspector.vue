@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { Button, FormControl, Switch, TabButtons, Textarea } from "frappe-ui"
+import { Button, FormControl, TabButtons, Textarea } from "frappe-ui"
 import { computed } from "vue"
 
 import type { LogicRule } from "@/utils/formLogic"
 
 import { CHOICE_TYPES, fieldType } from "../fieldTypes"
+import { ruleFields } from "../logic/ruleOptions"
 import type { DoctypeField, FormQuestion } from "../useFormBuilder"
+import FieldLogic from "./FieldLogic.vue"
 import OptionsEditor from "./OptionsEditor.vue"
 import ParagraphEditor from "./ParagraphEditor.vue"
 import TicketTypePicker from "./TicketTypePicker.vue"
@@ -15,12 +17,13 @@ const question = defineModel<FormQuestion>({ required: true })
 const props = defineProps<{
 	doctypeField?: DoctypeField
 	editor: QuestionEditor
-	ruleCount: number
+	questions: FormQuestion[]
+	doctypeFields: DoctypeField[]
 	rules: LogicRule[]
 	// Set on the attendee form, where a question can be asked for some tickets only.
 	ticketTypes?: { value: string; label: string }[] | null
 }>()
-defineEmits<{ addRule: []; close: [] }>()
+defineEmits<{ openLogic: []; close: [] }>()
 
 const fieldtype = computed(() => props.doctypeField?.fieldtype ?? question.value.fieldtype)
 const type = computed(() => fieldType(fieldtype.value))
@@ -34,14 +37,10 @@ const WIDTHS = [
 	{ label: "Half", value: "Half" },
 ]
 
-const enabled = computed({
-	get: () => !!question.value.enabled,
-	set: (on: boolean) => (question.value.enabled = on ? 1 : 0),
-})
-const mandatory = computed({
-	get: () => !!question.value.mandatory,
-	set: (on: boolean) => (question.value.mandatory = on ? 1 : 0),
-})
+// Conditions may test the form's own fields and the questions above this one.
+const ruleFieldsAbove = computed(() =>
+	ruleFields(props.doctypeFields, props.questions, props.editor.indexOf(question.value)),
+)
 </script>
 
 <template>
@@ -134,26 +133,17 @@ const mandatory = computed({
 				<TabButtons v-model="question.width" :options="WIDTHS" fluid />
 			</div>
 
-			<div class="space-y-3">
-				<Switch
-					v-if="!isLayout && !doctypeField?.locked && !question.is_standard"
-					v-model="mandatory"
-					label="Mandatory"
+			<div class="space-y-4 border-t border-outline-gray-1 pt-4">
+				<FieldLogic
+					v-model="question"
+					:rules="rules"
+					:fields="ruleFieldsAbove"
+					:ensure-fieldname="editor.ensureFieldname"
+					:can-hide="!doctypeField?.locked"
+					:can-require="!isLayout && !doctypeField?.locked && !question.is_standard"
+					@open-logic="$emit('openLogic')"
 				/>
-				<Switch v-if="!doctypeField?.locked" v-model="enabled" label="Show on the form" />
 			</div>
-
-			<section v-if="!question.is_standard" class="space-y-2 border-t border-outline-gray-1 pt-4">
-				<h3 class="text-p-sm font-medium text-ink-gray-8">Logic</h3>
-				<p class="text-p-sm text-ink-gray-5">
-					{{
-						ruleCount
-							? `${ruleCount} ${ruleCount === 1 ? "rule changes" : "rules change"} this field.`
-							: "Always asked, unless a rule says otherwise."
-					}}
-				</p>
-				<Button icon-left="lucide-workflow" label="Add a rule" @click="$emit('addRule')" />
-			</section>
 		</div>
 	</div>
 </template>

@@ -1,7 +1,7 @@
 import type { LogicRule } from "@/utils/formLogic"
 
 // "Ask only for these ticket types" is a show rule with one ticket_type condition.
-const isTicketRule = (rule: LogicRule, fieldname: string) =>
+export const isTicketRule = (rule: LogicRule, fieldname: string) =>
 	(rule.match ?? "all") === "all" &&
 	rule.conditions.length === 1 &&
 	rule.conditions[0][0] === "ticket_type" &&

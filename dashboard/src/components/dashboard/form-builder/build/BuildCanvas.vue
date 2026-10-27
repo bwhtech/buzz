@@ -26,7 +26,7 @@ const props = defineProps<{
 	// What the booking page always asks before these questions.
 	fixedFields?: string[]
 }>()
-defineEmits<{ addRule: [FormQuestion] }>()
+defineEmits<{ openLogic: [] }>()
 
 const editor = props.editor
 const composer = ref<InstanceType<typeof FieldComposer> | null>(null)
@@ -66,7 +66,8 @@ const inspectorProps = computed(() => {
 	return {
 		doctypeField: doctypeFieldOf(question),
 		editor,
-		ruleCount: rulesActingOn(question),
+		questions: form.value.questions,
+		doctypeFields: Object.values(props.doctypeFields),
 		rules: form.value.logic_rules,
 		ticketTypes:
 			form.value.form_doctype === "Event Booking Attendee"
@@ -332,7 +333,7 @@ watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.fo
 					v-model="form.questions[selectedIndex]"
 					v-bind="inspectorProps"
 					@close="closeInspector"
-					@add-rule="$emit('addRule', form.questions[selectedIndex])"
+					@open-logic="$emit('openLogic')"
 				/>
 			</aside>
 		</Transition>
@@ -359,7 +360,7 @@ watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.fo
 				v-model="form.questions[selectedIndex]"
 				v-bind="inspectorProps"
 				@close="inspectorOpen = false"
-				@add-rule="$emit('addRule', form.questions[selectedIndex])"
+				@open-logic="$emit('openLogic')"
 			/>
 		</BottomSheet>
 	</div>

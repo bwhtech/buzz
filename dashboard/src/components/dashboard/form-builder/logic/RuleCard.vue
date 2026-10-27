@@ -1,19 +1,13 @@
 <script setup lang="ts">
-import { Button, MultiSelect, Tooltip } from "frappe-ui"
-import { computed, onMounted } from "vue"
+import { Button, Tooltip } from "frappe-ui"
+import { computed, ref } from "vue"
 
-import type { Condition, LogicRule } from "@/utils/formLogic"
+import type { LogicRule } from "@/utils/formLogic"
 
 import type { DoctypeField, FormQuestion } from "../useFormBuilder"
+import ConditionList from "./ConditionList.vue"
 import LogicPill from "./LogicPill.vue"
-import {
-	ACTIONS,
-	type RuleField,
-	newCondition,
-	operatorOf,
-	operatorsFor,
-	ruleFields,
-} from "./ruleOptions"
+import { ACTIONS, ruleFields } from "./ruleOptions"
 
 const rule = defineModel<LogicRule>({ required: true })
 const props = defineProps<{
@@ -34,40 +28,8 @@ const firstTarget = computed(() =>
 	),
 )
 const fields = computed(() => ruleFields(props.doctypeFields, props.questions, firstTarget.value))
-const fieldOf = (condition: Condition) =>
-	fields.value.find((field) => field.fieldname === condition[0])
 const labelOf = (fieldname: string) =>
 	props.questions.find((question) => question.fieldname === fieldname)?.label || "pick a question"
-
-const valueLabel = (field: RuleField | undefined, value: unknown) =>
-	field?.values?.find((option) => option.value === value)?.label ?? String(value ?? "pick…")
-
-function fieldOptions(index: number) {
-	return fields.value.map((field) => ({
-		label: field.label,
-		onClick: () => (rule.value.conditions[index] = newCondition(field)),
-	}))
-}
-
-function operatorOptions(index: number) {
-	const condition = rule.value.conditions[index]
-	return operatorsFor(fieldOf(condition)).map((operator) => ({
-		label: operator.label,
-		onClick: () => {
-			const value =
-				operator.fixed ?? (operator.list ? [] : (fieldOf(condition)?.values?.[0]?.value ?? ""))
-			rule.value.conditions[index] = [condition[0], operator.value, value]
-		},
-	}))
-}
-
-function valueOptions(index: number) {
-	const condition = rule.value.conditions[index]
-	return (fieldOf(condition)?.values ?? []).map((option) => ({
-		label: option.label,
-		onClick: () => (condition[2] = option.value),
-	}))
-}
 
 function targetOptions(index: number) {
 	return targets.value.map((question) => ({
@@ -83,17 +45,7 @@ function actionOptions(index: number) {
 	}))
 }
 
-function addCondition() {
-	if (fields.value.length) rule.value.conditions.push(newCondition(fields.value[0]))
-}
-
-// A new rule opens with a condition to fill in.
-onMounted(() => props.readonly || rule.value.conditions.length || addCondition())
-
-const listLabel = (condition: Condition) =>
-	(Array.isArray(condition[2]) ? condition[2] : [])
-		.map((value) => valueLabel(fieldOf(condition), value))
-		.join(", ") || "pick…"
+const conditionList = ref<InstanceType<typeof ConditionList> | null>(null)
 
 function addAction() {
 	const target = targets.value.find(
@@ -129,66 +81,13 @@ function addAction() {
 			</Tooltip>
 		</div>
 
-		<div
-			v-for="(condition, index) in rule.conditions"
-			:key="`c${index}`"
-			class="flex min-h-7 flex-wrap items-center gap-1.5"
-		>
-			<span class="flex w-11 shrink-0">
-				<span v-if="index === 0" class="text-p-base font-medium text-ink-gray-6">If</span>
-				<LogicPill
-					v-else
-					kind="join"
-					:label="rule.match === 'any' ? 'or' : 'and'"
-					:aria-label="`Match ${rule.match === 'any' ? 'all' : 'any'} conditions`"
-					@click="readonly || (rule.match = rule.match === 'any' ? 'all' : 'any')"
-				/>
-			</span>
-			<LogicPill
-				:label="fieldOf(condition)?.label ?? condition[0]"
-				:options="readonly ? undefined : fieldOptions(index)"
-			/>
-			<LogicPill
-				kind="word"
-				:label="operatorOf(condition)?.label ?? condition[1]"
-				:options="readonly ? undefined : operatorOptions(index)"
-			/>
-			<template v-if="!operatorOf(condition)?.fixed">
-				<LogicPill v-if="readonly && operatorOf(condition)?.list" :label="listLabel(condition)" />
-				<MultiSelect
-					v-else-if="operatorOf(condition)?.list && fieldOf(condition)?.values"
-					:model-value="Array.isArray(condition[2]) ? condition[2] : []"
-					@update:model-value="
-						(items: any[]) => (condition[2] = items.map((item) => item?.value ?? item))
-					"
-					class="min-w-40"
-					:options="fieldOf(condition)?.values as any"
-					placeholder="pick…"
-				/>
-				<LogicPill
-					v-else-if="fieldOf(condition)?.values"
-					:label="valueLabel(fieldOf(condition), condition[2])"
-					:options="readonly ? undefined : valueOptions(index)"
-				/>
-				<LogicPill v-else-if="readonly" :label="String(condition[2] || 'a value')" />
-				<input
-					v-else
-					v-model="condition[2] as string"
-					placeholder="a value"
-					aria-label="Value"
-					class="h-[26px] w-40 rounded-5 border-0 bg-surface-gray-2 px-2 text-p-base text-ink-gray-8 outline-none placeholder:text-ink-gray-4 focus:ring-0 focus-visible:ring-2 focus-visible:ring-outline-gray-3"
-				/>
-			</template>
-			<button
-				v-if="!readonly"
-				type="button"
-				class="grid size-[22px] place-items-center rounded-5 text-ink-gray-4 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-8"
-				aria-label="Remove condition"
-				@click="rule.conditions.splice(index, 1)"
-			>
-				<span class="lucide-x size-3" aria-hidden="true" />
-			</button>
-		</div>
+		<ConditionList
+			ref="conditionList"
+			v-model="rule"
+			:fields="fields"
+			:readonly="readonly"
+			lead-words
+		/>
 		<div v-if="!rule.conditions.length" class="flex min-h-7 items-center">
 			<span class="w-11 text-p-base font-medium text-ink-gray-6">If</span>
 			<span class="text-p-sm text-ink-gray-5">no conditions yet, so this rule never runs</span>
@@ -197,7 +96,7 @@ function addAction() {
 			<button
 				type="button"
 				class="-ml-1.5 rounded-5 px-1.5 py-0.5 text-p-sm text-ink-gray-5 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-9"
-				@click="addCondition"
+				@click="conditionList?.addCondition()"
 			>
 				+ condition
 			</button>

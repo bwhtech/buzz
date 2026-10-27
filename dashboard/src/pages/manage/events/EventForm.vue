@@ -8,12 +8,8 @@ import BuildCanvas from "@/components/dashboard/form-builder/build/BuildCanvas.v
 import { useQuestionEditor } from "@/components/dashboard/form-builder/build/useQuestionEditor"
 import FormBuilderLayout from "@/components/dashboard/form-builder/FormBuilderLayout.vue"
 import LogicTab from "@/components/dashboard/form-builder/logic/LogicTab.vue"
-import { emptyRule } from "@/components/dashboard/form-builder/logic/ruleOptions"
 import SettingsTab from "@/components/dashboard/form-builder/settings/SettingsTab.vue"
-import {
-	type FormQuestion,
-	useFormBuilder,
-} from "@/components/dashboard/form-builder/useFormBuilder"
+import { useFormBuilder } from "@/components/dashboard/form-builder/useFormBuilder"
 import type { FrappeError } from "@/types"
 
 const route = useRoute()
@@ -46,11 +42,6 @@ const editor = useQuestionEditor(
 	() => draft.value!.logic_rules,
 )
 watch(scope, () => (editor.selected.value = null))
-
-function addRuleFor(question: FormQuestion) {
-	draft.value!.logic_rules.push(emptyRule(editor.ensureFieldname(question)))
-	tab.value = "logic"
-}
 
 const dirty = computed(() => builders.value.some((one) => one.dirty.value))
 const UNSAVED = "Leave without saving? Your changes to this form will be lost."
@@ -89,7 +80,7 @@ useEventListener(window, "beforeunload", (event) => dirty.value && event.prevent
 					:device="device"
 					:preview="preview"
 					:fixed-fields="isRegistration ? FIXED_FIELDS[scope] : undefined"
-					@add-rule="addRuleFor"
+					@open-logic="tab = 'logic'"
 				/>
 				<LogicTab
 					v-else-if="tab === 'logic'"
