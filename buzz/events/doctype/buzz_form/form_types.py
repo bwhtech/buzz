@@ -77,6 +77,7 @@ class FormType:
 	# The only standard fields offered, in order, with the label the booking page shows.
 	# None offers every renderable field under its doctype label.
 	core_fields: ClassVar[dict[str, str] | None] = None
+	core_width = "Full"
 	answers_field = "additional_fields"
 
 	def standard_fields(self, form_doctype: str) -> dict:

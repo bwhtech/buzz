@@ -109,6 +109,7 @@ class BuzzForm(Document):
 				"is_standard": 1,
 				"fieldname": fieldname,
 				"label": kind.default_label(fieldname, df),
+				"width": kind.core_width,
 				"enabled": 1,
 			}
 			for fieldname, df in fields.items()

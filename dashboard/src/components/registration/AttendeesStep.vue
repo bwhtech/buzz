@@ -30,30 +30,13 @@
 						{{ __("Your details") }}
 					</h2>
 					<div class="grid grid-cols-1 items-start gap-3.5 p-4 md:grid-cols-2">
-						<FormControl
-							v-model="me.first_name"
-							:label="__('First name')"
+						<CoreFieldInputs
+							:fields="coreFields"
+							:model="me"
+							:errors="meErrors"
+							:show-errors="showErrors"
 							:size="inputSize"
-							:error="showErrors ? meErrors.first_name : undefined"
-							required
-							autocomplete="given-name"
-						/>
-						<FormControl
-							v-model="me.last_name"
-							:label="__('Last name')"
-							:size="inputSize"
-							:error="showErrors ? meErrors.last_name : undefined"
-							:required="lastNameRequired"
-							autocomplete="family-name"
-						/>
-						<FormControl
-							v-model="me.email"
-							type="email"
-							:label="__('Email')"
-							:size="inputSize"
-							:error="showErrors ? meErrors.email : undefined"
-							required
-							autocomplete="email"
+							:required="requiredIdentity"
 						/>
 					</div>
 					<div
@@ -90,7 +73,8 @@
 			:custom-fields="fieldsFor(attendee)"
 			:errors="errors[index]"
 			:show-errors="showErrors"
-			:last-name-required="lastNameRequired"
+			:core-fields="coreFields"
+			:required-identity="requiredIdentity"
 			:collapsible="collapsible"
 			:open="openIndex === index"
 			:has-next="index < attendees.length - 1"
@@ -103,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { Checkbox, FormControl } from "frappe-ui"
+import { Checkbox } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import type { FrappeField } from "@/composables/useCustomFields"
@@ -117,6 +101,8 @@ import type {
 import AttendeeCard from "./AttendeeCard.vue"
 import type { AttendeeErrors, AttendeeIdentity } from "./attendeeValidation"
 import Collapse from "./Collapse.vue"
+import CoreFieldInputs from "./CoreFieldInputs.vue"
+import type { CoreField } from "./coreFields"
 
 const props = defineProps<{
 	attendees: BookingAttendee[]
@@ -131,11 +117,15 @@ const props = defineProps<{
 	fieldsFor: (attendee: BookingAttendee) => FrappeField[]
 	showErrors: boolean
 	lastNameRequired: boolean
+	coreFields: CoreField[]
 	collapsible: boolean
 }>()
 
 const openIndex = ref(0)
 const inputSize = computed(() => (props.collapsible ? "lg" : "sm"))
+const requiredIdentity = computed(() =>
+	props.lastNameRequired ? ["first_name", "last_name", "email"] : ["first_name", "email"],
+)
 const allForMe = computed(() => props.attendees.every((attendee) => attendee.is_me))
 const myName = computed(() => `${props.me.first_name} ${props.me.last_name}`.trim() || __("you"))
 

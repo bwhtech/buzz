@@ -109,6 +109,7 @@
 							:fields-for="ticketFieldsFor"
 							:show-errors="tried"
 							:last-name-required="isZoomEvent"
+							:core-fields="coreFieldsOf('Ticket')"
 							:collapsible="isMobile"
 						/>
 
@@ -117,6 +118,7 @@
 							v-model:booking-custom-fields-data="bookingCustomFieldsData"
 							:billing="billing"
 							:phone-required="isGuestMode && isPhoneOtp"
+							:core-fields="coreFieldsOf('Booking')"
 							:phone-error="otp.phoneError"
 							:booking-custom-fields="bookingCustomFields"
 							:show-invoice="tax.apply"
@@ -289,6 +291,7 @@ import { isZoomBackedCategory } from "@/utils/zoomCategory"
 import OfflinePaymentDialog from "./OfflinePaymentDialog.vue"
 import AttendeesStep from "./registration/AttendeesStep.vue"
 import CheckoutHeader from "./registration/CheckoutHeader.vue"
+import { type CoreField, DEFAULT_CORE_FIELDS } from "./registration/coreFields"
 import CouponField from "./registration/CouponField.vue"
 import CurrencySwitch from "./registration/CurrencySwitch.vue"
 import DetailsStep from "./registration/DetailsStep.vue"
@@ -323,6 +326,8 @@ const props = defineProps({
 	customFields: { type: Array as PropType<FrappeField[]>, default: () => [] },
 	// Show, hide and require rules per registration form, keyed like a field's applied_to.
 	logicRules: { type: Object as PropType<Record<string, LogicRule[]>>, default: () => ({}) },
+	// Core field rows per registration form, keyed like logicRules.
+	coreFields: { type: Object as PropType<Record<string, CoreField[]>>, default: () => ({}) },
 	eventRoute: { type: String, required: true },
 	paymentGateways: { type: Array as PropType<string[]>, default: () => [] },
 	isGuestMode: { type: Boolean, default: false },
@@ -353,6 +358,8 @@ const me = reactive({
 if (!props.isGuestMode) loadUser()
 
 const isZoomEvent = computed(() => isZoomBackedCategory(props.eventDetails.category))
+const coreFieldsOf = (appliedTo: string) =>
+	props.coreFields[appliedTo]?.length ? props.coreFields[appliedTo] : DEFAULT_CORE_FIELDS[appliedTo]
 const isPhoneOtp = computed(() => props.eventDetails.guest_verification_method === "Phone OTP")
 const requiresLogin = computed(() => props.isGuestMode && !props.eventDetails?.allow_guest_booking)
 const bookingCustomFields = computed(() =>

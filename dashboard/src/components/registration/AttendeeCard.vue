@@ -54,30 +54,13 @@
 					class="grid grid-cols-1 items-start gap-3.5 md:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]"
 				>
 					<template v-if="!identityHidden">
-						<FormControl
-							v-model="identity.first_name"
-							:label="__('First name')"
+						<CoreFieldInputs
+							:fields="coreFields"
+							:model="identity"
+							:errors="errors"
+							:show-errors="showErrors"
 							:size="inputSize"
-							:error="showErrors ? errors.first_name : undefined"
-							required
-							autocomplete="given-name"
-						/>
-						<FormControl
-							v-model="identity.last_name"
-							:label="__('Last name')"
-							:size="inputSize"
-							:error="showErrors ? errors.last_name : undefined"
-							:required="lastNameRequired"
-							autocomplete="family-name"
-						/>
-						<FormControl
-							v-model="identity.email"
-							type="email"
-							:label="__('Email')"
-							:size="inputSize"
-							:error="showErrors ? errors.email : undefined"
-							required
-							autocomplete="email"
+							:required="requiredIdentity"
 						/>
 					</template>
 					<CustomFieldInput
@@ -105,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, Checkbox, FormControl } from "frappe-ui"
+import { Button, Checkbox } from "frappe-ui"
 import { computed } from "vue"
 import LucideChevronDown from "~icons/lucide/chevron-down"
 import LucideCircleCheck from "~icons/lucide/circle-check"
@@ -118,6 +101,8 @@ import CustomFieldInput from "../CustomFieldInput.vue"
 import AttendeeAddOns from "./AttendeeAddOns.vue"
 import type { AttendeeErrors, AttendeeIdentity } from "./attendeeValidation"
 import Collapse from "./Collapse.vue"
+import CoreFieldInputs from "./CoreFieldInputs.vue"
+import type { CoreField } from "./coreFields"
 
 const props = defineProps<{
 	attendee: BookingAttendee
@@ -130,7 +115,8 @@ const props = defineProps<{
 	customFields: FrappeField[]
 	errors: AttendeeErrors
 	showErrors: boolean
-	lastNameRequired: boolean
+	coreFields: CoreField[]
+	requiredIdentity: string[]
 	collapsible?: boolean
 	open?: boolean
 	hasNext?: boolean

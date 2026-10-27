@@ -65,6 +65,7 @@
 				:eventDetails="eventBookingData.eventDetails || {}"
 				:customFields="eventBookingData.customFields || []"
 				:logicRules="eventBookingData.logicRules"
+				:coreFields="eventBookingData.coreFields"
 				:eventRoute="eventRoute"
 				:paymentGateways="eventBookingData.paymentGateways"
 				:isGuestMode="isGuest"
@@ -79,6 +80,7 @@ import { useIntervalFn } from "@vueuse/core"
 import { Spinner, useCall, usePageMeta } from "frappe-ui"
 import { computed, reactive, ref, watch } from "vue"
 
+import type { CoreField } from "@/components/registration/coreFields"
 import { holdTokenKey } from "@/composables/useTicketHold"
 import { session } from "@/data/session"
 import type {
@@ -102,6 +104,7 @@ const eventBookingData = reactive<{
 	eventDetails: Record<string, any> | null
 	customFields: FrappeField[] | null
 	logicRules: Record<string, LogicRule[]>
+	coreFields: Record<string, CoreField[]>
 	paymentGateways: string[]
 	offlineMethods: OfflineMethod[]
 }>({
@@ -112,6 +115,7 @@ const eventBookingData = reactive<{
 	eventDetails: null,
 	customFields: null,
 	logicRules: {},
+	coreFields: {},
 	paymentGateways: [],
 	offlineMethods: [],
 })
@@ -169,6 +173,7 @@ const eventBookingResource = useCall<
 		eventBookingData.eventDetails = data.event_details || {}
 		eventBookingData.customFields = data.custom_fields || []
 		eventBookingData.logicRules = data.logic_rules || {}
+		eventBookingData.coreFields = data.core_fields || {}
 		eventBookingData.paymentGateways = data.payment_gateways || []
 		eventBookingData.offlineMethods = data.offline_methods || []
 		registrationsClosed.value = data.registrations_closed || false
