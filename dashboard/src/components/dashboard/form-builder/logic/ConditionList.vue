@@ -138,7 +138,7 @@ defineExpose({ addCondition })
 		<button
 			v-if="!readonly"
 			type="button"
-			class="mt-0.5 grid size-[22px] shrink-0 place-items-center rounded-5 text-ink-gray-4 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-8"
+			class="mt-0.5 grid size-[22px] shrink-0 place-items-center rounded-5 text-ink-gray-4 transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.97] [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-8"
 			aria-label="Remove condition"
 			@click="rule.conditions.splice(index, 1)"
 		>

@@ -101,7 +101,7 @@ function addAction() {
 		<div v-if="!readonly" class="flex pl-11">
 			<button
 				type="button"
-				class="-ml-1.5 rounded-5 px-1.5 py-0.5 text-p-sm text-ink-gray-5 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-9"
+				class="-ml-1.5 rounded-5 px-1.5 py-0.5 text-p-sm text-ink-gray-5 transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.97] [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-9"
 				@click="conditionList?.addCondition()"
 			>
 				+ condition
@@ -128,7 +128,7 @@ function addAction() {
 			<button
 				v-if="!readonly && rule.actions.length > 1"
 				type="button"
-				class="grid size-[22px] place-items-center rounded-5 text-ink-gray-4 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-8"
+				class="grid size-[22px] place-items-center rounded-5 text-ink-gray-4 transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.97] [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-8"
 				aria-label="Remove action"
 				@click="rule.actions.splice(index, 1)"
 			>
@@ -138,7 +138,7 @@ function addAction() {
 		<div v-if="!readonly" class="flex pl-11">
 			<button
 				type="button"
-				class="-ml-1.5 rounded-5 px-1.5 py-0.5 text-p-sm text-ink-gray-5 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-9"
+				class="-ml-1.5 rounded-5 px-1.5 py-0.5 text-p-sm text-ink-gray-5 transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.97] [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-9"
 				@click="addAction"
 			>
 				+ action

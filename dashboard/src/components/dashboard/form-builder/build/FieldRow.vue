@@ -206,7 +206,7 @@ function onKeydown(event: KeyboardEvent) {
 	<div
 		v-else
 		ref="row"
-		class="group relative rounded-5 px-3 py-2.5 outline-none [@media(hover:hover)]:cursor-grab active:cursor-grabbing transition-[background-color,box-shadow,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
+		class="group relative rounded-5 px-3 py-2.5 outline-none [@media(hover:hover)]:cursor-grab active:cursor-grabbing transition-[background-color,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
 		:class="[
 			preview
 				? ''
@@ -261,7 +261,7 @@ function onKeydown(event: KeyboardEvent) {
 				<template #trigger>
 					<button
 						type="button"
-						class="flex h-7 items-center gap-1.5 rounded-5 pl-2 pr-1.5 text-p-xs text-ink-gray-7 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2"
+						class="flex h-7 items-center gap-1.5 rounded-5 pl-2 pr-1.5 text-p-xs text-ink-gray-7 transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.97] [@media(hover:hover)]:hover:bg-surface-gray-2"
 						:aria-label="`Turn ${type.label} into another type`"
 					>
 						<span :class="[type.icon, 'size-3.5']" aria-hidden="true" />

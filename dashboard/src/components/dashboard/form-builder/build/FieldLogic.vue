@@ -81,7 +81,7 @@ const addCondition = (rule: LogicRule) => rule.conditions.push(newCondition(like
 const others = computed(() => otherRuleCount(props.rules, question.value.fieldname))
 
 const LINK =
-	"rounded-5 px-1.5 py-0.5 text-p-sm text-ink-gray-5 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-9"
+	"rounded-5 px-1.5 py-0.5 text-p-sm text-ink-gray-5 transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.97] [@media(hover:hover)]:hover:bg-surface-gray-2 [@media(hover:hover)]:hover:text-ink-gray-9"
 </script>
 
 <template>

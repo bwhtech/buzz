@@ -58,7 +58,7 @@ function dragOver(index: number) {
 			>
 				<span
 					draggable="true"
-					class="grid h-7 w-4 shrink-0 cursor-grab place-items-center text-ink-gray-5 active:cursor-grabbing"
+					class="grid h-7 w-4 shrink-0 cursor-grab place-items-center text-ink-gray-5 transition-colors duration-150 active:cursor-grabbing [@media(hover:hover)]:hover:text-ink-gray-8"
 					aria-hidden="true"
 					@dragstart="startDrag(index, $event)"
 					@dragend="dragged = null"

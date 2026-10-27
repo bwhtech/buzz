@@ -173,7 +173,7 @@ watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.fo
 			@click="editor.selected.value = null"
 		>
 			<div
-				class="mx-auto w-full bg-surface-base transition-[max-width] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
+				class="mx-auto w-full bg-surface-base"
 				:class="
 					inCard
 						? 'max-w-[390px] rounded-5 px-4 pb-7 pt-5 shadow-sm ring-1 ring-inset ring-outline-gray-1'
@@ -285,7 +285,7 @@ watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.fo
 				<button
 					v-if="hasSteps && !preview"
 					type="button"
-					class="mt-8 flex w-full items-center gap-3 text-p-sm text-ink-gray-5 transition-colors hover:text-ink-gray-8"
+					class="mt-8 flex w-full items-center gap-3 text-p-sm text-ink-gray-5 transition-colors duration-150 [@media(hover:hover)]:hover:text-ink-gray-8"
 					@click.stop="steps.add()"
 				>
 					<span class="flex-1 border-t border-dashed border-outline-gray-3" aria-hidden="true" />
@@ -316,8 +316,8 @@ watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.fo
 		<Transition
 			enter-from-class="translate-x-3 opacity-0"
 			leave-to-class="translate-x-3 opacity-0"
-			enter-active-class="transition duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
-			leave-active-class="transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
+			enter-active-class="transition duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
+			leave-active-class="transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
 		>
 			<aside
 				v-if="!isNarrow && inspectorOpen"
