@@ -5,6 +5,7 @@ import {
 	Sidebar,
 	SidebarItem,
 	Switch,
+	TabButtons,
 	Textarea,
 	TextInput,
 	toast,
@@ -15,6 +16,7 @@ import UrlField from "@/components/UrlField.vue"
 import { useEventDoc } from "@/data/events"
 
 import type { BuzzFormDoc } from "../useFormBuilder"
+import FormStatus from "./FormStatus.vue"
 import SettingsRow from "./SettingsRow.vue"
 import SettingsSection from "./SettingsSection.vue"
 
@@ -29,12 +31,26 @@ const takesLogin = computed(
 	() => hasPage.value && form.value.form_doctype !== "Sponsorship Enquiry",
 )
 
+const FORM_KINDS: Record<string, { label: string; noun: string }> = {
+	"Talk Proposal": { label: "Call for proposals", noun: "proposals" },
+	"Event Booking": { label: "Registration", noun: "registrations" },
+	"Event Booking Attendee": { label: "Registration", noun: "registrations" },
+	"Sponsorship Enquiry": { label: "Sponsorship enquiry", noun: "enquiries" },
+}
+const kind = computed(
+	() => FORM_KINDS[form.value.form_doctype] ?? { label: "Custom form", noun: "responses" },
+)
+
 const SECTIONS = computed(
 	() =>
 		[
-			{ id: "general", label: "General", icon: "lucide-settings-2" },
-			!isAttendeeForm.value && { id: "submissions", label: "Submissions", icon: "lucide-inbox" },
-			hasPage.value && { id: "confirmation", label: "Confirmation", icon: "lucide-circle-check" },
+			(hasPage.value || !isAttendeeForm.value) && {
+				id: "sharing",
+				label: "Sharing",
+				icon: "lucide-link",
+			},
+			takesLogin.value && { id: "responses", label: "Responses", icon: "lucide-inbox" },
+			hasPage.value && { id: "messages", label: "Messages", icon: "lucide-message-square" },
 			hasPage.value && { id: "preview", label: "Link preview", icon: "lucide-share-2" },
 		].filter(Boolean) as { id: string; label: string; icon: string }[],
 )
@@ -46,14 +62,37 @@ const previewTitle = computed(
 	() => form.value.meta_title || `${form.value.title} · ${event.doc?.title ?? ""}`,
 )
 
+const closeTime = computed(() =>
+	form.value.auto_close_at
+		? new Date(form.value.auto_close_at).toLocaleTimeString(undefined, {
+				hour: "numeric",
+				minute: "2-digit",
+			})
+		: "",
+)
+
 const loginRequired = computed({
 	get: () => !!form.value.login_required,
 	set: (on: boolean) => (form.value.login_required = on ? 1 : 0),
 })
 
+// A redirect replaces the confirmation, so the two are one choice.
+const AFTER_SUBMIT = [
+	{ label: "Show message", value: "message" },
+	{ label: "Open website", value: "redirect" },
+]
+const redirecting = ref<boolean | null>(null)
+const afterSubmit = computed({
+	get: () => ((redirecting.value ?? !!form.value.redirect_url) ? "redirect" : "message"),
+	set: (choice: string) => {
+		redirecting.value = choice === "redirect"
+		if (choice === "message") form.value.redirect_url = null
+	},
+})
+
 // The nav follows the section scrolled to, and jumps to the one clicked.
 const scroller = ref<HTMLElement | null>(null)
-const active = ref("general")
+const active = ref(SECTIONS.value[0]?.id ?? "")
 // A clicked section stays highlighted while its jump scrolls, and when the page is too short
 // to scroll it to the top; the reader's own scrolling hands the highlight back.
 let jumping = false
@@ -66,7 +105,7 @@ function onScroll() {
 		(section) =>
 			document.getElementById(`settings-${section.id}`)!.getBoundingClientRect().top <= top,
 	)
-	active.value = passed.at(-1)?.id ?? "general"
+	active.value = passed.at(-1)?.id ?? SECTIONS.value[0]?.id ?? ""
 }
 
 function jump(id: string) {
@@ -110,54 +149,54 @@ async function copyLink() {
 			@touchstart.passive="stopJumping"
 			@keydown="stopJumping"
 		>
-			<div
-				class="mx-auto flex max-w-[720px] flex-col gap-6 px-4 pb-[120px] pt-5 md:gap-9 md:px-8 md:pt-7"
-			>
-				<SettingsSection id="settings-general" title="General">
-					<SettingsRow title="Title" description="Shown at the top of the form">
-						<TextInput aria-label="Title" v-model="form.title" />
-					</SettingsRow>
-					<SettingsRow
-						v-if="hasPage"
-						title="Link"
-						description="The end of the form's web address. Share it to invite people"
-					>
-						<div class="flex items-start gap-1">
-							<UrlField
-								v-model="form.route"
-								class="min-w-0 flex-1"
-								:prefix="linkPrefix"
-								label="Form link"
-								variant="subtle"
-								placeholder="your-form"
-							/>
-							<Button
-								class="mt-1.5"
-								variant="ghost"
-								icon="lucide-copy"
-								label="Copy link"
-								@click="copyLink"
-							/>
-						</div>
-					</SettingsRow>
-					<SettingsRow
-						v-if="hasPage"
-						title="Submit button text"
-						description="The button at the end of the form"
-					>
-						<TextInput
-							aria-label="Submit button text"
-							:model-value="form.submit_label ?? ''"
-							@update:model-value="form.submit_label = $event"
-							placeholder="Submit"
-						/>
-					</SettingsRow>
-				</SettingsSection>
+			<div class="mx-auto flex max-w-[720px] flex-col gap-7 px-4 pb-[120px] pt-6 md:px-8 md:pt-8">
+				<header>
+					<h1 class="text-2xl font-semibold text-ink-gray-9">Settings</h1>
+					<p class="mt-1 text-p-base text-ink-gray-5">{{ form.form_doctype }} · {{ kind.label }}</p>
+				</header>
 
-				<SettingsSection v-if="!isAttendeeForm" id="settings-submissions" title="Submissions">
+				<FormStatus :live="!!form.publish" :close-at="form.auto_close_at" :noun="kind.noun" />
+
+				<SettingsSection
+					v-if="SECTIONS.some((section) => section.id === 'sharing')"
+					id="settings-sharing"
+					title="Sharing"
+				>
 					<SettingsRow
-						title="Close date"
-						description="Stop taking submissions after this, in the event's time zone"
+						v-if="hasPage"
+						title="Form link"
+						:description="
+							form.login_required
+								? 'Signed-in people with this link can submit'
+								: 'Anyone with this link can submit'
+						"
+						icon="lucide-link"
+						tone="blue"
+					>
+						<template #below>
+							<div class="flex items-center gap-1">
+								<UrlField
+									v-model="form.route"
+									class="min-w-0 flex-1"
+									:prefix="linkPrefix"
+									label="Form link"
+									variant="subtle"
+									placeholder="your-form"
+								/>
+								<Button variant="ghost" icon="lucide-copy" label="Copy link" @click="copyLink" />
+							</div>
+						</template>
+					</SettingsRow>
+					<SettingsRow
+						v-if="!isAttendeeForm"
+						:title="`Stop accepting ${kind.noun} on`"
+						:description="
+							closeTime
+								? `Closes automatically at ${closeTime}, in the event's time zone`
+								: 'Leave empty to stay open until you unpublish'
+						"
+						icon="lucide-calendar-clock"
+						tone="amber"
 					>
 						<DateTimePicker
 							aria-label="Close date"
@@ -166,63 +205,89 @@ async function copyLink() {
 							@update:model-value="form.auto_close_at = $event || null"
 						/>
 					</SettingsRow>
+				</SettingsSection>
+
+				<SettingsSection v-if="takesLogin" id="settings-responses" title="Responses">
 					<SettingsRow
-						v-if="takesLogin"
 						title="Require sign-in"
 						description="Only signed-in people can submit"
+						icon="lucide-lock"
+						tone="violet"
 					>
 						<div class="flex sm:justify-end">
 							<Switch aria-label="Require sign-in" v-model="loginRequired" />
 						</div>
 					</SettingsRow>
-					<template v-if="hasPage">
-						<SettingsRow
-							title="Closed form heading"
-							description="What people see once the form stops taking submissions"
-						>
-							<TextInput
-								aria-label="Closed form heading"
-								:model-value="form.closed_title ?? ''"
-								@update:model-value="form.closed_title = $event"
-								placeholder="Submissions Closed"
-							/>
-						</SettingsRow>
-						<SettingsRow
-							title="Closed form message"
-							description="Explain why, or where to go instead"
-							stacked
-						>
-							<Textarea aria-label="Closed form message" v-model="form.closed_message" :rows="2" />
-						</SettingsRow>
-					</template>
 				</SettingsSection>
 
-				<SettingsSection v-if="hasPage" id="settings-confirmation" title="Confirmation">
-					<SettingsRow title="Confirmation heading" description="What people see after they submit">
+				<SettingsSection v-if="hasPage" id="settings-messages" title="Messages">
+					<SettingsRow
+						title="Submit button text"
+						description="Last button on the form"
+						icon="lucide-mouse-pointer-click"
+					>
 						<TextInput
-							aria-label="Confirmation heading"
-							:model-value="form.success_title ?? ''"
-							@update:model-value="form.success_title = $event"
-							placeholder="Thank you!"
+							aria-label="Submit button text"
+							:model-value="form.submit_label ?? ''"
+							@update:model-value="form.submit_label = $event"
+							placeholder="Submit"
 						/>
 					</SettingsRow>
 					<SettingsRow
-						title="Confirmation message"
-						description="Tell people what happens next. Markdown works here"
-						stacked
+						title="After submitting"
+						description="What people see when they finish"
+						icon="lucide-circle-check"
+						tone="green"
 					>
-						<Textarea aria-label="Confirmation message" v-model="form.success_message" :rows="3" />
+						<div class="flex sm:justify-end">
+							<TabButtons v-model="afterSubmit" :options="AFTER_SUBMIT" />
+						</div>
+						<template #below>
+							<div v-if="afterSubmit === 'message'" class="flex flex-col gap-3">
+								<TextInput
+									label="Title"
+									:model-value="form.success_title ?? ''"
+									@update:model-value="form.success_title = $event"
+									placeholder="Thank you!"
+								/>
+								<Textarea
+									label="Message"
+									v-model="form.success_message"
+									placeholder="Tell people what happens next. Markdown works here"
+									:rows="3"
+								/>
+							</div>
+							<TextInput
+								v-else
+								label="Website"
+								:model-value="form.redirect_url ?? ''"
+								@update:model-value="form.redirect_url = $event"
+								placeholder="https://"
+							/>
+						</template>
 					</SettingsRow>
 					<SettingsRow
-						title="Redirect URL"
-						description="Send people to this page after they submit, instead of the confirmation"
+						title="When closed"
+						description="What people see once the form stops taking submissions"
+						icon="lucide-circle-slash"
+						tone="amber"
 					>
-						<TextInput
-							aria-label="Redirect URL"
-							:model-value="form.redirect_url ?? ''"
-							@update:model-value="form.redirect_url = $event"
-							placeholder="https://"
-						/>
+						<template #below>
+							<div class="flex flex-col gap-3">
+								<TextInput
+									label="Title"
+									:model-value="form.closed_title ?? ''"
+									@update:model-value="form.closed_title = $event"
+									placeholder="Submissions Closed"
+								/>
+								<Textarea
+									label="Message"
+									v-model="form.closed_message"
+									placeholder="Explain why, or where to go instead"
+									:rows="2"
+								/>
+							</div>
+						</template>
 					</SettingsRow>
 				</SettingsSection>
 
@@ -232,8 +297,8 @@ async function copyLink() {
 					title="Link preview"
 					description="How the form link looks when shared on WhatsApp, Slack or social"
 				>
-					<div class="mt-3 grid gap-6 sm:grid-cols-[minmax(0,1fr)_260px] sm:items-start">
-						<div class="flex flex-col gap-3.5">
+					<div class="grid gap-6 p-4 sm:grid-cols-[minmax(0,1fr)_240px] sm:items-start">
+						<div class="flex flex-col gap-3">
 							<TextInput
 								:model-value="form.meta_title ?? ''"
 								@update:model-value="form.meta_title = $event"
