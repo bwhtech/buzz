@@ -171,9 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import DOMPurify from "dompurify"
 import { Button, Dialog, Spinner, toast, useCall, usePageMeta } from "frappe-ui"
-import { marked } from "marked"
 import { computed, reactive, ref } from "vue"
 import LucideAlertCircle from "~icons/lucide/alert-circle"
 import LucideCheckCircle from "~icons/lucide/check-circle"
@@ -186,6 +184,7 @@ import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomF
 import { session } from "@/data/session"
 import type { FrappeError } from "@/types"
 import { applyLogic, type LogicRule } from "@/utils/formLogic"
+import { safeMarkdown } from "@/utils/markdown"
 
 interface FormFieldDef {
 	fieldname: string
@@ -254,10 +253,7 @@ const tableDialog = reactive({
 })
 
 const renderedSuccessMessage = computed(() => {
-	const msg = formData.value?.success_message
-	if (!msg) return ""
-	// Organisers write it, so a `javascript:` link must not reach the public page.
-	return DOMPurify.sanitize(marked(msg) as string)
+	return safeMarkdown(formData.value?.success_message)
 })
 
 function normalizeField(field: FormFieldDef) {

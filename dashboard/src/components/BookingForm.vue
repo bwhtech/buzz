@@ -30,6 +30,7 @@
 			:title="successTitle"
 			:reference="completed.pendingVerification ? completed.bookingName : undefined"
 			:pending="completed.pendingVerification"
+			:note="safeMarkdown(success.message)"
 			@login="openLoginDialog()"
 		>
 			{{ successMessage }}
@@ -284,6 +285,7 @@ import type {
 import { formatWholePriceOrFree } from "@/utils/currency"
 import { eventPath } from "@/utils/eventUrl"
 import { applyLogic, type LogicRule } from "@/utils/formLogic"
+import { safeMarkdown } from "@/utils/markdown"
 import { siteHeaderHidden } from "@/utils/navbar"
 import { serverErrorMessage } from "@/utils/serverError"
 import { isZoomBackedCategory } from "@/utils/zoomCategory"
@@ -328,6 +330,11 @@ const props = defineProps({
 	logicRules: { type: Object as PropType<Record<string, LogicRule[]>>, default: () => ({}) },
 	// Core field rows per registration form, keyed like logicRules.
 	coreFields: { type: Object as PropType<Record<string, CoreField[]>>, default: () => ({}) },
+	// The organiser's own title and message for a finished booking.
+	success: {
+		type: Object as PropType<{ title?: string | null; message?: string | null }>,
+		default: () => ({}),
+	},
 	eventRoute: { type: String, required: true },
 	paymentGateways: { type: Array as PropType<string[]>, default: () => [] },
 	isGuestMode: { type: Boolean, default: false },
@@ -707,6 +714,7 @@ function trimmed(values: Record<string, string>) {
 
 const successTitle = computed(() => {
 	if (completed.value?.pendingVerification) return __("Booking received")
+	if (props.success.title) return props.success.title
 	return isZoomEvent.value ? __("Registration confirmed") : __("You're registered")
 })
 

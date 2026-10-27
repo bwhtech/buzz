@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from buzz.api.booking.event_data import get_registration_success
 from buzz.api.booking.schemas import (
 	BookingConfirmationResponse,
 	BookingDetailsResponse,
@@ -53,6 +54,7 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 			free_event=event_doc.get("free_event"),
 		),
 		venue=venue_details(event_doc.venue),
+		success=get_registration_success(event_doc.name),
 		booking=ConfirmationBooking(
 			name=booking_doc.name,
 			total_amount=booking_doc.total_amount,

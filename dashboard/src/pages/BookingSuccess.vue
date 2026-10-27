@@ -5,7 +5,12 @@
 
 	<div v-else-if="confirmation.data" class="mx-auto flex max-w-[600px] flex-col gap-9 pb-16">
 		<div class="flex flex-col gap-7">
-			<SuccessHero :event-title="event.title" :ticket-count="confirmation.data.tickets.length" />
+			<SuccessHero
+				:event-title="event.title"
+				:ticket-count="confirmation.data.tickets.length"
+				:title="confirmation.data.success?.title"
+				:note="safeMarkdown(confirmation.data.success?.message)"
+			/>
 
 			<EventSummaryCard
 				class="fade-up-in"
@@ -99,6 +104,7 @@ import { useLoginDialog } from "@/composables/useLoginDialog"
 import { session } from "@/data/session"
 import { triggerCelebrationConfetti } from "@/utils/confetti"
 import { eventUrl } from "@/utils/eventUrl"
+import { safeMarkdown } from "@/utils/markdown"
 
 const props = defineProps({
 	bookingId: {

@@ -40,6 +40,7 @@ EVENT_DATA_FIELDS = {
 	"tax_settings",
 	"custom_fields",
 	"core_fields",
+	"success",
 	"logic_rules",
 	"payment_gateways",
 	"offline_payment_enabled",

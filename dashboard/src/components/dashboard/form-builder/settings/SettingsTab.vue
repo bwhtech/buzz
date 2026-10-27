@@ -28,6 +28,8 @@ const props = defineProps<{ eventId: string }>()
 const REGISTRATION = ["Event Booking", "Event Booking Attendee"]
 const hasPage = computed(() => !REGISTRATION.includes(form.value.form_doctype))
 const isAttendeeForm = computed(() => form.value.form_doctype === "Event Booking Attendee")
+// The booking page shows the registration form's own confirmation, but has no redirect.
+const hasConfirmation = computed(() => hasPage.value || form.value.form_doctype === "Event Booking")
 const takesLogin = computed(
 	() => hasPage.value && form.value.form_doctype !== "Sponsorship Enquiry",
 )
@@ -51,7 +53,7 @@ const SECTIONS = computed(
 				icon: "lucide-link",
 			},
 			takesLogin.value && { id: "responses", label: "Responses", icon: "lucide-inbox" },
-			hasPage.value && { id: "messages", label: "Messages", icon: "lucide-message-square" },
+			hasConfirmation.value && { id: "messages", label: "Messages", icon: "lucide-message-square" },
 			hasPage.value && { id: "preview", label: "Link preview", icon: "lucide-share-2" },
 		].filter(Boolean) as { id: string; label: string; icon: string }[],
 )
@@ -219,8 +221,9 @@ const copyLink = () => copy(link.value, "Link copied")
 					</SettingsRow>
 				</SettingsSection>
 
-				<SettingsSection v-if="hasPage" id="settings-messages" title="Messages">
+				<SettingsSection v-if="hasConfirmation" id="settings-messages" title="Messages">
 					<SettingsRow
+						v-if="hasPage"
 						title="Submit button text"
 						description="Last button on the form"
 						icon="lucide-mouse-pointer-click"
@@ -238,7 +241,7 @@ const copyLink = () => copy(link.value, "Link copied")
 						icon="lucide-circle-check"
 						tone="green"
 					>
-						<div class="flex sm:justify-end">
+						<div v-if="hasPage" class="flex sm:justify-end">
 							<TabButtons v-model="afterSubmit" :options="AFTER_SUBMIT" />
 						</div>
 						<template #below>
@@ -247,7 +250,7 @@ const copyLink = () => copy(link.value, "Link copied")
 									label="Title"
 									:model-value="form.success_title ?? ''"
 									@update:model-value="form.success_title = $event"
-									placeholder="Thank you!"
+									:placeholder="hasPage ? 'Thank you!' : 'You\'re registered'"
 								/>
 								<Textarea
 									label="Message"
@@ -266,6 +269,7 @@ const copyLink = () => copy(link.value, "Link copied")
 						</template>
 					</SettingsRow>
 					<SettingsRow
+						v-if="hasPage"
 						title="When closed"
 						description="What people see once the form stops taking submissions"
 						icon="lucide-circle-slash"

@@ -66,6 +66,7 @@
 				:customFields="eventBookingData.customFields || []"
 				:logicRules="eventBookingData.logicRules"
 				:coreFields="eventBookingData.coreFields"
+				:success="eventBookingData.success"
 				:eventRoute="eventRoute"
 				:paymentGateways="eventBookingData.paymentGateways"
 				:isGuestMode="isGuest"
@@ -105,6 +106,7 @@ const eventBookingData = reactive<{
 	customFields: FrappeField[] | null
 	logicRules: Record<string, LogicRule[]>
 	coreFields: Record<string, CoreField[]>
+	success: { title?: string | null; message?: string | null }
 	paymentGateways: string[]
 	offlineMethods: OfflineMethod[]
 }>({
@@ -116,6 +118,7 @@ const eventBookingData = reactive<{
 	customFields: null,
 	logicRules: {},
 	coreFields: {},
+	success: {},
 	paymentGateways: [],
 	offlineMethods: [],
 })
@@ -174,6 +177,7 @@ const eventBookingResource = useCall<
 		eventBookingData.customFields = data.custom_fields || []
 		eventBookingData.logicRules = data.logic_rules || {}
 		eventBookingData.coreFields = data.core_fields || {}
+		eventBookingData.success = data.success || {}
 		eventBookingData.paymentGateways = data.payment_gateways || []
 		eventBookingData.offlineMethods = data.offline_methods || []
 		registrationsClosed.value = data.registrations_closed || false
