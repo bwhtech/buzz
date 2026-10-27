@@ -4,9 +4,10 @@ from buzz.api.forms import get_custom_form_data, get_form_builder_fields
 from buzz.api.forms.exceptions import InvalidAnswer, UnknownQuestions
 from buzz.api.forms.test_custom_forms import FormsTestCase
 from buzz.tests.factories import BuzzEventFactory
+from buzz.www.dashboard import form_link_preview
 
 
-class TestFormLayout(FormsTestCase):
+class FeedbackFormCase(FormsTestCase):
 	def feedback_form(self, *questions: dict):
 		event = BuzzEventFactory.create(team=self.team)
 		form = self.form_of(event.name, "Event Feedback")
@@ -20,6 +21,8 @@ class TestFormLayout(FormsTestCase):
 		self.submit(event.route, "feedback", data={"how_can_we_improve": "Fine"}, custom_fields_data=answers)
 		return frappe.get_last_doc("Event Feedback", filters={"event": event.name})
 
+
+class TestFormLayout(FeedbackFormCase):
 	def test_layout_rows_get_unique_fieldnames(self):
 		_, form = self.feedback_form(
 			{"label": "Divider", "fieldtype": "Divider"}, {"label": "Divider", "fieldtype": "Divider"}
@@ -86,3 +89,18 @@ class TestFormBuilderFields(FormsTestCase):
 		self.assertTrue(
 			all(field.offered for field in fields.values() if field.fieldname in ("tier", "company_name"))
 		)
+
+
+class TestFormLinkPreview(FeedbackFormCase):
+	def test_a_form_page_carries_its_preview_text(self):
+		event, form = self.feedback_form()
+		form.update({"meta_title": "Tell us everything", "meta_description": "Two minutes"})
+		form.save(ignore_permissions=True)
+
+		preview = form_link_preview(f"/b/{event.route}/feedback")
+
+		self.assertEqual((preview["title"], preview["description"]), ("Tell us everything", "Two minutes"))
+
+	def test_other_pages_carry_none(self):
+		self.assertIsNone(form_link_preview("/b/manage/events"))
+		self.assertIsNone(form_link_preview("/b/bookings"))

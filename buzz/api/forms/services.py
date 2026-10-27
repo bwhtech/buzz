@@ -98,6 +98,7 @@ class CustomFormService:
 			closed_message=form.closed_message or _("Submissions for this form have closed."),
 			success_title=form.success_title or _("Thank you!"),
 			success_message=form.success_message or "",
+			redirect_url=form.redirect_url,
 		)
 
 	def closed_response(self) -> CustomFormResponse:
@@ -113,6 +114,15 @@ class CustomFormService:
 			success_title="",
 			success_message="",
 		)
+
+	def link_preview(self) -> dict:
+		"""What a shared link to the form shows: its own preview text, else the form and event names."""
+		form, event = self.form, self.event
+		return {
+			"title": form.meta_title or f"{form.title} · {event.title}",
+			"description": form.meta_description or form.description or event.short_description or "",
+			"image": event.meta_image or event.banner_image,
+		}
 
 	def event_summary(self) -> FormEventSummary:
 		event = self.event

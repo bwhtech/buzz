@@ -124,3 +124,19 @@ test("a rule built in the Logic tab shows a question only for the chosen answer"
 	await page.getByRole("option", { name: "Advanced" }).click()
 	await expect(page.getByText("Outline")).toBeVisible()
 })
+
+test("settings change the public form's button and confirmation", async ({ page, request }) => {
+	const { event, form } = await builderForm(request)
+	await updateDoc(request, "Buzz Form", form, { submit_label: null, success_title: null })
+	await page.goto(`/b/manage/events/${event}/forms/${form}`)
+	await page.getByRole("radio", { name: "Settings" }).click()
+	await page.getByLabel("Button label").fill("Send it")
+	await page.getByLabel("Confirmation title").fill("Got it, thanks")
+	await page.getByRole("button", { name: "Save" }).click()
+	await expect(page.getByText("Form saved")).toBeVisible()
+
+	const formPage = new CustomFormPage(page)
+	await formPage.goto(CUSTOM_FORMS_EVENT_ROUTE, FORM_ROUTE)
+	await page.getByRole("button", { name: "Send it" }).click()
+	await expect(page.getByText("Got it, thanks")).toBeVisible()
+})

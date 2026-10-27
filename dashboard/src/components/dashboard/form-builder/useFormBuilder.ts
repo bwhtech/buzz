@@ -28,6 +28,16 @@ export interface BuzzFormDoc {
 	publish: 0 | 1
 	questions: FormQuestion[]
 	logic_rules: LogicRule[]
+	login_required?: 0 | 1
+	auto_close_at?: string | null
+	submit_label?: string | null
+	success_title?: string | null
+	success_message?: string
+	redirect_url?: string | null
+	closed_title?: string | null
+	closed_message?: string
+	meta_title?: string | null
+	meta_description?: string
 	[key: string]: unknown
 }
 
@@ -43,7 +53,24 @@ export interface DoctypeField {
 }
 
 // What the builder edits; everything else on the doc is the server's to set.
-const EDITABLE_FIELDS = ["title", "description", "questions", "logic_rules"] as const
+const EDITABLE_FIELDS = [
+	"title",
+	"description",
+	"questions",
+	"logic_rules",
+	"route",
+	"publish",
+	"login_required",
+	"auto_close_at",
+	"submit_label",
+	"success_title",
+	"success_message",
+	"redirect_url",
+	"closed_title",
+	"closed_message",
+	"meta_title",
+	"meta_description",
+] as const
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 

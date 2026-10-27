@@ -348,6 +348,11 @@ const submitResource = useCall<string | null, Record<string, any>>({
 	method: "POST",
 	immediate: false,
 	onSuccess: (name) => {
+		const redirect = formData.value?.redirect_url
+		if (redirect && /^https?:\/\//.test(redirect)) {
+			window.location.href = redirect
+			return
+		}
 		enquiryId.value = name || null
 		submitted.value = true
 	},

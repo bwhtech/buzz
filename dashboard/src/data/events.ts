@@ -48,6 +48,7 @@ type EventShellDoc = {
 	team: string | null
 	is_published: 0 | 1
 	theme: string | null
+	route: string | null
 }
 
 /**

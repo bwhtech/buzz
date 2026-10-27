@@ -9,6 +9,7 @@ import { useQuestionEditor } from "@/components/dashboard/form-builder/build/use
 import FormBuilderLayout from "@/components/dashboard/form-builder/FormBuilderLayout.vue"
 import LogicTab from "@/components/dashboard/form-builder/logic/LogicTab.vue"
 import { emptyRule } from "@/components/dashboard/form-builder/logic/ruleOptions"
+import SettingsTab from "@/components/dashboard/form-builder/settings/SettingsTab.vue"
 import {
 	type FormQuestion,
 	useFormBuilder,
@@ -56,5 +57,6 @@ useEventListener(window, "beforeunload", (event) => builder.dirty.value && event
 			:doctype-fields="Object.values(builder.doctypeFields.value)"
 			:editor="editor"
 		/>
+		<SettingsTab v-else-if="tab === 'settings'" v-model="draft" :event-id="eventId" />
 	</FormBuilderLayout>
 </template>

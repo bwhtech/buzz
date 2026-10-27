@@ -50,6 +50,7 @@ class CustomFormResponse(APIResponse):
 	closed_message: str
 	success_title: str
 	success_message: str
+	redirect_url: str | None = None
 
 
 class EventProposalFormResponse(APIResponse):

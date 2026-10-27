@@ -23,9 +23,13 @@
   "submit_label",
   "success_title",
   "success_message",
+  "redirect_url",
   "column_break_messages",
   "closed_title",
-  "closed_message"
+  "closed_message",
+  "link_preview_section",
+  "meta_title",
+  "meta_description"
  ],
  "fields": [
   {
@@ -137,6 +141,13 @@
    "label": "Success Message"
   },
   {
+   "fieldname": "redirect_url",
+   "fieldtype": "Data",
+   "options": "URL",
+   "label": "Redirect To",
+   "description": "Send people here after they submit, instead of the success message."
+  },
+  {
    "fieldname": "column_break_messages",
    "fieldtype": "Column Break"
   },
@@ -149,6 +160,22 @@
    "fieldname": "closed_message",
    "fieldtype": "Small Text",
    "label": "Closed Message"
+  },
+  {
+   "fieldname": "link_preview_section",
+   "fieldtype": "Section Break",
+   "label": "Link Preview"
+  },
+  {
+   "fieldname": "meta_title",
+   "fieldtype": "Data",
+   "label": "Preview Title",
+   "description": "Shown when the form link is shared. Defaults to the form and event names."
+  },
+  {
+   "fieldname": "meta_description",
+   "fieldtype": "Small Text",
+   "label": "Preview Description"
   }
  ],
  "links": [
@@ -157,7 +184,7 @@
    "link_fieldname": "enquiry_form"
   }
  ],
- "modified": "2026-10-27 14:00:00.000000",
+ "modified": "2026-10-27 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Form",

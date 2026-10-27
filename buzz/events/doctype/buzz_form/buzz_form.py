@@ -31,8 +31,12 @@ class BuzzForm(Document):
 		event: DF.Link
 		form_doctype: DF.Link
 		login_required: DF.Check
+		meta_description: DF.SmallText | None
+		meta_title: DF.Data | None
+		logic_rules: DF.JSON | None
 		publish: DF.Check
 		questions: DF.Table[BuzzFormField]
+		redirect_url: DF.Data | None
 		route: DF.Data
 		submit_label: DF.Data | None
 		success_message: DF.MarkdownEditor | None
