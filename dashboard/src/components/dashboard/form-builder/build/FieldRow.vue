@@ -11,6 +11,8 @@ const question = defineModel<FormQuestion>({ required: true })
 const props = defineProps<{
 	doctypeField?: DoctypeField
 	editor: QuestionEditor
+	conditional: boolean
+	preview: boolean
 	isFirst: boolean
 	isLast: boolean
 }>()
@@ -23,39 +25,37 @@ const isSelected = computed(
 const row = ref<HTMLElement | null>(null)
 watch(isSelected, (selected) => selected && row.value?.scrollIntoView({ block: "nearest" }))
 
-const isLayout = computed(() => fieldType(question.value.fieldtype).group === "Layout")
+const type = computed(() => fieldType(props.doctypeField?.fieldtype ?? question.value.fieldtype))
+const isLayout = computed(() => type.value.group === "Layout")
 const isStandard = computed(() => !!question.value.is_standard)
-const canHide = computed(() => !props.doctypeField?.locked)
+const isHalf = computed(() => question.value.width === "Half")
 
 const convertTargets = computed(() =>
 	Object.entries(FIELD_TYPES)
-		.filter(([key, type]) =>
+		.filter(([key, item]) =>
 			isLayout.value
 				? ["Heading", "Paragraph"].includes(key)
-				: !["Layout", "Standard"].includes(type.group),
+				: !["Layout", "Standard"].includes(item.group),
 		)
-		.map(([key, type]) => ({
-			label: type.label,
-			icon: type.icon,
-			selected: key === question.value.fieldtype,
+		.map(([key, item]) => ({
+			label: item.label,
+			icon: item.icon,
 			onClick: () => props.editor.convert(question.value, key),
 		})),
 )
 
 const moreOptions = computed(() => [
 	{
-		label: "Field settings",
-		icon: "lucide-settings-2",
-		onClick: () => {
-			props.editor.selected.value = question.value
-			props.editor.settingsOpen.value = true
-		},
+		label: isHalf.value ? "Full width" : "Half width",
+		icon: isHalf.value ? "lucide-rectangle-horizontal" : "lucide-columns-2",
+		disabled: isLayout.value,
+		onClick: () => (question.value.width = isHalf.value ? "Full" : "Half"),
 	},
 	{
-		label: "Turn into",
-		icon: "lucide-repeat-2",
-		disabled: isStandard.value,
-		submenu: convertTargets.value,
+		label: question.value.enabled ? "Hide" : "Show",
+		icon: question.value.enabled ? "lucide-eye-off" : "lucide-eye",
+		disabled: !!props.doctypeField?.locked,
+		onClick: () => (question.value.enabled = question.value.enabled ? 0 : 1),
 	},
 	{
 		label: "Duplicate",
@@ -84,56 +84,63 @@ const moreOptions = computed(() => [
 	},
 ])
 
-function toggleHidden() {
-	question.value.enabled = question.value.enabled ? 0 : 1
+function select() {
+	if (!props.preview) props.editor.selected.value = question.value
 }
 
-function toggleRequired() {
-	question.value.mandatory = question.value.mandatory ? 0 : 1
+function openSettings() {
+	select()
+	props.editor.settingsOpen.value = true
 }
 </script>
 
 <template>
 	<div
 		ref="row"
-		class="group relative rounded-6 px-3 py-3 transition-[background-color,box-shadow] duration-150"
+		class="group relative rounded-5 px-3 py-2.5 transition-[background-color,box-shadow,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
 		:class="[
-			isSelected
-				? 'bg-surface-base ring-[1.5px] ring-outline-gray-5'
-				: '[@media(hover:hover)]:hover:bg-surface-gray-1',
-			{ 'opacity-50': !question.enabled },
+			preview
+				? ''
+				: isSelected
+					? 'ring-[1.5px] ring-outline-blue-5'
+					: '[@media(hover:hover)]:hover:bg-surface-gray-1',
+			{ 'opacity-50': !question.enabled && !preview },
 		]"
-		draggable="true"
-		@click.stop="editor.selected.value = question"
+		:draggable="!preview"
+		@click.stop="select"
+		@dblclick="openSettings"
 		@dragstart="emit('dragstart', $event)"
 	>
-		<div class="mb-1 flex h-5 items-center gap-1.5">
-			<span
-				:class="[
-					fieldType(doctypeField?.fieldtype ?? question.fieldtype).icon,
-					'size-3.5 text-ink-gray-4',
-				]"
-				aria-hidden="true"
-			/>
-			<span class="text-p-xs text-ink-gray-4">{{
-				fieldType(doctypeField?.fieldtype ?? question.fieldtype).label
-			}}</span>
-			<Badge v-if="isStandard" label="Core" theme="gray" size="sm" />
-			<Badge v-if="!question.enabled" label="Hidden" theme="gray" size="sm" />
-			<Badge v-if="question.width === 'Half'" label="Half" theme="gray" size="sm" />
-		</div>
-
-		<FieldPreview v-model="question" :doctype-field="doctypeField" />
-
 		<div
-			class="absolute right-2 top-2 flex items-center gap-0.5 rounded-5 bg-surface-base p-0.5 shadow-sm ring-1 ring-outline-gray-1 transition-opacity duration-150"
+			v-if="!preview"
+			class="absolute -top-4 right-2.5 z-10 flex items-center gap-0.5 rounded-5 bg-surface-elevation-3 p-0.5 shadow-lg ring-1 ring-outline-gray-1 transition-opacity duration-150"
 			:class="
 				isSelected
 					? 'opacity-100'
-					: 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+					: 'pointer-events-none opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:pointer-events-auto [@media(hover:hover)]:group-hover:opacity-100'
 			"
 			@click.stop
+			@dblclick.stop
 		>
+			<span class="grid h-7 w-5 cursor-grab place-items-center text-ink-gray-4" aria-hidden="true">
+				<span class="lucide-grip-vertical size-3.5" />
+			</span>
+			<span v-if="isStandard" class="flex h-7 items-center gap-1.5 px-2 text-p-xs text-ink-gray-7">
+				<span :class="[type.icon, 'size-3.5']" aria-hidden="true" />
+				<span class="whitespace-nowrap">{{ type.label }}</span>
+			</span>
+			<Dropdown v-else :options="convertTargets">
+				<button
+					type="button"
+					class="flex h-7 items-center gap-1.5 rounded-5 pl-2 pr-1.5 text-p-xs text-ink-gray-7 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-2"
+					:aria-label="`Turn ${type.label} into another type`"
+				>
+					<span :class="[type.icon, 'size-3.5']" aria-hidden="true" />
+					<span class="whitespace-nowrap">{{ type.label }}</span>
+					<span class="lucide-chevrons-up-down size-3 text-ink-gray-4" aria-hidden="true" />
+				</button>
+			</Dropdown>
+			<span class="mx-0.5 h-4 w-px bg-outline-gray-2" aria-hidden="true" />
 			<Tooltip
 				v-if="!isLayout && !doctypeField?.locked"
 				:text="question.mandatory ? 'Make optional' : 'Make mandatory'"
@@ -143,21 +150,29 @@ function toggleRequired() {
 					size="sm"
 					icon="lucide-asterisk"
 					:label="question.mandatory ? 'Make optional' : 'Make mandatory'"
-					@click="toggleRequired"
+					@click="question.mandatory = question.mandatory ? 0 : 1"
 				/>
 			</Tooltip>
-			<Tooltip v-if="canHide" :text="question.enabled ? 'Hide' : 'Show'">
+			<Tooltip text="Field settings · double-click">
 				<Button
 					variant="ghost"
 					size="sm"
-					:icon="question.enabled ? 'lucide-eye' : 'lucide-eye-off'"
-					:label="question.enabled ? 'Hide' : 'Show'"
-					@click="toggleHidden"
+					icon="lucide-settings-2"
+					label="Field settings"
+					@click="openSettings"
 				/>
 			</Tooltip>
 			<Dropdown :options="moreOptions" align="end">
 				<Button variant="ghost" size="sm" icon="lucide-ellipsis" label="More actions" />
 			</Dropdown>
 		</div>
+
+		<FieldPreview v-model="question" :doctype-field="doctypeField" :readonly="preview">
+			<template v-if="!preview" #badges>
+				<Badge v-if="isStandard" label="Core" theme="gray" size="sm" />
+				<Badge v-if="!question.enabled" label="Hidden" theme="gray" size="sm" />
+				<Badge v-if="conditional" label="Conditional" theme="blue" size="sm" />
+			</template>
+		</FieldPreview>
 	</div>
 </template>

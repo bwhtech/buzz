@@ -50,14 +50,14 @@ defineExpose({ focus: () => input.value?.focus() })
 <template>
 	<div class="relative">
 		<div
-			class="flex items-center gap-3 rounded-6 px-3 py-2.5 text-ink-gray-4 focus-within:bg-surface-gray-1"
+			class="flex items-center gap-2 rounded-5 px-3 py-1 text-ink-gray-4 focus-within:bg-surface-gray-1"
 		>
 			<span class="lucide-plus size-4" aria-hidden="true" />
 			<input
 				ref="input"
 				v-model="text"
-				class="min-w-0 flex-1 border-0 bg-transparent p-0 text-p-base text-ink-gray-8 outline-none placeholder:text-ink-gray-4 focus:ring-0"
-				placeholder="Type a question, or / for field types"
+				class="h-[34px] min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-ink-gray-8 outline-none placeholder:text-ink-gray-4 focus:ring-0"
+				placeholder="Type a question and press Enter, or / for field types"
 				aria-label="Add a field"
 				role="combobox"
 				:aria-expanded="isSearching"
@@ -67,7 +67,7 @@ defineExpose({ focus: () => input.value?.focus() })
 		</div>
 		<div
 			v-if="isSearching"
-			class="absolute left-0 top-full z-20 mt-1 max-h-80 w-72 overflow-y-auto rounded-8 bg-surface-modal p-1 shadow-xl ring-1 ring-outline-gray-1"
+			class="absolute left-8 top-full z-20 mt-1 max-h-[340px] w-80 overflow-y-auto rounded-5 bg-surface-modal p-1 shadow-xl ring-1 ring-outline-gray-1"
 			role="listbox"
 		>
 			<p v-if="!items.length" class="px-2.5 py-2 text-p-sm text-ink-gray-5">No field matches</p>

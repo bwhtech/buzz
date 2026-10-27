@@ -56,7 +56,7 @@ test("renaming a question in the builder shows on the public form", async ({ pag
 	await page.goto(`/b/manage/events/${event}/forms/${form}`)
 	const label = page.getByRole("textbox", { name: "Label of Short text field" })
 	await label.fill("Favourite coffee")
-	await page.getByRole("button", { name: "Save" }).click()
+	await page.getByRole("button", { name: /^Publish/ }).click()
 	await expect(page.getByText("Form saved")).toBeVisible()
 
 	const formPage = new CustomFormPage(page)
@@ -77,16 +77,19 @@ test("questions added, dragged and deleted in the builder save in order", async 
 	await composer.fill("/rati")
 	await composer.press("Enter")
 
-	// The rating was added last and is selected; its settings panel deletes it.
-	await page.getByRole("button", { name: "Delete" }).click()
+	// The rating was added last and is selected, so its toolbar is showing.
+	const rating = page
+		.locator('[draggable="true"]')
+		.filter({ has: page.getByRole("textbox", { name: "Label of Rating field" }) })
+	await rating.getByRole("button", { name: "More actions" }).click()
+	await page.getByRole("menuitem", { name: "Delete" }).click()
 
 	const labels = page.getByRole("textbox", { name: /^Label of/ })
-	// Palette items drag too, so rows are the draggables that hold a label input.
 	const rows = page.locator('[draggable="true"]').filter({ has: labels })
 	await rows.last().dragTo(rows.first(), { targetPosition: { x: 20, y: 4 } })
 	await expect(labels.first()).toHaveValue("Roast level")
 
-	await page.getByRole("button", { name: "Save" }).click()
+	await page.getByRole("button", { name: /^Publish/ }).click()
 	await expect(page.getByText("Form saved")).toBeVisible()
 	const saved = await getDoc<{ questions: { label: string; is_standard: number }[] }>(
 		request,
@@ -107,14 +110,14 @@ test("a rule built in the Logic tab shows a question only for the chosen answer"
 	])
 	await page.goto(`/b/manage/events/${event}/forms/${form}`)
 	await page.getByRole("radio", { name: "Logic" }).click()
-	await page.getByRole("button", { name: "New rule" }).click()
+	await page.getByRole("button", { name: "Add rule" }).first().click()
 
 	// The rule acts on the last question and opens on the form's first field.
 	await page.getByRole("button", { name: "How can we improve?" }).click()
 	await page.getByRole("menuitem", { name: "Level" }).click()
 	await page.getByRole("button", { name: "Beginner" }).click()
 	await page.getByRole("menuitem", { name: "Advanced" }).click()
-	await page.getByRole("button", { name: "Save" }).click()
+	await page.getByRole("button", { name: /^Publish/ }).click()
 	await expect(page.getByText("Form saved")).toBeVisible()
 
 	const formPage = new CustomFormPage(page)
@@ -132,7 +135,7 @@ test("settings change the public form's button and confirmation", async ({ page,
 	await page.getByRole("radio", { name: "Settings" }).click()
 	await page.getByLabel("Button label").fill("Send it")
 	await page.getByLabel("Confirmation title").fill("Got it, thanks")
-	await page.getByRole("button", { name: "Save" }).click()
+	await page.getByRole("button", { name: /^Publish/ }).click()
 	await expect(page.getByText("Form saved")).toBeVisible()
 
 	const formPage = new CustomFormPage(page)
@@ -161,6 +164,12 @@ test("registration edits attendee and booking questions, with ticket-type chips"
 	const composer = page.getByRole("combobox", { name: "Add a field" })
 	await composer.fill("Seat preference")
 	await composer.press("Enter")
+	await page
+		.locator('[draggable="true"]')
+		.filter({ has: page.getByRole("textbox", { name: "Label of Short text field" }) })
+		.last()
+		.getByRole("button", { name: "Field settings" })
+		.click()
 	await page.getByRole("button", { name: ticketType.title, exact: true }).click()
 	await expect(page.getByRole("button", { name: "All tickets" })).not.toHaveClass(/solid/)
 
@@ -176,22 +185,22 @@ test("registration edits attendee and booking questions, with ticket-type chips"
 test.describe("on a phone", () => {
 	test.use({ viewport: { width: 390, height: 844 } })
 
-	test("fields are added from a sheet and their settings open from the row menu", async ({
+	test("fields added from the composer open their settings in a sheet", async ({
 		page,
 		request,
 	}) => {
 		const { event, form } = await builderForm(request)
 		await page.goto(`/b/manage/events/${event}/forms/${form}`)
 
-		await page.getByRole("button", { name: "Add a field" }).click()
-		await page.getByRole("dialog").getByRole("button", { name: "Email" }).click()
+		const composer = page.getByRole("combobox", { name: "Add a field" })
+		await composer.fill("/email")
+		await composer.press("Enter")
 		await expect(page.getByRole("textbox", { name: "Label of Email field" })).toBeVisible()
 
 		const row = page
 			.locator('[draggable="true"]')
 			.filter({ has: page.getByRole("textbox", { name: "Label of Email field" }) })
-		await row.getByRole("button", { name: "More actions" }).click()
-		await page.getByRole("menuitem", { name: "Field settings" }).click()
+		await row.getByRole("button", { name: "Field settings" }).click()
 		await expect(page.getByRole("dialog").getByText("Placeholder")).toBeVisible()
 	})
 })

@@ -39,6 +39,8 @@ const active = computed(() =>
 const draft = computed(() => active.value.draft.value)
 
 const tab = ref("build")
+const device = ref<"desktop" | "mobile">("desktop")
+const preview = ref(false)
 const editor = useQuestionEditor(
 	() => draft.value!.questions,
 	() => draft.value!.logic_rules,
@@ -57,7 +59,13 @@ useEventListener(window, "beforeunload", (event) => dirty.value && event.prevent
 </script>
 
 <template>
-	<FormBuilderLayout v-model:tab="tab" :builders="builders" :event-id="eventId">
+	<FormBuilderLayout
+		v-model:tab="tab"
+		v-model:device="device"
+		v-model:preview="preview"
+		:builders="builders"
+		:event-id="eventId"
+	>
 		<div v-if="active.form.error" class="p-8">
 			<ErrorMessage :message="(active.form.error as FrappeError).message" />
 		</div>
@@ -67,7 +75,7 @@ useEventListener(window, "beforeunload", (event) => dirty.value && event.prevent
 		<div v-else class="flex h-full flex-col">
 			<div
 				v-if="isRegistration && tab !== 'settings'"
-				class="flex justify-center border-b border-outline-gray-1 bg-surface-base py-2"
+				class="flex justify-center bg-surface-base pt-3"
 			>
 				<TabButtons v-model="scope" :options="SCOPES" />
 			</div>
@@ -78,6 +86,8 @@ useEventListener(window, "beforeunload", (event) => dirty.value && event.prevent
 					v-model="active.draft.value!"
 					:doctype-fields="active.doctypeFields.value"
 					:editor="editor"
+					:device="device"
+					:preview="preview"
 					:fixed-fields="isRegistration ? FIXED_FIELDS[scope] : undefined"
 					@add-rule="addRuleFor"
 				/>

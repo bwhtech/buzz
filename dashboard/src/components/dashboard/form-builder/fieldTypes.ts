@@ -167,12 +167,13 @@ export const presetsFor = (formDoctype: string): Preset[] =>
 	PRESETS[formDoctype] ?? [SOCIAL, SOURCE, COMPANY]
 
 // Registration has its own steps on the booking page, so its forms take no page breaks.
-const NO_PAGE_BREAK = ["Event Booking", "Event Booking Attendee"]
+export const takesSteps = (formDoctype: string) =>
+	!["Event Booking", "Event Booking Attendee"].includes(formDoctype)
 
-export const paletteTypesFor = (formDoctype: string): string[] =>
+// Steps come from "Add step", so page breaks stay out of the add-field menu.
+export const paletteTypesFor = (): string[] =>
 	Object.entries(FIELD_TYPES)
-		.filter(([, type]) => type.group !== "Standard")
-		.filter(([key]) => key !== "Page Break" || !NO_PAGE_BREAK.includes(formDoctype))
+		.filter(([key, type]) => type.group !== "Standard" && key !== "Page Break")
 		.map(([key]) => key)
 
 export interface MenuItem {
@@ -189,7 +190,7 @@ const GROUP_ORDER: FieldGroup[] = ["Basic", "Choice", "Media", "Layout"]
 export function fieldMenu(formDoctype: string, query = ""): { group: string; items: MenuItem[] }[] {
 	const search = query.trim().toLowerCase()
 	const matches = (label: string) => !search || label.toLowerCase().includes(search)
-	const types = paletteTypesFor(formDoctype)
+	const types = paletteTypesFor()
 	const groups = GROUP_ORDER.map((group) => ({
 		group: group as string,
 		items: types

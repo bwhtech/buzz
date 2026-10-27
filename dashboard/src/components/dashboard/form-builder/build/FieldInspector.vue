@@ -18,7 +18,7 @@ const props = defineProps<{
 	// Set on the attendee form, where a question can be asked for some tickets only.
 	ticketTypes?: { value: string; label: string }[] | null
 }>()
-defineEmits<{ addRule: [] }>()
+defineEmits<{ addRule: []; close: [] }>()
 
 const fieldtype = computed(() => props.doctypeField?.fieldtype ?? question.value.fieldtype)
 const type = computed(() => fieldType(fieldtype.value))
@@ -44,22 +44,47 @@ const mandatory = computed({
 
 <template>
 	<div class="flex h-full flex-col">
-		<header class="flex items-center gap-2 border-b border-outline-gray-1 px-4 py-3">
-			<span :class="[type.icon, 'size-4 text-ink-gray-6']" aria-hidden="true" />
-			<h2 class="flex-1 text-p-base font-medium text-ink-gray-9">{{ type.label }}</h2>
+		<header class="flex items-center gap-2.5 px-4 pb-1 pt-4">
+			<span class="grid size-7 place-items-center rounded-5 bg-surface-gray-2 text-ink-gray-7">
+				<span :class="[type.icon, 'size-4']" aria-hidden="true" />
+			</span>
+			<div class="flex min-w-0 flex-1 flex-col gap-0.5">
+				<h2 class="text-p-base font-semibold text-ink-gray-9">{{ type.label }}</h2>
+				<span v-if="question.fieldname" class="truncate font-mono text-p-xs text-ink-gray-5">
+					{{ question.fieldname }}
+				</span>
+			</div>
+			<template v-if="!question.is_standard">
+				<Button
+					variant="ghost"
+					size="sm"
+					icon="lucide-copy"
+					label="Duplicate"
+					@click="editor.duplicate(question)"
+				/>
+				<Button
+					variant="ghost"
+					size="sm"
+					icon="lucide-trash-2"
+					label="Delete"
+					@click="editor.remove(question)"
+				/>
+			</template>
 			<Button
 				variant="ghost"
+				size="sm"
 				icon="lucide-x"
 				label="Close field settings"
-				@click="editor.selected.value = null"
+				@click="$emit('close')"
 			/>
 		</header>
 
-		<div class="flex-1 space-y-5 overflow-y-auto p-4">
+		<div class="flex-1 space-y-4 overflow-y-auto p-4">
 			<p
 				v-if="question.is_standard"
-				class="rounded-5 bg-surface-gray-2 px-3 py-2 text-p-sm text-ink-gray-6"
+				class="flex gap-2.5 rounded-5 bg-surface-gray-1 px-3 py-2.5 text-p-xs leading-normal text-ink-gray-6 ring-1 ring-inset ring-outline-gray-1"
 			>
+				<span class="lucide-lock mt-0.5 size-3.5 shrink-0 text-ink-gray-5" aria-hidden="true" />
 				{{
 					doctypeField?.locked
 						? "Added by Buzz and always asked. You can rename and move it."
@@ -128,21 +153,5 @@ const mandatory = computed({
 				<Button icon-left="lucide-workflow" label="Add a rule" @click="$emit('addRule')" />
 			</section>
 		</div>
-
-		<footer v-if="!question.is_standard" class="flex gap-2 border-t border-outline-gray-1 p-3">
-			<Button
-				class="flex-1"
-				icon-left="lucide-copy"
-				label="Duplicate"
-				@click="editor.duplicate(question)"
-			/>
-			<Button
-				class="flex-1"
-				theme="red"
-				icon-left="lucide-trash-2"
-				label="Delete"
-				@click="editor.remove(question)"
-			/>
-		</footer>
 	</div>
 </template>

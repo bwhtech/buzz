@@ -390,7 +390,8 @@ const steps = computed(() => {
 		if (field.fieldtype === "Page Break") groups.push({ title: field.label, fields: [] })
 		else groups[groups.length - 1].fields.push(field)
 	}
-	return groups
+	// A page break at the very top only names the first step.
+	return groups[0].fields.length || groups.length === 1 ? groups : groups.slice(1)
 })
 const step = ref(0)
 const isLastStep = computed(() => step.value >= steps.value.length - 1)

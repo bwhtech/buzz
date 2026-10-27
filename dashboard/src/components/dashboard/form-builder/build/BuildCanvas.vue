@@ -1,20 +1,24 @@
 <script setup lang="ts">
 import { breakpointsTailwind, useBreakpoints, useEventListener } from "@vueuse/core"
 import { BottomSheet, Button } from "frappe-ui"
-import { computed, ref, toRaw } from "vue"
+import { computed, ref, toRaw, watch } from "vue"
 
-import type { MenuItem } from "../fieldTypes"
+import { type MenuItem, takesSteps } from "../fieldTypes"
 import type { BuzzFormDoc, DoctypeField, FormQuestion } from "../useFormBuilder"
 import FieldComposer from "./FieldComposer.vue"
 import FieldInspector from "./FieldInspector.vue"
-import FieldPalette from "./FieldPalette.vue"
 import FieldRow from "./FieldRow.vue"
+import FormHeader from "./FormHeader.vue"
+import StepBar from "./StepBar.vue"
 import { type QuestionEditor, newQuestion, questionKey } from "./useQuestionEditor"
+import { useSteps } from "./useSteps"
 
 const form = defineModel<BuzzFormDoc>({ required: true })
 const props = defineProps<{
 	doctypeFields: Record<string, DoctypeField>
 	editor: QuestionEditor
+	device: "desktop" | "mobile"
+	preview: boolean
 	// What the booking page always asks before these questions.
 	fixedFields?: string[]
 }>()
@@ -22,20 +26,34 @@ defineEmits<{ addRule: [FormQuestion] }>()
 
 const editor = props.editor
 const composer = ref<InstanceType<typeof FieldComposer> | null>(null)
+const steps = useSteps(() => form.value.questions)
+const hasSteps = computed(() => takesSteps(form.value.form_doctype))
+
+const isNarrow = useBreakpoints(breakpointsTailwind).smaller("lg")
+// The phone preview sits in a card on a grey canvas; on a real phone the form fills the screen.
+const inCard = computed(() => props.device === "mobile" && !isNarrow.value)
+const twoColumns = computed(() => props.device === "desktop" && !isNarrow.value)
+
+const stepRows = computed(() => {
+	const { start, end } = steps.step.value
+	return form.value.questions
+		.map((question, index) => ({ question, index }))
+		.slice(start, end)
+		.filter(({ question }) => question.fieldtype !== "Page Break")
+})
 
 const selectedIndex = computed(() =>
 	editor.selected.value ? editor.indexOf(editor.selected.value) : -1,
 )
+watch(
+	() => props.preview,
+	(on) => on && (editor.selected.value = null),
+)
 
-// Below lg the side panel is gone: settings and the palette open as bottom sheets.
-const isNarrow = useBreakpoints(breakpointsTailwind).smaller("lg")
-const paletteOpen = ref(false)
 const inspectorOpen = computed({
-	get: () => isNarrow.value && selectedIndex.value >= 0 && editor.settingsOpen.value,
+	get: () => !props.preview && selectedIndex.value >= 0 && editor.settingsOpen.value,
 	set: (open) => (editor.settingsOpen.value = open),
 })
-
-// The side panel and the phone sheet show the same settings.
 const inspectorProps = computed(() => {
 	const question = form.value.questions[selectedIndex.value]
 	return {
@@ -50,16 +68,15 @@ const inspectorProps = computed(() => {
 	}
 })
 
-function addFromSheet(item: MenuItem) {
-	paletteOpen.value = false
-	addItem(item)
-}
-
 const doctypeFieldOf = (question: FormQuestion) =>
 	question.is_standard ? props.doctypeFields[question.fieldname] : undefined
 
-// What is being dragged: a row being moved, or a palette item being added.
-const dragged = ref<FormQuestion | MenuItem | null>(null)
+const rulesActingOn = (question: FormQuestion) =>
+	form.value.logic_rules.filter((rule) =>
+		rule.actions.some(([, target]) => target === question.fieldname),
+	).length
+
+const dragged = ref<FormQuestion | null>(null)
 const dropIndex = ref<number | null>(null)
 
 function onRowDragOver(index: number, event: DragEvent) {
@@ -70,10 +87,7 @@ function onRowDragOver(index: number, event: DragEvent) {
 }
 
 function onDrop() {
-	const item = dragged.value
-	const at = dropIndex.value ?? form.value.questions.length
-	if (item && "fields" in item) addItem(item as MenuItem, at)
-	else if (item) editor.move(item as FormQuestion, at)
+	if (dragged.value) editor.move(dragged.value, dropIndex.value ?? steps.step.value.end)
 	endDrag()
 }
 
@@ -82,29 +96,27 @@ function endDrag() {
 	dropIndex.value = null
 }
 
-function addItem(item: MenuItem, at?: number) {
-	const added = item.fields.map(newQuestion)
-	if (at === undefined) editor.insertAfterSelection(added)
-	else editor.insert(at, added)
+// New fields land after the selected one, or at the end of the step on screen.
+function addItem(item: MenuItem) {
+	const selected = selectedIndex.value
+	const { start, end } = steps.step.value
+	const at = selected >= start && selected < end ? selected + 1 : end
+	editor.insert(at, item.fields.map(newQuestion))
 }
 
-const rulesActingOn = (question: FormQuestion) =>
-	form.value.logic_rules.filter((rule) =>
-		rule.actions.some(([, target]) => target === question.fieldname),
-	).length
+const isLastStep = computed(() => steps.stepIndex.value >= steps.steps.value.length - 1)
 
 function isTyping(event: KeyboardEvent) {
 	const target = event.target as HTMLElement
 	return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)
 }
 
-// A drag cancelled anywhere still ends here, so no stale drop line is left behind.
 useEventListener(window, "dragend", endDrag)
 
 useEventListener(window, "keydown", (event: KeyboardEvent) => {
 	const selected = editor.selected.value
 	if (event.key === "Escape") editor.selected.value = null
-	if (isTyping(event)) return
+	if (isTyping(event) || props.preview) return
 	if (event.key === "/") {
 		event.preventDefault()
 		composer.value?.focus()
@@ -118,122 +130,130 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 </script>
 
 <template>
-	<div class="flex h-full min-h-0">
-		<div class="min-w-0 flex-1 overflow-y-auto" @click="editor.selected.value = null">
-			<div class="mx-auto w-full max-w-[760px] px-4 pb-24 pt-8 sm:px-7">
-				<div class="rounded-8 bg-surface-base p-5 shadow-sm ring-1 ring-outline-gray-1 sm:p-8">
-					<input
-						v-model="form.title"
-						class="w-full border-0 bg-transparent p-0 text-2xl font-semibold text-ink-gray-9 outline-none focus:ring-0"
-						aria-label="Form name"
-						@click.stop
-					/>
-					<textarea
-						v-model="form.description"
-						rows="1"
-						class="mb-6 mt-1 w-full resize-none border-0 bg-transparent p-0 text-p-base text-ink-gray-6 outline-none [field-sizing:content] placeholder:text-ink-gray-4 focus:ring-0"
-						placeholder="Add a description"
-						aria-label="Form description"
-						@click.stop
-					/>
+	<div class="relative h-full min-h-0">
+		<div
+			class="h-full overflow-y-auto"
+			:class="
+				inCard ? 'bg-surface-gray-1 px-4 pb-20 pt-6' : 'bg-surface-base px-0 pb-24 pt-6 lg:pt-12'
+			"
+			@click="editor.selected.value = null"
+		>
+			<div
+				class="mx-auto w-full bg-surface-base transition-[max-width] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
+				:class="
+					inCard
+						? 'max-w-[390px] rounded-5 px-4 pb-7 pt-5 shadow-sm ring-1 ring-inset ring-outline-gray-1'
+						: 'max-w-[760px] px-4 pb-12 sm:px-10'
+				"
+			>
+				<FormHeader v-model="form" :readonly="preview" />
 
-					<p
-						v-if="fixedFields?.length"
-						class="mb-3 flex flex-wrap items-center gap-1.5 text-p-sm text-ink-gray-5"
+				<p
+					v-if="fixedFields?.length"
+					class="mb-3 flex flex-wrap items-center gap-1.5 text-p-sm text-ink-gray-5"
+				>
+					<span class="lucide-lock size-3.5" aria-hidden="true" />
+					Always asked:
+					<span
+						v-for="label in fixedFields"
+						:key="label"
+						class="rounded-5 bg-surface-gray-2 px-1.5 py-0.5 text-ink-gray-7"
 					>
-						<span class="lucide-lock size-3.5" aria-hidden="true" />
-						Always asked:
-						<span
-							v-for="label in fixedFields"
-							:key="label"
-							class="rounded-5 bg-surface-gray-2 px-1.5 py-0.5 text-ink-gray-7"
-						>
-							{{ label }}
-						</span>
-					</p>
+						{{ label }}
+					</span>
+				</p>
+
+				<StepBar v-if="hasSteps" :steps="steps" :compact="!twoColumns" :editable="!preview" />
+
+				<div class="-mx-3 grid grid-cols-2 gap-y-1.5" @dragover.prevent @drop.prevent="onDrop">
 					<div
-						class="-mx-3 grid grid-cols-1 gap-x-2 gap-y-1 md:grid-cols-2"
-						@dragover.prevent
-						@drop.prevent="onDrop"
+						v-for="{ question, index } in stepRows"
+						:key="questionKey(question)"
+						class="relative"
+						:class="{
+							'col-span-2': question.width !== 'Half' || !twoColumns,
+							'opacity-40': dragged && toRaw(dragged) === toRaw(question),
+						}"
+						@dragover="onRowDragOver(index, $event)"
 					>
-						<div
-							v-for="(question, index) in form.questions"
-							:key="questionKey(question)"
-							class="relative"
-							:class="{
-								'md:col-span-2': question.width !== 'Half',
-								'opacity-40': dragged && toRaw(dragged) === toRaw(question),
-							}"
-							@dragover="onRowDragOver(index, $event)"
-						>
-							<span
-								v-if="dropIndex === index"
-								class="absolute inset-x-3 -top-1 h-0.5 rounded-full bg-surface-gray-7"
-								aria-hidden="true"
-							/>
-							<FieldRow
-								v-model="form.questions[index]"
-								:doctype-field="doctypeFieldOf(question)"
-								:editor="editor"
-								:is-first="index === 0"
-								:is-last="index === form.questions.length - 1"
-								@dragstart="dragged = question"
-							/>
-						</div>
-						<div
-							class="relative md:col-span-2"
-							@dragover.prevent="dropIndex = form.questions.length"
-							@click.stop
-						>
-							<span
-								v-if="dropIndex === form.questions.length"
-								class="absolute inset-x-3 -top-1 h-0.5 rounded-full bg-surface-gray-7"
-								aria-hidden="true"
-							/>
-							<FieldComposer ref="composer" :form-doctype="form.form_doctype" @pick="addItem" />
-						</div>
+						<span
+							v-if="dropIndex === index"
+							class="absolute inset-x-2 -top-1 h-0.5 rounded-full bg-surface-blue-6"
+							aria-hidden="true"
+						/>
+						<FieldRow
+							v-model="form.questions[index]"
+							:doctype-field="doctypeFieldOf(question)"
+							:editor="editor"
+							:conditional="rulesActingOn(question) > 0"
+							:preview="preview"
+							:is-first="index === 0"
+							:is-last="index === form.questions.length - 1"
+							@dragstart="dragged = question"
+						/>
 					</div>
+					<div
+						v-if="!preview"
+						class="relative col-span-2 mt-1.5"
+						@dragover.prevent="dropIndex = steps.step.value.end"
+						@click.stop
+					>
+						<span
+							v-if="dropIndex === steps.step.value.end"
+							class="absolute inset-x-2 -top-1 h-0.5 rounded-full bg-surface-blue-6"
+							aria-hidden="true"
+						/>
+						<FieldComposer ref="composer" :form-doctype="form.form_doctype" @pick="addItem" />
+					</div>
+				</div>
+
+				<div class="mt-5 flex items-center gap-3" @click.stop>
+					<Button
+						v-if="steps.stepIndex.value > 0"
+						size="lg"
+						label="Back"
+						@click="steps.go(steps.stepIndex.value - 1)"
+					/>
+					<Button
+						class="flex-1"
+						variant="solid"
+						size="lg"
+						:label="isLastStep ? form.submit_label || 'Submit' : 'Next'"
+						@click="!isLastStep && steps.go(steps.stepIndex.value + 1)"
+					/>
 				</div>
 			</div>
 		</div>
 
-		<aside
-			class="hidden w-[300px] shrink-0 border-l border-outline-gray-1 bg-surface-base lg:block"
+		<Transition
+			enter-from-class="translate-x-3 opacity-0"
+			leave-to-class="translate-x-3 opacity-0"
+			enter-active-class="transition duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
+			leave-active-class="transition duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
 		>
-			<FieldInspector
-				v-if="selectedIndex >= 0"
-				:key="questionKey(form.questions[selectedIndex])"
-				v-model="form.questions[selectedIndex]"
-				v-bind="inspectorProps"
-				@add-rule="$emit('addRule', form.questions[selectedIndex])"
-			/>
-			<FieldPalette
-				v-else
-				:form-doctype="form.form_doctype"
-				@pick="addItem"
-				@dragstart="(item) => (dragged = item)"
-			/>
-		</aside>
+			<aside
+				v-if="!isNarrow && inspectorOpen"
+				class="absolute bottom-2 right-2 top-2 z-30 w-[296px] overflow-hidden rounded-5 bg-surface-base shadow-xl ring-1 ring-outline-gray-1"
+				@click.stop
+			>
+				<FieldInspector
+					:key="questionKey(form.questions[selectedIndex])"
+					v-model="form.questions[selectedIndex]"
+					v-bind="inspectorProps"
+					@close="inspectorOpen = false"
+					@add-rule="$emit('addRule', form.questions[selectedIndex])"
+				/>
+			</aside>
+		</Transition>
 		<BottomSheet v-if="isNarrow" v-model:open="inspectorOpen" title="Field settings">
 			<FieldInspector
 				v-if="selectedIndex >= 0"
 				:key="questionKey(form.questions[selectedIndex])"
 				v-model="form.questions[selectedIndex]"
 				v-bind="inspectorProps"
+				@close="inspectorOpen = false"
 				@add-rule="$emit('addRule', form.questions[selectedIndex])"
 			/>
 		</BottomSheet>
-		<BottomSheet v-if="isNarrow" v-model:open="paletteOpen" title="Add a field">
-			<FieldPalette :form-doctype="form.form_doctype" @pick="addFromSheet" />
-		</BottomSheet>
-		<Button
-			v-if="isNarrow"
-			variant="solid"
-			size="lg"
-			icon="lucide-plus"
-			label="Add a field"
-			class="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-10 !size-12 !rounded-full shadow-lg active:scale-95 transition-transform duration-150"
-			@click="paletteOpen = true"
-		/>
 	</div>
 </template>

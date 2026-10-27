@@ -5,7 +5,7 @@ import { fieldType } from "../fieldTypes"
 import type { DoctypeField, FormQuestion } from "../useFormBuilder"
 
 const question = defineModel<FormQuestion>({ required: true })
-const props = defineProps<{ doctypeField?: DoctypeField }>()
+const props = defineProps<{ doctypeField?: DoctypeField; readonly?: boolean }>()
 
 const fieldtype = computed(() => props.doctypeField?.fieldtype ?? question.value.fieldtype)
 const options = computed(() =>
@@ -18,59 +18,52 @@ const isInline = computed(() => ["Check", "Heading", "Paragraph"].includes(field
 const placeholder = computed(() => question.value.placeholder || "")
 
 const BOX = "rounded-5 bg-surface-gray-2 px-3 text-p-base text-ink-gray-4"
+const blurOnEnter = (event: KeyboardEvent) => (event.target as HTMLElement).blur()
 </script>
 
 <template>
 	<hr v-if="fieldtype === 'Divider'" class="my-2 border-outline-gray-2" />
 
-	<div v-else-if="fieldtype === 'Page Break'" class="flex items-center gap-3 py-1">
-		<span class="h-px flex-1 border-t border-dashed border-outline-gray-3" />
-		<input
-			v-model="question.label"
-			class="w-48 border-0 bg-transparent p-0 text-center text-p-sm font-medium text-ink-gray-5 outline-none focus:ring-0"
-			aria-label="Step name"
-		/>
-		<span class="h-px flex-1 border-t border-dashed border-outline-gray-3" />
-	</div>
-
-	<div v-else class="space-y-2">
-		<div class="flex items-center gap-2">
+	<div v-else>
+		<div class="flex min-h-[22px] flex-wrap items-center gap-1.5" :class="{ 'mb-2': !isInline }">
 			<span
 				v-if="fieldtype === 'Check'"
-				class="size-4 shrink-0 rounded-[4px] border border-outline-gray-4 bg-surface-base"
+				class="size-4 shrink-0 rounded-1 border border-outline-gray-4 bg-surface-base"
 				aria-hidden="true"
 			/>
 			<input
 				v-model="question.label"
-				class="min-w-[4ch] max-w-full border-0 bg-transparent p-0 text-ink-gray-8 outline-none [field-sizing:content] focus:ring-0"
+				:readonly="readonly"
+				class="min-w-[120px] flex-1 border-0 bg-transparent p-0 text-ink-gray-9 outline-none focus:ring-0"
 				:class="
 					fieldtype === 'Heading'
-						? 'text-lg font-semibold text-ink-gray-9'
-						: isInline
+						? 'text-lg font-semibold'
+						: fieldtype === 'Paragraph'
 							? 'text-p-base'
-							: 'text-p-sm font-medium'
+							: 'text-[14px] font-medium'
 				"
 				:aria-label="`Label of ${fieldType(fieldtype).label} field`"
-				@keydown.enter="($event.target as HTMLInputElement).blur()"
+				@keydown.enter="blurOnEnter"
 			/>
 			<span
 				v-if="question.mandatory || doctypeField?.locked"
-				class="text-ink-red-6"
+				class="text-[14px] leading-none text-ink-red-4"
 				aria-label="Required"
 				>*</span
 			>
+			<slot name="badges" />
 		</div>
 
 		<template v-if="!isInline">
-			<div v-if="isChoiceList" class="space-y-1.5">
+			<div v-if="isChoiceList" class="space-y-2">
 				<div
 					v-for="option in options"
 					:key="option"
-					class="flex items-center gap-2 text-p-base text-ink-gray-7"
+					class="flex items-center gap-2.5 text-p-base text-ink-gray-7"
 				>
 					<span
 						class="size-4 shrink-0 border border-outline-gray-4"
-						:class="fieldtype === 'Radio' ? 'rounded-full' : 'rounded-[4px]'"
+						:class="fieldtype === 'Radio' ? 'rounded-full' : 'rounded-1'"
 						aria-hidden="true"
 					/>
 					{{ option }}
@@ -81,13 +74,15 @@ const BOX = "rounded-5 bg-surface-gray-2 px-3 text-p-base text-ink-gray-4"
 			</div>
 			<div
 				v-else-if="['Attach', 'Attach Image'].includes(fieldtype)"
-				class="flex h-16 items-center justify-center gap-2 rounded-5 border border-dashed border-outline-gray-3 text-p-sm text-ink-gray-5"
+				class="flex h-20 items-center justify-center gap-2 rounded-5 border border-dashed border-outline-gray-3 text-p-sm text-ink-gray-5"
 			>
 				<span class="lucide-upload size-4" aria-hidden="true" />
 				Drop a file or browse
 			</div>
 			<div v-else-if="fieldtype === 'Table'" class="flex">
-				<span class="rounded-5 border border-outline-gray-2 px-2.5 py-1 text-p-sm text-ink-gray-6">
+				<span
+					class="rounded-5 border border-outline-gray-2 px-3 py-1.5 text-p-base text-ink-gray-8"
+				>
 					Add {{ question.label }}
 				</span>
 			</div>
@@ -96,8 +91,8 @@ const BOX = "rounded-5 bg-surface-gray-2 px-3 text-p-base text-ink-gray-4"
 				:class="[
 					BOX,
 					['Small Text', 'Text Editor'].includes(fieldtype)
-						? 'h-20 pt-2'
-						: 'flex h-8 items-center justify-between',
+						? 'h-[120px] pt-2.5'
+						: 'flex h-[38px] items-center justify-between',
 				]"
 			>
 				<span class="truncate">{{ placeholder || options[0] || "" }}</span>
@@ -114,7 +109,7 @@ const BOX = "rounded-5 bg-surface-gray-2 px-3 text-p-base text-ink-gray-4"
 		<p v-if="fieldtype === 'Paragraph'" class="text-p-base text-ink-gray-6">
 			{{ question.description || "Add the text in field settings" }}
 		</p>
-		<p v-else-if="question.description" class="text-p-sm text-ink-gray-5">
+		<p v-else-if="question.description" class="mt-1.5 text-p-sm text-ink-gray-5">
 			{{ question.description }}
 		</p>
 	</div>

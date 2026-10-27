@@ -1,12 +1,11 @@
 <script setup lang="ts">
-defineProps<{ title: string }>()
+defineProps<{ title: string; description?: string }>()
 </script>
 
 <template>
-	<section class="scroll-mt-8 rounded-8 bg-surface-base p-5 shadow-sm ring-1 ring-outline-gray-1">
-		<h2 class="mb-4 text-p-base font-semibold text-ink-gray-9">{{ title }}</h2>
-		<div class="space-y-4">
-			<slot />
-		</div>
+	<section class="flex scroll-mt-7 flex-col">
+		<h2 class="mb-1 text-[16px] font-semibold text-ink-gray-9">{{ title }}</h2>
+		<p v-if="description" class="text-p-sm text-ink-gray-5">{{ description }}</p>
+		<slot />
 	</section>
 </template>

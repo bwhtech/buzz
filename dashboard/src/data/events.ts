@@ -49,6 +49,10 @@ type EventShellDoc = {
 	is_published: 0 | 1
 	theme: string | null
 	route: string | null
+	start_date?: string
+	start_time?: string | null
+	end_time?: string | null
+	time_zone_label?: string | null
 }
 
 /**
