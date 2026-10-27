@@ -6,6 +6,7 @@ import type { LogicRule } from "@/utils/formLogic"
 
 import { CHOICE_TYPES, fieldType } from "../fieldTypes"
 import type { DoctypeField, FormQuestion } from "../useFormBuilder"
+import OptionsEditor from "./OptionsEditor.vue"
 import ParagraphEditor from "./ParagraphEditor.vue"
 import TicketTypePicker from "./TicketTypePicker.vue"
 import type { QuestionEditor } from "./useQuestionEditor"
@@ -119,14 +120,7 @@ const mandatory = computed({
 				label="Description"
 				:rows="2"
 			/>
-			<Textarea
-				v-if="CHOICE_TYPES.includes(fieldtype)"
-				:model-value="question.options ?? ''"
-				@update:model-value="question.options = $event"
-				label="Options"
-				description="One option per line"
-				:rows="5"
-			/>
+			<OptionsEditor v-if="CHOICE_TYPES.includes(fieldtype)" v-model="question.options" />
 
 			<TicketTypePicker
 				v-if="ticketTypes?.length && !isLayout && !question.is_standard"
