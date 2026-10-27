@@ -113,7 +113,7 @@ function addAction() {
 				<Button
 					variant="ghost"
 					size="sm"
-					icon="lucide-copy"
+					icon="lucide-layers-2"
 					label="Duplicate rule"
 					@click="$emit('duplicate')"
 				/>

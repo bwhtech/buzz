@@ -70,7 +70,7 @@ const moreOptions = computed(() => [
 	},
 	{
 		label: "Duplicate",
-		icon: "lucide-copy",
+		icon: "lucide-layers-2",
 		disabled: isStandard.value,
 		onClick: () => props.editor.duplicate(question.value),
 	},
