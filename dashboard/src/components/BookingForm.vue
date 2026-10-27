@@ -110,7 +110,7 @@
 							:fields-for="ticketFieldsFor"
 							:show-errors="tried"
 							:last-name-required="isZoomEvent"
-							:core-fields="coreFieldsOf('Ticket')"
+							:core-fields="coreFields.Ticket ?? []"
 							:collapsible="isMobile"
 						/>
 
@@ -119,7 +119,7 @@
 							v-model:booking-custom-fields-data="bookingCustomFieldsData"
 							:billing="billing"
 							:phone-required="isGuestMode && isPhoneOtp"
-							:core-fields="coreFieldsOf('Booking')"
+							:core-fields="coreFields.Booking ?? []"
 							:phone-error="otp.phoneError"
 							:booking-custom-fields="bookingCustomFields"
 							:show-invoice="tax.apply"
@@ -293,7 +293,7 @@ import { isZoomBackedCategory } from "@/utils/zoomCategory"
 import OfflinePaymentDialog from "./OfflinePaymentDialog.vue"
 import AttendeesStep from "./registration/AttendeesStep.vue"
 import CheckoutHeader from "./registration/CheckoutHeader.vue"
-import { type CoreField, DEFAULT_CORE_FIELDS } from "./registration/coreFields"
+import type { CoreField } from "./registration/coreFields"
 import CouponField from "./registration/CouponField.vue"
 import CurrencySwitch from "./registration/CurrencySwitch.vue"
 import DetailsStep from "./registration/DetailsStep.vue"
@@ -365,8 +365,6 @@ const me = reactive({
 if (!props.isGuestMode) loadUser()
 
 const isZoomEvent = computed(() => isZoomBackedCategory(props.eventDetails.category))
-const coreFieldsOf = (appliedTo: string) =>
-	props.coreFields[appliedTo]?.length ? props.coreFields[appliedTo] : DEFAULT_CORE_FIELDS[appliedTo]
 const isPhoneOtp = computed(() => props.eventDetails.guest_verification_method === "Phone OTP")
 const requiresLogin = computed(() => props.isGuestMode && !props.eventDetails?.allow_guest_booking)
 const bookingCustomFields = computed(() =>

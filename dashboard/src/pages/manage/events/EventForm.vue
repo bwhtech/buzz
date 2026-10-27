@@ -29,7 +29,7 @@ const SCOPES = [
 ]
 const fieldCount = (one: typeof builder) =>
 	(one.draft.value?.questions ?? []).filter(
-		(question) => fieldType(question.fieldtype).group !== "Layout",
+		(question) => question.enabled && fieldType(question.fieldtype).group !== "Layout",
 	).length
 const railItems = computed(() => [
 	{

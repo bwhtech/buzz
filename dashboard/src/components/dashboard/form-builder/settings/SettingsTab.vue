@@ -245,7 +245,7 @@ const copyLink = () => copy(link.value, "Link copied")
 							<TabButtons v-model="afterSubmit" :options="AFTER_SUBMIT" />
 						</div>
 						<template #below>
-							<div v-if="afterSubmit === 'message'" class="flex flex-col gap-3">
+							<div v-if="!hasPage || afterSubmit === 'message'" class="flex flex-col gap-3">
 								<TextInput
 									label="Title"
 									:model-value="form.success_title ?? ''"

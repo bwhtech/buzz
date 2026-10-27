@@ -7,7 +7,11 @@ from buzz.api.booking.schemas import EventBookingDataResponse, TaxSettings
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.filters.conditions import registration_logic_rules, registration_questions
 from buzz.api.forms.fields import question_definition
-from buzz.events.doctype.buzz_form.form_types import APPLIED_TO_BY_FORM_DOCTYPE, REGISTRATION_FORM_DOCTYPE
+from buzz.events.doctype.buzz_form.form_types import (
+	APPLIED_TO_BY_FORM_DOCTYPE,
+	REGISTRATION_FORM_DOCTYPE,
+	form_type,
+)
 from buzz.payments import get_payment_gateways_for_event
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 
@@ -120,15 +124,24 @@ def get_registration_custom_fields(event_id: str) -> list[dict]:
 def get_registration_core_fields(event_id: str) -> dict[str, list[dict]]:
 	"""Each registration form's core fields in the organiser's order, keyed like custom_fields' applied_to."""
 	return {
-		applied_to: frappe.get_all(
-			"Buzz Form Field",
-			filters={"parenttype": "Buzz Form", "parent": form, "is_standard": 1},
-			fields=["fieldname", "label", "width", "enabled"],
-			order_by="idx",
-		)
+		applied_to: core_field_rows(event_id, form_doctype)
 		for form_doctype, applied_to in APPLIED_TO_BY_FORM_DOCTYPE.items()
-		if (form := frappe.db.get_value("Buzz Form", {"event": event_id, "form_doctype": form_doctype}))
 	}
+
+
+def core_field_rows(event_id: str, form_doctype: str) -> list[dict]:
+	form = frappe.db.get_value("Buzz Form", {"event": event_id, "form_doctype": form_doctype})
+	rows = form and frappe.get_all(
+		"Buzz Form Field",
+		filters={"parenttype": "Buzz Form", "parent": form, "is_standard": 1},
+		fields=["fieldname", "label", "width", "enabled"],
+		order_by="idx",
+	)
+	# A form without its rows still asks for the booking's own fields.
+	return rows or [
+		{"fieldname": fieldname, "label": label, "width": "Half", "enabled": 1}
+		for fieldname, label in form_type(form_doctype).core_fields.items()
+	]
 
 
 def get_registration_success(event_id: str) -> dict:
