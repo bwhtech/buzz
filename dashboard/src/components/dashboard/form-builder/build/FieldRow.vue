@@ -127,7 +127,7 @@ const rowKeys: Record<string, () => void> = {
 	...sharedKeys,
 	ArrowUp: () => emit("navigate", -1, "row"),
 	ArrowDown: () => emit("navigate", 1, "row"),
-	Enter: () => row.value?.querySelector<HTMLElement>("[data-label]")?.focus(),
+	Enter: () => row.value?.querySelector<HTMLElement>("[data-label], [contenteditable]")?.focus(),
 	Escape: () => {
 		props.editor.selected.value = null
 		row.value?.blur()

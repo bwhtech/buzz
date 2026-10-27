@@ -6,6 +6,7 @@ import type { LogicRule } from "@/utils/formLogic"
 
 import { CHOICE_TYPES, fieldType } from "../fieldTypes"
 import type { DoctypeField, FormQuestion } from "../useFormBuilder"
+import ParagraphEditor from "./ParagraphEditor.vue"
 import TicketTypePicker from "./TicketTypePicker.vue"
 import type { QuestionEditor } from "./useQuestionEditor"
 
@@ -93,7 +94,7 @@ const mandatory = computed({
 			</p>
 
 			<FormControl
-				v-if="fieldtype !== 'Divider'"
+				v-if="!['Divider', 'Paragraph'].includes(fieldtype)"
 				v-model="question.label"
 				:label="
 					fieldtype === 'Page Break' ? 'Step name' : fieldtype === 'Heading' ? 'Heading' : 'Label'
@@ -104,12 +105,19 @@ const mandatory = computed({
 				v-model="question.placeholder"
 				label="Placeholder"
 			/>
+			<div v-if="fieldtype === 'Paragraph'" class="flex flex-col gap-1.5">
+				<span class="text-xs text-ink-gray-5">Text</span>
+				<ParagraphEditor
+					v-model="question.description"
+					content-class="min-h-24 rounded-5 bg-surface-gray-2 px-3 py-2"
+				/>
+			</div>
 			<Textarea
-				v-if="!['Divider', 'Page Break'].includes(fieldtype)"
+				v-else-if="!['Divider', 'Page Break'].includes(fieldtype)"
 				:model-value="question.description ?? ''"
 				@update:model-value="question.description = $event"
-				:label="fieldtype === 'Paragraph' ? 'Text' : 'Description'"
-				:rows="fieldtype === 'Paragraph' ? 4 : 2"
+				label="Description"
+				:rows="2"
 			/>
 			<Textarea
 				v-if="CHOICE_TYPES.includes(fieldtype)"

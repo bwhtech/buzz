@@ -185,9 +185,11 @@
 		{{ __(field.label) }}
 	</h3>
 
-	<p v-else-if="field.fieldtype === 'Paragraph'" class="text-p-base text-ink-gray-7">
-		{{ __(field.description || field.label) }}
-	</p>
+	<div
+		v-else-if="field.fieldtype === 'Paragraph'"
+		class="prose prose-sm max-w-none text-ink-gray-7"
+		v-html="field.description"
+	/>
 
 	<hr v-else-if="field.fieldtype === 'Divider'" class="border-outline-gray-2" />
 
@@ -247,7 +249,7 @@ import {
 	isDateField,
 	isDateTimeField,
 } from "@/composables/useCustomFields"
-import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
+import { EMPTY_EDITOR_HTML, richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 
 const props = defineProps({
 	field: {
@@ -276,9 +278,6 @@ const multiSelectProxy = computed({
 		}
 	},
 })
-
-// An emptied editor emits an empty paragraph, which mandatory checks would accept.
-const EMPTY_EDITOR_HTML = /^(<p>(<br\s*\/?>)?<\/p>)?$/
 
 const richTextValue = computed({
 	get: () => model.value || "",

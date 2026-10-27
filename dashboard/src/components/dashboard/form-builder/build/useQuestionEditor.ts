@@ -50,6 +50,18 @@ function fieldnameFrom(label: string, taken: Set<string>): string {
 	return candidate
 }
 
+// A paragraph keeps its words in rich text, a heading in its label.
+function moveParagraphText(question: FormQuestion, fieldtype: string) {
+	if (question.fieldtype === "Paragraph") {
+		const text = new DOMParser().parseFromString(question.description || "", "text/html").body
+		question.label = text.textContent?.trim() || question.label
+		question.description = null
+	} else if (fieldtype === "Paragraph") {
+		question.description = question.label
+		question.label = fieldType(fieldtype).label
+	}
+}
+
 export function useQuestionEditor(questions: () => FormQuestion[], rules: () => LogicRule[]) {
 	const selected = ref<FormQuestion | null>(null)
 	// On a phone, settings open as a sheet only when asked for, so tapping a label edits it.
@@ -120,6 +132,7 @@ export function useQuestionEditor(questions: () => FormQuestion[], rules: () => 
 	}
 
 	function convert(question: FormQuestion, fieldtype: string) {
+		moveParagraphText(question, fieldtype)
 		if (question.label === fieldType(question.fieldtype).label)
 			question.label = fieldType(fieldtype).label
 		if (CHOICE_TYPES.includes(fieldtype) && !question.options) question.options = DEFAULT_OPTIONS

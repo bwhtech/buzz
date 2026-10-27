@@ -3,6 +3,7 @@ import { computed } from "vue"
 
 import { fieldType } from "../fieldTypes"
 import type { DoctypeField, FormQuestion } from "../useFormBuilder"
+import ParagraphEditor from "./ParagraphEditor.vue"
 
 const question = defineModel<FormQuestion>({ required: true })
 const props = defineProps<{ doctypeField?: DoctypeField; readonly?: boolean }>()
@@ -24,7 +25,14 @@ const BOX = "rounded-5 bg-surface-gray-2 px-3 text-p-base text-ink-gray-4"
 	<hr v-if="fieldtype === 'Divider'" class="my-2 border-outline-gray-2" />
 
 	<div v-else>
-		<div class="flex min-h-[22px] flex-wrap items-center gap-1.5" :class="{ 'mb-2': !isInline }">
+		<div v-if="fieldtype === 'Paragraph'" class="mb-1 flex gap-1.5 empty:hidden">
+			<slot name="badges" />
+		</div>
+		<div
+			v-else
+			class="flex min-h-[22px] flex-wrap items-center gap-1.5"
+			:class="{ 'mb-2': !isInline }"
+		>
 			<span
 				v-if="fieldtype === 'Check'"
 				class="size-4 shrink-0 rounded-1 border border-outline-gray-4 bg-surface-base"
@@ -36,11 +44,7 @@ const BOX = "rounded-5 bg-surface-gray-2 px-3 text-p-base text-ink-gray-4"
 				class="border-0 bg-transparent p-0 text-ink-gray-9 outline-none focus:ring-0"
 				:class="[
 					readonly ? 'max-w-full [field-sizing:content]' : 'min-w-[120px] flex-1',
-					fieldtype === 'Heading'
-						? 'text-lg font-semibold'
-						: fieldtype === 'Paragraph'
-							? 'text-p-base'
-							: 'text-[14px] font-medium',
+					fieldtype === 'Heading' ? 'text-lg font-semibold' : 'text-[14px] font-medium',
 				]"
 				:aria-label="`Label of ${fieldType(fieldtype).label} field`"
 				data-label
@@ -106,9 +110,14 @@ const BOX = "rounded-5 bg-surface-gray-2 px-3 text-p-base text-ink-gray-4"
 				/>
 			</div>
 		</template>
-		<p v-if="fieldtype === 'Paragraph'" class="text-p-base text-ink-gray-6">
-			{{ question.description || "Add the text in field settings" }}
-		</p>
+		<template v-if="fieldtype === 'Paragraph'">
+			<div
+				v-if="readonly"
+				class="prose prose-sm max-w-none text-ink-gray-7"
+				v-html="question.description"
+			/>
+			<ParagraphEditor v-else v-model="question.description" />
+		</template>
 		<p v-else-if="question.description" class="mt-1.5 text-p-sm text-ink-gray-5">
 			{{ question.description }}
 		</p>
