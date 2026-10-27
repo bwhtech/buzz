@@ -18,6 +18,11 @@ const sheetOpen = ref(false)
 const current = computed(() => props.steps.stepIndex.value)
 const count = computed(() => props.steps.steps.value.length)
 
+function goTo(index: number) {
+	props.steps.go(index)
+	sheetOpen.value = false
+}
+
 const fieldCount = (index: number) => {
 	const { start, end } = props.steps.steps.value[index]
 	const fields = props.questions.slice(start, end).length
@@ -93,10 +98,7 @@ const fieldCount = (index: number) => {
 								: 'bg-surface-gray-2 text-ink-gray-7'
 						"
 						:aria-label="`Go to step ${index + 1}`"
-						@click="
-							steps.go(index)
-							sheetOpen = false
-						"
+						@click="goTo(index)"
 					>
 						{{ index + 1 }}
 					</button>
