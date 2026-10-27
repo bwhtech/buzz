@@ -38,6 +38,8 @@ export interface BuzzFormDoc {
 	closed_message?: string
 	meta_title?: string | null
 	meta_description?: string
+	meta_image?: string | null
+	og_image?: string | null
 	[key: string]: unknown
 }
 
@@ -78,6 +80,7 @@ const EDITABLE_FIELDS = [
 	"closed_message",
 	"meta_title",
 	"meta_description",
+	"meta_image",
 ] as const
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value))

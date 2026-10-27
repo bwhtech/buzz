@@ -29,7 +29,9 @@
   "closed_message",
   "link_preview_section",
   "meta_title",
-  "meta_description"
+  "meta_description",
+  "meta_image",
+  "og_image"
  ],
  "fields": [
   {
@@ -176,6 +178,19 @@
    "fieldname": "meta_description",
    "fieldtype": "Small Text",
    "label": "Preview Description"
+  },
+  {
+   "fieldname": "meta_image",
+   "fieldtype": "Attach Image",
+   "label": "Preview Image",
+   "description": "Leave empty to use an image drawn from the form and its event"
+  },
+  {
+   "fieldname": "og_image",
+   "fieldtype": "Attach Image",
+   "label": "Generated Preview Image",
+   "read_only": 1,
+   "no_copy": 1
   }
  ],
  "links": [
@@ -184,7 +199,7 @@
    "link_fieldname": "enquiry_form"
   }
  ],
- "modified": "2026-10-27 15:00:00.000000",
+ "modified": "2026-10-28 01:09:14.270094",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Form",

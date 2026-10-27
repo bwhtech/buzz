@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import frappe
 from frappe import _
 from frappe.geo.country_info import get_all as get_all_countries
-from frappe.utils.data import sbool
+from frappe.utils.data import format_date, get_datetime, get_url, now_datetime, sbool
 
 from buzz.api.forms.answers import CustomAnswers
 from buzz.api.forms.conditions import parse_rules
@@ -118,11 +118,26 @@ class CustomFormService:
 	def link_preview(self) -> dict:
 		"""What a shared link to the form shows: its own preview text, else the form and event names."""
 		form, event = self.form, self.event
+		image = form.meta_image or form.og_image or event.meta_image or event.og_image or event.banner_image
 		return {
 			"title": form.meta_title or f"{form.title} · {event.title}",
-			"description": form.meta_description or form.description or event.short_description or "",
-			"image": event.meta_image or event.banner_image,
+			"description": form.meta_description or self.default_preview_description(),
+			# Link crawlers ignore a relative image path.
+			"image": get_url(image) if image else None,
 		}
+
+	def default_preview_description(self) -> str:
+		intro = self.form.description or self.event.short_description or ""
+		return " ".join(part for part in [intro, self.closing_note()] if part)
+
+	def closing_note(self) -> str:
+		close_at = self.form.auto_close_at
+		if not close_at or get_datetime(close_at) <= now_datetime():
+			return ""
+		submissions = {"Talk Proposal": _("Proposals"), "Sponsorship Enquiry": _("Enquiries")}
+		return _("{0} close on {1}.").format(
+			submissions.get(self.form_doctype, _("Submissions")), format_date(close_at, "d MMM")
+		)
 
 	def event_summary(self) -> FormEventSummary:
 		event = self.event

@@ -1,8 +1,12 @@
+from unittest.mock import patch
+
 import frappe
+from frappe.utils import add_days, format_date, get_url, now_datetime
 
 from buzz.api.forms import get_custom_form_data, get_form_builder_fields
 from buzz.api.forms.exceptions import InvalidAnswer, UnknownQuestions
 from buzz.api.forms.test_custom_forms import FormsTestCase
+from buzz.events.og_image import generate, generate_form
 from buzz.tests.factories import BuzzEventFactory
 from buzz.www.dashboard import form_link_preview
 
@@ -104,3 +108,47 @@ class TestFormLinkPreview(FeedbackFormCase):
 	def test_other_pages_carry_none(self):
 		self.assertIsNone(form_link_preview("/b/manage/events"))
 		self.assertIsNone(form_link_preview("/b/bookings"))
+
+	def test_uploaded_image_is_shared_as_a_full_address(self):
+		event, form = self.feedback_form()
+		form.meta_image = "/files/cfp-cover.png"
+		form.save(ignore_permissions=True)
+
+		preview = form_link_preview(f"/b/{event.route}/feedback")
+
+		self.assertEqual(preview["image"], get_url("/files/cfp-cover.png"))
+
+	def test_default_description_says_when_the_form_closes(self):
+		event, form = self.feedback_form()
+		close_at = add_days(now_datetime(), 10)
+		form.update({"description": "Tell us how it went.", "auto_close_at": close_at})
+		form.save(ignore_permissions=True)
+
+		preview = form_link_preview(f"/b/{event.route}/feedback")
+
+		closes = format_date(close_at, "d MMM")
+		self.assertEqual(preview["description"], f"Tell us how it went. Submissions close on {closes}.")
+
+	def test_a_published_form_gets_its_own_share_image(self):
+		event, form = self.feedback_form()
+
+		generate_form(form.name)
+
+		og_image = frappe.db.get_value("Buzz Form", form.name, "og_image")
+		self.addCleanup(self.delete_files, form.name)
+		self.assertTrue(og_image.endswith(".png"))
+		self.assertEqual(form_link_preview(f"/b/{event.route}/feedback")["image"], get_url(og_image))
+
+	def test_redrawing_an_event_redraws_its_forms(self):
+		event, form = self.feedback_form()
+
+		with patch("frappe.enqueue") as enqueue:
+			generate(str(event.name))
+
+		self.addCleanup(self.delete_files, str(event.name))
+		self.assertIn(form.name, [call.kwargs.get("form_name") for call in enqueue.call_args_list])
+
+	def delete_files(self, attached_to: str):
+		# A rollback leaves the rendered files on disk
+		for name in frappe.get_all("File", filters={"attached_to_name": attached_to}, pluck="name"):
+			frappe.delete_doc("File", name, ignore_permissions=True, force=True)

@@ -17,6 +17,7 @@ import { useEventDoc } from "@/data/events"
 
 import type { BuzzFormDoc } from "../useFormBuilder"
 import FormStatus from "./FormStatus.vue"
+import LinkPreview from "./LinkPreview.vue"
 import SettingsRow from "./SettingsRow.vue"
 import SettingsSection from "./SettingsSection.vue"
 
@@ -58,9 +59,6 @@ const SECTIONS = computed(
 const event = useEventDoc(() => props.eventId)
 const linkPrefix = computed(() => `${window.location.host}/b/${event.doc?.route ?? ""}/`)
 const link = computed(() => `${window.location.protocol}//${linkPrefix.value}${form.value.route}`)
-const previewTitle = computed(
-	() => form.value.meta_title || `${form.value.title} · ${event.doc?.title ?? ""}`,
-)
 
 const closeTime = computed(() =>
 	form.value.auto_close_at
@@ -297,42 +295,12 @@ async function copyLink() {
 					title="Link preview"
 					description="How the form link looks when shared on WhatsApp, Slack or social"
 				>
-					<div class="grid gap-6 p-4 sm:grid-cols-[minmax(0,1fr)_240px] sm:items-start">
-						<div class="flex flex-col gap-3">
-							<TextInput
-								:model-value="form.meta_title ?? ''"
-								@update:model-value="form.meta_title = $event"
-								label="Preview title"
-								:placeholder="previewTitle"
-							/>
-							<Textarea
-								v-model="form.meta_description"
-								label="Preview description"
-								:placeholder="form.description || ''"
-								:rows="3"
-							/>
-						</div>
-						<div
-							class="overflow-hidden rounded-5 ring-1 ring-inset ring-outline-gray-2"
-							aria-label="Preview"
-						>
-							<div
-								class="flex h-[120px] flex-col items-center justify-center gap-1.5 bg-surface-gray-2 text-p-xs text-ink-gray-5"
-							>
-								<span class="lucide-image size-[18px]" aria-hidden="true" />
-								Uses the event cover
-							</div>
-							<div class="flex flex-col gap-0.5 px-3 py-2.5">
-								<span class="truncate text-[11px] text-ink-gray-5">{{
-									link.replace(/^https?:\/\//, "")
-								}}</span>
-								<span class="text-p-sm font-semibold text-ink-gray-9">{{ previewTitle }}</span>
-								<span class="line-clamp-2 text-p-xs text-ink-gray-6">
-									{{ form.meta_description || form.description }}
-								</span>
-							</div>
-						</div>
-					</div>
+					<LinkPreview
+						v-model="form"
+						:event-title="event.doc?.title ?? ''"
+						:event-description="event.doc?.short_description"
+						:event-image="event.doc?.meta_image || event.doc?.og_image || event.doc?.banner_image"
+					/>
 				</SettingsSection>
 			</div>
 		</div>

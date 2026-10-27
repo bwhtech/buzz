@@ -32,7 +32,9 @@ class BuzzForm(Document):
 		form_doctype: DF.Link
 		login_required: DF.Check
 		meta_description: DF.SmallText | None
+		meta_image: DF.AttachImage | None
 		meta_title: DF.Data | None
+		og_image: DF.AttachImage | None
 		logic_rules: DF.JSON | None
 		publish: DF.Check
 		questions: DF.Table[BuzzFormField]
@@ -168,3 +170,22 @@ class BuzzForm(Document):
 			self.form_doctype
 		).has_field(answers_field):
 			frappe.throw(_("{0} has no field to store answers in.").format(self.form_doctype))
+
+	def on_update(self):
+		self.enqueue_og_image()
+
+	def enqueue_og_image(self):
+		from buzz.events.form_og_image import FormOgImage
+		from buzz.events.og_image import enqueue_generate_form
+
+		# A live worker would render test forms mid-test and race their teardown
+		if frappe.in_test or not (self.publish and form_type(self.form_doctype).has_page):
+			return
+		try:
+			needs_update = FormOgImage(self).needs_update()
+		except Exception:
+			# The share image is a nicety; it must never block saving the form
+			frappe.log_error(f"Share image check failed for form {self.name}")
+			return
+		if needs_update:
+			enqueue_generate_form(self.name)
