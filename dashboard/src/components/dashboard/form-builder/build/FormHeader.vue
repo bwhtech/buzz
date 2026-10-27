@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { dayjs } from "frappe-ui"
-import { computed } from "vue"
+import { computed, ref } from "vue"
 
 import { useEventDoc } from "@/data/events"
 import { timeLabel12Hour } from "@/utils/dateLabels"
@@ -22,7 +22,11 @@ const schedule = computed(() => {
 	return [dayjs(doc.start_date).format("ddd, MMM D"), time].filter(Boolean)
 })
 
-const blurOnEnter = (keydown: KeyboardEvent) => (keydown.target as HTMLElement).blur()
+const emit = defineEmits<{ leaveDown: [] }>()
+const title = ref<HTMLTextAreaElement | null>(null)
+const description = ref<HTMLInputElement | null>(null)
+
+defineExpose({ focus: () => description.value?.focus() })
 </script>
 
 <template>
@@ -35,22 +39,28 @@ const blurOnEnter = (keydown: KeyboardEvent) => (keydown.target as HTMLElement).
 			</template>
 		</div>
 		<textarea
+			ref="title"
 			v-model="form.title"
 			rows="1"
 			:readonly="props.readonly"
 			placeholder="Untitled form"
 			aria-label="Form name"
 			class="mt-1.5 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[26px] md:text-[30px] font-semibold leading-[1.25] tracking-[-0.02em] text-ink-gray-9 outline-none [field-sizing:content] [text-wrap:balance] placeholder:text-ink-gray-4 focus:ring-0"
-			@keydown.enter.prevent="blurOnEnter"
+			@keydown.enter.prevent="description?.focus()"
+			@keydown.down.prevent="description?.focus()"
 			@click.stop
 		/>
 		<input
 			v-if="!props.readonly || form.description"
+			ref="description"
 			v-model="form.description"
 			:readonly="props.readonly"
 			placeholder="Add a short intro"
 			aria-label="Form description"
 			class="w-full border-0 bg-transparent p-0 text-[15px] leading-[1.55] text-ink-gray-6 outline-none placeholder:text-ink-gray-4 focus:ring-0"
+			@keydown.up.prevent="title?.focus()"
+			@keydown.down.prevent="emit('leaveDown')"
+			@keydown.enter.prevent="emit('leaveDown')"
 			@click.stop
 		/>
 	</div>

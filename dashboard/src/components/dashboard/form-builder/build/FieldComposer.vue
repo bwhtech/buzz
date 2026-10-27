@@ -4,7 +4,7 @@ import { computed, ref, watch } from "vue"
 import { fieldMenu, type MenuItem } from "../fieldTypes"
 
 const props = defineProps<{ formDoctype: string }>()
-const emit = defineEmits<{ pick: [MenuItem] }>()
+const emit = defineEmits<{ pick: [MenuItem]; leaveUp: [] }>()
 
 const text = ref("")
 const active = ref(0)
@@ -39,6 +39,9 @@ function onKeydown(event: KeyboardEvent) {
 				fields: [{ fieldtype: "Data", label: text.value.trim() }],
 			})
 		else if (items.value[active.value]) pick(items.value[active.value])
+	} else if (event.key === "ArrowUp") {
+		event.preventDefault()
+		emit("leaveUp")
 	} else if (event.key === "Escape") {
 		text.value = ""
 	}

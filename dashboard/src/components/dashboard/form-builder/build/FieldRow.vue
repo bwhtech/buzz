@@ -20,7 +20,12 @@ const props = defineProps<{
 	// On a phone the row is a card: a tap opens its settings, ⋯ opens its actions.
 	compact?: boolean
 }>()
-const emit = defineEmits<{ dragstart: [DragEvent] }>()
+const emit = defineEmits<{
+	dragstart: [DragEvent]
+	navigate: [step: number, part: "row" | "label"]
+	move: [step: number]
+	remove: []
+}>()
 
 const isSelected = computed(
 	() =>
@@ -108,6 +113,43 @@ function openSettings() {
 	select()
 	props.editor.settingsOpen.value = true
 }
+
+// Notion-style keys: a focused row is a selected block; its label is the text inside it.
+const sharedKeys = {
+	"Mod-Enter": openSettings,
+	"Mod-Shift-ArrowUp": () => emit("move", -1),
+	"Mod-Shift-ArrowDown": () => emit("move", 1),
+}
+const rowKeys: Record<string, () => void> = {
+	...sharedKeys,
+	ArrowUp: () => emit("navigate", -1, "row"),
+	ArrowDown: () => emit("navigate", 1, "row"),
+	Enter: () => row.value?.querySelector<HTMLElement>("[data-label]")?.focus(),
+	Escape: () => {
+		props.editor.selected.value = null
+		row.value?.blur()
+	},
+	"Mod-d": () => props.editor.duplicate(question.value),
+	Delete: () => emit("remove"),
+	Backspace: () => emit("remove"),
+}
+const labelKeys: Record<string, () => void> = {
+	...sharedKeys,
+	ArrowUp: () => emit("navigate", -1, "label"),
+	ArrowDown: () => emit("navigate", 1, "label"),
+	Enter: () => emit("navigate", 1, "label"),
+	Escape: () => row.value?.focus(),
+}
+
+function onKeydown(event: KeyboardEvent) {
+	const target = event.target as HTMLElement
+	const keys = target === row.value ? rowKeys : target.hasAttribute("data-label") ? labelKeys : {}
+	const modifiers = `${event.metaKey || event.ctrlKey ? "Mod-" : ""}${event.shiftKey ? "Shift-" : ""}`
+	const action = keys[modifiers + event.key]
+	if (!action) return
+	event.preventDefault()
+	action()
+}
 </script>
 
 <template>
@@ -153,16 +195,20 @@ function openSettings() {
 	<div
 		v-else
 		ref="row"
-		class="group relative rounded-5 px-3 py-2.5 transition-[background-color,box-shadow,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
+		class="group relative rounded-5 px-3 py-2.5 outline-none transition-[background-color,box-shadow,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
 		:class="[
 			preview
 				? ''
 				: isSelected
-					? 'ring-[1.5px] ring-outline-blue-5'
+					? 'ring-[1.5px] ring-outline-gray-9'
 					: '[@media(hover:hover)]:hover:bg-surface-gray-1',
 			{ 'opacity-50': !question.enabled && !preview },
 		]"
 		:draggable="!preview"
+		:tabindex="preview ? undefined : 0"
+		:aria-label="preview ? undefined : `${type.label}: ${question.label}`"
+		@focusin="select"
+		@keydown="onKeydown"
 		@click.stop="select"
 		@dblclick="openSettings"
 		@dragstart="emit('dragstart', $event)"
@@ -222,7 +268,7 @@ function openSettings() {
 					@click="question.mandatory = question.mandatory ? 0 : 1"
 				/>
 			</Tooltip>
-			<Tooltip text="Field settings · double-click">
+			<Tooltip text="Field settings · ⌘↵ or double-click">
 				<Button
 					variant="ghost"
 					size="sm"

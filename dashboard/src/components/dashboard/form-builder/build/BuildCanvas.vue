@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { breakpointsTailwind, useBreakpoints, useEventListener } from "@vueuse/core"
 import { BottomSheet, Button } from "frappe-ui"
-import { computed, ref, toRaw, watch } from "vue"
+import { computed, nextTick, ref, toRaw, watch } from "vue"
 
 import { useIsMobile } from "@/composables/useIsMobile"
 
@@ -120,19 +120,52 @@ function isTyping(event: KeyboardEvent) {
 useEventListener(window, "dragend", endDrag)
 
 useEventListener(window, "keydown", (event: KeyboardEvent) => {
-	const selected = editor.selected.value
+	if (event.defaultPrevented) return
 	if (event.key === "Escape") editor.selected.value = null
 	if (isTyping(event) || props.preview) return
 	if (event.key === "/") {
 		event.preventDefault()
 		composer.value?.focus()
-	} else if (selected && (event.metaKey || event.ctrlKey) && event.key === "d") {
-		event.preventDefault()
-		editor.duplicate(selected)
-	} else if (selected && ["Delete", "Backspace"].includes(event.key)) {
-		editor.remove(selected)
 	}
 })
+
+const header = ref<InstanceType<typeof FormHeader> | null>(null)
+const rowsBox = ref<HTMLElement | null>(null)
+
+const rowElement = (question: FormQuestion) =>
+	rowsBox.value?.querySelector<HTMLElement>(`[data-row="${questionKey(question)}"]`)
+
+// Past the first row lies the form intro, past the last the composer.
+function focusRow(position: number, part: "row" | "label" = "row") {
+	const rows = stepRows.value
+	if (position < 0) return header.value?.focus()
+	if (position >= rows.length) return composer.value?.focus()
+	const row = rowElement(rows[position].question)
+	;(part === "label" ? row?.querySelector<HTMLElement>("[data-label]") : row)?.focus()
+}
+
+// Moves keep a field in its step; the focus follows it, since moving a node drops focus.
+function moveWithinStep(position: number, step: number) {
+	const target = stepRows.value[position + step]
+	if (!target) return
+	const onLabel = document.activeElement?.hasAttribute("data-label")
+	editor.move(stepRows.value[position].question, step < 0 ? target.index : target.index + 1)
+	nextTick().then(() => focusRow(position + step, onLabel ? "label" : "row"))
+}
+
+function removeAt(position: number) {
+	editor.remove(stepRows.value[position].question)
+	nextTick().then(() => focusRow(Math.min(position, stepRows.value.length - 1)))
+}
+
+function closeInspector() {
+	inspectorOpen.value = false
+	const selected = editor.selected.value
+	if (selected) rowElement(selected)?.focus()
+}
+
+const inspector = ref<HTMLElement | null>(null)
+watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.focus()))
 </script>
 
 <template>
@@ -156,7 +189,12 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 						: 'max-w-[760px] px-4 pb-12 sm:px-10'
 				"
 			>
-				<FormHeader v-model="form" :readonly="preview" />
+				<FormHeader
+					ref="header"
+					v-model="form"
+					:readonly="preview"
+					@leave-down="focusRow(0, 'label')"
+				/>
 
 				<p
 					v-if="fixedFields?.length"
@@ -183,13 +221,14 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 				/>
 
 				<div
+					ref="rowsBox"
 					class="grid grid-cols-2"
 					:class="isPhone ? 'gap-y-2' : '-mx-3 gap-y-1.5'"
 					@dragover.prevent
 					@drop.prevent="onDrop"
 				>
 					<div
-						v-for="{ question, index } in stepRows"
+						v-for="({ question, index }, position) in stepRows"
 						:key="questionKey(question)"
 						class="relative"
 						:class="{
@@ -212,7 +251,11 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 							:compact="isPhone"
 							:is-first="index === 0"
 							:is-last="index === form.questions.length - 1"
+							:data-row="questionKey(question)"
 							@dragstart="dragged = question"
+							@navigate="(step, part) => focusRow(position + step, part)"
+							@move="(step) => moveWithinStep(position, step)"
+							@remove="removeAt(position)"
 						/>
 					</div>
 					<div
@@ -226,7 +269,12 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 							class="absolute inset-x-2 -top-1 h-0.5 rounded-full bg-surface-blue-6"
 							aria-hidden="true"
 						/>
-						<FieldComposer ref="composer" :form-doctype="form.form_doctype" @pick="addItem" />
+						<FieldComposer
+							ref="composer"
+							:form-doctype="form.form_doctype"
+							@pick="addItem"
+							@leave-up="focusRow(stepRows.length - 1, 'label')"
+						/>
 					</div>
 				</div>
 
@@ -269,14 +317,18 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 		>
 			<aside
 				v-if="!isNarrow && inspectorOpen"
-				class="absolute bottom-2 right-2 top-2 z-30 w-[296px] overflow-hidden rounded-5 bg-surface-base shadow-xl ring-1 ring-outline-gray-1"
+				ref="inspector"
+				tabindex="-1"
+				aria-label="Field settings"
+				class="absolute bottom-2 right-2 top-2 z-30 w-[296px] overflow-hidden rounded-5 bg-surface-base shadow-xl outline-none ring-1 ring-outline-gray-1"
 				@click.stop
+				@keydown.esc.prevent="closeInspector"
 			>
 				<FieldInspector
 					:key="questionKey(form.questions[selectedIndex])"
 					v-model="form.questions[selectedIndex]"
 					v-bind="inspectorProps"
-					@close="inspectorOpen = false"
+					@close="closeInspector"
 					@add-rule="$emit('addRule', form.questions[selectedIndex])"
 				/>
 			</aside>

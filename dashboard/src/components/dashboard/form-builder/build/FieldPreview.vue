@@ -18,7 +18,6 @@ const isInline = computed(() => ["Check", "Heading", "Paragraph"].includes(field
 const placeholder = computed(() => question.value.placeholder || "")
 
 const BOX = "rounded-5 bg-surface-gray-2 px-3 text-p-base text-ink-gray-4"
-const blurOnEnter = (event: KeyboardEvent) => (event.target as HTMLElement).blur()
 </script>
 
 <template>
@@ -44,7 +43,7 @@ const blurOnEnter = (event: KeyboardEvent) => (event.target as HTMLElement).blur
 							: 'text-[14px] font-medium',
 				]"
 				:aria-label="`Label of ${fieldType(fieldtype).label} field`"
-				@keydown.enter="blurOnEnter"
+				data-label
 			/>
 			<span
 				v-if="question.mandatory || doctypeField?.locked"
