@@ -140,3 +140,35 @@ test("settings change the public form's button and confirmation", async ({ page,
 	await page.getByRole("button", { name: "Send it" }).click()
 	await expect(page.getByText("Got it, thanks")).toBeVisible()
 })
+
+test("registration edits attendee and booking questions, with ticket-type chips", async ({
+	page,
+	request,
+}) => {
+	const [event] = await getList<NamedDoc>(request, "Buzz Event", {
+		filters: { route: ["=", CUSTOM_FORMS_EVENT_ROUTE] },
+	})
+	const [form] = await getList<NamedDoc>(request, "Buzz Form", {
+		filters: { event: ["=", event.name], form_doctype: ["=", "Event Booking"] },
+	})
+	const [ticketType] = await getList<NamedDoc & { title: string }>(request, "Event Ticket Type", {
+		filters: { event: ["=", event.name] },
+		fields: ["name", "title"],
+	})
+	await page.goto(`/b/manage/events/${event.name}/forms/${form.name}`)
+
+	await expect(page.getByText("Always asked:")).toContainText("First name")
+	const composer = page.getByRole("combobox", { name: "Add a field" })
+	await composer.fill("Seat preference")
+	await composer.press("Enter")
+	await page.getByRole("button", { name: ticketType.title, exact: true }).click()
+	await expect(page.getByRole("button", { name: "All tickets" })).not.toHaveClass(/solid/)
+
+	await page.getByRole("radio", { name: "Logic" }).click()
+	await expect(page.getByRole("button", { name: "Seat preference" })).toBeVisible()
+
+	await page.getByRole("radio", { name: "Build" }).click()
+	await page.getByRole("radio", { name: "Booking · once" }).click()
+	await expect(page.getByText("Always asked:")).not.toContainText("First name")
+	// Nothing is saved: other specs read this event's registration questions.
+})

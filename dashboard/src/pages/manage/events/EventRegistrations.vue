@@ -145,6 +145,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				v-if="page.data"
 				:event="eventId"
 				:registration-link="page.data.registration_link"
+				:registration-form="page.data.registration_form"
 				:closed="page.data.registrations_closed"
 				:can-write="page.data.can_write"
 				:allow-guest-booking="page.data.allow_guest_booking"

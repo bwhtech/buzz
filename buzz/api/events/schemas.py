@@ -265,6 +265,8 @@ class EventTicketTypes(APIResponse):
 	title: str
 	can_write: bool
 	registration_link: str | None
+	# The registration Buzz Form the dashboard's form builder opens.
+	registration_form: str | None = None
 	registrations_closed: bool
 	allow_guest_booking: bool
 	guest_verification_method: str

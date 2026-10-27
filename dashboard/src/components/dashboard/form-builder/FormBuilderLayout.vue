@@ -7,7 +7,8 @@ import type { FrappeError } from "@/types"
 
 import type { FormBuilder } from "./useFormBuilder"
 
-const props = defineProps<{ builder: FormBuilder; eventId: string }>()
+// Registration edits two forms at once; the first one names the page.
+const props = defineProps<{ builders: FormBuilder[]; eventId: string }>()
 const tab = defineModel<string>("tab", { required: true })
 
 // Where each form type lives in the event workspace, so the crumb leads back there.
@@ -19,7 +20,7 @@ const SECTIONS: Record<string, { label: string; route: string }> = {
 }
 
 const event = useEventDoc(() => props.eventId)
-const draft = computed(() => props.builder.draft.value)
+const draft = computed(() => props.builders[0].draft.value)
 
 const section = computed(() => {
 	const { label, route } = SECTIONS[draft.value?.form_doctype ?? ""] ?? {
@@ -41,11 +42,12 @@ const TABS = [
 	{ label: "Settings", value: "settings", iconLeft: "lucide-settings-2" },
 ]
 
-const saving = computed(() => props.builder.form.setValue.loading)
+const dirty = computed(() => props.builders.some((builder) => builder.dirty.value))
+const saving = computed(() => props.builders.some((builder) => builder.form.setValue.loading))
 
 async function save() {
 	try {
-		await props.builder.save()
+		for (const builder of props.builders) if (builder.dirty.value) await builder.save()
 		toast.success("Form saved")
 	} catch (error) {
 		toast.error((error as FrappeError).message || "Could not save the form")
@@ -69,13 +71,7 @@ async function save() {
 			</div>
 			<TabButtons v-model="tab" :options="TABS" />
 			<div class="flex flex-1 justify-end">
-				<Button
-					variant="solid"
-					label="Save"
-					:disabled="!builder.dirty.value"
-					:loading="saving"
-					@click="save"
-				/>
+				<Button variant="solid" label="Save" :disabled="!dirty" :loading="saving" @click="save" />
 			</div>
 		</header>
 		<main class="min-h-0 flex-1 overflow-hidden bg-surface-gray-1">

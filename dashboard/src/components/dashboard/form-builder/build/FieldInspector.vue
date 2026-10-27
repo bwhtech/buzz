@@ -2,8 +2,11 @@
 import { Button, FormControl, Switch, TabButtons, Textarea } from "frappe-ui"
 import { computed } from "vue"
 
+import type { LogicRule } from "@/utils/formLogic"
+
 import { CHOICE_TYPES, fieldType } from "../fieldTypes"
 import type { DoctypeField, FormQuestion } from "../useFormBuilder"
+import TicketTypePicker from "./TicketTypePicker.vue"
 import type { QuestionEditor } from "./useQuestionEditor"
 
 const question = defineModel<FormQuestion>({ required: true })
@@ -11,6 +14,9 @@ const props = defineProps<{
 	doctypeField?: DoctypeField
 	editor: QuestionEditor
 	ruleCount: number
+	rules: LogicRule[]
+	// Set on the attendee form, where a question can be asked for some tickets only.
+	ticketTypes?: { value: string; label: string }[] | null
 }>()
 defineEmits<{ addRule: [] }>()
 
@@ -87,6 +93,13 @@ const mandatory = computed({
 				label="Options"
 				description="One option per line"
 				:rows="5"
+			/>
+
+			<TicketTypePicker
+				v-if="ticketTypes?.length && !isLayout && !question.is_standard"
+				:rules="rules"
+				:fieldname="editor.ensureFieldname(question)"
+				:ticket-types="ticketTypes"
 			/>
 
 			<div v-if="!isLayout" class="space-y-1.5">

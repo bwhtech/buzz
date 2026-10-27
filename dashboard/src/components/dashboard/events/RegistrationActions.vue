@@ -13,6 +13,7 @@ const props = defineProps<{
 	closed: boolean
 	canWrite: boolean
 	registrationLink?: string | null
+	registrationForm?: string | null
 	allowGuestBooking: boolean
 	guestVerificationMethod: string
 }>()
@@ -33,9 +34,21 @@ const guestSubtitle = computed(() => {
 })
 
 const actions = computed<QuickAction[]>(() =>
-	props.registrationLink
-		? [{ icon: "lucide-arrow-up-right", label: "Registration page", link: props.registrationLink }]
-		: [],
+	[
+		props.registrationLink
+			? { icon: "lucide-arrow-up-right", label: "Registration page", link: props.registrationLink }
+			: null,
+		props.registrationForm && props.canWrite
+			? {
+					icon: "lucide-clipboard-list",
+					label: "Edit form",
+					route: {
+						name: "event-form",
+						params: { eventId: props.event, formName: props.registrationForm },
+					},
+				}
+			: null,
+	].filter((action) => action !== null),
 )
 </script>
 

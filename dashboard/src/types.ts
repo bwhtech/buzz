@@ -807,6 +807,7 @@ export interface EventTicketTypes {
 	title: string
 	can_write: boolean
 	registration_link: string | null
+	registration_form: string | null
 	registrations_closed: boolean
 	allow_guest_booking: boolean
 	guest_verification_method: string

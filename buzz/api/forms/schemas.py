@@ -75,3 +75,5 @@ class DoctypeField(APIResponse):
 
 class FormBuilderFields(APIResponse):
 	fields: list[DoctypeField]
+	# The registration form is edited beside the event's attendee form.
+	attendee_form: str | None = None

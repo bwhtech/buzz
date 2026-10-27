@@ -11,7 +11,12 @@ import FieldRow from "./FieldRow.vue"
 import { type QuestionEditor, newQuestion, questionKey } from "./useQuestionEditor"
 
 const form = defineModel<BuzzFormDoc>({ required: true })
-const props = defineProps<{ doctypeFields: Record<string, DoctypeField>; editor: QuestionEditor }>()
+const props = defineProps<{
+	doctypeFields: Record<string, DoctypeField>
+	editor: QuestionEditor
+	// What the booking page always asks before these questions.
+	fixedFields?: string[]
+}>()
 defineEmits<{ addRule: [FormQuestion] }>()
 
 const editor = props.editor
@@ -102,6 +107,20 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 						@click.stop
 					/>
 
+					<p
+						v-if="fixedFields?.length"
+						class="mb-3 flex flex-wrap items-center gap-1.5 text-p-sm text-ink-gray-5"
+					>
+						<span class="lucide-lock size-3.5" aria-hidden="true" />
+						Always asked:
+						<span
+							v-for="label in fixedFields"
+							:key="label"
+							class="rounded-5 bg-surface-gray-2 px-1.5 py-0.5 text-ink-gray-7"
+						>
+							{{ label }}
+						</span>
+					</p>
 					<div
 						class="-mx-3 grid grid-cols-1 gap-x-2 gap-y-1 md:grid-cols-2"
 						@dragover.prevent
@@ -158,6 +177,12 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 				:doctype-field="doctypeFieldOf(form.questions[selectedIndex])"
 				:editor="editor"
 				:rule-count="rulesActingOn(form.questions[selectedIndex])"
+				:rules="form.logic_rules"
+				:ticket-types="
+					form.form_doctype === 'Event Booking Attendee'
+						? doctypeFields.ticket_type?.link_options
+						: null
+				"
 				@add-rule="$emit('addRule', form.questions[selectedIndex])"
 			/>
 			<FieldPalette

@@ -24,10 +24,18 @@ class FormBuilderService:
 		kind = form_type(doctype)
 		offered = kind.standard_fields(doctype)
 		return FormBuilderFields(
+			attendee_form=self.attendee_form(),
 			fields=[
 				self.doctype_field(df, fieldname in offered, df.reqd or fieldname in kind.locked_fieldnames)
 				for fieldname, df in get_renderable_fields(doctype, system_exclude_fields(doctype)).items()
-			]
+			],
+		)
+
+	def attendee_form(self) -> str | None:
+		if self.form.form_doctype != "Event Booking":
+			return None
+		return frappe.db.get_value(
+			"Buzz Form", {"event": self.form.event, "form_doctype": "Event Booking Attendee"}, "name"
 		)
 
 	def doctype_field(self, df, offered: bool, locked: bool) -> DoctypeField:

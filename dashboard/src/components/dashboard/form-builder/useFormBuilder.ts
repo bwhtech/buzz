@@ -98,15 +98,23 @@ export function useFormBuilder(formName: () => string) {
 		reset((await form.setValue.submit(values)) as BuzzFormDoc)
 	}
 
-	const fieldsCall = useCall<{ fields: DoctypeField[] }, { form: string }>({
+	const fieldsCall = useCall<
+		{ fields: DoctypeField[]; attendee_form: string | null },
+		{ form: string }
+	>({
 		url: "/api/v2/method/buzz.api.forms.get_form_builder_fields",
 		params: () => ({ form: formName() }),
+		// Held until there is a form to describe, then follows it.
+		immediate: !!formName(),
+		refetch: true,
 	})
 	const doctypeFields = computed(() =>
 		Object.fromEntries((fieldsCall.data?.fields ?? []).map((field) => [field.fieldname, field])),
 	)
 
-	return { form, draft, dirty, save, doctypeFields }
+	const attendeeForm = computed(() => fieldsCall.data?.attendee_form ?? "")
+
+	return { form, draft, dirty, save, doctypeFields, attendeeForm }
 }
 
 export type FormBuilder = ReturnType<typeof useFormBuilder>
