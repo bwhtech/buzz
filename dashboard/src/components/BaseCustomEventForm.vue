@@ -171,6 +171,7 @@
 </template>
 
 <script setup lang="ts">
+import DOMPurify from "dompurify"
 import { Button, Dialog, Spinner, toast, useCall, usePageMeta } from "frappe-ui"
 import { marked } from "marked"
 import { computed, reactive, ref } from "vue"
@@ -255,7 +256,8 @@ const tableDialog = reactive({
 const renderedSuccessMessage = computed(() => {
 	const msg = formData.value?.success_message
 	if (!msg) return ""
-	return marked(msg)
+	// Organisers write it, so a `javascript:` link must not reach the public page.
+	return DOMPurify.sanitize(marked(msg) as string)
 })
 
 function normalizeField(field: FormFieldDef) {

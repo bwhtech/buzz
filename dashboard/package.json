@@ -21,6 +21,7 @@
 		"@vueuse/router": "^14.4.0",
 		"canvas-confetti": "^1.9.3",
 		"cobe": "0.6.5",
+		"dompurify": "3.4.12",
 		"feather-icons": "^4.29.2",
 		"frappe-ui": "1.0.2",
 		"maplibre-gl": "5.23.0",

@@ -3,7 +3,7 @@ import re
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cstr
+from frappe.utils import cstr, validate_url
 
 from buzz.api.forms.exceptions import MandatoryFieldsHidden
 from buzz.events.doctype.buzz_form.condition_validator import ConditionValidator
@@ -62,6 +62,7 @@ class BuzzForm(Document):
 	def validate(self):
 		self.validate_unchanged_fields()
 		self.validate_route()
+		self.validate_redirect_url()
 		self.sync_standard_rows()
 		self.validate_standard_rows()
 		self.validate_questions()
@@ -86,6 +87,10 @@ class BuzzForm(Document):
 			frappe.throw(_("Use only letters, numbers, hyphens and underscores in the form route."))
 		if self.route_is_taken():
 			frappe.throw(_("This route is already used by another form of this event."))
+
+	def validate_redirect_url(self):
+		if self.redirect_url and not validate_url(self.redirect_url, valid_schemes=("http", "https")):
+			frappe.throw(_("Redirect URL must start with http:// or https://."))
 
 	def route_is_taken(self) -> bool:
 		taken = frappe.get_all(
