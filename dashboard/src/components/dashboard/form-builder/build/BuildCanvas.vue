@@ -1,0 +1,33 @@
+<script setup lang="ts">
+import EmptyState from "@/components/common/EmptyState.vue"
+
+import type { BuzzFormDoc } from "../useFormBuilder"
+import FieldRow from "./FieldRow.vue"
+
+const form = defineModel<BuzzFormDoc>({ required: true })
+</script>
+
+<template>
+	<div class="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-7">
+		<div class="rounded-8 bg-surface-base p-5 shadow-sm ring-1 ring-outline-gray-1 sm:p-8">
+			<input
+				v-model="form.title"
+				class="mb-6 w-full border-0 bg-transparent p-0 text-2xl font-semibold text-ink-gray-9 outline-none focus:ring-0"
+				aria-label="Form name"
+			/>
+			<div v-if="form.questions.length" class="-mx-3 space-y-1">
+				<FieldRow
+					v-for="(question, index) in form.questions"
+					:key="question.name ?? index"
+					v-model="form.questions[index]"
+				/>
+			</div>
+			<EmptyState
+				v-else
+				title="No questions yet"
+				description="Questions you add show up on the form after its own fields."
+				icon="lucide-list-plus"
+			/>
+		</div>
+	</div>
+</template>

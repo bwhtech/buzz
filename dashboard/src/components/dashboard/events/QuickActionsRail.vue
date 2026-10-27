@@ -1,8 +1,11 @@
 <script lang="ts">
+import type { RouteLocationRaw } from "vue-router"
+
 export type QuickAction = {
 	icon: string
 	label: string
 	link?: string
+	route?: RouteLocationRaw
 	loading?: boolean
 	onClick?: () => void
 }
@@ -50,6 +53,7 @@ defineEmits<{ toggle: [] }>()
 			variant="ghost"
 			:label="action.label"
 			:href="action.link"
+			:route="action.route"
 			:loading="action.loading"
 			@click="action.onClick?.()"
 		>

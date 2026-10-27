@@ -214,6 +214,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 				:event="eventId"
 				:title="page.data.title"
 				:proposal-link="page.data.proposal_link"
+				:proposal-form="page.data.proposal_form"
 				:closed="!!page.data.proposals_closed"
 				:can-write="!!page.data.can_write"
 				:query="exportQuery"

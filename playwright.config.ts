@@ -100,7 +100,7 @@ export default defineConfig({
 		},
 		{
 			name: "custom-forms-chromium",
-			testMatch: /custom-forms\.spec\.ts/,
+			testMatch: /(custom-forms|form-builder)\.spec\.ts/,
 			use: {
 				...devices["Desktop Chrome"],
 				storageState: authFile,

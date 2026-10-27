@@ -143,6 +143,9 @@ def event_proposals(
 		has_next_page=start + len(rows) < matched,
 		can_write=has_section_permission(event, "talks", "write", frappe.session.user),
 		proposal_link=proposal_link(doc),
+		proposal_form=frappe.db.get_value(
+			"Buzz Form", {"event": event, "form_doctype": PROPOSAL_FORM_DOCTYPE}, "name"
+		),
 		proposals_closed=are_proposals_closed(doc),
 		filter_fields=filter_fields,
 	)

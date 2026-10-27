@@ -15,6 +15,7 @@ const props = defineProps<{
 	canWrite: boolean
 	title?: string | null
 	proposalLink?: string | null
+	proposalForm?: string | null
 	// What the list is currently showing, so the export is the same list.
 	query: { search: string; filters: string; order: string }
 }>()
@@ -67,6 +68,16 @@ const actions = computed<QuickAction[]>(() =>
 	[
 		props.proposalLink
 			? { icon: "lucide-arrow-up-right", label: "Proposal page", link: props.proposalLink }
+			: null,
+		props.proposalForm && props.canWrite
+			? {
+					icon: "lucide-clipboard-list",
+					label: "Edit form",
+					route: {
+						name: "event-form",
+						params: { eventId: props.event, formName: props.proposalForm },
+					},
+				}
 			: null,
 		{
 			icon: "lucide-download",

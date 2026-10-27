@@ -54,6 +54,7 @@ export interface EventProposals {
 	can_write: boolean
 	// Where talks are proposed, and whether that page still takes them.
 	proposal_link: string | null
+	proposal_form: string | null
 	proposals_closed: boolean
 	filter_fields: FilterField[]
 }
