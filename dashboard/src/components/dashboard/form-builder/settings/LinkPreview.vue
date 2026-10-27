@@ -47,8 +47,8 @@ const description = computed(() =>
 			@success="(file: { file_url: string }) => (form.meta_image = file.file_url)"
 		>
 			<template #default="{ openFileSelector, uploading, error }">
-				<div class="overflow-hidden rounded-5 ring-1 ring-inset ring-outline-gray-2">
-					<div class="relative aspect-[1200/630] bg-surface-gray-2">
+				<div class="overflow-hidden rounded-5 border border-outline-gray-2">
+					<div class="relative aspect-[1200/630] border-b border-outline-gray-2 bg-surface-gray-2">
 						<img v-if="image" :src="image" alt="" class="size-full object-cover" />
 						<div class="absolute bottom-3 right-3 flex gap-1.5">
 							<Button
