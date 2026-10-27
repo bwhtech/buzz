@@ -198,7 +198,7 @@ function onKeydown(event: KeyboardEvent) {
 	<div
 		v-else
 		ref="row"
-		class="group relative rounded-5 px-3 py-2.5 outline-none transition-[background-color,box-shadow,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
+		class="group relative rounded-5 px-3 py-2.5 outline-none [@media(hover:hover)]:cursor-grab active:cursor-grabbing transition-[background-color,box-shadow,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
 		:class="[
 			preview
 				? ''

@@ -13,6 +13,7 @@ import FieldInspector from "./FieldInspector.vue"
 import FieldRow from "./FieldRow.vue"
 import FormHeader from "./FormHeader.vue"
 import StepBar from "./StepBar.vue"
+import { DROP_LINE_CLASSES, useCanvasDrag } from "./useCanvasDrag"
 import { type QuestionEditor, newQuestion, questionKey } from "./useQuestionEditor"
 import { useSteps } from "./useSteps"
 
@@ -82,25 +83,13 @@ const rulesActingOn = (question: FormQuestion) =>
 		rule.actions.some(([, target]) => target === question.fieldname),
 	).length
 
-const dragged = ref<FormQuestion | null>(null)
-const dropIndex = ref<number | null>(null)
-
-function onRowDragOver(index: number, event: DragEvent) {
-	if (!dragged.value) return
-	event.preventDefault()
-	const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
-	dropIndex.value = event.clientY < box.top + box.height / 2 ? index : index + 1
-}
-
-function onDrop() {
-	if (dragged.value) editor.move(dragged.value, dropIndex.value ?? steps.step.value.end)
-	endDrag()
-}
-
-function endDrag() {
-	dragged.value = null
-	dropIndex.value = null
-}
+const drag = useCanvasDrag(
+	() => stepRows.value,
+	() => form.value.questions,
+	editor,
+	() => twoColumns.value,
+)
+const dragged = drag.dragged
 
 // New fields land after the selected one, or at the end of the step on screen.
 function addItem(item: MenuItem) {
@@ -118,7 +107,7 @@ function isTyping(event: KeyboardEvent) {
 	return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)
 }
 
-useEventListener(window, "dragend", endDrag)
+useEventListener(window, "dragend", drag.end)
 
 useEventListener(window, "keydown", (event: KeyboardEvent) => {
 	if (event.defaultPrevented) return
@@ -226,7 +215,7 @@ watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.fo
 					class="grid grid-cols-2"
 					:class="isPhone ? 'gap-y-2' : '-mx-3 gap-y-1.5'"
 					@dragover.prevent
-					@drop.prevent="onDrop"
+					@drop.prevent="drag.place"
 				>
 					<div
 						v-for="({ question, index }, position) in stepRows"
@@ -236,11 +225,24 @@ watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.fo
 							'col-span-2': question.width !== 'Half' || !twoColumns,
 							'opacity-40': dragged && toRaw(dragged) === toRaw(question),
 						}"
-						@dragover="onRowDragOver(index, $event)"
+						@dragover="drag.over({ question, index }, $event)"
 					>
 						<span
-							v-if="dropIndex === index"
-							class="absolute inset-x-2 -top-1 h-0.5 rounded-full bg-surface-blue-6"
+							v-if="drag.edgeOn(index) === 'swap'"
+							class="pointer-events-none absolute inset-0 z-10 flex items-start justify-end rounded-5 p-1.5 ring-2 ring-inset ring-outline-blue-5"
+							aria-hidden="true"
+						>
+							<span
+								class="flex items-center gap-1 rounded-5 bg-surface-blue-6 px-1.5 py-0.5 text-p-xs font-medium text-ink-base"
+							>
+								<span class="lucide-arrow-left-right size-3" />
+								Swap
+							</span>
+						</span>
+						<span
+							v-else-if="drag.edgeOn(index)"
+							class="pointer-events-none absolute z-10 rounded-full bg-surface-blue-6"
+							:class="DROP_LINE_CLASSES[drag.edgeOn(index) as keyof typeof DROP_LINE_CLASSES]"
 							aria-hidden="true"
 						/>
 						<FieldRow
@@ -253,7 +255,7 @@ watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.fo
 							:is-first="index === 0"
 							:is-last="index === form.questions.length - 1"
 							:data-row="questionKey(question)"
-							@dragstart="dragged = question"
+							@dragstart="drag.start(question, $event)"
 							@navigate="(step, part) => focusRow(position + step, part)"
 							@move="(step) => moveWithinStep(position, step)"
 							@remove="removeAt(position)"
@@ -262,11 +264,11 @@ watch(inspectorOpen, (open) => open && nextTick().then(() => inspector.value?.fo
 					<div
 						v-if="!preview && !isPhone"
 						class="relative col-span-2 mt-1.5"
-						@dragover.prevent="dropIndex = steps.step.value.end"
+						@dragover.prevent="drag.overEnd(steps.step.value.end)"
 						@click.stop
 					>
 						<span
-							v-if="dropIndex === steps.step.value.end"
+							v-if="drag.edgeOn(steps.step.value.end)"
 							class="absolute inset-x-2 -top-1 h-0.5 rounded-full bg-surface-blue-6"
 							aria-hidden="true"
 						/>
