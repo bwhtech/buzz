@@ -4,27 +4,89 @@ export interface FieldType {
 	label: string
 	icon: string
 	group: FieldGroup
+	// Other words people search for this type by.
+	keywords?: string
 }
 
 // Keyed by Buzz Form Field fieldtype, in palette order.
 export const FIELD_TYPES: Record<string, FieldType> = {
-	Data: { label: "Short text", icon: "lucide-type", group: "Basic" },
-	"Small Text": { label: "Long text", icon: "lucide-align-left", group: "Basic" },
-	Email: { label: "Email", icon: "lucide-mail", group: "Basic" },
-	Phone: { label: "Phone", icon: "lucide-phone", group: "Basic" },
-	Number: { label: "Number", icon: "lucide-hash", group: "Basic" },
-	URL: { label: "Link", icon: "lucide-link", group: "Basic" },
-	Date: { label: "Date", icon: "lucide-calendar", group: "Basic" },
-	Select: { label: "Dropdown", icon: "lucide-circle-chevron-down", group: "Choice" },
-	Radio: { label: "Single choice", icon: "lucide-circle-dot", group: "Choice" },
-	"Multi Select": { label: "Multiple choice", icon: "lucide-list-checks", group: "Choice" },
-	Check: { label: "Checkbox", icon: "lucide-square-check", group: "Choice" },
-	Rating: { label: "Rating", icon: "lucide-star", group: "Choice" },
-	Attach: { label: "File upload", icon: "lucide-paperclip", group: "Media" },
-	"Attach Image": { label: "Image upload", icon: "lucide-image", group: "Media" },
-	Heading: { label: "Heading", icon: "lucide-heading", group: "Layout" },
-	Paragraph: { label: "Paragraph", icon: "lucide-pilcrow", group: "Layout" },
-	Divider: { label: "Divider", icon: "lucide-minus", group: "Layout" },
+	Data: { label: "Short text", icon: "lucide-type", group: "Basic", keywords: "input string name" },
+	"Small Text": {
+		label: "Long text",
+		icon: "lucide-align-left",
+		group: "Basic",
+		keywords: "textarea multiline answer",
+	},
+	Email: { label: "Email", icon: "lucide-mail", group: "Basic", keywords: "mail address" },
+	Phone: {
+		label: "Phone",
+		icon: "lucide-phone",
+		group: "Basic",
+		keywords: "mobile number contact whatsapp",
+	},
+	Number: {
+		label: "Number",
+		icon: "lucide-hash",
+		group: "Basic",
+		keywords: "integer amount count",
+	},
+	URL: { label: "Link", icon: "lucide-link", group: "Basic", keywords: "url website" },
+	Date: {
+		label: "Date",
+		icon: "lucide-calendar",
+		group: "Basic",
+		keywords: "day calendar birthday",
+	},
+	Select: {
+		label: "Dropdown",
+		icon: "lucide-circle-chevron-down",
+		group: "Choice",
+		keywords: "picker options",
+	},
+	Radio: {
+		label: "Single choice",
+		icon: "lucide-circle-dot",
+		group: "Choice",
+		keywords: "radio option one",
+	},
+	"Multi Select": {
+		label: "Multiple choice",
+		icon: "lucide-list-checks",
+		group: "Choice",
+		keywords: "checkboxes many options",
+	},
+	Check: {
+		label: "Checkbox",
+		icon: "lucide-square-check",
+		group: "Choice",
+		keywords: "tick toggle boolean yes no agree consent",
+	},
+	Rating: { label: "Rating", icon: "lucide-star", group: "Choice", keywords: "stars score" },
+	Attach: {
+		label: "File upload",
+		icon: "lucide-paperclip",
+		group: "Media",
+		keywords: "attachment document pdf resume",
+	},
+	"Attach Image": {
+		label: "Image upload",
+		icon: "lucide-image",
+		group: "Media",
+		keywords: "photo picture headshot",
+	},
+	Heading: { label: "Heading", icon: "lucide-heading", group: "Layout", keywords: "title section" },
+	Paragraph: {
+		label: "Paragraph",
+		icon: "lucide-pilcrow",
+		group: "Layout",
+		keywords: "text info note",
+	},
+	Divider: {
+		label: "Divider",
+		icon: "lucide-minus",
+		group: "Layout",
+		keywords: "line separator rule",
+	},
 	"Page Break": { label: "Page break", icon: "lucide-separator-horizontal", group: "Layout" },
 	// Only the form's own fields use these; they are never offered in the palette.
 	"Text Editor": { label: "Rich text", icon: "lucide-text", group: "Standard" },
@@ -194,15 +256,53 @@ export const ADD_STEP: MenuItem = {
 	fields: [],
 }
 
+const words = (text: string) =>
+	text
+		.toLowerCase()
+		.split(/[^a-z0-9]+/)
+		.filter(Boolean)
+
+// Every word typed must start a word of the terms, so "select" finds Dropdown and "ad" finds "Add step".
+export function matchesSearch(query: string, ...terms: string[]): boolean {
+	const known = words(terms.join(" "))
+	return words(query).every((typed) => known.some((word) => word.startsWith(typed)))
+}
+
+const typeMatches = (query: string, key: string) => {
+	const { label, group, keywords = "" } = FIELD_TYPES[key]
+	return matchesSearch(query, key, label, group, keywords)
+}
+
+type TypeGroup = { group: string; options: { value: string }[] }
+
+// For the "turn into" pickers, whose options carry the fieldtype as their value.
+export const filterTypeGroups = <Group extends TypeGroup>(
+	groups: Group[],
+	query: string,
+): Group[] =>
+	groups
+		.map((group) => ({
+			...group,
+			options: group.options.filter((option) => typeMatches(query, option.value)),
+		}))
+		.filter((group) => group.options.length)
+
+const presetMatches = (query: string, preset: Preset) =>
+	matchesSearch(
+		query,
+		"Ready-made readymade preset template",
+		preset.label,
+		preset.description,
+		...preset.fields.map((field) => field.label),
+	)
+
 // What the add-field menu and the palette offer, grouped and filtered by the search text.
 export function fieldMenu(formDoctype: string, query = ""): { group: string; items: MenuItem[] }[] {
-	const search = query.trim().toLowerCase()
-	const matches = (label: string) => !search || label.toLowerCase().includes(search)
 	const types = paletteTypesFor()
 	const groups = GROUP_ORDER.map((group) => ({
 		group: group as string,
 		items: types
-			.filter((key) => FIELD_TYPES[key].group === group && matches(FIELD_TYPES[key].label))
+			.filter((key) => FIELD_TYPES[key].group === group && typeMatches(query, key))
 			.map((key): MenuItem => ({
 				key,
 				label: FIELD_TYPES[key].label,
@@ -212,7 +312,7 @@ export function fieldMenu(formDoctype: string, query = ""): { group: string; ite
 			})),
 	}))
 	const presets = presetsFor(formDoctype)
-		.filter((preset) => matches(preset.label))
+		.filter((preset) => presetMatches(query, preset))
 		.map((preset): MenuItem => ({
 			key: preset.label,
 			label: preset.label,
@@ -221,7 +321,7 @@ export function fieldMenu(formDoctype: string, query = ""): { group: string; ite
 			fields: preset.fields,
 		}))
 	groups.splice(1, 0, { group: "Ready-made", items: presets })
-	if (takesSteps(formDoctype) && matches(ADD_STEP.label))
+	if (takesSteps(formDoctype) && matchesSearch(query, ADD_STEP.label, "page break section"))
 		groups.find((group) => group.group === "Layout")?.items.push(ADD_STEP)
 	return groups.filter((group) => group.items.length)
 }

@@ -2,6 +2,8 @@
 import { BottomSheet, TextInput } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
+import { filterTypeGroups } from "../fieldTypes"
+
 export interface TypeGroup {
 	group: string
 	options: { label: string; value: string; icon: string }[]
@@ -13,16 +15,7 @@ const emit = defineEmits<{ pick: [string] }>()
 
 const query = ref("")
 watch(open, (isOpen) => isOpen || (query.value = ""))
-const matches = computed(() =>
-	props.groups
-		.map(({ group, options }) => ({
-			group,
-			options: options.filter((option) =>
-				option.label.toLowerCase().includes(query.value.trim().toLowerCase()),
-			),
-		}))
-		.filter(({ options }) => options.length),
-)
+const matches = computed(() => filterTypeGroups(props.groups, query.value))
 
 function pick(fieldtype: string) {
 	open.value = false

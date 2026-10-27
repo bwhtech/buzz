@@ -3,7 +3,7 @@ import { Badge, Button, Combobox, Dropdown, Tooltip } from "frappe-ui"
 import { computed, ref, toRaw, watch } from "vue"
 
 import ActionSheet from "../ActionSheet.vue"
-import { FIELD_TYPES, fieldType } from "../fieldTypes"
+import { FIELD_TYPES, fieldType, filterTypeGroups } from "../fieldTypes"
 import type { DoctypeField, FormQuestion } from "../useFormBuilder"
 import FieldPreview from "./FieldPreview.vue"
 import TypeSheet from "./TypeSheet.vue"
@@ -51,6 +51,9 @@ const convertTargets = computed(() => {
 	}
 	return Object.entries(groups).map(([group, options]) => ({ group, options }))
 })
+
+const typeQuery = ref("")
+const matchingTargets = computed(() => filterTypeGroups(convertTargets.value, typeQuery.value))
 
 const moreOptions = computed(() => [
 	{
@@ -235,7 +238,10 @@ function onKeydown(event: KeyboardEvent) {
 				v-else
 				trigger="button"
 				:model-value="question.fieldtype"
-				:options="convertTargets"
+				v-model:query="typeQuery"
+				:options="matchingTargets"
+				:filterable="false"
+				@update:open="(isOpen: boolean) => isOpen || (typeQuery = '')"
 				placeholder="Search field types"
 				empty-text="No field type matches"
 				align="start"
