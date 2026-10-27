@@ -174,7 +174,7 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 				</p>
 
 				<StepBar
-					v-if="hasSteps"
+					v-if="hasSteps && steps.steps.value.length > 1"
 					:steps="steps"
 					:questions="form.questions"
 					:compact="isPhone"
@@ -229,6 +229,18 @@ useEventListener(window, "keydown", (event: KeyboardEvent) => {
 						<FieldComposer ref="composer" :form-doctype="form.form_doctype" @pick="addItem" />
 					</div>
 				</div>
+
+				<button
+					v-if="hasSteps && !preview"
+					type="button"
+					class="mt-8 flex w-full items-center gap-3 text-p-sm text-ink-gray-5 transition-colors hover:text-ink-gray-8"
+					@click.stop="steps.add()"
+				>
+					<span class="flex-1 border-t border-dashed border-outline-gray-3" aria-hidden="true" />
+					<span class="lucide-separator-horizontal size-4" aria-hidden="true" />
+					Add a step after this
+					<span class="flex-1 border-t border-dashed border-outline-gray-3" aria-hidden="true" />
+				</button>
 
 				<div class="mt-5 flex items-center gap-3" @click.stop>
 					<Button
