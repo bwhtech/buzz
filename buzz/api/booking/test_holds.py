@@ -37,7 +37,7 @@ class HoldTestCase(BookingTestCase):
 			{"first_name": f"Booker {index}", "email": "booker@example.com", "ticket_type": self.name}
 			for index in range(quantity)
 		]
-		return process_booking(self.booking_request(attendees=attendees, hold_token=hold_token))
+		return self.process_as_booker(self.booking_request(attendees=attendees, hold_token=hold_token))
 
 	def holds_of(self, hold_token: str) -> int:
 		return frappe.db.count("Ticket Hold", {"hold_token": hold_token})
@@ -248,7 +248,7 @@ class TestDraftBookingHold(HoldTestCase):
 		method = str(OfflinePaymentMethodFactory.create(event=self.event.name).name)
 		attendees = [{"first_name": "Offline", "email": "offline@example.com", "ticket_type": self.name}]
 		request = self.booking_request(attendees=attendees, is_offline=True, offline_payment_method=method)
-		return process_booking(request)
+		return self.process_as_booker(request)
 
 
 class TestAvailabilityView(HoldTestCase):

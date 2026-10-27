@@ -82,7 +82,7 @@ class TestBookingCurrency(BookingTestCase):
 		)
 
 		with self.assertRaises(frappe.ValidationError):
-			process_booking(request)
+			self.process_as_booker(request)
 		self.assertIn("USD", frappe.local.message_log[-1]["message"])
 
 	def test_free_ticket_can_be_booked_in_usd(self):

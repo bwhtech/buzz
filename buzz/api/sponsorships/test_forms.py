@@ -14,6 +14,8 @@ from buzz.api.sponsorships import (
 from buzz.api.sponsorships.exceptions import EnquiryNotAccessible
 from buzz.tests.factories import BuzzEventFactory, SponsorshipTierFactory, UserFactory
 
+APPLICANT = "sponsor-applicant@example.com"
+
 
 class SponsorFormTestCase(IntegrationTestCase):
 	def setUp(self):
@@ -24,6 +26,15 @@ class SponsorFormTestCase(IntegrationTestCase):
 		)
 		self.form.publish = 1
 		self.form.save(ignore_permissions=True)
+
+	def submit(self, *args, **kwargs):
+		"""Enquiries come from website users; a System User would pass checks they must meet."""
+		with self.set_user(UserFactory.create_once(APPLICANT).name):
+			return submit_enquiry_form(*args, **kwargs)
+
+	def submit_generic(self, *args, **kwargs):
+		with self.set_user(UserFactory.create_once(APPLICANT).name):
+			return submit_custom_form(*args, **kwargs)
 
 	def form_values(self, **extra):
 		return {"company_name": "Acme", "company_logo": "/files/acme.png", **extra}
@@ -68,10 +79,11 @@ class TestSponsorFormData(SponsorFormTestCase):
 		self.assertFalse(contact["default"])
 
 	def test_signed_in_user_gets_their_email_prefilled(self):
-		contact = self.contact_field()
+		with self.set_user(UserFactory.create_once(APPLICANT).name):
+			contact = self.contact_field()
 
 		self.assertTrue(contact["reqd"])
-		self.assertEqual(contact["default"], frappe.db.get_value("User", "Administrator", "email"))
+		self.assertEqual(contact["default"], APPLICANT)
 
 	def test_hiding_contact_email_is_refused(self):
 		self.form.excluded_fields = "contact_email"
@@ -95,7 +107,7 @@ class TestSponsorFormData(SponsorFormTestCase):
 
 class TestSponsorFormSubmission(SponsorFormTestCase):
 	def test_submission_records_form_and_drops_forged_values(self):
-		name = submit_enquiry_form(
+		name = self.submit(
 			self.event.route,
 			self.form_values(event="forged", status="Paid", enquiry_form="forged"),
 		)
@@ -106,41 +118,38 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 		self.assertEqual(enquiry.status, "Approval Pending")
 
 	def test_signed_in_submission_without_contact_email_uses_their_email(self):
-		name = submit_enquiry_form(self.event.route, self.form_values())
+		name = self.submit(self.event.route, self.form_values())
 
-		self.assertEqual(
-			frappe.db.get_value("Sponsorship Enquiry", name, "contact_email"),
-			frappe.db.get_value("User", "Administrator", "email"),
-		)
+		self.assertEqual(frappe.db.get_value("Sponsorship Enquiry", name, "contact_email"), APPLICANT)
 
 	def test_signed_in_user_may_give_another_contact_email(self):
-		name = submit_enquiry_form(self.event.route, self.form_values(contact_email="team@example.com"))
+		name = self.submit(self.event.route, self.form_values(contact_email="team@example.com"))
 
 		enquiry = frappe.get_doc("Sponsorship Enquiry", name)
 		self.assertEqual(enquiry.contact_email, "team@example.com")
-		self.assertEqual(enquiry.owner, "Administrator")
+		self.assertEqual(enquiry.owner, APPLICANT)
 
 	def test_generic_submission_delegates_to_dedicated_service(self):
-		submit_custom_form(self.event.route, self.form.route, self.form_values(company_name="Generic"))
+		self.submit_generic(self.event.route, self.form.route, self.form_values(company_name="Generic"))
 		enquiry = frappe.get_last_doc("Sponsorship Enquiry", filters={"company_name": "Generic"})
 
 		self.assertEqual(enquiry.enquiry_form, self.form.name)
 
 	def test_standard_field_validation_is_preserved(self):
 		with self.assertRaises(frappe.MandatoryError):
-			submit_enquiry_form(self.event.route, {"company_logo": "/files/acme.png"})
+			self.submit(self.event.route, {"company_logo": "/files/acme.png"})
 
 		with self.assertRaises(frappe.ValidationError):
-			submit_enquiry_form(self.event.route, self.form_values(website="not-a-url"))
+			self.submit(self.event.route, self.form_values(website="not-a-url"))
 
 		with self.assertRaises(frappe.ValidationError):
-			submit_enquiry_form(self.event.route, self.form_values(phone="not-a-phone"))
+			self.submit(self.event.route, self.form_values(phone="not-a-phone"))
 
 	def test_cross_event_tier_is_rejected(self):
 		tier = SponsorshipTierFactory.create()
 
 		with self.assertRaises(frappe.ValidationError):
-			submit_enquiry_form(self.event.route, self.form_values(tier=tier.name))
+			self.submit(self.event.route, self.form_values(tier=tier.name))
 
 	def test_disabled_tier_is_excluded_from_link_options(self):
 		enabled = SponsorshipTierFactory.create(event=self.event.name)
@@ -158,7 +167,7 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 		tier = SponsorshipTierFactory.create(event=self.event.name, enabled=0)
 
 		with self.assertRaises(frappe.ValidationError):
-			submit_enquiry_form(self.event.route, self.form_values(tier=tier.name))
+			self.submit(self.event.route, self.form_values(tier=tier.name))
 
 	def test_guest_submission_requires_a_valid_contact_email(self):
 		self.enterContext(self.set_user("Guest"))
@@ -200,11 +209,9 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 		self.add_question(label="Package", fieldname="package", fieldtype="Select", options="Gold\nSilver")
 
 		with self.assertRaises(frappe.MandatoryError):
-			submit_enquiry_form(
-				self.event.route, self.form_values(), custom_fields_data={"newsletter": False}
-			)
+			self.submit(self.event.route, self.form_values(), custom_fields_data={"newsletter": False})
 
-		name = submit_enquiry_form(
+		name = self.submit(
 			self.event.route,
 			self.form_values(),
 			custom_fields_data={"budget": 0, "newsletter": False, "package": "Gold"},
@@ -215,14 +222,14 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 		self.assertEqual(answers, {"budget": "0", "newsletter": "0", "package": "Gold"})
 
 		with self.assertRaises(frappe.ValidationError):
-			submit_enquiry_form(
+			self.submit(
 				self.event.route,
 				self.form_values(),
 				custom_fields_data={"budget": 10, "newsletter": 1, "package": "Bronze"},
 			)
 
 		with self.assertRaises(frappe.ValidationError):
-			submit_enquiry_form(
+			self.submit(
 				self.event.route,
 				self.form_values(),
 				custom_fields_data={"budget": 10, "newsletter": 1, "unknown": "x"},
@@ -238,7 +245,7 @@ class TestSponsorFormConditions(SponsorFormTestCase):
 	def test_an_answer_to_a_hidden_question_is_dropped(self):
 		self.add_question(depends_on=condition("tier", "=", self.gold.name))
 
-		name = submit_enquiry_form(
+		name = self.submit(
 			self.event.route, self.form_values(tier=self.silver.name), custom_fields_data={"budget": 1000}
 		)
 
@@ -247,7 +254,7 @@ class TestSponsorFormConditions(SponsorFormTestCase):
 	def test_a_shown_question_keeps_its_answer(self):
 		self.add_question(depends_on=condition("tier", "=", self.gold.name))
 
-		name = submit_enquiry_form(
+		name = self.submit(
 			self.event.route, self.form_values(tier=self.gold.name), custom_fields_data={"budget": 1000}
 		)
 
@@ -256,16 +263,16 @@ class TestSponsorFormConditions(SponsorFormTestCase):
 	def test_a_hidden_mandatory_question_does_not_block_submit(self):
 		self.add_question(mandatory=1, depends_on=condition("tier", "=", self.gold.name))
 
-		self.assertTrue(submit_enquiry_form(self.event.route, self.form_values(tier=self.silver.name)))
+		self.assertTrue(self.submit(self.event.route, self.form_values(tier=self.silver.name)))
 		with self.assertRaises(frappe.MandatoryError):
-			submit_enquiry_form(self.event.route, self.form_values(tier=self.gold.name))
+			self.submit(self.event.route, self.form_values(tier=self.gold.name))
 
 	def test_a_conditionally_required_question_must_be_answered_when_shown(self):
 		self.add_question(mandatory_depends_on=condition("tier", "=", self.gold.name))
 
 		with self.assertRaises(frappe.MandatoryError):
-			submit_enquiry_form(self.event.route, self.form_values(tier=self.gold.name))
-		self.assertTrue(submit_enquiry_form(self.event.route, self.form_values(tier=self.silver.name)))
+			self.submit(self.event.route, self.form_values(tier=self.gold.name))
+		self.assertTrue(self.submit(self.event.route, self.form_values(tier=self.silver.name)))
 
 	def test_form_data_carries_help_text_and_conditions(self):
 		self.add_question(description="In dollars", depends_on=condition("tier", "=", self.gold.name))

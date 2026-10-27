@@ -16,9 +16,11 @@ from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
 	SponsorshipTierFactory,
+	UserFactory,
 )
 
 SPEAKERS = [{"first_name": "Jane", "email": "jane@example.com"}]
+SUBMITTER = "form-submitter@example.com"
 
 
 class FormsTestCase(IntegrationTestCase):
@@ -37,6 +39,11 @@ class FormsTestCase(IntegrationTestCase):
 		form.update({"publish": 1, **form_fields})
 		form.save(ignore_permissions=True)
 		return event, form.route
+
+	def submit(self, *args, **kwargs):
+		"""Forms are filled by website users; a System User would pass checks they must meet."""
+		with self.set_user(UserFactory.create_once(SUBMITTER).name):
+			return submit_custom_form(*args, **kwargs)
 
 	def submitted_proposal(self, title: str):
 		return frappe.get_last_doc("Talk Proposal", filters={"title": title})
@@ -87,7 +94,7 @@ class TestCustomFormExcludedFields(FormsTestCase):
 		event, form_route = self.build_event(excluded_fields="phone")
 		data = {"title": "Hidden Phone", "description": "<p>desc</p>", "speakers": SPEAKERS}
 
-		submit_custom_form(event.route, form_route, data={**data, "phone": "+919999999999"})
+		self.submit(event.route, form_route, data={**data, "phone": "+919999999999"})
 
 		created = self.submitted_proposal("Hidden Phone")
 		self.assertEqual(str(created.event), str(event.name))
@@ -202,7 +209,7 @@ class TestCustomFormClosing(FormsTestCase):
 		event, form_route = self.build_event(auto_close_at=add_to_date(now_datetime(), days=-1))
 
 		with self.assertRaises(SubmissionsClosed):
-			submit_custom_form(event.route, form_route, data={"title": "Too late"})
+			self.submit(event.route, form_route, data={"title": "Too late"})
 
 		self.assertEqual(frappe.local.message_log[-1]["title"], "Submissions Closed")
 
@@ -222,6 +229,7 @@ class TestCustomFormCustomFields(FormsTestCase):
 
 		values = [(row.fieldname, row.value) for row in created.additional_fields]
 		self.assertEqual(values, [("dietary_preference", "Vegetarian")])
+		self.assertEqual(created.owner, SUBMITTER)
 
 	def test_blank_values_are_not_appended(self):
 		created = self.submit_with_question("Blank", {"dietary_preference": ""})
@@ -238,14 +246,34 @@ class TestCustomFormCustomFields(FormsTestCase):
 		)
 
 		with self.assertRaises(frappe.MandatoryError):
-			submit_custom_form(event.route, "feedback", data={"how_can_we_improve": "Fine"})
+			self.submit(event.route, "feedback", data={"how_can_we_improve": "Fine"})
 
 	def test_an_answer_to_an_unknown_question_is_refused(self):
 		event = BuzzEventFactory.create(team=self.team)
 		self.add_question(self.form_of(event.name, "Event Feedback"), fieldname="feedback")
 
 		with self.assertRaises(UnknownQuestions):
-			submit_custom_form(event.route, "feedback", data={}, custom_fields_data={"unasked": "value"})
+			self.submit(event.route, "feedback", data={}, custom_fields_data={"unasked": "value"})
+
+	def test_feedback_answers_land_in_additional_fields(self):
+		event = BuzzEventFactory.create(team=self.team)
+		self.add_question(
+			self.form_of(event.name, "Event Feedback"), fieldname="highlight", label="Highlight"
+		)
+
+		self.submit(
+			event.route,
+			"feedback",
+			data={"how_can_we_improve": "More coffee"},
+			custom_fields_data={"highlight": "The keynote"},
+		)
+
+		feedback = frappe.get_last_doc("Event Feedback", filters={"event": event.name})
+		self.assertEqual(feedback.how_can_we_improve, "More coffee")
+		self.assertEqual(feedback.owner, SUBMITTER)
+		self.assertEqual(
+			[(row.fieldname, row.value) for row in feedback.additional_fields], [("highlight", "The keynote")]
+		)
 
 	def test_a_disabled_question_is_not_asked(self):
 		event, form_route = self.build_event_with_question(enabled=0)
@@ -266,7 +294,7 @@ class TestCustomFormCustomFields(FormsTestCase):
 	def submit_with_question(self, title: str, custom_fields_data: dict):
 		event, form_route = self.build_event_with_question()
 		data = {"title": title, "speakers": SPEAKERS}
-		submit_custom_form(event.route, form_route, data=data, custom_fields_data=custom_fields_data)
+		self.submit(event.route, form_route, data=data, custom_fields_data=custom_fields_data)
 		return self.submitted_proposal(title)
 
 

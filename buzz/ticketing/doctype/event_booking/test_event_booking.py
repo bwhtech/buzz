@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 import frappe
 
-from buzz.api.booking import process_booking
 from buzz.tests.base_test_cases import BookingTestCase
 from buzz.tests.factories import EventBookingFactory, EventTicketFactory, EventTicketTypeFactory
 
@@ -79,7 +78,7 @@ class TestProcessBooking(BookingTestCase):
 	def test_saves_utm_parameters(self):
 		utm_parameters = [{"utm_name": name, "value": value} for name, value in UTM_PARAMETERS.items()]
 
-		payload = process_booking(self.booking_request(utm_parameters=utm_parameters))
+		payload = self.process_as_booker(self.booking_request(utm_parameters=utm_parameters))
 
 		booking = frappe.get_doc("Event Booking", payload.booking_name)
 		self.assertEqual({row.utm_name: row.value for row in booking.utm_parameters}, UTM_PARAMETERS)
@@ -88,7 +87,7 @@ class TestProcessBooking(BookingTestCase):
 		self.set_event({"is_published": 0})
 
 		with self.assertRaises(frappe.ValidationError) as raised:
-			process_booking(self.booking_request())
+			self.process_as_booker(self.booking_request())
 
 		self.assertIn("Event is not live", str(raised.exception))
 
@@ -107,4 +106,4 @@ class TestZoomBackedCategoryBooking(BookingTestCase):
 
 	def book_without_last_name(self, category: str):
 		self.set_event({"category": category})
-		return process_booking(self.booking_request())
+		return self.process_as_booker(self.booking_request())

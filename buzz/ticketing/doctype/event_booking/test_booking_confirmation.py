@@ -7,7 +7,6 @@ from buzz.api.booking import (
 	download_tickets,
 	get_booking_confirmation,
 	get_calendar_invite,
-	process_booking,
 )
 from buzz.api.booking.downloads import inlined_qr
 from buzz.api.booking.services import get_booking_access_token, verify_booking_access_token
@@ -30,7 +29,7 @@ class TestBookingConfirmation(BookingTestCase):
 		self.assertFalse(verify_booking_access_token("B-OTHER-002", token))
 
 	def test_free_booking_redirects_to_the_token_gated_success_page(self):
-		payload = process_booking(self.booking_request())
+		payload = self.process_as_booker(self.booking_request())
 
 		path, token = payload.redirect_to.split("?token=")
 		self.assertEqual(path, f"/booking-success/{payload.booking_name}")
