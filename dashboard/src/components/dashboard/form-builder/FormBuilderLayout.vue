@@ -55,6 +55,7 @@ const link = computed(() => {
 	if (!form || ["Event Booking", "Event Booking Attendee"].includes(form.form_doctype)) return ""
 	return `${window.location.origin}/b/${event.doc?.route ?? ""}/${form.route}`
 })
+const openForm = () => window.open(link.value, "_blank")
 const publishMenuOpen = ref(false)
 const publishActions = computed(() => [
 	...(link.value
@@ -67,11 +68,7 @@ const publishActions = computed(() => [
 						toast.success("Link copied")
 					},
 				},
-				{
-					label: "Open form",
-					icon: "lucide-external-link",
-					onClick: () => window.open(link.value, "_blank"),
-				},
+				{ label: "Open form", icon: "lucide-external-link", onClick: openForm },
 			]
 		: []),
 	{
@@ -215,6 +212,14 @@ async function publish(on = true) {
 			<TabButtons v-model="tab" :options="TABS" />
 
 			<div class="flex items-center justify-end gap-1.5">
+				<Tooltip v-if="live && link" text="Go to form">
+					<Button
+						variant="ghost"
+						icon="lucide-arrow-up-right"
+						label="Go to form"
+						@click="openForm"
+					/>
+				</Tooltip>
 				<template v-if="tab === 'build'">
 					<Tooltip :text="preview ? 'Back to editing' : 'Preview'">
 						<Button
