@@ -35,7 +35,6 @@ function onKeydown(event: KeyboardEvent) {
 				key: "Data",
 				label: "",
 				icon: "",
-				hint: "",
 				fields: [{ fieldtype: "Data", label: text.value.trim() }],
 			})
 		else if (items.value[active.value]) pick(items.value[active.value])

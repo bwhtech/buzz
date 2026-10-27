@@ -135,11 +135,7 @@ const fieldCount = (index: number) => {
 		</BottomSheet>
 	</template>
 
-	<div
-		v-else-if="steps.steps.value.length > 1"
-		class="mb-7 flex min-w-0 items-center gap-2.5 overflow-hidden"
-		@click.stop
-	>
+	<div v-else class="mb-7 flex min-w-0 items-center gap-2.5 overflow-hidden" @click.stop>
 		<template v-for="(step, index) in steps.steps.value" :key="index">
 			<button
 				type="button"

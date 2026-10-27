@@ -76,10 +76,6 @@ export function useQuestionEditor(questions: () => FormQuestion[], rules: () => 
 		selected.value = questions()[at]
 	}
 
-	function insertAfterSelection(added: FormQuestion[]) {
-		insert(selected.value ? indexOf(selected.value) + 1 : questions().length, added)
-	}
-
 	function duplicate(question: FormQuestion) {
 		const copy = Object.fromEntries(COPIED_FIELDS.map((key) => [key, question[key]]))
 		insert(indexOf(question) + 1, [
@@ -144,7 +140,6 @@ export function useQuestionEditor(questions: () => FormQuestion[], rules: () => 
 		settingsOpen,
 		indexOf,
 		insert,
-		insertAfterSelection,
 		duplicate,
 		remove,
 		move,

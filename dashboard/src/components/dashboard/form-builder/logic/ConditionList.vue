@@ -76,7 +76,7 @@ defineExpose({ addCondition })
 		class="flex min-h-7 items-start gap-1.5"
 	>
 		<div class="flex min-w-0 flex-wrap items-center gap-1.5">
-			<span v-if="leadWords" class="flex w-11 shrink-0">
+			<span v-if="leadWords || index > 0" :class="leadWords ? 'flex w-11 shrink-0' : 'contents'">
 				<span v-if="index === 0" class="text-p-base font-medium text-ink-gray-6">If</span>
 				<LogicPill
 					v-else
@@ -86,13 +86,6 @@ defineExpose({ addCondition })
 					@click="readonly || toggleMatch()"
 				/>
 			</span>
-			<LogicPill
-				v-else-if="index > 0"
-				kind="join"
-				:label="rule.match === 'any' ? 'or' : 'and'"
-				:aria-label="`Match ${rule.match === 'any' ? 'all' : 'any'} conditions`"
-				@click="readonly || toggleMatch()"
-			/>
 			<LogicPill
 				:kind="pillKind"
 				:label="fieldOf(condition)?.label ?? condition[0]"

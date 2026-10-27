@@ -242,7 +242,6 @@ export interface MenuItem {
 	key: string
 	label: string
 	icon: string
-	hint: string
 	fields: PresetField[]
 }
 
@@ -252,7 +251,6 @@ export const ADD_STEP: MenuItem = {
 	key: "Add step",
 	label: "Add step",
 	icon: FIELD_TYPES["Page Break"].icon,
-	hint: "",
 	fields: [],
 }
 
@@ -307,7 +305,6 @@ export function fieldMenu(formDoctype: string, query = ""): { group: string; ite
 				key,
 				label: FIELD_TYPES[key].label,
 				icon: FIELD_TYPES[key].icon,
-				hint: "",
 				fields: [{ fieldtype: key, label: FIELD_TYPES[key].label }],
 			})),
 	}))
@@ -317,7 +314,6 @@ export function fieldMenu(formDoctype: string, query = ""): { group: string; ite
 			key: preset.label,
 			label: preset.label,
 			icon: preset.icon,
-			hint: preset.description,
 			fields: preset.fields,
 		}))
 	groups.splice(1, 0, { group: "Ready-made", items: presets })

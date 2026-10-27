@@ -21,7 +21,6 @@ function run(action: SheetAction) {
 <template>
 	<BottomSheet v-model:open="open" :title="title">
 		<div class="flex flex-col px-2 pb-6">
-			<slot />
 			<button
 				v-for="action in actions"
 				:key="action.label"
