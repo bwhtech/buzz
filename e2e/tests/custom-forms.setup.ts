@@ -1,18 +1,25 @@
 import { test as setup, expect, type APIRequestContext } from "@playwright/test"
 
 import {
+	ATTENDEE_EMAIL,
+	ATTENDEE_PASSWORD,
+	ATTENDEE_QUESTION,
+	ATTENDEE_STATE_PATH,
+	BOOKING_QUESTION,
 	CLOSED_FORM_MESSAGE,
 	CLOSED_FORM_ROUTE,
 	CLOSED_FORM_TITLE,
 	CUSTOM_FORMS_EVENT_ROUTE,
 	MEMBERS_ONLY_FORM_ROUTE,
 } from "../data/custom-forms"
+import { createUserWithRoles, saveLoginState } from "../helpers/auth"
 import {
 	createDoc,
 	docExists,
 	ensureEventHost,
 	ensureTestTeam,
 	getList,
+	openRegistrations,
 	updateDoc,
 } from "../helpers/frappe"
 
@@ -23,15 +30,24 @@ interface NamedDoc {
 const testCategoryName = "E2E Test Category"
 const testHostName = "E2E Test Host"
 
-setup("setup custom forms on test event", async ({ request }) => {
+setup("setup custom forms on test event", async ({ request, baseURL }) => {
 	let eventName: string
 
 	const events = await getList<NamedDoc>(request, "Buzz Event", {
 		filters: { route: ["=", CUSTOM_FORMS_EVENT_ROUTE] },
 	})
 
+	const futureDate = new Date()
+	futureDate.setMonth(futureDate.getMonth() + 1)
+	const startDate = futureDate.toISOString().split("T")[0]
+
 	if (events.length > 0) {
 		eventName = events[0].name
+		// A reused event must not have ended, or its registrations stay closed.
+		await updateDoc(request, "Buzz Event", eventName, {
+			start_date: startDate,
+			end_date: startDate,
+		})
 	} else {
 		if (!(await docExists(request, "Event Category", testCategoryName))) {
 			await createDoc(request, "Event Category", {
@@ -43,10 +59,6 @@ setup("setup custom forms on test event", async ({ request }) => {
 		const team = await ensureTestTeam(request)
 
 		const host = await ensureEventHost(request, testHostName, team)
-
-		const futureDate = new Date()
-		futureDate.setMonth(futureDate.getMonth() + 1)
-		const startDate = futureDate.toISOString().split("T")[0]
 
 		const event = await createDoc<NamedDoc>(request, "Buzz Event", {
 			team,
@@ -92,6 +104,20 @@ setup("setup custom forms on test event", async ({ request }) => {
 	})
 	expect(publishedForms.length).toBe(forms.length)
 
+	await setRegistrationQuestions(request, eventName)
+	await createUserWithRoles(request, {
+		email: ATTENDEE_EMAIL,
+		firstName: "Attendee",
+		password: ATTENDEE_PASSWORD,
+		roles: ["Buzz User"],
+		userType: "Website User",
+	})
+	await saveLoginState(baseURL!, {
+		email: ATTENDEE_EMAIL,
+		password: ATTENDEE_PASSWORD,
+		statePath: ATTENDEE_STATE_PATH,
+	})
+
 	console.log(
 		`Custom forms enabled on event: ${eventName} (${publishedForms.length} forms: ${forms.map((form) => form.route).join(", ")})`,
 	)
@@ -105,6 +131,7 @@ interface FormInput {
 	auto_close_at?: string
 	closed_title?: string
 	closed_message?: string
+	questions?: Record<string, unknown>[]
 }
 
 async function ensureForm(
@@ -120,4 +147,28 @@ async function ensureForm(
 		return
 	}
 	await createDoc(request, "Buzz Form", { event: eventName, title: form.form_doctype, ...form })
+}
+
+function question(fields: { label: string; fieldname: string }) {
+	return [{ ...fields, fieldtype: "Data", enabled: 1 }]
+}
+
+// Booking questions are asked once per booking, attendee questions once per ticket.
+async function setRegistrationQuestions(
+	request: APIRequestContext,
+	eventName: string,
+): Promise<void> {
+	await ensureForm(request, eventName, {
+		form_doctype: "Event Booking",
+		route: "register",
+		publish: 1,
+		questions: question(BOOKING_QUESTION),
+	})
+	await ensureForm(request, eventName, {
+		form_doctype: "Event Booking Attendee",
+		route: "register-attendee",
+		publish: 0,
+		questions: question(ATTENDEE_QUESTION),
+	})
+	await openRegistrations(request, eventName)
 }
