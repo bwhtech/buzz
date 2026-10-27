@@ -6,25 +6,17 @@ import { useIsMobile } from "@/composables/useIsMobile"
 import { useEventDoc } from "@/data/events"
 import type { FrappeError } from "@/types"
 
-import type { FormBuilder } from "./useFormBuilder"
+import { type FormBuilder, FORM_SECTIONS } from "./useFormBuilder"
 
 // Registration edits two forms at once; the first one names the page.
 const props = defineProps<{ builders: FormBuilder[]; eventId: string }>()
 const tab = defineModel<string>("tab", { required: true })
 
-// Where each form type lives in the event workspace, so the crumb leads back there.
-const SECTIONS: Record<string, { label: string; route: string }> = {
-	"Talk Proposal": { label: "Talks", route: "event-talks" },
-	"Sponsorship Enquiry": { label: "Sponsorships", route: "event-sponsorships" },
-	"Event Booking": { label: "Registrations", route: "event-registrations" },
-	"Event Booking Attendee": { label: "Registrations", route: "event-registrations" },
-}
-
 const event = useEventDoc(() => props.eventId)
 const draft = computed(() => props.builders[0].draft.value)
 
 const section = computed(() => {
-	const { label, route } = SECTIONS[draft.value?.form_doctype ?? ""] ?? {
+	const { label, route } = FORM_SECTIONS[draft.value?.form_doctype ?? ""] ?? {
 		label: "Settings",
 		route: "event-settings",
 	}

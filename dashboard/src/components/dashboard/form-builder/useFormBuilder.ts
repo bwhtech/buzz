@@ -52,6 +52,14 @@ export interface DoctypeField {
 	locked: boolean
 }
 
+// Where each form type lives in the event workspace, so the crumb leads back there.
+export const FORM_SECTIONS: Record<string, { label: string; route: string }> = {
+	"Talk Proposal": { label: "Talks", route: "event-talks" },
+	"Sponsorship Enquiry": { label: "Sponsorships", route: "event-sponsorships" },
+	"Event Booking": { label: "Registrations", route: "event-registrations" },
+	"Event Booking Attendee": { label: "Registrations", route: "event-registrations" },
+}
+
 // What the builder edits; everything else on the doc is the server's to set.
 const EDITABLE_FIELDS = [
 	"title",

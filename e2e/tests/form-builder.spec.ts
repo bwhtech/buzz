@@ -195,3 +195,17 @@ test.describe("on a phone", () => {
 		await expect(page.getByRole("dialog").getByText("Placeholder")).toBeVisible()
 	})
 })
+
+test("event settings list the feedback form and open it in the builder", async ({
+	page,
+	request,
+}) => {
+	const [event] = await getList<NamedDoc>(request, "Buzz Event", {
+		filters: { route: ["=", CUSTOM_FORMS_EVENT_ROUTE] },
+	})
+	await page.goto(`/b/manage/events/${event.name}/settings`)
+	await expect(page.getByRole("heading", { name: "Forms" })).toBeVisible()
+	await page.getByRole("link", { name: "Edit" }).first().click()
+	await expect(page.getByRole("radio", { name: "Build" })).toBeVisible()
+	await expect(page.getByRole("link", { name: "Back to Settings" })).toBeVisible()
+})

@@ -157,6 +157,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 
 		<template v-if="page.data?.form" #sidebar>
 			<EventSponsorshipActions
+				:event="eventId"
 				:form="page.data.form"
 				:can-write="!!page.data.can_write"
 				:can-import="canImport"
