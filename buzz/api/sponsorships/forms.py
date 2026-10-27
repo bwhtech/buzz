@@ -1,8 +1,6 @@
 import frappe
 from frappe import _
 
-from buzz.api.forms.answers import CustomAnswers
-from buzz.api.forms.exceptions import SubmissionsClosed
 from buzz.api.forms.fields import get_form_fields
 from buzz.api.forms.services import CustomFormService
 from buzz.events.doctype.buzz_form.form_types import ENQUIRY_FIELDS
@@ -47,21 +45,10 @@ class SponsorFormService(CustomFormService):
 				field["default"] = session_user_email()
 		return fields
 
-	def submit(self, data, custom_fields_data=None) -> str:
-		"""Record one enquiry against this form and return its name."""
-		self.check_login()
-		if self.is_closed:
-			SubmissionsClosed.throw()
-		values = frappe.parse_json(data) or {}
-		if not isinstance(values, dict):
-			frappe.throw(_("Could not read the submitted form. Please reload the page and try again."))
-		enquiry = frappe.get_doc(self.build_doc_data(values))
+	def prepare_submission(self, enquiry):
 		enquiry.enquiry_form = self.form.name
 		enquiry.contact_email = enquiry.contact_email or session_user_email()
-		answers = frappe.parse_json(custom_fields_data) or {}
-		enquiry.set("additional_fields", CustomAnswers(self.form.questions).rows(answers, context=values))
 		self.validate_tier_belongs_to_event(enquiry.tier)
-		return enquiry.insert(ignore_permissions=True).name
 
 	def validate_tier_belongs_to_event(self, tier):
 		if not tier:

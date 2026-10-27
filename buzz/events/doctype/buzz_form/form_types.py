@@ -72,10 +72,6 @@ class FormType:
 	reserved_fieldnames = frozenset()
 	answers_field = "additional_fields"
 
-	def condition_fields(self, form, question) -> dict:
-		"""Fields a condition on this question may name besides the form's own fields."""
-		return {}
-
 	def is_closed(self, form) -> bool:
 		return is_form_closed(form.publish, form.auto_close_at, event_time_zone(form.event))
 
@@ -146,9 +142,6 @@ class AttendeeFormType(FormType):
 
 	def open(self, form):
 		pass
-
-	def condition_fields(self, form, question) -> dict:
-		return {"ticket_type": frappe.get_meta(ATTENDEE_FORM_DOCTYPE).get_field("ticket_type")}
 
 
 FORM_TYPES = {

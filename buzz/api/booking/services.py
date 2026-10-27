@@ -31,6 +31,7 @@ from buzz.api.forms.answers import CustomAnswers
 from buzz.events.doctype.buzz_form.form_types import (
 	ATTENDEE_FORM_DOCTYPE,
 	REGISTRATION_FORM_DOCTYPE,
+	event_form,
 	is_registration_closed,
 )
 from buzz.payments import get_payment_link_for_booking
@@ -87,21 +88,20 @@ class BookingService:
 		verify_guest_otp deletes the code from the cache, and no rollback puts it back, so an
 		answer rejected later in build_booking would cost the guest a fresh OTP.
 		"""
+		# A condition may name any standard field the form shows, so each gets the values sent.
 		event = self.request.event
-		booking_questions = form_questions(event, REGISTRATION_FORM_DOCTYPE)
-		attendee_questions = form_questions(event, ATTENDEE_FORM_DOCTYPE)
-		self.booking_answers = self.answer_rows(booking_questions, self.request.booking_custom_fields)
+		booking_questions = CustomAnswers(form_questions(event, REGISTRATION_FORM_DOCTYPE))
+		attendee_questions = CustomAnswers(form_questions(event, ATTENDEE_FORM_DOCTYPE))
+		self.booking_answers = booking_questions.rows(
+			self.request.booking_custom_fields or {}, self.request.model_dump()
+		)
 		self.attendee_answers = [
-			self.answer_rows(
-				attendee_questions,
-				attendee.get("custom_fields"),
-				{"ticket_type": cstr(attendee.get("ticket_type"))},
+			attendee_questions.rows(
+				attendee.get("custom_fields") or {},
+				{**attendee, "ticket_type": cstr(attendee.get("ticket_type"))},
 			)
 			for attendee in self.request.attendees
 		]
-
-	def answer_rows(self, questions: list, values: dict | None, context: dict | None = None) -> list[dict]:
-		return CustomAnswers(questions).rows(values or {}, context)
 
 	def validate_add_ons(self) -> None:
 		"""Every add-on named in the request must be an enabled add-on of this event, and
@@ -243,10 +243,8 @@ class BookingService:
 		if add_ons:
 			add_ons = create_add_on_doc(f"{first_name} {last_name}".strip(), add_ons)
 
-		custom_fields = {
-			answer["fieldname"]: (attendee.get("custom_fields") or {})[answer["fieldname"]]
-			for answer in answers
-		}
+		values = attendee.get("custom_fields") or {}
+		custom_fields = {answer["fieldname"]: values[answer["fieldname"]] for answer in answers}
 
 		return {
 			"first_name": first_name,
@@ -335,13 +333,7 @@ class BookingService:
 
 
 def are_registrations_closed(event_doc) -> bool:
-	form = frappe.db.get_value(
-		"Buzz Form",
-		{"event": event_doc.name, "form_doctype": REGISTRATION_FORM_DOCTYPE},
-		["publish", "auto_close_at"],
-		as_dict=True,
-	)
-	return is_registration_closed(form, event_doc)
+	return is_registration_closed(event_form(event_doc.name, REGISTRATION_FORM_DOCTYPE), event_doc)
 
 
 def resolve_attendee_names(attendee: dict) -> tuple[str, str]:

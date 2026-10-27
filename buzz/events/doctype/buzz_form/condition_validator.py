@@ -4,7 +4,6 @@ from frappe.utils import cstr
 
 from buzz.api.forms.conditions import LIST_OPERATORS, OPERATORS, parse_conditions
 from buzz.api.forms.fields import get_exclude_fields, get_renderable_fields
-from buzz.events.doctype.buzz_form.form_types import form_type
 
 IS_OPERATOR_VALUES = ("set", "not set")
 CHECKED_VALUE_FIELDTYPES = frozenset({"Select", "Link"})
@@ -42,7 +41,7 @@ class ConditionValidator:
 		fieldname, operator, expected = condition
 		if operator not in OPERATORS:
 			self.throw_invalid(question, _("{0} is not a supported operator.").format(operator))
-		fields = self.condition_fields_for(question)
+		fields = self.standard_fields
 		if fieldname not in self.fieldnames_above and fieldname not in fields:
 			self.throw_invalid(question, _("{0} is not a field above this question.").format(fieldname))
 		if operator == "is" and expected not in IS_OPERATOR_VALUES:
@@ -52,16 +51,10 @@ class ConditionValidator:
 		if fieldname in fields and operator != "is":
 			self.validate_standard_values(question, fields[fieldname], expected)
 
-	def condition_fields_for(self, question) -> dict:
-		return {
-			**self.standard_fields,
-			**form_type(self.form.form_doctype).condition_fields(self.form, question),
-		}
-
 	def drop_link_conditions(self):
 		"""A Link value names a record of one event, so a condition copied to another cannot hold."""
+		fields = self.standard_fields
 		for question in self.form.questions:
-			fields = self.condition_fields_for(question)
 			for key in ("depends_on", "mandatory_depends_on"):
 				rows = parse_conditions(question.get(key)) or []
 				kept = [row for row in rows if getattr(fields.get(row[0]), "fieldtype", None) != "Link"]

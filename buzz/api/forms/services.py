@@ -143,16 +143,22 @@ class CustomFormService:
 			if question.enabled
 		]
 
-	def submit(self, data: dict | str, custom_fields_data: dict | str | None = None) -> None:
+	def submit(self, data: dict | str, custom_fields_data: dict | str | None = None) -> str:
 		self.check_login()
 		if self.is_closed:
 			SubmissionsClosed.throw()
 
 		values = frappe.parse_json(data) or {}
+		if not isinstance(values, dict):
+			frappe.throw(_("Could not read the submitted form. Please reload the page and try again."))
 		answers = frappe.parse_json(custom_fields_data) or {}
 		doc = frappe.get_doc(self.build_doc_data(values))
 		doc.set("additional_fields", CustomAnswers(self.form.questions).rows(answers, context=values))
-		doc.insert(ignore_permissions=True)
+		self.prepare_submission(doc)
+		return doc.insert(ignore_permissions=True).name
+
+	def prepare_submission(self, doc) -> None:
+		"""Set what the form's doctype needs beyond the submitted values."""
 
 	def build_doc_data(self, data: dict) -> dict:
 		form_doctype = self.form_doctype

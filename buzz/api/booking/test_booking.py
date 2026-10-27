@@ -568,6 +568,29 @@ class TestRegistrationAnswers(BookingTestCase):
 			},
 		)
 
+	def test_a_condition_on_an_attendee_field_reads_what_the_attendee_sent(self):
+		BuzzFormFactory.add_question(
+			self.event.name,
+			"Event Booking Attendee",
+			label="Badge name",
+			fieldname="badge_name",
+			depends_on=json.dumps([["email", "=", "first@example.com"]]),
+		)
+		attendees = [
+			self.attendee("first@example.com", self.other_ticket_type, diet="Veg", badge_name="Ada"),
+			self.attendee("second@example.com", self.other_ticket_type, diet="Veg", badge_name="Bob"),
+		]
+
+		booking_name = self.process_as_booker(self.booking_request(attendees=attendees)).booking_name
+
+		self.assertEqual(
+			self.ticket_answers(booking_name),
+			{
+				"first@example.com": {"diet": "Veg", "badge_name": "Ada"},
+				"second@example.com": {"diet": "Veg"},
+			},
+		)
+
 	def test_a_booking_question_is_not_asked_of_attendees(self):
 		attendees = [self.attendee("first@example.com", self.free_ticket_type, company="Acme")]
 
