@@ -202,7 +202,7 @@ def unique_fieldname(label_or_fieldname: str, taken: set, reserved: frozenset) -
 	strands every other event. Old answers keep their own fieldname copy, so a rename here
 	only affects what arrives next.
 	"""
-	name = re.sub(r"[^a-z0-9_]", "_", scrub(label_or_fieldname or ""))
+	name = re.sub(r"[^a-z0-9_]", "_", scrub(label_or_fieldname or "")).strip("_")
 	if not name[:1].isalpha():
 		name = f"question_{name}"
 	candidate, suffix = name, 2

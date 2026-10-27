@@ -78,7 +78,7 @@ async function save() {
 				/>
 			</div>
 		</header>
-		<main class="min-h-0 flex-1 overflow-y-auto bg-surface-gray-1">
+		<main class="min-h-0 flex-1 overflow-hidden bg-surface-gray-1">
 			<slot />
 		</main>
 	</div>

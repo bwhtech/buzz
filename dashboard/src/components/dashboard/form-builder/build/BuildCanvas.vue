@@ -1,42 +1,163 @@
 <script setup lang="ts">
-import EmptyState from "@/components/common/EmptyState.vue"
+import { useEventListener } from "@vueuse/core"
+import { computed, ref, toRaw } from "vue"
 
-import type { BuzzFormDoc, DoctypeField } from "../useFormBuilder"
+import type { MenuItem } from "../fieldTypes"
+import type { BuzzFormDoc, DoctypeField, FormQuestion } from "../useFormBuilder"
+import FieldComposer from "./FieldComposer.vue"
+import FieldInspector from "./FieldInspector.vue"
+import FieldPalette from "./FieldPalette.vue"
 import FieldRow from "./FieldRow.vue"
+import { newQuestion, questionKey, useQuestionEditor } from "./useQuestionEditor"
 
 const form = defineModel<BuzzFormDoc>({ required: true })
-defineProps<{ doctypeFields: Record<string, DoctypeField> }>()
+const props = defineProps<{ doctypeFields: Record<string, DoctypeField> }>()
+
+const editor = useQuestionEditor(() => form.value.questions)
+const composer = ref<InstanceType<typeof FieldComposer> | null>(null)
+
+const doctypeFieldOf = (question: FormQuestion) =>
+	question.is_standard ? props.doctypeFields[question.fieldname] : undefined
+const selectedIndex = computed(() =>
+	editor.selected.value ? editor.indexOf(editor.selected.value) : -1,
+)
+
+// What is being dragged: a row being moved, or a palette item being added.
+const dragged = ref<FormQuestion | MenuItem | null>(null)
+const dropIndex = ref<number | null>(null)
+
+function onRowDragOver(index: number, event: DragEvent) {
+	if (!dragged.value) return
+	event.preventDefault()
+	const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
+	dropIndex.value = event.clientY < box.top + box.height / 2 ? index : index + 1
+}
+
+function onDrop() {
+	const item = dragged.value
+	const at = dropIndex.value ?? form.value.questions.length
+	if (item && "fields" in item) addItem(item as MenuItem, at)
+	else if (item) editor.move(item as FormQuestion, at)
+	endDrag()
+}
+
+function endDrag() {
+	dragged.value = null
+	dropIndex.value = null
+}
+
+function addItem(item: MenuItem, at?: number) {
+	const added = item.fields.map(newQuestion)
+	if (at === undefined) editor.insertAfterSelection(added)
+	else editor.insert(at, added)
+}
+
+function isTyping(event: KeyboardEvent) {
+	const target = event.target as HTMLElement
+	return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)
+}
+
+// A drag cancelled anywhere still ends here, so no stale drop line is left behind.
+useEventListener(window, "dragend", endDrag)
+
+useEventListener(window, "keydown", (event: KeyboardEvent) => {
+	const selected = editor.selected.value
+	if (event.key === "Escape") editor.selected.value = null
+	if (isTyping(event)) return
+	if (event.key === "/") {
+		event.preventDefault()
+		composer.value?.focus()
+	} else if (selected && (event.metaKey || event.ctrlKey) && event.key === "d") {
+		event.preventDefault()
+		editor.duplicate(selected)
+	} else if (selected && ["Delete", "Backspace"].includes(event.key)) {
+		editor.remove(selected)
+	}
+})
 </script>
 
 <template>
-	<div class="mx-auto w-full max-w-[760px] px-4 py-8 sm:px-7">
-		<div class="rounded-8 bg-surface-base p-5 shadow-sm ring-1 ring-outline-gray-1 sm:p-8">
-			<input
-				v-model="form.title"
-				class="w-full border-0 bg-transparent p-0 text-2xl font-semibold text-ink-gray-9 outline-none focus:ring-0"
-				aria-label="Form name"
-			/>
-			<textarea
-				v-model="form.description"
-				rows="1"
-				class="mb-6 mt-1 w-full resize-none border-0 bg-transparent p-0 text-p-base text-ink-gray-6 outline-none [field-sizing:content] placeholder:text-ink-gray-4 focus:ring-0"
-				placeholder="Add a description"
-				aria-label="Form description"
-			/>
-			<div v-if="form.questions.length" class="-mx-3 space-y-1">
-				<FieldRow
-					v-for="(question, index) in form.questions"
-					:key="question.name ?? index"
-					v-model="form.questions[index]"
-					:doctype-field="question.is_standard ? doctypeFields[question.fieldname] : undefined"
-				/>
+	<div class="flex h-full min-h-0">
+		<div class="min-w-0 flex-1 overflow-y-auto" @click="editor.selected.value = null">
+			<div class="mx-auto w-full max-w-[760px] px-4 pb-24 pt-8 sm:px-7">
+				<div class="rounded-8 bg-surface-base p-5 shadow-sm ring-1 ring-outline-gray-1 sm:p-8">
+					<input
+						v-model="form.title"
+						class="w-full border-0 bg-transparent p-0 text-2xl font-semibold text-ink-gray-9 outline-none focus:ring-0"
+						aria-label="Form name"
+						@click.stop
+					/>
+					<textarea
+						v-model="form.description"
+						rows="1"
+						class="mb-6 mt-1 w-full resize-none border-0 bg-transparent p-0 text-p-base text-ink-gray-6 outline-none [field-sizing:content] placeholder:text-ink-gray-4 focus:ring-0"
+						placeholder="Add a description"
+						aria-label="Form description"
+						@click.stop
+					/>
+
+					<div
+						class="-mx-3 grid grid-cols-1 gap-x-2 gap-y-1 md:grid-cols-2"
+						@dragover.prevent
+						@drop.prevent="onDrop"
+					>
+						<div
+							v-for="(question, index) in form.questions"
+							:key="questionKey(question)"
+							class="relative"
+							:class="{
+								'md:col-span-2': question.width !== 'Half',
+								'opacity-40': dragged && toRaw(dragged) === toRaw(question),
+							}"
+							@dragover="onRowDragOver(index, $event)"
+						>
+							<span
+								v-if="dropIndex === index"
+								class="absolute inset-x-3 -top-1 h-0.5 rounded-full bg-surface-gray-7"
+								aria-hidden="true"
+							/>
+							<FieldRow
+								v-model="form.questions[index]"
+								:doctype-field="doctypeFieldOf(question)"
+								:editor="editor"
+								:is-first="index === 0"
+								:is-last="index === form.questions.length - 1"
+								@dragstart="dragged = question"
+							/>
+						</div>
+						<div
+							class="relative md:col-span-2"
+							@dragover.prevent="dropIndex = form.questions.length"
+							@click.stop
+						>
+							<span
+								v-if="dropIndex === form.questions.length"
+								class="absolute inset-x-3 -top-1 h-0.5 rounded-full bg-surface-gray-7"
+								aria-hidden="true"
+							/>
+							<FieldComposer ref="composer" :form-doctype="form.form_doctype" @pick="addItem" />
+						</div>
+					</div>
+				</div>
 			</div>
-			<EmptyState
-				v-else
-				title="No questions yet"
-				description="Add questions to ask more than the form's own fields."
-				icon="lucide-list-plus"
-			/>
 		</div>
+
+		<aside
+			class="hidden w-[300px] shrink-0 border-l border-outline-gray-1 bg-surface-base lg:block"
+		>
+			<FieldInspector
+				v-if="selectedIndex >= 0"
+				:key="questionKey(form.questions[selectedIndex])"
+				v-model="form.questions[selectedIndex]"
+				:doctype-field="doctypeFieldOf(form.questions[selectedIndex])"
+				:editor="editor"
+			/>
+			<FieldPalette
+				v-else
+				:form-doctype="form.form_doctype"
+				@pick="addItem"
+				@dragstart="(item) => (dragged = item)"
+			/>
+		</aside>
 	</div>
 </template>

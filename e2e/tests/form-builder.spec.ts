@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext } from "@playwright/test"
 
 import { CUSTOM_FORMS_EVENT_ROUTE } from "../data/custom-forms"
-import { createDoc, getList, updateDoc } from "../helpers/frappe"
+import { createDoc, getDoc, getList, updateDoc } from "../helpers/frappe"
 import { CustomFormPage } from "../pages"
 
 const FORM_ROUTE = "builder-check"
@@ -49,9 +49,42 @@ test("renaming a question in the builder shows on the public form", async ({ pag
 	const label = page.getByRole("textbox", { name: "Label of Short text field" })
 	await label.fill("Favourite coffee")
 	await page.getByRole("button", { name: "Save" }).click()
-	await expect(page.getByRole("button", { name: "Save" })).toBeDisabled()
+	await expect(page.getByText("Form saved")).toBeVisible()
 
 	const formPage = new CustomFormPage(page)
 	await formPage.goto(CUSTOM_FORMS_EVENT_ROUTE, FORM_ROUTE)
 	await formPage.expectFieldVisible("Favourite coffee")
+})
+
+test("questions added, dragged and deleted in the builder save in order", async ({
+	page,
+	request,
+}) => {
+	const { event, form } = await builderForm(request)
+	await page.goto(`/b/manage/events/${event}/forms/${form}`)
+
+	const composer = page.getByRole("combobox", { name: "Add a field" })
+	await composer.fill("Roast level")
+	await composer.press("Enter")
+	await composer.fill("/rati")
+	await composer.press("Enter")
+
+	// The rating was added last and is selected; its settings panel deletes it.
+	await page.getByRole("button", { name: "Delete" }).click()
+
+	const labels = page.getByRole("textbox", { name: /^Label of/ })
+	// Palette items drag too, so rows are the draggables that hold a label input.
+	const rows = page.locator('[draggable="true"]').filter({ has: labels })
+	await rows.last().dragTo(rows.first(), { targetPosition: { x: 20, y: 4 } })
+	await expect(labels.first()).toHaveValue("Roast level")
+
+	await page.getByRole("button", { name: "Save" }).click()
+	await expect(page.getByText("Form saved")).toBeVisible()
+	const saved = await getDoc<{ questions: { label: string; is_standard: number }[] }>(
+		request,
+		"Buzz Form",
+		form,
+	)
+	const questions = saved.questions.filter((row) => !row.is_standard).map((row) => row.label)
+	expect(questions).toEqual(["Roast level", "Favourite brew"])
 })

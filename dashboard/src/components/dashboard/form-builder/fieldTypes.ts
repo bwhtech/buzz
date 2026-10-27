@@ -36,3 +36,181 @@ export const CHOICE_TYPES = ["Select", "Radio", "Multi Select"]
 
 export const fieldType = (fieldtype: string): FieldType =>
 	FIELD_TYPES[fieldtype] ?? { label: fieldtype, icon: "lucide-square", group: "Basic" }
+
+export interface PresetField {
+	fieldtype: string
+	label: string
+	options?: string
+	placeholder?: string
+	description?: string
+	width?: "Full" | "Half"
+	mandatory?: 0 | 1
+}
+
+export interface Preset {
+	label: string
+	icon: string
+	description: string
+	fields: PresetField[]
+}
+
+const SOCIAL: Preset = {
+	label: "Social profiles",
+	icon: "lucide-at-sign",
+	description: "LinkedIn and Instagram",
+	fields: [
+		{ fieldtype: "URL", label: "LinkedIn", width: "Half", placeholder: "linkedin.com/in/" },
+		{ fieldtype: "URL", label: "Instagram", width: "Half", placeholder: "instagram.com/" },
+	],
+}
+const TSHIRT: Preset = {
+	label: "T-shirt size",
+	icon: "lucide-shirt",
+	description: "XS to XXL",
+	fields: [{ fieldtype: "Select", label: "T-shirt size", options: "XS\nS\nM\nL\nXL\nXXL" }],
+}
+const SOURCE: Preset = {
+	label: "How did you hear",
+	icon: "lucide-megaphone",
+	description: "Where they found you",
+	fields: [
+		{
+			fieldtype: "Select",
+			label: "How did you hear about us?",
+			options: "Instagram\nA friend\nNewsletter\nOther",
+		},
+	],
+}
+const COMPANY: Preset = {
+	label: "Company and role",
+	icon: "lucide-briefcase",
+	description: "Where they work",
+	fields: [
+		{ fieldtype: "Data", label: "Company", width: "Half" },
+		{ fieldtype: "Data", label: "Role", width: "Half" },
+	],
+}
+
+// Ready-made groups of questions, per form doctype.
+const PRESETS: Record<string, Preset[]> = {
+	"Talk Proposal": [
+		{
+			label: "Speaker bio",
+			icon: "lucide-user-round",
+			description: "Short bio and headshot",
+			fields: [
+				{ fieldtype: "Small Text", label: "Speaker bio", placeholder: "A few lines about you" },
+				{ fieldtype: "Attach Image", label: "Headshot", description: "Square, at least 400 × 400" },
+			],
+		},
+		{
+			label: "Previous talks",
+			icon: "lucide-history",
+			description: "Link to an earlier talk",
+			fields: [{ fieldtype: "URL", label: "Link to a previous talk", placeholder: "https://" }],
+		},
+		SOCIAL,
+		{
+			label: "Travel support",
+			icon: "lucide-plane",
+			description: "Need support and city",
+			fields: [
+				{ fieldtype: "Check", label: "I need travel or stay support" },
+				{ fieldtype: "Data", label: "Travelling from", placeholder: "City" },
+			],
+		},
+		TSHIRT,
+		{
+			label: "Code of conduct",
+			icon: "lucide-shield-check",
+			description: "Required agreement",
+			fields: [
+				{ fieldtype: "Check", label: "I agree to the speaker code of conduct", mandatory: 1 },
+			],
+		},
+	],
+	"Event Booking": [
+		COMPANY,
+		SOURCE,
+		{
+			label: "GST invoice",
+			icon: "lucide-receipt-text",
+			description: "Company and GSTIN",
+			fields: [
+				{ fieldtype: "Check", label: "I need a GST invoice" },
+				{ fieldtype: "Data", label: "GSTIN", width: "Half" },
+				{ fieldtype: "Data", label: "Business name", width: "Half" },
+			],
+		},
+	],
+	"Event Booking Attendee": [
+		{
+			label: "Dietary needs",
+			icon: "lucide-salad",
+			description: "Preference and allergies",
+			fields: [
+				{
+					fieldtype: "Select",
+					label: "Dietary preference",
+					options: "No preference\nVegetarian\nVegan\nJain",
+				},
+				{ fieldtype: "Data", label: "Allergies", placeholder: "Nuts, lactose…" },
+			],
+		},
+		COMPANY,
+		TSHIRT,
+		SOCIAL,
+	],
+}
+
+export const presetsFor = (formDoctype: string): Preset[] =>
+	PRESETS[formDoctype] ?? [SOCIAL, SOURCE, COMPANY]
+
+// Registration has its own steps on the booking page, so its forms take no page breaks.
+const NO_PAGE_BREAK = ["Event Booking", "Event Booking Attendee"]
+
+export const paletteTypesFor = (formDoctype: string): string[] =>
+	Object.entries(FIELD_TYPES)
+		.filter(([, type]) => type.group !== "Standard")
+		.filter(([key]) => key !== "Page Break" || !NO_PAGE_BREAK.includes(formDoctype))
+		.map(([key]) => key)
+
+export interface MenuItem {
+	key: string
+	label: string
+	icon: string
+	hint: string
+	fields: PresetField[]
+}
+
+const GROUP_ORDER: FieldGroup[] = ["Basic", "Choice", "Media", "Layout"]
+
+// What the add-field menu and the palette offer, grouped and filtered by the search text.
+export function fieldMenu(formDoctype: string, query = ""): { group: string; items: MenuItem[] }[] {
+	const search = query.trim().toLowerCase()
+	const matches = (label: string) => !search || label.toLowerCase().includes(search)
+	const types = paletteTypesFor(formDoctype)
+	const groups = GROUP_ORDER.map((group) => ({
+		group: group as string,
+		items: types
+			.filter((key) => FIELD_TYPES[key].group === group && matches(FIELD_TYPES[key].label))
+			.map((key): MenuItem => ({
+				key,
+				label: FIELD_TYPES[key].label,
+				icon: FIELD_TYPES[key].icon,
+				hint: "",
+				fields: [{ fieldtype: key, label: FIELD_TYPES[key].label }],
+			})),
+	}))
+	const presets = presetsFor(formDoctype)
+		.filter((preset) => matches(preset.label))
+		.map((preset): MenuItem => ({
+			key: preset.label,
+			label: preset.label,
+			icon: preset.icon,
+			hint: preset.description,
+			fields: preset.fields,
+		}))
+	groups.splice(1, 0, { group: "Ready-made", items: presets })
+	return groups.filter((group) => group.items.length)
+}
