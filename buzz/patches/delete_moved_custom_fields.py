@@ -8,7 +8,7 @@ MOVED_APPLIED_TO = ("Booking", "Ticket", "Custom Form")
 
 def execute():
 	"""Registration and custom form questions now live on Buzz Forms; offline payment ones stay."""
-	for row in moved_rows_by_form():
+	for row in moved_counts_by_form():
 		questions = frappe.db.count("Buzz Form Field", {"parenttype": "Buzz Form", "parent": row.form})
 		if not row.form or questions < row.moved:
 			frappe.throw(
@@ -19,7 +19,7 @@ def execute():
 	frappe.db.delete("Buzz Custom Field", {"applied_to": ["in", MOVED_APPLIED_TO]})
 
 
-def moved_rows_by_form() -> list:
+def moved_counts_by_form() -> list:
 	if not frappe.db.has_column("Buzz Custom Field", "custom_form_doctype"):
 		return []
 	return frappe.db.sql(

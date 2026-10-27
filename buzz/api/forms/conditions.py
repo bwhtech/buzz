@@ -26,8 +26,10 @@ def is_required(question, values: dict) -> bool:
 	"""A hidden question is never required, whatever its own flags say."""
 	if not is_shown(question, values):
 		return False
-	required_when = parse_conditions(question.mandatory_depends_on)
-	return bool(question.mandatory) or (bool(required_when) and all_conditions_match(required_when, values))
+	required_conditions = parse_conditions(question.mandatory_depends_on)
+	return bool(question.mandatory) or (
+		bool(required_conditions) and all_conditions_match(required_conditions, values)
+	)
 
 
 def condition_matches(condition, values: dict) -> bool:

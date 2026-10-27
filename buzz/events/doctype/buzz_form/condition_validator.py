@@ -6,7 +6,7 @@ from buzz.api.forms.conditions import LIST_OPERATORS, OPERATORS, parse_condition
 from buzz.api.forms.fields import get_exclude_fields, get_renderable_fields
 
 IS_OPERATOR_VALUES = ("set", "not set")
-CHECKED_VALUE_FIELDTYPES = frozenset({"Select", "Link"})
+VALIDATED_FIELDTYPES = frozenset({"Select", "Link"})
 
 
 class ConditionValidator:
@@ -61,7 +61,7 @@ class ConditionValidator:
 				question.set(key, frappe.as_json(kept) if kept else None)
 
 	def validate_standard_values(self, question, field, expected):
-		if field.fieldtype not in CHECKED_VALUE_FIELDTYPES:
+		if field.fieldtype not in VALIDATED_FIELDTYPES:
 			return
 		for value in expected if isinstance(expected, list) else [expected]:
 			if field.fieldtype == "Select":

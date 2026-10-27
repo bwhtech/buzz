@@ -4,7 +4,7 @@ from frappe.utils import cstr
 
 SOURCE_DOCTYPE = "Sponsor Enquiry Form"
 TARGET_FORM_DOCTYPE = "Sponsorship Enquiry"
-SETTINGS = (
+FORM_SETTINGS = (
 	"route",
 	"publish",
 	"auto_close_at",
@@ -31,7 +31,7 @@ def execute():
 		return
 	forms = SponsorFormMigration()
 	forms.move()
-	forms.delete_source()
+	forms.delete_old_forms()
 
 
 class SponsorFormMigration:
@@ -46,9 +46,9 @@ class SponsorFormMigration:
 			)
 			frappe.clear_document_cache("Buzz Event", form.event)
 
-	def delete_source(self):
+	def delete_old_forms(self):
 		# A row left behind would lose its settings and questions with the doctype.
-		if self.pending_rows():
+		if self.rows_to_move():
 			frappe.throw(_("Some sponsorship forms could not be moved to Buzz Form."))
 		frappe.delete_doc("DocType", SOURCE_DOCTYPE, ignore_missing=True, force=True)
 		frappe.db.delete("Buzz Form Field", {"parenttype": SOURCE_DOCTYPE})
@@ -56,7 +56,7 @@ class SponsorFormMigration:
 	def build_forms(self) -> list:
 		# Event names come back as integers here and as strings on the form.
 		events = {str(event) for event in frappe.get_all("Buzz Event", pluck="name")}
-		forms = [self.build_form(row, str(row.event) not in events) for row in self.pending_rows()]
+		forms = [self.build_form(row, str(row.event) not in events) for row in self.rows_to_move()]
 		for form in forms:
 			self.validate_form(form)
 		return forms
@@ -70,11 +70,11 @@ class SponsorFormMigration:
 				_("Cannot move the sponsorship form of event {0}: {1}").format(form.event, cstr(error))
 			)
 
-	def pending_rows(self) -> list:
+	def rows_to_move(self) -> list:
 		moved = set(frappe.get_all("Buzz Form", pluck="name"))
 		return [
 			row
-			for row in frappe.get_all(SOURCE_DOCTYPE, fields=["name", "event", *SETTINGS])
+			for row in frappe.get_all(SOURCE_DOCTYPE, fields=["name", "event", *FORM_SETTINGS])
 			if row.name not in moved
 		]
 
@@ -85,16 +85,16 @@ class SponsorFormMigration:
 				"title": "Sponsorship enquiry",
 				"form_doctype": TARGET_FORM_DOCTYPE,
 				"event": row.event,
-				**{fieldname: row.get(fieldname) for fieldname in SETTINGS},
+				**{fieldname: row.get(fieldname) for fieldname in FORM_SETTINGS},
 			}
 		)
 		form.flags.source_name = row.name
 		form.flags.orphaned = orphaned
-		for question in self.questions_of(row.name):
+		for question in self.questions_for(row.name):
 			form.append("questions", {fieldname: question.get(fieldname) for fieldname in QUESTION_FIELDS})
 		return form
 
-	def questions_of(self, form_name: str) -> list:
+	def questions_for(self, form_name: str) -> list:
 		return frappe.get_all(
 			"Buzz Form Field",
 			filters={"parenttype": SOURCE_DOCTYPE, "parent": form_name},

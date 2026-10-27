@@ -45,11 +45,10 @@ class BuzzForm(Document):
 
 	@frappe.whitelist(methods=["POST"])
 	def set_closed(self, closed: bool) -> bool:
-		form_rules = form_type(self.form_doctype)
 		if closed:
-			form_rules.close(self)
+			form_type(self.form_doctype).close(self)
 		else:
-			form_rules.open(self)
+			form_type(self.form_doctype).open(self)
 		self.save()
 		return self.is_closed
 
@@ -59,8 +58,8 @@ class BuzzForm(Document):
 		validate_excluded_fields(self.form_doctype, self.excluded_fields)
 		self.validate_questions()
 		self.validate_conditions()
-		self.validate_published_event()
-		self.validate_collects_answers()
+		self.validate_event_is_published()
+		self.validate_answers_field()
 		form_type(self.form_doctype).validate(self)
 
 	def validate_unchanged_fields(self):
@@ -111,13 +110,13 @@ class BuzzForm(Document):
 	def validate_conditions(self):
 		ConditionValidator(self).validate()
 
-	def validate_published_event(self):
+	def validate_event_is_published(self):
 		if self.flags.migrating or not form_type(self.form_doctype).has_page or self.is_closed:
 			return
 		if not frappe.db.get_value("Buzz Event", self.event, "is_published"):
 			frappe.throw(_("Publish the event before opening its form."))
 
-	def validate_collects_answers(self):
+	def validate_answers_field(self):
 		answers_field = form_type(self.form_doctype).answers_field
 		if self.questions and not frappe.get_meta(self.form_doctype).has_field(answers_field):
 			frappe.throw(_("{0} has no field to store answers in.").format(self.form_doctype))
