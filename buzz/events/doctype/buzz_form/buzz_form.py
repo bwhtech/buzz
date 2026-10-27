@@ -7,7 +7,7 @@ from frappe.utils import cstr
 
 from buzz.api.forms.fields import validate_excluded_fields
 from buzz.events.doctype.buzz_form.condition_validator import ConditionValidator
-from buzz.events.doctype.buzz_form.form_types import form_type
+from buzz.events.doctype.buzz_form.form_types import form_type, unique_fieldname
 
 ROUTE_PATTERN = r"[a-zA-Z0-9_-]+"
 FIELDNAME_PATTERN = r"[a-z][a-z0-9_]*"
@@ -27,6 +27,7 @@ class BuzzForm(Document):
 		auto_close_at: DF.Datetime | None
 		closed_message: DF.SmallText | None
 		closed_title: DF.Data | None
+		description: DF.SmallText | None
 		event: DF.Link
 		excluded_fields: DF.SmallText | None
 		form_doctype: DF.Link
@@ -34,6 +35,7 @@ class BuzzForm(Document):
 		publish: DF.Check
 		questions: DF.Table[BuzzFormField]
 		route: DF.Data
+		submit_label: DF.Data | None
 		success_message: DF.MarkdownEditor | None
 		success_title: DF.Data | None
 		title: DF.Data
@@ -87,10 +89,10 @@ class BuzzForm(Document):
 
 	def validate_questions(self):
 		reserved = form_type(self.form_doctype).reserved_fieldnames
+		self.set_missing_fieldnames(reserved)
 		used_fieldnames = set()
 		saved_fieldnames = self.saved_question_fieldnames()
 		for question in self.questions:
-			question.fieldname = question.fieldname or frappe.scrub(question.label or "")
 			if not re.fullmatch(FIELDNAME_PATTERN, question.fieldname):
 				frappe.throw(
 					_(
@@ -102,6 +104,12 @@ class BuzzForm(Document):
 			if saved_fieldnames.get(question.name) not in (None, question.fieldname):
 				frappe.throw(_("A saved question's fieldname cannot be changed. Add a new question instead."))
 			used_fieldnames.add(question.fieldname)
+
+	def set_missing_fieldnames(self, reserved: frozenset):
+		taken = {question.fieldname for question in self.questions if question.fieldname}
+		for question in self.questions:
+			if not question.fieldname:
+				question.fieldname = unique_fieldname(question.label or question.fieldtype, taken, reserved)
 
 	def saved_question_fieldnames(self) -> dict[str, str]:
 		before = self.get_doc_before_save()

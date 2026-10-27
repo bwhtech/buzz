@@ -20,7 +20,7 @@ async function builderForm(request: APIRequestContext): Promise<{ event: string;
 		filters: { event: ["=", event.name], route: ["=", FORM_ROUTE] },
 	})
 	if (existing) {
-		await updateDoc(request, "Buzz Form", existing.name, { questions })
+		await updateDoc(request, "Buzz Form", existing.name, { questions, publish: 1 })
 		return { event: event.name, form: existing.name }
 	}
 	const form = await createDoc<NamedDoc>(request, "Buzz Form", {
@@ -33,6 +33,14 @@ async function builderForm(request: APIRequestContext): Promise<{ event: string;
 	})
 	return { event: event.name, form: form.name }
 }
+
+// custom-forms.setup counts the event's published forms, so this one is closed again after.
+test.afterAll(async ({ request }) => {
+	const [form] = await getList<NamedDoc>(request, "Buzz Form", {
+		filters: { route: ["=", FORM_ROUTE] },
+	})
+	if (form) await updateDoc(request, "Buzz Form", form.name, { publish: 0 })
+})
 
 test("renaming a question in the builder shows on the public form", async ({ page, request }) => {
 	const { event, form } = await builderForm(request)

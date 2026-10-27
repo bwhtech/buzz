@@ -170,6 +170,7 @@ DEFINITION_FIELDS = (
 	"placeholder",
 	"default_value",
 	"description",
+	"width",
 )
 
 

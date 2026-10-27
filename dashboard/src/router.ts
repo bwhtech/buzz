@@ -26,6 +26,13 @@ const routes: RouteRecordRaw[] = [
 		component: () => import("@/pages/manage/CollaboratorInvite.vue"),
 	},
 	{
+		// Its own page, outside the manage shell: the editor needs the whole width.
+		path: "/manage/events/:eventId/forms/:formName",
+		name: "event-form",
+		meta: { fullBleed: true, title: "Form" },
+		component: () => import("@/pages/manage/events/EventForm.vue"),
+	},
+	{
 		path: "/manage",
 		meta: { fullBleed: true },
 		component: () => import("@/layouts/ManagerLayout.vue"),
@@ -82,12 +89,6 @@ const routes: RouteRecordRaw[] = [
 				name: "event-talks",
 				meta: { title: "Talks" },
 				component: () => import("@/pages/manage/events/EventTalks.vue"),
-			},
-			{
-				path: "events/:eventId/forms/:formName",
-				name: "event-form",
-				meta: { title: "Form" },
-				component: () => import("@/pages/manage/events/EventForm.vue"),
 			},
 			{
 				path: "events/:eventId/communications",

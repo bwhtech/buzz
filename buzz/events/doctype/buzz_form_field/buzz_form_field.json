@@ -41,7 +41,7 @@
    "reqd": 1,
    "default": "Data",
    "in_list_view": 1,
-   "options": "Data\nCheck\nSmall Text\nPhone\nEmail\nSelect\nDate\nNumber\nMulti Select\nRating\nAttach\nAttach Image"
+   "options": "Data\nCheck\nSmall Text\nPhone\nEmail\nSelect\nDate\nNumber\nMulti Select\nRating\nAttach\nAttach Image\nURL\nRadio\nHeading\nParagraph\nDivider\nPage Break"
   },
   {
    "fieldname": "mandatory",
@@ -51,10 +51,17 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "width",
+   "label": "Width",
+   "fieldtype": "Select",
+   "options": "Full\nHalf",
+   "default": "Full"
+  },
+  {
    "fieldname": "options",
    "label": "Options",
    "fieldtype": "Small Text",
-   "description": "One option per line for Select and Multi Select."
+   "description": "One option per line for Select, Radio and Multi Select."
   },
   {
    "fieldname": "placeholder",
@@ -98,6 +105,7 @@
   "column_break_question",
   "fieldtype",
   "mandatory",
+  "width",
   "options",
   "placeholder",
   "default_value",

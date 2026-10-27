@@ -4,7 +4,13 @@ from enum import Enum
 
 import frappe
 from frappe import _
-from frappe.utils import cstr, getdate, validate_email_address, validate_phone_number_with_country_code
+from frappe.utils import (
+	cstr,
+	getdate,
+	validate_email_address,
+	validate_phone_number_with_country_code,
+	validate_url,
+)
 
 from buzz.api.forms.conditions import is_required, is_shown
 from buzz.api.forms.exceptions import InvalidAnswer, UnknownQuestions
@@ -25,6 +31,18 @@ class QuestionType(str, Enum):
 	RATING = "Rating"
 	ATTACH = "Attach"
 	ATTACH_IMAGE = "Attach Image"
+	URL = "URL"
+	RADIO = "Radio"
+	HEADING = "Heading"
+	PARAGRAPH = "Paragraph"
+	DIVIDER = "Divider"
+	PAGE_BREAK = "Page Break"
+
+
+# Shape the form, ask nothing, so they never take an answer.
+LAYOUT_TYPES = frozenset(
+	{QuestionType.HEADING, QuestionType.PARAGRAPH, QuestionType.DIVIDER, QuestionType.PAGE_BREAK}
+)
 
 
 CHECK_VALUES = (0, 1, "0", "1", False, True)
@@ -34,7 +52,9 @@ class CustomAnswers:
 	"""Validate submitted answers against the question definitions on a form."""
 
 	def __init__(self, definitions):
-		self.definitions = {row.fieldname: row for row in definitions if row.enabled}
+		self.definitions = {
+			row.fieldname: row for row in definitions if row.enabled and row.fieldtype not in LAYOUT_TYPES
+		}
 
 	def rows(self, values: dict, context: dict | None = None) -> list[dict]:
 		"""Return `additional_fields` rows, rejecting anything the form did not ask for.
@@ -88,8 +108,12 @@ class CustomAnswers:
 			validate_email_address(value, throw=True)
 		elif question.fieldtype == QuestionType.PHONE:
 			validate_phone_number_with_country_code(value, question.label)
-		elif question.fieldtype == QuestionType.SELECT:
+		elif question.fieldtype in (QuestionType.SELECT, QuestionType.RADIO):
 			self.validate_options(question, [value])
+		elif question.fieldtype == QuestionType.URL and not validate_url(
+			value, valid_schemes=("http", "https")
+		):
+			self.invalid(question)
 		elif question.fieldtype == QuestionType.DATE:
 			getdate(value)
 

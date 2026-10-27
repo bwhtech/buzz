@@ -8,6 +8,7 @@
  "field_order": [
   "form_tab",
   "title",
+  "description",
   "event",
   "form_doctype",
   "column_break_settings",
@@ -19,6 +20,7 @@
   "questions_tab",
   "questions",
   "messages_tab",
+  "submit_label",
   "success_title",
   "success_message",
   "column_break_messages",
@@ -37,6 +39,12 @@
    "in_list_view": 1,
    "label": "Title",
    "reqd": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "description": "Shown under the form title."
   },
   {
    "fieldname": "event",
@@ -113,6 +121,11 @@
    "fieldtype": "Tab Break",
    "label": "Messages",
    "depends_on": "eval:!['Event Booking','Event Booking Attendee'].includes(doc.form_doctype)"
+  },
+  {
+   "fieldname": "submit_label",
+   "fieldtype": "Data",
+   "label": "Submit Button Label"
   },
   {
    "fieldname": "success_title",

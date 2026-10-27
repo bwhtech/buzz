@@ -21,17 +21,19 @@ const SECTIONS: Record<string, { label: string; route: string }> = {
 const event = useEventDoc(() => props.eventId)
 const draft = computed(() => props.builder.draft.value)
 
-const crumbs = computed(() => {
-	const section = SECTIONS[draft.value?.form_doctype ?? ""] ?? {
+const section = computed(() => {
+	const { label, route } = SECTIONS[draft.value?.form_doctype ?? ""] ?? {
 		label: "Settings",
 		route: "event-settings",
 	}
-	return [
-		{ label: event.doc?.title || "Event" },
-		{ label: section.label, route: { name: section.route, params: { eventId: props.eventId } } },
-		{ label: draft.value?.title || "Form" },
-	]
+	return { label, route: { name: route, params: { eventId: props.eventId } } }
 })
+
+const crumbs = computed(() => [
+	{ label: event.doc?.title || "Event" },
+	section.value,
+	{ label: draft.value?.title || "Form" },
+])
 
 const TABS = [
 	{ label: "Build", value: "build", iconLeft: "lucide-layout-list" },
@@ -56,7 +58,15 @@ async function save() {
 		<header
 			class="flex h-12 shrink-0 items-center gap-3 border-b border-outline-gray-1 bg-surface-base px-4"
 		>
-			<Breadcrumbs class="min-w-0 flex-1" :items="crumbs" />
+			<div class="flex min-w-0 flex-1 items-center gap-1">
+				<Button
+					variant="ghost"
+					icon="lucide-arrow-left"
+					:label="`Back to ${section.label}`"
+					:route="section.route"
+				/>
+				<Breadcrumbs class="min-w-0" :items="crumbs" />
+			</div>
 			<TabButtons v-model="tab" :options="TABS" />
 			<div class="flex flex-1 justify-end">
 				<Button

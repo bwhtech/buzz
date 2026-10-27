@@ -30,6 +30,7 @@ class CustomFieldDefinition(APIResponse):
 	placeholder: str | None
 	default_value: str | None
 	description: str | None = None
+	width: str | None = "Full"
 	depends_on: list | None = None
 	mandatory_depends_on: list | None = None
 	order: int
@@ -41,6 +42,8 @@ class CustomFormResponse(APIResponse):
 	form_fields: list[dict]
 	custom_fields: list[CustomFieldDefinition]
 	form_title: str
+	form_description: str | None = None
+	submit_label: str | None = None
 	event: FormEventSummary
 	closed: bool
 	closed_title: str

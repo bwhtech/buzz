@@ -52,12 +52,33 @@
 				class="bg-surface-base border border-outline-gray-1 rounded-6 p-6"
 				@submit.prevent="handleSubmit"
 			>
-				<h1 class="text-ink-gray-9 text-3xl-bold mb-6">
+				<h1
+					class="text-ink-gray-9 text-3xl-bold"
+					:class="formData.form_description ? 'mb-2' : 'mb-6'"
+				>
 					{{ formData.form_title }}
 				</h1>
+				<p v-if="formData.form_description" class="mb-6 text-p-base text-ink-gray-6">
+					{{ formData.form_description }}
+				</p>
+
+				<div v-if="steps.length > 1" class="mb-6 space-y-2">
+					<div class="flex gap-1" aria-hidden="true">
+						<span
+							v-for="(_, index) in steps"
+							:key="index"
+							class="h-1 flex-1 rounded-full transition-colors duration-200"
+							:class="index <= step ? 'bg-surface-gray-7' : 'bg-surface-gray-3'"
+						/>
+					</div>
+					<p class="text-p-sm text-ink-gray-5">
+						{{ __("Step {0} of {1}", [step + 1, steps.length]) }}
+						<template v-if="steps[step].title"> · {{ __(steps[step].title) }}</template>
+					</p>
+				</div>
 
 				<div class="space-y-6">
-					<FormFieldSections :fields="formData.form_fields">
+					<FormFieldSections v-if="step === 0" :fields="formData.form_fields">
 						<template #field="{ field }">
 							<div v-if="field.fieldtype === 'Table'" class="space-y-2">
 								<label class="text-xs text-ink-gray-5 block">
@@ -101,22 +122,27 @@
 					</FormFieldSections>
 
 					<CustomFieldsSection
-						v-if="formData.custom_fields?.length"
-						:custom-fields="formData.custom_fields"
+						v-if="steps[step].fields.length"
+						:custom-fields="steps[step].fields"
 						v-model="customFieldValues"
 						:show-title="false"
 					/>
 				</div>
 
-				<Button
-					variant="solid"
-					size="lg"
-					class="w-full mt-6"
-					:loading="submitResource.loading"
-					type="submit"
-				>
-					{{ __("Submit") }}
-				</Button>
+				<div class="mt-6 flex gap-2">
+					<Button v-if="step > 0" size="lg" @click="step--">
+						{{ __("Back") }}
+					</Button>
+					<Button
+						variant="solid"
+						size="lg"
+						class="flex-1"
+						:loading="submitResource.loading"
+						type="submit"
+					>
+						{{ isLastStep ? __(formData.submit_label || "Submit") : __("Next") }}
+					</Button>
+				</div>
 			</form>
 		</div>
 
@@ -336,7 +362,25 @@ function isAttachField(field: FormFieldDef) {
 	return field.fieldtype === "Attach" || field.fieldtype === "Attach Image"
 }
 
+// Page breaks split the questions into steps; the form's own fields open the first one.
+const steps = computed(() => {
+	const groups: { title: string; fields: FormFieldDef[] }[] = [{ title: "", fields: [] }]
+	for (const field of formData.value?.custom_fields || []) {
+		if (field.fieldtype === "Page Break") groups.push({ title: field.label, fields: [] })
+		else groups[groups.length - 1].fields.push(field)
+	}
+	return groups
+})
+const step = ref(0)
+const isLastStep = computed(() => step.value >= steps.value.length - 1)
+
+// The browser has already checked this step's required inputs before submit fires.
 function handleSubmit() {
+	if (!isLastStep.value) {
+		step.value++
+		window.scrollTo({ top: 0 })
+		return
+	}
 	for (const field of formData.value?.form_fields || []) {
 		if (field.fieldtype === "Table" && field.reqd && !tableData[field.fieldname]?.length) {
 			toast.error(__("Please add at least one {0}", [__(field.label)]))
@@ -353,6 +397,7 @@ function handleSubmit() {
 		const val = customFieldValues.value[field.fieldname]
 		const isEmpty = val == null || val === "" || (Array.isArray(val) && val.length === 0)
 		if (isEmpty) {
+			step.value = steps.value.findIndex((group) => group.fields.includes(field))
 			toast.error(__("{0} is required", [__(field.label)]))
 			return
 		}

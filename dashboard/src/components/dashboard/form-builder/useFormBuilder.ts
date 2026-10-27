@@ -11,12 +11,14 @@ export interface FormQuestion {
 	options?: string | null
 	placeholder?: string | null
 	description?: string | null
+	width?: "Full" | "Half"
 	[key: string]: unknown
 }
 
 export interface BuzzFormDoc {
 	name: string
 	title: string
+	description?: string | null
 	event: string
 	form_doctype: string
 	route: string
@@ -26,7 +28,7 @@ export interface BuzzFormDoc {
 }
 
 // What the builder edits; everything else on the doc is the server's to set.
-const EDITABLE_FIELDS = ["title", "questions"] as const
+const EDITABLE_FIELDS = ["title", "description", "questions"] as const
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 

@@ -4,14 +4,24 @@
 			{{ __(title) || __("Additional Information") }}
 		</h5>
 
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-			<CustomFieldInput
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+			<div
 				v-for="field in customFields"
 				:key="field.fieldname"
-				:field="field"
-				:model-value="getFieldValue(field.fieldname)"
-				@update:model-value="updateFieldValue(field.fieldname, $event)"
-			/>
+				:class="{ 'md:col-span-2': field.width !== 'Half' || isLayoutField(field) }"
+			>
+				<CustomFieldInput
+					:field="field"
+					:model-value="getFieldValue(field.fieldname)"
+					@update:model-value="updateFieldValue(field.fieldname, $event)"
+				/>
+				<p
+					v-if="field.description && !isLayoutField(field)"
+					class="mt-1.5 text-p-sm text-ink-gray-5"
+				>
+					{{ __(field.description) }}
+				</p>
+			</div>
 		</div>
 	</div>
 </template>
@@ -19,7 +29,11 @@
 <script setup lang="ts">
 import { type PropType } from "vue"
 
-import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields"
+import {
+	type FrappeField,
+	getFieldDefaultValue,
+	isLayoutField,
+} from "@/composables/useCustomFields"
 
 import CustomFieldInput from "./CustomFieldInput.vue"
 

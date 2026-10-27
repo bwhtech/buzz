@@ -12,8 +12,15 @@ const form = defineModel<BuzzFormDoc>({ required: true })
 		<div class="rounded-8 bg-surface-base p-5 shadow-sm ring-1 ring-outline-gray-1 sm:p-8">
 			<input
 				v-model="form.title"
-				class="mb-6 w-full border-0 bg-transparent p-0 text-2xl font-semibold text-ink-gray-9 outline-none focus:ring-0"
+				class="w-full border-0 bg-transparent p-0 text-2xl font-semibold text-ink-gray-9 outline-none focus:ring-0"
 				aria-label="Form name"
+			/>
+			<textarea
+				v-model="form.description"
+				rows="1"
+				class="mb-6 mt-1 w-full resize-none border-0 bg-transparent p-0 text-p-base text-ink-gray-6 outline-none [field-sizing:content] placeholder:text-ink-gray-4 focus:ring-0"
+				placeholder="Add a description"
+				aria-label="Form description"
 			/>
 			<div v-if="form.questions.length" class="-mx-3 space-y-1">
 				<FieldRow

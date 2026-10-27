@@ -87,6 +87,8 @@ class CustomFormService:
 			form_fields=self.renderable_fields(),
 			custom_fields=self.custom_field_definitions(),
 			form_title=self.form_doctype,
+			form_description=form.description,
+			submit_label=form.submit_label,
 			event=self.event_summary(),
 			closed=False,
 			closed_title=form.closed_title or _("Submissions Closed"),

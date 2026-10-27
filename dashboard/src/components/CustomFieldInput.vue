@@ -181,6 +181,34 @@
 		</FileUploader>
 	</div>
 
+	<h3 v-else-if="field.fieldtype === 'Heading'" class="pt-2 text-lg font-semibold text-ink-gray-9">
+		{{ __(field.label) }}
+	</h3>
+
+	<p v-else-if="field.fieldtype === 'Paragraph'" class="text-p-base text-ink-gray-7">
+		{{ __(field.description || field.label) }}
+	</p>
+
+	<hr v-else-if="field.fieldtype === 'Divider'" class="border-outline-gray-2" />
+
+	<!-- Steps are split out by the form; anywhere else a page break draws nothing. -->
+	<template v-else-if="field.fieldtype === 'Page Break'" />
+
+	<RadioGroup
+		v-else-if="field.fieldtype === 'Radio'"
+		:model-value="modelValue"
+		@update:model-value="$emit('update:modelValue', $event)"
+		:label="__(field.label)"
+		:required="!!field.mandatory"
+	>
+		<Radio
+			v-for="option in getFieldOptions(field)"
+			:key="option.value"
+			:value="option.value"
+			:label="option.label"
+		/>
+	</RadioGroup>
+
 	<FormControl
 		v-else
 		:model-value="modelValue"
@@ -201,6 +229,8 @@ import {
 	FileUploader,
 	TimePicker,
 	MultiSelect,
+	Radio,
+	RadioGroup,
 	Rating,
 	Textarea,
 } from "frappe-ui"
