@@ -87,7 +87,8 @@ class TicketHoldService:
 		ticket_types = [frappe.get_cached_doc("Event Ticket Type", name) for name in self.quantities]
 		for ticket_type in ticket_types:
 			if str(ticket_type.event) != self.event_name or not ticket_type.is_published:
-				frappe.throw(_("{0} is not available for this event").format(ticket_type.title))
+				# No title: it would name hidden ticket types of any event.
+				frappe.throw(_("A selected ticket type is not available for this event"))
 		self.validate_hidden(ticket_types)
 		return [ticket_type for ticket_type in ticket_types if ticket_type.max_tickets_available]
 

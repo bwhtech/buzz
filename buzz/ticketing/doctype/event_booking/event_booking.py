@@ -179,7 +179,8 @@ class EventBooking(Document):
 
 	def validate_ticket_type(self, ticket_type, quantity: int):
 		if str(ticket_type.event) != str(self.event):
-			frappe.throw(_("{0} is not available for this event").format(ticket_type.title))
+			# No title: it would name hidden ticket types of any event.
+			frappe.throw(_("A selected ticket type is not available for this event"))
 		if self.flags.payment_received:
 			self.log_if_oversold(ticket_type, quantity)
 			return
@@ -203,8 +204,12 @@ class EventBooking(Document):
 			for name in self.ticket_quantities()
 			if frappe.get_cached_value("Event Ticket Type", name, "is_hidden")
 		}
-		if hidden and not hidden <= self.unlocked_ticket_types():
+		unlocked = self.unlocked_ticket_types()
+		if hidden and not hidden <= unlocked:
 			HiddenTicketType.throw()
+		# A booking of public tickets only must not use up the code.
+		if not unlocked & set(self.ticket_quantities()):
+			self.access_code = None
 
 	def unlocked_ticket_types(self) -> set[str]:
 		access_code = self.get_access_code()

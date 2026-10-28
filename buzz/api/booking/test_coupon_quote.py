@@ -3,8 +3,13 @@ from frappe.utils import add_days, today
 from buzz.api.booking import get_discount
 from buzz.api.booking.details import coupon_code_of
 from buzz.api.booking.schemas import DiscountQuoteRequest
-from buzz.tests.base_test_cases import CouponTestCase, create_paid_ticket_type
-from buzz.tests.factories import BuzzCouponCodeFactory, BuzzEventFactory, EventTicketTypeFactory
+from buzz.tests.base_test_cases import CouponTestCase, attendee_rows, create_paid_ticket_type
+from buzz.tests.factories import (
+	BuzzCouponCodeFactory,
+	BuzzEventFactory,
+	EventBookingFactory,
+	EventTicketTypeFactory,
+)
 
 INVALID = "Invalid or expired code"
 
@@ -107,8 +112,8 @@ class TestAutomaticCouponSelection(QuoteTestCase):
 class TestAccessCodeQuote(QuoteTestCase):
 	def setUp(self):
 		super().setUp()
-		hidden = EventTicketTypeFactory.create("is_hidden", event=self.event.name)
-		self.ticket_types = [{"ticket_type": hidden.name}]
+		self.hidden = EventTicketTypeFactory.create("is_hidden", event=self.event.name)
+		self.ticket_types = [{"ticket_type": self.hidden.name}]
 
 	def test_applies_before_its_hidden_tickets_are_in_the_cart(self):
 		self.create_coupon("access_code", code="INSIDER", ticket_types=self.ticket_types)
@@ -121,6 +126,22 @@ class TestAccessCodeQuote(QuoteTestCase):
 		code = self.create_coupon(
 			"access_code", code="ONCEVIP", usage_limit=1, ticket_types=self.ticket_types
 		)
-		self.create_booking(buyer_email="first@example.com", access_code=code.name).submit()
+		EventBookingFactory.create(
+			event=self.event.name,
+			buyer_email="first@example.com",
+			access_code=code.name,
+			attendees=attendee_rows(self.hidden.name, 1),
+		).submit()
 
-		self.assertEqual(self.quote(coupon_code="ONCEVIP")["error"], "This access code is not valid.")
+		self.assertEqual(self.quote(coupon_code="ONCEVIP")["error"], INVALID)
+
+	def test_hidden_tickets_are_left_out_of_the_cart_without_their_code(self):
+		hidden = EventTicketTypeFactory.create(
+			"is_hidden", event=self.event.name, prices=[{"currency": "INR", "price": 500}]
+		)
+		self.create_coupon("automatic")
+		request = DiscountQuoteRequest(
+			event=str(self.event.name), currency="INR", ticket_types=[str(hidden.name)]
+		)
+
+		self.assertEqual(get_discount(request).discount_amount, 0)

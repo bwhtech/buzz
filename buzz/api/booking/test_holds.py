@@ -101,8 +101,10 @@ class TestHoldTickets(HoldTestCase):
 	def test_refuses_another_events_ticket_type(self):
 		other = EventTicketTypeFactory.create(event=BuzzEventFactory.create().name, max_tickets_available=5)
 
-		with self.assertRaises(frappe.ValidationError):
+		with self.assertRaises(frappe.ValidationError) as error:
 			hold_tickets(self.event.name, {str(other.name): 1})
+
+		self.assertNotIn(other.title, str(error.exception))
 
 	def test_refuses_an_unpublished_ticket_type(self):
 		unpublished = EventTicketTypeFactory.create("unpublished", event=self.event.name)

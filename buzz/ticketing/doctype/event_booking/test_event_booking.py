@@ -168,6 +168,8 @@ class TestHiddenTicketBooking(CouponTestCase):
 
 	def test_access_code_without_a_discount_keeps_the_automatic_offer(self):
 		automatic = self.create_coupon("automatic")
+		# Rollback is per class, so a live offer would discount later tests.
+		self.addCleanup(frappe.db.set_value, "Buzz Coupon Code", automatic.name, "enabled", 0)
 		code = self.create_access_code()
 
 		booking = self.book_hidden(code.name)
@@ -187,3 +189,10 @@ class TestHiddenTicketBooking(CouponTestCase):
 
 		with self.assertRaises(frappe.ValidationError):
 			self.book_hidden(code.name)
+
+	def test_access_code_is_not_used_up_by_a_booking_without_its_hidden_tickets(self):
+		code = self.create_access_code(usage_limit=1)
+
+		self.create_booking(access_code=code.name).submit()
+
+		self.assertEqual(self.book_hidden(code.name).access_code, code.name)

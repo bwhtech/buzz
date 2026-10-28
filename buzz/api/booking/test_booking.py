@@ -379,7 +379,9 @@ class TestBookingSelectionValidation(BookingTestCase):
 
 		with self.assertRaises(frappe.ValidationError):
 			self.book([self.attendee(ticket_type=str(foreign_ticket_type.name))])
-		self.assertIn("not available for this event", frappe.local.message_log[-1]["message"])
+		message = frappe.local.message_log[-1]["message"]
+		self.assertIn("not available for this event", message)
+		self.assertNotIn(foreign_ticket_type.title, message)
 
 	def test_add_on_from_another_event_is_refused(self):
 		foreign_add_on = TicketAddOnFactory.create(event=self.foreign_event.name)
