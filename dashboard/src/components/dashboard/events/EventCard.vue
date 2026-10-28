@@ -90,6 +90,7 @@ const venue = computed(() => {
 				:src="event.banner_image"
 				:style="banner"
 				loading="lazy"
+				decoding="async"
 				alt=""
 				@error="bannerFailed = true"
 			/>
