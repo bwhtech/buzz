@@ -170,46 +170,48 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 		limit=1,
 	)
 
-	if len(request):
-		data = frappe.parse_json(frappe.db.get_value("Integration Request", request[0].name, "data"))
+	if not request:
+		frappe.throw(_("No payment request found for {0}").format(reference_docname))
 
-		# The request data carries client-chosen values, so the server-made payment row decides.
-		payment = frappe.get_last_doc(
-			"Event Payment",
-			filters={
-				"reference_doctype": reference_doctype,
-				"reference_docname": reference_docname,
-				"payment_received": 0,
-			},
-		)
-		payment_gateway = payment.payment_gateway
+	data = frappe.parse_json(frappe.db.get_value("Integration Request", request[0].name, "data"))
 
-		if payment_gateway == "Razorpay":
-			payment_id = "razorpay_payment_id"
-			verify_razorpay_payment(payment, data.get(payment_id))
+	# The request data carries client-chosen values, so the server-made payment row decides.
+	payment = frappe.get_last_doc(
+		"Event Payment",
+		filters={
+			"reference_doctype": reference_doctype,
+			"reference_docname": reference_docname,
+			"payment_received": 0,
+		},
+	)
+	payment_gateway = payment.payment_gateway
 
-		elif payment_gateway == "Paymob":
-			payment_id = "paymob_payment_id"
+	if payment_gateway == "Razorpay":
+		payment_id = "razorpay_payment_id"
+		verify_razorpay_payment(payment, data.get(payment_id))
 
-		elif payment_gateway == "PayPal":
-			payment_id = "transaction_id"
+	elif payment_gateway == "Paymob":
+		payment_id = "paymob_payment_id"
 
-		elif "Stripe" in payment_gateway:
-			payment_id = "stripe_token_id"
-		else:
-			payment_id = "order_id"
+	elif payment_gateway == "PayPal":
+		payment_id = "transaction_id"
 
-		frappe.db.set_value(
-			"Event Payment",
-			payment.name,
-			{
-				"payment_received": 1,
-				"payment_id": data.get(payment_id),
-				"order_id": data.get("order_id"),
-			},
-		)
+	elif "Stripe" in payment_gateway:
+		payment_id = "stripe_token_id"
+	else:
+		payment_id = "order_id"
 
-		frappe.db.commit()  # nosemgrep: frappe-manual-commit
+	frappe.db.set_value(
+		"Event Payment",
+		payment.name,
+		{
+			"payment_received": 1,
+			"payment_id": data.get(payment_id),
+			"order_id": data.get("order_id"),
+		},
+	)
+
+	frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
 def verify_razorpay_payment(payment, payment_id: str | None):

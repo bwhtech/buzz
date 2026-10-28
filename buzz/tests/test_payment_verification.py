@@ -97,6 +97,20 @@ class TestRazorpayPaymentVerification(IntegrationTestCase):
 		self.assert_unconfirmed(other)
 		self.assertEqual(frappe.db.get_value("Event Payment", other_payment.name, "payment_received"), 0)
 
+	def test_refuses_confirmation_without_an_integration_request(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.authorize(self.booking, {"amount": 100, "currency": self.booking.currency})
+
+		self.assert_unconfirmed(self.booking)
+
+	def test_refuses_confirmation_without_an_unpaid_payment(self):
+		frappe.db.set_value("Event Payment", self.payment.name, "payment_received", 1)
+
+		with self.assertRaises(frappe.ValidationError):
+			self.pay(self.booking, "pay_orphan")
+
+		self.assert_unconfirmed(self.booking)
+
 	def test_gateway_named_by_the_client_does_not_skip_verification(self):
 		self.create_request(self.booking, "pay_stripe", payment_gateway="Stripe")
 
