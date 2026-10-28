@@ -161,6 +161,10 @@ class TestGetEventBookingData(BookingTestCase):
 		payload = get_event_booking_data(self.event.route).__json__()
 		self.assertEqual(set(payload["event_details"]), GUEST_EVENT_DETAIL_FIELDS)
 
+	def test_signed_in_users_get_the_same_trimmed_event(self):
+		payload = get_event_booking_data(self.event.route).__json__()
+		self.assertEqual(set(payload["event_details"]), GUEST_EVENT_DETAIL_FIELDS)
+
 	def test_ticket_types_follow_category_order_with_uncategorized_last(self):
 		later = EventTicketCategoryFactory.create(event=self.event.name, sort_order=2)
 		first = EventTicketCategoryFactory.create(event=self.event.name, sort_order=1)
