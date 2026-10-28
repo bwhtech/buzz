@@ -208,88 +208,106 @@ function goBack() {
 					/>
 					<CouponCheckoutPreview v-else :values="draft" :ticket-types="ticketTypes" />
 				</aside>
-				<div class="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
-					<Alert
-						v-if="!isNew && statusAlert"
-						:theme="statusAlert.theme"
-						:title="statusAlert.title"
-						:primary-action="
-							canWrite
-								? {
-										label: statusAlert.action,
-										variant: 'outline',
-										theme: 'gray',
-										loading: couponDoc.setValue.loading,
-										onClick: toggleEnabled,
-									}
-								: undefined
-						"
-					/>
-
-					<!-- A short crossfade so the step swap doesn't jump; the exit is quicker than the entry. -->
-					<Transition
-						mode="out-in"
-						enter-active-class="transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-opacity"
-						enter-from-class="opacity-0 translate-y-1 motion-reduce:translate-y-0"
-						leave-active-class="transition-opacity duration-100 ease-out"
-						leave-to-class="opacity-0"
-					>
-						<CouponTypeStep
-							v-if="step === 1"
-							v-model:coupon-type="draft.coupon_type"
-							v-model:discount-type="draft.discount_type"
+				<div class="flex min-w-0 flex-1 flex-col">
+					<div class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
+						<Alert
+							v-if="!isNew && statusAlert"
+							:theme="statusAlert.theme"
+							:title="statusAlert.title"
+							:primary-action="
+								canWrite
+									? {
+											label: statusAlert.action,
+											variant: 'outline',
+											theme: 'gray',
+											loading: couponDoc.setValue.loading,
+											onClick: toggleEnabled,
+										}
+									: undefined
+							"
 						/>
 
-						<div v-else class="flex flex-col gap-6">
-							<div class="flex items-center gap-3 rounded-4 bg-surface-gray-1 py-2 pl-3 pr-1.5">
-								<span
-									class="size-4 shrink-0 text-ink-gray-6"
-									:class="TYPE_ICONS[draft.coupon_type]"
-									aria-hidden="true"
-								/>
-								<span class="flex-1 text-sm text-ink-gray-8">{{ typeSummary }}</span>
-								<Button v-if="canChangeType" variant="ghost" label="Change" @click="step = 1" />
+						<!-- A short crossfade so the step swap doesn't jump; the exit is quicker than the entry. -->
+						<Transition
+							mode="out-in"
+							enter-active-class="transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-opacity"
+							enter-from-class="opacity-0 translate-y-1 motion-reduce:translate-y-0"
+							leave-active-class="transition-opacity duration-100 ease-out"
+							leave-to-class="opacity-0"
+						>
+							<CouponTypeStep
+								v-if="step === 1"
+								v-model:coupon-type="draft.coupon_type"
+								v-model:discount-type="draft.discount_type"
+							/>
+
+							<div v-else class="flex flex-col gap-6">
+								<div class="flex items-center gap-3 rounded-4 bg-surface-gray-1 py-2 pl-3 pr-1.5">
+									<span
+										class="size-4 shrink-0 text-ink-gray-6"
+										:class="TYPE_ICONS[draft.coupon_type]"
+										aria-hidden="true"
+									/>
+									<span class="flex-1 text-sm text-ink-gray-8">{{ typeSummary }}</span>
+									<Button v-if="canChangeType" variant="ghost" label="Change" @click="step = 1" />
+								</div>
+								<CouponForm v-model="draft" :ticket-types="ticketTypes" :disabled="!canWrite" />
 							</div>
-							<CouponForm v-model="draft" :ticket-types="ticketTypes" :disabled="!canWrite" />
+						</Transition>
+					</div>
+
+					<CouponCheckoutPreview
+						v-if="isMobile && step === 2 && draft.coupon_type !== 'Access Code'"
+						:values="draft"
+						:ticket-types="ticketTypes"
+						compact
+					/>
+
+					<!-- Sits under the form only, so the preview panel runs the full height. Slides up
+					     when an edit makes it appear; leaves faster than it arrives. -->
+					<Transition
+						enter-active-class="transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-opacity"
+						enter-from-class="opacity-0 translate-y-2 motion-reduce:translate-y-0"
+						leave-active-class="transition-opacity duration-150 ease-out"
+						leave-to-class="opacity-0"
+					>
+						<div
+							v-if="canWrite && (isNew || hasChanges || step === 1)"
+							class="shrink-0 border-t border-outline-gray-1 p-4"
+						>
+							<div class="flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2">
+								<ErrorMessage
+									v-if="showValidationError && step === 2"
+									class="text-right"
+									:message="validationError ?? undefined"
+								/>
+								<div class="flex justify-end gap-2 max-sm:w-full max-sm:[&>*]:flex-1">
+									<Button
+										size="md"
+										:label="isNew && step === 2 ? 'Back' : 'Cancel'"
+										@click="goBack"
+									/>
+									<Button
+										v-if="step === 1"
+										size="md"
+										variant="solid"
+										label="Continue"
+										@click="step = 2"
+									/>
+									<Button
+										v-else
+										size="md"
+										variant="solid"
+										:label="isNew ? 'Create coupon' : 'Save changes'"
+										:loading="isNew ? creator.loading : couponDoc.setValue.loading"
+										@click="submit"
+									/>
+								</div>
+							</div>
 						</div>
 					</Transition>
 				</div>
 			</div>
-
-			<CouponCheckoutPreview
-				v-if="isMobile && step === 2 && draft.coupon_type !== 'Access Code'"
-				:values="draft"
-				:ticket-types="ticketTypes"
-				compact
-			/>
-
-			<template v-if="canWrite && (isNew || hasChanges || step === 1)" #footer>
-				<div class="flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2">
-					<ErrorMessage
-						v-if="showValidationError && step === 2"
-						class="text-right"
-						:message="validationError ?? undefined"
-					/>
-					<div class="flex justify-end gap-2 max-sm:w-full max-sm:[&>*]:flex-1">
-						<Button size="md" :label="isNew && step === 2 ? 'Back' : 'Cancel'" @click="goBack" />
-						<Button
-							v-if="step === 1"
-							size="md"
-							variant="solid"
-							label="Continue"
-							@click="step = 2"
-						/>
-						<Button
-							v-else
-							size="md"
-							variant="solid"
-							:label="isNew ? 'Create coupon' : 'Save changes'"
-							:loading="isNew ? creator.loading : couponDoc.setValue.loading"
-							@click="submit"
-						/>
-					</div>
-				</div>
-			</template>
 		</DrawerContent>
 	</Drawer>
 </template>
