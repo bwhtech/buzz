@@ -253,7 +253,7 @@ class BuzzCouponCode(Document):
 		query = (
 			frappe.qb.from_(draft)
 			.select(Count(draft.name))
-			.where((draft.field(self.usage_field) == self.name) & (draft.docstatus == 0))
+			.where((getattr(draft, self.usage_field) == self.name) & (draft.docstatus == 0))
 			.where(draft.name != cstr(booking.name))
 			.where((draft.payment_method == OFFLINE_PAYMENT_METHOD) | (draft.creation > window_start))
 			.where(draft.buyer_email.isnotnull())
