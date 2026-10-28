@@ -4,6 +4,7 @@ import { computed, ref } from "vue"
 import { useRouter } from "vue-router"
 
 import QuickActionTile, { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
+import FormEditCard from "@/components/dashboard/form-builder/FormEditCard.vue"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import type { EventGuest, EventGuests } from "@/types"
 import { downloadCsv } from "@/utils/csv"
@@ -15,6 +16,7 @@ const props = defineProps<{
 	query: { search: string; filters: string; order: string; zone: string }
 	checkedIn: number
 	total: number
+	registrationForm?: string | null
 }>()
 
 const exporting = ref(false)
@@ -87,6 +89,7 @@ const actions = computed(() => [
 		tone="green"
 		@click="openCheckIn"
 	/>
+	<FormEditCard v-if="registrationForm" :form="registrationForm" />
 	<section>
 		<Button
 			v-for="action in actions"

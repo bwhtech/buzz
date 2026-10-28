@@ -15,6 +15,7 @@ export type QuickAction = {
 import { Button } from "frappe-ui"
 
 import QuickActionTile, { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
+import FormEditCard from "@/components/dashboard/form-builder/FormEditCard.vue"
 
 defineProps<{
 	// What is open or closed — "Registration", "Proposals".
@@ -24,6 +25,8 @@ defineProps<{
 	openIcon: string
 	closedIcon: string
 	actions: QuickAction[]
+	// The Buzz Form behind the subject, shown as a card that opens the builder.
+	form?: string | null
 }>()
 defineEmits<{ toggle: [] }>()
 </script>
@@ -44,6 +47,7 @@ defineEmits<{ toggle: [] }>()
 		/>
 		<slot />
 	</div>
+	<FormEditCard v-if="form" :form="form" />
 
 	<section class="space-y-1 pt-1">
 		<Button
