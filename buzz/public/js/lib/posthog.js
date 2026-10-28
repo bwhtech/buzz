@@ -12,6 +12,8 @@
 		defaults: "2026-08-30",
 		capture_pageview: "history_change",
 		session_recording: { maskAllInputs: true },
+		// LCP, INP, CLS and FCP as $web_vitals events, whatever the project setting says.
+		capture_performance: { web_vitals: true },
 	})
 	// One person per sandbox, whichever of its three users is logged in.
 	if (config.sandbox) {
