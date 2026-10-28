@@ -31,7 +31,7 @@ const questions = computed(() =>
 		class="group relative overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-white transition-[transform,background-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.98] motion-reduce:transition-none [@media(hover:hover)]:hover:bg-surface-gray-1"
 	>
 		<div
-			class="h-32 overflow-hidden bg-surface-gray-2 px-5 pt-4 [mask-image:linear-gradient(to_bottom,black_65%,transparent)]"
+			class="h-32 overflow-hidden bg-surface-gray-1 px-5 pt-4 [mask-image:linear-gradient(to_bottom,black_65%,transparent)]"
 			aria-hidden="true"
 		>
 			<div
