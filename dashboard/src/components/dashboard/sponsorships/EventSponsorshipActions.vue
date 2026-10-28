@@ -22,16 +22,6 @@ const actions = computed<QuickAction[]>(() =>
 		props.form.link
 			? { icon: "lucide-arrow-up-right", label: "Go to form page", link: props.form.link }
 			: null,
-		props.canWrite
-			? {
-					icon: "lucide-clipboard-list",
-					label: "Edit form",
-					route: {
-						name: "event-form",
-						params: { eventId: props.event, formName: props.form.name },
-					},
-				}
-			: null,
 		props.canImport
 			? { icon: "lucide-upload", label: "Import sponsors", onClick: () => emit("import") }
 			: null,
@@ -47,6 +37,7 @@ const actions = computed<QuickAction[]>(() =>
 		:closed="form.closed"
 		:can-write="canWrite"
 		:actions="actions"
+		:form="canWrite ? form.name : null"
 		@toggle="dialogOpen = true"
 	/>
 

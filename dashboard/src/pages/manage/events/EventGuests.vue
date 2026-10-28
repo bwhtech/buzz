@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
-import { ErrorMessage } from "frappe-ui"
+import { ErrorMessage, useList } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
@@ -46,6 +46,14 @@ const exportQuery = computed(() => ({
 
 const trend = useRegistrationTrend(eventId)
 const canWrite = useCanWriteEvent(eventId)
+
+// The answers on a guest come from the registration form, so it is edited from here too.
+const registrationForm = useList<{ name: string }>({
+	doctype: "Buzz Form",
+	filters: { event: eventId, form_doctype: "Event Booking" },
+	fields: ["name"],
+	limit: 1,
+})
 
 const message = (error: unknown) => (error as FrappeError | null)?.message
 
@@ -212,6 +220,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 				:query="exportQuery"
 				:checked-in="page.data.checked_in_any_zone"
 				:total="page.data.total"
+				:registration-form="canWrite.data?.has_permission ? registrationForm.data?.[0]?.name : null"
 			/>
 		</template>
 	</PageWithSidebar>
