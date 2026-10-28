@@ -22,6 +22,7 @@ import {
 import { matches } from "@/utils/formDraft"
 import { serverErrorMessage } from "@/utils/serverError"
 
+import AccessCodePreview from "./AccessCodePreview.vue"
 import CouponCheckoutPreview from "./CouponCheckoutPreview.vue"
 import CouponForm from "./CouponForm.vue"
 import CouponTypeStep from "./CouponTypeStep.vue"
@@ -200,7 +201,12 @@ function goBack() {
 					v-if="!isMobile"
 					class="w-[360px] shrink-0 overflow-y-auto border-r border-outline-gray-1 bg-surface-gray-1 p-5"
 				>
-					<CouponCheckoutPreview :values="draft" :ticket-types="ticketTypes" />
+					<AccessCodePreview
+						v-if="draft.coupon_type === 'Access Code'"
+						:values="draft"
+						:ticket-types="ticketTypes"
+					/>
+					<CouponCheckoutPreview v-else :values="draft" :ticket-types="ticketTypes" />
 				</aside>
 				<div class="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
 					<Alert
@@ -251,7 +257,7 @@ function goBack() {
 			</div>
 
 			<CouponCheckoutPreview
-				v-if="isMobile && step === 2"
+				v-if="isMobile && step === 2 && draft.coupon_type !== 'Access Code'"
 				:values="draft"
 				:ticket-types="ticketTypes"
 				compact
