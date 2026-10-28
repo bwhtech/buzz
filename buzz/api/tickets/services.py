@@ -1,11 +1,14 @@
 from typing import TYPE_CHECKING
 
 import frappe
+from frappe.utils import validate_email_address
 
 from buzz.api.tickets import windows
 from buzz.api.tickets.emails import send_ticket_transfer_emails
 from buzz.api.tickets.exceptions import (
 	AddOnChangeWindowClosed,
+	AddOnNotPermitted,
+	AddOnOptionInvalid,
 	AddOnValueNotFound,
 	CancellationAlreadyRequested,
 	CancellationNotPermitted,
@@ -130,6 +133,7 @@ class TicketService:
 		if not windows.is_window_open(ticket.event, windows.TRANSFER):
 			TransferWindowClosed.throw()
 
+		validate_email_address(new_email, throw=True)
 		old_name, old_email = ticket.attendee_name, ticket.attendee_email
 		ticket.first_name = new_first_name
 		ticket.last_name = new_last_name
@@ -154,10 +158,22 @@ def change_add_on_preference(add_on_id: str, new_value: str) -> None:
 	add_on_value = frappe.get_cached_doc("Ticket Add-on Value", add_on_id)
 	ticket = frappe.get_cached_doc("Event Ticket", add_on_value.parent)
 
+	if not TicketService(ticket.name).may_transfer(ticket):
+		AddOnNotPermitted.throw()
+
 	if not windows.is_window_open(ticket.event, windows.ADD_ON_CHANGE):
 		AddOnChangeWindowClosed.throw()
 
+	validate_add_on_option(add_on_value.add_on, new_value)
 	frappe.db.set_value("Ticket Add-on Value", add_on_id, "value", new_value)
+
+
+def validate_add_on_option(add_on_id: str, value: str) -> None:
+	user_selects_option, options = frappe.db.get_value(
+		"Ticket Add-on", add_on_id, ["user_selects_option", "options"]
+	)
+	if user_selects_option and value not in (options or "").split("\n"):
+		AddOnOptionInvalid.throw()
 
 
 def create_cancellation_request(booking_id: str, ticket_ids: list | None = None) -> None:
