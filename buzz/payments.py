@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import cint, cstr, flt
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import record_gateway_refund
@@ -160,9 +160,6 @@ def record_payment(
 
 
 def mark_payment_as_received(reference_doctype: str, reference_docname: str):
-	if frappe.in_test:
-		return
-
 	request = frappe.get_all(
 		"Integration Request",
 		{
@@ -174,12 +171,22 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 	)
 
 	if len(request):
-		data = frappe.db.get_value("Integration Request", request[0].name, "data")
-		data = frappe.parse_json(data)
+		data = frappe.parse_json(frappe.db.get_value("Integration Request", request[0].name, "data"))
 
-		payment_gateway = data.get("payment_gateway")
+		# The request data carries client-chosen values, so the server-made payment row decides.
+		payment = frappe.get_last_doc(
+			"Event Payment",
+			filters={
+				"reference_doctype": reference_doctype,
+				"reference_docname": reference_docname,
+				"payment_received": 0,
+			},
+		)
+		payment_gateway = payment.payment_gateway
+
 		if payment_gateway == "Razorpay":
 			payment_id = "razorpay_payment_id"
+			verify_razorpay_payment(payment, data.get(payment_id))
 
 		elif payment_gateway == "Paymob":
 			payment_id = "paymob_payment_id"
@@ -194,7 +201,7 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 
 		frappe.db.set_value(
 			"Event Payment",
-			data.payment,
+			payment.name,
 			{
 				"payment_received": 1,
 				"payment_id": data.get(payment_id),
@@ -203,6 +210,23 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 		)
 
 		frappe.db.commit()  # nosemgrep: frappe-manual-commit
+
+
+def verify_razorpay_payment(payment, payment_id: str | None):
+	"""Refuse a Razorpay payment that is not for this payment's amount, or was already used."""
+	if not payment_id:
+		frappe.throw(_("Payment id is missing"))
+
+	if frappe.db.exists("Event Payment", {"payment_id": payment_id, "payment_received": 1}):
+		frappe.throw(_("This payment was already used"))
+
+	gateway_payment = get_controller("Razorpay").fetch_payment(payment_id)
+	paid_amount = cint(gateway_payment.get("amount"))
+	if paid_amount != cint(round(flt(payment.amount) * 100)):
+		frappe.throw(_("Paid amount does not match the amount due"))
+
+	if cstr(gateway_payment.get("currency")).upper() != cstr(payment.currency).upper():
+		frappe.throw(_("Paid currency does not match the currency due"))
 
 
 def handle_refund_notification(doctype: str, docname: str) -> None:
