@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import flt
 
 from buzz.api.booking import process_booking
 from buzz.api.booking.schemas import BookingRequest
@@ -284,3 +285,26 @@ def razorpay_gateway() -> str:
 	if not frappe.db.exists("Payment Gateway", RAZORPAY):
 		PaymentGatewayFactory.create(gateway=RAZORPAY)
 	return RAZORPAY
+
+
+def authorize_payment(document, payment_status: str = "Completed") -> None:
+	"""Run the gateway callback as the payments app does: a request, an unpaid payment, a matching Razorpay payment."""
+	amount = flt(document.get("total_amount")) or TICKET_PRICE
+	currency = document.get("currency") or "INR"
+	EventPaymentFactory.create(
+		user=document.get("user") or BOOKER,
+		amount=amount,
+		currency=currency,
+		reference_doctype=document.doctype,
+		reference_docname=document.name,
+		payment_gateway=razorpay_gateway(),
+	)
+	# Marking a payment received commits, so each payment id must be new.
+	data = {"razorpay_payment_id": f"pay_{frappe.generate_hash(length=10)}"}
+	IntegrationRequestFactory.create(
+		reference_doctype=document.doctype, reference_docname=document.name, data=frappe.as_json(data)
+	)
+	gateway = MagicMock()
+	gateway.fetch_payment.return_value = {"amount": round(amount * 100), "currency": currency}
+	with patch("buzz.payments.get_controller", return_value=gateway):
+		document.on_payment_authorized(payment_status)

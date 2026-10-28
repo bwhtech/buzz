@@ -5,7 +5,7 @@ from frappe.utils import add_to_date, now_datetime
 
 from buzz.api.booking import get_event_booking_data, hold_tickets, process_booking, release_hold
 from buzz.api.booking.exceptions import RegistrationsClosed, TicketsUnavailable, TooManyTicketsHeld
-from buzz.tests.base_test_cases import BookingTestCase
+from buzz.tests.base_test_cases import BookingTestCase, authorize_payment
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzFormFactory,
@@ -239,7 +239,7 @@ class TestDraftBookingHold(HoldTestCase):
 	def test_a_payment_turns_the_hold_into_tickets(self):
 		booking = self.draft(2)
 
-		booking.on_payment_authorized("Completed")
+		authorize_payment(booking)
 
 		self.assertEqual(self.holds_of(booking.hold_token), 0)
 		self.assertEqual(self.ticket_type.remaining_tickets, 8)

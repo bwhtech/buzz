@@ -4,6 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from buzz.tests.base_test_cases import authorize_payment
 from buzz.tests.factories import SponsorshipEnquiryFactory, SponsorshipTierFactory
 
 
@@ -12,7 +13,7 @@ class IntegrationTestEventSponsor(IntegrationTestCase):
 		tier = SponsorshipTierFactory.create()
 		enquiry = SponsorshipEnquiryFactory.create(event=tier.event, tier=tier.name)
 
-		enquiry.on_payment_authorized("Completed")
+		authorize_payment(enquiry)
 
 		self.assertEqual(enquiry.status, "Paid")
 		self.assertTrue(frappe.db.exists("Event Sponsor", {"enquiry": enquiry.name}))
