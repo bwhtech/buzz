@@ -7,9 +7,13 @@ from buzz.api.schemas import APIRequest, APIResponse
 from buzz.events.doctype.event_venue.details import VenueDetails
 
 
+# Same cap as the tickets one network may hold (holds.MAX_TICKETS_PER_IP).
+MAX_ATTENDEES_PER_BOOKING = 20
+
+
 class BookingRequest(APIRequest):
 	# attendees and custom fields carry event-defined dynamic keys; validated against meta downstream.
-	attendees: list[dict]
+	attendees: list[dict] = Field(max_length=MAX_ATTENDEES_PER_BOOKING)
 	event: str
 	coupon_code: str | None = None
 	currency: str | None = None
