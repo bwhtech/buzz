@@ -51,7 +51,7 @@ class RegistrationCard:
 		return {"label": label, "url": "/b/account/bookings"}
 
 	def published_ticket_types(self) -> list:
-		filters = {"event": self.event.name, "is_published": 1}
+		filters = {"event": self.event.name, "is_published": 1, "is_hidden": 0}
 		return frappe.get_all("Event Ticket Type", filters=filters, pluck="name")
 
 	def open_card(self, subtitle: str) -> dict:

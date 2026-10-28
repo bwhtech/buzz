@@ -21,7 +21,7 @@ async function createPromoCode(page: Page, code: string) {
 	await page.getByRole("button", { name: "Add" }).click()
 	await expect(page.getByText("Step 1 of 2")).toBeVisible()
 	await page.getByRole("button", { name: "Continue" }).click()
-	await page.getByLabel("Code").fill(code)
+	await page.getByRole("textbox", { name: /^Code/ }).fill(code)
 	await page.getByRole("button", { name: "15%" }).click()
 	await page.getByRole("button", { name: "Create coupon" }).click()
 	await expect(page.getByText("Coupon created")).toBeVisible()

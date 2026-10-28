@@ -105,3 +105,40 @@ class TestPaidEventsFlag(IntegrationTestCase):
 		ticket_type.save()
 
 		self.assertEqual(frappe.db.get_value("Event Ticket Type", ticket_type.name, "title"), "Renamed")
+
+
+class TestHiddenTicketTypes(IntegrationTestCase):
+	def setUp(self):
+		self.event = BuzzEventFactory.create().name
+		frappe.db.set_value("Event Ticket Type", {"event": self.event}, "is_published", 0)
+		self.public = EventTicketTypeFactory.create(event=self.event)
+
+	def test_hiding_the_last_public_ticket_type_is_refused(self):
+		self.public.is_hidden = 1
+
+		with self.assertRaises(frappe.ValidationError):
+			self.public.save()
+
+	def test_unpublishing_the_last_public_ticket_type_is_refused_while_hidden_ones_are_published(self):
+		EventTicketTypeFactory.create("is_hidden", event=self.event)
+		self.public.is_published = 0
+
+		with self.assertRaises(frappe.ValidationError):
+			self.public.save()
+
+	def test_unpublishing_the_last_public_ticket_type_is_allowed_without_hidden_ones(self):
+		self.public.is_published = 0
+		self.public.save()
+
+		self.assertEqual(self.public.is_published, 0)
+
+	def test_a_hidden_ticket_type_is_allowed_beside_a_public_one(self):
+		hidden = EventTicketTypeFactory.create("is_hidden", event=self.event)
+
+		self.assertEqual(hidden.is_hidden, 1)
+
+	def test_an_unpublished_hidden_ticket_type_does_not_need_a_public_one(self):
+		self.public.is_published = 0
+		hidden = EventTicketTypeFactory.create("is_hidden", "unpublished", event=self.event)
+
+		self.assertEqual(hidden.is_published, 0)

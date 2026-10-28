@@ -134,7 +134,7 @@ class BookingService:
 	def build_booking(self) -> "EventBooking":
 		booking = frappe.new_doc("Event Booking")
 		booking.event = self.request.event
-		booking.coupon_code = self.resolve_coupon()
+		self.apply_code(booking)
 		booking.currency = self.request.currency
 		booking.hold_token = self.request.hold_token
 		booking.user = self.resolve_user()
@@ -145,13 +145,14 @@ class BookingService:
 		self.append_attendees(booking)
 		return booking
 
-	def resolve_coupon(self) -> str | None:
+	def apply_code(self, booking: "EventBooking") -> None:
+		"""Put the typed code in the field its coupon type is counted by."""
 		if not self.request.coupon_code:
-			return None
-		coupon = BuzzCouponCode.find_promo(self.request.event, self.request.coupon_code)
+			return
+		coupon = BuzzCouponCode.find_by_code(self.request.event, self.request.coupon_code)
 		if not coupon:
 			InvalidCoupon.throw()
-		return coupon.name
+		booking.set(coupon.usage_field, coupon.name)
 
 	def resolve_user(self) -> str:
 		if frappe.session.user != "Guest":
