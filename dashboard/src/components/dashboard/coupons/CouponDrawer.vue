@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Alert, Button, dayjsLocal, toast, useDoc, useNewDoc } from "frappe-ui"
+import { Alert, Button, ErrorMessage, dayjsLocal, toast, useDoc, useNewDoc } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import {
@@ -16,8 +16,8 @@ import {
 	type CouponValues,
 	blankCouponValues,
 	couponDocValues,
+	couponError,
 	couponValuesOf,
-	isCouponValid,
 } from "@/utils/couponForm"
 import { matches } from "@/utils/formDraft"
 import { serverErrorMessage } from "@/utils/serverError"
@@ -51,11 +51,14 @@ const resetDraft = () =>
 watch(open, (opened) => {
 	if (!opened) return
 	resetDraft()
+	showValidationError.value = false
 	step.value = isNew.value ? 1 : 2
 })
 
 const hasChanges = computed(() => !!savedValues.value && !matches(draft.value, savedValues.value))
-const isValid = computed(() => isCouponValid(draft.value, props.ticketTypes))
+const validationError = computed(() => couponError(draft.value, props.ticketTypes))
+// Shown only after a save attempt, then live until the drawer reopens.
+const showValidationError = ref(false)
 
 const creator = useNewDoc<Record<string, unknown>>("Buzz Coupon Code")
 const couponDoc = useDoc<Record<string, unknown> & { name: string }>({
@@ -135,6 +138,13 @@ async function create() {
 	toast.success("Coupon created")
 	emit("changed")
 	open.value = false
+}
+
+function submit() {
+	showValidationError.value = true
+	if (validationError.value) return
+	if (isNew.value) create()
+	else saveChanges()
 }
 
 async function saveChanges() {
@@ -244,18 +254,30 @@ function goBack() {
 			/>
 
 			<template v-if="canWrite && (isNew || hasChanges || step === 1)" #footer>
-				<div class="flex w-full justify-end gap-2 max-sm:[&>*]:flex-1">
-					<Button size="md" :label="isNew && step === 2 ? 'Back' : 'Cancel'" @click="goBack" />
-					<Button v-if="step === 1" size="md" variant="solid" label="Continue" @click="step = 2" />
-					<Button
-						v-else
-						size="md"
-						variant="solid"
-						:label="isNew ? 'Create coupon' : 'Save changes'"
-						:disabled="!isValid"
-						:loading="isNew ? creator.loading : couponDoc.setValue.loading"
-						@click="isNew ? create() : saveChanges()"
+				<div class="flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2">
+					<ErrorMessage
+						v-if="showValidationError && step === 2"
+						class="text-right"
+						:message="validationError ?? undefined"
 					/>
+					<div class="flex justify-end gap-2 max-sm:w-full max-sm:[&>*]:flex-1">
+						<Button size="md" :label="isNew && step === 2 ? 'Back' : 'Cancel'" @click="goBack" />
+						<Button
+							v-if="step === 1"
+							size="md"
+							variant="solid"
+							label="Continue"
+							@click="step = 2"
+						/>
+						<Button
+							v-else
+							size="md"
+							variant="solid"
+							:label="isNew ? 'Create coupon' : 'Save changes'"
+							:loading="isNew ? creator.loading : couponDoc.setValue.loading"
+							@click="submit"
+						/>
+					</div>
 				</div>
 			</template>
 		</DrawerContent>

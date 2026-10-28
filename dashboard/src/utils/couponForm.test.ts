@@ -10,6 +10,7 @@ import {
 	couponDocValues,
 	couponValuesOf,
 	eligibleTicketTypes,
+	couponError,
 	isCouponValid,
 } from "./couponForm.ts"
 
@@ -152,4 +153,10 @@ test("a promo code with a space is invalid, an automatic name with one is fine",
 		isCouponValid(promo({ coupon_type: "Automatic", code: "Group of 5+" }), ticketTypes),
 		true,
 	)
+})
+
+test("an access code without hidden ticket types says why it can't save", () => {
+	const values = promo({ coupon_type: "Access Code", discount_type: "None" })
+	assert.equal(couponError(values, ticketTypes), "Pick at least one hidden ticket type to unlock.")
+	assert.equal(couponError({ ...values, ticket_types: [ticketTypes[0].name] }, ticketTypes), null)
 })

@@ -10,6 +10,7 @@ import {
 	dayjs,
 } from "frappe-ui"
 import { computed } from "vue"
+import { useRoute } from "vue-router"
 
 import type { CouponTicketType } from "@/types"
 import {
@@ -27,6 +28,8 @@ import CurrencyAmounts from "./CurrencyAmounts.vue"
 
 const values = defineModel<CouponValues>({ required: true })
 const props = defineProps<{ ticketTypes: CouponTicketType[]; disabled?: boolean }>()
+
+const eventId = useRoute().params.eventId as string
 
 const QUICK_PERCENTAGES = [10, 15, 25, 50]
 
@@ -205,14 +208,27 @@ const hasInvalidCode = computed(
 
 			<div class="space-y-2">
 				<TabButtons v-if="!forAccessCode" v-model="scope" fluid :options="scopeOptions" />
-				<p v-else class="text-sm text-ink-gray-5">
-					{{
-						selectableTicketTypes.length
-							? "The hidden ticket types this code unlocks"
-							: "Hide a ticket type first, then pick it here."
-					}}
+				<p v-else-if="selectableTicketTypes.length" class="text-sm text-ink-gray-5">
+					The hidden ticket types this code unlocks
 				</p>
-				<div v-if="scope === 'specific'" class="rounded-4 border border-outline-gray-2 p-1">
+				<div
+					v-if="forAccessCode && !selectableTicketTypes.length"
+					class="flex flex-col items-center gap-3 rounded-4 border border-dashed border-outline-gray-2 px-4 py-6 text-center"
+				>
+					<span class="lucide-eye-off size-5 text-ink-gray-5" aria-hidden="true" />
+					<div>
+						<p class="text-base text-ink-gray-8">No hidden ticket types yet</p>
+						<p class="mt-0.5 text-sm text-ink-gray-5">
+							Hide a ticket type from its settings, then pick it here.
+						</p>
+					</div>
+					<Button
+						label="Go to ticket types"
+						icon-right="lucide-arrow-right"
+						:route="{ name: 'event-registrations', params: { eventId } }"
+					/>
+				</div>
+				<div v-else-if="scope === 'specific'" class="rounded-4 border border-outline-gray-2 p-1">
 					<Checkbox
 						v-for="ticketType in selectableTicketTypes"
 						:key="ticketType.name"

@@ -86,18 +86,37 @@ function coversCurrencies(rows: TierPrice[], currencies: string[]) {
 	)
 }
 
-function hasValidDiscount(values: CouponValues, currencies: string[]) {
-	if (values.discount_type === "None") return true
-	if (values.discount_type === "Flat Amount")
-		return coversCurrencies(values.discount_amounts, currencies)
-	return values.discount_percentage > 0 && values.discount_percentage <= 100
+function discountError(values: CouponValues, currencies: string[]) {
+	if (
+		values.discount_type === "Flat Amount" &&
+		!coversCurrencies(values.discount_amounts, currencies)
+	)
+		return "Enter a discount amount for every currency."
+	const percentage = values.discount_percentage
+	if (values.discount_type === "Percentage" && !(percentage > 0 && percentage <= 100))
+		return "Enter a discount between 1 and 100%."
+	return null
 }
 
-function hasValidMinimum(values: CouponValues, currencies: string[]) {
-	if (values.minimum_requirement === "Minimum Ticket Count") return values.minimum_ticket_count > 0
-	if (values.minimum_requirement === "Minimum Order Amount")
-		return coversCurrencies(values.minimum_order_amounts, currencies)
-	return true
+function minimumError(values: CouponValues, currencies: string[]) {
+	if (values.minimum_requirement === "Minimum Ticket Count" && !(values.minimum_ticket_count > 0))
+		return "Enter a minimum ticket count above 0."
+	if (
+		values.minimum_requirement === "Minimum Order Amount" &&
+		!coversCurrencies(values.minimum_order_amounts, currencies)
+	)
+		return "Enter a minimum order amount for every currency."
+	return null
+}
+
+function scopeError(values: CouponValues, currencies: string[]) {
+	// An access code can unlock free tickets, so it needs a scope rather than a price.
+	if (isAccessCode(values))
+		return values.ticket_types.length ? null : "Pick at least one hidden ticket type to unlock."
+	if (currencies.length) return null
+	return coversAllTicketTypes(values)
+		? "Add a paid ticket type to the event first."
+		: "Pick at least one paid ticket type."
 }
 
 const PROMO_CODE_PATTERN = /^[A-Z0-9_-]+$/
@@ -105,16 +124,32 @@ const PROMO_CODE_PATTERN = /^[A-Z0-9_-]+$/
 /** Letters, digits, hyphens and underscores only, upper-cased: what checkout can match. */
 export const cleanPromoCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9_-]/g, "")
 
-export function isCouponValid(values: CouponValues, ticketTypes: CouponTicketType[]) {
-	const currencies = couponCurrencies(values, ticketTypes)
-	// An access code can unlock free tickets, so it needs a scope rather than a price.
-	if (isAccessCode(values) ? !values.ticket_types.length : !currencies.length) return false
-	if (!values.code?.trim()) return false
-	if (isTypedCode(values) && !PROMO_CODE_PATTERN.test(values.code.trim().toUpperCase()))
-		return false
-	if (values.starts_on && values.expires_on && values.starts_on > values.expires_on) return false
-	return hasValidDiscount(values, currencies) && hasValidMinimum(values, currencies)
+function codeError(values: CouponValues) {
+	const code = values.code?.trim()
+	if (!code) return isTypedCode(values) ? "Enter a code." : "Enter a name."
+	if (isTypedCode(values) && !PROMO_CODE_PATTERN.test(code.toUpperCase()))
+		return "Codes can only use letters, numbers, - and _."
+	return null
 }
+
+/** Why the coupon can't be saved yet, or null when it can. */
+export function couponError(values: CouponValues, ticketTypes: CouponTicketType[]) {
+	const currencies = couponCurrencies(values, ticketTypes)
+	const datesError =
+		values.starts_on && values.expires_on && values.starts_on > values.expires_on
+			? "The start date must be on or before the end date."
+			: null
+	return (
+		codeError(values) ??
+		scopeError(values, currencies) ??
+		discountError(values, currencies) ??
+		minimumError(values, currencies) ??
+		datesError
+	)
+}
+
+export const isCouponValid = (values: CouponValues, ticketTypes: CouponTicketType[]) =>
+	!couponError(values, ticketTypes)
 
 const onlyCurrencies = (rows: TierPrice[], currencies: string[]) =>
 	rows.filter((row) => currencies.includes(row.currency))
