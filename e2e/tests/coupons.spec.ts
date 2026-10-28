@@ -75,7 +75,7 @@ test.describe("Access codes", () => {
 		const bookingPage = new BookingPage(page)
 		await bookingPage.goto(`${COUPON_EVENT_ROUTE}?code=${ACCESS_CODE}`)
 		await bookingPage.waitForFormLoad()
-		await expect(page.getByText(HIDDEN_TICKET_TITLE)).toBeVisible()
+		await expect(page.getByText(HIDDEN_TICKET_TITLE).first()).toBeVisible()
 
 		const hiddenTicketAdd = page.getByRole("button", { name: `Add ${HIDDEN_TICKET_TITLE}` })
 		if (await hiddenTicketAdd.count()) await hiddenTicketAdd.click()
@@ -95,12 +95,12 @@ test.describe("Access codes", () => {
 
 		await page.getByRole("button", { name: "Have an access code?" }).click()
 		await page.getByLabel("Access code").fill("NOSUCHCODE")
-		await page.getByRole("button", { name: "Apply", exact: true }).click()
+		await page.getByLabel("Access code").press("Enter")
 		await expect(page.getByText("Invalid or expired code").first()).toBeVisible()
 		await expect(page.getByText(HIDDEN_TICKET_TITLE)).toHaveCount(0)
 
 		await page.getByLabel("Access code").fill(ACCESS_CODE)
-		await page.getByRole("button", { name: "Apply", exact: true }).click()
-		await expect(page.getByText(HIDDEN_TICKET_TITLE)).toBeVisible()
+		await page.getByLabel("Access code").press("Enter")
+		await expect(page.getByText(HIDDEN_TICKET_TITLE).first()).toBeVisible()
 	})
 })
