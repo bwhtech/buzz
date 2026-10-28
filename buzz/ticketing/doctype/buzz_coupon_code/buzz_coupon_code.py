@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
 
 
+UNFINISHED_CHECKOUT_MESSAGE = _("You have an unfinished checkout with this code. Try again in a few minutes.")
 PROMO_CODE_PATTERN = re.compile(r"[A-Z0-9_-]+")
 
 
@@ -148,8 +149,12 @@ class BuzzCouponCode(Document):
 
 	def limit_reason(self, booking: "EventBooking") -> str | None:
 		if self.usage_limit and self.times_taken(booking) >= self.usage_limit:
+			if self.times_taken(booking) - self.own_live_drafts(booking) < self.usage_limit:
+				return UNFINISHED_CHECKOUT_MESSAGE
 			return _("This coupon has reached its usage limit")
 		if self.once_per_buyer and self.times_used_by(booking):
+			if self.own_live_drafts(booking) == self.times_used_by(booking):
+				return UNFINISHED_CHECKOUT_MESSAGE
 			return _("You have already used this coupon")
 
 	def eligibility_reason(self, booking: "EventBooking") -> str | None:
@@ -206,7 +211,11 @@ class BuzzCouponCode(Document):
 			.where(submitted.name != cstr(booking.name))
 			.where(condition)
 		)
-		return used.run()[0][0] + self.live_drafts(booking).where(condition).run()[0][0]
+		return used.run()[0][0] + self.own_live_drafts(booking)
+
+	def own_live_drafts(self, booking: "EventBooking") -> int:
+		condition = buyer_condition(booking)
+		return 0 if condition is None else self.live_drafts(booking).where(condition).run()[0][0]
 
 	def times_taken(self, booking: "EventBooking") -> int:
 		return self.times_used(exclude=booking.name) + self.times_reserved(booking)

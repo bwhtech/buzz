@@ -17,7 +17,7 @@ from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.payments import get_controller, mark_payment_as_received
 from buzz.permissions import has_section_permission
-from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode, buyer_condition
+from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
 	get_committed_tickets,
@@ -698,33 +698,11 @@ class EventBooking(Document):
 			self.discount_amount = coupon.discount_for(self)
 			self.total_amount = self.net_amount - self.discount_amount
 
-	def discard_superseded_drafts(self):
-		"""A retry replaces the buyer's earlier unpaid online drafts with a coupon, so they
-		stop holding a use and can't be paid for at the discount."""
-		condition = buyer_condition(self)
-		if not self.is_new() or condition is None:
-			return
-		draft = frappe.qb.DocType("Event Booking")
-		names = (
-			frappe.qb.from_(draft)
-			.select(draft.name)
-			.where((draft.event == self.event) & (draft.docstatus == 0) & draft.coupon_code.isnotnull())
-			.where((draft.payment_method.isnull()) | (draft.payment_method != OFFLINE_PAYMENT_METHOD))
-			.where(condition)
-			.run(pluck=True)
-		)
-		for name in names:
-			superseded = frappe.get_doc("Event Booking", name)
-			superseded.flags.ignore_permissions = True
-			superseded.discard()
-			release_hold(superseded.hold_token)
-
 	def get_coupon(self) -> BuzzCouponCode | None:
 		if self.flags.payment_received:
 			# The buyer paid this price, so keep the coupon it was quoted with.
 			return frappe.get_doc("Buzz Coupon Code", self.coupon_code) if self.coupon_code else None
 		BuzzCouponCode.lock_for(self)
-		self.discard_superseded_drafts()
 		if not self.coupon_code:
 			return BuzzCouponCode.best_automatic(self)
 		coupon = frappe.get_doc("Buzz Coupon Code", self.coupon_code)
