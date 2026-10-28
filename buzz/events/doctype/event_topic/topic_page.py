@@ -5,13 +5,13 @@ from frappe import _
 from frappe.utils import get_url
 
 from buzz.events.doctype.buzz_team.team_map import TeamMap
-from buzz.events.doctype.buzz_team.team_page import TeamPage, group_by_day
+from buzz.events.doctype.buzz_team.team_page import EventTimeline, group_by_day
 from buzz.www.event.meta import DESCRIPTION_LENGTH
 from buzz.www.events import enabled_topics, events_with_topic, icon_url, topic_page_url
 
 
-class TopicPage(TeamPage):
-	"""Context for a topic's public page: the team page's timeline, over the topic's events."""
+class TopicPage(EventTimeline):
+	"""Context for a topic's public page: the event timeline, over the topic's events."""
 
 	def __init__(self, topic):
 		self.topic = topic

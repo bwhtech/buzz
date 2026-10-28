@@ -115,28 +115,15 @@ def external_card(event) -> dict:
 	}
 
 
-class TeamPage:
-	"""Context for a team's public page: identity, links and its own event timeline."""
+class EventTimeline:
+	"""Upcoming and past event cards over the events a subclass's event_filters() picks."""
 
-	def __init__(self, team):
-		self.team = team
+	def event_filters(self) -> dict:
+		raise NotImplementedError
 
-	def as_context(self) -> dict:
-		upcoming = [self.card(event) for event in self.upcoming_events]
-		past = [self.card(event) for event in self.past_events]
-		return {
-			"title": self.team.team_name,
-			"links": public_links(self.team.links),
-			"events_hosted": frappe.db.count("Buzz Event", {"team": self.team.name, "is_published": 1}),
-			"upcoming_days": group_by_day(upcoming),
-			"past_days": group_by_day(past),
-			"meta": self.meta(),
-			"is_guest": frappe.session.user == "Guest",
-			"is_organizer": self.is_organizer(),
-			"manage_url": self.manage_url(),
-			"place_search_enabled": place_search_enabled(),
-			**TeamMap(upcoming, past).as_context(),
-		}
+	@cached_property
+	def external_events(self) -> list:
+		return []
 
 	@cached_property
 	def upcoming_events(self) -> list:
@@ -164,12 +151,6 @@ class TeamPage:
 		)
 		ended = [event for event in events + self.external_events if has_ended(event)]
 		return sorted(ended, key=starts_at, reverse=True)[:PAST_LIMIT]
-
-	@cached_property
-	def external_events(self) -> list:
-		if not self.team.accept_community_submissions:
-			return []
-		return [external_event(request) for request in approved_external_requests(self.team.name)]
 
 	@cached_property
 	def buzz_event_names(self) -> list[str]:
@@ -202,17 +183,6 @@ class TeamPage:
 		tickets = {"attendee_email": frappe.session.user, "docstatus": 1, "event": ["in", events]}
 		return set(frappe.get_all("Event Ticket", filters=tickets, pluck="event"))
 
-	def event_filters(self) -> dict:
-		"""The team's own events, plus those its community approved."""
-		filters = {"team": self.team.name}
-		if self.team.accept_community_submissions:
-			approved = {"community": self.team.name, "status": "Approved"}
-			filters["name"] = [
-				"in",
-				frappe.get_all("Community Event Request", filters=approved, pluck="event"),
-			]
-		return filters
-
 	def card(self, event) -> dict:
 		if event.is_external:
 			return external_card(event)
@@ -238,6 +208,47 @@ class TeamPage:
 			"latitude": flt(event.latitude) if has_location else None,
 			"longitude": flt(event.longitude) if has_location else None,
 		}
+
+
+class TeamPage(EventTimeline):
+	"""Context for a team's public page: identity, links and its own event timeline."""
+
+	def __init__(self, team):
+		self.team = team
+
+	def as_context(self) -> dict:
+		upcoming = [self.card(event) for event in self.upcoming_events]
+		past = [self.card(event) for event in self.past_events]
+		return {
+			"title": self.team.team_name,
+			"links": public_links(self.team.links),
+			"events_hosted": frappe.db.count("Buzz Event", {"team": self.team.name, "is_published": 1}),
+			"upcoming_days": group_by_day(upcoming),
+			"past_days": group_by_day(past),
+			"meta": self.meta(),
+			"is_guest": frappe.session.user == "Guest",
+			"is_organizer": self.is_organizer(),
+			"manage_url": self.manage_url(),
+			"place_search_enabled": place_search_enabled(),
+			**TeamMap(upcoming, past).as_context(),
+		}
+
+	@cached_property
+	def external_events(self) -> list:
+		if not self.team.accept_community_submissions:
+			return []
+		return [external_event(request) for request in approved_external_requests(self.team.name)]
+
+	def event_filters(self) -> dict:
+		"""The team's own events, plus those its community approved."""
+		filters = {"team": self.team.name}
+		if self.team.accept_community_submissions:
+			approved = {"community": self.team.name, "status": "Approved"}
+			filters["name"] = [
+				"in",
+				frappe.get_all("Community Event Request", filters=approved, pluck="event"),
+			]
+		return filters
 
 	def manage_url(self) -> str | None:
 		# Team Owners and Admins lack doctype write, which only System Manager holds
