@@ -23,6 +23,8 @@ from buzz.ticketing.doctype.ticket_hold import ticket_hold
 
 # nosemgrep: guest-whitelisted-method
 @frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=20, seconds=3600)
+@guests.normalize_identifier_for_limiter
 @rate_limit(key="identifier", limit=5, seconds=3600)
 def send_guest_booking_otp(event: int, identifier: str) -> dict | None:
 	return guests.send_booking_otp(event, identifier)
@@ -33,8 +35,13 @@ def get_event_booking_data(event_route: str, hold_token: str | None = None) -> E
 	return event_data.build_event_booking_data(event_route, hold_token)
 
 
+def process_booking_rate_limit() -> int:
+	return 20 if frappe.session.user == "Guest" else 60
+
+
 # nosemgrep: guest-whitelisted-method
 @frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=process_booking_rate_limit, seconds=600)
 def process_booking(
 	booking: BookingRequest,
 ) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
