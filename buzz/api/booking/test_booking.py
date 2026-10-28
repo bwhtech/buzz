@@ -2,6 +2,7 @@ import json
 from unittest.mock import patch
 
 import frappe
+from frappe.utils import add_days, today
 
 from buzz.api.booking import (
 	get_booking_details,
@@ -12,6 +13,8 @@ from buzz.api.booking import (
 )
 from buzz.api.booking.exceptions import (
 	AddOnNotForEvent,
+	HiddenTicketType,
+	InvalidAccessCode,
 	InvalidAddOnValue,
 	InvalidCoupon,
 	InvoiceDetailsMissing,
@@ -45,6 +48,7 @@ EVENT_DATA_FIELDS = {
 	"payment_gateways",
 	"offline_payment_enabled",
 	"offline_methods",
+	"access_code",
 }
 
 GUEST_EVENT_DETAIL_FIELDS = {
@@ -813,3 +817,68 @@ class TestBookingBuyerAndInvoice(BookingTestCase):
 		self.set_event({"apply_tax": 0})
 		booking = self.booked(invoice_requested=True, tax_id="29ABCDE1234F1Z5", business_name="Acme Pvt Ltd")
 		self.assertEqual((booking.invoice_requested, booking.business_name), (0, None))
+
+
+class TestAccessCodeBooking(BookingTestCase):
+	GENERIC_ERROR = str(InvalidAccessCode.message)
+
+	def setUp(self):
+		super().setUp()
+		self.hidden = EventTicketTypeFactory.create("is_hidden", event=self.event.name)
+		self.create_access_code()
+
+	def create_access_code(self, **overrides):
+		self.access_code = BuzzCouponCodeFactory.create(
+			"access_code",
+			event=self.event.name,
+			ticket_types=[{"ticket_type": self.hidden.name}],
+			**overrides,
+		)
+
+	def listed(self, code: str | None = None) -> set[str]:
+		data = get_event_booking_data(self.event.route, access_code=code)
+		return {str(row.name) for row in data.available_ticket_types}
+
+	def test_hidden_ticket_type_is_absent_without_a_code(self):
+		data = get_event_booking_data(self.event.route)
+
+		self.assertNotIn(str(self.hidden.name), self.listed())
+		self.assertIn(str(self.free_ticket_type.name), self.listed())
+		self.assertEqual(data.access_code.__json__(), {"code": None, "error": None})
+
+	def test_hidden_ticket_type_is_listed_with_a_valid_code(self):
+		data = get_event_booking_data(self.event.route, access_code=self.access_code.code.lower())
+
+		listed = {str(row.name) for row in data.available_ticket_types}
+		self.assertIn(str(self.hidden.name), listed)
+		self.assertIn(str(self.free_ticket_type.name), listed)
+		self.assertEqual(data.access_code.__json__(), {"code": self.access_code.code, "error": None})
+
+	def test_hidden_ticket_type_is_absent_with_an_expired_code(self):
+		self.create_access_code(expires_on=add_days(today(), -1))
+
+		data = get_event_booking_data(self.event.route, access_code=self.access_code.code)
+
+		self.assertNotIn(str(self.hidden.name), [str(row.name) for row in data.available_ticket_types])
+		self.assertEqual(data.access_code.error, self.GENERIC_ERROR)
+
+	def test_unknown_and_promo_codes_share_the_generic_error(self):
+		promo = BuzzCouponCodeFactory.create(event=self.event.name)
+
+		for code in ("NOPE", promo.code):
+			data = get_event_booking_data(self.event.route, access_code=code)
+			self.assertEqual(data.access_code.error, self.GENERIC_ERROR)
+
+	def test_process_booking_with_a_valid_code_sets_the_access_code(self):
+		attendee = {"first_name": "Guest", "email": "guest@example.com", "ticket_type": str(self.hidden.name)}
+		request = self.booking_request(attendees=[attendee], coupon_code=self.access_code.code)
+
+		name = process_booking(request).booking_name
+
+		self.assertEqual(frappe.db.get_value("Event Booking", name, "access_code"), self.access_code.name)
+
+	def test_process_booking_without_a_code_refuses_the_hidden_ticket_type(self):
+		attendee = {"first_name": "Guest", "email": "guest@example.com", "ticket_type": str(self.hidden.name)}
+
+		with self.assertRaises(HiddenTicketType):
+			process_booking(self.booking_request(attendees=[attendee]))

@@ -8,7 +8,7 @@ from frappe.model.document import Document
 from frappe.utils import add_to_date, cstr, flt, now_datetime
 
 from buzz import telemetry
-from buzz.api.booking.exceptions import RegistrationsClosed
+from buzz.api.booking.exceptions import HiddenTicketType, RegistrationsClosed
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, are_registrations_closed
 from buzz.api.filters.conditions import form_questions
 from buzz.emails import is_full_document
@@ -51,6 +51,7 @@ class EventBooking(Document):
 		additional_fields: DF.Table[AdditionalField]
 		amended_from: DF.Link | None
 		attendees: DF.Table[EventBookingAttendee]
+		access_code: DF.Link | None
 		billing_address: DF.SmallText | None
 		billing_state: DF.Data | None
 		business_name: DF.Data | None
@@ -83,6 +84,7 @@ class EventBooking(Document):
 	def validate(self):
 		self.validate_event_registration_is_open()
 		self.validate_ticket_availability()
+		self.validate_hidden_ticket_types()
 		self.fetch_amounts_from_ticket_types()
 		self.set_currency()
 		self.validate_add_ons_currency()
@@ -192,6 +194,27 @@ class EventBooking(Document):
 				remaining, ticket_type.title, quantity
 			)
 		)
+
+	def validate_hidden_ticket_types(self):
+		if self.flags.payment_received:
+			return
+		hidden = {
+			name
+			for name in self.ticket_quantities()
+			if frappe.get_cached_value("Event Ticket Type", name, "is_hidden")
+		}
+		if hidden and not hidden <= self.unlocked_ticket_types():
+			HiddenTicketType.throw()
+
+	def unlocked_ticket_types(self) -> set[str]:
+		access_code = self.get_access_code()
+		return access_code.unlocked_ticket_types() if access_code else set()
+
+	def get_access_code(self) -> BuzzCouponCode | None:
+		if not self.access_code:
+			return None
+		access_code = frappe.get_doc("Buzz Coupon Code", self.access_code)
+		return access_code if access_code.coupon_type == "Access Code" else None
 
 	def log_if_oversold(self, ticket_type, quantity: int):
 		remaining = ticket_type.get_remaining_tickets(for_update=True, hold_token=self.hold_token)
@@ -388,9 +411,11 @@ class EventBooking(Document):
 
 	def log_if_coupon_overused(self):
 		"""`validate` checks the limit before payment; a late payment is booked even past it."""
-		if not (self.flags.payment_received and self.coupon_code):
-			return
-		coupon = frappe.get_doc("Buzz Coupon Code", self.coupon_code)
+		if self.flags.payment_received:
+			for name in {self.coupon_code, self.access_code} - {None, ""}:
+				self.log_if_overused(frappe.get_doc("Buzz Coupon Code", name))
+
+	def log_if_overused(self, coupon: BuzzCouponCode):
 		if not coupon.usage_limit or coupon.times_used(exclude=self.name) < coupon.usage_limit:
 			return
 		frappe.log_error(
@@ -703,9 +728,19 @@ class EventBooking(Document):
 			# The buyer paid this price, so keep the coupon it was quoted with.
 			return frappe.get_doc("Buzz Coupon Code", self.coupon_code) if self.coupon_code else None
 		BuzzCouponCode.lock_for(self)
-		if not self.coupon_code:
+		access_code = self.get_usable_access_code()
+		if access_code and access_code.discount_type != "None":
+			return access_code
+		if access_code or not self.coupon_code:
 			return BuzzCouponCode.best_automatic(self)
-		coupon = frappe.get_doc("Buzz Coupon Code", self.coupon_code)
+		return self.get_usable_coupon(self.coupon_code)
+
+	def get_usable_access_code(self) -> BuzzCouponCode | None:
+		access_code = self.get_access_code()
+		return self.get_usable_coupon(access_code.name) if access_code else None
+
+	def get_usable_coupon(self, name: str) -> BuzzCouponCode:
+		coupon = frappe.get_doc("Buzz Coupon Code", name)
 		if reason := coupon.unusable_reason(self):
 			frappe.throw(reason)
 		return coupon

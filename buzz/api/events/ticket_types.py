@@ -30,6 +30,7 @@ TICKET_TYPE_FIELDS = [
 	"max_tickets_available",
 	"auto_unpublish_after",
 	"is_published",
+	"is_hidden",
 	{"prices": ["currency", "price"]},
 ]
 

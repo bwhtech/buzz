@@ -4,9 +4,15 @@ import frappe
 from frappe.utils import add_to_date, now_datetime
 
 from buzz.api.booking import get_event_booking_data, hold_tickets, process_booking, release_hold
-from buzz.api.booking.exceptions import RegistrationsClosed, TicketsUnavailable, TooManyTicketsHeld
+from buzz.api.booking.exceptions import (
+	HiddenTicketType,
+	RegistrationsClosed,
+	TicketsUnavailable,
+	TooManyTicketsHeld,
+)
 from buzz.tests.base_test_cases import BookingTestCase
 from buzz.tests.factories import (
+	BuzzCouponCodeFactory,
 	BuzzEventFactory,
 	BuzzFormFactory,
 	EventBookingFactory,
@@ -284,6 +290,40 @@ class TestAvailabilityView(HoldTestCase):
 		EventTicketFactory.create("submitted", event=event.name, ticket_type=ticket_type.name)
 
 		self.assertEqual(RegistrationCard(event).as_dict()["state"], "sold-out")
+
+	def test_the_event_page_shows_sold_out_when_only_hidden_tickets_are_in_stock(self):
+		event = self.open_event()
+		public = EventTicketTypeFactory.create(event=event.name, max_tickets_available=1)
+		EventTicketTypeFactory.create("is_hidden", event=event.name, max_tickets_available=5)
+		EventTicketFactory.create("submitted", event=event.name, ticket_type=public.name)
+
+		self.assertEqual(RegistrationCard(event).as_dict()["state"], "sold-out")
+
+
+class TestHoldHiddenTickets(HoldTestCase):
+	def setUp(self):
+		super().setUp()
+		self.hidden = EventTicketTypeFactory.create(
+			"is_hidden", event=self.event.name, max_tickets_available=5
+		)
+		self.hidden_name = str(self.hidden.name)
+		self.access_code = BuzzCouponCodeFactory.create(
+			"access_code", event=self.event.name, ticket_types=[{"ticket_type": self.hidden.name}]
+		)
+
+	def test_refuses_a_hidden_ticket_type_without_a_code(self):
+		with self.assertRaises(HiddenTicketType):
+			hold_tickets(self.event.name, {self.hidden_name: 1})
+
+	def test_refuses_a_hidden_ticket_type_with_an_unknown_code(self):
+		with self.assertRaises(HiddenTicketType):
+			hold_tickets(self.event.name, {self.hidden_name: 1}, None, "NOPE")
+
+	def test_holds_a_hidden_ticket_type_with_its_code(self):
+		response = hold_tickets(self.event.name, {self.hidden_name: 2}, None, self.access_code.code)
+
+		self.assertEqual(response.remaining, {self.hidden_name: 5})
+		self.assertEqual(self.hidden.remaining_tickets, 3)
 
 
 class TestHoldLimits(HoldTestCase):

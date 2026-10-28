@@ -28,5 +28,15 @@ class BuzzCouponCodeFactory(BaseFactory[BuzzCouponCode]):
 		return {"coupon_type": "Automatic", "code": f"Group discount {frappe.generate_hash(length=4)}"}
 
 	@property
+	def access_code(self) -> dict[str, Any]:
+		"""Without a discount; pass `ticket_types` with the hidden types it unlocks."""
+		return {
+			"coupon_type": "Access Code",
+			"code": f"VIP{frappe.generate_hash(length=6).upper()}",
+			"discount_type": "None",
+			"applies_to_all_ticket_types": 0,
+		}
+
+	@property
 	def flat(self) -> dict[str, Any]:
 		return {"discount_type": "Flat Amount", "discount_amounts": [{"currency": "INR", "price": 100}]}
