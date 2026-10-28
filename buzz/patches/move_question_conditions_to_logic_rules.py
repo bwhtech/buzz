@@ -5,6 +5,9 @@ import frappe
 
 def execute():
 	"""Each question's show and required conditions become rules on its form."""
+	# Sites that skipped straight past the columns never had conditions to move.
+	if not frappe.db.has_column("Buzz Form Field", "depends_on"):
+		return
 	rules_by_form = defaultdict(list)
 	for form, fieldname, depends_on, mandatory_depends_on in question_conditions():
 		for action, conditions in (("show", depends_on), ("require", mandatory_depends_on)):
