@@ -1,3 +1,5 @@
+from collections import Counter
+
 import frappe
 from frappe.query_builder.functions import Count, Sum
 from frappe.utils import getdate
@@ -76,7 +78,7 @@ def coupon_ticket_types(event: str) -> list[CouponTicketType]:
 	rows = frappe.get_all(
 		"Event Ticket Type",
 		filters={"event": event},
-		fields=["name", "title", {"prices": ["currency", "price"]}],
+		fields=["name", "title", "is_hidden", {"prices": ["currency", "price"]}],
 		order_by="creation asc",
 		ignore_permissions=True,
 	)
@@ -91,10 +93,17 @@ def redeemed_bookings(event: str):
 	return booking, query
 
 
-def times_used_by_coupon(event: str) -> dict[str, int]:
+def times_used_by_coupon(event: str) -> Counter:
+	"""A discounted access code sits in both fields of a booking; it counts once."""
 	booking, query = redeemed_bookings(event)
-	rows = query.select(booking.coupon_code, Count(booking.name)).groupby(booking.coupon_code).run()
-	return dict(rows)
+	by_coupon = query.where(booking.access_code.isnull() | (booking.access_code != booking.coupon_code))
+	by_access_code = frappe.qb.from_(booking).where(
+		(booking.event == event) & (booking.docstatus == 1) & booking.access_code.isnotnull()
+	)
+	used = Counter()
+	for field, rows in ((booking.coupon_code, by_coupon), (booking.access_code, by_access_code)):
+		used.update(dict(rows.select(field, Count(booking.name)).groupby(field).run()))
+	return used
 
 
 def discounted_by_currency(event: str) -> list[CurrencyAmount]:

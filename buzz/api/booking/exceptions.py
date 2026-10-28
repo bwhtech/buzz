@@ -55,3 +55,13 @@ class InvoiceDetailsMissing(BuzzAPIError):
 class InvalidCoupon(BuzzAPIError):
 	title = _lt("Invalid Code")
 	message = _lt("Invalid or expired code")
+
+
+class InvalidAccessCode(BuzzAPIError):
+	title = _lt("Invalid Access Code")
+	message = _lt("This access code is not valid.")
+
+
+class HiddenTicketType(BuzzAPIError):
+	title = _lt("Tickets Unavailable")
+	message = _lt("These tickets are only available with a valid access code.")

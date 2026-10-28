@@ -7,7 +7,7 @@ import {
 	conditionLabel,
 	couponStats,
 	discountLabel,
-	endsLabel,
+	scheduleLabel,
 	statusLabel,
 	usedLabel,
 	scopeLabel,
@@ -60,14 +60,15 @@ test("a flat amount lists every currency", () => {
 })
 
 test("scope names the picked ticket types", () => {
-	assert.equal(scopeLabel(coupon(), ticketTypes), "All tickets")
+	assert.equal(scopeLabel(coupon(), ticketTypes), "All paid tickets")
 	const picked = coupon({ applies_to_all_ticket_types: false, ticket_types: ["2", "1"] })
 	assert.equal(scopeLabel(picked, ticketTypes), "Student, VIP")
 })
 
-test("only an active coupon is green", () => {
+test("status themes: active green, scheduled blue, used up amber", () => {
 	assert.equal(statusTheme("Active"), "green")
-	assert.equal(statusTheme("Used up"), "gray")
+	assert.equal(statusTheme("Used up"), "amber")
+	assert.equal(statusTheme("Disabled"), "gray")
 	assert.equal(statusTheme("Scheduled"), "blue")
 })
 
@@ -104,15 +105,19 @@ test("the condition names a ticket count or a minimum order per currency", () =>
 	)
 })
 
-test("a card says when the coupon ends", () => {
-	assert.equal(endsLabel(coupon({ expires_on: "2026-11-15" })), "Ends 15 Nov")
-	assert.equal(endsLabel(coupon({ expires_on: "2026-09-30" })), "Ends 30 Sep")
-	assert.equal(endsLabel(coupon()), "No end date")
+test("a card says when the coupon works", () => {
+	assert.equal(scheduleLabel(coupon({ expires_on: "2026-11-15" })), "Until 15 Nov")
+	assert.equal(
+		scheduleLabel(coupon({ starts_on: "2026-11-01", expires_on: "2026-11-05" })),
+		"1 Nov – 5 Nov",
+	)
+	assert.equal(scheduleLabel(coupon({ starts_on: "2026-11-01" })), "From 1 Nov")
+	assert.equal(scheduleLabel(coupon()), "Until registration closes")
 })
 
 test("usage reads against the limit when there is one", () => {
 	assert.equal(usedLabel(coupon({ times_used: 34, usage_limit: 100 })), "34 / 100 used")
-	assert.equal(usedLabel(coupon({ times_used: 3 })), "3 used")
+	assert.equal(usedLabel(coupon({ times_used: 3 })), "3 used · No limit")
 })
 
 test("a scheduled coupon's badge says when it starts", () => {

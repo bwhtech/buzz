@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, watch } from "vue"
+
 import type { CouponItem } from "@/types"
 
 import CouponOptionCards, { type CouponOption } from "./CouponOptionCards.vue"
@@ -19,9 +21,22 @@ const typeOptions: CouponOption<CouponItem["coupon_type"]>[] = [
 		title: "Automatic",
 		description: "Applies on its own when an order qualifies",
 	},
+	{
+		value: "Access Code",
+		icon: "lucide-key-round",
+		title: "Access code",
+		description: "Unlock hidden ticket types, with an optional discount",
+	},
 ]
 
-const discountOptions: CouponOption<CouponItem["discount_type"]>[] = [
+const noDiscountOption: CouponOption<CouponItem["discount_type"]> = {
+	value: "None",
+	icon: "lucide-ticket",
+	title: "No discount",
+	description: "The code only unlocks the tickets",
+}
+
+const discountTypeOptions: CouponOption<CouponItem["discount_type"]>[] = [
 	{
 		value: "Percentage",
 		icon: "lucide-percent",
@@ -35,6 +50,17 @@ const discountOptions: CouponOption<CouponItem["discount_type"]>[] = [
 		description: "Set per currency, like ₹500 off",
 	},
 ]
+
+const isAccessCode = computed(() => couponType.value === "Access Code")
+const discountOptions = computed(() =>
+	isAccessCode.value ? [noDiscountOption, ...discountTypeOptions] : discountTypeOptions,
+)
+
+// No discount only makes sense for an access code, and is its default.
+watch(couponType, (type) => {
+	if (type === "Access Code") discountType.value = "None"
+	else if (discountType.value === "None") discountType.value = "Percentage"
+})
 </script>
 
 <template>

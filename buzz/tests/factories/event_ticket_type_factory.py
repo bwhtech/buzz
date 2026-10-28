@@ -28,5 +28,9 @@ class EventTicketTypeFactory(BaseFactory[EventTicketType]):
 		return {"prices": [{"currency": "INR", "price": 500}]}
 
 	@property
+	def is_hidden(self) -> dict[str, Any]:
+		return {"is_hidden": 1}
+
+	@property
 	def unpublished(self) -> dict[str, Any]:
 		return {"is_published": 0}

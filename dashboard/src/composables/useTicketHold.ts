@@ -21,6 +21,7 @@ export function useTicketHold(
 	eventRoute: string,
 	eventId: Ref<string | null>,
 	quantities: Ref<Record<string, number>>,
+	accessCode: Ref<string>,
 ) {
 	const holdToken = useSessionStorage<string | null>(holdTokenKey(eventRoute), null)
 	const deadline = ref<number | null>(null)
@@ -42,7 +43,12 @@ export function useTicketHold(
 	async function hold() {
 		if (!eventId.value || (!holdToken.value && !Object.keys(quantities.value).length)) return
 		const data = await holdCall
-			.submit({ event: eventId.value, quantities: quantities.value, hold_token: holdToken.value })
+			.submit({
+				event: eventId.value,
+				quantities: quantities.value,
+				hold_token: holdToken.value,
+				access_code: accessCode.value || null,
+			})
 			.catch(() => null)
 		if (!data) return
 		holdToken.value = data.hold_token

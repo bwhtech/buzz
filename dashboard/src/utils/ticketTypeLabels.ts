@@ -8,6 +8,7 @@ const isSoldOut = (ticketType: TicketTypeItem) =>
 
 export function ticketTypeBadge(ticketType: TicketTypeItem) {
 	if (!ticketType.is_published) return { label: "Disabled", theme: "gray" as const }
+	if (ticketType.is_hidden) return { label: "Hidden", theme: "gray" as const }
 	return isSoldOut(ticketType) ? { label: "Sold out", theme: "amber" as const } : null
 }
 

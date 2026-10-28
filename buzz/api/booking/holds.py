@@ -4,9 +4,15 @@ import frappe
 from frappe import _
 from frappe.utils import cint, now_datetime, time_diff_in_seconds
 
-from buzz.api.booking.exceptions import RegistrationsClosed, TicketsUnavailable, TooManyTicketsHeld
+from buzz.api.booking.exceptions import (
+	HiddenTicketType,
+	RegistrationsClosed,
+	TicketsUnavailable,
+	TooManyTicketsHeld,
+)
 from buzz.api.booking.schemas import TicketHoldResponse
 from buzz.api.booking.services import are_registrations_closed
+from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	lock_ticket_types,
 	start_capacity_transaction,
@@ -32,12 +38,13 @@ class TicketHoldService:
 	"""Set the tickets one booking form holds. A resize keeps the hold's expiry, so a client
 	can't extend it; a token whose hold has lapsed is replaced by a new one."""
 
-	def __init__(self, event: str, quantities: dict, hold_token: str | None):
+	def __init__(self, event: str, quantities: dict, hold_token: str | None, access_code: str | None = None):
 		self.event_name = str(event)
 		self.quantities = {
 			str(name): cint(quantity) for name, quantity in quantities.items() if cint(quantity) > 0
 		}
 		self.hold_token = hold_token
+		self.access_code = access_code
 
 	@property
 	def event(self) -> "BuzzEvent":
@@ -80,8 +87,19 @@ class TicketHoldService:
 		ticket_types = [frappe.get_cached_doc("Event Ticket Type", name) for name in self.quantities]
 		for ticket_type in ticket_types:
 			if str(ticket_type.event) != self.event_name or not ticket_type.is_published:
-				frappe.throw(_("{0} is not available for this event").format(ticket_type.title))
+				# No title: it would name hidden ticket types of any event.
+				frappe.throw(_("A selected ticket type is not available for this event"))
+		self.validate_hidden(ticket_types)
 		return [ticket_type for ticket_type in ticket_types if ticket_type.max_tickets_available]
+
+	def validate_hidden(self, ticket_types: list["EventTicketType"]) -> None:
+		hidden = {str(row.name) for row in ticket_types if row.is_hidden}
+		if hidden and not hidden <= self.unlocked_ticket_types():
+			HiddenTicketType.throw()
+
+	def unlocked_ticket_types(self) -> set[str]:
+		coupon = BuzzCouponCode.find_available_access_code(self.event_name, self.access_code)
+		return coupon.unlocked_ticket_types() if coupon else set()
 
 	def resolve_expiry(self):
 		expires_at = live_hold_expiry(self.hold_token)
