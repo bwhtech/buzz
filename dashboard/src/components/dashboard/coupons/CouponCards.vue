@@ -13,7 +13,7 @@ import {
 	usedLabel,
 } from "@/utils/couponLabels"
 
-import CouponCopyLink from "./CouponCopyLink.vue"
+import CouponCopyButton from "./CouponCopyButton.vue"
 
 defineProps<{
 	coupons: CouponItem[]
@@ -79,7 +79,7 @@ const accessDiscountLabel = (coupon: CouponItem) =>
 					class="mt-3 block truncate text-xl text-ink-gray-9"
 					:class="[
 						isTypedCode(coupon) ? 'font-mono font-bold tracking-wide' : 'font-semibold',
-						{ 'pr-24': isAccessCode(coupon) },
+						{ 'pr-10': isTypedCode(coupon) },
 					]"
 				>
 					{{ coupon.code }}
@@ -120,10 +120,9 @@ const accessDiscountLabel = (coupon: CouponItem) =>
 					<span>{{ scheduleLabel(coupon) }}</span>
 				</span>
 			</button>
-			<CouponCopyLink
-				v-if="isAccessCode(coupon)"
+			<CouponCopyButton
 				class="absolute right-2 top-[2.65rem]"
-				:code="coupon.code"
+				:coupon="coupon"
 				:registration-link="registrationLink"
 			/>
 		</div>

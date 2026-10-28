@@ -5,7 +5,7 @@ import type { CouponItem, CouponTicketType } from "@/types"
 import { isTypedCode } from "@/utils/couponForm"
 import { discountLabel, scopeLabel, statusLabel, typeLabel, usedLabel } from "@/utils/couponLabels"
 
-import CouponCopyLink from "./CouponCopyLink.vue"
+import CouponCopyButton from "./CouponCopyButton.vue"
 
 defineProps<{
 	coupons: CouponItem[]
@@ -67,12 +67,7 @@ const isDimmed = (coupon: CouponItem) => ["Disabled", "Used up"].includes(coupon
 					</span>
 				</span>
 			</button>
-			<CouponCopyLink
-				v-if="coupon.coupon_type === 'Access Code'"
-				class="mr-2"
-				:code="coupon.code"
-				:registration-link="registrationLink"
-			/>
+			<CouponCopyButton class="mr-2" :coupon="coupon" :registration-link="registrationLink" />
 		</li>
 	</ul>
 </template>
