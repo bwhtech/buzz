@@ -5,7 +5,7 @@ import re
 from typing import TYPE_CHECKING
 
 import frappe
-from frappe import _
+from frappe import _, _lt
 from frappe.model.document import Document
 from frappe.query_builder.functions import Count
 from frappe.utils import add_to_date, cint, cstr, flt, fmt_money, getdate, now_datetime
@@ -15,7 +15,9 @@ if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
 
 
-UNFINISHED_CHECKOUT_MESSAGE = _("You have an unfinished checkout with this code. Try again in a few minutes.")
+UNFINISHED_CHECKOUT_MESSAGE = _lt(
+	"You have an unfinished checkout with this code. Try again in a few minutes."
+)
 PROMO_CODE_PATTERN = re.compile(r"[A-Z0-9_-]+")
 
 
@@ -150,11 +152,11 @@ class BuzzCouponCode(Document):
 	def limit_reason(self, booking: "EventBooking") -> str | None:
 		if self.usage_limit and self.times_taken(booking) >= self.usage_limit:
 			if self.times_taken(booking) - self.own_live_drafts(booking) < self.usage_limit:
-				return UNFINISHED_CHECKOUT_MESSAGE
+				return str(UNFINISHED_CHECKOUT_MESSAGE)
 			return _("This coupon has reached its usage limit")
 		if self.once_per_buyer and self.times_used_by(booking):
 			if self.own_live_drafts(booking) == self.times_used_by(booking):
-				return UNFINISHED_CHECKOUT_MESSAGE
+				return str(UNFINISHED_CHECKOUT_MESSAGE)
 			return _("You have already used this coupon")
 
 	def eligibility_reason(self, booking: "EventBooking") -> str | None:
