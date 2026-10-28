@@ -5,6 +5,9 @@ from buzz.events.doctype.buzz_form.form_types import form_type
 
 def execute():
 	"""Hidden standard fields become disabled rows, so the form builder can order and rename them."""
+	# Sites that skipped straight past the column moved their hidden fields with the forms.
+	if not frappe.db.has_column("Buzz Form", "excluded_fields"):
+		return
 	form = frappe.qb.DocType("Buzz Form")
 	for name, excluded_fields in frappe.qb.from_(form).select(form.name, form.excluded_fields).run():
 		doc = frappe.get_doc("Buzz Form", name)

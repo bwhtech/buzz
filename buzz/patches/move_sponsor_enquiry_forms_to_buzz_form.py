@@ -2,6 +2,8 @@ import frappe
 from frappe import _
 from frappe.utils import cstr
 
+from buzz.patches.move_excluded_fields_to_standard_rows import hide_excluded_fields
+
 SOURCE_DOCTYPE = "Sponsor Enquiry Form"
 TARGET_FORM_DOCTYPE = "Sponsorship Enquiry"
 FORM_SETTINGS = (
@@ -92,6 +94,7 @@ class SponsorFormMigration:
 		form.flags.orphaned = orphaned
 		for question in self.questions_for(row.name):
 			form.append("questions", {fieldname: question.get(fieldname) for fieldname in QUESTION_FIELDS})
+		hide_excluded_fields(form, row.excluded_fields)
 		return form
 
 	def questions_for(self, form_name: str) -> list:

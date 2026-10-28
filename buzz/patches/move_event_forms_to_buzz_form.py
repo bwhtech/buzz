@@ -3,6 +3,7 @@ from frappe import _
 from frappe.utils import cstr
 
 from buzz.events.doctype.buzz_form.form_types import SPONSORSHIP_FORM_DOCTYPE, form_type, unique_fieldname
+from buzz.patches.move_excluded_fields_to_standard_rows import hide_excluded_fields
 
 SOURCE_DOCTYPE = "Buzz Event Form"
 FORM_SETTINGS = (
@@ -72,6 +73,7 @@ class EventFormMigration:
 		form.flags.migrating = True
 		for question in self.questions_for(row):
 			form.append("questions", question)
+		hide_excluded_fields(form, row.excluded_fields)
 		return form
 
 	def questions_for(self, row) -> list[dict]:
