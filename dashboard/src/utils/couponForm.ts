@@ -19,12 +19,15 @@ export type CouponValues = Pick<
 	| "expires_on"
 >
 
-export function blankCouponValues(): CouponValues {
+export function blankCouponValues(
+	couponType: CouponValues["coupon_type"] = "Promo Code",
+): CouponValues {
 	return {
-		coupon_type: "Promo Code",
+		coupon_type: couponType,
 		code: "",
 		description: "",
-		discount_type: "Percentage",
+		// No discount only makes sense for an access code, and is its default.
+		discount_type: couponType === "Access Code" ? "None" : "Percentage",
 		discount_percentage: 0,
 		discount_amounts: [],
 		applies_to_all_ticket_types: true,

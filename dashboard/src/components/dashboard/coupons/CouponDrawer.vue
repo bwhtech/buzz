@@ -30,6 +30,8 @@ const props = defineProps<{
 	event: string
 	// null opens the drawer on a new coupon.
 	coupon: CouponItem | null
+	// The type a new coupon starts on.
+	newCouponType?: CouponValues["coupon_type"]
 	ticketTypes: CouponTicketType[]
 	canWrite: boolean
 }>()
@@ -46,7 +48,9 @@ const savedValues = computed(() => (props.coupon ? couponValuesOf(props.coupon) 
 
 // A fresh copy each time: sharing savedValues' object would let edits change it too.
 const resetDraft = () =>
-	(draft.value = props.coupon ? couponValuesOf(props.coupon) : blankCouponValues())
+	(draft.value = props.coupon
+		? couponValuesOf(props.coupon)
+		: blankCouponValues(props.newCouponType))
 
 watch(open, (opened) => {
 	if (!opened) return

@@ -160,3 +160,8 @@ test("an access code without hidden ticket types says why it can't save", () => 
 	assert.equal(couponError(values, ticketTypes), "Pick at least one hidden ticket type to unlock.")
 	assert.equal(couponError({ ...values, ticket_types: [ticketTypes[0].name] }, ticketTypes), null)
 })
+
+test("a blank access code starts without a discount", () => {
+	assert.equal(blankCouponValues("Access Code").discount_type, "None")
+	assert.equal(blankCouponValues().discount_type, "Percentage")
+})

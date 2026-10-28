@@ -35,7 +35,7 @@ const meta = (coupon: CouponItem, ticketTypes: CouponTicketType[]) =>
 		<div v-for="coupon in coupons" :key="coupon.name" class="relative flex">
 			<button
 				type="button"
-				class="flex w-full flex-col gap-3.5 rounded-5 border border-outline-gray-2 p-3.5 text-left transition-[box-shadow,border-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.99] [@media(hover:hover)]:hover:border-outline-gray-1 [@media(hover:hover)]:hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 motion-reduce:transition-none"
+				class="flex w-full flex-col gap-3.5 rounded-5 border border-outline-gray-2 p-3.5 text-left transition-[background-color,transform] duration-150 ease-out active:scale-[0.99] [@media(hover:hover)]:hover:bg-surface-gray-1 focus-visible:focus-ring motion-reduce:transition-none"
 				:class="{ 'opacity-60': isDimmed(coupon) }"
 				@click="$emit('open', coupon.name)"
 			>
