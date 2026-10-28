@@ -71,19 +71,29 @@ class RegistrationMigration:
 		name = frappe.db.get_value("Buzz Form", {"event": event, "form_doctype": form_doctype}, "name")
 		if name:
 			return frappe.get_doc("Buzz Form", name)
-		form = frappe.get_doc(
-			{
-				"doctype": "Buzz Form",
-				"title": title,
-				"event": event,
-				"form_doctype": form_doctype,
-				"route": route,
-				# Registration was open before this form existed; the attendee form has no switch.
-				"publish": int(form_doctype == REGISTRATION_FORM_DOCTYPE),
-			}
+		# new_doc, not get_doc: only new_doc marks the form new, and build_form skips a form
+		# that is not new and has nothing to move.
+		form = frappe.new_doc(
+			"Buzz Form",
+			title=title,
+			event=event,
+			form_doctype=form_doctype,
+			route=route,
+			# Registration was open before this form existed; the attendee form has no switch.
+			publish=int(form_doctype == REGISTRATION_FORM_DOCTYPE),
 		)
+		if form_doctype == REGISTRATION_FORM_DOCTYPE:
+			form.auto_close_at = self.legacy_cutoff(event)
 		form.flags.migrating = True
 		return form
+
+	def legacy_cutoff(self, event: str):
+		"""move_registration_close_to_buzz_form skips an event with no form, so a form made
+		here takes the cutoff itself."""
+		if not frappe.db.has_column("Buzz Event", "registrations_close_at"):
+			return None
+		rows = frappe.db.sql("select registrations_close_at from `tabBuzz Event` where name = %s", event)
+		return rows[0][0]
 
 	def legacy_questions(self) -> dict[tuple, list]:
 		rows = frappe.get_all(
