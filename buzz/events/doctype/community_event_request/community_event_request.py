@@ -8,6 +8,7 @@ from frappe.utils import get_datetime, validate_url
 
 from buzz.permissions import WRITE_PTYPES, as_sql, is_unrestricted, my_teams, team_role_of
 
+SHARE_IMAGE_FIELDS = ("status", "community", "start_datetime", "end_datetime")
 EXTERNAL_FIELDS = ("event_title", "event_url", "host", "event_location", "start_datetime", "end_datetime")
 
 
@@ -48,15 +49,15 @@ class CommunityEventRequest(Document):
 		self.validate_community()
 
 	def on_update(self):
-		self.enqueue_share_image()
+		"""The community's share image counts its approved events, so these changes move it."""
+		from buzz.events.community_og_image import enqueue_generate_for
 
-	def enqueue_share_image(self):
-		"""The community's share image counts its approved events, so a status change moves it."""
-		from buzz.events.community_og_image import enqueue_generate
-
-		if frappe.in_test or not self.has_value_changed("status"):
+		if not any(self.has_value_changed(field) for field in SHARE_IMAGE_FIELDS):
 			return
-		enqueue_generate(self.community)
+		enqueue_generate_for(self.community)
+		previous = self.get_doc_before_save()
+		if previous and previous.community != self.community:
+			enqueue_generate_for(previous.community)
 
 	def validate_buzz_event(self):
 		if not self.event:

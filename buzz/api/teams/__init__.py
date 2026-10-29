@@ -99,14 +99,7 @@ def update_public_page(
 	meta_image: str | None = None,
 ) -> None:
 	services.update_public_page(
-		team,
-		is_published,
-		links,
-		short_description,
-		about,
-		accept_community_submissions,
-		slug,
-		meta_image,
+		team, is_published, links, short_description, about, accept_community_submissions, slug, meta_image
 	)
 
 

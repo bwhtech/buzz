@@ -7,7 +7,6 @@ import SharePreviewCard from "@/components/common/SharePreviewCard.vue"
 import EventLinks from "@/components/dashboard/events/EventLinks.vue"
 import { updatePublicPage } from "@/data/teams"
 import type { EventExternalLink, TeamOverview } from "@/types"
-import { plainText } from "@/utils/communicationText"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 import { serverErrorMessage } from "@/utils/serverError"
 import { teamPath, teamUrl } from "@/utils/teamUrl"
@@ -29,14 +28,6 @@ function fromTeam(team: TeamOverview) {
 const form = reactive(fromTeam(props.team))
 let justSaved = false
 
-// The server falls back to the same title and description on the shared link.
-const shareTitle = computed(() => __("{0} · Events Calendar", [props.team.team_name]))
-const shareDescription = computed(
-	() =>
-		form.short_description ||
-		plainText(form.about) ||
-		__("Upcoming events from {0}", [props.team.team_name]),
-)
 const shareImage = computed(() => form.meta_image || props.team.og_image || props.team.logo)
 const shareSite = computed(() =>
 	props.team.slug
@@ -66,7 +57,9 @@ watch(
 const isDirty = computed(() => differsFrom(props.team))
 
 async function save() {
-	await updatePublicPage.submit({ team: props.team.name, ...form }).catch(() => null)
+	await updatePublicPage
+		.submit({ team: props.team.name, ...form, meta_image: form.meta_image ?? "" })
+		.catch(() => null)
 	if (updatePublicPage.error) return
 	justSaved = true
 	toast.success(__("Public page saved"))
@@ -147,8 +140,8 @@ async function save() {
 			<SharePreviewCard
 				v-model:meta-image="form.meta_image"
 				:image="shareImage"
-				:title="shareTitle"
-				:description="shareDescription"
+				:title="team.share_title"
+				:description="team.share_description"
 				:site="shareSite"
 			/>
 		</div>

@@ -1,6 +1,7 @@
 """The team's logo on the rounded tile that straddles the share image's band."""
 
 from collections import Counter
+from urllib.parse import urlparse
 
 from PIL import Image, ImageDraw, ImageFilter
 
@@ -12,7 +13,6 @@ MARK_SIZE = LOGO_SIZE + 2 * LOGO_RING
 # A wordmark that spans the tile would be clipped by its rounded corner
 LOGO_INSET = 12
 MONOGRAM_SIZE = 60
-MONOGRAM_TILE, MONOGRAM_INK = "#ececec", "#6b6b6b"
 DARK_LOGO_LUMA = 90
 SHADOW_MARGIN, SHADOW_OFFSET, SHADOW_BLUR, SHADOW_ALPHA = 24, 4, 8, 26
 SCALE = 2  # marks and shadows are drawn at 2x and scaled down
@@ -25,6 +25,11 @@ class TeamMark:
 		self.team = team
 		self.colours = colours
 		self.top = top
+		self.logo = uploaded_image(team.logo)
+
+	def logo_failed_to_load(self) -> bool:
+		"""A stored logo that cannot be read. An external URL is deliberately drawn as a monogram."""
+		return bool(self.team.logo) and not urlparse(self.team.logo).scheme and self.logo is None
 
 	def draw(self, image: Image.Image, left: int):
 		avatar = self.avatar()
@@ -71,10 +76,9 @@ class TeamMark:
 	def mark(self) -> Image.Image:
 		"""The whole logo is scaled into the tile, so a wide or tall mark is never cropped."""
 		inner = LOGO_SIZE * SCALE
-		logo = uploaded_image(self.team.logo)
-		if logo is None:
+		if self.logo is None:
 			return self.monogram(inner)
-		logo = logo.convert("RGBA")
+		logo = self.logo.convert("RGBA")
 		mark = Image.new("RGBA", (inner, inner), self.mark_background(logo))
 		scale = (inner - 2 * LOGO_INSET * SCALE) / max(logo.width, logo.height)
 		fit = (max(1, round(logo.width * scale)), max(1, round(logo.height * scale)))
@@ -92,7 +96,7 @@ class TeamMark:
 		return edge_colour(logo)
 
 	def monogram(self, size: int) -> Image.Image:
-		mark = Image.new("RGBA", (size, size), MONOGRAM_TILE)
+		mark = Image.new("RGBA", (size, size), self.colours["border"])
 		letter = self.team.team_name[:1].upper() or "?"
 		typeface = font("SemiBold", MONOGRAM_SIZE * SCALE)
 		left, top, right, bottom = typeface.getbbox(letter, anchor="ls")
@@ -101,7 +105,7 @@ class TeamMark:
 			((size - right - left) / 2, (size - bottom - top) / 2),
 			letter,
 			font=typeface,
-			fill=MONOGRAM_INK,
+			fill=self.colours["ink-muted"],
 			anchor="ls",
 		)
 		return mark

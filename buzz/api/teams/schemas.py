@@ -58,6 +58,9 @@ class TeamOverview(APIResponse):
 	# An uploaded share image, then the one Buzz drew; the page shows the first it has.
 	meta_image: str | None
 	og_image: str | None
+	# What a shared link shows as its title and description
+	share_title: str
+	share_description: str
 	links: list[EventExternalLink]
 	my_role: str
 	members: list[TeamMember]

@@ -1,6 +1,5 @@
 import textwrap
 from collections import defaultdict
-from dataclasses import dataclass
 from datetime import datetime
 from functools import cached_property
 from itertools import groupby
@@ -14,6 +13,7 @@ from buzz.api.maps.services import place_search_enabled
 from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE, is_registration_closed
 from buzz.events.doctype.buzz_team.team_map import TeamMap
 from buzz.events.doctype.community_event_request.community_event_request import approved_external_requests
+from buzz.events.og_image import HEIGHT, WIDTH, uploaded_image
 from buzz.permissions import role_allows, team_role_of
 from buzz.www.event.date_range import format_time
 from buzz.www.event.index import public_links
@@ -29,7 +29,8 @@ from buzz.www.events import (
 )
 
 PAST_LIMIT = 30
-SHARE_IMAGE_SIZE = (1200, 630)
+# The shared card is large when its image is at least this much wider than tall
+LARGE_CARD_ASPECT = 1.5
 VENUE_FIELDS = [
 	"venue.latitude as latitude",
 	"venue.longitude as longitude",
@@ -267,8 +268,14 @@ class TeamPage(EventTimeline):
 
 	@cached_property
 	def upcoming_count(self) -> int:
-		"""What is still to come, on Buzz and on the other sites the community lists."""
-		return len(self.upcoming_events)
+		"""What is still to come, on Buzz and on the other sites the community lists. Not capped."""
+		events = frappe.get_all(
+			"Buzz Event",
+			filters=upcoming_filters(),
+			or_filters=self.event_filters(),
+			fields=["start_date", *TIME_FIELDS],
+		)
+		return len(exclude_ended_events(events + self.external_events))
 
 	@cached_property
 	def hosted_count(self) -> int:
@@ -278,18 +285,20 @@ class TeamPage(EventTimeline):
 
 	def meta(self) -> dict:
 		image = self.share_image()
-		# Only the two share images are drawn at 1200x630; a logo is square.
-		sized = bool(image) and image in (self.team.meta_image, self.team.og_image)
+		size = self.image_size(image) if image else None
 		return {
 			"url": get_url(f"/{self.team.route}"),
-			"title": _("{0} · Events Calendar").format(self.team.team_name),
-			"description": self.description(),
+			"title": self.share_title(),
+			"description": self.share_description(),
 			"image": get_url(image) if image else "",
-			"card": "summary_large_image" if sized else "summary",
-			"image_size": SHARE_IMAGE_SIZE if sized else None,
+			"card": "summary_large_image" if size and size[0] >= LARGE_CARD_ASPECT * size[1] else "summary",
+			"image_size": size,
 		}
 
-	def description(self) -> str:
+	def share_title(self) -> str:
+		return _("{0} · Events Calendar").format(self.team.team_name)
+
+	def share_description(self) -> str:
 		text = self.team.short_description or plain_text(self.team.about)
 		if not text:
 			return _("Upcoming events from {0}").format(self.team.team_name)
@@ -303,15 +312,8 @@ class TeamPage(EventTimeline):
 		urls = (self.team.meta_image, self.team.og_image, self.team.logo)
 		return next((url for url in urls if url and not url.startswith("/private/")), None)
 
-
-@dataclass
-class TeamEventCounts:
-	"""The numbers a team's page and its share image both show."""
-
-	upcoming: int
-	hosted: int
-
-
-def team_event_counts(team) -> TeamEventCounts:
-	page = TeamPage(team)
-	return TeamEventCounts(upcoming=page.upcoming_count, hosted=page.hosted_count)
+	def image_size(self, url: str) -> tuple[int, int] | None:
+		if url == self.team.og_image:
+			return WIDTH, HEIGHT
+		image = uploaded_image(url)
+		return image.size if image else None

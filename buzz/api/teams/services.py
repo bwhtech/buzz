@@ -74,8 +74,13 @@ def team_overview(team: str) -> TeamOverview:
 		NotATeamMember.throw()
 
 	route = details.pop("route")
+	from buzz.events.doctype.buzz_team.team_page import TeamPage
+
+	page = TeamPage(frappe.get_doc("Buzz Team", team))
 	return TeamOverview(
 		**details,
+		share_title=page.share_title(),
+		share_description=page.share_description(),
 		public_url=get_url(f"/{route}") if details.is_published and route else None,
 		links=links_of(team),
 		my_role=role,
@@ -264,6 +269,6 @@ def update_public_page(
 	public_page.set_slug(doc, slug)
 	doc.short_description = (short_description or "").strip() or None
 	doc.about = about or None
-	doc.meta_image = meta_image or None
+	public_page.set_meta_image(doc, meta_image)
 	doc.set("links", [{key: link.get(key) for key in ("icon", "label", "url")} for link in links])
 	doc.save(ignore_permissions=True)

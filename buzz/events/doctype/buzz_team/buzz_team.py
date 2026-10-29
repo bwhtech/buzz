@@ -133,17 +133,10 @@ class BuzzTeam(WebsiteGenerator):
 		return f"community/{self.slug}"
 
 	def on_update(self):
+		from buzz.events.community_og_image import enqueue_generate_for
+
 		super().on_update()
-		self.enqueue_share_image()
-
-	def enqueue_share_image(self):
-		"""Queue a fresh share image: a published team draws one, a private team clears it."""
-		from buzz.events.community_og_image import enqueue_generate
-
-		# A live worker would render test teams mid-test and race their teardown
-		if frappe.in_test or not (self.is_published or self.og_image):
-			return
-		enqueue_generate(self.name)
+		enqueue_generate_for(self.name)
 
 	def get_context(self, context):
 		from buzz.events.doctype.buzz_team.team_page import TeamPage

@@ -39,7 +39,7 @@ class TestCommunityOgImage(IntegrationTestCase):
 		self.create_event(7)
 		self.create_event(-7)
 		page = TeamPage(frappe.get_doc("Buzz Team", self.team))
-		counts = [stat.number for stat in self.image().stats]
+		counts = [number for number, _label in self.image().stats]
 
 		self.assertEqual(counts, [page.upcoming_count, page.hosted_count])
 		self.assertEqual(page.as_context()["events_hosted"], page.hosted_count)
@@ -48,7 +48,7 @@ class TestCommunityOgImage(IntegrationTestCase):
 		team = BuzzTeamFactory.create_owned_by(None, "community", team_name="Counted Builders").name
 		CommunityEventRequestFactory.create("approved", community=team)
 
-		self.assertEqual(CommunityOgImage(frappe.get_doc("Buzz Team", team)).stats[1].number, 1)
+		self.assertEqual(CommunityOgImage(frappe.get_doc("Buzz Team", team)).stats[1][0], 1)
 
 	def test_unchanged_team_keeps_its_image(self):
 		self.create_event(7)
@@ -87,6 +87,49 @@ class TestCommunityOgImage(IntegrationTestCase):
 		with patch("frappe.in_test", False), patch("frappe.enqueue") as enqueue:
 			team.save()
 		self.assertEqual(enqueue.call_args.kwargs["team_name"], self.team)
+
+	def test_a_deleted_team_is_skipped(self):
+		generate("Deleted Builders")
+
+	def test_a_logo_that_fails_to_load_keeps_the_current_image(self):
+		generate(self.team)
+		first = self.og_image()
+		frappe.db.set_value("Buzz Team", self.team, "logo", "/files/missing-logo.png")
+		generate(self.team)
+
+		self.assertEqual(self.og_image(), first)
+
+	def test_an_external_logo_is_drawn_as_a_monogram(self):
+		frappe.db.set_value("Buzz Team", self.team, "logo", "https://example.com/logo.png")
+		generate(self.team)
+
+		self.assertIsNotNone(self.og_image())
+
+	def test_a_team_move_queues_both_teams(self):
+		other = BuzzTeamFactory.create_owned_by(team_name="Receiving Builders", is_published=1).name
+		event = self.create_event(7)
+		event.reload()
+		event.team = other
+		with patch("frappe.in_test", False), patch("frappe.enqueue") as enqueue:
+			event.save()
+
+		queued = {call.kwargs["team_name"] for call in enqueue.call_args_list if "team_name" in call.kwargs}
+		self.assertEqual(queued, {self.team, other})
+
+	def test_a_community_request_move_queues_both_communities(self):
+		first = BuzzTeamFactory.create_owned_by(
+			None, "community", team_name="First Community", is_published=1
+		).name
+		other = BuzzTeamFactory.create_owned_by(
+			None, "community", team_name="Next Community", is_published=1
+		).name
+		request = CommunityEventRequestFactory.create("approved", community=first)
+		request.community = other
+		with patch("frappe.in_test", False), patch("frappe.enqueue") as enqueue:
+			request.save()
+
+		queued = {call.kwargs["team_name"] for call in enqueue.call_args_list}
+		self.assertEqual(queued, {first, other})
 
 	def og_image(self) -> str:
 		return frappe.db.get_value("Buzz Team", self.team, "og_image")

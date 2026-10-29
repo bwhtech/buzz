@@ -311,6 +311,7 @@ class BuzzEvent(Document):
 		if not frappe.db.exists("Sponsorship Enquiry", {"event": self.name}):
 			for form in frappe.get_all("Buzz Form", {"event": self.name}, pluck="name"):
 				frappe.delete_doc("Buzz Form", form, ignore_permissions=True)
+		self.enqueue_listing_share_images()
 		# A community's request to list the event means nothing once the event is gone.
 		frappe.db.delete("Community Event Request", {"event": self.name})
 		# Zones come with the event, the default one included. Check-ins block the delete on
@@ -318,6 +319,13 @@ class BuzzEvent(Document):
 		if not frappe.db.exists("Event Check In", {"event": self.name}):
 			for zone in frappe.get_all("Event Check-in Zone", {"event": self.name}, pluck="name"):
 				frappe.delete_doc("Event Check-in Zone", zone, ignore_permissions=True, ignore_on_trash=True)
+
+	def enqueue_listing_share_images(self):
+		from buzz.events.community_og_image import enqueue_generate_for
+
+		enqueue_generate_for(self.team)
+		for community in frappe.get_all("Community Event Request", {"event": self.name}, pluck="community"):
+			enqueue_generate_for(community)
 
 	def create_default_records(self):
 		records = [
@@ -390,15 +398,16 @@ class BuzzEvent(Document):
 		self.update_zoom_meeting()
 		self.capture_published_change()
 		self.enqueue_og_image()
-		self.enqueue_team_share_image()
+		self.enqueue_team_share_images()
 
-	def enqueue_team_share_image(self):
-		"""The team's share image counts its events, so it follows every event save."""
-		from buzz.events.community_og_image import enqueue_generate
+	def enqueue_team_share_images(self):
+		"""A team's share image counts its events, so both teams follow a move."""
+		from buzz.events.community_og_image import enqueue_generate_for
 
-		if frappe.in_test or not self.team:
-			return
-		enqueue_generate(self.team)
+		enqueue_generate_for(self.team)
+		previous = self.get_doc_before_save()
+		if previous and previous.team != self.team:
+			enqueue_generate_for(previous.team)
 
 	def enqueue_og_image(self):
 		from buzz.events.og_image import EventOgImage, enqueue_generate
