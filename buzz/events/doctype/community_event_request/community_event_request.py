@@ -9,7 +9,6 @@ from frappe.utils import get_datetime, validate_url
 from buzz.permissions import WRITE_PTYPES, as_sql, is_unrestricted, my_teams, team_role_of
 
 EXTERNAL_FIELDS = ("event_title", "event_url", "host", "event_location", "start_datetime", "end_datetime")
-PLACE_FIELDS = ("latitude", "longitude", "city", "country")
 
 
 class CommunityEventRequest(Document):
@@ -96,7 +95,7 @@ def approved_external_requests(community: str) -> list:
 	return frappe.get_all(
 		"Community Event Request",
 		filters={"community": community, "status": "Approved", "is_external_event": 1},
-		fields=["name", *EXTERNAL_FIELDS, *PLACE_FIELDS],
+		fields=["name", *EXTERNAL_FIELDS, "latitude", "longitude", "city", "country"],
 	)
 
 
