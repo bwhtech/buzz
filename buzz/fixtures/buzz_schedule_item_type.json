@@ -8,7 +8,9 @@
   "modified": "2026-10-29 12:00:00.000000",
   "name": "Talk",
   "team": null,
-  "title": "Talk"
+  "title": "Talk",
+  "default_duration": 30,
+  "spans_all_tracks": 0
  },
  {
   "color": "green",
@@ -19,7 +21,9 @@
   "modified": "2026-10-29 12:00:00.000000",
   "name": "Workshop",
   "team": null,
-  "title": "Workshop"
+  "title": "Workshop",
+  "default_duration": 90,
+  "spans_all_tracks": 0
  },
  {
   "color": "gray",
@@ -30,6 +34,112 @@
   "modified": "2026-10-29 12:00:00.000000",
   "name": "Break",
   "team": null,
-  "title": "Break"
+  "title": "Break",
+  "default_duration": 15,
+  "spans_all_tracks": 1
+ },
+ {
+  "color": "purple",
+  "default_duration": 45,
+  "docstatus": 0,
+  "doctype": "Buzz Schedule Item Type",
+  "icon": "mic",
+  "is_standard": 1,
+  "modified": "2026-10-30 12:00:00.000000",
+  "name": "Keynote",
+  "spans_all_tracks": 0,
+  "team": null,
+  "title": "Keynote"
+ },
+ {
+  "color": "yellow",
+  "default_duration": 10,
+  "docstatus": 0,
+  "doctype": "Buzz Schedule Item Type",
+  "icon": "zap",
+  "is_standard": 1,
+  "modified": "2026-10-30 12:00:00.000000",
+  "name": "Lightning",
+  "spans_all_tracks": 0,
+  "team": null,
+  "title": "Lightning"
+ },
+ {
+  "color": "gray",
+  "default_duration": 15,
+  "docstatus": 0,
+  "doctype": "Buzz Schedule Item Type",
+  "icon": "coffee",
+  "is_standard": 1,
+  "modified": "2026-10-30 12:00:00.000000",
+  "name": "Coffee break",
+  "spans_all_tracks": 1,
+  "team": null,
+  "title": "Coffee break"
+ },
+ {
+  "color": "gray",
+  "default_duration": 60,
+  "docstatus": 0,
+  "doctype": "Buzz Schedule Item Type",
+  "icon": "utensils",
+  "is_standard": 1,
+  "modified": "2026-10-30 12:00:00.000000",
+  "name": "Lunch",
+  "spans_all_tracks": 1,
+  "team": null,
+  "title": "Lunch"
+ },
+ {
+  "color": "teal",
+  "default_duration": 30,
+  "docstatus": 0,
+  "doctype": "Buzz Schedule Item Type",
+  "icon": "clipboard-list",
+  "is_standard": 1,
+  "modified": "2026-10-30 12:00:00.000000",
+  "name": "Registration",
+  "spans_all_tracks": 1,
+  "team": null,
+  "title": "Registration"
+ },
+ {
+  "color": "teal",
+  "default_duration": 45,
+  "docstatus": 0,
+  "doctype": "Buzz Schedule Item Type",
+  "icon": "users",
+  "is_standard": 1,
+  "modified": "2026-10-30 12:00:00.000000",
+  "name": "Networking",
+  "spans_all_tracks": 0,
+  "team": null,
+  "title": "Networking"
+ },
+ {
+  "color": "teal",
+  "default_duration": 45,
+  "docstatus": 0,
+  "doctype": "Buzz Schedule Item Type",
+  "icon": "message-square",
+  "is_standard": 1,
+  "modified": "2026-10-30 12:00:00.000000",
+  "name": "Panel discussion",
+  "spans_all_tracks": 0,
+  "team": null,
+  "title": "Panel discussion"
+ },
+ {
+  "color": "teal",
+  "default_duration": 30,
+  "docstatus": 0,
+  "doctype": "Buzz Schedule Item Type",
+  "icon": "pen-line",
+  "is_standard": 1,
+  "modified": "2026-10-30 12:00:00.000000",
+  "name": "Custom",
+  "spans_all_tracks": 0,
+  "team": null,
+  "title": "Custom"
  }
 ]

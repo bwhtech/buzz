@@ -15,9 +15,11 @@ class BuzzScheduleTrack(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		capacity: DF.Int
 		color: DF.Data | None
 		event: DF.Link | None
 		schedule: DF.Link
+		sequence: DF.Int
 		title: DF.Data
 	# end: auto-generated types
 

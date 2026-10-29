@@ -7,6 +7,8 @@
  "field_order": [
   "title",
   "color",
+  "sequence",
+  "capacity",
   "column_break_schedule",
   "schedule",
   "event"
@@ -24,6 +26,18 @@
    "fieldname": "color",
    "fieldtype": "Data",
    "label": "Color"
+  },
+  {
+   "default": "0",
+   "description": "Rooms show left to right, or top to bottom, in this order",
+   "fieldname": "sequence",
+   "fieldtype": "Int",
+   "label": "Sequence"
+  },
+  {
+   "fieldname": "capacity",
+   "fieldtype": "Int",
+   "label": "Seats"
   },
   {
    "fieldname": "column_break_schedule",
@@ -49,7 +63,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-29 12:00:00.000000",
+ "modified": "2026-10-30 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Schedule Track",

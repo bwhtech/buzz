@@ -28,8 +28,10 @@ class BuzzScheduleItemType(Document):
 		from frappe.types import DF
 
 		color: DF.Data | None
+		default_duration: DF.Int
 		icon: DF.Data | None
 		is_standard: DF.Check
+		spans_all_tracks: DF.Check
 		team: DF.Link | None
 		title: DF.Data
 	# end: auto-generated types

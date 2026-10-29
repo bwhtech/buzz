@@ -21,31 +21,24 @@ def create_schedule(event: int) -> str:
 			"schedule": schedule.name,
 			"title": _(DEFAULT_TRACK_TITLE),
 			"color": DEFAULT_TRACK_COLOR,
+			"sequence": 0,
 		}
 	).insert()
 	return schedule.name
 
 
-def unscheduled_talks(event: int) -> list[ScheduleTalk]:
-	scheduled = frappe.get_all(
-		"Buzz Schedule Item",
-		filters={"parenttype": "Buzz Schedule", "reference_doctype": "Event Talk"},
-		pluck="reference_document",
-	)
+def event_talks(event: int) -> list[ScheduleTalk]:
 	talks = frappe.get_list(
-		"Event Talk",
-		filters={"event": event, "name": ["not in", scheduled or [""]]},
-		fields=["name", "title"],
-		order_by="title",
+		"Event Talk", filters={"event": event}, fields=["name", "title"], order_by="title"
 	)
-	speakers = speaker_names([talk.name for talk in talks])
+	speakers = speaker_names([str(talk.name) for talk in talks])
 	return [
-		ScheduleTalk(name=str(talk.name), title=cstr(talk.title), speakers=speakers.get(talk.name, ""))
+		ScheduleTalk(name=str(talk.name), title=cstr(talk.title), speakers=speakers.get(str(talk.name), []))
 		for talk in talks
 	]
 
 
-def speaker_names(talks: list[str]) -> dict[str, str]:
+def speaker_names(talks: list[str]) -> dict[str, list[str]]:
 	rows = frappe.get_all(
 		"Talk Speaker",
 		filters={"parenttype": "Event Talk", "parent": ["in", talks or [""]]},
@@ -61,4 +54,4 @@ def speaker_names(talks: list[str]) -> dict[str, str]:
 	names: dict[str, list[str]] = {}
 	for row in rows:
 		names.setdefault(str(row.parent), []).append(display_names.get(str(row.speaker), row.speaker))
-	return {talk: ", ".join(labels) for talk, labels in names.items()}
+	return names

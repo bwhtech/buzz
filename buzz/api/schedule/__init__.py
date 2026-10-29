@@ -12,5 +12,5 @@ def get_or_create_schedule(event: int) -> str:
 
 @frappe.whitelist()
 def get_schedule_talks(event: int) -> list[ScheduleTalk]:
-	"""Accepted talks of the event that are not on its schedule yet."""
-	return services.unscheduled_talks(event)
+	"""Accepted talks of the event, with their speakers, for the library."""
+	return services.event_talks(event)

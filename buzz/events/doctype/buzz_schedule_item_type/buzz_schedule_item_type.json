@@ -8,6 +8,8 @@
   "title",
   "color",
   "icon",
+  "default_duration",
+  "spans_all_tracks",
   "column_break_team",
   "is_standard",
   "team"
@@ -33,6 +35,20 @@
    "label": "Icon"
   },
   {
+   "default": "30",
+   "description": "Minutes an item of this type lasts when added from the library",
+   "fieldname": "default_duration",
+   "fieldtype": "Int",
+   "label": "Default Duration (minutes)"
+  },
+  {
+   "default": "0",
+   "description": "Show in every room, such as a break or registration",
+   "fieldname": "spans_all_tracks",
+   "fieldtype": "Check",
+   "label": "Spans All Rooms"
+  },
+  {
    "fieldname": "column_break_team",
    "fieldtype": "Column Break"
   },
@@ -54,7 +70,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-29 12:00:00.000000",
+ "modified": "2026-10-30 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Schedule Item Type",
