@@ -249,6 +249,9 @@ export interface TeamOverview {
 	public_url: string | null
 	short_description: string | null
 	about: string | null
+	// An uploaded share image, then the one Buzz drew; the shared link shows the first it has.
+	meta_image: string | null
+	og_image: string | null
 	links: EventExternalLink[]
 	my_role: string
 	members: TeamMember[]

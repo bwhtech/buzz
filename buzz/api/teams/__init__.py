@@ -96,9 +96,17 @@ def update_public_page(
 	about: str | None = None,
 	accept_community_submissions: bool = False,
 	slug: str | None = None,
+	meta_image: str | None = None,
 ) -> None:
 	services.update_public_page(
-		team, is_published, links, short_description, about, accept_community_submissions, slug
+		team,
+		is_published,
+		links,
+		short_description,
+		about,
+		accept_community_submissions,
+		slug,
+		meta_image,
 	)
 
 

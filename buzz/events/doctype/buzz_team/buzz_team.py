@@ -102,6 +102,8 @@ class BuzzTeam(WebsiteGenerator):
 		is_published: DF.Check
 		links: DF.Table[EventExternalLink]
 		logo: DF.AttachImage | None
+		meta_image: DF.AttachImage | None
+		og_image: DF.AttachImage | None
 		route: DF.Data | None
 		short_description: DF.SmallText | None
 		slug: DF.Data | None
@@ -129,6 +131,19 @@ class BuzzTeam(WebsiteGenerator):
 
 	def make_route(self) -> str:
 		return f"community/{self.slug}"
+
+	def on_update(self):
+		super().on_update()
+		self.enqueue_share_image()
+
+	def enqueue_share_image(self):
+		"""Queue a fresh share image: a published team draws one, a private team clears it."""
+		from buzz.events.community_og_image import enqueue_generate
+
+		# A live worker would render test teams mid-test and race their teardown
+		if frappe.in_test or not (self.is_published or self.og_image):
+			return
+		enqueue_generate(self.name)
 
 	def get_context(self, context):
 		from buzz.events.doctype.buzz_team.team_page import TeamPage

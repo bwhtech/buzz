@@ -390,6 +390,15 @@ class BuzzEvent(Document):
 		self.update_zoom_meeting()
 		self.capture_published_change()
 		self.enqueue_og_image()
+		self.enqueue_team_share_image()
+
+	def enqueue_team_share_image(self):
+		"""The team's share image counts its events, so it follows every event save."""
+		from buzz.events.community_og_image import enqueue_generate
+
+		if frappe.in_test or not self.team:
+			return
+		enqueue_generate(self.team)
 
 	def enqueue_og_image(self):
 		from buzz.events.og_image import EventOgImage, enqueue_generate

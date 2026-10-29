@@ -47,6 +47,17 @@ class CommunityEventRequest(Document):
 			self.validate_buzz_event()
 		self.validate_community()
 
+	def on_update(self):
+		self.enqueue_share_image()
+
+	def enqueue_share_image(self):
+		"""The community's share image counts its approved events, so a status change moves it."""
+		from buzz.events.community_og_image import enqueue_generate
+
+		if frappe.in_test or not self.has_value_changed("status"):
+			return
+		enqueue_generate(self.community)
+
 	def validate_buzz_event(self):
 		if not self.event:
 			frappe.throw(_("Pick the event to list."))

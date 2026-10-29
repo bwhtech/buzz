@@ -91,6 +91,30 @@ class TestTeamPage(IntegrationTestCase):
 	def test_events_hosted_counts_published_events(self):
 		self.assertEqual(self.context()["events_hosted"], 3)
 
+	def test_the_shared_link_names_the_events_calendar(self):
+		meta = self.context()["meta"]
+
+		self.assertEqual(meta["title"], "Timeline Builders · Events Calendar")
+		self.assertEqual(meta["description"], "Upcoming events from Timeline Builders")
+		self.assertEqual(meta["card"], "summary")
+
+	def test_a_share_image_becomes_the_card_image(self):
+		team = frappe.get_doc("Buzz Team", self.team.name)
+		team.db_set("og_image", "/files/og-abc.png")
+
+		meta = TeamPage(team).meta()
+
+		self.assertTrue(meta["image"].endswith("/files/og-abc.png"))
+		self.assertEqual(meta["card"], "summary_large_image")
+		self.assertEqual(meta["image_size"], (1200, 630))
+
+	def test_an_uploaded_image_wins_over_the_generated_one(self):
+		team = frappe.get_doc("Buzz Team", self.team.name)
+		team.db_set("og_image", "/files/og-abc.png")
+		team.db_set("meta_image", "/files/uploaded.png")
+
+		self.assertTrue(TeamPage(team).meta()["image"].endswith("/files/uploaded.png"))
+
 	def test_links_drop_non_web_urls(self):
 		team = frappe.get_doc("Buzz Team", self.team.name)
 		team.set(
@@ -156,8 +180,9 @@ class TestTeamPageExternalEvents(IntegrationTestCase):
 		self.assertIn("Ended Meetup", event_titles(context["past_days"]))
 		self.assertNotIn("Ended Meetup", event_titles(context["upcoming_days"]))
 
-	def test_events_hosted_counts_only_own_events(self):
-		self.assertEqual(self.context()["events_hosted"], 1)
+	def test_events_hosted_counts_own_and_external_events(self):
+		# One published Buzz Event plus the two approved external ones.
+		self.assertEqual(self.context()["events_hosted"], 3)
 
 	def test_a_team_not_accepting_submissions_hides_external_events(self):
 		team = BuzzTeamFactory.create_owned_by(None, "community")

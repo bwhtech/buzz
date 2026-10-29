@@ -1,5 +1,6 @@
 import textwrap
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from functools import cached_property
 from itertools import groupby
@@ -28,6 +29,7 @@ from buzz.www.events import (
 )
 
 PAST_LIMIT = 30
+SHARE_IMAGE_SIZE = (1200, 630)
 VENUE_FIELDS = [
 	"venue.latitude as latitude",
 	"venue.longitude as longitude",
@@ -222,7 +224,7 @@ class TeamPage(EventTimeline):
 		return {
 			"title": self.team.team_name,
 			"links": public_links(self.team.links),
-			"events_hosted": frappe.db.count("Buzz Event", {"team": self.team.name, "is_published": 1}),
+			"events_hosted": self.hosted_count,
 			"upcoming_days": group_by_day(upcoming),
 			"past_days": group_by_day(past),
 			"meta": self.meta(),
@@ -263,10 +265,53 @@ class TeamPage(EventTimeline):
 		team_role = team_role_of(frappe.session.user, self.team.name)
 		return bool(team_role) and role_allows(team_role, "write")
 
+	@cached_property
+	def upcoming_count(self) -> int:
+		"""What is still to come, on Buzz and on the other sites the community lists."""
+		return len(self.upcoming_events)
+
+	@cached_property
+	def hosted_count(self) -> int:
+		"""Everything the team has run: its own published events, plus the external ones it lists."""
+		own = frappe.db.count("Buzz Event", {"team": self.team.name, "is_published": 1})
+		return own + len(self.external_events)
+
 	def meta(self) -> dict:
-		text = self.team.short_description or plain_text(self.team.about)
+		image = self.share_image()
+		# Only the two share images are drawn at 1200x630; a logo is square.
+		sized = bool(image) and image in (self.team.meta_image, self.team.og_image)
 		return {
 			"url": get_url(f"/{self.team.route}"),
-			"description": textwrap.shorten(text, DESCRIPTION_LENGTH, placeholder="…") if text else "",
-			"image": get_url(self.team.logo) if self.team.logo else "",
+			"title": _("{0} · Events Calendar").format(self.team.team_name),
+			"description": self.description(),
+			"image": get_url(image) if image else "",
+			"card": "summary_large_image" if sized else "summary",
+			"image_size": SHARE_IMAGE_SIZE if sized else None,
 		}
+
+	def description(self) -> str:
+		text = self.team.short_description or plain_text(self.team.about)
+		if not text:
+			return _("Upcoming events from {0}").format(self.team.team_name)
+		return textwrap.shorten(text, DESCRIPTION_LENGTH, placeholder="…")
+
+	def share_image(self) -> str | None:
+		"""An uploaded image wins over the generated one, which wins over the logo.
+
+		Crawlers get a 403 on private files, which drops the preview silently.
+		"""
+		urls = (self.team.meta_image, self.team.og_image, self.team.logo)
+		return next((url for url in urls if url and not url.startswith("/private/")), None)
+
+
+@dataclass
+class TeamEventCounts:
+	"""The numbers a team's page and its share image both show."""
+
+	upcoming: int
+	hosted: int
+
+
+def team_event_counts(team) -> TeamEventCounts:
+	page = TeamPage(team)
+	return TeamEventCounts(upcoming=page.upcoming_count, hosted=page.hosted_count)

@@ -55,6 +55,9 @@ class TeamOverview(APIResponse):
 	public_url: str | None
 	short_description: str | None
 	about: str | None
+	# An uploaded share image, then the one Buzz drew; the page shows the first it has.
+	meta_image: str | None
+	og_image: str | None
 	links: list[EventExternalLink]
 	my_role: str
 	members: list[TeamMember]

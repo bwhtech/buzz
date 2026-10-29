@@ -34,6 +34,8 @@ TEAM_FIELDS = (
 	"route",
 	"short_description",
 	"about",
+	"meta_image",
+	"og_image",
 )
 
 
@@ -245,6 +247,7 @@ def update_public_page(
 	about: str | None,
 	accept_community_submissions: bool = False,
 	slug: str | None = None,
+	meta_image: str | None = None,
 ) -> None:
 	"""Publish or edit a team's public page.
 
@@ -261,5 +264,6 @@ def update_public_page(
 	public_page.set_slug(doc, slug)
 	doc.short_description = (short_description or "").strip() or None
 	doc.about = about or None
+	doc.meta_image = meta_image or None
 	doc.set("links", [{key: link.get(key) for key in ("icon", "label", "url")} for link in links])
 	doc.save(ignore_permissions=True)
