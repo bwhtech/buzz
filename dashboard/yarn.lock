@@ -2149,9 +2149,9 @@ lru-cache@^10.2.0:
   integrity sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==
 
 lucide-static@^1.31.0:
-  version "1.35.0"
-  resolved "https://registry.yarnpkg.com/lucide-static/-/lucide-static-1.35.0.tgz#c8fe76915566f1c2495f17f8f7ead0c1c9824a43"
-  integrity sha512-Mc0cSZXDF+JkVG5YCrTsiDE3jnUrhNE0HJxL/8JJAI6NBGBDuJQPCni4QBRtK1AXVAmU4SlD1DfQG66VStUNCg==
+  version "1.64.0"
+  resolved "https://registry.yarnpkg.com/lucide-static/-/lucide-static-1.64.0.tgz#4e673aa08d67c2b5f7943dd95577af2e2c75c1a0"
+  integrity sha512-UxWmMteOXbKHI5E4f2qVtxCAAsI9gsInYK1lNw0nrOA0w4FkJeOVZ+UOV6aGA2377FZe3qyiFYq3lqjBKZ6OuA==
 
 magic-string@^0.30.17:
   version "0.30.17"
