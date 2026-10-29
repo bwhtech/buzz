@@ -1,5 +1,5 @@
 import type { Component } from "vue"
-import LucideCalendarArrowRight from "~icons/lucide/calendar-arrow-right"
+import LucideCalendarDays from "~icons/lucide/calendar-days"
 
 import type { EventAccess, EventSection } from "@/types"
 
@@ -85,7 +85,7 @@ function eventItems(eventId: string, access?: EventAccess | null): ManagerNavIte
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks`, section: "talks" },
 		{
 			label: "Schedule",
-			icon: LucideCalendarArrowRight,
+			icon: LucideCalendarDays,
 			to: `${event}/schedule`,
 			section: "talks",
 		},
