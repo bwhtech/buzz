@@ -1,0 +1,94 @@
+{% extends "buzz/templates/event_page/layout.html" %}
+
+{% block title %}{% autoescape true %}{{ _("Schedule") }} · {{ event.title }}{% endautoescape %}{% endblock %}
+
+{% block meta_block %}{% autoescape true %}
+	<meta name="description" content="{{ _("Schedule of {0}").format(event.title) }}">
+	<link rel="canonical" href="{{ meta.url }}/schedule">
+{% endautoescape %}{% endblock %}
+
+{% block content %}{% autoescape true %}
+	<main class="event-content schedule-page">
+		<a class="schedule-back" href="/events/{{ event.route }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>{{ event.title }}</a>
+		<h1 class="event-title">{{ _("Schedule") }}</h1>
+		<p class="schedule-subtitle">{{ [date_range.date_range_with_weekdays if date_range.is_multi_day else event_date.full_date, venue.name if venue and not venue.locations] | select | join(" · ") }}</p>
+		{% macro avatar(person, class_name="schedule-avatar") %}{% if person.image %}<img class="{{ class_name }}" src="{{ person.image }}" alt="">{% else %}<span class="{{ class_name }}" aria-hidden="true">{{ person.name[:1] | upper }}</span>{% endif %}{% endmacro %}
+
+		{% macro schedule_card(row) %}
+		{% set expandable = row.abstract or row.people %}
+		{% set tag = "details" if expandable else "div" %}
+		<li class="schedule-item" data-room="{{ row.room_key }}" style="--schedule-dot: {{ row.color }}">
+			<{{ tag }} class="schedule-card">
+				<{{ "summary" if expandable else "div" }} class="schedule-summary">
+					<span class="schedule-meta"><span class="schedule-dot" aria-hidden="true"></span><span class="schedule-meta-text">{{ [row.type, row.time, row.room] | select | join(" · ") }}</span></span>
+					<span class="schedule-title">{{ row.title }}</span>
+					{% if row.people %}
+					<span class="schedule-people">
+						<span class="schedule-avatars">{% for person in row.people[:3] %}{{ avatar(person) }}{% endfor %}</span>
+						<span class="schedule-speaker">{{ row.speakers }}</span>
+					</span>
+					{% endif %}
+					<span class="schedule-duration">{{ row.duration }}</span>
+				</{{ "summary" if expandable else "div" }}>
+				{% if expandable %}
+				<div class="schedule-detail">
+					{% if row.abstract %}<div class="prose">{{ row.abstract | safe }}</div>{% endif %}
+					{% for person in row.people %}
+					<div class="schedule-person">
+						{{ avatar(person, "schedule-avatar is-large") }}
+						<span class="schedule-person-name">{{ person.name }}</span>
+						{% if person.role %}<span class="schedule-person-role">{{ person.role }}</span>{% endif %}
+					</div>
+					{% endfor %}
+				</div>
+				{% endif %}
+			</{{ tag }}>
+		</li>
+		{% endmacro %}
+
+		<event-schedule class="schedule">
+			{% if schedule | length > 1 %}
+			<div class="schedule-days" role="group" aria-label="{{ _('Days') }}" data-controls hidden>
+				{% for day in schedule %}
+				<button class="schedule-day-button" type="button" data-day="{{ day.key }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">
+					<span class="schedule-day-name">{{ day.day }}</span>
+					<span class="schedule-day-caption">{{ day.caption }}</span>
+				</button>
+				{% endfor %}
+			</div>
+			{% endif %}
+			<div class="schedule-filters" data-controls hidden>
+				<input class="schedule-search" type="search" placeholder="{{ _('Search sessions') }}" aria-label="{{ _('Search sessions') }}">
+				{% if schedule_rooms %}
+				<div class="schedule-rooms" role="group" aria-label="{{ _('Rooms') }}">
+					<button class="schedule-room-button" type="button" data-room="" aria-pressed="true">{{ _("All rooms") }}</button>
+					{% for room in schedule_rooms %}<button class="schedule-room-button" type="button" data-room="{{ room.name }}" aria-pressed="false">{{ room.title }}</button>{% endfor %}
+				</div>
+				{% endif %}
+			</div>
+			<p class="schedule-note">{{ _("Times shown in {0}").format(timezone_label_with_offset) }}</p>
+			{% for day in schedule %}
+			<div class="schedule-day" data-day="{{ day.key }}">
+				{% if schedule | length > 1 %}<h3 class="label">{{ day.day }}</h3>{% endif %}
+				<ol class="schedule-slots">
+					{% for slot in day.slots %}
+					<li class="schedule-slot"{% if slot.all_rooms %} data-all-rooms{% endif %}>
+						<div class="schedule-slot-time">
+							<span class="schedule-start">{{ slot.start }}</span>
+							{% if slot.rows | length > 1 %}<span class="schedule-parallel">{{ _("{0} at once").format(slot.rows | length) }}</span>{% endif %}
+						</div>
+						<ul class="schedule-items">
+							{% for row in slot.rows %}{{ schedule_card(row) }}{% endfor %}
+						</ul>
+					</li>
+					{% endfor %}
+				</ol>
+			</div>
+			{% endfor %}
+			<div class="schedule-empty" hidden>
+				<p class="empty-state">{{ _("No sessions match your filters") }}</p>
+				<button class="es-button" type="button" data-variant="subtle" data-size="md" data-clear-filters>{{ _("Clear filters") }}</button>
+			</div>
+		</event-schedule>
+	</main>
+{% endautoescape %}{% endblock %}

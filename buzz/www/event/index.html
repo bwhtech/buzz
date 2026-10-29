@@ -12,7 +12,7 @@
    so those rules are written here. #}
 {% if tab_items | length > 1 %}
 <style>
-	{% for tab in tab_items %}
+	{% for tab in tab_items if not tab.url %}
 	.event-main:has(#tab-{{ tab.key }}:checked) [for="tab-{{ tab.key }}"]{border-bottom-color:var(--ink-strong);color:var(--ink-strong)}
 	.event-main:has(#tab-{{ tab.key }}:checked) #panel-{{ tab.key }}{display:block}
 	{% endfor %}
@@ -156,11 +156,13 @@
 		<div class="event-main">
 			{% if links %}{{ link_list("narrow-links") }}{% endif %}
 			{% if tab_items | length > 1 %}
-			{% for tab in tab_items %}
+			{% for tab in tab_items if not tab.url %}
 			<input class="tab-input" type="radio" name="tab" id="tab-{{ tab.key }}"{% if loop.first %} checked{% endif %}>
 			{% endfor %}
 			<nav class="tabs">
-				{% for tab in tab_items %}<label class="tab" for="tab-{{ tab.key }}">{{ tab.label }}</label>{% endfor %}
+				{% for tab in tab_items %}
+				{% if tab.url %}<a class="tab" href="{{ tab.url }}">{{ tab.label }}</a>{% else %}<label class="tab" for="tab-{{ tab.key }}">{{ tab.label }}</label>{% endif %}
+				{% endfor %}
 			</nav>
 			{% endif %}
 
@@ -172,24 +174,6 @@
 				<p class="empty-state">{{ _("No details about this event yet.") }}</p>
 				{% endif %}
 			</section>
-
-			{% if schedule %}
-			<section class="section tab-panel" id="panel-schedule">
-				<h2 class="section-title">{{ _("Schedule") }} · {{ timezone_label }}</h2>
-				{% for day in schedule %}
-				{% if schedule | length > 1 %}<h3 class="label">{{ day.day }}</h3>{% endif %}
-				<ol class="schedule">
-					{% for row in day.rows %}
-					<li class="schedule-row">
-						<span class="schedule-time">{{ row.time }}</span>
-						<span class="schedule-title">{{ row.title }}</span>
-						{% if row.speakers or row.room %}<span class="schedule-speaker">{{ [row.speakers, row.room] | select | join(" · ") }}</span>{% endif %}
-					</li>
-					{% endfor %}
-				</ol>
-				{% endfor %}
-			</section>
-			{% endif %}
 
 			{% if speakers %}
 			<section class="section tab-panel" id="panel-speakers">

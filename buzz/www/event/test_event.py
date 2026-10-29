@@ -8,13 +8,15 @@ from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzFormFactory,
 	BuzzScheduleFactory,
+	BuzzScheduleTrackFactory,
 	BuzzTeamFactory,
 	EventHostFactory,
 	EventTalkFactory,
 	SpeakerProfileFactory,
 	UserFactory,
 )
-from buzz.www.event.index import EventPage, format_day, join_parts
+from buzz.www.event.date_range import format_day, join_parts
+from buzz.www.event.index import EventPage
 
 
 class TestEventPage(IntegrationTestCase):
@@ -172,6 +174,28 @@ class TestEventPage(IntegrationTestCase):
 
 	def test_tabs_list_only_sections_with_content(self):
 		self.assertEqual([tab["key"] for tab in self.context()["tabs"]], ["about"])
+
+	def test_schedule_tab_links_to_the_schedule_page(self):
+		event = self.create_event()
+		save_schedule(event, {"type": "Break", "start_time": "09:00:00", "end_time": "09:30:00"})
+		tabs = {tab["key"]: tab for tab in EventPage(event.route).as_context()["tabs"]}
+		self.assertEqual(tabs["schedule"]["url"], f"/events/{event.route}/schedule")
+		self.assertNotIn("url", tabs["about"])
+
+	def test_schedule_groups_parallel_sessions_and_keeps_all_room_rows_alone(self):
+		event = self.create_event()
+		schedule = BuzzScheduleFactory.create(event=str(event.name), is_published=1)
+		rooms = [BuzzScheduleTrackFactory.create(schedule=schedule.name).name for _ in range(2)]
+		schedule.reload()
+		times = {"start_time": "10:00:00", "end_time": "11:00:00", "date": event.start_date}
+		for track in rooms:
+			schedule.append("items", {**times, "type": "Talk", "title": "Parallel", "track": track})
+		schedule.append("items", {**times, "type": "Break", "title": "Coffee", "all_tracks": 1})
+		schedule.save()
+		day = EventPage(event.route).as_context()["schedule"][0]
+		self.assertEqual([len(slot["rows"]) for slot in day["slots"]], [1, 2])
+		self.assertEqual(day["slots"][0]["rows"][0]["room_key"], "")
+		self.assertTrue(all(row["room"] for row in day["slots"][1]["rows"]))
 
 	def test_description_falls_back_to_about(self):
 		self.set_event({"short_description": "", "about": "<p>Tom &amp; Jerry " + "word " * 60})

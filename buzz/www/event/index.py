@@ -22,10 +22,17 @@ from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import datetime_in_time_zone, format_gmt_offset, get_time_zone_label
 from buzz.www.event.banner_color import banner_color
-from buzz.www.event.date_range import RANGE_SEPARATOR, EventDateRange, format_time
+from buzz.www.event.date_range import (
+	RANGE_SEPARATOR,
+	EventDateRange,
+	format_time,
+	format_time_range,
+	join_parts,
+)
 from buzz.www.event.dot_map import DotMap
 from buzz.www.event.link_icons import LINK_ICON_PATHS
 from buzz.www.event.meta import EventMeta, event_time_zone
+from buzz.www.event.public_schedule import PublicSchedule, speaker_summary
 from buzz.www.event.registration import ProposalCard, RegistrationCard
 from buzz.www.event.venue_map import venue_map_url
 from buzz.www.site_header import apply_site_context
@@ -37,27 +44,6 @@ def get_context(context):
 	page = EventPage(frappe.form_dict.event_route)
 	apply_site_context(context, page.event.theme)
 	context.update(page.as_context())
-
-
-def join_names(names: list[str]) -> str:
-	return comma_sep(names, _("{0} and {1}"), add_quotes=False)
-
-
-def is_talk(item) -> bool:
-	return item.reference_doctype == "Event Talk"
-
-
-def format_day(date) -> str:
-	return format_date(date, "EEE d MMM y")
-
-
-def join_parts(parts: list, separator: str) -> str:
-	stripped_parts = [part.strip() for part in parts if part]
-	return separator.join([part for part in stripped_parts if part])
-
-
-def format_time_range(start, end) -> str:
-	return join_parts([format_time(start), format_time(end)], RANGE_SEPARATOR)
 
 
 def web_url(url: str | None) -> str | None:
@@ -120,6 +106,7 @@ class EventPage:
 			"hosts": self.hosts(),
 			"links": self.links(),
 			"schedule": self.schedule,
+			"schedule_rooms": self.public_schedule.rooms,
 			"speakers": self.speakers,
 			"sponsor_tiers": self.sponsor_tiers,
 			"venue": self.venue(),
@@ -146,7 +133,12 @@ class EventPage:
 			("speakers", _("Speakers"), self.speakers),
 			("sponsors", _("Sponsors"), self.sponsor_tiers),
 		]
-		return [{"key": key, "label": label} for key, label, content in sections if content]
+		tabs = [{"key": key, "label": label} for key, label, content in sections if content]
+		return [tab | {"url": self.schedule_url} if tab["key"] == "schedule" else tab for tab in tabs]
+
+	@property
+	def schedule_url(self) -> str:
+		return f"/events/{self.event.route}/schedule"
 
 	def pages(self) -> list[dict]:
 		# Keyed by document name: the tab and its panel are siblings in the markup, so the
@@ -204,52 +196,12 @@ class EventPage:
 		return public_links(self.event.external_links)
 
 	@cached_property
+	def public_schedule(self) -> PublicSchedule:
+		return PublicSchedule(self.event.name)
+
+	@property
 	def schedule(self) -> list[dict]:
-		name = frappe.db.get_value("Buzz Schedule", {"event": self.event.name, "is_published": 1})
-		if not name:
-			return []
-		schedule = frappe.get_doc("Buzz Schedule", name)
-		items = sorted(schedule.items, key=lambda item: get_time(item.start_time))
-		speakers = self.talk_speakers([item.reference_document for item in items if is_talk(item)])
-		rooms = self.room_titles(name)
-		days = [self.schedule_day(day, items, speakers, rooms) for day in schedule.day_list()]
-		return [day for day in days if day["rows"]]
-
-	def room_titles(self, schedule: str) -> dict:
-		"""Track titles by name, empty with a single room: a label would only repeat itself."""
-		rows = frappe.get_all("Buzz Schedule Track", filters={"schedule": schedule}, fields=["name", "title"])
-		return {row.name: row.title for row in rows} if len(rows) > 1 else {}
-
-	def schedule_day(self, day: dict, items: list, speakers: dict, rooms: dict) -> dict:
-		rows = [self.schedule_row(item, speakers, rooms) for item in items if str(item.date) == day["date"]]
-		return {"day": day["label"] or format_day(day["date"]), "rows": rows}
-
-	def schedule_row(self, item, speakers: dict, rooms: dict) -> dict:
-		return {
-			"time": format_time_range(item.start_time, item.end_time),
-			"title": item.title,
-			"speakers": speakers.get(item.reference_document, "") if is_talk(item) else "",
-			"room": "" if item.all_tracks else rooms.get(item.track, ""),
-		}
-
-	def talk_speakers(self, talk_names: list[str]) -> dict:
-		rows = frappe.get_all(
-			"Talk Speaker",
-			filters={"parenttype": "Event Talk", "parent": ["in", talk_names]},
-			fields=["parent", "speaker"],
-			order_by="idx",
-		)
-		names = self.speaker_names([row.speaker for row in rows])
-		speakers = {}
-		for row in rows:
-			speakers.setdefault(row.parent, []).append(names.get(row.speaker, row.speaker))
-		return {talk: join_names(labels) for talk, labels in speakers.items()}
-
-	def speaker_names(self, profiles: list[str]) -> dict:
-		rows = frappe.get_all(
-			"Speaker Profile", filters={"name": ["in", profiles]}, fields=["name", "display_name"]
-		)
-		return {str(row.name): row.display_name for row in rows}
+		return self.public_schedule.days
 
 	@cached_property
 	def speakers(self) -> list[dict]:
@@ -260,14 +212,7 @@ class EventPage:
 			fields=["name", "display_name", "designation", "company", "display_image"],
 		)
 		by_name = {str(row.name): row for row in rows}
-		return [self.speaker(by_name[profile]) for profile in profiles if profile in by_name]
-
-	def speaker(self, profile) -> dict:
-		return {
-			"name": profile.display_name,
-			"role": join_parts([profile.designation, profile.company], ", "),
-			"image": profile.display_image,
-		}
+		return [speaker_summary(by_name[profile]) for profile in profiles if profile in by_name]
 
 	@cached_property
 	def sponsor_tiers(self) -> list[dict]:
