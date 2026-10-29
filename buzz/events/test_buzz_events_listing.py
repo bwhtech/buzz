@@ -58,3 +58,13 @@ class TestBuzzEventsListing(IntegrationTestCase):
 				enqueue_push(event)
 		post.assert_not_called()
 		enqueue.assert_not_called()
+
+	def test_sync_events_queues_a_full_sync(self):
+		with self.change_settings("Buzz Settings", SETTINGS), patch(ENQUEUE) as enqueue:
+			frappe.get_doc("Buzz Settings").sync_events()
+		self.assertEqual(enqueue.call_args.args[0], "buzz.events.buzz_events_listing.sync_all_events")
+
+	def test_sync_events_needs_listing_turned_on(self):
+		with self.change_settings("Buzz Settings", {"list_on_buzz_events": 0}), patch(ENQUEUE) as enqueue:
+			self.assertRaises(frappe.ValidationError, frappe.get_doc("Buzz Settings").sync_events)
+		enqueue.assert_not_called()
