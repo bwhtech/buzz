@@ -183,7 +183,7 @@
 					<li class="schedule-row">
 						<span class="schedule-time">{{ row.time }}</span>
 						<span class="schedule-title">{{ row.title }}</span>
-						{% if row.speakers %}<span class="schedule-speaker">{{ row.speakers }}</span>{% endif %}
+						{% if row.speakers or row.room %}<span class="schedule-speaker">{{ [row.speakers, row.room] | select | join(" · ") }}</span>{% endif %}
 					</li>
 					{% endfor %}
 				</ol>

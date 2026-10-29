@@ -211,18 +211,25 @@ class EventPage:
 		schedule = frappe.get_doc("Buzz Schedule", name)
 		items = sorted(schedule.items, key=lambda item: get_time(item.start_time))
 		speakers = self.talk_speakers([item.reference_document for item in items if is_talk(item)])
-		days = [self.schedule_day(day, items, speakers) for day in schedule.day_list()]
+		rooms = self.room_titles(name)
+		days = [self.schedule_day(day, items, speakers, rooms) for day in schedule.day_list()]
 		return [day for day in days if day["rows"]]
 
-	def schedule_day(self, day: dict, items: list, speakers: dict) -> dict:
-		rows = [self.schedule_row(item, speakers) for item in items if str(item.date) == day["date"]]
+	def room_titles(self, schedule: str) -> dict:
+		"""Track titles by name, empty with a single room: a label would only repeat itself."""
+		rows = frappe.get_all("Buzz Schedule Track", filters={"schedule": schedule}, fields=["name", "title"])
+		return {row.name: row.title for row in rows} if len(rows) > 1 else {}
+
+	def schedule_day(self, day: dict, items: list, speakers: dict, rooms: dict) -> dict:
+		rows = [self.schedule_row(item, speakers, rooms) for item in items if str(item.date) == day["date"]]
 		return {"day": day["label"] or format_day(day["date"]), "rows": rows}
 
-	def schedule_row(self, item, speakers: dict) -> dict:
+	def schedule_row(self, item, speakers: dict, rooms: dict) -> dict:
 		return {
 			"time": format_time_range(item.start_time, item.end_time),
 			"title": item.title,
 			"speakers": speakers.get(item.reference_document, "") if is_talk(item) else "",
+			"room": "" if item.all_tracks else rooms.get(item.track, ""),
 		}
 
 	def talk_speakers(self, talk_names: list[str]) -> dict:
