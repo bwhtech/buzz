@@ -401,13 +401,10 @@ class BuzzEvent(Document):
 		self.enqueue_team_share_images()
 
 	def enqueue_team_share_images(self):
-		"""A team's share image counts its events, so both teams follow a move."""
+		"""A team's share image counts its events."""
 		from buzz.events.community_og_image import enqueue_generate_for
 
 		enqueue_generate_for(self.team)
-		previous = self.get_doc_before_save()
-		if previous and previous.team != self.team:
-			enqueue_generate_for(previous.team)
 
 	def enqueue_og_image(self):
 		from buzz.events.og_image import EventOgImage, enqueue_generate

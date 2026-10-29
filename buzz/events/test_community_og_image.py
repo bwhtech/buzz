@@ -8,6 +8,7 @@ from PIL import Image
 
 from buzz.events.community_og_image import CommunityOgImage, generate
 from buzz.events.doctype.buzz_team.team_page import TeamPage
+from buzz.events.og_image import clear
 from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, CommunityEventRequestFactory
 
 
@@ -18,8 +19,7 @@ class TestCommunityOgImage(IntegrationTestCase):
 
 	def tearDown(self):
 		# Removes the rendered files from disk too, which a rollback leaves behind
-		for name in self.og_file_names():
-			frappe.delete_doc("File", name, ignore_permissions=True)
+		clear(frappe.get_doc("Buzz Team", self.team))
 
 	def create_event(self, offset: int, **overrides):
 		day = add_days(today(), offset)
@@ -86,7 +86,8 @@ class TestCommunityOgImage(IntegrationTestCase):
 		team = frappe.get_doc("Buzz Team", self.team)
 		with patch("frappe.in_test", False), patch("frappe.enqueue") as enqueue:
 			team.save()
-		self.assertEqual(enqueue.call_args.kwargs["team_name"], self.team)
+		queued = {call.kwargs["team_name"] for call in enqueue.call_args_list if "team_name" in call.kwargs}
+		self.assertEqual(queued, {self.team})
 
 	def test_a_deleted_team_is_skipped(self):
 		generate("Deleted Builders")
@@ -105,17 +106,6 @@ class TestCommunityOgImage(IntegrationTestCase):
 
 		self.assertIsNotNone(self.og_image())
 
-	def test_a_team_move_queues_both_teams(self):
-		other = BuzzTeamFactory.create_owned_by(team_name="Receiving Builders", is_published=1).name
-		event = self.create_event(7)
-		event.reload()
-		event.team = other
-		with patch("frappe.in_test", False), patch("frappe.enqueue") as enqueue:
-			event.save()
-
-		queued = {call.kwargs["team_name"] for call in enqueue.call_args_list if "team_name" in call.kwargs}
-		self.assertEqual(queued, {self.team, other})
-
 	def test_a_community_request_move_queues_both_communities(self):
 		first = BuzzTeamFactory.create_owned_by(
 			None, "community", team_name="First Community", is_published=1
@@ -133,13 +123,6 @@ class TestCommunityOgImage(IntegrationTestCase):
 
 	def og_image(self) -> str:
 		return frappe.db.get_value("Buzz Team", self.team, "og_image")
-
-	def og_file_names(self) -> list[str]:
-		return frappe.get_all(
-			"File",
-			filters={"attached_to_name": self.team, "attached_to_field": "og_image"},
-			pluck="name",
-		)
 
 	def og_files(self) -> list:
 		return frappe.get_all(
