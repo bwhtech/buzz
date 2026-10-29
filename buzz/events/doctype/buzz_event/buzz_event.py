@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
-from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
+from frappe.utils.data import get_datetime, time_diff_in_seconds
 from frappe.website.utils import cleanup_page_name
 
 from buzz import telemetry
@@ -57,7 +57,6 @@ class BuzzEvent(Document):
 		from buzz.events.doctype.event_featured_speaker.event_featured_speaker import EventFeaturedSpeaker
 		from buzz.events.doctype.event_payment_gateway.event_payment_gateway import EventPaymentGateway
 		from buzz.events.doctype.event_topic_link.event_topic_link import EventTopicLink
-		from buzz.events.doctype.schedule_item.schedule_item import ScheduleItem
 		from buzz.proposals.doctype.sponsorship_deck_item.sponsorship_deck_item import SponsorshipDeckItem
 
 		about: DF.TextEditor | None
@@ -93,7 +92,6 @@ class BuzzEvent(Document):
 		proposal: DF.Link | None
 		registration_url: DF.Data | None
 		route: DF.Data | None
-		schedule: DF.Table[ScheduleItem]
 		send_booking_confirmation_email: DF.Check
 		send_ticket_email: DF.Check
 		short_description: DF.SmallText | None
@@ -131,7 +129,6 @@ class BuzzEvent(Document):
 
 	def validate(self):
 		self.validate_dates()
-		self.validate_schedule()
 		self.validate_route()
 		self.validate_tax_settings()
 		self.validate_guest_verification_config()
@@ -181,41 +178,6 @@ class BuzzEvent(Document):
 		# computed at event start so DST zones get the abbreviation in effect then
 		event_start = get_datetime(f"{self.start_date} {self.start_time}")
 		self.time_zone_label = get_time_zone_label(self.time_zone, event_start)
-
-	def validate_schedule(self):
-		end_date = self.end_date or self.start_date
-		for item in self.schedule:
-			if item.date < self.start_date or item.date > end_date:
-				frappe.throw(
-					frappe._("<b>Schedule</b> row #{0}: <b>Date</b> must be within event dates").format(
-						item.idx
-					)
-				)
-
-			if time_diff_in_seconds(item.end_time, item.start_time) <= 0:
-				frappe.throw(
-					frappe._(
-						"<b>Schedule</b> row #{0}: <b>End Time</b> must be after <b>Start Time</b>"
-					).format(item.idx)
-				)
-
-			if (
-				item.date == self.start_date
-				and self.start_time
-				and get_time(item.start_time) < get_time(self.start_time)
-			):
-				frappe.throw(
-					frappe._(
-						"<b>Schedule</b> row #{0}: <b>Start Time</b> cannot be before event start time"
-					).format(item.idx)
-				)
-
-			if item.date == end_date and self.end_time and get_time(item.end_time) > get_time(self.end_time):
-				frappe.throw(
-					frappe._(
-						"<b>Schedule</b> row #{0}: <b>End Time</b> cannot be after event end time"
-					).format(item.idx)
-				)
 
 	def validate_dates(self):
 		self.validate_from_to_dates("start_date", "end_date")

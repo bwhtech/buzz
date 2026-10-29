@@ -2,7 +2,6 @@ import type { SponsorshipDeckItem } from "../Proposals/SponsorshipDeckItem"
 import type { EventCoHost } from "./EventCoHost"
 import type { EventFeaturedSpeaker } from "./EventFeaturedSpeaker"
 import type { EventPaymentGateway } from "./EventPaymentGateway"
-import type { ScheduleItem } from "./ScheduleItem"
 
 export interface BuzzEvent {
 	name: number
@@ -47,8 +46,6 @@ export interface BuzzEvent {
 	short_description?: string
 	/**	About : Text Editor - Description of the event	*/
 	about?: string
-	/**	Schedule : Table - Schedule Item	*/
-	schedule?: ScheduleItem[]
 	/**	Is Published? : Check	*/
 	is_published?: 0 | 1
 	/**	Featured : Check - Shown in the Featured section of the public events page.	*/

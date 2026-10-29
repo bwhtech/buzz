@@ -340,14 +340,6 @@ frappe.ui.form.on("Buzz Event", {
 			frm.save()
 		})
 
-		frm.set_query("track", "schedule", (doc) => {
-			return {
-				filters: {
-					event: doc.name,
-				},
-			}
-		})
-
 		frm.set_query("default_ticket_type", (doc) => {
 			return {
 				filters: {

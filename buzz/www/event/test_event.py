@@ -7,13 +7,14 @@ from buzz.tests.factories import (
 	AdditionalEventPageFactory,
 	BuzzEventFactory,
 	BuzzFormFactory,
+	BuzzScheduleFactory,
 	BuzzTeamFactory,
 	EventHostFactory,
 	EventTalkFactory,
 	SpeakerProfileFactory,
 	UserFactory,
 )
-from buzz.www.event.index import EventPage, join_parts
+from buzz.www.event.index import EventPage, format_day, join_parts
 
 
 class TestEventPage(IntegrationTestCase):
@@ -49,13 +50,9 @@ class TestEventPage(IntegrationTestCase):
 
 	def test_schedule_time_before_ten(self):
 		event = self.create_event(start_time="08:00:00")
-		schedule = {
-			"type": "Break",
-			"description": "Coffee",
-			"start_time": "09:00:00",
-			"end_time": "09:30:00",
-		}
-		save_schedule(event, schedule)
+		save_schedule(
+			event, {"type": "Break", "title": "Coffee", "start_time": "09:00:00", "end_time": "09:30:00"}
+		)
 		row = EventPage(event.route).as_context()["schedule"][0]["rows"][0]
 		self.assertEqual(row["time"], "09:00 \u2013 09:30")
 		self.assertEqual(row["title"], "Coffee")
@@ -68,13 +65,31 @@ class TestEventPage(IntegrationTestCase):
 			event=event.name, title="Scaling apps", speakers=[{"speaker": speaker}]
 		)
 		event.append("featured_speakers", {"speaker": speaker})
-		save_schedule(
-			event, {"type": "Talk", "talk": talk.name, "start_time": "10:00:00", "end_time": "10:30:00"}
-		)
+		event.save()
+		row = {"type": "Talk", "reference_doctype": "Event Talk", "reference_document": talk.name}
+		save_schedule(event, {**row, "start_time": "10:00:00", "end_time": "10:30:00"})
 		context = EventPage(event.route).as_context()
 		row = context["schedule"][0]["rows"][0]
 		self.assertEqual((row["title"], row["speakers"]), ("Scaling apps", "Asha Rao"))
 		self.assertEqual(context["speakers"][0]["name"], "Asha Rao")
+
+	def test_unpublished_schedule_is_hidden(self):
+		event = self.create_event()
+		save_schedule(
+			event, {"type": "Break", "start_time": "09:00:00", "end_time": "09:30:00"}, is_published=0
+		)
+		self.assertEqual(EventPage(event.route).as_context()["schedule"], [])
+
+	def test_schedule_days_follow_their_order_and_labels(self):
+		event = self.create_event()
+		next_day = add_days(event.start_date, 1)
+		days = [{"date": next_day, "label": "Workshops"}, {"date": event.start_date, "label": ""}]
+		save_schedule(event, {"type": "Break", "start_time": "09:00:00", "end_time": "09:30:00"}, days=days)
+		save_schedule(
+			event, {"date": next_day, "type": "Workshop", "start_time": "09:00:00", "end_time": "10:00:00"}
+		)
+		labels = [day["day"] for day in EventPage(event.route).as_context()["schedule"]]
+		self.assertEqual(labels, ["Workshops", format_day(event.start_date)])
 
 	def test_join_parts_strips_spaces_around_each_part(self):
 		self.assertEqual(join_parts(["Engineer ", " Frappe"], ", "), "Engineer, Frappe")
@@ -197,7 +212,11 @@ class TestEventPage(IntegrationTestCase):
 		return frappe.get_doc("Buzz Event", BuzzEventFactory.create(team=self.team, **overrides).name)
 
 
-def save_schedule(event, row: dict):
-	event.append("schedule", {"date": event.start_date, **row})
-	event.flags.ignore_mandatory = True
-	event.save()
+def save_schedule(event, row: dict, **schedule_values):
+	"""Add `row` to the event's schedule, creating a published one on first use."""
+	name = frappe.db.get_value("Buzz Schedule", {"event": event.name})
+	schedule = frappe.get_doc("Buzz Schedule", name) if name else None
+	if not schedule:
+		schedule = BuzzScheduleFactory.create(event=str(event.name), **{"is_published": 1, **schedule_values})
+	schedule.append("items", {"date": event.start_date, "all_tracks": 1, **row})
+	schedule.save()

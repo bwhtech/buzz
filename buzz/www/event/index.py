@@ -1,5 +1,4 @@
 from functools import cached_property
-from itertools import groupby
 from urllib.parse import urlparse
 
 import frappe
@@ -42,6 +41,10 @@ def get_context(context):
 
 def join_names(names: list[str]) -> str:
 	return comma_sep(names, _("{0} and {1}"), add_quotes=False)
+
+
+def is_talk(item) -> bool:
+	return item.reference_doctype == "Event Talk"
 
 
 def format_day(date) -> str:
@@ -202,31 +205,25 @@ class EventPage:
 
 	@cached_property
 	def schedule(self) -> list[dict]:
-		talk_titles = self.talk_titles([row.talk for row in self.event.schedule if row.talk])
-		talk_speakers = self.talk_speakers(list(talk_titles))
-		rows = sorted(self.event.schedule, key=lambda row: (getdate(row.date), get_time(row.start_time)))
-		return [
-			{
-				"day": format_day(date),
-				"rows": [self.schedule_row(row, talk_titles, talk_speakers) for row in day_rows],
-			}
-			for date, day_rows in groupby(rows, key=lambda row: row.date)
-		]
+		name = frappe.db.get_value("Buzz Schedule", {"event": self.event.name, "is_published": 1})
+		if not name:
+			return []
+		schedule = frappe.get_doc("Buzz Schedule", name)
+		items = sorted(schedule.items, key=lambda item: get_time(item.start_time))
+		speakers = self.talk_speakers([item.reference_document for item in items if is_talk(item)])
+		days = [self.schedule_day(day, items, speakers) for day in schedule.day_list()]
+		return [day for day in days if day["rows"]]
 
-	def schedule_row(self, row, talk_titles: dict, talk_speakers: dict) -> dict:
+	def schedule_day(self, day: dict, items: list, speakers: dict) -> dict:
+		rows = [self.schedule_row(item, speakers) for item in items if str(item.date) == day["date"]]
+		return {"day": day["label"] or format_day(day["date"]), "rows": rows}
+
+	def schedule_row(self, item, speakers: dict) -> dict:
 		return {
-			"time": format_time_range(row.start_time, row.end_time),
-			"title": talk_titles.get(row.talk) or row.description or _(row.type),
-			"speakers": talk_speakers.get(row.talk, ""),
+			"time": format_time_range(item.start_time, item.end_time),
+			"title": item.title,
+			"speakers": speakers.get(item.reference_document, "") if is_talk(item) else "",
 		}
-
-	def talk_titles(self, talk_names: list[str]) -> dict:
-		talks = frappe.get_all(
-			"Event Talk",
-			filters={"name": ["in", talk_names], "event": self.event.name},
-			fields=["name", "title"],
-		)
-		return {str(talk.name): talk.title for talk in talks}
 
 	def talk_speakers(self, talk_names: list[str]) -> dict:
 		rows = frappe.get_all(

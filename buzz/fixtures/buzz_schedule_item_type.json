@@ -1,0 +1,35 @@
+[
+ {
+  "color": "blue",
+  "docstatus": 0,
+  "doctype": "Buzz Schedule Item Type",
+  "icon": "mic",
+  "is_standard": 1,
+  "modified": "2026-10-29 12:00:00.000000",
+  "name": "Talk",
+  "team": null,
+  "title": "Talk"
+ },
+ {
+  "color": "green",
+  "docstatus": 0,
+  "doctype": "Buzz Schedule Item Type",
+  "icon": "wrench",
+  "is_standard": 1,
+  "modified": "2026-10-29 12:00:00.000000",
+  "name": "Workshop",
+  "team": null,
+  "title": "Workshop"
+ },
+ {
+  "color": "gray",
+  "docstatus": 0,
+  "doctype": "Buzz Schedule Item Type",
+  "icon": "coffee",
+  "is_standard": 1,
+  "modified": "2026-10-29 12:00:00.000000",
+  "name": "Break",
+  "team": null,
+  "title": "Break"
+ }
+]
