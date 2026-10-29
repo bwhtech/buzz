@@ -30,6 +30,22 @@ class TestBuzzEventsListing(IntegrationTestCase):
 		self.assertTrue(payload["start_datetime"].endswith("+05:30"))
 		self.assertTrue(payload["event_url"].endswith(f"/events/{event.route}"))
 
+	def test_in_person_payload_carries_the_venue_pin(self):
+		event = BuzzEventFactory.create("in_person")
+		frappe.db.set_value(
+			"Event Venue",
+			event.venue,
+			{"latitude": 18.5204, "longitude": 73.8567, "city": "Pune", "venue_country": "India"},
+		)
+		frappe.clear_document_cache("Event Venue", event.venue)
+		payload = ListingPush(event).payload()
+		self.assertEqual((payload["latitude"], payload["longitude"]), (18.5204, 73.8567))
+		self.assertEqual((payload["city"], payload["country"]), ("Pune", "India"))
+
+	def test_online_payload_has_no_pin(self):
+		payload = ListingPush(BuzzEventFactory.create()).payload()
+		self.assertNotIn("latitude", payload)
+
 	def test_published_event_is_upserted(self):
 		event = BuzzEventFactory.create()
 		with self.change_settings("Buzz Settings", SETTINGS), patch(POST) as post:
