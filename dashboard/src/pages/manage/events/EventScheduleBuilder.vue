@@ -5,6 +5,7 @@ import { Button, ErrorMessage, Spinner, TabButtons } from "frappe-ui"
 import { computed, onMounted } from "vue"
 import { onBeforeRouteLeave, useRoute } from "vue-router"
 
+import ScheduleMobile from "@/components/dashboard/schedule/mobile/ScheduleMobile.vue"
 import ScheduleAgenda from "@/components/dashboard/schedule/ScheduleAgenda.vue"
 import ScheduleCalendar from "@/components/dashboard/schedule/ScheduleCalendar.vue"
 import ScheduleDayNav from "@/components/dashboard/schedule/ScheduleDayNav.vue"
@@ -18,10 +19,12 @@ import ScheduleToast from "@/components/dashboard/schedule/ScheduleToast.vue"
 import type { ScheduleView } from "@/components/dashboard/schedule/scheduleTypes"
 import { provideSchedule, useScheduleBoard } from "@/components/dashboard/schedule/useScheduleBoard"
 import { useScheduleBuilder } from "@/components/dashboard/schedule/useScheduleBuilder"
+import { useIsMobile } from "@/composables/useIsMobile"
 import { useEventDoc } from "@/data/events"
 import type { FrappeError } from "@/types"
 
 const route = useRoute()
+const isMobile = useIsMobile()
 const eventId = route.params.eventId as string
 const event = useEventDoc(() => eventId)
 const builder = useScheduleBuilder(() => eventId)
@@ -76,7 +79,8 @@ useEventListener(window, "beforeunload", (e) => builder.dirty.value && e.prevent
 </script>
 
 <template>
-	<div class="flex h-full min-h-0 flex-col bg-surface-base">
+	<ScheduleMobile v-if="isMobile" :event-id="eventId" />
+	<div v-else class="flex h-full min-h-0 flex-col bg-surface-base">
 		<ScheduleHeader :event-id="eventId" />
 		<div v-if="loadError" class="p-8"><ErrorMessage :message="loadError.message" /></div>
 		<div v-else-if="!builder.draft.value" class="grid flex-1 place-items-center">
