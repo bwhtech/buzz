@@ -56,7 +56,13 @@ function afterLeave() {
 				@click="open = false"
 			>
 				<template #prefix>
-					<span :class="item.icon" class="size-5 text-ink-gray-6" aria-hidden="true" />
+					<component
+						:is="item.icon"
+						v-if="typeof item.icon !== 'string'"
+						class="size-5 text-ink-gray-6"
+						aria-hidden="true"
+					/>
+					<span v-else :class="item.icon" class="size-5 text-ink-gray-6" aria-hidden="true" />
 				</template>
 				<span class="text-base text-ink-gray-8">{{ __(item.label) }}</span>
 			</ItemListRow>

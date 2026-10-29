@@ -1,9 +1,12 @@
+import type { Component } from "vue"
+import LucideCalendarArrowRight from "~icons/lucide/calendar-arrow-right"
+
 import type { EventAccess, EventSection } from "@/types"
 
 export type ManagerNavItem = {
 	label: string
 	shortLabel?: string
-	icon: string
+	icon: string | Component
 	to: string
 	startsGroup?: boolean
 	// The event section that gates this item, and the level it needs.
@@ -82,7 +85,7 @@ function eventItems(eventId: string, access?: EventAccess | null): ManagerNavIte
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks`, section: "talks" },
 		{
 			label: "Schedule",
-			icon: "lucide-calendar-arrow-right",
+			icon: LucideCalendarArrowRight,
 			to: `${event}/schedule`,
 			section: "talks",
 		},
