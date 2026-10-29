@@ -90,11 +90,7 @@ watch(headerKey, (key, previous) => {
 									:icon="item.icon"
 									:route="item.to"
 									:active="isActive(item.to)"
-								>
-									<template v-if="item.opensBuilder" #suffix>
-										<span class="lucide-arrow-up-right mr-2 size-3.5 text-ink-gray-4" />
-									</template>
-								</SidebarItem>
+								/>
 							</template>
 						</div>
 					</Transition>

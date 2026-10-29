@@ -6,8 +6,6 @@ export type ManagerNavItem = {
 	icon: string
 	to: string
 	startsGroup?: boolean
-	// A builder takes over the whole shell instead of filling its page area.
-	opensBuilder?: boolean
 	// The event section that gates this item, and the level it needs.
 	section?: EventSection
 	needs?: "Edit"
@@ -84,10 +82,9 @@ function eventItems(eventId: string, access?: EventAccess | null): ManagerNavIte
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks`, section: "talks" },
 		{
 			label: "Schedule",
-			icon: "lucide-calendar-range",
+			icon: "lucide-calendar-arrow-right",
 			to: `${event}/schedule`,
 			section: "talks",
-			opensBuilder: true,
 		},
 		{
 			label: "Announcements",
