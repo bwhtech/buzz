@@ -40,6 +40,11 @@ class InvalidTeamSlug(BuzzAPIError):
 	message = _lt("Use letters, numbers and hyphens for the team's URL.")
 
 
+class InvalidShareImage(BuzzAPIError):
+	title = _lt("Invalid Image")
+	message = _lt("The share image must be a file uploaded to this site.")
+
+
 class TeamSlugTaken(Conflict):
 	title = _lt("URL Taken")
 	message = _lt("Another team already uses {slug}.")

@@ -102,6 +102,8 @@ class BuzzTeam(WebsiteGenerator):
 		is_published: DF.Check
 		links: DF.Table[EventExternalLink]
 		logo: DF.AttachImage | None
+		meta_image: DF.AttachImage | None
+		og_image: DF.AttachImage | None
 		route: DF.Data | None
 		short_description: DF.SmallText | None
 		slug: DF.Data | None
@@ -129,6 +131,12 @@ class BuzzTeam(WebsiteGenerator):
 
 	def make_route(self) -> str:
 		return f"community/{self.slug}"
+
+	def on_update(self):
+		from buzz.events.community_og_image import enqueue_generate_for
+
+		super().on_update()
+		enqueue_generate_for(self.name)
 
 	def get_context(self, context):
 		from buzz.events.doctype.buzz_team.team_page import TeamPage

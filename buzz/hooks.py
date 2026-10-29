@@ -62,6 +62,8 @@ scheduler_events = {
 	"daily": [
 		"buzz.tasks.unpublish_ticket_types_after_last_date",
 		"buzz.telemetry_scan.send_site_profile",
+		# Teams' share images count their upcoming events, which drift as days pass
+		"buzz.events.community_og_image.enqueue_all_published",
 	],
 }
 
