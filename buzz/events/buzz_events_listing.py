@@ -36,9 +36,25 @@ class ListingPush:
 		host = primary_host_of(self.event.team)
 		return host.label if host else frappe.local.site
 
+	def place(self) -> dict:
+		"""Where the event is on a map; online events and venues without a pin have none."""
+		if self.event.medium == "Online" or not self.event.venue:
+			return {}
+		fields = ["latitude", "longitude", "city", "venue_country"]
+		venue = frappe.get_cached_value("Event Venue", self.event.venue, fields, as_dict=True)
+		if not (venue.latitude and venue.longitude):
+			return {}
+		return {
+			"latitude": venue.latitude,
+			"longitude": venue.longitude,
+			"city": venue.city,
+			"country": venue.venue_country,
+		}
+
 	def payload(self) -> dict:
 		meta = EventMeta(self.event, {})
 		return {
+			**self.place(),
 			"source_id": self.source_id,
 			"event_title": self.event.title,
 			"host": self.host_label(),

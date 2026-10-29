@@ -20,7 +20,9 @@ class CommunityEventRequest(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		city: DF.Data | None
 		community: DF.Link
+		country: DF.Data | None
 		end_datetime: DF.Datetime | None
 		event: DF.Link | None
 		event_location: DF.Data | None
@@ -93,7 +95,7 @@ def approved_external_requests(community: str) -> list:
 	return frappe.get_all(
 		"Community Event Request",
 		filters={"community": community, "status": "Approved", "is_external_event": 1},
-		fields=["name", *EXTERNAL_FIELDS],
+		fields=["name", *EXTERNAL_FIELDS, "latitude", "longitude", "city", "country"],
 	)
 
 

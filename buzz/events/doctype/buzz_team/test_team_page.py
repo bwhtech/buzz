@@ -150,6 +150,39 @@ class TestTeamPageExternalEvents(IntegrationTestCase):
 		self.assertIsNone(card["latitude"])
 		self.assertEqual(card["time"], "18:00")
 
+	def card_titled(self, title: str) -> dict:
+		days = self.context()["upcoming_days"]
+		return next(event for day in days for event in day["events"] if event["title"] == title)
+
+	def test_an_external_event_with_one_coordinate_is_not_pinned(self):
+		create_request(self.community.name, "Half Pinned Meetup", 6, "approved", latitude=18.5204)
+		card = self.card_titled("Half Pinned Meetup")
+
+		self.assertIsNone(card["latitude"])
+		self.assertIsNone(card["longitude"])
+
+	def test_an_external_event_with_zero_coordinates_is_not_pinned(self):
+		create_request(self.community.name, "Zero Meetup", 6, "approved", latitude=0, longitude=0)
+		card = self.card_titled("Zero Meetup")
+
+		self.assertIsNone(card["latitude"])
+		self.assertIsNone(card["longitude"])
+
+	def test_an_external_event_with_coordinates_is_pinned(self):
+		create_request(
+			self.community.name,
+			"Pinned Meetup",
+			6,
+			"approved",
+			latitude=18.5204,
+			longitude=73.8567,
+			city="Pune",
+		)
+		card = self.card_titled("Pinned Meetup")
+
+		self.assertEqual((card["latitude"], card["longitude"], card["city"]), (18.5204, 73.8567, "Pune"))
+		self.assertTrue(self.context()["has_pins"])
+
 	def test_an_ended_external_event_is_past(self):
 		context = self.context()
 

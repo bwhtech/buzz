@@ -27,8 +27,34 @@ class TestBuzzEventsListing(IntegrationTestCase):
 		self.assertEqual(payload["source_id"], f"{frappe.local.site}:{event.name}")
 		self.assertEqual(payload["event_title"], "Launch Night")
 		self.assertEqual(payload["event_location"], "Online")
+		self.assertNotIn("latitude", payload)
 		self.assertTrue(payload["start_datetime"].endswith("+05:30"))
 		self.assertTrue(payload["event_url"].endswith(f"/events/{event.route}"))
+
+	def test_in_person_payload_carries_the_venue_pin(self):
+		event = BuzzEventFactory.create("in_person")
+		frappe.db.set_value(
+			"Event Venue",
+			event.venue,
+			{"latitude": 18.5204, "longitude": 73.8567, "city": "Pune", "venue_country": "India"},
+		)
+		frappe.clear_document_cache("Event Venue", event.venue)
+		payload = ListingPush(event).payload()
+		self.assertEqual((payload["latitude"], payload["longitude"]), (18.5204, 73.8567))
+		self.assertEqual((payload["city"], payload["country"]), ("Pune", "India"))
+
+	def test_in_person_venue_without_coordinates_has_no_pin(self):
+		event = BuzzEventFactory.create("in_person")
+		frappe.db.set_value("Event Venue", event.venue, {"latitude": 0, "longitude": 0})
+		frappe.clear_document_cache("Event Venue", event.venue)
+		self.assertNotIn("latitude", ListingPush(event).payload())
+
+	def test_in_person_event_without_a_venue_has_no_pin(self):
+		event = BuzzEventFactory.create()
+		event.medium = "In Person"
+		payload = ListingPush(event).payload()
+		self.assertNotIn("latitude", payload)
+		self.assertEqual(payload["event_location"], "Online")
 
 	def test_published_event_is_upserted(self):
 		event = BuzzEventFactory.create()

@@ -83,6 +83,10 @@ def external_event(request) -> frappe._dict:
 		event_url=request.event_url,
 		host_name=request.host,
 		venue_name=request.event_location,
+		latitude=request.latitude,
+		longitude=request.longitude,
+		city=request.city,
+		country=request.country,
 		start_date=start.date(),
 		start_time=time_of_day(start),
 		end_date=end.date(),
@@ -92,7 +96,8 @@ def external_event(request) -> frappe._dict:
 
 
 def external_card(event) -> dict:
-	"""Opens the host's own page; it has no image or coordinates, so it stays off the map."""
+	"""Opens the host's own page; it has no image, and a pin only when the host sent coordinates."""
+	has_location = bool(flt(event.latitude) and flt(event.longitude))
 	return {
 		"route": event.name,
 		"date": str(event.start_date),
@@ -108,10 +113,10 @@ def external_card(event) -> dict:
 		"is_live": has_started(event) and not has_ended(event),
 		"is_attending": False,
 		"registrations_closed": False,
-		"city": None,
-		"country": None,
-		"latitude": None,
-		"longitude": None,
+		"city": event.city,
+		"country": event.country,
+		"latitude": flt(event.latitude) if has_location else None,
+		"longitude": flt(event.longitude) if has_location else None,
 	}
 
 
