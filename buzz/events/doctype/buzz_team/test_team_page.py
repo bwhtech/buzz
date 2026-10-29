@@ -215,15 +215,14 @@ class TestTeamPageExternalEvents(IntegrationTestCase):
 		self.assertNotIn("Ended Meetup", event_titles(context["upcoming_days"]))
 
 	def test_events_hosted_counts_own_and_external_events(self):
-		# One published Buzz Event plus the two approved external ones.
-		page = TeamPage(frappe.get_doc("Buzz Team", self.community.name))
-		own = frappe.get_all("Buzz Event", {"team": self.community.name}, ["name", "title", "is_published"])
-		requests = frappe.get_all(
-			"Community Event Request",
-			{"community": self.community.name},
-			["name", "event_title", "status", "is_external_event"],
-		)
-		self.assertEqual(page.hosted_count, 3, f"{own=} {requests=} {page.external_events=}")
+		# A community of its own: the tests sharing this class's one keep adding requests to it
+		team = BuzzTeamFactory.create_owned_by(None, "community")
+		BuzzEventFactory.create(team=team.name)
+		create_request(team.name, "First Meetup", 5, "approved")
+		create_request(team.name, "Second Meetup", -3, "approved")
+		create_request(team.name, "Pending Meetup", 5)
+
+		self.assertEqual(self.context(team.name)["events_hosted"], 3)
 
 	def test_a_team_not_accepting_submissions_hides_external_events(self):
 		team = BuzzTeamFactory.create_owned_by(None, "community")
