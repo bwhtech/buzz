@@ -13,7 +13,7 @@ const props = defineProps<{ builder: ScheduleBuilder; eventId: string }>()
 const event = useEventDoc(() => props.eventId)
 const modified = useTimeAgo(() => props.builder.schedule.doc?.modified ?? "")
 const previewUrl = computed(() =>
-	event.doc?.route ? `${window.location.origin}/b/${event.doc.route}` : "",
+	event.doc?.route ? `${window.location.origin}/events/${event.doc.route}` : "",
 )
 
 const openPreview = () => window.open(previewUrl.value, "_blank")
