@@ -6,6 +6,9 @@ from buzz.tests.factories.buzz_custom_field_factory import BuzzCustomFieldFactor
 from buzz.tests.factories.buzz_event_collaborator_factory import BuzzEventCollaboratorFactory
 from buzz.tests.factories.buzz_event_factory import BuzzEventFactory
 from buzz.tests.factories.buzz_form_factory import BuzzFormFactory
+from buzz.tests.factories.buzz_schedule_factory import BuzzScheduleFactory
+from buzz.tests.factories.buzz_schedule_item_type_factory import BuzzScheduleItemTypeFactory
+from buzz.tests.factories.buzz_schedule_track_factory import BuzzScheduleTrackFactory
 from buzz.tests.factories.buzz_tag_factory import BuzzTagFactory
 from buzz.tests.factories.buzz_team_factory import BuzzTeamFactory
 from buzz.tests.factories.buzz_team_membership_factory import BuzzTeamMembershipFactory
@@ -54,6 +57,9 @@ __all__ = [
 	"BuzzEventCollaboratorFactory",
 	"BuzzEventFactory",
 	"BuzzFormFactory",
+	"BuzzScheduleFactory",
+	"BuzzScheduleItemTypeFactory",
+	"BuzzScheduleTrackFactory",
 	"BuzzTagFactory",
 	"BuzzTeamFactory",
 	"BuzzTeamMembershipFactory",

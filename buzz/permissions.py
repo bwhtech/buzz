@@ -35,7 +35,8 @@ DOCTYPE_SECTION = {
 	"Buzz Custom Field": "ticketing",
 	"Event Talk": "talks",
 	"Talk Proposal": "talks",
-	"Event Track": "talks",
+	"Buzz Schedule": "talks",
+	"Buzz Schedule Track": "talks",
 	"Event Sponsor": "sponsors",
 	"Sponsorship Tier": "sponsors",
 	"Sponsorship Enquiry": "sponsors",
@@ -338,14 +339,38 @@ def derived_has_permission(doc, ptype: str = "read", user: str | None = None, **
 			return True
 
 	# These doctypes carry no team column, so the team comes from their event.
-	team = frappe.db.get_value("Buzz Event", doc.event, "team") if doc.event else None
+	event = event_of(doc)
+	team = frappe.db.get_value("Buzz Event", event, "team") if event else None
 	if not team and doc.doctype in OWNER_VISIBLE_DOCTYPES:
 		# `has_team_access` waves an unstamped row through for a half-migrated site. These
 		# rows hold personal data, so they get no such pass — the checks above are the way in.
 		return is_unrestricted(user)
 
 	section = form_section(doc.form_doctype) if doc.doctype == "Buzz Form" else DOCTYPE_SECTION[doc.doctype]
-	return has_section_permission(doc.event, section, ptype, user)
+	return has_section_permission(event, section, ptype, user)
+
+
+def event_of(doc) -> str | None:
+	# A new track names only its schedule; `event` is fetched from it after the permission check.
+	if doc.doctype == "Buzz Schedule Track" and not doc.event and doc.schedule:
+		return frappe.db.get_value("Buzz Schedule", doc.schedule, "event")
+	return doc.event
+
+
+def item_type_query_conditions(user: str | None = None, **kwargs) -> str | None:
+	user = user or frappe.session.user
+	if is_unrestricted(user):
+		return None
+	table = frappe.qb.DocType("Buzz Schedule Item Type")
+	return as_sql((table.is_standard == 1) | table.team.isin(my_teams(user)))
+
+
+def item_type_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:
+	"""Standard types are shared by every team and changed only by System Managers."""
+	user = user or frappe.session.user
+	if doc.is_standard:
+		return ptype not in WRITE_PTYPES or is_unrestricted(user)
+	return has_team_access(doc.team, ptype, user)
 
 
 def team_doc_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:
