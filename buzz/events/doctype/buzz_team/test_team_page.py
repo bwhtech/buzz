@@ -216,7 +216,14 @@ class TestTeamPageExternalEvents(IntegrationTestCase):
 
 	def test_events_hosted_counts_own_and_external_events(self):
 		# One published Buzz Event plus the two approved external ones.
-		self.assertEqual(self.context()["events_hosted"], 3)
+		page = TeamPage(frappe.get_doc("Buzz Team", self.community.name))
+		own = frappe.get_all("Buzz Event", {"team": self.community.name}, ["name", "title", "is_published"])
+		requests = frappe.get_all(
+			"Community Event Request",
+			{"community": self.community.name},
+			["name", "event_title", "status", "is_external_event"],
+		)
+		self.assertEqual(page.hosted_count, 3, f"{own=} {requests=} {page.external_events=}")
 
 	def test_a_team_not_accepting_submissions_hides_external_events(self):
 		team = BuzzTeamFactory.create_owned_by(None, "community")
