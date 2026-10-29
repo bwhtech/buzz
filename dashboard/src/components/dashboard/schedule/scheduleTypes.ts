@@ -3,26 +3,24 @@ export interface ScheduleDay {
 	label: string
 }
 
+/** One slot on the schedule. Times are minutes since midnight; a null room spans every room. */
 export interface ScheduleItem {
-	// Client-only identity: rows have no name until the schedule is saved.
 	key: string
-	name?: string
 	date: string
+	room: string | null
+	start: number
+	duration: number
 	type: string
 	title: string
-	reference_doctype?: string | null
-	reference_document?: string | null
-	all_tracks: 0 | 1
-	track: string | null
-	start_time: string
-	duration: number
-	end_time?: string
+	talk: string | null
 }
 
-export interface ScheduleTrack {
+export interface ScheduleRoom {
 	name: string
 	title: string
 	color: string | null
+	capacity: number | null
+	sequence: number
 }
 
 export interface ScheduleItemType {
@@ -30,7 +28,29 @@ export interface ScheduleItemType {
 	title: string
 	color: string | null
 	icon: string | null
+	default_duration: number
+	spans_all_tracks: 0 | 1
 	is_standard: 0 | 1
+}
+
+export interface ScheduleTalk {
+	name: string
+	title: string
+	speakers: string[]
+}
+
+export interface ScheduleItemRow {
+	name?: string
+	date: string
+	type: string
+	title: string | null
+	reference_doctype: string | null
+	reference_document: string | null
+	all_tracks: 0 | 1
+	track: string | null
+	start_time: string
+	duration: number
+	end_time?: string
 }
 
 export interface ScheduleDoc {
@@ -38,17 +58,18 @@ export interface ScheduleDoc {
 	event: string
 	is_published: 0 | 1
 	days: string | ScheduleDay[] | null
-	items: ScheduleItem[]
+	items: ScheduleItemRow[]
 	modified: string
 }
 
-export interface ScheduleTalk {
-	name: string
-	title: string
-	speakers: string
+export type ScheduleView = "calendar" | "timeline" | "agenda" | "days"
+
+/** What a library row or a block carries while it is dragged. */
+export interface DragPayload {
+	kind: "item" | "talk" | "type"
+	id: string
+	duration: number
+	span: boolean
+	grabX: number
+	grabY: number
 }
-
-export type ScheduleView = "calendar" | "timeline"
-
-// What a rail row carries when it is dragged onto the schedule.
-export const DRAG_TYPE = "application/x-schedule"

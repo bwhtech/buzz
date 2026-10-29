@@ -1,119 +1,157 @@
 <script setup lang="ts">
-import { Button } from "frappe-ui"
 import { computed } from "vue"
 
-import ScheduleLanes from "./ScheduleLanes.vue"
-import { dayRange, hourLabel } from "./scheduleTime"
-import ScheduleTrackHeader from "./ScheduleTrackHeader.vue"
-import type { ScheduleItem, ScheduleItemType, ScheduleTrack } from "./scheduleTypes"
+import ScheduleAddRoom from "./ScheduleAddRoom.vue"
+import ScheduleBlock from "./ScheduleBlock.vue"
+import ScheduleGhost from "./ScheduleGhost.vue"
+import { ZOOM, hourLabel } from "./scheduleLayout"
+import ScheduleRoomHeader from "./ScheduleRoomHeader.vue"
+import { useDayLayout } from "./useDayLayout"
+import { pixelsPerMinute } from "./useScheduleBoard"
 
-const PIXELS_PER_MINUTE = 1.8
-const TIME_COLUMN = 56
-const TRACK_MIN_WIDTH = 200
+defineProps<{ timeZone?: string | null }>()
 
-const props = defineProps<{
-	items: ScheduleItem[]
-	tracks: ScheduleTrack[]
-	types: Record<string, ScheduleItemType>
-	conflicts: Set<string>
-	timeZone?: string | null
-}>()
-const emit = defineEmits<{
-	select: [key: string]
-	create: [track: string | null, minute: number]
-	drop: [track: string | null, minute: number, payload: string]
-	addTrack: []
-	renameTrack: [name: string, title: string]
-	removeTrack: [name: string]
-}>()
+const GUTTER = 64
+const ROOM_WIDTH = 220
+const SIDE = 184
+const pxm = pixelsPerMinute("y")
+const { board, rooms, roomIndex, visible, conflicts, lanes, countIn } = useDayLayout()
 
-const range = computed(() => dayRange(props.items))
-const height = computed(() => (range.value.end - range.value.start) * PIXELS_PER_MINUTE)
+const count = computed(() => Math.max(rooms.value.length, 1))
+const range = board.range
+const height = computed(() => ((range.value.end - range.value.start) / 60) * ZOOM)
 const hours = computed(() => {
 	const list = []
-	for (let minute = range.value.start; minute < range.value.end; minute += 60) list.push(minute)
+	for (let minute = range.value.start; minute <= range.value.end; minute += 60) list.push(minute)
 	return list
 })
-const columns = computed(() => `repeat(${props.tracks.length}, minmax(${TRACK_MIN_WIDTH}px, 1fr))`)
-const forTrack = (name: string) =>
-	props.items.filter((item) => !item.all_tracks && item.track === name)
-const spanning = computed(() => props.items.filter((item) => item.all_tracks))
+
+function boxOf(item: (typeof visible.value)[number]) {
+	const top = (item.start - range.value.start) * pxm
+	const length = item.duration * pxm
+	const span = !item.room
+	const place = lanes.value[item.key] ?? { lane: 0, lanes: 1 }
+	const column = roomIndex.value[item.room ?? ""] ?? 0
+	return {
+		span,
+		compact: length < 44,
+		showSpeakers: length >= 72,
+		style: {
+			top: `${top + 1}px`,
+			height: `${Math.max(length - 2, 16)}px`,
+			left: span
+				? "4px"
+				: `calc(${((column + place.lane / place.lanes) * 100) / count.value}% + 4px)`,
+			width: span ? "calc(100% - 8px)" : `calc(${100 / count.value / place.lanes}% - 8px)`,
+		},
+	}
+}
+
+const ghost = computed(() => {
+	const current = board.ghost.value
+	if (!current || current.axis !== "y") return null
+	if (!current.span && roomIndex.value[current.room ?? ""] === undefined && current.room)
+		return null
+	const left =
+		current.span || !current.room
+			? "4px"
+			: `calc(${(roomIndex.value[current.room] * 100) / count.value}% + 4px)`
+	const width =
+		current.span || !current.room ? "calc(100% - 8px)" : `calc(${100 / count.value}% - 8px)`
+	return {
+		current,
+		style: {
+			top: `${(current.start - range.value.start) * pxm + 1}px`,
+			height: `${Math.max(current.duration * pxm - 2, 18)}px`,
+			left,
+			width,
+		},
+	}
+})
 </script>
 
 <template>
-	<div class="h-full overflow-auto">
-		<div class="flex min-w-max flex-col" :style="{ minWidth: '100%' }">
-			<div class="sticky top-0 z-20 flex border-b border-outline-gray-1 bg-surface-base">
+	<div class="relative h-full overflow-auto">
+		<div class="relative" :style="{ minWidth: `${GUTTER + rooms.length * ROOM_WIDTH + SIDE}px` }">
+			<div class="sticky top-0 z-[8] flex border-b border-outline-gray-1 bg-surface-base">
 				<div
-					class="flex shrink-0 items-end justify-end px-2 pb-2 text-p-xs text-ink-gray-5"
-					:style="{ width: `${TIME_COLUMN}px` }"
+					class="sticky left-0 z-[2] flex shrink-0 items-end justify-end bg-surface-base px-2.5 pb-2 text-[11px] text-ink-gray-4"
+					:style="{ width: `${GUTTER}px` }"
 				>
 					{{ timeZone }}
 				</div>
-				<div class="grid flex-1" :style="{ gridTemplateColumns: columns }">
-					<ScheduleTrackHeader
-						v-for="track in tracks"
-						:key="track.name"
-						class="border-l border-outline-gray-1"
-						:track="track"
-						:count="forTrack(track.name).length"
-						:can-remove="tracks.length > 1"
-						@rename="(title) => emit('renameTrack', track.name, title)"
-						@remove="emit('removeTrack', track.name)"
+				<div class="flex min-w-0 flex-1">
+					<ScheduleRoomHeader
+						v-for="(room, index) in rooms"
+						:key="room.name"
+						class="min-w-0 flex-1 border-l border-outline-gray-1"
+						:room="room"
+						:index="index"
+						:total="rooms.length"
+						:count="countIn(room.name)"
 					/>
 				</div>
-				<div class="flex w-44 shrink-0 items-center px-3">
-					<Button
-						variant="ghost"
-						iconLeft="lucide-plus"
-						label="Add room"
-						@click="emit('addTrack')"
-					/>
+				<div
+					class="flex shrink-0 items-center border-l border-outline-gray-1 p-2"
+					:style="{ width: `${SIDE}px` }"
+				>
+					<ScheduleAddRoom />
 				</div>
 			</div>
-
-			<div class="flex" :style="{ height: `${height}px` }">
-				<div class="relative shrink-0" :style="{ width: `${TIME_COLUMN}px` }">
+			<div class="relative flex">
+				<div
+					class="sticky left-0 z-[6] shrink-0 bg-surface-base"
+					:style="{ width: `${GUTTER}px`, height: `${height}px` }"
+				>
 					<span
 						v-for="minute in hours"
 						:key="minute"
-						class="absolute right-2 -translate-y-1/2 text-p-xs text-ink-gray-5 first:translate-y-1"
-						:style="{ top: `${(minute - range.start) * PIXELS_PER_MINUTE}px` }"
+						class="absolute right-2.5 whitespace-nowrap text-[11px] tabular-nums text-ink-gray-5"
+						:style="{ top: `${Math.max(((minute - range.start) / 60) * ZOOM - 7, 2)}px` }"
 					>
 						{{ hourLabel(minute) }}
 					</span>
 				</div>
-				<div class="relative flex-1">
-					<div class="grid size-full" :style="{ gridTemplateColumns: columns }">
-						<div v-for="track in tracks" :key="track.name" class="border-l border-outline-gray-1">
-							<ScheduleLanes
-								:items="forTrack(track.name)"
-								:types="types"
-								:conflicts="conflicts"
-								vertical
-								:pixels-per-minute="PIXELS_PER_MINUTE"
-								:range-start="range.start"
-								@select="(key) => emit('select', key)"
-								@create="(minute) => emit('create', track.name, minute)"
-								@drop="(minute, payload) => emit('drop', track.name, minute, payload)"
-							/>
-						</div>
+				<div class="relative min-w-0 flex-1" :style="{ height: `${height}px` }">
+					<template v-for="minute in hours.slice(0, -1)" :key="minute">
+						<div
+							class="absolute inset-x-0 border-t border-outline-gray-1"
+							:style="{ top: `${((minute - range.start) / 60) * ZOOM}px` }"
+						/>
+						<div
+							class="absolute inset-x-0 border-t border-dashed border-outline-gray-1"
+							:style="{ top: `${((minute - range.start) / 60) * ZOOM + ZOOM / 2}px` }"
+						/>
+					</template>
+					<div class="absolute inset-0 flex">
+						<div
+							v-for="room in rooms"
+							:key="room.name"
+							class="min-w-0 flex-1 cursor-cell border-l border-outline-gray-1"
+							@dragover="board.dragOver(room.name, 'y')($event)"
+							@drop="board.dropOn(room.name)($event)"
+							@click="board.clickSlot(room.name, 'y')($event)"
+						/>
 					</div>
 					<div class="pointer-events-none absolute inset-0">
-						<ScheduleLanes
-							class="pointer-events-none [&_button]:pointer-events-auto"
-							:items="spanning"
-							:types="types"
-							:conflicts="conflicts"
-							vertical
-							:pixels-per-minute="PIXELS_PER_MINUTE"
-							:range-start="range.start"
-							:style="{ backgroundImage: 'none' }"
-							@select="(key) => emit('select', key)"
+						<ScheduleGhost v-if="ghost" :ghost="ghost.current" :style="ghost.style" />
+						<ScheduleBlock
+							v-for="item in visible"
+							:key="item.key"
+							:item="item"
+							axis="y"
+							:conflict="conflicts[item.key]"
+							:compact="boxOf(item).compact"
+							:show-speakers="boxOf(item).showSpeakers"
+							:span="boxOf(item).span"
+							:style="boxOf(item).style"
 						/>
 					</div>
 				</div>
-				<div class="w-44 shrink-0" />
+				<div
+					class="shrink-0 border-l border-outline-gray-1 bg-surface-gray-1"
+					:style="{ width: `${SIDE}px` }"
+				/>
 			</div>
 		</div>
 	</div>

@@ -5,11 +5,11 @@ const ICONS: Record<string, string> = {
 	coffee: "lucide-coffee",
 	utensils: "lucide-utensils",
 	users: "lucide-users",
+	zap: "lucide-zap",
 	"clipboard-list": "lucide-clipboard-list",
-	music: "lucide-music",
 	"message-square": "lucide-message-square",
-	pencil: "lucide-pencil",
+	"pen-line": "lucide-pen-line",
+	"message-circle": "lucide-message-circle",
 }
 
-export const scheduleIcon = (name: string | null | undefined) =>
-	ICONS[name ?? ""] ?? "lucide-calendar-clock"
+export const scheduleIcon = (name: string | null | undefined) => ICONS[name ?? ""] ?? ""
