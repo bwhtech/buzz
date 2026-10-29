@@ -118,8 +118,14 @@ class CouponTestCase(IntegrationTestCase):
 	def create_coupon(self, *traits, **overrides):
 		return BuzzCouponCodeFactory.create(*traits, event=self.event.name, **overrides)
 
+	def other_user(self) -> str:
+		return UserFactory.create_once("other-buyer@example.com").name
+
 	def create_booking(self, coupon: str | None = None, count: int = 1, **overrides):
 		attendees = attendee_rows(self.ticket_type.name, count)
+		if email := overrides.get("buyer_email"):
+			# One user per buyer email, as in production; the factory's shared user would be one buyer.
+			overrides.setdefault("user", UserFactory.create_once(email.lower()).name)
 		return EventBookingFactory.create(
 			event=self.event.name, coupon_code=coupon, attendees=attendees, **overrides
 		)
