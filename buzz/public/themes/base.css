@@ -390,6 +390,16 @@ body {
 	color: var(--ink-strong);
 }
 
+.schedule-heading {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.05;
+}
+
+.schedule-heading span {
+	color: color-mix(in srgb, var(--ink-title) 45%, transparent);
+}
+
 .schedule-subtitle {
 	margin: 8px 0 24px;
 	color: var(--ink-muted);
@@ -400,21 +410,15 @@ body {
 	position: sticky;
 	top: 65px;
 	z-index: 5;
-	padding-block: 8px 12px;
+	padding-block: 8px 16px;
 	background: var(--page-bg);
-}
-
-.schedule-days,
-.schedule-tracks {
 	display: flex;
 	gap: 8px;
 	overflow-x: auto;
 	scrollbar-width: none;
 }
 
-.schedule-day-button,
-.schedule-track-button,
-.schedule-layout-button {
+.schedule-day-button {
 	flex: none;
 	border: 1px solid transparent;
 	background: var(--surface-raised);
@@ -433,17 +437,43 @@ body {
 	text-align: left;
 }
 
-.schedule-track-button,
-.schedule-layout-button {
-	padding: 4px 12px;
-	border-radius: 999px;
-	font-size: 13px;
-	white-space: nowrap;
+/* Tracks and layouts are segmented controls: a tinted rail with the chosen option raised. */
+.schedule-segments {
+	display: flex;
+	gap: 2px;
+	max-width: 100%;
+	padding: 2px;
+	overflow-x: auto;
+	border-radius: calc(var(--radius) + 2px);
+	background: var(--surface-raised);
+	scrollbar-width: none;
 }
 
-.schedule-day-button[aria-pressed="true"],
+.schedule-track-button,
+.schedule-layout-button {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 12px;
+	border: 0;
+	border-radius: var(--radius);
+	background: transparent;
+	color: var(--ink-muted);
+	font: inherit;
+	font-size: 14px;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
 .schedule-track-button[aria-pressed="true"],
 .schedule-layout-button[aria-pressed="true"] {
+	background: var(--page-bg);
+	color: var(--ink-strong);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
+}
+
+.schedule-day-button[aria-pressed="true"] {
 	border-color: var(--border);
 	background: var(--page-bg);
 	color: var(--ink-strong);
@@ -472,26 +502,78 @@ body {
 	margin-bottom: 12px;
 }
 
-.schedule-search {
+.schedule-search-field {
+	display: flex;
 	flex: 1 1 200px;
+	align-items: center;
+	gap: 8px;
+	box-sizing: border-box;
 	max-width: 280px;
-	padding: 6px 12px;
-	border: 1px solid var(--border);
+	height: 34px;
+	padding: 0 12px;
+	border: 1px solid transparent;
 	border-radius: var(--radius);
+	background: var(--surface-raised);
+	color: var(--ink-muted);
+}
+
+.schedule-search-field:focus-within {
+	border-color: var(--border);
 	background: var(--page-bg);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--ink-muted) 25%, transparent);
+}
+
+.schedule-search {
+	flex: 1;
+	min-width: 0;
+	padding: 0;
+	border: 0;
+	outline: none;
+	background: transparent;
 	color: var(--ink-strong);
 	font: inherit;
 	font-size: 14px;
 }
 
-.schedule-search:focus-visible {
-	outline: 2px solid var(--ink-muted);
-	outline-offset: 2px;
-}
-
 .schedule-tracks {
 	flex: 0 1 auto;
 	min-width: 0;
+}
+
+.schedule-layouts {
+	width: fit-content;
+	margin-bottom: 16px;
+}
+
+.schedule-time-zone {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.schedule-time-zone .schedule-note {
+	margin: 0;
+}
+
+.schedule-zone-button {
+	padding: 3px 10px;
+	border: 0;
+	border-radius: var(--radius);
+	background: transparent;
+	color: var(--ink-muted);
+	font: inherit;
+	font-size: 12px;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.schedule-zone-button[aria-pressed="true"] {
+	background: var(--page-bg);
+	color: var(--ink-strong);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
 }
 
 /* The day buttons name the day, and a filtered slot no longer has all its sessions. */
@@ -743,12 +825,6 @@ summary.schedule-summary:focus-visible {
 	border-radius: var(--radius);
 }
 
-.schedule-layouts {
-	display: flex;
-	gap: 8px;
-	margin-left: auto;
-}
-
 /* The list is the default; the grid takes its place once chosen. */
 .schedule:not([data-layout="grid"]) .schedule-grid,
 .schedule[data-layout="grid"] .schedule-slots {
@@ -762,7 +838,7 @@ summary.schedule-summary:focus-visible {
 }
 
 .schedule-grid-inner {
-	padding-bottom: 10px;
+	padding-bottom: 12px;
 }
 
 .schedule-grid-head,
@@ -776,28 +852,47 @@ summary.schedule-summary:focus-visible {
 
 .schedule-grid-head {
 	border-bottom: 1px solid var(--border);
-	background: var(--surface-raised);
 }
 
 .schedule-grid-title {
-	overflow: hidden;
-	padding: 10px 12px;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	padding: 8px 12px;
 	border-left: 1px solid var(--border);
 	color: var(--ink-strong);
 	font-size: 13px;
 	font-weight: 600;
+}
+
+.schedule-grid-title > span {
+	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
+.schedule-grid-count {
+	color: var(--ink-muted);
+	font-size: 12px;
+	font-weight: 400;
+}
+
+/* Solid hour lines with fainter half-hour lines between them, as in the schedule builder. */
 .schedule-grid-body {
 	position: relative;
 	height: var(--grid-height);
-	background-image: repeating-linear-gradient(
-		to bottom,
-		var(--border) 0 1px,
-		transparent 1px var(--hour-height)
-	);
+	margin-top: 12px;
+	background-image:
+		repeating-linear-gradient(to bottom, var(--border) 0 1px, transparent 1px var(--hour-height)),
+		repeating-linear-gradient(
+			to bottom,
+			transparent 0 calc(var(--hour-height) / 2),
+			color-mix(in srgb, var(--border) 50%, transparent) calc(var(--hour-height) / 2)
+				calc(var(--hour-height) / 2 + 1px),
+			transparent calc(var(--hour-height) / 2 + 1px) var(--hour-height)
+		);
+	background-position: 56px 0;
+	background-repeat: repeat-y;
 }
 
 .schedule-grid-gutter {
@@ -811,10 +906,6 @@ summary.schedule-summary:focus-visible {
 	color: var(--ink-muted);
 	font-size: 11px;
 	font-variant-numeric: tabular-nums;
-}
-
-.schedule-grid-hour:first-child {
-	transform: none;
 }
 
 .schedule-grid-column,
@@ -842,27 +933,28 @@ summary.schedule-summary:focus-visible {
 	pointer-events: auto;
 }
 
+/* Blocks take their type's color as a tint, the way the schedule builder draws them. */
 .schedule-block {
+	--block-color: var(--schedule-dot, var(--ink-muted));
 	position: absolute;
 	box-sizing: border-box;
 	overflow: hidden;
-	border: 1px solid var(--border);
-	border-left: 3px solid var(--schedule-dot, var(--ink-muted));
-	border-radius: 8px;
-	background: color-mix(in srgb, var(--schedule-dot, var(--ink-muted)) 8%, var(--page-bg));
+	border: 1px solid color-mix(in srgb, var(--block-color) 35%, var(--page-bg));
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--block-color) 12%, var(--page-bg));
 	list-style: none;
 }
 
 .schedule-block-button {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: 1px;
 	width: 100%;
 	height: 100%;
-	padding: 6px 9px;
+	padding: 4px 8px;
 	border: 0;
 	background: none;
-	color: var(--ink-muted);
+	color: color-mix(in srgb, var(--block-color) 75%, var(--ink-strong));
 	font: inherit;
 	font-size: 12px;
 	text-align: left;
@@ -872,7 +964,14 @@ summary.schedule-summary:focus-visible {
 .schedule-block.is-compact .schedule-block-button {
 	flex-direction: row;
 	align-items: center;
+	gap: 6px;
 	padding: 0 8px;
+}
+
+.schedule-grid-spans .schedule-block-button {
+	align-items: center;
+	justify-content: center;
+	text-align: center;
 }
 
 .schedule-block-button:focus-visible {
@@ -883,12 +982,17 @@ summary.schedule-summary:focus-visible {
 .schedule-block-title {
 	display: block;
 	overflow: hidden;
-	color: var(--ink-strong);
-	font-size: 13px;
+	color: color-mix(in srgb, var(--block-color) 55%, var(--ink-strong));
+	font-size: 12px;
 	font-weight: 600;
-	line-height: 1.3;
+	line-height: 1.35;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.schedule-block.is-compact .schedule-block-title {
+	flex: 0 1 auto;
+	min-width: 0;
 }
 
 .schedule-block-title .schedule-dot {
@@ -896,7 +1000,15 @@ summary.schedule-summary:focus-visible {
 }
 
 .schedule-block-time {
+	overflow: hidden;
 	font-variant-numeric: tabular-nums;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.schedule-block.is-compact .schedule-block-time {
+	flex: 0 100 auto;
+	min-width: 0;
 }
 
 .schedule-block-speakers {
@@ -1886,7 +1998,7 @@ summary:focus-visible {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
-	.schedule-search {
+	.schedule-search-field {
 		flex-basis: 100%;
 		max-width: none;
 	}

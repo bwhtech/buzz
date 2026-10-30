@@ -12,4 +12,8 @@ def get_context(context):
 		not_found()
 	apply_site_context(context, page.event.theme)
 	context.update(page.as_context())
-	context.update(schedule=page.schedule, schedule_tracks=page.public_schedule.filter_tracks)
+	context.update(
+		schedule=page.schedule,
+		schedule_tracks=page.public_schedule.filter_tracks,
+		event_time_zone=page.time_zone,
+	)

@@ -1,11 +1,17 @@
 from math import ceil, floor
 
+from frappe import _
+
 PIXELS_PER_MINUTE = 1.8
 COMPACT_HEIGHT = 46
 SPEAKER_HEIGHT = 80
 MIN_BLOCK_HEIGHT = 16
 DEFAULT_START = 9 * 60
 DEFAULT_END = 18 * 60
+
+
+def count_label(count: int) -> str:
+	return _("1 session") if count == 1 else _("{0} sessions").format(count)
 
 
 def assign_lanes(blocks: list[dict]) -> None:
@@ -58,12 +64,19 @@ class ScheduleGrid:
 			blocks = [self.block(row) for row in self.rows if row["track_key"] == track.name]
 			if blocks:
 				assign_lanes(blocks)
-				columns.append({"key": track.name, "title": track.title, "blocks": blocks})
+				columns.append(
+					{
+						"key": track.name,
+						"title": track.title,
+						"count": count_label(len(blocks)),
+						"blocks": blocks,
+					}
+				)
 		return columns
 
 	def hours(self) -> list[dict]:
 		return [
-			{"label": f"{minute // 60:02d}:00", "top": self.pixels(minute - self.first)}
+			{"label": f"{minute // 60:02d}:00", "minutes": minute, "top": self.pixels(minute - self.first)}
 			for minute in range(self.first, self.last + 1, 60)
 		]
 

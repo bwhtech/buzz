@@ -7,7 +7,7 @@ from frappe.utils import comma_sep, get_time
 from buzz.api.schedule.services import speaker_profiles
 from buzz.events.doctype.buzz_schedule_item_type.buzz_schedule_item_type import HEX_COLOR
 from buzz.www.event.date_range import format_day, format_time, format_time_range, join_parts
-from buzz.www.event.schedule_grid import ScheduleGrid
+from buzz.www.event.schedule_grid import ScheduleGrid, count_label
 
 MUTED_COLOR = "var(--ink-muted)"
 
@@ -41,10 +41,6 @@ def duration_label(seconds) -> str:
 	hours, minutes = divmod(minutes, 60)
 	parts = [_("{0} hr").format(hours) if hours else "", _("{0} min").format(minutes) if minutes else ""]
 	return join_parts(parts, " ")
-
-
-def count_label(count: int) -> str:
-	return _("1 session") if count == 1 else _("{0} sessions").format(count)
 
 
 def group_into_slots(rows: list[dict]) -> list[dict]:
@@ -137,6 +133,8 @@ class PublicSchedule:
 		return {
 			"start": format_time(item.start_time),
 			"start_minutes": minutes_of(item.start_time),
+			"end": format_time(item.end_time),
+			"end_minutes": minutes_of(item.start_time) + int((item.duration or 0) // 60),
 			"duration_minutes": int((item.duration or 0) // 60),
 			"time": format_time_range(item.start_time, item.end_time),
 			"title": item.title,

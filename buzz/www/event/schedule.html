@@ -9,10 +9,15 @@
 
 {% block content %}{% autoescape true %}
 	<main class="event-content schedule-page">
-		<a class="schedule-back" href="/events/{{ event.route }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>{{ event.title }}</a>
-		<h1 class="event-title">{{ _("Schedule") }}</h1>
+		<a class="schedule-back" href="/events/{{ event.route }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>{{ _("Go to event page") }}</a>
+		<h1 class="event-title schedule-heading">
+			<span>{{ _("Schedule") }}</span>
+			{{ event.title }}
+		</h1>
 		<p class="schedule-subtitle">{{ [date_range.date_range_with_weekdays if date_range.is_multi_day else event_date.full_date, venue.name if venue and not venue.locations] | select | join(" · ") }}</p>
 		{% macro avatar(person, class_name="schedule-avatar") %}{% if person.image %}<img class="{{ class_name }}" src="{{ person.image }}" alt="">{% else %}<span class="{{ class_name }}" aria-hidden="true">{{ person.name[:1] | upper }}</span>{% endif %}{% endmacro %}
+		{% macro clock(minutes, label) %}<time data-minutes="{{ minutes }}">{{ label }}</time>{% endmacro %}
+		{% macro time_range(row) %}{{ clock(row.start_minutes, row.start) }} – {{ clock(row.end_minutes, row.end) }}{% endmacro %}
 		{% macro talk_detail(row) %}
 		{% if row.abstract %}<div class="prose">{{ row.abstract | safe }}</div>{% endif %}
 		{% for person in row.people %}
@@ -30,7 +35,7 @@
 		<li class="schedule-item" data-track="{{ row.track_key }}" style="--schedule-dot: {{ row.color }}">
 			<{{ tag }} class="schedule-card">
 				<{{ "summary" if expandable else "div" }} class="schedule-summary">
-					<span class="schedule-meta"><span class="schedule-dot" aria-hidden="true"></span><span class="schedule-meta-text">{{ [row.type, row.time, row.track] | select | join(" · ") }}</span></span>
+					<span class="schedule-meta"><span class="schedule-dot" aria-hidden="true"></span><span class="schedule-meta-text">{% if row.type %}{{ row.type }} · {% endif %}{{ time_range(row) }}{% if row.track %} · {{ row.track }}{% endif %}</span></span>
 					<span class="schedule-title">{{ row.title }}</span>
 					{% if row.people %}
 					<span class="schedule-people">
@@ -54,18 +59,18 @@
 		<li class="schedule-block{% if block.is_compact %} is-compact{% endif %}" data-track="{{ row.track_key }}" style="--schedule-dot: {{ row.color }}; top: {{ block.top }}px; height: {{ block.height }}px; left: calc({{ block.lane * 100 / block.lanes }}% + 3px); width: calc({{ 100 / block.lanes }}% - 6px)">
 			<button class="schedule-block-button" type="button" data-open-detail title="{{ row.title }}">
 				<span class="schedule-block-title"><span class="schedule-dot" aria-hidden="true"></span>{{ row.title }}</span>
-				{% if not block.is_compact %}<span class="schedule-block-time">{{ row.time }}</span>{% endif %}
+				<span class="schedule-block-time">{{ time_range(row) }}</span>
 				{% if block.shows_speakers %}<span class="schedule-block-speakers">{{ row.speakers }}</span>{% endif %}
 			</button>
 			<div class="schedule-block-detail" hidden>
 				<h2 class="schedule-dialog-title">{{ row.title }}</h2>
-				<p class="schedule-dialog-meta">{{ [row.type, row.time, row.duration, row.track] | select | join(" · ") }}</p>
+				<p class="schedule-dialog-meta">{% if row.type %}{{ row.type }} · {% endif %}{{ time_range(row) }} · {{ row.duration }}{% if row.track %} · {{ row.track }}{% endif %}</p>
 				{{ talk_detail(row) }}
 			</div>
 		</li>
 		{% endmacro %}
 
-		<event-schedule class="schedule">
+		<event-schedule class="schedule" data-time-zone="{{ event_time_zone }}" data-local-note="{{ _('Times shown in your time zone, {0}') }}">
 			{% if schedule | length > 1 %}
 			<div class="schedule-days" role="group" aria-label="{{ _('Days') }}" data-controls hidden>
 				{% for day in schedule %}
@@ -77,19 +82,29 @@
 			</div>
 			{% endif %}
 			<div class="schedule-filters" data-controls hidden>
-				<input class="schedule-search" type="search" placeholder="{{ _('Search sessions') }}" aria-label="{{ _('Search sessions') }}">
+				<label class="schedule-search-field">
+					<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+					<input class="schedule-search" type="search" placeholder="{{ _('Search sessions') }}" aria-label="{{ _('Search sessions') }}">
+				</label>
 				{% if schedule_tracks %}
-				<div class="schedule-tracks" role="group" aria-label="{{ _('Tracks') }}">
+				<div class="schedule-tracks schedule-segments" role="group" aria-label="{{ _('Tracks') }}">
 					<button class="schedule-track-button" type="button" data-track="" aria-pressed="true">{{ _("All tracks") }}</button>
 					{% for track in schedule_tracks %}<button class="schedule-track-button" type="button" data-track="{{ track.name }}" aria-pressed="false">{{ track.title }}</button>{% endfor %}
 				</div>
 				{% endif %}
-				<div class="schedule-layouts" role="group" aria-label="{{ _('Layout') }}">
-					<button class="schedule-layout-button" type="button" data-layout="list" aria-pressed="true">{{ _("List") }}</button>
-					<button class="schedule-layout-button" type="button" data-layout="grid" aria-pressed="false">{{ _("Grid") }}</button>
+			</div>
+			<div class="schedule-layouts schedule-segments" role="group" aria-label="{{ _('Layout') }}" data-controls hidden>
+				<button class="schedule-layout-button" type="button" data-layout="list" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/></svg>{{ _("List") }}</button>
+				<button class="schedule-layout-button" type="button" data-layout="grid" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>{{ _("Grid") }}</button>
+			</div>
+			<div class="schedule-time-zone">
+				<p class="schedule-note" data-event-note>{{ _("Times shown in {0}").format(timezone_label_with_offset) }}</p>
+				<p class="schedule-note" data-local-note hidden></p>
+				<div class="schedule-zones schedule-segments" role="group" aria-label="{{ _('Time zone') }}" hidden>
+					<button class="schedule-zone-button" type="button" data-zone="event" aria-pressed="true">{{ _("Event time") }}</button>
+					<button class="schedule-zone-button" type="button" data-zone="local" aria-pressed="false">{{ _("Your time") }}</button>
 				</div>
 			</div>
-			<p class="schedule-note">{{ _("Times shown in {0}").format(timezone_label_with_offset) }}</p>
 			{% for day in schedule %}
 			<div class="schedule-day" data-day="{{ day.key }}">
 				{% if schedule | length > 1 %}<h3 class="label">{{ day.day }}</h3>{% endif %}
@@ -97,7 +112,7 @@
 					{% for slot in day.slots %}
 					<li class="schedule-slot"{% if slot.all_tracks %} data-all-tracks{% endif %}>
 						<div class="schedule-slot-time">
-							<span class="schedule-start">{{ slot.start }}</span>
+							<span class="schedule-start">{{ clock(slot.rows[0].start_minutes, slot.start) }}</span>
 							{% if slot.rows | length > 1 %}<span class="schedule-parallel">{{ _("{0} at once").format(slot.rows | length) }}</span>{% endif %}
 						</div>
 						<ul class="schedule-items">
@@ -112,12 +127,12 @@
 						{% if grid.has_titles %}
 						<div class="schedule-grid-head">
 							<div class="schedule-grid-gutter"></div>
-							{% for column in grid.columns %}<div class="schedule-grid-title" data-track="{{ column.key }}">{{ column.title }}</div>{% endfor %}
+							{% for column in grid.columns %}<div class="schedule-grid-title" data-track="{{ column.key }}"><span>{{ column.title }}</span><span class="schedule-grid-count">{{ column.count }}</span></div>{% endfor %}
 						</div>
 						{% endif %}
 						<div class="schedule-grid-body">
 							<div class="schedule-grid-gutter">
-								{% for hour in grid.hours %}<span class="schedule-grid-hour" style="top: {{ hour.top }}px">{{ hour.label }}</span>{% endfor %}
+								{% for hour in grid.hours %}<span class="schedule-grid-hour" style="top: {{ hour.top }}px">{{ clock(hour.minutes, hour.label) }}</span>{% endfor %}
 							</div>
 							{% for column in grid.columns %}
 							<ul class="schedule-grid-column" data-track="{{ column.key }}">
