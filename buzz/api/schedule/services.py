@@ -4,32 +4,37 @@ from frappe.utils import cstr
 
 from buzz.api.schedule.schemas import ScheduleTalk
 
-DEFAULT_TRACK_TITLE = "Main Track"
-DEFAULT_TRACK_COLOR = "blue"
-
 
 def get_or_create_schedule(event: int) -> str:
-	name = frappe.db.get_value("Buzz Schedule", {"event": event}) or create_schedule(event)
-	ensure_track(name)
-	return name
+	return frappe.db.get_value("Buzz Schedule", {"event": event}) or create_schedule(event)
 
 
 def create_schedule(event: int) -> str:
 	return frappe.get_doc({"doctype": "Buzz Schedule", "event": event}).insert().name
 
 
-def ensure_track(schedule: str) -> None:
-	if frappe.db.exists("Buzz Schedule Track", {"schedule": schedule}):
-		return
-	frappe.get_doc(
+def fork_standard_track(schedule: str, track: str) -> str:
+	"""Gives the schedule its own copy of a standard track and moves the schedule's items onto it."""
+	standard = frappe.get_doc("Buzz Schedule Track", track)
+	if not standard.is_standard:
+		frappe.throw(_("Only a standard track can be copied"))
+	copy = frappe.get_doc(
 		{
 			"doctype": "Buzz Schedule Track",
 			"schedule": schedule,
-			"title": _(DEFAULT_TRACK_TITLE),
-			"color": DEFAULT_TRACK_COLOR,
-			"sequence": 0,
+			"title": standard.title,
+			"color": standard.color,
+			"capacity": standard.capacity,
+			"sequence": standard.sequence,
 		}
 	).insert()
+	frappe.db.set_value(
+		"Buzz Schedule Item",
+		{"parenttype": "Buzz Schedule", "parent": schedule, "track": track},
+		"track",
+		copy.name,
+	)
+	return copy.name
 
 
 def event_talks(event: int) -> list[ScheduleTalk]:

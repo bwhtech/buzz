@@ -18,10 +18,13 @@ class BuzzScheduleTrack(Document):
 		capacity: DF.Int
 		color: DF.Data | None
 		event: DF.Link | None
-		schedule: DF.Link
+		is_standard: DF.Check
+		schedule: DF.Link | None
 		sequence: DF.Int
 		title: DF.Data
 	# end: auto-generated types
 
 	def validate(self):
 		validate_color(self.color)
+		if self.is_standard:
+			self.schedule = self.event = None

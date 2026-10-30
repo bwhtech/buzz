@@ -130,6 +130,7 @@ fixtures = [
 	{"dt": "Buzz Theme", "filters": {"is_standard": 1}},
 	{"dt": "Event Topic", "filters": {"is_standard": 1}},
 	{"dt": "Buzz Schedule Item Type", "filters": {"is_standard": 1}},
+	{"dt": "Buzz Schedule Track", "filters": {"is_standard": 1}},
 	{"dt": "Notification Type", "filters": {"name": "Buzz Activity"}},
 ]
 

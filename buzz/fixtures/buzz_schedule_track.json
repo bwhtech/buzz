@@ -1,0 +1,15 @@
+[
+ {
+  "capacity": 0,
+  "color": "blue",
+  "docstatus": 0,
+  "doctype": "Buzz Schedule Track",
+  "event": null,
+  "is_standard": 1,
+  "modified": "2026-10-31 12:00:00.000000",
+  "name": "Main Track",
+  "schedule": null,
+  "sequence": 0,
+  "title": "Main Track"
+ }
+]

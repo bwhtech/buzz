@@ -289,6 +289,8 @@ def derived_criterion(user: str, doctype: str | None) -> Criterion | None:
 		return form_query_criterion(user, table)
 
 	criterion = table.event.isin(events_with_section_access(user, DOCTYPE_SECTION[doctype]))
+	if doctype == "Buzz Schedule Track":
+		criterion |= table.is_standard == 1
 	if doctype in OWNER_VISIBLE_DOCTYPES:
 		criterion |= table.owner == user
 
@@ -332,6 +334,8 @@ def team_has_permission(doc, ptype: str = "read", user: str | None = None, **kwa
 
 def derived_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:
 	user = user or frappe.session.user
+	if doc.doctype == "Buzz Schedule Track" and doc.is_standard:
+		return ptype not in WRITE_PTYPES or is_unrestricted(user)
 	if doc.doctype in OWNER_VISIBLE_DOCTYPES and belongs_to_user(doc, user):
 		return True
 	if doc.doctype == "Sponsorship Tier" and ptype not in WRITE_PTYPES:

@@ -80,11 +80,14 @@ class PublicSchedule:
 
 	@cached_property
 	def tracks(self) -> list[dict]:
+		if not self.name:
+			return []
+		used = {item.track for item in self.document.items if item.track}
 		return frappe.get_all(
 			"Buzz Schedule Track",
-			filters={"schedule": self.name},
+			or_filters={"schedule": self.name, "name": ["in", list(used) or [""]]},
 			fields=["name", "title"],
-			order_by="creation asc",
+			order_by="sequence asc, creation asc",
 		)
 
 	@cached_property
