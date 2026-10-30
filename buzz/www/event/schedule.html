@@ -71,12 +71,14 @@
 		{% endmacro %}
 
 		<event-schedule class="schedule" data-time-zone="{{ event_time_zone }}" data-local-note="{{ _('Times shown in your time zone, {0}') }}">
+			<div class="schedule-controls">
 			{% if schedule | length > 1 %}
 			<div class="schedule-days" role="group" aria-label="{{ _('Days') }}" data-controls hidden>
 				{% for day in schedule %}
 				<button class="schedule-day-button" type="button" data-day="{{ day.key }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">
 					<span class="schedule-day-name">{{ day.day }}</span>
 					<span class="schedule-day-caption">{{ day.caption }}</span>
+					{% if day.short_date %}<span class="schedule-day-short">{{ day.short_date }}</span>{% endif %}
 				</button>
 				{% endfor %}
 			</div>
@@ -97,12 +99,13 @@
 				<button class="schedule-layout-button" type="button" data-layout="list" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/></svg>{{ _("List") }}</button>
 				<button class="schedule-layout-button" type="button" data-layout="grid" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>{{ _("Grid") }}</button>
 			</div>
+			</div>
 			<div class="schedule-time-zone">
 				<p class="schedule-note" data-event-note>{{ _("Times shown in {0}").format(timezone_label_with_offset) }}</p>
 				<p class="schedule-note" data-local-note hidden></p>
 				<div class="schedule-zones schedule-segments" role="group" aria-label="{{ _('Time zone') }}" hidden>
-					<button class="schedule-zone-button" type="button" data-zone="event" aria-pressed="true">{{ _("Event time") }}</button>
-					<button class="schedule-zone-button" type="button" data-zone="local" aria-pressed="false">{{ _("Your time") }}</button>
+					<button class="schedule-zone-button" type="button" data-zone="event" aria-pressed="true"><span class="schedule-zone-label">{{ _("Event time") }}</span><span class="schedule-zone-action">{{ _("Use event time") }}</span></button>
+					<button class="schedule-zone-button" type="button" data-zone="local" aria-pressed="false"><span class="schedule-zone-label">{{ _("Your time") }}</span><span class="schedule-zone-action">{{ _("Use my time") }}</span></button>
 				</div>
 			</div>
 			{% for day in schedule %}

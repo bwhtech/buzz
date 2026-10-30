@@ -2,7 +2,7 @@ from functools import cached_property
 
 import frappe
 from frappe import _
-from frappe.utils import comma_sep, get_time
+from frappe.utils import comma_sep, format_date, get_time
 
 from buzz.api.schedule.services import speaker_profiles
 from buzz.events.doctype.buzz_schedule_item_type.buzz_schedule_item_type import HEX_COLOR
@@ -126,6 +126,7 @@ class PublicSchedule:
 		return {
 			"day": label,
 			"key": day["date"],
+			"short_date": format_date(day["date"], "EEE d") if day["label"] else "",
 			"caption": join_parts(
 				[format_day(day["date"]) if day["label"] else "", count_label(sessions)], " · "
 			),

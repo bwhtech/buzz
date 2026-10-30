@@ -405,6 +405,17 @@ body {
 	color: var(--ink-muted);
 }
 
+/* On wide screens the wrapper drops out of layout; on phones it holds all the controls together. */
+.schedule-controls {
+	display: contents;
+}
+
+/* Phone-only pieces: short day dates and the time zone link. */
+.schedule-day-short,
+.schedule-zone-action {
+	display: none;
+}
+
 /* The days stay in view just below the site navbar. */
 .schedule-days {
 	position: sticky;
@@ -666,6 +677,10 @@ summary.schedule-summary:focus-visible {
 
 .schedule-meta .schedule-dot {
 	margin-top: 4px;
+}
+
+.schedule-slot[data-all-tracks] .schedule-meta .schedule-dot {
+	margin-top: 0;
 }
 
 .schedule-meta-text {
@@ -2007,5 +2022,129 @@ summary:focus-visible {
 
 	.schedule-slot[data-all-tracks] .schedule-slot-time {
 		justify-content: flex-start;
+	}
+
+	/* Phones get one list: days, search and track chips stick together under the navbar. */
+	.schedule-controls {
+		position: sticky;
+		top: 64px;
+		z-index: 5;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		margin: 0 -16px 8px;
+		padding: 10px 16px;
+		border-bottom: 1px solid var(--border);
+		background: var(--page-bg);
+	}
+
+	.schedule-days {
+		position: static;
+		padding: 0;
+	}
+
+	.schedule-day-button,
+	.schedule-track-button {
+		flex: none;
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 6px;
+		min-width: 0;
+		height: 32px;
+		padding: 0 14px;
+		border: 0;
+		border-radius: 999px;
+		background: var(--surface-raised);
+		color: var(--ink-strong);
+		font: inherit;
+		font-size: 13px;
+		white-space: nowrap;
+		cursor: pointer;
+	}
+
+	.schedule-track-button {
+		height: 30px;
+		padding: 0 12px;
+		color: var(--ink-muted);
+	}
+
+	.schedule-day-button[aria-pressed="true"],
+	.schedule-track-button[aria-pressed="true"] {
+		background: var(--ink-strong);
+		color: var(--page-bg);
+		box-shadow: none;
+	}
+
+	.schedule-day-name {
+		font-weight: 500;
+	}
+
+	.schedule-day-caption {
+		display: none;
+	}
+
+	.schedule-day-short {
+		display: inline;
+		opacity: 0.65;
+	}
+
+	.schedule-filters {
+		gap: 10px;
+		margin: 0;
+	}
+
+	.schedule-layouts {
+		display: none;
+	}
+
+	/* Tracks drop the segmented rail and become a row of chips, one track at a time. */
+	.schedule-track-button[data-track=""] {
+		display: none;
+	}
+
+	.schedule-tracks {
+		flex-basis: 100%;
+		gap: 6px;
+		padding: 0;
+		border-radius: 0;
+		background: none;
+	}
+
+	.schedule[data-layout] .schedule-slots {
+		display: block;
+	}
+
+	.schedule[data-layout] .schedule-grid {
+		display: none;
+	}
+
+	/* The time zone switch becomes a single link to the other zone. */
+	.schedule-zones {
+		padding: 0;
+		background: none;
+	}
+
+	.schedule-zone-button[aria-pressed="true"],
+	.schedule-zone-label {
+		display: none;
+	}
+
+	.schedule-zone-button {
+		padding: 0;
+		color: var(--ink-strong);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+
+	.schedule-zone-action {
+		display: inline;
+	}
+
+	/* Breaks and other all-track items sit in a quiet tinted row. */
+	.schedule-slot[data-all-tracks] .schedule-card {
+		padding: 10px 12px;
+		border-radius: var(--radius);
+		background: var(--surface-raised);
 	}
 }

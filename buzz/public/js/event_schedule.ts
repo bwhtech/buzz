@@ -69,6 +69,7 @@ export class EventSchedule extends HTMLElement {
 		this.querySelectorAll("[data-controls]").forEach((controls) =>
 			controls.removeAttribute("hidden"),
 		)
+		this.track = this.defaultTrack()
 		this.setUpTimeZones()
 		this.replaceBrokenAvatars()
 		this.addEventListener("scroll", () => this.markScrollableRows(), true)
@@ -134,6 +135,15 @@ export class EventSchedule extends HTMLElement {
 		})
 	}
 
+	// Phones have no "All tracks" chip, so they start on the first track.
+	private defaultTrack() {
+		if (!window.matchMedia("(max-width: 720px)").matches) return ""
+		return (
+			this.querySelector<HTMLElement>(".schedule-track-button[data-track]:not([data-track=''])")
+				?.dataset.track ?? ""
+		)
+	}
+
 	private setLayout(layout: string) {
 		this.layout = layout
 		const url = new URL(window.location.href)
@@ -162,7 +172,7 @@ export class EventSchedule extends HTMLElement {
 	}
 
 	private clearFilters() {
-		this.track = ""
+		this.track = this.defaultTrack()
 		this.query = ""
 		const search = this.querySelector<HTMLInputElement>(".schedule-search")
 		if (search) search.value = ""
