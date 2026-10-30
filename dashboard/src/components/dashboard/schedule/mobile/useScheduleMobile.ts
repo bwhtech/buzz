@@ -8,6 +8,7 @@ export type MobileView = "list" | "track" | "grid"
 export type MobileSheet =
 	| { type: "add"; start: number; track: string | null }
 	| { type: "edit"; key: string }
+	| { type: "tracks" }
 
 export const ALL_TRACKS = "all"
 const DEFAULT_DURATION = 30
@@ -39,6 +40,7 @@ export function useScheduleMobile() {
 	}
 
 	const openEdit = (key: string) => (sheet.value = { type: "edit", key })
+	const openTracks = () => (sheet.value = { type: "tracks" })
 	const closeSheet = () => (sheet.value = null)
 
 	function addTrack() {
@@ -61,6 +63,7 @@ export function useScheduleMobile() {
 		unscheduledTalks,
 		openAdd,
 		openEdit,
+		openTracks,
 		closeSheet,
 		addTrack,
 	}

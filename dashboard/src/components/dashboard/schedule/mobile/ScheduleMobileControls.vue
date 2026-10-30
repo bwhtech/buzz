@@ -94,6 +94,14 @@ function pickTrack(name: string) {
 			>
 				<span class="lucide-plus size-3.5" aria-hidden="true" />Track
 			</button>
+			<button
+				type="button"
+				class="flex h-[30px] shrink-0 items-center rounded-full border border-dashed border-outline-gray-3 px-2.5 text-ink-gray-6"
+				aria-label="Edit tracks"
+				@click="mobile.openTracks"
+			>
+				<span class="lucide-pencil size-3.5" aria-hidden="true" />
+			</button>
 		</div>
 	</div>
 </template>

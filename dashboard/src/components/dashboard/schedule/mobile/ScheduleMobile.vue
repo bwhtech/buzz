@@ -12,6 +12,7 @@ import ScheduleMobileControls from "./ScheduleMobileControls.vue"
 import ScheduleMobileEditSheet from "./ScheduleMobileEditSheet.vue"
 import ScheduleMobileGrid from "./ScheduleMobileGrid.vue"
 import ScheduleMobileHeader from "./ScheduleMobileHeader.vue"
+import ScheduleMobileTracksSheet from "./ScheduleMobileTracksSheet.vue"
 import { provideScheduleMobile, useScheduleMobile } from "./useScheduleMobile"
 
 defineProps<{ eventId: string }>()
@@ -50,5 +51,6 @@ const loadError = computed(
 		/>
 		<ScheduleMobileEditSheet />
 		<ScheduleMobileAddSheet />
+		<ScheduleMobileTracksSheet />
 	</div>
 </template>
