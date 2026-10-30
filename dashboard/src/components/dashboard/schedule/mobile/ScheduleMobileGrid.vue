@@ -94,7 +94,7 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 <template>
 	<div class="relative min-h-0 flex-1">
 		<div class="h-full overflow-auto overscroll-contain">
-			<div :style="{ minWidth: `${RAIL + (isGrid ? COLUMN * columns.length : 0)}px` }">
+			<div :style="{ minWidth: `${RAIL + (isGrid ? COLUMN * (columns.length + 1) : 0)}px` }">
 				<div
 					v-if="isGrid"
 					class="sticky top-0 z-[6] flex border-b border-outline-gray-1 bg-surface-base"
@@ -114,6 +114,14 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 							column.items.length || ""
 						}}</span>
 					</div>
+					<button
+						type="button"
+						class="box-border flex shrink-0 items-center gap-1.5 border-l border-outline-gray-1 p-2.5 text-p-xs font-medium text-ink-gray-6 active:bg-surface-gray-2"
+						:style="{ width: `${COLUMN}px` }"
+						@click="mobile.addRoom"
+					>
+						<span class="lucide-plus size-3.5" aria-hidden="true" />Add room
+					</button>
 				</div>
 				<div class="relative flex pb-40" :style="{ paddingTop: `${GRID_PADDING}px` }">
 					<div
