@@ -61,7 +61,12 @@ useEventListener(window, "keydown", (keydown: KeyboardEvent) => {
 			<span class="text-ink-gray-4" aria-hidden="true">/</span>
 			<span class="font-medium text-ink-gray-9">Schedule</span>
 		</div>
-		<Badge :label="published ? 'Live' : 'Draft'" :theme="published ? 'green' : 'gray'" />
+		<Badge v-if="published" label="Live" theme="gray" variant="ghost">
+			<template #prefix
+				><span class="size-1.5 rounded-full bg-surface-green-6" aria-hidden="true"
+			/></template>
+		</Badge>
+		<Badge v-else label="Draft" theme="gray" variant="subtle" />
 		<div class="min-w-0 flex-1" />
 		<div
 			v-if="conflicts"
