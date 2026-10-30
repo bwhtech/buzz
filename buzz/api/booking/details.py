@@ -29,8 +29,9 @@ TICKET_FIELDS = [
 def ensure_confirmation_access(booking_id: str, token: str | None) -> None:
 	"""A guest holds the booking's token; a signed-in user needs read permission."""
 	# nosemgrep: unchecked-frappe-permission-call -- return value checked below
-	authorized = verify_booking_access_token(booking_id, token) or frappe.has_permission(
-		"Event Booking", "read", doc=booking_id
+	authorized = verify_booking_access_token(booking_id, token) or (
+		frappe.db.exists("Event Booking", booking_id)
+		and frappe.has_permission("Event Booking", "read", doc=booking_id)
 	)
 	if not authorized:
 		frappe.throw(_("You are not allowed to view this booking."), frappe.PermissionError)

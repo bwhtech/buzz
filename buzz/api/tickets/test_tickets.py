@@ -12,6 +12,8 @@ from buzz.api.tickets import (
 )
 from buzz.api.tickets.exceptions import (
 	AddOnChangeWindowClosed,
+	AddOnNotPermitted,
+	AddOnOptionInvalid,
 	AddOnValueNotFound,
 	CancellationAlreadyRequested,
 	CancellationNotPermitted,
@@ -130,6 +132,14 @@ class TestTransferTicket(TicketTestCase):
 			frappe.db.get_value("Event Ticket", ticket.name, "attendee_email"), "new-owner@example.com"
 		)
 
+	def test_malformed_new_email_is_refused(self):
+		ticket = self.make_ticket()
+
+		with self.set_user(ATTENDEE), self.assertRaises(frappe.ValidationError):
+			transfer_ticket(ticket.name, "New", "Owner", "not-an-email")
+
+		self.assertEqual(frappe.db.get_value("Event Ticket", ticket.name, "attendee_email"), ATTENDEE)
+
 	def test_unknown_ticket(self):
 		with self.assertRaises(TicketNotFound):
 			transfer_ticket("not-a-ticket", "New", "Owner", "new-owner@example.com")
@@ -160,9 +170,24 @@ class TestChangeAddOnPreference(TicketTestCase):
 	def test_changes_the_stored_value(self):
 		add_on_value = self.make_ticket_with_add_on().add_ons[0].name
 
-		change_add_on_preference(add_on_value, "Non-veg")
+		with self.set_user(ATTENDEE):
+			change_add_on_preference(add_on_value, "Non-veg")
 
 		self.assertEqual(frappe.db.get_value("Ticket Add-on Value", add_on_value, "value"), "Non-veg")
+
+	def test_an_unrelated_user_cannot_change_the_value(self):
+		add_on_value = self.make_ticket_with_add_on().add_ons[0].name
+
+		with self.set_user(OTHER_USER), self.assertRaises(AddOnNotPermitted):
+			change_add_on_preference(add_on_value, "Non-veg")
+
+		self.assertEqual(frappe.db.get_value("Ticket Add-on Value", add_on_value, "value"), "Veg")
+
+	def test_a_value_outside_the_options_is_refused(self):
+		add_on_value = self.make_ticket_with_add_on().add_ons[0].name
+
+		with self.set_user(ATTENDEE), self.assertRaises(AddOnOptionInvalid):
+			change_add_on_preference(add_on_value, "Pizza")
 
 	def test_unknown_add_on_value(self):
 		with self.assertRaises(AddOnValueNotFound):
@@ -172,7 +197,7 @@ class TestChangeAddOnPreference(TicketTestCase):
 		add_on_value = self.make_ticket_with_add_on().add_ons[0].name
 		self.set_event_start(2)
 
-		with self.assertRaises(AddOnChangeWindowClosed):
+		with self.set_user(ATTENDEE), self.assertRaises(AddOnChangeWindowClosed):
 			change_add_on_preference(add_on_value, "Non-veg")
 
 	def test_details_carry_the_selectable_options(self):

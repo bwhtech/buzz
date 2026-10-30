@@ -68,9 +68,6 @@ def access_code_status(access_code: str | None, coupon: BuzzCouponCode | None) -
 
 
 def get_event_details(event_doc: "BuzzEvent"):
-	if frappe.session.user != "Guest":
-		return {**event_doc.as_dict(), "venue_name": event_doc.get_venue_name()}
-
 	return {
 		"name": event_doc.name,
 		"title": event_doc.title,

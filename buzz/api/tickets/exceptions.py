@@ -13,6 +13,15 @@ class AddOnValueNotFound(ResourceNotFound):
 	message = _lt("Add-on value not found.")
 
 
+class AddOnNotPermitted(NotPermitted):
+	message = _lt("You are not permitted to change this add-on.")
+
+
+class AddOnOptionInvalid(BuzzAPIError):
+	title = _lt("Invalid Option")
+	message = _lt("That is not one of the options for this add-on.")
+
+
 class TicketNotAccessible(NotPermitted):
 	message = _lt("You are not permitted to view this ticket.")
 
