@@ -11,7 +11,7 @@ const props = defineProps<{ item: ScheduleItem }>()
 const builder = useBuilder()
 const board = useBoard()
 
-const resolved = computed(() => builder.resolve(props.item))
+const details = computed(() => builder.itemDetails(props.item))
 const conflict = computed(
 	() => builder.conflicts(builder.dayItems(props.item.date))[props.item.key],
 )
@@ -69,20 +69,17 @@ function duplicate() {
 		</div>
 		<div class="flex flex-1 flex-col gap-4 overflow-auto p-4">
 			<div class="flex flex-wrap gap-1.5">
-				<Badge
-					:label="resolved.type?.title ?? item.type"
-					:theme="badgeTheme(resolved.type?.color)"
-				/>
+				<Badge :label="details.type?.title ?? item.type" :theme="badgeTheme(details.type?.color)" />
 				<Badge v-if="isTalk" label="Accepted" theme="green" variant="outline" />
 			</div>
 			<div v-if="isTalk" class="flex flex-col gap-2.5">
 				<div
 					class="text-[17px] font-semibold leading-snug text-ink-gray-9 [overflow-wrap:anywhere]"
 				>
-					{{ resolved.title }}
+					{{ details.title }}
 				</div>
 				<div
-					v-for="name in resolved.speakers"
+					v-for="name in details.speakers"
 					:key="name"
 					class="flex items-center gap-2 text-p-sm text-ink-gray-7"
 				>

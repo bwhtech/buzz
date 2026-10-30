@@ -39,13 +39,13 @@ const VIEW_OPTIONS = [
 	{ label: "Calendar", value: "calendar", iconLeft: "lucide-columns-3" },
 	{ label: "Timeline", value: "timeline", iconLeft: "lucide-chart-gantt" },
 ]
-const BOARDS = {
+const VIEW_COMPONENTS = {
 	calendar: ScheduleCalendar,
 	timeline: ScheduleTimeline,
 }
 
 const loadError = computed(
-	() => (builder.schedule.error ?? builder.opener.error) as FrappeError | null,
+	() => (builder.schedule.error ?? builder.openCall.error) as FrappeError | null,
 )
 const hasRooms = computed(() => builder.rooms.rooms.value.length > 0)
 const dayIsEmpty = computed(
@@ -53,7 +53,7 @@ const dayIsEmpty = computed(
 		hasRooms.value &&
 		!builder.dayItems(builder.activeDate.value).length &&
 		!board.dragging.value &&
-		!board.quick.value,
+		!board.quickAdd.value,
 )
 
 function openCustom() {
@@ -87,7 +87,7 @@ useEventListener(window, "beforeunload", (e) => builder.dirty.value && e.prevent
 			</div>
 			<div class="relative flex min-h-0 flex-1">
 				<div class="relative flex min-w-0 flex-1 flex-col">
-					<component :is="BOARDS[view]" :time-zone="event.doc?.time_zone_label" />
+					<component :is="VIEW_COMPONENTS[view]" :time-zone="event.doc?.time_zone_label" />
 					<div
 						v-if="dayIsEmpty"
 						class="pointer-events-none absolute left-1/2 top-24 z-[9] flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-outline-gray-2 bg-surface-base px-3.5 py-2 text-p-sm text-ink-gray-7 shadow-md"

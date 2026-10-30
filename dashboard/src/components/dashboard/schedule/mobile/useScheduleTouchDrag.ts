@@ -33,10 +33,10 @@ const STEP_MINUTES = 5
 const EDGE_PX = 56
 const SIDEWAYS_PX = 24
 const MAX_SCROLL_PX = 14
-const stepped = (minutes: number) => Math.round(minutes / STEP_MINUTES) * STEP_MINUTES
+const roundToStep = (minutes: number) => Math.round(minutes / STEP_MINUTES) * STEP_MINUTES
 
 /** Scroll speed for a pointer near either end of the visible band; 0 in the middle. */
-function edgeSpeed(pointer: number, near: number, far: number) {
+function edgeScrollSpeed(pointer: number, near: number, far: number) {
 	if (pointer < near + EDGE_PX)
 		return -Math.min(1, (near + EDGE_PX - pointer) / EDGE_PX) * MAX_SCROLL_PX
 	if (pointer > far - EDGE_PX)
@@ -94,12 +94,12 @@ export function useScheduleTouchDrag(
 		gesture.last = { x: event.clientX, y: event.clientY }
 		gesture.moved = true
 		event.preventDefault()
-		follow()
+		updatePosition()
 		if (!frame) frame = requestAnimationFrame(autoScroll)
 	}
 
 	// The drag distance includes what the list scrolled since the press.
-	function follow() {
+	function updatePosition() {
 		if (!gesture) return
 		const box = scroller.value
 		const dx =
@@ -109,13 +109,13 @@ export function useScheduleTouchDrag(
 			offset.value = { x: 0, y: dy }
 			return void (position.value = resizedBy(dy))
 		}
-		const { x, y } = withinDay(dx, dy)
+		const { x, y } = clampToDay(dx, dy)
 		offset.value = { x, y }
 		position.value = movedBy(x, y)
 	}
 
 	// A block dragged past the day would stretch the scroll area and keep it scrolling.
-	function withinDay(dx: number, dy: number): Point {
+	function clampToDay(dx: number, dy: number): Point {
 		const { item } = gesture!
 		const { start: first, end } = board.range.value
 		const y = Math.max(
@@ -130,34 +130,34 @@ export function useScheduleTouchDrag(
 	}
 
 	// The grip sits at a block's right edge, so only a finger dragged sideways scrolls sideways.
-	const leaningSideways = () => Math.abs(offset.value.x) > SIDEWAYS_PX
+	const isDraggingSideways = () => Math.abs(offset.value.x) > SIDEWAYS_PX
 
 	function autoScroll() {
 		frame = 0
 		const box = scroller.value
 		if (!gesture || !box) return
 		const rect = box.getBoundingClientRect()
-		const left = leaningSideways()
-			? edgeSpeed(gesture.last.x, rect.left + insets.value.left, rect.right)
+		const left = isDraggingSideways()
+			? edgeScrollSpeed(gesture.last.x, rect.left + insets.value.left, rect.right)
 			: 0
-		const top = edgeSpeed(gesture.last.y, rect.top + insets.value.top, rect.bottom)
+		const top = edgeScrollSpeed(gesture.last.y, rect.top + insets.value.top, rect.bottom)
 		if (!left && !top) return
 		box.scrollBy({ left: gesture.mode === "resize" ? 0 : left, top })
-		follow()
+		updatePosition()
 		frame = requestAnimationFrame(autoScroll)
 	}
 
 	function resizedBy(dy: number): DragPosition {
 		const { item } = gesture!
 		const longest = board.range.value.end - item.start
-		const duration = stepped(item.duration + dy / pixelsPerMinute)
+		const duration = roundToStep(item.duration + dy / pixelsPerMinute)
 		return { ...item, duration: Math.max(MIN_DURATION, Math.min(longest, duration)) }
 	}
 
 	function movedBy(dx: number, dy: number): DragPosition {
 		const { item } = gesture!
 		const { start: first, end } = board.range.value
-		const start = stepped(item.start + dy / pixelsPerMinute)
+		const start = roundToStep(item.start + dy / pixelsPerMinute)
 		return {
 			...item,
 			start: Math.max(first, Math.min(end - item.duration, start)),

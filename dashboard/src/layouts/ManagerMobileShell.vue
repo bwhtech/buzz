@@ -26,7 +26,7 @@ const route = useRoute()
 // A route can drop the nav while one of its params is set, as a full-screen sub-page,
 // and a builder drops it for good.
 const showNav = computed(() => {
-	if (route.meta.takeover) return false
+	if (route.meta.fullScreen) return false
 	const param = route.meta.hideMobileNavWith as string | undefined
 	return !(param && route.params[param])
 })

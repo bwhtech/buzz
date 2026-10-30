@@ -2,8 +2,8 @@
 import { useElementSize } from "@vueuse/core"
 import { computed, ref } from "vue"
 
-import ScheduleGhost from "../ScheduleGhost.vue"
 import { hourLabel, lanesOf, SNAP_MINUTES } from "../scheduleLayout"
+import SchedulePlaceholder from "../SchedulePlaceholder.vue"
 import type { ScheduleItem } from "../scheduleTypes"
 import { useDayLayout } from "../useDayLayout"
 import ScheduleMobileBlock from "./ScheduleMobileBlock.vue"
@@ -11,13 +11,13 @@ import { useMobile } from "./useScheduleMobile"
 import { useScheduleTouchDrag } from "./useScheduleTouchDrag"
 
 const PIXELS_PER_MINUTE = 1.5
-const RAIL = 48
+const TIME_COLUMN_WIDTH = 48
 const COLUMN_PEEK = 28
 const MIN_COLUMN = 180
 const HEADER_HEIGHT = 40
 const MIN_BLOCK = 14
 const GRID_PADDING = 10
-const GHOST_MINUTES = 30
+const PLACEHOLDER_MINUTES = 30
 
 const { builder, board, rooms, dayItems, conflicts } = useDayLayout()
 const mobile = useMobile()
@@ -25,9 +25,11 @@ const isGrid = computed(() => mobile.view.value === "grid")
 const scroller = ref<HTMLElement | null>(null)
 const { width: viewport } = useElementSize(scroller)
 // One column fills the screen next to the rail, with a sliver of the next one showing.
-const COLUMN = computed(() => Math.max(MIN_COLUMN, viewport.value - RAIL - COLUMN_PEEK))
-const columnWidth = computed(() => (isGrid.value ? COLUMN.value : null))
-const insets = computed(() => ({ top: isGrid.value ? HEADER_HEIGHT : 0, left: RAIL }))
+const fullColumnWidth = computed(() =>
+	Math.max(MIN_COLUMN, viewport.value - TIME_COLUMN_WIDTH - COLUMN_PEEK),
+)
+const columnWidth = computed(() => (isGrid.value ? fullColumnWidth.value : null))
+const insets = computed(() => ({ top: isGrid.value ? HEADER_HEIGHT : 0, left: TIME_COLUMN_WIDTH }))
 const touch = useScheduleTouchDrag(PIXELS_PER_MINUTE, columnWidth, scroller, insets)
 
 const range = board.range
@@ -37,7 +39,7 @@ const hours = board.hours
 const shownRooms = computed(() =>
 	isGrid.value ? rooms.value : rooms.value.filter((room) => room.name === mobile.activeRoom.value),
 )
-// A move follows the finger and shows a ghost at its landing spot; only a resize reshapes the block.
+// A move follows the finger and shows a placeholder at its landing spot; only a resize reshapes the block.
 const resizing = computed(() => (touch.moving.value ? null : touch.position.value))
 const displayed = computed(() =>
 	dayItems.value.map((item) =>
@@ -73,23 +75,23 @@ function tapSlot(event: MouseEvent, room: string) {
 	mobile.openAdd(Math.min(start, range.value.end - SNAP_MINUTES), room)
 }
 
-const ghostStyle = (start: number, minutes = GHOST_MINUTES) => ({
+const placeholderStyle = (start: number, minutes = PLACEHOLDER_MINUTES) => ({
 	top: `${top(start)}px`,
 	height: `${minutes * PIXELS_PER_MINUTE - 2}px`,
 })
 
 const sheet = mobile.sheet
-function ghostFor(room: string) {
-	const landing = touch.moving.value
-	if (landing)
-		return !landing.room || landing.room === room
-			? ghostAt(room, landing.start, landing.duration)
+function placeholderFor(room: string) {
+	const landingPosition = touch.moving.value
+	if (landingPosition)
+		return !landingPosition.room || landingPosition.room === room
+			? placeholderAt(room, landingPosition.start, landingPosition.duration)
 			: null
 	return sheet.value?.type === "add" && sheet.value.room === room
-		? ghostAt(room, sheet.value.start, GHOST_MINUTES)
+		? placeholderAt(room, sheet.value.start, PLACEHOLDER_MINUTES)
 		: null
 }
-const ghostAt = (room: string, start: number, duration: number) => ({
+const placeholderAt = (room: string, start: number, duration: number) => ({
 	room,
 	start,
 	duration,
@@ -110,20 +112,24 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 			class="h-full scroll-pl-[48px] overflow-auto overscroll-contain"
 			:class="isGrid && !touch.position.value && 'snap-x snap-mandatory'"
 		>
-			<div :style="{ minWidth: `${RAIL + (isGrid ? COLUMN * (columns.length + 1) : 0)}px` }">
+			<div
+				:style="{
+					minWidth: `${TIME_COLUMN_WIDTH + (isGrid ? fullColumnWidth * (columns.length + 1) : 0)}px`,
+				}"
+			>
 				<div
 					v-if="isGrid"
 					class="sticky top-0 z-[6] flex border-b border-outline-gray-1 bg-surface-base"
 				>
 					<div
 						class="sticky left-0 z-[1] shrink-0 bg-surface-base"
-						:style="{ width: `${RAIL}px` }"
+						:style="{ width: `${TIME_COLUMN_WIDTH}px` }"
 					/>
 					<div
 						v-for="column in columns"
 						:key="column.room.name"
 						class="box-border flex min-w-0 shrink-0 snap-start gap-1.5 border-l border-outline-gray-1 p-2.5 text-p-xs font-semibold text-ink-gray-8"
-						:style="{ width: `${COLUMN}px` }"
+						:style="{ width: `${fullColumnWidth}px` }"
 					>
 						<span class="truncate">{{ column.room.title }}</span>
 						<span class="shrink-0 font-normal text-ink-gray-5">{{
@@ -133,7 +139,7 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 					<button
 						type="button"
 						class="box-border flex shrink-0 snap-start items-center gap-1.5 border-l border-outline-gray-1 p-2.5 text-p-xs font-medium text-ink-gray-6 active:bg-surface-gray-2"
-						:style="{ width: `${COLUMN}px` }"
+						:style="{ width: `${fullColumnWidth}px` }"
 						@click="mobile.addRoom"
 					>
 						<span class="lucide-plus size-3.5" aria-hidden="true" />Add track
@@ -142,7 +148,7 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 				<div class="relative flex pb-40" :style="{ paddingTop: `${GRID_PADDING}px` }">
 					<div
 						class="sticky left-0 z-[4] shrink-0 bg-surface-base"
-						:style="{ width: `${RAIL}px`, height: `${height}px` }"
+						:style="{ width: `${TIME_COLUMN_WIDTH}px`, height: `${height}px` }"
 					>
 						<span
 							v-for="minute in hours"
@@ -159,17 +165,20 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 						:class="isGrid ? 'shrink-0' : 'min-w-0 flex-1'"
 						:style="{
 							height: `${height}px`,
-							width: isGrid ? `${COLUMN}px` : undefined,
+							width: isGrid ? `${fullColumnWidth}px` : undefined,
 							backgroundImage: gridLines,
 						}"
 						@click="tapSlot($event, column.room.name)"
 					>
-						<ScheduleGhost
-							v-if="ghostFor(column.room.name)"
+						<SchedulePlaceholder
+							v-if="placeholderFor(column.room.name)"
 							class="inset-x-[3px]"
-							:ghost="ghostFor(column.room.name)!"
+							:placeholder="placeholderFor(column.room.name)!"
 							:style="
-								ghostStyle(ghostFor(column.room.name)!.start, ghostFor(column.room.name)!.duration)
+								placeholderStyle(
+									placeholderFor(column.room.name)!.start,
+									placeholderFor(column.room.name)!.duration,
+								)
 							"
 						/>
 						<ScheduleMobileBlock
@@ -180,7 +189,7 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 							:conflict="conflicts[entry.item.key]"
 							:dragging="touch.position.value?.key === entry.item.key"
 							:offset="touch.moving.value?.key === entry.item.key ? touch.offset.value : null"
-							:landing-start="
+							:landingPosition-start="
 								touch.moving.value?.key === entry.item.key ? touch.moving.value.start : undefined
 							"
 							:style="blockStyle(entry.item, entry.lane, entry.lanes)"

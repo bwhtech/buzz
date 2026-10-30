@@ -47,7 +47,7 @@ export function useScheduleMobile() {
 			.add(title)
 			.then(() => {
 				chosenRoom.value = rooms.value.at(-1)?.name ?? null
-				builder.say(`Added ${title}`)
+				builder.showToast(`Added ${title}`)
 			})
 			.catch(() => toast.error("Could not add the track"))
 	}

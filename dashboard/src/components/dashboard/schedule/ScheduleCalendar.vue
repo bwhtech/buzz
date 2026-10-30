@@ -3,28 +3,28 @@ import { computed } from "vue"
 
 import ScheduleAddRoom from "./ScheduleAddRoom.vue"
 import ScheduleBlock from "./ScheduleBlock.vue"
-import ScheduleGhost from "./ScheduleGhost.vue"
-import { ZOOM, hourLabel } from "./scheduleLayout"
+import { HOUR_HEIGHT, hourLabel } from "./scheduleLayout"
+import SchedulePlaceholder from "./SchedulePlaceholder.vue"
 import ScheduleRoomHeader from "./ScheduleRoomHeader.vue"
 import { useDayLayout } from "./useDayLayout"
 import { pixelsPerMinute } from "./useScheduleBoard"
 
 defineProps<{ timeZone?: string | null }>()
 
-const GUTTER = 64
+const TIME_COLUMN_WIDTH = 64
 const ROOM_WIDTH = 220
-const SIDE = 184
-const pxm = pixelsPerMinute("y")
+const SIDE_COLUMN_WIDTH = 184
+const minuteHeight = pixelsPerMinute("y")
 const { board, rooms, roomIndex, visible, conflicts, lanes, countIn } = useDayLayout()
 
 const count = computed(() => Math.max(rooms.value.length, 1))
 const range = board.range
-const height = computed(() => ((range.value.end - range.value.start) / 60) * ZOOM)
+const height = computed(() => ((range.value.end - range.value.start) / 60) * HOUR_HEIGHT)
 const hours = board.hours
 
 function boxOf(item: (typeof visible.value)[number]) {
-	const top = (item.start - range.value.start) * pxm
-	const length = item.duration * pxm
+	const top = (item.start - range.value.start) * minuteHeight
+	const length = item.duration * minuteHeight
 	const span = !item.room
 	const place = lanes.value[item.key] ?? { lane: 0, lanes: 1 }
 	const column = roomIndex.value[item.room ?? ""] ?? 0
@@ -43,8 +43,8 @@ function boxOf(item: (typeof visible.value)[number]) {
 	}
 }
 
-const ghost = computed(() => {
-	const current = board.ghost.value
+const placeholder = computed(() => {
+	const current = board.placeholder.value
 	if (!current || current.axis !== "y") return null
 	if (!current.span && roomIndex.value[current.room ?? ""] === undefined && current.room)
 		return null
@@ -57,8 +57,8 @@ const ghost = computed(() => {
 	return {
 		current,
 		style: {
-			top: `${(current.start - range.value.start) * pxm + 1}px`,
-			height: `${Math.max(current.duration * pxm - 2, 18)}px`,
+			top: `${(current.start - range.value.start) * minuteHeight + 1}px`,
+			height: `${Math.max(current.duration * minuteHeight - 2, 18)}px`,
 			left,
 			width,
 		},
@@ -68,11 +68,16 @@ const ghost = computed(() => {
 
 <template>
 	<div class="relative h-full overflow-auto">
-		<div class="relative" :style="{ minWidth: `${GUTTER + rooms.length * ROOM_WIDTH + SIDE}px` }">
+		<div
+			class="relative"
+			:style="{
+				minWidth: `${TIME_COLUMN_WIDTH + rooms.length * ROOM_WIDTH + SIDE_COLUMN_WIDTH}px`,
+			}"
+		>
 			<div class="sticky top-0 z-[8] flex border-b border-outline-gray-1 bg-surface-base">
 				<div
 					class="sticky left-0 z-[2] flex shrink-0 items-end justify-end bg-surface-base px-2.5 pb-2 text-[11px] text-ink-gray-4"
-					:style="{ width: `${GUTTER}px` }"
+					:style="{ width: `${TIME_COLUMN_WIDTH}px` }"
 				>
 					{{ timeZone }}
 				</div>
@@ -89,7 +94,7 @@ const ghost = computed(() => {
 				</div>
 				<div
 					class="flex shrink-0 items-center border-l border-outline-gray-1 p-2"
-					:style="{ width: `${SIDE}px` }"
+					:style="{ width: `${SIDE_COLUMN_WIDTH}px` }"
 				>
 					<ScheduleAddRoom />
 				</div>
@@ -97,13 +102,13 @@ const ghost = computed(() => {
 			<div class="relative flex">
 				<div
 					class="sticky left-0 z-[6] shrink-0 bg-surface-base"
-					:style="{ width: `${GUTTER}px`, height: `${height}px` }"
+					:style="{ width: `${TIME_COLUMN_WIDTH}px`, height: `${height}px` }"
 				>
 					<span
 						v-for="minute in hours"
 						:key="minute"
 						class="absolute right-2.5 whitespace-nowrap text-[11px] tabular-nums text-ink-gray-5"
-						:style="{ top: `${Math.max(((minute - range.start) / 60) * ZOOM - 7, 2)}px` }"
+						:style="{ top: `${Math.max(((minute - range.start) / 60) * HOUR_HEIGHT - 7, 2)}px` }"
 					>
 						{{ hourLabel(minute) }}
 					</span>
@@ -112,11 +117,11 @@ const ghost = computed(() => {
 					<template v-for="minute in hours.slice(0, -1)" :key="minute">
 						<div
 							class="absolute inset-x-0 border-t border-outline-gray-1"
-							:style="{ top: `${((minute - range.start) / 60) * ZOOM}px` }"
+							:style="{ top: `${((minute - range.start) / 60) * HOUR_HEIGHT}px` }"
 						/>
 						<div
 							class="absolute inset-x-0 border-t border-dashed border-outline-gray-1"
-							:style="{ top: `${((minute - range.start) / 60) * ZOOM + ZOOM / 2}px` }"
+							:style="{ top: `${((minute - range.start) / 60) * HOUR_HEIGHT + HOUR_HEIGHT / 2}px` }"
 						/>
 					</template>
 					<div class="absolute inset-0 flex">
@@ -130,7 +135,11 @@ const ghost = computed(() => {
 						/>
 					</div>
 					<div class="pointer-events-none absolute inset-0">
-						<ScheduleGhost v-if="ghost" :ghost="ghost.current" :style="ghost.style" />
+						<SchedulePlaceholder
+							v-if="placeholder"
+							:placeholder="placeholder.current"
+							:style="placeholder.style"
+						/>
 						<ScheduleBlock
 							v-for="item in visible"
 							:key="item.key"
@@ -146,7 +155,7 @@ const ghost = computed(() => {
 				</div>
 				<div
 					class="shrink-0 border-l border-outline-gray-1 bg-surface-gray-1"
-					:style="{ width: `${SIDE}px` }"
+					:style="{ width: `${SIDE_COLUMN_WIDTH}px` }"
 				/>
 			</div>
 		</div>

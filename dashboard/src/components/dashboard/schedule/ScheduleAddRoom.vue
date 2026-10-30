@@ -20,7 +20,7 @@ async function submit() {
 	board.roomDraft.value = ""
 	await builder.rooms
 		.add(title)
-		.then(() => builder.say(`Added ${title}`))
+		.then(() => builder.showToast(`Added ${title}`))
 		.catch(() => toast.error("Could not add the track"))
 }
 </script>

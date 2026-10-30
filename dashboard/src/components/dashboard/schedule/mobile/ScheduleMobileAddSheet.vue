@@ -18,21 +18,21 @@ const tab = ref<"talks" | "custom">("talks")
 const search = ref("")
 
 // The last add sheet outlives the sheet, so its content stays put while it slides out.
-const last = ref<AddSheet | null>(null)
+const lastAddSheet = ref<AddSheet | null>(null)
 watch(
 	mobile.sheet,
 	(sheet) => {
 		if (sheet?.type !== "add") return
-		last.value = sheet
+		lastAddSheet.value = sheet
 		search.value = ""
 	},
 	{ immediate: true },
 )
 const open = computed(() => mobile.sheet.value?.type === "add")
-const add = computed(() => last.value)
+const add = computed(() => lastAddSheet.value)
 
 const range = computed(() => builder.rangeOf(builder.activeDate.value))
-const where = computed(
+const sheetSubtitle = computed(
 	() =>
 		`${builder.activeDay.value?.label} · ${dayjs(builder.activeDate.value).format("ddd D MMM")}`,
 )
@@ -85,7 +85,7 @@ function place(kind: "talk" | "type", id: string) {
 				<div class="flex items-center gap-2">
 					<div class="min-w-0 flex-1">
 						<div class="text-lg font-semibold text-ink-gray-9">Add session</div>
-						<div class="truncate text-p-sm text-ink-gray-5">{{ where }}</div>
+						<div class="truncate text-p-sm text-ink-gray-5">{{ sheetSubtitle }}</div>
 					</div>
 					<Button
 						variant="outline"

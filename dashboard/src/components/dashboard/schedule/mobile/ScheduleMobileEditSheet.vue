@@ -10,7 +10,7 @@ import ScheduleMobileChip from "./ScheduleMobileChip.vue"
 import { useMobile } from "./useScheduleMobile"
 
 const DURATIONS = [5, 10, 15, 20, 30, 45, 60, 90, 120]
-const NUDGE_MINUTES = 5
+const SHIFT_MINUTES = 5
 const builder = useBuilder()
 const mobile = useMobile()
 
@@ -21,7 +21,7 @@ watch(mobile.sheet, (sheet) => sheet?.type === "edit" && (key.value = sheet.key)
 })
 const open = computed(() => mobile.sheet.value?.type === "edit")
 const item = computed(() => builder.items.value.find((entry) => entry.key === key.value))
-const resolved = computed(() => (item.value ? builder.resolve(item.value) : null))
+const details = computed(() => (item.value ? builder.itemDetails(item.value) : null))
 const isTalk = computed(() => !!item.value?.talk)
 const conflict = computed(() =>
 	item.value ? builder.conflicts(builder.dayItems(item.value.date))[item.value.key] : "",
@@ -40,7 +40,7 @@ function change(patch: Partial<ScheduleItem>) {
 	if (item.value) builder.update(item.value.key, patch)
 }
 
-function nudge(minutes: number) {
+function shiftStart(minutes: number) {
 	if (!item.value) return
 	const latest = range.value.end - item.value.duration
 	change({ start: Math.max(range.value.start, Math.min(latest, item.value.start + minutes)) })
@@ -60,12 +60,12 @@ function remove() {
 
 <template>
 	<BottomSheet :open="open" @update:open="(value) => !value && mobile.closeSheet()">
-		<div v-if="item && resolved" class="flex flex-col">
+		<div v-if="item && details" class="flex flex-col">
 			<div class="px-5 pt-2">
 				<div class="mb-2.5 flex items-center gap-1.5">
 					<Badge
-						:theme="badgeTheme(resolved.type?.color)"
-						:label="resolved.type?.title ?? item.type"
+						:theme="badgeTheme(details.type?.color)"
+						:label="details.type?.title ?? item.type"
 					/>
 					<Badge v-if="conflict" theme="red" :label="conflict" />
 				</div>
@@ -73,7 +73,7 @@ function remove() {
 					v-if="isTalk"
 					class="text-xl font-semibold leading-snug text-ink-gray-9 [overflow-wrap:anywhere]"
 				>
-					{{ resolved.title }}
+					{{ details.title }}
 				</div>
 				<input
 					v-else
@@ -84,10 +84,10 @@ function remove() {
 					@input="builder.retitle(item.key, ($event.target as HTMLInputElement).value)"
 				/>
 				<div
-					v-if="resolved.speakers.length"
+					v-if="details.speakers.length"
 					class="mt-1 text-p-base text-ink-gray-5 [overflow-wrap:anywhere]"
 				>
-					{{ resolved.speakers.join(", ") }}
+					{{ details.speakers.join(", ") }}
 				</div>
 
 				<div class="mt-4 flex flex-col border-t border-outline-gray-1">
@@ -110,7 +110,7 @@ function remove() {
 								variant="outline"
 								icon="lucide-minus"
 								label="5 minutes earlier"
-								@click="nudge(-NUDGE_MINUTES)"
+								@click="shiftStart(-SHIFT_MINUTES)"
 							/>
 							<div class="flex-1 text-center text-base font-semibold tabular-nums text-ink-gray-9">
 								{{ timeRange(item) }}
@@ -119,7 +119,7 @@ function remove() {
 								variant="outline"
 								icon="lucide-plus"
 								label="5 minutes later"
-								@click="nudge(NUDGE_MINUTES)"
+								@click="shiftStart(SHIFT_MINUTES)"
 							/>
 						</div>
 					</div>

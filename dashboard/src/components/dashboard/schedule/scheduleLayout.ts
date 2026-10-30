@@ -3,7 +3,7 @@ import type { ScheduleItem, ScheduleTalk } from "./scheduleTypes"
 export const SNAP_MINUTES = 15
 export const MIN_DURATION = 5
 export const DEFAULT_START = 9 * 60
-export const ZOOM = 112
+export const HOUR_HEIGHT = 112
 export const TIMELINE_RATIO = 1.6
 export const ROW_HEIGHT = 84
 export const DURATIONS = [5, 10, 15, 20, 25, 30, 40, 45, 60, 75, 90, 120, 150, 180]
@@ -100,19 +100,27 @@ export function conflictsOf(
 	context: ConflictContext,
 ): Record<string, string> {
 	const result: Record<string, string> = {}
-	const note = (item: ScheduleItem, message: string) => (result[item.key] ??= message)
+	const addConflict = (item: ScheduleItem, message: string) => (result[item.key] ??= message)
 	items.forEach((a, index) => {
 		for (const b of items.slice(index + 1)) {
 			if (!overlaps(a, b)) continue
 			if (a.room === b.room || !a.room || !b.room) {
-				note(a, `Overlaps “${titleOf(b, context)}”`)
-				note(b, `Overlaps “${titleOf(a, context)}”`)
+				addConflict(a, `Overlaps “${titleOf(b, context)}”`)
+				addConflict(b, `Overlaps “${titleOf(a, context)}”`)
 				continue
 			}
-			const shared = speakersOf(a, context).find((name) => speakersOf(b, context).includes(name))
-			if (!shared) continue
-			note(a, `${shared} is also speaking in ${context.roomTitle(b.room)} at this time`)
-			note(b, `${shared} is also speaking in ${context.roomTitle(a.room)} at this time`)
+			const sharedSpeaker = speakersOf(a, context).find((name) =>
+				speakersOf(b, context).includes(name),
+			)
+			if (!sharedSpeaker) continue
+			addConflict(
+				a,
+				`${sharedSpeaker} is also speaking in ${context.roomTitle(b.room)} at this time`,
+			)
+			addConflict(
+				b,
+				`${sharedSpeaker} is also speaking in ${context.roomTitle(a.room)} at this time`,
+			)
 		}
 	})
 	return result

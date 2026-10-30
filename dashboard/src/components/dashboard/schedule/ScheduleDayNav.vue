@@ -38,7 +38,7 @@ function confirmRemove(day: ScheduleDay) {
 	if (window.confirm(message)) builder.removeDay(day.date)
 }
 
-function pick(date: string) {
+function selectDay(date: string) {
 	builder.activeDate.value = date
 	board.select(null)
 }
@@ -59,8 +59,8 @@ function pick(date: string) {
 							? 'border-outline-gray-2 bg-surface-base shadow-sm'
 							: 'border-transparent bg-surface-gray-2'
 				"
-				@click="pick(day.date)"
-				@keydown.enter="pick(day.date)"
+				@click="selectDay(day.date)"
+				@keydown.enter="selectDay(day.date)"
 				@dragover="board.dayOver(day.date)($event)"
 				@drop="board.dayDrop(day.date)($event)"
 				@dragleave="board.dayLeave($event)"

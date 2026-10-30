@@ -20,8 +20,8 @@ const props = defineProps<{
 const emit = defineEmits<{ press: [event: PointerEvent, mode: DragMode]; open: [] }>()
 const builder = useBuilder()
 
-const resolved = computed(() => builder.resolve(props.item))
-const colors = computed(() => blockColors(resolved.value.type?.color))
+const details = computed(() => builder.itemDetails(props.item))
+const colors = computed(() => blockColors(details.value.type?.color))
 const showMeta = computed(() => props.height > 44)
 const showHandle = computed(() => props.height > 30)
 const lines = computed(() =>
@@ -30,7 +30,7 @@ const lines = computed(() =>
 const meta = computed(() => {
 	const start = props.landingStart ?? props.item.start
 	const range = `${clock(start)}–${clock(start + props.item.duration)}`
-	const speaker = resolved.value.speakers[0]
+	const speaker = details.value.speakers[0]
 	return speaker ? `${range} · ${speaker}` : range
 })
 const titleStyle = computed(() => ({
@@ -60,7 +60,7 @@ const style = computed(() => ({
 			class="text-p-xs font-medium leading-4 text-ink-gray-9 [overflow-wrap:anywhere]"
 			:style="titleStyle"
 		>
-			{{ resolved.title }}
+			{{ details.title }}
 		</div>
 		<div v-if="showMeta" class="mt-0.5 truncate text-[11px] tabular-nums text-ink-gray-6">
 			{{ meta }}

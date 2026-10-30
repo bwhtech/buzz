@@ -34,12 +34,12 @@ const headerKey = computed(() => {
 })
 
 // A builder slides the page panel left over the sidebar, rounded corners and all.
-const takeover = computed(() => Boolean(route.meta.takeover))
+const fullScreen = computed(() => Boolean(route.meta.fullScreen))
 const sidebarColumn = useTemplateRef<HTMLElement>("sidebarColumn")
 const { width: sidebarWidth } = useElementSize(sidebarColumn)
 const reducedMotion = usePreferredReducedMotion()
 const panelStyle = computed(() => ({
-	marginLeft: takeover.value ? `-${sidebarWidth.value}px` : "0",
+	marginLeft: fullScreen.value ? `-${sidebarWidth.value}px` : "0",
 	transitionDuration: reducedMotion.value === "reduce" ? "0ms" : undefined,
 }))
 
@@ -53,7 +53,7 @@ watch(headerKey, (key, previous) => {
 <template>
 	<!-- Not DesktopShell: it points page headers at its own bar, outside the rounded panel. -->
 	<div class="flex h-full">
-		<div ref="sidebarColumn" class="flex h-full shrink-0" :inert="takeover">
+		<div ref="sidebarColumn" class="flex h-full shrink-0" :inert="fullScreen">
 			<Sidebar>
 				<!-- px-1: puts the header mark on the item-icon centerline, in every state.
 				     h-14 holds the height while two states overlap mid-transition. -->
@@ -121,7 +121,7 @@ watch(headerKey, (key, previous) => {
 			<div
 				class="relative flex h-full flex-col overflow-hidden rounded-l-6 bg-surface-elevation-1 shadow-base"
 			>
-				<PageHeaderTarget v-if="!takeover" />
+				<PageHeaderTarget v-if="!fullScreen" />
 				<div class="relative min-h-0 flex-1 overflow-y-auto">
 					<router-view :key="$route.params.eventId as string" />
 				</div>

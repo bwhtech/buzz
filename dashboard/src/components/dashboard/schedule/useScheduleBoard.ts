@@ -1,13 +1,20 @@
 import { useEventListener } from "@vueuse/core"
 import { type InjectionKey, type Ref, computed, inject, provide, ref } from "vue"
 
-import { MIN_DURATION, SNAP_MINUTES, TIMELINE_RATIO, ZOOM, hourMarks, snap } from "./scheduleLayout"
+import {
+	MIN_DURATION,
+	SNAP_MINUTES,
+	TIMELINE_RATIO,
+	HOUR_HEIGHT,
+	hourMarks,
+	snap,
+} from "./scheduleLayout"
 import type { DragPayload, ScheduleView } from "./scheduleTypes"
 import type { ScheduleBuilder } from "./useScheduleBuilder"
 
 type Axis = "y" | "x"
 
-export interface Ghost {
+export interface Placeholder {
 	room: string | null
 	start: number
 	duration: number
@@ -15,20 +22,21 @@ export interface Ghost {
 	span: boolean
 }
 
-interface Quick {
+interface QuickAddState {
 	room: string | null
 	start: number
 	x: number
 	y: number
 }
 
-const DAY_SPRING_MS = 750
-export const pixelsPerMinute = (axis: Axis) => (axis === "y" ? ZOOM : ZOOM * TIMELINE_RATIO) / 60
+const DAY_SWITCH_DELAY_MS = 750
+export const pixelsPerMinute = (axis: Axis) =>
+	(axis === "y" ? HOUR_HEIGHT : HOUR_HEIGHT * TIMELINE_RATIO) / 60
 
 export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleView>) {
 	const selectedKey = ref<string | null>(null)
-	const quick = ref<Quick | null>(null)
-	const ghost = ref<Ghost | null>(null)
+	const quickAdd = ref<QuickAddState | null>(null)
+	const placeholder = ref<Placeholder | null>(null)
 	const dropDay = ref<string | null>(null)
 	const panelDrop = ref(false)
 	const dragKey = ref<string | null>(null)
@@ -45,12 +53,12 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 	const hours = computed(() => hourMarks(range.value))
 
 	let drag: DragPayload | null = null
-	let springTimer: ReturnType<typeof setTimeout> | undefined
+	let daySwitchTimer: ReturnType<typeof setTimeout> | undefined
 
 	function select(key: string | null) {
 		selectedKey.value = key
-		quick.value = null
-		ghost.value = null
+		quickAdd.value = null
+		placeholder.value = null
 	}
 
 	function startDrag(payload: DragPayload, event: DragEvent) {
@@ -67,16 +75,16 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		setTimeout(() => {
 			dragKey.value = isItem ? payload.id : null
 			dragging.value = true
-			quick.value = null
+			quickAdd.value = null
 		})
 	}
 
 	function endDrag() {
 		drag = null
-		clearTimeout(springTimer)
+		clearTimeout(daySwitchTimer)
 		dragKey.value = null
 		dragging.value = false
-		ghost.value = null
+		placeholder.value = null
 		dropDay.value = null
 		panelDrop.value = false
 	}
@@ -96,16 +104,18 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		if (!drag) return
 		event.preventDefault()
 		const start = startFrom(event, axis)
-		const current = ghost.value
+		const current = placeholder.value
 		if (current && current.room === room && current.start === start && current.axis === axis) return
-		ghost.value = { room, start, duration: drag.duration, axis, span: drag.span }
+		placeholder.value = { room, start, duration: drag.duration, axis, span: drag.span }
 		dropDay.value = null
 	}
 
 	const dropOn = (room: string | null) => (event: DragEvent) => {
 		event.preventDefault()
 		const placed =
-			drag && ghost.value && builder.place(drag, builder.activeDate.value, room, ghost.value.start)
+			drag &&
+			placeholder.value &&
+			builder.place(drag, builder.activeDate.value, room, placeholder.value.start)
 		if (placed && placed.type === "Custom") selectedKey.value = placed.key
 		endDrag()
 	}
@@ -117,9 +127,9 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 			const offset = axis === "y" ? event.clientY - box.top : event.clientX - box.left
 			const raw = range.value.start + offset / pixelsPerMinute(axis)
 			const start = Math.min(Math.floor(raw / SNAP_MINUTES) * SNAP_MINUTES, range.value.end - 30)
-			quick.value = { room, start, x: event.clientX, y: event.clientY }
+			quickAdd.value = { room, start, x: event.clientX, y: event.clientY }
 			selectedKey.value = null
-			ghost.value = { room, start, duration: 30, axis, span: false }
+			placeholder.value = { room, start, duration: 30, axis, span: false }
 		}
 	}
 
@@ -128,21 +138,24 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		event.preventDefault()
 		if (dropDay.value === date) return
 		dropDay.value = date
-		ghost.value = null
-		clearTimeout(springTimer)
+		placeholder.value = null
+		clearTimeout(daySwitchTimer)
 		if (date === builder.activeDate.value) return
-		springTimer = setTimeout(() => drag && (builder.activeDate.value = date), DAY_SPRING_MS)
+		daySwitchTimer = setTimeout(
+			() => drag && (builder.activeDate.value = date),
+			DAY_SWITCH_DELAY_MS,
+		)
 	}
 
 	function dayLeave(event: DragEvent) {
 		if ((event.currentTarget as HTMLElement).contains(event.relatedTarget as Node)) return
-		clearTimeout(springTimer)
+		clearTimeout(daySwitchTimer)
 		dropDay.value = null
 	}
 
 	const dayDrop = (date: string) => (event: DragEvent) => {
 		event.preventDefault()
-		clearTimeout(springTimer)
+		clearTimeout(daySwitchTimer)
 		if (drag) builder.place(drag, date)
 		endDrag()
 	}
@@ -151,7 +164,7 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		if (drag?.kind !== "item") return
 		event.preventDefault()
 		panelDrop.value = true
-		ghost.value = null
+		placeholder.value = null
 	}
 
 	function panelLeave(event: DragEvent) {
@@ -177,7 +190,7 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		event.preventDefault()
 		const item = builder.items.value.find((entry) => entry.key === key)
 		if (!item) return
-		builder.remember()
+		builder.saveUndoPoint()
 		const origin = axis === "y" ? event.clientY : event.clientX
 		resizing = { key, axis, origin, duration: item.duration, start: item.start }
 	}
@@ -198,8 +211,8 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		const field = (event.target as HTMLElement).tagName?.toLowerCase()
 		const typing = ["input", "textarea", "select"].includes(field)
 		if (event.key === "Escape") {
-			quick.value = null
-			ghost.value = null
+			quickAdd.value = null
+			placeholder.value = null
 			addingRoom.value = false
 			renamingRoom.value = null
 			if (!typing) selectedKey.value = null
@@ -212,8 +225,8 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		view,
 		selectedKey,
 		selected,
-		quick,
-		ghost,
+		quickAdd,
+		placeholder,
 		dropDay,
 		panelDrop,
 		dragKey,

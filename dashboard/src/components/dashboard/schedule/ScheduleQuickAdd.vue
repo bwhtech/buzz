@@ -11,9 +11,9 @@ const builder = useBuilder()
 const board = useBoard()
 const search = ref("")
 const box = ref<HTMLElement | null>(null)
-const quick = board.quick
+const quickAdd = board.quickAdd
 
-watch(quick, (open) => {
+watch(quickAdd, (open) => {
 	if (!open) return
 	search.value = ""
 	nextTick().then(() => box.value?.querySelector("input")?.focus())
@@ -33,39 +33,39 @@ const templates = computed(() =>
 	),
 )
 const title = computed(() =>
-	quick.value
-		? `Add to ${builder.rooms.titleOf(quick.value.room)} at ${clock(quick.value.start)}`
+	quickAdd.value
+		? `Add to ${builder.rooms.titleOf(quickAdd.value.room)} at ${clock(quickAdd.value.start)}`
 		: "",
 )
 const style = computed(() => {
-	if (!quick.value) return {}
-	const { x, y } = quick.value
+	if (!quickAdd.value) return {}
+	const { x, y } = quickAdd.value
 	return {
 		left: `${Math.min(x + 8, window.innerWidth - 336)}px`,
 		top: `${Math.max(8, Math.min(y - 20, window.innerHeight - 440))}px`,
 	}
 })
 
-function pick(kind: "talk" | "type", id: string) {
-	if (!quick.value) return
+function addItem(kind: "talk" | "type", id: string) {
+	if (!quickAdd.value) return
 	const item = builder.place(
 		{ kind, id },
 		builder.activeDate.value,
-		quick.value.room,
-		quick.value.start,
+		quickAdd.value.room,
+		quickAdd.value.start,
 	)
 	if (item && item.type === "Custom") board.select(item.key)
-	quick.value = null
-	board.ghost.value = null
+	quickAdd.value = null
+	board.placeholder.value = null
 }
 function close() {
-	quick.value = null
-	board.ghost.value = null
+	quickAdd.value = null
+	board.placeholder.value = null
 }
 </script>
 
 <template>
-	<template v-if="quick">
+	<template v-if="quickAdd">
 		<div class="fixed inset-0 z-40" @click="close" />
 		<div
 			ref="box"
@@ -92,7 +92,7 @@ function close() {
 					:key="talk.name"
 					type="button"
 					class="flex w-full items-start gap-2 rounded-4 px-2 py-1.5 text-left hover:bg-surface-gray-2"
-					@click="pick('talk', talk.name)"
+					@click="addItem('talk', talk.name)"
 				>
 					<span
 						class="mt-1.5 size-2 shrink-0 rounded-full"
@@ -118,7 +118,7 @@ function close() {
 					:key="type.name"
 					type="button"
 					class="flex w-full items-center gap-2 rounded-4 px-2 py-1.5 text-left hover:bg-surface-gray-2"
-					@click="pick('type', type.name)"
+					@click="addItem('type', type.name)"
 				>
 					<span :class="[scheduleIcon(type.icon), 'size-4 text-ink-gray-6']" aria-hidden="true" />
 					<span class="flex-1 text-p-sm text-ink-gray-9">{{

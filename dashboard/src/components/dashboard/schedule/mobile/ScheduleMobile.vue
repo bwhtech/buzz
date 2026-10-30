@@ -20,7 +20,7 @@ const mobile = useScheduleMobile()
 provideScheduleMobile(mobile)
 
 const loadError = computed(
-	() => (builder.schedule.error ?? builder.opener.error) as FrappeError | null,
+	() => (builder.schedule.error ?? builder.openCall.error) as FrappeError | null,
 )
 </script>
 

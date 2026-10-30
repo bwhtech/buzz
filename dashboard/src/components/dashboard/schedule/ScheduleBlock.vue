@@ -19,11 +19,11 @@ const props = defineProps<{
 const builder = useBuilder()
 const board = useBoard()
 
-const resolved = computed(() => builder.resolve(props.item))
-const colors = computed(() => blockColors(resolved.value.type?.color))
-const icon = computed(() => scheduleIcon(resolved.value.type?.icon))
+const details = computed(() => builder.itemDetails(props.item))
+const colors = computed(() => blockColors(details.value.type?.color))
+const icon = computed(() => scheduleIcon(details.value.type?.icon))
 const selected = computed(() => board.selectedKey.value === props.item.key)
-const speakers = computed(() => speakerLine(resolved.value.speakers))
+const speakers = computed(() => speakerLine(details.value.speakers))
 const style = computed(() => ({
 	background: colors.value.background,
 	borderColor: props.conflict ? "var(--outline-red-3)" : colors.value.border,
@@ -42,7 +42,7 @@ const handle = computed(() =>
 <template>
 	<div
 		draggable="true"
-		:title="conflict || resolved.title"
+		:title="conflict || details.title"
 		class="absolute box-border flex cursor-grab flex-col gap-px overflow-hidden rounded-4 border transition-[box-shadow,opacity] duration-100"
 		:class="[
 			compact ? 'justify-center px-2' : 'justify-start px-2 py-1',
@@ -70,7 +70,7 @@ const handle = computed(() =>
 				:class="compact ? 'flex-1 truncate text-p-xs' : 'line-clamp-2 text-p-sm leading-tight'"
 				:style="{ color: colors.title }"
 			>
-				{{ resolved.title }}
+				{{ details.title }}
 			</div>
 			<span
 				v-if="compact"

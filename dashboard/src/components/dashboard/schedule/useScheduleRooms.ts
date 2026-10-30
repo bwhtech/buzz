@@ -26,10 +26,12 @@ export function useScheduleRooms(scheduleName: () => string, isUsed: (room: stri
 		orderBy: "sequence asc",
 		limit: 10,
 	})
-	const own = computed(() => list.data ?? [])
+	const scheduleRooms = computed(() => list.data ?? [])
 	const rooms = computed(() => {
-		const shared = (standard.data ?? []).filter((room) => !own.value.length || isUsed(room.name))
-		return [...shared, ...own.value].toSorted((a, b) => a.sequence - b.sequence)
+		const sharedRooms = (standard.data ?? []).filter(
+			(room) => !scheduleRooms.value.length || isUsed(room.name),
+		)
+		return [...sharedRooms, ...scheduleRooms.value].toSorted((a, b) => a.sequence - b.sequence)
 	})
 	const find = (name: string | null) => rooms.value.find((room) => room.name === name)
 	const titleOf = (name: string | null) => (name ? (find(name)?.title ?? "—") : "All tracks")

@@ -22,21 +22,21 @@ interface Draft {
 
 export type SaveState = "saved" | "saving" | "unsaved" | "error"
 
-const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value))
+const deepCopy = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 const AUTOSAVE_MS = 800
 
 export function useScheduleBuilder(eventId: () => string) {
 	const scheduleName = ref("")
-	const opener = useCall<string, { event: string }>({
+	const openCall = useCall<string, { event: string }>({
 		url: "/api/v2/method/buzz.api.schedule.get_or_create_schedule",
 		method: "POST",
 		immediate: false,
 	})
 	const open = () =>
-		opener.submit({ event: eventId() }).then((name) => (scheduleName.value = String(name)))
+		openCall.submit({ event: eventId() }).then((name) => (scheduleName.value = String(name)))
 
 	const schedule = useDoc<ScheduleDoc>({ doctype: "Buzz Schedule", name: () => scheduleName.value })
-	const forker = useCall<string, { schedule: string; track: string }>({
+	const copyTrackCall = useCall<string, { schedule: string; track: string }>({
 		url: "/api/v2/method/buzz.api.schedule.fork_standard_track",
 		method: "POST",
 		immediate: false,
@@ -139,27 +139,28 @@ export function useScheduleBuilder(eventId: () => string) {
 
 	const toast = ref<string | null>(null)
 	let toastTimer: ReturnType<typeof setTimeout> | undefined
-	const previous = shallowRef<{ items: ScheduleItem[]; days: ScheduleDay[] } | null>(null)
-	const canUndo = computed(() => !!previous.value)
-	function say(message?: string | null) {
+	const undoPoint = shallowRef<{ items: ScheduleItem[]; days: ScheduleDay[] } | null>(null)
+	const canUndo = computed(() => !!undoPoint.value)
+	function showToast(message?: string | null) {
 		if (!message) return
 		clearTimeout(toastTimer)
 		toast.value = message
 		toastTimer = setTimeout(() => (toast.value = null), 3500)
 	}
-	function remember() {
-		if (draft.value) previous.value = copy({ items: draft.value.items, days: draft.value.days })
+	function saveUndoPoint() {
+		if (draft.value)
+			undoPoint.value = deepCopy({ items: draft.value.items, days: draft.value.days })
 	}
-	function commit(change: (current: Draft) => void, message?: string) {
+	function applyChange(change: (current: Draft) => void, message?: string) {
 		if (!draft.value) return
-		remember()
+		saveUndoPoint()
 		change(draft.value)
-		say(message)
+		showToast(message)
 	}
 	function undo() {
-		if (!draft.value || !previous.value) return
-		Object.assign(draft.value, previous.value)
-		previous.value = null
+		if (!draft.value || !undoPoint.value) return
+		Object.assign(draft.value, undoPoint.value)
+		undoPoint.value = null
 		toast.value = null
 	}
 
@@ -173,7 +174,7 @@ export function useScheduleBuilder(eventId: () => string) {
 	const rangeOf = (date: string) => dayRange(dayItems(date))
 	const dayLabel = (date: string) => days.value.find((day) => day.date === date)?.label ?? date
 
-	function resolve(item: ScheduleItem) {
+	function itemDetails(item: ScheduleItem) {
 		const talk = item.talk ? talksByName.value[item.talk] : null
 		const type = typesByName.value[item.type]
 		return {
@@ -185,7 +186,7 @@ export function useScheduleBuilder(eventId: () => string) {
 
 	function add(change: Omit<ScheduleItem, "key">, message?: string) {
 		const item = { ...change, key: newKey() }
-		commit((current) => current.items.push(item), message)
+		applyChange((current) => current.items.push(item), message)
 		return item
 	}
 
@@ -264,7 +265,7 @@ export function useScheduleBuilder(eventId: () => string) {
 	}
 
 	function update(key: string, patch: Partial<ScheduleItem>, message?: string) {
-		commit((current) => {
+		applyChange((current) => {
 			const item = current.items.find((entry) => entry.key === key)
 			if (item) Object.assign(item, patch)
 		}, message)
@@ -283,8 +284,8 @@ export function useScheduleBuilder(eventId: () => string) {
 	function remove(key: string) {
 		const item = items.value.find((entry) => entry.key === key)
 		if (!item) return
-		const title = resolve(item).title
-		commit(
+		const title = itemDetails(item).title
+		applyChange(
 			(current) => (current.items = current.items.filter((entry) => entry.key !== key)),
 			item.talk ? `Unscheduled “${title}”` : `Removed “${title}”`,
 		)
@@ -295,14 +296,14 @@ export function useScheduleBuilder(eventId: () => string) {
 		if (!item) return
 		const start = nextFreeStart(dayItems(item.date), item.room, item.duration, rangeOf(item.date))
 		const base = { ...item, start, talk: null, type: item.talk ? "Custom" : item.type }
-		const title = item.talk ? `${resolve(item).title} (Q&A)` : item.title
+		const title = item.talk ? `${itemDetails(item).title} (Q&A)` : item.title
 		return add({ ...base, title }, `Duplicated at ${clock(start)}`)
 	}
 
 	function addDay() {
-		const last = days.value.at(-1)
-		const date = dayjs(last?.date).add(1, "day").format("YYYY-MM-DD")
-		commit(
+		const lastDay = days.value.at(-1)
+		const date = dayjs(lastDay?.date).add(1, "day").format("YYYY-MM-DD")
+		applyChange(
 			(current) => current.days.push({ date, label: `Day ${current.days.length + 1}` }),
 			`Added Day ${days.value.length + 1}`,
 		)
@@ -310,7 +311,7 @@ export function useScheduleBuilder(eventId: () => string) {
 	}
 
 	function editDay(date: string, next: ScheduleDay) {
-		commit((current) => {
+		applyChange((current) => {
 			for (const item of current.items) if (item.date === date) item.date = next.date
 			const day = current.days.find((entry) => entry.date === date)
 			if (day) Object.assign(day, next)
@@ -323,16 +324,16 @@ export function useScheduleBuilder(eventId: () => string) {
 		const source = days.value.find((day) => day.date === date)
 		if (!source) return
 		const target = dayjs(days.value.at(-1)?.date).add(1, "day").format("YYYY-MM-DD")
-		commit((current) => {
-			current.days.push({ date: target, label: `${source.label} copy` })
+		applyChange((current) => {
+			current.days.push({ date: target, label: `${source.label} deepCopy` })
 			for (const item of dayItems(date))
-				current.items.push({ ...copy(item), key: newKey(), date: target })
+				current.items.push({ ...deepCopy(item), key: newKey(), date: target })
 		}, `Duplicated ${source.label}`)
 		activeDate.value = target
 	}
 
 	function removeDay(date: string) {
-		commit(
+		applyChange(
 			(current) => {
 				current.days = current.days.filter((day) => day.date !== date)
 				current.items = current.items.filter((item) => item.date !== date)
@@ -342,25 +343,30 @@ export function useScheduleBuilder(eventId: () => string) {
 	}
 
 	// The standard track is shared, so an edit gives this schedule a copy and moves its items there.
-	async function ownRoom(name: string) {
+	async function editableRoom(name: string) {
 		if (!rooms.find(name)?.is_standard) return name
-		const forked = String(await forker.submit({ schedule: scheduleName.value, track: name }))
+		const copiedRoom = String(
+			await copyTrackCall.submit({ schedule: scheduleName.value, track: name }),
+		)
 		await rooms.reload()
-		for (const item of items.value) if (item.room === name) item.room = forked
-		savedSnapshot.value = savedSnapshot.value.replaceAll(`"track":"${name}"`, `"track":"${forked}"`)
-		return forked
+		for (const item of items.value) if (item.room === name) item.room = copiedRoom
+		savedSnapshot.value = savedSnapshot.value.replaceAll(
+			`"track":"${name}"`,
+			`"track":"${copiedRoom}"`,
+		)
+		return copiedRoom
 	}
 
 	async function renameRoom(name: string, title: string) {
-		await rooms.rename(await ownRoom(name), title)
+		await rooms.rename(await editableRoom(name), title)
 		await rooms.reload()
 	}
 
 	async function moveRoom(name: string, step: -1 | 1) {
 		const order = rooms.rooms.value.map((room) => room.name)
 		const neighbor = order[order.indexOf(name) + step]
-		const moved = await ownRoom(name)
-		if (neighbor) await ownRoom(neighbor)
+		const moved = await editableRoom(name)
+		if (neighbor) await editableRoom(neighbor)
 		await rooms.move(moved, step)
 	}
 
@@ -372,15 +378,15 @@ export function useScheduleBuilder(eventId: () => string) {
 		const room = rooms.find(name)
 		draft.value.items = draft.value.items.filter((item) => item.room !== name)
 		// Undo would bring back items that point at the deleted track.
-		previous.value = null
+		undoPoint.value = null
 		await save()
 		if (!room?.is_standard) await rooms.remove(name)
-		say(`Deleted ${room?.title}`)
+		showToast(`Deleted ${room?.title}`)
 	}
 
 	return {
 		open,
-		opener,
+		openCall,
 		schedule,
 		draft,
 		dirty,
@@ -405,12 +411,12 @@ export function useScheduleBuilder(eventId: () => string) {
 		removeRoom,
 		conflicts,
 		conflictCount,
-		resolve,
+		itemDetails,
 		toast,
 		undo,
 		canUndo,
-		say,
-		remember,
+		showToast,
+		saveUndoPoint,
 		place,
 		addCustom,
 		update,

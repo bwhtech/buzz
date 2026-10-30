@@ -93,7 +93,7 @@ const routes: RouteRecordRaw[] = [
 			{
 				path: "events/:eventId/schedule",
 				name: "event-schedule",
-				meta: { title: "Schedule", takeover: true },
+				meta: { title: "Schedule", fullScreen: true },
 				component: () => import("@/pages/manage/events/EventScheduleBuilder.vue"),
 			},
 			{
