@@ -2,7 +2,7 @@
 import { Avatar, Badge, Button, FormControl, TextInput } from "frappe-ui"
 import { computed } from "vue"
 
-import { badgeTheme } from "./scheduleColors"
+import { badgeStyle } from "./scheduleColors"
 import { DURATIONS, SNAP_MINUTES, clock, durationLabel, timeRange } from "./scheduleLayout"
 import type { ScheduleItem } from "./scheduleTypes"
 import { useBoard, useBuilder } from "./useScheduleBoard"
@@ -62,7 +62,7 @@ function duplicate() {
 		</div>
 		<div class="flex flex-1 flex-col gap-4 overflow-auto p-4">
 			<div class="flex flex-wrap gap-1.5">
-				<Badge :label="details.type?.title ?? item.type" :theme="badgeTheme(details.type?.color)" />
+				<Badge :label="details.type?.title ?? item.type" :style="badgeStyle(details.type?.color)" />
 				<Badge v-if="isTalk" label="Accepted" theme="green" variant="outline" />
 			</div>
 			<div v-if="isTalk" class="flex flex-col gap-2.5">

@@ -2,7 +2,7 @@
 import { Badge, Button, TextInput } from "frappe-ui"
 import { computed, ref } from "vue"
 
-import { badgeTheme } from "./scheduleColors"
+import { badgeStyle } from "./scheduleColors"
 import { speakerLine, talkMatches } from "./scheduleLayout"
 import { useBoard, useBuilder } from "./useScheduleBoard"
 
@@ -30,7 +30,7 @@ const add = (name: string) => builder.place({ kind: "talk", id: name }, builder.
 
 <template>
 	<div class="flex min-h-0 flex-1 flex-col">
-		<div class="px-3 pb-2">
+		<div class="px-3 pb-2 pt-3">
 			<TextInput v-model="search" placeholder="Search talks or speakers" autocomplete="off">
 				<template #prefix
 					><span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true"
@@ -64,7 +64,7 @@ const add = (name: string) => builder.place({ kind: "talk", id: name }, builder.
 						<Badge
 							size="sm"
 							:label="talkType?.title ?? 'Talk'"
-							:theme="badgeTheme(talkType?.color)"
+							:style="badgeStyle(talkType?.color)"
 						/>
 						<Badge size="sm" :label="`${duration} min`" theme="gray" />
 						<Badge size="sm" label="Accepted" theme="green" variant="outline" />
@@ -87,24 +87,16 @@ const add = (name: string) => builder.place({ kind: "talk", id: name }, builder.
 				<div>
 					<div class="text-p-sm font-semibold text-ink-gray-9">No talks yet</div>
 					<div class="mt-0.5 text-p-xs leading-snug text-ink-gray-5">
-						Accepted proposals show up here. You can still add breaks and custom items.
+						Accepted proposals show up here. You can still add breaks and other items below.
 					</div>
 				</div>
-				<div class="flex flex-wrap gap-1.5">
-					<Button
-						variant="subtle"
-						size="sm"
-						iconLeft="lucide-arrow-up-right"
-						label="Open proposals"
-						:route="{ name: 'event-talks' }"
-					/>
-					<Button
-						variant="ghost"
-						size="sm"
-						label="Add custom item"
-						@click="board.tab.value = 'custom'"
-					/>
-				</div>
+				<Button
+					variant="subtle"
+					size="sm"
+					iconLeft="lucide-arrow-up-right"
+					label="Open proposals"
+					:route="{ name: 'event-talks' }"
+				/>
 			</div>
 			<div
 				v-else-if="!matching.length"
@@ -122,10 +114,5 @@ const add = (name: string) => builder.place({ kind: "talk", id: name }, builder.
 				Every matching talk is on the schedule
 			</div>
 		</div>
-		<p
-			class="shrink-0 border-t border-outline-gray-1 px-3.5 py-2.5 text-p-xs leading-snug text-ink-gray-5"
-		>
-			Drag a talk onto the schedule. Drop a block back here to unschedule it.
-		</p>
 	</div>
 </template>

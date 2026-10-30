@@ -56,11 +56,6 @@ const dayIsEmpty = computed(
 		!board.quickAdd.value,
 )
 
-function openCustom() {
-	board.tab.value = "custom"
-	board.select(null)
-}
-
 const UNSAVED = "Leave without saving? Your changes to this schedule will be lost."
 onBeforeRouteLeave(
 	() => !(builder.isPublished.value && builder.dirty.value) || window.confirm(UNSAVED),
@@ -83,7 +78,12 @@ useEventListener(window, "beforeunload", (e) => builder.dirty.value && e.prevent
 				<ScheduleDayNav />
 				<div class="flex-1" />
 				<TabButtons v-model="view" :options="VIEW_OPTIONS" />
-				<Button variant="subtle" iconLeft="lucide-plus" label="Add item" @click="openCustom" />
+				<Button
+					variant="subtle"
+					iconLeft="lucide-plus"
+					label="Add item"
+					@click="board.addItem('Custom')"
+				/>
 			</div>
 			<div class="relative flex min-h-0 flex-1">
 				<div class="relative flex min-w-0 flex-1 flex-col">

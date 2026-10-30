@@ -4,7 +4,14 @@ import { computed, ref, shallowRef, watch } from "vue"
 
 import type { FrappeError } from "@/types"
 
-import { MIN_DURATION, clock, conflictsOf, dayRange, nextFreeStart } from "./scheduleLayout"
+import {
+	MIN_DURATION,
+	TALK_TYPES,
+	clock,
+	conflictsOf,
+	dayRange,
+	nextFreeStart,
+} from "./scheduleLayout"
 import { fromRow, newKey, toRow } from "./scheduleRows"
 import type {
 	DragPayload,
@@ -74,6 +81,11 @@ export function useScheduleBuilder(eventId: () => string) {
 	const talks = computed(() => talksCall.data ?? [])
 	const talksByName = computed(() =>
 		Object.fromEntries(talks.value.map((talk) => [talk.name, talk])),
+	)
+	const itemTypes = computed(() =>
+		types.value
+			.filter((type) => !TALK_TYPES.has(type.name))
+			.toSorted((a, b) => Number(b.name === "Custom") - Number(a.name === "Custom")),
 	)
 	const talkDuration = computed(() => typesByName.value.Talk?.default_duration ?? 30)
 
@@ -219,6 +231,7 @@ export function useScheduleBuilder(eventId: () => string) {
 		start?: number,
 	) {
 		if (payload.kind === "item") return moveItem(payload.id, date, track, start)
+		if (payload.kind === "copy") return copyItem(payload.id, date, track, start)
 		const defaultTrack = tracks.tracks.value[0]?.name ?? null
 		if (payload.kind === "talk")
 			return placeTalk(payload.id, date, track === undefined ? defaultTrack : track, start)
@@ -237,6 +250,14 @@ export function useScheduleBuilder(eventId: () => string) {
 					? `Moved to ${tracks.titleOf(patch.track)}`
 					: undefined
 		update(key, patch, moved)
+	}
+
+	function copyItem(key: string, date: string, track?: string | null, start?: number) {
+		const item = findItem(key)
+		if (!item) return
+		const at = start ?? item.start
+		const target = track !== undefined && item.track ? track : item.track
+		return add({ ...item, date, track: target, start: at }, `Duplicated at ${clock(at)}`)
 	}
 
 	function placeTalk(name: string, date: string, track: string | null, start?: number) {
@@ -273,16 +294,6 @@ export function useScheduleBuilder(eventId: () => string) {
 				talk: null,
 			},
 			`Added ${title.toLowerCase()} at ${clock(at)}`,
-		)
-	}
-
-	function addCustom(date: string, title: string, duration: number, track: string | null) {
-		const type = typesByName.value.Custom
-		const at = nextFreeStart(dayItems(date), track, duration, rangeOf(date))
-		const name = title.trim() || "Untitled item"
-		return add(
-			{ date, track, start: at, duration, type: type?.name ?? "Custom", title: name, talk: null },
-			`Added “${name}” at ${clock(at)}`,
 		)
 	}
 
@@ -428,6 +439,7 @@ export function useScheduleBuilder(eventId: () => string) {
 		rangeOf,
 		types,
 		typesByName,
+		itemTypes,
 		talks,
 		unscheduledTalks,
 		talkDuration,
@@ -444,7 +456,6 @@ export function useScheduleBuilder(eventId: () => string) {
 		showToast,
 		saveUndoPoint,
 		place,
-		addCustom,
 		update,
 		retitle,
 		resize,

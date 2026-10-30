@@ -4,7 +4,7 @@ export const SNAP_MINUTES = 15
 export const MIN_DURATION = 5
 export const DEFAULT_START = 9 * 60
 export const HOUR_HEIGHT = 112
-export const TIMELINE_RATIO = 1.6
+export const TIMELINE_RATIO = 2.8
 export const ROW_HEIGHT = 84
 export const DURATIONS = [5, 10, 15, 20, 25, 30, 40, 45, 60, 75, 90, 120, 150, 180]
 // Talk-like types come from the talks library; the rest are the blocks organizers drop in.

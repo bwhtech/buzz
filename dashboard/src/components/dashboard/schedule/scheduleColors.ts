@@ -33,7 +33,15 @@ export interface BlockColors {
 /** Tinted block colors for a theme name or a #rrggbb value. */
 export function blockColors(color: string | null | undefined): BlockColors {
 	if (isHex(color)) {
-		return { background: `${color}1f`, border: `${color}55`, meta: color, title: color, dot: color }
+		// Mixing with the strongest ink keeps text readable in both light and dark mode.
+		const ink = (percent: number) => `color-mix(in srgb, ${color} ${percent}%, var(--ink-gray-9))`
+		return {
+			background: `color-mix(in srgb, ${color} 12%, var(--surface-base))`,
+			border: `color-mix(in srgb, ${color} 35%, var(--surface-base))`,
+			meta: ink(75),
+			title: ink(55),
+			dot: color,
+		}
 	}
 	const theme = themeOf(color)
 	const gray = theme === "gray"
@@ -48,16 +56,8 @@ export function blockColors(color: string | null | undefined): BlockColors {
 
 export const dotColor = (color: string | null | undefined) => blockColors(color).dot
 
-type BadgeTheme = "gray" | "blue" | "green" | "red" | "amber" | "violet"
-// frappe-ui Badge lacks these themes, so each borrows the nearest one.
-const BADGE_REMAPS: Record<string, BadgeTheme> = {
-	orange: "amber",
-	teal: "green",
-	cyan: "blue",
-	pink: "red",
-}
-
-export function badgeTheme(color: string | null | undefined) {
-	const theme = themeOf(color)
-	return BADGE_REMAPS[theme] ?? (theme as BadgeTheme)
+/** Inline colors that tint a frappe-ui Badge with an item type's color. */
+export function badgeStyle(color: string | null | undefined) {
+	const colors = blockColors(color)
+	return { background: colors.background, color: colors.title }
 }

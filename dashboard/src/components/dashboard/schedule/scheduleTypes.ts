@@ -67,7 +67,7 @@ export type ScheduleView = "calendar" | "timeline"
 
 /** What a library row or a block carries while it is dragged. */
 export interface DragPayload {
-	kind: "item" | "talk" | "type"
+	kind: "item" | "copy" | "talk" | "type"
 	id: string
 	duration: number
 	span: boolean

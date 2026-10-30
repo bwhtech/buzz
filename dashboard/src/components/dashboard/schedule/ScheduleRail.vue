@@ -1,20 +1,13 @@
 <script setup lang="ts">
-import { TabButtons } from "frappe-ui"
 import { computed } from "vue"
 
 import ScheduleCustomLibrary from "./ScheduleCustomLibrary.vue"
 import ScheduleInspector from "./ScheduleInspector.vue"
 import ScheduleTalkLibrary from "./ScheduleTalkLibrary.vue"
-import { useBoard, useBuilder } from "./useScheduleBoard"
+import { useBoard } from "./useScheduleBoard"
 
-const builder = useBuilder()
 const board = useBoard()
 
-const unscheduledCount = computed(() => builder.unscheduledTalks.value.length)
-const tabs = computed(() => [
-	{ label: `Talks · ${unscheduledCount.value}`, value: "talks" },
-	{ label: "Custom items", value: "custom" },
-])
 const dropping = computed(() => board.dragging.value && !!board.dragKey.value)
 </script>
 
@@ -27,11 +20,14 @@ const dropping = computed(() => board.dragging.value && !!board.dragKey.value)
 	>
 		<ScheduleInspector v-if="board.selected.value" :item="board.selected.value" />
 		<template v-else>
-			<div class="px-3 pb-2 pt-3">
-				<TabButtons v-model="board.tab.value" :options="tabs" />
-			</div>
-			<ScheduleTalkLibrary v-if="board.tab.value === 'talks'" />
-			<ScheduleCustomLibrary v-else />
+			<ScheduleTalkLibrary />
+			<ScheduleCustomLibrary />
+			<p
+				class="shrink-0 border-t border-outline-gray-1 px-3.5 py-2.5 text-p-xs leading-snug text-ink-gray-5"
+			>
+				Drag onto a track, or click to add at the next free slot. Drop a block back here to
+				unschedule it.
+			</p>
 		</template>
 		<div
 			v-if="dropping"

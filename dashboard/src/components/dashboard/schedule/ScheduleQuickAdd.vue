@@ -4,7 +4,7 @@ import { computed, nextTick, ref, watch } from "vue"
 
 import { dotColor } from "./scheduleColors"
 import { scheduleIcon } from "./scheduleIcons"
-import { TALK_TYPES, clamp, clock, speakerLine, talkMatches } from "./scheduleLayout"
+import { clamp, clock, speakerLine, talkMatches } from "./scheduleLayout"
 import { useBoard, useBuilder } from "./useScheduleBoard"
 
 const builder = useBuilder()
@@ -24,9 +24,7 @@ const talks = computed(() =>
 	builder.unscheduledTalks.value.filter((talk) => talkMatches(talk, query.value)).slice(0, 6),
 )
 const templates = computed(() =>
-	builder.types.value.filter(
-		(type) => !TALK_TYPES.has(type.name) && type.title.toLowerCase().includes(query.value),
-	),
+	builder.itemTypes.value.filter((type) => type.title.toLowerCase().includes(query.value)),
 )
 const title = computed(() =>
 	quickAdd.value
@@ -116,7 +114,11 @@ function close() {
 					class="flex w-full items-center gap-2 rounded-4 px-2 py-1.5 text-left hover:bg-surface-gray-2"
 					@click="addItem('type', type.name)"
 				>
-					<span :class="[scheduleIcon(type.icon), 'size-4 text-ink-gray-6']" aria-hidden="true" />
+					<span
+						:class="[scheduleIcon(type.icon), 'size-4']"
+						:style="{ color: dotColor(type.color) }"
+						aria-hidden="true"
+					/>
 					<span class="flex-1 text-p-sm text-ink-gray-9">{{
 						type.name === "Custom" ? "Untitled item" : type.title
 					}}</span>

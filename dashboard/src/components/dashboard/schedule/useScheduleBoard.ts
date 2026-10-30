@@ -42,7 +42,6 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 	const panelDrop = ref(false)
 	const dragKey = ref<string | null>(null)
 	const dragging = ref(false)
-	const tab = ref<"talks" | "custom">("talks")
 	const addingTrack = ref(false)
 	const renamingTrack = ref<string | null>(null)
 	const trackDraft = ref("")
@@ -62,17 +61,29 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		placeholder.value = null
 	}
 
+	function addItem(type: string) {
+		const item = builder.place({ kind: "type", id: type }, builder.activeDate.value)
+		if (item?.type === "Custom") select(item.key)
+	}
+
+	// Holding Option (Alt on Windows) while dragging a non-talk item drops a copy, like in Figma.
+	function copies(payload: DragPayload, event: DragEvent) {
+		return payload.kind === "item" && event.altKey && !builder.findItem(payload.id)?.talk
+	}
+
 	function startDrag(payload: DragPayload, event: DragEvent) {
 		if (resizing) return event.preventDefault()
+		if (copies(payload, event)) payload = { ...payload, kind: "copy" }
 		const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
 		const isItem = payload.kind === "item"
+		const grabbed = isItem || payload.kind === "copy"
 		drag = {
 			...payload,
-			grabX: isItem ? event.clientX - box.left : 0,
-			grabY: isItem ? event.clientY - box.top : 0,
+			grabX: grabbed ? event.clientX - box.left : 0,
+			grabY: grabbed ? event.clientY - box.top : 0,
 		}
 		event.dataTransfer?.setData("text/plain", payload.id)
-		if (event.dataTransfer) event.dataTransfer.effectAllowed = "move"
+		if (event.dataTransfer) event.dataTransfer.effectAllowed = grabbed && !isItem ? "copy" : "move"
 		setTimeout(() => {
 			dragKey.value = isItem ? payload.id : null
 			dragging.value = true
@@ -227,7 +238,7 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		panelDrop,
 		dragKey,
 		dragging,
-		tab,
+		addItem,
 		range,
 		hours,
 		addingTrack,

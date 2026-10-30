@@ -2,7 +2,7 @@
 import { Badge, BottomSheet, Button, TabButtons } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
-import { badgeTheme } from "../scheduleColors"
+import { badgeStyle } from "../scheduleColors"
 import { clamp, clock, durationLabel, timeRange } from "../scheduleLayout"
 import type { ScheduleItem } from "../scheduleTypes"
 import { useBuilder } from "../useScheduleBoard"
@@ -60,7 +60,7 @@ function remove() {
 			<div class="px-5 pt-2">
 				<div class="mb-2.5 flex items-center gap-1.5">
 					<Badge
-						:theme="badgeTheme(details.type?.color)"
+						:style="badgeStyle(details.type?.color)"
 						:label="details.type?.title ?? item.type"
 					/>
 					<Badge v-if="conflict" theme="red" :label="conflict" />

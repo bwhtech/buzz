@@ -42,7 +42,7 @@ const handle = computed(() =>
 <template>
 	<div
 		draggable="true"
-		:title="conflict || details.title"
+		:title="conflict || `${details.title} · ${timeRange(item)}`"
 		class="absolute box-border flex cursor-grab flex-col gap-px overflow-hidden rounded-4 border transition-[box-shadow,opacity] duration-100"
 		:class="[
 			compact ? 'justify-center px-2' : 'justify-start px-2 py-1',
@@ -58,7 +58,7 @@ const handle = computed(() =>
 		"
 		@dragend="board.endDrag"
 	>
-		<div class="flex min-w-0 items-center gap-1.5">
+		<div class="flex min-w-0 max-w-full items-center gap-1.5">
 			<span
 				v-if="icon"
 				:class="[icon, 'size-3.5 shrink-0']"
@@ -67,14 +67,18 @@ const handle = computed(() =>
 			/>
 			<div
 				class="min-w-0 font-semibold"
-				:class="compact ? 'flex-1 truncate text-p-xs' : 'line-clamp-2 text-p-sm leading-tight'"
+				:class="
+					compact
+						? 'flex-auto truncate text-p-xs'
+						: 'line-clamp-2 text-p-sm leading-tight [overflow-wrap:anywhere]'
+				"
 				:style="{ color: colors.title }"
 			>
 				{{ details.title }}
 			</div>
 			<span
 				v-if="compact"
-				class="shrink truncate text-p-xs tabular-nums"
+				class="min-w-0 shrink-[100] truncate text-p-xs tabular-nums"
 				:style="{ color: colors.meta }"
 			>
 				{{ timeRange(item) }}
