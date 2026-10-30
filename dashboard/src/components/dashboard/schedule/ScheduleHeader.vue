@@ -5,6 +5,7 @@ import { computed } from "vue"
 
 import { useEventDoc } from "@/data/events"
 import type { FrappeError } from "@/types"
+import { openEventSchedule } from "@/utils/eventUrl"
 
 import { useBuilder } from "./useScheduleBoard"
 
@@ -13,9 +14,7 @@ const builder = useBuilder()
 const event = useEventDoc(() => props.eventId)
 
 const modified = useTimeAgo(() => builder.schedule.doc?.modified ?? "")
-const previewUrl = computed(() =>
-	event.doc?.route ? `${window.location.origin}/events/${event.doc.route}/schedule` : "",
-)
+const route = computed(() => event.doc?.route)
 const published = builder.isPublished
 const saving = computed(() => builder.saveState.value === "saving")
 const conflicts = computed(() => builder.conflictCount.value)
@@ -81,12 +80,12 @@ useEventListener(window, "keydown", (keydown: KeyboardEvent) => {
 			/>
 			<span>{{ status }}</span>
 		</span>
-		<Tooltip v-if="previewUrl" text="View schedule page">
+		<Tooltip v-if="route" text="View schedule page">
 			<Button
 				variant="ghost"
 				icon="lucide-arrow-up-right"
 				label="View schedule page"
-				:link="previewUrl"
+				@click="openEventSchedule(route)"
 			/>
 		</Tooltip>
 		<template v-if="published">

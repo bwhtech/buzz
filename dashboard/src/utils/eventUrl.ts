@@ -22,6 +22,11 @@ export function openEventPage(route: string): void {
 	window.open(eventUrl(route), "_blank", "noopener")
 }
 
+/** Opens the event's public schedule page in a new tab. */
+export function openEventSchedule(route: string): void {
+	window.open(`${eventUrl(route)}/schedule`, "_blank", "noopener")
+}
+
 /** Puts an event's public link on the clipboard. Rejects if the browser refuses access. */
 export async function copyEventUrl(route: string): Promise<void> {
 	await navigator.clipboard.writeText(eventUrl(route))
