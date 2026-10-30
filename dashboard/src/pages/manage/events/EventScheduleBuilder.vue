@@ -6,12 +6,9 @@ import { computed, onMounted } from "vue"
 import { onBeforeRouteLeave, useRoute } from "vue-router"
 
 import ScheduleMobile from "@/components/dashboard/schedule/mobile/ScheduleMobile.vue"
-import ScheduleAgenda from "@/components/dashboard/schedule/ScheduleAgenda.vue"
 import ScheduleCalendar from "@/components/dashboard/schedule/ScheduleCalendar.vue"
 import ScheduleDayNav from "@/components/dashboard/schedule/ScheduleDayNav.vue"
-import ScheduleDays from "@/components/dashboard/schedule/ScheduleDays.vue"
 import ScheduleHeader from "@/components/dashboard/schedule/ScheduleHeader.vue"
-import ScheduleNoRooms from "@/components/dashboard/schedule/ScheduleNoRooms.vue"
 import ScheduleQuickAdd from "@/components/dashboard/schedule/ScheduleQuickAdd.vue"
 import ScheduleRail from "@/components/dashboard/schedule/ScheduleRail.vue"
 import ScheduleTimeline from "@/components/dashboard/schedule/ScheduleTimeline.vue"
@@ -29,7 +26,7 @@ const eventId = route.params.eventId as string
 const event = useEventDoc(() => eventId)
 const builder = useScheduleBuilder(() => eventId)
 
-const VIEWS: ScheduleView[] = ["calendar", "timeline", "agenda", "days"]
+const VIEWS: ScheduleView[] = ["calendar", "timeline"]
 const view = useRouteQuery<ScheduleView>("view", "calendar", {
 	transform: (value) =>
 		VIEWS.includes(value as ScheduleView) ? (value as ScheduleView) : "calendar",
@@ -41,26 +38,19 @@ onMounted(() => builder.open())
 const VIEW_OPTIONS = [
 	{ label: "Calendar", value: "calendar", iconLeft: "lucide-columns-3" },
 	{ label: "Timeline", value: "timeline", iconLeft: "lucide-chart-gantt" },
-	{ label: "Agenda", value: "agenda", iconLeft: "lucide-list" },
-	{ label: "Days", value: "days", iconLeft: "lucide-kanban" },
 ]
 const BOARDS = {
 	calendar: ScheduleCalendar,
 	timeline: ScheduleTimeline,
-	agenda: ScheduleAgenda,
-	days: ScheduleDays,
 }
 
 const loadError = computed(
 	() => (builder.schedule.error ?? builder.opener.error) as FrappeError | null,
 )
 const hasRooms = computed(() => builder.rooms.rooms.value.length > 0)
-const isGrid = computed(() => view.value === "calendar" || view.value === "timeline")
-const showNoRooms = computed(() => !hasRooms.value && isGrid.value && builder.rooms.loaded.value)
 const dayIsEmpty = computed(
 	() =>
 		hasRooms.value &&
-		isGrid.value &&
 		!builder.dayItems(builder.activeDate.value).length &&
 		!board.dragging.value &&
 		!board.quick.value,
@@ -98,7 +88,6 @@ useEventListener(window, "beforeunload", (e) => builder.dirty.value && e.prevent
 			<div class="relative flex min-h-0 flex-1">
 				<div class="relative flex min-w-0 flex-1 flex-col">
 					<component :is="BOARDS[view]" :time-zone="event.doc?.time_zone_label" />
-					<ScheduleNoRooms v-if="showNoRooms" />
 					<div
 						v-if="dayIsEmpty"
 						class="pointer-events-none absolute left-1/2 top-24 z-[9] flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-outline-gray-2 bg-surface-base px-3.5 py-2 text-p-sm text-ink-gray-7 shadow-md"

@@ -19,12 +19,14 @@ const previewUrl = computed(() =>
 const published = builder.isPublished
 const saving = computed(() => builder.saveState.value === "saving")
 const conflicts = computed(() => builder.conflictCount.value)
+const unpublishedChanges = computed(() => published.value && builder.dirty.value)
 
 const status = computed(() => {
 	const state = builder.saveState.value
 	if (state === "saving") return "Saving…"
 	if (state === "error") return "Couldn't save"
-	if (builder.dirty.value) return published.value ? "Unpublished changes" : "Saving soon…"
+	if (unpublishedChanges.value) return "Unpublished changes"
+	if (builder.dirty.value) return "Saving soon…"
 	return `Saved ${modified.value}`
 })
 
@@ -67,29 +69,45 @@ useEventListener(window, "keydown", (keydown: KeyboardEvent) => {
 			:label="`${conflicts} ${conflicts === 1 ? 'conflict' : 'conflicts'}`"
 			theme="red"
 		/>
-		<span class="hidden min-w-0 truncate text-p-sm text-ink-gray-5 md:inline" aria-live="polite">{{
-			status
-		}}</span>
-		<Button
-			v-if="previewUrl"
-			variant="subtle"
-			iconLeft="lucide-eye"
-			label="Preview"
-			:link="previewUrl"
-		/>
-		<Button
-			v-if="published"
-			variant="ghost"
-			label="Unpublish"
-			:loading="saving"
-			@click="save(false)"
-		/>
-		<Button
-			v-if="!published || builder.dirty.value"
-			variant="solid"
-			:label="published ? 'Publish changes' : 'Publish schedule'"
-			:loading="saving"
-			@click="save(true)"
-		/>
+		<span
+			class="hidden min-w-0 items-center gap-1.5 truncate text-p-sm md:flex"
+			:class="unpublishedChanges ? 'text-ink-amber-7' : 'text-ink-gray-5'"
+			aria-live="polite"
+		>
+			<span
+				v-if="unpublishedChanges"
+				class="size-1.5 shrink-0 rounded-full bg-current"
+				aria-hidden="true"
+			/>
+			<span>{{ status }}</span>
+		</span>
+		<Tooltip v-if="previewUrl" text="View schedule page">
+			<Button
+				variant="ghost"
+				icon="lucide-arrow-up-right"
+				label="View schedule page"
+				:link="previewUrl"
+			/>
+		</Tooltip>
+		<template v-if="published">
+			<Button
+				v-if="builder.dirty.value"
+				variant="solid"
+				label="Save and publish"
+				:loading="saving"
+				@click="save(true)"
+			/>
+			<Button v-else variant="ghost" label="Unpublish" :loading="saving" @click="save(false)" />
+		</template>
+		<template v-else>
+			<Button
+				v-if="builder.dirty.value"
+				variant="subtle"
+				label="Save"
+				:loading="saving"
+				@click="save()"
+			/>
+			<Button variant="solid" label="Publish" :loading="saving" @click="save(true)" />
+		</template>
 	</header>
 </template>

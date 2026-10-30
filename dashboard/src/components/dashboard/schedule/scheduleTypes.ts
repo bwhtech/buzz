@@ -62,7 +62,7 @@ export interface ScheduleDoc {
 	modified: string
 }
 
-export type ScheduleView = "calendar" | "timeline" | "agenda" | "days"
+export type ScheduleView = "calendar" | "timeline"
 
 /** What a library row or a block carries while it is dragged. */
 export interface DragPayload {

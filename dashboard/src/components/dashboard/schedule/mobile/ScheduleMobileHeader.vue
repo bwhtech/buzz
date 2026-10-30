@@ -41,7 +41,7 @@ function publish() {
 			v-if="publishable"
 			variant="solid"
 			size="sm"
-			:label="published ? 'Publish changes' : 'Publish'"
+			:label="published ? 'Save and publish' : 'Publish'"
 			:loading="saving"
 			@click="publish"
 		/>

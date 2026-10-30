@@ -4,7 +4,6 @@ import { computed, ref } from "vue"
 
 import { badgeTheme } from "./scheduleColors"
 import { speakerLine } from "./scheduleLayout"
-import { clock } from "./scheduleLayout"
 import { useBoard, useBuilder } from "./useScheduleBoard"
 
 const builder = useBuilder()
@@ -13,9 +12,7 @@ const search = ref("")
 
 const talkType = computed(() => builder.typesByName.value.Talk)
 const duration = computed(() => talkType.value?.default_duration ?? 30)
-const scheduled = computed(
-	() => new Map(builder.items.value.filter((item) => item.talk).map((item) => [item.talk, item])),
-)
+const scheduled = computed(() => new Set(builder.items.value.map((item) => item.talk)))
 
 const matching = computed(() => {
 	const query = search.value.trim().toLowerCase()
@@ -24,20 +21,6 @@ const matching = computed(() => {
 	)
 })
 const unscheduled = computed(() => matching.value.filter((talk) => !scheduled.value.has(talk.name)))
-const onSchedule = computed(() => matching.value.filter((talk) => scheduled.value.has(talk.name)))
-
-function whereIs(name: string) {
-	const item = scheduled.value.get(name)
-	if (!item) return ""
-	return `${builder.dayLabel(item.date)} · ${clock(item.start)} · ${builder.rooms.titleOf(item.room)}`
-}
-
-function open(name: string) {
-	const item = scheduled.value.get(name)
-	if (!item) return
-	builder.activeDate.value = item.date
-	board.select(item.key)
-}
 
 const drag = (name: string, event: DragEvent) =>
 	board.startDrag(
@@ -140,26 +123,6 @@ const add = (name: string) => builder.place({ kind: "talk", id: name }, builder.
 			>
 				Every matching talk is on the schedule
 			</div>
-
-			<div class="flex justify-between px-0.5 pt-2.5 text-p-xs text-ink-gray-5">
-				<span>On the schedule</span><span>{{ onSchedule.length }}</span>
-			</div>
-			<button
-				v-for="talk in onSchedule"
-				:key="talk.name"
-				type="button"
-				draggable="true"
-				class="-mx-1 flex cursor-pointer items-center gap-2 rounded-4 px-2 py-1.5 text-left hover:bg-surface-gray-2"
-				@click="open(talk.name)"
-				@dragstart="drag(talk.name, $event)"
-				@dragend="board.endDrag"
-			>
-				<span class="lucide-circle-check size-3.5 shrink-0 text-ink-green-6" aria-hidden="true" />
-				<div class="min-w-0 flex-1">
-					<div class="truncate text-p-sm text-ink-gray-8">{{ talk.title }}</div>
-					<div class="truncate text-p-xs text-ink-gray-5">{{ whereIs(talk.name) }}</div>
-				</div>
-			</button>
 		</div>
 		<p
 			class="shrink-0 border-t border-outline-gray-1 px-3.5 py-2.5 text-p-xs leading-snug text-ink-gray-5"

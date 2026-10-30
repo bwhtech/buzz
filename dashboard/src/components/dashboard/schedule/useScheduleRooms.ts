@@ -47,6 +47,5 @@ export function useScheduleRooms(scheduleName: () => string) {
 		await list.reload()
 	}
 
-	const loaded = computed(() => list.data !== null && list.data !== undefined)
-	return { rooms, loaded, find, titleOf, colorOf, add, rename, move, remove, reload: list.reload }
+	return { rooms, find, titleOf, colorOf, add, rename, move, remove, reload: list.reload }
 }

@@ -50,6 +50,7 @@ const options = computed(() => [
 		label: "Delete room",
 		icon: "lucide-trash-2",
 		theme: "red" as const,
+		disabled: props.total === 1,
 		onClick: () => builder.removeRoom(props.room.name),
 	},
 ])

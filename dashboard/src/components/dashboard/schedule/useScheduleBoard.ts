@@ -129,7 +129,7 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		dropDay.value = date
 		ghost.value = null
 		clearTimeout(springTimer)
-		if (date === builder.activeDate.value || view.value === "days") return
+		if (date === builder.activeDate.value) return
 		springTimer = setTimeout(() => drag && (builder.activeDate.value = date), DAY_SPRING_MS)
 	}
 
