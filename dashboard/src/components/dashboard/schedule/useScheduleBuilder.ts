@@ -1,6 +1,6 @@
 import { useDebounceFn } from "@vueuse/core"
 import { dayjs, useCall, useDoc, useList } from "frappe-ui"
-import { computed, ref, watch } from "vue"
+import { computed, ref, shallowRef, watch } from "vue"
 
 import { MIN_DURATION, clock, conflictsOf, dayRange, nextFreeStart } from "./scheduleLayout"
 import { fromRow, newKey, toRow } from "./scheduleRows"
@@ -126,7 +126,8 @@ export function useScheduleBuilder(eventId: () => string) {
 
 	const toast = ref<string | null>(null)
 	let toastTimer: ReturnType<typeof setTimeout> | undefined
-	let previous: { items: ScheduleItem[]; days: ScheduleDay[] } | null = null
+	const previous = shallowRef<{ items: ScheduleItem[]; days: ScheduleDay[] } | null>(null)
+	const canUndo = computed(() => !!previous.value)
 	function say(message?: string | null) {
 		if (!message) return
 		clearTimeout(toastTimer)
@@ -134,7 +135,7 @@ export function useScheduleBuilder(eventId: () => string) {
 		toastTimer = setTimeout(() => (toast.value = null), 3500)
 	}
 	function remember() {
-		if (draft.value) previous = copy({ items: draft.value.items, days: draft.value.days })
+		if (draft.value) previous.value = copy({ items: draft.value.items, days: draft.value.days })
 	}
 	function commit(change: (current: Draft) => void, message?: string) {
 		if (!draft.value) return
@@ -143,9 +144,9 @@ export function useScheduleBuilder(eventId: () => string) {
 		say(message)
 	}
 	function undo() {
-		if (!draft.value || !previous) return
-		Object.assign(draft.value, previous)
-		previous = null
+		if (!draft.value || !previous.value) return
+		Object.assign(draft.value, previous.value)
+		previous.value = null
 		toast.value = null
 	}
 
@@ -361,6 +362,7 @@ export function useScheduleBuilder(eventId: () => string) {
 		resolve,
 		toast,
 		undo,
+		canUndo,
 		say,
 		remember,
 		place,

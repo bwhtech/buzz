@@ -36,7 +36,13 @@ function publish() {
 		<div class="min-w-0 flex-1 truncate text-center text-lg font-semibold text-ink-gray-9">
 			{{ event.doc?.title }}
 		</div>
-		<Button variant="ghost" icon="lucide-undo-2" label="Undo" @click="builder.undo" />
+		<Button
+			v-if="builder.canUndo.value"
+			variant="ghost"
+			icon="lucide-undo-2"
+			label="Undo"
+			@click="builder.undo"
+		/>
 		<Button
 			v-if="publishable"
 			variant="solid"
