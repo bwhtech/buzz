@@ -1,5 +1,5 @@
 import { useEventListener } from "@vueuse/core"
-import { type Ref, onBeforeUnmount, ref } from "vue"
+import { type Ref, computed, onBeforeUnmount, ref } from "vue"
 
 import { clock, durationLabel, MIN_DURATION } from "../scheduleLayout"
 import type { ScheduleItem } from "../scheduleTypes"
@@ -15,37 +15,69 @@ export interface DragPosition {
 	duration: number
 }
 
+interface Point {
+	x: number
+	y: number
+}
+
 interface Gesture {
-	origin: { x: number; y: number }
+	origin: Point
+	last: Point
+	scrolled: { left: number; top: number }
 	item: DragPosition
 	mode: DragMode
 	moved: boolean
 }
 
 const STEP_MINUTES = 5
+const EDGE_PX = 56
+const SIDEWAYS_PX = 24
+const MAX_SCROLL_PX = 14
 const stepped = (minutes: number) => Math.round(minutes / STEP_MINUTES) * STEP_MINUTES
 
+/** Scroll speed for a pointer near either end of the visible band; 0 in the middle. */
+function edgeSpeed(pointer: number, near: number, far: number) {
+	if (pointer < near + EDGE_PX)
+		return -Math.min(1, (near + EDGE_PX - pointer) / EDGE_PX) * MAX_SCROLL_PX
+	if (pointer > far - EDGE_PX)
+		return Math.min(1, (pointer - (far - EDGE_PX)) / EDGE_PX) * MAX_SCROLL_PX
+	return 0
+}
+
 /** A block's side grip moves it and its bottom handle resizes it; both start at once. */
-export function useScheduleTouchDrag(pixelsPerMinute: number, columnWidth: Ref<number | null>) {
+export function useScheduleTouchDrag(
+	pixelsPerMinute: number,
+	columnWidth: Ref<number | null>,
+	scroller: Ref<HTMLElement | null>,
+	insets: Ref<{ top: number; left: number }>,
+) {
 	const builder = useBuilder()
 	const board = useBoard()
 	const mobile = useMobile()
 	const position = ref<DragPosition | null>(null)
+	const offset = ref<Point>({ x: 0, y: 0 })
+	const activeMode = ref<DragMode | null>(null)
+	const moving = computed(() => (activeMode.value === "move" ? position.value : null))
+	let frame = 0
 	let gesture: Gesture | null = null
 	let stopListening: Array<() => void> = []
 
-	function begin(event: PointerEvent, item: ScheduleItem, mode: DragMode) {
+	function begin(event: PointerEvent, item: ScheduleItem, pressed: DragMode) {
 		if (event.button) return
 		event.stopPropagation()
 		finish()
 		const start = { key: item.key, start: item.start, room: item.room, duration: item.duration }
+		const box = scroller.value
 		gesture = {
 			origin: { x: event.clientX, y: event.clientY },
+			last: { x: event.clientX, y: event.clientY },
+			scrolled: { left: box?.scrollLeft ?? 0, top: box?.scrollTop ?? 0 },
 			item: start,
-			mode,
+			mode: pressed,
 			moved: false,
 		}
 		position.value = start
+		activeMode.value = pressed
 		listen()
 	}
 
@@ -59,11 +91,60 @@ export function useScheduleTouchDrag(pixelsPerMinute: number, columnWidth: Ref<n
 
 	function onMove(event: PointerEvent) {
 		if (!gesture) return
-		const dx = event.clientX - gesture.origin.x
-		const dy = event.clientY - gesture.origin.y
+		gesture.last = { x: event.clientX, y: event.clientY }
 		gesture.moved = true
 		event.preventDefault()
-		position.value = gesture.mode === "resize" ? resizedBy(dy) : movedBy(dx, dy)
+		follow()
+		if (!frame) frame = requestAnimationFrame(autoScroll)
+	}
+
+	// The drag distance includes what the list scrolled since the press.
+	function follow() {
+		if (!gesture) return
+		const box = scroller.value
+		const dx =
+			gesture.last.x - gesture.origin.x + (box ? box.scrollLeft - gesture.scrolled.left : 0)
+		const dy = gesture.last.y - gesture.origin.y + (box ? box.scrollTop - gesture.scrolled.top : 0)
+		if (gesture.mode === "resize") {
+			offset.value = { x: 0, y: dy }
+			return void (position.value = resizedBy(dy))
+		}
+		const { x, y } = withinDay(dx, dy)
+		offset.value = { x, y }
+		position.value = movedBy(x, y)
+	}
+
+	// A block dragged past the day would stretch the scroll area and keep it scrolling.
+	function withinDay(dx: number, dy: number): Point {
+		const { item } = gesture!
+		const { start: first, end } = board.range.value
+		const y = Math.max(
+			(first - item.start) * pixelsPerMinute,
+			Math.min((end - item.start - item.duration) * pixelsPerMinute, dy),
+		)
+		const width = columnWidth.value
+		const rooms = builder.rooms.rooms.value
+		const index = rooms.findIndex((entry) => entry.name === item.room)
+		if (!width || index < 0 || mobile.view.value !== "grid") return { x: 0, y }
+		return { x: Math.max(-index * width, Math.min((rooms.length - 1 - index) * width, dx)), y }
+	}
+
+	// The grip sits at a block's right edge, so only a finger dragged sideways scrolls sideways.
+	const leaningSideways = () => Math.abs(offset.value.x) > SIDEWAYS_PX
+
+	function autoScroll() {
+		frame = 0
+		const box = scroller.value
+		if (!gesture || !box) return
+		const rect = box.getBoundingClientRect()
+		const left = leaningSideways()
+			? edgeSpeed(gesture.last.x, rect.left + insets.value.left, rect.right)
+			: 0
+		const top = edgeSpeed(gesture.last.y, rect.top + insets.value.top, rect.bottom)
+		if (!left && !top) return
+		box.scrollBy({ left: gesture.mode === "resize" ? 0 : left, top })
+		follow()
+		frame = requestAnimationFrame(autoScroll)
 	}
 
 	function resizedBy(dy: number): DragPosition {
@@ -120,12 +201,16 @@ export function useScheduleTouchDrag(pixelsPerMinute: number, columnWidth: Ref<n
 	}
 
 	function finish() {
+		cancelAnimationFrame(frame)
+		frame = 0
 		gesture = null
 		position.value = null
+		activeMode.value = null
+		offset.value = { x: 0, y: 0 }
 		stopListening.forEach((stop) => stop())
 		stopListening = []
 	}
 
 	onBeforeUnmount(finish)
-	return { position, begin }
+	return { position, moving, offset, begin }
 }

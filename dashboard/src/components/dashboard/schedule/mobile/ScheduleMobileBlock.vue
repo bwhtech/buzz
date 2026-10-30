@@ -14,6 +14,8 @@ const props = defineProps<{
 	height: number
 	conflict?: string
 	dragging: boolean
+	offset?: { x: number; y: number } | null
+	landingStart?: number
 }>()
 const emit = defineEmits<{ press: [event: PointerEvent, mode: DragMode]; open: [] }>()
 const builder = useBuilder()
@@ -26,7 +28,8 @@ const lines = computed(() =>
 	Math.max(1, Math.floor((props.height - (showMeta.value ? 24 : 8)) / LINE_HEIGHT)),
 )
 const meta = computed(() => {
-	const range = `${clock(props.item.start)}–${clock(props.item.start + props.item.duration)}`
+	const start = props.landingStart ?? props.item.start
+	const range = `${clock(start)}–${clock(start + props.item.duration)}`
 	const speaker = resolved.value.speakers[0]
 	return speaker ? `${range} · ${speaker}` : range
 })
@@ -40,13 +43,16 @@ const style = computed(() => ({
 	background: colors.value.background,
 	borderColor: props.conflict ? "var(--outline-red-3)" : colors.value.border,
 	padding: showHandle.value ? "5px 64px 5px 8px" : "1px 8px",
+	transform: props.offset
+		? `translate3d(${props.offset.x}px, ${props.offset.y}px, 0) scale(1.02)`
+		: undefined,
 }))
 </script>
 
 <template>
 	<div
 		class="absolute box-border select-none overflow-hidden rounded-5 border transition-shadow"
-		:class="dragging ? 'z-10 scale-[1.02] opacity-95 shadow-xl' : 'z-[1]'"
+		:class="dragging ? 'z-10 opacity-95 shadow-xl' : 'z-[1]'"
 		:style="style"
 		@click.stop="emit('open')"
 	>

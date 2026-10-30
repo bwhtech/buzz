@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from "vue"
+import { useElementSize } from "@vueuse/core"
+import { computed, ref } from "vue"
 
 import ScheduleGhost from "../ScheduleGhost.vue"
 import { hourLabel, lanesOf, SNAP_MINUTES } from "../scheduleLayout"
@@ -12,7 +13,9 @@ import { useScheduleTouchDrag } from "./useScheduleTouchDrag"
 
 const PIXELS_PER_MINUTE = 1.5
 const RAIL = 48
-const COLUMN = 220
+const COLUMN_PEEK = 28
+const MIN_COLUMN = 180
+const HEADER_HEIGHT = 40
 const MIN_BLOCK = 14
 const GRID_PADDING = 10
 const GHOST_MINUTES = 30
@@ -20,8 +23,13 @@ const GHOST_MINUTES = 30
 const { builder, board, rooms, dayItems, conflicts } = useDayLayout()
 const mobile = useMobile()
 const isGrid = computed(() => mobile.view.value === "grid")
-const columnWidth = computed(() => (isGrid.value ? COLUMN : null))
-const touch = useScheduleTouchDrag(PIXELS_PER_MINUTE, columnWidth)
+const scroller = ref<HTMLElement | null>(null)
+const { width: viewport } = useElementSize(scroller)
+// One column fills the screen next to the rail, with a sliver of the next one showing.
+const COLUMN = computed(() => Math.max(MIN_COLUMN, viewport.value - RAIL - COLUMN_PEEK))
+const columnWidth = computed(() => (isGrid.value ? COLUMN.value : null))
+const insets = computed(() => ({ top: isGrid.value ? HEADER_HEIGHT : 0, left: RAIL }))
+const touch = useScheduleTouchDrag(PIXELS_PER_MINUTE, columnWidth, scroller, insets)
 
 const range = board.range
 const height = computed(() => (range.value.end - range.value.start) * PIXELS_PER_MINUTE)
@@ -34,9 +42,11 @@ const hours = computed(() => {
 const shownRooms = computed(() =>
 	isGrid.value ? rooms.value : rooms.value.filter((room) => room.name === mobile.activeRoom.value),
 )
+// A move follows the finger and shows a ghost at its landing spot; only a resize reshapes the block.
+const resizing = computed(() => (touch.moving.value ? null : touch.position.value))
 const displayed = computed(() =>
 	dayItems.value.map((item) =>
-		touch.position.value?.key === item.key ? { ...item, ...touch.position.value } : item,
+		resizing.value?.key === item.key ? { ...item, ...resizing.value } : item,
 	),
 )
 const spans = computed(() => displayed.value.filter((item) => !item.room))
@@ -74,16 +84,26 @@ const spanStyle = (item: ScheduleItem) => ({
 	top: `${GRID_PADDING + top(item.start)}px`,
 	height: `${lengthOf(item)}px`,
 })
-const ghostStyle = (start: number) => ({
+const ghostStyle = (start: number, minutes = GHOST_MINUTES) => ({
 	top: `${top(start)}px`,
-	height: `${GHOST_MINUTES * PIXELS_PER_MINUTE - 2}px`,
+	height: `${minutes * PIXELS_PER_MINUTE - 2}px`,
 })
 
 const sheet = mobile.sheet
-const ghostFor = (room: string) =>
-	sheet.value?.type === "add" && sheet.value.room === room
-		? { room, start: sheet.value.start, duration: GHOST_MINUTES, axis: "y" as const, span: false }
+function ghostFor(room: string) {
+	const landing = touch.moving.value
+	if (landing) return landing.room === room ? ghostAt(room, landing.start, landing.duration) : null
+	return sheet.value?.type === "add" && sheet.value.room === room
+		? ghostAt(room, sheet.value.start, GHOST_MINUTES)
 		: null
+}
+const ghostAt = (room: string, start: number, duration: number) => ({
+	room,
+	start,
+	duration,
+	axis: "y" as const,
+	span: false,
+})
 const gridLines = computed(() => {
 	const hour = 60 * PIXELS_PER_MINUTE
 	return `repeating-linear-gradient(to bottom, var(--outline-gray-1) 0 1px, transparent 1px ${hour}px)`
@@ -93,7 +113,11 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 
 <template>
 	<div class="relative min-h-0 flex-1">
-		<div class="h-full overflow-auto overscroll-contain">
+		<div
+			ref="scroller"
+			class="h-full scroll-pl-[48px] overflow-auto overscroll-contain"
+			:class="isGrid && !touch.position.value && 'snap-x snap-mandatory'"
+		>
 			<div :style="{ minWidth: `${RAIL + (isGrid ? COLUMN * (columns.length + 1) : 0)}px` }">
 				<div
 					v-if="isGrid"
@@ -106,7 +130,7 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 					<div
 						v-for="column in columns"
 						:key="column.room.name"
-						class="box-border flex min-w-0 shrink-0 gap-1.5 border-l border-outline-gray-1 p-2.5 text-p-xs font-semibold text-ink-gray-8"
+						class="box-border flex min-w-0 shrink-0 snap-start gap-1.5 border-l border-outline-gray-1 p-2.5 text-p-xs font-semibold text-ink-gray-8"
 						:style="{ width: `${COLUMN}px` }"
 					>
 						<span class="truncate">{{ column.room.title }}</span>
@@ -116,7 +140,7 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 					</div>
 					<button
 						type="button"
-						class="box-border flex shrink-0 items-center gap-1.5 border-l border-outline-gray-1 p-2.5 text-p-xs font-medium text-ink-gray-6 active:bg-surface-gray-2"
+						class="box-border flex shrink-0 snap-start items-center gap-1.5 border-l border-outline-gray-1 p-2.5 text-p-xs font-medium text-ink-gray-6 active:bg-surface-gray-2"
 						:style="{ width: `${COLUMN}px` }"
 						@click="mobile.addRoom"
 					>
@@ -152,7 +176,9 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 							v-if="ghostFor(column.room.name)"
 							class="inset-x-[3px]"
 							:ghost="ghostFor(column.room.name)!"
-							:style="ghostStyle(ghostFor(column.room.name)!.start)"
+							:style="
+								ghostStyle(ghostFor(column.room.name)!.start, ghostFor(column.room.name)!.duration)
+							"
 						/>
 						<ScheduleMobileBlock
 							v-for="entry in column.items"
@@ -161,6 +187,10 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 							:height="lengthOf(entry.item)"
 							:conflict="conflicts[entry.item.key]"
 							:dragging="touch.position.value?.key === entry.item.key"
+							:offset="touch.moving.value?.key === entry.item.key ? touch.offset.value : null"
+							:landing-start="
+								touch.moving.value?.key === entry.item.key ? touch.moving.value.start : undefined
+							"
 							:style="blockStyle(entry.item, entry.lane, entry.lanes)"
 							@press="(event, mode) => touch.begin(event, entry.item, mode)"
 							@open="mobile.openEdit(entry.item.key)"
