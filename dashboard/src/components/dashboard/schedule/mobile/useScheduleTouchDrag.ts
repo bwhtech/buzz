@@ -19,18 +19,13 @@ interface Gesture {
 	origin: { x: number; y: number }
 	item: DragPosition
 	mode: DragMode
-	armed: boolean
 	moved: boolean
-	isMouse: boolean
-	timer?: ReturnType<typeof setTimeout>
 }
 
-const HOLD_MS = 300
-const SLOP_PX = 5
 const STEP_MINUTES = 5
 const stepped = (minutes: number) => Math.round(minutes / STEP_MINUTES) * STEP_MINUTES
 
-/** Press and hold a block to move it; the bottom handle resizes at once. */
+/** A block's side grip moves it and its bottom handle resizes it; both start at once. */
 export function useScheduleTouchDrag(pixelsPerMinute: number, columnWidth: Ref<number | null>) {
 	const builder = useBuilder()
 	const board = useBoard()
@@ -48,19 +43,10 @@ export function useScheduleTouchDrag(pixelsPerMinute: number, columnWidth: Ref<n
 			origin: { x: event.clientX, y: event.clientY },
 			item: start,
 			mode,
-			armed: mode === "resize",
 			moved: false,
-			isMouse: event.pointerType === "mouse",
 		}
-		if (gesture.armed) position.value = start
-		else gesture.timer = setTimeout(arm, HOLD_MS)
+		position.value = start
 		listen()
-	}
-
-	function arm() {
-		if (!gesture) return
-		gesture.armed = true
-		position.value = gesture.item
 	}
 
 	function listen() {
@@ -68,28 +54,16 @@ export function useScheduleTouchDrag(pixelsPerMinute: number, columnWidth: Ref<n
 			useEventListener(window, "pointermove", onMove, { passive: false }),
 			useEventListener(window, "pointerup", onEnd),
 			useEventListener(window, "pointercancel", finish),
-			useEventListener(window, "touchmove", blockScroll, { passive: false }),
 		]
 	}
-
-	const blockScroll = (event: TouchEvent) => gesture?.armed && event.preventDefault()
 
 	function onMove(event: PointerEvent) {
 		if (!gesture) return
 		const dx = event.clientX - gesture.origin.x
 		const dy = event.clientY - gesture.origin.y
-		if (!gesture.armed) return pendingMove(dx, dy)
 		gesture.moved = true
 		event.preventDefault()
 		position.value = gesture.mode === "resize" ? resizedBy(dy) : movedBy(dx, dy)
-	}
-
-	// Before the hold completes a mouse drags at once, while a moving finger means scrolling.
-	function pendingMove(dx: number, dy: number) {
-		if (!gesture || Math.hypot(dx, dy) <= SLOP_PX) return
-		if (!gesture.isMouse) return finish()
-		clearTimeout(gesture.timer)
-		arm()
 	}
 
 	function resizedBy(dy: number): DragPosition {
@@ -125,7 +99,6 @@ export function useScheduleTouchDrag(pixelsPerMinute: number, columnWidth: Ref<n
 		finish()
 		if (!ended) return
 		if (ended.moved && target) commit(ended, target)
-		else if (ended.mode === "move") mobile.openEdit(ended.item.key)
 	}
 
 	function commit(ended: Gesture, target: DragPosition) {
@@ -147,7 +120,6 @@ export function useScheduleTouchDrag(pixelsPerMinute: number, columnWidth: Ref<n
 	}
 
 	function finish() {
-		if (gesture) clearTimeout(gesture.timer)
 		gesture = null
 		position.value = null
 		stopListening.forEach((stop) => stop())

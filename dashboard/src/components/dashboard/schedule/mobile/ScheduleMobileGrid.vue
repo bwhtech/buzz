@@ -155,6 +155,7 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 							:dragging="touch.position.value?.key === entry.item.key"
 							:style="blockStyle(entry.item, entry.lane, entry.lanes)"
 							@press="(event, mode) => touch.begin(event, entry.item, mode)"
+							@open="mobile.openEdit(entry.item.key)"
 						/>
 					</div>
 					<ScheduleMobileCard

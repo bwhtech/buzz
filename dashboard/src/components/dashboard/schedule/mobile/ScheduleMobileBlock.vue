@@ -14,7 +14,7 @@ const props = defineProps<{
 	conflict?: string
 	dragging: boolean
 }>()
-const emit = defineEmits<{ press: [event: PointerEvent, mode: DragMode] }>()
+const emit = defineEmits<{ press: [event: PointerEvent, mode: DragMode]; open: [] }>()
 const builder = useBuilder()
 
 const resolved = computed(() => builder.resolve(props.item))
@@ -38,7 +38,7 @@ const titleStyle = computed(() => ({
 const style = computed(() => ({
 	background: colors.value.background,
 	borderColor: props.conflict ? "var(--outline-red-3)" : colors.value.border,
-	padding: showHandle.value ? "5px 8px" : "1px 8px",
+	padding: showHandle.value ? "5px 28px 5px 8px" : "1px 8px",
 }))
 </script>
 
@@ -47,8 +47,7 @@ const style = computed(() => ({
 		class="absolute box-border select-none overflow-hidden rounded-5 border transition-shadow"
 		:class="dragging ? 'z-10 scale-[1.02] opacity-95 shadow-xl' : 'z-[1]'"
 		:style="style"
-		@pointerdown="emit('press', $event, 'move')"
-		@click.stop
+		@click.stop="emit('open')"
 	>
 		<div
 			class="text-p-xs font-medium leading-4 text-ink-gray-9 [overflow-wrap:anywhere]"
@@ -61,14 +60,24 @@ const style = computed(() => ({
 		</div>
 		<span
 			v-if="conflict"
-			class="absolute right-[5px] top-[5px] size-[7px] rounded-full bg-surface-red-6"
+			class="absolute right-[30px] top-[5px] size-[7px] rounded-full bg-surface-red-6"
 			role="img"
 			:aria-label="conflict"
 		/>
 		<div
 			v-if="showHandle"
+			class="absolute inset-y-0 right-0 flex w-7 touch-none items-center justify-center text-ink-gray-5"
+			aria-label="Drag to move"
+			@pointerdown="emit('press', $event, 'move')"
+			@click.stop
+		>
+			<span class="lucide-grip-vertical size-4" aria-hidden="true" />
+		</div>
+		<div
+			v-if="showHandle"
 			class="absolute inset-x-0 -bottom-0.5 flex h-4 touch-none items-center justify-center"
 			@pointerdown="emit('press', $event, 'resize')"
+			@click.stop
 		>
 			<div class="h-1 w-6 rounded-sm bg-surface-gray-7" />
 		</div>

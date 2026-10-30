@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ErrorMessage, Spinner } from "frappe-ui"
+import { Button, ErrorMessage, Spinner } from "frappe-ui"
 import { computed } from "vue"
 
 import type { FrappeError } from "@/types"
@@ -35,18 +35,18 @@ const loadError = computed(
 			<ScheduleMobileControls />
 			<ScheduleMobileAgenda v-if="mobile.view.value === 'list'" />
 			<ScheduleMobileGrid v-else />
-			<button
-				type="button"
-				aria-label="Add session"
-				class="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-[18px] z-20 grid size-[52px] place-items-center rounded-full bg-surface-gray-9 text-ink-base shadow-xl transition-transform duration-100 active:scale-95"
+			<Button
+				variant="solid"
+				size="lg"
+				icon-left="lucide-plus"
+				label="Add session"
+				class="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-20 -translate-x-1/2 shadow-xl"
 				@click="mobile.openAdd()"
-			>
-				<span class="lucide-plus size-[22px]" aria-hidden="true" />
-			</button>
+			/>
 		</template>
 		<ScheduleToast
 			v-if="!mobile.sheet.value"
-			class="!bottom-[calc(6.5rem+env(safe-area-inset-bottom))]"
+			class="!bottom-[calc(5.5rem+env(safe-area-inset-bottom))]"
 		/>
 		<ScheduleMobileEditSheet />
 		<ScheduleMobileAddSheet />
