@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, TextInput } from "frappe-ui"
+import { Button, TextInput, toast } from "frappe-ui"
 import { nextTick, ref } from "vue"
 
 import { useBoard, useBuilder } from "./useScheduleBoard"
@@ -18,8 +18,10 @@ async function submit() {
 	const title = board.roomDraft.value.trim() || `Track ${builder.rooms.rooms.value.length + 1}`
 	board.addingRoom.value = false
 	board.roomDraft.value = ""
-	await builder.rooms.add(title)
-	builder.say(`Added ${title}`)
+	await builder.rooms
+		.add(title)
+		.then(() => builder.say(`Added ${title}`))
+		.catch(() => toast.error("Could not add the track"))
 }
 </script>
 

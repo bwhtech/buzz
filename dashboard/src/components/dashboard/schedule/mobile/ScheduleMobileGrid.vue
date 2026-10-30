@@ -32,11 +32,7 @@ const touch = useScheduleTouchDrag(PIXELS_PER_MINUTE, columnWidth, scroller, ins
 
 const range = board.range
 const height = computed(() => (range.value.end - range.value.start) * PIXELS_PER_MINUTE)
-const hours = computed(() => {
-	const list = []
-	for (let minute = range.value.start; minute <= range.value.end; minute += 60) list.push(minute)
-	return list
-})
+const hours = board.hours
 
 const shownRooms = computed(() =>
 	isGrid.value ? rooms.value : rooms.value.filter((room) => room.name === mobile.activeRoom.value),

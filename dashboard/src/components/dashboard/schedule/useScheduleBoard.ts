@@ -1,7 +1,7 @@
 import { useEventListener } from "@vueuse/core"
 import { type InjectionKey, type Ref, computed, inject, provide, ref } from "vue"
 
-import { MIN_DURATION, SNAP_MINUTES, TIMELINE_RATIO, ZOOM, snap } from "./scheduleLayout"
+import { MIN_DURATION, SNAP_MINUTES, TIMELINE_RATIO, ZOOM, hourMarks, snap } from "./scheduleLayout"
 import type { DragPayload, ScheduleView } from "./scheduleTypes"
 import type { ScheduleBuilder } from "./useScheduleBuilder"
 
@@ -42,6 +42,7 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		() => builder.items.value.find((item) => item.key === selectedKey.value) ?? null,
 	)
 	const range = computed(() => builder.rangeOf(builder.activeDate.value))
+	const hours = computed(() => hourMarks(range.value))
 
 	let drag: DragPayload | null = null
 	let springTimer: ReturnType<typeof setTimeout> | undefined
@@ -219,6 +220,7 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		dragging,
 		tab,
 		range,
+		hours,
 		addingRoom,
 		renamingRoom,
 		roomDraft,

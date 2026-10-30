@@ -20,11 +20,7 @@ const { board, rooms, roomIndex, visible, conflicts, lanes, countIn } = useDayLa
 const count = computed(() => Math.max(rooms.value.length, 1))
 const range = board.range
 const height = computed(() => ((range.value.end - range.value.start) / 60) * ZOOM)
-const hours = computed(() => {
-	const list = []
-	for (let minute = range.value.start; minute <= range.value.end; minute += 60) list.push(minute)
-	return list
-})
+const hours = board.hours
 
 function boxOf(item: (typeof visible.value)[number]) {
 	const top = (item.start - range.value.start) * pxm

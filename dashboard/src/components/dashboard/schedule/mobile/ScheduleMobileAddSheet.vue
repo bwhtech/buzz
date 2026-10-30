@@ -4,14 +4,13 @@ import { computed, ref, watch } from "vue"
 
 import { dotColor } from "../scheduleColors"
 import { scheduleIcon } from "../scheduleIcons"
-import { clock, durationLabel, speakerLine } from "../scheduleLayout"
+import { TALK_TYPES, clock, durationLabel, speakerLine } from "../scheduleLayout"
 import { useBuilder } from "../useScheduleBoard"
 import ScheduleMobileChip from "./ScheduleMobileChip.vue"
 import { type MobileSheet, useMobile } from "./useScheduleMobile"
 
 type AddSheet = Extract<MobileSheet, { type: "add" }>
 
-const TALK_TYPES = new Set(["Talk", "Keynote", "Lightning", "Workshop", "Break"])
 const STEP_MINUTES = 15
 const builder = useBuilder()
 const mobile = useMobile()
@@ -37,7 +36,7 @@ const where = computed(
 	() =>
 		`${builder.activeDay.value?.label} · ${dayjs(builder.activeDate.value).format("ddd D MMM")}`,
 )
-const talkDuration = computed(() => builder.typesByName.value.Talk?.default_duration ?? 30)
+const talkDuration = builder.talkDuration
 const tabOptions = computed(() => [
 	{ label: `Talks ${mobile.unscheduledTalks.value.length}`, value: "talks" },
 	{ label: "Breaks & custom", value: "custom" },

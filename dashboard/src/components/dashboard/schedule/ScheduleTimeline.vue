@@ -17,11 +17,7 @@ const { board, rooms, roomIndex, visible, conflicts, lanes, countIn } = useDayLa
 const range = board.range
 const width = computed(() => (range.value.end - range.value.start) * pxm)
 const rowsHeight = computed(() => rooms.value.length * ROW_HEIGHT)
-const hours = computed(() => {
-	const list = []
-	for (let minute = range.value.start; minute <= range.value.end; minute += 60) list.push(minute)
-	return list
-})
+const hours = board.hours
 const left = (minute: number) => (minute - range.value.start) * pxm
 
 function boxOf(item: (typeof visible.value)[number]) {
@@ -74,7 +70,7 @@ const ghost = computed(() => {
 					class="sticky left-0 z-[2] flex shrink-0 items-center border-r border-outline-gray-1 bg-surface-base px-4 text-p-xs text-ink-gray-5"
 					:style="{ width: `${LABELS}px` }"
 				>
-					Rooms
+					Tracks
 				</div>
 				<div class="relative shrink-0" :style="{ width: `${width}px` }">
 					<span

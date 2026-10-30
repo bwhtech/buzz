@@ -22,11 +22,7 @@ export function useScheduleMobile() {
 	const rooms = builder.rooms.rooms
 	const roomView = computed(() => rooms.value.find((room) => room.name === chosenRoom.value))
 	const activeRoom = computed(() => (roomView.value ?? rooms.value[0])?.name ?? null)
-	const unscheduledTalks = computed(() =>
-		builder.talks.value.filter(
-			(talk) => !builder.items.value.some((item) => item.talk === talk.name),
-		),
-	)
+	const unscheduledTalks = builder.unscheduledTalks
 
 	function defaultRoom() {
 		if (view.value === "room") return activeRoom.value

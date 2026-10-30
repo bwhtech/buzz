@@ -7,6 +7,8 @@ export const ZOOM = 112
 export const TIMELINE_RATIO = 1.6
 export const ROW_HEIGHT = 84
 export const DURATIONS = [5, 10, 15, 20, 25, 30, 40, 45, 60, 75, 90, 120, 150, 180]
+// Talk-like types come from the talks library; the rest are the blocks organizers drop in.
+export const TALK_TYPES = new Set(["Talk", "Keynote", "Lightning", "Workshop", "Break"])
 
 const pad = (value: number) => String(value).padStart(2, "0")
 
@@ -31,6 +33,12 @@ export function speakerLine(names: string[]) {
 export interface DayRange {
 	start: number
 	end: number
+}
+
+export function hourMarks(range: DayRange) {
+	const marks = []
+	for (let minute = range.start; minute <= range.end; minute += 60) marks.push(minute)
+	return marks
 }
 
 /** The usual conference day, stretched to hold every item. */

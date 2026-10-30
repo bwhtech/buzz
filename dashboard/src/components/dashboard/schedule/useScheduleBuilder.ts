@@ -73,6 +73,7 @@ export function useScheduleBuilder(eventId: () => string) {
 	const talksByName = computed(() =>
 		Object.fromEntries(talks.value.map((talk) => [talk.name, talk])),
 	)
+	const talkDuration = computed(() => typesByName.value.Talk?.default_duration ?? 30)
 
 	const draft = ref<Draft | null>(null)
 	const days = computed(() => draft.value?.days ?? [])
@@ -84,6 +85,10 @@ export function useScheduleBuilder(eventId: () => string) {
 	})
 	const activeDay = computed(() => days.value.find((day) => day.date === activeDate.value))
 	const dayItems = (date: string) => items.value.filter((item) => item.date === date)
+	const unscheduledTalks = computed(() => {
+		const scheduled = new Set(items.value.map((item) => item.talk))
+		return talks.value.filter((talk) => !scheduled.has(talk.name))
+	})
 
 	const serialized = () =>
 		JSON.stringify({
@@ -214,7 +219,7 @@ export function useScheduleBuilder(eventId: () => string) {
 	function placeTalk(name: string, date: string, room: string | null, start?: number) {
 		const talk = talksByName.value[name]
 		if (!talk) return
-		const duration = typesByName.value.Talk?.default_duration ?? 30
+		const duration = talkDuration.value
 		const existing = items.value.find((entry) => entry.talk === name)
 		const at = start ?? nextFreeStart(dayItems(date), room, duration, rangeOf(date))
 		if (existing) return update(existing.key, { date, room, start: at }, `Moved “${talk.title}”`)
@@ -359,9 +364,15 @@ export function useScheduleBuilder(eventId: () => string) {
 		await rooms.move(moved, step)
 	}
 
+	// Deleting saves at once, so on a live schedule it would publish every other pending edit.
 	async function removeRoom(name: string) {
+		if (!draft.value) return
+		if (isPublished.value && dirty.value)
+			throw new Error("Publish or undo your changes before deleting a track")
 		const room = rooms.find(name)
-		commit((current) => (current.items = current.items.filter((item) => item.room !== name)))
+		draft.value.items = draft.value.items.filter((item) => item.room !== name)
+		// Undo would bring back items that point at the deleted track.
+		previous.value = null
 		await save()
 		if (!room?.is_standard) await rooms.remove(name)
 		say(`Deleted ${room?.title}`)
@@ -386,6 +397,8 @@ export function useScheduleBuilder(eventId: () => string) {
 		types,
 		typesByName,
 		talks,
+		unscheduledTalks,
+		talkDuration,
 		rooms,
 		renameRoom,
 		moveRoom,

@@ -4,10 +4,9 @@ import { computed, nextTick, ref, watch } from "vue"
 
 import { dotColor } from "./scheduleColors"
 import { scheduleIcon } from "./scheduleIcons"
-import { clock, speakerLine } from "./scheduleLayout"
+import { TALK_TYPES, clock, speakerLine } from "./scheduleLayout"
 import { useBoard, useBuilder } from "./useScheduleBoard"
 
-const TALK_TYPES = new Set(["Talk", "Keynote", "Lightning", "Workshop", "Break"])
 const builder = useBuilder()
 const board = useBoard()
 const search = ref("")
@@ -22,8 +21,7 @@ watch(quick, (open) => {
 
 const query = computed(() => search.value.trim().toLowerCase())
 const talks = computed(() =>
-	builder.talks.value
-		.filter((talk) => !builder.items.value.some((item) => item.talk === talk.name))
+	builder.unscheduledTalks.value
 		.filter((talk) =>
 			`${talk.title} ${talk.speakers.join(" ")}`.toLowerCase().includes(query.value),
 		)
@@ -103,8 +101,7 @@ function close() {
 					<span class="min-w-0 flex-1">
 						<span class="block truncate text-p-sm text-ink-gray-9">{{ talk.title }}</span>
 						<span class="block text-p-xs text-ink-gray-5"
-							>{{ speakerLine(talk.speakers) }} ·
-							{{ builder.typesByName.value.Talk?.default_duration ?? 30 }} min</span
+							>{{ speakerLine(talk.speakers) }} · {{ builder.talkDuration.value }} min</span
 						>
 					</span>
 				</button>

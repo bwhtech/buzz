@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { Button, Dropdown, TextInput } from "frappe-ui"
+import { Button, Dropdown, TextInput, toast } from "frappe-ui"
 import { computed, nextTick, ref, watch } from "vue"
+
+import type { FrappeError } from "@/types"
 
 import { dotColor } from "./scheduleColors"
 import type { ScheduleRoom } from "./scheduleTypes"
@@ -19,6 +21,14 @@ const meta = computed(() => {
 	return `${seats}${props.count} ${props.count === 1 ? "item" : "items"}`
 })
 
+const run = (action: Promise<unknown>) =>
+	action.catch((error: FrappeError) => toast.error(error.message || "Could not change the track"))
+
+function remove() {
+	const message = `Delete ${props.room.title}? Its items on every day are deleted with it.`
+	if (window.confirm(message)) run(builder.removeRoom(props.room.name))
+}
+
 function startRename() {
 	board.roomDraft.value = props.room.title
 	board.renamingRoom.value = props.room.name
@@ -29,7 +39,7 @@ async function submitRename() {
 	const title = board.roomDraft.value.trim()
 	board.renamingRoom.value = null
 	if (!title || title === props.room.title) return
-	await builder.renameRoom(props.room.name, title)
+	await run(builder.renameRoom(props.room.name, title))
 }
 
 const options = computed(() => [
@@ -38,20 +48,20 @@ const options = computed(() => [
 		label: "Move left",
 		icon: "lucide-arrow-left",
 		disabled: props.index === 0,
-		onClick: () => builder.moveRoom(props.room.name, -1),
+		onClick: () => run(builder.moveRoom(props.room.name, -1)),
 	},
 	{
 		label: "Move right",
 		icon: "lucide-arrow-right",
 		disabled: props.index === props.total - 1,
-		onClick: () => builder.moveRoom(props.room.name, 1),
+		onClick: () => run(builder.moveRoom(props.room.name, 1)),
 	},
 	{
 		label: "Delete track",
 		icon: "lucide-trash-2",
 		theme: "red" as const,
 		disabled: props.total === 1,
-		onClick: () => builder.removeRoom(props.room.name),
+		onClick: remove,
 	},
 ])
 </script>

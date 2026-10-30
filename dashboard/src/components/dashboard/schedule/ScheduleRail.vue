@@ -10,12 +10,7 @@ import { useBoard, useBuilder } from "./useScheduleBoard"
 const builder = useBuilder()
 const board = useBoard()
 
-const unscheduledCount = computed(
-	() =>
-		builder.talks.value.filter(
-			(talk) => !builder.items.value.some((item) => item.talk === talk.name),
-		).length,
-)
+const unscheduledCount = computed(() => builder.unscheduledTalks.value.length)
 const tabs = computed(() => [
 	{ label: `Talks · ${unscheduledCount.value}`, value: "talks" },
 	{ label: "Custom items", value: "custom" },

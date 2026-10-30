@@ -3,11 +3,9 @@ import { Button, FormControl } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import { scheduleIcon } from "./scheduleIcons"
-import { DURATIONS, durationLabel } from "./scheduleLayout"
+import { DURATIONS, TALK_TYPES, durationLabel } from "./scheduleLayout"
 import { useBoard, useBuilder } from "./useScheduleBoard"
 
-// Talk-like types come from the talks library; the rest are the blocks organizers drop in.
-const TALK_TYPES = new Set(["Talk", "Keynote", "Lightning", "Workshop", "Break"])
 const builder = useBuilder()
 const board = useBoard()
 

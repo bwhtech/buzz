@@ -11,7 +11,7 @@ const board = useBoard()
 const search = ref("")
 
 const talkType = computed(() => builder.typesByName.value.Talk)
-const duration = computed(() => talkType.value?.default_duration ?? 30)
+const duration = builder.talkDuration
 const scheduled = computed(() => new Set(builder.items.value.map((item) => item.talk)))
 
 const matching = computed(() => {
