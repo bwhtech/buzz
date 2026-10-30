@@ -66,7 +66,7 @@ const style = computed(() => ({
 		/>
 		<div
 			v-if="showHandle"
-			class="absolute inset-y-0 right-0 flex w-7 touch-none items-center justify-center text-ink-gray-5"
+			class="absolute right-0 top-0 flex size-7 touch-none items-center justify-center text-ink-gray-5"
 			aria-label="Drag to move"
 			@pointerdown="emit('press', $event, 'move')"
 			@click.stop
