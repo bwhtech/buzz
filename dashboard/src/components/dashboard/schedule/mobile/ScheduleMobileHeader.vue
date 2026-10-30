@@ -75,7 +75,7 @@ function save(publish: boolean) {
 			<Button
 				v-else
 				variant="solid"
-				size="lg"
+				size="xs"
 				:label="published ? 'Save and publish' : 'Publish'"
 				:loading="saving"
 				@click="save(true)"
