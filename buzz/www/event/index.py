@@ -4,11 +4,9 @@ from urllib.parse import urlparse
 import frappe
 from frappe import _
 from frappe.utils import (
-	comma_sep,
 	format_date,
 	get_datetime,
 	get_system_timezone,
-	get_time,
 	getdate,
 	nowdate,
 )
@@ -105,8 +103,6 @@ class EventPage:
 			"tabs": self.tabs(),
 			"hosts": self.hosts(),
 			"links": self.links(),
-			"schedule": self.schedule,
-			"schedule_rooms": self.public_schedule.rooms,
 			"speakers": self.speakers,
 			"sponsor_tiers": self.sponsor_tiers,
 			"venue": self.venue(),
@@ -129,7 +125,7 @@ class EventPage:
 	def tabs(self) -> list[dict]:
 		sections = [
 			("about", _("About"), True),
-			("schedule", _("Schedule"), self.schedule),
+			("schedule", _("Schedule"), self.public_schedule.has_sessions),
 			("speakers", _("Speakers"), self.speakers),
 			("sponsors", _("Sponsors"), self.sponsor_tiers),
 		]

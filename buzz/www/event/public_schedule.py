@@ -74,6 +74,14 @@ class PublicSchedule:
 		days = [self.day(day) for day in self.document.day_list()]
 		return [day for day in days if day["rows"]]
 
+	@property
+	def has_sessions(self) -> bool:
+		"""Whether `days` has a row, without building the rows."""
+		if not self.name:
+			return False
+		dates = {day["date"] for day in self.document.day_list()}
+		return any(str(item.date) in dates for item in self.document.items)
+
 	@cached_property
 	def rooms(self) -> list[dict]:
 		"""Empty with a single room: a label or filter would only repeat itself."""

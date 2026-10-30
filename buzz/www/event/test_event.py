@@ -55,7 +55,7 @@ class TestEventPage(IntegrationTestCase):
 		save_schedule(
 			event, {"type": "Break", "title": "Coffee", "start_time": "09:00:00", "end_time": "09:30:00"}
 		)
-		row = EventPage(event.route).as_context()["schedule"][0]["rows"][0]
+		row = EventPage(event.route).schedule[0]["rows"][0]
 		self.assertEqual(row["time"], "09:00 \u2013 09:30")
 		self.assertEqual(row["title"], "Coffee")
 
@@ -70,8 +70,9 @@ class TestEventPage(IntegrationTestCase):
 		event.save()
 		row = {"type": "Talk", "reference_doctype": "Event Talk", "reference_document": talk.name}
 		save_schedule(event, {**row, "start_time": "10:00:00", "end_time": "10:30:00"})
-		context = EventPage(event.route).as_context()
-		row = context["schedule"][0]["rows"][0]
+		page = EventPage(event.route)
+		context = page.as_context()
+		row = page.schedule[0]["rows"][0]
 		self.assertEqual((row["title"], row["speakers"]), ("Scaling apps", "Asha Rao"))
 		self.assertEqual(context["speakers"][0]["name"], "Asha Rao")
 
@@ -80,7 +81,7 @@ class TestEventPage(IntegrationTestCase):
 		save_schedule(
 			event, {"type": "Break", "start_time": "09:00:00", "end_time": "09:30:00"}, is_published=0
 		)
-		self.assertEqual(EventPage(event.route).as_context()["schedule"], [])
+		self.assertEqual(EventPage(event.route).schedule, [])
 
 	def test_schedule_days_follow_their_order_and_labels(self):
 		event = self.create_event()
@@ -90,7 +91,7 @@ class TestEventPage(IntegrationTestCase):
 		save_schedule(
 			event, {"date": next_day, "type": "Workshop", "start_time": "09:00:00", "end_time": "10:00:00"}
 		)
-		labels = [day["day"] for day in EventPage(event.route).as_context()["schedule"]]
+		labels = [day["day"] for day in EventPage(event.route).schedule]
 		self.assertEqual(labels, ["Workshops", format_day(event.start_date)])
 
 	def test_join_parts_strips_spaces_around_each_part(self):
@@ -192,7 +193,7 @@ class TestEventPage(IntegrationTestCase):
 			schedule.append("items", {**times, "type": "Talk", "title": "Parallel", "track": track})
 		schedule.append("items", {**times, "type": "Break", "title": "Coffee", "all_tracks": 1})
 		schedule.save()
-		day = EventPage(event.route).as_context()["schedule"][0]
+		day = EventPage(event.route).schedule[0]
 		self.assertEqual([len(slot["rows"]) for slot in day["slots"]], [1, 2])
 		self.assertEqual(day["slots"][0]["rows"][0]["room_key"], "")
 		self.assertTrue(all(row["room"] for row in day["slots"][1]["rows"]))
