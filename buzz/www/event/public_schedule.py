@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import comma_sep, get_time
 
+from buzz.api.schedule.services import speaker_profiles
 from buzz.events.doctype.buzz_schedule_item_type.buzz_schedule_item_type import HEX_COLOR, THEME_COLORS
 from buzz.www.event.date_range import format_day, format_time, format_time_range, join_parts
 
@@ -157,23 +158,5 @@ class PublicSchedule:
 
 	@cached_property
 	def speakers(self) -> dict:
-		rows = frappe.get_all(
-			"Talk Speaker",
-			filters={"parenttype": "Event Talk", "parent": ["in", self.talk_names]},
-			fields=["parent", "speaker"],
-			order_by="idx",
-		)
-		profiles = self.profiles([row.speaker for row in rows])
-		speakers = {}
-		for row in rows:
-			if row.speaker in profiles:
-				speakers.setdefault(row.parent, []).append(speaker_summary(profiles[row.speaker]))
-		return speakers
-
-	def profiles(self, names: list[str]) -> dict:
-		rows = frappe.get_all(
-			"Speaker Profile",
-			filters={"name": ["in", names]},
-			fields=["name", "display_name", "designation", "company", "display_image"],
-		)
-		return {str(row.name): row for row in rows}
+		profiles = speaker_profiles(self.talk_names, ["designation", "company", "display_image"])
+		return {talk: [speaker_summary(profile) for profile in people] for talk, people in profiles.items()}

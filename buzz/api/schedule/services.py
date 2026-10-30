@@ -44,19 +44,30 @@ def event_talks(event: int) -> list[ScheduleTalk]:
 
 
 def speaker_names(talks: list[str]) -> dict[str, list[str]]:
+	return {
+		talk: [profile.display_name for profile in profiles]
+		for talk, profiles in speaker_profiles(talks).items()
+	}
+
+
+def speaker_profiles(talks: list[str], fields: list[str] | None = None) -> dict[str, list]:
+	"""Speaker Profile rows of each talk, in speaker order."""
 	rows = frappe.get_all(
 		"Talk Speaker",
 		filters={"parenttype": "Event Talk", "parent": ["in", talks or [""]]},
 		fields=["parent", "speaker"],
 		order_by="idx",
 	)
-	profiles = frappe.get_all(
-		"Speaker Profile",
-		filters={"name": ["in", [row.speaker for row in rows] or [""]]},
-		fields=["name", "display_name"],
-	)
-	display_names = {str(profile.name): profile.display_name for profile in profiles}
-	names: dict[str, list[str]] = {}
+	profiles = {
+		str(profile.name): profile
+		for profile in frappe.get_all(
+			"Speaker Profile",
+			filters={"name": ["in", [row.speaker for row in rows] or [""]]},
+			fields=["name", "display_name", *(fields or [])],
+		)
+	}
+	by_talk: dict[str, list] = {}
 	for row in rows:
-		names.setdefault(str(row.parent), []).append(display_names.get(str(row.speaker), row.speaker))
-	return names
+		if row.speaker in profiles:
+			by_talk.setdefault(str(row.parent), []).append(profiles[row.speaker])
+	return by_talk

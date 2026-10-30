@@ -48,18 +48,16 @@ export function blockColors(color: string | null | undefined): BlockColors {
 
 export const dotColor = (color: string | null | undefined) => blockColors(color).dot
 
-const BADGE_THEMES: Record<string, "gray" | "blue" | "green" | "red" | "amber" | "violet"> = {
-	gray: "gray",
-	blue: "blue",
-	green: "green",
-	red: "red",
-	amber: "amber",
-	violet: "violet",
+type BadgeTheme = "gray" | "blue" | "green" | "red" | "amber" | "violet"
+// frappe-ui Badge lacks these themes, so each borrows the nearest one.
+const BADGE_REMAPS: Record<string, BadgeTheme> = {
 	orange: "amber",
 	teal: "green",
 	cyan: "blue",
 	pink: "red",
 }
 
-/** frappe-ui Badge themes only know the names it ships. */
-export const badgeTheme = (color: string | null | undefined) => BADGE_THEMES[themeOf(color)]
+export function badgeTheme(color: string | null | undefined) {
+	const theme = themeOf(color)
+	return BADGE_REMAPS[theme] ?? (theme as BadgeTheme)
+}

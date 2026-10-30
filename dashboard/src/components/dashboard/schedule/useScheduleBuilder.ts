@@ -338,7 +338,6 @@ export function useScheduleBuilder(eventId: () => string) {
 	return {
 		open,
 		opener,
-		scheduleName,
 		schedule,
 		draft,
 		dirty,
@@ -355,7 +354,6 @@ export function useScheduleBuilder(eventId: () => string) {
 		types,
 		typesByName,
 		talks,
-		talksByName,
 		rooms,
 		removeRoom,
 		conflicts,
@@ -376,7 +374,6 @@ export function useScheduleBuilder(eventId: () => string) {
 		editDay,
 		duplicateDay,
 		removeDay,
-		refreshTypes: typesList.reload,
 	}
 }
 
