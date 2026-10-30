@@ -200,7 +200,6 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		event.preventDefault()
 		const item = builder.findItem(key)
 		if (!item) return
-		builder.saveUndoPoint()
 		const origin = axis === "y" ? event.clientY : event.clientX
 		resizing = { key, axis, origin, duration: item.duration, start: item.start }
 	}
@@ -212,7 +211,11 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		const duration = Math.min(longest, snap(resizing.duration + moved))
 		builder.resize(resizing.key, duration)
 	})
-	useEventListener(window, "mouseup", () => resizing && setTimeout(() => (resizing = null)))
+	useEventListener(window, "mouseup", () => {
+		if (!resizing) return
+		if (builder.findItem(resizing.key)?.duration !== resizing.duration) builder.recordChange()
+		setTimeout(() => (resizing = null))
+	})
 
 	useEventListener(window, "keydown", (event: KeyboardEvent) => {
 		const field = (event.target as HTMLElement).tagName?.toLowerCase()
@@ -223,6 +226,11 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 			addingTrack.value = false
 			renamingTrack.value = null
 			if (!typing) selectedKey.value = null
+		}
+		if (!typing && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
+			event.preventDefault()
+			if (event.shiftKey) builder.redo()
+			else builder.undo()
 		}
 		const removing = event.key === "Backspace" || event.key === "Delete"
 		if (!typing && removing && selectedKey.value) builder.remove(selectedKey.value)

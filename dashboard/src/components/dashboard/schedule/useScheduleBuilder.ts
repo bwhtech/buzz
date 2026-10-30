@@ -1,6 +1,6 @@
-import { useDebounceFn } from "@vueuse/core"
+import { useDebounceFn, useManualRefHistory } from "@vueuse/core"
 import { dayjs, toast, useCall, useDoc, useList } from "frappe-ui"
-import { computed, ref, shallowRef, watch } from "vue"
+import { computed, ref, watch } from "vue"
 
 import type { FrappeError } from "@/types"
 
@@ -90,6 +90,20 @@ export function useScheduleBuilder(eventId: () => string) {
 	const talkDuration = computed(() => typesByName.value.Talk?.default_duration ?? 30)
 
 	const draft = ref<Draft | null>(null)
+	// Undo and redo cover days and items; publishing is not an edit to undo.
+	const history = useManualRefHistory<Draft | null>(draft, {
+		capacity: 100,
+		clone: deepCopy,
+		setSource: (source, value) =>
+			source.value &&
+			value &&
+			Object.assign(source.value, { items: value.items, days: value.days }),
+	})
+	// vueuse's clear() keeps the old latest record, so record the current draft first.
+	function resetHistory() {
+		history.commit()
+		history.clear()
+	}
 	const days = computed(() => draft.value?.days ?? [])
 	const items = computed(() => draft.value?.items ?? [])
 	const isPublished = computed(() => !!draft.value?.published)
@@ -128,6 +142,7 @@ export function useScheduleBuilder(eventId: () => string) {
 		const loaded = typeof doc.days === "string" ? JSON.parse(doc.days || "[]") : (doc.days ?? [])
 		draft.value = { days: loaded, published: doc.is_published, items: doc.items.map(fromRow) }
 		savedSnapshot.value = serialized()
+		resetHistory()
 	})
 
 	async function save(publish?: boolean) {
@@ -172,28 +187,20 @@ export function useScheduleBuilder(eventId: () => string) {
 
 	const toastMessage = ref<string | null>(null)
 	let toastTimer: ReturnType<typeof setTimeout> | undefined
-	const undoPoint = shallowRef<{ items: ScheduleItem[]; days: ScheduleDay[] } | null>(null)
-	const canUndo = computed(() => !!undoPoint.value)
 	function showToast(message?: string | null) {
 		if (!message) return
 		clearTimeout(toastTimer)
 		toastMessage.value = message
 		toastTimer = setTimeout(() => (toastMessage.value = null), 3500)
 	}
-	function saveUndoPoint() {
-		if (draft.value)
-			undoPoint.value = deepCopy({ items: draft.value.items, days: draft.value.days })
-	}
 	function applyChange(change: (current: Draft) => void, message?: string) {
 		if (!draft.value) return
-		saveUndoPoint()
 		change(draft.value)
+		history.commit()
 		showToast(message)
 	}
 	function undo() {
-		if (!draft.value || !undoPoint.value) return
-		Object.assign(draft.value, undoPoint.value)
-		undoPoint.value = null
+		history.undo()
 		toastMessage.value = null
 	}
 
@@ -410,7 +417,7 @@ export function useScheduleBuilder(eventId: () => string) {
 		const track = tracks.find(name)
 		draft.value.items = draft.value.items.filter((item) => item.track !== name)
 		// Undo would bring back items that point at the deleted track.
-		undoPoint.value = null
+		resetHistory()
 		await save()
 		if (!track?.is_standard) await tracks.remove(name)
 		showToast(`Deleted ${track?.title}`)
@@ -452,9 +459,11 @@ export function useScheduleBuilder(eventId: () => string) {
 		itemDetails,
 		toastMessage,
 		undo,
-		canUndo,
+		canUndo: history.canUndo,
+		canRedo: history.canRedo,
+		redo: history.redo,
 		showToast,
-		saveUndoPoint,
+		recordChange: history.commit,
 		place,
 		update,
 		retitle,

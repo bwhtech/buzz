@@ -84,6 +84,7 @@ function duplicate() {
 				label="Title"
 				:model-value="item.title"
 				@update:model-value="(value: string) => builder.retitle(item.key, value)"
+				@change="builder.recordChange"
 			/>
 			<div
 				v-if="conflict"

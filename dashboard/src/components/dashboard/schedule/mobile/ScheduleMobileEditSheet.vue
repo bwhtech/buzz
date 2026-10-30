@@ -78,6 +78,7 @@ function remove() {
 					aria-label="Title"
 					class="w-full bg-transparent text-xl font-semibold leading-snug text-ink-gray-9 outline-none placeholder:text-ink-gray-4"
 					@input="builder.retitle(item.key, ($event.target as HTMLInputElement).value)"
+					@change="builder.recordChange"
 				/>
 				<div
 					v-if="details.speakers.length"
