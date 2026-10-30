@@ -11,7 +11,7 @@
 		"preview": "vite preview",
 		"lint": "oxlint --deny-warnings",
 		"typecheck": "./typecheck.sh",
-		"test:unit": "node --import ./src/test/stubIcons.mjs --test 'src/**/*.test.ts'",
+		"test:unit": "node --test 'src/**/*.test.ts'",
 		"copy-html-entry": "cp ../buzz/public/dashboard/index.html ../buzz/www/dashboard.html",
 		"fmt": "oxfmt",
 		"fmt:check": "oxfmt --check"
