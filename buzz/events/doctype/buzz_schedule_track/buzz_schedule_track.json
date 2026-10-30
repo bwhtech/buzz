@@ -30,7 +30,7 @@
   },
   {
    "default": "0",
-   "description": "Rooms show left to right, or top to bottom, in this order",
+   "description": "Tracks show left to right, or top to bottom, in this order",
    "fieldname": "sequence",
    "fieldtype": "Int",
    "label": "Sequence"
@@ -74,7 +74,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-31 12:00:00.000000",
+ "modified": "2026-10-31 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Schedule Track",
