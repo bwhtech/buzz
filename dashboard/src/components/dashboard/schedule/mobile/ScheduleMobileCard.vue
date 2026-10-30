@@ -9,7 +9,12 @@ import type { ScheduleItem } from "../scheduleTypes"
 import { useBuilder } from "../useScheduleBoard"
 import ScheduleMobileCardActions from "./ScheduleMobileCardActions.vue"
 
-const props = defineProps<{ item: ScheduleItem; conflict?: string; actions?: boolean }>()
+const props = defineProps<{
+	item: ScheduleItem
+	conflict?: string
+	actions?: boolean
+	movable?: boolean
+}>()
 defineEmits<{ edit: []; press: [event: PointerEvent] }>()
 const builder = useBuilder()
 
@@ -44,6 +49,8 @@ const cardStyle = computed(() => ({
 		<Badge v-if="conflict" theme="red" size="sm" label="Overlap" />
 		<ScheduleMobileCardActions
 			v-if="actions"
+			class="-my-1 -mr-1.5"
+			:movable="movable"
 			@edit="$emit('edit')"
 			@press="$emit('press', $event)"
 		/>
@@ -72,6 +79,8 @@ const cardStyle = computed(() => ({
 			<Badge v-if="conflict" theme="red" size="sm" label="Overlap" />
 			<ScheduleMobileCardActions
 				v-if="actions"
+				class="-my-1 -mr-1.5"
+				:movable="movable"
 				@edit="$emit('edit')"
 				@press="$emit('press', $event)"
 			/>

@@ -62,6 +62,7 @@ const dayLabel = computed(() => builder.activeDay.value?.label)
 						:item="item"
 						:conflict="conflicts[item.key]"
 						actions
+						:movable="filter !== ALL_ROOMS"
 						:class="drag?.key === item.key && 'pointer-events-none relative z-20 shadow-xl'"
 						:style="
 							drag?.key === item.key ? { transform: `translateY(${drag.offset}px)` } : undefined

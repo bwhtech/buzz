@@ -5,6 +5,7 @@ import { blockColors } from "../scheduleColors"
 import { clock } from "../scheduleLayout"
 import type { ScheduleItem } from "../scheduleTypes"
 import { useBuilder } from "../useScheduleBoard"
+import ScheduleMobileCardActions from "./ScheduleMobileCardActions.vue"
 import type { DragMode } from "./useScheduleTouchDrag"
 
 const LINE_HEIGHT = 16
@@ -38,7 +39,7 @@ const titleStyle = computed(() => ({
 const style = computed(() => ({
 	background: colors.value.background,
 	borderColor: props.conflict ? "var(--outline-red-3)" : colors.value.border,
-	padding: showHandle.value ? "5px 28px 5px 8px" : "1px 8px",
+	padding: showHandle.value ? "5px 64px 5px 8px" : "1px 8px",
 }))
 </script>
 
@@ -60,19 +61,16 @@ const style = computed(() => ({
 		</div>
 		<span
 			v-if="conflict"
-			class="absolute right-[30px] top-[5px] size-[7px] rounded-full bg-surface-red-6"
+			class="absolute right-[68px] top-[5px] size-[7px] rounded-full bg-surface-red-6"
 			role="img"
 			:aria-label="conflict"
 		/>
-		<div
+		<ScheduleMobileCardActions
 			v-if="showHandle"
-			class="absolute right-0 top-0 flex size-7 touch-none items-center justify-center text-ink-gray-5"
-			aria-label="Drag to move"
-			@pointerdown="emit('press', $event, 'move')"
-			@click.stop
-		>
-			<span class="lucide-grip-vertical size-4" aria-hidden="true" />
-		</div>
+			class="absolute right-0 top-0"
+			@edit="emit('open')"
+			@press="emit('press', $event, 'move')"
+		/>
 		<div
 			v-if="showHandle"
 			class="absolute inset-x-0 -bottom-0.5 flex h-4 touch-none items-center justify-center"

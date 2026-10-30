@@ -12,7 +12,7 @@ import { useScheduleTouchDrag } from "./useScheduleTouchDrag"
 
 const PIXELS_PER_MINUTE = 1.5
 const RAIL = 48
-const COLUMN = 150
+const COLUMN = 220
 const MIN_BLOCK = 14
 const GRID_PADDING = 10
 const GHOST_MINUTES = 30
