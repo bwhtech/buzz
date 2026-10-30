@@ -50,73 +50,81 @@ watch(image, () => {
 </script>
 
 <template>
-	<!-- 3:1 because that is the frame below; the crop is baked into the uploaded file, so
+	<!-- Always a JPEG: a banner needs no transparency, a 2400px PNG photo runs to megabytes,
+		 and link previews read JPEG everywhere.
+		 2:1 to match the event page's banner; the crop is baked into the uploaded file, so
 		 every other place the banner appears keeps its own object-cover with no extra
 		 field to carry a position. -->
 	<ImageCropUploader
-		:aspect-ratio="3"
-		:output-width="1500"
+		:aspect-ratio="2"
+		:output-width="2400"
+		output-type="image/jpeg"
 		:optimize="false"
 		:file-types="IMAGE_TYPES"
 		:validate-file="validateImage"
 		@success="(file: { file_url: string }) => (image = file.file_url)"
 	>
 		<template #default="{ openFileSelector, uploading, error: uploadError }">
-			<!-- The whole banner is the hit area; the button inside stays the -->
-			<!-- keyboard-reachable control, so its press must not fire twice. -->
-			<div
-				class="relative aspect-[3/1] overflow-hidden rounded-7 border border-outline-gray-2"
-				:class="disabled ? 'cursor-default' : 'cursor-pointer'"
-				@click="!disabled && openFileSelector()"
-			>
-				<!-- The pattern gets a layer of its own so the blur below never
+			<!-- The slot sits outside the clipped banner so an overlay can straddle its edge. -->
+			<div class="relative">
+				<!-- The whole banner is the hit area; the button inside stays the -->
+				<!-- keyboard-reachable control, so its press must not fire twice. -->
+				<div
+					class="relative aspect-[2/1] overflow-hidden rounded-7 border border-outline-gray-2 max-md:-mx-4 max-md:rounded-none max-md:border-x-0"
+					:class="disabled ? 'cursor-default' : 'cursor-pointer'"
+					@click="!disabled && openFileSelector()"
+				>
+					<!-- The pattern gets a layer of its own so the blur below never
 					 reaches the image or the button. Overscaled because blur samples
 					 past the edges, which would otherwise go milky against the border.
 					 A gradient cannot be interpolated, so blurring over the swap is
 					 what hides it. -->
-				<div
-					class="absolute inset-0 scale-105 transition-[filter] duration-200 ease-out"
-					:class="isSettling && !image ? 'blur-[10px] motion-reduce:blur-none' : 'blur-0'"
-					:style="pattern"
-					aria-hidden="true"
-				/>
-
-				<!-- Fades onto the pattern rather than replacing it outright. -->
-				<!-- Absolute, like the pattern behind it: a static sibling would paint
-					 under the positioned layer instead of over it. -->
-				<img
-					v-if="image"
-					class="absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-200 ease-out"
-					:class="loaded ? 'opacity-100' : 'opacity-0'"
-					:src="image"
-					alt=""
-					@load="loaded = true"
-				/>
-
-				<div class="absolute inset-0 flex items-center justify-center gap-2">
-					<Button
-						variant="subtle"
-						icon-left="lucide-image-up"
-						:label="image ? 'Change banner' : 'Add a banner'"
-						:disabled="disabled"
-						@click.stop="openFileSelector"
+					<div
+						class="absolute inset-0 scale-105 transition-[filter] duration-200 ease-out"
+						:class="isSettling && !image ? 'blur-[10px] motion-reduce:blur-none' : 'blur-0'"
+						:style="pattern"
+						aria-hidden="true"
 					/>
-					<!-- Clearing the field is the whole removal: the event carries the file
+
+					<!-- Fades onto the pattern rather than replacing it outright. -->
+					<!-- Absolute, like the pattern behind it: a static sibling would paint
+					 under the positioned layer instead of over it. -->
+					<img
+						v-if="image"
+						class="absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-200 ease-out"
+						:class="loaded ? 'opacity-100' : 'opacity-0'"
+						:src="image"
+						alt=""
+						@load="loaded = true"
+					/>
+
+					<div class="absolute inset-0 flex items-center justify-center gap-2">
+						<Button
+							variant="subtle"
+							icon-left="lucide-image-up"
+							:label="image ? 'Change banner' : 'Add a banner'"
+							:disabled="disabled"
+							@click.stop="openFileSelector"
+						/>
+						<!-- Clearing the field is the whole removal: the event carries the file
 						 by URL, and the seeded pattern is already painted underneath. Gone
 						 mid-upload, because the upload that lands would put a banner back. -->
-					<Button
-						v-if="image && !uploading"
-						variant="subtle"
-						icon="lucide-trash-2"
-						label="Remove banner"
-						:disabled="disabled"
-						@click.stop="image = ''"
-					/>
+						<Button
+							v-if="image && !uploading"
+							variant="subtle"
+							icon="lucide-trash-2"
+							label="Remove banner"
+							:disabled="disabled"
+							@click.stop="image = ''"
+						/>
+					</div>
 				</div>
+
+				<slot />
 			</div>
 
-			<p class="mt-2 text-p-sm text-ink-gray-5">
-				{{ __("Use a 3:1 wide image — 1500×500 or 900×300 pixels work well.") }}
+			<p class="text-p-sm text-ink-gray-5" :class="$slots.default ? 'mt-6' : 'mt-2'">
+				{{ __("Use a 2:1 wide image — 2400×1200 or 1200×600 pixels work well.") }}
 			</p>
 
 			<!-- The slot types its error as {}, so the message needs narrowing. -->

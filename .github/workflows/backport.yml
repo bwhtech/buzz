@@ -11,7 +11,7 @@ permissions:
 jobs:
   backport:
     name: Backport PR
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Only run on merged PRs that carry a backport label. The `labeled` event
     # lets you trigger a backport after the PR is already merged by adding the
     # label late.

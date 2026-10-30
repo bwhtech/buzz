@@ -1,6 +1,7 @@
-import { useCall } from "frappe-ui"
+import { toast, useCall } from "frappe-ui"
 import { computed, ref } from "vue"
 
+import { hasCollaborations } from "@/data/collaborators"
 import { session } from "@/data/session"
 import type { InviteOutcome, TeamOption, TeamOverview } from "@/types"
 
@@ -34,6 +35,22 @@ const teamsResource = useCall<TeamOption[]>({
 	},
 })
 
+/** A personal team reads as "Personal" next to the user's other teams. */
+export function teamLabel(team: Pick<TeamOption, "team_name" | "is_personal">): string {
+	return team.is_personal ? __("Personal") : team.team_name
+}
+
+export function isPersonalTeam(name: string): boolean {
+	return Boolean(teams.value.find((team) => team.name === name)?.is_personal)
+}
+
+export function upcomingEventsLabel(count: number): string {
+	if (!count) return __("No upcoming events")
+	return count === 1 ? __("1 upcoming event") : __("{0} upcoming events", [String(count)])
+}
+
+export const personalTeamsEnabled = Boolean(window.personal_teams_enabled)
+
 export const teams = computed((): TeamOption[] => teamsResource.data || [])
 
 // Not `loading`: the list is fetched on demand, so it sits idle before the first call.
@@ -43,15 +60,22 @@ export const currentTeam = computed(
 	(): TeamOption | null => teams.value.find((team) => team.name === selectedTeamName.value) || null,
 )
 
-// Flags are the current team's `feature_` Check fields on Buzz Team Settings.
-export function isFeatureEnabled(flag: string): boolean {
-	return currentTeam.value?.feature_flags[flag] ?? false
+// Flags are a team's `feature_` Check fields on Buzz Team Settings; the current team by default.
+export function isFeatureEnabled(flag: string, teamName?: string): boolean {
+	const team = teamName ? teams.value.find((option) => option.name === teamName) : currentTeam.value
+	return team?.feature_flags[flag] ?? false
 }
 
 export async function isTeamMember(): Promise<boolean> {
 	if (!session.isLoggedIn) return false
 	if (!teamsResource.data) await teamsResource.fetch()
 	return teams.value.length > 0
+}
+
+/** The manage dashboard is for team members and for people invited to an event. */
+export async function hasManageAccess(): Promise<boolean> {
+	if (!session.isLoggedIn) return false
+	return (await isTeamMember()) || hasCollaborations()
 }
 
 export function reloadTeams() {
@@ -104,6 +128,22 @@ export const updatePublicPage = useCall<unknown, Record<string, unknown>>({
 export function selectTeam(name: string) {
 	selectedTeamName.value = name
 	localStorage.setItem(STORAGE_KEY, name)
+}
+
+const createPersonalTeam = useCall<string>({
+	url: "/api/v2/method/buzz.api.teams.create_personal_team",
+	method: "POST",
+	immediate: false,
+})
+
+/** Make the user's personal team current, creating it first if they have none. */
+export async function selectPersonalTeam() {
+	// A second call while the first is in flight would create a second team.
+	if (createPersonalTeam.loading) return
+	const name = await createPersonalTeam.submit().catch(() => null)
+	if (!name) return toast.error(__("Could not create your personal team"))
+	await reloadTeams()
+	selectTeam(name)
 }
 
 // Imperative POSTs: `immediate: false` means nothing fires until `.submit(params)`.

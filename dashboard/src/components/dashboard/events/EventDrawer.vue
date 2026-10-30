@@ -4,6 +4,7 @@ import { Alert, Avatar, Button, Icon, toast } from "frappe-ui"
 import { dayjs } from "frappe-ui"
 import { computed } from "vue"
 
+import DateBadge from "@/components/common/DateBadge.vue"
 import {
 	Drawer,
 	DrawerCloseButton,
@@ -24,12 +25,6 @@ const open = defineModel<boolean>("open", { required: true })
 // The banner also backs a missing image, so the slot is never blank while it loads.
 const banner = computed(() => ({
 	backgroundImage: props.event ? bannerPattern(props.event.title) : "",
-}))
-
-// The calendar chip wants the parts, not a formatted string.
-const day = computed(() => ({
-	month: props.event ? dayjs(props.event.start_date).format("MMM").toUpperCase() : "",
-	date: props.event ? dayjs(props.event.start_date).format("D") : "",
 }))
 
 // A run that ends on a later day cannot state its times as one range — "09:00 – 17:00"
@@ -109,12 +104,13 @@ const endsAt = computed(() => {
 					<div class="relative p-4">
 						<img
 							v-if="event.banner_image"
-							class="aspect-video w-full rounded-6 object-cover border"
+							class="aspect-[2/1] w-full rounded-6 object-cover border"
+							decoding="async"
 							:src="event.banner_image"
 							:style="banner"
 							alt=""
 						/>
-						<div v-else class="aspect-video w-full rounded-6 border" :style="banner" />
+						<div v-else class="aspect-[2/1] w-full rounded-6 border" :style="banner" />
 
 						<EventCountdownPill
 							:event="event"
@@ -135,12 +131,7 @@ const endsAt = computed(() => {
 
 					<div class="flex flex-col gap-4 p-4">
 						<div class="flex items-center gap-3">
-							<div
-								class="flex size-11 shrink-0 flex-col items-center justify-center rounded-5 border border-outline-gray-2 leading-none"
-							>
-								<span class="text-xs text-ink-gray-5">{{ day.month }}</span>
-								<span class="text-base font-semibold text-ink-gray-8">{{ day.date }}</span>
-							</div>
+							<DateBadge :date="event.start_date" />
 							<div class="space-y-0.5">
 								<!-- Doubles as the drawer's accessible description. -->
 								<DrawerDescription class="text-base font-medium text-ink-gray-8">
@@ -155,7 +146,7 @@ const endsAt = computed(() => {
 								class="flex size-11 shrink-0 items-center justify-center rounded-5 border border-outline-gray-2"
 							>
 								<Icon
-									:name="event.venue ? 'lucide-map-pin' : 'lucide-map-pin-off'"
+									:icon="event.venue ? 'lucide-map-pin' : 'lucide-map-pin-off'"
 									class="size-5 text-ink-gray-6"
 								/>
 							</div>

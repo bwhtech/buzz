@@ -108,16 +108,16 @@ test.describe("Check-in scanner", () => {
 
 		await checkInPage.submitTicketId(ticketId)
 
-		await checkInPage.expectToast(/already checked in today/i)
+		await checkInPage.expectToast(/already checked in at/i)
 	})
 })
 
 test.describe("Check-in access control", () => {
 	test.use({ storageState: NO_ROLE_STATE_PATH })
 
-	test("a user without the Frontdesk Manager role is refused", async ({ page }) => {
+	test("a user outside the event's team is refused", async ({ page }) => {
 		const checkInPage = new CheckInPage(page)
-		await checkInPage.goto()
+		await checkInPage.goto(eventName)
 
 		await checkInPage.expectAccessDenied()
 	})

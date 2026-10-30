@@ -5,13 +5,9 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, today
 
-from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES
-from buzz.tests.factories import BuzzEventFactory, EventVenueFactory
-
-START_DATE = add_days(today(), 30)
-END_DATE = add_days(today(), 31)
+from buzz.events.doctype.buzz_event.buzz_event import MAX_TOPICS, RESERVED_EVENT_ROUTES
+from buzz.tests.factories import BuzzEventFactory, EventTopicFactory, EventVenueFactory
 
 
 class BuzzEventTestCase(IntegrationTestCase):
@@ -39,33 +35,18 @@ class TestEventValidation(BuzzEventTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			event.validate_tax_settings()
 
-	def test_schedule_start_time_after_event_start_is_valid(self):
-		# Regression: times were compared as strings, so "11:00" sorted before "9:00".
-		self.event_with_schedule(START_DATE, "11:00:00", "12:00:00").validate_schedule()
 
-	def test_schedule_start_time_before_event_start_is_rejected(self):
-		event = self.event_with_schedule(START_DATE, "08:00:00", "08:30:00")
+class TestEventTopics(BuzzEventTestCase):
+	def topics(self, count: int) -> list[dict]:
+		return [{"topic": EventTopicFactory.create().name} for _ in range(count)]
+
+	def test_saves_up_to_the_topic_limit(self):
+		event = self.create_event(topics=self.topics(MAX_TOPICS))
+		self.assertEqual(len(event.topics), MAX_TOPICS)
+
+	def test_refuses_more_topics_than_the_limit(self):
 		with self.assertRaises(frappe.ValidationError):
-			event.validate_schedule()
-
-	def test_schedule_end_time_after_event_end_is_rejected(self):
-		event = self.event_with_schedule(END_DATE, "17:00:00", "19:00:00")
-		with self.assertRaises(frappe.ValidationError):
-			event.validate_schedule()
-
-	def test_schedule_end_time_before_event_end_is_valid(self):
-		self.event_with_schedule(END_DATE, "16:00:00", "16:30:00").validate_schedule()
-
-	def event_with_schedule(self, date: str, start_time: str, end_time: str):
-		# Validated directly: an insert would need Event Track rows for the schedule.
-		row = {"date": date, "start_time": start_time, "end_time": end_time}
-		return self.build_event(
-			start_date=START_DATE,
-			end_date=END_DATE,
-			start_time="9:00:00",
-			end_time="18:00:00",
-			schedule=[row],
-		)
+			self.create_event(topics=self.topics(MAX_TOPICS + 1))
 
 
 class TestEventRoute(BuzzEventTestCase):
@@ -90,14 +71,37 @@ class TestEventRoute(BuzzEventTestCase):
 		route = f"conference-{frappe.generate_hash(length=6)}"
 		self.assertEqual(self.create_event(route=route).route, route)
 
-	def test_new_event_is_published_with_a_hashed_route(self):
+	def test_new_event_is_published_with_a_title_slug_route(self):
 		# None lets the DocType default apply on insert.
-		event = self.create_event(is_published=None)
+		suffix = frappe.generate_hash(length=6)
+		event = self.create_event(is_published=None, title=f"Frappe Conf: {suffix}!")
 		self.assertTrue(event.is_published)
-		self.assertRegex(event.route, r"^[0-9a-f]{8}$")
+		self.assertEqual(event.route, f"frappe-conf-{suffix}")
 
-	def test_generated_routes_are_unique(self):
-		self.assertNotEqual(self.create_event().route, self.create_event().route)
+	def test_title_that_slugs_to_a_reserved_route_gets_a_suffix(self):
+		self.assertEqual(self.create_event(title="Account").route, "account-event")
+
+	def test_new_event_comes_with_the_default_forms_in_one_save(self):
+		# A second save would rewrite the event, which deadlocks two events created at once.
+		event = self.create_event()
+
+		creation, modified = frappe.db.get_value("Buzz Event", event.name, ["creation", "modified"])
+		self.assertEqual(creation, modified)
+		forms = frappe.get_all(
+			"Buzz Form", filters={"event": event.name}, fields=["route", "publish"], order_by="route"
+		)
+		self.assertEqual(
+			[form.route for form in forms],
+			["enquire-sponsorship", "feedback", "propose-talk", "register", "register-attendee"],
+		)
+		# Organisers open each page form when they mean to take submissions; registration is
+		# always open, it has no page of its own.
+		self.assertEqual([form.route for form in forms if form.publish], ["register"])
+
+	def test_same_title_routes_get_a_number_suffix(self):
+		title = f"Meetup {frappe.generate_hash(length=6)}"
+		first = self.create_event(title=title).route
+		self.assertEqual(self.create_event(title=title).route, f"{first}-1")
 
 	def test_explicitly_unpublished_event_stays_a_draft(self):
 		self.assertFalse(self.create_event(is_published=0).is_published)

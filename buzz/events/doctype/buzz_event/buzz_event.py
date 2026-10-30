@@ -7,13 +7,21 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
-from frappe.utils import get_datetime_in_timezone, get_system_timezone
-from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
+from frappe.utils.data import get_datetime, time_diff_in_seconds
+from frappe.website.utils import cleanup_page_name
 
 from buzz import telemetry
-from buzz.api.forms.fields import validate_excluded_fields
+from buzz.api.forms.conditions import parse_rules
+from buzz.events.doctype.buzz_form.condition_validator import ConditionValidator
+from buzz.events.doctype.buzz_form.form_types import (
+	QUESTION_FIELD_NAMES,
+	create_default_forms,
+	event_form,
+	template_rules,
+)
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
-from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import create_for_event
+from buzz.events.doctype.event_check_in_zone.event_check_in_zone import create_default_zone
+from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import create_ticket_categories
 from buzz.utils import get_time_zone_label, only_if_app_installed
 
 # Top-level dashboard route segments (/b/<segment>) an event route must not shadow.
@@ -29,7 +37,10 @@ RESERVED_EVENT_ROUTES = {
 	"event-proposal",
 	"events",
 	"manage",
+	"playground",
 }
+
+MAX_TOPICS = 5
 
 
 class BuzzEvent(Document):
@@ -41,12 +52,11 @@ class BuzzEvent(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from buzz.events.doctype.buzz_event_form.buzz_event_form import BuzzEventForm
 		from buzz.events.doctype.event_cohost.event_cohost import EventCoHost
 		from buzz.events.doctype.event_external_link.event_external_link import EventExternalLink
 		from buzz.events.doctype.event_featured_speaker.event_featured_speaker import EventFeaturedSpeaker
 		from buzz.events.doctype.event_payment_gateway.event_payment_gateway import EventPaymentGateway
-		from buzz.events.doctype.schedule_item.schedule_item import ScheduleItem
+		from buzz.events.doctype.event_topic_link.event_topic_link import EventTopicLink
 		from buzz.proposals.doctype.sponsorship_deck_item.sponsorship_deck_item import SponsorshipDeckItem
 
 		about: DF.TextEditor | None
@@ -61,7 +71,6 @@ class BuzzEvent(Document):
 		card_image: DF.AttachImage | None
 		category: DF.Link
 		co_hosts: DF.Table[EventCoHost]
-		custom_forms: DF.Table[BuzzEventForm]
 		default_ticket_type: DF.Link | None
 		end_date: DF.Date | None
 		end_time: DF.Time
@@ -82,12 +91,11 @@ class BuzzEvent(Document):
 		payment_gateways: DF.Table[EventPaymentGateway]
 		proposal: DF.Link | None
 		registration_url: DF.Data | None
-		registrations_close_at: DF.Datetime | None
 		route: DF.Data | None
-		schedule: DF.Table[ScheduleItem]
 		send_booking_confirmation_email: DF.Check
 		send_ticket_email: DF.Check
 		short_description: DF.SmallText | None
+		show_countdown: DF.Check
 		show_sponsorship_section: DF.Check
 		sponsor_deck_attachments: DF.Table[SponsorshipDeckItem]
 		sponsor_deck_cc: DF.SmallText | None
@@ -105,16 +113,13 @@ class BuzzEvent(Document):
 		time_zone: DF.Autocomplete | None
 		time_zone_label: DF.Data | None
 		title: DF.Data
+		topics: DF.TableMultiSelect[EventTopicLink]
 		venue: DF.Link | None
 	# end: auto-generated types
 
 	def before_insert(self):
-		# Opaque, not a title slug: a new event is published immediately.
 		if not self.route:
-			self.route = frappe.generate_hash(length=8)
-		# Organisers open registrations once tickets and details are ready.
-		if not self.registrations_close_at:
-			self.close_registrations()
+			self.route = self.make_route()
 		self.add_default_payment_gateway()
 
 	def add_default_payment_gateway(self):
@@ -124,14 +129,13 @@ class BuzzEvent(Document):
 
 	def validate(self):
 		self.validate_dates()
-		self.validate_schedule()
 		self.validate_route()
 		self.validate_tax_settings()
 		self.validate_guest_verification_config()
-		self.validate_custom_forms()
 		self.clear_unused_location()
 		self.validate_co_hosts()
 		self.validate_external_links()
+		self.validate_topics()
 		self.set_time_zone_label()
 
 	def clear_unused_location(self):
@@ -161,6 +165,10 @@ class BuzzEvent(Document):
 			if urlparse(row.url or "").scheme not in ("http", "https"):
 				frappe.throw(_("Row {0}: link must start with http:// or https://").format(row.idx))
 
+	def validate_topics(self):
+		if len(self.topics) > MAX_TOPICS:
+			frappe.throw(_("An event can have at most {0} topics.").format(MAX_TOPICS))
+
 	def set_time_zone_label(self):
 		# validate runs before the mandatory check, so dates may still be empty here
 		if not (self.time_zone and self.start_date and self.start_time):
@@ -170,56 +178,6 @@ class BuzzEvent(Document):
 		# computed at event start so DST zones get the abbreviation in effect then
 		event_start = get_datetime(f"{self.start_date} {self.start_time}")
 		self.time_zone_label = get_time_zone_label(self.time_zone, event_start)
-
-	def validate_custom_forms(self):
-		# A new event has no form row yet, but create_default_records is about to make one.
-		sponsor_route = (
-			frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name}, "route")
-			if not self.is_new()
-			else "enquire-sponsorship"
-		)
-		for form in self.custom_forms:
-			if form.form_doctype == "Sponsorship Enquiry":
-				frappe.throw(_("Manage sponsorship intake in Sponsor Enquiry Form."))
-			if sponsor_route and (form.route or "").lower() == sponsor_route.lower():
-				frappe.throw(_("This route is already used by the sponsorship form."))
-			if form.excluded_fields:
-				validate_excluded_fields(form.form_doctype, form.excluded_fields)
-
-	def validate_schedule(self):
-		end_date = self.end_date or self.start_date
-		for item in self.schedule:
-			if item.date < self.start_date or item.date > end_date:
-				frappe.throw(
-					frappe._("<b>Schedule</b> row #{0}: <b>Date</b> must be within event dates").format(
-						item.idx
-					)
-				)
-
-			if time_diff_in_seconds(item.end_time, item.start_time) <= 0:
-				frappe.throw(
-					frappe._(
-						"<b>Schedule</b> row #{0}: <b>End Time</b> must be after <b>Start Time</b>"
-					).format(item.idx)
-				)
-
-			if (
-				item.date == self.start_date
-				and self.start_time
-				and get_time(item.start_time) < get_time(self.start_time)
-			):
-				frappe.throw(
-					frappe._(
-						"<b>Schedule</b> row #{0}: <b>Start Time</b> cannot be before event start time"
-					).format(item.idx)
-				)
-
-			if item.date == end_date and self.end_time and get_time(item.end_time) > get_time(self.end_time):
-				frappe.throw(
-					frappe._(
-						"<b>Schedule</b> row #{0}: <b>End Time</b> cannot be after event end time"
-					).format(item.idx)
-				)
 
 	def validate_dates(self):
 		self.validate_from_to_dates("start_date", "end_date")
@@ -243,8 +201,7 @@ class BuzzEvent(Document):
 
 	def validate_route(self):
 		if self.is_published and not self.route:
-			route = frappe.website.utils.cleanup_page_name(self.title).replace("_", "-")
-			self.route = append_number_if_name_exists("Buzz Event", route, fieldname="route")
+			self.route = self.make_route()
 
 		# Compared lowercased: vue-router matches paths case-insensitively, so a
 		# route like "Account" shadows /b/account just as "account" would.
@@ -252,6 +209,13 @@ class BuzzEvent(Document):
 			frappe.throw(
 				_("'{0}' is a reserved route and cannot be used as an event route.").format(self.route)
 			)
+
+	def make_route(self):
+		# Room for the "-<n>" suffix within the 140-char Data field.
+		slug = cleanup_page_name(self.title).replace("_", "-")[:130].strip("-")
+		if not slug or slug in RESERVED_EVENT_ROUTES:
+			slug = f"{slug}-event".lstrip("-")
+		return append_number_if_name_exists("Buzz Event", slug, fieldname="route")
 
 	def validate_guest_verification_config(self):
 		"""Ensure email/SMS is configured when OTP verification is enabled."""
@@ -302,15 +266,28 @@ class BuzzEvent(Document):
 		)
 
 	def on_trash(self):
-		# The form is created with the event and is the only doc that is one-per-event, so it
-		# goes with it. Frappe runs this before the link check, which would otherwise refuse
-		# every event delete. Enquiries block the delete on their own link to the event, so
-		# leave their form standing rather than pre-empting that with a worse message.
-		sponsorship_form_id = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
-		if sponsorship_form_id and not frappe.db.exists("Sponsorship Enquiry", {"event": self.name}):
-			frappe.delete_doc("Sponsor Enquiry Form", sponsorship_form_id, ignore_permissions=True)
+		# Forms are created with the event, so they go with it. Frappe runs this before the
+		# link check, which would otherwise refuse every event delete. Enquiries block the
+		# delete on their own link to the event, so leave their forms standing rather than
+		# pre-empting that with a worse message.
+		if not frappe.db.exists("Sponsorship Enquiry", {"event": self.name}):
+			for form in frappe.get_all("Buzz Form", {"event": self.name}, pluck="name"):
+				frappe.delete_doc("Buzz Form", form, ignore_permissions=True)
+		self.enqueue_listing_share_images()
 		# A community's request to list the event means nothing once the event is gone.
 		frappe.db.delete("Community Event Request", {"event": self.name})
+		# Zones come with the event, the default one included. Check-ins block the delete on
+		# their own link to the event, so the zones stay while any exist.
+		if not frappe.db.exists("Event Check In", {"event": self.name}):
+			for zone in frappe.get_all("Event Check-in Zone", {"event": self.name}, pluck="name"):
+				frappe.delete_doc("Event Check-in Zone", zone, ignore_permissions=True, ignore_on_trash=True)
+
+	def enqueue_listing_share_images(self):
+		from buzz.events.community_og_image import enqueue_generate_for
+
+		enqueue_generate_for(self.team)
+		for community in frappe.get_all("Community Event Request", {"event": self.name}, pluck="community"):
+			enqueue_generate_for(community)
 
 	def create_default_records(self):
 		records = [
@@ -319,15 +296,8 @@ class BuzzEvent(Document):
 		]
 		for record in records:
 			frappe.get_doc({**record, "event": self.name}).insert(ignore_permissions=True)
-
-		default_forms = [
-			{"form_doctype": "Event Feedback", "route": "feedback"},
-			{"form_doctype": "Talk Proposal", "route": "propose-talk"},
-		]
-		for form in default_forms:
-			self.append("custom_forms", form)
-		create_for_event(self.name)
-		self.save(ignore_permissions=True)
+		create_default_forms(self.name)
+		create_default_zone(self.name)
 
 	def archive_event(self):
 		"""Take the event off the public site, along with the forms and registrations it takes.
@@ -336,20 +306,11 @@ class BuzzEvent(Document):
 		state catching up, so publishing again does not reopen everything with it.
 		"""
 		self.is_published = 0
-		self.close_registrations()
-		for form in self.custom_forms:
-			form.publish = 0
-		sponsorship_form_id = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
-		if sponsorship_form_id:
-			sponsorship_form = frappe.get_doc("Sponsor Enquiry Form", sponsorship_form_id)
-			sponsorship_form.publish = 0
-			sponsorship_form.save(ignore_permissions=True)
+		for name in frappe.get_all("Buzz Form", {"event": self.name}, pluck="name"):
+			form = frappe.get_doc("Buzz Form", name)
+			form.flags.ignore_permissions = True
+			form.set_closed(True)
 		self.save()
-
-	def close_registrations(self):
-		"""Stop new registrations now, read on the event's own wall clock."""
-		timezone = self.time_zone or get_system_timezone()
-		self.registrations_close_at = get_datetime_in_timezone(timezone).replace(tzinfo=None)
 
 	@frappe.whitelist()
 	@only_if_app_installed("zoom_integration", raise_exception=True)
@@ -399,6 +360,13 @@ class BuzzEvent(Document):
 		self.update_zoom_meeting()
 		self.capture_published_change()
 		self.enqueue_og_image()
+		self.enqueue_team_share_images()
+
+	def enqueue_team_share_images(self):
+		"""A team's share image counts its events."""
+		from buzz.events.community_og_image import enqueue_generate_for
+
+		enqueue_generate_for(self.team)
 
 	def enqueue_og_image(self):
 		from buzz.events.og_image import EventOgImage, enqueue_generate
@@ -545,10 +513,12 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 
 	# Create linked documents (Ticket Types, Add-ons, Custom Fields)
 	if options.get("ticket_types"):
+		category_names = create_ticket_categories(event.name, template.template_ticket_categories)
 		for tt in template.template_ticket_types:
 			ticket_type = frappe.new_doc("Event Ticket Type")
 			ticket_type.event = event.name
 			ticket_type.title = tt.title
+			ticket_type.category = category_names.get(tt.category)
 			ticket_type.append("prices", {"currency": tt.currency, "price": tt.price})
 			ticket_type.is_published = tt.is_published
 			ticket_type.max_tickets_available = tt.max_tickets_available
@@ -569,24 +539,22 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 			add_on.insert()
 
 	if options.get("custom_fields"):
-		for cf in template.template_custom_fields:
-			# Sponsorship questions live on Sponsor Enquiry Form now; an older template may
-			# still carry one, and recreating it here would fail the event mid-creation.
-			if cf.custom_form_doctype == "Sponsorship Enquiry":
-				continue
-			custom_field = frappe.new_doc("Buzz Custom Field")
-			custom_field.event = event.name
-			custom_field.label = cf.label
-			custom_field.fieldname = cf.fieldname
-			custom_field.fieldtype = cf.fieldtype
-			custom_field.options = cf.options
-			custom_field.applied_to = cf.applied_to
-			custom_field.custom_form_doctype = cf.custom_form_doctype
-			custom_field.enabled = cf.enabled
-			custom_field.mandatory = cf.mandatory
-			custom_field.placeholder = cf.placeholder
-			custom_field.default_value = cf.default_value
-			custom_field.order = cf.order
-			custom_field.insert()
+		copy_template_questions(event, template.template_custom_fields)
 
 	return event.name
+
+
+def copy_template_questions(event, template_fields):
+	"""A template may name a form this event has not got; its questions are dropped."""
+	forms = {}
+	for field in template_fields:
+		if field.form_doctype not in forms:
+			forms[field.form_doctype] = event_form(event.name, field.form_doctype)
+		if form := forms[field.form_doctype]:
+			form.append("questions", {name: field.get(name) for name in QUESTION_FIELD_NAMES})
+			rules = parse_rules(form.logic_rules) + template_rules(field)
+			form.logic_rules = frappe.as_json(rules, indent=None) if rules else None
+	for form in forms.values():
+		if form:
+			ConditionValidator(form).drop_link_conditions()
+			form.save(ignore_permissions=True)

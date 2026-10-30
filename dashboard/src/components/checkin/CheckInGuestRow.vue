@@ -1,0 +1,77 @@
+<script setup lang="ts">
+import { Button, dayjsLocal } from "frappe-ui"
+import { computed } from "vue"
+
+import type { EventGuest } from "@/types"
+
+const props = defineProps<{ guest: EventGuest; busy?: boolean }>()
+
+const emit = defineEmits<{ open: []; checkIn: [] }>()
+
+const name = computed(
+	() => props.guest.attendee_name || props.guest.attendee_email || "Unnamed guest",
+)
+
+const checkedInAt = computed(() =>
+	props.guest.checked_in_at ? dayjsLocal(props.guest.checked_in_at).format("h:mm A") : null,
+)
+
+const detail = computed(() =>
+	[props.guest.ticket_type, props.guest.attendee_email].filter(Boolean).join(" · "),
+)
+</script>
+
+<template>
+	<li
+		class="flex flex-wrap items-center gap-3 rounded-[14px] py-2.5 pl-3.5 pr-2.5 transition-colors duration-200 ease-out motion-reduce:transition-none"
+		:class="checkedInAt ? 'bg-surface-green-2' : 'bg-surface-gray-1'"
+	>
+		<button
+			type="button"
+			class="flex min-w-0 flex-1 basis-40 flex-col gap-0.5 rounded-4 py-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+			:aria-label="`Open ${name}`"
+			@click="emit('open')"
+		>
+			<span class="truncate text-base font-semibold text-ink-gray-9">{{ name }}</span>
+			<Transition
+				mode="out-in"
+				enter-from-class="opacity-0"
+				enter-active-class="transition-opacity duration-200 ease-out"
+			>
+				<span v-if="checkedInAt" key="checked-in" class="truncate text-sm text-ink-green-7">
+					Checked in at {{ checkedInAt }}
+				</span>
+				<span v-else key="detail" class="truncate text-sm text-ink-gray-5">{{ detail }}</span>
+			</Transition>
+		</button>
+
+		<!-- Only the arrival of the check mark animates; the button it replaces leaves at once. -->
+		<Transition
+			mode="out-in"
+			enter-from-class="opacity-0 scale-90 motion-reduce:scale-100"
+			enter-active-class="transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
+		>
+			<span
+				v-if="checkedInAt"
+				key="checked-in"
+				role="img"
+				class="ml-auto grid min-w-[6.5rem] place-items-center text-ink-green-7"
+				:aria-label="`${name} is checked in`"
+			>
+				<span class="lucide-check size-5" aria-hidden="true" />
+			</span>
+			<Button
+				v-else
+				key="check-in"
+				variant="solid"
+				theme="green"
+				size="md"
+				label="Check in"
+				class="ml-auto min-w-[6.5rem] transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none dark:!text-white"
+				:aria-label="`Check in ${name}`"
+				:loading="busy"
+				@click="emit('checkIn')"
+			/>
+		</Transition>
+	</li>
+</template>

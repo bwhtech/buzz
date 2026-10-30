@@ -9,6 +9,7 @@
   "title",
   "team",
   "category",
+  "topics",
   "free_event",
   "medium",
   "column_break_cxqh",
@@ -32,27 +33,38 @@
   "external_links_section",
   "external_links",
   "tab_2_tab",
-  "schedule",
   "website_tab",
   "is_published",
   "is_featured",
+  "show_countdown",
   "route",
-  "default_ticket_type",
   "column_break_ndtl",
-  "external_registration_page",
-  "registration_url",
   "meta_image",
   "og_image",
   "card_image",
   "theme",
+  "section_break_kwlt",
+  "featured_speakers",
+  "registrations_tab",
+  "default_ticket_type",
+  "external_registration_page",
+  "registration_url",
   "section_break_rmtj",
   "allow_guest_booking",
   "column_break_lzcw",
   "guest_verification_method",
-  "auto_closures_section",
-  "registrations_close_at",
-  "section_break_kwlt",
-  "featured_speakers",
+  "ticket_email_section",
+  "send_ticket_email",
+  "section_break_uoke",
+  "attach_calendar_invite",
+  "ticket_email_template",
+  "column_break_ukql",
+  "attach_email_ticket",
+  "ticket_print_format",
+  "booking_confirmation_email_section",
+  "send_booking_confirmation_email",
+  "booking_confirmation_email_template",
+  "offline_acknowledgement_email_template",
   "payments_tab",
   "section_break_owtc",
   "payment_gateways",
@@ -73,22 +85,8 @@
   "column_break_rgkz",
   "sponsor_deck_attachments",
   "customisations_tab",
-  "send_ticket_email",
-  "section_break_uoke",
-  "attach_calendar_invite",
-  "ticket_email_template",
-  "column_break_ukql",
-  "attach_email_ticket",
-  "ticket_print_format",
-  "booking_confirmation_email_section",
-  "send_booking_confirmation_email",
-  "booking_confirmation_email_template",
-  "offline_acknowledgement_email_template",
   "talks_section",
   "allow_editing_talks_after_acceptance",
-  "custom_forms_tab",
-  "forms_section",
-  "custom_forms",
   "connections_tab",
   "proposal"
  ],
@@ -123,6 +121,13 @@
    "label": "Category",
    "options": "Event Category",
    "reqd": 1
+  },
+  {
+   "description": "Up to 5 topics the event is about.",
+   "fieldname": "topics",
+   "fieldtype": "Table MultiSelect",
+   "label": "Topics",
+   "options": "Event Topic Link"
   },
   {
    "depends_on": "eval:doc.medium!=\"Online\"",
@@ -248,15 +253,16 @@
    "permlevel": 1
   },
   {
+   "default": "0",
+   "description": "Shows the time until the event starts on the event page banner.",
+   "fieldname": "show_countdown",
+   "fieldtype": "Check",
+   "label": "Show Event Countdown"
+  },
+  {
    "fieldname": "tab_2_tab",
    "fieldtype": "Tab Break",
    "label": "Schedule"
-  },
-  {
-   "fieldname": "schedule",
-   "fieldtype": "Table",
-   "label": "Schedule",
-   "options": "Schedule Item"
   },
   {
    "fieldname": "payments_tab",
@@ -313,16 +319,6 @@
    "label": "Ticket Print Format",
    "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Event Ticket\"]]",
    "options": "Print Format"
-  },
-  {
-   "fieldname": "forms_section",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "custom_forms",
-   "fieldtype": "Table",
-   "label": "Custom Forms",
-   "options": "Buzz Event Form"
   },
   {
    "fieldname": "talks_section",
@@ -577,33 +573,28 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "auto_closures_section",
-   "fieldtype": "Section Break",
-   "label": "Auto Closures"
-  },
-  {
-   "fieldname": "registrations_close_at",
-   "fieldtype": "Datetime",
-   "label": "Registrations Close At",
-   "no_copy": 1
-  },
-  {
-   "fieldname": "custom_forms_tab",
-   "fieldtype": "Tab Break",
-   "label": "Forms"
-  },
-  {
    "fieldname": "team",
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Team",
    "options": "Buzz Team",
+   "set_only_once": 1,
    "reqd": 1,
    "search_index": 1
   },
   {
    "fieldname": "column_break_rgkz",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "registrations_tab",
+   "fieldtype": "Tab Break",
+   "label": "Registrations"
+  },
+  {
+   "fieldname": "ticket_email_section",
+   "fieldtype": "Section Break",
+   "label": "Ticket Email"
   }
  ],
  "grid_page_length": 50,
@@ -652,7 +643,7 @@
   },
   {
    "group": "General",
-   "link_doctype": "Event Track",
+   "link_doctype": "Buzz Schedule",
    "link_fieldname": "event"
   },
   {
@@ -681,7 +672,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-10-02 12:00:00.000000",
+ "modified": "2026-10-29 18:30:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

@@ -1,18 +1,12 @@
 <script setup lang="ts">
 import { Avatar } from "frappe-ui"
-import { computed } from "vue"
 
 import UserGroup from "@/components/common/UserGroup.vue"
 import { startOpening } from "@/composables/useWorkspaceOpening"
+import { upcomingEventsLabel } from "@/data/teams"
 import type { TeamOption } from "@/types"
 
 const props = defineProps<{ team: TeamOption }>()
-
-const upcomingEvents = computed(() => {
-	const count = props.team.upcoming_event_count
-	if (!count) return __("No upcoming events")
-	return count === 1 ? __("1 upcoming event") : __("{0} upcoming events", [String(count)])
-})
 
 // A modified click opens a new tab, leaving this page where it is.
 function open(event: MouseEvent) {
@@ -36,7 +30,7 @@ function open(event: MouseEvent) {
 			<p class="flex items-center gap-1.5 text-sm text-ink-gray-5">
 				<span>{{ __(team.team_role) }}</span>
 				<span class="text-ink-gray-4">·</span>
-				<span>{{ upcomingEvents }}</span>
+				<span>{{ upcomingEventsLabel(team.upcoming_event_count) }}</span>
 			</p>
 			<p v-if="team.short_description" class="line-clamp-2 text-p-base text-ink-gray-6">
 				{{ team.short_description }}

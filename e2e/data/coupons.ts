@@ -1,0 +1,5 @@
+export const COUPON_EVENT_TITLE = "E2E Coupons"
+export const COUPON_EVENT_ROUTE = "coupons-e2e"
+export const AUTOMATIC_OFFER_TITLE = "Early sign-up"
+export const HIDDEN_TICKET_TITLE = "Insider Pass"
+export const ACCESS_CODE = "E2EINSIDER"

@@ -53,22 +53,23 @@ test.describe("Ticket currencies", () => {
 		await deleteDoc(request, "Buzz Event", eventId).catch(() => {})
 	})
 
-	test("falls back to INR until every item has a USD price", async ({ page }) => {
+	test("switching currency drops tickets it doesn't sell, with undo", async ({ page }) => {
 		await page.goto(`/b/register/${route}`)
-		await expect(page.getByText("Showing INR prices")).toBeVisible({ timeout: 15000 })
+		const usd = page.getByRole("radio", { name: /USD/ })
+		await expect(usd).toBeVisible({ timeout: 15000 })
 
-		await page.getByRole("button", { name: "Change currency" }).click()
-		await page.getByRole("menuitem", { name: /USD/ }).click()
-		await expect(page.getByText("Showing USD prices")).toBeVisible()
+		await usd.click()
+		const removed = page.getByText("Removed Local. Not sold in USD.")
+		await expect(removed).toBeVisible()
+		await expect(page.getByText("Not sold in USD", { exact: true })).toBeVisible()
 
-		const ticketType = page.getByRole("combobox", { name: "Ticket Type" })
-		await expect(ticketType).toContainText("INR only")
-		const fallback = page.getByText("This order will be charged in INR")
-		await expect(fallback).toBeVisible()
+		await page.getByRole("button", { name: "Undo" }).click()
+		await expect(page.getByRole("radio", { name: /INR/ })).toBeChecked()
+		await expect(page.getByText("1 ticket selected")).toBeVisible()
 
-		await ticketType.click()
-		await page.getByRole("option", { name: /^Standard .*\$15/ }).click()
-		await expect(fallback).toBeHidden()
-		await expect(page.getByText("Pay by card. You're charged in USD.")).toBeVisible()
+		await usd.click()
+		await page.getByRole("button", { name: "Add Standard" }).click()
+		await expect(page.getByText("Pay in")).toBeVisible()
+		await expect(page.locator("aside dd").last()).toHaveText("$15")
 	})
 })

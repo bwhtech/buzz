@@ -7,6 +7,7 @@ from frappe.utils import get_datetime
 from buzz.api.communities.queries import time_of_day
 from buzz.api.events.services import split_by_date
 from buzz.api.teams.schemas import TeamEvent, TeamEvents
+from buzz.events.doctype.community_event_request.community_event_request import approved_external_requests
 from buzz.permissions import has_team_access
 
 REQUEST = "Community Event Request"
@@ -64,20 +65,7 @@ def buzz_events(team: str) -> list[TeamEvent]:
 
 
 def external_events(team: str) -> list[TeamEvent]:
-	rows = frappe.get_all(
-		REQUEST,
-		filters={"community": team, "status": "Approved", "is_external_event": 1},
-		fields=[
-			"name",
-			"event_title",
-			"event_url",
-			"host",
-			"event_location",
-			"start_datetime",
-			"end_datetime",
-		],
-	)
-	return [external_event(row) for row in rows]
+	return [external_event(row) for row in approved_external_requests(team)]
 
 
 def external_event(row) -> TeamEvent:

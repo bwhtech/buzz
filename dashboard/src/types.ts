@@ -2,6 +2,7 @@
 // src/types/*; interfaces below cover shapes the dashboard sees that the stored
 // schema does not describe (API-joined/computed fields and non-DocType data).
 
+export type { AdditionalEventPage } from "@/types/Events/AdditionalEventPage"
 export type { BuzzEvent } from "@/types/Events/BuzzEvent"
 export type { EventBooking } from "@/types/Ticketing/EventBooking"
 export type { EventTicket } from "@/types/Ticketing/EventTicket"
@@ -9,7 +10,7 @@ export type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
 export type { FrappeField } from "@/composables/useCustomFields"
 export type { TalkProposal } from "@/types/Proposals/TalkProposal"
 
-import type { FilterField } from "@/components/common/filters/fields"
+import type { Condition, FilterField } from "@/components/common/filters/fields"
 import type { FrappeField } from "@/composables/useCustomFields"
 import type { EventTicket } from "@/types/Ticketing/EventTicket"
 import type { TicketAddOnValue } from "@/types/Ticketing/TicketAddOnValue"
@@ -53,6 +54,7 @@ export interface EventProposals {
 	can_write: boolean
 	// Where talks are proposed, and whether that page still takes them.
 	proposal_link: string | null
+	proposal_form: string | null
 	proposals_closed: boolean
 	filter_fields: FilterField[]
 }
@@ -92,21 +94,90 @@ export interface FrappeError extends Error {
 	exc_type?: string
 }
 
-// buzz.api.account.get_user_info: every field but is_logged_in and brand_image
+export interface NavbarLink {
+	label: string
+	url: string | null
+	open_in_new_tab: boolean
+	right: boolean
+	child_items: NavbarLink[]
+}
+
+// Website Settings' navbar fields.
+export interface Navbar {
+	links: NavbarLink[]
+	call_to_action: string | null
+	call_to_action_url: string | null
+	show_login: boolean
+	show_language_picker: boolean
+}
+
+// Buzz Settings' whitelabel logos; `is_default` means none is set and the Buzz wordmark shows.
+export interface Brand {
+	logo: string
+	logo_dark: string | null
+	icon: string | null
+	name: string
+	is_default: boolean
+}
+
+// buzz.api.account.get_user_info: every field but is_logged_in, brand and navbar
 // is absent for guests, so the session fields stay optional.
 export interface UserInfo {
 	is_logged_in: boolean
-	brand_image: string | null
+	brand: Brand
+	navbar: Navbar
 	name?: string
 	first_name?: string | null
 	last_name?: string | null
 	full_name?: string | null
 	email?: string
+	username?: string | null
 	user_image?: string | null
 	bio?: string | null
 	roles?: { role: string }[]
 	language?: string | null
 	time_zone?: string | null
+}
+
+export interface EmailAttachment {
+	name: string
+	url: string
+	size: number
+}
+
+export interface ActivityEntry {
+	name: string
+	kind: "comment" | "email" | "change" | "created"
+	owner: string
+	owner_name: string
+	owner_image: string | null
+	creation: string
+	content: string | null
+	quoted_content: string | null
+	snippet: string | null
+	attachments: EmailAttachment[]
+	recipients: string[]
+	cc: string[]
+	received: boolean
+	field: string | null
+	old_value: string | null
+	new_value: string | null
+}
+
+// buzz.api.notifications.get_notifications: newest first.
+export interface NotificationItem {
+	name: string
+	kind: "comment" | "reply"
+	actor: string
+	actor_image: string | null
+	snippet: string | null
+	creation: string
+	read: boolean
+	reference_doctype: string
+	reference_name: string
+	title: string | null
+	event_title: string | null
+	link: string | null
 }
 
 export interface TeamMember {
@@ -125,6 +196,7 @@ export interface TeamOption {
 	slug: string | null
 	is_published: boolean
 	accept_community_submissions: boolean
+	is_personal: boolean
 	short_description: string | null
 	upcoming_event_count: number
 	team_role: string
@@ -177,6 +249,11 @@ export interface TeamOverview {
 	public_url: string | null
 	short_description: string | null
 	about: string | null
+	// An uploaded share image, then the one Buzz drew; the shared link shows the first it has.
+	meta_image: string | null
+	og_image: string | null
+	share_title: string
+	share_description: string
 	links: EventExternalLink[]
 	my_role: string
 	members: TeamMember[]
@@ -270,6 +347,10 @@ export interface EventGuest {
 	ticket_type: string | null
 	registered_at: string | null
 	add_ons: GuestAddOn[]
+	// Today's check-in in the chosen zone, if the guest has arrived.
+	checked_in_at?: string | null
+	// Where the guest stands at each enabled zone, default first.
+	zones: ZoneStatus[]
 }
 
 // buzz.api.events.get_event_registration_trend
@@ -290,17 +371,37 @@ export interface RegistrationTrend {
 	by_ticket_type: TicketTypeTotal[]
 }
 
+export interface GuestZone {
+	name: string
+	title: string
+	is_default?: boolean
+	// Guests checked in at the zone, out of the tickets it lets in.
+	checked_in?: number
+	eligible?: number
+}
+
+export interface ZoneStatus {
+	name: string
+	title: string
+	allowed: boolean
+	checked_in_at: string | null
+}
+
 export interface EventGuests {
 	title: string | null
 	start_date: string | null
 	start_time: string | null
 	end_date: string | null
 	venue: string | null
+	route: string | null
 	total: number
 	matched: number
+	checked_in: number
+	checked_in_any_zone: number
 	guests: EventGuest[]
 	has_next_page: boolean
 	filter_fields: FilterField[]
+	zones: GuestZone[]
 }
 
 export interface VerificationMethods {
@@ -308,9 +409,23 @@ export interface VerificationMethods {
 	phone: boolean
 }
 
-export interface EventVenueDetail {
-	name: string
+export interface VenueLocation {
+	venue_name: string
+	label: string | null
 	address: string | null
+	latitude: number | null
+	longitude: number | null
+	map_link: string | null
+}
+
+// A single venue lists itself as its only location.
+export interface VenueDetails {
+	name: string
+	venue_name: string
+	address: string | null
+	map_link: string | null
+	has_multiple_locations: boolean
+	locations: VenueLocation[]
 }
 
 // One name under "Hosted by": the event's team, or one of its co-hosts.
@@ -343,12 +458,17 @@ export interface EventDetail {
 	banner_image: string | null
 	allow_editing_talks_after_acceptance: boolean
 	medium: string | null
-	venue: EventVenueDetail | null
+	venue: VenueDetails | null
 	meeting_link: string | null
 	is_published: boolean
+	show_countdown: boolean
+	// Null once the event is over.
+	countdown: { starts_at: string; ends_at: string } | null
 	primary_host: EventHostRef | null
 	co_hosts: EventHostRef[]
 	external_links: EventExternalLink[]
+	topics: string[]
+	can_write: boolean
 }
 
 // A ticket the user holds, flattened with the context its event carries.
@@ -441,10 +561,26 @@ export interface AvailableTicketType {
 	currency?: string
 	description?: string
 	remaining_tickets?: number
+	max_tickets_available?: number
 	free_add_ons?: string[]
 	add_ons?: string[]
 	prices?: { currency: string; price: number }[]
 	price_note?: string
+	category?: string | null
+}
+
+// buzz.api.booking.hold_tickets
+export interface TicketHold {
+	hold_token: string
+	expires_in_seconds: number | null
+	remaining: Record<string, number>
+}
+
+// buzz.api.booking.get_event_booking_data: categories that hold an available ticket type.
+export interface BookingTicketCategory {
+	name: string
+	title: string
+	description: string | null
 }
 
 export interface AvailableAddOn {
@@ -483,30 +619,22 @@ export interface OfflineMethod {
 	custom_fields?: FrappeField[]
 }
 
-export interface CouponData {
-	id?: string
-	title?: string
-	description?: string
-	coupon_type?: string
-	discount_type?: string
-	discount_value?: number
-	max_discount_amount?: number
-	min_order_value?: number
-	free_add_ons?: string[]
-	ticket_type?: string
-	remaining_tickets?: number
-	[key: string]: any
+// buzz.api.booking.get_discount: coupon_code is null when an automatic coupon applied.
+export interface DiscountQuote {
+	discount_amount: number
+	coupon_code: string | null
+	error: string | null
+	offer_name: string | null
 }
 
-// buzz.api.communications: a message sent (or scheduled) to an event's guests or speakers.
-export type CommunicationAudience = "Guests" | "Speakers"
+// buzz.api.communications: a message sent (or scheduled) to an event's guests, speakers or sponsors.
+export type CommunicationAudience = "Guests" | "Speakers" | "Sponsors"
 
 export interface CommunicationItem {
 	name: string
 	audience: CommunicationAudience
-	// Comma-joined, the shape the composer keeps the filters in.
-	ticket_types: string
-	statuses: string
+	// JSON conditions, as the audience's list page sends them.
+	filters: string
 	subject: string
 	message: string
 	recipient_count: number
@@ -520,22 +648,21 @@ export interface EventCommunications {
 	can_write: boolean
 	can_edit_settings: boolean
 	support_email: string | null
-	ticket_types: { name: string; title: string | null }[]
-	statuses: string[]
+	// The filters each audience's own list page offers.
+	filter_fields: Record<CommunicationAudience, FilterField[]>
 	communications: CommunicationItem[]
 }
 
 // What the composer holds between the inline box and the Advanced drawer.
 export interface CommunicationDraft {
 	audience: CommunicationAudience
-	ticket_types: string[]
-	statuses: string[]
+	conditions: Condition[]
 	subject: string
 	message: string
 	scheduled_at: string
 }
 
-// buzz.api.sponsorships.get_event_sponsorships: an event's Sponsor Enquiry Form, as read
+// buzz.api.sponsorships.get_event_sponsorships: an event's sponsorship Buzz Form, as read
 // on the manage page.
 export interface EnquiryFormState {
 	name: string
@@ -646,6 +773,7 @@ export interface EventSponsorships {
 	sponsors: EventSponsorItem[]
 	team: string
 	tags: TagItem[]
+	import_enabled: boolean
 }
 
 export interface EventSponsors {
@@ -667,12 +795,22 @@ export interface TicketTypePrice extends TierPrice {
 }
 
 // buzz.api.events.get_event_ticket_types: the ticket types an event sells, for its Tickets page.
+export interface TicketCategoryItem {
+	name: string
+	title: string
+	description: string | null
+	sort_order: number
+}
+
 export interface TicketTypeItem {
 	name: string
 	title: string
+	description: string | null
+	category: string | null
 	max_tickets_available: number
 	auto_unpublish_after: string | null
 	is_published: boolean
+	is_hidden: boolean
 	tickets_sold: number
 	prices: TicketTypePrice[]
 }
@@ -681,6 +819,7 @@ export interface EventTicketTypes {
 	title: string
 	can_write: boolean
 	registration_link: string | null
+	registration_form: string | null
 	registrations_closed: boolean
 	allow_guest_booking: boolean
 	guest_verification_method: string
@@ -690,8 +829,10 @@ export interface EventTicketTypes {
 	tax_percentage: number
 	team_legal_name: string | null
 	team_tax_id: string | null
+	has_team_tax_details: boolean
 	can_edit_team: boolean
 	paid_events_enabled: boolean
+	categories: TicketCategoryItem[]
 	ticket_types: TicketTypeItem[]
 	payment_providers: PaymentProviderItem[]
 	revenue: CurrencyRevenue[]
@@ -708,4 +849,67 @@ export interface CurrencyRevenue {
 export interface PaymentProviderItem {
 	name: string
 	is_default: boolean
+}
+
+export type EventSection =
+	| "details"
+	| "guests"
+	| "ticketing"
+	| "talks"
+	| "sponsors"
+	| "communications"
+
+export type SectionLevel = "View" | "Edit"
+
+// buzz.api.events.collaborators.get_event_access: null means no access to that section.
+export type EventAccess = Record<EventSection, SectionLevel | null>
+
+// A `Buzz Event Collaborator` row; a blank level is no access.
+export type EventCollaborator = {
+	name: string
+	email: string
+	user: string | null
+	status: "Pending" | "Accepted" | "Revoked"
+} & { [Section in EventSection as `${Section}_access`]: SectionLevel | "" }
+
+export type CouponStatus = "Active" | "Disabled" | "Used up" | "Ended" | "Scheduled"
+
+export interface CouponItem {
+	name: string
+	coupon_type: "Promo Code" | "Automatic" | "Access Code"
+	/** Typed at checkout for a promo or access code; the offer name for an automatic one. */
+	code: string
+	description: string | null
+	enabled: boolean
+	discount_type: "Percentage" | "Flat Amount" | "None"
+	discount_percentage: number
+	discount_amounts: TierPrice[]
+	applies_to_all_ticket_types: boolean
+	ticket_types: string[]
+	minimum_requirement: "None" | "Minimum Order Amount" | "Minimum Ticket Count"
+	minimum_order_amounts: TierPrice[]
+	minimum_ticket_count: number
+	/** 0 means unlimited. */
+	usage_limit: number
+	once_per_buyer: boolean
+	starts_on: string | null
+	expires_on: string | null
+	times_used: number
+	status: CouponStatus
+}
+
+export interface CouponTicketType {
+	name: string
+	title: string
+	prices: TierPrice[]
+	is_hidden?: boolean
+}
+
+export interface EventCoupons {
+	title: string
+	can_write: boolean
+	registration_link: string | null
+	coupons: CouponItem[]
+	ticket_types: CouponTicketType[]
+	discounted: { currency: string; amount: number }[]
 }

@@ -4,7 +4,7 @@ import frappe
 import requests
 from frappe.tests import IntegrationTestCase, UnitTestCase
 
-from buzz.api.maps import add_place_as_venue, locate_map_link, search_places
+from buzz.api.maps import add_place_as_venue, locate_address, locate_map_link, search_places
 from buzz.api.maps.exceptions import CannotAddVenues, PlaceSearchFailed, PlaceSearchNotEnabled
 from buzz.api.maps.services import place_search_enabled
 from buzz.tests.factories import BuzzTeamFactory, UserFactory
@@ -28,6 +28,11 @@ SUGGESTIONS = {
 		{"queryPrediction": {"text": {"text": "nehru centre events"}}},
 	]
 }
+
+
+# What Nominatim answers for an address: OpenStreetMap's coordinates, which a site may keep.
+NOMINATIM_PLACE = {"lat": "18.9903", "lon": "72.8174", "address": {"city": "Mumbai"}}
+LOOKUP = "buzz.events.doctype.event_venue.geocode.VenueGeocoder.lookup"
 
 
 def google_answers(payload: dict) -> Mock:
@@ -99,6 +104,7 @@ class TestAddPlaceAsVenue(GoogleMapsTestCase):
 	def setUp(self):
 		super().setUp()
 		self.enterContext(self.set_user(self.owner))
+		self.lookup = self.enterContext(patch(LOOKUP, return_value=NOMINATIM_PLACE))
 
 	@patch("buzz.api.maps.services.requests.request")
 	def test_saves_the_place_with_its_address_and_place_id(self, request):
@@ -114,7 +120,8 @@ class TestAddPlaceAsVenue(GoogleMapsTestCase):
 			(venue.venue_name, venue.address, venue.google_place_id, venue.team),
 			("Nehru Centre", "Dr Annie Besant Rd, Worli", "place-1", self.team),
 		)
-		self.assertFalse(venue.latitude or venue.longitude)
+		# Google's coordinates are never kept: the pin comes from OpenStreetMap, at once.
+		self.assertEqual((venue.latitude, venue.longitude, venue.city), (18.9903, 72.8174, "Mumbai"))
 		self.assertEqual(request.call_args.args, ("GET", "https://places.googleapis.com/v1/places/place-1"))
 		self.assertEqual(request.call_args.kwargs["params"], {"sessionToken": "token-1"})
 		self.assertEqual(request.call_args.kwargs["headers"]["X-Goog-FieldMask"], "id,formattedAddress")
@@ -144,6 +151,25 @@ class TestAddPlaceAsVenue(GoogleMapsTestCase):
 		with self.set_user(self.outsider), self.assertRaises(frappe.PermissionError):
 			add_place_as_venue(self.team, "place-3", "Not Mine", "token-1")
 		request.assert_not_called()
+
+
+class TestLocateAddress(IntegrationTestCase):
+	@patch(LOOKUP, return_value=NOMINATIM_PLACE)
+	def test_gives_openstreetmap_coordinates_for_the_address(self, lookup):
+		location = locate_address("Dr Annie Besant Rd, Worli, Mumbai")
+
+		self.assertEqual((location.latitude, location.longitude), (18.9903, 72.8174))
+
+	@patch(LOOKUP, return_value=None)
+	def test_an_address_nominatim_cannot_find_gives_nothing(self, lookup):
+		self.assertIsNone(locate_address("Nowhere at all").latitude)
+
+	def test_someone_who_cannot_add_venues_is_refused(self):
+		with (
+			self.set_user(UserFactory.create_once(USER_WITHOUT_VENUE_ACCESS).name),
+			self.assertRaises(CannotAddVenues),
+		):
+			locate_address("Worli, Mumbai")
 
 
 class TestLocateMapLink(UnitTestCase):

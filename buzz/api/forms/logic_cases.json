@@ -1,0 +1,70 @@
+{
+	"conditions": [
+		{ "condition": ["tier", "=", "Gold"], "values": { "tier": "Gold" }, "expected": true },
+		{ "condition": ["tier", "=", "Gold"], "values": { "tier": "Silver" }, "expected": false },
+		{ "condition": ["tier", "!=", "Gold"], "values": { "tier": "Silver" }, "expected": true },
+		{ "condition": ["tier", "in", ["Gold", "Silver"]], "values": { "tier": "Gold" }, "expected": true },
+		{ "condition": ["tier", "not in", ["Gold"]], "values": { "tier": "Gold" }, "expected": false },
+		{ "condition": ["topics", "in", ["ai", "web"]], "values": { "topics": ["web", "ops"] }, "expected": true },
+		{ "condition": ["topics", "not in", ["ai"]], "values": { "topics": ["ai", "ops"] }, "expected": false },
+		{ "condition": ["budget", ">", 5000], "values": { "budget": "6000" }, "expected": true },
+		{ "condition": ["budget", ">", 5000], "values": {}, "expected": false },
+		{ "condition": ["budget", "<=", 5000], "values": { "budget": 5000 }, "expected": true },
+		{ "condition": ["tier", "is", "set"], "values": { "tier": "Gold" }, "expected": true },
+		{ "condition": ["tier", "is", "set"], "values": { "tier": "" }, "expected": false },
+		{ "condition": ["tier", "is", "not set"], "values": {}, "expected": true },
+		{ "condition": ["bio", "like", "Coffee"], "values": { "bio": "I roast coffee" }, "expected": true },
+		{ "condition": ["bio", "like", "tea"], "values": { "bio": "I roast coffee" }, "expected": false },
+		{ "condition": ["first_time", "=", 1], "values": { "first_time": 1 }, "expected": true }
+	],
+	"forms": [
+		{
+			"name": "a question without rules is shown and keeps its own flag",
+			"rules": [],
+			"values": {},
+			"questions": { "budget": { "mandatory": 1, "shown": true, "required": true } }
+		},
+		{
+			"name": "a show rule hides the question until it fires",
+			"rules": [{ "match": "all", "conditions": [["tier", "=", "Gold"]], "actions": [["show", "budget"]] }],
+			"values": { "tier": "Silver" },
+			"questions": { "budget": { "mandatory": 1, "shown": false, "required": false } }
+		},
+		{
+			"name": "a hide rule that fires wins over a show rule",
+			"rules": [
+				{ "match": "all", "conditions": [["tier", "=", "Gold"]], "actions": [["show", "budget"]] },
+				{ "match": "all", "conditions": [["country", "=", "India"]], "actions": [["hide", "budget"]] }
+			],
+			"values": { "tier": "Gold", "country": "India" },
+			"questions": { "budget": { "mandatory": 0, "shown": false, "required": false } }
+		},
+		{
+			"name": "any needs one condition, and one rule acts on two questions",
+			"rules": [
+				{
+					"match": "any",
+					"conditions": [["tier", "=", "Gold"], ["budget", ">", 5000]],
+					"actions": [["require", "company"], ["show", "logo"]]
+				}
+			],
+			"values": { "tier": "Silver", "budget": 9000 },
+			"questions": {
+				"company": { "mandatory": 0, "shown": true, "required": true },
+				"logo": { "mandatory": 0, "shown": true, "required": false }
+			}
+		},
+		{
+			"name": "all needs every condition",
+			"rules": [
+				{
+					"match": "all",
+					"conditions": [["tier", "=", "Gold"], ["budget", ">", 5000]],
+					"actions": [["require", "company"]]
+				}
+			],
+			"values": { "tier": "Gold", "budget": 100 },
+			"questions": { "company": { "mandatory": 0, "shown": true, "required": false } }
+		}
+	]
+}

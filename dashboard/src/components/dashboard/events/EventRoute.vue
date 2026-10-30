@@ -2,6 +2,7 @@
 import { watchDebounced } from "@vueuse/core"
 import { computed, ref, watch } from "vue"
 
+import UrlField from "@/components/UrlField.vue"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { checkEventRoute } from "@/data/events"
 import { eventPath, eventUrl, openEventPage } from "@/utils/eventUrl"
@@ -72,19 +73,12 @@ const open = () => openEventPage(props.saved ?? "")
 			</div>
 		</div>
 
-		<!-- Host on its own line so a long slug keeps the full width to itself. The border
-			 lights up on focus-within: the whole box is the field, not just the input. -->
-		<div
-			class="rounded-6 border border-outline-gray-2 px-2.5 py-1.5 transition-colors duration-150 ease-out focus-within:border-outline-gray-4 motion-reduce:transition-none"
-		>
-			<p class="text-xs leading-4 text-ink-gray-5">{{ hostname }}/events/</p>
-			<input
-				v-model="route"
-				aria-label="Event route"
-				placeholder="your-event"
-				class="w-full bg-transparent text-base text-ink-gray-8 placeholder:text-ink-gray-4 focus:outline-none"
-			/>
-		</div>
+		<UrlField
+			v-model="route"
+			:prefix="`${hostname}/events/`"
+			label="Event route"
+			placeholder="your-event"
+		/>
 
 		<!-- The answer lands 400ms after the last keystroke; without this it snaps in and
 			 shoves the column. -->

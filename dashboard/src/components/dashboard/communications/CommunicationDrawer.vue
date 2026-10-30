@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, DateTimePicker, FormControl, MultiSelect, Select, dayjsLocal } from "frappe-ui"
+import { Button, DateTimePicker, FormControl, Select, dayjsLocal } from "frappe-ui"
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, ref, watch } from "vue"
 
@@ -10,14 +10,15 @@ import {
 	DrawerDescription,
 	DrawerTitle,
 } from "@/components/common/drawer"
+import { type Condition, ListFilters } from "@/components/common/filters"
 import { useRecipientCount } from "@/data/communications"
 import type { CommunicationDraft, CommunicationItem, EventCommunications } from "@/types"
-import { audienceOptions, hasText } from "@/utils/communicationText"
+import { audienceOptions, describeCondition, hasText } from "@/utils/communicationText"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 
 const props = defineProps<{
 	event: string
-	options: Pick<EventCommunications, "ticket_types" | "statuses"> | null
+	filterFields: EventCommunications["filter_fields"] | null
 	// A sent message to read back; null means the drawer is composing.
 	viewing: CommunicationItem | null
 	canWrite: boolean
@@ -27,21 +28,10 @@ const open = defineModel<boolean>("open", { required: true })
 const draft = defineModel<CommunicationDraft>("draft", { required: true })
 const emit = defineEmits<{ send: [] }>()
 
-const tierOptions = computed(() =>
-	(props.options?.ticket_types || []).map((type) => ({
-		value: type.name,
-		label: type.title || type.name,
-	})),
-)
-const statusOptions = computed(() =>
-	(props.options?.statuses || []).map((status) => ({ value: status, label: status })),
-)
-
 const count = useRecipientCount(() => ({
 	event: props.event,
 	audience: draft.value.audience,
-	ticket_types: draft.value.ticket_types.join(","),
-	statuses: draft.value.statuses.join(","),
+	filters: JSON.stringify(draft.value.conditions),
 }))
 
 // Scheduling is a mode of the footer rather than a field: most messages go out now, so
@@ -66,15 +56,11 @@ function send() {
 const viewedFilters = computed(() => {
 	const row = props.viewing
 	if (!row) return ""
-	const chosen = row.audience === "Guests" ? row.ticket_types : row.statuses
-	if (!chosen) return `All ${row.audience.toLowerCase()}`
-	const titles = new Map(tierOptions.value.map((option) => [option.value, option.label]))
-	const filters = chosen
-		.split(",")
-		.map((value) => titles.get(value) || value)
-		.join(", ")
-	// "Speakers · Rejected" rather than "Rejected": the status alone does not say who.
-	return `${row.audience} · ${filters}`
+	const fields = props.filterFields?.[row.audience] ?? []
+	const conditions: Condition[] = row.filters ? JSON.parse(row.filters) : []
+	const described = conditions.map((condition) => describeCondition(condition, fields))
+	// "Speakers · Status is Rejected": the audience leads, since a condition alone does not say who.
+	return [row.audience, ...described.filter(Boolean)].join(" · ")
 })
 const viewedWhen = computed(() =>
 	props.viewing
@@ -129,30 +115,19 @@ const viewedWhen = computed(() =>
 					>Choose who receives it, then write it.</DrawerDescription
 				>
 
-				<div class="grid grid-cols-2 gap-3">
+				<ListFilters
+					v-model="draft.conditions"
+					:fields="canWrite ? (filterFields?.[draft.audience] ?? []) : []"
+					disable-shortcut
+				>
 					<Select
 						v-model="draft.audience"
+						class="flex-1"
 						label="Recipients"
 						:options="audienceOptions"
 						:disabled="!canWrite"
 					/>
-					<MultiSelect
-						v-if="draft.audience === 'Guests'"
-						v-model="draft.ticket_types"
-						label="Ticket tiers"
-						placeholder="All tiers"
-						:options="tierOptions"
-						:disabled="!canWrite"
-					/>
-					<MultiSelect
-						v-else
-						v-model="draft.statuses"
-						label="Proposal status"
-						placeholder="Any status"
-						:options="statusOptions"
-						:disabled="!canWrite"
-					/>
-				</div>
+				</ListFilters>
 				<!-- The last count stays put and dims while the next one is fetched: swapping the
 				     text for "Counting…" on every keystroke made the line jump. -->
 				<p

@@ -1,0 +1,8 @@
+/* League Gothic (SIL Open Font License), Latin subset. Display headings only. */
+@font-face {
+	font-family: "League Gothic";
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url("LeagueGothic-Regular.woff2") format("woff2");
+}

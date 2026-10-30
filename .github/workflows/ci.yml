@@ -20,10 +20,18 @@ concurrency:
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    # Pinned: the ubuntu-26.04 image lacks libmysqlclient.so.21 and Playwright support
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
-    name: Server
+      matrix:
+        include:
+          # Empty branch installs frappe's default branch (develop).
+          - name: Server
+            frappe-branch: ""
+          - name: Server (version-16)
+            frappe-branch: version-16
+    name: ${{ matrix.name }}
     # pull-requests: write lets the job post the coverage comment.
     permissions:
       contents: read
@@ -56,27 +64,29 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
 
-      - name: Find tests
-        run: |
-          echo "Finding tests"
-          grep -rn "def test" > /dev/null
-
       - name: Setup Bench
         uses: ./.github/actions/setup-bench
         with:
           # test_buzz_event imports zoom_integration.tests.zoom_fixtures.
           extra-app-url: https://github.com/bwhtech/zoom_integration
+          frappe-branch: ${{ matrix.frappe-branch }}
+          # Deploys build with version-16's older esbuild, which rejects syntax develop accepts.
+          build-assets: ${{ matrix.frappe-branch == 'version-16' }}
 
       - name: Run Tests
         working-directory: /home/runner/frappe-bench
-        run: bench --site test_site run-tests --app buzz --coverage
+        # Shards match the runner's 4 cores. Coverage only on frappe develop: its data files are
+        # per process there, while version-16 has every shard write the same file.
+        run: >-
+          bash "$GITHUB_WORKSPACE/.github/scripts/run-sharded-tests.sh" test_site 4
+          ${{ matrix.frappe-branch == '' && '--with-coverage' || '' }}
         env:
           TYPE: server
 
       # Frappe's --coverage omits test folders but not test_*.py files, so the report
       # is rebuilt from the raw data with the test modules left out.
       - name: Build coverage report
-        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.frappe-branch == '' }}
         continue-on-error: true
         # Reported from the app folder so the table shows paths relative to it.
         working-directory: /home/runner/frappe-bench/apps/buzz
@@ -87,7 +97,7 @@ jobs:
 
       - name: Comment coverage on the pull request
         # A fork's token cannot comment, so only same-repo pull requests get one.
-        if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.frappe-branch == '' && github.event.pull_request.head.repo.full_name == github.repository }}
         continue-on-error: true
         uses: actions/github-script@v9
         with:

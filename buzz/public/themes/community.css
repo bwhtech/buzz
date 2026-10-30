@@ -1,0 +1,263 @@
+/* The /community landing page. Colours come from the page's theme tokens, so light and dark follow it. */
+
+.community-landing {
+	--landing-width: min(1240px, 100% - 32px);
+	--landing-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.18);
+	--landing-font: InterVar, Inter, system-ui, sans-serif;
+	overflow-x: clip;
+	letter-spacing: normal;
+}
+
+.community-landing b {
+	color: var(--ink-strong);
+	font-weight: 600;
+}
+
+.community-landing .es-button {
+	transition: transform 160ms var(--ease-out), background-color 150ms ease;
+}
+
+.community-landing .es-button:active {
+	transform: scale(0.97);
+}
+
+/* Follow state is page-wide, so every Follow button and follower count agree. */
+[data-following="false"] [data-followed],
+[data-following="true"] [data-unfollowed] {
+	display: none;
+}
+
+/* Hero */
+
+.landing-hero {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 56px 16px 0;
+	overflow: hidden;
+	text-align: center;
+}
+
+/* The globe fades into the page instead of ending on a hard edge. */
+.landing-hero::after {
+	content: "";
+	position: absolute;
+	inset: auto 0 0;
+	height: 120px;
+	background: linear-gradient(to bottom, transparent, var(--page-bg));
+	pointer-events: none;
+}
+
+.hero-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 12px 4px 4px;
+	border: 1px solid var(--border);
+	border-radius: 100px;
+	background: var(--surface);
+	color: var(--ink-body);
+	font-size: 13px;
+}
+
+.hero-pill-tag {
+	padding: 2px 8px;
+	border-radius: 100px;
+	background: var(--ink-strong);
+	color: var(--page-bg);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.hero-title {
+	position: relative;
+	z-index: 1;
+	margin-top: 20px;
+	color: var(--ink-title);
+	font-family: var(--landing-font);
+	font-size: clamp(64px, 14.5vw, 232px);
+	font-weight: 800;
+	line-height: 0.9;
+	letter-spacing: -0.055em;
+	white-space: nowrap;
+}
+
+.hero-subtitle,
+.section-text {
+	max-width: 540px;
+	color: var(--ink-muted);
+	font-size: 18px;
+	line-height: 1.55;
+	text-wrap: pretty;
+}
+
+.hero-subtitle {
+	position: relative;
+	z-index: 1;
+	margin-top: 20px;
+}
+
+.hero-actions {
+	position: relative;
+	z-index: 1;
+	margin-top: 28px;
+}
+
+/* The lower half of the globe sits below the fold of the hero, like a horizon. */
+.hero-globe[hidden] {
+	display: none;
+}
+
+.hero-globe {
+	width: min(880px, 120vw);
+	aspect-ratio: 1;
+	margin-top: 24px;
+	margin-bottom: max(-440px, -60vw);
+}
+
+.hero-globe canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	cursor: grab;
+	touch-action: pan-y;
+	contain: layout paint size;
+	transition: opacity 900ms var(--ease-out);
+}
+
+.hero-globe canvas[data-ready] {
+	opacity: 1;
+}
+
+.hero-globe canvas[data-dragging] {
+	cursor: grabbing;
+}
+
+/* The hero arrives in a short sequence on first load. */
+.hero-pill,
+.hero-title,
+.hero-subtitle,
+.hero-actions {
+	animation: hero-in 600ms var(--ease-out) both;
+}
+
+.hero-title {
+	animation-delay: 60ms;
+}
+
+.hero-subtitle {
+	animation-delay: 120ms;
+}
+
+.hero-actions {
+	animation-delay: 180ms;
+}
+
+@keyframes hero-in {
+	from {
+		opacity: 0;
+		transform: translateY(12px);
+		filter: blur(4px);
+	}
+}
+
+/* Sections */
+
+.landing-section {
+	width: var(--landing-width);
+	margin-inline: auto;
+	padding-block: 80px;
+}
+
+.section-heading {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 40px;
+	text-align: center;
+}
+
+.section-eyebrow {
+	color: var(--ink-muted);
+	font-size: 13px;
+}
+
+.section-title {
+	max-width: 640px;
+	color: var(--ink-title);
+	font-family: var(--landing-font);
+	font-size: clamp(32px, 4vw, 48px);
+	font-weight: 640;
+	line-height: 1.05;
+	letter-spacing: -0.035em;
+	text-wrap: balance;
+}
+
+.section-heading .section-text {
+	max-width: 620px;
+	font-size: 16px;
+}
+
+.features-title {
+	margin-bottom: 40px;
+}
+
+.landing-cta {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 20px;
+	padding: clamp(40px, 7vw, 88px) 24px;
+	overflow: hidden;
+	border: 1px solid var(--border);
+	border-radius: 20px;
+	background: var(--surface);
+	text-align: center;
+}
+
+/* A dot field that clears around the message. */
+.landing-cta::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(var(--border) 1.2px, transparent 1.5px) 0 0 / 18px 18px;
+	mask-image: radial-gradient(ellipse 60% 70% at 50% 50%, transparent 30%, #000 100%);
+	pointer-events: none;
+}
+
+.landing-cta > * {
+	position: relative;
+}
+
+.landing-cta .section-title {
+	font-size: clamp(36px, 5vw, 64px);
+	line-height: 1;
+	letter-spacing: -0.04em;
+}
+
+.landing-cta .section-text {
+	font-size: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.hero-pill,
+	.hero-title,
+	.hero-subtitle,
+	.hero-actions {
+		animation-name: hero-fade;
+	}
+
+	.community-landing .es-button:active {
+		transform: none;
+	}
+}
+
+@keyframes hero-fade {
+	from {
+		opacity: 0;
+	}
+}

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useLocalStorage } from "@vueuse/core"
 import { ErrorMessage, Skeleton, dayjsLocal, toast } from "frappe-ui"
-import { computed, ref } from "vue"
+import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import CommunicationActions from "@/components/dashboard/communications/CommunicationActions.vue"
@@ -22,8 +22,7 @@ const page = useEventCommunications(eventId)
 
 const emptyDraft = (): CommunicationDraft => ({
 	audience: "Guests",
-	ticket_types: [],
-	statuses: [],
+	conditions: [],
 	subject: "",
 	message: "",
 	scheduled_at: "",
@@ -37,6 +36,12 @@ const draft = useLocalStorage<CommunicationDraft>(
 	{
 		mergeDefaults: true,
 	},
+)
+
+// Each audience filters on its own fields, so a switch starts the filters over.
+watch(
+	() => draft.value.audience,
+	() => (draft.value.conditions = []),
 )
 
 const drawerOpen = ref(false)
@@ -59,8 +64,7 @@ async function send() {
 		const sent = await sender.submit({
 			event: eventId,
 			audience: draft.value.audience,
-			ticket_types: draft.value.ticket_types.join(","),
-			statuses: draft.value.statuses.join(","),
+			filters: JSON.stringify(draft.value.conditions),
 			subject: draft.value.subject,
 			message: draft.value.message,
 			scheduled_at: draft.value.scheduled_at || null,
@@ -77,7 +81,7 @@ async function send() {
 // Nothing has left yet: the queue sends on the scheduler's next pass, so the toast says
 // "queued" and offers the row rather than claiming delivery.
 function announce(sent: CommunicationItem) {
-	const noun = sent.audience === "Guests" ? "guest" : "speaker"
+	const noun = sent.audience.toLowerCase().slice(0, -1)
 	const who = `${sent.recipient_count} ${noun}${sent.recipient_count === 1 ? "" : "s"}`
 	const scheduled = sent.scheduled_at ? dayjsLocal(sent.scheduled_at) : null
 	toast.success(
@@ -141,7 +145,7 @@ const canWrite = computed(() => !!page.data?.can_write)
 		v-model:open="drawerOpen"
 		v-model:draft="draft"
 		:event="eventId"
-		:options="page.data"
+		:filter-fields="page.data?.filter_fields ?? null"
 		:viewing="viewing"
 		:can-write="canWrite"
 		:sending="sender.loading"

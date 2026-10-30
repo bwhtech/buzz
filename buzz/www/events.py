@@ -16,6 +16,7 @@ from frappe.utils import (
 	today,
 )
 
+from buzz.playground import listing_filters
 from buzz.www.event.index import format_day, not_found
 from buzz.www.site_header import apply_site_context
 
@@ -37,10 +38,16 @@ TIME_FIELDS = ["start_time", "end_date", "end_time", "time_zone"]
 
 def get_context(context):
 	apply_site_context(context)
-	category_slug = frappe.form_dict.category
-	page = EventListing(category_slug) if category_slug else DiscoverPage()
-	context.update(page.as_context())
+	context.update(page_for(frappe.form_dict).as_context())
 	context.show_hosting_banner = hosting_banner_visible(context.is_guest)
+
+
+def page_for(form_dict):
+	if form_dict.category:
+		return CategoryListing(form_dict.category)
+	if form_dict.topic:
+		return TopicListing(form_dict.topic)
+	return DiscoverPage()
 
 
 def hosting_banner_visible(is_guest: bool) -> bool:
@@ -49,7 +56,8 @@ def hosting_banner_visible(is_guest: bool) -> bool:
 
 def upcoming_filters() -> dict:
 	# A day of slack for events in timezones behind the site's; exclude_ended_events makes the exact cut.
-	return {"is_published": 1, "route": ["is", "set"], "end_date": [">=", add_days(today(), -1)]}
+	filters = {"is_published": 1, "route": ["is", "set"], "end_date": [">=", add_days(today(), -1)]}
+	return filters | listing_filters()
 
 
 def current_time_in_event_timezone(event) -> datetime:
@@ -82,6 +90,40 @@ def enabled_categories() -> list:
 	)
 
 
+def enabled_topics() -> list:
+	return frappe.get_all(
+		"Event Topic",
+		filters={"enabled": 1},
+		fields=["name", "icon_svg", "route", "is_published"],
+		order_by="name",
+	)
+
+
+def topic_url(topic: str) -> str:
+	return f"/events?topic={quote(topic)}"
+
+
+def events_with_topic(topic: str) -> list[str]:
+	return frappe.get_all(
+		"Event Topic Link",
+		filters={"parenttype": "Buzz Event", "parentfield": "topics", "topic": topic},
+		pluck="parent",
+	)
+
+
+def topic_page_url(topic) -> str:
+	"""A published topic has its own page; the rest filter the events listing."""
+	return f"/{topic.route}" if topic.is_published else topic_url(topic.name)
+
+
+def category_url(slug: str) -> str:
+	return f"/events?category={quote(slug)}"
+
+
+def tab(label: str, url: str, current: bool) -> dict:
+	return {"label": label, "url": url, "current": current}
+
+
 def icon_url(icon_svg: str | None) -> str:
 	# Loaded through <img>, where browsers do not run scripts inside the SVG.
 	return f"data:image/svg+xml,{quote(icon_svg)}" if icon_svg else ""
@@ -102,13 +144,13 @@ class DiscoverPage:
 	def as_context(self) -> dict:
 		return {
 			"title": _("Discover Events"),
-			"category": None,
+			"listing": None,
 			"featured_events": [event_card(event) for event in self.featured_events()],
 			"popular_events": [event_card(event) for event in self.popular_events()],
-			"categories": self.categories(),
+			"topics": self.topics(),
 			"meta": {
 				"url": get_url("/events"),
-				"description": _("Find popular events and browse by category."),
+				"description": _("Find popular events and browse by topic."),
 			},
 		}
 
@@ -140,54 +182,94 @@ class DiscoverPage:
 		).run(as_dict=True)
 		return sorted(exclude_ended_events(events), key=lambda event: event.start_date, reverse=True)
 
-	def categories(self) -> list[dict]:
-		counts = self.event_counts()
+	def topics(self) -> list[dict]:
+		counts = self.topic_counts()
 		return [
 			{
-				"name": category.name,
-				"slug": category.slug,
-				"icon_url": icon_url(category.icon_svg),
-				"event_count": counts.get(category.name, 0),
+				"name": topic.name,
+				"url": topic_page_url(topic),
+				"icon_url": icon_url(topic.icon_svg),
+				"event_count": counts.get(topic.name, 0),
 			}
-			for category in enabled_categories()
+			for topic in enabled_topics()
 		]
 
-	def event_counts(self) -> dict[str, int]:
-		events = frappe.get_all("Buzz Event", filters=upcoming_filters(), fields=["category", *TIME_FIELDS])
-		return Counter(event.category for event in exclude_ended_events(events))
+	def topic_counts(self) -> Counter:
+		events = frappe.get_all("Buzz Event", filters=upcoming_filters(), fields=["name", *TIME_FIELDS])
+		names = [event.name for event in exclude_ended_events(events)] or [""]
+		topics = frappe.get_all(
+			"Event Topic Link",
+			filters={"parenttype": "Buzz Event", "parentfield": "topics", "parent": ["in", names]},
+			pluck="topic",
+		)
+		return Counter(topics)
 
 
 class EventListing:
-	def __init__(self, category_slug: str):
-		self.category = self.load_category(category_slug)
+	"""Upcoming events narrowed by `event_filters()`, with tabs to switch between siblings."""
 
-	def load_category(self, slug: str) -> frappe._dict:
-		category = frappe.db.get_value(
-			"Event Category",
-			{"slug": slug, "enabled": 1},
-			["name", "slug", "description", "banner_image"],
-			as_dict=True,
-		)
-		return category or not_found()
+	listing: frappe._dict
 
 	def as_context(self) -> dict:
 		return {
-			"title": self.category.name,
-			"category": self.category,
-			"categories": enabled_categories(),
+			"title": self.listing.name,
+			"listing": self.listing,
+			"tabs": self.tabs(),
 			"events": [event_card(event) for event in self.events()],
-			"meta": {
-				"url": get_url(f"/events?category={quote(self.category.slug)}"),
-				"description": self.category.description or "",
-			},
+			"meta": {"url": get_url(self.url()), "description": self.listing.get("description") or ""},
 		}
 
 	def events(self) -> list:
 		events = frappe.get_all(
 			"Buzz Event",
-			filters=upcoming_filters() | {"category": self.category.name},
+			filters=upcoming_filters() | self.event_filters(),
 			fields=CARD_FIELDS + TIME_FIELDS,
 			order_by="start_date asc",
 			limit=LISTING_LIMIT,
 		)
 		return exclude_ended_events(events)
+
+
+class CategoryListing(EventListing):
+	def __init__(self, slug: str):
+		self.listing = (
+			frappe.db.get_value(
+				"Event Category",
+				{"slug": slug, "enabled": 1},
+				["name", "slug", "description", "banner_image"],
+				as_dict=True,
+			)
+			or not_found()
+		)
+
+	def url(self) -> str:
+		return category_url(self.listing.slug)
+
+	def event_filters(self) -> dict:
+		return {"category": self.listing.name}
+
+	def tabs(self) -> list[dict]:
+		return [
+			tab(category.name, category_url(category.slug), category.name == self.listing.name)
+			for category in enabled_categories()
+		]
+
+
+class TopicListing(EventListing):
+	def __init__(self, topic: str):
+		self.listing = (
+			frappe.db.get_value("Event Topic", {"name": topic, "enabled": 1}, ["name"], as_dict=True)
+			or not_found()
+		)
+
+	def url(self) -> str:
+		return topic_url(self.listing.name)
+
+	def event_filters(self) -> dict:
+		return {"name": ["in", events_with_topic(self.listing.name) or [""]]}
+
+	def tabs(self) -> list[dict]:
+		return [
+			tab(topic.name, topic_url(topic.name), topic.name == self.listing.name)
+			for topic in enabled_topics()
+		]

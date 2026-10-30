@@ -8,6 +8,7 @@ from frappe.utils import get_datetime, validate_url
 
 from buzz.permissions import WRITE_PTYPES, as_sql, is_unrestricted, my_teams, team_role_of
 
+SHARE_IMAGE_FIELDS = ("status", "community", "start_datetime", "end_datetime")
 EXTERNAL_FIELDS = ("event_title", "event_url", "host", "event_location", "start_datetime", "end_datetime")
 
 
@@ -20,7 +21,9 @@ class CommunityEventRequest(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		city: DF.Data | None
 		community: DF.Link
+		country: DF.Data | None
 		end_datetime: DF.Datetime | None
 		event: DF.Link | None
 		event_location: DF.Data | None
@@ -34,6 +37,7 @@ class CommunityEventRequest(Document):
 		longitude: DF.Float
 		review_note: DF.SmallText | None
 		reviewed_by: DF.Link | None
+		source_id: DF.Data | None
 		start_datetime: DF.Datetime | None
 		status: DF.Literal["Pending", "Approved", "Rejected"]
 		submitted_by: DF.Link | None
@@ -45,6 +49,17 @@ class CommunityEventRequest(Document):
 		else:
 			self.validate_buzz_event()
 		self.validate_community()
+
+	def on_update(self):
+		"""The community's share image counts its approved events, so these changes move it."""
+		from buzz.events.community_og_image import enqueue_generate_for
+
+		if not any(self.has_value_changed(field) for field in SHARE_IMAGE_FIELDS):
+			return
+		enqueue_generate_for(self.community)
+		previous = self.get_doc_before_save()
+		if previous and previous.community != self.community:
+			enqueue_generate_for(previous.community)
 
 	def validate_buzz_event(self):
 		if not self.event:
@@ -87,9 +102,19 @@ class CommunityEventRequest(Document):
 			)
 
 
+def approved_external_requests(community: str) -> list:
+	"""Events hosted on other sites that the community approved."""
+	return frappe.get_all(
+		"Community Event Request",
+		filters={"community": community, "status": "Approved", "is_external_event": 1},
+		fields=["name", *EXTERNAL_FIELDS, "latitude", "longitude", "city", "country"],
+	)
+
+
 def on_doctype_update():
 	# validate_unique_pair names the clash; the index stops two concurrent inserts.
 	frappe.db.add_unique("Community Event Request", ["event", "community"])
+	frappe.db.add_unique("Community Event Request", ["community", "source_id"])
 
 
 def has_request_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:

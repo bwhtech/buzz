@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import frappe
 from frappe import _
 from frappe.query_builder import Case
@@ -12,6 +14,7 @@ from buzz.api.events.exceptions import (
 	EventNotFound,
 	ZoomNotAvailable,
 )
+from buzz.api.events.guest_zones import GuestZones, guest_list_zone
 from buzz.api.events.schemas import (
 	CreatedEvent,
 	DailyRegistrations,
@@ -20,7 +23,6 @@ from buzz.api.events.schemas import (
 	EventGuest,
 	EventGuestsResponse,
 	EventHostRef,
-	EventVenue,
 	GuestAddOn,
 	GuestTicketType,
 	MyEvent,
@@ -33,10 +35,23 @@ from buzz.api.events.schemas import (
 	TicketTypeTotal,
 	VerificationMethods,
 )
-from buzz.api.filters.conditions import ListConditions, event_questions, filter_field, question_fields
+from buzz.api.filters.conditions import ListConditions, filter_field, form_questions, question_fields
 from buzz.api.filters.schemas import FilterField
+from buzz.events.countdown import event_countdown
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
-from buzz.permissions import has_team_access, my_teams
+from buzz.events.doctype.buzz_form.form_types import (
+	ATTENDEE_FORM_DOCTYPE,
+	REGISTRATION_FORM_DOCTYPE,
+	event_form,
+)
+from buzz.events.doctype.buzz_team.buzz_team import personal_team_owner
+from buzz.events.doctype.event_venue.details import venue_details
+from buzz.permissions import (
+	events_with_section_access,
+	get_section_access,
+	has_section_permission,
+	has_team_access,
+)
 from buzz.utils import is_app_installed
 
 
@@ -61,7 +76,7 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 	team = frappe.qb.DocType("Buzz Team")
 	venue = frappe.qb.DocType("Event Venue")
 
-	hosted = event.team.isin(my_teams(user))
+	hosted = event.name.isin(events_with_section_access(user, "details"))
 	ticketed = event.name.isin(
 		frappe.qb.from_(ticket)
 		.select(ticket.event)
@@ -143,6 +158,7 @@ DETAIL_FIELDS = (
 	"venue",
 	"meeting_link",
 	"is_published",
+	"show_countdown",
 )
 
 
@@ -152,19 +168,23 @@ def event_detail(event: str) -> EventDetail:
 	if not row:
 		EventNotFound.throw()
 
-	# Read is not enough: this payload backs the page that edits the event.
-	if not has_team_access(row.team, "write", frappe.session.user):
+	user = frappe.session.user
+	if not has_section_permission(event, "details", "read", user):
 		CannotManageEvent.throw()
 
 	return EventDetail(
 		**row
 		| {
 			"name": str(row.name),
-			"venue": venue_of(row.venue),
+			"venue": venue_details(row.venue),
 			"meeting_link": meeting_link_of(row),
 			"primary_host": primary_host_of(row.team),
 			"co_hosts": co_hosts_of(event),
 			"external_links": external_links_of(event),
+			"topics": topics_of(event),
+			"countdown": event_countdown(row),
+			# Details View opens the same page with its fields locked.
+			"can_write": has_section_permission(event, "details", "write", user),
 		}
 	)
 
@@ -173,7 +193,10 @@ def primary_host_of(team: str | None) -> EventHostRef | None:
 	"""The team hosting the event."""
 	if not team:
 		return None
-	row = frappe.db.get_value("Buzz Team", team, ["team_name", "logo"], as_dict=True)
+	row = frappe.db.get_value("Buzz Team", team, ["team_name", "logo", "is_personal"], as_dict=True)
+	owner = personal_team_owner(team) if row and row.is_personal else None
+	if owner:
+		return EventHostRef(host=team, label=owner.full_name, logo=owner.user_image)
 	return EventHostRef(host=team, label=row.team_name or team, logo=row.logo) if row else None
 
 
@@ -203,6 +226,15 @@ def external_links_of(event: str) -> list[EventExternalLink]:
 		order_by="idx",
 	)
 	return [EventExternalLink(**row) for row in rows]
+
+
+def topics_of(event: str) -> list[str]:
+	return frappe.get_all(
+		"Event Topic Link",
+		filters={"parenttype": "Buzz Event", "parent": str(event), "parentfield": "topics"},
+		pluck="topic",
+		order_by="idx",
+	)
 
 
 def create_co_host(
@@ -247,18 +279,11 @@ def remove_co_host(event: str, host: str) -> None:
 	doc.save()
 
 
-def manageable_event(event: str) -> BuzzEvent:
+def manageable_event(event: str, section: str = "details") -> BuzzEvent:
 	doc = frappe.get_doc("Buzz Event", event)
-	if not has_team_access(doc.team, "write", frappe.session.user):
+	if not has_section_permission(event, section, "write", frappe.session.user):
 		CannotManageEvent.throw()
 	return doc
-
-
-def venue_of(venue: str | None) -> EventVenue | None:
-	if not venue:
-		return None
-	address = frappe.db.get_value("Event Venue", venue, "address")
-	return EventVenue(name=venue, address=address)
 
 
 def meeting_link_of(row) -> str | None:
@@ -280,7 +305,7 @@ GUESTS_PAGE_SIZE = 20
 
 
 def guest_search_filters(search: str | None) -> list[list] | None:
-	"""Name or email, matched loosely — the two things a manager reads off the row."""
+	"""Name, email or ticket ID, matched loosely."""
 	term = (search or "").strip()
 	if not term:
 		return None
@@ -288,12 +313,8 @@ def guest_search_filters(search: str | None) -> list[list] | None:
 	return [
 		["attendee_name", "like", f"%{term}%"],
 		["attendee_email", "like", f"%{term}%"],
+		["name", "like", f"%{term}%"],
 	]
-
-
-def ticket_type_filter(ticket_types: str | None) -> list[str]:
-	"""The chosen types, as the comma-joined list the query string carries them in."""
-	return [chosen for chosen in (ticket_types or "").split(",") if chosen.strip()]
 
 
 def registration_link(doc) -> str | None:
@@ -304,18 +325,12 @@ def registration_link(doc) -> str | None:
 
 
 def set_registration_state(event: str, closed: bool) -> RegistrationState:
-	"""Open or close registrations, and answer with the state the server ends up in.
-
-	Closure is derived from `registrations_close_at`, so closing writes the event's own
-	wall clock and opening clears the cutoff. Opening cannot beat the event's end date,
-	which closes registrations on its own — hence the state rather than an acknowledgement.
-	"""
-	doc = manageable_event(event)
-	if closed:
-		doc.close_registrations()
-	else:
-		doc.registrations_close_at = None
-	doc.save()
+	"""Answer with the state the server ends up in: opening cannot beat the event's end date."""
+	doc = manageable_event(event, "ticketing")
+	# Without a registration form an event takes no registrations, which is already closed.
+	if form := event_form(doc.name, REGISTRATION_FORM_DOCTYPE):
+		form.flags.ignore_permissions = True
+		form.set_closed(closed)
 	return RegistrationState(registrations_closed=are_registrations_closed(doc))
 
 
@@ -329,13 +344,22 @@ def verification_methods() -> VerificationMethods:
 	return VerificationMethods(email=email_otp_available(), phone=phone_otp_available())
 
 
-def ensure_event_team_access(event: str) -> None:
-	"""Read access to the event's team is the bar for everything a manage page shows."""
+def ensure_event_team_access(event: str, section: str | None) -> None:
+	"""Read access to the event's section is the bar for everything a manage page shows.
+
+	`section` None is team-level data, which a collaborator never reaches.
+	"""
 	if not frappe.db.exists("Buzz Event", event):
 		EventNotFound.throw()
 
+	user = frappe.session.user
 	team = frappe.db.get_value("Buzz Event", event, "team")
-	if not has_team_access(team, "read", frappe.session.user):
+	allowed = (
+		has_section_permission(event, section, "read", user)
+		if section
+		else has_team_access(team, "read", user)
+	)
+	if not allowed:
 		CannotManageEvent.throw()
 
 
@@ -346,6 +370,9 @@ def event_guests(
 	order: str = "desc",
 	start: int = 0,
 	limit: int = GUESTS_PAGE_SIZE,
+	checked_in: str | None = None,
+	zone: str | None = None,
+	name: str | None = None,
 ) -> EventGuestsResponse:
 	"""One page of the people holding a ticket to an event.
 
@@ -353,12 +380,23 @@ def event_guests(
 	access is the bar: this shows the team what it already sees through the doctype.
 
 	Ordered by when the ticket was registered, newest first by default, so a page is a
-	stable slice as the caller walks down the list.
+	stable slice as the caller walks down the list. `checked_in` is "1" or "0" to keep only
+	the guests who have, or have not, checked in today, at `zone` or the default zone.
+	A `zone` also keeps only the tickets it lets in.
 	"""
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "guests")
 
 	filter_fields, answer_parents = guest_filter_fields(event)
 	conditions = ListConditions("Event Ticket", filter_fields, answer_parents).frappe_filters(filters)
+	guest_zones = GuestZones(event)
+	arrivals = guest_zones.arrivals[guest_list_zone(event, zone)]
+	if zone and (types := guest_zones.ticket_types.get(zone)):
+		conditions.append(["ticket_type", "in", list(types)])
+	if checked_in in ("0", "1"):
+		operator = "in" if checked_in == "1" else "not in"
+		conditions.append(["name", operator, list(arrivals) or [""]])
+	if name:
+		conditions.append(["name", "=", name])
 	query_filters = [["event", "=", event], ["docstatus", "=", 1], *conditions]
 	or_filters = guest_search_filters(search)
 	limit = max(1, min(int(limit), 100))
@@ -381,11 +419,15 @@ def event_guests(
 	type_titles = titles_of("Event Ticket Type", {ticket.ticket_type for ticket in tickets})
 
 	for ticket in tickets:
+		ticket["zones"] = guest_zones.statuses(ticket.name, ticket.ticket_type)
 		# The response names it registered_at, and the model forbids a field it does not declare.
 		ticket["registered_at"] = ticket.pop("creation")
 		ticket["ticket_type"] = type_titles.get(ticket.ticket_type) or ticket.ticket_type
 
-	guests = [EventGuest(**ticket, add_ons=by_ticket.get(ticket.name, [])) for ticket in tickets]
+	guests = [
+		EventGuest(**ticket, add_ons=by_ticket.get(ticket.name, []), checked_in_at=arrivals.get(ticket.name))
+		for ticket in tickets
+	]
 	doc = frappe.get_cached_doc("Buzz Event", event)
 	total = count_tickets({"event": event, "docstatus": 1})
 	matched = count_tickets(query_filters, or_filters) if or_filters or conditions else total
@@ -395,11 +437,15 @@ def event_guests(
 		start_time=doc.start_time,
 		end_date=doc.end_date,
 		venue=doc.get_venue_name(),
+		route=doc.route if doc.is_published else None,
 		total=total,
 		matched=matched,
+		checked_in=len(arrivals),
+		checked_in_any_zone=guest_zones.checked_in_any_zone(),
 		guests=guests,
 		has_next_page=start + len(guests) < matched,
 		filter_fields=filter_fields,
+		zones=guest_zones.options(),
 	)
 
 
@@ -410,14 +456,11 @@ def guest_filter_fields(event: str) -> tuple[list[FilterField], dict]:
 	booking it belongs to. A fieldname asked on both keeps the ticket question.
 	"""
 	ticket_types = [(row.name, row.title) for row in ticket_types_of(event)]
-	questions: dict = {}
-	for row in event_questions(event, applied_to=["in", ["Ticket", "Booking"]]):
-		existing = questions.get(row.fieldname)
-		if not existing or existing.applied_to != "Ticket":
-			questions[row.fieldname] = row
-	answer_parents = {
-		key: ("Event Booking", "booking") for key, row in questions.items() if row.applied_to == "Booking"
-	}
+	questions = {row.fieldname: row for row in form_questions(event, REGISTRATION_FORM_DOCTYPE)}
+	answer_parents = {fieldname: ("Event Booking", "booking") for fieldname in questions}
+	for row in form_questions(event, ATTENDEE_FORM_DOCTYPE):
+		questions[row.fieldname] = row
+		answer_parents.pop(row.fieldname, None)
 	fields = [
 		filter_field("ticket_type", _("Ticket type"), "Link", ticket_types),
 		*question_fields(questions.values()),
@@ -435,7 +478,7 @@ def registration_trend(event: str, days: int = TREND_DAYS) -> RegistrationTrend:
 	is read as a shape, and a missing row would draw as a shorter week or a band that
 	disappears mid-stack rather than a quiet one.
 	"""
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "guests")
 
 	days = max(2, min(int(days), 90))
 	window = [add_days(getdate(), -offset) for offset in reversed(range(days))]

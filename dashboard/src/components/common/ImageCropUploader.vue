@@ -23,6 +23,7 @@ const props = withDefaults(
 		aspectRatio: number
 		shape?: "circle" | "rect"
 		outputWidth?: number
+		outputType?: "image/jpeg" | "image/png"
 		fileTypes?: string | string[]
 		validateFile?: (file: File) => string | void
 		private?: boolean
@@ -31,6 +32,7 @@ const props = withDefaults(
 	{
 		shape: "rect",
 		outputWidth: 1024,
+		outputType: undefined,
 		fileTypes: "image/*",
 		validateFile: undefined,
 		private: false,
@@ -157,6 +159,7 @@ function clearFile() {
 				:aspect-ratio="aspectRatio"
 				:shape="shape"
 				:output-width="outputWidth"
+				:output-type="outputType"
 			/>
 
 			<ErrorMessage :message="error" />

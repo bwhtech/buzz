@@ -84,16 +84,21 @@ class VenueGeocoder:
 		self.venue = venue
 
 	def fill(self) -> None:
+		if self.locate():
+			self.venue.save(ignore_permissions=True)
+
+	def locate(self) -> bool:
+		"""Sets the empty location fields without saving; False when Nominatim has no answer."""
 		place = self.lookup()
 		if not place or "error" in place:
-			return
+			return False
 		venue, address = self.venue, place.get("address") or {}
 		if not has_coordinates(venue):
 			venue.latitude, venue.longitude = flt(place.get("lat")), flt(place.get("lon"))
 		venue.city = venue.city or next((address[key] for key in CITY_KEYS if address.get(key)), None)
 		venue.venue_country = venue.venue_country or country_with_code(address.get("country_code"))
 		venue.flags.geocoded = True
-		venue.save(ignore_permissions=True)
+		return True
 
 	def lookup(self) -> dict | None:
 		if has_coordinates(self.venue):

@@ -87,14 +87,19 @@ const user = useDoc<UserDoc>({ doctype: "User", name: session.user, immediate: f
 
 const form = reactive<Profile>(savedProfile())
 
-// Mounted for the session, so a cancelled edit is discarded on the way back in.
-watch(open, (isOpen) => {
-	if (!isOpen) return
-	if (isPhone.value) tab.value = ""
-	Object.assign(form, savedProfile())
-	// Memberships change under the cached list, so the teams tab reads a fresh one.
-	reloadTeams()
-})
+// Mounted for the session, so a cancelled edit is discarded on the way back in. Immediate:
+// the menu mounts the dialog on its first open, already open.
+watch(
+	open,
+	(isOpen) => {
+		if (!isOpen) return
+		if (isPhone.value) tab.value = ""
+		Object.assign(form, savedProfile())
+		// Memberships change under the cached list, so the teams tab reads a fresh one.
+		reloadTeams()
+	},
+	{ immediate: true },
+)
 
 function savedProfile(): Profile {
 	const info = userResource.data
@@ -134,7 +139,7 @@ async function save(fields: Partial<Profile> = { ...form }) {
 </script>
 
 <template>
-	<SettingsDialog v-model:open="open" v-model:tab="tab" size="6xl" :shortcut="false">
+	<SettingsDialog v-model:open="open" v-model:tab="tab" size="6xl" :keyboard-shortcut="false">
 		<template #title>{{ __("Settings") }}</template>
 
 		<header

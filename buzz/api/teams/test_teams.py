@@ -3,12 +3,13 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
 from buzz.api.teams import get_my_teams, get_team_overview, update_public_page, update_team
-from buzz.api.teams.exceptions import CannotEditTeam, NotATeamMember
+from buzz.api.teams.exceptions import CannotEditTeam, InvalidShareImage, NotATeamMember
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
+	FileFactory,
 	UserFactory,
 )
 
@@ -224,6 +225,32 @@ class TestUpdatePublicPage(TeamTestCase):
 		self.assertTrue(
 			overview.public_url.endswith(f"/community/{frappe.db.get_value('Buzz Team', self.team, 'slug')}")
 		)
+
+	def test_the_overview_carries_the_shared_link_text(self):
+		self.publish_as(self.owner, short_description="Builders in public.")
+
+		overview = self.overview()
+
+		self.assertEqual(overview.share_title, "Public Page Builders · Events Calendar")
+		self.assertEqual(overview.share_description, "Builders in public.")
+
+	def test_an_omitted_meta_image_is_left_alone(self):
+		file_url = FileFactory.create().file_url
+		self.publish_as(self.owner, meta_image=file_url)
+		self.publish_as(self.owner)
+
+		self.assertEqual(self.overview().meta_image, file_url)
+
+	def test_an_empty_meta_image_removes_it(self):
+		self.publish_as(self.owner, meta_image=FileFactory.create().file_url)
+		self.publish_as(self.owner, meta_image="")
+
+		self.assertIsNone(self.overview().meta_image)
+
+	def test_a_meta_image_must_be_a_file_on_this_site(self):
+		for meta_image in ("https://example.com/share.png", "/files/missing-share.png"):
+			with self.assertRaises(InvalidShareImage):
+				self.publish_as(self.owner, meta_image=meta_image)
 
 	def test_links_are_saved_in_order(self):
 		links = [

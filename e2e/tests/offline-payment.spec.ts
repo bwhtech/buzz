@@ -12,16 +12,15 @@ test.describe("Offline Payment Flow", () => {
 		await bookingPage.goto("offline-payment-e2e")
 		await bookingPage.waitForFormLoad()
 
-		// Fill attendee details
-		await page.locator('input[placeholder="Enter first name"]').first().fill("Test")
-		await page.locator('input[placeholder="Enter last name"]').first().fill("User")
-		await page.locator('input[placeholder="Enter email address"]').first().fill(email)
+		await bookingPage.goToAttendees()
+		await bookingPage.fillMyDetails("Test", "User", email)
 
-		// Submit booking form
-		await bookingPage.submit()
+		await bookingPage.payWith("Bank Transfer")
 
 		// Wait for offline payment dialog
-		await expect(page.getByText("Bank Transfer")).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole("dialog").getByText("Bank Transfer")).toBeVisible({
+			timeout: 10000,
+		})
 		await expect(page.getByText("Transfer to Account: 123456789")).toBeVisible()
 
 		// Submit offline payment (no file upload required in test setup)
@@ -38,14 +37,10 @@ test.describe("Offline Payment Flow", () => {
 		await bookingPage.goto("offline-payment-e2e")
 		await bookingPage.waitForFormLoad()
 
-		await page.locator('input[placeholder="Enter first name"]').first().fill("Amount")
-		await page.locator('input[placeholder="Enter last name"]').first().fill("Test")
-		await page
-			.locator('input[placeholder="Enter email address"]')
-			.first()
-			.fill(`amount-${uid}@test.com`)
+		await bookingPage.goToAttendees()
+		await bookingPage.fillMyDetails("Amount", "Test", `amount-${uid}@test.com`)
 
-		await bookingPage.submit()
+		await bookingPage.payWith("Bank Transfer")
 
 		// Wait for dialog and verify amount is displayed in dialog
 		const dialog = page.getByRole("dialog")
@@ -58,22 +53,22 @@ test.describe("Offline Payment Flow", () => {
 		await bookingPage.goto("offline-payment-e2e")
 		await bookingPage.waitForFormLoad()
 
-		await page.locator('input[placeholder="Enter first name"]').first().fill("Cancel")
-		await page.locator('input[placeholder="Enter last name"]').first().fill("Test")
-		await page
-			.locator('input[placeholder="Enter email address"]')
-			.first()
-			.fill(`cancel-${uid}@test.com`)
+		await bookingPage.goToAttendees()
+		await bookingPage.fillMyDetails("Cancel", "Test", `cancel-${uid}@test.com`)
 
-		await bookingPage.submit()
+		await bookingPage.payWith("Bank Transfer")
 
-		await expect(page.getByText("Bank Transfer")).toBeVisible({ timeout: 10000 })
+		await expect(page.getByRole("dialog").getByText("Bank Transfer")).toBeVisible({
+			timeout: 10000,
+		})
 
 		// Click cancel
 		await page.getByRole("button", { name: "Cancel" }).click()
 
 		// Dialog should close
-		await expect(page.getByText("Bank Transfer")).not.toBeVisible({ timeout: 5000 })
+		await expect(page.getByRole("dialog").getByText("Bank Transfer")).not.toBeVisible({
+			timeout: 5000,
+		})
 	})
 })
 

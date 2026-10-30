@@ -59,8 +59,73 @@
 	grid-template-columns: minmax(0, 1fr);
 }
 
-[data-tab-buttons] {
+.timeline-controls {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
 	margin-bottom: 24px;
+}
+
+/* The cover layout: one grid across the days; each card's cover carries its date. */
+[data-card-layout="cover"] [data-panel]:not([hidden]) {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 20px;
+}
+
+[data-card-layout="cover"] :is(.team-day, .team-day-events) {
+	display: contents;
+}
+
+[data-card-layout="cover"] .team-day::before,
+[data-card-layout="cover"] .team-day::after {
+	content: none;
+}
+
+[data-card-layout="cover"] .team-day-heading {
+	display: none;
+}
+
+[data-card-layout="cover"] [data-panel] > :not(.team-day) {
+	grid-column: 1 / -1;
+}
+
+.timeline-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	padding: 48px 24px;
+	border: 1px dashed var(--outline-gray-2);
+	border-radius: var(--radius-xl);
+	text-align: center;
+}
+
+.timeline-empty-icon {
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	margin-bottom: 8px;
+	border-radius: var(--radius-full);
+	background: var(--surface-gray-2);
+	color: var(--ink-gray-5);
+}
+
+.timeline-empty-icon .icon {
+	width: 20px;
+	height: 20px;
+}
+
+.timeline-empty p {
+	margin: 0;
+}
+
+.timeline-empty-title {
+	color: var(--ink-gray-8);
+	font-weight: 500;
 }
 
 /* The dashboard timeline's rail: a dot at each day, a line fading down past its cards. */
@@ -110,86 +175,6 @@
 	gap: 12px;
 }
 
-/* Mirrors the dashboard's EventCard. */
-.team-event-card {
-	display: flex;
-	gap: 16px;
-	padding: 12px;
-	border: 1px solid var(--outline-gray-2);
-	border-radius: var(--radius-8);
-	transition:
-		transform 120ms var(--ease-out),
-		border-color 150ms ease;
-}
-
-.team-event-card:active {
-	transform: scale(0.995);
-}
-
-.team-event-card-image {
-	flex-shrink: 0;
-	width: 120px;
-	height: 120px;
-	border-radius: var(--radius-4);
-	background: var(--surface-gray-2);
-	object-fit: cover;
-	object-position: top;
-}
-
-.team-event-card-body {
-	display: flex;
-	flex: 1;
-	flex-direction: column;
-	gap: 8px;
-	min-width: 0;
-	padding-block: 4px;
-}
-
-.team-event-card-time {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.team-event-card-time,
-.team-event-card-place {
-	color: var(--ink-gray-5);
-	font-size: 14px;
-	font-variant-numeric: tabular-nums;
-}
-
-.team-event-card-title {
-	color: var(--ink-gray-8);
-	font-size: 16px;
-	font-weight: 600;
-	line-height: 1.35;
-	overflow-wrap: anywhere;
-}
-
-.team-event-card-host {
-	display: flex;
-	align-items: flex-start;
-	gap: 8px;
-	color: var(--ink-gray-6);
-	font-size: 13px;
-	overflow-wrap: anywhere;
-}
-
-.team-event-card-avatar {
-	display: grid;
-	flex-shrink: 0;
-	place-items: center;
-	width: 16px;
-	height: 16px;
-	margin-top: 1px;
-	border-radius: 50%;
-	background: var(--surface-gray-3);
-	color: var(--ink-gray-6);
-	font-size: 9px;
-	font-weight: 600;
-	object-fit: cover;
-}
-
 .team-aside {
 	position: sticky;
 	top: 76px;
@@ -221,12 +206,6 @@
 	margin-top: 16px;
 }
 
-@media (hover: hover) and (pointer: fine) {
-	.team-event-card:hover {
-		border-color: var(--outline-gray-3);
-	}
-}
-
 @media (max-width: 900px) {
 	.team-columns {
 		grid-template-columns: 1fr;
@@ -239,14 +218,7 @@
 }
 
 @media (max-width: 760px) {
-	.team-event-card-image {
-		width: 80px;
-		height: 80px;
-	}
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.team-event-card:active {
-		transform: none;
+	[data-card-layout="cover"] [data-panel]:not([hidden]) {
+		grid-template-columns: minmax(0, 1fr);
 	}
 }

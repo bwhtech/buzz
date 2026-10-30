@@ -6,9 +6,9 @@ import { useRoute } from "vue-router"
 import { useIsMobile } from "@/composables/useIsMobile"
 import { useTeamAccess } from "@/composables/useTeamAccess"
 import { finishOpening, openingTeam } from "@/composables/useWorkspaceOpening"
-import { useEventDoc } from "@/data/events"
+import { useEventAccess, useEventDoc } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
-import { selectTeam, teams, teamsLoaded } from "@/data/teams"
+import { personalTeamsEnabled, selectTeam, teamLabel, teams, teamsLoaded } from "@/data/teams"
 import ManagerDesktopShell from "@/layouts/ManagerDesktopShell.vue"
 import ManagerMobileShell from "@/layouts/ManagerMobileShell.vue"
 import NotFound from "@/pages/NotFound.vue"
@@ -19,6 +19,10 @@ const access = useTeamAccess()
 const isMobile = useIsMobile()
 const sponsorships = useMySponsorships()
 
+// Without a team, someone can still host in their own name once personal teams are on.
+// The teams check lets them stay once that first event creates their personal team.
+const allowCreateWithoutTeam = computed(() => personalTeamsEnabled && route.name === "create-event")
+
 // An event opens into the same shell with its own destinations.
 const eventId = computed(() => route.params.eventId as string | undefined)
 
@@ -27,6 +31,10 @@ const eventId = computed(() => route.params.eventId as string | undefined)
 // fetch between them.
 const eventDoc = useEventDoc(() => eventId.value ?? "")
 const eventTitle = computed(() => eventDoc.doc?.title ?? "")
+
+// Per section: a collaborator sees only the destinations they were granted.
+const eventAccess = useEventAccess(() => eventId.value ?? "")
+watch(eventId, (id) => id && eventAccess.fetch(), { immediate: true })
 
 // A team opens the same way; its name and logo are already in the teams list.
 const teamId = computed(() => route.params.teamId as string | undefined)
@@ -47,8 +55,8 @@ const workspace = computed((): Workspace | undefined => {
 		}
 	if (teamId.value)
 		return {
-			title: team.value?.team_name ?? "",
-			subtitle: "Community Workspace",
+			title: team.value ? teamLabel(team.value) : "",
+			subtitle: team.value?.is_personal ? "Personal Calendar" : "Community Workspace",
 			back: { label: "Back to communities", to: "/manage/communities" },
 			image: team.value?.logo,
 		}
@@ -63,20 +71,23 @@ usePageMeta(() => {
 
 // The sidebar empties while a workspace opens, so the old destinations don't linger.
 const items = computed(() =>
-	openingTeam.value
+	openingTeam.value || (eventId.value && !eventAccess.data)
 		? []
 		: managerNavigation({
 				eventId: eventId.value,
 				teamId: teamId.value,
 				creatingEvent: route.name === "create-event",
 				hasSponsorships: Boolean(sponsorships.data?.length),
+				access: eventAccess.data,
 			}),
 )
 </script>
 
 <template>
 	<!-- Shell and page render while access is pending, so pages show their own skeletons. -->
-	<NotFound v-if="access === 'denied' || teamDenied" />
+	<NotFound
+		v-if="(access === 'denied' && !teams.length && !allowCreateWithoutTeam) || teamDenied"
+	/>
 	<ManagerMobileShell v-else-if="isMobile" :items="items" :show-discover="!workspace" />
 	<ManagerDesktopShell v-else :items="items" :workspace="workspace" />
 </template>

@@ -1,4 +1,4 @@
-import { FrappeUIProvider, portalTargetKey } from "frappe-ui"
+import { FrappeUIProvider, frappeRequest, portalTargetKey, setConfig } from "frappe-ui"
 import { type Component, createApp, h, type Ref, ref } from "vue"
 
 import "./islands.css"
@@ -9,7 +9,13 @@ type Loader = () => Promise<{ default: Component }>
 // Each island's name, as a page's data-island names it, to its component.
 const ISLANDS: Record<string, Loader> = {
 	"add-event": () => import("@/components/dashboard/teams/AddEventMenu.vue"),
+	"create-community": () => import("./create-community/CreateCommunityIsland.vue"),
+	login: () => import("./LoginIsland.vue"),
+	playground: () => import("@/components/playground/PlaygroundBar.vue"),
 }
+
+// As in the SPA: createResource posts to /api/method/<url>, not a GET on the bare url.
+setConfig("resourceFetcher", frappeRequest)
 
 const opened = new Map<HTMLElement, Ref<boolean>>()
 
@@ -31,11 +37,19 @@ function mountToasts(root: HTMLElement) {
 	)
 }
 
+// For a toast on a page where no island has opened.
+export const ensureToasts = () => hasToasts || mountToasts(createRoot())
+
 function createRoot(): HTMLElement {
 	const root = document.createElement("div")
 	root.className = "buzz-island"
 	document.body.append(root)
 	return root
+}
+
+// Fetches an island's code ahead of its first click; a failed fetch retries on the click.
+export function prefetchIsland(name: string) {
+	ISLANDS[name]?.().catch(() => {})
 }
 
 export async function openIsland(trigger: HTMLElement) {

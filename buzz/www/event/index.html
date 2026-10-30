@@ -1,6 +1,24 @@
 {% extends "buzz/templates/event_page/layout.html" %}
 
+{# Built-in sections and the event's own pages share one tab strip. #}
+{% set tab_items = tabs + pages %}
+
 {% block title %}{% autoescape true %}{{ meta.title }}{% endautoescape %}{% endblock %}
+
+{% block head %}
+{{ super() }}
+{# A tab is a radio input and a panel is its sibling, so which panel shows is decided by a
+   rule naming the checked key. A page's key is its document name, known only at render time,
+   so those rules are written here. #}
+{% if tab_items | length > 1 %}
+<style>
+	{% for tab in tab_items %}
+	.event-main:has(#tab-{{ tab.key }}:checked) [for="tab-{{ tab.key }}"]{border-bottom-color:var(--ink-strong);color:var(--ink-strong)}
+	.event-main:has(#tab-{{ tab.key }}:checked) #panel-{{ tab.key }}{display:block}
+	{% endfor %}
+</style>
+{% endif %}
+{% endblock %}
 
 {% block meta_block %}{% autoescape true %}
 	<meta name="description" content="{{ meta.description }}">
@@ -14,12 +32,55 @@
 	<meta name="twitter:card" content="{{ meta.card }}">
 	<link rel="canonical" href="{{ meta.url }}">
 	{% if structured_data %}<script type="application/ld+json">{{ structured_data | tojson }}</script>{% endif %}
+	{% if venue and venue.locations %}<link rel="stylesheet" href="/assets/buzz/themes/venue_map.css?v={{ build_version }}">{% endif %}
 {% endautoescape %}{% endblock %}
 
 {% block content %}{% autoescape true %}
+	{% from "buzz/templates/event_page/manage_alert.html" import manage_alert with context %}
 	{% macro host_identity(host) %}
 	{% if host.logo %}<img class="host-logo" src="{{ host.logo }}" alt="">{% else %}<span class="host-logo">{{ host.label[:1] | upper }}</span>{% endif %}
 	<span class="aside-value">{{ host.label }}</span>
+	{% endmacro %}
+
+	{% macro place_link(name, link) %}
+	{%- if link -%}
+	<a class="venue-link" href="{{ link | e }}" target="_blank" rel="noopener noreferrer">{{ name }}<svg class="icon" viewBox="5 5 14 14" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
+	{%- else -%}
+	{{ name }}
+	{%- endif -%}
+	{% endmacro %}
+
+	{% macro locations_dialog() %}
+	<dialog class="venue-map-dialog" aria-labelledby="venue-map-title">
+		<div class="venue-map-sheet">
+			<aside class="venue-map-sidebar">
+				<header class="venue-map-header">
+					<form method="dialog"><button class="venue-map-close" aria-label="{{ _('Close') }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></form>
+					<div>
+						<h2 id="venue-map-title" class="venue-map-title">{{ _("Locations") }}</h2>
+						<p class="aside-note">{{ _("{0} places").format(venue.locations | length) }}</p>
+					</div>
+				</header>
+				<ol class="venue-map-list">
+					{% for location in venue.locations %}
+					<li class="venue-map-row" data-location-index="{{ loop.index0 }}">
+						<button type="button" class="venue-map-row-button" {% if not location.pin %}disabled{% endif %}>
+							<span class="location-number" aria-hidden="true">{{ loop.index }}</span>
+							<span class="venue-map-row-text">
+								{% if location.label %}<span class="venue-location-label">{{ location.label }}</span>{% endif %}
+								<span class="venue-map-row-name">{{ location.venue_name }}</span>
+								{% if location.address %}<span class="aside-note">{{ location.address }}</span>{% endif %}
+							</span>
+						</button>
+						{% if location.map_link %}<a class="venue-map-row-link" href="{{ location.map_link | e }}" target="_blank" rel="noopener noreferrer">{{ _("Open in Google Maps") }}</a>{% endif %}
+					</li>
+					{% endfor %}
+				</ol>
+			</aside>
+			<div class="venue-map-canvas" data-venue-map-canvas><p class="venue-map-failed aside-note">{{ _("The map could not load.") }}</p></div>
+		</div>
+		<script type="application/json" data-venue-locations>{{ venue.locations | tojson }}</script>
+	</dialog>
 	{% endmacro %}
 
 	{% macro link_list(class_name) %}
@@ -39,10 +100,35 @@
 	</section>
 	{% endmacro %}
 
-	<main class="event-content">
-		<div class="event-banner-frame">
+	{% macro card_icon(name) %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+		{%- if name == "open" %}<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2M13 17v2M13 11v2"/>
+		{%- elif name == "proposal" %}<path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/>
+		{%- else %}<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>
+		{%- endif %}</svg>{% endmacro %}
+
+	{% macro side_card(card, icon_name, class_name="") %}
+	<section class="side-card {{ class_name }}" data-state="{{ icon_name }}">
+		<div class="side-card-head">
+			<span class="side-card-icon">{{ card_icon(icon_name) }}</span>
+			<h2 class="side-card-title">{{ card.title }}</h2>
+			{% if card.subtitle %}<p class="side-card-subtitle">{{ card.subtitle }}</p>{% endif %}
+		</div>
+		{% if card.action_url %}
+		<div class="side-card-body">
+			{{ caller() }}
+			<a class="es-button side-card-action" data-variant="{{ 'solid' if card.primary else 'outline' }}" data-size="md" href="{{ card.action_url }}">{{ card.action_label }}</a>
+		</div>
+		{% endif %}
+	</section>
+	{% endmacro %}
+
+	<main class="event-content event-layout">
+		{% if manage_url %}
+		{{ manage_alert(_("You have manage access for this event"), manage_url) }}
+		{% endif %}
+		<div class="event-banner-frame"{% if banner_color %} style="--banner-color: {{ banner_color }}"{% endif %}>
 			{% if event.banner_image %}
-			<img class="event-banner" src="{{ event.banner_image }}" alt="">
+			<img class="event-banner" src="{{ event.banner_image }}" alt="" data-fade-in onload="this.dataset.loaded = ''">
 			{% else %}
 			<event-banner class="event-banner" seed="{{ event.title }}"></event-banner>
 			{% endif %}
@@ -62,180 +148,203 @@
 				<div class="event-meta">
 					<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>{{ date_range.date_range_with_weekdays if date_range.is_multi_day else event_date.full_date }}</span>
 					<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>{{ event_date.time_range }}</span>
-					{% if venue %}<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12s-8-7-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>{{ venue.name }}</span>{% elif online_label %}<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>{{ online_label }}</span>{% endif %}
+					{% if venue %}<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12s-8-7-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>{% if venue.locations %}<span class="meta-venue-name">{{ venue.locations[0].venue_name }}</span><span class="meta-more-locations" title="{{ venue.locations[1:] | map(attribute='venue_name') | join(', ') }}">+{{ venue.locations | length - 1 }}</span>{% else %}{{ venue.name }}{% endif %}</span>{% elif online_label %}<span class="meta-item"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>{{ online_label }}</span>{% endif %}
 				</div>
 			</div>
-
-			<div class="event-actions">
-				{% if registrations_closed %}
-				<span class="btn btn-secondary" aria-disabled="true">{{ _("Registrations closed") }}</span>
-				{% elif register_url %}
-				<a class="btn btn-primary" href="{{ register_url }}">{{ _("Register") }}</a>
-				{% endif %}
-			</div>
 		</div>
 
-		<div class="event-columns">
-			<div class="event-main">
-				{% if links %}{{ link_list("narrow-links") }}{% endif %}
-				{% if page %}
-				<nav class="tabs">
-					<a class="tab" href="/events/{{ event.route }}">{{ _("Overview") }}</a>
-					{% for item in pages %}
-					<a class="tab" href="/events/{{ event.route }}/{{ item.route }}"{% if item.route == page.route %} aria-current="page"{% endif %}>{{ item.title }}</a>
-					{% endfor %}
-				</nav>
-				<section class="section">
-					<h2 class="section-title">{{ page.title }}</h2>
-					<div class="prose">{{ page.content | safe }}</div>
-				</section>
+		<div class="event-main">
+			{% if links %}{{ link_list("narrow-links") }}{% endif %}
+			{% if tab_items | length > 1 %}
+			{% for tab in tab_items %}
+			<input class="tab-input" type="radio" name="tab" id="tab-{{ tab.key }}"{% if loop.first %} checked{% endif %}>
+			{% endfor %}
+			<nav class="tabs">
+				{% for tab in tab_items %}<label class="tab" for="tab-{{ tab.key }}">{{ tab.label }}</label>{% endfor %}
+			</nav>
+			{% endif %}
+
+			<section class="section tab-panel" id="panel-about">
+				<h2 class="section-title">{{ _("About") }}</h2>
+				{% if event.about %}
+				<div class="prose">{{ event.about | safe }}</div>
 				{% else %}
-				{% if tabs | length + pages | length > 1 %}
-				{% for tab in tabs %}
-				<input class="tab-input" type="radio" name="tab" id="tab-{{ tab.key }}"{% if loop.first %} checked{% endif %}>
-				{% endfor %}
-				<nav class="tabs">
-					{% for tab in tabs %}<label class="tab" for="tab-{{ tab.key }}">{{ tab.label }}</label>{% endfor %}
-					{% for item in pages %}<a class="tab" href="/events/{{ event.route }}/{{ item.route }}">{{ item.title }}</a>{% endfor %}
-				</nav>
+				<p class="empty-state">{{ _("No details about this event yet.") }}</p>
 				{% endif %}
+			</section>
 
-				<section class="section tab-panel" id="panel-about">
-					<h2 class="section-title">{{ _("About") }}</h2>
-					{% if event.about %}
-					<div class="prose">{{ event.about | safe }}</div>
-					{% else %}
-					<p class="empty-state">{{ _("No details about this event yet.") }}</p>
+			{% if schedule %}
+			<section class="section tab-panel" id="panel-schedule">
+				<h2 class="section-title">{{ _("Schedule") }} · {{ timezone_label }}</h2>
+				{% for day in schedule %}
+				{% if schedule | length > 1 %}<h3 class="label">{{ day.day }}</h3>{% endif %}
+				<ol class="schedule">
+					{% for row in day.rows %}
+					<li class="schedule-row">
+						<span class="schedule-time">{{ row.time }}</span>
+						<span class="schedule-title">{{ row.title }}</span>
+						{% if row.speakers %}<span class="schedule-speaker">{{ row.speakers }}</span>{% endif %}
+					</li>
+					{% endfor %}
+				</ol>
+				{% endfor %}
+			</section>
+			{% endif %}
+
+			{% if speakers %}
+			<section class="section tab-panel" id="panel-speakers">
+				<h2 class="section-title">{{ _("Speakers") }}</h2>
+				<ul class="speakers">
+					{% for speaker in speakers %}
+					<li class="speaker">
+						{% if speaker.image %}
+						<img class="speaker-avatar" src="{{ speaker.image }}" alt="">
+						{% else %}
+						<span class="speaker-avatar">{{ speaker.name[:1] | upper }}</span>
+						{% endif %}
+						<span class="speaker-name">{{ speaker.name }}</span>
+						{% if speaker.role %}<span class="speaker-role">{{ speaker.role }}</span>{% endif %}
+					</li>
+					{% endfor %}
+				</ul>
+			</section>
+			{% endif %}
+
+			{% if sponsor_tiers %}
+			<section class="section tab-panel" id="panel-sponsors">
+				<h2 class="section-title">{{ _("Sponsors") }}</h2>
+				{% for tier in sponsor_tiers %}
+				<div class="sponsor-tier">
+					{% if sponsor_tiers | length > 1 %}
+					<h3 class="sponsor-tier-title">{{ tier.title }}</h3>
 					{% endif %}
-				</section>
-
-				{% if schedule %}
-				<section class="section tab-panel" id="panel-schedule">
-					<h2 class="section-title">{{ _("Schedule") }} · {{ timezone_label }}</h2>
-					{% for day in schedule %}
-					{% if schedule | length > 1 %}<h3 class="label">{{ day.day }}</h3>{% endif %}
-					<ol class="schedule">
-						{% for row in day.rows %}
-						<li class="schedule-row">
-							<span class="schedule-time">{{ row.time }}</span>
-							<span class="schedule-title">{{ row.title }}</span>
-							{% if row.speakers %}<span class="schedule-speaker">{{ row.speakers }}</span>{% endif %}
+					<ul class="sponsor-list">
+						{% for sponsor in tier.sponsors %}
+						<li>
+							{% set content %}{% if sponsor.company_logo %}<img class="sponsor-logo" src="{{ sponsor.company_logo }}" alt="">{% endif %}<span class="sponsor-name">{{ sponsor.company_name }}</span>{% endset %}
+							{% if sponsor.website %}<a class="sponsor" href="{{ sponsor.website }}" rel="noopener" target="_blank">{{ content }}</a>{% else %}<div class="sponsor">{{ content }}</div>{% endif %}
 						</li>
+						{% endfor %}
+					</ul>
+				</div>
+				{% endfor %}
+			</section>
+			{% endif %}
+
+			{% for page in pages %}
+			<section class="section tab-panel" id="panel-{{ page.key }}">
+				<h2 class="section-title">{{ page.label }}</h2>
+				<div class="prose">{{ page.content | safe }}</div>
+			</section>
+			{% endfor %}
+		</div>
+
+		<aside class="event-aside">
+			<div class="side-cards">
+				{% if registration.booked %}
+				<div class="ticket-stack">
+					<p class="ticket-stack-note"><span class="booked-dot" aria-hidden="true"></span><span class="ticket-stack-text"><span class="ticket-stack-title">{{ _("You're registered") }}</span><span>{{ registration.booked.label }}</span></span></p>
+					<a class="es-button ticket-stack-button" data-variant="outline" data-size="sm" href="{{ registration.booked.url }}">{{ _("View tickets") }}</a>
+					<a class="ticket-stack-link" href="{{ registration.booked.url }}">{{ _("View") }}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+				</div>
+				{% endif %}
+				{% call side_card(registration, registration.state, "ticket-card") %}
+				{% if registration.state == "open" and not is_guest %}
+				<p class="side-card-identity">
+					{% if user_image %}<img class="user-avatar" src="{{ user_image }}" alt="">{% else %}<span class="user-avatar">{{ (fullname or user)[:1] | upper }}</span>{% endif %}
+					<span class="side-card-identity-text"><span class="side-card-identity-name">{{ fullname }}</span><span class="side-card-identity-email">{{ user }}</span></span>
+				</p>
+				{% endif %}
+				{% endcall %}
+				{% if proposal_card %}{% call side_card(proposal_card, "proposal") %}{% endcall %}{% endif %}
+			</div>
+
+			<section class="aside-block">
+				{% if date_range.is_multi_day %}
+				<div class="date-range" role="group" aria-label="{{ date_range.full_date_range }}">
+					<div class="date-range-heading">
+						<p class="date-range-title">{{ date_range.short_date_range }}</p>
+						<span class="date-range-day-count">{{ date_range.day_count_label }}</span>
+					</div>
+					<ol class="date-timeline">
+						{% for label, date_and_time in [(_("Starts"), date_range.start), (_("Ends"), date_range.end)] %}
+						<li><span class="date-timeline-label">{{ label }}</span> <span>{{ date_and_time.date }}{% if date_and_time.time %} <span class="date-timeline-time">· {{ date_and_time.time }}</span>{% endif %}</span></li>
 						{% endfor %}
 					</ol>
-					{% endfor %}
-				</section>
-				{% endif %}
-
-				{% if speakers %}
-				<section class="section tab-panel" id="panel-speakers">
-					<h2 class="section-title">{{ _("Speakers") }}</h2>
-					<ul class="speakers">
-						{% for speaker in speakers %}
-						<li class="speaker">
-							{% if speaker.image %}
-							<img class="speaker-avatar" src="{{ speaker.image }}" alt="">
-							{% else %}
-							<span class="speaker-avatar">{{ speaker.name[:1] | upper }}</span>
-							{% endif %}
-							<span class="speaker-name">{{ speaker.name }}</span>
-							{% if speaker.role %}<span class="speaker-role">{{ speaker.role }}</span>{% endif %}
-						</li>
-						{% endfor %}
-					</ul>
-				</section>
-				{% endif %}
-
-				{% if sponsor_tiers %}
-				<section class="section tab-panel" id="panel-sponsors">
-					<h2 class="section-title">{{ _("Sponsors") }}</h2>
-					{% for tier in sponsor_tiers %}
-					<div class="sponsor-tier">
-						{% if sponsor_tiers | length > 1 %}
-						<h3 class="sponsor-tier-title">{{ tier.title }}</h3>
-						{% endif %}
-						<ul class="sponsor-list">
-							{% for sponsor in tier.sponsors %}
-							<li>
-								{% set content %}<img class="sponsor-logo" src="{{ sponsor.company_logo }}" alt=""><span class="sponsor-name">{{ sponsor.company_name }}</span>{% endset %}
-								{% if sponsor.website %}<a class="sponsor" href="{{ sponsor.website }}" rel="noopener" target="_blank">{{ content }}</a>{% else %}<div class="sponsor">{{ content }}</div>{% endif %}
-							</li>
-							{% endfor %}
-						</ul>
+					<p class="aside-note">{{ _("Times in {0}").format(timezone_label_with_offset) }}</p>
+				</div>
+				{% else %}
+				<div class="date-row">
+					<span class="date-badge" aria-hidden="true"><span class="date-badge-month">{{ event_date.month }}</span><span class="date-badge-day">{{ event_date.day }}</span></span>
+					<div>
+						<p class="aside-value">{{ event_date.full_date }}</p>
+						<p class="aside-note">{{ event_date.time_range }}</p>
 					</div>
-					{% endfor %}
-				</section>
+				</div>
 				{% endif %}
-				{% endif %}
-			</div>
+			</section>
 
-			<aside class="event-aside">
-				<section class="aside-block">
-					{% if date_range.is_multi_day %}
-					<div class="date-range" role="group" aria-label="{{ date_range.full_date_range }}">
-						<div class="date-range-heading">
-							<p class="date-range-title">{{ date_range.short_date_range }}</p>
-							<span class="date-range-day-count">{{ date_range.day_count_label }}</span>
-						</div>
-						<ol class="date-timeline">
-							{% for label, date_and_time in [(_("Starts"), date_range.start), (_("Ends"), date_range.end)] %}
-							<li><span class="date-timeline-label">{{ label }}</span> {{ date_and_time.date }}{% if date_and_time.time %} <span class="date-timeline-time">· {{ date_and_time.time }}</span>{% endif %}</li>
-							{% endfor %}
-						</ol>
-						<p class="aside-note">{{ _("Times in {0}").format(timezone_label_with_offset) }}</p>
-					</div>
-					{% else %}
-					<div class="date-row">
-						<span class="date-badge" aria-hidden="true"><span class="date-badge-month">{{ event_date.month }}</span><span class="date-badge-day">{{ event_date.day }}</span></span>
+			{% if online_label %}
+			<section class="aside-block">
+				<h2 class="label">{{ _("Where") }}</h2>
+				<p class="aside-value online-place"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>{{ online_label }}</p>
+				{% if register_url %}<p class="aside-note">{{ _("Registered guests get the link to join.") }}</p>{% endif %}
+			</section>
+			{% endif %}
+
+			{% if venue %}
+			<section class="aside-block venue">
+				<h2 class="label">{{ _("Where") }}</h2>
+				{% if venue.locations %}
+				{% if venue.dot_map %}
+				<button type="button" class="venue-dot-map" data-venue-map data-map-script="{{ bundled_asset('venue_map.bundle.ts') }}" data-map-style="{{ bundled_asset('venue_map.bundle.css') }}" aria-haspopup="dialog" aria-label="{{ _('Show the {0} locations on a map').format(venue.locations | length) }}">
+					<svg class="dot-map-land" viewBox="{{ venue.dot_map.view_box }}" aria-hidden="true"><use stroke-width="{{ venue.dot_map.dot_width }}" href="{{ venue.dot_map.dots_url }}"/></svg>
+					<span class="dot-map-pins" aria-hidden="true">
+						{% for location in venue.locations %}{% if location.pin %}
+						<span class="dot-map-pin" style="left: {{ location.pin.x }}%; top: {{ location.pin.y }}%">{{ loop.index }}</span>
+						{% endif %}{% endfor %}
+					</span>
+					<span class="dot-map-hint"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>{{ _("Open map") }}</span>
+				</button>
+				{{ locations_dialog() }}
+				{% endif %}
+				<ol class="venue-locations">
+					{% for location in venue.locations %}
+					<li class="venue-location">
+						<span class="location-number" aria-hidden="true">{{ loop.index }}</span>
 						<div>
-							<p class="aside-value">{{ event_date.full_date }}</p>
-							<p class="aside-note">{{ event_date.time_range }}</p>
+							{% if location.label %}<p class="venue-location-label">{{ location.label }}</p>{% endif %}
+							<p class="aside-value">{{ place_link(location.venue_name, location.map_link) }}</p>
+							{% if location.address %}<p class="aside-note">{{ location.address }}</p>{% endif %}
 						</div>
-					</div>
-					{% endif %}
-				</section>
-
-				{% if online_label %}
-				<section class="aside-block">
-					<h2 class="label">{{ _("Where") }}</h2>
-					<p class="aside-value online-place"><svg class="icon meta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>{{ online_label }}</p>
-					{% if register_url %}<p class="aside-note">{{ _("Registered guests get the link to join.") }}</p>{% endif %}
-				</section>
+					</li>
+					{% endfor %}
+				</ol>
+				{% else %}
+				{% if venue.map_url %}
+				<iframe class="venue-map" src="{{ venue.map_url }}" data-fade-in onload="this.dataset.loaded = ''" title="{{ _('Map of {0}').format(venue.name) }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
 				{% endif %}
-
-				{% if venue %}
-				<section class="aside-block venue">
-					<h2 class="label">{{ _("Where") }}</h2>
-					{% if venue.map_url %}
-					<iframe class="venue-map" src="{{ venue.map_url }}" title="{{ _('Map of {0}').format(venue.name) }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
-					{% endif %}
-					<p class="aside-value">
-						{%- if venue.link -%}
-						<a class="venue-link" href="{{ venue.link | e }}" target="_blank" rel="noopener noreferrer">{{ venue.name }}<svg class="icon" viewBox="5 5 14 14" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
-						{%- else -%}
-						{{ venue.name }}
-						{%- endif -%}
-					</p>
-					{% if venue.address %}<p class="aside-note">{{ venue.address }}</p>{% endif %}
-				</section>
+				<p class="aside-value">{{ place_link(venue.name, venue.link) }}</p>
+				{% if venue.address %}<p class="aside-note">{{ venue.address }}</p>{% endif %}
 				{% endif %}
+			</section>
+			{% endif %}
 
-				{% if hosts %}
-				<section class="aside-block hosts">
-					<h2 class="label">{{ _("Hosted by") }}</h2>
-					<ul class="host-list">
-						{% for host in hosts %}
-						<li>
-							{% if host.url %}<a class="link-row" href="{{ host.url }}">{{ host_identity(host) }}</a>
-							{% else %}<span class="host-row">{{ host_identity(host) }}</span>{% endif %}
-						</li>
-						{% endfor %}
-					</ul>
-				</section>
-				{% endif %}
+			{% if hosts %}
+			<section class="aside-block hosts">
+				<h2 class="label">{{ _("Hosted by") }}</h2>
+				<ul class="host-list">
+					{% for host in hosts %}
+					<li>
+						{% if host.url %}<a class="link-row" href="{{ host.url }}">{{ host_identity(host) }}</a>
+						{% else %}<span class="host-row">{{ host_identity(host) }}</span>{% endif %}
+					</li>
+					{% endfor %}
+				</ul>
+			</section>
+			{% endif %}
 
-				{% if links %}{{ link_list("aside-block") }}{% endif %}
-			</aside>
-		</div>
+			{% if links %}{{ link_list("aside-block") }}{% endif %}
+		</aside>
 	</main>
 {% endautoescape %}{% endblock %}

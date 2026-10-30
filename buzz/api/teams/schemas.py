@@ -17,6 +17,7 @@ class TeamOption(APIResponse):
 	slug: str | None
 	is_published: bool
 	accept_community_submissions: bool
+	is_personal: bool
 	short_description: str | None
 	upcoming_event_count: int
 	team_role: str
@@ -54,6 +55,12 @@ class TeamOverview(APIResponse):
 	public_url: str | None
 	short_description: str | None
 	about: str | None
+	# An uploaded share image, then the one Buzz drew; the page shows the first it has.
+	meta_image: str | None
+	og_image: str | None
+	# What a shared link shows as its title and description
+	share_title: str
+	share_description: str
 	links: list[EventExternalLink]
 	my_role: str
 	members: list[TeamMember]

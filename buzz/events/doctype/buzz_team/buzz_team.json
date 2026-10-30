@@ -8,6 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "team_name",
+  "is_personal",
   "section_break_hvmt",
   "logo",
   "public_page_tab",
@@ -21,6 +22,10 @@
   "short_description",
   "column_break_about",
   "about",
+  "share_image_section",
+  "meta_image",
+  "column_break_share_image",
+  "og_image",
   "links_section",
   "links",
   "community_section",
@@ -34,6 +39,15 @@
    "in_list_view": 1,
    "label": "Team Name",
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Hosts events in the owner's own name. The owner is its only member.",
+   "fieldname": "is_personal",
+   "fieldtype": "Check",
+   "label": "Is Personal",
+   "read_only": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "section_break_hvmt",
@@ -103,6 +117,29 @@
    "label": "About"
   },
   {
+   "fieldname": "share_image_section",
+   "fieldtype": "Section Break",
+   "label": "Share Image"
+  },
+  {
+   "description": "Shown when the page is shared. Without one, Buzz draws an image from the name, logo and events.",
+   "fieldname": "meta_image",
+   "fieldtype": "Attach Image",
+   "label": "Share Image"
+  },
+  {
+   "fieldname": "column_break_share_image",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "og_image",
+   "fieldtype": "Attach Image",
+   "hidden": 1,
+   "label": "Generated Share Image",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
    "fieldname": "links_section",
    "fieldtype": "Section Break"
   },
@@ -143,7 +180,7 @@
    "link_fieldname": "team"
   }
  ],
- "modified": "2026-10-08 12:00:00.000000",
+ "modified": "2026-10-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Team",

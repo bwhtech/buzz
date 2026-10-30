@@ -1,12 +1,13 @@
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from typing import TYPE_CHECKING
 
 import frappe
 from frappe import _
 from frappe.geo.country_info import get_all as get_all_countries
-from frappe.utils import cstr, get_datetime, now_datetime
-from frappe.utils.data import sbool
+from frappe.utils.data import format_date, get_url, sbool
 
+from buzz.api.forms.answers import CustomAnswers
+from buzz.api.forms.conditions import parse_rules
 from buzz.api.forms.exceptions import (
 	EventNotFound,
 	FormNotAvailable,
@@ -16,10 +17,12 @@ from buzz.api.forms.exceptions import (
 )
 from buzz.api.forms.fields import (
 	EVENT_PROPOSAL_EXCLUDE_FIELDS,
+	build_field,
 	get_auto_set_fields,
-	get_exclude_fields,
 	get_form_fields,
 	get_renderable_fields,
+	question_definition,
+	system_exclude_fields,
 )
 from buzz.api.forms.schemas import (
 	CustomFieldDefinition,
@@ -29,10 +32,8 @@ from buzz.api.forms.schemas import (
 )
 
 if TYPE_CHECKING:
-	from frappe.model.document import Document
-
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
-	from buzz.events.doctype.buzz_event_form.buzz_event_form import BuzzEventForm
+	from buzz.events.doctype.buzz_form.buzz_form import BuzzForm
 
 
 class CustomFormService:
@@ -53,12 +54,18 @@ class CustomFormService:
 			EventNotFound.throw()
 		return event
 
-	@property
-	def form(self) -> "BuzzEventForm":
-		for row in self.event.custom_forms:
-			if row.route == self.form_route and row.publish:
-				return row
-		FormNotAvailable.throw()
+	@cached_property
+	def form(self) -> "BuzzForm":
+		# Imported here: form_types reads this package, so a module-level import cycles.
+		from buzz.events.doctype.buzz_form.form_types import form_type
+
+		form_name = frappe.db.get_value(
+			"Buzz Form", {"event": self.event.name, "route": self.form_route, "publish": 1}, "name"
+		)
+		form = frappe.get_doc("Buzz Form", form_name) if form_name else None
+		if not form or not form_type(form.form_doctype).has_page:
+			FormNotAvailable.throw()
+		return form
 
 	@property
 	def form_doctype(self) -> str:
@@ -66,8 +73,7 @@ class CustomFormService:
 
 	@property
 	def is_closed(self) -> bool:
-		auto_close_at = self.form.auto_close_at
-		return bool(auto_close_at) and get_datetime(auto_close_at) < now_datetime()
+		return self.form.is_closed
 
 	def check_login(self) -> None:
 		if sbool(self.form.login_required) and frappe.session.user == "Guest":
@@ -82,13 +88,17 @@ class CustomFormService:
 		return CustomFormResponse(
 			form_fields=self.renderable_fields(),
 			custom_fields=self.custom_field_definitions(),
-			form_title=self.form_doctype,
+			logic_rules=parse_rules(form.logic_rules),
+			form_title=form.title or self.form_doctype,
+			form_description=form.description,
+			submit_label=form.submit_label,
 			event=self.event_summary(),
 			closed=False,
 			closed_title=form.closed_title or _("Submissions Closed"),
 			closed_message=form.closed_message or _("Submissions for this form have closed."),
 			success_title=form.success_title or _("Thank you!"),
 			success_message=form.success_message or "",
+			redirect_url=form.redirect_url,
 		)
 
 	def closed_response(self) -> CustomFormResponse:
@@ -96,13 +106,44 @@ class CustomFormService:
 		return CustomFormResponse(
 			form_fields=[],
 			custom_fields=[],
-			form_title=self.form_doctype,
+			form_title=form.title or self.form_doctype,
 			event=self.event_summary(),
 			closed=True,
 			closed_title=form.closed_title or _("Submissions Closed"),
 			closed_message=form.closed_message or _("Submissions for this form have closed."),
 			success_title="",
 			success_message="",
+		)
+
+	def link_preview(self) -> dict:
+		"""What a shared link to the form shows: its own preview text, else the form and event names."""
+		form, event = self.form, self.event
+		image = form.meta_image or form.og_image or event.meta_image or event.og_image or event.banner_image
+		return {
+			"title": form.meta_title or self.default_preview_title(),
+			"description": form.meta_description or self.default_preview_description(),
+			# Link crawlers ignore a relative image path.
+			"image": get_url(image) if image else None,
+		}
+
+	def default_preview_title(self) -> str:
+		return f"{self.form.title} · {self.event.title}"
+
+	def default_preview_description(self) -> str:
+		intro = self.form.description or self.event.short_description or ""
+		return " ".join(part for part in [intro, self.closing_note()] if part)
+
+	def closing_note(self) -> str:
+		close_at = self.form.auto_close_at
+		if not close_at or self.form.is_closed:
+			return ""
+		submissions = {
+			"Talk Proposal": _("Proposals"),
+			"Sponsorship Enquiry": _("Enquiries"),
+			"Event Booking": _("Registrations"),
+		}
+		return _("{0} close on {1}.").format(
+			submissions.get(self.form_doctype, _("Submissions")), format_date(close_at, "d MMM")
 		)
 
 	def event_summary(self) -> FormEventSummary:
@@ -124,52 +165,49 @@ class CustomFormService:
 		)
 
 	@property
-	def exclude_fields(self) -> set:
-		return get_exclude_fields(self.form_doctype, self.form.excluded_fields)
+	def standard_rows(self) -> list:
+		"""The doctype's own fields the form asks for, in the order the organiser set."""
+		return [row for row in self.form.questions if row.is_standard and row.enabled]
 
 	def renderable_fields(self) -> list[dict]:
-		return get_form_fields(
-			self.form_doctype, self.exclude_fields, with_layout_breaks=True, event=self.event.name
-		)
+		fields = get_renderable_fields(self.form_doctype, system_exclude_fields(self.form_doctype))
+		return [
+			{
+				**build_field(fields[row.fieldname], self.event.name),
+				"label": row.label,
+				"width": row.width,
+				"order": row.idx,
+			}
+			for row in self.standard_rows
+			if row.fieldname in fields
+		]
 
 	def custom_field_definitions(self) -> list[CustomFieldDefinition]:
-		if not frappe.get_meta(self.form_doctype).has_field("additional_fields"):
-			return []
+		return [
+			CustomFieldDefinition(**question_definition(question))
+			for question in self.form.questions
+			if question.enabled and not question.is_standard
+		]
 
-		rows = frappe.get_all(
-			"Buzz Custom Field",
-			filters=self.custom_field_filters,
-			fields=[
-				"label",
-				"fieldname",
-				"fieldtype",
-				"options",
-				"mandatory",
-				"placeholder",
-				"default_value",
-				"order",
-			],
-			order_by="order asc",
-		)
-		return [CustomFieldDefinition(**row) for row in rows]
-
-	@property
-	def custom_field_filters(self) -> dict:
-		return {
-			"event": self.event.name,
-			"applied_to": "Custom Form",
-			"custom_form_doctype": self.form_doctype,
-			"enabled": 1,
-		}
-
-	def submit(self, data: dict | str, custom_fields_data: dict | str | None = None) -> None:
+	def submit(self, data: dict | str, custom_fields_data: dict | str | None = None) -> str:
 		self.check_login()
 		if self.is_closed:
 			SubmissionsClosed.throw()
 
-		doc = frappe.get_doc(self.build_doc_data(frappe.parse_json(data) or {}))
-		self.append_custom_fields(doc, frappe.parse_json(custom_fields_data) or {})
-		doc.insert(ignore_permissions=True)
+		values = frappe.parse_json(data) or {}
+		if not isinstance(values, dict):
+			frappe.throw(_("Could not read the submitted form. Please reload the page and try again."))
+		answers = frappe.parse_json(custom_fields_data) or {}
+		doc = frappe.get_doc(self.build_doc_data(values))
+		doc.set(
+			"additional_fields",
+			CustomAnswers(self.form.questions, self.form.logic_rules).rows(answers, context=values),
+		)
+		self.prepare_submission(doc)
+		return doc.insert(ignore_permissions=True).name
+
+	def prepare_submission(self, doc) -> None:
+		"""Set what the form's doctype needs beyond the submitted values."""
 
 	def build_doc_data(self, data: dict) -> dict:
 		form_doctype = self.form_doctype
@@ -178,33 +216,30 @@ class CustomFormService:
 		for fieldname, source in get_auto_set_fields(form_doctype).items():
 			doc_data[fieldname] = self.event.name if source == "from_route" else frappe.session.user
 
-		allowed_fieldnames = get_renderable_fields(form_doctype, self.exclude_fields)
+		allowed_fieldnames = {row.fieldname for row in self.standard_rows}
 		doc_data.update(
 			{fieldname: value for fieldname, value in data.items() if fieldname in allowed_fieldnames}
 		)
 		return doc_data
 
-	def append_custom_fields(self, doc: "Document", custom_fields_data: dict) -> None:
-		if not custom_fields_data or not doc.meta.has_field("additional_fields"):
-			return
 
-		definitions = frappe.get_all(
-			"Buzz Custom Field", filters=self.custom_field_filters, fields=["fieldname", "label", "fieldtype"]
+class RegistrationFormService(CustomFormService):
+	"""The event's booking page, previewed through its registration form."""
+
+	def __init__(self, event_route: str):
+		super().__init__(event_route, form_route="")
+
+	@cached_property
+	def form(self) -> "BuzzForm":
+		form_name = frappe.db.get_value(
+			"Buzz Form", {"event": self.event.name, "form_doctype": "Event Booking"}, "name"
 		)
-		allowed = {definition.fieldname: definition for definition in definitions}
+		if not form_name:
+			FormNotAvailable.throw()
+		return frappe.get_doc("Buzz Form", form_name)
 
-		for fieldname, value in custom_fields_data.items():
-			if fieldname in allowed and value not in (None, ""):
-				definition = allowed[fieldname]
-				doc.append(
-					"additional_fields",
-					{
-						"label": definition.label,
-						"fieldname": fieldname,
-						"fieldtype": definition.fieldtype,
-						"value": cstr(value),
-					},
-				)
+	def default_preview_title(self) -> str:
+		return _("Register for {0}").format(self.event.title)
 
 
 def get_event_proposal_settings():

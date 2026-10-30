@@ -23,6 +23,8 @@ const banner = computed(() => ({ backgroundImage: bannerPattern(props.request.ev
 	<img
 		v-else-if="request.banner_image && !bannerFailed"
 		class="size-10 shrink-0 rounded-4 object-cover object-top"
+		loading="lazy"
+		decoding="async"
 		:src="request.banner_image"
 		:style="banner"
 		alt=""

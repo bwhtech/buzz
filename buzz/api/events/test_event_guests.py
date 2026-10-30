@@ -1,13 +1,16 @@
 import json
 
+import frappe
 from frappe.tests import IntegrationTestCase
 
+from buzz.api.checkin import checkin_ticket
 from buzz.api.events import get_event, get_event_guests
-from buzz.api.events.exceptions import CannotManageEvent, EventNotFound
+from buzz.api.events.exceptions import CannotManageEvent, EventNotFound, ZoneNotFound
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
+	EventCheckinZoneFactory,
 	EventTicketFactory,
 	EventTicketTypeFactory,
 	TicketAddOnFactory,
@@ -61,6 +64,14 @@ class TestGetEventGuests(GuestsTestCase):
 
 		self.assertEqual(self.guests_as(self.owner).guests[0].ticket_type, "Early Bird")
 
+	def test_name_narrows_the_page_to_that_ticket(self):
+		wanted = EventTicketFactory.create("submitted", event=self.event).name
+		EventTicketFactory.create("submitted", event=self.event)
+
+		guests = self.guests_as(self.owner, name=wanted).guests
+
+		self.assertEqual([guest.name for guest in guests], [wanted])
+
 	def test_an_event_with_no_guests_is_empty_rather_than_an_error(self):
 		guests = self.guests_as(self.owner)
 
@@ -73,8 +84,8 @@ class TestGetEventGuests(GuestsTestCase):
 		BuzzTeamMembershipFactory.create(team=self.team, user=viewer, team_role="Viewer")
 
 		self.assertEqual(self.guests_as(viewer).title, "Guest List Event")
-		with self.set_user(viewer), self.assertRaises(CannotManageEvent):
-			get_event(self.event)
+		with self.set_user(viewer):
+			self.assertFalse(get_event(self.event).can_write)
 
 	def test_a_non_member_cannot_read_the_guest_list(self):
 		outsider = UserFactory.create_once("guests-stranger@example.com").name
@@ -131,3 +142,43 @@ class TestGetEventGuestsTicketTypeFilter(GuestsTestCase):
 
 def types_filter(*types: str) -> str:
 	return json.dumps([["ticket_type", "in", list(types)]])
+
+
+class TestGuestZones(GuestsTestCase):
+	def setUp(self):
+		super().setUp()
+		self.vip = str(EventTicketTypeFactory.create(event=self.event).name)
+		self.lounge = EventCheckinZoneFactory.create(
+			event=self.event, ticket_types=[{"ticket_type": self.vip}]
+		).name
+		self.general = EventTicketFactory.create("submitted", event=self.event).name
+		self.vip_ticket = EventTicketFactory.create("submitted", event=self.event, ticket_type=self.vip).name
+		checkin_ticket(self.vip_ticket, zone=self.lounge)
+
+	def test_counts_check_ins_against_the_tickets_each_zone_lets_in(self):
+		guests = self.guests_as(self.owner)
+
+		zones = {zone.name: (zone.checked_in, zone.eligible) for zone in guests.zones}
+		self.assertEqual(zones[self.lounge], (1, 1))
+		self.assertEqual(guests.zones[0].checked_in, 0)
+		self.assertEqual(guests.zones[0].eligible, 2)
+		self.assertEqual(guests.checked_in_any_zone, 1)
+
+	def test_gives_each_guest_a_status_per_zone(self):
+		guests = {guest.name: guest for guest in self.guests_as(self.owner).guests}
+
+		general = {zone.name: zone for zone in guests[self.general].zones}
+		self.assertFalse(general[self.lounge].allowed)
+		vip = {zone.name: zone for zone in guests[self.vip_ticket].zones}
+		self.assertIsNotNone(vip[self.lounge].checked_in_at)
+
+	def test_a_zone_narrows_the_list_to_the_tickets_it_lets_in(self):
+		guests = self.guests_as(self.owner, zone=self.lounge)
+
+		self.assertEqual([guest.name for guest in guests.guests], [self.vip_ticket])
+
+	def test_a_disabled_zone_cannot_narrow_the_list(self):
+		frappe.db.set_value("Event Check-in Zone", self.lounge, "enabled", 0)
+
+		with self.assertRaises(ZoneNotFound):
+			self.guests_as(self.owner, zone=self.lounge)

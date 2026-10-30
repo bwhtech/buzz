@@ -5,6 +5,7 @@ from pydantic import Field
 
 from buzz.api.filters.schemas import FilterField
 from buzz.api.schemas import APIRequest, APIResponse
+from buzz.events.doctype.event_venue.details import VenueDetails
 
 
 class MyEventFilters(APIRequest):
@@ -42,11 +43,6 @@ class MyEventsResponse(APIResponse):
 	past: list[MyEvent]
 
 
-class EventVenue(APIResponse):
-	name: str
-	address: str | None = None
-
-
 class EventHostRef(APIResponse):
 	"""One name under "Hosted by" — the event's team, or one of its co-hosts."""
 
@@ -59,6 +55,11 @@ class EventExternalLink(APIResponse):
 	icon: str | None = None
 	label: str
 	url: str
+
+
+class EventCountdown(APIResponse):
+	starts_at: str
+	ends_at: str
 
 
 class EventDetail(APIResponse):
@@ -78,19 +79,31 @@ class EventDetail(APIResponse):
 	about: str | None = None
 	banner_image: str | None = None
 	medium: str | None = None
-	venue: EventVenue | None = None
+	venue: VenueDetails | None = None
 	# The organiser's own link, or the one Zoom issued when the meeting was booked.
 	meeting_link: str | None = None
 	is_published: bool
+	show_countdown: bool = False
+	# None once the event is over.
+	countdown: EventCountdown | None = None
 	primary_host: EventHostRef | None = None
 	co_hosts: list[EventHostRef] = Field(default_factory=list)
 	external_links: list[EventExternalLink] = Field(default_factory=list)
+	topics: list[str] = Field(default_factory=list)
+	can_write: bool = False
 
 
 class GuestAddOn(APIResponse):
 	title: str
 	# The option the attendee picked, for an add-on that offers a choice.
 	value: str | None = None
+
+
+class ZoneStatus(APIResponse):
+	name: str
+	title: str
+	allowed: bool
+	checked_in_at: datetime | None = None
 
 
 class EventGuest(APIResponse):
@@ -103,6 +116,9 @@ class EventGuest(APIResponse):
 	# When the ticket was raised, which is when this guest registered.
 	registered_at: datetime | None = None
 	add_ons: list[GuestAddOn] = Field(default_factory=list)
+	checked_in_at: datetime | None = None
+	# Where the guest stands at each enabled zone, default first.
+	zones: list[ZoneStatus] = Field(default_factory=list)
 
 
 class GuestTicketType(APIResponse):
@@ -112,6 +128,15 @@ class GuestTicketType(APIResponse):
 	title: str | None = None
 
 
+class ZoneOption(APIResponse):
+	name: str
+	title: str
+	is_default: bool = False
+	# Guests checked in at the zone, out of the tickets it lets in.
+	checked_in: int = 0
+	eligible: int = 0
+
+
 class EventGuestsResponse(APIResponse):
 	title: str | None = None
 	# The event's own details, so a guest row can be drawn as the ticket it is.
@@ -119,13 +144,20 @@ class EventGuestsResponse(APIResponse):
 	start_time: timedelta | None = None
 	end_date: date | None = None
 	venue: str | None = None
+	route: str | None = None
 	# Everyone registered, then everyone the current search matches — the second is the
 	# first when nothing is being searched for.
 	total: int
 	matched: int
+	# Guests checked in today, which is what the front desk counts against.
+	checked_in: int = 0
+	# Guests checked in at one zone or more.
+	checked_in_any_zone: int = 0
 	guests: list[EventGuest]
 	has_next_page: bool = False
 	filter_fields: list[FilterField]
+	# The event's enabled check-in zones, default first.
+	zones: list[ZoneOption] = Field(default_factory=list)
 
 
 class DailyRegistrations(APIResponse):
@@ -197,12 +229,22 @@ class TicketTypePrice(APIResponse):
 	tickets_sold: int = 0
 
 
+class TicketCategoryItem(APIResponse):
+	name: str
+	title: str
+	description: str | None
+	sort_order: int
+
+
 class TicketTypeItem(APIResponse):
 	name: str
 	title: str
+	description: str | None
+	category: str | None
 	max_tickets_available: int
 	auto_unpublish_after: date | None
 	is_published: bool
+	is_hidden: bool
 	tickets_sold: int
 	prices: list[TicketTypePrice]
 
@@ -224,6 +266,8 @@ class EventTicketTypes(APIResponse):
 	title: str
 	can_write: bool
 	registration_link: str | None
+	# The registration Buzz Form the dashboard's form builder opens.
+	registration_form: str | None = None
 	registrations_closed: bool
 	allow_guest_booking: bool
 	guest_verification_method: str
@@ -233,8 +277,58 @@ class EventTicketTypes(APIResponse):
 	tax_percentage: float
 	team_legal_name: str | None
 	team_tax_id: str | None
+	has_team_tax_details: bool
 	can_edit_team: bool
 	paid_events_enabled: bool
+	categories: list[TicketCategoryItem]
 	ticket_types: list[TicketTypeItem]
 	payment_providers: list[PaymentProviderItem]
 	revenue: list[CurrencyRevenue]
+
+
+class CurrencyAmount(APIResponse):
+	currency: str
+	amount: float
+
+
+class CurrencyPrice(APIResponse):
+	currency: str
+	price: float
+
+
+class CouponTicketType(APIResponse):
+	name: str
+	title: str
+	is_hidden: bool
+	prices: list[CurrencyPrice]
+
+
+class CouponItem(APIResponse):
+	name: str
+	coupon_type: Literal["Promo Code", "Automatic", "Access Code"]
+	code: str
+	description: str | None
+	enabled: bool
+	discount_type: Literal["Percentage", "Flat Amount", "None"]
+	discount_percentage: float
+	discount_amounts: list[CurrencyPrice]
+	applies_to_all_ticket_types: bool
+	ticket_types: list[str]
+	minimum_requirement: Literal["None", "Minimum Order Amount", "Minimum Ticket Count"]
+	minimum_order_amounts: list[CurrencyPrice]
+	minimum_ticket_count: int
+	usage_limit: int
+	once_per_buyer: bool
+	starts_on: date | None
+	expires_on: date | None
+	times_used: int
+	status: Literal["Active", "Disabled", "Used up", "Ended", "Scheduled"]
+
+
+class EventCoupons(APIResponse):
+	title: str
+	can_write: bool
+	registration_link: str | None
+	coupons: list[CouponItem]
+	ticket_types: list[CouponTicketType]
+	discounted: list[CurrencyAmount]

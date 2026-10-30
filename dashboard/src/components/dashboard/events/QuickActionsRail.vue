@@ -1,8 +1,11 @@
 <script lang="ts">
+import type { RouteLocationRaw } from "vue-router"
+
 export type QuickAction = {
 	icon: string
 	label: string
 	link?: string
+	route?: RouteLocationRaw
 	loading?: boolean
 	onClick?: () => void
 }
@@ -12,6 +15,7 @@ export type QuickAction = {
 import { Button } from "frappe-ui"
 
 import QuickActionTile, { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
+import FormEditCard from "@/components/dashboard/form-builder/FormEditCard.vue"
 
 defineProps<{
 	// What is open or closed — "Registration", "Proposals".
@@ -21,6 +25,8 @@ defineProps<{
 	openIcon: string
 	closedIcon: string
 	actions: QuickAction[]
+	// The Buzz Form behind the subject, shown as a card that opens the builder.
+	form?: string | null
 }>()
 defineEmits<{ toggle: [] }>()
 </script>
@@ -41,6 +47,7 @@ defineEmits<{ toggle: [] }>()
 		/>
 		<slot />
 	</div>
+	<FormEditCard v-if="form" :form="form" />
 
 	<section class="space-y-1 pt-1">
 		<Button
@@ -49,7 +56,8 @@ defineEmits<{ toggle: [] }>()
 			:class="`w-full !justify-start ${PRESSABLE}`"
 			variant="ghost"
 			:label="action.label"
-			:link="action.link"
+			:href="action.link"
+			:route="action.route"
 			:loading="action.loading"
 			@click="action.onClick?.()"
 		>

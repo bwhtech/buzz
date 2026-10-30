@@ -68,6 +68,15 @@ class TestBuzzTeamMembership(IntegrationTestCase):
 
 		self.assertIn("Event Manager", frappe.get_roles(user))
 
+	def test_a_membership_that_earns_no_new_role_leaves_the_user_unsaved(self):
+		user = UserFactory.create_once("role-unchanged@example.com").name
+		self.add_member(self.create_team(), user, "Manager")
+		modified = frappe.db.get_value("User", user, "modified")
+
+		self.add_member(self.create_team(), user, "Admin")
+
+		self.assertEqual(frappe.db.get_value("User", user, "modified"), modified)
+
 	def test_deleting_a_membership_revokes_its_role(self):
 		user = UserFactory.create_once("role-deleted@example.com").name
 		membership = self.add_member(self.create_team(), user, "Manager")
@@ -219,6 +228,16 @@ class TestInvitationAccept(IntegrationTestCase):
 		self.assertRaises(frappe.ValidationError, invitation.accept, True)
 
 		self.assertEqual(self.memberships_of(email), [])
+
+	def test_accept_works_for_a_system_manager_outside_the_team(self):
+		system_manager = UserFactory.create_once("invite-system-manager@example.com")
+		system_manager.add_roles("System Manager")
+		email = "invitee-of-system-manager@example.com"
+		invitation = self.invite(email, inviter=system_manager.name)
+
+		invitation.accept(ignore_permissions=True)
+
+		self.assertEqual(len(self.memberships_of(email)), 1)
 
 	def test_accept_is_refused_when_the_invitation_grants_ownership(self):
 		email = "invitee-owner@example.com"

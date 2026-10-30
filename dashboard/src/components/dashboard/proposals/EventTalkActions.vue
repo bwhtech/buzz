@@ -15,6 +15,7 @@ const props = defineProps<{
 	canWrite: boolean
 	title?: string | null
 	proposalLink?: string | null
+	proposalForm?: string | null
 	// What the list is currently showing, so the export is the same list.
 	query: { search: string; filters: string; order: string }
 }>()
@@ -86,6 +87,7 @@ const actions = computed<QuickAction[]>(() =>
 		:closed="closed"
 		:can-write="canWrite"
 		:actions="actions"
+		:form="canWrite ? proposalForm : null"
 		@toggle="dialogOpen = true"
 	/>
 

@@ -1,0 +1,349 @@
+/* The Buzz Navbar web template. Any website page can render it, and Frappe's own pages carry
+   none of the Buzz theme tokens, so each token falls back to a light value. */
+.buzz-navbar {
+	--navbar-ink: var(--ink-strong, #171717);
+	--navbar-muted: var(--ink-muted, #7c7c7c);
+	--navbar-border: var(--border, #ededed);
+	--navbar-raised: var(--surface-raised, #f3f3f3);
+	--navbar-bg: var(--page-bg, #ffffff);
+	--navbar-radius: var(--radius, 10px);
+	--navbar-ease: var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+
+	/* Full-bleed so the blur and the edge span the screen; the padding keeps content on the page column.
+	   Content blurring through, and an edge that appears once scrolled, show the page continues above. */
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 16px max(16px, (100% - var(--page-width, 1024px)) / 2);
+	border-bottom: 1px solid transparent;
+	background: color-mix(in srgb, var(--navbar-bg) 80%, transparent);
+	backdrop-filter: blur(12px) saturate(1.5);
+	animation: buzz-navbar-edge linear both;
+	animation-timeline: scroll();
+	animation-range: 0 24px;
+	font-size: 14px;
+	line-height: 20px;
+	/* Named so it stays put while the content fades; a plain crossfade ghosts two layouts over each other. */
+	view-transition-name: site-header;
+}
+
+@keyframes buzz-navbar-edge {
+	to {
+		border-bottom-color: var(--navbar-border);
+	}
+}
+
+.buzz-navbar-start,
+.buzz-navbar-end,
+.buzz-navbar-links {
+	display: flex;
+	align-items: center;
+}
+
+.buzz-navbar-start {
+	gap: 16px;
+	min-width: 0;
+}
+
+.buzz-navbar-end {
+	gap: 8px;
+}
+
+.buzz-navbar-links {
+	gap: 4px;
+}
+
+.buzz-navbar-brand {
+	display: flex;
+}
+
+.buzz-navbar-brand img {
+	width: auto;
+	height: 24px;
+}
+
+/* The bundled wordmark is used as a shape only, painted in the ink colour each theme pairs with its background. */
+.buzz-navbar-default-logo {
+	display: block;
+	height: 24px;
+	aspect-ratio: 313 / 244;
+	background-color: var(--navbar-ink);
+	mask: url("/assets/buzz/images/buzz-logo-no-bg.svg") center / contain no-repeat;
+}
+
+.buzz-navbar svg {
+	flex-shrink: 0;
+	width: 16px;
+	height: 16px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+/* Frappe's own pages set no mode, so they get the light logo. */
+:root:not([data-mode="dark"]) .buzz-navbar [data-logo-mode="dark"],
+:root[data-mode="dark"] .buzz-navbar [data-logo-mode="light"] {
+	display: none;
+}
+
+:root[data-mode="dark"] [data-mode-toggle] .buzz-navbar-icon-moon,
+:root[data-mode="light"] [data-mode-toggle] .buzz-navbar-icon-sun {
+	display: none;
+}
+
+.buzz-navbar-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	height: 32px;
+	padding: 0 10px;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--navbar-ink);
+	font: inherit;
+	font-weight: 500;
+	white-space: nowrap;
+	text-decoration: none;
+	cursor: pointer;
+	transition:
+		transform 160ms var(--navbar-ease),
+		background-color 150ms ease,
+		border-color 150ms ease,
+		color 150ms ease;
+}
+
+.buzz-navbar-button[data-variant="solid"] {
+	background: var(--navbar-ink);
+	color: var(--navbar-bg);
+}
+
+.buzz-navbar-button[data-icon-only] {
+	width: 32px;
+	padding: 0;
+}
+
+.buzz-navbar-button:active {
+	transform: scale(0.97);
+}
+
+.buzz-navbar details {
+	position: relative;
+}
+
+.buzz-navbar summary {
+	list-style: none;
+}
+
+.buzz-navbar summary::-webkit-details-marker {
+	display: none;
+}
+
+.buzz-navbar-menu {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 8px);
+	z-index: 10;
+	display: flex;
+	flex-direction: column;
+	min-width: 180px;
+	padding: 4px;
+	background: var(--navbar-raised);
+	border: 1px solid var(--navbar-border);
+	border-radius: var(--navbar-radius);
+	transform-origin: top right;
+	transition:
+		opacity 150ms var(--navbar-ease),
+		transform 150ms var(--navbar-ease);
+}
+
+.buzz-navbar-start .buzz-navbar-menu {
+	right: auto;
+	left: 0;
+	transform-origin: top left;
+}
+
+@starting-style {
+	.buzz-navbar details[open] .buzz-navbar-menu {
+		opacity: 0;
+		transform: scale(0.97) translateY(-4px);
+	}
+}
+
+.buzz-navbar-menu a,
+.buzz-navbar-menu button,
+.buzz-navbar-menu-heading {
+	padding: 6px 10px;
+	border: 0;
+	border-radius: 6px;
+	background: none;
+	color: var(--navbar-ink);
+	font: inherit;
+	font-size: 13px;
+	text-align: left;
+	text-decoration: none;
+}
+
+.buzz-navbar-menu a,
+.buzz-navbar-menu button {
+	cursor: pointer;
+	transition: background-color 150ms ease;
+}
+
+.buzz-navbar-menu [aria-current] {
+	background: var(--navbar-border);
+}
+
+.buzz-navbar-menu-heading {
+	color: var(--navbar-muted);
+}
+
+.buzz-navbar-account summary {
+	display: flex;
+	border-radius: 50%;
+	cursor: pointer;
+}
+
+.buzz-navbar-avatar {
+	display: grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: var(--navbar-raised);
+	color: var(--navbar-ink);
+	font-weight: 500;
+	object-fit: cover;
+}
+
+.buzz-navbar :is(a, button, summary):focus-visible {
+	outline: 2px solid var(--navbar-muted);
+	outline-offset: 2px;
+}
+
+/* Touch devices fire hover on tap, so hover styles only apply to real pointers. */
+@media (hover: hover) and (pointer: fine) {
+	.buzz-navbar-button:hover {
+		background: var(--navbar-raised);
+		color: var(--navbar-ink);
+		text-decoration: none;
+	}
+
+	.buzz-navbar-button[data-variant="solid"]:hover {
+		background: var(--navbar-ink);
+		color: var(--navbar-bg);
+		opacity: 0.88;
+	}
+
+	.buzz-navbar-menu a:hover,
+	.buzz-navbar-menu button:hover {
+		background: var(--navbar-border);
+		color: var(--navbar-ink);
+		text-decoration: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.buzz-navbar-button:active {
+		transform: none;
+	}
+
+	@starting-style {
+		.buzz-navbar details[open] .buzz-navbar-menu {
+			transform: none;
+		}
+	}
+}
+
+.buzz-navbar-mobile {
+	display: none;
+}
+
+.buzz-navbar-menu-heading[data-section],
+.buzz-navbar-preferences {
+	margin-top: 4px;
+	border-top: 1px solid var(--navbar-border);
+}
+
+.buzz-navbar-menu-heading[data-section] {
+	padding-top: 10px;
+}
+
+.buzz-navbar-preferences {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 6px 4px;
+}
+
+.buzz-navbar-preferences .buzz-navbar-button {
+	position: relative;
+	gap: 4px;
+	height: 28px;
+	padding: 0 6px;
+}
+
+.buzz-navbar-language-code {
+	font-size: 12px;
+	letter-spacing: 0.04em;
+}
+
+/* Invisible over its label, so a tap opens the platform's own picker. */
+.buzz-navbar-preferences select {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	opacity: 0;
+	cursor: pointer;
+	/* iOS zooms into selects under 16px */
+	font-size: 16px;
+}
+
+.buzz-navbar-segmented {
+	display: flex;
+	gap: 2px;
+	padding: 2px;
+	border-radius: 8px;
+	background: var(--navbar-border);
+}
+
+.buzz-navbar-menu .buzz-navbar-segmented button {
+	display: grid;
+	place-items: center;
+	height: 24px;
+	padding: 0 10px;
+	color: var(--navbar-muted);
+}
+
+.buzz-navbar-menu .buzz-navbar-segmented [aria-pressed="true"] {
+	background: var(--navbar-bg);
+	color: var(--navbar-ink);
+}
+
+/* Small screens keep the brand and one menu holding everything else. */
+@media (max-width: 640px) {
+	/* Anchored to the header, not the button, so the menu spans the screen inside the gutters. */
+	.buzz-navbar .buzz-navbar-mobile {
+		display: block;
+		position: static;
+	}
+
+	.buzz-navbar-mobile .buzz-navbar-menu {
+		top: 100%;
+		right: 16px;
+		left: 16px;
+	}
+
+	.buzz-navbar-end > :not(.buzz-navbar-mobile),
+	.buzz-navbar-start .buzz-navbar-links {
+		display: none;
+	}
+}

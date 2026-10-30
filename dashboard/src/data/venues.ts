@@ -12,7 +12,11 @@ export interface Venue {
 	google_place_id?: string | null
 	latitude?: number
 	longitude?: number
+	has_multiple_locations?: 0 | 1
 }
+
+/** A new venue: a place, or a group of the team's places listed as its locations. */
+type NewVenue = Partial<Venue> & { team: string; locations?: { venue: string }[] }
 
 const team = ref("")
 
@@ -22,7 +26,15 @@ const team = ref("")
 export const venues = useList<Venue>({
 	doctype: "Event Venue",
 	filters: () => ({ team: team.value }),
-	fields: ["name", "venue_name", "address", "google_place_id", "latitude", "longitude"],
+	fields: [
+		"name",
+		"venue_name",
+		"address",
+		"google_place_id",
+		"latitude",
+		"longitude",
+		"has_multiple_locations",
+	],
 	orderBy: "modified desc",
 	// One page holds every venue a team has; the picker does not page.
 	limit: 1000,
@@ -36,7 +48,15 @@ export function loadVenues(name: string) {
 }
 
 // The server names the venue, so the insert answers with the `name` to select.
-export const createVenue = useDoctype<Venue & { team: string }>("Event Venue").insert
+export const createVenue = useDoctype<NewVenue>("Event Venue").insert
+
+/** The venues a group venue lists, in order. */
+export function useVenueLocations(venue: () => string) {
+	return useCall<{ locations: { venue: string }[] }>({
+		url: computed(() => `/api/v2/document/Event Venue/${encodeURIComponent(venue())}`),
+		immediate: false,
+	})
+}
 
 export interface PlacePrediction {
 	place_id: string
@@ -126,6 +146,14 @@ export interface MapLinkLocation {
 	name: string | null
 	address: string | null
 	embed_url: string | null
+}
+
+/** Where OpenStreetMap puts an address: Google's own coordinates may not go on this map. */
+export function useAddressLocation() {
+	return useCall<MapLinkLocation, { address: string }>({
+		url: "/api/v2/method/buzz.api.maps.locate_address",
+		immediate: false,
+	})
 }
 
 /** Where a pasted map link points, read by the server the way saving the venue would. */

@@ -1,14 +1,19 @@
-import { test, expect } from "@playwright/test"
+import { test, expect, type APIRequestContext } from "@playwright/test"
 
 import {
+	ATTENDEE_EMAIL,
+	ATTENDEE_QUESTION,
+	ATTENDEE_STATE_PATH,
+	BOOKING_QUESTION,
 	CLOSED_FORM_MESSAGE,
 	CLOSED_FORM_ROUTE,
 	CLOSED_FORM_TITLE,
 	CUSTOM_FORMS_EVENT_ROUTE as testEventRoute,
 	MEMBERS_ONLY_FORM_ROUTE,
 } from "../data/custom-forms"
-import { callMethod } from "../helpers/frappe"
-import { CustomFormPage } from "../pages"
+import { newApiContext } from "../helpers/auth"
+import { callMethod, getDoc, getList, updateDoc } from "../helpers/frappe"
+import { BookingPage, CustomFormPage } from "../pages"
 
 test.describe("Event Feedback Form", () => {
 	test("should display feedback form with title", async ({ page }) => {
@@ -139,15 +144,15 @@ test.describe("Talk Proposal Form", () => {
 		await formPage.expectSubmitButtonVisible()
 	})
 
-	test("should display description textarea", async ({ page }) => {
+	test("should display description editor", async ({ page }) => {
 		const formPage = new CustomFormPage(page)
 
 		await formPage.goto(testEventRoute, "propose-talk")
 		await formPage.waitForFormLoad()
 
-		const textarea = page.locator("textarea").first()
-		const hasTextarea = await textarea.isVisible({ timeout: 2000 }).catch(() => false)
-		expect(hasTextarea).toBeTruthy()
+		// The description is a Text Editor field, which renders the rich text editor.
+		const editor = page.locator('[contenteditable="true"]').first()
+		await expect(editor).toBeVisible({ timeout: 2000 })
 	})
 
 	test("should display phone input if present", async ({ page }) => {
@@ -172,10 +177,10 @@ test.describe("Talk Proposal Form", () => {
 		await titleInput.fill("Introduction to E2E Testing")
 		await expect(titleInput).toHaveValue("Introduction to E2E Testing")
 
-		const textarea = page.locator("textarea").first()
-		if (await textarea.isVisible({ timeout: 1000 }).catch(() => false)) {
-			await textarea.fill("A comprehensive talk about writing E2E tests with Playwright.")
-			await expect(textarea).toHaveValue(
+		const descriptionEditor = page.locator('[contenteditable="true"]').first()
+		if (await descriptionEditor.isVisible({ timeout: 1000 }).catch(() => false)) {
+			await descriptionEditor.fill("A comprehensive talk about writing E2E tests with Playwright.")
+			await expect(descriptionEditor).toContainText(
 				"A comprehensive talk about writing E2E tests with Playwright.",
 			)
 		}
@@ -213,16 +218,16 @@ test.describe("Talk Proposal Form", () => {
 		const titleInput = formPage.getInputByLabel("Title")
 		await titleInput.fill("E2E Test Talk: Automated Testing Best Practices")
 
-		const textarea = page.locator("textarea").first()
-		if (await textarea.isVisible({ timeout: 2000 }).catch(() => false)) {
-			await textarea.fill("This talk covers best practices for writing robust E2E tests.")
+		const descriptionEditor = page.locator('[contenteditable="true"]').first()
+		if (await descriptionEditor.isVisible({ timeout: 2000 }).catch(() => false)) {
+			await descriptionEditor.fill("This talk covers best practices for writing robust E2E tests.")
 		}
 
 		const addSpeakersButton = page.locator('button:has-text("Add Speakers")')
 		if (await addSpeakersButton.isVisible({ timeout: 2000 }).catch(() => false)) {
 			await addSpeakersButton.click()
 
-			const dialog = page.locator('[role="dialog"]')
+			const dialog = page.locator('[role="dialog"][data-state="open"]')
 			await expect(dialog).toBeVisible({ timeout: 5000 })
 
 			const firstNameInput = dialog
@@ -450,3 +455,135 @@ test.describe("Closed Form", () => {
 		expect((result as Error).message).toContain("Submissions for this form have closed.")
 	})
 })
+
+interface AnsweredDoc {
+	name: string
+	additional_fields?: { fieldname: string; value: string }[]
+	attendees?: { custom_fields: string | Record<string, string> }[]
+}
+
+test.describe("Registration Questions", () => {
+	test.use({ storageState: ATTENDEE_STATE_PATH })
+
+	test("booking and attendee answers are stored where each form keeps them", async ({
+		page,
+		baseURL,
+	}) => {
+		const bookingPage = new BookingPage(page)
+		await bookingPage.goto(testEventRoute)
+		await bookingPage.waitForFormLoad()
+		await bookingPage.goToAttendees()
+		await bookingPage.fillMyDetails("Form", "Attendee", ATTENDEE_EMAIL)
+		await page.getByLabel(ATTENDEE_QUESTION.label).fill("Vegan")
+		await bookingPage.continue()
+		await page.getByLabel(BOOKING_QUESTION.label).fill("Acme")
+		await bookingPage.submit()
+		await expect(page.getByText("You're going to")).toBeVisible({ timeout: 30000 })
+
+		const admin = await newApiContext(baseURL!)
+		const [latest] = await getList<AnsweredDoc>(admin, "Event Booking", {
+			filters: { user: ["=", ATTENDEE_EMAIL] },
+			orderBy: "creation desc",
+			limit: 1,
+		})
+		const booking = await getDoc<AnsweredDoc>(admin, "Event Booking", latest.name)
+		expect(answers(booking)).toEqual({ [BOOKING_QUESTION.fieldname]: "Acme" })
+		const attendeeAnswers = booking.attendees?.[0].custom_fields
+		expect(
+			typeof attendeeAnswers === "string" ? JSON.parse(attendeeAnswers) : attendeeAnswers,
+		).toEqual({ [ATTENDEE_QUESTION.fieldname]: "Vegan" })
+
+		const [ticket] = await getList<AnsweredDoc>(admin, "Event Ticket", {
+			filters: { booking: ["=", booking.name] },
+		})
+		expect(answers(await getDoc<AnsweredDoc>(admin, "Event Ticket", ticket.name))).toEqual({
+			[ATTENDEE_QUESTION.fieldname]: "Vegan",
+		})
+		await admin.dispose()
+	})
+
+	test("renamed and hidden core fields and the custom confirmation show on the booking page", async ({
+		page,
+		baseURL,
+	}) => {
+		const admin = await newApiContext(baseURL!)
+		await withCoreRows(
+			admin,
+			{
+				"Event Booking Attendee": {
+					questions: { first_name: { label: "Given name" }, last_name: { enabled: 0 } },
+				},
+				"Event Booking": {
+					questions: { buyer_name: { label: "Name on invoice" } },
+					success_title: "Welcome aboard",
+					success_message: "See you **soon**",
+				},
+			},
+			async () => {
+				const bookingPage = new BookingPage(page)
+				await bookingPage.goto(testEventRoute)
+				await bookingPage.waitForFormLoad()
+				await bookingPage.goToAttendees()
+				await page.getByLabel("Given name").first().fill("Core")
+				await expect(page.getByLabel("Last name")).toHaveCount(0)
+				await page.getByLabel("Email").first().fill(ATTENDEE_EMAIL)
+				await bookingPage.continue()
+				await page.getByLabel(BOOKING_QUESTION.label).fill("Acme")
+				await expect(page.getByLabel("Name on invoice")).toBeVisible()
+				await bookingPage.submit()
+
+				await expect(page.getByRole("heading", { name: "Welcome aboard" })).toBeVisible({
+					timeout: 30000,
+				})
+				await expect(page.locator("strong", { hasText: "soon" })).toBeVisible()
+			},
+		)
+		await admin.dispose()
+	})
+})
+
+interface RegistrationRow {
+	fieldname: string
+	label: string
+	enabled: number
+}
+
+// Edits core rows of the event's registration forms and puts the forms back after the callback.
+async function withCoreRows(
+	admin: APIRequestContext,
+	changes: Record<string, Record<string, any>>,
+	run: () => Promise<void>,
+): Promise<void> {
+	const [event] = await getList<{ name: string }>(admin, "Buzz Event", {
+		filters: { route: ["=", testEventRoute] },
+	})
+	const forms = await getList<{ name: string; form_doctype: string }>(admin, "Buzz Form", {
+		filters: { event: ["=", event.name], form_doctype: ["in", Object.keys(changes)] },
+		fields: ["name", "form_doctype"],
+	})
+	const originals = await Promise.all(
+		forms.map((form) => getDoc<Record<string, any>>(admin, "Buzz Form", form.name)),
+	)
+	try {
+		for (const [index, form] of forms.entries()) {
+			const { questions: edits, ...rest } = changes[form.form_doctype]
+			await updateDoc(admin, "Buzz Form", form.name, {
+				...rest,
+				questions: originals[index].questions.map((row: RegistrationRow) => ({
+					...row,
+					...edits?.[row.fieldname],
+				})),
+			})
+		}
+		await run()
+	} finally {
+		for (const [index, form] of forms.entries()) {
+			const { questions, success_title = null, success_message = null } = originals[index]
+			await updateDoc(admin, "Buzz Form", form.name, { questions, success_title, success_message })
+		}
+	}
+}
+
+function answers(doc: AnsweredDoc): Record<string, string> {
+	return Object.fromEntries((doc.additional_fields ?? []).map((row) => [row.fieldname, row.value]))
+}

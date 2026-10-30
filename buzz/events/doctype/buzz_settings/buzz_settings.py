@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+LISTING_FIELDS = ("list_on_buzz_events", "buzz_events_url", "buzz_events_api_key", "buzz_events_api_secret")
+
 
 class BuzzSettings(Document):
 	# begin: auto-generated types
@@ -20,12 +22,19 @@ class BuzzSettings(Document):
 		allow_guest_event_proposals: DF.Check
 		allow_ticket_cancellation_request_before_event_start_days: DF.Int
 		allow_transfer_ticket_before_event_start_days: DF.Int
+		app_icon: DF.AttachImage | None
+		app_logo: DF.AttachImage | None
+		app_logo_dark: DF.AttachImage | None
 		auto_send_pitch_deck: DF.Check
+		buzz_events_api_key: DF.Data | None
+		buzz_events_api_secret: DF.Password | None
+		buzz_events_url: DF.Data | None
 		default_payment_gateway: DF.Link | None
 		default_sponsor_deck_cc: DF.SmallText | None
 		default_sponsor_deck_email_template: DF.Link | None
 		default_sponsor_deck_reply_to: DF.Data | None
 		default_ticket_email_template: DF.Link | None
+		enable_communities: DF.Check
 		event_page_theme: DF.Link | None
 		event_proposal_banner_title: DF.Data | None
 		event_proposal_success_message: DF.MarkdownEditor | None
@@ -33,6 +42,7 @@ class BuzzSettings(Document):
 		google_maps_embed_api_key: DF.Data | None
 		google_maps_enabled: DF.Check
 		google_places_api_key: DF.Password | None
+		list_on_buzz_events: DF.Check
 		login_banner: DF.MarkdownEditor | None
 		show_hosting_banner: DF.Check
 		support_email: DF.Data | None
@@ -41,6 +51,38 @@ class BuzzSettings(Document):
 	def validate(self):
 		"""Validate the settings."""
 		self.validate_transfer_days()
+		self.validate_app_logos()
+		self.validate_buzz_events_url()
+
+	def on_update(self):
+		listing_changed = any(self.has_value_changed(field) for field in LISTING_FIELDS)
+		if self.list_on_buzz_events and listing_changed:
+			self.enqueue_sync()
+
+	@frappe.whitelist()
+	def sync_events(self):
+		frappe.only_for("System Manager")
+		if not self.list_on_buzz_events:
+			frappe.throw(_("Turn on listing on buzz.events first."))
+		self.enqueue_sync()
+
+	def enqueue_sync(self):
+		frappe.enqueue(
+			"buzz.events.buzz_events_listing.sync_all_events",
+			queue="long",
+			job_id="buzz_events_sync_all",
+			deduplicate=True,
+			enqueue_after_commit=True,
+		)
+
+	def validate_buzz_events_url(self):
+		# The API secret travels in a header, so it must not go over plain HTTP.
+		if self.list_on_buzz_events and not (self.buzz_events_url or "").startswith("https://"):
+			frappe.throw(_("The buzz.events URL must start with https://."))
+
+	def validate_app_logos(self):
+		if bool(self.app_logo) != bool(self.app_logo_dark):
+			frappe.throw(_("Upload both the light and dark App Logo, or neither."))
 
 	def validate_transfer_days(self):
 		"""Validate that transfer days is a reasonable value."""

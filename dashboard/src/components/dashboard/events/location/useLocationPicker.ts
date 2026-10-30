@@ -28,8 +28,11 @@ export function useLocationPicker(team: () => string, isOpen: Ref<boolean>) {
 
 	const savedVenues = computed(() => {
 		const text = query.value.trim().toLowerCase()
-		return (venues.data ?? []).filter((row) =>
-			`${row.venue_name} ${row.address ?? ""}`.toLowerCase().includes(text),
+		// A group venue is not a place of its own: it is rebuilt from its places instead.
+		return (venues.data ?? []).filter(
+			(row) =>
+				!row.has_multiple_locations &&
+				`${row.venue_name} ${row.address ?? ""}`.toLowerCase().includes(text),
 		)
 	})
 
@@ -39,9 +42,19 @@ export function useLocationPicker(team: () => string, isOpen: Ref<boolean>) {
 		return name
 	}
 
-	async function saveManually(venue: { venue_name: string; address: string; map_link: string }) {
+	function saveManually(venue: { venue_name: string; address: string; map_link: string }) {
+		return insertVenue({ team: team(), ...venue })
+	}
+
+	// The group's name is derived on the server from its places.
+	function saveGroup(places: string[]) {
+		const locations = places.map((venue) => ({ venue }))
+		return insertVenue({ team: team(), has_multiple_locations: 1, locations })
+	}
+
+	async function insertVenue(venue: Parameters<typeof createVenue.submit>[0]) {
 		manualError.value = ""
-		const saved = await createVenue.submit({ team: team(), ...venue }).catch((error) => {
+		const saved = await createVenue.submit(venue).catch((error) => {
 			manualError.value = serverErrorMessage(error)
 			return null
 		})
@@ -71,5 +84,6 @@ export function useLocationPicker(team: () => string, isOpen: Ref<boolean>) {
 		error: computed(() => manualError.value || placeSearch.error),
 		savePlace,
 		saveManually,
+		saveGroup,
 	})
 }

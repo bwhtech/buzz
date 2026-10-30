@@ -51,6 +51,8 @@ def get_event_team_settings(event: str | int) -> "BuzzTeamSettings":
 
 # A feature flag is any Check field with this prefix, kept at permlevel 1 so only System Manager sets it.
 FEATURE_FLAG_PREFIX = "feature_"
+# Lives here, not in buzz.api.imports, so the manage pages can read it without an import cycle.
+IMPORT_FLAG = "feature_data_import"
 
 
 def feature_flags(team: str) -> dict[str, bool]:

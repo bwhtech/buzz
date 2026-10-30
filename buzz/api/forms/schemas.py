@@ -29,6 +29,8 @@ class CustomFieldDefinition(APIResponse):
 	mandatory: int
 	placeholder: str | None
 	default_value: str | None
+	description: str | None = None
+	width: str | None = "Full"
 	order: int
 
 
@@ -37,13 +39,18 @@ class CustomFormResponse(APIResponse):
 	# Field shape varies per fieldtype at runtime, so only the envelope is modelled.
 	form_fields: list[dict]
 	custom_fields: list[CustomFieldDefinition]
+	# Show, hide and require rules over the questions; the server applies them again on submit.
+	logic_rules: list | None = None
 	form_title: str
+	form_description: str | None = None
+	submit_label: str | None = None
 	event: FormEventSummary
 	closed: bool
 	closed_title: str
 	closed_message: str
 	success_title: str
 	success_message: str
+	redirect_url: str | None = None
 
 
 class EventProposalFormResponse(APIResponse):
@@ -52,3 +59,21 @@ class EventProposalFormResponse(APIResponse):
 	banner_title: str
 	success_title: str
 	success_message: str
+
+
+class DoctypeField(APIResponse):
+	"""A field of the form's doctype: a core row when offered, and a name conditions may test."""
+
+	fieldname: str
+	fieldtype: str
+	label: str
+	options: str | None = None
+	link_options: list[dict] | None = None
+	offered: bool
+	locked: bool
+
+
+class FormBuilderFields(APIResponse):
+	fields: list[DoctypeField]
+	# The registration form is edited beside the event's attendee form.
+	attendee_form: str | None = None

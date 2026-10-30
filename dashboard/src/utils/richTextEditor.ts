@@ -25,6 +25,20 @@ export const richTextExtensions = [
 	}),
 ]
 
+// An emptied editor emits an empty paragraph, which mandatory checks would accept.
+export const EMPTY_EDITOR_HTML = /^(<p>(<br\s*\/?>)?<\/p>)?$/
+
+// Inline text formats only, for the toolbar that appears over selected text.
+export const inlineTextToolbar = [
+	Bold,
+	Italic,
+	Strike,
+	Separator,
+	BulletList,
+	OrderedList,
+	InsertLink,
+]
+
 export const richTextToolbar = [
 	HeadingGroup,
 	Separator,

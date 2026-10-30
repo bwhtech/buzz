@@ -7,6 +7,10 @@ class NotATeamMember(NotPermitted):
 	message = _lt("You are not a member of this team.")
 
 
+class PersonalTeamsDisabled(NotPermitted):
+	message = _lt("Personal teams are not enabled on this site.")
+
+
 class CannotManageMembers(NotPermitted):
 	title = _lt("Not Permitted")
 	message = _lt("You cannot manage members of this team.")
@@ -34,6 +38,11 @@ class NoPendingInvite(BuzzAPIError):
 class InvalidTeamSlug(BuzzAPIError):
 	title = _lt("Invalid URL")
 	message = _lt("Use letters, numbers and hyphens for the team's URL.")
+
+
+class InvalidShareImage(BuzzAPIError):
+	title = _lt("Invalid Image")
+	message = _lt("The share image must be a file uploaded to this site.")
 
 
 class TeamSlugTaken(Conflict):

@@ -3,12 +3,13 @@ import { Button, ErrorMessage, Switch, Textarea, toast } from "frappe-ui"
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, reactive, watch } from "vue"
 
+import SharePreviewCard from "@/components/common/SharePreviewCard.vue"
 import EventLinks from "@/components/dashboard/events/EventLinks.vue"
 import { updatePublicPage } from "@/data/teams"
 import type { EventExternalLink, TeamOverview } from "@/types"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 import { serverErrorMessage } from "@/utils/serverError"
-import { teamUrl } from "@/utils/teamUrl"
+import { teamPath, teamUrl } from "@/utils/teamUrl"
 
 const props = defineProps<{ team: TeamOverview }>()
 const emit = defineEmits<{ saved: [] }>()
@@ -19,12 +20,20 @@ function fromTeam(team: TeamOverview) {
 		accept_community_submissions: team.accept_community_submissions,
 		short_description: team.short_description ?? "",
 		about: team.about ?? "",
+		meta_image: team.meta_image ?? null,
 		links: team.links.map((link) => ({ ...link })) as EventExternalLink[],
 	}
 }
 
 const form = reactive(fromTeam(props.team))
 let justSaved = false
+
+const shareImage = computed(() => form.meta_image || props.team.og_image || props.team.logo)
+const shareSite = computed(() =>
+	props.team.slug
+		? `${window.location.hostname}${teamPath(props.team.slug)}`
+		: window.location.hostname,
+)
 
 function differsFrom(team: TeamOverview) {
 	return JSON.stringify(form) !== JSON.stringify(fromTeam(team))
@@ -48,7 +57,9 @@ watch(
 const isDirty = computed(() => differsFrom(props.team))
 
 async function save() {
-	await updatePublicPage.submit({ team: props.team.name, ...form }).catch(() => null)
+	await updatePublicPage
+		.submit({ team: props.team.name, ...form, meta_image: form.meta_image ?? "" })
+		.catch(() => null)
 	if (updatePublicPage.error) return
 	justSaved = true
 	toast.success(__("Public page saved"))
@@ -113,6 +124,26 @@ async function save() {
 					/>
 				</Editor>
 			</div>
+		</div>
+
+		<div class="space-y-2">
+			<div class="space-y-1">
+				<h4 class="text-base-semibold text-ink-gray-8">{{ __("Share image") }}</h4>
+				<p class="text-p-sm text-ink-gray-5">
+					{{
+						__(
+							"What people see when the page is shared. Without an upload, Buzz draws one from the team's name, logo and events.",
+						)
+					}}
+				</p>
+			</div>
+			<SharePreviewCard
+				v-model:meta-image="form.meta_image"
+				:image="shareImage"
+				:title="team.share_title"
+				:description="team.share_description"
+				:site="shareSite"
+			/>
 		</div>
 
 		<EventLinks

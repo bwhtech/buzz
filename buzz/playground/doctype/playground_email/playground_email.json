@@ -1,0 +1,99 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-20 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sandbox",
+  "subject",
+  "column_break_addresses",
+  "recipient",
+  "sender",
+  "reference_doctype",
+  "reference_name",
+  "message_section",
+  "message"
+ ],
+ "fields": [
+  {
+   "fieldname": "sandbox",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sandbox",
+   "options": "Playground Sandbox",
+   "search_index": 1
+  },
+  {
+   "fieldname": "subject",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Subject"
+  },
+  {
+   "fieldname": "column_break_addresses",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recipient",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Recipient"
+  },
+  {
+   "fieldname": "sender",
+   "fieldtype": "Data",
+   "label": "Sender"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Reference DocType",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Reference Name",
+   "options": "reference_doctype"
+  },
+  {
+   "fieldname": "message_section",
+   "fieldtype": "Section Break",
+   "label": "Message"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Long Text",
+   "ignore_xss_filter": 1,
+   "label": "Message"
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-21 20:49:32.389359",
+ "modified_by": "Administrator",
+ "module": "Playground",
+ "name": "Playground Email",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "subject"
+}

@@ -8,6 +8,9 @@
  "field_order": [
   "venue_name",
   "team",
+  "has_multiple_locations",
+  "locations",
+  "location_section",
   "map_link",
   "address",
   "column_break_kqaw",
@@ -28,14 +31,34 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Venue Name",
-   "reqd": 1
+   "mandatory_depends_on": "eval:!doc.has_multiple_locations",
+   "read_only_depends_on": "eval:doc.has_multiple_locations"
+  },
+  {
+   "default": "0",
+   "description": "Group several venues, like a main stage and an after-party, under one venue.",
+   "fieldname": "has_multiple_locations",
+   "fieldtype": "Check",
+   "label": "Has Multiple Locations"
+  },
+  {
+   "depends_on": "eval:doc.has_multiple_locations",
+   "fieldname": "locations",
+   "fieldtype": "Table",
+   "label": "Locations",
+   "options": "Event Venue Location"
+  },
+  {
+   "depends_on": "eval:!doc.has_multiple_locations",
+   "fieldname": "location_section",
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "address",
    "fieldtype": "Small Text",
    "in_list_view": 1,
    "label": "Address",
-   "mandatory_depends_on": "eval:!doc.map_link"
+   "mandatory_depends_on": "eval:!doc.map_link && !doc.has_multiple_locations"
   },
   {
    "fieldname": "location",
@@ -48,7 +71,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:doc.type===\"Open Street Map\"",
+   "depends_on": "eval:doc.type===\"Open Street Map\" && !doc.has_multiple_locations",
    "fieldname": "section_break_cexp",
    "fieldtype": "Section Break",
    "label": "Open Street Map"
@@ -122,7 +145,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-06 12:00:00.000000",
+ "modified": "2026-10-12 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Venue",

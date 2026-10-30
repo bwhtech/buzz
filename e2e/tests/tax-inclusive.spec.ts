@@ -30,24 +30,21 @@ test.describe("Tax Inclusive Pricing", () => {
 		await bookingPage.goto(testEventRoute)
 		await bookingPage.waitForFormLoad()
 
-		// Fill attendee details to trigger summary
-		await bookingPage.fillAttendeeDetails("Tax Test User", "taxtest@example.com")
-
 		// Wait for the booking summary to render
-		const summarySection = page.locator("text=Booking Summary")
+		const summarySection = page.getByRole("heading", { name: "Order summary" })
 		await expect(summarySection).toBeVisible({ timeout: 10000 })
 
 		// Subtotal should be hidden for tax-inclusive (no discount case)
-		const subtotalLabel = page.locator("span:text-is('Subtotal')")
+		const subtotalLabel = page.locator("aside dt", { hasText: "Subtotal" })
 		await expect(subtotalLabel).not.toBeVisible()
 
 		// Tax should NOT appear as a separate line item
 		// The "Inclusive of" note contains GST 18%, but there should be no standalone tax row
-		const separateTaxRow = page.locator(".flex.justify-between:has(span:text-is('GST (18%)'))")
+		const separateTaxRow = page.locator("aside dt", { hasText: "GST (18%)" })
 		await expect(separateTaxRow).not.toBeVisible()
 
 		// Verify the "Inclusive of" note appears below the total
-		const inclusiveNote = page.locator("text=/Inclusive of/")
+		const inclusiveNote = page.locator("aside").getByText(/Inclusive of/)
 		await expect(inclusiveNote).toBeVisible({ timeout: 5000 })
 
 		// Verify the note contains GST and 18%
@@ -56,7 +53,7 @@ test.describe("Tax Inclusive Pricing", () => {
 		expect(noteText).toContain("18%")
 
 		// Verify the total shows the ticket price (unchanged by tax)
-		const totalHeading = page.locator("h3:has-text('Total')")
+		const totalHeading = page.locator("aside dt", { hasText: /^Total$/ })
 		const totalContainer = totalHeading.locator("..")
 		const totalText = await totalContainer.textContent()
 		const totalMatch = totalText?.match(/[\d,]+/)
@@ -86,27 +83,24 @@ test.describe("Tax Inclusive Pricing", () => {
 		await bookingPage.goto(testEventRoute)
 		await bookingPage.waitForFormLoad()
 
-		// Fill attendee details to trigger summary
-		await bookingPage.fillAttendeeDetails("Tax Test User", "taxtest@example.com")
-
 		// Wait for the booking summary to render
-		const summarySection = page.locator("text=Booking Summary")
+		const summarySection = page.getByRole("heading", { name: "Order summary" })
 		await expect(summarySection).toBeVisible({ timeout: 10000 })
 
 		// Verify tax label does NOT show "Incl."
-		const taxLineInclusive = page.locator("text=/GST.*18.*%.*Incl/")
+		const taxLineInclusive = page.locator("aside").getByText(/GST.*18.*%.*Incl/)
 		await expect(taxLineInclusive).not.toBeVisible()
 
 		// Verify tax line exists without "Incl."
-		const taxLine = page.locator("text=/GST.*18.*%/")
+		const taxLine = page.locator("aside dt", { hasText: /GST.*18.*%/ })
 		await expect(taxLine).toBeVisible({ timeout: 5000 })
 
 		// For exclusive tax: total should be greater than subtotal
-		const totalHeading = page.locator("h3:has-text('Total')")
+		const totalHeading = page.locator("aside dt", { hasText: /^Total$/ })
 		const totalContainer = totalHeading.locator("..")
 		const totalText = await totalContainer.textContent()
 
-		const subtotalContainer = page.locator("span:text-is('Subtotal')").locator("..")
+		const subtotalContainer = page.locator("aside dt", { hasText: "Subtotal" }).locator("..")
 		const subtotalText = await subtotalContainer.textContent()
 
 		const subtotalMatch = subtotalText?.match(/[\d,]+/)

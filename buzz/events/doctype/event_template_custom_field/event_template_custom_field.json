@@ -6,100 +6,121 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "form_doctype",
   "enabled",
   "label",
   "fieldname",
+  "column_break_question",
+  "fieldtype",
   "mandatory",
+  "width",
+  "options",
   "placeholder",
   "default_value",
-  "column_break_efgh",
-  "applied_to",
-  "custom_form_doctype",
-  "fieldtype",
-  "options",
-  "order"
+  "description",
+  "section_break_conditions",
+  "depends_on",
+  "mandatory_depends_on"
  ],
  "fields": [
   {
-   "default": "1",
+   "fieldname": "form_doctype",
+   "fieldtype": "Link",
+   "label": "Form",
+   "options": "DocType",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
    "fieldname": "enabled",
+   "label": "Enabled",
    "fieldtype": "Check",
-   "label": "Enabled?"
+   "default": "1"
   },
   {
    "fieldname": "label",
-   "fieldtype": "Data",
-   "in_list_view": 1,
    "label": "Label",
-   "reqd": 1
+   "fieldtype": "Data",
+   "reqd": 1,
+   "in_list_view": 1
   },
   {
    "fieldname": "fieldname",
-   "fieldtype": "Data",
-   "label": "Name"
+   "label": "Fieldname",
+   "fieldtype": "Data"
   },
   {
-   "default": "0",
-   "fieldname": "mandatory",
-   "fieldtype": "Check",
-   "label": "Mandatory?"
-  },
-  {
-   "fieldname": "placeholder",
-   "fieldtype": "Data",
-   "label": "Placeholder"
-  },
-  {
-   "fieldname": "default_value",
-   "fieldtype": "Data",
-   "label": "Default Value"
-  },
-  {
-   "fieldname": "column_break_efgh",
+   "fieldname": "column_break_question",
    "fieldtype": "Column Break"
   },
   {
-   "default": "Booking",
-   "fieldname": "applied_to",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Applied To",
-   "options": "Booking\nTicket\nOffline Payment Form\nCustom Form"
-  },
-  {
-   "depends_on": "eval:doc.applied_to === 'Custom Form'",
-   "fieldname": "custom_form_doctype",
-   "fieldtype": "Link",
-   "label": "Custom Form DocType",
-   "mandatory_depends_on": "eval:doc.applied_to === 'Custom Form'",
-   "options": "DocType"
-  },
-  {
-   "default": "Data",
    "fieldname": "fieldtype",
-   "fieldtype": "Select",
-   "in_list_view": 1,
    "label": "Type",
-   "options": "Data\nPhone\nEmail\nSelect\nDate\nNumber",
-   "reqd": 1
+   "fieldtype": "Select",
+   "reqd": 1,
+   "default": "Data",
+   "in_list_view": 1,
+   "options": "Data\nCheck\nSmall Text\nPhone\nEmail\nSelect\nDate\nNumber\nMulti Select\nRating\nAttach\nAttach Image\nURL\nRadio\nHeading\nParagraph\nDivider\nPage Break"
+  },
+  {
+   "fieldname": "mandatory",
+   "label": "Required",
+   "fieldtype": "Check",
+   "default": "0",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "width",
+   "label": "Width",
+   "fieldtype": "Select",
+   "options": "Full\nHalf",
+   "default": "Full"
   },
   {
    "fieldname": "options",
+   "label": "Options",
    "fieldtype": "Small Text",
-   "label": "Options"
+   "description": "One option per line for Select and Multi Select."
   },
   {
-   "default": "1",
-   "fieldname": "order",
-   "fieldtype": "Int",
-   "label": "Order",
-   "non_negative": 1
+   "fieldname": "placeholder",
+   "label": "Placeholder",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "default_value",
+   "label": "Default Value",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "description",
+   "label": "Help Text",
+   "fieldtype": "Small Text",
+   "description": "Shown under the question."
+  },
+  {
+   "fieldname": "section_break_conditions",
+   "label": "Conditions",
+   "fieldtype": "Section Break",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "depends_on",
+   "label": "Show When",
+   "fieldtype": "JSON",
+   "description": "List of [fieldname, operator, value] triples that must all match. Empty means always shown."
+  },
+  {
+   "fieldname": "mandatory_depends_on",
+   "label": "Required When",
+   "fieldtype": "JSON",
+   "description": "Same format as Show When. The question is required when all triples match."
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-16 12:00:00.000000",
+ "modified": "2026-10-28 01:29:59.250089",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Template Custom Field",

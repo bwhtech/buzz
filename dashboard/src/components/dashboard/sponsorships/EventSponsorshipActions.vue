@@ -7,15 +7,25 @@ import QuickActionsRail, {
 import EnquiryFormDialog from "@/components/dashboard/sponsorships/EnquiryFormDialog.vue"
 import type { EnquiryFormState } from "@/types"
 
-const props = defineProps<{ form: EnquiryFormState; canWrite: boolean }>()
-const emit = defineEmits<{ changed: [] }>()
+const props = defineProps<{
+	event: string
+	form: EnquiryFormState
+	canWrite: boolean
+	canImport: boolean
+}>()
+const emit = defineEmits<{ changed: []; import: [] }>()
 
 const dialogOpen = ref(false)
 
 const actions = computed<QuickAction[]>(() =>
-	props.form.link
-		? [{ icon: "lucide-arrow-up-right", label: "Go to form page", link: props.form.link }]
-		: [],
+	[
+		props.form.link
+			? { icon: "lucide-arrow-up-right", label: "Go to form page", link: props.form.link }
+			: null,
+		props.canImport
+			? { icon: "lucide-upload", label: "Import sponsors", onClick: () => emit("import") }
+			: null,
+	].filter((action) => action !== null),
 )
 </script>
 
@@ -27,6 +37,7 @@ const actions = computed<QuickAction[]>(() =>
 		:closed="form.closed"
 		:can-write="canWrite"
 		:actions="actions"
+		:form="canWrite ? form.name : null"
 		@toggle="dialogOpen = true"
 	/>
 

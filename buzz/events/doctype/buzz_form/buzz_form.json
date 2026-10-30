@@ -1,0 +1,234 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-10-26 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "form_tab",
+  "title",
+  "description",
+  "event",
+  "form_doctype",
+  "column_break_settings",
+  "route",
+  "publish",
+  "login_required",
+  "auto_close_at",
+  "questions_tab",
+  "questions",
+  "logic_rules",
+  "messages_tab",
+  "submit_label",
+  "success_title",
+  "success_message",
+  "redirect_url",
+  "column_break_messages",
+  "closed_title",
+  "closed_message",
+  "link_preview_section",
+  "meta_title",
+  "meta_description",
+  "meta_image",
+  "og_image"
+ ],
+ "fields": [
+  {
+   "fieldname": "form_tab",
+   "fieldtype": "Tab Break",
+   "label": "Form"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "description": "Shown under the form title."
+  },
+  {
+   "fieldname": "event",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event",
+   "options": "Buzz Event",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "form_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Form DocType",
+   "options": "DocType",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "column_break_settings",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "route",
+   "fieldtype": "Data",
+   "label": "Route",
+   "reqd": 1,
+   "depends_on": "eval:doc.form_doctype!='Event Booking Attendee'"
+  },
+  {
+   "default": "0",
+   "fieldname": "publish",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Published",
+   "depends_on": "eval:doc.form_doctype!='Event Booking Attendee'"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:!['Sponsorship Enquiry','Event Booking','Event Booking Attendee'].includes(doc.form_doctype)",
+   "fieldname": "login_required",
+   "fieldtype": "Check",
+   "label": "Login Required"
+  },
+  {
+   "fieldname": "auto_close_at",
+   "fieldtype": "Datetime",
+   "label": "Close At",
+   "depends_on": "eval:doc.form_doctype!='Event Booking Attendee'"
+  },
+  {
+   "fieldname": "questions_tab",
+   "fieldtype": "Tab Break",
+   "label": "Questions"
+  },
+  {
+   "fieldname": "questions",
+   "fieldtype": "Table",
+   "label": "Questions",
+   "options": "Buzz Form Field"
+  },
+  {
+   "fieldname": "logic_rules",
+   "fieldtype": "JSON",
+   "label": "Logic Rules",
+   "description": "List of {match: all or any, conditions: [[fieldname, operator, value]], actions: [[show, hide or require, question]]}."
+  },
+  {
+   "fieldname": "messages_tab",
+   "fieldtype": "Tab Break",
+   "label": "Messages",
+   "depends_on": "eval:!['Event Booking','Event Booking Attendee'].includes(doc.form_doctype)"
+  },
+  {
+   "fieldname": "submit_label",
+   "fieldtype": "Data",
+   "label": "Submit Button Label"
+  },
+  {
+   "fieldname": "success_title",
+   "fieldtype": "Data",
+   "label": "Success Title"
+  },
+  {
+   "fieldname": "success_message",
+   "fieldtype": "Markdown Editor",
+   "label": "Success Message"
+  },
+  {
+   "fieldname": "redirect_url",
+   "fieldtype": "Data",
+   "options": "URL",
+   "label": "Redirect To",
+   "description": "Send people here after they submit, instead of the success message."
+  },
+  {
+   "fieldname": "column_break_messages",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "closed_title",
+   "fieldtype": "Data",
+   "label": "Closed Title"
+  },
+  {
+   "fieldname": "closed_message",
+   "fieldtype": "Small Text",
+   "label": "Closed Message"
+  },
+  {
+   "fieldname": "link_preview_section",
+   "fieldtype": "Section Break",
+   "label": "Link Preview"
+  },
+  {
+   "fieldname": "meta_title",
+   "fieldtype": "Data",
+   "label": "Preview Title",
+   "description": "Shown when the form link is shared. Defaults to the form and event names."
+  },
+  {
+   "fieldname": "meta_description",
+   "fieldtype": "Small Text",
+   "label": "Preview Description"
+  },
+  {
+   "fieldname": "meta_image",
+   "fieldtype": "Attach Image",
+   "label": "Preview Image",
+   "description": "Leave empty to use an image drawn from the form and its event"
+  },
+  {
+   "fieldname": "og_image",
+   "fieldtype": "Attach Image",
+   "label": "Generated Preview Image",
+   "read_only": 1,
+   "no_copy": 1
+  }
+ ],
+ "links": [
+  {
+   "link_doctype": "Sponsorship Enquiry",
+   "link_fieldname": "enquiry_form"
+  }
+ ],
+ "modified": "2026-10-28 01:09:14.270094",
+ "modified_by": "Administrator",
+ "module": "Events",
+ "name": "Buzz Form",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Event Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

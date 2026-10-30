@@ -24,12 +24,14 @@ def get_event_proposals(
 	order: str = "desc",
 	start: int = 0,
 	limit: int = services.PROPOSALS_PAGE_SIZE,
+	name: str | None = None,
 ) -> EventProposalsResponse:
 	"""One page of the talk proposals submitted to an event, for its team.
 
 	`filters` is a JSON list of `[field, operator, value]`, the string the dashboard keeps in its URL.
+	`name` narrows the page to that one proposal, for opening it from a link.
 	"""
-	return services.event_proposals(event, search, filters, order, start, limit)
+	return services.event_proposals(event, search, filters, order, start, limit, name)
 
 
 @frappe.whitelist()

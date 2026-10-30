@@ -94,6 +94,10 @@ class TestGetEventProposals(IntegrationTestCase):
 		self.assertEqual(response.total, 2)
 		self.assertFalse(response.can_write)
 
+	def test_name_narrows_the_page_to_that_proposal_of_this_event(self):
+		self.assertEqual(self.list_proposal_names(name=self.accepted), [self.accepted])
+		self.assertEqual(self.list_proposal_names(name=self.elsewhere), [])
+
 	def get_proposals_as_manager(self, **kwargs):
 		with self.set_user(self.manager):
 			return get_event_proposals(self.event, **kwargs)
@@ -154,6 +158,13 @@ class TestSetProposalState(IntegrationTestCase):
 		self.assertFalse(set_proposal_state(self.event, closed=False).proposals_closed)
 		self.assertFalse(get_event_proposals(self.event).proposals_closed)
 
+	def test_closing_keeps_the_form_page_up_with_its_closed_message(self):
+		set_proposal_state(self.event, closed=True)
+
+		form = frappe.get_doc("Buzz Form", {"event": self.event, "form_doctype": "Talk Proposal"})
+		self.assertTrue(form.publish)
+		self.assertTrue(form.auto_close_at)
+
 	def test_opening_publishes_a_form_that_was_never_published(self):
 		self.unpublish_proposal_form()
 
@@ -173,8 +184,6 @@ class TestSetProposalState(IntegrationTestCase):
 			set_proposal_state(self.event, closed=True)
 
 	def unpublish_proposal_form(self):
-		event = frappe.get_doc("Buzz Event", self.event)
-		for row in event.custom_forms:
-			if row.form_doctype == "Talk Proposal":
-				row.publish = 0
-		event.save(ignore_permissions=True)
+		form = frappe.get_doc("Buzz Form", {"event": self.event, "form_doctype": "Talk Proposal"})
+		form.publish = 0
+		form.save(ignore_permissions=True)

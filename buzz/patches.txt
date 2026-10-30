@@ -9,7 +9,6 @@ buzz.patches.migrate_offline_payment_to_methods
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 buzz.patches.populate_slug_in_event_category
-buzz.patches.set_applies_to_for_existing_coupons
 buzz.patches.set_payment_status_for_existing_bookings
 buzz.patches.normalize_phone_format
 buzz.patches.set_time_zone_label_for_existing_events
@@ -33,3 +32,27 @@ buzz.patches.geocode_event_venues
 buzz.patches.rename_is_a_community_field
 buzz.patches.migrate_desk_tags_to_buzz_tags
 buzz.patches.move_payments_to_bwh_payments
+buzz.patches.move_communication_recipients_to_filters
+buzz.patches.disable_unshipped_event_topics
+buzz.patches.use_buzz_navbar
+buzz.patches.move_community_topic_route
+buzz.patches.restructure_coupon_codes
+buzz.patches.convert_plain_text_editor_values
+buzz.patches.subscribe_talk_participants
+buzz.patches.email_buzz_activity
+buzz.patches.add_title_theme_tokens
+buzz.patches.add_default_check_in_zones
+buzz.patches.use_buzz_footer
+buzz.patches.move_sponsor_enquiry_forms_to_buzz_form
+buzz.patches.move_event_forms_to_buzz_form
+buzz.patches.move_registration_questions_to_buzz_form #2
+buzz.patches.move_registration_close_to_buzz_form
+buzz.patches.reshape_event_template_questions
+buzz.patches.delete_moved_custom_fields
+buzz.patches.drop_buzz_event_form_table
+buzz.patches.move_excluded_fields_to_standard_rows
+buzz.patches.move_question_conditions_to_logic_rules
+buzz.patches.add_registration_core_rows
+
+[post_fixture_sync]
+buzz.patches.move_schedule_to_buzz_schedule

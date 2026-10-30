@@ -4,6 +4,8 @@
 import frappe
 from frappe import _
 
+from buzz.booking_permissions import ensure_guests_access
+
 
 def execute(filters: dict | None = None):
 	"""Return columns and data for the report.
@@ -12,6 +14,7 @@ def execute(filters: dict | None = None):
 	dictionary and should return columns and data. It is called by the framework
 	every time the report is refreshed or a filter is updated.
 	"""
+	ensure_guests_access((filters or {}).get("event"))
 	columns = get_columns()
 	data = get_data(filters)
 

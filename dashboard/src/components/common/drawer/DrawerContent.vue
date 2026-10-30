@@ -8,7 +8,7 @@ withDefaults(
 	defineProps<{
 		showSwipeHandle?: boolean
 		// Governs the cross axis: width for a side drawer, height for a bottom or top one.
-		size?: "md" | "lg" | "xl"
+		size?: "md" | "lg" | "xl" | "2xl"
 	}>(),
 	{ showSwipeHandle: true, size: "md" },
 )
@@ -24,10 +24,21 @@ useEventListener(document, "pointerdown", (event: PointerEvent) => {
 	if (event.pointerType === "mouse" && drawer?.hasPointerCapture(event.pointerId))
 		drawer.releasePointerCapture(event.pointerId)
 })
+
+// A toast sits outside the drawer, and pressing its action is not a dismissal.
+function keepOpenForToasts(event: Event) {
+	if ((event.target as Element | null)?.closest?.("[data-sonner-toaster]")) event.preventDefault()
+}
 </script>
 
 <template>
-	<div v-if="isMobile" class="flex min-h-[75dvh] flex-col">
+	<!-- An xl drawer fills the sheet, so its body is the only scroller and a footer it
+	     pins stays on screen. 26px is the sheet's grab bar, inside its 90dvh cap. -->
+	<div
+		v-if="isMobile"
+		class="flex flex-col"
+		:class="size === 'xl' || size === '2xl' ? 'h-[calc(90dvh-26px)]' : 'min-h-[75dvh]'"
+	>
 		<slot />
 		<div v-if="$slots.footer" class="mt-auto flex shrink-0 items-center gap-2 p-4">
 			<slot name="footer" />
@@ -37,7 +48,11 @@ useEventListener(document, "pointerdown", (event: PointerEvent) => {
 	<DrawerPortal v-else>
 		<DrawerOverlay class="drawer-overlay fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" />
 
-		<DrawerContent :data-size="size" class="drawer bg-surface-elevation-2 shadow-2xl">
+		<DrawerContent
+			:data-size="size"
+			class="drawer bg-surface-elevation-2 shadow-2xl"
+			@interact-outside="keepOpenForToasts"
+		>
 			<DrawerHandle
 				v-if="showSwipeHandle"
 				class="drawer-handle mx-auto my-3 h-1.5 w-12 shrink-0 rounded-full bg-surface-gray-4"
@@ -106,6 +121,11 @@ useEventListener(document, "pointerdown", (event: PointerEvent) => {
 }
 .drawer[data-size="xl"] {
 	--drawer-width: max(28rem, 50vw);
+	--drawer-height: max(28rem, 50dvh);
+}
+/* Room for a form beside a side panel. */
+.drawer[data-size="2xl"] {
+	--drawer-width: 54rem;
 	--drawer-height: max(28rem, 50dvh);
 }
 

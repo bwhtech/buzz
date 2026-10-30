@@ -15,6 +15,7 @@ import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router"
 import ProgressStatus from "@/components/common/ProgressStatus.vue"
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
+import EventTeamSelect from "@/components/dashboard/events/EventTeamSelect.vue"
 import EventLocationField from "@/components/dashboard/events/location/EventLocationField.vue"
 import { useIsMobile } from "@/composables/useIsMobile"
 import { createEvent } from "@/data/events"
@@ -225,7 +226,7 @@ function goBack(path: string) {
 <template>
 	<PageHeaderMobile v-if="isMobile" title="Create event">
 		<template #prefix>
-			<PageHeaderBackButton :to="{ name: 'events' }" />
+			<PageHeaderBackButton :fallback-route="{ name: 'events' }" />
 		</template>
 		<template #suffix>
 			<Button variant="solid" label="Create" :loading="submitting" @click="save" />
@@ -257,6 +258,7 @@ function goBack(path: string) {
 						/>
 					</div>
 
+					<EventTeamSelect />
 					<ErrorMessage v-if="errorMessage" :message="errorMessage" />
 				</header>
 

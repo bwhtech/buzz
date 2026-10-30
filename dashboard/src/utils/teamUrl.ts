@@ -12,7 +12,7 @@ export function teamUrl(slug: string): string {
 	return `${window.location.origin}${teamPath(slug)}`
 }
 
-/** A plain navigation, not a router one: the page is served outside the SPA's /b base. */
-export function openTeamPage(slug: string): void {
-	window.open(teamUrl(slug), "_blank", "noopener")
+/** A personal calendar's public page: its owner's profile. */
+export function profileUrl(username: string): string {
+	return `${window.location.origin}/u/${username}`
 }

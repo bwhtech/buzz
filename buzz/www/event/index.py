@@ -1,7 +1,4 @@
-from datetime import datetime
-from datetime import time as clock_time
 from functools import cached_property
-from itertools import groupby
 from urllib.parse import urlparse
 
 import frappe
@@ -18,13 +15,18 @@ from frappe.utils import (
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import co_hosts_of, primary_host_of, registration_link
-from buzz.emails import venue_map_url as venue_link
+from buzz.events.countdown import event_countdown
+from buzz.events.doctype.buzz_team.buzz_team import personal_team_owner, personal_teams_enabled
+from buzz.events.doctype.event_venue.details import VenueLocation, venue_details
 from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import datetime_in_time_zone, format_gmt_offset, get_time_zone_label
+from buzz.www.event.banner_color import banner_color
 from buzz.www.event.date_range import RANGE_SEPARATOR, EventDateRange, format_time
+from buzz.www.event.dot_map import DotMap
 from buzz.www.event.link_icons import LINK_ICON_PATHS
 from buzz.www.event.meta import EventMeta, event_time_zone
+from buzz.www.event.registration import ProposalCard, RegistrationCard
 from buzz.www.event.venue_map import venue_map_url
 from buzz.www.site_header import apply_site_context
 
@@ -32,7 +34,7 @@ no_cache = 1
 
 
 def get_context(context):
-	page = EventPage(frappe.form_dict.event_route, frappe.form_dict.page_route)
+	page = EventPage(frappe.form_dict.event_route)
 	apply_site_context(context, page.event.theme)
 	context.update(page.as_context())
 
@@ -41,12 +43,17 @@ def join_names(names: list[str]) -> str:
 	return comma_sep(names, _("{0} and {1}"), add_quotes=False)
 
 
+def is_talk(item) -> bool:
+	return item.reference_doctype == "Event Talk"
+
+
 def format_day(date) -> str:
 	return format_date(date, "EEE d MMM y")
 
 
 def join_parts(parts: list, separator: str) -> str:
-	return separator.join([part for part in parts if part])
+	stripped_parts = [part.strip() for part in parts if part]
+	return separator.join([part for part in stripped_parts if part])
 
 
 def format_time_range(start, end) -> str:
@@ -70,9 +77,17 @@ def public_links(rows) -> list[dict]:
 	]
 
 
-def team_page_url(team: str | None) -> str | None:
-	route = frappe.db.get_value("Buzz Team", {"name": team, "is_published": 1}, "route") if team else None
-	return f"/{route}" if route else None
+def host_page_url(team: str | None) -> str | None:
+	"""A personal team links to its owner's profile, any other team to its published page."""
+	if not team:
+		return None
+	row = frappe.db.get_value("Buzz Team", team, ["is_personal", "is_published", "route"], as_dict=True)
+	if not row:
+		return None
+	if row.is_personal:
+		owner = personal_team_owner(team)
+		return f"/u/{owner.username}" if owner and owner.username and personal_teams_enabled() else None
+	return f"/{row.route}" if row.is_published and row.route else None
 
 
 def format_full_date(date) -> str:
@@ -85,33 +100,21 @@ def not_found():
 
 
 class EventPage:
-	def __init__(self, route: str, page_route: str | None = None):
+	def __init__(self, route: str):
 		# get_doc skips the team permission hooks, which would hide every event from a Guest
 		name = frappe.db.get_value("Buzz Event", {"route": route, "is_published": 1})
 		if not name:
 			not_found()
 		self.event = frappe.get_doc("Buzz Event", name)
-		self.page = self.load_page(page_route) if page_route else None
-
-	def load_page(self, page_route: str) -> frappe._dict:
-		page = frappe.db.get_value(
-			"Additional Event Page",
-			{"event": self.event.name, "route": page_route, "is_published": 1},
-			["title", "route", "content"],
-			as_dict=True,
-		)
-		if not page:
-			not_found()
-		return page
 
 	def as_context(self) -> dict:
 		context = {
 			"event": self.event,
+			"banner_color": banner_color(self.event.banner_image),
 			"event_date": self.event_date(),
 			"date_range": EventDateRange(self.event).as_dict(),
 			"timezone_label_with_offset": self.timezone_label_with_offset(),
 			"timezone_label": self.timezone_label,
-			"page": self.page,
 			"pages": self.pages(),
 			"tabs": self.tabs(),
 			"hosts": self.hosts(),
@@ -124,22 +127,17 @@ class EventPage:
 			"online_label": OnlineMeeting(self.event).label,
 			"register_url": registration_link(self.event),
 			"registrations_closed": are_registrations_closed(self.event),
-			"countdown": self.countdown(),
+			"registration": RegistrationCard(self.event).as_dict(),
+			"proposal_card": ProposalCard(self.event).as_dict(),
+			"countdown": event_countdown(self.event) if self.event.show_countdown else None,
+			"manage_url": self.manage_url(),
 		}
-		meta = EventMeta(self.event, self.page, context)
+		meta = EventMeta(self.event, context)
 		return context | {"meta": meta.as_dict(), "structured_data": meta.structured_data()}
 
-	def countdown(self) -> dict | None:
-		# An event with no closing time runs to the end of its last day; past that, no countdown.
-		# Whole seconds: JavaScript only promises to parse milliseconds.
-		zone = event_time_zone(self.event)
-		start_time = get_time(self.event.start_time) if self.event.start_time else clock_time.min
-		end_time = get_time(self.event.end_time) if self.event.end_time else clock_time(23, 59, 59)
-		starts_at = datetime.combine(getdate(self.event.start_date), start_time, zone)
-		ends_at = datetime.combine(getdate(self.event.end_date or self.event.start_date), end_time, zone)
-		if ends_at <= datetime.now(zone):
-			return None
-		return {"starts_at": starts_at.isoformat(), "ends_at": ends_at.isoformat()}
+	def manage_url(self) -> str | None:
+		if frappe.has_permission("Buzz Event", "write", self.event):
+			return f"/b/manage/events/{self.event.name}/details"
 
 	def tabs(self) -> list[dict]:
 		sections = [
@@ -151,11 +149,13 @@ class EventPage:
 		return [{"key": key, "label": label} for key, label, content in sections if content]
 
 	def pages(self) -> list[dict]:
+		# Keyed by document name: the tab and its panel are siblings in the markup, so the
+		# pair needs an id, and a page may be renamed without the tab changing.
 		return frappe.get_all(
 			"Additional Event Page",
-			filters={"event": self.event.name, "is_published": 1, "route": ["is", "set"]},
-			fields=["title", "route"],
-			order_by="creation",
+			filters={"event": self.event.name, "is_published": 1},
+			fields=["name as key", "title as label", "content"],
+			order_by="display_order asc, creation asc",
 		)
 
 	def event_date(self) -> dict:
@@ -195,9 +195,9 @@ class EventPage:
 		return get_datetime(f"{self.event.start_date} {self.event.start_time or '00:00:00'}")
 
 	def hosts(self) -> list:
-		# The team hosting the event links to its public page while that page is published.
+		# The hosting team links to its public page, or a personal team to its owner's profile.
 		primary = primary_host_of(self.event.team)
-		hosts = [frappe._dict(primary.__json__(), url=team_page_url(self.event.team))] if primary else []
+		hosts = [frappe._dict(primary.__json__(), url=host_page_url(self.event.team))] if primary else []
 		return hosts + [frappe._dict(host.__json__(), url=None) for host in co_hosts_of(self.event.name)]
 
 	def links(self) -> list[dict]:
@@ -205,31 +205,25 @@ class EventPage:
 
 	@cached_property
 	def schedule(self) -> list[dict]:
-		talk_titles = self.talk_titles([row.talk for row in self.event.schedule if row.talk])
-		talk_speakers = self.talk_speakers(list(talk_titles))
-		rows = sorted(self.event.schedule, key=lambda row: (getdate(row.date), get_time(row.start_time)))
-		return [
-			{
-				"day": format_day(date),
-				"rows": [self.schedule_row(row, talk_titles, talk_speakers) for row in day_rows],
-			}
-			for date, day_rows in groupby(rows, key=lambda row: row.date)
-		]
+		name = frappe.db.get_value("Buzz Schedule", {"event": self.event.name, "is_published": 1})
+		if not name:
+			return []
+		schedule = frappe.get_doc("Buzz Schedule", name)
+		items = sorted(schedule.items, key=lambda item: get_time(item.start_time))
+		speakers = self.talk_speakers([item.reference_document for item in items if is_talk(item)])
+		days = [self.schedule_day(day, items, speakers) for day in schedule.day_list()]
+		return [day for day in days if day["rows"]]
 
-	def schedule_row(self, row, talk_titles: dict, talk_speakers: dict) -> dict:
+	def schedule_day(self, day: dict, items: list, speakers: dict) -> dict:
+		rows = [self.schedule_row(item, speakers) for item in items if str(item.date) == day["date"]]
+		return {"day": day["label"] or format_day(day["date"]), "rows": rows}
+
+	def schedule_row(self, item, speakers: dict) -> dict:
 		return {
-			"time": format_time_range(row.start_time, row.end_time),
-			"title": talk_titles.get(row.talk) or row.description or _(row.type),
-			"speakers": talk_speakers.get(row.talk, ""),
+			"time": format_time_range(item.start_time, item.end_time),
+			"title": item.title,
+			"speakers": speakers.get(item.reference_document, "") if is_talk(item) else "",
 		}
-
-	def talk_titles(self, talk_names: list[str]) -> dict:
-		talks = frappe.get_all(
-			"Event Talk",
-			filters={"name": ["in", talk_names], "event": self.event.name},
-			fields=["name", "title"],
-		)
-		return {str(talk.name): talk.title for talk in talks}
 
 	def talk_speakers(self, talk_names: list[str]) -> dict:
 		rows = frappe.get_all(
@@ -297,27 +291,45 @@ class EventPage:
 		]
 
 	def venue(self) -> dict | None:
-		if self.event.medium == "Online" or not self.event.venue:
+		details = self.event.medium != "Online" and venue_details(self.event.venue)
+		if not details:
 			return None
-		venue = frappe.db.get_value(
-			"Event Venue",
-			self.event.venue,
-			[
-				"venue_name",
-				"address",
-				"type",
-				"google_maps_embed_code",
-				"google_place_id",
-				"latitude",
-				"longitude",
-			],
-			as_dict=True,
-		)
-		if not venue:
-			return None
-		return {
-			"name": venue.venue_name,
-			"address": venue.address,
-			"map_url": venue_map_url(venue),
-			"link": venue_link(self.event.venue),
+		venue = {
+			"name": details.venue_name,
+			"address": details.address,
+			"link": details.map_link,
+			"map_url": None,
+			"locations": [],
+			"dot_map": None,
 		}
+		if not details.has_multiple_locations:
+			return venue | {"map_url": self.venue_map_url()}
+		return venue | LocationsMap(details.locations).as_context()
+
+	def venue_map_url(self) -> str | None:
+		return venue_map_url(frappe.get_cached_doc("Event Venue", self.event.venue))
+
+
+class LocationsMap:
+	"""A grouped venue's locations, each with its pin on a dot map framed around them."""
+
+	def __init__(self, locations: list[VenueLocation]):
+		self.locations = locations
+		self.pinned = [location for location in locations if location.latitude and location.longitude]
+		coordinates = [(location.latitude, location.longitude) for location in self.pinned]
+		self.dot_map = DotMap(coordinates) if coordinates else None
+
+	def as_context(self) -> dict:
+		return {
+			"locations": [self.located(location) for location in self.locations],
+			"dot_map": self.dot_map
+			and {
+				"view_box": str(self.dot_map.view),
+				"dots_url": self.dot_map.dots_url,
+				"dot_width": self.dot_map.dot_width,
+			},
+		}
+
+	def located(self, location: VenueLocation) -> dict:
+		pin = self.dot_map.pin(location.latitude, location.longitude) if location in self.pinned else None
+		return {**location.__json__(), "pin": pin}

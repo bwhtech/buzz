@@ -22,8 +22,6 @@ export interface EventTicket {
 	event?: string
 	/**	Booking : Link - Event Booking	*/
 	booking?: string
-	/**	Coupon Used  : Link - Bulk Ticket Coupon	*/
-	coupon_used?: string
 	/**	Attendee Email : Data	*/
 	attendee_email: string
 	/**	Ticket Type : Link - Event Ticket Type	*/

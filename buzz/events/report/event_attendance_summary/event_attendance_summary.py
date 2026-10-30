@@ -5,6 +5,9 @@ import frappe
 from frappe import _
 from frappe.utils import formatdate
 
+from buzz.booking_permissions import ensure_guests_access
+from buzz.events.doctype.event_check_in_zone.event_check_in_zone import default_zone
+
 
 def execute(filters: dict | None = None):
 	"""Return columns and data for the report.
@@ -14,30 +17,31 @@ def execute(filters: dict | None = None):
 	every time the report is refreshed or a filter is updated.
 	"""
 	event = filters.get("event")
+	ensure_guests_access(event)
 	if not event:
 		return [], []
 
-	# Get all unique check-in dates for this event (sorted)
-	check_in_dates = get_check_in_dates(event)
+	zone = filters.get("zone") or default_zone(event)
+	check_in_dates = get_check_in_dates(event, zone)
 
 	columns = get_columns(check_in_dates)
-	data = get_data(event, check_in_dates)
+	data = get_data(event, zone, check_in_dates)
 	chart = get_chart(data, check_in_dates)
 	report_summary = get_report_summary(data, check_in_dates)
 
 	return columns, data, None, chart, report_summary
 
 
-def get_check_in_dates(event: str) -> list:
-	"""Get all unique check-in dates for the event, sorted chronologically."""
+def get_check_in_dates(event: str, zone: str) -> list:
+	"""Get all unique check-in dates for the event at the zone, sorted chronologically."""
 	dates = frappe.db.sql(
 		"""
 		SELECT DISTINCT date
 		FROM `tabEvent Check In`
-		WHERE event = %s AND docstatus = 1 AND date IS NOT NULL
+		WHERE event = %s AND zone = %s AND docstatus = 1 AND date IS NOT NULL
 		ORDER BY date ASC
 		""",
-		(event,),
+		(event, zone),
 		as_dict=True,
 	)
 	return [d.date for d in dates]
@@ -92,7 +96,7 @@ def get_columns(check_in_dates: list) -> list[dict]:
 	return columns
 
 
-def get_data(event: str, check_in_dates: list) -> list[dict]:
+def get_data(event: str, zone: str, check_in_dates: list) -> list[dict]:
 	"""Return data for the report.
 
 	Shows each ticket with check-in status for each day.
@@ -100,7 +104,7 @@ def get_data(event: str, check_in_dates: list) -> list[dict]:
 	# Get all check-ins for this event
 	check_ins = frappe.get_all(
 		"Event Check In",
-		filters={"event": event, "docstatus": 1},
+		filters={"event": event, "zone": zone, "docstatus": 1},
 		fields=["ticket", "date"],
 	)
 

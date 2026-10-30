@@ -20,8 +20,11 @@
 		"@vueuse/core": "^14.4.0",
 		"@vueuse/router": "^14.4.0",
 		"canvas-confetti": "^1.9.3",
+		"cobe": "0.6.5",
+		"dompurify": "3.4.12",
 		"feather-icons": "^4.29.2",
-		"frappe-ui": "1.0.0-beta.63",
+		"frappe-ui": "1.0.2",
+		"maplibre-gl": "5.23.0",
 		"reka-ui": "^2.10.1",
 		"socket.io-client": "^4.7.2",
 		"vue": "^3.5.13",
@@ -36,6 +39,7 @@
 		"prosemirror-view": "^1.42.1"
 	},
 	"devDependencies": {
+		"@tailwindcss/typography": "^0.5.16",
 		"@types/canvas-confetti": "^1.9.0",
 		"@types/node": "^25.2.0",
 		"@vitejs/plugin-vue": "^6.0.8",

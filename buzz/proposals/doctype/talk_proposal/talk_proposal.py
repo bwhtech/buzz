@@ -10,6 +10,7 @@ from frappe.utils import cstr, getdate
 
 from buzz import telemetry
 from buzz.permissions import as_sql, derived_criterion, derived_has_permission
+from buzz.proposals.description import DescriptionFormatter
 
 
 def get_speaker_query_conditions(user: str) -> Criterion:
@@ -71,6 +72,7 @@ class TalkProposal(Document):
 
 		additional_fields: DF.Table[AdditionalField]
 		description: DF.TextEditor | None
+		formatted_description: DF.TextEditor | None
 		event: DF.Link
 		phone: DF.Phone | None
 		speakers: DF.Table[ProposalSpeaker]
@@ -78,6 +80,10 @@ class TalkProposal(Document):
 		submitted_by: DF.Link | None
 		title: DF.Data
 	# end: auto-generated types
+
+	@property
+	def formatted_description(self) -> str:
+		return DescriptionFormatter(self.description).html()
 
 	@property
 	def speaker_emails(self) -> set[str]:
@@ -171,13 +177,18 @@ class TalkProposal(Document):
 							"user_type": "Website User",
 						}
 					)
-					.insert()
+					# Checked above: only System Manager may create a User, not the event's team.
+					.insert(ignore_permissions=True)
 					.name
 				)
 
 			speaker_profile = frappe.db.exists("Speaker Profile", {"user": user})
 			if not speaker_profile:
-				speaker_profile = frappe.get_doc({"doctype": "Speaker Profile", "user": user}).insert().name
+				speaker_profile = (
+					frappe.get_doc({"doctype": "Speaker Profile", "user": user})
+					.insert(ignore_permissions=True)
+					.name
+				)
 
 			talk.append("speakers", {"speaker": speaker_profile})
 

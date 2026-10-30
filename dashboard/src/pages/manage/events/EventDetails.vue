@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { useEventListener, useTextareaAutosize } from "@vueuse/core"
-import { Button, ErrorMessage, Textarea, toast } from "frappe-ui"
-import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
+import { Alert, Button, ErrorMessage, Textarea, toast } from "frappe-ui"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
+import BannerCountdown from "@/components/dashboard/events/BannerCountdown.vue"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
+import EventDetailsActions from "@/components/dashboard/events/EventDetailsActions.vue"
 import EventDetailsSkeleton from "@/components/dashboard/events/EventDetailsSkeleton.vue"
 import EventHosts from "@/components/dashboard/events/EventHosts.vue"
 import EventLinks from "@/components/dashboard/events/EventLinks.vue"
@@ -14,19 +15,32 @@ import EventMedium from "@/components/dashboard/events/EventMedium.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventRoute from "@/components/dashboard/events/EventRoute.vue"
 import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
+import EventTopics from "@/components/dashboard/events/EventTopics.vue"
+import EventAboutEditor from "@/components/dashboard/events/pages/EventAboutEditor.vue"
+import EventPages from "@/components/dashboard/events/pages/EventPages.vue"
 import { useFormDraft } from "@/composables/useFormDraft"
-import { eventDetail, updateEvent } from "@/data/events"
+import { eventDetail, setBanner, updateEvent } from "@/data/events"
 import { session } from "@/data/session"
+import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { EventDetail, EventExternalLink } from "@/types"
 import { isEndBeforeStart } from "@/utils/eventDates"
 import { matches } from "@/utils/formDraft"
-import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 import { serverErrorMessage } from "@/utils/serverError"
 
 const route = useRoute()
 const eventId = route.params.eventId as string
 
 const event = eventDetail(eventId)
+// Details View opens this page with every field locked; the server refuses the writes anyway.
+const canWrite = computed(() => !!event.data?.can_write)
+
+// Saved on its own by the sidebar switch, outside the form and its Save.
+const showCountdown = ref(false)
+watch(
+	() => event.data?.show_countdown,
+	(show) => (showCountdown.value = !!show),
+	{ immediate: true },
+)
 
 type EventForm = ReturnType<typeof blank>
 
@@ -62,6 +76,7 @@ function blank() {
 		venue: "",
 		meeting_link: "",
 		external_links: [] as EventExternalLink[],
+		topics: [] as string[],
 	}
 }
 
@@ -82,6 +97,7 @@ function fill(detail: EventDetail) {
 		venue: detail.venue?.name ?? "",
 		meeting_link: detail.meeting_link ?? "",
 		external_links: detail.external_links.map((link) => ({ ...link })),
+		topics: [...detail.topics],
 	})
 	// The editor rewrites its own HTML once it mounts, so the baseline is taken after
 	// that settles — otherwise the page loads already dirty.
@@ -149,11 +165,24 @@ async function adoptLocation() {
 	saved.value = { ...saved.value, ...location }
 }
 
+// Saved as soon as the crop is uploaded (or the banner removed), so it goes into both the
+// form and its baseline, like a converted location.
+async function saveBanner(bannerImage: string) {
+	await setBanner.submit({ name: eventId, banner_image: bannerImage || null }).catch(() => null)
+	if (setBanner.error) return
+	form.banner_image = bannerImage
+	saved.value = { ...saved.value, banner_image: bannerImage }
+	await event.reload()
+	toast.success(bannerImage ? "Banner updated" : "Banner removed")
+}
+
 function discard() {
 	if (event.data) fill(event.data)
 }
 
-const errorMessage = computed(() => serverErrorMessage(updateEvent.error))
+const errorMessage = computed(
+	() => serverErrorMessage(updateEvent.error) || serverErrorMessage(setBanner.error),
+)
 
 async function save() {
 	if (!canSave.value || updateEvent.loading) return
@@ -164,7 +193,9 @@ async function save() {
 	)
 	const submitted = { ...form }
 
-	await updateEvent.submit({ name: eventId, ...fields }).catch(() => null)
+	await updateEvent
+		.submit({ name: eventId, ...fields, topics: form.topics.map((topic) => ({ topic })) })
+		.catch(() => null)
 	if (updateEvent.error) return
 
 	// What the server now holds, not what the form holds — an edit made while the save
@@ -208,18 +239,40 @@ async function save() {
 		enter-active-class="transition-opacity duration-200 ease-out motion-reduce:transition-none"
 		enter-from-class="opacity-0"
 	>
-		<div v-if="event.data" class="m-auto w-full max-w-[800px] space-y-8 px-4 py-8">
+		<PageWithSidebar v-if="event.data">
 			<EventArchivedAlert :event="eventId" />
+
+			<Alert
+				v-if="!canWrite"
+				theme="gray"
+				:title="__('You can view this event, but not edit it')"
+				:description="
+					__('To make changes, ask the team that runs this event to give you edit access.')
+				"
+			/>
 
 			<ErrorMessage v-if="errorMessage" :message="errorMessage" />
 
 			<!-- Wrapped: the banner's hidden file input would otherwise take space-y margin. -->
-			<div class="max-md:px-4">
-				<EventBanner v-model="form.banner_image" :seed="form.title" />
-			</div>
+			<fieldset :disabled="!canWrite" class="min-w-0">
+				<!-- The saved schedule, not the form: the pill shows what the event page shows. -->
+				<EventBanner
+					:model-value="form.banner_image"
+					:seed="form.title"
+					:disabled="!canWrite"
+					@update:model-value="saveBanner"
+				>
+					<template v-if="showCountdown && event.data.countdown" #default>
+						<BannerCountdown
+							:starts-at="event.data.countdown.starts_at"
+							:ends-at="event.data.countdown.ends_at"
+						/>
+					</template>
+				</EventBanner>
+			</fieldset>
 
-			<div class="grid grid-cols-1 gap-8 md:grid-cols-5">
-				<div class="space-y-8 max-md:px-4 md:col-span-3">
+			<fieldset :disabled="!canWrite" class="grid min-w-0 grid-cols-1 gap-8 md:grid-cols-5">
+				<div class="space-y-8 md:col-span-3">
 					<div class="space-y-2">
 						<!-- Plain field on purpose: this is the page's headline, not a labelled one.
 						 A textarea rather than an input so a long name wraps; Enter is swallowed
@@ -244,36 +297,24 @@ async function save() {
 						/>
 					</div>
 
-					<section class="space-y-3">
-						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
-						<!-- Editor is renderless, so EditorContent's root is the ProseMirror element
-						 itself: the height and scrolling land on the editable area rather than on a
-						 wrapper, and the whole box takes a click. -->
-						<div
-							class="overflow-hidden rounded-6 border border-outline-gray-2 transition-colors duration-150 ease-out focus-within:border-outline-gray-4 motion-reduce:transition-none"
-						>
-							<Editor
-								v-model="form.about"
-								:extensions="richTextExtensions"
-								placeholder="What is this event about?"
-							>
-								<EditorFixedMenu
-									:items="richTextToolbar"
-									class="overflow-x-auto border-b border-outline-gray-2 px-2 py-1"
-								/>
-								<EditorContent
-									class="prose-sm h-48 max-w-none overflow-y-auto p-3 text-ink-gray-8 focus:outline-none"
-								/>
-							</Editor>
+					<section>
+						<div class="mb-2.5 flex items-baseline justify-between gap-3">
+							<h2 class="text-base font-semibold text-ink-gray-9">{{ __("About") }}</h2>
+							<span class="text-sm text-ink-gray-5">{{ __("Always shown first") }}</span>
 						</div>
+						<EventAboutEditor v-model="form.about" :readonly="!canWrite" />
 					</section>
+
+					<!-- The event's own extra tabs. Keyed by event: useEventPages resolves its
+					     filters once, and Details is reused when the route moves between events. -->
+					<EventPages :key="eventId" :event="eventId" :readonly="!canWrite" />
 				</div>
 
-				<div class="space-y-4 md:col-span-2">
+				<div class="space-y-4 max-md:-mx-4 md:col-span-2">
 					<!-- Every section in this column carries the same padding, so their labels
 					     share one left edge. -->
 					<EventRoute
-						class="rounded-6 p-4"
+						class="p-4 md:rounded-6"
 						v-model="form.route"
 						v-model:taken="routeTaken"
 						:event="eventId"
@@ -288,7 +329,9 @@ async function save() {
 						v-model:time-zone="form.time_zone"
 					/>
 
-					<section class="space-y-3 rounded-6 p-4">
+					<EventTopics v-model="form.topics" class="p-4 md:rounded-6" />
+
+					<section class="space-y-3 p-4 md:rounded-6">
 						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
 						<EventMedium
 							v-model:venue="form.venue"
@@ -301,16 +344,27 @@ async function save() {
 					</section>
 
 					<EventHosts
-						class="rounded-6 p-4"
+						class="p-4 md:rounded-6"
 						:event="eventId"
 						:primary-host="event.data.primary_host"
 						:co-hosts="event.data.co_hosts"
 						@changed="event.reload()"
 					/>
 
-					<EventLinks v-model="form.external_links" class="rounded-6 p-4" />
+					<EventLinks v-model="form.external_links" class="p-4 md:rounded-6" />
 				</div>
-			</div>
-		</div>
+			</fieldset>
+
+			<template #sidebar>
+				<fieldset :disabled="!canWrite" class="min-w-0">
+					<EventDetailsActions
+						v-model:show-countdown="showCountdown"
+						:event="eventId"
+						:route="event.data.route"
+						@changed="event.reload()"
+					/>
+				</fieldset>
+			</template>
+		</PageWithSidebar>
 	</Transition>
 </template>

@@ -87,7 +87,7 @@ const greeting = computed(() => {
 						icon="lucide-download"
 						aria-label="Download ticket"
 						tooltip="Download ticket"
-						:link="ticketPdfUrl(ticket.name)"
+						:href="ticketPdfUrl(ticket.name)"
 					/>
 				</div>
 				<PrintedTicket :ticket="ticket" class="-rotate-1" static />

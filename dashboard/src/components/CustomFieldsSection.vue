@@ -4,21 +4,20 @@
 			{{ __(title) || __("Additional Information") }}
 		</h5>
 
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+		<FormGrid :fields="customFields" v-slot="{ field }">
 			<CustomFieldInput
-				v-for="field in customFields"
-				:key="field.fieldname"
 				:field="field"
 				:model-value="getFieldValue(field.fieldname)"
 				@update:model-value="updateFieldValue(field.fieldname, $event)"
 			/>
-		</div>
+		</FormGrid>
 	</div>
 </template>
 
 <script setup lang="ts">
 import { type PropType } from "vue"
 
+import FormGrid from "@/components/FormGrid.vue"
 import { type FrappeField, getFieldDefaultValue } from "@/composables/useCustomFields"
 
 import CustomFieldInput from "./CustomFieldInput.vue"

@@ -22,7 +22,7 @@ before_uninstall = "buzz.uninstall.before_uninstall"
 
 website_route_rules = [
 	{"from_route": "/events/<event_route>", "to_route": "event"},
-	{"from_route": "/events/<event_route>/<page_route>", "to_route": "event"},
+	{"from_route": "/u/<username>", "to_route": "user_profile"},
 	{"from_route": "/b", "to_route": "dashboard"},
 	{"from_route": "/b/<path:app_path>", "to_route": "dashboard"},
 ]
@@ -44,6 +44,8 @@ website_redirects = [
 		"forward_query_parameters": True,
 	},
 	{"source": r"/dashboard/(.*)", "target": r"/b/\1", "forward_query_parameters": True},
+	# Additional event pages used to have their own URL; they are tabs on the event page now.
+	{"source": r"/events/([^/]+)/[^/]+", "target": r"/events/\1", "forward_query_parameters": True},
 	# Bare /dashboard has no trailing slash for the catch-all above to match, and
 	# www/dashboard.html would otherwise serve the SPA shell under the wrong base.
 	{"source": r"/dashboard", "target": "/b", "forward_query_parameters": True},
@@ -53,10 +55,16 @@ website_redirects = [
 # ---------------
 
 scheduler_events = {
+	"hourly": [
+		"buzz.ticketing.doctype.ticket_hold.ticket_hold.delete_expired_holds",
+		"buzz.playground.cleanup.delete_expired_sandboxes",
+	],
 	"daily": [
 		"buzz.tasks.unpublish_ticket_types_after_last_date",
 		"buzz.telemetry_scan.send_site_profile",
-	]
+		# Teams' share images count their upcoming events, which drift as days pass
+		"buzz.events.community_og_image.enqueue_all_published",
+	],
 }
 
 # Testing
@@ -67,7 +75,10 @@ before_tests = "buzz.install.before_tests"
 
 doc_events = {
 	"User": {
-		"after_insert": "buzz.utils.add_buzz_user_role",
+		"after_insert": [
+			"buzz.utils.add_buzz_user_role",
+			"buzz.events.doctype.buzz_team.buzz_team.create_personal_team_on_signup",
+		],
 		"on_update": "buzz.events.doctype.speaker_profile.speaker_profile.update_speaker_display_name",
 	},
 	"Currency": {
@@ -81,14 +92,36 @@ doc_events = {
 	},
 }
 
+doc_events["Buzz Event"].update(
+	{
+		"on_update": ["buzz.events.buzz_events_listing.enqueue_push"],
+		"on_trash": ["buzz.events.buzz_events_listing.enqueue_remove"],
+	}
+)
+
 # Records a Buzz Tag can be applied to; deleting one also removes its tags.
 taggable_doctypes = ["Event Sponsor", "Buzz Event", "Talk Proposal", "Buzz Team Membership"]
 for _doctype in taggable_doctypes:
-	doc_events.setdefault(_doctype, {})["on_trash"] = "buzz.events.doctype.buzz_tag.buzz_tag.delete_tag_links"
+	doc_events.setdefault(_doctype, {}).setdefault("on_trash", []).append(
+		"buzz.events.doctype.buzz_tag.buzz_tag.delete_tag_links"
+	)
+
+commentable_doctypes = ["Talk Proposal"]
+for _doctype in commentable_doctypes:
+	doc_events.setdefault(_doctype, {}).setdefault("on_trash", []).append(
+		"buzz.subscriptions.delete_record_subscriptions"
+	)
+doc_events["Communication"] = {"after_insert": "buzz.comments.notify_team_of_email"}
+doc_events["Email Queue"] = {"after_insert": "buzz.playground.inbox.capture_email"}
+doc_events.setdefault("Buzz Team", {})["after_insert"] = "buzz.playground.demo_data.seed_community_requests"
+extend_doctype_class = {"Comment": ["buzz.comments.TeamComment"]}
 
 fixtures = [
 	{"dt": "Role", "filters": {"name": ["in", ["Buzz User", "Event Manager", "Frontdesk Manager"]]}},
 	{"dt": "Buzz Theme", "filters": {"is_standard": 1}},
+	{"dt": "Event Topic", "filters": {"is_standard": 1}},
+	{"dt": "Buzz Schedule Item Type", "filters": {"is_standard": 1}},
+	{"dt": "Notification Type", "filters": {"name": "Buzz Activity"}},
 ]
 
 user_invitation = {
@@ -98,7 +131,11 @@ user_invitation = {
 }
 
 
-ignore_links_on_delete = ["Ticket Cancellation Request", "Ticket Add-on Value"]
+ignore_links_on_delete = [
+	"Ticket Cancellation Request",
+	"Ticket Add-on Value",
+	"Buzz Notification Subscription",
+]
 
 after_app_install = "buzz.install.after_app_install"
 
@@ -169,7 +206,14 @@ add_to_apps_screen = [
 # ----------
 
 jinja = {
-	"methods": ["buzz.emails.email_event_header", "buzz.emails.email_brand", "buzz.islands.island_script"],
+	"methods": [
+		"buzz.emails.email_event_header",
+		"buzz.emails.email_brand",
+		"buzz.analytics.posthog_config",
+		"buzz.islands.island_script",
+		"buzz.playground.playground_boot",
+		"buzz.www.site_header.buzz_navbar",
+	],
 }
 
 # Installation
@@ -213,7 +257,7 @@ after_migrate = "buzz.install.on_migrate"
 # compose the team scope with the speaker carve-out — one function per doctype per hook.
 
 permission_query_conditions = {
-	"Sponsor Enquiry Form": "buzz.permissions.derived_query_conditions",
+	"Buzz Form": "buzz.permissions.derived_query_conditions",
 	"Buzz Event": "buzz.permissions.team_query_conditions",
 	"Buzz Campaign": "buzz.permissions.team_query_conditions",
 	"Event Host": "buzz.permissions.team_query_conditions",
@@ -226,17 +270,27 @@ permission_query_conditions = {
 	"Buzz Custom Field": "buzz.permissions.derived_query_conditions",
 	"Event Booking": "buzz.permissions.derived_query_conditions",
 	"Event Check In": "buzz.permissions.derived_query_conditions",
+	"Event Check-in Zone": "buzz.permissions.derived_query_conditions",
 	"Event Communication": "buzz.permissions.derived_query_conditions",
 	"Event Feedback": "buzz.permissions.derived_query_conditions",
 	"Event Sponsor": "buzz.permissions.derived_query_conditions",
 	"Event Talk": "buzz.permissions.derived_query_conditions",
 	"Event Ticket": "buzz.permissions.derived_query_conditions",
+	"Event Ticket Category": "buzz.permissions.derived_query_conditions",
 	"Event Ticket Type": "buzz.permissions.derived_query_conditions",
-	"Event Track": "buzz.permissions.derived_query_conditions",
+	"Buzz Schedule": "buzz.permissions.derived_query_conditions",
+	"Buzz Schedule Track": "buzz.permissions.derived_query_conditions",
+	"Buzz Schedule Item Type": "buzz.permissions.item_type_query_conditions",
 	"Offline Payment Method": "buzz.permissions.derived_query_conditions",
 	"Sponsorship Enquiry": "buzz.permissions.derived_query_conditions",
 	"Sponsorship Tier": "buzz.permissions.derived_query_conditions",
 	"Ticket Add-on": "buzz.permissions.derived_query_conditions",
+	"Ticket Hold": "buzz.permissions.derived_query_conditions",
+	"Buzz Event Collaborator": "buzz.permissions.team_query_conditions",
+	"Event Payment": "buzz.booking_permissions.booking_query_conditions",
+	"Ticket Cancellation Request": "buzz.booking_permissions.booking_query_conditions",
+	"Event Booking Refund": "buzz.booking_permissions.booking_query_conditions",
+	"Attendee Ticket Add-on": "buzz.booking_permissions.booking_query_conditions",
 	"Buzz Team": "buzz.permissions.team_doc_query_conditions",
 	"Buzz Team Membership": "buzz.permissions.membership_query_conditions",
 	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.get_permission_query_conditions",
@@ -248,7 +302,7 @@ permission_query_conditions = {
 standard_queries = {"Buzz Team": "buzz.permissions.team_link_query"}
 
 has_permission = {
-	"Sponsor Enquiry Form": "buzz.permissions.derived_has_permission",
+	"Buzz Form": "buzz.permissions.derived_has_permission",
 	"Buzz Event": "buzz.permissions.team_has_permission",
 	"Buzz Campaign": "buzz.permissions.team_has_permission",
 	"Event Host": "buzz.permissions.team_has_permission",
@@ -261,17 +315,28 @@ has_permission = {
 	"Buzz Custom Field": "buzz.permissions.derived_has_permission",
 	"Event Booking": "buzz.permissions.derived_has_permission",
 	"Event Check In": "buzz.permissions.derived_has_permission",
+	"Event Check-in Zone": "buzz.permissions.derived_has_permission",
 	"Event Communication": "buzz.permissions.derived_has_permission",
 	"Event Feedback": "buzz.permissions.derived_has_permission",
 	"Event Sponsor": "buzz.permissions.derived_has_permission",
 	"Event Talk": "buzz.permissions.derived_has_permission",
 	"Event Ticket": "buzz.permissions.derived_has_permission",
+	"Event Ticket Category": "buzz.permissions.derived_has_permission",
 	"Event Ticket Type": "buzz.permissions.derived_has_permission",
-	"Event Track": "buzz.permissions.derived_has_permission",
+	"Buzz Schedule": "buzz.permissions.derived_has_permission",
+	"Buzz Schedule Track": "buzz.permissions.derived_has_permission",
+	"Buzz Schedule Item Type": "buzz.permissions.item_type_has_permission",
 	"Offline Payment Method": "buzz.permissions.derived_has_permission",
 	"Sponsorship Enquiry": "buzz.permissions.derived_has_permission",
 	"Sponsorship Tier": "buzz.permissions.derived_has_permission",
 	"Ticket Add-on": "buzz.permissions.derived_has_permission",
+	"Ticket Hold": "buzz.permissions.derived_has_permission",
+	"Buzz Event Collaborator": "buzz.permissions.team_admin_has_permission",
+	"Event Payment": "buzz.booking_permissions.booking_has_permission",
+	"Ticket Cancellation Request": "buzz.booking_permissions.booking_has_permission",
+	"Event Booking Refund": "buzz.booking_permissions.booking_has_permission",
+	"Attendee Ticket Add-on": "buzz.booking_permissions.booking_has_permission",
+	"Speaker Profile": "buzz.booking_permissions.speaker_profile_has_permission",
 	"Buzz Team": "buzz.permissions.team_doc_has_permission",
 	"Buzz Team Membership": "buzz.permissions.team_admin_has_permission",
 	"Talk Proposal": "buzz.proposals.doctype.talk_proposal.talk_proposal.has_talk_proposal_permission",
@@ -311,7 +376,7 @@ override_whitelisted_methods = {
 # Request Events
 # ----------------
 # before_request = ["events.utils.before_request"]
-# after_request = ["events.utils.after_request"]
+after_request = ["buzz.playground.add_noindex_header"]
 
 # Job Events
 # ----------

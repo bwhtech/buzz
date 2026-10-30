@@ -75,7 +75,7 @@
 		:placeholder="getFieldPlaceholder(field)"
 	/>
 
-	<div v-else-if="isTextareaField(field.fieldtype)" class="space-y-1.5">
+	<div v-else-if="field.fieldtype === 'Small Text'" class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(field.label) }}
 			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
@@ -89,6 +89,14 @@
 		/>
 	</div>
 
+	<div v-else-if="field.fieldtype === 'Text Editor'" class="space-y-1.5">
+		<label class="text-xs text-ink-gray-5 block">
+			{{ __(field.label) }}
+			<span v-if="field.mandatory" class="text-ink-red-8">*</span>
+		</label>
+		<RichTextFieldInput v-model="model" :placeholder="getFieldPlaceholder(field)" />
+	</div>
+
 	<div v-else-if="field.fieldtype === 'Rating'" class="space-y-1.5">
 		<label class="text-xs text-ink-gray-5 block">
 			{{ __(field.label) }}
@@ -96,6 +104,7 @@
 		</label>
 		<Rating
 			:model-value="Math.round((modelValue || 0) * 5)"
+			size="md"
 			@update:model-value="$emit('update:modelValue', $event / 5)"
 		/>
 	</div>
@@ -160,6 +169,36 @@
 		</FileUploader>
 	</div>
 
+	<h3 v-else-if="field.fieldtype === 'Heading'" class="pt-2 text-lg font-semibold text-ink-gray-9">
+		{{ __(field.label) }}
+	</h3>
+
+	<div
+		v-else-if="field.fieldtype === 'Paragraph'"
+		class="prose prose-sm max-w-none text-ink-gray-7"
+		v-html="field.description"
+	/>
+
+	<hr v-else-if="field.fieldtype === 'Divider'" class="border-outline-gray-2" />
+
+	<!-- Steps are split out by the form; anywhere else a page break draws nothing. -->
+	<template v-else-if="field.fieldtype === 'Page Break'" />
+
+	<RadioGroup
+		v-else-if="field.fieldtype === 'Radio'"
+		:model-value="modelValue"
+		@update:model-value="$emit('update:modelValue', $event)"
+		:label="__(field.label)"
+		:required="!!field.mandatory"
+	>
+		<Radio
+			v-for="option in getFieldOptions(field)"
+			:key="option.value"
+			:value="option.value"
+			:label="option.label"
+		/>
+	</RadioGroup>
+
 	<FormControl
 		v-else
 		:model-value="modelValue"
@@ -180,10 +219,12 @@ import {
 	FileUploader,
 	TimePicker,
 	MultiSelect,
+	Radio,
+	RadioGroup,
 	Rating,
 	Textarea,
 } from "frappe-ui"
-import { computed, type PropType } from "vue"
+import { computed, defineAsyncComponent, type PropType } from "vue"
 import LucideX from "~icons/lucide/x"
 
 import PhoneInput from "@/components/PhoneInput.vue"
@@ -194,8 +235,10 @@ import {
 	getFormControlType,
 	isDateField,
 	isDateTimeField,
-	isTextareaField,
 } from "@/composables/useCustomFields"
+
+// Loaded only for a form that has a rich text question: the editor is the app's largest chunk.
+const RichTextFieldInput = defineAsyncComponent(() => import("@/components/RichTextFieldInput.vue"))
 
 const props = defineProps({
 	field: {
@@ -216,12 +259,8 @@ const multiSelectProxy = computed({
 		return Array.isArray(model.value) ? model.value : String(model.value).split(",")
 	},
 	set(val) {
-		if (!val || val.length === 0) {
-			model.value = ""
-		} else {
-			const values = val.map((item) => item.value || item)
-			model.value = values.join(",")
-		}
+		// The server takes a Multi Select answer as a list.
+		model.value = (val ?? []).map((item) => item.value || item)
 	},
 })
 

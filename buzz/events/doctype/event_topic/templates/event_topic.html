@@ -1,0 +1,76 @@
+{% extends "buzz/templates/event_page/layout.html" %}
+
+{% block title %}{% autoescape true %}{{ title }}{% endautoescape %}{% endblock %}
+
+{% block meta_block %}{% autoescape true %}
+	<meta name="description" content="{{ meta.description }}">
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="{{ brand.name }}">
+	<meta property="og:title" content="{{ title }}">
+	<meta property="og:description" content="{{ meta.description }}">
+	<meta property="og:url" content="{{ meta.url }}">
+	<meta name="twitter:card" content="summary">
+	<link rel="canonical" href="{{ meta.url }}">
+	<link rel="stylesheet" href="/assets/buzz/themes/team.css">
+	<link rel="stylesheet" href="/assets/buzz/themes/event_card.css">
+	<link rel="stylesheet" href="/assets/buzz/themes/team_map.css">
+	<link rel="stylesheet" href="/assets/buzz/themes/topic.css">
+{% endautoescape %}{% endblock %}
+
+{% block content %}{% autoescape true %}
+	{% from "buzz/templates/event_page/timeline.html" import timeline, month_calendar, dot_map with context %}
+	{% set has_events = upcoming_days or past_days %}
+
+	<main class="event-content team-page topic-page">
+		<header class="topic-hero">
+			{# Admin-curated SVG, drawn inline so its strokes can animate in. #}
+			<span class="topic-icon" aria-hidden="true">{{ doc.icon_svg | safe }}</span>
+			<div class="topic-hero-text">
+				<h1 class="event-title">{{ doc.name }}</h1>
+				{% if doc.short_description %}<p class="topic-description">{{ doc.short_description }}</p>{% endif %}
+				<p class="topic-stats">
+					{% for stat in stats %}
+					<span><b>{{ stat.value }}</b> {{ stat.label }}</span>{% if not loop.last %}<span aria-hidden="true">·</span>{% endif %}
+					{% else %}{{ _("No upcoming events") }}{% endfor %}
+				</p>
+			</div>
+		</header>
+
+		<div class="team-columns">
+			<div class="team-events">
+				{% if has_events %}
+				{{ timeline(upcoming_days, past_days) }}
+				{% else %}
+				<div class="topic-empty">
+					<span class="topic-empty-icon" aria-hidden="true">{{ doc.icon_svg | safe }}</span>
+					<h2>{{ _("No {0} events yet").format(doc.name) }}</h2>
+					<p>{{ _("Nothing is scheduled here right now. Host the first one, or explore a related topic.") }}</p>
+					<a class="es-button" data-variant="solid" data-size="md" href="/b/manage/team/events/new">{{ _("Host an event") }}</a>
+				</div>
+				{% endif %}
+			</div>
+
+			<aside class="team-aside topic-aside">
+				{% if has_events %}{{ month_calendar() }}{% endif %}
+				{% if has_pins %}{{ dot_map() }}{% endif %}
+				{% if related_topics %}
+				<section class="team-about">
+					<h2 class="label">{{ _("Related topics") }}</h2>
+					<div class="topic-chips">
+						{% for topic in related_topics %}
+						<a class="topic-chip" href="{{ topic.url }}">{% if topic.icon_url %}<span class="topic-chip-icon" style="--icon: url('{{ topic.icon_url }}')" aria-hidden="true"></span>{% endif %}{{ topic.name }}</a>
+						{% endfor %}
+					</div>
+				</section>
+				{% endif %}
+			</aside>
+		</div>
+	</main>
+
+	<script type="application/json" id="team-page-data">{{ page_data | tojson }}</script>
+{% endautoescape %}{% endblock %}
+
+{% block script %}
+	{{ super() }}
+	<script src="{{ bundled_asset('team_page.bundle.ts') }}" defer></script>
+{% endblock %}

@@ -184,16 +184,18 @@ function render_save_template_options(dialog, frm) {
 		},
 		{
 			id: "custom-fields-option",
-			doctype: "Buzz Custom Field",
+			// Questions live on the event's forms; this counts the forms that have any.
+			doctype: "Buzz Form",
+			filters: { "questions.name": ["is", "set"] },
 			option: "custom_fields",
-			label: __("Custom Fields"),
+			label: __("Forms with questions"),
 		},
 	]
 
 	for (let item of linked_doctypes) {
 		frappe.call({
 			method: "frappe.client.get_count",
-			args: { doctype: item.doctype, filters: { event: doc.name } },
+			args: { doctype: item.doctype, filters: { event: doc.name, ...item.filters } },
 			callback: function (r) {
 				let count = r.message || 0
 				$wrapper.find(`#${item.id}`).html(`
@@ -292,15 +294,6 @@ function show_save_as_template_dialog(frm) {
 	dialog.show()
 }
 
-frappe.ui.form.on("Buzz Event Form", {
-	copy_to_clipboard(frm, cdt, cdn) {
-		const row = frappe.get_doc(cdt, cdn)
-		const url = `${window.location.origin}/b/${frm.doc.route}/${row.route}`
-		navigator.clipboard.writeText(url)
-		frappe.show_alert({ message: __("Link copied!"), indicator: "green" })
-	},
-})
-
 // min_date on the df is only read when the control builds its picker,
 // so the datepicker instance has to be updated directly.
 function set_end_date_limit(frm) {
@@ -312,14 +305,17 @@ function set_end_date_limit(frm) {
 frappe.ui.form.on("Buzz Event", {
 	async open_sponsor_form(frm) {
 		const result = await frappe.db.get_value(
-			"Sponsor Enquiry Form",
-			{ event: frm.doc.name },
+			"Buzz Form",
+			{ event: frm.doc.name, form_doctype: "Sponsorship Enquiry" },
 			"name",
 		)
 		if (result.message?.name) {
-			frappe.set_route("Form", "Sponsor Enquiry Form", result.message.name)
+			frappe.set_route("Form", "Buzz Form", result.message.name)
 		} else {
-			frappe.new_doc("Sponsor Enquiry Form", { event: frm.doc.name })
+			frappe.new_doc("Buzz Form", {
+				event: frm.doc.name,
+				form_doctype: "Sponsorship Enquiry",
+			})
 		}
 	},
 	refresh(frm) {
@@ -342,14 +338,6 @@ frappe.ui.form.on("Buzz Event", {
 		frm.add_custom_button(button_label, () => {
 			frm.set_value("is_published", !frm.doc.is_published)
 			frm.save()
-		})
-
-		frm.set_query("track", "schedule", (doc) => {
-			return {
-				filters: {
-					event: doc.name,
-				},
-			}
 		})
 
 		frm.set_query("default_ticket_type", (doc) => {

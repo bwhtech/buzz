@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from buzz.api.booking.event_data import get_registration_success
 from buzz.api.booking.schemas import (
 	BookingConfirmationResponse,
 	BookingDetailsResponse,
@@ -10,10 +11,10 @@ from buzz.api.booking.schemas import (
 	ConfirmationBooking,
 	ConfirmationEvent,
 	ConfirmationTicket,
-	ConfirmationVenue,
 )
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, verify_booking_access_token
 from buzz.api.tickets import windows
+from buzz.events.doctype.event_venue.details import venue_details
 from buzz.utils import qr_data_uri
 
 TICKET_FIELDS = [
@@ -25,7 +26,8 @@ TICKET_FIELDS = [
 ]
 
 
-def build_booking_confirmation(booking_id: str, token: str | None) -> BookingConfirmationResponse:
+def ensure_confirmation_access(booking_id: str, token: str | None) -> None:
+	"""A guest holds the booking's token; a signed-in user needs read permission."""
 	# nosemgrep: unchecked-frappe-permission-call -- return value checked below
 	authorized = verify_booking_access_token(booking_id, token) or frappe.has_permission(
 		"Event Booking", "read", doc=booking_id
@@ -33,6 +35,9 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 	if not authorized:
 		frappe.throw(_("You are not allowed to view this booking."), frappe.PermissionError)
 
+
+def build_booking_confirmation(booking_id: str, token: str | None) -> BookingConfirmationResponse:
+	ensure_confirmation_access(booking_id, token)
 	booking_doc = frappe.get_cached_doc("Event Booking", booking_id)
 	event_doc = frappe.get_cached_doc("Buzz Event", booking_doc.event)
 	tickets = frappe.db.get_all("Event Ticket", filters={"booking": booking_id}, fields=TICKET_FIELDS)
@@ -48,7 +53,8 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 			short_description=event_doc.get("short_description"),
 			free_event=event_doc.get("free_event"),
 		),
-		venue=get_confirmation_venue(event_doc.venue),
+		venue=venue_details(event_doc.venue),
+		success=get_registration_success(event_doc.name),
 		booking=ConfirmationBooking(
 			name=booking_doc.name,
 			total_amount=booking_doc.total_amount,
@@ -60,18 +66,30 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 			tax_label=booking_doc.tax_label,
 			tax_percentage=booking_doc.tax_percentage,
 			discount_amount=booking_doc.discount_amount,
-			coupon_code=booking_doc.coupon_code,
+			coupon_code=coupon_code_of(booking_doc),
+			payment_method=payment_method(booking_doc),
+			booked_on=booking_doc.creation,
 		),
 		# Guests read this with a token and no session, so the private QR file is inlined
 		tickets=[ConfirmationTicket(**{**ticket, "qr_code": qr_data_uri(ticket.name)}) for ticket in tickets],
 	)
 
 
-def get_confirmation_venue(venue_id: str | None) -> ConfirmationVenue | None:
-	if not venue_id:
-		return None
-	venue_doc = frappe.get_cached_doc("Event Venue", venue_id)
-	return ConfirmationVenue(venue_name=venue_doc.venue_name, address=venue_doc.get("address"))
+def coupon_code_of(booking) -> str | None:
+	"""The code buyers typed, or an automatic offer's name."""
+	if booking.coupon_code:
+		return frappe.db.get_value("Buzz Coupon Code", booking.coupon_code, "code")
+
+
+def payment_method(booking) -> str | None:
+	"""The offline method the buyer picked, or the gateway an online payment went through."""
+	if booking.payment_method == OFFLINE_PAYMENT_METHOD:
+		return booking.offline_payment_method
+	return frappe.db.get_value(
+		"Event Payment",
+		{"reference_doctype": "Event Booking", "reference_docname": booking.name, "payment_received": 1},
+		"payment_gateway",
+	)
 
 
 def build_booking_details(booking_id: str) -> BookingDetailsResponse:
@@ -88,10 +106,10 @@ def build_booking_details(booking_id: str) -> BookingDetailsResponse:
 	)
 
 	return BookingDetailsResponse(
-		doc=booking_doc,
+		doc=frappe._dict(booking_doc.as_dict(no_nulls=True), coupon_code=coupon_code_of(booking_doc)),
 		tickets=tickets,
 		event=event_doc,
-		venue=frappe.get_cached_doc("Event Venue", event_doc.venue) if event_doc.venue else None,
+		venue=venue_details(event_doc.venue),
 		can_transfer_ticket=windows.is_window_open(event_doc.name, windows.TRANSFER),
 		can_change_add_ons=windows.is_window_open(event_doc.name, windows.ADD_ON_CHANGE),
 		can_request_cancellation=windows.is_window_open(event_doc.name, windows.CANCELLATION),
@@ -244,7 +262,7 @@ def summarize_booking(booking, titles: dict[str, str], add_ons: dict[str, list])
 		lines=build_lines(booking, titles, add_ons),
 		net_amount=flt(booking.net_amount),
 		discount_amount=flt(booking.discount_amount),
-		coupon_code=booking.coupon_code,
+		coupon_code=coupon_code_of(booking),
 		tax_amount=flt(booking.tax_amount),
 		tax_label=booking.tax_label,
 		tax_percentage=flt(booking.tax_percentage),
@@ -253,12 +271,7 @@ def summarize_booking(booking, titles: dict[str, str], add_ons: dict[str, list])
 
 
 def build_lines(booking, titles: dict[str, str], add_ons: dict[str, list]) -> list[BookingLine]:
-	"""One line per ticket type, with the add-ons bought against it beneath.
-
-	Line amounts are the stored attendee amounts. A Free Tickets coupon zeroes
-	those after the subtotal has already counted them, so under that coupon the lines sum
-	to less than `net_amount` and the discount line makes up the difference.
-	"""
+	"""One line per ticket type, with the add-ons bought against it beneath."""
 	lines: dict[str, BookingLine] = {}
 	# Two add-ons of one event may carry the same title, so the sub-lines are keyed by
 	# add-on id and the title is only ever displayed.

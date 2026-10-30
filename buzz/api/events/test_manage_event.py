@@ -16,6 +16,7 @@ from buzz.tests.factories import (
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
 	EventCategoryFactory,
+	EventTopicFactory,
 	EventVenueFactory,
 	UserFactory,
 )
@@ -113,6 +114,14 @@ class TestGetEvent(IntegrationTestCase):
 		self.assertIsNone(detail["venue"])
 		self.assertTrue(detail["modified"])
 
+	def test_returns_topics_in_the_order_they_were_saved(self):
+		topics = [EventTopicFactory.create().name for _ in range(2)]
+		event = self.create_team_event(topics=[{"topic": topic} for topic in reversed(topics)])
+
+		detail = self.detail_as(self.owner, event)
+
+		self.assertEqual(detail["topics"], list(reversed(topics)))
+
 	def test_resolves_the_venue_with_its_address(self):
 		venue = EventVenueFactory.create(team=self.team, address="12 Example Street").name
 		event = self.create_team_event("in_person", venue=venue)
@@ -122,11 +131,11 @@ class TestGetEvent(IntegrationTestCase):
 		self.assertEqual(detail["venue"]["name"], venue)
 		self.assertEqual(detail["venue"]["address"], "12 Example Street")
 
-	def test_a_viewer_cannot_open_the_manage_payload(self):
+	def test_a_viewer_opens_the_manage_payload_read_only(self):
 		event = self.create_team_event()
 
-		with self.assertRaises(CannotManageEvent):
-			self.detail_as(self.viewer, event)
+		self.assertFalse(self.detail_as(self.viewer, event)["can_write"])
+		self.assertTrue(self.detail_as(self.owner, event)["can_write"])
 
 	def test_a_non_member_cannot_open_the_manage_payload(self):
 		event = self.create_team_event()

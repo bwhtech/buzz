@@ -7,7 +7,48 @@ from frappe.query_builder.builder import QueryBuilder
 
 WRITE_ROLES = frozenset({"Owner", "Admin", "Manager"})
 ADMIN_ROLES = frozenset({"Owner", "Admin"})
+CHECKIN_ROLES = frozenset({"Owner", "Admin", "Manager", "Frontdesk"})
+# A bot role for partner sites: it holds a membership but no access of its own.
+INTEGRATION_ROLE = "Integration"
+# Filters for the people on a team, leaving out integration users.
+HUMAN_MEMBER_FILTERS = {"enabled": 1, "team_role": ["!=", INTEGRATION_ROLE]}
 WRITE_PTYPES = frozenset({"write", "create", "submit", "cancel", "amend", "delete"})
+
+SECTIONS = ("details", "guests", "ticketing", "talks", "sponsors", "communications")
+EDIT = "Edit"
+VIEW = "View"
+
+DOCTYPE_SECTION = {
+	"Buzz Event": "details",
+	"Additional Event Page": "details",
+	"Event Booking": "guests",
+	"Event Ticket": "guests",
+	"Event Check In": "guests",
+	"Event Check-in Zone": "guests",
+	"Event Feedback": "guests",
+	"Event Ticket Type": "ticketing",
+	"Event Ticket Category": "ticketing",
+	"Ticket Add-on": "ticketing",
+	"Buzz Coupon Code": "ticketing",
+	"Ticket Hold": "ticketing",
+	"Offline Payment Method": "ticketing",
+	"Buzz Custom Field": "ticketing",
+	"Event Talk": "talks",
+	"Talk Proposal": "talks",
+	"Buzz Schedule": "talks",
+	"Buzz Schedule Track": "talks",
+	"Event Sponsor": "sponsors",
+	"Sponsorship Tier": "sponsors",
+	"Sponsorship Enquiry": "sponsors",
+	"Event Communication": "communications",
+}
+
+# A Buzz Form collects the rows of one doctype, so it belongs to that doctype's section.
+FORM_SECTION = {**DOCTYPE_SECTION, "Event Booking Attendee": "guests"}
+FORM_DOCTYPES_BY_SECTION = {
+	section: [doctype for doctype, mapped in FORM_SECTION.items() if mapped == section]
+	for section in SECTIONS
+}
 
 # Attendees, sponsors and speakers reach their own rows without any membership.
 OWNER_VISIBLE_DOCTYPES = frozenset({"Event Booking", "Event Ticket", "Sponsorship Enquiry", "Event Talk"})
@@ -38,12 +79,16 @@ def my_teams(user: str) -> QueryBuilder:
 	return (
 		frappe.qb.from_(membership)
 		.select(membership.team)
-		.where((membership.user == user) & (membership.enabled == 1))
+		.where(
+			(membership.user == user) & (membership.enabled == 1) & (membership.team_role != INTEGRATION_ROLE)
+		)
 	)
 
 
 def my_team_names(user: str) -> list[str]:
-	return frappe.get_all("Buzz Team Membership", filters={"user": user, "enabled": 1}, pluck="team")
+	return frappe.get_all(
+		"Buzz Team Membership", filters={**HUMAN_MEMBER_FILTERS, "user": user}, pluck="team"
+	)
 
 
 @frappe.whitelist()
@@ -74,9 +119,27 @@ def published_events() -> QueryBuilder:
 	return frappe.qb.from_(event).select(event.name).where(event.is_published == 1)
 
 
-def my_team_events(user: str) -> QueryBuilder:
+def collaborator_events(user: str, section: str) -> QueryBuilder:
+	collaborator = frappe.qb.DocType("Buzz Event Collaborator")
+	return (
+		frappe.qb.from_(collaborator)
+		.select(collaborator.event)
+		.where(
+			(collaborator.user == user)
+			& (collaborator.status == "Accepted")
+			& collaborator[f"{section}_access"].isin([VIEW, EDIT])
+		)
+	)
+
+
+def events_with_section_access(user: str, section: str) -> QueryBuilder:
+	"""The team's events, plus the events a collaborator holds `section` on."""
 	event = frappe.qb.DocType("Buzz Event")
-	return frappe.qb.from_(event).select(event.name).where(event.team.isin(my_teams(user)))
+	return (
+		frappe.qb.from_(event)
+		.select(event.name)
+		.where(event.team.isin(my_teams(user)) | event.name.isin(collaborator_events(user, section)))
+	)
 
 
 def my_bookings(user: str) -> QueryBuilder:
@@ -106,7 +169,7 @@ def team_role_of(user: str, team: str | None) -> str | None:
 	if not team:
 		return None
 	return frappe.db.get_value(
-		"Buzz Team Membership", {"user": user, "team": team, "enabled": 1}, "team_role"
+		"Buzz Team Membership", {**HUMAN_MEMBER_FILTERS, "user": user, "team": team}, "team_role"
 	)
 
 
@@ -130,6 +193,61 @@ def has_team_access(team: str | None, ptype: str, user: str) -> bool:
 	return bool(team_role) and role_allows(team_role, ptype)
 
 
+def team_role_access(team_role: str) -> dict[str, str]:
+	if team_role in WRITE_ROLES:
+		return dict.fromkeys(SECTIONS, EDIT)
+	if team_role == "Frontdesk":
+		return {section: EDIT if section == "guests" else VIEW for section in SECTIONS}
+	return dict.fromkeys(SECTIONS, VIEW)
+
+
+def collaborator_access(user: str, event: str) -> dict[str, str | None]:
+	row = frappe.db.get_value(
+		"Buzz Event Collaborator",
+		{"event": event, "user": user, "status": "Accepted"},
+		[f"{section}_access" for section in SECTIONS],
+		as_dict=True,
+	)
+	return {section: (row[f"{section}_access"] or None) if row else None for section in SECTIONS}
+
+
+def get_section_access(user: str, event: str) -> dict[str, str | None]:
+	"""Section -> "View" | "Edit" | None, for a team member and a collaborator alike."""
+	if is_unrestricted(user):
+		return dict.fromkeys(SECTIONS, EDIT)
+
+	team_role = team_role_of(user, frappe.db.get_value("Buzz Event", event, "team"))
+	return team_role_access(team_role) if team_role else collaborator_access(user, event)
+
+
+def collaborator_allows(user: str, event: str, section: str, ptype: str) -> bool:
+	level = collaborator_access(user, event)[section]
+	if not level or ptype == "delete":
+		return False
+	return level == EDIT or ptype not in WRITE_PTYPES
+
+
+def has_section_permission(event: str | None, section: str, ptype: str, user: str | None = None) -> bool:
+	"""Deny-only check for a document of `event`'s `section`; team roles are unchanged."""
+	user = user or frappe.session.user
+	team = frappe.db.get_value("Buzz Event", event, "team") if event else None
+	# An unstamped row predates the backfill; role permissions still gate it.
+	if is_unrestricted(user) or not team:
+		return True
+	if team_role := team_role_of(user, team):
+		return role_allows(team_role, ptype)
+	return collaborator_allows(user, event, section, ptype)
+
+
+def can_check_in(event: str, user: str) -> bool:
+	"""Front-desk work on an event. Unlike has_section_permission, an unstamped event fails closed."""
+	if is_unrestricted(user):
+		return True
+	if team_role := team_role_of(user, frappe.db.get_value("Buzz Event", event, "team")):
+		return team_role in CHECKIN_ROLES
+	return collaborator_allows(user, event, "guests", "write")
+
+
 def team_query_conditions(user: str | None = None, doctype: str | None = None, **kwargs) -> str | None:
 	user = user or frappe.session.user
 	if is_unrestricted(user):
@@ -139,9 +257,27 @@ def team_query_conditions(user: str | None = None, doctype: str | None = None, *
 	if doctype == "Buzz Event":
 		if user == "Guest":
 			return None
-		return as_sql(table.team.isin(my_teams(user)) | (table.is_published == 1))
+		return as_sql(
+			table.name.isin(events_with_section_access(user, "details")) | (table.is_published == 1)
+		)
 
 	return as_sql(table.team.isin(my_teams(user)))
+
+
+def form_section(form_doctype: str | None) -> str:
+	return FORM_SECTION.get(form_doctype, "details")
+
+
+def form_query_criterion(user: str, table) -> Criterion:
+	"""A form is visible to whoever may read the rows it collects."""
+	criterion = table.form_doctype.notin(list(FORM_SECTION)) & table.event.isin(
+		events_with_section_access(user, "details")
+	)
+	for section, doctypes in FORM_DOCTYPES_BY_SECTION.items():
+		criterion |= table.form_doctype.isin(doctypes) & table.event.isin(
+			events_with_section_access(user, section)
+		)
+	return criterion
 
 
 def derived_criterion(user: str, doctype: str | None) -> Criterion | None:
@@ -149,7 +285,10 @@ def derived_criterion(user: str, doctype: str | None) -> Criterion | None:
 		return None
 
 	table = frappe.qb.DocType(doctype)
-	criterion = table.event.isin(my_team_events(user))
+	if doctype == "Buzz Form":
+		return form_query_criterion(user, table)
+
+	criterion = table.event.isin(events_with_section_access(user, DOCTYPE_SECTION[doctype]))
 	if doctype in OWNER_VISIBLE_DOCTYPES:
 		criterion |= table.owner == user
 
@@ -186,6 +325,8 @@ def team_has_permission(doc, ptype: str = "read", user: str | None = None, **kwa
 	user = user or frappe.session.user
 	if doc.doctype == "Buzz Event" and ptype not in WRITE_PTYPES and doc.is_published:
 		return True
+	if doc.doctype == "Buzz Event" and not doc.is_new():
+		return has_section_permission(doc.name, "details", ptype, user)
 	return has_team_access(doc.team, ptype, user)
 
 
@@ -198,13 +339,38 @@ def derived_has_permission(doc, ptype: str = "read", user: str | None = None, **
 			return True
 
 	# These doctypes carry no team column, so the team comes from their event.
-	team = frappe.db.get_value("Buzz Event", doc.event, "team") if doc.event else None
+	event = event_of(doc)
+	team = frappe.db.get_value("Buzz Event", event, "team") if event else None
 	if not team and doc.doctype in OWNER_VISIBLE_DOCTYPES:
 		# `has_team_access` waves an unstamped row through for a half-migrated site. These
 		# rows hold personal data, so they get no such pass — the checks above are the way in.
 		return is_unrestricted(user)
 
-	return has_team_access(team, ptype, user)
+	section = form_section(doc.form_doctype) if doc.doctype == "Buzz Form" else DOCTYPE_SECTION[doc.doctype]
+	return has_section_permission(event, section, ptype, user)
+
+
+def event_of(doc) -> str | None:
+	# A new track names only its schedule; `event` is fetched from it after the permission check.
+	if doc.doctype == "Buzz Schedule Track" and not doc.event and doc.schedule:
+		return frappe.db.get_value("Buzz Schedule", doc.schedule, "event")
+	return doc.event
+
+
+def item_type_query_conditions(user: str | None = None, **kwargs) -> str | None:
+	user = user or frappe.session.user
+	if is_unrestricted(user):
+		return None
+	table = frappe.qb.DocType("Buzz Schedule Item Type")
+	return as_sql((table.is_standard == 1) | table.team.isin(my_teams(user)))
+
+
+def item_type_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:
+	"""Standard types are shared by every team and changed only by System Managers."""
+	user = user or frappe.session.user
+	if doc.is_standard:
+		return ptype not in WRITE_PTYPES or is_unrestricted(user)
+	return has_team_access(doc.team, ptype, user)
 
 
 def team_doc_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:

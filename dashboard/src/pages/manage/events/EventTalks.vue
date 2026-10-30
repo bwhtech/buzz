@@ -12,6 +12,7 @@ import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventTalkActions from "@/components/dashboard/proposals/EventTalkActions.vue"
 import EventTalkProposalDrawer from "@/components/dashboard/proposals/EventTalkProposalDrawer.vue"
 import ProposalCard from "@/components/dashboard/proposals/ProposalCard.vue"
+import { useDeepLinkedRecord } from "@/composables/useDeepLinkedRecord"
 import { useEventProposals } from "@/composables/useEventProposals"
 import { useListQuery } from "@/composables/useListQuery"
 import { useProposalTrend } from "@/data/proposals"
@@ -23,12 +24,8 @@ const eventId = route.params.eventId as string
 
 const { search, order, conditions, isFiltered } = useListQuery()
 
-const { proposals, applyStatus, loadMore, page, loadingFirstPage, loadingMore } = useEventProposals(
-	eventId,
-	search,
-	order,
-	conditions,
-)
+const { proposals, fetchOne, applyStatus, loadMore, page, loadingFirstPage, loadingMore } =
+	useEventProposals(eventId, search, order, conditions)
 
 // The export is the list on screen, not the whole event: same filters, same order.
 const exportQuery = computed(() => ({
@@ -61,11 +58,14 @@ const sinceYesterday = computed(() => {
 
 // The proposal is what is held, not its position. A card can be opened while a search is
 // still settling, and by the time the new page lands an index points at a different talk.
-const selectedId = ref<string | null>(null)
-
-const selected = computed(
-	() => proposals.value.find((proposal) => proposal.name === selectedId.value) ?? null,
-)
+// Mention emails and notifications link here with `?proposal=`, and `&activity=` for the note.
+const { selectedId, selected, linkedEntry } = useDeepLinkedRecord({
+	param: "proposal",
+	entryParam: "activity",
+	rows: proposals,
+	fetchOne,
+	notFound: __("This talk isn't available"),
+})
 
 const drawerOpen = computed<boolean>({
 	get: () => selected.value !== null,
@@ -74,8 +74,8 @@ const drawerOpen = computed<boolean>({
 
 // The row is patched rather than refetched — see applyStatus. The card above counts the
 // whole pipeline, so it is the one thing that does have to go back to the server.
-const onStatusChanged = (status: string) => {
-	if (selectedId.value) applyStatus(selectedId.value, status)
+const onStatusChanged = (proposal: string, status: string) => {
+	applyStatus(proposal, status)
 	trend.reload()
 }
 
@@ -214,6 +214,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 				:event="eventId"
 				:title="page.data.title"
 				:proposal-link="page.data.proposal_link"
+				:proposal-form="page.data.proposal_form"
 				:closed="!!page.data.proposals_closed"
 				:can-write="!!page.data.can_write"
 				:query="exportQuery"
@@ -225,6 +226,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 	<EventTalkProposalDrawer
 		v-model:open="drawerOpen"
 		:proposal="selected"
+		:linked-entry="linkedEntry"
 		:can-write="page.data?.can_write"
 		@changed="onStatusChanged"
 	/>

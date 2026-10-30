@@ -1,63 +1,63 @@
 import frappe
-from frappe import _
 
-from buzz.api.booking.schemas import (
-	DiscountCouponResponse,
-	FreeTicketsCouponResponse,
-	InvalidCouponResponse,
-)
-
-CouponResponse = InvalidCouponResponse | DiscountCouponResponse | FreeTicketsCouponResponse
+from buzz.api.booking.exceptions import InvalidCoupon
+from buzz.api.booking.schemas import DiscountQuote, DiscountQuoteRequest
+from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 
 
-def validate_coupon_for_event(
-	coupon_code: str, event: str, user_email: str | None, currency: str | None = None
-) -> CouponResponse:
-	if not frappe.db.exists("Buzz Coupon Code", coupon_code):
-		return InvalidCouponResponse(valid=False, error=_("Invalid coupon code"))
-
-	coupon = frappe.get_doc("Buzz Coupon Code", coupon_code)
-
-	is_valid, error = coupon.is_valid_for_event(event)
-	if not is_valid:
-		return InvalidCouponResponse(valid=False, error=error)
-
-	is_available, error = coupon.is_usage_available()
-	if not is_available:
-		return InvalidCouponResponse(valid=False, error=error)
-
-	is_limited, error = coupon.is_user_limit_reached(user=resolve_coupon_user(user_email))
-	if is_limited:
-		return InvalidCouponResponse(valid=False, error=error)
-
-	is_usable, error = coupon.is_usable_in_currency(currency, event)
-	if not is_usable:
-		return InvalidCouponResponse(valid=False, error=error)
-
-	if coupon.coupon_type == "Discount":
-		return DiscountCouponResponse(
-			valid=True,
-			coupon_type="Discount",
-			discount_type=coupon.discount_type,
-			discount_value=coupon.discount_value,
-			max_discount_amount=coupon.maximum_discount_amount or 0,
-			min_order_value=coupon.minimum_order_value or 0,
+def quote_discount(request: DiscountQuoteRequest) -> DiscountQuote:
+	"""Price the cart through the same coupon rules a booking uses, without saving anything."""
+	booking = build_cart(request)
+	if not request.coupon_code:
+		coupon = BuzzCouponCode.best_automatic(booking)
+		return DiscountQuote(
+			discount_amount=coupon.discount_for(booking) if coupon else 0,
+			coupon_code=None,
+			error=None,
+			offer_name=coupon.code if coupon else None,
 		)
+	coupon = BuzzCouponCode.find_by_code(request.event, request.coupon_code)
+	error = coupon.unusable_reason(booking) if coupon else str(InvalidCoupon.message)
+	if error and coupon and coupon.coupon_type == "Access Code":
+		# A specific reason would confirm the access code exists.
+		error = str(InvalidCoupon.message)
+	if error:
+		return DiscountQuote(discount_amount=0, coupon_code=None, error=error)
+	return quote_with_code(booking, coupon)
 
-	remaining = coupon.number_of_free_tickets - coupon.free_tickets_claimed
-	if remaining <= 0:
-		return InvalidCouponResponse(valid=False, error=_("All free tickets have been claimed"))
 
-	return FreeTicketsCouponResponse(
-		valid=True,
-		coupon_type="Free Tickets",
-		ticket_type=coupon.ticket_type,
-		remaining_tickets=remaining,
-		free_add_ons=[row.add_on for row in coupon.free_add_ons],
+def quote_with_code(booking, coupon: BuzzCouponCode) -> DiscountQuote:
+	"""An access code without a discount leaves the automatic offer in place."""
+	if coupon.discount_type != "None":
+		return DiscountQuote(
+			discount_amount=coupon.discount_for(booking), coupon_code=coupon.code, error=None
+		)
+	offer = BuzzCouponCode.best_automatic(booking)
+	return DiscountQuote(
+		discount_amount=offer.discount_for(booking) if offer else 0,
+		coupon_code=coupon.code,
+		error=None,
+		offer_name=offer.code if offer else None,
 	)
 
 
-def resolve_coupon_user(user_email: str | None) -> str | None:
-	if frappe.session.user != "Guest":
-		return frappe.session.user
-	return user_email.lower().strip() if user_email else None
+def build_cart(request: DiscountQuoteRequest):
+	booking = frappe.new_doc("Event Booking")
+	booking.update({"event": request.event, "currency": request.currency, "buyer_email": request.buyer_email})
+	for ticket_type in event_ticket_types(request):
+		booking.append("attendees", {"ticket_type": ticket_type})
+	booking.fetch_amounts_from_ticket_types()
+	return booking
+
+
+def event_ticket_types(request: DiscountQuoteRequest) -> list[str]:
+	filters = {"event": request.event, "name": ["in", request.ticket_types], "is_published": 1}
+	rows = frappe.get_all("Event Ticket Type", filters=filters, fields=["name", "is_hidden"])
+	unlocked = unlocked_ticket_types(request)
+	allowed = {str(row.name) for row in rows if not row.is_hidden or str(row.name) in unlocked}
+	return [name for name in request.ticket_types if name in allowed]
+
+
+def unlocked_ticket_types(request: DiscountQuoteRequest) -> set[str]:
+	coupon = BuzzCouponCode.find_available_access_code(request.event, request.coupon_code)
+	return coupon.unlocked_ticket_types() if coupon else set()

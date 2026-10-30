@@ -1,6 +1,7 @@
 import frappe
 
-from buzz.api.forms.schemas import CustomFormResponse, EventProposalFormResponse
+from buzz.api.forms.builder import FormBuilderService
+from buzz.api.forms.schemas import CustomFormResponse, EventProposalFormResponse, FormBuilderFields
 from buzz.api.forms.services import (
 	CustomFormService,
 	create_event_proposal,
@@ -28,10 +29,12 @@ def submit_custom_form(
 
 
 def form_service(event_route: str, form_route: str):
+	# Imported here: both modules read this package, so a module-level import cycles.
 	from buzz.api.sponsorships.forms import SponsorFormService
+	from buzz.events.doctype.buzz_form.form_types import SPONSORSHIP_FORM_DOCTYPE
 
 	service = CustomFormService(event_route, form_route)
-	if frappe.db.exists("Sponsor Enquiry Form", {"event": service.event.name, "route": form_route}):
+	if service.form_doctype == SPONSORSHIP_FORM_DOCTYPE:
 		return SponsorFormService(event_route, form_route)
 	return service
 
@@ -45,3 +48,8 @@ def get_event_proposal_form_data() -> EventProposalFormResponse:
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def submit_event_proposal(data: dict | str) -> None:
 	create_event_proposal(data)
+
+
+@frappe.whitelist()
+def get_form_builder_fields(form: str) -> FormBuilderFields:
+	return FormBuilderService(form).fields()

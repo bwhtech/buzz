@@ -47,7 +47,7 @@ const lastUpdatedExact = computed(() => modified.value.format("D MMM YYYY, h:mm 
 					}}<template v-if="byline.rest.length === 1"> &amp; {{ byline.rest[0] }}</template>
 					<template v-else-if="byline.rest.length">
 						and
-						<HoverCard :hover-delay="0.15" align="start">
+						<HoverCard :hover-delay="150" align="start">
 							<template #trigger>
 								<span
 									class="relative z-10 underline decoration-dotted underline-offset-2 transition-colors hover:text-ink-gray-9"

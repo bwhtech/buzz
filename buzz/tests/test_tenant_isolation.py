@@ -15,9 +15,7 @@ from buzz.tests.factories import (
 	TalkProposalFactory,
 	UserFactory,
 )
-
-# Buzz Team Membership carries a team column but is scoped by its own pair of hooks.
-SELF_SCOPED_DOCTYPES = frozenset({"Buzz Team Membership"})
+from buzz.tests.utils import SELF_SCOPED_DOCTYPES, linked_to
 
 
 class TestCrossTeamIsolation(TeamPermissionTestCase):
@@ -173,17 +171,6 @@ class TestCheckinIsolation(TeamPermissionTestCase):
 	def test_unknown_ticket_still_raises_not_found(self):
 		with self.set_user(self.frontdesk), self.assertRaises(TicketNotFound):
 			validate_ticket_for_checkin("no-such-ticket")
-
-
-def linked_to(doctype: str) -> set[str]:
-	"""Doctypes with a Link field named after `doctype`'s short name, e.g. `team` -> Buzz Team."""
-	fieldname = doctype.replace("Buzz ", "").lower()
-	parents = frappe.get_all(
-		"DocField",
-		filters={"fieldname": fieldname, "fieldtype": "Link", "options": doctype},
-		pluck="parent",
-	)
-	return {parent for parent in parents if not frappe.get_meta(parent).istable}
 
 
 def tenant_doctypes() -> set[str]:

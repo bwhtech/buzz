@@ -56,6 +56,14 @@ export function useEventProposals(
 		},
 	})
 
+	// One proposal by name, through the same permission check, for a link to a row not loaded.
+	const lookup = useCall<EventProposals, Record<string, string | number>>({
+		url: "/api/v2/method/buzz.api.proposals.get_event_proposals",
+		immediate: false,
+	})
+	const fetchOne = async (name: string) =>
+		(await lookup.submit({ event, name, limit: 1 }))?.proposals[0] ?? null
+
 	// Sync, so the offset is back at zero before useCall's own watcher rebuilds the URL —
 	// a pre-flush reset lets the stale offset go out as a request that is aborted a tick later.
 	watch(
@@ -93,6 +101,7 @@ export function useEventProposals(
 
 	return {
 		proposals,
+		fetchOne,
 		applyStatus,
 		loadMore,
 		page,

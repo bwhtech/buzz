@@ -80,9 +80,15 @@ export function getStorageStatePath() {
  */
 export async function createUserWithRoles(
 	request: APIRequestContext,
-	options: { email: string; firstName: string; password: string; roles: string[] },
+	options: {
+		email: string
+		firstName: string
+		password: string
+		roles: string[]
+		userType?: "System User" | "Website User"
+	},
 ): Promise<string> {
-	const { email, firstName, password, roles } = options
+	const { email, firstName, password, roles, userType = "System User" } = options
 	const doc = {
 		first_name: firstName,
 		new_password: password,
@@ -96,7 +102,7 @@ export async function createUserWithRoles(
 		return email
 	}
 
-	await createDoc(request, "User", { email, user_type: "System User", ...doc })
+	await createDoc(request, "User", { email, user_type: userType, ...doc })
 	return email
 }
 

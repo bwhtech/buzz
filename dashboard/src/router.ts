@@ -1,7 +1,10 @@
+import { call } from "frappe-ui"
 import { type RouteRecordRaw, createRouter, createWebHistory } from "vue-router"
 
-import { isTeamMember } from "@/data/teams"
+import { hasManageAccess } from "@/data/teams"
 import { loadUser } from "@/data/user"
+import type { EventAccess } from "@/types"
+import { firstEventPath } from "@/utils/managerNavigation"
 
 const APP_NAME = "Buzz"
 
@@ -12,8 +15,22 @@ const routes: RouteRecordRaw[] = [
 		// Never rendered — the guard always redirects — but a record needs a component.
 		component: { render: () => null },
 		beforeEnter: async () => ({
-			name: (await isTeamMember()) ? "manage" : "bookings-tab",
+			name: (await hasManageAccess()) ? "manage" : "bookings-tab",
 		}),
+	},
+	{
+		// Outside the manage shell: the invitee may not be logged in, or on any team.
+		path: "/manage/collaborator-invite",
+		name: "collaborator-invite",
+		meta: { isPublic: true, title: "Event Invitation" },
+		component: () => import("@/pages/manage/CollaboratorInvite.vue"),
+	},
+	{
+		// Its own page, outside the manage shell: the editor needs the whole width.
+		path: "/manage/events/:eventId/forms/:formName",
+		name: "event-form",
+		meta: { fullBleed: true, title: "Form" },
+		component: () => import("@/pages/manage/events/EventForm.vue"),
 	},
 	{
 		path: "/manage",
@@ -33,7 +50,15 @@ const routes: RouteRecordRaw[] = [
 			},
 			{
 				path: "events/:eventId",
-				redirect: (to) => `/manage/events/${to.params.eventId}/details`,
+				// A collaborator may not have Details; open the first section they have.
+				component: { render: () => null },
+				beforeEnter: async (to) => {
+					const eventId = to.params.eventId as string
+					const access = await call<EventAccess>("buzz.api.events.collaborators.get_event_access", {
+						event: eventId,
+					})
+					return firstEventPath(eventId, access) ?? "/manage/events"
+				},
 			},
 			{
 				path: "events/:eventId/details",
@@ -46,6 +71,12 @@ const routes: RouteRecordRaw[] = [
 				name: "event-registrations",
 				meta: { title: "Registration" },
 				component: () => import("@/pages/manage/events/EventRegistrations.vue"),
+			},
+			{
+				path: "events/:eventId/coupons",
+				name: "event-coupons",
+				meta: { title: "Coupons" },
+				component: () => import("@/pages/manage/events/EventCoupons.vue"),
 			},
 			{
 				path: "events/:eventId/guests",
@@ -72,11 +103,13 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/events/EventSponsorships.vue"),
 			},
 			{
-				path: "events/:eventId/more",
-				name: "event-more",
-				meta: { title: "More" },
-				component: () => import("@/pages/manage/events/EventMore.vue"),
+				path: "events/:eventId/settings",
+				name: "event-settings",
+				meta: { title: "Settings" },
+				component: () => import("@/pages/manage/events/EventSettings.vue"),
 			},
+			// Old links and bookmarks.
+			{ path: "events/:eventId/more", redirect: { name: "event-settings" } },
 			{
 				path: "events/:eventId/:section",
 				component: () => import("@/pages/manage/WorkInProgress.vue"),
@@ -159,26 +192,26 @@ const routes: RouteRecordRaw[] = [
 		name: "check-in",
 		props: true,
 		meta: { title: "Check In" },
-		component: () => import("@/pages/CheckInScanner.vue"),
+		component: () => import("@/pages/CheckIn.vue"),
 	},
 	{
 		path: "/register/:eventRoute",
 		props: true,
 		name: "event-booking",
-		meta: { isPublic: true },
+		meta: { isPublic: true, wide: true },
 		component: () => import("@/pages/BookTickets.vue"),
+	},
+	{
+		path: "/playground",
+		name: "playground",
+		meta: { isPublic: true, title: "Playground" },
+		component: () => import("@/pages/Playground.vue"),
 	},
 	{
 		path: "/login",
 		name: "login",
 		meta: { isPublic: true, title: "Log In" },
 		component: () => import("@/pages/LoginPage.vue"),
-	},
-	{
-		path: "/login/embed",
-		name: "login-embed",
-		meta: { isPublic: true, embedded: true },
-		component: () => import("@/pages/LoginEmbed.vue"),
 	},
 	{
 		path: "/event-proposal",

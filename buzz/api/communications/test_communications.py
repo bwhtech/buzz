@@ -1,3 +1,4 @@
+import json
 from unittest.mock import patch
 
 import frappe
@@ -12,21 +13,19 @@ from buzz.api.communications import (
 )
 from buzz.api.communications.exceptions import CannotSendCommunication, NoRecipients
 from buzz.api.events.exceptions import CannotManageEvent
+from buzz.api.filters.exceptions import InvalidFilter
 from buzz.api.teams.exceptions import CannotEditTeam
 from buzz.tests.factories import (
 	BuzzEventFactory,
+	BuzzFormFactory,
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
+	EventSponsorFactory,
 	EventTicketFactory,
 	TalkProposalFactory,
 	UserFactory,
 )
-from buzz.tests.utils import html_part, queued_emails, queued_recipients
-
-
-def forget_outgoing_account() -> None:
-	if hasattr(frappe.local, "outgoing_email_account"):
-		delattr(frappe.local, "outgoing_email_account")
+from buzz.tests.utils import html_part, mute_outgoing_email, queued_emails, queued_recipients
 
 
 class CommunicationsTestCase(IntegrationTestCase):
@@ -45,17 +44,13 @@ class CommunicationsTestCase(IntegrationTestCase):
 		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.manager, team_role="Manager")
 
 	def setUp(self):
-		# CI has no outgoing account. Muted, frappe queues against a dummy one and never sends;
-		# the dummy is cached on frappe.local, so it is dropped before the next module runs.
-		frappe.flags.mute_emails = True
-		self.addCleanup(setattr, frappe.flags, "mute_emails", False)
-		self.addCleanup(forget_outgoing_account)
-		# CI never builds assets, and every email inlines email.bundle.css through this lookup.
-		self.enterContext(patch("frappe.utils.get_assets_json", return_value={}))
+		mute_outgoing_email(self)
 		self.event = str(BuzzEventFactory.create(team=self.team).name)
 
-	def issue_ticket(self, attendee_email: str) -> str:
-		return EventTicketFactory.create("submitted", event=self.event, attendee_email=attendee_email).name
+	def issue_ticket(self, attendee_email: str, **values) -> str:
+		return EventTicketFactory.create(
+			"submitted", event=self.event, attendee_email=attendee_email, **values
+		).name
 
 	def create_talk_proposal(self, speaker_email: str) -> str:
 		speakers = [{"first_name": "Speaker", "email": speaker_email}]
@@ -74,33 +69,58 @@ class TestCountRecipients(CommunicationsTestCase):
 			event=self.event, attendee_email="draft@example.com"
 		)  # still being paid for
 
-		with self.set_user(self.owner):
-			self.assertEqual(count_recipients(self.event, "Guests").count, 2)
+		self.assertEqual(self.count("Guests"), 2)
 
 	def test_narrows_guests_by_ticket_type(self):
 		ticket = EventTicketFactory.create("submitted", event=self.event, attendee_email="tiered@example.com")
 		self.issue_ticket("other@example.com")
 
-		with self.set_user(self.owner):
-			count = count_recipients(self.event, "Guests", ticket_types=str(ticket.ticket_type)).count
+		self.assertEqual(self.count("Guests", ["ticket_type", "in", [str(ticket.ticket_type)]]), 1)
 
-		self.assertEqual(count, 1)
+	def test_narrows_guests_by_a_ticket_question(self):
+		BuzzFormFactory.add_question(self.event, "Event Booking Attendee", label="Diet")
+		self.issue_ticket("veg@example.com", additional_fields=[{"fieldname": "diet", "value": "Veg"}])
+		self.issue_ticket("vegan@example.com", additional_fields=[{"fieldname": "diet", "value": "Vegan"}])
+		self.issue_ticket("blank@example.com")
+
+		self.assertEqual(self.count("Guests", ["diet", "=", "Veg"]), 1)
+		self.assertEqual(self.count("Guests", ["diet", "is", "set"]), 2)
 
 	def test_counts_proposal_speakers_once(self):
 		self.create_talk_proposal("speaker@example.com")
 		self.create_talk_proposal("speaker@example.com")
 		self.create_talk_proposal("second@example.com")
 
-		with self.set_user(self.owner):
-			self.assertEqual(count_recipients(self.event, "Speakers").count, 2)
+		self.assertEqual(self.count("Speakers"), 2)
 
 	def test_narrows_speakers_by_proposal_status(self):
 		accepted = self.create_talk_proposal("yes@example.com")
 		self.create_talk_proposal("pending@example.com")
 		frappe.db.set_value("Talk Proposal", accepted, "status", "Accepted")
 
+		self.assertEqual(self.count("Speakers", ["status", "in", ["Accepted"]]), 1)
+
+	def test_counts_sponsor_contacts_and_skips_a_sponsor_without_one(self):
+		EventSponsorFactory.create(event=self.event, contact_email="gold@example.com")
+		EventSponsorFactory.create(event=self.event, contact_email="silver@example.com")
+		EventSponsorFactory.create(event=self.event)
+
+		self.assertEqual(self.count("Sponsors"), 2)
+
+	def test_narrows_sponsors_by_tier(self):
+		gold = EventSponsorFactory.create(event=self.event, contact_email="gold@example.com")
+		EventSponsorFactory.create(event=self.event, contact_email="silver@example.com")
+
+		self.assertEqual(self.count("Sponsors", ["tier", "in", [str(gold.tier)]]), 1)
+
+	def test_an_unknown_filter_field_is_refused(self):
+		with self.assertRaises(InvalidFilter):
+			self.count("Guests", ["status", "in", ["Accepted"]])
+
+	def count(self, audience: str, *conditions) -> int:
+		filters = json.dumps(list(conditions)) if conditions else None
 		with self.set_user(self.owner):
-			self.assertEqual(count_recipients(self.event, "Speakers", statuses="Accepted").count, 1)
+			return count_recipients(self.event, audience, filters).count
 
 	def test_an_outsider_is_refused(self):
 		outsider = UserFactory.create_once("comms-outsider@example.com").name
@@ -153,6 +173,16 @@ class TestSendCommunication(CommunicationsTestCase):
 		self.assertEqual(sent.subject, "")
 		self.assertIn(f"Subject: {title}", queued_emails(sent.name)[0].message)
 
+	def test_stores_the_filters_it_was_sent_with(self):
+		self.issue_ticket("kept@example.com")
+		filters = json.dumps([["ticket_type", "in", []]])
+
+		with self.set_user(self.manager):
+			sent = send_communication(self.event, "Guests", "<p>Hi</p>", filters=filters)
+
+		self.assertEqual(sent.filters, filters)
+		self.assertEqual(sent.recipient_count, 1)
+
 	def test_nobody_to_send_to_is_refused(self):
 		with self.set_user(self.manager), self.assertRaises(NoRecipients):
 			send_communication(self.event, "Speakers", "<p>Hi</p>")
@@ -187,8 +217,9 @@ class TestGetEventCommunications(CommunicationsTestCase):
 			page = get_event_communications(self.event)
 
 		self.assertEqual(page.support_email, "team@example.com")
-		self.assertTrue(page.ticket_types)
-		self.assertIn("Accepted", page.statuses)
+		self.assertEqual(set(page.filter_fields), {"Guests", "Speakers", "Sponsors"})
+		statuses = next(field for field in page.filter_fields["Speakers"] if field.key == "status")
+		self.assertIn("Accepted", [option.value for option in statuses.options])
 		self.assertTrue(page.can_edit_settings)
 
 

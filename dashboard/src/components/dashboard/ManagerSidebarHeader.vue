@@ -3,6 +3,7 @@ import { Avatar, Tooltip, sidebarCollapsedKey } from "frappe-ui"
 import { computed, inject } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
+import { userResource } from "@/data/user"
 import type { Workspace } from "@/utils/managerNavigation"
 
 const props = defineProps<{ workspace?: Workspace }>()
@@ -16,6 +17,14 @@ const isCollapsed = inject(
 
 // Never falls back to the id: swapping a hash for the title reads as a glitch.
 const name = computed(() => props.workspace?.title ?? "")
+
+// Buzz Settings' whitelabel: the full logo when expanded, the app icon when collapsed.
+const brand = computed(() => userResource.data?.brand)
+const isWhitelabel = computed(() => brand.value && !brand.value.is_default)
+const brandName = computed(() => (isWhitelabel.value && brand.value?.name) || "Buzz")
+const compactImage = computed(() =>
+	isWhitelabel.value ? brand.value?.icon : "/assets/buzz/images/buzz-logo-rounded.png",
+)
 
 const isCreatingEvent = computed(() => route.name === "create-event")
 
@@ -48,20 +57,35 @@ const goBack = () => (window.history.state?.back ? router.back() : goToEvents())
 	</Tooltip>
 
 	<!-- Identity and the way home; the account menu sits in the sidebar footer. -->
-	<Tooltip v-else-if="!workspace" class="w-full" text="Buzz" side="right" :disabled="!isCollapsed">
+	<Tooltip
+		v-else-if="!workspace"
+		class="w-full"
+		:text="brandName"
+		side="right"
+		:disabled="!isCollapsed"
+	>
 		<router-link
 			to="/manage"
 			class="flex h-12 w-full items-center gap-2 rounded-4 px-1.5 transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:outline-none focus-visible:focus-ring"
 		>
-			<Avatar
-				image="/assets/buzz/images/buzz-logo-rounded.png"
-				label="Buzz"
-				size="lg"
-				shape="square"
-			/>
-			<span v-if="!isCollapsed" class="flex-1 truncate text-base font-medium text-ink-gray-8">
-				Buzz
-			</span>
+			<template v-if="isWhitelabel && !isCollapsed && brand">
+				<img
+					class="ml-1.5 h-5 w-auto max-w-36 object-contain object-left dark:hidden"
+					:src="brand.logo"
+					:alt="brandName"
+				/>
+				<img
+					class="ml-1.5 hidden h-5 w-auto max-w-36 object-contain object-left dark:block"
+					:src="brand.logo_dark || brand.logo"
+					:alt="brandName"
+				/>
+			</template>
+			<template v-else>
+				<Avatar :image="compactImage ?? undefined" :label="brandName" size="lg" shape="square" />
+				<span v-if="!isCollapsed" class="flex-1 truncate text-base font-medium text-ink-gray-8">
+					Buzz
+				</span>
+			</template>
 		</router-link>
 	</Tooltip>
 

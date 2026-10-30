@@ -4,11 +4,15 @@
 import frappe
 from frappe import _
 
+from buzz.api.filters.conditions import registration_questions
+from buzz.booking_permissions import ensure_guests_access
+
 
 def execute(filters=None):
 	if not filters:
 		filters = {}
 
+	ensure_guests_access(filters.get("event"))
 	if not filters.get("event"):
 		return [], []
 
@@ -187,12 +191,14 @@ def get_data(filters, columns):
 
 
 def get_custom_fields_for_event(event):
-	return frappe.get_all(
-		"Buzz Custom Field",
-		filters={"event": event, "enabled": 1},
-		fields=["fieldname", "label", "applied_to"],
-		order_by="order asc",
-	)
+	return [
+		frappe._dict(
+			fieldname=question.fieldname,
+			label=question.label,
+			applied_to=question.applied_to,
+		)
+		for question in registration_questions(event)
+	]
 
 
 def get_add_ons_for_event(event):

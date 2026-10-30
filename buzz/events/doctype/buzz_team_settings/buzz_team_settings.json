@@ -22,6 +22,8 @@
   "billing_address",
   "flags_tab",
   "feature_paid_events",
+  "feature_multiple_locations",
+  "feature_data_import",
   "communications_tab",
   "ticketing_emails_section",
   "default_ticket_email_template",
@@ -134,6 +136,22 @@
    "permlevel": 1
   },
   {
+   "default": "0",
+   "description": "Allow venues with multiple locations, like a festival spread over several places.",
+   "fieldname": "feature_multiple_locations",
+   "fieldtype": "Check",
+   "label": "Multiple Locations",
+   "permlevel": 1
+  },
+  {
+   "default": "0",
+   "description": "Lets the team import check-ins, talks and sponsors from a spreadsheet.",
+   "fieldname": "feature_data_import",
+   "fieldtype": "Check",
+   "label": "Data Import",
+   "permlevel": 1
+  },
+  {
    "fieldname": "communications_tab",
    "fieldtype": "Tab Break",
    "label": "Communications"
@@ -211,7 +229,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-20 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Team Settings",

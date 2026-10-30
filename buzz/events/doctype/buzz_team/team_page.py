@@ -1,15 +1,19 @@
 import textwrap
 from collections import defaultdict
+from datetime import datetime
 from functools import cached_property
 from itertools import groupby
 
 import frappe
 from frappe import _
-from frappe.utils import date_diff, flt, format_date, get_url, getdate, today
+from frappe.utils import date_diff, flt, format_date, get_datetime, get_time, get_url, getdate, today
 
-from buzz.api.booking.services import are_registrations_closed
+from buzz.api.communities.queries import time_of_day
 from buzz.api.maps.services import place_search_enabled
+from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE, is_registration_closed
 from buzz.events.doctype.buzz_team.team_map import TeamMap
+from buzz.events.doctype.community_event_request.community_event_request import approved_external_requests
+from buzz.events.og_image import HEIGHT, WIDTH, uploaded_image
 from buzz.permissions import role_allows, team_role_of
 from buzz.www.event.date_range import format_time
 from buzz.www.event.index import public_links
@@ -25,6 +29,8 @@ from buzz.www.events import (
 )
 
 PAST_LIMIT = 30
+# The shared card is large when its image is at least this much wider than tall
+LARGE_CARD_ASPECT = 1.5
 VENUE_FIELDS = [
 	"venue.latitude as latitude",
 	"venue.longitude as longitude",
@@ -33,7 +39,7 @@ VENUE_FIELDS = [
 ]
 # A community lists other teams' events too, so each card names its event's own team.
 HOST_FIELDS = ["team.team_name as host_name", "team.logo as host_logo"]
-EVENT_FIELDS = CARD_FIELDS + TIME_FIELDS + VENUE_FIELDS + HOST_FIELDS + ["name", "registrations_close_at"]
+EVENT_FIELDS = CARD_FIELDS + TIME_FIELDS + VENUE_FIELDS + HOST_FIELDS + ["name"]
 
 
 def day_labels(day) -> dict:
@@ -67,27 +73,65 @@ def co_host_names_by_event(events: list[str]) -> dict[str, list[str]]:
 	return names
 
 
-class TeamPage:
-	"""Context for a team's public page: identity, links and its own event timeline."""
+def starts_at(event) -> datetime:
+	return datetime.combine(getdate(event.start_date), get_time(event.start_time))
 
-	def __init__(self, team):
-		self.team = team
 
-	def as_context(self) -> dict:
-		upcoming = [self.card(event) for event in self.upcoming_events]
-		past = [self.card(event) for event in self.past_events]
-		return {
-			"title": self.team.team_name,
-			"links": public_links(self.team.links),
-			"events_hosted": frappe.db.count("Buzz Event", {"team": self.team.name, "is_published": 1}),
-			"upcoming_days": group_by_day(upcoming),
-			"past_days": group_by_day(past),
-			"meta": self.meta(),
-			"is_guest": frappe.session.user == "Guest",
-			"is_organizer": self.is_organizer(),
-			"place_search_enabled": place_search_enabled(),
-			**TeamMap(upcoming, past).as_context(),
-		}
+def external_event(request) -> frappe._dict:
+	"""An approved external request in the shape of a Buzz Event row."""
+	start, end = get_datetime(request.start_datetime), get_datetime(request.end_datetime)
+	return frappe._dict(
+		name=request.name,
+		title=request.event_title,
+		event_url=request.event_url,
+		host_name=request.host,
+		venue_name=request.event_location,
+		latitude=request.latitude,
+		longitude=request.longitude,
+		city=request.city,
+		country=request.country,
+		start_date=start.date(),
+		start_time=time_of_day(start),
+		end_date=end.date(),
+		end_time=time_of_day(end),
+		is_external=True,
+	)
+
+
+def external_card(event) -> dict:
+	"""Opens the host's own page; it has no image, and a pin only when the host sent coordinates."""
+	has_location = bool(flt(event.latitude) and flt(event.longitude))
+	return {
+		"route": event.name,
+		"date": str(event.start_date),
+		"title": event.title,
+		"url": event.event_url,
+		"is_external": True,
+		"image": None,
+		"time": format_time(event.start_time),
+		"host_names": event.host_name,
+		"host_logo": None,
+		"place": event.venue_name,
+		"is_online": False,
+		"is_live": has_started(event) and not has_ended(event),
+		"is_attending": False,
+		"registrations_closed": False,
+		"city": event.city,
+		"country": event.country,
+		"latitude": flt(event.latitude) if has_location else None,
+		"longitude": flt(event.longitude) if has_location else None,
+	}
+
+
+class EventTimeline:
+	"""Upcoming and past event cards over the events a subclass's event_filters() picks."""
+
+	def event_filters(self) -> dict:
+		raise NotImplementedError
+
+	@cached_property
+	def external_events(self) -> list:
+		return []
 
 	@cached_property
 	def upcoming_events(self) -> list:
@@ -99,7 +143,8 @@ class TeamPage:
 			order_by="start_date asc, start_time asc",
 			limit=LISTING_LIMIT,
 		)
-		return exclude_ended_events(events)
+		external = exclude_ended_events(self.external_events)
+		return sorted(exclude_ended_events(events) + external, key=starts_at)[:LISTING_LIMIT]
 
 	@cached_property
 	def past_events(self) -> list:
@@ -112,33 +157,43 @@ class TeamPage:
 			order_by="start_date desc, start_time desc",
 			limit=PAST_LIMIT,
 		)
-		return [event for event in events if has_ended(event)]
+		ended = [event for event in events + self.external_events if has_ended(event)]
+		return sorted(ended, key=starts_at, reverse=True)[:PAST_LIMIT]
+
+	@cached_property
+	def buzz_event_names(self) -> list[str]:
+		return [str(event.name) for event in self.upcoming_events + self.past_events if not event.is_external]
 
 	@cached_property
 	def co_host_names(self) -> dict[str, list[str]]:
-		return co_host_names_by_event([str(event.name) for event in self.upcoming_events + self.past_events])
+		return co_host_names_by_event(self.buzz_event_names)
+
+	@cached_property
+	def registration_forms(self) -> dict:
+		if not self.buzz_event_names:
+			return {}
+		forms = frappe.get_all(
+			"Buzz Form",
+			filters={"event": ["in", self.buzz_event_names], "form_doctype": REGISTRATION_FORM_DOCTYPE},
+			fields=["event", "publish", "auto_close_at"],
+		)
+		return {str(form.event): form for form in forms}
+
+	def registrations_closed(self, event) -> bool:
+		return is_registration_closed(self.registration_forms.get(str(event.name)), event)
 
 	@cached_property
 	def attending_events(self) -> set[str]:
 		"""Events the visitor holds a ticket for: the dashboard's Attending rule."""
-		events = [str(event.name) for event in self.upcoming_events + self.past_events]
+		events = self.buzz_event_names
 		if frappe.session.user == "Guest" or not events:
 			return set()
 		tickets = {"attendee_email": frappe.session.user, "docstatus": 1, "event": ["in", events]}
 		return set(frappe.get_all("Event Ticket", filters=tickets, pluck="event"))
 
-	def event_filters(self) -> dict:
-		"""The team's own events, plus those its community approved."""
-		filters = {"team": self.team.name}
-		if self.team.accept_community_submissions:
-			approved = {"community": self.team.name, "status": "Approved"}
-			filters["name"] = [
-				"in",
-				frappe.get_all("Community Event Request", filters=approved, pluck="event"),
-			]
-		return filters
-
 	def card(self, event) -> dict:
+		if event.is_external:
+			return external_card(event)
 		is_online = event.medium == "Online"
 		has_location = not is_online and bool(flt(event.latitude) and flt(event.longitude))
 		return {
@@ -155,12 +210,58 @@ class TeamPage:
 			"is_live": has_started(event) and not has_ended(event),
 			"is_attending": str(event.name) in self.attending_events,
 			# Past events have ended, so only upcoming cards can say this.
-			"registrations_closed": not has_ended(event) and are_registrations_closed(event),
+			"registrations_closed": not has_ended(event) and self.registrations_closed(event),
 			"city": event.city,
 			"country": event.country,
 			"latitude": flt(event.latitude) if has_location else None,
 			"longitude": flt(event.longitude) if has_location else None,
 		}
+
+
+class TeamPage(EventTimeline):
+	"""Context for a team's public page: identity, links and its own event timeline."""
+
+	def __init__(self, team):
+		self.team = team
+
+	def as_context(self) -> dict:
+		upcoming = [self.card(event) for event in self.upcoming_events]
+		past = [self.card(event) for event in self.past_events]
+		return {
+			"title": self.team.team_name,
+			"links": public_links(self.team.links),
+			"events_hosted": self.hosted_count,
+			"upcoming_days": group_by_day(upcoming),
+			"past_days": group_by_day(past),
+			"meta": self.meta(),
+			"is_guest": frappe.session.user == "Guest",
+			"is_organizer": self.is_organizer(),
+			"manage_url": self.manage_url(),
+			"place_search_enabled": place_search_enabled(),
+			**TeamMap(upcoming, past).as_context(),
+		}
+
+	@cached_property
+	def external_events(self) -> list:
+		if not self.team.accept_community_submissions:
+			return []
+		return [external_event(request) for request in approved_external_requests(self.team.name)]
+
+	def event_filters(self) -> dict:
+		"""The team's own events, plus those its community approved."""
+		filters = {"team": self.team.name}
+		if self.team.accept_community_submissions:
+			approved = {"community": self.team.name, "status": "Approved"}
+			filters["name"] = [
+				"in",
+				frappe.get_all("Community Event Request", filters=approved, pluck="event"),
+			]
+		return filters
+
+	def manage_url(self) -> str | None:
+		# Team Owners and Admins lack doctype write, which only System Manager holds
+		if self.is_organizer() or frappe.has_permission("Buzz Team", "write", self.team):
+			return f"/b/manage/communities/{self.team.name}"
 
 	def is_organizer(self) -> bool:
 		"""The community's own curators add events straight away; anyone else submits them.
@@ -170,10 +271,54 @@ class TeamPage:
 		team_role = team_role_of(frappe.session.user, self.team.name)
 		return bool(team_role) and role_allows(team_role, "write")
 
+	@cached_property
+	def upcoming_count(self) -> int:
+		"""What is still to come, on Buzz and on the other sites the community lists. Not capped."""
+		events = frappe.get_all(
+			"Buzz Event",
+			filters=upcoming_filters(),
+			or_filters=self.event_filters(),
+			fields=["start_date", *TIME_FIELDS],
+		)
+		return len(exclude_ended_events(events + self.external_events))
+
+	@cached_property
+	def hosted_count(self) -> int:
+		"""Everything the team has run: its own published events, plus the external ones it lists."""
+		own = frappe.db.count("Buzz Event", {"team": self.team.name, "is_published": 1})
+		return own + len(self.external_events)
+
 	def meta(self) -> dict:
-		text = self.team.short_description or plain_text(self.team.about)
+		image = self.share_image()
+		size = self.image_size(image) if image else None
 		return {
 			"url": get_url(f"/{self.team.route}"),
-			"description": textwrap.shorten(text, DESCRIPTION_LENGTH, placeholder="…") if text else "",
-			"image": get_url(self.team.logo) if self.team.logo else "",
+			"title": self.share_title(),
+			"description": self.share_description(),
+			"image": get_url(image) if image else "",
+			"card": "summary_large_image" if size and size[0] >= LARGE_CARD_ASPECT * size[1] else "summary",
+			"image_size": size,
 		}
+
+	def share_title(self) -> str:
+		return _("{0} · Events Calendar").format(self.team.team_name)
+
+	def share_description(self) -> str:
+		text = self.team.short_description or plain_text(self.team.about)
+		if not text:
+			return _("Upcoming events from {0}").format(self.team.team_name)
+		return textwrap.shorten(text, DESCRIPTION_LENGTH, placeholder="…")
+
+	def share_image(self) -> str | None:
+		"""An uploaded image wins over the generated one, which wins over the logo.
+
+		Crawlers get a 403 on private files, which drops the preview silently.
+		"""
+		urls = (self.team.meta_image, self.team.og_image, self.team.logo)
+		return next((url for url in urls if url and not url.startswith("/private/")), None)
+
+	def image_size(self, url: str) -> tuple[int, int] | None:
+		if url == self.team.og_image:
+			return WIDTH, HEIGHT
+		image = uploaded_image(url)
+		return image.size if image else None

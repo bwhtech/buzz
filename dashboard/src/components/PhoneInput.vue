@@ -1,34 +1,41 @@
 <template>
 	<div class="space-y-1.5">
-		<label class="text-xs text-ink-gray-5 block">
-			{{ __(label) }}
-			<span v-if="required" class="text-ink-red-8">*</span>
-		</label>
-		<div class="flex gap-1.5">
-			<Combobox
-				class="w-26"
-				:model-value="null"
-				@update:model-value="onDialCodeChange"
-				:options="dialCodeOptions"
-				variant="outline"
-				:placeholder="shortDisplay"
-			/>
-			<TextInput
-				type="tel"
-				:variant="variant"
-				:model-value="localNumber"
-				@update:model-value="onNumberInput"
-				:placeholder="placeholder || __('Phone number')"
-			/>
-		</div>
+		<TextInput
+			class="[&_input]:ps-[calc(var(--dial-code-width)+0.75rem)]"
+			:style="{ '--dial-code-width': `${dialCodeWidth}px` }"
+			type="tel"
+			:label="__(label)"
+			:required="required"
+			:size="size"
+			:variant="variant"
+			:model-value="localNumber"
+			@update:model-value="onNumberInput"
+			:placeholder="placeholder || __('Phone number')"
+		>
+			<template #prefix>
+				<span ref="dialCodePicker" class="-ms-1.5 inline-flex">
+					<Combobox
+						class="!gap-0.5 !px-1.5"
+						trigger="button"
+						variant="ghost"
+						:size="size"
+						:model-value="dialCode"
+						@update:model-value="onDialCodeChange"
+						:options="dialCodeOptions"
+						:placeholder="__('Search')"
+					/>
+				</span>
+			</template>
+		</TextInput>
 		<ErrorMessage v-if="error" :message="error" />
 	</div>
 </template>
 
 <script setup lang="ts">
+import { useElementSize } from "@vueuse/core"
 import { Combobox, ErrorMessage, TextInput, useCall } from "frappe-ui"
 import type { PropType } from "vue"
-import { computed, ref, watch } from "vue"
+import { computed, ref, useTemplateRef, watch } from "vue"
 
 import { DEFAULT_DIAL_CODE, formatPhone, parsePhone } from "@/utils/phone"
 
@@ -43,8 +50,8 @@ const props = defineProps({
 	placeholder: { type: String, default: "" },
 	required: { type: Boolean, default: false },
 	error: { type: String, default: "" },
-	// Matches the dial-code combobox, which is outline whatever the number field is.
 	variant: { type: String as PropType<"subtle" | "outline" | "ghost">, default: "subtle" },
+	size: { type: String as PropType<"sm" | "md" | "lg">, default: "sm" },
 })
 
 const emit = defineEmits(["update:modelValue"])
@@ -52,6 +59,8 @@ const emit = defineEmits(["update:modelValue"])
 const dialCode = ref(DEFAULT_DIAL_CODE)
 const localNumber = ref("")
 const dialCodesData = ref<DialCode[]>([])
+// The number is padded past the dial code picker, whose width follows the code.
+const { width: dialCodeWidth } = useElementSize(useTemplateRef("dialCodePicker"))
 
 function getFlagEmoji(countryCode: string) {
 	if (!countryCode) return ""
@@ -61,12 +70,6 @@ function getFlagEmoji(countryCode: string) {
 		.map((char) => 127397 + char.charCodeAt(0))
 	return String.fromCodePoint(...codePoints)
 }
-
-const shortDisplay = computed(() => {
-	const entry = dialCodesData.value.find((d) => d.dial_code === dialCode.value)
-	if (entry) return `${getFlagEmoji(entry.code)} ${entry.dial_code}`
-	return dialCode.value
-})
 
 const dialCodeOptions = computed(() =>
 	dialCodesData.value.map((d) => ({

@@ -4,11 +4,14 @@ import frappe
 from bwh_payments import testing as payment_testing
 from frappe.tests import IntegrationTestCase
 
+from buzz.api.booking import process_booking
 from buzz.api.booking.schemas import BookingRequest
 from buzz.api.booking.services import create_add_on_doc
 from buzz.payments import get_payment_link_for_booking
 from buzz.tests.factories import (
+	BuzzCouponCodeFactory,
 	BuzzEventFactory,
+	BuzzFormFactory,
 	BuzzTeamFactory,
 	EventBookingFactory,
 	EventSponsorFactory,
@@ -40,12 +43,18 @@ class BookingTestCase(IntegrationTestCase):
 		self.enterContext(self.set_user("Administrator"))
 		frappe.clear_messages()
 		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event.name)
-		self.set_event({"is_published": 1, "registrations_close_at": None, "allow_guest_booking": 0})
+		self.set_event({"is_published": 1, "allow_guest_booking": 0})
+		BuzzFormFactory.set_registration_cutoff(self.event.name, None)
 		self.free_ticket_type = EventTicketTypeFactory.create(event=self.event.name)
 
 	def set_event(self, values):
 		frappe.db.set_value("Buzz Event", self.event.name, values)
 		frappe.clear_document_cache("Buzz Event", self.event.name)
+
+	def process_as_booker(self, request: BookingRequest):
+		"""Bookings come from website users; a System User would pass checks they must meet."""
+		with self.set_user(self.booker):
+			return process_booking(request)
 
 	def enable_phone_otp(self):
 		self.set_event({"allow_guest_booking": 1, "guest_verification_method": "Phone OTP"})
@@ -102,13 +111,16 @@ class CouponTestCase(IntegrationTestCase):
 		cls.ticket_type = create_paid_ticket_type(cls.event.name)
 		cls.add_on = TicketAddOnFactory.create(event=cls.event.name, price=ADD_ON_PRICE)
 
-	def create_booking(self, coupon: str, count: int = 1, **overrides):
+	def create_coupon(self, *traits, **overrides):
+		return BuzzCouponCodeFactory.create(*traits, event=self.event.name, **overrides)
+
+	def create_booking(self, coupon: str | None = None, count: int = 1, **overrides):
 		attendees = attendee_rows(self.ticket_type.name, count)
 		return EventBookingFactory.create(
 			event=self.event.name, coupon_code=coupon, attendees=attendees, **overrides
 		)
 
-	def create_booking_with_add_on(self, coupon: str, count: int = 1):
+	def create_booking_with_add_on(self, coupon: str | None = None, count: int = 1):
 		attendees = attendee_rows(self.ticket_type.name, count)
 		attendees[0]["add_ons"] = create_add_on_doc("", [{"add_on": self.add_on.name, "value": "XL"}]).name
 		return EventBookingFactory.create(event=self.event.name, coupon_code=coupon, attendees=attendees)
@@ -217,7 +229,7 @@ class BookingRefundTestCase(IntegrationTestCase):
 
 
 class TeamPermissionTestCase(IntegrationTestCase):
-	"""Alice owns team A, Bob owns team B, and each team has one unpublished event."""
+	"""Alice owns team A, Bob owns team B. Team A has two unpublished events, team B has one."""
 
 	@classmethod
 	def setUpClass(cls):
@@ -228,6 +240,7 @@ class TeamPermissionTestCase(IntegrationTestCase):
 		cls.team_a = BuzzTeamFactory.create_owned_by(cls.alice, team_name="Perm Team A").name
 		cls.team_b = BuzzTeamFactory.create_owned_by(cls.bob, team_name="Perm Team B").name
 		cls.event_a = BuzzEventFactory.create("unpublished", team=cls.team_a).name
+		cls.event_a2 = BuzzEventFactory.create("unpublished", team=cls.team_a).name
 		cls.event_b = BuzzEventFactory.create("unpublished", team=cls.team_b).name
 
 	def setUp(self):

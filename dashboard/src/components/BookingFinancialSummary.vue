@@ -1,70 +1,47 @@
 <template>
-	<div class="bg-surface-elevation-1 border border-outline-gray-1 rounded-6 p-6">
-		<div class="flex items-center justify-between mb-4">
-			<h3 class="text-lg-semibold text-ink-gray-9">{{ __("Payment Summary") }}</h3>
-			<Badge
-				v-if="(booking.total_amount || 0) > 0"
-				variant="subtle"
-				:theme="paymentBadge.theme"
-				size="sm"
-			>
+	<div class="overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-base">
+		<div class="flex items-center justify-between gap-2 px-4 pb-1.5 pt-3.5">
+			<h3 class="text-base-semibold text-ink-gray-9">{{ __("Payment") }}</h3>
+			<Badge v-if="(booking.total_amount || 0) > 0" variant="subtle" :theme="paymentBadge.theme">
 				<template #prefix>
-					<component :is="paymentBadge.icon" class="w-3 h-3" />
+					<component :is="paymentBadge.icon" class="size-3" />
 				</template>
 				{{ paymentBadge.label }}
 			</Badge>
 		</div>
 
-		<div class="space-y-3">
+		<div class="flex flex-col gap-2 px-4 pb-3 pt-1.5 text-p-sm text-ink-gray-6 tabular-nums">
 			<!-- Net Amount (hide when tax-inclusive and no discount) -->
-			<div
-				v-if="!isTaxInclusive || hasDiscount"
-				class="flex justify-between items-center text-ink-gray-7"
-			>
+			<div v-if="!isTaxInclusive || hasDiscount" class="flex justify-between gap-3">
 				<span>{{ __("Subtotal") }}</span>
-				<span class="font-medium">{{
-					formatPrice(booking.net_amount || 0, booking.currency || "INR")
-				}}</span>
+				<span>{{ formatPrice(booking.net_amount || 0, booking.currency || "INR") }}</span>
 			</div>
 
-			<!-- Coupon Code -->
-			<div v-if="booking.coupon_code" class="flex justify-between items-center text-ink-gray-7">
+			<div v-if="booking.coupon_code" class="flex justify-between gap-3">
 				<span>{{ __("Coupon") }}</span>
-				<span class="font-medium text-green-600">{{ booking.coupon_code }}</span>
+				<span>{{ booking.coupon_code }}</span>
 			</div>
 
-			<!-- Discount -->
-			<div v-if="hasDiscount" class="flex justify-between items-center text-green-600">
+			<div v-if="hasDiscount" class="flex justify-between gap-3">
 				<span>{{ __("Discount") }}</span>
-				<span class="font-medium"
-					>-{{ formatPrice(booking.discount_amount, booking.currency || "INR") }}</span
-				>
+				<span>-{{ formatPrice(booking.discount_amount, booking.currency || "INR") }}</span>
 			</div>
 
 			<!-- Tax Information (exclusive only) -->
-			<div
-				v-if="hasTax && !isTaxInclusive"
-				class="flex justify-between items-center text-ink-gray-7"
-			>
+			<div v-if="hasTax && !isTaxInclusive" class="flex justify-between gap-3">
 				<span>{{ __(booking.tax_label || "Tax") }} ({{ booking.tax_percentage || 0 }}%)</span>
-				<span class="font-medium">{{
-					formatPrice(booking.tax_amount || 0, booking.currency || "INR")
-				}}</span>
+				<span>{{ formatPrice(booking.tax_amount || 0, booking.currency || "INR") }}</span>
 			</div>
+		</div>
 
-			<!-- Divider -->
-			<hr class="border-outline-gray-1" />
-
-			<!-- Total Amount -->
-			<div class="flex justify-between items-center text-lg-semibold text-ink-gray-9">
-				<span>{{ isPaid ? __("Total Paid") : __("Total") }}</span>
-				<span :class="isPaid ? 'text-ink-green-6' : 'text-ink-gray-9'">{{
-					formatPrice(booking.total_amount || 0, booking.currency || "INR")
-				}}</span>
+		<div class="border-t border-outline-gray-1 px-4 py-3">
+			<div class="flex items-baseline justify-between gap-3 text-ink-gray-9">
+				<span class="text-base-semibold">{{ isPaid ? __("Total paid") : __("Total") }}</span>
+				<span class="text-lg-semibold tabular-nums">
+					{{ formatPrice(booking.total_amount || 0, booking.currency || "INR") }}
+				</span>
 			</div>
-
-			<!-- Tax-inclusive note -->
-			<div v-if="hasTax && isTaxInclusive" class="text-sm text-ink-gray-5 text-right mt-3">
+			<p v-if="hasTax && isTaxInclusive" class="mt-1 text-right text-p-xs text-ink-gray-5">
 				{{
 					__("Inclusive of {0} {1} ({2}%)", [
 						formatPrice(booking.tax_amount || 0, booking.currency || "INR"),
@@ -72,7 +49,14 @@
 						booking.tax_percentage || 0,
 					])
 				}}
-			</div>
+			</p>
+		</div>
+
+		<div
+			v-if="$slots.footer"
+			class="border-t border-outline-gray-1 bg-surface-gray-1 px-4 py-2.5 text-p-xs text-ink-gray-5"
+		>
+			<slot name="footer" />
 		</div>
 	</div>
 </template>

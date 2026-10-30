@@ -7,7 +7,8 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import set_request
 from frappe.website.serve import get_response_content
 
-from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, UserFactory
+from buzz.events.doctype.event_venue.event_venue import MULTIPLE_LOCATIONS_FLAG
+from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, EventVenueFactory, UserFactory
 from buzz.www.event.index import EventPage
 from buzz.www.site_header import DEFAULT_FAVICON
 
@@ -59,6 +60,13 @@ class TestEventPageRender(IntegrationTestCase):
 			self.assertNotIn(asset, html)
 		self.assertEqual(html.count('property="og:title"'), 1)
 
+	def test_page_renders_the_footer_the_site_chose(self):
+		with self.change_settings("Website Settings", footer_template="Standard Footer"):
+			html = render(self.route)
+		self.assertNotIn("buzz-footer", html)
+		self.assertIn("web-footer", html)
+		self.assertIn("website.bundle", html)
+
 	def test_favicon_falls_back_to_buzz(self):
 		settings = frappe.get_single("Website Settings")
 		self.addCleanup(frappe.clear_document_cache, "Website Settings", "Website Settings")
@@ -92,20 +100,54 @@ class TestEventPageRender(IntegrationTestCase):
 		self.assertEqual(EventPage(self.route).as_context()["online_label"], "Online")
 
 	def test_upcoming_event_renders_a_countdown(self):
-		self.set_event({"time_zone": "Asia/Kolkata", "start_date": "2099-01-05", "start_time": "09:30:00"})
+		self.set_event(
+			{
+				"show_countdown": 1,
+				"time_zone": "Asia/Kolkata",
+				"start_date": "2099-01-05",
+				"start_time": "09:30:00",
+			}
+		)
 		html = render(self.route)
 		self.assertIn('starts-at="2099-01-05T09:30:00+05:30"', html)
 
 	def test_ended_event_has_no_countdown(self):
-		self.set_event({"start_date": "2020-01-05", "end_date": "2020-01-05"})
+		self.set_event({"show_countdown": 1, "start_date": "2020-01-05", "end_date": "2020-01-05"})
+		self.assertNotIn("<event-countdown", render(self.route))
+
+	def test_countdown_is_off_unless_enabled(self):
+		self.set_event({"show_countdown": 0, "start_date": "2099-01-05"})
 		self.assertNotIn("<event-countdown", render(self.route))
 
 	def test_event_without_end_time_counts_to_end_of_last_day(self):
 		self.set_event(
-			{"time_zone": "UTC", "start_date": "2099-01-05", "end_date": "2099-01-06", "end_time": None}
+			{
+				"show_countdown": 1,
+				"time_zone": "UTC",
+				"start_date": "2099-01-05",
+				"end_date": "2099-01-06",
+				"end_time": None,
+			}
 		)
 		countdown = EventPage(self.route).as_context()["countdown"]
 		self.assertEqual(countdown["ends_at"], "2099-01-06T23:59:59+00:00")
+
+	def test_grouped_venue_shows_first_location_and_count_of_the_rest_in_the_meta(self):
+		BuzzTeamFactory.set_settings(self.team, {MULTIPLE_LOCATIONS_FLAG: 1})
+		self.addCleanup(BuzzTeamFactory.set_settings, self.team, {MULTIPLE_LOCATIONS_FLAG: 0})
+		museum = EventVenueFactory.create(team=self.team, venue_name="National Museum").name
+		hotel = EventVenueFactory.create(team=self.team, venue_name="Millennium Hotel").name
+		group = EventVenueFactory.create(
+			team=self.team,
+			has_multiple_locations=1,
+			locations=[{"venue": museum, "label": "Day 1"}, {"venue": hotel}],
+		)
+		self.set_event({"medium": "In Person", "venue": group.name})
+
+		page = render(self.route)
+
+		self.assertIn('<span class="meta-venue-name">National Museum</span>', page)
+		self.assertIn(">+1</span>", page)
 
 	def set_event(self, values: dict):
 		frappe.db.set_value("Buzz Event", self.event, values)

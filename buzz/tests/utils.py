@@ -11,6 +11,21 @@ def clear_map_link_cache():
 	frappe.cache.delete_keys(MAP_LINK_CACHE_PREFIX)
 
 
+def forget_outgoing_account() -> None:
+	if hasattr(frappe.local, "outgoing_email_account"):
+		delattr(frappe.local, "outgoing_email_account")
+
+
+def mute_outgoing_email(test_case) -> None:
+	"""CI has no outgoing account. Muted, frappe queues against a dummy one and never sends;
+	the dummy is cached on frappe.local, so it is dropped before the next module runs."""
+	frappe.flags.mute_emails = True
+	test_case.addCleanup(setattr, frappe.flags, "mute_emails", False)
+	test_case.addCleanup(forget_outgoing_account)
+	# CI never builds assets, and every email inlines email.bundle.css through this lookup.
+	test_case.enterContext(patch("frappe.utils.get_assets_json", return_value={}))
+
+
 def queued_emails(communication: str) -> list:
 	return frappe.get_all(
 		"Email Queue",
@@ -60,3 +75,19 @@ def properties_of(mock_capture, event: str) -> dict:
 	if len(matches) != 1:
 		raise AssertionError(f"expected one {event}, got {captured_names(mock_capture)}")
 	return matches[0]
+
+
+# Buzz Team Membership carries a team column but is scoped by its own pair of hooks.
+# Playground Sandbox is System Manager only; visitors reach it through buzz.api.playground.
+SELF_SCOPED_DOCTYPES = frozenset({"Buzz Team Membership", "Playground Sandbox"})
+
+
+def linked_to(doctype: str) -> set[str]:
+	"""Doctypes with a Link field named after `doctype`'s short name, e.g. `team` -> Buzz Team."""
+	fieldname = doctype.replace("Buzz ", "").lower()
+	parents = frappe.get_all(
+		"DocField",
+		filters={"fieldname": fieldname, "fieldtype": "Link", "options": doctype},
+		pluck="parent",
+	)
+	return {parent for parent in parents if not frappe.get_meta(parent).istable}

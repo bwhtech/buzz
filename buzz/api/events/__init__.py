@@ -1,9 +1,10 @@
 import frappe
 
-from buzz.api.events import services, taxes, zoom
+from buzz.api.events import coupons, services, taxes, zoom
 from buzz.api.events import ticket_types as ticket_types_service
 from buzz.api.events.schemas import (
 	CreatedEvent,
+	EventCoupons,
 	EventDetail,
 	EventGuestsResponse,
 	EventHostRef,
@@ -43,12 +44,15 @@ def get_event_guests(
 	order: str = "desc",
 	start: int = 0,
 	limit: int = services.GUESTS_PAGE_SIZE,
+	zone: str | None = None,
+	name: str | None = None,
 ) -> EventGuestsResponse:
 	"""One page of the people holding a submitted ticket to an event, with their add-ons.
 
 	`filters` is a JSON list of `[field, operator, value]`, the string the dashboard keeps in its URL.
+	`name` narrows the page to that one ticket, for opening it from a link.
 	"""
-	return services.event_guests(event, search, filters, order, start, limit)
+	return services.event_guests(event, search, filters, order, start, limit, zone=zone, name=name)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -112,6 +116,11 @@ def remove_co_host(event: str, host: str) -> None:
 @frappe.whitelist(methods=["GET"])
 def get_event_ticket_types(event: str) -> EventTicketTypes:
 	return ticket_types_service.event_ticket_types(event)
+
+
+@frappe.whitelist()
+def get_event_coupons(event: str) -> EventCoupons:
+	return coupons.event_coupons(event)
 
 
 @frappe.whitelist(methods=["POST"])

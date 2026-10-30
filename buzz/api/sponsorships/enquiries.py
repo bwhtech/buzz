@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 
 from buzz.api.events.services import ensure_event_team_access, manageable_event
-from buzz.api.filters.conditions import ListConditions, filter_field, question_fields
+from buzz.api.filters.conditions import ListConditions, filter_field, form_questions, question_fields
 from buzz.api.filters.schemas import FilterField
 from buzz.api.sponsorships.exceptions import EnquiryNotFound, EnquiryStatusLocked, EnquiryTierMissing
 from buzz.api.sponsorships.schemas import (
@@ -26,7 +26,7 @@ def event_enquiries(
 	limit: int = ENQUIRIES_PAGE_SIZE,
 ) -> EventEnquiriesResponse:
 	"""One page of an event's sponsorship enquiries; Sponsorship Enquiry grants organisers no role access."""
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "sponsors")
 
 	filter_fields = enquiry_filter_fields(event)
 	conditions = ListConditions("Sponsorship Enquiry", filter_fields).frappe_filters(filters)
@@ -66,21 +66,8 @@ def enquiry_filter_fields(event: str) -> list[FilterField]:
 		filter_field("status", _("Status"), "Select", [(status, _(status)) for status in statuses]),
 		filter_field("tier", _("Tier"), "Link", [(str(tier.name), tier.title) for tier in tiers]),
 		filter_field("contact_email", _("Contact email"), "Email"),
-		*question_fields(enquiry_questions(event)),
+		*question_fields(form_questions(event, "Sponsorship Enquiry")),
 	]
-
-
-def enquiry_questions(event: str) -> list:
-	"""Enabled questions on the event's enquiry form; an event has at most one."""
-	form = frappe.db.get_value("Sponsor Enquiry Form", {"event": event})
-	if not form:
-		return []
-	return frappe.get_all(
-		"Buzz Form Field",
-		filters={"parenttype": "Sponsor Enquiry Form", "parent": form, "enabled": 1},
-		fields=["fieldname", "label", "fieldtype", "options"],
-		order_by="idx",
-	)
 
 
 def search_filters(search: str | None) -> list[list] | None:
@@ -138,7 +125,7 @@ def enquiry_detail(enquiry: str) -> EnquiryDetail:
 	event = frappe.db.get_value("Sponsorship Enquiry", enquiry, "event")
 	if not event:
 		EnquiryNotFound.throw()
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "sponsors")
 
 	doc = frappe.get_doc("Sponsorship Enquiry", enquiry)
 	return EnquiryDetail(
@@ -173,7 +160,7 @@ def set_enquiry_status(enquiry: str, status: str) -> str:
 	if not frappe.db.exists("Sponsorship Enquiry", enquiry):
 		EnquiryNotFound.throw()
 	doc = frappe.get_doc("Sponsorship Enquiry", enquiry)
-	manageable_event(doc.event)
+	manageable_event(doc.event, "sponsors")
 
 	if doc.status in LOCKED_STATUSES and status != doc.status:
 		EnquiryStatusLocked.throw()

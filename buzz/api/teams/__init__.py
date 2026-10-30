@@ -4,6 +4,7 @@ from buzz.api.events.schemas import RouteAvailability
 from buzz.api.teams import calendar, invitations, public_page, services
 from buzz.api.teams.schemas import InviteOutcome, TeamEvents, TeamOption, TeamOverview
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
+from buzz.permissions import INTEGRATION_ROLE
 
 
 @frappe.whitelist()
@@ -28,13 +29,23 @@ def get_my_teams() -> list[TeamOption]:
 			team.slug,
 			team.is_published,
 			team.accept_community_submissions,
+			team.is_personal,
 			team.short_description,
 			membership.team_role,
 		)
-		.where((membership.user == frappe.session.user) & (membership.enabled == 1))
+		.where(
+			(membership.user == frappe.session.user)
+			& (membership.enabled == 1)
+			& (membership.team_role != INTEGRATION_ROLE)
+		)
 	).run(as_dict=True)
 	event_counts = services.upcoming_event_counts([my_team.name for my_team in my_teams])
 	return [team_option(my_team, event_counts.get(my_team.name, 0)) for my_team in my_teams]
+
+
+@frappe.whitelist(methods=["POST"])
+def create_personal_team() -> str:
+	return services.create_personal_team()
 
 
 def team_option(my_team: dict, upcoming_event_count: int) -> TeamOption:
@@ -85,9 +96,10 @@ def update_public_page(
 	about: str | None = None,
 	accept_community_submissions: bool = False,
 	slug: str | None = None,
+	meta_image: str | None = None,
 ) -> None:
 	services.update_public_page(
-		team, is_published, links, short_description, about, accept_community_submissions, slug
+		team, is_published, links, short_description, about, accept_community_submissions, slug, meta_image
 	)
 
 

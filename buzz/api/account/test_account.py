@@ -48,7 +48,7 @@ class TestGetUserInfo(LanguageTestCase):
 		with self.set_user("Guest"):
 			info = get_user_info().__json__()
 
-		self.assertEqual(set(info), {"is_logged_in", "brand_image", "language"})
+		self.assertEqual(set(info), {"is_logged_in", "brand", "navbar", "language"})
 		self.assertFalse(info["is_logged_in"])
 
 	def test_guest_language_follows_the_preferred_language_cookie(self):
@@ -76,10 +76,12 @@ class TestGetUserInfo(LanguageTestCase):
 				"last_name",
 				"full_name",
 				"email",
+				"username",
 				"user_image",
 				"bio",
 				"roles",
-				"brand_image",
+				"brand",
+				"navbar",
 				"language",
 				"time_zone",
 			},

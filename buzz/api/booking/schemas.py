@@ -4,6 +4,7 @@ from typing import Any
 from pydantic import Field
 
 from buzz.api.schemas import APIRequest, APIResponse
+from buzz.events.doctype.event_venue.details import VenueDetails
 
 
 class BookingRequest(APIRequest):
@@ -22,9 +23,23 @@ class BookingRequest(APIRequest):
 	payment_proof: str | None = None
 	is_offline: bool = False
 	offline_payment_method: str | None = None
+	buyer_name: str | None = None
+	buyer_email: str | None = None
+	buyer_phone: str | None = None
 	invoice_requested: bool = False
 	tax_id: str | None = None
+	business_name: str | None = None
 	billing_address: str | None = None
+	billing_state: str | None = None
+	hold_token: str | None = None
+
+
+class TicketHoldResponse(APIResponse):
+	hold_token: str
+	# None when nothing is held: no tickets asked for, or none of them has a limit.
+	expires_in_seconds: int | None
+	# Tickets this hold can still have, by ticket type. Ticket types without a limit are left out.
+	remaining: dict[str, int]
 
 
 class FreeBookingResponse(APIResponse):
@@ -48,18 +63,33 @@ class TaxSettings(APIResponse):
 	tax_percentage: float
 
 
+class AccessCodeStatus(APIResponse):
+	"""`error` is one generic message for every failure, so codes cannot be probed."""
+
+	code: str | None = None
+	error: str | None = None
+
+
 class EventBookingDataResponse(APIResponse):
 	# event_details and the list fields carry documents or meta-defined rows; typing
 	# them would reshape the payload.
 	registrations_closed: bool
 	event_details: Any
 	available_ticket_types: list
+	ticket_categories: list
 	available_add_ons: list
 	tax_settings: TaxSettings
 	custom_fields: list
+	# Core field rows (fieldname, label, width, enabled) per registration form, keyed like logic_rules.
+	core_fields: dict[str, list]
+	# The organiser's title and message for a finished booking, both optional.
+	success: dict
+	# Show, hide and require rules per registration form, keyed like custom_fields' applied_to.
+	logic_rules: dict
 	payment_gateways: list[str]
 	offline_payment_enabled: bool
 	offline_methods: list
+	access_code: AccessCodeStatus
 
 
 class ConfirmationEvent(APIResponse):
@@ -71,11 +101,6 @@ class ConfirmationEvent(APIResponse):
 	end_time: timedelta | None
 	short_description: str | None
 	free_event: int | None
-
-
-class ConfirmationVenue(APIResponse):
-	venue_name: str | None
-	address: str | None
 
 
 class ConfirmationBooking(APIResponse):
@@ -90,6 +115,8 @@ class ConfirmationBooking(APIResponse):
 	tax_percentage: float | None
 	discount_amount: float | None
 	coupon_code: str | None
+	payment_method: str | None
+	booked_on: datetime
 
 
 class ConfirmationTicket(APIResponse):
@@ -102,18 +129,20 @@ class ConfirmationTicket(APIResponse):
 
 class BookingConfirmationResponse(APIResponse):
 	event: ConfirmationEvent
-	venue: ConfirmationVenue | None
+	venue: VenueDetails | None
 	booking: ConfirmationBooking
 	tickets: list[ConfirmationTicket]
+	# The organiser's title and message for a finished booking, both optional.
+	success: dict
 
 
 class BookingDetailsResponse(APIResponse):
-	# doc, event, venue and the ticket rows are documents or aliased query rows;
+	# doc, event and the ticket rows are documents or aliased query rows;
 	# they pass through untyped to keep the wire shape.
 	doc: Any
 	tickets: list
 	event: Any
-	venue: Any
+	venue: VenueDetails | None
 	can_transfer_ticket: bool
 	can_change_add_ons: bool
 	can_request_cancellation: bool
@@ -122,27 +151,21 @@ class BookingDetailsResponse(APIResponse):
 	cancelled_tickets: list[str]
 
 
-class InvalidCouponResponse(APIResponse):
-	valid: bool
+class DiscountQuoteRequest(APIRequest):
+	event: str
+	currency: str
+	ticket_types: list[str]
+	coupon_code: str | None = None
+	buyer_email: str | None = None
+
+
+class DiscountQuote(APIResponse):
+	"""`coupon_code` is the typed code when a promo applied; `offer_name` names the automatic offer."""
+
+	discount_amount: float
+	coupon_code: str | None
 	error: str | None
-
-
-class DiscountCouponResponse(APIResponse):
-	valid: bool
-	coupon_type: str
-	discount_type: str | None
-	discount_value: float | None
-	# `or 0` fallbacks put a literal int 0 on the wire; a plain float would coerce it to 0.0.
-	max_discount_amount: int | float
-	min_order_value: int | float
-
-
-class FreeTicketsCouponResponse(APIResponse):
-	valid: bool
-	coupon_type: str
-	ticket_type: Any
-	remaining_tickets: int
-	free_add_ons: list
+	offer_name: str | None = None
 
 
 class BookingLine(APIResponse):

@@ -3,6 +3,7 @@ import { FrappeUIProvider, setConfig, useColorScheme } from "frappe-ui"
 import { watch } from "vue"
 
 import LoginDialog from "@/components/LoginDialog.vue"
+import PlaygroundBar from "@/components/playground/PlaygroundBar.vue"
 import { useThemeColor } from "@/composables/useThemeColor"
 import { userResource } from "@/data/user"
 
@@ -10,6 +11,8 @@ import Layout from "./layouts/Layout.vue"
 
 setConfig("systemTimezone", window.timezone?.system || null)
 setConfig("localTimezone", window.timezone?.user || null)
+
+const inSandbox = window.playground?.hours_left != null
 
 // Applies the stored theme on every page, not only those that render a theme toggle.
 useColorScheme()
@@ -32,5 +35,6 @@ watch(
 			<router-view />
 		</Layout>
 		<LoginDialog />
+		<PlaygroundBar v-if="inSandbox" />
 	</FrappeUIProvider>
 </template>

@@ -31,18 +31,27 @@
   "total_amount",
   "currency",
   "coupon_code",
+  "access_code",
   "discount_amount",
   "refund_section",
   "refund_status",
   "refunded_amount",
   "refunds_html",
+  "buyer_section",
+  "buyer_name",
+  "buyer_email",
+  "column_break_buyer",
+  "buyer_phone",
   "billing_details_section",
   "invoice_requested",
   "tax_id",
+  "business_name",
   "column_break_billing",
   "billing_address",
+  "billing_state",
   "section_break_sdfp",
   "amended_from",
+  "hold_token",
   "marketing_tab",
   "utm_parameters"
  ],
@@ -56,6 +65,13 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "hold_token",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Hold Token",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_sdfp",
@@ -179,6 +195,14 @@
    "options": "Buzz Coupon Code"
   },
   {
+   "description": "The access code that allowed the hidden tickets",
+   "fieldname": "access_code",
+   "fieldtype": "Link",
+   "label": "Access Code",
+   "options": "Buzz Coupon Code",
+   "read_only": 1
+  },
+  {
    "fieldname": "discount_amount",
    "fieldtype": "Currency",
    "label": "Discount Amount",
@@ -214,6 +238,45 @@
    "label": "Refunds"
   },
   {
+   "fieldname": "buyer_section",
+   "fieldtype": "Section Break",
+   "label": "Buyer"
+  },
+  {
+   "fieldname": "buyer_name",
+   "fieldtype": "Data",
+   "label": "Buyer Name"
+  },
+  {
+   "fieldname": "buyer_email",
+   "fieldtype": "Data",
+   "label": "Buyer Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "column_break_buyer",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "buyer_phone",
+   "fieldtype": "Data",
+   "label": "Buyer Phone",
+   "options": "Phone"
+  },
+  {
+   "depends_on": "eval:doc.invoice_requested==1",
+   "mandatory_depends_on": "eval:doc.invoice_requested==1",
+   "fieldname": "business_name",
+   "fieldtype": "Data",
+   "label": "Business Name"
+  },
+  {
+   "depends_on": "eval:doc.invoice_requested==1",
+   "fieldname": "billing_state",
+   "fieldtype": "Data",
+   "label": "Billing State"
+  },
+  {
    "fieldname": "billing_details_section",
    "fieldtype": "Section Break",
    "label": "Billing Details"
@@ -222,7 +285,8 @@
    "depends_on": "eval:doc.invoice_requested==1",
    "fieldname": "tax_id",
    "fieldtype": "Data",
-   "label": "Tax ID"
+   "label": "Tax ID",
+   "mandatory_depends_on": "eval:doc.invoice_requested==1"
   },
   {
    "fieldname": "column_break_billing",
@@ -232,8 +296,7 @@
    "depends_on": "eval:doc.invoice_requested==1",
    "fieldname": "billing_address",
    "fieldtype": "Small Text",
-   "label": "Billing Address",
-   "mandatory_depends_on": "eval:doc.invoice_requested==1"
+   "label": "Billing Address"
   },
   {
    "fieldname": "section_break_status",
@@ -308,7 +371,7 @@
    "link_fieldname": "booking"
   }
  ],
- "modified": "2026-08-17 13:00:00.000000",
+ "modified": "2026-10-26 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Booking",

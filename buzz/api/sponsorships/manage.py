@@ -9,14 +9,16 @@ from buzz.api.sponsorships.schemas import (
 	TierItem,
 )
 from buzz.api.sponsorships.sponsors import sponsor_items, sponsor_rows, sponsor_tags
-from buzz.permissions import has_team_access
+from buzz.events.doctype.buzz_form.form_types import SPONSORSHIP_FORM_DOCTYPE, event_form
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import IMPORT_FLAG, is_feature_enabled
+from buzz.permissions import has_section_permission
 
 TIER_FIELDS = ["name", "title", "enabled", "perks", "slots", {"prices": ["currency", "price"]}]
 
 
 def event_sponsorships(event: str) -> EventSponsorshipsResponse:
 	"""Tiers, confirmed sponsors and the enquiry form state for one event's manage page."""
-	ensure_event_team_access(event)
+	ensure_event_team_access(event, "sponsors")
 	doc = frappe.get_cached_doc("Buzz Event", event)
 
 	tiers = frappe.get_all(
@@ -32,18 +34,19 @@ def event_sponsorships(event: str) -> EventSponsorshipsResponse:
 
 	return EventSponsorshipsResponse(
 		title=doc.title,
-		can_write=has_team_access(doc.team, "write", frappe.session.user),
+		can_write=has_section_permission(event, "sponsors", "write", frappe.session.user),
 		form=form_state(doc),
 		tiers=[TierItem(**tier, sponsor_count=sponsor_counts[tier.name]) for tier in tiers],
 		sponsors=sponsor_items(sponsors, tier_titles),
 		team=doc.team,
 		tags=sponsor_tags(event),
+		import_enabled=is_feature_enabled(doc.team, IMPORT_FLAG),
 	)
 
 
 def form_state(doc) -> EnquiryFormState | None:
-	if not frappe.db.exists("Sponsor Enquiry Form", {"event": doc.name}):
+	form = event_form(doc.name, SPONSORSHIP_FORM_DOCTYPE)
+	if not form:
 		return None
-	form = frappe.get_doc("Sponsor Enquiry Form", {"event": doc.name})
 	link = f"/b/{doc.route}/{form.route}" if doc.route else None
 	return EnquiryFormState(name=form.name, closed=form.is_closed, link=link)

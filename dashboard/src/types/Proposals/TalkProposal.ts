@@ -22,6 +22,8 @@ export interface TalkProposal {
 	event: string
 	/**	Description : Text Editor	*/
 	description?: string
+	/**	Formatted Description : Text Editor	*/
+	formatted_description?: string
 	/**	Speakers : Table - Proposal Speaker	*/
 	speakers?: ProposalSpeaker[]
 	/**	Phone : Phone	*/

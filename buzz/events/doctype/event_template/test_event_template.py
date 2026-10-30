@@ -6,7 +6,15 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from buzz.events.doctype.buzz_event.buzz_event import create_from_template
-from buzz.tests.factories import BuzzTeamFactory, EventCategoryFactory, EventHostFactory, EventTemplateFactory
+from buzz.events.doctype.event_template.event_template import event_template_questions
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	BuzzTeamFactory,
+	EventCategoryFactory,
+	EventHostFactory,
+	EventTemplateFactory,
+	EventTicketTypeFactory,
+)
 
 DIRECT_FIELDS = {
 	"medium": "Online",
@@ -29,11 +37,20 @@ CUSTOM_FIELD = {
 	"label": "Company",
 	"fieldname": "company",
 	"fieldtype": "Data",
-	"applied_to": "Booking",
+	"form_doctype": "Event Booking",
 	"mandatory": 1,
 	"enabled": 1,
 	"placeholder": "Enter company name",
 }
+
+
+def form_questions(event: str) -> list[str]:
+	forms = frappe.get_all("Buzz Form", filters={"event": event}, pluck="name")
+	return frappe.get_all(
+		"Buzz Form Field",
+		{"parenttype": "Buzz Form", "parent": ["in", forms], "is_standard": 0},
+		pluck="name",
+	)
 
 
 class TestCreateEventFromTemplate(IntegrationTestCase):
@@ -89,7 +106,7 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 		ticket_types = frappe.get_all(
 			"Event Ticket Type",
 			filters={"event": event.name, "title": ["in", ["Early Bird", "Regular"]]},
-			fields=["title", {"prices": ["price"]}, "max_tickets_available"],
+			fields=["name", "title", {"prices": ["price"]}, "max_tickets_available"],
 			order_by="title",
 		)
 		self.assertEqual(
@@ -97,6 +114,23 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 			[("Early Bird", 500), ("Regular", 1000)],
 		)
 		self.assertEqual(ticket_types[0].max_tickets_available, 100)
+
+	def test_creates_ticket_categories_and_links_ticket_types(self):
+		template = self.create_template(
+			template_ticket_categories=[{"title": "Workshops", "description": "Hands-on", "sort_order": 2}],
+			template_ticket_types=[
+				{"title": "Lab", "category": "Workshops", "price": 0, "currency": "INR", "is_published": 1}
+			],
+		)
+
+		event = self.create_event(template, {"category": 1, "host": 1, "ticket_types": 1})
+
+		category = frappe.get_value(
+			"Event Ticket Category", {"event": event.name}, ["name", "title", "sort_order"], as_dict=True
+		)
+		self.assertEqual((category.title, category.sort_order), ("Workshops", 2))
+		lab = frappe.get_value("Event Ticket Type", {"event": event.name, "title": "Lab"}, "category")
+		self.assertEqual(lab, category.name)
 
 	def test_creates_add_ons(self):
 		add_on = {"title": "Workshop Access", "price": 2000, "currency": "INR", "enabled": 1}
@@ -116,20 +150,76 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 			[("Workshop Access", 2000, 1, "Morning\nAfternoon")],
 		)
 
-	def test_creates_custom_fields(self):
+	def test_copies_registration_questions_onto_the_new_events_form(self):
 		template = self.create_template(template_custom_fields=[CUSTOM_FIELD])
 
 		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
 
-		custom_fields = frappe.get_all(
-			"Buzz Custom Field",
-			filters={"event": event.name},
-			fields=["label", "fieldtype", "mandatory", "placeholder"],
-		)
+		form = frappe.get_doc("Buzz Form", {"event": event.name, "form_doctype": "Event Booking"})
 		self.assertEqual(
-			[(row.label, row.fieldtype, row.mandatory, row.placeholder) for row in custom_fields],
+			[
+				(
+					question.label,
+					question.fieldtype,
+					question.mandatory,
+					question.placeholder,
+				)
+				for question in form.questions
+				if not question.is_standard
+			],
 			[("Company", "Data", 1, "Enter company name")],
 		)
+
+	def test_copies_form_questions_onto_the_new_events_form(self):
+		template = self.create_template(
+			template_custom_fields=[
+				{
+					**CUSTOM_FIELD,
+					"label": "Dietary Preference",
+					"fieldname": "dietary_preference",
+					"mandatory": 0,
+					"placeholder": "",
+					"form_doctype": "Event Feedback",
+				}
+			]
+		)
+
+		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
+
+		form = frappe.get_doc("Buzz Form", {"event": event.name, "form_doctype": "Event Feedback"})
+		questions = [question.label for question in form.questions if not question.is_standard]
+		self.assertEqual(questions, ["Dietary Preference"])
+
+	def test_drops_conditions_that_name_another_events_records(self):
+		"""A ticket type belongs to the template's source event; a question-to-question condition travels."""
+		source_ticket_type = EventTicketTypeFactory.create().name
+		ticket_condition = [["ticket_type", "in", [source_ticket_type]]]
+		answer_condition = [["company", "is", "set"]]
+		template = self.create_template(
+			template_custom_fields=[
+				{**CUSTOM_FIELD, "form_doctype": "Event Booking Attendee"},
+				{
+					**CUSTOM_FIELD,
+					"label": "Role",
+					"fieldname": "role",
+					"form_doctype": "Event Booking Attendee",
+					"depends_on": frappe.as_json(ticket_condition + answer_condition),
+				},
+			]
+		)
+
+		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
+
+		form = frappe.get_doc("Buzz Form", {"event": event.name, "form_doctype": "Event Booking Attendee"})
+		rules = frappe.parse_json(form.logic_rules)
+		self.assertEqual([rule["conditions"] for rule in rules], [answer_condition])
+
+	def test_skips_form_questions_for_a_form_the_event_has_not(self):
+		template = self.create_template(template_custom_fields=[{**CUSTOM_FIELD, "form_doctype": "Buzz Tag"}])
+
+		event = self.create_event(template, {"category": 1, "host": 1, "custom_fields": 1})
+
+		self.assertFalse(form_questions(event.name))
 
 	def test_skips_linked_docs_when_unselected(self):
 		template = self.create_template(
@@ -143,7 +233,7 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 
 		self.assertFalse(frappe.db.exists("Event Ticket Type", {"event": event.name, "title": "Skipped"}))
 		self.assertFalse(frappe.db.exists("Ticket Add-on", {"event": event.name}))
-		self.assertFalse(frappe.db.exists("Buzz Custom Field", {"event": event.name}))
+		self.assertFalse(form_questions(event.name))
 
 	def test_sets_default_title_and_date(self):
 		template_name = f"Defaults Template {frappe.generate_hash(length=6)}"
@@ -178,3 +268,54 @@ class TestCreateEventFromTemplate(IntegrationTestCase):
 		return frappe.get_doc(
 			"Buzz Event", create_from_template(template.name, frappe.as_json(options), additional_fields)
 		)
+
+
+class TestTemplateFormQuestions(IntegrationTestCase):
+	"""The save side of the copy: every question of the event's forms becomes a template row."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.team = BuzzTeamFactory.create_owned_by().name
+
+	def setUp(self):
+		self.event = BuzzEventFactory.create(team=self.team)
+
+	def test_form_questions_name_their_form(self):
+		self.add_question("Event Feedback", "Dietary", "dietary")
+
+		rows = event_template_questions(str(self.event.name))
+
+		self.assertEqual(
+			[(row["fieldname"], row["form_doctype"]) for row in rows],
+			[("dietary", "Event Feedback")],
+		)
+
+	def test_registration_questions_name_their_form(self):
+		self.add_question("Event Booking", "Company", "company")
+		self.add_question("Event Booking Attendee", "Diet", "diet")
+
+		rows = event_template_questions(str(self.event.name))
+
+		self.assertCountEqual(
+			[(row["fieldname"], row["form_doctype"]) for row in rows],
+			[("company", "Event Booking"), ("diet", "Event Booking Attendee")],
+		)
+
+	def test_sponsorship_questions_stay_out(self):
+		self.add_question("Sponsorship Enquiry", "Extra", "extra")
+
+		self.assertEqual(event_template_questions(str(self.event.name)), [])
+
+	def add_question(self, form_doctype: str, label: str, fieldname: str):
+		form = frappe.get_doc("Buzz Form", {"event": self.event.name, "form_doctype": form_doctype})
+		form.append(
+			"questions",
+			{
+				"label": label,
+				"fieldname": fieldname,
+				"fieldtype": "Data",
+				"enabled": 1,
+			},
+		)
+		form.save(ignore_permissions=True)

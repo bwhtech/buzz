@@ -11,7 +11,6 @@
   "attendee_name",
   "event",
   "booking",
-  "coupon_used",
   "column_break_sqmr",
   "attendee_email",
   "ticket_type",
@@ -74,7 +73,8 @@
    "in_standard_filter": 1,
    "label": "Ticket Type",
    "options": "Event Ticket Type",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "amended_from",
@@ -116,12 +116,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "coupon_used",
-   "fieldtype": "Link",
-   "label": "Coupon Used ",
-   "options": "Bulk Ticket Coupon"
-  },
-  {
    "fieldname": "section_break_ijdn",
    "fieldtype": "Section Break"
   },
@@ -142,7 +136,7 @@
    "link_fieldname": "ticket"
   }
  ],
- "modified": "2026-08-17 10:00:00.000000",
+ "modified": "2026-10-16 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Ticket",
