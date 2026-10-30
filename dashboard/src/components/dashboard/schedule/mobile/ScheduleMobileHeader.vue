@@ -58,7 +58,7 @@ function save(publish: boolean) {
 				@click="builder.undo"
 			/>
 			<Button
-				v-if="route"
+				v-if="route && !builder.dirty.value"
 				variant="ghost"
 				size="lg"
 				icon="lucide-arrow-up-right"
