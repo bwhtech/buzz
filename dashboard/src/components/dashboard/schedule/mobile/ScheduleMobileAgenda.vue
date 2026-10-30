@@ -6,10 +6,12 @@ import { clock } from "../scheduleLayout"
 import { useDayLayout } from "../useDayLayout"
 import { buildAgenda } from "./scheduleMobileAgenda"
 import ScheduleMobileCard from "./ScheduleMobileCard.vue"
+import { useAgendaDrag } from "./useAgendaDrag"
 import { ALL_ROOMS, useMobile } from "./useScheduleMobile"
 
 const { builder, board, dayItems, roomIndex, conflicts } = useDayLayout()
 const mobile = useMobile()
+const { drag, begin } = useAgendaDrag()
 
 const filter = mobile.roomFilter
 const visibleItems = computed(() =>
@@ -30,7 +32,13 @@ const dayLabel = computed(() => builder.activeDay.value?.label)
 			<button
 				v-if="entry.kind === 'gap'"
 				type="button"
-				class="my-1.5 ml-[54px] flex w-[calc(100%-54px)] items-center justify-between gap-2 rounded-5 border border-dashed border-outline-gray-2 px-3 py-2 text-left text-p-xs text-ink-gray-5 transition-transform duration-100 active:scale-[0.98]"
+				:data-drop-start="entry.start"
+				class="my-1.5 ml-[54px] flex w-[calc(100%-54px)] items-center justify-between gap-2 rounded-5 border border-dashed px-3 py-2 text-left text-p-xs text-ink-gray-5 transition-transform duration-100 active:scale-[0.98]"
+				:class="
+					drag?.target === entry.start
+						? 'border-outline-blue-3 bg-surface-blue-1'
+						: 'border-outline-gray-2'
+				"
 				@click="mobile.openAdd(entry.start, gapRoom)"
 			>
 				<span>{{ entry.label }}</span>
@@ -38,7 +46,12 @@ const dayLabel = computed(() => builder.activeDay.value?.label)
 					<span class="lucide-plus size-3.5" aria-hidden="true" />Add
 				</span>
 			</button>
-			<div v-else class="flex gap-3 py-1.5">
+			<div
+				v-else
+				:data-drop-start="entry.start"
+				class="-mx-1 flex gap-3 rounded-5 px-1 py-1.5 transition-colors"
+				:class="drag?.target === entry.start && 'bg-surface-blue-1'"
+			>
 				<div class="w-[42px] shrink-0 pt-2.5 text-p-sm font-semibold tabular-nums text-ink-gray-9">
 					{{ clock(entry.start) }}
 				</div>
@@ -48,7 +61,13 @@ const dayLabel = computed(() => builder.activeDay.value?.label)
 						:key="item.key"
 						:item="item"
 						:conflict="conflicts[item.key]"
-						@click="mobile.openEdit(item.key)"
+						actions
+						:class="drag?.key === item.key && 'pointer-events-none relative z-20 shadow-xl'"
+						:style="
+							drag?.key === item.key ? { transform: `translateY(${drag.offset}px)` } : undefined
+						"
+						@edit="mobile.openEdit(item.key)"
+						@press="begin($event, item)"
 					/>
 				</div>
 			</div>

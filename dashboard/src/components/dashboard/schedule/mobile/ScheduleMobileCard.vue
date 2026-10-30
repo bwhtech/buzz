@@ -7,12 +7,15 @@ import { scheduleIcon } from "../scheduleIcons"
 import { durationLabel } from "../scheduleLayout"
 import type { ScheduleItem } from "../scheduleTypes"
 import { useBuilder } from "../useScheduleBoard"
+import ScheduleMobileCardActions from "./ScheduleMobileCardActions.vue"
 
-const props = defineProps<{ item: ScheduleItem; conflict?: string }>()
+const props = defineProps<{ item: ScheduleItem; conflict?: string; actions?: boolean }>()
+defineEmits<{ edit: []; press: [event: PointerEvent] }>()
 const builder = useBuilder()
 
 const resolved = computed(() => builder.resolve(props.item))
 const colors = computed(() => blockColors(resolved.value.type?.color))
+const tag = computed(() => (props.actions ? "div" : "button"))
 const isSpan = computed(() => !props.item.room)
 const speakers = computed(() => resolved.value.speakers.join(", "))
 const icon = computed(() => scheduleIcon(resolved.value.type?.icon) || "lucide-calendar-clock")
@@ -29,19 +32,26 @@ const cardStyle = computed(() => ({
 </script>
 
 <template>
-	<button
+	<component
+		:is="tag"
 		v-if="isSpan"
-		type="button"
+		:type="actions ? undefined : 'button'"
 		class="flex w-full items-center gap-2 rounded-5 bg-surface-gray-2 px-3 py-2.5 text-left text-p-sm text-ink-gray-7 transition-transform duration-100 active:scale-[0.98]"
 	>
 		<span :class="[icon, 'size-3.5 shrink-0']" aria-hidden="true" />
 		<span class="min-w-0 flex-1 truncate font-medium">{{ resolved.title }}</span>
 		<span class="whitespace-nowrap text-p-xs text-ink-gray-5">{{ meta }}</span>
 		<Badge v-if="conflict" theme="red" size="sm" label="Overlap" />
-	</button>
-	<button
+		<ScheduleMobileCardActions
+			v-if="actions"
+			@edit="$emit('edit')"
+			@press="$emit('press', $event)"
+		/>
+	</component>
+	<component
+		:is="tag"
 		v-else
-		type="button"
+		:type="actions ? undefined : 'button'"
 		class="block w-full min-w-0 rounded-5 border px-3 py-2.5 text-left transition-transform duration-100 active:scale-[0.98]"
 		:style="cardStyle"
 	>
@@ -60,6 +70,11 @@ const cardStyle = computed(() => ({
 				}}</span>
 			</span>
 			<Badge v-if="conflict" theme="red" size="sm" label="Overlap" />
+			<ScheduleMobileCardActions
+				v-if="actions"
+				@edit="$emit('edit')"
+				@press="$emit('press', $event)"
+			/>
 		</span>
-	</button>
+	</component>
 </template>
