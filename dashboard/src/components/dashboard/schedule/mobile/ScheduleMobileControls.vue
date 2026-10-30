@@ -43,13 +43,9 @@ function pickRoom(name: string) {
 </script>
 
 <template>
-	<div class="flex shrink-0 flex-col gap-3 border-b border-outline-gray-1 pb-3 pt-4">
-		<div class="flex items-center gap-2 px-4">
-			<h1 class="text-xl font-semibold text-ink-gray-9">Schedule</h1>
-			<span class="text-p-base text-ink-gray-5">{{ items.length }}</span>
-			<div class="flex-1" />
+	<div class="flex shrink-0 flex-col gap-3 border-b border-outline-gray-1 pb-3 pt-1">
+		<div v-if="unscheduled.length" class="flex justify-end px-4">
 			<Button
-				v-if="unscheduled.length"
 				variant="subtle"
 				size="sm"
 				iconLeft="lucide-inbox"
