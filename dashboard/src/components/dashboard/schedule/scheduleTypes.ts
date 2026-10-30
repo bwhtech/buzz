@@ -3,11 +3,11 @@ export interface ScheduleDay {
 	label: string
 }
 
-/** One slot on the schedule. Times are minutes since midnight; a null room spans every room. */
+/** One slot on the schedule. Times are minutes since midnight; a null track spans every track. */
 export interface ScheduleItem {
 	key: string
 	date: string
-	room: string | null
+	track: string | null
 	start: number
 	duration: number
 	type: string
@@ -15,7 +15,7 @@ export interface ScheduleItem {
 	talk: string | null
 }
 
-export interface ScheduleRoom {
+export interface ScheduleTrack {
 	name: string
 	title: string
 	color: string | null

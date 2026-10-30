@@ -12,7 +12,7 @@ import type {
 	ScheduleItemType,
 	ScheduleTalk,
 } from "./scheduleTypes"
-import { useScheduleRooms } from "./useScheduleRooms"
+import { useScheduleTracks } from "./useScheduleTracks"
 
 interface Draft {
 	days: ScheduleDay[]
@@ -41,9 +41,9 @@ export function useScheduleBuilder(eventId: () => string) {
 		method: "POST",
 		immediate: false,
 	})
-	const rooms = useScheduleRooms(
+	const tracks = useScheduleTracks(
 		() => scheduleName.value,
-		(room) => items.value.some((item) => item.room === room),
+		(track) => items.value.some((item) => item.track === track),
 	)
 	const typesList = useList<ScheduleItemType>({
 		doctype: "Buzz Schedule Item Type",
@@ -165,7 +165,7 @@ export function useScheduleBuilder(eventId: () => string) {
 	}
 
 	const conflicts = (list: ScheduleItem[]) =>
-		conflictsOf(list, { talks: talksByName.value, roomTitle: rooms.titleOf })
+		conflictsOf(list, { talks: talksByName.value, trackTitle: tracks.titleOf })
 	const conflictCount = computed(() =>
 		days.value
 			.map((day) => Object.keys(conflicts(dayItems(day.date))).length)
@@ -193,57 +193,57 @@ export function useScheduleBuilder(eventId: () => string) {
 	function place(
 		payload: Pick<DragPayload, "kind" | "id">,
 		date: string,
-		room?: string | null,
+		track?: string | null,
 		start?: number,
 	) {
-		if (payload.kind === "item") return moveItem(payload.id, date, room, start)
-		const defaultRoom = rooms.rooms.value[0]?.name ?? null
+		if (payload.kind === "item") return moveItem(payload.id, date, track, start)
+		const defaultTrack = tracks.tracks.value[0]?.name ?? null
 		if (payload.kind === "talk")
-			return placeTalk(payload.id, date, room === undefined ? defaultRoom : room, start)
-		return placeType(payload.id, date, room, start)
+			return placeTalk(payload.id, date, track === undefined ? defaultTrack : track, start)
+		return placeType(payload.id, date, track, start)
 	}
 
-	function moveItem(key: string, date: string, room?: string | null, start?: number) {
+	function moveItem(key: string, date: string, track?: string | null, start?: number) {
 		const item = items.value.find((entry) => entry.key === key)
 		if (!item) return
 		const patch: Partial<ScheduleItem> = { date, start: start ?? item.start }
-		if (room !== undefined && item.room) patch.room = room
+		if (track !== undefined && item.track) patch.track = track
 		const moved =
 			date !== item.date
 				? `Moved to ${dayLabel(date)}`
-				: patch.room && patch.room !== item.room
-					? `Moved to ${rooms.titleOf(patch.room)}`
+				: patch.track && patch.track !== item.track
+					? `Moved to ${tracks.titleOf(patch.track)}`
 					: undefined
 		update(key, patch, moved)
 	}
 
-	function placeTalk(name: string, date: string, room: string | null, start?: number) {
+	function placeTalk(name: string, date: string, track: string | null, start?: number) {
 		const talk = talksByName.value[name]
 		if (!talk) return
 		const duration = talkDuration.value
 		const existing = items.value.find((entry) => entry.talk === name)
-		const at = start ?? nextFreeStart(dayItems(date), room, duration, rangeOf(date))
-		if (existing) return update(existing.key, { date, room, start: at }, `Moved “${talk.title}”`)
+		const at = start ?? nextFreeStart(dayItems(date), track, duration, rangeOf(date))
+		if (existing) return update(existing.key, { date, track, start: at }, `Moved “${talk.title}”`)
 		add(
-			{ date, room, start: at, duration, type: "Talk", title: talk.title, talk: name },
+			{ date, track, start: at, duration, type: "Talk", title: talk.title, talk: name },
 			`Scheduled for ${dayLabel(date)}, ${clock(at)}`,
 		)
 	}
 
-	function placeType(name: string, date: string, room?: string | null, start?: number) {
+	function placeType(name: string, date: string, track?: string | null, start?: number) {
 		const type = typesByName.value[name]
 		if (!type) return
 		const target = type.spans_all_tracks
 			? null
-			: room === undefined
-				? (rooms.rooms.value[0]?.name ?? null)
-				: room
+			: track === undefined
+				? (tracks.tracks.value[0]?.name ?? null)
+				: track
 		const at = start ?? nextFreeStart(dayItems(date), target, type.default_duration, rangeOf(date))
 		const title = name === "Custom" ? "Untitled item" : type.title
 		return add(
 			{
 				date,
-				room: target,
+				track: target,
 				start: at,
 				duration: type.default_duration,
 				type: name,
@@ -254,12 +254,12 @@ export function useScheduleBuilder(eventId: () => string) {
 		)
 	}
 
-	function addCustom(date: string, title: string, duration: number, room: string | null) {
+	function addCustom(date: string, title: string, duration: number, track: string | null) {
 		const type = typesByName.value.Custom
-		const at = nextFreeStart(dayItems(date), room, duration, rangeOf(date))
+		const at = nextFreeStart(dayItems(date), track, duration, rangeOf(date))
 		const name = title.trim() || "Untitled item"
 		return add(
-			{ date, room, start: at, duration, type: type?.name ?? "Custom", title: name, talk: null },
+			{ date, track, start: at, duration, type: type?.name ?? "Custom", title: name, talk: null },
 			`Added “${name}” at ${clock(at)}`,
 		)
 	}
@@ -294,7 +294,7 @@ export function useScheduleBuilder(eventId: () => string) {
 	function duplicate(key: string) {
 		const item = items.value.find((entry) => entry.key === key)
 		if (!item) return
-		const start = nextFreeStart(dayItems(item.date), item.room, item.duration, rangeOf(item.date))
+		const start = nextFreeStart(dayItems(item.date), item.track, item.duration, rangeOf(item.date))
 		const base = { ...item, start, talk: null, type: item.talk ? "Custom" : item.type }
 		const title = item.talk ? `${itemDetails(item).title} (Q&A)` : item.title
 		return add({ ...base, title }, `Duplicated at ${clock(start)}`)
@@ -343,45 +343,45 @@ export function useScheduleBuilder(eventId: () => string) {
 	}
 
 	// The standard track is shared, so an edit gives this schedule a copy and moves its items there.
-	async function editableRoom(name: string) {
-		if (!rooms.find(name)?.is_standard) return name
-		const copiedRoom = String(
+	async function editableTrack(name: string) {
+		if (!tracks.find(name)?.is_standard) return name
+		const copiedTrack = String(
 			await copyTrackCall.submit({ schedule: scheduleName.value, track: name }),
 		)
-		await rooms.reload()
-		for (const item of items.value) if (item.room === name) item.room = copiedRoom
+		await tracks.reload()
+		for (const item of items.value) if (item.track === name) item.track = copiedTrack
 		savedSnapshot.value = savedSnapshot.value.replaceAll(
 			`"track":"${name}"`,
-			`"track":"${copiedRoom}"`,
+			`"track":"${copiedTrack}"`,
 		)
-		return copiedRoom
+		return copiedTrack
 	}
 
-	async function renameRoom(name: string, title: string) {
-		await rooms.rename(await editableRoom(name), title)
-		await rooms.reload()
+	async function renameTrack(name: string, title: string) {
+		await tracks.rename(await editableTrack(name), title)
+		await tracks.reload()
 	}
 
-	async function moveRoom(name: string, step: -1 | 1) {
-		const order = rooms.rooms.value.map((room) => room.name)
+	async function moveTrack(name: string, step: -1 | 1) {
+		const order = tracks.tracks.value.map((track) => track.name)
 		const neighbor = order[order.indexOf(name) + step]
-		const moved = await editableRoom(name)
-		if (neighbor) await editableRoom(neighbor)
-		await rooms.move(moved, step)
+		const moved = await editableTrack(name)
+		if (neighbor) await editableTrack(neighbor)
+		await tracks.move(moved, step)
 	}
 
 	// Deleting saves at once, so on a live schedule it would publish every other pending edit.
-	async function removeRoom(name: string) {
+	async function removeTrack(name: string) {
 		if (!draft.value) return
 		if (isPublished.value && dirty.value)
 			throw new Error("Publish or undo your changes before deleting a track")
-		const room = rooms.find(name)
-		draft.value.items = draft.value.items.filter((item) => item.room !== name)
+		const track = tracks.find(name)
+		draft.value.items = draft.value.items.filter((item) => item.track !== name)
 		// Undo would bring back items that point at the deleted track.
 		undoPoint.value = null
 		await save()
-		if (!room?.is_standard) await rooms.remove(name)
-		showToast(`Deleted ${room?.title}`)
+		if (!track?.is_standard) await tracks.remove(name)
+		showToast(`Deleted ${track?.title}`)
 	}
 
 	return {
@@ -405,10 +405,10 @@ export function useScheduleBuilder(eventId: () => string) {
 		talks,
 		unscheduledTalks,
 		talkDuration,
-		rooms,
-		renameRoom,
-		moveRoom,
-		removeRoom,
+		tracks,
+		renameTrack,
+		moveTrack,
+		removeTrack,
 		conflicts,
 		conflictCount,
 		itemDetails,

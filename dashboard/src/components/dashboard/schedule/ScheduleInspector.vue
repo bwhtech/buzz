@@ -21,9 +21,9 @@ const isTalk = computed(() => !!props.item.talk)
 const dayOptions = computed(() =>
 	builder.days.value.map((day) => ({ label: day.label, value: day.date })),
 )
-const roomOptions = computed(() => [
+const trackOptions = computed(() => [
 	{ label: "All tracks", value: "all" },
-	...builder.rooms.rooms.value.map((room) => ({ label: room.title, value: room.name })),
+	...builder.tracks.tracks.value.map((track) => ({ label: track.title, value: track.name })),
 ])
 const startOptions = computed(() => {
 	const starts = new Set([props.item.start])
@@ -40,11 +40,11 @@ const durationOptions = computed(() =>
 )
 const summary = computed(
 	() =>
-		`${timeRange(props.item)} · ${builder.dayLabel(props.item.date)} · ${builder.rooms.titleOf(props.item.room)}`,
+		`${timeRange(props.item)} · ${builder.dayLabel(props.item.date)} · ${builder.tracks.titleOf(props.item.track)}`,
 )
 
 const update = (patch: Partial<ScheduleItem>) => builder.update(props.item.key, patch)
-const setRoom = (value: string) => update({ room: value === "all" ? null : value })
+const setTrack = (value: string) => update({ track: value === "all" ? null : value })
 function remove() {
 	builder.remove(props.item.key)
 	board.select(null)
@@ -112,9 +112,9 @@ function duplicate() {
 				<FormControl
 					type="select"
 					label="Track"
-					:options="roomOptions"
-					:model-value="item.room ?? 'all'"
-					@update:model-value="setRoom"
+					:options="trackOptions"
+					:model-value="item.track ?? 'all'"
+					@update:model-value="setTrack"
 				/>
 				<FormControl
 					type="select"

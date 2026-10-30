@@ -49,7 +49,7 @@ const talks = computed(() => {
 })
 const customTypes = computed(() => builder.types.value.filter((type) => !TALK_TYPES.has(type.name)))
 const noTalksText = computed(() => {
-	if (!builder.rooms.rooms.value.length) return "Add a track to place talks"
+	if (!builder.tracks.tracks.value.length) return "Add a track to place talks"
 	if (!builder.talks.value.length) return "No accepted talks yet"
 	if (!mobile.unscheduledTalks.value.length) return "Every talk is on the schedule"
 	return `No talks match “${search.value.trim()}”`
@@ -70,7 +70,7 @@ function place(kind: "talk" | "type", id: string) {
 	const placed = builder.place(
 		{ kind, id },
 		builder.activeDate.value,
-		add.value.room,
+		add.value.track,
 		add.value.start,
 	)
 	mobile.closeSheet()
@@ -109,12 +109,12 @@ function place(kind: "talk" | "type", id: string) {
 					class="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 				>
 					<ScheduleMobileChip
-						v-for="room in builder.rooms.rooms.value"
-						:key="room.name"
-						:active="room.name === add.room"
-						@click="update({ room: room.name })"
+						v-for="track in builder.tracks.tracks.value"
+						:key="track.name"
+						:active="track.name === add.track"
+						@click="update({ track: track.name })"
 					>
-						{{ room.title }}
+						{{ track.title }}
 					</ScheduleMobileChip>
 				</div>
 				<TabButtons fluid v-model="tab" :options="tabOptions" />
@@ -153,7 +153,7 @@ function place(kind: "talk" | "type", id: string) {
 						<Badge theme="green" size="sm" label="Accepted" />
 					</button>
 					<div
-						v-if="!talks.length || !builder.rooms.rooms.value.length"
+						v-if="!talks.length || !builder.tracks.tracks.value.length"
 						class="px-4 py-9 text-center text-p-base text-ink-gray-5"
 					>
 						{{ noTalksText }}

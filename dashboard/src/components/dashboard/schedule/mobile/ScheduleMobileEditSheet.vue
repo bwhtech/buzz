@@ -31,9 +31,9 @@ const range = computed(() => builder.rangeOf(item.value?.date ?? ""))
 const dayOptions = computed(() =>
 	builder.days.value.map((day) => ({ label: day.label, value: day.date })),
 )
-const roomOptions = computed(() => [
+const trackOptions = computed(() => [
 	...(isTalk.value ? [] : [{ name: null, title: "All tracks" }]),
-	...builder.rooms.rooms.value,
+	...builder.tracks.tracks.value,
 ])
 
 function change(patch: Partial<ScheduleItem>) {
@@ -144,13 +144,13 @@ function remove() {
 						<div class="w-[72px] shrink-0 pt-1.5 text-p-sm text-ink-gray-5">Track</div>
 						<div class="flex min-w-0 flex-1 flex-wrap gap-1.5">
 							<ScheduleMobileChip
-								v-for="room in roomOptions"
-								:key="room.name ?? 'all'"
+								v-for="track in trackOptions"
+								:key="track.name ?? 'all'"
 								size="lg"
-								:active="room.name === item.room"
-								@click="change({ room: room.name })"
+								:active="track.name === item.track"
+								@click="change({ track: track.name })"
 							>
-								{{ room.title }}
+								{{ track.title }}
 							</ScheduleMobileChip>
 						</div>
 					</div>

@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import { computed } from "vue"
 
-import ScheduleAddRoom from "./ScheduleAddRoom.vue"
+import ScheduleAddTrack from "./ScheduleAddTrack.vue"
 import ScheduleBlock from "./ScheduleBlock.vue"
 import { HOUR_HEIGHT, hourLabel } from "./scheduleLayout"
 import SchedulePlaceholder from "./SchedulePlaceholder.vue"
-import ScheduleRoomHeader from "./ScheduleRoomHeader.vue"
+import ScheduleTrackHeader from "./ScheduleTrackHeader.vue"
 import { useDayLayout } from "./useDayLayout"
 import { pixelsPerMinute } from "./useScheduleBoard"
 
 defineProps<{ timeZone?: string | null }>()
 
 const TIME_COLUMN_WIDTH = 64
-const ROOM_WIDTH = 220
+const TRACK_WIDTH = 220
 const SIDE_COLUMN_WIDTH = 184
 const minuteHeight = pixelsPerMinute("y")
-const { board, rooms, roomIndex, visible, conflicts, lanes, countIn } = useDayLayout()
+const { board, tracks, trackIndex, visible, conflicts, lanes, countIn } = useDayLayout()
 
-const count = computed(() => Math.max(rooms.value.length, 1))
+const count = computed(() => Math.max(tracks.value.length, 1))
 const range = board.range
 const height = computed(() => ((range.value.end - range.value.start) / 60) * HOUR_HEIGHT)
 const hours = board.hours
@@ -25,9 +25,9 @@ const hours = board.hours
 function boxOf(item: (typeof visible.value)[number]) {
 	const top = (item.start - range.value.start) * minuteHeight
 	const length = item.duration * minuteHeight
-	const span = !item.room
+	const span = !item.track
 	const place = lanes.value[item.key] ?? { lane: 0, lanes: 1 }
-	const column = roomIndex.value[item.room ?? ""] ?? 0
+	const column = trackIndex.value[item.track ?? ""] ?? 0
 	return {
 		span,
 		compact: length < 44,
@@ -46,14 +46,14 @@ function boxOf(item: (typeof visible.value)[number]) {
 const placeholder = computed(() => {
 	const current = board.placeholder.value
 	if (!current || current.axis !== "y") return null
-	if (!current.span && roomIndex.value[current.room ?? ""] === undefined && current.room)
+	if (!current.span && trackIndex.value[current.track ?? ""] === undefined && current.track)
 		return null
 	const left =
-		current.span || !current.room
+		current.span || !current.track
 			? "4px"
-			: `calc(${(roomIndex.value[current.room] * 100) / count.value}% + 4px)`
+			: `calc(${(trackIndex.value[current.track] * 100) / count.value}% + 4px)`
 	const width =
-		current.span || !current.room ? "calc(100% - 8px)" : `calc(${100 / count.value}% - 8px)`
+		current.span || !current.track ? "calc(100% - 8px)" : `calc(${100 / count.value}% - 8px)`
 	return {
 		current,
 		style: {
@@ -71,7 +71,7 @@ const placeholder = computed(() => {
 		<div
 			class="relative"
 			:style="{
-				minWidth: `${TIME_COLUMN_WIDTH + rooms.length * ROOM_WIDTH + SIDE_COLUMN_WIDTH}px`,
+				minWidth: `${TIME_COLUMN_WIDTH + tracks.length * TRACK_WIDTH + SIDE_COLUMN_WIDTH}px`,
 			}"
 		>
 			<div class="sticky top-0 z-[8] flex border-b border-outline-gray-1 bg-surface-base">
@@ -82,21 +82,21 @@ const placeholder = computed(() => {
 					{{ timeZone }}
 				</div>
 				<div class="flex min-w-0 flex-1">
-					<ScheduleRoomHeader
-						v-for="(room, index) in rooms"
-						:key="room.name"
+					<ScheduleTrackHeader
+						v-for="(track, index) in tracks"
+						:key="track.name"
 						class="min-w-0 flex-1 border-l border-outline-gray-1"
-						:room="room"
+						:track="track"
 						:index="index"
-						:total="rooms.length"
-						:count="countIn(room.name)"
+						:total="tracks.length"
+						:count="countIn(track.name)"
 					/>
 				</div>
 				<div
 					class="flex shrink-0 items-center border-l border-outline-gray-1 p-2"
 					:style="{ width: `${SIDE_COLUMN_WIDTH}px` }"
 				>
-					<ScheduleAddRoom />
+					<ScheduleAddTrack />
 				</div>
 			</div>
 			<div class="relative flex">
@@ -126,12 +126,12 @@ const placeholder = computed(() => {
 					</template>
 					<div class="absolute inset-0 flex">
 						<div
-							v-for="room in rooms"
-							:key="room.name"
+							v-for="track in tracks"
+							:key="track.name"
 							class="min-w-0 flex-1 cursor-cell border-l border-outline-gray-1"
-							@dragover="board.dragOver(room.name, 'y')($event)"
-							@drop="board.dropOn(room.name)($event)"
-							@click="board.clickSlot(room.name, 'y')($event)"
+							@dragover="board.dragOver(track.name, 'y')($event)"
+							@drop="board.dropOn(track.name)($event)"
+							@click="board.clickSlot(track.name, 'y')($event)"
 						/>
 					</div>
 					<div class="pointer-events-none absolute inset-0">

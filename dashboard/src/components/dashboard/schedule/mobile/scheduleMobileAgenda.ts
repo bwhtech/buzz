@@ -26,10 +26,10 @@ const gapBetween = (from: number, to: number): AgendaGap => ({
 /** Items grouped by start time, with a gap entry wherever the day sits idle. */
 export function buildAgenda(
 	items: ScheduleItem[],
-	roomOrder: Record<string, number>,
+	trackOrder: Record<string, number>,
 	dayEnd: number,
 ): AgendaEntry[] {
-	const order = (item: ScheduleItem) => roomOrder[item.room ?? ""] ?? -1
+	const order = (item: ScheduleItem) => trackOrder[item.track ?? ""] ?? -1
 	const sorted = items.toSorted((a, b) => a.start - b.start || order(a) - order(b))
 	const entries: AgendaEntry[] = []
 	let current = null as AgendaGroup | null

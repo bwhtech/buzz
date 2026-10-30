@@ -17,10 +17,10 @@
 		{% macro schedule_card(row) %}
 		{% set expandable = row.abstract or row.people %}
 		{% set tag = "details" if expandable else "div" %}
-		<li class="schedule-item" data-room="{{ row.room_key }}" style="--schedule-dot: {{ row.color }}">
+		<li class="schedule-item" data-track="{{ row.track_key }}" style="--schedule-dot: {{ row.color }}">
 			<{{ tag }} class="schedule-card">
 				<{{ "summary" if expandable else "div" }} class="schedule-summary">
-					<span class="schedule-meta"><span class="schedule-dot" aria-hidden="true"></span><span class="schedule-meta-text">{{ [row.type, row.time, row.room] | select | join(" · ") }}</span></span>
+					<span class="schedule-meta"><span class="schedule-dot" aria-hidden="true"></span><span class="schedule-meta-text">{{ [row.type, row.time, row.track] | select | join(" · ") }}</span></span>
 					<span class="schedule-title">{{ row.title }}</span>
 					{% if row.people %}
 					<span class="schedule-people">
@@ -48,7 +48,7 @@
 
 		{% macro schedule_block(block) %}
 		{% set row = block.row %}
-		<li class="schedule-block{% if block.is_compact %} is-compact{% endif %}" data-room="{{ row.room_key }}" style="--schedule-dot: {{ row.color }}; top: {{ block.top }}px; height: {{ block.height }}px; left: calc({{ block.lane * 100 / block.lanes }}% + 3px); width: calc({{ 100 / block.lanes }}% - 6px)">
+		<li class="schedule-block{% if block.is_compact %} is-compact{% endif %}" data-track="{{ row.track_key }}" style="--schedule-dot: {{ row.color }}; top: {{ block.top }}px; height: {{ block.height }}px; left: calc({{ block.lane * 100 / block.lanes }}% + 3px); width: calc({{ 100 / block.lanes }}% - 6px)">
 			<button class="schedule-block-button" type="button" data-open-detail title="{{ row.title }}">
 				<span class="schedule-block-title"><span class="schedule-dot" aria-hidden="true"></span>{{ row.title }}</span>
 				{% if not block.is_compact %}<span class="schedule-block-time">{{ row.time }}</span>{% endif %}
@@ -56,7 +56,7 @@
 			</button>
 			<div class="schedule-block-detail" hidden>
 				<h2 class="schedule-dialog-title">{{ row.title }}</h2>
-				<p class="schedule-dialog-meta">{{ [row.type, row.time, row.duration, row.room] | select | join(" · ") }}</p>
+				<p class="schedule-dialog-meta">{{ [row.type, row.time, row.duration, row.track] | select | join(" · ") }}</p>
 				{% if row.abstract %}<div class="prose">{{ row.abstract | safe }}</div>{% endif %}
 				{% for person in row.people %}
 				<div class="schedule-person">
@@ -82,10 +82,10 @@
 			{% endif %}
 			<div class="schedule-filters" data-controls hidden>
 				<input class="schedule-search" type="search" placeholder="{{ _('Search sessions') }}" aria-label="{{ _('Search sessions') }}">
-				{% if schedule_rooms %}
-				<div class="schedule-rooms" role="group" aria-label="{{ _('Tracks') }}">
-					<button class="schedule-room-button" type="button" data-room="" aria-pressed="true">{{ _("All tracks") }}</button>
-					{% for room in schedule_rooms %}<button class="schedule-room-button" type="button" data-room="{{ room.name }}" aria-pressed="false">{{ room.title }}</button>{% endfor %}
+				{% if schedule_tracks %}
+				<div class="schedule-tracks" role="group" aria-label="{{ _('Tracks') }}">
+					<button class="schedule-track-button" type="button" data-track="" aria-pressed="true">{{ _("All tracks") }}</button>
+					{% for track in schedule_tracks %}<button class="schedule-track-button" type="button" data-track="{{ track.name }}" aria-pressed="false">{{ track.title }}</button>{% endfor %}
 				</div>
 				{% endif %}
 				<div class="schedule-layouts" role="group" aria-label="{{ _('Layout') }}">
@@ -99,7 +99,7 @@
 				{% if schedule | length > 1 %}<h3 class="label">{{ day.day }}</h3>{% endif %}
 				<ol class="schedule-slots">
 					{% for slot in day.slots %}
-					<li class="schedule-slot"{% if slot.all_rooms %} data-all-rooms{% endif %}>
+					<li class="schedule-slot"{% if slot.all_tracks %} data-all-tracks{% endif %}>
 						<div class="schedule-slot-time">
 							<span class="schedule-start">{{ slot.start }}</span>
 							{% if slot.rows | length > 1 %}<span class="schedule-parallel">{{ _("{0} at once").format(slot.rows | length) }}</span>{% endif %}
@@ -116,7 +116,7 @@
 						{% if grid.has_titles %}
 						<div class="schedule-grid-head">
 							<div class="schedule-grid-gutter"></div>
-							{% for column in grid.columns %}<div class="schedule-grid-title" data-room="{{ column.key }}">{{ column.title }}</div>{% endfor %}
+							{% for column in grid.columns %}<div class="schedule-grid-title" data-track="{{ column.key }}">{{ column.title }}</div>{% endfor %}
 						</div>
 						{% endif %}
 						<div class="schedule-grid-body">
@@ -124,7 +124,7 @@
 								{% for hour in grid.hours %}<span class="schedule-grid-hour" style="top: {{ hour.top }}px">{{ hour.label }}</span>{% endfor %}
 							</div>
 							{% for column in grid.columns %}
-							<ul class="schedule-grid-column" data-room="{{ column.key }}">
+							<ul class="schedule-grid-column" data-track="{{ column.key }}">
 								{% for block in column.blocks %}{{ schedule_block(block) }}{% endfor %}
 							</ul>
 							{% endfor %}

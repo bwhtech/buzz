@@ -19,7 +19,7 @@ const MIN_BLOCK = 14
 const GRID_PADDING = 10
 const PLACEHOLDER_MINUTES = 30
 
-const { builder, board, rooms, dayItems, conflicts } = useDayLayout()
+const { builder, board, tracks, dayItems, conflicts } = useDayLayout()
 const mobile = useMobile()
 const isGrid = computed(() => mobile.view.value === "grid")
 const scroller = ref<HTMLElement | null>(null)
@@ -36,8 +36,10 @@ const range = board.range
 const height = computed(() => (range.value.end - range.value.start) * PIXELS_PER_MINUTE)
 const hours = board.hours
 
-const shownRooms = computed(() =>
-	isGrid.value ? rooms.value : rooms.value.filter((room) => room.name === mobile.activeRoom.value),
+const shownTracks = computed(() =>
+	isGrid.value
+		? tracks.value
+		: tracks.value.filter((track) => track.name === mobile.activeTrack.value),
 )
 // A move follows the finger and shows a placeholder at its landing spot; only a resize reshapes the block.
 const resizing = computed(() => (touch.moving.value ? null : touch.position.value))
@@ -47,11 +49,11 @@ const displayed = computed(() =>
 	),
 )
 const columns = computed(() =>
-	shownRooms.value.map((room) => {
+	shownTracks.value.map((track) => {
 		// An all-track item shows in every track, beside whatever it overlaps.
-		const items = displayed.value.filter((item) => !item.room || item.room === room.name)
+		const items = displayed.value.filter((item) => !item.track || item.track === track.name)
 		const lanes = lanesOf(items)
-		return { room, items: items.map((item) => ({ item, ...lanes[item.key] })) }
+		return { track, items: items.map((item) => ({ item, ...lanes[item.key] })) }
 	}),
 )
 
@@ -67,12 +69,12 @@ function blockStyle(item: ScheduleItem, lane: number, lanes: number) {
 	}
 }
 
-function tapSlot(event: MouseEvent, room: string) {
+function tapSlot(event: MouseEvent, track: string) {
 	if (event.target !== event.currentTarget) return
 	const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
 	const raw = range.value.start + (event.clientY - box.top) / PIXELS_PER_MINUTE
 	const start = Math.floor(raw / SNAP_MINUTES) * SNAP_MINUTES
-	mobile.openAdd(Math.min(start, range.value.end - SNAP_MINUTES), room)
+	mobile.openAdd(Math.min(start, range.value.end - SNAP_MINUTES), track)
 }
 
 const placeholderStyle = (start: number, minutes = PLACEHOLDER_MINUTES) => ({
@@ -81,18 +83,18 @@ const placeholderStyle = (start: number, minutes = PLACEHOLDER_MINUTES) => ({
 })
 
 const sheet = mobile.sheet
-function placeholderFor(room: string) {
+function placeholderFor(track: string) {
 	const landingPosition = touch.moving.value
 	if (landingPosition)
-		return !landingPosition.room || landingPosition.room === room
-			? placeholderAt(room, landingPosition.start, landingPosition.duration)
+		return !landingPosition.track || landingPosition.track === track
+			? placeholderAt(track, landingPosition.start, landingPosition.duration)
 			: null
-	return sheet.value?.type === "add" && sheet.value.room === room
-		? placeholderAt(room, sheet.value.start, PLACEHOLDER_MINUTES)
+	return sheet.value?.type === "add" && sheet.value.track === track
+		? placeholderAt(track, sheet.value.start, PLACEHOLDER_MINUTES)
 		: null
 }
-const placeholderAt = (room: string, start: number, duration: number) => ({
-	room,
+const placeholderAt = (track: string, start: number, duration: number) => ({
+	track,
 	start,
 	duration,
 	axis: "y" as const,
@@ -127,11 +129,11 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 					/>
 					<div
 						v-for="column in columns"
-						:key="column.room.name"
+						:key="column.track.name"
 						class="box-border flex min-w-0 shrink-0 snap-start gap-1.5 border-l border-outline-gray-1 p-2.5 text-p-xs font-semibold text-ink-gray-8"
 						:style="{ width: `${fullColumnWidth}px` }"
 					>
-						<span class="truncate">{{ column.room.title }}</span>
+						<span class="truncate">{{ column.track.title }}</span>
 						<span class="shrink-0 font-normal text-ink-gray-5">{{
 							column.items.length || ""
 						}}</span>
@@ -140,7 +142,7 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 						type="button"
 						class="box-border flex shrink-0 snap-start items-center gap-1.5 border-l border-outline-gray-1 p-2.5 text-p-xs font-medium text-ink-gray-6 active:bg-surface-gray-2"
 						:style="{ width: `${fullColumnWidth}px` }"
-						@click="mobile.addRoom"
+						@click="mobile.addTrack"
 					>
 						<span class="lucide-plus size-3.5" aria-hidden="true" />Add track
 					</button>
@@ -160,7 +162,7 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 					</div>
 					<div
 						v-for="column in columns"
-						:key="column.room.name"
+						:key="column.track.name"
 						class="relative box-border cursor-pointer border-l border-outline-gray-1"
 						:class="isGrid ? 'shrink-0' : 'min-w-0 flex-1'"
 						:style="{
@@ -168,16 +170,16 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 							width: isGrid ? `${fullColumnWidth}px` : undefined,
 							backgroundImage: gridLines,
 						}"
-						@click="tapSlot($event, column.room.name)"
+						@click="tapSlot($event, column.track.name)"
 					>
 						<SchedulePlaceholder
-							v-if="placeholderFor(column.room.name)"
+							v-if="placeholderFor(column.track.name)"
 							class="inset-x-[3px]"
-							:placeholder="placeholderFor(column.room.name)!"
+							:placeholder="placeholderFor(column.track.name)!"
 							:style="
 								placeholderStyle(
-									placeholderFor(column.room.name)!.start,
-									placeholderFor(column.room.name)!.duration,
+									placeholderFor(column.track.name)!.start,
+									placeholderFor(column.track.name)!.duration,
 								)
 							"
 						/>

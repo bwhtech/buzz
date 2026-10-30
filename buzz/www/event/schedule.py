@@ -12,4 +12,4 @@ def get_context(context):
 		not_found()
 	apply_site_context(context, page.event.theme)
 	context.update(page.as_context())
-	context.update(schedule=page.schedule, schedule_rooms=page.public_schedule.rooms)
+	context.update(schedule=page.schedule, schedule_tracks=page.public_schedule.filter_tracks)

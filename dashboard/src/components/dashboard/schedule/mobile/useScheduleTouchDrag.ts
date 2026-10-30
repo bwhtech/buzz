@@ -11,7 +11,7 @@ export type DragMode = "move" | "resize"
 export interface DragPosition {
 	key: string
 	start: number
-	room: string | null
+	track: string | null
 	duration: number
 }
 
@@ -66,7 +66,7 @@ export function useScheduleTouchDrag(
 		if (event.button) return
 		event.stopPropagation()
 		finish()
-		const start = { key: item.key, start: item.start, room: item.room, duration: item.duration }
+		const start = { key: item.key, start: item.start, track: item.track, duration: item.duration }
 		const box = scroller.value
 		gesture = {
 			origin: { x: event.clientX, y: event.clientY },
@@ -123,10 +123,10 @@ export function useScheduleTouchDrag(
 			Math.min((end - item.start - item.duration) * pixelsPerMinute, dy),
 		)
 		const width = columnWidth.value
-		const rooms = builder.rooms.rooms.value
-		const index = rooms.findIndex((entry) => entry.name === item.room)
+		const tracks = builder.tracks.tracks.value
+		const index = tracks.findIndex((entry) => entry.name === item.track)
 		if (!width || index < 0 || mobile.view.value !== "grid") return { x: 0, y }
-		return { x: Math.max(-index * width, Math.min((rooms.length - 1 - index) * width, dx)), y }
+		return { x: Math.max(-index * width, Math.min((tracks.length - 1 - index) * width, dx)), y }
 	}
 
 	// The grip sits at a block's right edge, so only a finger dragged sideways scrolls sideways.
@@ -161,17 +161,17 @@ export function useScheduleTouchDrag(
 		return {
 			...item,
 			start: Math.max(first, Math.min(end - item.duration, start)),
-			room: roomAfter(item.room, dx),
+			track: trackAfter(item.track, dx),
 		}
 	}
 
-	function roomAfter(room: string | null, dx: number) {
+	function trackAfter(track: string | null, dx: number) {
 		const width = columnWidth.value
-		if (!room || !width || mobile.view.value !== "grid") return room
-		const rooms = builder.rooms.rooms.value
-		const index = rooms.findIndex((entry) => entry.name === room)
-		const next = Math.max(0, Math.min(rooms.length - 1, index + Math.round(dx / width)))
-		return rooms[next]?.name ?? room
+		if (!track || !width || mobile.view.value !== "grid") return track
+		const tracks = builder.tracks.tracks.value
+		const index = tracks.findIndex((entry) => entry.name === track)
+		const next = Math.max(0, Math.min(tracks.length - 1, index + Math.round(dx / width)))
+		return tracks[next]?.name ?? track
 	}
 
 	function onEnd() {
@@ -186,18 +186,18 @@ export function useScheduleTouchDrag(
 		const { item } = ended
 		if (
 			target.start === item.start &&
-			target.room === item.room &&
+			target.track === item.track &&
 			target.duration === item.duration
 		)
 			return
-		const patch = { start: target.start, room: target.room, duration: target.duration }
+		const patch = { start: target.start, track: target.track, duration: target.duration }
 		builder.update(item.key, patch, messageFor(ended.mode, target))
 	}
 
 	function messageFor(mode: DragMode, target: DragPosition) {
 		if (mode === "resize") return `Length set to ${durationLabel(target.duration)}`
-		const room = target.room ? ` · ${builder.rooms.titleOf(target.room)}` : ""
-		return `Moved to ${clock(target.start)}${room}`
+		const track = target.track ? ` · ${builder.tracks.titleOf(target.track)}` : ""
+		return `Moved to ${clock(target.start)}${track}`
 	}
 
 	function finish() {

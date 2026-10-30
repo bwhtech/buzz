@@ -15,7 +15,7 @@ import type { ScheduleBuilder } from "./useScheduleBuilder"
 type Axis = "y" | "x"
 
 export interface Placeholder {
-	room: string | null
+	track: string | null
 	start: number
 	duration: number
 	axis: Axis
@@ -23,7 +23,7 @@ export interface Placeholder {
 }
 
 interface QuickAddState {
-	room: string | null
+	track: string | null
 	start: number
 	x: number
 	y: number
@@ -42,9 +42,9 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 	const dragKey = ref<string | null>(null)
 	const dragging = ref(false)
 	const tab = ref<"talks" | "custom">("talks")
-	const addingRoom = ref(false)
-	const renamingRoom = ref<string | null>(null)
-	const roomDraft = ref("")
+	const addingTrack = ref(false)
+	const renamingTrack = ref<string | null>(null)
+	const trackDraft = ref("")
 
 	const selected = computed(
 		() => builder.items.value.find((item) => item.key === selectedKey.value) ?? null,
@@ -100,36 +100,37 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		)
 	}
 
-	const dragOver = (room: string | null, axis: Axis) => (event: DragEvent) => {
+	const dragOver = (track: string | null, axis: Axis) => (event: DragEvent) => {
 		if (!drag) return
 		event.preventDefault()
 		const start = startFrom(event, axis)
 		const current = placeholder.value
-		if (current && current.room === room && current.start === start && current.axis === axis) return
-		placeholder.value = { room, start, duration: drag.duration, axis, span: drag.span }
+		if (current && current.track === track && current.start === start && current.axis === axis)
+			return
+		placeholder.value = { track, start, duration: drag.duration, axis, span: drag.span }
 		dropDay.value = null
 	}
 
-	const dropOn = (room: string | null) => (event: DragEvent) => {
+	const dropOn = (track: string | null) => (event: DragEvent) => {
 		event.preventDefault()
 		const placed =
 			drag &&
 			placeholder.value &&
-			builder.place(drag, builder.activeDate.value, room, placeholder.value.start)
+			builder.place(drag, builder.activeDate.value, track, placeholder.value.start)
 		if (placed && placed.type === "Custom") selectedKey.value = placed.key
 		endDrag()
 	}
 
-	function clickSlot(room: string | null, axis: Axis) {
+	function clickSlot(track: string | null, axis: Axis) {
 		return (event: MouseEvent) => {
 			if (event.target !== event.currentTarget) return
 			const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
 			const offset = axis === "y" ? event.clientY - box.top : event.clientX - box.left
 			const raw = range.value.start + offset / pixelsPerMinute(axis)
 			const start = Math.min(Math.floor(raw / SNAP_MINUTES) * SNAP_MINUTES, range.value.end - 30)
-			quickAdd.value = { room, start, x: event.clientX, y: event.clientY }
+			quickAdd.value = { track, start, x: event.clientX, y: event.clientY }
 			selectedKey.value = null
-			placeholder.value = { room, start, duration: 30, axis, span: false }
+			placeholder.value = { track, start, duration: 30, axis, span: false }
 		}
 	}
 
@@ -213,8 +214,8 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		if (event.key === "Escape") {
 			quickAdd.value = null
 			placeholder.value = null
-			addingRoom.value = false
-			renamingRoom.value = null
+			addingTrack.value = false
+			renamingTrack.value = null
 			if (!typing) selectedKey.value = null
 		}
 		const removing = event.key === "Backspace" || event.key === "Delete"
@@ -234,9 +235,9 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		tab,
 		range,
 		hours,
-		addingRoom,
-		renamingRoom,
-		roomDraft,
+		addingTrack,
+		renamingTrack,
+		trackDraft,
 		select,
 		startDrag,
 		endDrag,

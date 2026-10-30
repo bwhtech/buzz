@@ -419,7 +419,7 @@ body {
 }
 
 .schedule-days,
-.schedule-rooms {
+.schedule-tracks {
 	display: flex;
 	gap: 8px;
 	overflow-x: auto;
@@ -427,7 +427,7 @@ body {
 }
 
 .schedule-day-button,
-.schedule-room-button,
+.schedule-track-button,
 .schedule-layout-button {
 	flex: none;
 	border: 1px solid transparent;
@@ -447,7 +447,7 @@ body {
 	text-align: left;
 }
 
-.schedule-room-button,
+.schedule-track-button,
 .schedule-layout-button {
 	padding: 4px 12px;
 	border-radius: 999px;
@@ -456,7 +456,7 @@ body {
 }
 
 .schedule-day-button[aria-pressed="true"],
-.schedule-room-button[aria-pressed="true"],
+.schedule-track-button[aria-pressed="true"],
 .schedule-layout-button[aria-pressed="true"] {
 	border-color: var(--border);
 	background: var(--page-bg);
@@ -503,7 +503,7 @@ body {
 	outline-offset: 2px;
 }
 
-.schedule-rooms {
+.schedule-tracks {
 	flex: 0 1 auto;
 	min-width: 0;
 }
@@ -702,48 +702,48 @@ summary.schedule-summary:focus-visible {
 	font-size: 12px;
 }
 
-/* A break or registration spans every room, so it reads as a line between sessions. */
-.schedule-slot[data-all-rooms] .schedule-items {
+/* A break or registration spans every track, so it reads as a line between sessions. */
+.schedule-slot[data-all-tracks] .schedule-items {
 	grid-template-columns: 1fr;
 }
 
-.schedule-slot[data-all-rooms] .schedule-slot-time {
+.schedule-slot[data-all-tracks] .schedule-slot-time {
 	padding-top: 0;
 }
 
-.schedule-slot[data-all-rooms] .schedule-card {
+.schedule-slot[data-all-tracks] .schedule-card {
 	border-color: transparent;
 	background: none;
 }
 
-.schedule-slot[data-all-rooms] .schedule-summary {
+.schedule-slot[data-all-tracks] .schedule-summary {
 	flex-direction: row;
 	align-items: center;
 	gap: 10px;
 	padding: 0;
 }
 
-.schedule-slot[data-all-rooms] .schedule-meta {
+.schedule-slot[data-all-tracks] .schedule-meta {
 	order: -1;
 }
 
-.schedule-slot[data-all-rooms] .schedule-meta-text,
-.schedule-slot[data-all-rooms] .schedule-people {
+.schedule-slot[data-all-tracks] .schedule-meta-text,
+.schedule-slot[data-all-tracks] .schedule-people {
 	display: none;
 }
 
-.schedule-slot[data-all-rooms] .schedule-title {
+.schedule-slot[data-all-tracks] .schedule-title {
 	flex: 1;
 	min-width: 0;
 	font-size: 14px;
 	font-weight: 400;
 }
 
-.schedule-slot[data-all-rooms] .schedule-duration {
+.schedule-slot[data-all-tracks] .schedule-duration {
 	display: block;
 }
 
-.schedule-slot[data-all-rooms] .schedule-detail {
+.schedule-slot[data-all-tracks] .schedule-detail {
 	margin: 12px 0 0 18px;
 }
 
@@ -1762,7 +1762,7 @@ summary:focus-visible {
 	}
 
 	.schedule-day-button:hover,
-	.schedule-room-button:hover,
+	.schedule-track-button:hover,
 	.schedule-layout-button:hover {
 		color: var(--ink-strong);
 	}
@@ -1905,7 +1905,7 @@ summary:focus-visible {
 		max-width: none;
 	}
 
-	.schedule-slot[data-all-rooms] .schedule-slot-time {
+	.schedule-slot[data-all-tracks] .schedule-slot-time {
 		justify-content: flex-start;
 	}
 }

@@ -19,14 +19,14 @@ const meta = (type: (typeof templates.value)[number]) =>
 
 const title = ref("")
 const duration = ref("30")
-const room = ref("all")
+const track = ref("all")
 const durationOptions = DURATIONS.map((minutes) => ({
 	label: durationLabel(minutes),
 	value: String(minutes),
 }))
-const roomOptions = computed(() => [
+const trackOptions = computed(() => [
 	{ label: "All tracks", value: "all" },
-	...builder.rooms.rooms.value.map((entry) => ({ label: entry.title, value: entry.name })),
+	...builder.tracks.tracks.value.map((entry) => ({ label: entry.title, value: entry.name })),
 ])
 const addLabel = computed(() => `Add to ${builder.activeDay.value?.label ?? "day"}`)
 
@@ -52,7 +52,7 @@ function addCustom() {
 		builder.activeDate.value,
 		title.value,
 		Number(duration.value),
-		room.value === "all" ? null : room.value,
+		track.value === "all" ? null : track.value,
 	)
 	title.value = ""
 }
@@ -95,7 +95,7 @@ function addCustom() {
 			/>
 			<div class="grid grid-cols-2 gap-2.5">
 				<FormControl v-model="duration" type="select" label="Duration" :options="durationOptions" />
-				<FormControl v-model="room" type="select" label="Track" :options="roomOptions" />
+				<FormControl v-model="track" type="select" label="Track" :options="trackOptions" />
 			</div>
 			<Button variant="solid" :label="addLabel" class="w-full" @click="addCustom" />
 		</div>

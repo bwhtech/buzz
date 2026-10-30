@@ -7,21 +7,21 @@ import { useDayLayout } from "../useDayLayout"
 import { buildAgenda } from "./scheduleMobileAgenda"
 import ScheduleMobileCard from "./ScheduleMobileCard.vue"
 import { useAgendaDrag } from "./useAgendaDrag"
-import { ALL_ROOMS, useMobile } from "./useScheduleMobile"
+import { ALL_TRACKS, useMobile } from "./useScheduleMobile"
 
-const { builder, board, dayItems, roomIndex, conflicts } = useDayLayout()
+const { builder, board, dayItems, trackIndex, conflicts } = useDayLayout()
 const mobile = useMobile()
 const { drag, begin } = useAgendaDrag()
 
-const filter = mobile.roomFilter
+const filter = mobile.trackFilter
 const visibleItems = computed(() =>
 	dayItems.value.filter(
-		(item) => filter.value === ALL_ROOMS || !item.room || item.room === filter.value,
+		(item) => filter.value === ALL_TRACKS || !item.track || item.track === filter.value,
 	),
 )
-const gapRoom = computed(() => (filter.value === ALL_ROOMS ? null : filter.value))
+const gapTrack = computed(() => (filter.value === ALL_TRACKS ? null : filter.value))
 const entries = computed(() =>
-	buildAgenda(visibleItems.value, roomIndex.value, board.range.value.end),
+	buildAgenda(visibleItems.value, trackIndex.value, board.range.value.end),
 )
 const dayLabel = computed(() => builder.activeDay.value?.label)
 </script>
@@ -39,7 +39,7 @@ const dayLabel = computed(() => builder.activeDay.value?.label)
 						? 'border-outline-blue-3 bg-surface-blue-1'
 						: 'border-outline-gray-2'
 				"
-				@click="mobile.openAdd(entry.start, gapRoom)"
+				@click="mobile.openAdd(entry.start, gapTrack)"
 			>
 				<span>{{ entry.label }}</span>
 				<span class="flex items-center gap-1 font-medium text-ink-gray-7">
@@ -62,7 +62,7 @@ const dayLabel = computed(() => builder.activeDay.value?.label)
 						:item="item"
 						:conflict="conflicts[item.key]"
 						actions
-						:movable="filter !== ALL_ROOMS"
+						:movable="filter !== ALL_TRACKS"
 						:class="drag?.key === item.key && 'pointer-events-none relative z-20 shadow-xl'"
 						:style="
 							drag?.key === item.key ? { transform: `translateY(${drag.offset}px)` } : undefined

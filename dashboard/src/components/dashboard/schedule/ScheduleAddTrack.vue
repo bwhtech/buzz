@@ -9,16 +9,16 @@ const board = useBoard()
 const input = ref<{ el: HTMLInputElement | null } | null>(null)
 
 function start() {
-	board.roomDraft.value = ""
-	board.addingRoom.value = true
+	board.trackDraft.value = ""
+	board.addingTrack.value = true
 	nextTick().then(() => input.value?.el?.focus())
 }
 
 async function submit() {
-	const title = board.roomDraft.value.trim() || `Track ${builder.rooms.rooms.value.length + 1}`
-	board.addingRoom.value = false
-	board.roomDraft.value = ""
-	await builder.rooms
+	const title = board.trackDraft.value.trim() || `Track ${builder.tracks.tracks.value.length + 1}`
+	board.addingTrack.value = false
+	board.trackDraft.value = ""
+	await builder.tracks
 		.add(title)
 		.then(() => builder.showToast(`Added ${title}`))
 		.catch(() => toast.error("Could not add the track"))
@@ -26,8 +26,8 @@ async function submit() {
 </script>
 
 <template>
-	<form v-if="board.addingRoom.value" class="w-full" @submit.prevent="submit">
-		<TextInput ref="input" v-model="board.roomDraft.value" placeholder="Track name, then Enter" />
+	<form v-if="board.addingTrack.value" class="w-full" @submit.prevent="submit">
+		<TextInput ref="input" v-model="board.trackDraft.value" placeholder="Track name, then Enter" />
 	</form>
 	<Button v-else variant="ghost" iconLeft="lucide-plus" label="Add track" @click="start" />
 </template>

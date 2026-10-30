@@ -2,7 +2,7 @@
 // the search and the list or grid layout on top of that same markup.
 export class EventSchedule extends HTMLElement {
 	private day = ""
-	private room = ""
+	private track = ""
 	private query = ""
 	private layout = "list"
 
@@ -21,10 +21,10 @@ export class EventSchedule extends HTMLElement {
 
 	private handleClick(target: HTMLElement) {
 		const dayButton = target.closest<HTMLElement>(".schedule-day-button")
-		const roomButton = target.closest<HTMLElement>(".schedule-room-button")
+		const trackButton = target.closest<HTMLElement>(".schedule-track-button")
 		const layoutButton = target.closest<HTMLElement>(".schedule-layout-button")
 		if (dayButton) this.day = dayButton.dataset.day ?? ""
-		else if (roomButton) this.room = roomButton.dataset.room ?? ""
+		else if (trackButton) this.track = trackButton.dataset.track ?? ""
 		else if (layoutButton) this.setLayout(layoutButton.dataset.layout ?? "list")
 		else if (target.closest("[data-clear-filters]")) this.clearFilters()
 		else if (target.closest("[data-open-detail]")) return this.openDetail(target)
@@ -61,21 +61,21 @@ export class EventSchedule extends HTMLElement {
 	}
 
 	private clearFilters() {
-		this.room = ""
+		this.track = ""
 		this.query = ""
 		const search = this.querySelector<HTMLInputElement>(".schedule-search")
 		if (search) search.value = ""
 	}
 
 	private render() {
-		this.toggleAttribute("data-filtered", Boolean(this.room || this.query))
+		this.toggleAttribute("data-filtered", Boolean(this.track || this.query))
 		this.markPressed(".schedule-day-button", "day", this.day)
-		this.markPressed(".schedule-room-button", "room", this.room)
+		this.markPressed(".schedule-track-button", "track", this.track)
 		this.markPressed(".schedule-layout-button", "layout", this.layout)
 		this.dataset.layout = this.layout
 		this.querySelectorAll<HTMLElement>(".schedule-grid-title, .schedule-grid-column").forEach(
 			(column) => {
-				column.hidden = Boolean(this.room) && column.dataset.room !== this.room
+				column.hidden = Boolean(this.track) && column.dataset.track !== this.track
 			},
 		)
 		this.querySelectorAll<HTMLElement>(".schedule-day").forEach((day) => {
@@ -97,9 +97,9 @@ export class EventSchedule extends HTMLElement {
 	}
 
 	private isShown(item: HTMLElement): boolean {
-		const inRoom = !this.room || !item.dataset.room || item.dataset.room === this.room
+		const inTrack = !this.track || !item.dataset.track || item.dataset.track === this.track
 		const inSearch = !this.query || (item.textContent ?? "").toLowerCase().includes(this.query)
-		return inRoom && inSearch
+		return inTrack && inSearch
 	}
 
 	private showEmptyState() {

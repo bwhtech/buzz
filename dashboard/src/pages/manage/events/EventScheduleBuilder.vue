@@ -47,10 +47,10 @@ const VIEW_COMPONENTS = {
 const loadError = computed(
 	() => (builder.schedule.error ?? builder.openCall.error) as FrappeError | null,
 )
-const hasRooms = computed(() => builder.rooms.rooms.value.length > 0)
+const hasTracks = computed(() => builder.tracks.tracks.value.length > 0)
 const dayIsEmpty = computed(
 	() =>
-		hasRooms.value &&
+		hasTracks.value &&
 		!builder.dayItems(builder.activeDate.value).length &&
 		!board.dragging.value &&
 		!board.quickAdd.value,

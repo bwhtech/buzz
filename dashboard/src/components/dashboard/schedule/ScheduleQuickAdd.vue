@@ -34,7 +34,7 @@ const templates = computed(() =>
 )
 const title = computed(() =>
 	quickAdd.value
-		? `Add to ${builder.rooms.titleOf(quickAdd.value.room)} at ${clock(quickAdd.value.start)}`
+		? `Add to ${builder.tracks.titleOf(quickAdd.value.track)} at ${clock(quickAdd.value.start)}`
 		: "",
 )
 const style = computed(() => {
@@ -51,7 +51,7 @@ function addItem(kind: "talk" | "type", id: string) {
 	const item = builder.place(
 		{ kind, id },
 		builder.activeDate.value,
-		quickAdd.value.room,
+		quickAdd.value.track,
 		quickAdd.value.start,
 	)
 	if (item && item.type === "Custom") board.select(item.key)

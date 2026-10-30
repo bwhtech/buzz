@@ -59,7 +59,7 @@ export interface Lane {
 	lanes: number
 }
 
-/** Overlapping items in one room sit side by side, one lane each. */
+/** Overlapping items in one track sit side by side, one lane each. */
 export function lanesOf(items: ScheduleItem[]): Record<string, Lane> {
 	const sorted = items.toSorted((a, b) => a.start - b.start || b.duration - a.duration)
 	const result: Record<string, Lane> = {}
@@ -86,7 +86,7 @@ export function lanesOf(items: ScheduleItem[]): Record<string, Lane> {
 
 export interface ConflictContext {
 	talks: Record<string, ScheduleTalk>
-	roomTitle: (room: string | null) => string
+	trackTitle: (track: string | null) => string
 }
 
 const titleOf = (item: ScheduleItem, context: ConflictContext) =>
@@ -94,7 +94,7 @@ const titleOf = (item: ScheduleItem, context: ConflictContext) =>
 const speakersOf = (item: ScheduleItem, context: ConflictContext) =>
 	item.talk ? (context.talks[item.talk]?.speakers ?? []) : []
 
-/** A message per item key: same-room overlaps, and one speaker in two rooms at once. */
+/** A message per item key: same-track overlaps, and one speaker in two tracks at once. */
 export function conflictsOf(
 	items: ScheduleItem[],
 	context: ConflictContext,
@@ -104,7 +104,7 @@ export function conflictsOf(
 	items.forEach((a, index) => {
 		for (const b of items.slice(index + 1)) {
 			if (!overlaps(a, b)) continue
-			if (a.room === b.room || !a.room || !b.room) {
+			if (a.track === b.track || !a.track || !b.track) {
 				addConflict(a, `Overlaps “${titleOf(b, context)}”`)
 				addConflict(b, `Overlaps “${titleOf(a, context)}”`)
 				continue
@@ -115,26 +115,26 @@ export function conflictsOf(
 			if (!sharedSpeaker) continue
 			addConflict(
 				a,
-				`${sharedSpeaker} is also speaking in ${context.roomTitle(b.room)} at this time`,
+				`${sharedSpeaker} is also speaking in ${context.trackTitle(b.track)} at this time`,
 			)
 			addConflict(
 				b,
-				`${sharedSpeaker} is also speaking in ${context.roomTitle(a.room)} at this time`,
+				`${sharedSpeaker} is also speaking in ${context.trackTitle(a.track)} at this time`,
 			)
 		}
 	})
 	return result
 }
 
-/** The first start at or after nine that clears the room, for a click-to-add. */
+/** The first start at or after nine that clears the track, for a click-to-add. */
 export function nextFreeStart(
 	items: ScheduleItem[],
-	room: string | null,
+	track: string | null,
 	duration: number,
 	range: DayRange,
 ) {
 	const busy = items
-		.filter((item) => !room || item.room === room || !item.room)
+		.filter((item) => !track || item.track === track || !item.track)
 		.toSorted((a, b) => a.start - b.start)
 	let start = DEFAULT_START
 	for (const item of busy) {

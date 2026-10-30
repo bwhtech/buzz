@@ -50,14 +50,14 @@ def count_label(count: int) -> str:
 
 
 def group_into_slots(rows: list[dict]) -> list[dict]:
-	"""Rows starting together share a slot, except all-room rows, which stand alone."""
+	"""Rows starting together share a slot, except all-track rows, which stand alone."""
 	slots = []
 	for row in rows:
 		last = slots[-1] if slots else None
-		if last and last["start"] == row["start"] and not (last["all_rooms"] or row["all_rooms"]):
+		if last and last["start"] == row["start"] and not (last["all_tracks"] or row["all_tracks"]):
 			last["rows"].append(row)
 		else:
-			slots.append({"start": row["start"], "all_rooms": row["all_rooms"], "rows": [row]})
+			slots.append({"start": row["start"], "all_tracks": row["all_tracks"], "rows": [row]})
 	return slots
 
 
@@ -83,8 +83,8 @@ class PublicSchedule:
 		return any(str(item.date) in dates for item in self.document.items)
 
 	@cached_property
-	def rooms(self) -> list[dict]:
-		"""Empty with a single room: a label or filter would only repeat itself."""
+	def filter_tracks(self) -> list[dict]:
+		"""Empty with a single track: a label or filter would only repeat itself."""
 		return self.tracks if len(self.tracks) > 1 else []
 
 	@cached_property
@@ -107,20 +107,20 @@ class PublicSchedule:
 	def items(self) -> list:
 		return sorted(
 			self.document.items,
-			key=lambda item: (get_time(item.start_time), self.room_positions.get(item.track, -1)),
+			key=lambda item: (get_time(item.start_time), self.track_positions.get(item.track, -1)),
 		)
 
 	@cached_property
-	def room_positions(self) -> dict:
+	def track_positions(self) -> dict:
 		return {track.name: position for position, track in enumerate(self.tracks)}
 
 	@cached_property
-	def room_titles(self) -> dict:
-		return {room.name: room.title for room in self.rooms}
+	def track_titles(self) -> dict:
+		return {track.name: track.title for track in self.filter_tracks}
 
 	def day(self, day: dict) -> dict:
 		rows = [self.row(item) for item in self.items if str(item.date) == day["date"]]
-		sessions = len([row for row in rows if not row["all_rooms"]])
+		sessions = len([row for row in rows if not row["all_tracks"]])
 		label = day["label"] or format_day(day["date"])
 		return {
 			"day": label,
@@ -145,16 +145,16 @@ class PublicSchedule:
 			"type": item_type.title if item_type else "",
 			"color": css_color(item_type.color if item_type else None),
 			"duration": duration_label(item.duration),
-			"all_rooms": bool(item.all_tracks),
-			"room": self.room_title(item),
-			"room_key": "" if item.all_tracks else item.track or "",
+			"all_tracks": bool(item.all_tracks),
+			"track": self.track_title(item),
+			"track_key": "" if item.all_tracks else item.track or "",
 			"people": people,
 			"speakers": join_names([person["name"] for person in people]),
 			"abstract": self.abstracts.get(item.reference_document, "") if is_talk(item) else "",
 		}
 
-	def room_title(self, item) -> str:
-		return "" if item.all_tracks else self.room_titles.get(item.track, "")
+	def track_title(self, item) -> str:
+		return "" if item.all_tracks else self.track_titles.get(item.track, "")
 
 	@cached_property
 	def types(self) -> dict:

@@ -1,32 +1,32 @@
 <script setup lang="ts">
 import { computed } from "vue"
 
-import ScheduleAddRoom from "./ScheduleAddRoom.vue"
+import ScheduleAddTrack from "./ScheduleAddTrack.vue"
 import ScheduleBlock from "./ScheduleBlock.vue"
 import { ROW_HEIGHT, hourLabel } from "./scheduleLayout"
 import SchedulePlaceholder from "./SchedulePlaceholder.vue"
-import ScheduleRoomHeader from "./ScheduleRoomHeader.vue"
+import ScheduleTrackHeader from "./ScheduleTrackHeader.vue"
 import { useDayLayout } from "./useDayLayout"
 import { pixelsPerMinute } from "./useScheduleBoard"
 
 const LABEL_COLUMN_WIDTH = 200
 const AXIS_HEIGHT = 36
 const minuteWidth = pixelsPerMinute("x")
-const { board, rooms, roomIndex, visible, conflicts, lanes, countIn } = useDayLayout()
+const { board, tracks, trackIndex, visible, conflicts, lanes, countIn } = useDayLayout()
 
 const range = board.range
 const width = computed(() => (range.value.end - range.value.start) * minuteWidth)
-const rowsHeight = computed(() => rooms.value.length * ROW_HEIGHT)
+const rowsHeight = computed(() => tracks.value.length * ROW_HEIGHT)
 const hours = board.hours
 const left = (minute: number) => (minute - range.value.start) * minuteWidth
 
 function boxOf(item: (typeof visible.value)[number]) {
-	const span = !item.room
+	const span = !item.track
 	const length = item.duration * minuteWidth
 	const place = lanes.value[item.key] ?? { lane: 0, lanes: 1 }
 	const laneHeight = (ROW_HEIGHT - 16) / place.lanes
 	const compact = !span && (laneHeight < 44 || length < 96)
-	const row = roomIndex.value[item.room ?? ""] ?? 0
+	const row = trackIndex.value[item.track ?? ""] ?? 0
 	const style = span
 		? {
 				top: "4px",
@@ -47,7 +47,7 @@ function boxOf(item: (typeof visible.value)[number]) {
 const placeholder = computed(() => {
 	const current = board.placeholder.value
 	if (!current || current.axis !== "x") return null
-	const row = roomIndex.value[current.room ?? ""]
+	const row = trackIndex.value[current.track ?? ""]
 	if (row === undefined && !current.span) return null
 	const style = {
 		left: `${left(current.start) + 1}px`,
@@ -104,8 +104,8 @@ const placeholder = computed(() => {
 					</template>
 				</div>
 				<div
-					v-for="(room, index) in rooms"
-					:key="room.name"
+					v-for="(track, index) in tracks"
+					:key="track.name"
 					class="box-border flex border-b border-outline-gray-1"
 					:style="{ height: `${ROW_HEIGHT}px` }"
 				>
@@ -113,20 +113,20 @@ const placeholder = computed(() => {
 						class="sticky left-0 z-[6] shrink-0 border-r border-outline-gray-1 bg-surface-base"
 						:style="{ width: `${LABEL_COLUMN_WIDTH}px` }"
 					>
-						<ScheduleRoomHeader
+						<ScheduleTrackHeader
 							class="h-full"
-							:room="room"
+							:track="track"
 							:index="index"
-							:total="rooms.length"
-							:count="countIn(room.name)"
+							:total="tracks.length"
+							:count="countIn(track.name)"
 						/>
 					</div>
 					<div
 						class="relative z-[1] shrink-0 cursor-cell"
 						:style="{ width: `${width}px` }"
-						@dragover="board.dragOver(room.name, 'x')($event)"
-						@drop="board.dropOn(room.name)($event)"
-						@click="board.clickSlot(room.name, 'x')($event)"
+						@dragover="board.dragOver(track.name, 'x')($event)"
+						@drop="board.dropOn(track.name)($event)"
+						@click="board.clickSlot(track.name, 'x')($event)"
 					/>
 				</div>
 				<div
@@ -156,7 +156,7 @@ const placeholder = computed(() => {
 				</div>
 			</div>
 			<div class="sticky left-0 p-2.5" :style="{ width: `${LABEL_COLUMN_WIDTH}px` }">
-				<ScheduleAddRoom />
+				<ScheduleAddTrack />
 			</div>
 		</div>
 	</div>

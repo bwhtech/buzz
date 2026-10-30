@@ -3,27 +3,27 @@ import { computed } from "vue"
 import { lanesOf } from "./scheduleLayout"
 import { useBoard, useBuilder } from "./useScheduleBoard"
 
-/** The active day's items arranged for a grid of rooms. */
+/** The active day's items arranged for a grid of tracks. */
 export function useDayLayout() {
 	const builder = useBuilder()
 	const board = useBoard()
-	const rooms = builder.rooms.rooms
+	const tracks = builder.tracks.tracks
 	const dayItems = computed(() => builder.dayItems(builder.activeDate.value))
-	const roomIndex = computed(() =>
-		Object.fromEntries(rooms.value.map((room, index) => [room.name, index])),
+	const trackIndex = computed(() =>
+		Object.fromEntries(tracks.value.map((track, index) => [track.name, index])),
 	)
 	const visible = computed(() =>
-		dayItems.value.filter((item) => !item.room || roomIndex.value[item.room] !== undefined),
+		dayItems.value.filter((item) => !item.track || trackIndex.value[item.track] !== undefined),
 	)
 	const conflicts = computed(() => builder.conflicts(dayItems.value))
 	const lanes = computed(() =>
 		Object.assign(
 			{},
-			...rooms.value.map((room) =>
-				lanesOf(dayItems.value.filter((item) => item.room === room.name)),
+			...tracks.value.map((track) =>
+				lanesOf(dayItems.value.filter((item) => item.track === track.name)),
 			),
 		),
 	)
-	const countIn = (room: string) => dayItems.value.filter((item) => item.room === room).length
-	return { builder, board, rooms, dayItems, roomIndex, visible, conflicts, lanes, countIn }
+	const countIn = (track: string) => dayItems.value.filter((item) => item.track === track).length
+	return { builder, board, tracks, dayItems, trackIndex, visible, conflicts, lanes, countIn }
 }

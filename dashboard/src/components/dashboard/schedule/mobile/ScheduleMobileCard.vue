@@ -21,14 +21,14 @@ const builder = useBuilder()
 const details = computed(() => builder.itemDetails(props.item))
 const colors = computed(() => blockColors(details.value.type?.color))
 const clickSelf = (event: KeyboardEvent) => (event.currentTarget as HTMLElement).click()
-const isSpan = computed(() => !props.item.room)
+const isSpan = computed(() => !props.item.track)
 const speakers = computed(() => details.value.speakers.join(", "))
 const icon = computed(() => scheduleIcon(details.value.type?.icon) || "lucide-calendar-clock")
 const meta = computed(() => {
 	const duration = durationLabel(props.item.duration)
 	if (isSpan.value) return `All tracks · ${duration}`
 	const type = details.value.type?.title ?? props.item.type
-	return `${type} · ${builder.rooms.titleOf(props.item.room)} · ${duration}`
+	return `${type} · ${builder.tracks.titleOf(props.item.track)} · ${duration}`
 })
 const cardStyle = computed(() => ({
 	background: colors.value.background,

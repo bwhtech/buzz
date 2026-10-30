@@ -15,7 +15,7 @@ const THEMES = new Set([
 const isHex = (color: string | null | undefined): color is string =>
 	/^#[0-9a-f]{6}$/i.test(color ?? "")
 
-export const ROOM_COLORS = ["blue", "purple", "green", "yellow", "pink", "cyan", "orange"]
+export const TRACK_COLORS = ["blue", "purple", "green", "yellow", "pink", "cyan", "orange"]
 
 function themeOf(color: string | null | undefined) {
 	const name = TOKEN_NAMES[color ?? ""] ?? color ?? ""

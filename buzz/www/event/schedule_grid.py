@@ -49,13 +49,13 @@ class ScheduleGrid:
 			"hours": self.hours(),
 			"columns": columns or [{"key": "", "title": "", "blocks": []}],
 			"has_titles": len(columns) > 1,
-			"spans": [self.block(row) for row in self.rows if row["all_rooms"]],
+			"spans": [self.block(row) for row in self.rows if row["all_tracks"]],
 		}
 
 	def columns(self) -> list[dict]:
 		columns = []
 		for track in self.tracks:
-			blocks = [self.block(row) for row in self.rows if row["room_key"] == track.name]
+			blocks = [self.block(row) for row in self.rows if row["track_key"] == track.name]
 			if blocks:
 				assign_lanes(blocks)
 				columns.append({"key": track.name, "title": track.title, "blocks": blocks})
