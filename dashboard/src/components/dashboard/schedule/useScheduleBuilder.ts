@@ -1,6 +1,8 @@
 import { useDebounceFn } from "@vueuse/core"
-import { dayjs, useCall, useDoc, useList } from "frappe-ui"
+import { dayjs, toast, useCall, useDoc, useList } from "frappe-ui"
 import { computed, ref, shallowRef, watch } from "vue"
+
+import type { FrappeError } from "@/types"
 
 import { MIN_DURATION, clock, conflictsOf, dayRange, nextFreeStart } from "./scheduleLayout"
 import { fromRow, newKey, toRow } from "./scheduleRows"
@@ -85,6 +87,15 @@ export function useScheduleBuilder(eventId: () => string) {
 	})
 	const activeDay = computed(() => days.value.find((day) => day.date === activeDate.value))
 	const dayItems = (date: string) => items.value.filter((item) => item.date === date)
+	const findItem = (key: string) => items.value.find((entry) => entry.key === key)
+	const nextDayDate = () => dayjs(days.value.at(-1)?.date).add(1, "day").format("YYYY-MM-DD")
+	const dayOptions = computed(() =>
+		days.value.map((day) => ({ label: day.label, value: day.date })),
+	)
+	const trackOptions = computed(() => [
+		{ label: "All tracks", value: "all" },
+		...tracks.tracks.value.map((track) => ({ label: track.title, value: track.name })),
+	])
 	const unscheduledTalks = computed(() => {
 		const scheduled = new Set(items.value.map((item) => item.talk))
 		return talks.value.filter((talk) => !scheduled.has(talk.name))
@@ -126,6 +137,16 @@ export function useScheduleBuilder(eventId: () => string) {
 		}
 	}
 
+	async function saveWithToast(publish?: boolean) {
+		try {
+			await save(publish)
+			if (publish !== undefined)
+				toast.success(publish ? "Schedule published" : "Schedule unpublished")
+		} catch (error) {
+			toast.error((error as FrappeError).message || "Could not save the schedule")
+		}
+	}
+
 	// A live schedule changes only when published; a draft saves as it is edited.
 	const autosave = useDebounceFn(
 		() => !isPublished.value && dirty.value && save().catch(() => null),
@@ -137,15 +158,15 @@ export function useScheduleBuilder(eventId: () => string) {
 		autosave()
 	})
 
-	const toast = ref<string | null>(null)
+	const toastMessage = ref<string | null>(null)
 	let toastTimer: ReturnType<typeof setTimeout> | undefined
 	const undoPoint = shallowRef<{ items: ScheduleItem[]; days: ScheduleDay[] } | null>(null)
 	const canUndo = computed(() => !!undoPoint.value)
 	function showToast(message?: string | null) {
 		if (!message) return
 		clearTimeout(toastTimer)
-		toast.value = message
-		toastTimer = setTimeout(() => (toast.value = null), 3500)
+		toastMessage.value = message
+		toastTimer = setTimeout(() => (toastMessage.value = null), 3500)
 	}
 	function saveUndoPoint() {
 		if (draft.value)
@@ -161,7 +182,7 @@ export function useScheduleBuilder(eventId: () => string) {
 		if (!draft.value || !undoPoint.value) return
 		Object.assign(draft.value, undoPoint.value)
 		undoPoint.value = null
-		toast.value = null
+		toastMessage.value = null
 	}
 
 	const conflicts = (list: ScheduleItem[]) =>
@@ -171,6 +192,7 @@ export function useScheduleBuilder(eventId: () => string) {
 			.map((day) => Object.keys(conflicts(dayItems(day.date))).length)
 			.reduce((a, b) => a + b, 0),
 	)
+	const conflictOf = (item: ScheduleItem) => conflicts(dayItems(item.date))[item.key]
 	const rangeOf = (date: string) => dayRange(dayItems(date))
 	const dayLabel = (date: string) => days.value.find((day) => day.date === date)?.label ?? date
 
@@ -204,7 +226,7 @@ export function useScheduleBuilder(eventId: () => string) {
 	}
 
 	function moveItem(key: string, date: string, track?: string | null, start?: number) {
-		const item = items.value.find((entry) => entry.key === key)
+		const item = findItem(key)
 		if (!item) return
 		const patch: Partial<ScheduleItem> = { date, start: start ?? item.start }
 		if (track !== undefined && item.track) patch.track = track
@@ -272,17 +294,17 @@ export function useScheduleBuilder(eventId: () => string) {
 	}
 
 	function retitle(key: string, title: string) {
-		const item = items.value.find((entry) => entry.key === key)
+		const item = findItem(key)
 		if (item) item.title = title
 	}
 
 	function resize(key: string, duration: number) {
-		const item = items.value.find((entry) => entry.key === key)
+		const item = findItem(key)
 		if (item) item.duration = Math.max(MIN_DURATION, duration)
 	}
 
 	function remove(key: string) {
-		const item = items.value.find((entry) => entry.key === key)
+		const item = findItem(key)
 		if (!item) return
 		const title = itemDetails(item).title
 		applyChange(
@@ -292,7 +314,7 @@ export function useScheduleBuilder(eventId: () => string) {
 	}
 
 	function duplicate(key: string) {
-		const item = items.value.find((entry) => entry.key === key)
+		const item = findItem(key)
 		if (!item) return
 		const start = nextFreeStart(dayItems(item.date), item.track, item.duration, rangeOf(item.date))
 		const base = { ...item, start, talk: null, type: item.talk ? "Custom" : item.type }
@@ -301,8 +323,7 @@ export function useScheduleBuilder(eventId: () => string) {
 	}
 
 	function addDay() {
-		const lastDay = days.value.at(-1)
-		const date = dayjs(lastDay?.date).add(1, "day").format("YYYY-MM-DD")
+		const date = nextDayDate()
 		applyChange(
 			(current) => current.days.push({ date, label: `Day ${current.days.length + 1}` }),
 			`Added Day ${days.value.length + 1}`,
@@ -323,7 +344,7 @@ export function useScheduleBuilder(eventId: () => string) {
 	function duplicateDay(date: string) {
 		const source = days.value.find((day) => day.date === date)
 		if (!source) return
-		const target = dayjs(days.value.at(-1)?.date).add(1, "day").format("YYYY-MM-DD")
+		const target = nextDayDate()
 		applyChange((current) => {
 			current.days.push({ date: target, label: `${source.label} copy` })
 			for (const item of dayItems(date))
@@ -393,11 +414,16 @@ export function useScheduleBuilder(eventId: () => string) {
 		saveState,
 		isPublished,
 		save,
+		saveWithToast,
 		days,
 		items,
 		activeDate,
 		activeDay,
 		dayItems,
+		findItem,
+		dayOptions,
+		trackOptions,
+		conflictOf,
 		dayLabel,
 		rangeOf,
 		types,
@@ -412,7 +438,7 @@ export function useScheduleBuilder(eventId: () => string) {
 		conflicts,
 		conflictCount,
 		itemDetails,
-		toast,
+		toastMessage,
 		undo,
 		canUndo,
 		showToast,

@@ -4,7 +4,14 @@ import { computed, ref, watch } from "vue"
 
 import { dotColor } from "../scheduleColors"
 import { scheduleIcon } from "../scheduleIcons"
-import { TALK_TYPES, clock, durationLabel, speakerLine } from "../scheduleLayout"
+import {
+	TALK_TYPES,
+	clamp,
+	clock,
+	durationLabel,
+	speakerLine,
+	talkMatches,
+} from "../scheduleLayout"
 import { useBuilder } from "../useScheduleBoard"
 import ScheduleMobileChip from "./ScheduleMobileChip.vue"
 import { type MobileSheet, useMobile } from "./useScheduleMobile"
@@ -43,9 +50,7 @@ const tabOptions = computed(() => [
 ])
 const talks = computed(() => {
 	const query = search.value.trim().toLowerCase()
-	return mobile.unscheduledTalks.value.filter((talk) =>
-		`${talk.title} ${talk.speakers.join(" ")}`.toLowerCase().includes(query),
-	)
+	return mobile.unscheduledTalks.value.filter((talk) => talkMatches(talk, query))
 })
 const customTypes = computed(() => builder.types.value.filter((type) => !TALK_TYPES.has(type.name)))
 const noTalksText = computed(() => {
@@ -62,7 +67,7 @@ function update(patch: Partial<AddSheet>) {
 function stepStart(step: number) {
 	if (!add.value) return
 	const start = add.value.start + step
-	update({ start: Math.max(range.value.start, Math.min(range.value.end - STEP_MINUTES, start)) })
+	update({ start: clamp(start, range.value.start, range.value.end - STEP_MINUTES) })
 }
 
 function place(kind: "talk" | "type", id: string) {

@@ -12,19 +12,12 @@ const builder = useBuilder()
 const board = useBoard()
 
 const details = computed(() => builder.itemDetails(props.item))
-const conflict = computed(
-	() => builder.conflicts(builder.dayItems(props.item.date))[props.item.key],
-)
+const conflict = computed(() => builder.conflictOf(props.item))
 const range = computed(() => builder.rangeOf(props.item.date))
 const isTalk = computed(() => !!props.item.talk)
 
-const dayOptions = computed(() =>
-	builder.days.value.map((day) => ({ label: day.label, value: day.date })),
-)
-const trackOptions = computed(() => [
-	{ label: "All tracks", value: "all" },
-	...builder.tracks.tracks.value.map((track) => ({ label: track.title, value: track.name })),
-])
+const dayOptions = builder.dayOptions
+const trackOptions = builder.trackOptions
 const startOptions = computed(() => {
 	const starts = new Set([props.item.start])
 	for (let minute = range.value.start; minute <= range.value.end - 5; minute += SNAP_MINUTES)

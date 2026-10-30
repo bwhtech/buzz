@@ -2,7 +2,7 @@
 import { useElementSize } from "@vueuse/core"
 import { computed, ref } from "vue"
 
-import { hourLabel, lanesOf, SNAP_MINUTES } from "../scheduleLayout"
+import { hourLabel, lanesOf, SNAP_MINUTES, snapDown } from "../scheduleLayout"
 import SchedulePlaceholder from "../SchedulePlaceholder.vue"
 import type { ScheduleItem } from "../scheduleTypes"
 import { useDayLayout } from "../useDayLayout"
@@ -73,7 +73,7 @@ function tapSlot(event: MouseEvent, track: string) {
 	if (event.target !== event.currentTarget) return
 	const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
 	const raw = range.value.start + (event.clientY - box.top) / PIXELS_PER_MINUTE
-	const start = Math.floor(raw / SNAP_MINUTES) * SNAP_MINUTES
+	const start = snapDown(raw)
 	mobile.openAdd(Math.min(start, range.value.end - SNAP_MINUTES), track)
 }
 

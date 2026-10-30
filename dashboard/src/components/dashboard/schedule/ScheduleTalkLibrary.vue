@@ -3,7 +3,7 @@ import { Badge, Button, TextInput } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import { badgeTheme } from "./scheduleColors"
-import { speakerLine } from "./scheduleLayout"
+import { speakerLine, talkMatches } from "./scheduleLayout"
 import { useBoard, useBuilder } from "./useScheduleBoard"
 
 const builder = useBuilder()
@@ -16,9 +16,7 @@ const scheduled = computed(() => new Set(builder.items.value.map((item) => item.
 
 const matching = computed(() => {
 	const query = search.value.trim().toLowerCase()
-	return builder.talks.value.filter((talk) =>
-		`${talk.title} ${talk.speakers.join(" ")}`.toLowerCase().includes(query),
-	)
+	return builder.talks.value.filter((talk) => talkMatches(talk, query))
 })
 const unscheduled = computed(() => matching.value.filter((talk) => !scheduled.value.has(talk.name)))
 

@@ -4,7 +4,7 @@ import { computed, nextTick, ref, watch } from "vue"
 
 import { dotColor } from "./scheduleColors"
 import { scheduleIcon } from "./scheduleIcons"
-import { TALK_TYPES, clock, speakerLine } from "./scheduleLayout"
+import { TALK_TYPES, clamp, clock, speakerLine, talkMatches } from "./scheduleLayout"
 import { useBoard, useBuilder } from "./useScheduleBoard"
 
 const builder = useBuilder()
@@ -21,11 +21,7 @@ watch(quickAdd, (open) => {
 
 const query = computed(() => search.value.trim().toLowerCase())
 const talks = computed(() =>
-	builder.unscheduledTalks.value
-		.filter((talk) =>
-			`${talk.title} ${talk.speakers.join(" ")}`.toLowerCase().includes(query.value),
-		)
-		.slice(0, 6),
+	builder.unscheduledTalks.value.filter((talk) => talkMatches(talk, query.value)).slice(0, 6),
 )
 const templates = computed(() =>
 	builder.types.value.filter(
@@ -42,7 +38,7 @@ const style = computed(() => {
 	const { x, y } = quickAdd.value
 	return {
 		left: `${Math.min(x + 8, window.innerWidth - 336)}px`,
-		top: `${Math.max(8, Math.min(y - 20, window.innerHeight - 440))}px`,
+		top: `${clamp(y - 20, 8, window.innerHeight - 440)}px`,
 	}
 })
 

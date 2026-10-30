@@ -13,6 +13,16 @@
 		<h1 class="event-title">{{ _("Schedule") }}</h1>
 		<p class="schedule-subtitle">{{ [date_range.date_range_with_weekdays if date_range.is_multi_day else event_date.full_date, venue.name if venue and not venue.locations] | select | join(" · ") }}</p>
 		{% macro avatar(person, class_name="schedule-avatar") %}{% if person.image %}<img class="{{ class_name }}" src="{{ person.image }}" alt="">{% else %}<span class="{{ class_name }}" aria-hidden="true">{{ person.name[:1] | upper }}</span>{% endif %}{% endmacro %}
+		{% macro talk_detail(row) %}
+		{% if row.abstract %}<div class="prose">{{ row.abstract | safe }}</div>{% endif %}
+		{% for person in row.people %}
+		<div class="schedule-person">
+			{{ avatar(person, "schedule-avatar is-large") }}
+			<span class="schedule-person-name">{{ person.name }}</span>
+			{% if person.role %}<span class="schedule-person-role">{{ person.role }}</span>{% endif %}
+		</div>
+		{% endfor %}
+		{% endmacro %}
 
 		{% macro schedule_card(row) %}
 		{% set expandable = row.abstract or row.people %}
@@ -32,14 +42,7 @@
 				</{{ "summary" if expandable else "div" }}>
 				{% if expandable %}
 				<div class="schedule-detail">
-					{% if row.abstract %}<div class="prose">{{ row.abstract | safe }}</div>{% endif %}
-					{% for person in row.people %}
-					<div class="schedule-person">
-						{{ avatar(person, "schedule-avatar is-large") }}
-						<span class="schedule-person-name">{{ person.name }}</span>
-						{% if person.role %}<span class="schedule-person-role">{{ person.role }}</span>{% endif %}
-					</div>
-					{% endfor %}
+					{{ talk_detail(row) }}
 				</div>
 				{% endif %}
 			</{{ tag }}>
@@ -57,14 +60,7 @@
 			<div class="schedule-block-detail" hidden>
 				<h2 class="schedule-dialog-title">{{ row.title }}</h2>
 				<p class="schedule-dialog-meta">{{ [row.type, row.time, row.duration, row.track] | select | join(" · ") }}</p>
-				{% if row.abstract %}<div class="prose">{{ row.abstract | safe }}</div>{% endif %}
-				{% for person in row.people %}
-				<div class="schedule-person">
-					{{ avatar(person, "schedule-avatar is-large") }}
-					<span class="schedule-person-name">{{ person.name }}</span>
-					{% if person.role %}<span class="schedule-person-role">{{ person.role }}</span>{% endif %}
-				</div>
-				{% endfor %}
+				{{ talk_detail(row) }}
 			</div>
 		</li>
 		{% endmacro %}

@@ -7,11 +7,11 @@ const builder = useBuilder()
 <template>
 	<Transition name="schedule-toast">
 		<div
-			v-if="builder.toast.value"
+			v-if="builder.toastMessage.value"
 			class="fixed bottom-5 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2.5 whitespace-nowrap rounded-5 bg-surface-gray-9 py-1.5 pl-3.5 pr-1.5 text-p-sm text-ink-base shadow-xl"
 			role="status"
 		>
-			<span>{{ builder.toast.value }}</span>
+			<span>{{ builder.toastMessage.value }}</span>
 			<button
 				type="button"
 				class="rounded-4 px-2 py-1 font-semibold text-ink-gray-3 hover:bg-surface-gray-8 hover:text-ink-base"

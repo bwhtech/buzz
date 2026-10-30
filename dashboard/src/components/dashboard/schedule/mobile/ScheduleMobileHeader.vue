@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { Button, Dropdown, toast } from "frappe-ui"
+import { Button, Dropdown } from "frappe-ui"
 import { computed } from "vue"
 
 import { useEventDoc } from "@/data/events"
-import type { FrappeError } from "@/types"
 import { openEventSchedule } from "@/utils/eventUrl"
 
 import { useBuilder } from "../useScheduleBoard"
@@ -22,12 +21,7 @@ const status = computed(() => {
 })
 const route = computed(() => event.doc?.route)
 
-function save(publish: boolean) {
-	builder
-		.save(publish)
-		.then(() => toast.success(publish ? "Schedule published" : "Schedule unpublished"))
-		.catch((error: FrappeError) => toast.error(error.message || "Could not save the schedule"))
-}
+const save = builder.saveWithToast
 </script>
 
 <template>

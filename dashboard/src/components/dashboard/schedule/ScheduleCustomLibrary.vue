@@ -24,10 +24,7 @@ const durationOptions = DURATIONS.map((minutes) => ({
 	label: durationLabel(minutes),
 	value: String(minutes),
 }))
-const trackOptions = computed(() => [
-	{ label: "All tracks", value: "all" },
-	...builder.tracks.tracks.value.map((entry) => ({ label: entry.title, value: entry.name })),
-])
+const trackOptions = builder.trackOptions
 const addLabel = computed(() => `Add to ${builder.activeDay.value?.label ?? "day"}`)
 
 function drag(type: (typeof templates.value)[number], event: DragEvent) {

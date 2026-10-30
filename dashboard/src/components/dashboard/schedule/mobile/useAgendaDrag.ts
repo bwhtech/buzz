@@ -1,7 +1,7 @@
 import { useEventListener } from "@vueuse/core"
 import { onBeforeUnmount, ref } from "vue"
 
-import { clock } from "../scheduleLayout"
+import { clamp, clock } from "../scheduleLayout"
 import type { ScheduleItem } from "../scheduleTypes"
 import { useBoard, useBuilder } from "../useScheduleBoard"
 
@@ -52,7 +52,7 @@ export function useAgendaDrag() {
 		const item = builder.items.value.find((entry) => entry.key === ended?.key)
 		if (!item || ended?.target == null) return
 		const { start: first, end } = board.range.value
-		const start = Math.max(first, Math.min(end - item.duration, ended.target))
+		const start = clamp(ended.target, first, end - item.duration)
 		if (start !== item.start) builder.update(item.key, { start }, `Moved to ${clock(start)}`)
 	}
 

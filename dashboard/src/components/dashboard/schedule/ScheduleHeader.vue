@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { useEventListener, useTimeAgo } from "@vueuse/core"
-import { Badge, Button, toast, Tooltip } from "frappe-ui"
+import { Badge, Button, Tooltip } from "frappe-ui"
 import { computed } from "vue"
 
 import { useEventDoc } from "@/data/events"
-import type { FrappeError } from "@/types"
 import { openEventSchedule } from "@/utils/eventUrl"
 
 import { useBuilder } from "./useScheduleBoard"
@@ -29,15 +28,7 @@ const status = computed(() => {
 	return `Saved ${modified.value}`
 })
 
-async function save(publish?: boolean) {
-	try {
-		await builder.save(publish)
-		if (publish !== undefined)
-			toast.success(publish ? "Schedule published" : "Schedule unpublished")
-	} catch (error) {
-		toast.error((error as FrappeError).message || "Could not save the schedule")
-	}
-}
+const save = builder.saveWithToast
 
 useEventListener(window, "keydown", (keydown: KeyboardEvent) => {
 	if (!(keydown.metaKey || keydown.ctrlKey) || keydown.key.toLowerCase() !== "s") return

@@ -2,12 +2,13 @@ import { useEventListener } from "@vueuse/core"
 import { type InjectionKey, type Ref, computed, inject, provide, ref } from "vue"
 
 import {
-	MIN_DURATION,
-	SNAP_MINUTES,
-	TIMELINE_RATIO,
 	HOUR_HEIGHT,
+	MIN_DURATION,
+	TIMELINE_RATIO,
+	clamp,
 	hourMarks,
 	snap,
+	snapDown,
 } from "./scheduleLayout"
 import type { DragPayload, ScheduleView } from "./scheduleTypes"
 import type { ScheduleBuilder } from "./useScheduleBuilder"
@@ -94,10 +95,7 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		const grab = axis === "y" ? (drag?.grabY ?? 0) : (drag?.grabX ?? 0)
 		const offset = (axis === "y" ? event.clientY - box.top : event.clientX - box.left) - grab
 		const minutes = snap(range.value.start + offset / pixelsPerMinute(axis))
-		return Math.max(
-			range.value.start,
-			Math.min(range.value.end - (drag?.duration ?? MIN_DURATION), minutes),
-		)
+		return clamp(minutes, range.value.start, range.value.end - (drag?.duration ?? MIN_DURATION))
 	}
 
 	const dragOver = (track: string | null, axis: Axis) => (event: DragEvent) => {
@@ -127,7 +125,7 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 			const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
 			const offset = axis === "y" ? event.clientY - box.top : event.clientX - box.left
 			const raw = range.value.start + offset / pixelsPerMinute(axis)
-			const start = Math.min(Math.floor(raw / SNAP_MINUTES) * SNAP_MINUTES, range.value.end - 30)
+			const start = Math.min(snapDown(raw), range.value.end - 30)
 			quickAdd.value = { track, start, x: event.clientX, y: event.clientY }
 			selectedKey.value = null
 			placeholder.value = { track, start, duration: 30, axis, span: false }
@@ -189,7 +187,7 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 	const startResize = (key: string, axis: Axis) => (event: MouseEvent) => {
 		event.stopPropagation()
 		event.preventDefault()
-		const item = builder.items.value.find((entry) => entry.key === key)
+		const item = builder.findItem(key)
 		if (!item) return
 		builder.saveUndoPoint()
 		const origin = axis === "y" ? event.clientY : event.clientX
@@ -200,10 +198,7 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		const pointer = resizing.axis === "y" ? event.clientY : event.clientX
 		const moved = (pointer - resizing.origin) / pixelsPerMinute(resizing.axis)
 		const longest = range.value.end - resizing.start
-		const duration = Math.min(
-			longest,
-			Math.round((resizing.duration + moved) / SNAP_MINUTES) * SNAP_MINUTES,
-		)
+		const duration = Math.min(longest, snap(resizing.duration + moved))
 		builder.resize(resizing.key, duration)
 	})
 	useEventListener(window, "mouseup", () => resizing && setTimeout(() => (resizing = null)))

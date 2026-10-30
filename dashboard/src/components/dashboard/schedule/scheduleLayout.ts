@@ -17,6 +17,11 @@ export const hourLabel = (minutes: number) => `${pad(Math.floor(minutes / 60))}:
 export const timeRange = (item: ScheduleItem) =>
 	`${clock(item.start)} – ${clock(item.start + item.duration)}`
 export const snap = (minutes: number) => Math.round(minutes / SNAP_MINUTES) * SNAP_MINUTES
+export const snapDown = (minutes: number) => Math.floor(minutes / SNAP_MINUTES) * SNAP_MINUTES
+export const clamp = (value: number, low: number, high: number) =>
+	Math.max(low, Math.min(high, value))
+export const talkMatches = (talk: ScheduleTalk, query: string) =>
+	`${talk.title} ${talk.speakers.join(" ")}`.toLowerCase().includes(query)
 
 export function durationLabel(minutes: number) {
 	if (minutes < 60) return `${minutes} min`
@@ -141,5 +146,5 @@ export function nextFreeStart(
 		if (start + duration <= item.start) break
 		start = Math.max(start, item.start + item.duration)
 	}
-	return Math.max(range.start, Math.min(start, range.end - duration))
+	return clamp(start, range.start, range.end - duration)
 }

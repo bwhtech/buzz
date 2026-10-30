@@ -1,7 +1,7 @@
 import { useEventListener } from "@vueuse/core"
 import { type Ref, computed, onBeforeUnmount, ref } from "vue"
 
-import { clock, durationLabel, MIN_DURATION } from "../scheduleLayout"
+import { clamp, clock, durationLabel, MIN_DURATION } from "../scheduleLayout"
 import type { ScheduleItem } from "../scheduleTypes"
 import { useBoard, useBuilder } from "../useScheduleBoard"
 import { useMobile } from "./useScheduleMobile"
@@ -118,15 +118,16 @@ export function useScheduleTouchDrag(
 	function clampToDay(dx: number, dy: number): Point {
 		const { item } = gesture!
 		const { start: first, end } = board.range.value
-		const y = Math.max(
+		const y = clamp(
+			dy,
 			(first - item.start) * pixelsPerMinute,
-			Math.min((end - item.start - item.duration) * pixelsPerMinute, dy),
+			(end - item.start - item.duration) * pixelsPerMinute,
 		)
 		const width = columnWidth.value
 		const tracks = builder.tracks.tracks.value
 		const index = tracks.findIndex((entry) => entry.name === item.track)
 		if (!width || index < 0 || mobile.view.value !== "grid") return { x: 0, y }
-		return { x: Math.max(-index * width, Math.min((tracks.length - 1 - index) * width, dx)), y }
+		return { x: clamp(dx, -index * width, (tracks.length - 1 - index) * width), y }
 	}
 
 	// The grip sits at a block's right edge, so only a finger dragged sideways scrolls sideways.
@@ -151,7 +152,7 @@ export function useScheduleTouchDrag(
 		const { item } = gesture!
 		const longest = board.range.value.end - item.start
 		const duration = roundToStep(item.duration + dy / pixelsPerMinute)
-		return { ...item, duration: Math.max(MIN_DURATION, Math.min(longest, duration)) }
+		return { ...item, duration: clamp(duration, MIN_DURATION, longest) }
 	}
 
 	function movedBy(dx: number, dy: number): DragPosition {
@@ -160,7 +161,7 @@ export function useScheduleTouchDrag(
 		const start = roundToStep(item.start + dy / pixelsPerMinute)
 		return {
 			...item,
-			start: Math.max(first, Math.min(end - item.duration, start)),
+			start: clamp(start, first, end - item.duration),
 			track: trackAfter(item.track, dx),
 		}
 	}
@@ -170,7 +171,7 @@ export function useScheduleTouchDrag(
 		if (!track || !width || mobile.view.value !== "grid") return track
 		const tracks = builder.tracks.tracks.value
 		const index = tracks.findIndex((entry) => entry.name === track)
-		const next = Math.max(0, Math.min(tracks.length - 1, index + Math.round(dx / width)))
+		const next = clamp(index + Math.round(dx / width), 0, tracks.length - 1)
 		return tracks[next]?.name ?? track
 	}
 

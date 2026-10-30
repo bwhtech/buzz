@@ -3,7 +3,7 @@ import { Badge, BottomSheet, Button, TabButtons } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import { badgeTheme } from "../scheduleColors"
-import { clock, durationLabel, timeRange } from "../scheduleLayout"
+import { clamp, clock, durationLabel, timeRange } from "../scheduleLayout"
 import type { ScheduleItem } from "../scheduleTypes"
 import { useBuilder } from "../useScheduleBoard"
 import ScheduleMobileChip from "./ScheduleMobileChip.vue"
@@ -20,17 +20,13 @@ watch(mobile.sheet, (sheet) => sheet?.type === "edit" && (key.value = sheet.key)
 	immediate: true,
 })
 const open = computed(() => mobile.sheet.value?.type === "edit")
-const item = computed(() => builder.items.value.find((entry) => entry.key === key.value))
+const item = computed(() => (key.value ? builder.findItem(key.value) : undefined))
 const details = computed(() => (item.value ? builder.itemDetails(item.value) : null))
 const isTalk = computed(() => !!item.value?.talk)
-const conflict = computed(() =>
-	item.value ? builder.conflicts(builder.dayItems(item.value.date))[item.value.key] : "",
-)
+const conflict = computed(() => (item.value ? builder.conflictOf(item.value) : ""))
 const range = computed(() => builder.rangeOf(item.value?.date ?? ""))
 
-const dayOptions = computed(() =>
-	builder.days.value.map((day) => ({ label: day.label, value: day.date })),
-)
+const dayOptions = builder.dayOptions
 const trackOptions = computed(() => [
 	...(isTalk.value ? [] : [{ name: null, title: "All tracks" }]),
 	...builder.tracks.tracks.value,
@@ -43,7 +39,7 @@ function change(patch: Partial<ScheduleItem>) {
 function shiftStart(minutes: number) {
 	if (!item.value) return
 	const latest = range.value.end - item.value.duration
-	change({ start: Math.max(range.value.start, Math.min(latest, item.value.start + minutes)) })
+	change({ start: clamp(item.value.start + minutes, range.value.start, latest) })
 }
 
 function setDay(date: string | number) {
