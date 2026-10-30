@@ -191,7 +191,7 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 							:conflict="conflicts[entry.item.key]"
 							:dragging="touch.position.value?.key === entry.item.key"
 							:offset="touch.moving.value?.key === entry.item.key ? touch.offset.value : null"
-							:landingPosition-start="
+							:landing-start="
 								touch.moving.value?.key === entry.item.key ? touch.moving.value.start : undefined
 							"
 							:style="blockStyle(entry.item, entry.lane, entry.lanes)"

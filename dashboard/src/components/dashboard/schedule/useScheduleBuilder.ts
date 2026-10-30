@@ -325,7 +325,7 @@ export function useScheduleBuilder(eventId: () => string) {
 		if (!source) return
 		const target = dayjs(days.value.at(-1)?.date).add(1, "day").format("YYYY-MM-DD")
 		applyChange((current) => {
-			current.days.push({ date: target, label: `${source.label} deepCopy` })
+			current.days.push({ date: target, label: `${source.label} copy` })
 			for (const item of dayItems(date))
 				current.items.push({ ...deepCopy(item), key: newKey(), date: target })
 		}, `Duplicated ${source.label}`)
