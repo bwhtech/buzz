@@ -401,12 +401,18 @@ export function useScheduleBuilder(eventId: () => string) {
 		await tracks.reload()
 	}
 
-	async function moveTrack(name: string, step: -1 | 1) {
+	// Every track between the old and new position gets a new sequence, so each must be editable.
+	async function moveTrack(name: string, to: number) {
 		const order = tracks.tracks.value.map((track) => track.name)
-		const neighbor = order[order.indexOf(name) + step]
-		const moved = await editableTrack(name)
-		if (neighbor) await editableTrack(neighbor)
-		await tracks.move(moved, step)
+		const from = order.indexOf(name)
+		if (from === to || to < 0 || to >= order.length) return
+		const shifted = order.slice(Math.min(from, to), Math.max(from, to) + 1)
+		let moved = name
+		for (const track of shifted) {
+			const editable = await editableTrack(track)
+			if (track === name) moved = editable
+		}
+		await tracks.move(moved, to)
 	}
 
 	// Deleting saves at once, so on a live schedule it would publish every other pending edit.

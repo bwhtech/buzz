@@ -44,19 +44,46 @@ async function submitRename() {
 	await withErrorToast(builder.renameTrack(props.track.name, title))
 }
 
+const dragged = computed(() => board.draggedTrack.value === props.track.name)
+const dropTarget = computed(
+	() => !!board.draggedTrack.value && !dragged.value && board.trackDropIndex.value === props.index,
+)
+
+function startTrackDrag(event: DragEvent) {
+	event.dataTransfer?.setData("text/plain", props.track.name)
+	board.draggedTrack.value = props.track.name
+}
+
+function endTrackDrag() {
+	board.draggedTrack.value = null
+	board.trackDropIndex.value = null
+}
+
+function trackOver(event: DragEvent) {
+	if (!board.draggedTrack.value) return
+	event.preventDefault()
+	board.trackDropIndex.value = props.index
+}
+
+function dropTrack() {
+	const name = board.draggedTrack.value
+	endTrackDrag()
+	if (name) withErrorToast(builder.moveTrack(name, props.index))
+}
+
 const options = computed(() => [
 	{ label: "Rename", icon: "lucide-pen-line", onClick: startRename },
 	{
 		label: "Move left",
 		icon: "lucide-arrow-left",
 		disabled: props.index === 0,
-		onClick: () => withErrorToast(builder.moveTrack(props.track.name, -1)),
+		onClick: () => withErrorToast(builder.moveTrack(props.track.name, props.index - 1)),
 	},
 	{
 		label: "Move right",
 		icon: "lucide-arrow-right",
 		disabled: props.index === props.total - 1,
-		onClick: () => withErrorToast(builder.moveTrack(props.track.name, 1)),
+		onClick: () => withErrorToast(builder.moveTrack(props.track.name, props.index + 1)),
 	},
 	{
 		label: "Delete track",
@@ -69,7 +96,19 @@ const options = computed(() => [
 </script>
 
 <template>
-	<div class="flex min-w-0 items-center gap-2 px-3 py-2">
+	<div
+		class="flex min-w-0 items-center gap-2 px-3 py-2 transition-colors"
+		:class="[
+			!renaming && 'cursor-grab',
+			dragged && 'opacity-40',
+			dropTarget && 'bg-surface-gray-2',
+		]"
+		:draggable="!renaming"
+		@dragstart="startTrackDrag"
+		@dragend="endTrackDrag"
+		@dragover="trackOver"
+		@drop.prevent="dropTrack"
+	>
 		<span
 			class="size-2 shrink-0 rounded-full"
 			:style="{ background: dotColor(track.color) }"

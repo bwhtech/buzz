@@ -45,6 +45,8 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 	const addingTrack = ref(false)
 	const renamingTrack = ref<string | null>(null)
 	const trackDraft = ref("")
+	const draggedTrack = ref<string | null>(null)
+	const trackDropIndex = ref<number | null>(null)
 
 	const selected = computed(
 		() => builder.items.value.find((item) => item.key === selectedKey.value) ?? null,
@@ -252,6 +254,8 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		addingTrack,
 		renamingTrack,
 		trackDraft,
+		draggedTrack,
+		trackDropIndex,
 		select,
 		startDrag,
 		endDrag,

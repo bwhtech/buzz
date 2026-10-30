@@ -48,12 +48,10 @@ export function useScheduleTracks(scheduleName: () => string, isUsed: (track: st
 
 	const rename = (name: string, title: string) => list.setValue.submit({ name, title })
 
-	async function move(name: string, step: -1 | 1) {
+	async function move(name: string, to: number) {
 		const order = tracks.value.map((track) => track.name)
-		const from = order.indexOf(name)
-		const to = from + step
-		if (to < 0 || to >= order.length) return
-		;[order[from], order[to]] = [order[to], order[from]]
+		order.splice(order.indexOf(name), 1)
+		order.splice(to, 0, name)
 		for (const [sequence, track] of order.entries()) {
 			if (find(track)?.sequence !== sequence) await list.setValue.submit({ name: track, sequence })
 		}
