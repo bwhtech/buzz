@@ -46,14 +46,14 @@ export function useScheduleMobile() {
 	const closeSheet = () => (sheet.value = null)
 
 	function addRoom() {
-		const title = `Room ${rooms.value.length + 1}`
+		const title = `Track ${rooms.value.length + 1}`
 		return builder.rooms
 			.add(title)
 			.then(() => {
 				chosenRoom.value = rooms.value.at(-1)?.name ?? null
 				builder.say(`Added ${title}`)
 			})
-			.catch(() => toast.error("Could not add the room"))
+			.catch(() => toast.error("Could not add the track"))
 	}
 
 	return {

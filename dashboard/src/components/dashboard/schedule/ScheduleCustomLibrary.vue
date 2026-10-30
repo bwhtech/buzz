@@ -17,7 +17,7 @@ const templates = computed(() =>
 		.map((type) => ({ ...type, label: type.name === "Custom" ? "Untitled item" : type.title })),
 )
 const meta = (type: (typeof templates.value)[number]) =>
-	`${type.default_duration} min${type.spans_all_tracks ? " · All rooms" : ""}`
+	`${type.default_duration} min${type.spans_all_tracks ? " · All tracks" : ""}`
 
 const title = ref("")
 const duration = ref("30")
@@ -27,7 +27,7 @@ const durationOptions = DURATIONS.map((minutes) => ({
 	value: String(minutes),
 }))
 const roomOptions = computed(() => [
-	{ label: "All rooms", value: "all" },
+	{ label: "All tracks", value: "all" },
 	...builder.rooms.rooms.value.map((entry) => ({ label: entry.title, value: entry.name })),
 ])
 const addLabel = computed(() => `Add to ${builder.activeDay.value?.label ?? "day"}`)
@@ -97,7 +97,7 @@ function addCustom() {
 			/>
 			<div class="grid grid-cols-2 gap-2.5">
 				<FormControl v-model="duration" type="select" label="Duration" :options="durationOptions" />
-				<FormControl v-model="room" type="select" label="Room" :options="roomOptions" />
+				<FormControl v-model="room" type="select" label="Track" :options="roomOptions" />
 			</div>
 			<Button variant="solid" :label="addLabel" class="w-full" @click="addCustom" />
 		</div>

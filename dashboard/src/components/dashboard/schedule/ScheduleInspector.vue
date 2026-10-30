@@ -22,7 +22,7 @@ const dayOptions = computed(() =>
 	builder.days.value.map((day) => ({ label: day.label, value: day.date })),
 )
 const roomOptions = computed(() => [
-	{ label: "All rooms", value: "all" },
+	{ label: "All tracks", value: "all" },
 	...builder.rooms.rooms.value.map((room) => ({ label: room.title, value: room.name })),
 ])
 const startOptions = computed(() => {
@@ -114,7 +114,7 @@ function duplicate() {
 				/>
 				<FormControl
 					type="select"
-					label="Room"
+					label="Track"
 					:options="roomOptions"
 					:model-value="item.room ?? 'all'"
 					@update:model-value="setRoom"

@@ -120,7 +120,7 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 						:style="{ width: `${COLUMN}px` }"
 						@click="mobile.addRoom"
 					>
-						<span class="lucide-plus size-3.5" aria-hidden="true" />Add room
+						<span class="lucide-plus size-3.5" aria-hidden="true" />Add track
 					</button>
 				</div>
 				<div class="relative flex pb-40" :style="{ paddingTop: `${GRID_PADDING}px` }">

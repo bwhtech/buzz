@@ -12,7 +12,7 @@ const mobile = useMobile()
 
 const VIEW_OPTIONS = [
 	{ label: "List", value: "list", iconLeft: "lucide-list" },
-	{ label: "Room", value: "room", iconLeft: "lucide-rectangle-vertical" },
+	{ label: "Track", value: "room", iconLeft: "lucide-rectangle-vertical" },
 	{ label: "Grid", value: "grid", iconLeft: "lucide-columns-3" },
 ]
 
@@ -102,7 +102,7 @@ function pickRoom(name: string) {
 				class="flex h-[30px] shrink-0 items-center gap-1 rounded-full border border-dashed border-outline-gray-3 px-3 text-p-sm text-ink-gray-6"
 				@click="mobile.addRoom"
 			>
-				<span class="lucide-plus size-3.5" aria-hidden="true" />Room
+				<span class="lucide-plus size-3.5" aria-hidden="true" />Track
 			</button>
 		</div>
 	</div>

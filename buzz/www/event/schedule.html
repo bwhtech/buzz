@@ -60,8 +60,8 @@
 			<div class="schedule-filters" data-controls hidden>
 				<input class="schedule-search" type="search" placeholder="{{ _('Search sessions') }}" aria-label="{{ _('Search sessions') }}">
 				{% if schedule_rooms %}
-				<div class="schedule-rooms" role="group" aria-label="{{ _('Rooms') }}">
-					<button class="schedule-room-button" type="button" data-room="" aria-pressed="true">{{ _("All rooms") }}</button>
+				<div class="schedule-rooms" role="group" aria-label="{{ _('Tracks') }}">
+					<button class="schedule-room-button" type="button" data-room="" aria-pressed="true">{{ _("All tracks") }}</button>
 					{% for room in schedule_rooms %}<button class="schedule-room-button" type="button" data-room="{{ room.name }}" aria-pressed="false">{{ room.title }}</button>{% endfor %}
 				</div>
 				{% endif %}

@@ -32,7 +32,7 @@ const dayOptions = computed(() =>
 	builder.days.value.map((day) => ({ label: day.label, value: day.date })),
 )
 const roomOptions = computed(() => [
-	...(isTalk.value ? [] : [{ name: null, title: "All rooms" }]),
+	...(isTalk.value ? [] : [{ name: null, title: "All tracks" }]),
 	...builder.rooms.rooms.value,
 ])
 
@@ -141,7 +141,7 @@ function remove() {
 						</div>
 					</div>
 					<div class="flex items-start gap-3 py-3">
-						<div class="w-[72px] shrink-0 pt-1.5 text-p-sm text-ink-gray-5">Room</div>
+						<div class="w-[72px] shrink-0 pt-1.5 text-p-sm text-ink-gray-5">Track</div>
 						<div class="flex min-w-0 flex-1 flex-wrap gap-1.5">
 							<ScheduleMobileChip
 								v-for="room in roomOptions"

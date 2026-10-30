@@ -50,7 +50,7 @@ const talks = computed(() => {
 })
 const customTypes = computed(() => builder.types.value.filter((type) => !TALK_TYPES.has(type.name)))
 const noTalksText = computed(() => {
-	if (!builder.rooms.rooms.value.length) return "Add a room to place talks"
+	if (!builder.rooms.rooms.value.length) return "Add a track to place talks"
 	if (!builder.talks.value.length) return "No accepted talks yet"
 	if (!mobile.unscheduledTalks.value.length) return "Every talk is on the schedule"
 	return `No talks match “${search.value.trim()}”`
@@ -182,7 +182,7 @@ function place(kind: "talk" | "type", id: string) {
 							}}</span>
 							<span class="block text-p-xs text-ink-gray-5">
 								{{ durationLabel(type.default_duration) }} ·
-								{{ type.spans_all_tracks ? "All rooms" : "One room" }}
+								{{ type.spans_all_tracks ? "All tracks" : "One track" }}
 							</span>
 						</span>
 					</button>

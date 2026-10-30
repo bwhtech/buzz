@@ -26,7 +26,7 @@ const speakers = computed(() => resolved.value.speakers.join(", "))
 const icon = computed(() => scheduleIcon(resolved.value.type?.icon) || "lucide-calendar-clock")
 const meta = computed(() => {
 	const duration = durationLabel(props.item.duration)
-	if (isSpan.value) return `All rooms · ${duration}`
+	if (isSpan.value) return `All tracks · ${duration}`
 	const type = resolved.value.type?.title ?? props.item.type
 	return `${type} · ${builder.rooms.titleOf(props.item.room)} · ${duration}`
 })

@@ -16,7 +16,7 @@ export function useScheduleRooms(scheduleName: () => string) {
 	})
 	const rooms = computed(() => list.data ?? [])
 	const find = (name: string | null) => rooms.value.find((room) => room.name === name)
-	const titleOf = (name: string | null) => (name ? (find(name)?.title ?? "—") : "All rooms")
+	const titleOf = (name: string | null) => (name ? (find(name)?.title ?? "—") : "All tracks")
 	const colorOf = (name: string | null) => {
 		const index = rooms.value.findIndex((room) => room.name === name)
 		return ROOM_COLORS[Math.max(index, 0) % ROOM_COLORS.length]

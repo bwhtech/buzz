@@ -15,7 +15,7 @@ function start() {
 }
 
 async function submit() {
-	const title = board.roomDraft.value.trim() || `Room ${builder.rooms.rooms.value.length + 1}`
+	const title = board.roomDraft.value.trim() || `Track ${builder.rooms.rooms.value.length + 1}`
 	board.addingRoom.value = false
 	board.roomDraft.value = ""
 	await builder.rooms.add(title)
@@ -25,7 +25,7 @@ async function submit() {
 
 <template>
 	<form v-if="board.addingRoom.value" class="w-full" @submit.prevent="submit">
-		<TextInput ref="input" v-model="board.roomDraft.value" placeholder="Room name, then Enter" />
+		<TextInput ref="input" v-model="board.roomDraft.value" placeholder="Track name, then Enter" />
 	</form>
-	<Button v-else variant="ghost" iconLeft="lucide-plus" label="Add room" @click="start" />
+	<Button v-else variant="ghost" iconLeft="lucide-plus" label="Add track" @click="start" />
 </template>

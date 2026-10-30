@@ -47,7 +47,7 @@ const options = computed(() => [
 		onClick: () => builder.rooms.move(props.room.name, 1),
 	},
 	{
-		label: "Delete room",
+		label: "Delete track",
 		icon: "lucide-trash-2",
 		theme: "red" as const,
 		disabled: props.total === 1,
@@ -71,7 +71,7 @@ const options = computed(() => [
 			<div class="truncate text-p-xs text-ink-gray-5">{{ meta }}</div>
 		</div>
 		<Dropdown :options="options" placement="right">
-			<Button variant="ghost" size="sm" icon="lucide-ellipsis" label="Room options" />
+			<Button variant="ghost" size="sm" icon="lucide-ellipsis" label="Track options" />
 		</Dropdown>
 	</div>
 </template>
