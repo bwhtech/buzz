@@ -7,7 +7,6 @@ import { hourLabel, lanesOf, SNAP_MINUTES } from "../scheduleLayout"
 import type { ScheduleItem } from "../scheduleTypes"
 import { useDayLayout } from "../useDayLayout"
 import ScheduleMobileBlock from "./ScheduleMobileBlock.vue"
-import ScheduleMobileCard from "./ScheduleMobileCard.vue"
 import { useMobile } from "./useScheduleMobile"
 import { useScheduleTouchDrag } from "./useScheduleTouchDrag"
 
@@ -19,7 +18,6 @@ const HEADER_HEIGHT = 40
 const MIN_BLOCK = 14
 const GRID_PADDING = 10
 const GHOST_MINUTES = 30
-const SPAN_LABEL_HEIGHT = 32
 
 const { builder, board, rooms, dayItems, conflicts } = useDayLayout()
 const mobile = useMobile()
@@ -50,10 +48,10 @@ const displayed = computed(() =>
 		resizing.value?.key === item.key ? { ...item, ...resizing.value } : item,
 	),
 )
-const spans = computed(() => displayed.value.filter((item) => !item.room))
 const columns = computed(() =>
 	shownRooms.value.map((room) => {
-		const items = displayed.value.filter((item) => item.room === room.name)
+		// An all-track item shows in every track, beside whatever it overlaps.
+		const items = displayed.value.filter((item) => !item.room || item.room === room.name)
 		const lanes = lanesOf(items)
 		return { room, items: items.map((item) => ({ item, ...lanes[item.key] })) }
 	}),
@@ -79,14 +77,6 @@ function tapSlot(event: MouseEvent, room: string) {
 	mobile.openAdd(Math.min(start, range.value.end - SNAP_MINUTES), room)
 }
 
-// An all-track item shows as a label at its start over a faint band for its length,
-// so the blocks it overlaps stay visible.
-const spanStyle = (item: ScheduleItem, pixels: number) => ({
-	left: `${RAIL + 3}px`,
-	right: "3px",
-	top: `${GRID_PADDING + top(item.start)}px`,
-	height: `${pixels}px`,
-})
 const ghostStyle = (start: number, minutes = GHOST_MINUTES) => ({
 	top: `${top(start)}px`,
 	height: `${minutes * PIXELS_PER_MINUTE - 2}px`,
@@ -95,7 +85,10 @@ const ghostStyle = (start: number, minutes = GHOST_MINUTES) => ({
 const sheet = mobile.sheet
 function ghostFor(room: string) {
 	const landing = touch.moving.value
-	if (landing) return landing.room === room ? ghostAt(room, landing.start, landing.duration) : null
+	if (landing)
+		return !landing.room || landing.room === room
+			? ghostAt(room, landing.start, landing.duration)
+			: null
 	return sheet.value?.type === "add" && sheet.value.room === room
 		? ghostAt(room, sheet.value.start, GHOST_MINUTES)
 		: null
@@ -199,24 +192,6 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 							@open="mobile.openEdit(entry.item.key)"
 						/>
 					</div>
-					<template v-for="item in spans" :key="item.key">
-						<div
-							class="pointer-events-none absolute z-0 rounded-5 bg-surface-gray-2 opacity-60"
-							:style="spanStyle(item, lengthOf(item))"
-						/>
-						<div
-							class="pointer-events-none absolute z-[3]"
-							:style="spanStyle(item, Math.min(lengthOf(item), SPAN_LABEL_HEIGHT))"
-						>
-							<ScheduleMobileCard
-								:item="item"
-								:conflict="conflicts[item.key]"
-								class="pointer-events-auto sticky h-full !py-0"
-								:style="{ left: `${RAIL + 3}px`, width: `${viewport - RAIL - 6}px` }"
-								@click.stop="mobile.openEdit(item.key)"
-							/>
-						</div>
-					</template>
 				</div>
 			</div>
 		</div>
