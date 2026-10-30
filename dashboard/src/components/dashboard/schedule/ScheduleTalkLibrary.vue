@@ -67,7 +67,6 @@ const add = (name: string) => builder.place({ kind: "talk", id: name }, builder.
 							:style="badgeStyle(talkType?.color)"
 						/>
 						<Badge size="sm" :label="`${duration} min`" theme="gray" />
-						<Badge size="sm" label="Accepted" theme="green" variant="outline" />
 					</div>
 				</div>
 				<Button

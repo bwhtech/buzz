@@ -3,7 +3,15 @@ import { Avatar, Badge, Button, FormControl, TextInput } from "frappe-ui"
 import { computed } from "vue"
 
 import { badgeStyle } from "./scheduleColors"
-import { DURATIONS, SNAP_MINUTES, clock, durationLabel, timeRange } from "./scheduleLayout"
+import {
+	DAY_END,
+	DURATIONS,
+	MIN_DURATION,
+	SNAP_MINUTES,
+	clock,
+	durationLabel,
+	timeRange,
+} from "./scheduleLayout"
 import type { ScheduleItem } from "./scheduleTypes"
 import { useBoard, useBuilder } from "./useScheduleBoard"
 
@@ -31,6 +39,19 @@ const durationOptions = computed(() =>
 		.toSorted((a, b) => a - b)
 		.map((minutes) => ({ label: durationLabel(minutes), value: String(minutes) })),
 )
+const end = computed(() => props.item.start + props.item.duration)
+// Ends run in quarter hours from the start.
+const endOptions = computed(() => {
+	const ends = new Set([end.value, props.item.start + MIN_DURATION])
+	for (let minute = props.item.start + SNAP_MINUTES; minute <= DAY_END; minute += SNAP_MINUTES)
+		ends.add(minute)
+	return [...ends]
+		.toSorted((a, b) => a - b)
+		.map((minute) => ({
+			label: clock(minute),
+			value: String(minute),
+		}))
+})
 const summary = computed(
 	() =>
 		`${timeRange(props.item)} · ${builder.dayLabel(props.item.date)} · ${builder.tracks.titleOf(props.item.track)}`,
@@ -63,7 +84,6 @@ function duplicate() {
 		<div class="flex flex-1 flex-col gap-4 overflow-auto p-4">
 			<div class="flex flex-wrap gap-1.5">
 				<Badge :label="details.type?.title ?? item.type" :style="badgeStyle(details.type?.color)" />
-				<Badge v-if="isTalk" label="Accepted" theme="green" variant="outline" />
 			</div>
 			<div v-if="isTalk" class="flex flex-col gap-2.5">
 				<div
@@ -93,7 +113,7 @@ function duplicate() {
 				<span class="lucide-triangle-alert mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
 				<span>{{ conflict }}</span>
 			</div>
-			<div class="grid grid-cols-2 gap-3">
+			<div class="flex flex-col gap-3">
 				<FormControl
 					type="select"
 					label="Day"
@@ -116,6 +136,13 @@ function duplicate() {
 					:options="startOptions"
 					:model-value="String(item.start)"
 					@update:model-value="(value: string) => update({ start: Number(value) })"
+				/>
+				<FormControl
+					type="select"
+					label="Ends"
+					:options="endOptions"
+					:model-value="String(end)"
+					@update:model-value="(value: string) => update({ duration: Number(value) - item.start })"
 				/>
 				<FormControl
 					type="select"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Badge, BottomSheet, Button, TabButtons, TextInput, dayjs } from "frappe-ui"
+import { BottomSheet, Button, TabButtons, TextInput, dayjs } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import { blockColors, dotColor } from "../scheduleColors"
@@ -148,7 +148,6 @@ function place(kind: "talk" | "type", id: string) {
 								{{ speakerLine(talk.speakers) }} · {{ durationLabel(talkDuration) }}
 							</span>
 						</span>
-						<Badge theme="green" size="sm" label="Accepted" />
 					</button>
 					<div
 						v-if="!talks.length || !builder.tracks.tracks.value.length"

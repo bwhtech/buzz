@@ -3,7 +3,7 @@ import { Badge, BottomSheet, Button, TabButtons } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import { badgeStyle } from "../scheduleColors"
-import { clamp, clock, durationLabel, timeRange } from "../scheduleLayout"
+import { DAY_END, MIN_DURATION, clamp, clock, durationLabel } from "../scheduleLayout"
 import type { ScheduleItem } from "../scheduleTypes"
 import { useBuilder } from "../useScheduleBoard"
 import ScheduleMobileChip from "./ScheduleMobileChip.vue"
@@ -40,6 +40,12 @@ function shiftStart(minutes: number) {
 	if (!item.value) return
 	const latest = range.value.end - item.value.duration
 	change({ start: clamp(item.value.start + minutes, range.value.start, latest) })
+}
+
+function shiftEnd(minutes: number) {
+	if (!item.value) return
+	const longest = DAY_END - item.value.start
+	change({ duration: clamp(item.value.duration + minutes, MIN_DURATION, longest) })
 }
 
 function setDay(date: string | number) {
@@ -110,13 +116,33 @@ function remove() {
 								@click="shiftStart(-SHIFT_MINUTES)"
 							/>
 							<div class="flex-1 text-center text-base font-semibold tabular-nums text-ink-gray-9">
-								{{ timeRange(item) }}
+								{{ clock(item.start) }}
 							</div>
 							<Button
 								variant="outline"
 								icon="lucide-plus"
 								label="5 minutes later"
 								@click="shiftStart(SHIFT_MINUTES)"
+							/>
+						</div>
+					</div>
+					<div class="flex items-center gap-3 border-b border-outline-gray-1 py-3">
+						<div class="w-[72px] shrink-0 text-p-sm text-ink-gray-5">Ends</div>
+						<div class="flex flex-1 items-center gap-2">
+							<Button
+								variant="outline"
+								icon="lucide-minus"
+								label="End 5 minutes earlier"
+								@click="shiftEnd(-SHIFT_MINUTES)"
+							/>
+							<div class="flex-1 text-center text-base font-semibold tabular-nums text-ink-gray-9">
+								{{ clock(item.start + item.duration) }}
+							</div>
+							<Button
+								variant="outline"
+								icon="lucide-plus"
+								label="End 5 minutes later"
+								@click="shiftEnd(SHIFT_MINUTES)"
 							/>
 						</div>
 					</div>

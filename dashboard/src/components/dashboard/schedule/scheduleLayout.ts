@@ -3,6 +3,7 @@ import type { ScheduleItem, ScheduleTalk } from "./scheduleTypes"
 export const SNAP_MINUTES = 15
 export const MIN_DURATION = 5
 export const DEFAULT_START = 9 * 60
+export const DAY_END = 24 * 60
 export const HOUR_HEIGHT = 112
 export const TIMELINE_RATIO = 2.8
 export const ROW_HEIGHT = 84
