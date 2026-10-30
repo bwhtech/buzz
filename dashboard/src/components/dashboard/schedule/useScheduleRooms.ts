@@ -4,17 +4,33 @@ import { computed } from "vue"
 import { ROOM_COLORS } from "./scheduleColors"
 import type { ScheduleRoom } from "./scheduleTypes"
 
-/** Rooms are Buzz Schedule Track rows; each change goes to the server at once. */
-export function useScheduleRooms(scheduleName: () => string) {
+const FIELDS = ["name", "title", "color", "capacity", "sequence", "is_standard"] as const
+
+/**
+ * Rooms are Buzz Schedule Track rows; each change goes to the server at once. The standard
+ * track is shared, so it shows only while the schedule has no track of its own or still uses it.
+ */
+export function useScheduleRooms(scheduleName: () => string, isUsed: (room: string) => boolean) {
 	const list = useList<ScheduleRoom>({
 		doctype: "Buzz Schedule Track",
-		fields: ["name", "title", "color", "capacity", "sequence"],
+		fields: [...FIELDS],
 		filters: () => ({ schedule: scheduleName() }),
 		orderBy: "sequence asc, creation asc" as "sequence asc",
 		limit: 50,
 		immediate: false,
 	})
-	const rooms = computed(() => list.data ?? [])
+	const standard = useList<ScheduleRoom>({
+		doctype: "Buzz Schedule Track",
+		fields: [...FIELDS],
+		filters: { is_standard: 1 },
+		orderBy: "sequence asc",
+		limit: 10,
+	})
+	const own = computed(() => list.data ?? [])
+	const rooms = computed(() => {
+		const shared = (standard.data ?? []).filter((room) => !own.value.length || isUsed(room.name))
+		return [...shared, ...own.value].toSorted((a, b) => a.sequence - b.sequence)
+	})
 	const find = (name: string | null) => rooms.value.find((room) => room.name === name)
 	const titleOf = (name: string | null) => (name ? (find(name)?.title ?? "—") : "All tracks")
 	const colorOf = (name: string | null) => {

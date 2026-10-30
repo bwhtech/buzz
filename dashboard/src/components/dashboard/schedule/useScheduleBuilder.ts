@@ -36,7 +36,15 @@ export function useScheduleBuilder(eventId: () => string) {
 		opener.submit({ event: eventId() }).then((name) => (scheduleName.value = String(name)))
 
 	const schedule = useDoc<ScheduleDoc>({ doctype: "Buzz Schedule", name: () => scheduleName.value })
-	const rooms = useScheduleRooms(() => scheduleName.value)
+	const forker = useCall<string, { schedule: string; track: string }>({
+		url: "/api/v2/method/buzz.api.schedule.fork_standard_track",
+		method: "POST",
+		immediate: false,
+	})
+	const rooms = useScheduleRooms(
+		() => scheduleName.value,
+		(room) => items.value.some((item) => item.room === room),
+	)
 	const typesList = useList<ScheduleItemType>({
 		doctype: "Buzz Schedule Item Type",
 		fields: [
@@ -328,12 +336,35 @@ export function useScheduleBuilder(eventId: () => string) {
 		)
 	}
 
+	// The standard track is shared, so an edit gives this schedule a copy and moves its items there.
+	async function ownRoom(name: string) {
+		if (!rooms.find(name)?.is_standard) return name
+		const forked = String(await forker.submit({ schedule: scheduleName.value, track: name }))
+		await rooms.reload()
+		for (const item of items.value) if (item.room === name) item.room = forked
+		savedSnapshot.value = savedSnapshot.value.replaceAll(`"track":"${name}"`, `"track":"${forked}"`)
+		return forked
+	}
+
+	async function renameRoom(name: string, title: string) {
+		await rooms.rename(await ownRoom(name), title)
+		await rooms.reload()
+	}
+
+	async function moveRoom(name: string, step: -1 | 1) {
+		const order = rooms.rooms.value.map((room) => room.name)
+		const neighbor = order[order.indexOf(name) + step]
+		const moved = await ownRoom(name)
+		if (neighbor) await ownRoom(neighbor)
+		await rooms.move(moved, step)
+	}
+
 	async function removeRoom(name: string) {
-		const title = rooms.titleOf(name)
+		const room = rooms.find(name)
 		commit((current) => (current.items = current.items.filter((item) => item.room !== name)))
 		await save()
-		await rooms.remove(name)
-		say(`Deleted ${title}`)
+		if (!room?.is_standard) await rooms.remove(name)
+		say(`Deleted ${room?.title}`)
 	}
 
 	return {
@@ -356,6 +387,8 @@ export function useScheduleBuilder(eventId: () => string) {
 		typesByName,
 		talks,
 		rooms,
+		renameRoom,
+		moveRoom,
 		removeRoom,
 		conflicts,
 		conflictCount,

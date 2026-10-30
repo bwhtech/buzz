@@ -25,11 +25,11 @@ function startRename() {
 }
 
 async function submitRename() {
+	if (!renaming.value) return
 	const title = board.roomDraft.value.trim()
 	board.renamingRoom.value = null
 	if (!title || title === props.room.title) return
-	await builder.rooms.rename(props.room.name, title)
-	await builder.rooms.reload()
+	await builder.renameRoom(props.room.name, title)
 }
 
 const options = computed(() => [
@@ -38,13 +38,13 @@ const options = computed(() => [
 		label: "Move left",
 		icon: "lucide-arrow-left",
 		disabled: props.index === 0,
-		onClick: () => builder.rooms.move(props.room.name, -1),
+		onClick: () => builder.moveRoom(props.room.name, -1),
 	},
 	{
 		label: "Move right",
 		icon: "lucide-arrow-right",
 		disabled: props.index === props.total - 1,
-		onClick: () => builder.rooms.move(props.room.name, 1),
+		onClick: () => builder.moveRoom(props.room.name, 1),
 	},
 	{
 		label: "Delete track",

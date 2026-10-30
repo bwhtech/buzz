@@ -21,6 +21,7 @@ export interface ScheduleRoom {
 	color: string | null
 	capacity: number | null
 	sequence: number
+	is_standard?: 0 | 1
 }
 
 export interface ScheduleItemType {
