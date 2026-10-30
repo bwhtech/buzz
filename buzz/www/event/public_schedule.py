@@ -7,12 +7,17 @@ from frappe.utils import comma_sep, get_time
 from buzz.api.schedule.services import speaker_profiles
 from buzz.events.doctype.buzz_schedule_item_type.buzz_schedule_item_type import HEX_COLOR, THEME_COLORS
 from buzz.www.event.date_range import format_day, format_time, format_time_range, join_parts
+from buzz.www.event.schedule_grid import ScheduleGrid
 
 MUTED_COLOR = "var(--ink-muted)"
 
 
 def join_names(names: list[str]) -> str:
 	return comma_sep(names, _("{0} and {1}"), add_quotes=False)
+
+
+def minutes_of(time) -> int:
+	return int(get_time(time).hour * 60 + get_time(time).minute)
 
 
 def is_talk(item) -> bool:
@@ -117,6 +122,7 @@ class PublicSchedule:
 			),
 			"rows": rows,
 			"slots": group_into_slots(rows),
+			"grid": ScheduleGrid(rows, self.tracks).as_dict(),
 		}
 
 	def row(self, item) -> dict:
@@ -124,6 +130,8 @@ class PublicSchedule:
 		item_type = self.types.get(item.type)
 		return {
 			"start": format_time(item.start_time),
+			"start_minutes": minutes_of(item.start_time),
+			"duration_minutes": int((item.duration or 0) // 60),
 			"time": format_time_range(item.start_time, item.end_time),
 			"title": item.title,
 			"type": item_type.title if item_type else "",

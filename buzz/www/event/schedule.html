@@ -46,6 +46,29 @@
 		</li>
 		{% endmacro %}
 
+		{% macro schedule_block(block) %}
+		{% set row = block.row %}
+		<li class="schedule-block{% if block.is_compact %} is-compact{% endif %}" data-room="{{ row.room_key }}" style="--schedule-dot: {{ row.color }}; top: {{ block.top }}px; height: {{ block.height }}px; left: calc({{ block.lane * 100 / block.lanes }}% + 3px); width: calc({{ 100 / block.lanes }}% - 6px)">
+			<button class="schedule-block-button" type="button" data-open-detail title="{{ row.title }}">
+				<span class="schedule-block-title"><span class="schedule-dot" aria-hidden="true"></span>{{ row.title }}</span>
+				{% if not block.is_compact %}<span class="schedule-block-time">{{ row.time }}</span>{% endif %}
+				{% if block.shows_speakers %}<span class="schedule-block-speakers">{{ row.speakers }}</span>{% endif %}
+			</button>
+			<div class="schedule-block-detail" hidden>
+				<h2 class="schedule-dialog-title">{{ row.title }}</h2>
+				<p class="schedule-dialog-meta">{{ [row.type, row.time, row.duration, row.room] | select | join(" · ") }}</p>
+				{% if row.abstract %}<div class="prose">{{ row.abstract | safe }}</div>{% endif %}
+				{% for person in row.people %}
+				<div class="schedule-person">
+					{{ avatar(person, "schedule-avatar is-large") }}
+					<span class="schedule-person-name">{{ person.name }}</span>
+					{% if person.role %}<span class="schedule-person-role">{{ person.role }}</span>{% endif %}
+				</div>
+				{% endfor %}
+			</div>
+		</li>
+		{% endmacro %}
+
 		<event-schedule class="schedule">
 			{% if schedule | length > 1 %}
 			<div class="schedule-days" role="group" aria-label="{{ _('Days') }}" data-controls hidden>
@@ -65,6 +88,10 @@
 					{% for room in schedule_rooms %}<button class="schedule-room-button" type="button" data-room="{{ room.name }}" aria-pressed="false">{{ room.title }}</button>{% endfor %}
 				</div>
 				{% endif %}
+				<div class="schedule-layouts" role="group" aria-label="{{ _('Layout') }}">
+					<button class="schedule-layout-button" type="button" data-layout="list" aria-pressed="true">{{ _("List") }}</button>
+					<button class="schedule-layout-button" type="button" data-layout="grid" aria-pressed="false">{{ _("Grid") }}</button>
+				</div>
 			</div>
 			<p class="schedule-note">{{ _("Times shown in {0}").format(timezone_label_with_offset) }}</p>
 			{% for day in schedule %}
@@ -83,12 +110,40 @@
 					</li>
 					{% endfor %}
 				</ol>
+				{% set grid = day.grid %}
+				<div class="schedule-grid">
+					<div class="schedule-grid-inner" style="--grid-height: {{ grid.height }}px; --hour-height: {{ grid.hour_height }}px">
+						{% if grid.has_titles %}
+						<div class="schedule-grid-head">
+							<div class="schedule-grid-gutter"></div>
+							{% for column in grid.columns %}<div class="schedule-grid-title" data-room="{{ column.key }}">{{ column.title }}</div>{% endfor %}
+						</div>
+						{% endif %}
+						<div class="schedule-grid-body">
+							<div class="schedule-grid-gutter">
+								{% for hour in grid.hours %}<span class="schedule-grid-hour" style="top: {{ hour.top }}px">{{ hour.label }}</span>{% endfor %}
+							</div>
+							{% for column in grid.columns %}
+							<ul class="schedule-grid-column" data-room="{{ column.key }}">
+								{% for block in column.blocks %}{{ schedule_block(block) }}{% endfor %}
+							</ul>
+							{% endfor %}
+							<ul class="schedule-grid-spans">
+								{% for block in grid.spans %}{{ schedule_block(block) }}{% endfor %}
+							</ul>
+						</div>
+					</div>
+				</div>
 			</div>
 			{% endfor %}
 			<div class="schedule-empty" hidden>
 				<p class="empty-state">{{ _("No sessions match your filters") }}</p>
 				<button class="es-button" type="button" data-variant="subtle" data-size="md" data-clear-filters>{{ _("Clear filters") }}</button>
 			</div>
+			<dialog class="schedule-dialog">
+				<form method="dialog"><button class="schedule-dialog-close" type="submit" aria-label="{{ _('Close') }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></form>
+				<div class="schedule-dialog-body"></div>
+			</dialog>
 		</event-schedule>
 	</main>
 {% endautoescape %}{% endblock %}
