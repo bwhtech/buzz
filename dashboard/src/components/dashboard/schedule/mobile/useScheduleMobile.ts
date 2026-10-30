@@ -1,8 +1,8 @@
 import { toast } from "frappe-ui"
-import { type InjectionKey, computed, inject, provide, ref } from "vue"
+import { type InjectionKey, computed, inject, provide, ref, watch } from "vue"
 
 import { nextFreeStart } from "../scheduleLayout"
-import { useBuilder } from "../useScheduleBoard"
+import { useBoard, useBuilder } from "../useScheduleBoard"
 
 export type MobileView = "list" | "track" | "grid"
 export type MobileSheet =
@@ -24,6 +24,13 @@ export function useScheduleMobile() {
 	const trackView = computed(() => tracks.value.find((track) => track.name === chosenTrack.value))
 	const activeTrack = computed(() => (trackView.value ?? tracks.value[0])?.name ?? null)
 	const unscheduledTalks = builder.unscheduledTalks
+
+	// Stepping to a conflict must not land on a card the track filter hides.
+	watch(useBoard().selected, (item) => {
+		if (!item?.track) return
+		if (view.value === "track") chosenTrack.value = item.track
+		else if (![ALL_TRACKS, item.track].includes(trackFilter.value)) trackFilter.value = ALL_TRACKS
+	})
 
 	function defaultTrack() {
 		if (view.value === "track") return activeTrack.value

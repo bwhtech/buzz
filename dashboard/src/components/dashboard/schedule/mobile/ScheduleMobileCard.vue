@@ -6,7 +6,7 @@ import { blockColors } from "../scheduleColors"
 import { scheduleIcon } from "../scheduleIcons"
 import { durationLabel } from "../scheduleLayout"
 import type { ScheduleItem } from "../scheduleTypes"
-import { useBuilder } from "../useScheduleBoard"
+import { useBoard, useBuilder } from "../useScheduleBoard"
 import ScheduleMobileCardActions from "./ScheduleMobileCardActions.vue"
 
 const props = defineProps<{
@@ -17,6 +17,7 @@ const props = defineProps<{
 }>()
 defineEmits<{ edit: []; press: [event: PointerEvent] }>()
 const builder = useBuilder()
+const board = useBoard()
 
 const details = computed(() => builder.itemDetails(props.item))
 const colors = computed(() => blockColors(details.value.type?.color))
@@ -30,15 +31,23 @@ const meta = computed(() => {
 	const type = details.value.type?.title ?? props.item.type
 	return `${type} · ${builder.tracks.titleOf(props.item.track)} · ${duration}`
 })
+const selectedStyle = computed(() =>
+	board.selectedKey.value === props.item.key
+		? { boxShadow: "0 0 0 2px var(--outline-gray-9)" }
+		: {},
+)
 const cardStyle = computed(() => ({
 	background: colors.value.background,
 	borderColor: props.conflict ? "var(--outline-red-3)" : colors.value.border,
+	...selectedStyle.value,
 }))
 </script>
 
 <template>
 	<div
 		v-if="isSpan"
+		:data-key="item.key"
+		:style="selectedStyle"
 		:role="actions ? undefined : 'button'"
 		:tabindex="actions ? undefined : 0"
 		@keydown.enter="clickSelf"
@@ -58,6 +67,7 @@ const cardStyle = computed(() => ({
 	</div>
 	<div
 		v-else
+		:data-key="item.key"
 		:role="actions ? undefined : 'button'"
 		:tabindex="actions ? undefined : 0"
 		@keydown.enter="clickSelf"

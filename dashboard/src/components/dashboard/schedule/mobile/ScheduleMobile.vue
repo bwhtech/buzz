@@ -4,6 +4,7 @@ import { computed } from "vue"
 
 import type { FrappeError } from "@/types"
 
+import ScheduleConflictStepper from "../ScheduleConflictStepper.vue"
 import ScheduleToast from "../ScheduleToast.vue"
 import { useBuilder } from "../useScheduleBoard"
 import ScheduleMobileAddSheet from "./ScheduleMobileAddSheet.vue"
@@ -36,14 +37,19 @@ const loadError = computed(
 			<ScheduleMobileControls />
 			<ScheduleMobileAgenda v-if="mobile.view.value === 'list'" />
 			<ScheduleMobileGrid v-else />
-			<Button
-				variant="solid"
-				size="lg"
-				icon-left="lucide-plus"
-				label="Add session"
-				class="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-20 -translate-x-1/2 shadow-xl"
-				@click="mobile.openAdd()"
-			/>
+			<div
+				class="pointer-events-none fixed inset-x-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-2 [&>*]:pointer-events-auto"
+			>
+				<ScheduleConflictStepper size="lg" />
+				<Button
+					variant="solid"
+					size="lg"
+					icon-left="lucide-plus"
+					label="Add session"
+					class="ml-auto shadow-xl"
+					@click="mobile.openAdd()"
+				/>
+			</div>
 		</template>
 		<ScheduleToast
 			v-if="!mobile.sheet.value"

@@ -4,7 +4,7 @@ import { computed } from "vue"
 import { blockColors } from "../scheduleColors"
 import { clock } from "../scheduleLayout"
 import type { ScheduleItem } from "../scheduleTypes"
-import { useBuilder } from "../useScheduleBoard"
+import { useBoard, useBuilder } from "../useScheduleBoard"
 import ScheduleMobileCardActions from "./ScheduleMobileCardActions.vue"
 import type { DragMode } from "./useScheduleTouchDrag"
 
@@ -19,6 +19,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ press: [event: PointerEvent, mode: DragMode]; open: [] }>()
 const builder = useBuilder()
+const board = useBoard()
 
 const details = computed(() => builder.itemDetails(props.item))
 const colors = computed(() => blockColors(details.value.type?.color))
@@ -42,6 +43,8 @@ const titleStyle = computed(() => ({
 const style = computed(() => ({
 	background: colors.value.background,
 	borderColor: props.conflict ? "var(--outline-red-3)" : colors.value.border,
+	boxShadow:
+		board.selectedKey.value === props.item.key ? "0 0 0 2px var(--outline-gray-9)" : undefined,
 	padding: showHandle.value ? "5px 64px 5px 8px" : "1px 8px",
 	transform: props.offset
 		? `translate3d(${props.offset.x}px, ${props.offset.y}px, 0) scale(1.02)`
@@ -51,6 +54,7 @@ const style = computed(() => ({
 
 <template>
 	<div
+		:data-key="item.key"
 		class="absolute box-border select-none overflow-hidden rounded-5 border transition-shadow"
 		:class="dragging ? 'z-10 opacity-95 shadow-xl' : 'z-[1]'"
 		:style="style"

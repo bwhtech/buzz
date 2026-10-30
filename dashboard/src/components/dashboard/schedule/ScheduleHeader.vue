@@ -6,26 +6,17 @@ import { computed } from "vue"
 import { useEventDoc } from "@/data/events"
 import { openEventSchedule } from "@/utils/eventUrl"
 
-import { useBoard, useBuilder } from "./useScheduleBoard"
+import ScheduleConflictStepper from "./ScheduleConflictStepper.vue"
+import { useBuilder } from "./useScheduleBoard"
 
 const props = defineProps<{ eventId: string }>()
 const builder = useBuilder()
-const board = useBoard()
 const event = useEventDoc(() => props.eventId)
 
 const modified = useTimeAgo(() => builder.schedule.doc?.modified ?? "")
 const route = computed(() => event.doc?.route)
 const published = builder.isPublished
 const saving = computed(() => builder.saveState.value === "saving")
-const conflicts = computed(() => builder.conflictedItems.value.length)
-const conflictIndex = computed(() =>
-	builder.conflictedItems.value.findIndex((item) => item.key === board.selectedKey.value),
-)
-const conflictLabel = computed(() => {
-	if (conflictIndex.value !== -1)
-		return `${conflictIndex.value + 1} of ${conflicts.value} conflicts`
-	return `${conflicts.value} ${conflicts.value === 1 ? "conflict" : "conflicts"}`
-})
 const unpublishedChanges = computed(() => published.value && builder.dirty.value)
 
 const status = computed(() => {
@@ -68,36 +59,7 @@ useEventListener(window, "keydown", (keydown: KeyboardEvent) => {
 		</Badge>
 		<Badge v-else label="Draft" theme="gray" variant="subtle" />
 		<div class="min-w-0 flex-1" />
-		<div
-			v-if="conflicts"
-			class="flex h-7 shrink-0 items-center overflow-hidden rounded-4 bg-surface-red-1 text-p-sm text-ink-red-7"
-		>
-			<button
-				type="button"
-				class="flex h-full items-center gap-1.5 px-2 tabular-nums hover:bg-surface-red-2"
-				@click="board.stepConflict(1)"
-			>
-				<span class="lucide-triangle-alert size-3.5" aria-hidden="true" />{{ conflictLabel }}
-			</button>
-			<button
-				type="button"
-				class="grid h-full w-6 place-items-center hover:bg-surface-red-2"
-				aria-label="Previous conflict"
-				title="Previous conflict"
-				@click="board.stepConflict(-1)"
-			>
-				<span class="lucide-chevron-up size-3.5" aria-hidden="true" />
-			</button>
-			<button
-				type="button"
-				class="grid h-full w-6 place-items-center hover:bg-surface-red-2"
-				aria-label="Next conflict"
-				title="Next conflict"
-				@click="board.stepConflict(1)"
-			>
-				<span class="lucide-chevron-down size-3.5" aria-hidden="true" />
-			</button>
-		</div>
+		<ScheduleConflictStepper />
 		<span
 			class="hidden min-w-0 items-center gap-1.5 truncate text-p-sm md:flex"
 			:class="unpublishedChanges ? 'text-ink-amber-7' : 'text-ink-gray-5'"
