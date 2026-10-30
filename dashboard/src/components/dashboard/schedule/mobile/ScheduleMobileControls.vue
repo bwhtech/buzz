@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, TabButtons, dayjs } from "frappe-ui"
+import { TabButtons, dayjs } from "frappe-ui"
 import { computed } from "vue"
 
 import { useBoard, useBuilder } from "../useScheduleBoard"
@@ -17,7 +17,6 @@ const VIEW_OPTIONS = [
 ]
 
 const items = computed(() => builder.dayItems(builder.activeDate.value))
-const unscheduled = mobile.unscheduledTalks
 const isTrackView = computed(() => mobile.view.value === "track")
 const showTracks = computed(() => mobile.view.value !== "grid")
 const countIn = (track: string) => items.value.filter((item) => item.track === track).length
@@ -44,15 +43,6 @@ function pickTrack(name: string) {
 
 <template>
 	<div class="flex shrink-0 flex-col gap-3 border-b border-outline-gray-1 pb-3 pt-1">
-		<div v-if="unscheduled.length" class="flex justify-end px-4">
-			<Button
-				variant="subtle"
-				size="sm"
-				iconLeft="lucide-inbox"
-				:label="`${unscheduled.length} to place`"
-				@click="mobile.openAdd()"
-			/>
-		</div>
 		<div
 			class="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex gap-2 overflow-x-auto px-4"
 			aria-label="Days"
