@@ -4,27 +4,32 @@ from frappe.utils import cstr
 
 from buzz.api.schedule.schemas import ScheduleTalk
 
-DEFAULT_TRACK_TITLE = "Main hall"
+DEFAULT_TRACK_TITLE = "Main Track"
 DEFAULT_TRACK_COLOR = "blue"
 
 
 def get_or_create_schedule(event: int) -> str:
-	name = frappe.db.get_value("Buzz Schedule", {"event": event})
-	return name or create_schedule(event)
+	name = frappe.db.get_value("Buzz Schedule", {"event": event}) or create_schedule(event)
+	ensure_track(name)
+	return name
 
 
 def create_schedule(event: int) -> str:
-	schedule = frappe.get_doc({"doctype": "Buzz Schedule", "event": event}).insert()
+	return frappe.get_doc({"doctype": "Buzz Schedule", "event": event}).insert().name
+
+
+def ensure_track(schedule: str) -> None:
+	if frappe.db.exists("Buzz Schedule Track", {"schedule": schedule}):
+		return
 	frappe.get_doc(
 		{
 			"doctype": "Buzz Schedule Track",
-			"schedule": schedule.name,
+			"schedule": schedule,
 			"title": _(DEFAULT_TRACK_TITLE),
 			"color": DEFAULT_TRACK_COLOR,
 			"sequence": 0,
 		}
 	).insert()
-	return schedule.name
 
 
 def event_talks(event: int) -> list[ScheduleTalk]:
