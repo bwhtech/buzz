@@ -42,6 +42,7 @@ const handle = computed(() =>
 <template>
 	<div
 		draggable="true"
+		:data-key="item.key"
 		:title="conflict || `${details.title} · ${timeRange(item)}`"
 		class="absolute box-border flex cursor-grab flex-col gap-px overflow-hidden rounded-4 border transition-[box-shadow,opacity] duration-100"
 		:class="[

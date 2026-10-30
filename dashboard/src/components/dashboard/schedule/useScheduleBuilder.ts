@@ -206,10 +206,13 @@ export function useScheduleBuilder(eventId: () => string) {
 
 	const conflicts = (list: ScheduleItem[]) =>
 		conflictsOf(list, { talks: talksByName.value, trackTitle: tracks.titleOf })
-	const conflictCount = computed(() =>
-		days.value
-			.map((day) => Object.keys(conflicts(dayItems(day.date))).length)
-			.reduce((a, b) => a + b, 0),
+	const conflictedItems = computed(() =>
+		days.value.flatMap((day) => {
+			const found = conflicts(dayItems(day.date))
+			return dayItems(day.date)
+				.filter((item) => found[item.key])
+				.toSorted((a, b) => a.start - b.start)
+		}),
 	)
 	const conflictOf = (item: ScheduleItem) => conflicts(dayItems(item.date))[item.key]
 	const rangeOf = (date: string) => dayRange(dayItems(date))
@@ -461,7 +464,7 @@ export function useScheduleBuilder(eventId: () => string) {
 		moveTrack,
 		removeTrack,
 		conflicts,
-		conflictCount,
+		conflictedItems,
 		itemDetails,
 		toastMessage,
 		undo,

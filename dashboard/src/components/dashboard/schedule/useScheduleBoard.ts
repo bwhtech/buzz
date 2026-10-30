@@ -1,5 +1,5 @@
 import { useEventListener } from "@vueuse/core"
-import { type InjectionKey, type Ref, computed, inject, provide, ref } from "vue"
+import { type InjectionKey, type Ref, computed, inject, nextTick, provide, ref } from "vue"
 
 import {
 	HOUR_HEIGHT,
@@ -61,6 +61,23 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		selectedKey.value = key
 		quickAdd.value = null
 		placeholder.value = null
+	}
+
+	// Steps through conflicts in day and time order, wrapping at either end.
+	function stepConflict(step: 1 | -1) {
+		const list = builder.conflictedItems.value
+		const index = list.findIndex((item) => item.key === selectedKey.value)
+		// With nothing selected, start before the first conflict or after the last.
+		const from = index === -1 && step === -1 ? 0 : index
+		const next = list[(from + step + list.length) % list.length]
+		if (!next) return
+		builder.activeDate.value = next.date
+		select(next.key)
+		nextTick(() =>
+			document
+				.querySelector(`[data-key="${next.key}"]`)
+				?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" }),
+		)
 	}
 
 	function addItem(type: string) {
@@ -257,6 +274,7 @@ export function useScheduleBoard(builder: ScheduleBuilder, view: Ref<ScheduleVie
 		draggedTrack,
 		trackDropIndex,
 		select,
+		stepConflict,
 		startDrag,
 		endDrag,
 		dragOver,
