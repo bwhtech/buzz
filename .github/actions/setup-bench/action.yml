@@ -7,15 +7,11 @@ inputs:
     required: false
     default: "test_site"
   build-assets:
-    description: "Run `bench build`. Needed by jobs that hit the UI or check the build."
+    description: "Run `bench build`. Only needed by jobs that hit the UI."
     required: false
     default: "false"
   extra-app-url:
     description: "Git URL of one more app to install before buzz. App name is the last path segment."
-    required: false
-    default: ""
-  frappe-branch:
-    description: "Branch of frappe and payments to install. Empty uses each repo's default branch."
     required: false
     default: ""
 
@@ -31,23 +27,10 @@ runs:
         python-version: "3.14"
 
     - uses: actions/setup-node@v4
-      if: inputs.build-assets == 'true'
       with:
         node-version: "24"
         cache: yarn
         cache-dependency-path: dashboard/yarn.lock
-
-    - name: Skip yarn installs
-      if: inputs.build-assets != 'true'
-      shell: bash -e {0}
-      run: |
-        # bench runs `yarn install` for every app even with --skip-assets, and nothing here
-        # builds assets. A no-op yarn saves the installs and the Node 24 requirement.
-        shim="${RUNNER_TEMP}/yarn-shim"
-        mkdir -p "$shim"
-        printf '#!/bin/sh\necho "yarn $* skipped: assets are not built"\n' > "$shim/yarn"
-        chmod +x "$shim/yarn"
-        echo "$shim" >> "$GITHUB_PATH"
 
     - uses: astral-sh/setup-uv@v6
       with:
@@ -80,11 +63,8 @@ runs:
 
     - name: Init bench
       shell: bash -e {0}
-      env:
-        FRAPPE_BRANCH: ${{ inputs.frappe-branch }}
       run: |
         bench init ~/frappe-bench \
-          ${FRAPPE_BRANCH:+--frappe-branch "$FRAPPE_BRANCH"} \
           --skip-redis-config-generation \
           --skip-assets \
           --no-backups \
@@ -100,10 +80,9 @@ runs:
       working-directory: /home/runner/frappe-bench
       env:
         EXTRA_APP_URL: ${{ inputs.extra-app-url }}
-        FRAPPE_BRANCH: ${{ inputs.frappe-branch }}
       run: |
-        # buzz lists frappe/payments in required_apps, so it must precede install-app.
-        bench get-app --skip-assets ${FRAPPE_BRANCH:+--branch "$FRAPPE_BRANCH"} https://github.com/frappe/payments
+        # buzz lists bwhtech/bwh_payments in required_apps, so it must precede install-app.
+        bench get-app --skip-assets --branch v1-stable https://github.com/bwhtech/bwh_payments
 
         # Test-only: buzz/tests/factories imports frappe_factory_bot. No install-app —
         # the app ships no DocTypes, and get-app already pip-installs it into the env.

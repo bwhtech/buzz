@@ -5,7 +5,21 @@
 
 	<div v-else-if="confirmation.data" class="mx-auto flex max-w-[600px] flex-col gap-9 pb-16">
 		<div class="flex flex-col gap-7">
+			<div v-if="!isConfirmed" class="text-center">
+				<h2 class="text-4xl-bold text-ink-gray-9 mb-2">{{ __("Payment Pending") }}</h2>
+				<p class="text-ink-gray-6 mb-4">
+					{{
+						__(
+							"We have not received your payment yet. If you have paid, it can take a minute to reach us.",
+						)
+					}}
+				</p>
+				<Button variant="outline" :loading="confirmation.loading" @click="confirmation.reload()">
+					{{ __("Check again") }}
+				</Button>
+			</div>
 			<SuccessHero
+				v-else
 				:event-title="event.title"
 				:ticket-count="confirmation.data.tickets.length"
 				:title="confirmation.data.success?.title"
@@ -117,10 +131,18 @@ const route = useRoute()
 const { open: openLoginDialog } = useLoginDialog()
 const copyToClipboard = useCopyToClipboard()
 
+// The shopper's return proves nothing; only a paid (or free) booking is confirmed.
+function isBookingConfirmed(data: Record<string, any> | null | undefined) {
+	return Boolean(data?.event?.free_event || data?.booking?.payment_status === "Paid")
+}
+const isConfirmed = computed(() => isBookingConfirmed(confirmation.data))
+
 const confirmation = useCall<Record<string, any>, Record<string, unknown>>({
 	url: "/api/v2/method/buzz.api.booking.get_booking_confirmation",
 	params: { booking_id: props.bookingId, token: route.query.token },
 	onSuccess: (data) => {
+		// useCall runs onSuccess before it sets confirmation.data, so read the response itself.
+		if (!isBookingConfirmed(data)) return
 		triggerCelebrationConfetti()
 		if (data?.event?.route) {
 			const { clearStoredData } = useBookingFormStorage(data.event.route)

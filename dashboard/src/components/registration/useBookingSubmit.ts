@@ -1,3 +1,4 @@
+import { useEventListener } from "@vueuse/core"
 import { toast, useCall } from "frappe-ui"
 import { computed, ref, type Ref } from "vue"
 import { useRouter } from "vue-router"
@@ -45,8 +46,16 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 		immediate: false,
 	})
 
+	// The gateway page can take seconds to load after the booking call returns.
+	const redirectingToPayment = ref(false)
+	const placing = computed(() => processBooking.loading || redirectingToPayment.value)
+	// Going back from the gateway restores this page from the back-forward cache.
+	useEventListener(window, "pageshow", (event: PageTransitionEvent) => {
+		if (event.persisted) redirectingToPayment.value = false
+	})
+
 	function submit() {
-		if (processBooking.loading) return
+		if (placing.value) return
 		const payload = inputs.buildPayload()
 		pendingPayload.value = payload
 		if (inputs.isGuest() && inputs.needsOtp()) otp.send()
@@ -102,8 +111,10 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 		if (isOtpFlow) otp.reset()
 
 		const action = resolveBookingSuccessAction(data, { isGuestMode: inputs.isGuest() })
-		if (action.type === "external") window.location.href = action.url
-		else if (action.type === "route") router.replace(action.path)
+		if (action.type === "external") {
+			redirectingToPayment.value = true
+			window.location.href = action.url
+		} else if (action.type === "route") router.replace(action.path)
 		else
 			completed.value = {
 				bookingName: action.bookingName,
@@ -123,7 +134,7 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 		offlineMethod,
 		showOfflineDialog,
 		completed,
-		placing: computed(() => processBooking.loading),
+		placing,
 	}
 }
 
