@@ -39,3 +39,26 @@ class TestPayingForABooking(BookingRefundTestCase):
 			frappe.db.get_value("Gateway Payment Request", payment_request, "redirect_to"),
 			"/b/booking-success/x?token=t",
 		)
+
+	def test_the_gateway_gets_the_buyer_on_the_booking(self):
+		booking = self.create_booking(("Buyer",), self.ticket_types[:1])
+		booking.db_set(
+			{"buyer_name": "Asha Rao Nair", "buyer_email": "asha@example.com", "buyer_phone": "+919876543210"}
+		)
+		booking.reload()
+
+		with self.set_user("Guest"):
+			get_payment_link_for_booking(booking.name)
+
+		payment_request = frappe.get_doc(
+			"Gateway Payment Request", self.get_payment(booking.name).payment_request
+		)
+		self.assertEqual(
+			(
+				payment_request.customer_email,
+				payment_request.customer_phone,
+				payment_request.customer_forenames,
+				payment_request.customer_surname,
+			),
+			("asha@example.com", "+919876543210", "Asha", "Rao Nair"),
+		)

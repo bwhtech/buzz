@@ -146,6 +146,8 @@
 							:tax-label="tax.label"
 							:currency="currency"
 							:show-currency="currencies.length > 1"
+							:phone-required="gatewayNeedsPhone"
+							:phone-error="showStepError ? stepErrors[0]?.buyer_phone : undefined"
 							@edit="goToStep"
 						>
 							<template #totals>
@@ -279,6 +281,7 @@ import { useAccessCode } from "@/composables/useAccessCode"
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
 import { useLoginDialog } from "@/composables/useLoginDialog"
 import { useTicketHold } from "@/composables/useTicketHold"
+import { usePaymentGatewaysNeedingPhone } from "@/data/paymentGatewaysNeedingPhone"
 import { loadUser, userResource } from "@/data/user"
 import type {
 	AvailableAddOn,
@@ -440,6 +443,10 @@ const gateways = computed(() =>
 		: props.paymentGateways.filter((g) => !isOfflineGateway(g)),
 )
 const selectedGateway = ref<string | null>(null)
+const gatewaysNeedingPhone = usePaymentGatewaysNeedingPhone()
+const gatewayNeedsPhone = computed(() =>
+	Boolean(selectedGateway.value && gatewaysNeedingPhone.data?.includes(selectedGateway.value)),
+)
 const showSummarySheet = ref(false)
 watch(
 	gateways,
@@ -585,6 +592,7 @@ const validation = useRegistrationValidation({
 	invoiceShown: () => tax.value.apply,
 	taxIsGst: () => isGstLabel(tax.value.label),
 	phoneRequired: () => props.isGuestMode && isPhoneOtp.value,
+	gatewayNeedsPhone: () => gatewayNeedsPhone.value,
 	lastNameRequired: () => isZoomEvent.value,
 })
 const { meErrors, attendeeErrorList, detailsErrors } = validation

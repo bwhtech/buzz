@@ -1,7 +1,13 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from buzz.api.payments import get_event_payment_gateways, get_payment_gateway_logos
+from buzz.api.payments import (
+	get_event_payment_gateways,
+	get_payment_gateway_logos,
+	get_payment_gateways_needing_phone,
+)
 from buzz.payments import resolve_payment_gateway
 from buzz.tests.base_test_cases import make_payment_gateway
 from buzz.tests.factories import BuzzEventFactory
@@ -70,6 +76,27 @@ class TestGetEventPaymentGateways(IntegrationTestCase):
 
 	def gateways_on(self, event: str) -> list[str]:
 		return [row.payment_gateway for row in frappe.get_doc("Buzz Event", event).payment_gateways]
+
+
+class TestGetPaymentGatewaysNeedingPhone(IntegrationTestCase):
+	def test_lists_enabled_gateways_whose_checkout_needs_a_phone(self):
+		gateway = make_payment_gateway()
+
+		with patch("buzz.payments.GATEWAYS_NEEDING_PHONE", ("Razorpay Gateway Settings",)):
+			self.assertIn(gateway, get_payment_gateways_needing_phone())
+
+	def test_leaves_out_gateways_that_do_not_need_one(self):
+		gateway = make_payment_gateway()
+
+		with patch("buzz.payments.GATEWAYS_NEEDING_PHONE", ("PayU Gateway Settings",)):
+			self.assertNotIn(gateway, get_payment_gateways_needing_phone())
+
+	def test_leaves_out_a_disabled_gateway(self):
+		gateway = make_payment_gateway()
+		frappe.db.set_value("Payment Gateway Profile", gateway, "enabled", 0)
+
+		with patch("buzz.payments.GATEWAYS_NEEDING_PHONE", ("Razorpay Gateway Settings",)):
+			self.assertNotIn(gateway, get_payment_gateways_needing_phone())
 
 
 class TestGetPaymentGatewayLogos(IntegrationTestCase):

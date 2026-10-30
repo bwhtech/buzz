@@ -2,6 +2,9 @@ import frappe
 from bwh_payments import api as payments
 from frappe import _
 
+# Their checkout needs the shopper's phone number.
+GATEWAYS_NEEDING_PHONE = ("PayU Gateway Settings",)
+
 
 def get_payment_gateways_for_event(event: str) -> list[str]:
 	"""Get the event's own payment gateways, or the site default when it has none.
@@ -16,6 +19,14 @@ def get_payment_gateways_for_event(event: str) -> list[str]:
 	default = frappe.db.get_single_value("Buzz Settings", "default_payment_gateway")
 	enabled = set(payments.get_payment_gateways())
 	return [gateway for gateway in gateways or [default] if gateway in enabled]
+
+
+def get_gateways_needing_phone() -> list[str]:
+	return frappe.get_all(
+		"Payment Gateway Profile",
+		filters={"enabled": 1, "gateway_settings": ("in", GATEWAYS_NEEDING_PHONE)},
+		pluck="name",
+	)
 
 
 def resolve_payment_gateway(event: str, payment_gateway: str | None) -> str:
@@ -40,6 +51,7 @@ def get_payment_link_for_booking(
 		booking_doc.currency,
 		payment_gateway,
 		redirect_to=redirect_to,
+		customer=get_buyer_details(booking_doc),
 	)
 
 
@@ -76,6 +88,7 @@ def get_payment_link(
 	currency: str,
 	payment_gateway: str,
 	redirect_to: str = "/events",
+	customer: dict | None = None,
 ) -> str:
 	"""Open a checkout and return its URL. bwh_payments brings the shopper back to `redirect_to`."""
 	payments.validate_currency(payment_gateway, currency)
@@ -87,10 +100,21 @@ def get_payment_link(
 		currency,
 		payment_gateway,
 		redirect_to=redirect_to,
-		**get_customer_details(),
+		**(get_customer_details() if customer is None else customer),
 	)
 	payment.db_set({"payment_request": payment_request.name, "order_id": payment_request.order_ref})
 	return payment_request.order_url
+
+
+def get_buyer_details(booking) -> dict:
+	"""The buyer on the booking, who may be a guest with no session. PayU needs their email and phone."""
+	forenames, _separator, surname = (booking.buyer_name or "").partition(" ")
+	return {
+		"customer_email": booking.buyer_email,
+		"customer_phone": booking.buyer_phone,
+		"customer_forenames": forenames,
+		"customer_surname": surname,
+	}
 
 
 def get_customer_details() -> dict:

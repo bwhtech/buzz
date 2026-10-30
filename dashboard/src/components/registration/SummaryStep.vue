@@ -37,10 +37,26 @@
 		<section class="overflow-hidden rounded-5 border border-outline-gray-2">
 			<SummaryCardHeader :title="__('Billing')" @edit="emit('edit', 'details')" />
 			<dl class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-x-4 gap-y-3 px-4 py-3">
-				<div v-for="field in billingRows" :key="field.label" class="flex min-w-0 flex-col gap-0.5">
-					<dt class="text-p-sm text-ink-gray-5">{{ field.label }}</dt>
-					<dd class="text-base text-ink-gray-8 [overflow-wrap:anywhere]">{{ field.value }}</dd>
-				</div>
+				<template v-for="field in billingRows" :key="field.label">
+					<div
+						v-if="field.editable"
+						class="flex min-w-0 flex-col gap-1.5"
+						:class="{ 'flash-in': !billing.buyer_phone }"
+					>
+						<PhoneInput
+							v-model="billing.buyer_phone"
+							:label="field.label"
+							size="sm"
+							required
+							:error="phoneError"
+						/>
+						<PhoneReason />
+					</div>
+					<div v-else class="flex min-w-0 flex-col gap-0.5">
+						<dt class="text-p-sm text-ink-gray-5">{{ field.label }}</dt>
+						<dd class="text-base text-ink-gray-8 [overflow-wrap:anywhere]">{{ field.value }}</dd>
+					</div>
+				</template>
 			</dl>
 		</section>
 
@@ -61,6 +77,8 @@ import type { BillingDetails } from "@/composables/useBookingFormStorage"
 import type { AvailableAddOn, AvailableTicketType, BookingAttendee } from "@/types"
 import { formatWholePriceOrFree } from "@/utils/currency"
 
+import PhoneInput from "../PhoneInput.vue"
+import PhoneReason from "./PhoneReason.vue"
 import { taxIdFieldLabel } from "./registrationSteps"
 import SummaryCardHeader from "./SummaryCardHeader.vue"
 import { useEventDateLabels } from "./useEventDateLabels"
@@ -77,6 +95,9 @@ const props = defineProps<{
 	taxLabel: string
 	currency: string
 	showCurrency: boolean
+	// The chosen payment method can't take the payment without a phone number.
+	phoneRequired: boolean
+	phoneError?: string
 }>()
 const emit = defineEmits<{ edit: [step: RegistrationStepId] }>()
 
@@ -129,7 +150,11 @@ const billingRows = computed(() => {
 	const rows = [
 		{ label: __("Name"), value: billing.buyer_name },
 		{ label: __("Email"), value: billing.buyer_email },
-		{ label: __("Phone"), value: billing.buyer_phone.replace("-", " ") || __("Not added") },
+		{
+			label: __("Phone"),
+			value: billing.buyer_phone.replace("-", " ") || __("Not added"),
+			editable: props.phoneRequired,
+		},
 	]
 	if (props.invoiceShown && billing.invoice_requested)
 		rows.push(
