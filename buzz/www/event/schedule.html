@@ -15,7 +15,7 @@
 			{{ event.title }}
 		</h1>
 		<p class="schedule-subtitle">{{ [date_range.date_range_with_weekdays if date_range.is_multi_day else event_date.full_date, venue.name if venue and not venue.locations] | select | join(" · ") }}</p>
-		{% macro avatar(person, class_name="schedule-avatar") %}{% if person.image %}<img class="{{ class_name }}" src="{{ person.image }}" alt="">{% else %}<span class="{{ class_name }}" aria-hidden="true">{{ person.name[:1] | upper }}</span>{% endif %}{% endmacro %}
+		{% macro avatar(person, class_name="schedule-avatar") %}{% if person.image %}<img class="{{ class_name }}" src="{{ person.image }}" alt="" data-initial="{{ person.name[:1] | upper }}">{% else %}<span class="{{ class_name }}" aria-hidden="true">{{ person.name[:1] | upper }}</span>{% endif %}{% endmacro %}
 		{% macro clock(minutes, label) %}<time data-minutes="{{ minutes }}">{{ label }}</time>{% endmacro %}
 		{% macro time_range(row) %}{{ clock(row.start_minutes, row.start) }} – {{ clock(row.end_minutes, row.end) }}{% endmacro %}
 		{% macro talk_detail(row) %}
@@ -127,7 +127,7 @@
 						{% if grid.has_titles %}
 						<div class="schedule-grid-head">
 							<div class="schedule-grid-gutter"></div>
-							{% for column in grid.columns %}<div class="schedule-grid-title" data-track="{{ column.key }}"><span>{{ column.title }}</span><span class="schedule-grid-count">{{ column.count }}</span></div>{% endfor %}
+							{% for column in grid.columns %}<div class="schedule-grid-title" data-track="{{ column.key }}" style="grid-column: span {{ column.span }}" title="{{ column.title }}"><span>{{ column.title }}</span><span class="schedule-grid-count">{{ column.count }}</span></div>{% endfor %}
 						</div>
 						{% endif %}
 						<div class="schedule-grid-body">
@@ -135,7 +135,7 @@
 								{% for hour in grid.hours %}<span class="schedule-grid-hour" style="top: {{ hour.top }}px">{{ clock(hour.minutes, hour.label) }}</span>{% endfor %}
 							</div>
 							{% for column in grid.columns %}
-							<ul class="schedule-grid-column" data-track="{{ column.key }}">
+							<ul class="schedule-grid-column" data-track="{{ column.key }}" style="grid-column: span {{ column.span }}">
 								{% for block in column.blocks %}{{ schedule_block(block) }}{% endfor %}
 							</ul>
 							{% endfor %}

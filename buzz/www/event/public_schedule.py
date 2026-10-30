@@ -16,6 +16,13 @@ def join_names(names: list[str]) -> str:
 	return comma_sep(names, _("{0} and {1}"), add_quotes=False)
 
 
+def speaker_line(names: list[str]) -> str:
+	"""Two names in full; past that the first name and a count, so cards keep one line."""
+	if len(names) <= 2:
+		return join_names(names)
+	return _("{0} and {1} others").format(names[0], len(names) - 1)
+
+
 def minutes_of(time) -> int:
 	return int(get_time(time).hour * 60 + get_time(time).minute)
 
@@ -145,7 +152,7 @@ class PublicSchedule:
 			"track": self.track_title(item),
 			"track_key": "" if item.all_tracks else item.track or "",
 			"people": people,
-			"speakers": join_names([person["name"] for person in people]),
+			"speakers": speaker_line([person["name"] for person in people]),
 			"abstract": self.abstracts.get(item.reference_document, "") if is_talk(item) else "",
 		}
 

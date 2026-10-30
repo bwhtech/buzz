@@ -6,6 +6,8 @@ PIXELS_PER_MINUTE = 1.8
 COMPACT_HEIGHT = 46
 SPEAKER_HEIGHT = 80
 MIN_BLOCK_HEIGHT = 16
+# Each extra side-by-side session widens its track by another column, up to this many.
+MAX_COLUMN_SPAN = 3
 DEFAULT_START = 9 * 60
 DEFAULT_END = 18 * 60
 
@@ -69,6 +71,7 @@ class ScheduleGrid:
 						"key": track.name,
 						"title": track.title,
 						"count": count_label(len(blocks)),
+						"span": min(max(block["lanes"] for block in blocks), MAX_COLUMN_SPAN),
 						"blocks": blocks,
 					}
 				)

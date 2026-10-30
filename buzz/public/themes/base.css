@@ -438,6 +438,11 @@ body {
 }
 
 /* Tracks and layouts are segmented controls: a tinted rail with the chosen option raised. */
+/* Set by the schedule script while a row scrolls sideways and has more to its right. */
+[data-more-right] {
+	mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+
 .schedule-segments {
 	display: flex;
 	gap: 2px;
@@ -618,11 +623,11 @@ body {
 .schedule-items {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	align-items: start;
 	gap: 10px;
 }
 
 .schedule-card {
-	height: 100%;
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	background: var(--page-bg);
@@ -652,17 +657,20 @@ summary.schedule-summary:focus-visible {
 
 .schedule-meta {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: 6px;
 	min-width: 0;
 	color: var(--ink-muted);
 	font-size: 12px;
 }
 
+.schedule-meta .schedule-dot {
+	margin-top: 4px;
+}
+
 .schedule-meta-text {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	min-width: 0;
+	overflow-wrap: anywhere;
 }
 
 .schedule-dot {
@@ -838,7 +846,7 @@ summary.schedule-summary:focus-visible {
 }
 
 .schedule-grid-inner {
-	padding-bottom: 12px;
+	padding-bottom: 24px;
 }
 
 .schedule-grid-head,
@@ -966,12 +974,6 @@ summary.schedule-summary:focus-visible {
 	align-items: center;
 	gap: 6px;
 	padding: 0 8px;
-}
-
-.schedule-grid-spans .schedule-block-button {
-	align-items: center;
-	justify-content: center;
-	text-align: center;
 }
 
 .schedule-block-button:focus-visible {

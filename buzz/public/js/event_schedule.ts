@@ -32,6 +32,15 @@ function zoneOffset(timeZone: string, instant: Date) {
 	return Math.round((wall - instant.getTime()) / 60000)
 }
 
+// A speaker photo that fails to load shows the speaker's initial instead.
+function showInitial(image: HTMLImageElement) {
+	const initial = document.createElement("span")
+	initial.className = image.className
+	initial.textContent = image.dataset.initial ?? ""
+	initial.setAttribute("aria-hidden", "true")
+	image.replaceWith(initial)
+}
+
 function localZoneName() {
 	const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
 	const short = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
@@ -61,6 +70,9 @@ export class EventSchedule extends HTMLElement {
 			controls.removeAttribute("hidden"),
 		)
 		this.setUpTimeZones()
+		this.replaceBrokenAvatars()
+		this.addEventListener("scroll", () => this.markScrollableRows(), true)
+		window.addEventListener("resize", () => this.markScrollableRows())
 		this.dataset.ready = ""
 		this.render()
 	}
@@ -79,6 +91,21 @@ export class EventSchedule extends HTMLElement {
 		else if (target.matches(".schedule-dialog")) return this.closeDetail()
 		else return
 		this.render()
+	}
+
+	private replaceBrokenAvatars() {
+		this.querySelectorAll<HTMLImageElement>("img[data-initial]").forEach((image) => {
+			if (image.complete && !image.naturalWidth) showInitial(image)
+			else image.addEventListener("error", () => showInitial(image), { once: true })
+		})
+	}
+
+	// Rows of buttons that scroll sideways fade out on the right while more is hidden there.
+	private markScrollableRows() {
+		this.querySelectorAll<HTMLElement>(".schedule-days, .schedule-segments").forEach((row) => {
+			const hidden = row.scrollWidth - row.clientWidth - row.scrollLeft
+			row.toggleAttribute("data-more-right", hidden > 1)
+		})
 	}
 
 	private setUpTimeZones() {
@@ -148,6 +175,7 @@ export class EventSchedule extends HTMLElement {
 		this.markPressed(".schedule-layout-button", "layout", this.layout)
 		this.markPressed(".schedule-zone-button", "zone", this.zone)
 		this.renderTimes()
+		this.markScrollableRows()
 		this.dataset.layout = this.layout
 		this.querySelectorAll<HTMLElement>(".schedule-grid-title, .schedule-grid-column").forEach(
 			(column) => {
