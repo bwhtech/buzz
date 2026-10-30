@@ -373,20 +373,6 @@ body {
 
 /* Schedule */
 
-/* Hues for the schedule's item types, named after the colors a type may use. */
-.schedule {
-	--schedule-gray: #7c7c7c;
-	--schedule-blue: #3b82f6;
-	--schedule-green: #22a06b;
-	--schedule-red: #ef4444;
-	--schedule-orange: #f97316;
-	--schedule-yellow: #eab308;
-	--schedule-teal: #14b8a6;
-	--schedule-cyan: #06b6d4;
-	--schedule-purple: #8b5cf6;
-	--schedule-pink: #ec4899;
-}
-
 .schedule [hidden] {
 	display: none;
 }

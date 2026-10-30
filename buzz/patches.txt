@@ -52,6 +52,7 @@ buzz.patches.drop_buzz_event_form_table
 buzz.patches.move_excluded_fields_to_standard_rows
 buzz.patches.move_question_conditions_to_logic_rules
 buzz.patches.add_registration_core_rows
+buzz.patches.use_hex_colors_for_schedule_item_types
 
 [post_fixture_sync]
 buzz.patches.move_schedule_to_buzz_schedule

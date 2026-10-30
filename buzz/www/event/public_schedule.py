@@ -5,7 +5,7 @@ from frappe import _
 from frappe.utils import comma_sep, get_time
 
 from buzz.api.schedule.services import speaker_profiles
-from buzz.events.doctype.buzz_schedule_item_type.buzz_schedule_item_type import HEX_COLOR, THEME_COLORS
+from buzz.events.doctype.buzz_schedule_item_type.buzz_schedule_item_type import HEX_COLOR
 from buzz.www.event.date_range import format_day, format_time, format_time_range, join_parts
 from buzz.www.event.schedule_grid import ScheduleGrid
 
@@ -33,8 +33,6 @@ def speaker_summary(profile) -> dict:
 
 
 def css_color(color: str | None) -> str:
-	if color in THEME_COLORS:
-		return f"var(--schedule-{color})"
 	return color if color and HEX_COLOR.match(color) else MUTED_COLOR
 
 

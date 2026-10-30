@@ -7,15 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-THEME_COLORS = frozenset(
-	{"gray", "blue", "green", "red", "orange", "yellow", "teal", "cyan", "purple", "pink"}
-)
 HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
-
-
-def validate_color(color: str | None):
-	if color and color not in THEME_COLORS and not HEX_COLOR.match(color):
-		frappe.throw(_("<b>Color</b> must be a theme color such as blue, or a hex value such as #2563eb"))
 
 
 class BuzzScheduleItemType(Document):
@@ -27,7 +19,7 @@ class BuzzScheduleItemType(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		color: DF.Data | None
+		color: DF.Color | None
 		default_duration: DF.Int
 		icon: DF.Data | None
 		is_standard: DF.Check
@@ -37,7 +29,8 @@ class BuzzScheduleItemType(Document):
 	# end: auto-generated types
 
 	def validate(self):
-		validate_color(self.color)
+		if self.color and not HEX_COLOR.match(self.color):
+			frappe.throw(_("<b>Color</b> must be a hex value such as #2563eb"))
 		if self.is_standard:
 			self.team = None
 		elif not self.team:
