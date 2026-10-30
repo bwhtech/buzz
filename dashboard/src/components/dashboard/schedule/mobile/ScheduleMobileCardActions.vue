@@ -10,7 +10,7 @@ defineEmits<{ edit: []; press: [event: PointerEvent] }>()
 			class="grid size-8 place-items-center rounded-4 active:bg-surface-gray-3"
 			@click.stop="$emit('edit')"
 		>
-			<span class="lucide-pen-line size-4" aria-hidden="true" />
+			<span class="lucide-pen size-4" aria-hidden="true" />
 		</button>
 		<div
 			role="button"
