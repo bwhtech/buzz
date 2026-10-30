@@ -19,6 +19,7 @@ const HEADER_HEIGHT = 40
 const MIN_BLOCK = 14
 const GRID_PADDING = 10
 const GHOST_MINUTES = 30
+const SPAN_LABEL_HEIGHT = 32
 
 const { builder, board, rooms, dayItems, conflicts } = useDayLayout()
 const mobile = useMobile()
@@ -78,11 +79,13 @@ function tapSlot(event: MouseEvent, room: string) {
 	mobile.openAdd(Math.min(start, range.value.end - SNAP_MINUTES), room)
 }
 
-const spanStyle = (item: ScheduleItem) => ({
+// An all-track item shows as a label at its start over a faint band for its length,
+// so the blocks it overlaps stay visible.
+const spanStyle = (item: ScheduleItem, pixels: number) => ({
 	left: `${RAIL + 3}px`,
 	right: "3px",
 	top: `${GRID_PADDING + top(item.start)}px`,
-	height: `${lengthOf(item)}px`,
+	height: `${pixels}px`,
 })
 const ghostStyle = (start: number, minutes = GHOST_MINUTES) => ({
 	top: `${top(start)}px`,
@@ -196,15 +199,24 @@ const empty = computed(() => !dayItems.value.length && !sheet.value)
 							@open="mobile.openEdit(entry.item.key)"
 						/>
 					</div>
-					<ScheduleMobileCard
-						v-for="item in spans"
-						:key="item.key"
-						:item="item"
-						:conflict="conflicts[item.key]"
-						class="absolute z-[3] !w-auto !py-0"
-						:style="spanStyle(item)"
-						@click.stop="mobile.openEdit(item.key)"
-					/>
+					<template v-for="item in spans" :key="item.key">
+						<div
+							class="pointer-events-none absolute z-0 rounded-5 bg-surface-gray-2 opacity-60"
+							:style="spanStyle(item, lengthOf(item))"
+						/>
+						<div
+							class="pointer-events-none absolute z-[3]"
+							:style="spanStyle(item, Math.min(lengthOf(item), SPAN_LABEL_HEIGHT))"
+						>
+							<ScheduleMobileCard
+								:item="item"
+								:conflict="conflicts[item.key]"
+								class="pointer-events-auto sticky h-full !py-0"
+								:style="{ left: `${RAIL + 3}px`, width: `${viewport - RAIL - 6}px` }"
+								@click.stop="mobile.openEdit(item.key)"
+							/>
+						</div>
+					</template>
 				</div>
 			</div>
 		</div>

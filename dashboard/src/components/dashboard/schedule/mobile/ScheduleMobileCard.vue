@@ -20,7 +20,7 @@ const builder = useBuilder()
 
 const resolved = computed(() => builder.resolve(props.item))
 const colors = computed(() => blockColors(resolved.value.type?.color))
-const tag = computed(() => (props.actions ? "div" : "button"))
+const clickSelf = (event: KeyboardEvent) => (event.currentTarget as HTMLElement).click()
 const isSpan = computed(() => !props.item.room)
 const speakers = computed(() => resolved.value.speakers.join(", "))
 const icon = computed(() => scheduleIcon(resolved.value.type?.icon) || "lucide-calendar-clock")
@@ -37,10 +37,11 @@ const cardStyle = computed(() => ({
 </script>
 
 <template>
-	<component
-		:is="tag"
+	<div
 		v-if="isSpan"
-		:type="actions ? undefined : 'button'"
+		:role="actions ? undefined : 'button'"
+		:tabindex="actions ? undefined : 0"
+		@keydown.enter="clickSelf"
 		class="flex w-full items-center gap-2 rounded-5 bg-surface-gray-2 px-3 py-2.5 text-left text-p-sm text-ink-gray-7 transition-transform duration-100 active:scale-[0.98]"
 	>
 		<span :class="[icon, 'size-3.5 shrink-0']" aria-hidden="true" />
@@ -54,11 +55,12 @@ const cardStyle = computed(() => ({
 			@edit="$emit('edit')"
 			@press="$emit('press', $event)"
 		/>
-	</component>
-	<component
-		:is="tag"
+	</div>
+	<div
 		v-else
-		:type="actions ? undefined : 'button'"
+		:role="actions ? undefined : 'button'"
+		:tabindex="actions ? undefined : 0"
+		@keydown.enter="clickSelf"
 		class="block w-full min-w-0 rounded-5 border px-3 py-2.5 text-left transition-transform duration-100 active:scale-[0.98]"
 		:style="cardStyle"
 	>
@@ -85,5 +87,5 @@ const cardStyle = computed(() => ({
 				@press="$emit('press', $event)"
 			/>
 		</span>
-	</component>
+	</div>
 </template>
