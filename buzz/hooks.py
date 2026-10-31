@@ -21,6 +21,7 @@ before_uninstall = "buzz.uninstall.before_uninstall"
 
 
 website_route_rules = [
+	{"from_route": "/events/<event_route>/schedule", "to_route": "event/schedule"},
 	{"from_route": "/events/<event_route>", "to_route": "event"},
 	{"from_route": "/u/<username>", "to_route": "user_profile"},
 	{"from_route": "/b", "to_route": "dashboard"},
@@ -45,7 +46,11 @@ website_redirects = [
 	},
 	{"source": r"/dashboard/(.*)", "target": r"/b/\1", "forward_query_parameters": True},
 	# Additional event pages used to have their own URL; they are tabs on the event page now.
-	{"source": r"/events/([^/]+)/[^/]+", "target": r"/events/\1", "forward_query_parameters": True},
+	{
+		"source": r"/events/([^/]+)/(?!schedule$)[^/]+",
+		"target": r"/events/\1",
+		"forward_query_parameters": True,
+	},
 	# Bare /dashboard has no trailing slash for the catch-all above to match, and
 	# www/dashboard.html would otherwise serve the SPA shell under the wrong base.
 	{"source": r"/dashboard", "target": "/b", "forward_query_parameters": True},
@@ -127,6 +132,7 @@ fixtures = [
 	{"dt": "Buzz Theme", "filters": {"is_standard": 1}},
 	{"dt": "Event Topic", "filters": {"is_standard": 1}},
 	{"dt": "Buzz Schedule Item Type", "filters": {"is_standard": 1}},
+	{"dt": "Buzz Schedule Track", "filters": {"is_standard": 1}},
 	{"dt": "Notification Type", "filters": {"name": "Buzz Activity"}},
 ]
 

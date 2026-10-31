@@ -6,6 +6,8 @@ import frappe
 from buzz.tests.base_test_cases import TeamPermissionTestCase
 from buzz.tests.factories import BuzzScheduleFactory, BuzzScheduleTrackFactory
 
+STANDARD_TRACK = "Main Track"
+
 
 class TestBuzzScheduleTrack(TeamPermissionTestCase):
 	@classmethod
@@ -28,6 +30,20 @@ class TestBuzzScheduleTrack(TeamPermissionTestCase):
 	def test_other_team_cannot_add_a_track_to_a_schedule(self):
 		with self.set_user(self.bob), self.assertRaises(frappe.PermissionError):
 			BuzzScheduleTrackFactory.create(schedule=self.schedule_a)
+
+	def test_every_team_lists_the_standard_track_and_only_its_own_tracks(self):
+		for user in (self.alice, self.bob):
+			self.assertIn(STANDARD_TRACK, self.list_as(user, "Buzz Schedule Track"))
+			self.assertTrue(self.has_permission_as(user, "read", "Buzz Schedule Track", STANDARD_TRACK))
+		self.assertIn(self.track_a, self.list_as(self.alice, "Buzz Schedule Track"))
+		self.assertNotIn(self.track_a, self.list_as(self.bob, "Buzz Schedule Track"))
+
+	def test_teams_cannot_change_the_standard_track(self):
+		for ptype in ("write", "delete"):
+			self.assertFalse(self.has_permission_as(self.alice, ptype, "Buzz Schedule Track", STANDARD_TRACK))
+		self.assertTrue(
+			self.has_permission_as("Administrator", "write", "Buzz Schedule Track", STANDARD_TRACK)
+		)
 
 	def test_other_team_cannot_list_or_read_schedules(self):
 		self.assertNotIn(self.schedule_a, self.list_as(self.bob, "Buzz Schedule"))

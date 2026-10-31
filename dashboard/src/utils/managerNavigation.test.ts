@@ -24,6 +24,7 @@ test("an event offers its own sections, scoped to its id", () => {
 		"Coupons",
 		"Guests",
 		"Talks",
+		"Schedule",
 		"Announcements",
 		"Sponsorships",
 		"Settings",

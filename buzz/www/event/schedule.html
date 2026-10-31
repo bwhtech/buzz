@@ -1,0 +1,163 @@
+{% extends "buzz/templates/event_page/layout.html" %}
+
+{% block title %}{% autoescape true %}{{ _("Schedule") }} · {{ event.title }}{% endautoescape %}{% endblock %}
+
+{% block meta_block %}{% autoescape true %}
+	<meta name="description" content="{{ _("Schedule of {0}").format(event.title) }}">
+	<link rel="canonical" href="{{ meta.url }}/schedule">
+{% endautoescape %}{% endblock %}
+
+{% block content %}{% autoescape true %}
+	<main class="event-content schedule-page">
+		<a class="schedule-back" href="/events/{{ event.route }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>{{ _("Go to event page") }}</a>
+		<h1 class="event-title schedule-heading">
+			<span>{{ _("Schedule") }}</span>
+			{{ event.title }}
+		</h1>
+		<p class="schedule-subtitle">{{ [date_range.date_range_with_weekdays if date_range.is_multi_day else event_date.full_date, venue.name if venue and not venue.locations] | select | join(" · ") }}</p>
+		{% macro avatar(person, class_name="schedule-avatar") %}{% if person.image %}<img class="{{ class_name }}" src="{{ person.image }}" alt="" data-initial="{{ person.name[:1] | upper }}">{% else %}<span class="{{ class_name }}" aria-hidden="true">{{ person.name[:1] | upper }}</span>{% endif %}{% endmacro %}
+		{% macro clock(minutes, label) %}<time data-minutes="{{ minutes }}">{{ label }}</time>{% endmacro %}
+		{% macro time_range(row) %}{{ clock(row.start_minutes, row.start) }} – {{ clock(row.end_minutes, row.end) }}{% endmacro %}
+		{% macro talk_detail(row) %}
+		{% if row.abstract %}<div class="prose">{{ row.abstract | safe }}</div>{% endif %}
+		{% for person in row.people %}
+		<div class="schedule-person">
+			{{ avatar(person, "schedule-avatar is-large") }}
+			<span class="schedule-person-name">{{ person.name }}</span>
+			{% if person.role %}<span class="schedule-person-role">{{ person.role }}</span>{% endif %}
+		</div>
+		{% endfor %}
+		{% endmacro %}
+
+		{% macro schedule_card(row) %}
+		{% set expandable = row.abstract or row.people %}
+		{% set tag = "details" if expandable else "div" %}
+		<li class="schedule-item" data-track="{{ row.track_key }}" style="--schedule-dot: {{ row.color }}">
+			<{{ tag }} class="schedule-card">
+				<{{ "summary" if expandable else "div" }} class="schedule-summary">
+					<span class="schedule-meta"><span class="schedule-dot" aria-hidden="true"></span><span class="schedule-meta-text">{% if row.type %}{{ row.type }} · {% endif %}{{ time_range(row) }}{% if row.track %} · {{ row.track }}{% endif %}</span></span>
+					<span class="schedule-title">{{ row.title }}</span>
+					{% if row.people %}
+					<span class="schedule-people">
+						<span class="schedule-avatars">{% for person in row.people[:3] %}{{ avatar(person) }}{% endfor %}</span>
+						<span class="schedule-speaker">{{ row.speakers }}</span>
+					</span>
+					{% endif %}
+					<span class="schedule-duration">{{ row.duration }}</span>
+				</{{ "summary" if expandable else "div" }}>
+				{% if expandable %}
+				<div class="schedule-detail">
+					{{ talk_detail(row) }}
+				</div>
+				{% endif %}
+			</{{ tag }}>
+		</li>
+		{% endmacro %}
+
+		{% macro schedule_block(block) %}
+		{% set row = block.row %}
+		<li class="schedule-block{% if block.is_compact %} is-compact{% endif %}" data-track="{{ row.track_key }}" style="--schedule-dot: {{ row.color }}; top: {{ block.top }}px; height: {{ block.height }}px; left: calc({{ block.lane * 100 / block.lanes }}% + 3px); width: calc({{ 100 / block.lanes }}% - 6px)">
+			<button class="schedule-block-button" type="button" data-open-detail title="{{ row.title }}">
+				<span class="schedule-block-title"><span class="schedule-dot" aria-hidden="true"></span>{{ row.title }}</span>
+				<span class="schedule-block-time">{{ time_range(row) }}</span>
+				{% if block.shows_speakers %}<span class="schedule-block-speakers">{{ row.speakers }}</span>{% endif %}
+			</button>
+			<div class="schedule-block-detail" hidden>
+				<h2 class="schedule-dialog-title">{{ row.title }}</h2>
+				<p class="schedule-dialog-meta">{% if row.type %}{{ row.type }} · {% endif %}{{ time_range(row) }} · {{ row.duration }}{% if row.track %} · {{ row.track }}{% endif %}</p>
+				{{ talk_detail(row) }}
+			</div>
+		</li>
+		{% endmacro %}
+
+		<event-schedule class="schedule" data-time-zone="{{ event_time_zone }}" data-local-note="{{ _('Times shown in your time zone, {0}') }}">
+			<div class="schedule-controls">
+			{% if schedule | length > 1 %}
+			<div class="schedule-days" role="group" aria-label="{{ _('Days') }}" data-controls hidden>
+				{% for day in schedule %}
+				<button class="schedule-day-button" type="button" data-day="{{ day.key }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">
+					<span class="schedule-day-name">{{ day.day }}</span>
+					<span class="schedule-day-caption">{{ day.caption }}</span>
+					{% if day.short_date %}<span class="schedule-day-short">{{ day.short_date }}</span>{% endif %}
+				</button>
+				{% endfor %}
+			</div>
+			{% endif %}
+			<div class="schedule-filters" data-controls hidden>
+				<label class="schedule-search-field">
+					<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+					<input class="schedule-search" type="search" placeholder="{{ _('Search sessions') }}" aria-label="{{ _('Search sessions') }}">
+				</label>
+				{% if schedule_tracks %}
+				<div class="schedule-tracks schedule-segments" role="group" aria-label="{{ _('Tracks') }}">
+					<button class="schedule-track-button" type="button" data-track="" aria-pressed="true">{{ _("All tracks") }}</button>
+					{% for track in schedule_tracks %}<button class="schedule-track-button" type="button" data-track="{{ track.name }}" aria-pressed="false">{{ track.title }}</button>{% endfor %}
+				</div>
+				{% endif %}
+			</div>
+			<div class="schedule-layouts schedule-segments" role="group" aria-label="{{ _('Layout') }}" data-controls hidden>
+				<button class="schedule-layout-button" type="button" data-layout="list" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/></svg>{{ _("List") }}</button>
+				<button class="schedule-layout-button" type="button" data-layout="grid" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>{{ _("Grid") }}</button>
+			</div>
+			</div>
+			<div class="schedule-time-zone">
+				<p class="schedule-note" data-event-note>{{ _("Times shown in {0}").format(timezone_label_with_offset) }}</p>
+				<p class="schedule-note" data-local-note hidden></p>
+				<div class="schedule-zones schedule-segments" role="group" aria-label="{{ _('Time zone') }}" hidden>
+					<button class="schedule-zone-button" type="button" data-zone="event" aria-pressed="true"><span class="schedule-zone-label">{{ _("Event time") }}</span><span class="schedule-zone-action">{{ _("Use event time") }}</span></button>
+					<button class="schedule-zone-button" type="button" data-zone="local" aria-pressed="false"><span class="schedule-zone-label">{{ _("Your time") }}</span><span class="schedule-zone-action">{{ _("Use my time") }}</span></button>
+				</div>
+			</div>
+			{% for day in schedule %}
+			<div class="schedule-day" data-day="{{ day.key }}">
+				{% if schedule | length > 1 %}<h3 class="label">{{ day.day }}</h3>{% endif %}
+				<ol class="schedule-slots">
+					{% for slot in day.slots %}
+					<li class="schedule-slot"{% if slot.all_tracks %} data-all-tracks{% endif %}>
+						<div class="schedule-slot-time">
+							<span class="schedule-start">{{ clock(slot.rows[0].start_minutes, slot.start) }}</span>
+							{% if slot.rows | length > 1 %}<span class="schedule-parallel">{{ _("{0} at once").format(slot.rows | length) }}</span>{% endif %}
+						</div>
+						<ul class="schedule-items">
+							{% for row in slot.rows %}{{ schedule_card(row) }}{% endfor %}
+						</ul>
+					</li>
+					{% endfor %}
+				</ol>
+				{% set grid = day.grid %}
+				<div class="schedule-grid">
+					<div class="schedule-grid-inner" style="--grid-height: {{ grid.height }}px; --hour-height: {{ grid.hour_height }}px">
+						{% if grid.has_titles %}
+						<div class="schedule-grid-head">
+							<div class="schedule-grid-gutter"></div>
+							{% for column in grid.columns %}<div class="schedule-grid-title" data-track="{{ column.key }}" style="grid-column: span {{ column.span }}" title="{{ column.title }}"><span>{{ column.title }}</span><span class="schedule-grid-count">{{ column.count }}</span></div>{% endfor %}
+						</div>
+						{% endif %}
+						<div class="schedule-grid-body">
+							<div class="schedule-grid-gutter">
+								{% for hour in grid.hours %}<span class="schedule-grid-hour" style="top: {{ hour.top }}px">{{ clock(hour.minutes, hour.label) }}</span>{% endfor %}
+							</div>
+							{% for column in grid.columns %}
+							<ul class="schedule-grid-column" data-track="{{ column.key }}" style="grid-column: span {{ column.span }}">
+								{% for block in column.blocks %}{{ schedule_block(block) }}{% endfor %}
+							</ul>
+							{% endfor %}
+							<ul class="schedule-grid-spans">
+								{% for block in grid.spans %}{{ schedule_block(block) }}{% endfor %}
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div>
+			{% endfor %}
+			<div class="schedule-empty" hidden>
+				<p class="empty-state">{{ _("No sessions match your filters") }}</p>
+				<button class="es-button" type="button" data-variant="subtle" data-size="md" data-clear-filters>{{ _("Clear filters") }}</button>
+			</div>
+			<dialog class="schedule-dialog">
+				<form method="dialog"><button class="schedule-dialog-close" type="submit" aria-label="{{ _('Close') }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></form>
+				<div class="schedule-dialog-body"></div>
+			</dialog>
+		</event-schedule>
+	</main>
+{% endautoescape %}{% endblock %}

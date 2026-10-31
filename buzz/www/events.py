@@ -17,7 +17,8 @@ from frappe.utils import (
 )
 
 from buzz.playground import listing_filters
-from buzz.www.event.index import format_day, not_found
+from buzz.www.event.date_range import format_day
+from buzz.www.event.index import not_found
 from buzz.www.site_header import apply_site_context
 
 no_cache = 1

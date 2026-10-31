@@ -7,7 +7,10 @@
  "field_order": [
   "title",
   "color",
+  "sequence",
+  "capacity",
   "column_break_schedule",
+  "is_standard",
   "schedule",
   "event"
  ],
@@ -26,8 +29,28 @@
    "label": "Color"
   },
   {
+   "default": "0",
+   "description": "Tracks show left to right, or top to bottom, in this order",
+   "fieldname": "sequence",
+   "fieldtype": "Int",
+   "label": "Sequence"
+  },
+  {
+   "fieldname": "capacity",
+   "fieldtype": "Int",
+   "label": "Seats"
+  },
+  {
    "fieldname": "column_break_schedule",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Shared by every event; only a System Manager changes it",
+   "fieldname": "is_standard",
+   "fieldtype": "Check",
+   "label": "Is Standard",
+   "read_only": 1
   },
   {
    "fieldname": "schedule",
@@ -35,8 +58,9 @@
    "in_standard_filter": 1,
    "label": "Schedule",
    "options": "Buzz Schedule",
-   "reqd": 1,
-   "set_only_once": 1
+   "set_only_once": 1,
+   "mandatory_depends_on": "eval:!doc.is_standard",
+   "depends_on": "eval:!doc.is_standard"
   },
   {
    "fetch_from": "schedule.event",
@@ -45,11 +69,12 @@
    "in_list_view": 1,
    "label": "Event",
    "options": "Buzz Event",
-   "read_only": 1
+   "read_only": 1,
+   "depends_on": "eval:!doc.is_standard"
   }
  ],
  "links": [],
- "modified": "2026-10-29 12:00:00.000000",
+ "modified": "2026-10-31 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Schedule Track",
