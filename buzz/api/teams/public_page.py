@@ -3,7 +3,7 @@ from frappe import _
 from frappe.website.utils import cleanup_page_name
 
 from buzz.api.events.schemas import RouteAvailability
-from buzz.api.teams.exceptions import InvalidTeamSlug, TeamSlugTaken
+from buzz.api.teams.exceptions import InvalidShareImage, InvalidTeamSlug, TeamSlugTaken
 
 
 def clean_slug(slug: str | None) -> str:
@@ -37,3 +37,12 @@ def set_slug(doc, slug: str | None) -> None:
 		TeamSlugTaken.throw(slug=clean)
 	doc.slug = clean
 	doc.route = doc.make_route()
+
+
+def set_meta_image(doc, meta_image: str | None) -> None:
+	"""None leaves the image as it is, an empty string removes it."""
+	if meta_image is None:
+		return
+	if meta_image and not frappe.db.exists("File", {"file_url": meta_image, "is_folder": 0}):
+		InvalidShareImage.throw()
+	doc.meta_image = meta_image or None

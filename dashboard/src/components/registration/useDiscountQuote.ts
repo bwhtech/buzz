@@ -14,6 +14,8 @@ export function useDiscountQuote(inputs: PricingInputs, netAmount: Ref<number>) 
 	const { attendees, currency } = inputs
 	// Keeps the URL in step with the applied code, so a shared link carries it.
 	const codeQuery = useRouteQuery<string | null>("coupon", null)
+	// An access link carries its code as ?code=.
+	const accessLinkQuery = useRouteQuery<string | null>("code", null)
 	const code = ref("")
 	const appliedCode = ref("")
 	const error = ref("")
@@ -80,6 +82,7 @@ export function useDiscountQuote(inputs: PricingInputs, netAmount: Ref<number>) 
 		error.value = ""
 		appliedCode.value = ""
 		codeQuery.value = null
+		accessLinkQuery.value = null
 	}
 
 	async function refreshQuote() {
@@ -101,12 +104,14 @@ export function useDiscountQuote(inputs: PricingInputs, netAmount: Ref<number>) 
 	})
 
 	const note = computed(() =>
-		applied.value ? __("You save {0}", [formatCurrency(discountAmount.value, currency.value)]) : "",
+		applied.value && discountAmount.value > 0
+			? __("You save {0}", [formatCurrency(discountAmount.value, currency.value)])
+			: "",
 	)
 
-	// A ?coupon= link applies its code once the form is ready.
+	// A ?coupon= or ?code= link applies its code once the form is ready.
 	function applyFromLink() {
-		const linked = codeQuery.value
+		const linked = codeQuery.value ?? accessLinkQuery.value
 		if (typeof linked !== "string" || !linked.trim() || applied.value) return
 		code.value = linked
 		return apply()

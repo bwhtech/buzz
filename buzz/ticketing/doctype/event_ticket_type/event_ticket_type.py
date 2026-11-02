@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder.functions import Count
+from frappe.utils import cstr
 
 from buzz.events.doctype.buzz_price.buzz_price import validate_unique_currencies
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import is_feature_enabled
@@ -50,6 +51,7 @@ class EventTicketType(Document):
 		category: DF.Link | None
 		description: DF.SmallText | None
 		event: DF.Link
+		is_hidden: DF.Check
 		is_published: DF.Check
 		max_tickets_available: DF.Int
 		name: DF.Int | None
@@ -67,11 +69,22 @@ class EventTicketType(Document):
 		self.validate_locked_prices()
 		self.validate_paid_events_enabled()
 		self.validate_category_event()
+		self.validate_public_ticket_type_remains()
 
 	def validate_category_event(self):
 		filters = {"name": self.category, "event": self.event}
 		if self.category and not frappe.db.exists("Event Ticket Category", filters):
 			frappe.throw(_("The ticket category of {0} belongs to another event").format(self.title))
+
+	def validate_public_ticket_type_remains(self):
+		"""Hidden tickets are only reachable through the event page's public tickets."""
+		if self.is_published and not self.is_hidden:
+			return
+		filters = {"event": self.event, "is_published": 1, "name": ["!=", cstr(self.name)]}
+		others = frappe.get_all("Event Ticket Type", filters=filters, fields=["is_hidden"])
+		has_hidden = bool(self.is_published) or any(row.is_hidden for row in others)
+		if has_hidden and all(row.is_hidden for row in others):
+			frappe.throw(_("The event needs at least one published ticket type that is not hidden"))
 
 	@property
 	def is_free(self) -> bool:

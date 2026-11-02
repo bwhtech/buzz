@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Alert, Button, dayjsLocal, toast, useDoc, useNewDoc } from "frappe-ui"
+import { Alert, Button, ErrorMessage, dayjsLocal, toast, useDoc, useNewDoc } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import {
@@ -16,12 +16,13 @@ import {
 	type CouponValues,
 	blankCouponValues,
 	couponDocValues,
+	couponError,
 	couponValuesOf,
-	isCouponValid,
 } from "@/utils/couponForm"
 import { matches } from "@/utils/formDraft"
 import { serverErrorMessage } from "@/utils/serverError"
 
+import AccessCodePreview from "./AccessCodePreview.vue"
 import CouponCheckoutPreview from "./CouponCheckoutPreview.vue"
 import CouponForm from "./CouponForm.vue"
 import CouponTypeStep from "./CouponTypeStep.vue"
@@ -30,6 +31,8 @@ const props = defineProps<{
 	event: string
 	// null opens the drawer on a new coupon.
 	coupon: CouponItem | null
+	// The type a new coupon starts on.
+	newCouponType?: CouponValues["coupon_type"]
 	ticketTypes: CouponTicketType[]
 	canWrite: boolean
 }>()
@@ -46,16 +49,21 @@ const savedValues = computed(() => (props.coupon ? couponValuesOf(props.coupon) 
 
 // A fresh copy each time: sharing savedValues' object would let edits change it too.
 const resetDraft = () =>
-	(draft.value = props.coupon ? couponValuesOf(props.coupon) : blankCouponValues())
+	(draft.value = props.coupon
+		? couponValuesOf(props.coupon)
+		: blankCouponValues(props.newCouponType))
 
 watch(open, (opened) => {
 	if (!opened) return
 	resetDraft()
+	showValidationError.value = false
 	step.value = isNew.value ? 1 : 2
 })
 
 const hasChanges = computed(() => !!savedValues.value && !matches(draft.value, savedValues.value))
-const isValid = computed(() => isCouponValid(draft.value, props.ticketTypes))
+const validationError = computed(() => couponError(draft.value, props.ticketTypes))
+// Shown only after a save attempt, then live until the drawer reopens.
+const showValidationError = ref(false)
 
 const creator = useNewDoc<Record<string, unknown>>("Buzz Coupon Code")
 const couponDoc = useDoc<Record<string, unknown> & { name: string }>({
@@ -69,11 +77,24 @@ const title = computed(() => {
 	return shownCoupon.value?.code ?? ""
 })
 
+const TYPE_TITLES = {
+	"Promo Code": "Promo code",
+	Automatic: "Automatic",
+	"Access Code": "Access code",
+}
+const DISCOUNT_TITLES = {
+	Percentage: "Percentage off",
+	"Flat Amount": "Fixed amount off",
+	None: "No discount",
+}
+const TYPE_ICONS = {
+	"Promo Code": "lucide-ticket-percent",
+	Automatic: "lucide-zap",
+	"Access Code": "lucide-key-round",
+}
+
 const typeSummary = computed(() =>
-	[
-		draft.value.coupon_type === "Automatic" ? "Automatic" : "Promo code",
-		draft.value.discount_type === "Percentage" ? "Percentage off" : "Fixed amount off",
-	].join(" · "),
+	[TYPE_TITLES[draft.value.coupon_type], DISCOUNT_TITLES[draft.value.discount_type]].join(" · "),
 )
 
 // A coupon someone has used keeps its type, so past receipts still read true.
@@ -122,6 +143,13 @@ async function create() {
 	toast.success("Coupon created")
 	emit("changed")
 	open.value = false
+}
+
+function submit() {
+	showValidationError.value = true
+	if (validationError.value) return
+	if (isNew.value) create()
+	else saveChanges()
 }
 
 async function saveChanges() {
@@ -173,80 +201,113 @@ function goBack() {
 					v-if="!isMobile"
 					class="w-[360px] shrink-0 overflow-y-auto border-r border-outline-gray-1 bg-surface-gray-1 p-5"
 				>
-					<CouponCheckoutPreview :values="draft" :ticket-types="ticketTypes" />
-				</aside>
-				<div class="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
-					<Alert
-						v-if="!isNew && statusAlert"
-						:theme="statusAlert.theme"
-						:title="statusAlert.title"
-						:primary-action="
-							canWrite
-								? {
-										label: statusAlert.action,
-										variant: 'outline',
-										theme: 'gray',
-										loading: couponDoc.setValue.loading,
-										onClick: toggleEnabled,
-									}
-								: undefined
-						"
+					<AccessCodePreview
+						v-if="draft.coupon_type === 'Access Code'"
+						:values="draft"
+						:ticket-types="ticketTypes"
 					/>
-
-					<!-- A short crossfade so the step swap doesn't jump; the exit is quicker than the entry. -->
-					<Transition
-						mode="out-in"
-						enter-active-class="transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-opacity"
-						enter-from-class="opacity-0 translate-y-1 motion-reduce:translate-y-0"
-						leave-active-class="transition-opacity duration-100 ease-out"
-						leave-to-class="opacity-0"
-					>
-						<CouponTypeStep
-							v-if="step === 1"
-							v-model:coupon-type="draft.coupon_type"
-							v-model:discount-type="draft.discount_type"
+					<CouponCheckoutPreview v-else :values="draft" :ticket-types="ticketTypes" />
+				</aside>
+				<div class="flex min-w-0 flex-1 flex-col">
+					<div class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
+						<Alert
+							v-if="!isNew && statusAlert"
+							:theme="statusAlert.theme"
+							:title="statusAlert.title"
+							:primary-action="
+								canWrite
+									? {
+											label: statusAlert.action,
+											variant: 'outline',
+											theme: 'gray',
+											loading: couponDoc.setValue.loading,
+											onClick: toggleEnabled,
+										}
+									: undefined
+							"
 						/>
 
-						<div v-else class="flex flex-col gap-6">
-							<div class="flex items-center gap-3 rounded-4 bg-surface-gray-1 py-2 pl-3 pr-1.5">
-								<span
-									class="size-4 shrink-0 text-ink-gray-6"
-									:class="
-										draft.coupon_type === 'Automatic' ? 'lucide-zap' : 'lucide-ticket-percent'
-									"
-									aria-hidden="true"
-								/>
-								<span class="flex-1 text-sm text-ink-gray-8">{{ typeSummary }}</span>
-								<Button v-if="canChangeType" variant="ghost" label="Change" @click="step = 1" />
+						<!-- A short crossfade so the step swap doesn't jump; the exit is quicker than the entry. -->
+						<Transition
+							mode="out-in"
+							enter-active-class="transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-opacity"
+							enter-from-class="opacity-0 translate-y-1 motion-reduce:translate-y-0"
+							leave-active-class="transition-opacity duration-100 ease-out"
+							leave-to-class="opacity-0"
+						>
+							<CouponTypeStep
+								v-if="step === 1"
+								v-model:coupon-type="draft.coupon_type"
+								v-model:discount-type="draft.discount_type"
+							/>
+
+							<div v-else class="flex flex-col gap-6">
+								<div class="flex items-center gap-3 rounded-4 bg-surface-gray-1 py-2 pl-3 pr-1.5">
+									<span
+										class="size-4 shrink-0 text-ink-gray-6"
+										:class="TYPE_ICONS[draft.coupon_type]"
+										aria-hidden="true"
+									/>
+									<span class="flex-1 text-sm text-ink-gray-8">{{ typeSummary }}</span>
+									<Button v-if="canChangeType" variant="ghost" label="Change" @click="step = 1" />
+								</div>
+								<CouponForm v-model="draft" :ticket-types="ticketTypes" :disabled="!canWrite" />
 							</div>
-							<CouponForm v-model="draft" :ticket-types="ticketTypes" :disabled="!canWrite" />
+						</Transition>
+					</div>
+
+					<CouponCheckoutPreview
+						v-if="isMobile && step === 2 && draft.coupon_type !== 'Access Code'"
+						:values="draft"
+						:ticket-types="ticketTypes"
+						compact
+					/>
+
+					<!-- Sits under the form only, so the preview panel runs the full height. Slides up
+					     when an edit makes it appear; leaves faster than it arrives. -->
+					<Transition
+						enter-active-class="transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-opacity"
+						enter-from-class="opacity-0 translate-y-2 motion-reduce:translate-y-0"
+						leave-active-class="transition-opacity duration-150 ease-out"
+						leave-to-class="opacity-0"
+					>
+						<div
+							v-if="canWrite && (isNew || hasChanges || step === 1)"
+							class="shrink-0 border-t border-outline-gray-1 p-4"
+						>
+							<div class="flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2">
+								<ErrorMessage
+									v-if="showValidationError && step === 2"
+									class="text-right"
+									:message="validationError ?? undefined"
+								/>
+								<div class="flex justify-end gap-2 max-sm:w-full max-sm:[&>*]:flex-1">
+									<Button
+										size="md"
+										:label="isNew && step === 2 ? 'Back' : 'Cancel'"
+										@click="goBack"
+									/>
+									<Button
+										v-if="step === 1"
+										size="md"
+										variant="solid"
+										label="Continue"
+										@click="step = 2"
+									/>
+									<Button
+										v-else
+										size="md"
+										variant="solid"
+										:label="isNew ? 'Create coupon' : 'Save changes'"
+										:loading="isNew ? creator.loading : couponDoc.setValue.loading"
+										@click="submit"
+									/>
+								</div>
+							</div>
 						</div>
 					</Transition>
 				</div>
 			</div>
-
-			<CouponCheckoutPreview
-				v-if="isMobile && step === 2"
-				:values="draft"
-				:ticket-types="ticketTypes"
-				compact
-			/>
-
-			<template v-if="canWrite && (isNew || hasChanges || step === 1)" #footer>
-				<div class="flex w-full justify-end gap-2 max-sm:[&>*]:flex-1">
-					<Button size="md" :label="isNew && step === 2 ? 'Back' : 'Cancel'" @click="goBack" />
-					<Button v-if="step === 1" size="md" variant="solid" label="Continue" @click="step = 2" />
-					<Button
-						v-else
-						size="md"
-						variant="solid"
-						:label="isNew ? 'Create coupon' : 'Save changes'"
-						:disabled="!isValid"
-						:loading="isNew ? creator.loading : couponDoc.setValue.loading"
-						@click="isNew ? create() : saveChanges()"
-					/>
-				</div>
-			</template>
 		</DrawerContent>
 	</Drawer>
 </template>

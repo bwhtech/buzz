@@ -1,0 +1,117 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-29 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "color",
+  "sequence",
+  "capacity",
+  "column_break_schedule",
+  "is_standard",
+  "schedule",
+  "event"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "description": "A theme name such as blue, or a hex value such as #2563eb",
+   "fieldname": "color",
+   "fieldtype": "Data",
+   "label": "Color"
+  },
+  {
+   "default": "0",
+   "description": "Tracks show left to right, or top to bottom, in this order",
+   "fieldname": "sequence",
+   "fieldtype": "Int",
+   "label": "Sequence"
+  },
+  {
+   "fieldname": "capacity",
+   "fieldtype": "Int",
+   "label": "Seats"
+  },
+  {
+   "fieldname": "column_break_schedule",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Shared by every event; only a System Manager changes it",
+   "fieldname": "is_standard",
+   "fieldtype": "Check",
+   "label": "Is Standard",
+   "read_only": 1
+  },
+  {
+   "fieldname": "schedule",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Schedule",
+   "options": "Buzz Schedule",
+   "set_only_once": 1,
+   "mandatory_depends_on": "eval:!doc.is_standard",
+   "depends_on": "eval:!doc.is_standard"
+  },
+  {
+   "fetch_from": "schedule.event",
+   "fieldname": "event",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Event",
+   "options": "Buzz Event",
+   "read_only": 1,
+   "depends_on": "eval:!doc.is_standard"
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-31 13:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Events",
+ "name": "Buzz Schedule Track",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "title,event",
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title"
+}

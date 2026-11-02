@@ -67,6 +67,13 @@ class TaxSettings(APIResponse):
 	tax_percentage: float
 
 
+class AccessCodeStatus(APIResponse):
+	"""`error` is one generic message for every failure, so codes cannot be probed."""
+
+	code: str | None = None
+	error: str | None = None
+
+
 class EventBookingDataResponse(APIResponse):
 	# event_details and the list fields carry documents or meta-defined rows; typing
 	# them would reshape the payload.
@@ -86,6 +93,7 @@ class EventBookingDataResponse(APIResponse):
 	payment_gateways: list[str]
 	offline_payment_enabled: bool
 	offline_methods: list
+	access_code: AccessCodeStatus
 
 
 class ConfirmationEvent(APIResponse):

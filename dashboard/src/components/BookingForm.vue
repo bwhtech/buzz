@@ -95,6 +95,11 @@
 								:stepper-size="isMobile ? 'lg' : 'sm'"
 								@change="changeQuantity"
 							/>
+							<AccessCodeInput
+								v-bind="accessCodeProps"
+								v-model="coupon.code"
+								@apply="coupon.apply"
+							/>
 						</div>
 
 						<AttendeesStep
@@ -270,6 +275,7 @@ import {
 } from "vue"
 import { useRoute } from "vue-router"
 
+import { useAccessCode } from "@/composables/useAccessCode"
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
 import { useLoginDialog } from "@/composables/useLoginDialog"
 import { useTicketHold } from "@/composables/useTicketHold"
@@ -291,6 +297,7 @@ import { serverErrorMessage } from "@/utils/serverError"
 import { isZoomBackedCategory } from "@/utils/zoomCategory"
 
 import OfflinePaymentDialog from "./OfflinePaymentDialog.vue"
+import AccessCodeInput from "./registration/AccessCodeInput.vue"
 import AttendeesStep from "./registration/AttendeesStep.vue"
 import CheckoutHeader from "./registration/CheckoutHeader.vue"
 import type { CoreField } from "./registration/coreFields"
@@ -339,6 +346,10 @@ const props = defineProps({
 	paymentGateways: { type: Array as PropType<string[]>, default: () => [] },
 	isGuestMode: { type: Boolean, default: false },
 	offlineMethods: { type: Array as PropType<OfflineMethod[]>, default: () => [] },
+	changeAccessCode: {
+		type: Function as PropType<(code: string) => Promise<unknown>>,
+		default: () => Promise.resolve(),
+	},
 })
 
 const route = useRoute()
@@ -460,6 +471,7 @@ const { holdToken, secondsLeft, expired, holdError, holdAgain, keepHold } = useT
 	props.eventRoute,
 	eventId,
 	heldQuantities,
+	computed(() => coupon.appliedCode),
 )
 const holdErrorMessage = computed(() => serverErrorMessage(holdError.value))
 
@@ -515,6 +527,17 @@ const pricing = useOrderPricing({
 })
 const { netAmount, discountAmount, tax, taxAmount, total, totalBeforeDiscount } = pricing
 const coupon = reactive(pricing.coupon)
+useAccessCode(
+	computed(() => coupon.appliedCode),
+	attendees,
+	() => props.availableTicketTypes,
+	props.changeAccessCode,
+)
+const accessCodeProps = computed(() => ({
+	applied: coupon.applied,
+	error: coupon.error,
+	loading: coupon.loading,
+}))
 
 // The typed code, or the automatic offer's name when no code is applied.
 const discountName = computed(() => (coupon.applied ? coupon.appliedCode : coupon.offerName))

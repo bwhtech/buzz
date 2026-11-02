@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING
 import frappe
 from frappe import _
 
-from buzz.api.booking.schemas import EventBookingDataResponse, TaxSettings
+from buzz.api.booking.exceptions import InvalidAccessCode
+from buzz.api.booking.schemas import AccessCodeStatus, EventBookingDataResponse, TaxSettings
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.filters.conditions import registration_logic_rules, registration_questions
 from buzz.api.forms.fields import question_definition
@@ -13,13 +14,16 @@ from buzz.events.doctype.buzz_form.form_types import (
 	form_type,
 )
 from buzz.payments import get_payment_gateways_for_event
+from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 
 if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
 
 
-def build_event_booking_data(event_route: str, hold_token: str | None = None) -> EventBookingDataResponse:
+def build_event_booking_data(
+	event_route: str, hold_token: str | None = None, access_code: str | None = None
+) -> EventBookingDataResponse:
 	event_doc = frappe.get_cached_doc("Buzz Event", {"route": event_route})
 
 	if not event_doc.is_published:
@@ -30,7 +34,9 @@ def build_event_booking_data(event_route: str, hold_token: str | None = None) ->
 	payment_gateways += [method["title"] for method in offline_methods]
 
 	categories = get_ordered_categories(event_doc.name)
-	ticket_types = get_available_ticket_types(event_doc.name, categories, hold_token)
+	coupon = BuzzCouponCode.find_available_access_code(event_doc.name, access_code)
+	unlocked = coupon.unlocked_ticket_types() if coupon else set()
+	ticket_types = get_available_ticket_types(event_doc.name, categories, hold_token, unlocked)
 
 	return EventBookingDataResponse(
 		registrations_closed=are_registrations_closed(event_doc),
@@ -51,7 +57,14 @@ def build_event_booking_data(event_route: str, hold_token: str | None = None) ->
 		payment_gateways=payment_gateways,
 		offline_payment_enabled=len(offline_methods) > 0,
 		offline_methods=offline_methods,
+		access_code=access_code_status(access_code, coupon),
 	)
+
+
+def access_code_status(access_code: str | None, coupon: BuzzCouponCode | None) -> AccessCodeStatus:
+	if coupon:
+		return AccessCodeStatus(code=coupon.code)
+	return AccessCodeStatus(error=str(InvalidAccessCode.message) if access_code else None)
 
 
 def get_event_details(event_doc: "BuzzEvent"):
@@ -84,8 +97,12 @@ def get_event_details(event_doc: "BuzzEvent"):
 
 # Ordered by category, then newest first. Uncategorized ticket types come last. Tickets held by
 # `hold_token` count as available, so a form still lists the ticket type its own hold used up.
+# Hidden ticket types are listed only when `unlocked` names them.
 def get_available_ticket_types(
-	event_id: str, categories: list[dict] | None = None, hold_token: str | None = None
+	event_id: str,
+	categories: list[dict] | None = None,
+	hold_token: str | None = None,
+	unlocked: set[str] | None = None,
 ) -> list:
 	published_ticket_types = frappe.db.get_all(
 		"Event Ticket Type", filters={"is_published": True, "event": event_id}, pluck="name"
@@ -93,6 +110,8 @@ def get_available_ticket_types(
 	available_ticket_types = []
 	for ticket_type in published_ticket_types:
 		ticket_type_doc = frappe.get_cached_doc("Event Ticket Type", ticket_type)
+		if ticket_type_doc.is_hidden and str(ticket_type) not in (unlocked or set()):
+			continue
 		if ticket_type_doc.are_tickets_available(1, hold_token):
 			available_ticket_types.append(ticket_type_doc)
 	position = {category["name"]: index for index, category in enumerate(categories or [])}

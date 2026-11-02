@@ -244,6 +244,7 @@ class TicketTypeItem(APIResponse):
 	max_tickets_available: int
 	auto_unpublish_after: date | None
 	is_published: bool
+	is_hidden: bool
 	tickets_sold: int
 	prices: list[TicketTypePrice]
 
@@ -298,16 +299,17 @@ class CurrencyPrice(APIResponse):
 class CouponTicketType(APIResponse):
 	name: str
 	title: str
+	is_hidden: bool
 	prices: list[CurrencyPrice]
 
 
 class CouponItem(APIResponse):
 	name: str
-	coupon_type: Literal["Promo Code", "Automatic"]
+	coupon_type: Literal["Promo Code", "Automatic", "Access Code"]
 	code: str
 	description: str | None
 	enabled: bool
-	discount_type: Literal["Percentage", "Flat Amount"]
+	discount_type: Literal["Percentage", "Flat Amount", "None"]
 	discount_percentage: float
 	discount_amounts: list[CurrencyPrice]
 	applies_to_all_ticket_types: bool
