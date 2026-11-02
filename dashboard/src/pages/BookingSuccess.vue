@@ -6,11 +6,13 @@
 	<div v-else-if="confirmation.data" class="mx-auto flex max-w-[600px] flex-col gap-9 pb-16">
 		<div class="flex flex-col gap-7">
 			<SuccessHero
+				v-if="isConfirmed"
 				:event-title="event.title"
 				:ticket-count="confirmation.data.tickets.length"
 				:title="confirmation.data.success?.title"
 				:note="safeMarkdown(confirmation.data.success?.message)"
 			/>
+			<UnconfirmedHero v-else :booking-id="bookingId" />
 
 			<EventSummaryCard
 				class="fade-up-in"
@@ -20,7 +22,11 @@
 				:booking-id="bookingId"
 			/>
 
-			<div class="fade-up-in flex flex-wrap justify-center gap-2" style="animation-delay: 220ms">
+			<div
+				v-if="isConfirmed"
+				class="fade-up-in flex flex-wrap justify-center gap-2"
+				style="animation-delay: 220ms"
+			>
 				<Button
 					size="md"
 					variant="solid"
@@ -48,6 +54,7 @@
 		</div>
 
 		<TicketRows
+			v-if="isConfirmed"
 			class="fade-up-in"
 			style="animation-delay: 260ms"
 			:tickets="confirmation.data.tickets"
@@ -63,7 +70,11 @@
 			<template #footer>{{ paymentLine }}</template>
 		</BookingFinancialSummary>
 
-		<p class="fade-up-in text-center text-p-sm text-ink-gray-5" style="animation-delay: 400ms">
+		<p
+			v-if="isConfirmed"
+			class="fade-up-in text-center text-p-sm text-ink-gray-5"
+			style="animation-delay: 400ms"
+		>
 			{{ __("Need to change a name or cancel?") }}
 			<RouterLink
 				v-if="session.isLoggedIn"
@@ -97,6 +108,7 @@ import { useRoute } from "vue-router"
 import EventSummaryCard from "@/components/booking-success/EventSummaryCard.vue"
 import SuccessHero from "@/components/booking-success/SuccessHero.vue"
 import TicketRows from "@/components/booking-success/TicketRows.vue"
+import UnconfirmedHero from "@/components/booking-success/UnconfirmedHero.vue"
 import BookingFinancialSummary from "@/components/BookingFinancialSummary.vue"
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
@@ -121,8 +133,9 @@ const confirmation = useCall<Record<string, any>, Record<string, unknown>>({
 	url: "/api/v2/method/buzz.api.booking.get_booking_confirmation",
 	params: { booking_id: props.bookingId, token: route.query.token },
 	onSuccess: (data) => {
+		if (!data?.tickets.length) return
 		triggerCelebrationConfetti()
-		if (data?.event?.route) {
+		if (data.event?.route) {
 			const { clearStoredData } = useBookingFormStorage(data.event.route)
 			clearStoredData()
 		}
@@ -130,6 +143,8 @@ const confirmation = useCall<Record<string, any>, Record<string, unknown>>({
 })
 
 const event = computed(() => confirmation.data!.event)
+// A booking issues its tickets on submit, so a refused payment or a draft has none.
+const isConfirmed = computed(() => confirmation.data!.tickets.length > 0)
 
 // Files the confirmation hands out; a guest proves access with the page's own token.
 function bookingFileUrl(method: string) {
