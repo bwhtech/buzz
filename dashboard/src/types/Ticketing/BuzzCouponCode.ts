@@ -15,7 +15,7 @@ export interface BuzzCouponCode {
 	/**	Event : Link - Buzz Event	*/
 	event: string
 	/**	Coupon Type : Select	*/
-	coupon_type: "Promo Code" | "Automatic"
+	coupon_type: "Promo Code" | "Automatic" | "Access Code"
 	/**	Code : Data	*/
 	code?: string
 	/**	Enabled : Check	*/
@@ -23,7 +23,7 @@ export interface BuzzCouponCode {
 	/**	Description : Small Text	*/
 	description?: string
 	/**	Discount Type : Select	*/
-	discount_type: "Percentage" | "Flat Amount"
+	discount_type: "Percentage" | "Flat Amount" | "None"
 	/**	Discount Percentage : Percent	*/
 	discount_percentage?: number
 	/**	Discount Amounts : Table - Buzz Price	*/

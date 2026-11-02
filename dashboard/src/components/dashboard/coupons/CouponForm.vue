@@ -10,13 +10,17 @@ import {
 	dayjs,
 } from "frappe-ui"
 import { computed } from "vue"
+import { useRoute } from "vue-router"
 
+import EmptyState from "@/components/common/EmptyState.vue"
 import type { CouponTicketType } from "@/types"
 import {
 	type CouponValues,
 	cleanPromoCode,
 	couponCurrencies,
 	generateCode,
+	isAccessCode,
+	isTypedCode,
 } from "@/utils/couponForm"
 import { amountsLabel } from "@/utils/couponLabels"
 
@@ -26,11 +30,20 @@ import CurrencyAmounts from "./CurrencyAmounts.vue"
 const values = defineModel<CouponValues>({ required: true })
 const props = defineProps<{ ticketTypes: CouponTicketType[]; disabled?: boolean }>()
 
+const eventId = useRoute().params.eventId as string
+
 const QUICK_PERCENTAGES = [10, 15, 25, 50]
 
 const isPaid = (ticketType: CouponTicketType) => ticketType.prices.some((row) => row.price > 0)
 
-const isCode = computed(() => values.value.coupon_type === "Promo Code")
+const isCode = computed(() => isTypedCode(values.value))
+const forAccessCode = computed(() => isAccessCode(values.value))
+const selectableTicketTypes = computed(() =>
+	forAccessCode.value
+		? props.ticketTypes.filter((ticketType) => ticketType.is_hidden)
+		: props.ticketTypes,
+)
+const canSelect = (ticketType: CouponTicketType) => forAccessCode.value || isPaid(ticketType)
 const currencies = computed(() => couponCurrencies(values.value, props.ticketTypes))
 
 const scopeOptions = [
@@ -38,7 +51,8 @@ const scopeOptions = [
 	{ label: "Specific ticket types", value: "specific" },
 ]
 const scope = computed({
-	get: () => (values.value.applies_to_all_ticket_types ? "all" : "specific"),
+	get: () =>
+		values.value.applies_to_all_ticket_types && !forAccessCode.value ? "all" : "specific",
 	set: (picked) => {
 		values.value.applies_to_all_ticket_types = picked === "all"
 		// Narrowing starts from every paid ticket type, so the organiser unticks rather than hunts.
@@ -168,6 +182,10 @@ const hasInvalidCode = computed(
 				</div>
 			</div>
 
+			<p v-else-if="values.discount_type === 'None'" class="text-sm text-ink-gray-5">
+				No discount. The code only unlocks the tickets, at their regular price.
+			</p>
+
 			<div v-else class="space-y-2">
 				<CurrencyAmounts
 					v-model="values.discount_amounts"
@@ -190,16 +208,32 @@ const hasInvalidCode = computed(
 			</div>
 
 			<div class="space-y-2">
-				<TabButtons v-model="scope" fluid :options="scopeOptions" />
-				<div v-if="scope === 'specific'" class="rounded-4 border border-outline-gray-2 p-1">
+				<TabButtons v-if="!forAccessCode" v-model="scope" fluid :options="scopeOptions" />
+				<p v-else-if="selectableTicketTypes.length" class="text-sm text-ink-gray-5">
+					The hidden ticket types this code unlocks
+				</p>
+				<EmptyState
+					v-if="forAccessCode && !selectableTicketTypes.length"
+					class="rounded-4 border border-dashed border-outline-gray-2"
+					title="No hidden ticket types yet"
+					description="Hide a ticket type from its settings, then pick it here."
+					icon="lucide-eye-off"
+				>
+					<Button
+						label="Go to ticket types"
+						icon-right="lucide-arrow-right"
+						:route="{ name: 'event-registrations', params: { eventId } }"
+					/>
+				</EmptyState>
+				<div v-else-if="scope === 'specific'" class="rounded-4 border border-outline-gray-2 p-1">
 					<Checkbox
-						v-for="ticketType in ticketTypes"
+						v-for="ticketType in selectableTicketTypes"
 						:key="ticketType.name"
 						padded
 						:label="ticketType.title"
 						:description="priceLabel(ticketType)"
 						:model-value="values.ticket_types.includes(ticketType.name)"
-						:disabled="disabled || !isPaid(ticketType)"
+						:disabled="disabled || !canSelect(ticketType)"
 						@update:model-value="toggleTicketType(ticketType.name, !!$event)"
 					/>
 				</div>

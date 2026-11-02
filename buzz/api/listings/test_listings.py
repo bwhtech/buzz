@@ -54,6 +54,21 @@ class TestPartnerListings(IntegrationTestCase):
 		self.assertTrue(request.is_external_event)
 		self.assertEqual(request.event_title, "Partner Meetup")
 
+	def test_upsert_stores_the_pin(self):
+		self.upsert(latitude=18.5204, longitude=73.8567, city="Pune", country="India")
+		request = frappe.get_doc(REQUEST, self.request_names()[0])
+		self.assertEqual((request.latitude, request.longitude), (18.5204, 73.8567))
+		self.assertEqual((request.city, request.country), ("Pune", "India"))
+
+	def test_upsert_without_a_pin_clears_the_old_one(self):
+		self.upsert(latitude=18.5204, longitude=73.8567)
+		self.upsert()
+		self.assertEqual(frappe.db.get_value(REQUEST, self.request_names()[0], "latitude"), 0)
+
+	def test_a_pin_off_the_globe_is_refused(self):
+		with self.assertRaises(ValueError):
+			self.listing(latitude=91, longitude=0)
+
 	def test_second_upsert_updates_the_same_request(self):
 		self.upsert()
 		self.upsert(event_title="Renamed Meetup")

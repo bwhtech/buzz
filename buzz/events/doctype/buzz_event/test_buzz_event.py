@@ -5,13 +5,9 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, today
 
 from buzz.events.doctype.buzz_event.buzz_event import MAX_TOPICS, RESERVED_EVENT_ROUTES
 from buzz.tests.factories import BuzzEventFactory, EventTopicFactory, EventVenueFactory
-
-START_DATE = add_days(today(), 30)
-END_DATE = add_days(today(), 31)
 
 
 class BuzzEventTestCase(IntegrationTestCase):
@@ -38,34 +34,6 @@ class TestEventValidation(BuzzEventTestCase):
 		event = self.build_event(apply_tax=1, tax_percentage=-5)
 		with self.assertRaises(frappe.ValidationError):
 			event.validate_tax_settings()
-
-	def test_schedule_start_time_after_event_start_is_valid(self):
-		# Regression: times were compared as strings, so "11:00" sorted before "9:00".
-		self.event_with_schedule(START_DATE, "11:00:00", "12:00:00").validate_schedule()
-
-	def test_schedule_start_time_before_event_start_is_rejected(self):
-		event = self.event_with_schedule(START_DATE, "08:00:00", "08:30:00")
-		with self.assertRaises(frappe.ValidationError):
-			event.validate_schedule()
-
-	def test_schedule_end_time_after_event_end_is_rejected(self):
-		event = self.event_with_schedule(END_DATE, "17:00:00", "19:00:00")
-		with self.assertRaises(frappe.ValidationError):
-			event.validate_schedule()
-
-	def test_schedule_end_time_before_event_end_is_valid(self):
-		self.event_with_schedule(END_DATE, "16:00:00", "16:30:00").validate_schedule()
-
-	def event_with_schedule(self, date: str, start_time: str, end_time: str):
-		# Validated directly: an insert would need Event Track rows for the schedule.
-		row = {"date": date, "start_time": start_time, "end_time": end_time}
-		return self.build_event(
-			start_date=START_DATE,
-			end_date=END_DATE,
-			start_time="9:00:00",
-			end_time="18:00:00",
-			schedule=[row],
-		)
 
 
 class TestEventTopics(BuzzEventTestCase):

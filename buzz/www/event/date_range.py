@@ -8,6 +8,19 @@ def format_time(time) -> str:
 	return get_time(time).strftime("%H:%M") if time else ""
 
 
+def format_day(date) -> str:
+	return format_date(date, "EEE d MMM y")
+
+
+def join_parts(parts: list, separator: str) -> str:
+	stripped_parts = [part.strip() for part in parts if part]
+	return separator.join([part for part in stripped_parts if part])
+
+
+def format_time_range(start, end) -> str:
+	return join_parts([format_time(start), format_time(end)], RANGE_SEPARATOR)
+
+
 class EventDateRange:
 	def __init__(self, event):
 		self.start_date = getdate(event.start_date)

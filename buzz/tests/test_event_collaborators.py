@@ -117,8 +117,9 @@ class TestSectionIsolation(CollaboratorTestCase):
 	def test_team_level_doctypes_stay_hidden(self):
 		user = self.collaborators["guests"]
 		for doctype in linked_to("Buzz Team") - SELF_SCOPED_DOCTYPES - {"Buzz Event"}:
-			with self.subTest(doctype=doctype):
-				self.assertEqual(self.list_names(user, doctype), set())
+			# Rows with no team, such as the standard schedule item types, are shared by design.
+			with self.subTest(doctype=doctype), self.set_user(user):
+				self.assertEqual(frappe.get_list(doctype, filters={"team": ["is", "set"]}, pluck="name"), [])
 
 	def test_team_member_lists_are_unchanged(self):
 		listed = self.list_names(self.alice, "Event Ticket Type")
