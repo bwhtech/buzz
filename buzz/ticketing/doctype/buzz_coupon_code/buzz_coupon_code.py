@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 import frappe
 from frappe import _, _lt
 from frappe.model.document import Document
+from frappe.query_builder import Criterion
 from frappe.query_builder.functions import Count
 from frappe.utils import add_to_date, cint, cstr, flt, fmt_money, getdate, now_datetime
-from pypika.terms import Criterion
 
 if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
@@ -155,7 +155,7 @@ class BuzzCouponCode(Document):
 		(
 			frappe.qb.from_(coupon)
 			.select(coupon.name)
-			.where(coupon.usage_limit > 0)
+			.where((coupon.usage_limit > 0) | (coupon.once_per_buyer == 1))
 			.where(scope)
 			.orderby(coupon.name)
 			.for_update()
@@ -178,14 +178,25 @@ class BuzzCouponCode(Document):
 		return self.limit_reason(booking) or self.eligibility_reason(booking)
 
 	def limit_reason(self, booking: "EventBooking") -> str | None:
-		if self.usage_limit and self.times_taken(booking) >= self.usage_limit:
-			if self.times_taken(booking) - self.own_live_drafts(booking) < self.usage_limit:
-				return str(UNFINISHED_CHECKOUT_MESSAGE)
-			return _("This coupon has reached its usage limit")
-		if self.once_per_buyer and self.times_used_by(booking):
-			if self.own_live_drafts(booking) == self.times_used_by(booking):
-				return str(UNFINISHED_CHECKOUT_MESSAGE)
+		return self.usage_limit_reason(booking) or self.once_per_buyer_reason(booking)
+
+	def usage_limit_reason(self, booking: "EventBooking") -> str | None:
+		if not self.usage_limit:
+			return None
+		taken = self.times_taken(booking)
+		if taken < self.usage_limit:
+			return None
+		if taken - self.own_live_drafts(booking) < self.usage_limit:
+			return str(UNFINISHED_CHECKOUT_MESSAGE)
+		return _("This coupon has reached its usage limit")
+
+	def once_per_buyer_reason(self, booking: "EventBooking") -> str | None:
+		if not self.once_per_buyer:
+			return None
+		if self.times_used_by(booking):
 			return _("You have already used this coupon")
+		if self.own_live_drafts(booking):
+			return str(UNFINISHED_CHECKOUT_MESSAGE)
 
 	def eligibility_reason(self, booking: "EventBooking") -> str | None:
 		# An access code is applied before its hidden tickets are in the cart.
@@ -242,23 +253,17 @@ class BuzzCouponCode(Document):
 		return frappe.db.count("Event Booking", self.usage_filters(exclude))
 
 	def times_used_by(self, booking: "EventBooking") -> int:
-		"""Submitted bookings and live drafts of the same buyer, matched by email or by user."""
-		condition = buyer_condition(booking)
-		if condition is None:
-			return 0
 		submitted = frappe.qb.DocType("Event Booking")
 		used = (
 			frappe.qb.from_(submitted)
 			.select(Count(submitted.name))
 			.where((submitted.coupon_code == self.name) & (submitted.docstatus == 1))
 			.where(submitted.name != cstr(booking.name))
-			.where(condition)
 		)
-		return used.run()[0][0] + self.own_live_drafts(booking)
+		return count_for_buyer(used, booking)
 
 	def own_live_drafts(self, booking: "EventBooking") -> int:
-		condition = buyer_condition(booking)
-		return 0 if condition is None else self.live_drafts(booking).where(condition).run()[0][0]
+		return count_for_buyer(self.live_drafts(booking), booking)
 
 	def times_taken(self, booking: "EventBooking") -> int:
 		return self.times_used(exclude=booking.name) + self.times_reserved(booking)
@@ -295,15 +300,15 @@ def on_doctype_update():
 	frappe.db.add_unique("Buzz Coupon Code", ["event", "code"])
 
 
-def buyer_condition(booking: "EventBooking"):
-	"""Match bookings of the same buyer by email, and by user when logged in."""
+def count_for_buyer(query, booking: "EventBooking") -> int:
+	"""Count the query's bookings of the same buyer, matched by email, and by user when logged in."""
 	table = frappe.qb.DocType("Event Booking")
 	conditions = []
 	if booking.buyer_email:
 		conditions.append(table.buyer_email == booking.buyer_email.strip().lower())
 	if booking.user and booking.user != "Guest":
 		conditions.append(table.user == booking.user)
-	return Criterion.any(conditions) if conditions else None
+	return query.where(Criterion.any(conditions)).run()[0][0] if conditions else 0
 
 
 def validate_amount_rows(rows: list, label: str):

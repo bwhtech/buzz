@@ -24,6 +24,16 @@ class QuoteTestCase(CouponTestCase):
 
 
 class TestCouponQuote(QuoteTestCase):
+	def test_signed_in_buyer_sees_the_once_per_buyer_refusal(self):
+		coupon = self.create_coupon(once_per_buyer=1)
+		first = self.create_booking(coupon.name, buyer_email="quoted@example.com")
+		first.submit()
+
+		with self.set_user(first.user):
+			self.assertEqual(
+				self.quote(coupon_code=coupon.code)["error"], "You have already used this coupon"
+			)
+
 	def test_no_coupons_quotes_zero(self):
 		self.assertEqual(
 			self.quote(), {"discount_amount": 0, "coupon_code": None, "error": None, "offer_name": None}
