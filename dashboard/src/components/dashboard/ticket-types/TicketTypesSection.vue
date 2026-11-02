@@ -22,7 +22,7 @@ defineEmits<{
 }>()
 
 const isMobile = useIsMobile()
-const view = useLocalStorage<"list" | "grouped" | "board">("buzz-ticket-types-view", "grouped")
+const view = useLocalStorage<"list" | "grouped" | "board">("buzz-ticket-types-view", "list")
 const viewOptions = [
 	{ value: "list", iconLeft: "lucide-list", label: "List" },
 	{ value: "grouped", iconLeft: "lucide-rows-3", label: "Grouped" },
