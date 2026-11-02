@@ -5,6 +5,12 @@ from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import record_gateway_refund
 
+GATEWAY_PAYMENT_ID_FIELDS = {
+	"Razorpay": "razorpay_payment_id",
+	"Paymob": "paymob_payment_id",
+	"PayPal": "transaction_id",
+}
+
 
 class RefundNotification(BaseModel):
 	"""The refund a Razorpay `refund.processed` or `refund.failed` webhook carries.
@@ -131,6 +137,7 @@ def get_payment_link(
 	if payment_gateway == "Razorpay" or payment_gateway == "Paymob":
 		order = controller.create_order(**payment_details)
 		payment_details.update({"order_id": order.get("id")})
+		payment.db_set("order_id", order.get("id"))
 
 	url = controller.get_payment_url(**payment_details)
 
@@ -160,21 +167,7 @@ def record_payment(
 
 
 def mark_payment_as_received(reference_doctype: str, reference_docname: str):
-	request = frappe.get_all(
-		"Integration Request",
-		{
-			"reference_doctype": reference_doctype,
-			"reference_docname": reference_docname,
-		},
-		order_by="creation desc",
-		limit=1,
-	)
-
-	if not request:
-		frappe.throw(_("No payment request found for {0}").format(reference_docname))
-
-	data = frappe.parse_json(frappe.db.get_value("Integration Request", request[0].name, "data"))
-
+	data = payment_request_data(reference_doctype, reference_docname)
 	# The request data carries client-chosen values, so the server-made payment row decides.
 	payment = frappe.get_last_doc(
 		"Event Payment",
@@ -184,47 +177,48 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 			"payment_received": 0,
 		},
 	)
-	payment_gateway = payment.payment_gateway
-
-	if payment_gateway == "Razorpay":
-		payment_id = "razorpay_payment_id"
-		verify_razorpay_payment(payment, data.get(payment_id))
-
-	elif payment_gateway == "Paymob":
-		payment_id = "paymob_payment_id"
-
-	elif payment_gateway == "PayPal":
-		payment_id = "transaction_id"
-
-	elif "Stripe" in payment_gateway:
-		payment_id = "stripe_token_id"
-	else:
-		payment_id = "order_id"
+	payment_id = data.get(payment_id_field(payment.payment_gateway))
+	if payment.payment_gateway == "Razorpay":
+		verify_razorpay_payment(payment, payment_id)
 
 	frappe.db.set_value(
 		"Event Payment",
 		payment.name,
 		{
 			"payment_received": 1,
-			"payment_id": data.get(payment_id),
-			"order_id": data.get("order_id"),
+			"payment_id": payment_id,
+			"order_id": payment.order_id or data.get("order_id"),
 		},
 	)
 
 	frappe.db.commit()  # nosemgrep: frappe-manual-commit
 
 
+def payment_request_data(reference_doctype: str, reference_docname: str) -> dict:
+	filters = {"reference_doctype": reference_doctype, "reference_docname": reference_docname}
+	data = frappe.db.get_value("Integration Request", filters, "data", order_by="creation desc")
+	if not data:
+		frappe.throw(_("No payment request found for {0}").format(reference_docname))
+	return frappe.parse_json(data)
+
+
+def payment_id_field(payment_gateway: str) -> str:
+	if "Stripe" in payment_gateway:
+		return "stripe_token_id"
+	return GATEWAY_PAYMENT_ID_FIELDS.get(payment_gateway, "order_id")
+
+
 def verify_razorpay_payment(payment, payment_id: str | None):
-	"""Refuse a Razorpay payment that is not for this payment's amount, or was already used."""
+	"""An order takes one captured payment, so this row's own order cannot pay anything else."""
 	if not payment_id:
 		frappe.throw(_("Payment id is missing"))
 
-	if frappe.db.exists("Event Payment", {"payment_id": payment_id, "payment_received": 1}):
-		frappe.throw(_("This payment was already used"))
-
 	gateway_payment = get_controller("Razorpay").fetch_payment(payment_id)
-	paid_amount = cint(gateway_payment.get("amount"))
-	if paid_amount != cint(round(flt(payment.amount) * 100)):
+	if not payment.order_id or gateway_payment.get("order_id") != payment.order_id:
+		frappe.throw(_("This payment is not for this order"))
+
+	# The payments app truncates an order's amount to paise, so it can sit one below the total.
+	if abs(cint(gateway_payment.get("amount")) - flt(payment.amount) * 100) > 1:
 		frappe.throw(_("Paid amount does not match the amount due"))
 
 	if cstr(gateway_payment.get("currency")).upper() != cstr(payment.currency).upper():

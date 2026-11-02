@@ -287,24 +287,39 @@ def razorpay_gateway() -> str:
 	return RAZORPAY
 
 
-def authorize_payment(document, payment_status: str = "Completed") -> None:
-	"""Run the gateway callback as the payments app does: a request, an unpaid payment, a matching Razorpay payment."""
-	amount = flt(document.get("total_amount")) or TICKET_PRICE
-	currency = document.get("currency") or "INR"
-	EventPaymentFactory.create(
-		user=document.get("user") or BOOKER,
-		amount=amount,
-		currency=currency,
+def create_unpaid_payment(document, order_id: str | None = None):
+	return EventPaymentFactory.create(
+		amount=flt(document.get("total_amount")) or TICKET_PRICE,
+		currency=document.get("currency") or "INR",
 		reference_doctype=document.doctype,
 		reference_docname=document.name,
 		payment_gateway=razorpay_gateway(),
+		order_id=order_id,
 	)
-	# Marking a payment received commits, so each payment id must be new.
-	data = {"razorpay_payment_id": f"pay_{frappe.generate_hash(length=10)}"}
+
+
+def create_payment_request(document, **data) -> None:
 	IntegrationRequestFactory.create(
 		reference_doctype=document.doctype, reference_docname=document.name, data=frappe.as_json(data)
 	)
+
+
+def run_gateway_callback(document, gateway_payment: dict, payment_status: str = "Completed") -> None:
 	gateway = MagicMock()
-	gateway.fetch_payment.return_value = {"amount": round(amount * 100), "currency": currency}
+	gateway.fetch_payment.return_value = gateway_payment
 	with patch("buzz.payments.get_controller", return_value=gateway):
 		document.on_payment_authorized(payment_status)
+
+
+def authorize_payment(document, payment_status: str = "Completed") -> None:
+	"""Run the gateway callback as the payments app does: a request, an unpaid payment, a payment for its order."""
+	# Marking a payment received commits, so each id must be new.
+	order_id = f"order_{frappe.generate_hash(length=10)}"
+	payment = create_unpaid_payment(document, order_id)
+	create_payment_request(document, razorpay_payment_id=f"pay_{frappe.generate_hash(length=10)}")
+	gateway_payment = {
+		"order_id": order_id,
+		"amount": int(payment.amount * 100),
+		"currency": payment.currency,
+	}
+	run_gateway_callback(document, gateway_payment, payment_status)
