@@ -2,10 +2,10 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import frappe
-from pydantic import ValidationError
 
 from buzz.api.booking import process_booking, send_guest_booking_otp
-from buzz.api.booking.schemas import MAX_ATTENDEES_PER_BOOKING
+from buzz.api.booking.exceptions import TooManyTicketsInBooking
+from buzz.api.booking.schemas import MAX_TICKETS_PER_IP
 from buzz.tests.base_test_cases import BookingTestCase
 
 
@@ -13,7 +13,9 @@ class RateLimitedTestCase(BookingTestCase):
 	def setUp(self):
 		super().setUp()
 		self.enterContext(patch.object(frappe.local, "request", SimpleNamespace(method="POST"), create=True))
-		self.enterContext(patch.object(frappe.local, "request_ip", frappe.generate_hash(length=12), create=True))
+		self.enterContext(
+			patch.object(frappe.local, "request_ip", frappe.generate_hash(length=12), create=True)
+		)
 
 
 class TestProcessBookingLimits(RateLimitedTestCase):
@@ -25,10 +27,12 @@ class TestProcessBookingLimits(RateLimitedTestCase):
 			with self.assertRaises(frappe.RateLimitExceededError):
 				process_booking(request)
 
-	def test_attendees_per_booking_are_capped(self):
+	def test_too_many_attendees_get_a_readable_refusal(self):
 		attendee = self.booking_request().attendees[0]
-		with self.assertRaises(ValidationError):
-			self.booking_request(attendees=[attendee] * (MAX_ATTENDEES_PER_BOOKING + 1))
+		request = self.booking_request(attendees=[attendee] * (MAX_TICKETS_PER_IP + 1))
+
+		with self.assertRaisesRegex(TooManyTicketsInBooking, str(MAX_TICKETS_PER_IP)):
+			process_booking(request)
 
 
 class TestSendGuestBookingOtpLimits(RateLimitedTestCase):
