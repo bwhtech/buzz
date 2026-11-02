@@ -1,14 +1,13 @@
 from typing import TYPE_CHECKING
 
 import frappe
-from frappe.utils import validate_email_address
 
+from buzz.api.booking.exceptions import InvalidAddOnValue
 from buzz.api.tickets import windows
 from buzz.api.tickets.emails import send_ticket_transfer_emails
 from buzz.api.tickets.exceptions import (
 	AddOnChangeWindowClosed,
 	AddOnNotPermitted,
-	AddOnOptionInvalid,
 	AddOnValueNotFound,
 	CancellationAlreadyRequested,
 	CancellationNotPermitted,
@@ -20,6 +19,7 @@ from buzz.api.tickets.exceptions import (
 	TransferWindowClosed,
 )
 from buzz.api.tickets.schemas import TicketAddOnDetail, TicketDetailsResponse
+from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import add_on_options
 
 if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_ticket.event_ticket import EventTicket
@@ -95,7 +95,7 @@ class TicketService:
 			filters={"event": event_id, "user_selects_option": True},
 			fields=["name", "options"],
 		)
-		return {add_on.name: add_on.options.split("\n") if add_on.options else [] for add_on in event_add_ons}
+		return {add_on.name: add_on_options(add_on.options) for add_on in event_add_ons}
 
 	def booking_owned_by_user(self):
 		"""The booking, but only for the user who made it — an attendee sees None."""
@@ -127,13 +127,12 @@ class TicketService:
 			TicketNotFound.throw()
 
 		ticket = frappe.get_doc("Event Ticket", self.ticket_id)
-		if not self.may_transfer(ticket):
+		if not self.may_manage(ticket):
 			TransferNotPermitted.throw()
 
 		if not windows.is_window_open(ticket.event, windows.TRANSFER):
 			TransferWindowClosed.throw()
 
-		validate_email_address(new_email, throw=True)
 		old_name, old_email = ticket.attendee_name, ticket.attendee_email
 		ticket.first_name = new_first_name
 		ticket.last_name = new_last_name
@@ -143,7 +142,7 @@ class TicketService:
 		new_name = f"{new_first_name} {new_last_name}".strip()
 		send_ticket_transfer_emails(ticket.name, old_name, old_email, new_name, new_email)
 
-	def may_transfer(self, ticket: "EventTicket") -> bool:
+	def may_manage(self, ticket: "EventTicket") -> bool:
 		if ticket.attendee_email == frappe.session.user:
 			return True
 		if frappe.db.get_value("Event Booking", ticket.booking, "user") == frappe.session.user:
@@ -158,7 +157,7 @@ def change_add_on_preference(add_on_id: str, new_value: str) -> None:
 	add_on_value = frappe.get_cached_doc("Ticket Add-on Value", add_on_id)
 	ticket = frappe.get_cached_doc("Event Ticket", add_on_value.parent)
 
-	if not TicketService(ticket.name).may_transfer(ticket):
+	if not TicketService(ticket.name).may_manage(ticket):
 		AddOnNotPermitted.throw()
 
 	if not windows.is_window_open(ticket.event, windows.ADD_ON_CHANGE):
@@ -172,8 +171,8 @@ def validate_add_on_option(add_on_id: str, value: str) -> None:
 	user_selects_option, options = frappe.db.get_value(
 		"Ticket Add-on", add_on_id, ["user_selects_option", "options"]
 	)
-	if user_selects_option and value not in (options or "").split("\n"):
-		AddOnOptionInvalid.throw()
+	if user_selects_option and value not in add_on_options(options):
+		InvalidAddOnValue.throw(value=value)
 
 
 def create_cancellation_request(booking_id: str, ticket_ids: list | None = None) -> None:

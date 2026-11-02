@@ -4,6 +4,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
+from buzz.api.booking.exceptions import InvalidAddOnValue
 from buzz.api.tickets import (
 	change_add_on_preference,
 	create_cancellation_request,
@@ -13,7 +14,6 @@ from buzz.api.tickets import (
 from buzz.api.tickets.exceptions import (
 	AddOnChangeWindowClosed,
 	AddOnNotPermitted,
-	AddOnOptionInvalid,
 	AddOnValueNotFound,
 	CancellationAlreadyRequested,
 	CancellationNotPermitted,
@@ -186,7 +186,7 @@ class TestChangeAddOnPreference(TicketTestCase):
 	def test_a_value_outside_the_options_is_refused(self):
 		add_on_value = self.make_ticket_with_add_on().add_ons[0].name
 
-		with self.set_user(ATTENDEE), self.assertRaises(AddOnOptionInvalid):
+		with self.set_user(ATTENDEE), self.assertRaises(InvalidAddOnValue):
 			change_add_on_preference(add_on_value, "Pizza")
 
 	def test_unknown_add_on_value(self):

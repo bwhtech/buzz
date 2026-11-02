@@ -51,7 +51,7 @@ EVENT_DATA_FIELDS = {
 	"access_code",
 }
 
-GUEST_EVENT_DETAIL_FIELDS = {
+EVENT_DETAIL_FIELDS = {
 	"name",
 	"title",
 	"route",
@@ -160,14 +160,11 @@ class TestGetEventBookingData(BookingTestCase):
 		self.assertEqual(payload["event_details"]["name"], self.event.name)
 		self.assertEqual(payload["event_details"]["venue_name"], self.event.get_venue_name())
 
-	def test_guests_get_a_trimmed_event(self):
-		frappe.set_user("Guest")
-		payload = get_event_booking_data(self.event.route).__json__()
-		self.assertEqual(set(payload["event_details"]), GUEST_EVENT_DETAIL_FIELDS)
-
-	def test_signed_in_users_get_the_same_trimmed_event(self):
-		payload = get_event_booking_data(self.event.route).__json__()
-		self.assertEqual(set(payload["event_details"]), GUEST_EVENT_DETAIL_FIELDS)
+	def test_guests_and_signed_in_users_get_the_same_trimmed_event(self):
+		for user in ("Guest", self.booker):
+			with self.subTest(user=user), self.set_user(user):
+				payload = get_event_booking_data(self.event.route).__json__()
+				self.assertEqual(set(payload["event_details"]), EVENT_DETAIL_FIELDS)
 
 	def test_ticket_types_follow_category_order_with_uncategorized_last(self):
 		later = EventTicketCategoryFactory.create(event=self.event.name, sort_order=2)
