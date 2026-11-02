@@ -5,8 +5,14 @@ from unittest.mock import patch
 
 import frappe
 
-from buzz.tests.base_test_cases import BookingTestCase
-from buzz.tests.factories import EventBookingFactory, EventTicketFactory, EventTicketTypeFactory
+from buzz.api.booking.exceptions import HiddenTicketType
+from buzz.tests.base_test_cases import BookingTestCase, CouponTestCase, attendee_rows
+from buzz.tests.factories import (
+	BuzzCouponCodeFactory,
+	EventBookingFactory,
+	EventTicketFactory,
+	EventTicketTypeFactory,
+)
 
 UTM_PARAMETERS = {
 	"utm_source": "facebook",
@@ -107,3 +113,86 @@ class TestZoomBackedCategoryBooking(BookingTestCase):
 	def book_without_last_name(self, category: str):
 		self.set_event({"category": category})
 		return self.process_as_booker(self.booking_request())
+
+
+class TestHiddenTicketBooking(CouponTestCase):
+	def setUp(self):
+		self.hidden = EventTicketTypeFactory.create(
+			"is_hidden", event=self.event.name, prices=[{"currency": "INR", "price": 500}]
+		)
+
+	def create_access_code(self, **overrides):
+		return BuzzCouponCodeFactory.create(
+			"access_code",
+			event=self.event.name,
+			ticket_types=[{"ticket_type": self.hidden.name}],
+			**overrides,
+		)
+
+	def book_hidden(self, access_code: str | None = None):
+		return EventBookingFactory.create(
+			event=self.event.name,
+			access_code=access_code,
+			attendees=attendee_rows(self.hidden.name, 1),
+		)
+
+	def test_hidden_ticket_type_is_refused_without_a_code(self):
+		with self.assertRaises(HiddenTicketType):
+			self.book_hidden()
+
+	def test_hidden_ticket_type_is_refused_with_a_code_that_does_not_cover_it(self):
+		other = EventTicketTypeFactory.create("is_hidden", event=self.event.name)
+		code = BuzzCouponCodeFactory.create(
+			"access_code", event=self.event.name, ticket_types=[{"ticket_type": other.name}]
+		)
+
+		with self.assertRaises(HiddenTicketType):
+			self.book_hidden(code.name)
+
+	def test_hidden_ticket_type_books_with_a_valid_code(self):
+		code = self.create_access_code()
+
+		booking = self.book_hidden(code.name)
+
+		self.assertEqual(booking.access_code, code.name)
+		self.assert_amounts(booking, net=500, discount=0, total=500)
+		self.assertIsNone(booking.coupon_code)
+
+	def test_access_code_with_a_discount_fills_the_coupon_code_too(self):
+		code = self.create_access_code(discount_type="Percentage", discount_percentage=20)
+
+		booking = self.book_hidden(code.name)
+
+		self.assertEqual((booking.access_code, booking.coupon_code), (code.name, code.name))
+		self.assert_amounts(booking, net=500, discount=100, total=400)
+
+	def test_access_code_without_a_discount_keeps_the_automatic_offer(self):
+		automatic = self.create_coupon("automatic")
+		# Rollback is per class, so a live offer would discount later tests.
+		self.addCleanup(frappe.db.set_value, "Buzz Coupon Code", automatic.name, "enabled", 0)
+		code = self.create_access_code()
+
+		booking = self.book_hidden(code.name)
+
+		self.assertEqual((booking.access_code, booking.coupon_code), (code.name, automatic.name))
+		self.assert_amounts(booking, net=500, discount=50, total=450)
+
+	def test_usage_limit_of_one_blocks_the_second_booking(self):
+		code = self.create_access_code(usage_limit=1)
+		self.book_hidden(code.name).submit()
+
+		with self.assertRaises(frappe.ValidationError):
+			self.book_hidden(code.name)
+
+	def test_expired_access_code_is_refused(self):
+		code = self.create_access_code(expires_on=frappe.utils.add_days(frappe.utils.today(), -1))
+
+		with self.assertRaises(frappe.ValidationError):
+			self.book_hidden(code.name)
+
+	def test_access_code_is_not_used_up_by_a_booking_without_its_hidden_tickets(self):
+		code = self.create_access_code(usage_limit=1)
+
+		self.create_booking(access_code=code.name).submit()
+
+		self.assertEqual(self.book_hidden(code.name).access_code, code.name)

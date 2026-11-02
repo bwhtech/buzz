@@ -13,6 +13,7 @@ function formFromTeam(team: TeamOverview) {
 		short_description: team.short_description ?? "",
 		// Not edited on Settings yet, but update_public_page takes the whole page.
 		about: team.about ?? "",
+		meta_image: team.meta_image ?? null,
 		links: team.links.map((link) => ({ ...link })) as EventExternalLink[],
 		is_published: team.is_published,
 		accept_community_submissions: team.accept_community_submissions,
@@ -24,6 +25,7 @@ const PAGE_FIELDS = [
 	"slug",
 	"short_description",
 	"about",
+	"meta_image",
 	"links",
 	"is_published",
 	"accept_community_submissions",

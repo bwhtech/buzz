@@ -14,13 +14,31 @@ export function amountsLabel(rows: TierPrice[]) {
 	return rows.map((row) => wholeAmount(row.price, row.currency)).join(" · ")
 }
 
-export function discountLabel(coupon: CouponItem) {
+export function discountLabel(
+	coupon: Pick<CouponItem, "discount_type" | "discount_percentage" | "discount_amounts">,
+) {
+	if (coupon.discount_type === "None") return "No discount"
 	if (coupon.discount_type === "Percentage") return `${coupon.discount_percentage}% off`
 	return `${amountsLabel(coupon.discount_amounts)} off`
 }
 
+const TYPE_LABELS: Record<CouponItem["coupon_type"], string> = {
+	"Promo Code": "Promo code",
+	Automatic: "Automatic",
+	"Access Code": "Access code",
+}
+
+export const typeLabel = (coupon: CouponItem) => TYPE_LABELS[coupon.coupon_type]
+
+/** The registration page with the code filled in, so the link unlocks the hidden tickets. */
+export function accessCodeLink(registrationLink: string, code: string) {
+	const url = new URL(registrationLink, window.location.origin)
+	url.searchParams.set("code", code)
+	return url.toString()
+}
+
 export function scopeLabel(coupon: CouponItem, ticketTypes: CouponTicketType[]) {
-	if (coupon.applies_to_all_ticket_types) return "All tickets"
+	if (coupon.applies_to_all_ticket_types) return "All paid tickets"
 	return ticketTypes
 		.filter((ticketType) => coupon.ticket_types.includes(ticketType.name))
 		.map((ticketType) => ticketType.title)
@@ -31,7 +49,7 @@ export function usedLabel(coupon: CouponItem) {
 	const used = coupon.times_used.toLocaleString()
 	return coupon.usage_limit
 		? `${used} / ${coupon.usage_limit.toLocaleString()} used`
-		: `${used} used`
+		: `${used} used · No limit`
 }
 
 export function conditionLabel(coupon: CouponItem) {
@@ -47,17 +65,23 @@ function shortDate(day: string) {
 	return `${date.getDate()} ${date.toLocaleDateString("en-US", { month: "short" })}`
 }
 
-export const endsLabel = (coupon: CouponItem) =>
-	coupon.expires_on ? `Ends ${shortDate(coupon.expires_on)}` : "No end date"
+export function scheduleLabel(coupon: CouponItem) {
+	const { starts_on, expires_on } = coupon
+	if (starts_on && expires_on) return `${shortDate(starts_on)} – ${shortDate(expires_on)}`
+	if (expires_on) return `Until ${shortDate(expires_on)}`
+	if (starts_on) return `From ${shortDate(starts_on)}`
+	return "Until registration closes"
+}
 
 export const statusLabel = (coupon: CouponItem) =>
 	coupon.status === "Scheduled" && coupon.starts_on
 		? `Starts ${shortDate(coupon.starts_on)}`
 		: coupon.status
 
-const STATUS_THEMES: Partial<Record<CouponStatus, "green" | "blue">> = {
+const STATUS_THEMES: Partial<Record<CouponStatus, "green" | "blue" | "amber">> = {
 	Active: "green",
 	Scheduled: "blue",
+	"Used up": "amber",
 }
 
 export function statusTheme(status: CouponStatus) {

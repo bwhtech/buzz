@@ -71,6 +71,7 @@
 				:paymentGateways="eventBookingData.paymentGateways"
 				:isGuestMode="isGuest"
 				:offlineMethods="eventBookingData.offlineMethods"
+				:changeAccessCode="changeAccessCode"
 			/>
 		</div>
 	</div>
@@ -80,6 +81,7 @@
 import { useIntervalFn } from "@vueuse/core"
 import { Spinner, useCall, usePageMeta } from "frappe-ui"
 import { computed, reactive, ref, watch } from "vue"
+import { useRoute } from "vue-router"
 
 import type { CoreField } from "@/components/registration/coreFields"
 import { holdTokenKey } from "@/composables/useTicketHold"
@@ -133,6 +135,8 @@ const props = defineProps({
 	},
 })
 
+const accessCode = ref(String(useRoute().query.code ?? ""))
+
 const isGuest = computed(() => !session.isLoggedIn)
 
 usePageMeta(() => {
@@ -147,12 +151,16 @@ const goToHome = () => {
 // The form's own hold counts as available, so a reload still lists the tickets it holds.
 const bookingDataParams = () => {
 	const holdToken = sessionStorage.getItem(holdTokenKey(props.eventRoute))
-	return { event_route: props.eventRoute, ...(holdToken ? { hold_token: holdToken } : {}) }
+	return {
+		event_route: props.eventRoute,
+		...(holdToken ? { hold_token: holdToken } : {}),
+		...(accessCode.value ? { access_code: accessCode.value } : {}),
+	}
 }
 
 const eventBookingResource = useCall<
 	Record<string, any>,
-	{ event_route: string; hold_token?: string }
+	{ event_route: string; hold_token?: string; access_code?: string }
 >({
 	url: "/api/v2/method/buzz.api.booking.get_event_booking_data",
 	params: bookingDataParams,
@@ -181,6 +189,8 @@ const eventBookingResource = useCall<
 		eventBookingData.paymentGateways = data.payment_gateways || []
 		eventBookingData.offlineMethods = data.offline_methods || []
 		registrationsClosed.value = data.registrations_closed || false
+		// The form shows the error when it validates the code itself.
+		if (data.access_code?.error) accessCode.value = ""
 	},
 	onError: (error) => {
 		if (error.message.includes("DoesNotExistError")) {
@@ -188,6 +198,11 @@ const eventBookingResource = useCall<
 		}
 	},
 })
+
+function changeAccessCode(code: string) {
+	accessCode.value = code
+	return eventBookingResource.reload()
+}
 
 // Other people's holds come and go, so the ticket types on offer are refreshed.
 useIntervalFn(() => {

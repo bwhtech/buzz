@@ -61,7 +61,7 @@ def generate_form(form_name: str):
 		render_if_stale(FormOgImage(form))
 
 
-def render_if_stale(image: "EventOgImage"):
+def render_if_stale(image: "OgImage"):
 	if not image.can_render():
 		clear(image.doc)
 	elif not image.is_current():
@@ -106,8 +106,52 @@ def site_language():
 		frappe.local.lang = previous
 
 
-class EventOgImage:
+class OgImage:
+	"""A generated share image, stored in its document's `og_image` field."""
+
+	# Bump when the layout changes, so every document renders again on its next save
+	render_version: int
+
+	def hash_parts(self) -> list:
+		raise NotImplementedError
+
+	def input_hash(self) -> str:
+		parts = [self.render_version, *self.hash_parts(), site_host()]
+		return hashlib.sha1(repr(parts).encode()).hexdigest()[:12]
+
+	def file_name(self) -> str:
+		return f"og-{self.input_hash()}.png"
+
+	def is_current(self) -> bool:
+		return bool(self.doc.og_image and self.doc.og_image.endswith(self.file_name()))
+
+	def can_render(self) -> bool:
+		raise NotImplementedError
+
+	def needs_update(self) -> bool:
+		return not self.is_current() if self.can_render() else bool(self.doc.og_image)
+
+	def save(self):
+		previous = attached_files(self.doc)
+		file = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": self.file_name(),
+				"attached_to_doctype": self.doc.doctype,
+				"attached_to_name": self.doc.name,
+				"attached_to_field": "og_image",
+				"is_private": 0,
+				"content": self.render(),
+			}
+		).insert(ignore_permissions=True)
+		self.doc.db_set("og_image", file.file_url, update_modified=False)
+		delete_files(previous)
+
+
+class EventOgImage(OgImage):
 	"""The share image of an event, or of another document (`doc`) shown with the event's look."""
+
+	render_version = RENDER_VERSION
 
 	def __init__(self, event, doc=None):
 		self.event = event
@@ -140,28 +184,11 @@ class EventOgImage:
 		place = _("Online") if self.event.medium == "Online" else venue and venue["name"]
 		return " · ".join(part for part in [date, place] if part)
 
-	def input_hash(self) -> str:
-		parts = [
-			RENDER_VERSION,
-			self.title,
-			self.meta_line,
-			self.event.banner_image,
-			self.colours,
-			site_host(),
-		]
-		return hashlib.sha1(repr(parts).encode()).hexdigest()[:12]
-
-	def file_name(self) -> str:
-		return f"og-{self.input_hash()}.png"
-
-	def is_current(self) -> bool:
-		return bool(self.doc.og_image and self.doc.og_image.endswith(self.file_name()))
+	def hash_parts(self) -> list:
+		return [self.title, self.meta_line, self.event.banner_image, self.colours]
 
 	def can_render(self) -> bool:
 		return is_drawable(self.title + self.meta_line)
-
-	def needs_update(self) -> bool:
-		return not self.is_current() if self.can_render() else bool(self.doc.og_image)
 
 	def render(self) -> bytes:
 		image = Image.new("RGB", (WIDTH, HEIGHT), self.colours["page-bg"])
@@ -186,14 +213,7 @@ class EventOgImage:
 		return ImageOps.fit(flat, (WIDTH, BANNER_HEIGHT), Image.LANCZOS)
 
 	def uploaded_banner(self) -> Image.Image | None:
-		url = self.event.banner_image
-		if not url or urlparse(url).scheme:
-			return None
-		try:
-			content = frappe.get_doc("File", {"file_url": url}).get_content()
-			return Image.open(io.BytesIO(content))
-		except Exception:
-			return None
+		return uploaded_image(self.event.banner_image)
 
 	def draw_text(self, image: Image.Image, max_width: int):
 		top = BANNER_HEIGHT + (HEIGHT - BANNER_HEIGHT - (60 + 10 + 34)) // 2
@@ -217,21 +237,16 @@ class EventOgImage:
 		)
 		return max(WORDMARK_SIZE[0], math.ceil(host_font.getlength(host)))
 
-	def save(self):
-		previous = attached_files(self.doc)
-		file = frappe.get_doc(
-			{
-				"doctype": "File",
-				"file_name": self.file_name(),
-				"attached_to_doctype": self.doc.doctype,
-				"attached_to_name": self.doc.name,
-				"attached_to_field": "og_image",
-				"is_private": 0,
-				"content": self.render(),
-			}
-		).insert(ignore_permissions=True)
-		self.doc.db_set("og_image", file.file_url, update_modified=False)
-		delete_files(previous)
+
+def uploaded_image(url: str | None) -> Image.Image | None:
+	"""The picture behind an uploaded file's URL. External URLs are left to the browser."""
+	if not url or urlparse(url).scheme:
+		return None
+	try:
+		content = frappe.get_doc("File", {"file_url": url}).get_content()
+		return Image.open(io.BytesIO(content))
+	except Exception:
+		return None
 
 
 def attached_files(doc) -> list[str]:

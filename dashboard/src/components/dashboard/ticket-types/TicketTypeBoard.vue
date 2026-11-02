@@ -80,7 +80,7 @@ const edgeMask = computed(() => {
 					v-for="ticketType in group.ticketTypes"
 					:key="ticketType.name"
 					type="button"
-					class="flex flex-col gap-2.5 rounded-4 border border-outline-gray-2 bg-surface-elevation-2 p-3 text-left transition-[box-shadow,opacity,transform] duration-150 ease-out focus-visible:outline-none focus-visible:focus-ring enabled:active:scale-[0.98] [@media(hover:hover)]:enabled:hover:shadow-sm motion-reduce:transform-none"
+					class="flex flex-col gap-2.5 rounded-4 border border-outline-gray-2 bg-surface-elevation-2 p-3 text-left transition-[border-color,opacity,transform] duration-150 ease-out focus-visible:outline-none focus-visible:focus-ring enabled:active:scale-[0.98] [@media(hover:hover)]:enabled:hover:border-outline-gray-3 motion-reduce:transform-none"
 					:class="
 						organizer.dragging.value === ticketType.name
 							? 'opacity-40'

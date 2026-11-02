@@ -29,8 +29,19 @@ def send_guest_booking_otp(event: int, identifier: str) -> dict | None:
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
-def get_event_booking_data(event_route: str, hold_token: str | None = None) -> EventBookingDataResponse:
+def get_event_booking_data(
+	event_route: str, hold_token: str | None = None, access_code: str | None = None
+) -> EventBookingDataResponse:
+	if access_code:
+		return build_data_for_access_code(event_route, hold_token, access_code)
 	return event_data.build_event_booking_data(event_route, hold_token)
+
+
+@rate_limit(limit=30, seconds=60)
+def build_data_for_access_code(
+	event_route: str, hold_token: str | None, access_code: str
+) -> EventBookingDataResponse:
+	return event_data.build_event_booking_data(event_route, hold_token, access_code)
 
 
 # nosemgrep: guest-whitelisted-method
@@ -48,8 +59,10 @@ def hold_tickets_rate_limit() -> int:
 # nosemgrep: guest-whitelisted-method
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 @rate_limit(limit=hold_tickets_rate_limit, seconds=600)
-def hold_tickets(event: int, quantities: dict, hold_token: str | None = None) -> TicketHoldResponse:
-	return TicketHoldService(event, quantities, hold_token).hold()
+def hold_tickets(
+	event: int, quantities: dict, hold_token: str | None = None, access_code: str | None = None
+) -> TicketHoldResponse:
+	return TicketHoldService(event, quantities, hold_token, access_code).hold()
 
 
 # nosemgrep: guest-whitelisted-method
