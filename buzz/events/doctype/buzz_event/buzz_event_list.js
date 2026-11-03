@@ -26,6 +26,14 @@ const TEMPLATE_FIELD_GROUPS = {
 			"ticket_print_format",
 		],
 	},
+	booking_email_settings: {
+		label: __("Booking Email Settings"),
+		fields: [
+			"send_booking_confirmation_email",
+			"booking_confirmation_email_template",
+			"offline_acknowledgement_email_template",
+		],
+	},
 	sponsorship_settings: {
 		label: __("Sponsorship Settings"),
 		fields: [
@@ -57,6 +65,9 @@ const FIELD_LABELS = {
 	tax_percentage: __("Tax Percentage"),
 	ticket_email_template: __("Ticket Email Template"),
 	ticket_print_format: __("Ticket Print Format"),
+	send_booking_confirmation_email: __("Send Booking Confirmation Email"),
+	booking_confirmation_email_template: __("Booking Confirmation Email Template"),
+	offline_acknowledgement_email_template: __("Offline Payment Acknowledgement Email Template"),
 	auto_send_pitch_deck: __("Auto Send Pitch Deck"),
 	sponsor_deck_email_template: __("Sponsor Deck Email Template"),
 	sponsor_deck_reply_to: __("Sponsor Deck Reply To"),
@@ -219,6 +230,7 @@ function render_template_options(dialog, template) {
 	let html = ""
 	html += render_field_group("event_details", template)
 	html += render_field_group("ticketing_settings", template)
+	html += render_field_group("booking_email_settings", template)
 	html += render_field_group("sponsorship_settings", template)
 	html += render_related_documents(template)
 
