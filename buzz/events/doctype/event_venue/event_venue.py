@@ -103,7 +103,7 @@ class EventVenue(Document):
 			)
 		}
 		self.validate_locations(venues, found)
-		self.venue_name = " · ".join(found[venue].venue_name for venue in venues)
+		self.venue_name = group_venue_name([found[venue].venue_name for venue in venues])
 		self.clear_location_fields()
 
 	def validate_locations(self, venues: list[str], found: dict) -> None:
@@ -171,6 +171,11 @@ class EventVenue(Document):
 				],
 			}
 			self.location = frappe.as_json(self.location)
+
+
+def group_venue_name(location_names: list[str]) -> str:
+	"""Short enough for one line and the field's 140 characters; the event page lists them all."""
+	return f"{location_names[0]} +{len(location_names) - 1}"
 
 
 def set_venue_names(rows: list) -> None:

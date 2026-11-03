@@ -120,7 +120,9 @@ const venue = computed(() => {
 				</span>
 				<span class="buzz-event-card-meta-item" :class="venue.tone">
 					<span class="size-3.5" :class="venue.icon" aria-hidden="true" />
-					<span class="line-clamp-2" :title="venue.label" dir="auto">{{ venue.label }}</span>
+					<span class="buzz-event-card-clamp" :title="venue.label" dir="auto">{{
+						venue.label
+					}}</span>
 				</span>
 			</p>
 		</div>

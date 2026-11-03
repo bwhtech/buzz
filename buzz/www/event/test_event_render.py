@@ -179,6 +179,8 @@ class TestEventPageRender(IntegrationTestCase):
 
 		self.assertIn('<span class="meta-venue-name">National Museum</span>', page)
 		self.assertIn(">+1</span>", page)
+		self.assertIn('class="meta-item meta-locations" data-venue-map', page)
+		self.assertIn('id="venue-locations"', page)
 
 	def set_event(self, values: dict):
 		frappe.db.set_value("Buzz Event", self.event, values)

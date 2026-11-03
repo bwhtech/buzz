@@ -1,0 +1,18 @@
+{%- set muted = "color:#7c7c7c" -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:14px;line-height:20px">
+  {% for location in event_header.locations %}
+  <tr>
+    <td style="padding:12px 12px 12px 0;width:22px;vertical-align:top{% if not loop.first %};border-top:1px solid #ededed{% endif %}">
+      <div style="width:22px;height:22px;border-radius:11px;background-color:#171717;color:#ffffff;font-size:11px;font-weight:600;line-height:22px;text-align:center">{{ loop.index }}</div>
+    </td>
+    <td style="padding:12px 0;vertical-align:top{% if not loop.first %};border-top:1px solid #ededed{% endif %}">
+      {% if location.label %}<div style="font-size:11px;font-weight:600;letter-spacing:0.06em;{{ muted }}">{{ location.label | upper }}</div>{% endif %}
+      <div style="font-weight:500;color:#171717">{{ location.venue_name }}</div>
+      {% if location.address %}<div style="font-size:13px;{{ muted }};margin-top:2px">{{ location.address }}</div>{% endif %}
+    </td>
+    <td align="right" style="padding:12px 0 12px 12px;vertical-align:top;white-space:nowrap{% if not loop.first %};border-top:1px solid #ededed{% endif %}">
+      {% if location.map_link %}<a href="{{ location.map_link | e }}" style="font-size:13px;font-weight:500;color:#171717;text-decoration:none">Directions&nbsp;<img src="{{ frappe.get_url('/assets/buzz/images/arrow-up-right.png') }}" alt="" width="12" height="12" style="display:inline-block;width:12px;height:12px;vertical-align:-1px;border:0" /></a>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>

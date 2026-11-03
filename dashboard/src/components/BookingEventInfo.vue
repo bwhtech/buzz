@@ -41,7 +41,13 @@
 					<LucideMapPin class="w-4 h-4 mr-2 flex-shrink-0" />
 					<span class="text-sm-medium">{{ __("Venue") }}</span>
 				</div>
-				<p class="text-ink-gray-9 font-medium">{{ venue.venue_name }}</p>
+				<p class="text-ink-gray-9 font-medium">
+					<VenueName
+						:name="venue.venue_name"
+						:event-route="event.route"
+						:has-multiple-locations="venue.has_multiple_locations"
+					/>
+				</p>
 				<p v-if="venue.address" class="text-sm text-ink-gray-6 mt-1">
 					{{ venue.address }}
 				</p>
@@ -59,6 +65,8 @@
 import { dayjsLocal } from "frappe-ui"
 import LucideCalendarDays from "~icons/lucide/calendar-days"
 import LucideMapPin from "~icons/lucide/map-pin"
+
+import VenueName from "@/components/common/VenueName.vue"
 
 defineProps({
 	event: {

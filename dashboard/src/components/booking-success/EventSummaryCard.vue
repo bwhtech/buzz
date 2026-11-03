@@ -3,12 +3,13 @@ import LucideArrowUpRight from "~icons/lucide/arrow-up-right"
 import LucideMapPin from "~icons/lucide/map-pin"
 
 import DateBadge from "@/components/common/DateBadge.vue"
+import VenueName from "@/components/common/VenueName.vue"
 import { useEventDateLabels } from "@/components/registration/useEventDateLabels"
 import { eventUrl } from "@/utils/eventUrl"
 
 const props = defineProps<{
 	event: Record<string, any>
-	venue: { venue_name: string; address?: string | null } | null
+	venue: { venue_name: string; address?: string | null; has_multiple_locations?: boolean } | null
 	bookingId: string
 }>()
 
@@ -30,7 +31,12 @@ const { dateLabel, timeLabel } = useEventDateLabels(() => props.event)
 		<div v-if="venue" class="flex items-start gap-3 border-t border-outline-gray-1 px-4 py-3.5">
 			<LucideMapPin class="mt-0.5 size-4 shrink-0 text-ink-gray-5" />
 			<div class="flex min-w-0 flex-col gap-0.5">
-				<span class="text-base-medium text-ink-gray-8">{{ venue.venue_name }}</span>
+				<VenueName
+					class="text-base-medium text-ink-gray-8"
+					:name="venue.venue_name"
+					:event-route="event.route"
+					:has-multiple-locations="venue.has_multiple_locations"
+				/>
 				<span v-if="venue.address" class="text-p-sm text-ink-gray-5 text-pretty">
 					{{ venue.address }}
 				</span>
