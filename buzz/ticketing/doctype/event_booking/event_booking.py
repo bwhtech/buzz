@@ -18,6 +18,7 @@ from buzz.events.online_meeting import OnlineMeeting
 from buzz.payments import get_controller, mark_payment_as_received
 from buzz.permissions import has_section_permission
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
+from buzz.ticketing.doctype.event_booking.booking_invoice import BookingInvoice
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
 	get_committed_tickets,
@@ -414,6 +415,12 @@ class EventBooking(Document):
 			}
 			for attendee in self.attendees
 		]
+
+	def has_invoice(self) -> bool:
+		return bool(self.invoice_requested and self.docstatus == 1 and self.total_amount)
+
+	def get_invoice(self) -> dict:
+		return BookingInvoice(self).context()
 
 	def log_if_coupon_overused(self):
 		"""`validate` checks the limit before payment; a late payment is booked even past it."""

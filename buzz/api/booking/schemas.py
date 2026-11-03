@@ -120,6 +120,7 @@ class ConfirmationBooking(APIResponse):
 	coupon_code: str | None
 	payment_method: str | None
 	booked_on: datetime
+	invoice_available: bool = False
 
 
 class ConfirmationTicket(APIResponse):
@@ -152,6 +153,7 @@ class BookingDetailsResponse(APIResponse):
 	cancellation_request: Any
 	cancellation_requested_tickets: list[str]
 	cancelled_tickets: list[str]
+	invoice_available: bool
 
 
 class DiscountQuoteRequest(APIRequest):

@@ -93,6 +93,11 @@ def download_tickets(booking_id: str, token: str | None = None) -> None:
 	downloads.tickets_pdf(booking_id, token)
 
 
+@frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
+def download_invoice(booking_id: str, token: str | None = None) -> None:
+	downloads.invoice_pdf(booking_id, token)
+
+
 @frappe.whitelist()
 def get_booking_details(booking_id: str) -> BookingDetailsResponse:
 	return details.build_booking_details(booking_id)

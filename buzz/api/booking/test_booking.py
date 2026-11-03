@@ -106,6 +106,7 @@ DETAILS_FIELDS = {
 	"cancellation_request",
 	"cancellation_requested_tickets",
 	"cancelled_tickets",
+	"invoice_available",
 }
 
 

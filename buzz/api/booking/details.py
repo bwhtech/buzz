@@ -70,6 +70,7 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 			coupon_code=coupon_code_of(booking_doc),
 			payment_method=payment_method(booking_doc),
 			booked_on=booking_doc.creation,
+			invoice_available=booking_doc.has_invoice(),
 		),
 		# Guests read this with a token and no session, so the private QR file is inlined
 		tickets=[ConfirmationTicket(**{**ticket, "qr_code": qr_data_uri(ticket.name)}) for ticket in tickets],
@@ -117,6 +118,7 @@ def build_booking_details(booking_id: str) -> BookingDetailsResponse:
 		cancellation_request=cancellation_request,
 		cancellation_requested_tickets=get_cancellation_requested_tickets(cancellation_request, tickets),
 		cancelled_tickets=[ticket.name for ticket in tickets if ticket.docstatus == 2],
+		invoice_available=booking_doc.has_invoice(),
 	)
 
 
