@@ -9,8 +9,8 @@ from buzz.api.comments.schemas import ActivityEntry, EmailAttachment
 
 # Field changes worth a line in the timeline, read from the record's Version history.
 TRACKED_FIELDS = {"Talk Proposal": ["status"]}
-# Shown by name only: a diff of long text reads badly.
-EDITED_FIELDS = {"Talk Proposal": ["title", "description", "phone"]}
+# Edits listed by field name only, since long text reads badly as a diff.
+EDIT_SUMMARY_FIELDS = {"Talk Proposal": ["title", "description", "phone"]}
 
 
 class ActivityFeed:
@@ -73,14 +73,18 @@ class ActivityFeed:
 		return [entry for row in rows for entry in self.version_entries(row)]
 
 	def version_entries(self, version) -> list[dict]:
-		changed = frappe.parse_json(version.data).get("changed") or []
-		tracked = TRACKED_FIELDS.get(self.reference_doctype, [])
-		return [*field_changes(version, changed, tracked), *self.edit(version, changed)]
+		changed_values = frappe.parse_json(version.data).get("changed") or []
+		tracked_fields = TRACKED_FIELDS.get(self.reference_doctype, [])
+		return [
+			*field_changes(version, changed_values, tracked_fields),
+			*self.edit_summary(version, changed_values),
+		]
 
-	def edit(self, version, changed: list) -> list[dict]:
-		changed_fields = {field for field, *_ in changed}
-		edited = [field for field in EDITED_FIELDS.get(self.reference_doctype, []) if field in changed_fields]
-		if not edited:
+	def edit_summary(self, version, changed_values: list) -> list[dict]:
+		changed_fields = {field for field, *_ in changed_values}
+		summary_fields = EDIT_SUMMARY_FIELDS.get(self.reference_doctype, [])
+		edited_fields = [field for field in summary_fields if field in changed_fields]
+		if not edited_fields:
 			return []
 		meta = frappe.get_meta(self.reference_doctype)
 		return [
@@ -89,7 +93,7 @@ class ActivityFeed:
 				"kind": "edit",
 				"owner": version.owner,
 				"creation": version.creation,
-				"fields": [meta.get_label(field) for field in edited],
+				"fields": [meta.get_label(field) for field in edited_fields],
 			}
 		]
 
@@ -147,7 +151,7 @@ def attachment_url(file: str) -> str:
 	return f"/api/v2/method/buzz.api.comments.get_email_attachment?name={quote(file)}"
 
 
-def field_changes(version, changed: list, fields: list[str]) -> list[dict]:
+def field_changes(version, changed_values: list, fields: list[str]) -> list[dict]:
 	return [
 		{
 			"name": f"{version.name}-{field}",
@@ -158,7 +162,7 @@ def field_changes(version, changed: list, fields: list[str]) -> list[dict]:
 			"old_value": old,
 			"new_value": new,
 		}
-		for field, old, new in changed
+		for field, old, new in changed_values
 		if field in fields
 	]
 
