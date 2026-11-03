@@ -66,8 +66,12 @@ class BuzzScheduleItem(Document):
 	def validate_track(self, schedule: str):
 		if self.all_tracks:
 			self.track = None
-		elif frappe.db.get_value("Buzz Schedule Track", self.track, "schedule") != schedule:
-			self.throw(_("<b>Track</b> must belong to this schedule"))
+			return
+		track_schedule, is_standard = frappe.db.get_value(
+			"Buzz Schedule Track", self.track, ["schedule", "is_standard"]
+		) or (None, 0)
+		if not is_standard and track_schedule != schedule:
+			self.throw(_("<b>Track</b> must be a standard track or belong to this schedule"))
 
 	def validate_type(self, team: str | None):
 		is_standard, type_team = frappe.db.get_value(

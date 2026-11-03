@@ -3,11 +3,12 @@ from unittest.mock import patch
 import frappe
 from bwh_payments import testing as payment_testing
 from frappe.tests import IntegrationTestCase
+from frappe.utils import flt
 
 from buzz.api.booking import process_booking
 from buzz.api.booking.schemas import BookingRequest
 from buzz.api.booking.services import create_add_on_doc
-from buzz.payments import get_payment_link_for_booking
+from buzz.payments import get_payment_link, get_payment_link_for_booking
 from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
 	BuzzEventFactory,
@@ -114,8 +115,14 @@ class CouponTestCase(IntegrationTestCase):
 	def create_coupon(self, *traits, **overrides):
 		return BuzzCouponCodeFactory.create(*traits, event=self.event.name, **overrides)
 
+	def other_user(self) -> str:
+		return UserFactory.create_once("other-buyer@example.com").name
+
 	def create_booking(self, coupon: str | None = None, count: int = 1, **overrides):
 		attendees = attendee_rows(self.ticket_type.name, count)
+		if email := overrides.get("buyer_email"):
+			# One user per buyer email, as in production; the factory's shared user would be one buyer.
+			overrides.setdefault("user", UserFactory.create_once(email.lower()).name)
 		return EventBookingFactory.create(
 			event=self.event.name, coupon_code=coupon, attendees=attendees, **overrides
 		)
@@ -273,3 +280,17 @@ def attendee_rows(ticket_type, count: int) -> list[dict]:
 def make_payment_gateway(name: str | None = None) -> str:
 	"""An enabled payment gateway on bwh_payments' in-memory test gateway."""
 	return payment_testing.configure_test_gateway(name or f"Gateway {frappe.generate_hash(length=8)}")
+
+
+def authorize_payment(document) -> None:
+	"""Pay for the document on the test gateway, which runs its `on_payment_authorized`."""
+	get_payment_link(
+		document.doctype,
+		document.name,
+		flt(document.get("total_amount")) or TICKET_PRICE,
+		document.get("currency") or "INR",
+		make_payment_gateway(payment_testing.TEST_GATEWAY),
+	)
+	payment = frappe.get_last_doc("Event Payment", {"reference_docname": document.name})
+	payment_testing.pay(payment.payment_request)
+	document.reload()

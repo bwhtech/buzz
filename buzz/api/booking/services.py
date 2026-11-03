@@ -18,9 +18,11 @@ from buzz.api.booking.exceptions import (
 	InvalidCoupon,
 	InvoiceDetailsMissing,
 	RegistrationsClosed,
+	TooManyTicketsInBooking,
 )
 from buzz.api.booking.guests import get_or_create_guest_user, verify_guest_otp
 from buzz.api.booking.schemas import (
+	MAX_TICKETS_PER_IP,
 	BookingRequest,
 	FreeBookingResponse,
 	OfflineBookingResponse,
@@ -40,6 +42,7 @@ from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	default_currency,
 	start_capacity_transaction,
 )
+from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import add_on_options
 from buzz.utils import ZOOM_BACKED_CATEGORIES
 
 if TYPE_CHECKING:
@@ -61,6 +64,7 @@ class BookingService:
 
 	def process(self) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
 		start_capacity_transaction()
+		self.validate_ticket_count()
 		self.validate_event()
 		self.validate_offline_currency()
 		self.validate_answers()
@@ -69,6 +73,11 @@ class BookingService:
 		booking.insert(ignore_permissions=True)
 		frappe.db.commit()  # nosemgrep: frappe-manual-commit
 		return self.finalize(booking)
+
+	# Holds only cover ticket types with a limit, so unlimited ones are capped here.
+	def validate_ticket_count(self) -> None:
+		if len(self.request.attendees) > MAX_TICKETS_PER_IP:
+			TooManyTicketsInBooking.throw(limit=MAX_TICKETS_PER_IP)
 
 	def validate_offline_currency(self) -> None:
 		currency = self.request.currency
@@ -119,8 +128,7 @@ class BookingService:
 				if not catalog:
 					AddOnNotForEvent.throw()
 				if catalog.user_selects_option:
-					options = (catalog.options or "").split("\n")
-					if add_on.get("value") not in options:
+					if add_on.get("value") not in add_on_options(catalog.options):
 						InvalidAddOnValue.throw(value=add_on.get("value"))
 
 	def allowed_add_ons(self) -> dict:

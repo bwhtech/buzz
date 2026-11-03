@@ -25,7 +25,7 @@ class TestBuzzScheduleItemType(TeamPermissionTestCase):
 	def test_team_member_cannot_write_standard_types(self):
 		self.assertFalse(self.has_permission_as(self.alice, "write", "Buzz Schedule Item Type", "Talk"))
 
-	def test_color_must_be_a_theme_name_or_hex(self):
+	def test_color_must_be_hex(self):
 		BuzzScheduleItemTypeFactory.create(team=self.team_a, color="#2563eb")
 		with self.assertRaises(frappe.ValidationError):
-			BuzzScheduleItemTypeFactory.create(team=self.team_a, color="sky")
+			BuzzScheduleItemTypeFactory.create(team=self.team_a, color="blue")

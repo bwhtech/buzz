@@ -160,7 +160,7 @@ def mark_payment_as_received(reference_doctype: str, reference_docname: str):
 		order_by="creation desc",
 	)
 	if not payment_request:
-		return
+		frappe.throw(_("No confirmed payment found for {0}").format(reference_docname))
 
 	frappe.db.set_value(
 		"Event Payment",

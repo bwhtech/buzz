@@ -16,6 +16,7 @@ from buzz.events.doctype.buzz_form.form_types import (
 from buzz.payments import get_payment_gateways_for_event
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
+from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import add_on_options
 
 if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
@@ -68,9 +69,6 @@ def access_code_status(access_code: str | None, coupon: BuzzCouponCode | None) -
 
 
 def get_event_details(event_doc: "BuzzEvent"):
-	if frappe.session.user != "Guest":
-		return {**event_doc.as_dict(), "venue_name": event_doc.get_venue_name()}
-
 	return {
 		"name": event_doc.name,
 		"title": event_doc.title,
@@ -129,7 +127,7 @@ def get_available_add_ons(event_id: str) -> list:
 	)
 	for add_on in add_ons:
 		if add_on.user_selects_option:
-			add_on.options = add_on.options.split("\n")
+			add_on.options = add_on_options(add_on.options)
 	return add_ons
 
 

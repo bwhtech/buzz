@@ -34,7 +34,11 @@
 				:booking-id="bookingId"
 			/>
 
-			<div class="fade-up-in flex flex-wrap justify-center gap-2" style="animation-delay: 220ms">
+			<div
+				v-if="isConfirmed"
+				class="fade-up-in flex flex-wrap justify-center gap-2"
+				style="animation-delay: 220ms"
+			>
 				<Button
 					size="md"
 					variant="solid"
@@ -62,6 +66,7 @@
 		</div>
 
 		<TicketRows
+			v-if="isConfirmed"
 			class="fade-up-in"
 			style="animation-delay: 260ms"
 			:tickets="confirmation.data.tickets"
@@ -77,7 +82,11 @@
 			<template #footer>{{ paymentLine }}</template>
 		</BookingFinancialSummary>
 
-		<p class="fade-up-in text-center text-p-sm text-ink-gray-5" style="animation-delay: 400ms">
+		<p
+			v-if="isConfirmed"
+			class="fade-up-in text-center text-p-sm text-ink-gray-5"
+			style="animation-delay: 400ms"
+		>
 			{{ __("Need to change a name or cancel?") }}
 			<RouterLink
 				v-if="session.isLoggedIn"
@@ -144,7 +153,7 @@ const confirmation = useCall<Record<string, any>, Record<string, unknown>>({
 		// useCall runs onSuccess before it sets confirmation.data, so read the response itself.
 		if (!isBookingConfirmed(data)) return
 		triggerCelebrationConfetti()
-		if (data?.event?.route) {
+		if (data.event?.route) {
 			const { clearStoredData } = useBookingFormStorage(data.event.route)
 			clearStoredData()
 		}

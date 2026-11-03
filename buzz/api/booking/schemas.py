@@ -6,6 +6,9 @@ from pydantic import Field
 from buzz.api.schemas import APIRequest, APIResponse
 from buzz.events.doctype.event_venue.details import VenueDetails
 
+# One network can hold this many tickets at a time, so a script can't hold a whole event.
+MAX_TICKETS_PER_IP = 20
+
 
 class BookingRequest(APIRequest):
 	# attendees and custom fields carry event-defined dynamic keys; validated against meta downstream.
