@@ -43,7 +43,14 @@ def quote_with_code(booking, coupon: BuzzCouponCode) -> DiscountQuote:
 
 def build_cart(request: DiscountQuoteRequest):
 	booking = frappe.new_doc("Event Booking")
-	booking.update({"event": request.event, "currency": request.currency, "buyer_email": request.buyer_email})
+	booking.update(
+		{
+			"event": request.event,
+			"currency": request.currency,
+			"buyer_email": request.buyer_email,
+			"user": frappe.session.user,
+		}
+	)
 	for ticket_type in event_ticket_types(request):
 		booking.append("attendees", {"ticket_type": ticket_type})
 	booking.fetch_amounts_from_ticket_types()
