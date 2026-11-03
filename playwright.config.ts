@@ -23,7 +23,8 @@ export default defineConfig({
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
 	workers: 4,
-	reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "html",
+	// CI runs in shards; each writes a blob report that a later job merges into HTML.
+	reporter: process.env.CI ? [["github"], ["blob"]] : "html",
 
 	timeout: 60000,
 	expect: {
