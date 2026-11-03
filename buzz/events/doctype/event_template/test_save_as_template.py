@@ -102,7 +102,7 @@ class TestSaveEventAsTemplate(IntegrationTestCase):
 			offline_acknowledgement_email_template=acknowledgement,
 		)
 		expected = (0, confirmation, acknowledgement)
-		options = dict.fromkeys(BOOKING_EMAIL_FIELDS, 1)
+		options = dict.fromkeys(["category", "host", *BOOKING_EMAIL_FIELDS], 1)
 
 		template = self.save_as_template(original, options)
 		team = frappe.as_json({"team": original.team})
