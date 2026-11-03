@@ -227,7 +227,7 @@ def location_label(location) -> str:
 	return f"{location.label}: {location.venue_name}" if location.label else location.venue_name
 
 
-def ics_description(event_doc, meeting, event_url: str | None, venue=None) -> str:
+def ics_description(event_doc, meeting, event_url: str | None, venue) -> str:
 	lines = [f"Your ticket for {event_doc.title}", event_url]
 	if meeting.join_url:
 		platform_text = f"on {meeting.platform}" if meeting.platform else "online"

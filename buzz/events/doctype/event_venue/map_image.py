@@ -40,29 +40,19 @@ class LocationsMapImage:
 		parts = repr([RENDER_VERSION, sorted(self.pins.items())])
 		return f"locations-map-{hashlib.sha1(parts.encode()).hexdigest()[:12]}.png"
 
-	def saved_url(self) -> str | None:
-		filters = {
+	def file(self) -> dict:
+		return {
 			"file_name": self.file_name(),
 			"attached_to_doctype": "Event Venue",
 			"attached_to_name": self.venue,
 		}
-		return frappe.db.get_value("File", filters, "file_url")
+
+	def saved_url(self) -> str | None:
+		return frappe.db.get_value("File", self.file(), "file_url")
 
 	def save(self) -> str:
-		return (
-			frappe.get_doc(
-				{
-					"doctype": "File",
-					"file_name": self.file_name(),
-					"attached_to_doctype": "Event Venue",
-					"attached_to_name": self.venue,
-					"is_private": 0,
-					"content": self.render(),
-				}
-			)
-			.insert(ignore_permissions=True)
-			.file_url
-		)
+		file = {"doctype": "File", **self.file(), "is_private": 0, "content": self.render()}
+		return frappe.get_doc(file).insert(ignore_permissions=True).file_url
 
 	def render(self) -> bytes:
 		dot_map = DotMap(list(self.pins.values()))
@@ -81,8 +71,7 @@ class LocationsMapImage:
 		radius = dot_map.dot_width / 2 * scale
 		for x, y in land_dots(dot_map.dots_url):
 			left, top = (x - view.x) * scale, (y - view.y) * scale
-			if -radius <= left <= WIDTH + radius and -radius <= top <= HEIGHT + radius:
-				draw.ellipse((left - radius, top - radius, left + radius, top + radius), fill=COLOURS["land"])
+			draw.ellipse((left - radius, top - radius, left + radius, top + radius), fill=COLOURS["land"])
 
 	def draw_pin(self, draw: ImageDraw.ImageDraw, number: int, x: float, y: float):
 		ring = PIN_RADIUS + PIN_RING

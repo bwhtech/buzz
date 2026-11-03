@@ -32,7 +32,7 @@ def email_event_header(event) -> dict:
 def email_locations(details, event_url: str | None) -> dict:
 	"""A grouped venue's places, and the event page link that opens them on its map."""
 	if not (details and details.has_multiple_locations):
-		return {"locations": [], "locations_url": None, "locations_map_url": None}
+		return {}
 	map_url = LocationsMapImage(details.name, details.locations).url()
 	return {
 		"locations": details.locations,
