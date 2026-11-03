@@ -15,6 +15,7 @@ const props = defineProps<{
 	title: string | null | undefined
 	section: string
 	modified?: string | null
+	dirty?: boolean
 }>()
 
 const isMobile = useIsMobile()
@@ -43,7 +44,8 @@ const modifiedExact = computed(() => modifiedAt.value?.format("D MMM YYYY, h:mm 
 			</template>
 			<template #suffix>
 				<slot />
-				<NotificationsButton />
+				<!-- Save and Discard need the room while there are unsaved edits. -->
+				<NotificationsButton v-if="!dirty" />
 			</template>
 		</PageHeaderMobile>
 		<EventArchivedAlert :event="route.params.eventId as string" banner />

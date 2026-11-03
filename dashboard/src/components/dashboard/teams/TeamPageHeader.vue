@@ -63,7 +63,7 @@ const items = computed(() => [{ label: teamName.value || "Community" }, { label:
 				@click="openPage"
 			/>
 			<slot />
-			<NotificationsButton />
+			<NotificationsButton v-if="!dirty" />
 		</template>
 	</PageHeaderMobile>
 

@@ -74,7 +74,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 </script>
 
 <template>
-	<EventPageHeader :title="page.data?.title" section="Registration">
+	<EventPageHeader :title="page.data?.title" section="Registration" :dirty="taxForm.isDirty.value">
 		<Transition
 			enter-active-class="transition duration-150 ease-out motion-reduce:transition-none"
 			enter-from-class="opacity-0 translate-y-1"
