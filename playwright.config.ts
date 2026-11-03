@@ -72,8 +72,9 @@ export default defineConfig({
 				...devices["Desktop Chrome"],
 				storageState: authFile,
 			},
-			// user-settings-setup seeds the member manage-access.spec.ts runs one test as.
-			dependencies: ["setup", "event-setup", "user-settings-setup"],
+			// manage-access.spec.ts runs as the member user-settings-setup seeds and the
+			// attendee tickets-setup seeds.
+			dependencies: ["setup", "event-setup", "user-settings-setup", "tickets-setup"],
 		},
 		{
 			name: "guest-event-setup",
