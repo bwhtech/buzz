@@ -79,7 +79,7 @@ class ActivityFeed:
 
 	def edit(self, version, changed: list) -> list[dict]:
 		changed_fields = {field for field, *_ in changed}
-		edited = [f for f in EDITED_FIELDS.get(self.reference_doctype, []) if f in changed_fields]
+		edited = [field for field in EDITED_FIELDS.get(self.reference_doctype, []) if field in changed_fields]
 		if not edited:
 			return []
 		meta = frappe.get_meta(self.reference_doctype)
