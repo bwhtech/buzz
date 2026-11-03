@@ -411,6 +411,16 @@
 	}
 }
 
+/* Locations without coordinates have no map; the list is the whole sheet. */
+.venue-map-dialog:not(:has(.venue-map-canvas)) {
+	width: min(420px, 100vw);
+}
+
+.venue-map-sheet:not(:has(.venue-map-canvas)) {
+	grid-template-columns: 1fr;
+	grid-template-rows: 1fr;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.venue-map-dialog,
 	.venue-map-dialog[open] {

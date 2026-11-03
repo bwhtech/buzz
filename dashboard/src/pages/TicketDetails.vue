@@ -179,7 +179,13 @@
 
 					<div>
 						<label class="block text-sm-medium text-ink-gray-6">{{ __("Venue") }}</label>
-						<p class="text-ink-gray-9">{{ ticketDetails.data.doc.venue }}</p>
+						<p class="text-ink-gray-9">
+							<VenueName
+								:name="ticketDetails.data.doc.venue"
+								:event-route="ticketDetails.data.event?.route"
+								:has-multiple-locations="ticketDetails.data.venue_has_multiple_locations"
+							/>
+						</p>
 					</div>
 
 					<div v-if="ticketDetails.data.doc.description">
@@ -302,6 +308,7 @@ import LucideExternalLink from "~icons/lucide/external-link"
 import LucideTriangleAlert from "~icons/lucide/triangle-alert"
 import LucideUserPlus from "~icons/lucide/user-plus"
 
+import VenueName from "@/components/common/VenueName.vue"
 import CheckInQrDialog from "@/components/dashboard/tickets/CheckInQrDialog.vue"
 import type { TicketAddOn } from "@/types"
 import { formatCurrency } from "@/utils/currency"
@@ -380,6 +387,7 @@ const ticketDetails = useCall<any, { ticket_id: string }>({
 			// Add-ons with proper titles
 			add_ons: data.add_ons || [],
 			event: data.event,
+			venue_has_multiple_locations: data.venue_has_multiple_locations,
 			booking: data.booking,
 			ticket_type: data.ticket_type,
 			can_transfer_ticket: data.can_transfer_ticket,

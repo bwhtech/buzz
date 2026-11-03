@@ -105,6 +105,13 @@
 	white-space: nowrap;
 }
 
+.buzz-event-card-clamp {
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
 .buzz-event-card-meta-item > :first-child {
 	flex-shrink: 0;
 }
