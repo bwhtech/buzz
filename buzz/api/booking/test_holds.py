@@ -10,7 +10,7 @@ from buzz.api.booking.exceptions import (
 	TicketsUnavailable,
 	TooManyTicketsHeld,
 )
-from buzz.tests.base_test_cases import BookingTestCase
+from buzz.tests.base_test_cases import BookingTestCase, authorize_payment
 from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
 	BuzzEventFactory,
@@ -247,7 +247,7 @@ class TestDraftBookingHold(HoldTestCase):
 	def test_a_payment_turns_the_hold_into_tickets(self):
 		booking = self.draft(2)
 
-		booking.on_payment_authorized("Completed")
+		authorize_payment(booking)
 
 		self.assertEqual(self.holds_of(booking.hold_token), 0)
 		self.assertEqual(self.ticket_type.remaining_tickets, 8)

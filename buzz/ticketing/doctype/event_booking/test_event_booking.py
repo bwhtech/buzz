@@ -6,7 +6,7 @@ from unittest.mock import patch
 import frappe
 
 from buzz.api.booking.exceptions import HiddenTicketType
-from buzz.tests.base_test_cases import BookingTestCase, CouponTestCase, attendee_rows
+from buzz.tests.base_test_cases import BookingTestCase, CouponTestCase, attendee_rows, authorize_payment
 from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
 	EventBookingFactory,
@@ -44,7 +44,7 @@ class TestTicketAvailability(BookingTestCase):
 		EventTicketFactory.create("submitted", event=self.event.name, ticket_type=paid)
 
 		with patch("buzz.ticketing.doctype.event_booking.event_booking.frappe.log_error") as log_error:
-			booking.on_payment_authorized("Completed")
+			authorize_payment(booking)
 
 		self.assertEqual(booking.docstatus, 1)
 		self.assertEqual(log_error.call_args.kwargs["reference_name"], booking.name)
@@ -55,7 +55,7 @@ class TestTicketAvailability(BookingTestCase):
 		frappe.db.set_value("Event Ticket Type", paid, "is_published", 0)
 		frappe.clear_document_cache("Event Ticket Type", paid)
 
-		booking.on_payment_authorized("Completed")
+		authorize_payment(booking)
 
 		self.assertEqual(booking.docstatus, 1)
 

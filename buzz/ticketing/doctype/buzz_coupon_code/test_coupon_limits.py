@@ -3,7 +3,7 @@ from unittest.mock import patch
 import frappe
 from frappe.utils import add_days, add_to_date, now_datetime, today
 
-from buzz.tests.base_test_cases import CouponTestCase
+from buzz.tests.base_test_cases import CouponTestCase, authorize_payment
 
 
 class TestCouponExpiry(CouponTestCase):
@@ -135,7 +135,7 @@ class TestCouponAfterPayment(CouponTestCase):
 		self.create_booking(coupon).submit()
 
 		with patch("buzz.ticketing.doctype.event_booking.event_booking.frappe.log_error") as log_error:
-			paid.on_payment_authorized("Completed")
+			authorize_payment(paid)
 
 		self.assert_confirmed_with_discount(paid, 50)
 		self.assertEqual(log_error.call_args.kwargs["reference_name"], paid.name)
@@ -147,7 +147,7 @@ class TestCouponAfterPayment(CouponTestCase):
 			self.create_booking(coupon, buyer_email="next@example.com")
 
 			with patch("buzz.ticketing.doctype.event_booking.event_booking.frappe.log_error") as log_error:
-				late.on_payment_authorized("Completed")
+				authorize_payment(late)
 
 		self.assertFalse(log_error.called)
 
@@ -156,7 +156,7 @@ class TestCouponAfterPayment(CouponTestCase):
 		paid = self.create_booking(coupon, buyer_email="twice@example.com")
 		self.create_booking(coupon, buyer_email="twice@example.com").submit()
 
-		paid.on_payment_authorized("Completed")
+		authorize_payment(paid)
 
 		self.assert_confirmed_with_discount(paid, 50)
 
@@ -164,7 +164,7 @@ class TestCouponAfterPayment(CouponTestCase):
 		paid = self.create_booking(self.create_coupon(expires_on=today()).name)
 
 		with self.freeze_time(add_days(today(), 1), tick=True):
-			paid.on_payment_authorized("Completed")
+			authorize_payment(paid)
 
 		self.assert_confirmed_with_discount(paid, 50)
 
@@ -173,7 +173,7 @@ class TestCouponAfterPayment(CouponTestCase):
 		paid = self.create_booking(coupon)
 		frappe.db.set_value("Buzz Coupon Code", coupon, "enabled", 0)
 
-		paid.on_payment_authorized("Completed")
+		authorize_payment(paid)
 
 		self.assert_confirmed_with_discount(paid, 50)
 
@@ -181,7 +181,7 @@ class TestCouponAfterPayment(CouponTestCase):
 		paid = self.create_booking()
 		self.create_coupon("automatic")
 
-		paid.on_payment_authorized("Completed")
+		authorize_payment(paid)
 
 		self.assert_confirmed_with_discount(paid, 0)
 		self.assertIsNone(paid.coupon_code)
