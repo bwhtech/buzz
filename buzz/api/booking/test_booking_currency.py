@@ -33,6 +33,19 @@ class TestBookingCurrency(BookingTestCase):
 		self.assertEqual(booking.currency, "INR")
 		self.assertEqual(booking.total_amount, 1000)
 
+	def test_attendees_share_one_currency_when_the_booking_has_none(self):
+		usd_only = self.create_ticket_type(USD_PRICE)
+		attendees = [
+			{"ticket_type": self.ticket_type, "first_name": "One", "email": "one@example.com"},
+			{"ticket_type": usd_only, "first_name": "Two", "email": "two@example.com"},
+		]
+		booking = EventBookingFactory.build(event=self.event.name, attendees=attendees)
+
+		with self.assertRaises(frappe.ValidationError):
+			booking.fetch_amounts_from_ticket_types()
+
+		self.assertEqual({attendee.currency for attendee in booking.attendees}, {"INR"})
+
 	def test_ticket_without_a_usd_price_cannot_be_paid_in_usd(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.create_booking(currency="USD", ticket_type=self.create_ticket_type(INR_PRICE))

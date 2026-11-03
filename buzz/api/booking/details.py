@@ -15,6 +15,7 @@ from buzz.api.booking.schemas import (
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, verify_booking_access_token
 from buzz.api.tickets import windows
 from buzz.events.doctype.event_venue.details import venue_details
+from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import add_on_options
 from buzz.utils import qr_data_uri
 
 TICKET_FIELDS = [
@@ -28,11 +29,11 @@ TICKET_FIELDS = [
 
 def ensure_confirmation_access(booking_id: str, token: str | None) -> None:
 	"""A guest holds the booking's token; a signed-in user needs read permission."""
-	# nosemgrep: unchecked-frappe-permission-call -- return value checked below
-	authorized = verify_booking_access_token(booking_id, token) or frappe.has_permission(
-		"Event Booking", "read", doc=booking_id
-	)
-	if not authorized:
+	if verify_booking_access_token(booking_id, token):
+		return
+	exists = frappe.db.exists("Event Booking", booking_id)
+	# nosemgrep: unchecked-frappe-permission-call -- return value checked here
+	if not exists or not frappe.has_permission("Event Booking", "read", doc=booking_id):
 		frappe.throw(_("You are not allowed to view this booking."), frappe.PermissionError)
 
 
@@ -171,7 +172,7 @@ def get_add_on_options_map(event_id: str) -> dict:
 		filters={"event": event_id, "user_selects_option": True},
 		fields=["name", "options"],
 	)
-	return {add_on.name: add_on.options.split("\n") if add_on.options else [] for add_on in event_add_ons}
+	return {add_on.name: add_on_options(add_on.options) for add_on in event_add_ons}
 
 
 def get_cancellation_requested_tickets(cancellation_request, tickets) -> list[str]:

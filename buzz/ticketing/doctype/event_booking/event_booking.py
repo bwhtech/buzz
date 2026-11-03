@@ -266,7 +266,8 @@ class EventBooking(Document):
 	def fetch_amounts_from_ticket_types(self):
 		for attendee in self.attendees:
 			ticket_type = frappe.get_cached_doc("Event Ticket Type", attendee.ticket_type)
-			attendee.currency = self.currency or ticket_type.prices[0].currency
+			self.currency = self.currency or ticket_type.prices[0].currency
+			attendee.currency = self.currency
 			attendee.amount = ticket_type.price_in(attendee.currency)
 
 	def validate_add_ons_currency(self):

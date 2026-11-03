@@ -42,6 +42,7 @@ from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	default_currency,
 	start_capacity_transaction,
 )
+from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import add_on_options
 from buzz.utils import ZOOM_BACKED_CATEGORIES
 
 if TYPE_CHECKING:
@@ -127,8 +128,7 @@ class BookingService:
 				if not catalog:
 					AddOnNotForEvent.throw()
 				if catalog.user_selects_option:
-					options = (catalog.options or "").split("\n")
-					if add_on.get("value") not in options:
+					if add_on.get("value") not in add_on_options(catalog.options):
 						InvalidAddOnValue.throw(value=add_on.get("value"))
 
 	def allowed_add_ons(self) -> dict:

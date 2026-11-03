@@ -63,6 +63,10 @@ class TestBookingConfirmation(BookingTestCase):
 				with self.subTest(token=token), self.assertRaises(frappe.PermissionError):
 					get_booking_confirmation(booking.name, token=token)
 
+	def test_a_missing_booking_is_refused_like_an_unreadable_one(self):
+		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
+			get_booking_confirmation("B-DOES-NOT-EXIST", token="wrong-token")
+
 	def test_a_user_with_access_needs_no_token(self):
 		booking = self.create_submitted_booking()
 
