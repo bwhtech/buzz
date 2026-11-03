@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -128,10 +130,10 @@ class TestMovePaymentsToBwhPayments(IntegrationTestCase):
 			amount=10,
 		)
 		frappe.db.delete("Event Booking", orphan_booking.name)
-		errors_before = frappe.db.count("Error Log")
 
-		PaymentHistoryMigration().run()
+		with patch("buzz.patches.move_payments_to_bwh_payments.frappe.log_error") as log_error:
+			PaymentHistoryMigration().run()
 
 		self.assertIsNone(frappe.db.get_value("Event Payment", orphan.name, "payment_request"))
 		self.assertTrue(frappe.db.get_value("Event Payment", self.paid.name, "payment_request"))
-		self.assertEqual(frappe.db.count("Error Log"), errors_before + 1)
+		log_error.assert_called_once()
