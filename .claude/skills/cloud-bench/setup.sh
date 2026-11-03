@@ -32,10 +32,15 @@ install_system_packages() {
 	DEBIAN_FRONTEND=noninteractive apt-get install -y -qq mariadb-server mariadb-client libmariadb-dev pkg-config
 }
 
+mariadb_alive() {
+	# Root has no password on a fresh install and "root" after the first run.
+	mariadb-admin ping --silent 2> /dev/null || mariadb-admin -u root -proot ping --silent 2> /dev/null
+}
+
 start_mariadb() {
-	if ! mariadb-admin ping --silent 2> /dev/null; then
-		(cd /tmp && mysqld_safe --user=mysql > /tmp/mariadb.log 2>&1 &)
-		until mariadb-admin ping --silent 2> /dev/null; do sleep 1; done
+	if ! mariadb_alive; then
+		pgrep mariadbd > /dev/null || (cd /tmp && mysqld_safe --user=mysql > /tmp/mariadb.log 2>&1 &)
+		until mariadb_alive; do sleep 1; done
 	fi
 	# A fresh install uses unix_socket auth; bench needs a root password.
 	if mariadb -u root -e "SELECT 1" > /dev/null 2>&1; then
