@@ -136,6 +136,8 @@
 /* The sheet. Opening eases in; closing is quicker, since the reader is done with it. */
 
 .venue-map-dialog {
+	--venue-map-inset: 20px;
+	--venue-map-close-size: 32px;
 	width: min(1080px, calc(100vw - 32px));
 	max-width: none;
 	height: min(680px, calc(100dvh - 32px));
@@ -202,7 +204,8 @@
 	display: flex;
 	align-items: center;
 	gap: 12px;
-	padding: 20px 20px 16px;
+	/* Clears the close button, which sits over the sheet's top left corner. */
+	padding: 20px 20px 16px calc(var(--venue-map-inset) + var(--venue-map-close-size) + 12px);
 	border-bottom: 1px solid var(--border);
 }
 
@@ -213,14 +216,20 @@
 }
 
 .venue-map-close {
+	position: absolute;
+	top: var(--venue-map-inset);
+	left: var(--venue-map-inset);
+	/* Above the map's canvas, markers and controls. */
+	z-index: 10;
 	display: grid;
 	place-items: center;
-	width: 32px;
-	height: 32px;
+	width: var(--venue-map-close-size);
+	height: var(--venue-map-close-size);
 	border: 1px solid var(--border);
 	border-radius: 50%;
 	background: var(--surface);
 	color: var(--ink-strong);
+	box-shadow: 0 2px 8px rgb(0 0 0 / 0.24);
 	cursor: pointer;
 	transition: scale 160ms var(--ease-out);
 }
@@ -408,6 +417,11 @@
 	.venue-map-sidebar {
 		border-right: 0;
 		border-top: 1px solid var(--border);
+	}
+
+	/* The close button sits over the map here, so the heading needs no room for it. */
+	.venue-map-sheet:has(.venue-map-canvas) .venue-map-header {
+		padding-left: 20px;
 	}
 }
 

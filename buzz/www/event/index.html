@@ -52,10 +52,10 @@
 
 	{% macro locations_dialog() %}
 	<dialog class="venue-map-dialog" id="venue-locations" aria-labelledby="venue-map-title"{% if venue.dot_map %} data-map-script="{{ bundled_asset('venue_map.bundle.ts') }}" data-map-style="{{ bundled_asset('venue_map.bundle.css') }}"{% endif %}>
+		<form method="dialog"><button class="venue-map-close" aria-label="{{ _('Close') }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></form>
 		<div class="venue-map-sheet">
 			<aside class="venue-map-sidebar">
 				<header class="venue-map-header">
-					<form method="dialog"><button class="venue-map-close" aria-label="{{ _('Close') }}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></form>
 					<div>
 						<h2 id="venue-map-title" class="venue-map-title">{{ _("Locations") }}</h2>
 						<p class="aside-note">{{ _("{0} places").format(venue.locations | length) }}</p>
