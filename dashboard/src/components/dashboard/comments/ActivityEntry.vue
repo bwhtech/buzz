@@ -31,7 +31,17 @@ const draft = ref("")
 
 const posted = computed(() => dayjsLocal(props.entry.creation))
 const exactTime = computed(() => posted.value.format("D MMM YYYY, h:mm A"))
-const isEvent = computed(() => props.entry.kind === "change" || props.entry.kind === "created")
+const isEvent = computed(() => props.entry.kind !== "comment" && props.entry.kind !== "email")
+const editedFields = computed(() =>
+	new Intl.ListFormat("en", { type: "conjunction" }).format(
+		props.entry.fields.map((field) => field.toLowerCase()),
+	),
+)
+const railIcons: Record<string, string> = {
+	change: "lucide-circle-dot",
+	edit: "lucide-pencil",
+	created: "lucide-inbox",
+}
 const isAuthor = computed(
 	() => props.entry.kind === "comment" && props.entry.owner === sessionUser(),
 )
@@ -70,11 +80,7 @@ function save(content: string) {
 				v-if="isEvent"
 				class="flex size-[22px] items-center justify-center rounded-full bg-surface-base text-ink-gray-5 ring-1 ring-outline-gray-2"
 			>
-				<span
-					:class="entry.kind === 'change' ? 'lucide-circle-dot' : 'lucide-inbox'"
-					class="size-3"
-					aria-hidden="true"
-				/>
+				<span :class="railIcons[entry.kind]" class="size-3" aria-hidden="true" />
 			</span>
 			<Avatar
 				v-else
@@ -109,6 +115,7 @@ function save(content: string) {
 					/>
 				</span>
 			</template>
+			<span v-else-if="entry.kind === 'edit'">updated the {{ editedFields }}</span>
 			<span v-else>{{ createdLabel }}</span>
 			<span class="text-ink-gray-4" aria-hidden="true">·</span>
 			<Tooltip :text="exactTime">
