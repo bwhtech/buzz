@@ -171,9 +171,25 @@ class TestDocumentComments(TeamPermissionTestCase):
 		self.assertEqual((feed[3].field, feed[3].new_value), ("status", "Shortlisted"))
 
 	def test_untracked_field_edits_stay_out_of_the_feed(self):
-		self.change_proposal(phone="+91-9820000000")
+		self.change_proposal(submitted_by=self.viewer)
 
 		self.assertEqual([entry.kind for entry in self.feed_as(self.alice)], ["created"])
+
+	def test_one_save_of_text_fields_is_one_edit_entry_naming_them(self):
+		self.change_proposal(title="A sharper title", description="<p>A sharper pitch</p>")
+
+		feed = self.feed_as(self.alice)
+
+		self.assertEqual([entry.kind for entry in feed], ["created", "edit"])
+		self.assertEqual(feed[1].fields, ["Title", "Description"])
+
+	def test_status_and_text_edits_in_one_save_are_separate_entries(self):
+		self.change_proposal(status="Shortlisted", title="A sharper title")
+
+		feed = self.feed_as(self.alice)
+
+		self.assertEqual(sorted(entry.kind for entry in feed[1:]), ["change", "edit"])
+		self.assertEqual(next(entry for entry in feed if entry.kind == "edit").fields, ["Title"])
 
 	def change_proposal(self, **values):
 		proposal = frappe.get_doc("Talk Proposal", self.proposal)

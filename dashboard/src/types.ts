@@ -147,7 +147,7 @@ export interface EmailAttachment {
 
 export interface ActivityEntry {
 	name: string
-	kind: "comment" | "email" | "change" | "created"
+	kind: "comment" | "email" | "change" | "created" | "edit"
 	owner: string
 	owner_name: string
 	owner_image: string | null
@@ -160,6 +160,7 @@ export interface ActivityEntry {
 	cc: string[]
 	received: boolean
 	field: string | null
+	fields: string[]
 	old_value: string | null
 	new_value: string | null
 }
