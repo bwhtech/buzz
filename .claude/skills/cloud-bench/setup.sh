@@ -39,7 +39,8 @@ mariadb_alive() {
 
 start_mariadb() {
 	if ! mariadb_alive; then
-		pgrep mariadbd > /dev/null || (cd /tmp && mysqld_safe --user=mysql > /tmp/mariadb.log 2>&1 &)
+		# Redirect the subshell too, or it holds the caller's stdout open (a piped run never ends).
+		pgrep mariadbd > /dev/null || (cd /tmp && mysqld_safe --user=mysql &) > /tmp/mariadb.log 2>&1
 		until mariadb_alive; do sleep 1; done
 	fi
 	# A fresh install uses unix_socket auth; bench needs a root password.
