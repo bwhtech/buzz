@@ -21,6 +21,7 @@ from buzz.events.doctype.buzz_form.form_types import (
 )
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 from buzz.events.doctype.event_check_in_zone.event_check_in_zone import create_default_zone
+from buzz.events.doctype.event_template.event_template import TEMPLATE_FIELDS
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import create_ticket_categories
 from buzz.utils import get_time_zone_label, only_if_app_installed
 
@@ -471,34 +472,9 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 		if value:
 			event.set(field, value)
 
-	# Field mapping for direct copy
-	field_map = {
-		"category": "category",
-		"host": "host",
-		"banner_image": "banner_image",
-		"short_description": "short_description",
-		"about": "about",
-		"medium": "medium",
-		"venue": "venue",
-		"allow_guest_booking": "allow_guest_booking",
-		"guest_verification_method": "guest_verification_method",
-		"time_zone": "time_zone",
-		"send_ticket_email": "send_ticket_email",
-		"ticket_email_template": "ticket_email_template",
-		"ticket_print_format": "ticket_print_format",
-		"apply_tax": "apply_tax",
-		"tax_inclusive": "tax_inclusive",
-		"tax_label": "tax_label",
-		"tax_percentage": "tax_percentage",
-		"auto_send_pitch_deck": "auto_send_pitch_deck",
-		"sponsor_deck_email_template": "sponsor_deck_email_template",
-		"sponsor_deck_reply_to": "sponsor_deck_reply_to",
-		"sponsor_deck_cc": "sponsor_deck_cc",
-	}
-
-	for option_key, field_name in field_map.items():
-		if options.get(option_key):
-			event.set(field_name, template.get(field_name))
+	for field in TEMPLATE_FIELDS:
+		if options.get(field):
+			event.set(field, template.get(field))
 
 	# Copy child tables
 	if options.get("payment_gateways"):

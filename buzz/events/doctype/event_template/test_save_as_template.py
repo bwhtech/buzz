@@ -6,6 +6,7 @@ from buzz.events.doctype.event_template.event_template import create_template_fr
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzFormFactory,
+	EmailTemplateFactory,
 	EventTicketCategoryFactory,
 	EventTicketTypeFactory,
 	TicketAddOnFactory,
@@ -17,6 +18,11 @@ EVENT_FIELDS = {
 	"tax_label": "GST",
 	"tax_percentage": 18,
 }
+BOOKING_EMAIL_FIELDS = (
+	"send_booking_confirmation_email",
+	"booking_confirmation_email_template",
+	"offline_acknowledgement_email_template",
+)
 ALL_OPTIONS = dict.fromkeys(["category", "host", "apply_tax", "ticket_types", *EVENT_FIELDS], 1)
 
 
@@ -86,6 +92,25 @@ class TestSaveEventAsTemplate(IntegrationTestCase):
 		)
 		lab = frappe.get_value("Event Ticket Type", {"event": new_event, "title": "Lab"}, "category")
 		self.assertEqual(lab, category.name)
+
+	def test_round_trip_keeps_booking_email_settings(self):
+		confirmation = EmailTemplateFactory.create().name
+		acknowledgement = EmailTemplateFactory.create().name
+		original = BuzzEventFactory.create(
+			send_booking_confirmation_email=0,
+			booking_confirmation_email_template=confirmation,
+			offline_acknowledgement_email_template=acknowledgement,
+		)
+		expected = (0, confirmation, acknowledgement)
+		options = dict.fromkeys(["category", "host", *BOOKING_EMAIL_FIELDS], 1)
+
+		template = self.save_as_template(original, options)
+		team = frappe.as_json({"team": original.team})
+		new_event = create_from_template(template.name, frappe.as_json(options), team)
+
+		self.assertEqual(tuple(template.get(field) for field in BOOKING_EMAIL_FIELDS), expected)
+		copied = frappe.get_doc("Buzz Event", new_event)
+		self.assertEqual(tuple(copied.get(field) for field in BOOKING_EMAIL_FIELDS), expected)
 
 	def test_requires_template_create_permission(self):
 		event = BuzzEventFactory.create()

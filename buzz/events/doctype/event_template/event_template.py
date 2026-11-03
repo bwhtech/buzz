@@ -13,6 +13,32 @@ from buzz.events.doctype.buzz_form.form_types import (
 )
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 
+TEMPLATE_FIELDS = (
+	"category",
+	"host",
+	"banner_image",
+	"short_description",
+	"about",
+	"medium",
+	"venue",
+	"allow_guest_booking",
+	"guest_verification_method",
+	"time_zone",
+	"send_ticket_email",
+	"ticket_email_template",
+	"ticket_print_format",
+	"send_booking_confirmation_email",
+	"booking_confirmation_email_template",
+	"offline_acknowledgement_email_template",
+	"apply_tax",
+	"tax_label",
+	"tax_percentage",
+	"auto_send_pitch_deck",
+	"sponsor_deck_email_template",
+	"sponsor_deck_reply_to",
+	"sponsor_deck_cc",
+)
+
 
 class EventTemplate(Document):
 	# begin: auto-generated types
@@ -41,11 +67,14 @@ class EventTemplate(Document):
 		apply_tax: DF.Check
 		auto_send_pitch_deck: DF.Check
 		banner_image: DF.AttachImage | None
+		booking_confirmation_email_template: DF.Link | None
 		category: DF.Link | None
 		guest_verification_method: DF.Literal["None", "Email OTP", "Phone OTP"]
 		host: DF.Link | None
 		medium: DF.Literal["In Person", "Online"]
+		offline_acknowledgement_email_template: DF.Link | None
 		payment_gateways: DF.Table[EventPaymentGateway]
+		send_booking_confirmation_email: DF.Check
 		send_ticket_email: DF.Check
 		short_description: DF.SmallText | None
 		sponsor_deck_attachments: DF.Table[SponsorshipDeckItem]
@@ -91,33 +120,9 @@ def create_template_from_event(event_name: str, template_name: str, options: str
 	template = frappe.new_doc("Event Template")
 	template.template_name = template_name
 
-	# Field mapping for direct copy
-	field_map = {
-		"category": "category",
-		"host": "host",
-		"banner_image": "banner_image",
-		"short_description": "short_description",
-		"about": "about",
-		"medium": "medium",
-		"venue": "venue",
-		"allow_guest_booking": "allow_guest_booking",
-		"guest_verification_method": "guest_verification_method",
-		"time_zone": "time_zone",
-		"send_ticket_email": "send_ticket_email",
-		"ticket_email_template": "ticket_email_template",
-		"ticket_print_format": "ticket_print_format",
-		"apply_tax": "apply_tax",
-		"tax_label": "tax_label",
-		"tax_percentage": "tax_percentage",
-		"auto_send_pitch_deck": "auto_send_pitch_deck",
-		"sponsor_deck_email_template": "sponsor_deck_email_template",
-		"sponsor_deck_reply_to": "sponsor_deck_reply_to",
-		"sponsor_deck_cc": "sponsor_deck_cc",
-	}
-
-	for option_key, field_name in field_map.items():
-		if options.get(option_key):
-			template.set(field_name, event.get(field_name))
+	for field in TEMPLATE_FIELDS:
+		if options.get(field):
+			template.set(field, event.get(field))
 
 	# Copy child tables from event
 	if options.get("payment_gateways"):
