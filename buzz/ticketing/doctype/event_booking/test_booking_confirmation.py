@@ -1,7 +1,9 @@
 from contextlib import ExitStack
+from io import BytesIO
 from unittest.mock import patch
 
 import frappe
+from pypdf import PdfWriter
 
 from buzz.api.booking import (
 	download_invoice,
@@ -147,6 +149,7 @@ class TestBookingConfirmation(BookingTestCase):
 
 		self.assertEqual(frappe.response.type, "download")
 		self.assertEqual(frappe.response.filename, f"Invoice-{booking.name}.pdf")
+		self.assertTrue(frappe.response.filecontent.startswith(b"%PDF"))
 		self.assertFalse(frappe.flags.ignore_print_permissions)
 
 	def test_a_booking_without_an_invoice_request_has_no_invoice(self):
@@ -201,5 +204,11 @@ def stub_pdf_rendering() -> ExitStack:
 
 
 def add_blank_page(html: str, options=None, output=None, **kwargs):
-	output.add_blank_page(width=100, height=100)
-	return output
+	# Tickets pass a writer to collect every page; a single print wants the PDF bytes back.
+	writer = output or PdfWriter()
+	writer.add_blank_page(width=100, height=100)
+	if output:
+		return output
+	buffer = BytesIO()
+	writer.write(buffer)
+	return buffer.getvalue()

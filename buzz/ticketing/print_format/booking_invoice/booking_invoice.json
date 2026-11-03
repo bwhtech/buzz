@@ -9,7 +9,7 @@
  "docstatus": 0,
  "doctype": "Print Format",
  "font_size": 14,
- "html": "{% include \"buzz/templates/print_formats/booking_invoice.html\" %}",
+ "html": "",
  "idx": 0,
  "line_breaks": 0,
  "margin_bottom": 15.0,

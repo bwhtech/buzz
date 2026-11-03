@@ -136,19 +136,21 @@ class BookingInvoice:
 
 	def totals(self) -> list[dict]:
 		booking = self.booking
-		rows = [(_("Subtotal"), booking.net_amount)]
+		rows = [self.total_row(_("Subtotal"), booking.net_amount)]
 		if booking.discount_amount:
-			rows.append((self.discount_label(), -flt(booking.discount_amount)))
+			rows.append(self.total_row(self.discount_label(), -flt(booking.discount_amount)))
 		if booking.tax_amount and not self.is_tax_inclusive():
-			rows.append((self.tax_label(), booking.tax_amount))
-		rows.append((_("Total"), booking.total_amount))
+			rows.append(self.total_row(self.tax_label(), booking.tax_amount))
+		rows.append(self.total_row(_("Total"), booking.total_amount, is_total=True))
 		if booking.refunded_amount:
-			rows.append((_("Refunded"), -flt(booking.refunded_amount)))
-			rows.append((_("Net paid"), flt(booking.total_amount) - flt(booking.refunded_amount)))
-		return [
-			{"label": label, "amount": self.money(amount), "is_total": label == _("Total")}
-			for label, amount in rows
-		]
+			rows.append(self.total_row(_("Refunded"), -flt(booking.refunded_amount)))
+			rows.append(
+				self.total_row(_("Net paid"), flt(booking.total_amount) - flt(booking.refunded_amount))
+			)
+		return rows
+
+	def total_row(self, label: str, amount: float, is_total: bool = False) -> dict:
+		return {"label": label, "amount": self.money(amount), "is_total": is_total}
 
 	def discount_label(self) -> str:
 		code = self.booking.coupon_code and frappe.db.get_value(

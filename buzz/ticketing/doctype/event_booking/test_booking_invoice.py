@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.utils import fmt_money
 
@@ -177,7 +179,9 @@ class TestBookingInvoice(BookingTestCase):
 		booking = self.create_invoice_booking(count=1)
 		booking.submit()
 
-		html = frappe.get_print("Event Booking", booking.name, "Booking Invoice", as_pdf=False)
+		# CI never runs bench build, so printview has no assets.json to read.
+		with patch("frappe.utils.get_assets_json", return_value={}):
+			html = frappe.get_print("Event Booking", booking.name, "Booking Invoice", as_pdf=False)
 
 		ticket_title = frappe.db.get_value("Event Ticket Type", self.ticket_type, "title")
 		for expected in (booking.name, SELLER_TAX_ID, BUYER_TAX_ID, ticket_title):
