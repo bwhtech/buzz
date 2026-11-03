@@ -1,6 +1,6 @@
 from frappe import _lt
 
-from buzz.api.exceptions import BuzzAPIError, Conflict
+from buzz.api.exceptions import BuzzAPIError, Conflict, ResourceNotFound
 
 
 class TooManyOTPAttempts(BuzzAPIError):
@@ -55,6 +55,11 @@ class TooManyTicketsInBooking(BuzzAPIError):
 class InvoiceDetailsMissing(BuzzAPIError):
 	title = _lt("Invoice Details Missing")
 	message = _lt("A tax invoice needs your tax ID and business name.")
+
+
+class InvoiceUnavailable(ResourceNotFound):
+	title = _lt("Invoice Unavailable")
+	message = _lt("This booking has no invoice.")
 
 
 class InvalidCoupon(BuzzAPIError):

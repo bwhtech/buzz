@@ -1,5 +1,6 @@
-"""Files a booking's confirmation page hands out: the calendar invite and the tickets."""
+"""Files a booking's confirmation page hands out: the calendar invite, tickets and invoice."""
 
+from contextlib import contextmanager
 from io import BytesIO
 from typing import TYPE_CHECKING
 
@@ -7,6 +8,7 @@ import frappe
 from pypdf import PdfWriter
 
 from buzz.api.booking.details import ensure_confirmation_access
+from buzz.api.booking.exceptions import InvoiceUnavailable
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import generate_ics_file, qr_data_uri
 
@@ -30,21 +32,37 @@ def tickets_pdf(booking_id: str, token: str | None) -> None:
 	send_file(f"Tickets-{booking_id}.pdf", render_tickets(tickets, print_format))
 
 
-def render_tickets(tickets: list[str], print_format: str) -> bytes:
-	# Access to the booking was checked above; a guest holding only the token has no
-	# permission of their own on the tickets for frappe's print check to find.
+def invoice_pdf(booking_id: str, token: str | None) -> None:
+	ensure_confirmation_access(booking_id, token)
+	booking = frappe.get_doc("Event Booking", booking_id)
+	if not booking.has_invoice():
+		InvoiceUnavailable.throw()
+	with print_permissions_ignored():
+		pdf = frappe.get_print("Event Booking", booking_id, "Booking Invoice", doc=booking, as_pdf=True)
+	send_file(f"Invoice-{booking_id}.pdf", pdf)
+
+
+@contextmanager
+def print_permissions_ignored():
+	# Access to the booking was checked by the caller; a guest holding only the token has no
+	# permission of their own on the documents for frappe's print check to find.
 	frappe.flags.ignore_print_permissions = True
 	try:
-		writer = PdfWriter()
+		yield
+	finally:
+		frappe.flags.ignore_print_permissions = False
+
+
+def render_tickets(tickets: list[str], print_format: str) -> bytes:
+	writer = PdfWriter()
+	with print_permissions_ignored():
 		for name in tickets:
 			frappe.get_print(
 				"Event Ticket", name, print_format, doc=inlined_qr(name), as_pdf=True, output=writer
 			)
-		buffer = BytesIO()
-		writer.write(buffer)
-		return buffer.getvalue()
-	finally:
-		frappe.flags.ignore_print_permissions = False
+	buffer = BytesIO()
+	writer.write(buffer)
+	return buffer.getvalue()
 
 
 def inlined_qr(name: str) -> "EventTicket":

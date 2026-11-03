@@ -66,6 +66,9 @@
 			class="fade-up-in"
 			style="animation-delay: 340ms"
 			:booking="confirmation.data.booking"
+			:invoice-url="
+				confirmation.data.booking.invoice_available ? bookingFileUrl('download_invoice') : undefined
+			"
 		>
 			<template #footer>{{ paymentLine }}</template>
 		</BookingFinancialSummary>
