@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 
 from buzz.events.doctype.event_venue.details import VenueLocation
 from buzz.events.og_text import font
-from buzz.www.event.dot_map import DotMap
+from buzz.www.event.dot_map import COARSE_DOTS, FINE_DOTS, DotMap
 
 # Bump when the drawing changes, so every venue renders again on its next email
 RENDER_VERSION = 1
@@ -16,6 +16,7 @@ RENDER_VERSION = 1
 WIDTH, HEIGHT = 1072, 670
 COLOURS = {"background": "#f6f6f6", "land": "#c8c8c8", "pin": "#171717", "number": "#ffffff"}
 PIN_RADIUS, PIN_RING = 36, 12
+DOT_FILES = {FINE_DOTS["url"]: "world-dots.svg", COARSE_DOTS["url"]: "world-dots-coarse.svg"}
 
 
 class LocationsMapImage:
@@ -92,7 +93,6 @@ class LocationsMapImage:
 
 @cache
 def land_dots(dots_url: str) -> list[tuple[float, float]]:
-	"""The dots of `world-dots.svg`, each drawn as a zero length path segment."""
-	file_name = dots_url.split("/images/")[1].split("#")[0]
-	with open(frappe.get_app_path("buzz", "public", "images", file_name)) as svg:
-		return [(float(x), float(y)) for x, y in re.findall(r"M([\d.]+) ([\d.]+)h0", svg.read())]
+	"""The dots of the dot map's SVG, each drawn as a zero length path segment."""
+	svg = frappe.read_file(frappe.get_app_path("buzz", "public", "images", DOT_FILES[dots_url]))
+	return [(float(x), float(y)) for x, y in re.findall(r"M([\d.]+) ([\d.]+)h0", svg)]
