@@ -48,6 +48,16 @@ type EventShellDoc = {
 	team: string | null
 	is_published: 0 | 1
 	theme: string | null
+	route: string | null
+	start_date?: string
+	start_time?: string | null
+	end_time?: string | null
+	time_zone_label?: string | null
+	time_zone?: string | null
+	short_description?: string | null
+	banner_image?: string | null
+	meta_image?: string | null
+	og_image?: string | null
 }
 
 /**
@@ -58,8 +68,9 @@ type EventShellDoc = {
  * lands in both without either knowing about the other.
  */
 export function useEventDoc(event: () => string) {
-	// The empty string holds the initial fetch until the route param resolves.
-	return useDoc<EventShellDoc>({ doctype: "Buzz Event", name: () => event() || "" })
+	// The empty string holds the initial fetch until the route param resolves. Saved docs
+	// return autoincrement links as numbers, which useDoc cannot take as a name.
+	return useDoc<EventShellDoc>({ doctype: "Buzz Event", name: () => String(event() || "") })
 }
 
 /** The session user's level in each section of an event, for the sidebar and the page gates. */

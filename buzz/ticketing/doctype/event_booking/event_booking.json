@@ -33,6 +33,7 @@
   "total_amount",
   "currency",
   "coupon_code",
+  "access_code",
   "discount_amount",
   "refund_section",
   "refund_status",
@@ -194,6 +195,14 @@
    "fieldtype": "Link",
    "label": "Coupon Code",
    "options": "Buzz Coupon Code"
+  },
+  {
+   "description": "The access code that allowed the hidden tickets",
+   "fieldname": "access_code",
+   "fieldtype": "Link",
+   "label": "Access Code",
+   "options": "Buzz Coupon Code",
+   "read_only": 1
   },
   {
    "fieldname": "discount_amount",
@@ -378,7 +387,7 @@
    "link_fieldname": "booking"
   }
  ],
- "modified": "2026-10-25 10:00:00.000000",
+ "modified": "2026-11-03 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Booking",

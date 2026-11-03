@@ -5,29 +5,14 @@
 			:description="__('Order confirmation and invoice are sent here')"
 		>
 			<div class="grid grid-cols-1 items-start gap-3.5 md:grid-cols-2">
-				<FormControl
-					v-model="billing.buyer_name"
-					:label="__('Full name')"
+				<CoreFieldInputs
+					:fields="coreFields"
+					:model="billing"
+					:errors="errors"
+					:show-errors="showErrors"
 					:size="inputSize"
-					:error="shown(errors.buyer_name)"
-					required
-					autocomplete="name"
-				/>
-				<FormControl
-					v-model="billing.buyer_email"
-					type="email"
-					:label="__('Email')"
-					:size="inputSize"
-					:error="shown(errors.buyer_email)"
-					required
-					autocomplete="email"
-				/>
-				<PhoneInput
-					v-model="billing.buyer_phone"
-					:label="__('Phone')"
-					:size="inputSize"
-					:error="phoneError || shown(errors.buyer_phone)"
-					:required="phoneRequired"
+					:required="requiredBuyer"
+					:phone-error="phoneError"
 				/>
 			</div>
 		</RegistrationPanel>
@@ -101,9 +86,10 @@ import type { BillingDetails } from "@/composables/useBookingFormStorage"
 import type { FrappeField } from "@/composables/useCustomFields"
 
 import CustomFieldsSection from "../CustomFieldsSection.vue"
-import PhoneInput from "../PhoneInput.vue"
 import type { AttendeeErrors } from "./attendeeValidation"
 import Collapse from "./Collapse.vue"
+import CoreFieldInputs from "./CoreFieldInputs.vue"
+import type { CoreField } from "./coreFields"
 import { INDIAN_STATES } from "./indianStates"
 import RegistrationPanel from "./RegistrationPanel.vue"
 import { isGstLabel, taxIdFieldLabel } from "./registrationSteps"
@@ -112,6 +98,7 @@ const props = defineProps<{
 	billing: BillingDetails
 	phoneRequired: boolean
 	phoneError: string
+	coreFields: CoreField[]
 	bookingCustomFields: FrappeField[]
 	showInvoice: boolean
 	taxLabel: string
@@ -127,5 +114,10 @@ const bookingCustomFieldsData = defineModel<Record<string, any>>("bookingCustomF
 const isGst = computed(() => isGstLabel(props.taxLabel))
 const taxIdLabel = computed(() => taxIdFieldLabel(props.taxLabel))
 const inputSize = computed(() => (props.large ? "lg" : "sm"))
+const requiredBuyer = computed(() =>
+	props.phoneRequired
+		? ["buyer_name", "buyer_email", "buyer_phone"]
+		: ["buyer_name", "buyer_email"],
+)
 const shown = (error?: string) => (props.showErrors ? error : undefined)
 </script>

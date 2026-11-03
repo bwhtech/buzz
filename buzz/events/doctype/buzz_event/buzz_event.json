@@ -33,29 +33,39 @@
   "external_links_section",
   "external_links",
   "tab_2_tab",
-  "schedule",
   "website_tab",
   "is_published",
   "is_featured",
   "show_countdown",
   "route",
-  "default_ticket_type",
   "column_break_ndtl",
-  "external_registration_page",
-  "registration_url",
   "meta_image",
   "og_image",
   "card_image",
   "theme",
+  "section_break_kwlt",
+  "featured_speakers",
+  "registrations_tab",
+  "default_ticket_type",
+  "external_registration_page",
+  "registration_url",
   "section_break_rmtj",
   "allow_guest_booking",
   "column_break_lzcw",
   "guest_verification_method",
-  "auto_closures_section",
-  "registrations_close_at",
   "requires_approval",
-  "section_break_kwlt",
-  "featured_speakers",
+  "ticket_email_section",
+  "send_ticket_email",
+  "section_break_uoke",
+  "attach_calendar_invite",
+  "ticket_email_template",
+  "column_break_ukql",
+  "attach_email_ticket",
+  "ticket_print_format",
+  "booking_confirmation_email_section",
+  "send_booking_confirmation_email",
+  "booking_confirmation_email_template",
+  "offline_acknowledgement_email_template",
   "payments_tab",
   "section_break_owtc",
   "payment_gateways",
@@ -76,22 +86,8 @@
   "column_break_rgkz",
   "sponsor_deck_attachments",
   "customisations_tab",
-  "send_ticket_email",
-  "section_break_uoke",
-  "attach_calendar_invite",
-  "ticket_email_template",
-  "column_break_ukql",
-  "attach_email_ticket",
-  "ticket_print_format",
-  "booking_confirmation_email_section",
-  "send_booking_confirmation_email",
-  "booking_confirmation_email_template",
-  "offline_acknowledgement_email_template",
   "talks_section",
   "allow_editing_talks_after_acceptance",
-  "custom_forms_tab",
-  "forms_section",
-  "custom_forms",
   "connections_tab",
   "proposal"
  ],
@@ -270,12 +266,6 @@
    "label": "Schedule"
   },
   {
-   "fieldname": "schedule",
-   "fieldtype": "Table",
-   "label": "Schedule",
-   "options": "Schedule Item"
-  },
-  {
    "fieldname": "payments_tab",
    "fieldtype": "Tab Break",
    "label": "Payments"
@@ -330,16 +320,6 @@
    "label": "Ticket Print Format",
    "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Event Ticket\"]]",
    "options": "Print Format"
-  },
-  {
-   "fieldname": "forms_section",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "custom_forms",
-   "fieldtype": "Table",
-   "label": "Custom Forms",
-   "options": "Buzz Event Form"
   },
   {
    "fieldname": "talks_section",
@@ -594,22 +574,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "auto_closures_section",
-   "fieldtype": "Section Break",
-   "label": "Auto Closures"
-  },
-  {
-   "fieldname": "registrations_close_at",
-   "fieldtype": "Datetime",
-   "label": "Registrations Close At",
-   "no_copy": 1
-  },
-  {
-   "fieldname": "custom_forms_tab",
-   "fieldtype": "Tab Break",
-   "label": "Forms"
-  },
-  {
    "fieldname": "team",
    "fieldtype": "Link",
    "in_standard_filter": 1,
@@ -629,6 +593,16 @@
    "fieldname": "requires_approval",
    "fieldtype": "Check",
    "label": "Require Approval for All Tickets"
+  },
+  {
+   "fieldname": "registrations_tab",
+   "fieldtype": "Tab Break",
+   "label": "Registrations"
+  },
+  {
+   "fieldname": "ticket_email_section",
+   "fieldtype": "Section Break",
+   "label": "Ticket Email"
   }
  ],
  "grid_page_length": 50,
@@ -677,7 +651,7 @@
   },
   {
    "group": "General",
-   "link_doctype": "Event Track",
+   "link_doctype": "Buzz Schedule",
    "link_fieldname": "event"
   },
   {
@@ -706,7 +680,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-10-25 10:00:00.000000",
+ "modified": "2026-11-03 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

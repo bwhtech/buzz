@@ -13,10 +13,13 @@
 				@changed="confirmation.reload()"
 			/>
 			<SuccessHero
-				v-else
+				v-else-if="isConfirmed"
 				:event-title="event.title"
 				:ticket-count="confirmation.data.tickets.length"
+				:title="confirmation.data.success?.title"
+				:note="safeMarkdown(confirmation.data.success?.message)"
 			/>
+			<UnconfirmedHero v-else :booking-id="bookingId" />
 
 			<EventSummaryCard
 				class="fade-up-in"
@@ -27,7 +30,7 @@
 			/>
 
 			<div
-				v-if="!approval"
+				v-if="isConfirmed"
 				class="fade-up-in flex flex-wrap justify-center gap-2"
 				style="animation-delay: 220ms"
 			>
@@ -58,7 +61,7 @@
 		</div>
 
 		<TicketRows
-			v-if="!approval"
+			v-if="isConfirmed"
 			class="fade-up-in"
 			style="animation-delay: 260ms"
 			:tickets="confirmation.data.tickets"
@@ -75,7 +78,7 @@
 		</BookingFinancialSummary>
 
 		<p
-			v-if="!approval"
+			v-if="isConfirmed"
 			class="fade-up-in text-center text-p-sm text-ink-gray-5"
 			style="animation-delay: 400ms"
 		>
@@ -112,6 +115,7 @@ import { useRoute } from "vue-router"
 import EventSummaryCard from "@/components/booking-success/EventSummaryCard.vue"
 import SuccessHero from "@/components/booking-success/SuccessHero.vue"
 import TicketRows from "@/components/booking-success/TicketRows.vue"
+import UnconfirmedHero from "@/components/booking-success/UnconfirmedHero.vue"
 import BookingApprovalNotice from "@/components/BookingApprovalNotice.vue"
 import BookingFinancialSummary from "@/components/BookingFinancialSummary.vue"
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
@@ -121,6 +125,7 @@ import { session } from "@/data/session"
 import { approvalState } from "@/utils/bookingApproval"
 import { triggerCelebrationConfetti } from "@/utils/confetti"
 import { eventUrl } from "@/utils/eventUrl"
+import { safeMarkdown } from "@/utils/markdown"
 
 const props = defineProps({
 	bookingId: {
@@ -137,8 +142,9 @@ const confirmation = useCall<Record<string, any>, Record<string, unknown>>({
 	url: "/api/v2/method/buzz.api.booking.get_booking_confirmation",
 	params: { booking_id: props.bookingId, token: route.query.token },
 	onSuccess: (data) => {
-		if (!approvalState(data.booking)) triggerCelebrationConfetti()
-		if (data?.event?.route) {
+		if (!data?.tickets.length) return
+		triggerCelebrationConfetti()
+		if (data.event?.route) {
 			const { clearStoredData } = useBookingFormStorage(data.event.route)
 			clearStoredData()
 		}
@@ -147,6 +153,8 @@ const confirmation = useCall<Record<string, any>, Record<string, unknown>>({
 
 const event = computed(() => confirmation.data!.event)
 const approval = computed(() => approvalState(confirmation.data?.booking ?? {}))
+// A booking issues its tickets on submit, so a refused payment or a draft has none.
+const isConfirmed = computed(() => confirmation.data!.tickets.length > 0)
 
 // Files the confirmation hands out; a guest proves access with the page's own token.
 function bookingFileUrl(method: string) {

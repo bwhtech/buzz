@@ -35,10 +35,15 @@ from buzz.api.events.schemas import (
 	TicketTypeTotal,
 	VerificationMethods,
 )
-from buzz.api.filters.conditions import ListConditions, event_questions, filter_field, question_fields
+from buzz.api.filters.conditions import ListConditions, filter_field, form_questions, question_fields
 from buzz.api.filters.schemas import FilterField
 from buzz.events.countdown import event_countdown
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
+from buzz.events.doctype.buzz_form.form_types import (
+	ATTENDEE_FORM_DOCTYPE,
+	REGISTRATION_FORM_DOCTYPE,
+	event_form,
+)
 from buzz.events.doctype.buzz_team.buzz_team import personal_team_owner
 from buzz.events.doctype.event_venue.details import venue_details
 from buzz.permissions import (
@@ -320,18 +325,12 @@ def registration_link(doc) -> str | None:
 
 
 def set_registration_state(event: str, closed: bool) -> RegistrationState:
-	"""Open or close registrations, and answer with the state the server ends up in.
-
-	Closure is derived from `registrations_close_at`, so closing writes the event's own
-	wall clock and opening clears the cutoff. Opening cannot beat the event's end date,
-	which closes registrations on its own — hence the state rather than an acknowledgement.
-	"""
+	"""Answer with the state the server ends up in: opening cannot beat the event's end date."""
 	doc = manageable_event(event, "ticketing")
-	if closed:
-		doc.close_registrations()
-	else:
-		doc.registrations_close_at = None
-	doc.save(ignore_permissions=True)
+	# Without a registration form an event takes no registrations, which is already closed.
+	if form := event_form(doc.name, REGISTRATION_FORM_DOCTYPE):
+		form.flags.ignore_permissions = True
+		form.set_closed(closed)
 	return RegistrationState(registrations_closed=are_registrations_closed(doc))
 
 
@@ -457,14 +456,11 @@ def guest_filter_fields(event: str) -> tuple[list[FilterField], dict]:
 	booking it belongs to. A fieldname asked on both keeps the ticket question.
 	"""
 	ticket_types = [(row.name, row.title) for row in ticket_types_of(event)]
-	questions: dict = {}
-	for row in event_questions(event, applied_to=["in", ["Ticket", "Booking"]]):
-		existing = questions.get(row.fieldname)
-		if not existing or existing.applied_to != "Ticket":
-			questions[row.fieldname] = row
-	answer_parents = {
-		key: ("Event Booking", "booking") for key, row in questions.items() if row.applied_to == "Booking"
-	}
+	questions = {row.fieldname: row for row in form_questions(event, REGISTRATION_FORM_DOCTYPE)}
+	answer_parents = {fieldname: ("Event Booking", "booking") for fieldname in questions}
+	for row in form_questions(event, ATTENDEE_FORM_DOCTYPE):
+		questions[row.fieldname] = row
+		answer_parents.pop(row.fieldname, None)
 	fields = [
 		filter_field("ticket_type", _("Ticket type"), "Link", ticket_types),
 		*question_fields(questions.values()),

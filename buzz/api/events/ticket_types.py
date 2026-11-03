@@ -32,6 +32,7 @@ TICKET_TYPE_FIELDS = [
 	"auto_unpublish_after",
 	"is_published",
 	"requires_approval",
+	"is_hidden",
 	{"prices": ["currency", "price"]},
 ]
 
@@ -52,6 +53,9 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		title=doc.title,
 		can_write=has_section_permission(event, "ticketing", "write", frappe.session.user),
 		registration_link=registration_link(doc),
+		registration_form=frappe.db.get_value(
+			"Buzz Form", {"event": event, "form_doctype": "Event Booking"}, "name"
+		),
 		registrations_closed=are_registrations_closed(doc),
 		allow_guest_booking=bool(doc.allow_guest_booking),
 		guest_verification_method=doc.guest_verification_method or "None",

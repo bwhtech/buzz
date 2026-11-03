@@ -96,9 +96,58 @@ class TestCouponValidation(CouponTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.create_coupon(minimum_requirement="Minimum Ticket Count", minimum_ticket_count=0)
 
-	def test_find_promo_ignores_case_and_event(self):
+	def test_find_by_code_ignores_case_and_event(self):
 		coupon = self.create_coupon(code="FINDME")
 		BuzzCouponCodeFactory.create(code="FINDME")
 
-		self.assertEqual(type(coupon).find_promo(self.event.name, " findme").name, coupon.name)
-		self.assertIsNone(type(coupon).find_promo(self.event.name, "MISSING"))
+		self.assertEqual(type(coupon).find_by_code(self.event.name, " findme").name, coupon.name)
+		self.assertIsNone(type(coupon).find_by_code(self.event.name, "MISSING"))
+
+	def test_find_by_code_skips_automatic_coupons(self):
+		coupon = self.create_coupon("automatic", code="Group deal")
+
+		self.assertIsNone(type(coupon).find_by_code(self.event.name, "GROUP DEAL"))
+
+
+class TestAccessCodeValidation(CouponTestCase):
+	def setUp(self):
+		self.hidden = EventTicketTypeFactory.create("is_hidden", event=self.event.name)
+
+	def create_access_code(self, **overrides):
+		overrides.setdefault("ticket_types", [{"ticket_type": self.hidden.name}])
+		return self.create_coupon("access_code", **overrides)
+
+	def test_no_discount_is_refused_on_promo_and_automatic_codes(self):
+		for traits in ((), ("automatic",)):
+			with self.subTest(traits=traits), self.assertRaises(frappe.ValidationError):
+				self.create_coupon(*traits, discount_type="None")
+
+	def test_access_code_is_uppercased_and_unlocks_its_scope(self):
+		coupon = self.create_access_code(code=" press-2026 ")
+
+		self.assertEqual(coupon.code, "PRESS-2026")
+		self.assertEqual(coupon.unlocked_ticket_types(), {str(self.hidden.name)})
+		self.assertEqual(type(coupon).find_by_code(self.event.name, "press-2026").name, coupon.name)
+
+	def test_access_code_is_never_scoped_to_all_ticket_types(self):
+		coupon = self.create_access_code(applies_to_all_ticket_types=1)
+
+		self.assertEqual(coupon.applies_to_all_ticket_types, 0)
+
+	def test_access_code_with_a_public_ticket_type_in_scope_is_refused(self):
+		scope = [{"ticket_type": self.hidden.name}, {"ticket_type": self.ticket_type.name}]
+
+		with self.assertRaises(frappe.ValidationError):
+			self.create_access_code(ticket_types=scope)
+
+	def test_access_code_with_an_empty_scope_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_access_code(ticket_types=[])
+
+	def test_access_code_may_carry_a_discount(self):
+		coupon = self.create_access_code(discount_type="Percentage", discount_percentage=20)
+
+		self.assertEqual(coupon.discount_percentage, 20)
+
+	def test_other_coupon_types_unlock_nothing(self):
+		self.assertEqual(self.create_coupon().unlocked_ticket_types(), set())

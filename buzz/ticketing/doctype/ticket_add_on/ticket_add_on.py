@@ -8,6 +8,10 @@ from frappe.model.document import Document
 from buzz.ticketing.approval import validate_free_only
 
 
+def add_on_options(options: str | None) -> list[str]:
+	return options.split("\n") if options else []
+
+
 class TicketAddon(Document):
 	def validate(self):
 		self.validate_duplicate_title()

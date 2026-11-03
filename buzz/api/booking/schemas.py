@@ -6,6 +6,9 @@ from pydantic import Field
 from buzz.api.schemas import APIRequest, APIResponse
 from buzz.events.doctype.event_venue.details import VenueDetails
 
+# One network can hold this many tickets at a time, so a script can't hold a whole event.
+MAX_TICKETS_PER_IP = 20
+
 
 class BookingRequest(APIRequest):
 	# attendees and custom fields carry event-defined dynamic keys; validated against meta downstream.
@@ -64,6 +67,13 @@ class TaxSettings(APIResponse):
 	tax_percentage: float
 
 
+class AccessCodeStatus(APIResponse):
+	"""`error` is one generic message for every failure, so codes cannot be probed."""
+
+	code: str | None = None
+	error: str | None = None
+
+
 class EventBookingDataResponse(APIResponse):
 	# event_details and the list fields carry documents or meta-defined rows; typing
 	# them would reshape the payload.
@@ -74,9 +84,16 @@ class EventBookingDataResponse(APIResponse):
 	available_add_ons: list
 	tax_settings: TaxSettings
 	custom_fields: list
+	# Core field rows (fieldname, label, width, enabled) per registration form, keyed like logic_rules.
+	core_fields: dict[str, list]
+	# The organiser's title and message for a finished booking, both optional.
+	success: dict
+	# Show, hide and require rules per registration form, keyed like custom_fields' applied_to.
+	logic_rules: dict
 	payment_gateways: list[str]
 	offline_payment_enabled: bool
 	offline_methods: list
+	access_code: AccessCodeStatus
 
 
 class ConfirmationEvent(APIResponse):
@@ -121,6 +138,8 @@ class BookingConfirmationResponse(APIResponse):
 	venue: VenueDetails | None
 	booking: ConfirmationBooking
 	tickets: list[ConfirmationTicket]
+	# The organiser's title and message for a finished booking, both optional.
+	success: dict
 
 
 class BookingDetailsResponse(APIResponse):

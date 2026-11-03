@@ -7,8 +7,8 @@ import { useRoute } from "vue-router"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import RegistrationActions from "@/components/dashboard/events/RegistrationActions.vue"
-import AddPricedItemDialog from "@/components/dashboard/sponsorships/AddPricedItemDialog.vue"
 import ApprovalOffDialog from "@/components/dashboard/ticket-types/ApprovalOffDialog.vue"
+import NewTicketTypeDrawer from "@/components/dashboard/ticket-types/NewTicketTypeDrawer.vue"
 import PaymentProviders from "@/components/dashboard/ticket-types/PaymentProviders.vue"
 import RevenueCards from "@/components/dashboard/ticket-types/RevenueCards.vue"
 import TaxSettings from "@/components/dashboard/ticket-types/TaxSettings.vue"
@@ -53,12 +53,12 @@ const approvalDialogOpen = computed<boolean>({
 
 const hasPricedTickets = computed(() => Boolean(page.data?.has_priced_items))
 
-const addDialogOpen = ref(false)
+const newDrawerOpen = ref(false)
 const addToCategory = ref("")
 
-function openAddDialog(category: string) {
+function openNewDrawer(category: string) {
 	addToCategory.value = category
-	addDialogOpen.value = true
+	newDrawerOpen.value = true
 }
 
 const categoryDialogOpen = ref(false)
@@ -136,7 +136,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				:page="page.data"
 				:organizer="organizer"
 				@open="selectedName = $event"
-				@add="openAddDialog"
+				@add="openNewDrawer"
 				@add-category="openCategoryDialog(null)"
 				@edit-category="openCategoryDialog"
 			/>
@@ -162,6 +162,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				v-if="page.data"
 				:event="eventId"
 				:registration-link="page.data.registration_link"
+				:registration-form="page.data.registration_form"
 				:closed="page.data.registrations_closed"
 				:can-write="page.data.can_write"
 				:allow-guest-booking="page.data.allow_guest_booking"
@@ -201,15 +202,12 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		@saved="page.reload()"
 	/>
 
-	<AddPricedItemDialog
-		v-model="addDialogOpen"
+	<NewTicketTypeDrawer
+		v-model:open="newDrawerOpen"
 		:event="eventId"
-		doctype="Event Ticket Type"
-		item-label="Ticket Type"
-		placeholder="General admission"
-		describable
-		:free-only="!page.data?.paid_events_enabled"
-		:defaults="addToCategory ? { category: addToCategory } : undefined"
-		@saved="page.reload()"
+		:category="addToCategory"
+		:categories="page.data?.categories ?? []"
+		:paid-events-enabled="!!page.data?.paid_events_enabled"
+		@created="page.reload()"
 	/>
 </template>

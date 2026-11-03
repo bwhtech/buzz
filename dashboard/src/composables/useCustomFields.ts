@@ -17,9 +17,19 @@ export interface FrappeField {
 	reqd?: number | boolean
 	default?: string | number | boolean
 	default_value?: string | number | boolean
+	description?: string
+	width?: "Full" | "Half"
+	// [fieldname, operator, value] triples that must all match; empty means always shown.
+	depends_on?: [string, string, unknown][] | null
+	mandatory_depends_on?: [string, string, unknown][] | null
 	link_options?: SelectOption[]
 	applied_to?: string
 }
+
+// Shape the form and take no answer.
+const LAYOUT_FIELDTYPES = ["Heading", "Paragraph", "Divider", "Page Break"]
+
+export const isLayoutField = (field: FrappeField) => LAYOUT_FIELDTYPES.includes(field.fieldtype)
 
 export interface SelectOption {
 	label: string
@@ -40,6 +50,8 @@ export function getFormControlType(fieldtype: string, options?: string): string 
 			return "text"
 		case "Email":
 			return "email"
+		case "URL":
+			return "url"
 		case "Select":
 			return "select"
 		case "Number":
@@ -79,7 +91,7 @@ export function isDateTimeField(fieldtype: string): boolean {
  * @returns {Array} - Array of { label, value } objects
  */
 export function getFieldOptions(field: FrappeField): SelectOption[] {
-	const isSelectType = field.fieldtype === "Select" || field.fieldtype === "Multi Select"
+	const isSelectType = ["Select", "Multi Select", "Radio"].includes(field.fieldtype)
 	if (isSelectType && field.options) {
 		let options = []
 

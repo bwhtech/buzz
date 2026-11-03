@@ -41,3 +41,18 @@ buzz.patches.subscribe_talk_participants
 buzz.patches.email_buzz_activity
 buzz.patches.add_title_theme_tokens
 buzz.patches.add_default_check_in_zones
+buzz.patches.use_buzz_footer
+buzz.patches.move_sponsor_enquiry_forms_to_buzz_form
+buzz.patches.move_event_forms_to_buzz_form
+buzz.patches.move_registration_questions_to_buzz_form #2
+buzz.patches.move_registration_close_to_buzz_form
+buzz.patches.reshape_event_template_questions
+buzz.patches.delete_moved_custom_fields
+buzz.patches.drop_buzz_event_form_table
+buzz.patches.move_excluded_fields_to_standard_rows
+buzz.patches.move_question_conditions_to_logic_rules
+buzz.patches.add_registration_core_rows
+buzz.patches.use_hex_colors_for_schedule_item_types
+
+[post_fixture_sync]
+buzz.patches.move_schedule_to_buzz_schedule

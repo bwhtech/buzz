@@ -5,10 +5,16 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import set_request
-from frappe.website.serve import get_response_content
+from frappe.website.serve import get_response, get_response_content
 
 from buzz.events.doctype.event_venue.event_venue import MULTIPLE_LOCATIONS_FLAG
-from buzz.tests.factories import BuzzEventFactory, BuzzTeamFactory, EventVenueFactory, UserFactory
+from buzz.tests.factories import (
+	BuzzEventFactory,
+	BuzzScheduleFactory,
+	BuzzTeamFactory,
+	EventVenueFactory,
+	UserFactory,
+)
 from buzz.www.event.index import EventPage
 from buzz.www.site_header import DEFAULT_FAVICON
 
@@ -54,11 +60,43 @@ class TestEventPageRender(IntegrationTestCase):
 		title = re.search(r"<title>(.*?)</title>", render(self.route), re.DOTALL).group(1)
 		self.assertIn("&amp;lt;script&amp;gt;", title)
 
+	def test_schedule_page_lists_the_published_schedule(self):
+		event = frappe.get_doc("Buzz Event", BuzzEventFactory.create(team=self.team).name)
+		schedule = BuzzScheduleFactory.create(event=str(event.name), is_published=1)
+		schedule.append(
+			"items",
+			{
+				"date": event.start_date,
+				"type": "Break",
+				"title": "Coffee",
+				"all_tracks": 1,
+				"start_time": "09:00:00",
+				"end_time": "09:30:00",
+			},
+		)
+		schedule.save()
+		html = render(event.route, "/schedule")
+		self.assertIn("Coffee", html)
+		self.assertIn("<event-schedule", html)
+
+	def test_schedule_page_is_not_found_without_a_published_schedule(self):
+		path = f"/events/{self.route}/schedule"
+		set_request(method="GET", path=path)
+		with patch("frappe.utils.get_assets_json", return_value={}):
+			self.assertEqual(get_response(path).status_code, 404)
+
 	def test_page_skips_frappe_website_assets(self):
 		html = render(self.route)
 		for asset in ("website.bundle", "frappe-web.bundle", "icons/lucide"):
 			self.assertNotIn(asset, html)
 		self.assertEqual(html.count('property="og:title"'), 1)
+
+	def test_page_renders_the_footer_the_site_chose(self):
+		with self.change_settings("Website Settings", footer_template="Standard Footer"):
+			html = render(self.route)
+		self.assertNotIn("buzz-footer", html)
+		self.assertIn("web-footer", html)
+		self.assertIn("website.bundle", html)
 
 	def test_favicon_falls_back_to_buzz(self):
 		settings = frappe.get_single("Website Settings")
@@ -146,11 +184,12 @@ class TestEventPageRender(IntegrationTestCase):
 		frappe.db.set_value("Buzz Event", self.event, values)
 
 
-def render(route: str) -> str:
-	set_request(method="GET", path=f"/events/{route}")
+def render(route: str, suffix: str = "") -> str:
+	path = f"/events/{route}{suffix}"
+	set_request(method="GET", path=path)
 	# CI never runs bench build, so there is no assets.json for bundled_asset to read
 	with patch("frappe.utils.get_assets_json", return_value={}):
-		return get_response_content(f"/events/{route}")
+		return get_response_content(path)
 
 
 def structured_data(html: str) -> dict:

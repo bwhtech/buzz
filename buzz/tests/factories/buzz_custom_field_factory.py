@@ -9,7 +9,7 @@ _fake = Faker()
 
 
 class BuzzCustomFieldFactory(BaseFactory[BuzzCustomField]):
-	"""An enabled Data field on the booking form."""
+	"""An enabled Data field on an offline payment method's form."""
 
 	doctype = "Buzz Custom Field"
 
@@ -20,4 +20,5 @@ class BuzzCustomFieldFactory(BaseFactory[BuzzCustomField]):
 		return {
 			"event": self.overrides.get("event") or BuzzEventFactory.create().name,
 			"label": _fake.word().capitalize(),
+			"applied_to": "Offline Payment Form",
 		}

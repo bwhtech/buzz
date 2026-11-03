@@ -2,23 +2,24 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_to_date, now_datetime
 
-from buzz.api.forms import get_custom_form_data, submit_custom_form
+from buzz.api.forms import form_service, get_custom_form_data, submit_custom_form
 from buzz.api.forms.exceptions import (
 	EventNotFound,
 	FormNotAvailable,
 	LoginRequired,
 	MandatoryFieldsHidden,
 	SubmissionsClosed,
-	UnknownExcludedFields,
+	UnknownQuestions,
 )
 from buzz.tests.factories import (
-	BuzzCustomFieldFactory,
 	BuzzEventFactory,
 	BuzzTeamFactory,
 	SponsorshipTierFactory,
+	UserFactory,
 )
 
 SPEAKERS = [{"first_name": "Jane", "email": "jane@example.com"}]
+SUBMITTER = "form-submitter@example.com"
 
 
 class FormsTestCase(IntegrationTestCase):
@@ -30,19 +31,31 @@ class FormsTestCase(IntegrationTestCase):
 	def setUp(self):
 		frappe.clear_messages()
 
-	def build_event(self, **form_row):
-		form_row = {
-			"form_doctype": "Talk Proposal",
-			"route": f"propose-{frappe.generate_hash(length=6)}",
-			"publish": 1,
-			**form_row,
-		}
-		event = BuzzEventFactory.create(team=self.team, custom_forms=[form_row])
-		event.reload()
-		return event, form_row["route"]
+	def build_event(self, **form_fields):
+		"""An event whose own talk proposal form is open, with the given settings."""
+		event = BuzzEventFactory.create(team=self.team)
+		form = self.form_of(event.name, "Talk Proposal")
+		form.update({"publish": 1, **form_fields})
+		form.save(ignore_permissions=True)
+		return event, form.route
+
+	def submit(self, *args, **kwargs):
+		"""Forms are filled by website users; a System User would pass checks they must meet."""
+		with self.set_user(UserFactory.create_once(SUBMITTER).name):
+			return submit_custom_form(*args, **kwargs)
 
 	def submitted_proposal(self, title: str):
 		return frappe.get_last_doc("Talk Proposal", filters={"title": title})
+
+	def form_of(self, event: str, form_doctype: str):
+		"""The form every event is created with."""
+		return frappe.get_doc("Buzz Form", {"event": event, "form_doctype": form_doctype})
+
+	def add_question(self, form, **question):
+		form.append("questions", {"label": "Feedback", "fieldtype": "Small Text", "enabled": 1, **question})
+		form.publish = 1
+		form.save(ignore_permissions=True)
+		return form
 
 
 class TestCustomFormResponse(FormsTestCase):
@@ -54,33 +67,38 @@ class TestCustomFormResponse(FormsTestCase):
 		self.assertEqual(data.event.name, str(event.name))
 		self.assertIsInstance(data.__json__()["event"]["name"], str)
 
-	def test_open_form_carries_success_copy(self):
-		event, form_route = self.build_event(success_title="Nice one", success_message="See you there")
+	def test_open_form_carries_its_title_and_success_copy(self):
+		event, form_route = self.build_event(
+			title="Speak at our meetup", success_title="Nice one", success_message="See you there"
+		)
 
 		data = get_custom_form_data(event.route, form_route)
 
 		self.assertFalse(data.closed)
 		self.assertEqual((data.success_title, data.success_message), ("Nice one", "See you there"))
-		self.assertEqual(data.form_title, "Talk Proposal")
+		self.assertEqual(data.form_title, "Speak at our meetup")
 
 
-class TestCustomFormExcludedFields(FormsTestCase):
-	def test_get_custom_form_data_hides_excluded_fields(self):
-		returned = self.form_fieldnames(excluded_fields="phone")
+class TestCustomFormStandardRows(FormsTestCase):
+	def test_every_offered_field_gets_a_row(self):
+		event, _ = self.build_event()
+
+		rows = [
+			row.fieldname for row in self.form_of(event.name, "Talk Proposal").questions if row.is_standard
+		]
+		self.assertEqual(set(rows), {"title", "speakers", "description", "phone"})
+
+	def test_a_hidden_field_is_not_rendered(self):
+		returned = self.form_fieldnames(*self.build_event_hiding("phone"))
 
 		self.assertNotIn("phone", returned)
 		self.assertTrue({"title", "description", "speakers"} <= returned)
 
-	def test_get_custom_form_data_empty_excluded_fields_returns_all(self):
-		self.assertTrue(
-			{"title", "description", "speakers", "phone"} <= self.form_fieldnames(excluded_fields="")
-		)
-
-	def test_submit_drops_excluded_field_value(self):
-		event, form_route = self.build_event(excluded_fields="phone")
+	def test_submit_drops_hidden_field_value(self):
+		event, form_route = self.build_event_hiding("phone")
 		data = {"title": "Hidden Phone", "description": "<p>desc</p>", "speakers": SPEAKERS}
 
-		submit_custom_form(event.route, form_route, data={**data, "phone": "+919999999999"})
+		self.submit(event.route, form_route, data={**data, "phone": "+919999999999"})
 
 		created = self.submitted_proposal("Hidden Phone")
 		self.assertEqual(str(created.event), str(event.name))
@@ -90,21 +108,37 @@ class TestCustomFormExcludedFields(FormsTestCase):
 			[(row.first_name, row.email) for row in created.speakers], [("Jane", "jane@example.com")]
 		)
 
-	def test_save_hiding_mandatory_throws(self):
+	def test_hiding_a_mandatory_field_throws(self):
 		with self.assertRaises(MandatoryFieldsHidden):
-			self.build_event(excluded_fields="speakers")
+			self.build_event_hiding("speakers")
 
-	def test_save_with_unknown_field_throws(self):
-		with self.assertRaises(UnknownExcludedFields):
-			self.build_event(excluded_fields="phone, bogus_field")
+	def test_rows_render_in_form_order_with_their_label(self):
+		event, form_route = self.build_event()
+		form = self.form_of(event.name, "Talk Proposal")
+		phone = next(row for row in form.questions if row.fieldname == "phone")
+		phone.label = "Mobile"
+		form.set("questions", [phone, *(row for row in form.questions if row is not phone)])
+		form.save(ignore_permissions=True)
 
-	def test_save_hiding_optional_field_succeeds(self):
-		event, _ = self.build_event(excluded_fields="phone")
+		first = get_custom_form_data(event.route, form_route).form_fields[0]
+		self.assertEqual((first["fieldname"], first["label"]), ("phone", "Mobile"))
 
-		self.assertTrue(frappe.db.exists("Buzz Event", event.name))
+	def test_a_question_cannot_take_a_standard_fieldname(self):
+		event, _ = self.build_event()
 
-	def form_fieldnames(self, **form_row) -> set[str]:
-		event, form_route = self.build_event(**form_row)
+		with self.assertRaises(frappe.ValidationError):
+			self.add_question(self.form_of(event.name, "Talk Proposal"), fieldname="title")
+
+	def build_event_hiding(self, *fieldnames):
+		event, form_route = self.build_event()
+		form = self.form_of(event.name, "Talk Proposal")
+		for row in form.questions:
+			if row.fieldname in fieldnames:
+				row.enabled = 0
+		form.save(ignore_permissions=True)
+		return event, form_route
+
+	def form_fieldnames(self, event, form_route) -> set[str]:
 		return {f["fieldname"] for f in get_custom_form_data(event.route, form_route).form_fields}
 
 
@@ -133,11 +167,23 @@ class TestCustomFormAccess(FormsTestCase):
 
 		self.assertIn("not available for this event", frappe.local.message_log[-1]["message"])
 
+	def test_form_service_with_an_unknown_route_is_not_available(self):
+		event, _ = self.build_event()
+
+		with self.assertRaises(FormNotAvailable):
+			form_service(event.route, "no-such-form-route")
+
 	def test_unpublished_form_row_is_not_available(self):
 		event, form_route = self.build_event(publish=0)
 
 		with self.assertRaises(FormNotAvailable):
 			get_custom_form_data(event.route, form_route)
+
+	def test_a_form_type_without_a_page_is_not_available(self):
+		event, _ = self.build_event()
+		# The registration form is published, but /book-tickets serves it.
+		with self.assertRaises(FormNotAvailable):
+			form_service(event.route, "register")
 
 	def test_guest_needs_login_when_form_requires_it(self):
 		event, form_route = self.build_event(login_required=1)
@@ -183,51 +229,92 @@ class TestCustomFormClosing(FormsTestCase):
 		event, form_route = self.build_event(auto_close_at=add_to_date(now_datetime(), days=-1))
 
 		with self.assertRaises(SubmissionsClosed):
-			submit_custom_form(event.route, form_route, data={"title": "Too late"})
+			self.submit(event.route, form_route, data={"title": "Too late"})
 
 		self.assertEqual(frappe.local.message_log[-1]["title"], "Submissions Closed")
 
 
 class TestCustomFormCustomFields(FormsTestCase):
 	def test_definitions_are_returned_with_the_form(self):
-		event, form_route = self.build_event_with_custom_field(mandatory=1, order=2, placeholder="Veg?")
+		event, form_route = self.build_event_with_question(mandatory=1, placeholder="Veg?")
 
 		custom_fields = get_custom_form_data(event.route, form_route).custom_fields
 
 		self.assertEqual([field.label for field in custom_fields], ["Dietary Preference"])
-		# Check fields travel as 0/1, not booleans.
-		self.assertEqual((custom_fields[0].mandatory, custom_fields[0].order), (1, 2))
+		# Check fields travel as 0/1, not booleans; the question follows the four core rows.
+		self.assertEqual((custom_fields[0].mandatory, custom_fields[0].order), (1, 5))
 
 	def test_submitted_values_land_in_additional_fields(self):
-		created = self.submit_with_custom_fields(
-			"Custom Field", {"dietary_preference": "Vegetarian", "not_a_custom_field": "dropped"}
-		)
+		created = self.submit_with_question("Answered", {"dietary_preference": "Vegetarian"})
 
 		values = [(row.fieldname, row.value) for row in created.additional_fields]
 		self.assertEqual(values, [("dietary_preference", "Vegetarian")])
+		self.assertEqual(created.owner, SUBMITTER)
 
 	def test_blank_values_are_not_appended(self):
-		created = self.submit_with_custom_fields("Blank Custom Field", {"dietary_preference": ""})
+		created = self.submit_with_question("Blank", {"dietary_preference": ""})
 
 		self.assertEqual(created.additional_fields, [])
 
-	def build_event_with_custom_field(self, **field):
-		event, form_route = self.build_event()
-		BuzzCustomFieldFactory.create(
-			event=event.name,
-			applied_to="Custom Form",
-			custom_form_doctype="Talk Proposal",
-			label="Dietary Preference",
-			fieldtype="Data",
-			**field,
+	def test_a_required_question_is_enforced(self):
+		event = BuzzEventFactory.create(team=self.team)
+		self.add_question(
+			self.form_of(event.name, "Event Feedback"),
+			fieldname="feedback",
+			label="How was it?",
+			mandatory=1,
 		)
-		frappe.clear_document_cache("Buzz Event", event.name)
+
+		with self.assertRaises(frappe.MandatoryError):
+			self.submit(event.route, "feedback", data={"how_can_we_improve": "Fine"})
+
+	def test_an_answer_to_an_unknown_question_is_refused(self):
+		event = BuzzEventFactory.create(team=self.team)
+		self.add_question(self.form_of(event.name, "Event Feedback"), fieldname="feedback")
+
+		with self.assertRaises(UnknownQuestions):
+			self.submit(event.route, "feedback", data={}, custom_fields_data={"unasked": "value"})
+
+	def test_feedback_answers_land_in_additional_fields(self):
+		event = BuzzEventFactory.create(team=self.team)
+		self.add_question(
+			self.form_of(event.name, "Event Feedback"), fieldname="highlight", label="Highlight"
+		)
+
+		self.submit(
+			event.route,
+			"feedback",
+			data={"how_can_we_improve": "More coffee"},
+			custom_fields_data={"highlight": "The keynote"},
+		)
+
+		feedback = frappe.get_last_doc("Event Feedback", filters={"event": event.name})
+		self.assertEqual(feedback.how_can_we_improve, "More coffee")
+		self.assertEqual(feedback.owner, SUBMITTER)
+		self.assertEqual(
+			[(row.fieldname, row.value) for row in feedback.additional_fields], [("highlight", "The keynote")]
+		)
+
+	def test_a_disabled_question_is_not_asked(self):
+		event, form_route = self.build_event_with_question(enabled=0)
+
+		self.assertEqual(get_custom_form_data(event.route, form_route).custom_fields, [])
+
+	def build_event_with_question(self, **question):
+		event, form_route = self.build_event()
+		self.add_question(
+			self.form_of(event.name, "Talk Proposal"),
+			label="Dietary Preference",
+			fieldname="dietary_preference",
+			fieldtype="Data",
+			**question,
+		)
 		return event, form_route
 
-	def submit_with_custom_fields(self, title: str, custom_fields_data: dict):
-		event, form_route = self.build_event_with_custom_field()
+	def submit_with_question(self, title: str, custom_fields_data: dict):
+		event, form_route = self.build_event_with_question()
 		data = {"title": title, "speakers": SPEAKERS}
-		submit_custom_form(event.route, form_route, data=data, custom_fields_data=custom_fields_data)
+		self.submit(event.route, form_route, data=data, custom_fields_data=custom_fields_data)
 		return self.submitted_proposal(title)
 
 
@@ -251,7 +338,7 @@ class TestCustomFormLinkEventFilter(FormsTestCase):
 
 	def build_sponsorship_event(self):
 		event, _ = self.build_event()
-		form = frappe.get_doc("Sponsor Enquiry Form", {"event": event.name})
+		form = frappe.get_doc("Buzz Form", {"event": event.name, "form_doctype": "Sponsorship Enquiry"})
 		form.publish = 1
 		form.save()
 		return event, form.route

@@ -245,6 +245,7 @@ class TicketTypeItem(APIResponse):
 	auto_unpublish_after: date | None
 	is_published: bool
 	requires_approval: bool
+	is_hidden: bool
 	tickets_sold: int
 	prices: list[TicketTypePrice]
 
@@ -266,6 +267,8 @@ class EventTicketTypes(APIResponse):
 	title: str
 	can_write: bool
 	registration_link: str | None
+	# The registration Buzz Form the dashboard's form builder opens.
+	registration_form: str | None = None
 	registrations_closed: bool
 	allow_guest_booking: bool
 	guest_verification_method: str
@@ -299,16 +302,17 @@ class CurrencyPrice(APIResponse):
 class CouponTicketType(APIResponse):
 	name: str
 	title: str
+	is_hidden: bool
 	prices: list[CurrencyPrice]
 
 
 class CouponItem(APIResponse):
 	name: str
-	coupon_type: Literal["Promo Code", "Automatic"]
+	coupon_type: Literal["Promo Code", "Automatic", "Access Code"]
 	code: str
 	description: str | None
 	enabled: bool
-	discount_type: Literal["Percentage", "Flat Amount"]
+	discount_type: Literal["Percentage", "Flat Amount", "None"]
 	discount_percentage: float
 	discount_amounts: list[CurrencyPrice]
 	applies_to_all_ticket_types: bool

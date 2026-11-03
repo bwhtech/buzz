@@ -5,8 +5,9 @@ import re
 from typing import TYPE_CHECKING
 
 import frappe
-from frappe import _
+from frappe import _, _lt
 from frappe.model.document import Document
+from frappe.query_builder import Criterion
 from frappe.query_builder.functions import Count
 from frappe.utils import add_to_date, cint, cstr, flt, fmt_money, getdate, now_datetime
 
@@ -14,7 +15,11 @@ if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
 
 
+UNFINISHED_CHECKOUT_MESSAGE = _lt(
+	"You have an unfinished checkout with this code. Try again in a few minutes."
+)
 PROMO_CODE_PATTERN = re.compile(r"[A-Z0-9_-]+")
+TYPED_CODE_TYPES = ("Promo Code", "Access Code")
 
 
 class BuzzCouponCode(Document):
@@ -33,11 +38,11 @@ class BuzzCouponCode(Document):
 
 		applies_to_all_ticket_types: DF.Check
 		code: DF.Data | None
-		coupon_type: DF.Literal["Promo Code", "Automatic"]
+		coupon_type: DF.Literal["Promo Code", "Automatic", "Access Code"]
 		description: DF.SmallText | None
 		discount_amounts: DF.Table[BuzzPrice]
 		discount_percentage: DF.Percent
-		discount_type: DF.Literal["Percentage", "Flat Amount"]
+		discount_type: DF.Literal["Percentage", "Flat Amount", "None"]
 		enabled: DF.Check
 		event: DF.Link
 		expires_on: DF.Date | None
@@ -59,11 +64,11 @@ class BuzzCouponCode(Document):
 		self.validate_schedule()
 
 	def normalize_code(self):
-		"""A promo's code is typed at checkout; an automatic coupon's code is its offer name."""
+		"""A promo or access code is typed at checkout; an automatic coupon's code is its offer name."""
 		self.code = cstr(self.code).strip() or None
 		if not self.code:
 			frappe.throw(_("A coupon needs a code"))
-		if self.coupon_type == "Promo Code":
+		if self.coupon_type in TYPED_CODE_TYPES:
 			self.code = self.code.upper()
 			if not PROMO_CODE_PATTERN.fullmatch(self.code):
 				frappe.throw(_("A promo code can only have letters, numbers, hyphens and underscores"))
@@ -78,12 +83,17 @@ class BuzzCouponCode(Document):
 			frappe.throw(_("Code {0} is already used on this event").format(self.code))
 
 	def validate_discount(self):
-		if self.discount_type == "Flat Amount":
+		if self.discount_type == "None":
+			if self.coupon_type != "Access Code":
+				frappe.throw(_("Only an access code can have no discount"))
+		elif self.discount_type == "Flat Amount":
 			validate_amount_rows(self.discount_amounts, _("Discount Amounts"))
 		elif not 0 < flt(self.discount_percentage) <= 100:
 			frappe.throw(_("Discount Percentage must be more than 0 and at most 100"))
 
 	def validate_ticket_types(self):
+		if self.coupon_type == "Access Code":
+			self.applies_to_all_ticket_types = 0
 		if self.applies_to_all_ticket_types:
 			self.ticket_types = []
 			return
@@ -93,6 +103,13 @@ class BuzzCouponCode(Document):
 		events = frappe.get_all("Event Ticket Type", filters={"name": ["in", names]}, pluck="event")
 		if any(str(event) != str(self.event) for event in events):
 			frappe.throw(_("Ticket types must belong to the coupon's event"))
+		if self.coupon_type == "Access Code":
+			self.validate_scope_is_hidden(names)
+
+	def validate_scope_is_hidden(self, names: list):
+		filters = {"name": ["in", names], "is_hidden": 0}
+		if frappe.db.exists("Event Ticket Type", filters):
+			frappe.throw(_("An access code can only unlock hidden ticket types"))
 
 	def validate_minimum(self):
 		if self.minimum_requirement == "Minimum Order Amount":
@@ -101,10 +118,21 @@ class BuzzCouponCode(Document):
 			frappe.throw(_("Minimum Ticket Count must be more than 0"))
 
 	@classmethod
-	def find_promo(cls, event: str, code: str | None) -> "BuzzCouponCode | None":
-		filters = {"event": event, "coupon_type": "Promo Code", "code": cstr(code).strip().upper()}
+	def find_by_code(cls, event: str, code: str | None) -> "BuzzCouponCode | None":
+		filters = {
+			"event": event,
+			"coupon_type": ["in", TYPED_CODE_TYPES],
+			"code": cstr(code).strip().upper(),
+		}
 		name = frappe.db.get_value("Buzz Coupon Code", filters)
 		return frappe.get_doc("Buzz Coupon Code", name) if name else None
+
+	@classmethod
+	def find_available_access_code(cls, event: str, code: str | None) -> "BuzzCouponCode | None":
+		"""The access code typed for the event, if it is open and not used up."""
+		coupon = cls.find_by_code(event, code) if code else None
+		if coupon and coupon.coupon_type == "Access Code" and coupon.is_available(event):
+			return coupon
 
 	@classmethod
 	def best_automatic(cls, booking: "EventBooking") -> "BuzzCouponCode | None":
@@ -120,23 +148,27 @@ class BuzzCouponCode(Document):
 		"""Lock the limited coupons the booking can use, in name order, so bookings check usage
 		limits one at a time until the transaction ends."""
 		coupon = frappe.qb.DocType("Buzz Coupon Code")
-		query = (
+		named = [name for name in (booking.coupon_code, booking.access_code) if name]
+		scope = coupon.name.isin(named or [""])
+		if not booking.coupon_code:
+			scope = scope | ((coupon.event == booking.event) & (coupon.coupon_type == "Automatic"))
+		(
 			frappe.qb.from_(coupon)
 			.select(coupon.name)
-			.where(coupon.usage_limit > 0)
+			.where((coupon.usage_limit > 0) | (coupon.once_per_buyer == 1))
+			.where(scope)
 			.orderby(coupon.name)
 			.for_update()
-		)
-		if booking.coupon_code:
-			query = query.where(coupon.name == booking.coupon_code)
-		else:
-			query = query.where((coupon.event == booking.event) & (coupon.coupon_type == "Automatic"))
-		query.run()
+		).run()
 
 	def is_open(self, event: str) -> bool:
 		started = not self.starts_on or getdate() >= getdate(self.starts_on)
 		expired = self.expires_on and getdate() > getdate(self.expires_on)
 		return bool(self.enabled) and started and not expired and str(self.event) == str(event)
+
+	def is_available(self, event: str) -> bool:
+		within_limit = not self.usage_limit or self.times_used() < self.usage_limit
+		return self.is_open(event) and within_limit
 
 	def unusable_reason(self, booking: "EventBooking") -> str | None:
 		from buzz.api.booking.exceptions import InvalidCoupon
@@ -146,13 +178,29 @@ class BuzzCouponCode(Document):
 		return self.limit_reason(booking) or self.eligibility_reason(booking)
 
 	def limit_reason(self, booking: "EventBooking") -> str | None:
-		if self.usage_limit and self.times_taken(booking) >= self.usage_limit:
-			return _("This coupon has reached its usage limit")
-		if self.once_per_buyer and self.times_used_by(booking.buyer_email, exclude=booking.name):
+		return self.usage_limit_reason(booking) or self.once_per_buyer_reason(booking)
+
+	def usage_limit_reason(self, booking: "EventBooking") -> str | None:
+		if not self.usage_limit:
+			return None
+		taken = self.times_taken(booking)
+		if taken < self.usage_limit:
+			return None
+		if taken - self.own_live_drafts(booking) < self.usage_limit:
+			return str(UNFINISHED_CHECKOUT_MESSAGE)
+		return _("This coupon has reached its usage limit")
+
+	def once_per_buyer_reason(self, booking: "EventBooking") -> str | None:
+		if not self.once_per_buyer:
+			return None
+		if self.times_used_by(booking):
 			return _("You have already used this coupon")
+		if self.own_live_drafts(booking):
+			return str(UNFINISHED_CHECKOUT_MESSAGE)
 
 	def eligibility_reason(self, booking: "EventBooking") -> str | None:
-		if not self.eligible_attendees(booking):
+		# An access code is applied before its hidden tickets are in the cart.
+		if not self.eligible_attendees(booking) and self.coupon_type != "Access Code":
 			return _("This coupon doesn't apply to the selected tickets")
 		uses_amounts = self.discount_type == "Flat Amount"
 		if uses_amounts and amount_in(self.discount_amounts, booking.currency) is None:
@@ -175,10 +223,22 @@ class BuzzCouponCode(Document):
 				)
 
 	def discount_for(self, booking: "EventBooking") -> float:
+		if self.discount_type == "None":
+			return 0
 		subtotal = self.eligible_subtotal(booking)
 		if self.discount_type == "Percentage":
 			return flt(subtotal * flt(self.discount_percentage) / 100, 2)
 		return min(amount_in(self.discount_amounts, booking.currency) or 0, subtotal)
+
+	def unlocked_ticket_types(self) -> set[str]:
+		if self.coupon_type != "Access Code":
+			return set()
+		return {str(row.ticket_type) for row in self.ticket_types}
+
+	@property
+	def usage_field(self) -> str:
+		"""The Event Booking field that records a use of this coupon."""
+		return "access_code" if self.coupon_type == "Access Code" else "coupon_code"
 
 	def eligible_attendees(self, booking: "EventBooking") -> list:
 		if self.applies_to_all_ticket_types:
@@ -192,37 +252,44 @@ class BuzzCouponCode(Document):
 	def times_used(self, exclude: str | None = None) -> int:
 		return frappe.db.count("Event Booking", self.usage_filters(exclude))
 
-	def times_used_by(self, buyer_email: str | None, exclude: str | None = None) -> int:
-		if not buyer_email:
-			return 0
-		filters = {**self.usage_filters(exclude), "buyer_email": buyer_email.strip().lower()}
-		return frappe.db.count("Event Booking", filters)
+	def times_used_by(self, booking: "EventBooking") -> int:
+		submitted = frappe.qb.DocType("Event Booking")
+		used = (
+			frappe.qb.from_(submitted)
+			.select(Count(submitted.name))
+			.where((submitted.coupon_code == self.name) & (submitted.docstatus == 1))
+			.where(submitted.name != cstr(booking.name))
+		)
+		return count_for_buyer(used, booking)
+
+	def own_live_drafts(self, booking: "EventBooking") -> int:
+		return count_for_buyer(self.live_drafts(booking), booking)
 
 	def times_taken(self, booking: "EventBooking") -> int:
 		return self.times_used(exclude=booking.name) + self.times_reserved(booking)
 
 	def times_reserved(self, booking: "EventBooking") -> int:
-		"""Drafts other buyers are still paying for: online ones for the payment window,
-		offline ones until approved or rejected."""
+		return self.live_drafts(booking).run()[0][0]
+
+	def live_drafts(self, booking: "EventBooking"):
+		"""Drafts still being paid for: online ones for the payment window, offline ones until
+		approved or rejected."""
 		from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
 		from buzz.ticketing.doctype.ticket_hold.ticket_hold import PAYMENT_HOLD_MINUTES
 
 		draft = frappe.qb.DocType("Event Booking")
 		window_start = add_to_date(now_datetime(), minutes=-PAYMENT_HOLD_MINUTES)
-		query = (
+		return (
 			frappe.qb.from_(draft)
 			.select(Count(draft.name))
-			.where((draft.coupon_code == self.name) & (draft.docstatus == 0))
+			.where((getattr(draft, self.usage_field) == self.name) & (draft.docstatus == 0))
 			.where(draft.name != cstr(booking.name))
 			.where((draft.payment_method == OFFLINE_PAYMENT_METHOD) | (draft.creation > window_start))
 			.where(draft.buyer_email.isnotnull())
 		)
-		if booking.buyer_email:
-			query = query.where(draft.buyer_email != booking.buyer_email.strip().lower())
-		return query.run()[0][0]
 
 	def usage_filters(self, exclude: str | None) -> dict:
-		filters = {"coupon_code": self.name, "docstatus": 1}
+		filters = {self.usage_field: self.name, "docstatus": 1}
 		if exclude:
 			filters["name"] = ["!=", exclude]
 		return filters
@@ -231,6 +298,17 @@ class BuzzCouponCode(Document):
 def on_doctype_update():
 	# validate_unique_code names the clash; the index stops two concurrent inserts.
 	frappe.db.add_unique("Buzz Coupon Code", ["event", "code"])
+
+
+def count_for_buyer(query, booking: "EventBooking") -> int:
+	"""Count the query's bookings of the same buyer, matched by email, and by user when logged in."""
+	table = frappe.qb.DocType("Event Booking")
+	conditions = []
+	if booking.buyer_email:
+		conditions.append(table.buyer_email == booking.buyer_email.strip().lower())
+	if booking.user and booking.user != "Guest":
+		conditions.append(table.user == booking.user)
+	return query.where(Criterion.any(conditions)).run()[0][0] if conditions else 0
 
 
 def validate_amount_rows(rows: list, label: str):

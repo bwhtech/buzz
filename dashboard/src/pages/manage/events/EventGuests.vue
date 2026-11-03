@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
 import { useRouteQuery } from "@vueuse/router"
-import { ErrorMessage, TabButtons } from "frappe-ui"
+import { ErrorMessage, TabButtons, useList } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
@@ -73,6 +73,14 @@ function reloadAfterReview() {
 	pending.reload()
 	page.reload()
 }
+
+// The answers on a guest come from the registration form, so it is edited from here too.
+const registrationForm = useList<{ name: string }>({
+	doctype: "Buzz Form",
+	filters: { event: eventId, form_doctype: "Event Booking" },
+	fields: ["name"],
+	limit: 1,
+})
 
 const message = (error: unknown) => (error as FrappeError | null)?.message
 
@@ -255,6 +263,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 				:query="exportQuery"
 				:checked-in="page.data.checked_in_any_zone"
 				:total="page.data.total"
+				:registration-form="canWrite.data?.has_permission ? registrationForm.data?.[0]?.name : null"
 			/>
 		</template>
 	</PageWithSidebar>

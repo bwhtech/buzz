@@ -80,6 +80,7 @@ function eventItems(eventId: string, access?: EventAccess | null): ManagerNavIte
 		},
 		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests`, section: "guests" },
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks`, section: "talks" },
+		{ label: "Schedule", icon: "lucide-calendar-days", to: `${event}/schedule`, section: "talks" },
 		{
 			label: "Announcements",
 			icon: "lucide-megaphone",

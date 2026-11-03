@@ -1,6 +1,7 @@
 import frappe
 from frappe.utils import add_days, add_to_date, get_datetime, today
 
+from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
 from buzz.playground import is_playground, sandbox_of
 
@@ -78,12 +79,17 @@ class DemoData:
 			end_date=event_date,
 			start_time="10:00:00",
 			end_time="18:00:00",
-			# New events start closed; demo guests book until the doors open.
-			registrations_close_at=f"{event_date} 10:00:00",
 			short_description=f"{title}, a Buzz Playground demo event.",
 			auto_send_pitch_deck=0,
 			**fields,
 		).name
+		# New events start closed; demo guests book until the doors open.
+		frappe.db.set_value(
+			"Buzz Form",
+			{"event": event, "form_doctype": REGISTRATION_FORM_DOCTYPE},
+			"auto_close_at",
+			f"{event_date} 10:00:00",
+		)
 		# Replaced by the demo's own tiers.
 		for doctype in ("Event Ticket Type", "Sponsorship Tier"):
 			frappe.db.delete(doctype, {"event": event, "title": "Normal"})

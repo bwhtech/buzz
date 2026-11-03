@@ -12,9 +12,8 @@ import {
 	type DropdownOptions,
 	type TabButtonValue,
 } from "frappe-ui"
-import { computed, inject, ref } from "vue"
+import { computed, defineAsyncComponent, inject, ref } from "vue"
 
-import UserSettingsDialog from "@/components/UserSettingsDialog.vue"
 import { session } from "@/data/session"
 
 // hideTrigger: the sheet opens from elsewhere, through v-model:sheet-open.
@@ -29,7 +28,11 @@ const isCollapsed = inject(
 
 const { colorScheme, setColorScheme } = useColorScheme()
 
+// Loaded on first open: its team pages pull in the rich-text editor, which every manager
+// page would otherwise download.
+const UserSettingsDialog = defineAsyncComponent(() => import("@/components/UserSettingsDialog.vue"))
 const settingsOpen = ref(false)
+const settingsOpened = ref(false)
 const sheetOpen = defineModel<boolean>("sheetOpen", { default: false })
 
 const NEW_ISSUE_URL = "https://github.com/bwhtech/buzz/issues/new"
@@ -44,7 +47,10 @@ const themeTabs = [...themes]
 const setTheme = (value: TabButtonValue) =>
 	setColorScheme(value as (typeof themes)[number]["value"])
 
-const openSettings = () => (settingsOpen.value = true)
+const openSettings = () => {
+	settingsOpened.value = true
+	settingsOpen.value = true
+}
 const reportIssue = () => window.open(NEW_ISSUE_URL, "_blank", "noopener")
 const logOut = () => session.logout.fetch()
 const logOutLabel = computed(() => (session.logout.loading ? __("Signing out…") : __("Log Out")))
@@ -200,5 +206,5 @@ const menu = computed<DropdownOptions>(() => [
 		</template>
 	</Dropdown>
 
-	<UserSettingsDialog v-model:open="settingsOpen" />
+	<UserSettingsDialog v-if="settingsOpened" v-model:open="settingsOpen" />
 </template>

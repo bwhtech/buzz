@@ -39,9 +39,12 @@ class SponsorshipEnquiry(Document):
 		self.company_logo = make_file_public(self.company_logo)
 		if self.is_new() and self.enquiry_form and not self.contact_email:
 			frappe.throw(frappe._("Contact Email is required."), frappe.MandatoryError)
-		if self.enquiry_form and str(
-			frappe.db.get_value("Sponsor Enquiry Form", self.enquiry_form, "event")
-		) != str(self.event):
+		if self.enquiry_form:
+			self.validate_enquiry_form_belongs_to_event()
+
+	def validate_enquiry_form_belongs_to_event(self):
+		form_event = frappe.db.get_value("Buzz Form", self.enquiry_form, "event")
+		if str(form_event) != str(self.event):
 			frappe.throw(frappe._("The enquiry form must belong to this event."))
 
 	@property

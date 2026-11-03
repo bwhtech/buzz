@@ -30,6 +30,7 @@
 			:title="successTitle"
 			:reference="showsPendingState ? completed.bookingName : undefined"
 			:pending="showsPendingState"
+			:note="completed.approvalPending ? undefined : safeMarkdown(success.message)"
 			@login="openLoginDialog()"
 		>
 			{{ successMessage }}
@@ -95,6 +96,11 @@
 								:event-requires-approval="!!eventDetails.requires_approval"
 								@change="changeQuantity"
 							/>
+							<AccessCodeInput
+								v-bind="accessCodeProps"
+								v-model="coupon.code"
+								@apply="coupon.apply"
+							/>
 						</div>
 
 						<AttendeesStep
@@ -107,8 +113,10 @@
 							:categories="ticketCategories"
 							:add-ons="addOns"
 							:custom-fields="ticketCustomFields"
+							:fields-for="ticketFieldsFor"
 							:show-errors="tried"
 							:last-name-required="isZoomEvent"
+							:core-fields="coreFields.Ticket ?? []"
 							:collapsible="isMobile"
 						/>
 
@@ -117,6 +125,7 @@
 							v-model:booking-custom-fields-data="bookingCustomFieldsData"
 							:billing="billing"
 							:phone-required="isGuestMode && isPhoneOtp"
+							:core-fields="coreFields.Booking ?? []"
 							:phone-error="otp.phoneError"
 							:booking-custom-fields="bookingCustomFields"
 							:show-invoice="tax.apply"
@@ -267,6 +276,7 @@ import {
 } from "vue"
 import { useRoute } from "vue-router"
 
+import { useAccessCode } from "@/composables/useAccessCode"
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
 import { useLoginDialog } from "@/composables/useLoginDialog"
 import { useTicketHold } from "@/composables/useTicketHold"
@@ -282,13 +292,17 @@ import type {
 import { needsApproval } from "@/utils/bookingApproval"
 import { formatWholePriceOrFree } from "@/utils/currency"
 import { eventPath } from "@/utils/eventUrl"
+import { applyLogic, type LogicRule } from "@/utils/formLogic"
+import { safeMarkdown } from "@/utils/markdown"
 import { siteHeaderHidden } from "@/utils/navbar"
 import { serverErrorMessage } from "@/utils/serverError"
 import { isZoomBackedCategory } from "@/utils/zoomCategory"
 
 import OfflinePaymentDialog from "./OfflinePaymentDialog.vue"
+import AccessCodeInput from "./registration/AccessCodeInput.vue"
 import AttendeesStep from "./registration/AttendeesStep.vue"
 import CheckoutHeader from "./registration/CheckoutHeader.vue"
+import type { CoreField } from "./registration/coreFields"
 import CouponField from "./registration/CouponField.vue"
 import CurrencySwitch from "./registration/CurrencySwitch.vue"
 import DetailsStep from "./registration/DetailsStep.vue"
@@ -321,10 +335,23 @@ const props = defineProps({
 	taxSettings: { type: Object as PropType<Record<string, any>>, default: () => ({}) },
 	eventDetails: { type: Object as PropType<Record<string, any>>, default: () => ({}) },
 	customFields: { type: Array as PropType<FrappeField[]>, default: () => [] },
+	// Show, hide and require rules per registration form, keyed like a field's applied_to.
+	logicRules: { type: Object as PropType<Record<string, LogicRule[]>>, default: () => ({}) },
+	// Core field rows per registration form, keyed like logicRules.
+	coreFields: { type: Object as PropType<Record<string, CoreField[]>>, default: () => ({}) },
+	// The organiser's own title and message for a finished booking.
+	success: {
+		type: Object as PropType<{ title?: string | null; message?: string | null }>,
+		default: () => ({}),
+	},
 	eventRoute: { type: String, required: true },
 	paymentGateways: { type: Array as PropType<string[]>, default: () => [] },
 	isGuestMode: { type: Boolean, default: false },
 	offlineMethods: { type: Array as PropType<OfflineMethod[]>, default: () => [] },
+	changeAccessCode: {
+		type: Function as PropType<(code: string) => Promise<unknown>>,
+		default: () => Promise.resolve(),
+	},
 })
 
 const route = useRoute()
@@ -354,11 +381,26 @@ const isZoomEvent = computed(() => isZoomBackedCategory(props.eventDetails.categ
 const isPhoneOtp = computed(() => props.eventDetails.guest_verification_method === "Phone OTP")
 const requiresLogin = computed(() => props.isGuestMode && !props.eventDetails?.allow_guest_booking)
 const bookingCustomFields = computed(() =>
-	props.customFields.filter((field) => field.applied_to === "Booking"),
+	applyLogic(
+		props.customFields.filter((field) => field.applied_to === "Booking"),
+		props.logicRules.Booking || [],
+		billing.value,
+		bookingCustomFieldsData.value,
+	),
 )
 const ticketCustomFields = computed(() =>
 	props.customFields.filter((field) => field.applied_to === "Ticket"),
 )
+// The attendee questions each ticket asks: rules may name the ticket type or answers above.
+function ticketFieldsFor(attendee: BookingAttendee) {
+	return applyLogic(
+		ticketCustomFields.value,
+		props.logicRules.Ticket || [],
+		{ ...attendee, ticket_type: String(attendee.ticket_type ?? "") },
+		attendee.custom_fields || {},
+	)
+}
+
 const eventId = computed(() =>
 	props.availableTicketTypes[0]?.event ? String(props.availableTicketTypes[0].event) : null,
 )
@@ -433,6 +475,7 @@ const { holdToken, secondsLeft, expired, holdError, holdAgain, keepHold } = useT
 	props.eventRoute,
 	eventId,
 	heldQuantities,
+	computed(() => coupon.appliedCode),
 )
 const holdErrorMessage = computed(() => serverErrorMessage(holdError.value))
 
@@ -488,6 +531,17 @@ const pricing = useOrderPricing({
 })
 const { netAmount, discountAmount, tax, taxAmount, total, totalBeforeDiscount } = pricing
 const coupon = reactive(pricing.coupon)
+useAccessCode(
+	computed(() => coupon.appliedCode),
+	attendees,
+	() => props.availableTicketTypes,
+	props.changeAccessCode,
+)
+const accessCodeProps = computed(() => ({
+	applied: coupon.applied,
+	error: coupon.error,
+	loading: coupon.loading,
+}))
 
 // The typed code, or the automatic offer's name when no code is applied.
 const discountName = computed(() => (coupon.applied ? coupon.appliedCode : coupon.offerName))
@@ -527,7 +581,7 @@ const countLabel = computed(() => {
 const validation = useRegistrationValidation({
 	me,
 	attendees,
-	ticketCustomFields,
+	ticketFieldsFor,
 	bookingCustomFields,
 	bookingCustomFieldsData,
 	billing,
@@ -668,7 +722,7 @@ function buildPayload() {
 	return {
 		event: eventId.value,
 		attendees: attendees.value.map((attendee) =>
-			attendeePayload(attendee, ticketCustomFields.value),
+			attendeePayload(attendee, ticketFieldsFor(attendee)),
 		),
 		coupon_code: coupon.appliedCode || null,
 		booking_custom_fields: cleanCustomFields(
@@ -703,6 +757,7 @@ const showsPendingState = computed(
 const successTitle = computed(() => {
 	if (completed.value?.approvalPending) return __("Request sent")
 	if (completed.value?.pendingVerification) return __("Booking received")
+	if (props.success.title) return props.success.title
 	return isZoomEvent.value ? __("Registration confirmed") : __("You're registered")
 })
 

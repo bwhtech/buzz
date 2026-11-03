@@ -13,6 +13,7 @@ const props = defineProps<{
 	closed: boolean
 	canWrite: boolean
 	registrationLink?: string | null
+	registrationForm?: string | null
 	allowGuestBooking: boolean
 	guestVerificationMethod: string
 	requiresApproval: boolean
@@ -40,9 +41,11 @@ const approvalSubtitle = computed(() => {
 })
 
 const actions = computed<QuickAction[]>(() =>
-	props.registrationLink
-		? [{ icon: "lucide-arrow-up-right", label: "Registration page", link: props.registrationLink }]
-		: [],
+	[
+		props.registrationLink
+			? { icon: "lucide-arrow-up-right", label: "Registration page", link: props.registrationLink }
+			: null,
+	].filter((action) => action !== null),
 )
 </script>
 
@@ -54,6 +57,7 @@ const actions = computed<QuickAction[]>(() =>
 		:closed="closed"
 		:can-write="canWrite"
 		:actions="actions"
+		:form="canWrite ? registrationForm : null"
 		@toggle="dialogOpen = true"
 	>
 		<QuickActionTile

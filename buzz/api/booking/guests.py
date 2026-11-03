@@ -1,5 +1,6 @@
 import os
 from base64 import b32encode
+from functools import wraps
 
 import frappe
 import pyotp
@@ -25,6 +26,19 @@ def phone_otp_available() -> bool:
 
 	allowed = {row.role for row in frappe.get_single("SMS Settings").get("allowed_roles")}
 	return "Guest" in allowed
+
+
+def normalize_identifier_for_limiter(function):
+	"""Case and whitespace variants of one identifier must share a rate limit counter."""
+
+	@wraps(function)
+	def wrapper(*args, **kwargs):
+		identifier = frappe.form_dict.get("identifier")
+		if isinstance(identifier, str):
+			frappe.form_dict["identifier"] = identifier.strip().lower()
+		return function(*args, **kwargs)
+
+	return wrapper
 
 
 def send_booking_otp(event: int, identifier: str) -> dict | None:

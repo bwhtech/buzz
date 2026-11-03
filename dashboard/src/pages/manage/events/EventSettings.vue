@@ -5,6 +5,7 @@ import { useRoute } from "vue-router"
 
 import CheckInZonesPanel from "@/components/dashboard/events/checkin-zones/CheckInZonesPanel.vue"
 import CollaboratorsPanel from "@/components/dashboard/events/collaborators/CollaboratorsPanel.vue"
+import EventFormsPanel from "@/components/dashboard/events/EventFormsPanel.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import EventThemeSetting from "@/components/dashboard/events/EventThemeSetting.vue"
 import { useArchiveEvent, useCanWriteEvent, useEventDoc } from "@/data/events"
@@ -117,6 +118,8 @@ async function unarchive() {
 		<CheckInZonesPanel :event="eventId" :disabled="!canWrite.data?.has_permission" />
 
 		<CollaboratorsPanel v-if="canManageCollaborators" :event="eventId" />
+
+		<EventFormsPanel v-if="canWrite.data?.has_permission" :event="eventId" />
 
 		<section v-for="group in settingGroups" :key="group.name" class="space-y-3">
 			<h2 class="text-lg font-semibold text-ink-gray-9">{{ group.title }}</h2>

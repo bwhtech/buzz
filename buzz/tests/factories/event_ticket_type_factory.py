@@ -32,5 +32,9 @@ class EventTicketTypeFactory(BaseFactory[EventTicketType]):
 		return {"requires_approval": 1}
 
 	@property
+	def is_hidden(self) -> dict[str, Any]:
+		return {"is_hidden": 1}
+
+	@property
 	def unpublished(self) -> dict[str, Any]:
 		return {"is_published": 0}

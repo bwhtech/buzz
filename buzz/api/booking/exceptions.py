@@ -47,6 +47,11 @@ class TooManyTicketsHeld(BuzzAPIError):
 	message = _lt("You can hold at most {limit} tickets at a time.")
 
 
+class TooManyTicketsInBooking(BuzzAPIError):
+	title = _lt("Too Many Tickets")
+	message = _lt("You can book at most {limit} tickets at a time.")
+
+
 class InvoiceDetailsMissing(BuzzAPIError):
 	title = _lt("Invoice Details Missing")
 	message = _lt("A tax invoice needs your tax ID and business name.")
@@ -75,3 +80,13 @@ class BookingNotPending(Conflict):
 class CannotWithdrawBooking(NotPermitted):
 	title = _lt("Not Permitted")
 	message = _lt("You cannot withdraw this request.")
+
+
+class InvalidAccessCode(BuzzAPIError):
+	title = _lt("Invalid Access Code")
+	message = _lt("This access code is not valid.")
+
+
+class HiddenTicketType(BuzzAPIError):
+	title = _lt("Tickets Unavailable")
+	message = _lt("These tickets are only available with a valid access code.")

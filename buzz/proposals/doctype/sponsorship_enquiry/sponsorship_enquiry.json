@@ -31,7 +31,7 @@
    "fieldname": "enquiry_form",
    "fieldtype": "Link",
    "label": "Enquiry Form",
-   "options": "Sponsor Enquiry Form",
+   "options": "Buzz Form",
    "read_only": 1,
    "set_only_once": 1
   },

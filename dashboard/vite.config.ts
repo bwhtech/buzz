@@ -4,8 +4,24 @@ import vue from "@vitejs/plugin-vue"
 import frappeui from "frappe-ui/vite"
 import { defineConfig } from "vite"
 
+// Link previews read the served HTML, so a public form's page renders its own tags. Jinja runs
+// only on the built page (buzz/www/dashboard.html); the dev server would show it as text.
+const LINK_PREVIEW = `{% if link_preview %}<title>{{ link_preview.title | e }}</title>
+    <meta name="description" content="{{ link_preview.description | e }}" />
+    <meta property="og:title" content="{{ link_preview.title | e }}" />
+    <meta property="og:description" content="{{ link_preview.description | e }}" />
+    {% if link_preview.image %}<meta property="og:image" content="{{ link_preview.image | e }}" />{% endif %}
+    {% else %}<title>Buzz Dashboard</title>{% endif %}`
+
+const linkPreviewTags = {
+	name: "buzz-link-preview-tags",
+	apply: "build" as const,
+	transformIndexHtml: (html: string) => html.replace("<title>Buzz Dashboard</title>", LINK_PREVIEW),
+}
+
 export default defineConfig({
 	plugins: [
+		linkPreviewTags,
 		frappeui({
 			frappeProxy: {
 				port: 8080,
