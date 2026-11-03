@@ -64,6 +64,7 @@
 						autocomplete="street-address"
 					/>
 					<Combobox
+						v-if="isGst"
 						:model-value="billing.billing_state || null"
 						:label="__('State')"
 						:size="inputSize"
@@ -71,6 +72,13 @@
 						:options="INDIAN_STATES"
 						open-on-click
 						@update:model-value="billing.billing_state = String($event ?? '')"
+					/>
+					<FormControl
+						v-else
+						v-model="billing.billing_state"
+						:label="__('State / region')"
+						:size="inputSize"
+						autocomplete="address-level1"
 					/>
 				</div>
 			</Collapse>

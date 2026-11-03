@@ -1,4 +1,4 @@
-// ponytail: India only, for GST place of supply. A per-event toggle is tracked to cover events elsewhere.
+// ponytail: India only, for GST place of supply. Shown only for GST events; other events get a free-text field.
 export const INDIAN_STATES = [
 	"Andaman and Nicobar Islands",
 	"Andhra Pradesh",
