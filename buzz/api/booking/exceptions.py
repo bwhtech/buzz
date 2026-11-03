@@ -47,6 +47,11 @@ class TooManyTicketsHeld(BuzzAPIError):
 	message = _lt("You can hold at most {limit} tickets at a time.")
 
 
+class TooManyTicketsInBooking(BuzzAPIError):
+	title = _lt("Too Many Tickets")
+	message = _lt("You can book at most {limit} tickets at a time.")
+
+
 class InvoiceDetailsMissing(BuzzAPIError):
 	title = _lt("Invoice Details Missing")
 	message = _lt("A tax invoice needs your tax ID and business name.")

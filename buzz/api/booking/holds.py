@@ -10,7 +10,7 @@ from buzz.api.booking.exceptions import (
 	TicketsUnavailable,
 	TooManyTicketsHeld,
 )
-from buzz.api.booking.schemas import TicketHoldResponse
+from buzz.api.booking.schemas import MAX_TICKETS_PER_IP, TicketHoldResponse
 from buzz.api.booking.services import are_registrations_closed
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
@@ -28,10 +28,6 @@ from buzz.ticketing.doctype.ticket_hold.ticket_hold import (
 if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
 	from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import EventTicketType
-
-
-# One network can hold this many tickets at a time, so a script can't hold a whole event.
-MAX_TICKETS_PER_IP = 20
 
 
 class TicketHoldService:
