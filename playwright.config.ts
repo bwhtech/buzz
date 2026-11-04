@@ -23,7 +23,8 @@ export default defineConfig({
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
 	workers: 4,
-	reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "html",
+	// CI runs in shards; each writes a blob report that a later job merges into HTML.
+	reporter: process.env.CI ? [["github"], ["blob"]] : "html",
 
 	timeout: 60000,
 	expect: {
@@ -71,8 +72,9 @@ export default defineConfig({
 				...devices["Desktop Chrome"],
 				storageState: authFile,
 			},
-			// user-settings-setup seeds the member manage-access.spec.ts runs one test as.
-			dependencies: ["setup", "event-setup", "user-settings-setup"],
+			// manage-access.spec.ts runs as the member user-settings-setup seeds and the
+			// attendee tickets-setup seeds.
+			dependencies: ["setup", "event-setup", "user-settings-setup", "tickets-setup"],
 		},
 		{
 			name: "guest-event-setup",
