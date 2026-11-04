@@ -7,6 +7,7 @@ from buzz.api.booking.services import are_registrations_closed
 from buzz.api.proposals.services import are_proposals_closed
 from buzz.playground import main_event, sandbox_teams
 from buzz.playground.demo_data import COMMUNITY_REQUESTS, PROPOSALS
+from buzz.playground.demo_schedule import SEEDED_SCHEDULED_TALKS
 
 if TYPE_CHECKING:
 	from buzz.playground.doctype.playground_sandbox.playground_sandbox import PlaygroundSandbox
@@ -89,6 +90,7 @@ class PlaygroundChecklist:
 				f"{manage}/talks",
 				doc and not are_proposals_closed(doc),
 				target="Proposals Closed",
+				optional=True,
 			),
 			self.step(
 				"add_event_page",
@@ -123,6 +125,7 @@ class PlaygroundChecklist:
 				False,
 				persona="attendee",
 				completes_on="visit",
+				optional=True,
 			),
 			self.step(
 				"view_event_page",
@@ -153,10 +156,27 @@ class PlaygroundChecklist:
 			self.step(
 				"accept_proposal",
 				_("Accept a talk proposal"),
-				_("Open a proposal in Talks and accept it. It joins the schedule."),
+				_("Open a proposal in Talks and accept it. It becomes a talk you can schedule."),
 				f"{manage}/talks",
 				self.exists("Talk Proposal", event=conference.name, status="Accepted"),
 				target=_("Open {0}").format(PROPOSALS[0][0]),
+			),
+			self.step(
+				"schedule_talk",
+				_("Put a talk on the schedule"),
+				_("In the schedule builder, drag a talk onto a room or add it to the next free slot."),
+				f"{manage}/schedule",
+				self.scheduled_talks(conference.name) > SEEDED_SCHEDULED_TALKS,
+				target="Add to next free slot",
+			),
+			self.step(
+				"publish_schedule",
+				_("Publish the schedule"),
+				_("Guests see the schedule on the event page once it is published."),
+				f"{manage}/schedule",
+				self.exists("Buzz Schedule", event=conference.name, is_published=1),
+				optional=True,
+				target="Publish",
 			),
 			self.step(
 				"email_speaker",
@@ -179,6 +199,7 @@ class PlaygroundChecklist:
 				f"{manage}/communications",
 				self.added("Event Communication", event=["in", self.events]),
 				target="Recipients",
+				optional=True,
 			),
 			self.step(
 				"check_in",
@@ -216,6 +237,7 @@ class PlaygroundChecklist:
 				False,
 				completes_on="click",
 				target="Gold",
+				optional=True,
 			),
 			self.step(
 				"add_tier",
@@ -224,6 +246,7 @@ class PlaygroundChecklist:
 				path,
 				self.added("Sponsorship Tier", event=event),
 				target="Add Tier",
+				optional=True,
 			),
 			self.step(
 				"add_sponsor",
@@ -232,6 +255,7 @@ class PlaygroundChecklist:
 				path,
 				self.added("Event Sponsor", event=event),
 				target="Add Manually",
+				optional=True,
 			),
 			self.step(
 				"review_enquiry",
@@ -259,6 +283,7 @@ class PlaygroundChecklist:
 				f"/b/manage/communities/{community}/members",
 				community and self.has_teammate(community),
 				target=_("Add member"),
+				optional=True,
 			),
 			self.step(
 				"approve_request",
@@ -273,6 +298,7 @@ class PlaygroundChecklist:
 					event_title=["in", seeded_titles],
 				),
 				target=_("Approve"),
+				optional=True,
 			),
 			self.step(
 				"add_external_event",
@@ -296,6 +322,7 @@ class PlaygroundChecklist:
 				f"/community/{community and frappe.db.get_value('Buzz Team', community, 'slug')}",
 				False,
 				completes_on="visit",
+				optional=True,
 			),
 		]
 		for step in steps:
@@ -308,6 +335,7 @@ class PlaygroundChecklist:
 			),
 			"/community",
 			bool(community),
+			optional=True,
 			target=_("Create a community"),
 		)
 		return self.group("community", _("Grow your community"), [create, *steps])
@@ -323,6 +351,7 @@ class PlaygroundChecklist:
 				f"/b/manage/events/{self.conference.name}/settings",
 				self.exists("Buzz Event Collaborator", event=self.conference.name),
 				target=_("Invite collaborator"),
+				optional=True,
 			),
 		]
 		return self.group("collaborators", _("Work with collaborators"), steps)
@@ -361,6 +390,13 @@ class PlaygroundChecklist:
 		return self.exists(
 			"Buzz Team Membership", team=community, user=["!=", self.sandbox.organizer]
 		) or self.exists("User Invitation", buzz_team=community, app_name="buzz")
+
+	def scheduled_talks(self, event: str) -> int:
+		schedule = frappe.db.get_value("Buzz Schedule", {"event": event})
+		return frappe.db.count(
+			"Buzz Schedule Item",
+			{"parenttype": "Buzz Schedule", "parent": schedule, "reference_doctype": "Event Talk"},
+		)
 
 	def exists(self, doctype: str, **filters) -> bool:
 		return bool(frappe.db.exists(doctype, filters))
