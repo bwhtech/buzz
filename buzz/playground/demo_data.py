@@ -243,7 +243,14 @@ def speaker_profile(first_name: str, last_name: str) -> str:
 	"""Speakers are shared by every sandbox, so cleanup leaves them, like the ones accepting a proposal makes."""
 	email = f"{first_name.lower()}.{last_name.lower()}@example.com"
 	if not frappe.db.exists("User", email):
-		insert("User", email=email, first_name=first_name, last_name=last_name, user_type="Website User")
+		insert(
+			"User",
+			email=email,
+			first_name=first_name,
+			last_name=last_name,
+			user_type="Website User",
+			send_welcome_email=0,
+		)
 	return frappe.db.exists("Speaker Profile", {"user": email}) or insert("Speaker Profile", user=email).name
 
 
