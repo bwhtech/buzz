@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Alert, dayjs } from "frappe-ui"
+import { Alert, dayjs, Switch, TabButtons } from "frappe-ui"
 import { computed, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import EmptyState from "@/components/common/EmptyState.vue"
+import { ListFilters } from "@/components/common/filters"
 import CreateEventHeader from "@/components/dashboard/CreateEventHeader.vue"
 import EventCard from "@/components/dashboard/events/EventCard.vue"
 import EventDrawer from "@/components/dashboard/events/EventDrawer.vue"
@@ -11,10 +12,11 @@ import FloatingCreateEventButton from "@/components/dashboard/FloatingCreateEven
 import AddEventMenu from "@/components/dashboard/teams/AddEventMenu.vue"
 import PendingSubmissions from "@/components/dashboard/teams/PendingSubmissions.vue"
 import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue"
-import TimelineList from "@/components/dashboard/TimelineList.vue"
+import TimelineList, { layoutOptions } from "@/components/dashboard/TimelineList.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
 import { useEventCardLayout } from "@/composables/useEventCardLayout"
 import { useIsMobile } from "@/composables/useIsMobile"
+import { useMyEventFilters } from "@/composables/useMyEventFilters"
 import { useRevealOnScroll } from "@/composables/useRevealOnScroll"
 import { finishOpening } from "@/composables/useWorkspaceOpening"
 import { useMyEvents, useTeamEvents } from "@/data/events"
@@ -31,8 +33,9 @@ const route = useRoute()
 const isMobile = useIsMobile()
 
 const team = computed(() => route.params.teamId as string | undefined)
+const { search, conditions, isFiltered, includeArchived, fields, filters } = useMyEventFilters()
 // A team's calendar also lists the events its community approved, which the personal feed leaves out.
-const myEvents = team.value ? useTeamEvents(() => team.value as string) : useMyEvents()
+const myEvents = team.value ? useTeamEvents(() => team.value as string) : useMyEvents(filters)
 const canReview = computed(() =>
 	canEditPublicPage(teams.value.find((option) => option.name === team.value)?.team_role),
 )
@@ -62,11 +65,13 @@ const drawer = useDrawerSelection<MyEvent>()
 const layout = useEventCardLayout()
 
 const emptyDescription = computed(() =>
-	team.value
-		? "Events your community hosts or features will show up here."
-		: tab.value === "upcoming"
-			? "Events you host or hold a ticket to will show up here."
-			: "Events you have already attended or hosted will show up here.",
+	isFiltered.value
+		? "No event matches your search or filters."
+		: team.value
+			? "Events your community hosts or features will show up here."
+			: tab.value === "upcoming"
+				? "Events you host or hold a ticket to will show up here."
+				: "Events you have already attended or hosted will show up here.",
 )
 </script>
 
@@ -135,6 +140,27 @@ const emptyDescription = computed(() =>
 		</template>
 		<template v-if="team && canReview && !isMobile" #actions>
 			<AddEventMenu :community="team" can-review @added="myEvents.reload()" />
+		</template>
+		<template v-if="!team" #controls>
+			<ListFilters
+				v-model="conditions"
+				v-model:search="search"
+				class="flex-1"
+				:fields="fields"
+				search-placeholder="Search events"
+				search-class="basis-full md:basis-1/2"
+			>
+				<template #after-search>
+					<!-- A padded end-switch spans its parent, so the wrapper keeps it to its content.
+					     On a phone it starts flush with the search box and pushes the buttons to the end. -->
+					<div class="whitespace-nowrap max-md:-ml-2 max-md:mr-auto md:ml-auto">
+						<Switch v-model="includeArchived" padded :label="__('Show archived')" />
+					</div>
+				</template>
+				<template #after-filter>
+					<TabButtons v-model="layout" :options="layoutOptions" />
+				</template>
+			</ListFilters>
 		</template>
 		<template #empty-state>
 			<EmptyState :title="`No ${tab} events`" :description="emptyDescription" icon="lucide-ghost" />

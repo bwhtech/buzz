@@ -2,7 +2,7 @@ from datetime import datetime
 
 import frappe
 from frappe import _
-from frappe.query_builder import Case
+from frappe.query_builder import Case, Criterion
 from frappe.query_builder.functions import Count, Date
 from frappe.utils import add_days, getdate
 
@@ -101,6 +101,7 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 			venue.venue_name.as_("venue"),
 			event.medium,
 			event.banner_image,
+			event.is_published,
 			event.team,
 			team.team_name,
 			team.logo.as_("team_logo"),
@@ -121,14 +122,18 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 
 def narrow(query, event, hosted, ticketed, filters: MyEventFilters | None):
 	"""Each set field adds one clause; the role reuses the criterions built above."""
-	if not filters:
-		return query
+	filters = filters or MyEventFilters()
+	if not filters.include_archived:
+		query = query.where(event.is_published == 1)
 	if filters.role:
-		query = query.where(hosted if filters.role == "hosting" else ticketed)
+		roles = {"hosting": hosted, "attending": ticketed}
+		query = query.where(Criterion.any([roles[role] for role in filters.role]))
 	if filters.team:
-		query = query.where(event.team == filters.team)
+		query = query.where(event.team.isin(filters.team))
 	if filters.medium:
-		query = query.where(event.medium == filters.medium)
+		query = query.where(event.medium.isin(filters.medium))
+	if filters.search and filters.search.strip():
+		query = query.where(event.title.like(f"%{filters.search.strip()}%"))
 	return query
 
 

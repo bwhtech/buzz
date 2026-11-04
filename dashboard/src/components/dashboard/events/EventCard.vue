@@ -43,6 +43,9 @@ const dateLabel = computed(() => {
 	return props.showDate ? dayLabel(start_date) : ""
 })
 
+// Rows without the field, such as an external calendar entry, are not archived.
+const isArchived = computed(() => props.event.is_published === false)
+
 // Solid on a cover, so the badges read over any image.
 const badgeVariant = computed(() => (props.layout === "cover" ? "solid" : "subtle"))
 
@@ -64,7 +67,7 @@ const venue = computed(() => {
 </script>
 
 <template>
-	<article class="buzz-event-card" :data-layout="layout">
+	<article class="buzz-event-card" :data-layout="layout" :data-archived="isArchived || undefined">
 		<!-- Static tags: a dynamic `is="button"` resolves to frappe-ui's global Button. -->
 		<a
 			v-if="externalUrl"
@@ -128,10 +131,11 @@ const venue = computed(() => {
 		</div>
 
 		<div
-			v-if="$slots.status || event.is_attendee || event.is_external"
+			v-if="$slots.status || isArchived || event.is_attendee || event.is_external"
 			class="buzz-event-card-status"
 		>
 			<slot name="status">
+				<Badge v-if="isArchived" theme="amber" :variant="badgeVariant" :label="__('Archived')" />
 				<Badge v-if="event.is_attendee" theme="violet" :variant="badgeVariant" label="Attending" />
 				<Badge v-if="event.is_external" :variant="badgeVariant" :label="__('External')" />
 			</slot>
