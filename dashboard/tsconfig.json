@@ -13,6 +13,8 @@
 		"forceConsistentCasingInFileNames": true,
 		"useDefineForClassFields": true,
 		"resolveJsonModule": true,
+		// Resolves the linked @framework/ui's imports from this app's node_modules.
+		"preserveSymlinks": true,
 		"allowImportingTsExtensions": true,
 		"noEmit": true,
 		"sourceMap": true,
@@ -21,6 +23,7 @@
 		"paths": {
 			"@/*": ["src/*"],
 			"@public/*": ["../buzz/public/*"],
+			"@framework/ui/telemetry": ["node_modules/@framework/ui/src/telemetry/index.ts"],
 			"tslib": ["/node_modules/tslib/tslib.d.ts"],
 			"maplibre-gl": ["node_modules/maplibre-gl"],
 			"cobe": ["node_modules/cobe"]

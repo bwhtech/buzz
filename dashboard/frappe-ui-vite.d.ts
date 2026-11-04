@@ -32,3 +32,10 @@ declare module "frappe-ui/vite" {
 
 	export default function frappeui(options?: FrappeUIOptions): Plugin[]
 }
+
+// @framework/ui ships its Vite plugin as plain JavaScript too.
+declare module "@framework/ui/vite" {
+	import type { Plugin } from "vite"
+
+	export default function frameworkUI(options?: { dedupe?: string[] }): Plugin[]
+}
