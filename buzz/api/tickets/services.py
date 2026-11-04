@@ -50,6 +50,9 @@ class TicketService:
 			add_ons=self.add_on_details(event_id),
 			event=event,
 			venue=event.get_venue_name(),
+			venue_has_multiple_locations=bool(
+				event.venue and frappe.get_cached_value("Event Venue", event.venue, "has_multiple_locations")
+			),
 			booking=self.booking_owned_by_user(),
 			ticket_type=frappe.get_cached_doc("Event Ticket Type", ticket.ticket_type),
 			can_transfer_ticket=windows.is_window_open(event_id, windows.TRANSFER),

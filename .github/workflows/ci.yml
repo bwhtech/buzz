@@ -76,10 +76,11 @@ jobs:
       - name: Run Tests
         working-directory: /home/runner/frappe-bench
         # Shards match the runner's 4 cores. Coverage only on frappe develop: its data files are
-        # per process there, while version-16 has every shard write the same file.
+        # per process there, while version-16 has every shard write the same file. Pull requests
+        # only: the report goes to a PR comment, and collecting it adds about 100s to the suite.
         run: >-
           bash "$GITHUB_WORKSPACE/.github/scripts/run-sharded-tests.sh" test_site 4
-          ${{ matrix.frappe-branch == '' && '--with-coverage' || '' }}
+          ${{ matrix.frappe-branch == '' && github.event_name == 'pull_request' && '--with-coverage' || '' }}
         env:
           TYPE: server
 

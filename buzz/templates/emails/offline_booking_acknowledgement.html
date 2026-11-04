@@ -11,3 +11,5 @@
 {% set total_label = "Amount to verify" %}
 {% include "buzz/templates/emails/_booking_summary.html" %}
 {% endblock %}
+
+{% block locations %}{% include "buzz/templates/emails/_locations_map.html" %}{% endblock %}

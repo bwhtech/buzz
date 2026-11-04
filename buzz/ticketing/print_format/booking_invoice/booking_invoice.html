@@ -1,0 +1,113 @@
+{%- set invoice = doc.get_invoice() -%}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+	body { font-family: Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; line-height: 20px; color: #171717; margin: 0; }
+	table { border-collapse: collapse; width: 100%; }
+	td, th { vertical-align: top; text-align: left; }
+	/* frappe's print view pads every cell; the layout sets its own spacing. */
+	.print-format td, .print-format th { padding: 0; }
+	.muted { color: #7c7c7c; }
+	.caption { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #7c7c7c; padding-bottom: 4px; }
+	.reference { font-family: 'SF Mono', Menlo, Consolas, monospace; }
+	.right { text-align: right; white-space: nowrap; }
+	.title { font-size: 24px; font-weight: 600; line-height: 30px; }
+	.logo { max-height: 48px; max-width: 160px; }
+	.section { margin-top: 28px; }
+	.lines th { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #7c7c7c; padding: 8px 0; border-bottom: 1px solid #ededed; }
+	.lines td { padding: 10px 0; border-bottom: 1px solid #ededed; }
+	.totals td { padding: 4px 0; }
+	.grand-total td { padding-top: 10px; border-top: 1px solid #ededed; font-weight: 600; }
+	.footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #ededed; font-size: 12px; color: #7c7c7c; }
+	@media print { body { background: #ffffff; } }
+</style>
+</head>
+<body>
+	<table>
+		<tr>
+			<td>
+				{% if invoice.seller.logo %}<img class="logo" src="{{ invoice.seller.logo }}" alt=""><br>{% endif %}
+				<div class="title">{{ invoice.title }}</div>
+			</td>
+			<td class="right">
+				<div class="caption">{{ _("Invoice number") }}</div>
+				<div class="reference">{{ invoice.number }}</div>
+				<div class="caption" style="padding-top: 8px">{{ _("Invoice date") }}</div>
+				<div>{{ invoice.date }}</div>
+				{% if invoice.payment_status %}
+				<div class="caption" style="padding-top: 8px">{{ _("Payment") }}</div>
+				<div>{{ invoice.payment_status }}{% if invoice.payment_method %} &middot; {{ invoice.payment_method }}{% endif %}</div>
+				{% endif %}
+			</td>
+		</tr>
+	</table>
+
+	<table class="section">
+		<tr>
+			<td style="width: 50%; padding-right: 16px">
+				<div class="caption">{{ _("From") }}</div>
+				<strong>{{ invoice.seller.name }}</strong>
+				{% if invoice.seller.address %}<br>{{ invoice.seller.address|e|replace("\n", "<br>"|safe) }}{% endif %}
+				{% if invoice.seller.tax_id %}<br>{{ invoice.seller.tax_id_label }}: {{ invoice.seller.tax_id }}{% endif %}
+				{% if invoice.support_email %}<br>{{ invoice.support_email }}{% endif %}
+			</td>
+			<td style="width: 50%">
+				<div class="caption">{{ _("Bill to") }}</div>
+				<strong>{{ invoice.buyer.name or invoice.buyer.contact_name }}</strong>
+				{% if invoice.buyer.name and invoice.buyer.contact_name %}<br>{{ invoice.buyer.contact_name }}{% endif %}
+				{% if invoice.buyer.address %}<br>{{ invoice.buyer.address|e|replace("\n", "<br>"|safe) }}{% endif %}
+				{% if invoice.buyer.state %}<br>{{ invoice.buyer.state_label }}: {{ invoice.buyer.state }}{% endif %}
+				{% if invoice.buyer.tax_id %}<br>{{ invoice.buyer.tax_id_label }}: {{ invoice.buyer.tax_id }}{% endif %}
+				{% if invoice.buyer.email %}<br>{{ invoice.buyer.email }}{% endif %}
+				{% if invoice.buyer.phone %}<br>{{ invoice.buyer.phone }}{% endif %}
+			</td>
+		</tr>
+	</table>
+
+	<table class="section">
+		<tr>
+			<td>
+				<div class="caption">{{ _("Event") }}</div>
+				<strong>{{ invoice.event.title }}</strong>
+				{% if invoice.event.dates %}<br>{{ invoice.event.dates }}{% endif %}
+				{% if invoice.event.venue %}<br>{{ invoice.event.venue }}{% endif %}
+			</td>
+		</tr>
+	</table>
+
+	<table class="lines section">
+		<tr>
+			<th>{{ _("Description") }}</th>
+			<th class="right">{{ _("Qty") }}</th>
+			<th class="right">{{ _("Unit price") }}</th>
+			<th class="right">{{ _("Amount") }}</th>
+		</tr>
+		{% for line in invoice.lines %}
+		<tr>
+			<td>{{ line.description }}</td>
+			<td class="right">{{ line.quantity }}</td>
+			<td class="right">{{ line.unit_price }}</td>
+			<td class="right">{{ line.amount }}</td>
+		</tr>
+		{% endfor %}
+	</table>
+
+	<table class="totals" style="margin-top: 12px">
+		{% for row in invoice.totals %}
+		<tr class="{{ 'grand-total' if row.is_total else '' }}">
+			<td class="{{ '' if row.is_total else 'muted' }}">{{ row.label }}</td>
+			<td class="right">{{ row.amount }}</td>
+		</tr>
+		{% endfor %}
+	</table>
+	{% if invoice.tax_note %}<div class="right muted">{{ invoice.tax_note }}</div>{% endif %}
+
+	<div class="footer">
+		{{ _("This is a computer-generated invoice.") }}
+		<span class="reference">{{ invoice.number }}</span>
+		{% if invoice.support_email %}&middot; {{ invoice.support_email }}{% endif %}
+	</div>
+</body>
+</html>

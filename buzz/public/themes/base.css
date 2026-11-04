@@ -170,6 +170,21 @@ body {
 	white-space: nowrap;
 }
 
+.meta-locations {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+.meta-locations:hover .meta-venue-name {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
 .meta-more-locations {
 	flex: none;
 	padding: 2px 8px;
@@ -1653,6 +1668,13 @@ summary.schedule-summary:focus-visible {
 .event-card-place {
 	color: var(--ink-muted);
 	font-size: 13px;
+}
+
+.event-card-place {
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
 }
 
 .event-card-title {

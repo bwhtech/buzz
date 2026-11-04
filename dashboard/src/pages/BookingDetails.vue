@@ -65,6 +65,7 @@
 			<BookingFinancialSummary
 				v-if="!bookingDetails.data.event.free_event && showPaymentSummary"
 				:booking="bookingDetails.data.doc"
+				:invoice-url="invoiceUrl"
 			/>
 		</div>
 
@@ -141,6 +142,11 @@ const isBookingRejected = computed(() => {
 const showPaymentSummary = computed(() => {
 	const doc = bookingDetails.data?.doc
 	return doc && (doc.total_amount || 0) > 0
+})
+
+const invoiceUrl = computed(() => {
+	if (!bookingDetails.data?.invoice_available) return undefined
+	return `/api/v2/method/buzz.api.booking.download_invoice?booking_id=${encodeURIComponent(props.bookingId)}`
 })
 
 // Check if this is a successful payment redirect (check URL immediately)

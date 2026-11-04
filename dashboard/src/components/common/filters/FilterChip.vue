@@ -52,8 +52,16 @@ const choiceSummary = (selected: { label: string }[]) =>
 const ratingStars = computed(() => Math.round(Number(value.value || 0) * 5))
 
 const textInput = ref<InstanceType<typeof TextInput> | null>(null)
+const choiceOpen = ref(false)
 // The menu hands focus back to its trigger as it closes, so the input claims it a beat later.
-onMounted(() => props.autofocus && setTimeout(() => textInput.value?.focus(), 50))
+onMounted(
+	() =>
+		props.autofocus &&
+		setTimeout(() => {
+			if (inputType.value === "choice") choiceOpen.value = true
+			else textInput.value?.focus()
+		}, 50),
+)
 </script>
 
 <template>
@@ -73,7 +81,8 @@ onMounted(() => props.autofocus && setTimeout(() => textInput.value?.focus(), 50
 
 		<MultiSelect
 			v-if="inputType === 'choice'"
-			:hide-search="field.options.length < 8"
+			v-model:open="choiceOpen"
+			:hide-search="!field.searchable && field.options.length < 8"
 			:options="field.options"
 			:model-value="value as string[]"
 			@update:model-value="setValue(($event as unknown[]).map(String))"

@@ -30,7 +30,7 @@ export const activityFilters: { label: string; value: ActivityFilter }[] = [
 const filterKinds: Record<Exclude<ActivityFilter, "all">, ActivityEntry["kind"][]> = {
 	email: ["email"],
 	comment: ["comment"],
-	update: ["change", "created"],
+	update: ["change", "created", "edit"],
 }
 
 /**

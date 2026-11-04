@@ -24,6 +24,9 @@ const FIELD_LABELS = {
 	tax_percentage: __("Tax Percentage"),
 	ticket_email_template: __("Ticket Email Template"),
 	ticket_print_format: __("Ticket Print Format"),
+	send_booking_confirmation_email: __("Send Booking Confirmation Email"),
+	booking_confirmation_email_template: __("Booking Confirmation Email Template"),
+	offline_acknowledgement_email_template: __("Offline Payment Acknowledgement Email Template"),
 	auto_send_pitch_deck: __("Auto Send Pitch Deck"),
 	sponsor_deck_email_template: __("Sponsor Deck Email Template"),
 	sponsor_deck_reply_to: __("Sponsor Deck Reply To"),
@@ -109,6 +112,20 @@ function render_save_template_options(dialog, frm) {
 			"tax_percentage",
 			"ticket_email_template",
 			"ticket_print_format",
+		],
+		doc,
+	)
+	html += "</div></div>"
+
+	// Booking Email Settings
+	html += '<div class="template-section mt-3">'
+	html += `<h6 class="text-muted">${__("Booking Email Settings")}</h6>`
+	html += '<div class="row">'
+	html += render_save_template_field_group(
+		[
+			"send_booking_confirmation_email",
+			"booking_confirmation_email_template",
+			"offline_acknowledgement_email_template",
 		],
 		doc,
 	)

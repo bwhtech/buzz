@@ -2,12 +2,23 @@
 	<div class="overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-base">
 		<div class="flex items-center justify-between gap-2 px-4 pb-1.5 pt-3.5">
 			<h3 class="text-base-semibold text-ink-gray-9">{{ __("Payment") }}</h3>
-			<Badge v-if="(booking.total_amount || 0) > 0" variant="subtle" :theme="paymentBadge.theme">
-				<template #prefix>
-					<component :is="paymentBadge.icon" class="size-3" />
-				</template>
-				{{ paymentBadge.label }}
-			</Badge>
+			<div class="flex items-center gap-2">
+				<Button
+					v-if="invoiceUrl"
+					variant="ghost"
+					size="sm"
+					icon-left="lucide-file-text"
+					:href="invoiceUrl"
+				>
+					{{ __("Download invoice") }}
+				</Button>
+				<Badge v-if="(booking.total_amount || 0) > 0" variant="subtle" :theme="paymentBadge.theme">
+					<template #prefix>
+						<component :is="paymentBadge.icon" class="size-3" />
+					</template>
+					{{ paymentBadge.label }}
+				</Badge>
+			</div>
 		</div>
 
 		<div class="flex flex-col gap-2 px-4 pb-3 pt-1.5 text-p-sm text-ink-gray-6 tabular-nums">
@@ -62,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { Badge } from "frappe-ui"
+import { Badge, Button } from "frappe-ui"
 import { computed } from "vue"
 import LucideCheck from "~icons/lucide/check"
 import LucideClock from "~icons/lucide/clock"
@@ -77,6 +88,10 @@ const props = defineProps({
 		validator: (value) => {
 			return typeof value === "object" && value !== null
 		},
+	},
+	invoiceUrl: {
+		type: String,
+		default: undefined,
 	},
 })
 

@@ -4,6 +4,7 @@ import { computed } from "vue"
 import { useRoute } from "vue-router"
 
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
+import NotificationsButton from "@/components/dashboard/notifications/NotificationsButton.vue"
 import { useIsMobile } from "@/composables/useIsMobile"
 
 // The event, then the section of it being looked at. Neither crumb is a link: the
@@ -14,6 +15,7 @@ const props = defineProps<{
 	title: string | null | undefined
 	section: string
 	modified?: string | null
+	dirty?: boolean
 }>()
 
 const isMobile = useIsMobile()
@@ -42,6 +44,8 @@ const modifiedExact = computed(() => modifiedAt.value?.format("D MMM YYYY, h:mm 
 			</template>
 			<template #suffix>
 				<slot />
+				<!-- Save and Discard need the room while there are unsaved edits. -->
+				<NotificationsButton v-if="!dirty" />
 			</template>
 		</PageHeaderMobile>
 		<EventArchivedAlert :event="route.params.eventId as string" banner />

@@ -15,9 +15,11 @@ class MyEventFilters(APIRequest):
 	instead of quietly matching nothing.
 	"""
 
-	role: Literal["hosting", "attending"] | None = None
-	team: str | None = None
-	medium: Literal["In Person", "Online"] | None = None
+	role: list[Literal["hosting", "attending"]] | None = None
+	team: list[str] | None = None
+	medium: list[Literal["In Person", "Online"]] | None = None
+	search: str | None = None
+	include_archived: bool = False
 
 
 class MyEvent(APIResponse):
@@ -31,6 +33,8 @@ class MyEvent(APIResponse):
 	venue: str | None = None
 	medium: str | None = None
 	banner_image: str | None = None
+	# An external calendar row has no Buzz state to archive, so it reads as published.
+	is_published: bool = True
 	is_host: bool
 	is_attendee: bool
 	team: str | None = None

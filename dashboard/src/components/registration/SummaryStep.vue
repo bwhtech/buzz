@@ -79,7 +79,7 @@ import { formatWholePriceOrFree } from "@/utils/currency"
 
 import PhoneInput from "../PhoneInput.vue"
 import PhoneReason from "./PhoneReason.vue"
-import { taxIdFieldLabel } from "./registrationSteps"
+import { isGstLabel, taxIdFieldLabel } from "./registrationSteps"
 import SummaryCardHeader from "./SummaryCardHeader.vue"
 import { useEventDateLabels } from "./useEventDateLabels"
 import type { RegistrationStepId } from "./useRegistrationSteps"
@@ -160,7 +160,14 @@ const billingRows = computed(() => {
 		rows.push(
 			{ label: taxIdFieldLabel(props.taxLabel), value: billing.tax_id },
 			{ label: __("Business Name"), value: billing.business_name },
-			...(billing.billing_state ? [{ label: __("State"), value: billing.billing_state }] : []),
+			...(billing.billing_state
+				? [
+						{
+							label: isGstLabel(props.taxLabel) ? __("State") : __("State / region"),
+							value: billing.billing_state,
+						},
+					]
+				: []),
 		)
 	if (props.showCurrency) rows.push({ label: __("Currency"), value: props.currency })
 	return rows

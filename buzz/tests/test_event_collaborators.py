@@ -199,8 +199,9 @@ class TestCollaboratorRows(CollaboratorTestCase):
 			self.assertEqual(get_my_teams(), [])
 
 	def test_collaborator_sees_only_their_event(self):
+		# The shared fixture events are unpublished, which the feed leaves out unless asked.
 		with self.set_user(self.collaborators["guests"]):
-			response = get_my_events()
+			response = get_my_events({"include_archived": True})
 
 		names = {str(event.name) for event in response.upcoming + response.past}
 		self.assertEqual(names, {str(self.event_a)})
