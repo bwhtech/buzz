@@ -1,3 +1,10 @@
+<script lang="ts">
+export const layoutOptions = [
+	{ label: "Timeline", value: "row", icon: "lucide-rows-3" },
+	{ label: "Cards", value: "cover", icon: "lucide-layout-grid" },
+]
+</script>
+
 <script setup lang="ts" generic="T extends { name: string }">
 import { ErrorMessage, Icon, Skeleton, TabButtons } from "frappe-ui"
 
@@ -27,11 +34,6 @@ const tabOptions = [
 	{ label: "Upcoming", value: "upcoming" },
 	{ label: "Past", value: "past" },
 ]
-
-const layoutOptions = [
-	{ label: "Timeline", value: "row", icon: "lucide-rows-3" },
-	{ label: "Cards", value: "cover", icon: "lucide-layout-grid" },
-]
 </script>
 
 <template>
@@ -56,7 +58,13 @@ const layoutOptions = [
 					size="md"
 					:fluid="isMobile"
 				/>
-				<TabButtons v-if="layout" v-model="layout" :options="layoutOptions" size="md" />
+				<!-- A list with its own controls row carries the layout toggle there instead. -->
+				<TabButtons
+					v-if="layout && !$slots.controls"
+					v-model="layout"
+					:options="layoutOptions"
+					size="md"
+				/>
 				<slot name="actions" />
 			</div>
 		</header>
