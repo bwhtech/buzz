@@ -132,8 +132,10 @@ def narrow(query, event, hosted, ticketed, filters: MyEventFilters | None):
 		query = query.where(event.team.isin(filters.team))
 	if filters.medium:
 		query = query.where(event.medium.isin(filters.medium))
-	if filters.search and filters.search.strip():
-		query = query.where(event.title.like(f"%{filters.search.strip()}%"))
+	if search := (filters.search or "").strip():
+		# Typed % and _ are matched as themselves, not as wildcards.
+		escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+		query = query.where(event.title.like(f"%{escaped}%"))
 	return query
 
 

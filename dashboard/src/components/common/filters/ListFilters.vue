@@ -85,11 +85,17 @@ const fieldMenuItem = (field: FilterField) => ({
 		: { onClick: () => add(field) }),
 })
 
+// A searchable field already on the panel is edited in its chip, not added twice.
+const isOffered = (field: FilterField) =>
+	!field.searchable || !conditions.value.some(([key]) => key === field.key)
+
 const fieldMenu = computed<DropdownOptions>(() =>
 	(["standard", "question"] as const)
 		.map((section) => ({
 			group: section === "standard" ? "Fields" : "Form questions",
-			options: props.fields.filter((field) => field.section === section).map(fieldMenuItem),
+			options: props.fields
+				.filter((field) => field.section === section && isOffered(field))
+				.map(fieldMenuItem),
 		}))
 		.filter((group) => group.options.length),
 )
