@@ -3,7 +3,7 @@ from frappe import _
 from frappe.desk.notifications import extract_mentions
 from frappe.utils import get_fullname, get_url, strip_html
 
-from buzz.permissions import HUMAN_MEMBER_FILTERS
+from buzz.permissions import HUMAN_MEMBER_FILTERS, has_team_access
 from buzz.subscriptions import Subscriptions
 
 DASHBOARD_ROUTES = {"Talk Proposal": "/b/manage/events/{event}/talks?proposal={name}"}
@@ -18,6 +18,23 @@ def team_of(doctype: str, name: str) -> str | None:
 		return frappe.db.get_value(doctype, name, "team")
 	event = frappe.db.get_value(doctype, name, "event")
 	return frappe.db.get_value("Buzz Event", event, "team") if event else None
+
+
+def is_team_note(comment) -> bool:
+	return comment.comment_type == "Comment" and is_commentable(comment.reference_doctype)
+
+
+def can_read_team_notes(team: str | None, user: str) -> bool:
+	"""Notes stay with the record's team: a speaker reads their own proposal, not its notes."""
+	return bool(team) and has_team_access(team, "read", user)
+
+
+def team_note_has_permission(doc, ptype: str | None = None, user: str | None = None, **kwargs) -> bool:
+	"""Frappe's form timeline and docinfo read comments through this hook, not the role check."""
+	if not is_team_note(doc):
+		return True
+	team = team_of(doc.reference_doctype, doc.reference_name)
+	return can_read_team_notes(team, user or frappe.session.user)
 
 
 def team_members(team: str | None) -> list[str]:
@@ -76,7 +93,7 @@ class TeamComment:
 	"""
 
 	def is_team_note(self) -> bool:
-		return self.comment_type == "Comment" and is_commentable(self.reference_doctype)
+		return is_team_note(self)
 
 	def after_insert(self):
 		if not self.is_team_note():

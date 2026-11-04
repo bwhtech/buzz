@@ -314,6 +314,7 @@ permission_query_conditions = {
 standard_queries = {"Buzz Team": "buzz.permissions.team_link_query"}
 
 has_permission = {
+	"Comment": "buzz.comments.team_note_has_permission",
 	"Buzz Form": "buzz.permissions.derived_has_permission",
 	"Buzz Event": "buzz.permissions.team_has_permission",
 	"Buzz Campaign": "buzz.permissions.team_has_permission",
