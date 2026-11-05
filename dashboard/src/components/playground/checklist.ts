@@ -64,9 +64,10 @@ export function trackCompletedSteps(
 		if (!groups()?.length) return
 		// Past the baseline, wait for PostHog rather than mark steps sent that it never saw.
 		if (sent.value && !window.posthog) return
-		for (const [name, properties] of checklistEvents(sent.value, steps, essentials.value)) {
-			window.posthog?.capture(name, properties)
-		}
+		const events = checklistEvents(sent.value, steps, essentials.value)
+		// capture returns nothing when PostHog drops the event (stub not loaded, bot filter), so retry on the next poll.
+		const dropped = events.some(([name, properties]) => !window.posthog?.capture(name, properties))
+		if (dropped) return
 		sent.value = steps.map((step) => step.step)
 	})
 }
