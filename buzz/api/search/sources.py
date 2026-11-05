@@ -31,29 +31,29 @@ class SearchSource:
 	section: str
 	doctype: str
 	title_field: str
-	subtitle_field: str | None
+	subtitle_field: str
 	search_filters: Callable[[str], list[list] | None]
 	base_filters: Callable[[str], list[list]] = event_filters
 	format_subtitle: Callable[[object], str] = str
 
 	def search(self, event: str, term: str) -> list[SearchRecord]:
-		fields = [field for field in ("name", self.title_field, self.subtitle_field) if field]
 		rows = frappe.get_all(
 			self.doctype,
 			filters=self.base_filters(event),
 			or_filters=self.search_filters(term),
-			fields=fields,
+			fields=["name", self.title_field, self.subtitle_field],
 			limit_page_length=RECORDS_PER_GROUP,
 			ignore_permissions=True,
 		)
 		return [self.record(row) for row in rows]
 
 	def record(self, row) -> SearchRecord:
-		subtitle = row.get(self.subtitle_field) if self.subtitle_field else None
+		subtitle = row.get(self.subtitle_field)
 		return SearchRecord(
 			name=str(row.name),
 			title=str(row.get(self.title_field) or row.name),
-			subtitle=self.format_subtitle(subtitle) if subtitle else None,
+			# `is not None`: a midnight start time is a falsy timedelta(0).
+			subtitle=self.format_subtitle(subtitle) if subtitle is not None and subtitle != "" else None,
 		)
 
 

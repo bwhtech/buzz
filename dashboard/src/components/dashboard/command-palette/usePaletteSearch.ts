@@ -10,7 +10,7 @@ export type SearchGroup = { key: string; records: SearchRecord[] }
 type SearchTarget = { event?: PaletteEvent; source?: SearchSource; term: string }
 type SearchParams = { event: string; term: string; section?: string }
 
-const MIN_TERM_LENGTH = 2
+export const MIN_TERM_LENGTH = 2
 const DEBOUNCE_MS = 150
 
 // Uncached: events and results are the session user's own.
@@ -41,9 +41,13 @@ export function usePaletteSearch(target: Ref<SearchTarget>) {
 			const request = params.value
 			if (!request) return (results.value = null)
 			search.abort()
-			const result = await search.submit(request).finally(() => {
-				if (key.value === current) pending.value = false
-			})
+			// A failed search shows nothing rather than the previous term's rows.
+			const result = await search
+				.submit(request)
+				.catch(() => ({ groups: [] }))
+				.finally(() => {
+					if (key.value === current) pending.value = false
+				})
 			// A slower, older request must not overwrite the newer query's rows.
 			if (result && key.value === current)
 				results.value = { event: request.event, groups: result.groups }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { KeyboardShortcut, useKeyboardShortcut } from "frappe-ui"
+import { Badge, KeyboardShortcut, useKeyboardShortcut } from "frappe-ui"
 import {
 	CommandPalette,
 	CommandPaletteEmpty,
@@ -10,13 +10,15 @@ import {
 	CommandPaletteList,
 	type CommandPaletteSelectEvent,
 } from "frappe-ui/experimental"
+import { ListboxGroupLabel } from "reka-ui"
 import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
+import HighlightFirstRow from "./HighlightFirstRow.vue"
 import { paletteOpen } from "./paletteOpen"
 import { scopeLabel, type PaletteScope } from "./paletteRows"
 import { usePaletteGroups } from "./usePaletteGroups"
-import { usePaletteEvents } from "./usePaletteSearch"
+import { MIN_TERM_LENGTH, usePaletteEvents } from "./usePaletteSearch"
 
 const route = useRoute()
 const router = useRouter()
@@ -57,7 +59,7 @@ function select(id: unknown, event: CommandPaletteSelectEvent) {
 
 function pushScope(id: unknown) {
 	const row = rowsById.value.get(String(id))
-	if (!row?.scope) return false
+	if (!row?.scope || !canPushInto(row.scope)) return false
 	scope.value = row.scope
 	query.value = row.scopeQuery ?? ""
 	return true
@@ -82,12 +84,21 @@ function onKeydown(event: KeyboardEvent, active: unknown) {
 	event.stopPropagation()
 }
 
+// The header row of the section already scoped to would push into itself.
+function canPushInto(target?: PaletteScope) {
+	if (!target) return false
+	const current = scope.value
+	return !(current?.event.name === target.event.name && current.source?.key === target.source?.key)
+}
+
+const rowIds = computed(() => [...rowsById.value.keys()].join())
+
 const scopeName = computed(() => (scope.value ? scopeLabel(scope.value) : ""))
 
 const emptyText = computed(() => {
 	const where = scopeName.value || currentEvent.value?.title
 	if (searching.value) return __("Searching…")
-	if (query.value.trim().length < 2)
+	if (query.value.trim().length < MIN_TERM_LENGTH)
 		return where ? __("Type at least two letters to search {0}", [where]) : __("No matches")
 	return where
 		? __('Nothing matches "{0}" in {1}', [query.value.trim(), where])
@@ -120,6 +131,7 @@ const emptyText = computed(() => {
 						<button
 							class="grid size-5 place-items-center rounded-full text-ink-gray-5 transition-transform duration-100 ease-out hover:bg-surface-gray-4 hover:text-ink-gray-8 active:scale-90"
 							:aria-label="__('Clear scope')"
+							@mousedown.prevent
 							@click="scope = null"
 						>
 							<span class="lucide-x size-3.5" />
@@ -128,12 +140,22 @@ const emptyText = computed(() => {
 				</template>
 			</CommandPaletteInput>
 
+			<HighlightFirstRow :row-ids="rowIds" />
 			<CommandPaletteList>
 				<CommandPaletteGroup
 					v-for="group in groups"
 					:key="group.label + group.rows[0]?.id"
-					:label="group.label || undefined"
+					:label="(!group.event && group.label) || undefined"
 				>
+					<ListboxGroupLabel
+						v-if="group.event"
+						as="div"
+						class="mb-2.5 flex min-w-0 items-center gap-1.5 px-4.5 text-base leading-tighter text-ink-gray-5"
+					>
+						<Badge :label="group.event" theme="gray" size="sm" class="min-w-0 truncate" />
+						<span class="lucide-chevron-right size-3.5 shrink-0" />
+						<span class="shrink-0">{{ group.label }}</span>
+					</ListboxGroupLabel>
 					<CommandPaletteItem
 						v-for="row in group.rows"
 						:key="row.id"
@@ -147,7 +169,7 @@ const emptyText = computed(() => {
 						<span v-if="row.subtitle" class="ml-2 truncate text-ink-gray-5">{{
 							row.subtitle
 						}}</span>
-						<template v-if="row.scope" #suffix="{ active: highlighted }">
+						<template v-if="canPushInto(row.scope)" #suffix="{ active: highlighted }">
 							<span v-if="highlighted" class="flex items-center gap-1 text-sm text-ink-gray-5">
 								{{ __("Search inside") }} <KeyboardShortcut combo="Tab" />
 							</span>

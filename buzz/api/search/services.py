@@ -1,7 +1,7 @@
 import frappe
 from frappe.utils import getdate, today
 
-from buzz.api.events.exceptions import CannotManageEvent, EventNotFound
+from buzz.api.events.exceptions import CannotManageEvent
 from buzz.api.search.exceptions import UnknownSearchSection
 from buzz.api.search.schemas import EventSearchResponse, PaletteEvent, PaletteEventsResponse, SearchGroup
 from buzz.api.search.sources import SOURCES
@@ -85,9 +85,7 @@ class EventSearch:
 	def __init__(self, event: str, section: str | None = None):
 		if section and section not in SECTIONS:
 			UnknownSearchSection.throw(section=section)
-		if not frappe.db.exists("Buzz Event", event):
-			EventNotFound.throw()
-
+		# No existence check: an unknown event and someone else's read the same, so ids cannot be probed.
 		self.event = event
 		self.access = get_section_access(frappe.session.user, event)
 		sources = [source for source in SOURCES if not section or source.section == section]

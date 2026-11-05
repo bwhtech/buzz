@@ -1,4 +1,5 @@
-import { computed, ref, type Ref } from "vue"
+import { useLocalStorage } from "@vueuse/core"
+import { computed, type Ref } from "vue"
 
 import { userResource } from "@/data/user"
 
@@ -16,11 +17,14 @@ type TipsState = {
 
 /** Example rows on an empty palette, until the user has opened a few search results. */
 export function usePaletteTips({ query, scope, event }: TipsState) {
-	const searches = ref(readSearches())
+	// Per browser, not per user: a hint that returns on a new device costs nothing.
+	const searches = useLocalStorage(SEARCHES_KEY, 0)
 
 	const tips = computed<PaletteRow[]>(() => {
 		if (searches.value >= SEARCHES_BEFORE_HIDING) return []
 		if (query.value || scope.value || !event.value) return []
+		// Nothing searchable here, so every example would lead nowhere.
+		if (!readableSources(event.value).length) return []
 		return tipRows(event.value, query, scope)
 	})
 
@@ -28,7 +32,6 @@ export function usePaletteTips({ query, scope, event }: TipsState) {
 	function countSearch(row: PaletteRow) {
 		if (!row.id.startsWith("record:") && !row.id.startsWith("search:")) return
 		searches.value += 1
-		writeSearches(searches.value)
 	}
 
 	return { tips, countSearch }
@@ -66,20 +69,4 @@ function tipRows(event: PaletteEvent, query: Ref<string>, scope: Ref<PaletteScop
 			run: () => (scope.value = { event, source }),
 		})
 	return rows
-}
-
-function readSearches() {
-	try {
-		return Number(localStorage.getItem(SEARCHES_KEY)) || 0
-	} catch {
-		return 0
-	}
-}
-
-function writeSearches(count: number) {
-	try {
-		localStorage.setItem(SEARCHES_KEY, String(count))
-	} catch {
-		// Private windows: the tips just show again next time.
-	}
 }

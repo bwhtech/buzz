@@ -83,6 +83,7 @@ export function usePaletteGroups({ query, scope, events, currentEventId }: Palet
 			...row,
 			id: `pick:${row.id}`,
 			keepOpen: true,
+			scopeQuery: parts.term,
 			run: () => {
 				scope.value = row.scope ?? null
 				query.value = parts.term

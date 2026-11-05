@@ -73,32 +73,51 @@ export type ParsedQuery = { term: string; event?: PaletteEvent; source?: SearchS
 export function parseQuery(query: string, events: PaletteEvent[]): ParsedQuery {
 	const parts = splitOnIn(query)
 	if (!parts) return { term: query.trim() }
+	if (!parts.target) return { term: parts.term }
 
-	const { term, target } = parts
-	if (!target) return { term }
+	// Leftmost ` in ` that names something first: an event title may contain " in " itself.
+	for (const at of inPositions(query)) {
+		const term = query.slice(0, at).trim()
+		const target = query
+			.slice(at + IN.length)
+			.trim()
+			.toLowerCase()
+		const source = sourceMatching(target)
+		if (source) return { term, source }
+		const event = events.find((option) => option.title.toLowerCase().includes(target))
+		if (event) return { term, event }
+	}
+	return { term: query.trim() }
+}
 
-	const source = SEARCH_SOURCES.find((option) => matchesSource(option, target))
-	if (source) return { term, source }
-	const event = events.find((option) => option.title.toLowerCase().includes(target))
-	return event ? { term, event } : { term: query.trim() }
+const IN = " in "
+
+function inPositions(query: string): number[] {
+	const lower = query.toLowerCase()
+	const positions: number[] = []
+	for (let at = lower.indexOf(IN); at >= 0; at = lower.indexOf(IN, at + 1)) positions.push(at)
+	return positions
 }
 
 /** The text before and after the last ` in `, the target lowercased. */
 export function splitOnIn(query: string): { term: string; target: string } | null {
-	const at = query.toLowerCase().lastIndexOf(" in ")
+	const at = query.toLowerCase().lastIndexOf(IN)
 	if (at < 0) return null
 	return {
 		term: query.slice(0, at).trim(),
 		target: query
-			.slice(at + 4)
+			.slice(at + IN.length)
 			.trim()
 			.toLowerCase(),
 	}
 }
 
-function matchesSource(source: SearchSource, target: string): boolean {
-	return [source.label, ...(source.keywords ?? [])].some((word) =>
-		word.toLowerCase().startsWith(target),
+// Labels before keywords: `in t` means Talks, not Guests by way of "tickets".
+function sourceMatching(target: string): SearchSource | undefined {
+	const starts = (word: string) => word.toLowerCase().startsWith(target)
+	return (
+		SEARCH_SOURCES.find((source) => starts(source.label)) ??
+		SEARCH_SOURCES.find((source) => source.keywords?.some(starts))
 	)
 }
 

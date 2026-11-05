@@ -50,7 +50,6 @@ const themeTabs = [...themes]
 const setTheme = (value: TabButtonValue) =>
 	setColorScheme(value as (typeof themes)[number]["value"])
 
-const openSettings = openUserSettings
 const reportIssue = () => window.open(NEW_ISSUE_URL, "_blank", "noopener")
 const logOut = () => session.logout.fetch()
 const logOutLabel = computed(() => (session.logout.loading ? __("Signing out…") : __("Log Out")))
@@ -76,7 +75,7 @@ const menu = computed<DropdownOptions>(() => [
 			{
 				label: __("Settings"),
 				icon: "lucide-settings",
-				onClick: openSettings,
+				onClick: openUserSettings,
 			},
 			{
 				label: __("Theme"),
@@ -134,7 +133,7 @@ const menu = computed<DropdownOptions>(() => [
 					size="lg"
 					icon-left="lucide-settings"
 					:label="__('Settings')"
-					@click="((sheetOpen = false), openSettings())"
+					@click="((sheetOpen = false), openUserSettings())"
 				/>
 				<!-- Matches the ghost Buttons around it: ItemListRow's own text is lighter and thinner. -->
 				<ItemListRow size="lg">

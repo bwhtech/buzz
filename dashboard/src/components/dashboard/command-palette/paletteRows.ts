@@ -8,7 +8,7 @@ import {
 	type PaletteEvent,
 	type SearchSource,
 } from "./paletteQuery"
-import type { SearchGroup } from "./usePaletteSearch"
+import type { SearchGroup, SearchRecord } from "./usePaletteSearch"
 
 export type PaletteScope = { event: PaletteEvent; source?: SearchSource }
 
@@ -27,7 +27,8 @@ export type PaletteRow = {
 	scopeQuery?: string
 }
 
-export type PaletteGroup = { label: string; rows: PaletteRow[] }
+// `event` draws the group's label as "<event> › <label>", for results inside one event.
+export type PaletteGroup = { label: string; rows: PaletteRow[]; event?: string }
 
 const EVENT_LIMIT = 8
 
@@ -88,17 +89,14 @@ export function searchGroups(
 		return [
 			{
 				label: source.label,
+				event: event.title,
 				rows: [header, ...group.records.map((record) => recordRow(event, source, record))],
 			},
 		]
 	})
 }
 
-function recordRow(
-	event: PaletteEvent,
-	source: SearchSource,
-	record: SearchGroup["records"][number],
-): PaletteRow {
+function recordRow(event: PaletteEvent, source: SearchSource, record: SearchRecord): PaletteRow {
 	const query = source.recordParam
 		? `?${source.recordParam}=${encodeURIComponent(record.name)}`
 		: ""
