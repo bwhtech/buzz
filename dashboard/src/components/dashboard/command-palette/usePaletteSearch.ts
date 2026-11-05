@@ -5,7 +5,7 @@ import { computed, ref, type Ref } from "vue"
 import { readableSources, type PaletteEvent, type SearchSource } from "./paletteQuery"
 
 export type SearchRecord = { name: string; title: string; subtitle: string | null }
-export type SearchGroup = { key: string; section: string; records: SearchRecord[] }
+export type SearchGroup = { key: string; records: SearchRecord[] }
 
 type SearchTarget = { event?: PaletteEvent; source?: SearchSource; term: string }
 type SearchParams = { event: string; term: string; section?: string }
@@ -52,7 +52,7 @@ export function usePaletteSearch(target: Ref<SearchTarget>) {
 		params.value && results.value?.event === params.value.event ? results.value.groups : [],
 	)
 
-	return { groups, loading: computed(() => search.loading) }
+	return { groups }
 }
 
 function searchParams({ event, source, term }: SearchTarget): SearchParams | null {

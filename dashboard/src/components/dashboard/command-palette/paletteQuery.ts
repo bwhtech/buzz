@@ -3,10 +3,7 @@ import type { EventAccess, EventSection } from "@/types"
 export type PaletteEvent = {
 	name: string
 	title: string
-	team: string | null
 	team_title: string | null
-	start_date: string | null
-	end_date: string | null
 	access: EventAccess
 }
 

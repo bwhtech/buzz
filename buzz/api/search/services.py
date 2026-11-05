@@ -29,8 +29,9 @@ def palette_events(user: str) -> PaletteEventsResponse:
 			as_list=True,
 		)
 	)
-	events = [palette_event(row, teams, collaborations, team_titles) for row in rows]
-	return PaletteEventsResponse(events=sorted_for_palette(events))
+	return PaletteEventsResponse(
+		events=[palette_event(row, teams, collaborations, team_titles) for row in sorted_for_palette(rows)]
+	)
 
 
 def team_roles(user: str) -> dict[str, str]:
@@ -63,15 +64,12 @@ def palette_event(row, teams: dict, collaborations: dict, team_titles: dict) -> 
 	return PaletteEvent(
 		name=str(row.name),
 		title=row.title,
-		team=row.team,
 		team_title=team_titles.get(row.team),
-		start_date=row.start_date,
-		end_date=row.end_date,
 		access=access,
 	)
 
 
-def sorted_for_palette(events: list[PaletteEvent]) -> list[PaletteEvent]:
+def sorted_for_palette(events: list) -> list:
 	today_date = getdate(today())
 	upcoming, past = [], []
 	for event in events:
@@ -105,7 +103,6 @@ class EventSearch:
 		if len(term) < MINIMUM_TERM_LENGTH:
 			return EventSearchResponse(groups=[])
 		groups = [
-			SearchGroup(key=source.key, section=source.section, records=source.search(self.event, term))
-			for source in self.sources
+			SearchGroup(key=source.key, records=source.search(self.event, term)) for source in self.sources
 		]
 		return EventSearchResponse(groups=[group for group in groups if group.records])

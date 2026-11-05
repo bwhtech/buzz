@@ -6,10 +6,7 @@ import { matchesText, orderEvents, parseQuery, type PaletteEvent } from "./palet
 const event = (name: string, title: string): PaletteEvent => ({
 	name,
 	title,
-	team: "T1",
 	team_title: "Team",
-	start_date: null,
-	end_date: null,
 	access: {
 		details: "View",
 		guests: "View",
