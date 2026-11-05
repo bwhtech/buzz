@@ -27,7 +27,7 @@ export function usePaletteSearch(target: Ref<SearchTarget>) {
 		url: "/api/v2/method/buzz.api.search.search_event",
 		immediate: false,
 	})
-	const groups = ref<SearchGroup[]>([])
+	const results = ref<{ event: string; groups: SearchGroup[] } | null>(null)
 	const params = computed(() => searchParams(target.value))
 	// Compared by value: the target object is rebuilt on every keystroke.
 	const key = computed(() => JSON.stringify(params.value))
@@ -35,14 +35,21 @@ export function usePaletteSearch(target: Ref<SearchTarget>) {
 	watchDebounced(
 		key,
 		async (current) => {
-			groups.value = []
-			if (!params.value) return
+			const request = params.value
+			if (!request) return (results.value = null)
 			search.abort()
-			const result = await search.submit(params.value)
+			const result = await search.submit(request)
 			// A slower, older request must not overwrite the newer query's rows.
-			if (result && key.value === current) groups.value = result.groups
+			if (result && key.value === current)
+				results.value = { event: request.event, groups: result.groups }
 		},
 		{ debounce: DEBOUNCE_MS },
+	)
+
+	// Earlier rows of the same event stay while the next term loads, so "No matches"
+	// never flashes; another event's rows would link into the wrong one.
+	const groups = computed(() =>
+		params.value && results.value?.event === params.value.event ? results.value.groups : [],
 	)
 
 	return { groups, loading: computed(() => search.loading) }

@@ -108,7 +108,7 @@ const canPush = (active: unknown) => Boolean(rowsById.value.get(String(active))?
 						:label="row.label"
 					>
 						<template #prefix>
-							<span :class="[row.icon, 'size-4 shrink-0 text-ink-gray-6']" />
+							<span :class="[row.icon, 'mr-2 size-4 shrink-0 text-ink-gray-6']" />
 						</template>
 						<span class="truncate">{{ row.label }}</span>
 						<span v-if="row.subtitle" class="ml-2 truncate text-ink-gray-5">{{
@@ -138,3 +138,11 @@ const canPush = (active: unknown) => Boolean(rowsById.value.get(String(active))?
 		</template>
 	</CommandPalette>
 </template>
+
+<style>
+/* Opened by keyboard many times a day, so it appears and leaves at once. */
+.dialog-content:has([data-slot="command-palette"]),
+body:has([data-slot="command-palette"]) .dialog-overlay {
+	animation: none;
+}
+</style>
