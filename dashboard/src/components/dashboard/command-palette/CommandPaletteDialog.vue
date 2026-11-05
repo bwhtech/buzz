@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Badge, KeyboardShortcut, useKeyboardShortcut } from "frappe-ui"
+import { KeyboardShortcut, useKeyboardShortcut } from "frappe-ui"
 import {
 	CommandPalette,
 	CommandPaletteEmpty,
@@ -26,7 +26,12 @@ const scope = ref<PaletteScope | null>(null)
 const eventsCall = usePaletteEvents()
 const events = computed(() => eventsCall.data?.events ?? [])
 const currentEventId = computed(() => route.params.eventId as string | undefined)
-const { groups, rowsById } = usePaletteGroups({ query, scope, events, currentEventId })
+const { groups, rowsById, searching, currentEvent, countSearch } = usePaletteGroups({
+	query,
+	scope,
+	events,
+	currentEventId,
+})
 
 useKeyboardShortcut({
 	combo: "Mod+K",
@@ -44,6 +49,7 @@ watch(paletteOpen, (open) => {
 function select(id: unknown, event: CommandPaletteSelectEvent) {
 	const row = rowsById.value.get(String(id))
 	if (!row) return
+	countSearch(row)
 	if (row.keepOpen) event.preventDefault()
 	if (row.run) row.run()
 	else if (row.to) router.push(row.to)
@@ -66,15 +72,27 @@ function popScope() {
 function onKeydown(event: KeyboardEvent, active: unknown) {
 	const handled =
 		(event.key === "Tab" && !event.shiftKey && pushScope(active)) ||
+		(event.key === "Tab" && event.shiftKey && popScope()) ||
 		(event.key === "Backspace" && !query.value && popScope()) ||
 		(event.key === "Escape" && popScope())
-	if (!handled) return
+	// Tab never leaves the field, even on a row it cannot push into.
+	if (!handled && event.key !== "Tab") return
 	event.preventDefault()
 	// The dialog closes on an Escape it hears; this one only left the scope.
 	event.stopPropagation()
 }
 
-const canPush = (active: unknown) => Boolean(rowsById.value.get(String(active))?.scope)
+const scopeName = computed(() => (scope.value ? scopeLabel(scope.value) : ""))
+
+const emptyText = computed(() => {
+	const where = scopeName.value || currentEvent.value?.title
+	if (searching.value) return __("Searching…")
+	if (query.value.trim().length < 2)
+		return where ? __("Type at least two letters to search {0}", [where]) : __("No matches")
+	return where
+		? __('Nothing matches "{0}" in {1}', [query.value.trim(), where])
+		: __('Nothing matches "{0}"', [query.value.trim()])
+})
 </script>
 
 <template>
@@ -87,11 +105,26 @@ const canPush = (active: unknown) => Boolean(rowsById.value.get(String(active))?
 	>
 		<template #default="{ active }">
 			<CommandPaletteInput
-				:placeholder="scope ? __('Search in {0}', [scopeLabel(scope)]) : __('Search or jump to…')"
+				:placeholder="
+					scope
+						? __('Search in {0}', [scopeName])
+						: __('Search people, talks, sponsors, or type a command…')
+				"
 				@keydown="onKeydown($event, active)"
 			>
 				<template v-if="scope" #prefix>
-					<Badge :label="scopeLabel(scope)" theme="gray" size="md" class="shrink-0" />
+					<span
+						class="flex shrink-0 items-center gap-1 rounded-full bg-surface-gray-3 py-0.5 pl-2 pr-0.5 text-sm text-ink-gray-8"
+					>
+						{{ scopeName }}
+						<button
+							class="grid size-5 place-items-center rounded-full text-ink-gray-5 transition-transform duration-100 ease-out hover:bg-surface-gray-4 hover:text-ink-gray-8 active:scale-90"
+							:aria-label="__('Clear scope')"
+							@click="scope = null"
+						>
+							<span class="lucide-x size-3.5" />
+						</button>
+					</span>
 				</template>
 			</CommandPaletteInput>
 
@@ -114,12 +147,17 @@ const canPush = (active: unknown) => Boolean(rowsById.value.get(String(active))?
 						<span v-if="row.subtitle" class="ml-2 truncate text-ink-gray-5">{{
 							row.subtitle
 						}}</span>
+						<template v-if="row.scope" #suffix="{ active: highlighted }">
+							<span v-if="highlighted" class="flex items-center gap-1 text-sm text-ink-gray-5">
+								{{ __("Search inside") }} <KeyboardShortcut combo="Tab" />
+							</span>
+						</template>
 					</CommandPaletteItem>
 				</CommandPaletteGroup>
 			</CommandPaletteList>
 
 			<CommandPaletteEmpty>
-				{{ scope ? __("Type at least two letters to search") : __("No matches") }}
+				{{ emptyText }}
 			</CommandPaletteEmpty>
 
 			<CommandPaletteFooter>
@@ -127,11 +165,8 @@ const canPush = (active: unknown) => Boolean(rowsById.value.get(String(active))?
 					<span class="flex items-center gap-1"
 						><KeyboardShortcut combo="Enter" /> {{ __("Open") }}</span
 					>
-					<span v-if="canPush(active)" class="flex items-center gap-1">
-						<KeyboardShortcut combo="Tab" /> {{ __("Search inside") }}
-					</span>
 					<span v-if="scope" class="flex items-center gap-1">
-						<KeyboardShortcut combo="Escape" /> {{ __("Back") }}
+						<KeyboardShortcut combo="Shift+Tab" /> {{ __("Back") }}
 					</span>
 				</div>
 			</CommandPaletteFooter>

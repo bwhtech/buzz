@@ -13,6 +13,7 @@ import {
 } from "./paletteRows"
 import { usePaletteCommands } from "./usePaletteCommands"
 import { usePaletteSearch } from "./usePaletteSearch"
+import { usePaletteTips } from "./usePaletteTips"
 
 type PaletteState = {
 	query: Ref<string>
@@ -37,7 +38,12 @@ export function usePaletteGroups({ query, scope, events, currentEventId }: Palet
 		source: scope.value?.source ?? parsed.value.source,
 		term: term.value,
 	}))
-	const { groups: results } = usePaletteSearch(target)
+	const { groups: results, searching } = usePaletteSearch(target)
+	const { tips, countSearch } = usePaletteTips({
+		query,
+		scope,
+		event: computed(() => currentEvent.value ?? ordered.value[0]),
+	})
 
 	const resultGroups = computed(() => {
 		const { event, source } = target.value
@@ -59,11 +65,11 @@ export function usePaletteGroups({ query, scope, events, currentEventId }: Palet
 		const typed = Boolean(term.value)
 		const event = target.value.event
 		return [
+			{ label: __("Try"), rows: tips.value },
 			pickerGroup(),
 			...resultGroups.value,
 			{ label: __("Commands"), rows: filter(commands.value) },
 			{ label: event ? event.title : "", rows: event ? sectionRows(event, term.value) : [] },
-			{ label: __("Events"), rows: eventRows(ordered.value, term.value, teams.value.length > 1) },
 			{ label: __("Communities"), rows: typed ? filter(communityRows.value) : [] },
 			{ label: "", rows: hintRows() },
 		]
@@ -106,5 +112,5 @@ export function usePaletteGroups({ query, scope, events, currentEventId }: Palet
 		() => new Map(groups.value.flatMap((group) => group.rows).map((row) => [row.id, row])),
 	)
 
-	return { groups, rowsById }
+	return { groups, rowsById, searching, currentEvent, countSearch }
 }
