@@ -38,6 +38,8 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 	const offlineMethod = ref<OfflineMethod | null>(null)
 	const pendingPayload = ref<Payload | null>(null)
 	const completed = ref<{ bookingName: string; pendingVerification: boolean } | null>(null)
+	// Stays true from a successful booking until the next page takes over.
+	const redirecting = ref(false)
 
 	const processBooking = useCall<BookingSubmitResponse, { booking: Payload }>({
 		url: "/api/v2/method/buzz.api.booking.process_booking",
@@ -46,7 +48,7 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 	})
 
 	function submit() {
-		if (processBooking.loading) return
+		if (processBooking.loading || redirecting.value) return
 		const payload = inputs.buildPayload()
 		pendingPayload.value = payload
 		if (inputs.isGuest() && inputs.needsOtp()) otp.send()
@@ -102,9 +104,13 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 		if (isOtpFlow) otp.reset()
 
 		const action = resolveBookingSuccessAction(data, { isGuestMode: inputs.isGuest() })
-		if (action.type === "external") window.location.href = action.url
-		else if (action.type === "route") router.replace(action.path)
-		else
+		if (action.type === "external") {
+			redirecting.value = true
+			window.location.href = action.url
+		} else if (action.type === "route") {
+			redirecting.value = true
+			router.replace(action.path).finally(() => (redirecting.value = false))
+		} else
 			completed.value = {
 				bookingName: action.bookingName,
 				pendingVerification: action.pendingVerification,
@@ -123,7 +129,7 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 		offlineMethod,
 		showOfflineDialog,
 		completed,
-		placing: computed(() => processBooking.loading),
+		placing: computed(() => processBooking.loading || redirecting.value),
 	}
 }
 
