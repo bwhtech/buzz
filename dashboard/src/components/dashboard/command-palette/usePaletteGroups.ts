@@ -64,14 +64,16 @@ export function usePaletteGroups({ query, scope, events, currentEventId }: Palet
 	const rootGroups = computed<PaletteGroup[]>(() => {
 		const typed = Boolean(term.value)
 		const event = target.value.event
+		const picker = pickerGroup()
 		return [
 			{ label: __("Try"), rows: tips.value },
-			pickerGroup(),
+			picker,
 			...resultGroups.value,
 			{ label: __("Commands"), rows: filter(commands.value) },
 			{ label: event ? event.title : "", rows: event ? sectionRows(event, term.value) : [] },
 			{ label: __("Communities"), rows: typed ? filter(communityRows.value) : [] },
-			{ label: "", rows: hintRows() },
+			// The event list already offers what the hint would.
+			{ label: "", rows: picker.rows.length ? [] : hintRows() },
 		]
 	})
 

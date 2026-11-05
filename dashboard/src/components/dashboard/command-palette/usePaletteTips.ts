@@ -41,10 +41,12 @@ function tipRows(event: PaletteEvent, query: Ref<string>, scope: Ref<PaletteScop
 	const source = readableSources(event)[0]
 	const name = userResource.data?.first_name?.toLowerCase() || "name"
 	const example = `${name} in ${event.title}`
+	// The label teaches the shape; a 140-character title would hide the explanation.
+	const title = shortTitle(event.title)
 	const rows: PaletteRow[] = [
 		{
 			id: "tip:in",
-			label: example,
+			label: `${name} in ${title}`,
 			subtitle: __("Find a person, talk or sponsor in one event"),
 			icon: "lucide-search",
 			keepOpen: true,
@@ -52,7 +54,7 @@ function tipRows(event: PaletteEvent, query: Ref<string>, scope: Ref<PaletteScop
 		},
 		{
 			id: "tip:event",
-			label: __("Search inside {0}", [event.title]),
+			label: __("Search inside {0}", [title]),
 			subtitle: __("Same as Tab on any event or section"),
 			icon: "lucide-corner-down-right",
 			keepOpen: true,
@@ -62,11 +64,17 @@ function tipRows(event: PaletteEvent, query: Ref<string>, scope: Ref<PaletteScop
 	if (source)
 		rows.splice(1, 0, {
 			id: "tip:section",
-			label: `${source.label} in ${event.title}`,
+			label: `${source.label} in ${title}`,
 			subtitle: __("Search one section"),
 			icon: "lucide-list-filter",
 			keepOpen: true,
 			run: () => (scope.value = { event, source }),
 		})
 	return rows
+}
+
+const TITLE_LENGTH = 32
+
+function shortTitle(title: string): string {
+	return title.length > TITLE_LENGTH ? `${title.slice(0, TITLE_LENGTH - 1).trimEnd()}…` : title
 }

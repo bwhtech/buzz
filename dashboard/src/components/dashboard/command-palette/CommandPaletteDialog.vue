@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Badge, KeyboardShortcut, useKeyboardShortcut } from "frappe-ui"
+import { KeyboardShortcut, useKeyboardShortcut } from "frappe-ui"
 import {
 	CommandPalette,
 	CommandPaletteEmpty,
@@ -98,6 +98,8 @@ const scopeName = computed(() => (scope.value ? scopeLabel(scope.value) : ""))
 const emptyText = computed(() => {
 	const where = scopeName.value || currentEvent.value?.title
 	if (searching.value) return __("Searching…")
+	if (eventsCall.data && !events.value.length)
+		return __("Join or create an event to search its guests, talks and sponsors")
 	if (query.value.trim().length < MIN_TERM_LENGTH)
 		return where ? __("Type at least two letters to search {0}", [where]) : __("No matches")
 	return where
@@ -124,10 +126,12 @@ const emptyText = computed(() => {
 				@keydown="onKeydown($event, active)"
 			>
 				<template v-if="scope" #prefix>
+					<!-- Capped, so a long event title never pushes the typed text out of view. -->
 					<span
-						class="flex shrink-0 items-center gap-1 rounded-full bg-surface-gray-3 py-0.5 pl-2 pr-0.5 text-sm text-ink-gray-8"
+						class="flex min-w-0 max-w-[50%] shrink-0 items-center gap-1 rounded-full bg-surface-gray-3 py-0.5 pl-2 pr-0.5 text-sm text-ink-gray-8"
+						:title="scopeName"
 					>
-						{{ scopeName }}
+						<span class="truncate">{{ scopeName }}</span>
 						<button
 							class="grid size-5 place-items-center rounded-full text-ink-gray-5 transition-transform duration-100 ease-out hover:bg-surface-gray-4 hover:text-ink-gray-8 active:scale-90"
 							:aria-label="__('Clear scope')"
@@ -152,7 +156,11 @@ const emptyText = computed(() => {
 						as="div"
 						class="mb-2.5 flex min-w-0 items-center gap-1.5 px-4.5 text-base leading-tighter text-ink-gray-5"
 					>
-						<Badge :label="group.event" theme="gray" size="sm" class="min-w-0 truncate" />
+						<span
+							class="max-w-[60%] truncate rounded bg-surface-gray-2 px-1.5 py-0.5 text-sm text-ink-gray-7"
+							:title="group.event"
+							>{{ group.event }}</span
+						>
 						<span class="lucide-chevron-right size-3.5 shrink-0" />
 						<span class="shrink-0">{{ group.label }}</span>
 					</ListboxGroupLabel>
@@ -165,10 +173,20 @@ const emptyText = computed(() => {
 						<template #prefix>
 							<span :class="[row.icon, 'mr-2 size-4 shrink-0 text-ink-gray-6']" />
 						</template>
-						<span class="truncate">{{ row.label }}</span>
-						<span v-if="row.subtitle" class="ml-2 truncate text-ink-gray-5">{{
-							row.subtitle
-						}}</span>
+						<!-- The name is capped so the subtitle, often what tells two rows apart, stays visible. -->
+						<span class="flex min-w-0 items-baseline gap-2">
+							<span
+								:class="['truncate', row.subtitle && 'max-w-[65%] shrink-0']"
+								:title="row.label"
+								>{{ row.label }}</span
+							>
+							<span
+								v-if="row.subtitle"
+								class="min-w-0 truncate text-ink-gray-5"
+								:title="row.subtitle"
+								>{{ row.subtitle }}</span
+							>
+						</span>
 						<template v-if="canPushInto(row.scope)" #suffix="{ active: highlighted }">
 							<span v-if="highlighted" class="flex items-center gap-1 text-sm text-ink-gray-5">
 								{{ __("Search inside") }} <KeyboardShortcut combo="Tab" />

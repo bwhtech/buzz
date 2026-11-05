@@ -74,7 +74,7 @@ export function searchGroups(
 	term: string,
 	groups: SearchGroup[],
 ): PaletteGroup[] {
-	return groups.flatMap((group) => {
+	return groups.flatMap((group, index) => {
 		const source = sourceFor(group.key)
 		if (!source) return []
 		const query = source.searchParam ? `?${source.searchParam}=${encodeURIComponent(term)}` : ""
@@ -89,7 +89,8 @@ export function searchGroups(
 		return [
 			{
 				label: source.label,
-				event: event.title,
+				// Once, on the first group: every group of one search shares the event.
+				event: index === 0 ? event.title : undefined,
 				rows: [header, ...group.records.map((record) => recordRow(event, source, record))],
 			},
 		]
