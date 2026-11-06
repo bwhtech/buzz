@@ -1,5 +1,6 @@
 import path from "node:path"
 
+import frameworkUI from "@framework/ui/vite"
 import vue from "@vitejs/plugin-vue"
 import frappeui from "frappe-ui/vite"
 import { defineConfig } from "vite"
@@ -28,6 +29,7 @@ const jinjaHeadTags = {
 export default defineConfig({
 	plugins: [
 		jinjaHeadTags,
+		frameworkUI(),
 		frappeui({
 			frappeProxy: {
 				port: 8080,
@@ -66,6 +68,7 @@ export default defineConfig({
 	},
 	server: {
 		allowedHosts: true,
-		fs: { allow: [".", "../buzz/public/js"] },
+		// @framework/ui is linked from the bench's frappe app and served from source.
+		fs: { allow: [".", "../buzz/public/js", "../../frappe/ui"] },
 	},
 })

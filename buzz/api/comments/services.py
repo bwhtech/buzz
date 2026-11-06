@@ -16,8 +16,8 @@ from buzz.api.comments.exceptions import (
 from buzz.api.comments.schemas import ActivityEntry
 from buzz.api.teams.schemas import TeamMember
 from buzz.api.teams.services import members_of
-from buzz.comments import is_commentable, note_email_args, team_of
-from buzz.permissions import ADMIN_ROLES, has_team_access, is_unrestricted, team_role_of
+from buzz.comments import can_read_team_notes, is_commentable, note_email_args, team_of
+from buzz.permissions import ADMIN_ROLES, is_unrestricted, team_role_of
 from buzz.subscriptions import Subscriptions
 
 
@@ -75,7 +75,7 @@ class DocumentComments:
 		self.reference_doctype = reference_doctype
 		self.reference_name = reference_name
 		self.team = team_of(reference_doctype, reference_name)
-		if not self.team or not has_team_access(self.team, "read", frappe.session.user):
+		if not can_read_team_notes(self.team, frappe.session.user):
 			NotTeamMember.throw()
 
 	@classmethod
