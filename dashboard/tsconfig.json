@@ -13,7 +13,6 @@
 		"forceConsistentCasingInFileNames": true,
 		"useDefineForClassFields": true,
 		"resolveJsonModule": true,
-		// Resolves the linked @framework/ui's imports from this app's node_modules.
 		"preserveSymlinks": true,
 		"allowImportingTsExtensions": true,
 		"noEmit": true,
