@@ -22,6 +22,8 @@ type PaletteState = {
 	currentEventId: Ref<string | undefined>
 }
 
+const multiTeam = () => teams.value.length > 1
+
 /** What the palette lists for the query, the pushed scope and the event on screen. */
 export function usePaletteGroups({ query, scope, events, currentEventId }: PaletteState) {
 	const { commands, communityRows } = usePaletteCommands()
@@ -74,6 +76,10 @@ export function usePaletteGroups({ query, scope, events, currentEventId }: Palet
 			{ label: __("Communities"), rows: typed ? filter(communityRows.value) : [] },
 			// The event list already offers what the hint would.
 			{ label: "", rows: picker.rows.length ? [] : hintRows() },
+			{
+				label: __("Events"),
+				rows: typed && !picker.rows.length ? eventRows(ordered.value, term.value, multiTeam()) : [],
+			},
 		]
 	})
 
@@ -81,7 +87,7 @@ export function usePaletteGroups({ query, scope, events, currentEventId }: Palet
 	function pickerGroup(): PaletteGroup {
 		const parts = splitOnIn(query.value)
 		if (!parts?.term || parsed.value.event || parsed.value.source) return { label: "", rows: [] }
-		const rows = eventRows(ordered.value, parts.target, teams.value.length > 1).map((row) => ({
+		const rows = eventRows(ordered.value, parts.target, multiTeam()).map((row) => ({
 			...row,
 			id: `pick:${row.id}`,
 			keepOpen: true,
