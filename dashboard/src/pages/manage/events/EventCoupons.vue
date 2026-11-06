@@ -12,6 +12,7 @@ import CouponRows from "@/components/dashboard/coupons/CouponRows.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
 import { useIsMobile } from "@/composables/useIsMobile"
+import { useQueryParamRecord } from "@/composables/useQueryParamRecord"
 import { useEventCoupons } from "@/data/coupons"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError } from "@/types"
@@ -76,6 +77,12 @@ function openCoupon(name: string | null) {
 	selectedName.value = name
 	drawerOpen.value = true
 }
+
+useQueryParamRecord(
+	"coupon",
+	() => page.data?.coupons,
+	(coupon) => openCoupon(coupon.name),
+)
 
 const message = (error: unknown) => (error as FrappeError | null)?.message
 </script>
