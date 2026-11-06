@@ -49,6 +49,7 @@
   {
    "fetch_from": "ticket_type.event",
    "fieldname": "event",
+   "search_index": 1,
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
@@ -136,7 +137,7 @@
    "link_fieldname": "ticket"
   }
  ],
- "modified": "2026-10-16 12:00:00.000000",
+ "modified": "2026-11-05 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Ticket",

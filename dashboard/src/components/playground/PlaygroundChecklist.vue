@@ -56,10 +56,12 @@ const isDone = (step: ChecklistStep) =>
 trackCompletedSteps(() => checklist.data ?? undefined, isDone)
 
 const groups = computed(() =>
-	(checklist.data ?? []).map((group) => ({
-		...group,
-		steps: group.steps.filter((step) => stepFilter.value === "everything" || !step.optional),
-	})),
+	(checklist.data ?? [])
+		.map((group) => ({
+			...group,
+			steps: group.steps.filter((step) => stepFilter.value === "everything" || !step.optional),
+		}))
+		.filter((group) => group.steps.length),
 )
 const steps = computed(() => groups.value.flatMap((group) => group.steps))
 const done = computed(() => steps.value.filter(isDone).length)

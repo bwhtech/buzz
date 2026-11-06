@@ -12,8 +12,13 @@ import {
 	type DropdownOptions,
 	type TabButtonValue,
 } from "frappe-ui"
-import { computed, defineAsyncComponent, inject, ref } from "vue"
+import { computed, defineAsyncComponent, inject } from "vue"
 
+import {
+	openUserSettings,
+	userSettingsMounted,
+	userSettingsOpen,
+} from "@/composables/useUserSettings"
 import { session } from "@/data/session"
 
 // hideTrigger: the sheet opens from elsewhere, through v-model:sheet-open.
@@ -31,8 +36,6 @@ const { colorScheme, setColorScheme } = useColorScheme()
 // Loaded on first open: its team pages pull in the rich-text editor, which every manager
 // page would otherwise download.
 const UserSettingsDialog = defineAsyncComponent(() => import("@/components/UserSettingsDialog.vue"))
-const settingsOpen = ref(false)
-const settingsOpened = ref(false)
 const sheetOpen = defineModel<boolean>("sheetOpen", { default: false })
 
 const NEW_ISSUE_URL = "https://github.com/bwhtech/buzz/issues/new"
@@ -47,10 +50,6 @@ const themeTabs = [...themes]
 const setTheme = (value: TabButtonValue) =>
 	setColorScheme(value as (typeof themes)[number]["value"])
 
-const openSettings = () => {
-	settingsOpened.value = true
-	settingsOpen.value = true
-}
 const reportIssue = () => window.open(NEW_ISSUE_URL, "_blank", "noopener")
 const logOut = () => session.logout.fetch()
 const logOutLabel = computed(() => (session.logout.loading ? __("Signing out…") : __("Log Out")))
@@ -76,7 +75,7 @@ const menu = computed<DropdownOptions>(() => [
 			{
 				label: __("Settings"),
 				icon: "lucide-settings",
-				onClick: openSettings,
+				onClick: openUserSettings,
 			},
 			{
 				label: __("Theme"),
@@ -134,7 +133,7 @@ const menu = computed<DropdownOptions>(() => [
 					size="lg"
 					icon-left="lucide-settings"
 					:label="__('Settings')"
-					@click="((sheetOpen = false), openSettings())"
+					@click="((sheetOpen = false), openUserSettings())"
 				/>
 				<!-- Matches the ghost Buttons around it: ItemListRow's own text is lighter and thinner. -->
 				<ItemListRow size="lg">
@@ -206,5 +205,5 @@ const menu = computed<DropdownOptions>(() => [
 		</template>
 	</Dropdown>
 
-	<UserSettingsDialog v-if="settingsOpened" v-model:open="settingsOpen" />
+	<UserSettingsDialog v-if="userSettingsMounted" v-model:open="userSettingsOpen" />
 </template>

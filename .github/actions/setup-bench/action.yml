@@ -39,27 +39,18 @@ runs:
           **/pyproject.toml
           **/requirements*.txt
 
-    - name: Install system deps and bench
+    # Cached .debs instead of a live apt install: the Azure apt mirror can stall for minutes.
+    - name: Install the MariaDB client
+      uses: awalsh128/cache-apt-pkgs-action@v1.6.3
+      with:
+        packages: mariadb-client
+
+    - name: Install bench
       shell: bash -e {0}
       run: |
-        install_db_client() {
-          # `apt-get update` is most of the cost, so only pay for it if the
-          # runner's package lists are too stale to resolve.
-          sudo apt-get -qq install -y --no-install-recommends mariadb-client \
-            || { sudo apt-get -qq update \
-                 && sudo apt-get -qq install -y --no-install-recommends mariadb-client; }
-        }
-
-        # apt and uv share no inputs.
-        install_db_client &> "${RUNNER_TEMP}/apt.log" &
-        apt_pid=$!
-
+        # The cache restores files without running ldconfig.
+        sudo ldconfig
         uv tool install frappe-bench
-
-        if ! wait "$apt_pid"; then
-          cat "${RUNNER_TEMP}/apt.log"
-          exit 1
-        fi
 
     - name: Init bench
       shell: bash -e {0}

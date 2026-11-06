@@ -17,6 +17,7 @@
 		"fmt:check": "oxfmt --check"
 	},
 	"dependencies": {
+		"@framework/ui": "link:../../frappe/ui",
 		"@vueuse/core": "^14.4.0",
 		"@vueuse/router": "^14.4.0",
 		"canvas-confetti": "^1.9.3",

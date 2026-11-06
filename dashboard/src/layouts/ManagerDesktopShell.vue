@@ -1,9 +1,18 @@
 <script setup lang="ts">
 import { useElementSize, usePreferredReducedMotion } from "@vueuse/core"
-import { Divider, PageHeaderTarget, Sidebar, SidebarItem, Skeleton } from "frappe-ui"
+import {
+	Divider,
+	KeyboardShortcut,
+	PageHeaderTarget,
+	Sidebar,
+	SidebarItem,
+	Skeleton,
+} from "frappe-ui"
 import { computed, ref, useTemplateRef, watch } from "vue"
 import { useRoute } from "vue-router"
 
+import CommandPaletteDialog from "@/components/dashboard/command-palette/CommandPaletteDialog.vue"
+import { paletteOpen } from "@/components/dashboard/command-palette/paletteOpen"
 import ManagerSidebarHeader from "@/components/dashboard/ManagerSidebarHeader.vue"
 import NotificationsPanel from "@/components/dashboard/notifications/NotificationsPanel.vue"
 import WorkspaceOpening from "@/components/dashboard/WorkspaceOpening.vue"
@@ -19,6 +28,7 @@ import {
 const props = defineProps<{ items: ManagerNavItem[]; workspace?: Workspace }>()
 
 const route = useRoute()
+const openPalette = () => (paletteOpen.value = true)
 
 // Calendar, Members, Payments and Settings.
 const WORKSPACE_ITEM_COUNT = 4
@@ -63,6 +73,14 @@ watch(headerKey, (key, previous) => {
 							<ManagerSidebarHeader :workspace="workspace" />
 						</div>
 					</Transition>
+				</div>
+
+				<div class="mx-2 mt-2">
+					<SidebarItem :label="__('Search')" icon="lucide-search" :on-click="openPalette">
+						<template #suffix>
+							<KeyboardShortcut combo="Mod+K" class="mr-1" />
+						</template>
+					</SidebarItem>
 				</div>
 
 				<!-- One block, not per row: absolute rows would all collapse onto the
@@ -113,6 +131,7 @@ watch(headerKey, (key, previous) => {
 		</div>
 		<!-- Zero-width column panels dock into, flush with the sidebar edge and over the page. -->
 		<div id="sidebar-panel" class="relative z-30 w-0 shrink-0" />
+		<CommandPaletteDialog />
 
 		<div
 			class="shell-panel relative flex h-full min-h-0 min-w-0 flex-1 flex-col bg-surface-sidebar py-2 pl-1"

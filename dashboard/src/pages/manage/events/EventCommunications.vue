@@ -10,6 +10,7 @@ import CommunicationDrawer from "@/components/dashboard/communications/Communica
 import CommunicationHistory from "@/components/dashboard/communications/CommunicationHistory.vue"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
+import { useQueryParamRecord } from "@/composables/useQueryParamRecord"
 import { useEventCommunications, useSendCommunication } from "@/data/communications"
 import { session } from "@/data/session"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
@@ -55,6 +56,8 @@ function openSent(row: CommunicationItem) {
 	viewing.value = row
 	drawerOpen.value = true
 }
+
+useQueryParamRecord("communication", () => page.data?.communications, openSent)
 
 const sender = useSendCommunication()
 const message = (error: unknown) => (error as FrappeError | null)?.message

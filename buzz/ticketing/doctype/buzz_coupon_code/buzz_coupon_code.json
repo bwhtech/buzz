@@ -40,6 +40,7 @@
   },
   {
    "fieldname": "event",
+   "search_index": 1,
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
@@ -204,7 +205,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-26 12:00:00.000000",
+ "modified": "2026-11-05 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Buzz Coupon Code",

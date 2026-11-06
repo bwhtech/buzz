@@ -46,12 +46,12 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 		immediate: false,
 	})
 
-	// The gateway page can take seconds to load after the booking call returns.
-	const redirectingToPayment = ref(false)
-	const placing = computed(() => processBooking.loading || redirectingToPayment.value)
+	// Stays true from a successful booking until the next page takes over.
+	const redirecting = ref(false)
+	const placing = computed(() => processBooking.loading || redirecting.value)
 	// Going back from the gateway restores this page from the back-forward cache.
 	useEventListener(window, "pageshow", (event: PageTransitionEvent) => {
-		if (event.persisted) redirectingToPayment.value = false
+		if (event.persisted) redirecting.value = false
 	})
 
 	function submit() {
@@ -112,10 +112,12 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 
 		const action = resolveBookingSuccessAction(data, { isGuestMode: inputs.isGuest() })
 		if (action.type === "external") {
-			redirectingToPayment.value = true
+			redirecting.value = true
 			window.location.href = action.url
-		} else if (action.type === "route") router.replace(action.path)
-		else
+		} else if (action.type === "route") {
+			redirecting.value = true
+			router.replace(action.path).finally(() => (redirecting.value = false))
+		} else
 			completed.value = {
 				bookingName: action.bookingName,
 				pendingVerification: action.pendingVerification,

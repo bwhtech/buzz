@@ -399,6 +399,12 @@ export function useScheduleBuilder(eventId: () => string) {
 		return copiedTrack
 	}
 
+	// A schedule's own track hides an unused standard track, so keep it by copying it first.
+	async function addTrack(title: string) {
+		for (const track of tracks.tracks.value) if (track.is_standard) await editableTrack(track.name)
+		await tracks.add(title)
+	}
+
 	async function renameTrack(name: string, title: string) {
 		await tracks.rename(await editableTrack(name), title)
 		await tracks.reload()
@@ -460,6 +466,7 @@ export function useScheduleBuilder(eventId: () => string) {
 		unscheduledTalks,
 		talkDuration,
 		tracks,
+		addTrack,
 		renameTrack,
 		moveTrack,
 		removeTrack,

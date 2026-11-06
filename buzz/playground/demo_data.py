@@ -4,6 +4,7 @@ from frappe.utils import add_days, add_to_date, get_datetime, today
 from buzz.events.doctype.buzz_form.form_types import REGISTRATION_FORM_DOCTYPE
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
 from buzz.playground import is_playground, sandbox_of
+from buzz.playground.demo_schedule import DemoSchedule
 
 CATEGORY = "Technology"
 LOGO = "/assets/buzz/images/buzz-logo.png"
@@ -27,6 +28,11 @@ PROPOSALS = (
 	("What we learned running 40 meetups", "Tom", "Fischer"),
 	("Accessible ticketing flows", "Aisha", "Bello"),
 	("Postgres tricks for busy launches", "Marco", "Rossi"),
+)
+TALKS = (
+	("Shipping with Frappe", "Nikhil", "Rao"),
+	("Designing for events", "Zoya", "Ali"),
+	("Scaling ticket sales", "Ravi", "Menon"),
 )
 COMMUNITY_REQUESTS = (
 	("FOSS Meetup Bengaluru", "FOSS United", "https://fossunited.org", 10),
@@ -105,7 +111,15 @@ class DemoData:
 		event = self.create_event("DevConf 2026", 30, medium="In Person", venue=venue)
 		early_bird = self.ticket_type(event, "Early Bird", 499, max_tickets_available=2)
 		regular = self.ticket_type(event, "Regular", 999)
-		self.ticket_type(event, "VIP", 2499)
+		vip = self.ticket_type(event, "VIP", 2499)
+		self.create_speaker_pass(event)
+		insert(
+			"Event Check-in Zone",
+			event=event,
+			title="Workshop Room",
+			repeat_rule="Once per day",
+			ticket_types=[{"ticket_type": vip}],
+		)
 		insert(
 			"Ticket Add-on",
 			event=event,
@@ -123,7 +137,7 @@ class DemoData:
 			event=event,
 		)
 		self.create_sponsors(event)
-		self.create_talks(event)
+		DemoSchedule(event, self.create_talks(event)).create()
 		self.create_proposals(event)
 		self.book(event, early_bird, GUESTS[:2], paid=True)
 		# Five guests a booking gives the announcement step a full guest list.
@@ -174,9 +188,28 @@ class DemoData:
 				submitted_by="Guest",
 			)
 
-	def create_talks(self, event: str):
-		for title in ("Shipping with Frappe", "Designing for events", "Scaling ticket sales"):
-			insert("Event Talk", event=event, title=title, submitted_by=self.organizer)
+	def create_speaker_pass(self, event: str):
+		speaker_pass = self.ticket_type(event, "Speaker pass", 0, is_hidden=1)
+		insert(
+			"Buzz Coupon Code",
+			coupon_type="Access Code",
+			code="SPEAKER",
+			discount_type="None",
+			event=event,
+			ticket_types=[{"ticket_type": speaker_pass}],
+		)
+
+	def create_talks(self, event: str) -> list[str]:
+		return [
+			insert(
+				"Event Talk",
+				event=event,
+				title=title,
+				submitted_by=self.organizer,
+				speakers=[{"speaker": speaker_profile(first_name, last_name)}],
+			).name
+			for title, first_name, last_name in TALKS
+		]
 
 	def book(
 		self, event: str, ticket_type: str, guests, paid: bool = False, user: str | None = None
@@ -204,6 +237,21 @@ class DemoData:
 		booking.insert()
 		booking.submit()
 		return frappe.get_all("Event Ticket", filters={"booking": booking.name}, pluck="name")
+
+
+def speaker_profile(first_name: str, last_name: str) -> str:
+	"""Speakers are shared by every sandbox, so cleanup leaves them, like the ones accepting a proposal makes."""
+	email = f"{first_name.lower()}.{last_name.lower()}@example.com"
+	if not frappe.db.exists("User", email):
+		insert(
+			"User",
+			email=email,
+			first_name=first_name,
+			last_name=last_name,
+			user_type="Website User",
+			send_welcome_email=0,
+		)
+	return frappe.db.exists("Speaker Profile", {"user": email}) or insert("Speaker Profile", user=email).name
 
 
 def seed_community_requests(team, method=None):

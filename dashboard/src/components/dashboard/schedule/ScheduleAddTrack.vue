@@ -18,8 +18,8 @@ async function submit() {
 	const title = board.trackDraft.value.trim() || `Track ${builder.tracks.tracks.value.length + 1}`
 	board.addingTrack.value = false
 	board.trackDraft.value = ""
-	await builder.tracks
-		.add(title)
+	await builder
+		.addTrack(title)
 		.then(() => builder.showToast(`Added ${title}`))
 		.catch(() => toast.error("Could not add the track"))
 }
