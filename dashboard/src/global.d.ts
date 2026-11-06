@@ -19,7 +19,7 @@ interface Window {
 		sandbox: string | null
 		persona: string | null
 	} | null
-	posthog?: { capture(event: string, properties?: Record<string, unknown>): void }
+	posthog?: { capture(event: string, properties?: Record<string, unknown>): unknown }
 }
 
 declare module "*.wav" {

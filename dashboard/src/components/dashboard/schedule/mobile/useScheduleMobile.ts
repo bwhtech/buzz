@@ -52,8 +52,8 @@ export function useScheduleMobile() {
 
 	function addTrack() {
 		const title = `Track ${tracks.value.length + 1}`
-		return builder.tracks
-			.add(title)
+		return builder
+			.addTrack(title)
 			.then(() => {
 				chosenTrack.value = tracks.value.at(-1)?.name ?? null
 				builder.showToast(`Added ${title}`)

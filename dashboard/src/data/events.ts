@@ -13,7 +13,7 @@ import type {
 
 // v2 path: useCall reads the payload from `data`, which /api/method names `message`.
 // Uncached: cacheKey would persist this user's feed to IndexedDB past a logout.
-export function useMyEvents(filters?: () => Record<string, string>) {
+export function useMyEvents(filters?: () => Record<string, unknown>) {
 	return useCall<MyEvents, { filters: string }>({
 		url: "/api/v2/method/buzz.api.events.get_my_events",
 		// JSON in one param: a nested object on a GET serialises to "[object Object]".

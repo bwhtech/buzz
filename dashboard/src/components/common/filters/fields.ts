@@ -18,6 +18,8 @@ export interface FilterField {
 	section: "standard" | "question"
 	options: FilterOption[]
 	operators: FilterOperator[]
+	/** Offers a search box over the options however few there are. */
+	searchable?: boolean
 }
 
 export type ConditionValue = string | string[]
@@ -48,6 +50,9 @@ const ICONS_BY_FIELD_KEY: Record<string, string> = {
 	ticket_type: "lucide-tag",
 	status: "lucide-circle-dashed",
 	tags: "lucide-tags",
+	role: "lucide-user-round",
+	medium: "lucide-map-pin",
+	team: "lucide-users-round",
 }
 
 export const fieldIcon = (field: FilterField) =>

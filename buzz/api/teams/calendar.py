@@ -52,6 +52,7 @@ def buzz_events(team: str) -> list[TeamEvent]:
 			venue.venue_name.as_("venue"),
 			event.medium,
 			event.banner_image,
+			event.is_published,
 			event.team,
 			host.team_name,
 			host.logo.as_("team_logo"),
