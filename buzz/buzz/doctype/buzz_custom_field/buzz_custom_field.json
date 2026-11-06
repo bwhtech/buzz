@@ -14,7 +14,6 @@
   "default_value",
   "column_break_fpgn",
   "applied_to",
-  "custom_form_doctype",
   "offline_payment_method",
   "fieldtype",
   "options",
@@ -90,19 +89,11 @@
    "label": "Default Value"
   },
   {
-   "default": "Booking",
+   "default": "Offline Payment Form",
    "fieldname": "applied_to",
    "fieldtype": "Select",
    "label": "Applied To",
-   "options": "Booking\nTicket\nOffline Payment Form\nCustom Form"
-  },
-  {
-   "depends_on": "eval:doc.applied_to === 'Custom Form'",
-   "fieldname": "custom_form_doctype",
-   "fieldtype": "Link",
-   "label": "Custom Form DocType",
-   "mandatory_depends_on": "eval:doc.applied_to === 'Custom Form'",
-   "options": "DocType"
+   "options": "Offline Payment Form"
   },
   {
    "depends_on": "eval:doc.applied_to === 'Offline Payment Form'",
@@ -116,7 +107,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-06 15:26:27.195623",
+ "modified": "2026-10-26 10:25:47.571179",
  "modified_by": "Administrator",
  "module": "Buzz",
  "name": "Buzz Custom Field",

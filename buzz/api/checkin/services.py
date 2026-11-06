@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 import frappe
@@ -6,6 +7,7 @@ from frappe.utils import cstr, format_date, format_time, today
 
 from buzz.api.checkin.exceptions import (
 	AlreadyCheckedIn,
+	NotAllowedInZone,
 	NotCheckedIn,
 	TicketCancelled,
 	TicketNotFound,
@@ -17,14 +19,18 @@ from buzz.api.checkin.schemas import (
 	PaymentDetails,
 	TicketAddOn,
 	TicketCheckinDetails,
+	ZoneStatus,
 )
+from buzz.api.events.exceptions import ZoneNotFound
 from buzz.api.exceptions import NotPermitted
+from buzz.events.doctype.event_check_in_zone.event_check_in_zone import default_zone, enabled_zones
 from buzz.permissions import CHECKIN_ROLES, EDIT, can_check_in, is_unrestricted
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import get_committed_tickets
 
 if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
 	from buzz.events.doctype.event_check_in.event_check_in import EventCheckIn
+	from buzz.events.doctype.event_check_in_zone.event_check_in_zone import EventCheckinZone
 	from buzz.ticketing.doctype.event_ticket.event_ticket import EventTicket
 
 CANCELLED = 2
@@ -69,16 +75,31 @@ def checkin_events() -> list[CheckinEvent]:
 
 
 class CheckinService:
-	"""Front-desk check-in for a single ticket, by a team member at Frontdesk or above."""
+	"""Front-desk check-in for a single ticket at one zone, by a team member at Frontdesk or above.
 
-	def __init__(self, ticket_id: str):
+	No zone is the event's default zone, except for `validate`, which then skips the zone checks.
+	"""
+
+	def __init__(self, ticket_id: str, zone: str | None = None):
 		if not frappe.db.exists("Event Ticket", ticket_id):
 			TicketNotFound.throw()
 
 		self.ticket_id = ticket_id
+		self.requested_zone = zone
 		self.date = today()
-		# Both endpoints route through here, so one team check covers them.
+		# Every endpoint routes through here, so one team check covers them.
 		ensure_can_check_in(self.ticket.event)
+		if zone:
+			self.zone  # Refuses a zone that is not open for this event.
+
+	@cached_property
+	def zone(self) -> "EventCheckinZone":
+		name = self.requested_zone or default_zone(self.ticket.event)
+		if not frappe.db.exists(
+			"Event Check-in Zone", {"name": name, "event": self.ticket.event, "enabled": 1}
+		):
+			ZoneNotFound.throw()
+		return frappe.get_cached_doc("Event Check-in Zone", name)
 
 	@property
 	def ticket(self) -> "EventTicket":
@@ -89,15 +110,21 @@ class CheckinService:
 		return frappe.get_cached_doc("Buzz Event", self.ticket.event)
 
 	def validate(self) -> CheckinResponse:
-		self.ensure_checkin_allowed()
+		self.ensure_ticket_valid()
+		if self.requested_zone:
+			self.ensure_zone_allows()
 		return CheckinResponse(
 			message=_("Valid ticket ready for check-in"),
 			ticket=self.ticket_details(),
 			payment_details=self.payment_details(),
+			zones=self.zone_statuses(),
 		)
 
 	def checkin(self) -> CheckinResponse:
-		self.ensure_checkin_allowed()
+		self.ensure_ticket_valid()
+		# Two desks scanning one ticket at once: the second waits here, then sees the first.
+		frappe.db.get_value("Event Ticket", self.ticket_id, "name", for_update=True)
+		self.ensure_zone_allows()
 		checkin_doc = self.record_checkin()
 
 		return CheckinResponse(
@@ -110,9 +137,10 @@ class CheckinService:
 				check_in_time=checkin_doc.creation,
 				check_in_date=self.date,
 			),
+			zones=self.zone_statuses(),
 		)
 
-	def ensure_checkin_allowed(self) -> None:
+	def ensure_ticket_valid(self) -> None:
 		if self.ticket.docstatus == CANCELLED:
 			TicketCancelled.throw()
 
@@ -121,18 +149,23 @@ class CheckinService:
 		if self.ticket.booking and self.ticket_id in get_committed_tickets(self.ticket.booking):
 			TicketRefunded.throw()
 
-		existing = self.todays_checkin()
-		if existing:
-			creation = frappe.db.get_value("Event Check In", existing, "creation")
-			AlreadyCheckedIn.throw(checked_in_at=f"{format_date(creation)} at {format_time(creation)}")
+	def ensure_zone_allows(self) -> None:
+		if not self.zone.allows(self.ticket.ticket_type):
+			NotAllowedInZone.throw(zone=self.zone.title)
+
+		if existing := self.zone.existing_checkin(self.ticket_id, self.date):
+			creation = existing.creation
+			AlreadyCheckedIn.throw(
+				zone=self.zone.title, checked_in_at=f"{format_date(creation)} at {format_time(creation)}"
+			)
 
 	def undo_checkin(self) -> CheckinResponse:
-		existing = self.todays_checkin()
+		existing = self.zone.existing_checkin(self.ticket_id, self.date)
 		if not existing:
-			NotCheckedIn.throw()
+			NotCheckedIn.throw(zone=self.zone.title)
 
 		# Cancelled rather than deleted, so the record of the mistaken check-in stays.
-		checkin_doc = frappe.get_doc("Event Check In", existing)
+		checkin_doc = frappe.get_doc("Event Check In", existing.name)
 		checkin_doc.flags.ignore_permissions = True
 		checkin_doc.cancel()
 		return CheckinResponse(
@@ -140,17 +173,29 @@ class CheckinService:
 				attendee_name=self.ticket.attendee_name
 			),
 			ticket=self.ticket_details(),
+			zones=self.zone_statuses(),
 		)
 
-	def todays_checkin(self) -> str | None:
-		return frappe.db.exists(
-			"Event Check In", {"ticket": self.ticket_id, "date": self.date, "docstatus": 1}
+	def zone_statuses(self) -> list[ZoneStatus]:
+		return [
+			self.zone_status(frappe.get_cached_doc("Event Check-in Zone", row.name))
+			for row in enabled_zones(self.ticket.event)
+		]
+
+	def zone_status(self, zone: "EventCheckinZone") -> ZoneStatus:
+		existing = zone.existing_checkin(self.ticket_id, self.date)
+		return ZoneStatus(
+			name=zone.name,
+			title=zone.title,
+			allowed=zone.allows(self.ticket.ticket_type),
+			checked_in_at=existing.creation if existing else None,
 		)
 
 	def record_checkin(self) -> "EventCheckIn":
 		checkin_doc = frappe.new_doc("Event Check In")
 		checkin_doc.ticket = self.ticket_id
 		checkin_doc.date = self.date
+		checkin_doc.zone = self.zone.name
 		checkin_doc.insert(ignore_permissions=True)
 		checkin_doc.submit()
 		return checkin_doc

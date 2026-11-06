@@ -12,6 +12,7 @@
 				</span>
 				<h2 class="font-display text-[34px] uppercase leading-none text-ink-gray-9">{{ title }}</h2>
 				<p class="text-base text-ink-gray-6 text-pretty"><slot /></p>
+				<div v-if="note" class="prose prose-sm max-w-none text-ink-gray-7" v-html="note" />
 				<p v-if="reference" class="text-p-sm text-ink-gray-5">
 					{{ __("Booking reference") }}:
 					<span class="font-medium text-ink-gray-8">{{ reference }}</span>
@@ -34,7 +35,8 @@ import { Button } from "frappe-ui"
 import LucideCircleCheck from "~icons/lucide/circle-check"
 import LucideClock from "~icons/lucide/clock"
 
-defineProps<{ title: string; reference?: string; pending?: boolean }>()
+// `note` is sanitized HTML from the organiser's confirmation message.
+defineProps<{ title: string; reference?: string; pending?: boolean; note?: string }>()
 const emit = defineEmits<{ login: [] }>()
 </script>
 

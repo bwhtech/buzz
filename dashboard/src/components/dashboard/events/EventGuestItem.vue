@@ -2,6 +2,7 @@
 import { Avatar, Badge, Tooltip } from "frappe-ui"
 import { computed } from "vue"
 
+import GuestZoneDots from "@/components/dashboard/events/GuestZoneDots.vue"
 import type { EventGuest } from "@/types"
 
 const props = defineProps<{ guest: EventGuest; selected?: boolean }>()
@@ -29,7 +30,7 @@ const hidden = computed(() => props.guest.add_ons.slice(VISIBLE_ADD_ONS))
 	<li>
 		<button
 			type="button"
-			class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 ease-out hover:bg-surface-gray-1 active:bg-surface-gray-2 motion-reduce:transition-none"
+			class="flex min-h-12 w-full items-center gap-3 px-3.5 py-2 text-left transition-colors duration-150 ease-out hover:bg-surface-gray-1 active:bg-surface-gray-2 motion-reduce:transition-none"
 			:class="selected && 'bg-surface-gray-2'"
 			:aria-label="`Open ${name}`"
 			@click="emit('open')"
@@ -39,7 +40,7 @@ const hidden = computed(() => props.guest.add_ons.slice(VISIBLE_ADD_ONS))
 			<!-- Name and email on one line: the email is how you tell two Harshes apart, so it
 				 belongs beside the name rather than under it. -->
 			<span class="flex min-w-0 flex-1 items-baseline gap-2">
-				<span class="truncate text-base font-medium text-ink-gray-8">{{ name }}</span>
+				<span class="truncate text-base font-medium text-ink-gray-9">{{ name }}</span>
 				<span v-if="guest.attendee_email" class="truncate text-base text-ink-gray-5">
 					{{ guest.attendee_email }}
 				</span>
@@ -58,6 +59,8 @@ const hidden = computed(() => props.guest.add_ons.slice(VISIBLE_ADD_ONS))
 				</Tooltip>
 				<Badge v-if="guest.ticket_type" variant="subtle" :label="guest.ticket_type" />
 			</span>
+
+			<GuestZoneDots v-if="guest.zones?.length" :zones="guest.zones" />
 		</button>
 	</li>
 </template>

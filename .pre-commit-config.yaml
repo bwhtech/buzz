@@ -1,5 +1,6 @@
 exclude: "node_modules|.git"
 default_stages: [pre-commit]
+default_install_hook_types: [pre-commit, pre-push]
 fail_fast: false
 
 repos:
@@ -53,7 +54,19 @@ repos:
         types_or: [javascript, jsx, ts, tsx, vue]
         exclude: *oxc_exclude
 
+  - repo: local
+    hooks:
+      # Catches type errors before CI does. Runs on push, not commit, to keep commits fast.
+      - id: dashboard-typecheck
+        name: "Type check the dashboard"
+        entry: bash -c 'cd dashboard && yarn typecheck'
+        language: system
+        pass_filenames: false
+        files: ^(dashboard/|buzz/public/js/)
+        stages: [pre-push]
+
 ci:
   autoupdate_schedule: weekly
-  skip: []
+  # Needs the dashboard's node_modules.
+  skip: [dashboard-typecheck]
   submodules: false

@@ -28,7 +28,7 @@ export class EventProposalPage {
 		return this.page
 			.locator(`label:has-text("${label}")`)
 			.locator("..")
-			.locator("input, textarea, select")
+			.locator('input, textarea, select, [contenteditable="true"]')
 			.first()
 	}
 

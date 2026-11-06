@@ -8,7 +8,7 @@ import frappe
 from buzz.api.checkin import checkin_ticket, validate_ticket_for_checkin
 from buzz.api.exceptions import Conflict
 from buzz.tests.base_test_cases import CHARGED_PER_TICKET, BookingRefundTestCase
-from buzz.tests.factories import BuzzEventFactory, PaymentGatewayFactory
+from buzz.tests.factories import BuzzEventFactory, EventCheckinZoneFactory, PaymentGatewayFactory
 
 
 class TestRefundSummary(BookingRefundTestCase):
@@ -34,6 +34,13 @@ class TestRefundSummary(BookingRefundTestCase):
 		checkin_ticket(checked_in_ticket)
 
 		self.assertEqual(len(self.refundable_tickets()), 1)
+		self.assertNotIn(checked_in_ticket, self.refundable_tickets())
+
+	def test_a_check_in_at_another_zone_also_blocks_the_refund(self):
+		checked_in_ticket = self.refundable_tickets()[0]
+		zone = EventCheckinZoneFactory.create(event=self.booking.event).name
+		checkin_ticket(checked_in_ticket, zone=zone)
+
 		self.assertNotIn(checked_in_ticket, self.refundable_tickets())
 
 

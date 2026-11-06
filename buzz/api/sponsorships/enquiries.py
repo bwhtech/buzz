@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 
 from buzz.api.events.services import ensure_event_team_access, manageable_event
-from buzz.api.filters.conditions import ListConditions, filter_field, question_fields
+from buzz.api.filters.conditions import ListConditions, filter_field, form_questions, question_fields
 from buzz.api.filters.schemas import FilterField
 from buzz.api.sponsorships.exceptions import EnquiryNotFound, EnquiryStatusLocked, EnquiryTierMissing
 from buzz.api.sponsorships.schemas import (
@@ -66,21 +66,8 @@ def enquiry_filter_fields(event: str) -> list[FilterField]:
 		filter_field("status", _("Status"), "Select", [(status, _(status)) for status in statuses]),
 		filter_field("tier", _("Tier"), "Link", [(str(tier.name), tier.title) for tier in tiers]),
 		filter_field("contact_email", _("Contact email"), "Email"),
-		*question_fields(enquiry_questions(event)),
+		*question_fields(form_questions(event, "Sponsorship Enquiry")),
 	]
-
-
-def enquiry_questions(event: str) -> list:
-	"""Enabled questions on the event's enquiry form; an event has at most one."""
-	form = frappe.db.get_value("Sponsor Enquiry Form", {"event": event})
-	if not form:
-		return []
-	return frappe.get_all(
-		"Buzz Form Field",
-		filters={"parenttype": "Sponsor Enquiry Form", "parent": form, "enabled": 1},
-		fields=["fieldname", "label", "fieldtype", "options"],
-		order_by="idx",
-	)
 
 
 def search_filters(search: str | None) -> list[list] | None:

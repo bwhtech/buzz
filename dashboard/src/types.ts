@@ -54,6 +54,7 @@ export interface EventProposals {
 	can_write: boolean
 	// Where talks are proposed, and whether that page still takes them.
 	proposal_link: string | null
+	proposal_form: string | null
 	proposals_closed: boolean
 	filter_fields: FilterField[]
 }
@@ -146,7 +147,7 @@ export interface EmailAttachment {
 
 export interface ActivityEntry {
 	name: string
-	kind: "comment" | "email" | "change" | "created"
+	kind: "comment" | "email" | "change" | "created" | "edit"
 	owner: string
 	owner_name: string
 	owner_image: string | null
@@ -159,8 +160,25 @@ export interface ActivityEntry {
 	cc: string[]
 	received: boolean
 	field: string | null
+	fields: string[]
 	old_value: string | null
 	new_value: string | null
+}
+
+// buzz.api.notifications.get_notifications: newest first.
+export interface NotificationItem {
+	name: string
+	kind: "comment" | "reply"
+	actor: string
+	actor_image: string | null
+	snippet: string | null
+	creation: string
+	read: boolean
+	reference_doctype: string
+	reference_name: string
+	title: string | null
+	event_title: string | null
+	link: string | null
 }
 
 export interface TeamMember {
@@ -232,6 +250,11 @@ export interface TeamOverview {
 	public_url: string | null
 	short_description: string | null
 	about: string | null
+	// An uploaded share image, then the one Buzz drew; the shared link shows the first it has.
+	meta_image: string | null
+	og_image: string | null
+	share_title: string
+	share_description: string
 	links: EventExternalLink[]
 	my_role: string
 	members: TeamMember[]
@@ -266,6 +289,7 @@ export interface MyEvent {
 	medium: string | null
 	banner_image: string | null
 	allow_editing_talks_after_acceptance: boolean
+	is_published?: boolean
 	is_host: boolean
 	is_attendee: boolean
 	team: string | null
@@ -325,8 +349,10 @@ export interface EventGuest {
 	ticket_type: string | null
 	registered_at: string | null
 	add_ons: GuestAddOn[]
-	// Today's check-in, if the guest has arrived.
+	// Today's check-in in the chosen zone, if the guest has arrived.
 	checked_in_at?: string | null
+	// Where the guest stands at each enabled zone, default first.
+	zones: ZoneStatus[]
 }
 
 // buzz.api.events.get_event_registration_trend
@@ -347,6 +373,22 @@ export interface RegistrationTrend {
 	by_ticket_type: TicketTypeTotal[]
 }
 
+export interface GuestZone {
+	name: string
+	title: string
+	is_default?: boolean
+	// Guests checked in at the zone, out of the tickets it lets in.
+	checked_in?: number
+	eligible?: number
+}
+
+export interface ZoneStatus {
+	name: string
+	title: string
+	allowed: boolean
+	checked_in_at: string | null
+}
+
 export interface EventGuests {
 	title: string | null
 	start_date: string | null
@@ -357,9 +399,11 @@ export interface EventGuests {
 	total: number
 	matched: number
 	checked_in: number
+	checked_in_any_zone: number
 	guests: EventGuest[]
 	has_next_page: boolean
 	filter_fields: FilterField[]
+	zones: GuestZone[]
 }
 
 export interface VerificationMethods {
@@ -620,7 +664,7 @@ export interface CommunicationDraft {
 	scheduled_at: string
 }
 
-// buzz.api.sponsorships.get_event_sponsorships: an event's Sponsor Enquiry Form, as read
+// buzz.api.sponsorships.get_event_sponsorships: an event's sponsorship Buzz Form, as read
 // on the manage page.
 export interface EnquiryFormState {
 	name: string
@@ -762,6 +806,7 @@ export interface TicketTypeItem {
 	max_tickets_available: number
 	auto_unpublish_after: string | null
 	is_published: boolean
+	is_hidden: boolean
 	tickets_sold: number
 	prices: TicketTypePrice[]
 }
@@ -770,6 +815,7 @@ export interface EventTicketTypes {
 	title: string
 	can_write: boolean
 	registration_link: string | null
+	registration_form: string | null
 	registrations_closed: boolean
 	allow_guest_booking: boolean
 	guest_verification_method: string
@@ -826,12 +872,12 @@ export type CouponStatus = "Active" | "Disabled" | "Used up" | "Ended" | "Schedu
 
 export interface CouponItem {
 	name: string
-	coupon_type: "Promo Code" | "Automatic"
-	/** Typed at checkout for a promo code; the offer name for an automatic one. */
+	coupon_type: "Promo Code" | "Automatic" | "Access Code"
+	/** Typed at checkout for a promo or access code; the offer name for an automatic one. */
 	code: string
 	description: string | null
 	enabled: boolean
-	discount_type: "Percentage" | "Flat Amount"
+	discount_type: "Percentage" | "Flat Amount" | "None"
 	discount_percentage: number
 	discount_amounts: TierPrice[]
 	applies_to_all_ticket_types: boolean
@@ -852,6 +898,7 @@ export interface CouponTicketType {
 	name: string
 	title: string
 	prices: TierPrice[]
+	is_hidden?: boolean
 }
 
 export interface EventCoupons {

@@ -45,11 +45,8 @@ test.describe("Event Proposal Form - Submission", () => {
 
 		await proposalPage.selectOptionByLabel("Event Category", "E2E Test Category")
 
-		const aboutTextarea = page
-			.locator('label:has-text("About the event")')
-			.locator("..")
-			.locator("textarea")
-		await aboutTextarea.fill("An E2E test proposal about automated testing practices.")
+		const aboutEditor = proposalPage.getInputByLabel("About the event")
+		await aboutEditor.fill("An E2E test proposal about automated testing practices.")
 
 		const { succeeded, status } = await proposalPage.submitAndExpectResponse()
 		console.log(`Proposal submission: status=${status}, succeeded=${succeeded}`)
@@ -73,11 +70,8 @@ test.describe("Event Proposal Form - Submission", () => {
 
 		await proposalPage.selectOptionByLabel("Event Category", "E2E Test Category")
 
-		const aboutTextarea = page
-			.locator('label:has-text("About the event")')
-			.locator("..")
-			.locator("textarea")
-		await aboutTextarea.fill("An E2E test proposal about building better events.")
+		const aboutEditor = proposalPage.getInputByLabel("About the event")
+		await aboutEditor.fill("An E2E test proposal about building better events.")
 
 		await proposalPage.submitAndExpectResponse()
 		await proposalPage.expectSuccess()

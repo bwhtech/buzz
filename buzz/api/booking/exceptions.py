@@ -1,6 +1,6 @@
 from frappe import _lt
 
-from buzz.api.exceptions import BuzzAPIError, Conflict
+from buzz.api.exceptions import BuzzAPIError, Conflict, ResourceNotFound
 
 
 class TooManyOTPAttempts(BuzzAPIError):
@@ -47,11 +47,31 @@ class TooManyTicketsHeld(BuzzAPIError):
 	message = _lt("You can hold at most {limit} tickets at a time.")
 
 
+class TooManyTicketsInBooking(BuzzAPIError):
+	title = _lt("Too Many Tickets")
+	message = _lt("You can book at most {limit} tickets at a time.")
+
+
 class InvoiceDetailsMissing(BuzzAPIError):
 	title = _lt("Invoice Details Missing")
 	message = _lt("A tax invoice needs your tax ID and business name.")
 
 
+class InvoiceUnavailable(ResourceNotFound):
+	title = _lt("Invoice Unavailable")
+	message = _lt("This booking has no invoice.")
+
+
 class InvalidCoupon(BuzzAPIError):
 	title = _lt("Invalid Code")
 	message = _lt("Invalid or expired code")
+
+
+class InvalidAccessCode(BuzzAPIError):
+	title = _lt("Invalid Access Code")
+	message = _lt("This access code is not valid.")
+
+
+class HiddenTicketType(BuzzAPIError):
+	title = _lt("Tickets Unavailable")
+	message = _lt("These tickets are only available with a valid access code.")

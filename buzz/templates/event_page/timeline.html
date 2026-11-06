@@ -24,7 +24,7 @@
 			{% if event.place %}
 			<span class="buzz-event-card-meta-item">
 				<svg class="buzz-event-card-icon" viewBox="0 0 24 24" aria-hidden="true">{% if event.is_online %}<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>{% else %}<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>{% endif %}</svg>
-				<span dir="auto">{{ event.place }}</span>
+				<span class="buzz-event-card-clamp" title="{{ event.place }}" dir="auto">{{ event.place }}</span>
 			</span>
 			{% endif %}
 		</p>

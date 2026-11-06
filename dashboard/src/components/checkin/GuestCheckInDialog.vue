@@ -2,19 +2,23 @@
 import { Avatar, Badge, BottomSheet, Button, Dialog, ErrorMessage, dayjsLocal } from "frappe-ui"
 import { computed } from "vue"
 
+import GuestZoneStatusList from "@/components/checkin/GuestZoneStatusList.vue"
 import { useIsMobile } from "@/composables/useIsMobile"
-import type { EventGuest } from "@/types"
+import type { EventGuest, ZoneStatus } from "@/types"
 
 const props = defineProps<{
 	guest: EventGuest | null
 	payment?: string | null
 	busy?: boolean
 	error?: string
+	zones?: ZoneStatus[]
+	// Empty in "Any zone" mode, where each zone gets its own row.
+	zone?: string
 }>()
 
 const open = defineModel<boolean>("open", { required: true })
 
-const emit = defineEmits<{ checkIn: []; undo: [] }>()
+const emit = defineEmits<{ checkIn: [zone?: string]; undo: [zone?: string] }>()
 
 // A dialog at the desk, a sheet from the bottom edge on a phone held in one hand.
 const isMobile = useIsMobile()
@@ -91,7 +95,16 @@ const addOnLabel = (addOn: EventGuest["add_ons"][number]) =>
 
 			<ErrorMessage :message="error" />
 
-			<template v-if="checkedInAt">
+			<GuestZoneStatusList
+				v-if="!zone"
+				:zones="zones ?? []"
+				zone=""
+				:busy="busy"
+				@check-in="emit('checkIn', $event)"
+				@undo="emit('undo', $event)"
+			/>
+
+			<template v-else-if="checkedInAt">
 				<div
 					class="flex h-14 items-center justify-center gap-2 rounded-[14px] bg-surface-green-2 text-lg font-medium text-ink-green-7"
 				>
@@ -117,6 +130,8 @@ const addOnLabel = (addOn: EventGuest["add_ons"][number]) =>
 				:loading="busy"
 				@click="emit('checkIn')"
 			/>
+
+			<GuestZoneStatusList v-if="zone" :zones="zones ?? []" :zone="zone" />
 		</div>
 	</component>
 </template>

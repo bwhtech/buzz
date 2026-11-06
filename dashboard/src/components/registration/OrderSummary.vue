@@ -18,6 +18,7 @@
 			<slot name="coupon" />
 		</div>
 		<dl
+			v-if="!lines || lines.length"
 			class="flex flex-col gap-1.5 border-outline-gray-2 px-4 py-3 tabular-nums"
 			:class="{ 'border-t': lines || $slots.coupon }"
 		>

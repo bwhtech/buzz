@@ -234,7 +234,7 @@ class TestReviewing(CommunityTestCase):
 	def test_deleting_a_submitted_event_takes_its_requests_along(self):
 		request = self.submit()
 		# The defaults made with every event block a delete on their own links.
-		for doctype in ("Sponsorship Tier", "Event Ticket Type"):
+		for doctype in ("Sponsorship Tier", "Event Ticket Type", "Event Check-in Zone"):
 			frappe.db.delete(doctype, {"event": self.event})
 
 		frappe.delete_doc("Buzz Event", self.event)

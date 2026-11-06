@@ -209,7 +209,12 @@ async function save() {
 </script>
 
 <template>
-	<EventPageHeader :title="event.data?.title" section="Details" :modified="event.data?.modified">
+	<EventPageHeader
+		:title="event.data?.title"
+		section="Details"
+		:modified="event.data?.modified"
+		:dirty="isDirty"
+	>
 		<!-- These appear mid-edit, so they arrive rather than pop. Exit is quicker than
 			 entry: the save has already happened by then. -->
 		<Transition

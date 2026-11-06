@@ -23,8 +23,10 @@ const accountOpen = ref(false)
 // `active` is a Boolean prop, so leaving it unset casts to false and skips route matching.
 const route = useRoute()
 
-// A route can drop the nav while one of its params is set, as a full-screen sub-page.
+// A route can drop the nav while one of its params is set, as a full-screen sub-page,
+// and a builder drops it for good.
 const showNav = computed(() => {
+	if (route.meta.fullScreen) return false
 	const param = route.meta.hideMobileNavWith as string | undefined
 	return !(param && route.params[param])
 })
@@ -33,7 +35,7 @@ const showNav = computed(() => {
 <template>
 	<MobileShell>
 		<div class="relative min-h-full bg-surface-elevation-1">
-			<router-view />
+			<router-view :key="$route.params.eventId as string" />
 			<WorkspaceOpening />
 		</div>
 

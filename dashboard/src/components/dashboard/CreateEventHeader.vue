@@ -2,6 +2,7 @@
 import { Button, PageHeader, PageHeaderMobile } from "frappe-ui"
 
 import FloatingCreateEventButton from "@/components/dashboard/FloatingCreateEventButton.vue"
+import NotificationsButton from "@/components/dashboard/notifications/NotificationsButton.vue"
 import UserMenu from "@/components/UserMenu.vue"
 import { useIsMobile } from "@/composables/useIsMobile"
 
@@ -14,6 +15,7 @@ const isMobile = useIsMobile()
 	<template v-if="isMobile">
 		<PageHeaderMobile :title="title">
 			<template #suffix>
+				<NotificationsButton />
 				<UserMenu variant="sheet" />
 			</template>
 		</PageHeaderMobile>

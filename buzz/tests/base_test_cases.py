@@ -2,13 +2,16 @@ from unittest.mock import MagicMock, patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import flt
 
+from buzz.api.booking import process_booking
 from buzz.api.booking.schemas import BookingRequest
 from buzz.api.booking.services import create_add_on_doc
 from buzz.payments import handle_refund_notification
 from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
 	BuzzEventFactory,
+	BuzzFormFactory,
 	BuzzTeamFactory,
 	EventBookingFactory,
 	EventPaymentFactory,
@@ -45,12 +48,18 @@ class BookingTestCase(IntegrationTestCase):
 		self.enterContext(self.set_user("Administrator"))
 		frappe.clear_messages()
 		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event.name)
-		self.set_event({"is_published": 1, "registrations_close_at": None, "allow_guest_booking": 0})
+		self.set_event({"is_published": 1, "allow_guest_booking": 0})
+		BuzzFormFactory.set_registration_cutoff(self.event.name, None)
 		self.free_ticket_type = EventTicketTypeFactory.create(event=self.event.name)
 
 	def set_event(self, values):
 		frappe.db.set_value("Buzz Event", self.event.name, values)
 		frappe.clear_document_cache("Buzz Event", self.event.name)
+
+	def process_as_booker(self, request: BookingRequest):
+		"""Bookings come from website users; a System User would pass checks they must meet."""
+		with self.set_user(self.booker):
+			return process_booking(request)
 
 	def enable_phone_otp(self):
 		self.set_event({"allow_guest_booking": 1, "guest_verification_method": "Phone OTP"})
@@ -110,8 +119,14 @@ class CouponTestCase(IntegrationTestCase):
 	def create_coupon(self, *traits, **overrides):
 		return BuzzCouponCodeFactory.create(*traits, event=self.event.name, **overrides)
 
+	def other_user(self) -> str:
+		return UserFactory.create_once("other-buyer@example.com").name
+
 	def create_booking(self, coupon: str | None = None, count: int = 1, **overrides):
 		attendees = attendee_rows(self.ticket_type.name, count)
+		if email := overrides.get("buyer_email"):
+			# One user per buyer email, as in production; the factory's shared user would be one buyer.
+			overrides.setdefault("user", UserFactory.create_once(email.lower()).name)
 		return EventBookingFactory.create(
 			event=self.event.name, coupon_code=coupon, attendees=attendees, **overrides
 		)
@@ -276,3 +291,41 @@ def razorpay_gateway() -> str:
 	if not frappe.db.exists("Payment Gateway", RAZORPAY):
 		PaymentGatewayFactory.create(gateway=RAZORPAY)
 	return RAZORPAY
+
+
+def create_unpaid_payment(document, order_id: str | None = None):
+	return EventPaymentFactory.create(
+		amount=flt(document.get("total_amount")) or TICKET_PRICE,
+		currency=document.get("currency") or "INR",
+		reference_doctype=document.doctype,
+		reference_docname=document.name,
+		payment_gateway=razorpay_gateway(),
+		order_id=order_id,
+	)
+
+
+def create_payment_request(document, **data) -> None:
+	IntegrationRequestFactory.create(
+		reference_doctype=document.doctype, reference_docname=document.name, data=frappe.as_json(data)
+	)
+
+
+def run_gateway_callback(document, gateway_payment: dict, payment_status: str = "Completed") -> None:
+	gateway = MagicMock()
+	gateway.fetch_payment.return_value = gateway_payment
+	with patch("buzz.payments.get_controller", return_value=gateway):
+		document.on_payment_authorized(payment_status)
+
+
+def authorize_payment(document, payment_status: str = "Completed") -> None:
+	"""Run the gateway callback as the payments app does: a request, an unpaid payment, a payment for its order."""
+	# Marking a payment received commits, so each id must be new.
+	order_id = f"order_{frappe.generate_hash(length=10)}"
+	payment = create_unpaid_payment(document, order_id)
+	create_payment_request(document, razorpay_payment_id=f"pay_{frappe.generate_hash(length=10)}")
+	gateway_payment = {
+		"order_id": order_id,
+		"amount": int(payment.amount * 100),
+		"currency": payment.currency,
+	}
+	run_gateway_callback(document, gateway_payment, payment_status)

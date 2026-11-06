@@ -4,8 +4,15 @@ from enum import Enum
 
 import frappe
 from frappe import _
-from frappe.utils import cstr, getdate, validate_email_address, validate_phone_number_with_country_code
+from frappe.utils import (
+	cstr,
+	getdate,
+	validate_email_address,
+	validate_phone_number_with_country_code,
+	validate_url,
+)
 
+from buzz.api.forms.conditions import FormLogic
 from buzz.api.forms.exceptions import InvalidAnswer, UnknownQuestions
 
 
@@ -24,6 +31,18 @@ class QuestionType(str, Enum):
 	RATING = "Rating"
 	ATTACH = "Attach"
 	ATTACH_IMAGE = "Attach Image"
+	URL = "URL"
+	RADIO = "Radio"
+	HEADING = "Heading"
+	PARAGRAPH = "Paragraph"
+	DIVIDER = "Divider"
+	PAGE_BREAK = "Page Break"
+
+
+# Shape the form, ask nothing, so they never take an answer.
+LAYOUT_TYPES = frozenset(
+	{QuestionType.HEADING, QuestionType.PARAGRAPH, QuestionType.DIVIDER, QuestionType.PAGE_BREAK}
+)
 
 
 CHECK_VALUES = (0, 1, "0", "1", False, True)
@@ -32,18 +51,30 @@ CHECK_VALUES = (0, 1, "0", "1", False, True)
 class CustomAnswers:
 	"""Validate submitted answers against the question definitions on a form."""
 
-	def __init__(self, definitions):
-		self.definitions = {row.fieldname: row for row in definitions if row.enabled}
+	def __init__(self, definitions, rules=None):
+		self.logic = FormLogic(rules)
+		self.definitions = {
+			row.fieldname: row
+			for row in definitions
+			if row.enabled and not row.is_standard and row.fieldtype not in LAYOUT_TYPES
+		}
 
-	def rows(self, values: dict) -> list[dict]:
-		"""Return `additional_fields` rows, rejecting anything the form did not ask for."""
+	def rows(self, values: dict, context: dict | None = None) -> list[dict]:
+		"""Return `additional_fields` rows, rejecting anything the form did not ask for.
+
+		`context` holds the standard field values a condition may name, such as an
+		enquiry's tier. Conditions name questions above, so only shown answers join it.
+		"""
 		if not isinstance(values, dict) or values.keys() - self.definitions.keys():
 			UnknownQuestions.throw()
+		condition_values = dict(context or {})
 		rows = []
 		for fieldname, question in self.definitions.items():
-			value = values.get(fieldname)
+			if not self.logic.is_shown(question, condition_values):
+				continue
+			value = condition_values[fieldname] = values.get(fieldname)
 			if value is None or value == "" or value == []:
-				if question.mandatory:
+				if self.logic.is_required(question, condition_values):
 					frappe.throw(_("{0} is required.").format(question.label), frappe.MandatoryError)
 				continue
 			self.validate_value(question, value)
@@ -80,8 +111,12 @@ class CustomAnswers:
 			validate_email_address(value, throw=True)
 		elif question.fieldtype == QuestionType.PHONE:
 			validate_phone_number_with_country_code(value, question.label)
-		elif question.fieldtype == QuestionType.SELECT:
+		elif question.fieldtype in (QuestionType.SELECT, QuestionType.RADIO):
 			self.validate_options(question, [value])
+		elif question.fieldtype == QuestionType.URL and not validate_url(
+			value, valid_schemes=("http", "https")
+		):
+			self.invalid(question)
 		elif question.fieldtype == QuestionType.DATE:
 			getdate(value)
 

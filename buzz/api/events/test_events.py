@@ -22,10 +22,13 @@ class TestGetMyEvents(IntegrationTestCase):
 		cls.host_team = BuzzTeamFactory.create_owned_by(cls.host_user, team_name="My Events Host Team").name
 		cls.other_team = BuzzTeamFactory.create_owned_by(cls.attendee).name
 
-	def test_returns_unpublished_event_of_own_team_as_host(self):
+	def test_returns_archived_event_of_own_team_only_when_asked(self):
 		event = self.create_team_event(self.host_team, "unpublished")
 
-		self.assertTrue(self.row_of(self.upcoming_of(self.host_user), event)["is_host"])
+		self.assertNotIn(event, self.all_events_of(self.host_user))
+		row = self.row_of(self.upcoming_of(self.host_user, include_archived=True), event)
+		self.assertTrue(row["is_host"])
+		self.assertFalse(row["is_published"])
 
 	def test_returns_ticketed_event_of_another_team_as_guest(self):
 		event = self.create_team_event(self.host_team)
@@ -107,7 +110,7 @@ class TestGetMyEvents(IntegrationTestCase):
 	def test_a_role_filter_keeps_only_hosted_events(self):
 		hosted, ticketed = self.hosted_and_ticketed()
 
-		names = self.names_in(self.upcoming_of(self.host_user, role="hosting"))
+		names = self.names_in(self.upcoming_of(self.host_user, role=["hosting"]))
 
 		self.assertIn(hosted, names)
 		self.assertNotIn(ticketed, names)
@@ -115,7 +118,7 @@ class TestGetMyEvents(IntegrationTestCase):
 	def test_a_role_filter_keeps_only_ticketed_events(self):
 		hosted, ticketed = self.hosted_and_ticketed()
 
-		names = self.names_in(self.upcoming_of(self.host_user, role="attending"))
+		names = self.names_in(self.upcoming_of(self.host_user, role=["attending"]))
 
 		self.assertIn(ticketed, names)
 		self.assertNotIn(hosted, names)
@@ -123,7 +126,7 @@ class TestGetMyEvents(IntegrationTestCase):
 	def test_a_team_filter_keeps_only_that_teams_events(self):
 		hosted, ticketed = self.hosted_and_ticketed()
 
-		names = self.names_in(self.upcoming_of(self.host_user, team=self.host_team))
+		names = self.names_in(self.upcoming_of(self.host_user, team=[self.host_team]))
 
 		self.assertIn(hosted, names)
 		self.assertNotIn(ticketed, names)
@@ -132,14 +135,14 @@ class TestGetMyEvents(IntegrationTestCase):
 		online = self.create_team_event(self.host_team, medium="Online")
 		in_person = self.create_team_event(self.host_team, "in_person")
 
-		names = self.names_in(self.upcoming_of(self.host_user, medium="Online"))
+		names = self.names_in(self.upcoming_of(self.host_user, medium=["Online"]))
 
 		self.assertIn(online, names)
 		self.assertNotIn(in_person, names)
 
 	def test_an_unknown_filter_value_is_refused(self):
 		with self.assertRaises(ValidationError):
-			self.events_of(self.host_user, role="lurking")
+			self.events_of(self.host_user, role=["lurking"])
 
 	def hosted_and_ticketed(self) -> tuple[str, str]:
 		"""One event the host's team runs, and one of another team the host holds a ticket to."""

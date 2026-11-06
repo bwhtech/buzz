@@ -4,10 +4,17 @@ import frappe
 from frappe.utils import add_to_date, now_datetime
 
 from buzz.api.booking import get_event_booking_data, hold_tickets, process_booking, release_hold
-from buzz.api.booking.exceptions import RegistrationsClosed, TicketsUnavailable, TooManyTicketsHeld
-from buzz.tests.base_test_cases import BookingTestCase
+from buzz.api.booking.exceptions import (
+	HiddenTicketType,
+	RegistrationsClosed,
+	TicketsUnavailable,
+	TooManyTicketsHeld,
+)
+from buzz.tests.base_test_cases import BookingTestCase, authorize_payment
 from buzz.tests.factories import (
+	BuzzCouponCodeFactory,
 	BuzzEventFactory,
+	BuzzFormFactory,
 	EventBookingFactory,
 	EventTicketFactory,
 	EventTicketTypeFactory,
@@ -36,7 +43,7 @@ class HoldTestCase(BookingTestCase):
 			{"first_name": f"Booker {index}", "email": "booker@example.com", "ticket_type": self.name}
 			for index in range(quantity)
 		]
-		return process_booking(self.booking_request(attendees=attendees, hold_token=hold_token))
+		return self.process_as_booker(self.booking_request(attendees=attendees, hold_token=hold_token))
 
 	def holds_of(self, hold_token: str) -> int:
 		return frappe.db.count("Ticket Hold", {"hold_token": hold_token})
@@ -94,8 +101,10 @@ class TestHoldTickets(HoldTestCase):
 	def test_refuses_another_events_ticket_type(self):
 		other = EventTicketTypeFactory.create(event=BuzzEventFactory.create().name, max_tickets_available=5)
 
-		with self.assertRaises(frappe.ValidationError):
+		with self.assertRaises(frappe.ValidationError) as error:
 			hold_tickets(self.event.name, {str(other.name): 1})
+
+		self.assertNotIn(other.title, str(error.exception))
 
 	def test_refuses_an_unpublished_ticket_type(self):
 		unpublished = EventTicketTypeFactory.create("unpublished", event=self.event.name)
@@ -104,7 +113,7 @@ class TestHoldTickets(HoldTestCase):
 			hold_tickets(self.event.name, {str(unpublished.name): 1})
 
 	def test_refuses_closed_registrations(self):
-		self.set_event({"registrations_close_at": add_to_date(now_datetime(), days=-1)})
+		BuzzFormFactory.set_registration_cutoff(self.event.name, add_to_date(now_datetime(), days=-1))
 
 		with self.assertRaises(RegistrationsClosed):
 			self.hold(1)
@@ -238,7 +247,7 @@ class TestDraftBookingHold(HoldTestCase):
 	def test_a_payment_turns_the_hold_into_tickets(self):
 		booking = self.draft(2)
 
-		booking.on_payment_authorized("Completed")
+		authorize_payment(booking)
 
 		self.assertEqual(self.holds_of(booking.hold_token), 0)
 		self.assertEqual(self.ticket_type.remaining_tickets, 8)
@@ -247,7 +256,7 @@ class TestDraftBookingHold(HoldTestCase):
 		method = str(OfflinePaymentMethodFactory.create(event=self.event.name).name)
 		attendees = [{"first_name": "Offline", "email": "offline@example.com", "ticket_type": self.name}]
 		request = self.booking_request(attendees=attendees, is_offline=True, offline_payment_method=method)
-		return process_booking(request)
+		return self.process_as_booker(request)
 
 
 class TestAvailabilityView(HoldTestCase):
@@ -265,7 +274,7 @@ class TestAvailabilityView(HoldTestCase):
 		"""A fresh event, so no booking of Administrator's marks it as registered, without the
 		default ticket type a new event gets."""
 		event = BuzzEventFactory.create()
-		frappe.db.set_value("Buzz Event", event.name, "registrations_close_at", None)
+		BuzzFormFactory.set_registration_cutoff(event.name, None)
 		frappe.db.set_value("Event Ticket Type", {"event": event.name}, "is_published", 0)
 		return frappe.get_doc("Buzz Event", event.name)
 
@@ -283,6 +292,40 @@ class TestAvailabilityView(HoldTestCase):
 		EventTicketFactory.create("submitted", event=event.name, ticket_type=ticket_type.name)
 
 		self.assertEqual(RegistrationCard(event).as_dict()["state"], "sold-out")
+
+	def test_the_event_page_shows_sold_out_when_only_hidden_tickets_are_in_stock(self):
+		event = self.open_event()
+		public = EventTicketTypeFactory.create(event=event.name, max_tickets_available=1)
+		EventTicketTypeFactory.create("is_hidden", event=event.name, max_tickets_available=5)
+		EventTicketFactory.create("submitted", event=event.name, ticket_type=public.name)
+
+		self.assertEqual(RegistrationCard(event).as_dict()["state"], "sold-out")
+
+
+class TestHoldHiddenTickets(HoldTestCase):
+	def setUp(self):
+		super().setUp()
+		self.hidden = EventTicketTypeFactory.create(
+			"is_hidden", event=self.event.name, max_tickets_available=5
+		)
+		self.hidden_name = str(self.hidden.name)
+		self.access_code = BuzzCouponCodeFactory.create(
+			"access_code", event=self.event.name, ticket_types=[{"ticket_type": self.hidden.name}]
+		)
+
+	def test_refuses_a_hidden_ticket_type_without_a_code(self):
+		with self.assertRaises(HiddenTicketType):
+			hold_tickets(self.event.name, {self.hidden_name: 1})
+
+	def test_refuses_a_hidden_ticket_type_with_an_unknown_code(self):
+		with self.assertRaises(HiddenTicketType):
+			hold_tickets(self.event.name, {self.hidden_name: 1}, None, "NOPE")
+
+	def test_holds_a_hidden_ticket_type_with_its_code(self):
+		response = hold_tickets(self.event.name, {self.hidden_name: 2}, None, self.access_code.code)
+
+		self.assertEqual(response.remaining, {self.hidden_name: 5})
+		self.assertEqual(self.hidden.remaining_tickets, 3)
 
 
 class TestHoldLimits(HoldTestCase):

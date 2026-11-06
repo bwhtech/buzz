@@ -2,9 +2,9 @@ from datetime import datetime
 
 import frappe
 from frappe import _
-from frappe.query_builder import Case
+from frappe.query_builder import Case, Criterion
 from frappe.query_builder.functions import Count, Date
-from frappe.utils import add_days, getdate, today
+from frappe.utils import add_days, getdate
 
 from buzz.api.booking.guests import email_otp_available, phone_otp_available
 from buzz.api.booking.services import are_registrations_closed
@@ -14,6 +14,7 @@ from buzz.api.events.exceptions import (
 	EventNotFound,
 	ZoomNotAvailable,
 )
+from buzz.api.events.guest_zones import GuestZones, guest_list_zone
 from buzz.api.events.schemas import (
 	CreatedEvent,
 	DailyRegistrations,
@@ -34,10 +35,15 @@ from buzz.api.events.schemas import (
 	TicketTypeTotal,
 	VerificationMethods,
 )
-from buzz.api.filters.conditions import ListConditions, event_questions, filter_field, question_fields
+from buzz.api.filters.conditions import ListConditions, filter_field, form_questions, question_fields
 from buzz.api.filters.schemas import FilterField
 from buzz.events.countdown import event_countdown
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
+from buzz.events.doctype.buzz_form.form_types import (
+	ATTENDEE_FORM_DOCTYPE,
+	REGISTRATION_FORM_DOCTYPE,
+	event_form,
+)
 from buzz.events.doctype.buzz_team.buzz_team import personal_team_owner
 from buzz.events.doctype.event_venue.details import venue_details
 from buzz.permissions import (
@@ -95,6 +101,7 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 			venue.venue_name.as_("venue"),
 			event.medium,
 			event.banner_image,
+			event.is_published,
 			event.team,
 			team.team_name,
 			team.logo.as_("team_logo"),
@@ -115,14 +122,20 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 
 def narrow(query, event, hosted, ticketed, filters: MyEventFilters | None):
 	"""Each set field adds one clause; the role reuses the criterions built above."""
-	if not filters:
-		return query
+	filters = filters or MyEventFilters()
+	if not filters.include_archived:
+		query = query.where(event.is_published == 1)
 	if filters.role:
-		query = query.where(hosted if filters.role == "hosting" else ticketed)
+		roles = {"hosting": hosted, "attending": ticketed}
+		query = query.where(Criterion.any([roles[role] for role in filters.role]))
 	if filters.team:
-		query = query.where(event.team == filters.team)
+		query = query.where(event.team.isin(filters.team))
 	if filters.medium:
-		query = query.where(event.medium == filters.medium)
+		query = query.where(event.medium.isin(filters.medium))
+	if search := (filters.search or "").strip():
+		# Typed % and _ are matched as themselves, not as wildcards.
+		escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+		query = query.where(event.title.like(f"%{escaped}%"))
 	return query
 
 
@@ -319,18 +332,12 @@ def registration_link(doc) -> str | None:
 
 
 def set_registration_state(event: str, closed: bool) -> RegistrationState:
-	"""Open or close registrations, and answer with the state the server ends up in.
-
-	Closure is derived from `registrations_close_at`, so closing writes the event's own
-	wall clock and opening clears the cutoff. Opening cannot beat the event's end date,
-	which closes registrations on its own — hence the state rather than an acknowledgement.
-	"""
+	"""Answer with the state the server ends up in: opening cannot beat the event's end date."""
 	doc = manageable_event(event, "ticketing")
-	if closed:
-		doc.close_registrations()
-	else:
-		doc.registrations_close_at = None
-	doc.save(ignore_permissions=True)
+	# Without a registration form an event takes no registrations, which is already closed.
+	if form := event_form(doc.name, REGISTRATION_FORM_DOCTYPE):
+		form.flags.ignore_permissions = True
+		form.set_closed(closed)
 	return RegistrationState(registrations_closed=are_registrations_closed(doc))
 
 
@@ -371,6 +378,8 @@ def event_guests(
 	start: int = 0,
 	limit: int = GUESTS_PAGE_SIZE,
 	checked_in: str | None = None,
+	zone: str | None = None,
+	name: str | None = None,
 ) -> EventGuestsResponse:
 	"""One page of the people holding a ticket to an event.
 
@@ -379,16 +388,22 @@ def event_guests(
 
 	Ordered by when the ticket was registered, newest first by default, so a page is a
 	stable slice as the caller walks down the list. `checked_in` is "1" or "0" to keep only
-	the guests who have, or have not, checked in today.
+	the guests who have, or have not, checked in today, at `zone` or the default zone.
+	A `zone` also keeps only the tickets it lets in.
 	"""
 	ensure_event_team_access(event, "guests")
 
 	filter_fields, answer_parents = guest_filter_fields(event)
 	conditions = ListConditions("Event Ticket", filter_fields, answer_parents).frappe_filters(filters)
-	arrivals = checked_in_today(event)
+	guest_zones = GuestZones(event)
+	arrivals = guest_zones.arrivals[guest_list_zone(event, zone)]
+	if zone and (types := guest_zones.ticket_types.get(zone)):
+		conditions.append(["ticket_type", "in", list(types)])
 	if checked_in in ("0", "1"):
 		operator = "in" if checked_in == "1" else "not in"
 		conditions.append(["name", operator, list(arrivals) or [""]])
+	if name:
+		conditions.append(["name", "=", name])
 	query_filters = [["event", "=", event], ["docstatus", "=", 1], *conditions]
 	or_filters = guest_search_filters(search)
 	limit = max(1, min(int(limit), 100))
@@ -411,6 +426,7 @@ def event_guests(
 	type_titles = titles_of("Event Ticket Type", {ticket.ticket_type for ticket in tickets})
 
 	for ticket in tickets:
+		ticket["zones"] = guest_zones.statuses(ticket.name, ticket.ticket_type)
 		# The response names it registered_at, and the model forbids a field it does not declare.
 		ticket["registered_at"] = ticket.pop("creation")
 		ticket["ticket_type"] = type_titles.get(ticket.ticket_type) or ticket.ticket_type
@@ -432,29 +448,12 @@ def event_guests(
 		total=total,
 		matched=matched,
 		checked_in=len(arrivals),
+		checked_in_any_zone=guest_zones.checked_in_any_zone(),
 		guests=guests,
 		has_next_page=start + len(guests) < matched,
 		filter_fields=filter_fields,
+		zones=guest_zones.options(),
 	)
-
-
-def checked_in_today(event: str) -> dict[str, datetime]:
-	"""When each of the event's submitted tickets checked in today, keyed by ticket."""
-	# Query builder: the team check in the caller is the authorization.
-	checkin, ticket = frappe.qb.DocType("Event Check In"), frappe.qb.DocType("Event Ticket")
-	rows = (
-		frappe.qb.from_(checkin)
-		.join(ticket)
-		.on(ticket.name == checkin.ticket)
-		.select(checkin.ticket, checkin.creation)
-		.where(
-			(checkin.event == event)
-			& (checkin.date == today())
-			& (checkin.docstatus == 1)
-			& (ticket.docstatus == 1)
-		)
-	).run(as_dict=True)
-	return {row.ticket: row.creation for row in rows}
 
 
 def guest_filter_fields(event: str) -> tuple[list[FilterField], dict]:
@@ -464,14 +463,11 @@ def guest_filter_fields(event: str) -> tuple[list[FilterField], dict]:
 	booking it belongs to. A fieldname asked on both keeps the ticket question.
 	"""
 	ticket_types = [(row.name, row.title) for row in ticket_types_of(event)]
-	questions: dict = {}
-	for row in event_questions(event, applied_to=["in", ["Ticket", "Booking"]]):
-		existing = questions.get(row.fieldname)
-		if not existing or existing.applied_to != "Ticket":
-			questions[row.fieldname] = row
-	answer_parents = {
-		key: ("Event Booking", "booking") for key, row in questions.items() if row.applied_to == "Booking"
-	}
+	questions = {row.fieldname: row for row in form_questions(event, REGISTRATION_FORM_DOCTYPE)}
+	answer_parents = {fieldname: ("Event Booking", "booking") for fieldname in questions}
+	for row in form_questions(event, ATTENDEE_FORM_DOCTYPE):
+		questions[row.fieldname] = row
+		answer_parents.pop(row.fieldname, None)
 	fields = [
 		filter_field("ticket_type", _("Ticket type"), "Link", ticket_types),
 		*question_fields(questions.values()),

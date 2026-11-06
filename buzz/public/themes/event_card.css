@@ -105,6 +105,13 @@
 	white-space: nowrap;
 }
 
+.buzz-event-card-clamp {
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
 .buzz-event-card-meta-item > :first-child {
 	flex-shrink: 0;
 }
@@ -241,7 +248,17 @@
 	transform: scale(0.99);
 }
 
+/* An archived event steps back; its badge and Manage stay at full strength. */
+.buzz-event-card[data-archived] :is(.buzz-event-card-cover, .buzz-event-card-body) {
+	opacity: 0.55;
+	transition: opacity 150ms ease;
+}
+
 @media (hover: hover) and (pointer: fine) {
+	.buzz-event-card[data-archived]:hover :is(.buzz-event-card-cover, .buzz-event-card-body) {
+		opacity: 0.85;
+	}
+
 	.buzz-event-card[data-layout="row"]:hover {
 		background: var(--surface-gray-1);
 	}

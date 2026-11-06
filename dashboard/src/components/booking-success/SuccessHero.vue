@@ -1,5 +1,6 @@
 <script setup lang="ts">
-defineProps<{ eventTitle: string; ticketCount: number }>()
+// `title` and `note` are the organiser's own; `note` is sanitized HTML.
+defineProps<{ eventTitle: string; ticketCount: number; title?: string | null; note?: string }>()
 </script>
 
 <template>
@@ -27,7 +28,7 @@ defineProps<{ eventTitle: string; ticketCount: number }>()
 			<h1
 				class="text-[30px] font-semibold leading-tight tracking-tight text-ink-gray-9 text-balance"
 			>
-				{{ __("You're going to {0}", [eventTitle]) }}
+				{{ title || __("You're going to {0}", [eventTitle]) }}
 			</h1>
 			<p class="max-w-[460px] text-base text-ink-gray-6 text-pretty">
 				{{
@@ -37,6 +38,11 @@ defineProps<{ eventTitle: string; ticketCount: number }>()
 				}}
 				{{ __("Show the QR code at the entrance to check in.") }}
 			</p>
+			<div
+				v-if="note"
+				class="prose prose-sm max-w-[460px] text-left text-ink-gray-7"
+				v-html="note"
+			/>
 		</div>
 	</div>
 </template>

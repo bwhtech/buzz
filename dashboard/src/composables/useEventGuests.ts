@@ -28,7 +28,8 @@ export function useEventGuests(
 	{
 		url = "/api/v2/method/buzz.api.events.get_event_guests",
 		checkedIn = ref(""),
-	}: { url?: string; checkedIn?: Ref<string> } = {},
+		zone = ref(""),
+	}: { url?: string; checkedIn?: Ref<string>; zone?: Ref<string> } = {},
 ) {
 	// Typing rewrites the URL, and every rewrite is a request — wait for the pause.
 	const debouncedSearch = refDebounced(search, 300)
@@ -45,6 +46,7 @@ export function useEventGuests(
 			start: start.value,
 			limit: GUESTS_PAGE_SIZE,
 			checked_in: checkedIn.value,
+			...(zone.value && { zone: zone.value }),
 		}),
 		// Off by default, so without this a new page or search would never be fetched.
 		refetch: true,
@@ -60,9 +62,14 @@ export function useEventGuests(
 		},
 	})
 
+	// One ticket by name, through the same permission check, for a link to a row not loaded.
+	const lookup = useCall<EventGuests, Record<string, string | number>>({ url, immediate: false })
+	const fetchOne = async (name: string) =>
+		(await lookup.submit({ event, name, limit: 1 }))?.guests[0] ?? null
+
 	// Sync, so the offset is back at zero before useCall's own watcher rebuilds the URL —
 	// a pre-flush reset lets the stale offset go out as a request that is aborted a tick later.
-	watch([debouncedSearch, order, conditions, checkedIn], () => (start.value = 0), {
+	watch([debouncedSearch, order, conditions, checkedIn, zone], () => (start.value = 0), {
 		flush: "sync",
 	})
 
@@ -73,6 +80,7 @@ export function useEventGuests(
 
 	return {
 		guests,
+		fetchOne,
 		loadMore,
 		page,
 		// The first page is the only one that leaves the list empty while it loads.

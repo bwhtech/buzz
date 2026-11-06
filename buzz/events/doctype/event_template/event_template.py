@@ -5,7 +5,39 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from buzz.api.forms.conditions import parse_rules
+from buzz.events.doctype.buzz_form.form_types import (
+	QUESTION_FIELD_NAMES,
+	SPONSORSHIP_FORM_DOCTYPE,
+	template_conditions,
+)
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
+
+TEMPLATE_FIELDS = (
+	"category",
+	"host",
+	"banner_image",
+	"short_description",
+	"about",
+	"medium",
+	"venue",
+	"allow_guest_booking",
+	"guest_verification_method",
+	"time_zone",
+	"send_ticket_email",
+	"ticket_email_template",
+	"ticket_print_format",
+	"send_booking_confirmation_email",
+	"booking_confirmation_email_template",
+	"offline_acknowledgement_email_template",
+	"apply_tax",
+	"tax_label",
+	"tax_percentage",
+	"auto_send_pitch_deck",
+	"sponsor_deck_email_template",
+	"sponsor_deck_reply_to",
+	"sponsor_deck_cc",
+)
 
 
 class EventTemplate(Document):
@@ -35,11 +67,14 @@ class EventTemplate(Document):
 		apply_tax: DF.Check
 		auto_send_pitch_deck: DF.Check
 		banner_image: DF.AttachImage | None
+		booking_confirmation_email_template: DF.Link | None
 		category: DF.Link | None
 		guest_verification_method: DF.Literal["None", "Email OTP", "Phone OTP"]
 		host: DF.Link | None
 		medium: DF.Literal["In Person", "Online"]
+		offline_acknowledgement_email_template: DF.Link | None
 		payment_gateways: DF.Table[EventPaymentGateway]
+		send_booking_confirmation_email: DF.Check
 		send_ticket_email: DF.Check
 		short_description: DF.SmallText | None
 		sponsor_deck_attachments: DF.Table[SponsorshipDeckItem]
@@ -85,33 +120,9 @@ def create_template_from_event(event_name: str, template_name: str, options: str
 	template = frappe.new_doc("Event Template")
 	template.template_name = template_name
 
-	# Field mapping for direct copy
-	field_map = {
-		"category": "category",
-		"host": "host",
-		"banner_image": "banner_image",
-		"short_description": "short_description",
-		"about": "about",
-		"medium": "medium",
-		"venue": "venue",
-		"allow_guest_booking": "allow_guest_booking",
-		"guest_verification_method": "guest_verification_method",
-		"time_zone": "time_zone",
-		"send_ticket_email": "send_ticket_email",
-		"ticket_email_template": "ticket_email_template",
-		"ticket_print_format": "ticket_print_format",
-		"apply_tax": "apply_tax",
-		"tax_label": "tax_label",
-		"tax_percentage": "tax_percentage",
-		"auto_send_pitch_deck": "auto_send_pitch_deck",
-		"sponsor_deck_email_template": "sponsor_deck_email_template",
-		"sponsor_deck_reply_to": "sponsor_deck_reply_to",
-		"sponsor_deck_cc": "sponsor_deck_cc",
-	}
-
-	for option_key, field_name in field_map.items():
-		if options.get(option_key):
-			template.set(field_name, event.get(field_name))
+	for field in TEMPLATE_FIELDS:
+		if options.get(field):
+			template.set(field, event.get(field))
 
 	# Copy child tables from event
 	if options.get("payment_gateways"):
@@ -178,40 +189,34 @@ def create_template_from_event(event_name: str, template_name: str, options: str
 			)
 
 	if options.get("custom_fields"):
-		custom_fields = frappe.get_all(
-			"Buzz Custom Field",
-			filters={"event": event_name},
-			fields=[
-				"label",
-				"fieldname",
-				"fieldtype",
-				"options",
-				"applied_to",
-				"custom_form_doctype",
-				"enabled",
-				"mandatory",
-				"placeholder",
-				"default_value",
-				"order",
-			],
-		)
-		for cf in custom_fields:
-			template.append(
-				"template_custom_fields",
-				{
-					"label": cf.label,
-					"fieldname": cf.fieldname,
-					"fieldtype": cf.fieldtype,
-					"options": cf.options,
-					"applied_to": cf.applied_to,
-					"custom_form_doctype": cf.custom_form_doctype,
-					"enabled": cf.enabled,
-					"mandatory": cf.mandatory,
-					"placeholder": cf.placeholder,
-					"default_value": cf.default_value,
-					"order": cf.order,
-				},
-			)
+		for custom_field in event_template_questions(event_name):
+			template.append("template_custom_fields", custom_field)
 
 	template.insert()
 	return template.name
+
+
+def event_template_questions(event_name: str) -> list[dict]:
+	# Sponsorship questions stay on the event's own sponsorship form, which every event has.
+	forms = {
+		form.name: form
+		for form in frappe.get_all(
+			"Buzz Form",
+			filters={"event": event_name, "form_doctype": ["!=", SPONSORSHIP_FORM_DOCTYPE]},
+			fields=["name", "form_doctype", "logic_rules"],
+		)
+	}
+	questions = frappe.get_all(
+		"Buzz Form Field",
+		filters={"parenttype": "Buzz Form", "parent": ["in", list(forms)], "is_standard": 0},
+		fields=["parent", *QUESTION_FIELD_NAMES],
+		order_by="parent, idx",
+	)
+	return [
+		{
+			**{name: question.get(name) for name in QUESTION_FIELD_NAMES},
+			**template_conditions(parse_rules(forms[question.parent].logic_rules), question.fieldname),
+			"form_doctype": forms[question.parent].form_doctype,
+		}
+		for question in questions
+	]

@@ -1,15 +1,18 @@
 from contextlib import ExitStack
+from io import BytesIO
 from unittest.mock import patch
 
 import frappe
+from pypdf import PdfWriter
 
 from buzz.api.booking import (
+	download_invoice,
 	download_tickets,
 	get_booking_confirmation,
 	get_calendar_invite,
-	process_booking,
 )
 from buzz.api.booking.downloads import inlined_qr
+from buzz.api.booking.exceptions import InvoiceUnavailable
 from buzz.api.booking.services import get_booking_access_token, verify_booking_access_token
 from buzz.tests.base_test_cases import BookingTestCase
 from buzz.tests.factories import (
@@ -18,6 +21,8 @@ from buzz.tests.factories import (
 	EventTicketTypeFactory,
 	PaymentGatewayFactory,
 )
+
+BUYER_INVOICE_DETAILS = {"tax_id": "29BBBBB1111B1Z6", "business_name": "Globex Corporation"}
 
 
 class TestBookingConfirmation(BookingTestCase):
@@ -30,7 +35,7 @@ class TestBookingConfirmation(BookingTestCase):
 		self.assertFalse(verify_booking_access_token("B-OTHER-002", token))
 
 	def test_free_booking_redirects_to_the_token_gated_success_page(self):
-		payload = process_booking(self.booking_request())
+		payload = self.process_as_booker(self.booking_request())
 
 		path, token = payload.redirect_to.split("?token=")
 		self.assertEqual(path, f"/booking-success/{payload.booking_name}")
@@ -63,6 +68,10 @@ class TestBookingConfirmation(BookingTestCase):
 			for token in ("wrong-token", ""):
 				with self.subTest(token=token), self.assertRaises(frappe.PermissionError):
 					get_booking_confirmation(booking.name, token=token)
+
+	def test_a_missing_booking_is_refused_like_an_unreadable_one(self):
+		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
+			get_booking_confirmation("B-DOES-NOT-EXIST", token="wrong-token")
 
 	def test_a_user_with_access_needs_no_token(self):
 		booking = self.create_submitted_booking()
@@ -131,15 +140,58 @@ class TestBookingConfirmation(BookingTestCase):
 		with self.set_user(self.outsider), self.assertRaises(frappe.PermissionError):
 			download_tickets(booking.name)
 
-	def create_submitted_booking(self):
+	def test_guest_with_a_valid_token_downloads_the_invoice(self):
+		booking = self.create_submitted_booking(invoice_requested=1, **BUYER_INVOICE_DETAILS)
+		token = get_booking_access_token(booking.name)
+
+		with self.set_user("Guest"), stub_pdf_rendering():
+			download_invoice(booking.name, token=token)
+
+		self.assertEqual(frappe.response.type, "download")
+		self.assertEqual(frappe.response.filename, f"Invoice-{booking.name}.pdf")
+		self.assertTrue(frappe.response.filecontent.startswith(b"%PDF"))
+		self.assertFalse(frappe.flags.ignore_print_permissions)
+
+	def test_a_booking_without_an_invoice_request_has_no_invoice(self):
+		booking = self.create_submitted_booking()
+
+		with self.assertRaises(InvoiceUnavailable):
+			download_invoice(booking.name)
+
+	def test_a_draft_booking_has_no_invoice(self):
+		booking = self.create_booking(
+			EventTicketTypeFactory.create("paid", event=self.event.name).name,
+			invoice_requested=1,
+			**BUYER_INVOICE_DETAILS,
+		)
+
+		with self.assertRaises(InvoiceUnavailable):
+			download_invoice(booking.name)
+
+	def test_an_invoice_needs_a_token_or_permission(self):
+		booking = self.create_submitted_booking(invoice_requested=1, **BUYER_INVOICE_DETAILS)
+
+		with self.set_user("Guest"), self.assertRaises(frappe.PermissionError):
+			download_invoice(booking.name)
+		with self.set_user(self.outsider), self.assertRaises(frappe.PermissionError):
+			download_invoice(booking.name)
+
+	def test_confirmation_offers_the_invoice_only_for_an_invoiced_booking(self):
+		invoiced = self.create_submitted_booking(invoice_requested=1, **BUYER_INVOICE_DETAILS)
+		plain = self.create_submitted_booking()
+
+		self.assertTrue(get_booking_confirmation(invoiced.name).booking.invoice_available)
+		self.assertFalse(get_booking_confirmation(plain.name).booking.invoice_available)
+
+	def create_submitted_booking(self, **overrides):
 		paid_ticket_type = EventTicketTypeFactory.create("paid", event=self.event.name).name
-		booking = self.create_booking(paid_ticket_type)
+		booking = self.create_booking(paid_ticket_type, **overrides)
 		booking.submit()
 		return booking
 
-	def create_booking(self, ticket_type: str):
+	def create_booking(self, ticket_type: str, **overrides):
 		attendees = [{"ticket_type": ticket_type, "first_name": "Conf", "email": "conf@example.com"}]
-		return EventBookingFactory.create(event=self.event.name, attendees=attendees)
+		return EventBookingFactory.create(event=self.event.name, attendees=attendees, **overrides)
 
 
 def stub_pdf_rendering() -> ExitStack:
@@ -152,5 +204,11 @@ def stub_pdf_rendering() -> ExitStack:
 
 
 def add_blank_page(html: str, options=None, output=None, **kwargs):
-	output.add_blank_page(width=100, height=100)
-	return output
+	# Tickets pass a writer to collect every page; a single print wants the PDF bytes back.
+	writer = output or PdfWriter()
+	writer.add_blank_page(width=100, height=100)
+	if output:
+		return output
+	buffer = BytesIO()
+	writer.write(buffer)
+	return buffer.getvalue()

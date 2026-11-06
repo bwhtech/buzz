@@ -1,5 +1,6 @@
 import { bannerPattern } from "./event_banner"
 import { EventCountdown } from "./event_countdown"
+import { EventSchedule } from "./event_schedule"
 import { mountVenueMaps } from "./venue_map"
 
 // The public page's theme tokens, so each theme colours the same rings its own way.
@@ -26,5 +27,6 @@ class EventBanner extends HTMLElement {
 
 if (!customElements.get("event-banner")) customElements.define("event-banner", EventBanner)
 if (!customElements.get("event-countdown")) customElements.define("event-countdown", EventCountdown)
+if (!customElements.get("event-schedule")) customElements.define("event-schedule", EventSchedule)
 
 mountVenueMaps()

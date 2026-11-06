@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from buzz.api.booking.event_data import get_registration_success
 from buzz.api.booking.schemas import (
 	BookingConfirmationResponse,
 	BookingDetailsResponse,
@@ -14,6 +15,7 @@ from buzz.api.booking.schemas import (
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, verify_booking_access_token
 from buzz.api.tickets import windows
 from buzz.events.doctype.event_venue.details import venue_details
+from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import add_on_options
 from buzz.utils import qr_data_uri
 
 TICKET_FIELDS = [
@@ -27,11 +29,11 @@ TICKET_FIELDS = [
 
 def ensure_confirmation_access(booking_id: str, token: str | None) -> None:
 	"""A guest holds the booking's token; a signed-in user needs read permission."""
-	# nosemgrep: unchecked-frappe-permission-call -- return value checked below
-	authorized = verify_booking_access_token(booking_id, token) or frappe.has_permission(
-		"Event Booking", "read", doc=booking_id
-	)
-	if not authorized:
+	if verify_booking_access_token(booking_id, token):
+		return
+	exists = frappe.db.exists("Event Booking", booking_id)
+	# nosemgrep: unchecked-frappe-permission-call -- return value checked here
+	if not exists or not frappe.has_permission("Event Booking", "read", doc=booking_id):
 		frappe.throw(_("You are not allowed to view this booking."), frappe.PermissionError)
 
 
@@ -53,6 +55,7 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 			free_event=event_doc.get("free_event"),
 		),
 		venue=venue_details(event_doc.venue),
+		success=get_registration_success(event_doc.name),
 		booking=ConfirmationBooking(
 			name=booking_doc.name,
 			total_amount=booking_doc.total_amount,
@@ -67,6 +70,7 @@ def build_booking_confirmation(booking_id: str, token: str | None) -> BookingCon
 			coupon_code=coupon_code_of(booking_doc),
 			payment_method=payment_method(booking_doc),
 			booked_on=booking_doc.creation,
+			invoice_available=booking_doc.has_invoice(),
 		),
 		# Guests read this with a token and no session, so the private QR file is inlined
 		tickets=[ConfirmationTicket(**{**ticket, "qr_code": qr_data_uri(ticket.name)}) for ticket in tickets],
@@ -114,6 +118,7 @@ def build_booking_details(booking_id: str) -> BookingDetailsResponse:
 		cancellation_request=cancellation_request,
 		cancellation_requested_tickets=get_cancellation_requested_tickets(cancellation_request, tickets),
 		cancelled_tickets=[ticket.name for ticket in tickets if ticket.docstatus == 2],
+		invoice_available=booking_doc.has_invoice(),
 	)
 
 
@@ -169,7 +174,7 @@ def get_add_on_options_map(event_id: str) -> dict:
 		filters={"event": event_id, "user_selects_option": True},
 		fields=["name", "options"],
 	)
-	return {add_on.name: add_on.options.split("\n") if add_on.options else [] for add_on in event_add_ons}
+	return {add_on.name: add_on_options(add_on.options) for add_on in event_add_ons}
 
 
 def get_cancellation_requested_tickets(cancellation_request, tickets) -> list[str]:

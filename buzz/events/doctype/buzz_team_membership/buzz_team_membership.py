@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from buzz.permissions import EDIT, SECTIONS, can_manage_members
+from buzz.permissions import EDIT, INTEGRATION_ROLE, SECTIONS, can_manage_members, is_unrestricted
 
 if TYPE_CHECKING:
 	from frappe.core.doctype.user.user import User
@@ -35,6 +35,9 @@ def on_invitation_accepted(invitation: "UserInvitation", user: "User", user_inse
 
 	if team_role == "Owner":
 		frappe.throw(_("An invitation cannot grant ownership of a team."))
+
+	if team_role == INTEGRATION_ROLE:
+		frappe.throw(_("An invitation cannot grant the Integration role."))
 
 	# Same rule as invite time, so a System Manager's invitation can be accepted too.
 	if not can_manage_members(team, invitation.invited_by):
@@ -123,25 +126,40 @@ class BuzzTeamMembership(Document):
 
 		enabled: DF.Check
 		team: DF.Link
-		team_role: DF.Literal["Owner", "Admin", "Manager", "Frontdesk", "Viewer"]
+		team_role: DF.Literal["Owner", "Admin", "Manager", "Frontdesk", "Viewer", "Integration"]
 		user: DF.Link
 	# end: auto-generated types
 
 	def on_update(self):
 		# Fires on insert too — Document._action is "save" for both.
 		sync_frappe_roles(self.user)
+		if self.has_value_changed("enabled") and not self.enabled:
+			self.drop_subscriptions()
 
 	def on_trash(self):
 		if self.team_role == "Owner":
 			frappe.throw(_("The owner of a team cannot be removed."))
+		if self.team_role == INTEGRATION_ROLE and not is_unrestricted(frappe.session.user):
+			frappe.throw(_("Only a System Manager can manage the Integration role."))
 
 	def after_delete(self):
 		# Not on_trash — that runs before the row is gone, so it would still be counted.
 		sync_frappe_roles(self.user)
+		self.drop_subscriptions()
+
+	def drop_subscriptions(self):
+		frappe.enqueue(
+			"buzz.subscriptions.drop_team_subscriptions",
+			team=self.team,
+			user=self.user,
+			enqueue_after_commit=True,
+			now=frappe.in_test,
+		)
 
 	def validate(self):
 		self.validate_duplicate()
 		self.validate_owner_is_locked()
+		self.validate_integration_role()
 		self.validate_personal_team_has_one_member()
 
 	def validate_duplicate(self):
@@ -151,6 +169,19 @@ class BuzzTeamMembership(Document):
 		)
 		if existing:
 			frappe.throw(_("{0} is already a member of this team.").format(self.user))
+
+	def validate_integration_role(self):
+		"""Only a System Manager creates, changes or toggles a bot membership."""
+		previous_membership = self.get_doc_before_save()
+		integration_role_involved = INTEGRATION_ROLE in (
+			self.team_role,
+			previous_membership and previous_membership.team_role,
+		)
+		role_or_enabled_changed = (
+			self.is_new() or self.has_value_changed("team_role") or self.has_value_changed("enabled")
+		)
+		if integration_role_involved and role_or_enabled_changed and not is_unrestricted(frappe.session.user):
+			frappe.throw(_("Only a System Manager can manage the Integration role."))
 
 	def validate_personal_team_has_one_member(self):
 		others = frappe.db.exists("Buzz Team Membership", {"team": self.team, "name": ("!=", self.name)})

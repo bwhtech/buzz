@@ -1,6 +1,5 @@
 import frappe
 
-from buzz.api.booking import process_booking
 from buzz.tests.base_test_cases import BookingTestCase
 from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
@@ -105,7 +104,7 @@ class TestOfflineBooking(BookingTestCase):
 			}
 		]
 		request = self.booking_request(attendees=attendees, is_offline=True, offline_payment_method=method)
-		return process_booking(request)
+		return self.process_as_booker(request)
 
 	def ticket_count(self, booking: str) -> int:
 		return frappe.db.count("Event Ticket", {"booking": booking})

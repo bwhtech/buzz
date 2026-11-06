@@ -11,6 +11,7 @@ import TicketTypeRow from "./TicketTypeRow.vue"
 const props = defineProps<{ organizer: TicketTypeOrganizer; canWrite?: boolean }>()
 defineEmits<{
 	open: [name: string]
+	add: [category: string]
 	addCategory: []
 	editCategory: [category: TicketCategoryItem]
 }>()
@@ -110,5 +111,13 @@ const chips = computed(() => [
 				No ticket types in this category yet
 			</p>
 		</section>
+		<Button
+			v-if="canWrite"
+			size="md"
+			variant="ghost"
+			icon-left="lucide-plus"
+			label="Add ticket type"
+			@click="$emit('add', selectedGroup?.key ?? '')"
+		/>
 	</div>
 </template>

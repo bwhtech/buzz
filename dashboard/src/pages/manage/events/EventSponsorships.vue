@@ -16,6 +16,7 @@ import SponsorDrawer from "@/components/dashboard/sponsorships/SponsorDrawer.vue
 import SponsorsSection from "@/components/dashboard/sponsorships/SponsorsSection.vue"
 import TierDrawer from "@/components/dashboard/sponsorships/TierDrawer.vue"
 import TierList from "@/components/dashboard/sponsorships/TierList.vue"
+import { useQueryParamRecord } from "@/composables/useQueryParamRecord"
 import { useEventSponsorships } from "@/data/sponsorships"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError } from "@/types"
@@ -66,6 +67,12 @@ type Selection = { kind: "tier" | "sponsor" | "enquiry"; name: string }
 const selected = ref<Selection | null>(null)
 
 const select = (kind: Selection["kind"], name: string) => (selected.value = { kind, name })
+
+useQueryParamRecord(
+	"sponsor",
+	() => page.data?.sponsors,
+	(sponsor) => select("sponsor", sponsor.name),
+)
 
 function pick<T extends { name: string }>(kind: Selection["kind"], rows: T[] | undefined) {
 	if (selected.value?.kind !== kind) return null
@@ -157,6 +164,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 
 		<template v-if="page.data?.form" #sidebar>
 			<EventSponsorshipActions
+				:event="eventId"
 				:form="page.data.form"
 				:can-write="!!page.data.can_write"
 				:can-import="canImport"

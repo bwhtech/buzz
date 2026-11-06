@@ -24,6 +24,16 @@ def get_email_sender(reference_doctype: str, reference_name: str) -> str | None:
 
 
 @frappe.whitelist()
+def get_subscription(reference_doctype: str, reference_name: str) -> bool:
+	return DocumentComments(reference_doctype, reference_name).is_subscribed()
+
+
+@frappe.whitelist(methods=["POST"])
+def set_subscription(reference_doctype: str, reference_name: str, subscribed: bool) -> None:
+	DocumentComments(reference_doctype, reference_name).set_subscribed(subscribed)
+
+
+@frappe.whitelist()
 def get_email_attachment(name: str) -> Response:
 	return email_attachment(name)
 

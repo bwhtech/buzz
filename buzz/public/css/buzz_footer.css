@@ -1,0 +1,144 @@
+/* The Buzz Footer web template. Any website page can render it, and Frappe's own pages carry
+   none of the Buzz theme tokens, so each token falls back to a light value. */
+.buzz-footer {
+	--footer-ink: var(--ink-muted, #7c7c7c);
+	--footer-ink-strong: var(--ink-strong, #171717);
+
+	display: flex;
+	flex-direction: column;
+	gap: 64px;
+	width: min(var(--page-width, 1024px), 100% - 32px);
+	margin: 32px auto 0;
+	padding: 32px 8px 24px;
+	border-top: 1px solid var(--border, #ededed);
+	color: var(--footer-ink);
+	font-size: 13px;
+	line-height: 1.57;
+}
+
+.buzz-footer-main {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+	gap: 32px;
+}
+
+.buzz-footer-about {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 12px;
+}
+
+.buzz-footer-logo {
+	width: auto;
+	height: 24px;
+}
+
+/* The bundled wordmark as a shape, in the footer's muted ink. */
+span.buzz-footer-logo {
+	aspect-ratio: 313 / 244;
+	background-color: currentColor;
+	mask: url("/assets/buzz/images/buzz-logo-no-bg.svg") center / contain no-repeat;
+}
+
+/* Frappe's own pages set no mode, so they get the light logo. */
+:root:not([data-mode="dark"]) .buzz-footer [data-logo-mode="dark"],
+:root[data-mode="dark"] .buzz-footer [data-logo-mode="light"] {
+	display: none;
+}
+
+.buzz-footer-address {
+	max-width: 28ch;
+	margin: 0;
+	white-space: pre-line;
+}
+
+.buzz-footer-groups {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+	gap: 24px;
+}
+
+.buzz-footer-group-label {
+	margin: 0 0 10px;
+	color: var(--footer-ink-strong);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.buzz-footer-groups ul {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.buzz-footer-bottom,
+.buzz-footer-end {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 16px;
+}
+
+.buzz-footer-end {
+	margin-left: auto;
+}
+
+.buzz-footer a {
+	display: flex;
+	color: inherit;
+	text-decoration: none;
+	transition: color 150ms ease;
+}
+
+.buzz-footer svg {
+	flex-shrink: 0;
+	width: 16px;
+	height: 16px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.buzz-footer-back-to-top {
+	align-items: center;
+	gap: 6px;
+}
+
+.buzz-footer-back-to-top svg {
+	width: 14px;
+	height: 14px;
+}
+
+@media (max-width: 640px) {
+	.buzz-footer-main {
+		grid-template-columns: 1fr;
+	}
+
+	.buzz-footer-end {
+		margin-left: 0;
+	}
+}
+
+@media (pointer: coarse) {
+	.buzz-footer a {
+		min-height: 44px;
+		align-items: center;
+	}
+
+	.buzz-footer-groups ul {
+		gap: 0;
+	}
+}
+
+/* Touch devices fire hover on tap, so hover styles only apply to real pointers. */
+@media (hover: hover) and (pointer: fine) {
+	.buzz-footer a:hover {
+		color: var(--footer-ink-strong);
+	}
+}

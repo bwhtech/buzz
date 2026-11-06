@@ -27,11 +27,6 @@ class SubmissionsClosed(Conflict):
 	message = _lt("Submissions for this form have closed.")
 
 
-class UnknownExcludedFields(BuzzAPIError):
-	title = _lt("Unknown Fields")
-	message = _lt("These fields do not exist on the {form_doctype} form: {fieldnames}")
-
-
 class MandatoryFieldsHidden(BuzzAPIError):
 	title = _lt("Mandatory Fields")
 	message = _lt("These mandatory fields cannot be hidden on the {form_doctype} form: {fieldnames}")

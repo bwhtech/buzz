@@ -3,6 +3,7 @@ import { Breadcrumbs, Button, PageHeader, PageHeaderMobile, PageHeaderMobileTitl
 import { computed } from "vue"
 import { type RouteLocationRaw, useRoute } from "vue-router"
 
+import NotificationsButton from "@/components/dashboard/notifications/NotificationsButton.vue"
 import { useIsMobile } from "@/composables/useIsMobile"
 import { teamLabel, teams } from "@/data/teams"
 import { userResource } from "@/data/user"
@@ -62,6 +63,7 @@ const items = computed(() => [{ label: teamName.value || "Community" }, { label:
 				@click="openPage"
 			/>
 			<slot />
+			<NotificationsButton v-if="!dirty" />
 		</template>
 	</PageHeaderMobile>
 

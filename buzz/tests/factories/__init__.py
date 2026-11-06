@@ -5,6 +5,10 @@ from buzz.tests.factories.buzz_coupon_code_factory import BuzzCouponCodeFactory
 from buzz.tests.factories.buzz_custom_field_factory import BuzzCustomFieldFactory
 from buzz.tests.factories.buzz_event_collaborator_factory import BuzzEventCollaboratorFactory
 from buzz.tests.factories.buzz_event_factory import BuzzEventFactory
+from buzz.tests.factories.buzz_form_factory import BuzzFormFactory
+from buzz.tests.factories.buzz_schedule_factory import BuzzScheduleFactory
+from buzz.tests.factories.buzz_schedule_item_type_factory import BuzzScheduleItemTypeFactory
+from buzz.tests.factories.buzz_schedule_track_factory import BuzzScheduleTrackFactory
 from buzz.tests.factories.buzz_tag_factory import BuzzTagFactory
 from buzz.tests.factories.buzz_team_factory import BuzzTeamFactory
 from buzz.tests.factories.buzz_team_membership_factory import BuzzTeamMembershipFactory
@@ -16,6 +20,7 @@ from buzz.tests.factories.email_template_factory import EmailTemplateFactory
 from buzz.tests.factories.event_booking_factory import EventBookingFactory
 from buzz.tests.factories.event_booking_refund_factory import EventBookingRefundFactory
 from buzz.tests.factories.event_category_factory import EventCategoryFactory
+from buzz.tests.factories.event_check_in_zone_factory import EventCheckinZoneFactory
 from buzz.tests.factories.event_host_factory import EventHostFactory
 from buzz.tests.factories.event_payment_factory import EventPaymentFactory
 from buzz.tests.factories.event_proposal_factory import EventProposalFactory
@@ -51,6 +56,10 @@ __all__ = [
 	"BuzzCustomFieldFactory",
 	"BuzzEventCollaboratorFactory",
 	"BuzzEventFactory",
+	"BuzzFormFactory",
+	"BuzzScheduleFactory",
+	"BuzzScheduleItemTypeFactory",
+	"BuzzScheduleTrackFactory",
 	"BuzzTagFactory",
 	"BuzzTeamFactory",
 	"BuzzTeamMembershipFactory",
@@ -62,6 +71,7 @@ __all__ = [
 	"EventBookingFactory",
 	"EventBookingRefundFactory",
 	"EventCategoryFactory",
+	"EventCheckinZoneFactory",
 	"EventHostFactory",
 	"EventPaymentFactory",
 	"EventProposalFactory",

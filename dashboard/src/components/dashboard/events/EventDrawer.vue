@@ -105,6 +105,7 @@ const endsAt = computed(() => {
 						<img
 							v-if="event.banner_image"
 							class="aspect-[2/1] w-full rounded-6 object-cover border"
+							decoding="async"
 							:src="event.banner_image"
 							:style="banner"
 							alt=""

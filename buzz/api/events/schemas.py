@@ -15,9 +15,11 @@ class MyEventFilters(APIRequest):
 	instead of quietly matching nothing.
 	"""
 
-	role: Literal["hosting", "attending"] | None = None
-	team: str | None = None
-	medium: Literal["In Person", "Online"] | None = None
+	role: list[Literal["hosting", "attending"]] | None = None
+	team: list[str] | None = None
+	medium: list[Literal["In Person", "Online"]] | None = None
+	search: str | None = None
+	include_archived: bool = False
 
 
 class MyEvent(APIResponse):
@@ -31,6 +33,8 @@ class MyEvent(APIResponse):
 	venue: str | None = None
 	medium: str | None = None
 	banner_image: str | None = None
+	# An external calendar row has no Buzz state to archive, so it reads as published.
+	is_published: bool = True
 	is_host: bool
 	is_attendee: bool
 	team: str | None = None
@@ -99,6 +103,13 @@ class GuestAddOn(APIResponse):
 	value: str | None = None
 
 
+class ZoneStatus(APIResponse):
+	name: str
+	title: str
+	allowed: bool
+	checked_in_at: datetime | None = None
+
+
 class EventGuest(APIResponse):
 	"""One ticket. A person who booked twice holds two, and appears twice."""
 
@@ -110,6 +121,8 @@ class EventGuest(APIResponse):
 	registered_at: datetime | None = None
 	add_ons: list[GuestAddOn] = Field(default_factory=list)
 	checked_in_at: datetime | None = None
+	# Where the guest stands at each enabled zone, default first.
+	zones: list[ZoneStatus] = Field(default_factory=list)
 
 
 class GuestTicketType(APIResponse):
@@ -117,6 +130,15 @@ class GuestTicketType(APIResponse):
 
 	name: str
 	title: str | None = None
+
+
+class ZoneOption(APIResponse):
+	name: str
+	title: str
+	is_default: bool = False
+	# Guests checked in at the zone, out of the tickets it lets in.
+	checked_in: int = 0
+	eligible: int = 0
 
 
 class EventGuestsResponse(APIResponse):
@@ -133,9 +155,13 @@ class EventGuestsResponse(APIResponse):
 	matched: int
 	# Guests checked in today, which is what the front desk counts against.
 	checked_in: int = 0
+	# Guests checked in at one zone or more.
+	checked_in_any_zone: int = 0
 	guests: list[EventGuest]
 	has_next_page: bool = False
 	filter_fields: list[FilterField]
+	# The event's enabled check-in zones, default first.
+	zones: list[ZoneOption] = Field(default_factory=list)
 
 
 class DailyRegistrations(APIResponse):
@@ -222,6 +248,7 @@ class TicketTypeItem(APIResponse):
 	max_tickets_available: int
 	auto_unpublish_after: date | None
 	is_published: bool
+	is_hidden: bool
 	tickets_sold: int
 	prices: list[TicketTypePrice]
 
@@ -243,6 +270,8 @@ class EventTicketTypes(APIResponse):
 	title: str
 	can_write: bool
 	registration_link: str | None
+	# The registration Buzz Form the dashboard's form builder opens.
+	registration_form: str | None = None
 	registrations_closed: bool
 	allow_guest_booking: bool
 	guest_verification_method: str
@@ -274,16 +303,17 @@ class CurrencyPrice(APIResponse):
 class CouponTicketType(APIResponse):
 	name: str
 	title: str
+	is_hidden: bool
 	prices: list[CurrencyPrice]
 
 
 class CouponItem(APIResponse):
 	name: str
-	coupon_type: Literal["Promo Code", "Automatic"]
+	coupon_type: Literal["Promo Code", "Automatic", "Access Code"]
 	code: str
 	description: str | None
 	enabled: bool
-	discount_type: Literal["Percentage", "Flat Amount"]
+	discount_type: Literal["Percentage", "Flat Amount", "None"]
 	discount_percentage: float
 	discount_amounts: list[CurrencyPrice]
 	applies_to_all_ticket_types: bool

@@ -9,7 +9,7 @@ from frappe.website.website_generator import WebsiteGenerator
 
 from buzz.events.doctype.buzz_team_membership.buzz_team_membership import upsert_membership
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import create_team_settings
-from buzz.permissions import can_manage_members, my_team_names
+from buzz.permissions import HUMAN_MEMBER_FILTERS, can_manage_members, my_team_names
 from buzz.www.site_header import apply_site_context
 
 SEARCH_LIMIT = 10
@@ -102,6 +102,8 @@ class BuzzTeam(WebsiteGenerator):
 		is_published: DF.Check
 		links: DF.Table[EventExternalLink]
 		logo: DF.AttachImage | None
+		meta_image: DF.AttachImage | None
+		og_image: DF.AttachImage | None
 		route: DF.Data | None
 		short_description: DF.SmallText | None
 		slug: DF.Data | None
@@ -129,6 +131,12 @@ class BuzzTeam(WebsiteGenerator):
 
 	def make_route(self) -> str:
 		return f"community/{self.slug}"
+
+	def on_update(self):
+		from buzz.events.community_og_image import enqueue_generate_for
+
+		super().on_update()
+		enqueue_generate_for(self.name)
 
 	def get_context(self, context):
 		from buzz.events.doctype.buzz_team.team_page import TeamPage
@@ -179,7 +187,9 @@ class BuzzTeam(WebsiteGenerator):
 		return [{"value": user.name, "description": user.full_name} for user in users]
 
 	def member_users(self) -> list[str]:
-		return frappe.get_all("Buzz Team Membership", filters={"team": self.name, "enabled": 1}, pluck="user")
+		return frappe.get_all(
+			"Buzz Team Membership", filters={**HUMAN_MEMBER_FILTERS, "team": self.name}, pluck="user"
+		)
 
 	def check_can_manage_members(self):
 		if not can_manage_members(self.name):

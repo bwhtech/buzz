@@ -17,7 +17,11 @@ import type { ProposalListItem, ProposalSpeaker } from "@/types"
 
 import ProposalDocument from "./ProposalDocument.vue"
 
-const props = defineProps<{ proposal: ProposalListItem | null; canWrite?: boolean }>()
+const props = defineProps<{
+	proposal: ProposalListItem | null
+	canWrite?: boolean
+	linkedEntry?: string | null
+}>()
 
 const open = defineModel<boolean>("open", { required: true })
 
@@ -196,6 +200,7 @@ const lastUpdated = computed(() => (props.proposal ? dayjsLocal(props.proposal.m
 					:doc="proposalDoc.doc"
 					:loading="proposalDoc.loading"
 					:speakers="speakers"
+					:linked-entry="linkedEntry"
 				/>
 
 				<Dialog

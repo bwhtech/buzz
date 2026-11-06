@@ -7,14 +7,21 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import append_number_if_name_exists
-from frappe.utils import get_datetime_in_timezone, get_system_timezone
-from frappe.utils.data import get_datetime, get_time, time_diff_in_seconds
+from frappe.utils.data import get_datetime, time_diff_in_seconds
 from frappe.website.utils import cleanup_page_name
 
 from buzz import telemetry
-from buzz.api.forms.fields import validate_excluded_fields
+from buzz.api.forms.conditions import parse_rules
+from buzz.events.doctype.buzz_form.condition_validator import ConditionValidator
+from buzz.events.doctype.buzz_form.form_types import (
+	QUESTION_FIELD_NAMES,
+	create_default_forms,
+	event_form,
+	template_rules,
+)
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
-from buzz.events.doctype.sponsor_enquiry_form.sponsor_enquiry_form import create_for_event
+from buzz.events.doctype.event_check_in_zone.event_check_in_zone import create_default_zone
+from buzz.events.doctype.event_template.event_template import TEMPLATE_FIELDS
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import create_ticket_categories
 from buzz.utils import get_time_zone_label, only_if_app_installed
 
@@ -46,13 +53,11 @@ class BuzzEvent(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from buzz.events.doctype.buzz_event_form.buzz_event_form import BuzzEventForm
 		from buzz.events.doctype.event_cohost.event_cohost import EventCoHost
 		from buzz.events.doctype.event_external_link.event_external_link import EventExternalLink
 		from buzz.events.doctype.event_featured_speaker.event_featured_speaker import EventFeaturedSpeaker
 		from buzz.events.doctype.event_payment_gateway.event_payment_gateway import EventPaymentGateway
 		from buzz.events.doctype.event_topic_link.event_topic_link import EventTopicLink
-		from buzz.events.doctype.schedule_item.schedule_item import ScheduleItem
 		from buzz.proposals.doctype.sponsorship_deck_item.sponsorship_deck_item import SponsorshipDeckItem
 
 		about: DF.TextEditor | None
@@ -67,7 +72,6 @@ class BuzzEvent(Document):
 		card_image: DF.AttachImage | None
 		category: DF.Link
 		co_hosts: DF.Table[EventCoHost]
-		custom_forms: DF.Table[BuzzEventForm]
 		default_ticket_type: DF.Link | None
 		end_date: DF.Date | None
 		end_time: DF.Time
@@ -88,9 +92,7 @@ class BuzzEvent(Document):
 		payment_gateways: DF.Table[EventPaymentGateway]
 		proposal: DF.Link | None
 		registration_url: DF.Data | None
-		registrations_close_at: DF.Datetime | None
 		route: DF.Data | None
-		schedule: DF.Table[ScheduleItem]
 		send_booking_confirmation_email: DF.Check
 		send_ticket_email: DF.Check
 		short_description: DF.SmallText | None
@@ -119,12 +121,7 @@ class BuzzEvent(Document):
 	def before_insert(self):
 		if not self.route:
 			self.route = self.make_route()
-		# Organisers open registrations once tickets and details are ready.
-		if not self.registrations_close_at:
-			self.close_registrations()
 		self.add_default_payment_gateway()
-		self.append("custom_forms", {"form_doctype": "Event Feedback", "route": "feedback"})
-		self.append("custom_forms", {"form_doctype": "Talk Proposal", "route": "propose-talk"})
 
 	def add_default_payment_gateway(self):
 		default = frappe.db.get_single_value("Buzz Settings", "default_payment_gateway")
@@ -133,11 +130,9 @@ class BuzzEvent(Document):
 
 	def validate(self):
 		self.validate_dates()
-		self.validate_schedule()
 		self.validate_route()
 		self.validate_tax_settings()
 		self.validate_guest_verification_config()
-		self.validate_custom_forms()
 		self.clear_unused_location()
 		self.validate_co_hosts()
 		self.validate_external_links()
@@ -184,56 +179,6 @@ class BuzzEvent(Document):
 		# computed at event start so DST zones get the abbreviation in effect then
 		event_start = get_datetime(f"{self.start_date} {self.start_time}")
 		self.time_zone_label = get_time_zone_label(self.time_zone, event_start)
-
-	def validate_custom_forms(self):
-		# A new event has no form row yet, but create_default_records is about to make one.
-		sponsor_route = (
-			frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name}, "route")
-			if not self.is_new()
-			else "enquire-sponsorship"
-		)
-		for form in self.custom_forms:
-			if form.form_doctype == "Sponsorship Enquiry":
-				frappe.throw(_("Manage sponsorship intake in Sponsor Enquiry Form."))
-			if sponsor_route and (form.route or "").lower() == sponsor_route.lower():
-				frappe.throw(_("This route is already used by the sponsorship form."))
-			if form.excluded_fields:
-				validate_excluded_fields(form.form_doctype, form.excluded_fields)
-
-	def validate_schedule(self):
-		end_date = self.end_date or self.start_date
-		for item in self.schedule:
-			if item.date < self.start_date or item.date > end_date:
-				frappe.throw(
-					frappe._("<b>Schedule</b> row #{0}: <b>Date</b> must be within event dates").format(
-						item.idx
-					)
-				)
-
-			if time_diff_in_seconds(item.end_time, item.start_time) <= 0:
-				frappe.throw(
-					frappe._(
-						"<b>Schedule</b> row #{0}: <b>End Time</b> must be after <b>Start Time</b>"
-					).format(item.idx)
-				)
-
-			if (
-				item.date == self.start_date
-				and self.start_time
-				and get_time(item.start_time) < get_time(self.start_time)
-			):
-				frappe.throw(
-					frappe._(
-						"<b>Schedule</b> row #{0}: <b>Start Time</b> cannot be before event start time"
-					).format(item.idx)
-				)
-
-			if item.date == end_date and self.end_time and get_time(item.end_time) > get_time(self.end_time):
-				frappe.throw(
-					frappe._(
-						"<b>Schedule</b> row #{0}: <b>End Time</b> cannot be after event end time"
-					).format(item.idx)
-				)
 
 	def validate_dates(self):
 		self.validate_from_to_dates("start_date", "end_date")
@@ -322,15 +267,28 @@ class BuzzEvent(Document):
 		)
 
 	def on_trash(self):
-		# The form is created with the event and is the only doc that is one-per-event, so it
-		# goes with it. Frappe runs this before the link check, which would otherwise refuse
-		# every event delete. Enquiries block the delete on their own link to the event, so
-		# leave their form standing rather than pre-empting that with a worse message.
-		sponsorship_form_id = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
-		if sponsorship_form_id and not frappe.db.exists("Sponsorship Enquiry", {"event": self.name}):
-			frappe.delete_doc("Sponsor Enquiry Form", sponsorship_form_id, ignore_permissions=True)
+		# Forms are created with the event, so they go with it. Frappe runs this before the
+		# link check, which would otherwise refuse every event delete. Enquiries block the
+		# delete on their own link to the event, so leave their forms standing rather than
+		# pre-empting that with a worse message.
+		if not frappe.db.exists("Sponsorship Enquiry", {"event": self.name}):
+			for form in frappe.get_all("Buzz Form", {"event": self.name}, pluck="name"):
+				frappe.delete_doc("Buzz Form", form, ignore_permissions=True)
+		self.enqueue_listing_share_images()
 		# A community's request to list the event means nothing once the event is gone.
 		frappe.db.delete("Community Event Request", {"event": self.name})
+		# Zones come with the event, the default one included. Check-ins block the delete on
+		# their own link to the event, so the zones stay while any exist.
+		if not frappe.db.exists("Event Check In", {"event": self.name}):
+			for zone in frappe.get_all("Event Check-in Zone", {"event": self.name}, pluck="name"):
+				frappe.delete_doc("Event Check-in Zone", zone, ignore_permissions=True, ignore_on_trash=True)
+
+	def enqueue_listing_share_images(self):
+		from buzz.events.community_og_image import enqueue_generate_for
+
+		enqueue_generate_for(self.team)
+		for community in frappe.get_all("Community Event Request", {"event": self.name}, pluck="community"):
+			enqueue_generate_for(community)
 
 	def create_default_records(self):
 		records = [
@@ -339,7 +297,8 @@ class BuzzEvent(Document):
 		]
 		for record in records:
 			frappe.get_doc({**record, "event": self.name}).insert(ignore_permissions=True)
-		create_for_event(self.name)
+		create_default_forms(self.name)
+		create_default_zone(self.name)
 
 	def archive_event(self):
 		"""Take the event off the public site, along with the forms and registrations it takes.
@@ -348,20 +307,11 @@ class BuzzEvent(Document):
 		state catching up, so publishing again does not reopen everything with it.
 		"""
 		self.is_published = 0
-		self.close_registrations()
-		for form in self.custom_forms:
-			form.publish = 0
-		sponsorship_form_id = frappe.db.get_value("Sponsor Enquiry Form", {"event": self.name})
-		if sponsorship_form_id:
-			sponsorship_form = frappe.get_doc("Sponsor Enquiry Form", sponsorship_form_id)
-			sponsorship_form.publish = 0
-			sponsorship_form.save(ignore_permissions=True)
+		for name in frappe.get_all("Buzz Form", {"event": self.name}, pluck="name"):
+			form = frappe.get_doc("Buzz Form", name)
+			form.flags.ignore_permissions = True
+			form.set_closed(True)
 		self.save()
-
-	def close_registrations(self):
-		"""Stop new registrations now, read on the event's own wall clock."""
-		timezone = self.time_zone or get_system_timezone()
-		self.registrations_close_at = get_datetime_in_timezone(timezone).replace(tzinfo=None)
 
 	@frappe.whitelist()
 	@only_if_app_installed("zoom_integration", raise_exception=True)
@@ -411,6 +361,13 @@ class BuzzEvent(Document):
 		self.update_zoom_meeting()
 		self.capture_published_change()
 		self.enqueue_og_image()
+		self.enqueue_team_share_images()
+
+	def enqueue_team_share_images(self):
+		"""A team's share image counts its events."""
+		from buzz.events.community_og_image import enqueue_generate_for
+
+		enqueue_generate_for(self.team)
 
 	def enqueue_og_image(self):
 		from buzz.events.og_image import EventOgImage, enqueue_generate
@@ -515,34 +472,9 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 		if value:
 			event.set(field, value)
 
-	# Field mapping for direct copy
-	field_map = {
-		"category": "category",
-		"host": "host",
-		"banner_image": "banner_image",
-		"short_description": "short_description",
-		"about": "about",
-		"medium": "medium",
-		"venue": "venue",
-		"allow_guest_booking": "allow_guest_booking",
-		"guest_verification_method": "guest_verification_method",
-		"time_zone": "time_zone",
-		"send_ticket_email": "send_ticket_email",
-		"ticket_email_template": "ticket_email_template",
-		"ticket_print_format": "ticket_print_format",
-		"apply_tax": "apply_tax",
-		"tax_inclusive": "tax_inclusive",
-		"tax_label": "tax_label",
-		"tax_percentage": "tax_percentage",
-		"auto_send_pitch_deck": "auto_send_pitch_deck",
-		"sponsor_deck_email_template": "sponsor_deck_email_template",
-		"sponsor_deck_reply_to": "sponsor_deck_reply_to",
-		"sponsor_deck_cc": "sponsor_deck_cc",
-	}
-
-	for option_key, field_name in field_map.items():
-		if options.get(option_key):
-			event.set(field_name, template.get(field_name))
+	for field in TEMPLATE_FIELDS:
+		if options.get(field):
+			event.set(field, template.get(field))
 
 	# Copy child tables
 	if options.get("payment_gateways"):
@@ -583,24 +515,22 @@ def create_from_template(template_name: str, options: str, additional_fields: st
 			add_on.insert()
 
 	if options.get("custom_fields"):
-		for cf in template.template_custom_fields:
-			# Sponsorship questions live on Sponsor Enquiry Form now; an older template may
-			# still carry one, and recreating it here would fail the event mid-creation.
-			if cf.custom_form_doctype == "Sponsorship Enquiry":
-				continue
-			custom_field = frappe.new_doc("Buzz Custom Field")
-			custom_field.event = event.name
-			custom_field.label = cf.label
-			custom_field.fieldname = cf.fieldname
-			custom_field.fieldtype = cf.fieldtype
-			custom_field.options = cf.options
-			custom_field.applied_to = cf.applied_to
-			custom_field.custom_form_doctype = cf.custom_form_doctype
-			custom_field.enabled = cf.enabled
-			custom_field.mandatory = cf.mandatory
-			custom_field.placeholder = cf.placeholder
-			custom_field.default_value = cf.default_value
-			custom_field.order = cf.order
-			custom_field.insert()
+		copy_template_questions(event, template.template_custom_fields)
 
 	return event.name
+
+
+def copy_template_questions(event, template_fields):
+	"""A template may name a form this event has not got; its questions are dropped."""
+	forms = {}
+	for field in template_fields:
+		if field.form_doctype not in forms:
+			forms[field.form_doctype] = event_form(event.name, field.form_doctype)
+		if form := forms[field.form_doctype]:
+			form.append("questions", {name: field.get(name) for name in QUESTION_FIELD_NAMES})
+			rules = parse_rules(form.logic_rules) + template_rules(field)
+			form.logic_rules = frappe.as_json(rules, indent=None) if rules else None
+	for form in forms.values():
+		if form:
+			ConditionValidator(form).drop_link_conditions()
+			form.save(ignore_permissions=True)

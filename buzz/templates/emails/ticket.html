@@ -25,3 +25,5 @@
   <div style="font-size:12px;color:#7c7c7c;margin-top:10px;font-family:'SF Mono',Menlo,Consolas,monospace">{{ doc.name }}</div>
 </div>
 {% endblock %}
+
+{% block locations %}{% include "buzz/templates/emails/_locations_map.html" %}{% endblock %}

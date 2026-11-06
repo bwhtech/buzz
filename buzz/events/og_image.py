@@ -43,9 +43,27 @@ def generate(event_name: str):
 	doc = frappe.get_doc("Buzz Event", event_name)
 	if not doc.is_published:
 		return
-	image = EventOgImage(doc)
+	render_if_stale(EventOgImage(doc))
+	# Form images show the event's banner, title and theme, so they follow it
+	for form in frappe.get_all("Buzz Form", filters={"event": doc.name, "publish": 1}, pluck="name"):
+		enqueue_generate_form(form)
+
+
+def generate_form(form_name: str):
+	from buzz.events.doctype.buzz_form.form_types import form_type
+	from buzz.events.form_og_image import FormOgImage
+
+	# The form may be deleted before the job runs
+	if not frappe.db.exists("Buzz Form", form_name):
+		return
+	form = frappe.get_doc("Buzz Form", form_name)
+	if form.publish and form_type(form.form_doctype).has_page:
+		render_if_stale(FormOgImage(form))
+
+
+def render_if_stale(image: "OgImage"):
 	if not image.can_render():
-		clear(doc)
+		clear(image.doc)
 	elif not image.is_current():
 		image.save()
 
@@ -55,6 +73,16 @@ def enqueue_generate(event_name: str):
 		"buzz.events.og_image.generate",
 		event_name=event_name,
 		job_id=f"og-image-{event_name}",
+		deduplicate=True,
+		enqueue_after_commit=True,
+	)
+
+
+def enqueue_generate_form(form_name: str):
+	frappe.enqueue(
+		"buzz.events.og_image.generate_form",
+		form_name=form_name,
+		job_id=f"og-image-form-{form_name}",
 		deduplicate=True,
 		enqueue_after_commit=True,
 	)
@@ -78,14 +106,65 @@ def site_language():
 		frappe.local.lang = previous
 
 
-class EventOgImage:
-	def __init__(self, event):
+class OgImage:
+	"""A generated share image, stored in its document's `og_image` field."""
+
+	# Bump when the layout changes, so every document renders again on its next save
+	render_version: int
+
+	def hash_parts(self) -> list:
+		raise NotImplementedError
+
+	def input_hash(self) -> str:
+		parts = [self.render_version, *self.hash_parts(), site_host()]
+		return hashlib.sha1(repr(parts).encode()).hexdigest()[:12]
+
+	def file_name(self) -> str:
+		return f"og-{self.input_hash()}.png"
+
+	def is_current(self) -> bool:
+		return bool(self.doc.og_image and self.doc.og_image.endswith(self.file_name()))
+
+	def can_render(self) -> bool:
+		raise NotImplementedError
+
+	def needs_update(self) -> bool:
+		return not self.is_current() if self.can_render() else bool(self.doc.og_image)
+
+	def save(self):
+		previous = attached_files(self.doc)
+		file = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": self.file_name(),
+				"attached_to_doctype": self.doc.doctype,
+				"attached_to_name": self.doc.name,
+				"attached_to_field": "og_image",
+				"is_private": 0,
+				"content": self.render(),
+			}
+		).insert(ignore_permissions=True)
+		self.doc.db_set("og_image", file.file_url, update_modified=False)
+		delete_files(previous)
+
+
+class EventOgImage(OgImage):
+	"""The share image of an event, or of another document (`doc`) shown with the event's look."""
+
+	render_version = RENDER_VERSION
+
+	def __init__(self, event, doc=None):
 		self.event = event
+		self.doc = doc or event
 		self.colours = theme_colours(
 			resolve_theme(event.theme, frappe.db.get_single_value("Buzz Settings", "event_page_theme"))
 		)
 		with site_language():
+			self.title = self.build_title()
 			self.meta_line = self.build_meta_line()
+
+	def build_title(self) -> str:
+		return self.event.title
 
 	def build_meta_line(self) -> str:
 		page = EventPage(self.event.route)
@@ -105,28 +184,11 @@ class EventOgImage:
 		place = _("Online") if self.event.medium == "Online" else venue and venue["name"]
 		return " · ".join(part for part in [date, place] if part)
 
-	def input_hash(self) -> str:
-		parts = [
-			RENDER_VERSION,
-			self.event.title,
-			self.meta_line,
-			self.event.banner_image,
-			self.colours,
-			site_host(),
-		]
-		return hashlib.sha1(repr(parts).encode()).hexdigest()[:12]
-
-	def file_name(self) -> str:
-		return f"og-{self.input_hash()}.png"
-
-	def is_current(self) -> bool:
-		return bool(self.event.og_image and self.event.og_image.endswith(self.file_name()))
+	def hash_parts(self) -> list:
+		return [self.title, self.meta_line, self.event.banner_image, self.colours]
 
 	def can_render(self) -> bool:
-		return is_drawable(self.event.title + self.meta_line)
-
-	def needs_update(self) -> bool:
-		return not self.is_current() if self.can_render() else bool(self.event.og_image)
+		return is_drawable(self.title + self.meta_line)
 
 	def render(self) -> bytes:
 		image = Image.new("RGB", (WIDTH, HEIGHT), self.colours["page-bg"])
@@ -151,18 +213,11 @@ class EventOgImage:
 		return ImageOps.fit(flat, (WIDTH, BANNER_HEIGHT), Image.LANCZOS)
 
 	def uploaded_banner(self) -> Image.Image | None:
-		url = self.event.banner_image
-		if not url or urlparse(url).scheme:
-			return None
-		try:
-			content = frappe.get_doc("File", {"file_url": url}).get_content()
-			return Image.open(io.BytesIO(content))
-		except Exception:
-			return None
+		return uploaded_image(self.event.banner_image)
 
 	def draw_text(self, image: Image.Image, max_width: int):
 		top = BANNER_HEIGHT + (HEIGHT - BANNER_HEIGHT - (60 + 10 + 34)) // 2
-		title = OgText(self.event.title, font("SemiBold", 52), tracking(52)).fit(max_width)
+		title = OgText(self.title, font("SemiBold", 52), tracking(52)).fit(max_width)
 		title.draw(image, (PADDING, top + 30), self.colours["ink-title"])
 		meta = OgText(self.meta_line, font("Medium", 26)).fit(max_width)
 		meta.draw(image, (PADDING, top + 60 + 10 + 17), self.colours["ink-muted"])
@@ -182,38 +237,33 @@ class EventOgImage:
 		)
 		return max(WORDMARK_SIZE[0], math.ceil(host_font.getlength(host)))
 
-	def save(self):
-		previous = attached_files(self.event.name)
-		file = frappe.get_doc(
-			{
-				"doctype": "File",
-				"file_name": self.file_name(),
-				"attached_to_doctype": "Buzz Event",
-				"attached_to_name": self.event.name,
-				"attached_to_field": "og_image",
-				"is_private": 0,
-				"content": self.render(),
-			}
-		).insert(ignore_permissions=True)
-		self.event.db_set("og_image", file.file_url, update_modified=False)
-		delete_files(previous)
+
+def uploaded_image(url: str | None) -> Image.Image | None:
+	"""The picture behind an uploaded file's URL. External URLs are left to the browser."""
+	if not url or urlparse(url).scheme:
+		return None
+	try:
+		content = frappe.get_doc("File", {"file_url": url}).get_content()
+		return Image.open(io.BytesIO(content))
+	except Exception:
+		return None
 
 
-def attached_files(event_name: str) -> list[str]:
+def attached_files(doc) -> list[str]:
 	return frappe.get_all(
 		"File",
 		filters={
-			"attached_to_doctype": "Buzz Event",
-			"attached_to_name": event_name,
+			"attached_to_doctype": doc.doctype,
+			"attached_to_name": doc.name,
 			"attached_to_field": "og_image",
 		},
 		pluck="name",
 	)
 
 
-def clear(event):
-	event.db_set("og_image", None, update_modified=False)
-	delete_files(attached_files(event.name))
+def clear(doc):
+	doc.db_set("og_image", None, update_modified=False)
+	delete_files(attached_files(doc))
 
 
 def delete_files(names: list[str]):

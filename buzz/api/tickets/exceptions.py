@@ -13,6 +13,10 @@ class AddOnValueNotFound(ResourceNotFound):
 	message = _lt("Add-on value not found.")
 
 
+class AddOnNotPermitted(NotPermitted):
+	message = _lt("You are not permitted to change this add-on.")
+
+
 class TicketNotAccessible(NotPermitted):
 	message = _lt("You are not permitted to view this ticket.")
 

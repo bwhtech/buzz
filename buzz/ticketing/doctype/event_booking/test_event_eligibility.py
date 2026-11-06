@@ -12,6 +12,7 @@ from buzz.api.booking.schemas import BookingRequest
 from buzz.tests.base_test_cases import BookingTestCase
 from buzz.tests.factories import (
 	BuzzEventFactory,
+	BuzzFormFactory,
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
 	EventBookingFactory,
@@ -42,7 +43,7 @@ class EligibilityTestCase(BookingTestCase):
 		)
 
 	def close_registrations(self):
-		self.set_event({"registrations_close_at": add_days(now_datetime(), -1)})
+		BuzzFormFactory.set_registration_cutoff(self.event.name, add_days(now_datetime(), -1))
 
 	def attendee_row(self, **overrides) -> dict:
 		row = {
@@ -188,9 +189,8 @@ class TestTheGuardCannotBeSteppedAround(EligibilityTestCase):
 	def test_a_draft_cannot_be_repointed_at_a_closed_event(self):
 		# Ticket types pin a draft to its event.
 		booking = self.insert_as(self.organiser)
-		closed_event = BuzzEventFactory.create(
-			team=self.event.team, registrations_close_at=add_days(now_datetime(), -1)
-		)
+		closed_event = BuzzEventFactory.create(team=self.event.team)
+		BuzzFormFactory.set_registration_cutoff(closed_event.name, add_days(now_datetime(), -1))
 
 		with self.set_user(self.organiser), self.assertRaises(frappe.ValidationError):
 			booking.event = closed_event.name

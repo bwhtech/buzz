@@ -44,6 +44,8 @@ class EventProposalsResponse(APIResponse):
 	can_write: bool = False
 	# Where talks are proposed, and whether that page still takes them.
 	proposal_link: str | None = None
+	# The Buzz Form the dashboard's form builder opens.
+	proposal_form: str | None = None
 	proposals_closed: bool = False
 	filter_fields: list[FilterField]
 

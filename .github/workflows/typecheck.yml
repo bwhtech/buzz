@@ -18,20 +18,30 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+      # The dashboard links @framework/ui from the frappe app beside it, as on a bench.
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          path: apps/buzz
+
+      - name: Checkout @framework/ui
+        uses: actions/checkout@v4
+        with:
+          repository: frappe/frappe
+          path: apps/frappe
+          sparse-checkout: ui
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: "yarn"
-          cache-dependency-path: dashboard/yarn.lock
+          cache-dependency-path: apps/buzz/dashboard/yarn.lock
 
       - name: Install dependencies
-        working-directory: dashboard
+        working-directory: apps/buzz/dashboard
         run: yarn install --frozen-lockfile
 
       - name: Type check
-        working-directory: dashboard
+        working-directory: apps/buzz/dashboard
         run: yarn typecheck

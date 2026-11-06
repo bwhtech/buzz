@@ -42,6 +42,11 @@
   "ticket_email_template",
   "column_break_custom",
   "ticket_print_format",
+  "booking_confirmation_email_section",
+  "send_booking_confirmation_email",
+  "booking_confirmation_email_template",
+  "column_break_booking_email",
+  "offline_acknowledgement_email_template",
   "ticket_types_tab",
   "template_ticket_categories",
   "template_ticket_types",
@@ -251,6 +256,37 @@
    "options": "Print Format"
   },
   {
+   "fieldname": "booking_confirmation_email_section",
+   "fieldtype": "Section Break",
+   "label": "Booking Confirmation Email"
+  },
+  {
+   "default": "1",
+   "description": "Send booking emails to the person who made the booking: an acknowledgement while an offline payment awaits verification, and a confirmation once the booking is confirmed.",
+   "fieldname": "send_booking_confirmation_email",
+   "fieldtype": "Check",
+   "label": "Send Booking Confirmation Email"
+  },
+  {
+   "depends_on": "eval:doc.send_booking_confirmation_email;",
+   "fieldname": "booking_confirmation_email_template",
+   "fieldtype": "Link",
+   "label": "Booking Confirmation Email Template",
+   "options": "Email Template"
+  },
+  {
+   "fieldname": "column_break_booking_email",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.send_booking_confirmation_email;",
+   "description": "Sent when a booking is made with an offline payment method, before the payment is verified.",
+   "fieldname": "offline_acknowledgement_email_template",
+   "fieldtype": "Link",
+   "label": "Offline Payment Acknowledgement Email Template",
+   "options": "Email Template"
+  },
+  {
    "fieldname": "ticket_types_tab",
    "fieldtype": "Tab Break",
    "label": "Ticket Types"
@@ -301,7 +337,7 @@
  "image_field": "banner_image",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-15 22:26:29.370897",
+ "modified": "2026-11-03 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Event Template",

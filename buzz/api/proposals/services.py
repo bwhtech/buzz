@@ -1,11 +1,11 @@
 import frappe
 from frappe import _
 from frappe.query_builder.functions import Count, Date
-from frappe.utils import add_days, get_datetime, getdate, now_datetime
+from frappe.utils import add_days, getdate
 
 from buzz.api.events.exceptions import CannotManageEvent
 from buzz.api.events.services import ensure_event_team_access
-from buzz.api.filters.conditions import ListConditions, event_questions, filter_field, question_fields
+from buzz.api.filters.conditions import ListConditions, filter_field, form_questions, question_fields
 from buzz.api.filters.schemas import FilterField
 from buzz.api.proposals.exceptions import ProposalFormMissing
 from buzz.api.proposals.schemas import (
@@ -18,6 +18,8 @@ from buzz.api.proposals.schemas import (
 	ProposalTrend,
 	StatusTotal,
 )
+from buzz.events.doctype.buzz_form.form_types import TALK_PROPOSAL_FORM_DOCTYPE as PROPOSAL_FORM_DOCTYPE
+from buzz.events.doctype.buzz_form.form_types import event_form
 from buzz.events.doctype.event_venue.event_venue import set_venue_names
 from buzz.permissions import derived_has_permission, has_section_permission
 
@@ -99,6 +101,7 @@ def event_proposals(
 	order: str = "desc",
 	start: int = 0,
 	limit: int = PROPOSALS_PAGE_SIZE,
+	name: str | None = None,
 ) -> EventProposalsResponse:
 	"""One page of the talk proposals submitted to an event, newest first by default.
 
@@ -108,6 +111,8 @@ def event_proposals(
 
 	filter_fields = proposal_filter_fields(event)
 	conditions = ListConditions("Talk Proposal", filter_fields).frappe_filters(filters)
+	if name:
+		conditions.append(["name", "=", name])
 	query_filters = [["event", "=", event], *conditions]
 	or_filters = proposal_search_filters(search)
 	limit = max(1, min(int(limit), 100))
@@ -138,6 +143,9 @@ def event_proposals(
 		has_next_page=start + len(rows) < matched,
 		can_write=has_section_permission(event, "talks", "write", frappe.session.user),
 		proposal_link=proposal_link(doc),
+		proposal_form=frappe.db.get_value(
+			"Buzz Form", {"event": event, "form_doctype": PROPOSAL_FORM_DOCTYPE}, "name"
+		),
 		proposals_closed=are_proposals_closed(doc),
 		filter_fields=filter_fields,
 	)
@@ -148,53 +156,40 @@ def proposal_filter_fields(event: str) -> list[FilterField]:
 	statuses = frappe.get_all("Talk Proposal Status", pluck="name", order_by="creation asc")
 	return [
 		filter_field("status", _("Status"), "Select", [(status, _(status)) for status in statuses]),
-		*question_fields(
-			event_questions(event, applied_to="Custom Form", custom_form_doctype="Talk Proposal")
-		),
+		*question_fields(form_questions(event, PROPOSAL_FORM_DOCTYPE)),
 	]
 
 
-PROPOSAL_FORM_DOCTYPE = "Talk Proposal"
+def proposal_form(event):
+	"""The event's talk proposal form — the Buzz Form its public submission page is served from."""
+	return event_form(event.name, PROPOSAL_FORM_DOCTYPE)
 
 
-def proposal_form_row(doc):
-	"""The event's talk proposal form — the row its public submission page is served from."""
-	return next((row for row in doc.custom_forms if row.form_doctype == PROPOSAL_FORM_DOCTYPE), None)
-
-
-def proposal_link(doc) -> str | None:
+def proposal_link(event) -> str | None:
 	"""Where talks are proposed: the event's own form page, the route the dashboard serves."""
-	row = proposal_form_row(doc)
-	return f"/b/{doc.route}/{row.route}" if row and doc.route else None
+	form = proposal_form(event)
+	return f"/b/{event.route}/{form.route}" if form and event.route else None
 
 
-def are_proposals_closed(doc) -> bool:
-	"""Closed when the form is unpublished, or past the cutoff the form page itself reads."""
-	row = proposal_form_row(doc)
-	if not row or not row.publish:
-		return True
-	return bool(row.auto_close_at) and get_datetime(row.auto_close_at) < now_datetime()
+def are_proposals_closed(event) -> bool:
+	form = proposal_form(event)
+	return form.is_closed if form else True
 
 
 def set_proposal_state(event: str, closed: bool) -> ProposalState:
 	"""Open or close talk proposals, and answer with the state the server ends up in.
 
-	Closure is the form's own cutoff, so closing writes now and opening clears it —
-	and also publishes the form, since an unpublished one takes nothing either.
+	Closure is the form's own, the same one the form page reads, so there is one mechanism.
 	"""
-	doc = frappe.get_doc("Buzz Event", event)
 	if not has_section_permission(event, "talks", "write", frappe.session.user):
 		CannotManageEvent.throw()
 
-	row = proposal_form_row(doc)
-	if not row:
+	form = proposal_form(frappe.get_doc("Buzz Event", event))
+	if not form:
 		ProposalFormMissing.throw()
 
-	row.auto_close_at = now_datetime() if closed else None
-	if not closed:
-		row.publish = 1
-	doc.save()
-	return ProposalState(proposals_closed=are_proposals_closed(doc))
+	form.set_closed(closed)
+	return ProposalState(proposals_closed=form.is_closed)
 
 
 def proposal_search_filters(search: str | None) -> list[list] | None:

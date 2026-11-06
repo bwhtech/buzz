@@ -7,7 +7,12 @@ import QuickActionsRail, {
 import EnquiryFormDialog from "@/components/dashboard/sponsorships/EnquiryFormDialog.vue"
 import type { EnquiryFormState } from "@/types"
 
-const props = defineProps<{ form: EnquiryFormState; canWrite: boolean; canImport: boolean }>()
+const props = defineProps<{
+	event: string
+	form: EnquiryFormState
+	canWrite: boolean
+	canImport: boolean
+}>()
 const emit = defineEmits<{ changed: []; import: [] }>()
 
 const dialogOpen = ref(false)
@@ -32,6 +37,7 @@ const actions = computed<QuickAction[]>(() =>
 		:closed="form.closed"
 		:can-write="canWrite"
 		:actions="actions"
+		:form="canWrite ? form.name : null"
 		@toggle="dialogOpen = true"
 	/>
 

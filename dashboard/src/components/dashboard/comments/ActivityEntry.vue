@@ -21,6 +21,7 @@ const props = defineProps<{
 	saving?: boolean
 	fresh?: boolean
 	folded?: boolean
+	highlighted?: boolean
 }>()
 
 const emit = defineEmits<{ update: [content: string]; delete: [] }>()
@@ -30,7 +31,17 @@ const draft = ref("")
 
 const posted = computed(() => dayjsLocal(props.entry.creation))
 const exactTime = computed(() => posted.value.format("D MMM YYYY, h:mm A"))
-const isEvent = computed(() => props.entry.kind === "change" || props.entry.kind === "created")
+const isEvent = computed(() => props.entry.kind !== "comment" && props.entry.kind !== "email")
+const editedFieldList = computed(() =>
+	new Intl.ListFormat("en", { type: "conjunction" }).format(
+		props.entry.fields.map((field) => field.toLowerCase()),
+	),
+)
+const eventIcons: Record<string, string> = {
+	change: "lucide-circle-dot",
+	edit: "lucide-pencil",
+	created: "lucide-inbox",
+}
 const isAuthor = computed(
 	() => props.entry.kind === "comment" && props.entry.owner === sessionUser(),
 )
@@ -54,7 +65,12 @@ function save(content: string) {
 </script>
 
 <template>
-	<li class="entry relative flex items-start gap-3" :data-fresh="fresh || undefined">
+	<li
+		class="entry relative flex items-start gap-3"
+		:data-entry="entry.name"
+		:data-fresh="fresh || undefined"
+		:data-highlighted="highlighted || undefined"
+	>
 		<!-- The rail lane: a ringed icon for events, an avatar for notes and emails. -->
 		<div
 			class="relative z-[1] flex w-7 shrink-0 justify-center"
@@ -64,11 +80,7 @@ function save(content: string) {
 				v-if="isEvent"
 				class="flex size-[22px] items-center justify-center rounded-full bg-surface-base text-ink-gray-5 ring-1 ring-outline-gray-2"
 			>
-				<span
-					:class="entry.kind === 'change' ? 'lucide-circle-dot' : 'lucide-inbox'"
-					class="size-3"
-					aria-hidden="true"
-				/>
+				<span :class="eventIcons[entry.kind]" class="size-3" aria-hidden="true" />
 			</span>
 			<Avatar
 				v-else
@@ -103,6 +115,7 @@ function save(content: string) {
 					/>
 				</span>
 			</template>
+			<span v-else-if="entry.kind === 'edit'">updated the {{ editedFieldList }}</span>
 			<span v-else>{{ createdLabel }}</span>
 			<span class="text-ink-gray-4" aria-hidden="true">·</span>
 			<Tooltip :text="exactTime">
@@ -184,6 +197,29 @@ function save(content: string) {
 	.entry[data-fresh] {
 		opacity: 0;
 		transform: translateY(4px);
+	}
+}
+
+/* A linked entry holds a tint long enough to be found, then lets it go. */
+.entry[data-highlighted]::after {
+	content: "";
+	position: absolute;
+	inset: -6px -8px;
+	z-index: -1;
+	border-radius: 10px;
+	background: var(--surface-gray-2);
+	opacity: 0;
+	animation: highlight-fade 2400ms ease both;
+}
+
+.entry[data-highlighted] {
+	isolation: isolate;
+}
+
+@keyframes highlight-fade {
+	0%,
+	50% {
+		opacity: 1;
 	}
 }
 

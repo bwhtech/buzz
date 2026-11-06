@@ -24,7 +24,11 @@ jobs:
     # Pinned: the ubuntu-26.04 image lacks libmysqlclient.so.21 and Playwright support
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    name: Playwright E2E Tests
+    name: Playwright shard ${{ matrix.shard }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
 
     env:
       PYTHONWARNINGS: ignore
@@ -96,25 +100,25 @@ jobs:
           npx playwright install --only-shell chromium
 
       - name: Run Playwright Tests
-        run: npx playwright test
+        run: npx playwright test --shard=${{ matrix.shard }}/2
         env:
           BASE_URL: http://buzz.test:8000
           FRAPPE_USER: testuser@buzz.test
           FRAPPE_PASSWORD: Test@123
 
-      - name: Upload Playwright Report
+      - name: Upload blob report
         uses: actions/upload-artifact@v4
-        if: always()
+        if: ${{ !cancelled() }}
         with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
+          name: blob-report-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 1
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: test-results
+          name: test-results-${{ matrix.shard }}
           path: test-results/
           retention-days: 7
 
@@ -127,3 +131,46 @@ jobs:
           echo ""
           echo "=== Frappe Logs ==="
           cat logs/*.log || true
+
+  # Keeps the required check's name and merges the shards' reports into one.
+  ui-tests-result:
+    if: ${{ !cancelled() }}
+    needs: ui-tests
+    runs-on: ubuntu-24.04
+    name: Playwright E2E Tests
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install Playwright
+        run: yarn install --frozen-lockfile --ignore-scripts
+
+      - name: Download blob reports
+        # The shards' results decide the check; a missing report must not.
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Merge reports
+        continue-on-error: true
+        run: npx playwright merge-reports --reporter html ./all-blob-reports
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Fail if a shard failed
+        if: ${{ needs.ui-tests.result != 'success' }}
+        run: exit 1

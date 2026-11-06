@@ -12,6 +12,7 @@ from buzz.events.doctype.buzz_team.buzz_team import personal_teams_enabled
 from buzz.playground import playground_boot
 from buzz.utils import is_app_installed
 from buzz.www.event.venue_map import google_maps_embed_api_key
+from buzz.www.site_header import DEFAULT_FAVICON
 
 no_cache = 1
 
@@ -22,9 +23,28 @@ def get_context():
 	context = frappe._dict()
 	context.boot = get_boot()
 	context.boot.csrf_token = csrf_token
+	context.link_preview = form_link_preview(frappe.request.path if frappe.request else "")
+	context.favicon = frappe.db.get_single_value("Website Settings", "favicon") or DEFAULT_FAVICON
 	if frappe.session.user != "Guest":
 		telemetry.capture("active_site", interval="1d", on_commit=False)
 	return context
+
+
+def form_link_preview(path: str) -> dict | None:
+	"""Link previews read the HTML, so a public form's page carries its own title and description."""
+	parts = path.strip("/").split("/")
+	if len(parts) != 3 or parts[0] != "b":
+		return None
+	from buzz.api.forms import form_service
+	from buzz.api.forms.services import RegistrationFormService
+
+	try:
+		if parts[1] == "register":
+			return RegistrationFormService(parts[2]).link_preview()
+		return form_service(parts[1], parts[2]).link_preview()
+	except frappe.ValidationError:
+		frappe.clear_messages()
+		return None
 
 
 # nosemgrep: guest-whitelisted-method

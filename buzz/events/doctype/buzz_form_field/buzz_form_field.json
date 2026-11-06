@@ -18,6 +18,14 @@
    "default": "1"
   },
   {
+   "fieldname": "is_standard",
+   "label": "Standard Field",
+   "fieldtype": "Check",
+   "default": "0",
+   "read_only": 1,
+   "description": "A field of the form's own doctype. It can be renamed, moved or hidden, not removed."
+  },
+  {
    "fieldname": "label",
    "label": "Label",
    "fieldtype": "Data",
@@ -38,10 +46,9 @@
    "fieldname": "fieldtype",
    "label": "Type",
    "fieldtype": "Select",
-   "reqd": 1,
    "default": "Data",
    "in_list_view": 1,
-   "options": "Data\nCheck\nSmall Text\nPhone\nEmail\nSelect\nDate\nNumber\nMulti Select\nRating\nAttach\nAttach Image"
+   "options": "Data\nCheck\nSmall Text\nPhone\nEmail\nSelect\nDate\nNumber\nMulti Select\nRating\nAttach\nAttach Image\nURL\nRadio\nHeading\nParagraph\nDivider\nPage Break"
   },
   {
    "fieldname": "mandatory",
@@ -51,10 +58,17 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "width",
+   "label": "Width",
+   "fieldtype": "Select",
+   "options": "Full\nHalf",
+   "default": "Full"
+  },
+  {
    "fieldname": "options",
    "label": "Options",
    "fieldtype": "Small Text",
-   "description": "One option per line for Select and Multi Select."
+   "description": "One option per line for Select, Radio and Multi Select."
   },
   {
    "fieldname": "placeholder",
@@ -65,18 +79,28 @@
    "fieldname": "default_value",
    "label": "Default Value",
    "fieldtype": "Data"
+  },
+  {
+   "fieldname": "description",
+   "label": "Description",
+   "fieldtype": "Small Text",
+   "description": "Shown under the question."
   }
  ],
  "field_order": [
   "enabled",
+  "is_standard",
   "label",
   "fieldname",
   "column_break_question",
   "fieldtype",
   "mandatory",
+  "width",
   "options",
   "placeholder",
-  "default_value"
+  "default_value",
+  "description"
  ],
- "permissions": []
+ "permissions": [],
+ "modified": "2026-10-27 18:00:00.000000"
 }

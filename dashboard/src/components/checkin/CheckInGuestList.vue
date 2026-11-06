@@ -13,17 +13,20 @@ import {
 import { computed, ref, watch } from "vue"
 
 import CheckInGuestRow from "@/components/checkin/CheckInGuestRow.vue"
+import CheckInZoneSelect from "@/components/checkin/CheckInZoneSelect.vue"
 import GuestCheckInDialog from "@/components/checkin/GuestCheckInDialog.vue"
 import EmptyState from "@/components/common/EmptyState.vue"
 import QRScanner from "@/components/QRScanner.vue"
+import { useCheckInZone } from "@/composables/useCheckInZone"
 import { useEventGuests } from "@/composables/useEventGuests"
+import { useIsMobile } from "@/composables/useIsMobile"
 import type { ListOrder } from "@/composables/useListQuery"
 import {
 	type ValidationResult,
 	playSuccessBeep,
 	useTicketValidation,
 } from "@/composables/useTicketValidation"
-import type { EventGuest } from "@/types"
+import type { EventGuest, GuestZone, ZoneStatus } from "@/types"
 import { formatPriceOrFree } from "@/utils/currency"
 import { serverErrorMessage } from "@/utils/serverError"
 
@@ -33,13 +36,19 @@ const search = ref("")
 // "1" and "0" narrow the list on the server; anything else is everyone.
 const tab = ref("all")
 
+// The zone drives the list itself, and the zones come back with the list.
+const zones = ref<GuestZone[]>([])
+const { selected: selectedZone, zone, defaultZone } = useCheckInZone(props.event, zones)
+
 const { guests, loadMore, page, loadingFirstPage, loadingMore, searchPending } = useEventGuests(
 	props.event,
 	search,
 	ref<ListOrder>("desc"),
 	ref([]),
-	{ url: "/api/v2/method/buzz.api.checkin.get_checkin_guests", checkedIn: tab },
+	{ url: "/api/v2/method/buzz.api.checkin.get_checkin_guests", checkedIn: tab, zone },
 )
+// Where the open guest stands at each zone; the row carries it, a check-in refreshes it.
+const zoneStatuses = ref<ZoneStatus[]>([])
 
 // Check-ins made here since the last fetch. A fetch carries the server's own count, which
 // already includes them, so the tally starts over with every response.
@@ -48,7 +57,8 @@ const localCheckIns = ref(0)
 const loadedSearch = ref("")
 watch(
 	() => page.data,
-	() => {
+	(data) => {
+		if (data?.zones) zones.value = data.zones
 		localCheckIns.value = 0
 		loadedSearch.value = search.value.trim()
 	},
@@ -99,40 +109,56 @@ const selectedGuest = ref<EventGuest | null>(null)
 const payment = ref<string | null>(null)
 const guestOpen = ref(false)
 
-const openGuest = (guest: EventGuest, paid: string | null = null) => {
+const openGuest = (
+	guest: EventGuest,
+	paid: string | null = null,
+	scannedStatuses?: ZoneStatus[],
+) => {
 	checkInCall.reset()
 	undoCall.reset()
 	selectedGuest.value = guest
+	zoneStatuses.value = scannedStatuses ?? guest.zones
 	payment.value = paid
 	guestOpen.value = true
 }
 
 // Rows are patched in place rather than refetched, so the pages already scrolled through stay.
+// Only a change in the zone the list shows touches its rows and tally.
 const setCheckedIn = (ticket: string, at: string | null) => {
+	if ((actionZone.value || defaultZone.value) !== (zone.value || defaultZone.value)) return
 	for (const guest of [guests.value.find((row) => row.name === ticket), selectedGuest.value])
 		if (guest?.name === ticket) guest.checked_in_at = at
 	localCheckIns.value += at ? 1 : -1
 }
 
+const updateZones = (ticket: string, statuses: ZoneStatus[]) => {
+	zoneStatuses.value = statuses
+	const row = guests.value.find((guest) => guest.name === ticket)
+	if (row) row.zones = statuses
+}
+
 interface CheckInResponse {
 	message: string
 	ticket: { id: string; check_in_time: string }
+	zones: ZoneStatus[]
 }
 
 // One check-in at a time: the row or dialog that started it shows the spinner.
 const busyTicket = ref<string | null>(null)
 
-const checkInCall = useCall<CheckInResponse, { ticket_id: string }>({
+const checkInCall = useCall<CheckInResponse, { ticket_id: string; zone?: string }>({
 	url: "/api/v2/method/buzz.api.checkin.checkin_ticket",
 	method: "POST",
 	immediate: false,
 	onSuccess: (data) => {
 		busyTicket.value = null
+		updateZones(data.ticket.id, data.zones)
 		setCheckedIn(data.ticket.id, data.ticket.check_in_time)
 		playSuccessBeep()
 		toast.success(data.message)
 		// Long enough to see the button turn into "Checked in", then out of the way.
-		if (guestOpen.value) setTimeout(() => (guestOpen.value = false), 600)
+		// In "Any zone" mode the dialog lists more zones to act on, so it stays.
+		if (guestOpen.value && zone.value) setTimeout(() => (guestOpen.value = false), 600)
 	},
 	onError: (error) => {
 		busyTicket.value = null
@@ -141,29 +167,38 @@ const checkInCall = useCall<CheckInResponse, { ticket_id: string }>({
 	},
 })
 
-const checkIn = (ticket: string) => {
+// A row in "Any zone" mode names its own zone; otherwise the selected zone applies.
+const actionZone = ref("")
+
+const zoneParams = (ticket: string, rowZone = "") => {
+	actionZone.value = rowZone || zone.value
+	return { ticket_id: ticket, ...(actionZone.value && { zone: actionZone.value }) }
+}
+
+const checkIn = (ticket: string, rowZone?: string) => {
 	if (busyTicket.value) return
 	busyTicket.value = ticket
-	checkInCall.submit({ ticket_id: ticket })
+	checkInCall.submit(zoneParams(ticket, rowZone))
 }
 
 // Undo lives only in the guest dialog, so its errors show there too.
-const undoCall = useCall<CheckInResponse, { ticket_id: string }>({
+const undoCall = useCall<CheckInResponse, { ticket_id: string; zone?: string }>({
 	url: "/api/v2/method/buzz.api.checkin.undo_checkin",
 	method: "POST",
 	immediate: false,
 	onSuccess: (data) => {
 		busyTicket.value = null
+		updateZones(data.ticket.id, data.zones)
 		setCheckedIn(data.ticket.id, null)
 		toast.success(data.message)
 	},
 	onError: () => (busyTicket.value = null),
 })
 
-const undoCheckIn = (ticket: string) => {
+const undoCheckIn = (ticket: string, rowZone?: string) => {
 	if (busyTicket.value) return
 	busyTicket.value = ticket
-	undoCall.submit({ ticket_id: ticket })
+	undoCall.submit(zoneParams(ticket, rowZone))
 }
 
 const stickySentinel = ref<HTMLElement | null>(null)
@@ -176,7 +211,9 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 })
 
 const scanning = ref(false)
-const { validationResult } = useTicketValidation()
+const isMobile = useIsMobile()
+const { validationResult, scanZone } = useTicketValidation()
+watch(zone, (value) => (scanZone.value = value), { immediate: true })
 
 const guestFromScan = ({ ticket }: Required<Pick<ValidationResult, "ticket">>): EventGuest =>
 	guests.value.find((guest) => guest.name === ticket.id) ?? {
@@ -189,6 +226,7 @@ const guestFromScan = ({ ticket }: Required<Pick<ValidationResult, "ticket">>): 
 			title: addOn.add_on_title || addOn.add_on,
 			value: addOn.value ?? null,
 		})),
+		zones: [],
 	}
 
 watch(validationResult, (result) => {
@@ -197,6 +235,7 @@ watch(validationResult, (result) => {
 	openGuest(
 		guestFromScan({ ticket: result.ticket }),
 		paid ? formatPriceOrFree(paid.amount, paid.currency) : null,
+		result.zones ?? [],
 	)
 	validationResult.value = null
 })
@@ -249,6 +288,7 @@ watch(validationResult, (result) => {
 						</p>
 					</div>
 					<Button
+						v-if="!isMobile"
 						size="lg"
 						:icon-left="scanning ? 'lucide-x' : 'lucide-scan-barcode'"
 						:label="scanning ? 'Close' : 'Scan'"
@@ -261,20 +301,32 @@ watch(validationResult, (result) => {
 					<QRScanner v-if="scanning" :paused="guestOpen" />
 				</Transition>
 
-				<TextInput
-					v-model="search"
-					type="search"
-					size="md"
-					placeholder="Search by name, email or ticket ID"
-					aria-label="Search guests"
-				>
-					<template #prefix>
-						<Icon icon="lucide-search" class="size-4 text-ink-gray-5" />
-					</template>
-					<template #suffix>
-						<LoadingText v-if="reloading && search.trim()" text="Searching" class="!text-sm" />
-					</template>
-				</TextInput>
+				<!-- Who and where: stacked on a phone; side by side from sm, the search taking three
+				     parts and the zone one, never narrower than a zone name. -->
+				<div class="flex flex-col gap-2 sm:flex-row">
+					<TextInput
+						v-model="search"
+						class="sm:min-w-0 sm:flex-[3]"
+						type="search"
+						size="md"
+						placeholder="Search by name, email or ticket ID"
+						aria-label="Search guests"
+					>
+						<template #prefix>
+							<Icon icon="lucide-search" class="size-4 text-ink-gray-5" />
+						</template>
+						<template #suffix>
+							<LoadingText v-if="reloading && search.trim()" text="Searching" class="!text-sm" />
+						</template>
+					</TextInput>
+					<CheckInZoneSelect
+						v-model="selectedZone"
+						:zones="zones"
+						any-zone
+						size="md"
+						class="sm:min-w-32 sm:flex-1"
+					/>
+				</div>
 			</div>
 
 			<div class="-mx-4 overflow-x-auto px-4">
@@ -323,6 +375,21 @@ watch(validationResult, (result) => {
 			</div>
 
 			<div ref="sentinel" aria-hidden="true" />
+
+			<!-- On a phone Scan is the thumb's main job, so it floats where the thumb rests. -->
+			<div
+				v-if="isMobile"
+				class="pointer-events-none fixed inset-x-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-20 flex justify-center"
+			>
+				<Button
+					class="pointer-events-auto shadow-lg transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97] motion-reduce:transition-none"
+					variant="solid"
+					size="lg"
+					:icon-left="scanning ? 'lucide-x' : 'lucide-scan-barcode'"
+					:label="scanning ? 'Close' : 'Scan'"
+					@click="scanning = !scanning"
+				/>
+			</div>
 		</template>
 
 		<GuestCheckInDialog
@@ -331,8 +398,10 @@ watch(validationResult, (result) => {
 			:payment="payment"
 			:busy="busyTicket === selectedGuest?.name"
 			:error="serverErrorMessage(checkInCall.error || undoCall.error)"
-			@check-in="selectedGuest && checkIn(selectedGuest.name)"
-			@undo="selectedGuest && undoCheckIn(selectedGuest.name)"
+			:zones="zoneStatuses"
+			:zone="zone"
+			@check-in="selectedGuest && checkIn(selectedGuest.name, $event)"
+			@undo="selectedGuest && undoCheckIn(selectedGuest.name, $event)"
 		/>
 	</div>
 </template>

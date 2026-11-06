@@ -10,7 +10,7 @@ const emit = defineEmits<{ changed: [] }>()
 
 // Only the method is used; the form itself is never fetched.
 const form = useDoc<{ name: string }, { setClosed: (params: { closed: boolean }) => boolean }>({
-	doctype: "Sponsor Enquiry Form",
+	doctype: "Buzz Form",
 	name: () => props.form,
 	immediate: false,
 	methods: { setClosed: "set_closed" },

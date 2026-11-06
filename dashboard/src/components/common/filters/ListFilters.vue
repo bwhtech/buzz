@@ -18,6 +18,8 @@ import FilterChip from "./FilterChip.vue"
 const props = defineProps<{
 	fields: FilterField[]
 	searchPlaceholder?: string
+	/** Sizes the search box; by default it takes the row the controls leave. */
+	searchClass?: string
 	disableShortcut?: boolean
 }>()
 const conditions = defineModel<Condition[]>({ required: true })
@@ -69,10 +71,11 @@ const remove = (index: number) =>
 	(conditions.value = conditions.value.filter((_, position) => position !== index))
 
 // Fields with options open onto them, so the first value is picked in the same motion.
+// A searchable field adds its chip instead, whose list opens with a search box.
 const fieldMenuItem = (field: FilterField) => ({
 	label: field.label,
 	icon: fieldIcon(field),
-	...(field.options.length
+	...(field.options.length && !field.searchable
 		? {
 				submenu: field.options.map((option) => ({
 					label: option.label,
@@ -82,11 +85,17 @@ const fieldMenuItem = (field: FilterField) => ({
 		: { onClick: () => add(field) }),
 })
 
+// A searchable field already on the panel is edited in its chip, not added twice.
+const isOffered = (field: FilterField) =>
+	!field.searchable || !conditions.value.some(([key]) => key === field.key)
+
 const fieldMenu = computed<DropdownOptions>(() =>
 	(["standard", "question"] as const)
 		.map((section) => ({
 			group: section === "standard" ? "Fields" : "Form questions",
-			options: props.fields.filter((field) => field.section === section).map(fieldMenuItem),
+			options: props.fields
+				.filter((field) => field.section === section && isOffered(field))
+				.map(fieldMenuItem),
 		}))
 		.filter((group) => group.options.length),
 )
@@ -110,7 +119,7 @@ onKeyStroke("f", (event) => {
 			<FormControl
 				v-if="search !== undefined"
 				v-model="search"
-				class="min-w-48 flex-1"
+				:class="searchClass ?? 'min-w-48 flex-1'"
 				size="sm"
 				type="text"
 				:placeholder="searchPlaceholder"
@@ -120,6 +129,7 @@ onKeyStroke("f", (event) => {
 					<Icon icon="lucide-search" class="size-4 text-ink-gray-5" />
 				</template>
 			</FormControl>
+			<slot name="after-search" />
 			<Select
 				v-if="order !== undefined"
 				size="sm"
@@ -138,6 +148,7 @@ onKeyStroke("f", (event) => {
 					:aria-keyshortcuts="disableShortcut ? undefined : 'F'"
 				/>
 			</Dropdown>
+			<slot name="after-filter" />
 		</div>
 
 		<div v-if="conditions.length" class="flex items-center gap-2 rounded-5 bg-surface-gray-2 p-1.5">

@@ -1,11 +1,35 @@
 import path from "node:path"
 
+import frameworkUI from "@framework/ui/vite"
 import vue from "@vitejs/plugin-vue"
 import frappeui from "frappe-ui/vite"
 import { defineConfig } from "vite"
 
+// Link previews read the served HTML, so a public form's page renders its own tags, and the
+// favicon follows Website Settings. Jinja runs only on the built page (buzz/www/dashboard.html);
+// the dev server would show it as text.
+const LINK_PREVIEW = `{% if link_preview %}<title>{{ link_preview.title | e }}</title>
+    <meta name="description" content="{{ link_preview.description | e }}" />
+    <meta property="og:title" content="{{ link_preview.title | e }}" />
+    <meta property="og:description" content="{{ link_preview.description | e }}" />
+    {% if link_preview.image %}<meta property="og:image" content="{{ link_preview.image | e }}" />{% endif %}
+    {% else %}<title>Buzz Dashboard</title>{% endif %}`
+
+const FAVICON = `<link rel="icon" href="{{ favicon | e }}" />`
+
+const jinjaHeadTags = {
+	name: "buzz-jinja-head-tags",
+	apply: "build" as const,
+	transformIndexHtml: (html: string) =>
+		html
+			.replace("<title>Buzz Dashboard</title>", LINK_PREVIEW)
+			.replace(/<link rel="icon"[^>]*>/, FAVICON),
+}
+
 export default defineConfig({
 	plugins: [
+		jinjaHeadTags,
+		frameworkUI(),
 		frappeui({
 			frappeProxy: {
 				port: 8080,
@@ -44,6 +68,7 @@ export default defineConfig({
 	},
 	server: {
 		allowedHosts: true,
-		fs: { allow: [".", "../buzz/public/js"] },
+		// @framework/ui is linked from the bench's frappe app and served from source.
+		fs: { allow: [".", "../buzz/public/js", "../../frappe/ui"] },
 	},
 })

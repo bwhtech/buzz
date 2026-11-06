@@ -1,3 +1,4 @@
+import { telemetryPlugin } from "@framework/ui/telemetry"
 import {
 	Alert,
 	Badge,
@@ -14,9 +15,10 @@ import { createApp } from "vue"
 
 import App from "./App.vue"
 import { applyLanguageFromQuery } from "./composables/useLanguage"
+import { session } from "./data/session"
 import router from "./router"
 import { initSocket } from "./socket"
-import { installTelemetry, loadPosthog } from "./telemetry"
+import { captureLongFrames, loadPosthog } from "./telemetry"
 import translationPlugin from "./translation"
 
 import "./index.css"
@@ -42,7 +44,7 @@ applyLanguageFromQuery(router)
 app.use(translationPlugin)
 app.use(router)
 app.use(resourcesPlugin)
-installTelemetry(router).catch(() => {})
+if (session.isLoggedIn) app.use(telemetryPlugin, { app_name: "buzz", router })
 
 // The bench renders boot data into the page; the Vite dev server does not, so dev fetches it
 // before mounting, as App.vue reads `window.playground` at setup.
@@ -63,5 +65,6 @@ for (const [key, component] of Object.entries(globalComponents)) {
 
 bootData.then(() => {
 	loadPosthog()
+	captureLongFrames(router)
 	app.mount("#app")
 })

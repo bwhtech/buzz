@@ -8,6 +8,11 @@ class EventNotFound(ResourceNotFound):
 	message = _lt("This event does not exist.")
 
 
+class ZoneNotFound(ResourceNotFound):
+	title = _lt("Zone Not Found")
+	message = _lt("This check-in zone is not open for the event.")
+
+
 class CannotManageEvent(NotPermitted):
 	title = _lt("Not Permitted")
 	message = _lt("You cannot manage this event.")
