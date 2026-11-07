@@ -316,7 +316,7 @@
 import { Badge, Button, Dialog, ErrorMessage, FileUploader, Spinner, useCall } from "frappe-ui"
 import { toast } from "frappe-ui"
 import { dayjsLocal } from "frappe-ui"
-import { computed, ref } from "vue"
+import { computed, ref, watch } from "vue"
 import LucideCheckCircle from "~icons/lucide/check-circle"
 import LucideClock from "~icons/lucide/clock"
 import LucideXCircle from "~icons/lucide/x-circle"
@@ -376,13 +376,12 @@ const updateLogoResource = useCall<unknown, { company_logo: string }>({
 	onError: (error) => console.error("Failed to update company logo:", error),
 })
 
-// Use the payment success composable
-const { showSuccessMessage } = usePaymentSuccess({
-	onSuccess: () => {
-		// Reload the enquiry details to get updated status
-		enquiryDetails.reload()
-	},
-})
+// Back from the payment page: celebrate only once the enquiry is actually paid.
+const { showSuccessMessage, checkForSuccess } = usePaymentSuccess({ checkOnMount: false })
+watch(
+	() => enquiryDetails.data?.enquiry?.status,
+	(status) => status === "Paid" && checkForSuccess(),
+)
 
 // Check if inquiry can be withdrawn (not paid and not already withdrawn)
 const canWithdraw = computed(() => {

@@ -36,6 +36,8 @@ interface ValidationInputs {
 	taxIsGst: () => boolean
 	selectedGateway: Ref<string | null>
 	phoneRequired: () => boolean
+	// The chosen payment method needs a phone number, which the buyer may not have given yet.
+	gatewayNeedsPhone: () => boolean
 	lastNameRequired: () => boolean
 }
 
@@ -91,7 +93,10 @@ export function useRegistrationValidation(inputs: ValidationInputs) {
 		}
 		if (stepId === "details")
 			return Object.keys(detailsErrors.value).length ? [detailsErrors.value] : []
-		return inputs.selectedGateway.value ? [] : [{ payment: __("Choose a payment method") }]
+		if (!inputs.selectedGateway.value) return [{ payment: __("Choose a payment method") }]
+		return inputs.gatewayNeedsPhone() && !inputs.billing.value.buyer_phone.trim()
+			? [{ buyer_phone: __("Enter a phone number") }]
+			: []
 	}
 
 	// Names what isn't highlighted inline; otherwise points at the highlighted fields.

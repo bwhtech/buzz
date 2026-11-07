@@ -20,5 +20,4 @@ class EventPaymentFactory(BaseFactory[EventPayment]):
 
 	@property
 	def received(self) -> dict[str, Any]:
-		# Webhooks find the payment by its id, so each one is unique.
-		return {"payment_received": 1, "payment_id": f"pay_{frappe.generate_hash(length=10)}"}
+		return {"payment_received": 1, "payment_id": f"payment-{frappe.generate_hash(length=10)}"}

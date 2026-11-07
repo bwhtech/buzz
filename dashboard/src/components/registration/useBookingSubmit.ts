@@ -1,3 +1,4 @@
+import { useEventListener } from "@vueuse/core"
 import { toast, useCall } from "frappe-ui"
 import { computed, ref, type Ref } from "vue"
 import { useRouter } from "vue-router"
@@ -38,8 +39,6 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 	const offlineMethod = ref<OfflineMethod | null>(null)
 	const pendingPayload = ref<Payload | null>(null)
 	const completed = ref<{ bookingName: string; pendingVerification: boolean } | null>(null)
-	// Stays true from a successful booking until the next page takes over.
-	const redirecting = ref(false)
 
 	const processBooking = useCall<BookingSubmitResponse, { booking: Payload }>({
 		url: "/api/v2/method/buzz.api.booking.process_booking",
@@ -47,8 +46,16 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 		immediate: false,
 	})
 
+	// Stays true from a successful booking until the next page takes over.
+	const redirecting = ref(false)
+	const placing = computed(() => processBooking.loading || redirecting.value)
+	// Going back from the gateway restores this page from the back-forward cache.
+	useEventListener(window, "pageshow", (event: PageTransitionEvent) => {
+		if (event.persisted) redirecting.value = false
+	})
+
 	function submit() {
-		if (processBooking.loading || redirecting.value) return
+		if (placing.value) return
 		const payload = inputs.buildPayload()
 		pendingPayload.value = payload
 		if (inputs.isGuest() && inputs.needsOtp()) otp.send()
@@ -129,7 +136,7 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 		offlineMethod,
 		showOfflineDialog,
 		completed,
-		placing: computed(() => processBooking.loading || redirecting.value),
+		placing,
 	}
 }
 

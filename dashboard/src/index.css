@@ -96,6 +96,24 @@ button,
 	animation: fade-up-in 0.4s ease both;
 }
 
+/* Draws the eye to a field that just became required. The ring is a box-shadow, so it
+   takes no layout space. */
+@keyframes flash-in {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 transparent;
+	}
+	30%,
+	60% {
+		box-shadow: 0 0 0 6px var(--surface-gray-3);
+	}
+}
+
+.flash-in {
+	border-radius: 0.5rem;
+	animation: flash-in 1.2s ease 2;
+}
+
 /* Content a click reveals in place, such as a folded email body. Short because it
    runs many times a session. */
 .reveal {
@@ -119,6 +137,7 @@ button,
 	}
 
 	.fade-up-in,
+	.flash-in,
 	.text-shimmer {
 		animation: none;
 	}

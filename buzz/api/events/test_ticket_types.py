@@ -5,6 +5,7 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.api.events import get_event_ticket_types
 from buzz.api.events.exceptions import CannotManageEvent
+from buzz.tests.base_test_cases import make_payment_gateway
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
@@ -12,7 +13,6 @@ from buzz.tests.factories import (
 	EventBookingFactory,
 	EventTicketCategoryFactory,
 	EventTicketTypeFactory,
-	PaymentGatewayFactory,
 	UserFactory,
 )
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
@@ -113,7 +113,7 @@ class TestGetEventTicketTypes(TicketTypesTestCase):
 		self.assertEqual([price["tickets_sold"] for price in row["prices"]], [0, 1])
 
 	def test_lists_payment_providers_and_flags_the_default(self):
-		default = PaymentGatewayFactory.create().name
+		default = make_payment_gateway()
 
 		with self.change_settings("Buzz Settings", default_payment_gateway=default):
 			providers = self.payload_as(self.owner)["payment_providers"]
