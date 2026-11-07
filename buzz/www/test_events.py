@@ -5,6 +5,7 @@ from frappe.utils import add_days, today
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
+	CommunityEventRequestFactory,
 	EventCategoryFactory,
 	EventTicketFactory,
 	EventTopicFactory,
@@ -125,3 +126,35 @@ class TestCategoryListing(IntegrationTestCase):
 
 	def popular_routes(self) -> list[str]:
 		return [event.route for event in DiscoverPage().popular_events(limit=1000)]
+
+
+class TestCommunityEvents(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		community = BuzzTeamFactory.create_owned_by(None, "community").name
+		cls.approved = cls.create_request(community, "approved")
+		cls.pending = cls.create_request(community)
+		yesterday = add_days(today(), -1)
+		cls.ended = cls.create_request(
+			community, "approved", start_datetime=f"{yesterday} 10:00", end_datetime=f"{yesterday} 11:00"
+		)
+		closed = BuzzTeamFactory.create_owned_by(None, "community").name
+		cls.closed = cls.create_request(closed, "approved")
+		frappe.db.set_value("Buzz Team", closed, "accept_community_submissions", 0)
+
+	@classmethod
+	def create_request(cls, community: str, *traits: str, **overrides) -> str:
+		return CommunityEventRequestFactory.create(*traits, community=community, **overrides).name
+
+	def test_lists_only_approved_upcoming_events_of_open_communities(self):
+		names = [event.name for event in DiscoverPage().community_events(limit=1000)]
+		self.assertIn(self.approved, names)
+		self.assertNotIn(self.pending, names)
+		self.assertNotIn(self.ended, names)
+		self.assertNotIn(self.closed, names)
+
+	def test_card_opens_the_host_page(self):
+		cards = DiscoverPage().as_context()["community_events"]
+		self.assertTrue(cards)
+		self.assertTrue(all(card["is_external"] and card["url"].startswith("https://") for card in cards))

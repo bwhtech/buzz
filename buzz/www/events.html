@@ -20,7 +20,7 @@
 	{% endmacro %}
 
 	{% macro event_card(event) %}
-	<a class="event-card" href="{{ event.url }}">
+	<a class="event-card" href="{{ event.url }}"{% if event.is_external %} target="_blank" rel="noopener"{% endif %}>
 		{% if event.image %}<img class="event-card-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
 		{{ event_date(event) }}
 		<span class="event-card-title">{{ event.title }}</span>
@@ -95,6 +95,15 @@
 			</div>
 			{% endif %}
 		</section>
+
+		{% if community_events %}
+		<section class="discover-section">
+			<h2 class="section-title">{{ _("From communities") }}</h2>
+			<ul class="event-cards">
+				{% for event in community_events %}<li>{{ event_card(event) }}</li>{% endfor %}
+			</ul>
+		</section>
+		{% endif %}
 
 		{% if topics %}
 		<section class="discover-section">
