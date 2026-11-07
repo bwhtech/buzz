@@ -75,7 +75,7 @@
 			<ul class="event-rows">
 				{% for event in popular_events %}
 				<li>
-					<a class="event-row" href="{{ event.url }}">
+					<a class="event-row" href="{{ event.url }}"{% if event.is_external %} target="_blank" rel="noopener"{% endif %}>
 						{% if event.image %}<img class="event-row-image" src="{{ event.image }}" alt="">{% else %}<event-banner class="event-row-image" seed="{{ event.title }}"></event-banner>{% endif %}
 						<span class="event-row-text">
 							{{ event_date(event) }}

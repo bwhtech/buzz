@@ -16,6 +16,7 @@ from frappe.utils import (
 	today,
 )
 
+from buzz.events.doctype.community_event_request.community_event_request import EXTERNAL_FIELDS
 from buzz.playground import listing_filters
 from buzz.www.event.date_range import format_day
 from buzz.www.event.index import not_found
@@ -82,6 +83,13 @@ def exclude_ended_events(events: list) -> list:
 	return [event for event in events if not has_ended(event)]
 
 
+def listed_communities() -> list[str]:
+	filters = {"is_published": 1, "accept_community_submissions": 1}
+	if sandbox_teams := listing_filters().get("team"):
+		filters["name"] = sandbox_teams
+	return frappe.get_all("Buzz Team", filters=filters, pluck="name")
+
+
 def enabled_categories() -> list:
 	return frappe.get_all(
 		"Event Category",
@@ -141,13 +149,18 @@ def event_card(event) -> dict:
 	}
 
 
+def community_event_card(event) -> dict:
+	"""Opens the host's own page."""
+	return event_card(event) | {"url": event.event_url, "is_external": True}
+
+
 class DiscoverPage:
 	def as_context(self) -> dict:
 		return {
 			"title": _("Discover Events"),
 			"listing": None,
 			"featured_events": [event_card(event) for event in self.featured_events()],
-			"popular_events": [event_card(event) for event in self.popular_events()],
+			"popular_events": self.popular_cards(),
 			"topics": self.topics(),
 			"meta": {
 				"url": get_url("/events"),
@@ -182,6 +195,32 @@ class DiscoverPage:
 			.limit(limit)
 		).run(as_dict=True)
 		return sorted(exclude_ended_events(events), key=lambda event: event.start_date, reverse=True)
+
+	def popular_cards(self) -> list[dict]:
+		"""Events hosted here first; external events a community approved fill any spots left."""
+		cards = [event_card(event) for event in self.popular_events()]
+		spots = POPULAR_LIMIT - len(cards)
+		if spots > 0:
+			cards += [community_event_card(event) for event in self.community_events(limit=spots)]
+		return cards
+
+	def community_events(self, limit: int = POPULAR_LIMIT) -> list:
+		"""Events on other sites that a public community approved."""
+		from buzz.events.doctype.buzz_team.team_page import external_event  # team_page imports this module
+
+		requests = frappe.get_all(
+			"Community Event Request",
+			filters={
+				"community": ["in", listed_communities() or [""]],
+				"status": "Approved",
+				"is_external_event": 1,
+				"end_datetime": [">=", add_days(today(), -1)],
+			},
+			fields=["name", *EXTERNAL_FIELDS],
+			order_by="start_datetime asc",
+			limit=limit,
+		)
+		return exclude_ended_events([external_event(request) for request in requests])
 
 	def topics(self) -> list[dict]:
 		counts = self.topic_counts()

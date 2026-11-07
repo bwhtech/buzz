@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
@@ -5,12 +7,14 @@ from frappe.utils import add_days, today
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
+	CommunityEventRequestFactory,
 	EventCategoryFactory,
 	EventTicketFactory,
 	EventTopicFactory,
 	UserFactory,
 )
 from buzz.www.events import (
+	POPULAR_LIMIT,
 	CategoryListing,
 	DiscoverPage,
 	TopicListing,
@@ -125,3 +129,46 @@ class TestCategoryListing(IntegrationTestCase):
 
 	def popular_routes(self) -> list[str]:
 		return [event.route for event in DiscoverPage().popular_events(limit=1000)]
+
+
+class TestCommunityEvents(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		community = BuzzTeamFactory.create_owned_by(None, "community").name
+		cls.approved = cls.create_request(community, "approved")
+		cls.pending = cls.create_request(community)
+		yesterday = add_days(today(), -1)
+		cls.ended = cls.create_request(
+			community, "approved", start_datetime=f"{yesterday} 10:00", end_datetime=f"{yesterday} 11:00"
+		)
+		closed = BuzzTeamFactory.create_owned_by(None, "community").name
+		cls.closed = cls.create_request(closed, "approved")
+		frappe.db.set_value("Buzz Team", closed, "accept_community_submissions", 0)
+
+	@classmethod
+	def create_request(cls, community: str, *traits: str, **overrides) -> str:
+		return CommunityEventRequestFactory.create(*traits, community=community, **overrides).name
+
+	def test_lists_only_approved_upcoming_events_of_open_communities(self):
+		names = [event.name for event in DiscoverPage().community_events(limit=1000)]
+		self.assertIn(self.approved, names)
+		self.assertNotIn(self.pending, names)
+		self.assertNotIn(self.ended, names)
+		self.assertNotIn(self.closed, names)
+
+	def test_external_events_fill_spots_popular_events_leave(self):
+		with patch.object(DiscoverPage, "popular_events", return_value=[]):
+			cards = DiscoverPage().popular_cards()
+		self.assertTrue(cards)
+		self.assertTrue(all(card["is_external"] and card["url"].startswith("https://") for card in cards))
+
+	def test_full_popular_events_leave_no_spot_for_external_events(self):
+		events = [
+			frappe._dict(
+				title="Hosted", route="hosted", start_date=today(), start_time="10:00:00", end_time="11:00:00"
+			)
+		] * POPULAR_LIMIT
+		with patch.object(DiscoverPage, "popular_events", return_value=events):
+			cards = DiscoverPage().popular_cards()
+		self.assertFalse(any(card.get("is_external") for card in cards))
