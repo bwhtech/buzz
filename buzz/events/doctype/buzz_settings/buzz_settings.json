@@ -30,6 +30,10 @@
   "app_icon",
   "payments_tab",
   "default_payment_gateway",
+  "payouts_section",
+  "platform_fee_percent",
+  "column_break_payouts",
+  "payout_gateway",
   "proposals_tab",
   "event_proposals_section",
   "accept_event_proposals",
@@ -157,6 +161,30 @@
    "fieldname": "default_payment_gateway",
    "fieldtype": "Link",
    "label": "Default Payment Gateway",
+   "options": "Payment Gateway Profile"
+  },
+  {
+   "description": "Teams with an active linked account are paid their share of each payment through the gateway.",
+   "fieldname": "payouts_section",
+   "fieldtype": "Section Break",
+   "label": "Team Payouts"
+  },
+  {
+   "default": "0",
+   "description": "What BWH keeps of each payment it takes for a team. 0 turns team payouts off.",
+   "fieldname": "platform_fee_percent",
+   "fieldtype": "Percent",
+   "label": "Platform Fee"
+  },
+  {
+   "fieldname": "column_break_payouts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The gateway teams onboard their payout account on.",
+   "fieldname": "payout_gateway",
+   "fieldtype": "Link",
+   "label": "Payout Gateway",
    "options": "Payment Gateway Profile"
   },
   {
@@ -450,7 +478,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-24 10:00:00.000000",
+ "modified": "2026-11-07 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",
