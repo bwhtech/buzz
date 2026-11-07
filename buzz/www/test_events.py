@@ -164,7 +164,11 @@ class TestCommunityEvents(IntegrationTestCase):
 		self.assertTrue(all(card["is_external"] and card["url"].startswith("https://") for card in cards))
 
 	def test_full_popular_events_leave_no_spot_for_external_events(self):
-		events = [frappe._dict(title="Hosted", route="hosted", start_date=today())] * POPULAR_LIMIT
+		events = [
+			frappe._dict(
+				title="Hosted", route="hosted", start_date=today(), start_time="10:00:00", end_time="11:00:00"
+			)
+		] * POPULAR_LIMIT
 		with patch.object(DiscoverPage, "popular_events", return_value=events):
 			cards = DiscoverPage().popular_cards()
 		self.assertFalse(any(card.get("is_external") for card in cards))
