@@ -2,6 +2,8 @@ import frappe
 from bwh_payments import api as payments
 from frappe import _
 
+from buzz.payouts import PayoutSplit
+
 # Their checkout needs the shopper's phone number.
 GATEWAYS_NEEDING_PHONE = ("PayU Gateway Settings",)
 
@@ -52,6 +54,7 @@ def get_payment_link_for_booking(
 		payment_gateway,
 		redirect_to=redirect_to,
 		customer=get_buyer_details(booking_doc),
+		event=booking_doc.event,
 	)
 
 
@@ -78,6 +81,7 @@ def get_payment_link_for_sponsorship(
 		price.currency,
 		payment_gateway,
 		redirect_to,
+		event=tier_doc.event,
 	)
 
 
@@ -89,10 +93,15 @@ def get_payment_link(
 	payment_gateway: str,
 	redirect_to: str = "/events",
 	customer: dict | None = None,
+	event: str | int | None = None,
 ) -> str:
-	"""Open a checkout and return its URL. bwh_payments brings the shopper back to `redirect_to`."""
+	"""Open a checkout and return its URL. bwh_payments brings the shopper back to `redirect_to`.
+
+	With `event`, the event's team is paid its share through the gateway when it can be.
+	"""
 	payments.validate_currency(payment_gateway, currency)
 	payment = record_payment(reference_doctype, reference_docname, amount, currency, payment_gateway)
+	splits = PayoutSplit(event, amount, currency, payment_gateway).as_list() if event else []
 	payment_request = payments.create_payment(
 		reference_doctype,
 		reference_docname,
@@ -100,6 +109,7 @@ def get_payment_link(
 		currency,
 		payment_gateway,
 		redirect_to=redirect_to,
+		splits=splits,
 		**(get_customer_details() if customer is None else customer),
 	)
 	payment.db_set({"payment_request": payment_request.name, "order_id": payment_request.order_ref})

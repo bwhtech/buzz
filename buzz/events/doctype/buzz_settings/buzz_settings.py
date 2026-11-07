@@ -4,6 +4,9 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import flt
+
+from buzz.payouts import MINIMUM_PLATFORM_FEE_PERCENT
 
 LISTING_FIELDS = ("list_on_buzz_events", "buzz_events_url", "buzz_events_api_key", "buzz_events_api_secret")
 
@@ -44,6 +47,8 @@ class BuzzSettings(Document):
 		google_places_api_key: DF.Password | None
 		list_on_buzz_events: DF.Check
 		login_banner: DF.MarkdownEditor | None
+		payout_gateway: DF.Link | None
+		platform_fee_percent: DF.Percent
 		show_hosting_banner: DF.Check
 		support_email: DF.Data | None
 	# end: auto-generated types
@@ -53,6 +58,7 @@ class BuzzSettings(Document):
 		self.validate_transfer_days()
 		self.validate_app_logos()
 		self.validate_buzz_events_url()
+		self.validate_platform_fee()
 
 	def on_update(self):
 		listing_changed = any(self.has_value_changed(field) for field in LISTING_FIELDS)
@@ -79,6 +85,16 @@ class BuzzSettings(Document):
 		# The API secret travels in a header, so it must not go over plain HTTP.
 		if self.list_on_buzz_events and not (self.buzz_events_url or "").startswith("https://"):
 			frappe.throw(_("The buzz.events URL must start with https://."))
+
+	def validate_platform_fee(self):
+		# Razorpay takes its fee and a transfer fee from our balance, so a smaller fee pays for the teams.
+		fee = flt(self.platform_fee_percent)
+		if fee and not MINIMUM_PLATFORM_FEE_PERCENT <= fee <= 100:
+			frappe.throw(
+				_("The Platform Fee must be 0 (payouts off) or between {0}% and 100%.").format(
+					MINIMUM_PLATFORM_FEE_PERCENT
+				)
+			)
 
 	def validate_app_logos(self):
 		if bool(self.app_logo) != bool(self.app_logo_dark):

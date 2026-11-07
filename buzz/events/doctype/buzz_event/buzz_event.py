@@ -362,6 +362,21 @@ class BuzzEvent(Document):
 		self.capture_published_change()
 		self.enqueue_og_image()
 		self.enqueue_team_share_images()
+		self.move_payout_holds()
+
+	def move_payout_holds(self):
+		"""The team's share of each payment is held until after the event, so the hold follows a move."""
+		from buzz.payouts import EVENT_END_FIELDS
+
+		if self.flags.in_insert or not any(self.has_value_changed(field) for field in EVENT_END_FIELDS):
+			return
+		frappe.enqueue(
+			"buzz.payouts.move_event_holds",
+			# Not `event`: frappe.enqueue keeps that keyword for itself.
+			event_name=str(self.name),
+			enqueue_after_commit=True,
+			now=frappe.in_test,
+		)
 
 	def enqueue_team_share_images(self):
 		"""A team's share image counts its events."""
