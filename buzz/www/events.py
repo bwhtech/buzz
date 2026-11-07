@@ -160,8 +160,7 @@ class DiscoverPage:
 			"title": _("Discover Events"),
 			"listing": None,
 			"featured_events": [event_card(event) for event in self.featured_events()],
-			"popular_events": [event_card(event) for event in self.popular_events()],
-			"community_events": [community_event_card(event) for event in self.community_events()],
+			"popular_events": self.popular_cards(),
 			"topics": self.topics(),
 			"meta": {
 				"url": get_url("/events"),
@@ -196,6 +195,14 @@ class DiscoverPage:
 			.limit(limit)
 		).run(as_dict=True)
 		return sorted(exclude_ended_events(events), key=lambda event: event.start_date, reverse=True)
+
+	def popular_cards(self) -> list[dict]:
+		"""Events hosted here first; external events a community approved fill any spots left."""
+		cards = [event_card(event) for event in self.popular_events()]
+		spots = POPULAR_LIMIT - len(cards)
+		if spots > 0:
+			cards += [community_event_card(event) for event in self.community_events(limit=spots)]
+		return cards
 
 	def community_events(self, limit: int = POPULAR_LIMIT) -> list:
 		"""Events on other sites that a public community approved."""

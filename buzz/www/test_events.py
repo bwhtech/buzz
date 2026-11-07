@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
@@ -12,6 +14,7 @@ from buzz.tests.factories import (
 	UserFactory,
 )
 from buzz.www.events import (
+	POPULAR_LIMIT,
 	CategoryListing,
 	DiscoverPage,
 	TopicListing,
@@ -154,7 +157,14 @@ class TestCommunityEvents(IntegrationTestCase):
 		self.assertNotIn(self.ended, names)
 		self.assertNotIn(self.closed, names)
 
-	def test_card_opens_the_host_page(self):
-		cards = DiscoverPage().as_context()["community_events"]
+	def test_external_events_fill_spots_popular_events_leave(self):
+		with patch.object(DiscoverPage, "popular_events", return_value=[]):
+			cards = DiscoverPage().popular_cards()
 		self.assertTrue(cards)
 		self.assertTrue(all(card["is_external"] and card["url"].startswith("https://") for card in cards))
+
+	def test_full_popular_events_leave_no_spot_for_external_events(self):
+		events = [frappe._dict(title="Hosted", route="hosted", start_date=today())] * POPULAR_LIMIT
+		with patch.object(DiscoverPage, "popular_events", return_value=events):
+			cards = DiscoverPage().popular_cards()
+		self.assertFalse(any(card.get("is_external") for card in cards))
