@@ -4,18 +4,12 @@ import { ref, watch } from "vue"
 
 import AvatarUploader from "@/components/common/AvatarUploader.vue"
 import SlugInput, { type Availability } from "@/components/common/SlugInput.vue"
+import { slugify } from "@/utils/slug"
 
 import { checkCommunitySlug, communityError, flow, saveCommunity } from "./useOnboarding"
 
 const community = flow.community
 const availability = ref<Availability | null>(null)
-
-const slugify = (text: string) =>
-	text
-		.toLowerCase()
-		.trim()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-|-$/g, "")
 
 watch(
 	() => community.team_name,

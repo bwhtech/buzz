@@ -6,6 +6,8 @@ import { flow, steps } from "./useOnboarding"
 	<div
 		class="flex items-center gap-1.5"
 		role="progressbar"
+		:aria-label="__('Onboarding progress')"
+		aria-valuemin="1"
 		:aria-valuenow="flow.stepIndex + 1"
 		:aria-valuemax="steps.length"
 	>

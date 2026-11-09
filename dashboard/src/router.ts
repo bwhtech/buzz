@@ -1,5 +1,10 @@
 import { call } from "frappe-ui"
-import { type RouteRecordRaw, createRouter, createWebHistory } from "vue-router"
+import {
+	type RouteLocationNormalized,
+	type RouteRecordRaw,
+	createRouter,
+	createWebHistory,
+} from "vue-router"
 
 import { hasManageAccess } from "@/data/teams"
 import { loadUser, userResource } from "@/data/user"
@@ -9,9 +14,12 @@ import { firstEventPath } from "@/utils/managerNavigation"
 const APP_NAME = "Buzz"
 
 // New users finish onboarding before the dashboard. Other pages (tickets, bookings) never wait.
-async function onboardingRedirect() {
+// A deep link into /manage is kept, so onboarding ends where the user was going.
+async function onboardingRedirect(to: RouteLocationNormalized) {
 	await loadUser()
-	return userResource.data?.needs_onboarding ? { name: "onboarding" } : undefined
+	if (!userResource.data?.needs_onboarding) return undefined
+	const query = to.path === "/" ? {} : { "redirect-to": `/b${to.fullPath}` }
+	return { name: "onboarding", query }
 }
 
 const routes: RouteRecordRaw[] = [
@@ -20,8 +28,8 @@ const routes: RouteRecordRaw[] = [
 		name: "dashboard",
 		// Never rendered — the guard always redirects — but a record needs a component.
 		component: { render: () => null },
-		beforeEnter: async () =>
-			(await onboardingRedirect()) ?? {
+		beforeEnter: async (to) =>
+			(await onboardingRedirect(to)) ?? {
 				name: (await hasManageAccess()) ? "manage" : "bookings-tab",
 			},
 	},

@@ -51,7 +51,7 @@ const crowd = ["A", "B", "C", "D"]
 	transform: translateY(-3px) scale(1.04);
 }
 @media (hover: hover) and (pointer: fine) {
-	.illustration:hover .lift {
+	.fork-card:hover .lift {
 		transform: translateY(-2px);
 	}
 }

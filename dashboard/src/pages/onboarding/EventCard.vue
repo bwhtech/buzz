@@ -5,6 +5,8 @@ import { computed } from "vue"
 import LucideMapPin from "~icons/lucide/map-pin"
 import LucideVideo from "~icons/lucide/video"
 
+import DateBadge from "@/components/common/DateBadge.vue"
+
 import { effectiveChoice, flow, fullName, profile } from "./useOnboarding"
 
 const event = flow.event
@@ -16,8 +18,6 @@ const host = computed(() =>
 const date = computed(() =>
 	event.start_date ? new Date(`${event.start_date}T${event.start_time || "00:00"}`) : null,
 )
-const month = computed(() => date.value?.toLocaleString(undefined, { month: "short" }) ?? "—")
-const day = computed(() => date.value?.getDate() ?? "")
 const when = computed(
 	() =>
 		date.value?.toLocaleString(undefined, {
@@ -39,13 +39,13 @@ const online = computed(() => event.medium === "Online")
 		/>
 		<div class="flex flex-col gap-3 p-4">
 			<div class="flex items-start gap-3">
+				<DateBadge v-if="event.start_date" :date="event.start_date" />
 				<div
+					v-else
 					class="flex w-10 shrink-0 flex-col overflow-hidden rounded-md border border-outline-gray-2 text-center"
 				>
-					<span class="bg-surface-gray-2 text-2xs-medium uppercase text-ink-gray-6">{{
-						month
-					}}</span>
-					<span class="py-0.5 text-base-semibold text-ink-gray-9 tabular-nums">{{ day }}</span>
+					<span class="bg-surface-gray-2 text-2xs-medium uppercase text-ink-gray-6">—</span>
+					<span class="py-0.5 text-base-semibold text-ink-gray-9">&nbsp;</span>
 				</div>
 				<div class="flex min-w-0 flex-col gap-0.5">
 					<p class="truncate text-base-semibold text-ink-gray-9">

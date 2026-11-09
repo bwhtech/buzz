@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ErrorMessage } from "frappe-ui"
-import { computed } from "vue"
+import { computed, ref } from "vue"
 
 import ForkIllustration from "./ForkIllustration.vue"
 import {
@@ -38,6 +38,17 @@ function tileFor(choice: Choice): Tile {
 }
 
 const tiles = computed(() => forkOptions.value.map(tileFor))
+const tileElements = ref<HTMLElement[]>([])
+const tabbableIndex = computed(() => {
+	const selected = tiles.value.findIndex((tile) => tile.value === flow.choice)
+	return Math.max(selected, 0)
+})
+
+function select(index: number) {
+	const target = (index + tiles.value.length) % tiles.value.length
+	flow.choice = tiles.value[target].value
+	tileElements.value[target]?.focus()
+}
 const isWide = (choice: Choice) => choice === "attendee" || hostingOptions.value.length === 1
 
 defineExpose({
@@ -48,14 +59,19 @@ defineExpose({
 
 <template>
 	<div class="flex flex-col gap-4">
-		<div class="grid gap-3 sm:grid-cols-2" role="radiogroup">
+		<div
+			class="grid gap-3 sm:grid-cols-2"
+			role="radiogroup"
+			:aria-label="__('How will you use Buzz?')"
+		>
 			<div
-				v-for="tile in tiles"
+				v-for="(tile, index) in tiles"
 				:key="tile.value"
-				tabindex="0"
+				ref="tileElements"
+				:tabindex="index === tabbableIndex ? 0 : -1"
 				role="radio"
 				:aria-checked="flow.choice === tile.value"
-				class="fork-card flex cursor-pointer flex-col overflow-hidden rounded-5 border bg-surface-elevation-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+				class="fork-card flex cursor-pointer flex-col overflow-hidden rounded-5 border bg-surface-elevation-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-outline-gray-8"
 				:class="[
 					isWide(tile.value) && 'sm:col-span-2 sm:flex-row',
 					flow.choice === tile.value
@@ -63,7 +79,12 @@ defineExpose({
 						: 'border-outline-gray-2 hover:border-outline-gray-3',
 				]"
 				@click="flow.choice = tile.value"
+				@keydown.enter.self.prevent="flow.choice = tile.value"
 				@keydown.space.self.prevent="flow.choice = tile.value"
+				@keydown.down.self.prevent="select(index + 1)"
+				@keydown.right.self.prevent="select(index + 1)"
+				@keydown.up.self.prevent="select(index - 1)"
+				@keydown.left.self.prevent="select(index - 1)"
 			>
 				<ForkIllustration
 					:kind="tile.value"
@@ -76,7 +97,7 @@ defineExpose({
 				>
 					<span class="text-lg-semibold text-ink-gray-9">{{ tile.title }}</span>
 					<span class="text-base text-ink-gray-6">{{ tile.line }}</span>
-					<span class="text-sm text-ink-gray-4">{{ __("e.g. {0}", [tile.example]) }}</span>
+					<span class="text-sm text-ink-gray-5">{{ __("e.g. {0}", [tile.example]) }}</span>
 				</span>
 			</div>
 		</div>
@@ -87,8 +108,9 @@ defineExpose({
 <style scoped>
 .fork-card {
 	transition:
-		transform 160ms ease-out,
-		border-color 150ms ease;
+		transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+		border-color 150ms ease,
+		box-shadow 150ms ease;
 }
 .fork-card:active {
 	transform: scale(0.985);

@@ -8,6 +8,7 @@ import { resolveLoginRedirect } from "@/utils/loginRedirect"
 
 import {
 	completeCall,
+	completeOnce,
 	flow,
 	fullName,
 	hasDraft,
@@ -15,7 +16,6 @@ import {
 	invitedTeam,
 	outcome,
 	profile,
-	retryComplete,
 } from "./useOnboarding"
 
 type Action = { label: string; run: () => void }
@@ -103,10 +103,13 @@ onBeforeUnmount(() => clearInterval(timer))
 
 		<div v-if="completeCall.error" class="flex flex-col items-center gap-3">
 			<ErrorMessage :message="completeCall.error.message" />
-			<Button variant="subtle" :label="__('Try again')" @click="retryComplete" />
+			<Button variant="subtle" :label="__('Try again')" @click="completeOnce" />
 		</div>
 		<div v-else-if="redirectTo" class="flex w-full max-w-sm flex-col items-center gap-3">
-			<p class="text-sm text-ink-gray-6" aria-live="polite">
+			<p class="sr-only" role="status">
+				{{ __("Taking you back in {0} seconds", [REDIRECT_SECONDS]) }}
+			</p>
+			<p class="text-sm text-ink-gray-6" aria-live="off">
 				{{ __("Taking you back in {0}s", [secondsLeft]) }}
 			</p>
 			<div class="h-0.5 w-full overflow-hidden rounded-full bg-surface-gray-2">

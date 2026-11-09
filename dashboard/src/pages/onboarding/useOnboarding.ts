@@ -14,7 +14,7 @@ export type InvitedTeam = {
 	team_name: string
 	logo: string | null
 	team_role: string
-	invited_by: string
+	invited_by: string | null
 	member_count: number
 	upcoming_event_count: number
 }
@@ -51,12 +51,12 @@ const personalTeamCall = useCall<string>({
 	method: "POST",
 	immediate: false,
 })
-const communityCall = useCall<{ name: string }, Record<string, unknown>>({
+const communityCall = useCall<string, Record<string, unknown>>({
 	url: "/api/v2/method/buzz.api.onboarding.save_community",
 	method: "POST",
 	immediate: false,
 })
-const eventCall = useCall<{ name: string }, { event: Record<string, unknown> }>({
+const eventCall = useCall<string, { event: Record<string, unknown> }>({
 	url: "/api/v2/method/buzz.api.onboarding.save_first_event",
 	method: "POST",
 	immediate: false,
@@ -238,13 +238,9 @@ function prefillDraft() {
 	})
 }
 
-async function completeOnce() {
+export async function completeOnce() {
 	if (flow.completed || completeCall.loading) return
 	flow.completed = await attempt(completeCall.submit())
-}
-
-export function retryComplete() {
-	return completeOnce()
 }
 
 export function goTo(index: number) {
@@ -276,7 +272,7 @@ export async function saveCommunity() {
 	const { team_name, slug, logo, short_description } = flow.community
 	const saved = await attempt(communityCall.submit({ team_name, slug, logo, short_description }))
 	if (!saved) return false
-	Object.assign(flow.community, { name: communityCall.data?.name, savedSlug: slug })
+	Object.assign(flow.community, { name: communityCall.data, savedSlug: slug })
 	return true
 }
 
@@ -291,7 +287,7 @@ export async function saveFirstEvent() {
 	}
 	const saved = await attempt(eventCall.submit({ event }))
 	if (!saved) return false
-	Object.assign(flow.event, { name: eventCall.data?.name, team: hostTeam.value })
+	Object.assign(flow.event, { name: eventCall.data, team: hostTeam.value })
 	flow.eventSkipped = false
 	return true
 }

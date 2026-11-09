@@ -34,16 +34,17 @@ defineExpose({ canContinue: () => true, save: savePersonalTeam })
 <template>
 	<div v-if="team" class="flex flex-col gap-5">
 		<div
-			role="radio"
+			role="button"
 			tabindex="0"
-			:aria-checked="teamSelected"
-			class="cursor-pointer overflow-hidden rounded-5 border bg-surface-elevation-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+			:aria-pressed="teamSelected"
+			class="cursor-pointer overflow-hidden rounded-5 border bg-surface-elevation-1 text-left transition-[border-color,box-shadow,transform] duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-outline-gray-8 active:scale-[0.985] motion-reduce:transform-none"
 			:class="
 				teamSelected
 					? 'border-outline-gray-9 ring-1 ring-outline-gray-9'
 					: 'border-outline-gray-2 hover:border-outline-gray-3'
 			"
 			@click="flow.choice = 'team'"
+			@keydown.enter.self.prevent="flow.choice = 'team'"
 			@keydown.space.self.prevent="flow.choice = 'team'"
 		>
 			<div class="h-20" :style="{ backgroundImage: bannerPattern(team.team_name) }" />
@@ -58,7 +59,11 @@ defineExpose({ canContinue: () => true, save: savePersonalTeam })
 				<div class="flex flex-col gap-0.5">
 					<p class="text-lg-semibold text-ink-gray-9">{{ team.team_name }}</p>
 					<p class="text-sm text-ink-gray-5">
-						{{ __("{0} added you as {1}", [team.invited_by, team.team_role]) }}
+						{{
+							team.invited_by
+								? __("{0} added you as {1}", [team.invited_by, team.team_role])
+								: __("You're a {0} here", [team.team_role])
+						}}
 					</p>
 				</div>
 				<p class="text-sm text-ink-gray-5">
@@ -80,11 +85,10 @@ defineExpose({ canContinue: () => true, save: savePersonalTeam })
 				<Button
 					v-for="option in ownSpaceButtons"
 					:key="option.value"
-					variant="outline"
+					:variant="flow.choice === option.value ? 'subtle' : 'outline'"
 					:icon-left="option.icon"
 					:label="option.label"
 					:aria-pressed="flow.choice === option.value"
-					:class="{ 'ring-1 ring-outline-gray-9': flow.choice === option.value }"
 					@click="toggle(option.value)"
 				/>
 			</div>

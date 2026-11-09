@@ -107,19 +107,26 @@ const stageStyle = computed(() => ({
 	<LoginRequired v-if="!session.isLoggedIn" />
 	<div v-else-if="ready" class="grid min-h-dvh bg-surface-white lg:grid-cols-2">
 		<div class="flex min-w-0 flex-col">
-			<header class="flex items-center justify-between px-6 py-5">
+			<header class="flex items-center justify-between px-4 py-5 sm:px-6">
 				<BuzzLogo v-if="!user?.brand || user.brand.is_default" class="h-7 w-9 text-ink-gray-9" />
 				<img v-else class="h-6 w-auto" :src="user.brand.logo" alt="" />
-				<span class="hidden text-sm text-ink-gray-5 sm:inline">
-					{{ user?.email }} ·
-					<button type="button" class="hover:text-ink-gray-8" @click="session.logout.submit()">
+				<span class="text-sm text-ink-gray-5">
+					<span class="hidden sm:inline">{{ user?.email }} · </span>
+					<button
+						type="button"
+						class="-my-2 rounded px-1 py-2 hover:text-ink-gray-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-outline-gray-8"
+						@click="session.logout.submit()"
+					>
 						{{ __("Log out") }}
 					</button>
 				</span>
 			</header>
 
-			<main class="mx-auto w-full max-w-md px-4 pb-32 pt-[6vh] sm:pt-[10vh]">
-				<ErrorMessage v-if="loadError" :message="loadError" />
+			<main class="mx-auto w-full max-w-md px-4 sm:px-6 pb-32 pt-[6vh] sm:pt-[10vh]">
+				<div v-if="loadError" class="flex flex-col items-start gap-3">
+					<ErrorMessage :message="loadError" />
+					<Button variant="subtle" :label="__('Try again')" @click="loadOnboarding(user)" />
+				</div>
 				<form v-else class="flex flex-col gap-6" @submit.prevent="submit">
 					<ProgressDots v-if="!isDone" />
 					<div class="step-stage -m-2" :style="stageStyle">
