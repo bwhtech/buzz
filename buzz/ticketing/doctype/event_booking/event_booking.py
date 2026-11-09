@@ -20,6 +20,7 @@ from buzz.payments import mark_payment_as_received
 from buzz.permissions import has_section_permission
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_booking.booking_invoice import BookingInvoice
+from buzz.ticketing.doctype.event_booking.registration_request import REQUEST_STATUSES, RegistrationRequest
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
 	get_committed_tickets,
@@ -71,7 +72,7 @@ class EventBooking(Document):
 		payment_status: DF.Literal["Unpaid", "Paid", "Verification Pending"]
 		refund_status: DF.Literal["", "Refund Initiated", "Partially Refunded", "Refunded"]
 		refunded_amount: DF.Currency
-		status: DF.Literal["Confirmed", "Approval Pending", "Approved", "Rejected"]
+		status: DF.Literal["Confirmed", "Approval Pending", "Approved", "Rejected", "Requested"]
 		tax_amount: DF.Currency
 		tax_id: DF.Data | None
 		tax_label: DF.Data | None
@@ -109,8 +110,18 @@ class EventBooking(Document):
 		if are_registrations_closed(event):
 			RegistrationsClosed.throw()
 
+	@property
+	def is_request(self) -> bool:
+		return self.status in REQUEST_STATUSES
+
 	def before_submit(self):
 		"""Set status before submit based on payment method."""
+		if self.is_request:
+			# Desk's plain Submit must not skip the organizer's decision or the capacity check.
+			frappe.throw(
+				_("This booking is a registration request. Please use the Approve or Reject button.")
+			)
+
 		# Skip if already approved (submission triggered by approve_booking)
 		if self.status == "Approved":
 			return
@@ -238,7 +249,7 @@ class EventBooking(Document):
 		"""A draft that waits for payment or approval keeps its tickets held, so they can't sell
 		out under it. Runs right after `validate_ticket_availability` locked the ticket types
 		and checked capacity, so it can create the hold even if the form's hold lapsed."""
-		if not self.total_amount:
+		if not self.total_amount or self.is_request:
 			return
 		quantities = {
 			name: quantity
@@ -338,12 +349,15 @@ class EventBooking(Document):
 			),
 		)
 
-	def send_booking_email(self, template: str | None, builtin: str, subject: str) -> None:
-		recipient = self.get_booking_email_recipient()
+	def send_booking_email(
+		self, template: str | None, builtin: str, subject: str, always: bool = False, **extra_args
+	) -> None:
+		"""`always` sends it even when the event mutes booking confirmations."""
+		recipient = self.get_booking_email_recipient(always)
 		if not recipient:
 			return
 
-		args = self.get_booking_email_args()
+		args = {**self.get_booking_email_args(), **extra_args}
 
 		content = None
 		if template:
@@ -364,13 +378,15 @@ class EventBooking(Document):
 			reference_name=self.name,
 		)
 
-	def get_booking_email_recipient(self) -> str | None:
+	def get_booking_email_recipient(self, always: bool = False) -> str | None:
 		"""Who to email about this booking, or None when nobody should be emailed."""
 		# Never email system/placeholder users — they are not real recipients.
 		if self.user in ("Administrator", "Guest"):
 			return None
 
-		if not frappe.get_cached_value("Buzz Event", self.event, "send_booking_confirmation_email"):
+		if not always and not frappe.get_cached_value(
+			"Buzz Event", self.event, "send_booking_confirmation_email"
+		):
 			return None
 
 		return frappe.db.get_value("User", self.user, "email") or self.user
@@ -686,6 +702,10 @@ class EventBooking(Document):
 	def approve_booking(self):
 		"""Approve the booking and submit it to generate tickets."""
 		frappe.only_for("Event Manager")
+		if self.is_request:
+			RegistrationRequest(self).approve()
+			frappe.msgprint(_("Request has been approved!"))
+			return
 
 		self.status = "Approved"
 		self.flags.payment_received = True
@@ -700,6 +720,10 @@ class EventBooking(Document):
 	def reject_booking(self):
 		"""Reject and discard the booking."""
 		frappe.only_for("Event Manager")
+		if self.is_request:
+			RegistrationRequest(self).decline()
+			frappe.msgprint(_("Request has been declined!"))
+			return
 
 		self.flags.ignore_permissions = True
 		self.discard()

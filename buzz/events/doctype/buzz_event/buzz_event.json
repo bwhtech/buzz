@@ -53,6 +53,9 @@
   "allow_guest_booking",
   "column_break_lzcw",
   "guest_verification_method",
+  "registration_requests_section",
+  "requires_approval",
+  "column_break_registration_requests",
   "ticket_email_section",
   "send_ticket_email",
   "section_break_uoke",
@@ -578,9 +581,9 @@
    "in_standard_filter": 1,
    "label": "Team",
    "options": "Buzz Team",
-   "set_only_once": 1,
    "reqd": 1,
-   "search_index": 1
+   "search_index": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "column_break_rgkz",
@@ -595,6 +598,22 @@
    "fieldname": "ticket_email_section",
    "fieldtype": "Section Break",
    "label": "Ticket Email"
+  },
+  {
+   "fieldname": "registration_requests_section",
+   "fieldtype": "Section Break",
+   "label": "Registration Requests"
+  },
+  {
+   "default": "0",
+   "description": "Every registration becomes a request that an organizer approves or declines.",
+   "fieldname": "requires_approval",
+   "fieldtype": "Check",
+   "label": "Require approval for all tickets"
+  },
+  {
+   "fieldname": "column_break_registration_requests",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
@@ -672,7 +691,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-10-29 18:30:00.000000",
+ "modified": "2026-11-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

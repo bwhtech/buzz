@@ -92,6 +92,7 @@ class BuzzEvent(Document):
 		payment_gateways: DF.Table[EventPaymentGateway]
 		proposal: DF.Link | None
 		registration_url: DF.Data | None
+		requires_approval: DF.Check
 		route: DF.Data | None
 		send_booking_confirmation_email: DF.Check
 		send_ticket_email: DF.Check

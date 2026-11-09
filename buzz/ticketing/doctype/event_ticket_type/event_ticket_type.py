@@ -56,6 +56,7 @@ class EventTicketType(Document):
 		max_tickets_available: DF.Int
 		name: DF.Int | None
 		prices: DF.Table[BuzzPrice]
+		requires_approval: DF.Check
 		title: DF.Data
 	# end: auto-generated types
 
@@ -85,6 +86,12 @@ class EventTicketType(Document):
 		has_hidden = bool(self.is_published) or any(row.is_hidden for row in others)
 		if has_hidden and all(row.is_hidden for row in others):
 			frappe.throw(_("The event needs at least one published ticket type that is not hidden"))
+
+	@property
+	def needs_approval(self) -> bool:
+		return bool(
+			self.requires_approval or frappe.get_cached_value("Buzz Event", self.event, "requires_approval")
+		)
 
 	@property
 	def is_free(self) -> bool:

@@ -265,10 +265,10 @@
   },
   {
    "depends_on": "eval:doc.invoice_requested==1",
-   "mandatory_depends_on": "eval:doc.invoice_requested==1",
    "fieldname": "business_name",
    "fieldtype": "Data",
-   "label": "Business Name"
+   "label": "Business Name",
+   "mandatory_depends_on": "eval:doc.invoice_requested==1"
   },
   {
    "depends_on": "eval:doc.invoice_requested==1",
@@ -322,7 +322,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Confirmed\nApproval Pending\nApproved\nRejected",
+   "options": "Confirmed\nApproval Pending\nApproved\nRejected\nRequested",
    "read_only": 1
   },
   {
@@ -371,7 +371,7 @@
    "link_fieldname": "booking"
   }
  ],
- "modified": "2026-10-26 12:00:00.000000",
+ "modified": "2026-11-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Booking",

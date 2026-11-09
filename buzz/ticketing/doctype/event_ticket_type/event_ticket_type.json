@@ -16,6 +16,7 @@
   "is_hidden",
   "auto_unpublish_after",
   "max_tickets_available",
+  "requires_approval",
   "stats_section",
   "tickets_sold",
   "column_break_ygut",
@@ -109,6 +110,12 @@
   {
    "fieldname": "column_break_ygut",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "requires_approval",
+   "fieldtype": "Check",
+   "label": "Requires approval"
   }
  ],
  "grid_page_length": 50,
@@ -119,7 +126,7 @@
    "link_fieldname": "ticket_type"
   }
  ],
- "modified": "2026-10-26 12:00:00.000000",
+ "modified": "2026-11-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Ticket Type",

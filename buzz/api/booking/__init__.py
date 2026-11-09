@@ -15,6 +15,7 @@ from buzz.api.booking.schemas import (
 	MyBooking,
 	OfflineBookingResponse,
 	PaymentLinkResponse,
+	RequestResponse,
 	TicketHoldResponse,
 )
 from buzz.api.booking.services import BookingService
@@ -55,7 +56,7 @@ def process_booking_rate_limit() -> int:
 @rate_limit(limit=process_booking_rate_limit, seconds=600)
 def process_booking(
 	booking: BookingRequest,
-) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
+) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse | RequestResponse:
 	return BookingService(booking).process()
 
 

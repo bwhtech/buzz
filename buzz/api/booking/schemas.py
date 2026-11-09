@@ -50,6 +50,12 @@ class FreeBookingResponse(APIResponse):
 	redirect_to: str
 
 
+class RequestResponse(APIResponse):
+	booking_name: str
+	redirect_to: str
+	request_status: str
+
+
 class OfflineBookingResponse(APIResponse):
 	booking_name: str
 	offline_payment: bool
@@ -221,3 +227,26 @@ class MyBooking(APIResponse):
 	status: str | None
 	# Only counted by the list; each row is a plain ticket_type pair.
 	attendees: list
+
+
+class RequestAttendee(APIResponse):
+	full_name: str
+	email: str | None
+	ticket_type: str
+
+
+class RequestAnswer(APIResponse):
+	label: str | None
+	value: str | None
+
+
+class RegistrationRequestRow(APIResponse):
+	name: str
+	status: str
+	buyer_name: str | None
+	buyer_email: str | None
+	total_amount: float
+	currency: str | None
+	requested_at: datetime
+	attendees: list[RequestAttendee]
+	answers: list[RequestAnswer]

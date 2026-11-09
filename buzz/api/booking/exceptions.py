@@ -75,3 +75,13 @@ class InvalidAccessCode(BuzzAPIError):
 class HiddenTicketType(BuzzAPIError):
 	title = _lt("Tickets Unavailable")
 	message = _lt("These tickets are only available with a valid access code.")
+
+
+class RequestAlreadyOpen(Conflict):
+	title = _lt("Request Already Open")
+	message = _lt("You already have an open request for this event.")
+
+
+class RequestNotOpen(Conflict):
+	title = _lt("Request Not Open")
+	message = _lt("This request is no longer open.")

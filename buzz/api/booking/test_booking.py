@@ -72,6 +72,7 @@ EVENT_DETAIL_FIELDS = {
 	"allow_guest_booking",
 	"guest_verification_method",
 	"default_ticket_type",
+	"requires_approval",
 }
 
 SUMMARY_FIELDS = {
