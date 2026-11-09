@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, Tooltip, toast } from "frappe-ui"
+import { toast } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import EmptyState from "@/components/common/EmptyState.vue"
@@ -22,7 +22,6 @@ const STATUS_BADGES: Record<RequestStatus, { label: string; theme: BadgeTheme }>
 
 const approval = useApproveRequest()
 const decline = useDeclineRequest()
-const busy = computed(() => approval.loading || decline.loading)
 
 // A request has no ticket yet, so the buyer stands in as the guest the row and drawer show.
 function asGuest(request: RegistrationRequest): EventGuest {
@@ -36,8 +35,6 @@ function asGuest(request: RegistrationRequest): EventGuest {
 		zones: [],
 	}
 }
-
-const isOpen = (request: RegistrationRequest) => request.status !== "Payment Pending"
 
 const selectedName = ref<string | null>(null)
 const selectedIndex = computed(() =>
@@ -99,30 +96,7 @@ async function confirmDecline(message: string) {
 			:status="STATUS_BADGES[request.status]"
 			:selected="request.name === selectedName"
 			@open="selectedName = request.name"
-		>
-			<template v-if="isOpen(request)" #actions>
-				<Tooltip text="Approve">
-					<Button
-						variant="subtle"
-						theme="green"
-						icon="lucide-check"
-						aria-label="Approve"
-						:disabled="busy"
-						@click="approve(request.name)"
-					/>
-				</Tooltip>
-				<Tooltip text="Decline">
-					<Button
-						variant="subtle"
-						theme="red"
-						icon="lucide-x"
-						aria-label="Decline"
-						:disabled="busy"
-						@click="askToDecline(request.name)"
-					/>
-				</Tooltip>
-			</template>
-		</EventGuestItem>
+		/>
 	</ul>
 	<EmptyState
 		v-else
