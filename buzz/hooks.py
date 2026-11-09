@@ -83,6 +83,7 @@ doc_events = {
 		"after_insert": [
 			"buzz.utils.add_buzz_user_role",
 			"buzz.events.doctype.buzz_team.buzz_team.create_personal_team_on_signup",
+			"buzz.api.onboarding.services.mark_pending_on_signup",
 		],
 		"on_update": "buzz.events.doctype.speaker_profile.speaker_profile.update_speaker_display_name",
 	},

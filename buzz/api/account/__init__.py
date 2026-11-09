@@ -4,6 +4,7 @@ from frappe.translate import get_all_translations
 from buzz.api.account.exceptions import UnknownLanguage, UnknownTimezone
 from buzz.api.account.schemas import GuestInfoResponse, LanguageOption, UserInfoResponse
 from buzz.api.account.services import accepted_timezones, get_request_language
+from buzz.api.onboarding.services import needs_onboarding
 from buzz.www.site_header import SiteHeader
 
 
@@ -35,6 +36,7 @@ def get_user_info() -> UserInfoResponse | GuestInfoResponse:
 		navbar=header.navbar(),
 		language=user.language,
 		time_zone=user.time_zone,
+		needs_onboarding=needs_onboarding(user.name),
 	)
 
 

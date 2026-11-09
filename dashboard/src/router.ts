@@ -2,11 +2,17 @@ import { call } from "frappe-ui"
 import { type RouteRecordRaw, createRouter, createWebHistory } from "vue-router"
 
 import { hasManageAccess } from "@/data/teams"
-import { loadUser } from "@/data/user"
+import { loadUser, userResource } from "@/data/user"
 import type { EventAccess } from "@/types"
 import { firstEventPath } from "@/utils/managerNavigation"
 
 const APP_NAME = "Buzz"
+
+// New users finish onboarding before the dashboard. Other pages (tickets, bookings) never wait.
+async function onboardingRedirect() {
+	await loadUser()
+	return userResource.data?.needs_onboarding ? { name: "onboarding" } : undefined
+}
 
 const routes: RouteRecordRaw[] = [
 	{
@@ -14,9 +20,10 @@ const routes: RouteRecordRaw[] = [
 		name: "dashboard",
 		// Never rendered — the guard always redirects — but a record needs a component.
 		component: { render: () => null },
-		beforeEnter: async () => ({
-			name: (await hasManageAccess()) ? "manage" : "bookings-tab",
-		}),
+		beforeEnter: async () =>
+			(await onboardingRedirect()) ?? {
+				name: (await hasManageAccess()) ? "manage" : "bookings-tab",
+			},
 	},
 	{
 		// Outside the manage shell: the invitee may not be logged in, or on any team.
@@ -35,6 +42,7 @@ const routes: RouteRecordRaw[] = [
 	{
 		path: "/manage",
 		meta: { fullBleed: true },
+		beforeEnter: onboardingRedirect,
 		component: () => import("@/layouts/ManagerLayout.vue"),
 		children: [
 			{
@@ -212,6 +220,12 @@ const routes: RouteRecordRaw[] = [
 		name: "playground",
 		meta: { isPublic: true, title: "Playground" },
 		component: () => import("@/pages/Playground.vue"),
+	},
+	{
+		path: "/onboarding",
+		name: "onboarding",
+		meta: { fullBleed: true, title: "Welcome" },
+		component: () => import("@/pages/onboarding/OnboardingPage.vue"),
 	},
 	{
 		path: "/login",

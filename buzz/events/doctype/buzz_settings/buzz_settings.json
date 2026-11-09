@@ -12,6 +12,8 @@
   "personal_teams_section",
   "enable_personal_teams",
   "create_personal_team_on_signup",
+  "onboarding_section",
+  "enable_onboarding",
   "event_page_section",
   "event_page_theme",
   "show_hosting_banner",
@@ -100,6 +102,18 @@
    "fieldname": "create_personal_team_on_signup",
    "fieldtype": "Check",
    "label": "Create Personal Team on Sign Up"
+  },
+  {
+   "fieldname": "onboarding_section",
+   "fieldtype": "Section Break",
+   "label": "Onboarding"
+  },
+  {
+   "default": "0",
+   "description": "New users set up their profile, and optionally a community and a first event, before they reach the dashboard.",
+   "fieldname": "enable_onboarding",
+   "fieldtype": "Check",
+   "label": "Enable Onboarding"
   },
   {
    "fieldname": "event_page_section",
@@ -450,7 +464,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-24 10:00:00.000000",
+ "modified": "2026-11-10 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",
