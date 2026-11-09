@@ -2,10 +2,19 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.account import get_user_info
-from buzz.api.onboarding import check_username, complete_onboarding, save_profile
+from buzz.api.exceptions import NotPermitted
+from buzz.api.onboarding import (
+	check_username,
+	complete_onboarding,
+	get_onboarding_state,
+	save_community,
+	save_first_event,
+	save_profile,
+)
 from buzz.api.onboarding.exceptions import InvalidUsername, UsernameTaken
+from buzz.api.onboarding.schemas import FirstEvent
 from buzz.api.onboarding.services import STATUS_FIELD, mark_pending_on_signup
-from buzz.tests.factories import UserFactory
+from buzz.tests.factories import BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
 
 
 class TestOnboarding(IntegrationTestCase):
@@ -57,3 +66,69 @@ class TestOnboarding(IntegrationTestCase):
 			"User", self.user.name, ["first_name", "last_name", "username"], as_dict=True
 		)
 		self.assertEqual(saved, {"first_name": "Priya", "last_name": "Raman", "username": "priya-onboarding"})
+
+
+class TestOnboardingSetup(IntegrationTestCase):
+	def setUp(self):
+		self.user = UserFactory.create_once("onboarding-host@example.com")
+		self.enterContext(
+			self.change_settings("Buzz Settings", enable_communities=1, enable_personal_teams=1)
+		)
+		self.addCleanup(frappe.set_user, "Administrator")
+		frappe.set_user(self.user.name)
+
+	def test_community_is_created_once_then_edited(self):
+		first = save_community(team_name="Clay Club", slug="clay-club-onboarding")
+		second = save_community(
+			team_name="Clay Collective", slug="clay-collective-onboarding", short_description="Pots"
+		)
+		self.assertEqual(first.name, second.name)
+		team = frappe.db.get_value(
+			"Buzz Team", second.name, ["team_name", "slug", "is_published"], as_dict=True
+		)
+		self.assertEqual(
+			team, {"team_name": "Clay Collective", "slug": "clay-collective-onboarding", "is_published": 1}
+		)
+		self.assertEqual(get_onboarding_state().community.name, first.name)
+
+	def test_first_event_is_an_editable_draft(self):
+		team = save_community(team_name="Kiln Club", slug="kiln-club-onboarding").name
+		event = {"team": team, "title": "Glaze night", "start_date": "2027-01-10", "start_time": "18:00:00"}
+		first = save_first_event(FirstEvent(**event, medium="In Person", venue_name="Studio 5"))
+		second = save_first_event(FirstEvent(**event, medium="Online", event=first.name))
+
+		self.assertEqual(first.name, second.name)
+		saved = frappe.get_doc("Buzz Event", second.name)
+		self.assertEqual((saved.is_published, saved.medium, saved.venue), (0, "Online", None))
+		self.assertEqual(str(saved.end_time), "19:00:00")
+		self.assertEqual(get_onboarding_state().draft_event.name, first.name)
+
+	def test_another_users_draft_cannot_be_edited(self):
+		team = save_community(team_name="Wheel Club", slug="wheel-club-onboarding").name
+		event = {"team": team, "title": "Throwing", "start_date": "2027-01-10", "start_time": "18:00:00"}
+		draft = save_first_event(FirstEvent(**event, medium="Online"))
+		frappe.db.set_value("Buzz Event", draft.name, "owner", "Administrator")
+		with self.assertRaises(NotPermitted):
+			save_first_event(FirstEvent(**event, medium="Online", event=draft.name))
+
+
+class TestInvitedTeam(IntegrationTestCase):
+	def test_invitee_sees_the_team_they_joined(self):
+		user = UserFactory.create_once("onboarding-invitee@example.com")
+		team = BuzzTeamFactory.create_owned_by(team_name="BLR JS")
+		BuzzTeamMembershipFactory.create(team=team.name, user=user.name, team_role="Manager")
+		self.addCleanup(frappe.set_user, "Administrator")
+		frappe.set_user(user.name)
+
+		invited = get_onboarding_state().invited_team
+		self.assertEqual((invited.name, invited.team_role, invited.member_count), (team.name, "Manager", 2))
+
+
+class TestDeferredSignup(IntegrationTestCase):
+	def test_booking_signup_defers_onboarding(self):
+		user = UserFactory.create_once("onboarding-booker@example.com")
+		self.enterContext(self.change_settings("Buzz Settings", enable_onboarding=1))
+		frappe.form_dict.skip_onboarding = "1"
+		self.addCleanup(frappe.form_dict.pop, "skip_onboarding", None)
+		mark_pending_on_signup(user)
+		self.assertEqual(frappe.db.get_value("User", user.name, STATUS_FIELD), "Deferred")

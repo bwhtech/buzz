@@ -1,8 +1,9 @@
 import frappe
 
 from buzz.api.events.schemas import RouteAvailability
-from buzz.api.onboarding import services
+from buzz.api.onboarding import services, setup
 from buzz.api.onboarding.exceptions import InvalidUsername, UsernameTaken
+from buzz.api.onboarding.schemas import FirstEvent, OnboardingState, SavedRecord
 
 
 @frappe.whitelist()
@@ -27,3 +28,19 @@ def save_profile(first_name: str, username: str, last_name: str = "", user_image
 @frappe.whitelist(methods=["POST"])
 def complete_onboarding() -> None:
 	frappe.db.set_value("User", frappe.session.user, services.STATUS_FIELD, "Completed")
+
+
+@frappe.whitelist()
+def get_onboarding_state() -> OnboardingState:
+	return services.onboarding_state(frappe.session.user)
+
+
+@frappe.whitelist(methods=["POST"])
+def save_community(team_name: str, slug: str, logo: str = "", short_description: str = "") -> SavedRecord:
+	name = setup.save_community(frappe.session.user, team_name, slug, logo, short_description)
+	return SavedRecord(name=name)
+
+
+@frappe.whitelist(methods=["POST"])
+def save_first_event(event: FirstEvent) -> SavedRecord:
+	return SavedRecord(name=setup.save_first_event(event))
