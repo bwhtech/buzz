@@ -20,13 +20,7 @@
 			<template #cell="{ item, row, column, align }">
 				<Badge
 					v-if="column.key === 'status'"
-					:theme="
-						row.status === 'Approved' || row.status === 'Confirmed'
-							? 'green'
-							: row.status === 'Approval Pending'
-								? 'amber'
-								: 'red'
-					"
+					:theme="statusTheme(row.status)"
 					variant="subtle"
 					size="sm"
 				>
@@ -45,6 +39,7 @@ import { ListRowItem, ListView } from "frappe-ui/experimental"
 
 import { formatCurrency } from "@/utils/currency"
 import { pluralize } from "@/utils/pluralize"
+import { requestNotice } from "@/utils/registrationRequest"
 
 const columns = [
 	{ label: __("Event"), key: "event_title", width: "220px" },
@@ -54,6 +49,12 @@ const columns = [
 	{ label: __("Amount Paid"), key: "formatted_amount", width: "110px" },
 	{ label: __("Status"), key: "status", width: "120px" },
 ]
+
+function statusTheme(status: string) {
+	if (status === "Approved" || status === "Confirmed") return "green"
+	if (status === "Approval Pending") return "amber"
+	return requestNotice(status)?.theme ?? "red"
+}
 
 const bookings = useCall<any[]>({
 	url: "/api/v2/method/buzz.api.booking.get_my_bookings",

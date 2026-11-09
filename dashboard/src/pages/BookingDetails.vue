@@ -6,6 +6,13 @@
 	</div>
 
 	<div v-else-if="bookingDetails.data">
+		<RegistrationRequestNotice
+			v-if="notice"
+			class="mb-6"
+			:booking-id="bookingId"
+			:notice="notice"
+		/>
+
 		<!-- Approval Pending Status -->
 		<div v-if="!bookingDetails.data.event.free_event && isOfflinePaymentPending" class="mb-6">
 			<div class="p-4 rounded-6 border bg-yellow-50 border-yellow-200">
@@ -30,7 +37,7 @@
 		</div>
 
 		<!-- Rejected Status -->
-		<div v-if="isBookingRejected" class="mb-6">
+		<div v-if="isBookingRejected && !notice" class="mb-6">
 			<div class="p-4 rounded-6 border bg-red-50 border-red-200">
 				<div class="flex items-center gap-3">
 					<div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
@@ -78,7 +85,7 @@
 
 		<!-- Tickets Section -->
 		<TicketsSection
-			v-if="!bookingDetails.data.event.free_event && !isOfflinePaymentPending"
+			v-if="!bookingDetails.data.event.free_event && !isOfflinePaymentPending && !notice"
 			:tickets="bookingDetails.data.tickets"
 			:can-request-cancellation="canRequestCancellation"
 			:can-transfer-tickets="canTransferTickets"
@@ -111,12 +118,15 @@ import LucideXCircle from "~icons/lucide/x-circle"
 
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
 import { usePaymentSuccess } from "@/composables/usePaymentSuccess"
+import { triggerCelebrationConfetti } from "@/utils/confetti"
+import { requestNotice } from "@/utils/registrationRequest"
 
 import BookingEventInfo from "../components/BookingEventInfo.vue"
 import BookingFinancialSummary from "../components/BookingFinancialSummary.vue"
 import BookingHeader from "../components/BookingHeader.vue"
 import CancellationRequestDialog from "../components/CancellationRequestDialog.vue"
 import CancellationRequestNotice from "../components/CancellationRequestNotice.vue"
+import RegistrationRequestNotice from "../components/RegistrationRequestNotice.vue"
 import SuccessMessage from "../components/SuccessMessage.vue"
 import TicketsSection from "../components/TicketsSection.vue"
 
@@ -130,6 +140,8 @@ const props = defineProps({
 })
 
 // Check if this is an offline payment that is not yet verified
+const notice = computed(() => requestNotice(bookingDetails.data?.doc?.status))
+
 const isOfflinePaymentPending = computed(() => {
 	return bookingDetails.data?.doc?.status === "Approval Pending"
 })
@@ -155,9 +167,7 @@ const isConfirmationPending = route.query.offline === "true"
 
 // Use payment success composable for UI effects (confetti, message, URL cleanup)
 // Disable confetti when booking is pending approval (e.g. offline payments)
-const { showSuccessMessage } = usePaymentSuccess({
-	enableConfetti: !isConfirmationPending,
-})
+const { showSuccessMessage } = usePaymentSuccess({ enableConfetti: false })
 
 const showCancellationDialog = ref(false)
 
@@ -165,6 +175,8 @@ const bookingDetails = useCall<Record<string, any>, { booking_id: string }>({
 	url: "/api/v2/method/buzz.api.booking.get_booking_details",
 	params: { booking_id: props.bookingId },
 	onSuccess: (data) => {
+		if (isPaymentSuccess && !isConfirmationPending && !requestNotice(data?.doc?.status))
+			triggerCelebrationConfetti()
 		// Clear stored booking form data if this was a successful payment
 		if (isPaymentSuccess && data?.event?.route) {
 			const { clearStoredData } = useBookingFormStorage(data.event.route)
