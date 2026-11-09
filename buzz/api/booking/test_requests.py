@@ -12,7 +12,7 @@ from buzz.api.booking.requests import (
 from buzz.api.booking.services import get_booking_access_token
 from buzz.api.events.exceptions import CannotManageEvent
 from buzz.tests.base_test_cases import BookingTestCase, authorize_payment, make_payment_gateway
-from buzz.tests.factories import BuzzEventFactory, EventTicketTypeFactory
+from buzz.tests.factories import BuzzEventFactory, EventTicketFactory, EventTicketTypeFactory, UserFactory
 from buzz.tests.utils import html_part, mute_outgoing_email
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import held_quantities
 
@@ -160,3 +160,31 @@ class TestPaidRegistrationRequests(RequestTestCase):
 			self.assertEqual(held_quantities([ticket_type.name]), {})
 			get_request_payment_link(name)
 			self.assertEqual(held_quantities([ticket_type.name]), {str(ticket_type.name): 1})
+
+
+class TestWaitlist(RequestTestCase):
+	def test_waitlist_queues_registrations_until_approved(self):
+		ticket_type = EventTicketTypeFactory.create(
+			event=self.event.name, enable_waitlist=1, max_tickets_available=1
+		)
+		EventTicketFactory.create("submitted", event=self.event.name, ticket_type=ticket_type.name)
+
+		name = self.request_to_join(ticket_type.name)
+
+		booking = self.booking(name)
+		self.assertEqual((booking.status, booking.docstatus), ("Waitlisted", 0))
+		self.assertRaises(frappe.ValidationError, booking.submit)
+		# Still full: approval fails and the entry stays.
+		self.assertRaises(frappe.ValidationError, approve_request, name)
+		self.assertEqual(self.booking(name).status, "Waitlisted")
+
+		frappe.db.set_value("Event Ticket Type", ticket_type.name, "max_tickets_available", 2)
+		frappe.clear_document_cache("Event Ticket Type", ticket_type.name)
+		# The freed spot goes to the queue, not to the next registration.
+		self.booker = UserFactory.create_once("waitlist-second@example.com").name
+		self.assertEqual(self.booking(self.request_to_join(ticket_type.name)).status, "Waitlisted")
+
+		approve_request(name)
+
+		self.assertEqual(self.booking(name).status, "Confirmed")
+		self.assertEqual(self.tickets_of(name), 1)

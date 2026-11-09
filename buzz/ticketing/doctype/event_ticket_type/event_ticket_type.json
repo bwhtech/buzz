@@ -17,6 +17,7 @@
   "auto_unpublish_after",
   "max_tickets_available",
   "requires_approval",
+  "enable_waitlist",
   "stats_section",
   "tickets_sold",
   "column_break_ygut",
@@ -116,6 +117,13 @@
    "fieldname": "requires_approval",
    "fieldtype": "Check",
    "label": "Requires approval"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.max_tickets_available",
+   "fieldname": "enable_waitlist",
+   "fieldtype": "Check",
+   "label": "Waitlist when sold out"
   }
  ],
  "grid_page_length": 50,

@@ -56,6 +56,7 @@
   "registration_requests_section",
   "requires_approval",
   "column_break_registration_requests",
+  "enable_waitlist",
   "ticket_email_section",
   "send_ticket_email",
   "section_break_uoke",
@@ -614,6 +615,13 @@
   {
    "fieldname": "column_break_registration_requests",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "A sold-out ticket type with a limit takes waitlist entries that an organizer approves as spots open.",
+   "fieldname": "enable_waitlist",
+   "fieldtype": "Check",
+   "label": "Waitlist for all sold-out tickets"
   }
  ],
  "grid_page_length": 50,

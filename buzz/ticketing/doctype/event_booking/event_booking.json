@@ -322,7 +322,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Confirmed\nApproval Pending\nApproved\nRejected\nRequested\nPayment Pending",
+   "options": "Confirmed\nApproval Pending\nApproved\nRejected\nRequested\nPayment Pending\nWaitlisted",
    "read_only": 1
   },
   {

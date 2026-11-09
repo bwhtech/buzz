@@ -78,7 +78,13 @@ class EventBooking(Document):
 		refund_status: DF.Literal["", "Refund Initiated", "Partially Refunded", "Refunded"]
 		refunded_amount: DF.Currency
 		status: DF.Literal[
-			"Confirmed", "Approval Pending", "Approved", "Rejected", "Requested", "Payment Pending"
+			"Confirmed",
+			"Approval Pending",
+			"Approved",
+			"Rejected",
+			"Requested",
+			"Payment Pending",
+			"Waitlisted",
 		]
 		tax_amount: DF.Currency
 		tax_id: DF.Data | None
@@ -189,6 +195,8 @@ class EventBooking(Document):
 		return Counter(str(attendee.ticket_type) for attendee in self.attendees)
 
 	def validate_ticket_availability(self):
+		if self.status == "Waitlisted":
+			return
 		quantities = self.ticket_quantities()
 		ticket_types = [frappe.get_cached_doc("Event Ticket Type", name) for name in quantities]
 		lock_ticket_types([row.name for row in ticket_types if row.max_tickets_available])

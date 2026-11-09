@@ -12,7 +12,7 @@ from buzz.ticketing.doctype.ticket_hold.ticket_hold import PAYMENT_HOLD_MINUTES,
 if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
 
-REQUEST_STATUSES = ("Requested",)
+REQUEST_STATUSES = ("Requested", "Waitlisted")
 OPEN_STATUSES = (*REQUEST_STATUSES, "Payment Pending")
 # ponytail: one window for all events; make it an event field if asked
 PAYMENT_OFFER_HOURS = 48
@@ -32,7 +32,12 @@ class RegistrationRequest:
 		"""The request status a new booking starts in, or None when it books straight away."""
 		if has_section_permission(self.booking.event, "guests", "create", frappe.session.user):
 			return None
-		if any(ticket_type.needs_approval for ticket_type in self.ticket_types()):
+		quantities = self.booking.ticket_quantities()
+		ticket_types = self.ticket_types()
+		hold_token = self.booking.hold_token
+		if any(row.joins_waitlist(quantities[str(row.name)], hold_token) for row in ticket_types):
+			return "Waitlisted"
+		if any(ticket_type.needs_approval for ticket_type in ticket_types):
 			return "Requested"
 		return None
 

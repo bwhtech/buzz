@@ -20,6 +20,7 @@ from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import add_on_options
 
 if TYPE_CHECKING:
 	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
+	from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import EventTicketType
 
 
 def build_event_booking_data(
@@ -42,7 +43,7 @@ def build_event_booking_data(
 	return EventBookingDataResponse(
 		registrations_closed=are_registrations_closed(event_doc),
 		event_details=get_event_details(event_doc),
-		available_ticket_types=ticket_types,
+		available_ticket_types=[ticket_type_row(row, hold_token) for row in ticket_types],
 		ticket_categories=categories_in_use(categories, ticket_types),
 		available_add_ons=get_available_add_ons(event_doc.name),
 		tax_settings=TaxSettings(
@@ -91,12 +92,14 @@ def get_event_details(event_doc: "BuzzEvent"):
 		"guest_verification_method": event_doc.guest_verification_method,
 		"default_ticket_type": event_doc.default_ticket_type,
 		"requires_approval": event_doc.requires_approval,
+		"enable_waitlist": event_doc.enable_waitlist,
 	}
 
 
 # Ordered by category, then newest first. Uncategorized ticket types come last. Tickets held by
 # `hold_token` count as available, so a form still lists the ticket type its own hold used up.
-# Hidden ticket types are listed only when `unlocked` names them.
+# Hidden ticket types are listed only when `unlocked` names them. A sold-out ticket type with a
+# waitlist is listed as `waitlisted`.
 def get_available_ticket_types(
 	event_id: str,
 	categories: list[dict] | None = None,
@@ -111,10 +114,18 @@ def get_available_ticket_types(
 		ticket_type_doc = frappe.get_cached_doc("Event Ticket Type", ticket_type)
 		if ticket_type_doc.is_hidden and str(ticket_type) not in (unlocked or set()):
 			continue
-		if ticket_type_doc.are_tickets_available(1, hold_token):
+		if ticket_type_doc.has_waitlist or ticket_type_doc.are_tickets_available(1, hold_token):
 			available_ticket_types.append(ticket_type_doc)
 	position = {category["name"]: index for index, category in enumerate(categories or [])}
 	return sorted(available_ticket_types, key=lambda row: position.get(row.category, len(position)))
+
+
+def ticket_type_row(ticket_type: "EventTicketType", hold_token: str | None) -> frappe._dict:
+	return frappe._dict(
+		ticket_type.as_dict(no_nulls=True),
+		needs_approval=ticket_type.needs_approval,
+		waitlisted=ticket_type.joins_waitlist(1, hold_token),
+	)
 
 
 def categories_in_use(categories: list[dict], ticket_types: list) -> list[dict]:
