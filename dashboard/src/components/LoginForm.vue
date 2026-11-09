@@ -189,6 +189,7 @@ import { session } from "@/data/session"
 import { userResource } from "@/data/user"
 import type { FrappeError } from "@/types"
 import { serverErrorMessage } from "@/utils/serverError"
+import { signupRedirect } from "@/utils/signupRedirect"
 
 export type LoginView = "login" | "signup" | "forgot-password" | "email-link"
 
@@ -297,7 +298,7 @@ function handleSignup() {
 	signup_resource.submit({
 		email: form.value.email,
 		full_name: form.value.full_name,
-		redirect_to: window.location.pathname + window.location.search,
+		...signupRedirect(window.location),
 	})
 }
 
