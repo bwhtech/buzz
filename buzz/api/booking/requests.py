@@ -1,7 +1,15 @@
 import frappe
+from frappe import _
+from frappe.rate_limiter import rate_limit
 
 from buzz.api.booking.details import ticket_type_titles
-from buzz.api.booking.schemas import RegistrationRequestRow, RequestAnswer, RequestAttendee
+from buzz.api.booking.schemas import (
+	PaymentLinkResponse,
+	RegistrationRequestRow,
+	RequestAnswer,
+	RequestAttendee,
+)
+from buzz.api.booking.services import verify_booking_access_token
 from buzz.api.events.services import manageable_event
 from buzz.ticketing.doctype.event_booking.registration_request import OPEN_STATUSES, RegistrationRequest
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import start_capacity_transaction
@@ -30,6 +38,13 @@ def managed_request(booking: str) -> RegistrationRequest:
 	doc = frappe.get_doc("Event Booking", booking)
 	manageable_event(doc.event, "guests")
 	return RegistrationRequest(doc)
+
+
+def own_request(booking: str, token: str | None) -> RegistrationRequest:
+	owner = frappe.db.get_value("Event Booking", booking, "user")
+	if not owner or (owner != frappe.session.user and not verify_booking_access_token(booking, token)):
+		frappe.throw(_("You are not allowed to view this booking."), frappe.PermissionError)
+	return RegistrationRequest(frappe.get_doc("Event Booking", booking))
 
 
 def request_row(booking, titles: dict[str, str]) -> RegistrationRequestRow:
@@ -68,3 +83,11 @@ def approve_request(booking: str) -> None:
 @frappe.whitelist(methods=["POST"])
 def decline_request(booking: str, message: str | None = None) -> None:
 	managed_request(booking).decline(message)
+
+
+# nosemgrep: guest-whitelisted-method
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=20, seconds=600)
+def get_request_payment_link(booking: str, token: str | None = None) -> PaymentLinkResponse:
+	start_capacity_transaction()
+	return PaymentLinkResponse(payment_link=own_request(booking, token).payment_link())

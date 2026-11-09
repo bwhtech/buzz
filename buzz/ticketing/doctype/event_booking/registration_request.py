@@ -2,15 +2,20 @@ from typing import TYPE_CHECKING
 
 import frappe
 from frappe import _
+from frappe.utils import add_to_date, get_url, now_datetime
 
 from buzz.api.booking.exceptions import RequestAlreadyOpen, RequestNotOpen
+from buzz.payments import get_payment_link_for_booking
 from buzz.permissions import has_section_permission
+from buzz.ticketing.doctype.ticket_hold.ticket_hold import PAYMENT_HOLD_MINUTES, live_hold_expiry
 
 if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
 
 REQUEST_STATUSES = ("Requested",)
-OPEN_STATUSES = REQUEST_STATUSES
+OPEN_STATUSES = (*REQUEST_STATUSES, "Payment Pending")
+# ponytail: one window for all events; make it an event field if asked
+PAYMENT_OFFER_HOURS = 48
 
 
 class RegistrationRequest:
@@ -40,11 +45,40 @@ class RegistrationRequest:
 			RequestAlreadyOpen.throw()
 
 	def approve(self) -> None:
+		"""Leaving the request status makes `validate` check capacity and reprice the booking."""
 		self.validate_is_request()
 		self.booking.flags.ignore_permissions = True
-		self.booking.status = "Confirmed"
-		# validate checks capacity again; on_submit issues the tickets and emails them.
-		self.booking.submit()
+		if not self.booking.total_amount:
+			self.booking.status = "Confirmed"
+			self.booking.submit()
+			return
+		self.booking.status = "Payment Pending"
+		self.booking.save()
+		self.booking.hold_draft_tickets()
+		self.send_email(
+			"booking_request_approved",
+			_("You're approved for {0}: pay to confirm your spot").format(self.event_title),
+			pay_url=get_url(self.booking_page()),
+			hours=PAYMENT_OFFER_HOURS,
+		)
+
+	def payment_link(self) -> str:
+		if self.booking.docstatus != 0 or self.booking.status != "Payment Pending":
+			RequestNotOpen.throw()
+		if not live_hold_expiry(self.booking.hold_token):
+			self.hold_again()
+		return get_payment_link_for_booking(self.booking.name, redirect_to=self.booking_page())
+
+	def hold_again(self) -> None:
+		"""The offer lapsed: `save` checks the tickets are still there, then they are held again."""
+		self.booking.flags.ignore_permissions = True
+		self.booking.save()
+		self.booking.hold_draft_tickets(add_to_date(now_datetime(), minutes=PAYMENT_HOLD_MINUTES))
+
+	def booking_page(self) -> str:
+		from buzz.api.booking.services import success_path  # services imports this module
+
+		return f"/b{success_path(self.booking.name)}"
 
 	def decline(self, message: str | None = None) -> None:
 		self.validate_is_request()

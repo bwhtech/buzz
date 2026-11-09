@@ -1,10 +1,17 @@
 import frappe
+from frappe.utils import add_to_date, now_datetime
 
 from buzz.api.booking import hold_tickets, process_booking
-from buzz.api.booking.exceptions import RequestAlreadyOpen
-from buzz.api.booking.requests import approve_request, decline_request, get_requests
+from buzz.api.booking.exceptions import RequestAlreadyOpen, RequestNotOpen
+from buzz.api.booking.requests import (
+	approve_request,
+	decline_request,
+	get_request_payment_link,
+	get_requests,
+)
+from buzz.api.booking.services import get_booking_access_token
 from buzz.api.events.exceptions import CannotManageEvent
-from buzz.tests.base_test_cases import BookingTestCase
+from buzz.tests.base_test_cases import BookingTestCase, authorize_payment, make_payment_gateway
 from buzz.tests.factories import BuzzEventFactory, EventTicketTypeFactory
 from buzz.tests.utils import html_part, mute_outgoing_email
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import held_quantities
@@ -14,7 +21,7 @@ class RequestTestCase(BookingTestCase):
 	"""A fresh event per test: `process_booking` commits, so requests would pile up on a shared one."""
 
 	def setUp(self):
-		self.event = BuzzEventFactory.create()
+		self.event = BuzzEventFactory.create(payment_gateways=[{"payment_gateway": make_payment_gateway()}])
 		self.event.reload()
 		super().setUp()
 		mute_outgoing_email(self)
@@ -29,6 +36,11 @@ class RequestTestCase(BookingTestCase):
 			attendees = [{"first_name": "Guest", "email": "guest@example.com", "ticket_type": ticket_type}]
 			request = self.booking_request(attendees=attendees, hold_token=hold_token)
 			return process_booking(request).booking_name
+
+	def paid_ticket_type(self):
+		return EventTicketTypeFactory.create(
+			"paid", event=self.event.name, requires_approval=1, max_tickets_available=5
+		)
 
 	def booking(self, name: str):
 		return frappe.get_doc("Event Booking", name)
@@ -55,7 +67,7 @@ class TestRegistrationRequests(RequestTestCase):
 		self.assertEqual(self.tickets_of(name), 0)
 		self.assertEqual(held_quantities([self.ticket_type.name]), {})
 		self.assertIn("No ticket has been issued yet", self.emails_of(name)[0])
-		self.assertEqual([row.name for row in get_requests(self.event.name)], [name])
+		self.assertEqual([row.name for row in get_requests(str(self.event.name))], [name])
 		# Desk's plain Submit must not skip the organizer.
 		self.assertRaises(frappe.ValidationError, booking.submit)
 
@@ -64,7 +76,7 @@ class TestRegistrationRequests(RequestTestCase):
 		booking = self.booking(name)
 		self.assertEqual((booking.status, booking.docstatus), ("Confirmed", 1))
 		self.assertEqual(self.tickets_of(name), 1)
-		self.assertEqual(get_requests(self.event.name), [])
+		self.assertEqual(get_requests(str(self.event.name)), [])
 
 	def test_declined_request_issues_nothing_and_can_be_made_again(self):
 		name = self.request_to_join()
@@ -88,7 +100,7 @@ class TestRegistrationRequests(RequestTestCase):
 		with self.set_user(self.outsider):
 			self.assertRaises(CannotManageEvent, approve_request, name)
 			self.assertRaises(CannotManageEvent, decline_request, name)
-			self.assertRaises(CannotManageEvent, get_requests, self.event.name)
+			self.assertRaises(CannotManageEvent, get_requests, str(self.event.name))
 		self.assertEqual(self.booking(name).status, "Requested")
 
 	def test_event_wide_approval_and_organizer_adds(self):
@@ -98,6 +110,53 @@ class TestRegistrationRequests(RequestTestCase):
 		self.assertEqual(self.booking(self.request_to_join(plain.name)).status, "Requested")
 		# The organizer adds a guest directly.
 		booking = process_booking(
-			self.booking_request(attendees=[{"first_name": "VIP", "ticket_type": str(plain.name)}])
+			self.booking_request(
+				attendees=[{"first_name": "VIP", "email": "vip@example.com", "ticket_type": str(plain.name)}]
+			)
 		)
 		self.assertEqual(self.booking(booking.booking_name).status, "Confirmed")
+
+
+class TestPaidRegistrationRequests(RequestTestCase):
+	def test_paid_request_is_confirmed_once_paid(self):
+		ticket_type = self.paid_ticket_type()
+		name = self.request_to_join(ticket_type.name)
+
+		approve_request(name)
+
+		booking = self.booking(name)
+		self.assertEqual((booking.status, booking.docstatus), ("Payment Pending", 0))
+		self.assertEqual(held_quantities([ticket_type.name]), {str(ticket_type.name): 1})
+		self.assertIn("Pay now", self.emails_of(name)[-1])
+		# The guest may be on the payment page.
+		self.assertRaises(RequestNotOpen, decline_request, name)
+
+		authorize_payment(booking)
+
+		self.assertEqual((booking.status, booking.docstatus), ("Confirmed", 1))
+		self.assertEqual(self.tickets_of(name), 1)
+		self.assertEqual(held_quantities([ticket_type.name]), {})
+
+	def test_payment_link_needs_the_booking_token(self):
+		ticket_type = self.paid_ticket_type()
+		name = self.request_to_join(ticket_type.name)
+		token = get_booking_access_token(name)
+
+		with self.set_user("Guest"):
+			self.assertRaises(frappe.PermissionError, get_request_payment_link, name, "wrong")
+			self.assertRaises(RequestNotOpen, get_request_payment_link, name, token)
+
+		approve_request(name)
+
+		with self.set_user("Guest"):
+			self.assertTrue(get_request_payment_link(name, token).payment_link)
+
+	def test_lapsed_offer_holds_the_tickets_again(self):
+		ticket_type = self.paid_ticket_type()
+		name = self.request_to_join(ticket_type.name)
+		approve_request(name)
+
+		with self.freeze_time(add_to_date(now_datetime(), hours=49)), self.set_user(self.booker):
+			self.assertEqual(held_quantities([ticket_type.name]), {})
+			get_request_payment_link(name)
+			self.assertEqual(held_quantities([ticket_type.name]), {str(ticket_type.name): 1})

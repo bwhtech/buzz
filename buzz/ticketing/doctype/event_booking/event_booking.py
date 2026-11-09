@@ -20,7 +20,12 @@ from buzz.payments import mark_payment_as_received
 from buzz.permissions import has_section_permission
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_booking.booking_invoice import BookingInvoice
-from buzz.ticketing.doctype.event_booking.registration_request import REQUEST_STATUSES, RegistrationRequest
+from buzz.ticketing.doctype.event_booking.registration_request import (
+	OPEN_STATUSES,
+	PAYMENT_OFFER_HOURS,
+	REQUEST_STATUSES,
+	RegistrationRequest,
+)
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
 	get_committed_tickets,
@@ -72,7 +77,9 @@ class EventBooking(Document):
 		payment_status: DF.Literal["Unpaid", "Paid", "Verification Pending"]
 		refund_status: DF.Literal["", "Refund Initiated", "Partially Refunded", "Refunded"]
 		refunded_amount: DF.Currency
-		status: DF.Literal["Confirmed", "Approval Pending", "Approved", "Rejected", "Requested"]
+		status: DF.Literal[
+			"Confirmed", "Approval Pending", "Approved", "Rejected", "Requested", "Payment Pending"
+		]
 		tax_amount: DF.Currency
 		tax_id: DF.Data | None
 		tax_label: DF.Data | None
@@ -245,7 +252,7 @@ class EventBooking(Document):
 	def after_insert(self):
 		self.hold_draft_tickets()
 
-	def hold_draft_tickets(self):
+	def hold_draft_tickets(self, expires_at=None):
 		"""A draft that waits for payment or approval keeps its tickets held, so they can't sell
 		out under it. Runs right after `validate_ticket_availability` locked the ticket types
 		and checked capacity, so it can create the hold even if the form's hold lapsed."""
@@ -260,11 +267,13 @@ class EventBooking(Document):
 			return
 		if not self.hold_token:
 			self.db_set("hold_token", frappe.generate_hash(length=32), update_modified=False)
-		set_hold(self.hold_token, self.event, quantities, self.draft_hold_expiry())
+		set_hold(self.hold_token, self.event, quantities, expires_at or self.draft_hold_expiry())
 
 	def draft_hold_expiry(self):
 		if self.payment_method == OFFLINE_PAYMENT_METHOD:
 			return self.event_end()
+		if self.status == "Payment Pending":
+			return add_to_date(now_datetime(), hours=PAYMENT_OFFER_HOURS)
 		return add_to_date(now_datetime(), minutes=PAYMENT_HOLD_MINUTES)
 
 	def event_end(self):
@@ -702,7 +711,7 @@ class EventBooking(Document):
 	def approve_booking(self):
 		"""Approve the booking and submit it to generate tickets."""
 		frappe.only_for("Event Manager")
-		if self.is_request:
+		if self.status in OPEN_STATUSES:
 			RegistrationRequest(self).approve()
 			frappe.msgprint(_("Request has been approved!"))
 			return
@@ -720,7 +729,7 @@ class EventBooking(Document):
 	def reject_booking(self):
 		"""Reject and discard the booking."""
 		frappe.only_for("Event Manager")
-		if self.is_request:
+		if self.status in OPEN_STATUSES:
 			RegistrationRequest(self).decline()
 			frappe.msgprint(_("Request has been declined!"))
 			return
