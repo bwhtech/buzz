@@ -82,34 +82,32 @@ class TestOnboardingSetup(IntegrationTestCase):
 		second = save_community(
 			team_name="Clay Collective", slug="clay-collective-onboarding", short_description="Pots"
 		)
-		self.assertEqual(first.name, second.name)
-		team = frappe.db.get_value(
-			"Buzz Team", second.name, ["team_name", "slug", "is_published"], as_dict=True
-		)
+		self.assertEqual(first, second)
+		team = frappe.db.get_value("Buzz Team", second, ["team_name", "slug", "is_published"], as_dict=True)
 		self.assertEqual(
 			team, {"team_name": "Clay Collective", "slug": "clay-collective-onboarding", "is_published": 1}
 		)
-		self.assertEqual(get_onboarding_state().community.name, first.name)
+		self.assertEqual(get_onboarding_state().community.name, first)
 
 	def test_first_event_is_an_editable_draft(self):
-		team = save_community(team_name="Kiln Club", slug="kiln-club-onboarding").name
+		team = save_community(team_name="Kiln Club", slug="kiln-club-onboarding")
 		event = {"team": team, "title": "Glaze night", "start_date": "2027-01-10", "start_time": "18:00:00"}
 		first = save_first_event(FirstEvent(**event, medium="In Person", venue_name="Studio 5"))
-		second = save_first_event(FirstEvent(**event, medium="Online", event=first.name))
+		second = save_first_event(FirstEvent(**event, medium="Online", event=first))
 
-		self.assertEqual(first.name, second.name)
-		saved = frappe.get_doc("Buzz Event", second.name)
+		self.assertEqual(first, second)
+		saved = frappe.get_doc("Buzz Event", second)
 		self.assertEqual((saved.is_published, saved.medium, saved.venue), (0, "Online", None))
 		self.assertEqual(str(saved.end_time), "19:00:00")
-		self.assertEqual(get_onboarding_state().draft_event.name, first.name)
+		self.assertEqual(get_onboarding_state().draft_event.name, first)
 
 	def test_another_users_draft_cannot_be_edited(self):
-		team = save_community(team_name="Wheel Club", slug="wheel-club-onboarding").name
+		team = save_community(team_name="Wheel Club", slug="wheel-club-onboarding")
 		event = {"team": team, "title": "Throwing", "start_date": "2027-01-10", "start_time": "18:00:00"}
 		draft = save_first_event(FirstEvent(**event, medium="Online"))
-		frappe.db.set_value("Buzz Event", draft.name, "owner", "Administrator")
+		frappe.db.set_value("Buzz Event", draft, "owner", "Administrator")
 		with self.assertRaises(NotPermitted):
-			save_first_event(FirstEvent(**event, medium="Online", event=draft.name))
+			save_first_event(FirstEvent(**event, medium="Online", event=draft))
 
 
 class TestInvitedTeam(IntegrationTestCase):
@@ -132,3 +130,10 @@ class TestDeferredSignup(IntegrationTestCase):
 		self.addCleanup(frappe.form_dict.pop, "skip_onboarding", None)
 		mark_pending_on_signup(user)
 		self.assertEqual(frappe.db.get_value("User", user.name, STATUS_FIELD), "Deferred")
+
+	def test_desk_users_skip_onboarding(self):
+		user = UserFactory.create_once("onboarding-staff@example.com")
+		self.enterContext(self.change_settings("Buzz Settings", enable_onboarding=1))
+		frappe.db.set_value("User", user.name, STATUS_FIELD, None)
+		mark_pending_on_signup(frappe._dict(name=user.name, user_type="System User"))
+		self.assertIsNone(frappe.db.get_value("User", user.name, STATUS_FIELD))

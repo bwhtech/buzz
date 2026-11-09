@@ -49,7 +49,3 @@ class FirstEvent(APIRequest):
 	venue_name: str | None = None
 	# The draft saved on an earlier pass, so going back and forth edits it instead of adding more.
 	event: str | None = None
-
-
-class SavedRecord(APIResponse):
-	name: str

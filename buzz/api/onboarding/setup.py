@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import frappe
 
-from buzz.api.communities.creation import create_community
+from buzz.api.communities.creation import create_community, ensure_communities_enabled
 from buzz.api.events.exceptions import CannotCreateEvents
 from buzz.api.exceptions import NotPermitted
 from buzz.api.onboarding.schemas import CommunityDraft, EventDraft, FirstEvent
@@ -37,6 +37,7 @@ def community_draft(user: str) -> CommunityDraft | None:
 
 
 def save_community(user: str, team_name: str, slug: str, logo: str, short_description: str) -> str:
+	ensure_communities_enabled()
 	team = owned_community(user) or create_community(team_name, slug).team
 	doc = frappe.get_doc("Buzz Team", team)
 	public_page.set_slug(doc, slug)
@@ -93,7 +94,7 @@ def draft_to_edit(event: str | None, user: str):
 	if not event:
 		return None
 	doc = frappe.get_doc("Buzz Event", event)
-	if doc.owner != user or doc.is_published:
+	if doc.owner != user or doc.is_published or not has_team_access(doc.team, "write", user):
 		NotPermitted.throw()
 	return doc
 

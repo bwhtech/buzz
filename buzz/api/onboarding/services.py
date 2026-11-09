@@ -24,7 +24,8 @@ def mark_pending_on_signup(doc, event=None):
 	Signup during ticket booking sends `skip_onboarding`, which frappe's sign_up ignores as an
 	argument but leaves in form_dict. That user onboards on their next visit to the dashboard.
 	"""
-	if not onboarding_enabled():
+	# Staff and integration accounts made in Desk are System Users and skip onboarding.
+	if not onboarding_enabled() or doc.user_type != "Website User":
 		return
 	status = "Deferred" if frappe.form_dict.get("skip_onboarding") else "Pending"
 	frappe.db.set_value("User", doc.name, STATUS_FIELD, status)
