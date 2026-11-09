@@ -86,28 +86,34 @@ function draw() {
 	if (!canvas.value) return
 	const dark = document.documentElement.getAttribute("data-theme") === "dark"
 	const size = canvas.value.offsetWidth * 2
-	globe = createGlobe(canvas.value, {
-		devicePixelRatio: 2,
-		width: size,
-		height: size,
-		phi,
-		theta,
-		dark: dark ? 1 : 0,
-		diffuse: dark ? 1.4 : 0.6,
-		mapSamples: 20000,
-		mapBrightness: dark ? 5 : 1.4,
-		baseColor: dark ? [0.32, 0.32, 0.32] : [1, 1, 1],
-		glowColor: dark ? [0.16, 0.16, 0.16] : [0.96, 0.96, 0.96],
-		markerColor: ACCENT,
-		markers: [],
-		onRender: (state) => {
-			const now = performance.now()
-			turn()
-			state.phi = phi
-			state.theta = theta
-			state.markers = markers(now)
-		},
-	})
+	// No WebGL (old devices, some locked-down browsers): the card shows without the globe.
+	try {
+		globe = createGlobe(canvas.value, {
+			devicePixelRatio: 2,
+			width: size,
+			height: size,
+			phi,
+			theta,
+			dark: dark ? 1 : 0,
+			diffuse: dark ? 1.4 : 0.6,
+			mapSamples: 20000,
+			mapBrightness: dark ? 5 : 1.4,
+			baseColor: dark ? [0.32, 0.32, 0.32] : [1, 1, 1],
+			glowColor: dark ? [0.16, 0.16, 0.16] : [0.96, 0.96, 0.96],
+			markerColor: ACCENT,
+			markers: [],
+			onRender: (state) => {
+				const now = performance.now()
+				turn()
+				state.phi = phi
+				state.theta = theta
+				state.markers = markers(now)
+			},
+		})
+	} catch {
+		globe = null
+		return
+	}
 	requestAnimationFrame(() => (ready.value = true))
 }
 

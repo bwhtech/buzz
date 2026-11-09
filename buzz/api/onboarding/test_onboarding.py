@@ -78,7 +78,7 @@ class TestOnboardingSetup(IntegrationTestCase):
 		frappe.set_user(self.user.name)
 
 	def test_community_is_created_once_then_edited(self):
-		first = save_community(team_name="Clay Club", slug="clay-club-onboarding")
+		first = save_community(team_name="Clay Club", slug="clay-club-onboarding", logo=None)
 		second = save_community(
 			team_name="Clay Collective", slug="clay-collective-onboarding", short_description="Pots"
 		)
@@ -112,7 +112,7 @@ class TestOnboardingSetup(IntegrationTestCase):
 
 class TestInvitedTeam(IntegrationTestCase):
 	def test_invitee_sees_the_team_they_joined(self):
-		user = UserFactory.create_once("onboarding-invitee@example.com")
+		user = UserFactory.create_once("onboarding-team-member@example.com")
 		team = BuzzTeamFactory.create_owned_by(team_name="BLR JS")
 		BuzzTeamMembershipFactory.create(team=team.name, user=user.name, team_role="Manager")
 		self.addCleanup(frappe.set_user, "Administrator")

@@ -13,7 +13,9 @@ def check_username(username: str) -> RouteAvailability:
 
 # Frappe blanks a taken username on save instead of failing, so it is checked here first.
 @frappe.whitelist(methods=["POST"])
-def save_profile(first_name: str, username: str, last_name: str = "", user_image: str = "") -> None:
+def save_profile(
+	first_name: str, username: str, last_name: str | None = None, user_image: str | None = None
+) -> None:
 	if not first_name.strip():
 		frappe.throw(frappe._("First name is required"))
 	if not services.is_valid_username(username):
@@ -38,7 +40,10 @@ def get_onboarding_state() -> OnboardingState:
 
 
 @frappe.whitelist(methods=["POST"])
-def save_community(team_name: str, slug: str, logo: str = "", short_description: str = "") -> str:
+# The dashboard sends null for an empty logo or description.
+def save_community(
+	team_name: str, slug: str, logo: str | None = None, short_description: str | None = None
+) -> str:
 	return setup.save_community(frappe.session.user, team_name, slug, logo, short_description)
 
 

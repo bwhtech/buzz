@@ -217,10 +217,12 @@ export const scene = computed<Scene>(() => {
 
 export const previewAddress = computed(() => {
 	const host = window.location.host
-	if (scene.value === "community") return `${host}/community/${flow.community.slug || "…"}`
-	if (scene.value === "event") return `${host}/events`
-	if (scene.value === "attendee") return `${host}/b/account/tickets`
-	if (scene.value === "team") return `${host}/b/manage`
+	// All set previews what the user ended up with.
+	const shown = scene.value === "done" ? (hasDraft.value ? "event" : outcome.value) : scene.value
+	if (shown === "community") return `${host}/community/${flow.community.slug || "…"}`
+	if (shown === "event") return `${host}/events`
+	if (shown === "attendee") return `${host}/b/account/tickets`
+	if (shown === "team") return `${host}/b/manage`
 	return `${host}/u/${profile.username || "…"}`
 })
 

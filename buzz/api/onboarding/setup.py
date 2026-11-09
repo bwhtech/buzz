@@ -36,7 +36,9 @@ def community_draft(user: str) -> CommunityDraft | None:
 	return CommunityDraft(**row)
 
 
-def save_community(user: str, team_name: str, slug: str, logo: str, short_description: str) -> str:
+def save_community(
+	user: str, team_name: str, slug: str, logo: str | None, short_description: str | None
+) -> str:
 	ensure_communities_enabled()
 	team = owned_community(user) or create_community(team_name, slug).team
 	doc = frappe.get_doc("Buzz Team", team)
