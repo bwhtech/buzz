@@ -4,11 +4,12 @@ import { computed } from "vue"
 
 import GuestZoneDots from "@/components/dashboard/events/GuestZoneDots.vue"
 import type { EventGuest } from "@/types"
+import type { BadgeTheme } from "@/utils/badgeTheme"
 
 const props = defineProps<{
 	guest: EventGuest
 	selected?: boolean
-	status?: { label: string; theme: "blue" | "gray" | "amber" }
+	status?: { label: string; theme: BadgeTheme }
 }>()
 
 const emit = defineEmits<{ open: [] }>()

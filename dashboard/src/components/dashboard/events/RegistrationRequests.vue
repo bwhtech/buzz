@@ -8,12 +8,13 @@ import EventGuestItem from "@/components/dashboard/events/EventGuestItem.vue"
 import GuestInfoDrawer from "@/components/dashboard/events/GuestInfoDrawer.vue"
 import { useApproveRequest, useDeclineRequest } from "@/data/requests"
 import type { EventGuest, RegistrationRequest, RequestStatus } from "@/types"
+import type { BadgeTheme } from "@/utils/badgeTheme"
 import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps<{ requests: RegistrationRequest[] }>()
 const emit = defineEmits<{ changed: [confirmed: boolean] }>()
 
-const STATUS_BADGES: Record<RequestStatus, { label: string; theme: "blue" | "gray" | "amber" }> = {
+const STATUS_BADGES: Record<RequestStatus, { label: string; theme: BadgeTheme }> = {
 	Requested: { label: "Approval", theme: "blue" },
 	Waitlisted: { label: "Waitlist", theme: "gray" },
 	"Payment Pending": { label: "Payment pending", theme: "amber" },

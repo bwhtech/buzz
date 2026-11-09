@@ -73,11 +73,7 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 
 	function pay(payload: Payload, isOtpFlow = false) {
 		const paid = inputs.total.value > 0 && !inputs.isRequest()
-		const gateway = paid
-			? inputs.selectedGateway.value
-			: inputs.isRequest()
-				? null
-				: (inputs.gateways.value[0] ?? null)
+		const gateway = paid ? inputs.selectedGateway.value : (inputs.gateways.value[0] ?? null)
 		const method = paid ? inputs.offlineMethods().find((m) => m.title === gateway) : undefined
 		if (method) {
 			pendingPayload.value = payload
