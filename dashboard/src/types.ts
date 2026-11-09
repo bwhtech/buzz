@@ -569,6 +569,8 @@ export interface AvailableTicketType {
 	prices?: { currency: string; price: number }[]
 	price_note?: string
 	category?: string | null
+	needs_approval?: boolean
+	waitlisted?: boolean
 }
 
 // buzz.api.booking.hold_tickets
@@ -813,6 +815,8 @@ export interface TicketTypeItem {
 	auto_unpublish_after: string | null
 	is_published: boolean
 	is_hidden: boolean
+	requires_approval: boolean
+	enable_waitlist: boolean
 	tickets_sold: number
 	prices: TicketTypePrice[]
 }
@@ -825,6 +829,8 @@ export interface EventTicketTypes {
 	registrations_closed: boolean
 	allow_guest_booking: boolean
 	guest_verification_method: string
+	requires_approval: boolean
+	enable_waitlist: boolean
 	apply_tax: boolean
 	tax_inclusive: boolean
 	tax_label: string
@@ -914,4 +920,26 @@ export interface EventCoupons {
 	coupons: CouponItem[]
 	ticket_types: CouponTicketType[]
 	discounted: { currency: string; amount: number }[]
+}
+
+// buzz.api.booking.requests
+export type RequestStatus = "Requested" | "Waitlisted" | "Payment Pending"
+
+export interface RegistrationRequest {
+	name: string
+	status: RequestStatus
+	buyer_name: string
+	buyer_email: string
+	total_amount: number
+	currency: string
+	requested_at: string
+	attendees: { full_name: string; email: string; ticket_type: string }[]
+	answers: { label: string; value: string }[]
+}
+
+// buzz.api.booking.process_booking: a registration request is answered without payment.
+export interface RequestResponse {
+	booking_name: string
+	redirect_to: string
+	request_status: "Requested" | "Waitlisted"
 }

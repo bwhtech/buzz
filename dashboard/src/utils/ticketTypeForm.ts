@@ -7,6 +7,8 @@ export type TicketTypeValues = {
 	is_hidden: boolean
 	prices: TierPrice[]
 	max_tickets_available: number
+	requires_approval: boolean
+	enable_waitlist: boolean
 	auto_unpublish_after: string | null
 }
 
@@ -18,6 +20,8 @@ export function blankTicketTypeValues(category: string, currency: string): Ticke
 		is_hidden: false,
 		prices: [{ currency, price: 0 }],
 		max_tickets_available: 0,
+		requires_approval: false,
+		enable_waitlist: false,
 		auto_unpublish_after: null,
 	}
 }
@@ -30,6 +34,8 @@ export function ticketTypeValuesOf(ticketType: TicketTypeItem): TicketTypeValues
 		is_hidden: ticketType.is_hidden,
 		prices: ticketType.prices.map(({ currency, price }) => ({ currency, price })),
 		max_tickets_available: ticketType.max_tickets_available,
+		requires_approval: ticketType.requires_approval,
+		enable_waitlist: ticketType.enable_waitlist,
 		auto_unpublish_after: ticketType.auto_unpublish_after,
 	}
 }
@@ -49,6 +55,8 @@ export function ticketTypeDocValues(values: TicketTypeValues) {
 	return {
 		...values,
 		is_hidden: (values.is_hidden ? 1 : 0) as 0 | 1,
+		requires_approval: (values.requires_approval ? 1 : 0) as 0 | 1,
+		enable_waitlist: (values.enable_waitlist && values.max_tickets_available > 0 ? 1 : 0) as 0 | 1,
 		title: values.title.trim(),
 		description: values.description.trim(),
 	}

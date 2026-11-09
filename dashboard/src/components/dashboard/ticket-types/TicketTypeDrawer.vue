@@ -31,7 +31,13 @@ const emit = defineEmits<{ changed: [] }>()
 const shownTicketType = keepLastValue(() => props.ticketType)
 
 const ticketTypeDoc = useDoc<
-	Omit<TicketTypeValues, "is_hidden"> & { name: string; is_published: 0 | 1; is_hidden: 0 | 1 }
+	Omit<TicketTypeValues, "is_hidden" | "requires_approval" | "enable_waitlist"> & {
+		name: string
+		is_published: 0 | 1
+		is_hidden: 0 | 1
+		requires_approval: 0 | 1
+		enable_waitlist: 0 | 1
+	}
 >({
 	doctype: "Event Ticket Type",
 	name: () => props.ticketType?.name ?? "",

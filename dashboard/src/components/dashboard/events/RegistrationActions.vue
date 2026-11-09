@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { call, toast } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import GuestRegistrationDialog from "@/components/dashboard/events/GuestRegistrationDialog.vue"
@@ -7,6 +8,7 @@ import QuickActionsRail, {
 } from "@/components/dashboard/events/QuickActionsRail.vue"
 import QuickActionTile from "@/components/dashboard/events/QuickActionTile.vue"
 import RegistrationDialog from "@/components/dashboard/events/RegistrationDialog.vue"
+import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps<{
 	event: string
@@ -16,6 +18,8 @@ const props = defineProps<{
 	registrationForm?: string | null
 	allowGuestBooking: boolean
 	guestVerificationMethod: string
+	requiresApproval: boolean
+	enableWaitlist: boolean
 }>()
 const emit = defineEmits<{ changed: [] }>()
 
@@ -32,6 +36,23 @@ const guestSubtitle = computed(() => {
 	const verification = VERIFICATION_LABELS[props.guestVerificationMethod]
 	return verification ? `Enabled · ${verification}` : "Enabled"
 })
+
+async function toggleEventField(
+	fieldname: "requires_approval" | "enable_waitlist",
+	enabled: boolean,
+) {
+	try {
+		await call("frappe.client.set_value", {
+			doctype: "Buzz Event",
+			name: props.event,
+			fieldname,
+			value: enabled ? 1 : 0,
+		})
+		emit("changed")
+	} catch (error) {
+		toast.error(serverErrorMessage(error) || "Could not save the setting. Try again.")
+	}
+}
 
 const actions = computed<QuickAction[]>(() =>
 	[
@@ -60,6 +81,22 @@ const actions = computed<QuickAction[]>(() =>
 			:tone="allowGuestBooking ? 'violet' : 'gray'"
 			:disabled="!canWrite"
 			@click="guestDialogOpen = true"
+		/>
+		<QuickActionTile
+			icon="lucide-user-check"
+			title="Approval"
+			:subtitle="requiresApproval ? 'Required for all tickets' : 'Off'"
+			:tone="requiresApproval ? 'amber' : 'gray'"
+			:disabled="!canWrite"
+			@click="toggleEventField('requires_approval', !requiresApproval)"
+		/>
+		<QuickActionTile
+			icon="lucide-clock"
+			title="Waitlist"
+			:subtitle="enableWaitlist ? 'On for sold-out tickets' : 'Off'"
+			:tone="enableWaitlist ? 'amber' : 'gray'"
+			:disabled="!canWrite"
+			@click="toggleEventField('enable_waitlist', !enableWaitlist)"
 		/>
 	</QuickActionsRail>
 

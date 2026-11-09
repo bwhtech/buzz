@@ -23,6 +23,8 @@ const autoUnpublish = computed<boolean>({
 	set: (on) => (values.value.auto_unpublish_after = on ? "" : null),
 })
 
+const hasSeatLimit = computed(() => values.value.max_tickets_available > 0)
+
 const closesIn = computed(() => {
 	const date = values.value.auto_unpublish_after
 	if (!date) return "Pick the last day to sell"
@@ -90,6 +92,28 @@ const categoryOptions = computed(() => [
 			@update:model-value="values.max_tickets_available = Math.max(Number($event) || 0, 0)"
 		/>
 		<div class="divide-y divide-outline-gray-1 rounded-4 border border-outline-gray-2">
+			<div class="p-1">
+				<Switch
+					v-model="values.requires_approval"
+					padded
+					label="Requires approval"
+					description="Guests send a request and you approve or decline it."
+					:disabled="disabled"
+				/>
+			</div>
+			<div class="p-1">
+				<Switch
+					v-model="values.enable_waitlist"
+					padded
+					label="Waitlist when sold out"
+					:description="
+						hasSeatLimit
+							? 'Guests can join a waitlist once all seats are taken.'
+							: 'Set a number of seats to use a waitlist.'
+					"
+					:disabled="disabled || !hasSeatLimit"
+				/>
+			</div>
 			<div class="p-1">
 				<Switch
 					v-model="autoUnpublish"
