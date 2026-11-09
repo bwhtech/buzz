@@ -31,6 +31,7 @@ test("guest requests a free ticket, the organizer approves it, and the booking i
 	await bookingPage.waitForFormLoad()
 	await bookingPage.goToAttendees()
 	await bookingPage.fillMyDetails(REQUESTER.name, "E2E", REQUESTER.email)
+	await bookingPage.continue()
 	await expect(guestPage.getByRole("button", { name: "Request to join" })).toBeVisible()
 	await bookingPage.submit()
 
@@ -39,8 +40,8 @@ test("guest requests a free ticket, the organizer approves it, and the booking i
 
 	await page.goto(`/b/manage/events/${eventId}/guests`)
 	await page.getByRole("radio", { name: /^Requests \(\d+\)$/ }).click()
-	const row = page.getByRole("listitem").filter({ hasText: REQUESTER.email })
-	await row.getByRole("button", { name: "Approve", exact: true }).click()
+	await page.getByRole("button", { name: `Open ${REQUESTER.name} E2E` }).click()
+	await page.getByRole("button", { name: "Approve", exact: true }).click()
 	await expect(page.getByText("Request approved").first()).toBeVisible()
 
 	await guestPage.reload()
