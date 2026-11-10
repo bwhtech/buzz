@@ -5,10 +5,10 @@ import { routePattern } from "./telemetry.ts"
 
 test("the route pattern replaces real ids", () => {
 	const route = {
-		path: "/account/tickets/TICKET-123",
-		matched: [{ path: "/account" }, { path: "/account/tickets/:ticketId" }],
+		path: "/manage/events/EVENT-123/guests",
+		matched: [{ path: "/manage" }, { path: "/manage/events/:eventId/guests" }],
 	} as unknown as Parameters<typeof routePattern>[0]
-	assert.equal(routePattern(route), "/account/tickets/:ticketId")
+	assert.equal(routePattern(route), "/manage/events/:eventId/guests")
 })
 
 test("an unmatched route falls back to its path", () => {

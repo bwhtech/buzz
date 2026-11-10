@@ -17,6 +17,7 @@ from buzz.tests.factories import (
 )
 from buzz.www.event.date_range import format_day, join_parts
 from buzz.www.event.index import EventPage
+from buzz.www.event.registration import RegistrationCard
 
 
 class TestEventPage(IntegrationTestCase):
@@ -245,3 +246,14 @@ def save_schedule(event, row: dict, **schedule_values):
 		schedule = BuzzScheduleFactory.create(event=str(event.name), **{"is_published": 1, **schedule_values})
 	schedule.append("items", {"date": event.start_date, "all_tracks": 1, **row})
 	schedule.save()
+
+
+class TestBookedTicketsLink(IntegrationTestCase):
+	def test_links_to_the_event_in_the_dashboard(self):
+		event = frappe._dict(name="EVT-0001")
+		card = RegistrationCard(event)
+		card.booked_ticket_count = 2
+
+		self.assertEqual(
+			card.booked_tickets(), {"label": "2 tickets", "url": "/b/manage/events?event=EVT-0001"}
+		)

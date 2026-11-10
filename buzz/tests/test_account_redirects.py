@@ -26,3 +26,36 @@ class TestAccountRedirects(UnitTestCase):
 			self.redirect_location("b/account/proposals/PROP-0001", "lang=hi"),
 			"/b/manage/proposals?proposal=PROP-0001&lang=hi",
 		)
+
+	def test_tabs_without_an_id_land_on_their_new_page(self):
+		cases = {
+			"b/account": "/b/manage/events",
+			"b/account/bookings": "/b/manage/events",
+			"b/account/tickets": "/b/manage/events",
+			"b/account/sponsorships": "/b/manage/sponsorship",
+		}
+		for path, target in cases.items():
+			with self.subTest(path=path):
+				self.assertEqual(self.redirect_location(path), target)
+
+	def test_ids_open_their_drawer(self):
+		cases = {
+			"b/account/tickets/TKT-1": "/b/manage/events?ticket=TKT-1",
+			"b/account/bookings/BKG-1": "/b/manage/events?booking=BKG-1",
+			"b/account/sponsorships/ENQ-1": "/b/manage/sponsorship?enquiry=ENQ-1",
+		}
+		for path, target in cases.items():
+			with self.subTest(path=path):
+				self.assertEqual(self.redirect_location(path), target)
+
+	def test_payment_success_flag_survives(self):
+		self.assertEqual(
+			self.redirect_location("b/account/sponsorships/ENQ-1", "success=true"),
+			"/b/manage/sponsorship?enquiry=ENQ-1&success=true",
+		)
+
+	def test_old_dashboard_links_reach_the_account_redirects(self):
+		self.assertEqual(self.redirect_location("dashboard/account/sponsorships"), "/b/account/sponsorships")
+
+	def test_manage_paths_are_left_alone(self):
+		self.assertIsNone(resolve_redirect("b/manage/events", ""))

@@ -21,7 +21,7 @@ function resolve(requestedLanguage: string, overrides: Record<string, unknown> =
 }
 
 test("a URL without ?lang is left untouched", () => {
-	assert.deepEqual(takeLanguageFromQuery("https://buzz.test/b/account/bookings"), {
+	assert.deepEqual(takeLanguageFromQuery("https://buzz.test/b/manage/events"), {
 		cleanedUrl: null,
 		requestedLanguage: null,
 	})

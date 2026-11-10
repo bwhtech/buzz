@@ -62,7 +62,32 @@ website_redirects = [
 	},
 	{
 		"source": r"/b/account/proposals",
-		"target": "/b/manage/proposals",
+		"target": r"/b/manage/proposals",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/b/account/sponsorships/([^/]+)",
+		"target": r"/b/manage/sponsorship?enquiry=\1",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/b/account/sponsorships",
+		"target": r"/b/manage/sponsorship",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/b/account/tickets/([^/]+)",
+		"target": r"/b/manage/events?ticket=\1",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/b/account/bookings/([^/]+)",
+		"target": r"/b/manage/events?booking=\1",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/b/account(/.*)?",
+		"target": r"/b/manage/events",
 		"forward_query_parameters": True,
 	},
 ]

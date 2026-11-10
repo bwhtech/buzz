@@ -48,7 +48,7 @@ class RegistrationCard:
 		if not count:
 			return None
 		label = _("1 ticket") if count == 1 else _("{0} tickets").format(count)
-		return {"label": label, "url": "/b/account/bookings"}
+		return {"label": label, "url": f"/b/manage/events?event={self.event.name}"}
 
 	def published_ticket_types(self) -> list:
 		filters = {"event": self.event.name, "is_published": 1, "is_hidden": 0}
