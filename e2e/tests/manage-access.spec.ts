@@ -27,7 +27,7 @@ test.describe("Manage access", () => {
 	})
 
 	test("routes a section with no page yet to the placeholder", async ({ page }) => {
-		await page.goto("/b/manage/sponsorship")
+		await page.goto("/b/manage/overview")
 
 		await expect(page.getByText("Work in progress")).toBeVisible({ timeout: 15000 })
 	})

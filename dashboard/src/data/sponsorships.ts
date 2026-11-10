@@ -1,17 +1,38 @@
 import { refDebounced } from "@vueuse/core"
 import { useCall } from "frappe-ui"
-import type { Ref } from "vue"
+import { type Ref, computed } from "vue"
 
 import type { Condition } from "@/components/common/filters"
 import type { ListOrder } from "@/composables/useListQuery"
-import type { EnquiryDetail, EventSponsors, EventSponsorships } from "@/types"
+import type { EnquiryDetail, EventSponsors, EventSponsorships, SponsorshipListItem } from "@/types"
 
 // v2 path: useCall reads the payload from `data`, which /api/method names `message`.
 // Uncached: cacheKey would persist this user's inquiries to IndexedDB past a logout.
-// Rows are only ever counted, so the sidebar and tab bar need no more than the key.
 export function useMySponsorships() {
-	return useCall<{ name: string }[]>({
+	return useCall<SponsorshipListItem[]>({
 		url: "/api/v2/method/buzz.api.sponsorships.get_user_sponsorship_inquiries",
+	})
+}
+
+export function useWithdrawEnquiry() {
+	return useCall<null, { enquiry_id: string }>({
+		url: "/api/v2/method/buzz.api.sponsorships.withdraw_sponsorship_enquiry",
+		method: "POST",
+		immediate: false,
+	})
+}
+
+// The logo lives on the Event Sponsor once the sponsorship is confirmed, on the enquiry until then.
+export function useUpdateSponsorshipLogo(enquiry: () => SponsorshipListItem | null) {
+	return useCall<unknown, { company_logo: string }>({
+		url: computed(() => {
+			const sponsor = enquiry()?.sponsor
+			return sponsor
+				? `/api/v2/document/Event Sponsor/${encodeURIComponent(sponsor)}`
+				: `/api/v2/document/Sponsorship Enquiry/${encodeURIComponent(enquiry()?.name || "")}`
+		}),
+		method: "PUT",
+		immediate: false,
 	})
 }
 

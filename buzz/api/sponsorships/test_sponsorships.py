@@ -64,6 +64,20 @@ class TestGetUserSponsorshipInquiries(SponsorshipTestCase):
 
 		self.assertTrue(self.listed_row().has_sponsor)
 
+	def test_row_carries_the_tier_price_and_event_date(self):
+		start_date = frappe.db.get_value("Buzz Event", self.event, "start_date")
+		row = self.listed_row()
+
+		self.assertEqual((row.tier_price, row.tier_currency), (5000, "INR"))
+		self.assertEqual(row.start_date, start_date)
+
+	def test_confirmed_sponsor_logo_replaces_the_enquiry_logo(self):
+		sponsor = self.make_sponsor()
+		frappe.db.set_value("Event Sponsor", sponsor.name, "company_logo", "/files/acme-sponsor.png")
+		row = self.listed_row()
+
+		self.assertEqual((row.sponsor, row.company_logo), (sponsor.name, "/files/acme-sponsor.png"))
+
 	def test_only_own_enquiries_are_listed(self):
 		with self.set_user(self.make_stranger()):
 			names = [row.name for row in get_user_sponsorship_inquiries()]
@@ -148,7 +162,7 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 		payment = frappe.get_last_doc("Event Payment", {"reference_docname": self.enquiry.name})
 		self.assertEqual(
 			frappe.db.get_value("Gateway Payment Request", payment.payment_request, "redirect_to"),
-			f"/b/account/sponsorships/{self.enquiry.name}?success=true",
+			f"/b/manage/sponsorship?enquiry={self.enquiry.name}&success=true",
 		)
 
 	def add_gateway_to_event(self) -> str:

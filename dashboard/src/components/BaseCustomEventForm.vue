@@ -24,7 +24,7 @@
 				<Button
 					v-if="enquiryId && session.isLoggedIn"
 					class="mt-4"
-					:route="`/account/sponsorships/${enquiryId}`"
+					:route="{ name: 'my-sponsorships', query: { enquiry: enquiryId } }"
 				>
 					{{ __("View your enquiry") }}
 				</Button>

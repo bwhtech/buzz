@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from buzz.api.filters.schemas import FilterField
 from buzz.api.schemas import APIResponse
@@ -150,10 +150,20 @@ class SponsorshipDetailsResponse(APIResponse):
 class SponsorshipListItem(APIResponse):
 	name: str
 	company_name: str
+	company_logo: str | None
 	event: str
+	# Joined over the event link, so a deleted event leaves them empty.
+	event_title: str | None = None
+	start_date: date | None = None
+	start_time: timedelta | None = None
+	end_date: date | None = None
+	venue: str | None = None
+	banner_image: str | None = None
 	tier: str | None
+	tier_title: str
+	tier_price: float | None
+	tier_currency: str | None
 	status: str
 	creation: datetime
-	event_title: str | None
-	tier_title: str
+	sponsor: str | None
 	has_sponsor: bool

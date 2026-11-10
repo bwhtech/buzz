@@ -35,7 +35,7 @@
  "show_attachments": 0,
  "show_list": 1,
  "show_sidebar": 0,
- "success_url": "/dashboard/account/sponsorships",
+ "success_url": "/b/manage/sponsorship",
  "title": "Apply for Sponsorship",
  "web_form_fields": [
   {

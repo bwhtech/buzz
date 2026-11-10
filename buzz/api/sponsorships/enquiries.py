@@ -11,7 +11,7 @@ from buzz.api.sponsorships.schemas import (
 	EventEnquiriesResponse,
 	EventEnquiryItem,
 )
-from buzz.api.sponsorships.services import get_tier_title
+from buzz.api.sponsorships.services import get_tier_title, tiers_by_name
 
 ENQUIRIES_PAGE_SIZE = 20
 ENQUIRY_FIELDS = ["name", "company_name", "company_logo", "website", "status", "tier", "creation"]
@@ -105,19 +105,6 @@ def enquiry_item(row, tier) -> EventEnquiryItem:
 		tier_price=tier.prices[0].price if tier else None,
 		tier_currency=tier.prices[0].currency if tier else None,
 	)
-
-
-def tiers_by_name(names: set[str]) -> dict:
-	if not names:
-		return {}
-	rows = frappe.get_all(
-		"Sponsorship Tier",
-		filters={"name": ["in", list(names)]},
-		fields=["name", "title", {"prices": ["currency", "price"]}],
-		ignore_permissions=True,
-	)
-	# Link values arrive as strings even where the tier autonames to an integer.
-	return {str(row.name): row for row in rows}
 
 
 def enquiry_detail(enquiry: str) -> EnquiryDetail:

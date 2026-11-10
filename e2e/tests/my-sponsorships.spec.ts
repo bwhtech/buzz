@@ -1,0 +1,106 @@
+import { type Page, expect, test } from "@playwright/test"
+
+import { createDoc, deleteDoc, ensureEventHost, ensureTestTeam, getList } from "../helpers/frappe"
+
+interface NamedDoc {
+	name: string
+}
+
+const enquiryCard = (page: Page, company: string) =>
+	page.getByRole("button", { name: `Open ${company} enquiry` })
+
+const drawer = (page: Page) => page.getByRole("dialog")
+
+// Runs under the shared Administrator state, who owns every enquiry it files here. Seeds its
+// own event, and company names carry the run's timestamp, so no other spec's rows meet these.
+test.describe("My sponsorships", () => {
+	const run = Date.now()
+	const approved = `Approved Co ${run}`
+	const pending = `Pending Co ${run}`
+	const paid = `Paid Co ${run}`
+	const enquiries: Record<string, string> = {}
+	let event: string
+
+	test.beforeAll(async ({ request }) => {
+		const team = await ensureTestTeam(request)
+		event = (
+			await createDoc<NamedDoc>(request, "Buzz Event", {
+				team,
+				title: `My Sponsorships ${run}`,
+				category: "E2E Test Category",
+				host: await ensureEventHost(request, "E2E Test Host", team),
+				start_date: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
+				start_time: "09:00:00",
+				end_time: "17:00:00",
+				medium: "In Person",
+			})
+		).name
+		const tier = await createDoc<NamedDoc>(request, "Sponsorship Tier", {
+			event,
+			title: "Gold",
+			prices: [{ currency: "INR", price: 50000 }],
+		})
+		const file = async (company_name: string, status: string) => {
+			const enquiry = await createDoc<NamedDoc>(request, "Sponsorship Enquiry", {
+				event,
+				tier: tier.name,
+				company_name,
+				status,
+			})
+			enquiries[company_name] = enquiry.name
+		}
+		await file(approved, "Payment Pending")
+		await file(pending, "Approval Pending")
+		await file(paid, "Paid")
+	})
+
+	test.afterAll(async ({ request }) => {
+		for (const name of Object.values(enquiries)) {
+			await deleteDoc(request, "Sponsorship Enquiry", name)
+		}
+		for (const tier of await getList<NamedDoc>(request, "Sponsorship Tier", {
+			filters: { event },
+		})) {
+			await deleteDoc(request, "Sponsorship Tier", tier.name).catch(() => {})
+		}
+	})
+
+	test("lists the enquiry and offers payment once it is approved", async ({ page }) => {
+		await page.goto("/b/manage/sponsorship")
+
+		await enquiryCard(page, approved).click()
+
+		await expect(drawer(page).getByText("Payment Pending").first()).toBeVisible()
+		await expect(drawer(page).getByText("₹50,000")).toBeVisible()
+		await drawer(page).getByRole("button", { name: "Pay now" }).click()
+		await expect(page.getByText("Select Sponsorship Tier")).toBeVisible()
+	})
+
+	test("opens the linked enquiry in its drawer", async ({ page }) => {
+		await page.goto(`/b/manage/sponsorship?enquiry=${enquiries[pending]}`)
+
+		await expect(drawer(page).getByRole("heading", { name: pending })).toBeVisible()
+		await expect(page).toHaveURL(/\/b\/manage\/sponsorship$/)
+	})
+
+	test("withdraws an enquiry", async ({ page }) => {
+		await page.goto(`/b/manage/sponsorship?enquiry=${enquiries[pending]}`)
+
+		await drawer(page).getByRole("button", { name: "Withdraw" }).click()
+		await page
+			.getByRole("dialog", { name: "Withdraw this enquiry?" })
+			.getByRole("button", { name: "Withdraw" })
+			.click()
+
+		await expect(page.getByText("Enquiry withdrawn")).toBeVisible()
+		await expect(enquiryCard(page, pending)).toContainText("Withdrawn")
+	})
+
+	test("celebrates a paid enquiry on the way back from the payment page", async ({ page }) => {
+		await page.goto(`/b/manage/sponsorship?enquiry=${enquiries[paid]}&success=true`)
+
+		await expect(drawer(page).getByText("Payment successful")).toBeVisible()
+		await expect(drawer(page).getByRole("button", { name: "Pay now" })).toHaveCount(0)
+		await expect(page).toHaveURL(/\/b\/manage\/sponsorship$/)
+	})
+})

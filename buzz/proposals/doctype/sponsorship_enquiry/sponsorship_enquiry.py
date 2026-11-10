@@ -155,7 +155,7 @@ class SponsorshipEnquiry(Document):
 		"""
 		if self.owner == "Guest":
 			return "We will be in touch shortly to confirm your sponsorship tier and arrange payment."
-		dashboard_link = get_url(f"/b/account/sponsorships/{self.name}")
+		dashboard_link = get_url(f"/b/manage/sponsorship?enquiry={self.name}")
 		return (
 			"You can now proceed to select a sponsorship tier and complete the payment "
 			f'by visiting your dashboard <a href="{dashboard_link}">here</a>.'
