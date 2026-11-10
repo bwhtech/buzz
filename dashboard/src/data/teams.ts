@@ -64,6 +64,11 @@ export function isFeatureEnabled(flag: string, teamName?: string): boolean {
 	return team?.feature_flags[flag] ?? false
 }
 
+/** The manage shell reads the teams list everywhere; fetched once per session. */
+export function loadTeams() {
+	if (!teamsResource.data) teamsResource.fetch()
+}
+
 export function reloadTeams() {
 	return teamsResource.reload()
 }

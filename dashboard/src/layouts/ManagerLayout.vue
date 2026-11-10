@@ -7,7 +7,7 @@ import { useIsMobile } from "@/composables/useIsMobile"
 import { finishOpening, openingTeam } from "@/composables/useWorkspaceOpening"
 import { useEventAccess, useEventDoc } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
-import { selectTeam, teamLabel, teams, teamsLoaded } from "@/data/teams"
+import { loadTeams, selectTeam, teamLabel, teams, teamsLoaded } from "@/data/teams"
 import ManagerDesktopShell from "@/layouts/ManagerDesktopShell.vue"
 import ManagerMobileShell from "@/layouts/ManagerMobileShell.vue"
 import NotFound from "@/pages/NotFound.vue"
@@ -16,6 +16,8 @@ import { managerNavigation, type Workspace } from "@/utils/managerNavigation"
 const route = useRoute()
 const isMobile = useIsMobile()
 const sponsorships = useMySponsorships()
+
+loadTeams()
 
 // An event opens into the same shell with its own destinations.
 const eventId = computed(() => route.params.eventId as string | undefined)
