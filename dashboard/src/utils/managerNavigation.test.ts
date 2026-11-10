@@ -21,6 +21,7 @@ test("an event offers its own sections, scoped to its id", () => {
 	assert.deepEqual(labels(items), [
 		"Details",
 		"Registration",
+		"Payments",
 		"Coupons",
 		"Guests",
 		"Talks",

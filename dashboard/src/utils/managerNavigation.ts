@@ -73,6 +73,12 @@ function eventItems(eventId: string, access?: EventAccess | null): ManagerNavIte
 			section: "ticketing",
 		},
 		{
+			label: "Payments",
+			icon: "lucide-credit-card",
+			to: `${event}/payments`,
+			section: "ticketing",
+		},
+		{
 			label: "Coupons",
 			icon: "lucide-ticket-percent",
 			to: `${event}/coupons`,

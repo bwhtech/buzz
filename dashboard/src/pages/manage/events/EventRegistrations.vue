@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { useEventListener } from "@vueuse/core"
-import { Alert, Button, ErrorMessage, Skeleton } from "frappe-ui"
+import { ErrorMessage, Skeleton } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
@@ -8,13 +7,9 @@ import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import RegistrationActions from "@/components/dashboard/events/RegistrationActions.vue"
 import NewTicketTypeDrawer from "@/components/dashboard/ticket-types/NewTicketTypeDrawer.vue"
-import PaymentProviders from "@/components/dashboard/ticket-types/PaymentProviders.vue"
-import RevenueCards from "@/components/dashboard/ticket-types/RevenueCards.vue"
-import TaxSettings from "@/components/dashboard/ticket-types/TaxSettings.vue"
 import TicketCategoryDialog from "@/components/dashboard/ticket-types/TicketCategoryDialog.vue"
 import TicketTypeDrawer from "@/components/dashboard/ticket-types/TicketTypeDrawer.vue"
 import TicketTypesSection from "@/components/dashboard/ticket-types/TicketTypesSection.vue"
-import { useTaxSettingsForm } from "@/composables/useTaxSettingsForm"
 import { useTicketTypeOrganizer } from "@/composables/useTicketTypeOrganizer"
 import { useEventTicketTypes } from "@/data/ticketTypes"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
@@ -23,19 +18,6 @@ import type { FrappeError, TicketCategoryItem } from "@/types"
 const eventId = useRoute().params.eventId as string
 
 const page = useEventTicketTypes(eventId)
-
-const taxForm = useTaxSettingsForm(
-	eventId,
-	computed(() => page.data ?? undefined),
-	() => page.reload(),
-)
-
-// The page's own save takes the shortcut, as on the Details page.
-useEventListener(document, "keydown", (stroke: KeyboardEvent) => {
-	if (stroke.key !== "s" || !(stroke.metaKey || stroke.ctrlKey) || stroke.altKey) return
-	stroke.preventDefault()
-	if (!stroke.repeat) taxForm.save()
-})
 
 const organizer = useTicketTypeOrganizer(
 	computed(() => page.data),
@@ -74,26 +56,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 </script>
 
 <template>
-	<EventPageHeader :title="page.data?.title" section="Registration" :dirty="taxForm.isDirty.value">
-		<Transition
-			enter-active-class="transition duration-150 ease-out motion-reduce:transition-none"
-			enter-from-class="opacity-0 translate-y-1"
-			leave-active-class="transition duration-100 ease-out motion-reduce:transition-none"
-			leave-to-class="opacity-0"
-		>
-			<Button
-				v-if="taxForm.isDirty.value"
-				variant="solid"
-				label="Save"
-				:loading="taxForm.update.loading"
-				@click="taxForm.save"
-			/>
-		</Transition>
-
-		<template #leading>
-			<Button v-if="taxForm.isDirty.value" label="Discard" @click="taxForm.discard" />
-		</template>
-	</EventPageHeader>
+	<EventPageHeader :title="page.data?.title" section="Registration" />
 
 	<PageWithSidebar>
 		<EventArchivedAlert :event="eventId" />
@@ -106,15 +69,6 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		<ErrorMessage v-else-if="page.error" :message="message(page.error)" />
 
 		<div v-else-if="page.data" class="space-y-8">
-			<Alert
-				v-if="!page.data.paid_events_enabled"
-				theme="amber"
-				title="Paid tickets are not available"
-				description="Ticket types for this event can only be free. Contact your administrator to enable paid tickets."
-			/>
-
-			<RevenueCards v-if="page.data.revenue.length" :revenue="page.data.revenue" />
-
 			<TicketTypesSection
 				:page="page.data"
 				:organizer="organizer"
@@ -123,21 +77,6 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				@add-category="openCategoryDialog(null)"
 				@edit-category="openCategoryDialog"
 			/>
-
-			<template v-if="page.data.paid_events_enabled">
-				<PaymentProviders :providers="page.data.payment_providers" />
-
-				<TaxSettings
-					:event="eventId"
-					:form="taxForm"
-					:can-write="page.data.can_write"
-					:team-legal-name="page.data.team_legal_name"
-					:team-tax-id="page.data.team_tax_id"
-					:has-team-tax-details="page.data.has_team_tax_details"
-					:can-edit-team="page.data.can_edit_team"
-					@tax-details-added="page.reload()"
-				/>
-			</template>
 		</div>
 
 		<template #sidebar>

@@ -549,7 +549,7 @@ test.describe("Taxes", () => {
 			},
 		})
 		eventId = String(event.name)
-		await page.goto(`/b/manage/events/${eventId}/registrations`)
+		await page.goto(`/b/manage/events/${eventId}/payments`)
 	})
 
 	async function addTeamTaxDetails(request: APIRequestContext) {
@@ -575,7 +575,7 @@ test.describe("Taxes", () => {
 				end_time: "17:00:00",
 			},
 		})
-		await page.goto(`/b/manage/events/${event.name}/registrations`)
+		await page.goto(`/b/manage/events/${event.name}/payments`)
 
 		const alert = page.getByText("Tax details required")
 		await expect(alert).toBeVisible({ timeout: 15000 })
@@ -638,7 +638,7 @@ test.describe("Taxes", () => {
 
 		page.once("dialog", (dialog) => dialog.dismiss())
 		await page.getByRole("link", { name: "Guests" }).click()
-		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/registrations$`))
+		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/payments$`))
 
 		page.once("dialog", (dialog) => dialog.accept())
 		await page.getByRole("link", { name: "Guests" }).click()
