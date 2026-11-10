@@ -93,7 +93,7 @@
 			{{ __("Need to change a name or cancel?") }}
 			<RouterLink
 				v-if="session.isLoggedIn"
-				:to="`/account/bookings/${bookingId}`"
+				:to="{ name: 'events', query: { booking: bookingId } }"
 				class="text-ink-gray-8 hover:underline"
 			>
 				{{ __("Manage booking") }}

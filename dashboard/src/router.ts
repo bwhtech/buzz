@@ -278,10 +278,7 @@ const routes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/bookings/:bookingId",
-		redirect: (to) => ({
-			name: "booking-details",
-			params: { bookingId: to.params.bookingId },
-		}),
+		redirect: (to) => ({ name: "events", query: { booking: to.params.bookingId } }),
 	},
 	{
 		path: "/tickets",
@@ -289,56 +286,7 @@ const routes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/tickets/:ticketId",
-		redirect: (to) => ({
-			name: "ticket-details",
-			params: { ticketId: to.params.ticketId },
-		}),
-	},
-	{
-		path: "/account",
-		component: () => import("@/pages/Account.vue"),
-		redirect: { name: "bookings-list" },
-		children: [
-			{
-				path: "bookings",
-				name: "bookings-list",
-				meta: { title: "My Bookings" },
-				component: () => import("@/pages/BookingsList.vue"),
-			},
-			{
-				path: "bookings/:bookingId",
-				props: true,
-				name: "booking-details",
-				meta: { title: "Booking Details" },
-				component: () => import("@/pages/BookingDetails.vue"),
-			},
-			{
-				path: "tickets",
-				name: "tickets-list",
-				meta: { title: "My Tickets" },
-				component: () => import("@/pages/TicketsList.vue"),
-			},
-			{
-				path: "tickets/:ticketId",
-				props: true,
-				name: "ticket-details",
-				meta: { title: "Ticket Details" },
-				component: () => import("@/pages/TicketDetails.vue"),
-			},
-			{
-				path: "sponsorships",
-				name: "sponsorships-list",
-				meta: { title: "Sponsorships" },
-				component: () => import("@/pages/SponsorshipsList.vue"),
-			},
-			{
-				path: "sponsorships/:enquiryId",
-				props: true,
-				name: "sponsorship-details",
-				meta: { title: "Sponsorship Details" },
-				component: () => import("@/pages/SponsorshipDetails.vue"),
-			},
-		],
+		redirect: (to) => ({ name: "events", query: { ticket: to.params.ticketId } }),
 	},
 	// Event custom form: /b/<event>/<form>. Declared last — two dynamic segments,
 	// so it only matches after every static route above has been ruled out.

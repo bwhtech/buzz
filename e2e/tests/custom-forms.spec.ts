@@ -370,7 +370,10 @@ test.describe("Sponsorship Enquiry Form", () => {
 		const enquiryLink = page.getByRole("link", { name: "View your enquiry" })
 		await expect(enquiryLink).toBeVisible()
 		await enquiryLink.click()
-		await expect(page).toHaveURL(/\/account\/sponsorships\/.+/)
+		await expect(page.getByRole("dialog").getByText("E2E Sponsor Company").first()).toBeVisible({
+			timeout: 15000,
+		})
+		await expect(page).toHaveURL(/\/b\/manage\/sponsorship$/)
 	})
 })
 
