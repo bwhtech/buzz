@@ -122,6 +122,8 @@ setup("seed a ticket owned by the attendee", async ({ request, baseURL }) => {
 		attendee_name: "Tickets Attendee",
 		attendee_email: ATTENDEE_EMAIL,
 		add_ons: [{ add_on: addOn.name, value: ADD_ON_OPTIONS[0], price: 0, currency: "INR" }],
+		// The event drawer lists submitted tickets only.
+		docstatus: 1,
 	})
 
 	await saveLoginState(baseURL!, {

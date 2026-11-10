@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { Button, Skeleton } from "frappe-ui"
-import { computed, ref } from "vue"
+import { Skeleton } from "frappe-ui"
+import { computed } from "vue"
 
-import CheckInQrDialog from "@/components/dashboard/tickets/CheckInQrDialog.vue"
-import PrintedTicket from "@/components/dashboard/tickets/PrintedTicket.vue"
+import MyTicket from "@/components/dashboard/tickets/MyTicket.vue"
 import TicketBookingDetails from "@/components/dashboard/tickets/TicketBookingDetails.vue"
-import { useMyTickets, useTicketDetails } from "@/data/tickets"
+import { useMyBookings } from "@/data/bookings"
+import { useMyTickets } from "@/data/tickets"
 import { userResource } from "@/data/user"
-import type { MyEvent, TicketWithEvent } from "@/types"
-import { ticketPdfUrl } from "@/utils/ticketPdf"
+import type { MyBooking, MyEvent, TicketWithEvent } from "@/types"
 
 const props = defineProps<{ event: MyEvent }>()
 
 const tickets = useMyTickets(() => props.event.name)
+const bookings = useMyBookings(() => props.event.name)
 
 // A ticket whose event columns did not come over the link hop has nothing to print.
 // The venue is two hops away, and the feed row already carries it.
@@ -24,10 +24,30 @@ const myTickets = computed(() =>
 		),
 )
 
-// The feed row already says the viewer holds a ticket, so the section can hold its place
-// while the ticket call is still out and the drawer stops jumping.
+// A draft is a booking only while an offline payment waits on approval; any other draft
+// is a checkout that never reached the gateway's end.
+const isListedBooking = (booking: MyBooking) =>
+	booking.docstatus !== 0 ||
+	(booking.status === "Approval Pending" && booking.payment_method === "Offline")
+
+const myBookingNames = computed(() =>
+	(bookings.data || []).filter(isListedBooking).map((booking) => booking.name),
+)
+
+// Bookings with none of the user's tickets in them — pending, rejected, cancelled or bought
+// for others — still get their receipt, on their own.
+const bookingsWithoutTickets = computed(() =>
+	myBookingNames.value.filter((name) => !myTickets.value.some((ticket) => ticket.booking === name)),
+)
+
+// The feed row already says the viewer is attending, so the section can hold its place
+// while the calls are still out and the drawer stops jumping.
 const ticketsPending = computed(
-	() => Boolean(props.event.is_attendee) && tickets.loading && !myTickets.value.length,
+	() =>
+		Boolean(props.event.is_attendee) &&
+		(tickets.loading || bookings.loading) &&
+		!myTickets.value.length &&
+		!bookingsWithoutTickets.value.length,
 )
 
 const hasTickets = computed(() => Boolean(myTickets.value.length || ticketsPending.value))
@@ -39,17 +59,9 @@ function ownsBookingReceipt(ticket: TicketWithEvent, index: number) {
 	return myTickets.value.findIndex((row) => row.booking === ticket.booking) === index
 }
 
-// Held past the close so the dialog keeps its contents while it animates out.
-const selectedTicket = ref<TicketWithEvent | null>(null)
-const qrDialogOpen = ref(false)
-
-// The stub the feed loads carries no add-on rows, so the dialog fetches them for
-// whichever ticket was picked.
-const ticketDetails = useTicketDetails(() => selectedTicket.value?.name)
-
-function showCheckInQr(ticket: TicketWithEvent) {
-	selectedTicket.value = ticket
-	qrDialogOpen.value = true
+function reload() {
+	tickets.reload()
+	bookings.reload()
 }
 
 const greeting = computed(() => {
@@ -59,10 +71,14 @@ const greeting = computed(() => {
 </script>
 
 <template>
-	<div v-if="hasTickets" class="space-y-3 rounded-6 bg-surface-gray-1 p-4">
-		<h3 class="flex items-center gap-2 text-xl font-semibold text-ink-gray-7">
+	<div
+		v-if="hasTickets || bookingsWithoutTickets.length"
+		class="space-y-3 rounded-6 bg-surface-gray-1 p-4"
+	>
+		<h3 v-if="hasTickets" class="flex items-center gap-2 text-xl font-semibold text-ink-gray-7">
 			{{ greeting }}
 		</h3>
+		<h3 v-else class="text-xl font-semibold text-ink-gray-7">Your bookings</h3>
 
 		<div v-if="ticketsPending" class="space-y-3">
 			<div class="flex gap-2">
@@ -73,37 +89,20 @@ const greeting = computed(() => {
 		</div>
 
 		<template v-else>
-			<div v-for="(ticket, index) in myTickets" :key="ticket.name" class="space-y-3">
-				<div class="flex gap-2">
-					<Button
-						variant="outline"
-						icon-left="lucide-qr-code"
-						label="Ticket QR"
-						tooltip="Show Check-In QR"
-						@click="showCheckInQr(ticket)"
-					/>
-					<Button
-						variant="outline"
-						icon="lucide-download"
-						aria-label="Download ticket"
-						tooltip="Download ticket"
-						:href="ticketPdfUrl(ticket.name)"
-					/>
-				</div>
-				<PrintedTicket :ticket="ticket" class="-rotate-1" static />
-				<TicketBookingDetails v-if="ownsBookingReceipt(ticket, index)" :booking="ticket.booking!" />
-			</div>
+			<MyTicket
+				v-for="(ticket, index) in myTickets"
+				:key="ticket.name"
+				:ticket="ticket"
+				:show-receipt="ownsBookingReceipt(ticket, index)"
+				:is-booker="myBookingNames.includes(ticket.booking!)"
+				@transferred="reload"
+			/>
+			<TicketBookingDetails
+				v-for="booking in bookingsWithoutTickets"
+				:key="booking"
+				:booking="booking"
+				is-booker
+			/>
 		</template>
-
-		<CheckInQrDialog
-			v-if="selectedTicket"
-			v-model:open="qrDialogOpen"
-			:qr-code="selectedTicket.qr_code"
-			:attendee-name="selectedTicket.attendee_name"
-			:attendee-email="selectedTicket.attendee_email"
-			:ticket-type="selectedTicket.ticket_type"
-			:event-title="selectedTicket.event_title"
-			:add-ons="ticketDetails.data?.add_ons"
-		/>
 	</div>
 </template>

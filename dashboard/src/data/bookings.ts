@@ -1,6 +1,7 @@
-import { useCall } from "frappe-ui"
+import { useCall, useList } from "frappe-ui"
 
-import type { BookingSummary } from "@/types"
+import { session } from "@/data/session"
+import type { BookingDetails, BookingSummary, MyBooking } from "@/types"
 
 /**
  * One booking as a receipt, scoped by read permission rather than by who booked it — a
@@ -17,5 +18,25 @@ export function useBookingSummary(booking: () => string | undefined) {
 		// before one is picked, so there the first fetch waits for the id.
 		immediate: Boolean(booking()),
 		refetch: true,
+	})
+}
+
+/** The booker's view of one booking: its tickets, invoice and cancellation state. */
+export function useBookingDetails(booking: () => string) {
+	return useCall<BookingDetails, { booking_id: string }>({
+		url: "/api/v2/method/buzz.api.booking.get_booking_details",
+		params: () => ({ booking_id: booking() }),
+		refetch: true,
+	})
+}
+
+/** The session user's bookings for one event, drafts included: an offline payment waits as one. */
+export function useMyBookings(event: () => string) {
+	return useList<MyBooking>({
+		doctype: "Event Booking",
+		fields: ["name", "status", "docstatus", "payment_method"],
+		filters: () => ({ user: session.user, event: event() }),
+		// No cacheKey: it persists to IndexedDB and would outlive this user's session.
+		orderBy: "creation desc",
 	})
 }

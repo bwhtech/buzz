@@ -24,10 +24,16 @@ test.describe("Offline Payment Flow", () => {
 		await expect(page.getByText("Transfer to Account: 123456789")).toBeVisible()
 
 		// Submit offline payment (no file upload required in test setup)
-		const submitButton = page.getByRole("button", { name: "Submit" })
-		await submitButton.click()
+		const placed = page.waitForResponse((response) => response.url().includes("process_booking"))
+		await page.getByRole("button", { name: "Submit" }).click()
+		const bookingName = (await (await placed).json()).data.booking_name
 
-		// Verify booking created with verification pending status
+		// The booker lands on the booking in the event drawer, awaiting verification.
+		await expect(page).toHaveURL(/\/b\/manage\/events/, { timeout: 30000 })
+		await expect(page.getByText("Payment Confirmation Pending")).toBeVisible({ timeout: 30000 })
+
+		// A fresh booking link opens the same drawer.
+		await page.goto(`/b/manage/events?booking=${bookingName}`)
 		await expect(page.getByText("Payment Confirmation Pending")).toBeVisible({ timeout: 30000 })
 	})
 
@@ -69,20 +75,5 @@ test.describe("Offline Payment Flow", () => {
 		await expect(page.getByRole("dialog").getByText("Bank Transfer")).not.toBeVisible({
 			timeout: 5000,
 		})
-	})
-})
-
-test.describe("Booking Details - Offline Payment", () => {
-	test("shows verification pending status", async ({ page }) => {
-		// This test assumes a booking already exists
-		// Navigate to bookings list
-		await page.goto("/b/bookings")
-		await page.waitForLoadState("networkidle")
-
-		// Look for verification pending badge
-		const pendingBadge = page.locator("text=/Verification Pending|Approval Pending/i").first()
-		if (await pendingBadge.isVisible({ timeout: 5000 })) {
-			await expect(pendingBadge).toBeVisible()
-		}
 	})
 })

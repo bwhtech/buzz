@@ -8,6 +8,7 @@ from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
+	EventBookingFactory,
 	EventTicketFactory,
 	UserFactory,
 )
@@ -50,6 +51,18 @@ class TestGetMyEvents(IntegrationTestCase):
 		EventTicketFactory.create(event=event, attendee_email=self.host_user)
 
 		self.assertNotIn(event, self.all_events_of(self.host_user))
+
+	def test_returns_an_event_whose_offline_booking_awaits_approval(self):
+		event = self.create_team_event(self.host_team)
+		EventBookingFactory.create(event=event, user=self.attendee, payment_method="Offline")
+
+		self.assertTrue(self.row_of(self.upcoming_of(self.attendee), event)["is_attendee"])
+
+	def test_ignores_a_booking_still_awaiting_online_payment(self):
+		event = self.create_team_event(self.host_team)
+		EventBookingFactory.create(event=event, user=self.attendee)
+
+		self.assertNotIn(event, self.all_events_of(self.attendee))
 
 	def test_excludes_another_teams_event_without_a_ticket(self):
 		event = self.create_team_event(self.other_team, is_published=1)

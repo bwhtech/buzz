@@ -325,6 +325,26 @@ export interface BookingSummary {
 	total_amount: number
 }
 
+/** buzz.api.booking.get_booking_details, narrowed to what the booker's receipt acts on. */
+export interface BookingDetails {
+	doc: { name: string; status: string; docstatus: number }
+	tickets: DashboardTicket[]
+	event: { free_event: boolean }
+	can_request_cancellation: boolean
+	cancellation_request: { cancel_full_booking: boolean; creation: string } | null
+	cancellation_requested_tickets: string[]
+	cancelled_tickets: string[]
+	invoice_available: boolean
+}
+
+/** An Event Booking row the session user made, for the event drawer. */
+export interface MyBooking {
+	name: string
+	status: string
+	docstatus: number
+	payment_method: string | null
+}
+
 /** buzz.api.teams.get_team_events: a calendar row, the team's own or one its community approved. */
 export interface TeamEvent extends MyEvent {
 	is_community_request: boolean
@@ -523,6 +543,9 @@ export interface TicketDetails {
 		currency: string
 	} | null
 	ticket_type: { title: string }
+	can_transfer_ticket: boolean
+	can_change_add_ons: boolean
+	zoom_join_url: string | null
 }
 
 export interface TicketAddOnDetail {
@@ -531,6 +554,9 @@ export interface TicketAddOnDetail {
 	value: string | null
 	price: number | null
 	currency: string | null
+	user_selects_option: boolean
+	// The event's choices for an add-on the attendee picks an option of.
+	options: string[]
 }
 
 // Languages served by the translation API (not a Buzz DocType).
