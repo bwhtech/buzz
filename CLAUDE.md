@@ -42,6 +42,32 @@ Always load frappe-app-dev before any implementation. For UI work, also load ui-
 and the building-apis skill when touching `buzz/api/`. (There is no frappe-ui skill —
 frappe-ui patterns live in frappe-app-dev's frontend references.)
 
+## Subagents
+
+Keep edits and judgment calls on the main session. Hand subagents work that is
+verbose to read and cheap to check, so the main context stays lean.
+
+Classify each subagent before spawning it, and set `model` to match:
+
+| Class | Examples | `model` |
+|---|---|---|
+| Read-only sweep | file search, log and test-output reading, summaries | `haiku` |
+| Scoped task | bug fix to a spec, investigation, review, drafting | `sonnet` |
+| Complex task | multi-file features, debugging, migrations, perf work | `opus` |
+| Frontier task | major refactors, architecture, leading many subagents | `fable` — ask first |
+
+* Never choose `fable` on your own. Ask the user for permission first, every time,
+  and fall back to `opus` if they decline.
+* Unsure of the class → `opus`.
+* A clear spec alone does not make a task scoped; migrations and performance work stay
+  `opus`.
+* Before moving a subagent up a class, give it a way to verify its own work (tests,
+  build), then raise effort one level.
+* Fan out parallel `sonnet` workers only for large, independent work; run a dependent
+  chain or work that fits one context in a single agent.
+* The built-in `Explore` agent runs on the session's model; pass `model: haiku` to keep
+  sweeps cheap.
+
 ## Planning
 
 For creating specs use tracer bullet approach.
