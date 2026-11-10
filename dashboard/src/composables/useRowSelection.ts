@@ -22,5 +22,9 @@ export function useRowSelection(selectableKeys: Ref<string[]>) {
 		chosen.value = new Set()
 	}
 
-	return { selected, isSelected, toggle, clear }
+	function selectAll() {
+		chosen.value = new Set(selectableKeys.value)
+	}
+
+	return { selected, isSelected, toggle, clear, selectAll }
 }

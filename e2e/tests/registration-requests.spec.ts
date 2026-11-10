@@ -38,14 +38,22 @@ test("guest requests a free ticket, the organizer approves it, and the booking i
 	await expect(guestPage).toHaveURL(/\/booking-success\/.+/)
 	await expect(guestPage.getByText("Request received").first()).toBeVisible({ timeout: 30000 })
 
-	await page.goto(`/b/manage/events/${eventId}/guests`)
-	await page.getByRole("radio", { name: /^Requests \(\d+\)$/ }).click()
+	// The registration page counts the request and shows the mode the ticket type flag implies.
+	await page.goto(`/b/manage/events/${eventId}/registrations`)
+	await expect(page.getByRole("link", { name: /Waiting for review/ })).toContainText("1")
+	await expect(page.getByRole("radio", { name: /Review some tickets/ })).toBeChecked()
+
+	await page.getByRole("link", { name: /Waiting for review/ }).click()
+	await expect(page).toHaveURL(/\/approvals$/)
 	await page.getByRole("button", { name: `Open ${REQUESTER.name} E2E` }).click()
 	await page.getByRole("button", { name: "Approve", exact: true }).click()
-	await expect(page.getByText("Request approved").first()).toBeVisible()
+	await expect(page.getByText(/^Approved /).first()).toBeVisible()
 
-	await guestPage.reload()
-	await expect(guestPage.getByText("Add to calendar").first()).toBeVisible()
+	// The write is held for the Undo window, so the guest's booking confirms a few seconds later.
+	await expect(async () => {
+		await guestPage.reload()
+		await expect(guestPage.getByText("Add to calendar").first()).toBeVisible({ timeout: 2000 })
+	}).toPass({ timeout: 20000 })
 	await expect(guestPage.getByText("Request received")).toHaveCount(0)
 	await guestContext.close()
 })

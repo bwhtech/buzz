@@ -7,6 +7,7 @@ import { useIsMobile } from "@/composables/useIsMobile"
 import { useTeamAccess } from "@/composables/useTeamAccess"
 import { finishOpening, openingTeam } from "@/composables/useWorkspaceOpening"
 import { useEventAccess, useEventDoc } from "@/data/events"
+import { useRequestCounts } from "@/data/requests"
 import { useMySponsorships } from "@/data/sponsorships"
 import { personalTeamsEnabled, selectTeam, teamLabel, teams, teamsLoaded } from "@/data/teams"
 import ManagerDesktopShell from "@/layouts/ManagerDesktopShell.vue"
@@ -35,6 +36,11 @@ const eventTitle = computed(() => eventDoc.doc?.title ?? "")
 // Per section: a collaborator sees only the destinations they were granted.
 const eventAccess = useEventAccess(() => eventId.value ?? "")
 watch(eventId, (id) => id && eventAccess.fetch(), { immediate: true })
+
+// Only someone who can act on requests may count them.
+const requestCounts = useRequestCounts(() =>
+	eventId.value && eventAccess.data?.guests === "Edit" ? eventId.value : "",
+)
 
 // A team opens the same way; its name and logo are already in the teams list.
 const teamId = computed(() => route.params.teamId as string | undefined)
@@ -79,6 +85,7 @@ const items = computed(() =>
 				creatingEvent: route.name === "create-event",
 				hasSponsorships: Boolean(sponsorships.data?.length),
 				access: eventAccess.data,
+				requestCounts: requestCounts.data,
 			}),
 )
 </script>

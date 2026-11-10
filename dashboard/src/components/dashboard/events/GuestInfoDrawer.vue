@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Alert, Avatar, Badge, Button, Tooltip, dayjsLocal } from "frappe-ui"
+import { Avatar, Badge, Button, Tooltip, dayjsLocal } from "frappe-ui"
 import { computed } from "vue"
 
 import DetailRow from "@/components/common/DetailRow.vue"
@@ -12,19 +12,18 @@ import {
 } from "@/components/common/drawer"
 import PrintedTicket from "@/components/dashboard/tickets/PrintedTicket.vue"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
-import type { EventGuest, EventGuests, RegistrationRequest, TicketWithEvent } from "@/types"
+import type { EventGuest, EventGuests, TicketWithEvent } from "@/types"
 
 const props = defineProps<{
 	guest: EventGuest | null
 	event: EventGuests | null
-	request?: RegistrationRequest | null
 	hasPrevious: boolean
 	hasNext: boolean
 }>()
 
 const open = defineModel<boolean>("open", { required: true })
 
-const emit = defineEmits<{ previous: []; next: []; approve: []; decline: [] }>()
+const emit = defineEmits<{ previous: []; next: [] }>()
 
 const copyToClipboard = useCopyToClipboard()
 
@@ -38,10 +37,6 @@ const name = computed(
 const registeredAt = computed(() =>
 	props.guest?.registered_at ? dayjsLocal(props.guest.registered_at) : null,
 )
-
-const ticketTypes = computed(() => [
-	...new Set(props.request?.attendees.map((attendee) => attendee.ticket_type)),
-])
 
 // The row is a ticket, so the drawer opens on the paper rather than on a field list.
 // Drawn only once the event carries a title and a date — PrintedTicket has nothing to
@@ -100,7 +95,7 @@ const ticket = computed<TicketWithEvent | null>(() => {
 				</div>
 
 				<div class="flex flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
-					<PrintedTicket v-if="ticket && !request" :ticket="ticket" static />
+					<PrintedTicket v-if="ticket" :ticket="ticket" static />
 
 					<div class="flex items-center gap-3">
 						<Avatar :label="name" size="2xl" />
@@ -114,32 +109,8 @@ const ticket = computed<TicketWithEvent | null>(() => {
 						</div>
 					</div>
 
-					<Alert
-						v-if="request?.status === 'Payment Pending'"
-						theme="amber"
-						:title="`${name} is approved and has yet to pay`"
-						description="Their ticket is issued once the payment goes through."
-					/>
-					<Alert
-						v-else-if="request"
-						:title="`${name} ${request.status === 'Waitlisted' ? 'is on the waitlist' : 'has requested to join this event'}`"
-						description="Approve to issue their ticket, or decline to let them know."
-						:primary-action="{ label: 'Approve', variant: 'solid', onClick: () => emit('approve') }"
-						:secondary-action="{
-							label: 'Decline',
-							variant: 'solid',
-							theme: 'red',
-							onClick: () => emit('decline'),
-						}"
-					/>
-
 					<dl class="space-y-3 text-base">
-						<DetailRow v-if="request" label="Ticket type">
-							<div class="flex flex-wrap gap-1.5">
-								<Badge v-for="type in ticketTypes" :key="type" variant="subtle" :label="type" />
-							</div>
-						</DetailRow>
-						<DetailRow v-else label="Ticket type">
+						<DetailRow label="Ticket type">
 							<Badge v-if="guest.ticket_type" variant="subtle" :label="guest.ticket_type" />
 							<span v-else class="text-ink-gray-5">—</span>
 						</DetailRow>
@@ -156,20 +127,7 @@ const ticket = computed<TicketWithEvent | null>(() => {
 							</template>
 						</DetailRow>
 
-						<DetailRow v-if="request && request.attendees.length > 1" label="Attendees">
-							<ul class="space-y-1">
-								<li v-for="(attendee, index) in request.attendees" :key="index">
-									{{ attendee.full_name }}
-									<span class="text-ink-gray-5">{{ attendee.email }}</span>
-								</li>
-							</ul>
-						</DetailRow>
-
-						<DetailRow v-for="answer in request?.answers" :key="answer.label" :label="answer.label">
-							<span class="whitespace-normal">{{ answer.value }}</span>
-						</DetailRow>
-
-						<DetailRow v-if="!request" label="Ticket ID">
+						<DetailRow label="Ticket ID">
 							<span class="font-mono text-sm tracking-wider uppercase">{{ guest.name }}</span>
 							<template #suffix>
 								<Button
@@ -182,7 +140,7 @@ const ticket = computed<TicketWithEvent | null>(() => {
 							</template>
 						</DetailRow>
 
-						<DetailRow :label="request ? 'Requested' : 'Registered'">
+						<DetailRow label="Registered">
 							<Tooltip v-if="registeredAt" :text="registeredAt.fromNow()">
 								<span>{{ registeredAt.format("D MMM YYYY, h:mm A") }}</span>
 							</Tooltip>

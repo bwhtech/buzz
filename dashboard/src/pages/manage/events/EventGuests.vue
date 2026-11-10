@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useIntersectionObserver } from "@vueuse/core"
-import { useRouteQuery } from "@vueuse/router"
-import { ErrorMessage, TabButtons, useList } from "frappe-ui"
+import { ErrorMessage, useList } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
@@ -15,12 +14,10 @@ import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import GuestInfoDrawer from "@/components/dashboard/events/GuestInfoDrawer.vue"
 import GuestQuickActions from "@/components/dashboard/events/GuestQuickActions.vue"
 import GuestStatCards from "@/components/dashboard/events/GuestStatCards.vue"
-import RegistrationRequests from "@/components/dashboard/events/RegistrationRequests.vue"
 import { useDeepLinkedRecord } from "@/composables/useDeepLinkedRecord"
 import { useEventGuests } from "@/composables/useEventGuests"
 import { useListQuery } from "@/composables/useListQuery"
 import { useCanWriteEvent, useRegistrationTrend } from "@/data/events"
-import { useRegistrationRequests } from "@/data/requests"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError } from "@/types"
 
@@ -49,23 +46,6 @@ const exportQuery = computed(() => ({
 
 const trend = useRegistrationTrend(eventId)
 const canWrite = useCanWriteEvent(eventId)
-
-// Only organizers who can approve may list requests; for anyone else the call fails and
-// the view stays hidden.
-const requests = useRegistrationRequests(eventId)
-const openRequests = computed(() => requests.data ?? [])
-const showRequests = computed(() => !requests.error && openRequests.value.length > 0)
-const view = useRouteQuery<string>("view", "guests")
-const viewingRequests = computed(() => showRequests.value && view.value === "requests")
-const viewOptions = computed(() => [
-	{ label: "Guests", value: "guests" },
-	{ label: `Requests (${openRequests.value.length})`, value: "requests" },
-])
-
-function reloadAfterReview(confirmed: boolean) {
-	requests.reload()
-	if (confirmed) page.reload()
-}
 
 // The answers on a guest come from the registration form, so it is edited from here too.
 const registrationForm = useList<{ name: string }>({
@@ -138,22 +118,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 			/>
 		</section>
 
-		<TabButtons
-			v-if="showRequests"
-			class="w-full sm:w-72"
-			fluid
-			:options="viewOptions"
-			:model-value="viewingRequests ? 'requests' : 'guests'"
-			@update:model-value="view = String($event)"
-		/>
-
-		<RegistrationRequests
-			v-if="viewingRequests"
-			:requests="openRequests"
-			@changed="reloadAfterReview"
-		/>
-
-		<section v-else class="space-y-3">
+		<section class="space-y-3">
 			<h2 class="text-lg font-semibold text-ink-gray-9">
 				{{ selectedZone ? `Guest list · ${selectedZone.title}` : "Guest list" }}
 			</h2>

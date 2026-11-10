@@ -924,18 +924,38 @@ export interface EventCoupons {
 }
 
 // buzz.api.booking.requests
-export type RequestStatus = "Requested" | "Waitlisted" | "Payment Pending"
+export type RequestType = "Approval" | "Waitlist"
+
+export type RequestStatus =
+	| "Requested"
+	| "Waitlisted"
+	| "Payment Pending"
+	| "Rejected"
+	| "Confirmed"
 
 export interface RegistrationRequest {
 	name: string
 	status: RequestStatus
-	buyer_name: string
-	buyer_email: string
+	request_type: RequestType
+	docstatus: 0 | 1 | 2
+	// Waitlist rank within its ticket type, waiting rows only.
+	position: number | null
+	// Null on a Payment Pending row once the payment window has lapsed.
+	offer_expires_at: string | null
+	buyer_name: string | null
+	buyer_email: string | null
 	total_amount: number
-	currency: string
+	currency: string | null
 	requested_at: string
-	attendees: { full_name: string; email: string; ticket_type: string }[]
-	answers: { label: string; value: string }[]
+	attendees: { full_name: string; email: string | null; ticket_type: string }[]
+	answers: { label: string | null; value: string | null }[]
+}
+
+export interface RequestCounts {
+	pending: number
+	waiting: number
+	// Unsold seats by ticket type title, only for ticket types with people waiting.
+	seats_free: Record<string, number>
 }
 
 // buzz.api.booking.process_booking: a registration request is answered without payment.
