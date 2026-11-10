@@ -1,4 +1,4 @@
-import { call, useCall, useList } from "frappe-ui"
+import { useCall, useList } from "frappe-ui"
 
 import type { EventCollaborator, InviteOutcome } from "@/types"
 import type { SectionLevels } from "@/utils/eventSections"
@@ -55,16 +55,4 @@ export function useAcceptCollaboratorInvite() {
 		method: "POST",
 		immediate: false,
 	})
-}
-
-let collaborating: Promise<boolean> | null = null
-
-/** Whether the session user collaborates on any event. Asked once; the answer is per session. */
-export function hasCollaborations(): Promise<boolean> {
-	// A failed answer is not kept, so the next navigation asks again.
-	collaborating ??= call<boolean>("buzz.api.events.collaborators.has_collaborations").catch(() => {
-		collaborating = null
-		return false
-	})
-	return collaborating
 }

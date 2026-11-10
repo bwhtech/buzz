@@ -36,11 +36,6 @@ def get_event_access(event: str) -> dict[str, str | None]:
 	return get_section_access(frappe.session.user, event)
 
 
-@frappe.whitelist()
-def has_collaborations() -> bool:
-	return bool(frappe.db.exists(COLLABORATOR, {"user": frappe.session.user, "status": "Accepted"}))
-
-
 @frappe.whitelist(methods=["POST"])
 def invite_collaborators(event: str, invites: list[dict]) -> list[InviteOutcome]:
 	team = managed_team(event)

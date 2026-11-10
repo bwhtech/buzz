@@ -6,14 +6,13 @@ import {
 	createWebHistory,
 } from "vue-router"
 
-import { hasManageAccess } from "@/data/teams"
 import { loadUser, userResource } from "@/data/user"
 import type { EventAccess } from "@/types"
 import { firstEventPath } from "@/utils/managerNavigation"
 
 const APP_NAME = "Buzz"
 
-// New users finish onboarding before the dashboard. Other pages (tickets, bookings) never wait.
+// New users finish onboarding before the dashboard. Other pages (check-in, booking) never wait.
 // A deep link into /manage is kept, so onboarding ends where the user was going.
 async function onboardingRedirect(to: RouteLocationNormalized) {
 	await loadUser()
@@ -28,10 +27,7 @@ const routes: RouteRecordRaw[] = [
 		name: "dashboard",
 		// Never rendered — the guard always redirects — but a record needs a component.
 		component: { render: () => null },
-		beforeEnter: async (to) =>
-			(await onboardingRedirect(to)) ?? {
-				name: (await hasManageAccess()) ? "manage" : "bookings-tab",
-			},
+		beforeEnter: async (to) => (await onboardingRedirect(to)) ?? { name: "manage" },
 	},
 	{
 		// Outside the manage shell: the invitee may not be logged in, or on any team.
@@ -272,8 +268,7 @@ const routes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/bookings",
-		name: "bookings-tab",
-		redirect: "/account/bookings",
+		redirect: { name: "events" },
 	},
 	{
 		path: "/bookings/:bookingId",
@@ -284,7 +279,7 @@ const routes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/tickets",
-		redirect: "/account/tickets",
+		redirect: { name: "events" },
 	},
 	{
 		path: "/tickets/:ticketId",

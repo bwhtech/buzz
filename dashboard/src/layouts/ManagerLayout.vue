@@ -4,24 +4,18 @@ import { computed, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import { useIsMobile } from "@/composables/useIsMobile"
-import { useTeamAccess } from "@/composables/useTeamAccess"
 import { finishOpening, openingTeam } from "@/composables/useWorkspaceOpening"
 import { useEventAccess, useEventDoc } from "@/data/events"
 import { useMySponsorships } from "@/data/sponsorships"
-import { personalTeamsEnabled, selectTeam, teamLabel, teams, teamsLoaded } from "@/data/teams"
+import { selectTeam, teamLabel, teams, teamsLoaded } from "@/data/teams"
 import ManagerDesktopShell from "@/layouts/ManagerDesktopShell.vue"
 import ManagerMobileShell from "@/layouts/ManagerMobileShell.vue"
 import NotFound from "@/pages/NotFound.vue"
 import { managerNavigation, type Workspace } from "@/utils/managerNavigation"
 
 const route = useRoute()
-const access = useTeamAccess()
 const isMobile = useIsMobile()
 const sponsorships = useMySponsorships()
-
-// Without a team, someone can still host in their own name once personal teams are on.
-// The teams check lets them stay once that first event creates their personal team.
-const allowCreateWithoutTeam = computed(() => personalTeamsEnabled && route.name === "create-event")
 
 // An event opens into the same shell with its own destinations.
 const eventId = computed(() => route.params.eventId as string | undefined)
@@ -84,10 +78,7 @@ const items = computed(() =>
 </script>
 
 <template>
-	<!-- Shell and page render while access is pending, so pages show their own skeletons. -->
-	<NotFound
-		v-if="(access === 'denied' && !teams.length && !allowCreateWithoutTeam) || teamDenied"
-	/>
+	<NotFound v-if="teamDenied" />
 	<ManagerMobileShell v-else-if="isMobile" :items="items" :show-discover="!workspace" />
 	<ManagerDesktopShell v-else :items="items" :workspace="workspace" />
 </template>

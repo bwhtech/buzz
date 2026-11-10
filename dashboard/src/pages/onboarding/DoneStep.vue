@@ -61,7 +61,7 @@ const actions = computed<Action[]>(() => {
 			eventAction.value,
 			{ label: __("View community page"), run: () => open(`/community/${flow.community.slug}`) },
 		]
-	return [browseEvents, { label: __("My tickets"), run: () => open("/b/account/tickets") }]
+	return [browseEvents, { label: __("My tickets"), run: () => open("/b/manage/events") }]
 })
 
 const summary = computed(() => {

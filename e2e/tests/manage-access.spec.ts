@@ -46,19 +46,18 @@ test.describe("Manage access", () => {
 			expect(response.ok()).toBeTruthy()
 		})
 
-		test("lands on the attendee dashboard", async ({ page }) => {
+		test("lands on the events feed", async ({ page }) => {
 			await page.goto("/b/")
 
-			await expect(page).toHaveURL(/\/b\/account\/bookings$/, { timeout: 15000 })
+			await expect(page).toHaveURL(/\/b\/manage\/events$/, { timeout: 15000 })
+			await expect(page.getByRole("heading", { name: "Events", level: 1 })).toBeVisible()
 		})
 
-		test("gets a 404 in place at /manage", async ({ page }) => {
-			await page.goto("/b/manage")
-
-			// /manage redirects to the landing page before the layout decides anyone is
-			// unwelcome, so the 404 renders at /manage/events, not at /manage.
-			await expect(page.getByText("Page not found")).toBeVisible({ timeout: 15000 })
-			await expect(page).toHaveURL(/\/b\/manage\/events$/)
+		test("keeps the old bookings and tickets paths on the events feed", async ({ page }) => {
+			for (const path of ["/b/bookings", "/b/tickets"]) {
+				await page.goto(path)
+				await expect(page).toHaveURL(/\/b\/manage\/events$/, { timeout: 15000 })
+			}
 		})
 	})
 
