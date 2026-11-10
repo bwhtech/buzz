@@ -214,7 +214,6 @@ declare module 'vue' {
     ProposalCard: typeof import('./src/components/dashboard/proposals/ProposalCard.vue')['default']
     ProposalDocument: typeof import('./src/components/dashboard/proposals/ProposalDocument.vue')['default']
     ProposalDrawer: typeof import('./src/components/dashboard/proposals/ProposalDrawer.vue')['default']
-    ProposalEditDialog: typeof import('./src/components/ProposalEditDialog.vue')['default']
     ProposalProperties: typeof import('./src/components/dashboard/proposals/ProposalProperties.vue')['default']
     ProposalsDialog: typeof import('./src/components/dashboard/proposals/ProposalsDialog.vue')['default']
     QRScanner: typeof import('./src/components/QRScanner.vue')['default']

@@ -54,6 +54,17 @@ website_redirects = [
 	# Bare /dashboard has no trailing slash for the catch-all above to match, and
 	# www/dashboard.html would otherwise serve the SPA shell under the wrong base.
 	{"source": r"/dashboard", "target": "/b", "forward_query_parameters": True},
+	# /b/account was folded into /b/manage; an id in the old path opens its drawer there.
+	{
+		"source": r"/b/account/proposals/([^/]+)",
+		"target": r"/b/manage/proposals?proposal=\1",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/b/account/proposals",
+		"target": "/b/manage/proposals",
+		"forward_query_parameters": True,
+	},
 ]
 
 # Scheduled Tasks

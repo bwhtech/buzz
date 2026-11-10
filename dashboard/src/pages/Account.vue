@@ -32,7 +32,6 @@ import { computed, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import LucideCalendarDays from "~icons/lucide/calendar-days"
 import LucideCircleDollarSign from "~icons/lucide/circle-dollar-sign"
-import LucideMegaphone from "~icons/lucide/megaphone"
 import LucideTicket from "~icons/lucide/ticket"
 
 import ProfileView from "@/components/ProfileView.vue"
@@ -58,12 +57,6 @@ const tabs = computed(() => {
 			label: __("My Tickets"),
 			route: "/account/tickets",
 			iconLeft: LucideTicket,
-		},
-		{
-			value: "/account/proposals",
-			label: __("Talk Proposals"),
-			route: "/account/proposals",
-			iconLeft: LucideMegaphone,
 		},
 	]
 

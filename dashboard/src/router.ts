@@ -189,12 +189,18 @@ const routes: RouteRecordRaw[] = [
 				meta: { title: "My Proposals" },
 				component: () => import("@/pages/manage/MyProposals.vue"),
 			},
+			{
+				path: "sponsorship",
+				name: "my-sponsorships",
+				meta: { title: "Sponsorship" },
+				component: () => import("@/pages/manage/MySponsorships.vue"),
+			},
 			// Sidebar destinations that have no page yet. Unnamed on purpose: SidebarItem
 			// falls back to matching on path, so each one lights up on its own. Enumerated
 			// so a mistyped path reaches the 404 below — keep in step with the sidebar
 			// items in ManagerLayout.vue.
 			{
-				path: ":section(sponsorship|overview|registrations|sponsors|more)",
+				path: ":section(overview|registrations|sponsors|more)",
 				component: () => import("@/pages/manage/WorkInProgress.vue"),
 			},
 			// Claims the rest of /manage before the two-segment custom form route can:
@@ -318,19 +324,6 @@ const routes: RouteRecordRaw[] = [
 				name: "ticket-details",
 				meta: { title: "Ticket Details" },
 				component: () => import("@/pages/TicketDetails.vue"),
-			},
-			{
-				path: "proposals",
-				name: "proposals-list",
-				meta: { title: "Talk Proposals" },
-				component: () => import("@/pages/ProposalsList.vue"),
-			},
-			{
-				path: "proposals/:proposalId",
-				props: true,
-				name: "proposal-details",
-				meta: { title: "Proposal Details" },
-				component: () => import("@/pages/ProposalDetails.vue"),
 			},
 			{
 				path: "sponsorships",
