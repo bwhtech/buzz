@@ -34,7 +34,8 @@ const requires_auth = computed(() => !route.meta?.isPublic)
 // meta of the URL being loaded instead.
 const startMeta = router.resolve(router.options.history.location).meta
 const meta = computed(() => (routerReady.value ? route.meta : startMeta))
-const fullBleed = computed(() => Boolean(meta.value.fullBleed))
+// A guest on a full-bleed page gets the site header and its login prompt instead.
+const fullBleed = computed(() => Boolean(meta.value.fullBleed) && session.isLoggedIn)
 // Wide pages lay out their own width under the site header.
 const contentClass = computed(() => {
 	if (fullBleed.value) return "h-full"

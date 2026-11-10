@@ -45,6 +45,7 @@ test.describe("My sponsorships", () => {
 				event,
 				tier: tier.name,
 				company_name,
+				company_logo: "/assets/buzz/images/buzz-logo.png",
 				status,
 			})
 			enquiries[company_name] = enquiry.name
@@ -93,7 +94,8 @@ test.describe("My sponsorships", () => {
 			.click()
 
 		await expect(page.getByText("Enquiry withdrawn")).toBeVisible()
-		await expect(enquiryCard(page, pending)).toContainText("Withdrawn")
+		// The drawer stays open, so the refreshed row shows there; the card is behind its modal.
+		await expect(drawer(page).getByText("Withdrawn").first()).toBeVisible()
 	})
 
 	test("celebrates a paid enquiry on the way back from the payment page", async ({ page }) => {
