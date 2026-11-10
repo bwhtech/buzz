@@ -22,9 +22,9 @@ from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponC
 from buzz.ticketing.doctype.event_booking.booking_invoice import BookingInvoice
 from buzz.ticketing.doctype.event_booking.registration_request import (
 	OPEN_STATUSES,
-	PAYMENT_OFFER_HOURS,
 	REQUEST_STATUSES,
 	RegistrationRequest,
+	payment_offer_hours,
 )
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
@@ -76,6 +76,7 @@ class EventBooking(Document):
 		payment_method: DF.Data | None
 		payment_status: DF.Literal["Unpaid", "Paid", "Verification Pending"]
 		refund_status: DF.Literal["", "Refund Initiated", "Partially Refunded", "Refunded"]
+		request_type: DF.Literal["", "Approval", "Waitlist"]
 		refunded_amount: DF.Currency
 		status: DF.Literal[
 			"Confirmed",
@@ -207,6 +208,8 @@ class EventBooking(Document):
 		if str(ticket_type.event) != str(self.event):
 			# No title: it would name hidden ticket types of any event.
 			frappe.throw(_("A selected ticket type is not available for this event"))
+		if self.flags.organizer_override:
+			return
 		if self.flags.payment_received:
 			self.log_if_oversold(ticket_type, quantity)
 			return
@@ -281,7 +284,7 @@ class EventBooking(Document):
 		if self.payment_method == OFFLINE_PAYMENT_METHOD:
 			return self.event_end()
 		if self.status == "Payment Pending":
-			return add_to_date(now_datetime(), hours=PAYMENT_OFFER_HOURS)
+			return add_to_date(now_datetime(), hours=payment_offer_hours(self.event))
 		return add_to_date(now_datetime(), minutes=PAYMENT_HOLD_MINUTES)
 
 	def event_end(self):

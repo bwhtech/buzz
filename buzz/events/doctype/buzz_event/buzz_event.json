@@ -57,6 +57,7 @@
   "requires_approval",
   "column_break_registration_requests",
   "enable_waitlist",
+  "payment_offer_hours",
   "ticket_email_section",
   "send_ticket_email",
   "section_break_uoke",
@@ -622,6 +623,14 @@
    "fieldname": "enable_waitlist",
    "fieldtype": "Check",
    "label": "Waitlist for all sold-out tickets"
+  },
+  {
+   "default": "48",
+   "description": "How long an approved guest has to pay before their seats go back on sale.",
+   "fieldname": "payment_offer_hours",
+   "fieldtype": "Select",
+   "label": "Payment Link Expires After (Hours)",
+   "options": "24\n48\n72"
   }
  ],
  "grid_page_length": 50,
@@ -699,7 +708,7 @@
    "link_fieldname": "event"
   }
  ],
- "modified": "2026-11-09 12:00:00.000000",
+ "modified": "2026-11-10 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Event",

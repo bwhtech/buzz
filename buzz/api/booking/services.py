@@ -156,7 +156,7 @@ class BookingService:
 		self.append_utm_parameters(booking)
 		self.append_custom_fields(booking)
 		self.append_attendees(booking)
-		booking.status = RegistrationRequest(booking).initial_status() or booking.status
+		RegistrationRequest(booking).start()
 		return booking
 
 	def apply_code(self, booking: "EventBooking") -> None:

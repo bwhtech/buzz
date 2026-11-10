@@ -22,12 +22,12 @@ MY_BOOKINGS_LIMIT = 20
 
 
 def my_bookings() -> list[MyBooking]:
-	"""The session user's submitted and cancelled bookings and open requests, newest first."""
+	"""The session user's submitted and cancelled bookings and requests, newest first."""
 	rows = frappe.get_list(
 		"Event Booking",
 		fields=MY_BOOKING_FIELDS,
 		filters={"user": frappe.session.user},
-		or_filters=[["docstatus", "!=", 0], ["status", "in", OPEN_STATUSES]],
+		or_filters=[["docstatus", "!=", 0], ["status", "in", (*OPEN_STATUSES, "Rejected")]],
 		order_by="creation desc",
 		limit=MY_BOOKINGS_LIMIT,
 	)

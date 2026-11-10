@@ -243,6 +243,12 @@ class RequestAnswer(APIResponse):
 class RegistrationRequestRow(APIResponse):
 	name: str
 	status: str
+	request_type: str | None
+	docstatus: int
+	# Waitlist rank within its ticket type, counting waiting entries only.
+	position: int | None
+	# When the payment offer lapses; None on a Payment Pending row means it has.
+	offer_expires_at: datetime | None
 	buyer_name: str | None
 	buyer_email: str | None
 	total_amount: float
@@ -250,3 +256,10 @@ class RegistrationRequestRow(APIResponse):
 	requested_at: datetime
 	attendees: list[RequestAttendee]
 	answers: list[RequestAnswer]
+
+
+class RequestCounts(APIResponse):
+	pending: int
+	waiting: int
+	# Unsold seats on ticket types that have people waiting, by ticket type title.
+	seats_free: dict[str, int]

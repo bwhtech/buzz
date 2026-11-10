@@ -8,7 +8,7 @@ from buzz.api.comments.email_content import EmailContent
 from buzz.api.comments.schemas import ActivityEntry, EmailAttachment
 
 # Field changes worth a line in the timeline, read from the record's Version history.
-TRACKED_FIELDS = {"Talk Proposal": ["status"]}
+TRACKED_FIELDS = {"Talk Proposal": ["status"], "Event Booking": ["status"]}
 # Edits listed by field name only, since long text reads badly as a diff.
 EDIT_SUMMARY_FIELDS = {"Talk Proposal": ["title", "description", "phone"]}
 

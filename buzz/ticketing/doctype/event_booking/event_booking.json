@@ -14,6 +14,7 @@
   "payment_status",
   "column_break_status",
   "status",
+  "request_type",
   "payment_method_section",
   "payment_method",
   "column_break_payment_method",
@@ -326,6 +327,14 @@
    "read_only": 1
   },
   {
+   "fieldname": "request_type",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Request Type",
+   "options": "\nApproval\nWaitlist",
+   "read_only": 1
+  },
+  {
    "fieldname": "payment_method_section",
    "fieldtype": "Section Break",
    "label": "Payment Method"
@@ -371,7 +380,7 @@
    "link_fieldname": "booking"
   }
  ],
- "modified": "2026-11-09 12:00:00.000000",
+ "modified": "2026-11-10 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Booking",
@@ -425,5 +434,6 @@
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
- "title_field": "user"
+ "title_field": "user",
+ "track_changes": 1
 }
