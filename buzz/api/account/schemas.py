@@ -51,6 +51,7 @@ class UserInfoResponse(APIResponse):
 	navbar: Navbar
 	language: str | None
 	time_zone: str | None
+	needs_onboarding: bool
 
 
 class LanguageOption(APIResponse):

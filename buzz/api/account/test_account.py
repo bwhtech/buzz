@@ -84,6 +84,7 @@ class TestGetUserInfo(LanguageTestCase):
 				"navbar",
 				"language",
 				"time_zone",
+				"needs_onboarding",
 			},
 		)
 		self.assertTrue(info["is_logged_in"])
