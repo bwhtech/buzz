@@ -137,6 +137,7 @@ export interface UserInfo {
 	roles?: { role: string }[]
 	language?: string | null
 	time_zone?: string | null
+	needs_onboarding?: boolean
 }
 
 export interface EmailAttachment {

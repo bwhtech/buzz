@@ -58,6 +58,21 @@ USER_INVITATION_CUSTOM_FIELDS = {
 	],
 }
 
+# Blank means the user predates onboarding, or signed up while it was off.
+USER_ONBOARDING_CUSTOM_FIELDS = {
+	"User": [
+		{
+			"fieldname": "buzz_onboarding_status",
+			"label": "Buzz Onboarding Status",
+			"fieldtype": "Select",
+			"options": "\nPending\nDeferred\nCompleted",
+			"insert_after": "bio",
+			"read_only": 1,
+			"hidden": 1,
+		},
+	],
+}
+
 ZOOM_INTEGRATION_CUSTOM_FIELDS = {
 	"Buzz Event": [
 		{
@@ -194,6 +209,7 @@ def create_custom_fields():
 	installed_apps = frappe.get_installed_apps()
 
 	_create_custom_fields(USER_INVITATION_CUSTOM_FIELDS, ignore_validate=True)
+	_create_custom_fields(USER_ONBOARDING_CUSTOM_FIELDS, ignore_validate=True)
 
 	if "zoom_integration" in installed_apps:
 		create_zoom_integration_custom_fields()
