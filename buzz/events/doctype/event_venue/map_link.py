@@ -72,6 +72,9 @@ def resolved_url(link: str | None) -> ParseResult:
 def full_google_link(short_link: str) -> str | None:
 	# One hop, to a host named above, and only the redirect target is read: a pasted link
 	# must not be able to point the server at an address of its choosing.
+	# requests connects to the netloc, not the hostname; netloc keeps userinfo, port and "@".
+	if urlparse(short_link).netloc not in GOOGLE_SHORT_LINK_HOSTS:
+		return None
 	try:
 		response = requests.get(
 			short_link.replace("http://", "https://", 1),
