@@ -16,6 +16,7 @@ from buzz.tests.factories import (
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
 	EventBookingFactory,
+	EventTicketFactory,
 	EventTicketTypeFactory,
 	UserFactory,
 )
@@ -96,31 +97,70 @@ class TestEventManagersAreHeldToTheirOwnTeam(EligibilityTestCase):
 	def test_an_outsider_may_not_book_an_unpublished_event(self):
 		self.set_event({"is_published": 0})
 
-		with self.assertRaises(frappe.ValidationError):
+		with self.assertRaises(frappe.PermissionError) as context:
 			self.insert_as(self.outsider)
 
+		self.assertIn("registration page", str(context.exception))
 		self.assertIn("Event Manager", frappe.get_roles(self.outsider))
 
 	def test_an_outsider_may_not_book_after_registrations_close(self):
+		# The creation guard refuses the insert before the cutoff is even reached.
 		self.close_registrations()
 
-		with self.assertRaises(RegistrationsClosed):
+		with self.assertRaises(frappe.PermissionError):
 			self.insert_as(self.outsider)
 
-	def test_an_outsider_may_not_book_an_event_that_already_ended(self):
-		# No explicit cutoff, so `are_registrations_closed` falls back to the end datetime.
-		self.addCleanup(
-			self.set_event, {"start_date": self.event.start_date, "end_date": self.event.end_date}
+	def test_an_outsider_cannot_book_an_open_published_event(self):
+		with self.assertRaises(frappe.PermissionError) as context:
+			self.insert_as(self.outsider)
+
+		self.assertIn("registration page", str(context.exception))
+		self.assertEqual(frappe.db.count("Event Booking", {"user": self.outsider}), 0)
+
+
+class TestAUserCannotIssueTicketsDirectly(EligibilityTestCase):
+	def ticket_values(self, **overrides) -> dict:
+		values = {
+			"event": str(self.event.name),
+			"ticket_type": str(self.paid_ticket_type.name),
+			"first_name": "Test",
+			"attendee_email": ATTENDEE,
+		}
+		values.update(overrides)
+		return values
+
+	def test_an_outsider_cannot_create_a_ticket(self):
+		with self.set_user(self.outsider), self.assertRaises(frappe.PermissionError) as context:
+			EventTicketFactory.create(**self.ticket_values())
+
+		self.assertIn("issued by a booking", str(context.exception))
+
+	def test_a_ticket_cannot_dodge_the_check_with_a_blank_event(self):
+		with self.set_user(self.outsider):
+			ticket = EventTicketFactory.build(**self.ticket_values())
+			ticket.event = None
+
+			with self.assertRaises(frappe.PermissionError):
+				ticket.insert()
+
+		self.assertFalse(frappe.db.exists("Event Ticket", {"attendee_email": ATTENDEE}))
+
+
+class TestABookingNeedsAReceivedPayment(EligibilityTestCase):
+	def test_a_booking_without_a_received_payment_cannot_be_submitted(self):
+		booking = EventBookingFactory.create(
+			event=str(self.event.name),
+			user=self.outsider,
+			payment_status="Paid",
+			attendees=[self.attendee_row()],
 		)
-		self.set_event({"start_date": add_days(today(), -10), "end_date": add_days(today(), -10)})
 
-		with self.assertRaises(RegistrationsClosed):
-			self.insert_as(self.outsider)
+		with self.set_user(self.outsider):
+			booking.reload()
+			with self.assertRaises(frappe.ValidationError):
+				booking.submit()
 
-	def test_an_outsider_may_book_an_open_published_event(self):
-		booking = self.insert_as(self.outsider)
-
-		self.assertTrue(frappe.db.exists("Event Booking", booking.name))
+		self.assertEqual(frappe.db.get_value("Event Booking", booking.name, "docstatus"), 0)
 
 
 class TestTheServiceFlowRefusesIneligibleEvents(EligibilityTestCase):
@@ -134,6 +174,16 @@ class TestTheServiceFlowRefusesIneligibleEvents(EligibilityTestCase):
 
 	def test_service_refuses_once_registrations_have_closed(self):
 		self.close_registrations()
+
+		with self.set_user(self.attendee), self.assertRaises(RegistrationsClosed):
+			process_booking(self.booking_request())
+
+	def test_service_refuses_an_event_that_already_ended(self):
+		# No explicit cutoff, so `are_registrations_closed` falls back to the end datetime.
+		self.addCleanup(
+			self.set_event, {"start_date": self.event.start_date, "end_date": self.event.end_date}
+		)
+		self.set_event({"start_date": add_days(today(), -10), "end_date": add_days(today(), -10)})
 
 		with self.set_user(self.attendee), self.assertRaises(RegistrationsClosed):
 			process_booking(self.booking_request())
@@ -172,8 +222,11 @@ class TestLegitimateFlowsStillWork(EligibilityTestCase):
 
 class TestTheGuardCannotBeSteppedAround(EligibilityTestCase):
 	def test_an_outsider_cannot_grow_a_draft_after_registrations_close(self):
+		# The already-open draft is the buyer's, so the save reaches the cutoff check.
 		free_type = str(self.free_ticket_type.name)
-		booking = self.insert_as(self.outsider, attendees=[self.attendee_row(ticket_type=free_type)])
+		booking = self.insert_as(
+			self.organiser, user=self.outsider, attendees=[self.attendee_row(ticket_type=free_type)]
+		)
 		self.close_registrations()
 
 		with self.set_user(self.outsider):
