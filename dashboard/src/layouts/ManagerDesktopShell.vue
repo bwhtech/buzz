@@ -6,6 +6,7 @@ import {
 	PageHeaderTarget,
 	Sidebar,
 	SidebarItem,
+	SidebarSection,
 	Skeleton,
 } from "frappe-ui"
 import { computed, ref, useTemplateRef, watch } from "vue"
@@ -20,6 +21,7 @@ import UserMenu from "@/components/UserMenu.vue"
 import { openingTeam } from "@/composables/useWorkspaceOpening"
 import {
 	discoverEvents,
+	navigationGroups,
 	openDiscoverEvents,
 	type ManagerNavItem,
 	type Workspace,
@@ -28,6 +30,7 @@ import {
 const props = defineProps<{ items: ManagerNavItem[]; workspace?: Workspace }>()
 
 const route = useRoute()
+const groups = computed(() => navigationGroups(props.items))
 const openPalette = () => (paletteOpen.value = true)
 
 // Calendar, Members, Payments and Settings.
@@ -101,24 +104,32 @@ watch(headerKey, (key, previous) => {
 									<Skeleton class="h-3 w-24 rounded-2" />
 								</div>
 							</template>
-							<template v-for="item in items" v-else :key="item.label">
-								<Divider v-if="item.startsGroup" class="my-1.5" />
-								<SidebarItem
-									:label="item.label"
-									:icon="item.icon"
-									:route="item.to"
-									:active="isActive(item.to)"
-								>
-									<template v-if="item.count" #suffix>
-										<span
-											class="mr-2 flex items-center gap-1.5 text-sm text-ink-gray-5 tabular-nums"
-										>
-											<span v-if="item.dot" class="size-1.5 rounded-full bg-surface-amber-6" />
-											{{ item.count }}
-										</span>
-									</template>
-								</SidebarItem>
-							</template>
+							<SidebarSection
+								v-for="(group, index) in groups"
+								v-else
+								:key="index"
+								:label="group.label && __(group.label)"
+								class="first:mt-0"
+							>
+								<template v-for="item in group.items" :key="item.label">
+									<Divider v-if="item.startsGroup" class="my-1.5" />
+									<SidebarItem
+										:label="item.label"
+										:icon="item.icon"
+										:route="item.to"
+										:active="isActive(item.to)"
+									>
+										<template v-if="item.count" #suffix>
+											<span
+												class="mr-2 flex items-center gap-1.5 text-sm text-ink-gray-5 tabular-nums"
+											>
+												<span v-if="item.dot" class="size-1.5 rounded-full bg-surface-amber-6" />
+												{{ item.count }}
+											</span>
+										</template>
+									</SidebarItem>
+								</template>
+							</SidebarSection>
 						</div>
 					</Transition>
 				</div>
