@@ -109,7 +109,7 @@ function confirmRevoke(collaborator: EventCollaborator) {
 					/>
 				</div>
 				<Button
-					variant="solid"
+					variant="subtle"
 					icon-left="lucide-plus"
 					:label="__('Invite')"
 					@click="openDrawer(null)"

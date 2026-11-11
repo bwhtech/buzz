@@ -41,7 +41,7 @@ async function toggleEnabled(zone: CheckInZone, enabled: boolean) {
 				</p>
 			</div>
 			<Button
-				variant="solid"
+				variant="subtle"
 				icon-left="lucide-plus"
 				:label="__('Add zone')"
 				:disabled="disabled"
