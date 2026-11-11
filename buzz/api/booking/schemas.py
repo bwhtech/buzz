@@ -50,6 +50,12 @@ class FreeBookingResponse(APIResponse):
 	redirect_to: str
 
 
+class RequestResponse(APIResponse):
+	booking_name: str
+	redirect_to: str
+	request_status: str
+
+
 class OfflineBookingResponse(APIResponse):
 	booking_name: str
 	offline_payment: bool
@@ -221,3 +227,39 @@ class MyBooking(APIResponse):
 	status: str | None
 	# Only counted by the list; each row is a plain ticket_type pair.
 	attendees: list
+
+
+class RequestAttendee(APIResponse):
+	full_name: str
+	email: str | None
+	ticket_type: str
+
+
+class RequestAnswer(APIResponse):
+	label: str | None
+	value: str | None
+
+
+class RegistrationRequestRow(APIResponse):
+	name: str
+	status: str
+	request_type: str | None
+	docstatus: int
+	# Waitlist rank within its ticket type, counting waiting entries only.
+	position: int | None
+	# When the payment offer lapses; None on a Payment Pending row means it has.
+	offer_expires_at: datetime | None
+	buyer_name: str | None
+	buyer_email: str | None
+	total_amount: float
+	currency: str | None
+	requested_at: datetime
+	attendees: list[RequestAttendee]
+	answers: list[RequestAnswer]
+
+
+class RequestCounts(APIResponse):
+	pending: int
+	waiting: int
+	# Unsold seats on ticket types that have people waiting, by ticket type title.
+	seats_free: dict[str, int]

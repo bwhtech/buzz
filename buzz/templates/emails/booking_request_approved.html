@@ -1,0 +1,14 @@
+{% extends "buzz/templates/emails/base.html" %}
+
+{% block preheader %}You're approved for {{ event_title }}. Pay to confirm your spot.{% endblock %}
+{% block title %}You're approved{% endblock %}
+
+{% block content %}
+<p style="margin:0 0 24px">
+  The organizer approved your request. Your tickets are held for {{ hours }} hours.
+  <strong style="color:#171717">Pay to confirm your spot.</strong>
+</p>
+{% set total_label = "Amount to pay" %}
+{% include "buzz/templates/emails/_booking_summary.html" %}
+{% with button_url=pay_url, button_label="Pay now" %}{% include "buzz/templates/emails/_button.html" %}{% endwith %}
+{% endblock %}

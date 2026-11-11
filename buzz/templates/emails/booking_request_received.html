@@ -1,0 +1,13 @@
+{% extends "buzz/templates/emails/base.html" %}
+
+{% block preheader %}We received your request to join {{ event_title }}.{% endblock %}
+{% block title %}{% if doc.status == "Waitlisted" %}You're on the waitlist{% else %}Request received{% endif %}{% endblock %}
+
+{% block content %}
+<p style="margin:0 0 24px">
+  {% if doc.status == "Waitlisted" %}This event is full. The organizer approves waitlist entries as spots open.{% else %}The organizer reviews every request.{% endif %}
+  We will email you once they decide. <strong style="color:#171717">No ticket has been issued yet.</strong>
+</p>
+{% set total_label = "Total" %}
+{% include "buzz/templates/emails/_booking_summary.html" %}
+{% endblock %}

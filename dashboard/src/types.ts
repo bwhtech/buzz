@@ -596,6 +596,8 @@ export interface AvailableTicketType {
 	prices?: { currency: string; price: number }[]
 	price_note?: string
 	category?: string | null
+	needs_approval?: boolean
+	waitlisted?: boolean
 }
 
 // buzz.api.booking.hold_tickets
@@ -867,6 +869,8 @@ export interface TicketTypeItem {
 	auto_unpublish_after: string | null
 	is_published: boolean
 	is_hidden: boolean
+	requires_approval: boolean
+	enable_waitlist: boolean
 	tickets_sold: number
 	prices: TicketTypePrice[]
 }
@@ -879,6 +883,8 @@ export interface EventTicketTypes {
 	registrations_closed: boolean
 	allow_guest_booking: boolean
 	guest_verification_method: string
+	requires_approval: boolean
+	enable_waitlist: boolean
 	apply_tax: boolean
 	tax_inclusive: boolean
 	tax_label: string
@@ -968,4 +974,46 @@ export interface EventCoupons {
 	coupons: CouponItem[]
 	ticket_types: CouponTicketType[]
 	discounted: { currency: string; amount: number }[]
+}
+
+// buzz.api.booking.requests
+export type RequestType = "Approval" | "Waitlist"
+
+export type RequestStatus =
+	| "Requested"
+	| "Waitlisted"
+	| "Payment Pending"
+	| "Rejected"
+	| "Confirmed"
+
+export interface RegistrationRequest {
+	name: string
+	status: RequestStatus
+	request_type: RequestType
+	docstatus: 0 | 1 | 2
+	// Waitlist rank within its ticket type, waiting rows only.
+	position: number | null
+	// Null on a Payment Pending row once the payment window has lapsed.
+	offer_expires_at: string | null
+	buyer_name: string | null
+	buyer_email: string | null
+	total_amount: number
+	currency: string | null
+	requested_at: string
+	attendees: { full_name: string; email: string | null; ticket_type: string }[]
+	answers: { label: string | null; value: string | null }[]
+}
+
+export interface RequestCounts {
+	pending: number
+	waiting: number
+	// Unsold seats by ticket type title, only for ticket types with people waiting.
+	seats_free: Record<string, number>
+}
+
+// buzz.api.booking.process_booking: a registration request is answered without payment.
+export interface RequestResponse {
+	booking_name: string
+	redirect_to: string
+	request_status: "Requested" | "Waitlisted"
 }

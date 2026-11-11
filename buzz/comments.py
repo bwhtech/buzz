@@ -65,7 +65,7 @@ def notify_subscribers(
 ) -> None:
 	"""Tells everyone following the note's or email's record, with a plain-text preview of it."""
 	doctype, name = source.reference_doctype, source.reference_name
-	title = frappe.db.get_value(doctype, name, "title")
+	title = frappe.db.get_value(doctype, name, frappe.get_meta(doctype).get_title_field())
 	Subscriptions(doctype, name).notify(
 		source,
 		subject.format(author, title),

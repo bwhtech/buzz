@@ -57,6 +57,8 @@ class RegistrationCard:
 	def open_card(self, subtitle: str) -> dict:
 		register_url = registration_link(self.event)
 		label = _("Book more tickets") if self.booked_ticket_count else _("Register")
+		if self.ticket_types and all(row.joins_waitlist(1) for row in self.ticket_types):
+			label = _("Join waitlist")
 		return self.card("open", _("Registration open"), subtitle, label, register_url, primary=True)
 
 	def card(self, state, title, subtitle, action_label=None, action_url=None, primary=False) -> dict:

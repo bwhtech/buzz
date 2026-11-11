@@ -5,7 +5,8 @@
 
 	<div v-else-if="confirmation.data" class="mx-auto flex max-w-[600px] flex-col gap-9 pb-16">
 		<div class="flex flex-col gap-7">
-			<div v-if="!isConfirmed" class="text-center">
+			<RegistrationRequestNotice v-if="notice" :booking-id="bookingId" :notice="notice" />
+			<div v-else-if="!isConfirmed" class="text-center">
 				<h2 class="text-4xl-bold text-ink-gray-9 mb-2">{{ __("Payment Pending") }}</h2>
 				<p class="text-ink-gray-6 mb-4">
 					{{
@@ -124,6 +125,7 @@ import EventSummaryCard from "@/components/booking-success/EventSummaryCard.vue"
 import SuccessHero from "@/components/booking-success/SuccessHero.vue"
 import TicketRows from "@/components/booking-success/TicketRows.vue"
 import BookingFinancialSummary from "@/components/BookingFinancialSummary.vue"
+import RegistrationRequestNotice from "@/components/RegistrationRequestNotice.vue"
 import { useBookingFormStorage } from "@/composables/useBookingFormStorage"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useLoginDialog } from "@/composables/useLoginDialog"
@@ -131,6 +133,7 @@ import { session } from "@/data/session"
 import { triggerCelebrationConfetti } from "@/utils/confetti"
 import { eventUrl } from "@/utils/eventUrl"
 import { safeMarkdown } from "@/utils/markdown"
+import { requestNotice } from "@/utils/registrationRequest"
 
 const props = defineProps({
 	bookingId: {
@@ -145,6 +148,7 @@ const copyToClipboard = useCopyToClipboard()
 
 // The shopper's return proves nothing; only a paid (or free) booking is confirmed.
 function isBookingConfirmed(data: Record<string, any> | null | undefined) {
+	if (requestNotice(data?.booking?.status)) return false
 	return Boolean(data?.event?.free_event || data?.booking?.payment_status === "Paid")
 }
 const isConfirmed = computed(() => isBookingConfirmed(confirmation.data))
@@ -164,6 +168,7 @@ const confirmation = useCall<Record<string, any>, Record<string, unknown>>({
 })
 
 const event = computed(() => confirmation.data!.event)
+const notice = computed(() => requestNotice(confirmation.data?.booking?.status))
 
 // Files the confirmation hands out; a guest proves access with the page's own token.
 function bookingFileUrl(method: string) {

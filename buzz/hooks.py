@@ -148,7 +148,7 @@ for _doctype in taggable_doctypes:
 		"buzz.events.doctype.buzz_tag.buzz_tag.delete_tag_links"
 	)
 
-commentable_doctypes = ["Talk Proposal"]
+commentable_doctypes = ["Talk Proposal", "Event Booking"]
 for _doctype in commentable_doctypes:
 	doc_events.setdefault(_doctype, {}).setdefault("on_trash", []).append(
 		"buzz.subscriptions.delete_record_subscriptions"

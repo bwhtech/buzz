@@ -26,8 +26,17 @@
 					:class="{ 'opacity-60': ticketType.price_note }"
 				>
 					<div class="flex min-w-0 flex-1 flex-col gap-1">
-						<span class="text-base font-semibold text-ink-gray-9 text-pretty">
-							{{ __(ticketType.title ?? "") }}
+						<span class="flex flex-wrap items-center gap-2">
+							<span class="text-base font-semibold text-ink-gray-9 text-pretty">
+								{{ __(ticketType.title ?? "") }}
+							</span>
+							<Badge v-if="ticketType.waitlisted" theme="gray" size="sm" :label="__('Waitlist')" />
+							<Badge
+								v-else-if="ticketType.needs_approval"
+								theme="amber"
+								size="sm"
+								:label="__('Requires approval')"
+							/>
 						</span>
 						<span v-if="ticketType.description" class="text-p-sm text-ink-gray-5 text-pretty">
 							{{ __(ticketType.description) }}
@@ -60,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import { Badge } from "frappe-ui"
 import { computed } from "vue"
 
 import type { AvailableTicketType, BookingTicketCategory } from "@/types"

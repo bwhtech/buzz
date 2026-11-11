@@ -108,7 +108,16 @@ watch(headerKey, (key, previous) => {
 									:icon="item.icon"
 									:route="item.to"
 									:active="isActive(item.to)"
-								/>
+								>
+									<template v-if="item.count" #suffix>
+										<span
+											class="mr-2 flex items-center gap-1.5 text-sm text-ink-gray-5 tabular-nums"
+										>
+											<span v-if="item.dot" class="size-1.5 rounded-full bg-surface-amber-6" />
+											{{ item.count }}
+										</span>
+									</template>
+								</SidebarItem>
 							</template>
 						</div>
 					</Transition>

@@ -21,8 +21,11 @@ test("an event offers its own sections, scoped to its id", () => {
 	assert.deepEqual(labels(items), [
 		"Details",
 		"Registration",
+		"Payments",
 		"Coupons",
 		"Guests",
+		"Approvals",
+		"Waitlist",
 		"Talks",
 		"Schedule",
 		"Announcements",
@@ -30,6 +33,31 @@ test("an event offers its own sections, scoped to its id", () => {
 		"Settings",
 	])
 	assert.ok(items.every((item) => item.to.startsWith("/manage/events/EV-1/")))
+})
+
+test("approvals and waitlist carry their counts, and only pending approvals get a dot", () => {
+	const items = managerNavigation({
+		eventId: "EV-1",
+		creatingEvent: false,
+		hasSponsorships: false,
+		requestCounts: { pending: 3, waiting: 5 },
+	})
+	const approvals = items.find((item) => item.label === "Approvals")
+	const waitlist = items.find((item) => item.label === "Waitlist")
+	assert.deepEqual([approvals?.count, approvals?.dot], [3, true])
+	assert.deepEqual([waitlist?.count, waitlist?.dot], [5, undefined])
+	assert.equal(approvals?.to, "/manage/events/EV-1/approvals")
+})
+
+test("an empty queue shows no count or dot", () => {
+	const items = managerNavigation({
+		eventId: "EV-1",
+		creatingEvent: false,
+		hasSponsorships: false,
+		requestCounts: { pending: 0, waiting: 0 },
+	})
+	const approvals = items.find((item) => item.label === "Approvals")
+	assert.deepEqual([approvals?.count, approvals?.dot], [undefined, false])
 })
 
 test("a team offers its sections with settings last, scoped to its id", () => {
@@ -74,6 +102,16 @@ test("settings needs edit access to the event details", () => {
 		access: { ...guestsOnly, details: "Edit" },
 	})
 	assert.deepEqual(labels(items), ["Details", "Guests", "Settings"])
+})
+
+test("approvals and waitlist need edit access to the guests", () => {
+	const items = managerNavigation({
+		eventId: "EV-1",
+		creatingEvent: false,
+		hasSponsorships: false,
+		access: { ...guestsOnly, guests: "Edit" },
+	})
+	assert.deepEqual(labels(items), ["Details", "Guests", "Approvals", "Waitlist"])
 })
 
 test("an event opens on the first section the user has", () => {

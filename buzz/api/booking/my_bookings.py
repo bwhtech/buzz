@@ -2,6 +2,7 @@ import frappe
 
 from buzz.api.booking.schemas import MyBooking
 from buzz.events.doctype.event_venue.event_venue import set_venue_names
+from buzz.ticketing.doctype.event_booking.registration_request import OPEN_STATUSES
 
 MY_BOOKING_FIELDS = [
 	"name",
@@ -21,11 +22,12 @@ MY_BOOKINGS_LIMIT = 20
 
 
 def my_bookings() -> list[MyBooking]:
-	"""The session user's submitted and cancelled bookings, newest first."""
+	"""The session user's submitted and cancelled bookings and requests, newest first."""
 	rows = frappe.get_list(
 		"Event Booking",
 		fields=MY_BOOKING_FIELDS,
-		filters={"user": frappe.session.user, "docstatus": ["!=", 0]},
+		filters={"user": frappe.session.user},
+		or_filters=[["docstatus", "!=", 0], ["status", "in", (*OPEN_STATUSES, "Rejected")]],
 		order_by="creation desc",
 		limit=MY_BOOKINGS_LIMIT,
 	)

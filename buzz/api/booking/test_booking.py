@@ -72,6 +72,8 @@ EVENT_DETAIL_FIELDS = {
 	"allow_guest_booking",
 	"guest_verification_method",
 	"default_ticket_type",
+	"requires_approval",
+	"enable_waitlist",
 }
 
 SUMMARY_FIELDS = {

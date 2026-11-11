@@ -19,6 +19,7 @@ type Payload = Record<string, any>
 interface SubmitInputs {
 	buildPayload: () => Payload
 	total: Ref<number>
+	isRequest: () => boolean
 	gateways: Ref<string[]>
 	selectedGateway: Ref<string | null>
 	offlineMethods: () => OfflineMethod[]
@@ -71,7 +72,7 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 	}
 
 	function pay(payload: Payload, isOtpFlow = false) {
-		const paid = inputs.total.value > 0
+		const paid = inputs.total.value > 0 && !inputs.isRequest()
 		const gateway = paid ? inputs.selectedGateway.value : (inputs.gateways.value[0] ?? null)
 		const method = paid ? inputs.offlineMethods().find((m) => m.title === gateway) : undefined
 		if (method) {

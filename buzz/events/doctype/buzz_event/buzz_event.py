@@ -90,8 +90,10 @@ class BuzzEvent(Document):
 		offline_acknowledgement_email_template: DF.Link | None
 		og_image: DF.AttachImage | None
 		payment_gateways: DF.Table[EventPaymentGateway]
+		payment_offer_hours: DF.Literal["24", "48", "72"]
 		proposal: DF.Link | None
 		registration_url: DF.Data | None
+		requires_approval: DF.Check
 		route: DF.Data | None
 		send_booking_confirmation_email: DF.Check
 		send_ticket_email: DF.Check

@@ -9,6 +9,7 @@ export interface BookingSubmitResponse {
 	payment_link?: string
 	redirect_to?: string
 	offline_payment?: boolean
+	request_status?: "Requested" | "Waitlisted"
 }
 
 export type BookingSuccessAction =

@@ -65,3 +65,15 @@ test("a response with no booking name and no payment link throws", () => {
 	assert.throws(() => resolveBookingSuccessAction({}, { isGuestMode: false }), /booking name/)
 	assert.throws(() => resolveBookingSuccessAction({}, { isGuestMode: true }), /booking name/)
 })
+
+test("a registration request goes to its booking page without payment", () => {
+	const data = {
+		booking_name: "B-0009",
+		redirect_to: "/bookings/B-0009",
+		request_status: "Requested" as const,
+	}
+	assert.deepEqual(resolveBookingSuccessAction(data, { isGuestMode: true }), {
+		type: "route",
+		path: "/bookings/B-0009",
+	})
+})
