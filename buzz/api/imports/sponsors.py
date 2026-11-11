@@ -49,6 +49,11 @@ def normalize(text: str) -> str:
 	return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
 
 
+def ensure_import_permitted(event: str) -> None:
+	if not has_section_permission(event, "sponsors", "write"):
+		NotPermitted.throw()
+
+
 class SponsorImporter:
 	"""Reads a sheet into sponsors on the event's tiers, reports what blocks them, and imports the rest.
 
@@ -60,10 +65,6 @@ class SponsorImporter:
 		self.event = event
 		self.sheet = sheet
 		self.choices = choices
-
-	def ensure_permitted(self) -> None:
-		if not has_section_permission(self.event, "sponsors", "write"):
-			NotPermitted.throw()
 
 	# Columns
 

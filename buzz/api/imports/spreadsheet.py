@@ -1,6 +1,6 @@
 import csv
 import io
-from zipfile import BadZipFile
+from zipfile import BadZipFile, ZipFile
 
 import frappe
 from frappe.utils import cstr
@@ -10,6 +10,9 @@ from openpyxl.utils.exceptions import InvalidFileException
 from buzz.api.imports.exceptions import EmptySpreadsheet, TooManyRows, UnreadableFile
 
 MAX_ROWS = 5000
+MAX_FILE_BYTES = 5 * 1024 * 1024
+# A small zip can expand far past MAX_FILE_BYTES once every member is unpacked.
+MAX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
 
 
 class Spreadsheet:
@@ -36,15 +39,30 @@ class Spreadsheet:
 			EmptySpreadsheet.throw()
 		file = frappe.get_doc("File", {"file_url": file_url})
 		file.check_permission("read")
+		ensure_file_size(file)
 		try:
 			content = file.get_content()
 			if file.file_name.lower().endswith(".xlsx"):
 				# get_content hands back text when the bytes decode, as a CSV renamed to .xlsx does.
 				workbook = content.encode() if isinstance(content, str) else content
+				ensure_uncompressed_size(workbook)
 				return cls(read_xlsx_file_from_attached_file(fcontent=workbook))
 			return cls(read_text(content.decode("utf-8-sig") if isinstance(content, bytes) else content))
 		except (UnicodeDecodeError, ValueError, KeyError, OSError, BadZipFile, InvalidFileException):
 			UnreadableFile.throw()
+
+
+def ensure_file_size(file) -> None:
+	if not file.file_size or file.file_size > MAX_FILE_BYTES:
+		UnreadableFile.throw()
+
+
+def ensure_uncompressed_size(workbook: bytes) -> None:
+	# Reading the central directory is cheap; parsing every member is not.
+	with ZipFile(io.BytesIO(workbook)) as archive:
+		expanded = sum(member.file_size for member in archive.infolist())
+	if expanded > MAX_UNCOMPRESSED_BYTES:
+		UnreadableFile.throw()
 
 
 def read_text(text: str) -> list[list[str]]:

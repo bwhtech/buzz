@@ -1,7 +1,9 @@
+import io
 from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from openpyxl import Workbook
 
 from buzz.api.exceptions import NotPermitted
 from buzz.api.imports import check_import, get_import_status, start_import
@@ -12,7 +14,8 @@ from buzz.api.imports.exceptions import (
 	ImportsNotEnabled,
 	UnreadableFile,
 )
-from buzz.api.imports.services import save_status, status_key
+from buzz.api.imports.services import build_importer, save_status, status_key
+from buzz.api.imports.spreadsheet import MAX_FILE_BYTES
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import IMPORT_FLAG
 from buzz.tests.factories import (
 	BuzzEventFactory,
@@ -21,6 +24,15 @@ from buzz.tests.factories import (
 	SponsorshipTierFactory,
 	UserFactory,
 )
+
+
+def workbook_bytes(rows: list[list[str]]) -> bytes:
+	buffer = io.BytesIO()
+	book = Workbook()
+	for row in rows:
+		book.active.append(row)
+	book.save(buffer)
+	return buffer.getvalue()
 
 
 class SponsorImportTest(IntegrationTestCase):
@@ -137,3 +149,28 @@ class SponsorImportTest(IntegrationTestCase):
 		outsider = UserFactory.create_once("import-outsider@example.com").name
 		with self.set_user(outsider):
 			self.assertRaises(NotPermitted, self.check, "Company,Tier\nAcme,Gold")
+
+	def test_an_outsider_is_refused_before_the_file_is_parsed(self):
+		outsider = UserFactory.create_once("import-outsider@example.com").name
+		file = FileFactory.create(file_name="sponsors.xlsx", content=b"not a workbook", is_private=1)
+		parsed = patch("buzz.api.imports.services.Spreadsheet.load", side_effect=AssertionError("parsed"))
+
+		with self.set_user(outsider), parsed:
+			self.assertRaises(NotPermitted, build_importer, self.event, file.file_url, None, {})
+
+	def test_a_file_over_the_size_cap_is_refused_without_reading_it(self):
+		file = FileFactory.create(file_name="sponsors.csv", content=b"Company,Tier\nAcme,Gold")
+		frappe.db.set_value("File", file.name, "file_size", MAX_FILE_BYTES + 1)
+
+		with patch("buzz.api.imports.spreadsheet.read_text", side_effect=AssertionError("read")):
+			self.assertRaises(UnreadableFile, check_import, self.event, file_url=file.file_url)
+
+	def test_a_workbook_that_expands_past_the_cap_is_unreadable(self):
+		file = FileFactory.create(
+			file_name="sponsors.xlsx",
+			content=workbook_bytes([["Company", "Tier"], ["Acme", "Gold"]]),
+			is_private=1,
+		)
+
+		with patch("buzz.api.imports.spreadsheet.MAX_UNCOMPRESSED_BYTES", 1):
+			self.assertRaises(UnreadableFile, check_import, self.event, file_url=file.file_url)

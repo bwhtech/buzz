@@ -5,7 +5,7 @@ from frappe.utils import strip_html
 from buzz.api.events.exceptions import EventNotFound
 from buzz.api.imports.exceptions import ImportNotReady, ImportRunning, ImportsNotEnabled
 from buzz.api.imports.schemas import ImportStatus
-from buzz.api.imports.sponsors import SponsorImporter
+from buzz.api.imports.sponsors import SponsorImporter, ensure_import_permitted
 from buzz.api.imports.spreadsheet import Spreadsheet
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import IMPORT_FLAG, is_feature_enabled
 
@@ -15,9 +15,9 @@ STATUS_TTL = 3600
 
 def build_importer(event: str, file_url: str | None, text: str | None, choices: dict) -> SponsorImporter:
 	ensure_imports_enabled(event)
-	importer = SponsorImporter(event, Spreadsheet.load(file_url, text), choices)
-	importer.ensure_permitted()
-	return importer
+	# Before the file is read: a user without access must not cost us a parse.
+	ensure_import_permitted(event)
+	return SponsorImporter(event, Spreadsheet.load(file_url, text), choices)
 
 
 def start(importer: SponsorImporter, source: dict) -> None:
