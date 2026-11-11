@@ -5,27 +5,19 @@ import frappe
 from buzz.api.sponsorships.exceptions import (
 	EnquiryAlreadyPaid,
 	EnquiryAlreadyWithdrawn,
-	EnquiryNotAccessible,
 	PaymentNotPermitted,
 	WithdrawalNotPermitted,
 )
-from buzz.api.sponsorships.schemas import (
-	EnquirySummary,
-	EventSummary,
-	SponsorshipDetailsResponse,
-	SponsorshipListItem,
-	SponsorSummary,
-)
+from buzz.api.sponsorships.schemas import SponsorshipListItem
 from buzz.events.doctype.event_venue.event_venue import set_venue_names
 from buzz.payments import get_payment_link_for_sponsorship
 
 if TYPE_CHECKING:
-	from buzz.events.doctype.buzz_event.buzz_event import BuzzEvent
 	from buzz.proposals.doctype.sponsorship_enquiry.sponsorship_enquiry import SponsorshipEnquiry
 
 
 class SponsorshipService:
-	"""Read and act on one Sponsorship Enquiry on behalf of its owner."""
+	"""Act on one Sponsorship Enquiry on behalf of its owner."""
 
 	def __init__(self, enquiry_id: str):
 		self.enquiry_id = enquiry_id
@@ -35,24 +27,8 @@ class SponsorshipService:
 		return frappe.get_cached_doc("Sponsorship Enquiry", self.enquiry_id)
 
 	@property
-	def event(self) -> "BuzzEvent":
-		return frappe.get_cached_doc("Buzz Event", self.enquiry.event)
-
-	@property
 	def is_owner(self) -> bool:
 		return self.enquiry.is_applicant()
-
-	def details(self) -> SponsorshipDetailsResponse:
-		if not self.is_owner and not frappe.has_permission("Sponsorship Enquiry", "read", self.enquiry):
-			EnquiryNotAccessible.throw()
-
-		sponsor = self.sponsor()
-		return SponsorshipDetailsResponse(
-			enquiry=self.enquiry_summary(),
-			event_details=self.event_summary(),
-			sponsor_details=sponsor,
-			has_sponsor=bool(sponsor),
-		)
 
 	def payment_link(
 		self, tier_id: str, payment_gateway: str | None = None, currency: str | None = None
@@ -80,44 +56,6 @@ class SponsorshipService:
 
 		enquiry.status = "Withdrawn"
 		enquiry.save(ignore_permissions=True)
-
-	def enquiry_summary(self) -> EnquirySummary:
-		enquiry = self.enquiry
-		return EnquirySummary(
-			name=enquiry.name,
-			company_name=enquiry.company_name,
-			company_logo=enquiry.company_logo,
-			event=enquiry.event,
-			tier=enquiry.tier,
-			tier_title=get_tier_title(enquiry.tier) if enquiry.tier else "",
-			status=enquiry.status,
-			creation=enquiry.creation,
-			owner=enquiry.owner,
-		)
-
-	def event_summary(self) -> EventSummary:
-		event = self.event
-		return EventSummary(
-			title=event.title,
-			short_description=event.short_description,
-			about=event.about,
-			start_date=event.start_date,
-			end_date=event.end_date,
-			venue=event.get_venue_name(),
-			route=event.route,
-		)
-
-	def sponsor(self) -> SponsorSummary | None:
-		sponsors = frappe.db.get_all(
-			"Event Sponsor",
-			filters={"enquiry": self.enquiry_id},
-			fields=["name", "company_name", "company_logo", "creation", "event", "tier"],
-			limit=1,
-		)
-		if not sponsors:
-			return None
-
-		return SponsorSummary(**sponsors[0], tier_title=get_tier_title(sponsors[0].tier))
 
 
 # The columns behind one sponsor-side card. The event ones come over a link hop, so a

@@ -7,10 +7,6 @@ class EnquiryNotFound(ResourceNotFound):
 	message = _lt("This sponsorship enquiry does not exist.")
 
 
-class EnquiryNotAccessible(NotPermitted):
-	message = _lt("You are not permitted to view this sponsorship enquiry.")
-
-
 class PaymentNotPermitted(NotPermitted):
 	message = _lt("You are not permitted to pay for this sponsorship enquiry.")
 

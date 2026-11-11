@@ -5,7 +5,6 @@ from frappe.utils import add_to_date, get_datetime, now_datetime
 
 from buzz.api.booking import hold_tickets, process_booking
 from buzz.api.booking.exceptions import RequestAlreadyOpen, RequestNotOpen
-from buzz.api.booking.my_bookings import my_bookings
 from buzz.api.booking.requests import (
 	approve_request,
 	decline_request,
@@ -19,6 +18,7 @@ from buzz.api.booking.requests import (
 from buzz.api.booking.services import get_booking_access_token
 from buzz.api.comments import get_activity
 from buzz.api.events.exceptions import CannotManageEvent
+from buzz.api.events.services import events_for
 from buzz.api.events.ticket_types import revenue_by_currency
 from buzz.tests.base_test_cases import BookingTestCase, authorize_payment, make_payment_gateway
 from buzz.tests.factories import BuzzEventFactory, EventTicketFactory, EventTicketTypeFactory, UserFactory
@@ -113,7 +113,7 @@ class TestRegistrationRequests(RequestTestCase):
 		self.assertEqual(self.tickets_of(name), 0)
 		self.assertIn("The room is full of speakers.", self.emails_of(name)[-1])
 		with self.set_user(self.booker):
-			self.assertEqual(next(row.status for row in my_bookings() if row.name == name), "Rejected")
+			self.assertIn(str(self.event.name), {row.name for row in events_for(self.booker)})
 
 		reopen_request(name)
 

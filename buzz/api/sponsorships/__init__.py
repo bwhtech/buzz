@@ -14,7 +14,6 @@ from buzz.api.sponsorships.schemas import (
 	EventEnquiriesResponse,
 	EventSponsorshipsResponse,
 	EventSponsorsResponse,
-	SponsorshipDetailsResponse,
 	SponsorshipListItem,
 )
 from buzz.api.sponsorships.services import SponsorshipService, list_user_enquiries
@@ -36,11 +35,6 @@ def submit_enquiry_form(
 	custom_fields_data: dict | str | None = None,
 ) -> str:
 	return SponsorFormService(event_route, form_route).submit(data, custom_fields_data)
-
-
-@frappe.whitelist()
-def get_sponsorship_details(enquiry_id: str) -> SponsorshipDetailsResponse:
-	return SponsorshipService(enquiry_id).details()
 
 
 @frappe.whitelist()

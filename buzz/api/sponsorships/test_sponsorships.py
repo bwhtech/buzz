@@ -3,55 +3,16 @@ from bwh_payments import testing as payment_testing
 
 from buzz.api.sponsorships import (
 	create_sponsorship_payment_link,
-	get_sponsorship_details,
 	get_user_sponsorship_inquiries,
 	withdraw_sponsorship_enquiry,
 )
 from buzz.api.sponsorships.exceptions import (
 	EnquiryAlreadyPaid,
 	EnquiryAlreadyWithdrawn,
-	EnquiryNotAccessible,
 	PaymentNotPermitted,
 	WithdrawalNotPermitted,
 )
 from buzz.tests.base_test_cases import SponsorshipTestCase, make_payment_gateway
-
-
-class TestGetSponsorshipDetails(SponsorshipTestCase):
-	def test_enquiry_carries_the_tier_title(self):
-		enquiry = get_sponsorship_details(self.enquiry.name).__json__()["enquiry"]
-
-		self.assertEqual(enquiry["name"], self.enquiry.name)
-		self.assertEqual(enquiry["tier_title"], "Gold")
-		self.assertEqual(enquiry["owner"], "Administrator")
-
-	def test_no_sponsor_yet(self):
-		response = get_sponsorship_details(self.enquiry.name).__json__()
-
-		self.assertFalse(response["has_sponsor"])
-		self.assertIsNone(response["sponsor_details"])
-
-	def test_sponsor_details_once_sponsored(self):
-		sponsor = self.make_sponsor()
-		response = get_sponsorship_details(self.enquiry.name).__json__()
-
-		self.assertTrue(response["has_sponsor"])
-		self.assertEqual(
-			set(response["sponsor_details"]),
-			{"name", "company_name", "company_logo", "creation", "event", "tier", "tier_title"},
-		)
-		self.assertEqual(response["sponsor_details"]["name"], sponsor.name)
-		self.assertEqual(response["sponsor_details"]["tier_title"], "Gold")
-
-	def test_stranger_is_refused(self):
-		with self.set_user(self.make_stranger()), self.assertRaises(EnquiryNotAccessible):
-			get_sponsorship_details(self.enquiry.name)
-
-		self.assertEqual(frappe.local.message_log[-1]["title"], "Not Permitted")
-
-	def test_unknown_enquiry_raises_does_not_exist(self):
-		with self.assertRaises(frappe.DoesNotExistError):
-			get_sponsorship_details("no-such-enquiry")
 
 
 class TestGetUserSponsorshipInquiries(SponsorshipTestCase):
