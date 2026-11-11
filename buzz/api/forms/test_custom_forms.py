@@ -360,14 +360,23 @@ class TestCustomFormRateLimit(FormsTestCase):
 			patch.object(frappe.local, "request_ip", frappe.generate_hash(length=12), create=True)
 		)
 
-	def submit_unknown_event(self):
-		# The limiter counts before the body runs, so nothing is written.
-		with self.assertRaises(EventNotFound):
-			self.submit("no-such-event-route", "feedback", data={})
+	def submit_request(self, event_route: str, form_route: str, data: dict):
+		# The limiter reads the request's form_dict, which set_user resets, so set it inside.
+		with self.set_user(UserFactory.create_once(SUBMITTER).name):
+			frappe.local.form_dict = frappe._dict(event_route=event_route, form_route=form_route)
+			return submit_custom_form(event_route, form_route, data=data)
 
-	def test_guest_is_rate_limited(self):
-		for _attempt in range(20):
-			self.submit_unknown_event()
+	def test_a_talk_proposal_is_rate_limited(self):
+		event, form_route = self.build_event()
+		for attempt in range(20):
+			proposal = {"title": f"Talk {attempt}", "description": "<p>d</p>", "speakers": SPEAKERS}
+			self.submit_request(event.route, form_route, proposal)
 
 		with self.assertRaises(frappe.RateLimitExceededError):
-			self.submit("no-such-event-route", "feedback", data={})
+			self.submit_request(event.route, form_route, {"title": "One too many"})
+
+	def test_feedback_is_not_rate_limited(self):
+		event = BuzzEventFactory.create(team=self.team)
+		form = self.add_question(self.form_of(event.name, "Event Feedback"))
+		for _attempt in range(25):
+			self.submit_request(event.route, form.route, {})

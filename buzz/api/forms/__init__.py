@@ -1,3 +1,5 @@
+import sys
+
 import frappe
 from frappe.rate_limiter import rate_limit
 
@@ -21,9 +23,19 @@ def get_custom_form_data(event_route: str, form_route: str) -> CustomFormRespons
 	return form_service(event_route, form_route).form_data()
 
 
+def custom_form_submit_limit() -> int:
+	"""Attendees send feedback together from the venue's one IP, so feedback goes unlimited."""
+	from buzz.events.doctype.buzz_form.form_types import EVENT_FEEDBACK_FORM_DOCTYPE
+
+	request = frappe.form_dict
+	if form_service(request.event_route, request.form_route).form_doctype == EVENT_FEEDBACK_FORM_DOCTYPE:
+		return sys.maxsize
+	return 20
+
+
 # nosemgrep: guest-whitelisted-method
 @frappe.whitelist(allow_guest=True, methods=["POST"])
-@rate_limit(limit=20, seconds=3600)
+@rate_limit(limit=custom_form_submit_limit, seconds=3600)
 def submit_custom_form(
 	event_route: str, form_route: str, data: dict | str, custom_fields_data: dict | str | None = None
 ) -> str | None:
