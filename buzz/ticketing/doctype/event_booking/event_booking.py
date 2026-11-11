@@ -20,6 +20,12 @@ from buzz.payments import mark_payment_as_received
 from buzz.permissions import has_section_permission
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_booking.booking_invoice import BookingInvoice
+from buzz.ticketing.doctype.event_booking.registration_request import (
+	OPEN_STATUSES,
+	REQUEST_STATUSES,
+	RegistrationRequest,
+	payment_offer_hours,
+)
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_refunds,
 	get_committed_tickets,
@@ -70,8 +76,17 @@ class EventBooking(Document):
 		payment_method: DF.Data | None
 		payment_status: DF.Literal["Unpaid", "Paid", "Verification Pending"]
 		refund_status: DF.Literal["", "Refund Initiated", "Partially Refunded", "Refunded"]
+		request_type: DF.Literal["", "Approval", "Waitlist"]
 		refunded_amount: DF.Currency
-		status: DF.Literal["Confirmed", "Approval Pending", "Approved", "Rejected"]
+		status: DF.Literal[
+			"Confirmed",
+			"Approval Pending",
+			"Approved",
+			"Rejected",
+			"Requested",
+			"Payment Pending",
+			"Waitlisted",
+		]
 		tax_amount: DF.Currency
 		tax_id: DF.Data | None
 		tax_label: DF.Data | None
@@ -109,8 +124,18 @@ class EventBooking(Document):
 		if are_registrations_closed(event):
 			RegistrationsClosed.throw()
 
+	@property
+	def is_request(self) -> bool:
+		return self.status in REQUEST_STATUSES
+
 	def before_submit(self):
 		"""Set status before submit based on payment method."""
+		if self.is_request:
+			# Desk's plain Submit must not skip the organizer's decision or the capacity check.
+			frappe.throw(
+				_("This booking is a registration request. Please use the Approve or Reject button.")
+			)
+
 		# Skip if already approved (submission triggered by approve_booking)
 		if self.status == "Approved":
 			return
@@ -171,6 +196,8 @@ class EventBooking(Document):
 		return Counter(str(attendee.ticket_type) for attendee in self.attendees)
 
 	def validate_ticket_availability(self):
+		if self.status == "Waitlisted":
+			return
 		quantities = self.ticket_quantities()
 		ticket_types = [frappe.get_cached_doc("Event Ticket Type", name) for name in quantities]
 		lock_ticket_types([row.name for row in ticket_types if row.max_tickets_available])
@@ -181,6 +208,8 @@ class EventBooking(Document):
 		if str(ticket_type.event) != str(self.event):
 			# No title: it would name hidden ticket types of any event.
 			frappe.throw(_("A selected ticket type is not available for this event"))
+		if self.flags.organizer_override:
+			return
 		if self.flags.payment_received:
 			self.log_if_oversold(ticket_type, quantity)
 			return
@@ -234,11 +263,11 @@ class EventBooking(Document):
 	def after_insert(self):
 		self.hold_draft_tickets()
 
-	def hold_draft_tickets(self):
+	def hold_draft_tickets(self, expires_at=None):
 		"""A draft that waits for payment or approval keeps its tickets held, so they can't sell
 		out under it. Runs right after `validate_ticket_availability` locked the ticket types
 		and checked capacity, so it can create the hold even if the form's hold lapsed."""
-		if not self.total_amount:
+		if not self.total_amount or self.is_request:
 			return
 		quantities = {
 			name: quantity
@@ -249,11 +278,13 @@ class EventBooking(Document):
 			return
 		if not self.hold_token:
 			self.db_set("hold_token", frappe.generate_hash(length=32), update_modified=False)
-		set_hold(self.hold_token, self.event, quantities, self.draft_hold_expiry())
+		set_hold(self.hold_token, self.event, quantities, expires_at or self.draft_hold_expiry())
 
 	def draft_hold_expiry(self):
 		if self.payment_method == OFFLINE_PAYMENT_METHOD:
 			return self.event_end()
+		if self.status == "Payment Pending":
+			return add_to_date(now_datetime(), hours=payment_offer_hours(self.event))
 		return add_to_date(now_datetime(), minutes=PAYMENT_HOLD_MINUTES)
 
 	def event_end(self):
@@ -338,12 +369,15 @@ class EventBooking(Document):
 			),
 		)
 
-	def send_booking_email(self, template: str | None, builtin: str, subject: str) -> None:
-		recipient = self.get_booking_email_recipient()
+	def send_booking_email(
+		self, template: str | None, builtin: str, subject: str, always: bool = False, **extra_args
+	) -> None:
+		"""`always` sends it even when the event mutes booking confirmations."""
+		recipient = self.get_booking_email_recipient(always)
 		if not recipient:
 			return
 
-		args = self.get_booking_email_args()
+		args = {**self.get_booking_email_args(), **extra_args}
 
 		content = None
 		if template:
@@ -364,13 +398,15 @@ class EventBooking(Document):
 			reference_name=self.name,
 		)
 
-	def get_booking_email_recipient(self) -> str | None:
+	def get_booking_email_recipient(self, always: bool = False) -> str | None:
 		"""Who to email about this booking, or None when nobody should be emailed."""
 		# Never email system/placeholder users — they are not real recipients.
 		if self.user in ("Administrator", "Guest"):
 			return None
 
-		if not frappe.get_cached_value("Buzz Event", self.event, "send_booking_confirmation_email"):
+		if not always and not frappe.get_cached_value(
+			"Buzz Event", self.event, "send_booking_confirmation_email"
+		):
 			return None
 
 		return frappe.db.get_value("User", self.user, "email") or self.user
@@ -686,6 +722,10 @@ class EventBooking(Document):
 	def approve_booking(self):
 		"""Approve the booking and submit it to generate tickets."""
 		frappe.only_for("Event Manager")
+		if self.status in OPEN_STATUSES:
+			RegistrationRequest(self).approve()
+			frappe.msgprint(_("Request has been approved!"))
+			return
 
 		self.status = "Approved"
 		self.flags.payment_received = True
@@ -700,6 +740,10 @@ class EventBooking(Document):
 	def reject_booking(self):
 		"""Reject and discard the booking."""
 		frappe.only_for("Event Manager")
+		if self.status in OPEN_STATUSES:
+			RegistrationRequest(self).decline()
+			frappe.msgprint(_("Request has been declined!"))
+			return
 
 		self.flags.ignore_permissions = True
 		self.discard()

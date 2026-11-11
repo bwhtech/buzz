@@ -2,6 +2,7 @@
 import { Alert, ErrorMessage, toast, useDoc } from "frappe-ui"
 import { computed, ref } from "vue"
 
+import TicketTypeRequestsLink from "@/components/dashboard/requests/TicketTypeRequestsLink.vue"
 import DrawerSaveBar from "@/components/dashboard/sponsorships/DrawerSaveBar.vue"
 import { keepLastValue } from "@/components/dashboard/sponsorships/helpers"
 import SponsorshipDrawer from "@/components/dashboard/sponsorships/SponsorshipDrawer.vue"
@@ -9,6 +10,7 @@ import TicketTypeFields from "@/components/dashboard/ticket-types/TicketTypeFiel
 import TicketTypeGuests from "@/components/dashboard/ticket-types/TicketTypeGuests.vue"
 import { useDrawerEdits } from "@/composables/useDrawerEdits"
 import type { TicketCategoryItem, TicketTypeItem } from "@/types"
+import type { TicketTypeAccess } from "@/utils/approvalMode"
 import { formatWholePriceOrFree } from "@/utils/currency"
 import { serverErrorMessage } from "@/utils/serverError"
 import {
@@ -24,6 +26,7 @@ const props = defineProps<{
 	categories: TicketCategoryItem[]
 	canWrite: boolean
 	paidEventsEnabled: boolean
+	access: TicketTypeAccess
 }>()
 const open = defineModel<boolean>("open", { required: true })
 const emit = defineEmits<{ changed: [] }>()
@@ -31,7 +34,13 @@ const emit = defineEmits<{ changed: [] }>()
 const shownTicketType = keepLastValue(() => props.ticketType)
 
 const ticketTypeDoc = useDoc<
-	Omit<TicketTypeValues, "is_hidden"> & { name: string; is_published: 0 | 1; is_hidden: 0 | 1 }
+	Omit<TicketTypeValues, "is_hidden" | "requires_approval" | "enable_waitlist"> & {
+		name: string
+		is_published: 0 | 1
+		is_hidden: 0 | 1
+		requires_approval: 0 | 1
+		enable_waitlist: 0 | 1
+	}
 >({
 	doctype: "Event Ticket Type",
 	name: () => props.ticketType?.name ?? "",
@@ -121,9 +130,17 @@ async function save(values: TicketTypeValues) {
 			v-model="draft"
 			:categories="categories"
 			:paid-events-enabled="paidEventsEnabled"
+			:access="access"
 			:hideable="!!shownTicketType.is_published"
 			:locked-currencies="soldCurrencies"
 			:disabled="!canWrite"
+		/>
+
+		<TicketTypeRequestsLink
+			v-if="canWrite"
+			:event="event"
+			:ticket-type="shownTicketType.title"
+			:guests="shownTicketType.tickets_sold"
 		/>
 
 		<TicketTypeGuests

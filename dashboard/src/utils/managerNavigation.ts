@@ -9,6 +9,9 @@ export type ManagerNavItem = {
 	// The event section that gates this item, and the level it needs.
 	section?: EventSection
 	needs?: "Edit"
+	// A count beside the label, and a dot when it needs attention.
+	count?: number
+	dot?: boolean
 }
 
 // /events is a site page outside the dashboard router, so it opens as a full page load.
@@ -36,6 +39,7 @@ type NavigationContext = {
 	hasSponsorships: boolean
 	// The user's level per section of the open event; without it every item shows.
 	access?: EventAccess | null
+	requestCounts?: { pending: number; waiting: number } | null
 }
 
 function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
@@ -61,7 +65,11 @@ function rootItems(hasSponsorships: boolean): ManagerNavItem[] {
 	return items
 }
 
-function eventItems(eventId: string, access?: EventAccess | null): ManagerNavItem[] {
+function eventItems(
+	eventId: string,
+	access?: EventAccess | null,
+	counts?: NavigationContext["requestCounts"],
+): ManagerNavItem[] {
 	const event = `/manage/events/${eventId}`
 	const items: ManagerNavItem[] = [
 		// View opens the details page with its fields locked.
@@ -73,12 +81,35 @@ function eventItems(eventId: string, access?: EventAccess | null): ManagerNavIte
 			section: "ticketing",
 		},
 		{
+			label: "Payments",
+			icon: "lucide-credit-card",
+			to: `${event}/payments`,
+			section: "ticketing",
+		},
+		{
 			label: "Coupons",
 			icon: "lucide-ticket-percent",
 			to: `${event}/coupons`,
 			section: "ticketing",
 		},
 		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests`, section: "guests" },
+		{
+			label: "Approvals",
+			icon: "lucide-user-check",
+			to: `${event}/approvals`,
+			section: "guests",
+			needs: "Edit",
+			count: counts?.pending || undefined,
+			dot: Boolean(counts?.pending),
+		},
+		{
+			label: "Waitlist",
+			icon: "lucide-list-ordered",
+			to: `${event}/waitlist`,
+			section: "guests",
+			needs: "Edit",
+			count: counts?.waiting || undefined,
+		},
 		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks`, section: "talks" },
 		{ label: "Schedule", icon: "lucide-calendar-days", to: `${event}/schedule`, section: "talks" },
 		{
@@ -128,7 +159,7 @@ function teamItems(teamId: string): ManagerNavItem[] {
 export function managerNavigation(context: NavigationContext): ManagerNavItem[] {
 	// Creating an event is a page of its own; the shell holds only the way out of it.
 	if (context.creatingEvent) return []
-	if (context.eventId) return eventItems(context.eventId, context.access)
+	if (context.eventId) return eventItems(context.eventId, context.access, context.requestCounts)
 	if (context.teamId) return teamItems(context.teamId)
 	return rootItems(context.hasSponsorships)
 }

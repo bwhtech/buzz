@@ -249,6 +249,8 @@ class TicketTypeItem(APIResponse):
 	auto_unpublish_after: date | None
 	is_published: bool
 	is_hidden: bool
+	requires_approval: bool
+	enable_waitlist: bool
 	tickets_sold: int
 	prices: list[TicketTypePrice]
 
@@ -275,6 +277,8 @@ class EventTicketTypes(APIResponse):
 	registrations_closed: bool
 	allow_guest_booking: bool
 	guest_verification_method: str
+	requires_approval: bool
+	enable_waitlist: bool
 	apply_tax: bool
 	tax_inclusive: bool
 	tax_label: str

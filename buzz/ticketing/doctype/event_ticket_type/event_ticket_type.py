@@ -50,12 +50,14 @@ class EventTicketType(Document):
 		auto_unpublish_after: DF.Date | None
 		category: DF.Link | None
 		description: DF.SmallText | None
+		enable_waitlist: DF.Check
 		event: DF.Link
 		is_hidden: DF.Check
 		is_published: DF.Check
 		max_tickets_available: DF.Int
 		name: DF.Int | None
 		prices: DF.Table[BuzzPrice]
+		requires_approval: DF.Check
 		title: DF.Data
 	# end: auto-generated types
 
@@ -85,6 +87,42 @@ class EventTicketType(Document):
 		has_hidden = bool(self.is_published) or any(row.is_hidden for row in others)
 		if has_hidden and all(row.is_hidden for row in others):
 			frappe.throw(_("The event needs at least one published ticket type that is not hidden"))
+
+	@property
+	def needs_approval(self) -> bool:
+		return bool(
+			self.requires_approval or frappe.get_cached_value("Buzz Event", self.event, "requires_approval")
+		)
+
+	@property
+	def has_waitlist(self) -> bool:
+		# A ticket type without a limit never sells out.
+		enabled = self.enable_waitlist or frappe.get_cached_value("Buzz Event", self.event, "enable_waitlist")
+		return bool(self.max_tickets_available and enabled)
+
+	def joins_waitlist(self, quantity: int, hold_token: str | None = None, for_update: bool = False) -> bool:
+		"""Open waitlist entries keep a freed ticket for the queue, not for the next public buyer."""
+		if not self.has_waitlist:
+			return False
+		remaining = self.get_remaining_tickets(for_update=for_update, hold_token=hold_token)
+		return remaining < quantity or self.has_waitlist_entries()
+
+	def has_waitlist_entries(self) -> bool:
+		booking = frappe.qb.DocType("Event Booking")
+		attendee = frappe.qb.DocType("Event Booking Attendee")
+		query = (
+			frappe.qb.from_(attendee)
+			.join(booking)
+			.on(booking.name == attendee.parent)
+			.select(attendee.name)
+			.where(
+				(attendee.ticket_type == self.name)
+				& (booking.docstatus == 0)
+				& (booking.status == "Waitlisted")
+			)
+			.limit(1)
+		)
+		return bool(query.run())
 
 	@property
 	def is_free(self) -> bool:

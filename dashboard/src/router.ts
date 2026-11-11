@@ -89,6 +89,12 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/events/EventRegistrations.vue"),
 			},
 			{
+				path: "events/:eventId/payments",
+				name: "event-payments",
+				meta: { title: "Payments" },
+				component: () => import("@/pages/manage/events/EventPayments.vue"),
+			},
+			{
 				path: "events/:eventId/coupons",
 				name: "event-coupons",
 				meta: { title: "Coupons" },
@@ -99,6 +105,20 @@ const routes: RouteRecordRaw[] = [
 				name: "event-guests",
 				meta: { title: "Guests" },
 				component: () => import("@/pages/manage/events/EventGuests.vue"),
+			},
+			{
+				path: "events/:eventId/approvals",
+				name: "event-approvals",
+				meta: { title: "Approvals" },
+				props: { requestType: "Approval" },
+				component: () => import("@/pages/manage/events/EventRequestQueue.vue"),
+			},
+			{
+				path: "events/:eventId/waitlist",
+				name: "event-waitlist",
+				meta: { title: "Waitlist" },
+				props: { requestType: "Waitlist" },
+				component: () => import("@/pages/manage/events/EventRequestQueue.vue"),
 			},
 			{
 				path: "events/:eventId/talks",

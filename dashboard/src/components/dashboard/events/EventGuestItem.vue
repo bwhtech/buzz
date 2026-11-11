@@ -5,7 +5,10 @@ import { computed } from "vue"
 import GuestZoneDots from "@/components/dashboard/events/GuestZoneDots.vue"
 import type { EventGuest } from "@/types"
 
-const props = defineProps<{ guest: EventGuest; selected?: boolean }>()
+const props = defineProps<{
+	guest: EventGuest
+	selected?: boolean
+}>()
 
 const emit = defineEmits<{ open: [] }>()
 

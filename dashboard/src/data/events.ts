@@ -44,6 +44,10 @@ export const createEvent = useCall<
 /** What the manage shell reads off the event itself: its title, whether it is live, and its page theme. */
 type EventShellDoc = {
 	name: string
+	// "24", "48" or "72": how long an approved or invited guest has to pay.
+	payment_offer_hours?: string
+	requires_approval?: 0 | 1
+	enable_waitlist?: 0 | 1
 	title: string
 	team: string | null
 	is_published: 0 | 1

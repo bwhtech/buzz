@@ -296,6 +296,7 @@ import { eventPath } from "@/utils/eventUrl"
 import { applyLogic, type LogicRule } from "@/utils/formLogic"
 import { safeMarkdown } from "@/utils/markdown"
 import { siteHeaderHidden } from "@/utils/navbar"
+import { isRegistrationRequest, requestSubmitLabel } from "@/utils/registrationRequest"
 import { serverErrorMessage } from "@/utils/serverError"
 import { isZoomBackedCategory } from "@/utils/zoomCategory"
 
@@ -469,7 +470,9 @@ const quantities = computed(() => {
 // Ticket types with a limit are the only ones a hold reserves.
 const heldQuantities = computed(() => {
 	const limited = new Set(
-		props.availableTicketTypes.filter((t) => t.max_tickets_available).map((t) => String(t.name)),
+		props.availableTicketTypes
+			.filter((t) => t.max_tickets_available && !t.waitlisted && !t.needs_approval)
+			.map((t) => String(t.name)),
 	)
 	return Object.fromEntries(Object.entries(quantities.value).filter(([name]) => limited.has(name)))
 })
@@ -597,12 +600,16 @@ const validation = useRegistrationValidation({
 })
 const { meErrors, attendeeErrorList, detailsErrors } = validation
 
+const pickedTicketTypes = computed(() =>
+	attendees.value.map((attendee) => ticketTypesMap.value[String(attendee.ticket_type)] ?? {}),
+)
+const isRequest = computed(() => isRegistrationRequest(pickedTicketTypes.value))
 const steps = computed(() =>
 	buildSteps({
 		ticketCount: attendees.value.length,
 		completeAttendees: validation.completeAttendees.value,
-		paid: netAmount.value > 0,
-		payable: total.value > 0,
+		paid: netAmount.value > 0 && !isRequest.value,
+		payable: total.value > 0 && !isRequest.value,
 		totalLabel: formatWholePriceOrFree(total.value, currency.value),
 	}),
 )
@@ -610,7 +617,7 @@ const { current, direction, step, isLast, tried, go, markTried } = useRegistrati
 const stepCopy = computed(() =>
 	copyFor(step.value.id, {
 		free: Boolean(props.eventDetails.free_event),
-		paid: netAmount.value > 0,
+		paid: netAmount.value > 0 && !isRequest.value,
 	}),
 )
 
@@ -620,17 +627,21 @@ const stepErrorMessage = computed(() => validation.summarize(stepErrors.value))
 
 const nextStep = computed(() => steps.value[current.value + 1])
 const totalLabel = computed(() => formatWholePriceOrFree(total.value, currency.value))
+const requestLabel = computed(() => requestSubmitLabel(pickedTicketTypes.value))
 const ctaLabel = computed(() => {
 	if (nextStep.value?.id === "summary") return __("Review booking")
 	if (nextStep.value) return __("Continue to {0}", [nextStep.value.label.toLowerCase()])
 	if (placing.value) return __("Processing...")
+	if (isRequest.value) return __(requestLabel.value!)
 	if (total.value > 0) return __("Proceed to pay {0}", [totalLabel.value])
 	return isZoomEvent.value || props.eventDetails.free_event ? __("Register") : __("Book Tickets")
 })
 const mobileCtaLabel = computed(() => {
 	if (nextStep.value?.id === "summary") return __("Review")
 	if (nextStep.value) return __("Continue")
-	return total.value > 0 && !placing.value ? __("Pay {0}", [totalLabel.value]) : ctaLabel.value
+	return total.value > 0 && !isRequest.value && !placing.value
+		? __("Pay {0}", [totalLabel.value])
+		: ctaLabel.value
 })
 
 function goToStep(id: RegistrationStepId) {
@@ -682,6 +693,7 @@ const { submit, verifyOtp, submitOffline, offlineMethod, showOfflineDialog, comp
 	useBookingSubmit({
 		buildPayload,
 		total,
+		isRequest: () => isRequest.value,
 		gateways,
 		selectedGateway,
 		offlineMethods: () => props.offlineMethods,

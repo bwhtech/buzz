@@ -27,6 +27,7 @@ from buzz.api.booking.schemas import (
 	FreeBookingResponse,
 	OfflineBookingResponse,
 	PaymentLinkResponse,
+	RequestResponse,
 )
 from buzz.api.filters.conditions import form_logic_rules, form_questions
 from buzz.api.forms.answers import CustomAnswers
@@ -38,11 +39,13 @@ from buzz.events.doctype.buzz_form.form_types import (
 )
 from buzz.payments import get_payment_link_for_booking
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
+from buzz.ticketing.doctype.event_booking.registration_request import RegistrationRequest
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	default_currency,
 	start_capacity_transaction,
 )
 from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import add_on_options
+from buzz.ticketing.doctype.ticket_hold.ticket_hold import release_hold
 from buzz.utils import ZOOM_BACKED_CATEGORIES
 
 if TYPE_CHECKING:
@@ -62,7 +65,7 @@ class BookingService:
 	def event(self) -> "BuzzEvent":
 		return frappe.get_cached_doc("Buzz Event", self.request.event)
 
-	def process(self) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
+	def process(self) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse | RequestResponse:
 		start_capacity_transaction()
 		self.validate_ticket_count()
 		self.validate_event()
@@ -70,6 +73,8 @@ class BookingService:
 		self.validate_answers()
 		self.validate_add_ons()
 		booking = self.build_booking()
+		if booking.is_request:
+			RegistrationRequest(booking).validate_no_open_request()
 		booking.insert(ignore_permissions=True)
 		frappe.db.commit()  # nosemgrep: frappe-manual-commit
 		return self.finalize(booking)
@@ -151,6 +156,7 @@ class BookingService:
 		self.append_utm_parameters(booking)
 		self.append_custom_fields(booking)
 		self.append_attendees(booking)
+		RegistrationRequest(booking).start()
 		return booking
 
 	def apply_code(self, booking: "EventBooking") -> None:
@@ -271,7 +277,9 @@ class BookingService:
 
 	def finalize(
 		self, booking: "EventBooking"
-	) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse:
+	) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse | RequestResponse:
+		if booking.is_request:
+			return self.request_response(booking)
 		if booking.total_amount == 0:
 			return self.free_booking_response(booking)
 		if self.request.is_offline:
@@ -281,9 +289,14 @@ class BookingService:
 	def free_booking_response(self, booking: "EventBooking") -> FreeBookingResponse:
 		booking.flags.ignore_permissions = True
 		booking.submit()
-		return FreeBookingResponse(
-			booking_name=booking.name,
-			redirect_to=f"/booking-success/{booking.name}?token={get_booking_access_token(booking.name)}",
+		return FreeBookingResponse(booking_name=booking.name, redirect_to=success_path(booking.name))
+
+	def request_response(self, booking: "EventBooking") -> RequestResponse:
+		"""A request holds no tickets until an organizer approves it."""
+		release_hold(booking.hold_token)
+		RegistrationRequest(booking).send_received_email()
+		return RequestResponse(
+			booking_name=booking.name, redirect_to=success_path(booking.name), request_status=booking.status
 		)
 
 	def offline_booking_response(self, booking: "EventBooking") -> OfflineBookingResponse:
@@ -344,6 +357,10 @@ class BookingService:
 				payment_gateway=self.request.payment_gateway,
 			)
 		)
+
+
+def success_path(booking_name: str) -> str:
+	return f"/booking-success/{booking_name}?token={get_booking_access_token(booking_name)}"
 
 
 def are_registrations_closed(event_doc) -> bool:

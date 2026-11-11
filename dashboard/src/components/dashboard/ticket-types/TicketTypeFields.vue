@@ -4,6 +4,7 @@ import { computed } from "vue"
 
 import PriceList from "@/components/dashboard/sponsorships/PriceList.vue"
 import type { TicketCategoryItem } from "@/types"
+import { type TicketTypeAccess, approvalSwitch, waitlistSwitch } from "@/utils/approvalMode"
 import type { TicketTypeValues } from "@/utils/ticketTypeForm"
 
 const values = defineModel<TicketTypeValues>({ required: true })
@@ -14,6 +15,7 @@ const props = defineProps<{
 	hideable: boolean
 	lockedCurrencies?: string[]
 	disabled?: boolean
+	access: TicketTypeAccess
 }>()
 
 // No field of its own: on while a date is set. Switching on leaves an empty date ("") for the
@@ -22,6 +24,13 @@ const autoUnpublish = computed<boolean>({
 	get: () => values.value.auto_unpublish_after != null,
 	set: (on) => (values.value.auto_unpublish_after = on ? "" : null),
 })
+
+const hasSeatLimit = computed(() => values.value.max_tickets_available > 0)
+
+// The event can decide both for every ticket type; the switch then shows its decision.
+const approval = computed(() => approvalSwitch(props.access.mode))
+const waitlist = computed(() => waitlistSwitch(props.access.eventWaitlist, hasSeatLimit.value))
+const shown = (forced: boolean | undefined, own: boolean) => forced ?? own
 
 const closesIn = computed(() => {
 	const date = values.value.auto_unpublish_after
@@ -89,6 +98,31 @@ const categoryOptions = computed(() => [
 			:disabled="disabled"
 			@update:model-value="values.max_tickets_available = Math.max(Number($event) || 0, 0)"
 		/>
+		<fieldset class="space-y-2">
+			<legend class="pb-2 text-sm font-semibold text-ink-gray-9">Access</legend>
+			<div class="divide-y divide-outline-gray-1 rounded-4 border border-outline-gray-2">
+				<div class="p-1">
+					<Switch
+						:model-value="shown(approval.forced, values.requires_approval)"
+						padded
+						label="Require approval"
+						:description="approval.description"
+						:disabled="disabled || approval.disabled"
+						@update:model-value="values.requires_approval = $event"
+					/>
+				</div>
+				<div class="p-1">
+					<Switch
+						:model-value="shown(waitlist.forced, values.enable_waitlist)"
+						padded
+						label="Waitlist when sold out"
+						:description="waitlist.description"
+						:disabled="disabled || waitlist.disabled"
+						@update:model-value="values.enable_waitlist = $event"
+					/>
+				</div>
+			</div>
+		</fieldset>
 		<div class="divide-y divide-outline-gray-1 rounded-4 border border-outline-gray-2">
 			<div class="p-1">
 				<Switch

@@ -46,3 +46,12 @@ test("clearing empties the selection", () => {
 
 	assert.deepEqual(selection.selected.value, [])
 })
+
+test("select all takes every selectable key", () => {
+	const selection = useRowSelection(keys())
+
+	selection.toggle("b")
+	selection.selectAll()
+
+	assert.deepEqual(selection.selected.value, ["a", "b", "c"])
+})
