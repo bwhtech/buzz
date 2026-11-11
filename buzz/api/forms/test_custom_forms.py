@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_to_date, now_datetime
@@ -346,3 +349,25 @@ class TestCustomFormLinkEventFilter(FormsTestCase):
 	def link_options(self, event, form_route: str, fieldname: str) -> list[dict]:
 		fields = get_custom_form_data(event.route, form_route).form_fields
 		return next(f for f in fields if f["fieldname"] == fieldname)["link_options"]
+
+
+class TestCustomFormRateLimit(FormsTestCase):
+	def setUp(self):
+		super().setUp()
+		# One fixed IP per test so every call lands in the same limiter bucket.
+		self.enterContext(patch.object(frappe.local, "request", SimpleNamespace(method="POST"), create=True))
+		self.enterContext(
+			patch.object(frappe.local, "request_ip", frappe.generate_hash(length=12), create=True)
+		)
+
+	def submit_unknown_event(self):
+		# The limiter counts before the body runs, so nothing is written.
+		with self.assertRaises(EventNotFound):
+			self.submit("no-such-event-route", "feedback", data={})
+
+	def test_guest_is_rate_limited(self):
+		for _attempt in range(20):
+			self.submit_unknown_event()
+
+		with self.assertRaises(frappe.RateLimitExceededError):
+			self.submit("no-such-event-route", "feedback", data={})

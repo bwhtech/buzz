@@ -1,4 +1,5 @@
 import frappe
+from frappe.rate_limiter import rate_limit
 
 from buzz.api.forms.builder import FormBuilderService
 from buzz.api.forms.schemas import CustomFormResponse, EventProposalFormResponse, FormBuilderFields
@@ -22,6 +23,7 @@ def get_custom_form_data(event_route: str, form_route: str) -> CustomFormRespons
 
 # nosemgrep: guest-whitelisted-method
 @frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=20, seconds=3600)
 def submit_custom_form(
 	event_route: str, form_route: str, data: dict | str, custom_fields_data: dict | str | None = None
 ) -> str | None:
@@ -46,6 +48,7 @@ def get_event_proposal_form_data() -> EventProposalFormResponse:
 
 # nosemgrep: guest-whitelisted-method
 @frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=10, seconds=3600)
 def submit_event_proposal(data: dict | str) -> None:
 	create_event_proposal(data)
 
