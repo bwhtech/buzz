@@ -17,31 +17,23 @@ const summary = useBookingSummary(() => props.booking)
 
 const accordionItems = [{ value: "booking", title: "Booking Details" }]
 
-const STATUS_NOTICES = {
-	"Approval Pending": {
-		theme: "amber",
-		title: "Payment Confirmation Pending",
-		description:
-			"Your booking is confirmed subject to verifying the offline payment details. You will be notified once payment is verified.",
-	},
-	Rejected: {
-		theme: "red",
-		title: "Booking Rejected",
-		description:
-			"Your booking has been rejected. Please contact the event organizer for more information.",
-	},
+const OFFLINE_PENDING_NOTICE = {
+	theme: "amber",
+	title: "Payment Confirmation Pending",
+	description:
+		"Your booking is confirmed subject to verifying the offline payment details. You will be notified once payment is verified.",
 } as const
 
 // A registration request's state, with Pay now once a paid request is approved.
 const request = computed(() => requestNotice(summary.data?.status))
 
 // Only an offline payment waits on approval; an online one marked pending is still at the gateway.
-const statusNotice = computed(() => {
-	const row = summary.data
-	if (!row) return null
-	if (row.status === "Approval Pending" && !row.is_offline) return null
-	return STATUS_NOTICES[row.status as keyof typeof STATUS_NOTICES] || null
-})
+// A rejected booking is covered by the request notice above.
+const statusNotice = computed(() =>
+	summary.data?.status === "Approval Pending" && summary.data.is_offline
+		? OFFLINE_PENDING_NOTICE
+		: null,
+)
 </script>
 
 <template>

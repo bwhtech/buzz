@@ -3,20 +3,15 @@ import { Avatar, Badge, Tooltip, dayjsLocal } from "frappe-ui"
 import { computed } from "vue"
 
 import EventHoverCard from "@/components/dashboard/events/EventHoverCard.vue"
-import { enquiryStatusTheme } from "@/components/dashboard/sponsorships/helpers"
+import { enquiryPrice, enquiryStatusTheme } from "@/components/dashboard/sponsorships/helpers"
 import { enquiryStatusIcon } from "@/components/dashboard/sponsorships/mine/enquiryStatus"
 import type { SponsorshipWithEvent } from "@/types"
-import { formatWholePriceOrFree } from "@/utils/currency"
 
 const props = defineProps<{ enquiry: SponsorshipWithEvent }>()
 
 const emit = defineEmits<{ open: [] }>()
 
-const price = computed(() =>
-	props.enquiry.tier_price == null
-		? ""
-		: formatWholePriceOrFree(props.enquiry.tier_price, props.enquiry.tier_currency || "INR"),
-)
+const price = computed(() => enquiryPrice(props.enquiry))
 
 // creation is a full timestamp in the site's timezone, so this one does convert.
 const submitted = computed(() => dayjsLocal(props.enquiry.creation))

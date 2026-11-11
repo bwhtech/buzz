@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Alert, Button, Dialog, ErrorMessage, dayjs, dayjsLocal, toast } from "frappe-ui"
+import { Alert, Button, ErrorMessage, dayjs, dayjsLocal, dialog, toast } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import {
@@ -11,7 +11,7 @@ import {
 } from "@/components/common/drawer"
 import ImageCropUploader from "@/components/common/ImageCropUploader.vue"
 import EventHoverCard from "@/components/dashboard/events/EventHoverCard.vue"
-import { enquiryStatusTheme } from "@/components/dashboard/sponsorships/helpers"
+import { enquiryPrice, enquiryStatusTheme } from "@/components/dashboard/sponsorships/helpers"
 import LogoPanel from "@/components/dashboard/sponsorships/LogoPanel.vue"
 import {
 	enquiryActions,
@@ -22,7 +22,6 @@ import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useUpdateSponsorshipLogo, useWithdrawEnquiry } from "@/data/sponsorships"
 import type { SponsorshipListItem } from "@/types"
 import { validateIsImageFile } from "@/utils"
-import { formatWholePriceOrFree } from "@/utils/currency"
 import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps<{ enquiry: SponsorshipListItem | null; paymentReceived?: boolean }>()
@@ -37,18 +36,25 @@ const withdrawal = useWithdrawEnquiry()
 const logo = useUpdateSponsorshipLogo(() => props.enquiry)
 const copyId = useCopyToClipboard()
 
-const confirmingWithdrawal = ref(false)
 const paying = ref(false)
 
-async function withdraw() {
-	try {
-		await withdrawal.submit({ enquiry_id: props.enquiry?.name || "" })
-		toast.success("Enquiry withdrawn")
-		confirmingWithdrawal.value = false
-		emit("changed")
-	} catch (error) {
-		toast.error(serverErrorMessage(error) || "Could not withdraw the enquiry")
-	}
+function confirmWithdrawal() {
+	dialog.confirm({
+		title: "Withdraw this enquiry?",
+		message: "The event team stops considering it, and you cannot put it back yourself.",
+		theme: "red",
+		confirmLabel: "Withdraw",
+		onConfirm: async () => {
+			try {
+				await withdrawal.submit({ enquiry_id: props.enquiry?.name || "" })
+			} catch (error) {
+				toast.error(serverErrorMessage(error) || "Could not withdraw the enquiry")
+				throw error
+			}
+			toast.success("Enquiry withdrawn")
+			emit("changed")
+		},
+	})
 }
 
 async function replaceLogo(file: { file_url: string }) {
@@ -61,11 +67,7 @@ async function replaceLogo(file: { file_url: string }) {
 	}
 }
 
-const price = computed(() =>
-	props.enquiry?.tier_price == null
-		? ""
-		: formatWholePriceOrFree(props.enquiry.tier_price, props.enquiry.tier_currency || "INR"),
-)
+const price = computed(() => (props.enquiry ? enquiryPrice(props.enquiry) : ""))
 
 // Plain dayjs: start_date is date-only, and a timezone shift moves it a day back.
 const eventDate = computed(() =>
@@ -168,26 +170,6 @@ const fields = computed(() => {
 					:event-id="enquiry.event"
 					:event-title="enquiry.event_title || ''"
 				/>
-
-				<Dialog
-					v-model:open="confirmingWithdrawal"
-					title="Withdraw this enquiry?"
-					message="The event team stops considering it, and you cannot put it back yourself."
-					size="md"
-				>
-					<template #actions>
-						<div class="flex justify-end gap-2">
-							<Button label="Keep it" @click="confirmingWithdrawal = false" />
-							<Button
-								variant="solid"
-								theme="red"
-								label="Withdraw"
-								:loading="withdrawal.loading"
-								@click="withdraw"
-							/>
-						</div>
-					</template>
-				</Dialog>
 			</template>
 
 			<template v-if="enquiry && (actions.canPay || actions.canWithdraw)" #footer>
@@ -204,7 +186,7 @@ const fields = computed(() => {
 					theme="red"
 					size="md"
 					label="Withdraw"
-					@click="confirmingWithdrawal = true"
+					@click="confirmWithdrawal"
 				/>
 			</template>
 		</DrawerContent>
