@@ -43,6 +43,8 @@ class TicketHoldResponse(APIResponse):
 	expires_in_seconds: int | None
 	# Tickets this hold can still have, by ticket type. Ticket types without a limit are left out.
 	remaining: dict[str, int]
+	# Ticket types the picked quantity can't get, so the booking joins their waitlist.
+	waitlisted: list[str]
 
 
 class FreeBookingResponse(APIResponse):

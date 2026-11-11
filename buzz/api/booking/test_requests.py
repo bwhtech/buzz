@@ -3,7 +3,7 @@ from unittest.mock import patch
 import frappe
 from frappe.utils import add_to_date, get_datetime, now_datetime
 
-from buzz.api.booking import hold_tickets, process_booking
+from buzz.api.booking import get_event_booking_data, hold_tickets, process_booking
 from buzz.api.booking.exceptions import RequestAlreadyOpen, RequestNotOpen
 from buzz.api.booking.requests import (
 	approve_request,
@@ -175,6 +175,17 @@ class TestRegistrationRequests(RequestTestCase):
 		)
 		self.assertEqual(self.state(booking.booking_name), ("Confirmed", 1, ""))
 
+	def test_form_asks_only_guests_for_a_request(self):
+		self.set_event({"requires_approval": 1})
+
+		def needs_approval() -> list[bool]:
+			rows = get_event_booking_data(self.event.route).available_ticket_types
+			return [row.needs_approval for row in rows]
+
+		with self.set_user(self.booker):
+			self.assertTrue(all(needs_approval()))
+		self.assertFalse(any(needs_approval()))
+
 	def test_approval_goes_through_after_the_ticket_type_sold_out(self):
 		ticket_type = EventTicketTypeFactory.create(
 			event=self.event.name, requires_approval=1, max_tickets_available=1
@@ -338,6 +349,14 @@ class TestWaitlist(RequestTestCase):
 		self.assertEqual(self.state(name), ("Waitlisted", 0, "Waitlist"))
 		self.assertRaises(frappe.ValidationError, self.booking(name).submit)
 		self.assertEqual(self.tickets_of(name), 0)
+
+	def test_organizer_registering_for_a_sold_out_ticket_type_joins_the_waitlist(self):
+		ticket_type = self.waitlist_ticket_type()
+		self.sell_out(ticket_type)
+
+		name = self.request_to_join(ticket_type.name, "Administrator")
+
+		self.assertEqual(self.state(name), ("Waitlisted", 0, "Waitlist"))
 
 	def test_let_in_while_sold_out(self):
 		ticket_type = self.waitlist_ticket_type()

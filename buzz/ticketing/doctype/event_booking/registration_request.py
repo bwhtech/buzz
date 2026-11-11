@@ -47,14 +47,15 @@ class RegistrationRequest:
 			self.booking.request_type = "Waitlist" if status == "Waitlisted" else "Approval"
 
 	def initial_status(self) -> str | None:
-		"""The request status a new booking starts in, or None when it books straight away."""
-		if has_section_permission(self.booking.event, "guests", "create", frappe.session.user):
-			return None
+		"""The request status a new booking starts in, or None when it books straight away.
+		Organizers skip approval, but a sold-out ticket type queues them like anyone else."""
 		quantities = self.booking.ticket_quantities()
 		ticket_types = self.ticket_types()
 		hold_token = self.booking.hold_token
 		if any(row.joins_waitlist(quantities[str(row.name)], hold_token) for row in ticket_types):
 			return "Waitlisted"
+		if has_section_permission(self.booking.event, "guests", "create", frappe.session.user):
+			return None
 		if any(ticket_type.needs_approval for ticket_type in ticket_types):
 			return "Requested"
 		return None

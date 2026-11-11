@@ -14,6 +14,7 @@ from buzz.events.doctype.buzz_form.form_types import (
 	form_type,
 )
 from buzz.payments import get_payment_gateways_for_event
+from buzz.permissions import has_section_permission
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import add_on_options
@@ -39,11 +40,14 @@ def build_event_booking_data(
 	coupon = BuzzCouponCode.find_available_access_code(event_doc.name, access_code)
 	unlocked = coupon.unlocked_ticket_types() if coupon else set()
 	ticket_types = get_available_ticket_types(event_doc.name, categories, hold_token, unlocked)
+	adds_guests_directly = has_section_permission(event_doc.name, "guests", "create", frappe.session.user)
 
 	return EventBookingDataResponse(
 		registrations_closed=are_registrations_closed(event_doc),
 		event_details=get_event_details(event_doc),
-		available_ticket_types=[ticket_type_row(row, hold_token) for row in ticket_types],
+		available_ticket_types=[
+			ticket_type_row(row, hold_token, adds_guests_directly) for row in ticket_types
+		],
 		ticket_categories=categories_in_use(categories, ticket_types),
 		available_add_ons=get_available_add_ons(event_doc.name),
 		tax_settings=TaxSettings(
@@ -120,10 +124,12 @@ def get_available_ticket_types(
 	return sorted(available_ticket_types, key=lambda row: position.get(row.category, len(position)))
 
 
-def ticket_type_row(ticket_type: "EventTicketType", hold_token: str | None) -> frappe._dict:
+def ticket_type_row(
+	ticket_type: "EventTicketType", hold_token: str | None, adds_guests_directly: bool = False
+) -> frappe._dict:
 	return frappe._dict(
 		ticket_type.as_dict(no_nulls=True),
-		needs_approval=ticket_type.needs_approval,
+		needs_approval=ticket_type.needs_approval and not adds_guests_directly,
 		waitlisted=ticket_type.joins_waitlist(1, hold_token),
 	)
 

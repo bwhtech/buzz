@@ -477,12 +477,13 @@ const heldQuantities = computed(() => {
 	return Object.fromEntries(Object.entries(quantities.value).filter(([name]) => limited.has(name)))
 })
 
-const { holdToken, secondsLeft, expired, holdError, holdAgain, keepHold } = useTicketHold(
-	props.eventRoute,
-	eventId,
-	heldQuantities,
-	computed(() => coupon.appliedCode),
-)
+const { holdToken, secondsLeft, expired, holdError, waitlisted, holdAgain, keepHold } =
+	useTicketHold(
+		props.eventRoute,
+		eventId,
+		heldQuantities,
+		computed(() => coupon.appliedCode),
+	)
 const holdErrorMessage = computed(() => serverErrorMessage(holdError.value))
 
 function createAttendee(ticketType: string): BookingAttendee {
@@ -601,7 +602,11 @@ const validation = useRegistrationValidation({
 const { meErrors, attendeeErrorList, detailsErrors } = validation
 
 const pickedTicketTypes = computed(() =>
-	attendees.value.map((attendee) => ticketTypesMap.value[String(attendee.ticket_type)] ?? {}),
+	attendees.value.map((attendee) => {
+		const name = String(attendee.ticket_type)
+		const ticketType = ticketTypesMap.value[name] ?? {}
+		return waitlisted.value.includes(name) ? { ...ticketType, waitlisted: true } : ticketType
+	}),
 )
 const isRequest = computed(() => isRegistrationRequest(pickedTicketTypes.value))
 const steps = computed(() =>

@@ -606,6 +606,7 @@ export interface TicketHold {
 	hold_token: string
 	expires_in_seconds: number | null
 	remaining: Record<string, number>
+	waitlisted: string[]
 }
 
 // buzz.api.booking.get_event_booking_data: categories that hold an available ticket type.

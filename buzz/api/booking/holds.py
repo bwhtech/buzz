@@ -54,7 +54,8 @@ class TicketHoldService:
 		lock_ticket_types([row.name for row in ticket_types])
 		expires_at = self.resolve_expiry()
 		# A waitlisted ticket type holds nothing: the booking joins the queue instead.
-		ticket_types = [row for row in ticket_types if not self.joins_waitlist(row)]
+		waitlisted = [str(row.name) for row in ticket_types if self.joins_waitlist(row)]
+		ticket_types = [row for row in ticket_types if str(row.name) not in waitlisted]
 		remaining = {str(row.name): self.check_capacity(row) for row in ticket_types}
 		held = {name: self.quantities[name] for name in remaining}
 		set_hold(self.hold_token, self.event_name, held, expires_at)
@@ -62,6 +63,7 @@ class TicketHoldService:
 			hold_token=self.hold_token,
 			expires_in_seconds=self.seconds_until(expires_at) if any(held.values()) else None,
 			remaining=remaining,
+			waitlisted=waitlisted,
 		)
 
 	def validate_event(self) -> None:
