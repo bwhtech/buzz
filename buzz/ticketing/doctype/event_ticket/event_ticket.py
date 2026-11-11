@@ -2,12 +2,14 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.core.api.user_invitation import invite_by_email
 from frappe.model.document import Document
 
 from buzz.emails import is_full_document, send_message_email
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.events.online_meeting import OnlineMeeting
+from buzz.permissions import has_section_permission
 from buzz.utils import (
 	generate_ics_file,
 	generate_qr_code_file,
@@ -50,7 +52,18 @@ class EventTicket(Document):
 				self.last_name = name_parts[1]
 
 	def validate(self):
+		if not self.event and self.ticket_type:
+			self.event = frappe.db.get_value("Event Ticket Type", self.ticket_type, "event")
 		self.attendee_name = f"{self.first_name or ''} {self.last_name or ''}".strip()
+		self.validate_creation_rights()
+
+	def validate_creation_rights(self):
+		"""A ticket comes from a booking, or from the event's own team."""
+		if not self.is_new() or self.flags.ignore_permissions:
+			return
+		if has_section_permission(self.event, "guests", "create", frappe.session.user):
+			return
+		frappe.throw(_("Tickets are issued by a booking."), frappe.PermissionError)
 
 	def before_submit(self):
 		self.generate_qr_code()

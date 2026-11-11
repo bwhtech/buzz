@@ -17,7 +17,7 @@ from buzz.events.doctype.buzz_form.form_types import ATTENDEE_FORM_DOCTYPE
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.payments import mark_payment_as_received
-from buzz.permissions import has_section_permission
+from buzz.permissions import has_section_permission, is_unrestricted
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_booking.booking_invoice import BookingInvoice
 from buzz.ticketing.doctype.event_booking.registration_request import (
@@ -97,6 +97,7 @@ class EventBooking(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		self.validate_creation_rights()
 		self.validate_event_registration_is_open()
 		self.validate_ticket_availability()
 		self.validate_hidden_ticket_types()
@@ -106,6 +107,17 @@ class EventBooking(Document):
 		self.set_total()
 		self.apply_coupon_if_applicable()
 		self.apply_taxes_if_applicable()
+
+	def validate_creation_rights(self):
+		"""Only the event's own team, or the vetted service flow, may open a booking."""
+		if not self.is_new() or self.flags.ignore_permissions:
+			return
+		if has_section_permission(self.event, "guests", "create", frappe.session.user):
+			return
+		frappe.throw(
+			_("Tickets for this event are issued through its registration page."),
+			frappe.PermissionError,
+		)
 
 	def validate_event_registration_is_open(self):
 		"""Refuse new bookings for unpublished or closed events, backing up
@@ -151,7 +163,12 @@ class EventBooking(Document):
 					"This booking requires offline payment verification. Please use the Approve or Reject button instead."
 				)
 			)
-		elif self.payment_status != "Paid":
+
+		# A claimed `payment_status` is not a payment.
+		if not self.flags.payment_received and not is_unrestricted(frappe.session.user):
+			frappe.throw(_("This booking has no received payment."))
+
+		if self.payment_status != "Paid":
 			self.payment_status = "Unpaid"
 			self.status = "Approval Pending"
 
