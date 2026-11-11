@@ -15,7 +15,9 @@ class ImportsNotEnabled(NotPermitted):
 
 class UnreadableFile(BuzzAPIError):
 	title = _lt("Unreadable File")
-	message = _lt("This file could not be read. Upload a CSV or an Excel (.xlsx) file.")
+	message = _lt(
+		"This file could not be read, or it is too large. Upload a smaller CSV or an Excel (.xlsx) file."
+	)
 
 
 class EmptySpreadsheet(BuzzAPIError):
