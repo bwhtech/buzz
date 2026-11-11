@@ -233,6 +233,8 @@ class DemoData:
 		)
 		if paid:
 			booking.update({"payment_status": "Paid", "status": "Confirmed", "payment_method": "Playground"})
+			# Demo money: there is no Event Payment, and a submit otherwise asks for one.
+			booking.flags.payment_received = True
 		booking.flags.ignore_permissions = True
 		booking.insert()
 		booking.submit()

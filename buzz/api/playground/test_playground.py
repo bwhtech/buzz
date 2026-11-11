@@ -51,6 +51,16 @@ class TestSandbox(PlaygroundTestCase):
 		)
 		self.assertEqual(role, "Owner")
 
+	def test_a_guest_starts_a_sandbox_with_paid_bookings(self):
+		# The landing page calls start before anyone is logged in.
+		with self.set_user("Guest"):
+			start()
+
+		sandbox = frappe.get_last_doc("Playground Sandbox")
+		events = frappe.get_all("Buzz Event", {"team": sandbox.team}, pluck="name")
+		paid = {"event": ("in", events), "payment_status": "Paid", "docstatus": 1}
+		self.assertTrue(frappe.db.count("Event Booking", paid))
+
 	def test_seeding_leaves_the_inbox_empty(self):
 		sandbox = create_sandbox()
 		self.assertEqual(self.emails_of(sandbox), [])
