@@ -76,12 +76,15 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 	team = frappe.qb.DocType("Buzz Team")
 	venue = frappe.qb.DocType("Event Venue")
 
-	hosted = event.name.isin(events_with_section_access(user, "details"))
+	hosted = event.name.isin(event_names(events_with_section_access(user, "details")))
 	ticketed = event.name.isin(
-		frappe.qb.from_(ticket)
-		.select(ticket.event)
-		.where((ticket.attendee_email == user) & (ticket.docstatus == 1))
-	) | event.name.isin(events_booked_by(user))
+		event_names(
+			frappe.qb.from_(ticket)
+			.select(ticket.event)
+			.where((ticket.attendee_email == user) & (ticket.docstatus == 1))
+		)
+		+ event_names(events_booked_by(user))
+	)
 
 	query = (
 		frappe.qb.from_(event)
@@ -118,6 +121,13 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 
 	# Buzz Event autonames to integers, while every link to it travels as a string.
 	return [MyEvent(**row | {"name": str(row.name)}) for row in rows]
+
+
+def event_names(query) -> list:
+	"""Run up front: Buzz Event names are integers while links to them are varchar, so as an
+	IN subquery MariaDB re-scans the linked table once per event row. NULL keeps IN valid
+	when nothing matches."""
+	return query.distinct().run(pluck=True) or [None]
 
 
 def events_booked_by(user: str):
