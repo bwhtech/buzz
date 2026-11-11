@@ -243,8 +243,9 @@ def uploaded_image(url: str | None) -> Image.Image | None:
 	if not url or urlparse(url).scheme:
 		return None
 	try:
-		content = frappe.get_doc("File", {"file_url": url}).get_content()
-		return Image.open(io.BytesIO(content))
+		file = frappe.get_doc("File", {"file_url": url})
+		file.check_permission("read")
+		return Image.open(io.BytesIO(file.get_content()))
 	except Exception:
 		return None
 
