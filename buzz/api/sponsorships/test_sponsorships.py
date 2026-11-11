@@ -16,6 +16,7 @@ from buzz.api.sponsorships.exceptions import (
 	WithdrawalNotPermitted,
 )
 from buzz.tests.base_test_cases import SponsorshipTestCase, make_payment_gateway
+from buzz.tests.factories import BuzzEventFactory, SponsorshipTierFactory
 
 
 class TestGetUserSponsorshipInquiries(SponsorshipTestCase):
@@ -126,6 +127,41 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 		self.assertTrue(frappe.db.exists("Event Sponsor", {"enquiry": self.enquiry.name}))
 		self.assertEqual(frappe.db.get_value("Event Payment", payment.name, "payment_received"), 1)
 
+	def test_link_refuses_a_tier_from_another_event(self):
+		other_event = str(BuzzEventFactory.create().name)
+		gateway = self.add_gateway_to_event(other_event)
+		other_event_tier = SponsorshipTierFactory.create(event=other_event)
+
+		with self.assertRaises(frappe.ValidationError):
+			create_sponsorship_payment_link(self.enquiry.name, other_event_tier.name, gateway)
+
+		self.assertEqual(self.saved_tier(), self.tier.name)
+
+	def test_link_refuses_to_repoint_a_paid_enquiry(self):
+		gateway = self.add_gateway_to_event()
+		create_sponsorship_payment_link(self.enquiry.name, self.tier.name, gateway)
+		payment = frappe.get_last_doc("Event Payment", {"reference_docname": self.enquiry.name})
+		payment_testing.pay(payment.payment_request)
+		frappe.clear_document_cache("Sponsorship Enquiry", self.enquiry.name)
+		cheaper_tier = SponsorshipTierFactory.create(
+			event=self.event, title="Silver", prices=[{"currency": "INR", "price": 100}]
+		)
+
+		with self.assertRaises(frappe.ValidationError):
+			create_sponsorship_payment_link(self.enquiry.name, cheaper_tier.name, gateway)
+
+		self.assertEqual(self.saved_tier(), self.tier.name)
+
+	def test_link_writes_the_tier_once_it_validates(self):
+		gateway = self.add_gateway_to_event()
+		silver = SponsorshipTierFactory.create(
+			event=self.event, title="Silver", prices=[{"currency": "INR", "price": 100}]
+		)
+
+		create_sponsorship_payment_link(self.enquiry.name, silver.name, gateway)
+
+		self.assertEqual(self.saved_tier(), silver.name)
+
 	def test_the_sponsor_comes_back_to_their_enquiry_after_paying(self):
 		gateway = self.add_gateway_to_event()
 
@@ -137,12 +173,16 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 			f"/b/manage/sponsorship?enquiry={self.enquiry.name}&success=true",
 		)
 
-	def add_gateway_to_event(self) -> str:
+	def saved_tier(self) -> str:
+		return frappe.db.get_value("Sponsorship Enquiry", self.enquiry.name, "tier")
+
+	def add_gateway_to_event(self, event: str | None = None) -> str:
 		gateway = make_payment_gateway()
-		event = frappe.get_doc("Buzz Event", self.event)
-		event.set("payment_gateways", [{"payment_gateway": gateway}])
-		event.save(ignore_permissions=True)
-		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event)
+		event_name = event or self.event
+		event_doc = frappe.get_doc("Buzz Event", event_name)
+		event_doc.set("payment_gateways", [{"payment_gateway": gateway}])
+		event_doc.save(ignore_permissions=True)
+		self.addCleanup(frappe.clear_document_cache, "Buzz Event", event_name)
 		return gateway
 
 

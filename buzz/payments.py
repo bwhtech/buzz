@@ -5,6 +5,9 @@ from frappe import _
 # Their checkout needs the shopper's phone number.
 GATEWAYS_NEEDING_PHONE = ("PayU Gateway Settings",)
 
+# An enquiry still open for its applicant to pay for.
+PAYABLE_ENQUIRY_STATUSES = ("Approval Pending", "Payment Pending")
+
 
 def get_payment_gateways_for_event(event: str) -> list[str]:
 	"""Get the event's own payment gateways, or the site default when it has none.
@@ -62,7 +65,15 @@ def get_payment_link_for_sponsorship(
 	payment_gateway: str | None = None,
 	currency: str | None = None,
 ) -> str:
+	# Read fresh: the status is what gates a second payment, and `db_set` leaves the cache stale.
+	enquiry = frappe.db.get_value(
+		"Sponsorship Enquiry", sponsorship_enquiry, ["event", "status"], as_dict=True
+	)
 	tier_doc = frappe.get_cached_doc("Sponsorship Tier", sponsorship_tier)
+	if str(tier_doc.event) != str(enquiry.event):
+		frappe.throw(_("This sponsorship tier is not offered for this event."))
+	if enquiry.status not in PAYABLE_ENQUIRY_STATUSES:
+		frappe.throw(_("This sponsorship enquiry is not open for payment."))
 	if not tier_doc.enabled:
 		frappe.throw(_("This sponsorship tier is no longer available."))
 	payment_gateway = resolve_payment_gateway(tier_doc.event, payment_gateway)
