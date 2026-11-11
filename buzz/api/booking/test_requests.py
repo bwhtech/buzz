@@ -3,7 +3,7 @@ from unittest.mock import patch
 import frappe
 from frappe.utils import add_to_date, get_datetime, now_datetime
 
-from buzz.api.booking import hold_tickets, process_booking
+from buzz.api.booking import get_event_booking_data, hold_tickets, process_booking
 from buzz.api.booking.exceptions import RequestAlreadyOpen, RequestNotOpen
 from buzz.api.booking.requests import (
 	approve_request,
@@ -174,6 +174,17 @@ class TestRegistrationRequests(RequestTestCase):
 			)
 		)
 		self.assertEqual(self.state(booking.booking_name), ("Confirmed", 1, ""))
+
+	def test_form_asks_only_guests_for_a_request(self):
+		self.set_event({"requires_approval": 1})
+
+		def needs_approval() -> list[bool]:
+			rows = get_event_booking_data(self.event.route).available_ticket_types
+			return [row.needs_approval for row in rows]
+
+		with self.set_user(self.booker):
+			self.assertTrue(all(needs_approval()))
+		self.assertFalse(any(needs_approval()))
 
 	def test_approval_goes_through_after_the_ticket_type_sold_out(self):
 		ticket_type = EventTicketTypeFactory.create(
