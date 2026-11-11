@@ -4,14 +4,29 @@ import type { Ref } from "vue"
 
 import type { Condition } from "@/components/common/filters"
 import type { ListOrder } from "@/composables/useListQuery"
-import type { EnquiryDetail, EventSponsors, EventSponsorships } from "@/types"
+import type { EnquiryDetail, EventSponsors, EventSponsorships, SponsorshipListItem } from "@/types"
 
 // v2 path: useCall reads the payload from `data`, which /api/method names `message`.
 // Uncached: cacheKey would persist this user's inquiries to IndexedDB past a logout.
-// Rows are only ever counted, so the sidebar and tab bar need no more than the key.
 export function useMySponsorships() {
-	return useCall<{ name: string }[]>({
+	return useCall<SponsorshipListItem[]>({
 		url: "/api/v2/method/buzz.api.sponsorships.get_user_sponsorship_inquiries",
+	})
+}
+
+export function useWithdrawEnquiry() {
+	return useCall<null, { enquiry_id: string }>({
+		url: "/api/v2/method/buzz.api.sponsorships.withdraw_sponsorship_enquiry",
+		method: "POST",
+		immediate: false,
+	})
+}
+
+export function useUpdateSponsorshipLogo() {
+	return useCall<null, { enquiry_id: string; company_logo: string }>({
+		url: "/api/v2/method/buzz.api.sponsorships.update_sponsorship_logo",
+		method: "POST",
+		immediate: false,
 	})
 }
 

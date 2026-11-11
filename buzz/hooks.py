@@ -54,6 +54,42 @@ website_redirects = [
 	# Bare /dashboard has no trailing slash for the catch-all above to match, and
 	# www/dashboard.html would otherwise serve the SPA shell under the wrong base.
 	{"source": r"/dashboard", "target": "/b", "forward_query_parameters": True},
+	# /b/account was folded into /b/manage; an id in the old path opens its drawer there.
+	{
+		"source": r"/b/account/proposals/([^/]+)",
+		"target": r"/b/manage/proposals?proposal=\1",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/b/account/proposals",
+		"target": r"/b/manage/proposals",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/b/account/sponsorships/([^/]+)",
+		"target": r"/b/manage/sponsorship?enquiry=\1",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/b/account/sponsorships",
+		"target": r"/b/manage/sponsorship",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/b/account/tickets/([^/]+)",
+		"target": r"/b/manage/events?ticket=\1",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/b/account/bookings/([^/]+)",
+		"target": r"/b/manage/events?booking=\1",
+		"forward_query_parameters": True,
+	},
+	{
+		"source": r"/b/account(/.*)?",
+		"target": r"/b/manage/events",
+		"forward_query_parameters": True,
+	},
 ]
 
 # Scheduled Tasks

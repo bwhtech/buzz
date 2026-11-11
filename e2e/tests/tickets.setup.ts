@@ -6,8 +6,11 @@ import {
 	ATTENDEE_EMAIL,
 	ATTENDEE_PASSWORD,
 	ATTENDEE_STATE_PATH,
+	ADD_ON_EVENT_TITLE,
+	CANCELLATION_EVENT_TITLE,
 	TICKETS_EVENT_ROUTE,
 	TICKETS_EVENT_TITLE,
+	TRANSFER_EVENT_TITLE,
 } from "../data/tickets"
 import { createUserWithRoles, saveLoginState } from "../helpers/auth"
 import {
@@ -34,9 +37,16 @@ async function forceDelete(request, doctype: string, name: string) {
 	await deleteDoc(request, doctype, name).catch(() => {})
 }
 
+const EVENTS = [
+	{ title: TICKETS_EVENT_TITLE, route: TICKETS_EVENT_ROUTE },
+	{ title: ADD_ON_EVENT_TITLE, route: "tickets-e2e-add-on" },
+	{ title: TRANSFER_EVENT_TITLE, route: "tickets-e2e-transfer" },
+	{ title: CANCELLATION_EVENT_TITLE, route: "tickets-e2e-cancellation" },
+]
+
 async function cleanUpPreviousRun(request) {
 	const events = await getList<NamedDoc>(request, "Buzz Event", {
-		filters: { title: ["=", TICKETS_EVENT_TITLE] },
+		filters: { title: ["in", EVENTS.map((event) => event.title)] },
 	})
 
 	for (const event of events) {
@@ -45,7 +55,15 @@ async function cleanUpPreviousRun(request) {
 		})) {
 			await forceDelete(request, "Event Ticket", ticket.name)
 		}
-		// Bookings block the event delete even though this setup no longer creates any.
+		for (const booking of await getList<NamedDoc>(request, "Event Booking", {
+			filters: { event: ["=", event.name] },
+		})) {
+			for (const row of await getList<NamedDoc>(request, "Ticket Cancellation Request", {
+				filters: { booking: ["=", booking.name] },
+			})) {
+				await forceDelete(request, "Ticket Cancellation Request", row.name)
+			}
+		}
 		for (const booking of await getList<NamedDoc>(request, "Event Booking", {
 			filters: { event: ["=", event.name] },
 		})) {
@@ -62,30 +80,23 @@ async function cleanUpPreviousRun(request) {
 	}
 }
 
-setup("seed a ticket owned by the attendee", async ({ request, baseURL }) => {
-	await cleanUpPreviousRun(request)
+interface SeededEvent {
+	event: string
+	ticketType: string
+	addOn: string
+}
 
-	if (!(await docExists(request, "Event Category", CATEGORY))) {
-		await createDoc(request, "Event Category", {
-			name: CATEGORY,
-			enabled: 1,
-			slug: "e2e-tickets-category",
-		})
-	}
-	const team = await ensureTestTeam(request)
-
-	const host = await ensureEventHost(request, HOST, team)
-
+async function seedEvent(request, team: string, host: string, spec: (typeof EVENTS)[number]) {
 	// Far enough out that every action window (transfer, add-ons, cancellation) is open.
 	const startDate = new Date()
 	startDate.setDate(startDate.getDate() + 60)
 
 	const event = await createDoc<NamedDoc>(request, "Buzz Event", {
 		team,
-		title: TICKETS_EVENT_TITLE,
+		title: spec.title,
 		category: CATEGORY,
 		host,
-		route: TICKETS_EVENT_ROUTE,
+		route: spec.route,
 		start_date: startDate.toISOString().split("T")[0],
 		start_time: "09:00:00",
 		end_time: "17:00:00",
@@ -99,7 +110,6 @@ setup("seed a ticket owned by the attendee", async ({ request, baseURL }) => {
 		title: "Tickets E2E Ticket",
 		is_published: 1,
 	})
-
 	const addOn = await createDoc<NamedDoc>(request, "Ticket Add-on", {
 		event: event.name,
 		title: ADD_ON_TITLE,
@@ -108,6 +118,52 @@ setup("seed a ticket owned by the attendee", async ({ request, baseURL }) => {
 		price: 0,
 		currency: "INR",
 	})
+	return { event: event.name, ticketType: ticketType.name, addOn: addOn.name }
+}
+
+function seedTicket(request, seeded: SeededEvent, email: string, name: string) {
+	return createDoc<NamedDoc>(request, "Event Ticket", {
+		event: seeded.event,
+		ticket_type: seeded.ticketType,
+		attendee_name: name,
+		attendee_email: email,
+		add_ons: [{ add_on: seeded.addOn, value: ADD_ON_OPTIONS[0], price: 0, currency: "INR" }],
+		// The event drawer lists submitted tickets only.
+		docstatus: 1,
+	})
+}
+
+// A submitted booking with no price confirms on its own and issues the attendee's ticket.
+function seedBooking(request, seeded: SeededEvent) {
+	return createDoc<NamedDoc>(request, "Event Booking", {
+		event: seeded.event,
+		user: ATTENDEE_EMAIL,
+		attendees: [
+			{
+				first_name: "Tickets",
+				last_name: "Attendee",
+				email: ATTENDEE_EMAIL,
+				ticket_type: seeded.ticketType,
+				currency: "INR",
+				amount: 0,
+			},
+		],
+		docstatus: 1,
+	})
+}
+
+setup("seed tickets for the attendee", async ({ request, baseURL }) => {
+	await cleanUpPreviousRun(request)
+
+	if (!(await docExists(request, "Event Category", CATEGORY))) {
+		await createDoc(request, "Event Category", {
+			name: CATEGORY,
+			enabled: 1,
+			slug: "e2e-tickets-category",
+		})
+	}
+	const team = await ensureTestTeam(request)
+	const host = await ensureEventHost(request, HOST, team)
 
 	await createUserWithRoles(request, {
 		email: ATTENDEE_EMAIL,
@@ -116,13 +172,14 @@ setup("seed a ticket owned by the attendee", async ({ request, baseURL }) => {
 		roles: ["Buzz User"],
 	})
 
-	const ticket = await createDoc<NamedDoc>(request, "Event Ticket", {
-		event: event.name,
-		ticket_type: ticketType.name,
-		attendee_name: "Tickets Attendee",
-		attendee_email: ATTENDEE_EMAIL,
-		add_ons: [{ add_on: addOn.name, value: ADD_ON_OPTIONS[0], price: 0, currency: "INR" }],
-	})
+	const seeded: SeededEvent[] = []
+	for (const spec of EVENTS) seeded.push(await seedEvent(request, team, host, spec))
+	const [mainEvent, addOnEvent, transferEvent, cancellationEvent] = seeded
+
+	const ticket = await seedTicket(request, mainEvent, ATTENDEE_EMAIL, "Tickets Attendee")
+	await seedTicket(request, addOnEvent, ATTENDEE_EMAIL, "Tickets Attendee")
+	await seedTicket(request, transferEvent, ATTENDEE_EMAIL, "Tickets Attendee")
+	await seedBooking(request, cancellationEvent)
 
 	await saveLoginState(baseURL!, {
 		email: ATTENDEE_EMAIL,
@@ -130,5 +187,5 @@ setup("seed a ticket owned by the attendee", async ({ request, baseURL }) => {
 		statePath: ATTENDEE_STATE_PATH,
 	})
 
-	console.log(`Tickets setup complete. Event ${event.name}, ticket ${ticket.name}`)
+	console.log(`Tickets setup complete. Event ${mainEvent.event}, ticket ${ticket.name}`)
 })

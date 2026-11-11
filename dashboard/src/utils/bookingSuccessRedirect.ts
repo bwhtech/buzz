@@ -1,6 +1,6 @@
 // Where the user lands after a booking is submitted. The server decides between
 // a gateway hand-off and an explicit redirect; when it asks for neither, guests
-// stay on the form and logged-in users go to their bookings.
+// stay on the form and logged-in users go to the booking in their events.
 
 // A paid booking comes back with only a payment link — the booking name is
 // carried by every other response.
@@ -36,18 +36,12 @@ export function resolveBookingSuccessAction(
 		throw new Error("Booking response carried neither a payment link nor a booking name")
 	}
 
-	// A guest has no session to read /bookings/<name> with, so an offline booking stays
-	// inline and says so instead of claiming tickets were sent.
+	// A guest has no session to open the booking with, so an offline booking stays inline
+	// and says so instead of claiming tickets were sent.
 	if (isGuestMode) {
 		return { type: "guest-inline", bookingName, pendingVerification: !!data.offline_payment }
 	}
 
-	if (data.offline_payment) {
-		return {
-			type: "route",
-			path: `/bookings/${bookingName}?success=true&offline=true`,
-		}
-	}
-
-	return { type: "route", path: `/bookings/${bookingName}?success=true` }
+	// The event drawer shows a booking still awaiting approval with that notice on it.
+	return { type: "route", path: `/manage/events?booking=${encodeURIComponent(bookingName)}` }
 }

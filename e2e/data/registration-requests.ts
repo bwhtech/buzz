@@ -5,6 +5,10 @@ export const REQUESTS_EVENT_TITLE = "E2E Registration Requests Event"
 export const REQUESTS_EVENT_ROUTE = "registration-requests-e2e"
 export const REQUESTS_TICKET_TITLE = "Requests E2E Ticket"
 
+export const PAID_EVENT_TITLE = "E2E Paid Registration Requests Event"
+export const PAID_EVENT_ROUTE = "paid-registration-requests-e2e"
+export const PAID_TICKET_TITLE = "Paid Requests E2E Ticket"
+
 export const REQUESTER_PASSWORD = "Requester@123"
 export const REQUESTER = {
 	email: "registration-requester-e2e@buzz.test",

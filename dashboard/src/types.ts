@@ -325,6 +325,27 @@ export interface BookingSummary {
 	total_amount: number
 }
 
+/** buzz.api.booking.get_booking_details, narrowed to what the booker's receipt acts on. */
+export interface BookingDetails {
+	doc: { name: string; status: string; docstatus: number }
+	tickets: DashboardTicket[]
+	event: { free_event: boolean }
+	can_request_cancellation: boolean
+	cancellation_request: { cancel_full_booking: boolean; creation: string } | null
+	cancellation_requested_tickets: string[]
+	cancelled_tickets: string[]
+	invoice_available: boolean
+}
+
+/** An Event Booking row the session user made, for the event drawer. */
+export interface MyBooking {
+	name: string
+	status: string
+	docstatus: number
+	payment_method: string | null
+	request_type: "Approval" | "Waitlist" | "" | null
+}
+
 /** buzz.api.teams.get_team_events: a calendar row, the team's own or one its community approved. */
 export interface TeamEvent extends MyEvent {
 	is_community_request: boolean
@@ -523,6 +544,9 @@ export interface TicketDetails {
 		currency: string
 	} | null
 	ticket_type: { title: string }
+	can_transfer_ticket: boolean
+	can_change_add_ons: boolean
+	zoom_join_url: string | null
 }
 
 export interface TicketAddOnDetail {
@@ -531,6 +555,9 @@ export interface TicketAddOnDetail {
 	value: string | null
 	price: number | null
 	currency: string | null
+	user_selects_option: boolean
+	// The event's choices for an add-on the attendee picks an option of.
+	options: string[]
 }
 
 // Languages served by the translation API (not a Buzz DocType).
@@ -756,6 +783,33 @@ export interface EnquiryDetail {
 	sponsor: string | null
 	answers: EnquiryAnswer[]
 }
+
+// buzz.api.sponsorships.get_user_sponsorship_inquiries: one of the user's own enquiries.
+export interface SponsorshipListItem {
+	name: string
+	company_name: string
+	// The confirmed sponsor's logo once there is one, the enquiry's until then.
+	company_logo: string | null
+	event: string
+	// Joined over the event link, so a deleted event leaves them empty.
+	event_title: string | null
+	start_date: string | null
+	start_time: string | null
+	end_date: string | null
+	venue: string | null
+	banner_image: string | null
+	tier: string | null
+	tier_title: string
+	tier_price: number | null
+	tier_currency: string | null
+	status: string
+	creation: string
+	sponsor: string | null
+	has_sponsor: boolean
+}
+
+// An enquiry whose event row still resolves — the only kind the timeline can place.
+export type SponsorshipWithEvent = SponsorshipListItem & { event_title: string; start_date: string }
 
 export interface EventEnquiryItem {
 	name: string

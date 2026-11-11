@@ -8,6 +8,7 @@ import ProposalCard from "@/components/dashboard/proposals/ProposalCard.vue"
 import ProposalDrawer from "@/components/dashboard/proposals/ProposalDrawer.vue"
 import TimelineList from "@/components/dashboard/TimelineList.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
+import { useOpenFromQuery } from "@/composables/useOpenFromQuery"
 import { useMyProposals } from "@/data/proposals"
 import type { ProposalWithEvent } from "@/types"
 import { groupEventsByMonth } from "@/utils/eventGroups"
@@ -37,8 +38,17 @@ const dated = computed(() =>
 )
 
 // Plain dayjs: these are date-only values, and dayjsLocal shifts them a day back.
-const months = computed(() =>
-	groupEventsByMonth(inTab(dated.value, tab.value, dayjs().format("YYYY-MM-DD"))),
+const today = dayjs().format("YYYY-MM-DD")
+const months = computed(() => groupEventsByMonth(inTab(dated.value, tab.value, today)))
+
+// A link to one proposal opens it, on whichever tab lists it.
+useOpenFromQuery(
+	"proposal",
+	(name) => dated.value.find((proposal) => proposal.name === name),
+	(proposal) => {
+		tab.value = inTab([proposal], "past", today).length ? "past" : "upcoming"
+		drawer.show(proposal)
+	},
 )
 
 const emptyDescription = computed(() =>

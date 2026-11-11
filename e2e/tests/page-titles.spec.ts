@@ -8,8 +8,8 @@ test.describe("Page titles", () => {
 		await page.goto("/b/manage/events")
 		await expect(page).toHaveTitle("My Events | Buzz")
 
-		await page.goto("/b/account/bookings")
-		await expect(page).toHaveTitle("My Bookings | Buzz")
+		await page.goto("/b/manage/proposals")
+		await expect(page).toHaveTitle("My Proposals | Buzz")
 	})
 
 	test("uses the event as context inside an event", async ({ page }) => {
@@ -31,7 +31,7 @@ test.describe("Page titles", () => {
 		await expect(page).toHaveTitle(`Register | ${EVENT_TITLE}`, { timeout: 15000 })
 
 		// usePageMeta never restores on unmount; the afterEach is what clears it.
-		await page.goto("/b/account/tickets")
-		await expect(page).toHaveTitle("My Tickets | Buzz")
+		await page.goto("/b/manage/events")
+		await expect(page).toHaveTitle("My Events | Buzz")
 	})
 })

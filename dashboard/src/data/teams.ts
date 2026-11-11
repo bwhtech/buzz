@@ -1,8 +1,6 @@
 import { toast, useCall } from "frappe-ui"
 import { computed, ref } from "vue"
 
-import { hasCollaborations } from "@/data/collaborators"
-import { session } from "@/data/session"
 import type { InviteOutcome, TeamOption, TeamOverview } from "@/types"
 
 const STORAGE_KEY = "buzz:current-team"
@@ -23,7 +21,7 @@ const selectedTeamName = ref(localStorage.getItem(STORAGE_KEY) || "")
 const teamsResource = useCall<TeamOption[]>({
 	url: "/api/v2/method/buzz.api.teams.get_my_teams",
 	// Uncached: the key is not per-user, and a cached empty list restores as data, so
-	// `isTeamMember` would skip its fetch and keep denying a user who has since joined a team.
+	// a user who has since joined a team would keep seeing the old list.
 	// Not immediate: get_my_teams is not allow_guest, so a logged-out visitor on a public
 	// booking route would fire a 403 on module load.
 	immediate: false,
@@ -66,16 +64,9 @@ export function isFeatureEnabled(flag: string, teamName?: string): boolean {
 	return team?.feature_flags[flag] ?? false
 }
 
-export async function isTeamMember(): Promise<boolean> {
-	if (!session.isLoggedIn) return false
-	if (!teamsResource.data) await teamsResource.fetch()
-	return teams.value.length > 0
-}
-
-/** The manage dashboard is for team members and for people invited to an event. */
-export async function hasManageAccess(): Promise<boolean> {
-	if (!session.isLoggedIn) return false
-	return (await isTeamMember()) || hasCollaborations()
+/** The manage shell reads the teams list everywhere; fetched once per session. */
+export function loadTeams() {
+	if (!teamsResource.data) teamsResource.fetch()
 }
 
 export function reloadTeams() {

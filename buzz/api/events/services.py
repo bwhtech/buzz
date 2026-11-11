@@ -7,7 +7,7 @@ from frappe.query_builder.functions import Count, Date
 from frappe.utils import add_days, getdate
 
 from buzz.api.booking.guests import email_otp_available, phone_otp_available
-from buzz.api.booking.services import are_registrations_closed
+from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD, are_registrations_closed
 from buzz.api.events.exceptions import (
 	CannotCreateEvents,
 	CannotManageEvent,
@@ -81,7 +81,7 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 		frappe.qb.from_(ticket)
 		.select(ticket.event)
 		.where((ticket.attendee_email == user) & (ticket.docstatus == 1))
-	)
+	) | event.name.isin(events_booked_by(user))
 
 	query = (
 		frappe.qb.from_(event)
@@ -118,6 +118,22 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 
 	# Buzz Event autonames to integers, while every link to it travels as a string.
 	return [MyEvent(**row | {"name": str(row.name)}) for row in rows]
+
+
+def events_booked_by(user: str):
+	"""A booking that holds no ticket of the user's still belongs in their feed: one bought for
+	others, one cancelled or rejected, an offline payment still awaiting approval, or a
+	registration request (a draft until the organizer decides)."""
+	booking = frappe.qb.DocType("Event Booking")
+	awaiting_approval = (booking.status == "Approval Pending") & (
+		booking.payment_method == OFFLINE_PAYMENT_METHOD
+	)
+	is_request = booking.request_type.isin(["Approval", "Waitlist"])
+	return (
+		frappe.qb.from_(booking)
+		.select(booking.event)
+		.where((booking.user == user) & ((booking.docstatus != 0) | awaiting_approval | is_request))
+	)
 
 
 def narrow(query, event, hosted, ticketed, filters: MyEventFilters | None):

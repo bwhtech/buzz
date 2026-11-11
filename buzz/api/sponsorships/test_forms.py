@@ -7,11 +7,9 @@ from buzz.api.forms import get_custom_form_data, submit_custom_form
 from buzz.api.forms.exceptions import FormNotAvailable
 from buzz.api.sponsorships import (
 	get_enquiry_form,
-	get_sponsorship_details,
 	get_user_sponsorship_inquiries,
 	submit_enquiry_form,
 )
-from buzz.api.sponsorships.exceptions import EnquiryNotAccessible
 from buzz.tests.factories import BuzzEventFactory, BuzzFormFactory, SponsorshipTierFactory, UserFactory
 
 APPLICANT = "sponsor-applicant@example.com"
@@ -190,8 +188,6 @@ class TestSponsorFormSubmission(SponsorFormTestCase):
 
 		# The address is never verified, so holding that mailbox proves nothing.
 		with self.set_user(UserFactory.create_once("applicant@example.com").name):
-			with self.assertRaises(EnquiryNotAccessible):
-				get_sponsorship_details(name)
 			self.assertNotIn(name, {row.name for row in get_user_sponsorship_inquiries()})
 
 	def test_custom_answers_validate_required_zero_and_options(self):

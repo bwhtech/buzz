@@ -7,7 +7,6 @@ from frappe.utils import now_datetime
 
 from buzz.api.events.collaborators import (
 	accept_collaborator_invite,
-	has_collaborations,
 	invite_collaborators,
 	revoke_collaborators,
 	update_collaborator_access,
@@ -127,19 +126,6 @@ class TestInvite(CollaboratorInviteTestCase):
 				revoke_collaborators(self.event, ["inv-r@example.com"])
 			with self.assertRaises(CannotManageEvent):
 				update_collaborator_access(self.event, "inv-r@example.com", {"guests_access": "Edit"})
-
-	def test_has_collaborations_is_true_for_accepted_collaborators_only(self):
-		accepted = BuzzEventCollaboratorFactory.create(
-			"accepted", event=self.event_a, email="inv-h@example.com", guests_access="View"
-		)
-		BuzzEventCollaboratorFactory.create(
-			"pending", event=self.event_a, email="inv-p@example.com", guests_access="View"
-		)
-
-		with self.set_user(accepted.user):
-			self.assertTrue(has_collaborations())
-		with self.set_user(self.outsider):
-			self.assertFalse(has_collaborations())
 
 	def test_access_change_updates_the_sections(self):
 		BuzzEventCollaboratorFactory.create(

@@ -1,7 +1,7 @@
 import frappe
 from frappe.rate_limiter import rate_limit
 
-from buzz.api.booking import coupons, details, downloads, event_data, guests, my_bookings
+from buzz.api.booking import coupons, details, downloads, event_data, guests
 from buzz.api.booking.holds import TicketHoldService
 from buzz.api.booking.schemas import (
 	BookingConfirmationResponse,
@@ -12,7 +12,6 @@ from buzz.api.booking.schemas import (
 	DiscountQuoteRequest,
 	EventBookingDataResponse,
 	FreeBookingResponse,
-	MyBooking,
 	OfflineBookingResponse,
 	PaymentLinkResponse,
 	RequestResponse,
@@ -102,11 +101,6 @@ def download_invoice(booking_id: str, token: str | None = None) -> None:
 @frappe.whitelist()
 def get_booking_details(booking_id: str) -> BookingDetailsResponse:
 	return details.build_booking_details(booking_id)
-
-
-@frappe.whitelist()
-def get_my_bookings() -> list[MyBooking]:
-	return my_bookings.my_bookings()
 
 
 @frappe.whitelist()

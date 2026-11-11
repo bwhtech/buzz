@@ -29,7 +29,7 @@
   {% if event_doc.send_ticket_email %}
   Each attendee gets their own {{ meeting.platform }} link in their ticket email.
   {% else %}
-  Your {{ meeting.platform }} link is on <a href="{{ frappe.get_url('/b/account/tickets') }}" style="color:#171717;font-weight:500">your ticket page</a>.
+  Your {{ meeting.platform }} link is on <a href="{{ frappe.get_url('/b/manage/events?event=' ~ event_doc.name) }}" style="color:#171717;font-weight:500">your ticket page</a>.
   {% endif %}
 </p>
 {% endif %}

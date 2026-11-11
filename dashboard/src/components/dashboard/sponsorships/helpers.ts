@@ -1,7 +1,9 @@
 import { dayjsLocal } from "frappe-ui"
 import { type Ref, ref, watch } from "vue"
 
+import type { SponsorshipListItem } from "@/types"
 import { type BadgeTheme, badgeDotClass } from "@/utils/badgeTheme"
+import { formatWholePriceOrFree } from "@/utils/currency"
 
 const ENQUIRY_STATUS_THEMES: Record<string, BadgeTheme> = {
 	Paid: "green",
@@ -49,3 +51,8 @@ export function keepLastValue<T>(current: () => T | null | undefined) {
 	watch(current, (value) => value && (last.value = value), { immediate: true })
 	return last as Ref<T | null>
 }
+
+export const enquiryPrice = (enquiry: Pick<SponsorshipListItem, "tier_price" | "tier_currency">) =>
+	enquiry.tier_price == null
+		? ""
+		: formatWholePriceOrFree(enquiry.tier_price, enquiry.tier_currency || "INR")

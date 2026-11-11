@@ -14,7 +14,6 @@ from buzz.api.sponsorships.schemas import (
 	EventEnquiriesResponse,
 	EventSponsorshipsResponse,
 	EventSponsorsResponse,
-	SponsorshipDetailsResponse,
 	SponsorshipListItem,
 )
 from buzz.api.sponsorships.services import SponsorshipService, list_user_enquiries
@@ -39,11 +38,6 @@ def submit_enquiry_form(
 
 
 @frappe.whitelist()
-def get_sponsorship_details(enquiry_id: str) -> SponsorshipDetailsResponse:
-	return SponsorshipService(enquiry_id).details()
-
-
-@frappe.whitelist()
 def get_user_sponsorship_inquiries() -> list[SponsorshipListItem]:
 	return list_user_enquiries()
 
@@ -58,6 +52,11 @@ def create_sponsorship_payment_link(
 @frappe.whitelist()
 def withdraw_sponsorship_enquiry(enquiry_id: str) -> None:
 	SponsorshipService(enquiry_id).withdraw()
+
+
+@frappe.whitelist(methods=["POST"])
+def update_sponsorship_logo(enquiry_id: str, company_logo: str) -> None:
+	SponsorshipService(enquiry_id).change_logo(company_logo)
 
 
 @frappe.whitelist(methods=["GET"])

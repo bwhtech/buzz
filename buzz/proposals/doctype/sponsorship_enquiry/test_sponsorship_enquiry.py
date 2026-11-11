@@ -102,7 +102,7 @@ class TestSponsorshipApprovalNotification(IntegrationTestCase):
 
 		message = self.approval_email(enquiry)["args"]["message"]
 
-		self.assertIn(f"/b/account/sponsorships/{enquiry.name}", message)
+		self.assertIn(f"/b/manage/sponsorship?enquiry={enquiry.name}", message)
 
 	def test_a_guest_enquiry_is_not_sent_to_a_page_it_cannot_open(self):
 		enquiry = self.create_enquiry(owner="Guest", contact_email="guest-applicant@example.com")
@@ -111,7 +111,7 @@ class TestSponsorshipApprovalNotification(IntegrationTestCase):
 
 		self.assertEqual(email["recipients"], ["guest-applicant@example.com"])
 		# Nobody satisfies is_applicant on a Guest-owned enquiry, so the link would 403.
-		self.assertNotIn("/b/account/sponsorships/", email["args"]["message"])
+		self.assertNotIn("/b/manage/sponsorship", email["args"]["message"])
 		self.assertIn("be in touch", email["args"]["message"])
 
 	def test_a_guest_enquiry_without_a_contact_email_sends_nothing(self):

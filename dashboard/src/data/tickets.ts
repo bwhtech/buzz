@@ -33,14 +33,11 @@ export function useMyTickets(event: () => string) {
 	})
 }
 
-/** One ticket with its add-ons, event and — only for whoever paid — its booking. */
-export function useTicketDetails(ticket: () => string | undefined) {
+/** One ticket with its add-ons, event, change windows and — only for whoever paid — its booking. */
+export function useTicketDetails(ticket: () => string) {
 	return useCall<TicketDetails, { ticket_id: string }>({
 		url: "/api/v2/method/buzz.api.tickets.get_ticket_details",
-		params: () => ({ ticket_id: ticket() || "" }),
-		// The drawer mounts before a ticket is picked, so the first fetch waits for the
-		// id to land; refetch then carries every later pick.
-		immediate: false,
+		params: () => ({ ticket_id: ticket() }),
 		refetch: true,
 	})
 }

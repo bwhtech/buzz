@@ -45,7 +45,13 @@
 import { Button, Dialog, FormControl, toast, useCall } from "frappe-ui"
 import { type PropType, computed, ref, watch } from "vue"
 
-import type { TicketAddOn } from "@/types"
+// The fields it reads, so both ticket payloads in the app can be passed in.
+type EditableAddOn = {
+	id?: string
+	title?: string | null
+	value?: string | null
+	options?: string[]
+}
 
 const props = defineProps({
 	modelValue: {
@@ -53,7 +59,7 @@ const props = defineProps({
 		default: false,
 	},
 	ticket: {
-		type: Object as PropType<{ add_ons?: TicketAddOn[]; attendee_name?: string }>,
+		type: Object as PropType<{ add_ons?: EditableAddOn[]; attendee_name?: string }>,
 		required: true,
 	},
 })
@@ -72,8 +78,8 @@ const addOnsWithOptions = computed(() => {
 	if (!props.ticket?.add_ons) return []
 
 	return props.ticket.add_ons
-		.filter((addon: TicketAddOn) => addon.options && addon.options.length > 0)
-		.map((addon: TicketAddOn) => ({
+		.filter((addon: EditableAddOn) => addon.options && addon.options.length > 0)
+		.map((addon: EditableAddOn) => ({
 			...addon,
 			selectOptions: (addon.options ?? []).map((option: string) => ({
 				label: __(option),

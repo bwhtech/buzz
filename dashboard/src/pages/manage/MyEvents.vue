@@ -15,6 +15,7 @@ import TeamPageHeader from "@/components/dashboard/teams/TeamPageHeader.vue"
 import TimelineList, { layoutOptions } from "@/components/dashboard/TimelineList.vue"
 import { useDrawerSelection } from "@/composables/useDrawerSelection"
 import { useEventCardLayout } from "@/composables/useEventCardLayout"
+import { useEventDeepLinks } from "@/composables/useEventDeepLinks"
 import { useIsMobile } from "@/composables/useIsMobile"
 import { useMyEventFilters } from "@/composables/useMyEventFilters"
 import { useRevealOnScroll } from "@/composables/useRevealOnScroll"
@@ -62,6 +63,15 @@ const fileUnder = (event: MyEvent) =>
 const months = computed(() => groupEventsByMonth(visible.value, fileUnder))
 
 const drawer = useDrawerSelection<MyEvent>()
+
+// Links into the feed name an event, ticket or booking; the drawer opens on its event's tab.
+useEventDeepLinks(
+	() => myEvents.data,
+	({ event, tab: eventTab }) => {
+		tab.value = eventTab
+		drawer.show(event)
+	},
+)
 const layout = useEventCardLayout()
 
 const emptyDescription = computed(() =>

@@ -69,14 +69,14 @@ test.describe("Telemetry", () => {
 	test("sends a pageview with the route pattern, never the real url", async ({ page }) => {
 		const pulseRequests = await stubPulse(page, true)
 
-		await page.goto("/b/account/tickets/TICKET-SECRET-123")
+		await page.goto("/b/manage/events?ticket=TICKET-SECRET-123")
 		await expect.poll(async () => (await captures(page)).length).toBeGreaterThan(0)
 
 		const [pageview] = await captures(page)
 		expect(pageview).toEqual({
 			event: "pageview",
 			app: "buzz",
-			properties: { route: "/account/tickets/:ticketId" },
+			properties: { route: "/manage/events" },
 		})
 		expect(JSON.stringify(await captures(page))).not.toContain("TICKET-SECRET-123")
 		expect(pulseRequests).toEqual([])
@@ -85,7 +85,7 @@ test.describe("Telemetry", () => {
 	test("sends nothing when telemetry is off", async ({ page }) => {
 		await stubPulse(page, false)
 
-		await page.goto("/b/account/bookings")
+		await page.goto("/b/manage/events")
 		await page.waitForLoadState("networkidle")
 
 		expect(await captures(page)).toEqual([])

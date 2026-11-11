@@ -12,3 +12,11 @@ export const ATTENDEE_STATE_PATH = "e2e/.auth/tickets-attendee.json"
 
 export const ADD_ON_TITLE = "E2E Meal Preference"
 export const ADD_ON_OPTIONS = ["Veg", "Non-veg"]
+
+// Each action runs against its own event, so the drawer under test holds a single ticket and
+// the main event's ticket stays untouched.
+export const ADD_ON_EVENT_TITLE = "E2E Tickets Add-on Event"
+export const TRANSFER_EVENT_TITLE = "E2E Tickets Transfer Event"
+export const CANCELLATION_EVENT_TITLE = "E2E Tickets Cancellation Event"
+
+export const TRANSFER_RECIPIENT_EMAIL = "tickets-recipient-e2e@buzz.test"
