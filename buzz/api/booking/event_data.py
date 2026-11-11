@@ -127,11 +127,19 @@ def get_available_ticket_types(
 def ticket_type_row(
 	ticket_type: "EventTicketType", hold_token: str | None, adds_guests_directly: bool = False
 ) -> frappe._dict:
-	return frappe._dict(
+	row = frappe._dict(
 		ticket_type.as_dict(no_nulls=True),
 		needs_approval=ticket_type.needs_approval and not adds_guests_directly,
 		waitlisted=ticket_type.joins_waitlist(1, hold_token),
 	)
+	# The registration page never reads a sales count, and it is the organiser's business.
+	row.pop("tickets_sold", None)
+	row["prices"] = [without_field(price, "tickets_sold") for price in row.get("prices") or []]
+	return row
+
+
+def without_field(row: dict, fieldname: str) -> frappe._dict:
+	return frappe._dict({name: value for name, value in dict(row).items() if name != fieldname})
 
 
 def categories_in_use(categories: list[dict], ticket_types: list) -> list[dict]:

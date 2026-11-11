@@ -5,6 +5,12 @@ from frappe.utils import cstr, now_datetime, today
 LAYOUT_FIELDTYPES = set(display_fieldtypes)
 LAYOUT_BREAK_FIELDTYPES = {"Column Break", "Section Break"}
 
+# Masters a public form asks for; `get_list` refuses them to anyone without a permission, and no
+# row on these is private.
+PUBLIC_LINK_DOCTYPES = frozenset({"Country", "Event Host", "Event Category", "Sponsorship Tier"})
+# A picker is a shortlist, not a listing.
+LINK_OPTION_LIMIT = 100
+
 EVENT_PROPOSAL_EXCLUDE_FIELDS = DEFAULT_FIELDS | {
 	"naming_series",
 	"amended_from",
@@ -83,6 +89,9 @@ def get_child_fields(child_doctype: str) -> list[dict]:
 
 def get_link_field_options(doctype: str, event: str | None = None) -> list[dict]:
 	meta = frappe.get_meta(doctype)
+	can_read = frappe.has_permission(doctype, "read")
+	if not can_read and not is_open_reference(doctype, meta):
+		return []
 	title_field = meta.get_title_field()
 
 	filters = {}
@@ -91,10 +100,28 @@ def get_link_field_options(doctype: str, event: str | None = None) -> list[dict]
 	# A linked master is disabled rather than deleted, so a picker never offers a retired row.
 	if meta.has_field("enabled"):
 		filters["enabled"] = 1
+	# Without permissions no query hook runs, so an unpublished row would otherwise be offered.
+	if not can_read and meta.has_field("is_published"):
+		filters["is_published"] = 1
 
 	fields = ["name"] if title_field == "name" else ["name", title_field]
-	rows = frappe.get_all(doctype, filters=filters, fields=fields, limit_page_length=0, order_by="name asc")
+	rows = frappe.get_list(
+		doctype,
+		filters=filters,
+		fields=fields,
+		# A picker is a shortlist, not a listing.
+		limit_page_length=LINK_OPTION_LIMIT,
+		order_by="name asc",
+		ignore_permissions=not can_read,
+	)
 	return [{"value": row.name, "label": row.get(title_field) or row.name} for row in rows]
+
+
+def is_open_reference(doctype: str, meta) -> bool:
+	"""What a public form may offer someone holding no permission: published rows and masters."""
+	if doctype in PUBLIC_LINK_DOCTYPES:
+		return True
+	return meta.has_field("is_published")
 
 
 def get_auto_set_fields(form_doctype: str) -> dict[str, str]:
