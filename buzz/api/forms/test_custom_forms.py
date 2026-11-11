@@ -14,9 +14,11 @@ from buzz.api.forms.exceptions import (
 	SubmissionsClosed,
 	UnknownQuestions,
 )
+from buzz.api.forms.fields import get_link_field_options
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
+	EventTicketTypeFactory,
 	SponsorshipTierFactory,
 	UserFactory,
 )
@@ -380,3 +382,40 @@ class TestCustomFormRateLimit(FormsTestCase):
 		form = self.add_question(self.form_of(event.name, "Event Feedback"))
 		for _attempt in range(25):
 			self.submit_request(event.route, form.route, {})
+
+
+class TestGuestLinkOptions(FormsTestCase):
+	def test_a_guest_is_offered_published_events_only(self):
+		published = BuzzEventFactory.create(team=self.team)
+		draft = BuzzEventFactory.create("unpublished", team=self.team)
+
+		# A busy site overflows the shortlist, so lift the cap and read the whole set.
+		with patch("buzz.api.forms.fields.LINK_OPTION_LIMIT", 100_000):
+			values = [option["value"] for option in self.as_guest("Buzz Event")]
+
+		self.assertIn(published.name, values)
+		self.assertNotIn(draft.name, values, "a draft event must not be offered")
+
+	def test_the_shortlist_is_capped(self):
+		with self.set_user("Guest"):
+			self.assertLessEqual(len(get_link_field_options("Buzz Event")), 100)
+
+	def test_a_doctype_the_guest_may_not_read_offers_nothing(self):
+		self.assertEqual(self.as_guest("Buzz Team Membership"), [])
+
+	def test_a_guest_gets_every_country(self):
+		self.assertEqual(len(self.as_guest("Country")), frappe.db.count("Country"))
+
+	def test_a_guest_is_not_offered_a_hidden_ticket_type(self):
+		event = BuzzEventFactory.create(team=self.team)
+		shown = EventTicketTypeFactory.create(event=event.name)
+		hidden = EventTicketTypeFactory.create(event=event.name, is_hidden=1)
+
+		values = [option["value"] for option in self.as_guest("Event Ticket Type", event.name)]
+
+		self.assertIn(shown.name, values)
+		self.assertNotIn(hidden.name, values)
+
+	def as_guest(self, doctype: str, event: str | None = None) -> list[dict]:
+		with self.set_user("Guest"):
+			return get_link_field_options(doctype, event)
