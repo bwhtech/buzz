@@ -65,7 +65,10 @@ def get_payment_link_for_sponsorship(
 	payment_gateway: str | None = None,
 	currency: str | None = None,
 ) -> str:
-	enquiry = frappe.get_cached_doc("Sponsorship Enquiry", sponsorship_enquiry)
+	# Read fresh: the status is what gates a second payment, and `db_set` leaves the cache stale.
+	enquiry = frappe.db.get_value(
+		"Sponsorship Enquiry", sponsorship_enquiry, ["event", "status"], as_dict=True
+	)
 	tier_doc = frappe.get_cached_doc("Sponsorship Tier", sponsorship_tier)
 	if str(tier_doc.event) != str(enquiry.event):
 		frappe.throw(_("This sponsorship tier is not offered for this event."))
