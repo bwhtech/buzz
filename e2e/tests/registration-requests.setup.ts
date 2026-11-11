@@ -42,7 +42,13 @@ async function cleanUpPreviousRun(request: APIRequestContext) {
 		filters: { title: ["=", REQUESTS_EVENT_TITLE] },
 	})
 	for (const event of events) {
-		for (const doctype of ["Event Ticket", "Event Booking", "Sponsorship Tier", "Event Ticket Type", "Ticket Add-on"]) {
+		for (const doctype of [
+			"Event Ticket",
+			"Event Booking",
+			"Sponsorship Tier",
+			"Event Ticket Type",
+			"Ticket Add-on",
+		]) {
 			await deleteEventRows(request, doctype, event.name)
 		}
 		await deleteDoc(request, "Buzz Event", event.name).catch(() => {})
