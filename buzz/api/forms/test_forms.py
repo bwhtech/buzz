@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -79,10 +77,7 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 		self.assertEqual(self.label_of("Sponsorship Tier", tier), tier)
 
 	def label_of(self, doctype: str, name: str) -> str:
-		# A busy site overflows the shortlist; the label rules are what these tests check.
-		with patch("buzz.api.forms.fields.LINK_OPTION_LIMIT", 100_000):
-			options = get_link_field_options(doctype)
-		return next(option["label"] for option in options if option["value"] == name)
+		return next(o["label"] for o in get_link_field_options(doctype) if o["value"] == name)
 
 
 class TestDialCodes(IntegrationTestCase):

@@ -18,6 +18,7 @@ from buzz.api.forms.fields import get_link_field_options
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzTeamFactory,
+	EventTicketTypeFactory,
 	SponsorshipTierFactory,
 	UserFactory,
 )
@@ -402,9 +403,19 @@ class TestGuestLinkOptions(FormsTestCase):
 	def test_a_doctype_the_guest_may_not_read_offers_nothing(self):
 		self.assertEqual(self.as_guest("Buzz Team Membership"), [])
 
-	def test_a_guest_still_gets_the_country_picker(self):
-		self.assertTrue(len(self.as_guest("Country")) > 1)
+	def test_a_guest_gets_every_country(self):
+		self.assertEqual(len(self.as_guest("Country")), frappe.db.count("Country"))
 
-	def as_guest(self, doctype: str) -> list[dict]:
+	def test_a_guest_is_not_offered_a_hidden_ticket_type(self):
+		event = BuzzEventFactory.create(team=self.team)
+		shown = EventTicketTypeFactory.create(event=event.name)
+		hidden = EventTicketTypeFactory.create(event=event.name, is_hidden=1)
+
+		values = [option["value"] for option in self.as_guest("Event Ticket Type", event.name)]
+
+		self.assertIn(shown.name, values)
+		self.assertNotIn(hidden.name, values)
+
+	def as_guest(self, doctype: str, event: str | None = None) -> list[dict]:
 		with self.set_user("Guest"):
-			return get_link_field_options(doctype)
+			return get_link_field_options(doctype, event)

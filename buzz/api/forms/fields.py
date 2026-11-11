@@ -6,7 +6,7 @@ LAYOUT_FIELDTYPES = set(display_fieldtypes)
 LAYOUT_BREAK_FIELDTYPES = {"Column Break", "Section Break"}
 
 # Masters a public form asks for; `get_list` refuses them to anyone without a permission, and no
-# row on these is private.
+# row on these is private. They are short, so they are offered whole.
 PUBLIC_LINK_DOCTYPES = frozenset({"Country", "Event Host", "Event Category", "Sponsorship Tier"})
 # A picker is a shortlist, not a listing.
 LINK_OPTION_LIMIT = 100
@@ -103,14 +103,15 @@ def get_link_field_options(doctype: str, event: str | None = None) -> list[dict]
 	# Without permissions no query hook runs, so an unpublished row would otherwise be offered.
 	if not can_read and meta.has_field("is_published"):
 		filters["is_published"] = 1
+	if not can_read and meta.has_field("is_hidden"):
+		filters["is_hidden"] = 0
 
 	fields = ["name"] if title_field == "name" else ["name", title_field]
 	rows = frappe.get_list(
 		doctype,
 		filters=filters,
 		fields=fields,
-		# A picker is a shortlist, not a listing.
-		limit_page_length=LINK_OPTION_LIMIT,
+		limit_page_length=0 if doctype in PUBLIC_LINK_DOCTYPES else LINK_OPTION_LIMIT,
 		order_by="name asc",
 		ignore_permissions=not can_read,
 	)

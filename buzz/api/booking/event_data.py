@@ -134,12 +134,11 @@ def ticket_type_row(
 	)
 	# The registration page never reads a sales count, and it is the organiser's business.
 	row.pop("tickets_sold", None)
-	row["prices"] = [without_field(price, "tickets_sold") for price in row.get("prices") or []]
+	row["prices"] = [
+		frappe._dict({key: value for key, value in price.items() if key != "tickets_sold"})
+		for price in row.get("prices") or []
+	]
 	return row
-
-
-def without_field(row: dict, fieldname: str) -> frappe._dict:
-	return frappe._dict({name: value for name, value in dict(row).items() if name != fieldname})
 
 
 def categories_in_use(categories: list[dict], ticket_types: list) -> list[dict]:
