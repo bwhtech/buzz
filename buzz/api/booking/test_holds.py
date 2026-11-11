@@ -98,6 +98,16 @@ class TestHoldTickets(HoldTestCase):
 		self.assertIsNone(response.expires_in_seconds)
 		self.assertEqual(self.holds_of(response.hold_token), 0)
 
+	def test_names_a_ticket_type_that_joins_the_waitlist_for_the_picked_quantity(self):
+		self.ticket_type.db_set("enable_waitlist", 1)
+		self.held_by_others(9)
+
+		self.assertEqual(self.hold(1).waitlisted, [])
+		response = self.hold(2)
+
+		self.assertEqual(response.waitlisted, [self.name])
+		self.assertEqual(response.remaining, {})
+
 	def test_refuses_another_events_ticket_type(self):
 		other = EventTicketTypeFactory.create(event=BuzzEventFactory.create().name, max_tickets_available=5)
 

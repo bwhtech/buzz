@@ -339,6 +339,14 @@ class TestWaitlist(RequestTestCase):
 		self.assertRaises(frappe.ValidationError, self.booking(name).submit)
 		self.assertEqual(self.tickets_of(name), 0)
 
+	def test_organizer_registering_for_a_sold_out_ticket_type_joins_the_waitlist(self):
+		ticket_type = self.waitlist_ticket_type()
+		self.sell_out(ticket_type)
+
+		name = self.request_to_join(ticket_type.name, "Administrator")
+
+		self.assertEqual(self.state(name), ("Waitlisted", 0, "Waitlist"))
+
 	def test_let_in_while_sold_out(self):
 		ticket_type = self.waitlist_ticket_type()
 		self.sell_out(ticket_type)

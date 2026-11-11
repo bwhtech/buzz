@@ -25,6 +25,8 @@ export function useTicketHold(
 ) {
 	const holdToken = useSessionStorage<string | null>(holdTokenKey(eventRoute), null)
 	const deadline = ref<number | null>(null)
+	// Ticket types the picked quantity can't get, so the booking will join their waitlist.
+	const waitlisted = ref<string[]>([])
 	const now = ref(Date.now())
 	let keepOnLeave = false
 	let resizeTimer: ReturnType<typeof setTimeout> | undefined
@@ -52,6 +54,7 @@ export function useTicketHold(
 			.catch(() => null)
 		if (!data) return
 		holdToken.value = data.hold_token
+		waitlisted.value = data.waitlisted
 		deadline.value =
 			data.expires_in_seconds === null ? null : Date.now() + data.expires_in_seconds * 1000
 	}
@@ -108,6 +111,7 @@ export function useTicketHold(
 		secondsLeft,
 		expired,
 		holdError: computed(() => holdCall.error),
+		waitlisted,
 		holdAgain,
 		keepHold,
 	}
