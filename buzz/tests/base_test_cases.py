@@ -94,6 +94,12 @@ class SponsorshipTestCase(IntegrationTestCase):
 	def make_stranger(self) -> str:
 		return UserFactory.create_once("sponsorship-stranger@example.com").name
 
+	def make_applicant(self) -> str:
+		applicant = UserFactory.create_once("sponsorship-applicant@example.com").name
+		frappe.db.set_value("Sponsorship Enquiry", self.enquiry.name, "owner", applicant)
+		frappe.clear_document_cache("Sponsorship Enquiry", self.enquiry.name)
+		return applicant
+
 	def make_sponsor(self):
 		return EventSponsorFactory.create(
 			event=self.event,

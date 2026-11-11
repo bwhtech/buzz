@@ -5,6 +5,8 @@ import frappe
 from buzz.api.sponsorships.exceptions import (
 	EnquiryAlreadyPaid,
 	EnquiryAlreadyWithdrawn,
+	EnquiryLogoLocked,
+	LogoChangeNotPermitted,
 	PaymentNotPermitted,
 	WithdrawalNotPermitted,
 )
@@ -14,6 +16,9 @@ from buzz.payments import get_payment_link_for_sponsorship
 
 if TYPE_CHECKING:
 	from buzz.proposals.doctype.sponsorship_enquiry.sponsorship_enquiry import SponsorshipEnquiry
+
+# Settled outcomes: a payment or sponsor, a removed sponsor, or the applicant's withdrawal.
+LOCKED_STATUSES = ("Paid", "Cancelled", "Withdrawn")
 
 
 class SponsorshipService:
@@ -55,6 +60,16 @@ class SponsorshipService:
 			EnquiryAlreadyWithdrawn.throw()
 
 		enquiry.status = "Withdrawn"
+		enquiry.save(ignore_permissions=True)
+
+	def change_logo(self, company_logo: str) -> None:
+		if not self.is_owner:
+			LogoChangeNotPermitted.throw()
+		enquiry = self.enquiry
+		if enquiry.status in LOCKED_STATUSES:
+			EnquiryLogoLocked.throw()
+
+		enquiry.company_logo = company_logo
 		enquiry.save(ignore_permissions=True)
 
 

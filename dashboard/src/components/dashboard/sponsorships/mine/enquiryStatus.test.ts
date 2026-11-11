@@ -9,9 +9,10 @@ test("only an approved enquiry can be paid", () => {
 	assert.equal(enquiryActions("Paid").canPay, false)
 })
 
-test("a settled enquiry cannot be withdrawn", () => {
+test("a settled enquiry cannot be withdrawn or get a new logo", () => {
 	for (const status of ["Paid", "Cancelled", "Withdrawn"]) {
 		assert.equal(enquiryActions(status).canWithdraw, false, status)
+		assert.equal(enquiryActions(status).canChangeLogo, false, status)
 	}
 	assert.equal(enquiryActions("Approval Pending").canWithdraw, true)
 	assert.equal(enquiryActions("Payment Pending").canWithdraw, true)

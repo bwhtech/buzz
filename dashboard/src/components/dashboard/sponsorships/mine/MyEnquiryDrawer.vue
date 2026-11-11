@@ -33,7 +33,7 @@ const emit = defineEmits<{ changed: [] }>()
 const actions = computed(() => enquiryActions(props.enquiry?.status || ""))
 
 const withdrawal = useWithdrawEnquiry()
-const logo = useUpdateSponsorshipLogo(() => props.enquiry)
+const logo = useUpdateSponsorshipLogo()
 const copyId = useCopyToClipboard()
 
 const paying = ref(false)
@@ -59,7 +59,7 @@ function confirmWithdrawal() {
 
 async function replaceLogo(file: { file_url: string }) {
 	try {
-		await logo.submit({ company_logo: file.file_url })
+		await logo.submit({ enquiry_id: props.enquiry?.name || "", company_logo: file.file_url })
 		toast.success("Logo updated")
 		emit("changed")
 	} catch {
@@ -146,7 +146,7 @@ const fields = computed(() => {
 									size="lg"
 									:src="enquiry.company_logo"
 									:name="enquiry.company_name"
-									editable
+									:editable="actions.canChangeLogo"
 									:replacing="uploading || logo.loading"
 									@replace="openFileSelector"
 								/>

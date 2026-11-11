@@ -4,11 +4,14 @@ from bwh_payments import testing as payment_testing
 from buzz.api.sponsorships import (
 	create_sponsorship_payment_link,
 	get_user_sponsorship_inquiries,
+	update_sponsorship_logo,
 	withdraw_sponsorship_enquiry,
 )
 from buzz.api.sponsorships.exceptions import (
 	EnquiryAlreadyPaid,
 	EnquiryAlreadyWithdrawn,
+	EnquiryLogoLocked,
+	LogoChangeNotPermitted,
 	PaymentNotPermitted,
 	WithdrawalNotPermitted,
 )
@@ -70,6 +73,14 @@ class TestWithdrawSponsorshipEnquiry(SponsorshipTestCase):
 
 		with self.assertRaises(EnquiryAlreadyPaid):
 			withdraw_sponsorship_enquiry(self.enquiry.name)
+
+	def test_applicant_who_is_not_on_the_team_can_withdraw(self):
+		applicant = self.make_applicant()
+
+		with self.set_user(applicant):
+			withdraw_sponsorship_enquiry(self.enquiry.name)
+
+		self.assertEqual(frappe.db.get_value("Sponsorship Enquiry", self.enquiry.name, "status"), "Withdrawn")
 
 	def test_stranger_cannot_withdraw(self):
 		with self.set_user(self.make_stranger()), self.assertRaises(WithdrawalNotPermitted):
@@ -133,3 +144,25 @@ class TestCreateSponsorshipPaymentLink(SponsorshipTestCase):
 		event.save(ignore_permissions=True)
 		self.addCleanup(frappe.clear_document_cache, "Buzz Event", self.event)
 		return gateway
+
+
+class TestUpdateSponsorshipLogo(SponsorshipTestCase):
+	def test_applicant_changes_the_logo_on_their_open_enquiry(self):
+		with self.set_user(self.make_applicant()):
+			update_sponsorship_logo(self.enquiry.name, "/files/new-logo.png")
+
+		self.assertEqual(self.saved_logo(), "/files/new-logo.png")
+
+	def test_stranger_cannot_change_the_logo(self):
+		with self.set_user(self.make_stranger()), self.assertRaises(LogoChangeNotPermitted):
+			update_sponsorship_logo(self.enquiry.name, "/files/new-logo.png")
+
+	def test_logo_is_locked_once_the_enquiry_is_paid(self):
+		frappe.db.set_value("Sponsorship Enquiry", self.enquiry.name, "status", "Paid")
+		frappe.clear_document_cache("Sponsorship Enquiry", self.enquiry.name)
+
+		with self.set_user(self.make_applicant()), self.assertRaises(EnquiryLogoLocked):
+			update_sponsorship_logo(self.enquiry.name, "/files/new-logo.png")
+
+	def saved_logo(self) -> str:
+		return frappe.db.get_value("Sponsorship Enquiry", self.enquiry.name, "company_logo")

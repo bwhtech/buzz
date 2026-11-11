@@ -11,7 +11,7 @@ from buzz.api.sponsorships.schemas import (
 	EventEnquiriesResponse,
 	EventEnquiryItem,
 )
-from buzz.api.sponsorships.services import get_tier_title, tiers_by_name
+from buzz.api.sponsorships.services import LOCKED_STATUSES, get_tier_title, tiers_by_name
 
 ENQUIRIES_PAGE_SIZE = 20
 ENQUIRY_FIELDS = ["name", "company_name", "company_logo", "website", "status", "tier", "creation"]
@@ -136,8 +136,6 @@ def enquiry_detail(enquiry: str) -> EnquiryDetail:
 	)
 
 
-# Settled outcomes: a payment or sponsor, a removed sponsor, or the applicant's withdrawal.
-LOCKED_STATUSES = ("Paid", "Cancelled", "Withdrawn")
 # Moving to these tells the applicant a tier is settled, so the enquiry must carry one.
 TIERED_STATUSES = ("Payment Pending", "Paid")
 

@@ -28,5 +28,6 @@ export function enquiryActions(status: string) {
 	return {
 		canPay: status === "Payment Pending",
 		canWithdraw: !SETTLED_STATUSES.includes(status),
+		canChangeLogo: !SETTLED_STATUSES.includes(status),
 	}
 }

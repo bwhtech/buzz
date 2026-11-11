@@ -1,6 +1,6 @@
 import { refDebounced } from "@vueuse/core"
 import { useCall } from "frappe-ui"
-import { type Ref, computed } from "vue"
+import type { Ref } from "vue"
 
 import type { Condition } from "@/components/common/filters"
 import type { ListOrder } from "@/composables/useListQuery"
@@ -22,16 +22,10 @@ export function useWithdrawEnquiry() {
 	})
 }
 
-// The logo lives on the Event Sponsor once the sponsorship is confirmed, on the enquiry until then.
-export function useUpdateSponsorshipLogo(enquiry: () => SponsorshipListItem | null) {
-	return useCall<unknown, { company_logo: string }>({
-		url: computed(() => {
-			const sponsor = enquiry()?.sponsor
-			return sponsor
-				? `/api/v2/document/Event Sponsor/${encodeURIComponent(sponsor)}`
-				: `/api/v2/document/Sponsorship Enquiry/${encodeURIComponent(enquiry()?.name || "")}`
-		}),
-		method: "PUT",
+export function useUpdateSponsorshipLogo() {
+	return useCall<null, { enquiry_id: string; company_logo: string }>({
+		url: "/api/v2/method/buzz.api.sponsorships.update_sponsorship_logo",
+		method: "POST",
 		immediate: false,
 	})
 }

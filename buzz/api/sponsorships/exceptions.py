@@ -15,6 +15,15 @@ class WithdrawalNotPermitted(NotPermitted):
 	message = _lt("You are not permitted to withdraw this sponsorship enquiry.")
 
 
+class LogoChangeNotPermitted(NotPermitted):
+	message = _lt("You are not permitted to change the logo on this sponsorship enquiry.")
+
+
+class EnquiryLogoLocked(Conflict):
+	title = _lt("Logo Locked")
+	message = _lt("The logo cannot be changed once a sponsorship enquiry is paid, cancelled or withdrawn.")
+
+
 class EnquiryAlreadyPaid(Conflict):
 	title = _lt("Already Paid")
 	message = _lt("A paid sponsorship enquiry cannot be withdrawn.")
