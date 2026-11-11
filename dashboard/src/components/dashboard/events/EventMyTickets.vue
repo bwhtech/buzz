@@ -24,10 +24,11 @@ const myTickets = computed(() =>
 		),
 )
 
-// A draft is a booking only while an offline payment waits on approval; any other draft
-// is a checkout that never reached the gateway's end.
+// A draft is a booking only while an offline payment waits on approval or while it is a
+// registration request; any other draft is a checkout that never reached the gateway's end.
 const isListedBooking = (booking: MyBooking) =>
 	booking.docstatus !== 0 ||
+	Boolean(booking.request_type) ||
 	(booking.status === "Approval Pending" && booking.payment_method === "Offline")
 
 const myBookingNames = computed(() =>

@@ -5,7 +5,9 @@ import { computed } from "vue"
 
 import BookingSummary from "@/components/dashboard/events/BookingSummary.vue"
 import BookingActions from "@/components/dashboard/tickets/BookingActions.vue"
+import RegistrationRequestNotice from "@/components/RegistrationRequestNotice.vue"
 import { useBookingSummary } from "@/data/bookings"
+import { requestNotice } from "@/utils/registrationRequest"
 
 // Fetched per booking rather than off the viewer's own bookings: the receipt behind a
 // ticket somebody else paid for is still theirs to read.
@@ -30,6 +32,9 @@ const STATUS_NOTICES = {
 	},
 } as const
 
+// A registration request's state, with Pay now once a paid request is approved.
+const request = computed(() => requestNotice(summary.data?.status))
+
 // Only an offline payment waits on approval; an online one marked pending is still at the gateway.
 const statusNotice = computed(() => {
 	const row = summary.data
@@ -41,7 +46,8 @@ const statusNotice = computed(() => {
 
 <template>
 	<div v-if="summary.data" class="space-y-3">
-		<Alert v-if="statusNotice" v-bind="statusNotice" />
+		<RegistrationRequestNotice v-if="request" :booking-id="booking" :notice="request" />
+		<Alert v-else-if="statusNotice" v-bind="statusNotice" />
 		<Accordion :items="accordionItems">
 			<template #item-content>
 				<BookingSummary :booking="summary.data" show-id />

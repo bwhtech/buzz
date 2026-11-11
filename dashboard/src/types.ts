@@ -343,6 +343,7 @@ export interface MyBooking {
 	status: string
 	docstatus: number
 	payment_method: string | null
+	request_type: "Approval" | "Waitlist" | "" | null
 }
 
 /** buzz.api.teams.get_team_events: a calendar row, the team's own or one its community approved. */

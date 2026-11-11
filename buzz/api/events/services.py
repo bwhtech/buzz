@@ -122,15 +122,17 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 
 def events_booked_by(user: str):
 	"""A booking that holds no ticket of the user's still belongs in their feed: one bought for
-	others, one cancelled or rejected, or an offline payment still awaiting approval."""
+	others, one cancelled or rejected, an offline payment still awaiting approval, or a
+	registration request (a draft until the organizer decides)."""
 	booking = frappe.qb.DocType("Event Booking")
 	awaiting_approval = (booking.status == "Approval Pending") & (
 		booking.payment_method == OFFLINE_PAYMENT_METHOD
 	)
+	is_request = booking.request_type.isin(["Approval", "Waitlist"])
 	return (
 		frappe.qb.from_(booking)
 		.select(booking.event)
-		.where((booking.user == user) & ((booking.docstatus != 0) | awaiting_approval))
+		.where((booking.user == user) & ((booking.docstatus != 0) | awaiting_approval | is_request))
 	)
 
 

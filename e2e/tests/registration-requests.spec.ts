@@ -37,6 +37,15 @@ test("guest requests a free ticket, the organizer approves it, and the booking i
 
 	await expect(guestPage).toHaveURL(/\/booking-success\/.+/)
 	await expect(guestPage.getByText("Request received").first()).toBeVisible({ timeout: 30000 })
+	const successUrl = guestPage.url()
+
+	// The request holds no ticket, yet its event is in the guest's feed with the same notice.
+	const booking = new URL(successUrl).pathname.split("/").pop()
+	await guestPage.goto(`/b/manage/events?booking=${booking}`)
+	await expect(guestPage.getByRole("dialog").getByText("Request received")).toBeVisible({
+		timeout: 15000,
+	})
+	await guestPage.goto(successUrl)
 
 	// The registration page counts the request and shows the mode the ticket type flag implies.
 	await page.goto(`/b/manage/events/${eventId}/registrations`)

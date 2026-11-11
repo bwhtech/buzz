@@ -58,6 +58,13 @@ class TestGetMyEvents(IntegrationTestCase):
 
 		self.assertTrue(self.row_of(self.upcoming_of(self.attendee), event)["is_attendee"])
 
+	def test_returns_an_event_the_user_asked_to_join(self):
+		event = self.create_team_event(self.host_team)
+		booking = EventBookingFactory.create(event=event, user=self.attendee)
+		booking.db_set({"status": "Waitlisted", "request_type": "Waitlist"})
+
+		self.assertTrue(self.row_of(self.upcoming_of(self.attendee), event)["is_attendee"])
+
 	def test_ignores_a_booking_still_awaiting_online_payment(self):
 		event = self.create_team_event(self.host_team)
 		EventBookingFactory.create(event=event, user=self.attendee)

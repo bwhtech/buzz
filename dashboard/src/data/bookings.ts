@@ -34,7 +34,7 @@ export function useBookingDetails(booking: () => string) {
 export function useMyBookings(event: () => string) {
 	return useList<MyBooking>({
 		doctype: "Event Booking",
-		fields: ["name", "status", "docstatus", "payment_method"],
+		fields: ["name", "status", "docstatus", "payment_method", "request_type"],
 		filters: () => ({ user: session.user, event: event() }),
 		// No cacheKey: it persists to IndexedDB and would outlive this user's session.
 		orderBy: "creation desc",
