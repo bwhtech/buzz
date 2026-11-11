@@ -57,6 +57,15 @@ class TestMakeFilePublic(IntegrationTestCase):
 		self.assertTrue(url.startswith("/files/"))
 		self.assertEqual(self.is_private(file), 0)
 
+	def test_a_guest_cannot_publish_another_visitors_attached_upload(self):
+		file = FileFactory.create(is_private=1)
+		file.db_set({"owner": "Guest", "attached_to_doctype": "User", "attached_to_name": OWNER})
+
+		with self.set_user("Guest"):
+			self.assertRaises(frappe.PermissionError, make_file_public, file.file_url)
+
+		self.assertEqual(self.is_private(file), 1)
+
 	def test_a_public_url_is_left_alone(self):
 		file = FileFactory.create(is_private=0)
 

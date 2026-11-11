@@ -349,18 +349,25 @@ def render_email_template(template_name: str, args: dict) -> dict:
 	return frappe.get_doc("Email Template", template_name).get_formatted_email(args)
 
 
-def make_file_public(file_url: str | None) -> str | None:
-	"""Move a private file to public and return its new URL, so guests can load it."""
+def can_publish(file, user: str) -> bool:
+	"""File's read check denies a guest even its own upload, so ownership decides here."""
 	from buzz.permissions import is_unrestricted
 
+	if is_unrestricted(user):
+		return True
+	# Every guest is "Guest": one already attached to a document is another visitor's.
+	return file.owner == user and not (user == "Guest" and file.attached_to_name)
+
+
+def make_file_public(file_url: str | None) -> str | None:
+	"""Move a private file to public and return its new URL, so guests can load it."""
 	if not (file_url or "").startswith("/private/"):
 		return file_url
 	name = frappe.db.get_value("File", {"file_url": file_url})
 	if not name:
 		return file_url
 	file = frappe.get_doc("File", name)
-	# File's read check denies a guest even on its own upload, so ownership decides here.
-	if file.owner != frappe.session.user and not is_unrestricted(frappe.session.user):
+	if not can_publish(file, frappe.session.user):
 		frappe.throw(frappe._("You can only publish a file you uploaded."), frappe.PermissionError)
 	file.is_private = 0
 	try:
