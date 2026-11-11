@@ -6,6 +6,8 @@ export type ManagerNavItem = {
 	icon: string
 	to: string
 	startsGroup?: boolean
+	// The sidebar section heading this item sits under.
+	group?: string
 	// The event section that gates this item, and the level it needs.
 	section?: EventSection
 	needs?: "Edit"
@@ -79,25 +81,35 @@ function eventItems(
 			icon: "lucide-ticket",
 			to: `${event}/registrations`,
 			section: "ticketing",
+			group: "Ticketing",
 		},
 		{
 			label: "Payments",
 			icon: "lucide-credit-card",
 			to: `${event}/payments`,
 			section: "ticketing",
+			group: "Ticketing",
 		},
 		{
 			label: "Coupons",
 			icon: "lucide-ticket-percent",
 			to: `${event}/coupons`,
 			section: "ticketing",
+			group: "Ticketing",
 		},
-		{ label: "Guests", icon: "lucide-users-round", to: `${event}/guests`, section: "guests" },
+		{
+			label: "Guests",
+			icon: "lucide-users-round",
+			to: `${event}/guests`,
+			section: "guests",
+			group: "Attendees",
+		},
 		{
 			label: "Approvals",
 			icon: "lucide-user-check",
 			to: `${event}/approvals`,
 			section: "guests",
+			group: "Attendees",
 			needs: "Edit",
 			count: counts?.pending || undefined,
 			dot: Boolean(counts?.pending),
@@ -107,22 +119,37 @@ function eventItems(
 			icon: "lucide-list-ordered",
 			to: `${event}/waitlist`,
 			section: "guests",
+			group: "Attendees",
 			needs: "Edit",
 			count: counts?.waiting || undefined,
 		},
-		{ label: "Talks", icon: "lucide-presentation", to: `${event}/talks`, section: "talks" },
-		{ label: "Schedule", icon: "lucide-calendar-days", to: `${event}/schedule`, section: "talks" },
+		{
+			label: "Talks",
+			icon: "lucide-presentation",
+			to: `${event}/talks`,
+			section: "talks",
+			group: "Program",
+		},
+		{
+			label: "Schedule",
+			icon: "lucide-calendar-days",
+			to: `${event}/schedule`,
+			section: "talks",
+			group: "Program",
+		},
 		{
 			label: "Announcements",
 			icon: "lucide-megaphone",
 			to: `${event}/communications`,
 			section: "communications",
+			group: "Outreach",
 		},
 		{
 			label: "Sponsorships",
 			icon: "lucide-handshake",
 			to: `${event}/sponsorships`,
 			section: "sponsors",
+			group: "Outreach",
 		},
 		{
 			label: "Settings",
@@ -154,6 +181,19 @@ function teamItems(teamId: string): ManagerNavItem[] {
 		// Settings stays the last item, whatever is added above it.
 		{ label: "Settings", icon: "lucide-settings", to: `${team}/settings` },
 	]
+}
+
+export type ManagerNavGroup = { label?: string; items: ManagerNavItem[] }
+
+/** Runs of adjacent items that share a heading; ungrouped items form unlabelled runs. */
+export function navigationGroups(items: ManagerNavItem[]): ManagerNavGroup[] {
+	const groups: ManagerNavGroup[] = []
+	for (const item of items) {
+		const last = groups.at(-1)
+		if (last && last.label === item.group) last.items.push(item)
+		else groups.push({ label: item.group, items: [item] })
+	}
+	return groups
 }
 
 export function managerNavigation(context: NavigationContext): ManagerNavItem[] {
