@@ -1,4 +1,5 @@
 import frappe
+from frappe.rate_limiter import rate_limit
 
 from buzz.api.forms.schemas import CustomFormResponse
 from buzz.api.sponsorships.enquiries import (
@@ -28,6 +29,7 @@ def get_enquiry_form(event_route: str, form_route: str = "enquire-sponsorship") 
 
 # nosemgrep: guest-whitelisted-method
 @frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=10, seconds=3600)
 def submit_enquiry_form(
 	event_route: str,
 	data: dict | str,
