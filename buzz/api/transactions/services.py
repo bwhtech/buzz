@@ -4,6 +4,7 @@ from frappe.query_builder.functions import Count
 
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
 from buzz.api.events.exceptions import CannotManageEvent, EventNotFound
+from buzz.api.filters.exceptions import InvalidFilter
 from buzz.api.transactions.filters import TransactionConditions, transaction_filter_fields
 from buzz.api.transactions.schemas import TransactionRow, TransactionsPage
 from buzz.permissions import can_view_transactions
@@ -34,6 +35,13 @@ def transaction_filters(event: str) -> list[list]:
 	"""A paid-for booking on the event: submitted, or offline and awaiting verification."""
 	return [["event", "=", str(event)], ["total_amount", ">", 0], ["docstatus", "!=", 2]]
 
+
+# The list's status tabs. Paid leaves out refunds, which have a tab of their own.
+STATUS_FILTERS = {
+	"paid": [["payment_status", "=", "Paid"], ["refund_status", "is", "not set"]],
+	"pending": [["payment_status", "=", VERIFICATION_PENDING]],
+	"refunded": [["refund_status", "is", "set"]],
+}
 
 TRANSACTION_OR_FILTERS = [["docstatus", "=", 1], ["payment_status", "=", VERIFICATION_PENDING]]
 
@@ -106,7 +114,9 @@ def event_currencies(event: str) -> list[str]:
 class TransactionsList:
 	"""One page of an event's transactions, searched, filtered and ordered by creation."""
 
-	def __init__(self, event: str, search: str | None, filters: str | None, name: str | None):
+	def __init__(
+		self, event: str, search: str | None, filters: str | None, name: str | None, status: str | None = None
+	):
 		ensure_transactions_access(event)
 		self.event = str(event)
 		self.currencies = event_currencies(self.event)
@@ -116,6 +126,10 @@ class TransactionsList:
 			self.conditions.append(["name", "in", searched_bookings(self.event, term) or [""]])
 		if name:
 			self.conditions.append(["name", "=", name])
+		if status:
+			if status not in STATUS_FILTERS:
+				InvalidFilter.throw()
+			self.conditions.extend(STATUS_FILTERS[status])
 
 	def page(self, order: str, start: int, limit: int) -> TransactionsPage:
 		limit = max(1, min(int(limit), 100))

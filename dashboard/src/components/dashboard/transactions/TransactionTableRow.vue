@@ -1,80 +1,110 @@
 <script setup lang="ts">
-import { Badge, Button, Tooltip, dayjsLocal } from "frappe-ui"
+import { Button, Tooltip, dayjsLocal } from "frappe-ui"
+import { computed } from "vue"
 
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
+import { useMoney } from "@/composables/useMoney"
 import type { TransactionRow } from "@/types"
-import { formatCurrency } from "@/utils/currency"
-import { paymentStatusTheme, refundStatusTheme, truncateMiddle } from "@/utils/transactionStatus"
+import { badgeDotClass } from "@/utils/badgeTheme"
+import { transactionStatus, truncateMiddle } from "@/utils/transactionStatus"
 
-defineProps<{ transaction: TransactionRow; selected?: boolean }>()
+const props = defineProps<{ transaction: TransactionRow; selected?: boolean }>()
 
 const emit = defineEmits<{ open: [] }>()
 
 const copyToClipboard = useCopyToClipboard()
+
+const money = useMoney()
+
+const createdAt = computed(() => dayjsLocal(props.transaction.created_at))
+// A server clock a little ahead would otherwise read "in 2 minutes".
+const createdAgo = computed(() =>
+	createdAt.value.isAfter(dayjsLocal()) ? "just now" : createdAt.value.fromNow(),
+)
+// "Oct 23, 2:00am"; a booking from another year says which.
+const createdOn = computed(() =>
+	createdAt.value.format(
+		createdAt.value.isSame(dayjsLocal(), "year") ? "MMM D, h:mma" : "MMM D YYYY, h:mma",
+	),
+)
+const buyerName = computed(() => props.transaction.buyer_name || "Unnamed buyer")
+const status = computed(() => transactionStatus(props.transaction))
 </script>
 
 <template>
 	<tr
-		class="cursor-pointer text-base transition-colors duration-150 ease-out hover:bg-surface-gray-1 motion-reduce:transition-none"
-		:class="selected && 'bg-surface-gray-2'"
+		class="group h-10 cursor-pointer text-base transition-colors duration-150 ease-out motion-reduce:transition-none"
+		:class="selected ? 'bg-surface-gray-2' : 'hover:bg-surface-gray-1'"
+		:data-selected="selected"
 		@click="emit('open')"
 	>
-		<td class="px-3 py-2">
+		<td class="whitespace-nowrap px-3 font-mono text-sm text-ink-gray-7">
+			{{ transaction.name }}
+		</td>
+		<td class="whitespace-nowrap px-3 text-right tabular-nums text-ink-gray-9">
+			{{ money(transaction.total_amount, transaction.currency) }}
+		</td>
+		<td class="whitespace-nowrap px-3">
+			<span class="flex max-w-48 items-center gap-2 text-ink-gray-7" :title="status.label">
+				<span
+					class="size-1.5 shrink-0 rounded-full"
+					:class="badgeDotClass(status.theme)"
+					aria-hidden="true"
+				/>
+				<span class="min-w-0 truncate">{{ status.label }}</span>
+			</span>
+		</td>
+		<td class="min-w-48 max-w-64 px-3 py-2">
 			<button
 				type="button"
-				class="font-mono text-sm text-ink-gray-9 focus-visible:underline focus-visible:outline-none"
-				:aria-label="`Open ${transaction.name}`"
+				class="block max-w-full rounded-1 text-left leading-snug [overflow-wrap:anywhere] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-4"
+				:aria-label="`${buyerName}, booking ${transaction.name}`"
 				@click.stop="emit('open')"
 			>
-				{{ transaction.name }}
+				<span dir="auto" class="line-clamp-2 text-ink-gray-9" :title="buyerName">
+					{{ buyerName }}
+				</span>
+				<span
+					class="line-clamp-2 text-sm"
+					:class="transaction.buyer_email ? 'text-ink-gray-5' : 'text-ink-gray-4'"
+					:title="transaction.buyer_email ?? undefined"
+				>
+					{{ transaction.buyer_email || "No email" }}
+				</span>
 			</button>
 		</td>
-		<td class="whitespace-nowrap px-3 py-2 text-ink-gray-7">
-			{{ dayjsLocal(transaction.created_at).format("D MMM YYYY, h:mm A") }}
-		</td>
-		<td class="max-w-56 px-3 py-2">
-			<div class="truncate text-ink-gray-9">{{ transaction.buyer_name || "—" }}</div>
-			<div class="truncate text-sm text-ink-gray-5">{{ transaction.buyer_email }}</div>
-		</td>
-		<td class="px-3 py-2 text-right tabular-nums text-ink-gray-7">{{ transaction.tickets }}</td>
-		<td class="whitespace-nowrap px-3 py-2 text-right tabular-nums text-ink-gray-9">
-			{{ formatCurrency(transaction.total_amount, transaction.currency ?? undefined) }}
-		</td>
-		<td class="whitespace-nowrap px-3 py-2 text-ink-gray-7">
-			{{ transaction.payment_method || "—" }}
-		</td>
-		<td class="px-3 py-2">
-			<Badge
-				v-if="transaction.payment_status"
-				variant="subtle"
-				:theme="paymentStatusTheme(transaction.payment_status)"
-				:label="transaction.payment_status"
-			/>
-		</td>
-		<td class="px-3 py-2">
-			<Badge
-				v-if="transaction.refund_status"
-				variant="subtle"
-				:theme="refundStatusTheme(transaction.refund_status)"
-				:label="transaction.refund_status"
-			/>
-		</td>
-		<td class="whitespace-nowrap px-3 py-2">
-			<span v-if="transaction.payment_id" class="flex items-center gap-1">
-				<Tooltip :text="transaction.payment_id">
-					<span class="font-mono text-sm text-ink-gray-7">
-						{{ truncateMiddle(transaction.payment_id) }}
-					</span>
-				</Tooltip>
+		<td class="whitespace-nowrap px-3">
+			<div class="flex items-center gap-1">
+				<span
+					v-if="transaction.payment_id"
+					class="font-mono text-sm text-ink-gray-7"
+					:title="transaction.payment_id"
+				>
+					{{ truncateMiddle(transaction.payment_id) }}
+				</span>
+				<span v-else class="text-ink-gray-4">—</span>
 				<Button
+					v-if="transaction.payment_id"
 					variant="ghost"
 					size="sm"
 					icon="lucide-copy"
-					aria-label="Copy transaction ID"
-					@click.stop="copyToClipboard(transaction.payment_id, 'Transaction ID copied')"
+					class="opacity-0 focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+					aria-label="Copy payment ID"
+					@click.stop="copyToClipboard(transaction.payment_id, 'Payment ID copied')"
 				/>
+			</div>
+			<span
+				v-if="transaction.payment_method"
+				class="block max-w-48 truncate text-sm text-ink-gray-5"
+				:title="transaction.payment_method"
+			>
+				{{ transaction.payment_method }}
 			</span>
-			<span v-else class="text-ink-gray-5">—</span>
+		</td>
+		<td class="whitespace-nowrap px-3 tabular-nums text-ink-gray-7">
+			<Tooltip :text="createdAgo">
+				<time :datetime="transaction.created_at">{{ createdOn }}</time>
+			</Tooltip>
 		</td>
 	</tr>
 </template>

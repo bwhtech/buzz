@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from buzz.api.events.schemas import CurrencyRevenue
@@ -138,7 +138,16 @@ class PaymentMethodTotal(APIResponse):
 	amount: float
 
 
+class DailyRevenue(APIResponse):
+	date: date
+	currency: str | None = None
+	collected: float
+	refunded: float
+	bookings: int
+
+
 class TransactionSummary(APIResponse):
 	currencies: list[CurrencySummary]
+	daily: list[DailyRevenue]
 	pending_verification: list[PendingVerification]
 	by_payment_method: list[PaymentMethodTotal]

@@ -2,6 +2,7 @@ import json
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import getdate
 
 from buzz.api.events.collaborators import get_event_access
 from buzz.api.events.exceptions import CannotManageEvent
@@ -200,6 +201,17 @@ class TestTransactionRows(TransactionsTestCase):
 		self.assertEqual(self.names_as(filters=by_status), {self.pending.name})
 		self.assertEqual(self.names_as(filters=by_method), {self.paid.name})
 
+	def test_status_tabs_split_paid_pending_and_refunded(self):
+		self.assertEqual(self.names_as(status="paid"), {self.paid.name})
+		self.assertEqual(self.names_as(status="pending"), {self.pending.name})
+		with self.assertRaises(InvalidFilter):
+			self.names_as(status="captured")
+
+		frappe.db.set_value("Event Booking", self.paid.name, "refund_status", "Refunded")
+		self.addCleanup(frappe.db.set_value, "Event Booking", self.paid.name, "refund_status", None)
+		self.assertEqual(self.names_as(status="refunded"), {self.paid.name})
+		self.assertEqual(self.names_as(status="paid"), set())
+
 	def test_ticket_type_filter_reads_through_attendees(self):
 		chosen = json.dumps([["ticket_type", "in", [str(self.ticket_type)]]])
 		excluded = json.dumps([["ticket_type", "not in", [str(self.ticket_type)]]])
@@ -284,6 +296,12 @@ class TestTransactionSummary(TransactionsTestCase):
 			[(row.payment_method, row.bookings, row.amount) for row in methods],
 			[(self.gateway, 1, 2 * TICKET_PRICE)],
 		)
+
+	def test_daily_revenue_counts_paid_bookings_by_day(self):
+		[day] = self.summary().daily
+
+		self.assertEqual(day.date, getdate(self.paid.creation))
+		self.assertEqual((day.currency, day.collected, day.bookings), ("INR", 2 * TICKET_PRICE, 1))
 
 
 class TestPaymentDoctypePermissions(TransactionsTestCase):

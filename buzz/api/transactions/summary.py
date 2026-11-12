@@ -1,10 +1,11 @@
 import frappe
-from frappe.query_builder.functions import Count, Sum
+from frappe.query_builder.functions import Count, Date, Sum
 from frappe.utils import flt
 
 from buzz.api.events.ticket_types import paid_bookings, revenue_by_currency
 from buzz.api.transactions.schemas import (
 	CurrencySummary,
+	DailyRevenue,
 	PaymentMethodTotal,
 	PendingVerification,
 	TransactionSummary,
@@ -24,6 +25,7 @@ def transaction_summary(event: str) -> TransactionSummary:
 		currencies=currency_summaries(event),
 		pending_verification=pending_verification(event),
 		by_payment_method=totals_by_payment_method(event),
+		daily=daily_revenue(event),
 	)
 
 
@@ -34,6 +36,25 @@ def currency_summaries(event: str) -> list[CurrencySummary]:
 		average = flt(revenue.collected) / revenue.bookings if revenue.bookings else 0
 		summaries.append(CurrencySummary(**revenue.model_dump(), net=net, average_order_value=average))
 	return summaries
+
+
+def daily_revenue(event: str) -> list[DailyRevenue]:
+	"""Paid bookings by the day they were made; a later refund counts against that day."""
+	booking = frappe.qb.DocType("Event Booking")
+	day = Date(booking.creation)
+	rows = (
+		paid_bookings(event)
+		.select(
+			day.as_("date"),
+			booking.currency,
+			Sum(booking.total_amount).as_("collected"),
+			Sum(booking.refunded_amount).as_("refunded"),
+			Count(booking.name).as_("bookings"),
+		)
+		.groupby(day, booking.currency)
+		.orderby(day)
+	).run(as_dict=True)
+	return [DailyRevenue(**row) for row in rows]
 
 
 def pending_verification(event: str) -> list[PendingVerification]:

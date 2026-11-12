@@ -1173,8 +1173,17 @@ export interface CurrencySummary {
 	average_order_value: number
 }
 
+export interface DailyRevenue {
+	date: string
+	currency: string | null
+	collected: number
+	refunded: number
+	bookings: number
+}
+
 export interface TransactionSummary {
 	currencies: CurrencySummary[]
+	daily: DailyRevenue[]
 	pending_verification: { currency: string | null; bookings: number; amount: number }[]
 	by_payment_method: {
 		currency: string | null

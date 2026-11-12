@@ -1,47 +1,48 @@
 import { refDebounced } from "@vueuse/core"
+import { useRouteQuery } from "@vueuse/router"
 import { useCall } from "frappe-ui"
-import { computed, type Ref, ref, watch } from "vue"
+import { computed, type Ref, watch } from "vue"
 
 import type { Condition } from "@/components/common/filters"
+import { devTransactionsPage } from "@/components/dashboard/transactions/transactionFixtures"
 import type { ListOrder } from "@/composables/useListQuery"
-import type { TransactionRow, TransactionsPage } from "@/types"
+import type { TransactionsPage } from "@/types"
 
-const PAGE_SIZE = 20
+export const TRANSACTIONS_PAGE_SIZE = 25
 const URL = "/api/v2/method/buzz.api.transactions.get_event_transactions"
 
-/** One event's transactions, a page at a time, the way useEventGuests walks the guest list. */
+/** One page of an event's transactions; the page number lives in `?page=`. */
 export function useEventTransactions(
 	event: string,
 	search: Ref<string>,
 	order: Ref<ListOrder>,
 	conditions: Ref<Condition[]>,
+	status: Ref<string | null>,
 ) {
 	const debouncedSearch = refDebounced(search, 300)
-	const start = ref(0)
-	const transactions = ref<TransactionRow[]>([])
+	const pageParam = useRouteQuery<string | null>("page", null)
+	const page = computed<number>({
+		get: () => Math.max(1, Number(pageParam.value) || 1),
+		set: (value) => (pageParam.value = value > 1 ? String(value) : null),
+	})
+	watch([debouncedSearch, order, conditions, status], () => (page.value = 1))
 
-	const page = useCall<TransactionsPage, Record<string, string | number>>({
+	const list = useCall<TransactionsPage, Record<string, string | number>>({
 		url: URL,
 		params: () => ({
 			event,
 			search: debouncedSearch.value.trim(),
 			filters: JSON.stringify(conditions.value),
 			order: order.value,
-			start: start.value,
-			limit: PAGE_SIZE,
+			...(status.value && { status: status.value }),
+			start: (page.value - 1) * TRANSACTIONS_PAGE_SIZE,
+			limit: TRANSACTIONS_PAGE_SIZE,
 		}),
 		refetch: true,
-		onSuccess: (data) => {
-			if (start.value === 0) {
-				transactions.value = data.transactions
-				return
-			}
-			const seen = new Set(transactions.value.map((row) => row.name))
-			transactions.value = [
-				...transactions.value,
-				...data.transactions.filter((row) => !seen.has(row.name)),
-			]
-		},
+		transform: (data) =>
+			devTransactionsPage(data, (page.value - 1) * TRANSACTIONS_PAGE_SIZE, TRANSACTIONS_PAGE_SIZE),
+		// A page past the end, from an old link, falls back to the first.
+		onSuccess: (data) => !data.transactions.length && page.value > 1 && (page.value = 1),
 	})
 
 	const lookup = useCall<TransactionsPage, Record<string, string | number>>({
@@ -51,19 +52,10 @@ export function useEventTransactions(
 	const fetchOne = async (name: string) =>
 		(await lookup.submit({ event, name, limit: 1 }))?.transactions[0] ?? null
 
-	watch([debouncedSearch, order, conditions], () => (start.value = 0), { flush: "sync" })
-
-	const loadMore = () => {
-		if (page.loading || !page.data?.has_next_page) return
-		start.value += PAGE_SIZE
-	}
-
 	return {
-		transactions,
-		fetchOne,
-		loadMore,
+		list,
 		page,
-		loadingFirstPage: computed(() => page.loading && start.value === 0),
-		loadingMore: computed(() => page.loading && start.value > 0),
+		transactions: computed(() => list.data?.transactions ?? []),
+		fetchOne,
 	}
 }

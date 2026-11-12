@@ -9,26 +9,33 @@ import {
 	DrawerDescription,
 	DrawerTitle,
 } from "@/components/common/drawer"
+import BookingActivity from "@/components/dashboard/transactions/BookingActivity.vue"
 import TransactionAmountsSection from "@/components/dashboard/transactions/TransactionAmountsSection.vue"
 import TransactionBuyerSection from "@/components/dashboard/transactions/TransactionBuyerSection.vue"
 import TransactionPaymentSection from "@/components/dashboard/transactions/TransactionPaymentSection.vue"
 import TransactionRefundsSection from "@/components/dashboard/transactions/TransactionRefundsSection.vue"
 import TransactionSourceSection from "@/components/dashboard/transactions/TransactionSourceSection.vue"
 import TransactionTicketsSection from "@/components/dashboard/transactions/TransactionTicketsSection.vue"
-import type { FrappeError, TransactionDetail } from "@/types"
-import { formatCurrency } from "@/utils/currency"
-import { paymentStatusTheme, refundStatusTheme } from "@/utils/transactionStatus"
+import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
+import { useMoney } from "@/composables/useMoney"
+import type { TransactionDetail } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
+import { transactionStatus } from "@/utils/transactionStatus"
 
 const props = defineProps<{
 	event: string
 	booking: string | null
 	hasPrevious: boolean
 	hasNext: boolean
+	// download_invoice reads the booking itself, which takes guests access.
+	canDownloadInvoice: boolean
 }>()
 
 const open = defineModel<boolean>("open", { required: true })
 
 const emit = defineEmits<{ previous: []; next: [] }>()
+
+const copyToClipboard = useCopyToClipboard()
 
 const detail = useCall<TransactionDetail, { event: string; booking: string }>({
 	url: "/api/v2/method/buzz.api.transactions.get_transaction",
@@ -37,7 +44,8 @@ const detail = useCall<TransactionDetail, { event: string; booking: string }>({
 
 watch(
 	() => props.booking,
-	(booking) => booking && detail.submit({ event: props.event, booking }),
+	// The error shows from detail.error; submit() rejects as well.
+	(booking) => booking && detail.submit({ event: props.event, booking }).catch(() => {}),
 	{ immediate: true },
 )
 
@@ -46,18 +54,27 @@ const transaction = computed(() =>
 	detail.data?.name === props.booking ? (detail.data ?? null) : null,
 )
 
-const createdAt = computed(() =>
-	transaction.value ? dayjsLocal(transaction.value.created_at) : null,
-)
+const status = computed(() => (transaction.value ? transactionStatus(transaction.value) : null))
 
+const money = useMoney()
 const total = computed(() =>
 	transaction.value
-		? formatCurrency(
-				transaction.value.amounts.total_amount,
-				transaction.value.currency ?? undefined,
-			)
+		? money(transaction.value.amounts.total_amount, transaction.value.currency)
 		: "",
 )
+
+const byline = computed(() => {
+	if (!transaction.value) return ""
+	const { buyer, created_at } = transaction.value
+	return `${buyer.name || buyer.email || "Unnamed buyer"} · ${dayjsLocal(created_at).format("D MMM YYYY, h:mm A")}`
+})
+
+const invoiceUrl = computed(() => {
+	const booking = transaction.value
+	if (!props.canDownloadInvoice || !booking?.buyer.invoice_requested) return undefined
+	if (booking.payment_status === "Verification Pending") return undefined
+	return `/api/v2/method/buzz.api.booking.download_invoice?booking_id=${encodeURIComponent(booking.name)}`
+})
 </script>
 
 <template>
@@ -91,34 +108,29 @@ const total = computed(() =>
 
 			<div class="flex flex-1 flex-col gap-8 overflow-y-auto overscroll-contain p-4">
 				<header class="space-y-2">
-					<DrawerTitle class="font-mono text-base text-ink-gray-5">{{ booking }}</DrawerTitle>
-					<template v-if="transaction">
+					<div class="flex items-center gap-1">
+						<DrawerTitle class="font-mono text-base text-ink-gray-5">{{ booking }}</DrawerTitle>
+						<Button
+							v-if="booking"
+							variant="ghost"
+							size="sm"
+							icon="lucide-copy"
+							aria-label="Copy booking ID"
+							@click="copyToClipboard(booking, 'Booking ID copied')"
+						/>
+					</div>
+					<template v-if="transaction && status">
 						<p class="text-3xl font-semibold tabular-nums text-ink-gray-9">{{ total }}</p>
-						<div class="flex flex-wrap items-center gap-1.5">
-							<Badge
-								v-if="transaction.payment_status"
-								variant="subtle"
-								:theme="paymentStatusTheme(transaction.payment_status)"
-								:label="transaction.payment_status"
-							/>
-							<Badge
-								v-if="transaction.refund_status"
-								variant="subtle"
-								:theme="refundStatusTheme(transaction.refund_status)"
-								:label="transaction.refund_status"
-							/>
-						</div>
+						<Badge variant="subtle" size="md" :theme="status.theme" :label="status.label" />
 					</template>
-					<DrawerDescription class="text-base text-ink-gray-5">
-						<Tooltip v-if="createdAt" :text="createdAt.fromNow()">
-							<span>{{ createdAt.format("D MMM YYYY, h:mm A") }}</span>
-						</Tooltip>
+					<DrawerDescription class="text-base tabular-nums text-ink-gray-5">
+						{{ byline }}
 					</DrawerDescription>
 				</header>
 
 				<ErrorMessage
 					v-if="detail.error && !detail.loading"
-					:message="(detail.error as FrappeError | null)?.message"
+					:message="serverErrorMessage(detail.error)"
 				/>
 
 				<div v-else-if="!transaction" class="space-y-3">
@@ -140,8 +152,25 @@ const total = computed(() =>
 						v-if="transaction.utm.length || transaction.answers.length"
 						:transaction="transaction"
 					/>
+					<BookingActivity
+						:key="transaction.name"
+						:booking="transaction.name"
+						:buyer-name="transaction.buyer.name"
+						:buyer-email="transaction.buyer.email"
+					/>
 				</template>
 			</div>
+
+			<template v-if="invoiceUrl" #footer>
+				<Button
+					class="flex-1"
+					size="md"
+					variant="subtle"
+					icon-left="lucide-download"
+					label="Download invoice"
+					:href="invoiceUrl"
+				/>
+			</template>
 		</DrawerContent>
 	</Drawer>
 </template>

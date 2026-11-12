@@ -15,9 +15,11 @@ def get_event_transactions(
 	start: int = 0,
 	limit: int = PAGE_SIZE,
 	name: str | None = None,
+	status: str | None = None,
 ) -> TransactionsPage:
-	"""One page of an event's paid-for bookings. `filters` is a JSON list of `[field, operator, value]`."""
-	return services.TransactionsList(event, search, filters, name).page(order, start, limit)
+	"""One page of an event's paid-for bookings. `filters` is a JSON list of `[field, operator, value]`;
+	`status` is one of `services.STATUS_FILTERS`."""
+	return services.TransactionsList(event, search, filters, name, status).page(order, start, limit)
 
 
 @frappe.whitelist()

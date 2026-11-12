@@ -3,13 +3,14 @@ import { Badge, dayjsLocal } from "frappe-ui"
 
 import CopyableDetailRow from "@/components/dashboard/transactions/CopyableDetailRow.vue"
 import TransactionSection from "@/components/dashboard/transactions/TransactionSection.vue"
+import { useMoney } from "@/composables/useMoney"
 import type { TransactionDetail } from "@/types"
-import { formatCurrency } from "@/utils/currency"
 import { pluralize } from "@/utils/pluralize"
 
 const props = defineProps<{ transaction: TransactionDetail }>()
 
-const money = (amount: number) => formatCurrency(amount, props.transaction.currency ?? undefined)
+const format = useMoney()
+const money = (amount: number) => format(amount, props.transaction.currency)
 </script>
 
 <template>

@@ -1,30 +1,64 @@
 <script setup lang="ts">
-import { useIntersectionObserver } from "@vueuse/core"
-import { ErrorMessage } from "frappe-ui"
-import { computed, ref } from "vue"
+import { useRouteQuery } from "@vueuse/router"
+import { ErrorMessage, TabButtons } from "frappe-ui"
+import { computed } from "vue"
 import { useRoute } from "vue-router"
 
 import EmptyState from "@/components/common/EmptyState.vue"
 import { ListFilters } from "@/components/common/filters"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
+import DevDataToggle from "@/components/dashboard/transactions/DevDataToggle.vue"
 import TransactionDrawer from "@/components/dashboard/transactions/TransactionDrawer.vue"
+import TransactionExportMenu from "@/components/dashboard/transactions/TransactionExportMenu.vue"
+import TransactionPagination from "@/components/dashboard/transactions/TransactionPagination.vue"
 import TransactionSummaryCards from "@/components/dashboard/transactions/TransactionSummaryCards.vue"
 import TransactionTable from "@/components/dashboard/transactions/TransactionTable.vue"
 import { useDeepLinkedRecord } from "@/composables/useDeepLinkedRecord"
-import { useEventTransactions } from "@/composables/useEventTransactions"
+import { TRANSACTIONS_PAGE_SIZE, useEventTransactions } from "@/composables/useEventTransactions"
 import { useListQuery } from "@/composables/useListQuery"
+import { useEventAccess } from "@/data/events"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
-import type { FrappeError } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
+
+const isDev = import.meta.env.DEV
 
 const eventId = useRoute().params.eventId as string
 
-const { search, order, conditions, isFiltered } = useListQuery()
+const { search, order, conditions, isFiltered: isNarrowed } = useListQuery()
 
-const { transactions, fetchOne, loadMore, page, loadingFirstPage, loadingMore } =
-	useEventTransactions(eventId, search, order, conditions)
+const STATUS_TABS = [
+	{ label: "All", value: "all" },
+	{ label: "Paid", value: "paid" },
+	{ label: "Pending verification", value: "pending" },
+	{ label: "Refunded", value: "refunded" },
+]
+const statusParam = useRouteQuery<string | null>("status", null)
+const status = computed<string>({
+	get: () => statusParam.value ?? "all",
+	set: (value) => (statusParam.value = value === "all" ? null : value),
+})
+const isFiltered = computed(() => isNarrowed.value || Boolean(statusParam.value))
 
-const message = (error: unknown) => (error as FrappeError | null)?.message
+const { list, page, transactions, fetchOne } = useEventTransactions(
+	eventId,
+	search,
+	order,
+	conditions,
+	statusParam,
+)
+
+const exportQuery = computed(() => ({
+	search: search.value.trim(),
+	filters: JSON.stringify(conditions.value),
+	order: order.value,
+	status: statusParam.value ?? "",
+}))
+
+const access = useEventAccess(() => eventId)
+access.fetch()
+
+const message = serverErrorMessage
 
 const { selectedId, selected } = useDeepLinkedRecord({
 	param: "booking",
@@ -46,55 +80,62 @@ const step = (by: number) => {
 	const next = transactions.value[selectedIndex.value + by]
 	if (next) selectedId.value = next.name
 }
-
-const sentinel = ref<HTMLElement | null>(null)
-useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore(), {
-	rootMargin: "400px",
-})
 </script>
 
 <template>
-	<EventPageHeader :title="page.data?.title" section="Transactions" />
+	<EventPageHeader :title="list.data?.title" section="Transactions" />
 
 	<PageWithSidebar>
 		<EventArchivedAlert :event="eventId" />
 
-		<ErrorMessage v-if="page.error && !page.data" :message="message(page.error)" />
+		<ErrorMessage v-if="list.error && !list.data" :message="message(list.error)" />
 
 		<template v-else>
-			<TransactionSummaryCards :event="eventId" />
+			<TransactionSummaryCards :event="eventId" @review-pending="status = 'pending'" />
 
 			<section class="space-y-3">
-				<h2 class="text-lg font-semibold text-ink-gray-9">Transactions</h2>
+				<div class="flex items-center justify-between gap-3">
+					<h2 class="text-lg font-semibold text-ink-gray-9">Transactions</h2>
+					<TransactionExportMenu
+						v-if="list.data?.total"
+						:event="eventId"
+						:title="list.data.title"
+						:query="exportQuery"
+						:is-filtered="isFiltered"
+					/>
+				</div>
+
+				<TabButtons v-model="status" :options="STATUS_TABS" />
 
 				<ListFilters
 					v-model="conditions"
 					v-model:search="search"
 					v-model:order="order"
-					:fields="page.data?.filter_fields ?? []"
-					search-placeholder="Search by booking, transaction ID, name or email"
+					:fields="list.data?.filter_fields ?? []"
+					search-placeholder="Search transactions"
 				/>
 
-				<p v-if="isFiltered" aria-live="polite" class="text-sm text-ink-gray-5">
-					{{ page.data?.matched ?? 0 }} of {{ page.data?.total ?? 0 }} transactions
-				</p>
-
 				<TransactionTable
-					v-if="loadingFirstPage"
+					v-if="list.loading && !list.data"
 					:transactions="[]"
 					:selected-id="null"
 					:loading-rows="6"
 				/>
 
-				<ErrorMessage v-else-if="page.error" :message="message(page.error)" />
+				<ErrorMessage v-else-if="list.error" :message="message(list.error)" />
 
-				<TransactionTable
-					v-else-if="transactions.length"
-					:transactions="transactions"
-					:selected-id="selectedId"
-					:loading-rows="loadingMore ? 3 : 0"
-					@open="selectedId = $event"
-				/>
+				<template v-else-if="transactions.length">
+					<TransactionTable
+						:transactions="transactions"
+						:selected-id="selectedId"
+						@open="selectedId = $event"
+					/>
+					<TransactionPagination
+						v-model:page="page"
+						:total="list.data?.matched ?? 0"
+						:page-size="TRANSACTIONS_PAGE_SIZE"
+					/>
+				</template>
 
 				<EmptyState
 					v-else-if="isFiltered"
@@ -112,11 +153,11 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 					description="Paid bookings show up here once buyers check out."
 					icon="lucide-arrow-left-right"
 				/>
-
-				<div ref="sentinel" aria-hidden="true" />
 			</section>
 		</template>
 	</PageWithSidebar>
+
+	<DevDataToggle v-if="isDev" />
 
 	<TransactionDrawer
 		v-model:open="drawerOpen"
@@ -124,6 +165,7 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 		:booking="selected?.name ?? null"
 		:has-previous="selectedIndex > 0"
 		:has-next="selectedIndex >= 0 && selectedIndex < transactions.length - 1"
+		:can-download-invoice="Boolean(access.data?.guests)"
 		@previous="step(-1)"
 		@next="step(1)"
 	/>

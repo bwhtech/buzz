@@ -2,12 +2,13 @@
 import { computed } from "vue"
 
 import TransactionSection from "@/components/dashboard/transactions/TransactionSection.vue"
+import { useMoney } from "@/composables/useMoney"
 import type { TransactionDetail } from "@/types"
-import { formatCurrency } from "@/utils/currency"
 
 const props = defineProps<{ transaction: TransactionDetail }>()
 
-const money = (amount: number) => formatCurrency(amount, props.transaction.currency ?? undefined)
+const format = useMoney()
+const money = (amount: number) => format(amount, props.transaction.currency)
 
 const totals = computed(() => {
 	const amounts = props.transaction.amounts

@@ -22,3 +22,17 @@ export const refundStatusTheme = (status: string | null): BadgeTheme =>
 export function truncateMiddle(text: string, keep = 6): string {
 	return text.length <= keep * 2 + 1 ? text : `${text.slice(0, keep)}…${text.slice(-keep)}`
 }
+
+export type TransactionStatus = { label: string; theme: BadgeTheme }
+
+/** One status for the money: a refund outranks the payment it undoes. */
+export function transactionStatus(row: {
+	payment_status: string | null
+	refund_status: string | null
+}): TransactionStatus {
+	const { payment_status, refund_status } = row
+	if (refund_status) return { label: refund_status, theme: refundStatusTheme(refund_status) }
+	if (payment_status === "Verification Pending")
+		return { label: "Pending verification", theme: "amber" }
+	return { label: payment_status || "Unpaid", theme: paymentStatusTheme(payment_status) }
+}
