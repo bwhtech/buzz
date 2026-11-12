@@ -945,7 +945,12 @@ export type EventSection =
 export type SectionLevel = "View" | "Edit"
 
 // buzz.api.events.collaborators.get_event_access: null means no access to that section.
-export type EventAccess = Record<EventSection, SectionLevel | null>
+// Transactions is derived from team role and ticketing, not a collaborator level of its own.
+export type EventAccess = Record<EventSection, SectionLevel | null> & {
+	transactions?: SectionLevel | null
+}
+
+export type AccessSection = keyof EventAccess
 
 // A `Buzz Event Collaborator` row; a blank level is no access.
 export type EventCollaborator = {
@@ -1037,4 +1042,144 @@ export interface RequestResponse {
 	booking_name: string
 	redirect_to: string
 	request_status: "Requested" | "Waitlisted"
+}
+
+// buzz.api.transactions: bookings that took, or are waiting on, money.
+export interface TransactionRow {
+	name: string
+	created_at: string
+	buyer_name: string | null
+	buyer_email: string | null
+	tickets: number
+	total_amount: number
+	currency: string | null
+	payment_method: string | null
+	payment_status: string | null
+	refund_status: string | null
+	payment_id: string | null
+}
+
+export interface TransactionsPage {
+	title: string | null
+	currencies: string[]
+	total: number
+	matched: number
+	transactions: TransactionRow[]
+	has_next_page: boolean
+	filter_fields: FilterField[]
+}
+
+export interface TransactionBuyer {
+	name: string | null
+	email: string | null
+	phone: string | null
+	user: string | null
+	business_name: string | null
+	tax_id: string | null
+	billing_state: string | null
+	billing_address: string | null
+	invoice_requested: boolean
+}
+
+export interface TransactionAmounts {
+	net_amount: number
+	discount_amount: number
+	coupon_code: string | null
+	access_code: string | null
+	tax_label: string | null
+	tax_percentage: number
+	tax_amount: number
+	total_amount: number
+	refunded_amount: number
+	net_received: number
+}
+
+export interface TransactionLineItem {
+	attendee_name: string | null
+	attendee_email: string | null
+	ticket_type: string | null
+	amount: number
+	add_ons: string[]
+	add_on_total: number
+}
+
+export interface TransactionPayment {
+	name: string
+	payment_gateway: string | null
+	payment_id: string | null
+	order_id: string | null
+	amount: number
+	currency: string | null
+	payment_received: boolean
+	created_at: string
+}
+
+export interface TransactionRefund {
+	name: string
+	refund_id: string | null
+	amount: number
+	status: string | null
+	created_at: string
+	tickets: string[]
+	cancellation_request: string | null
+}
+
+export interface TransactionTicket {
+	name: string
+	attendee_name: string | null
+	attendee_email: string | null
+	ticket_type: string | null
+	add_ons: string[]
+	checked_in: boolean
+}
+
+// An Additional Field row as saved; its shape follows each event's form.
+export interface TransactionAnswer {
+	fieldname?: string
+	label?: string | null
+	value?: unknown
+	fieldtype?: string | null
+}
+
+export interface TransactionDetail {
+	name: string
+	created_at: string
+	modified_at: string
+	currency: string | null
+	payment_status: string | null
+	refund_status: string | null
+	status: string | null
+	payment_method: string | null
+	offline_payment_method: string | null
+	buyer: TransactionBuyer
+	amounts: TransactionAmounts
+	line_items: TransactionLineItem[]
+	payments: TransactionPayment[]
+	refunds: TransactionRefund[]
+	tickets: TransactionTicket[]
+	utm: { utm_name: string | null; value: string | null }[]
+	answers: TransactionAnswer[]
+}
+
+export interface CurrencySummary {
+	currency: string
+	collected: number
+	refunded: number
+	net: number
+	tax: number
+	discounts: number
+	bookings: number
+	tickets: number
+	average_order_value: number
+}
+
+export interface TransactionSummary {
+	currencies: CurrencySummary[]
+	pending_verification: { currency: string | null; bookings: number; amount: number }[]
+	by_payment_method: {
+		currency: string | null
+		payment_method: string | null
+		bookings: number
+		amount: number
+	}[]
 }
