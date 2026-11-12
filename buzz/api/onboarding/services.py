@@ -28,7 +28,7 @@ def mark_pending_on_signup(doc, event=None):
 	if not onboarding_enabled() or doc.user_type != "Website User":
 		return
 	status = "Deferred" if frappe.form_dict.get("skip_onboarding") else "Pending"
-	frappe.db.set_value("User", doc.name, STATUS_FIELD, status)
+	doc.db_set(STATUS_FIELD, status)
 
 
 def needs_onboarding(user: str) -> bool:
