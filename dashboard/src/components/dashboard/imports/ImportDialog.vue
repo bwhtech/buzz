@@ -11,6 +11,7 @@ import {
 } from "frappe-ui"
 import { computed, reactive, ref, watch } from "vue"
 
+import ImportDropzone from "@/components/dashboard/imports/ImportDropzone.vue"
 import ImportIssueCard from "@/components/dashboard/imports/ImportIssueCard.vue"
 import ImportPreview from "@/components/dashboard/imports/ImportPreview.vue"
 import {
@@ -89,8 +90,7 @@ function useSource(next: Source | null) {
 	choices.skip_invalid = false
 }
 
-async function addFile(file: File | undefined) {
-	if (!file) return
+async function addFile(file: File) {
 	const uploaded = await uploader.upload(file, { private: true }).catch(() => null)
 	if (uploaded) useSource({ file_url: uploaded.file_url, name: file.name })
 }
@@ -132,40 +132,14 @@ async function start() {
 			<p class="text-p-base text-ink-gray-6">
 				Add sponsors on the event's tiers. A logo is optional.
 			</p>
-			<label
-				class="flex cursor-pointer flex-col items-center gap-2 rounded-7 border border-dashed border-outline-gray-3 bg-surface-gray-1 px-5 py-9 text-center focus-within:focus-ring"
-				@dragover.prevent
-				@drop.prevent="addFile($event.dataTransfer?.files[0])"
-			>
-				<span class="lucide-upload size-5 text-ink-gray-6" aria-hidden="true" />
-				<span class="text-p-base font-medium text-ink-gray-9">
-					{{
-						uploader.isUploading.value
-							? `Uploading ${uploader.progress.value}%`
-							: "Drop a CSV or Excel file"
-					}}
-				</span>
-				<span class="text-p-sm text-ink-gray-6">or click to browse · up to 5,000 rows</span>
-				<input
-					type="file"
-					class="sr-only"
-					accept=".csv,.xlsx,.tsv,.txt"
-					@change="addFile(($event.target as HTMLInputElement).files?.[0])"
-				/>
-			</label>
-			<p class="text-p-sm text-ink-gray-6">
-				You can also paste rows copied from Google Sheets or Excel.
-			</p>
-			<div class="flex flex-wrap items-center justify-between gap-2 text-p-sm text-ink-gray-6">
-				<span>Needs Company Name and Tier. Everything else is optional.</span>
-				<Button
-					variant="ghost"
-					size="sm"
-					icon-left="lucide-download"
-					label="Template"
-					@click="downloadTemplate"
-				/>
-			</div>
+			<ImportDropzone
+				requirement="Needs Company Name and Tier. Everything else is optional."
+				:row-limit="5000"
+				:progress="uploader.isUploading.value ? uploader.progress.value : null"
+				accepts-paste
+				@file="addFile"
+				@template="downloadTemplate"
+			/>
 			<ErrorMessage :message="uploader.error.value?.message" />
 		</div>
 
