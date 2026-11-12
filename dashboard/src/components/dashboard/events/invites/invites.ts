@@ -1,5 +1,5 @@
 // Mirrors INVITE_LIMIT in buzz/api/booking/invites.py.
-export const INVITE_LIMIT = 50
+export const INVITE_LIMIT = 100
 export const MESSAGE_LIMIT = 300
 export const TEMPLATE_COLUMNS = ["First Name", "Last Name", "Email", "Tier"]
 

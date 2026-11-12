@@ -157,7 +157,6 @@ declare module 'vue' {
     ImportPreview: typeof import('./src/components/dashboard/imports/ImportPreview.vue')['default']
     InviteEmailsPane: typeof import('./src/components/dashboard/events/invites/InviteEmailsPane.vue')['default']
     InviteGuestsDialog: typeof import('./src/components/dashboard/events/invites/InviteGuestsDialog.vue')['default']
-    InviteLimitRing: typeof import('./src/components/dashboard/events/invites/InviteLimitRing.vue')['default']
     InviteMessageStep: typeof import('./src/components/dashboard/events/invites/InviteMessageStep.vue')['default']
     InviteMobileFlow: typeof import('./src/components/dashboard/events/invites/InviteMobileFlow.vue')['default']
     InviteMobilePick: typeof import('./src/components/dashboard/events/invites/InviteMobilePick.vue')['default']

@@ -4,11 +4,10 @@ import { onKeyStroke, useScrollLock } from "@vueuse/core"
 import { Button } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
-import InviteLimitRing from "./InviteLimitRing.vue"
 import InviteMessageStep from "./InviteMessageStep.vue"
 import InviteMobilePick from "./InviteMobilePick.vue"
 import InviteReviewStep from "./InviteReviewStep.vue"
-import { INVITE_LIMIT, type TierOption } from "./invites"
+import type { TierOption } from "./invites"
 import InviteStepActions from "./InviteStepActions.vue"
 import { type InviteFlow, STAGES, stageTitle } from "./useInviteFlow"
 
@@ -66,7 +65,6 @@ onKeyStroke("Escape", (keyEvent) => {
 						</h3>
 						<p class="text-p-xs text-ink-gray-5">Step {{ stageIndex + 1 }} of 3</p>
 					</div>
-					<InviteLimitRing :used="selected.length" :limit="INVITE_LIMIT" />
 					<Button
 						v-if="stage !== 'pick'"
 						variant="ghost"

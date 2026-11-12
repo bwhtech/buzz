@@ -17,7 +17,8 @@ from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_
 if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
 
-INVITE_LIMIT = 50
+# One request books every guest, so a batch stays small enough to finish within it.
+INVITE_LIMIT = 100
 MESSAGE_LIMIT = 300
 # A guest holding one of these is asked already, so a second invite would only spam them.
 SHEET_FIELDS = ("first_name", "last_name", "email", "tier")

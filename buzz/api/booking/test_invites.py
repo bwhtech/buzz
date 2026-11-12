@@ -9,6 +9,7 @@ from buzz.api.booking.exceptions import (
 	TooManyInvites,
 )
 from buzz.api.booking.invites import (
+	INVITE_LIMIT,
 	accept_invite,
 	add_guests,
 	decline_invite,
@@ -223,7 +224,9 @@ class TestInviteBatch(InviteTestCase):
 		self.assertIn("&lt;a href=", self.emails_of(name)[0])
 
 	def test_a_batch_is_capped(self):
-		rows = [{"email": f"guest{index}@example.com", "ticket_type": "1"} for index in range(51)]
+		rows = [
+			{"email": f"guest{index}@example.com", "ticket_type": "1"} for index in range(INVITE_LIMIT + 1)
+		]
 
 		with self.assertRaises(TooManyInvites):
 			send_invites(str(self.event.name), rows)
@@ -290,7 +293,7 @@ class TestInviteSheet(InviteTestCase):
 		)
 
 	def test_a_sheet_past_the_batch_limit_is_refused(self):
-		text = "Email\n" + "\n".join(f"guest{index}@example.com" for index in range(51))
+		text = "Email\n" + "\n".join(f"guest{index}@example.com" for index in range(INVITE_LIMIT + 1))
 
 		with self.assertRaises(TooManyInvites):
 			read_invite_sheet(str(self.event.name), text=text)

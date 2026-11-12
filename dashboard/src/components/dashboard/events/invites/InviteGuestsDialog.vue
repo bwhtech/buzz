@@ -5,11 +5,10 @@ import { computed, ref } from "vue"
 import { useIsMobile } from "@/composables/useIsMobile"
 
 import InviteEmailsPane from "./InviteEmailsPane.vue"
-import InviteLimitRing from "./InviteLimitRing.vue"
 import InviteMessageStep from "./InviteMessageStep.vue"
 import InviteMobileFlow from "./InviteMobileFlow.vue"
 import InviteReviewStep from "./InviteReviewStep.vue"
-import { INVITE_LIMIT, type TierOption } from "./invites"
+import type { TierOption } from "./invites"
 import InviteStepActions from "./InviteStepActions.vue"
 import PastEventGuests from "./PastEventGuests.vue"
 import { stageTitle, useInviteFlow } from "./useInviteFlow"
@@ -83,7 +82,6 @@ function reset() {
 				<h3 class="flex-1 text-lg font-semibold text-ink-gray-9">
 					{{ stageTitle(stage, selected.length) }}
 				</h3>
-				<InviteLimitRing :used="selected.length" :limit="INVITE_LIMIT" />
 				<Button variant="ghost" icon="lucide-x" label="Close" @click="open = false" />
 			</header>
 
