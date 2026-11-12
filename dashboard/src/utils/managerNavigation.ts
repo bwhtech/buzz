@@ -123,6 +123,15 @@ function eventItems(
 			needs: "Edit",
 			count: counts?.waiting || undefined,
 		},
+		// The check-in page is full screen, outside the manager shell.
+		{
+			label: "Check In",
+			icon: "lucide-scan-line",
+			to: `/check-in/${eventId}`,
+			section: "guests",
+			group: "Attendees",
+			needs: "Edit",
+		},
 		{
 			label: "Talks",
 			icon: "lucide-presentation",
