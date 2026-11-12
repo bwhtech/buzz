@@ -4,7 +4,6 @@ import { NumberCard } from "frappe-ui/charts"
 import { computed, ref } from "vue"
 
 import PaymentMethodMix from "@/components/dashboard/transactions/PaymentMethodMix.vue"
-import { devTransactionSummary } from "@/components/dashboard/transactions/transactionFixtures"
 import { useMoney } from "@/composables/useMoney"
 import type { TransactionSummary } from "@/types"
 import { pluralize } from "@/utils/pluralize"
@@ -41,7 +40,6 @@ const money = useMoney()
 const summary = useCall<TransactionSummary, { event: string }>({
 	url: "/api/v2/method/buzz.api.transactions.get_transaction_summary",
 	params: () => ({ event: props.event }),
-	transform: devTransactionSummary,
 })
 
 const currencies = computed(() => (summary.data ? currenciesByVolume(summary.data) : []))

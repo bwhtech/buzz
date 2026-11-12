@@ -4,7 +4,6 @@ import { useCall } from "frappe-ui"
 import { computed, type Ref, watch } from "vue"
 
 import type { Condition } from "@/components/common/filters"
-import { devTransactionsPage } from "@/components/dashboard/transactions/transactionFixtures"
 import type { ListOrder } from "@/composables/useListQuery"
 import type { TransactionsPage } from "@/types"
 
@@ -39,8 +38,6 @@ export function useEventTransactions(
 			limit: TRANSACTIONS_PAGE_SIZE,
 		}),
 		refetch: true,
-		transform: (data) =>
-			devTransactionsPage(data, (page.value - 1) * TRANSACTIONS_PAGE_SIZE, TRANSACTIONS_PAGE_SIZE),
 		// A page past the end, from an old link, falls back to the first.
 		onSuccess: (data) => !data.transactions.length && page.value > 1 && (page.value = 1),
 	})

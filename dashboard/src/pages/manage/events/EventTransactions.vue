@@ -8,7 +8,6 @@ import EmptyState from "@/components/common/EmptyState.vue"
 import { ListFilters } from "@/components/common/filters"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
-import DevDataToggle from "@/components/dashboard/transactions/DevDataToggle.vue"
 import TransactionDrawer from "@/components/dashboard/transactions/TransactionDrawer.vue"
 import TransactionExportMenu from "@/components/dashboard/transactions/TransactionExportMenu.vue"
 import TransactionPagination from "@/components/dashboard/transactions/TransactionPagination.vue"
@@ -20,8 +19,6 @@ import { useListQuery } from "@/composables/useListQuery"
 import { useEventAccess } from "@/data/events"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import { serverErrorMessage } from "@/utils/serverError"
-
-const isDev = import.meta.env.DEV
 
 const eventId = useRoute().params.eventId as string
 
@@ -156,8 +153,6 @@ const step = (by: number) => {
 			</section>
 		</template>
 	</PageWithSidebar>
-
-	<DevDataToggle v-if="isDev" />
 
 	<TransactionDrawer
 		v-model:open="drawerOpen"
