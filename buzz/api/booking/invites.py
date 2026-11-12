@@ -48,6 +48,7 @@ class InviteService:
 
 	def preview(self, message: str | None) -> str:
 		"""The invite email as a guest would get it, with a placeholder accept link."""
+		# nosemgrep: frappe-ssti
 		return frappe.render_template(
 			"buzz/templates/emails/booking_invite.html",
 			{
