@@ -250,3 +250,36 @@ class RequestCounts(APIResponse):
 	waiting: int
 	# Unsold seats on ticket types that have people waiting, by ticket type title.
 	seats_free: dict[str, int]
+
+
+class InviteRequest(APIRequest):
+	email: str
+	ticket_type: str
+	first_name: str | None = None
+	last_name: str | None = None
+
+
+class InviteOutcome(APIResponse):
+	email: str
+	# "invited", "added", or why the row was skipped.
+	status: str
+	booking: str | None = None
+
+
+class InviteDetails(APIResponse):
+	event_title: str
+	start_date: date | None
+	start_time: timedelta | None
+	venue: str | None
+	ticket_type: str
+	status: str
+	first_name: str | None
+	last_name: str | None
+
+
+class InviteSheetRow(APIResponse):
+	first_name: str
+	last_name: str
+	email: str
+	# The tier as written in the sheet; the dialog maps it onto the event's ticket types.
+	tier: str

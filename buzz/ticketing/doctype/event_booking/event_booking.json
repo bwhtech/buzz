@@ -323,7 +323,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Confirmed\nApproval Pending\nApproved\nRejected\nRequested\nPayment Pending\nWaitlisted",
+   "options": "Confirmed\nApproval Pending\nApproved\nRejected\nRequested\nPayment Pending\nWaitlisted\nInvited",
    "read_only": 1
   },
   {
@@ -331,7 +331,7 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Request Type",
-   "options": "\nApproval\nWaitlist",
+   "options": "\nApproval\nWaitlist\nInvite",
    "read_only": 1
   },
   {
@@ -380,7 +380,7 @@
    "link_fieldname": "booking"
   }
  ],
- "modified": "2026-11-10 12:00:00.000000",
+ "modified": "2026-11-12 10:28:43.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Event Booking",

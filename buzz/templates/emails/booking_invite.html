@@ -1,0 +1,15 @@
+{% extends "buzz/templates/emails/base.html" %}
+
+{% block preheader %}{{ host|e }} invited you to {{ event_title|e }}.{% endblock %}
+{% block title %}You're invited{% endblock %}
+
+{% block content %}
+<p style="margin:0 0 24px">
+  {{ host|e }} invited you to <strong style="color:#171717">{{ event_title|e }}</strong>.
+  Your ticket is on the house.
+</p>
+{% if message %}
+<p style="margin:0 0 24px;white-space:pre-line">{{ message|e }}</p>
+{% endif %}
+{% with button_url=accept_url, button_label="Accept invitation" %}{% include "buzz/templates/emails/_button.html" %}{% endwith %}
+{% endblock %}

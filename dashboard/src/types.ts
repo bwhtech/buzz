@@ -276,6 +276,25 @@ export interface InviteOutcome {
 	full_name?: string | null
 }
 
+// buzz.api.booking.invites.get_invite: what the guest sees behind an invite link.
+export interface GuestInvite {
+	event_title: string
+	start_date: string | null
+	start_time: string | null
+	venue: string | null
+	ticket_type: string
+	status: "Invited" | "Confirmed" | "Rejected"
+	first_name: string | null
+	last_name: string | null
+}
+
+// buzz.api.booking.invites.send_invites and add_guests: one row per new address.
+export interface GuestInviteOutcome {
+	email: string
+	status: "invited" | "added" | "registered" | "already invited"
+	booking: string | null
+}
+
 // buzz.api.events.get_my_events: events the user's teams host, plus events they
 // hold a ticket to. is_host separates the two.
 export interface MyEvent {

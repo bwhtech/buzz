@@ -14,6 +14,7 @@ import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import GuestInfoDrawer from "@/components/dashboard/events/GuestInfoDrawer.vue"
 import GuestQuickActions from "@/components/dashboard/events/GuestQuickActions.vue"
 import GuestStatCards from "@/components/dashboard/events/GuestStatCards.vue"
+import InviteGuestsDialog from "@/components/dashboard/events/invites/InviteGuestsDialog.vue"
 import { useDeepLinkedRecord } from "@/composables/useDeepLinkedRecord"
 import { useEventGuests } from "@/composables/useEventGuests"
 import { useListQuery } from "@/composables/useListQuery"
@@ -54,6 +55,11 @@ const registrationForm = useList<{ name: string }>({
 	fields: ["name"],
 	limit: 1,
 })
+
+const inviting = ref(false)
+const tiers = computed(
+	() => page.data?.filter_fields.find((field) => field.key === "ticket_type")?.options ?? [],
+)
 
 const message = (error: unknown) => (error as FrappeError | null)?.message
 
@@ -218,12 +224,21 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 				:event="eventId"
 				:title="page.data.title"
 				:query="exportQuery"
-				:checked-in="page.data.checked_in_any_zone"
-				:total="page.data.total"
 				:registration-form="canWrite.data?.has_permission ? registrationForm.data?.[0]?.name : null"
+				:can-invite="Boolean(canWrite.data?.has_permission)"
+				@invite="inviting = true"
 			/>
 		</template>
 	</PageWithSidebar>
+
+	<InviteGuestsDialog
+		v-if="page.data"
+		v-model="inviting"
+		:event="eventId"
+		:event-title="page.data.title ?? ''"
+		:tiers="tiers"
+		@sent="page.reload()"
+	/>
 
 	<GuestInfoDrawer
 		v-model:open="drawerOpen"

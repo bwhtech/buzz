@@ -85,3 +85,23 @@ class RequestAlreadyOpen(Conflict):
 class RequestNotOpen(Conflict):
 	title = _lt("Request Not Open")
 	message = _lt("This request is no longer open.")
+
+
+class InviteNotFound(ResourceNotFound):
+	title = _lt("Invite Not Found")
+	message = _lt("This invite link isn't valid.")
+
+
+class InviteNotOpen(Conflict):
+	title = _lt("Invite Closed")
+	message = _lt("This invite has already been answered or withdrawn.")
+
+
+class InviteExpired(Conflict):
+	title = _lt("Event Over")
+	message = _lt("This event has already ended.")
+
+
+class TooManyInvites(BuzzAPIError):
+	title = _lt("Too Many Guests")
+	message = _lt("Invite at most {limit} guests at a time.")

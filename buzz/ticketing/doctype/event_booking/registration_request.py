@@ -114,7 +114,11 @@ class RegistrationRequest:
 
 	def reopen(self) -> None:
 		"""Put a declined request back in the queue."""
-		if self.booking.docstatus != 0 or self.booking.status != "Rejected" or not self.booking.request_type:
+		if (
+			self.booking.docstatus != 0
+			or self.booking.status != "Rejected"
+			or self.booking.request_type not in STATUS_OF_TYPE
+		):
 			RequestNotOpen.throw()
 		self.validate_no_open_request()
 		self.set_status(STATUS_OF_TYPE[self.booking.request_type])

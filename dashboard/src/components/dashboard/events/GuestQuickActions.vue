@@ -5,7 +5,6 @@ import { useRouter } from "vue-router"
 
 import QuickActionTile, { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
 import FormEditCard from "@/components/dashboard/form-builder/FormEditCard.vue"
-import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import type { EventGuest, EventGuests } from "@/types"
 import { downloadCsv } from "@/utils/csv"
 
@@ -14,23 +13,13 @@ const props = defineProps<{
 	title?: string | null
 	// What the list is currently showing, so the export is the same list.
 	query: { search: string; filters: string; order: string; zone: string }
-	checkedIn: number
-	total: number
 	registrationForm?: string | null
+	canInvite: boolean
 }>()
+const emit = defineEmits<{ invite: [] }>()
 
 const exporting = ref(false)
 const router = useRouter()
-
-const copyToClipboard = useCopyToClipboard()
-
-const checkInHref = () =>
-	router.resolve({ name: "check-in", params: { eventName: props.event } }).href
-
-const openCheckIn = () => window.open(checkInHref(), "_blank")
-
-const copyCheckInLink = () =>
-	copyToClipboard(new URL(checkInHref(), window.location.origin).href, "Check-in link copied")
 
 // The list is paged, so the export walks it: a hundred at a time until the server says
 // there is no next page.
@@ -69,7 +58,6 @@ async function exportGuests() {
 }
 
 const actions = computed(() => [
-	{ label: "Copy check-in link", icon: "lucide-link", run: copyCheckInLink, loading: false },
 	{
 		label: "Manage zones",
 		icon: "lucide-settings-2",
@@ -83,11 +71,12 @@ const actions = computed(() => [
 <template>
 	<h3 class="text-p-sm font-medium text-ink-gray-5">Quick actions</h3>
 	<QuickActionTile
-		icon="lucide-scan-line"
-		title="Check-in"
-		:subtitle="`${checkedIn} of ${total} checked in`"
-		tone="green"
-		@click="openCheckIn"
+		v-if="canInvite"
+		icon="lucide-user-plus"
+		title="Invite guests"
+		subtitle="Free tickets, sent by email"
+		tone="violet"
+		@click="emit('invite')"
 	/>
 	<FormEditCard v-if="registrationForm" :form="registrationForm" />
 	<section>
