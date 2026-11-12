@@ -76,7 +76,7 @@ class EventBooking(Document):
 		payment_method: DF.Data | None
 		payment_status: DF.Literal["Unpaid", "Paid", "Verification Pending"]
 		refund_status: DF.Literal["", "Refund Initiated", "Partially Refunded", "Refunded"]
-		request_type: DF.Literal["", "Approval", "Waitlist"]
+		request_type: DF.Literal["", "Approval", "Waitlist", "Invite"]
 		refunded_amount: DF.Currency
 		status: DF.Literal[
 			"Confirmed",
@@ -86,6 +86,7 @@ class EventBooking(Document):
 			"Requested",
 			"Payment Pending",
 			"Waitlisted",
+			"Invited",
 		]
 		tax_amount: DF.Currency
 		tax_id: DF.Data | None
@@ -98,6 +99,7 @@ class EventBooking(Document):
 
 	def validate(self):
 		self.validate_creation_rights()
+		self.validate_invite_type()
 		self.validate_event_registration_is_open()
 		self.validate_ticket_availability()
 		self.validate_hidden_ticket_types()
@@ -119,6 +121,12 @@ class EventBooking(Document):
 			frappe.PermissionError,
 		)
 
+	def validate_invite_type(self):
+		"""An invite is free, so only the invite flow may make a booking one."""
+		changed = self.is_new() or self.has_value_changed("request_type")
+		if self.is_invite and changed and not self.flags.organizer_override:
+			frappe.throw(_("Only an organizer's invite can be free this way."), frappe.PermissionError)
+
 	def validate_event_registration_is_open(self):
 		"""Refuse new bookings for unpublished or closed events, backing up
 		`BookingService.validate_event` so the generic document API can't skip it."""
@@ -139,6 +147,11 @@ class EventBooking(Document):
 	@property
 	def is_request(self) -> bool:
 		return self.status in REQUEST_STATUSES
+
+	@property
+	def is_invite(self) -> bool:
+		"""The organizer's guest: free whatever the tier costs."""
+		return self.request_type == "Invite"
 
 	def before_submit(self):
 		"""Set status before submit based on payment method."""
@@ -243,7 +256,8 @@ class EventBooking(Document):
 		)
 
 	def validate_hidden_ticket_types(self):
-		if self.flags.payment_received:
+		# The organizer picked the tier, so an invite needs no access code.
+		if self.flags.payment_received or self.is_invite:
 			return
 		hidden = {
 			name
@@ -316,7 +330,7 @@ class EventBooking(Document):
 			ticket_type = frappe.get_cached_doc("Event Ticket Type", attendee.ticket_type)
 			self.currency = self.currency or ticket_type.prices[0].currency
 			attendee.currency = self.currency
-			attendee.amount = ticket_type.price_in(attendee.currency)
+			attendee.amount = 0 if self.is_invite else ticket_type.price_in(attendee.currency)
 
 	def validate_add_ons_currency(self):
 		for attendee in self.attendees:
