@@ -29,6 +29,8 @@ export const emailKey = (email: string) => email.trim().toLowerCase()
 
 export const guestCount = (count: number) => `${count} ${count === 1 ? "guest" : "guests"}`
 
+export const needsName = (invitee: Pick<Invitee, "first_name">) => !invitee.first_name.trim()
+
 export const displayName = (invitee: Pick<Invitee, "first_name" | "last_name" | "email">) =>
 	[invitee.first_name, invitee.last_name].filter(Boolean).join(" ") || invitee.email
 

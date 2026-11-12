@@ -144,13 +144,16 @@ defineExpose({ commit, restore, ownsUndo })
 				</div>
 				<Button variant="subtle" label="Add" :disabled="!draft.trim()" @click="commit">
 					<template #suffix>
-						<KeyboardShortcut combo="Shift+Enter" />
+						<KeyboardShortcut class="max-md:hidden" combo="Shift+Enter" />
 					</template>
 				</Button>
 			</div>
 			<ErrorMessage v-if="error" :message="error" />
 			<p v-else class="flex items-center gap-1.5 text-p-sm text-ink-gray-5">
-				Space or comma adds an address · <KeyboardShortcut combo="Mod+Z" /> to undo
+				Space or comma adds an address
+				<span class="flex items-center gap-1.5 max-md:hidden">
+					· <KeyboardShortcut combo="Mod+Z" /> to undo
+				</span>
 			</p>
 		</section>
 
@@ -179,7 +182,7 @@ defineExpose({ commit, restore, ownsUndo })
 						variant="ghost"
 						size="sm"
 						icon="lucide-x"
-						class="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+						class="shrink-0 transition-opacity duration-150 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100"
 						:label="`Remove ${displayName(invitee)}`"
 						@click="selection.remove([invitee])"
 					/>
@@ -198,7 +201,8 @@ defineExpose({ commit, restore, ownsUndo })
 					/>
 					<ErrorMessage :message="sheetError" />
 				</template>
-				<template v-else>
+				<!-- The checked sheet is its own task until its rows are added, so it gets a box. -->
+				<div v-else class="space-y-4 rounded-5 border border-outline-gray-2 p-4">
 					<InviteSheetCheck
 						v-model:rows="sheet.rows"
 						v-model:skip-invalid="skipInvalid"
@@ -209,13 +213,13 @@ defineExpose({ commit, restore, ownsUndo })
 					<div class="flex justify-end gap-2">
 						<Button variant="ghost" label="Cancel" @click="sheet = null" />
 						<Button
-							variant="subtle"
+							variant="solid"
 							:label="`Add ${guestCount(sheetReady.length)}`"
 							:disabled="sheetBlocked"
 							@click="addSheet"
 						/>
 					</div>
-				</template>
+				</div>
 			</section>
 		</Transition>
 	</div>

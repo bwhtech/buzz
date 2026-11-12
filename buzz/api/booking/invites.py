@@ -12,6 +12,7 @@ from buzz.api.booking.services import get_booking_access_token, success_path, ve
 from buzz.api.events.services import manageable_event
 from buzz.api.imports.sponsors import normalize
 from buzz.api.imports.spreadsheet import Spreadsheet
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_event_team_settings
 
 if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
@@ -43,6 +44,20 @@ class InviteService:
 		if len(message or "") > MESSAGE_LIMIT:
 			frappe.throw(_("Keep the message under {0} characters").format(MESSAGE_LIMIT))
 		return self.each_new_guest(self.validate_batch(invites), lambda row: self.invite(row, message))
+
+	def preview(self, message: str | None) -> str:
+		"""The invite email as a guest would get it, with a placeholder accept link."""
+		return frappe.render_template(
+			"buzz/templates/emails/booking_invite.html",
+			{
+				"event_doc": self.event,
+				"event_title": self.event.title,
+				"support_email": get_event_team_settings(self.event.name).support_email,
+				"accept_url": "#",
+				"message": (message or "").strip()[:MESSAGE_LIMIT] or None,
+				"host": get_fullname(frappe.session.user),
+			},
+		)
 
 	def add(self, invites: list[dict]) -> list[InviteOutcome]:
 		rows = self.validate_batch(invites)
@@ -244,6 +259,11 @@ def decline_invite(booking: str, token: str) -> None:
 @rate_limit(limit=20, seconds=3600)
 def add_guests(event: str, invites: list[dict]) -> list[InviteOutcome]:
 	return InviteService(event).add(invites)
+
+
+@frappe.whitelist()
+def preview_invite(event: str, message: str | None = None) -> str:
+	return InviteService(event).preview(message)
 
 
 @frappe.whitelist(methods=["POST"])

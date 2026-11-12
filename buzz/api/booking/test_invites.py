@@ -13,6 +13,7 @@ from buzz.api.booking.invites import (
 	add_guests,
 	decline_invite,
 	get_invite,
+	preview_invite,
 	read_invite_sheet,
 	send_invites,
 )
@@ -230,6 +231,22 @@ class TestInviteBatch(InviteTestCase):
 	def test_only_the_guest_list_editors_invite(self):
 		with self.set_user(self.outsider), self.assertRaises(CannotManageEvent):
 			self.invite("nobody@example.com")
+
+
+class TestInvitePreview(InviteTestCase):
+	def test_the_preview_is_the_email_with_its_event_header(self):
+		html = preview_invite(str(self.event.name), "See you there")
+
+		self.assertIn(f'invited you to <strong style="color:#171717">{self.event.title}</strong>', html)
+		self.assertIn(f'line-height:22px">{self.event.title}</div>', html)
+		self.assertIn("See you there", html)
+
+	def test_the_message_is_escaped_in_the_preview(self):
+		self.assertIn("&lt;b&gt;", preview_invite(str(self.event.name), "<b>hi</b>"))
+
+	def test_only_the_guest_list_editors_preview(self):
+		with self.set_user(self.outsider), self.assertRaises(CannotManageEvent):
+			preview_invite(str(self.event.name))
 
 
 class TestAddDirectly(InviteTestCase):
