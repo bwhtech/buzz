@@ -1,14 +1,15 @@
 from unittest.mock import patch
 
 import frappe
-from frappe.utils import fmt_money
+from frappe.utils import fmt_money, format_datetime
 
 from buzz.api.booking.services import create_add_on_doc
-from buzz.tests.base_test_cases import BookingTestCase
+from buzz.tests.base_test_cases import BookingTestCase, make_payment_gateway
 from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
 	BuzzTeamFactory,
 	EventBookingFactory,
+	EventPaymentFactory,
 	EventTicketTypeFactory,
 	TicketAddOnFactory,
 )
@@ -17,6 +18,7 @@ SELLER_TAX_ID = "27AAAAA0000A1Z5"
 BUYER_TAX_ID = "29BBBBB1111B1Z6"
 TICKET_PRICE = 500
 ADD_ON_PRICE = 150
+MINUS_SIGN = "\N{MINUS SIGN}"
 
 
 def money(amount: float) -> str:
@@ -72,6 +74,7 @@ class TestBookingInvoice(BookingTestCase):
 					"quantity": 2,
 					"unit_price": money(TICKET_PRICE),
 					"amount": money(2 * TICKET_PRICE),
+					"holders": ["Guest0", "Guest1"],
 				}
 			],
 		)
@@ -84,6 +87,16 @@ class TestBookingInvoice(BookingTestCase):
 		self.assertEqual(add_on_line["amount"], money(ADD_ON_PRICE))
 		self.assertEqual(invoice["totals"][0]["amount"], money(2 * TICKET_PRICE + ADD_ON_PRICE))
 
+	def test_add_on_lines_name_the_attendees_who_bought_them(self):
+		invoice = self.create_invoice_booking(count=2, add_on_option="XL").get_invoice()
+
+		self.assertEqual(invoice["lines"][1]["holders"], ["Guest0"])
+
+	def test_ticket_lines_name_the_attendees_they_cover(self):
+		invoice = self.create_invoice_booking(count=2).get_invoice()
+
+		self.assertEqual(invoice["lines"][0]["holders"], ["Guest0", "Guest1"])
+
 	def test_a_discount_is_one_row_that_names_the_coupon(self):
 		coupon = BuzzCouponCodeFactory.create("flat", event=self.event.name)
 		booking = self.create_invoice_booking(count=2, coupon_code=coupon.name)
@@ -92,7 +105,7 @@ class TestBookingInvoice(BookingTestCase):
 
 		self.assertEqual(totals[0]["amount"], money(2 * TICKET_PRICE))
 		self.assertEqual(totals[1]["label"], f"Discount ({coupon.code})")
-		self.assertEqual(totals[1]["amount"], money(-100))
+		self.assertEqual(totals[1]["amount"], f"{MINUS_SIGN}{money(100)}")
 		self.assertEqual(totals[-1]["amount"], money(2 * TICKET_PRICE - 100))
 
 	def test_lines_add_up_to_the_subtotal_when_a_coupon_applies(self):
@@ -154,7 +167,49 @@ class TestBookingInvoice(BookingTestCase):
 		self.assertEqual(invoice["seller"]["name"], "Acme Events Pvt Ltd")
 		self.assertEqual(invoice["seller"]["tax_id"], SELLER_TAX_ID)
 		self.assertEqual(invoice["buyer"]["name"], "Globex Corporation")
+		self.assertEqual(invoice["buyer"]["display_name"], "Globex Corporation")
 		self.assertEqual(invoice["buyer"]["tax_id"], BUYER_TAX_ID)
+
+	def test_billed_to_falls_back_to_the_buyer_email(self):
+		invoice = self.create_invoice_booking(
+			business_name=None, buyer_name=None, buyer_email="buyer@example.com"
+		).get_invoice()
+
+		self.assertEqual(invoice["buyer"]["display_name"], "buyer@example.com")
+
+	def test_payment_block_names_the_gateway_reference_and_paid_on(self):
+		booking = self.create_invoice_booking(count=1)
+		gateway = make_payment_gateway()
+		payment = EventPaymentFactory.create(
+			"received",
+			reference_doctype="Event Booking",
+			reference_docname=booking.name,
+			payment_gateway=gateway,
+		)
+
+		self.assertEqual(
+			booking.get_invoice()["payment"],
+			{
+				"gateway": gateway,
+				"reference": payment.payment_id,
+				"paid_on": format_datetime(payment.creation, "d MMM yyyy, h:mm a"),
+			},
+		)
+
+	def test_payment_block_falls_back_to_the_method_on_the_booking(self):
+		booking = self.create_invoice_booking(
+			count=1, payment_method="Offline", offline_payment_method="Cash"
+		)
+
+		self.assertEqual(
+			booking.get_invoice()["payment"],
+			{"gateway": "Cash", "reference": None, "paid_on": None},
+		)
+
+	def test_the_total_is_the_grand_total(self):
+		invoice = self.create_invoice_booking(count=2).get_invoice()
+
+		self.assertEqual(invoice["total"], invoice["totals"][-1]["amount"])
 
 	def test_seller_falls_back_to_the_team_name(self):
 		self.set_seller(legal_name=None)
@@ -171,7 +226,9 @@ class TestBookingInvoice(BookingTestCase):
 
 		totals = booking.get_invoice()["totals"]
 
-		self.assertEqual(totals[-2], {"label": "Refunded", "amount": money(-200), "is_total": False})
+		self.assertEqual(
+			totals[-2], {"label": "Refunded", "amount": f"{MINUS_SIGN}{money(200)}", "is_total": False}
+		)
 		self.assertEqual(totals[-1]["label"], "Net paid")
 		self.assertEqual(totals[-1]["amount"], money(TICKET_PRICE - 200))
 
