@@ -2,9 +2,10 @@ import frappe
 from frappe.utils import flt
 
 from buzz.api.booking.details import coupon_code_of
-from buzz.api.events.services import add_ons_by_ticket, titles_of
+from buzz.api.events.services import titles_of
 from buzz.api.transactions.exceptions import TransactionNotFound
 from buzz.api.transactions.schemas import (
+	TransactionAddOn,
 	TransactionAmounts,
 	TransactionBuyer,
 	TransactionDetail,
@@ -37,11 +38,31 @@ def with_created_at(row: dict) -> dict:
 	return row
 
 
+def add_ons_by_parent(parenttype: str, parents: list[str]) -> dict[str, list[TransactionAddOn]]:
+	"""Each add-on's label, as shown to the buyer, with its price."""
+	parents = [parent for parent in parents if parent]
+	if not parents:
+		return {}
+	rows = frappe.get_all(
+		"Ticket Add-on Value",
+		filters={"parenttype": parenttype, "parent": ("in", parents)},
+		fields=["parent", "add_on", "value", "price"],
+		order_by="idx asc",
+		ignore_permissions=True,
+	)
+	titles = titles_of("Ticket Add-on", {row.add_on for row in rows})
+	by_parent: dict[str, list[TransactionAddOn]] = {}
+	for row in rows:
+		title = titles.get(row.add_on) or row.add_on
+		label = f"{title}: {row.value}" if row.value else title
+		by_parent.setdefault(row.parent, []).append(TransactionAddOn(title=label, price=flt(row.price)))
+	return by_parent
+
+
 def add_on_labels(parenttype: str, parents: list[str]) -> dict[str, list[str]]:
-	by_parent = add_ons_by_ticket([parent for parent in parents if parent], parenttype)
 	return {
-		parent: [f"{add_on.title}: {add_on.value}" if add_on.value else add_on.title for add_on in add_ons]
-		for parent, add_ons in by_parent.items()
+		parent: [add_on.title for add_on in add_ons]
+		for parent, add_ons in add_ons_by_parent(parenttype, parents).items()
 	}
 
 
@@ -110,14 +131,15 @@ class TransactionDetailBuilder:
 	def line_items(self) -> list[TransactionLineItem]:
 		attendees = self.booking.attendees
 		titles = titles_of("Event Ticket Type", {row.ticket_type for row in attendees})
-		add_ons = add_on_labels("Attendee Ticket Add-on", [row.add_ons for row in attendees])
+		add_ons = add_ons_by_parent("Attendee Ticket Add-on", [row.add_ons for row in attendees])
 		return [
 			TransactionLineItem(
 				attendee_name=row.full_name,
 				attendee_email=row.email,
 				ticket_type=titles.get(str(row.ticket_type)) or row.ticket_type,
 				amount=flt(row.amount),
-				add_ons=add_ons.get(row.add_ons, []),
+				add_ons=[add_on.title for add_on in add_ons.get(row.add_ons, [])],
+				add_on_items=add_ons.get(row.add_ons, []),
 				add_on_total=flt(row.add_on_total),
 			)
 			for row in attendees

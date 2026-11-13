@@ -1,4 +1,5 @@
 import json
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -7,10 +8,16 @@ from frappe.utils import getdate
 from buzz.api.events.collaborators import get_event_access
 from buzz.api.events.exceptions import CannotManageEvent
 from buzz.api.filters.exceptions import InvalidFilter
-from buzz.api.transactions import get_event_transactions, get_transaction, get_transaction_summary
+from buzz.api.transactions import (
+	download_ticket,
+	get_event_transactions,
+	get_transaction,
+	get_transaction_summary,
+)
 from buzz.api.transactions.exceptions import TransactionNotFound
 from buzz.tests.base_test_cases import make_payment_gateway
 from buzz.tests.factories import (
+	AttendeeTicketAddOnFactory,
 	BuzzEventCollaboratorFactory,
 	BuzzEventFactory,
 	BuzzTeamFactory,
@@ -18,6 +25,7 @@ from buzz.tests.factories import (
 	EventBookingFactory,
 	EventPaymentFactory,
 	EventTicketTypeFactory,
+	TicketAddOnFactory,
 	UserFactory,
 )
 
@@ -260,11 +268,90 @@ class TestTransactionDetail(TransactionsTestCase):
 		self.assertEqual(detail.amounts.net_received, 2 * TICKET_PRICE)
 		self.assertEqual(detail.refunds, [])
 
+	def test_line_items_price_each_add_on(self):
+		add_on = TicketAddOnFactory.create(event=self.event, title="Workshop", price=250).name
+		attendee_add_ons = AttendeeTicketAddOnFactory.create(
+			add_ons=[{"add_on": add_on, "value": "Sunday", "price": 250}]
+		).name
+		booking = EventBookingFactory.create(
+			event=self.event,
+			payment_status="Paid",
+			attendees=[
+				{
+					"ticket_type": self.ticket_type,
+					"first_name": "Priced",
+					"email": "priced@example.com",
+					"add_ons": attendee_add_ons,
+				}
+			],
+		)
+		booking.submit()
+
+		item = self.detail(booking.name).line_items[0]
+
+		self.assertEqual(item.add_ons, ["Workshop: Sunday"])
+		self.assertEqual(
+			[(add_on.title, add_on.price) for add_on in item.add_on_items], [("Workshop: Sunday", 250)]
+		)
+		self.assertEqual(item.add_on_total, 250)
+		self.assertEqual(
+			self.detail(booking.name).__json__()["line_items"][0]["add_on_items"][0]["price"], 250
+		)
+
+	def test_line_item_without_add_ons_has_none(self):
+		item = self.detail(self.paid.name).line_items[0]
+
+		self.assertEqual((item.add_ons, item.add_on_items), ([], []))
+
 	def test_payload_serializes(self):
 		payload = self.detail(self.pending.name).__json__()
 
 		self.assertEqual(payload["payment_method"], "Bank Transfer")
 		self.assertEqual(payload["tickets"], [])
+
+
+class TestDownloadTicket(TransactionsTestCase):
+	def ticket_of(self, booking) -> str:
+		return frappe.db.get_value("Event Ticket", {"booking": booking.name, "docstatus": 1}, "name")
+
+	def download_as(self, user: str, event: str, ticket: str):
+		with (
+			self.set_user(user),
+			patch("buzz.api.transactions.downloads.ticket_pdf", return_value=b"%PDF-ticket"),
+		):
+			download_ticket(event, ticket)
+
+	def test_responds_with_the_ticket_pdf(self):
+		ticket = self.ticket_of(self.paid)
+
+		self.download_as(self.owner, self.event, ticket)
+
+		self.assertEqual(frappe.response.type, "download")
+		self.assertEqual(frappe.response.filename, f"Ticket-{ticket}.pdf")
+		self.assertEqual(frappe.response.filecontent, b"%PDF-ticket")
+
+	def test_same_access_as_the_booking_detail(self):
+		ticket = self.ticket_of(self.paid)
+
+		for user in (self.viewer, self.frontdesk, self.guests_editor):
+			with self.assertRaises(CannotManageEvent):
+				self.download_as(user, self.event, ticket)
+
+	def test_a_ticket_of_another_event_is_not_found(self):
+		ticket = self.ticket_of(self.elsewhere)
+
+		with self.assertRaises(TransactionNotFound):
+			self.download_as(self.owner, self.event, ticket)
+
+	def test_a_ticket_of_a_booking_that_is_not_a_transaction_is_not_found(self):
+		ticket = self.ticket_of(self.free)
+
+		with self.assertRaises(TransactionNotFound):
+			self.download_as(self.owner, self.event, ticket)
+
+	def test_an_unknown_ticket_is_not_found(self):
+		with self.assertRaises(TransactionNotFound):
+			self.download_as(self.owner, self.event, "missing-ticket")
 
 
 class TestTransactionSummary(TransactionsTestCase):

@@ -55,12 +55,18 @@ class TransactionAmounts(APIResponse):
 	net_received: float
 
 
+class TransactionAddOn(APIResponse):
+	title: str
+	price: float
+
+
 class TransactionLineItem(APIResponse):
 	attendee_name: str | None = None
 	attendee_email: str | None = None
 	ticket_type: str | None = None
 	amount: float
 	add_ons: list[str]
+	add_on_items: list[TransactionAddOn]
 	add_on_total: float
 
 

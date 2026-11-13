@@ -1,6 +1,6 @@
 import frappe
 
-from buzz.api.transactions import detail, services, summary
+from buzz.api.transactions import detail, downloads, services, summary
 from buzz.api.transactions.schemas import TransactionDetail, TransactionsPage, TransactionSummary
 
 PAGE_SIZE = 20
@@ -25,6 +25,12 @@ def get_event_transactions(
 @frappe.whitelist()
 def get_transaction(event: str, booking: str) -> TransactionDetail:
 	return detail.TransactionDetailBuilder(event, booking).detail()
+
+
+@frappe.whitelist()
+def download_ticket(event: str, ticket: str) -> None:
+	"""Responds with the ticket's PDF, as `Ticket-<name>.pdf`."""
+	downloads.download_ticket(event, ticket)
 
 
 @frappe.whitelist()

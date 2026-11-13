@@ -36,3 +36,17 @@ export function transactionStatus(row: {
 		return { label: "Pending verification", theme: "amber" }
 	return { label: payment_status || "Unpaid", theme: paymentStatusTheme(payment_status) }
 }
+
+const BOOKING_STATUS_THEMES: Record<string, BadgeTheme> = {
+	Confirmed: "green",
+	Approved: "green",
+	"Payment Pending": "amber",
+	"Approval Pending": "amber",
+	Requested: "blue",
+	Invited: "blue",
+	Rejected: "red",
+}
+
+/** A booking status change in the activity feed, coloured like its meaning. */
+export const bookingStatusTheme = (status: string): BadgeTheme =>
+	BOOKING_STATUS_THEMES[status] ?? "gray"

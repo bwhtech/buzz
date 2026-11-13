@@ -1116,6 +1116,7 @@ export interface TransactionLineItem {
 	ticket_type: string | null
 	amount: number
 	add_ons: string[]
+	add_on_items: { title: string; price: number }[]
 	add_on_total: number
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Badge, Button, ErrorMessage, Skeleton, Tooltip, dayjsLocal, useCall } from "frappe-ui"
+import { Button, ErrorMessage, Skeleton, Tooltip, dayjsLocal, useCall } from "frappe-ui"
 import { computed, watch } from "vue"
 
 import {
@@ -11,10 +11,8 @@ import {
 } from "@/components/common/drawer"
 import BookingActivity from "@/components/dashboard/transactions/BookingActivity.vue"
 import TransactionAmountsSection from "@/components/dashboard/transactions/TransactionAmountsSection.vue"
-import TransactionBuyerSection from "@/components/dashboard/transactions/TransactionBuyerSection.vue"
-import TransactionPaymentSection from "@/components/dashboard/transactions/TransactionPaymentSection.vue"
+import TransactionProperties from "@/components/dashboard/transactions/TransactionProperties.vue"
 import TransactionRefundsSection from "@/components/dashboard/transactions/TransactionRefundsSection.vue"
-import TransactionSourceSection from "@/components/dashboard/transactions/TransactionSourceSection.vue"
 import TransactionTicketsSection from "@/components/dashboard/transactions/TransactionTicketsSection.vue"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useMoney } from "@/composables/useMoney"
@@ -27,7 +25,7 @@ const props = defineProps<{
 	booking: string | null
 	hasPrevious: boolean
 	hasNext: boolean
-	// download_invoice reads the booking itself, which takes guests access.
+	// download_invoice and download_tickets read the booking itself, which takes guests access.
 	canDownloadInvoice: boolean
 }>()
 
@@ -55,6 +53,12 @@ const transaction = computed(() =>
 )
 
 const status = computed(() => (transaction.value ? transactionStatus(transaction.value) : null))
+const STATUS_DOTS: Record<string, string> = {
+	green: "bg-surface-green-3",
+	amber: "bg-surface-amber-3",
+	red: "bg-surface-red-5",
+	blue: "bg-surface-blue-3",
+}
 
 const money = useMoney()
 const total = computed(() =>
@@ -62,26 +66,33 @@ const total = computed(() =>
 		? money(transaction.value.amounts.total_amount, transaction.value.currency)
 		: "",
 )
+const bookedAt = computed(() =>
+	transaction.value ? dayjsLocal(transaction.value.created_at).format("D MMM YYYY, h:mm A") : "",
+)
 
-const byline = computed(() => {
-	if (!transaction.value) return ""
-	const { buyer, created_at } = transaction.value
-	return `${buyer.name || buyer.email || "Unnamed buyer"} · ${dayjsLocal(created_at).format("D MMM YYYY, h:mm A")}`
-})
-
-const invoiceUrl = computed(() => {
+const invoiceAvailable = computed(() => {
 	const booking = transaction.value
-	if (!props.canDownloadInvoice || !booking?.buyer.invoice_requested) return undefined
-	if (booking.payment_status === "Verification Pending") return undefined
-	return `/api/v2/method/buzz.api.booking.download_invoice?booking_id=${encodeURIComponent(booking.name)}`
+	return Boolean(
+		props.canDownloadInvoice &&
+		booking?.buyer.invoice_requested &&
+		booking.payment_status !== "Verification Pending",
+	)
 })
+const invoiceUrl = computed(() =>
+	invoiceAvailable.value && transaction.value
+		? `/api/v2/method/buzz.api.booking.download_invoice?booking_id=${encodeURIComponent(transaction.value.name)}`
+		: undefined,
+)
 </script>
 
 <template>
 	<Drawer v-model:open="open" swipe-direction="right">
 		<DrawerContent size="lg">
-			<div class="flex items-center gap-1 p-4 pb-0">
+			<div class="flex items-center gap-1 px-5 pt-4">
 				<DrawerCloseButton label="Close transaction" />
+				<DrawerTitle class="ml-1 text-lg font-semibold text-ink-gray-9"
+					>Transaction details</DrawerTitle
+				>
 				<div class="ml-auto flex items-center gap-1">
 					<Tooltip text="Previous transaction">
 						<Button
@@ -106,71 +117,78 @@ const invoiceUrl = computed(() => {
 				</div>
 			</div>
 
-			<div class="flex flex-1 flex-col gap-8 overflow-y-auto overscroll-contain p-4">
-				<header class="space-y-2">
-					<div class="flex items-center gap-1">
-						<DrawerTitle class="font-mono text-base text-ink-gray-5">{{ booking }}</DrawerTitle>
-						<Button
-							v-if="booking"
-							variant="ghost"
-							size="sm"
-							icon="lucide-copy"
-							aria-label="Copy booking ID"
-							@click="copyToClipboard(booking, 'Booking ID copied')"
+			<ErrorMessage
+				v-if="detail.error && !detail.loading"
+				class="mx-6 mt-5"
+				:message="serverErrorMessage(detail.error)"
+			/>
+
+			<div v-else-if="!transaction || !status" class="space-y-3 px-6 pt-5">
+				<Skeleton class="h-5 w-20 rounded-4" />
+				<Skeleton class="h-9 w-44 rounded-4" />
+				<Skeleton v-for="row in 4" :key="row" class="h-5 w-full rounded-4" />
+			</div>
+
+			<BookingActivity
+				v-else
+				:key="transaction.name"
+				:transaction="transaction"
+				:can-attach-invoice="invoiceAvailable"
+			>
+				<header class="space-y-2 pt-3">
+					<p class="flex items-center gap-2 text-base text-ink-gray-7">
+						<span
+							class="size-2 rounded-full"
+							:class="STATUS_DOTS[status.theme] ?? 'bg-surface-gray-4'"
+							aria-hidden="true"
 						/>
-					</div>
-					<template v-if="transaction && status">
-						<p class="text-3xl font-semibold tabular-nums text-ink-gray-9">{{ total }}</p>
-						<Badge variant="subtle" size="md" :theme="status.theme" :label="status.label" />
-					</template>
-					<DrawerDescription class="text-base tabular-nums text-ink-gray-5">
-						{{ byline }}
+						{{ status.label }}
+					</p>
+					<p class="text-4xl font-semibold tabular-nums tracking-tight text-ink-gray-9">
+						{{ total }}
+					</p>
+					<DrawerDescription class="flex items-center gap-1.5 text-base text-ink-gray-5">
+						<button
+							type="button"
+							class="copy-id cursor-copy font-mono text-sm uppercase tracking-wider hover:text-ink-gray-7"
+							:aria-label="`Copy booking ID ${transaction.name}`"
+							@click="copyToClipboard(transaction.name, 'Booking ID copied')"
+						>
+							#{{ transaction.name }}
+						</button>
+						<span aria-hidden="true">·</span>
+						<span class="tabular-nums">Booked {{ bookedAt }}</span>
 					</DrawerDescription>
 				</header>
 
-				<ErrorMessage
-					v-if="detail.error && !detail.loading"
-					:message="serverErrorMessage(detail.error)"
+				<TransactionProperties :transaction="transaction" :invoice-url="invoiceUrl" />
+				<TransactionAmountsSection :transaction="transaction" />
+				<TransactionTicketsSection
+					v-if="transaction.tickets.length"
+					:transaction="transaction"
+					:event="event"
+					:can-download-all="canDownloadInvoice"
 				/>
-
-				<div v-else-if="!transaction" class="space-y-3">
-					<Skeleton class="h-8 w-40 rounded-4" />
-					<Skeleton v-for="row in 4" :key="row" class="h-5 w-full rounded-4" />
-				</div>
-
-				<template v-else>
-					<TransactionPaymentSection :transaction="transaction" />
-					<TransactionAmountsSection :transaction="transaction" />
-					<TransactionTicketsSection
-						v-if="transaction.tickets.length"
-						:transaction="transaction"
-						:event="event"
-					/>
-					<TransactionRefundsSection v-if="transaction.refunds.length" :transaction="transaction" />
-					<TransactionBuyerSection :buyer="transaction.buyer" />
-					<TransactionSourceSection
-						v-if="transaction.utm.length || transaction.answers.length"
-						:transaction="transaction"
-					/>
-					<BookingActivity
-						:key="transaction.name"
-						:booking="transaction.name"
-						:buyer-name="transaction.buyer.name"
-						:buyer-email="transaction.buyer.email"
-					/>
-				</template>
-			</div>
-
-			<template v-if="invoiceUrl" #footer>
-				<Button
-					class="flex-1"
-					size="md"
-					variant="subtle"
-					icon-left="lucide-download"
-					label="Download invoice"
-					:href="invoiceUrl"
-				/>
-			</template>
+				<TransactionRefundsSection v-if="transaction.refunds.length" :transaction="transaction" />
+			</BookingActivity>
 		</DrawerContent>
 	</Drawer>
 </template>
+
+<style scoped>
+.copy-id {
+	transition:
+		color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+		transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.copy-id:active {
+	transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.copy-id:active {
+		transform: none;
+	}
+}
+</style>
