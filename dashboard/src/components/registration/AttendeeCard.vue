@@ -71,7 +71,7 @@
 						@update:model-value="setCustomField(field.fieldname, $event)"
 					/>
 				</div>
-				<AttendeeAddOns v-if="addOns.length" :attendee="attendee" :add-ons="addOns" />
+				<AttendeeAddOns v-if="offeredAddOns.length" :attendee="attendee" :add-ons="offeredAddOns" />
 				<Button
 					v-if="collapsible && hasNext"
 					variant="subtle"
@@ -98,6 +98,7 @@ import type { FrappeField } from "@/composables/useCustomFields"
 import type { AvailableAddOn, BookingAttendee } from "@/types"
 
 import CustomFieldInput from "../CustomFieldInput.vue"
+import { addOnsForAttendee } from "./addOnScope"
 import AttendeeAddOns from "./AttendeeAddOns.vue"
 import type { AttendeeErrors, AttendeeIdentity } from "./attendeeValidation"
 import Collapse from "./Collapse.vue"
@@ -126,6 +127,7 @@ const props = defineProps<{
 const emit = defineEmits<{ toggle: []; next: []; "update:isMe": [isMe: boolean] }>()
 
 const inputSize = computed(() => (props.collapsible ? "lg" : "sm"))
+const offeredAddOns = computed(() => addOnsForAttendee(props.addOns, props.attendee))
 const identity = computed(() => (props.attendee.is_me ? props.me : props.attendee))
 const isComplete = computed(() => !Object.keys(props.errors).length)
 const displayName = computed(

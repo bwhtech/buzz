@@ -28,6 +28,12 @@ def tickets_sold_by_currency(ticket_types: list) -> dict[tuple[str, str], int]:
 	return {(str(ticket_type), currency): count for ticket_type, currency, count in rows}
 
 
+def validate_paid_events_enabled(event: str) -> None:
+	team = frappe.get_cached_value("Buzz Event", event, "team")
+	if not is_feature_enabled(team, PAID_EVENTS_FLAG):
+		frappe.throw(_("Paid events are not enabled for this team. Contact your administrator."))
+
+
 def default_currency(event: str) -> str:
 	"""Default currency of the ticket type the booking page lists first; fixed coupon amounts are in it."""
 	filters = {"event": event, "is_published": 1}
@@ -155,9 +161,7 @@ class EventTicketType(Document):
 		before = self.get_doc_before_save()
 		if self.is_free or (before and not before.is_free):
 			return
-		team = frappe.get_cached_value("Buzz Event", self.event, "team")
-		if not is_feature_enabled(team, PAID_EVENTS_FLAG):
-			frappe.throw(_("Paid tickets are not enabled for this team. Contact your administrator."))
+		validate_paid_events_enabled(self.event)
 
 	def price_in(self, currency: str) -> float:
 		if self.is_free:

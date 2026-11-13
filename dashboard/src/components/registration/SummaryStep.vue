@@ -78,6 +78,7 @@ import type { AvailableAddOn, AvailableTicketType, BookingAttendee } from "@/typ
 import { formatWholePriceOrFree } from "@/utils/currency"
 
 import PhoneInput from "../PhoneInput.vue"
+import { selectedAddOns } from "./addOnScope"
 import PhoneReason from "./PhoneReason.vue"
 import { isGstLabel, taxIdFieldLabel } from "./registrationSteps"
 import SummaryCardHeader from "./SummaryCardHeader.vue"
@@ -121,25 +122,18 @@ const ticketRows = computed(() =>
 	}),
 )
 
-function selectedAddOns(attendee: BookingAttendee) {
-	return Object.entries(attendee.add_ons ?? {}).filter(
-		([name, selection]) => selection.selected && props.addOnsMap[name],
-	)
-}
-
 function addOnLabels(attendee: BookingAttendee) {
-	return selectedAddOns(attendee).map(([name, selection]) => {
-		const addOn = props.addOnsMap[name]
-		const title = __(addOn?.title ?? "")
-		return addOn?.user_selects_option && selection.option
+	return selectedAddOns(attendee, props.addOnsMap).map(([addOn, selection]) => {
+		const title = __(addOn.title ?? "")
+		return addOn.user_selects_option && selection.option
 			? `${title} · ${__(selection.option)}`
 			: title
 	})
 }
 
 function attendeeAmount(attendee: BookingAttendee, ticketType?: AvailableTicketType) {
-	const addOnsTotal = selectedAddOns(attendee).reduce(
-		(sum, [name]) => sum + (props.addOnsMap[name]?.price ?? 0),
+	const addOnsTotal = selectedAddOns(attendee, props.addOnsMap).reduce(
+		(sum, [addOn]) => sum + (addOn.price ?? 0),
 		0,
 	)
 	return (ticketType?.price ?? 0) + addOnsTotal
