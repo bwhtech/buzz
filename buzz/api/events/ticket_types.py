@@ -4,6 +4,7 @@ from frappe.utils import flt
 
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.schemas import (
+	AddOnItem,
 	CurrencyRevenue,
 	EventTicketTypes,
 	PaymentProviderItem,
@@ -21,6 +22,7 @@ from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	PAID_EVENTS_FLAG,
 	tickets_sold_by_currency,
 )
+from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import add_on_options
 
 TICKET_TYPE_FIELDS = [
 	"name",
@@ -34,6 +36,18 @@ TICKET_TYPE_FIELDS = [
 	"requires_approval",
 	"enable_waitlist",
 	{"prices": ["currency", "price"]},
+]
+
+ADD_ON_FIELDS = [
+	"name",
+	"title",
+	"description",
+	"price",
+	"currency",
+	"enabled",
+	"user_selects_option",
+	"options",
+	{"ticket_types": ["ticket_type"]},
 ]
 
 
@@ -71,6 +85,7 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		paid_events_enabled=is_feature_enabled(doc.team, PAID_EVENTS_FLAG),
 		categories=ticket_categories(event),
 		ticket_types=[ticket_type_item(row, sold, sold_by_currency) for row in rows],
+		add_ons=add_on_items(event),
 		payment_providers=payment_providers(event),
 		revenue=revenue_by_currency(event),
 	)
@@ -104,6 +119,23 @@ def ticket_type_item(row, sold: dict, sold_by_currency: dict) -> TicketTypeItem:
 		for price in row.prices
 	]
 	return TicketTypeItem(**{**row, "name": name, "tickets_sold": sold.get(name, 0), "prices": prices})
+
+
+def add_on_items(event: str) -> list[AddOnItem]:
+	rows = frappe.get_all(
+		"Ticket Add-on",
+		filters={"event": event},
+		fields=ADD_ON_FIELDS,
+		order_by="title asc",
+		ignore_permissions=True,
+	)
+	return [add_on_item(row) for row in rows]
+
+
+def add_on_item(row) -> AddOnItem:
+	options = add_on_options(row.options)
+	ticket_types = [str(scope.ticket_type) for scope in row.ticket_types]
+	return AddOnItem(**{**row, "options": options, "ticket_types": ticket_types})
 
 
 def tickets_sold_by_type(event: str) -> dict[str, int]:

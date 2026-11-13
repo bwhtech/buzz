@@ -645,6 +645,8 @@ export interface AvailableAddOn {
 	price_note?: string
 	options?: string[]
 	user_selects_option?: 0 | 1 | boolean
+	// Event Ticket Type names it is offered with; empty means all.
+	ticket_types?: string[]
 }
 
 export interface AttendeeAddOnSelection {
@@ -919,6 +921,20 @@ export interface EventTicketTypes {
 	ticket_types: TicketTypeItem[]
 	payment_providers: PaymentProviderItem[]
 	revenue: CurrencyRevenue[]
+	add_ons: AddOnItem[]
+}
+
+export interface AddOnItem {
+	name: string
+	title: string
+	description: string | null
+	price: number
+	currency: string
+	enabled: boolean
+	user_selects_option: boolean
+	options: string[]
+	// Event Ticket Type names; empty means all.
+	ticket_types: string[]
 }
 
 export interface CurrencyRevenue {

@@ -4,7 +4,7 @@ import { computed, ref, type Ref } from "vue"
 import { useRouter } from "vue-router"
 
 import type { FrappeField } from "@/composables/useCustomFields"
-import type { BookingAttendee, OfflineMethod } from "@/types"
+import type { AvailableAddOn, BookingAttendee, OfflineMethod } from "@/types"
 import {
 	type BookingSubmitResponse,
 	resolveBookingSuccessAction,
@@ -12,6 +12,7 @@ import {
 import { clearBookingCache } from "@/utils/index"
 import { serverErrorMessage } from "@/utils/serverError"
 
+import { selectedAddOns } from "./addOnScope"
 import type { useGuestOtp } from "./useGuestOtp"
 
 type Payload = Record<string, any>
@@ -152,11 +153,16 @@ export function cleanCustomFields(values: Record<string, any> | undefined, field
 	return Object.keys(cleaned).length ? cleaned : null
 }
 
-export function attendeePayload(attendee: BookingAttendee, ticketCustomFields: FrappeField[]) {
+export function attendeePayload(
+	attendee: BookingAttendee,
+	ticketCustomFields: FrappeField[],
+	addOnsMap: Record<string, AvailableAddOn>,
+) {
 	const { is_me: _isMe, ...clean } = JSON.parse(JSON.stringify(attendee))
-	clean.add_ons = Object.entries(clean.add_ons ?? {})
-		.filter(([, state]: [string, any]) => state.selected)
-		.map(([addOn, state]: [string, any]) => ({ add_on: addOn, value: state.option || true }))
+	clean.add_ons = selectedAddOns(attendee, addOnsMap).map(([addOn, selection]) => ({
+		add_on: addOn.name,
+		value: selection.option || true,
+	}))
 	clean.custom_fields = cleanCustomFields(clean.custom_fields, ticketCustomFields)
 	return clean
 }

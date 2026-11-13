@@ -13,6 +13,7 @@ from buzz.tests.factories import (
 	EventBookingFactory,
 	EventTicketCategoryFactory,
 	EventTicketTypeFactory,
+	TicketAddOnFactory,
 	UserFactory,
 )
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
@@ -88,6 +89,40 @@ class TestGetEventTicketTypes(TicketTypesTestCase):
 
 		self.assertEqual([row["name"] for row in payload["categories"]], [early.name, late.name])
 		self.assertEqual(self.ticket_type_row(payload)["category"], early.name)
+
+	def test_lists_every_add_on_with_its_scope(self):
+		TicketAddOnFactory.create(
+			event=self.event,
+			title="T-shirt",
+			price=299,
+			user_selects_option=1,
+			options="S\nM",
+			ticket_types=[{"ticket_type": self.ticket_type}],
+		)
+		TicketAddOnFactory.create(event=self.event, title="Parking", enabled=0)
+
+		add_ons = self.payload_as(self.owner)["add_ons"]
+
+		self.assertEqual([row["title"] for row in add_ons], ["Parking", "T-shirt"])
+		parking, shirt = add_ons
+		self.assertEqual(
+			set(shirt),
+			{
+				"name",
+				"title",
+				"description",
+				"price",
+				"currency",
+				"enabled",
+				"user_selects_option",
+				"options",
+				"ticket_types",
+			},
+		)
+		self.assertEqual(
+			(shirt["price"], shirt["options"], shirt["ticket_types"]), (299, ["S", "M"], [self.ticket_type])
+		)
+		self.assertEqual((parking["enabled"], parking["ticket_types"]), (False, []))
 
 	def test_reports_whether_the_team_can_sell_paid_tickets(self):
 		self.assertTrue(self.payload_as(self.owner)["paid_events_enabled"])

@@ -13,6 +13,7 @@ from buzz.api.booking import (
 )
 from buzz.api.booking.exceptions import (
 	AddOnNotForEvent,
+	AddOnNotForTicketType,
 	HiddenTicketType,
 	InvalidAccessCode,
 	InvalidAddOnValue,
@@ -401,6 +402,27 @@ class TestBookingSelectionValidation(BookingTestCase):
 	def test_invalid_add_on_value_is_refused(self):
 		with self.assertRaises(InvalidAddOnValue):
 			self.book([self.attendee(add_ons=[{"add_on": self.add_on.name, "value": "Gold"}])])
+
+	def scoped_add_on(self, ticket_type):
+		return TicketAddOnFactory.create(
+			event=self.event.name, ticket_types=[{"ticket_type": ticket_type.name}]
+		)
+
+	def test_add_on_outside_ticket_type_scope_is_refused(self):
+		add_on = self.scoped_add_on(EventTicketTypeFactory.create(event=self.event.name))
+		with self.assertRaises(AddOnNotForTicketType):
+			self.book([self.attendee(add_ons=[{"add_on": add_on.name, "value": True}])])
+
+	def test_add_on_in_ticket_type_scope_is_accepted(self):
+		add_on = self.scoped_add_on(self.free_ticket_type)
+		self.book([self.attendee(add_ons=[{"add_on": add_on.name, "value": True}])])
+		self.assertEqual(frappe.get_last_doc("Event Booking").attendees[0].number_of_add_ons, 1)
+
+	def test_event_data_lists_add_on_ticket_types(self):
+		add_on = self.scoped_add_on(self.free_ticket_type)
+		add_ons = {row.name: row for row in get_event_booking_data(self.event.route).available_add_ons}
+		self.assertEqual(add_ons[add_on.name].ticket_types, [str(self.free_ticket_type.name)])
+		self.assertEqual(add_ons[self.add_on.name].ticket_types, [])
 
 	def test_a_legitimate_selection_is_accepted(self):
 		with patch("buzz.api.booking.services.get_payment_link_for_booking", return_value="/pay"):

@@ -2,6 +2,7 @@ import { computed, type Ref } from "vue"
 
 import type { AvailableAddOn, AvailableTicketType, BookingAttendee } from "@/types"
 
+import { selectedAddOns } from "./addOnScope"
 import { useDiscountQuote } from "./useDiscountQuote"
 
 export interface PricingInputs {
@@ -35,9 +36,8 @@ export function useOrderPricing(inputs: PricingInputs) {
 		}
 		for (const attendee of attendees.value) {
 			add(`ticket-${attendee.ticket_type}`, ticketTypesMap.value[String(attendee.ticket_type)])
-			for (const [name, selection] of Object.entries(attendee.add_ons ?? {})) {
-				if (selection.selected) add(`add-on-${name}`, addOnsMap.value[name])
-			}
+			for (const [addOn] of selectedAddOns(attendee, addOnsMap.value))
+				add(`add-on-${addOn.name}`, addOn)
 		}
 		const all = Object.values(byKey)
 		return [

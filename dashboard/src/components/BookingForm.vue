@@ -730,7 +730,7 @@ function buildPayload() {
 	return {
 		event: eventId.value,
 		attendees: attendees.value.map((attendee) =>
-			attendeePayload(attendee, ticketFieldsFor(attendee)),
+			attendeePayload(attendee, ticketFieldsFor(attendee), addOnsMap.value),
 		),
 		coupon_code: coupon.appliedCode || null,
 		booking_custom_fields: cleanCustomFields(

@@ -2,7 +2,16 @@
 import SortableList from "@/components/dashboard/sponsorships/SortableList.vue"
 
 const perks = defineModel<string[]>({ required: true })
-defineProps<{ disabled?: boolean }>()
+withDefaults(
+	defineProps<{
+		disabled?: boolean
+		label?: string
+		addLabel?: string
+		itemName?: string
+		placeholder?: string
+	}>(),
+	{ label: "Perks", addLabel: "Add perk", itemName: "perk", placeholder: "Describe the perk" },
+)
 
 function updatePerk(index: number, value: string) {
 	perks.value = perks.value.map((perk, perkIndex) => (perkIndex === index ? value : perk))
@@ -12,9 +21,9 @@ function updatePerk(index: number, value: string) {
 <template>
 	<SortableList
 		v-model="perks"
-		label="Perks"
-		add-label="Add perk"
-		item-name="perk"
+		:label="label"
+		:add-label="addLabel"
+		:item-name="itemName"
 		:create-item="() => ''"
 		:disabled="disabled"
 	>
@@ -22,8 +31,8 @@ function updatePerk(index: number, value: string) {
 			<input
 				:value="item"
 				type="text"
-				placeholder="Describe the perk"
-				aria-label="Perk"
+				:placeholder="placeholder"
+				:aria-label="itemName"
 				:disabled="disabled"
 				class="min-w-0 flex-1 border-0 bg-transparent px-1 py-1.5 text-base text-ink-gray-8 placeholder:text-ink-gray-4 focus:outline-none focus:ring-0"
 				@input="updatePerk(index, ($event.target as HTMLInputElement).value)"

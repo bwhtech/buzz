@@ -13,7 +13,8 @@
   "column_break_lbak",
   "currency",
   "user_selects_option",
-  "options"
+  "options",
+  "ticket_types"
  ],
  "fields": [
   {
@@ -71,12 +72,19 @@
    "fieldname": "enabled",
    "fieldtype": "Check",
    "label": "Enabled?"
+  },
+  {
+   "description": "Leave empty to offer this add-on with every ticket type.",
+   "fieldname": "ticket_types",
+   "fieldtype": "Table MultiSelect",
+   "label": "Ticket Types",
+   "options": "Ticket Add-on Ticket Type"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-08 15:25:00.872093",
+ "modified": "2026-11-13 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Ticketing",
  "name": "Ticket Add-on",

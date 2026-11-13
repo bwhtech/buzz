@@ -175,6 +175,15 @@ class TestInvitationAccept(IntegrationTestCase):
 		self.assertTrue(memberships[0].enabled)
 		self.assertIn("Frontdesk Manager", frappe.get_roles(email))
 
+	def test_accept_creates_a_new_user_while_onboarding_is_on(self):
+		self.enterContext(self.change_settings("Buzz Settings", enable_onboarding=1))
+		email = "invitee-onboarding@example.com"
+		invitation = self.invite(email)
+
+		invitation.accept(ignore_permissions=True)
+
+		self.assertEqual(len(self.memberships_of(email)), 1)
+
 	def test_accept_works_for_a_logged_out_invitee(self):
 		# The accept endpoint is allow_guest: a brand-new invitee is Guest while the hook runs.
 		email = "invitee-guest@example.com"

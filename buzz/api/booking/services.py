@@ -14,6 +14,7 @@ from frappe.utils.password import get_encryption_key
 
 from buzz.api.booking.exceptions import (
 	AddOnNotForEvent,
+	AddOnNotForTicketType,
 	InvalidAddOnValue,
 	InvalidCoupon,
 	InvoiceDetailsMissing,
@@ -53,6 +54,16 @@ if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
 
 OFFLINE_PAYMENT_METHOD = "Offline"
+
+
+def validate_add_on(catalog, value: str | None, ticket_type: str) -> None:
+	if not catalog:
+		AddOnNotForEvent.throw()
+	scope = [str(row.ticket_type) for row in catalog.ticket_types]
+	if scope and ticket_type not in scope:
+		AddOnNotForTicketType.throw()
+	if catalog.user_selects_option and value not in add_on_options(catalog.options):
+		InvalidAddOnValue.throw(value=value)
 
 
 class BookingService:
@@ -123,24 +134,20 @@ class BookingService:
 		]
 
 	def validate_add_ons(self) -> None:
-		"""Every add-on named in the request must be an enabled add-on of this event, and
-		its value one of the add-on's options. Runs before build_booking so a bad selection
-		is rejected before any document is written."""
+		"""Every add-on named in the request must be an enabled add-on of this event, in scope
+		for the attendee's ticket type, and its value one of the add-on's options. Runs before
+		build_booking so a bad selection is rejected before any document is written."""
 		allowed = self.allowed_add_ons()
 		for attendee in self.request.attendees:
+			ticket_type = cstr(attendee.get("ticket_type"))
 			for add_on in attendee.get("add_ons") or []:
-				catalog = allowed.get(add_on["add_on"])
-				if not catalog:
-					AddOnNotForEvent.throw()
-				if catalog.user_selects_option:
-					if add_on.get("value") not in add_on_options(catalog.options):
-						InvalidAddOnValue.throw(value=add_on.get("value"))
+				validate_add_on(allowed.get(add_on["add_on"]), add_on.get("value"), ticket_type)
 
 	def allowed_add_ons(self) -> dict:
 		rows = frappe.db.get_all(
 			"Ticket Add-on",
 			filters={"event": self.request.event, "enabled": 1},
-			fields=["name", "options", "user_selects_option"],
+			fields=["name", "options", "user_selects_option", {"ticket_types": ["ticket_type"]}],
 		)
 		return {row.name: row for row in rows}
 
