@@ -120,16 +120,16 @@ class TestMovePaymentsToBwhPayments(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value("Event Booking", self.booking.name, "docstatus"), 1)
 
 	def test_a_payment_for_a_deleted_booking_is_skipped_and_logged_without_stopping_the_rest(self):
-		orphan_booking = EventBookingFactory.create()
 		orphan = EventPaymentFactory.create(
 			"received",
 			reference_doctype="Event Booking",
-			reference_docname=orphan_booking.name,
+			reference_docname=EventBookingFactory.create().name,
 			payment_gateway=self.gateway,
 			currency="INR",
 			amount=10,
 		)
-		frappe.db.delete("Event Booking", orphan_booking.name)
+		# Set past the Link check: deleting the booking would leave it in frappe.db.value_cache.
+		frappe.db.set_value("Event Payment", orphan.name, "reference_docname", "Deleted Booking")
 
 		with patch("buzz.patches.move_payments_to_bwh_payments.frappe.log_error") as log_error:
 			PaymentHistoryMigration().run()
