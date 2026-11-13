@@ -98,6 +98,7 @@ import type {
 	BookingTicketCategory,
 } from "@/types"
 
+import { addOnsForAttendee } from "./addOnScope"
 import AttendeeCard from "./AttendeeCard.vue"
 import type { AttendeeErrors, AttendeeIdentity } from "./attendeeValidation"
 import Collapse from "./Collapse.vue"
@@ -130,7 +131,11 @@ const allForMe = computed(() => props.attendees.every((attendee) => attendee.is_
 const myName = computed(() => `${props.me.first_name} ${props.me.last_name}`.trim() || __("you"))
 
 // With every ticket issued to the registrant, cards remain only to ask for add-ons and fields.
-const hasExtras = computed(() => props.addOns.length > 0 || props.customFields.length > 0)
+const hasExtras = computed(
+	() =>
+		props.customFields.length > 0 ||
+		props.attendees.some((attendee) => addOnsForAttendee(props.addOns, attendee).length > 0),
+)
 const shownCards = computed(() => (allForMe.value && !hasExtras.value ? [] : props.attendees))
 
 const ticketTypesByName = computed(() =>

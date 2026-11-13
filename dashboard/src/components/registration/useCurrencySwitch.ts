@@ -2,6 +2,8 @@ import { computed, ref, type Ref } from "vue"
 
 import type { AvailableAddOn, AvailableTicketType, BookingAttendee } from "@/types"
 
+import { appliesToTicketType } from "./addOnScope"
+
 type Priced = { price?: number; currency?: string; prices?: { currency: string; price: number }[] }
 
 // A free item sells in every currency; a priced one only where it has a price row.
@@ -54,7 +56,7 @@ export function useCurrencySwitch(
 			if (priceIn(addOn, next) !== undefined) continue
 			for (const attendee of attendees.value) {
 				const selection = attendee.add_ons?.[addOn.name]
-				if (selection?.selected) {
+				if (selection?.selected && appliesToTicketType(addOn, attendee.ticket_type)) {
 					selection.selected = false
 					dropped.add(__(addOn.title ?? ""))
 				}

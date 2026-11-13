@@ -3,6 +3,8 @@ import { ErrorMessage, Skeleton } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
+import AddOnDrawer from "@/components/dashboard/add-ons/AddOnDrawer.vue"
+import AddOnsSection from "@/components/dashboard/add-ons/AddOnsSection.vue"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import RegistrationActions from "@/components/dashboard/events/RegistrationActions.vue"
@@ -64,6 +66,18 @@ const drawerOpen = computed<boolean>({
 	set: (open) => !open && (selectedName.value = null),
 })
 
+const addOnDrawerOpen = ref(false)
+// Empty while adding a new add-on.
+const addOnName = ref("")
+const selectedAddOn = computed(
+	() => page.data?.add_ons.find((addOn) => addOn.name === addOnName.value) ?? null,
+)
+
+function openAddOnDrawer(name: string) {
+	addOnName.value = name
+	addOnDrawerOpen.value = true
+}
+
 const message = (error: unknown) => (error as FrappeError | null)?.message
 </script>
 
@@ -91,6 +105,8 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				@add-category="openCategoryDialog(null)"
 				@edit-category="openCategoryDialog"
 			/>
+
+			<AddOnsSection :page="page.data" @open="openAddOnDrawer" @add="openAddOnDrawer('')" />
 
 			<ApprovalModeCards
 				:mode="rules.mode.value"
@@ -130,6 +146,15 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		:can-write="!!page.data?.can_write"
 		:paid-events-enabled="!!page.data?.paid_events_enabled"
 		:access="access"
+		@changed="page.reload()"
+	/>
+
+	<AddOnDrawer
+		v-model:open="addOnDrawerOpen"
+		:event="eventId"
+		:add-on="selectedAddOn"
+		:ticket-types="page.data?.ticket_types ?? []"
+		:paid-events-enabled="!!page.data?.paid_events_enabled"
 		@changed="page.reload()"
 	/>
 
