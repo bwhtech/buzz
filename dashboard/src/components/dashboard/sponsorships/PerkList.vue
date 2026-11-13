@@ -32,7 +32,7 @@ function updatePerk(index: number, value: string) {
 				:value="item"
 				type="text"
 				:placeholder="placeholder"
-				:aria-label="label"
+				:aria-label="itemName"
 				:disabled="disabled"
 				class="min-w-0 flex-1 border-0 bg-transparent px-1 py-1.5 text-base text-ink-gray-8 placeholder:text-ink-gray-4 focus:outline-none focus:ring-0"
 				@input="updatePerk(index, ($event.target as HTMLInputElement).value)"
