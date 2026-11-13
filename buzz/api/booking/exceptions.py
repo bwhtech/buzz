@@ -31,6 +31,11 @@ class AddOnNotForEvent(BuzzAPIError):
 	message = _lt("This add-on is not available for this event.")
 
 
+class AddOnNotForTicketType(BuzzAPIError):
+	title = _lt("Add-on Unavailable")
+	message = _lt("This add-on is not available for the selected ticket type.")
+
+
 class InvalidAddOnValue(BuzzAPIError):
 	title = _lt("Invalid Option")
 	message = _lt("{value} is not a valid option for this add-on.")

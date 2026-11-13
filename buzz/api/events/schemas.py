@@ -268,6 +268,18 @@ class CurrencyRevenue(APIResponse):
 	tickets: int
 
 
+class AddOnItem(APIResponse):
+	name: str
+	title: str
+	description: str | None
+	price: float
+	currency: str | None
+	enabled: bool
+	user_selects_option: bool
+	options: list[str]
+	ticket_types: list[str]
+
+
 class EventTicketTypes(APIResponse):
 	title: str
 	can_write: bool
@@ -290,6 +302,7 @@ class EventTicketTypes(APIResponse):
 	paid_events_enabled: bool
 	categories: list[TicketCategoryItem]
 	ticket_types: list[TicketTypeItem]
+	add_ons: list[AddOnItem]
 	payment_providers: list[PaymentProviderItem]
 	revenue: list[CurrencyRevenue]
 

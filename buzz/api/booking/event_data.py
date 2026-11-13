@@ -148,9 +148,13 @@ def categories_in_use(categories: list[dict], ticket_types: list) -> list[dict]:
 
 def get_available_add_ons(event_id: str) -> list:
 	add_ons = frappe.db.get_all(
-		"Ticket Add-on", filters={"event": event_id, "enabled": 1}, fields=["*"], order_by="title"
+		"Ticket Add-on",
+		filters={"event": event_id, "enabled": 1},
+		fields=["*", {"ticket_types": ["ticket_type"]}],
+		order_by="title",
 	)
 	for add_on in add_ons:
+		add_on.ticket_types = [str(row.ticket_type) for row in add_on.ticket_types]
 		if add_on.user_selects_option:
 			add_on.options = add_on_options(add_on.options)
 	return add_ons
