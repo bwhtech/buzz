@@ -5,9 +5,12 @@ import { computed } from "vue"
 import DetailRow from "@/components/common/DetailRow.vue"
 import CopyableDetailRow from "@/components/dashboard/transactions/CopyableDetailRow.vue"
 import TransactionSection from "@/components/dashboard/transactions/TransactionSection.vue"
+import { useMoney } from "@/composables/useMoney"
 import type { TransactionDetail } from "@/types"
 
 const props = defineProps<{ transaction: TransactionDetail }>()
+
+const money = useMoney()
 
 const formatDate = (date: string) => dayjsLocal(date).format("D MMM YYYY, h:mm A")
 
@@ -28,6 +31,11 @@ const pending = computed(() => props.transaction.payment_status === "Verificatio
 			</p>
 			<dl class="space-y-3 text-base">
 				<DetailRow label="Method" :value="payment.payment_gateway" />
+				<DetailRow
+					v-if="multiplePayments"
+					label="Amount"
+					:value="money(payment.amount, payment.currency)"
+				/>
 				<CopyableDetailRow label="Payment ID" :value="payment.payment_id" />
 				<CopyableDetailRow label="Order ID" :value="payment.order_id" />
 				<DetailRow label="Status">

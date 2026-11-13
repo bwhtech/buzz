@@ -69,11 +69,12 @@ export function periodStats(
 	const length = PERIOD_DAYS[period]
 	const first = length ? shiftDay(today, 1 - length) : ([...byDay.keys()][0] ?? today)
 	const days = daysBetween(first, today)
+	const valueOn = (day: string, pick: (row: DailyRevenue) => number) => {
+		const row = byDay.get(day)
+		return row ? pick(row) : 0
+	}
 	const sum = (range: string[], pick: (row: DailyRevenue) => number) =>
-		range.reduce(
-			(total, day) => total + (byDay.has(day) ? pick(byDay.get(day) as DailyRevenue) : 0),
-			0,
-		)
+		range.reduce((total, day) => total + valueOn(day, pick), 0)
 	const previous = length ? daysBetween(shiftDay(first, -length), shiftDay(first, -1)) : null
 	const bookings = sum(days, (row) => row.bookings)
 	return {
@@ -83,16 +84,14 @@ export function periodStats(
 		averageOrder: bookings ? sum(days, (row) => row.collected) / bookings : 0,
 		previousNet: previous && sum(previous, netOf),
 		previousBookings: previous && sum(previous, (row) => row.bookings),
-		netRunning: runningTotal(
-			days.map((day) => (byDay.has(day) ? netOf(byDay.get(day) as DailyRevenue) : 0)),
-		),
-		bookingBars: groupIntoBars(days.map((day) => byDay.get(day)?.bookings ?? 0)),
+		netRunning: runningTotal(days.map((day) => valueOn(day, netOf))),
+		bookingBars: groupIntoBars(days.map((day) => valueOn(day, (row) => row.bookings))),
 	}
 }
 
 /** Percent change, or null when there is nothing to compare against. */
 export const percentChange = (current: number, previous: number | null) =>
-	previous ? Math.round(((current - previous) / previous) * 1000) / 10 : null
+	previous ? Math.round(((current - previous) / Math.abs(previous)) * 1000) / 10 : null
 
 export function pendingFor(summary: TransactionSummary, currency: string) {
 	return (

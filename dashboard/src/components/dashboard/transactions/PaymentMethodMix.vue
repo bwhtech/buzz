@@ -15,7 +15,7 @@ const SHADES = ["bg-surface-gray-9", "bg-surface-gray-6", "bg-surface-gray-4", "
 const shade = (index: number) => SHADES[Math.min(index, SHADES.length - 1)]
 
 const total = computed(() => props.methods.reduce((sum, method) => sum + method.amount, 0))
-const amount = (value: number) => (props.currency ? money(value, props.currency) : "0")
+const amount = (value: number) => money(value, props.currency)
 </script>
 
 <template>
@@ -23,7 +23,7 @@ const amount = (value: number) => (props.currency ? money(value, props.currency)
 		<div class="flex flex-col gap-1.5">
 			<div class="flex items-center justify-between gap-3 text-sm text-ink-gray-5">
 				<span>Payment methods</span>
-				<span>All time</span>
+				<span>Collected, all time</span>
 			</div>
 
 			<Skeleton v-if="loading" class="my-1 h-7 w-28 rounded-4" />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button, ErrorMessage, TabButtons, dayjsLocal, useCall } from "frappe-ui"
+import { Button, ErrorMessage, TabButtons, dayjs, useCall } from "frappe-ui"
 import { NumberCard } from "frappe-ui/charts"
 import { computed, ref } from "vue"
 
@@ -56,11 +56,11 @@ const currencyOptions = computed(() =>
 const period = ref<Period>("all")
 
 const stats = computed(() =>
-	summary.data
-		? periodStats(summary.data, currency.value, period.value, dayjsLocal().format("YYYY-MM-DD"))
-		: null,
+	summary.data ? periodStats(summary.data, currency.value, period.value, systemToday()) : null,
 )
-const amount = (value: number) => (currency.value ? money(value, currency.value) : "0")
+// Days are grouped in the system timezone, so "today" must be too.
+const systemToday = () => dayjs().tz(window.timezone?.system).format("YYYY-MM-DD")
+const amount = (value: number) => money(value, currency.value)
 const tickets = computed(
 	() => summary.data?.currencies.find((row) => row.currency === currency.value)?.tickets ?? 0,
 )

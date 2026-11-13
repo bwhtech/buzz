@@ -5,7 +5,7 @@ import { computed, ref } from "vue"
 import type { TransactionRow, TransactionsPage } from "@/types"
 import { downloadCsv } from "@/utils/csv"
 
-type ExportQuery = { search: string; filters: string; order: string; status: string }
+type ExportQuery = { search: string; filters: string; order: string; status?: string }
 
 const props = defineProps<{
 	event: string
@@ -15,7 +15,7 @@ const props = defineProps<{
 	isFiltered: boolean
 }>()
 
-const ALL_TRANSACTIONS: ExportQuery = { search: "", filters: "[]", order: "desc", status: "" }
+const ALL_TRANSACTIONS: ExportQuery = { search: "", filters: "[]", order: "desc" }
 
 const exporting = ref<"shown" | "all" | null>(null)
 

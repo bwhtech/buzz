@@ -37,7 +37,7 @@ const status = computed<string>({
 })
 const isFiltered = computed(() => isNarrowed.value || Boolean(statusParam.value))
 
-const { list, page, transactions, fetchOne } = useEventTransactions(
+const { list, query, page, transactions, fetchOne } = useEventTransactions(
 	eventId,
 	search,
 	order,
@@ -45,17 +45,8 @@ const { list, page, transactions, fetchOne } = useEventTransactions(
 	statusParam,
 )
 
-const exportQuery = computed(() => ({
-	search: search.value.trim(),
-	filters: JSON.stringify(conditions.value),
-	order: order.value,
-	status: statusParam.value ?? "",
-}))
-
 const access = useEventAccess(() => eventId)
 access.fetch()
-
-const message = serverErrorMessage
 
 const { selectedId, selected } = useDeepLinkedRecord({
 	param: "booking",
@@ -85,7 +76,7 @@ const step = (by: number) => {
 	<PageWithSidebar>
 		<EventArchivedAlert :event="eventId" />
 
-		<ErrorMessage v-if="list.error && !list.data" :message="message(list.error)" />
+		<ErrorMessage v-if="list.error && !list.data" :message="serverErrorMessage(list.error)" />
 
 		<template v-else>
 			<TransactionSummaryCards :event="eventId" @review-pending="status = 'pending'" />
@@ -97,7 +88,7 @@ const step = (by: number) => {
 						v-if="list.data?.total"
 						:event="eventId"
 						:title="list.data.title"
-						:query="exportQuery"
+						:query="query"
 						:is-filtered="isFiltered"
 					/>
 				</div>
@@ -119,7 +110,7 @@ const step = (by: number) => {
 					:loading-rows="6"
 				/>
 
-				<ErrorMessage v-else-if="list.error" :message="message(list.error)" />
+				<ErrorMessage v-else-if="list.error" :message="serverErrorMessage(list.error)" />
 
 				<template v-else-if="transactions.length">
 					<TransactionTable

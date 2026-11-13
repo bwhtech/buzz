@@ -26,14 +26,19 @@ export function useEventTransactions(
 	})
 	watch([debouncedSearch, order, conditions, status], () => (page.value = 1))
 
+	// The list's search, filters, order and status, shared with the export.
+	const query = computed(() => ({
+		search: debouncedSearch.value.trim(),
+		filters: JSON.stringify(conditions.value),
+		order: order.value,
+		...(status.value && { status: status.value }),
+	}))
+
 	const list = useCall<TransactionsPage, Record<string, string | number>>({
 		url: URL,
 		params: () => ({
 			event,
-			search: debouncedSearch.value.trim(),
-			filters: JSON.stringify(conditions.value),
-			order: order.value,
-			...(status.value && { status: status.value }),
+			...query.value,
 			start: (page.value - 1) * TRANSACTIONS_PAGE_SIZE,
 			limit: TRANSACTIONS_PAGE_SIZE,
 		}),
@@ -51,6 +56,7 @@ export function useEventTransactions(
 
 	return {
 		list,
+		query,
 		page,
 		transactions: computed(() => list.data?.transactions ?? []),
 		fetchOne,

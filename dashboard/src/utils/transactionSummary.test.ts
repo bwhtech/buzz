@@ -80,6 +80,7 @@ test("a long range groups its days into at most thirty bars", () => {
 test("percent change rounds to one decimal", () => {
 	assert.equal(percentChange(150, 120), 25)
 	assert.equal(percentChange(100, 300), -66.7)
+	assert.equal(percentChange(50, -100), 150)
 })
 
 test("the busiest currency comes first", () => {
