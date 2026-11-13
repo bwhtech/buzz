@@ -144,7 +144,6 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		:ticket-type="selectedTicketType"
 		:categories="page.data?.categories ?? []"
 		:can-write="!!page.data?.can_write"
-		:paid-events-enabled="!!page.data?.paid_events_enabled"
 		:access="access"
 		@changed="page.reload()"
 	/>
@@ -154,7 +153,6 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		:event="eventId"
 		:add-on="selectedAddOn"
 		:ticket-types="page.data?.ticket_types ?? []"
-		:paid-events-enabled="!!page.data?.paid_events_enabled"
 		@changed="page.reload()"
 	/>
 
@@ -170,7 +168,6 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		:event="eventId"
 		:category="addToCategory"
 		:categories="page.data?.categories ?? []"
-		:paid-events-enabled="!!page.data?.paid_events_enabled"
 		:access="access"
 		@created="page.reload()"
 	/>

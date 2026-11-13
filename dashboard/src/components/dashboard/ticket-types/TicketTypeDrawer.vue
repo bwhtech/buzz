@@ -25,7 +25,6 @@ const props = defineProps<{
 	ticketType: TicketTypeItem | null
 	categories: TicketCategoryItem[]
 	canWrite: boolean
-	paidEventsEnabled: boolean
 	access: TicketTypeAccess
 }>()
 const open = defineModel<boolean>("open", { required: true })
@@ -129,7 +128,6 @@ async function save(values: TicketTypeValues) {
 		<TicketTypeFields
 			v-model="draft"
 			:categories="categories"
-			:paid-events-enabled="paidEventsEnabled"
 			:access="access"
 			:hideable="!!shownTicketType.is_published"
 			:locked-currencies="soldCurrencies"

@@ -1,7 +1,6 @@
 import frappe
 
 from buzz.events.doctype.buzz_team.buzz_team import create_default_team_for
-from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
 from buzz.utils import delete_custom_fields, get_custom_fields_creator
 from buzz.www.site_header import BUZZ_FOOTER, BUZZ_NAVBAR
 
@@ -148,9 +147,7 @@ def setup_test_records():
 
 	# Administrator's only membership: doctypes that fill `team` from a sole membership
 	# (Event Template, Talk Proposal submissions) resolve to it in tests.
-	admin_team = create_default_team_for("Administrator").name
-	frappe.db.set_value("Buzz Team Settings", admin_team, PAID_EVENTS_FLAG, 1)
-	frappe.clear_document_cache("Buzz Team Settings", admin_team)
+	create_default_team_for("Administrator")
 
 
 def after_install():

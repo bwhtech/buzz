@@ -12,7 +12,6 @@ import type { AddOnValues } from "./addOnForm"
 const values = defineModel<AddOnValues>({ required: true })
 defineProps<{
 	ticketTypes: TicketTypeItem[]
-	paidEventsEnabled: boolean
 	// The enabled switch shows only on a saved add-on.
 	showEnabled?: boolean
 }>()
@@ -68,7 +67,7 @@ function toggleTicketType(name: string, picked: boolean) {
 			description="Shown below the name on the booking page."
 			:rows="2"
 		/>
-		<div v-if="paidEventsEnabled" class="space-y-1.5">
+		<div class="space-y-1.5">
 			<span class="block text-xs text-ink-gray-5">Price</span>
 			<div class="grid grid-cols-[2fr_1fr] gap-2">
 				<PriceInput

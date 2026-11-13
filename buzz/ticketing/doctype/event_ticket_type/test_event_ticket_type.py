@@ -10,7 +10,6 @@ from buzz.tests.factories import (
 	EventBookingFactory,
 	EventTicketTypeFactory,
 )
-from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
 
 
 class TestEventTicketTypePrices(IntegrationTestCase):
@@ -66,45 +65,6 @@ class TestEventTicketTypePrices(IntegrationTestCase):
 
 		with self.assertRaises(frappe.LinkExistsError):
 			frappe.delete_doc("Event Ticket Type", self.ticket_type.name)
-
-
-class TestPaidEventsFlag(IntegrationTestCase):
-	@classmethod
-	def setUpClass(cls):
-		super().setUpClass()
-		cls.event = BuzzEventFactory.create()
-
-	def setUp(self):
-		self.set_paid_events(1)
-
-	def set_paid_events(self, value: int):
-		BuzzTeamFactory.set_settings(self.event.team, {PAID_EVENTS_FLAG: value})
-
-	def test_free_ticket_type_saves_without_the_flag(self):
-		self.set_paid_events(0)
-		EventTicketTypeFactory.create(event=self.event.name)
-
-	def test_paid_ticket_type_needs_the_flag(self):
-		self.set_paid_events(0)
-		with self.assertRaises(frappe.ValidationError):
-			EventTicketTypeFactory.create("paid", event=self.event.name)
-
-	def test_free_ticket_type_cannot_turn_paid_without_the_flag(self):
-		self.set_paid_events(0)
-		ticket_type = EventTicketTypeFactory.create(event=self.event.name)
-		ticket_type.set("prices", [{"currency": "INR", "price": 500}])
-		with self.assertRaises(frappe.ValidationError):
-			ticket_type.save()
-
-	def test_existing_paid_ticket_type_stays_editable_after_the_flag_is_off(self):
-		ticket_type = EventTicketTypeFactory.create("paid", event=self.event.name)
-		self.set_paid_events(0)
-
-		ticket_type.title = "Renamed"
-		ticket_type.is_published = 0
-		ticket_type.save()
-
-		self.assertEqual(frappe.db.get_value("Event Ticket Type", ticket_type.name, "title"), "Renamed")
 
 
 class TestHiddenTicketTypes(IntegrationTestCase):

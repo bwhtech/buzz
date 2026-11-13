@@ -14,14 +14,10 @@ from buzz.api.events.schemas import (
 )
 from buzz.api.events.services import ensure_event_team_access, registration_link
 from buzz.api.events.taxes import team_tax_details
-from buzz.events.doctype.buzz_team_settings.buzz_team_settings import is_feature_enabled
 from buzz.payments import get_payment_gateways_for_event
 from buzz.permissions import can_manage_members, has_section_permission, has_team_access
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
-from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
-	PAID_EVENTS_FLAG,
-	tickets_sold_by_currency,
-)
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import tickets_sold_by_currency
 from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import add_on_options
 
 TICKET_TYPE_FIELDS = [
@@ -82,7 +78,6 @@ def event_ticket_types(event: str) -> EventTicketTypes:
 		tax_percentage=flt(doc.tax_percentage) or 18,
 		**visible_tax_details(doc.team),
 		can_edit_team=can_manage_members(doc.team),
-		paid_events_enabled=is_feature_enabled(doc.team, PAID_EVENTS_FLAG),
 		categories=ticket_categories(event),
 		ticket_types=[ticket_type_item(row, sold, sold_by_currency) for row in rows],
 		add_ons=add_on_items(event),
