@@ -7,7 +7,6 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import set_request
 from frappe.website.serve import get_response, get_response_content
 
-from buzz.events.doctype.event_venue.event_venue import MULTIPLE_LOCATIONS_FLAG
 from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzScheduleFactory,
@@ -164,8 +163,6 @@ class TestEventPageRender(IntegrationTestCase):
 		self.assertEqual(countdown["ends_at"], "2099-01-06T23:59:59+00:00")
 
 	def test_grouped_venue_shows_first_location_and_count_of_the_rest_in_the_meta(self):
-		BuzzTeamFactory.set_settings(self.team, {MULTIPLE_LOCATIONS_FLAG: 1})
-		self.addCleanup(BuzzTeamFactory.set_settings, self.team, {MULTIPLE_LOCATIONS_FLAG: 0})
 		museum = EventVenueFactory.create(team=self.team, venue_name="National Museum").name
 		hotel = EventVenueFactory.create(team=self.team, venue_name="Millennium Hotel").name
 		group = EventVenueFactory.create(
