@@ -33,10 +33,12 @@ test.describe("Event transactions", () => {
 		const event = await testEventName(page)
 		await page.goto(`/b/manage/events/${event}/transactions`)
 
-		await expect(page.getByRole("table").or(page.getByText("No transactions yet"))).toBeVisible({
+		// The loading skeleton is a table too; pagination only shows once rows have loaded.
+		const pagination = page.getByRole("navigation", { name: "Pagination" })
+		await expect(pagination.or(page.getByText("No transactions yet"))).toBeVisible({
 			timeout: 15000,
 		})
-		test.skip(!(await page.getByRole("table").isVisible()), "The seeded event has no transactions")
+		test.skip(!(await pagination.isVisible()), "The seeded event has no transactions")
 
 		await page.getByRole("button", { name: "Export" }).click()
 		await expect(page.getByRole("menuitem", { name: "Download CSV" })).toBeVisible()
@@ -51,7 +53,6 @@ test.describe("Event transactions", () => {
 			"Payment ID",
 			"Date",
 		])
-		const pagination = page.getByRole("navigation", { name: "Pagination" })
 		// One page reads "7 transactions"; more read "1–25 of 1,284" with arrows.
 		await expect(pagination).toContainText(/^(1–25 of [\d,]+|[\d,]+ transactions?)/)
 	})
