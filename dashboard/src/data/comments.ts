@@ -21,6 +21,21 @@ export function useMentionMembers(reference: () => Reference) {
 
 export type EmailCopies = { cc: string[]; bcc: string[] }
 
+// What an emailed note can carry: a PDF the booking renders, or a file the sender uploaded.
+export type EmailAttachmentSource =
+	| { kind: "invoice" }
+	| { kind: "tickets" }
+	| { kind: "ticket"; ticket: string }
+	| { kind: "file"; file: string }
+
+export type EmailAttachmentChoice = {
+	key: string
+	label: string
+	fileName: string
+	icon: string
+	source: EmailAttachmentSource
+}
+
 export function useEmailSender(reference: () => Reference) {
 	return useCall<string | null, Reference>({
 		url: "/api/v2/method/buzz.api.comments.get_email_sender",
@@ -46,7 +61,11 @@ export function useSetSubscription() {
 export function useAddComment() {
 	return useCall<
 		string,
-		Reference & { content: string; email_recipients: boolean } & Partial<EmailCopies>
+		Reference & {
+			content: string
+			email_recipients: boolean
+			attachments?: EmailAttachmentSource[]
+		} & Partial<EmailCopies>
 	>({
 		url: "/api/v2/method/buzz.api.comments.add_comment",
 		method: "POST",

@@ -11,23 +11,30 @@ from buzz.permissions import (
 	WRITE_PTYPES,
 	as_sql,
 	events_with_section_access,
+	events_with_transactions_access,
 	has_section_permission,
 	is_unrestricted,
+	transactions_allows,
 )
 
+# Money records follow the transactions rule; the rest of a booking follows the guests section.
+TRANSACTION_DOCTYPES = frozenset({"Event Payment", "Event Booking Refund"})
 
-def guest_bookings(user: str) -> QueryBuilder:
+
+def bookings_of_events(events: QueryBuilder) -> QueryBuilder:
 	booking = frappe.qb.DocType("Event Booking")
-	return (
-		frappe.qb.from_(booking)
-		.select(booking.name)
-		.where(booking.event.isin(events_with_section_access(user, "guests")))
-	)
+	return frappe.qb.from_(booking).select(booking.name).where(booking.event.isin(events))
+
+
+def readable_bookings(user: str, doctype: str) -> QueryBuilder:
+	if doctype in TRANSACTION_DOCTYPES:
+		return bookings_of_events(events_with_transactions_access(user))
+	return bookings_of_events(events_with_section_access(user, "guests"))
 
 
 def booking_criterion(user: str, doctype: str) -> Criterion:
 	table = frappe.qb.DocType(doctype)
-	bookings = guest_bookings(user)
+	bookings = readable_bookings(user, doctype)
 	if doctype == "Event Payment":
 		return (table.reference_doctype == "Event Booking") & table.reference_docname.isin(bookings)
 	if doctype == "Attendee Ticket Add-on":
@@ -54,14 +61,18 @@ def booking_of(doc) -> str | None:
 
 
 def booking_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:
-	"""Guest-section access on the booking's event. Booking flows insert these past permissions."""
+	"""Access on the booking's event. Booking flows insert these past permissions."""
 	user = user or frappe.session.user
 	if is_unrestricted(user):
 		return True
 
 	booking = booking_of(doc)
 	event = frappe.db.get_value("Event Booking", booking, "event") if booking else None
-	return bool(event) and has_section_permission(event, "guests", ptype, user)
+	if not event:
+		return False
+	if doc.doctype in TRANSACTION_DOCTYPES:
+		return transactions_allows(event, ptype, user)
+	return has_section_permission(event, "guests", ptype, user)
 
 
 def speaker_profile_has_permission(doc, ptype: str = "read", user: str | None = None, **kwargs) -> bool:

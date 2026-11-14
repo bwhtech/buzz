@@ -74,15 +74,16 @@ def as_sql(criterion: Criterion | None) -> str | None:
 	return criterion.get_sql(with_namespace=True, quote_char=quote_char)
 
 
-def my_teams(user: str) -> QueryBuilder:
+def my_teams(user: str, team_roles: frozenset[str] | None = None) -> QueryBuilder:
 	membership = frappe.qb.DocType("Buzz Team Membership")
-	return (
+	query = (
 		frappe.qb.from_(membership)
 		.select(membership.team)
 		.where(
 			(membership.user == user) & (membership.enabled == 1) & (membership.team_role != INTEGRATION_ROLE)
 		)
 	)
+	return query.where(membership.team_role.isin(list(team_roles))) if team_roles else query
 
 
 def my_team_names(user: str) -> list[str]:
@@ -139,6 +140,22 @@ def events_with_section_access(user: str, section: str) -> QueryBuilder:
 		frappe.qb.from_(event)
 		.select(event.name)
 		.where(event.team.isin(my_teams(user)) | event.name.isin(collaborator_events(user, section)))
+	)
+
+
+def events_with_transactions_access(user: str) -> QueryBuilder:
+	"""Events whose money the user may see: their teams' as a write role, or ticketing collaborations."""
+	event = frappe.qb.DocType("Buzz Event")
+	return (
+		frappe.qb.from_(event)
+		.select(event.name)
+		.where(
+			event.team.isnotnull()
+			& (
+				event.team.isin(my_teams(user, WRITE_ROLES))
+				| event.name.isin(collaborator_events(user, "ticketing"))
+			)
+		)
 	)
 
 
@@ -246,6 +263,24 @@ def can_check_in(event: str, user: str) -> bool:
 	if team_role := team_role_of(user, frappe.db.get_value("Buzz Event", event, "team")):
 		return team_role in CHECKIN_ROLES
 	return collaborator_allows(user, event, "guests", "write")
+
+
+def transactions_allows(event: str | None, ptype: str, user: str | None = None) -> bool:
+	"""Payments and refunds: team write roles, or a ticketing collaborator. Unlike
+	has_section_permission, an unstamped event fails closed."""
+	user = user or frappe.session.user
+	if is_unrestricted(user):
+		return True
+	team = frappe.db.get_value("Buzz Event", event, "team") if event else None
+	if not team:
+		return False
+	if team_role := team_role_of(user, team):
+		return team_role in WRITE_ROLES and role_allows(team_role, ptype)
+	return collaborator_allows(user, event, "ticketing", ptype)
+
+
+def can_view_transactions(event: str | None, user: str | None = None) -> bool:
+	return transactions_allows(event, "read", user)
 
 
 def team_query_conditions(user: str | None = None, doctype: str | None = None, **kwargs) -> str | None:

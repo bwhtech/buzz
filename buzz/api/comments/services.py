@@ -6,6 +6,7 @@ from frappe.utils.response import send_private_file
 from werkzeug.wrappers import Response
 
 from buzz.api.comments.activity import ActivityFeed
+from buzz.api.comments.attachments import EmailAttachments
 from buzz.api.comments.exceptions import (
 	AttachmentNotFound,
 	CannotDeleteComment,
@@ -21,6 +22,11 @@ from buzz.permissions import ADMIN_ROLES, is_unrestricted, team_role_of
 from buzz.subscriptions import Subscriptions
 
 
+def booking_buyer_emails(booking: str) -> list[str]:
+	buyer_email, user = frappe.db.get_value("Event Booking", booking, ["buyer_email", "user"])
+	return [buyer_email or user]
+
+
 def proposal_speaker_emails(proposal: str) -> list[str]:
 	return frappe.get_all(
 		"Proposal Speaker",
@@ -31,7 +37,7 @@ def proposal_speaker_emails(proposal: str) -> list[str]:
 
 
 # Who a note can be emailed to, for records that have someone outside the team.
-EMAIL_RECIPIENTS = {"Talk Proposal": proposal_speaker_emails}
+EMAIL_RECIPIENTS = {"Talk Proposal": proposal_speaker_emails, "Event Booking": booking_buyer_emails}
 
 
 def email_attachment(file: str) -> Response:
@@ -102,10 +108,11 @@ class DocumentComments:
 		email_recipients: bool = False,
 		cc: list[str] | None = None,
 		bcc: list[str] | None = None,
+		attachments: list[dict] | None = None,
 	) -> str:
 		"""A team note is a Comment; one emailed to the record's outside party is a Communication."""
 		if email_recipients:
-			return self.email(content, cc or [], bcc or [])
+			return self.email(content, cc or [], bcc or [], attachments)
 		user = frappe.session.user
 		return add_comment(
 			self.reference_doctype, self.reference_name, content, user, get_fullname(user)
@@ -132,7 +139,9 @@ class DocumentComments:
 	def email_sender(self) -> str | None:
 		return frappe.db.get_value("Email Account", {"default_outgoing": 1, "enable_outgoing": 1}, "email_id")
 
-	def email(self, content: str, cc: list[str], bcc: list[str]) -> str:
+	def email(
+		self, content: str, cc: list[str], bcc: list[str], attachments: list[dict] | None = None
+	) -> str:
 		recipient_source = EMAIL_RECIPIENTS.get(self.reference_doctype)
 		recipients = recipient_source(self.reference_name) if recipient_source else []
 		if not recipients:
@@ -141,6 +150,7 @@ class DocumentComments:
 			validate_email_address(address, throw=True)
 		# Comment.validate cleans a note; Communication stores what it is given.
 		note = sanitize_html(content, always_sanitize=True)
+		files = EmailAttachments(self.reference_doctype, self.reference_name).resolve(attachments)
 		args = note_email_args(self.reference_doctype, self.reference_name, frappe.session.user, note)
 		# Stored as the plain note for the activity feed; sent in the Buzz email layout.
 		communication = make_communication(
@@ -151,8 +161,9 @@ class DocumentComments:
 			recipients=recipients,
 			cc=cc,
 			bcc=bcc,
+			attachments=files,
 			send_email=False,
 		)["name"]
-		send_in_layout(communication, render_email("proposal_note", args))
+		send_in_layout(communication, render_email("record_note", args))
 		self.set_subscribed(True)
 		return communication
