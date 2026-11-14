@@ -26,3 +26,8 @@ class AttachmentNotFound(ResourceNotFound):
 class NoRecipients(BuzzAPIError):
 	title = _lt("No Recipients")
 	message = _lt("There is no one to email on this record.")
+
+
+class InvalidAttachment(BuzzAPIError):
+	title = _lt("Invalid Attachment")
+	message = _lt("This attachment cannot be sent.")

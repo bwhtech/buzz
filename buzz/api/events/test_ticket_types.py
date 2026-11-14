@@ -166,11 +166,27 @@ class TestRegistrationRevenue(TicketTypesTestCase):
 
 		self.assertEqual(
 			revenue["INR"],
-			{"currency": "INR", "collected": 2000, "refunded": 0, "bookings": 1, "tickets": 2},
+			{
+				"currency": "INR",
+				"collected": 2000,
+				"refunded": 0,
+				"tax": 0,
+				"discounts": 0,
+				"bookings": 1,
+				"tickets": 2,
+			},
 		)
 		self.assertEqual(
 			revenue["USD"],
-			{"currency": "USD", "collected": 15, "refunded": 0, "bookings": 1, "tickets": 1},
+			{
+				"currency": "USD",
+				"collected": 15,
+				"refunded": 0,
+				"tax": 0,
+				"discounts": 0,
+				"bookings": 1,
+				"tickets": 1,
+			},
 		)
 
 	def test_leaves_out_unpaid_and_free_bookings(self):

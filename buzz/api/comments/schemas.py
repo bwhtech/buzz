@@ -3,7 +3,13 @@ from typing import Literal
 
 from pydantic import Field
 
-from buzz.api.schemas import APIResponse
+from buzz.api.schemas import APIRequest, APIResponse
+
+
+class AttachmentRequest(APIRequest):
+	kind: Literal["invoice", "tickets", "ticket", "file"]
+	ticket: str | None = None
+	file: str | None = None
 
 
 class EmailAttachment(APIResponse):

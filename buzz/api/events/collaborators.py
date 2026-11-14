@@ -19,6 +19,7 @@ from buzz.permissions import (
 	SECTIONS,
 	VIEW,
 	can_manage_members,
+	can_view_transactions,
 	get_section_access,
 	team_role_of,
 )
@@ -32,8 +33,9 @@ class AcceptedInvitation(APIResponse):
 
 @frappe.whitelist()
 def get_event_access(event: str) -> dict[str, str | None]:
-	"""Section -> View | Edit | None for the session user."""
-	return get_section_access(frappe.session.user, event)
+	"""Section -> View | Edit | None for the session user, plus the read-only transactions page."""
+	access = get_section_access(frappe.session.user, event)
+	return access | {"transactions": VIEW if can_view_transactions(event) else None}
 
 
 @frappe.whitelist(methods=["POST"])
