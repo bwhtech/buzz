@@ -7,7 +7,6 @@ import { useRoute } from "vue-router"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import PaymentProviders from "@/components/dashboard/ticket-types/PaymentProviders.vue"
-import RevenueCards from "@/components/dashboard/ticket-types/RevenueCards.vue"
 import TaxSettings from "@/components/dashboard/ticket-types/TaxSettings.vue"
 import { useTaxSettingsForm } from "@/composables/useTaxSettingsForm"
 import { useEventTicketTypes } from "@/data/ticketTypes"
@@ -74,8 +73,6 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		/>
 
 		<div v-else-if="page.data" class="space-y-8">
-			<RevenueCards v-if="page.data.revenue.length" :revenue="page.data.revenue" />
-
 			<PaymentProviders :providers="page.data.payment_providers" />
 
 			<TaxSettings
