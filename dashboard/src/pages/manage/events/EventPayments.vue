@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useEventListener } from "@vueuse/core"
-import { Alert, Button, ErrorMessage, Skeleton } from "frappe-ui"
+import { Button, ErrorMessage, Skeleton } from "frappe-ui"
 import { computed } from "vue"
 import { useRoute } from "vue-router"
 
@@ -64,13 +64,6 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		</div>
 
 		<ErrorMessage v-else-if="page.error" :message="message(page.error)" />
-
-		<Alert
-			v-else-if="page.data && !page.data.paid_events_enabled"
-			theme="amber"
-			title="Paid tickets are not available"
-			description="Ticket types for this event can only be free. Contact your administrator to enable paid tickets."
-		/>
 
 		<div v-else-if="page.data" class="space-y-8">
 			<PaymentProviders :providers="page.data.payment_providers" />

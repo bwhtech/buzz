@@ -25,7 +25,6 @@ const props = defineProps<{
 	// null opens the drawer on a new add-on.
 	addOn: AddOnItem | null
 	ticketTypes: TicketTypeItem[]
-	paidEventsEnabled: boolean
 }>()
 const open = defineModel<boolean>("open", { required: true })
 const emit = defineEmits<{ changed: [] }>()
@@ -79,7 +78,7 @@ async function save() {
 	showValidationError.value = true
 	serverError.value = ""
 	if (validationError.value || saving.value) return
-	const error = await submitValues(addOnDocValues(draft.value, props.paidEventsEnabled))
+	const error = await submitValues(addOnDocValues(draft.value))
 	if (error) {
 		serverError.value = serverErrorMessage(error) || "Could not save the add-on. Try again."
 		return
@@ -96,12 +95,7 @@ async function save() {
 		:title="addOn?.title ?? 'New add-on'"
 		:description="addOn ? formatWholePriceOrFree(addOn.price, addOn.currency) : ''"
 	>
-		<AddOnFields
-			v-model="draft"
-			:ticket-types="ticketTypes"
-			:paid-events-enabled="paidEventsEnabled"
-			:show-enabled="!isNew"
-		/>
+		<AddOnFields v-model="draft" :ticket-types="ticketTypes" :show-enabled="!isNew" />
 
 		<template v-if="hasChanges" #footer>
 			<div class="flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2">

@@ -21,7 +21,6 @@
   "column_break_tax",
   "billing_address",
   "flags_tab",
-  "feature_paid_events",
   "feature_multiple_locations",
   "feature_data_import",
   "communications_tab",
@@ -129,14 +128,6 @@
   },
   {
    "default": "0",
-   "description": "Allow ticket types with a price above zero, along with payment providers and tax settings.",
-   "fieldname": "feature_paid_events",
-   "fieldtype": "Check",
-   "label": "Paid Events",
-   "permlevel": 1
-  },
-  {
-   "default": "0",
    "description": "Allow venues with multiple locations, like a festival spread over several places.",
    "fieldname": "feature_multiple_locations",
    "fieldtype": "Check",
@@ -229,7 +220,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-20 12:00:00.000000",
+ "modified": "2026-11-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Team Settings",

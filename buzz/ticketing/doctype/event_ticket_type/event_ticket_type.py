@@ -8,10 +8,7 @@ from frappe.query_builder.functions import Count
 from frappe.utils import cstr
 
 from buzz.events.doctype.buzz_price.buzz_price import validate_unique_currencies
-from buzz.events.doctype.buzz_team_settings.buzz_team_settings import is_feature_enabled
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import held_quantities
-
-PAID_EVENTS_FLAG = "feature_paid_events"
 
 
 def tickets_sold_by_currency(ticket_types: list) -> dict[tuple[str, str], int]:
@@ -26,12 +23,6 @@ def tickets_sold_by_currency(ticket_types: list) -> dict[tuple[str, str], int]:
 		.groupby(attendee.ticket_type, attendee.currency)
 	).run()
 	return {(str(ticket_type), currency): count for ticket_type, currency, count in rows}
-
-
-def validate_paid_events_enabled(event: str) -> None:
-	team = frappe.get_cached_value("Buzz Event", event, "team")
-	if not is_feature_enabled(team, PAID_EVENTS_FLAG):
-		frappe.throw(_("Paid events are not enabled for this team. Contact your administrator."))
 
 
 def default_currency(event: str) -> str:
@@ -75,7 +66,6 @@ class EventTicketType(Document):
 		validate_unique_currencies(self.prices)
 		self.validate_free_or_paid_everywhere()
 		self.validate_locked_prices()
-		self.validate_paid_events_enabled()
 		self.validate_category_event()
 		self.validate_public_ticket_type_remains()
 
@@ -154,14 +144,6 @@ class EventTicketType(Document):
 						row.currency, self.title
 					)
 				)
-
-	# Only a ticket turning paid is checked, so a team without the flag can still edit or
-	# disable the paid ticket types it already has.
-	def validate_paid_events_enabled(self):
-		before = self.get_doc_before_save()
-		if self.is_free or (before and not before.is_free):
-			return
-		validate_paid_events_enabled(self.event)
 
 	def price_in(self, currency: str) -> float:
 		if self.is_free:

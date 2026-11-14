@@ -10,7 +10,6 @@ import type { TicketTypeValues } from "@/utils/ticketTypeForm"
 const values = defineModel<TicketTypeValues>({ required: true })
 const props = defineProps<{
 	categories: TicketCategoryItem[]
-	paidEventsEnabled: boolean
 	// Only a published ticket type can be hidden behind an access code.
 	hideable: boolean
 	lockedCurrencies?: string[]
@@ -83,7 +82,6 @@ const categoryOptions = computed(() => [
 			:disabled="disabled"
 		/>
 		<PriceList
-			v-if="paidEventsEnabled"
 			v-model="values.prices"
 			:locked-currencies="lockedCurrencies"
 			locked-message="Tickets have sold at this price, so it can't be changed. To charge a different price, disable this ticket type and add a new one."

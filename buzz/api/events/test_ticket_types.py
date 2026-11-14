@@ -16,7 +16,6 @@ from buzz.tests.factories import (
 	TicketAddOnFactory,
 	UserFactory,
 )
-from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import PAID_EVENTS_FLAG
 
 
 class TicketTypesTestCase(IntegrationTestCase):
@@ -123,14 +122,6 @@ class TestGetEventTicketTypes(TicketTypesTestCase):
 			(shirt["price"], shirt["options"], shirt["ticket_types"]), (299, ["S", "M"], [self.ticket_type])
 		)
 		self.assertEqual((parking["enabled"], parking["ticket_types"]), (False, []))
-
-	def test_reports_whether_the_team_can_sell_paid_tickets(self):
-		self.assertTrue(self.payload_as(self.owner)["paid_events_enabled"])
-
-		# The team is shared by the class, and rollback is per class.
-		self.addCleanup(BuzzTeamFactory.set_settings, self.team, {PAID_EVENTS_FLAG: 1})
-		BuzzTeamFactory.set_settings(self.team, {PAID_EVENTS_FLAG: 0})
-		self.assertFalse(self.payload_as(self.owner)["paid_events_enabled"])
 
 	def test_viewer_reads_without_write_access(self):
 		self.assertFalse(self.payload_as(self.viewer)["can_write"])
