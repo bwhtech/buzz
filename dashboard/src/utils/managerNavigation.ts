@@ -1,4 +1,4 @@
-import type { EventAccess, EventSection } from "@/types"
+import type { AccessSection, EventAccess } from "@/types"
 
 export type ManagerNavItem = {
 	label: string
@@ -9,7 +9,7 @@ export type ManagerNavItem = {
 	// The sidebar section heading this item sits under.
 	group?: string
 	// The event section that gates this item, and the level it needs.
-	section?: EventSection
+	section?: AccessSection
 	needs?: "Edit"
 	// A count beside the label, and a dot when it needs attention.
 	count?: number
@@ -88,6 +88,13 @@ function eventItems(
 			icon: "lucide-credit-card",
 			to: `${event}/payments`,
 			section: "ticketing",
+			group: "Ticketing",
+		},
+		{
+			label: "Transactions",
+			icon: "lucide-arrow-left-right",
+			to: `${event}/transactions`,
+			section: "transactions",
 			group: "Ticketing",
 		},
 		{

@@ -29,12 +29,9 @@ PUBLIC_DOCTYPES = frozenset(
 	{"Buzz Theme", "Event Category", "Event Topic", "Talk Proposal Status", "Speaker Profile"}
 )
 
-BOOKING_LINKED_DOCTYPES = (
-	"Event Payment",
-	"Ticket Cancellation Request",
-	"Event Booking Refund",
-	"Attendee Ticket Add-on",
-)
+GUEST_LINKED_DOCTYPES = ("Ticket Cancellation Request", "Attendee Ticket Add-on")
+TRANSACTION_DOCTYPES = ("Event Payment", "Event Booking Refund")
+BOOKING_LINKED_DOCTYPES = GUEST_LINKED_DOCTYPES + TRANSACTION_DOCTYPES
 
 REPORTS = {
 	"Event Overview": event_overview.execute,
@@ -98,18 +95,29 @@ class TestRoleReachableDoctypes(LeakTestCase):
 
 class TestBookingLinkedDoctypes(LeakTestCase):
 	def test_guests_editor_lists_only_their_events_rows(self):
-		for doctype in BOOKING_LINKED_DOCTYPES:
+		self.assert_lists_only_event_a(self.guests_editor, GUEST_LINKED_DOCTYPES)
+
+	def test_ticketing_editor_lists_only_their_events_money_rows(self):
+		self.assert_lists_only_event_a(self.ticketing_editor, TRANSACTION_DOCTYPES)
+
+	def assert_lists_only_event_a(self, user: str, doctypes: tuple[str, ...]):
+		for doctype in doctypes:
 			with self.subTest(doctype=doctype):
-				listed = set(self.list_as(self.guests_editor, doctype))
+				listed = set(self.list_as(user, doctype))
 
 				self.assertIn(self.names(self.event_a, doctype), listed)
 				self.assertNotIn(self.names(self.event_a2, doctype), listed)
 				self.assertNotIn(self.names(self.event_b, doctype), listed)
 
 	def test_collaborator_without_guests_lists_none(self):
-		for doctype in BOOKING_LINKED_DOCTYPES:
+		for doctype in GUEST_LINKED_DOCTYPES:
 			with self.subTest(doctype=doctype):
 				self.assertEqual(self.list_as(self.ticketing_editor, doctype), [])
+
+	def test_guests_editor_lists_no_money_rows(self):
+		for doctype in TRANSACTION_DOCTYPES:
+			with self.subTest(doctype=doctype):
+				self.assertEqual(self.list_as(self.guests_editor, doctype), [])
 
 	def test_another_teams_manager_lists_none(self):
 		for doctype in BOOKING_LINKED_DOCTYPES:
@@ -120,16 +128,23 @@ class TestBookingLinkedDoctypes(LeakTestCase):
 				self.assertIn(self.names(self.event_b, doctype), listed)
 
 	def test_document_reads_follow_the_guests_section(self):
-		for doctype in BOOKING_LINKED_DOCTYPES:
+		self.assert_document_reads(self.guests_editor, (self.ticketing_editor,), GUEST_LINKED_DOCTYPES)
+
+	def test_document_reads_follow_the_transactions_rule(self):
+		self.assert_document_reads(self.ticketing_editor, (self.guests_editor,), TRANSACTION_DOCTYPES)
+
+	def assert_document_reads(self, reader: str, refused: tuple[str, ...], doctypes: tuple[str, ...]):
+		for doctype in doctypes:
 			with self.subTest(doctype=doctype):
 				own, sibling = self.names(self.event_a, doctype), self.names(self.event_a2, doctype)
 
-				self.assertTrue(self.has_permission_as(self.guests_editor, "read", doctype, own))
-				self.assertFalse(self.has_permission_as(self.guests_editor, "read", doctype, sibling))
+				self.assertTrue(self.has_permission_as(reader, "read", doctype, own))
+				self.assertFalse(self.has_permission_as(reader, "read", doctype, sibling))
 				# Like a team Viewer, a View collaborator holds no role that reads these at all.
 				self.assertFalse(self.has_permission_as(self.guests_viewer, "read", doctype, own))
-				self.assertFalse(self.has_permission_as(self.ticketing_editor, "read", doctype, own))
 				self.assertFalse(self.has_permission_as(self.outsider, "read", doctype, own))
+				for user in refused:
+					self.assertFalse(self.has_permission_as(user, "read", doctype, own))
 
 	def test_guests_view_cannot_write(self):
 		payment = self.names(self.event_a, "Event Payment")

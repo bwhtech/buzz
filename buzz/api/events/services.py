@@ -599,7 +599,7 @@ def titles_of(doctype: str, names: set[str | None]) -> dict[str, str]:
 	return {str(name): title for name, title in rows}
 
 
-def add_ons_by_ticket(tickets: list[str]) -> dict[str, list[GuestAddOn]]:
+def add_ons_by_ticket(tickets: list[str], parenttype: str = "Event Ticket") -> dict[str, list[GuestAddOn]]:
 	"""Add-ons for every ticket at once, rather than a query per row."""
 	if not tickets:
 		return {}
@@ -610,7 +610,7 @@ def add_ons_by_ticket(tickets: list[str]) -> dict[str, list[GuestAddOn]]:
 	rows = (
 		frappe.qb.from_(value)
 		.select(value.parent, value.add_on, value.value)
-		.where((value.parenttype == "Event Ticket") & value.parent.isin(tickets))
+		.where((value.parenttype == parenttype) & value.parent.isin(tickets))
 	).run(as_dict=True)
 	titles = titles_of("Ticket Add-on", {row.add_on for row in rows})
 

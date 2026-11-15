@@ -1,0 +1,11 @@
+{% extends "buzz/templates/emails/base.html" %}
+
+{% block preheader %}{{ author }} wrote to you about {{ record_title }}.{% endblock %}
+{% block title %}{% if reference_doctype == "Event Booking" %}A note on your booking{% else %}A note on your proposal{% endif %}{% endblock %}
+
+{% block content %}
+<p style="margin:0 0 16px;color:#7c7c7c">{{ author }} · <strong style="color:#171717">{{ record_title }}</strong></p>
+{{ note }}
+{% endblock %}
+
+{% block reason %}{% if reference_doctype == "Event Booking" %}You received this email because you booked tickets to {{ event_doc.title }} on Buzz.{% else %}You received this email because you submitted a talk to {{ event_doc.title }} on Buzz.{% endif %} Reply to this email to answer the organisers.{% endblock %}

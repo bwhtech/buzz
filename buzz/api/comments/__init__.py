@@ -46,10 +46,16 @@ def add_comment(
 	email_recipients: bool = False,
 	cc: list[str] | None = None,
 	bcc: list[str] | None = None,
+	attachments: list[dict] | None = None,
 ) -> str:
-	"""With `email_recipients`, the note is emailed to the record's outside party, such as its speakers,
-	copying `cc` and `bcc`, instead of being kept as a team note."""
-	return DocumentComments(reference_doctype, reference_name).add(content, email_recipients, cc, bcc)
+	"""With `email_recipients`, the note is emailed to the record's outside party, such as its speakers
+	or a booking's buyer, copying `cc` and `bcc`, instead of being kept as a team note.
+
+	`attachments`, used only when emailing, are `{"kind": "invoice" | "tickets"}`,
+	`{"kind": "ticket", "ticket": <name>}` or `{"kind": "file", "file": <name>}`."""
+	return DocumentComments(reference_doctype, reference_name).add(
+		content, email_recipients, cc, bcc, attachments
+	)
 
 
 @frappe.whitelist(methods=["POST"])

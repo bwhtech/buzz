@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref } from "vue"
 import {
 	useActivity,
 	useAddComment,
+	type EmailAttachmentSource,
 	type EmailCopies,
 	useDeleteComment,
 	useEmailSender,
@@ -64,9 +65,20 @@ export function useDocumentActivity(doctype: string, name: () => string) {
 
 	const reload = () => activity.reload()
 
-	const add = (content: string, emailRecipients: boolean, copies?: EmailCopies) =>
+	const add = (
+		content: string,
+		emailRecipients: boolean,
+		copies?: EmailCopies,
+		attachments?: EmailAttachmentSource[],
+	) =>
 		adding
-			.submit({ ...reference(), content, email_recipients: emailRecipients, ...copies })
+			.submit({
+				...reference(),
+				content,
+				email_recipients: emailRecipients,
+				...copies,
+				...(attachments?.length && { attachments }),
+			})
 			.then(() => {
 				// What was just posted must be in view, whatever the filter hid.
 				filter.value = "all"

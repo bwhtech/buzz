@@ -22,6 +22,7 @@ test("an event offers its own sections, scoped to its id", () => {
 		"Details",
 		"Registration",
 		"Payments",
+		"Transactions",
 		"Coupons",
 		"Guests",
 		"Approvals",
@@ -123,4 +124,34 @@ test("an event opens on the first section the user has", () => {
 		firstEventPath("EV-1", { ...guestsOnly, details: null as never }),
 		"/manage/events/EV-1/guests",
 	)
+})
+
+test("transactions stay hidden from a guests-only collaborator", () => {
+	const items = managerNavigation({
+		eventId: "EV-1",
+		creatingEvent: false,
+		hasSponsorships: false,
+		access: { ...guestsOnly, guests: "Edit", ticketing: "View", transactions: null },
+	})
+	assert.ok(!labels(items).includes("Transactions"))
+})
+
+test("transactions sit after payments once the user may view them", () => {
+	const items = managerNavigation({
+		eventId: "EV-1",
+		creatingEvent: false,
+		hasSponsorships: false,
+		access: { ...guestsOnly, ticketing: "View", transactions: "View" },
+	})
+	assert.deepEqual(labels(items), [
+		"Details",
+		"Registration",
+		"Payments",
+		"Transactions",
+		"Coupons",
+		"Guests",
+	])
+	const transactions = items.find((item) => item.label === "Transactions")
+	assert.equal(transactions?.to, "/manage/events/EV-1/transactions")
+	assert.equal(transactions?.group, "Ticketing")
 })

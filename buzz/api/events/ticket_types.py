@@ -157,6 +157,8 @@ def revenue_by_currency(event: str) -> list[CurrencyRevenue]:
 			booking.currency,
 			Sum(booking.total_amount).as_("collected"),
 			Sum(booking.refunded_amount).as_("refunded"),
+			Sum(booking.tax_amount).as_("tax"),
+			Sum(booking.discount_amount).as_("discounts"),
 			Count(booking.name).as_("bookings"),
 		)
 		.groupby(booking.currency)

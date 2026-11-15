@@ -264,6 +264,8 @@ class CurrencyRevenue(APIResponse):
 	currency: str
 	collected: float
 	refunded: float
+	tax: float = 0
+	discounts: float = 0
 	bookings: int
 	tickets: int
 

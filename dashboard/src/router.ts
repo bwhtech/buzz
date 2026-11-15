@@ -91,6 +91,12 @@ const routes: RouteRecordRaw[] = [
 				component: () => import("@/pages/manage/events/EventPayments.vue"),
 			},
 			{
+				path: "events/:eventId/transactions",
+				name: "event-transactions",
+				meta: { title: "Transactions" },
+				component: () => import("@/pages/manage/events/EventTransactions.vue"),
+			},
+			{
 				path: "events/:eventId/coupons",
 				name: "event-coupons",
 				meta: { title: "Coupons" },

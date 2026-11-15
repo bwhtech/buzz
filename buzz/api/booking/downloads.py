@@ -26,20 +26,36 @@ def calendar_invite(booking_id: str, token: str | None) -> None:
 
 def tickets_pdf(booking_id: str, token: str | None) -> None:
 	ensure_confirmation_access(booking_id, token)
-	event = frappe.db.get_value("Event Booking", booking_id, "event")
-	print_format = frappe.db.get_value("Buzz Event", event, "ticket_print_format") or "Standard Ticket"
-	tickets = frappe.db.get_all("Event Ticket", {"booking": booking_id, "docstatus": 1}, pluck="name")
-	send_file(f"Tickets-{booking_id}.pdf", render_tickets(tickets, print_format))
+	send_file(f"Tickets-{booking_id}.pdf", booking_tickets_pdf(booking_id))
 
 
 def invoice_pdf(booking_id: str, token: str | None) -> None:
 	ensure_confirmation_access(booking_id, token)
+	send_file(f"Invoice-{booking_id}.pdf", booking_invoice_pdf(booking_id))
+
+
+def ticket_print_format(event: str) -> str:
+	return frappe.db.get_value("Buzz Event", event, "ticket_print_format") or "Standard Ticket"
+
+
+def booking_tickets_pdf(booking_id: str) -> bytes:
+	"""Every submitted ticket of the booking in one PDF."""
+	event = frappe.db.get_value("Event Booking", booking_id, "event")
+	tickets = frappe.db.get_all("Event Ticket", {"booking": booking_id, "docstatus": 1}, pluck="name")
+	return render_tickets(tickets, ticket_print_format(event))
+
+
+def ticket_pdf(ticket_id: str) -> bytes:
+	event = frappe.db.get_value("Event Ticket", ticket_id, "event")
+	return render_tickets([ticket_id], ticket_print_format(event))
+
+
+def booking_invoice_pdf(booking_id: str) -> bytes:
 	booking = frappe.get_doc("Event Booking", booking_id)
 	if not booking.has_invoice():
 		InvoiceUnavailable.throw()
 	with print_permissions_ignored():
-		pdf = frappe.get_print("Event Booking", booking_id, "Booking Invoice", doc=booking, as_pdf=True)
-	send_file(f"Invoice-{booking_id}.pdf", pdf)
+		return frappe.get_print("Event Booking", booking_id, "Booking Invoice", doc=booking, as_pdf=True)
 
 
 @contextmanager

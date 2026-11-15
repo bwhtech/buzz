@@ -12,7 +12,7 @@ export function pluralize(count: number, singular: string, plural?: string | nul
 	// Return singular for count of 1, plural for everything else (including 0)
 	const word = count === 1 ? singular : pluralForm
 
-	return `${count} ${word}`
+	return `${count.toLocaleString()} ${word}`
 }
 
 /**

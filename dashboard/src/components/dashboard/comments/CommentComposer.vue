@@ -3,10 +3,12 @@ import { Button, TabButtons } from "frappe-ui"
 import { CommentKit, Editor, EditorContent } from "frappe-ui/editor"
 import { computed, ref, watch } from "vue"
 
-import type { EmailCopies } from "@/data/comments"
+import type { EmailAttachmentChoice, EmailAttachmentSource, EmailCopies } from "@/data/comments"
 import type { TeamMember } from "@/types"
 import { trimTrailingEmptyParagraphs } from "@/utils/communicationText"
 
+import AttachmentList from "./AttachmentList.vue"
+import AttachmentMenu from "./AttachmentMenu.vue"
 import { mentionSuggestion } from "./mentionSuggestion"
 import RecipientRow from "./RecipientRow.vue"
 
@@ -18,12 +20,19 @@ const props = defineProps<{
 	recipients?: Recipient[]
 	// The address emails are sent from.
 	sender?: string | null
+	// Files the record can attach to an email, such as a booking's invoice; set to allow attaching.
+	attachmentChoices?: EmailAttachmentChoice[]
 	loading?: boolean
 	editing?: boolean
 }>()
 
 const emit = defineEmits<{
-	submit: [content: string, toRecipients: boolean, copies: EmailCopies]
+	submit: [
+		content: string,
+		toRecipients: boolean,
+		copies: EmailCopies,
+		attachments: EmailAttachmentSource[],
+	]
 	cancel: []
 }>()
 
@@ -33,6 +42,7 @@ const cc = ref<string[]>([])
 const bcc = ref<string[]>([])
 const showCc = ref(false)
 const showBcc = ref(false)
+const attached = ref<EmailAttachmentChoice[]>([])
 
 const canEmail = computed(() => Boolean(props.recipients?.length) && !props.editing)
 const emailing = computed(() => canEmail.value && mode.value === "email")
@@ -43,7 +53,7 @@ const hint = computed(() =>
 	emailing.value
 		? props.sender
 			? `Sends from ${props.sender}`
-			: "Emails the speakers"
+			: `Emails ${firstNames.value}`
 		: "Visible to organizers only",
 )
 
@@ -67,16 +77,23 @@ watch(draft, (value) => {
 	mode.value = "note"
 	cc.value = []
 	bcc.value = []
+	attached.value = []
 	showCc.value = showBcc.value = false
 })
 
 function submit(isEmpty: boolean) {
 	if (isEmpty || props.loading) return
 	sent.value = true
-	emit("submit", trimTrailingEmptyParagraphs(draft.value), emailing.value, {
-		cc: cc.value,
-		bcc: bcc.value,
-	})
+	emit(
+		"submit",
+		trimTrailingEmptyParagraphs(draft.value),
+		emailing.value,
+		{
+			cc: cc.value,
+			bcc: bcc.value,
+		},
+		emailing.value ? attached.value.map((choice) => choice.source) : [],
+	)
 }
 </script>
 
@@ -115,7 +132,14 @@ function submit(isEmpty: boolean) {
 					class="max-h-48 min-h-[4.5rem] overflow-y-auto px-3.5 pt-3 pb-1 text-base leading-[1.55] text-ink-gray-8"
 				/>
 
+				<AttachmentList v-if="emailing && attachmentChoices" v-model="attached" />
+
 				<div class="flex items-center gap-1 px-3 pt-2 pb-3">
+					<AttachmentMenu
+						v-if="emailing && attachmentChoices"
+						v-model="attached"
+						:choices="attachmentChoices"
+					/>
 					<Button
 						v-if="!editing"
 						variant="ghost"
