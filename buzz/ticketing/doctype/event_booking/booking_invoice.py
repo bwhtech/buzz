@@ -2,14 +2,22 @@ from typing import TYPE_CHECKING
 
 import frappe
 from frappe import _
-from frappe.utils import flt, fmt_money, format_date, format_datetime
+from frappe.utils import flt, fmt_money, format_date, format_datetime, get_url, getdate
 
+from buzz.emails import WORDMARK
 from buzz.events.doctype.buzz_team_settings.buzz_team_settings import get_team_settings
 
 if TYPE_CHECKING:
 	from buzz.ticketing.doctype.event_booking.event_booking import EventBooking
 
 MINUS_SIGN = "\N{MINUS SIGN}"
+DATE_FORMAT = "d MMM yyyy"
+# wkhtmltopdf ignores most CSS page-break rules, so the template breaks pages itself.
+# Budgets are in table rows; a line whose description wraps costs two.
+FIRST_PAGE_ROWS = 24
+PAGE_ROWS = 36
+TOTALS_ROWS = 15
+WRAPPING_DESCRIPTION_LENGTH = 80
 
 
 class BookingInvoice:
@@ -22,21 +30,30 @@ class BookingInvoice:
 		self.settings = get_team_settings(self.event.team)
 
 	def context(self) -> dict:
+		lines = self.lines()
 		return {
 			"title": self.title(),
 			"number": self.booking.name,
-			"date": format_date(self.booking.creation),
+			"date": format_date(self.booking.creation, DATE_FORMAT),
 			"payment_status": self.booking.payment_status,
 			"payment": self.payment(),
 			"seller": self.seller(),
 			"buyer": self.buyer(),
 			"event": self.event_details(),
-			"lines": self.lines(),
+			"lines": lines,
+			"pages": self.paginate(lines),
 			"totals": self.totals(),
 			"total": self.total(),
 			"tax_note": self.tax_note(),
 			"support_email": self.settings.support_email,
+			"brand": self.brand(),
+			"booking_url": get_url(f"/b/account/bookings/{self.booking.name}"),
 		}
+
+	def brand(self) -> dict:
+		website = frappe.get_cached_doc("Website Settings")
+		logo = frappe.db.get_single_value("Buzz Settings", "app_logo") or website.app_logo
+		return {"logo": logo or website.banner_image or WORDMARK, "name": website.app_name or "Buzz"}
 
 	def title(self) -> str:
 		is_tax_invoice = self.settings.tax_id and self.booking.tax_amount
@@ -73,11 +90,17 @@ class BookingInvoice:
 		return "GSTIN" if self.is_gst() else _("{0} number").format(_(self.booking.tax_label or "Tax"))
 
 	def event_details(self) -> dict:
-		start, end = self.event.start_date, self.event.end_date
-		dates = (
-			format_date(start) if not end or end == start else f"{format_date(start)} - {format_date(end)}"
-		)
-		return {"title": self.event.title, "dates": dates, "venue": self.event.get_venue_name()}
+		return {"title": self.event.title, "dates": self.event_dates(), "venue": self.event.get_venue_name()}
+
+	def event_dates(self) -> str:
+		start, end = getdate(self.event.start_date), getdate(self.event.end_date or self.event.start_date)
+		if start == end:
+			return format_date(start, DATE_FORMAT)
+		if start.year != end.year:
+			start_format = DATE_FORMAT
+		else:
+			start_format = "d" if start.month == end.month else "d MMM"
+		return f"{format_date(start, start_format)} \N{EN DASH} {format_date(end, DATE_FORMAT)}"
 
 	def payment(self) -> dict:
 		latest = self.latest_payment()
@@ -92,7 +115,11 @@ class BookingInvoice:
 	def latest_payment(self):
 		rows = frappe.get_all(
 			"Event Payment",
-			filters={"reference_doctype": "Event Booking", "reference_docname": self.booking.name},
+			filters={
+				"reference_doctype": "Event Booking",
+				"reference_docname": self.booking.name,
+				"payment_received": 1,
+			},
 			fields=["payment_gateway", "payment_id", "creation"],
 			order_by="creation desc",
 			limit=1,
@@ -104,6 +131,21 @@ class BookingInvoice:
 
 	def total(self) -> str:
 		return self.money(self.booking.total_amount)
+
+	@staticmethod
+	def paginate(lines: list[dict]) -> list[dict]:
+		"""Line items split into printed pages; totals move to their own page when they don't fit."""
+		pages, rows, budget = [[]], 0, FIRST_PAGE_ROWS
+		for line in lines:
+			cost = 2 if len(line["description"]) > WRAPPING_DESCRIPTION_LENGTH else 1
+			if rows + cost > budget:
+				pages.append([])
+				rows, budget = 0, PAGE_ROWS
+			pages[-1].append(line)
+			rows += cost
+		if rows + TOTALS_ROWS > budget:
+			pages.append([])
+		return [{"lines": lines, "is_first": index == 0} for index, lines in enumerate(pages)]
 
 	def lines(self) -> list[dict]:
 		return [
@@ -117,7 +159,6 @@ class BookingInvoice:
 			"quantity": 0,
 			"unit_price": flt(unit_price),
 			"amount": 0,
-			"holders": [],
 		}
 
 	def ticket_type_lines(self) -> list[dict]:
@@ -128,7 +169,6 @@ class BookingInvoice:
 			line = lines.setdefault(key, self.new_line(titles.get(key, key), attendee.amount))
 			line["quantity"] += 1
 			line["amount"] += flt(attendee.amount)
-			line["holders"].append(self.attendee_name(attendee))
 		return list(lines.values())
 
 	def ticket_type_titles(self) -> dict[str, str]:
@@ -140,28 +180,15 @@ class BookingInvoice:
 
 	def add_on_lines(self) -> list[dict]:
 		lines: dict[tuple, dict] = {}
-		names = self.attendee_names_by_add_on()
 		for row in self.add_on_rows():
 			description = self.add_on_description(row)
 			line = lines.setdefault((description, flt(row.price)), self.new_line(description, row.price))
 			line["quantity"] += 1
 			line["amount"] += flt(row.price)
-			if names.get(row.parent):
-				line["holders"].append(names[row.parent])
 		return list(lines.values())
 
 	def add_on_description(self, row) -> str:
 		return f"{row.title} ({row.value})" if row.user_selects_option and row.value else row.title
-
-	def attendee_names_by_add_on(self) -> dict[str, str]:
-		names = {}
-		for attendee in self.booking.attendees:
-			if attendee.add_ons:
-				names[attendee.add_ons] = self.attendee_name(attendee)
-		return names
-
-	def attendee_name(self, attendee) -> str:
-		return attendee.full_name or attendee.email
 
 	def add_on_rows(self) -> list:
 		parents = [attendee.add_ons for attendee in self.booking.attendees if attendee.add_ons]
@@ -171,7 +198,6 @@ class BookingInvoice:
 			"Ticket Add-on Value",
 			filters={"parent": ("in", parents)},
 			fields=[
-				"parent",
 				"add_on.title as title",
 				"add_on.user_selects_option as user_selects_option",
 				"value",
@@ -223,4 +249,6 @@ class BookingInvoice:
 		return abs(flt(self.booking.total_amount) - expected_total) < 0.01
 
 	def money(self, amount: float) -> str:
-		return fmt_money(amount, currency=self.booking.currency)
+		currency = self.booking.currency
+		number_format = frappe.db.get_value("Currency", currency, "number_format", cache=True)
+		return fmt_money(amount, currency=currency, format=number_format or None)

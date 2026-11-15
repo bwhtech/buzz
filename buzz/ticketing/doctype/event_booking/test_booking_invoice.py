@@ -74,7 +74,6 @@ class TestBookingInvoice(BookingTestCase):
 					"quantity": 2,
 					"unit_price": money(TICKET_PRICE),
 					"amount": money(2 * TICKET_PRICE),
-					"holders": ["Guest0", "Guest1"],
 				}
 			],
 		)
@@ -86,16 +85,6 @@ class TestBookingInvoice(BookingTestCase):
 		self.assertEqual(add_on_line["quantity"], 1)
 		self.assertEqual(add_on_line["amount"], money(ADD_ON_PRICE))
 		self.assertEqual(invoice["totals"][0]["amount"], money(2 * TICKET_PRICE + ADD_ON_PRICE))
-
-	def test_add_on_lines_name_the_attendees_who_bought_them(self):
-		invoice = self.create_invoice_booking(count=2, add_on_option="XL").get_invoice()
-
-		self.assertEqual(invoice["lines"][1]["holders"], ["Guest0"])
-
-	def test_ticket_lines_name_the_attendees_they_cover(self):
-		invoice = self.create_invoice_booking(count=2).get_invoice()
-
-		self.assertEqual(invoice["lines"][0]["holders"], ["Guest0", "Guest1"])
 
 	def test_a_discount_is_one_row_that_names_the_coupon(self):
 		coupon = BuzzCouponCodeFactory.create("flat", event=self.event.name)
