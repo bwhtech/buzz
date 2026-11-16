@@ -223,7 +223,7 @@ export const previewAddress = computed(() => {
 	if (shown === "event") return `${host}/events`
 	if (shown === "attendee") return `${host}/b/manage/events`
 	if (shown === "team") return `${host}/b/manage`
-	return `${host}/u/${profile.username || "…"}`
+	return `${host}/@${profile.username || "…"}`
 })
 
 function prefillDraft() {

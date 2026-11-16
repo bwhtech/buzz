@@ -14,5 +14,5 @@ export function teamUrl(slug: string): string {
 
 /** A personal calendar's public page: its owner's profile. */
 export function profileUrl(username: string): string {
-	return `${window.location.origin}/u/${username}`
+	return `${window.location.origin}/@${username}`
 }

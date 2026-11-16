@@ -24,7 +24,7 @@ def get_profile_user(username: str | None) -> frappe._dict:
 
 
 def get_profile_team(user: frappe._dict):
-	"""The personal team behind /u/<username>, shown as its owner. Public once it has a published event."""
+	"""The personal team behind /@<username>, shown as its owner. Public once it has a published event."""
 	team = personal_team_of(user.name)
 	if not team or not frappe.db.exists("Buzz Event", {"team": team, "is_published": 1}):
 		raise frappe.PageDoesNotExistError
@@ -32,7 +32,7 @@ def get_profile_team(user: frappe._dict):
 	doc = frappe.get_doc("Buzz Team", team)
 	# Page meta reads `about` as HTML, and a bio is plain text.
 	about = escape_html(user.bio) if user.bio else None
-	doc.update({"logo": user.user_image, "about": about, "route": f"u/{user.username}"})
+	doc.update({"logo": user.user_image, "about": about, "route": f"@{user.username}"})
 	return doc
 
 
@@ -42,7 +42,7 @@ def get_user_by_username(username: str) -> frappe._dict | None:
 
 
 class ProfilePage:
-	"""Context for /u/<username>: the owner, their links and the personal team's events."""
+	"""Context for /@<username>: the owner, their links and the personal team's events."""
 
 	def __init__(self, user: frappe._dict, team):
 		self.user = user

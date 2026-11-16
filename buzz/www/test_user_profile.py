@@ -60,10 +60,10 @@ class TestUserProfile(IntegrationTestCase):
 		user = UserFactory.create(username=username)
 		BuzzEventFactory.create(team=BuzzTeamFactory.create_owned_by(user.name).name)
 
-		self.assertEqual(self.visit(f"/u/{username}").status_code, 404)
+		self.assertEqual(self.visit(f"/@{username}").status_code, 404)
 
 	def test_unknown_username_is_not_found(self):
-		self.assertEqual(self.visit("/u/nobody-by-this-name").status_code, 404)
+		self.assertEqual(self.visit("/@nobody-by-this-name").status_code, 404)
 
 	def test_profile_is_hidden_while_personal_teams_are_off(self):
 		with self.change_settings("Buzz Settings", enable_personal_teams=0):
@@ -76,4 +76,4 @@ class TestUserProfile(IntegrationTestCase):
 			return render(url)
 
 	def profile_url(self, user: str | None = None) -> str:
-		return f"/u/{frappe.db.get_value('User', user or self.user.name, 'username')}"
+		return f"/@{frappe.db.get_value('User', user or self.user.name, 'username')}"

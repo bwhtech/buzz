@@ -122,9 +122,7 @@ class TestEventPage(IntegrationTestCase):
 			host = EventPage(event.route).as_context()["hosts"][0]
 
 		username = frappe.db.get_value("User", user, "username")
-		self.assertEqual(
-			(host.label, host.logo, host.url), ("Mira Host", "/files/mira.png", f"/u/{username}")
-		)
+		self.assertEqual((host.label, host.logo, host.url), ("Mira Host", "/files/mira.png", f"/@{username}"))
 
 	def test_personal_host_is_not_linked_while_personal_teams_are_off(self):
 		team = create_personal_team_for(UserFactory.create().name).name

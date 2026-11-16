@@ -91,7 +91,7 @@
   },
   {
    "default": "0",
-   "description": "People can host events in their own name, with a profile at /u/<username>.",
+   "description": "People can host events in their own name, with a profile at /@<username>.",
    "fieldname": "enable_personal_teams",
    "fieldtype": "Check",
    "label": "Enable Personal Teams"

@@ -70,7 +70,7 @@ def host_page_url(team: str | None) -> str | None:
 		return None
 	if row.is_personal:
 		owner = personal_team_owner(team)
-		return f"/u/{owner.username}" if owner and owner.username and personal_teams_enabled() else None
+		return f"/@{owner.username}" if owner and owner.username and personal_teams_enabled() else None
 	return f"/{row.route}" if row.is_published and row.route else None
 
 
