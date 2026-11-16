@@ -1,6 +1,7 @@
 const BOOKING_PATH = "/b/register/"
 
-// Where a new account lands after verifying its email. Booking stays uninterrupted, so
+// Where a new account lands after verifying its email or finishing social login. Existing
+// users pass through onboarding, which sends them straight on. Booking stays uninterrupted, so
 // onboarding waits for the next dashboard visit; everywhere else onboarding comes first
 // and then returns the user to the page they signed up on.
 export function signupRedirect({
