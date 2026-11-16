@@ -256,6 +256,14 @@ def has_section_permission(event: str | None, section: str, ptype: str, user: st
 	return collaborator_allows(user, event, section, ptype)
 
 
+def can_add_guests_directly(event: str, user: str) -> bool:
+	"""Team members who can create, or collaborators with Edit on guests. No System Manager bypass."""
+	team = frappe.db.get_value("Buzz Event", event, "team")
+	if team_role := team_role_of(user, team):
+		return role_allows(team_role, "create")
+	return collaborator_allows(user, event, "guests", "create")
+
+
 def can_check_in(event: str, user: str) -> bool:
 	"""Front-desk work on an event. Unlike has_section_permission, an unstamped event fails closed."""
 	if is_unrestricted(user):

@@ -6,7 +6,7 @@ from frappe.utils import add_to_date, cint, get_url, now_datetime
 
 from buzz.api.booking.exceptions import RequestAlreadyOpen, RequestNotOpen
 from buzz.payments import get_payment_link_for_booking
-from buzz.permissions import has_section_permission
+from buzz.permissions import can_add_guests_directly
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import (
 	PAYMENT_HOLD_MINUTES,
 	live_hold_expiry,
@@ -54,7 +54,7 @@ class RegistrationRequest:
 		hold_token = self.booking.hold_token
 		if any(row.joins_waitlist(quantities[str(row.name)], hold_token) for row in ticket_types):
 			return "Waitlisted"
-		if has_section_permission(self.booking.event, "guests", "create", frappe.session.user):
+		if can_add_guests_directly(self.booking.event, frappe.session.user):
 			return None
 		if any(ticket_type.needs_approval for ticket_type in ticket_types):
 			return "Requested"
