@@ -14,7 +14,7 @@ const props = defineProps<{ team: TeamOption | null }>()
 
 const router = useRouter()
 const username = computed(() => userResource.data?.username)
-const profileUrl = computed(() => `${window.location.host}/u/${username.value}`)
+const profileUrl = computed(() => `${window.location.host}/@${username.value}`)
 const pattern = {
 	backgroundImage: bannerPattern("personal", {
 		line: "var(--outline-gray-1)",
