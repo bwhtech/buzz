@@ -213,7 +213,8 @@ const form = ref({
 
 const login_context_resource = useCall<Record<string, any>, { redirect_to: string }>({
 	url: "/api/v2/method/buzz.api.auth.get_login_context",
-	params: { redirect_to: window.location.href },
+	// Social login can create the account, so it lands where an email signup does.
+	params: { redirect_to: signupRedirect(window.location).redirect_to },
 })
 
 const login_context = computed(() => login_context_resource.data)
