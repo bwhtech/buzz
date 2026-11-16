@@ -241,8 +241,6 @@ export async function ensureTestTeam(request: APIRequestContext): Promise<string
 	const team =
 		existing ??
 		(await createDoc<{ name: string }>(request, "Buzz Team", { team_name: TEST_TEAM_NAME }))
-	// Fixtures sell paid tickets, which the team's flag gates.
-	await updateDoc(request, "Buzz Team Settings", team.name, { feature_paid_events: 1 })
 	return team.name
 }
 

@@ -53,12 +53,13 @@ export function addOnError(values: AddOnValues) {
 	return null
 }
 
-/** The values as the doctype stores them; price is left out when paid events are off. */
-export function addOnDocValues(values: AddOnValues, paidEventsEnabled: boolean) {
+/** The values as the doctype stores them. */
+export function addOnDocValues(values: AddOnValues) {
 	return {
 		title: values.title.trim(),
 		description: values.description.trim(),
-		...(paidEventsEnabled && { price: values.price, currency: values.currency }),
+		price: values.price,
+		currency: values.currency,
 		enabled: (values.enabled ? 1 : 0) as 0 | 1,
 		user_selects_option: (values.user_selects_option ? 1 : 0) as 0 | 1,
 		options: filledOptions(values).join("\n"),
