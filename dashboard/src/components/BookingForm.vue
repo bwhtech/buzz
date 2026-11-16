@@ -819,12 +819,14 @@ watch(
 	{ immediate: true, deep: true },
 )
 
-// A ticket type that stopped selling (or a stale stored one) drops its attendees.
+// A ticket type that stopped selling, isn't sold in the current currency, or a stale stored one
+// drops its attendees.
 watch(
 	ticketTypes,
 	(list) => {
 		if (!list.length) return
-		const available = new Set(list.map((ticketType) => String(ticketType.name)))
+		const sellable = list.filter((ticketType) => !ticketType.price_note)
+		const available = new Set(sellable.map((ticketType) => String(ticketType.name)))
 		const kept = attendees.value.filter((attendee) => available.has(String(attendee.ticket_type)))
 		if (kept.length !== attendees.value.length) attendees.value = kept
 	},
