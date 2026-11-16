@@ -14,7 +14,7 @@ from buzz.events.doctype.buzz_form.form_types import (
 	form_type,
 )
 from buzz.payments import get_payment_gateways_for_event
-from buzz.permissions import has_section_permission
+from buzz.permissions import can_add_guests_directly
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 from buzz.ticketing.doctype.ticket_add_on.ticket_add_on import add_on_options
@@ -40,7 +40,7 @@ def build_event_booking_data(
 	coupon = BuzzCouponCode.find_available_access_code(event_doc.name, access_code)
 	unlocked = coupon.unlocked_ticket_types() if coupon else set()
 	ticket_types = get_available_ticket_types(event_doc.name, categories, hold_token, unlocked)
-	adds_guests_directly = has_section_permission(event_doc.name, "guests", "create", frappe.session.user)
+	adds_guests_directly = can_add_guests_directly(event_doc.name, frappe.session.user)
 
 	return EventBookingDataResponse(
 		registrations_closed=are_registrations_closed(event_doc),

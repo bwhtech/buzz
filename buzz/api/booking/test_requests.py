@@ -21,7 +21,14 @@ from buzz.api.events.exceptions import CannotManageEvent
 from buzz.api.events.services import events_for
 from buzz.api.events.ticket_types import revenue_by_currency
 from buzz.tests.base_test_cases import BookingTestCase, authorize_payment, make_payment_gateway
-from buzz.tests.factories import BuzzEventFactory, EventTicketFactory, EventTicketTypeFactory, UserFactory
+from buzz.tests.factories import (
+	BuzzEventCollaboratorFactory,
+	BuzzEventFactory,
+	BuzzTeamMembershipFactory,
+	EventTicketFactory,
+	EventTicketTypeFactory,
+	UserFactory,
+)
 from buzz.tests.utils import html_part, mute_outgoing_email
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import held_quantities, live_hold_expiry
 
@@ -45,6 +52,12 @@ class RequestTestCase(BookingTestCase):
 			attendees = [{"first_name": "Guest", "email": "guest@example.com", "ticket_type": ticket_type}]
 			request = self.booking_request(attendees=attendees, hold_token=hold_token)
 			return process_booking(request).booking_name
+
+	@property
+	def organizer(self) -> str:
+		return frappe.db.get_value(
+			"Buzz Team Membership", {"team": self.event.team, "team_role": "Owner"}, "user"
+		)
 
 	def another_booker(self, label: str) -> str:
 		return UserFactory.create_once(f"request-{label}@example.com").name
@@ -168,11 +181,14 @@ class TestRegistrationRequests(RequestTestCase):
 
 		self.assertEqual(self.state(self.request_to_join(plain.name)), ("Requested", 0, "Approval"))
 		# The organizer adds a guest directly.
-		booking = process_booking(
-			self.booking_request(
-				attendees=[{"first_name": "VIP", "email": "vip@example.com", "ticket_type": str(plain.name)}]
+		with self.set_user(self.organizer):
+			booking = process_booking(
+				self.booking_request(
+					attendees=[
+						{"first_name": "VIP", "email": "vip@example.com", "ticket_type": str(plain.name)}
+					]
+				)
 			)
-		)
 		self.assertEqual(self.state(booking.booking_name), ("Confirmed", 1, ""))
 
 	def test_form_asks_only_guests_for_a_request(self):
@@ -184,7 +200,8 @@ class TestRegistrationRequests(RequestTestCase):
 
 		with self.set_user(self.booker):
 			self.assertTrue(all(needs_approval()))
-		self.assertFalse(any(needs_approval()))
+		with self.set_user(self.organizer):
+			self.assertFalse(any(needs_approval()))
 
 	def test_approval_goes_through_after_the_ticket_type_sold_out(self):
 		ticket_type = EventTicketTypeFactory.create(
@@ -226,6 +243,72 @@ class TestRegistrationRequests(RequestTestCase):
 			if entry.kind == "change"
 		]
 		self.assertEqual(changes, [("Requested", "Rejected"), ("Rejected", "Requested")])
+
+
+class TestApprovalSkip(RequestTestCase):
+	"""Only the event's own organizers skip approval; elevated roles outside the team do not."""
+
+	def setUp(self):
+		super().setUp()
+		frappe.db.set_value("Buzz Event", self.event.name, "requires_approval", 1)
+		self.ticket_type = EventTicketTypeFactory.create(
+			event=self.event.name, requires_approval=0, max_tickets_available=50
+		)
+		frappe.clear_cache()
+
+	def system_user(self, email: str, role: str) -> str:
+		user = UserFactory.create_once(email)
+		user.user_type = "System User"
+		user.add_roles(role)
+		user.reload()
+		return user.name
+
+	def book_as(self, user: str) -> tuple:
+		return self.state(self.request_to_join(booker=user))
+
+	def needs_approval_for(self, user: str) -> bool:
+		with self.set_user(user):
+			rows = get_event_booking_data(self.event.route).available_ticket_types
+		return all(row.needs_approval for row in rows)
+
+	def test_system_manager_outside_the_team_needs_approval(self):
+		user = self.system_user("approval-system-manager@example.com", "System Manager")
+
+		self.assertEqual(self.book_as(user), ("Requested", 0, "Approval"))
+		self.assertTrue(self.needs_approval_for(user))
+
+	def test_system_user_without_system_manager_needs_approval(self):
+		user = self.system_user("approval-desk@example.com", "Desk User")
+
+		self.assertEqual(self.book_as(user), ("Requested", 0, "Approval"))
+
+	def test_website_user_needs_approval(self):
+		self.assertEqual(self.book_as(self.booker), ("Requested", 0, "Approval"))
+
+	def test_team_manager_skips_approval(self):
+		manager = UserFactory.create_once("approval-manager@example.com").name
+		BuzzTeamMembershipFactory.create(team=self.event.team, user=manager, team_role="Manager")
+
+		self.assertEqual(self.book_as(manager), ("Confirmed", 1, ""))
+		self.assertFalse(self.needs_approval_for(manager))
+
+	def test_collaborator_with_guests_edit_skips_approval(self):
+		collaborator = BuzzEventCollaboratorFactory.create(
+			"accepted", event=self.event.name, guests_access="Edit"
+		).user
+
+		self.assertEqual(self.book_as(collaborator), ("Confirmed", 1, ""))
+
+	def test_collaborator_with_guests_view_needs_approval(self):
+		collaborator = BuzzEventCollaboratorFactory.create("accepted", event=self.event.name).user
+
+		self.assertEqual(self.book_as(collaborator), ("Requested", 0, "Approval"))
+
+	def test_event_without_a_team_skips_approval_for_no_one(self):
+		frappe.db.set_value("Buzz Event", self.event.name, "team", None)
+		frappe.clear_cache()
+
+		self.assertEqual(self.book_as("Administrator"), ("Requested", 0, "Approval"))
 
 
 class TestPaidRegistrationRequests(RequestTestCase):
