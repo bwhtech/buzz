@@ -24,7 +24,7 @@
 		"cobe": "0.6.5",
 		"dompurify": "3.4.12",
 		"feather-icons": "^4.29.2",
-		"frappe-ui": "1.0.2",
+		"frappe-ui": "1.2.0",
 		"maplibre-gl": "5.23.0",
 		"reka-ui": "^2.10.1",
 		"socket.io-client": "^4.7.2",
