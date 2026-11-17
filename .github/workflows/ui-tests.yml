@@ -92,15 +92,14 @@ jobs:
 
       - name: Install Playwright
         run: |
-          # --ignore-scripts skips the postinstall that reinstalls the whole
-          # dashboard tree; the tests only need @playwright/test.
-          yarn install --frozen-lockfile --ignore-scripts
+          # bun reads the root yarn.lock; the dashboard postinstall is a no-op after setup-bench.
+          bun install --frozen-lockfile
           # No --with-deps: the runner image already has Chromium's libraries, and
           # the apt fonts it adds are only needed by screenshot assertions.
-          npx playwright install --only-shell chromium
+          bunx playwright install --only-shell chromium
 
       - name: Run Playwright Tests
-        run: npx playwright test --shard=${{ matrix.shard }}/2
+        run: bunx playwright test --shard=${{ matrix.shard }}/2
         env:
           BASE_URL: http://buzz.test:8000
           FRAPPE_USER: testuser@buzz.test
@@ -147,8 +146,13 @@ jobs:
         with:
           node-version: "24"
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
       - name: Install Playwright
-        run: yarn install --frozen-lockfile --ignore-scripts
+        # --ignore-scripts skips the dashboard install; merging reports needs only @playwright/test.
+        run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Download blob reports
         # The shards' results decide the check; a missing report must not.
@@ -161,7 +165,7 @@ jobs:
 
       - name: Merge reports
         continue-on-error: true
-        run: npx playwright merge-reports --reporter html ./all-blob-reports
+        run: bunx playwright merge-reports --reporter html ./all-blob-reports
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4

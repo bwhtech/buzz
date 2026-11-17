@@ -30,7 +30,19 @@ runs:
       with:
         node-version: "24"
         cache: yarn
-        cache-dependency-path: dashboard/yarn.lock
+        cache-dependency-path: yarn.lock
+
+    # Root postinstall installs the dashboard with bun (the root's pinned `bun` devDependency).
+    - name: Cache bun packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.bun/install/cache
+        key: ${{ runner.os }}-bun-${{ hashFiles('dashboard/bun.lock') }}
+        restore-keys: ${{ runner.os }}-bun-
+
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: "1.4.4"
 
     - uses: astral-sh/setup-uv@v6
       with:

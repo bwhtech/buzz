@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "cd dashboard && yarn install",
-    "dev": "cd dashboard && yarn dev",
-    "build": "cd dashboard && yarn build",
+    "postinstall": "cd dashboard && bun install --frozen-lockfile",
+    "dev": "cd dashboard && bun run dev",
+    "build": "cd dashboard && bun run build",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
@@ -30,9 +30,13 @@
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "@types/node": "^25.0.8",
+    "bun": "1.4.4",
     "oxfmt": "0.65.0",
     "oxlint": "1.80.0"
   },
+  "trustedDependencies": [
+    "bun"
+  ],
   "dependencies": {
     "cobe": "0.6.5",
     "maplibre-gl": "5.11.0"

@@ -59,7 +59,7 @@ repos:
       # Catches type errors before CI does. Runs on push, not commit, to keep commits fast.
       - id: dashboard-typecheck
         name: "Type check the dashboard"
-        entry: bash -c 'cd dashboard && yarn typecheck'
+        entry: bash -c 'cd dashboard && bun run typecheck'
         language: system
         pass_filenames: false
         files: ^(dashboard/|buzz/public/js/)
