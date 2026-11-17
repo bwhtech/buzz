@@ -119,6 +119,14 @@ class TestToolPayloads(McpToolTestCase):
 		with self.set_user(self.booker):
 			self.assertEqual(tools_for_user(), ATTENDEE_TOOLS)
 
+	def test_team_member_gets_both_sets(self):
+		with self.set_user(self.alice):
+			self.assertEqual(tools_for_user(), ATTENDEE_TOOLS + ORGANIZER_TOOLS)
+
+	def test_collaborator_gets_both_sets(self):
+		with self.set_user(self.collaborator):
+			self.assertEqual(tools_for_user(), ATTENDEE_TOOLS + ORGANIZER_TOOLS)
+
 	def test_desk_user_gets_both_sets(self):
 		with self.set_user("Administrator"):
 			self.assertEqual(tools_for_user(), ATTENDEE_TOOLS + ORGANIZER_TOOLS)
