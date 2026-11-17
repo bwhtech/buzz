@@ -106,5 +106,5 @@ class TestMcpAccess(McpTestCase):
 		with patch("buzz.mcp.registry.tools_for_user", return_value=(writer,)):
 			result = self.call_tool("write_note", authorization=self.bearer_for(self.attendee))
 		self.assertTrue(result["isError"])
-		self.assertIn("read-only", result["content"][0]["text"])
+		self.assertRegex(result["content"][0]["text"], "(?i)read.only")
 		self.assertFalse(frappe.db.exists("ToDo", {"description": "written by a tool"}))

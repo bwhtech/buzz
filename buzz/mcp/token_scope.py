@@ -11,11 +11,27 @@ def confine_mcp_tokens() -> None:
 
 	Without this, the token is a full API credential for whoever signs in.
 	"""
-	client = frappe.session.data.get("oauth_client")
-	if not client or not frappe.get_cached_value("OAuth Client", client, "is_dynamic_client"):
+	client = bearer_client()
+	if not client or not is_mcp_client(frappe.get_cached_doc("OAuth Client", client)):
 		return
 	if requested_method() not in MCP_METHODS:
 		frappe.throw(_("This token can only be used with the Buzz MCP server."), frappe.PermissionError)
+
+
+def bearer_client() -> str | None:
+	"""The OAuth Client whose bearer token signed this request in, if one did."""
+	if client := frappe.session.data.get("oauth_client"):
+		return client
+	scheme, _separator, token = frappe.get_request_header("Authorization", "").partition(" ")
+	if scheme.lower() != "bearer" or frappe.session.user == "Guest":
+		return None
+	# Frappe 16 keeps no client on the session, and names the token row by the raw token.
+	return frappe.db.get_value("OAuth Bearer Token", token, "client")
+
+
+def is_mcp_client(client) -> bool:
+	# Frappe 16 has no is_dynamic_client flag; registration is the only way a Guest creates a client.
+	return bool(client.get("is_dynamic_client")) or client.owner == "Guest"
 
 
 def requested_method() -> str | None:
@@ -31,5 +47,5 @@ def open_to_every_user(doc, method=None) -> None:
 
 	Safe because `confine_mcp_tokens` limits these clients' tokens to MCP.
 	"""
-	if doc.is_dynamic_client and not doc.allowed_roles:
+	if is_mcp_client(doc) and not doc.allowed_roles:
 		doc.append("allowed_roles", {"role": ALL_USER_ROLE})

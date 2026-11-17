@@ -17,4 +17,5 @@ class OAuthClientFactory(BaseFactory[OAuthClient]):
 
 	@property
 	def dynamic(self) -> dict[str, Any]:
-		return {"is_dynamic_client": 1, "token_endpoint_auth_method": "None"}
+		# Frappe 16 has no is_dynamic_client; there a Guest owner marks a registered client.
+		return {"is_dynamic_client": 1, "owner": "Guest", "token_endpoint_auth_method": "None"}
