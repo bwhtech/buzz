@@ -17,7 +17,7 @@ class UsageQuota:
 	def consume(self) -> None:
 		for window, seconds, setting in WINDOWS:
 			limit = frappe.db.get_single_value("Buzz Settings", setting)
-			if limit and int(frappe.cache.get(self.key(window, seconds)) or 0) >= limit:
+			if limit and self.count(window, seconds) >= limit:
 				QuotaExceeded.throw(window=window, resets_at=self.resets_at(seconds))
 		for window, seconds, _setting in WINDOWS:
 			self.increment(window, seconds)
@@ -25,6 +25,11 @@ class UsageQuota:
 	def key(self, window: str, seconds: int) -> str:
 		bucket = int(time.time()) // seconds
 		return frappe.cache.make_key(f"buzz:mcp:{window}:{bucket}:{self.user}")
+
+	def count(self, window: str, seconds: int) -> int:
+		# The key is site-scoped by make_key; the counter is a raw Redis integer, not a pickled value.
+		value = frappe.cache.get(self.key(window, seconds))  # nosemgrep: frappe-cache-breaks-multitenancy
+		return int(value or 0)
 
 	def increment(self, window: str, seconds: int) -> None:
 		key = self.key(window, seconds)
