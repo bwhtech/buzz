@@ -1,7 +1,5 @@
 """The share image of /@<username>: the owner's name under a spotlight of the Buzz rings."""
 
-from urllib.parse import urlparse
-
 import frappe
 from frappe import _
 from PIL import Image, ImageDraw, ImageOps
@@ -48,10 +46,7 @@ def generate(team_name: str):
 	if not owner:
 		clear(team)
 		return
-	image = ProfileOgImage(team, owner)
-	# A photo that fails to load keeps the current image, so the next run retries
-	if not image.avatar_failed_to_load():
-		render_if_stale(image)
+	render_if_stale(ProfileOgImage(team, owner))
 
 
 def profile_owner(team) -> frappe._dict | None:
@@ -110,11 +105,6 @@ class ProfileOgImage(OgImage):
 
 	def can_render(self) -> bool:
 		return is_drawable(self.name + self.subtitle)
-
-	def avatar_failed_to_load(self) -> bool:
-		"""A stored photo that cannot be read. An external URL is deliberately drawn as a monogram."""
-		photo = self.owner.user_image
-		return bool(photo) and not urlparse(photo).scheme and self.avatar is None
 
 	def render(self) -> bytes:
 		image = Image.new("RGB", (WIDTH, HEIGHT), self.colours["page-bg"])
