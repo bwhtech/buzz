@@ -1,7 +1,5 @@
 """The share image of a team's public page: the Buzz band, the team mark, its name and stats."""
 
-import io
-
 import frappe
 from frappe import _
 from PIL import Image, ImageDraw
@@ -16,12 +14,13 @@ from buzz.events.og_image import (
 	WORDMARK_SIZE,
 	OgImage,
 	clear,
+	png_bytes,
 	recoloured_wordmark,
 	render_if_stale,
 	site_host,
 	site_language,
 )
-from buzz.events.og_text import OgText, font, is_drawable, tracking
+from buzz.events.og_text import OgText, font, is_drawable, tracking, wrap_lines
 from buzz.events.team_mark import MARK_SIZE, TeamMark
 
 RENDER_VERSION = 1
@@ -62,11 +61,21 @@ def enqueue_generate(team_name: str):
 
 
 def enqueue_generate_for(team_name: str | None):
-	"""A published team draws a fresh image, a private one clears a leftover."""
+	"""A published team draws a fresh image, a private one clears a leftover.
+
+	A personal team is never published: its image is its owner's profile image.
+	"""
+	from buzz.events import profile_og_image
+
 	# A live worker would render test teams mid-test and race their teardown
 	if frappe.in_test or not team_name:
 		return
-	if any(frappe.db.get_value("Buzz Team", team_name, ["is_published", "og_image"]) or ()):
+	row = frappe.db.get_value(
+		"Buzz Team", team_name, ["is_personal", "is_published", "og_image"], as_dict=True
+	)
+	if row and row.is_personal:
+		profile_og_image.enqueue_generate(team_name)
+	elif row and (row.is_published or row.og_image):
 		enqueue_generate(team_name)
 
 
@@ -116,9 +125,7 @@ class CommunityOgImage(OgImage):
 		self.draw_brand(image)
 		self.draw_name(image)
 		self.draw_stats(image)
-		output = io.BytesIO()
-		image.save(output, "PNG", optimize=True)
-		return output.getvalue()
+		return png_bytes(image)
 
 	def band(self) -> Image.Image:
 		return rings_banner(self.name, (WIDTH, BAND_HEIGHT), self.colours["border"], self.colours["surface"])
@@ -146,15 +153,7 @@ class CommunityOgImage(OgImage):
 			)
 
 	def name_lines(self) -> list[str]:
-		"""Two lines at most: a longer name folds into line two, then ends in an ellipsis."""
-		lines = wrap_name(self.name) or [""]
-		if len(lines) > NAME_LINES:
-			joined = " ".join(lines[NAME_LINES - 1 :])
-			lines = [*lines[: NAME_LINES - 1], joined]
-		lines[-1] = (
-			OgText(lines[-1], font("SemiBold", NAME_SIZE), tracking(NAME_SIZE)).fit(CONTENT_WIDTH).text
-		)
-		return lines
+		return wrap_lines(self.name, font("SemiBold", NAME_SIZE), CONTENT_WIDTH, NAME_LINES)
 
 	def draw_stats(self, image: Image.Image):
 		"""Number then label on a shared baseline, so the ink centres on STATS_MIDDLE."""
@@ -170,23 +169,3 @@ class CommunityOgImage(OgImage):
 				(label_left, baseline), label, font=label_font, fill=self.colours["ink-muted"], anchor="ls"
 			)
 			left = label_left + label_font.getlength(label) + STATS_GAP
-
-
-def wrap_name(text: str) -> list[str]:
-	"""Greedy word wrap, so a two-line name breaks where it reads best."""
-	typeface, spacing = font("SemiBold", NAME_SIZE), tracking(NAME_SIZE)
-	lines, words = [], text.split()
-	while words:
-		line, words = take_line(words, typeface, spacing)
-		lines.append(line)
-	return lines
-
-
-def take_line(words: list[str], typeface, spacing: float) -> tuple[str, list[str]]:
-	line = words[0]
-	for index in range(1, len(words)):
-		candidate = f"{line} {words[index]}"
-		if OgText(candidate, typeface, spacing).width() > CONTENT_WIDTH:
-			return line, words[index:]
-		line = candidate
-	return line, []
