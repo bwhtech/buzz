@@ -1,7 +1,9 @@
 import json
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import frappe
+from bwh_payments.base_class import InlineCheckout
 from frappe.utils import add_days, today
 
 from buzz.api.booking import (
@@ -21,6 +23,7 @@ from buzz.api.booking.exceptions import (
 	InvoiceDetailsMissing,
 	RegistrationsClosed,
 )
+from buzz.api.booking.schemas import InlineCheckoutResponse
 from buzz.api.forms.exceptions import UnknownQuestions
 from buzz.tests.base_test_cases import BOOKER, OUTSIDER, BookingTestCase
 from buzz.tests.factories import (
@@ -111,6 +114,10 @@ DETAILS_FIELDS = {
 	"cancelled_tickets",
 	"invoice_available",
 }
+
+
+# A gateway without a browser SDK, so the booking answers with its payment link.
+LINK_CHECKOUT = SimpleNamespace(order_url="/pay", get_inline_checkout=lambda display: None)
 
 
 class TestSendGuestBookingOtp(BookingTestCase):
@@ -278,7 +285,7 @@ class TestProcessBooking(BookingTestCase):
 		request = self.make_paid_request()
 
 		with (
-			patch("buzz.api.booking.services.get_payment_link_for_booking", return_value="/pay"),
+			patch("buzz.api.booking.services.open_booking_checkout", return_value=LINK_CHECKOUT),
 			patch("frappe.sendmail") as sendmail,
 		):
 			self.process_as_booker(request)
@@ -332,7 +339,7 @@ class TestBookingAddOnPricing(BookingTestCase):
 		]
 		# The paid path builds a payment link from a gateway that tests do not configure;
 		# stub it so the booking is created and its stored amounts can be read back.
-		with patch("buzz.api.booking.services.get_payment_link_for_booking", return_value="/pay"):
+		with patch("buzz.api.booking.services.open_booking_checkout", return_value=LINK_CHECKOUT):
 			self.process_as_booker(self.booking_request(attendees=attendees))
 		return frappe.get_last_doc("Event Booking")
 
@@ -425,7 +432,7 @@ class TestBookingSelectionValidation(BookingTestCase):
 		self.assertEqual(add_ons[self.add_on.name].ticket_types, [])
 
 	def test_a_legitimate_selection_is_accepted(self):
-		with patch("buzz.api.booking.services.get_payment_link_for_booking", return_value="/pay"):
+		with patch("buzz.api.booking.services.open_booking_checkout", return_value=LINK_CHECKOUT):
 			self.book([self.attendee(add_ons=[{"add_on": self.add_on.name, "value": "Vegetarian meal"}])])
 		booking = frappe.get_last_doc("Event Booking")
 		self.assertEqual(booking.attendees[0].add_on_total, 500)
@@ -724,7 +731,7 @@ class BookingSummaryTestCase(BookingTestCase):
 		frappe.set_user(user)
 		try:
 			# The add-on path builds a payment link from a gateway tests do not configure.
-			with patch("buzz.api.booking.services.get_payment_link_for_booking", return_value="/pay"):
+			with patch("buzz.api.booking.services.open_booking_checkout", return_value=LINK_CHECKOUT):
 				request = self.booking_request(attendees=attendees or [self.attendee()])
 				return process_booking(request).__json__().get("booking_name")
 		finally:
@@ -910,3 +917,18 @@ class TestAccessCodeBooking(BookingTestCase):
 
 		with self.assertRaises(HiddenTicketType):
 			process_booking(self.booking_request(attendees=[attendee]))
+
+
+class TestInlineCheckoutResponse(BookingTestCase):
+	def test_the_payments_app_checkout_validates_as_the_booking_response(self):
+		checkout = InlineCheckout(
+			request="GPR-1",
+			sdk="razorpay",
+			script_url="https://checkout.razorpay.com/v1/checkout.js",
+			options={"key": "rzp_test_x"},
+			redirect_to="/booking-success",
+		).model_dump()
+
+		response = InlineCheckoutResponse(inline_checkout=checkout)
+
+		self.assertEqual(response.inline_checkout.script_url, checkout["script_url"])

@@ -26,8 +26,10 @@ from buzz.api.booking.schemas import (
 	MAX_TICKETS_PER_IP,
 	BookingRequest,
 	FreeBookingResponse,
+	InlineCheckoutResponse,
 	OfflineBookingResponse,
 	PaymentLinkResponse,
+	PaymentResponse,
 	RequestResponse,
 )
 from buzz.api.filters.conditions import form_logic_rules, form_questions
@@ -38,7 +40,7 @@ from buzz.events.doctype.buzz_form.form_types import (
 	event_form,
 	is_registration_closed,
 )
-from buzz.payments import get_payment_link_for_booking
+from buzz.payments import get_booking_checkout_display, open_booking_checkout
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_booking.registration_request import RegistrationRequest
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
@@ -76,7 +78,7 @@ class BookingService:
 	def event(self) -> "BuzzEvent":
 		return frappe.get_cached_doc("Buzz Event", self.request.event)
 
-	def process(self) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse | RequestResponse:
+	def process(self) -> FreeBookingResponse | OfflineBookingResponse | PaymentResponse | RequestResponse:
 		start_capacity_transaction()
 		self.validate_ticket_count()
 		self.validate_event()
@@ -284,14 +286,14 @@ class BookingService:
 
 	def finalize(
 		self, booking: "EventBooking"
-	) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse | RequestResponse:
+	) -> FreeBookingResponse | OfflineBookingResponse | PaymentResponse | RequestResponse:
 		if booking.is_request:
 			return self.request_response(booking)
 		if booking.total_amount == 0:
 			return self.free_booking_response(booking)
 		if self.request.is_offline:
 			return self.offline_booking_response(booking)
-		return self.payment_link_response(booking)
+		return self.payment_response(booking)
 
 	def free_booking_response(self, booking: "EventBooking") -> FreeBookingResponse:
 		booking.flags.ignore_permissions = True
@@ -356,14 +358,16 @@ class BookingService:
 		except Exception as exception:
 			frappe.log_error(f"Failed to attach payment proof: {exception}")
 
-	def payment_link_response(self, booking: "EventBooking") -> PaymentLinkResponse:
-		return PaymentLinkResponse(
-			payment_link=get_payment_link_for_booking(
-				booking.name,
-				redirect_to=f"/b/booking-success/{booking.name}?token={get_booking_access_token(booking.name)}",
-				payment_gateway=self.request.payment_gateway,
-			)
+	def payment_response(self, booking: "EventBooking") -> PaymentResponse:
+		checkout = open_booking_checkout(
+			booking.name,
+			redirect_to=f"/b/booking-success/{booking.name}?token={get_booking_access_token(booking.name)}",
+			payment_gateway=self.request.payment_gateway,
+			inline=True,
 		)
+		if inline_checkout := checkout.get_inline_checkout(get_booking_checkout_display(booking)):
+			return InlineCheckoutResponse(inline_checkout=inline_checkout)
+		return PaymentLinkResponse(payment_link=checkout.order_url)
 
 
 def success_path(booking_name: str) -> str:

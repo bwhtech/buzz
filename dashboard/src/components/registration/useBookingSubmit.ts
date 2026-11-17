@@ -9,6 +9,8 @@ import {
 	type BookingSubmitResponse,
 	resolveBookingSuccessAction,
 } from "@/utils/bookingSuccessRedirect"
+import type { InlineCheckout } from "@/utils/checkouts"
+import { useInlinePayment } from "@/utils/checkouts/useInlinePayment"
 import { clearBookingCache } from "@/utils/index"
 import { serverErrorMessage } from "@/utils/serverError"
 
@@ -47,6 +49,8 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 		method: "POST",
 		immediate: false,
 	})
+
+	const inlinePayment = useInlinePayment()
 
 	// Stays true from a successful booking until the next page takes over.
 	const redirecting = ref(false)
@@ -113,7 +117,9 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 		if (isOtpFlow) otp.reset()
 
 		const action = resolveBookingSuccessAction(data, { isGuestMode: inputs.isGuest() })
-		if (action.type === "external") {
+		if (action.type === "inline") {
+			payInline(action.checkout)
+		} else if (action.type === "external") {
 			redirecting.value = true
 			window.location.href = action.url
 		} else if (action.type === "route") {
@@ -124,6 +130,12 @@ export function useBookingSubmit(inputs: SubmitInputs) {
 				bookingName: action.bookingName,
 				pendingVerification: action.pendingVerification,
 			}
+	}
+
+	// Closing the checkout leaves the buyer on the form to pay again.
+	async function payInline(checkout: InlineCheckout) {
+		redirecting.value = true
+		if (!(await inlinePayment.pay(checkout))) redirecting.value = false
 	}
 
 	const showOfflineDialog = computed({
