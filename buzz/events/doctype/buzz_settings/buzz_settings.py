@@ -35,6 +35,7 @@ class BuzzSettings(Document):
 		default_sponsor_deck_reply_to: DF.Data | None
 		default_ticket_email_template: DF.Link | None
 		enable_communities: DF.Check
+		enable_mcp: DF.Check
 		enable_onboarding: DF.Check
 		event_page_theme: DF.Link | None
 		event_proposal_banner_title: DF.Data | None
@@ -45,6 +46,9 @@ class BuzzSettings(Document):
 		google_places_api_key: DF.Password | None
 		list_on_buzz_events: DF.Check
 		login_banner: DF.MarkdownEditor | None
+		mcp_calls_per_day: DF.Int
+		mcp_calls_per_hour: DF.Int
+		mcp_requests_per_minute: DF.Int
 		show_hosting_banner: DF.Check
 		support_email: DF.Data | None
 	# end: auto-generated types
