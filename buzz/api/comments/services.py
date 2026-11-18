@@ -1,5 +1,5 @@
 import frappe
-from frappe.core.doctype.communication.email import make as make_communication
+from frappe.core.doctype.communication.email import _make as make_communication
 from frappe.desk.form.utils import add_comment
 from frappe.utils import get_fullname, sanitize_html, validate_email_address
 from frappe.utils.response import send_private_file
@@ -152,6 +152,9 @@ class DocumentComments:
 		note = sanitize_html(content, always_sanitize=True)
 		files = EmailAttachments(self.reference_doctype, self.reference_name).resolve(attachments)
 		args = note_email_args(self.reference_doctype, self.reference_name, frappe.session.user, note)
+		# Frappe's public `make` refuses website users, who are most hosts. Its internal `_make`
+		# skips every check, so the email permission it ran is kept here, after the team gate.
+		frappe.has_permission(self.reference_doctype, doc=self.reference_name, ptype="email", throw=True)
 		# Stored as the plain note for the activity feed; sent in the Buzz email layout.
 		communication = make_communication(
 			doctype=self.reference_doctype,
@@ -163,6 +166,7 @@ class DocumentComments:
 			bcc=bcc,
 			attachments=files,
 			send_email=False,
+			add_signature=False,
 		)["name"]
 		send_in_layout(communication, render_email("record_note", args))
 		self.set_subscribed(True)
