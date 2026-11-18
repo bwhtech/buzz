@@ -197,9 +197,7 @@ class EventOgImage(OgImage):
 		draw.line([(0, BANNER_HEIGHT), (WIDTH, BANNER_HEIGHT)], fill=self.colours["border"], width=1)
 		brand_width = self.draw_brand(image, draw)
 		self.draw_text(image, WIDTH - 2 * PADDING - brand_width - COLUMN_GAP)
-		output = io.BytesIO()
-		image.save(output, "PNG", optimize=True)
-		return output.getvalue()
+		return png_bytes(image)
 
 	def banner(self) -> Image.Image:
 		uploaded = self.uploaded_banner()
@@ -236,6 +234,12 @@ class EventOgImage(OgImage):
 			anchor="rm",
 		)
 		return max(WORDMARK_SIZE[0], math.ceil(host_font.getlength(host)))
+
+
+def png_bytes(image: Image.Image) -> bytes:
+	output = io.BytesIO()
+	image.save(output, "PNG", optimize=True)
+	return output.getvalue()
 
 
 def uploaded_image(url: str | None) -> Image.Image | None:

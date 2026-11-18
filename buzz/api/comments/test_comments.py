@@ -150,6 +150,11 @@ class TestDocumentComments(TeamPermissionTestCase):
 		with self.assertRaises(frappe.InvalidEmailAddressError):
 			self.add_as(self.manager, email_recipients=True, cc=["not-an-address"])
 
+	def test_outsider_cannot_email_a_note(self):
+		with self.set_user(self.bob), self.assertRaises(NotTeamMember):
+			add_comment("Talk Proposal", self.proposal, "<p>Hi</p>", email_recipients=True)
+		self.assertEqual(emailed_to(self.proposal), set())
+
 	def test_email_sender_is_hidden_from_outsiders(self):
 		with self.set_user(self.bob), self.assertRaises(NotTeamMember):
 			get_email_sender("Talk Proposal", self.proposal)

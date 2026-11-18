@@ -30,7 +30,8 @@ defineExpose({
 	// Resolves false on failure; the error renders below the form.
 	save: async () => {
 		if (!(await attempt(saveProfile.submit({ ...profile })))) return false
-		await userResource.reload()
+		// Patched in place: the save changes only these fields, so a refetch would cost a round trip.
+		Object.assign(userResource.data ?? {}, { ...profile, full_name: fullName.value })
 		return true
 	},
 })

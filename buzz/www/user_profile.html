@@ -10,7 +10,7 @@
 	<meta property="og:description" content="{{ meta.description }}">
 	<meta property="og:url" content="{{ meta.url }}">
 	{% if meta.image %}<meta property="og:image" content="{{ meta.image }}">{% endif %}
-	<meta name="twitter:card" content="summary">
+	<meta name="twitter:card" content="{{ meta.card }}">
 	<link rel="canonical" href="{{ meta.url }}">
 	<link rel="stylesheet" href="/assets/buzz/themes/team.css?v={{ build_version }}">
 	<link rel="stylesheet" href="/assets/buzz/themes/event_card.css?v={{ build_version }}">

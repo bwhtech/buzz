@@ -60,7 +60,7 @@ def personal_team_of(user: str) -> str | None:
 
 def personal_team_owner(team: str) -> frappe._dict | None:
 	user = frappe.db.get_value("Buzz Team Membership", {"team": team, "team_role": "Owner"}, "user")
-	return frappe.db.get_value("User", user, ["full_name", "user_image", "username"], as_dict=True)
+	return frappe.db.get_value("User", user, ["full_name", "user_image", "username", "bio"], as_dict=True)
 
 
 def fill_blank_username(user: str):

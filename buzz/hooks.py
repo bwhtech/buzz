@@ -123,7 +123,10 @@ doc_events = {
 			"buzz.events.doctype.buzz_team.buzz_team.create_personal_team_on_signup",
 			"buzz.api.onboarding.services.mark_pending_on_signup",
 		],
-		"on_update": "buzz.events.doctype.speaker_profile.speaker_profile.update_speaker_display_name",
+		"on_update": [
+			"buzz.events.doctype.speaker_profile.speaker_profile.update_speaker_display_name",
+			"buzz.events.profile_og_image.enqueue_for_user",
+		],
 	},
 	"Currency": {
 		"on_update": "buzz.api.payments.currencies.clear_currency_cache",

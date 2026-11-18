@@ -96,3 +96,33 @@ class OgText:
 		size = (round(width * self.emoji_scale), round(height * self.emoji_scale))
 		glyphs = glyphs.resize(size, Image.LANCZOS)
 		image.paste(glyphs, (round(position[0]), round(position[1] - size[1] / 2)), glyphs)
+
+
+def wrap_lines(text: str, typeface: ImageFont.FreeTypeFont, width: float, max_lines: int) -> list[str]:
+	"""Greedy word wrap into `max_lines` at most: the rest folds into the last line, then an ellipsis."""
+	spacing = tracking(typeface.size)
+	lines = word_wrap(text, typeface, spacing, width) or [""]
+	if len(lines) > max_lines:
+		lines = [*lines[: max_lines - 1], " ".join(lines[max_lines - 1 :])]
+	lines[-1] = OgText(lines[-1], typeface, spacing).fit(width).text
+	return lines
+
+
+def word_wrap(text: str, typeface: ImageFont.FreeTypeFont, spacing: float, width: float) -> list[str]:
+	lines, words = [], text.split()
+	while words:
+		line, words = take_line(words, typeface, spacing, width)
+		lines.append(line)
+	return lines
+
+
+def take_line(
+	words: list[str], typeface: ImageFont.FreeTypeFont, spacing: float, width: float
+) -> tuple[str, list[str]]:
+	line = words[0]
+	for index in range(1, len(words)):
+		candidate = f"{line} {words[index]}"
+		if OgText(candidate, typeface, spacing).width() > width:
+			return line, words[index:]
+		line = candidate
+	return line, []

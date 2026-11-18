@@ -11,8 +11,9 @@ withDefaults(
 		description?: string
 		shape?: "circle" | "square"
 		size?: "md" | "lg"
+		icon?: string
 	}>(),
-	{ description: "", shape: "circle", size: "md" },
+	{ description: "", shape: "circle", size: "md", icon: "lucide-camera" },
 )
 
 const image = defineModel<string | null>({ required: true })
@@ -41,7 +42,7 @@ const image = defineModel<string | null>({ required: true })
 				>
 					<img v-if="image" :src="image" :alt="label" class="size-full object-cover" />
 					<!-- Over an image the scrim is a hover affordance; over the empty
-					     shape the camera is the only click cue. -->
+					     shape the icon is the only click cue. -->
 					<span
 						class="absolute inset-0 flex items-center justify-center transition-opacity duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
 						:class="
@@ -55,11 +56,7 @@ const image = defineModel<string | null>({ required: true })
 							class="size-5"
 							:class="image ? 'text-white' : 'text-ink-gray-5'"
 						/>
-						<span
-							v-else
-							class="lucide-camera size-5"
-							:class="image ? 'text-white' : 'text-ink-gray-5'"
-						/>
+						<span v-else class="size-5" :class="[icon, image ? 'text-white' : 'text-ink-gray-5']" />
 					</span>
 				</button>
 

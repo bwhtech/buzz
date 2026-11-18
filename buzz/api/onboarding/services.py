@@ -7,7 +7,7 @@ from buzz.api.events.schemas import RouteAvailability
 from buzz.api.onboarding.exceptions import InvalidUsername
 from buzz.api.onboarding.invited import invited_team
 from buzz.api.onboarding.schemas import OnboardingState
-from buzz.api.onboarding.setup import community_draft, event_draft
+from buzz.api.onboarding.setup import community_draft
 from buzz.events.doctype.buzz_team.buzz_team import personal_teams_enabled
 
 USERNAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_.-]{2,29}$")
@@ -59,5 +59,4 @@ def onboarding_state(user: str) -> OnboardingState:
 		communities_enabled=bool(frappe.db.get_single_value("Buzz Settings", "enable_communities")),
 		invited_team=invited_team(user),
 		community=community_draft(user),
-		draft_event=event_draft(user),
 	)
