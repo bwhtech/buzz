@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Avatar, Button, Combobox } from "frappe-ui"
+import { Avatar, Combobox } from "frappe-ui"
 import { computed, watchEffect } from "vue"
 
 import { session } from "@/data/session"
@@ -50,9 +50,13 @@ watchEffect(() => {
 </script>
 
 <template>
+	<!-- A sentence at the top of the form, so the host is read before anything is typed:
+	     events made under the wrong team are the mistake this guards against. -->
 	<div v-if="selectedOption" class="space-y-2">
-		<div class="flex items-center gap-3">
-			<span class="text-base text-ink-gray-5">{{ __("Hosted by") }}</span>
+		<div
+			class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-lg font-semibold tracking-tight md:text-[22px]"
+		>
+			<span class="text-ink-gray-5">{{ __("New event for") }}</span>
 			<Combobox
 				v-model="selectedTeam"
 				:options="options"
@@ -60,18 +64,19 @@ watchEffect(() => {
 				:placeholder="__('Search teams')"
 			>
 				<template #trigger>
-					<Button
-						variant="outline"
-						class="rounded-full transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
-						:label="selectedOption.label"
+					<button
+						type="button"
+						class="host -my-0.5 inline-flex min-w-0 items-center gap-2 rounded-4 py-0.5 pl-0.5 pr-1.5 text-ink-gray-9 aria-expanded:bg-surface-gray-3 disabled:cursor-default"
+						:disabled="options.length < 2"
 					>
-						<template #prefix>
-							<Avatar size="sm" :image="selectedOption.image" :label="selectedOption.label" />
-						</template>
-						<template v-if="options.length > 1" #suffix>
-							<span class="lucide-chevron-down size-4 text-ink-gray-5" aria-hidden="true" />
-						</template>
-					</Button>
+						<Avatar size="md" :image="selectedOption.image" :label="selectedOption.label" />
+						<span class="truncate">{{ selectedOption.label }}</span>
+						<span
+							v-if="options.length > 1"
+							class="lucide-chevron-down size-[18px] shrink-0 text-ink-gray-5"
+							aria-hidden="true"
+						/>
+					</button>
 				</template>
 				<template #item-prefix="{ item }">
 					<Avatar shape="square" size="md" :image="item.image" :label="item.label" />
@@ -83,3 +88,27 @@ watchEffect(() => {
 		</p>
 	</div>
 </template>
+
+<style scoped>
+.host {
+	text-decoration: underline dotted var(--outline-gray-4);
+	text-decoration-thickness: 2px;
+	text-underline-offset: 6px;
+	transition:
+		transform 150ms cubic-bezier(0.23, 1, 0.32, 1),
+		background-color 150ms ease;
+}
+.host:not(:disabled):active {
+	transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+	.host:not(:disabled):hover {
+		background: var(--surface-gray-2);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.host:active {
+		transform: none;
+	}
+}
+</style>
