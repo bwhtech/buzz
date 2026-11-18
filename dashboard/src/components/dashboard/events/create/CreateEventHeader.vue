@@ -6,7 +6,7 @@ import type { ChecklistItem } from "@/utils/eventValidation"
 
 import CreateEventButton from "./CreateEventButton.vue"
 
-// The page's own bar, since it covers the sidebar: the way back, where you are, and on
+// The page's own bar, since it covers the sidebar: the way back, the title, and on
 // larger screens Create, which steps aside while the copy at the end of the form shows.
 defineProps<{ missing: ChecklistItem[]; loading?: boolean; createHidden: boolean }>()
 const showMissing = defineModel<boolean>("showMissing", { default: false })
@@ -25,16 +25,7 @@ const isMobile = useIsMobile()
 			:aria-label="__('Back')"
 			@click="emit('close')"
 		/>
-		<span v-if="isMobile" class="text-base font-semibold text-ink-gray-9">{{
-			__("New event")
-		}}</span>
-		<nav v-else :aria-label="__('Breadcrumb')" class="flex min-w-0 items-center gap-1.5 text-base">
-			<router-link :to="{ name: 'events' }" class="text-ink-gray-5 hover:text-ink-gray-8">{{
-				__("Events")
-			}}</router-link>
-			<span class="text-ink-gray-4" aria-hidden="true">/</span>
-			<span class="whitespace-nowrap font-medium text-ink-gray-9">{{ __("New event") }}</span>
-		</nav>
+		<h1 class="truncate text-base font-semibold text-ink-gray-9">{{ __("Create New Event") }}</h1>
 		<div class="flex-1" />
 		<!-- Kept in the layout while hidden, so nothing beside it jumps when it hands over. -->
 		<div
