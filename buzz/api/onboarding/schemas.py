@@ -1,7 +1,4 @@
-from datetime import date, timedelta
-from typing import Literal
-
-from buzz.api.schemas import APIRequest, APIResponse
+from buzz.api.schemas import APIResponse
 
 
 class CommunityDraft(APIResponse):
@@ -10,16 +7,6 @@ class CommunityDraft(APIResponse):
 	slug: str | None
 	logo: str | None
 	short_description: str | None
-
-
-class EventDraft(APIResponse):
-	name: str
-	team: str
-	title: str
-	start_date: date
-	start_time: str
-	medium: str
-	venue_name: str | None
 
 
 class InvitedTeam(APIResponse):
@@ -37,15 +24,3 @@ class OnboardingState(APIResponse):
 	communities_enabled: bool
 	invited_team: InvitedTeam | None
 	community: CommunityDraft | None
-	draft_event: EventDraft | None
-
-
-class FirstEvent(APIRequest):
-	team: str
-	title: str
-	start_date: date
-	start_time: timedelta
-	medium: Literal["Online", "In Person"]
-	venue_name: str | None = None
-	# The draft saved on an earlier pass, so going back and forth edits it instead of adding more.
-	event: str | None = None

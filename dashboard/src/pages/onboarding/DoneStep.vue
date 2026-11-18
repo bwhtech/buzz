@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Avatar, Button, ErrorMessage } from "frappe-ui"
+import { Avatar, Button, ErrorMessage, Spinner } from "frappe-ui"
 import { computed, onBeforeUnmount, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
@@ -11,18 +11,20 @@ import {
 	completeOnce,
 	flow,
 	fullName,
-	hasDraft,
 	hostTeam,
 	invitedTeam,
 	outcome,
 	profile,
 } from "./useOnboarding"
 
-type Action = { label: string; run: () => void }
+type Action = { label: string; description: string; icon: string; run: () => void }
 
 const REDIRECT_SECONDS = 5
 const route = useRoute()
-const redirectTo = computed(() => route.query["redirect-to"])
+// Hosts stay to pick their next step, so only attendees and invitees go back on their own.
+const redirectTo = computed(() =>
+	["personal", "community"].includes(outcome.value) ? undefined : route.query["redirect-to"],
+)
 const secondsLeft = ref(REDIRECT_SECONDS)
 let timer: ReturnType<typeof setInterval> | undefined
 
@@ -31,44 +33,68 @@ function open(path: string, teamName?: string) {
 	window.location.assign(path)
 }
 
-const eventAction = computed<Action>(() =>
-	hasDraft.value
-		? {
-				label: __("Open event draft"),
-				run: () => open(`/b/manage/events/${flow.event.name}`, hostTeam.value),
-			}
-		: {
-				label: __("Create event"),
-				run: () => open("/b/manage/team/events/new", hostTeam.value),
-			},
-)
-const browseEvents: Action = { label: __("Browse events"), run: () => open("/events") }
+// The create page reads `team` to pick the team the user just set up.
+const createEvent = computed<Action>(() => ({
+	label: __("Create your first event"),
+	description: __("Set the date, the place, and the tickets."),
+	icon: "lucide-calendar-plus",
+	run: () => open(`/b/manage/team/events/new?team=${encodeURIComponent(hostTeam.value)}`),
+}))
+const browseEvents: Action = {
+	label: __("Browse events"),
+	description: __("Find events to attend."),
+	icon: "lucide-compass",
+	run: () => open("/events"),
+}
 
 const actions = computed<Action[]>(() => {
 	const team = invitedTeam.value
 	if (outcome.value === "team" && team)
 		return [
-			{ label: __("Open {0}", [team.team_name]), run: () => open("/b/manage", team.name) },
+			{
+				label: __("Open {0}", [team.team_name]),
+				description: __("See the events and members of your team."),
+				icon: "lucide-users",
+				run: () => open("/b/manage", team.name),
+			},
 			browseEvents,
 		]
 	if (outcome.value === "personal")
 		return [
-			eventAction.value,
-			{ label: __("Go to dashboard"), run: () => open("/b/manage", hostTeam.value) },
+			createEvent.value,
+			{
+				label: __("Go to dashboard"),
+				description: __("See your events and settings."),
+				icon: "lucide-layout-dashboard",
+				run: () => open("/b/manage", hostTeam.value),
+			},
 		]
 	if (outcome.value === "community")
 		return [
-			eventAction.value,
-			{ label: __("View community page"), run: () => open(`/community/${flow.community.slug}`) },
+			createEvent.value,
+			{
+				label: __("View community page"),
+				description: __("See the page your members visit."),
+				icon: "lucide-globe",
+				run: () => open(`/community/${flow.community.slug}`),
+			},
 		]
-	return [browseEvents, { label: __("My tickets"), run: () => open("/b/manage/events") }]
+	return [
+		browseEvents,
+		{
+			label: __("My tickets"),
+			description: __("See all your bookings in one place."),
+			icon: "lucide-ticket",
+			run: () => open("/b/manage/events"),
+		},
+	]
 })
 
 const summary = computed(() => {
 	if (outcome.value === "attendee") return __("Your tickets and bookings live in one place now.")
 	if (outcome.value === "team" && invitedTeam.value)
 		return __("{0}'s events and members are waiting for you.", [invitedTeam.value.team_name])
-	return __("Everything you set up is saved. Pick up where you left off.")
+	return __("Everything you set up is saved. Next, create your first event.")
 })
 
 function redirectNow() {
@@ -126,25 +152,60 @@ onBeforeUnmount(() => clearInterval(timer))
 				@click="redirectNow"
 			/>
 		</div>
-		<div v-else class="flex flex-wrap justify-center gap-2">
-			<Button
-				variant="solid"
-				:label="actions[0].label"
-				:loading="completeCall.loading"
+		<div
+			v-else
+			class="flex w-full max-w-sm flex-col overflow-hidden rounded-5 border border-outline-gray-2 bg-surface-elevation-1"
+		>
+			<button
+				v-for="(action, index) in actions"
+				:key="action.label"
+				type="button"
+				class="action group flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-gray-1 focus-visible:bg-surface-gray-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+				:class="index > 0 && 'border-t border-outline-gray-1'"
 				:disabled="!flow.completed"
-				@click="actions[0].run"
-			/>
-			<Button
-				variant="subtle"
-				:label="actions[1].label"
-				:disabled="!flow.completed"
-				@click="actions[1].run"
-			/>
+				@click="action.run"
+			>
+				<span class="flex size-5 shrink-0 items-center justify-center text-ink-gray-6">
+					<Spinner v-if="index === 0 && completeCall.loading" class="size-4" />
+					<span v-else class="size-4" :class="action.icon" />
+				</span>
+				<span class="flex min-w-0 flex-1 flex-col gap-0.5">
+					<span class="text-base-medium text-ink-gray-9">{{ action.label }}</span>
+					<span class="text-sm text-ink-gray-5">{{ action.description }}</span>
+				</span>
+				<span class="chevron lucide-chevron-right size-4 shrink-0 text-ink-gray-4" />
+			</button>
 		</div>
 	</div>
 </template>
 
 <style scoped>
+.action {
+	transition: background-color 150ms ease;
+}
+.action:not(:disabled):active {
+	background-color: var(--surface-gray-2);
+}
+.chevron {
+	transition:
+		transform 200ms cubic-bezier(0.23, 1, 0.32, 1),
+		color 150ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+	.action:not(:disabled):hover .chevron {
+		transform: translateX(2px);
+		color: var(--ink-gray-7);
+	}
+}
+.action:focus-visible .chevron {
+	transform: translateX(2px);
+}
+@media (prefers-reduced-motion: reduce) {
+	.action,
+	.chevron {
+		transition: none;
+	}
+}
 .countdown {
 	transform-origin: left;
 	animation: countdown linear forwards;

@@ -2,12 +2,12 @@ import { useCall } from "frappe-ui"
 import { computed, reactive, ref } from "vue"
 
 import type { Availability } from "@/composables/useSlugAvailability"
+import { loadUser, userResource } from "@/data/user"
 import type { UserInfo } from "@/types"
 
 export type Choice = "personal" | "community" | "attendee" | "team"
-export type StepId = "profile" | "fork" | "invite" | "community" | "event" | "done"
-export type Scene = "profile" | "personal" | "community" | "attendee" | "team" | "event" | "done"
-export type Medium = "Online" | "In Person"
+export type StepId = "profile" | "fork" | "invite" | "community" | "done"
+export type Scene = "profile" | "personal" | "community" | "attendee" | "team" | "done"
 
 export type InvitedTeam = {
 	name: string
@@ -25,21 +25,11 @@ type SavedCommunity = {
 	logo: string | null
 	short_description: string | null
 }
-type DraftEvent = {
-	name: string
-	team: string
-	title: string
-	start_date: string
-	start_time: string
-	medium: Medium
-	venue_name: string | null
-}
 type OnboardingState = {
 	personal_teams_enabled: boolean
 	communities_enabled: boolean
 	invited_team: InvitedTeam | null
 	community: SavedCommunity | null
-	draft_event: DraftEvent | null
 }
 
 const stateCall = useCall<OnboardingState>({
@@ -56,11 +46,6 @@ const communityCall = useCall<string, Record<string, unknown>>({
 	method: "POST",
 	immediate: false,
 })
-const eventCall = useCall<string, { event: Record<string, unknown> }>({
-	url: "/api/v2/method/buzz.api.onboarding.save_first_event",
-	method: "POST",
-	immediate: false,
-})
 export const completeCall = useCall<null>({
 	url: "/api/v2/method/buzz.api.onboarding.complete_onboarding",
 	method: "POST",
@@ -74,7 +59,6 @@ const slugCall = useCall<Availability, { slug: string }>({
 export const checkCommunitySlug = (slug: string) => slugCall.submit({ slug })
 export const personalTeamError = computed(() => personalTeamCall.error?.message)
 export const communityError = computed(() => communityCall.error?.message)
-export const eventError = computed(() => eventCall.error?.message)
 export const loadError = computed(() => stateCall.error?.message)
 
 export type Profile = {
@@ -95,7 +79,6 @@ export const flow = reactive({
 	personalTeam: "",
 	stepIndex: 0,
 	direction: 1,
-	eventSkipped: false,
 	completed: false,
 	community: {
 		name: "",
@@ -105,15 +88,6 @@ export const flow = reactive({
 		slugEdited: false,
 		logo: null as string | null,
 		short_description: "",
-	},
-	event: {
-		name: "",
-		team: "",
-		title: "",
-		start_date: "",
-		start_time: "",
-		medium: "Online" as Medium,
-		venue_name: "",
 	},
 })
 export const state = ref<OnboardingState | null>(null)
@@ -143,11 +117,12 @@ function loadCommunity(saved: SavedCommunity | null | undefined) {
 	})
 }
 
-export async function loadOnboarding(user: UserInfo | null | undefined) {
-	await stateCall.fetch()
+// The state is fetched alongside the user, since the profile step fills from both.
+export async function loadOnboarding() {
+	await Promise.all([stateCall.fetch(), loadUser()])
 	if (stateCall.error) return
 	state.value = stateCall.data
-	loadProfile(user)
+	loadProfile(userResource.data)
 	loadCommunity(stateCall.data?.community)
 }
 
@@ -181,7 +156,6 @@ export const effectiveChoice = computed<Choice>(
 
 export const steps = computed<StepId[]>(() => {
 	const choice = effectiveChoice.value
-	const hosting = choice === "personal" || choice === "community"
 	const askFork: StepId | null = invitedTeam.value
 		? "invite"
 		: hostingOptions.value.length
@@ -191,7 +165,6 @@ export const steps = computed<StepId[]>(() => {
 		"profile",
 		...(askFork ? [askFork] : []),
 		...(choice === "community" ? ["community" as const] : []),
-		...(hosting ? ["event" as const] : []),
 		"done",
 	]
 })
@@ -206,7 +179,6 @@ export const outcome = computed<Choice>(() =>
 export const hostTeam = computed(() =>
 	effectiveChoice.value === "community" ? flow.community.name : flow.personalTeam,
 )
-export const hasDraft = computed(() => !flow.eventSkipped && Boolean(flow.event.name))
 
 export const scene = computed<Scene>(() => {
 	const step = currentStep.value
@@ -218,27 +190,12 @@ export const scene = computed<Scene>(() => {
 export const previewAddress = computed(() => {
 	const host = window.location.host
 	// All set previews what the user ended up with.
-	const shown = scene.value === "done" ? (hasDraft.value ? "event" : outcome.value) : scene.value
+	const shown = scene.value === "done" ? outcome.value : scene.value
 	if (shown === "community") return `${host}/community/${flow.community.slug || "…"}`
-	if (shown === "event") return `${host}/events`
 	if (shown === "attendee") return `${host}/b/manage/events`
 	if (shown === "team") return `${host}/b/manage`
 	return `${host}/@${profile.username || "…"}`
 })
-
-function prefillDraft() {
-	const draft = state.value?.draft_event
-	if (flow.event.name || !draft || draft.team !== hostTeam.value) return
-	Object.assign(flow.event, {
-		name: draft.name,
-		team: draft.team,
-		title: draft.title,
-		start_date: draft.start_date,
-		start_time: draft.start_time.slice(0, 5),
-		medium: draft.medium,
-		venue_name: draft.venue_name ?? "",
-	})
-}
 
 export async function completeOnce() {
 	if (flow.completed || completeCall.loading) return
@@ -249,7 +206,6 @@ export function goTo(index: number) {
 	const target = Math.max(0, Math.min(index, steps.value.length - 1))
 	flow.direction = target >= flow.stepIndex ? 1 : -1
 	flow.stepIndex = target
-	if (currentStep.value === "event") prefillDraft()
 	if (currentStep.value === "done") completeOnce()
 }
 
@@ -257,9 +213,7 @@ export const next = () => goTo(flow.stepIndex + 1)
 export const back = () => goTo(flow.stepIndex - 1)
 
 export function skip() {
-	if (currentStep.value === "community") return goTo(steps.value.length - 1)
 	if (currentStep.value === "fork") flow.choice = "attendee"
-	if (currentStep.value === "event") flow.eventSkipped = true
 	next()
 }
 
@@ -275,21 +229,5 @@ export async function saveCommunity() {
 	const saved = await attempt(communityCall.submit({ team_name, slug, logo, short_description }))
 	if (!saved) return false
 	Object.assign(flow.community, { name: communityCall.data, savedSlug: slug })
-	return true
-}
-
-export async function saveFirstEvent() {
-	const { name, team, start_time, ...fields } = flow.event
-	const event = {
-		...fields,
-		team: hostTeam.value,
-		start_time: `${start_time}:00`,
-		venue_name: fields.medium === "In Person" ? fields.venue_name : undefined,
-		event: team === hostTeam.value ? name || undefined : undefined,
-	}
-	const saved = await attempt(eventCall.submit({ event }))
-	if (!saved) return false
-	Object.assign(flow.event, { name: eventCall.data, team: hostTeam.value })
-	flow.eventSkipped = false
 	return true
 }

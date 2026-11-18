@@ -76,6 +76,8 @@ export function getStorageStatePath() {
 
 /**
  * Create a user holding the given roles, or top up the roles if they already exist.
+ * The user counts as onboarded unless `onboarding` says otherwise: another project may turn
+ * onboarding on mid-run, and a pending user is sent to it instead of the dashboard.
  * Returns the user's name (its email).
  */
 export async function createUserWithRoles(
@@ -86,9 +88,11 @@ export async function createUserWithRoles(
 		password: string
 		roles: string[]
 		userType?: "System User" | "Website User"
+		onboarding?: "Completed" | "Pending"
 	},
 ): Promise<string> {
 	const { email, firstName, password, roles, userType = "System User" } = options
+	const onboarding = { buzz_onboarding_status: options.onboarding ?? "Completed" }
 	const doc = {
 		first_name: firstName,
 		new_password: password,
@@ -98,11 +102,13 @@ export async function createUserWithRoles(
 	}
 
 	if (await docExists(request, "User", email)) {
-		await updateDoc(request, "User", email, doc)
+		await updateDoc(request, "User", email, { ...doc, ...onboarding })
 		return email
 	}
 
 	await createDoc(request, "User", { email, user_type: userType, ...doc })
+	// Set after the insert: the signup hook marks new users pending while onboarding is on.
+	await updateDoc(request, "User", email, onboarding)
 	return email
 }
 

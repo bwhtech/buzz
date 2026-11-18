@@ -67,7 +67,7 @@ export default defineConfig({
 		{
 			name: "chromium",
 			testIgnore:
-				/guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets|language|user-settings|ticket-holds|offline-payment|coupons|registration-requests/,
+				/guest-booking|custom-forms|event-proposal|login-modal|check-in|tickets|language|user-settings|ticket-holds|offline-payment|coupons|registration-requests|onboarding/,
 			use: {
 				...devices["Desktop Chrome"],
 				storageState: authFile,
@@ -249,6 +249,23 @@ export default defineConfig({
 				storageState: authFile,
 			},
 			dependencies: ["registration-requests-setup"],
+		},
+		{
+			name: "onboarding-setup",
+			testMatch: /onboarding\.setup\.ts/,
+			use: {
+				storageState: authFile,
+			},
+			dependencies: ["setup"],
+		},
+		{
+			// Each flow runs as a user of its own (see onboarding.setup.ts).
+			name: "onboarding-chromium",
+			testMatch: /onboarding\.spec\.ts/,
+			use: {
+				...devices["Desktop Chrome"],
+			},
+			dependencies: ["onboarding-setup"],
 		},
 		{
 			name: "ticket-holds-setup",

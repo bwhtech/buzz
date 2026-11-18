@@ -3,7 +3,7 @@ import frappe
 from buzz.api.events.schemas import RouteAvailability
 from buzz.api.onboarding import services, setup
 from buzz.api.onboarding.exceptions import InvalidUsername, UsernameTaken
-from buzz.api.onboarding.schemas import FirstEvent, OnboardingState
+from buzz.api.onboarding.schemas import OnboardingState
 
 
 @frappe.whitelist()
@@ -45,8 +45,3 @@ def save_community(
 	team_name: str, slug: str, logo: str | None = None, short_description: str | None = None
 ) -> str:
 	return setup.save_community(frappe.session.user, team_name, slug, logo, short_description)
-
-
-@frappe.whitelist(methods=["POST"])
-def save_first_event(event: FirstEvent) -> str:
-	return setup.save_first_event(event)

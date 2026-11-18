@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ErrorMessage, TextInput, Textarea } from "frappe-ui"
+import { ErrorMessage, FormLabel, TextInput, Textarea } from "frappe-ui"
 import { ref, watch } from "vue"
 
 import AvatarUploader from "@/components/common/AvatarUploader.vue"
@@ -25,7 +25,8 @@ watch(
 )
 
 const slugReady = () =>
-	community.slug === community.savedSlug || Boolean(availability.value?.available)
+	Boolean(community.slug.trim()) &&
+	(community.slug === community.savedSlug || Boolean(availability.value?.available))
 
 defineExpose({
 	canContinue: () => Boolean(community.team_name.trim()) && slugReady(),
@@ -39,23 +40,25 @@ defineExpose({
 			v-model="community.logo"
 			shape="square"
 			:label="community.team_name || '?'"
+			icon="lucide-upload"
 			:title="__('Community logo')"
-			:description="__('Optional. Your initials show until you add one.')"
+			:description="__('Optional. A square image works best.')"
 		/>
 		<TextInput
 			v-model="community.team_name"
 			:label="__('Community name')"
-			:placeholder="__('Bangalore JS Meetup')"
+			:placeholder="__('Weekend Builders Club')"
 			required
 			autofocus
 		/>
 		<div class="flex flex-col gap-1.5">
-			<p class="text-xs text-ink-gray-5">{{ __("Page address") }}</p>
+			<FormLabel :label="__('Community URL')" required />
 			<SlugInput
 				v-model="community.slug"
 				v-model:availability="availability"
 				prefix="community/"
-				:label="__('Page address')"
+				:label="__('Community URL')"
+				placeholder="weekend-builders-club"
 				:saved-slug="community.savedSlug"
 				:check="checkCommunitySlug"
 			/>
@@ -63,13 +66,9 @@ defineExpose({
 		<Textarea
 			v-model="community.short_description"
 			:label="__('Short description')"
-			:placeholder="__('Monthly talks and hack nights for JavaScript folks in Bangalore.')"
+			:placeholder="__('What you host, and who it is for')"
 			:rows="2"
 		/>
-		<p class="flex items-center gap-2 text-sm text-ink-gray-5">
-			<span class="size-1.5 rounded-full bg-surface-green-3" />
-			{{ __("Your community page goes live when you continue.") }}
-		</p>
 		<ErrorMessage :message="communityError" />
 	</div>
 </template>
