@@ -18,11 +18,9 @@ setup("seed the onboarding users", async ({ request, baseURL }) => {
 			password: ONBOARDING_PASSWORD,
 			roles: ["Buzz User"],
 			userType: "Website User",
+			onboarding: "Pending",
 		})
-		await updateDoc(request, "User", user.email, {
-			username: user.username,
-			buzz_onboarding_status: "Pending",
-		})
+		await updateDoc(request, "User", user.email, { username: user.username })
 		await saveLoginState(baseURL!, {
 			email: user.email,
 			password: ONBOARDING_PASSWORD,
