@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ErrorMessage } from "frappe-ui"
 import { computed, ref } from "vue"
+import { useRoute } from "vue-router"
 
 import ForkIllustration from "./ForkIllustration.vue"
 import {
@@ -12,28 +13,30 @@ import {
 	savePersonalTeam,
 } from "./useOnboarding"
 
-type Tile = { value: Choice; title: string; line: string; example: string }
+type Tile = { value: Choice; title: string; line: string; note?: string }
+
+const route = useRoute()
 
 function tileFor(choice: Choice): Tile {
 	if (choice === "personal")
 		return {
 			value: choice,
 			title: __("Host as myself"),
-			line: __("Run events under your own name and profile."),
-			example: __("Priya's weekend pottery workshops"),
+			line: __("Host events on your own, under your name."),
+			note: __("You cannot add team members."),
 		}
 	if (choice === "community")
 		return {
 			value: choice,
 			title: __("Create a community"),
-			line: __("A shared page for a group that hosts together."),
-			example: __("Bangalore JS Meetup"),
+			line: __("Create a team and add members to host events together."),
 		}
 	return {
 		value: choice,
 		title: __("Skip, I'm just attending"),
-		line: __("Find events and keep your tickets in one place."),
-		example: __("You can start hosting any time"),
+		line: route.query["redirect-to"]
+			? __("Skip this step and go back to the page you were on.")
+			: __("Skip this step and go to your events and tickets."),
 	}
 }
 
@@ -97,7 +100,7 @@ defineExpose({
 				>
 					<span class="text-lg-semibold text-ink-gray-9">{{ tile.title }}</span>
 					<span class="text-base text-ink-gray-6">{{ tile.line }}</span>
-					<span class="text-sm text-ink-gray-5">{{ __("e.g. {0}", [tile.example]) }}</span>
+					<span v-if="tile.note" class="text-sm text-ink-gray-5">{{ tile.note }}</span>
 				</span>
 			</div>
 		</div>
