@@ -52,7 +52,7 @@ const headings = computed<Record<string, [string, string]>>(() => ({
 	fork: [__("How will you use Buzz?"), __("Pick what fits today. You can change it later.")],
 	invite: [
 		__("You're on the {0} team", [invitedTeam.value?.team_name ?? ""]),
-		__("Start with your team. You can host on your own any time."),
+		__("Continue to open the team in your dashboard."),
 	],
 	community: [__("Set up your community"), __("A home page for your events and members.")],
 }))
