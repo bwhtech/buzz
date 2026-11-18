@@ -3,7 +3,7 @@ import createGlobe from "cobe"
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
 import PreviewCard from "./PreviewCard.vue"
-import { type Scene, flow, previewAddress, scene } from "./useOnboarding"
+import { type Scene, previewAddress, scene } from "./useOnboarding"
 
 type City = [lat: number, lng: number]
 type Globe = ReturnType<typeof createGlobe>
@@ -40,10 +40,6 @@ const setups: Record<Scene, () => SceneSetup> = {
 	community: () => ({ cities: WORLD.slice(0, 14), size: 0.05, focus: null }),
 	attendee: () => ({ cities: WORLD, size: 0.035, focus: null }),
 	team: () => ({ cities: NEARBY, size: 0.07, focus: HOME }),
-	event: () =>
-		flow.event.medium === "In Person"
-			? { cities: [HOME], size: 0.13, focus: HOME }
-			: { cities: WORLD, size: 0.03, focus: null },
 	done: () => ({ cities: WORLD, size: 0.04, focus: null }),
 }
 
@@ -117,7 +113,7 @@ function draw() {
 	requestAnimationFrame(() => (ready.value = true))
 }
 
-watch([scene, () => flow.event.medium], () => {
+watch(scene, () => {
 	setup = setups[scene.value]()
 	bloomStart = performance.now()
 })

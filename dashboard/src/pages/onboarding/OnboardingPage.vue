@@ -11,7 +11,6 @@ import { resolveLoginRedirect } from "@/utils/loginRedirect"
 
 import CommunityStep from "./CommunityStep.vue"
 import DoneStep from "./DoneStep.vue"
-import EventStep from "./EventStep.vue"
 import ForkStep from "./ForkStep.vue"
 import InviteStep from "./InviteStep.vue"
 import OnboardingSkeleton from "./OnboardingSkeleton.vue"
@@ -36,7 +35,6 @@ const views = {
 	fork: ForkStep,
 	invite: InviteStep,
 	community: CommunityStep,
-	event: EventStep,
 	done: DoneStep,
 }
 
@@ -48,9 +46,6 @@ const user = computed(() => userResource.data)
 const isDone = computed(() => currentStep.value === "done")
 // Profile is required, and an invitee already has a place to land, so neither offers Skip.
 const canSkip = computed(() => !["profile", "invite", "done"].includes(currentStep.value))
-const continueLabel = computed(() =>
-	currentStep.value === "event" ? __("Save draft") : __("Continue"),
-)
 
 const headings = computed<Record<string, [string, string]>>(() => ({
 	profile: [__("Set up your profile"), __("This is how hosts and guests see you on Buzz.")],
@@ -60,10 +55,6 @@ const headings = computed<Record<string, [string, string]>>(() => ({
 		__("Start with your team. You can host on your own any time."),
 	],
 	community: [__("Set up your community"), __("A home page for your events and members.")],
-	event: [
-		__("Plan your first event"),
-		__("Just the basics. It saves as a draft you can finish later."),
-	],
 }))
 
 // The route is full bleed, so the user is loaded here rather than by the router.
@@ -171,7 +162,7 @@ const stageStyle = computed(() => ({
 							<Button
 								type="submit"
 								variant="solid"
-								:label="continueLabel"
+								:label="__('Continue')"
 								:loading="saving"
 								:disabled="!step?.canContinue()"
 							/>

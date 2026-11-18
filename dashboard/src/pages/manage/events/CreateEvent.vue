@@ -18,8 +18,9 @@ import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
 import EventTeamSelect from "@/components/dashboard/events/EventTeamSelect.vue"
 import EventLocationField from "@/components/dashboard/events/location/EventLocationField.vue"
 import { useIsMobile } from "@/composables/useIsMobile"
+import { useQueryParamRecord } from "@/composables/useQueryParamRecord"
 import { createEvent } from "@/data/events"
-import { currentTeam } from "@/data/teams"
+import { currentTeam, selectTeam, teams, teamsLoaded } from "@/data/teams"
 import { defaultSchedule } from "@/utils/eventDates"
 import type { ChecklistItem } from "@/utils/eventValidation"
 import { eventDraftChecklist, isDraftComplete } from "@/utils/eventValidation"
@@ -37,6 +38,12 @@ const router = useRouter()
 const isMobile = useIsMobile()
 
 const canCreate = computed(() => canCreateEvents(currentTeam.value?.team_role))
+// `?team=<name>` picks the team to create under, as onboarding links do.
+useQueryParamRecord(
+	"team",
+	() => (teamsLoaded.value ? teams.value : undefined),
+	(team) => selectTeam(team.name),
+)
 
 const title = ref("")
 

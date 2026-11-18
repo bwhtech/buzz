@@ -2,17 +2,14 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.account import get_user_info
-from buzz.api.exceptions import NotPermitted
 from buzz.api.onboarding import (
 	check_username,
 	complete_onboarding,
 	get_onboarding_state,
 	save_community,
-	save_first_event,
 	save_profile,
 )
 from buzz.api.onboarding.exceptions import InvalidUsername, UsernameTaken
-from buzz.api.onboarding.schemas import FirstEvent
 from buzz.api.onboarding.services import STATUS_FIELD, mark_pending_on_signup
 from buzz.tests.factories import BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
 
@@ -88,26 +85,6 @@ class TestOnboardingSetup(IntegrationTestCase):
 			team, {"team_name": "Clay Collective", "slug": "clay-collective-onboarding", "is_published": 1}
 		)
 		self.assertEqual(get_onboarding_state().community.name, first)
-
-	def test_first_event_is_an_editable_draft(self):
-		team = save_community(team_name="Kiln Club", slug="kiln-club-onboarding")
-		event = {"team": team, "title": "Glaze night", "start_date": "2027-01-10", "start_time": "18:00:00"}
-		first = save_first_event(FirstEvent(**event, medium="In Person", venue_name="Studio 5"))
-		second = save_first_event(FirstEvent(**event, medium="Online", event=first))
-
-		self.assertEqual(first, second)
-		saved = frappe.get_doc("Buzz Event", second)
-		self.assertEqual((saved.is_published, saved.medium, saved.venue), (0, "Online", None))
-		self.assertEqual(str(saved.end_time), "19:00:00")
-		self.assertEqual(get_onboarding_state().draft_event.name, first)
-
-	def test_another_users_draft_cannot_be_edited(self):
-		team = save_community(team_name="Wheel Club", slug="wheel-club-onboarding")
-		event = {"team": team, "title": "Throwing", "start_date": "2027-01-10", "start_time": "18:00:00"}
-		draft = save_first_event(FirstEvent(**event, medium="Online"))
-		frappe.db.set_value("Buzz Event", draft, "owner", "Administrator")
-		with self.assertRaises(NotPermitted):
-			save_first_event(FirstEvent(**event, medium="Online", event=draft))
 
 
 class TestInvitedTeam(IntegrationTestCase):

@@ -3,24 +3,14 @@ import { bannerPattern } from "@public/js/event_banner"
 import { Avatar } from "frappe-ui"
 import { computed } from "vue"
 
-import EventCard from "./EventCard.vue"
-import {
-	type Scene,
-	effectiveChoice,
-	flow,
-	fullName,
-	hasDraft,
-	invitedTeam,
-	profile,
-} from "./useOnboarding"
+import { type Scene, effectiveChoice, flow, fullName, invitedTeam, profile } from "./useOnboarding"
 
 const props = defineProps<{ scene: Scene }>()
 
 const crowd = ["A", "B", "C", "D", "E"]
 const fanned = ["first", "second"]
 const card = computed(() => {
-	if (props.scene !== "done") return props.scene
-	return hasDraft.value ? "event" : effectiveChoice.value
+	return props.scene === "done" ? effectiveChoice.value : props.scene
 })
 const cover = (seed: string) => ({ backgroundImage: bannerPattern(seed) })
 
@@ -45,9 +35,7 @@ const group = computed(() => {
 </script>
 
 <template>
-	<EventCard v-if="card === 'event'" />
-
-	<div v-else-if="card === 'attendee'" class="relative w-full max-w-xs">
+	<div v-if="card === 'attendee'" class="relative w-full max-w-xs">
 		<div
 			class="stack-behind absolute inset-x-4 -bottom-2 h-full rounded-5 border border-outline-gray-2 bg-surface-elevation-1"
 		/>
