@@ -1,28 +1,21 @@
 <script setup lang="ts">
-import { useTextareaAutosize } from "@vueuse/core"
-import {
-	Alert,
-	Button,
-	ErrorMessage,
-	PageHeaderBackButton,
-	PageHeaderMobile,
-	toast,
-} from "frappe-ui"
+import { Alert, ErrorMessage, toast } from "frappe-ui"
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
-import { computed, onBeforeUnmount, onMounted, ref } from "vue"
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue"
 import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router"
 
 import ProgressStatus from "@/components/common/ProgressStatus.vue"
+import CreateEventFooter from "@/components/dashboard/events/create/CreateEventFooter.vue"
+import CreateEventHeader from "@/components/dashboard/events/create/CreateEventHeader.vue"
+import EventScheduleField from "@/components/dashboard/events/create/EventScheduleField.vue"
+import EventTitleField from "@/components/dashboard/events/create/EventTitleField.vue"
 import EventBanner from "@/components/dashboard/events/EventBanner.vue"
-import EventSchedule from "@/components/dashboard/events/EventSchedule.vue"
 import EventTeamSelect from "@/components/dashboard/events/EventTeamSelect.vue"
 import EventLocationField from "@/components/dashboard/events/location/EventLocationField.vue"
-import { useIsMobile } from "@/composables/useIsMobile"
 import { useQueryParamRecord } from "@/composables/useQueryParamRecord"
 import { createEvent } from "@/data/events"
 import { currentTeam, selectTeam, teams, teamsLoaded } from "@/data/teams"
 import { defaultSchedule } from "@/utils/eventDates"
-import type { ChecklistItem } from "@/utils/eventValidation"
 import { eventDraftChecklist, isDraftComplete } from "@/utils/eventValidation"
 import { resolveLoginRedirect } from "@/utils/loginRedirect"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
@@ -35,8 +28,6 @@ const MANAGER_REQUIRED = "Ask an admin to make you a Manager to create events."
 const route = useRoute()
 const router = useRouter()
 
-const isMobile = useIsMobile()
-
 const canCreate = computed(() => canCreateEvents(currentTeam.value?.team_role))
 // `?team=<name>` picks the team to create under, as onboarding links do.
 useQueryParamRecord(
@@ -46,28 +37,21 @@ useQueryParamRecord(
 )
 
 const title = ref("")
-
-const titleField = ref<HTMLTextAreaElement>()
-useTextareaAutosize({ element: titleField, watch: title })
 const about = ref("")
 const bannerImage = ref("")
 
 const opening = defaultSchedule()
-const startDate = ref(opening.startDate)
-const startTime = ref(opening.startTime)
-const endDate = ref(opening.endDate)
-const endTime = ref(opening.endTime)
-const timeZone = ref(currentTimeZone())
+const schedule = reactive({ ...opening, timeZone: currentTimeZone() })
 
 const venue = ref("")
 const zoomMeeting = ref(false)
 
 const draft = computed(() => ({
 	title: title.value,
-	startDate: startDate.value,
-	startTime: startTime.value,
-	endDate: endDate.value,
-	endTime: endTime.value,
+	startDate: schedule.startDate,
+	startTime: schedule.startTime,
+	endDate: schedule.endDate,
+	endTime: schedule.endTime,
 	venue: venue.value,
 	zoomMeeting: zoomMeeting.value,
 }))
@@ -83,10 +67,10 @@ const isDirty = computed(() =>
 		bannerImage.value ||
 		venue.value ||
 		zoomMeeting.value ||
-		startDate.value !== opening.startDate ||
-		startTime.value !== opening.startTime ||
-		endDate.value !== opening.endDate ||
-		endTime.value !== opening.endTime,
+		schedule.startDate !== opening.startDate ||
+		schedule.startTime !== opening.startTime ||
+		schedule.endDate !== opening.endDate ||
+		schedule.endTime !== opening.endTime,
 	),
 )
 
@@ -142,11 +126,23 @@ onBeforeRouteLeave(() => !isDirty.value || submitting.value || window.confirm(LE
 const saveAttempted = ref(false)
 
 const missingItems = computed(() => checklist.value.filter((item) => !item.done))
+const isMissing = (field: string) =>
+	saveAttempted.value && missingItems.value.some((item) => item.field === field)
+const labelTone = (fields: string[]) =>
+	fields.some(isMissing) ? "text-ink-red-7" : "text-ink-gray-6"
+const SCHEDULE_FIELDS = ["event-schedule-start", "event-schedule-end"]
 
-function iconColor(item: ChecklistItem) {
-	if (item.done) return "text-ink-green-7"
-	return saveAttempted.value ? "text-ink-red-7" : "text-ink-gray-6"
-}
+// One list of what is missing, shown beside whichever Create is on screen.
+const showMissing = ref(false)
+const footerVisible = ref(false)
+const headerMissing = computed({
+	get: () => showMissing.value && !footerVisible.value,
+	set: (open: boolean) => (showMissing.value = open),
+})
+const footerMissing = computed({
+	get: () => showMissing.value && footerVisible.value,
+	set: (open: boolean) => (showMissing.value = open),
+})
 
 const locationError = computed(() =>
 	saveAttempted.value && !venue.value && !zoomMeeting.value
@@ -154,15 +150,13 @@ const locationError = computed(() =>
 		: "",
 )
 
-const listFormat = new Intl.ListFormat("en", { style: "long", type: "conjunction" })
-
 function focusFirstMissing() {
 	const target = document.getElementById(missingItems.value[0]?.field ?? "")
 	const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches
 	target?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "center" })
-	const focusable = target?.matches("input, button")
+	const focusable = target?.matches("input, button, textarea")
 		? target
-		: target?.querySelector("input, button")
+		: target?.querySelector("input, button, textarea")
 	;(focusable as HTMLElement | null)?.focus({ preventScroll: true })
 }
 
@@ -175,11 +169,11 @@ async function save() {
 	}
 	saveAttempted.value = true
 	if (!isDraftComplete(draft.value)) {
-		const names = missingItems.value.map((item) => item.label.toLowerCase())
-		toast.error(`Add ${listFormat.format(names)}`)
+		showMissing.value = true
 		focusFirstMissing()
 		return
 	}
+	showMissing.value = false
 
 	submitting.value = true
 	failed.value = false
@@ -190,13 +184,13 @@ async function save() {
 			event: {
 				team: currentTeam.value?.name,
 				title: title.value.trim(),
-				start_date: startDate.value,
-				start_time: startTime.value,
-				end_date: endDate.value || null,
-				end_time: endTime.value,
+				start_date: schedule.startDate,
+				start_time: schedule.startTime,
+				end_date: schedule.endDate || null,
+				end_time: schedule.endTime,
 				about: about.value || null,
 				banner_image: bannerImage.value || null,
-				time_zone: timeZone.value || null,
+				time_zone: schedule.timeZone || null,
 				venue: venue.value || null,
 				zoom_meeting: zoomMeeting.value,
 			},
@@ -222,6 +216,11 @@ async function save() {
 	router.push({ name: "event-details", params: { eventId: createEvent.data?.name } })
 }
 
+function close() {
+	if (redirectTo.value) return goBack(redirectTo.value)
+	router.push({ name: "events" })
+}
+
 // A dashboard page stays in the SPA; a public page, such as a community's, is a full load.
 function goBack(path: string) {
 	const base = router.options.history.base
@@ -231,16 +230,17 @@ function goBack(path: string) {
 </script>
 
 <template>
-	<PageHeaderMobile v-if="isMobile" title="Create event">
-		<template #prefix>
-			<PageHeaderBackButton :fallback-route="{ name: 'events' }" />
-		</template>
-		<template #suffix>
-			<Button variant="solid" label="Create" :loading="submitting" @click="save" />
-		</template>
-	</PageHeaderMobile>
+	<div class="flex min-h-full flex-col bg-surface-white">
+		<CreateEventHeader
+			v-model:show-missing="headerMissing"
+			class="sticky top-0 z-10"
+			:missing="missingItems"
+			:loading="submitting"
+			:create-hidden="footerVisible || submitting"
+			@create="save"
+			@close="close"
+		/>
 
-	<div class="m-auto max-w-[800px] w-full py-8 px-4">
 		<Transition
 			mode="out-in"
 			enter-active-class="transition-opacity duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
@@ -248,26 +248,12 @@ function goBack(path: string) {
 			enter-from-class="opacity-0"
 			leave-to-class="opacity-0"
 		>
-			<div v-if="!submitting" class="space-y-8">
-				<header class="space-y-4">
-					<div class="hidden items-center justify-between gap-4 md:flex">
-						<h1 class="text-2xl font-semibold text-ink-gray-9">Create event</h1>
-						<!-- Never disabled, and never aria-disabled: the click is what explains
-						 what is missing. Held busy past the response, or the page it just saved
-						 takes a second click. -->
-						<Button
-							variant="solid"
-							size="lg"
-							label="Create"
-							:loading="submitting"
-							aria-describedby="event-requirements"
-							@click="save"
-						/>
-					</div>
-
-					<EventTeamSelect />
-					<ErrorMessage v-if="errorMessage" :message="errorMessage" />
-				</header>
+			<div
+				v-if="!submitting"
+				class="mx-auto flex w-full max-w-[720px] flex-col gap-6 px-4 pb-10 pt-6 md:gap-7 md:px-6 md:pb-28 md:pt-10"
+			>
+				<EventTeamSelect />
+				<ErrorMessage v-if="errorMessage" :message="errorMessage" />
 
 				<Alert
 					v-if="!canCreate"
@@ -279,87 +265,64 @@ function goBack(path: string) {
 
 				<EventBanner v-model="bannerImage" :seed="title" :disabled="!canCreate" />
 
-				<textarea
-					id="event-title"
-					ref="titleField"
+				<EventTitleField
 					v-model="title"
-					rows="1"
-					maxlength="140"
-					aria-label="Event title"
-					placeholder="Name your event"
 					:disabled="!canCreate"
-					:aria-invalid="saveAttempted && !title.trim()"
-					class="w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-4xl font-semibold text-ink-gray-9 placeholder:text-ink-gray-4 focus:outline-none disabled:text-ink-gray-5 aria-invalid:placeholder:text-ink-red-4"
-					@keydown.enter.prevent
+					:invalid="isMissing('event-title')"
 				/>
 
-				<div class="grid grid-cols-1 gap-8 md:grid-cols-5">
-					<section class="space-y-3 md:col-span-3">
-						<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">About</h2>
-						<div class="overflow-hidden rounded-6 border border-outline-gray-2">
-							<Editor
-								v-model="about"
-								:extensions="richTextExtensions"
-								placeholder="What is this event about?"
-								:editable="canCreate"
-							>
-								<EditorFixedMenu
-									:items="richTextToolbar"
-									class="overflow-x-auto border-b border-outline-gray-2 px-2 py-1"
-								/>
-								<EditorContent
-									class="prose-sm h-48 max-w-none overflow-y-auto p-3 text-ink-gray-8 focus:outline-none"
-								/>
-							</Editor>
-						</div>
-					</section>
-
-					<div class="space-y-8 md:col-span-2">
-						<EventSchedule
-							:disabled="!canCreate"
-							v-model:start-date="startDate"
-							v-model:start-time="startTime"
-							v-model:end-date="endDate"
-							v-model:end-time="endTime"
-							v-model:time-zone="timeZone"
-						/>
-
-						<section id="event-location" class="space-y-1.5 px-4">
-							<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">Where</h2>
-							<EventLocationField
-								v-model:venue="venue"
-								v-model:zoom-meeting="zoomMeeting"
-								:team="currentTeam?.name ?? ''"
-								:disabled="!canCreate"
-								:error="locationError"
-							/>
-						</section>
-					</div>
-				</div>
-				<section id="event-requirements" class="space-y-3 rounded-6 bg-surface-gray-1/90 p-4">
-					<h2 class="text-sm font-medium uppercase tracking-wide text-ink-gray-5">
-						{{ missingItems.length ? "Still needed" : "Ready to create" }}
-					</h2>
-
-					<ul class="space-y-2" aria-live="polite">
-						<li
-							v-for="item in checklist"
-							:key="item.label"
-							class="flex items-center gap-2 text-base text-ink-gray-8"
+				<section>
+					<h2 class="mb-2 text-sm font-medium text-ink-gray-6">{{ __("About") }}</h2>
+					<div
+						class="overflow-hidden rounded-5 border border-outline-gray-2 focus-within:border-outline-gray-3"
+					>
+						<Editor
+							v-model="about"
+							:extensions="richTextExtensions"
+							placeholder="What is this event about?"
+							:editable="canCreate"
 						>
-							<span
-								class="size-4 shrink-0 transition-colors duration-150 ease-out motion-reduce:transition-none"
-								:class="[item.done ? 'lucide-check' : 'lucide-x', iconColor(item)]"
-								aria-hidden="true"
+							<EditorFixedMenu
+								:items="richTextToolbar"
+								class="overflow-x-auto border-b border-outline-gray-1 px-1.5 py-1"
 							/>
-							<span>{{ item.label }}</span>
-							<span class="sr-only">{{ item.done ? "done" : "missing" }}</span>
-						</li>
-					</ul>
+							<EditorContent
+								class="prose-sm min-h-40 max-w-none p-3 text-ink-gray-8 focus:outline-none"
+							/>
+						</Editor>
+					</div>
 				</section>
+
+				<section>
+					<h2 class="mb-2 text-sm font-medium" :class="labelTone(SCHEDULE_FIELDS)">
+						{{ __("When") }}
+					</h2>
+					<EventScheduleField :schedule="schedule" :disabled="!canCreate" />
+				</section>
+
+				<section id="event-location">
+					<h2 class="mb-2 text-sm font-medium" :class="labelTone(['event-location'])">
+						{{ __("Where") }}
+					</h2>
+					<EventLocationField
+						v-model:venue="venue"
+						v-model:zoom-meeting="zoomMeeting"
+						:team="currentTeam?.name ?? ''"
+						:disabled="!canCreate"
+						:error="locationError"
+					/>
+				</section>
+
+				<CreateEventFooter
+					v-model:show-missing="footerMissing"
+					v-model:visible="footerVisible"
+					:missing="missingItems"
+					:loading="submitting"
+					@create="save"
+				/>
 			</div>
 
-			<ProgressStatus v-else :text="step" :failed="failed" delayed />
+			<ProgressStatus v-else class="py-16" :text="step" :failed="failed" delayed />
 		</Transition>
 	</div>
 </template>
