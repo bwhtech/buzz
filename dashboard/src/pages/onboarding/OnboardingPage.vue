@@ -14,6 +14,7 @@ import DoneStep from "./DoneStep.vue"
 import EventStep from "./EventStep.vue"
 import ForkStep from "./ForkStep.vue"
 import InviteStep from "./InviteStep.vue"
+import OnboardingSkeleton from "./OnboardingSkeleton.vue"
 import PreviewPane from "./PreviewPane.vue"
 import ProfileStep from "./ProfileStep.vue"
 import ProgressDots from "./ProgressDots.vue"
@@ -67,13 +68,14 @@ const headings = computed<Record<string, [string, string]>>(() => ({
 
 // The route is full bleed, so the user is loaded here rather than by the router.
 onMounted(async () => {
+	const onboarding = session.isLoggedIn ? loadOnboarding() : null
 	await loadUser()
 	// Signup always passes through here, so with nothing to do it goes straight on.
 	if (session.isLoggedIn && !user.value?.needs_onboarding)
 		return window.location.replace(
 			resolveLoginRedirect(route.query["redirect-to"], window.location.origin),
 		)
-	if (session.isLoggedIn) await loadOnboarding(user.value)
+	await onboarding
 	ready.value = true
 })
 
@@ -105,10 +107,15 @@ const stageStyle = computed(() => ({
 
 <template>
 	<LoginRequired v-if="!session.isLoggedIn" />
-	<div v-else-if="ready" class="grid min-h-dvh bg-surface-white lg:grid-cols-2">
+	<div v-else class="grid min-h-dvh bg-surface-white lg:grid-cols-2">
 		<div class="flex min-w-0 flex-col">
 			<header class="flex items-center justify-between px-4 py-5 sm:px-6">
-				<BuzzLogo v-if="!user?.brand || user.brand.is_default" class="h-7 w-9 text-ink-gray-9" />
+				<!-- Waits for the user so a custom brand logo doesn't replace the Buzz one mid-load. -->
+				<span v-if="!user" class="h-7" />
+				<BuzzLogo
+					v-else-if="!user.brand || user.brand.is_default"
+					class="h-7 w-9 text-ink-gray-9"
+				/>
 				<img v-else class="h-6 w-auto" :src="user.brand.logo" alt="" />
 				<span class="text-sm text-ink-gray-5">
 					<span class="hidden sm:inline">{{ user?.email }} · </span>
@@ -123,9 +130,10 @@ const stageStyle = computed(() => ({
 			</header>
 
 			<main class="mx-auto w-full max-w-md px-4 sm:px-6 pb-32 pt-[6vh] sm:pt-[10vh]">
-				<div v-if="loadError" class="flex flex-col items-start gap-3">
+				<OnboardingSkeleton v-if="!ready" />
+				<div v-else-if="loadError" class="flex flex-col items-start gap-3">
 					<ErrorMessage :message="loadError" />
-					<Button variant="subtle" :label="__('Try again')" @click="loadOnboarding(user)" />
+					<Button variant="subtle" :label="__('Try again')" @click="loadOnboarding()" />
 				</div>
 				<form v-else class="flex flex-col gap-6" @submit.prevent="submit">
 					<ProgressDots v-if="!isDone" />
@@ -176,7 +184,7 @@ const stageStyle = computed(() => ({
 			class="sticky top-0 hidden h-dvh overflow-hidden border-l border-outline-gray-1 bg-surface-gray-1 lg:block"
 			:aria-label="__('Live preview')"
 		>
-			<PreviewPane />
+			<PreviewPane v-if="ready" />
 		</aside>
 	</div>
 </template>

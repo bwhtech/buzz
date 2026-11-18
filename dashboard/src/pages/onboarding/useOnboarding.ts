@@ -2,6 +2,7 @@ import { useCall } from "frappe-ui"
 import { computed, reactive, ref } from "vue"
 
 import type { Availability } from "@/composables/useSlugAvailability"
+import { loadUser, userResource } from "@/data/user"
 import type { UserInfo } from "@/types"
 
 export type Choice = "personal" | "community" | "attendee" | "team"
@@ -143,11 +144,12 @@ function loadCommunity(saved: SavedCommunity | null | undefined) {
 	})
 }
 
-export async function loadOnboarding(user: UserInfo | null | undefined) {
-	await stateCall.fetch()
+// The state is fetched alongside the user, since the profile step fills from both.
+export async function loadOnboarding() {
+	await Promise.all([stateCall.fetch(), loadUser()])
 	if (stateCall.error) return
 	state.value = stateCall.data
-	loadProfile(user)
+	loadProfile(userResource.data)
 	loadCommunity(stateCall.data?.community)
 }
 
