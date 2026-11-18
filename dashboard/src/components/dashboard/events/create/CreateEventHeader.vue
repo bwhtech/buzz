@@ -6,8 +6,8 @@ import type { ChecklistItem } from "@/utils/eventValidation"
 
 import CreateEventButton from "./CreateEventButton.vue"
 
-// The page's own bar, since it covers the sidebar: the way out, where you are, and
-// Create, which steps aside while the copy at the end of the form is on screen.
+// The page's own bar, since it covers the sidebar: the way back, where you are, and on
+// larger screens Create, which steps aside while the copy at the end of the form shows.
 defineProps<{ missing: ChecklistItem[]; loading?: boolean; createHidden: boolean }>()
 const showMissing = defineModel<boolean>("showMissing", { default: false })
 const emit = defineEmits<{ create: []; close: [] }>()
@@ -19,7 +19,12 @@ const isMobile = useIsMobile()
 	<header
 		class="flex h-12 shrink-0 items-center gap-3 border-b border-outline-gray-1 bg-surface-base px-2 md:px-4"
 	>
-		<Button variant="ghost" icon="lucide-x" :aria-label="__('Close')" @click="emit('close')" />
+		<Button
+			variant="ghost"
+			icon="lucide-chevron-left"
+			:aria-label="__('Back')"
+			@click="emit('close')"
+		/>
 		<span v-if="isMobile" class="text-base font-semibold text-ink-gray-9">{{
 			__("New event")
 		}}</span>
@@ -33,6 +38,7 @@ const isMobile = useIsMobile()
 		<div class="flex-1" />
 		<!-- Kept in the layout while hidden, so nothing beside it jumps when it hands over. -->
 		<div
+			v-if="!isMobile"
 			class="header-create"
 			:data-hidden="createHidden || undefined"
 			:inert="createHidden || undefined"

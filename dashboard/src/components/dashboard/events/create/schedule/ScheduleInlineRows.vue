@@ -3,13 +3,7 @@ import { dayjsLocal } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import ScheduleCalendar from "./ScheduleCalendar.vue"
-import {
-	type ScheduleDraft,
-	formatDuration,
-	formatTime,
-	scheduleLength,
-	today,
-} from "./scheduleTime"
+import { type ScheduleDraft, formatTime, today } from "./scheduleTime"
 import TimeWheelColumns from "./TimeWheelColumns.vue"
 import { useScheduleEdits } from "./useScheduleRange"
 
@@ -54,7 +48,6 @@ const dateLabel = (row: { key: string; date: string }) =>
 	row.key === "end" && row.date === props.schedule.startDate
 		? __("Same day")
 		: dayjsLocal(row.date).format("D MMM YYYY")
-const length = computed(() => formatDuration(scheduleLength(props.schedule)))
 </script>
 
 <template>
@@ -111,9 +104,6 @@ const length = computed(() => formatDuration(scheduleLength(props.schedule)))
 				</div>
 			</div>
 		</template>
-		<p class="border-t border-outline-gray-1 px-3.5 py-2 text-xs text-ink-gray-5">
-			{{ __("Lasts {0}", [length]) }}
-		</p>
 	</div>
 </template>
 

@@ -10,6 +10,7 @@ const props = defineProps<{
 	placement: "header" | "end"
 	missing: ChecklistItem[]
 	loading?: boolean
+	wide?: boolean
 }>()
 const showMissing = defineModel<boolean>("showMissing", { default: false })
 const emit = defineEmits<{ create: [] }>()
@@ -24,23 +25,29 @@ const open = computed({
 <template>
 	<Popover
 		v-model:open="open"
+		:class="wide && 'w-full'"
 		trigger="manual"
 		:side="atEnd ? 'top' : 'bottom'"
-		align="end"
+		:align="wide ? 'center' : 'end'"
 		:offset="8"
 	>
 		<template #trigger>
 			<!-- Never disabled: the click is what explains what is missing. -->
 			<Button
 				variant="solid"
-				:size="atEnd ? 'md' : 'sm'"
+				:size="wide ? 'lg' : atEnd ? 'md' : 'sm'"
 				:label="atEnd ? __('Create event') : __('Create')"
 				:loading="loading"
+				:class="wide && 'w-full'"
 				class="transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
 				@click="emit('create')"
 			/>
 		</template>
-		<div class="flex w-[280px] flex-col gap-2 p-3" role="status">
+		<div
+			class="flex flex-col gap-2 p-3"
+			:class="wide ? 'w-[calc(100vw-2rem)]' : 'w-[280px]'"
+			role="status"
+		>
 			<p class="text-sm font-semibold text-ink-gray-9">{{ __("Add these to create the event") }}</p>
 			<p
 				v-for="item in missing"
