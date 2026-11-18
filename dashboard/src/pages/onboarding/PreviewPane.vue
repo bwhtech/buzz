@@ -150,7 +150,9 @@ onBeforeUnmount(() => {
 					<PreviewCard :scene="scene" />
 				</div>
 			</Transition>
-			<p class="font-mono text-xs text-ink-gray-5">{{ previewAddress }}</p>
+			<p class="max-w-full break-all text-center font-mono text-xs text-ink-gray-5">
+				{{ previewAddress }}
+			</p>
 		</div>
 	</div>
 </template>
