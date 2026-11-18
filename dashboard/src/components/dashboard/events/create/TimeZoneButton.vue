@@ -44,7 +44,7 @@ const detail = computed(() =>
 		<template #trigger>
 			<button
 				type="button"
-				class="zone flex min-h-14 w-full items-center gap-2.5 rounded-5 border border-outline-gray-2 bg-surface-white px-3.5 py-2 text-left disabled:cursor-not-allowed disabled:opacity-60"
+				class="zone flex min-h-14 w-full items-center gap-2.5 rounded-5 border border-outline-gray-2 bg-surface-base px-3.5 py-2 text-left disabled:cursor-not-allowed disabled:opacity-60"
 				:disabled="disabled"
 				:aria-label="__('Time zone: {0}', [name])"
 			>

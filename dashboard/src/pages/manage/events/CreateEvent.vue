@@ -230,10 +230,10 @@ function goBack(path: string) {
 </script>
 
 <template>
-	<div class="flex min-h-full flex-col bg-surface-white">
+	<div class="flex min-h-full flex-col bg-surface-base">
 		<CreateEventHeader
 			v-model:show-missing="headerMissing"
-			class="sticky top-0 z-10"
+			class="sticky top-0 z-30"
 			:missing="missingItems"
 			:loading="submitting"
 			:create-hidden="footerVisible || submitting"

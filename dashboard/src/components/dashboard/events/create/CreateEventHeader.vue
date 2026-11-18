@@ -17,7 +17,7 @@ const isMobile = useIsMobile()
 
 <template>
 	<header
-		class="flex h-12 shrink-0 items-center gap-3 border-b border-outline-gray-1 bg-surface-white px-2 md:px-4"
+		class="flex h-12 shrink-0 items-center gap-3 border-b border-outline-gray-1 bg-surface-base px-2 md:px-4"
 	>
 		<Button variant="ghost" icon="lucide-x" :aria-label="__('Close')" @click="emit('close')" />
 		<span v-if="isMobile" class="text-base font-semibold text-ink-gray-9">{{

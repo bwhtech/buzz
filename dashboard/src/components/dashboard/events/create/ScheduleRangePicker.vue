@@ -35,7 +35,7 @@ const isPicked = (start: string, end: string) =>
 			<button
 				id="event-schedule-start"
 				type="button"
-				class="press flex min-h-14 w-full items-center gap-3 rounded-5 border border-outline-gray-2 bg-surface-white px-3.5 py-2 text-left aria-expanded:border-outline-gray-4 disabled:cursor-not-allowed disabled:opacity-60"
+				class="press flex min-h-14 w-full items-center gap-3 rounded-5 border border-outline-gray-2 bg-surface-base px-3.5 py-2 text-left aria-expanded:border-outline-gray-4 disabled:cursor-not-allowed disabled:opacity-60"
 				:aria-expanded="open"
 				:disabled="disabled"
 			>
@@ -125,7 +125,7 @@ const isPicked = (start: string, end: string) =>
 }
 .quick {
 	border-color: var(--outline-gray-2);
-	background: var(--surface-white);
+	background: var(--surface-base);
 	color: var(--ink-gray-8);
 }
 .quick[aria-pressed="true"] {
