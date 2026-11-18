@@ -159,6 +159,7 @@ for _doctype in commentable_doctypes:
 		"buzz.subscriptions.delete_record_subscriptions"
 	)
 doc_events["Communication"] = {"after_insert": "buzz.comments.notify_team_of_email"}
+doc_events["OAuth Client"] = {"before_validate": "buzz.mcp.token_scope.open_to_every_user"}
 doc_events["Email Queue"] = {"after_insert": "buzz.playground.inbox.capture_email"}
 doc_events.setdefault("Buzz Team", {})["after_insert"] = "buzz.playground.demo_data.seed_community_requests"
 extend_doctype_class = {"Comment": ["buzz.comments.TeamComment"]}
@@ -459,9 +460,7 @@ after_request = ["buzz.playground.add_noindex_header"]
 # Authentication and authorization
 # --------------------------------
 
-# auth_hooks = [
-# 	"events.auth.validate"
-# ]
+auth_hooks = ["buzz.mcp.token_scope.confine_mcp_tokens"]
 
 # Automatically update python controller files with type annotations for this app.
 

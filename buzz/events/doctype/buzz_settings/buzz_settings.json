@@ -61,6 +61,13 @@
   "default_sponsor_deck_reply_to",
   "column_break_sponsor",
   "default_sponsor_deck_cc",
+  "mcp_tab",
+  "mcp_section",
+  "enable_mcp",
+  "mcp_limits_column",
+  "mcp_requests_per_minute",
+  "mcp_calls_per_hour",
+  "mcp_calls_per_day",
   "buzz_events_tab",
   "buzz_events_section",
   "list_on_buzz_events",
@@ -400,6 +407,51 @@
    "label": "Maps Embed API Key"
   },
   {
+   "fieldname": "mcp_tab",
+   "fieldtype": "Tab Break",
+   "label": "AI Assistants"
+  },
+  {
+   "fieldname": "mcp_section",
+   "fieldtype": "Section Break",
+   "label": "MCP Server",
+   "description": "Lets people connect AI assistants such as Claude to Buzz over MCP. Every tool is read-only."
+  },
+  {
+   "fieldname": "enable_mcp",
+   "fieldtype": "Check",
+   "label": "Enable MCP Server",
+   "default": "0"
+  },
+  {
+   "fieldname": "mcp_limits_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "mcp_requests_per_minute",
+   "fieldtype": "Int",
+   "label": "Requests per Minute",
+   "default": "30",
+   "non_negative": 1,
+   "description": "Per user, across all MCP requests. Guests are counted by IP. 0 for no limit."
+  },
+  {
+   "fieldname": "mcp_calls_per_hour",
+   "fieldtype": "Int",
+   "label": "Tool Calls per Hour",
+   "default": "200",
+   "non_negative": 1,
+   "description": "Per user. 0 for no limit."
+  },
+  {
+   "fieldname": "mcp_calls_per_day",
+   "fieldtype": "Int",
+   "label": "Tool Calls per Day",
+   "default": "1000",
+   "non_negative": 1,
+   "description": "Per user. 0 for no limit."
+  },
+  {
    "fieldname": "buzz_events_tab",
    "fieldtype": "Tab Break",
    "label": "buzz.events"
@@ -464,7 +516,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-10 10:00:00.000000",
+ "modified": "2026-11-17 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",

@@ -283,3 +283,20 @@ class InviteSheetRow(APIResponse):
 	email: str
 	# The tier as written in the sheet; the dialog maps it onto the event's ticket types.
 	tier: str
+
+
+class MyBooking(APIResponse):
+	name: str
+	event: str
+	event_title: str | None = None
+	event_start_date: date | None = None
+	status: str | None = None
+	payment_status: str | None = None
+	# 0 while being paid for, 1 confirmed, 2 cancelled.
+	docstatus: int
+	booked_at: datetime
+
+
+class MyBookingsPage(APIResponse):
+	bookings: list[MyBooking]
+	has_next_page: bool
