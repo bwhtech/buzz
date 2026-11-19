@@ -9,6 +9,7 @@ from buzz.subscriptions import Subscriptions
 DASHBOARD_ROUTES = {
 	"Talk Proposal": "/b/manage/events/{event}/talks?proposal={name}",
 	"Event Booking": "/b/manage/events/{event}/transactions?booking={name}",
+	"Event Ticket": "/b/manage/events/{event}/guests?guest={name}",
 }
 
 
@@ -155,10 +156,14 @@ def notify_mentioned_members(comment) -> set[str]:
 	return mentioned
 
 
+# Records named by their ID and event, since their title field is a person.
+RECORD_PREFIXES = {"Event Booking": "Booking", "Event Ticket": "Ticket"}
+
+
 def record_title(doctype: str, name: str) -> str:
-	if doctype == "Event Booking":
+	if prefix := RECORD_PREFIXES.get(doctype):
 		event = frappe.db.get_value(doctype, name, "event")
-		return f"Booking {name} · {frappe.db.get_value('Buzz Event', event, 'title')}"
+		return f"{prefix} {name} · {frappe.db.get_value('Buzz Event', event, 'title')}"
 	return frappe.db.get_value(doctype, name, frappe.get_meta(doctype).get_title_field())
 
 

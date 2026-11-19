@@ -67,6 +67,13 @@ export function useEventGuests(
 	const fetchOne = async (name: string) =>
 		(await lookup.submit({ event, name, limit: 1 }))?.guests[0] ?? null
 
+	// After a change made from the drawer, so the row updates without reloading the pages.
+	const refreshOne = async (name: string) => {
+		const fresh = await fetchOne(name)
+		const index = guests.value.findIndex((guest) => guest.name === name)
+		if (fresh && index >= 0) guests.value[index] = fresh
+	}
+
 	// Sync, so the offset is back at zero before useCall's own watcher rebuilds the URL —
 	// a pre-flush reset lets the stale offset go out as a request that is aborted a tick later.
 	watch([debouncedSearch, order, conditions, checkedIn, zone], () => (start.value = 0), {
@@ -81,6 +88,7 @@ export function useEventGuests(
 	return {
 		guests,
 		fetchOne,
+		refreshOne,
 		loadMore,
 		page,
 		// The first page is the only one that leaves the list empty while it loads.
