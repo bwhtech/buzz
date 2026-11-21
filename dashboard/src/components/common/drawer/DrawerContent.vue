@@ -38,7 +38,11 @@ function keepOpenForToasts(event: Event) {
 	<div
 		v-if="isMobile"
 		class="flex flex-col"
-		:class="size === 'xl' || size === '2xl' ? 'h-[calc(90dvh-26px)]' : 'min-h-[75dvh] max-h-[calc(90dvh-26px)]'"
+		:class="
+			size === 'xl' || size === '2xl'
+				? 'h-[calc(90dvh-26px)]'
+				: 'min-h-[75dvh] max-h-[calc(90dvh-26px)]'
+		"
 	>
 		<slot />
 		<div v-if="$slots.footer" class="mt-auto flex shrink-0 items-center gap-2 p-4">
