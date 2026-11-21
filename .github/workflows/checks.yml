@@ -1,0 +1,89 @@
+name: Dashboard Checks
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: checks-buzz-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    # Format, lint, type check and unit tests in one job. Each check runs even when an earlier
+    # one failed, so a single run lists every failure.
+    name: Dashboard checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+
+    steps:
+      # The dashboard links @framework/ui from the frappe app beside it, as on a bench.
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: apps/buzz
+          filter: blob:none
+
+      - name: Checkout @framework/ui
+        uses: actions/checkout@v4
+        with:
+          repository: frappe/frappe
+          path: apps/frappe
+          sparse-checkout: ui
+          filter: blob:none
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      # Node 24 runs the unit tests a second time on V8, the engine Chrome ships.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      # yarn.lock stays the only lockfile: Frappe's build installs with yarn on deploy, and
+      # bun reads it as is.
+      - name: Restore node_modules
+        id: modules
+        uses: actions/cache@v4
+        with:
+          path: apps/buzz/dashboard/node_modules
+          key: dashboard-modules-${{ runner.os }}-bun-1.4.4-${{ hashFiles('apps/buzz/dashboard/yarn.lock', 'apps/buzz/dashboard/package.json') }}
+
+      - name: Install dependencies
+        id: install
+        if: steps.modules.outputs.cache-hit != 'true'
+        working-directory: apps/buzz/dashboard
+        run: bun install --frozen-lockfile
+
+      - name: Format
+        if: ${{ !cancelled() }}
+        working-directory: apps/buzz
+        run: bun fmt --no-script --check
+
+      - name: Lint
+        if: ${{ !cancelled() && steps.install.outcome != 'failure' }}
+        working-directory: apps/buzz
+        run: dashboard/node_modules/.bin/oxlint --deny-warnings
+
+      - name: Type check
+        if: ${{ !cancelled() && steps.install.outcome != 'failure' }}
+        working-directory: apps/buzz/dashboard
+        run: bun run typecheck
+
+      - name: Unit tests (JavaScriptCore, random order)
+        if: ${{ !cancelled() && steps.install.outcome != 'failure' }}
+        working-directory: apps/buzz/dashboard
+        run: bun test --randomize --isolate src
+
+      - name: Unit tests (V8)
+        if: ${{ !cancelled() && steps.install.outcome != 'failure' }}
+        working-directory: apps/buzz/dashboard
+        run: node --test 'src/**/*.test.ts'
