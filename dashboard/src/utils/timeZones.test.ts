@@ -83,9 +83,11 @@ test("an unknown zone has no country rather than throwing", () => {
 	assert.equal(zoneCountry("Nowhere/Nothing"), "")
 })
 
+// UTC and Safari's fixed-offset Etc/GMT±N zones are offsets, not places.
+const isOffset = (zone: string) => zone === "UTC" || zone.startsWith("Etc/")
+
 test("every zone on offer has a country", () => {
-	// UTC is ours, not a place, so it is the one entry with nowhere to belong.
-	const placeless = allTimeZones().filter((zone) => zone !== "UTC" && !zoneCountry(zone))
+	const placeless = allTimeZones().filter((zone) => !isOffset(zone) && !zoneCountry(zone))
 	assert.deepEqual(placeless, [])
 })
 
