@@ -32,12 +32,17 @@ function keepOpenForToasts(event: Event) {
 </script>
 
 <template>
-	<!-- An xl drawer fills the sheet, so its body is the only scroller and a footer it
-	     pins stays on screen. 26px is the sheet's grab bar, inside its 90dvh cap. -->
+	<!-- Capped at the sheet's height so the body is the only scroller and the footer
+	     stays on screen; an xl drawer always fills it. 26px is the sheet's grab bar,
+	     inside its 90dvh cap. -->
 	<div
 		v-if="isMobile"
 		class="flex flex-col"
-		:class="size === 'xl' || size === '2xl' ? 'h-[calc(90dvh-26px)]' : 'min-h-[75dvh]'"
+		:class="
+			size === 'xl' || size === '2xl'
+				? 'h-[calc(90dvh-26px)]'
+				: 'min-h-[75dvh] max-h-[calc(90dvh-26px)]'
+		"
 	>
 		<slot />
 		<div v-if="$slots.footer" class="mt-auto flex shrink-0 items-center gap-2 p-4">
