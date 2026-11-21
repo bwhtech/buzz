@@ -15,9 +15,7 @@
 	"ignorePatterns": [
 		"buzz/public/dist/**",
 		"buzz/public/dashboard/**",
-		"buzz/public/js/lib/**",
-		"buzz/templates/includes/**",
-		"**/boilerplate/**"
+		"buzz/public/js/lib/**"
 	],
 	"overrides": [
 		{

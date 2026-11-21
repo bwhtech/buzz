@@ -81,7 +81,7 @@ jobs:
       - name: Unit tests (JavaScriptCore, random order)
         if: ${{ !cancelled() && steps.install.outcome != 'failure' }}
         working-directory: apps/buzz/dashboard
-        run: bun test --randomize --isolate src
+        run: bun run test
 
       - name: Unit tests (V8)
         if: ${{ !cancelled() && steps.install.outcome != 'failure' }}
