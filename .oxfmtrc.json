@@ -7,6 +7,7 @@
 	"ignorePatterns": [
 		"buzz/public/dist/**",
 		"buzz/public/dashboard/**",
+		"buzz/public/js/lib/**",
 		"dashboard/auto-imports.d.ts",
 		"dashboard/components.d.ts",
 		"**/*.json",

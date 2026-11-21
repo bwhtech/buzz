@@ -14,10 +14,18 @@ inputs:
     description: "Git URL of one more app to install before buzz. App name is the last path segment."
     required: false
     default: ""
+  frappe-branch:
+    description: "Frappe branch to test against. Empty means frappe's default branch."
+    required: false
+    default: ""
 
 runs:
   using: "composite"
   steps:
+    - name: Pin the factory app
+      shell: bash -e {0}
+      run: echo "FACTORY_BOT_COMMIT=48904d0df778513934e92a4e7663c74bfe31bc56" >> "$GITHUB_ENV"
+
     - name: Add site to hosts
       shell: bash -e {0}
       run: echo "127.0.0.1 ${{ inputs.site-name }}" | sudo tee -a /etc/hosts
@@ -52,10 +60,40 @@ runs:
         sudo ldconfig
         uv tool install frappe-bench
 
-    - name: Init bench
+    # Everything but buzz is pinned to a commit, so the bench built from them is reused
+    # until one of those commits moves.
+    - name: Key the bench
+      id: bench-key
       shell: bash -e {0}
+      env:
+        FRAPPE_BRANCH: ${{ inputs.frappe-branch }}
+        EXTRA_APP_URL: ${{ inputs.extra-app-url }}
+      run: |
+        {
+          echo "python $(python --version) bench $(bench --version)"
+          git ls-remote https://github.com/frappe/frappe "${FRAPPE_BRANCH:-HEAD}" | head -1
+          git ls-remote https://github.com/bwhtech/bwh_payments v1-stable
+          echo "frappe_factory_bot $FACTORY_BOT_COMMIT"
+          [ -z "$EXTRA_APP_URL" ] || git ls-remote "$EXTRA_APP_URL" HEAD
+        } > "${RUNNER_TEMP}/bench-commits.txt"
+        cat "${RUNNER_TEMP}/bench-commits.txt"
+        echo "key=bench-${{ runner.os }}-$(sha256sum "${RUNNER_TEMP}/bench-commits.txt" | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the bench
+      id: bench-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: /home/runner/frappe-bench
+        key: ${{ steps.bench-key.outputs.key }}
+
+    - name: Init bench
+      if: steps.bench-cache.outputs.cache-hit != 'true'
+      shell: bash -e {0}
+      env:
+        FRAPPE_BRANCH: ${{ inputs.frappe-branch }}
       run: |
         bench init ~/frappe-bench \
+          ${FRAPPE_BRANCH:+--frappe-branch "$FRAPPE_BRANCH"} \
           --skip-redis-config-generation \
           --skip-assets \
           --no-backups \
@@ -66,7 +104,8 @@ runs:
         # socketio stays: the dashboard opens a socket on boot (dashboard/src/main.ts).
         sed -i '/^watch:/d;/^schedule:/d' Procfile
 
-    - name: Get apps
+    - name: Get the other apps
+      if: steps.bench-cache.outputs.cache-hit != 'true'
       shell: bash -e {0}
       working-directory: /home/runner/frappe-bench
       env:
@@ -79,15 +118,25 @@ runs:
         # the app ships no DocTypes, and get-app already pip-installs it into the env.
         # Pinned to a reviewed commit: the repo has no tags and `bench get-app --branch`
         # rejects a SHA, so clone and check out before handing bench the local path.
-        git clone https://github.com/harshtandiya/frappe_factory_bot /tmp/frappe_factory_bot
-        git -C /tmp/frappe_factory_bot checkout 48904d0df778513934e92a4e7663c74bfe31bc56
+        git clone --filter=blob:none https://github.com/harshtandiya/frappe_factory_bot /tmp/frappe_factory_bot
+        git -C /tmp/frappe_factory_bot checkout "$FACTORY_BOT_COMMIT"
         bench get-app --skip-assets /tmp/frappe_factory_bot
 
         if [ -n "$EXTRA_APP_URL" ]; then
           bench get-app --skip-assets "$EXTRA_APP_URL"
         fi
 
-        bench get-app --skip-assets buzz "$GITHUB_WORKSPACE"
+    - name: Save the bench
+      if: steps.bench-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: /home/runner/frappe-bench
+        key: ${{ steps.bench-key.outputs.key }}
+
+    - name: Get buzz
+      shell: bash -e {0}
+      working-directory: /home/runner/frappe-bench
+      run: bench get-app --skip-assets buzz "$GITHUB_WORKSPACE"
 
     - name: Key the other apps' assets
       id: assets-key
