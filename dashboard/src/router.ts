@@ -161,7 +161,7 @@ const routes: RouteRecordRaw[] = [
 			{
 				path: "team/events/new",
 				name: "create-event",
-				meta: { title: "Create New Event" },
+				meta: { title: "Create New Event", fullScreen: true },
 				component: () => import("@/pages/manage/events/CreateEvent.vue"),
 			},
 			{
