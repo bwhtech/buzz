@@ -103,6 +103,11 @@ class GuestAddOn(APIResponse):
 	value: str | None = None
 
 
+class GuestAnswer(APIResponse):
+	label: str
+	value: str
+
+
 class ZoneStatus(APIResponse):
 	name: str
 	title: str
@@ -123,6 +128,9 @@ class EventGuest(APIResponse):
 	checked_in_at: datetime | None = None
 	# Where the guest stands at each enabled zone, default first.
 	zones: list[ZoneStatus] = Field(default_factory=list)
+	booking: str | None = None
+	# Ticket answers first, then the booking's.
+	answers: list[GuestAnswer] = Field(default_factory=list)
 
 
 class GuestTicketType(APIResponse):

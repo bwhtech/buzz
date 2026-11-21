@@ -394,6 +394,14 @@ export interface EventGuest {
 	checked_in_at?: string | null
 	// Where the guest stands at each enabled zone, default first.
 	zones: ZoneStatus[]
+	booking: string | null
+	// Ticket answers first, then the booking's.
+	answers: GuestAnswer[]
+}
+
+export interface GuestAnswer {
+	label: string
+	value: string
 }
 
 // buzz.api.events.get_event_registration_trend
