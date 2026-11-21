@@ -23,7 +23,8 @@ jobs:
   ui-tests:
     # Pinned: the ubuntu-26.04 image lacks libmysqlclient.so.21 and Playwright support
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # Budget: the slowest recent run took 9.5 minutes.
+    timeout-minutes: 12
     name: Playwright shard ${{ matrix.shard }}
     strategy:
       fail-fast: false
@@ -56,20 +57,30 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          filter: blob:none
+
+      - name: Select suites
+        id: select
+        run: bash .github/scripts/select-suites.sh
 
       - name: Cache Playwright browsers
+        if: steps.select.outputs.ui == 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('yarn.lock') }}
 
       - name: Setup Bench
+        if: steps.select.outputs.ui == 'true'
         uses: ./.github/actions/setup-bench
         with:
           site-name: buzz.test
           build-assets: true
 
       - name: Create Test User
+        if: steps.select.outputs.ui == 'true'
         working-directory: /home/runner/frappe-bench
         run: >-
           bench --site buzz.test add-user testuser@buzz.test
@@ -77,6 +88,7 @@ jobs:
           --add-role "System Manager"
 
       - name: Start Frappe Server
+        if: steps.select.outputs.ui == 'true'
         working-directory: /home/runner/frappe-bench
         run: |
           # No SMTP on CI: muting still queues Email Queue rows, it only never sends them.
@@ -91,6 +103,7 @@ jobs:
             'until curl -sf http://buzz.test:8000 > /dev/null; do sleep 1; done'
 
       - name: Install Playwright
+        if: steps.select.outputs.ui == 'true'
         run: |
           # --ignore-scripts skips the postinstall that reinstalls the whole
           # dashboard tree; the tests only need @playwright/test.
@@ -100,6 +113,7 @@ jobs:
           npx playwright install --only-shell chromium
 
       - name: Run Playwright Tests
+        if: steps.select.outputs.ui == 'true'
         run: npx playwright test --shard=${{ matrix.shard }}/2
         env:
           BASE_URL: http://buzz.test:8000
@@ -108,7 +122,7 @@ jobs:
 
       - name: Upload blob report
         uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.select.outputs.ui == 'true' }}
         with:
           name: blob-report-${{ matrix.shard }}
           path: blob-report/
@@ -142,6 +156,8 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+        with:
+          filter: blob:none
 
       - uses: actions/setup-node@v4
         with:
