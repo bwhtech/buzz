@@ -18,7 +18,7 @@ def quote_discount(request: DiscountQuoteRequest) -> DiscountQuote:
 		)
 	coupon = BuzzCouponCode.find_by_code(request.event, request.coupon_code)
 	error = coupon.unusable_reason(booking) if coupon else str(InvalidCoupon.message)
-	if error and coupon and coupon.coupon_type == "Access Code":
+	if error and coupon and coupon.coupon_type == "Access  Code":
 		# A specific reason would confirm the access code exists.
 		error = str(InvalidCoupon.message)
 	if error:
