@@ -150,3 +150,27 @@ class TestHostedPayout(HostedPaymentsTestCase):
 	def test_payout_without_lines_cannot_be_submitted(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.submit(self.payout_with_payments())
+
+	def test_cancel_releases_the_payments(self):
+		order_id = self.paid_order(1000)
+		self.submit(self.payout_with_payments()).cancel()
+		self.assertIsNone(self.payout_of(order_id))
+		payout = self.payout_with_payments()
+		self.assertEqual(self.line_values(payout), [(order_id, "upi", 3.3, 1000, 0, 33, 967)])
+
+	def test_cancel_releases_a_carried_forward_refund(self):
+		order_id = self.paid_order(1000)
+		self.submit(self.payout_with_payments())
+		self.refund(order_id, 300)
+		self.submit(self.payout_with_payments(), transfer_reference="UTR-1002").cancel()
+		payout = self.payout_with_payments()
+		self.assertEqual(self.line_values(payout), [(order_id, "upi", 0, 0, 300, 0, -300)])
+
+	def test_payout_whose_refunds_a_later_payout_deducted_cannot_be_cancelled(self):
+		order_id = self.paid_order(1000)
+		first = self.submit(self.payout_with_payments())
+		self.refund(order_id, 300)
+		self.submit(self.payout_with_payments(), transfer_reference="UTR-1002")
+		with self.assertRaises(frappe.ValidationError):
+			first.cancel()
+		self.assertEqual(self.payout_of(order_id), first.name)

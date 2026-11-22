@@ -67,12 +67,26 @@ class HostedPayout(Document):
 				)
 
 	def on_submit(self):
-		self.set_payout_on_payments(self.name)
-
-	def set_payout_on_payments(self, payout: str | None) -> None:
-		names = [line.hosted_payment for line in self.lines if not is_refund_line(line)]
+		names = self.settled_payments()
 		if names:
-			frappe.db.set_value("Hosted Payment", {"name": ["in", names]}, "payout", payout)
+			frappe.db.set_value("Hosted Payment", {"name": ["in", names]}, "payout", self.name)
+
+	def settled_payments(self) -> list[str]:
+		return [line.hosted_payment for line in self.lines if not is_refund_line(line)]
+
+	def before_cancel(self):
+		later_payout = frappe.db.get_value(
+			"Hosted Payout Line",
+			{"hosted_payment": ["in", self.settled_payments()], "docstatus": 1, "parent": ["!=", self.name]},
+			"parent",
+		)
+		if later_payout:
+			frappe.throw(
+				_("Payout {0} deducts refunds of these payments. Cancel it first.").format(later_payout)
+			)
+
+	def on_cancel(self):
+		frappe.db.set_value("Hosted Payment", {"payout": self.name}, "payout", None)
 
 	def set_totals(self) -> None:
 		for field in ("gross", "refunded", "commission", "net"):
