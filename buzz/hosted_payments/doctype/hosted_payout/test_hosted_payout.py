@@ -8,22 +8,20 @@ from buzz.tests.factories import HostedPayoutFactory
 
 
 class TestHostedPayout(HostedPaymentsTestCase):
-	@classmethod
-	def setUpClass(cls):
-		super().setUpClass()
-		settings = frappe.get_doc("Buzz Settings")
-		settings.hosted_payment_fallback_rate = 5
-		settings.set(
-			"hosted_payment_rates",
-			[{"payment_method": "upi", "rate": 3.3}, {"payment_method": "card_credit", "rate": 4.4}],
-		)
-		settings.save()
-
 	def setUp(self):
 		super().setUp()
-		# Rollback is per class, so each test undoes its own payments.
+		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
+		# Rollback is per class, so each test undoes its own payments and rates.
 		frappe.db.savepoint("hosted_payout_test")
 		self.addCleanup(frappe.db.rollback, save_point="hosted_payout_test")
+		self.set_rates({"upi": 3.3, "card_credit": 4.4}, fallback_rate=5)
+
+	def set_rates(self, rates: dict[str, float], fallback_rate: float) -> None:
+		settings = frappe.get_single("Buzz Settings")
+		settings.hosted_payment_fallback_rate = fallback_rate
+		rows = [{"payment_method": method, "rate": rate} for method, rate in rates.items()]
+		settings.set("hosted_payment_rates", rows)
+		settings.save()
 
 	def paid_order(self, amount: float, payment_method: str = "upi") -> str:
 		with self.set_user(self.integration):
