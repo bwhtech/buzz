@@ -94,3 +94,26 @@ class TestHostedPayout(HostedPaymentsTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.submit(payout, transfer_reference="")
 		self.assertIsNone(self.payout_of(order_id))
+
+	def test_settled_payment_is_not_pulled_again(self):
+		self.paid_order(1000)
+		self.submit(self.payout_with_payments())
+		self.assertEqual(self.payout_with_payments().lines, [])
+
+	def test_payment_on_two_draft_payouts_settles_once(self):
+		order_id = self.paid_order(1000)
+		first, second = self.payout_with_payments(), self.payout_with_payments()
+		self.submit(first)
+		with self.assertRaises(frappe.ValidationError):
+			self.submit(second, transfer_reference="UTR-1002")
+		self.assertEqual(self.payout_of(order_id), first.name)
+
+	def test_unpaid_payment_is_not_pulled(self):
+		with self.set_user(self.integration):
+			create_order(**self.order_values(amount=1000))
+		self.assertEqual(self.payout_with_payments().lines, [])
+
+	def test_payment_outside_the_dates_is_not_pulled(self):
+		self.paid_order(1000)
+		payout = self.payout_with_payments(from_date=add_days(today(), 1), to_date=add_days(today(), 7))
+		self.assertEqual(payout.lines, [])

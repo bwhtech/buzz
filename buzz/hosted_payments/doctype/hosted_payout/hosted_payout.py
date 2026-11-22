@@ -39,6 +39,16 @@ class HostedPayout(Document):
 	def before_submit(self):
 		if not self.transfer_reference:
 			frappe.throw(_("Set the Transfer Reference before you submit the payout."))
+		self.validate_payments_unsettled()
+
+	def validate_payments_unsettled(self) -> None:
+		for line in self.lines:
+			if frappe.db.get_value("Hosted Payment", line.hosted_payment, "payout", for_update=True):
+				frappe.throw(
+					_("Row {0}: Hosted Payment {1} is already paid out. Get payments again.").format(
+						line.idx, line.hosted_payment
+					)
+				)
 
 	def on_submit(self):
 		self.set_payout_on_payments(self.name)
@@ -67,6 +77,7 @@ class HostedPayout(Document):
 				"currency": self.currency,
 				"status": ["in", SETTLEABLE_STATUSES],
 				"payout": ["is", "not set"],
+				"creation": ["between", [self.from_date, self.to_date]],
 			},
 			fields=["name", "payment_method", "amount", "refunded_amount"],
 			order_by="creation asc",
