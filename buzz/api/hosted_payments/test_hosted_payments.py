@@ -51,6 +51,14 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 		with self.assertRaises(UnsupportedCurrency):
 			self.create_order(currency="USD")
 
+	def test_checkout_names_the_team_and_the_order(self):
+		order = self.create_order(reference="PRO-GPR-7")
+		request = frappe.db.get_value("Hosted Payment", order.order_id, "payment_request")
+		self.assertEqual(
+			frappe.db.get_value("Gateway Payment Request", request, "description"),
+			"Pro Team via Buzz · PRO-GPR-7",
+		)
+
 	def pay(self, order_id: str, payment_method: str = "upi") -> None:
 		request = frappe.db.get_value("Hosted Payment", order_id, "payment_request")
 		payment_testing.pay(request, payment_method=payment_method)
