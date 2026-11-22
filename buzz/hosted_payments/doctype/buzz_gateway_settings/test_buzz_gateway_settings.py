@@ -1,5 +1,8 @@
+from unittest.mock import patch
+
 import frappe
 from bwh_payments import testing as payment_testing
+from bwh_payments.services import GatewayUnavailableError
 from frappe.tests import IntegrationTestCase
 from frappe.utils import get_url
 
@@ -7,6 +10,7 @@ from buzz.hosted_payments.doctype.buzz_gateway_settings.buzz_gateway_settings im
 from buzz.install import create_buzz_payment_gateway
 from buzz.patches.create_buzz_payment_gateway import execute as run_patch
 from buzz.tests.base_test_cases import BUZZ_GATEWAY, BuzzGatewayTestCase
+from buzz.tests.utils import hub_response
 
 
 class TestBuzzGatewaySettings(BuzzGatewayTestCase):
@@ -69,6 +73,43 @@ class TestBuzzGatewaySettings(BuzzGatewayTestCase):
 		for payload in (b"not json", b"\xff", b"[]", b'{"status": "Paid"}', b'{"order_id": ["HP-1"]}'):
 			with self.subTest(payload=payload):
 				self.assertIsNone(self.gateway.handle_webhook(payload, {}))
+
+
+class TestBuzzGatewayRefundAnswers(IntegrationTestCase):
+	"""Only a named refusal from the hub fails a refund; anything else may come after the hub made it."""
+
+	def setUp(self):
+		self.enterContext(
+			self.change_settings(
+				"Buzz Settings",
+				buzz_events_url="https://hub.example.com",
+				buzz_events_api_key="pro-key",
+				buzz_events_api_secret="pro-secret",
+			)
+		)
+		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
+
+	def refund_answered_with(self, status_code: int, body: dict):
+		with patch("requests.Session.request", return_value=hub_response(status_code, body)):
+			frappe.get_single("Buzz Gateway Settings").refund_payment(
+				"HP-1", 200, "INR", idempotency_key="PRO-RFND-1"
+			)
+
+	def test_a_named_refusal_is_a_refusal(self):
+		for status_code in (400, 403, 404, 409):
+			with self.subTest(status_code=status_code):
+				with self.assertRaises(frappe.ValidationError) as refused:
+					self.refund_answered_with(status_code, {"errors": [{"message": "Refund Too Large"}]})
+				self.assertNotIsInstance(refused.exception, GatewayUnavailableError)
+
+	def test_an_unexpected_hub_error_keeps_the_refund_pending(self):
+		modified = {"errors": [{"message": "Gateway Refund has been modified after you have opened it"}]}
+		with self.assertRaises(GatewayUnavailableError):
+			self.refund_answered_with(417, modified)
+
+	def test_a_success_without_a_refund_keeps_the_refund_pending(self):
+		with self.assertRaises(GatewayUnavailableError):
+			self.refund_answered_with(200, {"data": {"refund_id": "HP-RFND-1"}})
 
 
 class TestBuzzPaymentGatewayProfile(IntegrationTestCase):

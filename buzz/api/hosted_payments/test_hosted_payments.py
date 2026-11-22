@@ -3,6 +3,7 @@ from unittest.mock import patch
 import frappe
 import requests
 from bwh_payments import testing as payment_testing
+from bwh_payments.bwh_payments.doctype.gateway_refund.gateway_refund import GatewayRefund
 from bwh_payments.bwh_payments.doctype.razorpay_gateway_settings.razorpay_gateway_settings import (
 	RazorpayGatewaySettings,
 )
@@ -327,6 +328,23 @@ class TestHostedRefunds(HostedPaymentsTestCase):
 		retry = self.refund(200, idempotency_key="PRO-RFND-LOST")
 		self.assertEqual((retry.refund_id, retry.status), (first.refund_id, "Pending"))
 		self.assertEqual(len(StubRazorpayClient.created_refunds), 1)
+
+	def test_refund_whose_result_failed_to_record_after_the_gateway_made_it_is_pending(self):
+		with patch.object(GatewayRefund, "apply_gateway_result", side_effect=frappe.TimestampMismatchError):
+			pending = self.refund(500)
+		self.assertEqual((pending.status, pending.amount), ("Pending", 500))
+		with self.assertRaises(RefundExceedsBalance):
+			self.refund(100)
+		settled = self.refund_status(pending.refund_id)
+		self.assertEqual((settled.status, self.refunded_amount()), ("Processed", 500))
+		self.assertEqual(len(StubRazorpayClient.created_refunds), 1)
+
+	def test_refund_the_gateway_refused_is_answered_failed_and_frees_its_amount(self):
+		refused = frappe.ValidationError("Razorpay rejected the request: amount exceeds the payment")
+		with patch.object(StubRazorpayClient, "create_refund", side_effect=refused):
+			failed = self.refund(500)
+		self.assertEqual((failed.status, failed.amount), ("Failed", 500))
+		self.assertEqual(self.refund(550).status, "Processed")
 
 	def test_full_refund_pings_the_site_once(self):
 		pings = pings_after(lambda: self.refund(550))

@@ -2,7 +2,6 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import frappe
 from bwh_payments import api as payments
-from bwh_payments.services import GatewayUnavailableError
 from frappe import _
 from frappe.utils import get_url
 
@@ -173,12 +172,17 @@ def site_origin(url: str | None) -> tuple[str, str, int] | None:
 
 
 def send_refund(payment_request: str, amount: float, idempotency_key: str):
-	"""A refund the gateway did not answer is answered as it stands here, so the site never reads it as refused."""
+	"""Once the refund is reserved, an error is answered with the refund as it stands, Pending until a sync
+	settles it, so the site never reads a refund the gateway may have made as refused."""
 	try:
 		return payments.refund(payment_request, amount, reference=idempotency_key)
-	except GatewayUnavailableError:
-		frappe.clear_last_message()
-		return keyed_refund(payment_request, idempotency_key)
+	except Exception:
+		# Back to the committed reservation, without what failed after the gateway call.
+		frappe.db.rollback()
+		if refund := keyed_refund(payment_request, idempotency_key):
+			frappe.clear_last_message()
+			return refund
+		raise
 
 
 def keyed_refund(payment_request: str, idempotency_key: str):

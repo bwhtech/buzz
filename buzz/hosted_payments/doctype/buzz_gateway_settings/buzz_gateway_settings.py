@@ -3,6 +3,8 @@
 
 import frappe
 from bwh_payments.base_class import CheckoutSession, PaymentGatewayBase, RefundResult, WebhookEvent
+from bwh_payments.services import GatewayUnavailableError
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_url
 from frappe.utils.caching import redis_cache
@@ -51,12 +53,18 @@ class BuzzGatewaySettings(Document, PaymentGatewayBase):
 	def refund_payment(
 		self, session_id: str, amount: float, currency: str | None = None, idempotency_key: str | None = None
 	) -> RefundResult:
-		# The hub always sends a status: bwh_payments reads a missing one as Processed.
-		return RefundResult(
-			**hub.call_hub(
-				"refund", "POST", order_id=session_id, amount=amount, idempotency_key=idempotency_key
+		try:
+			return read_refund(
+				hub.call_hub(
+					"refund", "POST", order_id=session_id, amount=amount, idempotency_key=idempotency_key
+				)
 			)
-		)
+		except Exception as error:
+			if is_hub_refusal(error):
+				raise
+			# The hub may have made it, so the refund stays Pending and a sync sends it again with its key.
+			frappe.clear_last_message()
+			frappe.throw(_("buzz.events did not confirm the refund."), GatewayUnavailableError)
 
 	def get_refund_status(self, session_id: str, refund_id: str) -> RefundResult:
 		# POST: the hub may refresh the refund from its gateway.
@@ -73,6 +81,20 @@ class BuzzGatewaySettings(Document, PaymentGatewayBase):
 
 	def supported_currencies(self) -> tuple[str, ...]:
 		return get_hub_currencies()
+
+
+def read_refund(answer: dict) -> RefundResult:
+	"""bwh_payments reads a missing status as Processed, so an answer without one is not a refund."""
+	result = RefundResult.model_validate(answer)
+	if not (result.refund_id and result.status):
+		raise ValueError(answer)
+	return result
+
+
+def is_hub_refusal(error: Exception) -> bool:
+	"""A named 4xx, which the hub answers before it refunds. A 417 is an error nobody named, and can come after."""
+	status_code = getattr(error, "http_status_code", None)
+	return isinstance(status_code, int) and 400 <= status_code < 500 and status_code not in (408, 417, 429)
 
 
 def read_order_id(payload: bytes) -> str | None:

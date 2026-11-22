@@ -8,6 +8,14 @@ from frappe.utils import strip_html
 TIMEOUT_SECONDS = 30
 
 
+class HubError(frappe.ValidationError):
+	"""An error buzz.events answered, with the HTTP status it answered with."""
+
+	def __init__(self, *args, http_status_code: int = 417):
+		super().__init__(*args)
+		self.http_status_code = http_status_code
+
+
 class BuzzEventsClient(FrappeClient):
 	"""This site's calls to buzz.events, signed in as its team's Integration user.
 
@@ -53,7 +61,8 @@ class BuzzEventsClient(FrappeClient):
 		"""The hub's own error message reaches the buyer as it is."""
 		errors = response.json().get("errors") or []
 		if errors and errors[0].get("message"):
-			frappe.throw(strip_html(errors[0]["message"]), title=_("buzz.events"))
+			error = HubError(http_status_code=response.status_code)
+			frappe.throw(strip_html(errors[0]["message"]), error, title=_("buzz.events"))
 		return self.post_process(response)
 
 
