@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
@@ -21,8 +22,11 @@ class HostedPayment(Document):
 		currency: DF.Link
 		customer_email: DF.Data | None
 		customer_phone: DF.Data | None
+		next_ping_on: DF.Datetime | None
 		paid_on: DF.Datetime | None
 		payment_method: DF.Data | None
+		ping_attempts: DF.Int
+		ping_status: DF.Literal["", "Pending", "Delivered", "Failed"]
 		payment_request: DF.Link | None
 		payout: DF.Link | None
 		reference: DF.Data | None
@@ -47,3 +51,9 @@ class HostedPayment(Document):
 		self.db_set("refunded_amount", refunded)
 		if gateway_refund.status != "Pending":
 			enqueue_ping(self.name)
+
+	@frappe.whitelist(methods=["POST"])
+	def ping_site_again(self) -> None:
+		frappe.only_for("System Manager")
+		enqueue_ping(self.name)
+		frappe.msgprint(_("The connected site will be pinged again."), alert=True)

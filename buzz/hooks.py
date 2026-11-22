@@ -99,6 +99,9 @@ website_redirects = [
 # ---------------
 
 scheduler_events = {
+	"all": [
+		"buzz.hosted_payments.webhook_ping.retry_due_pings",
+	],
 	"hourly": [
 		"buzz.ticketing.doctype.ticket_hold.ticket_hold.delete_expired_holds",
 		"buzz.playground.cleanup.delete_expired_sandboxes",

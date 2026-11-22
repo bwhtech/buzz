@@ -24,6 +24,11 @@
   "return_url",
   "column_break_webhook",
   "webhook_url",
+  "ping_section",
+  "ping_status",
+  "column_break_ping",
+  "ping_attempts",
+  "next_ping_on",
   "payment_request_section",
   "payment_request",
   "column_break_payout",
@@ -152,6 +157,37 @@
    "reqd": 1
   },
   {
+   "fieldname": "ping_section",
+   "fieldtype": "Section Break",
+   "label": "Site Ping"
+  },
+  {
+   "description": "Whether the connected site has heard about the latest status. A Pending ping is sent again at Next Ping On; a Failed one waits for Ping Site Again.",
+   "fieldname": "ping_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Ping Status",
+   "options": "\nPending\nDelivered\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ping",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "ping_attempts",
+   "fieldtype": "Int",
+   "label": "Ping Attempts",
+   "read_only": 1
+  },
+  {
+   "fieldname": "next_ping_on",
+   "fieldtype": "Datetime",
+   "label": "Next Ping On",
+   "read_only": 1
+  },
+  {
    "fieldname": "payment_request_section",
    "fieldtype": "Section Break",
    "label": "Payment Request"
@@ -177,7 +213,7 @@
   }
  ],
  "links": [],
- "modified": "2026-11-22 18:00:00.000000",
+ "modified": "2026-11-22 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hosted Payments",
  "name": "Hosted Payment",
