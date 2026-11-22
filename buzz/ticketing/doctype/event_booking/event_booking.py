@@ -715,8 +715,15 @@ class EventBooking(Document):
 
 	def set_refund_status(self) -> None:
 		"""Recompute refunded amount and status from the refunds against this booking."""
-		refunds = frappe.get_all(
-			"Event Booking Refund", filters={"booking": self.name}, fields=["amount", "status"]
+		# Locking reads under the booking lock: a plain read keeps the snapshot from before another
+		# worker settled a refund, and would write back a smaller refunded amount.
+		frappe.db.get_value("Event Booking", self.name, "name", for_update=True)
+		refunds = frappe.db.get_values(
+			"Event Booking Refund",
+			{"booking": self.name},
+			["amount", "status"],
+			as_dict=True,
+			for_update=True,
 		)
 		self.refunded_amount = sum(flt(refund.amount) for refund in refunds if refund.status == "Processed")
 
