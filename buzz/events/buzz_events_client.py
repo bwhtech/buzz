@@ -46,7 +46,8 @@ class BuzzEventsClient(FrappeClient):
 		try:
 			return self.read(response)
 		except ValueError:
-			throw_unreachable(frappe.ValidationError)
+			# A success it cannot read may still have been acted on, such as a refund made.
+			throw_unreachable(GatewayUnavailableError if response.ok else frappe.ValidationError)
 
 	def read(self, response: requests.Response):
 		"""The hub's own error message reaches the buyer as it is."""

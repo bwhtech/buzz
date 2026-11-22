@@ -75,6 +75,18 @@ class TestBuzzEventsClient(IntegrationTestCase):
 				with self.assertRaisesRegex(GatewayUnavailableError, "buzz.events could not be reached"):
 					BuzzEventsClient().get("buzz.api.hosted_payments.get_status", {"order_id": "HP-1"})
 
+	def test_a_success_the_client_cannot_read_is_reported_unavailable(self):
+		# The hub may have acted on it, such as made a refund, so it is not a refusal.
+		with patch(REQUEST, return_value=hub_response(200, text="<html>")):
+			with self.assertRaises(GatewayUnavailableError):
+				BuzzEventsClient().post("buzz.api.hosted_payments.refund", {"order_id": "HP-1"})
+
+	def test_a_refusal_the_client_cannot_read_is_not_reported_unavailable(self):
+		with patch(REQUEST, return_value=hub_response(404, text="<html>")):
+			with self.assertRaises(frappe.ValidationError) as raised:
+				BuzzEventsClient().get("buzz.api.hosted_payments.get_status", {"order_id": "HP-1"})
+		self.assertNotIsInstance(raised.exception, GatewayUnavailableError)
+
 	def test_a_hub_refusal_is_not_reported_unavailable(self):
 		for status in (400, 403, 404, 417):
 			refusal = hub_response(status, {"errors": [{"message": "Order not found"}]})
