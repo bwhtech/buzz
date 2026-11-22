@@ -7,7 +7,7 @@ from frappe.tests import IntegrationTestCase
 from buzz.payments import get_payment_link_for_booking
 from buzz.tests.base_test_cases import make_payment_gateway
 from buzz.tests.factories import BuzzEventFactory, EventBookingFactory, EventTicketTypeFactory
-from buzz.tests.sessions import Session, in_session, overlap
+from buzz.tests.sessions import Session, SnapshotIsolation, in_session, overlap, run_again
 from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import EventBookingRefund
 
 
@@ -19,7 +19,7 @@ def sync_refunds(booking: str):
 	frappe.get_doc("Event Booking", booking).sync_refunds()
 
 
-class TestOverlappingBookingRefunds(IntegrationTestCase):
+class TestOverlappingBookingRefunds(SnapshotIsolation, IntegrationTestCase):
 	"""A paid ₹1,000 booking refunded by requests of their own, which commit as real ones do.
 
 	Each refund pauses after its Event Booking Refund is inserted, with the locks it holds by then.
@@ -58,8 +58,12 @@ class TestOverlappingBookingRefunds(IntegrationTestCase):
 		overlap(outer, EventBookingRefund, "on_update", inner)
 		return outer
 
-	def assert_no_deadlock(self, *sessions: Session):
-		self.assertEqual([session.error for session in sessions], [None] * len(sessions))
+	def assert_both_went_through(self, outer: Session, inner: Session):
+		"""With snapshot isolation the overlapping one first fails at its lock, and goes through when run again."""
+		if self.snapshot_isolated:
+			self.assertIsInstance(inner.error, frappe.QueryDeadlockError)
+			inner = run_again(inner)
+		self.assertEqual([outer.error, inner.error], [None, None])
 
 	def refunds(self) -> list:
 		return in_session(
@@ -72,7 +76,7 @@ class TestOverlappingBookingRefunds(IntegrationTestCase):
 		inner = Session(lambda: refund(self.booking, 200))
 		outer = self.overlap_refunds(inner)
 
-		self.assert_no_deadlock(outer, inner)
+		self.assert_both_went_through(outer, inner)
 		self.assertEqual(
 			[(r.amount, r.status) for r in self.refunds()], [(200, "Processed"), (300, "Processed")]
 		)
@@ -86,7 +90,7 @@ class TestOverlappingBookingRefunds(IntegrationTestCase):
 
 		outer = self.overlap_refunds(settling)
 
-		self.assert_no_deadlock(outer, settling)
+		self.assert_both_went_through(outer, settling)
 		self.assertEqual(
 			[(r.amount, r.status) for r in self.refunds()], [(200, "Processed"), (300, "Processed")]
 		)
@@ -94,3 +98,7 @@ class TestOverlappingBookingRefunds(IntegrationTestCase):
 	def settle_at_the_gateway(self):
 		pending = frappe.db.get_value("Gateway Refund", {"payment_request": self.payment_request})
 		payment_testing.set_refund_status(pending, "Processed")
+
+
+class TestOverlappingBookingRefundsWithSnapshotIsolation(TestOverlappingBookingRefunds):
+	snapshot_isolated = True

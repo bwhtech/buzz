@@ -6,6 +6,7 @@ from frappe.utils import now_datetime
 
 from buzz.api.checkin import checkin_ticket
 from buzz.tests.base_test_cases import CHARGED_PER_TICKET, BookingRefundTestCase
+from buzz.tests.sessions import SnapshotIsolation
 from buzz.tests.utils import other_connection
 
 BOOKING_TOTAL = 1100
@@ -170,7 +171,7 @@ class TestSyncRefunds(BookingRefundTestCase):
 		return result
 
 
-class TestRefundSettledByAnotherWorker(BookingRefundTestCase):
+class TestRefundSettledByAnotherWorker(SnapshotIsolation, BookingRefundTestCase):
 	"""Another worker commits a processed refund after this transaction took its snapshot.
 
 	One test per class: the class transaction keeps the locks its test takes, and the other worker's row
@@ -207,6 +208,16 @@ class TestRefundSettledByAnotherWorker(BookingRefundTestCase):
 	def test_the_booking_counts_the_refund_the_other_worker_settled(self):
 		self.settle_refund_elsewhere(CHARGED_PER_TICKET)
 
+		if self.snapshot_isolated:
+			# The webhook job fails at its lock and goes back to the job runner. The database rolls this
+			# test's whole transaction back, fixtures included, so the retry is not run here.
+			with self.assertRaises(frappe.RetryBackgroundJobError):
+				self.refund_outside_buzz(100)
+			return
 		self.refund_outside_buzz(100)
 
 		self.assertEqual(self.booking.refunded_amount, CHARGED_PER_TICKET + 100)
+
+
+class TestRefundSettledByAnotherWorkerWithSnapshotIsolation(TestRefundSettledByAnotherWorker):
+	snapshot_isolated = True

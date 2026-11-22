@@ -3,7 +3,7 @@ from frappe.tests import IntegrationTestCase
 
 from buzz.hosted_payments.doctype.hosted_payout.hosted_payout import HostedPayout
 from buzz.tests.factories import BuzzTeamFactory, HostedPaymentFactory, HostedPayoutFactory
-from buzz.tests.sessions import Session, in_session, overlap
+from buzz.tests.sessions import Session, SnapshotIsolation, in_session, overlap, run_again
 
 
 def set_fallback_rate(rate: float | None) -> float | None:
@@ -22,7 +22,7 @@ def cancel(payout: str):
 	frappe.get_doc("Hosted Payout", payout).cancel()
 
 
-class TestOverlappingPayouts(IntegrationTestCase):
+class TestOverlappingPayouts(SnapshotIsolation, IntegrationTestCase):
 	"""A payment settled by one payout and refunded after it, so two draft payouts carry the refund forward.
 
 	Every write is committed from sessions of their own, as concurrent requests make them.
@@ -74,6 +74,10 @@ class TestOverlappingPayouts(IntegrationTestCase):
 		self.assertEqual(outstanding_lines, [])
 
 	def assert_refused_without_a_deadlock(self, session: Session, message: str):
+		"""With snapshot isolation it first fails at its lock, and is refused when run again."""
+		if self.snapshot_isolated:
+			self.assertIsInstance(session.error, frappe.QueryDeadlockError)
+			session = run_again(session)
 		self.assertNotIsInstance(session.error, frappe.QueryDeadlockError)
 		self.assertIsInstance(session.error, frappe.ValidationError)
 		self.assertIn(message, str(session.error))
@@ -107,3 +111,7 @@ class TestOverlappingPayouts(IntegrationTestCase):
 		self.assertIsNone(first.error)
 		self.assert_refused_without_a_deadlock(late, "Get payments again")
 		self.assert_refund_deducted_once_by(self.drafts[0])
+
+
+class TestOverlappingPayoutsWithSnapshotIsolation(TestOverlappingPayouts):
+	snapshot_isolated = True

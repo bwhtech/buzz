@@ -2,6 +2,7 @@ import threading
 from unittest.mock import patch
 
 import frappe
+from bwh_payments import testing as payment_testing
 from frappe.tests.classes.context_managers import set_user
 
 # How long the first operation waits, mid-way, for the overlapping one to finish.
@@ -29,6 +30,29 @@ class Session(threading.Thread):
 			self.error = error
 		finally:
 			frappe.destroy()
+
+
+class SnapshotIsolation:
+	"""Mixin: the class runs with MariaDB's `innodb_snapshot_isolation` as `snapshot_isolated` says.
+
+	MariaDB 11.8 has it ON by default. Then a lock on a row another worker changed after the transaction's
+	first read fails the transaction with `QueryDeadlockError`, and the request or job must run again.
+	"""
+
+	snapshot_isolated = False
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.enterClassContext(payment_testing.snapshot_isolation(cls.snapshot_isolated))
+
+
+def run_again(session: Session) -> Session:
+	"""The same action in a fresh request, as a client retries a restartable error."""
+	retry = Session(session.action)
+	retry.start()
+	retry.join()
+	return retry
 
 
 def in_session(action):

@@ -8,9 +8,10 @@ from buzz.api.hosted_payments import create_order, refund
 from buzz.api.hosted_payments.exceptions import RefundExceedsBalance
 from buzz.tests.base_test_cases import HostedPaymentsTestCase
 from buzz.tests.factories import HostedPayoutFactory
+from buzz.tests.sessions import SnapshotIsolation
 
 
-class HubRefundRaceTestCase(HostedPaymentsTestCase):
+class HubRefundRaceTestCase(SnapshotIsolation, HostedPaymentsTestCase):
 	"""Another worker commits a refund after this transaction took its snapshot.
 
 	One test per class: the class transaction keeps every lock its tests take, and the other worker would
@@ -46,21 +47,46 @@ class HubRefundRaceTestCase(HostedPaymentsTestCase):
 		with self.set_user(self.integration):
 			return refund(self.order_id, amount, idempotency_key)
 
+	def assert_restartable(self, amount: float, idempotency_key: str):
+		"""With snapshot isolation the refund fails at its lock, before the gateway, with a 5xx. The site
+		reads that as unavailable, keeps its refund Pending and asks again. The database rolls this test's
+		whole transaction back, fixtures included, so the retry is not run here."""
+		with self.assertRaises(frappe.QueryDeadlockError) as raised:
+			self.refund(amount, idempotency_key)
+		self.assertGreaterEqual(getattr(raised.exception, "http_status_code", 500), 500)
+		self.assertEqual(StubRazorpayClient.created_refunds, [])
+
 
 class TestRefundReservedByAnotherWorker(HubRefundRaceTestCase):
 	def test_counts_against_the_balance(self):
 		self.reserve_elsewhere(700)
+		if self.snapshot_isolated:
+			self.assert_restartable(700, frappe.generate_hash())
+			return
 		with self.assertRaises(RefundExceedsBalance):
 			self.refund(700, frappe.generate_hash())
 		self.assertEqual(StubRazorpayClient.created_refunds, [])
 
 
+class TestRefundReservedByAnotherWorkerWithSnapshotIsolation(TestRefundReservedByAnotherWorker):
+	snapshot_isolated = True
+
+
 class TestRefundRetriedWhileAnotherWorkerMadeIt(HubRefundRaceTestCase):
 	def test_returns_the_refund_the_other_worker_made(self):
 		name = self.reserve_elsewhere(200, reference="PRO-RFND-RACE")
+		if self.snapshot_isolated:
+			self.assert_restartable(200, "PRO-RFND-RACE")
+			return
 		retry = self.refund(200, "PRO-RFND-RACE")
 		self.assertEqual((retry.refund_id, retry.status, retry.amount), (name, "Pending", 200))
 		self.assertEqual(StubRazorpayClient.created_refunds, [])
+
+
+class TestRefundRetriedWhileAnotherWorkerMadeItWithSnapshotIsolation(
+	TestRefundRetriedWhileAnotherWorkerMadeIt
+):
+	snapshot_isolated = True
 
 
 class TestPendingRefundAfterAnotherWorkerSettledOne(HubRefundRaceTestCase):
@@ -70,6 +96,9 @@ class TestPendingRefundAfterAnotherWorkerSettledOne(HubRefundRaceTestCase):
 			"update `tabGateway Refund` set status = 'Processed' where name = %s", (settled,)
 		)
 		payment_testing.set_next_refund_status("Pending")
+		if self.snapshot_isolated:
+			self.assert_restartable(200, frappe.generate_hash())
+			return
 
 		self.assertEqual(self.refund(200, frappe.generate_hash()).status, "Pending")
 
@@ -78,3 +107,9 @@ class TestPendingRefundAfterAnotherWorkerSettledOne(HubRefundRaceTestCase):
 		payout.get_payments()
 		[line] = [line for line in payout.lines if line.hosted_payment == self.order_id]
 		self.assertEqual(line.refunded, 300)
+
+
+class TestPendingRefundAfterAnotherWorkerSettledOneWithSnapshotIsolation(
+	TestPendingRefundAfterAnotherWorkerSettledOne
+):
+	snapshot_isolated = True
