@@ -1,3 +1,6 @@
+import re
+from unittest.mock import patch
+
 import frappe
 from bwh_payments import testing as payment_testing
 from frappe.utils import add_days, now_datetime, today
@@ -5,9 +8,20 @@ from frappe.utils import add_days, now_datetime, today
 from buzz.api.hosted_payments import create_order, refund
 from buzz.tests.base_test_cases import HostedPaymentsTestCase
 from buzz.tests.factories import BuzzTeamFactory, HostedPayoutFactory
+from buzz.tests.utils import other_connection
+
+# Payout lines a second session commits, standing in for a concurrent payout submitted meanwhile.
+CONCURRENT_PAYOUT = "CONCURRENT-PAYOUT"
+LOCKED_TABLE = re.compile(r"from\s+`(tab[^`]+)`", re.IGNORECASE)
 
 
-class TestHostedPayout(HostedPaymentsTestCase):
+def delete_concurrent_refund_lines() -> None:
+	with other_connection() as database:
+		database.delete("Hosted Payout Line", {"parent": CONCURRENT_PAYOUT})
+		database.commit()
+
+
+class HostedPayoutTestCase(HostedPaymentsTestCase):
 	def setUp(self):
 		super().setUp()
 		self.addCleanup(frappe.clear_document_cache, "Buzz Settings", "Buzz Settings")
@@ -45,6 +59,16 @@ class TestHostedPayout(HostedPaymentsTestCase):
 		fields = ("hosted_payment", "payment_method", "rate", "gross", "refunded", "commission", "net")
 		return [tuple(line.get(field) for field in fields) for line in payout.lines]
 
+	def submit(self, payout, transfer_reference: str = "UTR-1001"):
+		payout.transfer_reference = transfer_reference
+		payout.submit()
+		return payout
+
+	def payout_of(self, order_id: str) -> str | None:
+		return frappe.db.get_value("Hosted Payment", order_id, "payout")
+
+
+class TestHostedPayout(HostedPayoutTestCase):
 	def test_upi_payment_is_charged_the_upi_rate(self):
 		order_id = self.paid_order(1000, "upi")
 		payout = self.payout_with_payments()
@@ -89,14 +113,6 @@ class TestHostedPayout(HostedPaymentsTestCase):
 		payout = self.payout_with_payments()
 		totals = (payout.total_gross, payout.total_refunded, payout.total_commission, payout.total_net)
 		self.assertEqual(totals, (300.3, 0, 9.91, 290.39))
-
-	def submit(self, payout, transfer_reference: str = "UTR-1001"):
-		payout.transfer_reference = transfer_reference
-		payout.submit()
-		return payout
-
-	def payout_of(self, order_id: str) -> str | None:
-		return frappe.db.get_value("Hosted Payment", order_id, "payout")
 
 	def test_submit_settles_the_payments(self):
 		order_id = self.paid_order(1000)
@@ -211,6 +227,72 @@ class TestHostedPayout(HostedPaymentsTestCase):
 		first = self.submit(self.payout_with_payments())
 		self.refund(order_id, 300)
 		self.submit(self.payout_with_payments(), transfer_reference="UTR-1002")
+		with self.assertRaises(frappe.ValidationError):
+			first.cancel()
+		self.assertEqual(self.payout_of(order_id), first.name)
+
+	def test_cancel_locks_the_payments_before_it_looks_for_later_payouts(self):
+		order_id = self.paid_order(1000)
+		payout = self.submit(self.payout_with_payments())
+		self.assertEqual(
+			self.tables_locked_for(order_id, payout.cancel), ["tabHosted Payment", "tabHosted Payout Line"]
+		)
+
+	def tables_locked_for(self, order_id: str, action) -> list[str]:
+		"""The tables of the `for update` reads the action makes for this payment, in order."""
+		tables, sql = [], frappe.db.sql
+
+		def record(query, values=(), *args, **kwargs):
+			text = str(query)
+			if "for update" in text.lower() and order_id in str(values) + text:
+				tables.append(LOCKED_TABLE.search(text).group(1))
+			return sql(query, values, *args, **kwargs)
+
+		with patch.object(frappe.db, "sql", side_effect=record):
+			action()
+		return tables
+
+
+class ConcurrentPayoutTestCase(HostedPayoutTestCase):
+	"""A second session commits a submitted refund line after this transaction took its snapshot.
+
+	One test per class: the class transaction keeps the gap locks its own line writes take until the class
+	rollback, and those would block the second session's insert.
+	"""
+
+	@classmethod
+	def setUpClass(cls):
+		# Registered first, so it runs after the class rollback releases this session's locks on the line.
+		cls.addClassCleanup(delete_concurrent_refund_lines)
+		super().setUpClass()
+
+	def commit_concurrent_refund_line(self, order_id: str, refunded: float) -> None:
+		with other_connection() as database:
+			database.sql(
+				"""insert into `tabHosted Payout Line`
+				(name, parent, parenttype, parentfield, docstatus, hosted_payment, line_type, refunded)
+				values (%s, %s, 'Hosted Payout', 'lines', 1, %s, 'Refund', %s)""",
+				(frappe.generate_hash(), CONCURRENT_PAYOUT, order_id, refunded),
+			)
+			database.commit()
+
+
+class TestConcurrentRefundDeduction(ConcurrentPayoutTestCase):
+	def test_refund_deducted_by_a_payout_committed_meanwhile_is_not_deducted_again(self):
+		order_id = self.paid_order(1000)
+		self.commit_concurrent_refund_line(order_id, 300)
+		self.submit(self.payout_with_payments())
+		self.refund(order_id, 300)
+		with self.assertRaises(frappe.ValidationError):
+			self.submit(self.payout_with_payments(), transfer_reference="UTR-1002")
+
+
+class TestConcurrentCancel(ConcurrentPayoutTestCase):
+	def test_payout_is_not_cancelled_once_a_payout_committed_meanwhile_deducts_its_refunds(self):
+		order_id = self.paid_order(1000)
+		self.commit_concurrent_refund_line(order_id, 300)
+		first = self.submit(self.payout_with_payments())
+		self.refund(order_id, 300)
 		with self.assertRaises(frappe.ValidationError):
 			first.cancel()
 		self.assertEqual(self.payout_of(order_id), first.name)

@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import frappe
 import requests
+from frappe.database import get_db
 from frappe.tests.classes.context_managers import set_user
 
 from buzz.events.doctype.event_venue.map_link import MAP_LINK_CACHE_PREFIX
@@ -16,6 +17,29 @@ def hub_response(status_code: int, body: dict | None = None, text: str | None = 
 	response.status_code = status_code
 	response._content = (text if text is not None else json.dumps(body)).encode()
 	return response
+
+
+@contextmanager
+def other_connection():
+	"""A database session of its own, as a concurrent worker holds. It sees only committed rows.
+
+	IntegrationTestCase.secondary_connection swaps frappe.local.db and the session user, so it is not used.
+	"""
+	conf = frappe.conf
+	database = get_db(
+		socket=conf.db_socket,
+		host=conf.db_host,
+		port=conf.db_port,
+		user=conf.db_user,
+		password=conf.db_password,
+		cur_db_name=conf.db_name,
+	)
+	database.connect()
+	try:
+		yield database
+	finally:
+		database.rollback()
+		database.close()
 
 
 def clear_map_link_cache():

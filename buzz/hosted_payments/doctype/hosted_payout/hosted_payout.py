@@ -49,17 +49,8 @@ class HostedPayout(Document):
 		"""Each payment is this payout's team and currency. It settles once, and each refund of a settled
 		payment is deducted once."""
 		names = [line.hosted_payment for line in self.lines]
-		payments = {
-			payment.name: payment
-			for payment in frappe.db.get_values(
-				"Hosted Payment",
-				{"name": ["in", names]},
-				["name", "team", "currency", "payout", "refunded_amount"],
-				as_dict=True,
-				for_update=True,
-			)
-		}
-		deducted = deducted_refunds(names)
+		payments = lock_payments(names)
+		deducted = deducted_refunds(names, for_update=True)
 		for line in self.lines:
 			self.validate_line(line, payments[line.hosted_payment], deducted)
 
@@ -86,10 +77,13 @@ class HostedPayout(Document):
 		return [line.hosted_payment for line in self.lines if not is_refund_line(line)]
 
 	def before_cancel(self):
+		settled = self.settled_payments()
+		lock_payments(settled)
 		later_payout = frappe.db.get_value(
 			"Hosted Payout Line",
-			{"hosted_payment": ["in", self.settled_payments()], "docstatus": 1, "parent": ["!=", self.name]},
+			{"hosted_payment": ["in", settled], "docstatus": 1, "parent": ["!=", self.name]},
 			"parent",
+			for_update=True,
 		)
 		if later_payout:
 			frappe.throw(
@@ -157,8 +151,26 @@ class PaymentRates:
 		return self.rates.get(payment_method, self.fallback_rate)
 
 
-def deducted_refunds(payments: list[str]) -> dict[str, float]:
-	"""Refunded amounts already counted on submitted payouts, per payment."""
+def lock_payments(names: list[str]) -> dict[str, dict]:
+	"""Submit and cancel both lock the payments first, in name order, so each waits for the other."""
+	if not names:
+		return {}
+	payments = frappe.db.get_values(
+		"Hosted Payment",
+		{"name": ["in", names]},
+		["name", "team", "currency", "payout", "refunded_amount"],
+		as_dict=True,
+		order_by="name asc",
+		for_update=True,
+	)
+	return {payment.name: payment for payment in payments}
+
+
+def deducted_refunds(payments: list[str], for_update: bool = False) -> dict[str, float]:
+	"""Refunded amounts already counted on submitted payouts, per payment.
+
+	`for_update` reads what is committed now; a plain read sees the transaction's older snapshot.
+	"""
 	if not payments:
 		return {}
 	line = frappe.qb.DocType("Hosted Payout Line")
@@ -168,6 +180,8 @@ def deducted_refunds(payments: list[str]) -> dict[str, float]:
 		.where((line.docstatus == 1) & line.hosted_payment.isin(payments))
 		.groupby(line.hosted_payment)
 	)
+	if for_update:
+		query = query.for_update()
 	return dict(query.run())
 
 
