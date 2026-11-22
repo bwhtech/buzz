@@ -58,8 +58,17 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 		with self.assertRaises(UnsupportedCurrency):
 			self.create_order(currency="USD")
 
-	def pay(self, order_id: str) -> None:
-		payment_testing.pay(frappe.db.get_value("Hosted Payment", order_id, "payment_request"))
+	def test_checkout_names_the_team_and_the_order(self):
+		order = self.create_order(reference="PRO-GPR-7")
+		request = frappe.db.get_value("Hosted Payment", order.order_id, "payment_request")
+		self.assertEqual(
+			frappe.db.get_value("Gateway Payment Request", request, "description"),
+			"Pro Team via Buzz · PRO-GPR-7",
+		)
+
+	def pay(self, order_id: str, payment_method: str = "upi") -> None:
+		request = frappe.db.get_value("Hosted Payment", order_id, "payment_request")
+		payment_testing.pay(request, payment_method=payment_method)
 
 	def test_new_order_is_pending(self):
 		order = self.create_order()
@@ -72,6 +81,13 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 		self.assertEqual(frappe.db.get_value("Hosted Payment", order.order_id, "status"), "Paid")
 		with self.set_user(self.integration):
 			self.assertEqual(get_status(order.order_id), "Paid")
+
+	def test_paid_order_keeps_the_payment_method(self):
+		order = self.create_order()
+		self.pay(order.order_id, payment_method="card_credit")
+		self.assertEqual(
+			frappe.db.get_value("Hosted Payment", order.order_id, "payment_method"), "card_credit"
+		)
 
 	def test_another_team_cannot_read_an_order(self):
 		order = self.create_order()
