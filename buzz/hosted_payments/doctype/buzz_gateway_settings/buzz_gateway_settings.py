@@ -1,6 +1,8 @@
 # Copyright (c) 2026, BWH Studios and contributors
 # For license information, please see license.txt
 
+import json
+
 import frappe
 from bwh_payments.base_class import CheckoutSession, PaymentGatewayBase, RefundResult, WebhookEvent
 from frappe import _
@@ -50,7 +52,9 @@ class BuzzGatewaySettings(Document, PaymentGatewayBase):
 		frappe.throw(_("Refunds through Buzz are not available yet."))
 
 	def handle_webhook(self, payload: bytes, headers: dict) -> WebhookEvent | None:
-		return None
+		# Anyone can post here, so the status is read back from the hub, never from the body.
+		order_id = json.loads(payload)["order_id"]
+		return WebhookEvent(session_id=order_id, status="Pending", sync_status=True)
 
 	def supported_currencies(self) -> tuple[str, ...]:
 		return get_hub_currencies()
