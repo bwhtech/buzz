@@ -12,13 +12,11 @@ from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import Eve
 
 
 def refund(booking: str, amount: float) -> str:
-	with patch("frappe.sendmail"):
-		return frappe.get_doc("Event Booking", booking).refund(amount=amount)
+	return frappe.get_doc("Event Booking", booking).refund(amount=amount)
 
 
 def sync_refunds(booking: str):
-	with patch("frappe.sendmail"):
-		frappe.get_doc("Event Booking", booking).sync_refunds()
+	frappe.get_doc("Event Booking", booking).sync_refunds()
 
 
 class TestOverlappingBookingRefunds(IntegrationTestCase):
@@ -28,6 +26,8 @@ class TestOverlappingBookingRefunds(IntegrationTestCase):
 	"""
 
 	def setUp(self):
+		# Patched once, here: sessions patching it at once would restore each other's mock, not sendmail.
+		self.enterContext(patch("frappe.sendmail"))
 		payment_testing.reset()
 		self.booking, self.payment_request = in_session(self.paid_booking)
 		self.addCleanup(in_session, self.delete_fixtures)
@@ -41,8 +41,7 @@ class TestOverlappingBookingRefunds(IntegrationTestCase):
 		payment_request = frappe.db.get_value(
 			"Event Payment", {"reference_docname": booking}, "payment_request"
 		)
-		with patch("frappe.sendmail"):
-			payment_testing.pay(payment_request)
+		payment_testing.pay(payment_request)
 		return booking, payment_request
 
 	def delete_fixtures(self):
