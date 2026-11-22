@@ -1,11 +1,21 @@
+import json
 from contextlib import contextmanager
 from email import message_from_string
 from unittest.mock import patch
 
 import frappe
+import requests
 from frappe.tests.classes.context_managers import set_user
 
 from buzz.events.doctype.event_venue.map_link import MAP_LINK_CACHE_PREFIX
+
+
+def hub_response(status_code: int, body: dict | None = None, text: str | None = None) -> requests.Response:
+	"""What buzz.events answers over HTTP, for tests that patch `requests.Session.request`."""
+	response = requests.Response()
+	response.status_code = status_code
+	response._content = (text if text is not None else json.dumps(body)).encode()
+	return response
 
 
 def clear_map_link_cache():

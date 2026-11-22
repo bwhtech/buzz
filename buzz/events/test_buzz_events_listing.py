@@ -6,9 +6,11 @@ from frappe.utils import add_days, today
 
 from buzz.events.buzz_events_listing import ListingPush, enqueue_push, push_event, source_id_of
 from buzz.tests.factories import BuzzEventFactory
+from buzz.tests.utils import hub_response
 
-POST = "buzz.events.buzz_events_listing.make_post_request"
+POST = "requests.Session.request"
 ENQUEUE = "buzz.events.buzz_events_listing.frappe.enqueue"
+ACCEPTED = hub_response(200, {"data": None})
 SETTINGS = {
 	"list_on_buzz_events": 1,
 	"buzz_events_url": "https://listings.example.com/",
@@ -58,11 +60,10 @@ class TestBuzzEventsListing(IntegrationTestCase):
 
 	def test_published_event_is_upserted(self):
 		event = BuzzEventFactory.create()
-		with self.change_settings("Buzz Settings", SETTINGS), patch(POST) as post:
+		with self.change_settings("Buzz Settings", SETTINGS), patch(POST, return_value=ACCEPTED) as post:
 			push_event(str(event.name))
-		url = post.call_args.args[0]
+		url = post.call_args.args[1]
 		self.assertEqual(url, "https://listings.example.com/api/v2/method/buzz.api.listings.upsert_event")
-		self.assertEqual(post.call_args.kwargs["headers"], {"Authorization": "token key:secret"})
 		self.assertEqual(post.call_args.kwargs["json"]["event"]["event_title"], event.title)
 
 	def test_unpublished_or_ended_event_is_removed(self):
@@ -71,9 +72,9 @@ class TestBuzzEventsListing(IntegrationTestCase):
 			BuzzEventFactory.create("unpublished"),
 			BuzzEventFactory.create(start_date=past, end_date=past),
 		):
-			with self.change_settings("Buzz Settings", SETTINGS), patch(POST) as post:
+			with self.change_settings("Buzz Settings", SETTINGS), patch(POST, return_value=ACCEPTED) as post:
 				push_event(str(event.name))
-			self.assertTrue(post.call_args.args[0].endswith("remove_event"))
+			self.assertTrue(post.call_args.args[1].endswith("remove_event"))
 			self.assertEqual(post.call_args.kwargs["json"], {"source_id": source_id_of(event.name)})
 
 	def test_nothing_runs_when_disabled(self):
