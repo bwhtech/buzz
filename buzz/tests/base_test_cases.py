@@ -3,7 +3,7 @@ from unittest.mock import patch
 import frappe
 from bwh_payments import testing as payment_testing
 from frappe.tests import IntegrationTestCase
-from frappe.utils import flt
+from frappe.utils import flt, get_url
 
 from buzz.api.booking import process_booking
 from buzz.api.booking.schemas import BookingRequest
@@ -14,6 +14,7 @@ from buzz.tests.factories import (
 	BuzzEventFactory,
 	BuzzFormFactory,
 	BuzzTeamFactory,
+	BuzzTeamMembershipFactory,
 	EventBookingFactory,
 	EventSponsorFactory,
 	EventTicketTypeFactory,
@@ -239,6 +240,38 @@ class BookingRefundTestCase(IntegrationTestCase):
 			filters={"booking": self.booking.name},
 			fields=["name", "docstatus"],
 		)
+
+
+class HostedPaymentsTestCase(IntegrationTestCase):
+	"""A hub team connected to this site, with its Integration user, taking payments on the test gateway."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.hub_gateway = make_payment_gateway()
+		cls.integration = UserFactory.create_once("hosted-payments-bot@example.com").name
+		cls.team = BuzzTeamFactory.create_owned_by(team_name="Pro Team", connected_site_url=get_url()).name
+		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.integration, team_role="Integration")
+
+	def setUp(self):
+		self.enterContext(self.set_user("Administrator"))
+		payment_testing.reset()
+		self.enterContext(
+			self.change_settings(
+				"Buzz Settings", hosted_payment_gateway=self.hub_gateway, hosted_payment_currencies="INR"
+			)
+		)
+
+	def order_values(self, **overrides) -> dict:
+		values = {
+			"amount": 550,
+			"currency": "INR",
+			"reference": "PRO-GPR-1",
+			"customer": {"email": "buyer@example.com", "phone": "+91-9999999999"},
+			"return_url": get_url("/api/method/pro.return?request=PRO-GPR-1"),
+			"webhook_url": get_url("/api/method/pro.webhook?gateway=Buzz"),
+		}
+		return values | overrides
 
 
 class TeamPermissionTestCase(IntegrationTestCase):
