@@ -67,13 +67,18 @@ class ListingPush:
 
 def post_to_buzz_events(method: str, body: dict) -> None:
 	settings = frappe.get_cached_doc("Buzz Settings")
-	token = f"{settings.buzz_events_api_key}:{settings.get_password('buzz_events_api_secret')}"
 	make_post_request(
 		f"{settings.buzz_events_url.rstrip('/')}{API_PATH}.{method}",
-		headers={"Authorization": f"token {token}"},
+		headers=buzz_events_headers(settings),
 		json=body,
 		timeout=30,
 	)
+
+
+def buzz_events_headers(settings) -> dict:
+	"""This site signs in to buzz.events as its team's Integration user."""
+	token = f"{settings.buzz_events_api_key}:{settings.get_password('buzz_events_api_secret')}"
+	return {"Authorization": f"token {token}"}
 
 
 def push_event(event_name: str) -> None:

@@ -157,6 +157,21 @@ def after_install():
 	create_administrator_team()
 	use_buzz_navbar()
 	use_buzz_footer()
+	create_buzz_payment_gateway()
+
+
+def create_buzz_payment_gateway():
+	"""Disabled until provisioning sets this site's buzz.events credentials and turns it on."""
+	if frappe.db.exists("Payment Gateway Profile", "Buzz"):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Payment Gateway Profile",
+			"name": "Buzz",
+			"gateway_settings": "Buzz Gateway Settings",
+			"enabled": 0,
+		}
+	).insert(ignore_permissions=True)
 
 
 def use_buzz_navbar():

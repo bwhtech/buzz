@@ -56,6 +56,7 @@ buzz.patches.add_registration_core_rows
 buzz.patches.use_hex_colors_for_schedule_item_types
 buzz.patches.shorten_group_venue_names
 buzz.patches.generate_profile_share_images
+buzz.patches.create_buzz_payment_gateway
 
 [post_fixture_sync]
 buzz.patches.move_schedule_to_buzz_schedule
