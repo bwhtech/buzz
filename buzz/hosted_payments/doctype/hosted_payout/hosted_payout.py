@@ -36,7 +36,19 @@ class HostedPayout(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		self.validate_payments_are_unique()
 		self.set_totals()
+
+	def validate_payments_are_unique(self) -> None:
+		seen = set()
+		for line in self.lines:
+			if line.hosted_payment in seen:
+				frappe.throw(
+					_("Row {0}: Hosted Payment {1} is already in this payout.").format(
+						line.idx, line.hosted_payment
+					)
+				)
+			seen.add(line.hosted_payment)
 
 	def before_submit(self):
 		if not self.transfer_reference:

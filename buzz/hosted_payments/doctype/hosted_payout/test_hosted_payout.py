@@ -231,6 +231,26 @@ class TestHostedPayout(HostedPayoutTestCase):
 			first.cancel()
 		self.assertEqual(self.payout_of(order_id), first.name)
 
+	def repeat_first_line(self, payout) -> None:
+		fields = ("hosted_payment", "line_type", "payment_method", "rate", "gross", "refunded", "commission")
+		payout.append("lines", {field: payout.lines[0].get(field) for field in (*fields, "net")})
+
+	def test_payment_twice_in_one_payout_is_rejected(self):
+		self.paid_order(1000)
+		payout = self.payout_with_payments()
+		self.repeat_first_line(payout)
+		with self.assertRaises(frappe.ValidationError):
+			payout.save()
+
+	def test_refund_twice_in_one_payout_is_rejected(self):
+		order_id = self.paid_order(1000)
+		self.submit(self.payout_with_payments())
+		self.refund(order_id, 300)
+		payout = self.payout_with_payments()
+		self.repeat_first_line(payout)
+		with self.assertRaises(frappe.ValidationError):
+			payout.save()
+
 	def test_cancel_locks_the_payments_before_it_looks_for_later_payouts(self):
 		order_id = self.paid_order(1000)
 		payout = self.submit(self.payout_with_payments())
