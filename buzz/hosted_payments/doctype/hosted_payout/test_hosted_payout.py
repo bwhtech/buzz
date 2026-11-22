@@ -238,6 +238,54 @@ class TestHostedPayout(HostedPayoutTestCase):
 			first.cancel()
 		self.assertEqual(self.payout_of(order_id), first.name)
 
+	def test_unpaid_payment_cannot_be_submitted(self):
+		order_id = HostedPaymentFactory.create(
+			team=self.team, paid_on=now_datetime(), payment_method="upi"
+		).name
+		line = {"hosted_payment": order_id, "line_type": "Payment", "payment_method": "upi", "rate": 3.3}
+		line |= {"gross": 1000, "refunded": 0, "commission": 33, "net": 967}
+		payout = HostedPayoutFactory.create(team=self.team, lines=[line])
+		with self.assertRaisesRegex(frappe.ValidationError, "Get payments again"):
+			self.submit(payout)
+		self.assertIsNone(self.payout_of(order_id))
+
+	def submit_with_line_changed(self, payout, **values) -> None:
+		payout.lines[0].update(values)
+		payout.save()
+		with self.assertRaisesRegex(frappe.ValidationError, "Get payments again"):
+			self.submit(payout, transfer_reference="UTR-1002")
+
+	def test_refund_line_that_adds_to_the_transfer_is_rejected(self):
+		order_id = self.paid_order(1000)
+		self.submit(self.payout_with_payments())
+		self.refund(order_id, 300)
+		self.submit_with_line_changed(self.payout_with_payments(), net=300)
+		self.assertEqual(
+			self.line_values(self.payout_with_payments()), [(order_id, "upi", 0, 0, 300, 0, -300)]
+		)
+
+	def test_refund_line_with_gross_or_commission_is_rejected(self):
+		order_id = self.paid_order(1000)
+		self.submit(self.payout_with_payments())
+		self.refund(order_id, 300)
+		for values in ({"gross": 300}, {"commission": 10, "net": -310}):
+			with self.subTest(values=values):
+				self.submit_with_line_changed(self.payout_with_payments(), **values)
+
+	def test_payment_line_with_values_other_than_the_payment_is_rejected(self):
+		self.paid_order(1000)
+		for values in ({"gross": 2000, "net": 1967}, {"commission": 0, "net": 1000}, {"rate": 0}):
+			with self.subTest(values=values):
+				self.submit_with_line_changed(self.payout_with_payments(), **values)
+
+	def test_payment_refunded_after_the_payout_was_drawn_up_is_rejected(self):
+		order_id = self.paid_order(1000)
+		payout = self.payout_with_payments()
+		self.refund(order_id, 400)
+		with self.assertRaisesRegex(frappe.ValidationError, "Get payments again"):
+			self.submit(payout)
+		self.assertIsNone(self.payout_of(order_id))
+
 	def repeat_first_line(self, payout) -> None:
 		fields = ("hosted_payment", "line_type", "payment_method", "rate", "gross", "refunded", "commission")
 		payout.append("lines", {field: payout.lines[0].get(field) for field in (*fields, "net")})

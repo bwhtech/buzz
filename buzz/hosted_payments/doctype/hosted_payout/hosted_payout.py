@@ -9,6 +9,8 @@ from frappe.utils import flt
 from buzz.hosted_payments.currency import round_to_currency
 
 SETTLEABLE_STATUSES = ("Paid", "Partially Refunded", "Refunded")
+REFUNDED_STATUSES = ("Partially Refunded", "Refunded")
+LINE_AMOUNT_FIELDS = ("gross", "refunded", "commission", "net")
 
 
 class HostedPayout(Document):
@@ -59,25 +61,36 @@ class HostedPayout(Document):
 		self.validate_lines()
 
 	def validate_lines(self) -> None:
-		"""Each payment is this payout's team and currency. It settles once, and each refund of a settled
-		payment is deducted once."""
+		"""Each line is what Get Payments makes of its payment as locked now, never what the form sent. So a
+		payment settles once, after it was paid, and each refund of a settled payment is deducted once."""
 		payments = lock_payments(self.payment_names())
+		rates = PaymentRates()
 		for line in self.lines:
-			self.validate_line(line, payments[line.hosted_payment])
+			self.validate_line(line, payments[line.hosted_payment], rates)
 
-	def validate_line(self, line, payment: dict) -> None:
+	def validate_line(self, line, payment: dict, rates: "PaymentRates") -> None:
 		if (payment.team, payment.currency) != (self.team, self.currency):
 			frappe.throw(
 				_("Row {0}: Hosted Payment {1} is not a {2} payment of team {3}.").format(
 					line.idx, line.hosted_payment, self.currency, self.team
 				)
 			)
-		if not line_is_unsettled(line, payment, self.currency):
+		expected = self.expected_line(line, payment, rates)
+		if not expected or frozen_values(line, self.currency) != frozen_values(expected, self.currency):
 			frappe.throw(
-				_("Row {0}: Hosted Payment {1} has been paid out since. Get payments again.").format(
-					line.idx, line.hosted_payment
-				)
+				_(
+					"Row {0}: Hosted Payment {1} has changed or been paid out since. Get payments again."
+				).format(line.idx, line.hosted_payment)
 			)
+
+	def expected_line(self, line, payment: dict, rates: "PaymentRates") -> dict | None:
+		if is_refund_line(line):
+			outstanding = outstanding_refund(payment, self.currency)
+			if payment.payout and payment.status in REFUNDED_STATUSES and outstanding > 0:
+				return refund_line(payment, outstanding)
+		elif not payment.payout and payment.status in SETTLEABLE_STATUSES:
+			return payment_line(payment, rates.rate(payment.payment_method), self.currency)
+		return None
 
 	def payment_names(self) -> list[str]:
 		return [line.hosted_payment for line in self.lines]
@@ -184,7 +197,17 @@ def lock_payments(names: list[str]) -> dict[str, dict]:
 	payments = frappe.db.get_values(
 		"Hosted Payment",
 		{"name": ["in", names]},
-		["name", "team", "currency", "payout", "refunded_amount", "deducted_refund_amount"],
+		[
+			"name",
+			"team",
+			"currency",
+			"status",
+			"payment_method",
+			"amount",
+			"payout",
+			"refunded_amount",
+			"deducted_refund_amount",
+		],
 		as_dict=True,
 		order_by="name asc",
 		for_update=True,
@@ -206,10 +229,9 @@ def is_refund_line(line) -> bool:
 	return line.line_type == "Refund"
 
 
-def line_is_unsettled(line, payment: dict, currency: str) -> bool:
-	if not is_refund_line(line):
-		return not payment.payout
-	return bool(payment.payout) and flt(line.refunded) <= outstanding_refund(payment, currency)
+def frozen_values(line, currency: str) -> tuple:
+	amounts = (round_to_currency(flt(line.get(field)), currency) for field in LINE_AMOUNT_FIELDS)
+	return (line.get("line_type"), line.get("payment_method") or None, flt(line.get("rate")), *amounts)
 
 
 def payment_line(payment: dict, rate: float, currency: str) -> dict:
