@@ -3,6 +3,7 @@ from email import message_from_string
 from unittest.mock import patch
 
 import frappe
+from frappe.tests.classes.context_managers import set_user
 
 from buzz.events.doctype.event_venue.map_link import MAP_LINK_CACHE_PREFIX
 
@@ -80,6 +81,12 @@ def properties_of(mock_capture, event: str) -> dict:
 # Buzz Team Membership carries a team column but is scoped by its own pair of hooks.
 # Playground Sandbox is System Manager only; visitors reach it through buzz.api.playground.
 SELF_SCOPED_DOCTYPES = frozenset({"Buzz Team Membership", "Playground Sandbox"})
+
+
+def readable_by(user: str, doctypes: set[str]) -> set[str]:
+	"""A desk-only doctype the user cannot read at all, such as Hosted Payment, leaks nothing."""
+	with set_user(user):
+		return {doctype for doctype in doctypes if frappe.has_permission(doctype, "read")}
 
 
 def linked_to(doctype: str) -> set[str]:

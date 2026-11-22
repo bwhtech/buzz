@@ -15,12 +15,12 @@ from buzz.tests.factories import (
 	TalkProposalFactory,
 	UserFactory,
 )
-from buzz.tests.utils import SELF_SCOPED_DOCTYPES, linked_to
+from buzz.tests.utils import SELF_SCOPED_DOCTYPES, linked_to, readable_by
 
 
 class TestCrossTeamIsolation(TeamPermissionTestCase):
 	def test_team_direct_lists_exclude_other_teams(self):
-		for doctype in linked_to("Buzz Team") - SELF_SCOPED_DOCTYPES:
+		for doctype in readable_by(self.alice, linked_to("Buzz Team") - SELF_SCOPED_DOCTYPES):
 			with self.subTest(doctype=doctype):
 				self.assertNotIn(self.team_b, self.list_as(self.alice, doctype, pluck="team"))
 
