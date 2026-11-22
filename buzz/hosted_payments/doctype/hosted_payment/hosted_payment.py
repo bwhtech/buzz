@@ -5,6 +5,8 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
+from buzz.hosted_payments.webhook_ping import enqueue_ping
+
 
 class HostedPayment(Document):
 	# begin: auto-generated types
@@ -43,3 +45,5 @@ class HostedPayment(Document):
 	def on_refund_update(self, gateway_refund) -> None:
 		refunded = frappe.db.get_value("Gateway Payment Request", self.payment_request, "refund_amount")
 		self.db_set("refunded_amount", refunded)
+		if gateway_refund.status != "Pending":
+			enqueue_ping(self.name)

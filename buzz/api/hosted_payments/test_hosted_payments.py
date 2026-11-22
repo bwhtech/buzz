@@ -30,6 +30,20 @@ from buzz.tests.base_test_cases import HostedPaymentsTestCase
 from buzz.tests.factories import BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
 
 
+def pings_after(change_status) -> list[dict]:
+	"""Capture the pings and run every other job, such as bwh_payments applying a webhook."""
+	pings, enqueue = [], frappe.enqueue
+
+	def capture(method, **kwargs):
+		if method is not ping_site:
+			return enqueue(method, **kwargs)
+		pings.append(kwargs)
+
+	with patch("frappe.enqueue", side_effect=capture):
+		change_status()
+	return pings
+
+
 class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 	def create_order(self, user: str | None = None, **overrides):
 		with self.set_user(user or self.integration):
@@ -173,11 +187,6 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 		with self.set_user("Guest"), self.assertRaises(OrderNotFound):
 			return_to_site("no-such-order")
 
-	def pings_after(self, change_status) -> list[dict]:
-		with patch("frappe.enqueue") as enqueue:
-			change_status()
-		return [call.kwargs for call in enqueue.call_args_list if call.args == (ping_site,)]
-
 	def expire(self, order_id: str) -> None:
 		request = frappe.get_doc(
 			"Gateway Payment Request", frappe.db.get_value("Hosted Payment", order_id, "payment_request")
@@ -187,19 +196,19 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 
 	def test_payment_pings_the_stored_webhook_url(self):
 		order = self.create_order(webhook_url=get_url("/api/method/pro.webhook?gateway=Buzz&site=1"))
-		pings = self.pings_after(lambda: self.pay(order.order_id))
+		pings = pings_after(lambda: self.pay(order.order_id))
 		self.assertEqual(len(pings), 1)
 		self.assertEqual(pings[0]["webhook_url"], get_url("/api/method/pro.webhook?gateway=Buzz&site=1"))
 		self.assertEqual((pings[0]["order_id"], pings[0]["enqueue_after_commit"]), (order.order_id, True))
 
 	def test_expiry_is_mirrored_and_pinged(self):
 		order = self.create_order()
-		pings = self.pings_after(lambda: self.expire(order.order_id))
+		pings = pings_after(lambda: self.expire(order.order_id))
 		self.assertEqual([ping["order_id"] for ping in pings], [order.order_id])
 		self.assertEqual(frappe.db.get_value("Hosted Payment", order.order_id, "status"), "Expired")
 
 	def test_new_order_does_not_ping(self):
-		self.assertEqual(self.pings_after(self.create_order), [])
+		self.assertEqual(pings_after(self.create_order), [])
 
 	def test_ping_posts_only_the_order_id(self):
 		with patch("buzz.hosted_payments.webhook_ping.make_post_request") as post:
@@ -281,6 +290,17 @@ class TestHostedRefunds(HostedPaymentsTestCase):
 		payment_testing.set_refund_status(pending.refund_id, "Processed")
 		settled = self.refund_status(pending.refund_id)
 		self.assertEqual((settled.status, self.refunded_amount()), ("Processed", 200))
+
+	def test_full_refund_pings_the_site_once(self):
+		pings = pings_after(lambda: self.refund(550))
+		self.assertEqual([ping["order_id"] for ping in pings], [self.order_id])
+
+	def test_second_partial_refund_settling_pings_the_site(self):
+		self.refund(200)
+		payment_testing.set_next_refund_status("Pending")
+		pending = self.refund(100)
+		pings = pings_after(lambda: payment_testing.send_refund_webhook(pending.refund_id, "Processed"))
+		self.assertEqual([ping["order_id"] for ping in pings], [self.order_id])
 
 	def test_refund_of_another_order_is_not_found(self):
 		other_order = self.create_other_order()

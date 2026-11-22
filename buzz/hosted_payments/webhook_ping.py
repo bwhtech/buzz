@@ -2,6 +2,9 @@ import frappe
 import requests
 from frappe.integrations.utils import make_post_request
 
+# Pinged from Hosted Payment.on_refund_update, which also hears a refund that leaves the status as it was.
+REFUND_STATUSES = ("Partially Refunded", "Refunded")
+
 
 def sync_hosted_payment(payment_request, method: str | None = None) -> None:
 	"""Mirror a hub payment's status onto its Hosted Payment, then ping the connected site."""
@@ -11,6 +14,11 @@ def sync_hosted_payment(payment_request, method: str | None = None) -> None:
 		return
 	order_id = payment_request.ref_docname
 	frappe.db.set_value("Hosted Payment", order_id, "status", payment_request.status)
+	if payment_request.status not in REFUND_STATUSES:
+		enqueue_ping(order_id)
+
+
+def enqueue_ping(order_id: str) -> None:
 	frappe.enqueue(
 		ping_site,
 		queue="short",
