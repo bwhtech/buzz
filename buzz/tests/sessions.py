@@ -43,8 +43,9 @@ class SnapshotIsolation:
 
 	@classmethod
 	def setUpClass(cls):
-		super().setUpClass()
+		# First, so the class transaction IntegrationTestCase starts with its commit runs at REPEATABLE READ.
 		cls.enterClassContext(payment_testing.snapshot_isolation(cls.snapshot_isolated))
+		super().setUpClass()
 
 
 def run_again(session: Session) -> Session:
