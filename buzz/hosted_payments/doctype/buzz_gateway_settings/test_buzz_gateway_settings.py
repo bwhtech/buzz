@@ -1,9 +1,12 @@
 import frappe
 from bwh_payments import testing as payment_testing
+from frappe.tests import IntegrationTestCase
 from frappe.utils import get_url
 
 from buzz.hosted_payments.doctype.buzz_gateway_settings.buzz_gateway_settings import WEBHOOK_PATH
-from buzz.tests.base_test_cases import BuzzGatewayTestCase
+from buzz.install import create_buzz_payment_gateway
+from buzz.patches.create_buzz_payment_gateway import execute as run_patch
+from buzz.tests.base_test_cases import BUZZ_GATEWAY, BuzzGatewayTestCase
 
 
 class TestBuzzGatewaySettings(BuzzGatewayTestCase):
@@ -67,3 +70,22 @@ class TestBuzzGatewaySettings(BuzzGatewayTestCase):
 		for payload in (b"not json", b"\xff", b"[]", b'{"status": "Paid"}', b'{"order_id": ["HP-1"]}'):
 			with self.subTest(payload=payload):
 				self.assertIsNone(self.gateway.handle_webhook(payload, {}))
+
+
+class TestBuzzPaymentGatewayProfile(IntegrationTestCase):
+	def profile(self) -> tuple | None:
+		return frappe.db.get_value(
+			"Payment Gateway Profile", BUZZ_GATEWAY, ["gateway_settings", "enabled"], as_dict=False
+		)
+
+	def test_install_and_patch_create_the_profile_disabled(self):
+		for create in (create_buzz_payment_gateway, run_patch):
+			with self.subTest(create=create.__module__):
+				frappe.db.delete("Payment Gateway Profile", BUZZ_GATEWAY)
+				create()
+				self.assertEqual(self.profile(), ("Buzz Gateway Settings", 0))
+
+	def test_patch_keeps_an_enabled_profile_enabled(self):
+		frappe.db.set_value("Payment Gateway Profile", BUZZ_GATEWAY, "enabled", 1)
+		run_patch()
+		self.assertEqual(self.profile(), ("Buzz Gateway Settings", 1))
