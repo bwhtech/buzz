@@ -61,7 +61,7 @@ const columns = [
 	{ label: __("Ends At"), key: "ends_at" },
 ]
 
-const formatTimestamp = (date?: string, time?: string) => {
+const formatTimestamp = (date?: string | null, time?: string | null) => {
 	let formattedDate = ""
 	let formattedTime = ""
 
@@ -76,7 +76,7 @@ const formatTimestamp = (date?: string, time?: string) => {
 		}
 	}
 
-	if (!formattedDate && !formattedTime) return "No date specified"
+	if (!formattedDate && !formattedTime) return __("Date to be announced")
 	if (formattedDate && !formattedTime) return formattedDate
 	if (!formattedDate && formattedTime) return formattedTime
 	return `${formattedDate} ${formattedTime}`

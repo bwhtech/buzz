@@ -7,7 +7,7 @@ import { serverErrorMessage } from "@/utils/serverError"
 interface EventOption {
 	name: string
 	title: string
-	start_date: string
+	start_date: string | null
 	team_name: string
 }
 
@@ -76,7 +76,12 @@ async function submit() {
 		<div v-if="event" class="space-y-1 rounded-6 border border-outline-gray-2 p-3">
 			<p class="text-base font-semibold text-ink-gray-9">{{ event.title }}</p>
 			<p class="text-sm text-ink-gray-6">
-				{{ dayjs(event.start_date).format("ddd D MMM YYYY") }} · {{ event.team_name }}
+				{{
+					event.start_date
+						? dayjs(event.start_date).format("ddd D MMM YYYY")
+						: __("Date to be announced")
+				}}
+				· {{ event.team_name }}
 			</p>
 		</div>
 

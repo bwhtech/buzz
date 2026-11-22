@@ -58,7 +58,9 @@ watch(tab, reset)
 // An event already under way is still on, so it sits under today, not its start date.
 const today = dayjs().format("YYYY-MM-DD")
 const fileUnder = (event: MyEvent) =>
-	tab.value === "upcoming" && event.start_date < today ? today : event.start_date
+	tab.value === "upcoming" && event.start_date && event.start_date < today
+		? today
+		: event.start_date
 
 const months = computed(() => groupEventsByMonth(visible.value, fileUnder))
 

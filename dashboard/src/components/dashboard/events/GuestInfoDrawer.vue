@@ -39,11 +39,10 @@ const registeredAt = computed(() =>
 )
 
 // The row is a ticket, so the drawer opens on the paper rather than on a field list.
-// Drawn only once the event carries a title and a date — PrintedTicket has nothing to
-// print without them.
+// Drawn only once the event carries a title — PrintedTicket has nothing to print without it.
 const ticket = computed<TicketWithEvent | null>(() => {
 	const event = props.event
-	if (!props.guest || !event?.title || !event.start_date) return null
+	if (!props.guest || !event?.title) return null
 
 	return {
 		name: props.guest.name,

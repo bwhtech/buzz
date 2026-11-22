@@ -17,9 +17,11 @@ const barcode = computed(() => ({
 	backgroundSize: "100% 1rem",
 	backgroundRepeat: "repeat-y",
 }))
-const date = computed(() => dayjs(props.ticket.start_date).format("DD.MM.YY"))
+const date = computed(() =>
+	props.ticket.start_date ? dayjs(props.ticket.start_date).format("DD.MM.YY") : __("TBA"),
+)
 const time = computed(() => {
-	if (!props.ticket.start_time) return "TBA"
+	if (!props.ticket.start_time) return __("TBA")
 	const [hour, minute] = props.ticket.start_time.split(":")
 	return `${hour.padStart(2, "0")}:${minute}`
 })
@@ -65,7 +67,7 @@ const time = computed(() => {
 						<span class="block text-2xs-medium uppercase tracking-widest text-ink-gray-5"
 							>Venue</span
 						>
-						<span class="line-clamp-3">{{ ticket.venue || "To be announced" }}</span>
+						<span class="line-clamp-3">{{ ticket.venue || __("To be announced") }}</span>
 					</span>
 				</span>
 			</span>

@@ -13,23 +13,30 @@ function moment(date: string, time: string | null) {
 	return dayjs(`${date} ${time || "00:00:00"}`)
 }
 
-const startsOn = computed(() => moment(props.event.start_date, props.event.start_time))
+const startsOn = computed(() => {
+	const { start_date, start_time } = props.event
+	return start_date ? moment(start_date, start_time) : null
+})
 
 // An event with no closing time runs to the end of its last day.
 const endsOn = computed(() => {
 	const { start_date, end_date, end_time } = props.event
 	const lastDay = end_date || start_date
+	if (!lastDay) return null
 	return end_time ? moment(lastDay, end_time) : moment(lastDay, null).endOf("day")
 })
 
-const minutesToStart = computed(() => startsOn.value.diff(now.value, "minute"))
+const minutesToStart = computed(() => startsOn.value?.diff(now.value, "minute") ?? 0)
 
-const isLive = computed(() => minutesToStart.value <= 0 && dayjs(now.value).isBefore(endsOn.value))
+const isLive = computed(
+	() =>
+		Boolean(endsOn.value) && minutesToStart.value <= 0 && dayjs(now.value).isBefore(endsOn.value),
+)
 
 // Time left on the viewer's own clock: "14d 5h 55m", with the leading empty units dropped.
 const countdown = computed(() => {
 	const minutes = minutesToStart.value
-	if (minutes <= 0) return null
+	if (!startsOn.value || minutes <= 0) return null
 	const days = Math.floor(minutes / 1440)
 	const hours = Math.floor((minutes % 1440) / 60)
 	const parts = [`${minutes % 60}m`]

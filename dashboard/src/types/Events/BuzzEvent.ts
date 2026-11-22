@@ -29,11 +29,11 @@ export interface BuzzEvent {
 	/**	Co-hosts : Table - Event CoHost	*/
 	co_hosts?: EventCoHost[]
 	/**	Venue : Link - Event Venue	*/
-	venue?: string
+	venue?: string | null
 	/**	Start Date : Date	*/
-	start_date: string
+	start_date: string | null
 	/**	Start Time : Time	*/
-	start_time?: string
+	start_time?: string | null
 	/**	Time Zone : Autocomplete	*/
 	time_zone?: any
 	/**	Time Zone Label : Data	*/
@@ -41,7 +41,7 @@ export interface BuzzEvent {
 	/**	End Date : Date	*/
 	end_date?: string
 	/**	End Time : Time	*/
-	end_time?: string
+	end_time?: string | null
 	/**	Short Description : Small Text	*/
 	short_description?: string
 	/**	About : Text Editor - Description of the event	*/

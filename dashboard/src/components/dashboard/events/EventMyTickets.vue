@@ -19,9 +19,7 @@ const bookings = useMyBookings(() => props.event.name)
 const myTickets = computed(() =>
 	(tickets.data || [])
 		.map((ticket) => ({ ...ticket, venue: props.event.venue }))
-		.filter((ticket): ticket is TicketWithEvent =>
-			Boolean(ticket.start_date && ticket.event_title),
-		),
+		.filter((ticket): ticket is TicketWithEvent => Boolean(ticket.event_title)),
 )
 
 // A draft is a booking only while an offline payment waits on approval or while it is a

@@ -22,7 +22,7 @@ const banner = computed(() => ({ backgroundImage: bannerPattern(props.title) }))
 // Plain dayjs: start_date is date-only, and a timezone shift moves it a day back.
 // The time leads, as the one thing a reader checks first.
 const startsAt = computed(() => {
-	if (!props.startDate) return ""
+	if (!props.startDate) return __("Date to be announced")
 	const date = dayjs(props.startDate).format("D MMM YYYY")
 	return props.startTime ? `${timeLabel(props.startTime)}, ${date}` : date
 })

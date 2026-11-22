@@ -5,6 +5,7 @@ import { Button, ErrorMessage, Spinner, TabButtons } from "frappe-ui"
 import { computed, onMounted } from "vue"
 import { onBeforeRouteLeave, useRoute } from "vue-router"
 
+import EmptyState from "@/components/common/EmptyState.vue"
 import ScheduleMobile from "@/components/dashboard/schedule/mobile/ScheduleMobile.vue"
 import ScheduleCalendar from "@/components/dashboard/schedule/ScheduleCalendar.vue"
 import ScheduleDayNav from "@/components/dashboard/schedule/ScheduleDayNav.vue"
@@ -47,6 +48,7 @@ const VIEW_COMPONENTS = {
 const loadError = computed(
 	() => (builder.schedule.error ?? builder.openCall.error) as FrappeError | null,
 )
+const needsDates = computed(() => Boolean(event.doc?.name) && !event.doc?.start_date)
 const hasTracks = computed(() => builder.tracks.tracks.value.length > 0)
 const dayIsEmpty = computed(
 	() =>
@@ -64,7 +66,12 @@ useEventListener(window, "beforeunload", (e) => builder.dirty.value && e.prevent
 </script>
 
 <template>
-	<ScheduleMobile v-if="isMobile" :event-id="eventId" />
+	<EmptyState
+		v-if="needsDates"
+		icon="lucide-calendar-days"
+		:title="__('Set the event\'s dates to build its schedule')"
+	/>
+	<ScheduleMobile v-else-if="isMobile" :event-id="eventId" />
 	<div v-else class="flex h-full min-h-0 flex-col bg-surface-base">
 		<ScheduleHeader :event-id="eventId" />
 		<div v-if="loadError" class="p-8"><ErrorMessage :message="loadError.message" /></div>

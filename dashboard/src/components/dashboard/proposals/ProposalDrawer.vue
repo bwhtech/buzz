@@ -159,7 +159,9 @@ const avatarTheme = (speaker: ProposalSpeaker) => {
 
 // Plain dayjs: start_date is date-only, and a timezone shift moves it a day back.
 const eventDate = computed(() =>
-	props.proposal?.start_date ? dayjs(props.proposal.start_date).format("D MMMM YYYY") : "",
+	props.proposal?.start_date
+		? dayjs(props.proposal.start_date).format("D MMMM YYYY")
+		: __("Date to be announced"),
 )
 
 // creation and modified are full timestamps in the site's timezone, so these convert.

@@ -39,7 +39,7 @@ export function useInviteFlow(event: string, tiers: () => TierOption[], onDone: 
 
 	const eventDoc = useEventDoc(() => event)
 	// The team's other events, newest first; each one's guests load only when it is opened.
-	const pastEvents = useList<{ name: string; title: string; start_date: string }>({
+	const pastEvents = useList<{ name: string; title: string; start_date: string | null }>({
 		doctype: "Buzz Event",
 		fields: ["name", "title", "start_date"],
 		filters: () => ({ team: eventDoc.doc?.team ?? "", name: ["!=", event] }),

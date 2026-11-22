@@ -84,7 +84,7 @@ export interface ProposalTrend {
 }
 
 // A proposal whose event row still resolves — the only kind the timeline can place.
-export type ProposalWithEvent = ProposalListItem & { event_title: string; start_date: string }
+export type ProposalWithEvent = ProposalListItem & { event_title: string }
 
 // Errors rejected by frappe-ui resources carry server messages beyond Error.
 export interface FrappeError extends Error {
@@ -215,7 +215,7 @@ export interface CommunityRequest {
 	event_url: string | null
 	event_title: string
 	event_route: string | null
-	start_date: string
+	start_date: string | null
 	start_time: string | null
 	place: string | null
 	banner_image: string | null
@@ -301,7 +301,7 @@ export interface MyEvent {
 	name: string
 	title: string
 	route: string | null
-	start_date: string
+	start_date: string | null
 	end_date: string | null
 	start_time: string | null
 	end_time: string | null
@@ -491,7 +491,7 @@ export interface EventDetail {
 	route: string | null
 	team: string | null
 	modified: string
-	start_date: string
+	start_date: string | null
 	end_date: string | null
 	start_time: string | null
 	end_time: string | null
@@ -533,7 +533,6 @@ export interface TicketStub {
 // A ticket whose event row still resolves — the only kind the ticket UI can draw.
 export type TicketWithEvent = TicketStub & {
 	event_title: string
-	start_date: string
 	venue: string | null
 }
 
@@ -831,7 +830,7 @@ export interface SponsorshipListItem {
 }
 
 // An enquiry whose event row still resolves — the only kind the timeline can place.
-export type SponsorshipWithEvent = SponsorshipListItem & { event_title: string; start_date: string }
+export type SponsorshipWithEvent = SponsorshipListItem & { event_title: string }
 
 export interface EventEnquiryItem {
 	name: string

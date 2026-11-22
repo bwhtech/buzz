@@ -13,6 +13,7 @@ const isMobile = useIsMobile()
 
 const when = computed(() => {
 	const { start_date, start_time } = props.request
+	if (!start_date) return __("Date to be announced")
 	const date = dayjs(start_date).format("ddd D MMM")
 	// The server sends a time as "9:30:00", without a leading zero.
 	return start_time ? `${date}, ${dayjs(`2000-01-01 ${start_time}`).format("HH:mm")}` : date

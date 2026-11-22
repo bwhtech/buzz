@@ -22,10 +22,10 @@ const mySponsorships = useMySponsorships()
 
 const drawer = useDrawerSelection<SponsorshipWithEvent>()
 
-// An enquiry whose event was deleted has no date to file it under, so it drops out.
+// An enquiry whose event was deleted has no event to show, so it drops out.
 const dated = computed(() =>
 	(mySponsorships.data || []).filter((enquiry): enquiry is SponsorshipWithEvent =>
-		Boolean(enquiry.start_date && enquiry.event_title),
+		Boolean(enquiry.event_title),
 	),
 )
 

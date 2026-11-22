@@ -71,7 +71,9 @@ const price = computed(() => (props.enquiry ? enquiryPrice(props.enquiry) : ""))
 
 // Plain dayjs: start_date is date-only, and a timezone shift moves it a day back.
 const eventDate = computed(() =>
-	props.enquiry?.start_date ? dayjs(props.enquiry.start_date).format("D MMMM YYYY") : "",
+	props.enquiry?.start_date
+		? dayjs(props.enquiry.start_date).format("D MMMM YYYY")
+		: __("Date to be announced"),
 )
 
 const fields = computed(() => {
