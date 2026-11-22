@@ -94,6 +94,27 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 				return_url="http://pro.example.com/return", webhook_url="https://pro.example.com/hook"
 			)
 
+	def test_a_url_a_browser_reads_as_another_site_is_rejected(self):
+		self.connect_site("https://pro.example.com")
+		for url in (
+			"https://evil.example\\@pro.example.com/return",
+			"https://evil.example%5C@pro.example.com/return",
+			"https://evil.example@pro.example.com/return",
+			"https://:@pro.example.com/return",
+			"https://evil.exa\tmple@pro.example.com/return",
+			"https://pro.example.com\\.evil.example/return",
+			"https://pro.example.com/\\evil.example/return",
+			"https://pro%2Eexample.com/return",
+			"https://pro.example.com\n/return",
+		):
+			for field in ("return_url", "webhook_url"):
+				urls = {
+					"return_url": "https://pro.example.com/return",
+					"webhook_url": "https://pro.example.com/hook",
+				}
+				with self.subTest(url=url, field=field), self.assertRaises(ForeignSiteURL):
+					self.create_order(**(urls | {field: url}))
+
 	def test_default_port_matches_a_site_url_without_one(self):
 		self.connect_site("https://pro.example.com")
 		order = self.create_order(

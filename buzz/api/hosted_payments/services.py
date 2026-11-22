@@ -1,3 +1,4 @@
+import re
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import frappe
@@ -20,6 +21,8 @@ from buzz.permissions import INTEGRATION_ROLE
 RETURN_PATH = "/api/method/buzz.api.hosted_payments.return_to_site"
 PAY_PAGE_PATH = "/pay"
 DEFAULT_PORTS = {"http": 80, "https": 443}
+UNSAFE_URL_CHARACTERS = re.compile(r"[\\\s\x00-\x1f\x7f]")
+PLAIN_AUTHORITY = re.compile(r"[a-z0-9.-]+(:[0-9]{1,5})?", re.IGNORECASE)
 
 
 class HostedPayments:
@@ -160,9 +163,15 @@ def return_location(order_id: str) -> str:
 
 
 def site_origin(url: str | None) -> tuple[str, str, int] | None:
-	"""Scheme, host and port, with a missing port read as the scheme's default."""
-	parts = urlsplit(url or "")
-	if parts.scheme not in DEFAULT_PORTS or not parts.hostname:
+	"""Scheme, host and port, with a missing port read as the scheme's default.
+
+	Only a plain host and port pass: a browser reads backslashes, credentials, escapes and whitespace
+	differently from Python, so such a URL could pass here and send the buyer to another site.
+	"""
+	if not url or UNSAFE_URL_CHARACTERS.search(url):
+		return None
+	parts = urlsplit(url)
+	if parts.scheme not in DEFAULT_PORTS or not PLAIN_AUTHORITY.fullmatch(parts.netloc):
 		return None
 	try:
 		port = parts.port or DEFAULT_PORTS[parts.scheme]
