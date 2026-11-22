@@ -182,14 +182,14 @@ def send_refund(payment_request: str, amount: float, idempotency_key: str):
 
 
 def keyed_refund(payment_request: str, idempotency_key: str):
-	"""A locking read, since a plain one reads the transaction's snapshot from before the lock."""
+	"""Locking reads, since a plain one reads the transaction's snapshot from before the lock."""
 	name = frappe.db.get_value(
 		"Gateway Refund",
 		{"payment_request": payment_request, "reference": idempotency_key},
 		"name",
 		for_update=True,
 	)
-	return frappe.get_doc("Gateway Refund", name) if name else None
+	return frappe.get_doc("Gateway Refund", name, for_update=True) if name else None
 
 
 def hosted_refund(gateway_refund) -> HostedRefund:
