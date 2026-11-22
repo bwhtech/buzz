@@ -27,6 +27,12 @@ class RefundExceedsBalance(BuzzAPIError):
 	message = _lt("Only {remaining} is left to refund on this order.")
 
 
+class RefundNotAllowed(BuzzAPIError):
+	http_status_code = 409
+	title = _lt("Refund Not Allowed")
+	message = _lt("An order in status {status} cannot be refunded.")
+
+
 class OrderNotFound(ResourceNotFound):
 	message = _lt("This order does not exist.")
 

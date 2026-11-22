@@ -3,6 +3,9 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import frappe
 from bwh_payments import api as payments
+from bwh_payments.bwh_payments.doctype.gateway_payment_request.gateway_payment_request import (
+	REFUNDABLE_STATUSES,
+)
 from frappe import _
 from frappe.utils import get_url
 
@@ -11,6 +14,7 @@ from buzz.api.hosted_payments.exceptions import (
 	NotAnIntegration,
 	OrderNotFound,
 	RefundExceedsBalance,
+	RefundNotAllowed,
 	RefundNotFound,
 	UnsupportedCurrency,
 )
@@ -51,6 +55,8 @@ class HostedPayments:
 		payment_request.lock_row()
 		if existing := keyed_refund(payment_request.name, idempotency_key):
 			return hosted_refund(existing)
+		if payment_request.status not in REFUNDABLE_STATUSES:
+			RefundNotAllowed.throw(status=_(payment_request.status))
 		# Rounded as bwh_payments rounds it, so both sides agree on what is left to refund.
 		amount = round_to_currency(amount, payment_request.currency_code)
 		remaining = payment_request.get_remaining_refundable_amount()

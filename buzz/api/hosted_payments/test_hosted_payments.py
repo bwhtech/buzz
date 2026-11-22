@@ -27,6 +27,7 @@ from buzz.api.hosted_payments.exceptions import (
 	NotAnIntegration,
 	OrderNotFound,
 	RefundExceedsBalance,
+	RefundNotAllowed,
 	RefundNotFound,
 	UnsupportedCurrency,
 )
@@ -299,6 +300,15 @@ class TestHostedRefunds(HostedPaymentsTestCase):
 		result = self.refund(50.004)
 		self.assertEqual((result.status, result.amount), ("Processed", 50))
 		self.assertEqual(self.refunded_amount(), 550)
+
+	def test_refund_of_an_unpaid_order_is_a_named_refusal(self):
+		with self.set_user(self.integration):
+			unpaid = create_order(**self.order_values()).order_id
+			with self.assertRaises(RefundNotAllowed) as refusal:
+				refund(unpaid, 100, frappe.generate_hash())
+		self.assertEqual(refusal.exception.http_status_code, 409)
+		payment_request = frappe.db.get_value("Hosted Payment", unpaid, "payment_request")
+		self.assertFalse(frappe.db.exists("Gateway Refund", {"payment_request": payment_request}))
 
 	def test_another_team_cannot_refund_an_order(self):
 		other = UserFactory.create_once("hosted-refunds-other-bot@example.com").name
