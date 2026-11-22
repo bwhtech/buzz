@@ -23,6 +23,7 @@ class HostedPayment(Document):
 		currency: DF.Link
 		customer_email: DF.Data | None
 		customer_phone: DF.Data | None
+		deducted_refund_amount: DF.Currency
 		next_ping_on: DF.Datetime | None
 		paid_on: DF.Datetime | None
 		payment_method: DF.Data | None

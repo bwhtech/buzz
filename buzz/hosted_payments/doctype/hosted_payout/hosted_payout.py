@@ -4,7 +4,6 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.query_builder.functions import Sum
 from frappe.utils import flt
 
 from buzz.hosted_payments.currency import round_to_currency
@@ -62,50 +61,64 @@ class HostedPayout(Document):
 	def validate_lines(self) -> None:
 		"""Each payment is this payout's team and currency. It settles once, and each refund of a settled
 		payment is deducted once."""
-		names = [line.hosted_payment for line in self.lines]
-		payments = lock_payments(names)
-		deducted = deducted_refunds(names, for_update=True)
+		payments = lock_payments(self.payment_names())
 		for line in self.lines:
-			self.validate_line(line, payments[line.hosted_payment], deducted)
+			self.validate_line(line, payments[line.hosted_payment])
 
-	def validate_line(self, line, payment: dict, deducted: dict[str, float]) -> None:
+	def validate_line(self, line, payment: dict) -> None:
 		if (payment.team, payment.currency) != (self.team, self.currency):
 			frappe.throw(
 				_("Row {0}: Hosted Payment {1} is not a {2} payment of team {3}.").format(
 					line.idx, line.hosted_payment, self.currency, self.team
 				)
 			)
-		if not line_is_unsettled(line, payment, deducted, self.currency):
+		if not line_is_unsettled(line, payment, self.currency):
 			frappe.throw(
 				_("Row {0}: Hosted Payment {1} has been paid out since. Get payments again.").format(
 					line.idx, line.hosted_payment
 				)
 			)
 
-	def on_submit(self):
-		names = self.settled_payments()
-		if names:
-			frappe.db.set_value("Hosted Payment", {"name": ["in", names]}, "payout", self.name)
+	def payment_names(self) -> list[str]:
+		return [line.hosted_payment for line in self.lines]
 
-	def settled_payments(self) -> list[str]:
-		return [line.hosted_payment for line in self.lines if not is_refund_line(line)]
+	def on_submit(self):
+		self.update_payments(payout=self.name, direction=1)
 
 	def before_cancel(self):
-		settled = self.settled_payments()
-		lock_payments(settled)
-		later_payout = frappe.db.get_value(
+		"""Payout locks are only ever taken on the payout's own rows and its Hosted Payments, in that order,
+		so a cancel and a submit wait for each other and never deadlock."""
+		payments = lock_payments(self.payment_names())
+		for line in self.lines:
+			if not is_refund_line(line) and has_later_deductions(
+				line, payments[line.hosted_payment], self.currency
+			):
+				frappe.throw(
+					_("Payout {0} deducts refunds of Hosted Payment {1}. Cancel it first.").format(
+						self.later_payout(line.hosted_payment), line.hosted_payment
+					)
+				)
+
+	def later_payout(self, payment: str) -> str | None:
+		return frappe.db.get_value(
 			"Hosted Payout Line",
-			{"hosted_payment": ["in", settled], "docstatus": 1, "parent": ["!=", self.name]},
+			{"hosted_payment": payment, "docstatus": 1, "parent": ["!=", self.name]},
 			"parent",
-			for_update=True,
 		)
-		if later_payout:
-			frappe.throw(
-				_("Payout {0} deducts refunds of these payments. Cancel it first.").format(later_payout)
-			)
 
 	def on_cancel(self):
-		frappe.db.set_value("Hosted Payment", {"payout": self.name}, "payout", None)
+		self.update_payments(payout=None, direction=-1)
+
+	def update_payments(self, payout: str | None, direction: int) -> None:
+		"""Settle or release each payment, and add or take back the refunds this payout deducts."""
+		payments = lock_payments(self.payment_names())
+		for line in self.lines:
+			payment = payments[line.hosted_payment]
+			deducted = flt(payment.deducted_refund_amount) + direction * flt(line.refunded)
+			values = {"deducted_refund_amount": round_to_currency(deducted, self.currency)}
+			if not is_refund_line(line):
+				values["payout"] = payout
+			frappe.db.set_value("Hosted Payment", payment.name, values)
 
 	def set_totals(self) -> None:
 		for field in ("gross", "refunded", "commission", "net"):
@@ -143,14 +156,11 @@ class HostedPayout(Document):
 		payments = frappe.get_all(
 			"Hosted Payment",
 			filters=self.team_payment_filters() | {"payout": ["is", "set"], "refunded_amount": [">", 0]},
-			fields=["name", "payment_method", "refunded_amount"],
+			fields=["name", "payment_method", "refunded_amount", "deducted_refund_amount"],
 			order_by="creation asc",
 		)
-		deducted = deducted_refunds([payment.name for payment in payments])
 		for payment in payments:
-			outstanding = round_to_currency(
-				payment.refunded_amount - deducted.get(payment.name, 0), self.currency
-			)
+			outstanding = outstanding_refund(payment, self.currency)
 			if outstanding > 0:
 				yield payment, outstanding
 
@@ -174,7 +184,7 @@ def lock_payments(names: list[str]) -> dict[str, dict]:
 	payments = frappe.db.get_values(
 		"Hosted Payment",
 		{"name": ["in", names]},
-		["name", "team", "currency", "payout", "refunded_amount"],
+		["name", "team", "currency", "payout", "refunded_amount", "deducted_refund_amount"],
 		as_dict=True,
 		order_by="name asc",
 		for_update=True,
@@ -182,36 +192,24 @@ def lock_payments(names: list[str]) -> dict[str, dict]:
 	return {payment.name: payment for payment in payments}
 
 
-def deducted_refunds(payments: list[str], for_update: bool = False) -> dict[str, float]:
-	"""Refunded amounts already counted on submitted payouts, per payment.
+def outstanding_refund(payment: dict, currency: str) -> float:
+	"""Refunded but not yet deducted on a submitted payout."""
+	return round_to_currency(flt(payment.refunded_amount) - flt(payment.deducted_refund_amount), currency)
 
-	`for_update` reads what is committed now; a plain read sees the transaction's older snapshot.
-	"""
-	if not payments:
-		return {}
-	line = frappe.qb.DocType("Hosted Payout Line")
-	query = (
-		frappe.qb.from_(line)
-		.select(line.hosted_payment, Sum(line.refunded))
-		.where((line.docstatus == 1) & line.hosted_payment.isin(payments))
-		.groupby(line.hosted_payment)
-	)
-	if for_update:
-		query = query.for_update()
-	return dict(query.run())
+
+def has_later_deductions(line, payment: dict, currency: str) -> bool:
+	"""Another submitted payout deducts refunds of the payment this line settles."""
+	return round_to_currency(flt(payment.deducted_refund_amount) - flt(line.refunded), currency) > 0
 
 
 def is_refund_line(line) -> bool:
 	return line.line_type == "Refund"
 
 
-def line_is_unsettled(line, payment: dict, deducted: dict[str, float], currency: str) -> bool:
+def line_is_unsettled(line, payment: dict, currency: str) -> bool:
 	if not is_refund_line(line):
 		return not payment.payout
-	deducted_after_submit = round_to_currency(flt(deducted.get(payment.name)) + flt(line.refunded), currency)
-	return bool(payment.payout) and deducted_after_submit <= round_to_currency(
-		payment.refunded_amount, currency
-	)
+	return bool(payment.payout) and flt(line.refunded) <= outstanding_refund(payment, currency)
 
 
 def payment_line(payment: dict, rate: float, currency: str) -> dict:
