@@ -9,6 +9,9 @@ from bwh_payments.bwh_payments.doctype.razorpay_gateway_settings.razorpay_gatewa
 	RazorpayGatewaySettings,
 )
 from bwh_payments.services import GatewayUnavailableError
+from bwh_payments.services.razorpay.stub import (  # nosemgrep: frappe-monkey-patching-not-allowed
+	StubRazorpayClient,
+)
 from frappe.utils import get_url
 
 from buzz.api.booking import process_booking
@@ -191,4 +194,16 @@ class TestHostedPaymentBooking(BuzzGatewayTestCase):
 			"Gateway Refund", {"payment_request": self.hub_payment_request(order_id)}, pluck="amount"
 		)
 		self.assertEqual(hub_refunds, [200])
+		self.assertEqual(self.booking_refund(booking.name).status, "Processed")
+
+	def test_refund_whose_hub_gateway_answer_was_lost_is_made_once_when_synced(self):
+		booking, order_id = self.confirmed_booking()
+		payment_testing.lose_next_refund_answer()
+		with patch("frappe.sendmail"):
+			booking.refund(amount=200)
+		self.assertEqual(self.booking_refund(booking.name).status, "Initiated")
+		with patch("frappe.sendmail"):
+			booking.sync_refunds()
+		self.assertEqual(len(StubRazorpayClient.created_refunds), 1)
+		self.assertEqual(frappe.db.get_value("Hosted Payment", order_id, "refunded_amount"), 200)
 		self.assertEqual(self.booking_refund(booking.name).status, "Processed")

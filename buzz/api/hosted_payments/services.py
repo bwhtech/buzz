@@ -2,6 +2,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import frappe
 from bwh_payments import api as payments
+from bwh_payments.services import GatewayUnavailableError
 from frappe import _
 from frappe.utils import get_url
 
@@ -53,7 +54,7 @@ class HostedPayments:
 		remaining = payment_request.get_remaining_refundable_amount()
 		if amount > remaining:
 			RefundExceedsBalance.throw(remaining=remaining)
-		return hosted_refund(payments.refund(payment_request.name, amount, reference=idempotency_key))
+		return hosted_refund(send_refund(payment_request.name, amount, idempotency_key))
 
 	def refund_status(self, order_id: str, refund_id: str) -> HostedRefund:
 		payment_request = self.payment_request(order_id)
@@ -169,6 +170,15 @@ def site_origin(url: str | None) -> tuple[str, str, int] | None:
 	except ValueError:
 		return None
 	return parts.scheme, parts.hostname, port
+
+
+def send_refund(payment_request: str, amount: float, idempotency_key: str):
+	"""A refund the gateway did not answer is answered as it stands here, so the site never reads it as refused."""
+	try:
+		return payments.refund(payment_request, amount, reference=idempotency_key)
+	except GatewayUnavailableError:
+		frappe.clear_last_message()
+		return keyed_refund(payment_request, idempotency_key)
 
 
 def keyed_refund(payment_request: str, idempotency_key: str):

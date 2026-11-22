@@ -307,6 +307,27 @@ class TestHostedRefunds(HostedPaymentsTestCase):
 		settled = self.refund_status(pending.refund_id)
 		self.assertEqual((settled.status, self.refunded_amount()), ("Processed", 200))
 
+	def test_refund_whose_gateway_answer_was_lost_is_pending_and_made_once_when_read(self):
+		payment_testing.lose_next_refund_answer()
+		pending = self.refund(200)
+		self.assertEqual((pending.status, pending.amount, self.refunded_amount()), ("Pending", 200, 0))
+		settled = self.refund_status(pending.refund_id)
+		self.assertEqual((settled.status, self.refunded_amount()), ("Processed", 200))
+		self.assertEqual(len(StubRazorpayClient.created_refunds), 1)
+
+	def test_refund_whose_gateway_answer_was_lost_keeps_its_amount_reserved(self):
+		payment_testing.lose_next_refund_answer()
+		self.refund(500)
+		with self.assertRaises(RefundExceedsBalance):
+			self.refund(100)
+
+	def test_refund_retried_while_its_gateway_answer_is_lost_returns_the_pending_refund(self):
+		payment_testing.lose_next_refund_answer()
+		first = self.refund(200, idempotency_key="PRO-RFND-LOST")
+		retry = self.refund(200, idempotency_key="PRO-RFND-LOST")
+		self.assertEqual((retry.refund_id, retry.status), (first.refund_id, "Pending"))
+		self.assertEqual(len(StubRazorpayClient.created_refunds), 1)
+
 	def test_full_refund_pings_the_site_once(self):
 		pings = pings_after(lambda: self.refund(550))
 		self.assertEqual([ping["order_id"] for ping in pings], [self.order_id])
