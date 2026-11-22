@@ -51,16 +51,21 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
 		return response.ok ? (await response.json()).data : null
 	}
 
-	async function waitForPayment(title) {
+	async function waitForPayment(title, attempts = POLL_ATTEMPTS) {
 		showProcessing(title)
 		let status = null
-		for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
+		for (let attempt = 1; attempt <= attempts; attempt++) {
 			status = await readStatus().catch(() => null)
 			if (SETTLED_STATUSES.includes(status)) return backToSite()
-			if (status && status !== "Pending") break
+			if ((status && status !== "Pending") || attempt === attempts) break
 			await sleep(POLL_INTERVAL_MS)
 		}
 		showNotCompleted(status)
+	}
+
+	// Closing the dialog means the buyer chose not to pay, so one check is enough.
+	function checkDismissedPayment() {
+		return waitForPayment(undefined, 1)
 	}
 
 	async function confirmPayment(result) {
@@ -95,7 +100,7 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
 			dialog = new window.Razorpay({
 				...config.checkout.options,
 				handler: confirmPayment,
-				modal: { ondismiss: () => waitForPayment() },
+				modal: { ondismiss: checkDismissedPayment },
 			})
 		}
 		dialog.open()
