@@ -28,8 +28,7 @@ class TestBuzzGatewaySettings(BuzzGatewayTestCase):
 		payment = frappe.get_doc("Hosted Payment", session.session_id)
 		self.assertEqual((payment.reference, payment.amount, payment.team), ("PRO-GPR-7", 550, self.team))
 		self.assertEqual(payment.webhook_url, get_url(WEBHOOK_PATH))
-		request_url = frappe.db.get_value("Gateway Payment Request", payment.payment_request, "order_url")
-		self.assertEqual(session.redirect_url, request_url)
+		self.assertEqual(session.redirect_url, get_url(f"/pay/{session.session_id}"))
 
 	def test_payment_status_comes_from_the_hub(self):
 		session = self.create_session()

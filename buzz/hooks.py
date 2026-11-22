@@ -24,6 +24,7 @@ website_route_rules = [
 	{"from_route": "/events/<event_route>/schedule", "to_route": "event/schedule"},
 	{"from_route": "/events/<event_route>", "to_route": "event"},
 	{"from_route": "/@<username>", "to_route": "user_profile"},
+	{"from_route": "/pay/<order_id>", "to_route": "pay"},
 	{"from_route": "/b", "to_route": "dashboard"},
 	{"from_route": "/b/<path:app_path>", "to_route": "dashboard"},
 ]

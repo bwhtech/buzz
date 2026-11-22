@@ -1,0 +1,100 @@
+body {
+	margin: 0;
+	background: var(--surface-base);
+	color: var(--ink-gray-8);
+	font-family: "Inter", system-ui, sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+
+.pay {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 24px;
+	min-height: 100vh;
+	min-height: 100dvh;
+	padding: 24px 16px;
+	box-sizing: border-box;
+	text-align: center;
+}
+
+.pay-logo {
+	width: 48px;
+	height: 48px;
+	border-radius: var(--radius-6);
+}
+
+.pay-panel {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 16px;
+	width: 100%;
+	max-width: 320px;
+}
+
+.pay[data-state="processing"] [data-panel="failed"],
+.pay[data-state="failed"] [data-panel="processing"] {
+	display: none;
+}
+
+.pay-title {
+	margin: 0;
+	font-size: 16px;
+	line-height: 24px;
+	font-weight: var(--font-weight-semibold);
+	color: var(--ink-gray-9);
+}
+
+.pay-text {
+	margin: -8px 0 0;
+	font-size: 14px;
+	line-height: 20px;
+	color: var(--ink-gray-6);
+}
+
+.pay-skeleton {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	width: 200px;
+}
+
+.pay-skeleton span {
+	width: 100%;
+	height: 8px;
+	border-radius: var(--radius-9);
+	background: var(--surface-gray-3);
+	animation: pay-pulse 1.4s ease-in-out infinite;
+}
+
+.pay-skeleton span:nth-child(2) {
+	width: 80%;
+	animation-delay: 0.15s;
+}
+
+.pay-skeleton span:nth-child(3) {
+	width: 60%;
+	animation-delay: 0.3s;
+}
+
+@keyframes pay-pulse {
+	50% {
+		opacity: 0.4;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pay-skeleton span {
+		animation: none;
+	}
+}
+
+.pay-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 100%;
+}

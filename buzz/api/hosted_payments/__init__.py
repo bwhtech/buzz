@@ -2,6 +2,7 @@ import frappe
 from frappe.rate_limiter import rate_limit
 
 from buzz.api.hosted_payments import services
+from buzz.api.hosted_payments.checkout import HostedCheckout
 from buzz.api.hosted_payments.schemas import HostedOrder, HostedRefund, OrderCustomer
 from buzz.api.hosted_payments.services import HostedPayments
 
@@ -41,3 +42,18 @@ def return_to_site(order_id: str) -> None:
 	"""Send the buyer from the hub checkout back to the connected site, which confirms the payment."""
 	frappe.local.response["type"] = "redirect"
 	frappe.local.response["location"] = services.return_location(order_id)
+
+
+# nosemgrep: guest-whitelisted-method  # the buyer's pay page polls it; it returns the status only
+@frappe.whitelist(allow_guest=True, methods=["GET"])
+@rate_limit(limit=60, seconds=60, ip_based=True)
+def get_checkout_status(order_id: str) -> str:
+	return HostedCheckout(order_id).status()
+
+
+# nosemgrep: guest-whitelisted-method  # the gateway dialog's result, checked against the gateway's signature
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=20, seconds=60, ip_based=True)
+def confirm_checkout(order_id: str, payload: dict) -> str:
+	"""Confirm what the gateway's dialog handed the pay page, and return the order's status."""
+	return HostedCheckout(order_id).confirm(payload)

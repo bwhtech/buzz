@@ -3,6 +3,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import frappe
 from bwh_payments import api as payments
 from frappe import _
+from frappe.utils import get_url
 
 from buzz.api.hosted_payments.exceptions import (
 	ForeignSiteURL,
@@ -16,6 +17,7 @@ from buzz.api.hosted_payments.schemas import HostedOrder, HostedRefund, OrderCus
 from buzz.permissions import INTEGRATION_ROLE
 
 RETURN_PATH = "/api/method/buzz.api.hosted_payments.return_to_site"
+PAY_PAGE_PATH = "/pay"
 DEFAULT_PORTS = {"http": 80, "https": 443}
 
 
@@ -92,8 +94,8 @@ class HostedPayments:
 		self.validate_site_urls(return_url, webhook_url)
 		self.validate_currency(currency)
 		payment = self.insert_payment(amount, currency, reference, customer, return_url, webhook_url)
-		request = self.open_checkout(payment)
-		return HostedOrder(order_id=payment.name, checkout_url=request.order_url)
+		self.open_checkout(payment)
+		return HostedOrder(order_id=payment.name, checkout_url=get_url(pay_page_path(payment.name)))
 
 	def insert_payment(
 		self,
@@ -125,13 +127,22 @@ class HostedPayments:
 			payment.amount,
 			payment.currency,
 			frappe.db.get_single_value("Buzz Settings", "hosted_payment_gateway"),
-			redirect_to=f"{RETURN_PATH}?order_id={payment.name}",
+			# The pay page opens the gateway's dialog, and a gateway without one returns there.
+			checkout="embedded",
+			redirect_to=pay_page_path(payment.name),
 			description=self.checkout_description(payment.reference),
 			customer_email=payment.customer_email,
 			customer_phone=payment.customer_phone,
 		)
 		payment.db_set("payment_request", request.name)
-		return request
+
+
+def pay_page_path(order_id: str) -> str:
+	return f"{PAY_PAGE_PATH}/{order_id}"
+
+
+def return_path(order_id: str) -> str:
+	return f"{RETURN_PATH}?order_id={order_id}"
 
 
 def return_location(order_id: str) -> str:

@@ -3,6 +3,9 @@ from unittest.mock import patch
 import frappe
 import requests
 from bwh_payments import testing as payment_testing
+from bwh_payments.bwh_payments.doctype.razorpay_gateway_settings.razorpay_gateway_settings import (
+	RazorpayGatewaySettings,
+)
 from bwh_payments.services.razorpay.stub import (  # nosemgrep: frappe-monkey-patching-not-allowed
 	StubRazorpayClient,
 )
@@ -56,7 +59,6 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 		self.assertEqual((payment.team, payment.amount, payment.status), (self.team, 550, "Pending"))
 		self.assertEqual((request.gateway, request.ref_doctype), (self.hub_gateway, "Hosted Payment"))
 		self.assertEqual(request.customer_email, "buyer@example.com")
-		self.assertEqual(order.checkout_url, request.order_url)
 
 	def test_only_a_team_integration_can_create_orders(self):
 		manager = UserFactory.create_once("hosted-payments-manager@example.com").name
@@ -202,7 +204,9 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 		self.assertEqual((pings[0]["order_id"], pings[0]["enqueue_after_commit"]), (order.order_id, True))
 
 	def test_expiry_is_mirrored_and_pinged(self):
-		order = self.create_order()
+		# A Razorpay order never expires, so this order takes the payment link a redirect gateway opens.
+		with patch.object(RazorpayGatewaySettings, "supports_embedded_checkout", False):
+			order = self.create_order()
 		pings = pings_after(lambda: self.expire(order.order_id))
 		self.assertEqual([ping["order_id"] for ping in pings], [order.order_id])
 		self.assertEqual(frappe.db.get_value("Hosted Payment", order.order_id, "status"), "Expired")
