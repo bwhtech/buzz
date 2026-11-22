@@ -14,6 +14,7 @@ from buzz.api.hosted_payments.exceptions import (
 	UnsupportedCurrency,
 )
 from buzz.api.hosted_payments.schemas import HostedOrder, HostedRefund, OrderCustomer
+from buzz.hosted_payments.currency import round_to_currency
 from buzz.permissions import INTEGRATION_ROLE
 
 RETURN_PATH = "/api/method/buzz.api.hosted_payments.return_to_site"
@@ -48,7 +49,7 @@ class HostedPayments:
 		if existing := keyed_refund(payment_request.name, idempotency_key):
 			return hosted_refund(existing)
 		# Rounded as bwh_payments rounds it, so both sides agree on what is left to refund.
-		amount = in_minor_units(amount, payment_request.currency_code)
+		amount = round_to_currency(amount, payment_request.currency_code)
 		remaining = payment_request.get_remaining_refundable_amount()
 		if amount > remaining:
 			RefundExceedsBalance.throw(remaining=remaining)
@@ -168,10 +169,6 @@ def site_origin(url: str | None) -> tuple[str, str, int] | None:
 	except ValueError:
 		return None
 	return parts.scheme, parts.hostname, port
-
-
-def in_minor_units(amount: float, currency: str) -> float:
-	return payments.from_minor_units(payments.to_minor_units(amount, currency), currency)
 
 
 def keyed_refund(payment_request: str, idempotency_key: str):

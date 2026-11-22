@@ -7,7 +7,7 @@ from frappe.utils import add_days, now_datetime, today
 
 from buzz.api.hosted_payments import create_order, refund
 from buzz.tests.base_test_cases import HostedPaymentsTestCase
-from buzz.tests.factories import BuzzTeamFactory, HostedPayoutFactory
+from buzz.tests.factories import BuzzTeamFactory, HostedPaymentFactory, HostedPayoutFactory
 from buzz.tests.utils import other_connection
 
 # Payout lines a second session commits, standing in for a concurrent payout submitted meanwhile.
@@ -58,6 +58,9 @@ class HostedPayoutTestCase(HostedPaymentsTestCase):
 	def line_values(self, payout) -> list[tuple]:
 		fields = ("hosted_payment", "payment_method", "rate", "gross", "refunded", "commission", "net")
 		return [tuple(line.get(field) for field in fields) for line in payout.lines]
+
+	def settled_payment(self, currency: str, amount: float) -> str:
+		return HostedPaymentFactory.create("paid", team=self.team, currency=currency, amount=amount).name
 
 	def submit(self, payout, transfer_reference: str = "UTR-1001"):
 		payout.transfer_reference = transfer_reference
@@ -113,6 +116,24 @@ class TestHostedPayout(HostedPayoutTestCase):
 		payout = self.payout_with_payments()
 		totals = (payout.total_gross, payout.total_refunded, payout.total_commission, payout.total_net)
 		self.assertEqual(totals, (300.3, 0, 9.91, 290.39))
+
+	def test_three_decimal_currency_keeps_its_third_decimal(self):
+		order_id = self.settled_payment("KWD", 1.234)
+		payout = self.payout_with_payments(currency="KWD")
+		self.assertEqual(self.line_values(payout), [(order_id, "upi", 3.3, 1.234, 0, 0.041, 1.193)])
+
+	def test_three_decimal_refund_after_settlement_is_carried_forward(self):
+		order_id = self.settled_payment("KWD", 10)
+		self.submit(self.payout_with_payments(currency="KWD"))
+		frappe.db.set_value("Hosted Payment", order_id, "refunded_amount", 0.004)
+		payout = self.payout_with_payments(currency="KWD")
+		self.assertEqual(self.line_values(payout), [(order_id, "upi", 0, 0, 0.004, 0, -0.004)])
+
+	def test_zero_decimal_currency_rounds_to_whole_units(self):
+		order_id = self.settled_payment("JPY", 1001)
+		payout = self.payout_with_payments(currency="JPY")
+		self.assertEqual(self.line_values(payout), [(order_id, "upi", 3.3, 1001, 0, 33, 968)])
+		self.assertEqual((payout.total_commission, payout.total_net), (33, 968))
 
 	def test_submit_settles_the_payments(self):
 		order_id = self.paid_order(1000)
