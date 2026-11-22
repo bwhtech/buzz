@@ -20,6 +20,7 @@ class HostedPayment(Document):
 		customer_phone: DF.Data | None
 		payment_method: DF.Data | None
 		payment_request: DF.Link | None
+		payout: DF.Link | None
 		reference: DF.Data | None
 		refunded_amount: DF.Currency
 		return_url: DF.SmallText

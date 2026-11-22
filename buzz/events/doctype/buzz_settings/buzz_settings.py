@@ -17,6 +17,8 @@ class BuzzSettings(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		from buzz.hosted_payments.doctype.hosted_payment_rate.hosted_payment_rate import HostedPaymentRate
+
 		accept_event_proposals: DF.Check
 		allow_add_ons_change_before_event_start_days: DF.Int
 		allow_guest_event_proposals: DF.Check
@@ -48,7 +50,9 @@ class BuzzSettings(Document):
 		google_maps_enabled: DF.Check
 		google_places_api_key: DF.Password | None
 		hosted_payment_currencies: DF.Data | None
+		hosted_payment_fallback_rate: DF.Percent
 		hosted_payment_gateway: DF.Link | None
+		hosted_payment_rates: DF.Table[HostedPaymentRate]
 		list_on_buzz_events: DF.Check
 		login_banner: DF.MarkdownEditor | None
 		mcp_calls_per_day: DF.Int

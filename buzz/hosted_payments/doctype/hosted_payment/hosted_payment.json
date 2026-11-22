@@ -24,7 +24,9 @@
   "column_break_webhook",
   "webhook_url",
   "payment_request_section",
-  "payment_request"
+  "payment_request",
+  "column_break_payout",
+  "payout"
  ],
  "fields": [
   {
@@ -153,10 +155,22 @@
    "label": "Payment Request",
    "options": "Gateway Payment Request",
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_payout",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payout",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Payout",
+   "options": "Hosted Payout",
+   "read_only": 1
   }
  ],
  "links": [],
- "modified": "2026-11-22 12:00:00.000000",
+ "modified": "2026-11-22 13:40:59.000000",
  "modified_by": "Administrator",
  "module": "Hosted Payments",
  "name": "Hosted Payment",

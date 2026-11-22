@@ -36,6 +36,9 @@
   "hosted_payment_gateway",
   "column_break_hosted_payments",
   "hosted_payment_currencies",
+  "hosted_payment_fallback_rate",
+  "hosted_payment_rates_section",
+  "hosted_payment_rates",
   "proposals_tab",
   "event_proposals_section",
   "accept_event_proposals",
@@ -537,13 +540,31 @@
    "label": "Hosted Payment Currencies",
    "default": "INR",
    "description": "Comma separated ISO codes, such as INR, USD."
+  },
+  {
+   "description": "Commission for a payment method that has no rate in the table below.",
+   "fieldname": "hosted_payment_fallback_rate",
+   "fieldtype": "Percent",
+   "label": "Hosted Payment Fallback Rate"
+  },
+  {
+   "fieldname": "hosted_payment_rates_section",
+   "fieldtype": "Section Break",
+   "label": "Hosted Payment Rates",
+   "description": "Commission Buzz keeps on the gross of each hosted payment, by payment method."
+  },
+  {
+   "fieldname": "hosted_payment_rates",
+   "fieldtype": "Table",
+   "label": "Hosted Payment Rates",
+   "options": "Hosted Payment Rate"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-22 12:00:00.000000",
+ "modified": "2026-11-22 13:40:59.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",

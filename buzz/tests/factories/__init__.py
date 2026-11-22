@@ -33,6 +33,7 @@ from buzz.tests.factories.event_ticket_type_factory import EventTicketTypeFactor
 from buzz.tests.factories.event_topic_factory import EventTopicFactory
 from buzz.tests.factories.event_venue_factory import EventVenueFactory
 from buzz.tests.factories.file_factory import FileFactory
+from buzz.tests.factories.hosted_payout_factory import HostedPayoutFactory
 from buzz.tests.factories.oauth_bearer_token_factory import OAuthBearerTokenFactory
 from buzz.tests.factories.oauth_client_factory import OAuthClientFactory
 from buzz.tests.factories.offline_payment_method_factory import OfflinePaymentMethodFactory
@@ -84,6 +85,7 @@ __all__ = [
 	"EventTopicFactory",
 	"EventVenueFactory",
 	"FileFactory",
+	"HostedPayoutFactory",
 	"OAuthBearerTokenFactory",
 	"OAuthClientFactory",
 	"OfflinePaymentMethodFactory",
