@@ -167,8 +167,8 @@ def is_refund_line(line) -> bool:
 def line_is_unsettled(line, payment: dict, deducted: dict[str, float]) -> bool:
 	if not is_refund_line(line):
 		return not payment.payout
-	already_deducted = flt(deducted.get(payment.name))
-	return bool(payment.payout) and already_deducted + flt(line.refunded) <= flt(payment.refunded_amount)
+	deducted_after_submit = flt(flt(deducted.get(payment.name)) + flt(line.refunded), 2)
+	return bool(payment.payout) and deducted_after_submit <= flt(payment.refunded_amount, 2)
 
 
 def payment_line(payment: dict, rate: float) -> dict:
@@ -180,7 +180,7 @@ def payment_line(payment: dict, rate: float) -> dict:
 		"gross": payment.amount,
 		"refunded": payment.refunded_amount,
 		"commission": commission,
-		"net": payment.amount - payment.refunded_amount - commission,
+		"net": flt(payment.amount - payment.refunded_amount - commission, 2),
 	}
 
 
