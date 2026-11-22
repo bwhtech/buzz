@@ -216,7 +216,7 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 
 	def test_ping_posts_only_the_order_id(self):
 		with patch("buzz.hosted_payments.webhook_ping.make_post_request") as post:
-			ping_site(order_id="HP-1", webhook_url="https://pro.example.com/webhook")
+			ping_site(order_id="HP-1", webhook_url="https://pro.example.com/webhook", generation=1)
 		post.assert_called_once_with("https://pro.example.com/webhook", json={"order_id": "HP-1"}, timeout=30)
 
 	def test_failed_ping_is_logged_not_raised(self):
@@ -224,7 +224,7 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 			patch("requests.Session.request", side_effect=requests.ConnectionError),
 			patch("frappe.log_error") as log_error,
 		):
-			ping_site(order_id="HP-1", webhook_url="https://pro.example.com/webhook")
+			ping_site(order_id="HP-1", webhook_url="https://pro.example.com/webhook", generation=1)
 		log_error.assert_called_once()
 
 

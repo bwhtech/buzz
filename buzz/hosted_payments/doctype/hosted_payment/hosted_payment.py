@@ -26,6 +26,7 @@ class HostedPayment(Document):
 		paid_on: DF.Datetime | None
 		payment_method: DF.Data | None
 		ping_attempts: DF.Int
+		ping_generation: DF.Int
 		ping_status: DF.Literal["", "Pending", "Delivered", "Failed"]
 		payment_request: DF.Link | None
 		payout: DF.Link | None
