@@ -25,7 +25,7 @@
    "reqd": 1
   },
   {
-   "columns": 1,
+   "columns": 2,
    "fieldname": "payment_method",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -46,7 +46,8 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Gross",
-   "read_only": 1
+   "read_only": 1,
+   "options": "currency"
   },
   {
    "columns": 1,
@@ -54,7 +55,8 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Refunded",
-   "read_only": 1
+   "read_only": 1,
+   "options": "currency"
   },
   {
    "columns": 1,
@@ -62,7 +64,8 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Commission",
-   "read_only": 1
+   "read_only": 1,
+   "options": "currency"
   },
   {
    "columns": 1,
@@ -70,12 +73,13 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Net",
-   "read_only": 1
+   "read_only": 1,
+   "options": "currency"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-11-22 12:00:00.000000",
+ "modified": "2026-11-22 13:49:18.000000",
  "modified_by": "Administrator",
  "module": "Hosted Payments",
  "name": "Hosted Payout Line",

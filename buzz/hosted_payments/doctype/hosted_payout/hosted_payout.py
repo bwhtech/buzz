@@ -26,6 +26,7 @@ class HostedPayout(Document):
 		from_date: DF.Date
 		lines: DF.Table[HostedPayoutLine]
 		team: DF.Link
+		team_name: DF.Data | None
 		to_date: DF.Date
 		total_commission: DF.Currency
 		total_gross: DF.Currency

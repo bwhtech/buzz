@@ -7,6 +7,7 @@
  "field_order": [
   "payout_tab",
   "team",
+  "team_name",
   "currency",
   "column_break_dates",
   "from_date",
@@ -38,6 +39,13 @@
    "label": "Team",
    "options": "Buzz Team",
    "reqd": 1
+  },
+  {
+   "fetch_from": "team.team_name",
+   "fieldname": "team_name",
+   "fieldtype": "Data",
+   "label": "Team Name",
+   "read_only": 1
   },
   {
    "default": "INR",
@@ -145,7 +153,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-22 12:00:00.000000",
+ "modified": "2026-11-22 13:48:28.000000",
  "modified_by": "Administrator",
  "module": "Hosted Payments",
  "name": "Hosted Payout",
@@ -169,9 +177,10 @@
   }
  ],
  "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
- "title_field": "team",
+ "title_field": "team_name",
  "track_changes": 1
 }
