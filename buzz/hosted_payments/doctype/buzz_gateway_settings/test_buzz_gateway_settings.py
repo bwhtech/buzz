@@ -39,3 +39,22 @@ class TestBuzzGatewaySettings(BuzzGatewayTestCase):
 		self.assertEqual(self.gateway.supported_currencies(), ("INR", "USD"))
 		self.enterContext(self.change_settings("Buzz Settings", hosted_payment_currencies="INR"))
 		self.assertEqual(self.gateway.supported_currencies(), ("INR", "USD"))
+
+	def paid_order(self) -> str:
+		session = self.create_session()
+		payment_testing.pay(self.hub_payment_request(session.session_id))
+		return session.session_id
+
+	def test_refund_is_made_on_the_hub(self):
+		order_id = self.paid_order()
+		result = self.gateway.refund_payment(order_id, 200, "INR")
+		self.assertEqual((result.status, result.amount), ("Processed", 200))
+		self.assertEqual(frappe.db.get_value("Hosted Payment", order_id, "refunded_amount"), 200)
+
+	def test_pending_refund_status_comes_from_the_hub(self):
+		order_id = self.paid_order()
+		payment_testing.set_next_refund_status("Pending")
+		pending = self.gateway.refund_payment(order_id, 200, "INR")
+		self.assertEqual(self.gateway.get_refund_status(order_id, pending.refund_id).status, "Pending")
+		payment_testing.send_refund_webhook(pending.refund_id, "Processed")
+		self.assertEqual(self.gateway.get_refund_status(order_id, pending.refund_id).status, "Processed")

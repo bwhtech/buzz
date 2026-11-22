@@ -78,3 +78,33 @@ class TestHostedPaymentBooking(BuzzGatewayTestCase):
 		self.follow_as_guest(return_from_gateway, pro_request.name)
 		booking = frappe.get_doc("Event Booking", pro_request.ref_docname)
 		self.assertEqual(booking.docstatus, 0)
+
+	def confirmed_booking(self):
+		self.book()
+		pro_request = self.pro_payment_request()
+		with patch("frappe.sendmail"):
+			payment_testing.pay(self.hub_payment_request(pro_request.order_ref))
+			self.follow_as_guest(return_from_gateway, pro_request.name)
+		return frappe.get_doc("Event Booking", pro_request.ref_docname), pro_request.order_ref
+
+	def booking_refund(self, booking: str):
+		return frappe.get_last_doc("Event Booking Refund", {"booking": booking})
+
+	def test_booking_refund_from_the_desk_is_made_on_the_hub(self):
+		booking, order_id = self.confirmed_booking()
+		with patch("frappe.sendmail"):
+			booking.refund(amount=200)
+		self.assertEqual(frappe.db.get_value("Hosted Payment", order_id, "refunded_amount"), 200)
+		self.assertEqual(self.booking_refund(booking.name).status, "Processed")
+
+	def test_pending_hub_refund_settles_on_sync(self):
+		booking, order_id = self.confirmed_booking()
+		payment_testing.set_next_refund_status("Pending")
+		booking.refund(amount=200)
+		self.assertEqual(self.booking_refund(booking.name).status, "Initiated")
+		hub_refund = frappe.get_last_doc("Gateway Refund", {"reference": order_id})
+		payment_testing.send_refund_webhook(hub_refund.name, "Processed")
+		with patch("frappe.sendmail"):
+			booking.sync_refunds()
+		self.assertEqual(frappe.db.get_value("Hosted Payment", order_id, "refunded_amount"), 200)
+		self.assertEqual(self.booking_refund(booking.name).status, "Processed")

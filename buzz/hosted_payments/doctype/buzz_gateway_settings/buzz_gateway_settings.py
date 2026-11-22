@@ -1,9 +1,7 @@
 # Copyright (c) 2026, BWH Studios and contributors
 # For license information, please see license.txt
 
-import frappe
 from bwh_payments.base_class import CheckoutSession, PaymentGatewayBase, RefundResult, WebhookEvent
-from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_url
 from frappe.utils.caching import redis_cache
@@ -47,7 +45,11 @@ class BuzzGatewaySettings(Document, PaymentGatewayBase):
 		return hub.call_hub("get_status", order_id=session_id)
 
 	def refund_payment(self, session_id: str, amount: float, currency: str | None = None) -> RefundResult:
-		frappe.throw(_("Refunds through Buzz are not available yet."))
+		# The hub always sends a status: bwh_payments reads a missing one as Processed.
+		return RefundResult(**hub.call_hub("refund", "POST", order_id=session_id, amount=amount))
+
+	def get_refund_status(self, session_id: str, refund_id: str) -> RefundResult:
+		return RefundResult(**hub.call_hub("get_refund_status", order_id=session_id, refund_id=refund_id))
 
 	def handle_webhook(self, payload: bytes, headers: dict) -> WebhookEvent | None:
 		return None
