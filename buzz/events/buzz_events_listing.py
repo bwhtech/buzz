@@ -68,11 +68,15 @@ class ListingPush:
 def post_to_buzz_events(method: str, body: dict) -> None:
 	settings = frappe.get_cached_doc("Buzz Settings")
 	make_post_request(
-		f"{settings.buzz_events_url.rstrip('/')}{API_PATH}.{method}",
+		buzz_events_method_url(settings, f"{API_PATH}.{method}"),
 		headers=buzz_events_headers(settings),
 		json=body,
 		timeout=30,
 	)
+
+
+def buzz_events_method_url(settings, method_path: str) -> str:
+	return f"{settings.buzz_events_url.rstrip('/')}{method_path}"
 
 
 def buzz_events_headers(settings) -> dict:

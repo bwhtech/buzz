@@ -3,7 +3,7 @@ import requests
 from frappe import _
 from frappe.integrations.utils import make_get_request, make_post_request
 
-from buzz.events.buzz_events_listing import buzz_events_headers
+from buzz.events.buzz_events_listing import buzz_events_headers, buzz_events_method_url
 
 API_PATH = "/api/v2/method/buzz.api.hosted_payments"
 
@@ -11,7 +11,7 @@ API_PATH = "/api/v2/method/buzz.api.hosted_payments"
 def call_hub(method: str, http_method: str = "GET", **arguments):
 	"""Call a hosted payments endpoint on buzz.events and return its payload."""
 	settings = frappe.get_cached_doc("Buzz Settings")
-	url = f"{settings.buzz_events_url.rstrip('/')}{API_PATH}.{method}"
+	url = buzz_events_method_url(settings, f"{API_PATH}.{method}")
 	headers = buzz_events_headers(settings)
 	try:
 		if http_method == "POST":
