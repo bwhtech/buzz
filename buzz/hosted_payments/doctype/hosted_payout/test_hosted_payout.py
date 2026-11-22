@@ -117,3 +117,36 @@ class TestHostedPayout(HostedPaymentsTestCase):
 		self.paid_order(1000)
 		payout = self.payout_with_payments(from_date=add_days(today(), 1), to_date=add_days(today(), 7))
 		self.assertEqual(payout.lines, [])
+
+	def test_refund_after_settlement_is_a_negative_line_on_the_next_payout(self):
+		order_id = self.paid_order(1000)
+		first = self.submit(self.payout_with_payments())
+		self.refund(order_id, 300)
+		payout = self.payout_with_payments()
+		self.assertEqual(self.line_values(payout), [(order_id, "upi", 0, 0, 300, 0, -300)])
+		self.assertEqual(payout.total_net, -300)
+		self.submit(payout, transfer_reference="UTR-1002")
+		self.assertEqual(self.payout_of(order_id), first.name)
+
+	def test_refund_is_carried_forward_once(self):
+		order_id = self.paid_order(1000)
+		self.refund(order_id, 100)
+		self.submit(self.payout_with_payments())
+		self.refund(order_id, 300)
+		self.submit(self.payout_with_payments(), transfer_reference="UTR-1002")
+		self.refund(order_id, 200)
+		payout = self.payout_with_payments()
+		self.assertEqual(self.line_values(payout), [(order_id, "upi", 0, 0, 200, 0, -200)])
+
+	def test_carried_forward_refund_on_two_draft_payouts_is_deducted_once(self):
+		order_id = self.paid_order(1000)
+		self.submit(self.payout_with_payments())
+		self.refund(order_id, 300)
+		first, second = self.payout_with_payments(), self.payout_with_payments()
+		self.submit(first, transfer_reference="UTR-1002")
+		with self.assertRaises(frappe.ValidationError):
+			self.submit(second, transfer_reference="UTR-1003")
+
+	def test_payout_without_lines_cannot_be_submitted(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.submit(self.payout_with_payments())

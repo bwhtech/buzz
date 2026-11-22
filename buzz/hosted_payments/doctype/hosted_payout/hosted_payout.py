@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.query_builder.functions import Sum
 from frappe.utils import flt
 
 SETTLEABLE_STATUSES = ("Paid", "Partially Refunded", "Refunded")
@@ -39,13 +40,28 @@ class HostedPayout(Document):
 	def before_submit(self):
 		if not self.transfer_reference:
 			frappe.throw(_("Set the Transfer Reference before you submit the payout."))
-		self.validate_payments_unsettled()
+		if not self.lines:
+			frappe.throw(_("Get payments before you submit the payout."))
+		self.validate_lines_unsettled()
 
-	def validate_payments_unsettled(self) -> None:
+	def validate_lines_unsettled(self) -> None:
+		"""Each payment settles once, and each refund of a settled payment is deducted once."""
+		names = [line.hosted_payment for line in self.lines]
+		payments = {
+			payment.name: payment
+			for payment in frappe.db.get_values(
+				"Hosted Payment",
+				{"name": ["in", names]},
+				["name", "payout", "refunded_amount"],
+				as_dict=True,
+				for_update=True,
+			)
+		}
+		deducted = deducted_refunds(names)
 		for line in self.lines:
-			if frappe.db.get_value("Hosted Payment", line.hosted_payment, "payout", for_update=True):
+			if not line_is_unsettled(line, payments[line.hosted_payment], deducted):
 				frappe.throw(
-					_("Row {0}: Hosted Payment {1} is already paid out. Get payments again.").format(
+					_("Row {0}: Hosted Payment {1} has been paid out since. Get payments again.").format(
 						line.idx, line.hosted_payment
 					)
 				)
@@ -54,7 +70,7 @@ class HostedPayout(Document):
 		self.set_payout_on_payments(self.name)
 
 	def set_payout_on_payments(self, payout: str | None) -> None:
-		names = [line.hosted_payment for line in self.lines]
+		names = [line.hosted_payment for line in self.lines if not is_refund_line(line)]
 		if names:
 			frappe.db.set_value("Hosted Payment", {"name": ["in", names]}, "payout", payout)
 
@@ -68,13 +84,18 @@ class HostedPayout(Document):
 		self.set("lines", [])
 		for payment in self.unsettled_payments():
 			self.append("lines", payment_line(payment, rates.rate(payment.payment_method)))
+		for payment, refunded in self.refunds_to_carry_forward():
+			self.append("lines", refund_line(payment, refunded))
+		self.set_totals()
+
+	def team_payment_filters(self) -> dict:
+		return {"team": self.team, "currency": self.currency}
 
 	def unsettled_payments(self) -> list[dict]:
 		return frappe.get_all(
 			"Hosted Payment",
-			filters={
-				"team": self.team,
-				"currency": self.currency,
+			filters=self.team_payment_filters()
+			| {
 				"status": ["in", SETTLEABLE_STATUSES],
 				"payout": ["is", "not set"],
 				"creation": ["between", [self.from_date, self.to_date]],
@@ -82,6 +103,20 @@ class HostedPayout(Document):
 			fields=["name", "payment_method", "amount", "refunded_amount"],
 			order_by="creation asc",
 		)
+
+	def refunds_to_carry_forward(self):
+		"""Settled payments refunded after their payout, with the refund not yet deducted."""
+		payments = frappe.get_all(
+			"Hosted Payment",
+			filters=self.team_payment_filters() | {"payout": ["is", "set"], "refunded_amount": [">", 0]},
+			fields=["name", "payment_method", "refunded_amount"],
+			order_by="creation asc",
+		)
+		deducted = deducted_refunds([payment.name for payment in payments])
+		for payment in payments:
+			outstanding = flt(payment.refunded_amount - deducted.get(payment.name, 0), 2)
+			if outstanding > 0:
+				yield payment, outstanding
 
 
 class PaymentRates:
@@ -96,6 +131,31 @@ class PaymentRates:
 		return self.rates.get(payment_method, self.fallback_rate)
 
 
+def deducted_refunds(payments: list[str]) -> dict[str, float]:
+	"""Refunded amounts already counted on submitted payouts, per payment."""
+	if not payments:
+		return {}
+	line = frappe.qb.DocType("Hosted Payout Line")
+	query = (
+		frappe.qb.from_(line)
+		.select(line.hosted_payment, Sum(line.refunded))
+		.where((line.docstatus == 1) & line.hosted_payment.isin(payments))
+		.groupby(line.hosted_payment)
+	)
+	return dict(query.run())
+
+
+def is_refund_line(line) -> bool:
+	return not flt(line.gross)
+
+
+def line_is_unsettled(line, payment: dict, deducted: dict[str, float]) -> bool:
+	if not is_refund_line(line):
+		return not payment.payout
+	already_deducted = flt(deducted.get(payment.name))
+	return bool(payment.payout) and already_deducted + flt(line.refunded) <= flt(payment.refunded_amount)
+
+
 def payment_line(payment: dict, rate: float) -> dict:
 	commission = flt(payment.amount * rate / 100, 2)
 	return {
@@ -106,4 +166,17 @@ def payment_line(payment: dict, rate: float) -> dict:
 		"refunded": payment.refunded_amount,
 		"commission": commission,
 		"net": payment.amount - payment.refunded_amount - commission,
+	}
+
+
+def refund_line(payment: dict, refunded: float) -> dict:
+	"""Commission was kept at settlement, so only the refund is deducted."""
+	return {
+		"hosted_payment": payment.name,
+		"payment_method": payment.payment_method,
+		"rate": 0,
+		"gross": 0,
+		"refunded": refunded,
+		"commission": 0,
+		"net": -refunded,
 	}
