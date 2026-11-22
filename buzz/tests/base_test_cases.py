@@ -253,10 +253,18 @@ class HostedPaymentsTestCase(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
+		# bwh_payments commits each refund; held so the class rollback still undoes them.
+		cls.held_commits = payment_testing.without_commits()
+		cls.held_commits.__enter__()
 		cls.hub_gateway = make_payment_gateway()
 		cls.integration = UserFactory.create_once("hosted-payments-bot@example.com").name
 		cls.team = BuzzTeamFactory.create_owned_by(team_name="Pro Team", connected_site_url=get_url()).name
 		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.integration, team_role="Integration")
+
+	@classmethod
+	def tearDownClass(cls):
+		cls.held_commits.__exit__(None, None, None)
+		super().tearDownClass()
 
 	def setUp(self):
 		self.enterContext(self.set_user("Administrator"))

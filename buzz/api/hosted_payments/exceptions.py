@@ -13,5 +13,14 @@ class UnsupportedCurrency(BuzzAPIError):
 	message = _lt("Buzz cannot take payments in {currency}.")
 
 
+class RefundExceedsBalance(BuzzAPIError):
+	title = _lt("Refund Too Large")
+	message = _lt("Only {remaining} is left to refund on this order.")
+
+
 class OrderNotFound(ResourceNotFound):
 	message = _lt("This order does not exist.")
+
+
+class RefundNotFound(ResourceNotFound):
+	message = _lt("This refund does not exist.")

@@ -3,9 +3,16 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import frappe
 from bwh_payments import api as payments
 from frappe import _
+from frappe.utils import flt
 
-from buzz.api.hosted_payments.exceptions import ForeignSiteURL, OrderNotFound, UnsupportedCurrency
-from buzz.api.hosted_payments.schemas import HostedOrder
+from buzz.api.hosted_payments.exceptions import (
+	ForeignSiteURL,
+	OrderNotFound,
+	RefundExceedsBalance,
+	RefundNotFound,
+	UnsupportedCurrency,
+)
+from buzz.api.hosted_payments.schemas import HostedOrder, HostedRefund
 from buzz.api.listings.exceptions import NotAnIntegration
 from buzz.permissions import INTEGRATION_ROLE
 
@@ -22,12 +29,30 @@ class HostedPayments:
 			NotAnIntegration.throw()
 		self.team = teams[0]
 
-	def status(self, order_id: str) -> str:
+	def payment_request(self, order_id: str) -> str:
 		filters = {"name": order_id, "team": self.team}
 		payment_request = frappe.db.get_value("Hosted Payment", filters, "payment_request")
 		if not payment_request:
 			OrderNotFound.throw()
-		return frappe.db.get_value("Gateway Payment Request", payment_request, "status")
+		return payment_request
+
+	def status(self, order_id: str) -> str:
+		return frappe.db.get_value("Gateway Payment Request", self.payment_request(order_id), "status")
+
+	def refund(self, order_id: str, amount: float) -> HostedRefund:
+		payment_request = self.payment_request(order_id)
+		remaining = frappe.get_doc(
+			"Gateway Payment Request", payment_request
+		).get_remaining_refundable_amount()
+		if flt(amount) > remaining:
+			RefundExceedsBalance.throw(remaining=remaining)
+		return hosted_refund(payments.refund(payment_request, amount, reference=order_id))
+
+	def refund_status(self, order_id: str, refund_id: str) -> HostedRefund:
+		filters = {"name": refund_id, "payment_request": self.payment_request(order_id)}
+		if not frappe.db.exists("Gateway Refund", filters):
+			RefundNotFound.throw()
+		return hosted_refund(frappe.get_doc("Gateway Refund", refund_id))
 
 	def currencies(self) -> list[str]:
 		codes = frappe.db.get_single_value("Buzz Settings", "hosted_payment_currencies") or ""
@@ -86,3 +111,10 @@ def return_location(order_id: str) -> str:
 def site_host(url: str | None) -> str | None:
 	parts = urlsplit(url or "")
 	return parts.hostname if parts.scheme in ("http", "https") else None
+
+
+def hosted_refund(gateway_refund) -> HostedRefund:
+	"""The hub's own Gateway Refund name is the id the connected site keeps."""
+	return HostedRefund(
+		refund_id=gateway_refund.name, status=gateway_refund.status, amount=gateway_refund.amount
+	)

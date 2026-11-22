@@ -2,7 +2,7 @@ import frappe
 from frappe.rate_limiter import rate_limit
 
 from buzz.api.hosted_payments import services
-from buzz.api.hosted_payments.schemas import HostedOrder
+from buzz.api.hosted_payments.schemas import HostedOrder, HostedRefund
 from buzz.api.hosted_payments.services import HostedPayments
 
 
@@ -17,6 +17,16 @@ def create_order(
 def get_status(order_id: str) -> str:
 	"""The order's Gateway Payment Request status."""
 	return HostedPayments().status(order_id)
+
+
+@frappe.whitelist(methods=["POST"])
+def refund(order_id: str, amount: float) -> HostedRefund:
+	return HostedPayments().refund(order_id, amount)
+
+
+@frappe.whitelist()
+def get_refund_status(order_id: str, refund_id: str) -> HostedRefund:
+	return HostedPayments().refund_status(order_id, refund_id)
 
 
 @frappe.whitelist()

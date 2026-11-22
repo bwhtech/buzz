@@ -2,8 +2,21 @@ import frappe
 from bwh_payments import testing as payment_testing
 from frappe.utils import get_url
 
-from buzz.api.hosted_payments import create_order, get_currencies, get_status, return_to_site
-from buzz.api.hosted_payments.exceptions import ForeignSiteURL, OrderNotFound, UnsupportedCurrency
+from buzz.api.hosted_payments import (
+	create_order,
+	get_currencies,
+	get_refund_status,
+	get_status,
+	refund,
+	return_to_site,
+)
+from buzz.api.hosted_payments.exceptions import (
+	ForeignSiteURL,
+	OrderNotFound,
+	RefundExceedsBalance,
+	RefundNotFound,
+	UnsupportedCurrency,
+)
 from buzz.api.listings.exceptions import NotAnIntegration
 from buzz.tests.base_test_cases import HostedPaymentsTestCase
 from buzz.tests.factories import BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
@@ -91,3 +104,68 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 	def test_return_for_an_unknown_order_is_not_found(self):
 		with self.set_user("Guest"), self.assertRaises(frappe.DoesNotExistError):
 			return_to_site("no-such-order")
+
+
+class TestHostedRefunds(HostedPaymentsTestCase):
+	def setUp(self):
+		super().setUp()
+		with self.set_user(self.integration):
+			self.order_id = create_order(**self.order_values(amount=550)).order_id
+		payment_testing.pay(frappe.db.get_value("Hosted Payment", self.order_id, "payment_request"))
+
+	def refund(self, amount: float, user: str | None = None):
+		with self.set_user(user or self.integration):
+			return refund(self.order_id, amount)
+
+	def refunded_amount(self) -> float:
+		return frappe.db.get_value("Hosted Payment", self.order_id, "refunded_amount")
+
+	def test_full_refund(self):
+		result = self.refund(550)
+		self.assertEqual((result.status, result.amount), ("Processed", 550))
+		self.assertEqual(self.refunded_amount(), 550)
+
+	def test_two_partial_refunds(self):
+		self.refund(200)
+		second = self.refund(350)
+		self.assertEqual((second.status, second.amount), ("Processed", 350))
+		self.assertEqual(self.refunded_amount(), 550)
+
+	def test_refund_over_the_balance_is_rejected(self):
+		self.refund(500)
+		with self.assertRaises(RefundExceedsBalance):
+			self.refund(100)
+		self.assertEqual(self.refunded_amount(), 500)
+
+	def test_another_team_cannot_refund_an_order(self):
+		other = UserFactory.create_once("hosted-refunds-other-bot@example.com").name
+		other_team = BuzzTeamFactory.create_owned_by(connected_site_url=get_url()).name
+		BuzzTeamMembershipFactory.create(team=other_team, user=other, team_role="Integration")
+		with self.assertRaises(OrderNotFound):
+			self.refund(100, user=other)
+		self.assertEqual(self.refunded_amount(), 0)
+
+	def refund_status(self, refund_id: str, user: str | None = None):
+		with self.set_user(user or self.integration):
+			return get_refund_status(self.order_id, refund_id)
+
+	def test_pending_refund_counts_once_the_gateway_settles_it(self):
+		payment_testing.set_next_refund_status("Pending")
+		pending = self.refund(200)
+		self.assertEqual((pending.status, self.refunded_amount()), ("Pending", 0))
+		payment_testing.send_refund_webhook(pending.refund_id, "Processed")
+		settled = self.refund_status(pending.refund_id)
+		self.assertEqual(
+			(settled.refund_id, settled.status, settled.amount), (pending.refund_id, "Processed", 200)
+		)
+		self.assertEqual(self.refunded_amount(), 200)
+
+	def test_refund_of_another_order_is_not_found(self):
+		other_order = self.create_other_order()
+		other_refund = self.refund(100)
+		with self.set_user(self.integration), self.assertRaises(RefundNotFound):
+			get_refund_status(other_order, other_refund.refund_id)
+
+	def create_other_order(self) -> str:
+		with self.set_user(self.integration):
+			return create_order(**self.order_values()).order_id

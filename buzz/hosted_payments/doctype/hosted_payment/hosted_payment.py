@@ -1,6 +1,7 @@
 # Copyright (c) 2026, BWH Studios and contributors
 # For license information, please see license.txt
 
+import frappe
 from frappe.model.document import Document
 
 
@@ -31,3 +32,7 @@ class HostedPayment(Document):
 
 	def on_payment_authorized(self, status: str) -> None:
 		self.db_set("status", "Paid")
+
+	def on_refund_update(self, gateway_refund) -> None:
+		refunded = frappe.db.get_value("Gateway Payment Request", self.payment_request, "refund_amount")
+		self.db_set("refunded_amount", refunded)
