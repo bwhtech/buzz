@@ -7,6 +7,7 @@ from bwh_payments.bwh_payments.doctype.gateway_refund.gateway_refund import Gate
 from bwh_payments.bwh_payments.doctype.razorpay_gateway_settings.razorpay_gateway_settings import (
 	RazorpayGatewaySettings,
 )
+from bwh_payments.services import GatewayRefusedError
 from bwh_payments.services.razorpay.stub import (  # nosemgrep: frappe-monkey-patching-not-allowed
 	StubRazorpayClient,
 )
@@ -361,7 +362,7 @@ class TestHostedRefunds(HostedPaymentsTestCase):
 		self.assertEqual(len(StubRazorpayClient.created_refunds), 1)
 
 	def test_refund_the_gateway_refused_is_answered_failed_and_frees_its_amount(self):
-		refused = frappe.ValidationError("Razorpay rejected the request: amount exceeds the payment")
+		refused = GatewayRefusedError("Razorpay rejected the request: amount exceeds the payment")
 		with patch.object(StubRazorpayClient, "create_refund", side_effect=refused):
 			failed = self.refund(500)
 		self.assertEqual((failed.status, failed.amount), ("Failed", 500))

@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import frappe
 from bwh_payments import testing as payment_testing
-from bwh_payments.services import GatewayUnavailableError
+from bwh_payments.services import GatewayRefusedError, GatewayUnavailableError
 from frappe.tests import IntegrationTestCase
 from frappe.utils import get_url
 
@@ -92,15 +92,14 @@ class TestBuzzGatewayRefundAnswers(IntegrationTestCase):
 	def refund_answered_with(self, status_code: int, body: dict):
 		with patch("requests.Session.request", return_value=hub_response(status_code, body)):
 			frappe.get_single("Buzz Gateway Settings").refund_payment(
-				"HP-1", 200, "INR", idempotency_key="PRO-RFND-1"
+				"HP-1", 200, "INR", idempotency_key="PRO-RFND-1", transaction_ref=None
 			)
 
 	def test_a_named_refusal_is_a_refusal(self):
 		for status_code in (400, 403, 404, 409):
 			with self.subTest(status_code=status_code):
-				with self.assertRaises(frappe.ValidationError) as refused:
+				with self.assertRaisesRegex(GatewayRefusedError, "Refund Too Large"):
 					self.refund_answered_with(status_code, {"errors": [{"message": "Refund Too Large"}]})
-				self.assertNotIsInstance(refused.exception, GatewayUnavailableError)
 
 	def test_an_unexpected_hub_error_keeps_the_refund_pending(self):
 		modified = {"errors": [{"message": "Gateway Refund has been modified after you have opened it"}]}

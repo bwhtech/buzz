@@ -196,6 +196,25 @@ class TestHostedPaymentBooking(BuzzGatewayTestCase):
 		self.assertEqual(hub_refunds, [200])
 		self.assertEqual(self.booking_refund(booking.name).status, "Processed")
 
+	def test_refund_the_hub_refuses_when_resent_fails_and_frees_its_amount(self):
+		booking, order_id = self.confirmed_booking()
+
+		def lose_the_refund_on_the_way(method: str, http_method: str = "GET", **arguments):
+			if method == "refund":
+				raise GatewayUnavailableError("buzz.events did not answer")
+			return self.call_hub_in_process(method, http_method, **arguments)
+
+		with patch("buzz.hosted_payments.hub.call_hub", lose_the_refund_on_the_way):
+			with self.assertRaises(GatewayUnavailableError):
+				booking.refund(amount=400)
+		frappe.get_doc("Gateway Payment Request", self.hub_payment_request(order_id)).refund(200)
+		with patch("frappe.sendmail"):
+			booking.sync_refunds()
+
+		self.assertEqual(self.booking_refund(booking.name).status, "Failed")
+		pro_request = self.pro_payment_request()
+		self.assertEqual(pro_request.get_remaining_refundable_amount(), 500)
+
 	def test_refund_whose_hub_gateway_answer_was_lost_is_made_once_when_synced(self):
 		booking, order_id = self.confirmed_booking()
 		payment_testing.lose_next_refund_answer()

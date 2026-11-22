@@ -3,7 +3,7 @@
 
 import frappe
 from bwh_payments.base_class import CheckoutSession, PaymentGatewayBase, RefundResult, WebhookEvent
-from bwh_payments.services import GatewayUnavailableError
+from bwh_payments.services import GatewayRefusedError, GatewayUnavailableError
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_url
@@ -51,8 +51,14 @@ class BuzzGatewaySettings(Document, PaymentGatewayBase):
 		return hub.call_hub("get_status", order_id=session_id)
 
 	def refund_payment(
-		self, session_id: str, amount: float, currency: str | None = None, idempotency_key: str | None = None
+		self,
+		session_id: str,
+		amount: float,
+		currency: str | None = None,
+		idempotency_key: str | None = None,
+		transaction_ref: str | None = None,
 	) -> RefundResult:
+		# The hub finds the payment from the order, so `transaction_ref` is not needed.
 		try:
 			return read_refund(
 				hub.call_hub(
@@ -60,10 +66,10 @@ class BuzzGatewaySettings(Document, PaymentGatewayBase):
 				)
 			)
 		except Exception as error:
-			if is_hub_refusal(error):
-				raise
-			# The hub may have made it, so the refund stays Pending and a sync sends it again with its key.
 			frappe.clear_last_message()
+			if is_hub_refusal(error):
+				frappe.throw(str(error), GatewayRefusedError, title=_("buzz.events"))
+			# The hub may have made it, so the refund stays Pending and a sync sends it again with its key.
 			frappe.throw(_("buzz.events did not confirm the refund."), GatewayUnavailableError)
 
 	def get_refund_status(self, session_id: str, refund_id: str) -> RefundResult:
