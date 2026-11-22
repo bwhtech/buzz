@@ -105,6 +105,22 @@ class TestHostedPaymentBooking(BuzzGatewayTestCase):
 		booking = frappe.get_doc("Event Booking", pro_request.ref_docname)
 		self.assertEqual((booking.docstatus, booking.status), (1, "Confirmed"))
 
+	def test_first_ping_after_a_hub_refund_confirms_the_booking_and_records_the_refund(self):
+		self.book()
+		pro_request = self.pro_payment_request()
+		hub_request = self.hub_payment_request(pro_request.order_ref)
+		payment_testing.pay(hub_request)
+		frappe.get_doc("Gateway Payment Request", hub_request).refund(200)
+		with patch("frappe.sendmail"):
+			self.ping({"order_id": pro_request.order_ref})
+
+		booking = frappe.get_doc("Event Booking", pro_request.ref_docname)
+		self.assertEqual((booking.docstatus, booking.status), (1, "Confirmed"))
+		refund = self.booking_refund(booking.name)
+		self.assertEqual((refund.status, refund.amount), ("Processed", 200))
+		pro_request.reload()
+		self.assertEqual((pro_request.status, pro_request.refund_amount), ("Partially Refunded", 200))
+
 	def test_ping_status_is_read_from_the_hub_not_the_body(self):
 		self.book()
 		pro_request = self.pro_payment_request()
@@ -207,13 +223,15 @@ class TestHostedPaymentBooking(BuzzGatewayTestCase):
 		with patch("buzz.hosted_payments.hub.call_hub", lose_the_refund_on_the_way):
 			with self.assertRaises(GatewayUnavailableError):
 				booking.refund(amount=400)
+		unanswered = self.booking_refund(booking.name).name
 		frappe.get_doc("Gateway Payment Request", self.hub_payment_request(order_id)).refund(200)
 		with patch("frappe.sendmail"):
 			booking.sync_refunds()
 
-		self.assertEqual(self.booking_refund(booking.name).status, "Failed")
-		pro_request = self.pro_payment_request()
-		self.assertEqual(pro_request.get_remaining_refundable_amount(), 500)
+		self.assertEqual(frappe.db.get_value("Event Booking Refund", unanswered, "status"), "Failed")
+		# The 200 refunded on the hub is recorded too, so only it counts against the balance.
+		self.assertEqual(self.booking_refund(booking.name).amount, 200)
+		self.assertEqual(self.pro_payment_request().get_remaining_refundable_amount(), 300)
 
 	def test_refund_whose_hub_gateway_answer_was_lost_is_made_once_when_synced(self):
 		booking, order_id = self.confirmed_booking()

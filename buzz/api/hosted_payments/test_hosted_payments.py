@@ -17,6 +17,7 @@ from buzz.api.hosted_payments import (
 	create_order,
 	get_currencies,
 	get_refund_status,
+	get_refunds,
 	get_status,
 	refund,
 	return_to_site,
@@ -377,6 +378,16 @@ class TestHostedRefunds(HostedPaymentsTestCase):
 			failed = self.refund(500)
 		self.assertEqual((failed.status, failed.amount), ("Failed", 500))
 		self.assertEqual(self.refund(550).status, "Processed")
+
+	def test_refunds_list_every_refund_that_did_not_fail(self):
+		made = self.refund(200)
+		with patch.object(StubRazorpayClient, "create_refund", side_effect=GatewayRefusedError("no")):
+			self.refund(100)
+		with self.set_user(self.integration):
+			refunds = get_refunds(self.order_id)
+		self.assertEqual(
+			[(r.refund_id, r.status, r.amount) for r in refunds], [(made.refund_id, "Processed", 200)]
+		)
 
 	def test_full_refund_pings_the_site_once(self):
 		pings = pings_after(lambda: self.refund(550))

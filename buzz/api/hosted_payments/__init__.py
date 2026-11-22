@@ -31,6 +31,12 @@ def get_refund_status(order_id: str, refund_id: str) -> HostedRefund:
 	return HostedPayments().refund_status(order_id, refund_id)
 
 
+@frappe.whitelist(methods=["GET"])
+def get_refunds(order_id: str) -> list[HostedRefund]:
+	"""Every refund on the order that has not failed, including ones made on the hub itself."""
+	return HostedPayments().refunds(order_id)
+
+
 @frappe.whitelist()
 def get_currencies() -> list[str]:
 	return HostedPayments().currencies()

@@ -76,6 +76,11 @@ class HostedPayments:
 			payments.sync_refunds(payment_request)
 		return hosted_refund(frappe.get_doc("Gateway Refund", refund_id))
 
+	def refunds(self, order_id: str) -> list[HostedRefund]:
+		filters = {"payment_request": self.payment_request(order_id), "status": ["!=", "Failed"]}
+		fields = ["name", "status", "amount"]
+		return [hosted_refund(refund) for refund in frappe.get_all("Gateway Refund", filters, fields)]
+
 	def currencies(self) -> list[str]:
 		codes = frappe.db.get_single_value("Buzz Settings", "hosted_payment_currencies") or ""
 		return [code.strip().upper() for code in codes.split(",") if code.strip()]

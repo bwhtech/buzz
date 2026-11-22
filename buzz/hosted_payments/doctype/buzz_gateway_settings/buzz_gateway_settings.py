@@ -12,6 +12,7 @@ from frappe.utils.caching import redis_cache
 from buzz.hosted_payments import hub
 
 WEBHOOK_PATH = "/api/method/bwh_payments.bwh_payments.webhook.handle?gateway=Buzz"
+HUB_REFUNDED_STATUSES = ("Partially Refunded", "Refunded")
 
 
 class BuzzGatewaySettings(Document, PaymentGatewayBase):
@@ -48,7 +49,9 @@ class BuzzGatewaySettings(Document, PaymentGatewayBase):
 		)
 
 	def get_payment_status(self, session_id: str) -> str:
-		return hub.call_hub("get_status", order_id=session_id)
+		# A refunded order was captured first; its refunds are recorded through `list_refunds`.
+		status = hub.call_hub("get_status", order_id=session_id)
+		return "Paid" if status in HUB_REFUNDED_STATUSES else status
 
 	def refund_payment(
 		self,
@@ -77,6 +80,9 @@ class BuzzGatewaySettings(Document, PaymentGatewayBase):
 		return RefundResult(
 			**hub.call_hub("get_refund_status", "POST", order_id=session_id, refund_id=refund_id)
 		)
+
+	def list_refunds(self, session_id: str) -> list[RefundResult]:
+		return [RefundResult(**refund) for refund in hub.call_hub("get_refunds", order_id=session_id)]
 
 	def handle_webhook(self, payload: bytes, headers: dict) -> WebhookEvent | None:
 		# Anyone can post here, so the status is read back from the hub, never from the body.
