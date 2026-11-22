@@ -49,9 +49,15 @@ class HostedPayments:
 		return hosted_refund(payments.refund(payment_request.name, amount, reference=order_id))
 
 	def refund_status(self, order_id: str, refund_id: str) -> HostedRefund:
-		filters = {"name": refund_id, "payment_request": self.payment_request(order_id)}
-		if not frappe.db.exists("Gateway Refund", filters):
+		payment_request = self.payment_request(order_id)
+		status = frappe.db.get_value(
+			"Gateway Refund", {"name": refund_id, "payment_request": payment_request}, "status"
+		)
+		if not status:
 			RefundNotFound.throw()
+		if status == "Pending":
+			# Asked again here, so a lost gateway webhook does not keep the refund Pending.
+			payments.sync_refunds(payment_request)
 		return hosted_refund(frappe.get_doc("Gateway Refund", refund_id))
 
 	def currencies(self) -> list[str]:

@@ -275,6 +275,13 @@ class TestHostedRefunds(HostedPaymentsTestCase):
 		)
 		self.assertEqual(self.refunded_amount(), 200)
 
+	def test_pending_refund_is_refreshed_from_the_gateway_when_read(self):
+		payment_testing.set_next_refund_status("Pending")
+		pending = self.refund(200)
+		payment_testing.set_refund_status(pending.refund_id, "Processed")
+		settled = self.refund_status(pending.refund_id)
+		self.assertEqual((settled.status, self.refunded_amount()), ("Processed", 200))
+
 	def test_refund_of_another_order_is_not_found(self):
 		other_order = self.create_other_order()
 		other_refund = self.refund(100)

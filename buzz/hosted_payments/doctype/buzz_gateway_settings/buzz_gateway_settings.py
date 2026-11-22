@@ -50,7 +50,10 @@ class BuzzGatewaySettings(Document, PaymentGatewayBase):
 		return RefundResult(**hub.call_hub("refund", "POST", order_id=session_id, amount=amount))
 
 	def get_refund_status(self, session_id: str, refund_id: str) -> RefundResult:
-		return RefundResult(**hub.call_hub("get_refund_status", order_id=session_id, refund_id=refund_id))
+		# POST: the hub may refresh the refund from its gateway.
+		return RefundResult(
+			**hub.call_hub("get_refund_status", "POST", order_id=session_id, refund_id=refund_id)
+		)
 
 	def handle_webhook(self, payload: bytes, headers: dict) -> WebhookEvent | None:
 		# Anyone can post here, so the status is read back from the hub, never from the body.

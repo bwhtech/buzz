@@ -24,7 +24,7 @@ def refund(order_id: str, amount: float) -> HostedRefund:
 	return HostedPayments().refund(order_id, amount)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def get_refund_status(order_id: str, refund_id: str) -> HostedRefund:
 	return HostedPayments().refund_status(order_id, refund_id)
 
