@@ -16,9 +16,9 @@ test.describe("Create event", () => {
 		const create = page.getByRole("button", { name: "Create", exact: true })
 		await expect(create).toBeEnabled()
 		await create.click()
-		// The schedule is pre-filled, so only the name and the venue are outstanding.
+		// The date and the venue can be announced later, so only the name is outstanding.
 		const missing = page.getByRole("status").filter({ hasText: "Add these to create the event" })
 		await expect(missing).toContainText("Name")
-		await expect(missing).toContainText("Venue")
+		await expect(missing).not.toContainText("Venue")
 	})
 })

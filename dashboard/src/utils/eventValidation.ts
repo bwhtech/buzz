@@ -6,8 +6,6 @@ export interface EventDraft {
 	startTime: string
 	endDate: string
 	endTime: string
-	venue: string
-	zoomMeeting: boolean
 }
 
 export interface ChecklistItem {
@@ -21,8 +19,8 @@ export interface ChecklistItem {
  * What an event needs before it can be created, and what the draft already has.
  *
  * Shown as a live checklist rather than enforced by a disabled button, so the organiser
- * can see which field is holding the save back. About and the banner are optional: an
- * event needs a name, when it runs, and where.
+ * can see which field is holding the save back. Only the name is required: the date and
+ * the venue can be announced later.
  */
 export function eventDraftChecklist(draft: EventDraft): ChecklistItem[] {
 	const endsBeforeItStarts = isEndBeforeStart(
@@ -33,13 +31,6 @@ export function eventDraftChecklist(draft: EventDraft): ChecklistItem[] {
 	)
 	return [
 		{ label: "Name", done: Boolean(draft.title.trim()), field: "event-title" },
-		{
-			label: "Start date and time",
-			done: Boolean(draft.startDate && draft.startTime),
-			field: "event-schedule-start",
-		},
-		{ label: "End time", done: Boolean(draft.endTime), field: "event-schedule-end" },
-		{ label: "Venue", done: Boolean(draft.venue || draft.zoomMeeting), field: "event-location" },
 		// A schedule nobody has filled in yet cannot run backwards, so this only earns a row
 		// once it can actually fail.
 		...(endsBeforeItStarts

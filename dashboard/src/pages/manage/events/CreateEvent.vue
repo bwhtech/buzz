@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Alert, ErrorMessage, toast } from "frappe-ui"
-import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue"
 import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router"
 
@@ -18,7 +17,6 @@ import { currentTeam, selectTeam, teams, teamsLoaded } from "@/data/teams"
 import { defaultSchedule } from "@/utils/eventDates"
 import { eventDraftChecklist, isDraftComplete } from "@/utils/eventValidation"
 import { resolveLoginRedirect } from "@/utils/loginRedirect"
-import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 import { serverErrorMessage } from "@/utils/serverError"
 import { canCreateEvents } from "@/utils/teamRoles"
 import { currentTimeZone } from "@/utils/timeZones"
@@ -37,7 +35,6 @@ useQueryParamRecord(
 )
 
 const title = ref("")
-const about = ref("")
 const bannerImage = ref("")
 
 const opening = defaultSchedule()
@@ -52,8 +49,6 @@ const draft = computed(() => ({
 	startTime: schedule.startTime,
 	endDate: schedule.endDate,
 	endTime: schedule.endTime,
-	venue: venue.value,
-	zoomMeeting: zoomMeeting.value,
 }))
 
 const checklist = computed(() => eventDraftChecklist(draft.value))
@@ -63,7 +58,6 @@ const errorMessage = computed(() => serverErrorMessage(createEvent.error))
 const isDirty = computed(() =>
 	Boolean(
 		title.value ||
-		about.value ||
 		bannerImage.value ||
 		venue.value ||
 		zoomMeeting.value ||
@@ -144,12 +138,6 @@ const footerMissing = computed({
 	set: (open: boolean) => (showMissing.value = open),
 })
 
-const locationError = computed(() =>
-	saveAttempted.value && !venue.value && !zoomMeeting.value
-		? "Pick a venue, or create a Zoom meeting"
-		: "",
-)
-
 function focusFirstMissing() {
 	const target = document.getElementById(missingItems.value[0]?.field ?? "")
 	const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -184,11 +172,10 @@ async function save() {
 			event: {
 				team: currentTeam.value?.name,
 				title: title.value.trim(),
-				start_date: schedule.startDate,
-				start_time: schedule.startTime,
+				start_date: schedule.startDate || null,
+				start_time: schedule.startTime || null,
 				end_date: schedule.endDate || null,
-				end_time: schedule.endTime,
-				about: about.value || null,
+				end_time: schedule.endTime || null,
 				banner_image: bannerImage.value || null,
 				time_zone: schedule.timeZone || null,
 				venue: venue.value || null,
@@ -272,28 +259,6 @@ function goBack(path: string) {
 				/>
 
 				<section>
-					<h2 class="mb-2 text-sm font-medium text-ink-gray-6">{{ __("About") }}</h2>
-					<div
-						class="overflow-hidden rounded-5 border border-outline-gray-2 focus-within:border-outline-gray-3"
-					>
-						<Editor
-							v-model="about"
-							:extensions="richTextExtensions"
-							placeholder="What is this event about?"
-							:editable="canCreate"
-						>
-							<EditorFixedMenu
-								:items="richTextToolbar"
-								class="overflow-x-auto border-b border-outline-gray-1 px-1.5 py-1"
-							/>
-							<EditorContent
-								class="prose-sm min-h-40 max-w-none p-3 text-ink-gray-8 focus:outline-none"
-							/>
-						</Editor>
-					</div>
-				</section>
-
-				<section>
 					<h2 class="mb-2 text-sm font-medium" :class="labelTone(SCHEDULE_FIELDS)">
 						{{ __("When") }}
 					</h2>
@@ -309,7 +274,6 @@ function goBack(path: string) {
 						v-model:zoom-meeting="zoomMeeting"
 						:team="currentTeam?.name ?? ''"
 						:disabled="!canCreate"
-						:error="locationError"
 					/>
 				</section>
 
