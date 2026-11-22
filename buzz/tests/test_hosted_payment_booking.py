@@ -101,9 +101,9 @@ class TestHostedPaymentBooking(BuzzGatewayTestCase):
 		)
 		self.assertEqual(frappe.db.get_value("Event Booking", pro_request.ref_docname, "docstatus"), 0)
 
-	def test_ping_without_an_order_is_rejected(self):
-		with self.assertRaises(AssertionError):
-			self.ping({"status": "Paid"})
+	def test_ping_without_an_order_is_ignored(self):
+		self.ping({"status": "Paid"})
+		self.assertFalse(frappe.db.exists("Error Log", {"method": "Buzz webhook verification failed"}))
 
 	def confirmed_booking(self):
 		self.book()

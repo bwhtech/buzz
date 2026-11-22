@@ -58,3 +58,12 @@ class TestBuzzGatewaySettings(BuzzGatewayTestCase):
 		self.assertEqual(self.gateway.get_refund_status(order_id, pending.refund_id).status, "Pending")
 		payment_testing.send_refund_webhook(pending.refund_id, "Processed")
 		self.assertEqual(self.gateway.get_refund_status(order_id, pending.refund_id).status, "Processed")
+
+	def test_ping_names_the_order_to_sync(self):
+		event = self.gateway.handle_webhook(b'{"order_id": "HP-1", "status": "Paid"}', {})
+		self.assertEqual((event.session_id, event.status, event.sync_status), ("HP-1", "Pending", True))
+
+	def test_malformed_ping_is_ignored(self):
+		for payload in (b"not json", b"\xff", b"[]", b'{"status": "Paid"}', b'{"order_id": ["HP-1"]}'):
+			with self.subTest(payload=payload):
+				self.assertIsNone(self.gateway.handle_webhook(payload, {}))
