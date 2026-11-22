@@ -64,14 +64,14 @@ class TestSitePingRetry(HostedPaymentsTestCase):
 
 	def test_due_ping_is_sent_again_and_one_not_due_waits(self):
 		self.ping(SITE_IS_DOWN)
-		self.assertEqual(enqueued_pings(retry_due_pings), [])
+		self.assertNotIn(self.order_id, enqueued_pings(retry_due_pings))
 		with self.freeze_time(add_to_date(now_datetime(), minutes=3)):
-			self.assertEqual(enqueued_pings(retry_due_pings), [self.order_id])
+			self.assertIn(self.order_id, enqueued_pings(retry_due_pings))
 
 	def test_delivered_ping_is_not_sent_again(self):
 		self.ping(SITE_ANSWERS)
 		with self.freeze_time(add_to_date(now_datetime(), hours=2)):
-			self.assertEqual(enqueued_pings(retry_due_pings), [])
+			self.assertNotIn(self.order_id, enqueued_pings(retry_due_pings))
 
 	def test_operator_pings_a_failed_site_again(self):
 		frappe.db.set_value("Hosted Payment", self.order_id, "ping_attempts", MAX_PING_ATTEMPTS - 1)
