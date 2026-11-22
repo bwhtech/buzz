@@ -7,6 +7,7 @@ from bwh_payments.services.razorpay.stub import (  # nosemgrep: frappe-monkey-pa
 from buzz.api.hosted_payments import create_order, refund
 from buzz.api.hosted_payments.exceptions import RefundExceedsBalance
 from buzz.tests.base_test_cases import HostedPaymentsTestCase
+from buzz.tests.factories import HostedPayoutFactory
 
 
 class HubRefundRaceTestCase(HostedPaymentsTestCase):
@@ -60,3 +61,20 @@ class TestRefundRetriedWhileAnotherWorkerMadeIt(HubRefundRaceTestCase):
 		retry = self.refund(200, "PRO-RFND-RACE")
 		self.assertEqual((retry.refund_id, retry.status, retry.amount), (name, "Pending", 200))
 		self.assertEqual(StubRazorpayClient.created_refunds, [])
+
+
+class TestPendingRefundAfterAnotherWorkerSettledOne(HubRefundRaceTestCase):
+	def test_the_mirror_and_the_payout_count_the_settled_refund(self):
+		settled = self.reserve_elsewhere(300)
+		payment_testing.commit_elsewhere(
+			"update `tabGateway Refund` set status = 'Processed' where name = %s", (settled,)
+		)
+		payment_testing.set_next_refund_status("Pending")
+
+		self.assertEqual(self.refund(200, frappe.generate_hash()).status, "Pending")
+
+		self.assertEqual(frappe.db.get_value("Hosted Payment", self.order_id, "refunded_amount"), 300)
+		payout = HostedPayoutFactory.create(team=self.team)
+		payout.get_payments()
+		[line] = [line for line in payout.lines if line.hosted_payment == self.order_id]
+		self.assertEqual(line.refunded, 300)

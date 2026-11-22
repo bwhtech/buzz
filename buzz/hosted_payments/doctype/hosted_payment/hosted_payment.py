@@ -4,8 +4,9 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import now_datetime
+from frappe.utils import flt, now_datetime
 
+from buzz.hosted_payments.currency import round_to_currency
 from buzz.hosted_payments.webhook_ping import enqueue_ping
 
 
@@ -48,10 +49,22 @@ class HostedPayment(Document):
 		self.db_set({"payment_method": payment_method, "paid_on": now_datetime()})
 
 	def on_refund_update(self, gateway_refund) -> None:
-		refunded = frappe.db.get_value("Gateway Payment Request", self.payment_request, "refund_amount")
-		self.db_set("refunded_amount", refunded)
+		self.db_set("refunded_amount", self.processed_refund_total())
 		if gateway_refund.status != "Pending":
 			enqueue_ping(self.name)
+
+	def processed_refund_total(self) -> float:
+		"""Locking reads under the request lock, since a plain read keeps the snapshot from before another
+		refund settled."""
+		frappe.db.get_value("Gateway Payment Request", self.payment_request, "name", for_update=True)
+		amounts = frappe.db.get_values(
+			"Gateway Refund",
+			{"payment_request": self.payment_request, "status": "Processed"},
+			"amount",
+			for_update=True,
+			pluck=True,
+		)
+		return round_to_currency(sum(flt(amount) for amount in amounts), self.currency)
 
 	@frappe.whitelist(methods=["POST"])
 	def ping_site_again(self) -> None:
