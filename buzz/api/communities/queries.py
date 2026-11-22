@@ -92,7 +92,7 @@ def upcoming_event_options(filters: dict) -> list[EventOption]:
 	"""Published events that have not ended, as picker options."""
 	events = frappe.get_all(
 		"Buzz Event",
-		filters=upcoming_filters() | filters,
+		filters=upcoming_filters(filters),
 		fields=["name", "title", "start_date", "team.team_name as team_name", *TIME_FIELDS],
 		order_by="start_date asc",
 		limit=EVENT_OPTION_LIMIT,

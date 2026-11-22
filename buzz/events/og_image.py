@@ -168,6 +168,10 @@ class EventOgImage(OgImage):
 
 	def build_meta_line(self) -> str:
 		page = EventPage(self.event.route)
+		venue = page.venue()
+		place = _("Online") if self.event.medium == "Online" else venue and venue["name"]
+		if not self.event.start_date:
+			return " · ".join([_("Date to be announced"), place or _("Venue to be announced")])
 		start, end = getdate(self.event.start_date), getdate(self.event.end_date or self.event.start_date)
 		if start == end:
 			time = format_time(self.event.start_time)
@@ -180,8 +184,6 @@ class EventOgImage(OgImage):
 			date = f"{start.day}{RANGE_SEPARATOR}{format_date(end, 'd MMM')}"
 		else:
 			date = f"{format_date(start, 'd MMM')}{RANGE_SEPARATOR}{format_date(end, 'd MMM')}"
-		venue = page.venue()
-		place = _("Online") if self.event.medium == "Online" else venue and venue["name"]
 		return " · ".join(part for part in [date, place] if part)
 
 	def hash_parts(self) -> list:

@@ -74,7 +74,7 @@ class BuzzEvent(Document):
 		co_hosts: DF.Table[EventCoHost]
 		default_ticket_type: DF.Link | None
 		end_date: DF.Date | None
-		end_time: DF.Time
+		end_time: DF.Time | None
 		external_links: DF.Table[EventExternalLink]
 		external_registration_page: DF.Check
 		featured_speakers: DF.Table[EventFeaturedSpeaker]
@@ -104,8 +104,8 @@ class BuzzEvent(Document):
 		sponsor_deck_cc: DF.SmallText | None
 		sponsor_deck_email_template: DF.Link | None
 		sponsor_deck_reply_to: DF.Data | None
-		start_date: DF.Date
-		start_time: DF.Time
+		start_date: DF.Date | None
+		start_time: DF.Time | None
 		tax_inclusive: DF.Check
 		tax_label: DF.Data | None
 		tax_percentage: DF.Percent
@@ -152,6 +152,9 @@ class BuzzEvent(Document):
 			self.venue = None
 		else:
 			self.meeting_link = None
+
+	def has_schedule(self) -> bool:
+		return bool(self.start_date and self.start_time and self.end_time)
 
 	def get_venue_name(self) -> str | None:
 		return frappe.get_cached_value("Event Venue", self.venue, "venue_name") if self.venue else None
@@ -318,8 +321,8 @@ class BuzzEvent(Document):
 	@frappe.whitelist()
 	@only_if_app_installed("zoom_integration", raise_exception=True)
 	def create_webinar_on_zoom(self):
-		if not self.end_time:
-			frappe.throw(frappe._("End time is needed for Zoom Webinar creation"))
+		if not self.has_schedule():
+			frappe.throw(_("Set the date and time before creating a Zoom Webinar"))
 
 		zoom_webinar = frappe.get_doc(
 			{
@@ -340,8 +343,8 @@ class BuzzEvent(Document):
 	@frappe.whitelist()
 	@only_if_app_installed("zoom_integration", raise_exception=True)
 	def create_meeting_on_zoom(self):
-		if not self.end_time:
-			frappe.throw(_("End time is needed for Zoom Meeting creation"))
+		if not self.has_schedule():
+			frappe.throw(_("Set the date and time before creating a Zoom Meeting"))
 
 		zoom_meeting = frappe.get_doc(
 			{
@@ -395,7 +398,7 @@ class BuzzEvent(Document):
 
 	@only_if_app_installed("zoom_integration")
 	def update_zoom_webinar(self):
-		if not self.zoom_webinar:
+		if not (self.zoom_webinar and self.has_schedule()):
 			return
 
 		if (
@@ -417,7 +420,7 @@ class BuzzEvent(Document):
 
 	@only_if_app_installed("zoom_integration")
 	def update_zoom_meeting(self):
-		if not self.zoom_meeting:
+		if not (self.zoom_meeting and self.has_schedule()):
 			return
 
 		if (

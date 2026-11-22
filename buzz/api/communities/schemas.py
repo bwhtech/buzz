@@ -15,7 +15,7 @@ class CommunityOption(APIResponse):
 class EventOption(APIResponse):
 	name: str
 	title: str
-	start_date: date
+	start_date: date | None = None
 	team_name: str
 
 
@@ -28,7 +28,7 @@ class CommunityRequest(APIResponse):
 	event_url: str | None
 	event_title: str
 	event_route: str | None
-	start_date: date
+	start_date: date | None = None
 	start_time: timedelta | None
 	# The venue, "Online", or for an external event its location.
 	place: str | None

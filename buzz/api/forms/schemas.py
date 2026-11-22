@@ -10,7 +10,7 @@ class FormEventSummary(APIResponse):
 	title: str
 	route: str | None
 	banner_image: str | None
-	start_date: date
+	start_date: date | None
 	end_date: date | None
 	start_time: timedelta | None
 	end_time: timedelta | None

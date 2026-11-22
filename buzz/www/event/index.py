@@ -147,12 +147,14 @@ class EventPage:
 		)
 
 	def event_date(self) -> dict:
+		if not self.event.start_date:
+			return {"month": "", "day": "", "full_date": _("Date to be announced"), "time_range": ""}
 		start_date = getdate(self.event.start_date)
 		return {
 			"month": format_date(start_date, "MMM"),
 			"day": start_date.day,
 			"full_date": format_full_date(start_date),
-			"time_range": join_parts([self.time_range(), self.timezone_label], " "),
+			"time_range": join_parts([self.time_range(), self.event.start_time and self.timezone_label], " "),
 		}
 
 	def time_range(self) -> str:
@@ -180,7 +182,7 @@ class EventPage:
 
 	@property
 	def start_datetime(self):
-		return get_datetime(f"{self.event.start_date} {self.event.start_time or '00:00:00'}")
+		return get_datetime(f"{self.event.start_date or nowdate()} {self.event.start_time or '00:00:00'}")
 
 	def hosts(self) -> list:
 		# The hosting team links to its public page, or a personal team to its owner's profile.

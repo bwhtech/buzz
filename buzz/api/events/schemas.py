@@ -26,7 +26,7 @@ class MyEvent(APIResponse):
 	name: str
 	title: str
 	route: str | None = None
-	start_date: date
+	start_date: date | None = None
 	end_date: date | None = None
 	start_time: timedelta | None = None
 	end_time: timedelta | None = None
@@ -74,7 +74,7 @@ class EventDetail(APIResponse):
 	route: str | None = None
 	team: str | None = None
 	modified: datetime
-	start_date: date
+	start_date: date | None = None
 	end_date: date | None = None
 	start_time: timedelta | None = None
 	end_time: timedelta | None = None
@@ -196,9 +196,9 @@ class RouteAvailability(APIResponse):
 class NewEvent(APIRequest):
 	team: str
 	title: str
-	start_date: date
-	start_time: timedelta
-	end_time: timedelta
+	start_date: date | None = None
+	start_time: timedelta | None = None
+	end_time: timedelta | None = None
 	end_date: date | None = None
 	about: str | None = None
 	banner_image: str | None = None

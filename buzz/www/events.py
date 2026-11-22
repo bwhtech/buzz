@@ -1,5 +1,5 @@
 from collections import Counter
-from datetime import datetime
+from datetime import date, datetime
 from urllib.parse import quote
 
 import frappe
@@ -56,10 +56,12 @@ def hosting_banner_visible(is_guest: bool) -> bool:
 	return is_guest and bool(frappe.db.get_single_value("Buzz Settings", "show_hosting_banner"))
 
 
-def upcoming_filters() -> dict:
+def upcoming_filters(extra: dict | None = None) -> list:
 	# A day of slack for events in timezones behind the site's; exclude_ended_events makes the exact cut.
-	filters = {"is_published": 1, "route": ["is", "set"], "end_date": [">=", add_days(today(), -1)]}
-	return filters | listing_filters()
+	# An event without a date has not been announced yet, so it stays upcoming.
+	event = frappe.qb.DocType("Buzz Event")
+	not_over = (event.end_date >= add_days(today(), -1)) | event.start_date.isnull()
+	return [not_over, {"is_published": 1, "route": ["is", "set"]} | listing_filters() | (extra or {})]
 
 
 def current_time_in_event_timezone(event) -> datetime:
@@ -67,12 +69,16 @@ def current_time_in_event_timezone(event) -> datetime:
 
 
 def has_started(event) -> bool:
+	if not event.start_date:
+		return False
 	return datetime.combine(
 		getdate(event.start_date), get_time(event.start_time)
 	) <= current_time_in_event_timezone(event)
 
 
 def has_ended(event) -> bool:
+	if not event.start_date:
+		return False
 	# A one-day event leaves `end_date` blank, and getdate(None) would read it as today.
 	return datetime.combine(
 		getdate(event.end_date or event.start_date), get_time(event.end_time)
@@ -144,7 +150,7 @@ def event_card(event) -> dict:
 		"url": f"/events/{event.route}",
 		"date": format_day(event.start_date),
 		"is_live": has_started(event) and not has_ended(event),
-		"place": _("Online") if event.medium == "Online" else event.venue_name,
+		"place": _("Online") if event.medium == "Online" else event.venue_name or _("Venue to be announced"),
 		"image": event.card_image or event.banner_image,
 	}
 
@@ -171,7 +177,7 @@ class DiscoverPage:
 	def featured_events(self) -> list:
 		events = frappe.get_all(
 			"Buzz Event",
-			filters=upcoming_filters() | {"is_featured": 1},
+			filters=upcoming_filters({"is_featured": 1}),
 			fields=CARD_FIELDS + TIME_FIELDS,
 			order_by="start_date asc",
 			limit=FEATURED_LIMIT,
@@ -184,7 +190,7 @@ class DiscoverPage:
 		query = frappe.qb.get_query(
 			"Buzz Event",
 			fields=CARD_FIELDS + TIME_FIELDS,
-			filters=upcoming_filters() | {"is_featured": 0},
+			filters=upcoming_filters({"is_featured": 0}),
 		)
 		events = (
 			query.left_join(ticket)
@@ -194,7 +200,9 @@ class DiscoverPage:
 			.orderby(event.start_date)
 			.limit(limit)
 		).run(as_dict=True)
-		return sorted(exclude_ended_events(events), key=lambda event: event.start_date, reverse=True)
+		return sorted(
+			exclude_ended_events(events), key=lambda event: event.start_date or date.min, reverse=True
+		)
 
 	def popular_cards(self) -> list[dict]:
 		"""Events hosted here first; external events a community approved fill any spots left."""
@@ -235,7 +243,9 @@ class DiscoverPage:
 		]
 
 	def topic_counts(self) -> Counter:
-		events = frappe.get_all("Buzz Event", filters=upcoming_filters(), fields=["name", *TIME_FIELDS])
+		events = frappe.get_all(
+			"Buzz Event", filters=upcoming_filters(), fields=["name", "start_date", *TIME_FIELDS]
+		)
 		names = [event.name for event in exclude_ended_events(events)] or [""]
 		topics = frappe.get_all(
 			"Event Topic Link",
@@ -262,7 +272,7 @@ class EventListing:
 	def events(self) -> list:
 		events = frappe.get_all(
 			"Buzz Event",
-			filters=upcoming_filters() | self.event_filters(),
+			filters=upcoming_filters(self.event_filters()),
 			fields=CARD_FIELDS + TIME_FIELDS,
 			order_by="start_date asc",
 			limit=LISTING_LIMIT,

@@ -164,7 +164,7 @@ class EventTicket(Document):
 				}
 			)
 
-		if event_doc.attach_calendar_invite:
+		if event_doc.attach_calendar_invite and event_doc.start_date:
 			ics_content = generate_ics_file(event_doc, self.attendee_email, meeting)
 			attachments.append(
 				{

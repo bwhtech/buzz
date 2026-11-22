@@ -10,6 +10,8 @@ def event_countdown(event) -> dict | None:
 	"""Start and end of the banner countdown, or None once the event is over."""
 	# An event with no closing time runs to the end of its last day.
 	# Whole seconds: JavaScript only promises to parse milliseconds.
+	if not event.start_date:
+		return None
 	zone = event_time_zone(event)
 	start_time = get_time(event.start_time) if event.start_time else clock_time.min
 	end_time = get_time(event.end_time) if event.end_time else clock_time(23, 59, 59)

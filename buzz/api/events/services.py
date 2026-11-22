@@ -112,6 +112,8 @@ def events_for(user: str, filters: MyEventFilters | None = None) -> list[MyEvent
 			Case().when(ticketed, 1).else_(0).as_("is_attendee"),
 		)
 		.where(hosted | ticketed)
+		# Undated events trail the dated ones they are upcoming with
+		.orderby(event.start_date.isnull())
 		.orderby(event.start_date)
 		.orderby(event.start_time)
 	)
@@ -168,7 +170,7 @@ def narrow(query, event, hosted, ticketed, filters: MyEventFilters | None):
 def split_by_date(events: list[MyEvent]) -> tuple[list[MyEvent], list[MyEvent]]:
 	upcoming, past = [], []
 	for event in events:
-		is_over = (event.end_date or event.start_date) < getdate()
+		is_over = bool(event.start_date) and (event.end_date or event.start_date) < getdate()
 		(past if is_over else upcoming).append(event)
 	return upcoming, list(reversed(past))
 
@@ -677,7 +679,8 @@ def create_event(new: NewEvent) -> CreatedEvent:
 		}
 	).insert()
 
-	if new.zoom_meeting:
+	# Zoom needs a time slot; an unscheduled event books its meeting from the event later
+	if new.zoom_meeting and event.has_schedule():
 		book_zoom_meeting(event)
 
 	return CreatedEvent(name=str(event.name), title=event.title)
