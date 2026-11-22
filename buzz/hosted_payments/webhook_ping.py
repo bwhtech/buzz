@@ -46,7 +46,17 @@ def start_delivery(order_id: str) -> int:
 
 
 def ping_site(order_id: str, webhook_url: str, generation: int) -> None:
-	"""The site re-reads the status from the hub, so the ping carries only the order."""
+	"""The site re-reads the status from the hub, so the ping carries only the order, and a retry that pings
+	again is harmless."""
+	try:
+		deliver_ping(order_id, webhook_url, generation)
+	except (frappe.QueryDeadlockError, frappe.QueryTimeoutError) as error:
+		# A deadlock, or with snapshot isolation a lock on the row a newer delivery changed after this job
+		# read it. Frappe version-16's job runner retries RetryBackgroundJobError, not the DB errors it wraps.
+		raise frappe.RetryBackgroundJobError from error
+
+
+def deliver_ping(order_id: str, webhook_url: str, generation: int) -> None:
 	try:
 		make_post_request(webhook_url, json={"order_id": order_id}, timeout=30)
 	except requests.RequestException:

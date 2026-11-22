@@ -116,3 +116,11 @@ class TestSitePingRetry(HostedPaymentsTestCase):
 			[retry] = [job for job in enqueued_ping_jobs(retry_due_pings) if job["order_id"] == self.order_id]
 		self.ping(SITE_ANSWERS, retry)
 		self.assertEqual(self.ping_state(), ("Delivered", 1, None))
+
+	def test_a_lock_conflict_recording_the_ping_is_handed_back_to_the_job_runner_to_retry(self):
+		# A deadlock, or with snapshot isolation a newer delivery changing the row after this job read it.
+		conflict = patch(
+			"buzz.hosted_payments.webhook_ping.update_ping_state", side_effect=frappe.QueryDeadlockError
+		)
+		with conflict, self.assertRaises(frappe.RetryBackgroundJobError):
+			self.ping(SITE_ANSWERS)
