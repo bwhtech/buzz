@@ -1,5 +1,6 @@
 import frappe
 import requests
+from bwh_payments.services import GatewayUnavailableError
 from frappe import _
 from frappe.frappeclient import FrappeClient
 from frappe.utils import strip_html
@@ -38,9 +39,14 @@ class BuzzEventsClient(FrappeClient):
 				timeout=TIMEOUT_SECONDS,
 				**options,
 			)
+		except requests.RequestException:
+			throw_unreachable(GatewayUnavailableError)
+		if response.status_code == 429 or response.status_code >= 500:
+			throw_unreachable(GatewayUnavailableError)
+		try:
 			return self.read(response)
-		except (requests.RequestException, ValueError):
-			frappe.throw(_("buzz.events could not be reached. Please try again."), title=_("buzz.events"))
+		except ValueError:
+			throw_unreachable(frappe.ValidationError)
 
 	def read(self, response: requests.Response):
 		"""The hub's own error message reaches the buyer as it is."""
@@ -48,3 +54,8 @@ class BuzzEventsClient(FrappeClient):
 		if errors and errors[0].get("message"):
 			frappe.throw(strip_html(errors[0]["message"]), title=_("buzz.events"))
 		return self.post_process(response)
+
+
+def throw_unreachable(error: type[frappe.ValidationError]) -> None:
+	"""GatewayUnavailableError says a retry may work, so bwh_payments' webhook job retries it."""
+	frappe.throw(_("buzz.events could not be reached. Please try again."), error, title=_("buzz.events"))

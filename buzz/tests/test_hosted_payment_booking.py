@@ -2,6 +2,7 @@ import json
 from unittest.mock import patch
 
 import frappe
+import requests
 from bwh_payments import testing as payment_testing
 from bwh_payments.bwh_payments.checkout import get_return_url, return_from_gateway
 from bwh_payments.bwh_payments.doctype.razorpay_gateway_settings.razorpay_gateway_settings import (
@@ -13,6 +14,7 @@ from frappe.utils import get_url
 from buzz.api.booking import process_booking
 from buzz.api.booking.schemas import BookingRequest
 from buzz.api.hosted_payments import confirm_checkout, return_to_site
+from buzz.hosted_payments.hub import call_hub as call_hub_over_http
 from buzz.tests.base_test_cases import BUZZ_GATEWAY, BuzzGatewayTestCase, create_paid_ticket_type
 from buzz.tests.factories import BuzzEventFactory, BuzzFormFactory, UserFactory
 
@@ -108,6 +110,19 @@ class TestHostedPaymentBooking(BuzzGatewayTestCase):
 			frappe.db.get_value("Gateway Payment Request", pro_request.name, "status"), "Pending"
 		)
 		self.assertEqual(frappe.db.get_value("Event Booking", pro_request.ref_docname, "docstatus"), 0)
+
+	def test_ping_while_the_hub_cannot_answer_is_retried(self):
+		self.book()
+		pro_request = self.pro_payment_request()
+		with (
+			patch("buzz.hosted_payments.hub.call_hub", call_hub_over_http),
+			patch("requests.Session.request", side_effect=requests.Timeout),
+			self.assertRaises(frappe.RetryBackgroundJobError),
+		):
+			self.ping({"order_id": pro_request.order_ref})
+		self.assertEqual(
+			frappe.db.get_value("Gateway Payment Request", pro_request.name, "status"), "Pending"
+		)
 
 	def test_ping_without_an_order_is_ignored(self):
 		self.ping({"status": "Paid"})

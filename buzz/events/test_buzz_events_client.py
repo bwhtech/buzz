@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import frappe
 import requests
+from bwh_payments.services import GatewayUnavailableError
 from frappe.tests import IntegrationTestCase
 
 from buzz.events.buzz_events_client import BuzzEventsClient
@@ -61,3 +62,23 @@ class TestBuzzEventsClient(IntegrationTestCase):
 			with self.subTest(answer=answer), patch(REQUEST, **answer):
 				with self.assertRaisesRegex(frappe.ValidationError, "buzz.events could not be reached"):
 					BuzzEventsClient().get("buzz.api.hosted_payments.get_currencies")
+
+	def test_a_hub_that_may_answer_later_is_reported_unavailable(self):
+		for answer in (
+			{"side_effect": requests.Timeout},
+			{"side_effect": requests.ConnectionError},
+			{"return_value": hub_response(429, {"errors": [{"message": "Too many requests"}]})},
+			{"return_value": hub_response(502, text="<html>")},
+			{"return_value": hub_response(503, {"errors": [{"message": "Down for maintenance"}]})},
+		):
+			with self.subTest(answer=answer), patch(REQUEST, **answer):
+				with self.assertRaisesRegex(GatewayUnavailableError, "buzz.events could not be reached"):
+					BuzzEventsClient().get("buzz.api.hosted_payments.get_status", {"order_id": "HP-1"})
+
+	def test_a_hub_refusal_is_not_reported_unavailable(self):
+		for status in (400, 403, 404, 417):
+			refusal = hub_response(status, {"errors": [{"message": "Order not found"}]})
+			with self.subTest(status=status), patch(REQUEST, return_value=refusal):
+				with self.assertRaises(frappe.ValidationError) as raised:
+					BuzzEventsClient().get("buzz.api.hosted_payments.get_status", {"order_id": "HP-1"})
+				self.assertNotIsInstance(raised.exception, GatewayUnavailableError)
