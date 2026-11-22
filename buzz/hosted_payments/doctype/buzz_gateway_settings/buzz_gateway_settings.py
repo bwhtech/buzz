@@ -22,7 +22,9 @@ class BuzzGatewaySettings(Document, PaymentGatewayBase):
 		reference: str | None = None,
 		customer: dict | None = None,
 		return_url: str | None = None,
+		description: str | None = None,
 	) -> CheckoutSession:
+		# The hub writes its own checkout description, naming the team.
 		return_url = return_url or get_url()
 		order = hub.call_hub(
 			"create_order",
