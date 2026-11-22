@@ -33,7 +33,7 @@ class TestHostedPayout(HostedPaymentsTestCase):
 
 	def refund(self, order_id: str, amount: float) -> None:
 		with self.set_user(self.integration):
-			refund(order_id, amount)
+			refund(order_id, amount, frappe.generate_hash())
 
 	def payout_with_payments(self, **overrides):
 		payout = HostedPayoutFactory.create(team=self.team, **overrides)

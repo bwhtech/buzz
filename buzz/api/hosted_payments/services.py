@@ -41,14 +41,18 @@ class HostedPayments:
 	def status(self, order_id: str) -> str:
 		return frappe.db.get_value("Gateway Payment Request", self.payment_request(order_id), "status")
 
-	def refund(self, order_id: str, amount: float) -> HostedRefund:
+	def refund(self, order_id: str, amount: float, idempotency_key: str) -> HostedRefund:
 		payment_request = frappe.get_doc("Gateway Payment Request", self.payment_request(order_id))
+		# The lock bwh_payments refunds under, so a concurrent retry waits and then finds this refund.
+		payment_request.lock_row()
+		if existing := keyed_refund(payment_request.name, idempotency_key):
+			return hosted_refund(existing)
 		# Rounded as bwh_payments rounds it, so both sides agree on what is left to refund.
 		amount = in_minor_units(amount, payment_request.currency_code)
 		remaining = payment_request.get_remaining_refundable_amount()
 		if amount > remaining:
 			RefundExceedsBalance.throw(remaining=remaining)
-		return hosted_refund(payments.refund(payment_request.name, amount, reference=order_id))
+		return hosted_refund(payments.refund(payment_request.name, amount, reference=idempotency_key))
 
 	def refund_status(self, order_id: str, refund_id: str) -> HostedRefund:
 		payment_request = self.payment_request(order_id)
@@ -168,6 +172,17 @@ def site_origin(url: str | None) -> tuple[str, str, int] | None:
 
 def in_minor_units(amount: float, currency: str) -> float:
 	return payments.from_minor_units(payments.to_minor_units(amount, currency), currency)
+
+
+def keyed_refund(payment_request: str, idempotency_key: str):
+	"""A locking read, since a plain one reads the transaction's snapshot from before the lock."""
+	name = frappe.db.get_value(
+		"Gateway Refund",
+		{"payment_request": payment_request, "reference": idempotency_key},
+		"name",
+		for_update=True,
+	)
+	return frappe.get_doc("Gateway Refund", name) if name else None
 
 
 def hosted_refund(gateway_refund) -> HostedRefund:

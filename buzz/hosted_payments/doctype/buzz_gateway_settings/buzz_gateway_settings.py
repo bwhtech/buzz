@@ -14,6 +14,7 @@ WEBHOOK_PATH = "/api/method/bwh_payments.bwh_payments.webhook.handle?gateway=Buz
 
 class BuzzGatewaySettings(Document, PaymentGatewayBase):
 	description = "Take payments through buzz.events, which pays them out to you later."
+	idempotent_refunds = True
 
 	def create_session(
 		self,
@@ -47,9 +48,15 @@ class BuzzGatewaySettings(Document, PaymentGatewayBase):
 	def get_payment_status(self, session_id: str) -> str:
 		return hub.call_hub("get_status", order_id=session_id)
 
-	def refund_payment(self, session_id: str, amount: float, currency: str | None = None) -> RefundResult:
+	def refund_payment(
+		self, session_id: str, amount: float, currency: str | None = None, idempotency_key: str | None = None
+	) -> RefundResult:
 		# The hub always sends a status: bwh_payments reads a missing one as Processed.
-		return RefundResult(**hub.call_hub("refund", "POST", order_id=session_id, amount=amount))
+		return RefundResult(
+			**hub.call_hub(
+				"refund", "POST", order_id=session_id, amount=amount, idempotency_key=idempotency_key
+			)
+		)
 
 	def get_refund_status(self, session_id: str, refund_id: str) -> RefundResult:
 		# POST: the hub may refresh the refund from its gateway.

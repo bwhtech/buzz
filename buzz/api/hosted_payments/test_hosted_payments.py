@@ -235,9 +235,9 @@ class TestHostedRefunds(HostedPaymentsTestCase):
 			self.order_id = create_order(**self.order_values(amount=550)).order_id
 		payment_testing.pay(frappe.db.get_value("Hosted Payment", self.order_id, "payment_request"))
 
-	def refund(self, amount: float, user: str | None = None):
+	def refund(self, amount: float, user: str | None = None, idempotency_key: str | None = None):
 		with self.set_user(user or self.integration):
-			return refund(self.order_id, amount)
+			return refund(self.order_id, amount, idempotency_key or frappe.generate_hash())
 
 	def refunded_amount(self) -> float:
 		return frappe.db.get_value("Hosted Payment", self.order_id, "refunded_amount")
@@ -252,6 +252,18 @@ class TestHostedRefunds(HostedPaymentsTestCase):
 		second = self.refund(350)
 		self.assertEqual((second.status, second.amount), ("Processed", 350))
 		self.assertEqual(self.refunded_amount(), 550)
+
+	def test_refund_retried_with_its_key_returns_the_first_refund(self):
+		first = self.refund(200, idempotency_key="PRO-RFND-1")
+		retry = self.refund(200, idempotency_key="PRO-RFND-1")
+		self.assertEqual((retry.refund_id, retry.status, retry.amount), (first.refund_id, "Processed", 200))
+		self.assertEqual(self.refunded_amount(), 200)
+
+	def test_refund_with_another_key_is_another_refund(self):
+		first = self.refund(200, idempotency_key="PRO-RFND-1")
+		second = self.refund(200, idempotency_key="PRO-RFND-2")
+		self.assertNotEqual(second.refund_id, first.refund_id)
+		self.assertEqual(self.refunded_amount(), 400)
 
 	def test_refund_over_the_balance_is_rejected(self):
 		self.refund(500)

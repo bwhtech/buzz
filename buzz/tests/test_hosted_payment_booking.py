@@ -7,6 +7,7 @@ from bwh_payments.bwh_payments.checkout import get_return_url, return_from_gatew
 from bwh_payments.bwh_payments.doctype.razorpay_gateway_settings.razorpay_gateway_settings import (
 	RazorpayGatewaySettings,
 )
+from bwh_payments.services import GatewayUnavailableError
 from frappe.utils import get_url
 
 from buzz.api.booking import process_booking
@@ -135,7 +136,9 @@ class TestHostedPaymentBooking(BuzzGatewayTestCase):
 		payment_testing.set_next_refund_status("Pending")
 		booking.refund(amount=200)
 		self.assertEqual(self.booking_refund(booking.name).status, "Initiated")
-		hub_refund = frappe.get_last_doc("Gateway Refund", {"reference": order_id})
+		hub_refund = frappe.get_last_doc(
+			"Gateway Refund", {"payment_request": self.hub_payment_request(order_id)}
+		)
 		payment_testing.send_refund_webhook(hub_refund.name, "Processed")
 		with patch("frappe.sendmail"):
 			booking.sync_refunds()
@@ -146,8 +149,31 @@ class TestHostedPaymentBooking(BuzzGatewayTestCase):
 		booking, order_id = self.confirmed_booking()
 		payment_testing.set_next_refund_status("Pending")
 		booking.refund(amount=200)
-		hub_refund = frappe.get_last_doc("Gateway Refund", {"reference": order_id})
+		hub_refund = frappe.get_last_doc(
+			"Gateway Refund", {"payment_request": self.hub_payment_request(order_id)}
+		)
 		payment_testing.send_refund_webhook(hub_refund.name, "Processed")
 		with patch("frappe.sendmail"):
 			self.ping({"order_id": order_id})
+		self.assertEqual(self.booking_refund(booking.name).status, "Processed")
+
+	def test_refund_whose_hub_answer_was_lost_is_made_once_when_synced(self):
+		booking, order_id = self.confirmed_booking()
+
+		def lose_the_refund_answer(method: str, http_method: str = "GET", **arguments):
+			result = self.call_hub_in_process(method, http_method, **arguments)
+			if method == "refund":
+				raise GatewayUnavailableError("buzz.events did not answer")
+			return result
+
+		with patch("buzz.hosted_payments.hub.call_hub", lose_the_refund_answer):
+			with self.assertRaises(GatewayUnavailableError):
+				booking.refund(amount=200)
+		self.assertEqual(self.booking_refund(booking.name).status, "Initiated")
+		with patch("frappe.sendmail"):
+			booking.sync_refunds()
+		hub_refunds = frappe.get_all(
+			"Gateway Refund", {"payment_request": self.hub_payment_request(order_id)}, pluck="amount"
+		)
+		self.assertEqual(hub_refunds, [200])
 		self.assertEqual(self.booking_refund(booking.name).status, "Processed")

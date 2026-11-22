@@ -49,14 +49,14 @@ class TestBuzzGatewaySettings(BuzzGatewayTestCase):
 
 	def test_refund_is_made_on_the_hub(self):
 		order_id = self.paid_order()
-		result = self.gateway.refund_payment(order_id, 200, "INR")
+		result = self.gateway.refund_payment(order_id, 200, "INR", idempotency_key=frappe.generate_hash())
 		self.assertEqual((result.status, result.amount), ("Processed", 200))
 		self.assertEqual(frappe.db.get_value("Hosted Payment", order_id, "refunded_amount"), 200)
 
 	def test_pending_refund_status_comes_from_the_hub(self):
 		order_id = self.paid_order()
 		payment_testing.set_next_refund_status("Pending")
-		pending = self.gateway.refund_payment(order_id, 200, "INR")
+		pending = self.gateway.refund_payment(order_id, 200, "INR", idempotency_key=frappe.generate_hash())
 		self.assertEqual(self.gateway.get_refund_status(order_id, pending.refund_id).status, "Pending")
 		payment_testing.send_refund_webhook(pending.refund_id, "Processed")
 		self.assertEqual(self.gateway.get_refund_status(order_id, pending.refund_id).status, "Processed")

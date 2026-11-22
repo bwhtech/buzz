@@ -21,8 +21,9 @@ def get_status(order_id: str) -> str:
 
 
 @frappe.whitelist(methods=["POST"])
-def refund(order_id: str, amount: float) -> HostedRefund:
-	return HostedPayments().refund(order_id, amount)
+def refund(order_id: str, amount: float, idempotency_key: str) -> HostedRefund:
+	"""A retry with the same `idempotency_key` returns the refund it made the first time."""
+	return HostedPayments().refund(order_id, amount, idempotency_key)
 
 
 @frappe.whitelist(methods=["POST"])
