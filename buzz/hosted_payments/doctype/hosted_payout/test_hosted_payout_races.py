@@ -1,62 +1,9 @@
-import threading
-from unittest.mock import patch
-
 import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.hosted_payments.doctype.hosted_payout.hosted_payout import HostedPayout
 from buzz.tests.factories import BuzzTeamFactory, HostedPaymentFactory, HostedPayoutFactory
-
-# How long the first payout operation waits, mid-way, for the overlapping one to finish.
-OVERLAP_SECONDS = 3
-
-
-class Session(threading.Thread):
-	"""A request of its own, on another thread and database connection. It commits when it succeeds."""
-
-	def __init__(self, action):
-		super().__init__()
-		self.site, self.sites_path = frappe.local.site, frappe.local.sites_path
-		self.action, self.result, self.error = action, None, None
-
-	def run(self):
-		frappe.init(self.site, sites_path=self.sites_path)
-		frappe.connect()
-		frappe.set_user("Administrator")
-		try:
-			self.result = self.action()
-			# A request of its own ends in a commit, as a real one does.
-			frappe.db.commit()  # nosemgrep: frappe-manual-commit
-		except Exception as error:
-			frappe.db.rollback()
-			self.error = error
-		finally:
-			frappe.destroy()
-
-
-def in_session(action):
-	session = Session(action)
-	session.start()
-	session.join()
-	if session.error:
-		raise session.error
-	return session.result
-
-
-def overlap(outer: Session, hook: str, inner: Session) -> None:
-	"""Pause `outer` at `hook`, after Frappe has locked its payout, while `inner` runs alongside."""
-	original = getattr(HostedPayout, hook)
-
-	def run_inner_then_continue(payout):
-		if threading.current_thread() is outer:
-			inner.start()
-			inner.join(OVERLAP_SECONDS)
-		original(payout)
-
-	with patch.object(HostedPayout, hook, run_inner_then_continue):
-		outer.start()
-		outer.join()
-	inner.join()
+from buzz.tests.sessions import Session, in_session, overlap
 
 
 def set_fallback_rate(rate: float | None) -> float | None:
@@ -135,7 +82,7 @@ class TestOverlappingPayouts(IntegrationTestCase):
 		cancelling = Session(lambda: cancel(self.settled_by))
 		submitting = Session(lambda: submit(self.drafts[0], "UTR-REFUND"))
 
-		overlap(cancelling, "before_cancel", submitting)
+		overlap(cancelling, HostedPayout, "before_cancel", submitting)
 
 		self.assertIsNone(submitting.error)
 		self.assert_refused_without_a_deadlock(cancelling, "Cancel it first")
@@ -145,7 +92,7 @@ class TestOverlappingPayouts(IntegrationTestCase):
 		submitting = Session(lambda: submit(self.drafts[0], "UTR-REFUND"))
 		cancelling = Session(lambda: cancel(self.settled_by))
 
-		overlap(submitting, "on_submit", cancelling)
+		overlap(submitting, HostedPayout, "on_submit", cancelling)
 
 		self.assertIsNone(submitting.error)
 		self.assert_refused_without_a_deadlock(cancelling, "Cancel it first")
@@ -155,7 +102,7 @@ class TestOverlappingPayouts(IntegrationTestCase):
 		late = Session(lambda: submit(self.drafts[1], "UTR-LATE"))
 		first = Session(lambda: submit(self.drafts[0], "UTR-FIRST"))
 
-		overlap(late, "before_submit", first)
+		overlap(late, HostedPayout, "before_submit", first)
 
 		self.assertIsNone(first.error)
 		self.assert_refused_without_a_deadlock(late, "Get payments again")
