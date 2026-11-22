@@ -1,5 +1,11 @@
+from unittest.mock import patch
+
 import frappe
+import requests
 from bwh_payments import testing as payment_testing
+from bwh_payments.services.razorpay.stub import (  # nosemgrep: frappe-monkey-patching-not-allowed
+	StubRazorpayClient,
+)
 from frappe.utils import get_url
 
 from buzz.api.hosted_payments import (
@@ -18,6 +24,7 @@ from buzz.api.hosted_payments.exceptions import (
 	UnsupportedCurrency,
 )
 from buzz.api.listings.exceptions import NotAnIntegration
+from buzz.hosted_payments.webhook_ping import ping_site
 from buzz.tests.base_test_cases import HostedPaymentsTestCase
 from buzz.tests.factories import BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
 
@@ -64,8 +71,17 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 		with self.assertRaises(UnsupportedCurrency):
 			self.create_order(currency="USD")
 
-	def pay(self, order_id: str) -> None:
-		payment_testing.pay(frappe.db.get_value("Hosted Payment", order_id, "payment_request"))
+	def test_checkout_names_the_team_and_the_order(self):
+		order = self.create_order(reference="PRO-GPR-7")
+		request = frappe.db.get_value("Hosted Payment", order.order_id, "payment_request")
+		self.assertEqual(
+			frappe.db.get_value("Gateway Payment Request", request, "description"),
+			"Pro Team via Buzz · PRO-GPR-7",
+		)
+
+	def pay(self, order_id: str, payment_method: str = "upi") -> None:
+		request = frappe.db.get_value("Hosted Payment", order_id, "payment_request")
+		payment_testing.pay(request, payment_method=payment_method)
 
 	def test_new_order_is_pending(self):
 		order = self.create_order()
@@ -78,6 +94,13 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 		self.assertEqual(frappe.db.get_value("Hosted Payment", order.order_id, "status"), "Paid")
 		with self.set_user(self.integration):
 			self.assertEqual(get_status(order.order_id), "Paid")
+
+	def test_paid_order_keeps_the_payment_method(self):
+		order = self.create_order()
+		self.pay(order.order_id, payment_method="card_credit")
+		self.assertEqual(
+			frappe.db.get_value("Hosted Payment", order.order_id, "payment_method"), "card_credit"
+		)
 
 	def test_another_team_cannot_read_an_order(self):
 		order = self.create_order()
@@ -104,6 +127,47 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 	def test_return_for_an_unknown_order_is_not_found(self):
 		with self.set_user("Guest"), self.assertRaises(frappe.DoesNotExistError):
 			return_to_site("no-such-order")
+
+	def pings_after(self, change_status) -> list[dict]:
+		with patch("frappe.enqueue") as enqueue:
+			change_status()
+		return [call.kwargs for call in enqueue.call_args_list if call.args == (ping_site,)]
+
+	def expire(self, order_id: str) -> None:
+		request = frappe.get_doc(
+			"Gateway Payment Request", frappe.db.get_value("Hosted Payment", order_id, "payment_request")
+		)
+		StubRazorpayClient.set_status(request.order_ref, "expired")
+		request.sync_status()
+
+	def test_payment_pings_the_stored_webhook_url(self):
+		order = self.create_order(webhook_url=get_url("/api/method/pro.webhook?gateway=Buzz&site=1"))
+		pings = self.pings_after(lambda: self.pay(order.order_id))
+		self.assertEqual(len(pings), 1)
+		self.assertEqual(pings[0]["webhook_url"], get_url("/api/method/pro.webhook?gateway=Buzz&site=1"))
+		self.assertEqual((pings[0]["order_id"], pings[0]["enqueue_after_commit"]), (order.order_id, True))
+
+	def test_expiry_is_mirrored_and_pinged(self):
+		order = self.create_order()
+		pings = self.pings_after(lambda: self.expire(order.order_id))
+		self.assertEqual([ping["order_id"] for ping in pings], [order.order_id])
+		self.assertEqual(frappe.db.get_value("Hosted Payment", order.order_id, "status"), "Expired")
+
+	def test_new_order_does_not_ping(self):
+		self.assertEqual(self.pings_after(self.create_order), [])
+
+	def test_ping_posts_only_the_order_id(self):
+		with patch("buzz.hosted_payments.webhook_ping.make_post_request") as post:
+			ping_site(order_id="HP-1", webhook_url="https://pro.example.com/webhook")
+		post.assert_called_once_with("https://pro.example.com/webhook", json={"order_id": "HP-1"}, timeout=30)
+
+	def test_failed_ping_is_logged_not_raised(self):
+		with (
+			patch("requests.Session.request", side_effect=requests.ConnectionError),
+			patch("frappe.log_error") as log_error,
+		):
+			ping_site(order_id="HP-1", webhook_url="https://pro.example.com/webhook")
+		log_error.assert_called_once()
 
 
 class TestHostedRefunds(HostedPaymentsTestCase):

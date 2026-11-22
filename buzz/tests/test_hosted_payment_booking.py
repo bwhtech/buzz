@@ -1,3 +1,4 @@
+import json
 from unittest.mock import patch
 
 import frappe
@@ -78,6 +79,31 @@ class TestHostedPaymentBooking(BuzzGatewayTestCase):
 		self.follow_as_guest(return_from_gateway, pro_request.name)
 		booking = frappe.get_doc("Event Booking", pro_request.ref_docname)
 		self.assertEqual(booking.docstatus, 0)
+
+	def ping(self, body: dict) -> None:
+		payment_testing.post_webhook(BUZZ_GATEWAY, json.dumps(body).encode(), {})
+
+	def test_ping_for_a_paid_order_confirms_the_booking_without_the_return(self):
+		self.book()
+		pro_request = self.pro_payment_request()
+		with patch("frappe.sendmail"):
+			payment_testing.pay(self.hub_payment_request(pro_request.order_ref))
+			self.ping({"order_id": pro_request.order_ref})
+		booking = frappe.get_doc("Event Booking", pro_request.ref_docname)
+		self.assertEqual((booking.docstatus, booking.status), (1, "Confirmed"))
+
+	def test_ping_status_is_read_from_the_hub_not_the_body(self):
+		self.book()
+		pro_request = self.pro_payment_request()
+		self.ping({"order_id": pro_request.order_ref, "status": "Paid"})
+		self.assertEqual(
+			frappe.db.get_value("Gateway Payment Request", pro_request.name, "status"), "Pending"
+		)
+		self.assertEqual(frappe.db.get_value("Event Booking", pro_request.ref_docname, "docstatus"), 0)
+
+	def test_ping_without_an_order_is_rejected(self):
+		with self.assertRaises(AssertionError):
+			self.ping({"status": "Paid"})
 
 	def confirmed_booking(self):
 		self.book()

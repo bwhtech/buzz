@@ -58,6 +58,10 @@ class HostedPayments:
 		codes = frappe.db.get_single_value("Buzz Settings", "hosted_payment_currencies") or ""
 		return [code.strip().upper() for code in codes.split(",") if code.strip()]
 
+	def checkout_description(self, reference: str) -> str:
+		team_name = frappe.db.get_value("Buzz Team", self.team, "team_name")
+		return _("{0} via Buzz · {1}").format(team_name, reference)
+
 	def validate_site_urls(self, *urls: str) -> None:
 		"""The buyer and the ping go only to the team's own site, never where a caller points them."""
 		connected_host = site_host(frappe.db.get_value("Buzz Team", self.team, "connected_site_url"))
@@ -92,6 +96,7 @@ class HostedPayments:
 			currency,
 			gateway,
 			redirect_to=f"{RETURN_PATH}?order_id={payment.name}",
+			description=self.checkout_description(reference),
 			customer_email=payment.customer_email,
 			customer_phone=payment.customer_phone,
 		)

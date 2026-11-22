@@ -31,7 +31,10 @@ class HostedPayment(Document):
 	# end: auto-generated types
 
 	def on_payment_authorized(self, status: str) -> None:
-		self.db_set("status", "Paid")
+		payment_method = frappe.db.get_value(
+			"Gateway Payment Request", self.payment_request, "payment_method"
+		)
+		self.db_set({"status": "Paid", "payment_method": payment_method})
 
 	def on_refund_update(self, gateway_refund) -> None:
 		refunded = frappe.db.get_value("Gateway Payment Request", self.payment_request, "refund_amount")

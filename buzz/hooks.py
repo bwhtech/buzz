@@ -128,6 +128,7 @@ doc_events = {
 			"buzz.events.profile_og_image.enqueue_for_user",
 		],
 	},
+	"Gateway Payment Request": {"on_update": "buzz.hosted_payments.webhook_ping.sync_hosted_payment"},
 	"Currency": {
 		"on_update": "buzz.api.payments.currencies.clear_currency_cache",
 		"on_trash": "buzz.api.payments.currencies.clear_currency_cache",
