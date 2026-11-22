@@ -38,7 +38,6 @@ class HostedPayoutTestCase(HostedPaymentsTestCase):
 	def payout_with_payments(self, **overrides):
 		payout = HostedPayoutFactory.create(team=self.team, **overrides)
 		payout.get_payments()
-		payout.save()
 		return payout
 
 	def line_values(self, payout) -> list[tuple]:
@@ -277,6 +276,28 @@ class TestHostedPayout(HostedPayoutTestCase):
 		for values in ({"gross": 2000, "net": 1967}, {"commission": 0, "net": 1000}, {"rate": 0}):
 			with self.subTest(values=values):
 				self.submit_with_line_changed(self.payout_with_payments(), **values)
+
+	def test_rate_changed_after_get_payments_submits_at_the_frozen_rate(self):
+		order_id = self.paid_order(1000)
+		payout = self.payout_with_payments()
+		self.set_rates({"upi": 5}, fallback_rate=5)
+		self.submit(payout)
+		self.assertEqual(self.line_values(payout), [(order_id, "upi", 3.3, 1000, 0, 33, 967)])
+		self.assertEqual(self.payout_of(order_id), payout.name)
+
+	def test_get_payments_again_takes_the_new_rate(self):
+		order_id = self.paid_order(1000)
+		payout = self.payout_with_payments()
+		self.set_rates({"upi": 5}, fallback_rate=5)
+		payout.get_payments()
+		self.submit(payout)
+		self.assertEqual(self.line_values(payout), [(order_id, "upi", 5, 1000, 0, 50, 950)])
+
+	def test_rates_sent_with_the_payout_are_not_trusted(self):
+		self.paid_order(1000)
+		payout = self.payout_with_payments()
+		payout.commission_rates = {"rates": {"upi": 0}, "fallback_rate": 0}
+		self.submit_with_line_changed(payout, rate=0, commission=0, net=1000)
 
 	def test_payment_refunded_after_the_payout_was_drawn_up_is_rejected(self):
 		order_id = self.paid_order(1000)

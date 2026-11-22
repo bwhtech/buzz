@@ -23,7 +23,8 @@
   "payments_section",
   "lines",
   "more_info_tab",
-  "amended_from"
+  "amended_from",
+  "commission_rates"
  ],
  "fields": [
   {
@@ -149,11 +150,19 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "description": "The commission rates Get Payments used. Submit checks the lines against them.",
+   "fieldname": "commission_rates",
+   "fieldtype": "JSON",
+   "hidden": 1,
+   "label": "Commission Rates",
+   "read_only": 1
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-22 13:48:28.000000",
+ "modified": "2026-11-22 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hosted Payments",
  "name": "Hosted Payout",

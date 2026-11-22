@@ -48,7 +48,7 @@ class TestOverlappingPayouts(IntegrationTestCase):
 	def drafted_payout(self, team: str):
 		payout = HostedPayoutFactory.create(team=team)
 		payout.get_payments()
-		return payout.save()
+		return payout
 
 	def delete_fixtures(self):
 		payouts = frappe.get_all("Hosted Payout", {"team": self.team}, pluck="name")
@@ -61,7 +61,7 @@ class TestOverlappingPayouts(IntegrationTestCase):
 
 	def assert_refund_deducted_once_by(self, payout: str):
 		def read():
-			draft = HostedPayoutFactory.build(team=self.team)
+			draft = HostedPayoutFactory.create(team=self.team)
 			draft.get_payments()
 			docstatus = [
 				frappe.db.get_value("Hosted Payout", name, "docstatus") for name in (self.settled_by, payout)

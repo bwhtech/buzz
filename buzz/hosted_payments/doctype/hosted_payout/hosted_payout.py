@@ -25,6 +25,7 @@ class HostedPayout(Document):
 		from buzz.hosted_payments.doctype.hosted_payout_line.hosted_payout_line import HostedPayoutLine
 
 		amended_from: DF.Link | None
+		commission_rates: DF.JSON | None
 		currency: DF.Link
 		from_date: DF.Date
 		lines: DF.Table[HostedPayoutLine]
@@ -39,8 +40,16 @@ class HostedPayout(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		self.freeze_commission_rates()
 		self.validate_payments_are_unique()
 		self.set_totals()
+
+	def freeze_commission_rates(self) -> None:
+		"""Only Get Payments sets the rates. Any other save keeps the saved ones, or today's for a new payout."""
+		if self.flags.getting_payments:
+			return
+		saved = self.get_doc_before_save()
+		self.commission_rates = (saved and saved.commission_rates) or PaymentRates.current().snapshot()
 
 	def validate_payments_are_unique(self) -> None:
 		seen = set()
@@ -61,10 +70,11 @@ class HostedPayout(Document):
 		self.validate_lines()
 
 	def validate_lines(self) -> None:
-		"""Each line is what Get Payments makes of its payment as locked now, never what the form sent. So a
-		payment settles once, after it was paid, and each refund of a settled payment is deducted once."""
+		"""Each line is what Get Payments makes of its payment as locked now, at the rates it froze, never what
+		the form sent. So a payment settles once, after it was paid, and each refund of a settled payment is
+		deducted once."""
 		payments = lock_payments(self.payment_names())
-		rates = PaymentRates()
+		rates = PaymentRates.frozen(self.commission_rates)
 		for line in self.lines:
 			self.validate_line(line, payments[line.hosted_payment], rates)
 
@@ -140,13 +150,17 @@ class HostedPayout(Document):
 
 	@frappe.whitelist(methods=["POST"])
 	def get_payments(self) -> None:
-		rates = PaymentRates()
+		"""Saved here, so the rates frozen on the payout come from the server, not the form."""
+		rates = PaymentRates.current()
+		self.commission_rates = rates.snapshot()
 		self.set("lines", [])
 		for payment in self.unsettled_payments():
 			self.append("lines", payment_line(payment, rates.rate(payment.payment_method), self.currency))
 		for payment, refunded in self.refunds_to_carry_forward():
 			self.append("lines", refund_line(payment, refunded))
-		self.set_totals()
+		self.flags.getting_payments = True
+		self.save()
+		self.flags.getting_payments = False
 
 	def team_payment_filters(self) -> dict:
 		return {"team": self.team, "currency": self.currency}
@@ -179,12 +193,24 @@ class HostedPayout(Document):
 
 
 class PaymentRates:
-	"""Commission % per payment method, from Buzz Settings."""
+	"""Commission % per payment method."""
 
-	def __init__(self):
+	def __init__(self, rates: dict[str, float], fallback_rate: float):
+		self.rates, self.fallback_rate = rates, fallback_rate
+
+	@classmethod
+	def current(cls) -> "PaymentRates":
 		settings = frappe.get_single("Buzz Settings")
-		self.rates = {row.payment_method: row.rate for row in settings.hosted_payment_rates}
-		self.fallback_rate = settings.hosted_payment_fallback_rate
+		rates = {row.payment_method: row.rate for row in settings.hosted_payment_rates}
+		return cls(rates, settings.hosted_payment_fallback_rate)
+
+	@classmethod
+	def frozen(cls, snapshot: str | dict) -> "PaymentRates":
+		values = frappe.parse_json(snapshot)
+		return cls(values["rates"], values["fallback_rate"])
+
+	def snapshot(self) -> dict:
+		return {"rates": self.rates, "fallback_rate": self.fallback_rate}
 
 	def rate(self, payment_method: str | None) -> float:
 		return self.rates.get(payment_method, self.fallback_rate)

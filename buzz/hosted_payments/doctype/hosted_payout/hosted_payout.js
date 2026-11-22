@@ -13,8 +13,9 @@ frappe.ui.form.on("Hosted Payout", {
 			frappe.msgprint(__("Set the Team, From Date and To Date first."))
 			return
 		}
+		// Get Payments saves the payout, so a new one is saved first to keep its name.
+		if (frm.is_new()) await frm.save()
 		await frm.call({ method: "get_payments", doc: frm.doc, freeze: true })
-		frm.dirty()
 		frm.refresh()
 	},
 })
