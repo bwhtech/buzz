@@ -1,6 +1,15 @@
 from frappe import _lt
 
-from buzz.api.exceptions import BuzzAPIError, ResourceNotFound
+from buzz.api.exceptions import BuzzAPIError, NotPermitted, ResourceNotFound
+
+
+class NotAnIntegration(NotPermitted):
+	message = _lt("This account is not the integration of exactly one team.")
+
+
+class InvalidCustomer(BuzzAPIError):
+	title = _lt("Invalid Customer")
+	message = _lt("The customer's {field} is not valid.")
 
 
 class ForeignSiteURL(BuzzAPIError):

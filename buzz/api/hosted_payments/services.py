@@ -3,20 +3,20 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import frappe
 from bwh_payments import api as payments
 from frappe import _
-from frappe.utils import flt
 
 from buzz.api.hosted_payments.exceptions import (
 	ForeignSiteURL,
+	NotAnIntegration,
 	OrderNotFound,
 	RefundExceedsBalance,
 	RefundNotFound,
 	UnsupportedCurrency,
 )
-from buzz.api.hosted_payments.schemas import HostedOrder, HostedRefund
-from buzz.api.listings.exceptions import NotAnIntegration
+from buzz.api.hosted_payments.schemas import HostedOrder, HostedRefund, OrderCustomer
 from buzz.permissions import INTEGRATION_ROLE
 
 RETURN_PATH = "/api/method/buzz.api.hosted_payments.return_to_site"
+DEFAULT_PORTS = {"http": 80, "https": 443}
 
 
 class HostedPayments:
@@ -40,13 +40,13 @@ class HostedPayments:
 		return frappe.db.get_value("Gateway Payment Request", self.payment_request(order_id), "status")
 
 	def refund(self, order_id: str, amount: float) -> HostedRefund:
-		payment_request = self.payment_request(order_id)
-		remaining = frappe.get_doc(
-			"Gateway Payment Request", payment_request
-		).get_remaining_refundable_amount()
-		if flt(amount) > remaining:
+		payment_request = frappe.get_doc("Gateway Payment Request", self.payment_request(order_id))
+		# Rounded as bwh_payments rounds it, so both sides agree on what is left to refund.
+		amount = in_minor_units(amount, payment_request.currency_code)
+		remaining = payment_request.get_remaining_refundable_amount()
+		if amount > remaining:
 			RefundExceedsBalance.throw(remaining=remaining)
-		return hosted_refund(payments.refund(payment_request, amount, reference=order_id))
+		return hosted_refund(payments.refund(payment_request.name, amount, reference=order_id))
 
 	def refund_status(self, order_id: str, refund_id: str) -> HostedRefund:
 		filters = {"name": refund_id, "payment_request": self.payment_request(order_id)}
@@ -64,58 +64,93 @@ class HostedPayments:
 
 	def validate_site_urls(self, *urls: str) -> None:
 		"""The buyer and the ping go only to the team's own site, never where a caller points them."""
-		connected_host = site_host(frappe.db.get_value("Buzz Team", self.team, "connected_site_url"))
+		connected_origin = site_origin(frappe.db.get_value("Buzz Team", self.team, "connected_site_url"))
 		for url in urls:
-			if not connected_host or site_host(url) != connected_host:
+			if not connected_origin or site_origin(url) != connected_origin:
 				ForeignSiteURL.throw(url=url)
 
-	def create_order(
-		self, amount: float, currency: str, reference: str, customer: dict, return_url: str, webhook_url: str
-	) -> HostedOrder:
-		self.validate_site_urls(return_url, webhook_url)
+	def validate_currency(self, currency: str) -> None:
 		if currency not in self.currencies():
 			UnsupportedCurrency.throw(currency=currency)
-		gateway = frappe.db.get_single_value("Buzz Settings", "hosted_payment_gateway")
-		payment = frappe.get_doc(
+
+	def create_order(
+		self,
+		amount: float,
+		currency: str,
+		reference: str,
+		customer: OrderCustomer,
+		return_url: str,
+		webhook_url: str,
+	) -> HostedOrder:
+		currency = currency.upper()
+		self.validate_site_urls(return_url, webhook_url)
+		self.validate_currency(currency)
+		payment = self.insert_payment(amount, currency, reference, customer, return_url, webhook_url)
+		request = self.open_checkout(payment)
+		return HostedOrder(order_id=payment.name, checkout_url=request.order_url)
+
+	def insert_payment(
+		self,
+		amount: float,
+		currency: str,
+		reference: str,
+		customer: OrderCustomer,
+		return_url: str,
+		webhook_url: str,
+	):
+		return frappe.get_doc(
 			{
 				"doctype": "Hosted Payment",
 				"team": self.team,
 				"amount": amount,
 				"currency": currency,
 				"reference": reference,
-				"customer_email": customer.get("email"),
-				"customer_phone": customer.get("phone"),
+				"customer_email": customer.email,
+				"customer_phone": customer.phone,
 				"return_url": return_url,
 				"webhook_url": webhook_url,
 			}
 		).insert(ignore_permissions=True)
+
+	def open_checkout(self, payment):
 		request = payments.create_payment(
 			"Hosted Payment",
 			payment.name,
-			amount,
-			currency,
-			gateway,
+			payment.amount,
+			payment.currency,
+			frappe.db.get_single_value("Buzz Settings", "hosted_payment_gateway"),
 			redirect_to=f"{RETURN_PATH}?order_id={payment.name}",
-			description=self.checkout_description(reference),
+			description=self.checkout_description(payment.reference),
 			customer_email=payment.customer_email,
 			customer_phone=payment.customer_phone,
 		)
 		payment.db_set("payment_request", request.name)
-		return HostedOrder(order_id=payment.name, checkout_url=request.order_url)
+		return request
 
 
 def return_location(order_id: str) -> str:
 	return_url = frappe.db.get_value("Hosted Payment", order_id, "return_url")
 	if not return_url:
-		raise frappe.DoesNotExistError(_("Payment not found"))
+		OrderNotFound.throw()
 	parts = urlsplit(return_url)
 	query = urlencode([*parse_qsl(parts.query), ("order_id", order_id)])
 	return urlunsplit((parts.scheme, parts.netloc, parts.path, query, parts.fragment))
 
 
-def site_host(url: str | None) -> str | None:
+def site_origin(url: str | None) -> tuple[str, str, int] | None:
+	"""Scheme, host and port, with a missing port read as the scheme's default."""
 	parts = urlsplit(url or "")
-	return parts.hostname if parts.scheme in ("http", "https") else None
+	if parts.scheme not in DEFAULT_PORTS or not parts.hostname:
+		return None
+	try:
+		port = parts.port or DEFAULT_PORTS[parts.scheme]
+	except ValueError:
+		return None
+	return parts.scheme, parts.hostname, port
+
+
+def in_minor_units(amount: float, currency: str) -> float:
+	return payments.from_minor_units(payments.to_minor_units(amount, currency), currency)
 
 
 def hosted_refund(gateway_refund) -> HostedRefund:

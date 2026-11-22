@@ -2,13 +2,13 @@ import frappe
 from frappe.rate_limiter import rate_limit
 
 from buzz.api.hosted_payments import services
-from buzz.api.hosted_payments.schemas import HostedOrder, HostedRefund
+from buzz.api.hosted_payments.schemas import HostedOrder, HostedRefund, OrderCustomer
 from buzz.api.hosted_payments.services import HostedPayments
 
 
 @frappe.whitelist(methods=["POST"])
 def create_order(
-	amount: float, currency: str, reference: str, customer: dict, return_url: str, webhook_url: str
+	amount: float, currency: str, reference: str, customer: OrderCustomer, return_url: str, webhook_url: str
 ) -> HostedOrder:
 	return HostedPayments().create_order(amount, currency, reference, customer, return_url, webhook_url)
 

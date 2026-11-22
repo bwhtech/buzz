@@ -18,12 +18,13 @@ from buzz.api.hosted_payments import (
 )
 from buzz.api.hosted_payments.exceptions import (
 	ForeignSiteURL,
+	InvalidCustomer,
+	NotAnIntegration,
 	OrderNotFound,
 	RefundExceedsBalance,
 	RefundNotFound,
 	UnsupportedCurrency,
 )
-from buzz.api.listings.exceptions import NotAnIntegration
 from buzz.hosted_payments.webhook_ping import ping_site
 from buzz.tests.base_test_cases import HostedPaymentsTestCase
 from buzz.tests.factories import BuzzTeamFactory, BuzzTeamMembershipFactory, UserFactory
@@ -57,6 +58,46 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 		with self.assertRaises(ForeignSiteURL):
 			self.create_order(webhook_url="https://attacker.example.com/hook")
 
+	def connect_site(self, url: str) -> None:
+		connected = frappe.db.get_value("Buzz Team", self.team, "connected_site_url")
+		self.addCleanup(frappe.db.set_value, "Buzz Team", self.team, "connected_site_url", connected)
+		frappe.db.set_value("Buzz Team", self.team, "connected_site_url", url)
+
+	def test_return_url_on_another_port_is_rejected(self):
+		self.connect_site("https://pro.example.com")
+		with self.assertRaises(ForeignSiteURL):
+			self.create_order(
+				return_url="https://pro.example.com:8443/return", webhook_url="https://pro.example.com/hook"
+			)
+
+	def test_return_url_on_another_scheme_is_rejected(self):
+		self.connect_site("https://pro.example.com")
+		with self.assertRaises(ForeignSiteURL):
+			self.create_order(
+				return_url="http://pro.example.com/return", webhook_url="https://pro.example.com/hook"
+			)
+
+	def test_default_port_matches_a_site_url_without_one(self):
+		self.connect_site("https://pro.example.com")
+		order = self.create_order(
+			return_url="https://pro.example.com:443/return", webhook_url="https://pro.example.com/hook"
+		)
+		self.assertTrue(frappe.db.exists("Hosted Payment", order.order_id))
+
+	def test_customer_with_an_invalid_email_is_rejected(self):
+		with self.assertRaises(InvalidCustomer):
+			self.create_order(customer={"email": "not-an-email"}, reference="PRO-GPR-BAD-EMAIL")
+		self.assertFalse(frappe.db.exists("Hosted Payment", {"reference": "PRO-GPR-BAD-EMAIL"}))
+
+	def test_customer_with_an_invalid_phone_is_rejected(self):
+		with self.assertRaises(InvalidCustomer):
+			self.create_order(customer={"email": "buyer@example.com", "phone": "call me"})
+
+	def test_customer_without_contact_details_is_accepted(self):
+		order = self.create_order(customer={"email": "", "phone": ""})
+		payment = frappe.get_doc("Hosted Payment", order.order_id)
+		self.assertEqual((payment.customer_email, payment.customer_phone), (None, None))
+
 	def test_rejected_order_leaves_no_payment(self):
 		with self.assertRaises(ForeignSiteURL):
 			self.create_order(return_url="javascript:alert(1)", reference="PRO-GPR-REJECTED")
@@ -70,6 +111,10 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 	def test_create_order_rejects_other_currencies(self):
 		with self.assertRaises(UnsupportedCurrency):
 			self.create_order(currency="USD")
+
+	def test_currency_is_matched_in_any_case_and_stored_upper_case(self):
+		order = self.create_order(currency="inr")
+		self.assertEqual(frappe.db.get_value("Hosted Payment", order.order_id, "currency"), "INR")
 
 	def test_checkout_names_the_team_and_the_order(self):
 		order = self.create_order(reference="PRO-GPR-7")
@@ -111,7 +156,7 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 			get_status(order.order_id)
 
 	def test_return_sends_the_buyer_back_to_the_site_with_the_order(self):
-		frappe.db.set_value("Buzz Team", self.team, "connected_site_url", "https://pro.example.com")
+		self.connect_site("https://pro.example.com")
 		order = self.create_order(
 			return_url="https://pro.example.com/return?request=PRO-GPR-1",
 			webhook_url="https://pro.example.com/webhook",
@@ -125,7 +170,7 @@ class TestHostedPaymentsAPI(HostedPaymentsTestCase):
 		)
 
 	def test_return_for_an_unknown_order_is_not_found(self):
-		with self.set_user("Guest"), self.assertRaises(frappe.DoesNotExistError):
+		with self.set_user("Guest"), self.assertRaises(OrderNotFound):
 			return_to_site("no-such-order")
 
 	def pings_after(self, change_status) -> list[dict]:
@@ -200,6 +245,12 @@ class TestHostedRefunds(HostedPaymentsTestCase):
 		with self.assertRaises(RefundExceedsBalance):
 			self.refund(100)
 		self.assertEqual(self.refunded_amount(), 500)
+
+	def test_refund_of_the_balance_is_compared_in_minor_units(self):
+		self.refund(500)
+		result = self.refund(50.004)
+		self.assertEqual((result.status, result.amount), ("Processed", 50))
+		self.assertEqual(self.refunded_amount(), 550)
 
 	def test_another_team_cannot_refund_an_order(self):
 		other = UserFactory.create_once("hosted-refunds-other-bot@example.com").name
