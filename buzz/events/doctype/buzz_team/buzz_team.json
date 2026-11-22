@@ -29,7 +29,9 @@
   "links_section",
   "links",
   "community_section",
-  "accept_community_submissions"
+  "accept_community_submissions",
+  "hosted_payments_tab",
+  "connected_site_url"
  ],
  "fields": [
   {
@@ -161,6 +163,19 @@
    "fieldname": "accept_community_submissions",
    "fieldtype": "Check",
    "label": "Accept Community Submissions"
+  },
+  {
+   "fieldname": "hosted_payments_tab",
+   "fieldtype": "Tab Break",
+   "label": "Hosted Payments"
+  },
+  {
+   "fieldname": "connected_site_url",
+   "fieldtype": "Data",
+   "label": "Connected Site URL",
+   "options": "URL",
+   "permlevel": 1,
+   "description": "The Pro site this team takes payments for. Return and webhook URLs must be on its host."
   }
  ],
  "grid_page_length": 50,
@@ -180,7 +195,7 @@
    "link_fieldname": "team"
   }
  ],
- "modified": "2026-10-29 12:00:00.000000",
+ "modified": "2026-11-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Team",
