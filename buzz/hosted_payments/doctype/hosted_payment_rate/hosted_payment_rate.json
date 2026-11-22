@@ -10,12 +10,13 @@
  ],
  "fields": [
   {
-   "description": "As stored on the Hosted Payment, such as upi or card_credit.",
+   "description": "As stored on the Hosted Payment. A method without a rate is charged the fallback rate.",
    "fieldname": "payment_method",
-   "fieldtype": "Data",
+   "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Payment Method",
-   "reqd": 1
+   "reqd": 1,
+   "options": "upi\ncard_credit\ncard_debit\ncard\nnetbanking\nwallet\nemi\npaylater"
   },
   {
    "fieldname": "rate",
@@ -27,7 +28,7 @@
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-11-22 12:00:00.000000",
+ "modified": "2026-11-22 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hosted Payments",
  "name": "Hosted Payment Rate",

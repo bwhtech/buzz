@@ -9,6 +9,7 @@
   "reference",
   "column_break_status",
   "status",
+  "paid_on",
   "amount_section",
   "amount",
   "refunded_amount",
@@ -58,6 +59,12 @@
    "in_standard_filter": 1,
    "label": "Status",
    "options": "Pending\nPaid\nNot Paid\nCancelled\nExpired\nPartially Refunded\nRefunded",
+   "read_only": 1
+  },
+  {
+   "fieldname": "paid_on",
+   "fieldtype": "Datetime",
+   "label": "Paid On",
    "read_only": 1
   },
   {
@@ -170,7 +177,7 @@
   }
  ],
  "links": [],
- "modified": "2026-11-22 13:40:59.000000",
+ "modified": "2026-11-22 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Hosted Payments",
  "name": "Hosted Payment",

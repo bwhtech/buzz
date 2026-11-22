@@ -16,7 +16,9 @@ class HostedPaymentRate(Document):
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
-		payment_method: DF.Data
+		payment_method: DF.Literal[
+			"upi", "card_credit", "card_debit", "card", "netbanking", "wallet", "emi", "paylater"
+		]
 		rate: DF.Percent
 	# end: auto-generated types
 

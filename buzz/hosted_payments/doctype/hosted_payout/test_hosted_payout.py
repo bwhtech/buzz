@@ -1,10 +1,10 @@
 import frappe
 from bwh_payments import testing as payment_testing
-from frappe.utils import add_days, today
+from frappe.utils import add_days, now_datetime, today
 
 from buzz.api.hosted_payments import create_order, refund
 from buzz.tests.base_test_cases import HostedPaymentsTestCase
-from buzz.tests.factories import HostedPayoutFactory
+from buzz.tests.factories import BuzzTeamFactory, HostedPayoutFactory
 
 
 class TestHostedPayout(HostedPaymentsTestCase):
@@ -60,6 +60,16 @@ class TestHostedPayout(HostedPaymentsTestCase):
 		payout = self.payout_with_payments()
 		self.assertEqual(self.line_values(payout), [(order_id, "netbanking", 5, 1000, 0, 50, 950)])
 
+	def test_unknown_method_is_charged_the_fallback_rate(self):
+		order_id = self.paid_order(1000, "upi")
+		frappe.db.set_value("Hosted Payment", order_id, "payment_method", "bank_transfer")
+		payout = self.payout_with_payments()
+		self.assertEqual(self.line_values(payout), [(order_id, "bank_transfer", 5, 1000, 0, 50, 950)])
+
+	def test_rate_for_a_method_outside_the_list_is_rejected(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.set_rates({"UPI": 3.3}, fallback_rate=5)
+
 	def test_commission_is_charged_on_gross_and_kept_on_a_refund(self):
 		order_id = self.paid_order(1000, "upi")
 		self.refund(order_id, 400)
@@ -72,6 +82,13 @@ class TestHostedPayout(HostedPaymentsTestCase):
 		payout = self.payout_with_payments()
 		totals = (payout.total_gross, payout.total_refunded, payout.total_commission, payout.total_net)
 		self.assertEqual(totals, (1500, 100, 55, 1345))
+
+	def test_totals_are_rounded_to_the_currency(self):
+		self.paid_order(100.1, "upi")
+		self.paid_order(200.2, "upi")
+		payout = self.payout_with_payments()
+		totals = (payout.total_gross, payout.total_refunded, payout.total_commission, payout.total_net)
+		self.assertEqual(totals, (300.3, 0, 9.91, 290.39))
 
 	def submit(self, payout, transfer_reference: str = "UTR-1001"):
 		payout.transfer_reference = transfer_reference
@@ -115,6 +132,31 @@ class TestHostedPayout(HostedPaymentsTestCase):
 		self.paid_order(1000)
 		payout = self.payout_with_payments(from_date=add_days(today(), 1), to_date=add_days(today(), 7))
 		self.assertEqual(payout.lines, [])
+
+	def test_payment_is_pulled_by_the_day_it_was_paid(self):
+		with self.freeze_time(add_days(now_datetime(), -3)):
+			with self.set_user(self.integration):
+				order_id = create_order(**self.order_values(amount=1000)).order_id
+		payment_testing.pay(frappe.db.get_value("Hosted Payment", order_id, "payment_request"))
+		ordered_day = add_days(today(), -3)
+		self.assertEqual(self.payout_with_payments(from_date=ordered_day, to_date=ordered_day).lines, [])
+		self.assertEqual([line.hosted_payment for line in self.payout_with_payments().lines], [order_id])
+
+	def test_payment_of_another_team_cannot_be_submitted(self):
+		self.paid_order(1000)
+		payout = self.payout_with_payments()
+		payout.team = BuzzTeamFactory.create_owned_by().name
+		payout.save()
+		with self.assertRaises(frappe.ValidationError):
+			self.submit(payout)
+
+	def test_payment_in_another_currency_cannot_be_submitted(self):
+		self.paid_order(1000)
+		payout = self.payout_with_payments()
+		payout.currency = "USD"
+		payout.save()
+		with self.assertRaises(frappe.ValidationError):
+			self.submit(payout)
 
 	def test_refund_after_settlement_is_a_negative_line_on_the_next_payout(self):
 		order_id = self.paid_order(1000)

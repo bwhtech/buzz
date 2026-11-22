@@ -16,6 +16,7 @@ class HostedPayoutLine(Document):
 		commission: DF.Currency
 		gross: DF.Currency
 		hosted_payment: DF.Link
+		line_type: DF.Literal["Payment", "Refund"]
 		net: DF.Currency
 		parent: DF.Data
 		parentfield: DF.Data

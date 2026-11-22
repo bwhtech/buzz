@@ -3,6 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import now_datetime
 
 
 class HostedPayment(Document):
@@ -18,6 +19,7 @@ class HostedPayment(Document):
 		currency: DF.Link
 		customer_email: DF.Data | None
 		customer_phone: DF.Data | None
+		paid_on: DF.Datetime | None
 		payment_method: DF.Data | None
 		payment_request: DF.Link | None
 		payout: DF.Link | None
@@ -35,7 +37,8 @@ class HostedPayment(Document):
 		payment_method = frappe.db.get_value(
 			"Gateway Payment Request", self.payment_request, "payment_method"
 		)
-		self.db_set({"status": "Paid", "payment_method": payment_method})
+		# The status mirror on Gateway Payment Request sets the status.
+		self.db_set({"payment_method": payment_method, "paid_on": now_datetime()})
 
 	def on_refund_update(self, gateway_refund) -> None:
 		refunded = frappe.db.get_value("Gateway Payment Request", self.payment_request, "refund_amount")
