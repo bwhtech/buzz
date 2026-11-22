@@ -134,3 +134,13 @@ class TestHostedPaymentBooking(BuzzGatewayTestCase):
 			booking.sync_refunds()
 		self.assertEqual(frappe.db.get_value("Hosted Payment", order_id, "refunded_amount"), 200)
 		self.assertEqual(self.booking_refund(booking.name).status, "Processed")
+
+	def test_pending_hub_refund_settles_on_the_hub_ping(self):
+		booking, order_id = self.confirmed_booking()
+		payment_testing.set_next_refund_status("Pending")
+		booking.refund(amount=200)
+		hub_refund = frappe.get_last_doc("Gateway Refund", {"reference": order_id})
+		payment_testing.send_refund_webhook(hub_refund.name, "Processed")
+		with patch("frappe.sendmail"):
+			self.ping({"order_id": order_id})
+		self.assertEqual(self.booking_refund(booking.name).status, "Processed")
