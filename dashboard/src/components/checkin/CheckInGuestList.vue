@@ -227,6 +227,8 @@ const guestFromScan = ({ ticket }: Required<Pick<ValidationResult, "ticket">>): 
 			value: addOn.value ?? null,
 		})),
 		zones: [],
+		booking: null,
+		answers: [],
 	}
 
 watch(validationResult, (result) => {

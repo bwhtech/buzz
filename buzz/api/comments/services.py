@@ -36,8 +36,17 @@ def proposal_speaker_emails(proposal: str) -> list[str]:
 	)
 
 
+def ticket_attendee_emails(ticket: str) -> list[str]:
+	email = frappe.db.get_value("Event Ticket", ticket, "attendee_email")
+	return [email] if email else []
+
+
 # Who a note can be emailed to, for records that have someone outside the team.
-EMAIL_RECIPIENTS = {"Talk Proposal": proposal_speaker_emails, "Event Booking": booking_buyer_emails}
+EMAIL_RECIPIENTS = {
+	"Talk Proposal": proposal_speaker_emails,
+	"Event Booking": booking_buyer_emails,
+	"Event Ticket": ticket_attendee_emails,
+}
 
 
 def email_attachment(file: str) -> Response:

@@ -58,6 +58,17 @@ class TestGetEventGuests(GuestsTestCase):
 
 		self.assertEqual([(row.title, row.value) for row in guest.add_ons], [("T-Shirt", "Large")])
 
+	def test_carries_the_answers_on_the_ticket_and_skips_blank_ones(self):
+		answers = [
+			{"label": "Company", "fieldname": "company", "value": "Razorpay"},
+			{"label": "Role", "fieldname": "role", "value": ""},
+		]
+		EventTicketFactory.create("submitted", event=self.event, additional_fields=answers)
+
+		guest = self.guests_as(self.owner).guests[0]
+
+		self.assertEqual([(row.label, row.value) for row in guest.answers], [("Company", "Razorpay")])
+
 	def test_names_the_ticket_type_rather_than_its_docname(self):
 		ticket_type = EventTicketTypeFactory.create(event=self.event, title="Early Bird").name
 		EventTicketFactory.create("submitted", event=self.event, ticket_type=ticket_type)

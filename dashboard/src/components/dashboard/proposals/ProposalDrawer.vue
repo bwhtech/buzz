@@ -15,6 +15,7 @@ import {
 import { Editor, EditorContent, EditorFixedMenu } from "frappe-ui/editor"
 import { computed, ref } from "vue"
 
+import CopyId from "@/components/common/CopyId.vue"
 import {
 	Drawer,
 	DrawerCloseButton,
@@ -25,7 +26,6 @@ import {
 import EventHoverCard from "@/components/dashboard/events/EventHoverCard.vue"
 import AddSpeakerDialog from "@/components/dashboard/proposals/AddSpeakerDialog.vue"
 import PhoneInput from "@/components/PhoneInput.vue"
-import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
 import { useProposal } from "@/data/proposals"
 import { session } from "@/data/session"
@@ -148,8 +148,6 @@ async function removeSpeaker() {
 
 const reader = computed(() => userResource.data?.email || session.user)
 
-const copyId = useCopyToClipboard()
-
 // One theme per speaker, stable across renders so a face keeps its colour.
 const AVATAR_THEMES = ["blue", "green", "amber", "red", "violet"] as const
 const avatarTheme = (speaker: ProposalSpeaker) => {
@@ -186,14 +184,7 @@ const fields = computed(() => [
 			<template v-if="proposal">
 				<div class="flex items-center gap-2 p-4 pb-0">
 					<DrawerCloseButton />
-					<button
-						type="button"
-						class="cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5"
-						:aria-label="`Copy proposal id ${proposal.name}`"
-						@click="copyId(proposal.name)"
-					>
-						#{{ proposal.name }}
-					</button>
+					<CopyId :value="proposal.name" label="Proposal ID" />
 				</div>
 
 				<div class="flex flex-1 flex-col space-y-4 overflow-y-auto overscroll-contain p-4">

@@ -7,7 +7,8 @@ from buzz.api.booking.downloads import booking_invoice_pdf, booking_tickets_pdf,
 from buzz.api.comments.exceptions import InvalidAttachment
 from buzz.api.comments.schemas import AttachmentRequest
 
-BOOKING_KINDS = {"invoice", "tickets", "ticket"}
+# What each record can render as a PDF of its own.
+RECORD_KINDS = {"Event Booking": {"invoice", "tickets", "ticket"}, "Event Ticket": {"ticket"}}
 
 
 class EmailAttachments:
@@ -26,7 +27,7 @@ class EmailAttachments:
 			request = AttachmentRequest(**item)
 		except (ValidationError, TypeError):
 			InvalidAttachment.throw()
-		if request.kind in BOOKING_KINDS and self.reference_doctype != "Event Booking":
+		if request.kind != "file" and request.kind not in RECORD_KINDS.get(self.reference_doctype, ()):
 			InvalidAttachment.throw()
 		return request
 
@@ -46,9 +47,14 @@ class EmailAttachments:
 		}
 
 	def ticket(self, ticket: str | None) -> dict:
-		if not ticket or frappe.db.get_value("Event Ticket", ticket, "booking") != self.reference_name:
+		if not ticket or not self.owns_ticket(ticket):
 			InvalidAttachment.throw()
 		return {"fname": f"Ticket-{ticket}.pdf", "fcontent": ticket_pdf(ticket)}
+
+	def owns_ticket(self, ticket: str) -> bool:
+		if self.reference_doctype == "Event Ticket":
+			return ticket == self.reference_name
+		return frappe.db.get_value("Event Ticket", ticket, "booking") == self.reference_name
 
 	def uploaded_file(self, file: str | None) -> str:
 		row = file and frappe.db.get_value(
