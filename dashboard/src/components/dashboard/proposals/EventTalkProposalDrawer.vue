@@ -2,6 +2,7 @@
 import { Button, Dialog, Select, call, dayjsLocal, toast } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
+import CopyId from "@/components/common/CopyId.vue"
 import {
 	Drawer,
 	DrawerCloseButton,
@@ -9,7 +10,6 @@ import {
 	DrawerDescription,
 	DrawerTitle,
 } from "@/components/common/drawer"
-import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useHeldWrite } from "@/composables/useHeldWrite"
 import { useProposalStatuses } from "@/composables/useProposalStatuses"
 import { useAcceptProposal, useProposal } from "@/data/proposals"
@@ -131,8 +131,6 @@ async function acceptProposal() {
 	}
 }
 
-const copyId = useCopyToClipboard()
-
 // modified is a full timestamp in the site's timezone, so this converts.
 const lastUpdated = computed(() => (props.proposal ? dayjsLocal(props.proposal.modified) : null))
 </script>
@@ -144,14 +142,7 @@ const lastUpdated = computed(() => (props.proposal ? dayjsLocal(props.proposal.m
 				<header class="shrink-0 px-6 pt-4 pb-2">
 					<div class="flex items-center gap-2">
 						<DrawerCloseButton label="Close proposal" />
-						<button
-							type="button"
-							class="copy-id cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5 hover:text-ink-gray-7"
-							:aria-label="`Copy proposal id ${proposal.name}`"
-							@click="copyId(proposal.name)"
-						>
-							#{{ proposal.name }}
-						</button>
+						<CopyId :value="proposal.name" label="Proposal ID" />
 						<span
 							v-if="lastUpdated"
 							class="ml-auto text-sm text-ink-gray-5"
@@ -225,23 +216,3 @@ const lastUpdated = computed(() => (props.proposal ? dayjsLocal(props.proposal.m
 		</DrawerContent>
 	</Drawer>
 </template>
-
-<style scoped>
-.copy-id {
-	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-	transition:
-		color 160ms var(--ease-out),
-		transform 160ms var(--ease-out);
-}
-
-.copy-id:active {
-	transform: scale(0.97);
-}
-
-/* Gentler, not none: the fade still explains what happened, nothing travels. */
-@media (prefers-reduced-motion: reduce) {
-	.copy-id:active {
-		transform: none;
-	}
-}
-</style>

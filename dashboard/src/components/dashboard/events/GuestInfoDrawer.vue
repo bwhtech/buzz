@@ -3,18 +3,18 @@ import { Avatar, Badge, Button, Dropdown, Tooltip, call, dayjsLocal, toast } fro
 import { computed, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
+import CopyId from "@/components/common/CopyId.vue"
+import DetailRow from "@/components/common/DetailRow.vue"
 import {
 	Drawer,
-	DrawerCloseButton,
 	DrawerContent,
 	DrawerDescription,
+	DrawerNavBar,
 	DrawerTitle,
 } from "@/components/common/drawer"
-import PropertyRow from "@/components/common/PropertyRow.vue"
 import RecordActivity from "@/components/dashboard/comments/RecordActivity.vue"
 import GuestAnswers from "@/components/dashboard/events/GuestAnswers.vue"
 import GuestZones from "@/components/dashboard/events/GuestZones.vue"
-import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import type { EmailAttachmentChoice } from "@/data/comments"
 import type { EventGuest, GuestAddOn, ZoneStatus } from "@/types"
 import { serverErrorMessage } from "@/utils/serverError"
@@ -31,7 +31,6 @@ const emit = defineEmits<{ previous: []; next: []; changed: [ticket: string] }>(
 
 const route = useRoute()
 const router = useRouter()
-const copyToClipboard = useCopyToClipboard()
 
 // A ticket can be issued before anyone is named on it, so the email stands in.
 const name = computed(
@@ -114,38 +113,16 @@ const actions = computed(() => {
 		<DrawerContent size="lg">
 			<template v-if="guest">
 				<header class="shrink-0 px-6 pt-4 pb-2">
-					<div class="flex items-center gap-2">
-						<DrawerCloseButton label="Close guest" />
-						<button
-							type="button"
-							class="cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5 hover:text-ink-gray-7"
-							:aria-label="`Copy ticket id ${guest.name}`"
-							@click="copyToClipboard(guest.name, 'Ticket ID copied')"
-						>
-							#{{ guest.name }}
-						</button>
+					<DrawerNavBar
+						noun="guest"
+						:has-previous="hasPrevious"
+						:has-next="hasNext"
+						@previous="emit('previous')"
+						@next="emit('next')"
+					>
+						<CopyId :value="guest.name" label="Ticket ID" />
 
-						<div class="ml-auto flex items-center gap-1">
-							<Tooltip text="Previous guest">
-								<Button
-									variant="ghost"
-									size="sm"
-									icon="lucide-chevron-up"
-									aria-label="Previous guest"
-									:disabled="!hasPrevious"
-									@click="emit('previous')"
-								/>
-							</Tooltip>
-							<Tooltip text="Next guest">
-								<Button
-									variant="ghost"
-									size="sm"
-									icon="lucide-chevron-down"
-									aria-label="Next guest"
-									:disabled="!hasNext"
-									@click="emit('next')"
-								/>
-							</Tooltip>
+						<template #actions>
 							<Dropdown v-if="actions.length" :options="actions" align="end">
 								<Button
 									variant="ghost"
@@ -154,8 +131,8 @@ const actions = computed(() => {
 									aria-label="Guest actions"
 								/>
 							</Dropdown>
-						</div>
-					</div>
+						</template>
+					</DrawerNavBar>
 				</header>
 
 				<RecordActivity
@@ -167,14 +144,11 @@ const actions = computed(() => {
 					created-label="registered"
 				>
 					<div class="flex items-start gap-3">
-						<Avatar v-if="hasIdentity" :label="name" size="2xl" class="shrink-0" />
-						<span
-							v-else
-							class="flex size-12 shrink-0 items-center justify-center rounded-full bg-surface-gray-2 text-ink-gray-5"
-							aria-hidden="true"
-						>
-							<span class="lucide-user size-5" />
-						</span>
+						<Avatar :label="name" size="2xl" class="shrink-0">
+							<template v-if="!hasIdentity" #default>
+								<span class="lucide-user" aria-hidden="true" />
+							</template>
+						</Avatar>
 						<div class="min-w-0 space-y-1 pt-1">
 							<DrawerTitle class="text-3xl leading-tight font-semibold text-pretty text-ink-gray-9">
 								{{ name }}
@@ -185,8 +159,8 @@ const actions = computed(() => {
 						</div>
 					</div>
 
-					<dl class="space-y-0.5">
-						<PropertyRow label="Ticket type" icon="lucide-ticket">
+					<dl class="space-y-3 text-base">
+						<DetailRow wrap label="Ticket type" icon="lucide-ticket">
 							<Badge
 								v-if="guest.ticket_type"
 								variant="subtle"
@@ -196,16 +170,16 @@ const actions = computed(() => {
 								<span class="truncate">{{ guest.ticket_type }}</span>
 							</Badge>
 							<span v-else class="text-ink-gray-5">—</span>
-						</PropertyRow>
+						</DetailRow>
 
-						<PropertyRow label="Registered" icon="lucide-calendar">
+						<DetailRow wrap label="Registered" icon="lucide-calendar">
 							<Tooltip v-if="registeredAt" :text="registeredAt.fromNow()">
 								<span>{{ registeredAt.format("D MMM YYYY, h:mm A") }}</span>
 							</Tooltip>
 							<span v-else class="text-ink-gray-5">—</span>
-						</PropertyRow>
+						</DetailRow>
 
-						<PropertyRow v-if="guest.add_ons.length" label="Add-ons" icon="lucide-package-plus">
+						<DetailRow v-if="guest.add_ons.length" wrap label="Add-ons" icon="lucide-package-plus">
 							<div class="flex flex-wrap gap-1.5">
 								<Badge
 									v-for="addOn in guest.add_ons"
@@ -217,18 +191,18 @@ const actions = computed(() => {
 									<span class="truncate">{{ addOnLabel(addOn) }}</span>
 								</Badge>
 							</div>
-						</PropertyRow>
+						</DetailRow>
 
-						<PropertyRow v-if="guest.booking" label="Transaction" icon="lucide-receipt">
-							<button
-								type="button"
-								class="inline-flex items-center gap-1 font-mono text-sm hover:text-ink-gray-9 hover:underline"
+						<DetailRow v-if="guest.booking" wrap label="Transaction" icon="lucide-receipt">
+							<Button
+								variant="ghost"
+								size="sm"
+								class="-my-1 -ml-2 font-mono"
+								icon-right="lucide-arrow-up-right"
+								:label="guest.booking"
 								@click="openTransaction"
-							>
-								{{ guest.booking }}
-								<span class="lucide-arrow-up-right size-3.5 text-ink-gray-5" aria-hidden="true" />
-							</button>
-						</PropertyRow>
+							/>
+						</DetailRow>
 					</dl>
 
 					<GuestZones

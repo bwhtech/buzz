@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Avatar } from "frappe-ui"
 
-import PropertyRow from "@/components/common/PropertyRow.vue"
+import DetailRow from "@/components/common/DetailRow.vue"
 import type { ProposalSpeaker } from "@/types"
 import { speakerName } from "@/utils/speakerByline"
 
@@ -19,8 +19,8 @@ const avatarTheme = (email: string) => {
 </script>
 
 <template>
-	<dl class="space-y-0.5">
-		<PropertyRow v-if="speakers.length" label="Speakers" icon="lucide-users">
+	<dl class="space-y-3 text-base">
+		<DetailRow v-if="speakers.length" wrap label="Speakers" icon="lucide-users">
 			<div class="space-y-1.5">
 				<div
 					v-for="speaker in speakers"
@@ -32,9 +32,15 @@ const avatarTheme = (email: string) => {
 					<span class="truncate text-sm text-ink-gray-5">{{ speaker.email }}</span>
 				</div>
 			</div>
-		</PropertyRow>
-		<PropertyRow v-for="field in fields" :key="field.label" :label="field.label" :icon="field.icon">
+		</DetailRow>
+		<DetailRow
+			v-for="field in fields"
+			wrap
+			:key="field.label"
+			:label="field.label"
+			:icon="field.icon"
+		>
 			{{ field.value }}
-		</PropertyRow>
+		</DetailRow>
 	</dl>
 </template>

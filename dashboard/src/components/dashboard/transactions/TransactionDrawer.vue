@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { Button, ErrorMessage, Skeleton, Tooltip, dayjsLocal, useCall } from "frappe-ui"
+import { ErrorMessage, Skeleton, dayjsLocal, useCall } from "frappe-ui"
 import { computed, watch } from "vue"
 
+import CopyId from "@/components/common/CopyId.vue"
 import {
 	Drawer,
-	DrawerCloseButton,
 	DrawerContent,
 	DrawerDescription,
+	DrawerNavBar,
 	DrawerTitle,
 } from "@/components/common/drawer"
 import BookingActivity from "@/components/dashboard/transactions/BookingActivity.vue"
@@ -14,7 +15,6 @@ import TransactionAmountsSection from "@/components/dashboard/transactions/Trans
 import TransactionProperties from "@/components/dashboard/transactions/TransactionProperties.vue"
 import TransactionRefundsSection from "@/components/dashboard/transactions/TransactionRefundsSection.vue"
 import TransactionTicketsSection from "@/components/dashboard/transactions/TransactionTicketsSection.vue"
-import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useMoney } from "@/composables/useMoney"
 import type { TransactionDetail } from "@/types"
 import { serverErrorMessage } from "@/utils/serverError"
@@ -32,8 +32,6 @@ const props = defineProps<{
 const open = defineModel<boolean>("open", { required: true })
 
 const emit = defineEmits<{ previous: []; next: [] }>()
-
-const copyToClipboard = useCopyToClipboard()
 
 const detail = useCall<TransactionDetail, { event: string; booking: string }>({
 	url: "/api/v2/method/buzz.api.transactions.get_transaction",
@@ -88,34 +86,16 @@ const invoiceUrl = computed(() =>
 <template>
 	<Drawer v-model:open="open" swipe-direction="right">
 		<DrawerContent size="lg">
-			<div class="flex items-center gap-1 px-5 pt-4">
-				<DrawerCloseButton label="Close transaction" />
-				<DrawerTitle class="ml-1 text-lg font-semibold text-ink-gray-9"
-					>Transaction details</DrawerTitle
-				>
-				<div class="ml-auto flex items-center gap-1">
-					<Tooltip text="Previous transaction">
-						<Button
-							variant="ghost"
-							size="sm"
-							icon="lucide-chevron-up"
-							aria-label="Previous transaction"
-							:disabled="!hasPrevious"
-							@click="emit('previous')"
-						/>
-					</Tooltip>
-					<Tooltip text="Next transaction">
-						<Button
-							variant="ghost"
-							size="sm"
-							icon="lucide-chevron-down"
-							aria-label="Next transaction"
-							:disabled="!hasNext"
-							@click="emit('next')"
-						/>
-					</Tooltip>
-				</div>
-			</div>
+			<DrawerNavBar
+				class="px-5 pt-4"
+				noun="transaction"
+				:has-previous="hasPrevious"
+				:has-next="hasNext"
+				@previous="emit('previous')"
+				@next="emit('next')"
+			>
+				<DrawerTitle class="text-lg font-semibold text-ink-gray-9">Transaction details</DrawerTitle>
+			</DrawerNavBar>
 
 			<ErrorMessage
 				v-if="detail.error && !detail.loading"
@@ -148,14 +128,7 @@ const invoiceUrl = computed(() =>
 						{{ total }}
 					</p>
 					<DrawerDescription class="flex items-center gap-1.5 text-base text-ink-gray-5">
-						<button
-							type="button"
-							class="copy-id cursor-copy font-mono text-sm uppercase tracking-wider hover:text-ink-gray-7"
-							:aria-label="`Copy booking ID ${transaction.name}`"
-							@click="copyToClipboard(transaction.name, 'Booking ID copied')"
-						>
-							#{{ transaction.name }}
-						</button>
+						<CopyId :value="transaction.name" label="Booking ID" />
 						<span aria-hidden="true">·</span>
 						<span class="tabular-nums">Booked {{ bookedAt }}</span>
 					</DrawerDescription>
@@ -174,21 +147,3 @@ const invoiceUrl = computed(() =>
 		</DrawerContent>
 	</Drawer>
 </template>
-
-<style scoped>
-.copy-id {
-	transition:
-		color 160ms cubic-bezier(0.23, 1, 0.32, 1),
-		transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.copy-id:active {
-	transform: scale(0.97);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.copy-id:active {
-		transform: none;
-	}
-}
-</style>
