@@ -1,7 +1,10 @@
+from unittest.mock import patch
+
 import frappe
 
 from buzz.api.comments import add_comment
 from buzz.api.comments.exceptions import InvalidAttachment
+from buzz.api.comments.test_booking_notes import PDF
 from buzz.comments import dashboard_url, note_email_args
 from buzz.tests.base_test_cases import TeamPermissionTestCase
 from buzz.tests.factories import BuzzTeamMembershipFactory, EventTicketFactory, UserFactory
@@ -41,7 +44,8 @@ class TestTicketNotes(TeamPermissionTestCase):
 		self.assertEqual(frappe.db.get_value("Communication", name, "recipients"), ATTENDEE)
 
 	def test_own_ticket_pdf_is_attached(self):
-		name = self.email_as(self.manager, attachments=[{"kind": "ticket", "ticket": self.ticket}])
+		with patch("buzz.api.comments.attachments.ticket_pdf", return_value=PDF):
+			name = self.email_as(self.manager, attachments=[{"kind": "ticket", "ticket": self.ticket}])
 
 		files = frappe.get_all(
 			"File", {"attached_to_doctype": "Communication", "attached_to_name": name}, pluck="file_name"
