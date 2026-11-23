@@ -86,14 +86,32 @@ function post(
 </template>
 
 <style scoped>
-/* Same fade as the Talk drawer: the timeline runs under the pinned composer. */
+/* Same fade as the Talk drawer: the timeline runs under the pinned composer, and the top
+   edge fades in over the first 24px of scroll, so nothing is cut against the header. */
+@property --top-fade {
+	syntax: "<length>";
+	inherits: false;
+	initial-value: 0px;
+}
+
 .scroll-fade {
 	mask-image: linear-gradient(
 		to bottom,
+		transparent,
+		black var(--top-fade),
 		black calc(100% - 4rem),
 		rgb(0 0 0 / 0.7) calc(100% - 2.5rem),
 		rgb(0 0 0 / 0.3) calc(100% - 1.25rem),
 		transparent
 	);
+	animation: top-fade-in linear both;
+	animation-timeline: scroll(self);
+	animation-range: 0 1.5rem;
+}
+
+@keyframes top-fade-in {
+	to {
+		--top-fade: 1.5rem;
+	}
 }
 </style>

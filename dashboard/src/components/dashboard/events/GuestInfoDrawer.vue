@@ -16,7 +16,7 @@ import GuestAnswers from "@/components/dashboard/events/GuestAnswers.vue"
 import GuestZones from "@/components/dashboard/events/GuestZones.vue"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import type { EmailAttachmentChoice } from "@/data/comments"
-import type { EventGuest, ZoneStatus } from "@/types"
+import type { EventGuest, GuestAddOn, ZoneStatus } from "@/types"
 import { serverErrorMessage } from "@/utils/serverError"
 
 const props = defineProps<{
@@ -37,6 +37,14 @@ const copyToClipboard = useCopyToClipboard()
 const name = computed(
 	() => props.guest?.attendee_name || props.guest?.attendee_email || "Unnamed guest",
 )
+
+// Initials of the "Unnamed guest" placeholder would read as a real person's.
+const hasIdentity = computed(() =>
+	Boolean(props.guest?.attendee_name || props.guest?.attendee_email),
+)
+
+const addOnLabel = (addOn: GuestAddOn) =>
+	addOn.value ? `${addOn.title}: ${addOn.value}` : addOn.title
 
 const recipients = computed(() =>
 	props.guest?.attendee_email ? [{ name: name.value, email: props.guest.attendee_email }] : [],
@@ -148,18 +156,6 @@ const actions = computed(() => {
 							</Dropdown>
 						</div>
 					</div>
-
-					<div class="mt-4 flex items-center gap-3">
-						<Avatar :label="name" size="2xl" />
-						<div class="min-w-0 space-y-1">
-							<DrawerTitle class="truncate text-3xl font-semibold text-ink-gray-9">
-								{{ name }}
-							</DrawerTitle>
-							<DrawerDescription class="truncate text-base text-ink-gray-5">
-								{{ guest.attendee_email || "No email on this ticket" }}
-							</DrawerDescription>
-						</div>
-					</div>
 				</header>
 
 				<RecordActivity
@@ -170,9 +166,35 @@ const actions = computed(() => {
 					:attachment-choices="attachmentChoices"
 					created-label="registered"
 				>
+					<div class="flex items-start gap-3">
+						<Avatar v-if="hasIdentity" :label="name" size="2xl" class="shrink-0" />
+						<span
+							v-else
+							class="flex size-12 shrink-0 items-center justify-center rounded-full bg-surface-gray-2 text-ink-gray-5"
+							aria-hidden="true"
+						>
+							<span class="lucide-user size-5" />
+						</span>
+						<div class="min-w-0 space-y-1 pt-1">
+							<DrawerTitle class="text-3xl leading-tight font-semibold text-pretty text-ink-gray-9">
+								{{ name }}
+							</DrawerTitle>
+							<DrawerDescription class="text-base [overflow-wrap:anywhere] text-ink-gray-5">
+								{{ guest.attendee_email || "No email on this ticket" }}
+							</DrawerDescription>
+						</div>
+					</div>
+
 					<dl class="space-y-0.5">
 						<PropertyRow label="Ticket type" icon="lucide-ticket">
-							<Badge v-if="guest.ticket_type" variant="subtle" :label="guest.ticket_type" />
+							<Badge
+								v-if="guest.ticket_type"
+								variant="subtle"
+								class="max-w-full"
+								:title="guest.ticket_type"
+							>
+								<span class="truncate">{{ guest.ticket_type }}</span>
+							</Badge>
 							<span v-else class="text-ink-gray-5">—</span>
 						</PropertyRow>
 
@@ -189,8 +211,11 @@ const actions = computed(() => {
 									v-for="addOn in guest.add_ons"
 									:key="`${addOn.title}: ${addOn.value}`"
 									variant="subtle"
-									:label="addOn.value ? `${addOn.title}: ${addOn.value}` : addOn.title"
-								/>
+									class="max-w-full"
+									:title="addOnLabel(addOn)"
+								>
+									<span class="truncate">{{ addOnLabel(addOn) }}</span>
+								</Badge>
 							</div>
 						</PropertyRow>
 
