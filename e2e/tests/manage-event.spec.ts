@@ -199,6 +199,7 @@ test.describe("Guest list", () => {
 		{ name: "Ada Lovelace", email: "ada@example.com" },
 		{ name: "Grace Hopper", email: "grace@example.com" },
 	]
+	const ANSWER = { label: "Dietary needs", value: "No peanuts" }
 
 	let eventId: string
 	let ticketNames: string[]
@@ -241,6 +242,8 @@ test.describe("Guest list", () => {
 				// to every row alike.
 				add_ons:
 					index === 0 ? [{ add_on: addOn.name, value: "Large", price: 0, currency: "INR" }] : [],
+				additional_fields:
+					index === 0 ? [{ label: ANSWER.label, fieldname: "dietary", value: ANSWER.value }] : [],
 			})
 			// A draft ticket belongs to a booking still being paid for; only a submitted
 			// one is somebody coming.
@@ -291,6 +294,33 @@ test.describe("Guest list", () => {
 		await expect(page.getByRole("dialog")).toContainText(GUESTS[0].email, { timeout: 15000 })
 		// The param is read once and dropped; the search stays.
 		await expect(page).toHaveURL(new RegExp(`/guests\\?q=Grace$`))
+	})
+
+	test("checks a guest in and out from the drawer", async ({ page }) => {
+		await page.goto(`/b/manage/events/${eventId}/guests?guest=${ticketNames[0]}`)
+
+		const drawer = page.getByRole("dialog")
+		await expect(drawer.getByRole("heading", { name: GUESTS[0].name })).toBeVisible({
+			timeout: 15000,
+		})
+		await expect(drawer.getByRole("button", { name: "Copy ticket ID" })).toBeVisible()
+		await expect(drawer).toContainText(TICKET_TYPE)
+
+		// Answers stay folded until asked for.
+		const answers = drawer.getByRole("button", { name: /Registration answers/ })
+		await expect(drawer.getByText(ANSWER.value)).toBeHidden()
+		await answers.click()
+		await expect(drawer.getByText(ANSWER.value)).toBeVisible()
+
+		// Every event starts with the default zone, so the ticket has one to check in at.
+		await drawer.getByRole("button", { name: "Check in at Main Entrance" }).click()
+		const undo = drawer.getByRole("button", { name: "Undo check-in at Main Entrance" })
+		await expect(undo).toHaveAttribute("aria-pressed", "true")
+		await expect(drawer).toContainText("1 of 1")
+
+		await undo.click()
+		await expect(drawer.getByRole("button", { name: "Check in at Main Entrance" })).toBeVisible()
+		await expect(drawer).toContainText("0 of 1")
 	})
 
 	test("narrows the guest list by search", async ({ page }) => {
