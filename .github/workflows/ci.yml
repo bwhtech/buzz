@@ -22,7 +22,8 @@ jobs:
   tests:
     # Pinned: the ubuntu-26.04 image lacks libmysqlclient.so.21 and Playwright support
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # Budget: the slowest recent run took 8.5 minutes.
+    timeout-minutes: 12
     strategy:
       fail-fast: false
       matrix:
@@ -64,8 +65,16 @@ jobs:
     steps:
       - name: Clone
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          filter: blob:none
+
+      - name: Select suites
+        id: select
+        run: bash .github/scripts/select-suites.sh
 
       - name: Setup Bench
+        if: steps.select.outputs.backend == 'true'
         uses: ./.github/actions/setup-bench
         with:
           # test_buzz_event imports zoom_integration.tests.zoom_fixtures.
@@ -75,6 +84,7 @@ jobs:
           build-assets: ${{ matrix.frappe-branch == 'version-16' }}
 
       - name: Run Tests
+        if: steps.select.outputs.backend == 'true'
         working-directory: /home/runner/frappe-bench
         # Shards match the runner's 4 cores. Coverage only on frappe develop: its data files are
         # per process there, while version-16 has every shard write the same file. Pull requests
@@ -88,7 +98,7 @@ jobs:
       # Frappe's --coverage omits test folders but not test_*.py files, so the report
       # is rebuilt from the raw data with the test modules left out.
       - name: Build coverage report
-        if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.frappe-branch == '' }}
+        if: ${{ !cancelled() && steps.select.outputs.backend == 'true' && github.event_name == 'pull_request' && matrix.frappe-branch == '' }}
         continue-on-error: true
         # Reported from the app folder so the table shows paths relative to it.
         working-directory: /home/runner/frappe-bench/apps/buzz
@@ -99,7 +109,7 @@ jobs:
 
       - name: Comment coverage on the pull request
         # A fork's token cannot comment, so only same-repo pull requests get one.
-        if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.frappe-branch == '' && github.event.pull_request.head.repo.full_name == github.repository }}
+        if: ${{ !cancelled() && steps.select.outputs.backend == 'true' && github.event_name == 'pull_request' && matrix.frappe-branch == '' && github.event.pull_request.head.repo.full_name == github.repository }}
         continue-on-error: true
         uses: actions/github-script@v9
         with:

@@ -18,6 +18,19 @@ const RENAMED = {
 	"Europe/Kiev": "Europe/Kyiv",
 	"America/Godthab": "America/Nuuk",
 	"Atlantic/Faeroe": "Atlantic/Faroe",
+	// Safari lists these under the new name but files them by country under the old one.
+	"Africa/Asmera": "Africa/Asmara",
+	"America/Buenos_Aires": "America/Argentina/Buenos_Aires",
+	"America/Catamarca": "America/Argentina/Catamarca",
+	"America/Coral_Harbour": "America/Atikokan",
+	"America/Cordoba": "America/Argentina/Cordoba",
+	"America/Indianapolis": "America/Indiana/Indianapolis",
+	"America/Jujuy": "America/Argentina/Jujuy",
+	"America/Louisville": "America/Kentucky/Louisville",
+	"America/Mendoza": "America/Argentina/Mendoza",
+	"Pacific/Enderbury": "Pacific/Kanton",
+	"Pacific/Ponape": "Pacific/Pohnpei",
+	"Pacific/Truk": "Pacific/Chuuk",
 } as const
 
 export function canonicalZone(zone: string): string {
