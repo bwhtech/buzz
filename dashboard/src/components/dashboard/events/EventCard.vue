@@ -33,12 +33,13 @@ defineSlots<{
 // An external event opens where it lives, on its own platform.
 const externalUrl = computed(() => (props.event.is_external && props.event.event_url) || "")
 
-const start = computed(() => dayjs(props.event.start_date))
+const start = computed(() => (props.event.start_date ? dayjs(props.event.start_date) : null))
 const startTime = computed(() => (props.event.start_time ? timeLabel(props.event.start_time) : ""))
 
 // A multi-day event always carries its range: the timeline files it under one day only.
 const dateLabel = computed(() => {
 	const { start_date, end_date } = props.event
+	if (!start_date) return __("Date to be announced")
 	if (end_date && end_date !== start_date) return rangeLabel(start_date, end_date)
 	return props.showDate ? dayLabel(start_date) : ""
 })
@@ -62,7 +63,7 @@ const venue = computed(() => {
 			icon: "lucide-triangle-alert",
 			tone: "buzz-event-card-warning",
 		}
-	return { label: "Venue to be announced", icon: "lucide-map-pin-off", tone: "" }
+	return { label: __("Venue to be announced"), icon: "lucide-map-pin-off", tone: "" }
 })
 </script>
 
@@ -105,7 +106,7 @@ const venue = computed(() => {
 			<p v-if="dateLabel || startTime || layout === 'cover'" class="buzz-event-card-time">
 				<span v-if="dateLabel" class="whitespace-nowrap">{{ dateLabel }}</span>
 				<span v-else class="buzz-event-card-weekday">
-					<span>{{ start.format("ddd") }}</span>
+					<span>{{ start?.format("ddd") }}</span>
 					<span v-if="startTime" class="buzz-event-card-separator">·</span>
 				</span>
 				<span v-if="dateLabel && startTime" class="buzz-event-card-separator">·</span>

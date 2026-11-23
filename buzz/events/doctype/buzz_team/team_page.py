@@ -43,13 +43,15 @@ EVENT_FIELDS = CARD_FIELDS + TIME_FIELDS + VENUE_FIELDS + HOST_FIELDS + ["name"]
 
 
 def day_labels(day) -> dict:
+	if not day:
+		return {"label": _("Date to be announced"), "weekday": ""}
 	relative = {0: _("Today"), 1: _("Tomorrow")}.get(date_diff(day, today()))
 	return {"label": relative or format_date(day, "d MMM"), "weekday": format_date(day, "EEEE")}
 
 
 def group_by_day(cards: list[dict]) -> list[dict]:
 	return [
-		{"date": date, **day_labels(getdate(date)), "events": list(group)}
+		{"date": date, **day_labels(getdate(date) if date else None), "events": list(group)}
 		for date, group in groupby(cards, key=lambda card: card["date"])
 	]
 
@@ -74,6 +76,8 @@ def co_host_names_by_event(events: list[str]) -> dict[str, list[str]]:
 
 
 def starts_at(event) -> datetime:
+	if not event.start_date:
+		return datetime.max
 	return datetime.combine(getdate(event.start_date), get_time(event.start_time))
 
 
@@ -198,14 +202,14 @@ class EventTimeline:
 		has_location = not is_online and bool(flt(event.latitude) and flt(event.longitude))
 		return {
 			"route": event.route,
-			"date": str(getdate(event.start_date)),
+			"date": str(getdate(event.start_date)) if event.start_date else "",
 			"title": event.title,
 			"url": f"/events/{event.route}",
 			"image": event.card_image or event.banner_image,
 			"time": format_time(event.start_time),
 			"host_names": ", ".join([event.host_name, *self.co_host_names.get(str(event.name), [])]),
 			"host_logo": event.host_logo,
-			"place": _("Online") if is_online else event.venue_name,
+			"place": _("Online") if is_online else event.venue_name or _("Venue to be announced"),
 			"is_online": is_online,
 			"is_live": has_started(event) and not has_ended(event),
 			"is_attending": str(event.name) in self.attending_events,

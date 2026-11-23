@@ -9,7 +9,7 @@ def format_time(time) -> str:
 
 
 def format_day(date) -> str:
-	return format_date(date, "EEE d MMM y")
+	return format_date(date, "EEE d MMM y") if date else _("Date to be announced")
 
 
 def join_parts(parts: list, separator: str) -> str:
@@ -24,7 +24,8 @@ def format_time_range(start, end) -> str:
 class EventDateRange:
 	def __init__(self, event):
 		self.start_date = getdate(event.start_date)
-		self.end_date = getdate(event.end_date or event.start_date)
+		# An undated event reads as one day, so nothing shows a range it does not have
+		self.end_date = getdate(event.start_date and (event.end_date or event.start_date))
 		self.start_time = event.start_time
 		self.end_time = event.end_time
 

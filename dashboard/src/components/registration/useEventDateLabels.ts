@@ -9,7 +9,7 @@ export function useEventDateLabels(eventDetails: MaybeRefOrGetter<Record<string,
 
 	const dateLabel = computed(() => {
 		const { start_date, end_date } = event.value
-		if (!start_date) return ""
+		if (!start_date) return __("Date to be announced")
 		const start = startDate.value.format("ddd, MMM D, YYYY")
 		if (!end_date || end_date === start_date) return start
 		return `${startDate.value.format("MMM D")} – ${dayjsLocal(end_date).format("MMM D, YYYY")}`
@@ -22,9 +22,11 @@ export function useEventDateLabels(eventDetails: MaybeRefOrGetter<Record<string,
 		return time_zone_label ? `${range} ${time_zone_label}` : range
 	})
 
-	const venueLabel = computed(
-		() => event.value.venue_name || (event.value.medium === "Online" ? __("Online") : ""),
-	)
+	const venueLabel = computed(() => {
+		const { venue_name, medium } = event.value
+		if (medium === "Online") return venue_name || __("Online")
+		return venue_name || (medium === "In Person" ? __("Venue to be announced") : "")
+	})
 
 	return { startDate, dateLabel, timeLabel, venueLabel }
 }

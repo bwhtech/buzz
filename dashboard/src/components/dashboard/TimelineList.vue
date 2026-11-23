@@ -101,11 +101,11 @@ const tabOptions = [
 		</div>
 
 		<div v-else class="relative space-y-6">
-			<section v-for="month in months" :key="month.month" class="space-y-4">
+			<section v-for="month in months" :key="month.month || 'undated'" class="space-y-4">
 				<h2
 					class="sticky top-0 z-[1] bg-surface-elevation-1 py-1 text-xl font-semibold text-ink-gray-8 md:relative"
 				>
-					{{ monthLabel(month.month) }}
+					{{ month.month ? monthLabel(month.month) : __("Date to be announced") }}
 				</h2>
 
 				<div v-if="layout === 'cover'" class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -123,8 +123,10 @@ const tabOptions = [
 						class="grid grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-[6rem_minmax(0,1fr)] md:gap-4"
 					>
 						<div class="flex items-baseline gap-2 md:block md:pt-1">
-							<p class="font-semibold text-ink-gray-8">{{ dayLabel(day.date) }}</p>
-							<p class="text-base text-ink-gray-5">{{ weekday(day.date) }}</p>
+							<p class="font-semibold text-ink-gray-8">
+								{{ day.date ? dayLabel(day.date) : __("TBA") }}
+							</p>
+							<p v-if="day.date" class="text-base text-ink-gray-5">{{ weekday(day.date) }}</p>
 						</div>
 
 						<div class="relative space-y-1 pb-4 md:pl-6 md:pb-7">

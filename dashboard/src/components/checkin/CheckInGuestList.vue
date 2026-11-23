@@ -100,7 +100,8 @@ const countOf = (value: string | number) =>
 
 const startsAt = computed(() => {
 	const data = page.data
-	if (!data?.start_date) return ""
+	if (!data) return ""
+	if (!data.start_date) return __("Date to be announced")
 	const date = dayjsLocal(`${data.start_date}T${data.start_time || "00:00:00"}`)
 	return date.format(data.start_time ? "ddd D MMM, h:mm A" : "ddd D MMM")
 })

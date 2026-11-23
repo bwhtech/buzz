@@ -30,10 +30,10 @@ async function refresh() {
 	if (fresh) drawer.selected.value = fresh
 }
 
-// A proposal whose event was deleted has no date to file it under, so it drops out.
+// A proposal whose event was deleted has no event to show, so it drops out.
 const dated = computed(() =>
 	(myProposals.data || []).filter((proposal): proposal is ProposalWithEvent =>
-		Boolean(proposal.start_date && proposal.event_title),
+		Boolean(proposal.event_title),
 	),
 )
 

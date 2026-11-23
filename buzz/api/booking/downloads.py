@@ -8,7 +8,7 @@ import frappe
 from pypdf import PdfWriter
 
 from buzz.api.booking.details import ensure_confirmation_access
-from buzz.api.booking.exceptions import InvoiceUnavailable
+from buzz.api.booking.exceptions import CalendarInviteUnavailable, InvoiceUnavailable
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import generate_ics_file, qr_data_uri
 
@@ -20,6 +20,8 @@ def calendar_invite(booking_id: str, token: str | None) -> None:
 	ensure_confirmation_access(booking_id, token)
 	booking = frappe.get_cached_doc("Event Booking", booking_id)
 	event = frappe.get_cached_doc("Buzz Event", booking.event)
+	if not event.start_date:
+		CalendarInviteUnavailable.throw()
 	attendee_email = booking.buyer_email or booking.user
 	send_file(f"{event.title}.ics", generate_ics_file(event, attendee_email, OnlineMeeting(event)))
 

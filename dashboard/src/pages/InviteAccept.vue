@@ -41,7 +41,8 @@ watch(
 
 const eventDateTime = computed(() => {
 	const data = invite.data
-	if (!data?.start_date) return ""
+	if (!data) return ""
+	if (!data.start_date) return __("Date to be announced")
 	const date = dayjs(data.start_date).format("ddd, D MMM YYYY")
 	return data.start_time
 		? `${date} · ${dayjs(`2000-01-01 ${data.start_time}`).format("h:mm A")}`

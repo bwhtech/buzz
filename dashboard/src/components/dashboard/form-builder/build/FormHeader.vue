@@ -14,7 +14,8 @@ const event = useEventDoc(() => form.value.event)
 
 const schedule = computed(() => {
 	const doc = event.doc
-	if (!doc?.start_date) return []
+	if (!doc?.name) return []
+	if (!doc.start_date) return [__("Date to be announced")]
 	const times = [doc.start_time, doc.end_time].filter(Boolean).map((time) => timeLabel12Hour(time!))
 	const time = times.length
 		? [times.join(" – "), doc.time_zone_label].filter(Boolean).join(" ")

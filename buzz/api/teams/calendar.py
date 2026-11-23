@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 
 import frappe
 from frappe.query_builder import Case
@@ -17,7 +17,7 @@ def team_events(team: str) -> TeamEvents:
 	"""A team's own events, plus the Buzz and external events its community approved."""
 	events = sorted(
 		buzz_events(team) + external_events(team),
-		key=lambda event: (event.start_date, event.start_time or timedelta(0)),
+		key=lambda event: (event.start_date or date.max, event.start_time or timedelta(0)),
 	)
 	upcoming, past = split_by_date(events)
 	return TeamEvents(upcoming=upcoming, past=past)

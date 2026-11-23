@@ -24,7 +24,8 @@ class ListingPush:
 		self.source_id = source_id_of(event.name)
 
 	def sync_listing(self) -> None:
-		if self.event.is_published and not self.has_ended():
+		# The listing places every event on a calendar, so an undated one waits for its date
+		if self.event.is_published and self.event.start_date and not self.has_ended():
 			post_to_buzz_events("upsert_event", {"event": self.payload()})
 		else:
 			post_to_buzz_events("remove_event", {"source_id": self.source_id})

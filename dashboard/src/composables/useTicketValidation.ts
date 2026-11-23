@@ -13,11 +13,11 @@ export interface ValidationTicket {
 	attendee_email: string
 	event_title: string
 	ticket_type: string
-	venue: string
-	start_date: string
-	start_time: string
-	end_date: string
-	end_time: string
+	venue: string | null
+	start_date: string | null
+	start_time: string | null
+	end_date: string | null
+	end_time: string | null
 	is_checked_in: boolean
 	check_in_time: string | null
 	check_in_date?: string | null

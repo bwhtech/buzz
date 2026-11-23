@@ -64,6 +64,8 @@ class BuzzSchedule(Document):
 def event_days(event: str) -> str:
 	"""One day per date the event spans, labeled Day 1 to Day N."""
 	start_date, end_date = frappe.db.get_value("Buzz Event", event, ["start_date", "end_date"])
+	if not start_date:
+		return frappe.as_json([])
 	count = date_diff(end_date or start_date, start_date) + 1
 	return frappe.as_json(
 		[

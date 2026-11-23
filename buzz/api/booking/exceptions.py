@@ -67,6 +67,11 @@ class InvoiceUnavailable(ResourceNotFound):
 	message = _lt("This booking has no invoice.")
 
 
+class CalendarInviteUnavailable(ResourceNotFound):
+	title = _lt("Calendar Invite Unavailable")
+	message = _lt("This event's date has not been announced yet.")
+
+
 class InvalidCoupon(BuzzAPIError):
 	title = _lt("Invalid Code")
 	message = _lt("Invalid or expired code")

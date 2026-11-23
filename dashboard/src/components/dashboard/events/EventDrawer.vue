@@ -31,12 +31,13 @@ const banner = computed(() => ({
 // would read as a single afternoon — so each end gets its own line with its own date.
 const laterEndDate = computed(() => {
 	const event = props.event
-	if (!event?.end_date || event.end_date === event.start_date) return null
+	if (!event?.start_date || !event.end_date || event.end_date === event.start_date) return null
 	return event.end_date
 })
 
 const startsAt = computed(() => {
 	if (!props.event) return ""
+	if (!props.event.start_date) return __("Date to be announced")
 	const date = dayjs(props.event.start_date)
 	if (!laterEndDate.value) return date.format("dddd, D MMMM")
 	const time = props.event.start_time ? `, ${timeLabel12Hour(props.event.start_time)}` : ""
@@ -56,13 +57,13 @@ async function copyLink() {
 }
 
 const endsAt = computed(() => {
-	if (!props.event) return ""
+	if (!props.event?.start_date) return ""
 	if (laterEndDate.value) {
 		const date = dayjs(laterEndDate.value).format("ddd, D MMM")
 		const time = props.event.end_time ? `, ${timeLabel12Hour(props.event.end_time)}` : ""
 		return `to ${date}${time}`
 	}
-	if (!props.event.start_time) return "Time to be announced"
+	if (!props.event.start_time) return __("Time to be announced")
 	const start = timeLabel12Hour(props.event.start_time)
 	return props.event.end_time ? `${start} – ${timeLabel12Hour(props.event.end_time)}` : start
 })
@@ -137,7 +138,7 @@ const endsAt = computed(() => {
 								<DrawerDescription class="text-base font-medium text-ink-gray-8">
 									{{ startsAt }}
 								</DrawerDescription>
-								<p class="text-base text-ink-gray-5">{{ endsAt }}</p>
+								<p v-if="endsAt" class="text-base text-ink-gray-5">{{ endsAt }}</p>
 							</div>
 						</div>
 
@@ -151,7 +152,7 @@ const endsAt = computed(() => {
 								/>
 							</div>
 							<p class="text-base text-ink-gray-8">
-								{{ event.venue || "Venue to be announced" }}
+								{{ event.venue || __("Venue to be announced") }}
 							</p>
 						</div>
 					</div>

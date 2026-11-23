@@ -7,11 +7,11 @@
 	<a class="buzz-event-card-target" aria-label="{{ event.title }}" href="{{ event.url }}"{% if event.is_external %} target="_blank" rel="noopener"{% endif %}></a>
 	<div class="buzz-event-card-cover">
 		{% if event.image %}<img class="buzz-event-card-image" src="{{ event.image }}" loading="lazy" alt="">{% else %}<event-banner class="buzz-event-card-image" seed="{{ event.title }}"></event-banner>{% endif %}
-		<span class="date-badge" data-size="sm" aria-hidden="true"><span class="date-badge-month">{{ frappe.utils.format_date(event.date, "MMM") }}</span><span class="date-badge-day">{{ frappe.utils.format_date(event.date, "d") }}</span></span>
+		{% if event.date %}<span class="date-badge" data-size="sm" aria-hidden="true"><span class="date-badge-month">{{ frappe.utils.format_date(event.date, "MMM") }}</span><span class="date-badge-day">{{ frappe.utils.format_date(event.date, "d") }}</span></span>{% endif %}
 	</div>
 	<div class="buzz-event-card-body">
 		<p class="buzz-event-card-time">
-			<span class="buzz-event-card-weekday"><span>{{ frappe.utils.format_date(event.date, "EEE") }}</span>{% if event.is_live or event.time %}<span class="buzz-event-card-separator">·</span>{% endif %}</span>
+			<span class="buzz-event-card-weekday"><span>{{ frappe.utils.format_date(event.date, "EEE") if event.date else _("Date to be announced") }}</span>{% if event.is_live or event.time %}<span class="buzz-event-card-separator">·</span>{% endif %}</span>
 			{# Like the discover page: a live event says so instead of its start time. #}
 			{% if event.is_live %}<span class="event-card-live"><span class="live-dot"></span>{{ _("Live") }}</span>{% else %}<span>{{ event.time }}</span>{% endif %}
 		</p>

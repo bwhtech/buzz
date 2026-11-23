@@ -53,3 +53,15 @@ test("a null end_date falls back to start_date", () => {
 
 	assert.deepEqual(inTab([row], "past", TODAY), [row])
 })
+
+test("an undated row is upcoming and sorts after dated ones", () => {
+	const undated = { start_date: null }
+	const items = [undated, item("2026-09-01"), item("2026-08-14")]
+
+	assert.deepEqual(inTab(items, "upcoming", TODAY), [
+		item("2026-08-14"),
+		item("2026-09-01"),
+		undated,
+	])
+	assert.deepEqual(inTab(items, "past", TODAY), [])
+})

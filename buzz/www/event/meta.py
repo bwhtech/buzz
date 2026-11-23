@@ -49,6 +49,9 @@ class EventMeta:
 		return get_url(public) if public else ""
 
 	def structured_data(self) -> dict | None:
+		# Search engines reject an Event without a start date
+		if not self.event.start_date:
+			return None
 		image = self.image()
 		data = {
 			"@context": "https://schema.org",
@@ -66,7 +69,9 @@ class EventMeta:
 		}
 		return {key: value for key, value in data.items() if value}
 
-	def event_datetime(self, date, time) -> str:
+	def event_datetime(self, date, time) -> str | None:
+		if not date:
+			return None
 		if not time:
 			return getdate(date).isoformat()
 		return datetime.combine(getdate(date), get_time(time), event_time_zone(self.event)).isoformat()
