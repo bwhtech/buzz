@@ -275,6 +275,7 @@ function goBack(path: string) {
 							variant="ghost"
 							size="sm"
 							:label="__('Announce later')"
+							:disabled="!canCreate"
 							@click="clearSchedule"
 						/>
 					</div>
