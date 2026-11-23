@@ -16,9 +16,7 @@ const isMobile = useIsMobile()
 </script>
 
 <template>
-	<header
-		class="flex h-12 shrink-0 items-center gap-3 border-b border-outline-gray-1 bg-surface-base px-2 md:px-4"
-	>
+	<header class="flex h-12 shrink-0 items-center gap-3 bg-surface-base px-2 md:px-4">
 		<Button
 			variant="ghost"
 			icon="lucide-chevron-left"
