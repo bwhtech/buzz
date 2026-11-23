@@ -54,15 +54,16 @@ function clear() {
 			@remove="clear"
 		/>
 		<!-- An event opened with a venue waits for the list, rather than flashing Add Location. -->
-		<Button
-			v-else-if="!venue || !venues.loading"
-			class="!h-14 w-full"
-			variant="subtle"
-			icon-left="lucide-map-pin-plus"
-			label="Add Location"
-			:disabled="disabled"
-			@click="isOpen = true"
-		/>
+		<slot v-else-if="!venue || !venues.loading" name="empty" :open="() => (isOpen = true)">
+			<Button
+				class="!h-14 w-full"
+				variant="subtle"
+				icon-left="lucide-map-pin-plus"
+				label="Add Location"
+				:disabled="disabled"
+				@click="isOpen = true"
+			/>
+		</slot>
 		<ErrorMessage :message="error" />
 
 		<LocationDialog

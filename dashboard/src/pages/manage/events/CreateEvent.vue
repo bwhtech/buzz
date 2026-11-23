@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { Alert, ErrorMessage, toast } from "frappe-ui"
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue"
+import { Alert, Button, ErrorMessage, toast } from "frappe-ui"
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue"
 import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router"
 
 import ProgressStatus from "@/components/common/ProgressStatus.vue"
+import AnnounceLaterTile from "@/components/dashboard/events/create/AnnounceLaterTile.vue"
 import CreateEventFooter from "@/components/dashboard/events/create/CreateEventFooter.vue"
 import CreateEventHeader from "@/components/dashboard/events/create/CreateEventHeader.vue"
 import EventScheduleField from "@/components/dashboard/events/create/EventScheduleField.vue"
 import EventTitleField from "@/components/dashboard/events/create/EventTitleField.vue"
-import EventBanner from "@/components/dashboard/events/EventBanner.vue"
 import EventTeamSelect from "@/components/dashboard/events/EventTeamSelect.vue"
 import EventLocationField from "@/components/dashboard/events/location/EventLocationField.vue"
 import { useQueryParamRecord } from "@/composables/useQueryParamRecord"
@@ -35,10 +35,20 @@ useQueryParamRecord(
 )
 
 const title = ref("")
-const bannerImage = ref("")
 
-const opening = defaultSchedule()
+// The date can be announced later, so the form opens without one.
+const opening = { startDate: "", startTime: "", endDate: "", endTime: "" }
 const schedule = reactive({ ...opening, timeZone: currentTimeZone() })
+const hasSchedule = computed(() => Boolean(schedule.startDate))
+
+const clearSchedule = () => Object.assign(schedule, opening)
+
+// Starts from the next free hour and opens the picker, so setting a date is one click.
+async function setSchedule() {
+	Object.assign(schedule, defaultSchedule())
+	await nextTick()
+	document.getElementById("event-schedule-start")?.click()
+}
 
 const venue = ref("")
 const zoomMeeting = ref(false)
@@ -58,7 +68,6 @@ const errorMessage = computed(() => serverErrorMessage(createEvent.error))
 const isDirty = computed(() =>
 	Boolean(
 		title.value ||
-		bannerImage.value ||
 		venue.value ||
 		zoomMeeting.value ||
 		schedule.startDate !== opening.startDate ||
@@ -176,7 +185,6 @@ async function save() {
 				start_time: schedule.startTime || null,
 				end_date: schedule.endDate || null,
 				end_time: schedule.endTime || null,
-				banner_image: bannerImage.value || null,
 				time_zone: schedule.timeZone || null,
 				venue: venue.value || null,
 				zoom_meeting: zoomMeeting.value,
@@ -250,8 +258,6 @@ function goBack(path: string) {
 					:dismissible="false"
 				/>
 
-				<EventBanner v-model="bannerImage" :seed="title" :disabled="!canCreate" />
-
 				<EventTitleField
 					v-model="title"
 					:disabled="!canCreate"
@@ -259,22 +265,51 @@ function goBack(path: string) {
 				/>
 
 				<section>
-					<h2 class="mb-2 text-sm font-medium" :class="labelTone(SCHEDULE_FIELDS)">
-						{{ __("When") }}
-					</h2>
-					<EventScheduleField :schedule="schedule" :disabled="!canCreate" />
+					<div class="mb-2 flex h-6 items-center justify-between">
+						<h2 class="text-sm font-medium" :class="labelTone(SCHEDULE_FIELDS)">
+							{{ __("When") }}
+							<span class="font-normal text-ink-gray-4">· {{ __("Optional") }}</span>
+						</h2>
+						<Button
+							v-if="hasSchedule"
+							variant="ghost"
+							size="sm"
+							:label="__('Announce later')"
+							@click="clearSchedule"
+						/>
+					</div>
+					<EventScheduleField v-if="hasSchedule" :schedule="schedule" :disabled="!canCreate" />
+					<AnnounceLaterTile
+						v-else
+						icon="lucide-calendar-clock"
+						:title="__('Date to be announced')"
+						:action-label="__('Set date')"
+						:disabled="!canCreate"
+						@action="setSchedule"
+					/>
 				</section>
 
 				<section id="event-location">
-					<h2 class="mb-2 text-sm font-medium" :class="labelTone(['event-location'])">
+					<h2 class="mb-2 text-sm font-medium text-ink-gray-6">
 						{{ __("Where") }}
+						<span class="font-normal text-ink-gray-4">· {{ __("Optional") }}</span>
 					</h2>
 					<EventLocationField
 						v-model:venue="venue"
 						v-model:zoom-meeting="zoomMeeting"
 						:team="currentTeam?.name ?? ''"
 						:disabled="!canCreate"
-					/>
+					>
+						<template #empty="{ open }">
+							<AnnounceLaterTile
+								icon="lucide-map-pin"
+								:title="__('Venue to be announced')"
+								:action-label="__('Add location')"
+								:disabled="!canCreate"
+								@action="open"
+							/>
+						</template>
+					</EventLocationField>
 				</section>
 
 				<CreateEventFooter
