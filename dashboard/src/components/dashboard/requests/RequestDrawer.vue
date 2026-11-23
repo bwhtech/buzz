@@ -5,9 +5,9 @@ import { computed } from "vue"
 import DetailRow from "@/components/common/DetailRow.vue"
 import {
 	Drawer,
-	DrawerCloseButton,
 	DrawerContent,
 	DrawerDescription,
+	DrawerNavBar,
 	DrawerTitle,
 } from "@/components/common/drawer"
 import type { RegistrationRequest } from "@/types"
@@ -75,34 +75,18 @@ const note = computed(() => {
 	<Drawer v-model:open="open" swipe-direction="right">
 		<DrawerContent size="md">
 			<template v-if="request && status">
-				<div class="flex items-center gap-1 p-4 pb-0">
-					<DrawerCloseButton label="Close request" />
+				<DrawerNavBar
+					class="p-4 pb-0"
+					noun="request"
+					:has-previous="hasPrevious"
+					:has-next="hasNext"
+					@previous="emit('previous')"
+					@next="emit('next')"
+				>
 					<span class="text-sm text-ink-gray-5">
 						{{ waitlist ? `Waitlist · ${ticketType}` : "Approval request" }}
 					</span>
-					<div class="ml-auto flex items-center gap-1">
-						<Tooltip text="Previous request">
-							<Button
-								variant="ghost"
-								size="sm"
-								icon="lucide-chevron-up"
-								aria-label="Previous request"
-								:disabled="!hasPrevious"
-								@click="emit('previous')"
-							/>
-						</Tooltip>
-						<Tooltip text="Next request">
-							<Button
-								variant="ghost"
-								size="sm"
-								icon="lucide-chevron-down"
-								aria-label="Next request"
-								:disabled="!hasNext"
-								@click="emit('next')"
-							/>
-						</Tooltip>
-					</div>
-				</div>
+				</DrawerNavBar>
 
 				<div class="flex flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
 					<RequestPosition

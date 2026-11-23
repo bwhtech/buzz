@@ -18,6 +18,7 @@ import {
 } from "reka-ui"
 import { computed, ref, watch } from "vue"
 
+import CopyId from "@/components/common/CopyId.vue"
 import DetailRow from "@/components/common/DetailRow.vue"
 import {
 	Drawer,
@@ -144,14 +145,7 @@ const updatedAt = computed(() => (loaded.value ? dayjsLocal(loaded.value.modifie
 			<template v-if="enquiry">
 				<div class="flex items-center gap-2 p-4 pb-0">
 					<DrawerCloseButton label="Close enquiry" />
-					<button
-						type="button"
-						class="cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5 hover:text-ink-gray-7"
-						:aria-label="`Copy enquiry id ${enquiry}`"
-						@click="copyToClipboard(enquiry, 'Enquiry ID copied')"
-					>
-						#{{ enquiry }}
-					</button>
+					<CopyId :value="enquiry" label="Enquiry ID" />
 				</div>
 
 				<div class="flex flex-1 flex-col space-y-4 overflow-y-auto overscroll-contain p-4">

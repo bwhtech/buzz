@@ -29,13 +29,8 @@ const { search, order, conditions, isFiltered } = useListQuery()
 
 const zone = ref("")
 
-const { guests, fetchOne, loadMore, page, loadingFirstPage, loadingMore } = useEventGuests(
-	eventId,
-	search,
-	order,
-	conditions,
-	{ zone },
-)
+const { guests, fetchOne, refreshOne, loadMore, page, loadingFirstPage, loadingMore } =
+	useEventGuests(eventId, search, order, conditions, { zone })
 
 // The export is the list on screen, not the whole event: same filters, same order.
 const exportQuery = computed(() => ({
@@ -243,10 +238,10 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 	<GuestInfoDrawer
 		v-model:open="drawerOpen"
 		:guest="selectedGuest"
-		:event="page.data"
 		:has-previous="selectedIndex > 0"
 		:has-next="selectedIndex >= 0 && selectedIndex < guests.length - 1"
 		@previous="step(-1)"
 		@next="step(1)"
+		@changed="refreshOne"
 	/>
 </template>

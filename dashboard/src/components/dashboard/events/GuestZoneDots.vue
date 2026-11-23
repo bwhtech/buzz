@@ -3,19 +3,9 @@ import { HoverCard, ItemListRow } from "frappe-ui"
 import { computed } from "vue"
 
 import type { ZoneStatus } from "@/types"
-import { checkInTimeLabel } from "@/utils/dateLabels"
+import { zoneDotClass as dotClass, zoneStatusLabel as status } from "@/utils/zoneStatus"
 
 const props = defineProps<{ zones: ZoneStatus[] }>()
-
-const status = (zone: ZoneStatus) => {
-	if (zone.checked_in_at) return checkInTimeLabel(zone.checked_in_at)
-	return zone.allowed ? "Not checked in" : "Not allowed"
-}
-
-const dotClass = (zone: ZoneStatus) => {
-	if (zone.checked_in_at) return "bg-surface-green-6"
-	return zone.allowed ? "bg-surface-gray-4" : "border border-outline-gray-4"
-}
 
 const checkedIn = computed(() => props.zones.filter((zone) => zone.checked_in_at).length)
 const allowed = computed(() => props.zones.filter((zone) => zone.allowed).length)

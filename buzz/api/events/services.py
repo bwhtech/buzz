@@ -24,6 +24,7 @@ from buzz.api.events.schemas import (
 	EventGuestsResponse,
 	EventHostRef,
 	GuestAddOn,
+	GuestAnswer,
 	GuestTicketType,
 	MyEvent,
 	MyEventFilters,
@@ -443,13 +444,17 @@ def event_guests(
 		"Event Ticket",
 		filters=query_filters,
 		or_filters=or_filters,
-		fields=["name", "attendee_name", "attendee_email", "ticket_type", "creation"],
+		fields=["name", "attendee_name", "attendee_email", "ticket_type", "booking", "creation"],
 		order_by=f"creation {direction}, name {direction}",
 		limit_start=start,
 		limit_page_length=limit,
 	)
 
 	by_ticket = add_ons_by_ticket([ticket.name for ticket in tickets])
+	ticket_answers = answers_by_parent("Event Ticket", [ticket.name for ticket in tickets])
+	booking_answers = answers_by_parent(
+		"Event Booking", [ticket.booking for ticket in tickets if ticket.booking]
+	)
 	# Event Ticket Type is autonamed, so the link value is a number nobody recognises.
 	type_titles = titles_of("Event Ticket Type", {ticket.ticket_type for ticket in tickets})
 
@@ -460,7 +465,12 @@ def event_guests(
 		ticket["ticket_type"] = type_titles.get(ticket.ticket_type) or ticket.ticket_type
 
 	guests = [
-		EventGuest(**ticket, add_ons=by_ticket.get(ticket.name, []), checked_in_at=arrivals.get(ticket.name))
+		EventGuest(
+			**ticket,
+			add_ons=by_ticket.get(ticket.name, []),
+			checked_in_at=arrivals.get(ticket.name),
+			answers=ticket_answers.get(ticket.name, []) + booking_answers.get(ticket.booking, []),
+		)
 		for ticket in tickets
 	]
 	doc = frappe.get_cached_doc("Buzz Event", event)
@@ -599,6 +609,24 @@ def titles_of(doctype: str, names: set[str | None]) -> dict[str, str]:
 	# An autonamed doctype comes back with integer names, while every link to it travels
 	# as a string — without this the map never matches.
 	return {str(name): title for name, title in rows}
+
+
+def answers_by_parent(parenttype: str, parents: list[str]) -> dict[str, list[GuestAnswer]]:
+	"""Form answers for every parent at once. Query builder for the same reason as add-ons."""
+	if not parents:
+		return {}
+	field = frappe.qb.DocType("Additional Field")
+	rows = (
+		frappe.qb.from_(field)
+		.select(field.parent, field.label, field.fieldname, field.value)
+		.where((field.parenttype == parenttype) & field.parent.isin(parents) & (field.value != ""))
+		.orderby(field.idx)
+	).run(as_dict=True)
+	by_parent: dict[str, list[GuestAnswer]] = {}
+	for row in rows:
+		answer = GuestAnswer(label=row.label or row.fieldname, value=row.value)
+		by_parent.setdefault(row.parent, []).append(answer)
+	return by_parent
 
 
 def add_ons_by_ticket(tickets: list[str], parenttype: str = "Event Ticket") -> dict[str, list[GuestAddOn]]:

@@ -2,6 +2,7 @@
 import { Alert, Button, ErrorMessage, dayjs, dayjsLocal, dialog, toast } from "frappe-ui"
 import { computed, ref } from "vue"
 
+import CopyId from "@/components/common/CopyId.vue"
 import {
 	Drawer,
 	DrawerCloseButton,
@@ -18,7 +19,6 @@ import {
 	enquiryStatusMessage,
 } from "@/components/dashboard/sponsorships/mine/enquiryStatus"
 import SponsorshipPaymentDialog from "@/components/SponsorshipPaymentDialog.vue"
-import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import { useUpdateSponsorshipLogo, useWithdrawEnquiry } from "@/data/sponsorships"
 import type { SponsorshipListItem } from "@/types"
 import { validateIsImageFile } from "@/utils"
@@ -34,7 +34,6 @@ const actions = computed(() => enquiryActions(props.enquiry?.status || ""))
 
 const withdrawal = useWithdrawEnquiry()
 const logo = useUpdateSponsorshipLogo()
-const copyId = useCopyToClipboard()
 
 const paying = ref(false)
 
@@ -94,14 +93,7 @@ const fields = computed(() => {
 			<template v-if="enquiry">
 				<div class="flex items-center gap-2 p-4 pb-0">
 					<DrawerCloseButton />
-					<button
-						type="button"
-						class="cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5"
-						:aria-label="`Copy enquiry id ${enquiry.name}`"
-						@click="copyId(enquiry.name)"
-					>
-						#{{ enquiry.name }}
-					</button>
+					<CopyId :value="enquiry.name" label="Enquiry ID" />
 				</div>
 
 				<div class="flex flex-1 flex-col space-y-4 overflow-y-auto overscroll-contain p-4">
