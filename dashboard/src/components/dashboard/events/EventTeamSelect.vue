@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Avatar, Combobox } from "frappe-ui"
+import { Avatar, Button, Combobox } from "frappe-ui"
 import { computed, watchEffect } from "vue"
 
 import { session } from "@/data/session"
@@ -13,6 +13,10 @@ import {
 } from "@/data/teams"
 import { NEW_PERSONAL_TEAM, eventTeamOptions } from "@/utils/eventTeamOptions"
 
+// The host as a row of chips, so the other teams are in view and the default reads as a
+// choice rather than a fact: events made under the wrong team are the mistake this guards.
+const VISIBLE_CHIPS = 3
+
 const options = computed(() =>
 	eventTeamOptions(teams.value, {
 		personalTeamsEnabled,
@@ -20,15 +24,10 @@ const options = computed(() =>
 	}).map(({ value, label }) => {
 		const team = teams.value.find((row) => row.name === value)
 		const isPersonal = value === NEW_PERSONAL_TEAM || Boolean(team?.is_personal)
-		const memberCount = team?.members.length ?? 0
 		return {
 			value,
 			label,
-			description: isPersonal
-				? session.user
-				: memberCount === 1
-					? __("1 member")
-					: __("{0} members", [memberCount]),
+			isPersonal,
 			image: (isPersonal ? session.userImage : team?.logo) ?? undefined,
 		}
 	}),
@@ -43,6 +42,18 @@ const selectedOption = computed(() =>
 	options.value.find((option) => option.value === selectedTeam.value),
 )
 
+// A team picked from the search joins the chips, so the choice stays on screen.
+const chips = computed(() => {
+	const head = options.value.slice(0, VISIBLE_CHIPS)
+	const picked = selectedOption.value
+	return picked && !head.includes(picked) ? [...head, picked] : head
+})
+const otherOptions = computed(() => options.value.filter((option) => !chips.value.includes(option)))
+const searchPick = computed({
+	get: () => null,
+	set: (value: string | null) => value && (selectedTeam.value = value),
+})
+
 // Someone with no team came here to host, and Personal is all they can host as.
 watchEffect(() => {
 	if (teamsLoaded.value && !teams.value.length && personalTeamsEnabled) selectPersonalTeam()
@@ -50,65 +61,51 @@ watchEffect(() => {
 </script>
 
 <template>
-	<!-- A sentence at the top of the form, so the host is read before anything is typed:
-	     events made under the wrong team are the mistake this guards against. -->
-	<div v-if="selectedOption" class="space-y-2">
-		<div
-			class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-lg font-semibold tracking-tight md:text-[22px]"
-		>
-			<span class="text-ink-gray-5">{{ __("New event for") }}</span>
+	<section v-if="selectedOption" class="space-y-2">
+		<h2 class="text-sm font-medium text-ink-gray-6">{{ __("Host") }}</h2>
+		<div class="flex flex-wrap gap-2">
+			<Button
+				v-for="option in chips"
+				:key="option.value"
+				size="md"
+				class="max-w-full rounded-full"
+				:variant="option.value === selectedTeam ? 'solid' : 'subtle'"
+				:aria-pressed="option.value === selectedTeam"
+				@click="selectedTeam = option.value"
+			>
+				<template #prefix>
+					<Avatar size="xs" :image="option.image" :label="option.label" />
+				</template>
+				<span class="inline-block max-w-48 truncate align-bottom" :title="option.label">
+					{{ option.label }}
+				</span>
+			</Button>
 			<Combobox
-				v-model="selectedTeam"
-				:options="options"
-				:disabled="options.length < 2"
+				v-if="otherOptions.length"
+				v-model="searchPick"
+				:options="otherOptions"
 				:placeholder="__('Search teams')"
 			>
 				<template #trigger>
-					<button
-						type="button"
-						class="host -my-0.5 inline-flex min-w-0 items-center gap-2 rounded-4 py-0.5 pl-0.5 pr-1.5 text-ink-gray-9 aria-expanded:bg-surface-gray-3 disabled:cursor-default"
-						:disabled="options.length < 2"
-					>
-						<Avatar size="md" :image="selectedOption.image" :label="selectedOption.label" />
-						<span class="truncate">{{ selectedOption.label }}</span>
-						<span
-							v-if="options.length > 1"
-							class="lucide-chevron-down size-[18px] shrink-0 text-ink-gray-5"
-							aria-hidden="true"
-						/>
-					</button>
+					<Button
+						size="md"
+						variant="outline"
+						icon-left="lucide-plus"
+						class="rounded-full border-dashed"
+						:label="__('{0} more', [otherOptions.length])"
+					/>
 				</template>
 				<template #item-prefix="{ item }">
 					<Avatar shape="square" size="md" :image="item.image" :label="item.label" />
 				</template>
 			</Combobox>
 		</div>
-		<p v-if="currentTeam?.is_personal" class="text-p-sm text-ink-gray-5">
-			{{ __("Shows on your profile. Only you can edit it") }}
+		<p class="text-p-sm text-ink-gray-5">
+			{{
+				selectedOption.isPersonal
+					? __("Hosted by you. It shows on your profile and only you can edit it.")
+					: __("Hosted by {0}. Its members can manage this event.", [selectedOption.label])
+			}}
 		</p>
-	</div>
+	</section>
 </template>
-
-<style scoped>
-.host {
-	text-decoration: underline dotted var(--outline-gray-4);
-	text-decoration-thickness: 2px;
-	text-underline-offset: 6px;
-	transition:
-		transform 150ms cubic-bezier(0.23, 1, 0.32, 1),
-		background-color 150ms ease;
-}
-.host:not(:disabled):active {
-	transform: scale(0.97);
-}
-@media (hover: hover) and (pointer: fine) {
-	.host:not(:disabled):hover {
-		background: var(--surface-gray-2);
-	}
-}
-@media (prefers-reduced-motion: reduce) {
-	.host:active {
-		transform: none;
-	}
-}
-</style>
