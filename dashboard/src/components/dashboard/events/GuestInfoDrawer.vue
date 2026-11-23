@@ -3,7 +3,6 @@ import { Avatar, Badge, Button, Dropdown, Tooltip, call, dayjsLocal, toast } fro
 import { computed, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
-import DetailRow from "@/components/common/DetailRow.vue"
 import {
 	Drawer,
 	DrawerCloseButton,
@@ -11,12 +10,14 @@ import {
 	DrawerDescription,
 	DrawerTitle,
 } from "@/components/common/drawer"
+import PropertyRow from "@/components/common/PropertyRow.vue"
 import RecordActivity from "@/components/dashboard/comments/RecordActivity.vue"
+import GuestAnswers from "@/components/dashboard/events/GuestAnswers.vue"
+import GuestZones from "@/components/dashboard/events/GuestZones.vue"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import type { EmailAttachmentChoice } from "@/data/comments"
-import type { EventGuest } from "@/types"
+import type { EventGuest, ZoneStatus } from "@/types"
 import { serverErrorMessage } from "@/utils/serverError"
-import { zoneDotClass, zoneStatusLabel } from "@/utils/zoneStatus"
 
 const props = defineProps<{
 	guest: EventGuest | null
@@ -59,24 +60,23 @@ const registeredAt = computed(() =>
 	props.guest?.registered_at ? dayjsLocal(props.guest.registered_at) : null,
 )
 
-// Check-in from here is at the default zone, which is listed first.
-const checkedIn = computed(() => Boolean(props.guest?.zones[0]?.checked_in_at))
+// The zone being checked in or undone, so the list waits for one write at a time.
+const pendingZone = ref<string | null>(null)
 
-const checkingIn = ref(false)
-
-async function toggleCheckIn(ticket: string) {
-	const method = checkedIn.value ? "undo_checkin" : "checkin_ticket"
-	checkingIn.value = true
+async function toggleCheckIn(ticket: string, zone: ZoneStatus) {
+	const method = zone.checked_in_at ? "undo_checkin" : "checkin_ticket"
+	pendingZone.value = zone.name
 	try {
 		const data: { message: string } = await call(`buzz.api.checkin.${method}`, {
 			ticket_id: ticket,
+			zone: zone.name,
 		})
 		toast.success(data.message)
 		emit("changed", ticket)
 	} catch (error) {
 		toast.error(serverErrorMessage(error) || "Check-in failed")
 	} finally {
-		checkingIn.value = false
+		pendingZone.value = null
 	}
 }
 
@@ -92,64 +92,75 @@ const actions = computed(() => {
 	if (!guest) return []
 	return [
 		{
-			label: checkedIn.value ? "Undo check-in" : "Check in",
-			icon: checkedIn.value ? "lucide-rotate-ccw" : "lucide-scan-line",
-			onClick: () => toggleCheckIn(guest.name),
-		},
-		{
-			label: "Copy ticket ID",
-			icon: "lucide-copy",
-			onClick: () => copyToClipboard(guest.name, "Ticket ID copied"),
-		},
-		{
 			label: "View transaction",
 			icon: "lucide-receipt",
 			onClick: openTransaction,
 			condition: () => Boolean(guest.booking),
 		},
-	]
+	].filter((action) => action.condition())
 })
 </script>
 
 <template>
 	<Drawer v-model:open="open" swipe-direction="right">
-		<DrawerContent size="md">
+		<DrawerContent size="lg">
 			<template v-if="guest">
-				<div class="flex items-center gap-1 px-5 pt-4">
-					<DrawerCloseButton label="Close guest" />
+				<header class="shrink-0 px-6 pt-4 pb-2">
+					<div class="flex items-center gap-2">
+						<DrawerCloseButton label="Close guest" />
+						<button
+							type="button"
+							class="cursor-copy font-mono text-sm tracking-wider uppercase text-ink-gray-5 hover:text-ink-gray-7"
+							:aria-label="`Copy ticket id ${guest.name}`"
+							@click="copyToClipboard(guest.name, 'Ticket ID copied')"
+						>
+							#{{ guest.name }}
+						</button>
 
-					<div class="ml-auto flex items-center gap-1">
-						<Tooltip text="Previous guest">
-							<Button
-								variant="ghost"
-								size="sm"
-								icon="lucide-chevron-up"
-								aria-label="Previous guest"
-								:disabled="!hasPrevious"
-								@click="emit('previous')"
-							/>
-						</Tooltip>
-						<Tooltip text="Next guest">
-							<Button
-								variant="ghost"
-								size="sm"
-								icon="lucide-chevron-down"
-								aria-label="Next guest"
-								:disabled="!hasNext"
-								@click="emit('next')"
-							/>
-						</Tooltip>
-						<Dropdown :options="actions" align="end">
-							<Button
-								variant="ghost"
-								size="sm"
-								icon="lucide-ellipsis"
-								aria-label="Guest actions"
-								:loading="checkingIn"
-							/>
-						</Dropdown>
+						<div class="ml-auto flex items-center gap-1">
+							<Tooltip text="Previous guest">
+								<Button
+									variant="ghost"
+									size="sm"
+									icon="lucide-chevron-up"
+									aria-label="Previous guest"
+									:disabled="!hasPrevious"
+									@click="emit('previous')"
+								/>
+							</Tooltip>
+							<Tooltip text="Next guest">
+								<Button
+									variant="ghost"
+									size="sm"
+									icon="lucide-chevron-down"
+									aria-label="Next guest"
+									:disabled="!hasNext"
+									@click="emit('next')"
+								/>
+							</Tooltip>
+							<Dropdown v-if="actions.length" :options="actions" align="end">
+								<Button
+									variant="ghost"
+									size="sm"
+									icon="lucide-ellipsis"
+									aria-label="Guest actions"
+								/>
+							</Dropdown>
+						</div>
 					</div>
-				</div>
+
+					<div class="mt-4 flex items-center gap-3">
+						<Avatar :label="name" size="2xl" />
+						<div class="min-w-0 space-y-1">
+							<DrawerTitle class="truncate text-3xl font-semibold text-ink-gray-9">
+								{{ name }}
+							</DrawerTitle>
+							<DrawerDescription class="truncate text-base text-ink-gray-5">
+								{{ guest.attendee_email || "No email on this ticket" }}
+							</DrawerDescription>
+						</div>
+					</div>
+				</header>
 
 				<RecordActivity
 					:key="guest.name"
@@ -159,91 +170,50 @@ const actions = computed(() => {
 					:attachment-choices="attachmentChoices"
 					created-label="registered"
 				>
-					<header class="flex items-center gap-3 pt-3">
-						<Avatar :label="name" size="2xl" />
-						<div class="min-w-0 space-y-1">
-							<DrawerTitle class="truncate text-xl font-semibold text-ink-gray-9">
-								{{ name }}
-							</DrawerTitle>
-							<DrawerDescription class="truncate text-base text-ink-gray-5">
-								{{ guest.attendee_email || "No email on this ticket" }}
-							</DrawerDescription>
-						</div>
-					</header>
-
-					<dl class="space-y-3 text-base">
-						<DetailRow label="Ticket type">
+					<dl class="space-y-0.5">
+						<PropertyRow label="Ticket type" icon="lucide-ticket">
 							<Badge v-if="guest.ticket_type" variant="subtle" :label="guest.ticket_type" />
 							<span v-else class="text-ink-gray-5">—</span>
-						</DetailRow>
+						</PropertyRow>
 
-						<DetailRow label="Ticket ID">
-							<span class="font-mono text-sm tracking-wider uppercase">{{ guest.name }}</span>
-						</DetailRow>
-
-						<DetailRow label="Registered">
+						<PropertyRow label="Registered" icon="lucide-calendar">
 							<Tooltip v-if="registeredAt" :text="registeredAt.fromNow()">
 								<span>{{ registeredAt.format("D MMM YYYY, h:mm A") }}</span>
 							</Tooltip>
 							<span v-else class="text-ink-gray-5">—</span>
-						</DetailRow>
+						</PropertyRow>
 
-						<DetailRow v-if="guest.add_ons.length" label="Add-ons">
+						<PropertyRow v-if="guest.add_ons.length" label="Add-ons" icon="lucide-package-plus">
 							<div class="flex flex-wrap gap-1.5">
 								<Badge
 									v-for="addOn in guest.add_ons"
 									:key="`${addOn.title}: ${addOn.value}`"
-									theme="blue"
 									variant="subtle"
 									:label="addOn.value ? `${addOn.title}: ${addOn.value}` : addOn.title"
 								/>
 							</div>
-						</DetailRow>
+						</PropertyRow>
 
-						<DetailRow v-if="guest.booking" label="Transaction">
+						<PropertyRow v-if="guest.booking" label="Transaction" icon="lucide-receipt">
 							<button
 								type="button"
-								class="inline-flex items-center gap-1 font-mono text-sm text-ink-gray-8 hover:text-ink-gray-9 hover:underline"
+								class="inline-flex items-center gap-1 font-mono text-sm hover:text-ink-gray-9 hover:underline"
 								@click="openTransaction"
 							>
 								{{ guest.booking }}
 								<span class="lucide-arrow-up-right size-3.5 text-ink-gray-5" aria-hidden="true" />
 							</button>
-						</DetailRow>
+						</PropertyRow>
 					</dl>
 
-					<section v-if="guest.zones.length" class="space-y-2">
-						<h3 class="text-sm font-medium text-ink-gray-5">Zones</h3>
-						<ul class="space-y-2 text-base">
-							<li v-for="zone in guest.zones" :key="zone.name" class="flex items-center gap-2.5">
-								<span class="size-2 shrink-0 rounded-full" :class="zoneDotClass(zone)" />
-								<span
-									class="flex-1 truncate"
-									:class="zone.allowed ? 'text-ink-gray-8' : 'text-ink-gray-5'"
-								>
-									{{ zone.title }}
-								</span>
-								<span
-									class="tabular-nums"
-									:class="zone.checked_in_at ? 'text-ink-gray-8' : 'text-ink-gray-5'"
-								>
-									{{ zoneStatusLabel(zone) }}
-								</span>
-							</li>
-						</ul>
-					</section>
+					<GuestZones
+						v-if="guest.zones.length"
+						:zones="guest.zones"
+						:pending-zone="pendingZone"
+						@toggle="toggleCheckIn(guest.name, $event)"
+					/>
 
-					<section v-if="guest.answers.length" class="space-y-2">
-						<h3 class="text-sm font-medium text-ink-gray-5">Registration answers</h3>
-						<dl class="space-y-3">
-							<div v-for="answer in guest.answers" :key="answer.label" class="space-y-0.5">
-								<dt class="text-sm text-ink-gray-5">{{ answer.label }}</dt>
-								<dd class="text-base text-pretty whitespace-pre-line text-ink-gray-8">
-									{{ answer.value }}
-								</dd>
-							</div>
-						</dl>
-					</section>
+					<GuestAnswers v-if="guest.answers.length" :answers="guest.answers" />
 				</RecordActivity>
 			</template>
 		</DrawerContent>
