@@ -161,6 +161,7 @@ for _doctype in commentable_doctypes:
 doc_events["Communication"] = {"after_insert": "buzz.comments.notify_team_of_email"}
 doc_events["OAuth Client"] = {"before_validate": "buzz.mcp.token_scope.open_to_every_user"}
 doc_events["Email Queue"] = {"after_insert": "buzz.playground.inbox.capture_email"}
+doc_events["File"] = {"after_insert": "buzz.ticketing.stored_ticket_pdf.delete_after_send"}
 doc_events.setdefault("Buzz Team", {})["after_insert"] = "buzz.playground.demo_data.seed_community_requests"
 extend_doctype_class = {"Comment": ["buzz.comments.TeamComment"]}
 

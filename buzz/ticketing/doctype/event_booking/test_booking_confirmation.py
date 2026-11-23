@@ -1,9 +1,6 @@
-from contextlib import ExitStack
-from io import BytesIO
 from unittest.mock import patch
 
 import frappe
-from pypdf import PdfWriter
 
 from buzz.api.booking import (
 	download_invoice,
@@ -20,6 +17,7 @@ from buzz.tests.factories import (
 	EventPaymentFactory,
 	EventTicketTypeFactory,
 )
+from buzz.tests.utils import stub_pdf_rendering
 
 BUYER_INVOICE_DETAILS = {"tax_id": "29BBBBB1111B1Z6", "business_name": "Globex Corporation"}
 
@@ -191,23 +189,3 @@ class TestBookingConfirmation(BookingTestCase):
 	def create_booking(self, ticket_type: str, **overrides):
 		attendees = [{"ticket_type": ticket_type, "first_name": "Conf", "email": "conf@example.com"}]
 		return EventBookingFactory.create(event=self.event.name, attendees=attendees, **overrides)
-
-
-def stub_pdf_rendering() -> ExitStack:
-	# CI never runs bench build, so printview has no assets.json and wkhtmltopdf
-	# has no server to fetch the print styles from
-	stack = ExitStack()
-	stack.enter_context(patch("frappe.utils.get_assets_json", return_value={}))
-	stack.enter_context(patch("frappe.utils.pdf.get_pdf", side_effect=add_blank_page))
-	return stack
-
-
-def add_blank_page(html: str, options=None, output=None, **kwargs):
-	# Tickets pass a writer to collect every page; a single print wants the PDF bytes back.
-	writer = output or PdfWriter()
-	writer.add_blank_page(width=100, height=100)
-	if output:
-		return output
-	buffer = BytesIO()
-	writer.write(buffer)
-	return buffer.getvalue()

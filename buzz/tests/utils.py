@@ -1,8 +1,10 @@
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from email import message_from_string
+from io import BytesIO
 from unittest.mock import patch
 
 import frappe
+from pypdf import PdfWriter
 
 from buzz.events.doctype.event_venue.map_link import MAP_LINK_CACHE_PREFIX
 
@@ -91,3 +93,23 @@ def linked_to(doctype: str) -> set[str]:
 		pluck="parent",
 	)
 	return {parent for parent in parents if not frappe.get_meta(parent).istable}
+
+
+def stub_pdf_rendering() -> ExitStack:
+	# CI never runs bench build, so printview has no assets.json and wkhtmltopdf
+	# has no server to fetch the print styles from
+	stack = ExitStack()
+	stack.enter_context(patch("frappe.utils.get_assets_json", return_value={}))
+	stack.enter_context(patch("frappe.utils.pdf.get_pdf", side_effect=add_blank_page))
+	return stack
+
+
+def add_blank_page(html: str, options=None, output=None, **kwargs):
+	# Tickets pass a writer to collect every page; a single print wants the PDF bytes back.
+	writer = output or PdfWriter()
+	writer.add_blank_page(width=100, height=100)
+	if output:
+		return output
+	buffer = BytesIO()
+	writer.write(buffer)
+	return buffer.getvalue()
