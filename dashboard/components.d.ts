@@ -235,6 +235,7 @@ declare module 'vue' {
     PriceList: typeof import('./src/components/dashboard/sponsorships/PriceList.vue')['default']
     PrintedTicket: typeof import('./src/components/dashboard/tickets/PrintedTicket.vue')['default']
     ProgressStatus: typeof import('./src/components/common/ProgressStatus.vue')['default']
+    PropertyRow: typeof import('./src/components/common/PropertyRow.vue')['default']
     ProposalCard: typeof import('./src/components/dashboard/proposals/ProposalCard.vue')['default']
     ProposalDocument: typeof import('./src/components/dashboard/proposals/ProposalDocument.vue')['default']
     ProposalDrawer: typeof import('./src/components/dashboard/proposals/ProposalDrawer.vue')['default']
