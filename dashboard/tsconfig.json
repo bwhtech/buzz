@@ -17,15 +17,14 @@
 		"allowImportingTsExtensions": true,
 		"noEmit": true,
 		"sourceMap": true,
-		"baseUrl": ".",
 		"types": ["node"],
 		"paths": {
-			"@/*": ["src/*"],
+			"@/*": ["./src/*"],
 			"@public/*": ["../buzz/public/*"],
-			"@framework/ui/telemetry": ["node_modules/@framework/ui/src/telemetry/index.ts"],
+			"@framework/ui/telemetry": ["./node_modules/@framework/ui/src/telemetry/index.ts"],
 			"tslib": ["/node_modules/tslib/tslib.d.ts"],
-			"maplibre-gl": ["node_modules/maplibre-gl"],
-			"cobe": ["node_modules/cobe"]
+			"maplibre-gl": ["./node_modules/maplibre-gl"],
+			"cobe": ["./node_modules/cobe"]
 		},
 		"lib": ["esnext", "dom", "dom.iterable", "scripthost"]
 	},

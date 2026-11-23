@@ -11,6 +11,7 @@
 		"preview": "vite preview",
 		"lint": "oxlint --deny-warnings",
 		"typecheck": "./typecheck.sh",
+		"test": "bun test --randomize --isolate src",
 		"test:unit": "node --test 'src/**/*.test.ts'",
 		"copy-html-entry": "cp ../buzz/public/dashboard/index.html ../buzz/www/dashboard.html",
 		"fmt": "oxfmt",
@@ -51,7 +52,7 @@
 		"postcss": "^8.4.5",
 		"tailwindcss": "^3.4.15",
 		"typescript": "^5.9.3",
-		"vite": "^8.1.5",
+		"vite": "^8.1.7",
 		"vue-tsc": "^3.3.7"
 	}
 }

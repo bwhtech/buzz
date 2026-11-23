@@ -12,7 +12,11 @@
 		"no-redeclare": "error",
 		"no-regex-spaces": "error"
 	},
-	"ignorePatterns": ["buzz/public/dist/**", "buzz/public/dashboard/**"],
+	"ignorePatterns": [
+		"buzz/public/dist/**",
+		"buzz/public/dashboard/**",
+		"buzz/public/js/lib/**"
+	],
 	"overrides": [
 		{
 			"files": ["buzz/**/*.js"],

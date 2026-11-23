@@ -10,10 +10,9 @@
     "resolveJsonModule": true,
     "declaration": false,
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
-      "@helpers/*": ["helpers/*"],
-      "@pages/*": ["pages/*"]
+      "@helpers/*": ["./helpers/*"],
+      "@pages/*": ["./pages/*"]
     }
   },
   "include": [
