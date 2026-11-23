@@ -7,7 +7,7 @@ from frappe.tests import IntegrationTestCase
 from pypdf import PdfWriter
 
 from buzz.patches.delete_stored_ticket_pdfs import execute as run_cleanup_patch
-from buzz.tests.factories import BuzzEventFactory, EventTicketFactory, FileFactory
+from buzz.tests.factories import BuzzEventFactory, EmailQueueFactory, EventTicketFactory, FileFactory
 from buzz.tests.utils import mute_outgoing_email, stub_pdf_rendering
 from buzz.ticketing.stored_ticket_pdf import delete_stored_ticket_pdfs
 
@@ -48,6 +48,16 @@ class TestStoredTicketPdf(IntegrationTestCase):
 
 		enqueue.assert_called_once_with(DELETE_JOB, file=self.stored_copy(), enqueue_after_commit=True)
 
+	def test_a_copy_renamed_because_the_name_was_taken_is_queued_too(self):
+		with patch("buzz.ticketing.stored_ticket_pdf.frappe.enqueue"):
+			self.stored_pdf(f"{self.ticket.name}.pdf", "Email Queue")
+		with patch("buzz.ticketing.stored_ticket_pdf.frappe.enqueue") as enqueue:
+			self.build_message(self.queue_ticket_email())
+
+		renamed = frappe.get_last_doc("File", {"attached_to_doctype": "Email Queue"})
+		self.assertNotEqual(renamed.file_name, f"{self.ticket.name}.pdf")
+		enqueue.assert_called_once_with(DELETE_JOB, file=renamed.name, enqueue_after_commit=True)
+
 	def test_a_retried_send_still_attaches_the_ticket_once_the_copy_is_gone(self):
 		self.build_message(self.queue_ticket_email())
 		frappe.delete_doc("File", self.stored_copy(), ignore_permissions=True)
@@ -68,29 +78,32 @@ class TestStoredTicketPdf(IntegrationTestCase):
 			frappe.db.exists("Comment", {"reference_name": queue, "comment_type": "Attachment Removed"})
 		)
 
-	def test_other_pdfs_on_an_email_queue_are_left_alone(self):
+	def test_a_pdf_named_like_a_ticket_on_another_documents_email_is_left_alone(self):
+		other_email = EmailQueueFactory.create(reference_doctype="User", reference_name="Administrator").name
 		with patch("buzz.ticketing.stored_ticket_pdf.frappe.enqueue") as enqueue:
-			FileFactory.create(
-				file_name="Invoice-0001.pdf",
-				content=unique_pdf(),
-				is_private=1,
-				attached_to_doctype="Email Queue",
-				attached_to_name=frappe.generate_hash(length=10),
-			)
+			self.stored_pdf(f"{self.ticket.name}.pdf", "Email Queue", other_email)
 
 		enqueue.assert_not_called()
 
-	def test_cleanup_deletes_copies_left_behind_by_deleted_queue_rows(self):
-		orphan = self.stored_pdf(f"{self.ticket.name}.pdf", attached_to_doctype="Email Queue")
-		invoice = self.stored_pdf("Invoice-0001.pdf", attached_to_doctype="Email Queue")
-		ticket_elsewhere = self.stored_pdf(f"{self.ticket.name}.pdf", attached_to_doctype="Communication")
+	def test_cleanup_deletes_only_ticket_pdfs_on_ticket_emails(self):
+		self.enterContext(patch("buzz.ticketing.stored_ticket_pdf.frappe.enqueue"))
+		ticket_email = EmailQueueFactory.create(
+			reference_doctype="Event Ticket", reference_name=self.ticket.name
+		)
+		other_email = EmailQueueFactory.create(reference_doctype="User", reference_name="Administrator")
+		on_ticket_email = self.stored_pdf(f"{self.ticket.name}.pdf", "Email Queue", ticket_email.name)
+		orphan = self.stored_pdf(f"{self.ticket.name}.pdf", "Email Queue")
+		on_other_email = self.stored_pdf(f"{self.ticket.name}.pdf", "Email Queue", other_email.name)
+		invoice = self.stored_pdf("Invoice-0001.pdf", "Email Queue")
+		on_communication = self.stored_pdf(f"{self.ticket.name}.pdf", "Communication")
 
 		with patch("frappe.db.commit"):
 			delete_stored_ticket_pdfs()
 
+		self.assertFalse(frappe.db.exists("File", on_ticket_email))
 		self.assertFalse(frappe.db.exists("File", orphan))
-		self.assertTrue(frappe.db.exists("File", invoice))
-		self.assertTrue(frappe.db.exists("File", ticket_elsewhere))
+		for kept in (on_other_email, invoice, on_communication):
+			self.assertTrue(frappe.db.exists("File", kept))
 
 	def test_patch_queues_the_cleanup_on_the_long_queue(self):
 		with patch("buzz.patches.delete_stored_ticket_pdfs.frappe.enqueue") as enqueue:
@@ -99,15 +112,16 @@ class TestStoredTicketPdf(IntegrationTestCase):
 		enqueue.assert_called_once()
 		self.assertEqual(enqueue.call_args.kwargs["queue"], "long")
 
-	def stored_pdf(self, file_name: str, attached_to_doctype: str) -> str:
-		with patch("buzz.ticketing.stored_ticket_pdf.frappe.enqueue"):
-			return FileFactory.create(
-				file_name=file_name,
-				content=unique_pdf(),
-				is_private=1,
-				attached_to_doctype=attached_to_doctype,
-				attached_to_name=frappe.generate_hash(length=10),
-			).name
+	def stored_pdf(
+		self, file_name: str, attached_to_doctype: str, attached_to_name: str | None = None
+	) -> str:
+		return FileFactory.create(
+			file_name=file_name,
+			content=unique_pdf(),
+			is_private=1,
+			attached_to_doctype=attached_to_doctype,
+			attached_to_name=attached_to_name or frappe.generate_hash(length=10),
+		).name
 
 
 def unique_pdf() -> bytes:
