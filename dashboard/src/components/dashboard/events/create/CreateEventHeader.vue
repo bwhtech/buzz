@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button } from "frappe-ui"
+import { Button, PageHeaderMobile } from "frappe-ui"
 
 import { useIsMobile } from "@/composables/useIsMobile"
 import type { ChecklistItem } from "@/utils/eventValidation"
@@ -16,7 +16,18 @@ const isMobile = useIsMobile()
 </script>
 
 <template>
-	<header class="flex h-12 shrink-0 items-center gap-3 bg-surface-base px-2 md:px-4">
+	<!-- A phone gets the app's standard bar, title centred; Create lives at the end of the form. -->
+	<PageHeaderMobile v-if="isMobile" :title="__('Create New Event')">
+		<template #prefix>
+			<Button
+				variant="ghost"
+				icon="lucide-chevron-left"
+				:aria-label="__('Back')"
+				@click="emit('close')"
+			/>
+		</template>
+	</PageHeaderMobile>
+	<header v-else class="flex h-12 shrink-0 items-center gap-3 bg-surface-base px-2 md:px-4">
 		<Button
 			variant="ghost"
 			icon="lucide-chevron-left"
@@ -27,7 +38,6 @@ const isMobile = useIsMobile()
 		<div class="flex-1" />
 		<!-- Kept in the layout while hidden, so nothing beside it jumps when it hands over. -->
 		<div
-			v-if="!isMobile"
 			class="header-create"
 			:data-hidden="createHidden || undefined"
 			:inert="createHidden || undefined"
