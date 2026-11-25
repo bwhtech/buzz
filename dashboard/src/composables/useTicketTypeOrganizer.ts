@@ -49,9 +49,10 @@ export function useTicketTypeOrganizer(
 		}))
 		const uncategorized = inGroup("")
 		if (!uncategorized.length && !dragging.value) return categorized
+		// Uncategorized is pinned first: it holds ticket types that have no group yet.
 		return [
-			...categorized,
 			{ key: "", category: null, title: "Uncategorized", ticketTypes: uncategorized },
+			...categorized,
 		]
 	})
 

@@ -8,16 +8,12 @@ import AddOnsSection from "@/components/dashboard/add-ons/AddOnsSection.vue"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import RegistrationActions from "@/components/dashboard/events/RegistrationActions.vue"
-import ApprovalModeCards from "@/components/dashboard/requests/ApprovalModeCards.vue"
-import RequestSummaryCards from "@/components/dashboard/requests/RequestSummaryCards.vue"
-import WaitlistSettings from "@/components/dashboard/requests/WaitlistSettings.vue"
 import NewTicketTypeDrawer from "@/components/dashboard/ticket-types/NewTicketTypeDrawer.vue"
 import TicketCategoryDialog from "@/components/dashboard/ticket-types/TicketCategoryDialog.vue"
 import TicketTypeDrawer from "@/components/dashboard/ticket-types/TicketTypeDrawer.vue"
 import TicketTypesSection from "@/components/dashboard/ticket-types/TicketTypesSection.vue"
 import { useRegistrationRules } from "@/composables/useRegistrationRules"
 import { useTicketTypeOrganizer } from "@/composables/useTicketTypeOrganizer"
-import { useRequestCounts } from "@/data/requests"
 import { useEventTicketTypes } from "@/data/ticketTypes"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
 import type { FrappeError, TicketCategoryItem } from "@/types"
@@ -32,7 +28,6 @@ const organizer = useTicketTypeOrganizer(
 )
 
 const rules = useRegistrationRules(eventId, page)
-const counts = useRequestCounts(() => eventId)
 const access = computed(() => ({
 	mode: rules.mode.value,
 	eventWaitlist: Boolean(page.data?.enable_waitlist),
@@ -95,8 +90,6 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		<ErrorMessage v-else-if="page.error" :message="message(page.error)" />
 
 		<div v-else-if="page.data" class="space-y-10">
-			<RequestSummaryCards v-if="page.data.can_write" :event="eventId" :counts="counts.data" />
-
 			<TicketTypesSection
 				:page="page.data"
 				:organizer="organizer"
@@ -107,27 +100,12 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 			/>
 
 			<AddOnsSection :page="page.data" @open="openAddOnDrawer" @add="openAddOnDrawer('')" />
-
-			<ApprovalModeCards
-				:mode="rules.mode.value"
-				:disabled="!page.data.can_write"
-				@pick="rules.pickMode"
-			/>
-
-			<WaitlistSettings
-				:enabled="page.data.enable_waitlist"
-				:offer-hours="rules.offerHours.value"
-				:disabled="!page.data.can_write"
-				@toggle="rules.setWaitlist"
-				@hours="rules.setOfferHours"
-			/>
 		</div>
 
 		<template #sidebar>
 			<RegistrationActions
 				v-if="page.data"
 				:event="eventId"
-				:registration-link="page.data.registration_link"
 				:registration-form="page.data.registration_form"
 				:closed="page.data.registrations_closed"
 				:can-write="page.data.can_write"

@@ -47,6 +47,12 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 								:class="{ '-rotate-90': collapsed.has(group.key) }"
 								aria-hidden="true"
 							/>
+							<Icon
+								v-if="!group.category"
+								icon="lucide-circle-dashed"
+								class="size-4 shrink-0 text-ink-gray-5"
+								aria-hidden="true"
+							/>
 							<span
 								class="min-w-0 text-base font-semibold [overflow-wrap:anywhere]"
 								:class="group.category ? 'text-ink-gray-9' : 'text-ink-gray-6'"
@@ -72,7 +78,7 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 				<TicketCategoryActions
 					v-if="canWrite"
 					:category="group.category"
-					:first="index === 0"
+					:first="!organizer.groups.value[index - 1]?.category"
 					:last="!organizer.groups.value[index + 1]?.category"
 					@move="organizer.shift(group.category!, $event)"
 					@edit="$emit('editCategory', group.category!)"
@@ -102,16 +108,24 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 						@click="$emit('open', ticketType.name)"
 					/>
 				</li>
-				<li
-					v-if="!group.ticketTypes.length"
-					key="empty"
-					class="rounded-4 border border-dashed border-outline-gray-2 p-4 text-center text-sm text-ink-gray-5"
-				>
-					{{
-						organizer.dragging.value
-							? "Drop here to move"
-							: "No ticket types yet. Drag one here or add one."
-					}}
+				<li v-if="!group.ticketTypes.length" key="empty">
+					<!-- The empty slot is the action: it sits where the first ticket type will go. -->
+					<button
+						v-if="canWrite && !organizer.dragging.value"
+						type="button"
+						class="flex h-16 w-full items-center gap-2 rounded-4 border border-dashed border-outline-gray-3 px-3.5 text-base text-ink-gray-6 transition-[border-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] [@media(hover:hover)]:hover:border-outline-gray-4 [@media(hover:hover)]:hover:text-ink-gray-8 focus-visible:outline-none focus-visible:focus-ring active:scale-[0.99] motion-reduce:transform-none"
+						@click="$emit('add', group.key)"
+					>
+						<Icon icon="lucide-plus" class="size-4" aria-hidden="true" />
+						Add ticket type
+						<span class="ml-auto text-sm text-ink-gray-5">or drag one here</span>
+					</button>
+					<p
+						v-else
+						class="flex h-16 items-center justify-center rounded-4 border border-dashed border-outline-gray-3 text-sm text-ink-gray-5"
+					>
+						{{ organizer.dragging.value ? "Drop here to move" : "No ticket types yet" }}
+					</p>
 				</li>
 			</TransitionGroup>
 		</section>

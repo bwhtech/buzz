@@ -17,11 +17,11 @@ const emit = defineEmits<{ pick: [mode: ApprovalMode] }>()
 			<label
 				v-for="option in APPROVAL_MODES"
 				:key="option.value"
-				class="flex cursor-pointer flex-col gap-0.5 rounded-6 border p-3.5 transition-[border-color,box-shadow] duration-150 ease-out has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-outline-gray-3 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 motion-reduce:transition-none"
+				class="flex cursor-pointer flex-col gap-0.5 rounded-6 border p-3.5 transition-[border-color,box-shadow,transform] duration-150 ease-out active:scale-[0.99] has-[:disabled]:active:scale-100 motion-reduce:transform-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-outline-gray-3 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 motion-reduce:transition-none"
 				:class="
 					mode === option.value
 						? 'border-outline-gray-8 shadow-[0_0_0_1px_var(--outline-gray-8)]'
-						: 'border-outline-gray-2 hover:border-outline-gray-3'
+						: 'border-outline-gray-2 [@media(hover:hover)]:hover:border-outline-gray-3'
 				"
 			>
 				<input
@@ -36,7 +36,7 @@ const emit = defineEmits<{ pick: [mode: ApprovalMode] }>()
 				<span class="flex items-center justify-between">
 					<span :class="option.icon" class="size-4 text-ink-gray-6" aria-hidden="true" />
 					<span
-						class="size-4 rounded-full border transition-[border-width] duration-150"
+						class="size-4 rounded-full border transition-[border-width] duration-150 ease-out"
 						:class="
 							mode === option.value ? 'border-[5px] border-outline-gray-8' : 'border-outline-gray-4'
 						"

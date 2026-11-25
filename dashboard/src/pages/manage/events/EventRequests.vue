@@ -7,12 +7,15 @@ import EmptyState from "@/components/common/EmptyState.vue"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventGuestSkeleton from "@/components/dashboard/events/EventGuestSkeleton.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
+import ApprovalModeCards from "@/components/dashboard/requests/ApprovalModeCards.vue"
 import RequestDrawer from "@/components/dashboard/requests/RequestDrawer.vue"
 import RequestList from "@/components/dashboard/requests/RequestList.vue"
 import RequestsDisabled from "@/components/dashboard/requests/RequestsDisabled.vue"
 import RequestStatCards from "@/components/dashboard/requests/RequestStatCards.vue"
 import RequestToolbar from "@/components/dashboard/requests/RequestToolbar.vue"
 import SeatsFreedBanner from "@/components/dashboard/requests/SeatsFreedBanner.vue"
+import WaitlistSettings from "@/components/dashboard/requests/WaitlistSettings.vue"
+import { useRegistrationRules } from "@/composables/useRegistrationRules"
 import { useRequestQueue } from "@/composables/useRequestQueue"
 import { useEventDoc } from "@/data/events"
 import { useEventTicketTypes } from "@/data/ticketTypes"
@@ -35,6 +38,8 @@ const props = defineProps<{ requestType: RequestType }>()
 const eventId = useRoute().params.eventId as string
 const event = useEventDoc(() => eventId)
 const settings = useEventTicketTypes(eventId)
+const rules = useRegistrationRules(eventId, settings)
+const readOnly = computed(() => !settings.data?.can_write)
 const { requests, counts, rows, viewOf, act } = useRequestQueue(eventId, props.requestType)
 const waitlist = props.requestType === "Waitlist"
 
@@ -176,6 +181,23 @@ const seatsFreeFor = (row: RegistrationRequest | null) =>
 	<PageWithSidebar>
 		<EventArchivedAlert :event="eventId" />
 
+		<template v-if="settings.data">
+			<WaitlistSettings
+				v-if="waitlist"
+				:enabled="settings.data.enable_waitlist"
+				:offer-hours="rules.offerHours.value"
+				:disabled="readOnly"
+				@toggle="rules.setWaitlist"
+				@hours="rules.setOfferHours"
+			/>
+			<ApprovalModeCards
+				v-else
+				:mode="rules.mode.value"
+				:disabled="readOnly"
+				@pick="rules.pickMode"
+			/>
+		</template>
+
 		<ul
 			v-if="isLoading"
 			class="divide-y divide-outline-gray-1 overflow-hidden rounded-6 border border-outline-gray-2"
@@ -183,11 +205,7 @@ const seatsFreeFor = (row: RegistrationRequest | null) =>
 			<EventGuestSkeleton :rows="5" />
 		</ul>
 		<ErrorMessage v-else-if="requests.error" :message="serverErrorMessage(requests.error)" />
-		<RequestsDisabled
-			v-else-if="isQueueEmpty && !isEnabled"
-			:type="requestType"
-			:event-id="eventId"
-		/>
+		<RequestsDisabled v-else-if="isQueueEmpty && !isEnabled" :type="requestType" />
 		<template v-else>
 			<RequestStatCards :stats="stats" :active="view" @pick="pick" />
 
