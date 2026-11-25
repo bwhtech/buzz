@@ -365,7 +365,6 @@ async function save() {
 					<EventDetailsActions
 						v-model:show-countdown="showCountdown"
 						:event="eventId"
-						:route="event.data.route"
 						@changed="event.reload()"
 					/>
 				</fieldset>
