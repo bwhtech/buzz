@@ -1,6 +1,5 @@
 {% extends "buzz/templates/emails/base.html" %}
 
-{% block preheader %}We received your request to join {{ event_title }}.{% endblock %}
 {% block title %}{% if doc.status == "Waitlisted" %}You're on the waitlist{% else %}Request received{% endif %}{% endblock %}
 
 {% block content %}
