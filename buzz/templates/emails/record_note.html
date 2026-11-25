@@ -1,6 +1,5 @@
 {% extends "buzz/templates/emails/base.html" %}
 
-{% block preheader %}{{ author }} wrote to you about {{ record_title }}.{% endblock %}
 {% block title %}{% if reference_doctype == "Event Booking" %}A note on your booking{% elif reference_doctype == "Event Ticket" %}A note on your ticket{% else %}A note on your proposal{% endif %}{% endblock %}
 
 {% block content %}

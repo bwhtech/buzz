@@ -1,0 +1,18 @@
+rules:
+  - id: hidden-text-in-email-template
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      Spam filters (Rspamd MANY_INVISIBLE_PARTS) count hidden text against the
+      email. Email text must be visible; do not hide it with inline styles.
+    paths:
+      include:
+        - "buzz/templates/emails/**/*.html"
+    pattern-either:
+      - pattern-regex: 'style\s*=\s*"[^"]*(?<![\w-])display\s*:\s*none'
+      - pattern-regex: 'style\s*=\s*"[^"]*(?<![\w-])visibility\s*:\s*hidden'
+      - pattern-regex: 'style\s*=\s*"[^"]*(?<![\w-])opacity\s*:\s*(0?\.0\d*|0(\.0*)?)\s*(;|"|!)'
+      - pattern-regex: 'style\s*=\s*"[^"]*(?<![\w-])max-(height|width)\s*:\s*0(px)?\s*(;|"|!)'
+      - pattern-regex: 'style\s*=\s*"[^"]*(?<![\w-])text-indent\s*:\s*-'
+      - pattern-regex: 'style\s*=\s*"[^"]*(?<![\w-])font-size\s*:\s*[0-2](\.\d+)?(px|pt)?\s*(;|"|!)'
+      - pattern-regex: 'style\s*=\s*"[^"]*(?<![\w-])clip\s*:'
