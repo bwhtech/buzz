@@ -1,34 +1,24 @@
 <script setup lang="ts">
-import { Button } from "frappe-ui"
-
 import EmptyState from "@/components/common/EmptyState.vue"
 import type { RequestType } from "@/types"
 
-const props = defineProps<{ type: RequestType; eventId: string }>()
+const props = defineProps<{ type: RequestType }>()
 
 const COPY = {
 	Approval: {
 		icon: "lucide-user-check",
-		title: "Approvals aren’t enabled for this event",
-		description:
-			"Turn on registration approval first. Then every registration waits here until you accept it.",
+		title: "Approvals are off",
+		description: "Pick Manual review or Review some tickets above to review registrations here.",
 	},
 	Waitlist: {
 		icon: "lucide-list-ordered",
-		title: "The waitlist isn’t enabled for this event",
-		description:
-			"Turn on the waitlist first. Then people can queue up here once a ticket type with a seat limit sells out.",
+		title: "The waitlist is off",
+		description: "Turn it on above to let people queue for sold-out tickets.",
 	},
 }
 const copy = COPY[props.type]
 </script>
 
 <template>
-	<EmptyState v-bind="copy">
-		<Button
-			variant="solid"
-			label="Go to Registration"
-			:route="`/manage/events/${eventId}/registrations`"
-		/>
-	</EmptyState>
+	<EmptyState v-bind="copy" />
 </template>

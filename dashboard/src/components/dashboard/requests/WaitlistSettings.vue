@@ -16,7 +16,7 @@ const HOURS = ["24", "48", "72"].map((value) => ({ label: `${value}h`, value }))
 			</p>
 		</div>
 		<div
-			class="rounded-6 border border-outline-gray-2 transition-[border-color] duration-150 ease-out hover:border-outline-gray-3 has-[input:focus-visible]:outline has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-outline-gray-5 motion-reduce:transition-none"
+			class="rounded-6 border border-outline-gray-2 transition-[border-color] duration-150 ease-out [@media(hover:hover)]:hover:border-outline-gray-3 has-[input:focus-visible]:outline has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-outline-gray-5 motion-reduce:transition-none"
 		>
 			<label
 				class="flex cursor-pointer items-center gap-3.5 p-3.5 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"

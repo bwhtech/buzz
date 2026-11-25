@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useResizeObserver, useScroll } from "@vueuse/core"
-import { Badge, Progress } from "frappe-ui"
+import { Badge, Icon, Progress } from "frappe-ui"
 import { computed, useTemplateRef, watchPostEffect } from "vue"
 
 import type { TicketTypeOrganizer } from "@/composables/useTicketTypeOrganizer"
@@ -125,8 +125,17 @@ const edgeMask = computed(() => {
 				</button>
 			</TransitionGroup>
 
+			<button
+				v-if="!group.ticketTypes.length && canWrite && !organizer.dragging.value"
+				type="button"
+				class="flex h-[4.5rem] items-center justify-center gap-1.5 rounded-4 border border-dashed border-outline-gray-3 text-sm text-ink-gray-6 transition-[border-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] [@media(hover:hover)]:hover:border-outline-gray-4 [@media(hover:hover)]:hover:text-ink-gray-8 focus-visible:outline-none focus-visible:focus-ring active:scale-[0.98] motion-reduce:transform-none"
+				@click="$emit('add', group.key)"
+			>
+				<Icon icon="lucide-plus" class="size-4" aria-hidden="true" />
+				Add ticket type
+			</button>
 			<p
-				v-if="!group.ticketTypes.length"
+				v-else-if="!group.ticketTypes.length"
 				class="rounded-4 border border-dashed border-outline-gray-3 px-3 py-5 text-center text-sm text-ink-gray-5"
 			>
 				{{ organizer.dragging.value ? "Drop here to move" : "No ticket types yet" }}

@@ -47,13 +47,9 @@ test("guest requests a free ticket, the organizer approves it, and the booking i
 	})
 	await guestPage.goto(successUrl)
 
-	// The registration page counts the request and shows the mode the ticket type flag implies.
-	await page.goto(`/b/manage/events/${eventId}/registrations`)
-	await expect(page.getByRole("link", { name: /Waiting for review/ })).toContainText("1")
+	// The approvals page shows the mode the ticket type flag implies, above the queue.
+	await page.goto(`/b/manage/events/${eventId}/approvals`)
 	await expect(page.getByRole("radio", { name: /Review some tickets/ })).toBeChecked()
-
-	await page.getByRole("link", { name: /Waiting for review/ }).click()
-	await expect(page).toHaveURL(/\/approvals$/)
 	await page.getByRole("button", { name: `Open ${REQUESTER.name} E2E` }).click()
 	await page.getByRole("button", { name: "Approve", exact: true }).click()
 	await expect(page.getByText(/^Approved /).first()).toBeVisible()

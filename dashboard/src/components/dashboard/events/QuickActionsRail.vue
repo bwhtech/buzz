@@ -24,7 +24,7 @@ defineProps<{
 	canWrite: boolean
 	openIcon: string
 	closedIcon: string
-	actions: QuickAction[]
+	actions?: QuickAction[]
 	// The Buzz Form behind the subject, shown as a card that opens the builder.
 	form?: string | null
 }>()
@@ -49,7 +49,7 @@ defineEmits<{ toggle: [] }>()
 	</div>
 	<FormEditCard v-if="form" :form="form" />
 
-	<section class="space-y-1 pt-1">
+	<section v-if="actions?.length" class="space-y-1 pt-1">
 		<Button
 			v-for="action in actions"
 			:key="action.label"

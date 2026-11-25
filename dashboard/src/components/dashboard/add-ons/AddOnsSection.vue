@@ -24,18 +24,28 @@ const optionsLabel = (addOn: AddOnItem) =>
 <template>
 	<ListSection
 		title="Add-ons"
-		description="Extras a participant can pick with their ticket"
+		description="Extras that people can buy with a ticket."
 		:count="page.add_ons.length"
 		:empty="!page.add_ons.length"
 		empty-title="No add-ons yet"
-		empty-description="Offer extras like lunch, merchandise or a workshop seat."
 		empty-icon="lucide-package-plus"
 		:empty-action="
 			page.can_write
-				? { label: 'Add add-on', iconLeft: 'lucide-plus', onClick: () => $emit('add') }
+				? {
+						label: 'Add add-on',
+						variant: 'subtle',
+						iconLeft: 'lucide-plus',
+						onClick: () => $emit('add'),
+					}
 				: null
 		"
 	>
+		<template #emptyDescription>
+			Extras that people can buy with a ticket.<br />
+			Ex: <code>Lunch</code> or a
+			<code>T-shirt</code>
+		</template>
+
 		<ul class="space-y-2">
 			<li v-for="addOn in page.add_ons" :key="addOn.name">
 				<PricedItemRow

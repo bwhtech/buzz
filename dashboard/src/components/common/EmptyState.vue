@@ -20,7 +20,12 @@ defineProps<{
 		</div>
 
 		<h2 class="text-lg-medium text-ink-gray-8">{{ title }}</h2>
-		<p v-if="description" class="text-base text-ink-gray-5">{{ description }}</p>
+		<p
+			v-if="description || $slots.description"
+			class="max-w-sm text-pretty text-p-base text-ink-gray-5 [&_code]:rounded-2 [&_code]:bg-surface-gray-2 [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.9em] [&_code]:text-ink-gray-7"
+		>
+			<slot name="description">{{ description }}</slot>
+		</p>
 		<div v-if="$slots.default || action" class="mt-2">
 			<slot><Button variant="solid" v-bind="action" /></slot>
 		</div>

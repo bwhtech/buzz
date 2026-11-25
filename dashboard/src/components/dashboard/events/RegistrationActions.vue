@@ -2,9 +2,7 @@
 import { computed, ref } from "vue"
 
 import GuestRegistrationDialog from "@/components/dashboard/events/GuestRegistrationDialog.vue"
-import QuickActionsRail, {
-	type QuickAction,
-} from "@/components/dashboard/events/QuickActionsRail.vue"
+import QuickActionsRail from "@/components/dashboard/events/QuickActionsRail.vue"
 import QuickActionTile from "@/components/dashboard/events/QuickActionTile.vue"
 import RegistrationDialog from "@/components/dashboard/events/RegistrationDialog.vue"
 
@@ -12,7 +10,6 @@ const props = defineProps<{
 	event: string
 	closed: boolean
 	canWrite: boolean
-	registrationLink?: string | null
 	registrationForm?: string | null
 	allowGuestBooking: boolean
 	guestVerificationMethod: string
@@ -32,14 +29,6 @@ const guestSubtitle = computed(() => {
 	const verification = VERIFICATION_LABELS[props.guestVerificationMethod]
 	return verification ? `Enabled · ${verification}` : "Enabled"
 })
-
-const actions = computed<QuickAction[]>(() =>
-	[
-		props.registrationLink
-			? { icon: "lucide-arrow-up-right", label: "Registration page", link: props.registrationLink }
-			: null,
-	].filter((action) => action !== null),
-)
 </script>
 
 <template>
@@ -49,7 +38,6 @@ const actions = computed<QuickAction[]>(() =>
 		closed-icon="lucide-ticket-x"
 		:closed="closed"
 		:can-write="canWrite"
-		:actions="actions"
 		:form="canWrite ? registrationForm : null"
 		@toggle="dialogOpen = true"
 	>
