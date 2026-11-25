@@ -41,3 +41,16 @@ export function checkInTimeLabel(at: string): string {
 	const time = dayjsLocal(at)
 	return time.format(time.isToday() ? "h:mm A" : "D MMM, h:mm A")
 }
+
+// "just now", "3m ago", "4h ago", "2d ago", then the date: "Jun 24", with the year
+// once it is not this year's.
+export function editedAgo(timestamp: string, now: Date = new Date()): string {
+	const then = dayjsLocal(timestamp)
+	const minutes = dayjs(now).diff(then, "minute")
+	if (minutes < 1) return "just now"
+	if (minutes < 60) return `${minutes}m ago`
+	const hours = Math.floor(minutes / 60)
+	if (hours < 24) return `${hours}h ago`
+	if (hours < 24 * 7) return `${Math.floor(hours / 24)}d ago`
+	return then.format(then.isSame(dayjs(now), "year") ? "MMM D" : "MMM D, YYYY")
+}
