@@ -47,6 +47,12 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 								:class="{ '-rotate-90': collapsed.has(group.key) }"
 								aria-hidden="true"
 							/>
+							<Icon
+								v-if="!group.category"
+								icon="lucide-circle-dashed"
+								class="size-4 shrink-0 text-ink-gray-5"
+								aria-hidden="true"
+							/>
 							<span
 								class="min-w-0 text-base font-semibold [overflow-wrap:anywhere]"
 								:class="group.category ? 'text-ink-gray-9' : 'text-ink-gray-6'"
@@ -72,7 +78,7 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 				<TicketCategoryActions
 					v-if="canWrite"
 					:category="group.category"
-					:first="index === 0"
+					:first="!organizer.groups.value[index - 1]?.category"
 					:last="!organizer.groups.value[index + 1]?.category"
 					@move="organizer.shift(group.category!, $event)"
 					@edit="$emit('editCategory', group.category!)"

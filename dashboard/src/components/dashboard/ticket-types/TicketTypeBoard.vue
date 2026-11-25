@@ -23,8 +23,10 @@ const { arrivedState, measure } = useScroll(board)
 // useScroll measures only on scroll; columns and the page width change without one.
 useResizeObserver(board, measure)
 watchPostEffect(() => props.organizer.groups.value.length && measure())
+// Uncategorized stays pinned on the left; columns scroll under it, so that edge never fades.
+const pinned = computed(() => props.organizer.groups.value[0]?.category === null)
 const edgeMask = computed(() => {
-	const left = arrivedState.left ? "black" : "transparent"
+	const left = arrivedState.left || pinned.value ? "black" : "transparent"
 	const right = arrivedState.right ? "black" : "transparent"
 	return `linear-gradient(to right, ${left}, black 2rem, black calc(100% - 2rem), ${right})`
 })
@@ -40,14 +42,21 @@ const edgeMask = computed(() => {
 			v-for="(group, index) in organizer.groups.value"
 			:key="group.key"
 			class="flex w-64 shrink-0 flex-col gap-2 rounded-7 border border-dashed p-2 transition-colors duration-150 ease-out"
-			:class="
+			:class="[
 				organizer.dropTarget.value === group.key
 					? 'border-outline-gray-4 bg-surface-gray-2'
-					: 'border-transparent bg-surface-gray-1 dark:bg-surface-base'
-			"
+					: 'border-transparent bg-surface-gray-1 dark:bg-surface-base',
+				{ 'sticky left-0 z-[1]': !group.category },
+			]"
 			v-on="canWrite ? organizer.drag.zone(group.key) : {}"
 		>
 			<header class="group flex min-h-7 items-center gap-1.5 pl-1">
+				<Icon
+					v-if="!group.category"
+					icon="lucide-circle-dashed"
+					class="size-4 shrink-0 text-ink-gray-5"
+					aria-hidden="true"
+				/>
 				<h3
 					class="truncate text-sm font-semibold"
 					:title="group.title"
@@ -61,7 +70,7 @@ const edgeMask = computed(() => {
 				<TicketCategoryActions
 					v-if="canWrite"
 					:category="group.category"
-					:first="index === 0"
+					:first="!organizer.groups.value[index - 1]?.category"
 					:last="!organizer.groups.value[index + 1]?.category"
 					horizontal
 					menu
