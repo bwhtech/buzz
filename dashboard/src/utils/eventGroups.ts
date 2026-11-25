@@ -12,7 +12,7 @@ export interface MonthGroup<T> {
  * Groups a sorted list of events by month, then by day. Insertion order is kept,
  * so the caller's sort survives — ascending for upcoming, descending for past.
  * `dateOf` picks the day an event is filed under; it defaults to its start date.
- * Events without a date close the list as one group with an empty month and date.
+ * Events without a date open the list as one group with an empty month and date.
  */
 export function groupEventsByMonth<T extends { start_date: string | null }>(
 	events: T[],
@@ -36,6 +36,6 @@ export function groupEventsByMonth<T extends { start_date: string | null }>(
 		month,
 		days: [...days].map(([date, dayEvents]) => ({ date, events: dayEvents })),
 	}))
-	if (undated.length) groups.push({ month: "", days: [{ date: "", events: undated }] })
+	if (undated.length) groups.unshift({ month: "", days: [{ date: "", events: undated }] })
 	return groups
 }

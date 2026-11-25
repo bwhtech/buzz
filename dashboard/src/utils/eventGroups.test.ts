@@ -59,12 +59,12 @@ test("no events produce no groups", () => {
 	assert.deepEqual(groupEventsByMonth([]), [])
 })
 
-test("undated events close the list as one group", () => {
-	const groups = groupEventsByMonth([{ start_date: null, title: "tba" }, event("2026-08-15")])
+test("undated events open the list as one group", () => {
+	const groups = groupEventsByMonth([event("2026-08-15"), { start_date: null, title: "tba" }])
 
 	assert.deepEqual(
 		groups.map((group) => group.month),
-		["2026-08", ""],
+		["", "2026-08"],
 	)
-	assert.equal(groups[1].days[0].events[0].title, "tba")
+	assert.equal(groups[0].days[0].events[0].title, "tba")
 })

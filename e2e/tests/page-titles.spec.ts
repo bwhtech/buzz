@@ -15,6 +15,9 @@ test.describe("Page titles", () => {
 	test("uses the event as context inside an event", async ({ page }) => {
 		await page.goto("/b/manage/events")
 		await page.getByRole("link", { name: "Manage" }).first().click()
+		// An event opens on its overview; details carries the title field to read.
+		await expect(page).toHaveTitle(/^Overview \| /, { timeout: 15000 })
+		await page.getByRole("link", { name: "Details", exact: true }).click()
 
 		// Whichever event the first card opens: the title follows the event, not the route.
 		const field = page.getByRole("textbox", { name: "Event title" })

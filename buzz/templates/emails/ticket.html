@@ -1,7 +1,5 @@
 {% extends "buzz/templates/emails/base.html" %}
 
-{% block preheader %}Your ticket for {{ event_title }} is ready.{% endblock %}
-
 {% block content %}
 {% if meeting.join_url %}
 <p style="margin:0 0 20px">Hi {{ doc.attendee_name }}, you're in. Here's how to join.</p>
