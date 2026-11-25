@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect, test } from "@playwright/test"
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test"
 
 import {
 	callMethod,
@@ -9,6 +9,12 @@ import {
 	updateDoc,
 } from "../helpers/frappe"
 
+// An event opens on its overview; the details section is the first sidebar link after it.
+async function openDetails(page: Page) {
+	await page.getByRole("link", { name: "Details", exact: true }).click()
+	await expect(page).toHaveURL(/\/b\/manage\/events\/\d+\/details$/, { timeout: 15000 })
+}
+
 // Runs under the shared Administrator state, whose team hosts the event seeded by
 // event.setup.ts — the one card guaranteed to carry a Manage button.
 test.describe("Event workspace", () => {
@@ -17,8 +23,13 @@ test.describe("Event workspace", () => {
 		await page.getByRole("link", { name: "Manage" }).first().click()
 	})
 
-	test("opens the event on its details section", async ({ page }) => {
-		await expect(page).toHaveURL(/\/b\/manage\/events\/\d+\/details$/, { timeout: 15000 })
+	test("opens the event on its overview, with details one click away", async ({ page }) => {
+		await expect(page).toHaveURL(/\/b\/manage\/events\/\d+\/overview$/, { timeout: 15000 })
+		await expect(page.getByRole("heading", { name: "Finish setting up" })).toBeVisible({
+			timeout: 15000,
+		})
+
+		await openDetails(page)
 		// The details page opens on the event's own values, with the section after it
 		// in the trail.
 		await expect(page.getByRole("textbox", { name: "Event title" })).not.toHaveValue("", {
@@ -28,6 +39,7 @@ test.describe("Event workspace", () => {
 	})
 
 	test("saves an edit, offering Save only once something changed", async ({ page }) => {
+		await openDetails(page)
 		const description = page.getByRole("textbox", { name: "Short description" })
 		await expect(description).toBeVisible({ timeout: 15000 })
 
@@ -44,6 +56,7 @@ test.describe("Event workspace", () => {
 	})
 
 	test("shows the event's public address beside its name", async ({ page }) => {
+		await openDetails(page)
 		const field = page.getByRole("textbox", { name: "Event route" })
 		await expect(field).toBeVisible({ timeout: 15000 })
 

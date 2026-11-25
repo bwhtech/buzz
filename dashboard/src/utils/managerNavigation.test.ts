@@ -19,6 +19,7 @@ test("sponsorship appears once the user has an inquiry", () => {
 test("an event offers its own sections, scoped to its id", () => {
 	const items = managerNavigation({ eventId: "EV-1", creatingEvent: false, hasSponsorships: true })
 	assert.deepEqual(labels(items), [
+		"Overview",
 		"Details",
 		"Registration",
 		"Payments",
@@ -95,7 +96,7 @@ test("a collaborator sees only the sections they were granted", () => {
 		hasSponsorships: false,
 		access: guestsOnly,
 	})
-	assert.deepEqual(labels(items), ["Details", "Guests"])
+	assert.deepEqual(labels(items), ["Overview", "Details", "Guests"])
 })
 
 test("settings needs edit access to the event details", () => {
@@ -105,7 +106,7 @@ test("settings needs edit access to the event details", () => {
 		hasSponsorships: false,
 		access: { ...guestsOnly, details: "Edit" },
 	})
-	assert.deepEqual(labels(items), ["Details", "Guests", "Settings"])
+	assert.deepEqual(labels(items), ["Overview", "Details", "Guests", "Settings"])
 })
 
 test("approvals, waitlist and check-in need edit access to the guests", () => {
@@ -115,11 +116,18 @@ test("approvals, waitlist and check-in need edit access to the guests", () => {
 		hasSponsorships: false,
 		access: { ...guestsOnly, guests: "Edit" },
 	})
-	assert.deepEqual(labels(items), ["Details", "Guests", "Approvals", "Waitlist", "Check In"])
+	assert.deepEqual(labels(items), [
+		"Overview",
+		"Details",
+		"Guests",
+		"Approvals",
+		"Waitlist",
+		"Check In",
+	])
 })
 
 test("an event opens on the first section the user has", () => {
-	assert.equal(firstEventPath("EV-1", guestsOnly), "/manage/events/EV-1/details")
+	assert.equal(firstEventPath("EV-1", guestsOnly), "/manage/events/EV-1/overview")
 	assert.equal(
 		firstEventPath("EV-1", { ...guestsOnly, details: null as never }),
 		"/manage/events/EV-1/guests",
@@ -144,6 +152,7 @@ test("transactions sit after payments once the user may view them", () => {
 		access: { ...guestsOnly, ticketing: "View", transactions: "View" },
 	})
 	assert.deepEqual(labels(items), [
+		"Overview",
 		"Details",
 		"Registration",
 		"Payments",
