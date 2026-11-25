@@ -1,4 +1,4 @@
-import { useCall, useDoc } from "frappe-ui"
+import { dayjs, useCall, useDoc } from "frappe-ui"
 import { computed, ref } from "vue"
 
 import type { LogicRule } from "@/utils/formLogic"
@@ -16,6 +16,12 @@ export interface FormQuestion {
 	description?: string | null
 	width?: "Full" | "Half"
 	[key: string]: unknown
+}
+
+// A published form stops taking submissions once its cutoff passes; closing a
+// registration or proposal form sets that cutoff and leaves the page up.
+export function isPastCutoff(form: Pick<BuzzFormDoc, "auto_close_at">): boolean {
+	return Boolean(form.auto_close_at && dayjs(form.auto_close_at).isBefore(dayjs()))
 }
 
 export interface BuzzFormDoc {

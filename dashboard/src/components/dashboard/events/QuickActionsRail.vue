@@ -47,7 +47,7 @@ defineEmits<{ toggle: [] }>()
 		/>
 		<slot />
 	</div>
-	<FormEditCard v-if="form" :form="form" />
+	<FormEditCard v-if="form" :form="form" :closed="closed" />
 
 	<section v-if="actions?.length" class="space-y-1 pt-1">
 		<Button
