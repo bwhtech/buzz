@@ -1,11 +1,11 @@
 import frappe
-from frappe.integrations.utils import make_post_request
 from frappe.utils import getdate, today
 
 from buzz.api.events.services import primary_host_of
+from buzz.events.buzz_events_client import BuzzEventsClient
 from buzz.www.event.meta import EventMeta
 
-API_PATH = "/api/v2/method/buzz.api.listings"
+API_PATH = "buzz.api.listings"
 
 
 def listing_enabled() -> bool:
@@ -67,14 +67,7 @@ class ListingPush:
 
 
 def post_to_buzz_events(method: str, body: dict) -> None:
-	settings = frappe.get_cached_doc("Buzz Settings")
-	token = f"{settings.buzz_events_api_key}:{settings.get_password('buzz_events_api_secret')}"
-	make_post_request(
-		f"{settings.buzz_events_url.rstrip('/')}{API_PATH}.{method}",
-		headers={"Authorization": f"token {token}"},
-		json=body,
-		timeout=30,
-	)
+	BuzzEventsClient().post(f"{API_PATH}.{method}", body)
 
 
 def push_event(event_name: str) -> None:

@@ -27,7 +27,7 @@ from buzz.tests.factories import (
 	TalkProposalFactory,
 	UserFactory,
 )
-from buzz.tests.utils import SELF_SCOPED_DOCTYPES, linked_to
+from buzz.tests.utils import SELF_SCOPED_DOCTYPES, linked_to, readable_by
 
 # One real row per section; the other doctypes are covered through their permission hook.
 SAMPLE_DOCTYPE = {
@@ -116,7 +116,7 @@ class TestSectionIsolation(CollaboratorTestCase):
 
 	def test_team_level_doctypes_stay_hidden(self):
 		user = self.collaborators["guests"]
-		for doctype in linked_to("Buzz Team") - SELF_SCOPED_DOCTYPES - {"Buzz Event"}:
+		for doctype in readable_by(user, linked_to("Buzz Team") - SELF_SCOPED_DOCTYPES - {"Buzz Event"}):
 			# Rows with no team, such as the standard schedule item types, are shared by design.
 			with self.subTest(doctype=doctype), self.set_user(user):
 				self.assertEqual(frappe.get_list(doctype, filters={"team": ["is", "set"]}, pluck="name"), [])

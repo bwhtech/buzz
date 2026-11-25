@@ -4,3 +4,4 @@ Ticketing
 Proposals
 Buzz Marketing
 Playground
+Hosted Payments

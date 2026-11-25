@@ -1,0 +1,37 @@
+{% extends "templates/base.html" %}
+
+{% block meta_block %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block favicon %}<link rel="icon" href="/assets/buzz/images/buzz-logo.svg" type="image/svg+xml">{% endblock %}
+
+{% block head %}
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..600&display=swap">
+	<link rel="stylesheet" href="{{ bundled_asset('espresso.bundle.css') }}">
+{% endblock %}
+
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block base_scripts %}{% endblock %}
+
+{% block content %}{% autoescape true %}
+	<main class="pay" data-state="processing">
+		<img class="pay-logo" src="/assets/buzz/images/buzz-logo.svg" alt="Buzz" width="48" height="48">
+
+		<section class="pay-panel" data-panel="processing" aria-live="polite">
+			<h1 class="pay-title" id="pay-processing-title">{{ _("Processing your payment securely") }}</h1>
+			<div class="pay-skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
+		</section>
+
+		<section class="pay-panel" data-panel="failed" aria-live="polite">
+			<h1 class="pay-title">{{ _("Payment not completed") }}</h1>
+			<p class="pay-text">{{ _("We could not confirm your payment.") }}</p>
+			<div class="pay-actions">
+				<button type="button" class="es-button" data-variant="solid" data-size="lg" id="pay-retry">{{ _("Try again") }}</button>
+				<a class="es-button" data-variant="ghost" data-size="lg" href="{{ config.return_url }}">{{ _("Back to {0}").format(config.team_name) }}</a>
+			</div>
+		</section>
+	</main>
+	<script type="application/json" id="checkout-config">{{ config | tojson }}</script>
+{% endautoescape %}{% endblock %}

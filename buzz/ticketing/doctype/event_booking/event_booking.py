@@ -653,6 +653,7 @@ class EventBooking(Document):
 		frappe.only_for("System Manager")
 
 		payment = self.get_received_payment()
+		self.lock_for_refund(payment.payment_request)
 		tickets = frappe.parse_json(tickets) if isinstance(tickets, str) else tickets
 		self.validate_refund(flt(amount), tickets)
 
@@ -674,6 +675,11 @@ class EventBooking(Document):
 		frappe.db.set_value("Event Booking Refund", refund.name, "refund_id", gateway_refund.refund_id)
 
 		return frappe.db.get_value("Event Booking Refund", refund.name, "status")
+
+	def lock_for_refund(self, payment_request: str) -> None:
+		"""The payment request, then the booking: the order bwh_payments' refund callbacks take them in."""
+		frappe.db.get_value("Gateway Payment Request", payment_request, "name", for_update=True)
+		frappe.db.get_value("Event Booking", self.name, "name", for_update=True)
 
 	def on_refund_update(self, gateway_refund) -> None:
 		"""bwh_payments reports a refund on this booking's payment, from Buzz or the gateway's dashboard."""
@@ -715,8 +721,15 @@ class EventBooking(Document):
 
 	def set_refund_status(self) -> None:
 		"""Recompute refunded amount and status from the refunds against this booking."""
-		refunds = frappe.get_all(
-			"Event Booking Refund", filters={"booking": self.name}, fields=["amount", "status"]
+		# Locking reads under the booking lock: a plain read keeps the snapshot from before another
+		# worker settled a refund, and would write back a smaller refunded amount.
+		frappe.db.get_value("Event Booking", self.name, "name", for_update=True)
+		refunds = frappe.db.get_values(
+			"Event Booking Refund",
+			{"booking": self.name},
+			["amount", "status"],
+			as_dict=True,
+			for_update=True,
 		)
 		self.refunded_amount = sum(flt(refund.amount) for refund in refunds if refund.status == "Processed")
 

@@ -2,9 +2,12 @@ from unittest.mock import patch
 
 import frappe
 from bwh_payments import testing as payment_testing
+from frappe.utils import now_datetime
 
 from buzz.api.checkin import checkin_ticket
 from buzz.tests.base_test_cases import CHARGED_PER_TICKET, BookingRefundTestCase
+from buzz.tests.sessions import SnapshotIsolation
+from buzz.tests.utils import other_connection
 
 BOOKING_TOTAL = 1100
 
@@ -166,3 +169,55 @@ class TestSyncRefunds(BookingRefundTestCase):
 			result = self.booking.sync_refunds()
 		self.booking.reload()
 		return result
+
+
+class TestRefundSettledByAnotherWorker(SnapshotIsolation, BookingRefundTestCase):
+	"""Another worker commits a processed refund after this transaction took its snapshot.
+
+	One test per class: the class transaction keeps the locks its test takes, and the other worker's row
+	is deleted only once they are released.
+	"""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.settled_elsewhere = []
+
+	@classmethod
+	def tearDownClass(cls):
+		super().tearDownClass()
+		frappe.db.rollback()
+		with other_connection() as database:
+			for name in cls.settled_elsewhere:
+				database.delete("Event Booking Refund", {"name": name})
+			database.commit()
+
+	def settle_refund_elsewhere(self, amount: float) -> None:
+		name = frappe.generate_hash(length=10)
+		now = now_datetime()
+		with other_connection() as database:
+			database.sql(
+				"""insert into `tabEvent Booking Refund` (name, creation, modified, owner, modified_by,
+				docstatus, booking, amount, currency, status) values (%s, %s, %s, 'Administrator',
+				'Administrator', 0, %s, %s, 'INR', 'Processed')""",
+				(name, now, now, self.booking.name, amount),
+			)
+			database.commit()
+		self.settled_elsewhere.append(name)
+
+	def test_the_booking_counts_the_refund_the_other_worker_settled(self):
+		self.settle_refund_elsewhere(CHARGED_PER_TICKET)
+
+		if self.snapshot_isolated:
+			# The webhook job fails at its lock and goes back to the job runner. The database rolls this
+			# test's whole transaction back, fixtures included, so the retry is not run here.
+			with self.assertRaises(frappe.RetryBackgroundJobError):
+				self.refund_outside_buzz(100)
+			return
+		self.refund_outside_buzz(100)
+
+		self.assertEqual(self.booking.refunded_amount, CHARGED_PER_TICKET + 100)
+
+
+class TestRefundSettledByAnotherWorkerWithSnapshotIsolation(TestRefundSettledByAnotherWorker):
+	snapshot_isolated = True

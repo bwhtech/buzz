@@ -32,6 +32,13 @@
   "app_icon",
   "payments_tab",
   "default_payment_gateway",
+  "hosted_payments_section",
+  "hosted_payment_gateway",
+  "column_break_hosted_payments",
+  "hosted_payment_currencies",
+  "hosted_payment_fallback_rate",
+  "hosted_payment_rates_section",
+  "hosted_payment_rates",
   "proposals_tab",
   "event_proposals_section",
   "accept_event_proposals",
@@ -510,13 +517,54 @@
    "fieldtype": "Attach Image",
    "label": "App Icon",
    "description": "A square mark shown when the dashboard sidebar is collapsed"
+  },
+  {
+   "fieldname": "hosted_payments_section",
+   "fieldtype": "Section Break",
+   "label": "Hosted Payments",
+   "description": "Payments this site takes for connected Pro sites."
+  },
+  {
+   "fieldname": "hosted_payment_gateway",
+   "fieldtype": "Link",
+   "label": "Hosted Payment Gateway",
+   "options": "Payment Gateway Profile"
+  },
+  {
+   "fieldname": "column_break_hosted_payments",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hosted_payment_currencies",
+   "fieldtype": "Data",
+   "label": "Hosted Payment Currencies",
+   "default": "INR",
+   "description": "Comma separated ISO codes, such as INR, USD."
+  },
+  {
+   "description": "Commission for a payment method that has no rate in the table below.",
+   "fieldname": "hosted_payment_fallback_rate",
+   "fieldtype": "Percent",
+   "label": "Hosted Payment Fallback Rate"
+  },
+  {
+   "fieldname": "hosted_payment_rates_section",
+   "fieldtype": "Section Break",
+   "label": "Hosted Payment Rates",
+   "description": "Commission Buzz keeps on the gross of each hosted payment, by payment method."
+  },
+  {
+   "fieldname": "hosted_payment_rates",
+   "fieldtype": "Table",
+   "label": "Hosted Payment Rates",
+   "options": "Hosted Payment Rate"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-17 10:00:00.000000",
+ "modified": "2026-11-22 13:40:59.000000",
  "modified_by": "Administrator",
  "module": "Events",
  "name": "Buzz Settings",

@@ -98,6 +98,8 @@ class BuzzTeam(WebsiteGenerator):
 		from buzz.events.doctype.event_external_link.event_external_link import EventExternalLink
 
 		about: DF.TextEditor | None
+		accept_community_submissions: DF.Check
+		connected_site_url: DF.Data | None
 		is_personal: DF.Check
 		is_published: DF.Check
 		links: DF.Table[EventExternalLink]

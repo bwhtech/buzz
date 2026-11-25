@@ -2,18 +2,23 @@ from unittest.mock import patch
 
 import frappe
 from bwh_payments import testing as payment_testing
+from bwh_payments.bwh_payments.utils import get_available_payment_modes
 from frappe.tests import IntegrationTestCase
-from frappe.utils import flt
+from frappe.tests.classes.context_managers import set_user
+from frappe.utils import flt, get_url
 
+from buzz.api import hosted_payments as hub_api
 from buzz.api.booking import process_booking
 from buzz.api.booking.schemas import BookingRequest
 from buzz.api.booking.services import create_add_on_doc
+from buzz.hosted_payments.doctype.buzz_gateway_settings.buzz_gateway_settings import get_hub_currencies
 from buzz.payments import get_payment_link, get_payment_link_for_booking
 from buzz.tests.factories import (
 	BuzzCouponCodeFactory,
 	BuzzEventFactory,
 	BuzzFormFactory,
 	BuzzTeamFactory,
+	BuzzTeamMembershipFactory,
 	EventBookingFactory,
 	EventSponsorFactory,
 	EventTicketTypeFactory,
@@ -23,6 +28,7 @@ from buzz.tests.factories import (
 	UserFactory,
 )
 
+BUZZ_GATEWAY = "Buzz"
 BOOKER = "booking-owner@example.com"
 OUTSIDER = "booking-outsider@example.com"
 TICKET_PRICE = 500
@@ -239,6 +245,77 @@ class BookingRefundTestCase(IntegrationTestCase):
 			filters={"booking": self.booking.name},
 			fields=["name", "docstatus"],
 		)
+
+
+class HostedPaymentsTestCase(IntegrationTestCase):
+	"""A hub team connected to this site, with its Integration user, taking payments on the test gateway."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		# bwh_payments commits each refund; held so the class rollback still undoes them.
+		cls.held_commits = payment_testing.without_commits()
+		cls.held_commits.__enter__()
+		cls.hub_gateway = make_payment_gateway()
+		cls.integration = UserFactory.create_once("hosted-payments-bot@example.com").name
+		cls.team = BuzzTeamFactory.create_owned_by(team_name="Pro Team", connected_site_url=get_url()).name
+		BuzzTeamMembershipFactory.create(team=cls.team, user=cls.integration, team_role="Integration")
+
+	@classmethod
+	def tearDownClass(cls):
+		cls.held_commits.__exit__(None, None, None)
+		super().tearDownClass()
+
+	def setUp(self):
+		self.enterContext(self.set_user("Administrator"))
+		payment_testing.reset()
+		self.enterContext(
+			self.change_settings(
+				"Buzz Settings", hosted_payment_gateway=self.hub_gateway, hosted_payment_currencies="INR"
+			)
+		)
+
+	def order_values(self, **overrides) -> dict:
+		values = {
+			"amount": 550,
+			"currency": "INR",
+			"reference": "PRO-GPR-1",
+			"customer": {"email": "buyer@example.com", "phone": "+91-9999999999"},
+			"return_url": get_url("/api/method/pro.return?request=PRO-GPR-1"),
+			"webhook_url": get_url("/api/method/pro.webhook?gateway=Buzz"),
+		}
+		return values | overrides
+
+
+class BuzzGatewayTestCase(HostedPaymentsTestCase):
+	"""This site is both the hub and a Pro site paying through it with the Buzz gateway.
+
+	The client's HTTP call to the hub runs the hub endpoint in-process, as the team's Integration user.
+	"""
+
+	def setUp(self):
+		super().setUp()
+		self.enterContext(
+			self.change_settings(
+				"Buzz Settings",
+				buzz_events_url=get_url(),
+				buzz_events_api_key="pro-key",
+				buzz_events_api_secret="pro-secret",
+			)
+		)
+		self.enterContext(patch("buzz.hosted_payments.hub.call_hub", self.call_hub_in_process))
+		frappe.db.set_value("Payment Gateway Profile", BUZZ_GATEWAY, "enabled", 1)
+		for cache in (get_available_payment_modes, get_hub_currencies):
+			cache.clear_cache()
+			self.addCleanup(cache.clear_cache)
+
+	def call_hub_in_process(self, method: str, http_method: str = "GET", **arguments):
+		with set_user(self.integration):
+			result = getattr(hub_api, method)(**arguments)
+		return frappe.parse_json(frappe.as_json(result))
+
+	def hub_payment_request(self, order_id: str) -> str:
+		return frappe.db.get_value("Hosted Payment", order_id, "payment_request")
 
 
 class TeamPermissionTestCase(IntegrationTestCase):

@@ -1,0 +1,262 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-11-22 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "team",
+  "reference",
+  "column_break_status",
+  "status",
+  "paid_on",
+  "amount_section",
+  "amount",
+  "refunded_amount",
+  "column_break_currency",
+  "currency",
+  "payment_method",
+  "customer_section",
+  "customer_email",
+  "column_break_customer",
+  "customer_phone",
+  "connected_site_section",
+  "return_url",
+  "column_break_webhook",
+  "webhook_url",
+  "ping_section",
+  "ping_status",
+  "column_break_ping",
+  "ping_attempts",
+  "next_ping_on",
+  "ping_generation",
+  "payment_request_section",
+  "payment_request",
+  "column_break_payout",
+  "payout",
+  "deducted_refund_amount"
+ ],
+ "fields": [
+  {
+   "fieldname": "team",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Team",
+   "options": "Buzz Team",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "description": "The connected site's own id for the payment.",
+   "fieldname": "reference",
+   "fieldtype": "Data",
+   "label": "Reference",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending\nPaid\nNot Paid\nCancelled\nExpired\nPartially Refunded\nRefunded",
+   "read_only": 1
+  },
+  {
+   "fieldname": "paid_on",
+   "fieldtype": "Datetime",
+   "label": "Paid On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_section",
+   "fieldtype": "Section Break",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "options": "currency",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "refunded_amount",
+   "fieldtype": "Currency",
+   "label": "Refunded Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_currency",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "payment_method",
+   "fieldtype": "Data",
+   "label": "Payment Method",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_section",
+   "fieldtype": "Section Break",
+   "label": "Customer"
+  },
+  {
+   "fieldname": "customer_email",
+   "fieldtype": "Data",
+   "label": "Customer Email",
+   "options": "Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_customer",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer_phone",
+   "fieldtype": "Data",
+   "label": "Customer Phone",
+   "read_only": 1
+  },
+  {
+   "fieldname": "connected_site_section",
+   "fieldtype": "Section Break",
+   "label": "Connected Site"
+  },
+  {
+   "fieldname": "return_url",
+   "fieldtype": "Small Text",
+   "label": "Return URL",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_webhook",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "webhook_url",
+   "fieldtype": "Small Text",
+   "label": "Webhook URL",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "ping_section",
+   "fieldtype": "Section Break",
+   "label": "Site Ping"
+  },
+  {
+   "description": "Whether the connected site has heard about the latest status. A Pending ping is sent again at Next Ping On; a Failed one waits for Ping Site Again.",
+   "fieldname": "ping_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Ping Status",
+   "options": "\nPending\nDelivered\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ping",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "ping_attempts",
+   "fieldtype": "Int",
+   "label": "Ping Attempts",
+   "read_only": 1
+  },
+  {
+   "fieldname": "next_ping_on",
+   "fieldtype": "Datetime",
+   "label": "Next Ping On",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Goes up with each change the connected site is pinged about. Only the latest delivery updates Ping Status.",
+   "fieldname": "ping_generation",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Ping Generation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_request_section",
+   "fieldtype": "Section Break",
+   "label": "Payment Request"
+  },
+  {
+   "fieldname": "payment_request",
+   "fieldtype": "Link",
+   "label": "Payment Request",
+   "options": "Gateway Payment Request",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_payout",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payout",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Payout",
+   "options": "Hosted Payout",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Refunds of this payment already deducted on submitted payouts.",
+   "fieldname": "deducted_refund_amount",
+   "fieldtype": "Currency",
+   "label": "Deducted Refunds",
+   "options": "currency",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-23 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Hosted Payments",
+ "name": "Hosted Payment",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "reference",
+ "track_changes": 1
+}

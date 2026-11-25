@@ -139,11 +139,17 @@ def record_gateway_refund(booking: str, gateway_refund) -> bool:
 
 
 def find_refund(booking: str, gateway_refund) -> str | None:
-	if gateway_refund.reference and frappe.db.exists(
-		"Event Booking Refund", {"name": gateway_refund.reference, "booking": booking}
+	"""Locking reads, so a refund another worker recorded after this transaction's snapshot is found."""
+	if gateway_refund.reference and frappe.db.get_value(
+		"Event Booking Refund",
+		{"name": gateway_refund.reference, "booking": booking},
+		"name",
+		for_update=True,
 	):
 		return gateway_refund.reference
-	return frappe.db.exists("Event Booking Refund", {"gateway_refund": gateway_refund.name})
+	return frappe.db.get_value(
+		"Event Booking Refund", {"gateway_refund": gateway_refund.name}, "name", for_update=True
+	)
 
 
 def tickets_a_refund_covers(booking: str, amount: float) -> list[str]:

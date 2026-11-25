@@ -1,0 +1,104 @@
+{
+ "actions": [],
+ "creation": "2026-11-22 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "hosted_payment",
+  "line_type",
+  "payment_method",
+  "rate",
+  "gross",
+  "refunded",
+  "commission",
+  "net"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "fieldname": "hosted_payment",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Hosted Payment",
+   "options": "Hosted Payment",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "columns": 1,
+   "default": "Payment",
+   "fieldname": "line_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Line Type",
+   "options": "Payment\nRefund",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "payment_method",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Payment Method",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "rate",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Rate",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "gross",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Gross",
+   "read_only": 1,
+   "options": "currency"
+  },
+  {
+   "columns": 1,
+   "fieldname": "refunded",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Refunded",
+   "read_only": 1,
+   "options": "currency"
+  },
+  {
+   "columns": 1,
+   "fieldname": "commission",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Commission",
+   "read_only": 1,
+   "options": "currency"
+  },
+  {
+   "columns": 1,
+   "fieldname": "net",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Net",
+   "read_only": 1,
+   "options": "currency"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-22 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Hosted Payments",
+ "name": "Hosted Payout Line",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

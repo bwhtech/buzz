@@ -1,10 +1,45 @@
+import json
 from contextlib import contextmanager
 from email import message_from_string
 from unittest.mock import patch
 
 import frappe
+import requests
+from frappe.database import get_db
+from frappe.tests.classes.context_managers import set_user
 
 from buzz.events.doctype.event_venue.map_link import MAP_LINK_CACHE_PREFIX
+
+
+def hub_response(status_code: int, body: dict | None = None, text: str | None = None) -> requests.Response:
+	"""What buzz.events answers over HTTP, for tests that patch `requests.Session.request`."""
+	response = requests.Response()
+	response.status_code = status_code
+	response._content = (text if text is not None else json.dumps(body)).encode()
+	return response
+
+
+@contextmanager
+def other_connection():
+	"""A database session of its own, as a concurrent worker holds. It sees only committed rows.
+
+	IntegrationTestCase.secondary_connection swaps frappe.local.db and the session user, so it is not used.
+	"""
+	conf = frappe.conf
+	database = get_db(
+		socket=conf.db_socket,
+		host=conf.db_host,
+		port=conf.db_port,
+		user=conf.db_user,
+		password=conf.db_password,
+		cur_db_name=conf.db_name,
+	)
+	database.connect()
+	try:
+		yield database
+	finally:
+		database.rollback()
+		database.close()
 
 
 def clear_map_link_cache():
@@ -80,6 +115,12 @@ def properties_of(mock_capture, event: str) -> dict:
 # Buzz Team Membership carries a team column but is scoped by its own pair of hooks.
 # Playground Sandbox is System Manager only; visitors reach it through buzz.api.playground.
 SELF_SCOPED_DOCTYPES = frozenset({"Buzz Team Membership", "Playground Sandbox"})
+
+
+def readable_by(user: str, doctypes: set[str]) -> set[str]:
+	"""A desk-only doctype the user cannot read at all, such as Hosted Payment, leaks nothing."""
+	with set_user(user):
+		return {doctype for doctype in doctypes if frappe.has_permission(doctype, "read")}
 
 
 def linked_to(doctype: str) -> set[str]:

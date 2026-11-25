@@ -24,6 +24,7 @@ website_route_rules = [
 	{"from_route": "/events/<event_route>/schedule", "to_route": "event/schedule"},
 	{"from_route": "/events/<event_route>", "to_route": "event"},
 	{"from_route": "/@<username>", "to_route": "user_profile"},
+	{"from_route": "/pay/<order_id>", "to_route": "pay"},
 	{"from_route": "/b", "to_route": "dashboard"},
 	{"from_route": "/b/<path:app_path>", "to_route": "dashboard"},
 ]
@@ -98,6 +99,9 @@ website_redirects = [
 # ---------------
 
 scheduler_events = {
+	"all": [
+		"buzz.hosted_payments.webhook_ping.retry_due_pings",
+	],
 	"hourly": [
 		"buzz.ticketing.doctype.ticket_hold.ticket_hold.delete_expired_holds",
 		"buzz.playground.cleanup.delete_expired_sandboxes",
@@ -128,6 +132,7 @@ doc_events = {
 			"buzz.events.profile_og_image.enqueue_for_user",
 		],
 	},
+	"Gateway Payment Request": {"on_update": "buzz.hosted_payments.webhook_ping.sync_hosted_payment"},
 	"Currency": {
 		"on_update": "buzz.api.payments.currencies.clear_currency_cache",
 		"on_trash": "buzz.api.payments.currencies.clear_currency_cache",
@@ -313,6 +318,8 @@ permission_query_conditions = {
 	"Event Template": "buzz.permissions.team_query_conditions",
 	"Event Venue": "buzz.permissions.team_query_conditions",
 	"Buzz Tag": "buzz.permissions.team_query_conditions",
+	"Hosted Payment": "buzz.permissions.team_query_conditions",
+	"Hosted Payout": "buzz.permissions.team_query_conditions",
 	"Buzz Team Settings": "buzz.permissions.team_query_conditions",
 	"Additional Event Page": "buzz.permissions.derived_query_conditions",
 	"Buzz Coupon Code": "buzz.permissions.derived_query_conditions",
@@ -359,6 +366,8 @@ has_permission = {
 	"Event Template": "buzz.permissions.team_has_permission",
 	"Event Venue": "buzz.permissions.team_has_permission",
 	"Buzz Tag": "buzz.permissions.team_has_permission",
+	"Hosted Payment": "buzz.permissions.team_has_permission",
+	"Hosted Payout": "buzz.permissions.team_has_permission",
 	"Buzz Team Settings": "buzz.permissions.team_admin_has_permission",
 	"Additional Event Page": "buzz.permissions.derived_has_permission",
 	"Buzz Coupon Code": "buzz.permissions.derived_has_permission",
