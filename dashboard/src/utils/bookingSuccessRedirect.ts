@@ -2,17 +2,21 @@
 // a gateway hand-off and an explicit redirect; when it asks for neither, guests
 // stay on the form and logged-in users go to the booking in their events.
 
-// A paid booking comes back with only a payment link — the booking name is
-// carried by every other response.
+import type { InlineCheckout } from "./checkouts"
+
+// A paid booking comes back with only a payment link or an inline checkout —
+// the booking name is carried by every other response.
 export interface BookingSubmitResponse {
 	booking_name?: string
 	payment_link?: string
+	inline_checkout?: InlineCheckout
 	redirect_to?: string
 	offline_payment?: boolean
 	request_status?: "Requested" | "Waitlisted"
 }
 
 export type BookingSuccessAction =
+	| { type: "inline"; checkout: InlineCheckout }
 	| { type: "external"; url: string }
 	| { type: "route"; path: string }
 	| { type: "guest-inline"; bookingName: string; pendingVerification: boolean }
@@ -21,6 +25,10 @@ export function resolveBookingSuccessAction(
 	data: BookingSubmitResponse,
 	{ isGuestMode }: { isGuestMode: boolean },
 ): BookingSuccessAction {
+	if (data.inline_checkout) {
+		return { type: "inline", checkout: data.inline_checkout }
+	}
+
 	if (data.payment_link) {
 		return { type: "external", url: data.payment_link }
 	}
@@ -33,7 +41,7 @@ export function resolveBookingSuccessAction(
 	// booking. Refuse rather than build a URL pointing at "undefined".
 	const bookingName = data.booking_name
 	if (!bookingName) {
-		throw new Error("Booking response carried neither a payment link nor a booking name")
+		throw new Error("Booking response carried no checkout and no booking name")
 	}
 
 	// A guest has no session to open the booking with, so an offline booking stays inline

@@ -11,6 +11,17 @@ test("payment_link takes priority and is external", () => {
 	assert.deepEqual(action, { type: "external", url: "https://gateway.example/pay/123" })
 })
 
+test("an inline checkout opens in the page", () => {
+	const checkout = {
+		request: "GPR-1",
+		sdk: "razorpay",
+		script_url: "https://checkout.razorpay.com/v1/checkout.js",
+		options: { order_id: "order_1" },
+	}
+	const action = resolveBookingSuccessAction({ inline_checkout: checkout }, { isGuestMode: true })
+	assert.deepEqual(action, { type: "inline", checkout })
+})
+
 test("redirect_to routes to booking-success for a guest", () => {
 	const action = resolveBookingSuccessAction(
 		{ booking_name: "B-0001", redirect_to: "/booking-success/B-0001?token=abc" },

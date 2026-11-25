@@ -1,9 +1,15 @@
 import frappe
 from bwh_payments import api as payments
 from frappe import _
+from frappe.utils import now_datetime, time_diff_in_seconds
+
+from buzz.ticketing.doctype.ticket_hold.ticket_hold import live_hold_expiry
 
 # Their checkout needs the shopper's phone number.
 GATEWAYS_NEEDING_PHONE = ("PayU Gateway Settings",)
+
+# Browser checkouts the dashboard can open in the page. Keep in step with dashboard/src/utils/checkouts.
+INLINE_CHECKOUT_SDKS = ("razorpay",)
 
 # An enquiry still open for its applicant to pay for.
 PAYABLE_ENQUIRY_STATUSES = ("Approval Pending", "Payment Pending")
@@ -45,9 +51,19 @@ def resolve_payment_gateway(event: str, payment_gateway: str | None) -> str:
 def get_payment_link_for_booking(
 	booking_id: str, redirect_to: str = "/events", payment_gateway: str | None = None
 ) -> str:
+	return open_booking_checkout(booking_id, redirect_to, payment_gateway).order_url
+
+
+def open_booking_checkout(
+	booking_id: str,
+	redirect_to: str = "/events",
+	payment_gateway: str | None = None,
+	inline: bool = False,
+):
+	"""Open the booking's checkout. With `inline`, a gateway with a browser SDK opens no link."""
 	booking_doc = frappe.get_cached_doc("Event Booking", booking_id)
 	payment_gateway = resolve_payment_gateway(booking_doc.event, payment_gateway)
-	return get_payment_link(
+	return open_checkout(
 		"Event Booking",
 		booking_id,
 		booking_doc.total_amount,
@@ -55,6 +71,7 @@ def get_payment_link_for_booking(
 		payment_gateway,
 		redirect_to=redirect_to,
 		customer=get_buyer_details(booking_doc),
+		inline_sdks=INLINE_CHECKOUT_SDKS if inline else (),
 	)
 
 
@@ -102,6 +119,21 @@ def get_payment_link(
 	customer: dict | None = None,
 ) -> str:
 	"""Open a checkout and return its URL. bwh_payments brings the shopper back to `redirect_to`."""
+	return open_checkout(
+		reference_doctype, reference_docname, amount, currency, payment_gateway, redirect_to, customer
+	).order_url
+
+
+def open_checkout(
+	reference_doctype: str,
+	reference_docname: str,
+	amount: float,
+	currency: str,
+	payment_gateway: str,
+	redirect_to: str = "/events",
+	customer: dict | None = None,
+	inline_sdks: tuple[str, ...] = (),
+):
 	payments.validate_currency(payment_gateway, currency)
 	payment = record_payment(reference_doctype, reference_docname, amount, currency, payment_gateway)
 	payment_request = payments.create_payment(
@@ -110,11 +142,33 @@ def get_payment_link(
 		amount,
 		currency,
 		payment_gateway,
+		inline_sdks=inline_sdks,
 		redirect_to=redirect_to,
 		**(get_customer_details() if customer is None else customer),
 	)
 	payment.db_set({"payment_request": payment_request.name, "order_id": payment_request.order_ref})
-	return payment_request.order_url
+	return payment_request
+
+
+def get_booking_checkout_display(booking) -> dict:
+	"""What the in-page checkout shows: the host, the event, and the ticket hold's time left."""
+	event = frappe.get_cached_value("Buzz Event", booking.event, ["title", "host"], as_dict=True)
+	host = event.host and frappe.get_cached_value(
+		"Event Host", event.host, ["host_name", "logo"], as_dict=True
+	)
+	return {
+		"name": host and host.host_name,
+		"image": host and host.logo,
+		"description": event.title,
+		"timeout": seconds_until(live_hold_expiry(booking.hold_token)),
+		"notes": {"booking": booking.name, "event": booking.event},
+		"lock_customer": True,
+	}
+
+
+def seconds_until(moment) -> int | None:
+	# The checkout closes itself when the hold ends, so the buyer cannot pay for released tickets.
+	return max(1, int(time_diff_in_seconds(moment, now_datetime()))) if moment else None
 
 
 def get_buyer_details(booking) -> dict:

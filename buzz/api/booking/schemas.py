@@ -67,6 +67,21 @@ class PaymentLinkResponse(APIResponse):
 	payment_link: str
 
 
+class InlineCheckout(APIResponse):
+	request: str
+	sdk: str
+	script_url: str
+	options: dict
+	redirect_to: str | None = None
+
+
+class InlineCheckoutResponse(APIResponse):
+	inline_checkout: InlineCheckout
+
+
+PaymentResponse = PaymentLinkResponse | InlineCheckoutResponse
+
+
 class TaxSettings(APIResponse):
 	apply_tax: int
 	tax_inclusive: int
