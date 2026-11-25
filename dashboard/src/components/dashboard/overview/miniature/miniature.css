@@ -1,0 +1,35 @@
+/* Shared by every miniature: one panel, one field, two greys of text. */
+.miniature .mini-panel {
+	border-radius: 8px;
+	background: var(--surface-elevation-1);
+	box-shadow:
+		0 0 0 1px var(--outline-gray-2),
+		0 1px 2px rgba(0, 0, 0, 0.04),
+		0 12px 24px -8px rgba(0, 0, 0, 0.08);
+}
+.miniature .mini-label {
+	color: var(--ink-gray-5);
+}
+.miniature .mini-value {
+	font-family: var(--font-mono, ui-monospace, monospace);
+	font-size: 10.5px;
+	color: var(--ink-gray-6);
+}
+.miniature .mini-field {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	height: 24px;
+	padding: 0 8px;
+	border-radius: 6px;
+	background: var(--surface-gray-2);
+}
+.miniature .mini-empty {
+	color: var(--ink-gray-4);
+}
+.miniature .mini-bar {
+	display: block;
+	height: 5px;
+	border-radius: 3px;
+	background: var(--surface-gray-3);
+}

@@ -74,6 +74,7 @@ function eventItems(
 ): ManagerNavItem[] {
 	const event = `/manage/events/${eventId}`
 	const items: ManagerNavItem[] = [
+		{ label: "Overview", icon: "lucide-house", to: `${event}/overview`, section: "details" },
 		// View opens the details page with its fields locked.
 		{ label: "Details", icon: "lucide-receipt-text", to: `${event}/details`, section: "details" },
 		{
