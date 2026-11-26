@@ -16,7 +16,7 @@ export type ManagerNavItem = {
 	dot?: boolean
 }
 
-// /events is a site page outside the dashboard router, so it opens as a full page load.
+// /events is a site page outside the dashboard router; it opens in a new tab so the dashboard stays put.
 export const discoverEvents = {
 	label: "Discover Events",
 	shortLabel: "Discover",
@@ -24,7 +24,7 @@ export const discoverEvents = {
 	href: "/events",
 }
 
-export const openDiscoverEvents = () => window.location.assign(discoverEvents.href)
+export const openDiscoverEvents = () => window.open(discoverEvents.href, "_blank", "noopener")
 
 export type Workspace = {
 	title: string
