@@ -51,7 +51,7 @@ const offerName = computed(() =>
 	</p>
 
 	<div v-else-if="compact" class="border-t border-outline-gray-1 bg-surface-gray-1">
-		<!-- Same collapse as Limits & schedule: rows grow from 0fr, faster on close. -->
+		<!-- Rows grow from 0fr, faster on close. -->
 		<div
 			class="grid transition-[grid-template-rows] ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
 			:class="expanded ? 'grid-rows-[1fr] duration-200' : 'grid-rows-[0fr] duration-150'"

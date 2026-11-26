@@ -56,8 +56,8 @@ const scope = computed({
 
 const minimumOptions = computed(() => [
 	...(isCode.value ? [] : [{ label: "Any order", value: "None" }]),
-	{ label: "Order total is at least", value: "Minimum Order Amount" },
-	{ label: "Number of tickets is at least", value: "Minimum Ticket Count" },
+	{ label: "Minimum order amount", value: "Minimum Order Amount" },
+	{ label: "Minimum number of tickets", value: "Minimum Ticket Count" },
 ])
 const requiresMinimum = computed({
 	get: () => values.value.minimum_requirement !== "None",
@@ -181,10 +181,52 @@ const hasInvalidCode = computed(
 
 		<DrawerSection
 			title="Eligibility"
-			:description="
-				isCode ? 'Which tickets and orders the code works on' : 'Which orders qualify for it'
-			"
+			:description="isCode ? 'Which tickets it works on, and when' : 'Which orders qualify for it'"
 		>
+			<div class="rounded-4 border border-outline-gray-2">
+				<div v-if="isCode" class="p-1">
+					<Switch
+						v-model="requiresMinimum"
+						padded
+						label="Minimum purchase"
+						description="Only apply when the order is big enough"
+						:disabled="disabled"
+					/>
+				</div>
+				<div v-else class="px-3 pt-3">
+					<p class="text-base text-ink-gray-8">Applies when</p>
+					<p class="mt-0.5 text-sm text-ink-gray-6">
+						Added at checkout once the order qualifies. No code needed.
+					</p>
+				</div>
+				<div v-if="!isCode || requiresMinimum" class="space-y-2 p-3">
+					<FormControl
+						v-model="values.minimum_requirement"
+						type="select"
+						:options="minimumOptions"
+						:disabled="disabled"
+					/>
+					<CurrencyAmounts
+						v-if="values.minimum_requirement === 'Minimum Order Amount'"
+						v-model="values.minimum_order_amounts"
+						label="Order amount at least"
+						:currencies="currencies"
+						:disabled="disabled"
+					/>
+					<FormControl
+						v-if="values.minimum_requirement === 'Minimum Ticket Count'"
+						:model-value="values.minimum_ticket_count || ''"
+						type="number"
+						placeholder="5"
+						:min="1"
+						:disabled="disabled"
+						@update:model-value="values.minimum_ticket_count = Math.max(Number($event) || 0, 0)"
+					>
+						<template #suffix><span class="text-sm text-ink-gray-5">tickets</span></template>
+					</FormControl>
+				</div>
+			</div>
+
 			<div class="space-y-2">
 				<TabButtons v-if="!forAccessCode" v-model="scope" fluid :options="scopeOptions" />
 				<p v-else-if="selectableTicketTypes.length" class="text-sm text-ink-gray-5">
@@ -211,50 +253,6 @@ const hasInvalidCode = computed(
 					:describe="priceLabel"
 					:is-selectable="canSelect"
 				/>
-			</div>
-
-			<div class="rounded-4 border border-outline-gray-2">
-				<div v-if="isCode" class="p-1">
-					<Switch
-						v-model="requiresMinimum"
-						padded
-						label="Require a minimum"
-						description="When off, the code works on any order."
-						:disabled="disabled"
-					/>
-				</div>
-				<div v-else class="px-3 pt-3">
-					<p class="text-base text-ink-gray-8">Applies when</p>
-					<p class="mt-0.5 text-sm text-ink-gray-6">
-						Added to the order as soon as it qualifies, no code needed.
-					</p>
-				</div>
-				<div v-if="!isCode || requiresMinimum" class="space-y-2 p-3">
-					<FormControl
-						v-model="values.minimum_requirement"
-						type="select"
-						:options="minimumOptions"
-						:disabled="disabled"
-					/>
-					<CurrencyAmounts
-						v-if="values.minimum_requirement === 'Minimum Order Amount'"
-						v-model="values.minimum_order_amounts"
-						label="Order total"
-						:currencies="currencies"
-						:disabled="disabled"
-					/>
-					<FormControl
-						v-if="values.minimum_requirement === 'Minimum Ticket Count'"
-						:model-value="values.minimum_ticket_count || ''"
-						type="number"
-						placeholder="5"
-						:min="1"
-						:disabled="disabled"
-						@update:model-value="values.minimum_ticket_count = Math.max(Number($event) || 0, 0)"
-					>
-						<template #suffix><span class="text-sm text-ink-gray-5">tickets</span></template>
-					</FormControl>
-				</div>
 			</div>
 		</DrawerSection>
 	</div>
