@@ -9,7 +9,7 @@ import { useEventDoc } from "@/data/events"
 import type { FrappeError } from "@/types"
 
 import ActionSheet from "./ActionSheet.vue"
-import { type FormBuilder, FORM_SECTIONS, isPastCutoff } from "./useFormBuilder"
+import { type FormBuilder, FORM_SECTIONS, isFormOpen } from "./useFormBuilder"
 
 // Registration edits two forms at once; the first one names the page and carries the publish state.
 const props = defineProps<{ builders: FormBuilder[]; eventId: string }>()
@@ -43,13 +43,15 @@ const DEVICES = [
 ]
 
 const dirty = computed(() => props.builders.some((builder) => builder.dirty.value))
-const saving = computed(() => props.builders.some((builder) => builder.form.setValue.loading))
-const live = computed(() => !!main.value.form.doc?.publish)
+const saving = computed(() =>
+	props.builders.some((builder) => builder.form.setValue.loading || builder.form.setClosed.loading),
+)
+const live = computed(() => !!main.value.form.doc && isFormOpen(main.value.form.doc))
 const status = computed(() => {
-	if (!live.value) return { label: "Draft", dot: "bg-surface-gray-4" }
-	if (main.value.form.doc && isPastCutoff(main.value.form.doc)) {
-		return { label: "Closed", dot: "bg-surface-red-5" }
-	}
+	if (!live.value)
+		return main.value.form.doc?.publish
+			? { label: "Closed", dot: "bg-surface-red-5" }
+			: { label: "Draft", dot: "bg-surface-gray-4" }
 	if (dirty.value) return { label: "Edited", dot: "bg-surface-amber-5" }
 	return { label: "Live", dot: "bg-surface-green-3" }
 })
@@ -84,12 +86,13 @@ const publishActions = computed(() => [
 	},
 ])
 
-// Saving is publishing: there are no drafts, so every save goes live.
+// Saving is publishing: edits save first, then the form opens or closes on the server.
 async function publish(on = true) {
-	if (draft.value) draft.value.publish = on ? 1 : 0
+	const wasLive = live.value
 	try {
 		for (const builder of props.builders) if (builder.dirty.value) await builder.save()
-		toast.success(on ? "Form saved" : "Form unpublished")
+		if (on !== wasLive) await main.value.setClosed(!on)
+		toast.success(!on ? "Form unpublished" : wasLive ? "Changes published" : "Form published")
 	} catch (error) {
 		toast.error((error as FrappeError).message || "Could not save the form")
 	}
