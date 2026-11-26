@@ -3,7 +3,8 @@ from frappe.query_builder import Order
 from frappe.query_builder.functions import Count
 
 from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
-from buzz.api.events.exceptions import CannotManageEvent, EventNotFound
+from buzz.api.events.exceptions import CannotManageEvent
+from buzz.api.events.services import get_event_doc
 from buzz.api.filters.exceptions import InvalidFilter
 from buzz.api.transactions.filters import TransactionConditions, transaction_filter_fields
 from buzz.api.transactions.schemas import TransactionRow, TransactionsPage
@@ -24,11 +25,11 @@ ROW_FIELDS = [
 ]
 
 
-def ensure_transactions_access(event: str) -> None:
-	if not frappe.db.exists("Buzz Event", event):
-		EventNotFound.throw()
-	if not can_view_transactions(event):
+def ensure_transactions_access(event: str):
+	doc = get_event_doc(event)
+	if not can_view_transactions(event, team=doc.team or ""):
 		CannotManageEvent.throw()
+	return doc
 
 
 def transaction_filters(event: str) -> list[list]:
@@ -52,6 +53,7 @@ def transaction_names(event: str, filters: list[list] | None = None, **arguments
 		filters=[*transaction_filters(event), *(filters or [])],
 		or_filters=TRANSACTION_OR_FILTERS,
 		pluck="name",
+		ignore_permissions=True,
 		**arguments,
 	)
 
@@ -62,6 +64,7 @@ def count_transactions(event: str, filters: list[list] | None = None) -> int:
 		filters=[*transaction_filters(event), *(filters or [])],
 		or_filters=TRANSACTION_OR_FILTERS,
 		fields=[{"COUNT": "*"}],
+		ignore_permissions=True,
 	)
 	return rows[0]["COUNT(*)"] if rows else 0
 
@@ -70,12 +73,14 @@ def latest_payments(bookings: list[str]) -> dict[str, frappe._dict]:
 	"""Each booking's most recent Event Payment, in one query."""
 	if not bookings:
 		return {}
-	rows = frappe.get_all(
-		"Event Payment",
-		filters={"reference_doctype": "Event Booking", "reference_docname": ("in", bookings)},
-		fields=["reference_docname", "payment_gateway", "payment_id"],
-		order_by="creation asc, name asc",
-	)
+	payment = frappe.qb.DocType("Event Payment")
+	rows = (
+		frappe.qb.from_(payment)
+		.select(payment.reference_docname, payment.payment_gateway, payment.payment_id)
+		.where((payment.reference_doctype == "Event Booking") & payment.reference_docname.isin(bookings))
+		.orderby(payment.creation)
+		.orderby(payment.name)
+	).run(as_dict=True)
 	return {row.reference_docname: row for row in rows}
 
 
@@ -99,16 +104,24 @@ def ticket_counts(bookings: list[str]) -> dict[str, int]:
 	return dict(rows)
 
 
-def event_currencies(event: str) -> list[str]:
-	rows = frappe.get_all(
-		"Event Booking",
-		filters=transaction_filters(event),
-		or_filters=TRANSACTION_OR_FILTERS,
-		pluck="currency",
-		distinct=True,
-		order_by="currency asc",
-	)
-	return [currency for currency in rows if currency]
+def event_currency_totals(event: str) -> tuple[list[str], int]:
+	"""Distinct transaction currencies and total transaction count for `event`, in one query."""
+	booking = frappe.qb.DocType("Event Booking")
+	rows = (
+		frappe.qb.from_(booking)
+		.select(booking.currency, Count(booking.name))
+		.where(
+			(booking.event == str(event))
+			& (booking.total_amount > 0)
+			& (booking.docstatus != 2)
+			& ((booking.docstatus == 1) | (booking.payment_status == VERIFICATION_PENDING))
+		)
+		.groupby(booking.currency)
+		.orderby(booking.currency)
+	).run()
+	currencies = [currency for currency, _ in rows if currency]
+	total = sum(count for _, count in rows)
+	return currencies, total
 
 
 class TransactionsList:
@@ -117,9 +130,9 @@ class TransactionsList:
 	def __init__(
 		self, event: str, search: str | None, filters: str | None, name: str | None, status: str | None = None
 	):
-		ensure_transactions_access(event)
-		self.event = str(event)
-		self.currencies = event_currencies(self.event)
+		self.event_doc = ensure_transactions_access(event)
+		self.event = str(self.event_doc.name)
+		self.currencies, self.total = event_currency_totals(self.event)
 		self.filter_fields = transaction_filter_fields(self.event, self.currencies)
 		self.conditions = TransactionConditions(self.event, self.filter_fields).frappe_filters(filters)
 		if term := (search or "").strip():
@@ -134,13 +147,20 @@ class TransactionsList:
 	def page(self, order: str, start: int, limit: int) -> TransactionsPage:
 		limit = max(1, min(int(limit), 100))
 		start = max(0, int(start))
-		rows = self.rows(order, start, limit)
-		total = count_transactions(self.event)
-		matched = count_transactions(self.event, self.conditions) if self.conditions else total
+		if not self.total:
+			rows, matched = [], 0
+		else:
+			rows = self.rows(order, start, limit)
+			if not self.conditions:
+				matched = self.total
+			elif start == 0 and len(rows) < limit:
+				matched = len(rows)
+			else:
+				matched = count_transactions(self.event, self.conditions)
 		return TransactionsPage(
-			title=frappe.db.get_value("Buzz Event", self.event, "title"),
+			title=self.event_doc.title,
 			currencies=self.currencies,
-			total=total,
+			total=self.total,
 			matched=matched,
 			transactions=rows,
 			has_next_page=start + len(rows) < matched,
@@ -150,15 +170,34 @@ class TransactionsList:
 	def rows(self, order: str, start: int, limit: int) -> list[TransactionRow]:
 		# Interpolated into ORDER BY, so it can only ever be one of two literals.
 		direction = "asc" if str(order).lower() == "asc" else "desc"
-		bookings = frappe.get_all(
-			"Event Booking",
-			filters=[*transaction_filters(self.event), *self.conditions],
-			or_filters=TRANSACTION_OR_FILTERS,
-			fields=ROW_FIELDS,
-			order_by=f"creation {direction}, name {direction}",
-			limit_start=start,
-			limit=limit,
-		)
+		if not self.conditions:
+			booking = frappe.qb.DocType("Event Booking")
+			order_dir = Order.asc if direction == "asc" else Order.desc
+			bookings = (
+				frappe.qb.from_(booking)
+				.select(*(booking[field] for field in ROW_FIELDS))
+				.where(
+					(booking.event == self.event)
+					& (booking.total_amount > 0)
+					& (booking.docstatus != 2)
+					& ((booking.docstatus == 1) | (booking.payment_status == VERIFICATION_PENDING))
+				)
+				.orderby(booking.creation, order=order_dir)
+				.orderby(booking.name, order=order_dir)
+				.limit(limit)
+				.offset(start)
+			).run(as_dict=True)
+		else:
+			bookings = frappe.get_all(
+				"Event Booking",
+				filters=[*transaction_filters(self.event), *self.conditions],
+				or_filters=TRANSACTION_OR_FILTERS,
+				fields=ROW_FIELDS,
+				order_by=f"creation {direction}, name {direction}",
+				limit_start=start,
+				limit=limit,
+				ignore_permissions=True,
+			)
 		names = [booking.name for booking in bookings]
 		payments, tickets = latest_payments(names), ticket_counts(names)
 		return [transaction_row(booking, payments, tickets) for booking in bookings]
@@ -189,14 +228,19 @@ def like_pattern(term: str) -> str:
 
 def searched_bookings(event: str, term: str) -> list[str]:
 	"""Bookings of the event matching on the buyer, the booking name, or a payment's ids."""
+	event_id = str(event)
 	booking = frappe.qb.DocType("Event Booking")
 	payment = frappe.qb.DocType("Event Payment")
+	payment_booking = frappe.qb.DocType("Event Booking").as_("payment_booking")
 	pattern = like_pattern(term)
 	paid_by = (
 		frappe.qb.from_(payment)
+		.join(payment_booking)
+		.on(payment_booking.name == payment.reference_docname)
 		.select(payment.reference_docname)
 		.where(
-			(payment.reference_doctype == "Event Booking")
+			(payment_booking.event == event_id)
+			& (payment.reference_doctype == "Event Booking")
 			& (payment.payment_id.like(pattern) | payment.order_id.like(pattern))
 		)
 	)
@@ -207,5 +251,5 @@ def searched_bookings(event: str, term: str) -> list[str]:
 		| booking.buyer_phone.like(pattern)
 		| booking.name.isin(paid_by)
 	)
-	query = frappe.qb.from_(booking).select(booking.name).where((booking.event == event) & matches)
+	query = frappe.qb.from_(booking).select(booking.name).where((booking.event == event_id) & matches)
 	return query.orderby(booking.name, order=Order.asc).run(pluck=True)

@@ -6,7 +6,10 @@ from buzz.api.events.services import ensure_event_team_access, manageable_event
 
 
 def team_tax_details(team: str) -> dict:
-	legal_name, tax_id = frappe.db.get_value("Buzz Team Settings", team, ["legal_name", "tax_id"])
+	if not team:
+		return {"team_legal_name": None, "team_tax_id": None}
+	values = frappe.get_cached_value("Buzz Team Settings", team, ["legal_name", "tax_id"])
+	legal_name, tax_id = values if values else (None, None)
 	return {"team_legal_name": legal_name, "team_tax_id": tax_id}
 
 

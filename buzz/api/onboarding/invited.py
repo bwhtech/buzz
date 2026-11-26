@@ -15,11 +15,17 @@ def invited_team(user: str) -> InvitedTeam | None:
 		as_dict=True,
 		order_by="creation asc",
 	)
-	if not membership or frappe.db.get_value("Buzz Team", membership.team, "is_personal"):
+	if not membership:
 		return None
-	team = frappe.db.get_value("Buzz Team", membership.team, ["name", "team_name", "logo"], as_dict=True)
+	team = frappe.get_cached_value(
+		"Buzz Team", membership.team, ["name", "team_name", "logo", "is_personal"], as_dict=True
+	)
+	if not team or team.is_personal:
+		return None
 	return InvitedTeam(
-		**team,
+		name=team.name,
+		team_name=team.team_name,
+		logo=team.logo,
 		team_role=membership.team_role,
 		invited_by=inviter(user, team.name),
 		member_count=frappe.db.count("Buzz Team Membership", {"team": team.name, **HUMAN_MEMBER_FILTERS}),

@@ -29,6 +29,10 @@ class TicketAddon(Document):
 	def validate_ticket_types(self):
 		types = {str(row.ticket_type) for row in self.ticket_types}
 		if types and frappe.db.count(
-			"Event Ticket Type", {"name": ["in", list(types)], "event": self.event}
+			"Event Ticket Type", {"name": ["in", list(types)], "event": str(self.event)}
 		) != len(types):
 			frappe.throw(_("An add-on can only apply to ticket types of its own event."))
+
+
+def on_doctype_update():
+	frappe.db.add_index("Ticket Add-on", ["event", "enabled"])

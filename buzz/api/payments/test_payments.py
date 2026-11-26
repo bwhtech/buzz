@@ -98,6 +98,14 @@ class TestGetPaymentGatewaysNeedingPhone(IntegrationTestCase):
 		with patch("buzz.payments.GATEWAYS_NEEDING_PHONE", ("Razorpay Gateway Settings",)):
 			self.assertNotIn(gateway, get_payment_gateways_needing_phone())
 
+	def test_cache_invalidates_when_gateway_profile_is_saved(self):
+		gateway = make_payment_gateway()
+
+		with patch("buzz.payments.GATEWAYS_NEEDING_PHONE", ("Razorpay Gateway Settings",)):
+			self.assertIn(gateway, get_payment_gateways_needing_phone())
+			frappe.get_doc("Payment Gateway Profile", gateway).update({"enabled": 0}).save()
+			self.assertNotIn(gateway, get_payment_gateways_needing_phone())
+
 
 class TestGetPaymentGatewayLogos(IntegrationTestCase):
 	def test_every_enabled_gateway_comes_with_its_logo_for_both_themes(self):

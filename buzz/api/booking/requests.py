@@ -1,8 +1,8 @@
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Count
 from frappe.rate_limiter import rate_limit
 
-from buzz.api.booking.details import ticket_type_titles
 from buzz.api.booking.schemas import (
 	PaymentLinkResponse,
 	RegistrationRequestRow,
@@ -11,64 +11,169 @@ from buzz.api.booking.schemas import (
 	RequestCounts,
 )
 from buzz.api.booking.services import verify_booking_access_token
+from buzz.api.events.exceptions import CannotManageEvent
 from buzz.api.events.services import manageable_event
+from buzz.permissions import has_section_permission
 from buzz.ticketing.doctype.event_booking.registration_request import RegistrationRequest
-from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import start_capacity_transaction
-from buzz.ticketing.doctype.ticket_hold.ticket_hold import live_hold_expiry
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
+	remaining_for,
+	sold_counts,
+	start_capacity_transaction,
+	waitlist_ticket_types,
+)
+from buzz.ticketing.doctype.ticket_hold.ticket_hold import held_quantities, live_hold_expiries
+
+REQUEST_BOOKING_FIELDS = [
+	"name",
+	"status",
+	"request_type",
+	"docstatus",
+	"hold_token",
+	"buyer_name",
+	"buyer_email",
+	"total_amount",
+	"currency",
+	"creation",
+]
 
 
 class RequestService:
 	"""Registration requests of one event, for anyone who can write its guest list."""
 
 	def __init__(self, event: str):
-		self.event = manageable_event(event, "guests")
+		self.event = frappe.get_cached_doc("Buzz Event", str(event))
+		self.event_id = str(self.event.name)
+		if not has_section_permission(
+			self.event_id, "guests", "write", frappe.session.user, team=self.event.team
+		):
+			CannotManageEvent.throw()
 
 	def requests(self, request_type: str) -> list[RegistrationRequestRow]:
 		"""Every request of one type, open or decided, oldest first."""
 		# ponytail: no paging, add when an event passes ~500 requests
-		names = frappe.get_all(
-			"Event Booking",
-			filters={"event": self.event.name, "request_type": request_type, "docstatus": ("<", 2)},
-			order_by="creation asc",
-			pluck="name",
+		booking_table = frappe.qb.DocType("Event Booking")
+		bookings = (
+			frappe.qb.from_(booking_table)
+			.select(*(booking_table[field] for field in REQUEST_BOOKING_FIELDS))
+			.where(
+				(booking_table.event == self.event_id)
+				& (booking_table.request_type == request_type)
+				& (booking_table.docstatus < 2)
+			)
+			.orderby(booking_table.creation)
+		).run(as_dict=True)
+		if not bookings:
+			return []
+		names = [booking.name for booking in bookings]
+		attendees_by_booking = request_attendees(names)
+		answers_by_booking = request_answers(names)
+		titles = request_ticket_type_titles(attendees_by_booking)
+		expiries = live_hold_expiries(
+			[
+				booking.hold_token
+				for booking in bookings
+				if booking.status == "Payment Pending" and booking.hold_token
+			]
 		)
-		bookings = [frappe.get_doc("Event Booking", name) for name in names]
-		titles = ticket_type_titles(bookings)
-		positions = waitlist_positions(bookings)
-		return [request_row(booking, titles, positions.get(booking.name)) for booking in bookings]
+		positions = waitlist_positions(bookings, attendees_by_booking)
+		return [
+			request_row(
+				booking,
+				attendees_by_booking.get(booking.name, []),
+				answers_by_booking.get(booking.name, []),
+				titles,
+				positions.get(booking.name),
+				expiries.get(booking.hold_token) if booking.status == "Payment Pending" else None,
+			)
+			for booking in bookings
+		]
 
 	def counts(self) -> RequestCounts:
-		rows = frappe.get_all(
-			"Event Booking",
-			filters={"event": self.event.name, "docstatus": 0, "status": ("in", ("Requested", "Waitlisted"))},
-			fields=["status", {"COUNT": "*", "as": "count"}],
-			group_by="status",
-		)
+		booking_table = frappe.qb.DocType("Event Booking")
+		rows = (
+			frappe.qb.from_(booking_table)
+			.select(booking_table.status, Count("*").as_("count"))
+			.where(
+				(booking_table.event == self.event_id)
+				& (booking_table.docstatus == 0)
+				& booking_table.status.isin(["Requested", "Waitlisted"])
+			)
+			.groupby(booking_table.status)
+		).run(as_dict=True)
 		by_status = {row.status: row.count for row in rows}
+		waiting = by_status.get("Waitlisted", 0)
 		return RequestCounts(
 			pending=by_status.get("Requested", 0),
-			waiting=by_status.get("Waitlisted", 0),
-			seats_free=self.seats_free(),
+			waiting=waiting,
+			seats_free=self.seats_free() if waiting else {},
 		)
 
 	def seats_free(self) -> dict[str, int]:
-		ticket_types = frappe.get_all("Event Ticket Type", filters={"event": self.event.name}, pluck="name")
-		seats = {}
-		for name in ticket_types:
-			ticket_type = frappe.get_cached_doc("Event Ticket Type", name)
-			if ticket_type.has_waitlist_entries():
-				seats[ticket_type.title] = ticket_type.get_remaining_tickets()
-		return seats
+		queued_ids = waitlist_ticket_types(self.event_id)
+		if not queued_ids:
+			return {}
+		tt = frappe.qb.DocType("Event Ticket Type")
+		ticket_types = (
+			frappe.qb.from_(tt)
+			.select(tt.name, tt.title, tt.max_tickets_available)
+			.where((tt.event == self.event_id) & tt.name.isin(list(queued_ids)))
+		).run(as_dict=True)
+		limited = [str(row.name) for row in ticket_types if row.max_tickets_available]
+		sold = sold_counts(limited, event=self.event_id)
+		held = held_quantities(limited)
+		return {row.title: remaining_for(row, sold, held) for row in ticket_types}
 
 
-def waitlist_positions(bookings: list) -> dict[str, int]:
+def request_attendees(booking_names: list[str]) -> dict[str, list]:
+	rows = frappe.get_all(
+		"Event Booking Attendee",
+		filters={"parenttype": "Event Booking", "parent": ("in", booking_names)},
+		fields=["parent", "full_name", "first_name", "last_name", "email", "ticket_type"],
+		order_by="parent asc, idx asc",
+	)
+	grouped: dict[str, list] = {}
+	for row in rows:
+		grouped.setdefault(row.parent, []).append(row)
+	return grouped
+
+
+def request_answers(booking_names: list[str]) -> dict[str, list]:
+	rows = frappe.get_all(
+		"Additional Field",
+		filters={"parenttype": "Event Booking", "parent": ("in", booking_names)},
+		fields=["parent", "label", "value"],
+		order_by="parent asc, idx asc",
+	)
+	grouped: dict[str, list] = {}
+	for row in rows:
+		grouped.setdefault(row.parent, []).append(row)
+	return grouped
+
+
+def request_ticket_type_titles(attendees_by_booking: dict[str, list]) -> dict[str, str]:
+	ids = {
+		str(attendee.ticket_type)
+		for attendees in attendees_by_booking.values()
+		for attendee in attendees
+		if attendee.ticket_type
+	}
+	if not ids:
+		return {}
+	rows = frappe.db.get_all(
+		"Event Ticket Type", filters={"name": ("in", list(ids))}, fields=["name", "title"]
+	)
+	return {str(row.name): row.title for row in rows}
+
+
+def waitlist_positions(bookings: list, attendees_by_booking: dict[str, list]) -> dict[str, int]:
 	"""Rank of each waiting booking in the queue of its first ticket type."""
 	queues: dict[str, int] = {}
 	positions = {}
 	for booking in bookings:
-		if booking.status != "Waitlisted" or not booking.attendees:
+		attendees = attendees_by_booking.get(booking.name)
+		if booking.status != "Waitlisted" or not attendees:
 			continue
-		ticket_type = str(booking.attendees[0].ticket_type)
+		ticket_type = str(attendees[0].ticket_type)
 		queues[ticket_type] = queues.get(ticket_type, 0) + 1
 		positions[booking.name] = queues[ticket_type]
 	return positions
@@ -87,16 +192,21 @@ def own_request(booking: str, token: str | None) -> RegistrationRequest:
 	return RegistrationRequest(frappe.get_doc("Event Booking", booking))
 
 
-def request_row(booking, titles: dict[str, str], position: int | None = None) -> RegistrationRequestRow:
+def request_row(
+	booking,
+	attendees: list,
+	answers: list,
+	titles: dict[str, str],
+	position: int | None = None,
+	offer_expires_at=None,
+) -> RegistrationRequestRow:
 	return RegistrationRequestRow(
 		name=booking.name,
 		status=booking.status,
 		request_type=booking.request_type,
 		docstatus=booking.docstatus,
 		position=position,
-		offer_expires_at=live_hold_expiry(booking.hold_token)
-		if booking.status == "Payment Pending"
-		else None,
+		offer_expires_at=offer_expires_at,
 		buyer_name=booking.buyer_name,
 		buyer_email=booking.buyer_email,
 		total_amount=booking.total_amount,
@@ -109,9 +219,9 @@ def request_row(booking, titles: dict[str, str], position: int | None = None) ->
 				email=attendee.email,
 				ticket_type=titles.get(str(attendee.ticket_type), str(attendee.ticket_type)),
 			)
-			for attendee in booking.attendees
+			for attendee in attendees
 		],
-		answers=[RequestAnswer(label=field.label, value=field.value) for field in booking.additional_fields],
+		answers=[RequestAnswer(label=field.label, value=field.value) for field in answers],
 	)
 
 

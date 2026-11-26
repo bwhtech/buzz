@@ -31,10 +31,15 @@ from buzz.ticketing.doctype.event_booking_refund.event_booking_refund import (
 	get_committed_tickets,
 	record_gateway_refund,
 )
-from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import lock_ticket_types
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
+	lock_ticket_types,
+	remaining_for,
+	sold_counts,
+)
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import (
 	PAYMENT_HOLD_MINUTES,
 	extend_hold,
+	held_quantities,
 	release_hold,
 	set_hold,
 )
@@ -135,8 +140,10 @@ class EventBooking(Document):
 		if self.flags.ignore_permissions:
 			return
 
-		event = frappe.get_cached_doc("Buzz Event", self.event)
-		if has_section_permission(event.name, "guests", "create", frappe.session.user):
+		event = frappe.get_cached_doc("Buzz Event", str(self.event))
+		if has_section_permission(
+			str(event.name), "guests", "create", frappe.session.user, team=event.team or ""
+		):
 			return
 
 		if not event.is_published:
@@ -190,13 +197,30 @@ class EventBooking(Document):
 
 	def set_total(self):
 		self.net_amount = 0
+		add_on_rows = self._attendee_add_on_rows()
 		for attendee in self.attendees:
 			self.net_amount += attendee.amount
 			if attendee.add_ons:
-				attendee.add_on_total = attendee.get_add_on_total()
-				attendee.number_of_add_ons = attendee.get_number_of_add_ons()
+				rows = add_on_rows.get(attendee.add_ons, [])
+				attendee.add_on_total = sum(row.price for row in rows)
+				attendee.number_of_add_ons = len(rows)
 				self.net_amount += attendee.add_on_total
 		self.total_amount = self.net_amount
+
+	def _attendee_add_on_rows(self) -> dict[str, list[frappe._dict]]:
+		parents = list({attendee.add_ons for attendee in self.attendees if attendee.add_ons})
+		if not parents:
+			return {}
+		value = frappe.qb.DocType("Ticket Add-on Value")
+		rows = (
+			frappe.qb.from_(value)
+			.select(value.parent, value.price, value.currency)
+			.where((value.parenttype == "Attendee Ticket Add-on") & value.parent.isin(parents))
+		).run(as_dict=True)
+		grouped: dict[str, list[frappe._dict]] = {}
+		for row in rows:
+			grouped.setdefault(row.parent, []).append(row)
+		return grouped
 
 	def apply_taxes_if_applicable(self):
 		"""Apply tax based on event-level tax configuration."""
@@ -204,7 +228,7 @@ class EventBooking(Document):
 		self.tax_amount = 0
 		self.tax_label = None
 
-		event = frappe.get_cached_doc("Buzz Event", self.event)
+		event = frappe.get_cached_doc("Buzz Event", str(self.event))
 		if not event.apply_tax:
 			return
 
@@ -229,24 +253,40 @@ class EventBooking(Document):
 		if self.status == "Waitlisted":
 			return
 		quantities = self.ticket_quantities()
-		ticket_types = [frappe.get_cached_doc("Event Ticket Type", name) for name in quantities]
-		lock_ticket_types([row.name for row in ticket_types if row.max_tickets_available])
+		ticket_types = [frappe.get_cached_doc("Event Ticket Type", str(name)) for name in quantities]
+		if self.flags.organizer_override:
+			for ticket_type in ticket_types:
+				self.validate_ticket_type(ticket_type, quantities[str(ticket_type.name)])
+			return
+		limited = [row for row in ticket_types if row.max_tickets_available]
+		lock_ticket_types([row.name for row in limited])
+		sold = sold_counts([row.name for row in limited], for_update=True) if limited else {}
+		held = (
+			held_quantities([row.name for row in limited], exclude_token=self.hold_token, for_update=True)
+			if limited
+			else {}
+		)
 		for ticket_type in ticket_types:
-			self.validate_ticket_type(ticket_type, quantities[str(ticket_type.name)])
+			self.validate_ticket_type(
+				ticket_type,
+				quantities[str(ticket_type.name)],
+				remaining=remaining_for(ticket_type, sold, held),
+			)
 
-	def validate_ticket_type(self, ticket_type, quantity: int):
+	def validate_ticket_type(self, ticket_type, quantity: int, remaining: int | None = None):
 		if str(ticket_type.event) != str(self.event):
 			# No title: it would name hidden ticket types of any event.
 			frappe.throw(_("A selected ticket type is not available for this event"))
 		if self.flags.organizer_override:
 			return
 		if self.flags.payment_received:
-			self.log_if_oversold(ticket_type, quantity)
+			self.log_if_oversold(ticket_type, quantity, remaining=remaining)
 			return
 		if not ticket_type.is_published:
 			frappe.throw(_("{0} tickets no longer available!").format(ticket_type.title))
 
-		remaining = ticket_type.get_remaining_tickets(for_update=True, hold_token=self.hold_token)
+		if remaining is None:
+			remaining = ticket_type.get_remaining_tickets(for_update=True, hold_token=self.hold_token)
 		if remaining == -1 or remaining >= quantity:
 			return
 		frappe.throw(
@@ -281,8 +321,9 @@ class EventBooking(Document):
 		access_code = frappe.get_doc("Buzz Coupon Code", self.access_code)
 		return access_code if access_code.coupon_type == "Access Code" else None
 
-	def log_if_oversold(self, ticket_type, quantity: int):
-		remaining = ticket_type.get_remaining_tickets(for_update=True, hold_token=self.hold_token)
+	def log_if_oversold(self, ticket_type, quantity: int, remaining: int | None = None):
+		if remaining is None:
+			remaining = ticket_type.get_remaining_tickets(for_update=True, hold_token=self.hold_token)
 		if remaining == -1 or remaining >= quantity:
 			return
 		frappe.log_error(
@@ -319,7 +360,7 @@ class EventBooking(Document):
 		return add_to_date(now_datetime(), minutes=PAYMENT_HOLD_MINUTES)
 
 	def event_end(self):
-		_start, end = build_event_datetimes(frappe.get_cached_doc("Buzz Event", self.event))
+		_start, end = build_event_datetimes(frappe.get_cached_doc("Buzz Event", str(self.event)))
 		return end
 
 	def hold_until_approval(self):
@@ -327,17 +368,19 @@ class EventBooking(Document):
 
 	def fetch_amounts_from_ticket_types(self):
 		for attendee in self.attendees:
-			ticket_type = frappe.get_cached_doc("Event Ticket Type", attendee.ticket_type)
+			ticket_type = frappe.get_cached_doc("Event Ticket Type", str(attendee.ticket_type))
 			self.currency = self.currency or ticket_type.prices[0].currency
 			attendee.currency = self.currency
 			attendee.amount = 0 if self.is_invite else ticket_type.price_in(attendee.currency)
 
 	def validate_add_ons_currency(self):
+		add_on_rows = self._attendee_add_on_rows()
 		for attendee in self.attendees:
 			if not attendee.add_ons:
 				continue
-			add_ons = frappe.get_cached_doc("Attendee Ticket Add-on", attendee.add_ons).add_ons
-			if any(row.price and row.currency != self.currency for row in add_ons):
+			if any(
+				row.price and row.currency != self.currency for row in add_on_rows.get(attendee.add_ons, [])
+			):
 				frappe.throw(_("Paid add-ons can't be paid in {0}").format(self.currency))
 
 	def on_submit(self):
@@ -345,7 +388,17 @@ class EventBooking(Document):
 		self.generate_tickets()
 		release_hold(self.hold_token)
 		self.capture_confirmed()
+		if frappe.in_test:
+			self.send_confirmation_email_safely()
+			return
+		frappe.enqueue(
+			"buzz.ticketing.doctype.event_booking.event_booking.send_booking_confirmation_email_job",
+			booking_name=self.name,
+			queue="short",
+			enqueue_after_commit=True,
+		)
 
+	def send_confirmation_email_safely(self):
 		try:
 			self.send_booking_confirmation_email()
 		except Exception:
@@ -376,7 +429,7 @@ class EventBooking(Document):
 		)
 
 	def send_booking_confirmation_email(self):
-		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
+		event_doc = frappe.get_cached_doc("Buzz Event", str(self.event))
 		team_settings = get_event_team_settings(self.event)
 		# Fallback to the team default if event-level not set
 		self.send_booking_email(
@@ -391,7 +444,7 @@ class EventBooking(Document):
 	def send_offline_acknowledgement_email(self):
 		"""Tell the booker their offline payment is awaiting verification. Sent while the
 		booking is still a draft, so the confirmation above stays the approval's job."""
-		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
+		event_doc = frappe.get_cached_doc("Buzz Event", str(self.event))
 		self.send_booking_email(
 			template=event_doc.offline_acknowledgement_email_template,
 			builtin="offline_booking_acknowledgement",
@@ -436,14 +489,14 @@ class EventBooking(Document):
 			return None
 
 		if not always and not frappe.get_cached_value(
-			"Buzz Event", self.event, "send_booking_confirmation_email"
+			"Buzz Event", str(self.event), "send_booking_confirmation_email"
 		):
 			return None
 
 		return frappe.db.get_value("User", self.user, "email") or self.user
 
 	def get_booking_email_args(self) -> dict:
-		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
+		event_doc = frappe.get_cached_doc("Buzz Event", str(self.event))
 		return {
 			"doc": self,
 			"event_doc": event_doc,
@@ -504,6 +557,11 @@ class EventBooking(Document):
 		)
 
 	def generate_tickets(self):
+		custom_field_map = None
+		if any(attendee.custom_fields for attendee in self.attendees):
+			custom_field_defs = form_questions(str(self.event), ATTENDEE_FORM_DOCTYPE)
+			custom_field_map = {cf["fieldname"]: cf for cf in custom_field_defs}
+
 		for attendee in self.attendees:
 			ticket = frappe.new_doc("Event Ticket")
 			ticket.event = self.event
@@ -518,17 +576,13 @@ class EventBooking(Document):
 				ticket.add_ons = add_ons_list
 
 			# Add custom fields from attendee to ticket
-			if attendee.custom_fields:
+			if attendee.custom_fields and custom_field_map:
 				custom_fields_data = attendee.custom_fields
 				if isinstance(custom_fields_data, str):
 					try:
 						custom_fields_data = frappe.parse_json(custom_fields_data)
 					except (ValueError, TypeError):
 						custom_fields_data = {}
-
-				# The event's attendee questions give each answer its label and type.
-				custom_field_defs = form_questions(self.event, ATTENDEE_FORM_DOCTYPE)
-				custom_field_map = {cf["fieldname"]: cf for cf in custom_field_defs}
 
 				for field_name, field_value in custom_fields_data.items():
 					if field_value and field_name in custom_field_map:
@@ -543,8 +597,9 @@ class EventBooking(Document):
 							},
 						)
 
+			ticket.docstatus = 1
 			ticket.flags.ignore_permissions = 1
-			ticket.insert().submit()
+			ticket.insert()
 
 	def on_payment_authorized(self, payment_status: str):
 		if payment_status in ("Authorized", "Completed"):
@@ -799,7 +854,7 @@ class EventBooking(Document):
 		if access_code and access_code.discount_type != "None":
 			return access_code
 		if access_code or not self.coupon_code:
-			return BuzzCouponCode.best_automatic(self)
+			return BuzzCouponCode.best_automatic(self, use_cache=False)
 		return self.get_usable_coupon(self.coupon_code)
 
 	def get_usable_access_code(self) -> BuzzCouponCode | None:
@@ -813,6 +868,13 @@ class EventBooking(Document):
 		return coupon
 
 
+def send_booking_confirmation_email_job(booking_name: str) -> None:
+	booking = frappe.get_doc("Event Booking", booking_name)
+	if booking.docstatus != 1:
+		return
+	booking.send_confirmation_email_safely()
+
+
 def get_checked_in_tickets(tickets: list[str]) -> set[str]:
 	"""Of the tickets given, the ones whose attendee has already been through the door."""
 	if not tickets:
@@ -821,3 +883,12 @@ def get_checked_in_tickets(tickets: list[str]) -> set[str]:
 	return set(
 		frappe.get_all("Event Check In", filters={"ticket": ("in", tickets), "docstatus": 1}, pluck="ticket")
 	)
+
+
+def on_doctype_update():
+	frappe.db.add_index("Event Booking", ["event", "docstatus", "status"])
+	frappe.db.add_index("Event Booking", ["event", "request_type", "docstatus"])
+	frappe.db.add_index("Event Booking", ["event", "creation"])
+	frappe.db.add_index("Event Booking", ["user", "docstatus"])
+	frappe.db.add_index("Event Booking", ["coupon_code", "docstatus"])
+	frappe.db.add_index("Event Booking", ["access_code", "docstatus"])

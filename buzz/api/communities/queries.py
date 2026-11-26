@@ -63,7 +63,10 @@ def request_rows(**conditions) -> list[CommunityRequest]:
 		.orderby(Coalesce(event.start_date, request.start_datetime))
 	)
 	for field, value in conditions.items():
-		query = query.where(request[field] == value)
+		if isinstance(value, list | tuple | set):
+			query = query.where(request[field].isin(list(value)))
+		else:
+			query = query.where(request[field] == value)
 	return [CommunityRequest(**request_row(row)) for row in query.run(as_dict=True)]
 
 

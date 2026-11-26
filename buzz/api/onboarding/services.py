@@ -8,14 +8,13 @@ from buzz.api.onboarding.exceptions import InvalidUsername
 from buzz.api.onboarding.invited import invited_team
 from buzz.api.onboarding.schemas import OnboardingState
 from buzz.api.onboarding.setup import community_draft
-from buzz.events.doctype.buzz_team.buzz_team import personal_teams_enabled
 
 USERNAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_.-]{2,29}$")
 STATUS_FIELD = "buzz_onboarding_status"
 
 
 def onboarding_enabled() -> bool:
-	return bool(frappe.db.get_single_value("Buzz Settings", "enable_onboarding"))
+	return bool(frappe.get_cached_value("Buzz Settings", "Buzz Settings", "enable_onboarding"))
 
 
 def mark_pending_on_signup(doc, event=None):
@@ -31,10 +30,15 @@ def mark_pending_on_signup(doc, event=None):
 	doc.db_set(STATUS_FIELD, status)
 
 
-def needs_onboarding(user: str) -> bool:
+def needs_onboarding(user: str, user_doc=None) -> bool:
 	if not onboarding_enabled():
 		return False
-	return frappe.db.get_value("User", user, STATUS_FIELD) in ("Pending", "Deferred")
+	status = (
+		user_doc.get(STATUS_FIELD)
+		if user_doc is not None
+		else frappe.get_cached_value("User", user, STATUS_FIELD)
+	)
+	return status in ("Pending", "Deferred")
 
 
 def is_valid_username(username: str) -> bool:
@@ -54,9 +58,10 @@ def username_availability(username: str, user: str) -> RouteAvailability:
 
 
 def onboarding_state(user: str) -> OnboardingState:
+	settings = frappe.get_cached_doc("Buzz Settings")
 	return OnboardingState(
-		personal_teams_enabled=personal_teams_enabled(),
-		communities_enabled=bool(frappe.db.get_single_value("Buzz Settings", "enable_communities")),
+		personal_teams_enabled=bool(settings.enable_personal_teams),
+		communities_enabled=bool(settings.enable_communities),
 		invited_team=invited_team(user),
 		community=community_draft(user),
 	)

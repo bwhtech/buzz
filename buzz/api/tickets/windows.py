@@ -10,7 +10,7 @@ CANCELLATION = "allow_ticket_cancellation_request_before_event_start_days"
 
 def is_window_open(event_id: str | int, cutoff_fieldname: str) -> bool:
 	"""True while the event is still further away than its team's cutoff."""
-	start_date = frappe.get_cached_value("Buzz Event", event_id, "start_date")
+	start_date = frappe.get_cached_value("Buzz Event", str(event_id), "start_date")
 	if not start_date:
 		return False
 

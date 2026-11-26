@@ -18,28 +18,30 @@ TIER_FIELDS = ["name", "title", "enabled", "perks", "slots", {"prices": ["curren
 
 def event_sponsorships(event: str) -> EventSponsorshipsResponse:
 	"""Tiers, confirmed sponsors and the enquiry form state for one event's manage page."""
-	ensure_event_team_access(event, "sponsors")
-	doc = frappe.get_cached_doc("Buzz Event", event)
+	doc = ensure_event_team_access(event, "sponsors")
+	event_id = str(doc.name)
 
 	tiers = frappe.get_all(
 		"Sponsorship Tier",
-		filters={"event": event},
+		filters={"event": event_id},
 		fields=TIER_FIELDS,
 		order_by="creation asc",
 		ignore_permissions=True,
 	)
-	sponsors = sponsor_rows({"event": event})
+	sponsors = sponsor_rows({"event": event_id})
 	tier_titles = {str(tier.name): tier.title for tier in tiers}
 	sponsor_counts = Counter(sponsor.tier for sponsor in sponsors)
 
 	return EventSponsorshipsResponse(
 		title=doc.title,
-		can_write=has_section_permission(event, "sponsors", "write", frappe.session.user),
+		can_write=has_section_permission(
+			event_id, "sponsors", "write", frappe.session.user, team=doc.team or ""
+		),
 		form=form_state(doc),
 		tiers=[TierItem(**tier, sponsor_count=sponsor_counts[tier.name]) for tier in tiers],
 		sponsors=sponsor_items(sponsors, tier_titles),
 		team=doc.team,
-		tags=sponsor_tags(event),
+		tags=sponsor_tags(event_id, team=doc.team),
 		import_enabled=is_feature_enabled(doc.team, IMPORT_FLAG),
 	)
 

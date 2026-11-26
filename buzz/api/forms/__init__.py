@@ -49,7 +49,7 @@ def form_service(event_route: str, form_route: str):
 
 	service = CustomFormService(event_route, form_route)
 	if service.form_doctype == SPONSORSHIP_FORM_DOCTYPE:
-		return SponsorFormService(event_route, form_route)
+		return SponsorFormService(event_route, form_route, event=service.event, form=service.form)
 	return service
 
 

@@ -35,11 +35,13 @@ class TicketHold(Document):
 def held_quantities(ticket_types: list, exclude_token: str | None = None, for_update: bool = False) -> dict:
 	"""Live held quantity by ticket type name. `for_update` makes it a locking read, as
 	`EventTicketType.count_tickets_sold` explains."""
+	if not ticket_types:
+		return {}
 	hold = frappe.qb.DocType("Ticket Hold")
 	query = (
 		frappe.qb.from_(hold)
 		.select(hold.ticket_type, Sum(hold.quantity))
-		.where(hold.ticket_type.isin([str(name) for name in ticket_types] or [""]))
+		.where(hold.ticket_type.isin([str(name) for name in ticket_types]))
 		.where(hold.expires_at > now_datetime())
 		.groupby(hold.ticket_type)
 	)
@@ -70,13 +72,22 @@ def live_hold_expiry(hold_token: str | None):
 	"""When the token's live hold ends, or None if it has none."""
 	if not hold_token:
 		return None
+	return live_hold_expiries([hold_token]).get(hold_token)
+
+
+def live_hold_expiries(hold_tokens: list[str]) -> dict:
+	"""When each token's live hold ends, in one grouped query."""
+	tokens = [token for token in set(hold_tokens) if token]
+	if not tokens:
+		return {}
 	hold = frappe.qb.DocType("Ticket Hold")
-	query = (
+	rows = (
 		frappe.qb.from_(hold)
-		.select(Max(hold.expires_at))
-		.where((hold.hold_token == hold_token) & (hold.expires_at > now_datetime()))
-	)
-	return query.run()[0][0]
+		.select(hold.hold_token, Max(hold.expires_at))
+		.where(hold.hold_token.isin(tokens) & (hold.expires_at > now_datetime()))
+		.groupby(hold.hold_token)
+	).run()
+	return {token: expires_at for token, expires_at in rows if expires_at}
 
 
 def new_hold_expiry():
@@ -111,3 +122,8 @@ def extend_hold(hold_token: str | None, expires_at) -> None:
 def release_hold(hold_token: str | None) -> None:
 	if hold_token:
 		frappe.db.delete("Ticket Hold", {"hold_token": hold_token})
+
+
+def on_doctype_update():
+	frappe.db.add_index("Ticket Hold", ["ticket_type", "expires_at"])
+	frappe.db.add_index("Ticket Hold", ["ip_address", "expires_at"])

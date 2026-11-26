@@ -194,3 +194,80 @@ class TestGuestTicketEmail(IntegrationTestCase):
 
 		mock_sendmail.assert_called_once()
 		self.assertEqual(mock_sendmail.call_args[1]["subject"], "Guest ticket template")
+
+
+class TestAsyncTicketSideEffects(IntegrationTestCase):
+	def test_submit_enqueues_side_effects_after_commit_outside_tests(self):
+		from buzz.ticketing.doctype.event_ticket.event_ticket import fulfill_ticket_side_effects
+
+		event = BuzzEventFactory.create(send_ticket_email=1)
+		ticket = EventTicketFactory.create(event=event.name)
+
+		with (
+			patch("frappe.in_test", False),
+			patch("frappe.enqueue") as enqueue,
+			patch("frappe.sendmail") as sendmail,
+		):
+			ticket.submit()
+
+		enqueue.assert_called_once_with(
+			"buzz.ticketing.doctype.event_ticket.event_ticket.fulfill_ticket_side_effects",
+			ticket_name=ticket.name,
+			queue="short",
+			enqueue_after_commit=True,
+		)
+		sendmail.assert_not_called()
+		# QR code is generated synchronously before submit so My Tickets never renders a blank QR.
+		qr_url = frappe.db.get_value("Event Ticket", ticket.name, "qr_code")
+		self.assertTrue(qr_url and qr_url.endswith(".png"))
+
+		# Running the enqueued job reuses the existing QR file and sends the ticket email.
+		with (
+			patch("buzz.ticketing.doctype.event_ticket.event_ticket.generate_qr_code_file") as gen_qr,
+			patch("frappe.sendmail") as sendmail,
+		):
+			fulfill_ticket_side_effects(ticket.name)
+		gen_qr.assert_not_called()
+		sendmail.assert_called_once()
+
+	def test_zoom_error_does_not_block_ticket_email(self):
+		from buzz.ticketing.doctype.event_ticket.event_ticket import fulfill_ticket_side_effects
+
+		event = BuzzEventFactory.create(send_ticket_email=1)
+		ticket = EventTicketFactory.create(event=event.name)
+		with patch("frappe.in_test", False), patch("frappe.enqueue"):
+			ticket.submit()
+
+		with (
+			patch(
+				"buzz.ticketing.doctype.event_ticket.event_ticket.EventTicket.create_zoom_registration_if_applicable",
+				side_effect=RuntimeError("Zoom down"),
+			),
+			patch("frappe.log_error") as log_error,
+			patch("frappe.sendmail") as sendmail,
+		):
+			fulfill_ticket_side_effects(ticket.name)
+
+		log_error.assert_called_once()
+		sendmail.assert_called_once()
+
+	def test_worker_skips_cancelled_ticket(self):
+		from buzz.ticketing.doctype.event_ticket.event_ticket import fulfill_ticket_side_effects
+
+		event = BuzzEventFactory.create(send_ticket_email=1)
+		ticket = EventTicketFactory.create(event=event.name)
+		with patch("frappe.in_test", False), patch("frappe.enqueue"):
+			ticket.submit()
+		with patch("frappe.sendmail"):
+			ticket.cancel()
+
+		with (
+			patch("frappe.sendmail") as sendmail,
+			patch(
+				"buzz.ticketing.doctype.event_ticket.event_ticket.EventTicket.create_zoom_registration_if_applicable"
+			) as zoom_reg,
+		):
+			fulfill_ticket_side_effects(ticket.name)
+
+		sendmail.assert_not_called()
+		zoom_reg.assert_not_called()

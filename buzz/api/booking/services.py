@@ -30,12 +30,11 @@ from buzz.api.booking.schemas import (
 	PaymentLinkResponse,
 	RequestResponse,
 )
-from buzz.api.filters.conditions import form_logic_rules, form_questions
+from buzz.api.filters.conditions import form_questions_by_doctype
 from buzz.api.forms.answers import CustomAnswers
 from buzz.events.doctype.buzz_form.form_types import (
 	ATTENDEE_FORM_DOCTYPE,
 	REGISTRATION_FORM_DOCTYPE,
-	event_form,
 	is_registration_closed,
 )
 from buzz.payments import get_payment_link_for_booking
@@ -74,7 +73,7 @@ class BookingService:
 
 	@property
 	def event(self) -> "BuzzEvent":
-		return frappe.get_cached_doc("Buzz Event", self.request.event)
+		return frappe.get_cached_doc("Buzz Event", str(self.request.event))
 
 	def process(self) -> FreeBookingResponse | OfflineBookingResponse | PaymentLinkResponse | RequestResponse:
 		start_capacity_transaction()
@@ -114,13 +113,24 @@ class BookingService:
 		answer rejected later in build_booking would cost the guest a fresh OTP.
 		"""
 		# A condition may name any standard field the form shows, so each gets the values sent.
-		event = self.request.event
+		event = str(self.request.event)
+		doctypes = (REGISTRATION_FORM_DOCTYPE, ATTENDEE_FORM_DOCTYPE)
+		questions_by_doctype = form_questions_by_doctype(event, doctypes)
+		form = frappe.qb.DocType("Buzz Form")
+		rules_rows = (
+			frappe.qb.from_(form)
+			.select(form.form_doctype, form.logic_rules)
+			.where((form.event == event) & form.form_doctype.isin(list(doctypes)))
+		).run(as_dict=True)
+		rules_by_doctype = {row.form_doctype: row.logic_rules for row in rules_rows}
+
 		booking_questions = CustomAnswers(
-			form_questions(event, REGISTRATION_FORM_DOCTYPE),
-			form_logic_rules(event, REGISTRATION_FORM_DOCTYPE),
+			questions_by_doctype[REGISTRATION_FORM_DOCTYPE],
+			rules_by_doctype.get(REGISTRATION_FORM_DOCTYPE),
 		)
 		attendee_questions = CustomAnswers(
-			form_questions(event, ATTENDEE_FORM_DOCTYPE), form_logic_rules(event, ATTENDEE_FORM_DOCTYPE)
+			questions_by_doctype[ATTENDEE_FORM_DOCTYPE],
+			rules_by_doctype.get(ATTENDEE_FORM_DOCTYPE),
 		)
 		self.booking_answers = booking_questions.rows(
 			self.request.booking_custom_fields or {}, self.request.model_dump()
@@ -137,17 +147,25 @@ class BookingService:
 		"""Every add-on named in the request must be an enabled add-on of this event, in scope
 		for the attendee's ticket type, and its value one of the add-on's options. Runs before
 		build_booking so a bad selection is rejected before any document is written."""
-		allowed = self.allowed_add_ons()
+		has_add_ons = any(attendee.get("add_ons") for attendee in self.request.attendees)
+		self._allowed_add_ons = self.allowed_add_ons() if has_add_ons else {}
 		for attendee in self.request.attendees:
 			ticket_type = cstr(attendee.get("ticket_type"))
 			for add_on in attendee.get("add_ons") or []:
-				validate_add_on(allowed.get(add_on["add_on"]), add_on.get("value"), ticket_type)
+				validate_add_on(self._allowed_add_ons.get(add_on["add_on"]), add_on.get("value"), ticket_type)
 
 	def allowed_add_ons(self) -> dict:
 		rows = frappe.db.get_all(
 			"Ticket Add-on",
-			filters={"event": self.request.event, "enabled": 1},
-			fields=["name", "options", "user_selects_option", {"ticket_types": ["ticket_type"]}],
+			filters={"event": str(self.request.event), "enabled": 1},
+			fields=[
+				"name",
+				"price",
+				"currency",
+				"options",
+				"user_selects_option",
+				{"ticket_types": ["ticket_type"]},
+			],
 		)
 		return {row.name: row for row in rows}
 
@@ -268,7 +286,9 @@ class BookingService:
 
 		add_ons = attendee.get("add_ons", None)
 		if add_ons:
-			add_ons = create_add_on_doc(f"{first_name} {last_name}".strip(), add_ons)
+			add_ons = create_add_on_doc(
+				f"{first_name} {last_name}".strip(), add_ons, getattr(self, "_allowed_add_ons", None)
+			)
 
 		values = attendee.get("custom_fields") or {}
 		custom_fields = {answer["fieldname"]: values[answer["fieldname"]] for answer in answers}
@@ -371,7 +391,14 @@ def success_path(booking_name: str) -> str:
 
 
 def are_registrations_closed(event_doc) -> bool:
-	return is_registration_closed(event_form(event_doc.name, REGISTRATION_FORM_DOCTYPE), event_doc)
+	form = frappe.qb.DocType("Buzz Form")
+	rows = (
+		frappe.qb.from_(form)
+		.select(form.publish, form.auto_close_at)
+		.where((form.event == str(event_doc.name)) & (form.form_doctype == REGISTRATION_FORM_DOCTYPE))
+		.limit(1)
+	).run(as_dict=True)
+	return is_registration_closed(rows[0] if rows else None, event_doc)
 
 
 def resolve_attendee_names(attendee: dict) -> tuple[str, str]:
@@ -386,12 +413,16 @@ def resolve_attendee_names(attendee: dict) -> tuple[str, str]:
 	return first_name, last_name
 
 
-def create_add_on_doc(attendee_name: str, add_ons: list[dict]):
+def create_add_on_doc(attendee_name: str, add_ons: list[dict], catalog: dict | None = None):
 	# Price and currency are read from the catalog and overwrite whatever the request
 	# carried. The Ticket Add-on Value price field only fetches when left empty, so a
 	# price sent in the payload would otherwise be charged as-is.
 	for add_on in add_ons:
-		price, currency = frappe.db.get_value("Ticket Add-on", add_on["add_on"], ["price", "currency"])
+		entry = catalog.get(add_on["add_on"]) if catalog else None
+		if entry is not None:
+			price, currency = entry.price, entry.currency
+		else:
+			price, currency = frappe.db.get_value("Ticket Add-on", add_on["add_on"], ["price", "currency"])
 		add_on["price"] = price
 		add_on["currency"] = currency
 

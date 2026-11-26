@@ -4,7 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import fmt_money, format_date
 
-from buzz.api.booking.event_data import get_available_ticket_types
+from buzz.api.booking.event_data import load_available_ticket_type_rows
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import registration_link
 from buzz.api.proposals.services import are_proposals_closed, proposal_form, proposal_link
@@ -57,7 +57,7 @@ class RegistrationCard:
 	def open_card(self, subtitle: str) -> dict:
 		register_url = registration_link(self.event)
 		label = _("Book more tickets") if self.booked_ticket_count else _("Register")
-		if self.ticket_types and all(row.joins_waitlist(1) for row in self.ticket_types):
+		if self.ticket_types and all(str(row.name) in self.waitlisted_types for row in self.ticket_types):
 			label = _("Join waitlist")
 		return self.card("open", _("Registration open"), subtitle, label, register_url, primary=True)
 
@@ -84,15 +84,31 @@ class RegistrationCard:
 		return frappe.db.count("Event Ticket", filters) if bookings else 0
 
 	@cached_property
+	def _ticket_availability(self) -> tuple[list, dict[str, int], set[str]]:
+		return load_available_ticket_type_rows(self.event)
+
+	@property
 	def ticket_types(self) -> list:
-		return get_available_ticket_types(self.event.name)
+		return self._ticket_availability[0]
+
+	@property
+	def remaining_by_type(self) -> dict[str, int]:
+		return self._ticket_availability[1]
+
+	@property
+	def waitlisted_types(self) -> set[str]:
+		return self._ticket_availability[2]
 
 	def ticket_summary(self) -> str:
 		return " · ".join(part for part in [self.price_label(), self.spots_label()] if part)
 
 	def price_label(self) -> str:
 		ticket_types = self.ticket_types
-		paid = [ticket_type.prices[0] for ticket_type in ticket_types if not ticket_type.is_free]
+		paid = [
+			ticket_type.prices[0]
+			for ticket_type in ticket_types
+			if ticket_type.prices and ticket_type.prices[0].price
+		]
 		if not paid:
 			return _("Free")
 		lowest = min(paid, key=lambda row: row.price)
@@ -102,7 +118,7 @@ class RegistrationCard:
 		return _("From {0}").format(price) if len(paid) > 1 else price
 
 	def spots_label(self) -> str | None:
-		remaining = [ticket_type.remaining_tickets for ticket_type in self.ticket_types]
+		remaining = [self.remaining_by_type[str(ticket_type.name)] for ticket_type in self.ticket_types]
 		if -1 in remaining:
 			return None
 		return _("{0} spots left").format(sum(remaining))

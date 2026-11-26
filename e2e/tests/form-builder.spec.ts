@@ -57,7 +57,7 @@ test("renaming a question in the builder shows on the public form", async ({ pag
 	const label = page.getByRole("textbox", { name: "Label of Short text field" })
 	await label.fill("Favourite coffee")
 	await page.getByRole("button", { name: /^Publish/ }).click()
-	await expect(page.getByText("Form saved")).toBeVisible()
+	await expect(page.getByText("Changes published")).toBeVisible()
 
 	const formPage = new CustomFormPage(page)
 	await formPage.goto(CUSTOM_FORMS_EVENT_ROUTE, FORM_ROUTE)
@@ -90,7 +90,7 @@ test("questions added, dragged and deleted in the builder save in order", async 
 	await expect(labels.first()).toHaveValue("Roast level")
 
 	await page.getByRole("button", { name: /^Publish/ }).click()
-	await expect(page.getByText("Form saved")).toBeVisible()
+	await expect(page.getByText("Changes published")).toBeVisible()
 	const saved = await getDoc<{ questions: { label: string; is_standard: number }[] }>(
 		request,
 		"Buzz Form",
@@ -118,7 +118,7 @@ test("a rule built in the Logic tab shows a question only for the chosen answer"
 	await page.getByRole("button", { name: "Beginner" }).click()
 	await page.getByRole("menuitem", { name: "Advanced" }).click()
 	await page.getByRole("button", { name: /^Publish/ }).click()
-	await expect(page.getByText("Form saved")).toBeVisible()
+	await expect(page.getByText("Changes published")).toBeVisible()
 
 	const formPage = new CustomFormPage(page)
 	await formPage.goto(CUSTOM_FORMS_EVENT_ROUTE, FORM_ROUTE)
@@ -137,7 +137,7 @@ test("settings change the public form's button and confirmation", async ({ page,
 	// The confirmation's Title comes before the closed form's.
 	await page.locator("#settings-messages").getByLabel("Title").first().fill("Got it, thanks")
 	await page.getByRole("button", { name: /^Publish/ }).click()
-	await expect(page.getByText("Form saved")).toBeVisible()
+	await expect(page.getByText("Changes published")).toBeVisible()
 
 	const formPage = new CustomFormPage(page)
 	await formPage.goto(CUSTOM_FORMS_EVENT_ROUTE, FORM_ROUTE)
@@ -163,7 +163,7 @@ test("registration edits attendee and booking questions, with ticket-type chips"
 
 	const rail = page.getByRole("navigation", { name: "Registration forms" })
 	await expect(rail.getByRole("button", { name: /^Attendees/ })).toHaveAttribute("aria-current")
-	await expect(page.getByText("Core", { exact: true })).toHaveCount(3)
+	await expect(page.getByText("Standard", { exact: true })).toHaveCount(3)
 	for (const label of ["First name", "Last name", "Email"]) {
 		await expect(page.getByLabel(new RegExp(`: ${label}$`))).toBeVisible()
 	}

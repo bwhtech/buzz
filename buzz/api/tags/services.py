@@ -84,11 +84,11 @@ class DocumentTags:
 	def names(self) -> list[str]:
 		return frappe.get_all("Buzz Tag Link", filters=self.filters, pluck="tag")
 
-	def replace(self, tags: list[str]) -> list[TagItem]:
-		current = set(self.names())
-		if removed := current - set(tags):
+	def replace(self, tags: list[str], current: set[str] | None = None) -> list[TagItem]:
+		existing = current if current is not None else set(self.names())
+		if removed := existing - set(tags):
 			frappe.db.delete("Buzz Tag Link", {**self.filters, "tag": ("in", list(removed))})
-		for tag in set(tags) - current:
+		for tag in set(tags) - existing:
 			frappe.get_doc({"doctype": "Buzz Tag Link", "tag": tag, **self.filters}).insert(
 				ignore_permissions=True
 			)

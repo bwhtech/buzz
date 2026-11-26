@@ -37,3 +37,7 @@ class OfflinePaymentMethod(Document):
 					frappe.bold(self.title)
 				)
 			)
+
+
+def on_doctype_update():
+	frappe.db.add_index("Offline Payment Method", ["event", "enabled"])

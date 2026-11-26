@@ -6,6 +6,7 @@ from frappe.translate import get_all_languages
 from frappe.utils import set_request
 
 from buzz.api.account import (
+	get_enabled_languages,
 	get_translations,
 	get_user_info,
 	update_user_language,
@@ -112,6 +113,20 @@ class TestLanguages(LanguageTestCase):
 	def test_update_stays_closed_to_guests(self):
 		self.assertIn(update_user_language, frappe.whitelisted)
 		self.assertNotIn(update_user_language, frappe.guest_methods)
+
+	def test_enabled_languages_cache_invalidates_on_language_save(self):
+		language_code = self.other_enabled_language()
+		lang_doc = frappe.get_doc("Language", language_code)
+		self.addCleanup(lambda: frappe.get_doc("Language", language_code).update({"enabled": 1}).save())
+
+		before = [item.language_code for item in get_enabled_languages()]
+		self.assertIn(language_code, before)
+
+		lang_doc.enabled = 0
+		lang_doc.save()
+
+		after = [item.language_code for item in get_enabled_languages()]
+		self.assertNotIn(language_code, after)
 
 
 class TestTimezones(IntegrationTestCase):

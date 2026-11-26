@@ -40,7 +40,7 @@ def ensure_confirmation_access(booking_id: str, token: str | None) -> None:
 def build_booking_confirmation(booking_id: str, token: str | None) -> BookingConfirmationResponse:
 	ensure_confirmation_access(booking_id, token)
 	booking_doc = frappe.get_cached_doc("Event Booking", booking_id)
-	event_doc = frappe.get_cached_doc("Buzz Event", booking_doc.event)
+	event_doc = frappe.get_cached_doc("Buzz Event", str(booking_doc.event))
 	tickets = frappe.db.get_all("Event Ticket", filters={"booking": booking_id}, fields=TICKET_FIELDS)
 
 	return BookingConfirmationResponse(
@@ -97,7 +97,7 @@ def payment_method(booking) -> str | None:
 def build_booking_details(booking_id: str) -> BookingDetailsResponse:
 	booking_doc = frappe.get_cached_doc("Event Booking", booking_id)
 	ensure_booking_is_readable(booking_doc)
-	event_doc = frappe.get_cached_doc("Buzz Event", booking_doc.event)
+	event_doc = frappe.get_cached_doc("Buzz Event", str(booking_doc.event))
 	tickets = get_tickets_with_add_ons(booking_id, booking_doc.event)
 
 	cancellation_request = frappe.db.get_value(
@@ -135,6 +135,8 @@ def get_tickets_with_add_ons(booking_id: str, event_id: str) -> list:
 		filters={"booking": booking_id},
 		fields=[*TICKET_FIELDS, "event", "docstatus"],
 	)
+	if not tickets:
+		return []
 	add_ons = frappe.db.get_all(
 		"Ticket Add-on Value",
 		filters={"parent": ("in", [ticket.name for ticket in tickets])},
@@ -147,24 +149,24 @@ def get_tickets_with_add_ons(booking_id: str, event_id: str) -> list:
 			"add_on.user_selects_option as user_selects_option",
 		],
 	)
-	options_map = get_add_on_options_map(event_id)
+	options_map = (
+		get_add_on_options_map(event_id) if any(add_on.user_selects_option for add_on in add_ons) else {}
+	)
+	add_ons_by_ticket: dict[str, list] = {}
+	for add_on in add_ons:
+		add_ons_by_ticket.setdefault(add_on.parent, []).append(
+			{
+				"id": add_on.name,
+				"name": add_on.add_on,
+				"title": add_on.add_on_title,
+				"value": add_on.value,
+				"user_selects_option": add_on.user_selects_option,
+				"options": options_map.get(add_on.add_on, []),
+			}
+		)
 
 	for ticket in tickets:
-		ticket.add_ons = sorted(
-			(
-				{
-					"id": add_on.name,
-					"name": add_on.add_on,
-					"title": add_on.add_on_title,
-					"value": add_on.value,
-					"user_selects_option": add_on.user_selects_option,
-					"options": options_map.get(add_on.add_on, []),
-				}
-				for add_on in add_ons
-				if add_on.parent == ticket.name
-			),
-			key=lambda add_on: add_on["title"],
-		)
+		ticket.add_ons = sorted(add_ons_by_ticket.get(ticket.name, []), key=lambda add_on: add_on["title"])
 	return tickets
 
 

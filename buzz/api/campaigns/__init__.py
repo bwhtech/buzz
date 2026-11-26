@@ -37,10 +37,11 @@ def register_campaign_interest(campaign: str) -> None:
 
 
 def get_campaign(campaign: str):
-	if not frappe.db.exists("Buzz Campaign", campaign):
+	try:
+		return frappe.get_cached_doc("Buzz Campaign", campaign)
+	except frappe.DoesNotExistError:
+		frappe.clear_last_message()
 		frappe.throw(_("Campaign not found"), frappe.DoesNotExistError)
-
-	return frappe.get_cached_doc("Buzz Campaign", campaign)
 
 
 def create_campaign_lead(campaign_doc) -> None:

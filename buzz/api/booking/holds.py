@@ -15,10 +15,14 @@ from buzz.api.booking.services import are_registrations_closed
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	lock_ticket_types,
+	remaining_for,
+	sold_counts,
 	start_capacity_transaction,
+	waitlist_ticket_types,
 )
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import (
 	held_from_ip,
+	held_quantities,
 	live_hold_expiry,
 	new_hold_expiry,
 	release_hold,
@@ -53,10 +57,26 @@ class TicketHoldService:
 		ticket_types = self.limited_ticket_types()
 		lock_ticket_types([row.name for row in ticket_types])
 		expires_at = self.resolve_expiry()
+		limited_names = [str(row.name) for row in ticket_types]
+		sold = sold_counts(limited_names, for_update=True)
+		held_by_others = held_quantities(limited_names, exclude_token=self.hold_token, for_update=True)
+		waitlist_enabled = {str(row.name) for row in ticket_types if row.has_waitlist}
+		queued = waitlist_ticket_types(self.event_name, list(waitlist_enabled)) if waitlist_enabled else set()
+
 		# A waitlisted ticket type holds nothing: the booking joins the queue instead.
-		waitlisted = [str(row.name) for row in ticket_types if self.joins_waitlist(row)]
-		ticket_types = [row for row in ticket_types if str(row.name) not in waitlisted]
-		remaining = {str(row.name): self.check_capacity(row) for row in ticket_types}
+		waitlisted = []
+		remaining = {}
+		for row in ticket_types:
+			key = str(row.name)
+			quantity = self.quantities[key]
+			left = remaining_for(row, sold, held_by_others)
+			if key in waitlist_enabled and (left < quantity or key in queued):
+				waitlisted.append(key)
+				continue
+			if left < quantity:
+				TicketsUnavailable.throw(remaining=max(left, 0), ticket_type=row.title)
+			remaining[key] = left
+
 		held = {name: self.quantities[name] for name in remaining}
 		set_hold(self.hold_token, self.event_name, held, expires_at)
 		return TicketHoldResponse(
@@ -108,16 +128,6 @@ class TicketHoldService:
 		release_hold(self.hold_token)
 		self.hold_token = frappe.generate_hash(length=32)
 		return new_hold_expiry()
-
-	def joins_waitlist(self, ticket_type: "EventTicketType") -> bool:
-		quantity = self.quantities[str(ticket_type.name)]
-		return ticket_type.joins_waitlist(quantity, self.hold_token, for_update=True)
-
-	def check_capacity(self, ticket_type: "EventTicketType") -> int:
-		remaining = ticket_type.get_remaining_tickets(for_update=True, hold_token=self.hold_token)
-		if remaining < self.quantities[str(ticket_type.name)]:
-			TicketsUnavailable.throw(remaining=max(remaining, 0), ticket_type=ticket_type.title)
-		return remaining
 
 	@staticmethod
 	def seconds_until(expires_at) -> int:
