@@ -15,7 +15,8 @@ import { useIsMobile } from "@/composables/useIsMobile"
 import { useQueryParamRecord } from "@/composables/useQueryParamRecord"
 import { useEventCoupons } from "@/data/coupons"
 import PageWithSidebar from "@/layouts/PageWithSidebar.vue"
-import type { FrappeError } from "@/types"
+import type { CouponItem, FrappeError } from "@/types"
+import { CouponAvailability } from "@/utils/couponAvailability"
 import { couponStats } from "@/utils/couponLabels"
 
 const eventId = useRoute().params.eventId as string
@@ -66,6 +67,26 @@ const coupons = computed(() =>
 	(page.data?.coupons ?? []).filter((coupon) => matchesFilter(coupon, filter.value)),
 )
 
+// A free event can't hold a discount, so the empty state says so before any drawer opens.
+const availability = computed(() => new CouponAvailability(page.data?.ticket_types ?? []))
+const freeEventEmpty = computed(() => !hasCoupons.value && !availability.value.hasPaid)
+const emptyState = computed(() => {
+	if (!freeEventEmpty.value)
+		return {
+			title: "No coupons yet",
+			description:
+				"Create a code participants enter at checkout, or a discount that applies automatically",
+			icon: "lucide-ticket-percent",
+		}
+	return {
+		title: availability.value.hasHidden
+			? "Only access codes for now"
+			: "Coupons need a paid ticket",
+		description: availability.value.freeEventMessage ?? "",
+		icon: "lucide-lock",
+	}
+})
+
 const drawerOpen = ref(false)
 // Held by name so a reload keeps the drawer pointing at fresh data; null is a new coupon.
 const selectedName = ref<string | null>(null)
@@ -73,8 +94,12 @@ const selectedCoupon = computed(
 	() => page.data?.coupons.find((coupon) => coupon.name === selectedName.value) ?? null,
 )
 
-function openCoupon(name: string | null) {
+// The type a new coupon starts on when the drawer is opened for one kind only.
+const newCouponType = ref<CouponItem["coupon_type"]>()
+
+function openCoupon(name: string | null, type?: CouponItem["coupon_type"]) {
 	selectedName.value = name
+	newCouponType.value = type
 	drawerOpen.value = true
 }
 
@@ -115,15 +140,32 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 				description="Discounts participants redeem with a code, or that apply on their own when an order qualifies, and codes that unlock hidden tickets"
 				:count="hasCoupons ? page.data.coupons.length : null"
 				:empty="!hasCoupons"
-				empty-title="No coupons yet"
-				empty-description="Create a code participants enter at checkout, or a discount that applies automatically"
-				empty-icon="lucide-ticket-percent"
+				:empty-title="emptyState.title"
+				:empty-description="emptyState.description"
+				:empty-icon="emptyState.icon"
 				:empty-action="
-					page.data.can_write
-						? { label: 'Create coupon', iconLeft: 'lucide-plus', onClick: () => openCoupon(null) }
+					page.data.can_write && !freeEventEmpty
+						? { label: 'Create', iconLeft: 'lucide-plus', onClick: () => openCoupon(null) }
 						: null
 				"
 			>
+				<template v-if="page.data.can_write && freeEventEmpty" #emptyAction>
+					<div class="flex flex-wrap justify-center gap-2">
+						<Button
+							variant="subtle"
+							icon-right="lucide-arrow-right"
+							label="Add a paid ticket type"
+							:route="{ name: 'event-registrations', params: { eventId } }"
+						/>
+						<Button
+							v-if="availability.hasHidden"
+							variant="outline"
+							icon-left="lucide-key-round"
+							label="Create access code"
+							@click="openCoupon(null, 'Access Code')"
+						/>
+					</div>
+				</template>
 				<template v-if="hasCoupons" #toolbar>
 					<div class="flex items-center gap-2">
 						<TabButtons v-model="filter" :options="filterOptions" />
@@ -144,7 +186,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 					icon="lucide-ticket-percent"
 					:action="
 						page.data.can_write
-							? { label: 'Create coupon', iconLeft: 'lucide-plus', onClick: () => openCoupon(null) }
+							? { label: 'Create', iconLeft: 'lucide-plus', onClick: () => openCoupon(null) }
 							: null
 					"
 				/>
@@ -202,7 +244,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		v-model:open="drawerOpen"
 		:event="eventId"
 		:coupon="selectedCoupon"
-		:new-coupon-type="filter === 'all' ? undefined : filter"
+		:new-coupon-type="newCouponType ?? (filter === 'all' ? undefined : filter)"
 		:ticket-types="page.data?.ticket_types ?? []"
 		:can-write="!!page.data?.can_write"
 		@changed="page.reload()"

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Button, ErrorMessage, dayjsLocal, toast, useDoc, useNewDoc } from "frappe-ui"
+import { Alert, Button, ErrorMessage, dayjsLocal, toast, useDoc, useNewDoc } from "frappe-ui"
 import { computed, ref, watch } from "vue"
+import { useRouter } from "vue-router"
 
 import {
 	Drawer,
@@ -13,6 +14,7 @@ import EnabledAlert from "@/components/dashboard/EnabledAlert.vue"
 import { keepLastValue } from "@/components/dashboard/sponsorships/helpers"
 import { useIsMobile } from "@/composables/useIsMobile"
 import type { CouponItem, CouponTicketType } from "@/types"
+import { CouponAvailability } from "@/utils/couponAvailability"
 import {
 	type CouponValues,
 	blankCouponValues,
@@ -48,11 +50,42 @@ const step = ref<1 | 2>(1)
 const draft = ref<CouponValues>(blankCouponValues())
 const savedValues = computed(() => (props.coupon ? couponValuesOf(props.coupon) : null))
 
+const availability = computed(() => new CouponAvailability(props.ticketTypes))
+const router = useRouter()
+
+// The preview waits for a picked type, so step 1 has the whole width for the choice.
+const showPreview = computed(() => !isMobile.value && step.value === 2)
+const freeEventAlert = computed(() => {
+	const description = availability.value.freeEventMessage
+	if (step.value !== 1 || !description) return null
+	const nothingAllowed = !availability.value.firstAllowedType
+	return {
+		theme: nothingAllowed ? ("amber" as const) : ("blue" as const),
+		title: nothingAllowed ? "Nothing to create yet" : "This event is free",
+		description,
+		primaryAction: {
+			label: "Add a paid ticket type",
+			variant: "outline" as const,
+			theme: "gray" as const,
+			onClick: () => {
+				router.push({ name: "event-registrations", params: { eventId: props.event } })
+			},
+		},
+	}
+})
+const canContinue = computed(() => availability.value.allowsType(draft.value.coupon_type))
+
+// A new coupon starts on a type the event allows, so Continue never leads to a form
+// that can't save.
+function startingType() {
+	const wanted = props.newCouponType ?? "Promo Code"
+	if (availability.value.allowsType(wanted)) return wanted
+	return availability.value.firstAllowedType ?? wanted
+}
+
 // A fresh copy each time: sharing savedValues' object would let edits change it too.
 const resetDraft = () =>
-	(draft.value = props.coupon
-		? couponValuesOf(props.coupon)
-		: blankCouponValues(props.newCouponType))
+	(draft.value = props.coupon ? couponValuesOf(props.coupon) : blankCouponValues(startingType()))
 
 watch(open, (opened) => {
 	if (!opened) return
@@ -105,7 +138,7 @@ const couponStatus = computed(() => {
 	const coupon = shownCoupon.value
 	if (!coupon) return undefined
 	if (!coupon.enabled) return { theme: "gray" as const, title: "Coupon is disabled" }
-	if (coupon.status === "Used up") return { theme: "amber" as const, title: "All redemptions used" }
+	if (coupon.status === "Used up") return { theme: "amber" as const, title: "No uses left" }
 	if (coupon.status === "Ended") return { theme: "gray" as const, title: "Coupon has ended" }
 	if (coupon.status === "Scheduled")
 		return {
@@ -183,17 +216,25 @@ function goBack() {
 			</div>
 
 			<div class="flex min-h-0 flex-1">
-				<aside
-					v-if="!isMobile"
-					class="w-[360px] shrink-0 overflow-y-auto border-r border-outline-gray-1 bg-surface-gray-1 p-5"
+				<!-- Slides in from the drawer's edge once a type is picked; leaves faster. -->
+				<Transition
+					enter-active-class="transition-[opacity,transform] duration-[240ms] ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-opacity"
+					enter-from-class="opacity-0 -translate-x-4 motion-reduce:translate-x-0"
+					leave-active-class="transition-opacity duration-100 ease-out"
+					leave-to-class="opacity-0"
 				>
-					<AccessCodePreview
-						v-if="draft.coupon_type === 'Access Code'"
-						:values="draft"
-						:ticket-types="ticketTypes"
-					/>
-					<CouponCheckoutPreview v-else :values="draft" :ticket-types="ticketTypes" />
-				</aside>
+					<aside
+						v-if="showPreview"
+						class="w-[360px] shrink-0 overflow-y-auto border-r border-outline-gray-1 bg-surface-gray-1 p-5"
+					>
+						<AccessCodePreview
+							v-if="draft.coupon_type === 'Access Code'"
+							:values="draft"
+							:ticket-types="ticketTypes"
+						/>
+						<CouponCheckoutPreview v-else :values="draft" :ticket-types="ticketTypes" />
+					</aside>
+				</Transition>
 				<div class="flex min-w-0 flex-1 flex-col">
 					<div class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
 						<EnabledAlert
@@ -215,11 +256,15 @@ function goBack() {
 							leave-active-class="transition-opacity duration-100 ease-out"
 							leave-to-class="opacity-0"
 						>
-							<CouponTypeStep
-								v-if="step === 1"
-								v-model:coupon-type="draft.coupon_type"
-								v-model:discount-type="draft.discount_type"
-							/>
+							<div v-if="step === 1" class="flex flex-col gap-6">
+								<Alert v-if="freeEventAlert" v-bind="freeEventAlert" />
+								<CouponTypeStep
+									v-model:coupon-type="draft.coupon_type"
+									v-model:discount-type="draft.discount_type"
+									:availability="availability"
+									:columns="3"
+								/>
+							</div>
 
 							<div v-else class="flex flex-col gap-6">
 								<div class="flex items-center gap-3 rounded-4 bg-surface-gray-1 py-2 pl-3 pr-1.5">
@@ -272,6 +317,7 @@ function goBack() {
 										size="md"
 										variant="solid"
 										label="Continue"
+										:disabled="!canContinue"
 										@click="step = 2"
 									/>
 									<Button
