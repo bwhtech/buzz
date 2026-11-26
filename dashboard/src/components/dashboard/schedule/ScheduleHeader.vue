@@ -72,14 +72,13 @@ useEventListener(window, "keydown", (keydown: KeyboardEvent) => {
 			/>
 			<span>{{ status }}</span>
 		</span>
-		<Tooltip v-if="route" text="View schedule page">
-			<Button
-				variant="ghost"
-				icon="lucide-arrow-up-right"
-				label="View schedule page"
-				@click="openEventSchedule(route)"
-			/>
-		</Tooltip>
+		<Button
+			v-if="route"
+			variant="ghost"
+			icon-right="lucide-arrow-up-right"
+			label="View page"
+			@click="openEventSchedule(route)"
+		/>
 		<template v-if="published">
 			<Button
 				v-if="builder.dirty.value"
