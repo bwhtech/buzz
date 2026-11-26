@@ -40,7 +40,11 @@ export function useTicketTypeOrganizer(
 	}
 
 	const groups = computed<TicketTypeGroup[]>(() => {
-		const inGroup = (key: string) => ticketTypes.value.filter((row) => categoryOf(row) === key)
+		// Enabled ticket types lead each group; the sort is stable, so the server order holds within.
+		const inGroup = (key: string) =>
+			ticketTypes.value
+				.filter((row) => categoryOf(row) === key)
+				.toSorted((a, b) => Number(b.is_published) - Number(a.is_published))
 		const categorized = categories.value.map((category) => ({
 			key: category.name,
 			category,
