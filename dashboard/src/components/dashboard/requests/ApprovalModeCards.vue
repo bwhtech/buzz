@@ -17,7 +17,7 @@ const emit = defineEmits<{ pick: [mode: ApprovalMode] }>()
 			<label
 				v-for="option in APPROVAL_MODES"
 				:key="option.value"
-				class="flex cursor-pointer flex-col gap-0.5 rounded-6 border p-3.5 transition-[border-color,box-shadow,transform] duration-150 ease-out active:scale-[0.99] has-[:disabled]:active:scale-100 motion-reduce:transform-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-outline-gray-3 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 motion-reduce:transition-none"
+				class="flex cursor-pointer flex-col gap-0.5 rounded-5 border p-3 transition-[border-color,box-shadow,transform] duration-150 ease-out active:scale-[0.99] has-[:disabled]:active:scale-100 motion-reduce:transform-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-outline-gray-3 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 motion-reduce:transition-none"
 				:class="
 					mode === option.value
 						? 'border-outline-gray-8 shadow-[0_0_0_1px_var(--outline-gray-8)]'
@@ -43,7 +43,7 @@ const emit = defineEmits<{ pick: [mode: ApprovalMode] }>()
 						aria-hidden="true"
 					/>
 				</span>
-				<span class="mt-2.5 text-base font-medium text-ink-gray-9">{{ option.title }}</span>
+				<span class="mt-2 text-base font-medium text-ink-gray-9">{{ option.title }}</span>
 				<span class="text-sm leading-snug text-ink-gray-5">{{ option.description }}</span>
 			</label>
 		</div>

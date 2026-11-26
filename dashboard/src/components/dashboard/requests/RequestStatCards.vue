@@ -10,14 +10,21 @@ const emit = defineEmits<{ pick: [view: RequestView] }>()
 </script>
 
 <template>
-	<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+	<!-- One surface split by hairlines: the gap shows the container's border colour. -->
+	<div
+		class="grid grid-cols-2 gap-px overflow-hidden rounded-5 border border-outline-gray-2 bg-outline-gray-2 sm:grid-cols-4"
+	>
 		<button
 			v-for="stat in stats"
 			:key="stat.view"
 			type="button"
 			:aria-pressed="active === stat.view"
-			class="flex flex-col gap-1.5 rounded-6 border bg-surface-base px-4 py-3.5 text-left transition-[border-color,box-shadow] duration-150 ease-out hover:border-outline-gray-3 motion-reduce:transition-none"
-			:class="active === stat.view ? 'border-outline-gray-4 shadow-sm' : 'border-outline-gray-2'"
+			class="flex flex-col gap-1 px-4 py-3 text-left transition-colors duration-150 ease-out focus-visible:relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-outline-gray-3 motion-reduce:transition-none"
+			:class="
+				active === stat.view
+					? 'bg-surface-gray-2'
+					: 'bg-surface-base [@media(hover:hover)]:hover:bg-surface-gray-1'
+			"
 			@click="emit('pick', stat.view)"
 		>
 			<span class="flex items-center gap-1.5 text-sm text-ink-gray-5">
@@ -28,7 +35,7 @@ const emit = defineEmits<{ pick: [view: RequestView] }>()
 				/>
 				{{ stat.label }}
 			</span>
-			<span class="text-2xl font-semibold tabular-nums text-ink-gray-9">{{ stat.count }}</span>
+			<span class="text-xl font-semibold tabular-nums text-ink-gray-9">{{ stat.count }}</span>
 		</button>
 	</div>
 </template>

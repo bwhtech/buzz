@@ -20,7 +20,7 @@ const seats = computed(() =>
 </script>
 
 <template>
-	<div class="flex items-center gap-4 rounded-6 border border-outline-gray-2 p-4">
+	<div class="flex items-center gap-4 rounded-5 border border-outline-gray-2 p-4">
 		<span
 			class="min-w-12 text-4xl font-semibold tabular-nums"
 			:class="waiting && request.position ? 'text-ink-gray-9' : 'text-ink-gray-4'"
