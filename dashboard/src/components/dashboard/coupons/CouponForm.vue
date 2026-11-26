@@ -1,18 +1,11 @@
 <script setup lang="ts">
-import {
-	Button,
-	Checkbox,
-	FormControl,
-	FormLabel,
-	Switch,
-	TabButtons,
-	TextInput,
-	dayjs,
-} from "frappe-ui"
+import { Button, FormControl, FormLabel, Switch, TabButtons, TextInput, dayjs } from "frappe-ui"
 import { computed } from "vue"
 import { useRoute } from "vue-router"
 
 import EmptyState from "@/components/common/EmptyState.vue"
+import DrawerSection from "@/components/dashboard/DrawerSection.vue"
+import TicketTypePicker from "@/components/dashboard/TicketTypePicker.vue"
 import type { CouponTicketType } from "@/types"
 import {
 	type CouponValues,
@@ -61,11 +54,6 @@ const scope = computed({
 	},
 })
 
-function toggleTicketType(name: string, picked: boolean) {
-	const others = values.value.ticket_types.filter((row) => row !== name)
-	values.value.ticket_types = picked ? [...others, name] : others
-}
-
 const minimumOptions = computed(() => [
 	...(isCode.value ? [] : [{ label: "Any order", value: "None" }]),
 	{ label: "Order total is at least", value: "Minimum Order Amount" },
@@ -94,15 +82,8 @@ const hasInvalidCode = computed(
 </script>
 
 <template>
-	<div class="divide-y divide-outline-gray-1">
-		<section class="space-y-4 pb-5">
-			<div>
-				<h3 class="text-base font-semibold text-ink-gray-9">Discount</h3>
-				<p class="mt-0.5 text-sm text-ink-gray-5">
-					{{ isCode ? "The code and what it takes off" : "What it takes off" }}
-				</p>
-			</div>
-
+	<div class="space-y-6">
+		<DrawerSection title="Discount">
 			<div v-if="isCode" class="space-y-1.5">
 				<FormLabel id="coupon-code" label="Code" required />
 				<div class="flex gap-2">
@@ -129,8 +110,8 @@ const hasInvalidCode = computed(
 				>
 					{{
 						hasInvalidCode
-							? "Remove the spaces and symbols to save. Letters, numbers, - and _ only"
-							: "Entered by participants at checkout. Letters, numbers, - and _ only"
+							? "Take out spaces and symbols to save. Use letters, numbers, dashes or underscores."
+							: "Participants type this at checkout. Use letters, numbers, dashes or underscores."
 					}}
 				</p>
 			</div>
@@ -150,8 +131,7 @@ const hasInvalidCode = computed(
 				v-model="values.description"
 				type="textarea"
 				label="Description"
-				placeholder="What this offer is for and who it's meant for"
-				description="Only visible to organizers"
+				placeholder="Only visible to organizers"
 				:rows="2"
 				:disabled="disabled"
 			/>
@@ -195,18 +175,16 @@ const hasInvalidCode = computed(
 				/>
 				<p class="text-sm text-ink-gray-5">{{ currencyHint }}</p>
 			</div>
-		</section>
+		</DrawerSection>
 
-		<section class="space-y-4 py-5">
-			<div>
-				<h3 class="text-base font-semibold text-ink-gray-9">Eligibility</h3>
-				<p class="mt-0.5 text-sm text-ink-gray-5">
-					{{
-						isCode ? "Which tickets and orders the code works on" : "Which orders qualify for it"
-					}}
-				</p>
-			</div>
+		<CouponLimits v-model="values" :min-date="today" :disabled="disabled" />
 
+		<DrawerSection
+			title="Eligibility"
+			:description="
+				isCode ? 'Which tickets and orders the code works on' : 'Which orders qualify for it'
+			"
+		>
 			<div class="space-y-2">
 				<TabButtons v-if="!forAccessCode" v-model="scope" fluid :options="scopeOptions" />
 				<p v-else-if="selectableTicketTypes.length" class="text-sm text-ink-gray-5">
@@ -225,18 +203,14 @@ const hasInvalidCode = computed(
 						:route="{ name: 'event-registrations', params: { eventId } }"
 					/>
 				</EmptyState>
-				<div v-else-if="scope === 'specific'" class="rounded-4 border border-outline-gray-2 p-1">
-					<Checkbox
-						v-for="ticketType in selectableTicketTypes"
-						:key="ticketType.name"
-						padded
-						:label="ticketType.title"
-						:description="priceLabel(ticketType)"
-						:model-value="values.ticket_types.includes(ticketType.name)"
-						:disabled="disabled || !canSelect(ticketType)"
-						@update:model-value="toggleTicketType(ticketType.name, !!$event)"
-					/>
-				</div>
+				<TicketTypePicker
+					v-else-if="scope === 'specific'"
+					v-model="values.ticket_types"
+					:ticket-types="selectableTicketTypes"
+					:disabled="disabled"
+					:describe="priceLabel"
+					:is-selectable="canSelect"
+				/>
 			</div>
 
 			<div class="rounded-4 border border-outline-gray-2">
@@ -282,8 +256,6 @@ const hasInvalidCode = computed(
 					</FormControl>
 				</div>
 			</div>
-		</section>
-
-		<CouponLimits v-model="values" class="pt-5" :min-date="today" :disabled="disabled" />
+		</DrawerSection>
 	</div>
 </template>

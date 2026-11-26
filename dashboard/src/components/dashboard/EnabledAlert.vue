@@ -10,6 +10,8 @@ type SetValue = {
 	loading: boolean
 }
 
+type AlertTheme = "green" | "amber" | "gray" | "blue" | "red"
+
 const props = defineProps<{
 	// What is enabled, as the title reads it: "Ticket type", "Add-on".
 	noun: string
@@ -18,15 +20,18 @@ const props = defineProps<{
 	// The check field the toggle writes, through the record's useDoc setValue.
 	field: string
 	setValue: SetValue
+	// Replaces the enabled or disabled wording, for records with more states than on and off.
+	status?: { theme: AlertTheme; title: string }
 }>()
 const emit = defineEmits<{ changed: [] }>()
 
 const error = ref("")
-const alert = computed(() =>
-	props.enabled
-		? { theme: "green" as const, title: `${props.noun} is Enabled`, action: "Disable" }
-		: { theme: "amber" as const, title: `${props.noun} is Disabled`, action: "Enable" },
-)
+const alert = computed(() => {
+	const fallback = props.enabled
+		? { theme: "green" as const, title: `${props.noun} is Enabled` }
+		: { theme: "amber" as const, title: `${props.noun} is Disabled` }
+	return { ...(props.status ?? fallback), action: props.enabled ? "Disable" : "Enable" }
+})
 
 async function toggle() {
 	const enabling = !props.enabled

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Alert, Button, ErrorMessage, dayjsLocal, toast, useDoc, useNewDoc } from "frappe-ui"
+import { Button, ErrorMessage, dayjsLocal, toast, useDoc, useNewDoc } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
 import {
@@ -9,6 +9,7 @@ import {
 	DrawerDescription,
 	DrawerTitle,
 } from "@/components/common/drawer"
+import EnabledAlert from "@/components/dashboard/EnabledAlert.vue"
 import { keepLastValue } from "@/components/dashboard/sponsorships/helpers"
 import { useIsMobile } from "@/composables/useIsMobile"
 import type { CouponItem, CouponTicketType } from "@/types"
@@ -100,34 +101,19 @@ const typeSummary = computed(() =>
 // A coupon someone has used keeps its type, so past receipts still read true.
 const canChangeType = computed(() => props.canWrite && !shownCoupon.value?.times_used)
 
-const statusAlert = computed(() => {
+const couponStatus = computed(() => {
 	const coupon = shownCoupon.value
-	if (!coupon) return null
-	if (!coupon.enabled)
-		return { theme: "gray" as const, title: "Coupon is disabled", action: "Enable" }
-	if (coupon.status === "Used up")
-		return { theme: "amber" as const, title: "All redemptions used", action: "Disable" }
-	if (coupon.status === "Ended")
-		return { theme: "gray" as const, title: "Coupon has ended", action: "Disable" }
+	if (!coupon) return undefined
+	if (!coupon.enabled) return { theme: "gray" as const, title: "Coupon is disabled" }
+	if (coupon.status === "Used up") return { theme: "amber" as const, title: "All redemptions used" }
+	if (coupon.status === "Ended") return { theme: "gray" as const, title: "Coupon has ended" }
 	if (coupon.status === "Scheduled")
 		return {
 			theme: "blue" as const,
 			title: `Goes live on ${dayjsLocal(coupon.starts_on ?? undefined).format("D MMM YYYY")}`,
-			action: "Disable",
 		}
-	return { theme: "green" as const, title: "Coupon is active", action: "Disable" }
+	return { theme: "green" as const, title: "Coupon is active" }
 })
-
-async function toggleEnabled() {
-	const enabling = !shownCoupon.value?.enabled
-	await couponDoc.setValue.submit({ enabled: enabling ? 1 : 0 }).catch(() => null)
-	if (couponDoc.setValue.error) {
-		toast.error(serverErrorMessage(couponDoc.setValue.error))
-		return
-	}
-	toast.success(enabling ? "Coupon enabled" : "Coupon disabled")
-	emit("changed")
-}
 
 async function create() {
 	if (creator.loading) return
@@ -210,21 +196,15 @@ function goBack() {
 				</aside>
 				<div class="flex min-w-0 flex-1 flex-col">
 					<div class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
-						<Alert
-							v-if="!isNew && statusAlert"
-							:theme="statusAlert.theme"
-							:title="statusAlert.title"
-							:primary-action="
-								canWrite
-									? {
-											label: statusAlert.action,
-											variant: 'outline',
-											theme: 'gray',
-											loading: couponDoc.setValue.loading,
-											onClick: toggleEnabled,
-										}
-									: undefined
-							"
+						<EnabledAlert
+							v-if="!isNew && shownCoupon"
+							noun="Coupon"
+							:enabled="!!shownCoupon.enabled"
+							:editable="canWrite"
+							field="enabled"
+							:status="couponStatus"
+							:set-value="couponDoc.setValue"
+							@changed="emit('changed')"
 						/>
 
 						<!-- A short crossfade so the step swap doesn't jump; the exit is quicker than the entry. -->
