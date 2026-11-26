@@ -35,69 +35,84 @@ const closesIn = computed(() => {
 </script>
 
 <template>
-	<form novalidate class="space-y-4" @submit.prevent>
-		<div v-if="hideable" class="rounded-4 border border-outline-gray-2 p-1">
-			<Switch
-				v-model="values.is_hidden"
-				padded
-				label="Hidden ticket"
-				description="Only people with an access code can see it."
+	<form novalidate class="space-y-6" @submit.prevent>
+		<div class="space-y-4">
+			<FormControl
+				v-model="values.title"
+				label="Name"
+				required
+				placeholder="General admission"
+				autocomplete="off"
 				:disabled="disabled"
 			/>
-		</div>
-		<FormControl
-			v-model="values.title"
-			label="Name"
-			required
-			placeholder="General admission"
-			autocomplete="off"
-			:disabled="disabled"
-		/>
-		<FormControl
-			v-model="values.description"
-			type="textarea"
-			label="Description"
-			placeholder="Talks, expo and lunch on both days"
-			:rows="2"
-			:disabled="disabled"
-		/>
-		<TicketCategoryCombobox
-			v-model="values.category"
-			:categories="categories"
-			:disabled="disabled"
-			@created="$emit('categoryCreated')"
-		/>
-		<PriceList
-			v-model="values.prices"
-			:locked-currencies="lockedCurrencies"
-			locked-message="This price has sales, so it can't change. To charge differently, disable this ticket type and add a new one."
-			:disabled="disabled"
-		/>
-		<FormControl
-			:model-value="values.max_tickets_available || ''"
-			type="number"
-			label="Seats"
-			placeholder="Unlimited"
-			:min="0"
-			:disabled="disabled"
-			@update:model-value="values.max_tickets_available = Math.max(Number($event) || 0, 0)"
-		/>
-		<div class="space-y-1.5">
-			<DatePicker
-				:model-value="values.auto_unpublish_after ?? ''"
-				label="Auto close sales on"
-				placeholder="Never"
-				format="ddd, D MMM YYYY"
-				:min="dayjs().format('YYYY-MM-DD')"
-				clearable
+			<FormControl
+				v-model="values.description"
+				type="textarea"
+				label="Description"
+				placeholder="Talks, expo and lunch on both days"
+				:rows="2"
 				:disabled="disabled"
-				@update:model-value="values.auto_unpublish_after = $event || null"
 			/>
-			<p class="text-p-xs tabular-nums text-ink-gray-5">{{ closesIn }}</p>
+			<TicketCategoryCombobox
+				v-model="values.category"
+				:categories="categories"
+				:disabled="disabled"
+				@created="$emit('categoryCreated')"
+			/>
 		</div>
-		<fieldset class="space-y-2">
-			<legend class="pb-2 text-sm font-semibold text-ink-gray-9">Access</legend>
+		<fieldset>
+			<legend
+				class="w-full border-t border-outline-gray-1 pb-3 pt-4 text-base font-semibold text-ink-gray-9"
+			>
+				Sales
+			</legend>
+			<div class="space-y-4">
+				<PriceList
+					v-model="values.prices"
+					:locked-currencies="lockedCurrencies"
+					locked-message="This price has sales, so it can't change. To charge differently, disable this ticket type and add a new one."
+					:disabled="disabled"
+				/>
+				<FormControl
+					:model-value="values.max_tickets_available || ''"
+					type="number"
+					label="Seats"
+					placeholder="Unlimited"
+					:min="0"
+					:disabled="disabled"
+					@update:model-value="values.max_tickets_available = Math.max(Number($event) || 0, 0)"
+				/>
+				<div class="space-y-1.5">
+					<DatePicker
+						:model-value="values.auto_unpublish_after ?? ''"
+						label="Auto close sales on"
+						placeholder="Never"
+						format="ddd, D MMM YYYY"
+						:min="dayjs().format('YYYY-MM-DD')"
+						clearable
+						:disabled="disabled"
+						@update:model-value="values.auto_unpublish_after = $event || null"
+					/>
+					<p class="text-p-xs tabular-nums text-ink-gray-5">{{ closesIn }}</p>
+				</div>
+			</div>
+		</fieldset>
+		<fieldset>
+			<legend
+				class="w-full border-t border-outline-gray-1 pb-3 pt-4 text-base font-semibold text-ink-gray-9"
+			>
+				Access
+			</legend>
 			<div class="divide-y divide-outline-gray-1 rounded-4 border border-outline-gray-2">
+				<div v-if="hideable" class="p-1">
+					<Switch
+						v-model="values.is_hidden"
+						padded
+						label="Hidden ticket"
+						description="Only people with an access code can see it."
+						:disabled="disabled"
+					/>
+				</div>
 				<div class="p-1">
 					<Switch
 						v-model="values.requires_approval"

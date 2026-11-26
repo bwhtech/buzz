@@ -142,17 +142,22 @@ async function save(values: TicketTypeValues) {
 			@category-created="emit('changed')"
 		/>
 
-		<TicketTypeRequestsLink v-if="canWrite" :event="event" :ticket-type="shownTicketType.title" />
+		<section class="space-y-3">
+			<h3 class="border-t border-outline-gray-1 pt-4 text-base font-semibold text-ink-gray-9">
+				Guests
+			</h3>
+			<TicketTypeRequestsLink v-if="canWrite" :event="event" :ticket-type="shownTicketType.title" />
 
-		<TicketTypeGuests
-			v-if="shownTicketType.tickets_sold"
-			:event="event"
-			:ticket-type="shownTicketType.name"
-			:count="shownTicketType.tickets_sold"
-		/>
-		<p v-else class="w-full rounded-4 bg-surface-gray-1 p-4 text-base text-ink-gray-5">
-			No confirmed guests yet.
-		</p>
+			<TicketTypeGuests
+				v-if="shownTicketType.tickets_sold"
+				:event="event"
+				:ticket-type="shownTicketType.name"
+				:count="shownTicketType.tickets_sold"
+			/>
+			<p v-else class="w-full rounded-4 bg-surface-gray-1 p-4 text-base text-ink-gray-5">
+				No confirmed guests yet.
+			</p>
+		</section>
 
 		<template v-if="canWrite && hasChanges" #footer>
 			<DrawerSaveBar :disabled="isInvalid" @discard="discardChanges" @save="confirmAndSave" />
