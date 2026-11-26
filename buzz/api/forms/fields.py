@@ -1,6 +1,7 @@
 import frappe
 from frappe.model import DEFAULT_FIELDS, display_fieldtypes
 from frappe.utils import cstr, now_datetime, today
+from frappe.utils.caching import redis_cache
 
 LAYOUT_FIELDTYPES = set(display_fieldtypes)
 LAYOUT_BREAK_FIELDTYPES = {"Column Break", "Section Break"}
@@ -87,7 +88,15 @@ def get_child_fields(child_doctype: str) -> list[dict]:
 	]
 
 
+@redis_cache(ttl=86400)
+def _cached_country_options() -> list[dict]:
+	rows = frappe.get_all("Country", fields=["name"], order_by="name asc", limit_page_length=0)
+	return [{"value": row.name, "label": row.name} for row in rows]
+
+
 def get_link_field_options(doctype: str, event: str | None = None) -> list[dict]:
+	if doctype == "Country" and not event:
+		return _cached_country_options()
 	meta = frappe.get_meta(doctype)
 	can_read = frappe.has_permission(doctype, "read")
 	if not can_read and not is_open_reference(doctype, meta):
@@ -96,7 +105,7 @@ def get_link_field_options(doctype: str, event: str | None = None) -> list[dict]
 
 	filters = {}
 	if event and meta.has_field("event"):
-		filters["event"] = event
+		filters["event"] = str(event)
 	# A linked master is disabled rather than deleted, so a picker never offers a retired row.
 	if meta.has_field("enabled"):
 		filters["enabled"] = 1

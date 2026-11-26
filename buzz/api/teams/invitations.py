@@ -21,22 +21,25 @@ def invite_members(team: str, invites: list[dict]) -> list[InviteOutcome]:
 	"""
 	if not can_manage_members(team):
 		CannotManageMembers.throw()
+	if not invites:
+		return []
 
 	# Every row is checked before any of them is acted on, so one bad role cannot leave
 	# half a batch invited.
-	for invite in invites:
-		validate_role(invite["team_role"])
+	for role in {invite["team_role"] for invite in invites}:
+		validate_role(role)
 
-	return [invite_one(team, invite) for invite in invites]
+	normalized = [(invite["email"].strip().lower(), invite["team_role"]) for invite in invites]
+	emails = list({email for email, _ in normalized})
+	existing_users = {
+		row.name: row.full_name or ""
+		for row in frappe.get_all("User", filters={"name": ["in", emails]}, fields=["name", "full_name"])
+	}
+	return [invite_one(team, email, team_role, existing_users.get(email)) for email, team_role in normalized]
 
 
-def invite_one(team: str, invite: dict) -> InviteOutcome:
-	# User names are lowercased emails, so the lookup has to be too.
-	email = invite["email"].strip().lower()
-	team_role = invite["team_role"]
-
+def invite_one(team: str, email: str, team_role: str, full_name: str | None) -> InviteOutcome:
 	# None means no such User; an existing one with a blank name still reads as "".
-	full_name = frappe.db.get_value("User", email, "full_name")
 	if full_name is not None:
 		added = upsert_membership(team, email, team_role)
 		return InviteOutcome(

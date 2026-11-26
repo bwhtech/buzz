@@ -19,13 +19,19 @@ def owned_community(user: str) -> str | None:
 
 
 def community_draft(user: str) -> CommunityDraft | None:
-	team = owned_community(user)
-	if not team:
+	owned = frappe.get_all(
+		"Buzz Team Membership", filters={"user": user, "team_role": "Owner", "enabled": 1}, pluck="team"
+	)
+	if not owned:
 		return None
 	row = frappe.db.get_value(
-		"Buzz Team", team, ["name", "team_name", "slug", "logo", "short_description"], as_dict=True
+		"Buzz Team",
+		{"name": ("in", owned), "is_personal": 0},
+		["name", "team_name", "slug", "logo", "short_description"],
+		as_dict=True,
+		order_by="creation desc",
 	)
-	return CommunityDraft(**row)
+	return CommunityDraft(**row) if row else None
 
 
 def save_community(

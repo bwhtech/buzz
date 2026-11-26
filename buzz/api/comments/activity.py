@@ -123,6 +123,8 @@ def email_row(row, files: list) -> dict:
 
 
 def attached_files(communications: list[str]) -> dict[str, list]:
+	if not communications:
+		return {}
 	rows = frappe.get_all(
 		"File",
 		filters={"attached_to_doctype": "Communication", "attached_to_name": ("in", communications)},
@@ -168,8 +170,11 @@ def field_changes(version, changed_values: list, fields: list[str]) -> list[dict
 
 
 def user_details(users: set[str]) -> dict:
+	wanted = [user for user in users if user]
+	if not wanted:
+		return {}
 	rows = frappe.get_all(
-		"User", filters={"name": ("in", list(users))}, fields=["name", "full_name", "user_image"]
+		"User", filters={"name": ("in", wanted)}, fields=["name", "full_name", "user_image"]
 	)
 	return {row.name: row for row in rows}
 

@@ -69,13 +69,49 @@ class InviteService:
 
 	def each_new_guest(self, rows: list[InviteRequest], act) -> list[InviteOutcome]:
 		"""Runs `act` once per new email; repeats are dropped, existing guests reported as skipped."""
-		outcomes, seen = [], set()
+		unique_rows, seen = [], set()
 		for row in rows:
 			row.email = row.email.lower()
 			if row.email in seen:
 				continue
 			seen.add(row.email)
-			outcomes.append(self.skipped(row.email) or act(row))
+			unique_rows.append(row)
+		if not unique_rows:
+			return []
+		emails = [row.email for row in unique_rows]
+		event = str(self.event.name)
+		registered = set(
+			frappe.get_all(
+				"Event Ticket",
+				filters={"event": event, "attendee_email": ["in", emails], "docstatus": 1},
+				pluck="attendee_email",
+			)
+		)
+		remaining = [email for email in emails if email not in registered]
+		already_invited = (
+			set(
+				frappe.get_all(
+					"Event Booking",
+					filters={
+						"event": event,
+						"user": ["in", remaining],
+						"docstatus": 0,
+						"status": ["in", list(OPEN)],
+					},
+					pluck="user",
+				)
+			)
+			if remaining
+			else set()
+		)
+		outcomes = []
+		for row in unique_rows:
+			if row.email in registered:
+				outcomes.append(InviteOutcome(email=row.email, status="registered"))
+			elif row.email in already_invited:
+				outcomes.append(InviteOutcome(email=row.email, status="already invited"))
+			else:
+				outcomes.append(act(row))
 		return outcomes
 
 	def read_sheet(self, file_url: str | None, text: str | None) -> list[InviteSheetRow]:
@@ -103,7 +139,9 @@ class InviteService:
 
 	def invite(self, row: InviteRequest, message: str | None) -> InviteOutcome:
 		booking = self.create_booking(row)
-		send_invite_email(booking, message)
+		if not hasattr(self, "_host_name"):
+			self._host_name = get_fullname(frappe.session.user)
+		send_invite_email(booking, message, event_title=self.event.title, host=self._host_name)
 		return InviteOutcome(email=row.email, status="invited", booking=booking.name)
 
 	def add_one(self, row: InviteRequest) -> InviteOutcome:
@@ -153,17 +191,22 @@ def invited_user(email: str, full_name: str) -> str:
 		frappe.flags.in_import = importing
 
 
-def send_invite_email(booking: "EventBooking", message: str | None) -> None:
+def send_invite_email(
+	booking: "EventBooking",
+	message: str | None,
+	event_title: str | None = None,
+	host: str | None = None,
+) -> None:
 	accept_url = get_url(f"/b/invite/{booking.name}?token={get_booking_access_token(booking.name)}")
-	event_title = frappe.get_cached_value("Buzz Event", booking.event, "title")
+	resolved_title = event_title or frappe.get_cached_value("Buzz Event", str(booking.event), "title")
 	booking.send_booking_email(
 		template=None,
 		builtin="booking_invite",
-		subject=_("You're invited to {0}").format(event_title),
+		subject=_("You're invited to {0}").format(resolved_title),
 		always=True,
 		accept_url=accept_url,
 		message=(message or "").strip() or None,
-		host=get_fullname(frappe.session.user),
+		host=host or get_fullname(frappe.session.user),
 	)
 
 

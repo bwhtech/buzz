@@ -20,9 +20,15 @@ def event_filters(event: str) -> list[list]:
 	return [["event", "=", event]]
 
 
-def schedule_item_filters(event: str) -> list[list]:
+def schedule_item_filters(event: str) -> list[list] | None:
 	schedules = frappe.get_all("Buzz Schedule", filters={"event": event}, pluck="name")
+	if not schedules:
+		return None
 	return [["parenttype", "=", "Buzz Schedule"], ["parent", "in", schedules]]
+
+
+def scoped_proposal_search_filters(event: str, term: str) -> list[list] | None:
+	return proposal_search_filters(term, event=event)
 
 
 @dataclass(frozen=True)
@@ -32,15 +38,22 @@ class SearchSource:
 	doctype: str
 	title_field: str
 	subtitle_field: str
-	search_filters: Callable[[str], list[list] | None]
-	base_filters: Callable[[str], list[list]] = event_filters
+	search_filters: Callable
+	base_filters: Callable[[str], list[list] | None] = event_filters
 	format_subtitle: Callable[[object], str] = str
+	pass_event_to_search: bool = False
 
 	def search(self, event: str, term: str) -> list[SearchRecord]:
+		filters = self.base_filters(event)
+		if filters is None:
+			return []
+		or_filters = (
+			self.search_filters(event, term) if self.pass_event_to_search else self.search_filters(term)
+		)
 		rows = frappe.get_all(
 			self.doctype,
-			filters=self.base_filters(event),
-			or_filters=self.search_filters(term),
+			filters=filters,
+			or_filters=or_filters,
 			fields=["name", self.title_field, self.subtitle_field],
 			limit_page_length=RECORDS_PER_GROUP,
 			ignore_permissions=True,
@@ -71,7 +84,15 @@ SOURCES = (
 		guest_search_filters,
 		submitted_guest_filters,
 	),
-	SearchSource("talks", "talks", "Talk Proposal", "title", "status", proposal_search_filters),
+	SearchSource(
+		"talks",
+		"talks",
+		"Talk Proposal",
+		"title",
+		"status",
+		scoped_proposal_search_filters,
+		pass_event_to_search=True,
+	),
 	SearchSource("sponsors", "sponsors", "Event Sponsor", "company_name", "website", sponsor_search_filters),
 	SearchSource("coupons", "ticketing", "Buzz Coupon Code", "code", "description", like_filters("code")),
 	SearchSource(

@@ -175,9 +175,10 @@ def narrow(query, event, hosted, ticketed, filters: MyEventFilters | None):
 
 
 def split_by_date(events: list[MyEvent]) -> tuple[list[MyEvent], list[MyEvent]]:
+	today_date = getdate()
 	upcoming, past = [], []
 	for event in events:
-		is_over = bool(event.start_date) and (event.end_date or event.start_date) < getdate()
+		is_over = bool(event.start_date) and (event.end_date or event.start_date) < today_date
 		(past if is_over else upcoming).append(event)
 	return upcoming, list(reversed(past))
 

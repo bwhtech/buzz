@@ -49,10 +49,11 @@ def team_members(team: str | None) -> list[str]:
 	)
 
 
-def publish_to_team(doctype: str, name: str) -> None:
+def publish_to_team(doctype: str, name: str, members: list[str] | None = None) -> None:
 	"""Tells open drawers to refetch, without carrying the note itself."""
 	message = {"reference_doctype": doctype, "reference_name": name}
-	for user in team_members(team_of(doctype, name)):
+	recipients = members if members is not None else team_members(team_of(doctype, name))
+	for user in recipients:
 		frappe.publish_realtime("buzz_comment_update", message, user=user, after_commit=True)
 
 
@@ -101,18 +102,18 @@ class TeamComment:
 	def after_insert(self):
 		if not self.is_team_note():
 			return super().after_insert()
-		mentioned = notify_mentioned_members(self)
+		members = team_members(team_of(self.reference_doctype, self.reference_name))
+		mentioned = notify_mentioned_members(self, members=members)
 		self.subscribe_participants(mentioned)
 		notify_subscribers(
 			self, _("{0} commented on {1}"), get_fullname(self.owner), from_user=self.owner, skip=mentioned
 		)
-		self.notify_change("add")
+		publish_to_team(self.reference_doctype, self.reference_name, members=members)
 
 	def subscribe_participants(self, mentioned: set[str]):
 		subscriptions = Subscriptions(self.reference_doctype, self.reference_name)
 		subscriptions.subscribe(self.owner)
-		for user in mentioned:
-			subscriptions.follow(user)
+		subscriptions.follow_many(mentioned)
 
 	def on_update(self):
 		if not self.is_team_note():
@@ -130,10 +131,14 @@ class TeamComment:
 		publish_to_team(self.reference_doctype, self.reference_name)
 
 
-def notify_mentioned_members(comment) -> set[str]:
+def notify_mentioned_members(comment, members: list[str] | None = None) -> set[str]:
 	"""Emails the team members a note mentions, and returns them."""
-	members = set(team_members(team_of(comment.reference_doctype, comment.reference_name)))
-	mentioned = (set(extract_mentions(comment.content)) & members) - {comment.owner}
+	team_set = set(
+		members
+		if members is not None
+		else team_members(team_of(comment.reference_doctype, comment.reference_name))
+	)
+	mentioned = (set(extract_mentions(comment.content)) & team_set) - {comment.owner}
 	if not mentioned:
 		return mentioned
 	args = note_email_args(comment.reference_doctype, comment.reference_name, comment.owner, comment.content)
@@ -163,14 +168,14 @@ RECORD_PREFIXES = {"Event Booking": "Booking", "Event Ticket": "Ticket"}
 def record_title(doctype: str, name: str) -> str:
 	if prefix := RECORD_PREFIXES.get(doctype):
 		event = frappe.db.get_value(doctype, name, "event")
-		return f"{prefix} {name} · {frappe.db.get_value('Buzz Event', event, 'title')}"
+		return f"{prefix} {name} · {frappe.get_cached_value('Buzz Event', str(event), 'title')}"
 	return frappe.db.get_value(doctype, name, frappe.get_meta(doctype).get_title_field())
 
 
 def note_email_args(doctype: str, name: str, author: str, note: str) -> dict:
 	"""What the note emails render: the note, who wrote it, and the record and event it is on."""
 	event = frappe.db.get_value(doctype, name, "event")
-	event_doc = frappe.get_cached_doc("Buzz Event", event) if event else None
+	event_doc = frappe.get_cached_doc("Buzz Event", str(event)) if event else None
 	return {
 		"author": get_fullname(author),
 		"note": note,

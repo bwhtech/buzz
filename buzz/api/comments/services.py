@@ -98,12 +98,14 @@ class DocumentComments:
 		reference = frappe.db.get_value(
 			"Comment",
 			{"name": name, "comment_type": "Comment"},
-			["reference_doctype", "reference_name"],
+			["reference_doctype", "reference_name", "owner"],
 			as_dict=True,
 		)
 		if not reference:
 			frappe.throw(frappe._("Comment not found"), frappe.DoesNotExistError)
-		return cls(reference.reference_doctype, reference.reference_name)
+		instance = cls(reference.reference_doctype, reference.reference_name)
+		instance._comment_owners = {name: reference.owner}
+		return instance
 
 	def activity(self) -> list[ActivityEntry]:
 		return ActivityFeed(self.reference_doctype, self.reference_name).entries()
@@ -128,7 +130,9 @@ class DocumentComments:
 		).name
 
 	def delete(self, name: str) -> None:
-		if not self.can_delete(frappe.db.get_value("Comment", name, "owner")):
+		owners = getattr(self, "_comment_owners", {})
+		owner = owners[name] if name in owners else frappe.db.get_value("Comment", name, "owner")
+		if not self.can_delete(owner):
 			CannotDeleteComment.throw()
 		frappe.delete_doc("Comment", name, ignore_permissions=True)
 

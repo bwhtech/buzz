@@ -12,7 +12,7 @@ def get_request_language() -> str:
 	`preferred_language` cookie, `Accept-Language` header, System Settings.
 	"""
 	if frappe.session.user != "Guest":
-		return frappe.db.get_value("User", frappe.session.user, "language") or get_default_language()
+		return frappe.get_cached_value("User", frappe.session.user, "language") or get_default_language()
 
 	# get_language reads cookies and headers off the live request; background
 	# jobs and the console have none.

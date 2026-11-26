@@ -54,8 +54,12 @@ class Actors:
 	is a speaker, who may have no user account."""
 
 	def __init__(self, logs: list):
-		users = [log.from_user for log in logs if log.from_user]
-		emails = [log.source_name for log in logs if log.source_doctype == "Communication"]
+		users = list(
+			{log.from_user for log in logs if log.from_user and log.source_doctype != "Communication"}
+		)
+		emails = list(
+			{log.source_name for log in logs if log.source_doctype == "Communication" and log.source_name}
+		)
 		self.users = rows_by_name("User", users, ["full_name", "user_image"])
 		self.emails = rows_by_name("Communication", emails, ["sender", "sender_full_name"])
 

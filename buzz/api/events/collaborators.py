@@ -41,9 +41,27 @@ def get_event_access(event: str) -> dict[str, str | None]:
 @frappe.whitelist(methods=["POST"])
 def invite_collaborators(event: str, invites: list[dict]) -> list[InviteOutcome]:
 	team = managed_team(event)
+	if not invites:
+		return []
 	for invite in invites:
 		validate_sections(invite)
-	return [invite_one(event, team, invite) for invite in invites]
+	emails = list({invite["email"].strip().lower() for invite in invites})
+	team_members = set(
+		frappe.get_all(
+			"Buzz Team Membership",
+			filters={"team": team, "user": ["in", emails], "enabled": 1},
+			pluck="user",
+		)
+	)
+	existing = {
+		row.email: row.name
+		for row in frappe.get_all(
+			COLLABORATOR,
+			filters={"event": str(event), "email": ["in", emails]},
+			fields=["name", "email"],
+		)
+	}
+	return [invite_one(event, team, invite, team_members, existing) for invite in invites]
 
 
 @frappe.whitelist(methods=["POST"])
@@ -58,8 +76,22 @@ def update_collaborator_access(event: str, email: str, sections: dict) -> None:
 @frappe.whitelist(methods=["POST"])
 def revoke_collaborators(event: str, emails: list[str]) -> None:
 	managed_team(event)
-	for email in emails:
-		existing_row(event, email).revoke()
+	if not emails:
+		return
+	normalized = [email.strip().lower() for email in emails]
+	existing = {
+		row.email: row.name
+		for row in frappe.get_all(
+			COLLABORATOR,
+			filters={"event": str(event), "email": ["in", list(set(normalized))]},
+			fields=["name", "email"],
+		)
+	}
+	for email, norm in zip(emails, normalized, strict=True):
+		name = existing.get(norm)
+		if not name:
+			UnknownCollaborator.throw(email=email)
+		frappe.get_doc(COLLABORATOR, name).revoke()
 
 
 # nosemgrep: guest-whitelisted-method
@@ -77,7 +109,7 @@ def accept_collaborator_invite(key: str) -> AcceptedInvitation:
 
 
 def managed_team(event: str) -> str:
-	team = frappe.db.get_value("Buzz Event", event, "team")
+	team = frappe.get_cached_value("Buzz Event", str(event), "team")
 	if not team:
 		EventNotFound.throw()
 	if not can_manage_members(team):
@@ -104,12 +136,23 @@ def existing_row(event: str, email: str):
 	return frappe.get_doc(COLLABORATOR, name)
 
 
-def invite_one(event: str, team: str, invite: dict) -> InviteOutcome:
+def invite_one(
+	event: str,
+	team: str,
+	invite: dict,
+	team_members: set[str] | None = None,
+	existing: dict[str, str] | None = None,
+) -> InviteOutcome:
 	email = invite["email"].strip().lower()
-	if team_role_of(email, team):
+	is_member = email in team_members if team_members is not None else bool(team_role_of(email, team))
+	if is_member:
 		AlreadyOnTeam.throw(email=email)
 
-	name = frappe.db.exists(COLLABORATOR, {"event": event, "email": email})
+	name = (
+		existing.get(email)
+		if existing is not None
+		else frappe.db.exists(COLLABORATOR, {"event": event, "email": email})
+	)
 	row = frappe.get_doc(COLLABORATOR, name) if name else frappe.new_doc(COLLABORATOR)
 	if row.status == "Accepted":
 		AlreadyCollaborator.throw(email=email)

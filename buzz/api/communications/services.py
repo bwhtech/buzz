@@ -1,9 +1,11 @@
 from datetime import datetime
 
 import frappe
+from frappe.query_builder import Criterion
+from frappe.query_builder.functions import Count
 from frappe.utils import validate_email_address
 
-from buzz.api.communications.exceptions import CannotSendCommunication, NoRecipients, UnknownAudience
+from buzz.api.communications.exceptions import CannotSendCommunication, UnknownAudience
 from buzz.api.communications.schemas import (
 	CommunicationItem,
 	EventCommunicationsResponse,
@@ -18,62 +20,85 @@ from buzz.api.teams.exceptions import CannotEditTeam
 from buzz.permissions import can_manage_members, has_section_permission
 
 
-def guest_emails(event: str, filters: str | None) -> list[str]:
-	"""Every submitted ticket holder. A draft belongs to a booking still being paid for."""
-	fields, answer_parents = guest_filter_fields(event)
-	conditions = ListConditions("Event Ticket", fields, answer_parents).frappe_filters(filters)
-	query_filters = [["event", "=", event], ["docstatus", "=", 1], *conditions]
-	return frappe.get_all("Event Ticket", filters=query_filters, pluck="attendee_email", distinct=True)
+def _recipient_query(event: str, audience: str, filters: str | None):
+	event_id = str(event)
+	if audience == "Guests":
+		fields, answer_parents = guest_filter_fields(event_id)
+		ticket = frappe.qb.DocType("Event Ticket")
+		criteria = ListConditions("Event Ticket", fields, answer_parents, event=event_id).qb_criteria(
+			filters, ticket
+		)
+		where = Criterion.all(
+			[
+				ticket.event == event_id,
+				ticket.docstatus == 1,
+				ticket.attendee_email.isnotnull(),
+				ticket.attendee_email != "",
+				*criteria,
+			]
+		)
+		return frappe.qb.from_(ticket).where(where), ticket.attendee_email
 
+	if audience == "Speakers":
+		proposal = frappe.qb.DocType("Talk Proposal")
+		speaker = frappe.qb.DocType("Proposal Speaker")
+		criteria = ListConditions(
+			"Talk Proposal", proposal_filter_fields(event_id), event=event_id
+		).qb_criteria(filters, proposal)
+		where = Criterion.all(
+			[
+				proposal.event == event_id,
+				speaker.parenttype == "Talk Proposal",
+				speaker.email.isnotnull(),
+				speaker.email != "",
+				*criteria,
+			]
+		)
+		query = frappe.qb.from_(proposal).join(speaker).on(speaker.parent == proposal.name).where(where)
+		return query, speaker.email
 
-def speaker_emails(event: str, filters: str | None) -> list[str]:
-	"""Every speaker listed on the event's proposals that match the filters."""
-	conditions = ListConditions("Talk Proposal", proposal_filter_fields(event)).frappe_filters(filters)
-	proposals = frappe.get_all("Talk Proposal", filters=[["event", "=", event], *conditions], pluck="name")
-	if not proposals:
-		return []
-	return frappe.get_all(
-		"Proposal Speaker",
-		filters={"parenttype": "Talk Proposal", "parent": ["in", proposals]},
-		pluck="email",
-		distinct=True,
-	)
+	if audience == "Sponsors":
+		sponsor = frappe.qb.DocType("Event Sponsor")
+		criteria = ListConditions("Event Sponsor", sponsor_filter_fields(event_id)).qb_criteria(
+			filters, sponsor
+		)
+		where = Criterion.all(
+			[
+				sponsor.event == event_id,
+				sponsor.contact_email.isnotnull(),
+				sponsor.contact_email != "",
+				*criteria,
+			]
+		)
+		return frappe.qb.from_(sponsor).where(where), sponsor.contact_email
 
-
-def sponsor_emails(event: str, filters: str | None) -> list[str]:
-	"""The contact email of every sponsor that matches the filters."""
-	conditions = ListConditions("Event Sponsor", sponsor_filter_fields(event)).frappe_filters(filters)
-	return frappe.get_all(
-		"Event Sponsor", filters=[["event", "=", event], *conditions], pluck="contact_email", distinct=True
-	)
-
-
-RECIPIENT_SOURCES = {"Guests": guest_emails, "Speakers": speaker_emails, "Sponsors": sponsor_emails}
+	UnknownAudience.throw(audience=audience)
 
 
 def recipients_of(event: str, audience: str, filters: str | None) -> list[str]:
 	"""Each address once, whichever audience it comes from."""
-	if audience not in RECIPIENT_SOURCES:
-		UnknownAudience.throw(audience=audience)
-	return sorted({email for email in RECIPIENT_SOURCES[audience](event, filters) if email})
+	query, email_column = _recipient_query(event, audience, filters)
+	return query.select(email_column).distinct().orderby(email_column).run(pluck=True)
 
 
-def filter_fields_by_audience(event: str) -> dict[str, list[FilterField]]:
+def filter_fields_by_audience(event: str, team: str | None = None) -> dict[str, list[FilterField]]:
 	"""The same filters each audience's own list page offers."""
 	return {
 		"Guests": guest_filter_fields(event)[0],
 		"Speakers": proposal_filter_fields(event),
-		"Sponsors": sponsor_filter_fields(event),
+		"Sponsors": sponsor_filter_fields(event, team=team),
 	}
 
 
 def count_recipients(event: str, audience: str, filters: str | None):
 	ensure_event_team_access(event, "communications")
-	return RecipientCount(count=len(recipients_of(event, audience, filters)))
+	query, email_column = _recipient_query(event, audience, filters)
+	rows = query.select(Count(email_column).distinct()).run()
+	return RecipientCount(count=rows[0][0] if rows else 0)
 
 
 def team_of(event: str) -> str:
-	return frappe.get_cached_value("Buzz Event", event, "team")
+	return frappe.get_cached_value("Buzz Event", str(event), "team")
 
 
 def send_communication(
@@ -85,8 +110,10 @@ def send_communication(
 	scheduled_at: datetime | None,
 ) -> CommunicationItem:
 	"""Insert the record; its controller resolves the recipients and hands them to sendmail."""
-	ensure_event_team_access(event, "communications")
-	if not has_section_permission(event, "communications", "write", frappe.session.user):
+	event_doc = ensure_event_team_access(event, "communications")
+	if not has_section_permission(
+		event, "communications", "write", frappe.session.user, team=event_doc.team or ""
+	):
 		CannotSendCommunication.throw()
 
 	doc = frappe.get_doc(
@@ -118,11 +145,12 @@ def item_of(row, sent_by: str) -> CommunicationItem:
 
 
 def event_communications(event: str) -> EventCommunicationsResponse:
-	ensure_event_team_access(event, "communications")
-	team = team_of(event)
+	doc = ensure_event_team_access(event, "communications")
+	event_id = str(doc.name)
+	team = doc.team or ""
 	rows = frappe.get_all(
 		"Event Communication",
-		filters={"event": event},
+		filters={"event": event_id},
 		fields=[
 			"name",
 			"audience",
@@ -135,25 +163,29 @@ def event_communications(event: str) -> EventCommunicationsResponse:
 			"creation",
 		],
 		order_by="creation desc, name desc",
+		ignore_permissions=True,
 	)
-	names = frappe.get_all(
-		"User", filters={"name": ["in", {row.owner for row in rows}]}, fields=["name", "full_name"]
+	owners = {row.owner for row in rows if row.owner}
+	names = (
+		frappe.get_all("User", filters={"name": ["in", list(owners)]}, fields=["name", "full_name"])
+		if owners
+		else []
 	)
 	full_names = {user.name: user.full_name for user in names}
 	settings = frappe.get_cached_doc("Buzz Team Settings", team)
 	return EventCommunicationsResponse(
-		title=frappe.get_cached_value("Buzz Event", event, "title"),
-		can_write=has_section_permission(event, "communications", "write", frappe.session.user),
+		title=doc.title,
+		can_write=has_section_permission(event_id, "communications", "write", frappe.session.user, team=team),
 		can_edit_settings=can_manage_members(team),
 		support_email=settings.support_email or None,
-		filter_fields=filter_fields_by_audience(event),
+		filter_fields=filter_fields_by_audience(event_id, team=team),
 		communications=[item_of(row, full_names.get(row.owner) or row.owner) for row in rows],
 	)
 
 
 def update_support_email(event: str, support_email: str) -> None:
-	ensure_event_team_access(event, "communications")
-	team = team_of(event)
+	doc = ensure_event_team_access(event, "communications")
+	team = doc.team or ""
 	if not can_manage_members(team):
 		CannotEditTeam.throw()
 	support_email = support_email.strip()

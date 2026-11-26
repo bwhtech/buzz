@@ -1,13 +1,27 @@
 import frappe
 from frappe.utils import md_to_html
+from frappe.utils.caching import redis_cache
 from frappe.utils.oauth import get_oauth2_authorize_url, get_oauth_keys
 
 from buzz.api.auth.schemas import LoginContextResponse, ProviderLogin
 
 
+@redis_cache(ttl=3600)
+def _cached_social_login_keys() -> list[dict]:
+	return frappe.get_all(
+		"Social Login Key",
+		filters={"enable_social_login": 1},
+		fields=["name", "provider_name", "icon", "client_id", "base_url"],
+	)
+
+
+def clear_social_login_cache(*args, **kwargs) -> None:
+	_cached_social_login_keys.clear_cache()
+
+
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_login_context(redirect_to: str | None = None) -> LoginContextResponse:
-	raw_banner = frappe.db.get_single_value("Buzz Settings", "login_banner")
+	raw_banner = frappe.get_cached_value("Buzz Settings", "Buzz Settings", "login_banner")
 
 	return LoginContextResponse(
 		disable_signup=frappe.get_website_settings("disable_signup"),
@@ -19,19 +33,13 @@ def get_login_context(redirect_to: str | None = None) -> LoginContextResponse:
 
 
 def get_provider_logins(redirect_to: str) -> list[ProviderLogin]:
-	social_login_keys = frappe.get_all(
-		"Social Login Key",
-		filters={"enable_social_login": 1},
-		fields=["name", "provider_name", "icon", "client_id", "base_url"],
-	)
-
 	return [
 		ProviderLogin(
-			name=provider.name,
-			provider_name=provider.provider_name,
-			icon=provider.icon or "",
-			auth_url=get_oauth2_authorize_url(provider.name, redirect_to),
+			name=provider["name"],
+			provider_name=provider["provider_name"],
+			icon=provider["icon"] or "",
+			auth_url=get_oauth2_authorize_url(provider["name"], redirect_to),
 		)
-		for provider in social_login_keys
-		if provider.client_id and provider.base_url and get_oauth_keys(provider.name)
+		for provider in _cached_social_login_keys()
+		if provider["client_id"] and provider["base_url"] and get_oauth_keys(provider["name"])
 	]

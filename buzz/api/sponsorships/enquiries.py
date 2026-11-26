@@ -1,7 +1,9 @@
 import frappe
 from frappe import _
+from frappe.query_builder import Criterion
+from frappe.query_builder.functions import Count
 
-from buzz.api.events.services import ensure_event_team_access, manageable_event
+from buzz.api.events.services import ensure_event_team_access
 from buzz.api.filters.conditions import ListConditions, filter_field, form_questions, question_fields
 from buzz.api.filters.schemas import FilterField
 from buzz.api.sponsorships.exceptions import EnquiryNotFound, EnquiryStatusLocked, EnquiryTierMissing
@@ -12,9 +14,10 @@ from buzz.api.sponsorships.schemas import (
 	EventEnquiryItem,
 )
 from buzz.api.sponsorships.services import LOCKED_STATUSES, get_tier_title, tiers_by_name
+from buzz.permissions import has_section_permission
 
 ENQUIRIES_PAGE_SIZE = 20
-ENQUIRY_FIELDS = ["name", "company_name", "company_logo", "website", "status", "tier", "creation"]
+ENQUIRY_FIELDS = ("name", "company_name", "company_logo", "website", "status", "tier", "creation")
 
 
 def event_enquiries(
@@ -26,29 +29,42 @@ def event_enquiries(
 	limit: int = ENQUIRIES_PAGE_SIZE,
 ) -> EventEnquiriesResponse:
 	"""One page of an event's sponsorship enquiries; Sponsorship Enquiry grants organisers no role access."""
-	ensure_event_team_access(event, "sponsors")
+	doc = ensure_event_team_access(event, "sponsors")
+	event_id = str(doc.name)
 
-	filter_fields = enquiry_filter_fields(event)
-	conditions = ListConditions("Sponsorship Enquiry", filter_fields).frappe_filters(filters)
-	query_filters = [["event", "=", event], *conditions]
-	or_filters = search_filters(search)
+	filter_fields = enquiry_filter_fields(event_id)
+	enquiry = frappe.qb.DocType("Sponsorship Enquiry")
+	extra_criteria = ListConditions("Sponsorship Enquiry", filter_fields, event=event_id).qb_criteria(
+		filters, enquiry
+	)
+	if search_criterion := enquiry_search_criterion(enquiry, search):
+		extra_criteria.append(search_criterion)
 	limit = max(1, min(int(limit), 100))
 	start = max(0, int(start))
-	# Interpolated into ORDER BY, so it can only ever be one of two literals.
-	direction = "asc" if str(order).lower() == "asc" else "desc"
+	order_dir = frappe.qb.asc if str(order).lower() == "asc" else frappe.qb.desc
 
-	rows = frappe.get_all(
-		"Sponsorship Enquiry",
-		filters=query_filters,
-		or_filters=or_filters,
-		fields=ENQUIRY_FIELDS,
-		order_by=f"creation {direction}, name {direction}",
-		limit_start=start,
-		limit_page_length=limit,
-		ignore_permissions=True,
+	where_criterion = Criterion.all([enquiry.event == event_id, *extra_criteria])
+	rows = (
+		frappe.qb.from_(enquiry)
+		.select(*(enquiry[field] for field in ENQUIRY_FIELDS))
+		.where(where_criterion)
+		.orderby(enquiry.creation, order=order_dir)
+		.orderby(enquiry.name, order=order_dir)
+		.limit(limit)
+		.offset(start)
+	).run(as_dict=True)
+	total = (
+		len(rows)
+		if not extra_criteria and start == 0 and len(rows) < limit
+		else frappe.db.count("Sponsorship Enquiry", {"event": event_id})
 	)
-	total = frappe.db.count("Sponsorship Enquiry", {"event": event})
-	matched = count_enquiries(query_filters, or_filters) if or_filters or conditions else total
+	if not extra_criteria:
+		matched = total
+	elif start == 0 and len(rows) < limit:
+		matched = len(rows)
+	else:
+		count_rows = frappe.qb.from_(enquiry).select(Count(enquiry.name)).where(where_criterion).run()
+		matched = count_rows[0][0] if count_rows else 0
 	return EventEnquiriesResponse(
 		total=total,
 		matched=matched,
@@ -70,27 +86,20 @@ def enquiry_filter_fields(event: str) -> list[FilterField]:
 	]
 
 
+def enquiry_search_criterion(table, search: str | None):
+	term = (search or "").strip()
+	if not term:
+		return None
+	pattern = f"%{term}%"
+	return table.company_name.like(pattern) | table.contact_email.like(pattern) | table.website.like(pattern)
+
+
 def search_filters(search: str | None) -> list[list] | None:
 	"""Company, contact email or website — what a manager reads off the row."""
 	term = (search or "").strip()
 	if not term:
 		return None
 	return [[field, "like", f"%{term}%"] for field in ("company_name", "contact_email", "website")]
-
-
-def count_enquiries(filters: list, or_filters: list[list] | None) -> int:
-	"""`frappe.db.count` takes no or_filters, so a search has to be counted the long way."""
-	if not or_filters:
-		return frappe.db.count("Sponsorship Enquiry", filters)
-	return len(
-		frappe.get_all(
-			"Sponsorship Enquiry",
-			filters=filters,
-			or_filters=or_filters,
-			pluck="name",
-			ignore_permissions=True,
-		)
-	)
 
 
 def enquiry_items(rows: list) -> list[EventEnquiryItem]:
@@ -109,12 +118,12 @@ def enquiry_item(row, tier) -> EventEnquiryItem:
 
 def enquiry_detail(enquiry: str) -> EnquiryDetail:
 	"""One enquiry for the event team; Sponsorship Enquiry grants organisers no role access."""
-	event = frappe.db.get_value("Sponsorship Enquiry", enquiry, "event")
-	if not event:
+	try:
+		doc = frappe.get_doc("Sponsorship Enquiry", enquiry)
+	except frappe.DoesNotExistError:
 		EnquiryNotFound.throw()
-	ensure_event_team_access(event, "sponsors")
+	ensure_event_team_access(doc.event, "sponsors")
 
-	doc = frappe.get_doc("Sponsorship Enquiry", enquiry)
 	return EnquiryDetail(
 		name=doc.name,
 		company_name=doc.company_name,
@@ -142,10 +151,17 @@ TIERED_STATUSES = ("Payment Pending", "Paid")
 
 def set_enquiry_status(enquiry: str, status: str) -> str:
 	"""Move an enquiry along for the event team; marking it paid also lists the sponsor."""
-	if not frappe.db.exists("Sponsorship Enquiry", enquiry):
+	try:
+		doc = frappe.get_doc("Sponsorship Enquiry", enquiry)
+	except frappe.DoesNotExistError:
 		EnquiryNotFound.throw()
-	doc = frappe.get_doc("Sponsorship Enquiry", enquiry)
-	manageable_event(doc.event, "sponsors")
+	event_doc = ensure_event_team_access(doc.event, "sponsors")
+	if not has_section_permission(
+		doc.event, "sponsors", "write", frappe.session.user, team=event_doc.team or ""
+	):
+		from buzz.api.events.exceptions import CannotManageEvent
+
+		CannotManageEvent.throw()
 
 	if doc.status in LOCKED_STATUSES and status != doc.status:
 		EnquiryStatusLocked.throw()

@@ -164,8 +164,23 @@ class TalkProposal(Document):
 		# cannot fill a field the source doctype does not have.
 		talk.proposal = self.name
 
+		emails = list({speaker.email for speaker in self.speakers if speaker.email})
+		existing_users = (
+			set(frappe.get_all("User", filters={"name": ["in", emails]}, pluck="name")) if emails else set()
+		)
+		profiles_by_user = (
+			{
+				row.user: row.name
+				for row in frappe.get_all(
+					"Speaker Profile", filters={"user": ["in", list(existing_users)]}, fields=["name", "user"]
+				)
+			}
+			if existing_users
+			else {}
+		)
+
 		for speaker in self.speakers:
-			user = frappe.db.exists("User", speaker.email)
+			user = speaker.email if speaker.email in existing_users else None
 			if not user:
 				user = (
 					frappe.get_doc(
@@ -181,14 +196,16 @@ class TalkProposal(Document):
 					.insert(ignore_permissions=True)
 					.name
 				)
+				existing_users.add(user)
 
-			speaker_profile = frappe.db.exists("Speaker Profile", {"user": user})
+			speaker_profile = profiles_by_user.get(user)
 			if not speaker_profile:
 				speaker_profile = (
 					frappe.get_doc({"doctype": "Speaker Profile", "user": user})
 					.insert(ignore_permissions=True)
 					.name
 				)
+				profiles_by_user[user] = speaker_profile
 
 			talk.append("speakers", {"speaker": speaker_profile})
 
