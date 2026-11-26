@@ -35,7 +35,7 @@ const SECTIONS = [
 
 type Section = (typeof SECTIONS)[number]
 
-// Rules act only on the form's own questions, so core fields have no "Only if".
+// Rules act only on the form's own questions, so standard fields have no "Only if".
 const takesRules = computed(() => !question.value.is_standard && props.fields.length > 0)
 
 const sections = computed(() =>

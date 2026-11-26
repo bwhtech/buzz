@@ -14,9 +14,9 @@ const form = defineModel<BuzzFormDoc>({ required: true })
 const props = defineProps<{ doctypeFields: DoctypeField[]; editor: QuestionEditor }>()
 defineEmits<{ openBuild: [] }>()
 
-const NO_TARGETS = "Add a question first: core fields are always asked"
+const NO_TARGETS = "Add a question first: standard fields are always asked"
 
-// Rules act on the form's own questions; core fields always show.
+// Rules act on the form's own questions; standard fields always show.
 const targets = computed(() =>
 	form.value.questions.filter(
 		(question) => !question.is_standard && fieldType(question.fieldtype).group !== "Layout",
@@ -111,8 +111,8 @@ function remove(index: number) {
 				<template v-else>
 					<p class="text-p-base font-medium text-ink-gray-8">Logic needs a question you add</p>
 					<p class="max-w-[340px] text-p-sm text-ink-gray-5">
-						This form only has core fields, and those are always asked, so no rule can change them.
-						Add a question in Build to show, hide or require it based on answers.
+						This form only has standard fields, and those are always asked, so no rule can change
+						them. Add a question in Build to show, hide or require it based on answers.
 					</p>
 					<Button
 						class="mt-2"

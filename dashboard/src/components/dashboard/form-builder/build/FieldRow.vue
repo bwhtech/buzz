@@ -181,7 +181,7 @@ function onKeydown(event: KeyboardEvent) {
 				v-if="!preview && (isStandard || !question.enabled || conditional || isHalf)"
 				class="mt-2.5 flex flex-wrap gap-1"
 			>
-				<Badge v-if="isStandard" label="Core" theme="gray" size="sm" />
+				<Badge v-if="isStandard" label="Standard" theme="gray" size="sm" />
 				<Badge v-if="!question.enabled" label="Hidden" theme="gray" size="sm" />
 				<Badge v-if="conditional" label="Conditional" theme="blue" size="sm" />
 				<Badge v-if="isHalf" label="Half width" theme="gray" size="sm" />
@@ -299,7 +299,7 @@ function onKeydown(event: KeyboardEvent) {
 
 		<FieldPreview v-model="question" :doctype-field="doctypeField" :readonly="preview">
 			<template v-if="!preview" #badges>
-				<Badge v-if="isStandard" label="Core" theme="gray" size="sm" />
+				<Badge v-if="isStandard" label="Standard" theme="gray" size="sm" />
 				<Badge v-if="!question.enabled" label="Hidden" theme="gray" size="sm" />
 				<Badge v-if="conditional" label="Conditional" theme="blue" size="sm" />
 			</template>
