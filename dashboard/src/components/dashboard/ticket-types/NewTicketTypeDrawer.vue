@@ -73,7 +73,12 @@ async function create() {
 </script>
 
 <template>
-	<SponsorshipDrawer v-model:open="open" title="New ticket type" description="">
+	<SponsorshipDrawer
+		v-model:open="open"
+		title="New ticket type"
+		description=""
+		:close-on-outside-click="false"
+	>
 		<TicketTypeFields
 			v-model="draft"
 			:categories="categories"

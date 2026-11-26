@@ -4,13 +4,14 @@ import { DrawerContent, DrawerHandle, DrawerOverlay, DrawerPortal } from "reka-u
 
 import { useIsMobile } from "@/composables/useIsMobile"
 
-withDefaults(
+const props = withDefaults(
 	defineProps<{
 		showSwipeHandle?: boolean
 		// Governs the cross axis: width for a side drawer, height for a bottom or top one.
 		size?: "md" | "lg" | "xl" | "2xl"
+		closeOnOutsideClick?: boolean
 	}>(),
-	{ showSwipeHandle: true, size: "md" },
+	{ showSwipeHandle: true, size: "md", closeOnOutsideClick: true },
 )
 
 const isMobile = useIsMobile()
@@ -26,8 +27,9 @@ useEventListener(document, "pointerdown", (event: PointerEvent) => {
 })
 
 // A toast sits outside the drawer, and pressing its action is not a dismissal.
-function keepOpenForToasts(event: Event) {
-	if ((event.target as Element | null)?.closest?.("[data-sonner-toaster]")) event.preventDefault()
+function keepOpenOnOutsideClick(event: Event) {
+	const onToast = (event.target as Element | null)?.closest?.("[data-sonner-toaster]")
+	if (onToast || !props.closeOnOutsideClick) event.preventDefault()
 }
 </script>
 
@@ -56,7 +58,7 @@ function keepOpenForToasts(event: Event) {
 		<DrawerContent
 			:data-size="size"
 			class="drawer bg-surface-elevation-2 shadow-2xl"
-			@interact-outside="keepOpenForToasts"
+			@interact-outside="keepOpenOnOutsideClick"
 		>
 			<DrawerHandle
 				v-if="showSwipeHandle"

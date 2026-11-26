@@ -8,14 +8,19 @@ import {
 } from "@/components/common/drawer"
 
 // The title sits beside the close button; the body is the caller's to fill.
-defineProps<{ title: string; description: string }>()
+defineProps<{
+	title: string
+	description: string
+	// Off while the drawer holds unsaved input, so a stray click beside it loses nothing.
+	closeOnOutsideClick?: boolean
+}>()
 
 const open = defineModel<boolean>("open", { required: true })
 </script>
 
 <template>
 	<Drawer v-model:open="open" swipe-direction="right">
-		<DrawerContent size="md">
+		<DrawerContent size="md" :close-on-outside-click="closeOnOutsideClick">
 			<div class="flex items-center gap-1 p-4 pb-0">
 				<DrawerCloseButton />
 				<DrawerTitle class="ml-1 truncate text-lg font-semibold text-ink-gray-9">

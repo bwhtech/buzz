@@ -108,6 +108,7 @@ async function save() {
 <template>
 	<SponsorshipDrawer
 		v-model:open="open"
+		:close-on-outside-click="!isNew"
 		:title="addOn?.title ?? 'New add-on'"
 		:description="addOn ? formatWholePriceOrFree(addOn.price, addOn.currency) : ''"
 	>
