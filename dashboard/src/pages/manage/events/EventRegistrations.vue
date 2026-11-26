@@ -148,5 +148,6 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		:categories="page.data?.categories ?? []"
 		:access="access"
 		@created="page.reload()"
+		@category-created="page.reload()"
 	/>
 </template>

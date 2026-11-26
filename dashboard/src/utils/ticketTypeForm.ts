@@ -45,8 +45,6 @@ export function ticketTypeError(values: TicketTypeValues) {
 	if (!values.title?.trim()) return "Enter a name."
 	if (values.prices?.some((row) => !row.currency || !(row.price >= 0)))
 		return "Give every price a currency and an amount of zero or more."
-	// An empty string means the switch is on but no date is picked yet.
-	if (values.auto_unpublish_after === "") return "Pick the last day to sell."
 	return null
 }
 

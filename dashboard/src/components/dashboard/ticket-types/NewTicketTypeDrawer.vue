@@ -26,7 +26,7 @@ const props = defineProps<{
 	access: TicketTypeAccess
 }>()
 const open = defineModel<boolean>("open", { required: true })
-const emit = defineEmits<{ created: [] }>()
+const emit = defineEmits<{ created: []; categoryCreated: [] }>()
 
 const creator = useNewDoc<Record<string, unknown>>("Event Ticket Type")
 const enabledCurrencies = useEnabledCurrencies()
@@ -65,7 +65,13 @@ async function create() {
 
 <template>
 	<SponsorshipDrawer v-model:open="open" title="New ticket type" description="">
-		<TicketTypeFields v-model="draft" :categories="categories" :access="access" hideable />
+		<TicketTypeFields
+			v-model="draft"
+			:categories="categories"
+			:access="access"
+			hideable
+			@category-created="emit('categoryCreated')"
+		/>
 
 		<template #footer>
 			<div class="flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2">

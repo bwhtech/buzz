@@ -132,6 +132,7 @@ async function save(values: TicketTypeValues) {
 			:hideable="!!shownTicketType.is_published"
 			:locked-currencies="soldCurrencies"
 			:disabled="!canWrite"
+			@category-created="emit('changed')"
 		/>
 
 		<TicketTypeRequestsLink

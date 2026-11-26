@@ -19,11 +19,6 @@ test("every price needs a currency and a non-negative amount", () => {
 	assert.notEqual(ticketTypeError(values({ prices: [{ currency: "INR", price: -1 }] })), null)
 })
 
-test("closing sales automatically needs a date", () => {
-	assert.equal(ticketTypeError(values({ auto_unpublish_after: "" })), "Pick the last day to sell.")
-	assert.equal(ticketTypeError(values({ auto_unpublish_after: null })), null)
-})
-
 test("the saved document trims text and stores hidden as a check", () => {
 	const saved = ticketTypeDocValues(values({ title: " VIP ", is_hidden: true }))
 	assert.equal(saved.title, "VIP")
