@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { Alert, ErrorMessage, toast, useDoc } from "frappe-ui"
+import { toast, useDoc } from "frappe-ui"
 import { computed, ref } from "vue"
 
+import DrawerSection from "@/components/dashboard/DrawerSection.vue"
+import EnabledAlert from "@/components/dashboard/EnabledAlert.vue"
 import TicketTypeRequestsLink from "@/components/dashboard/requests/TicketTypeRequestsLink.vue"
 import DrawerSaveBar from "@/components/dashboard/sponsorships/DrawerSaveBar.vue"
 import { keepLastValue } from "@/components/dashboard/sponsorships/helpers"
@@ -75,12 +77,6 @@ const defaultPrice = computed(() => {
 	return row ? formatWholePriceOrFree(row.price, row.currency) : ""
 })
 
-const publishedAlert = computed(() =>
-	props.ticketType?.is_published
-		? { theme: "green" as const, title: "Ticket type is Enabled", action: "Disable" }
-		: { theme: "amber" as const, title: "Ticket type is Disabled", action: "Enable" },
-)
-
 const publishError = ref("")
 
 async function togglePublished() {
@@ -115,22 +111,14 @@ async function save(values: TicketTypeValues) {
 		:description="defaultPrice"
 	>
 		<template #notice>
-			<Alert
-				:theme="publishedAlert.theme"
-				:title="publishedAlert.title"
-				:primary-action="
-					canWrite
-						? {
-								label: publishedAlert.action,
-								variant: 'outline',
-								theme: 'gray',
-								loading: ticketTypeDoc.setValue.loading,
-								onClick: togglePublished,
-							}
-						: undefined
-				"
+			<EnabledAlert
+				noun="Ticket type"
+				:enabled="!!shownTicketType.is_published"
+				:editable="canWrite"
+				:loading="ticketTypeDoc.setValue.loading"
+				:error="publishError"
+				@toggle="togglePublished"
 			/>
-			<ErrorMessage class="mt-2" :message="publishError" />
 		</template>
 
 		<TicketTypeFields
@@ -142,10 +130,7 @@ async function save(values: TicketTypeValues) {
 			@category-created="emit('changed')"
 		/>
 
-		<section class="space-y-3">
-			<h3 class="border-t border-outline-gray-1 pt-4 text-base font-semibold text-ink-gray-9">
-				Guests
-			</h3>
+		<DrawerSection title="Guests">
 			<TicketTypeRequestsLink v-if="canWrite" :event="event" :ticket-type="shownTicketType.title" />
 
 			<TicketTypeGuests
@@ -157,7 +142,7 @@ async function save(values: TicketTypeValues) {
 			<p v-else class="w-full rounded-4 bg-surface-gray-1 p-4 text-base text-ink-gray-5">
 				No confirmed guests yet.
 			</p>
-		</section>
+		</DrawerSection>
 
 		<template v-if="canWrite && hasChanges" #footer>
 			<DrawerSaveBar :disabled="isInvalid" @discard="discardChanges" @save="confirmAndSave" />

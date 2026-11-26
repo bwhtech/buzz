@@ -2,6 +2,7 @@
 import { Button, ErrorMessage, toast, useDoc, useNewDoc } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
+import EnabledAlert from "@/components/dashboard/EnabledAlert.vue"
 import SponsorshipDrawer from "@/components/dashboard/sponsorships/SponsorshipDrawer.vue"
 import { useEnabledCurrencies } from "@/data/currencies"
 import type { AddOnItem, TicketTypeItem } from "@/types"
@@ -46,6 +47,7 @@ const validationError = computed(() => addOnError(draft.value))
 // Shown only after a save attempt, then live until the drawer reopens.
 const showValidationError = ref(false)
 const serverError = ref("")
+const toggleError = ref("")
 const shownError = computed(
 	() => serverError.value || (showValidationError.value ? validationError.value : null),
 )
@@ -61,6 +63,7 @@ watch(open, (opened) => {
 	draft.value = props.addOn ? addOnValuesOf(props.addOn) : blankAddOnValues(defaultCurrency())
 	showValidationError.value = false
 	serverError.value = ""
+	toggleError.value = ""
 	creator.reset()
 })
 
@@ -72,6 +75,19 @@ async function submitValues(values: ReturnType<typeof addOnDocValues>) {
 	Object.assign(creator.doc, { event: props.event, ...values })
 	await creator.submit().catch(() => null)
 	return creator.error
+}
+
+async function toggleEnabled() {
+	const enabling = !props.addOn?.enabled
+	toggleError.value = ""
+	await addOnDoc.setValue.submit({ enabled: enabling ? 1 : 0 }).catch(() => null)
+	if (addOnDoc.setValue.error) {
+		toggleError.value =
+			serverErrorMessage(addOnDoc.setValue.error) || "Could not update the add-on. Try again."
+		return
+	}
+	toast.success(enabling ? "Add-on enabled" : "Add-on disabled")
+	emit("changed")
 }
 
 async function save() {
@@ -95,7 +111,18 @@ async function save() {
 		:title="addOn?.title ?? 'New add-on'"
 		:description="addOn ? formatWholePriceOrFree(addOn.price, addOn.currency) : ''"
 	>
-		<AddOnFields v-model="draft" :ticket-types="ticketTypes" :show-enabled="!isNew" />
+		<template v-if="addOn" #notice>
+			<EnabledAlert
+				noun="Add-on"
+				:enabled="!!addOn.enabled"
+				editable
+				:loading="addOnDoc.setValue.loading"
+				:error="toggleError"
+				@toggle="toggleEnabled"
+			/>
+		</template>
+
+		<AddOnFields v-model="draft" :ticket-types="ticketTypes" />
 
 		<template v-if="hasChanges" #footer>
 			<div class="flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2">

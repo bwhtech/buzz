@@ -2,6 +2,7 @@
 import { DatePicker, FormControl, Switch, Tooltip, dayjs } from "frappe-ui"
 import { computed } from "vue"
 
+import DrawerSection from "@/components/dashboard/DrawerSection.vue"
 import PriceList from "@/components/dashboard/sponsorships/PriceList.vue"
 import TicketCategoryCombobox from "@/components/dashboard/ticket-types/TicketCategoryCombobox.vue"
 import type { TicketCategoryItem } from "@/types"
@@ -60,49 +61,37 @@ const closesIn = computed(() => {
 				@created="$emit('categoryCreated')"
 			/>
 		</div>
-		<fieldset>
-			<legend
-				class="w-full border-t border-outline-gray-1 pb-3 pt-4 text-base font-semibold text-ink-gray-9"
-			>
-				Sales
-			</legend>
-			<div class="space-y-4">
-				<PriceList
-					v-model="values.prices"
-					:locked-currencies="lockedCurrencies"
-					locked-message="This price has sales, so it can't change. To charge differently, disable this ticket type and add a new one."
+		<DrawerSection title="Sales">
+			<PriceList
+				v-model="values.prices"
+				:locked-currencies="lockedCurrencies"
+				locked-message="This price has sales, so it can't change. To charge differently, disable this ticket type and add a new one."
+				:disabled="disabled"
+			/>
+			<FormControl
+				:model-value="values.max_tickets_available || ''"
+				type="number"
+				label="Seats"
+				placeholder="Unlimited"
+				:min="0"
+				:disabled="disabled"
+				@update:model-value="values.max_tickets_available = Math.max(Number($event) || 0, 0)"
+			/>
+			<div class="space-y-1.5">
+				<DatePicker
+					:model-value="values.auto_unpublish_after ?? ''"
+					label="Auto close sales on"
+					placeholder="Never"
+					format="ddd, D MMM YYYY"
+					:min="dayjs().format('YYYY-MM-DD')"
+					clearable
 					:disabled="disabled"
+					@update:model-value="values.auto_unpublish_after = $event || null"
 				/>
-				<FormControl
-					:model-value="values.max_tickets_available || ''"
-					type="number"
-					label="Seats"
-					placeholder="Unlimited"
-					:min="0"
-					:disabled="disabled"
-					@update:model-value="values.max_tickets_available = Math.max(Number($event) || 0, 0)"
-				/>
-				<div class="space-y-1.5">
-					<DatePicker
-						:model-value="values.auto_unpublish_after ?? ''"
-						label="Auto close sales on"
-						placeholder="Never"
-						format="ddd, D MMM YYYY"
-						:min="dayjs().format('YYYY-MM-DD')"
-						clearable
-						:disabled="disabled"
-						@update:model-value="values.auto_unpublish_after = $event || null"
-					/>
-					<p class="text-p-xs tabular-nums text-ink-gray-5">{{ closesIn }}</p>
-				</div>
+				<p class="text-p-xs tabular-nums text-ink-gray-5">{{ closesIn }}</p>
 			</div>
-		</fieldset>
-		<fieldset>
-			<legend
-				class="w-full border-t border-outline-gray-1 pb-3 pt-4 text-base font-semibold text-ink-gray-9"
-			>
-				Access
-			</legend>
+		</DrawerSection>
+		<DrawerSection title="Access">
 			<div class="divide-y divide-outline-gray-1 rounded-4 border border-outline-gray-2">
 				<div v-if="hideable" class="p-1">
 					<Switch
@@ -135,6 +124,6 @@ const closesIn = computed(() => {
 					</div>
 				</Tooltip>
 			</div>
-		</fieldset>
+		</DrawerSection>
 	</form>
 </template>
