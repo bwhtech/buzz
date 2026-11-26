@@ -21,6 +21,8 @@ const props = defineProps<{
 	/** Sizes the search box; by default it takes the row the controls leave. */
 	searchClass?: string
 	disableShortcut?: boolean
+	/** Spells out "Filter" next to the icon, where the icon alone goes unnoticed. */
+	labelFilter?: boolean
 }>()
 const conditions = defineModel<Condition[]>({ required: true })
 // Unbound, the search box and sort select are left out: the default slot takes their place.
@@ -142,9 +144,10 @@ onKeyStroke("f", (event) => {
 			<Dropdown v-model:open="menuOpen" :options="fieldMenu" align="end">
 				<Button
 					:disabled="!fields.length"
-					icon="lucide-list-filter"
-					:tooltip="disableShortcut ? 'Filter' : 'Filter (F)'"
-					aria-label="Filter"
+					:icon="labelFilter ? undefined : 'lucide-list-filter'"
+					:icon-left="labelFilter ? 'lucide-list-filter' : undefined"
+					label="Filter"
+					:tooltip="labelFilter ? undefined : disableShortcut ? 'Filter' : 'Filter (F)'"
 					:aria-keyshortcuts="disableShortcut ? undefined : 'F'"
 				/>
 			</Dropdown>
