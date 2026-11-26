@@ -116,20 +116,18 @@ async function remove() {
 <template>
 	<Drawer v-model:open="open" swipe-direction="right">
 		<DrawerContent :close-on-outside-click="!isNew">
-			<div
-				class="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-outline-gray-1 pl-5 pr-2.5"
-			>
-				<DrawerTitle class="text-lg font-semibold text-ink-gray-9">
+			<div class="flex items-center gap-1 p-4 pb-0">
+				<DrawerCloseButton />
+				<DrawerTitle class="ml-1 truncate text-lg font-semibold text-ink-gray-9">
 					{{ isNew ? __("Add zone") : __("Edit zone") }}
 				</DrawerTitle>
 				<DrawerDescription class="sr-only">
 					{{ __("A zone is a place at the venue where guests are checked in.") }}
 				</DrawerDescription>
-				<DrawerCloseButton />
 			</div>
 
 			<div
-				class="flex flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-5"
+				class="flex flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-4"
 				@keydown.meta.enter.prevent="save"
 				@keydown.ctrl.enter.prevent="save"
 			>
