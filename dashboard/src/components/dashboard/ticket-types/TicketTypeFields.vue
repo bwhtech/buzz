@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { DatePicker, FormControl, Switch, dayjs } from "frappe-ui"
+import { DatePicker, FormControl, Switch, Tooltip, dayjs } from "frappe-ui"
 import { computed } from "vue"
 
 import PriceList from "@/components/dashboard/sponsorships/PriceList.vue"
 import TicketCategoryCombobox from "@/components/dashboard/ticket-types/TicketCategoryCombobox.vue"
 import type { TicketCategoryItem } from "@/types"
-import { type TicketTypeAccess, approvalSwitch, waitlistSwitch } from "@/utils/approvalMode"
 import type { TicketTypeValues } from "@/utils/ticketTypeForm"
 
 const values = defineModel<TicketTypeValues>({ required: true })
@@ -15,16 +14,16 @@ const props = defineProps<{
 	hideable: boolean
 	lockedCurrencies?: string[]
 	disabled?: boolean
-	access: TicketTypeAccess
 }>()
 defineEmits<{ categoryCreated: [] }>()
 
 const hasSeatLimit = computed(() => values.value.max_tickets_available > 0)
 
-// The event can decide both for every ticket type; the switch then shows its decision.
-const approval = computed(() => approvalSwitch(props.access.mode))
-const waitlist = computed(() => waitlistSwitch(props.access.eventWaitlist, hasSeatLimit.value))
-const shown = (forced: boolean | undefined, own: boolean) => forced ?? own
+const waitlistHint = computed(() =>
+	hasSeatLimit.value
+		? "People can request to join once seats run out"
+		: "Ticket with unlimited seats cannot be waitlisted",
+)
 
 const closesIn = computed(() => {
 	const date = values.value.auto_unpublish_after
@@ -101,24 +100,25 @@ const closesIn = computed(() => {
 			<div class="divide-y divide-outline-gray-1 rounded-4 border border-outline-gray-2">
 				<div class="p-1">
 					<Switch
-						:model-value="shown(approval.forced, values.requires_approval)"
+						v-model="values.requires_approval"
 						padded
 						label="Require approval"
-						:description="approval.description"
-						:disabled="disabled || approval.disabled"
-						@update:model-value="values.requires_approval = $event"
+						description="Review guests for this ticket type before accepting them"
+						:disabled="disabled"
 					/>
 				</div>
-				<div class="p-1">
-					<Switch
-						:model-value="shown(waitlist.forced, values.enable_waitlist)"
-						padded
-						label="Waitlist when sold out"
-						:description="waitlist.description"
-						:disabled="disabled || waitlist.disabled"
-						@update:model-value="values.enable_waitlist = $event"
-					/>
-				</div>
+				<Tooltip text="Limit seats to use waitlist feature" :disabled="hasSeatLimit || disabled">
+					<div class="p-1">
+						<Switch
+							:model-value="hasSeatLimit && values.enable_waitlist"
+							padded
+							label="Waitlist when sold out"
+							:description="waitlistHint"
+							:disabled="disabled || !hasSeatLimit"
+							@update:model-value="values.enable_waitlist = $event"
+						/>
+					</div>
+				</Tooltip>
 			</div>
 		</fieldset>
 	</form>

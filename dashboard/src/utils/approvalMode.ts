@@ -57,39 +57,20 @@ export interface TicketTypeAccess {
 	eventWaitlist: boolean
 }
 
-interface AccessSwitch {
-	disabled: boolean
-	// Shown instead of the stored value while the event decides it.
-	forced?: boolean
-	description: string
+type AccessValues = { requires_approval: boolean; enable_waitlist: boolean }
+
+/** The ticket type's switches show what applies to it, the event's flags included. */
+export function withEventAccess<T extends AccessValues>(values: T, access: TicketTypeAccess): T {
+	return {
+		...values,
+		requires_approval: values.requires_approval || access.mode === "manual",
+		enable_waitlist: values.enable_waitlist || access.eventWaitlist,
+	}
 }
 
-/** The ticket type's own approval switch: only free to change under "Review some tickets". */
-export function approvalSwitch(mode: ApprovalMode): AccessSwitch {
-	if (mode === "manual")
-		return {
-			disabled: true,
-			forced: true,
-			description: "On for all tickets — change in Registration approval",
-		}
-	if (mode === "auto")
-		return {
-			disabled: true,
-			forced: false,
-			description: "Off for all tickets — change in Registration approval",
-		}
-	return { disabled: false, description: "Registrations wait in Approvals until you accept them" }
-}
-
-/** The event waitlist covers every ticket type with a seat limit; a ticket type can add its own. */
-export function waitlistSwitch(eventWaitlist: boolean, hasSeatLimit: boolean): AccessSwitch {
-	if (!hasSeatLimit)
-		return { disabled: true, forced: false, description: "Set a seat limit to enable a waitlist" }
-	if (eventWaitlist)
-		return {
-			disabled: true,
-			forced: true,
-			description: "On for all sold-out tickets — change in Registration",
-		}
-	return { disabled: false, description: "People can join a waitlist once every seat is taken" }
+export function accessChanged(before: AccessValues, after: AccessValues): boolean {
+	return (
+		before.requires_approval !== after.requires_approval ||
+		before.enable_waitlist !== after.enable_waitlist
+	)
 }

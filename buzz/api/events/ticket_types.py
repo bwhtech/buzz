@@ -12,7 +12,7 @@ from buzz.api.events.schemas import (
 	TicketTypeItem,
 	TicketTypePrice,
 )
-from buzz.api.events.services import ensure_event_team_access, registration_link
+from buzz.api.events.services import ensure_event_team_access, manageable_event, registration_link
 from buzz.api.events.taxes import team_tax_details
 from buzz.payments import get_payment_gateways_for_event
 from buzz.permissions import can_manage_members, has_section_permission, has_team_access
@@ -185,3 +185,28 @@ def paid_bookings(event: str):
 		& (booking.payment_status == "Paid")
 		& (booking.total_amount > 0)
 	)
+
+
+class TicketTypeAccess:
+	"""Approval and waitlist for one ticket type. The event's flag stands for every ticket
+	type, so turning one off while it is set moves the flag onto all the others instead."""
+
+	def __init__(self, ticket_type: str):
+		doc = frappe.get_doc("Event Ticket Type", ticket_type)
+		self.ticket_type = str(doc.name)
+		self.event = manageable_event(doc.event, "ticketing")
+
+	def update(self, requires_approval: bool, enable_waitlist: bool) -> None:
+		self.set("requires_approval", requires_approval)
+		self.set("enable_waitlist", enable_waitlist)
+
+	def set(self, field: str, enabled: bool) -> None:
+		if not enabled and self.event.get(field):
+			self.event.db_set(field, 0)
+			for name in self.other_ticket_types():
+				frappe.db.set_value("Event Ticket Type", name, field, 1)
+		frappe.db.set_value("Event Ticket Type", self.ticket_type, field, int(enabled))
+
+	def other_ticket_types(self) -> list[str]:
+		filters = {"event": self.event.name, "name": ["!=", self.ticket_type]}
+		return frappe.get_all("Event Ticket Type", filters=filters, pluck="name")

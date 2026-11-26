@@ -53,8 +53,9 @@ export function ticketTypeDocValues(values: TicketTypeValues) {
 	return {
 		...values,
 		is_hidden: (values.is_hidden ? 1 : 0) as 0 | 1,
-		requires_approval: (values.requires_approval ? 1 : 0) as 0 | 1,
-		enable_waitlist: (values.enable_waitlist && values.max_tickets_available > 0 ? 1 : 0) as 0 | 1,
+		// Saved apart, through set_ticket_type_access: changing them can change the event.
+		requires_approval: undefined,
+		enable_waitlist: undefined,
 		title: values.title.trim(),
 		description: values.description.trim(),
 	}

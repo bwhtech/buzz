@@ -4,8 +4,8 @@ import { test } from "node:test"
 import {
 	approvalModeOf,
 	approvalModeWrites,
-	approvalSwitch,
-	waitlistSwitch,
+	accessChanged,
+	withEventAccess,
 } from "./approvalMode.ts"
 
 const general = { name: "1", requires_approval: false }
@@ -46,14 +46,17 @@ test("auto-confirm clears the event flag and every flagged ticket type", () => {
 	})
 })
 
-test("the ticket approval switch is only free under review some", () => {
-	assert.equal(approvalSwitch("some").disabled, false)
-	assert.deepEqual([approvalSwitch("manual").forced, approvalSwitch("auto").forced], [true, false])
+test("the ticket type switches include what the event decides", () => {
+	const values = { requires_approval: false, enable_waitlist: false }
+	assert.deepEqual(withEventAccess(values, { mode: "manual", eventWaitlist: true }), {
+		requires_approval: true,
+		enable_waitlist: true,
+	})
+	assert.deepEqual(withEventAccess(values, { mode: "some", eventWaitlist: false }), values)
 })
 
-test("the ticket waitlist switch needs a seat limit and follows the event waitlist", () => {
-	assert.equal(waitlistSwitch(false, false).disabled, true)
-	assert.equal(waitlistSwitch(true, false).forced, false)
-	assert.equal(waitlistSwitch(true, true).forced, true)
-	assert.equal(waitlistSwitch(false, true).disabled, false)
+test("access counts as changed only when a switch moved", () => {
+	const values = { requires_approval: true, enable_waitlist: false }
+	assert.equal(accessChanged(values, { ...values }), false)
+	assert.equal(accessChanged(values, { ...values, enable_waitlist: true }), true)
 })

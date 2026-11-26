@@ -4,8 +4,9 @@ import { computed, ref, watch } from "vue"
 
 import SponsorshipDrawer from "@/components/dashboard/sponsorships/SponsorshipDrawer.vue"
 import { useEnabledCurrencies } from "@/data/currencies"
+import { useSetTicketTypeAccess } from "@/data/ticketTypes"
 import type { TicketCategoryItem } from "@/types"
-import type { TicketTypeAccess } from "@/utils/approvalMode"
+import { type TicketTypeAccess, accessChanged, withEventAccess } from "@/utils/approvalMode"
 import { serverErrorMessage } from "@/utils/serverError"
 import {
 	type TicketTypeValues,
@@ -28,10 +29,13 @@ const props = defineProps<{
 const open = defineModel<boolean>("open", { required: true })
 const emit = defineEmits<{ created: []; categoryCreated: [] }>()
 
-const creator = useNewDoc<Record<string, unknown>>("Event Ticket Type")
+const creator = useNewDoc<Record<string, unknown> & { name?: string }>("Event Ticket Type")
+const accessSetter = useSetTicketTypeAccess()
 const enabledCurrencies = useEnabledCurrencies()
 
-const draft = ref<TicketTypeValues>(blankTicketTypeValues("", DEFAULT_CURRENCY))
+const blankValues = (category: string, currency: string) =>
+	withEventAccess(blankTicketTypeValues(category, currency), props.access)
+const draft = ref<TicketTypeValues>(blankValues("", DEFAULT_CURRENCY))
 const validationError = computed(() => ticketTypeError(draft.value))
 // Shown only after a create attempt, then live until the drawer reopens.
 const showValidationError = ref(false)
@@ -43,7 +47,7 @@ function defaultCurrency() {
 
 watch(open, (opened) => {
 	if (!opened) return
-	draft.value = blankTicketTypeValues(props.category, defaultCurrency())
+	draft.value = blankValues(props.category, defaultCurrency())
 	showValidationError.value = false
 	creator.reset()
 })
@@ -52,11 +56,16 @@ async function create() {
 	showValidationError.value = true
 	if (validationError.value || creator.loading) return
 	Object.assign(creator.doc, { event: props.event, ...ticketTypeDocValues(draft.value) })
-	await creator.submit().catch(() => null)
+	const doc = await creator.submit().catch(() => null)
 	if (creator.error) {
 		toast.error(serverErrorMessage(creator.error))
 		return
 	}
+	// The ticket type exists by now, so a failure here must not invite a second create.
+	if (doc?.name && accessChanged(blankValues("", ""), draft.value))
+		await accessSetter
+			.save(String(doc.name), draft.value)
+			.catch((error) => toast.error(serverErrorMessage(error)))
 	toast.success("Ticket type added")
 	emit("created")
 	open.value = false
@@ -68,7 +77,6 @@ async function create() {
 		<TicketTypeFields
 			v-model="draft"
 			:categories="categories"
-			:access="access"
 			hideable
 			@category-created="emit('categoryCreated')"
 		/>
