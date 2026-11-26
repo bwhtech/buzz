@@ -31,18 +31,24 @@ def event_sponsors(
 	titles = tier_titles(event_id)
 	filter_fields = sponsor_filter_fields(event_id, team=doc.team, titles=titles)
 	sponsor = frappe.qb.DocType("Event Sponsor")
-	extra_criteria = ListConditions("Event Sponsor", filter_fields).qb_criteria(filters, sponsor)
+	standard_filters, extra_criteria = ListConditions("Event Sponsor", filter_fields).split_qb_criteria(
+		filters, sponsor
+	)
 	if search_criterion := enquiry_search_criterion(sponsor, search):
 		extra_criteria.append(search_criterion)
-	order_dir = frappe.qb.asc if str(order).lower() == "asc" else frappe.qb.desc
-	rows = (
-		frappe.qb.from_(sponsor)
-		.select(*(sponsor[field] for field in SPONSOR_FIELDS))
-		.where(Criterion.all([sponsor.event == event_id, *extra_criteria]))
-		.orderby(sponsor.creation, order=order_dir)
-		.orderby(sponsor.name, order=order_dir)
-	).run(as_dict=True)
-	total = frappe.db.count("Event Sponsor", {"event": event_id}) if extra_criteria else len(rows)
+	direction = "asc" if str(order).lower() == "asc" else "desc"
+	query = frappe.qb.get_query(
+		"Event Sponsor",
+		fields=list(SPONSOR_FIELDS),
+		filters=[["event", "=", event_id], *standard_filters],
+		order_by=f"creation {direction}, name {direction}",
+		ignore_permissions=True,
+	)
+	if extra_criteria:
+		query = query.where(Criterion.all(extra_criteria))
+	rows = query.run(as_dict=True)
+	is_filtered = bool(standard_filters or extra_criteria)
+	total = frappe.db.count("Event Sponsor", {"event": event_id}) if is_filtered else len(rows)
 	return EventSponsorsResponse(
 		total=total,
 		sponsors=sponsor_items(rows, titles),

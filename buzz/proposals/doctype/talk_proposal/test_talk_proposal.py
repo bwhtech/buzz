@@ -96,6 +96,21 @@ class TestCreateTalk(TalkProposalTestCase):
 
 		self.assertEqual(frappe.db.get_value("User", email, "user_type"), "Website User")
 
+	def test_mixed_case_speaker_email_reuses_existing_user_and_profile(self):
+		email = f"mixed-speaker-{frappe.generate_hash(length=6)}@example.com"
+		user = UserFactory.create_once(email).name
+		existing_profile = frappe.get_doc({"doctype": "Speaker Profile", "user": user}).insert(
+			ignore_permissions=True
+		)
+		proposal = frappe.get_doc(
+			"Talk Proposal",
+			TalkProposalFactory.create_as_guest(self.event, email.upper()).name,
+		)
+
+		talk = proposal.create_talk()
+
+		self.assertEqual([row.speaker for row in talk.speakers], [existing_profile.name])
+
 	def test_a_member_of_the_events_team_can_accept_a_proposal(self):
 		manager = UserFactory.create_once("create-talk-manager@example.com").name
 		event = self.create_event_owned_by(manager)

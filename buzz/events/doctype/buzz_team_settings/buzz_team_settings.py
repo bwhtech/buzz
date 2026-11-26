@@ -73,16 +73,16 @@ def feature_flags_by_team(teams: list[str]) -> dict[str, dict[str, bool]]:
 	if not teams:
 		return {}
 	flag_fields = feature_flag_fields()
-	if not flag_fields:
-		return {team: {} for team in teams}
 	rows = frappe.get_all(
 		"Buzz Team Settings",
 		filters={"name": ["in", teams]},
 		fields=["name", *flag_fields],
 	)
 	by_team = {row.name: {fieldname: bool(row.get(fieldname)) for fieldname in flag_fields} for row in rows}
-	default = dict.fromkeys(flag_fields, False)
-	return {team: by_team.get(team, default) for team in teams}
+	for team in teams:
+		if team not in by_team:
+			frappe.throw(_("Buzz Team Settings {0} not found").format(team), frappe.DoesNotExistError)
+	return {team: by_team[team] for team in teams}
 
 
 def is_feature_enabled(team: str, flag: str) -> bool:

@@ -95,7 +95,7 @@ def _cached_country_options() -> list[dict]:
 
 
 def get_link_field_options(doctype: str, event: str | None = None) -> list[dict]:
-	if doctype == "Country" and not event:
+	if doctype == "Country":
 		return _cached_country_options()
 	meta = frappe.get_meta(doctype)
 	can_read = frappe.has_permission(doctype, "read")

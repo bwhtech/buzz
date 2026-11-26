@@ -77,5 +77,5 @@ def get_tags(doctype: str, txt: str):
 		pluck="label",
 		distinct=True,
 		order_by="label asc",
-		limit_page_length=50,
+		limit_page_length=0,
 	)

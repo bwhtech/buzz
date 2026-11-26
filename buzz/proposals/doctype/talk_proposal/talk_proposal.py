@@ -166,13 +166,20 @@ class TalkProposal(Document):
 
 		emails = list({speaker.email for speaker in self.speakers if speaker.email})
 		existing_users = (
-			set(frappe.get_all("User", filters={"name": ["in", emails]}, pluck="name")) if emails else set()
+			{
+				name.lower(): name
+				for name in frappe.get_all("User", filters={"name": ["in", emails]}, pluck="name")
+			}
+			if emails
+			else {}
 		)
 		profiles_by_user = (
 			{
-				row.user: row.name
+				row.user.lower(): row.name
 				for row in frappe.get_all(
-					"Speaker Profile", filters={"user": ["in", list(existing_users)]}, fields=["name", "user"]
+					"Speaker Profile",
+					filters={"user": ["in", list(existing_users.values())]},
+					fields=["name", "user"],
 				)
 			}
 			if existing_users
@@ -180,7 +187,8 @@ class TalkProposal(Document):
 		)
 
 		for speaker in self.speakers:
-			user = speaker.email if speaker.email in existing_users else None
+			email_key = (speaker.email or "").lower()
+			user = existing_users.get(email_key)
 			if not user:
 				user = (
 					frappe.get_doc(
@@ -196,16 +204,17 @@ class TalkProposal(Document):
 					.insert(ignore_permissions=True)
 					.name
 				)
-				existing_users.add(user)
+				existing_users[email_key] = user
+				existing_users[user.lower()] = user
 
-			speaker_profile = profiles_by_user.get(user)
+			speaker_profile = profiles_by_user.get(user.lower())
 			if not speaker_profile:
 				speaker_profile = (
 					frappe.get_doc({"doctype": "Speaker Profile", "user": user})
 					.insert(ignore_permissions=True)
 					.name
 				)
-				profiles_by_user[user] = speaker_profile
+				profiles_by_user[user.lower()] = speaker_profile
 
 			talk.append("speakers", {"speaker": speaker_profile})
 

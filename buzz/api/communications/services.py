@@ -20,65 +20,87 @@ from buzz.api.teams.exceptions import CannotEditTeam
 from buzz.permissions import can_manage_members, has_section_permission
 
 
-def _recipient_query(event: str, audience: str, filters: str | None):
+def _recipient_query(event: str, audience: str, filters: str | None, *, count_only: bool = False):
 	event_id = str(event)
 	if audience == "Guests":
 		fields, answer_parents = guest_filter_fields(event_id)
 		ticket = frappe.qb.DocType("Event Ticket")
-		criteria = ListConditions("Event Ticket", fields, answer_parents, event=event_id).qb_criteria(
-			filters, ticket
+		standard_filters, extra_criteria = ListConditions(
+			"Event Ticket", fields, answer_parents, event=event_id
+		).split_qb_criteria(filters, ticket)
+		select_fields = [Count(ticket.attendee_email).distinct()] if count_only else ["attendee_email"]
+		query = frappe.qb.get_query(
+			"Event Ticket",
+			fields=select_fields,
+			filters=[
+				["event", "=", event_id],
+				["docstatus", "=", 1],
+				["attendee_email", "is", "set"],
+				*standard_filters,
+			],
+			distinct=not count_only,
+			order_by=None if count_only else "attendee_email asc",
+			ignore_permissions=True,
 		)
-		where = Criterion.all(
-			[
-				ticket.event == event_id,
-				ticket.docstatus == 1,
-				ticket.attendee_email.isnotnull(),
-				ticket.attendee_email != "",
-				*criteria,
-			]
-		)
-		return frappe.qb.from_(ticket).where(where), ticket.attendee_email
+		if extra_criteria:
+			query = query.where(Criterion.all(extra_criteria))
+		return query
 
 	if audience == "Speakers":
 		proposal = frappe.qb.DocType("Talk Proposal")
 		speaker = frappe.qb.DocType("Proposal Speaker")
-		criteria = ListConditions(
+		standard_filters, extra_criteria = ListConditions(
 			"Talk Proposal", proposal_filter_fields(event_id), event=event_id
-		).qb_criteria(filters, proposal)
-		where = Criterion.all(
-			[
-				proposal.event == event_id,
-				speaker.parenttype == "Talk Proposal",
-				speaker.email.isnotnull(),
-				speaker.email != "",
-				*criteria,
-			]
+		).split_qb_criteria(filters, proposal)
+		query = (
+			frappe.qb.get_query(
+				"Talk Proposal",
+				fields=[Count(speaker.email).distinct()] if count_only else [speaker.email],
+				filters=[["event", "=", event_id], *standard_filters],
+				distinct=not count_only,
+				ignore_permissions=True,
+			)
+			.join(speaker)
+			.on(speaker.parent == proposal.name)
+			.where(
+				Criterion.all(
+					[
+						speaker.parenttype == "Talk Proposal",
+						speaker.email.isnotnull(),
+						speaker.email != "",
+						*extra_criteria,
+					]
+				)
+			)
 		)
-		query = frappe.qb.from_(proposal).join(speaker).on(speaker.parent == proposal.name).where(where)
-		return query, speaker.email
+		if not count_only:
+			query = query.orderby(speaker.email)
+		return query
 
 	if audience == "Sponsors":
 		sponsor = frappe.qb.DocType("Event Sponsor")
-		criteria = ListConditions("Event Sponsor", sponsor_filter_fields(event_id)).qb_criteria(
-			filters, sponsor
+		standard_filters, extra_criteria = ListConditions(
+			"Event Sponsor", sponsor_filter_fields(event_id)
+		).split_qb_criteria(filters, sponsor)
+		select_fields = [Count(sponsor.contact_email).distinct()] if count_only else ["contact_email"]
+		query = frappe.qb.get_query(
+			"Event Sponsor",
+			fields=select_fields,
+			filters=[["event", "=", event_id], ["contact_email", "is", "set"], *standard_filters],
+			distinct=not count_only,
+			order_by=None if count_only else "contact_email asc",
+			ignore_permissions=True,
 		)
-		where = Criterion.all(
-			[
-				sponsor.event == event_id,
-				sponsor.contact_email.isnotnull(),
-				sponsor.contact_email != "",
-				*criteria,
-			]
-		)
-		return frappe.qb.from_(sponsor).where(where), sponsor.contact_email
+		if extra_criteria:
+			query = query.where(Criterion.all(extra_criteria))
+		return query
 
 	UnknownAudience.throw(audience=audience)
 
 
 def recipients_of(event: str, audience: str, filters: str | None) -> list[str]:
 	"""Each address once, whichever audience it comes from."""
-	query, email_column = _recipient_query(event, audience, filters)
-	return query.select(email_column).distinct().orderby(email_column).run(pluck=True)
+	return _recipient_query(event, audience, filters).run(pluck=True)
 
 
 def filter_fields_by_audience(event: str, team: str | None = None) -> dict[str, list[FilterField]]:
@@ -92,8 +114,7 @@ def filter_fields_by_audience(event: str, team: str | None = None) -> dict[str, 
 
 def count_recipients(event: str, audience: str, filters: str | None):
 	ensure_event_team_access(event, "communications")
-	query, email_column = _recipient_query(event, audience, filters)
-	rows = query.select(Count(email_column).distinct()).run()
+	rows = _recipient_query(event, audience, filters, count_only=True).run()
 	return RecipientCount(count=rows[0][0] if rows else 0)
 
 

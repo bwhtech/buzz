@@ -76,6 +76,13 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 
 		self.assertEqual(self.label_of("Sponsorship Tier", tier), tier)
 
+	def test_country_options_use_cache_when_event_is_given(self):
+		first = get_link_field_options("Country", event="some-event")
+		self.assertTrue(first)
+		with self.assertQueryCount(0):
+			second = get_link_field_options("Country", event="some-event")
+		self.assertEqual(first, second)
+
 	def label_of(self, doctype: str, name: str) -> str:
 		return next(o["label"] for o in get_link_field_options(doctype) if o["value"] == name)
 

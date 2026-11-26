@@ -131,6 +131,7 @@ class TicketService:
 		try:
 			ticket = frappe.get_doc("Event Ticket", self.ticket_id)
 		except frappe.DoesNotExistError:
+			frappe.clear_last_message()
 			TicketNotFound.throw()
 		if not self.may_manage(ticket):
 			TransferNotPermitted.throw()
@@ -162,6 +163,7 @@ def change_add_on_preference(add_on_id: str, new_value: str) -> None:
 	try:
 		add_on_value = frappe.get_cached_doc("Ticket Add-on Value", add_on_id)
 	except frappe.DoesNotExistError:
+		frappe.clear_last_message()
 		AddOnValueNotFound.throw()
 	ticket = frappe.get_cached_doc("Event Ticket", add_on_value.parent)
 

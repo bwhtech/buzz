@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 import frappe
@@ -80,17 +81,20 @@ class InviteService:
 			return []
 		emails = [row.email for row in unique_rows]
 		event = str(self.event.name)
-		registered = set(
-			frappe.get_all(
+		registered = {
+			email.lower()
+			for email in frappe.get_all(
 				"Event Ticket",
 				filters={"event": event, "attendee_email": ["in", emails], "docstatus": 1},
 				pluck="attendee_email",
 			)
-		)
+			if email
+		}
 		remaining = [email for email in emails if email not in registered]
 		already_invited = (
-			set(
-				frappe.get_all(
+			{
+				email.lower()
+				for email in frappe.get_all(
 					"Event Booking",
 					filters={
 						"event": event,
@@ -100,7 +104,8 @@ class InviteService:
 					},
 					pluck="user",
 				)
-			)
+				if email
+			}
 			if remaining
 			else set()
 		)
@@ -127,21 +132,13 @@ class InviteService:
 			TooManyInvites.throw(limit=INVITE_LIMIT)
 		return [InviteRequest.model_validate(row) for row in invites]
 
-	def skipped(self, email: str) -> InviteOutcome | None:
-		event = self.event.name
-		if frappe.db.exists("Event Ticket", {"event": event, "attendee_email": email, "docstatus": 1}):
-			return InviteOutcome(email=email, status="registered")
-		if frappe.db.exists(
-			"Event Booking", {"event": event, "user": email, "docstatus": 0, "status": ("in", OPEN)}
-		):
-			return InviteOutcome(email=email, status="already invited")
-		return None
+	@cached_property
+	def host_name(self) -> str:
+		return get_fullname(frappe.session.user)
 
 	def invite(self, row: InviteRequest, message: str | None) -> InviteOutcome:
 		booking = self.create_booking(row)
-		if not hasattr(self, "_host_name"):
-			self._host_name = get_fullname(frappe.session.user)
-		send_invite_email(booking, message, event_title=self.event.title, host=self._host_name)
+		send_invite_email(booking, message, event_title=self.event.title, host=self.host_name)
 		return InviteOutcome(email=row.email, status="invited", booking=booking.name)
 
 	def add_one(self, row: InviteRequest) -> InviteOutcome:

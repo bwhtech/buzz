@@ -115,11 +115,11 @@ def event_proposals(
 
 	filter_fields = proposal_filter_fields(event_id)
 	proposal = frappe.qb.DocType("Talk Proposal")
-	extra_criteria = ListConditions("Talk Proposal", filter_fields, event=event_id).qb_criteria(
-		filters, proposal
-	)
+	standard_filters, extra_criteria = ListConditions(
+		"Talk Proposal", filter_fields, event=event_id
+	).split_qb_criteria(filters, proposal)
 	if name:
-		extra_criteria.append(proposal.name == name)
+		standard_filters.append(["name", "=", name])
 	if term := (search or "").strip():
 		pattern = f"%{term}%"
 		speaker = frappe.qb.DocType("Proposal Speaker")
@@ -139,25 +139,21 @@ def event_proposals(
 		extra_criteria.append(proposal.title.like(pattern) | speaker_match)
 	limit = max(1, min(int(limit), 100))
 	start = max(0, int(start))
-	order_dir = frappe.qb.asc if str(order).lower() == "asc" else frappe.qb.desc
+	direction = "asc" if str(order).lower() == "asc" else "desc"
 
-	where_criterion = Criterion.all([proposal.event == event_id, *extra_criteria])
-	rows = (
-		frappe.qb.from_(proposal)
-		.select(
-			proposal.name,
-			proposal.title,
-			proposal.event,
-			proposal.status,
-			proposal.creation,
-			proposal.modified,
-		)
-		.where(where_criterion)
-		.orderby(proposal.creation, order=order_dir)
-		.orderby(proposal.name, order=order_dir)
-		.limit(limit)
-		.offset(start)
-	).run(as_dict=True)
+	base_filters = [["event", "=", event_id], *standard_filters]
+	query = frappe.qb.get_query(
+		"Talk Proposal",
+		fields=["name", "title", "event", "status", "creation", "modified"],
+		filters=base_filters,
+		order_by=f"creation {direction}, name {direction}",
+		limit=limit,
+		offset=start,
+		ignore_permissions=True,
+	)
+	if extra_criteria:
+		query = query.where(Criterion.all(extra_criteria))
+	rows = query.run(as_dict=True)
 	speakers = speakers_by_proposal([row.name for row in rows])
 	event_meta = {
 		"event_title": doc.title,
@@ -169,17 +165,26 @@ def event_proposals(
 		"allow_editing_talks_after_acceptance": doc.allow_editing_talks_after_acceptance,
 	}
 
+	is_filtered = bool(standard_filters or extra_criteria)
 	total = (
 		len(rows)
-		if not extra_criteria and start == 0 and len(rows) < limit
+		if not is_filtered and start == 0 and len(rows) < limit
 		else frappe.db.count("Talk Proposal", {"event": event_id})
 	)
-	if not extra_criteria:
+	if not is_filtered:
 		matched = total
 	elif start == 0 and len(rows) < limit:
 		matched = len(rows)
 	else:
-		count_rows = frappe.qb.from_(proposal).select(Count(proposal.name)).where(where_criterion).run()
+		count_query = frappe.qb.get_query(
+			"Talk Proposal",
+			fields=[Count(proposal.name)],
+			filters=base_filters,
+			ignore_permissions=True,
+		)
+		if extra_criteria:
+			count_query = count_query.where(Criterion.all(extra_criteria))
+		count_rows = count_query.run()
 		matched = count_rows[0][0] if count_rows else 0
 
 	form_row = frappe.db.get_value(

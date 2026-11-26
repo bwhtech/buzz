@@ -43,9 +43,6 @@ def get_gateways_needing_phone() -> list[str]:
 
 def clear_payment_gateway_caches(*args, **kwargs) -> None:
 	get_gateways_needing_phone.clear_cache()
-	from buzz.api.payments import _cached_gateway_logos
-
-	_cached_gateway_logos.clear_cache()
 
 
 def resolve_payment_gateway(event: str, payment_gateway: str | None) -> str:

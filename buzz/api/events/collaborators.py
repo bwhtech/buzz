@@ -16,6 +16,7 @@ from buzz.api.schemas import APIResponse
 from buzz.api.teams.schemas import InviteOutcome
 from buzz.permissions import (
 	EDIT,
+	HUMAN_MEMBER_FILTERS,
 	SECTIONS,
 	VIEW,
 	can_manage_members,
@@ -46,20 +47,23 @@ def invite_collaborators(event: str, invites: list[dict]) -> list[InviteOutcome]
 	for invite in invites:
 		validate_sections(invite)
 	emails = list({invite["email"].strip().lower() for invite in invites})
-	team_members = set(
-		frappe.get_all(
+	team_members = {
+		user.lower()
+		for user in frappe.get_all(
 			"Buzz Team Membership",
-			filters={"team": team, "user": ["in", emails], "enabled": 1},
+			filters={**HUMAN_MEMBER_FILTERS, "team": team, "user": ["in", emails]},
 			pluck="user",
 		)
-	)
+		if user
+	}
 	existing = {
-		row.email: row.name
+		row.email.lower(): row.name
 		for row in frappe.get_all(
 			COLLABORATOR,
 			filters={"event": str(event), "email": ["in", emails]},
 			fields=["name", "email"],
 		)
+		if row.email
 	}
 	return [invite_one(event, team, invite, team_members, existing) for invite in invites]
 
@@ -80,12 +84,13 @@ def revoke_collaborators(event: str, emails: list[str]) -> None:
 		return
 	normalized = [email.strip().lower() for email in emails]
 	existing = {
-		row.email: row.name
+		row.email.lower(): row.name
 		for row in frappe.get_all(
 			COLLABORATOR,
 			filters={"event": str(event), "email": ["in", list(set(normalized))]},
 			fields=["name", "email"],
 		)
+		if row.email
 	}
 	for email, norm in zip(emails, normalized, strict=True):
 		name = existing.get(norm)
@@ -159,6 +164,8 @@ def invite_one(
 
 	row.update({"event": event, "email": email} | section_values(invite))
 	row.issue_invitation(frappe.session.user)
+	if existing is not None:
+		existing[email] = row.name
 	return InviteOutcome(email=email, status="invited")
 
 

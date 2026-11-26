@@ -40,6 +40,7 @@ def get_campaign(campaign: str):
 	try:
 		return frappe.get_cached_doc("Buzz Campaign", campaign)
 	except frappe.DoesNotExistError:
+		frappe.clear_last_message()
 		frappe.throw(_("Campaign not found"), frappe.DoesNotExistError)
 
 

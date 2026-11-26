@@ -3,6 +3,7 @@ from frappe import _
 from frappe.query_builder import Criterion
 from frappe.query_builder.functions import Count
 
+from buzz.api.events.exceptions import CannotManageEvent
 from buzz.api.events.services import ensure_event_team_access
 from buzz.api.filters.conditions import ListConditions, filter_field, form_questions, question_fields
 from buzz.api.filters.schemas import FilterField
@@ -34,36 +35,48 @@ def event_enquiries(
 
 	filter_fields = enquiry_filter_fields(event_id)
 	enquiry = frappe.qb.DocType("Sponsorship Enquiry")
-	extra_criteria = ListConditions("Sponsorship Enquiry", filter_fields, event=event_id).qb_criteria(
-		filters, enquiry
-	)
+	standard_filters, extra_criteria = ListConditions(
+		"Sponsorship Enquiry", filter_fields, event=event_id
+	).split_qb_criteria(filters, enquiry)
 	if search_criterion := enquiry_search_criterion(enquiry, search):
 		extra_criteria.append(search_criterion)
 	limit = max(1, min(int(limit), 100))
 	start = max(0, int(start))
-	order_dir = frappe.qb.asc if str(order).lower() == "asc" else frappe.qb.desc
+	direction = "asc" if str(order).lower() == "asc" else "desc"
 
-	where_criterion = Criterion.all([enquiry.event == event_id, *extra_criteria])
-	rows = (
-		frappe.qb.from_(enquiry)
-		.select(*(enquiry[field] for field in ENQUIRY_FIELDS))
-		.where(where_criterion)
-		.orderby(enquiry.creation, order=order_dir)
-		.orderby(enquiry.name, order=order_dir)
-		.limit(limit)
-		.offset(start)
-	).run(as_dict=True)
+	base_filters = [["event", "=", event_id], *standard_filters]
+	query = frappe.qb.get_query(
+		"Sponsorship Enquiry",
+		fields=list(ENQUIRY_FIELDS),
+		filters=base_filters,
+		order_by=f"creation {direction}, name {direction}",
+		limit=limit,
+		offset=start,
+		ignore_permissions=True,
+	)
+	if extra_criteria:
+		query = query.where(Criterion.all(extra_criteria))
+	rows = query.run(as_dict=True)
+	is_filtered = bool(standard_filters or extra_criteria)
 	total = (
 		len(rows)
-		if not extra_criteria and start == 0 and len(rows) < limit
+		if not is_filtered and start == 0 and len(rows) < limit
 		else frappe.db.count("Sponsorship Enquiry", {"event": event_id})
 	)
-	if not extra_criteria:
+	if not is_filtered:
 		matched = total
 	elif start == 0 and len(rows) < limit:
 		matched = len(rows)
 	else:
-		count_rows = frappe.qb.from_(enquiry).select(Count(enquiry.name)).where(where_criterion).run()
+		count_query = frappe.qb.get_query(
+			"Sponsorship Enquiry",
+			fields=[Count(enquiry.name)],
+			filters=base_filters,
+			ignore_permissions=True,
+		)
+		if extra_criteria:
+			count_query = count_query.where(Criterion.all(extra_criteria))
+		count_rows = count_query.run()
 		matched = count_rows[0][0] if count_rows else 0
 	return EventEnquiriesResponse(
 		total=total,
@@ -121,6 +134,7 @@ def enquiry_detail(enquiry: str) -> EnquiryDetail:
 	try:
 		doc = frappe.get_doc("Sponsorship Enquiry", enquiry)
 	except frappe.DoesNotExistError:
+		frappe.clear_last_message()
 		EnquiryNotFound.throw()
 	ensure_event_team_access(doc.event, "sponsors")
 
@@ -154,13 +168,12 @@ def set_enquiry_status(enquiry: str, status: str) -> str:
 	try:
 		doc = frappe.get_doc("Sponsorship Enquiry", enquiry)
 	except frappe.DoesNotExistError:
+		frappe.clear_last_message()
 		EnquiryNotFound.throw()
 	event_doc = ensure_event_team_access(doc.event, "sponsors")
 	if not has_section_permission(
 		doc.event, "sponsors", "write", frappe.session.user, team=event_doc.team or ""
 	):
-		from buzz.api.events.exceptions import CannotManageEvent
-
 		CannotManageEvent.throw()
 
 	if doc.status in LOCKED_STATUSES and status != doc.status:
