@@ -5,9 +5,9 @@ import frappe
 from buzz.events.doctype.buzz_form.form_types import APPLIED_TO_BY_FORM_DOCTYPE
 
 BOOKING_METADATA_KEY_PREFIX = "buzz:booking_metadata:v1:"
-BOOKING_METADATA_VERSION_PREFIX = "buzz:booking_metadata_ver:v1:"
+BOOKING_METADATA_VERSION_PREFIX = "buzz:booking_metadata_ver:v2:"
 EVENT_ROUTE_KEY_PREFIX = "buzz:event_route:v1:"
-EVENT_ROUTE_VERSION_PREFIX = "buzz:event_route_ver:v1:"
+EVENT_ROUTE_VERSION_PREFIX = "buzz:event_route_ver:v2:"
 BOOKING_METADATA_TTL_SECONDS = 15 * 60
 EVENT_ROUTE_TTL_SECONDS = 15 * 60
 
@@ -35,12 +35,14 @@ class EventBookingCache:
 
 	@staticmethod
 	def _read_version(version_key: str) -> int:
-		raw = frappe.cache.get_value(version_key)
+		key = frappe.cache.make_key(version_key)
+		# Tenant-scoped via make_key; raw get reads the unpickled integer written by atomic incr.
+		raw = frappe.cache.get(key)  # nosemgrep: frappe-cache-breaks-multitenancy
 		return int(raw) if raw is not None else 0
 
 	@staticmethod
 	def _bump_version(version_key: str) -> None:
-		frappe.cache.set_value(version_key, EventBookingCache._read_version(version_key) + 1)
+		frappe.cache.incr(frappe.cache.make_key(version_key))
 
 	@classmethod
 	def _dirty_events(cls) -> set[str]:

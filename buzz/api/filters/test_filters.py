@@ -182,3 +182,9 @@ class TestListConditionsQB(TestListConditions):
 
 	def test_standard_not_in(self):
 		self.assertEqual(self.matching(["status", "not in", ["Paid"]]), {self.yes})
+
+	def test_numeric_filter_ignores_non_numeric_answers(self):
+		bad = self.enquiry("Paid", attendees="abc")
+		self.addCleanup(frappe.delete_doc, "Sponsorship Enquiry", bad, force=True, ignore_permissions=True)
+		self.assertNotIn(bad, self.matching(["attendees", "<", "1"]))
+		self.assertNotIn(bad, self.matching(["attendees", ">", "-1"]))
