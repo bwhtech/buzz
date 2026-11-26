@@ -93,7 +93,7 @@ async function create() {
 					<Button
 						size="md"
 						variant="solid"
-						label="Add ticket type"
+						label="Create"
 						:loading="creator.loading"
 						@click="create"
 					/>

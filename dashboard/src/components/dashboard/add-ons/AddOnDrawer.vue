@@ -132,7 +132,7 @@ async function save() {
 					<Button
 						size="md"
 						variant="solid"
-						:label="isNew ? 'Add add-on' : 'Save changes'"
+						:label="isNew ? 'Create' : 'Save changes'"
 						:loading="saving"
 						@click="save"
 					/>
