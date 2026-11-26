@@ -12,7 +12,7 @@ const props = defineProps<{
 	event: string
 	title?: string | null
 	// What the list is currently showing, so the export is the same list.
-	query: { search: string; filters: string; order: string; zone: string }
+	query: { search: string; filters: string; order: string }
 	registrationForm?: string | null
 	canInvite: boolean
 }>()
@@ -61,7 +61,7 @@ const actions = computed(() => [
 	{
 		label: "Manage zones",
 		icon: "lucide-settings-2",
-		run: () => router.push({ name: "event-settings", params: { eventId: props.event } }),
+		run: () => router.push({ name: "event-check-in", params: { eventId: props.event } }),
 		loading: false,
 	},
 	{ label: "Download CSV", icon: "lucide-download", run: exportGuests, loading: exporting.value },

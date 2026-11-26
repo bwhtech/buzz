@@ -12,10 +12,8 @@ import {
 	zoneRulesLabel,
 } from "./checkInZones"
 
-// `readOnly` keeps the cards as filters only, for a member who cannot edit the event.
+// `readOnly` hides editing, for a member who cannot edit the event.
 const props = defineProps<{ event: string; stats: GuestZone[]; readOnly?: boolean }>()
-// The zone the guest list is narrowed to, empty for every guest.
-const selected = defineModel<string>({ required: true })
 const emit = defineEmits<{ changed: [] }>()
 
 const zones = useCheckInZones(props.event)
@@ -24,35 +22,40 @@ const ticketTypes = useEventTicketTypes(props.event)
 const isDrawerOpen = ref(false)
 const editing = ref<CheckInZone | null>(null)
 
-const cards = computed(() =>
-	props.stats.map((stat) => {
-		const zone = zones.data?.find((row) => row.name === stat.name) ?? null
-		const checkedIn = stat.checked_in ?? 0
-		const eligible = stat.eligible ?? 0
-		return {
-			...stat,
-			zone,
-			meta: zone ? zoneRulesLabel(zone, ticketTypes.data ?? []) : "",
-			checkedIn,
-			eligible,
-			percent: eligible ? Math.round((checkedIn / eligible) * 100) : 0,
-		}
-	}),
-)
+function card(stat: GuestZone, zone: CheckInZone | null) {
+	const checkedIn = stat.checked_in ?? 0
+	const eligible = stat.eligible ?? 0
+	return {
+		...stat,
+		zone,
+		enabled: zone ? Boolean(zone.enabled) : true,
+		meta: zone ? zoneRulesLabel(zone, ticketTypes.data ?? []) : "",
+		checkedIn,
+		eligible,
+		percent: eligible ? Math.round((checkedIn / eligible) * 100) : 0,
+	}
+}
+
+// Stats cover enabled zones only; disabled ones follow, so they can be turned back on.
+const cards = computed(() => {
+	const enabled = props.stats.map((stat) =>
+		card(stat, zones.data?.find((row) => row.name === stat.name) ?? null),
+	)
+	const disabled = (zones.data ?? [])
+		.filter((zone) => !zone.enabled)
+		.map((zone) => card({ name: zone.name, title: zone.title, is_default: false }, zone))
+	return [...enabled, ...disabled]
+})
 
 function edit(zone: CheckInZone | null) {
 	editing.value = zone
 	isDrawerOpen.value = true
 }
-
-// A zone turned off or deleted can no longer narrow the list.
+// Enabling or disabling a zone changes which ones have stats, as well as its own row.
 function onSaved() {
-	const zone = zones.data?.find((row) => row.name === selected.value)
-	if (selected.value && !zone?.enabled) selected.value = ""
+	zones.reload()
 	emit("changed")
 }
-
-const toggle = (name: string) => (selected.value = selected.value === name ? "" : name)
 </script>
 
 <template>
@@ -60,27 +63,18 @@ const toggle = (name: string) => (selected.value = selected.value === name ? "" 
 		<div
 			v-for="card in cards"
 			:key="card.name"
-			class="relative flex flex-col gap-2.5 rounded-5 border bg-surface-base py-3 pl-3.5 pr-3 transition-[border-color,box-shadow,transform] duration-150 ease-out has-[>button:active]:scale-[0.98] motion-reduce:transition-none"
-			:class="
-				selected === card.name
-					? 'border-outline-gray-4 shadow-sm'
-					: 'border-outline-gray-2 hover:border-outline-gray-3'
-			"
+			class="flex flex-col gap-2.5 rounded-5 border border-outline-gray-2 py-3 pl-3.5 pr-3"
+			:class="card.enabled ? 'bg-surface-base' : 'bg-surface-gray-1'"
 		>
 			<div class="flex min-h-5 items-center gap-1.5">
-				<!-- The whole card filters the list; the edit button sits above the stretched area. -->
-				<button
-					type="button"
-					class="min-w-0 truncate text-left text-base font-medium text-ink-gray-9 after:absolute after:inset-0 after:rounded-5 focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-outline-gray-3"
-					:aria-pressed="selected === card.name"
-					@click="toggle(card.name)"
-				>
+				<span class="min-w-0 truncate text-base font-medium text-ink-gray-9">
 					{{ card.title }}
-				</button>
+				</span>
 				<Badge v-if="card.is_default" size="sm" :label="__('Default')" />
+				<Badge v-if="!card.enabled" size="sm" theme="amber" :label="__('Disabled')" />
 				<Button
 					v-if="card.zone && !readOnly"
-					class="relative -my-1.5 -mr-1 ml-auto"
+					class="-my-1.5 -mr-1 ml-auto"
 					variant="ghost"
 					size="sm"
 					icon="lucide-pencil"
@@ -91,7 +85,7 @@ const toggle = (name: string) => (selected.value = selected.value === name ? "" 
 
 			<p class="min-h-4 truncate text-p-xs text-ink-gray-5" :title="card.meta">{{ card.meta }}</p>
 
-			<div class="flex flex-col gap-1.5">
+			<div v-if="card.enabled" class="flex flex-col gap-1.5">
 				<div class="flex justify-between gap-2 text-xs tabular-nums">
 					<span class="font-medium text-ink-gray-8">
 						{{ card.checkedIn }}

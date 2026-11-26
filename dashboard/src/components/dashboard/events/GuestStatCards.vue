@@ -2,17 +2,15 @@
 import { ChartCard, NumberCard } from "frappe-ui/charts"
 import { computed } from "vue"
 
-import type { EventGuests, GuestZone, RegistrationTrend } from "@/types"
+import type { EventGuests, RegistrationTrend } from "@/types"
 
 const props = defineProps<{
 	trend: RegistrationTrend | null
 	guests: EventGuests | null
-	// The zone the list is narrowed to; null counts every zone.
-	zone: GuestZone | null
 	loading: boolean
 }>()
 
-// One frappe-ui card surface for all three, at the radius the zone cards below use.
+// One frappe-ui card surface for all three.
 const CARD = "!rounded-5 !border-outline-gray-2 !bg-surface-base"
 
 // Gray steps rather than hues: a ticket type is a category, not a state.
@@ -25,13 +23,6 @@ const sinceYesterday = computed(() => {
 	const days = [...totals.values()]
 	return days.length < 2 ? null : days[days.length - 1] - days[days.length - 2]
 })
-
-const checkedIn = computed(() =>
-	props.zone ? (props.zone.checked_in ?? 0) : (props.guests?.checked_in_any_zone ?? 0),
-)
-const checkedInOf = computed(() =>
-	props.zone ? (props.zone.eligible ?? 0) : (props.guests?.total ?? 0),
-)
 
 const ticketTypes = computed(() => {
 	const total = props.trend?.total || 0
@@ -59,9 +50,9 @@ const ticketTypes = computed(() => {
 
 		<NumberCard
 			:class="CARD"
-			:title="zone ? __('Checked in at {0}', [zone.title]) : __('Checked in')"
-			:value="guests ? checkedIn : null"
-			:target="checkedInOf"
+			:title="__('Checked in')"
+			:value="guests ? (guests.checked_in_any_zone ?? 0) : null"
+			:target="guests?.total ?? 0"
 			:loading="loading && !guests"
 		/>
 

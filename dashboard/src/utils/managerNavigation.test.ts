@@ -28,16 +28,14 @@ test("an event offers its own sections, scoped to its id", () => {
 		"Guests",
 		"Approvals",
 		"Waitlist",
-		"Check In",
+		"Check-in",
 		"Talks",
 		"Schedule",
 		"Announcements",
 		"Sponsorships",
 		"Settings",
 	])
-	const inShell = items.filter((item) => item.label !== "Check In")
-	assert.ok(inShell.every((item) => item.to.startsWith("/manage/events/EV-1/")))
-	assert.equal(items.find((item) => item.label === "Check In")?.to, "/check-in/EV-1")
+	assert.ok(items.every((item) => item.to.startsWith("/manage/events/EV-1/")))
 })
 
 test("approvals and waitlist carry their counts, and only pending approvals get a dot", () => {
@@ -96,7 +94,7 @@ test("a collaborator sees only the sections they were granted", () => {
 		hasSponsorships: false,
 		access: guestsOnly,
 	})
-	assert.deepEqual(labels(items), ["Overview", "Details", "Guests"])
+	assert.deepEqual(labels(items), ["Overview", "Details", "Guests", "Check-in"])
 })
 
 test("settings needs edit access to the event details", () => {
@@ -106,10 +104,10 @@ test("settings needs edit access to the event details", () => {
 		hasSponsorships: false,
 		access: { ...guestsOnly, details: "Edit" },
 	})
-	assert.deepEqual(labels(items), ["Overview", "Details", "Guests", "Settings"])
+	assert.deepEqual(labels(items), ["Overview", "Details", "Guests", "Check-in", "Settings"])
 })
 
-test("approvals, waitlist and check-in need edit access to the guests", () => {
+test("approvals and waitlist need edit access to the guests", () => {
 	const items = managerNavigation({
 		eventId: "EV-1",
 		creatingEvent: false,
@@ -122,7 +120,7 @@ test("approvals, waitlist and check-in need edit access to the guests", () => {
 		"Guests",
 		"Approvals",
 		"Waitlist",
-		"Check In",
+		"Check-in",
 	])
 })
 
@@ -159,6 +157,7 @@ test("transactions sit after payments once the user may view them", () => {
 		"Transactions",
 		"Coupons",
 		"Guests",
+		"Check-in",
 	])
 	const transactions = items.find((item) => item.label === "Transactions")
 	assert.equal(transactions?.to, "/manage/events/EV-1/transactions")

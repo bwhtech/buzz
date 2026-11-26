@@ -6,7 +6,6 @@ import { useRoute } from "vue-router"
 
 import EmptyState from "@/components/common/EmptyState.vue"
 import { ListFilters } from "@/components/common/filters"
-import CheckInZoneCards from "@/components/dashboard/events/checkin-zones/CheckInZoneCards.vue"
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
 import EventGuestItem from "@/components/dashboard/events/EventGuestItem.vue"
 import EventGuestSkeleton from "@/components/dashboard/events/EventGuestSkeleton.vue"
@@ -27,17 +26,14 @@ const eventId = route.params.eventId as string
 
 const { search, order, conditions, isFiltered } = useListQuery()
 
-const zone = ref("")
-
 const { guests, fetchOne, refreshOne, loadMore, page, loadingFirstPage, loadingMore } =
-	useEventGuests(eventId, search, order, conditions, { zone })
+	useEventGuests(eventId, search, order, conditions)
 
 // The export is the list on screen, not the whole event: same filters, same order.
 const exportQuery = computed(() => ({
 	search: search.value.trim(),
 	filters: JSON.stringify(conditions.value),
 	order: order.value,
-	zone: zone.value,
 }))
 
 const trend = useRegistrationTrend(eventId)
@@ -57,8 +53,6 @@ const tiers = computed(
 )
 
 const message = (error: unknown) => (error as FrappeError | null)?.message
-
-const selectedZone = computed(() => page.data?.zones.find((row) => row.name === zone.value) ?? null)
 
 // The ticket is what is held, not its position. A row can be opened while a search is
 // still settling, and by the time the new page lands an index points at a different guest.
@@ -99,30 +93,12 @@ useIntersectionObserver(sentinel, ([entry]) => entry?.isIntersecting && loadMore
 		<EventArchivedAlert :event="eventId" />
 
 		<section aria-label="Overview">
-			<GuestStatCards
-				:trend="trend.data"
-				:guests="page.data"
-				:zone="selectedZone"
-				:loading="page.loading"
-			/>
+			<GuestStatCards :trend="trend.data" :guests="page.data" :loading="page.loading" />
 			<ErrorMessage :message="message(trend.error)" />
 		</section>
 
 		<section class="space-y-3">
-			<h2 class="text-lg font-semibold text-ink-gray-9">Check-in zones</h2>
-			<CheckInZoneCards
-				v-model="zone"
-				:event="eventId"
-				:stats="page.data?.zones ?? []"
-				:read-only="!canWrite.data?.has_permission"
-				@changed="page.reload()"
-			/>
-		</section>
-
-		<section class="space-y-3">
-			<h2 class="text-lg font-semibold text-ink-gray-9">
-				{{ selectedZone ? `Guest list · ${selectedZone.title}` : "Guest list" }}
-			</h2>
+			<h2 class="text-lg font-semibold text-ink-gray-9">Guest list</h2>
 
 			<ListFilters
 				v-model="conditions"
