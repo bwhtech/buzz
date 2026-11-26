@@ -9,7 +9,7 @@ import { useEventDoc } from "@/data/events"
 import type { FrappeError } from "@/types"
 
 import ActionSheet from "./ActionSheet.vue"
-import { type FormBuilder, FORM_SECTIONS } from "./useFormBuilder"
+import { type FormBuilder, FORM_SECTIONS, isPastCutoff } from "./useFormBuilder"
 
 // Registration edits two forms at once; the first one names the page and carries the publish state.
 const props = defineProps<{ builders: FormBuilder[]; eventId: string }>()
@@ -47,6 +47,9 @@ const saving = computed(() => props.builders.some((builder) => builder.form.setV
 const live = computed(() => !!main.value.form.doc?.publish)
 const status = computed(() => {
 	if (!live.value) return { label: "Draft", dot: "bg-surface-gray-4" }
+	if (main.value.form.doc && isPastCutoff(main.value.form.doc)) {
+		return { label: "Closed", dot: "bg-surface-red-5" }
+	}
 	if (dirty.value) return { label: "Edited", dot: "bg-surface-amber-5" }
 	return { label: "Live", dot: "bg-surface-green-3" }
 })

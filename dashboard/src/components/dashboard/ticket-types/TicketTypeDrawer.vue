@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { Alert, ErrorMessage, toast, useDoc } from "frappe-ui"
-import { computed, ref } from "vue"
+import { useDoc } from "frappe-ui"
+import { computed } from "vue"
 
+import DrawerSection from "@/components/dashboard/DrawerSection.vue"
+import EnabledAlert from "@/components/dashboard/EnabledAlert.vue"
 import TicketTypeRequestsLink from "@/components/dashboard/requests/TicketTypeRequestsLink.vue"
 import DrawerSaveBar from "@/components/dashboard/sponsorships/DrawerSaveBar.vue"
 import { keepLastValue } from "@/components/dashboard/sponsorships/helpers"
@@ -9,10 +11,10 @@ import SponsorshipDrawer from "@/components/dashboard/sponsorships/SponsorshipDr
 import TicketTypeFields from "@/components/dashboard/ticket-types/TicketTypeFields.vue"
 import TicketTypeGuests from "@/components/dashboard/ticket-types/TicketTypeGuests.vue"
 import { useDrawerEdits } from "@/composables/useDrawerEdits"
+import { useSetTicketTypeAccess } from "@/data/ticketTypes"
 import type { TicketCategoryItem, TicketTypeItem } from "@/types"
-import type { TicketTypeAccess } from "@/utils/approvalMode"
+import { type TicketTypeAccess, accessChanged, withEventAccess } from "@/utils/approvalMode"
 import { formatWholePriceOrFree } from "@/utils/currency"
-import { serverErrorMessage } from "@/utils/serverError"
 import {
 	type TicketTypeValues,
 	ticketTypeDocValues,
@@ -46,9 +48,14 @@ const ticketTypeDoc = useDoc<
 	immediate: false,
 })
 
+const savedValues = computed(
+	() => props.ticketType && withEventAccess(ticketTypeValuesOf(props.ticketType), props.access),
+)
+const accessSetter = useSetTicketTypeAccess()
+
 const { draft, hasChanges, discardChanges, confirmAndSave } = useDrawerEdits<TicketTypeValues>(
 	() => props.ticketType?.name,
-	() => props.ticketType && ticketTypeValuesOf(props.ticketType),
+	() => savedValues.value,
 	save,
 	{
 		title: "Save ticket type",
@@ -69,33 +76,15 @@ const defaultPrice = computed(() => {
 	return row ? formatWholePriceOrFree(row.price, row.currency) : ""
 })
 
-const publishedAlert = computed(() =>
-	props.ticketType?.is_published
-		? { theme: "green" as const, title: "Ticket type is Enabled", action: "Disable" }
-		: { theme: "amber" as const, title: "Ticket type is Disabled", action: "Enable" },
-)
-
-const publishError = ref("")
-
-async function togglePublished() {
-	if (!props.ticketType) return
-	const enabling = !props.ticketType.is_published
-	publishError.value = ""
-	await ticketTypeDoc.setValue.submit({ is_published: enabling ? 1 : 0 }).catch(() => null)
-	if (ticketTypeDoc.setValue.error) {
-		publishError.value =
-			serverErrorMessage(ticketTypeDoc.setValue.error) ||
-			"Could not update the ticket type. Try again."
-		return
-	}
-	toast.success(enabling ? "Ticket type enabled" : "Ticket type disabled")
-	emit("changed")
-}
-
 async function save(values: TicketTypeValues) {
 	await ticketTypeDoc.setValue.submit(ticketTypeDocValues(values))
 	if (ticketTypeDoc.setValue.error) throw ticketTypeDoc.setValue.error
-	emit("changed")
+	try {
+		if (savedValues.value && accessChanged(savedValues.value, values))
+			await accessSetter.save(props.ticketType!.name, values)
+	} finally {
+		emit("changed")
+	}
 }
 </script>
 
@@ -107,49 +96,38 @@ async function save(values: TicketTypeValues) {
 		:description="defaultPrice"
 	>
 		<template #notice>
-			<Alert
-				:theme="publishedAlert.theme"
-				:title="publishedAlert.title"
-				:primary-action="
-					canWrite
-						? {
-								label: publishedAlert.action,
-								variant: 'outline',
-								theme: 'gray',
-								loading: ticketTypeDoc.setValue.loading,
-								onClick: togglePublished,
-							}
-						: undefined
-				"
+			<EnabledAlert
+				noun="Ticket type"
+				:enabled="!!shownTicketType.is_published"
+				:editable="canWrite"
+				field="is_published"
+				:set-value="ticketTypeDoc.setValue"
+				@changed="emit('changed')"
 			/>
-			<ErrorMessage class="mt-2" :message="publishError" />
 		</template>
 
 		<TicketTypeFields
 			v-model="draft"
 			:categories="categories"
-			:access="access"
 			:hideable="!!shownTicketType.is_published"
 			:locked-currencies="soldCurrencies"
 			:disabled="!canWrite"
+			@category-created="emit('changed')"
 		/>
 
-		<TicketTypeRequestsLink
-			v-if="canWrite"
-			:event="event"
-			:ticket-type="shownTicketType.title"
-			:guests="shownTicketType.tickets_sold"
-		/>
+		<DrawerSection title="Guests">
+			<TicketTypeRequestsLink v-if="canWrite" :event="event" :ticket-type="shownTicketType.title" />
 
-		<TicketTypeGuests
-			v-if="shownTicketType.tickets_sold"
-			:event="event"
-			:ticket-type="shownTicketType.name"
-			:count="shownTicketType.tickets_sold"
-		/>
-		<p v-else class="w-full rounded-4 bg-surface-gray-1 p-4 text-base text-ink-gray-5">
-			No one has bought this ticket yet.
-		</p>
+			<TicketTypeGuests
+				v-if="shownTicketType.tickets_sold"
+				:event="event"
+				:ticket-type="shownTicketType.name"
+				:count="shownTicketType.tickets_sold"
+			/>
+			<p v-else class="w-full rounded-4 bg-surface-gray-1 p-4 text-base text-ink-gray-5">
+				No confirmed guests yet.
+			</p>
+		</DrawerSection>
 
 		<template v-if="canWrite && hasChanges" #footer>
 			<DrawerSaveBar :disabled="isInvalid" @discard="discardChanges" @save="confirmAndSave" />

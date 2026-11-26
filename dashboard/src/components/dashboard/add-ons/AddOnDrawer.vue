@@ -2,6 +2,7 @@
 import { Button, ErrorMessage, toast, useDoc, useNewDoc } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
+import EnabledAlert from "@/components/dashboard/EnabledAlert.vue"
 import SponsorshipDrawer from "@/components/dashboard/sponsorships/SponsorshipDrawer.vue"
 import { useEnabledCurrencies } from "@/data/currencies"
 import type { AddOnItem, TicketTypeItem } from "@/types"
@@ -92,10 +93,22 @@ async function save() {
 <template>
 	<SponsorshipDrawer
 		v-model:open="open"
+		:close-on-outside-click="!isNew"
 		:title="addOn?.title ?? 'New add-on'"
 		:description="addOn ? formatWholePriceOrFree(addOn.price, addOn.currency) : ''"
 	>
-		<AddOnFields v-model="draft" :ticket-types="ticketTypes" :show-enabled="!isNew" />
+		<template v-if="addOn" #notice>
+			<EnabledAlert
+				noun="Add-on"
+				:enabled="!!addOn.enabled"
+				editable
+				field="enabled"
+				:set-value="addOnDoc.setValue"
+				@changed="emit('changed')"
+			/>
+		</template>
+
+		<AddOnFields v-model="draft" :ticket-types="ticketTypes" />
 
 		<template v-if="hasChanges" #footer>
 			<div class="flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2">
@@ -105,7 +118,7 @@ async function save() {
 					<Button
 						size="md"
 						variant="solid"
-						:label="isNew ? 'Add add-on' : 'Save changes'"
+						:label="isNew ? 'Create' : 'Save changes'"
 						:loading="saving"
 						@click="save"
 					/>

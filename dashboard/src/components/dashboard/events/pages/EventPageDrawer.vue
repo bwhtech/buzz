@@ -88,7 +88,7 @@ async function save() {
 
 <template>
 	<Drawer v-model:open="open" swipe-direction="right">
-		<DrawerContent size="lg">
+		<DrawerContent size="lg" :close-on-outside-click="!isNew">
 			<div
 				class="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-outline-gray-1 pl-5 pr-2.5"
 			>

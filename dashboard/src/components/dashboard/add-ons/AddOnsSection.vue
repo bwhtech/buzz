@@ -40,6 +40,9 @@ const optionsLabel = (addOn: AddOnItem) =>
 				: null
 		"
 	>
+		<template v-if="page.add_ons.length && page.can_write" #actions>
+			<Button variant="subtle" icon-left="lucide-plus" label="Add" @click="$emit('add')" />
+		</template>
 		<template #emptyDescription>
 			Extras that people can buy with a ticket.<br />
 			Ex: <code>Lunch</code> or a
@@ -58,9 +61,6 @@ const optionsLabel = (addOn: AddOnItem) =>
 					:disabled="!page.can_write"
 					@click="$emit('open', addOn.name)"
 				/>
-			</li>
-			<li v-if="page.can_write">
-				<Button variant="ghost" icon-left="lucide-plus" label="Add add-on" @click="$emit('add')" />
 			</li>
 		</ul>
 	</ListSection>

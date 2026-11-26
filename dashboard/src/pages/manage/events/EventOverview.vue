@@ -4,8 +4,8 @@ import { ref } from "vue"
 import { useRoute } from "vue-router"
 
 import EventArchivedAlert from "@/components/dashboard/events/EventArchivedAlert.vue"
+import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
 import { useEventOverview } from "@/components/dashboard/overview/overviewData"
-import OverviewHeader from "@/components/dashboard/overview/OverviewHeader.vue"
 import OverviewHero from "@/components/dashboard/overview/OverviewHero.vue"
 import OverviewStats from "@/components/dashboard/overview/OverviewStats.vue"
 import SetupSteps from "@/components/dashboard/overview/SetupSteps.vue"
@@ -20,7 +20,7 @@ const headingVisible = useElementVisibility(heading, { initialValue: true })
 
 <template>
 	<div class="min-h-full bg-surface-elevation-1">
-		<OverviewHeader :summary="summary" :heading-visible="headingVisible" />
+		<EventPageHeader :title="summary.title" section="Overview" :hide-crumbs="headingVisible" />
 
 		<main class="overview-page mx-auto flex max-w-[800px] flex-col gap-10 px-4 pb-40 pt-4">
 			<EventArchivedAlert :event="eventId" />

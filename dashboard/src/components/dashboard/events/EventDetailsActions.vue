@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { Button, ErrorMessage, Switch } from "frappe-ui"
+import { ErrorMessage, Switch } from "frappe-ui"
 import { computed } from "vue"
 
-import { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
 import { setShowCountdown } from "@/data/events"
-import { eventPath } from "@/utils/eventUrl"
 import { serverErrorMessage } from "@/utils/serverError"
 
-const props = defineProps<{ event: string; route: string | null }>()
+const props = defineProps<{ event: string }>()
 const emit = defineEmits<{ changed: [] }>()
 
 // Flipped before the save lands so the banner answers at once; a refused save flips it back.
@@ -27,18 +25,6 @@ async function toggle(show: boolean) {
 
 <template>
 	<h3 class="text-p-sm font-medium text-ink-gray-5">Quick actions</h3>
-
-	<Button
-		v-if="route"
-		:class="`w-full !justify-start ${PRESSABLE}`"
-		variant="ghost"
-		label="Go to event page"
-		:href="eventPath(route)"
-	>
-		<template #prefix>
-			<span class="lucide-arrow-up-right size-4" aria-hidden="true" />
-		</template>
-	</Button>
 
 	<div class="rounded-4 p-1 bg-surface-gray-2">
 		<Switch

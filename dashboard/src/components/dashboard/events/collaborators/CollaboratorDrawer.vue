@@ -117,7 +117,7 @@ async function saveAccess() {
 
 <template>
 	<Drawer v-model:open="open" swipe-direction="right">
-		<DrawerContent>
+		<DrawerContent :close-on-outside-click="!isInvite">
 			<div
 				class="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-outline-gray-1 pl-5 pr-2.5"
 			>

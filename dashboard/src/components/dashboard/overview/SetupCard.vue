@@ -8,7 +8,7 @@ defineProps<{ step: SetupCardStep; event: StepEvent }>()
 
 <template>
 	<article
-		class="setup-card relative flex flex-col overflow-hidden rounded-5 bg-surface-gray-1"
+		class="setup-card relative flex flex-col overflow-hidden rounded-5 bg-surface-gray-1 dark:bg-surface-gray-2"
 		:data-done="step.done || undefined"
 	>
 		<div class="setup-text space-y-1 pr-6">

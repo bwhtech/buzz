@@ -118,6 +118,12 @@ def get_event_ticket_types(event: str) -> EventTicketTypes:
 	return ticket_types_service.event_ticket_types(event)
 
 
+@frappe.whitelist(methods=["POST"])
+def set_ticket_type_access(ticket_type: str, requires_approval: bool, enable_waitlist: bool) -> None:
+	"""Approval and waitlist as the ticket type should have them, whatever the event decides."""
+	ticket_types_service.TicketTypeAccess(ticket_type).update(requires_approval, enable_waitlist)
+
+
 @frappe.whitelist()
 def get_event_coupons(event: str) -> EventCoupons:
 	return coupons.event_coupons(event)

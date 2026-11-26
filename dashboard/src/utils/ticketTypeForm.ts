@@ -45,18 +45,16 @@ export function ticketTypeError(values: TicketTypeValues) {
 	if (!values.title?.trim()) return "Enter a name."
 	if (values.prices?.some((row) => !row.currency || !(row.price >= 0)))
 		return "Give every price a currency and an amount of zero or more."
-	// An empty string means the switch is on but no date is picked yet.
-	if (values.auto_unpublish_after === "") return "Pick the last day to sell."
 	return null
 }
 
 /** The values as the doctype stores them. */
 export function ticketTypeDocValues(values: TicketTypeValues) {
+	// Approval and waitlist save apart, through set_ticket_type_access: they can change the event.
+	const { requires_approval: _approval, enable_waitlist: _waitlist, ...rest } = values
 	return {
-		...values,
+		...rest,
 		is_hidden: (values.is_hidden ? 1 : 0) as 0 | 1,
-		requires_approval: (values.requires_approval ? 1 : 0) as 0 | 1,
-		enable_waitlist: (values.enable_waitlist && values.max_tickets_available > 0 ? 1 : 0) as 0 | 1,
 		title: values.title.trim(),
 		description: values.description.trim(),
 	}
