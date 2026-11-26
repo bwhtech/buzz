@@ -27,6 +27,22 @@ class Subscriptions:
 		if not self.row(user):
 			self.subscribe(user)
 
+	def follow_many(self, users: set[str]) -> None:
+		"""Subscribes every user in `users` who has not already chosen."""
+		if not users:
+			return
+		existing = set(
+			frappe.get_all(
+				DOCTYPE,
+				filters={**self.reference, "user": ["in", list(users)]},
+				pluck="user",
+			)
+		)
+		for user in users - existing:
+			frappe.get_doc({"doctype": DOCTYPE, **self.reference, "user": user, "subscribed": True}).insert(
+				ignore_permissions=True
+			)
+
 	def set(self, user: str, subscribed: bool) -> None:
 		if name := self.row(user):
 			frappe.db.set_value(DOCTYPE, name, "subscribed", subscribed)

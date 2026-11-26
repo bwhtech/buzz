@@ -26,15 +26,16 @@ def team_events(team: str) -> TeamEvents:
 def buzz_events(team: str) -> list[TeamEvent]:
 	event, request = frappe.qb.DocType("Buzz Event"), frappe.qb.DocType(REQUEST)
 	host, venue = frappe.qb.DocType("Buzz Team"), frappe.qb.DocType("Event Venue")
-	own = event.team == team
-	approved = event.name.isin(
+	approved_events = (
 		frappe.qb.from_(request)
 		.select(request.event)
-		.where((request.community == team) & (request.status == "Approved"))
-	)
+		.where((request.community == team) & (request.status == "Approved") & request.event.isnotnull())
+	).run(pluck=True)
+	own = event.team == team
 	published = event.is_published == 1
 	# Members also see their team's drafts; anyone else, published events only.
 	visible = own if has_team_access(team, "read", frappe.session.user) else own & published
+	condition = visible | (event.name.isin(approved_events) & published) if approved_events else visible
 	rows = (
 		frappe.qb.from_(event)
 		.left_join(host)
@@ -59,7 +60,7 @@ def buzz_events(team: str) -> list[TeamEvent]:
 			Case().when(own, 1).else_(0).as_("is_host"),
 			Case().when(own, 0).else_(1).as_("is_community_request"),
 		)
-		.where(visible | (approved & published))
+		.where(condition)
 	).run(as_dict=True)
 	# Buzz Event autonames to integers, while every link to it travels as a string.
 	return [TeamEvent(**row | {"name": str(row.name), "is_attendee": False}) for row in rows]

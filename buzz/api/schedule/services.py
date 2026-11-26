@@ -57,17 +57,24 @@ def speaker_names(talks: list[str]) -> dict[str, list[str]]:
 
 def speaker_profiles(talks: list[str], fields: list[str] | None = None) -> dict[str, list]:
 	"""Speaker Profile rows of each talk, in speaker order."""
+	if not talks:
+		return {}
 	rows = frappe.get_all(
 		"Talk Speaker",
-		filters={"parenttype": "Event Talk", "parent": ["in", talks or [""]]},
+		filters={"parenttype": "Event Talk", "parent": ["in", talks]},
 		fields=["parent", "speaker"],
 		order_by="idx",
 	)
+	if not rows:
+		return {}
+	speaker_ids = list({row.speaker for row in rows if row.speaker})
+	if not speaker_ids:
+		return {}
 	profiles = {
 		str(profile.name): profile
 		for profile in frappe.get_all(
 			"Speaker Profile",
-			filters={"name": ["in", [row.speaker for row in rows] or [""]]},
+			filters={"name": ["in", speaker_ids]},
 			fields=["name", "display_name", *(fields or [])],
 		)
 	}

@@ -65,26 +65,31 @@ def team_overview(team: str) -> TeamOverview:
 	only, while a Frontdesk or Viewer member still works inside the team. Membership is
 	the authorization.
 	"""
-	role = team_role_of(frappe.session.user, team)
+	members = members_of(team)
+	role = next((member.team_role for member in members if member.user == frappe.session.user), None)
 	if not role:
 		NotATeamMember.throw()
 
-	details = frappe.db.get_value("Buzz Team", team, TEAM_FIELDS, as_dict=True)
-	if not details:
+	try:
+		doc = frappe.get_cached_doc("Buzz Team", team)
+	except frappe.DoesNotExistError:
+		frappe.clear_last_message()
 		NotATeamMember.throw()
 
-	route = details.pop("route")
 	from buzz.events.doctype.buzz_team.team_page import TeamPage
 
-	page = TeamPage(frappe.get_doc("Buzz Team", team))
+	page = TeamPage(doc)
+	details = {field: doc.get(field) for field in TEAM_FIELDS if field != "route"}
 	return TeamOverview(
 		**details,
 		share_title=page.share_title(),
 		share_description=page.share_description(),
-		public_url=get_url(f"/{route}") if details.is_published and route else None,
-		links=links_of(team),
+		public_url=get_url(f"/{doc.route}") if doc.is_published and doc.route else None,
+		links=[
+			EventExternalLink(icon=link.icon, label=link.label, url=link.url) for link in (doc.links or [])
+		],
 		my_role=role,
-		members=members_of(team),
+		members=members,
 		invites=pending_invites_for(team),
 		tax_details=tax_details_of(team),
 	)
@@ -119,6 +124,12 @@ def upcoming_event_counts(teams: list[str]) -> dict[str, int]:
 
 
 def members_of(team: str) -> list[TeamMember]:
+	return members_by_team([team]).get(team, [])
+
+
+def members_by_team(teams: list[str]) -> dict[str, list[TeamMember]]:
+	if not teams:
+		return {}
 	membership = frappe.qb.DocType("Buzz Team Membership")
 	user = frappe.qb.DocType("User")
 
@@ -129,15 +140,21 @@ def members_of(team: str) -> list[TeamMember]:
 		frappe.qb.from_(membership)
 		.inner_join(user)
 		.on(user.name == membership.user)
-		.select(membership.user, membership.team_role, user.full_name, user.user_image)
+		.select(membership.team, membership.user, membership.team_role, user.full_name, user.user_image)
 		.where(
-			(membership.team == team) & (membership.enabled == 1) & (membership.team_role != INTEGRATION_ROLE)
+			membership.team.isin(teams)
+			& (membership.enabled == 1)
+			& (membership.team_role != INTEGRATION_ROLE)
 		)
 		.orderby(owner_first)
 		.orderby(user.full_name)
 	).run(as_dict=True)
 
-	return [TeamMember(**row) for row in rows]
+	grouped: dict[str, list[TeamMember]] = {team: [] for team in teams}
+	for row in rows:
+		team_name = row.pop("team")
+		grouped.setdefault(team_name, []).append(TeamMember(**row))
+	return grouped
 
 
 def pending_invites_for(team: str) -> list[TeamInvite]:
@@ -156,46 +173,25 @@ def pending_invites_for(team: str) -> list[TeamInvite]:
 	return [TeamInvite(**row) for row in rows]
 
 
+def _human_memberships_by_user(team: str, users: list[str]) -> dict[str, str]:
+	return {
+		row.user: row.name
+		for row in frappe.get_all(
+			"Buzz Team Membership",
+			filters={**HUMAN_MEMBER_FILTERS, "team": team, "user": ["in", list(set(users))]},
+			fields=["name", "user"],
+		)
+	}
+
+
 def remove_member(team: str, user: str) -> None:
-	"""Take a member off a team by disabling their membership.
-
-	Disabled rather than deleted: `upsert_membership` re-enables the same row if they are
-	ever invited back, and the history survives. An Owner row refuses to be disabled in the
-	membership controller, so ownership needs no check here.
-	"""
-	if not can_manage_members(team):
-		CannotManageMembers.throw()
-
-	name = frappe.db.exists("Buzz Team Membership", {**HUMAN_MEMBER_FILTERS, "team": team, "user": user})
-	if not name:
-		NotATeamMember.throw()
-
-	membership = frappe.get_doc("Buzz Team Membership", name)
-	membership.enabled = 0
-	# Event Manager holds no write permission on the membership doctype, so the guard above
-	# is the authorization — the same shape as the Desk add-members flow.
-	membership.save(ignore_permissions=True)
+	"""Take a member off a team by disabling their membership."""
+	remove_members(team, [user])
 
 
 def change_role(team: str, user: str, team_role: str) -> None:
-	"""Move a member to another role.
-
-	Ownership is out of reach from both ends: `validate_role` refuses it as a target, and
-	the membership controller refuses to take it away from the row that holds it.
-	"""
-	if not can_manage_members(team):
-		CannotManageMembers.throw()
-	validate_role(team_role)
-
-	name = frappe.db.exists("Buzz Team Membership", {**HUMAN_MEMBER_FILTERS, "team": team, "user": user})
-	if not name:
-		NotATeamMember.throw()
-
-	membership = frappe.get_doc("Buzz Team Membership", name)
-	membership.team_role = team_role
-	# Same shape as `remove_member`: the guard above is the authorization, since Event
-	# Manager holds no write permission on the membership doctype.
-	membership.save(ignore_permissions=True)
+	"""Move a member to another role."""
+	change_roles(team, [user], team_role)
 
 
 def remove_members(team: str, users: list[str]) -> None:
@@ -204,14 +200,37 @@ def remove_members(team: str, users: list[str]) -> None:
 	One request is one transaction, so a refusal on any of them takes the whole batch
 	back out — the roster is never left half-changed.
 	"""
+	if not users:
+		return
+	if not can_manage_members(team):
+		CannotManageMembers.throw()
+	memberships = _human_memberships_by_user(team, users)
 	for user in users:
-		remove_member(team, user)
+		name = memberships.get(user)
+		if not name:
+			NotATeamMember.throw()
+		membership = frappe.get_doc("Buzz Team Membership", name)
+		membership.enabled = 0
+		# Event Manager holds no write permission on the membership doctype, so the guard above
+		# is the authorization — the same shape as the Desk add-members flow.
+		membership.save(ignore_permissions=True)
 
 
 def change_roles(team: str, users: list[str], team_role: str) -> None:
 	"""Move several members to the same role, all-or-nothing like `remove_members`."""
+	if not users:
+		return
+	if not can_manage_members(team):
+		CannotManageMembers.throw()
+	validate_role(team_role)
+	memberships = _human_memberships_by_user(team, users)
 	for user in users:
-		change_role(team, user, team_role)
+		name = memberships.get(user)
+		if not name:
+			NotATeamMember.throw()
+		membership = frappe.get_doc("Buzz Team Membership", name)
+		membership.team_role = team_role
+		membership.save(ignore_permissions=True)
 
 
 def update_team(team: str, team_name: str, logo: str | None) -> None:

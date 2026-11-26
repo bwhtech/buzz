@@ -20,7 +20,7 @@ def community_contact(community: str) -> str | None:
 
 
 def team_name(team: str) -> str:
-	return frappe.db.get_value("Buzz Team", team, "team_name")
+	return frappe.get_cached_value("Buzz Team", team, "team_name")
 
 
 def submitting_team(request) -> str:
@@ -42,12 +42,24 @@ def external_event(request) -> dict | None:
 
 
 def send_email(
-	request, recipients: list[str], subject: str, template: str, reply_to: str | None = None, **args
+	request,
+	recipients: list[str],
+	subject: str,
+	template: str,
+	reply_to: str | None = None,
+	community_name: str | None = None,
+	event_doc=None,
+	**args,
 ) -> None:
 	# Administrator and Guest have no inbox; mail to them only fails.
 	recipients = [user for user in recipients if user not in frappe.STANDARD_USERS]
 	if not recipients:
 		return
+	resolved_event_doc = (
+		event_doc
+		if event_doc is not None
+		else (frappe.get_cached_doc("Buzz Event", str(request.event)) if request.event else None)
+	)
 	frappe.sendmail(
 		recipients=recipients,
 		reply_to=None if reply_to in frappe.STANDARD_USERS else reply_to,
@@ -57,8 +69,8 @@ def send_email(
 		add_css=False,
 		args={
 			"event_title": request.event_title,
-			"community_name": team_name(request.community),
-			"event_doc": frappe.get_cached_doc("Buzz Event", request.event) if request.event else None,
+			"community_name": community_name or team_name(request.community),
+			"event_doc": resolved_event_doc,
 			"external_event": external_event(request),
 			**args,
 		},
@@ -69,21 +81,28 @@ def send_email(
 
 def notify_submitted(request) -> None:
 	"""Tells the submitter it arrived, and the community's managers it needs a review."""
+	comm_name = team_name(request.community)
+	event_doc = frappe.get_cached_doc("Buzz Event", str(request.event)) if request.event else None
 	if request.submitted_by:
 		send_email(
 			request,
 			[request.submitted_by],
-			_("{0} was sent to {1}").format(request.event_title, team_name(request.community)),
+			_("{0} was sent to {1}").format(request.event_title, comm_name),
 			"community_event_received",
 			reply_to=community_contact(request.community),
+			community_name=comm_name,
+			event_doc=event_doc,
 		)
+	submitter_team = submitting_team(request)
 	send_email(
 		request,
 		community_managers(request.community),
-		_("{0} submitted {1}").format(submitting_team(request), request.event_title),
+		_("{0} submitted {1}").format(submitter_team, request.event_title),
 		"community_event_submitted",
 		reply_to=request.submitted_by,
-		team_name=submitting_team(request),
+		community_name=comm_name,
+		event_doc=event_doc,
+		team_name=submitter_team,
 		review_url=get_url(f"/b/manage/communities/{request.community}/calendar"),
 	)
 
@@ -93,13 +112,14 @@ def notify_reviewed(request) -> None:
 	if not request.submitted_by:
 		return
 	approved = request.status == "Approved"
-	community_route = frappe.db.get_value("Buzz Team", request.community, "route")
+	comm = frappe.get_cached_value("Buzz Team", request.community, ["route", "team_name"], as_dict=True) or {}
 	send_email(
 		request,
 		[request.submitted_by],
 		(_("{0} was approved") if approved else _("{0} was not approved")).format(request.event_title),
 		"community_event_approved" if approved else "community_event_rejected",
 		reply_to=community_contact(request.community),
-		community_url=get_url(f"/{community_route}"),
+		community_name=comm.get("team_name"),
+		community_url=get_url(f"/{comm.get('route')}"),
 		review_note=request.review_note,
 	)

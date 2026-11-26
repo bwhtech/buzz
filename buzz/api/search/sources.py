@@ -12,16 +12,18 @@ from buzz.api.sponsorships.enquiries import search_filters as sponsor_search_fil
 RECORDS_PER_GROUP = 3
 
 
-def like_filters(*fields: str) -> Callable[[str], list[list]]:
-	return lambda term: [[field, "like", f"%{term}%"] for field in fields]
+def like_filters(*fields: str) -> Callable[[str, str], list[list]]:
+	return lambda term, _event: [[field, "like", f"%{term}%"] for field in fields]
 
 
 def event_filters(event: str) -> list[list]:
 	return [["event", "=", event]]
 
 
-def schedule_item_filters(event: str) -> list[list]:
+def schedule_item_filters(event: str) -> list[list] | None:
 	schedules = frappe.get_all("Buzz Schedule", filters={"event": event}, pluck="name")
+	if not schedules:
+		return None
 	return [["parenttype", "=", "Buzz Schedule"], ["parent", "in", schedules]]
 
 
@@ -32,15 +34,18 @@ class SearchSource:
 	doctype: str
 	title_field: str
 	subtitle_field: str
-	search_filters: Callable[[str], list[list] | None]
-	base_filters: Callable[[str], list[list]] = event_filters
+	search_filters: Callable[[str, str], list[list] | None]
+	base_filters: Callable[[str], list[list] | None] = event_filters
 	format_subtitle: Callable[[object], str] = str
 
 	def search(self, event: str, term: str) -> list[SearchRecord]:
+		filters = self.base_filters(event)
+		if filters is None:
+			return []
 		rows = frappe.get_all(
 			self.doctype,
-			filters=self.base_filters(event),
-			or_filters=self.search_filters(term),
+			filters=filters,
+			or_filters=self.search_filters(term, event),
 			fields=["name", self.title_field, self.subtitle_field],
 			limit_page_length=RECORDS_PER_GROUP,
 			ignore_permissions=True,
@@ -68,11 +73,25 @@ SOURCES = (
 		"Event Ticket",
 		"attendee_name",
 		"attendee_email",
-		guest_search_filters,
+		lambda term, _event: guest_search_filters(term),
 		submitted_guest_filters,
 	),
-	SearchSource("talks", "talks", "Talk Proposal", "title", "status", proposal_search_filters),
-	SearchSource("sponsors", "sponsors", "Event Sponsor", "company_name", "website", sponsor_search_filters),
+	SearchSource(
+		"talks",
+		"talks",
+		"Talk Proposal",
+		"title",
+		"status",
+		lambda term, event: proposal_search_filters(term, event=event),
+	),
+	SearchSource(
+		"sponsors",
+		"sponsors",
+		"Event Sponsor",
+		"company_name",
+		"website",
+		lambda term, _event: sponsor_search_filters(term),
+	),
 	SearchSource("coupons", "ticketing", "Buzz Coupon Code", "code", "description", like_filters("code")),
 	SearchSource(
 		"schedule",

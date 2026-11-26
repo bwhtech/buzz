@@ -161,6 +161,31 @@ class TestDeskTags(TeamPermissionTestCase):
 			desk.remove_tag("Returning", "Event Sponsor", self.sponsor)
 		self.assertEqual(self.desk_tags(), "")
 
+	def test_desk_bulk_add_tags_applies_once_across_records(self):
+		second_sponsor = EventSponsorFactory.create(event=self.event_a).name
+		original_bulk = frappe.db.get_value("User", self.alice, "bulk_actions")
+		self.addCleanup(frappe.db.set_value, "User", self.alice, "bulk_actions", original_bulk)
+		frappe.db.set_value("User", self.alice, "bulk_actions", 1)
+		frappe.clear_document_cache("User", self.alice)
+
+		with self.set_user(self.alice):
+			desk.add_tags(["Gold", "VIP"], "Event Sponsor", [self.sponsor, second_sponsor])
+			desk.add_tags(["Gold"], "Event Sponsor", [self.sponsor, second_sponsor])
+
+		self.assertEqual(self.desk_tags(), "Gold,VIP")
+		self.assertEqual(
+			frappe.db.get_value("Event Sponsor", second_sponsor, "_user_tags").strip(","), "Gold,VIP"
+		)
+
+	def test_desk_bulk_add_tags_requires_bulk_actions_permission(self):
+		original_bulk = frappe.db.get_value("User", self.alice, "bulk_actions")
+		self.addCleanup(frappe.db.set_value, "User", self.alice, "bulk_actions", original_bulk)
+		frappe.db.set_value("User", self.alice, "bulk_actions", 0)
+		frappe.clear_document_cache("User", self.alice)
+
+		with self.set_user(self.alice), self.assertRaises(frappe.PermissionError):
+			desk.add_tags(["Gold"], "Event Sponsor", [self.sponsor])
+
 	def test_desk_suggests_only_the_users_team_tags(self):
 		BuzzTagFactory.create(team=self.team_a, label="Alpha Only")
 		BuzzTagFactory.create(team=self.team_b, label="Beta Only")

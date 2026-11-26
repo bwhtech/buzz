@@ -1,6 +1,7 @@
 import frappe
 from bwh_payments import api as payments
 from frappe import _
+from frappe.utils.caching import redis_cache
 
 # Their checkout needs the shopper's phone number.
 GATEWAYS_NEEDING_PHONE = ("PayU Gateway Settings",)
@@ -31,12 +32,17 @@ def get_payment_gateways_for_event(event: str | int, event_doc=None) -> list[str
 	return [gateway for gateway in gateways if gateway in enabled]
 
 
+@redis_cache(ttl=3600)
 def get_gateways_needing_phone() -> list[str]:
 	return frappe.get_all(
 		"Payment Gateway Profile",
 		filters={"enabled": 1, "gateway_settings": ("in", GATEWAYS_NEEDING_PHONE)},
 		pluck="name",
 	)
+
+
+def clear_payment_gateway_caches(*args, **kwargs) -> None:
+	get_gateways_needing_phone.clear_cache()
 
 
 def resolve_payment_gateway(event: str, payment_gateway: str | None) -> str:

@@ -39,17 +39,21 @@ if TYPE_CHECKING:
 class CustomFormService:
 	"""Resolve one published custom form on a published event, then read or submit it."""
 
-	def __init__(self, event_route: str, form_route: str):
+	def __init__(self, event_route: str, form_route: str, event=None, form=None):
 		self.event_route = event_route
 		self.form_route = form_route
+		if event is not None:
+			self.__dict__["event"] = event
+		if form is not None:
+			self.__dict__["form"] = form
 
-	@property
+	@cached_property
 	def event(self) -> "BuzzEvent":
 		event_name = frappe.get_cached_value("Buzz Event", {"route": self.event_route}, "name")
 		if not event_name:
 			EventNotFound.throw()
 
-		event = frappe.get_cached_doc("Buzz Event", event_name)
+		event = frappe.get_cached_doc("Buzz Event", str(event_name))
 		if not event.is_published:
 			EventNotFound.throw()
 		return event
@@ -60,9 +64,9 @@ class CustomFormService:
 		from buzz.events.doctype.buzz_form.form_types import form_type
 
 		form_name = frappe.db.get_value(
-			"Buzz Form", {"event": self.event.name, "route": self.form_route, "publish": 1}, "name"
+			"Buzz Form", {"event": str(self.event.name), "route": self.form_route, "publish": 1}, "name"
 		)
-		form = frappe.get_doc("Buzz Form", form_name) if form_name else None
+		form = frappe.get_cached_doc("Buzz Form", form_name) if form_name else None
 		if not form or not form_type(form.form_doctype).has_page:
 			FormNotAvailable.throw()
 		return form
@@ -272,9 +276,7 @@ def create_event_proposal(data: dict | str) -> None:
 	if frappe.session.user != "Guest":
 		doc_data["submitted_by"] = frappe.session.user
 
-	allowed_fieldnames = {
-		field["fieldname"] for field in get_form_fields("Event Proposal", EVENT_PROPOSAL_EXCLUDE_FIELDS)
-	}
+	allowed_fieldnames = set(get_renderable_fields("Event Proposal", EVENT_PROPOSAL_EXCLUDE_FIELDS))
 	doc_data.update(
 		{fieldname: value for fieldname, value in data.items() if fieldname in allowed_fieldnames}
 	)

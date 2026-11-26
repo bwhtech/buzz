@@ -183,6 +183,16 @@ doc_events["Communication"] = {"after_insert": "buzz.comments.notify_team_of_ema
 doc_events["OAuth Client"] = {"before_validate": "buzz.mcp.token_scope.open_to_every_user"}
 doc_events["Email Queue"] = {"after_insert": "buzz.playground.inbox.capture_email"}
 doc_events.setdefault("Buzz Team", {})["after_insert"] = "buzz.playground.demo_data.seed_community_requests"
+for _event in ("on_update", "on_trash"):
+	doc_events.setdefault("Language", {}).setdefault(_event, []).append(
+		"buzz.api.account.clear_enabled_languages_cache"
+	)
+	doc_events.setdefault("Social Login Key", {}).setdefault(_event, []).append(
+		"buzz.api.auth.clear_social_login_cache"
+	)
+	doc_events.setdefault("Payment Gateway Profile", {}).setdefault(_event, []).append(
+		"buzz.payments.clear_payment_gateway_caches"
+	)
 extend_doctype_class = {"Comment": ["buzz.comments.TeamComment"]}
 
 fixtures = [

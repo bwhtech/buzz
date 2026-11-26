@@ -1,4 +1,5 @@
 import frappe
+from frappe.query_builder import Criterion
 from frappe.utils import getdate, today
 
 from buzz.api.events.exceptions import CannotManageEvent
@@ -15,22 +16,22 @@ def palette_events(user: str) -> PaletteEventsResponse:
 	collaborations = collaborator_access_levels(user)
 	if not teams and not collaborations:
 		return PaletteEventsResponse(events=[])
-	rows = frappe.get_all(
-		"Buzz Event",
-		or_filters=[["team", "in", list(teams)], ["name", "in", list(collaborations)]],
-		fields=["name", "title", "team", "start_date", "end_date"],
-		ignore_permissions=True,
-	)
-	team_titles = dict(
-		frappe.get_all(
-			"Buzz Team",
-			filters={"name": ["in", {row.team for row in rows if row.team}]},
-			fields=["name", "team_name"],
-			as_list=True,
-		)
-	)
+	event = frappe.qb.DocType("Buzz Event")
+	team = frappe.qb.DocType("Buzz Team")
+	branches = []
+	if teams:
+		branches.append(event.team.isin(list(teams)))
+	if collaborations:
+		branches.append(event.name.isin(list(collaborations)))
+	rows = (
+		frappe.qb.from_(event)
+		.left_join(team)
+		.on(team.name == event.team)
+		.select(event.name, event.title, event.team, event.start_date, event.end_date, team.team_name)
+		.where(Criterion.any(branches))
+	).run(as_dict=True)
 	return PaletteEventsResponse(
-		events=[palette_event(row, teams, collaborations, team_titles) for row in sorted_for_palette(rows)]
+		events=[palette_event(row, teams, collaborations) for row in sorted_for_palette(rows)]
 	)
 
 
@@ -56,7 +57,7 @@ def collaborator_access_levels(user: str) -> dict[str, dict[str, str | None]]:
 	return {event: access for event, access in levels.items() if any(access.values())}
 
 
-def palette_event(row, teams: dict, collaborations: dict, team_titles: dict) -> PaletteEvent:
+def palette_event(row, teams: dict, collaborations: dict) -> PaletteEvent:
 	if team_role := teams.get(row.team):
 		access = team_role_access(team_role)
 	else:
@@ -64,7 +65,7 @@ def palette_event(row, teams: dict, collaborations: dict, team_titles: dict) -> 
 	return PaletteEvent(
 		name=str(row.name),
 		title=row.title,
-		team_title=team_titles.get(row.team),
+		team_title=row.team_name,
 		access=access,
 	)
 

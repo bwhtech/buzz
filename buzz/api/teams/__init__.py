@@ -3,7 +3,7 @@ import frappe
 from buzz.api.events.schemas import RouteAvailability
 from buzz.api.teams import calendar, invitations, public_page, services
 from buzz.api.teams.schemas import InviteOutcome, TeamEvents, TeamOption, TeamOverview
-from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags
+from buzz.events.doctype.buzz_team_settings.buzz_team_settings import feature_flags_by_team
 from buzz.permissions import INTEGRATION_ROLE
 
 
@@ -39,22 +39,24 @@ def get_my_teams() -> list[TeamOption]:
 			& (membership.team_role != INTEGRATION_ROLE)
 		)
 	).run(as_dict=True)
-	event_counts = services.upcoming_event_counts([my_team.name for my_team in my_teams])
-	return [team_option(my_team, event_counts.get(my_team.name, 0)) for my_team in my_teams]
+	team_names = [my_team.name for my_team in my_teams]
+	event_counts = services.upcoming_event_counts(team_names)
+	members = services.members_by_team(team_names)
+	flags = feature_flags_by_team(team_names)
+	return [
+		TeamOption(
+			**my_team,
+			upcoming_event_count=event_counts.get(my_team.name, 0),
+			members=members.get(my_team.name, []),
+			feature_flags=flags.get(my_team.name, {}),
+		)
+		for my_team in my_teams
+	]
 
 
 @frappe.whitelist(methods=["POST"])
 def create_personal_team() -> str:
 	return services.create_personal_team()
-
-
-def team_option(my_team: dict, upcoming_event_count: int) -> TeamOption:
-	return TeamOption(
-		**my_team,
-		upcoming_event_count=upcoming_event_count,
-		members=services.members_of(my_team.name),
-		feature_flags=feature_flags(my_team.name),
-	)
 
 
 @frappe.whitelist()

@@ -111,6 +111,28 @@ class TestInvite(CollaboratorInviteTestCase):
 		with self.assertRaises(InvalidCollaboratorInvitation):
 			accept_collaborator_invite(old_key)
 
+	def test_duplicate_email_in_same_batch_updates_without_error(self):
+		with self.set_user(self.alice):
+			outcomes = invite_collaborators(
+				self.event,
+				[
+					{"email": "dup-batch@example.com", "guests_access": "View"},
+					{"email": "DUP-BATCH@example.com", "guests_access": "Edit"},
+				],
+			)
+
+		self.assertEqual(len(outcomes), 2)
+		self.assertEqual(self.row("dup-batch@example.com").guests_access, "Edit")
+
+	def test_integration_role_member_can_be_invited_as_collaborator(self):
+		integration_user = UserFactory.create_once("collab-integration@example.com").name
+		BuzzTeamMembershipFactory.create(team=self.team_a, user=integration_user, team_role="Integration")
+
+		outcomes = self.invite(integration_user)
+
+		self.assertEqual(outcomes[0].status, "invited")
+		self.assertEqual(self.row(integration_user).status, "Pending")
+
 	def test_invalid_level_is_refused(self):
 		with self.assertRaises(InvalidSectionAccess):
 			self.invite("invitee-bad@example.com", guests_access="Owner")

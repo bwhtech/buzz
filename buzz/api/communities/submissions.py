@@ -25,10 +25,13 @@ class EventSubmissions:
 		return cls(doc.event), doc
 
 	def overview(self) -> EventRequests:
-		return EventRequests(requests=request_rows(event=self.event), communities=self.open_communities())
+		requests = request_rows(event=self.event)
+		asked = [row.community for row in requests if row.community]
+		return EventRequests(requests=requests, communities=self.open_communities(asked))
 
-	def open_communities(self) -> list[CommunityOption]:
-		asked = frappe.get_all(REQUEST, filters={"event": self.event}, pluck="community")
+	def open_communities(self, asked: list[str] | None = None) -> list[CommunityOption]:
+		if asked is None:
+			asked = frappe.get_all(REQUEST, filters={"event": self.event}, pluck="community")
 		filters = {
 			"accept_community_submissions": 1,
 			"is_published": 1,
@@ -80,8 +83,11 @@ def submittable_events(community: str) -> list[EventOption]:
 	teams = frappe.get_all("Buzz Team Membership", filters=membership, pluck="team")
 	if not teams:
 		return []
-	asked = frappe.get_all(REQUEST, filters={"community": community}, pluck="event")
-	return upcoming_event_options({"team": ["in", teams], "name": ["not in", asked]})
+	asked = frappe.get_all(REQUEST, filters={"community": community, "event": ["is", "set"]}, pluck="event")
+	filters = {"team": ["in", teams]}
+	if asked:
+		filters["name"] = ["not in", asked]
+	return upcoming_event_options(filters)
 
 
 def external_request(community: str, event: ExternalEvent):
