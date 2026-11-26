@@ -71,7 +71,7 @@ const viewedWhen = computed(() =>
 
 <template>
 	<Drawer v-model:open="open" swipe-direction="right">
-		<DrawerContent size="lg">
+		<DrawerContent size="lg" :close-on-outside-click="!!viewing">
 			<div class="flex items-center gap-2 p-4 pb-0">
 				<DrawerCloseButton />
 			</div>

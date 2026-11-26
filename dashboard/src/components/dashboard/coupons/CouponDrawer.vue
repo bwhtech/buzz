@@ -173,7 +173,7 @@ function goBack() {
 
 <template>
 	<Drawer v-model:open="open" swipe-direction="right">
-		<DrawerContent size="2xl">
+		<DrawerContent size="2xl" :close-on-outside-click="!isNew">
 			<div class="flex items-center gap-1 p-4 pb-2">
 				<DrawerCloseButton />
 				<DrawerTitle class="ml-1 truncate text-lg font-semibold text-ink-gray-9">{{
