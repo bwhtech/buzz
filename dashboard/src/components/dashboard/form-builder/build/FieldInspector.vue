@@ -8,6 +8,7 @@ import { CHOICE_TYPES, fieldType } from "../fieldTypes"
 import { ruleFields } from "../logic/ruleOptions"
 import type { DoctypeField, FormQuestion } from "../useFormBuilder"
 import FieldLogic from "./FieldLogic.vue"
+import FieldTypeSwitcher from "./FieldTypeSwitcher.vue"
 import OptionsEditor from "./OptionsEditor.vue"
 import ParagraphEditor from "./ParagraphEditor.vue"
 import TicketTypePicker from "./TicketTypePicker.vue"
@@ -93,6 +94,20 @@ const ruleFieldsAbove = computed(() =>
 				}}
 			</p>
 
+			<div v-if="!question.is_standard" class="flex flex-col gap-1.5">
+				<span class="text-xs text-ink-gray-5">Field type</span>
+				<FieldTypeSwitcher :question="question" :editor="editor">
+					<button
+						type="button"
+						class="flex h-7 w-full items-center gap-2 rounded bg-surface-gray-2 px-2 text-base text-ink-gray-8 transition-colors duration-150 [@media(hover:hover)]:hover:bg-surface-gray-3"
+						:aria-label="`Field type: ${type.label}`"
+					>
+						<span :class="[type.icon, 'size-4 text-ink-gray-5']" aria-hidden="true" />
+						<span class="flex-1 text-left">{{ type.label }}</span>
+						<span class="lucide-chevron-down size-4 text-ink-gray-5" aria-hidden="true" />
+					</button>
+				</FieldTypeSwitcher>
+			</div>
 			<FormControl
 				v-if="!['Divider', 'Paragraph'].includes(fieldtype)"
 				v-model="question.label"
