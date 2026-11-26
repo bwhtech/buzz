@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Button, call, toast } from "frappe-ui"
 import { computed, ref } from "vue"
-import { useRouter } from "vue-router"
 
 import QuickActionTile, { PRESSABLE } from "@/components/dashboard/events/QuickActionTile.vue"
 import FormEditCard from "@/components/dashboard/form-builder/FormEditCard.vue"
@@ -12,14 +11,13 @@ const props = defineProps<{
 	event: string
 	title?: string | null
 	// What the list is currently showing, so the export is the same list.
-	query: { search: string; filters: string; order: string; zone: string }
+	query: { search: string; filters: string; order: string }
 	registrationForm?: string | null
 	canInvite: boolean
 }>()
 const emit = defineEmits<{ invite: [] }>()
 
 const exporting = ref(false)
-const router = useRouter()
 
 // The list is paged, so the export walks it: a hundred at a time until the server says
 // there is no next page.
@@ -58,12 +56,6 @@ async function exportGuests() {
 }
 
 const actions = computed(() => [
-	{
-		label: "Manage zones",
-		icon: "lucide-settings-2",
-		run: () => router.push({ name: "event-settings", params: { eventId: props.event } }),
-		loading: false,
-	},
 	{ label: "Download CSV", icon: "lucide-download", run: exportGuests, loading: exporting.value },
 ])
 </script>

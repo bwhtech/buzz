@@ -96,7 +96,9 @@ function confirmRevoke(collaborator: EventCollaborator) {
 			<div class="flex min-w-0 flex-[1_1_16rem] flex-col gap-1">
 				<h2 class="text-lg font-semibold text-ink-gray-9">{{ __("Collaborators") }}</h2>
 				<p class="text-p-sm text-pretty text-ink-gray-5">
-					{{ __("People outside your team who can open this event, section by section") }}
+					{{
+						__("Give someone access to this event only. Your team members already see every event.")
+					}}
 				</p>
 			</div>
 			<div class="flex shrink-0 items-center gap-2.5">
@@ -109,6 +111,7 @@ function confirmRevoke(collaborator: EventCollaborator) {
 					/>
 				</div>
 				<Button
+					v-if="collaborators.data?.length"
 					variant="subtle"
 					icon-left="lucide-plus"
 					:label="__('Invite')"
@@ -123,13 +126,13 @@ function confirmRevoke(collaborator: EventCollaborator) {
 			<EmptyState
 				v-else-if="!collaborators.data.length"
 				icon="lucide-users"
-				:title="__('No collaborators yet')"
-				:description="
-					__(
-						'Bring in a co-host, check-in crew or sponsor lead. They see only the sections you pick.',
-					)
-				"
+				:title="__('Only your team can manage this event')"
 			>
+				<template #description>
+					{{ __("Invite someone to help with just this event, like a volunteer at check-in.") }}
+					<br />
+					{{ __("You choose which sections they can open.") }}
+				</template>
 				<Button
 					variant="subtle"
 					icon-left="lucide-plus"

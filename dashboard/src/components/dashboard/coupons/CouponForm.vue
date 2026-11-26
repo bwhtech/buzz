@@ -1,18 +1,11 @@
 <script setup lang="ts">
-import {
-	Button,
-	Checkbox,
-	FormControl,
-	FormLabel,
-	Switch,
-	TabButtons,
-	TextInput,
-	dayjs,
-} from "frappe-ui"
+import { Button, FormControl, FormLabel, Switch, TabButtons, TextInput, dayjs } from "frappe-ui"
 import { computed } from "vue"
 import { useRoute } from "vue-router"
 
 import EmptyState from "@/components/common/EmptyState.vue"
+import DrawerSection from "@/components/dashboard/DrawerSection.vue"
+import TicketTypePicker from "@/components/dashboard/TicketTypePicker.vue"
 import type { CouponTicketType } from "@/types"
 import {
 	type CouponValues,
@@ -61,15 +54,10 @@ const scope = computed({
 	},
 })
 
-function toggleTicketType(name: string, picked: boolean) {
-	const others = values.value.ticket_types.filter((row) => row !== name)
-	values.value.ticket_types = picked ? [...others, name] : others
-}
-
 const minimumOptions = computed(() => [
 	...(isCode.value ? [] : [{ label: "Any order", value: "None" }]),
-	{ label: "Order total is at least", value: "Minimum Order Amount" },
-	{ label: "Number of tickets is at least", value: "Minimum Ticket Count" },
+	{ label: "Minimum order amount", value: "Minimum Order Amount" },
+	{ label: "Minimum number of tickets", value: "Minimum Ticket Count" },
 ])
 const requiresMinimum = computed({
 	get: () => values.value.minimum_requirement !== "None",
@@ -94,15 +82,8 @@ const hasInvalidCode = computed(
 </script>
 
 <template>
-	<div class="divide-y divide-outline-gray-1">
-		<section class="space-y-4 pb-5">
-			<div>
-				<h3 class="text-base font-semibold text-ink-gray-9">Discount</h3>
-				<p class="mt-0.5 text-sm text-ink-gray-5">
-					{{ isCode ? "The code and what it takes off" : "What it takes off" }}
-				</p>
-			</div>
-
+	<div class="space-y-6">
+		<DrawerSection title="Discount">
 			<div v-if="isCode" class="space-y-1.5">
 				<FormLabel id="coupon-code" label="Code" required />
 				<div class="flex gap-2">
@@ -129,8 +110,8 @@ const hasInvalidCode = computed(
 				>
 					{{
 						hasInvalidCode
-							? "Remove the spaces and symbols to save. Letters, numbers, - and _ only"
-							: "Entered by participants at checkout. Letters, numbers, - and _ only"
+							? "Take out spaces and symbols to save. Use letters, numbers, dashes or underscores."
+							: "Participants type this at checkout. Use letters, numbers, dashes or underscores."
 					}}
 				</p>
 			</div>
@@ -150,8 +131,7 @@ const hasInvalidCode = computed(
 				v-model="values.description"
 				type="textarea"
 				label="Description"
-				placeholder="What this offer is for and who it's meant for"
-				description="Only visible to organizers"
+				placeholder="Only visible to organizers"
 				:rows="2"
 				:disabled="disabled"
 			/>
@@ -195,16 +175,56 @@ const hasInvalidCode = computed(
 				/>
 				<p class="text-sm text-ink-gray-5">{{ currencyHint }}</p>
 			</div>
-		</section>
+		</DrawerSection>
 
-		<section class="space-y-4 py-5">
-			<div>
-				<h3 class="text-base font-semibold text-ink-gray-9">Eligibility</h3>
-				<p class="mt-0.5 text-sm text-ink-gray-5">
-					{{
-						isCode ? "Which tickets and orders the code works on" : "Which orders qualify for it"
-					}}
-				</p>
+		<CouponLimits v-model="values" :min-date="today" :disabled="disabled" />
+
+		<DrawerSection
+			title="Eligibility"
+			:description="isCode ? 'Which tickets it works on, and when' : 'Which orders qualify for it'"
+		>
+			<div class="rounded-4 border border-outline-gray-2">
+				<div v-if="isCode" class="p-1">
+					<Switch
+						v-model="requiresMinimum"
+						padded
+						label="Minimum purchase"
+						description="Only apply when the order is big enough"
+						:disabled="disabled"
+					/>
+				</div>
+				<div v-else class="px-3 pt-3">
+					<p class="text-base text-ink-gray-8">Applies when</p>
+					<p class="mt-0.5 text-sm text-ink-gray-6">
+						Added at checkout once the order qualifies. No code needed.
+					</p>
+				</div>
+				<div v-if="!isCode || requiresMinimum" class="space-y-2 p-3">
+					<FormControl
+						v-model="values.minimum_requirement"
+						type="select"
+						:options="minimumOptions"
+						:disabled="disabled"
+					/>
+					<CurrencyAmounts
+						v-if="values.minimum_requirement === 'Minimum Order Amount'"
+						v-model="values.minimum_order_amounts"
+						label="Order amount at least"
+						:currencies="currencies"
+						:disabled="disabled"
+					/>
+					<FormControl
+						v-if="values.minimum_requirement === 'Minimum Ticket Count'"
+						:model-value="values.minimum_ticket_count || ''"
+						type="number"
+						placeholder="5"
+						:min="1"
+						:disabled="disabled"
+						@update:model-value="values.minimum_ticket_count = Math.max(Number($event) || 0, 0)"
+					>
+						<template #suffix><span class="text-sm text-ink-gray-5">tickets</span></template>
+					</FormControl>
+				</div>
 			</div>
 
 			<div class="space-y-2">
@@ -225,65 +245,15 @@ const hasInvalidCode = computed(
 						:route="{ name: 'event-registrations', params: { eventId } }"
 					/>
 				</EmptyState>
-				<div v-else-if="scope === 'specific'" class="rounded-4 border border-outline-gray-2 p-1">
-					<Checkbox
-						v-for="ticketType in selectableTicketTypes"
-						:key="ticketType.name"
-						padded
-						:label="ticketType.title"
-						:description="priceLabel(ticketType)"
-						:model-value="values.ticket_types.includes(ticketType.name)"
-						:disabled="disabled || !canSelect(ticketType)"
-						@update:model-value="toggleTicketType(ticketType.name, !!$event)"
-					/>
-				</div>
+				<TicketTypePicker
+					v-else-if="scope === 'specific'"
+					v-model="values.ticket_types"
+					:ticket-types="selectableTicketTypes"
+					:disabled="disabled"
+					:describe="priceLabel"
+					:is-selectable="canSelect"
+				/>
 			</div>
-
-			<div class="rounded-4 border border-outline-gray-2">
-				<div v-if="isCode" class="p-1">
-					<Switch
-						v-model="requiresMinimum"
-						padded
-						label="Require a minimum"
-						description="When off, the code works on any order."
-						:disabled="disabled"
-					/>
-				</div>
-				<div v-else class="px-3 pt-3">
-					<p class="text-base text-ink-gray-8">Applies when</p>
-					<p class="mt-0.5 text-sm text-ink-gray-6">
-						Added to the order as soon as it qualifies, no code needed.
-					</p>
-				</div>
-				<div v-if="!isCode || requiresMinimum" class="space-y-2 p-3">
-					<FormControl
-						v-model="values.minimum_requirement"
-						type="select"
-						:options="minimumOptions"
-						:disabled="disabled"
-					/>
-					<CurrencyAmounts
-						v-if="values.minimum_requirement === 'Minimum Order Amount'"
-						v-model="values.minimum_order_amounts"
-						label="Order total"
-						:currencies="currencies"
-						:disabled="disabled"
-					/>
-					<FormControl
-						v-if="values.minimum_requirement === 'Minimum Ticket Count'"
-						:model-value="values.minimum_ticket_count || ''"
-						type="number"
-						placeholder="5"
-						:min="1"
-						:disabled="disabled"
-						@update:model-value="values.minimum_ticket_count = Math.max(Number($event) || 0, 0)"
-					>
-						<template #suffix><span class="text-sm text-ink-gray-5">tickets</span></template>
-					</FormControl>
-				</div>
-			</div>
-		</section>
-
-		<CouponLimits v-model="values" class="pt-5" :min-date="today" :disabled="disabled" />
+		</DrawerSection>
 	</div>
 </template>

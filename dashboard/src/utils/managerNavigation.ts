@@ -16,7 +16,7 @@ export type ManagerNavItem = {
 	dot?: boolean
 }
 
-// /events is a site page outside the dashboard router, so it opens as a full page load.
+// /events is a site page outside the dashboard router; it opens in a new tab so the dashboard stays put.
 export const discoverEvents = {
 	label: "Discover Events",
 	shortLabel: "Discover",
@@ -24,7 +24,7 @@ export const discoverEvents = {
 	href: "/events",
 }
 
-export const openDiscoverEvents = () => window.location.assign(discoverEvents.href)
+export const openDiscoverEvents = () => window.open(discoverEvents.href, "_blank", "noopener")
 
 export type Workspace = {
 	title: string
@@ -131,14 +131,12 @@ function eventItems(
 			needs: "Edit",
 			count: counts?.waiting || undefined,
 		},
-		// The check-in page is full screen, outside the manager shell.
 		{
-			label: "Check In",
+			label: "Check-in",
 			icon: "lucide-scan-line",
-			to: `/check-in/${eventId}`,
+			to: `${event}/check-in`,
 			section: "guests",
 			group: "Attendees",
-			needs: "Edit",
 		},
 		{
 			label: "Talks",

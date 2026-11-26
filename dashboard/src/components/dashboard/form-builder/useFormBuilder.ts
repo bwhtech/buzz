@@ -24,6 +24,10 @@ export function isPastCutoff(form: Pick<BuzzFormDoc, "auto_close_at">): boolean 
 	return Boolean(form.auto_close_at && dayjs(form.auto_close_at).isBefore(dayjs()))
 }
 
+// Mirrors the server's open state, which every Publish, Unpublish and quick action writes through `set_closed`.
+export const isFormOpen = (form: Pick<BuzzFormDoc, "publish" | "auto_close_at">) =>
+	!!form.publish && !isPastCutoff(form)
+
 export interface BuzzFormDoc {
 	name: string
 	title: string
@@ -92,7 +96,11 @@ const EDITABLE_FIELDS = [
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 
 export function useFormBuilder(formName: () => string) {
-	const form = useDoc<BuzzFormDoc>({ doctype: "Buzz Form", name: formName })
+	const form = useDoc<BuzzFormDoc, { setClosed: (params: { closed: boolean }) => boolean }>({
+		doctype: "Buzz Form",
+		name: formName,
+		methods: { setClosed: "set_closed" },
+	})
 	const draft = ref<BuzzFormDoc | null>(null)
 	const savedSnapshot = ref("")
 
@@ -146,7 +154,14 @@ export function useFormBuilder(formName: () => string) {
 
 	const attendeeForm = computed(() => fieldsCall.data?.attendee_form ?? "")
 
-	return { form, draft, dirty, save, doctypeFields, attendeeForm }
+	// The form type decides what closing means, such as a cutoff that keeps the page up.
+	async function setClosed(closed: boolean) {
+		await form.setClosed.submit({ closed })
+		if (form.setClosed.error) throw form.setClosed.error
+		await form.reload()
+	}
+
+	return { form, draft, dirty, save, setClosed, doctypeFields, attendeeForm }
 }
 
 export type FormBuilder = ReturnType<typeof useFormBuilder>

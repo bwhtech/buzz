@@ -3,7 +3,6 @@ import { Button, Skeleton, dialog, toast } from "frappe-ui"
 import { computed } from "vue"
 import { useRoute } from "vue-router"
 
-import CheckInZonesPanel from "@/components/dashboard/events/checkin-zones/CheckInZonesPanel.vue"
 import CollaboratorsPanel from "@/components/dashboard/events/collaborators/CollaboratorsPanel.vue"
 import EventFormsPanel from "@/components/dashboard/events/EventFormsPanel.vue"
 import EventPageHeader from "@/components/dashboard/events/EventPageHeader.vue"
@@ -114,8 +113,6 @@ async function unarchive() {
 				<EventThemeSetting :event="eventId" :disabled="!canWrite.data?.has_permission" />
 			</div>
 		</section>
-
-		<CheckInZonesPanel :event="eventId" :disabled="!canWrite.data?.has_permission" />
 
 		<CollaboratorsPanel v-if="canManageCollaborators" :event="eventId" />
 

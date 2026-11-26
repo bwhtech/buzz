@@ -64,7 +64,7 @@ function actOnChosen(action: RequestAction) {
 		<TransitionGroup
 			tag="ul"
 			name="request"
-			class="divide-y divide-outline-gray-1 overflow-hidden rounded-6 border border-outline-gray-2"
+			class="divide-y divide-outline-gray-1 overflow-hidden rounded-5 border border-outline-gray-2"
 		>
 			<RequestRow
 				v-for="row in rows"

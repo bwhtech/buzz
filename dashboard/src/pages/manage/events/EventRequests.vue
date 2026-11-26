@@ -198,20 +198,25 @@ const seatsFreeFor = (row: RegistrationRequest | null) =>
 			/>
 		</template>
 
-		<ul
-			v-if="isLoading"
-			class="divide-y divide-outline-gray-1 overflow-hidden rounded-6 border border-outline-gray-2"
-		>
-			<EventGuestSkeleton :rows="5" />
-		</ul>
-		<ErrorMessage v-else-if="requests.error" :message="serverErrorMessage(requests.error)" />
-		<RequestsDisabled v-else-if="isQueueEmpty && !isEnabled" :type="requestType" />
-		<template v-else>
-			<RequestStatCards :stats="stats" :active="view" @pick="pick" />
+		<!-- Settings above, the daily queue below: a rule and heading keep them apart. -->
+		<section class="space-y-4 border-t border-outline-gray-1 pt-8">
+			<h2 class="text-lg font-semibold text-ink-gray-9">
+				{{ waitlist ? "People waiting" : "Requests" }}
+			</h2>
 
-			<SeatsFreedBanner v-if="waitlist" :freed="freed" @let-in="letIn" />
+			<ul
+				v-if="isLoading"
+				class="divide-y divide-outline-gray-1 overflow-hidden rounded-5 border border-outline-gray-2"
+			>
+				<EventGuestSkeleton :rows="5" />
+			</ul>
+			<ErrorMessage v-else-if="requests.error" :message="serverErrorMessage(requests.error)" />
+			<RequestsDisabled v-else-if="isQueueEmpty && !isEnabled" :type="requestType" />
+			<template v-else>
+				<RequestStatCards :stats="stats" :active="view" @pick="pick" />
 
-			<section class="space-y-3">
+				<SeatsFreedBanner v-if="waitlist" :freed="freed" @let-in="letIn" />
+
 				<RequestToolbar
 					v-if="!isQueueEmpty"
 					v-model:search="search"
@@ -234,8 +239,8 @@ const seatsFreeFor = (row: RegistrationRequest | null) =>
 				<EmptyState v-else-if="isQueueEmpty" v-bind="emptyQueueCopy" :icon="queueIcon" />
 				<EmptyState v-else-if="isFiltered" v-bind="filteredEmptyState" icon="lucide-filter-x" />
 				<EmptyState v-else v-bind="VIEW_EMPTY_STATES[view]" :icon="queueIcon" />
-			</section>
-		</template>
+			</template>
+		</section>
 	</PageWithSidebar>
 
 	<RequestDrawer

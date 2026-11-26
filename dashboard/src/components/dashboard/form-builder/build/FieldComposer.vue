@@ -46,15 +46,28 @@ function onKeydown(event: KeyboardEvent) {
 	}
 }
 
+function openMenu() {
+	text.value = "/"
+	input.value?.focus()
+}
+
 defineExpose({ focus: () => input.value?.focus() })
 </script>
 
 <template>
 	<div class="relative">
-		<div
-			class="flex items-center gap-2 rounded-5 px-3 py-1 text-ink-gray-4 focus-within:bg-surface-gray-1"
+		<!-- The whole row is the target: the plus opens the field types, anywhere else types a question. -->
+		<label
+			class="flex cursor-text items-center gap-2 rounded-5 px-3 py-1 text-ink-gray-4 focus-within:bg-surface-gray-1 [@media(hover:hover)]:hover:bg-surface-gray-1"
 		>
-			<span class="lucide-plus size-4" aria-hidden="true" />
+			<button
+				type="button"
+				class="-m-1 flex rounded p-1 hover:text-ink-gray-7"
+				aria-label="Choose a field type"
+				@mousedown.prevent="openMenu"
+			>
+				<span class="lucide-plus size-4" aria-hidden="true" />
+			</button>
 			<input
 				ref="input"
 				v-model="text"
@@ -66,7 +79,7 @@ defineExpose({ focus: () => input.value?.focus() })
 				@keydown="onKeydown"
 				@blur="text.startsWith('/') && (text = '')"
 			/>
-		</div>
+		</label>
 		<div
 			v-if="isSearching"
 			class="absolute left-8 top-full z-20 mt-1 max-h-[340px] w-80 overflow-y-auto rounded-5 bg-surface-elevation-3 p-1 shadow-xl ring-1 ring-outline-gray-1"

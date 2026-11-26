@@ -16,7 +16,7 @@ const breakdown = computed(() =>
 <template>
 	<div
 		v-if="people.length"
-		class="flex items-center gap-3.5 rounded-6 bg-surface-gray-2 px-4 py-3.5"
+		class="flex items-center gap-3.5 rounded-5 bg-surface-gray-2 px-4 py-3.5"
 	>
 		<span
 			class="grid size-8 shrink-0 place-items-center rounded-4 bg-surface-base text-ink-gray-7 shadow-sm"

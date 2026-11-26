@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Checkbox, FormControl, TabButtons, TextInput } from "frappe-ui"
-import { computed, ref } from "vue"
+import { FormControl, TabButtons } from "frappe-ui"
+import { computed } from "vue"
 
 import EmptyState from "@/components/common/EmptyState.vue"
 import DrawerSection from "@/components/dashboard/DrawerSection.vue"
 import PerkList from "@/components/dashboard/sponsorships/PerkList.vue"
 import PriceInput from "@/components/dashboard/sponsorships/PriceInput.vue"
+import TicketTypePicker from "@/components/dashboard/TicketTypePicker.vue"
 import { useEnabledCurrencies } from "@/data/currencies"
 import type { TicketTypeItem } from "@/types"
 
@@ -33,19 +34,6 @@ const scope = computed({
 	get: () => (values.value.applies_to_all_ticket_types ? "all" : "specific"),
 	set: (picked) => (values.value.applies_to_all_ticket_types = picked === "all"),
 })
-
-const search = ref("")
-const shownTicketTypes = computed(() => {
-	const typed = search.value.trim().toLowerCase()
-	return props.ticketTypes.filter((row) => row.title.toLowerCase().includes(typed))
-})
-
-const noMatchText = computed(() => `No ticket type has "${search.value.trim()}" in its name.`)
-
-function toggleTicketType(name: string, picked: boolean) {
-	const others = values.value.ticket_types.filter((row) => row !== name)
-	values.value.ticket_types = picked ? [...others, name] : others
-}
 </script>
 
 <template>
@@ -102,34 +90,11 @@ function toggleTicketType(name: string, picked: boolean) {
 				title="No ticket types yet"
 				description="Add a ticket type first, then pick which ones this add-on is for."
 			/>
-			<div v-else-if="scope === 'specific'" class="space-y-2">
-				<TextInput v-model="search" type="search" placeholder="Search ticket types">
-					<template #prefix>
-						<span class="lucide-search size-4 text-ink-gray-5" aria-hidden="true" />
-					</template>
-				</TextInput>
-				<p class="text-p-xs tabular-nums text-ink-gray-5">
-					{{ values.ticket_types.length }} of {{ ticketTypes.length }} selected
-				</p>
-				<EmptyState
-					v-if="!shownTicketTypes.length"
-					class="rounded-4 border border-dashed border-outline-gray-2 !py-6"
-					icon="lucide-search"
-					title="No matches"
-					:description="noMatchText"
-					:action="{ label: 'Clear search', variant: 'subtle', onClick: () => (search = '') }"
-				/>
-				<div v-else class="max-h-72 overflow-y-auto rounded-4 border border-outline-gray-2 p-1">
-					<Checkbox
-						v-for="ticketType in shownTicketTypes"
-						:key="ticketType.name"
-						padded
-						:label="ticketType.title"
-						:model-value="values.ticket_types.includes(ticketType.name)"
-						@update:model-value="toggleTicketType(ticketType.name, !!$event)"
-					/>
-				</div>
-			</div>
+			<TicketTypePicker
+				v-else-if="scope === 'specific'"
+				v-model="values.ticket_types"
+				:ticket-types="ticketTypes"
+			/>
 		</DrawerSection>
 	</form>
 </template>

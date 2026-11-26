@@ -271,6 +271,20 @@ const typeMatches = (query: string, key: string) => {
 	return matchesSearch(query, key, label, group, keywords)
 }
 
+// What a field may turn into, grouped like the add-field menu. Layout blocks swap only among text blocks.
+export function convertTargets(fieldtype: string) {
+	const isLayout = fieldType(fieldtype).group === "Layout"
+	const groups: Record<string, { label: string; value: string; icon: string }[]> = {}
+	for (const [key, item] of Object.entries(FIELD_TYPES)) {
+		const offered = isLayout
+			? ["Heading", "Paragraph"].includes(key)
+			: !["Layout", "Standard"].includes(item.group)
+		if (offered)
+			(groups[item.group] ??= []).push({ label: item.label, value: key, icon: item.icon })
+	}
+	return Object.entries(groups).map(([group, options]) => ({ group, options }))
+}
+
 type TypeGroup = { group: string; options: { value: string }[] }
 
 // For the "turn into" pickers, whose options carry the fieldtype as their value.

@@ -119,6 +119,7 @@ const viewedWhen = computed(() =>
 					v-model="draft.conditions"
 					:fields="canWrite ? (filterFields?.[draft.audience] ?? []) : []"
 					disable-shortcut
+					label-filter
 				>
 					<Select
 						v-model="draft.audience"

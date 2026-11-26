@@ -2,13 +2,15 @@
 import { computed, watch } from "vue"
 
 import type { CouponItem } from "@/types"
+import type { CouponAvailability } from "@/utils/couponAvailability"
 
 import CouponOptionCards, { type CouponOption } from "./CouponOptionCards.vue"
 
 const couponType = defineModel<CouponItem["coupon_type"]>("couponType", { required: true })
 const discountType = defineModel<CouponItem["discount_type"]>("discountType", { required: true })
+const props = defineProps<{ availability: CouponAvailability; columns?: 2 | 3 }>()
 
-const typeOptions: CouponOption<CouponItem["coupon_type"]>[] = [
+const allTypeOptions: CouponOption<CouponItem["coupon_type"]>[] = [
 	{
 		value: "Promo Code",
 		icon: "lucide-ticket-percent",
@@ -36,7 +38,7 @@ const noDiscountOption: CouponOption<CouponItem["discount_type"]> = {
 	description: "The code only unlocks the tickets",
 }
 
-const discountTypeOptions: CouponOption<CouponItem["discount_type"]>[] = [
+const allDiscountOptions: CouponOption<CouponItem["discount_type"]>[] = [
 	{
 		value: "Percentage",
 		icon: "lucide-percent",
@@ -51,9 +53,22 @@ const discountTypeOptions: CouponOption<CouponItem["discount_type"]>[] = [
 	},
 ]
 
+const typeOptions = computed(() =>
+	allTypeOptions.map((option) => ({
+		...option,
+		disabled: !props.availability.allowsType(option.value),
+	})),
+)
+const discountTypeOptions = computed(() =>
+	allDiscountOptions.map((option) => ({
+		...option,
+		disabled: !props.availability.allowsDiscount(option.value),
+	})),
+)
+
 const isAccessCode = computed(() => couponType.value === "Access Code")
 const discountOptions = computed(() =>
-	isAccessCode.value ? [noDiscountOption, ...discountTypeOptions] : discountTypeOptions,
+	isAccessCode.value ? [noDiscountOption, ...discountTypeOptions.value] : discountTypeOptions.value,
 )
 
 // No discount only makes sense for an access code, and is its default.
@@ -65,7 +80,17 @@ watch(couponType, (type) => {
 
 <template>
 	<div class="space-y-6">
-		<CouponOptionCards v-model="couponType" label="How it's applied" :options="typeOptions" />
-		<CouponOptionCards v-model="discountType" label="Discount" :options="discountOptions" />
+		<CouponOptionCards
+			v-model="couponType"
+			label="How it's applied"
+			:options="typeOptions"
+			:columns="columns"
+		/>
+		<CouponOptionCards
+			v-model="discountType"
+			label="Discount"
+			:options="discountOptions"
+			:columns="columns"
+		/>
 	</div>
 </template>
