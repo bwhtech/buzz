@@ -50,12 +50,11 @@ export function ticketTypeError(values: TicketTypeValues) {
 
 /** The values as the doctype stores them. */
 export function ticketTypeDocValues(values: TicketTypeValues) {
+	// Approval and waitlist save apart, through set_ticket_type_access: they can change the event.
+	const { requires_approval: _approval, enable_waitlist: _waitlist, ...rest } = values
 	return {
-		...values,
+		...rest,
 		is_hidden: (values.is_hidden ? 1 : 0) as 0 | 1,
-		// Saved apart, through set_ticket_type_access: changing them can change the event.
-		requires_approval: undefined,
-		enable_waitlist: undefined,
 		title: values.title.trim(),
 		description: values.description.trim(),
 	}

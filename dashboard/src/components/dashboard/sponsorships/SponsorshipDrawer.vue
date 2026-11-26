@@ -8,12 +8,15 @@ import {
 } from "@/components/common/drawer"
 
 // The title sits beside the close button; the body is the caller's to fill.
-defineProps<{
-	title: string
-	description: string
-	// Off while the drawer holds unsaved input, so a stray click beside it loses nothing.
-	closeOnOutsideClick?: boolean
-}>()
+withDefaults(
+	defineProps<{
+		title: string
+		description: string
+		// Off for a drawer that creates something, so a stray click beside it loses nothing.
+		closeOnOutsideClick?: boolean
+	}>(),
+	{ closeOnOutsideClick: true },
+)
 
 const open = defineModel<boolean>("open", { required: true })
 </script>

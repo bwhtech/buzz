@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { toast, useDoc } from "frappe-ui"
-import { computed, ref } from "vue"
+import { useDoc } from "frappe-ui"
+import { computed } from "vue"
 
 import DrawerSection from "@/components/dashboard/DrawerSection.vue"
 import EnabledAlert from "@/components/dashboard/EnabledAlert.vue"
@@ -15,7 +15,6 @@ import { useSetTicketTypeAccess } from "@/data/ticketTypes"
 import type { TicketCategoryItem, TicketTypeItem } from "@/types"
 import { type TicketTypeAccess, accessChanged, withEventAccess } from "@/utils/approvalMode"
 import { formatWholePriceOrFree } from "@/utils/currency"
-import { serverErrorMessage } from "@/utils/serverError"
 import {
 	type TicketTypeValues,
 	ticketTypeDocValues,
@@ -77,29 +76,15 @@ const defaultPrice = computed(() => {
 	return row ? formatWholePriceOrFree(row.price, row.currency) : ""
 })
 
-const publishError = ref("")
-
-async function togglePublished() {
-	if (!props.ticketType) return
-	const enabling = !props.ticketType.is_published
-	publishError.value = ""
-	await ticketTypeDoc.setValue.submit({ is_published: enabling ? 1 : 0 }).catch(() => null)
-	if (ticketTypeDoc.setValue.error) {
-		publishError.value =
-			serverErrorMessage(ticketTypeDoc.setValue.error) ||
-			"Could not update the ticket type. Try again."
-		return
-	}
-	toast.success(enabling ? "Ticket type enabled" : "Ticket type disabled")
-	emit("changed")
-}
-
 async function save(values: TicketTypeValues) {
 	await ticketTypeDoc.setValue.submit(ticketTypeDocValues(values))
 	if (ticketTypeDoc.setValue.error) throw ticketTypeDoc.setValue.error
-	if (savedValues.value && accessChanged(savedValues.value, values))
-		await accessSetter.save(props.ticketType!.name, values)
-	emit("changed")
+	try {
+		if (savedValues.value && accessChanged(savedValues.value, values))
+			await accessSetter.save(props.ticketType!.name, values)
+	} finally {
+		emit("changed")
+	}
 }
 </script>
 
@@ -115,9 +100,9 @@ async function save(values: TicketTypeValues) {
 				noun="Ticket type"
 				:enabled="!!shownTicketType.is_published"
 				:editable="canWrite"
-				:loading="ticketTypeDoc.setValue.loading"
-				:error="publishError"
-				@toggle="togglePublished"
+				field="is_published"
+				:set-value="ticketTypeDoc.setValue"
+				@changed="emit('changed')"
 			/>
 		</template>
 

@@ -65,7 +65,9 @@ async function create() {
 	if (doc?.name && accessChanged(blankValues("", ""), draft.value))
 		await accessSetter
 			.save(String(doc.name), draft.value)
-			.catch((error) => toast.error(serverErrorMessage(error)))
+			.catch((error) =>
+				toast.error(`Approval and waitlist were not saved. ${serverErrorMessage(error)}`),
+			)
 	toast.success("Ticket type added")
 	emit("created")
 	open.value = false

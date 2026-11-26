@@ -18,9 +18,6 @@ export interface EventSummary {
 	venueMissing: boolean
 	banner: string | null
 	route: string
-	teamId: string
-	teamName: string
-	teamLogo: string | undefined
 	isPublished: boolean
 }
 
@@ -40,7 +37,6 @@ export type OverviewEventDoc = {
 }
 
 type VenueDoc = { name: string; venue_name: string; city: string | null; address: string | null }
-type TeamDoc = { name: string; team_name: string; logo: string | null }
 
 // A call that fails (no access to that section) counts as settled with nothing to show.
 const settled = (call: { data: unknown; error: unknown }) => Boolean(call.data || call.error)
@@ -55,7 +51,6 @@ const NO_TICKETING: StepFacts["ticketing"] = {
 export function useEventOverview(eventId: string) {
 	const event = useEventDoc(() => eventId)
 	const doc = computed(() => event.doc as unknown as OverviewEventDoc | null)
-	const team = useDoc<TeamDoc>({ doctype: "Buzz Team", name: () => doc.value?.team || "" })
 	const venue = useDoc<VenueDoc>({ doctype: "Event Venue", name: () => doc.value?.venue || "" })
 	const ticketing = useEventTicketTypes(eventId)
 	const collaborators = useList<{ name: string }>({
@@ -80,26 +75,19 @@ export function useEventOverview(eventId: string) {
 			: null,
 	)
 	const steps = computed(() => (facts.value ? buildSteps(facts.value) : []))
-	const summary = computed(() => summarise(doc.value, team.doc, venue.doc))
+	const summary = computed(() => summarise(doc.value, venue.doc))
 	const metrics = computed(() => buildMetrics(registrations.data, proposals.data, ticketing.data))
 	const metricsLoaded = computed(() => settled(registrations) && settled(proposals))
 	return { summary, steps, metrics, metricsLoaded }
 }
 
-function summarise(
-	doc: OverviewEventDoc | null,
-	team: TeamDoc | null,
-	venue: VenueDoc | null,
-): EventSummary {
+function summarise(doc: OverviewEventDoc | null, venue: VenueDoc | null): EventSummary {
 	return {
 		title: doc?.title || "",
 		...dateLabels(doc),
 		...venueLabels(doc, venue),
 		banner: doc?.banner_image || null,
 		route: doc?.route || "",
-		teamId: doc?.team || "",
-		teamName: team?.team_name || "",
-		teamLogo: team?.logo || undefined,
 		isPublished: Boolean(doc?.is_published),
 	}
 }

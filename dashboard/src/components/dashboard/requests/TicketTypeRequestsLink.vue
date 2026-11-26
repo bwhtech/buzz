@@ -8,7 +8,7 @@ import { OPEN_VIEW, requestViewOf } from "@/utils/requestStatus"
 
 const props = defineProps<{ event: string; ticketType: string }>()
 
-// ponytail: counts per ticket type come from the full lists, add them to
+// Counts per ticket type come from the full lists, add them to
 // get_request_counts if events grow past a few hundred requests.
 const approvals = useRegistrationRequests(props.event, "Approval")
 const waitlist = useRegistrationRequests(props.event, "Waitlist")

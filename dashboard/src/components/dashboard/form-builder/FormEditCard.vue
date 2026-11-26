@@ -7,7 +7,10 @@ import { type BuzzFormDoc, isPastCutoff } from "@/components/dashboard/form-buil
 
 // `closed` is the server's answer when the caller has it: a registration form also
 // closes once its event ends. Without it, the form's own switch and cutoff decide.
-const props = defineProps<{ form: string; closed?: boolean }>()
+// undefined, not false, when absent: a boolean prop otherwise reads false and hides the fallback.
+const props = withDefaults(defineProps<{ form: string; closed?: boolean }>(), {
+	closed: undefined,
+})
 
 const route = useRoute()
 const doc = useDoc<BuzzFormDoc>({ doctype: "Buzz Form", name: props.form })
@@ -17,7 +20,7 @@ const editRoute = computed(() => ({
 	params: { eventId: route.params.eventId as string, formName: props.form },
 }))
 
-const closed = computed(() => {
+const isClosed = computed(() => {
 	if (props.closed !== undefined) return props.closed
 	const form = doc.doc
 	return !form?.publish || isPastCutoff(form)
@@ -60,7 +63,7 @@ const questions = computed(() =>
 		<div class="flex items-center justify-between gap-2 border-t border-outline-gray-1 px-3 py-2.5">
 			<div class="min-w-0 space-y-1">
 				<p class="truncate text-p-sm font-medium text-ink-gray-9">{{ doc.doc.title }}</p>
-				<Badge :theme="closed ? 'red' : 'green'" :label="closed ? 'Closed' : 'Live'" />
+				<Badge :theme="isClosed ? 'red' : 'green'" :label="isClosed ? 'Closed' : 'Live'" />
 			</div>
 			<Button
 				class="shrink-0 after:absolute after:inset-0"

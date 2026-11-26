@@ -6,6 +6,7 @@ import { useRoute } from "vue-router"
 
 import { useEventDoc } from "@/data/events"
 import { editedAgo } from "@/utils/dateLabels"
+import { eventPath } from "@/utils/eventUrl"
 
 // The right side every event page header shares: when the event was last edited, a
 // link to its public page, and the team that owns it. A page that saves the event
@@ -33,7 +34,7 @@ const editedLabel = computed(() => (modified.value ? editedAgo(modified.value, n
 const editedExact = computed(() =>
 	modified.value ? dayjsLocal(modified.value).format("D MMM YYYY, h:mm A") : "",
 )
-const eventPage = computed(() => (doc.value?.route ? `/${doc.value.route}` : undefined))
+const eventPage = computed(() => (doc.value?.route ? eventPath(doc.value.route) : undefined))
 const teamRoute = computed(() =>
 	team.doc ? { name: "team-calendar", params: { teamId: team.doc.name } } : undefined,
 )

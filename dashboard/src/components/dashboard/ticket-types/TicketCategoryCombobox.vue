@@ -3,7 +3,8 @@ import { Combobox, toast, useNewDoc } from "frappe-ui"
 import { computed, ref } from "vue"
 import { useRoute } from "vue-router"
 
-import type { FrappeError, TicketCategoryItem } from "@/types"
+import type { TicketCategoryItem } from "@/types"
+import { serverErrorMessage } from "@/utils/serverError"
 
 // Type to find a category; a name that matches none can be created on the spot.
 // "" is Uncategorized, which is also what clearing the input leaves.
@@ -26,9 +27,7 @@ const typed = computed(() => query.value.trim())
 const matchesNone = computed(
 	() =>
 		Boolean(typed.value) &&
-		!allCategories.value.some((item) =>
-			item.title.toLowerCase().includes(typed.value.toLowerCase()),
-		),
+		!allCategories.value.some((item) => item.title.toLowerCase() === typed.value.toLowerCase()),
 )
 
 const options = computed(() => [
@@ -47,11 +46,12 @@ async function create(title: string) {
 	Object.assign(creator.doc, { title, event: eventId })
 	const doc = await creator.submit().catch(() => null)
 	if (!doc?.name) {
-		toast.error((creator.error as FrappeError | null)?.message || "Could not create the category")
+		toast.error(serverErrorMessage(creator.error) || "Could not create the category")
 		return
 	}
 	created.value.push({ name: doc.name, title, description: null, sort_order: 0 })
 	category.value = doc.name
+	query.value = ""
 	creator.reset()
 	emit("created")
 }

@@ -194,6 +194,8 @@ class TicketTypeAccess:
 	def __init__(self, ticket_type: str):
 		doc = frappe.get_doc("Event Ticket Type", ticket_type)
 		self.ticket_type = str(doc.name)
+		# Locked before reading, so two opt-outs at once can't both move the event flag.
+		frappe.db.get_value("Buzz Event", doc.event, "name", for_update=True)
 		self.event = manageable_event(doc.event, "ticketing")
 
 	def update(self, requires_approval: bool, enable_waitlist: bool) -> None:
