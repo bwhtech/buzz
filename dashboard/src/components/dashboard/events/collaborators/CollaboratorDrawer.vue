@@ -125,7 +125,11 @@ async function saveAccess() {
 					{{ isInvite ? __("Invite collaborators") : __("Edit access") }}
 				</DrawerTitle>
 				<DrawerDescription class="sr-only">
-					{{ __("Collaborators see only this event, and only the sections you choose.") }}
+					{{
+						__(
+							"They can open this event and the sections you pick. They can't see your other events or your team.",
+						)
+					}}
 				</DrawerDescription>
 				<DrawerCloseButton />
 			</div>
