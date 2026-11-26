@@ -141,10 +141,31 @@ doc_events = {
 
 doc_events["Buzz Event"].update(
 	{
-		"on_update": ["buzz.events.buzz_events_listing.enqueue_push"],
-		"on_trash": ["buzz.events.buzz_events_listing.enqueue_remove"],
+		"on_update": [
+			"buzz.events.buzz_events_listing.enqueue_push",
+			"buzz.api.booking.cache.invalidate_for_event",
+		],
+		"on_trash": [
+			"buzz.events.buzz_events_listing.enqueue_remove",
+			"buzz.api.booking.cache.invalidate_for_event",
+		],
+		"after_rename": ["buzz.api.booking.cache.invalidate_for_event"],
 	}
 )
+
+booking_metadata_doctypes = [
+	"Event Ticket Type",
+	"Event Ticket Category",
+	"Ticket Add-on",
+	"Offline Payment Method",
+	"Buzz Custom Field",
+	"Buzz Form",
+]
+for _doctype in booking_metadata_doctypes:
+	for _event in ("on_update", "on_trash", "after_rename"):
+		doc_events.setdefault(_doctype, {}).setdefault(_event, []).append(
+			"buzz.api.booking.cache.invalidate_for_event_child"
+		)
 
 # Records a Buzz Tag can be applied to; deleting one also removes its tags.
 taggable_doctypes = ["Event Sponsor", "Buzz Event", "Talk Proposal", "Buzz Team Membership"]

@@ -7,8 +7,14 @@ from frappe.utils import add_to_date, cint, get_url, now_datetime
 from buzz.api.booking.exceptions import RequestAlreadyOpen, RequestNotOpen
 from buzz.payments import get_payment_link_for_booking
 from buzz.permissions import can_add_guests_directly
+from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
+	remaining_for,
+	sold_counts,
+	waitlist_ticket_types,
+)
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import (
 	PAYMENT_HOLD_MINUTES,
+	held_quantities,
 	live_hold_expiry,
 	release_hold,
 )
@@ -22,9 +28,9 @@ STATUS_OF_TYPE = {"Approval": "Requested", "Waitlist": "Waitlisted"}
 DEFAULT_PAYMENT_OFFER_HOURS = 48
 
 
-def payment_offer_hours(event: str) -> int:
+def payment_offer_hours(event: str | int) -> int:
 	return (
-		cint(frappe.get_cached_value("Buzz Event", event, "payment_offer_hours"))
+		cint(frappe.get_cached_value("Buzz Event", str(event), "payment_offer_hours"))
 		or DEFAULT_PAYMENT_OFFER_HOURS
 	)
 
@@ -37,7 +43,7 @@ class RegistrationRequest:
 
 	@property
 	def event_title(self) -> str:
-		return frappe.get_cached_value("Buzz Event", self.booking.event, "title")
+		return frappe.get_cached_value("Buzz Event", str(self.booking.event), "title")
 
 	def start(self) -> None:
 		"""Turn a new booking into a request when its tickets need the organizer."""
@@ -51,17 +57,33 @@ class RegistrationRequest:
 		Organizers skip approval, but a sold-out ticket type queues them like anyone else."""
 		quantities = self.booking.ticket_quantities()
 		ticket_types = self.ticket_types()
-		hold_token = self.booking.hold_token
-		if any(row.joins_waitlist(quantities[str(row.name)], hold_token) for row in ticket_types):
-			return "Waitlisted"
-		if can_add_guests_directly(self.booking.event, frappe.session.user):
+		event_doc = frappe.get_cached_doc("Buzz Event", str(self.booking.event))
+		event_waitlist = bool(event_doc.enable_waitlist)
+		waitlist_candidates = [
+			row
+			for row in ticket_types
+			if row.max_tickets_available and (row.enable_waitlist or event_waitlist)
+		]
+		if waitlist_candidates:
+			candidate_ids = [str(row.name) for row in waitlist_candidates]
+			sold = sold_counts(candidate_ids)
+			held = held_quantities(candidate_ids, exclude_token=self.booking.hold_token)
+			queued = waitlist_ticket_types(str(event_doc.name), candidate_ids)
+			for row in waitlist_candidates:
+				key = str(row.name)
+				if remaining_for(row, sold, held) < quantities[key] or key in queued:
+					return "Waitlisted"
+		if can_add_guests_directly(str(event_doc.name), frappe.session.user, team=event_doc.team or ""):
 			return None
-		if any(ticket_type.needs_approval for ticket_type in ticket_types):
+		event_requires_approval = bool(event_doc.requires_approval)
+		if any(row.requires_approval or event_requires_approval for row in ticket_types):
 			return "Requested"
 		return None
 
 	def ticket_types(self) -> list:
-		return [frappe.get_cached_doc("Event Ticket Type", name) for name in self.booking.ticket_quantities()]
+		return [
+			frappe.get_cached_doc("Event Ticket Type", str(name)) for name in self.booking.ticket_quantities()
+		]
 
 	def validate_no_open_request(self) -> None:
 		filters = {

@@ -1,6 +1,7 @@
 import json
 
 import frappe
+from frappe.query_builder import Criterion
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
@@ -137,3 +138,35 @@ class TestAnswersSavedAsText(IntegrationTestCase):
 		field, operator, names = self.conditions(["booth", "in", ["1"]], answer_parents=answer_parents)[0]
 		self.assertEqual((field, operator), ("booking", "in"))
 		self.assertIn(self.ticked, names)
+
+	def test_qb_criteria_matches_python_string_answers(self):
+		table = frappe.qb.DocType("Sponsorship Enquiry")
+		for triple, expected in (
+			(["booth", "in", ["1"]], True),
+			(["interests", "like", ["Talk"]], True),
+			(["interests", "not like", ["Talk"]], False),
+		):
+			criteria = ListConditions("Sponsorship Enquiry", self.fields).qb_criteria(
+				json.dumps([triple]), table
+			)
+			matched = set(
+				frappe.qb.from_(table)
+				.select(table.name)
+				.where(Criterion.all([table.name == self.ticked, *criteria]))
+				.run(pluck=True)
+			)
+			self.assertEqual(self.ticked in matched, expected)
+
+
+class TestListConditionsQB(TestListConditions):
+	"""Every filter rule produces the same matches via correlated EXISTS criteria."""
+
+	def matching(self, *triples) -> set[str]:
+		fields = [filter_field("status", "Status", "Select", [("Paid", "Paid")]), *question_fields(QUESTIONS)]
+		table = frappe.qb.DocType("Sponsorship Enquiry")
+		criteria = ListConditions("Sponsorship Enquiry", fields).qb_criteria(json.dumps(triples), table)
+		where_clause = Criterion.all([table.event == self.event, *criteria])
+		return set(frappe.qb.from_(table).select(table.name).where(where_clause).run(pluck=True))
+
+	def test_standard_not_in(self):
+		self.assertEqual(self.matching(["status", "not in", ["Paid"]]), {self.yes})

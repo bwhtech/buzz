@@ -14,7 +14,7 @@ from buzz.api.events.exceptions import (
 	EventNotFound,
 	ZoomNotAvailable,
 )
-from buzz.api.events.guest_zones import GuestZones, guest_list_zone
+from buzz.api.events.guest_zones import GuestZones
 from buzz.api.events.schemas import (
 	CreatedEvent,
 	DailyRegistrations,
@@ -36,7 +36,12 @@ from buzz.api.events.schemas import (
 	TicketTypeTotal,
 	VerificationMethods,
 )
-from buzz.api.filters.conditions import ListConditions, filter_field, form_questions, question_fields
+from buzz.api.filters.conditions import (
+	ListConditions,
+	filter_field,
+	form_questions_by_doctype,
+	question_fields,
+)
 from buzz.api.filters.schemas import FilterField
 from buzz.events.countdown import event_countdown
 from buzz.events.doctype.buzz_event.buzz_event import RESERVED_EVENT_ROUTES, BuzzEvent
@@ -48,6 +53,7 @@ from buzz.events.doctype.buzz_form.form_types import (
 from buzz.events.doctype.buzz_team.buzz_team import personal_team_owner
 from buzz.events.doctype.event_venue.details import venue_details
 from buzz.permissions import (
+	event_section_permissions,
 	events_with_section_access,
 	get_section_access,
 	has_section_permission,
@@ -198,29 +204,38 @@ DETAIL_FIELDS = (
 )
 
 
-def event_detail(event: str) -> EventDetail:
-	"""One event for its manage page, with the venue and meeting link resolved."""
-	row = frappe.db.get_value("Buzz Event", event, DETAIL_FIELDS, as_dict=True)
-	if not row:
+def get_event_doc(event: str) -> BuzzEvent:
+	try:
+		return frappe.get_cached_doc("Buzz Event", str(event))
+	except frappe.DoesNotExistError:
+		frappe.clear_last_message()
 		EventNotFound.throw()
 
-	user = frappe.session.user
-	if not has_section_permission(event, "details", "read", user):
+
+def event_detail(event: str) -> EventDetail:
+	"""One event for its manage page, with the venue and meeting link resolved."""
+	doc = get_event_doc(event)
+	perms = event_section_permissions(event, "details", team=doc.team or "")
+	if not perms["can_read"]:
 		CannotManageEvent.throw()
 
+	row = frappe._dict({field: doc.get(field) for field in DETAIL_FIELDS})
 	return EventDetail(
 		**row
 		| {
-			"name": str(row.name),
-			"venue": venue_details(row.venue),
-			"meeting_link": meeting_link_of(row),
-			"primary_host": primary_host_of(row.team),
-			"co_hosts": co_hosts_of(event),
-			"external_links": external_links_of(event),
-			"topics": topics_of(event),
-			"countdown": event_countdown(row),
+			"name": str(doc.name),
+			"venue": venue_details(doc.venue),
+			"meeting_link": meeting_link_of(doc),
+			"primary_host": primary_host_of(doc.team),
+			"co_hosts": co_hosts_of(event) if doc.co_hosts else [],
+			"external_links": [
+				EventExternalLink(icon=link.icon, label=link.label, url=link.url)
+				for link in doc.external_links
+			],
+			"topics": [topic.topic for topic in doc.topics],
+			"countdown": event_countdown(doc),
 			# Details View opens the same page with its fields locked.
-			"can_write": has_section_permission(event, "details", "write", user),
+			"can_write": perms["can_write"],
 		}
 	)
 
@@ -229,7 +244,7 @@ def primary_host_of(team: str | None) -> EventHostRef | None:
 	"""The team hosting the event."""
 	if not team:
 		return None
-	row = frappe.db.get_value("Buzz Team", team, ["team_name", "logo", "is_personal"], as_dict=True)
+	row = frappe.get_cached_value("Buzz Team", team, ["team_name", "logo", "is_personal"], as_dict=True)
 	owner = personal_team_owner(team) if row and row.is_personal else None
 	if owner:
 		return EventHostRef(host=team, label=owner.full_name, logo=owner.user_image)
@@ -252,25 +267,6 @@ def co_hosts_of(event: str) -> list[EventHostRef]:
 		.orderby(co_host.idx)
 	).run(as_dict=True)
 	return [EventHostRef(host=row.name, label=row.host_name or row.name, logo=row.logo) for row in rows]
-
-
-def external_links_of(event: str) -> list[EventExternalLink]:
-	rows = frappe.get_all(
-		"Event External Link",
-		filters={"parenttype": "Buzz Event", "parent": str(event), "parentfield": "external_links"},
-		fields=["icon", "label", "url"],
-		order_by="idx",
-	)
-	return [EventExternalLink(**row) for row in rows]
-
-
-def topics_of(event: str) -> list[str]:
-	return frappe.get_all(
-		"Event Topic Link",
-		filters={"parenttype": "Buzz Event", "parent": str(event), "parentfield": "topics"},
-		pluck="topic",
-		order_by="idx",
-	)
 
 
 def create_co_host(
@@ -380,23 +376,21 @@ def verification_methods() -> VerificationMethods:
 	return VerificationMethods(email=email_otp_available(), phone=phone_otp_available())
 
 
-def ensure_event_team_access(event: str, section: str | None) -> None:
+def ensure_event_team_access(event: str, section: str | None) -> BuzzEvent:
 	"""Read access to the event's section is the bar for everything a manage page shows.
 
 	`section` None is team-level data, which a collaborator never reaches.
 	"""
-	if not frappe.db.exists("Buzz Event", event):
-		EventNotFound.throw()
-
+	doc = get_event_doc(event)
 	user = frappe.session.user
-	team = frappe.db.get_value("Buzz Event", event, "team")
 	allowed = (
-		has_section_permission(event, section, "read", user)
+		has_section_permission(event, section, "read", user, team=doc.team or "")
 		if section
-		else has_team_access(team, "read", user)
+		else has_team_access(doc.team, "read", user)
 	)
 	if not allowed:
 		CannotManageEvent.throw()
+	return doc
 
 
 def event_guests(
@@ -420,62 +414,92 @@ def event_guests(
 	the guests who have, or have not, checked in today, at `zone` or the default zone.
 	A `zone` also keeps only the tickets it lets in.
 	"""
-	ensure_event_team_access(event, "guests")
+	doc = ensure_event_team_access(event, "guests")
+	event_id = str(doc.name)
 
-	filter_fields, answer_parents = guest_filter_fields(event)
-	conditions = ListConditions("Event Ticket", filter_fields, answer_parents).frappe_filters(filters)
-	guest_zones = GuestZones(event)
-	arrivals = guest_zones.arrivals[guest_list_zone(event, zone)]
+	counts_by_type = registrations_by_type(event_id)
+	total = sum(counts_by_type.values())
+	ticket_types = ticket_types_of(event_id)
+	filter_fields, answer_parents = guest_filter_fields(event_id, ticket_types=ticket_types)
+	ticket_table = frappe.qb.DocType("Event Ticket")
+	extra_criteria = ListConditions(
+		"Event Ticket", filter_fields, answer_parents, event=event_id
+	).qb_criteria(filters, ticket_table)
+	guest_zones = GuestZones(event_id, load_counts=total > 0)
+	active_zone = guest_zones.resolve_zone(zone)
 	if zone and (types := guest_zones.ticket_types.get(zone)):
-		conditions.append(["ticket_type", "in", list(types)])
+		extra_criteria.append(ticket_table.ticket_type.isin(list(types)))
 	if checked_in in ("0", "1"):
-		operator = "in" if checked_in == "1" else "not in"
-		conditions.append(["name", operator, list(arrivals) or [""]])
+		extra_criteria.append(guest_zones.checked_in_criterion(active_zone, ticket_table, checked_in == "1"))
 	if name:
-		conditions.append(["name", "=", name])
-	query_filters = [["event", "=", event], ["docstatus", "=", 1], *conditions]
-	or_filters = guest_search_filters(search)
+		extra_criteria.append(ticket_table.name == name)
+	if term := (search or "").strip():
+		pattern = f"%{term}%"
+		extra_criteria.append(
+			ticket_table.attendee_name.like(pattern)
+			| ticket_table.attendee_email.like(pattern)
+			| ticket_table.name.like(pattern)
+		)
 	limit = max(1, min(int(limit), 100))
 	start = max(0, int(start))
-	# Interpolated into ORDER BY, so it can only ever be one of two literals.
-	direction = "asc" if str(order).lower() == "asc" else "desc"
+	order_dir = frappe.qb.asc if str(order).lower() == "asc" else frappe.qb.desc
 
-	tickets = frappe.get_all(
-		"Event Ticket",
-		filters=query_filters,
-		or_filters=or_filters,
-		fields=["name", "attendee_name", "attendee_email", "ticket_type", "booking", "creation"],
-		order_by=f"creation {direction}, name {direction}",
-		limit_start=start,
-		limit_page_length=limit,
-	)
+	if not total:
+		tickets = []
+		matched = 0
+	else:
+		where_criterion = Criterion.all(
+			[ticket_table.event == event_id, ticket_table.docstatus == 1, *extra_criteria]
+		)
+		tickets = (
+			frappe.qb.from_(ticket_table)
+			.select(
+				ticket_table.name,
+				ticket_table.attendee_name,
+				ticket_table.attendee_email,
+				ticket_table.ticket_type,
+				ticket_table.booking,
+				ticket_table.creation,
+			)
+			.where(where_criterion)
+			.orderby(ticket_table.creation, order=order_dir)
+			.orderby(ticket_table.name, order=order_dir)
+			.limit(limit)
+			.offset(start)
+		).run(as_dict=True)
+		if not extra_criteria:
+			matched = total
+		elif start == 0 and len(tickets) < limit:
+			matched = len(tickets)
+		else:
+			count_rows = (
+				frappe.qb.from_(ticket_table).select(Count(ticket_table.name)).where(where_criterion).run()
+			)
+			matched = count_rows[0][0] if count_rows else 0
 
-	by_ticket = add_ons_by_ticket([ticket.name for ticket in tickets])
-	ticket_answers = answers_by_parent("Event Ticket", [ticket.name for ticket in tickets])
-	booking_answers = answers_by_parent(
-		"Event Booking", [ticket.booking for ticket in tickets if ticket.booking]
-	)
-	# Event Ticket Type is autonamed, so the link value is a number nobody recognises.
-	type_titles = titles_of("Event Ticket Type", {ticket.ticket_type for ticket in tickets})
+	ticket_names = [ticket.name for ticket in tickets]
+	booking_names = list({ticket.booking for ticket in tickets if ticket.booking})
+	guest_zones.load_page_arrivals(ticket_names)
+	active_arrivals = guest_zones.page_arrivals[active_zone]
+	by_ticket = add_ons_by_ticket(ticket_names)
+	ticket_answers, booking_answers = guest_answers_by_parent(ticket_names, booking_names)
+	type_titles = {row.name: row.title for row in ticket_types}
 
 	for ticket in tickets:
 		ticket["zones"] = guest_zones.statuses(ticket.name, ticket.ticket_type)
 		# The response names it registered_at, and the model forbids a field it does not declare.
 		ticket["registered_at"] = ticket.pop("creation")
-		ticket["ticket_type"] = type_titles.get(ticket.ticket_type) or ticket.ticket_type
+		ticket["ticket_type"] = type_titles.get(str(ticket.ticket_type)) or ticket.ticket_type
 
 	guests = [
 		EventGuest(
 			**ticket,
 			add_ons=by_ticket.get(ticket.name, []),
-			checked_in_at=arrivals.get(ticket.name),
+			checked_in_at=active_arrivals.get(ticket.name),
 			answers=ticket_answers.get(ticket.name, []) + booking_answers.get(ticket.booking, []),
 		)
 		for ticket in tickets
 	]
-	doc = frappe.get_cached_doc("Buzz Event", event)
-	total = count_tickets({"event": event, "docstatus": 1})
-	matched = count_tickets(query_filters, or_filters) if or_filters or conditions else total
 	return EventGuestsResponse(
 		title=doc.title,
 		start_date=doc.start_date,
@@ -485,29 +509,33 @@ def event_guests(
 		route=doc.route if doc.is_published else None,
 		total=total,
 		matched=matched,
-		checked_in=len(arrivals),
+		checked_in=guest_zones.checked_in_count(active_zone),
 		checked_in_any_zone=guest_zones.checked_in_any_zone(),
 		guests=guests,
 		has_next_page=start + len(guests) < matched,
 		filter_fields=filter_fields,
-		zones=guest_zones.options(),
+		zones=guest_zones.options(counts_by_type),
 	)
 
 
-def guest_filter_fields(event: str) -> tuple[list[FilterField], dict]:
+def guest_filter_fields(
+	event: str, ticket_types: list[GuestTicketType] | None = None
+) -> tuple[list[FilterField], dict]:
 	"""Ticket type, then the event's ticket and booking questions.
 
 	Booking questions are answered once per booking, so they filter a ticket through the
 	booking it belongs to. A fieldname asked on both keeps the ticket question.
 	"""
-	ticket_types = [(row.name, row.title) for row in ticket_types_of(event)]
-	questions = {row.fieldname: row for row in form_questions(event, REGISTRATION_FORM_DOCTYPE)}
+	rows = ticket_types if ticket_types is not None else ticket_types_of(event)
+	ticket_type_options = [(row.name, row.title) for row in rows]
+	by_doctype = form_questions_by_doctype(event, (REGISTRATION_FORM_DOCTYPE, ATTENDEE_FORM_DOCTYPE))
+	questions = {row.fieldname: row for row in by_doctype[REGISTRATION_FORM_DOCTYPE]}
 	answer_parents = {fieldname: ("Event Booking", "booking") for fieldname in questions}
-	for row in form_questions(event, ATTENDEE_FORM_DOCTYPE):
+	for row in by_doctype[ATTENDEE_FORM_DOCTYPE]:
 		questions[row.fieldname] = row
 		answer_parents.pop(row.fieldname, None)
 	fields = [
-		filter_field("ticket_type", _("Ticket type"), "Link", ticket_types),
+		filter_field("ticket_type", _("Ticket type"), "Link", ticket_type_options),
 		*question_fields(questions.values()),
 	]
 	return fields, answer_parents
@@ -533,7 +561,7 @@ def registration_trend(event: str, days: int = TREND_DAYS) -> RegistrationTrend:
 	all_time = registrations_by_type(event)
 
 	return RegistrationTrend(
-		total=count_tickets({"event": event, "docstatus": 1}),
+		total=sum(all_time.values()),
 		by_ticket_type=[
 			TicketTypeTotal(ticket_type=title or ticket_type, count=all_time.get(ticket_type, 0))
 			for ticket_type, title in titles.items()
@@ -586,17 +614,12 @@ def registrations_by_day_and_type(event: str, since) -> dict[tuple, int]:
 
 def ticket_types_of(event: str) -> list[GuestTicketType]:
 	"""Every type the event sells, so the filter can offer one that nobody bought yet."""
-	rows = frappe.get_all(
-		"Event Ticket Type", filters={"event": event}, fields=["name", "title"], order_by="title asc"
-	)
+	tt = frappe.qb.DocType("Event Ticket Type")
+	rows = (
+		frappe.qb.from_(tt).select(tt.name, tt.title).where(tt.event == str(event)).orderby(tt.title)
+	).run(as_dict=True)
 	# Autonamed, so the name arrives as an integer while every link to it travels as a string.
 	return [GuestTicketType(name=str(row.name), title=row.title) for row in rows]
-
-
-def count_tickets(filters: dict | list, or_filters: list[list] | None = None) -> int:
-	"""Dict syntax rather than "count(name)": get_all rejects SQL functions written as strings."""
-	rows = frappe.get_all("Event Ticket", filters=filters, or_filters=or_filters, fields=[{"COUNT": "*"}])
-	return rows[0]["COUNT(*)"] if rows else 0
 
 
 def titles_of(doctype: str, names: set[str | None]) -> dict[str, str]:
@@ -611,22 +634,32 @@ def titles_of(doctype: str, names: set[str | None]) -> dict[str, str]:
 	return {str(name): title for name, title in rows}
 
 
-def answers_by_parent(parenttype: str, parents: list[str]) -> dict[str, list[GuestAnswer]]:
-	"""Form answers for every parent at once. Query builder for the same reason as add-ons."""
-	if not parents:
-		return {}
+def guest_answers_by_parent(
+	tickets: list[str], bookings: list[str]
+) -> tuple[dict[str, list[GuestAnswer]], dict[str, list[GuestAnswer]]]:
+	"""Ticket and booking answers for one page of guests, in a single query."""
+	if not tickets and not bookings:
+		return {}, {}
 	field = frappe.qb.DocType("Additional Field")
+	branches = []
+	if tickets:
+		branches.append((field.parenttype == "Event Ticket") & field.parent.isin(tickets))
+	if bookings:
+		branches.append((field.parenttype == "Event Booking") & field.parent.isin(bookings))
 	rows = (
 		frappe.qb.from_(field)
-		.select(field.parent, field.label, field.fieldname, field.value)
-		.where((field.parenttype == parenttype) & field.parent.isin(parents) & (field.value != ""))
+		.select(field.parenttype, field.parent, field.label, field.fieldname, field.value)
+		.where(Criterion.any(branches) & (field.value != ""))
 		.orderby(field.idx)
 	).run(as_dict=True)
-	by_parent: dict[str, list[GuestAnswer]] = {}
+	by_ticket: dict[str, list[GuestAnswer]] = {}
+	by_booking: dict[str, list[GuestAnswer]] = {}
 	for row in rows:
-		answer = GuestAnswer(label=row.label or row.fieldname, value=row.value)
-		by_parent.setdefault(row.parent, []).append(answer)
-	return by_parent
+		target = by_ticket if row.parenttype == "Event Ticket" else by_booking
+		target.setdefault(row.parent, []).append(
+			GuestAnswer(label=row.label or row.fieldname, value=row.value)
+		)
+	return by_ticket, by_booking
 
 
 def add_ons_by_ticket(tickets: list[str], parenttype: str = "Event Ticket") -> dict[str, list[GuestAddOn]]:
@@ -637,16 +670,18 @@ def add_ons_by_ticket(tickets: list[str], parenttype: str = "Event Ticket") -> d
 	# Query builder rather than get_all: a child doctype has no standalone permission of
 	# its own, and the team check above is the authorization.
 	value = frappe.qb.DocType("Ticket Add-on Value")
+	addon = frappe.qb.DocType("Ticket Add-on")
 	rows = (
 		frappe.qb.from_(value)
-		.select(value.parent, value.add_on, value.value)
+		.left_join(addon)
+		.on(addon.name == value.add_on)
+		.select(value.parent, value.add_on, addon.title.as_("add_on_title"), value.value)
 		.where((value.parenttype == parenttype) & value.parent.isin(tickets))
 	).run(as_dict=True)
-	titles = titles_of("Ticket Add-on", {row.add_on for row in rows})
 
 	by_ticket: dict[str, list[GuestAddOn]] = {}
 	for row in rows:
-		add_on = GuestAddOn(title=titles.get(row.add_on) or row.add_on, value=row.value)
+		add_on = GuestAddOn(title=row.add_on_title or row.add_on, value=row.value)
 		by_ticket.setdefault(row.parent, []).append(add_on)
 	return by_ticket
 

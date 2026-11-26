@@ -46,7 +46,7 @@ def get_team_settings(team: str) -> "BuzzTeamSettings":
 
 
 def get_event_team_settings(event: str | int) -> "BuzzTeamSettings":
-	return get_team_settings(frappe.get_cached_value("Buzz Event", event, "team"))
+	return get_team_settings(frappe.get_cached_value("Buzz Event", str(event), "team"))
 
 
 # A feature flag is any Check field with this prefix, kept at permlevel 1 so only System Manager sets it.

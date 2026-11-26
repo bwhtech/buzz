@@ -228,13 +228,52 @@ def collaborator_access(user: str, event: str) -> dict[str, str | None]:
 	return {section: (row[f"{section}_access"] or None) if row else None for section in SECTIONS}
 
 
-def get_section_access(user: str, event: str) -> dict[str, str | None]:
+def event_team_of(event: str | int | None) -> str | None:
+	if not event:
+		return None
+	return frappe.get_cached_value("Buzz Event", str(event), "team")
+
+
+def get_section_access(user: str, event: str, team: str | None = None) -> dict[str, str | None]:
 	"""Section -> "View" | "Edit" | None, for a team member and a collaborator alike."""
 	if is_unrestricted(user):
 		return dict.fromkeys(SECTIONS, EDIT)
 
-	team_role = team_role_of(user, frappe.db.get_value("Buzz Event", event, "team"))
+	if team is None:
+		team = event_team_of(event)
+	team_role = team_role_of(user, team)
 	return team_role_access(team_role) if team_role else collaborator_access(user, event)
+
+
+def event_section_permissions(
+	event: str, section: str, team: str | None = None, user: str | None = None
+) -> dict[str, bool]:
+	"""Resolve read/write/team flags for an event section in at most one membership lookup."""
+	user = user or frappe.session.user
+	if is_unrestricted(user):
+		return {"can_read": True, "can_write": True, "has_team_read": True, "can_edit_team": True}
+
+	if team is None:
+		team = event_team_of(event)
+	if not team:
+		return {"can_read": True, "can_write": True, "has_team_read": True, "can_edit_team": False}
+
+	team_role = team_role_of(user, team)
+	if team_role:
+		return {
+			"can_read": True,
+			"can_write": role_allows(team_role, "write"),
+			"has_team_read": True,
+			"can_edit_team": team_role in ADMIN_ROLES,
+		}
+
+	level = collaborator_access(user, event)[section]
+	return {
+		"can_read": bool(level),
+		"can_write": level == EDIT,
+		"has_team_read": False,
+		"can_edit_team": False,
+	}
 
 
 def collaborator_allows(user: str, event: str, section: str, ptype: str) -> bool:
@@ -244,42 +283,59 @@ def collaborator_allows(user: str, event: str, section: str, ptype: str) -> bool
 	return level == EDIT or ptype not in WRITE_PTYPES
 
 
-def has_section_permission(event: str | None, section: str, ptype: str, user: str | None = None) -> bool:
+def has_section_permission(
+	event: str | None,
+	section: str,
+	ptype: str,
+	user: str | None = None,
+	team: str | None = None,
+) -> bool:
 	"""Deny-only check for a document of `event`'s `section`; team roles are unchanged."""
 	user = user or frappe.session.user
-	team = frappe.db.get_value("Buzz Event", event, "team") if event else None
+	if is_unrestricted(user):
+		return True
+	if team is None and event:
+		team = event_team_of(event)
 	# An unstamped row predates the backfill; role permissions still gate it.
-	if is_unrestricted(user) or not team:
+	if not team:
 		return True
 	if team_role := team_role_of(user, team):
 		return role_allows(team_role, ptype)
 	return collaborator_allows(user, event, section, ptype)
 
 
-def can_add_guests_directly(event: str, user: str) -> bool:
+def can_add_guests_directly(event: str | int, user: str, team: str | None = None) -> bool:
 	"""Team members who can create, or collaborators with Edit on guests. No System Manager bypass."""
-	team = frappe.db.get_value("Buzz Event", event, "team")
+	if user == "Guest":
+		return False
+	if team is None:
+		team = event_team_of(event)
 	if team_role := team_role_of(user, team):
 		return role_allows(team_role, "create")
 	return collaborator_allows(user, event, "guests", "create")
 
 
-def can_check_in(event: str, user: str) -> bool:
+def can_check_in(event: str, user: str, team: str | None = None) -> bool:
 	"""Front-desk work on an event. Unlike has_section_permission, an unstamped event fails closed."""
 	if is_unrestricted(user):
 		return True
-	if team_role := team_role_of(user, frappe.db.get_value("Buzz Event", event, "team")):
+	if team is None:
+		team = event_team_of(event)
+	if team_role := team_role_of(user, team):
 		return team_role in CHECKIN_ROLES
 	return collaborator_allows(user, event, "guests", "write")
 
 
-def transactions_allows(event: str | None, ptype: str, user: str | None = None) -> bool:
+def transactions_allows(
+	event: str | None, ptype: str, user: str | None = None, team: str | None = None
+) -> bool:
 	"""Payments and refunds: team write roles, or a ticketing collaborator. Unlike
 	has_section_permission, an unstamped event fails closed."""
 	user = user or frappe.session.user
 	if is_unrestricted(user):
 		return True
-	team = frappe.db.get_value("Buzz Event", event, "team") if event else None
+	if team is None:
+		team = event_team_of(event)
 	if not team:
 		return False
 	if team_role := team_role_of(user, team):
@@ -287,8 +343,8 @@ def transactions_allows(event: str | None, ptype: str, user: str | None = None) 
 	return collaborator_allows(user, event, "ticketing", ptype)
 
 
-def can_view_transactions(event: str | None, user: str | None = None) -> bool:
-	return transactions_allows(event, "read", user)
+def can_view_transactions(event: str | None, user: str | None = None, team: str | None = None) -> bool:
+	return transactions_allows(event, "read", user, team=team)
 
 
 def team_query_conditions(user: str | None = None, doctype: str | None = None, **kwargs) -> str | None:
@@ -371,7 +427,7 @@ def team_has_permission(doc, ptype: str = "read", user: str | None = None, **kwa
 	if doc.doctype == "Buzz Event" and ptype not in WRITE_PTYPES and doc.is_published:
 		return True
 	if doc.doctype == "Buzz Event" and not doc.is_new():
-		return has_section_permission(doc.name, "details", ptype, user)
+		return has_section_permission(doc.name, "details", ptype, user, team=doc.team or "")
 	return has_team_access(doc.team, ptype, user)
 
 
@@ -382,19 +438,19 @@ def derived_has_permission(doc, ptype: str = "read", user: str | None = None, **
 	if doc.doctype in OWNER_VISIBLE_DOCTYPES and belongs_to_user(doc, user):
 		return True
 	if doc.doctype == "Sponsorship Tier" and ptype not in WRITE_PTYPES:
-		if frappe.db.get_value("Buzz Event", doc.event, "is_published"):
+		if frappe.get_cached_value("Buzz Event", str(doc.event), "is_published"):
 			return True
 
 	# These doctypes carry no team column, so the team comes from their event.
 	event = event_of(doc)
-	team = frappe.db.get_value("Buzz Event", event, "team") if event else None
+	team = event_team_of(event)
 	if not team and doc.doctype in OWNER_VISIBLE_DOCTYPES:
 		# `has_team_access` waves an unstamped row through for a half-migrated site. These
 		# rows hold personal data, so they get no such pass — the checks above are the way in.
 		return is_unrestricted(user)
 
 	section = form_section(doc.form_doctype) if doc.doctype == "Buzz Form" else DOCTYPE_SECTION[doc.doctype]
-	return has_section_permission(event, section, ptype, user)
+	return has_section_permission(event, section, ptype, user, team=team or "")
 
 
 def event_of(doc) -> str | None:

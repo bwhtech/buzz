@@ -9,19 +9,26 @@ GATEWAYS_NEEDING_PHONE = ("PayU Gateway Settings",)
 PAYABLE_ENQUIRY_STATUSES = ("Approval Pending", "Payment Pending")
 
 
-def get_payment_gateways_for_event(event: str) -> list[str]:
+def get_payment_gateways_for_event(event: str | int, event_doc=None) -> list[str]:
 	"""Get the event's own payment gateways, or the site default when it has none.
 
 	Only enabled gateways are returned, so a gateway switched off in bwh_payments is never offered.
 	"""
-	gateways = frappe.get_all(
-		"Event Payment Gateway",
-		filters={"parent": event, "parenttype": "Buzz Event"},
-		pluck="payment_gateway",
-	)
-	default = frappe.db.get_single_value("Buzz Settings", "default_payment_gateway")
+	if event_doc is not None:
+		gateways = [row.payment_gateway for row in event_doc.payment_gateways]
+	else:
+		gateways = frappe.get_all(
+			"Event Payment Gateway",
+			filters={"parent": event, "parenttype": "Buzz Event"},
+			pluck="payment_gateway",
+		)
+	if not gateways:
+		default = frappe.get_cached_value("Buzz Settings", "Buzz Settings", "default_payment_gateway")
+		gateways = [default] if default else []
+	if not gateways:
+		return []
 	enabled = set(payments.get_payment_gateways())
-	return [gateway for gateway in gateways or [default] if gateway in enabled]
+	return [gateway for gateway in gateways if gateway in enabled]
 
 
 def get_gateways_needing_phone() -> list[str]:

@@ -1,7 +1,7 @@
 # Copyright (c) 2025, BWH Studios and contributors
 # For license information, please see license.txt
 
-# import frappe
+import frappe
 from frappe.model.document import Document
 
 
@@ -28,3 +28,11 @@ class EventPayment(Document):
 	# end: auto-generated types
 
 	pass
+
+
+def on_doctype_update():
+	frappe.db.add_index(
+		"Event Payment",
+		["reference_docname", "reference_doctype", "payment_gateway", "creation", "name"],
+		index_name="event_payment_ref_gateway_idx",
+	)

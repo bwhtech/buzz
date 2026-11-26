@@ -1,6 +1,8 @@
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Cast_
 from frappe.utils import cstr, flt
+from pypika.terms import Criterion, ExistsCriterion, ValueWrapper
 
 from buzz.api.filters.exceptions import InvalidFilter
 from buzz.api.filters.schemas import FilterField, FilterOperator, FilterOption
@@ -86,15 +88,32 @@ def question_fields(questions) -> list[FilterField]:
 
 def form_questions(event: str, form_doctype: str) -> list:
 	"""The enabled questions of the event's form of that doctype, in form order."""
-	form_name = frappe.db.get_value("Buzz Form", {"event": event, "form_doctype": form_doctype}, "name")
-	if not form_name:
-		return []
-	return frappe.get_all(
-		"Buzz Form Field",
-		filters={"parenttype": "Buzz Form", "parent": form_name, "enabled": 1, "is_standard": 0},
-		fields=QUESTION_FIELDS,
-		order_by="idx",
-	)
+	return form_questions_by_doctype(event, (form_doctype,)).get(form_doctype, [])
+
+
+def form_questions_by_doctype(event: str, form_doctypes: tuple[str, ...]) -> dict[str, list]:
+	"""Enabled questions for one or more form doctypes of an event, in one JOIN query."""
+	form = frappe.qb.DocType("Buzz Form")
+	field = frappe.qb.DocType("Buzz Form Field")
+	rows = (
+		frappe.qb.from_(field)
+		.join(form)
+		.on(form.name == field.parent)
+		.select(form.form_doctype, *(field[name] for name in QUESTION_FIELDS))
+		.where(
+			(form.event == str(event))
+			& form.form_doctype.isin(list(form_doctypes))
+			& (field.parenttype == "Buzz Form")
+			& (field.enabled == 1)
+			& (field.is_standard == 0)
+		)
+		.orderby(field.idx)
+	).run(as_dict=True)
+	grouped: dict[str, list] = {doctype: [] for doctype in form_doctypes}
+	for row in rows:
+		doctype = row.pop("form_doctype")
+		grouped.setdefault(doctype, []).append(row)
+	return grouped
 
 
 def form_logic_rules(event: str, form_doctype: str) -> str | None:
@@ -135,16 +154,27 @@ def is_blank(operator: str, value) -> bool:
 class ListConditions:
 	"""Turns the dashboard's `[field, operator, value]` triples into `frappe.get_all` filters."""
 
-	def __init__(self, doctype: str, fields: list[FilterField], answer_parents: dict | None = None):
+	def __init__(
+		self,
+		doctype: str,
+		fields: list[FilterField],
+		answer_parents: dict | None = None,
+		event: str | None = None,
+	):
 		"""`answer_parents` maps a question answered on a linked record to that record's doctype
 		and the list field linking to it, as a guest's booking questions sit on the booking."""
 		self.doctype = doctype
 		self.fields = {field.key: field for field in fields}
 		self.answer_parents = answer_parents or {}
+		self.event = str(event) if event is not None else None
 
 	def frappe_filters(self, filters_json: str | None) -> list[list]:
 		translated = (self.translate(*triple) for triple in self.parse(filters_json))
 		return [condition for condition in translated if condition]
+
+	def qb_criteria(self, filters_json: str | None, table) -> list[Criterion]:
+		translated = (self.translate_qb(table, *triple) for triple in self.parse(filters_json))
+		return [criterion for criterion in translated if criterion is not None]
 
 	def parse(self, filters_json: str | None) -> list[list]:
 		triples = frappe.parse_json(filters_json) if filters_json else []
@@ -166,8 +196,38 @@ class ListConditions:
 		field = self.fields[key]
 		if field.section == "question":
 			doctype, link_field = self.answer_parents.get(key, (self.doctype, "name"))
-			return AnswerCondition(doctype, link_field, field, operator, value).name_filter()
+			return AnswerCondition(
+				doctype, link_field, field, operator, value, event=self.event
+			).name_filter()
 		return [key, operator, f"%{value}%" if "like" in operator else value]
+
+	def translate_qb(self, table, key: str, operator: str, value) -> Criterion | None:
+		if is_blank(operator, value):
+			return None
+		if key == TAGS_KEY:
+			return self.tags_criterion(table, operator, value)
+		field = self.fields[key]
+		if field.section == "question":
+			doctype, link_field = self.answer_parents.get(key, (self.doctype, "name"))
+			return AnswerCondition(
+				doctype, link_field, field, operator, value, event=self.event
+			).qb_criterion(table)
+		return standard_field_criterion(table[key], operator, value)
+
+	def tags_criterion(self, table, operator: str, value) -> Criterion:
+		values = value if isinstance(value, list) else [value]
+		tag_link = frappe.qb.DocType("Buzz Tag Link")
+		subquery = (
+			frappe.qb.from_(tag_link)
+			.select(ValueWrapper(1))
+			.where(
+				(tag_link.document_type == self.doctype)
+				& (tag_link.document_name == table.name)
+				& tag_link.tag.isin(values)
+			)
+		)
+		criterion = ExistsCriterion(subquery)
+		return criterion.negate() if operator == "not in" else criterion
 
 	def tagged_names(self, tags: list[str]) -> list[str]:
 		return frappe.get_all(
@@ -177,6 +237,31 @@ class ListConditions:
 		)
 
 
+def standard_field_criterion(column, operator: str, value) -> Criterion:
+	if operator == "in":
+		values = value if isinstance(value, list) else [value]
+		return column.isin(values)
+	if operator == "not in":
+		values = value if isinstance(value, list) else [value]
+		return column.isnull() | column.notin(values)
+	if operator == "like":
+		return column.like(f"%{value}%")
+	if operator == "not like":
+		return column.isnull() | column.not_like(f"%{value}%")
+	if operator == "=":
+		return column == value
+	if operator == ">":
+		return column > value
+	if operator == "<":
+		return column < value
+	if operator == "between":
+		return column.between(value[0], value[-1])
+	InvalidFilter.throw()
+
+
+EVENT_SCOPED_DOCTYPES = ("Event Ticket", "Event Booking")
+
+
 class AnswerCondition:
 	"""One condition on a custom question, resolved to the parents whose answer matches.
 
@@ -184,15 +269,21 @@ class AnswerCondition:
 	each question is looked up on its own and lands back on the list as `name in (...)`.
 	"""
 
-	# Name lists grow with how many records answered the question; move to a qb
-	# subquery if a list ever reaches tens of thousands of rows.
-
-	def __init__(self, doctype: str, link_field: str, field: FilterField, operator: str, value):
+	def __init__(
+		self,
+		doctype: str,
+		link_field: str,
+		field: FilterField,
+		operator: str,
+		value,
+		event: str | None = None,
+	):
 		self.doctype = doctype
 		self.link_field = link_field
 		self.field = field
 		self.operator = operator
 		self.values = value if isinstance(value, list) else [value]
+		self.event = str(event) if event is not None else None
 
 	def name_filter(self) -> list | None:
 		if self.operator == "is":
@@ -234,6 +325,22 @@ class AnswerCondition:
 			return self.answered_parents(["like", f"%{self.values[0]}%"])
 		return self.answered_parents([operator, self.values if operator == "in" else self.values[0]])
 
+	def _answer_query(self):
+		field = frappe.qb.DocType("Additional Field")
+		query = frappe.qb.from_(field).where(
+			(field.parenttype == self.doctype)
+			& (field.parentfield == "additional_fields")
+			& (field.fieldname == self.field.key)
+		)
+		if self.event and self.doctype in EVENT_SCOPED_DOCTYPES:
+			parent_table = frappe.qb.DocType(self.doctype)
+			query = (
+				query.join(parent_table)
+				.on(parent_table.name == field.parent)
+				.where(parent_table.event == self.event)
+			)
+		return field, query
+
 	def compared_parents(self, operator: str) -> list[str]:
 		"""Answers are text, so numbers and dates are compared here rather than in SQL."""
 		convert = flt if kind_of(self.field.fieldtype) == "number" else str
@@ -244,13 +351,90 @@ class AnswerCondition:
 			"<": lambda answer: answer < low,
 			"between": lambda answer: low <= answer <= high,
 		}[operator]
-		rows = frappe.get_all("Additional Field", filters=self.answer_filters(), fields=["parent", "value"])
+		field, query = self._answer_query()
+		rows = query.select(field.parent, field.value).run(as_dict=True)
 		return [row.parent for row in rows if row.value not in (None, "") and matches(convert(row.value))]
 
 	def answered_parents(self, value=None) -> list[str]:
-		filters = self.answer_filters()
-		filters["value"] = value if value is not None else ["is", "set"]
-		return frappe.get_all("Additional Field", filters=filters, pluck="parent")
+		field, query = self._answer_query()
+		if value is None:
+			query = query.where(field.value.isnotnull() & (field.value != ""))
+		else:
+			op, operand = value
+			if op == "in":
+				if not operand:
+					return []
+				query = query.where(field.value.isin(operand))
+			elif op == "like":
+				query = query.where(field.value.like(operand))
+			else:
+				query = query.where(field.value == operand)
+		return query.select(field.parent).distinct().run(pluck=True)
 
-	def answer_filters(self) -> dict:
-		return {"parenttype": self.doctype, "parentfield": "additional_fields", "fieldname": self.field.key}
+	def qb_criterion(self, table) -> Criterion | None:
+		outer_column = table[self.link_field]
+		field = frappe.qb.DocType("Additional Field")
+		if self.operator == "is":
+			criterion = self._exists_criterion(
+				outer_column, field, field.value.isnotnull() & (field.value != "")
+			)
+			return criterion if self.values[0] == "set" else criterion.negate()
+		if self.field.fieldtype == "Check":
+			return self.check_qb_criterion(outer_column, field)
+		positive_operator = NEGATED_OPERATORS.get(self.operator, self.operator)
+		value_criterion = self._value_criterion(field, positive_operator)
+		criterion = self._exists_criterion(outer_column, field, value_criterion)
+		return criterion.negate() if self.operator in NEGATED_OPERATORS else criterion
+
+	def check_qb_criterion(self, outer_column, field) -> Criterion | None:
+		selected_values = set(self.values)
+		if self.operator == "not in":
+			selected_values = {"0", "1"} - selected_values
+		if len(selected_values) != 1:
+			return None
+		criterion = self._exists_criterion(outer_column, field, field.value.isin(CHECKED_VALUES))
+		return criterion if selected_values == {"1"} else criterion.negate()
+
+	def _exists_criterion(self, outer_column, field, value_criterion) -> ExistsCriterion:
+		subquery = (
+			frappe.qb.from_(field)
+			.select(ValueWrapper(1))
+			.where(
+				(field.parenttype == self.doctype)
+				& (field.parentfield == "additional_fields")
+				& (field.fieldname == self.field.key)
+				& (field.parent == outer_column)
+				& value_criterion
+			)
+		)
+		return ExistsCriterion(subquery)
+
+	def _value_criterion(self, field, operator: str) -> Criterion:
+		kind = kind_of(self.field.fieldtype)
+		if kind in ("number", "date"):
+			return self._comparison_criterion(field, kind, operator)
+		if kind == "multi":
+			patterns = [f'%"{option}"%' for option in self.values] + [
+				f"%'{option}'%" for option in self.values
+			]
+			return Criterion.any([field.value.like(pattern) for pattern in patterns])
+		if operator == "like":
+			return field.value.like(f"%{self.values[0]}%")
+		if operator == "in":
+			return field.value.isin(self.values)
+		return field.value == self.values[0]
+
+	def _comparison_criterion(self, field, kind: str, operator: str) -> Criterion:
+		if kind == "number":
+			low, high = flt(self.values[0]), flt(self.values[-1])
+			column = Cast_(field.value, "DECIMAL(20, 6)")
+		else:
+			low, high = str(self.values[0]), str(self.values[-1])
+			column = field.value
+		comparisons = {
+			"=": column == low,
+			">": column > low,
+			"<": column < low,
+			"between": column.between(low, high),
+		}
+		return field.value.isnotnull() & (field.value != "") & comparisons[operator]

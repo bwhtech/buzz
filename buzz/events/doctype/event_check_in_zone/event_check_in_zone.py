@@ -80,11 +80,13 @@ def create_default_zone(event: str) -> None:
 	).insert(ignore_permissions=True)
 
 
-def enabled_zones(event: str) -> list[frappe._dict]:
+def enabled_zones(event: str | int) -> list[frappe._dict]:
 	"""The event's enabled zones, default first."""
-	return frappe.get_all(
-		"Event Check-in Zone",
-		filters={"event": event, "enabled": 1},
-		fields=["name", "title", "is_default", "repeat_rule"],
-		order_by="is_default desc, creation asc",
-	)
+	zone = frappe.qb.DocType("Event Check-in Zone")
+	return (
+		frappe.qb.from_(zone)
+		.select(zone.name, zone.title, zone.is_default, zone.repeat_rule)
+		.where((zone.event == str(event)) & (zone.enabled == 1))
+		.orderby(zone.is_default, order=frappe.qb.desc)
+		.orderby(zone.creation)
+	).run(as_dict=True)

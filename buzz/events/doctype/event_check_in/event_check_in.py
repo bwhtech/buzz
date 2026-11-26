@@ -40,3 +40,8 @@ class EventCheckIn(Document):
 
 	def on_submit(self):
 		telemetry.capture("ticket_checked_in")
+
+
+def on_doctype_update():
+	frappe.db.add_index("Event Check In", ["event", "docstatus", "zone", "date", "ticket"])
+	frappe.db.add_index("Event Check In", ["ticket", "zone", "docstatus"])

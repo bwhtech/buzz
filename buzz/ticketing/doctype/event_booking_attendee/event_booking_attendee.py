@@ -50,3 +50,8 @@ class EventBookingAttendee(Document):
 
 	def get_number_of_add_ons(self):
 		return len(frappe.get_cached_doc("Attendee Ticket Add-on", self.add_ons).add_ons)
+
+
+def on_doctype_update():
+	frappe.db.add_index("Event Booking Attendee", ["ticket_type", "parent"])
+	frappe.db.add_index("Event Booking Attendee", ["parent", "ticket_type", "currency"])

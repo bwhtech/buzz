@@ -65,26 +65,31 @@ class EventTicket(Document):
 			return
 		frappe.throw(_("Tickets are issued by a booking."), frappe.PermissionError)
 
-	def before_submit(self):
-		self.generate_qr_code()
-
 	def on_submit(self):
-		# The ticket email carries the guest's own Zoom link, so registration comes first.
+		if frappe.in_test:
+			self.fulfill_side_effects()
+			return
+		frappe.enqueue(
+			"buzz.ticketing.doctype.event_ticket.event_ticket.fulfill_ticket_side_effects",
+			ticket_name=self.name,
+			queue="short",
+			enqueue_after_commit=True,
+		)
+
+	def fulfill_side_effects(self):
+		# QR file and Zoom link must exist before the ticket email embeds them.
+		self.ensure_qr_code()
 		self.create_zoom_registration_if_applicable()
 		try:
 			self.send_ticket_email()
 		except Exception as e:
 			frappe.log_error("Error sending ticket email: " + str(e))
 
-		# TODO: bring back after we have templates
-		# try:
-		# 	self.send_user_invitation()
-		# except Exception as e:
-		# 	frappe.log_error("Error sending user invitation: " + str(e))
-
 	@only_if_app_installed("zoom_integration")
 	def create_zoom_registration_if_applicable(self):
-		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
+		if self.get("zoom_session_registration"):
+			return
+		event_doc = frappe.get_cached_doc("Buzz Event", str(self.event))
 
 		if event_doc.zoom_webinar:
 			session_ref = {"reference_doctype": "Zoom Webinar", "reference_name": event_doc.zoom_webinar}
@@ -104,6 +109,7 @@ class EventTicket(Document):
 		).insert(ignore_permissions=True)
 
 		try:
+			registration.flags.ignore_permissions = True
 			registration.submit()
 			# Store the registration reference on the ticket (holds meeting or webinar registration)
 			self.db_set("zoom_session_registration", registration.name)
@@ -119,14 +125,15 @@ class EventTicket(Document):
 		)
 
 	def send_ticket_email(self, now: bool = False):
-		send_ticket_email = frappe.get_cached_value("Buzz Event", self.event, "send_ticket_email")
-
-		if not send_ticket_email:
+		event_doc = frappe.get_cached_doc("Buzz Event", str(self.event))
+		if not event_doc.send_ticket_email:
 			return
+		if self.docstatus == 1 and not self.qr_code:
+			self.ensure_qr_code()
 
-		event_title, ticket_template, ticket_print_format = frappe.get_cached_value(
-			"Buzz Event", self.event, ["title", "ticket_email_template", "ticket_print_format"]
-		)
+		event_title = event_doc.title
+		ticket_template = event_doc.ticket_email_template
+		ticket_print_format = event_doc.ticket_print_format
 
 		team_settings = get_event_team_settings(self.event)
 		# Fallback to the team default if event-level not set
@@ -134,7 +141,6 @@ class EventTicket(Document):
 			ticket_template = team_settings.default_ticket_email_template
 
 		subject = frappe._("Your ticket to {0} 🎟️").format(event_title)
-		event_doc = frappe.get_cached_doc("Buzz Event", self.event)
 		meeting = OnlineMeeting(event_doc, self)
 		args = {
 			"doc": self,
@@ -188,6 +194,12 @@ class EventTicket(Document):
 			attachments=attachments,
 		)
 
+	def ensure_qr_code(self):
+		if self.qr_code:
+			return
+		self.generate_qr_code()
+		self.db_set("qr_code", self.qr_code, update_modified=False)
+
 	def generate_qr_code(self):
 		self.qr_code = generate_qr_code_file(
 			doc=self,
@@ -201,7 +213,7 @@ class EventTicket(Document):
 		self.send_cancellation_email()
 
 	def send_cancellation_email(self):
-		event = frappe.get_cached_doc("Buzz Event", self.event)
+		event = frappe.get_cached_doc("Buzz Event", str(self.event))
 		send_message_email(
 			title=frappe._("Ticket cancelled"),
 			message=frappe._("<p>Hi {0}, your ticket has been cancelled. Sad to see you go.</p>").format(
@@ -212,3 +224,18 @@ class EventTicket(Document):
 			subject=f"Your ticket to {event.title} is cancelled.",
 			retry=2,
 		)
+
+
+def fulfill_ticket_side_effects(ticket_name: str) -> None:
+	ticket = frappe.get_doc("Event Ticket", ticket_name)
+	if ticket.docstatus != 1:
+		return
+	ticket.fulfill_side_effects()
+
+
+def on_doctype_update():
+	frappe.db.add_index("Event Ticket", ["event", "docstatus", "creation"])
+	frappe.db.add_index("Event Ticket", ["event", "docstatus", "ticket_type"])
+	frappe.db.add_index("Event Ticket", ["ticket_type", "docstatus"])
+	frappe.db.add_index("Event Ticket", ["booking", "docstatus"])
+	frappe.db.add_index("Event Ticket", ["attendee_email", "docstatus", "event"])

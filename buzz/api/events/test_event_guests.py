@@ -4,12 +4,14 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from buzz.api.checkin import checkin_ticket
-from buzz.api.events import get_event, get_event_guests
+from buzz.api.events import get_event, get_event_guests, services
 from buzz.api.events.exceptions import CannotManageEvent, EventNotFound, ZoneNotFound
 from buzz.tests.factories import (
 	BuzzEventFactory,
+	BuzzFormFactory,
 	BuzzTeamFactory,
 	BuzzTeamMembershipFactory,
+	EventBookingFactory,
 	EventCheckinZoneFactory,
 	EventTicketFactory,
 	EventTicketTypeFactory,
@@ -193,3 +195,85 @@ class TestGuestZones(GuestsTestCase):
 
 		with self.assertRaises(ZoneNotFound):
 			self.guests_as(self.owner, zone=self.lounge)
+
+
+class TestGuestCustomFiltersAndCheckIn(GuestsTestCase):
+	def setUp(self):
+		super().setUp()
+		BuzzFormFactory.add_question(
+			self.event,
+			form_doctype="Event Booking Attendee",
+			label="Shirt Size",
+			fieldname="shirt_size",
+			fieldtype="Select",
+			options="S\nM\nL",
+		)
+		BuzzFormFactory.add_question(
+			self.event,
+			form_doctype="Event Booking",
+			label="Company",
+			fieldname="company_name",
+			fieldtype="Data",
+		)
+		self.acme_booking = EventBookingFactory.create(
+			event=self.event,
+			additional_fields=[{"fieldname": "company_name", "label": "Company", "value": "Acme Corp"}],
+		).name
+		self.beta_booking = EventBookingFactory.create(
+			event=self.event,
+			additional_fields=[{"fieldname": "company_name", "label": "Company", "value": "Beta Labs"}],
+		).name
+		self.alice = EventTicketFactory.create(
+			"submitted",
+			event=self.event,
+			booking=self.acme_booking,
+			first_name="Alice",
+			attendee_email="alice@acme.test",
+			additional_fields=[{"fieldname": "shirt_size", "label": "Shirt Size", "value": "L"}],
+		).name
+		self.bob = EventTicketFactory.create(
+			"submitted",
+			event=self.event,
+			booking=self.beta_booking,
+			first_name="Bob",
+			attendee_email="bob@beta.test",
+			additional_fields=[{"fieldname": "shirt_size", "label": "Shirt Size", "value": "M"}],
+		).name
+		self.carol = EventTicketFactory.create(
+			"submitted",
+			event=self.event,
+			first_name="Carol",
+			attendee_email="carol@solo.test",
+		).name
+		checkin_ticket(self.alice)
+
+	def names(self, **arguments) -> set[str]:
+		with self.set_user(self.owner):
+			return {guest.name for guest in services.event_guests(self.event, **arguments).guests}
+
+	def test_filters_by_ticket_and_booking_custom_questions(self):
+		self.assertEqual(self.names(filters=json.dumps([["shirt_size", "in", ["L"]]])), {self.alice})
+		self.assertEqual(
+			self.names(filters=json.dumps([["shirt_size", "not in", ["L"]]])), {self.bob, self.carol}
+		)
+		self.assertEqual(self.names(filters=json.dumps([["company_name", "like", "acme"]])), {self.alice})
+		self.assertEqual(
+			self.names(filters=json.dumps([["company_name", "not like", "acme"]])), {self.bob, self.carol}
+		)
+		self.assertEqual(self.names(filters=json.dumps([["shirt_size", "is", "not set"]])), {self.carol})
+
+	def test_filters_by_checked_in_and_combines_with_custom_filters_and_paging(self):
+		self.assertEqual(self.names(checked_in="1"), {self.alice})
+		self.assertEqual(self.names(checked_in="0"), {self.bob, self.carol})
+		with self.set_user(self.owner):
+			page = services.event_guests(self.event, checked_in="0", limit=1)
+			combined = services.event_guests(
+				self.event,
+				checked_in="0",
+				filters=json.dumps([["company_name", "like", "beta"]]),
+				search="bob@",
+			)
+		self.assertEqual(page.matched, 2)
+		self.assertTrue(page.has_next_page)
+		self.assertEqual([guest.name for guest in combined.guests], [self.bob])
+		self.assertEqual(combined.matched, 1)

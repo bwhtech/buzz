@@ -124,6 +124,7 @@ def make_qr_image(data: str) -> bytes:
 	return output.getvalue()
 
 
+@functools.lru_cache(maxsize=512)
 def qr_data_uri(data: str) -> str:
 	return "data:image/png;base64," + base64.b64encode(make_qr_image(data)).decode()
 

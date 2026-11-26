@@ -125,7 +125,7 @@ class BuzzCouponCode(Document):
 			"code": cstr(code).strip().upper(),
 		}
 		name = frappe.db.get_value("Buzz Coupon Code", filters)
-		return frappe.get_doc("Buzz Coupon Code", name) if name else None
+		return frappe.get_cached_doc("Buzz Coupon Code", name) if name else None
 
 	@classmethod
 	def find_available_access_code(cls, event: str, code: str | None) -> "BuzzCouponCode | None":
@@ -135,28 +135,83 @@ class BuzzCouponCode(Document):
 			return coupon
 
 	@classmethod
-	def best_automatic(cls, booking: "EventBooking") -> "BuzzCouponCode | None":
-		filters = {"event": booking.event, "coupon_type": "Automatic", "enabled": 1}
-		names = frappe.get_all("Buzz Coupon Code", filters=filters, order_by="creation asc", pluck="name")
-		coupons = [frappe.get_doc("Buzz Coupon Code", name) for name in names]
-		usable = [coupon for coupon in coupons if coupon.unusable_reason(booking) is None]
+	def best_automatic(cls, booking: "EventBooking", use_cache: bool = True) -> "BuzzCouponCode | None":
+		coupon_table = frappe.qb.DocType("Buzz Coupon Code")
+		names = (
+			frappe.qb.from_(coupon_table)
+			.select(coupon_table.name)
+			.where(
+				(coupon_table.event == str(booking.event))
+				& (coupon_table.coupon_type == "Automatic")
+				& (coupon_table.enabled == 1)
+			)
+			.orderby(coupon_table.creation)
+		).run(pluck=True)
+		if not names:
+			return None
+		loader = frappe.get_cached_doc if use_cache else frappe.get_doc
+		coupons = [loader("Buzz Coupon Code", name) for name in names]
+		open_coupons = [coupon for coupon in coupons if coupon.is_open(booking.event)]
+		limited_names = [coupon.name for coupon in open_coupons if coupon.usage_limit]
+		taken_map = cls.batch_times_taken(limited_names, booking) if limited_names else {}
+		usable = [
+			coupon
+			for coupon in open_coupons
+			if coupon.unusable_reason(booking, taken_override=taken_map.get(coupon.name)) is None
+		]
 		best = max(usable, key=lambda coupon: coupon.discount_for(booking), default=None)
 		return best if best and best.discount_for(booking) > 0 else None
+
+	@classmethod
+	def batch_times_taken(cls, coupon_names: list[str], booking: "EventBooking") -> dict[str, int]:
+		"""Taken counts for multiple automatic/promo coupons in a single grouped query."""
+		from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
+		from buzz.ticketing.doctype.ticket_hold.ticket_hold import PAYMENT_HOLD_MINUTES
+
+		table = frappe.qb.DocType("Event Booking")
+		window_start = add_to_date(now_datetime(), minutes=-PAYMENT_HOLD_MINUTES)
+		live_draft = (
+			(table.docstatus == 0)
+			& ((table.payment_method == OFFLINE_PAYMENT_METHOD) | (table.creation > window_start))
+			& table.buyer_email.isnotnull()
+		)
+		rows = (
+			frappe.qb.from_(table)
+			.select(table.coupon_code, Count(table.name))
+			.where(table.coupon_code.isin(coupon_names))
+			.where(table.name != cstr(booking.name))
+			.where((table.docstatus == 1) | live_draft)
+			.groupby(table.coupon_code)
+		).run()
+		counts = {name: 0 for name in coupon_names}
+		for code, count in rows:
+			counts[code] = count
+		return counts
 
 	@classmethod
 	def lock_for(cls, booking: "EventBooking") -> None:
 		"""Lock the limited coupons the booking can use, in name order, so bookings check usage
 		limits one at a time until the transaction ends."""
 		coupon = frappe.qb.DocType("Buzz Coupon Code")
-		named = [name for name in (booking.coupon_code, booking.access_code) if name]
-		scope = coupon.name.isin(named or [""])
+		candidates = {name for name in (booking.coupon_code, booking.access_code) if name}
 		if not booking.coupon_code:
-			scope = scope | ((coupon.event == booking.event) & (coupon.coupon_type == "Automatic"))
+			auto_names = (
+				frappe.qb.from_(coupon)
+				.select(coupon.name)
+				.where(
+					(coupon.event == str(booking.event))
+					& (coupon.coupon_type == "Automatic")
+					& ((coupon.usage_limit > 0) | (coupon.once_per_buyer == 1))
+				)
+			).run(pluck=True)
+			candidates.update(auto_names)
+		if not candidates:
+			return
 		(
 			frappe.qb.from_(coupon)
 			.select(coupon.name)
+			.where(coupon.name.isin(sorted(candidates)))
 			.where((coupon.usage_limit > 0) | (coupon.once_per_buyer == 1))
-			.where(scope)
 			.orderby(coupon.name)
 			.for_update()
 		).run()
@@ -170,20 +225,22 @@ class BuzzCouponCode(Document):
 		within_limit = not self.usage_limit or self.times_used() < self.usage_limit
 		return self.is_open(event) and within_limit
 
-	def unusable_reason(self, booking: "EventBooking") -> str | None:
+	def unusable_reason(self, booking: "EventBooking", taken_override: int | None = None) -> str | None:
 		from buzz.api.booking.exceptions import InvalidCoupon
 
 		if not self.is_open(booking.event):
 			return str(InvalidCoupon.message)
-		return self.limit_reason(booking) or self.eligibility_reason(booking)
+		return self.limit_reason(booking, taken_override=taken_override) or self.eligibility_reason(booking)
 
-	def limit_reason(self, booking: "EventBooking") -> str | None:
-		return self.usage_limit_reason(booking) or self.once_per_buyer_reason(booking)
+	def limit_reason(self, booking: "EventBooking", taken_override: int | None = None) -> str | None:
+		return self.usage_limit_reason(booking, taken_override=taken_override) or self.once_per_buyer_reason(
+			booking
+		)
 
-	def usage_limit_reason(self, booking: "EventBooking") -> str | None:
+	def usage_limit_reason(self, booking: "EventBooking", taken_override: int | None = None) -> str | None:
 		if not self.usage_limit:
 			return None
-		taken = self.times_taken(booking)
+		taken = self.times_taken(booking) if taken_override is None else taken_override
 		if taken < self.usage_limit:
 			return None
 		if taken - self.own_live_drafts(booking) < self.usage_limit:
@@ -266,10 +323,23 @@ class BuzzCouponCode(Document):
 		return count_for_buyer(self.live_drafts(booking), booking)
 
 	def times_taken(self, booking: "EventBooking") -> int:
-		return self.times_used(exclude=booking.name) + self.times_reserved(booking)
+		from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
+		from buzz.ticketing.doctype.ticket_hold.ticket_hold import PAYMENT_HOLD_MINUTES
 
-	def times_reserved(self, booking: "EventBooking") -> int:
-		return self.live_drafts(booking).run()[0][0]
+		table = frappe.qb.DocType("Event Booking")
+		window_start = add_to_date(now_datetime(), minutes=-PAYMENT_HOLD_MINUTES)
+		live_draft = (
+			(table.docstatus == 0)
+			& ((table.payment_method == OFFLINE_PAYMENT_METHOD) | (table.creation > window_start))
+			& table.buyer_email.isnotnull()
+		)
+		return (
+			frappe.qb.from_(table)
+			.select(Count(table.name))
+			.where(getattr(table, self.usage_field) == self.name)
+			.where(table.name != cstr(booking.name))
+			.where((table.docstatus == 1) | live_draft)
+		).run()[0][0]
 
 	def live_drafts(self, booking: "EventBooking"):
 		"""Drafts still being paid for: online ones for the payment window, offline ones until
