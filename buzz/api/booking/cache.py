@@ -5,7 +5,9 @@ import frappe
 from buzz.events.doctype.buzz_form.form_types import APPLIED_TO_BY_FORM_DOCTYPE
 
 BOOKING_METADATA_KEY_PREFIX = "buzz:booking_metadata:v1:"
+BOOKING_METADATA_VERSION_PREFIX = "buzz:booking_metadata_ver:v1:"
 EVENT_ROUTE_KEY_PREFIX = "buzz:event_route:v1:"
+EVENT_ROUTE_VERSION_PREFIX = "buzz:event_route_ver:v1:"
 BOOKING_METADATA_TTL_SECONDS = 15 * 60
 EVENT_ROUTE_TTL_SECONDS = 15 * 60
 
@@ -14,12 +16,31 @@ class EventBookingCache:
 	"""Transaction-safe Redis cache for static per-event booking metadata and route lookups."""
 
 	@staticmethod
-	def metadata_key(event_id: str | int) -> str:
-		return f"{BOOKING_METADATA_KEY_PREFIX}{event_id}"
+	def metadata_version_key(event_id: str | int) -> str:
+		return f"{BOOKING_METADATA_VERSION_PREFIX}{event_id}"
+
+	@classmethod
+	def metadata_key(cls, event_id: str | int, version: int | None = None) -> str:
+		ver = cls._read_version(cls.metadata_version_key(event_id)) if version is None else version
+		return f"{BOOKING_METADATA_KEY_PREFIX}{event_id}:v{ver}"
 
 	@staticmethod
-	def route_key(route: str) -> str:
-		return f"{EVENT_ROUTE_KEY_PREFIX}{route}"
+	def route_version_key(route: str) -> str:
+		return f"{EVENT_ROUTE_VERSION_PREFIX}{route}"
+
+	@classmethod
+	def route_key(cls, route: str, version: int | None = None) -> str:
+		ver = cls._read_version(cls.route_version_key(route)) if version is None else version
+		return f"{EVENT_ROUTE_KEY_PREFIX}{route}:v{ver}"
+
+	@staticmethod
+	def _read_version(version_key: str) -> int:
+		raw = frappe.cache.get_value(version_key)
+		return int(raw) if raw is not None else 0
+
+	@staticmethod
+	def _bump_version(version_key: str) -> None:
+		frappe.cache.set_value(version_key, EventBookingCache._read_version(version_key) + 1)
 
 	@classmethod
 	def _dirty_events(cls) -> set[str]:
@@ -53,16 +74,17 @@ class EventBookingCache:
 		cls._dirty_routes().clear()
 		frappe.local._booking_cache_cleanup_scheduled = False
 		for event_id in dirty_events:
-			frappe.cache.delete_value(cls.metadata_key(event_id))
+			cls._bump_version(cls.metadata_version_key(event_id))
 		for route in dirty_routes:
-			frappe.cache.delete_value(cls.route_key(route))
+			cls._bump_version(cls.route_version_key(route))
 
 	@classmethod
 	def get_metadata(cls, event_id: str | int, loader: Callable[[str], dict]) -> dict:
 		key_id = str(event_id)
 		if frappe.flags.in_patch or key_id in cls._dirty_events():
 			return loader(key_id)
-		cache_key = cls.metadata_key(key_id)
+		version = cls._read_version(cls.metadata_version_key(key_id))
+		cache_key = cls.metadata_key(key_id, version)
 		cached = frappe.cache.get_value(cache_key)
 		if cached is not None:
 			return cached
@@ -77,7 +99,8 @@ class EventBookingCache:
 		if frappe.flags.in_patch or event_route in cls._dirty_routes():
 			name = frappe.db.get_value("Buzz Event", {"route": event_route}, "name")
 			return str(name) if name else None
-		cache_key = cls.route_key(event_route)
+		version = cls._read_version(cls.route_version_key(event_route))
+		cache_key = cls.route_key(event_route, version)
 		cached = frappe.cache.get_value(cache_key)
 		if cached is not None:
 			return str(cached)
@@ -94,7 +117,7 @@ class EventBookingCache:
 			return
 		key_id = str(event_id)
 		cls._dirty_events().add(key_id)
-		frappe.cache.delete_value(cls.metadata_key(key_id))
+		cls._bump_version(cls.metadata_version_key(key_id))
 		cls._schedule_transaction_cleanup()
 
 	@classmethod
@@ -102,7 +125,7 @@ class EventBookingCache:
 		if not route:
 			return
 		cls._dirty_routes().add(route)
-		frappe.cache.delete_value(cls.route_key(route))
+		cls._bump_version(cls.route_version_key(route))
 		cls._schedule_transaction_cleanup()
 
 

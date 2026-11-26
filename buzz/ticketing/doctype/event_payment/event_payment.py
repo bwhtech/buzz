@@ -33,6 +33,6 @@ class EventPayment(Document):
 def on_doctype_update():
 	frappe.db.add_index(
 		"Event Payment",
-		["reference_docname", "reference_doctype", "payment_gateway", "creation", "name"],
+		["reference_docname", "reference_doctype", "payment_gateway", "creation"],
 		index_name="event_payment_ref_gateway_idx",
 	)

@@ -7,7 +7,6 @@ from pypika.terms import Criterion, ExistsCriterion, ValueWrapper
 from buzz.api.filters.exceptions import InvalidFilter
 from buzz.api.filters.schemas import FilterField, FilterOperator, FilterOption
 from buzz.api.forms.answers import LAYOUT_TYPES
-from buzz.api.forms.conditions import parse_rules
 from buzz.events.doctype.buzz_form.form_types import APPLIED_TO_BY_FORM_DOCTYPE, QUESTION_FIELD_NAMES
 
 KIND_BY_FIELDTYPE = {
@@ -120,14 +119,6 @@ def form_logic_rules(event: str, form_doctype: str) -> str | None:
 	return frappe.db.get_value("Buzz Form", {"event": event, "form_doctype": form_doctype}, "logic_rules")
 
 
-def registration_logic_rules(event: str) -> dict:
-	"""Each registration form's rules, keyed the way registration_questions tags its questions."""
-	return {
-		applied_to: parse_rules(form_logic_rules(event, form_doctype))
-		for form_doctype, applied_to in APPLIED_TO_BY_FORM_DOCTYPE.items()
-	}
-
-
 def registration_questions(event: str) -> list:
 	"""Booking then attendee questions, each tagged with what the booking page calls it."""
 	return [
@@ -172,9 +163,27 @@ class ListConditions:
 		translated = (self.translate(*triple) for triple in self.parse(filters_json))
 		return [condition for condition in translated if condition]
 
-	def qb_criteria(self, filters_json: str | None, table) -> list[Criterion]:
-		translated = (self.translate_qb(table, *triple) for triple in self.parse(filters_json))
-		return [criterion for criterion in translated if criterion is not None]
+	def split_qb_criteria(self, filters_json: str | None, table) -> tuple[list[list], list[Criterion]]:
+		"""Split filters into standard Frappe filter triples and correlated EXISTS criteria."""
+		standard_filters: list[list] = []
+		exists_criteria: list[Criterion] = []
+		for key, operator, value in self.parse(filters_json):
+			if is_blank(operator, value):
+				continue
+			if key == TAGS_KEY:
+				exists_criteria.append(self.tags_criterion(table, operator, value))
+				continue
+			field = self.fields[key]
+			if field.section == "question":
+				doctype, link_field = self.answer_parents.get(key, (self.doctype, "name"))
+				criterion = AnswerCondition(
+					doctype, link_field, field, operator, value, event=self.event
+				).qb_criterion(table)
+				if criterion is not None:
+					exists_criteria.append(criterion)
+			else:
+				standard_filters.append([key, operator, f"%{value}%" if "like" in operator else value])
+		return standard_filters, exists_criteria
 
 	def parse(self, filters_json: str | None) -> list[list]:
 		triples = frappe.parse_json(filters_json) if filters_json else []
@@ -201,19 +210,6 @@ class ListConditions:
 			).name_filter()
 		return [key, operator, f"%{value}%" if "like" in operator else value]
 
-	def translate_qb(self, table, key: str, operator: str, value) -> Criterion | None:
-		if is_blank(operator, value):
-			return None
-		if key == TAGS_KEY:
-			return self.tags_criterion(table, operator, value)
-		field = self.fields[key]
-		if field.section == "question":
-			doctype, link_field = self.answer_parents.get(key, (self.doctype, "name"))
-			return AnswerCondition(
-				doctype, link_field, field, operator, value, event=self.event
-			).qb_criterion(table)
-		return standard_field_criterion(table[key], operator, value)
-
 	def tags_criterion(self, table, operator: str, value) -> Criterion:
 		values = value if isinstance(value, list) else [value]
 		tag_link = frappe.qb.DocType("Buzz Tag Link")
@@ -235,28 +231,6 @@ class ListConditions:
 			filters={"document_type": self.doctype, "tag": ["in", tags]},
 			pluck="document_name",
 		)
-
-
-def standard_field_criterion(column, operator: str, value) -> Criterion:
-	if operator == "in":
-		values = value if isinstance(value, list) else [value]
-		return column.isin(values)
-	if operator == "not in":
-		values = value if isinstance(value, list) else [value]
-		return column.isnull() | column.notin(values)
-	if operator == "like":
-		return column.like(f"%{value}%")
-	if operator == "not like":
-		return column.isnull() | column.not_like(f"%{value}%")
-	if operator == "=":
-		return column == value
-	if operator == ">":
-		return column > value
-	if operator == "<":
-		return column < value
-	if operator == "between":
-		return column.between(value[0], value[-1])
-	InvalidFilter.throw()
 
 
 EVENT_SCOPED_DOCTYPES = ("Event Ticket", "Event Booking")
@@ -425,8 +399,10 @@ class AnswerCondition:
 		return field.value == self.values[0]
 
 	def _comparison_criterion(self, field, kind: str, operator: str) -> Criterion:
+		guard = field.value.isnotnull() & (field.value != "")
 		if kind == "number":
 			low, high = flt(self.values[0]), flt(self.values[-1])
+			guard = guard & field.value.regexp(r"^-?[0-9]+(\.[0-9]+)?$")
 			column = Cast_(field.value, "DECIMAL(20, 6)")
 		else:
 			low, high = str(self.values[0]), str(self.values[-1])
@@ -437,4 +413,4 @@ class AnswerCondition:
 			"<": column < low,
 			"between": column.between(low, high),
 		}
-		return field.value.isnotnull() & (field.value != "") & comparisons[operator]
+		return guard & comparisons[operator]

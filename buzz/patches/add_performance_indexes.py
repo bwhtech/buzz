@@ -21,7 +21,7 @@ def execute():
 		("Event Ticket Type", ["event", "is_published"], None),
 		(
 			"Event Payment",
-			["reference_docname", "reference_doctype", "payment_gateway", "creation", "name"],
+			["reference_docname", "reference_doctype", "payment_gateway", "creation"],
 			"event_payment_ref_gateway_idx",
 		),
 		("Event Check In", ["event", "docstatus", "zone", "date", "ticket"], None),

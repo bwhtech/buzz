@@ -146,15 +146,18 @@ class TestAnswersSavedAsText(IntegrationTestCase):
 			(["interests", "like", ["Talk"]], True),
 			(["interests", "not like", ["Talk"]], False),
 		):
-			criteria = ListConditions("Sponsorship Enquiry", self.fields).qb_criteria(
-				json.dumps([triple]), table
+			standard_filters, exists_criteria = ListConditions(
+				"Sponsorship Enquiry", self.fields
+			).split_qb_criteria(json.dumps([triple]), table)
+			query = frappe.qb.get_query(
+				"Sponsorship Enquiry",
+				fields=["name"],
+				filters=[["name", "=", self.ticked], *standard_filters],
+				ignore_permissions=True,
 			)
-			matched = set(
-				frappe.qb.from_(table)
-				.select(table.name)
-				.where(Criterion.all([table.name == self.ticked, *criteria]))
-				.run(pluck=True)
-			)
+			if exists_criteria:
+				query = query.where(Criterion.all(exists_criteria))
+			matched = set(query.run(pluck=True))
 			self.assertEqual(self.ticked in matched, expected)
 
 
@@ -164,9 +167,18 @@ class TestListConditionsQB(TestListConditions):
 	def matching(self, *triples) -> set[str]:
 		fields = [filter_field("status", "Status", "Select", [("Paid", "Paid")]), *question_fields(QUESTIONS)]
 		table = frappe.qb.DocType("Sponsorship Enquiry")
-		criteria = ListConditions("Sponsorship Enquiry", fields).qb_criteria(json.dumps(triples), table)
-		where_clause = Criterion.all([table.event == self.event, *criteria])
-		return set(frappe.qb.from_(table).select(table.name).where(where_clause).run(pluck=True))
+		standard_filters, exists_criteria = ListConditions("Sponsorship Enquiry", fields).split_qb_criteria(
+			json.dumps(triples), table
+		)
+		query = frappe.qb.get_query(
+			"Sponsorship Enquiry",
+			fields=["name"],
+			filters=[["event", "=", self.event], *standard_filters],
+			ignore_permissions=True,
+		)
+		if exists_criteria:
+			query = query.where(Criterion.all(exists_criteria))
+		return set(query.run(pluck=True))
 
 	def test_standard_not_in(self):
 		self.assertEqual(self.matching(["status", "not in", ["Paid"]]), {self.yes})

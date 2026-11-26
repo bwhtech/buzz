@@ -53,6 +53,7 @@ def transaction_names(event: str, filters: list[list] | None = None, **arguments
 		filters=[*transaction_filters(event), *(filters or [])],
 		or_filters=TRANSACTION_OR_FILTERS,
 		pluck="name",
+		ignore_permissions=True,
 		**arguments,
 	)
 
@@ -63,6 +64,7 @@ def count_transactions(event: str, filters: list[list] | None = None) -> int:
 		filters=[*transaction_filters(event), *(filters or [])],
 		or_filters=TRANSACTION_OR_FILTERS,
 		fields=[{"COUNT": "*"}],
+		ignore_permissions=True,
 	)
 	return rows[0]["COUNT(*)"] if rows else 0
 
@@ -194,6 +196,7 @@ class TransactionsList:
 				order_by=f"creation {direction}, name {direction}",
 				limit_start=start,
 				limit=limit,
+				ignore_permissions=True,
 			)
 		names = [booking.name for booking in bookings]
 		payments, tickets = latest_payments(names), ticket_counts(names)

@@ -427,7 +427,7 @@ def team_has_permission(doc, ptype: str = "read", user: str | None = None, **kwa
 	if doc.doctype == "Buzz Event" and ptype not in WRITE_PTYPES and doc.is_published:
 		return True
 	if doc.doctype == "Buzz Event" and not doc.is_new():
-		return has_section_permission(doc.name, "details", ptype, user, team=doc.team or "")
+		return has_section_permission(doc.name, "details", ptype, user)
 	return has_team_access(doc.team, ptype, user)
 
 

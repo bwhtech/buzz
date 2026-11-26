@@ -422,17 +422,17 @@ def event_guests(
 	ticket_types = ticket_types_of(event_id)
 	filter_fields, answer_parents = guest_filter_fields(event_id, ticket_types=ticket_types)
 	ticket_table = frappe.qb.DocType("Event Ticket")
-	extra_criteria = ListConditions(
+	standard_filters, extra_criteria = ListConditions(
 		"Event Ticket", filter_fields, answer_parents, event=event_id
-	).qb_criteria(filters, ticket_table)
+	).split_qb_criteria(filters, ticket_table)
 	guest_zones = GuestZones(event_id, load_counts=total > 0)
 	active_zone = guest_zones.resolve_zone(zone)
 	if zone and (types := guest_zones.ticket_types.get(zone)):
-		extra_criteria.append(ticket_table.ticket_type.isin(list(types)))
+		standard_filters.append(["ticket_type", "in", list(types)])
 	if checked_in in ("0", "1"):
 		extra_criteria.append(guest_zones.checked_in_criterion(active_zone, ticket_table, checked_in == "1"))
 	if name:
-		extra_criteria.append(ticket_table.name == name)
+		standard_filters.append(["name", "=", name])
 	if term := (search or "").strip():
 		pattern = f"%{term}%"
 		extra_criteria.append(
@@ -442,39 +442,40 @@ def event_guests(
 		)
 	limit = max(1, min(int(limit), 100))
 	start = max(0, int(start))
-	order_dir = frappe.qb.asc if str(order).lower() == "asc" else frappe.qb.desc
+	direction = "asc" if str(order).lower() == "asc" else "desc"
 
 	if not total:
 		tickets = []
 		matched = 0
 	else:
-		where_criterion = Criterion.all(
-			[ticket_table.event == event_id, ticket_table.docstatus == 1, *extra_criteria]
+		base_filters = [["event", "=", event_id], ["docstatus", "=", 1], *standard_filters]
+		query = frappe.qb.get_query(
+			"Event Ticket",
+			fields=["name", "attendee_name", "attendee_email", "ticket_type", "booking", "creation"],
+			filters=base_filters,
+			order_by=f"creation {direction}, name {direction}",
+			limit=limit,
+			offset=start,
+			ignore_permissions=True,
 		)
-		tickets = (
-			frappe.qb.from_(ticket_table)
-			.select(
-				ticket_table.name,
-				ticket_table.attendee_name,
-				ticket_table.attendee_email,
-				ticket_table.ticket_type,
-				ticket_table.booking,
-				ticket_table.creation,
-			)
-			.where(where_criterion)
-			.orderby(ticket_table.creation, order=order_dir)
-			.orderby(ticket_table.name, order=order_dir)
-			.limit(limit)
-			.offset(start)
-		).run(as_dict=True)
-		if not extra_criteria:
+		if extra_criteria:
+			query = query.where(Criterion.all(extra_criteria))
+		tickets = query.run(as_dict=True)
+		is_filtered = bool(standard_filters or extra_criteria)
+		if not is_filtered:
 			matched = total
 		elif start == 0 and len(tickets) < limit:
 			matched = len(tickets)
 		else:
-			count_rows = (
-				frappe.qb.from_(ticket_table).select(Count(ticket_table.name)).where(where_criterion).run()
+			count_query = frappe.qb.get_query(
+				"Event Ticket",
+				fields=[Count(ticket_table.name)],
+				filters=base_filters,
+				ignore_permissions=True,
 			)
+			if extra_criteria:
+				count_query = count_query.where(Criterion.all(extra_criteria))
+			count_rows = count_query.run()
 			matched = count_rows[0][0] if count_rows else 0
 
 	ticket_names = [ticket.name for ticket in tickets]

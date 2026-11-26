@@ -65,6 +65,10 @@ class EventTicket(Document):
 			return
 		frappe.throw(_("Tickets are issued by a booking."), frappe.PermissionError)
 
+	def before_submit(self):
+		if not self.qr_code:
+			self.generate_qr_code()
+
 	def on_submit(self):
 		if frappe.in_test:
 			self.fulfill_side_effects()
@@ -77,9 +81,11 @@ class EventTicket(Document):
 		)
 
 	def fulfill_side_effects(self):
-		# QR file and Zoom link must exist before the ticket email embeds them.
 		self.ensure_qr_code()
-		self.create_zoom_registration_if_applicable()
+		try:
+			self.create_zoom_registration_if_applicable()
+		except Exception as e:
+			frappe.log_error("Error creating Zoom registration: " + str(e))
 		try:
 			self.send_ticket_email()
 		except Exception as e:

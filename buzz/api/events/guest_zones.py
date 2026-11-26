@@ -59,9 +59,7 @@ class GuestZones:
 		return self.counts_by_zone.get(str(zone), 0)
 
 	def checked_in_criterion(self, zone: str, ticket_table, is_checked_in: bool):
-		zone_row = self.zones_by_name.get(str(zone))
-		if not zone_row:
-			return ValueWrapper(0) == ValueWrapper(1) if is_checked_in else ValueWrapper(1) == ValueWrapper(1)
+		zone_row = self.zones_by_name[str(zone)]
 		checkin = frappe.qb.DocType("Event Check In")
 		condition = (
 			(checkin.event == self.event)
