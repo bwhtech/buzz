@@ -20,10 +20,15 @@ class TestCouponDiscounts(CouponTestCase):
 
 		self.assert_amounts(self.create_booking(coupon), net=500, discount=500, total=0)
 
-	def test_add_ons_excluded_from_discount(self):
+	def test_percentage_discount_includes_add_ons(self):
 		coupon = self.create_coupon(discount_percentage=50).name
 
-		self.assert_amounts(self.create_booking_with_add_on(coupon), net=700, discount=250, total=450)
+		self.assert_amounts(self.create_booking_with_add_on(coupon), net=700, discount=350, total=350)
+
+	def test_flat_discount_capped_at_tickets_and_add_ons(self):
+		coupon = self.create_coupon("flat", discount_amounts=[{"currency": "INR", "price": 1000}]).name
+
+		self.assert_amounts(self.create_booking_with_add_on(coupon), net=700, discount=700, total=0)
 
 	def test_flat_discount_without_currency_row_is_refused(self):
 		coupon = self.create_coupon("flat", discount_amounts=[{"currency": "USD", "price": 10}]).name

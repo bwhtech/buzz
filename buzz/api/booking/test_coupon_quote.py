@@ -9,6 +9,7 @@ from buzz.tests.factories import (
 	BuzzEventFactory,
 	EventBookingFactory,
 	EventTicketTypeFactory,
+	TicketAddOnFactory,
 )
 
 INVALID = "Invalid or expired code"
@@ -69,6 +70,23 @@ class TestCouponQuote(QuoteTestCase):
 		self.create_coupon(code="LASTDAY", expires_on=today())
 
 		self.assertEqual(self.quote(coupon_code="LASTDAY")["discount_amount"], 50)
+
+	def test_percentage_quote_includes_add_ons(self):
+		self.create_coupon(code="HALF", discount_percentage=50)
+		other_event_add_on = TicketAddOnFactory.create(price=300).name
+
+		quote = self.quote(coupon_code="HALF", add_ons=[[self.add_on.name, other_event_add_on]])
+
+		self.assertEqual(quote["discount_amount"], 350)
+
+	def test_quote_matches_booking_with_add_ons(self):
+		coupon = self.create_coupon(code="MATCH", discount_percentage=50)
+
+		quote = self.quote(coupon_code="MATCH", add_ons=[[self.add_on.name]])
+
+		self.assertEqual(
+			quote["discount_amount"], self.create_booking_with_add_on(coupon.name).discount_amount
+		)
 
 	def test_quote_respects_once_per_buyer(self):
 		coupon = self.create_coupon(code="ONCE", once_per_buyer=1)

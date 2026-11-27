@@ -282,7 +282,7 @@ class BuzzCouponCode(Document):
 	def discount_for(self, booking: "EventBooking") -> float:
 		if self.discount_type == "None":
 			return 0
-		subtotal = self.eligible_subtotal(booking)
+		subtotal = self.discountable_subtotal(booking)
 		if self.discount_type == "Percentage":
 			return flt(subtotal * flt(self.discount_percentage) / 100, 2)
 		return min(amount_in(self.discount_amounts, booking.currency) or 0, subtotal)
@@ -305,6 +305,11 @@ class BuzzCouponCode(Document):
 
 	def eligible_subtotal(self, booking: "EventBooking") -> float:
 		return sum(flt(attendee.amount) for attendee in self.eligible_attendees(booking))
+
+	def discountable_subtotal(self, booking: "EventBooking") -> float:
+		"""The eligible tickets with their add-ons."""
+		attendees = self.eligible_attendees(booking)
+		return sum(flt(attendee.amount) + flt(attendee.add_on_total) for attendee in attendees)
 
 	def times_used(self, exclude: str | None = None) -> int:
 		return frappe.db.count("Event Booking", self.usage_filters(exclude))
