@@ -31,6 +31,7 @@ from buzz.tests.factories import (
 )
 from buzz.tests.utils import html_part, mute_outgoing_email
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import held_quantities, live_hold_expiry
+from buzz.www.event.registration import RegistrationCard
 
 
 class RequestTestCase(BookingTestCase):
@@ -116,6 +117,35 @@ class TestRegistrationRequests(RequestTestCase):
 		self.assertEqual(self.tickets_of(name), 1)
 		# A decided request stays on the Approvals page.
 		self.assertEqual(self.rows("Approval")[name].status, "Confirmed")
+
+	def test_free_approval_tells_the_guest_they_are_approved(self):
+		name = self.request_to_join()
+
+		approve_request(name)
+
+		self.assertIn("The organizer approved your request.", self.emails_of(name)[-1])
+
+	def test_registration_page_shows_the_open_request(self):
+		name = self.request_to_join()
+
+		with self.set_user(self.booker):
+			self.assertEqual(get_event_booking_data(self.event.route).open_request.name, name)
+		with self.set_user(self.another_booker("no-request")):
+			self.assertIsNone(get_event_booking_data(self.event.route).open_request)
+
+		decline_request(name)
+		with self.set_user(self.booker):
+			self.assertIsNone(get_event_booking_data(self.event.route).open_request)
+
+	def test_event_page_links_to_the_open_request(self):
+		name = self.request_to_join()
+
+		with self.set_user(self.booker):
+			request = RegistrationCard(self.event).open_request()
+		with self.set_user("Guest"):
+			self.assertIsNone(RegistrationCard(self.event).open_request())
+
+		self.assertEqual(request, {"label": "Request received", "url": f"/b/booking-success/{name}"})
 
 	def test_declined_request_is_kept_and_can_be_reopened(self):
 		name = self.request_to_join()
@@ -321,6 +351,9 @@ class TestPaidRegistrationRequests(RequestTestCase):
 		self.assertEqual(self.state(name), ("Payment Pending", 0, "Approval"))
 		self.assertEqual(held_quantities([ticket_type.name]), {str(ticket_type.name): 1})
 		self.assertIn("Pay now", self.emails_of(name)[-1])
+		# The link starts the payment on arrival.
+		self.assertIn(f"/b/booking-success/{name}?token=", self.emails_of(name)[-1])
+		self.assertIn("pay=1", self.emails_of(name)[-1])
 		self.assertIsNotNone(self.rows("Approval")[name].offer_expires_at)
 		# The guest may be on the payment page.
 		self.assertRaises(RequestNotOpen, decline_request, name)

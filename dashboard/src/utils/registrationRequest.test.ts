@@ -1,7 +1,12 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 
-import { isRegistrationRequest, requestNotice, requestSubmitLabel } from "./registrationRequest.ts"
+import {
+	isRegistrationRequest,
+	requestNote,
+	requestNotice,
+	requestSubmitLabel,
+} from "./registrationRequest.ts"
 
 test("each request status has a notice, other statuses have none", () => {
 	assert.equal(requestNotice("Requested")?.title, "Request received")
@@ -30,4 +35,10 @@ test("the waitlist label wins over the approval label", () => {
 	)
 	assert.equal(requestSubmitLabel([{ needs_approval: true }]), "Request to join")
 	assert.equal(requestSubmitLabel([{}]), null)
+})
+
+test("a mixed order is told the whole order waits", () => {
+	assert.match(requestNote([{}, { needs_approval: true }])!, /whole order/)
+	assert.match(requestNote([{}, { waitlisted: true }])!, /waitlist/)
+	assert.equal(requestNote([{}]), null)
 })

@@ -4,7 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import fmt_money, format_date
 
-from buzz.api.booking.event_data import load_available_ticket_type_rows
+from buzz.api.booking.event_data import load_available_ticket_type_rows, open_request_of_user
 from buzz.api.booking.services import are_registrations_closed
 from buzz.api.events.services import registration_link
 from buzz.api.proposals.services import are_proposals_closed, proposal_form, proposal_link
@@ -18,7 +18,7 @@ class RegistrationCard:
 		self.event = event
 
 	def as_dict(self) -> dict:
-		return self.state_card() | {"booked": self.booked_tickets()}
+		return self.state_card() | {"booked": self.booked_tickets(), "request": self.open_request()}
 
 	def state_card(self) -> dict:
 		if are_registrations_closed(self.event):
@@ -49,6 +49,17 @@ class RegistrationCard:
 			return None
 		label = _("1 ticket") if count == 1 else _("{0} tickets").format(count)
 		return {"label": label, "url": f"/b/manage/events?event={self.event.name}"}
+
+	def open_request(self) -> dict | None:
+		request = open_request_of_user(str(self.event.name))
+		if not request:
+			return None
+		titles = {
+			"Requested": _("Request received"),
+			"Waitlisted": _("You're on the waitlist"),
+			"Payment Pending": _("You're approved: pay to confirm"),
+		}
+		return {"label": titles[request.status], "url": f"/b/booking-success/{request.name}"}
 
 	def published_ticket_types(self) -> list:
 		filters = {"event": self.event.name, "is_published": 1, "is_hidden": 0}

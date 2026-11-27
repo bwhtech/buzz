@@ -50,6 +50,7 @@ EVENT_DATA_FIELDS = {
 	"offline_payment_enabled",
 	"offline_methods",
 	"access_code",
+	"open_request",
 }
 
 EVENT_DETAIL_FIELDS = {

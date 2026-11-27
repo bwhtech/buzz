@@ -231,6 +231,12 @@
 					<a class="es-button ticket-stack-button" data-variant="outline" data-size="sm" href="{{ registration.booked.url }}">{{ _("View tickets") }}</a>
 					<a class="ticket-stack-link" href="{{ registration.booked.url }}">{{ _("View") }}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
 				</div>
+				{% elif registration.request %}
+				<div class="ticket-stack">
+					<p class="ticket-stack-note"><span class="request-dot" aria-hidden="true"></span><span class="ticket-stack-text"><span class="ticket-stack-title">{{ registration.request.label }}</span></span></p>
+					<a class="es-button ticket-stack-button" data-variant="outline" data-size="sm" href="{{ registration.request.url }}">{{ _("View request") }}</a>
+					<a class="ticket-stack-link" href="{{ registration.request.url }}">{{ _("View") }}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+				</div>
 				{% endif %}
 				{% call side_card(registration, registration.state, "ticket-card") %}
 				{% if registration.state == "open" and not is_guest %}

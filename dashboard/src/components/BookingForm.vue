@@ -71,6 +71,7 @@
 						class="flex min-w-0 flex-col gap-6"
 						:style="{ '--direction': direction }"
 					>
+						<slot v-if="step.id === 'tickets'" name="notice" />
 						<header class="flex flex-col gap-1.5">
 							<h1 class="text-xl-semibold tracking-[-0.01em] text-ink-gray-9 md:text-2xl-semibold">
 								{{ stepCopy.title }}
@@ -160,6 +161,9 @@
 							/>
 						</SummaryStep>
 
+						<p v-if="isMobile && requestNoteText" class="text-p-sm text-ink-gray-5">
+							{{ requestNoteText }}
+						</p>
 						<p v-if="isMobile && showStepError" class="text-center text-p-sm text-ink-red-6">
 							{{ stepErrorMessage }}
 						</p>
@@ -200,6 +204,9 @@
 					>
 						{{ ctaLabel }}
 					</Button>
+					<p v-if="requestNoteText" class="text-center text-p-sm text-ink-gray-5">
+						{{ requestNoteText }}
+					</p>
 					<p v-if="showStepError" class="text-center text-p-sm text-ink-red-6">
 						{{ stepErrorMessage }}
 					</p>
@@ -296,7 +303,7 @@ import { eventPath } from "@/utils/eventUrl"
 import { applyLogic, type LogicRule } from "@/utils/formLogic"
 import { safeMarkdown } from "@/utils/markdown"
 import { siteHeaderHidden } from "@/utils/navbar"
-import { isRegistrationRequest, requestSubmitLabel } from "@/utils/registrationRequest"
+import { isRegistrationRequest, requestNote, requestSubmitLabel } from "@/utils/registrationRequest"
 import { serverErrorMessage } from "@/utils/serverError"
 import { isZoomBackedCategory } from "@/utils/zoomCategory"
 
@@ -633,6 +640,10 @@ const stepErrorMessage = computed(() => validation.summarize(stepErrors.value))
 const nextStep = computed(() => steps.value[current.value + 1])
 const totalLabel = computed(() => formatWholePriceOrFree(total.value, currency.value))
 const requestLabel = computed(() => requestSubmitLabel(pickedTicketTypes.value))
+const requestNoteText = computed(() => {
+	const note = requestNote(pickedTicketTypes.value)
+	return note ? __(note) : null
+})
 const ctaLabel = computed(() => {
 	if (nextStep.value?.id === "summary") return __("Review booking")
 	if (nextStep.value) return __("Continue to {0}", [nextStep.value.label.toLowerCase()])

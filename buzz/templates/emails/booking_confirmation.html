@@ -4,7 +4,7 @@
 
 {% block content %}
 <p style="margin:0 0 24px">
-  Thanks for booking.{% if event_doc.send_ticket_email %} Each attendee gets their own ticket{% if not meeting.is_online %} with an entry QR code{% endif %} by email.{% endif %}
+  {% if doc.is_free_approved_request %}The organizer approved your request.{% else %}Thanks for booking.{% endif %}{% if event_doc.send_ticket_email %} Each attendee gets their own ticket{% if not meeting.is_online %} with an entry QR code{% endif %} by email.{% endif %}
 </p>
 {% set email_type = "booking" %}
 {% include "buzz/templates/emails/_join_meeting.html" %}

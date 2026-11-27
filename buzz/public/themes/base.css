@@ -1400,7 +1400,8 @@ summary.schedule-summary:focus-visible {
 	font-weight: 500;
 }
 
-.booked-dot {
+.booked-dot,
+.request-dot {
 	flex-shrink: 0;
 	/* Centred on the first line of text */
 	margin: 6px 3px 0;
@@ -1409,6 +1410,11 @@ summary.schedule-summary:focus-visible {
 	border-radius: 50%;
 	background: var(--ink-green-3);
 	box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink-green-3) 18%, transparent);
+}
+
+.request-dot {
+	background: var(--ink-amber-3);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink-amber-3) 18%, transparent);
 }
 
 .ticket-stack-link {

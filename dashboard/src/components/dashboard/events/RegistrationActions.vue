@@ -25,9 +25,9 @@ const VERIFICATION_LABELS: Record<string, string> = {
 }
 
 const guestSubtitle = computed(() => {
-	if (!props.allowGuestBooking) return "Disabled"
+	if (!props.allowGuestBooking) return "Login required"
 	const verification = VERIFICATION_LABELS[props.guestVerificationMethod]
-	return verification ? `Enabled · ${verification}` : "Enabled"
+	return verification ? `No login needed · ${verification}` : "No login needed"
 })
 </script>
 
@@ -43,7 +43,7 @@ const guestSubtitle = computed(() => {
 	>
 		<QuickActionTile
 			icon="lucide-hat-glasses"
-			title="Guest registration"
+			title="Anonymous"
 			:subtitle="guestSubtitle"
 			:tone="allowGuestBooking ? 'violet' : 'gray'"
 			:disabled="!canWrite"

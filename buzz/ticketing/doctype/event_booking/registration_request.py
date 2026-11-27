@@ -114,7 +114,7 @@ class RegistrationRequest:
 		self.send_email(
 			"booking_request_approved",
 			_("You're approved for {0}: pay to confirm your spot").format(self.event_title),
-			pay_url=get_url(self.booking_page()),
+			pay_url=get_url(f"{self.booking_page()}&pay=1"),
 			hours=payment_offer_hours(self.booking.event),
 		)
 
