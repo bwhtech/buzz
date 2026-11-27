@@ -428,9 +428,17 @@ class EventBooking(Document):
 			},
 		)
 
+	@property
+	def is_free_approved_request(self) -> bool:
+		"""Approving a free request confirms it at once, so this email is the approval notice."""
+		return self.request_type in ("Approval", "Waitlist") and not self.total_amount
+
 	def send_booking_confirmation_email(self):
 		event_doc = frappe.get_cached_doc("Buzz Event", str(self.event))
 		team_settings = get_event_team_settings(self.event)
+		subject = _("Your booking for {0} is confirmed ✅")
+		if self.is_free_approved_request:
+			subject = _("You're approved for {0}: your booking is confirmed ✅")
 		# Fallback to the team default if event-level not set
 		self.send_booking_email(
 			template=(
@@ -438,7 +446,8 @@ class EventBooking(Document):
 				or team_settings.default_booking_confirmation_email_template
 			),
 			builtin="booking_confirmation",
-			subject=_("Your booking for {0} is confirmed ✅").format(event_doc.title),
+			subject=subject.format(event_doc.title),
+			always=self.is_free_approved_request,
 		)
 
 	def send_offline_acknowledgement_email(self):
