@@ -5,7 +5,12 @@ from frappe import _
 
 from buzz.api.booking.cache import EventBookingCache
 from buzz.api.booking.exceptions import InvalidAccessCode
-from buzz.api.booking.schemas import AccessCodeStatus, EventBookingDataResponse, TaxSettings
+from buzz.api.booking.schemas import (
+	AccessCodeStatus,
+	EventBookingDataResponse,
+	OpenRequest,
+	TaxSettings,
+)
 from buzz.api.filters.conditions import QUESTION_FIELDS
 from buzz.api.forms.conditions import parse_rules
 from buzz.api.forms.fields import question_definition
@@ -18,6 +23,7 @@ from buzz.events.doctype.buzz_form.form_types import (
 from buzz.payments import get_payment_gateways_for_event
 from buzz.permissions import can_add_guests_directly
 from buzz.ticketing.doctype.buzz_coupon_code.buzz_coupon_code import BuzzCouponCode
+from buzz.ticketing.doctype.event_booking.registration_request import OPEN_STATUSES
 from buzz.ticketing.doctype.event_ticket_category.event_ticket_category import get_ordered_categories
 from buzz.ticketing.doctype.event_ticket_type.event_ticket_type import (
 	remaining_for,
@@ -114,7 +120,21 @@ def build_event_booking_data(
 		offline_payment_enabled=len(offline_methods) > 0,
 		offline_methods=offline_methods,
 		access_code=access_code_status(access_code, coupon),
+		open_request=open_request_of_user(event_id),
 	)
+
+
+def open_request_of_user(event_id: str) -> OpenRequest | None:
+	"""Read through the (user, docstatus) index: a user has few draft bookings."""
+	if frappe.session.user == "Guest":
+		return None
+	row = frappe.db.get_value(
+		"Event Booking",
+		{"user": frappe.session.user, "docstatus": 0, "event": event_id, "status": ("in", OPEN_STATUSES)},
+		["name", "status"],
+		as_dict=True,
+	)
+	return OpenRequest(name=row.name, status=row.status) if row else None
 
 
 def get_event_booking_metadata(event_id: str | int) -> dict:

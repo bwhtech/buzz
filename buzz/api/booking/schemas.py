@@ -81,6 +81,11 @@ class AccessCodeStatus(APIResponse):
 	error: str | None = None
 
 
+class OpenRequest(APIResponse):
+	name: str
+	status: str
+
+
 class EventBookingDataResponse(APIResponse):
 	# event_details and the list fields carry documents or meta-defined rows; typing
 	# them would reshape the payload.
@@ -101,6 +106,8 @@ class EventBookingDataResponse(APIResponse):
 	offline_payment_enabled: bool
 	offline_methods: list
 	access_code: AccessCodeStatus
+	# The signed-in user's undecided request for this event, if any.
+	open_request: OpenRequest | None
 
 
 class ConfirmationEvent(APIResponse):
