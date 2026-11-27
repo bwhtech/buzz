@@ -1,7 +1,7 @@
 import type { Condition, LogicRule } from "@/utils/formLogic"
 
-import { CHOICE_TYPES, fieldType } from "../fieldTypes"
-import type { DoctypeField, FormQuestion } from "../useFormBuilder"
+import { CHOICE_TYPES, fieldType } from "../fieldTypes.ts"
+import type { DoctypeField, FormQuestion } from "../useFormBuilder.ts"
 
 export interface RuleField {
 	fieldname: string
@@ -80,7 +80,14 @@ function valuesOf(
 	return null
 }
 
-// What a condition may test: the doctype's own fields (a link with no choices to pick from is skipped), then questions above the rule's targets.
+// Links to other attendees' records, not to choices an attendee makes, so they can't be tested.
+const PER_ATTENDEE_LINKS = ["Attendee Ticket Add-on"]
+
+const isTestable = (field: DoctypeField) =>
+	field.fieldtype !== "Link" ||
+	(Boolean(field.link_options?.length) && !PER_ATTENDEE_LINKS.includes(field.options ?? ""))
+
+// What a condition may test: the doctype's own fields, then questions above the rule's targets.
 export function ruleFields(
 	doctypeFields: DoctypeField[],
 	questions: FormQuestion[],
@@ -88,7 +95,7 @@ export function ruleFields(
 ): RuleField[] {
 	const standard = doctypeFields
 		.filter((field) => fieldType(field.fieldtype).group !== "Layout")
-		.filter((field) => field.fieldtype !== "Link" || field.link_options)
+		.filter(isTestable)
 		.map((field) => ({
 			fieldname: field.fieldname,
 			label: field.label,
