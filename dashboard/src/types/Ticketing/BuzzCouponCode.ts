@@ -28,6 +28,8 @@ export interface BuzzCouponCode {
 	discount_percentage?: number
 	/**	Discount Amounts : Table - Buzz Price	*/
 	discount_amounts?: BuzzPrice[]
+	/**	Maximum Discount Amounts : Table - Buzz Price - Optional. The most one booking can save, per currency	*/
+	maximum_discount_amounts?: BuzzPrice[]
 	/**	Applies to All Ticket Types : Check	*/
 	applies_to_all_ticket_types?: 0 | 1
 	/**	Ticket Types : Table MultiSelect - Buzz Coupon Ticket Type	*/

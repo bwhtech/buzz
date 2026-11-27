@@ -27,9 +27,14 @@ function quantityFor(values: CouponValues, price: number, currency: string) {
 	return 1
 }
 
+function percentageDiscount(values: CouponValues, subtotal: number, currency: string) {
+	const discount = Math.round(subtotal * Math.min(values.discount_percentage, 100)) / 100
+	const maximum = amountIn(values.maximum_discount_amounts, currency)
+	return maximum > 0 ? Math.min(discount, maximum) : discount
+}
+
 function discountFor(values: CouponValues, subtotal: number, currency: string) {
-	if (values.discount_type === "Percentage")
-		return Math.round(subtotal * Math.min(values.discount_percentage, 100)) / 100
+	if (values.discount_type === "Percentage") return percentageDiscount(values, subtotal, currency)
 	return Math.min(amountIn(values.discount_amounts, currency), subtotal)
 }
 

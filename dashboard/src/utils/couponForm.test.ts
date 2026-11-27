@@ -101,6 +101,18 @@ test("the saved document drops amounts for currencies no longer sold", () => {
 	assert.deepEqual(doc.ticket_types, [{ ticket_type: "student" }])
 })
 
+test("the saved document keeps only positive maximum discounts", () => {
+	const values = promo({
+		discount_percentage: 20,
+		maximum_discount_amounts: [
+			{ currency: "INR", price: 0 },
+			{ currency: "USD", price: 5 },
+		],
+	})
+	const doc = couponDocValues(values, ticketTypes)
+	assert.deepEqual(doc.maximum_discount_amounts, [{ currency: "USD", price: 5 }])
+})
+
 test("an automatic coupon keeps its name as typed", () => {
 	const doc = couponDocValues(
 		promo({ coupon_type: "Automatic", code: " Group of 5+ " }),

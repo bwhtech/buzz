@@ -160,6 +160,14 @@ const hasInvalidCode = computed(
 						@click="values.discount_percentage = percentage"
 					/>
 				</div>
+				<CurrencyAmounts
+					v-if="currencies.length"
+					v-model="values.maximum_discount_amounts"
+					label="Maximum discount per order (optional)"
+					:currencies="currencies"
+					:disabled="disabled"
+				/>
+				<p v-if="currencies.length" class="text-sm text-ink-gray-5">Leave at 0 for no limit.</p>
 			</div>
 
 			<p v-else-if="values.discount_type === 'None'" class="text-sm text-ink-gray-5">

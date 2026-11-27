@@ -104,3 +104,12 @@ test("a ticket count minimum notes that the preview uses it", () => {
 	)
 	assert.equal(preview?.note, "Shown with the minimum of 5 tickets.")
 })
+
+test("a maximum discount caps the percentage in its currency", () => {
+	const preview = checkoutPreview(
+		values({ maximum_discount_amounts: [{ currency: "INR", price: 50 }] }),
+		ticketTypes,
+		{},
+	)
+	assert.deepEqual([preview?.discount, preview?.total], [50, 450])
+})
