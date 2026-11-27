@@ -40,7 +40,7 @@ defineEmits<{ toggle: [] }>()
 			:icon="closed ? closedIcon : openIcon"
 			:title="subject"
 			:subtitle="closed ? 'Closed' : 'Open'"
-			:tone="closed ? 'red' : 'green'"
+			:tone="closed ? 'gray' : 'green'"
 			:pulse="!closed"
 			:disabled="!canWrite"
 			@click="$emit('toggle')"

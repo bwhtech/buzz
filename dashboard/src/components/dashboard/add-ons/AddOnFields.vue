@@ -34,6 +34,13 @@ const scope = computed({
 	get: () => (values.value.applies_to_all_ticket_types ? "all" : "specific"),
 	set: (picked) => (values.value.applies_to_all_ticket_types = picked === "all"),
 })
+
+const isPublished = (ticketType: TicketTypeItem) => !!ticketType.is_published
+const describeTicketType = (ticketType: TicketTypeItem) =>
+	isPublished(ticketType) ? "" : "Not published"
+// A selected one stays toggleable so it can be removed.
+const isSelectable = (ticketType: TicketTypeItem) =>
+	isPublished(ticketType) || values.value.ticket_types.includes(ticketType.name)
 </script>
 
 <template>
@@ -72,16 +79,16 @@ const scope = computed({
 				<p class="text-p-xs text-ink-gray-5">Leave at zero to offer it free.</p>
 			</div>
 		</div>
-		<DrawerSection title="Options">
+		<DrawerSection title="Choices">
 			<PerkList
 				v-model="values.options"
-				label="Attendees pick one, such as a T-shirt size"
-				add-label="Add option"
-				item-name="option"
-				placeholder="Option name"
+				label="Let attendees pick one, such as a T-shirt size. Leave empty if there is nothing to choose."
+				add-label="Add choice"
+				item-name="choice"
+				placeholder="Choice name"
 			/>
 		</DrawerSection>
-		<DrawerSection title="Applies to">
+		<DrawerSection title="Available to">
 			<TabButtons v-model="scope" fluid :options="scopeOptions" />
 			<EmptyState
 				v-if="scope === 'specific' && !ticketTypes.length"
@@ -94,6 +101,8 @@ const scope = computed({
 				v-else-if="scope === 'specific'"
 				v-model="values.ticket_types"
 				:ticket-types="ticketTypes"
+				:describe="describeTicketType"
+				:is-selectable="isSelectable"
 			/>
 		</DrawerSection>
 	</form>
