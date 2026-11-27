@@ -1,14 +1,5 @@
 <script setup lang="ts">
-import {
-	Button,
-	ErrorMessage,
-	FormLabel,
-	Switch,
-	TabButtons,
-	TextInput,
-	dialog,
-	toast,
-} from "frappe-ui"
+import { Button, ErrorMessage, FormLabel, TabButtons, TextInput, dialog, toast } from "frappe-ui"
 import { computed, reactive, ref, watch } from "vue"
 
 import {
@@ -18,6 +9,7 @@ import {
 	DrawerDescription,
 	DrawerTitle,
 } from "@/components/common/drawer"
+import EnabledAlert from "@/components/dashboard/EnabledAlert.vue"
 import { serverErrorMessage } from "@/utils/serverError"
 
 import {
@@ -40,7 +32,6 @@ const emit = defineEmits<{ saved: [] }>()
 const form = reactive({
 	title: "",
 	repeat_rule: REPEAT_RULES[0] as RepeatRule,
-	enabled: true,
 	ticket_types: [] as string[],
 })
 const errorMessage = ref("")
@@ -48,6 +39,20 @@ const errorMessage = ref("")
 const isNew = computed(() => !props.zone)
 const isDefault = computed(() => !!props.zone?.is_default)
 const isSaving = computed(() => props.zones.insert.loading || props.zones.setValue.loading)
+// The opened zone is a snapshot; read the reloaded row so the alert follows a toggle.
+const shownZone = computed(
+	() => props.zones.data?.find((row) => row.name === props.zone?.name) ?? props.zone,
+)
+const zoneSetValue = {
+	submit: (values: Record<string, 0 | 1>) =>
+		props.zones.setValue.submit({ ...values, name: props.zone?.name ?? "" }),
+	get error() {
+		return props.zones.setValue.error
+	},
+	get loading() {
+		return props.zones.setValue.loading
+	},
+}
 
 const repeatRuleOptions = REPEAT_RULES.map((rule) => ({ label: __(rule), value: rule }))
 const repeatRuleHelp = computed(() =>
@@ -62,7 +67,6 @@ watch(open, (opened) => {
 	Object.assign(form, {
 		title: props.zone?.title ?? "",
 		repeat_rule: props.zone?.repeat_rule ?? REPEAT_RULES[0],
-		enabled: props.zone ? !!props.zone.enabled : true,
 		ticket_types: props.zone?.ticket_types.map((row) => row.ticket_type) ?? [],
 	})
 })
@@ -78,12 +82,11 @@ async function save() {
 	const values = {
 		title: form.title.trim(),
 		repeat_rule: form.repeat_rule,
-		enabled: form.enabled ? (1 as const) : (0 as const),
 		ticket_types: form.ticket_types.map((ticket_type) => ({ ticket_type })),
 	}
 	const request = props.zone
 		? props.zones.setValue.submit({ ...values, name: props.zone.name })
-		: props.zones.insert.submit({ ...values, event: props.event })
+		: props.zones.insert.submit({ ...values, event: props.event, enabled: 1 })
 	await request.catch(() => null)
 	const error = props.zone ? props.zones.setValue.error : props.zones.insert.error
 	if (error) return (errorMessage.value = serverErrorMessage(error))
@@ -131,6 +134,16 @@ async function remove() {
 				@keydown.meta.enter.prevent="save"
 				@keydown.ctrl.enter.prevent="save"
 			>
+				<EnabledAlert
+					v-if="shownZone"
+					noun="Zone"
+					:enabled="!!shownZone.enabled"
+					:editable="!isDefault"
+					field="enabled"
+					:set-value="zoneSetValue"
+					@changed="emit('saved')"
+				/>
+
 				<TextInput
 					v-model="form.title"
 					:label="__('Name')"
@@ -163,19 +176,6 @@ async function remove() {
 								: __("Every ticket can check in here. Pick some to limit the zone.")
 						}}
 					</span>
-				</div>
-
-				<div class="border-t border-outline-gray-1 pt-4">
-					<Switch
-						v-model="form.enabled"
-						:label="__('Enabled')"
-						:description="
-							isDefault
-								? __('The default zone can be renamed but not turned off.')
-								: __('Turned-off zones are hidden from the check-in page.')
-						"
-						:disabled="isDefault"
-					/>
 				</div>
 
 				<ErrorMessage :message="errorMessage" />
