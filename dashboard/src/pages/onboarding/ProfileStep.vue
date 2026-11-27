@@ -43,7 +43,6 @@ defineExpose({
 			v-model="profile.user_image"
 			:label="fullName || '?'"
 			:title="__('Profile photo')"
-			:description="__('Optional. Your initials show until you add one.')"
 		/>
 
 		<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">

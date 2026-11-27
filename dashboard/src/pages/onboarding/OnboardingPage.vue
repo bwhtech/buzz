@@ -47,9 +47,9 @@ const isDone = computed(() => currentStep.value === "done")
 // Profile is required, and an invitee already has a place to land, so neither offers Skip.
 const canSkip = computed(() => !["profile", "invite", "done"].includes(currentStep.value))
 
-const headings = computed<Record<string, [string, string]>>(() => ({
+const headings = computed<Record<string, [string, string?]>>(() => ({
 	profile: [__("Set up your profile"), __("This is how hosts and guests see you on Buzz.")],
-	fork: [__("How will you use Buzz?"), __("Pick what fits today. You can change it later.")],
+	fork: [__("How will you use Buzz?")],
 	invite: [
 		__("You're on the {0} team", [invitedTeam.value?.team_name ?? ""]),
 		__("Continue to open the team in your dashboard."),
@@ -134,7 +134,9 @@ const stageStyle = computed(() => ({
 								<div :key="currentStep" class="flex flex-col gap-6">
 									<header v-if="!isDone" class="flex flex-col gap-1">
 										<h1 class="text-xl-semibold text-ink-gray-9">{{ headings[currentStep][0] }}</h1>
-										<p class="text-base text-ink-gray-5">{{ headings[currentStep][1] }}</p>
+										<p v-if="headings[currentStep][1]" class="text-base text-ink-gray-5">
+											{{ headings[currentStep][1] }}
+										</p>
 									</header>
 									<component :is="views[currentStep]" ref="step" />
 								</div>

@@ -8,6 +8,7 @@ import EventLinks from "@/components/dashboard/events/EventLinks.vue"
 import PersonalProfileSettings from "@/components/dashboard/teams/settings/PersonalProfileSettings.vue"
 import type { TeamSettings } from "@/composables/useTeamSettings"
 import { checkTeamSlug, isPersonalTeam } from "@/data/teams"
+import { SHORT_DESCRIPTION_MAX_LENGTH } from "@/utils/textLimits"
 
 const props = defineProps<{ settings: TeamSettings }>()
 const form = computed(() => props.settings.form)
@@ -91,6 +92,7 @@ watch(availability, (answer) => (props.settings.slugTaken = Boolean(answer) && !
 						:rows="2"
 						:disabled="!settings.canEditPage"
 						:aria-label="__('Short description')"
+						:maxlength="SHORT_DESCRIPTION_MAX_LENGTH"
 						:placeholder="__('Add a short description')"
 						class="resize-none !border-0 bg-transparent !px-0 text-ink-gray-6"
 					/>

@@ -10,6 +10,7 @@ import type { EventExternalLink, TeamOverview } from "@/types"
 import { richTextExtensions, richTextToolbar } from "@/utils/richTextEditor"
 import { serverErrorMessage } from "@/utils/serverError"
 import { teamPath, teamUrl } from "@/utils/teamUrl"
+import { SHORT_DESCRIPTION_MAX_LENGTH } from "@/utils/textLimits"
 
 const props = defineProps<{ team: TeamOverview }>()
 const emit = defineEmits<{ saved: [] }>()
@@ -102,6 +103,7 @@ async function save() {
 			v-model="form.short_description"
 			:label="__('Short description')"
 			:rows="2"
+			:maxlength="SHORT_DESCRIPTION_MAX_LENGTH"
 			:placeholder="__('One line about the team')"
 		/>
 

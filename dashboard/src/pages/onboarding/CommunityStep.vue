@@ -5,6 +5,7 @@ import { ref, watch } from "vue"
 import AvatarUploader from "@/components/common/AvatarUploader.vue"
 import SlugInput, { type Availability } from "@/components/common/SlugInput.vue"
 import { slugify } from "@/utils/slug"
+import { SHORT_DESCRIPTION_MAX_LENGTH } from "@/utils/textLimits"
 
 import { checkCommunitySlug, communityError, flow, saveCommunity } from "./useOnboarding"
 
@@ -52,22 +53,26 @@ defineExpose({
 			autofocus
 		/>
 		<div class="flex flex-col gap-1.5">
-			<FormLabel :label="__('Community URL')" required />
+			<FormLabel :label="__('Community page link')" required />
 			<SlugInput
 				v-model="community.slug"
 				v-model:availability="availability"
 				prefix="community/"
-				:label="__('Community URL')"
+				:label="__('Community page link')"
 				placeholder="weekend-builders-club"
 				:saved-slug="community.savedSlug"
 				:check="checkCommunitySlug"
 			/>
+			<p class="text-sm text-ink-gray-5">
+				{{ __("Your public page, where people find your events. You can change it later.") }}
+			</p>
 		</div>
 		<Textarea
 			v-model="community.short_description"
 			:label="__('Short description')"
 			:placeholder="__('What you host, and who it is for')"
 			:rows="2"
+			:maxlength="SHORT_DESCRIPTION_MAX_LENGTH"
 		/>
 		<ErrorMessage :message="communityError" />
 	</div>

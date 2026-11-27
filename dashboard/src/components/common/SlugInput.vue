@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from "vue"
+import { computed, watch } from "vue"
 
 import PrefixedInput from "@/components/common/PrefixedInput.vue"
 import SlugStatus from "@/components/common/SlugStatus.vue"
@@ -16,6 +16,11 @@ const props = defineProps<{
 	check: (slug: string) => Promise<Availability | null>
 }>()
 const slug = defineModel<string>({ required: true })
+// Slugs are lowercase on the server, so capitals are folded as the user types.
+const lowercaseSlug = computed({
+	get: () => slug.value,
+	set: (value: string) => (slug.value = value.toLowerCase()),
+})
 const availability = defineModel<Availability | null>("availability", { default: null })
 
 const live = useSlugAvailability(slug, props.check, () => props.savedSlug)
@@ -25,7 +30,7 @@ watch(live.availability, (value) => (availability.value = value), { immediate: t
 <template>
 	<div>
 		<PrefixedInput
-			v-model="slug"
+			v-model="lowercaseSlug"
 			:prefix="prefix"
 			:label="label"
 			:placeholder="placeholder"
